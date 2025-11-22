@@ -36,3 +36,16 @@ mybatis-plus:
 jwt:
   secret: jia_shi_yi_xuan_secret_key_1234567890
   expiration: 86400000  # 24小时
+
+# Netty配置
+netty:
+  port: 9091  # 更改为未被使用的端口号
+  bossGroup:
+    threads: 1
+  workerGroup:
+    threads: 8
+  maxFrameLength: 65536
+  lengthFieldOffset: 0
+  lengthFieldLength: 4
+  lengthAdjustment: 0
+  initialBytesToStrip: 4

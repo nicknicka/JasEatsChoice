@@ -47,6 +47,12 @@
             <artifactId>spring-boot-starter-websocket</artifactId>
         </dependency>
 
+        <!-- Netty依赖 -->
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-all</artifactId>
+        </dependency>
+
         <!-- MyBatis-Plus for Spring Boot 3 -->
         <dependency>
             <groupId>com.baomidou</groupId>

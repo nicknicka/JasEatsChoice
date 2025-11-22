@@ -40,8 +40,8 @@ public class Order {
     private BigDecimal totalAmount; // 订单总金额
 
     @TableField("status")
-    @ApiModelProperty(value = "订单状态：1-待支付，2-已支付，3-已完成，4-已取消")
-    private Integer status; // 订单状态：1-待支付，2-已支付，3-已完成，4-已取消
+    @ApiModelProperty(value = "订单状态：0-待支付、1-待接单、2-备菜中、3-烹饪中、4-待上菜、5-已完成、6-已取消")
+    private Integer status; // 订单状态：0-待支付、1-待接单、2-备菜中、3-烹饪中、4-待上菜、5-已完成、6-已取消
 
     @TableField("address")
     @ApiModelProperty(value = "配送地址")

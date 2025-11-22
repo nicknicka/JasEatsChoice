@@ -1,6 +1,10 @@
 package com.xx.jaseatschoicejava.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import java.util.List;
+import java.util.Map;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.xx.jaseatschoicejava.common.ResponseResult;
 import com.xx.jaseatschoicejava.entity.ChatMsg;
@@ -30,14 +34,48 @@ public class ChatController {
     @ApiOperation("获取聊天会话列表")
     @GetMapping("/users/{userId}/chat-sessions")
     public ResponseResult<?> getChatSessions(@PathVariable String userId) {
-        // TODO: 需要根据业务逻辑实现会话列表查询
-        // 会话列表应该是与该用户有过聊天记录的所有用户/群组的列表
-        // 这里先返回空列表，后续需要完善
-        return ResponseResult.success("会话列表获取成功");
+        // 会话列表是与该用户有过聊天记录的所有用户/群组的列表
+        // 查询条件：fromId或toId等于当前用户ID，然后按时间倒序取最新的消息
+        LambdaQueryWrapper<ChatMsg> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.or(wrapper -> wrapper.eq(ChatMsg::getFromId, userId)
+                .or().eq(ChatMsg::getToId, userId))
+                .orderByDesc(ChatMsg::getCreateTime);
+
+        // 查询所有相关聊天记录
+        List<ChatMsg> chatMessages = chatMsgService.list(queryWrapper);
+
+        // 将聊天记录按会话分组，取每个会话的最新一条消息
+        // 会话标识：单聊是对方用户ID，群聊是群组ID（toId）
+        Map<String, ChatMsg> sessionMap = new LinkedHashMap<>();
+
+        for (ChatMsg message : chatMessages) {
+            String sessionId = "";
+            if ("group".equals(message.getMsgType())) {
+                // 群聊：会话ID是toId
+                sessionId = message.getToId();
+            } else {
+                // 单聊：会话ID是对方用户ID
+                sessionId = message.getFromId().equals(userId) ? message.getToId() : message.getFromId();
+            }
+
+            // 如果会话不存在，则将当前消息加入
+            if (!sessionMap.containsKey(sessionId)) {
+                sessionMap.put(sessionId, message);
+            }
+            // 否则保留第一条（因为已经按时间倒序排列）
+        }
+
+        // 转换为会话列表
+        List<ChatMsg> sessionList = new ArrayList<>(sessionMap.values());
+
+        return ResponseResult.success(sessionList);
     }
 
     /**
      * 获取聊天记录
+     * @param sessionId 会话ID，可以是：
+     *                  1. 单聊：两个用户ID用"_"拼接，如"user1_user2"
+     *                  2. 群聊：群组ID，如"group123"
      */
     @ApiOperation("获取聊天记录")
     @GetMapping("/chat/{sessionId}/messages")
@@ -45,25 +83,30 @@ public class ChatController {
             @PathVariable String sessionId,
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "20") Integer size) {
-        // TODO: 这里sessionId需要明确是单聊还是群聊
-        // 单聊的话，sessionId可以是两个用户ID的组合
-        // 群聊的话，sessionId是群组ID
 
-        // 这里暂时假设是根据fromId和toId的组合查询，需要根据实际业务调整
         Page<ChatMsg> chatMsgPage = new Page<>(page, size);
+        LambdaQueryWrapper<ChatMsg> queryWrapper = new LambdaQueryWrapper<>();
 
-        // 这里查询逻辑需要根据实际业务调整，例如查询两个人之间的聊天记录
-        // LambdaQueryWrapper<ChatMsg> queryWrapper = new LambdaQueryWrapper<>();
-        // queryWrapper.and(wrapper -> wrapper
-        //         .eq(ChatMsg::getFromId, sessionId.split("-")[0])
-        //         .eq(ChatMsg::getToId, sessionId.split("-")[1]))
-        //         .or(wrapper -> wrapper
-        //                 .eq(ChatMsg::getFromId, sessionId.split("-")[1])
-        //                 .eq(ChatMsg::getToId, sessionId.split("-")[0]))
-        //         .orderByDesc(ChatMsg::getCreateTime);
+        // 判断是单聊还是群聊
+        if (sessionId.contains("_")) {
+            // 单聊：会话ID格式为 "fromId_toId" 或 "toId_fromId"
+            String[] userIds = sessionId.split("_");
+            queryWrapper.and(wrapper -> wrapper
+                    .eq(ChatMsg::getFromId, userIds[0])
+                    .eq(ChatMsg::getToId, userIds[1]))
+                    .or(wrapper -> wrapper
+                            .eq(ChatMsg::getFromId, userIds[1])
+                            .eq(ChatMsg::getToId, userIds[0]));
+        } else {
+            // 群聊：会话ID就是群组ID，作为toId
+            queryWrapper.eq(ChatMsg::getToId, sessionId);
+        }
 
-        // 暂时返回空结果，等待业务逻辑明确
-        Page<ChatMsg> result = chatMsgService.page(chatMsgPage, null);
+        // 按时间倒序排序
+        queryWrapper.orderByDesc(ChatMsg::getCreateTime);
+
+        // 查询结果
+        Page<ChatMsg> result = chatMsgService.page(chatMsgPage, queryWrapper);
         return ResponseResult.success(result);
     }
 
