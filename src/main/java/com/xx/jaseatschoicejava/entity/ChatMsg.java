@@ -35,8 +35,8 @@ public class ChatMsg {
     private String toId; // 接收者ID
 
     @TableField("msg_type")
-    @ApiModelProperty(value = "消息类型（如：text-文本消息，image-图片消息等）")
-    private String msgType; // 消息类型（如：text-文本消息，image-图片消息等）
+    @ApiModelProperty(value = "消息类型（single/group/order_sync/order_status）")
+    private String msgType; // 消息类型（single/group/order_sync/order_status）
 
     @TableField("content")
     @ApiModelProperty(value = "消息内容")
