@@ -1,0 +1,38 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /api/v1
+
+spring:
+  # 数据库配置
+  datasource:
+    url: jdbc:mysql://localhost:3306/jia_shi_yi_xuan?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8
+    username: root
+    password: 123456
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  # Redis配置
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password:
+      database: 0
+      timeout: 10000ms
+
+  # Jackson配置
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+
+# MyBatis-Plus配置
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  type-aliases-package: com.xx.jaseatschoicejava.entity
+  configuration:
+    map-underscore-to-camel-case: true  # 自动驼峰命名转换
+
+# JWT配置
+jwt:
+  secret: jia_shi_yi_xuan_secret_key_1234567890
+  expiration: 86400000  # 24小时
