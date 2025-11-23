@@ -3,6 +3,8 @@ package com.xx.jaseatschoicejava.netty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xx.jaseatschoicejava.constants.Constant;
 import com.xx.jaseatschoicejava.enums.MsgType;
+import com.xx.jaseatschoicejava.entity.ChatMsg;
+import com.xx.jaseatschoicejava.service.ChatMsgService;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -14,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -35,6 +38,14 @@ public class NettyChatHandler extends SimpleChannelInboundHandler<String> {
 
     // JSON解析器
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    // 聊天消息服务（用于存储离线消息）
+    private final ChatMsgService chatMsgService;
+
+    // 构造函数注入
+    public NettyChatHandler(ChatMsgService chatMsgService) {
+        this.chatMsgService = chatMsgService;
+    }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
@@ -131,8 +142,32 @@ public class NettyChatHandler extends SimpleChannelInboundHandler<String> {
                 logger.error("Failed to send message to user {}: {}", userId, e.getMessage());
             }
         } else {
-            logger.info("User {} is offline", userId);
-            // TODO: 将消息存入数据库，等待用户上线后推送
+            logger.info("User {} is offline, storing message in database", userId);
+            // 将消息存入数据库，等待用户上线后推送
+            try {
+                // 解析JSON消息
+                com.fasterxml.jackson.databind.JsonNode msgNode = objectMapper.readTree(message);
+
+                // 提取消息内容
+                String fromId = msgNode.get("fromId").asText();
+                String toId = msgNode.get("toId").asText();
+                String msgType = msgNode.get("msgType").asText();
+                String content = msgNode.get("content").asText();
+
+                // 保存到数据库
+                ChatMsg chatMsg = new ChatMsg();
+                chatMsg.setFromId(fromId);
+                chatMsg.setToId(toId);
+                chatMsg.setMsgType(msgType);
+                chatMsg.setContent(content);
+                chatMsg.setReadStatus(false); // 未读状态
+                chatMsg.setCreateTime(LocalDateTime.now());
+
+                chatMsgService.save(chatMsg);
+                logger.info("Message stored in database for user: {}", userId);
+            } catch (Exception e) {
+                logger.error("Failed to store offline message: {}", e.getMessage());
+            }
         }
     }
 

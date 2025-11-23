@@ -1,9 +1,12 @@
 package com.xx.jaseatschoicejava.util;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
 
+import java.nio.charset.StandardCharsets;
+import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -11,7 +14,8 @@ import java.util.Map;
 public class JwtUtil {
 
     // Use a simple secret key string for simplicity (in production, use a secure key management system)
-    private static final String SECRET_KEY = "jaseatschoice_secret_key_123456789012345678901234567890";
+    // Use a simple secret key string for simplicity (in production, use a secure key management system)
+    private static final Key SECRET_KEY = Keys.hmacShaKeyFor("jaseatschoice_secret_key_123456789012345678901234567890".getBytes(StandardCharsets.UTF_8));
 
     // Token expiration time (1 hour)
     private static final long EXPIRATION_TIME = 3600000;
@@ -28,11 +32,11 @@ public class JwtUtil {
         claims.put("phone", phone);
 
         return Jwts.builder()
-                .setClaims(claims)
-                .setSubject(phone)
-                .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
-                .signWith(SignatureAlgorithm.HS256, SECRET_KEY)
+                .claims(claims)
+                .subject(phone)
+                .issuedAt(new Date(System.currentTimeMillis()))
+                .expiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
+                .signWith(SECRET_KEY)
                 .compact();
     }
 
@@ -45,7 +49,7 @@ public class JwtUtil {
         return Jwts.parser()
                 .setSigningKey(SECRET_KEY)
                 .build()
-                .parseClaimsJws(token)
+                .parseSignedClaims(token)
                 .getBody();
     }
 

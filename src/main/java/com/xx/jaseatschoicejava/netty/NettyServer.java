@@ -1,6 +1,7 @@
 package com.xx.jaseatschoicejava.netty;
 
 import com.xx.jaseatschoicejava.config.NettyConfig;
+import com.xx.jaseatschoicejava.service.ChatMsgService;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -17,8 +18,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
-import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import java.util.concurrent.TimeUnit;
 
@@ -35,6 +34,9 @@ public class NettyServer {
 
     @Autowired
     private NettyConfig nettyConfig;
+
+    @Autowired
+    private ChatMsgService chatMsgService;
 
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
@@ -97,7 +99,7 @@ public class NettyServer {
                             pipeline.addLast(new StringEncoder(CharsetUtil.UTF_8));
 
                             // 消息处理Handler，放在业务线程池处理
-                            pipeline.addLast(businessGroup, new NettyChatHandler());
+                            pipeline.addLast(businessGroup, new NettyChatHandler(chatMsgService));
                         }
                     });
 
