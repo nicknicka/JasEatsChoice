@@ -13,7 +13,11 @@ import {
   ChatDotRound,
   Setting,
   HomeFilled,
-  User
+  User,
+  CircleClose,
+  CircleCheckFilled,
+  Goods,
+  Dish
 } from '@element-plus/icons-vue'
 import { decodeJwt } from '../utils/api.js'
 import { useAuthStore } from '../store/authStore'
@@ -110,13 +114,14 @@ const menuData = {
     // 首页模块
     { index: '1', name: '我的店铺', icon: HomeFilled, path: '/merchant/home' },
 
-    // 核心业务模块
+    // 订单管理模块
     {
       index: '2',
-      name: '核心业务',
+      name: '订单管理',
       icon: List,
       children: [
-        { index: '2-1', name: '今日订单', icon: List, path: '/merchant/home/today-orders' }
+        { index: '2-1', name: '今日订单', icon: Calendar, path: '/merchant/home/today-orders' },
+        { index: '2-2', name: '全部订单', icon: Document, path: '/merchant/home/orders' }
       ]
     },
 

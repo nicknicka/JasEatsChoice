@@ -92,13 +92,29 @@ const animateValue = (key, endValue, duration = 1000) => {
   requestAnimationFrame(animate)
 }
 
+// 获取筛选状态列表（支持多状态筛选，如"2-3"表示状态2和3）
+const getStatusFilters = (statusFilter) => {
+  if (statusFilter === 'all' || statusFilter === '') return []
+
+  // 处理特殊状态 "2-3"（进行中 = 备菜+烹饪+待上菜）
+  if (statusFilter === '2-3') {
+    return [2, 3, 4] // 备菜中、烹饪中、待上菜
+  }
+
+  // 单个状态
+  return [parseInt(statusFilter)]
+}
+
 // 筛选后的订单
 const filteredOrders = computed(() => {
   return orders.value
     .filter((order) => {
-      // 状态筛选
+      // 状态筛选（支持多状态）
+      const statusFilters = getStatusFilters(activeStatusFilter.value)
       const statusMatch =
-        activeStatusFilter.value === 'all' || order.status === activeStatusFilter.value
+        activeStatusFilter.value === 'all' ||
+        activeStatusFilter.value === '' ||
+        statusFilters.includes(order.status)
 
       // 搜索筛选
       const searchMatch =
@@ -228,13 +244,25 @@ const getStatusCount = (status) => {
 // 获取状态标签文本
 const getStatusLabel = (status) => {
   if (status === 'all') return '全部'
+  if (status === '2-3') return '进行中'
   return statusFilterMap[status]?.text || '未知'
 }
+
+// 页面标题（根据当前筛选状态动态显示）
+const pageTitle = computed(() => {
+  if (activeStatusFilter.value === '' || activeStatusFilter.value === 'all') {
+    return '全部订单'
+  }
+  return getStatusLabel(activeStatusFilter.value) + '订单'
+})
 
 // 获取空状态描述
 const getEmptyDescription = () => {
   if (searchKeyword.value) {
     return '未找到匹配的订单'
+  }
+  if (activeStatusFilter.value === '2-3') {
+    return '暂无进行中订单'
   }
   if (activeStatusFilter.value === 0) {
     return '暂无待支付订单'
@@ -270,6 +298,18 @@ const refreshOrders = () => {
 
 // 页面加载时初始化
 onMounted(() => {
+  // 从URL参数读取状态并设置筛选
+  const statusParam = route.query.status
+  if (statusParam) {
+    activeStatusFilter.value = statusParam
+  }
+
+  // 从URL参数读取搜索关键词
+  const searchParam = route.query.search
+  if (searchParam) {
+    searchKeyword.value = searchParam
+  }
+
   // 模拟商家ID，实际应用中应从登录信息获取
   const merchantId = 1
 
@@ -286,11 +326,6 @@ onMounted(() => {
       // 使用模拟数据用于展示
       orders.value = []
     })
-
-  const searchParam = route.query.search
-  if (searchParam) {
-    searchKeyword.value = searchParam
-  }
 })
 </script>
 
@@ -299,8 +334,7 @@ onMounted(() => {
     <!-- 头部 -->
     <div class="orders-header">
       <div class="header-left">
-        <h3 class="page-title">全部订单</h3>
-        <span class="page-subtitle">查看所有历史订单</span>
+        <h3 class="page-title">{{ pageTitle }}</h3>
       </div>
       <div class="header-right">
         <el-button
@@ -380,13 +414,16 @@ onMounted(() => {
         </div>
         <div class="status-filter-group">
           <div
-            v-for="status in ['all', 0, 1, 2, 3, 4, 5, 6]"
+            v-for="status in ['all', '2-3', 0, 1, 2, 3, 4, 5, 6]"
             :key="status"
             :class="['custom-status-tag', `status-tag-${status}`, { 'active': activeStatusFilter === status, 'zero-count': getStatusCount(status) === 0 }]"
             @click="activeStatusFilter = status"
           >
             <template v-if="status === 'all'">
               <el-icon class="tag-icon"><List /></el-icon>
+            </template>
+            <template v-else-if="status === '2-3'">
+              <el-icon class="tag-icon"><Goods /></el-icon>
             </template>
             <template v-else-if="status === 0">
               <el-icon class="tag-icon"><CircleClose /></el-icon>
@@ -865,6 +902,18 @@ onMounted(() => {
             &.active {
               background: linear-gradient(135deg, #e6a23c 0%, #f0a858 100%);
               color: #ffffff;
+            }
+          }
+
+          &.status-tag-2-3 {
+            background: linear-gradient(135deg, #fff7e6 0%, #e6f7ff 100%);
+            color: #409eff;
+            border: 1px solid #91d5ff;
+            &.active {
+              background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
+              color: #ffffff;
+              border-color: #409eff;
+              box-shadow: 0 2px 6px rgba(64, 158, 255, 0.4);
             }
           }
 
