@@ -1,0 +1,1263 @@
+<script setup>
+import { ref, onMounted, computed } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { useRouter } from 'vue-router'
+import {
+  ChatDotRound,
+  View,
+  CircleCheck,
+  Refresh,
+  Document,
+  ShoppingBag,
+  Timer,
+  Wallet
+} from '@element-plus/icons-vue'
+import CommonBackButton from '../../components/common/CommonBackButton.vue'
+
+const router = useRouter()
+
+// 订单状态映射
+const orderStatusMap = {
+  1: { text: '待接单', type: 'danger', color: '#f56c6c' },
+  2: { text: '备菜中', type: 'warning', color: '#e6a23c' },
+  3: { text: '烹饪中', type: 'warning', color: '#ff9800' },
+  4: { text: '待上菜', type: 'primary', color: '#409eff' },
+  5: { text: '已完成', type: 'success', color: '#67c23a' }
+}
+
+// 模拟对话列表
+const conversationList = ref([
+  {
+    id: 1,
+    userId: 1,
+    userName: '王小明',
+    userAvatar: '👨',
+    lastMessage: '我的订单什么时候能好？',
+    time: '12:30',
+    unreadCount: 2,
+    // 关联订单
+    relatedOrder: {
+      orderId: 'JD20241121001',
+      items: [
+        { name: '麻辣香锅饭', quantity: 2, price: 35 },
+        { name: '鱼香肉丝面', quantity: 1, price: 28 }
+      ],
+      status: 3,
+      totalAmount: 98,
+      address: '北京市朝阳区望京SOHO T1',
+      phone: '138****8888'
+    }
+  },
+  {
+    id: 2,
+    userId: 2,
+    userName: '李小红',
+    userAvatar: '👩',
+    lastMessage: '好的，谢谢！',
+    time: '12:25',
+    unreadCount: 0,
+    relatedOrder: null
+  },
+  {
+    id: 3,
+    userId: 3,
+    userName: '张小刚',
+    userAvatar: '👨‍💼',
+    lastMessage: '什么时候能配送？',
+    time: '12:20',
+    unreadCount: 0,
+    relatedOrder: null
+  },
+  {
+    id: 4,
+    userId: 4,
+    userName: '陈美丽',
+    userAvatar: '👩‍💼',
+    lastMessage: '请问有素食套餐吗？',
+    time: '11:45',
+    unreadCount: 5,
+    relatedOrder: {
+      orderId: 'JD20241121002',
+      items: [
+        { name: '宫保鸡丁', quantity: 1, price: 32 },
+        { name: '清炒时蔬', quantity: 2, price: 18 },
+        { name: '米饭', quantity: 3, price: 2 }
+      ],
+      status: 2,
+      totalAmount: 74,
+      address: '北京市海淀区中关村软件园',
+      phone: '139****6666'
+    }
+  },
+  {
+    id: 5,
+    userId: 5,
+    userName: '刘建国',
+    userAvatar: '👴',
+    lastMessage: '订单已经收到了，谢谢！',
+    time: '11:30',
+    unreadCount: 0,
+    relatedOrder: {
+      orderId: 'JD20241121003',
+      items: [
+        { name: '红烧肉套餐', quantity: 1, price: 45 },
+        { name: '紫菜蛋花汤', quantity: 1, price: 12 }
+      ],
+      status: 5,
+      totalAmount: 57,
+      address: '北京市西城区金融街',
+      phone: '136****9999'
+    }
+  },
+  {
+    id: 6,
+    userId: 6,
+    userName: '赵芳芳',
+    userAvatar: '👧',
+    lastMessage: '能帮我加一份小菜吗？',
+    time: '11:15',
+    unreadCount: 1,
+    relatedOrder: {
+      orderId: 'JD20241121004',
+      items: [
+        { name: '水煮鱼', quantity: 1, price: 58 },
+        { name: '凉拌黄瓜', quantity: 1, price: 15 }
+      ],
+      status: 1,
+      totalAmount: 73,
+      address: '北京市东城区王府井',
+      phone: '135****5555'
+    }
+  },
+  {
+    id: 7,
+    userId: 7,
+    userName: '孙伟',
+    userAvatar: '👨‍🎓',
+    lastMessage: '你们今天营业吗？',
+    time: '10:50',
+    unreadCount: 0,
+    relatedOrder: null
+  },
+  {
+    id: 8,
+    userId: 8,
+    userName: '周娜娜',
+    userAvatar: '👩‍🎤',
+    lastMessage: '好评已给，服务很棒！',
+    time: '10:30',
+    unreadCount: 0,
+    relatedOrder: {
+      orderId: 'JD20241121005',
+      items: [
+        { name: '糖醋里脊', quantity: 1, price: 38 },
+        { name: '酸辣汤', quantity: 2, price: 15 }
+      ],
+      status: 5,
+      totalAmount: 68,
+      address: '北京市丰台区科技园',
+      phone: '133****4444'
+    }
+  }
+])
+
+// 当前选中的对话
+const selectedConversation = ref(null)
+
+// 新消息内容
+const newMessage = ref('')
+
+// 显示关联订单详情
+const showOrderDetail = ref(false)
+
+// 为每个对话存储聊天记录
+const conversationsMessages = ref({
+  1: [
+    {
+      id: 1,
+      sender: 'user',
+      content: '你好，我刚才下单了，订单号是 JD20241121001',
+      time: '12:15',
+      isRead: true
+    },
+    {
+      id: 2,
+      sender: 'merchant',
+      content: '您好！您的订单我们已经收到了，正在准备中',
+      time: '12:18',
+      isRead: true
+    },
+    {
+      id: 3,
+      sender: 'user',
+      content: '我的订单什么时候能好？大概需要等多久？',
+      time: '12:30',
+      isRead: false
+    },
+    {
+      id: 4,
+      sender: 'merchant',
+      content: '正在制作中，您的麻辣香锅饭和鱼香肉丝面都在烹饪中，预计10分钟后可以完成',
+      time: '12:35',
+      isRead: true
+    },
+    {
+      id: 5,
+      sender: 'user',
+      content: '太好了，我不吃辣，麻辣香锅能少放点辣椒吗？',
+      time: '12:38',
+      isRead: true
+    },
+    {
+      id: 6,
+      sender: 'merchant',
+      content: '没问题，我们已经在备注里标注了微辣，您放心！',
+      time: '12:40',
+      isRead: true
+    },
+    {
+      id: 7,
+      sender: 'user',
+      content: '好的，谢谢！',
+      time: '12:42',
+      isRead: true
+    },
+    {
+      id: 8,
+      sender: 'user',
+      content: '请问配送需要多长时间？我在望京SOHO这边',
+      time: '12:45',
+      isRead: false
+    }
+  ],
+  2: [
+    {
+      id: 1,
+      sender: 'user',
+      content: '你好，请问你们店里有什么推荐菜品吗？',
+      time: '11:50',
+      isRead: true
+    },
+    {
+      id: 2,
+      sender: 'merchant',
+      content: '您好！我们的招牌菜有红烧肉套餐、宫保鸡丁和水煮鱼，都很受欢迎哦',
+      time: '11:52',
+      isRead: true
+    },
+    {
+      id: 3,
+      sender: 'user',
+      content: '好的，谢谢！',
+      time: '12:25',
+      isRead: true
+    }
+  ],
+  3: [
+    {
+      id: 1,
+      sender: 'user',
+      content: '什么时候能配送？',
+      time: '12:20',
+      isRead: true
+    }
+  ],
+  4: [
+    {
+      id: 1,
+      sender: 'user',
+      content: '你好，请问有素食套餐吗？',
+      time: '11:30',
+      isRead: true
+    },
+    {
+      id: 2,
+      sender: 'merchant',
+      content: '您好！我们有清炒时蔬、麻婆豆腐等素食菜品',
+      time: '11:32',
+      isRead: true
+    },
+    {
+      id: 3,
+      sender: 'user',
+      content: '太好了，我点一份清炒时蔬和宫保鸡丁',
+      time: '11:35',
+      isRead: false
+    },
+    {
+      id: 4,
+      sender: 'merchant',
+      content: '好的，您的订单已收到，正在准备中',
+      time: '11:38',
+      isRead: false
+    },
+    {
+      id: 5,
+      sender: 'user',
+      content: '请问有素食套餐吗？我想看看还有什么选择',
+      time: '11:45',
+      isRead: false
+    }
+  ],
+  5: [
+    {
+      id: 1,
+      sender: 'user',
+      content: '订单已经收到了，谢谢！',
+      time: '11:30',
+      isRead: true
+    },
+    {
+      id: 2,
+      sender: 'merchant',
+      content: '不客气！希望您用餐愉快，有问题随时联系我们',
+      time: '11:32',
+      isRead: true
+    }
+  ],
+  6: [
+    {
+      id: 1,
+      sender: 'user',
+      content: '你好，我点了一份水煮鱼',
+      time: '11:00',
+      isRead: true
+    },
+    {
+      id: 2,
+      sender: 'merchant',
+      content: '好的，收到了',
+      time: '11:02',
+      isRead: true
+    },
+    {
+      id: 3,
+      sender: 'user',
+      content: '能帮我加一份小菜吗？',
+      time: '11:15',
+      isRead: false
+    }
+  ],
+  7: [
+    {
+      id: 1,
+      sender: 'user',
+      content: '你们今天营业吗？',
+      time: '10:50',
+      isRead: true
+    },
+    {
+      id: 2,
+      sender: 'merchant',
+      content: '营业的！我们每天10:00-21:00营业，欢迎点餐',
+      time: '10:52',
+      isRead: true
+    }
+  ],
+  8: [
+    {
+      id: 1,
+      sender: 'user',
+      content: '好评已给，服务很棒！',
+      time: '10:30',
+      isRead: true
+    },
+    {
+      id: 2,
+      sender: 'merchant',
+      content: '感谢您的好评！我们会继续努力提供优质服务，期待您的下次光临',
+      time: '10:32',
+      isRead: true
+    }
+  ]
+})
+
+// 当前对话的聊天记录
+const chatMessages = computed(() => {
+  if (!selectedConversation.value) return []
+  return conversationsMessages.value[selectedConversation.value.id] || []
+})
+
+// 排序后的对话列表（有未读消息的在前）
+const sortedConversations = computed(() => {
+  return [...conversationList.value].sort((a, b) => {
+    if (a.unreadCount > 0 && b.unreadCount === 0) return -1
+    if (a.unreadCount === 0 && b.unreadCount > 0) return 1
+    return 0
+  })
+})
+
+// 页面加载
+onMounted(() => {
+  // 默认选中第一个对话
+  if (sortedConversations.value.length > 0) {
+    selectedConversation.value = sortedConversations.value[0]
+  }
+})
+
+// 选择对话
+const selectConversation = (conversation) => {
+  selectedConversation.value = conversation
+  // 清空未读消息
+  if (conversation.unreadCount > 0) {
+    conversation.unreadCount = 0
+    ElMessage.success('消息已标记为已读')
+  }
+}
+
+// 发送消息
+const sendMessage = () => {
+  if (!newMessage.value.trim() || !selectedConversation.value) {
+    return
+  }
+
+  // 创建新消息
+  const message = {
+    id: Date.now(),
+    sender: 'merchant',
+    content: newMessage.value.trim(),
+    time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+    isRead: true
+  }
+
+  // 添加到对应对话的聊天记录
+  const conversationId = selectedConversation.value.id
+  if (!conversationsMessages.value[conversationId]) {
+    conversationsMessages.value[conversationId] = []
+  }
+  conversationsMessages.value[conversationId].push(message)
+
+  // 更新对话列表的最后一条消息
+  selectedConversation.value.lastMessage = message.content
+  selectedConversation.value.time = message.time
+
+  // 清空输入框
+  newMessage.value = ''
+  ElMessage.success('消息发送成功')
+}
+
+// 查看订单详情
+const viewOrderDetail = () => {
+  if (selectedConversation.value?.relatedOrder) {
+    showOrderDetail.value = true
+  }
+}
+
+// 更新订单状态
+const updateOrderStatus = (newStatus) => {
+  if (selectedConversation.value?.relatedOrder) {
+    ElMessageBox.confirm(
+      `确定要将订单状态更新为"${orderStatusMap[newStatus].text}"吗？`,
+      '更新订单状态',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    ).then(() => {
+      selectedConversation.value.relatedOrder.status = newStatus
+      ElMessage.success('订单状态已更新')
+
+      // 发送系统消息通知用户
+      const statusMsg = {
+        id: Date.now(),
+        sender: 'merchant',
+        content: `您的订单状态已更新为：${orderStatusMap[newStatus].text}`,
+        time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+        isRead: true
+      }
+
+      const conversationId = selectedConversation.value.id
+      if (!conversationsMessages.value[conversationId]) {
+        conversationsMessages.value[conversationId] = []
+      }
+      conversationsMessages.value[conversationId].push(statusMsg)
+    }).catch(() => {})
+  }
+}
+
+// 发送订单提醒
+const sendOrderReminder = () => {
+  if (selectedConversation.value?.relatedOrder) {
+    const reminderMsg = {
+      id: Date.now(),
+      sender: 'merchant',
+      content: `您的订单（${selectedConversation.value.relatedOrder.orderId}）${orderStatusMap[selectedConversation.value.relatedOrder.status].text}，请耐心等待`,
+      time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+      isRead: true
+    }
+
+    const conversationId = selectedConversation.value.id
+    if (!conversationsMessages.value[conversationId]) {
+      conversationsMessages.value[conversationId] = []
+    }
+    conversationsMessages.value[conversationId].push(reminderMsg)
+
+    ElMessage.success('订单提醒已发送')
+  }
+}
+</script>
+
+<template>
+  <div class="private-chat-container">
+    <!-- 头部 -->
+    <div class="chat-header">
+      <div class="header-left">
+        <h3 class="page-title">单聊会话</h3>
+        <p class="page-subtitle" v-if="selectedConversation">
+          客户：{{ selectedConversation.userName }}
+        </p>
+      </div>
+      <div class="header-right">
+        <CommonBackButton />
+      </div>
+    </div>
+
+    <div class="chat-content">
+      <!-- 对话列表 -->
+      <div class="conversation-list">
+        <div class="list-header">
+          <div class="header-title">
+            <el-icon :size="18"><ChatDotRound /></el-icon>
+            <span>会话列表</span>
+          </div>
+        </div>
+        <div
+          v-for="conversation in sortedConversations"
+          :key="conversation.id"
+          class="conversation-item"
+          :class="{
+            active: selectedConversation?.id === conversation.id,
+            'has-unread': conversation.unreadCount > 0,
+            'has-order': conversation.relatedOrder
+          }"
+          @click="selectConversation(conversation)"
+        >
+          <div class="conversation-avatar">
+            <div class="emoji-avatar">{{ conversation.userAvatar }}</div>
+            <div v-if="conversation.unreadCount > 0" class="unread-badge">
+              {{ conversation.unreadCount }}
+            </div>
+            <div v-if="conversation.relatedOrder" class="order-indicator" title="有关联订单">
+              📋
+            </div>
+          </div>
+          <div class="conversation-info">
+            <div class="user-name-time">
+              <span class="user-name">{{ conversation.userName }}</span>
+              <span class="time">{{ conversation.time }}</span>
+            </div>
+            <div class="last-message">{{ conversation.lastMessage }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 聊天区域 -->
+      <div class="chat-area" v-if="selectedConversation">
+        <!-- 用户信息头 -->
+        <div class="user-header">
+          <div class="user-info">
+            <div class="user-avatar-large">{{ selectedConversation.userAvatar }}</div>
+            <div class="user-details">
+              <div class="user-name">{{ selectedConversation.userName }}</div>
+              <div class="user-status" v-if="selectedConversation.relatedOrder">
+                <el-tag :type="orderStatusMap[selectedConversation.relatedOrder.status]?.type" size="small">
+                  {{ orderStatusMap[selectedConversation.relatedOrder.status]?.text }}
+                </el-tag>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 关联订单信息 -->
+        <div class="order-info-section" v-if="selectedConversation.relatedOrder && !showOrderDetail">
+          <div class="order-info-header">
+            <div class="header-title">
+              <el-icon :size="18"><ShoppingBag /></el-icon>
+              <span>关联订单信息</span>
+            </div>
+            <el-button type="primary" size="small" @click="showOrderDetail = true" :icon="View">
+              查看详情
+            </el-button>
+          </div>
+          <div class="order-info-summary">
+            <div class="info-item">
+              <span class="label">订单号：</span>
+              <span class="value">{{ selectedConversation.relatedOrder.orderId }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">金额：</span>
+              <span class="value amount">¥{{ selectedConversation.relatedOrder.totalAmount }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">状态：</span>
+              <el-tag :type="orderStatusMap[selectedConversation.relatedOrder.status]?.type" size="small">
+                {{ orderStatusMap[selectedConversation.relatedOrder.status]?.text }}
+              </el-tag>
+            </div>
+          </div>
+        </div>
+
+        <!-- 订单详情面板 -->
+        <div class="order-detail-panel" v-if="selectedConversation.relatedOrder && showOrderDetail">
+          <div class="detail-header">
+            <div class="header-title">
+              <el-icon :size="18"><Document /></el-icon>
+              <span>订单详情</span>
+            </div>
+            <el-button size="small" @click="showOrderDetail = false">收起</el-button>
+          </div>
+
+          <div class="detail-content">
+            <div class="order-basic-info">
+              <div class="info-row">
+                <span class="label">订单号</span>
+                <span class="value">{{ selectedConversation.relatedOrder.orderId }}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">联系电话</span>
+                <span class="value">{{ selectedConversation.relatedOrder.phone }}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">配送地址</span>
+                <span class="value">{{ selectedConversation.relatedOrder.address }}</span>
+              </div>
+            </div>
+
+            <div class="order-items">
+              <div class="items-title">菜品清单</div>
+              <div v-for="(item, index) in selectedConversation.relatedOrder.items" :key="index" class="item-row">
+                <span class="item-name">{{ item.name }}</span>
+                <span class="item-quantity">×{{ item.quantity }}</span>
+                <span class="item-price">¥{{ item.price }}</span>
+              </div>
+            </div>
+
+            <div class="order-total">
+              <div class="total-row">
+                <span class="label">订单总额</span>
+                <span class="value amount">¥{{ selectedConversation.relatedOrder.totalAmount }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="detail-actions">
+            <div class="actions-title">快捷操作</div>
+            <div class="action-buttons">
+              <el-button size="small" @click="router.push(`/merchant/home/order-detail/${selectedConversation.relatedOrder.orderId}`)" :icon="View">
+                查看订单
+              </el-button>
+              <el-dropdown trigger="click">
+                <el-button type="primary" size="small" :icon="Refresh">
+                  更新状态
+                </el-button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item
+                      v-for="(status, key) in orderStatusMap"
+                      :key="key"
+                      @click="updateOrderStatus(parseInt(key))"
+                      :disabled="parseInt(key) === selectedConversation.relatedOrder.status"
+                    >
+                      <el-tag :type="status.type" size="small">{{ status.text }}</el-tag>
+                    </el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+              <el-button type="success" size="small" @click="sendOrderReminder" :icon="Timer">
+                发送提醒
+              </el-button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 聊天消息 -->
+        <div class="messages-container">
+          <div
+            v-for="message in chatMessages"
+            :key="message.id"
+            class="message-item"
+            :class="{
+              'user-message': message.sender === 'user',
+              'merchant-message': message.sender === 'merchant'
+            }"
+          >
+            <div class="message-content">
+              <div class="message-text">{{ message.content }}</div>
+              <div class="message-time">{{ message.time }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 消息输入 -->
+        <div class="message-input-container">
+          <el-input
+            v-model="newMessage"
+            type="textarea"
+            placeholder="输入消息内容..."
+            :rows="2"
+            @keyup.enter.ctrl="sendMessage"
+          />
+          <el-button type="primary" @click="sendMessage" :icon="ChatDotRound">
+            发送
+          </el-button>
+        </div>
+
+        <!-- 安全提示 -->
+        <div class="security-tip">
+          <el-icon :size="14"><ChatDotRound /></el-icon>
+          <span>此会话仅与该客户沟通，消息已加密处理</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<style scoped lang="less">
+.private-chat-container {
+  padding: 0 20px 20px 20px;
+  height: calc(100vh - 60px);
+
+  .chat-header {
+    margin-bottom: 20px;
+    .page-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin: 0;
+      color: #1f2937;
+    }
+  }
+
+  .chat-content {
+    display: flex;
+    gap: 20px;
+    height: calc(100vh - 120px);
+
+    .conversation-list {
+      width: 320px;
+      border: 1px solid #e8eef5;
+      border-radius: 16px;
+      overflow-y: auto;
+      background: #ffffff;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+
+      .list-header {
+        padding: 18px 20px;
+        border-bottom: 1px solid #e8eef5;
+        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+
+        .header-title {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 15px;
+          font-weight: 600;
+          color: #1f2937;
+        }
+      }
+
+      .conversation-item {
+        display: flex;
+        align-items: center;
+        padding: 14px 16px;
+        cursor: pointer;
+        border-bottom: 1px solid #f3f4f6;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+
+        &:last-child {
+          border-bottom: none;
+        }
+
+        &:hover {
+          background-color: #f8f9fa;
+          transform: translateX(2px);
+        }
+
+        &.active {
+          background: linear-gradient(135deg, #ecf5ff 0%, #e3f2fd 100%);
+          border-left: 3px solid #667eea;
+          padding-left: 13px;
+        }
+
+        &.has-unread {
+          background-color: #fef2f2;
+        }
+
+        .conversation-avatar {
+          position: relative;
+          margin-right: 14px;
+
+          .emoji-avatar {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+            border-radius: 50%;
+            transition: transform 0.2s ease;
+          }
+
+          .unread-badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            background: linear-gradient(135deg, #f56c6c 0%, #ff8787 100%);
+            color: #ffffff;
+            border-radius: 12px;
+            padding: 2px 7px;
+            font-size: 11px;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(245, 108, 108, 0.4);
+            border: 2px solid #fff;
+          }
+
+          .order-indicator {
+            position: absolute;
+            bottom: -2px;
+            right: -2px;
+            width: 20px;
+            height: 20px;
+            background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            box-shadow: 0 2px 6px rgba(64, 158, 255, 0.4);
+            border: 2px solid #fff;
+          }
+        }
+
+        .conversation-info {
+          flex: 1;
+
+          .user-name-time {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+
+            .user-name {
+              font-weight: 600;
+              font-size: 14px;
+              color: #1f2937;
+            }
+
+            .time {
+              font-size: 11px;
+              color: #9ca3af;
+              font-weight: 500;
+            }
+          }
+
+          .last-message {
+            font-size: 13px;
+            color: #6b7280;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.4;
+          }
+        }
+      }
+    }
+
+    .chat-area {
+      flex: 1;
+      border: 1px solid #e8eef5;
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      background: #ffffff;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+      overflow: hidden;
+
+      .user-header {
+        padding: 16px 20px;
+        border-bottom: 1px solid #e8eef5;
+        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+
+        .user-info {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+
+          .user-avatar-large {
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+          }
+
+          .user-details {
+            .user-name {
+              font-size: 16px;
+              font-weight: 700;
+              color: #1f2937;
+              margin-bottom: 4px;
+            }
+
+            .user-status {
+              :deep(.el-tag) {
+                border-radius: 6px;
+                font-weight: 500;
+              }
+            }
+          }
+        }
+      }
+
+      .order-info-section {
+        padding: 16px 20px;
+        margin: 12px;
+        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        border: 1px solid #bae6fd;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(14, 165, 233, 0.1);
+
+        .order-info-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 12px;
+
+          .header-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #0369a1;
+          }
+
+          :deep(.el-button) {
+            font-weight: 500;
+          }
+        }
+
+        .order-info-summary {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 12px;
+
+          .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+
+            .label {
+              font-size: 12px;
+              color: #64748b;
+              font-weight: 500;
+            }
+
+            .value {
+              font-size: 14px;
+              color: #0c4a6e;
+              font-weight: 600;
+
+              &.amount {
+                color: #ea580c;
+              }
+            }
+          }
+        }
+      }
+
+      .order-detail-panel {
+        padding: 16px;
+        margin: 12px;
+        background: #ffffff;
+        border: 1px solid #e8eef5;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+
+        .detail-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 16px;
+          padding-bottom: 12px;
+          border-bottom: 1px solid #e8eef5;
+
+          .header-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #1f2937;
+          }
+        }
+
+        .detail-content {
+          margin-bottom: 16px;
+
+          .order-basic-info {
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            padding: 14px;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            border: 1px solid #e8eef5;
+
+            .info-row {
+              display: flex;
+              justify-content: space-between;
+              padding: 6px 0;
+              font-size: 13px;
+
+              .label {
+                color: #6b7280;
+                font-weight: 500;
+              }
+
+              .value {
+                color: #1f2937;
+                font-weight: 600;
+              }
+            }
+          }
+
+          .order-items {
+            background: #ffffff;
+            padding: 14px;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            border: 1px solid #e8eef5;
+
+            .items-title {
+              font-size: 13px;
+              font-weight: 600;
+              color: #1f2937;
+              margin-bottom: 10px;
+              padding-bottom: 8px;
+              border-bottom: 1px solid #e8eef5;
+            }
+
+            .item-row {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              padding: 8px 0;
+              font-size: 13px;
+              border-bottom: 1px dashed #e8eef5;
+
+              &:last-child {
+                border-bottom: none;
+              }
+
+              .item-name {
+                flex: 1;
+                color: #374151;
+                font-weight: 500;
+              }
+
+              .item-quantity {
+                color: #6b7280;
+                margin: 0 12px;
+                font-weight: 500;
+              }
+
+              .item-price {
+                color: #ea580c;
+                font-weight: 700;
+              }
+            }
+          }
+
+          .order-total {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            padding: 14px;
+            border-radius: 10px;
+            border: 1px solid #fbbf24;
+
+            .total-row {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+
+              .label {
+                font-size: 14px;
+                color: #78350f;
+                font-weight: 600;
+              }
+
+              .value {
+                font-size: 18px;
+                color: #b45309;
+                font-weight: 700;
+              }
+            }
+          }
+        }
+
+        .detail-actions {
+          .actions-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #6b7280;
+            margin-bottom: 10px;
+          }
+
+          .action-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+
+            :deep(.el-button) {
+              font-weight: 500;
+            }
+          }
+        }
+      }
+
+      .messages-container {
+        flex: 1;
+        padding: 18px 20px;
+        overflow-y: auto;
+        background: linear-gradient(180deg, #f8f9fa 0%, #ffffff 100%);
+
+        .message-item {
+          margin-bottom: 18px;
+          max-width: 70%;
+          animation: messageSlideIn 0.3s ease-out;
+
+          &.user-message {
+            align-self: flex-start;
+
+            .message-content {
+              background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
+              border: 1px solid #e5e7eb;
+              border-radius: 14px;
+              padding: 12px 16px;
+              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+
+              .message-text {
+                color: #1f2937;
+                font-size: 14px;
+                line-height: 1.6;
+                font-weight: 400;
+              }
+
+              .message-time {
+                text-align: right;
+                font-size: 11px;
+                color: #9ca3af;
+                margin-top: 6px;
+                font-weight: 500;
+              }
+            }
+          }
+
+          &.merchant-message {
+            align-self: flex-end;
+            margin-left: auto;
+
+            .message-content {
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: #ffffff;
+              border-radius: 14px;
+              padding: 12px 16px;
+              box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+
+              .message-text {
+                font-size: 14px;
+                line-height: 1.6;
+                font-weight: 500;
+              }
+
+              .message-time {
+                text-align: right;
+                font-size: 11px;
+                opacity: 0.85;
+                margin-top: 6px;
+                font-weight: 500;
+              }
+            }
+          }
+        }
+      }
+
+      .message-input-container {
+        padding: 16px 20px;
+        border-top: 1px solid #e8eef5;
+        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+        display: flex;
+        gap: 14px;
+        box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.04);
+
+        :deep(.el-textarea) {
+          flex: 1;
+
+          .el-textarea__inner {
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+            background: #ffffff;
+            padding: 12px 14px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+
+            &:focus {
+              border-color: #667eea;
+              box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            }
+          }
+        }
+
+        :deep(.el-button) {
+          align-self: flex-end;
+          border-radius: 10px;
+          font-weight: 600;
+          padding: 10px 24px;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          border: none;
+          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+
+          &:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+          }
+
+          &:active {
+            transform: translateY(0);
+          }
+        }
+      }
+
+      .security-tip {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 10px;
+        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+        border-top: 1px solid #bbf7d0;
+        font-size: 12px;
+        color: #15803d;
+        font-weight: 500;
+      }
+    }
+  }
+}
+
+@keyframes messageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+</style>

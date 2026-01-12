@@ -1,26 +1,36 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../store/authStore'
 import api, { decodeJwt } from '../../utils/api.js'
 import { API_CONFIG } from '../../config/index.js'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
+import {
+  Bell,
+  ChatDotRound,
+  Notification,
+  ChatLineSquare,
+  Refresh,
+  Check,
+  Filter
+} from '@element-plus/icons-vue'
 
 const router = useRouter()
 
 // 消息分类映射
 const messageCategories = {
-  all: '所有消息',
-  system: '系统通知',
-  order: '订单消息',
-  comment: '评价消息'
+  all: { text: '所有消息', icon: ChatDotRound },
+  system: { text: '系统通知', icon: Notification },
+  order: { text: '订单消息', icon: Bell },
+  comment: { text: '评价消息', icon: ChatLineSquare }
 }
 
 // 消息数据，将从后端API获取
 const messages = ref([])
 const selectedMessage = ref(null)
 const activeCategory = ref('all')
+const loading = ref(false)
 
 // 筛选后的消息
 const filteredMessages = ref([])
@@ -29,17 +39,69 @@ const filteredMessages = ref([])
 const unreadCounts = ref({
   system: 0,
   order: 0,
+  comment: 0,
+  total: 0
+})
+
+// 数字动画
+const animatedValues = ref({
+  total: 0,
+  system: 0,
+  order: 0,
   comment: 0
 })
+
+// 动画数字
+const animateValue = (key, endValue, duration = 1000) => {
+  const startValue = animatedValues.value[key]
+  const startTime = performance.now()
+
+  const animate = (currentTime) => {
+    const elapsed = currentTime - startTime
+    const progress = Math.min(elapsed / duration, 1)
+    const easeOutQuart = 1 - Math.pow(1 - progress, 4)
+    animatedValues.value[key] = Math.floor(startValue + (endValue - startValue) * easeOutQuart)
+
+    if (progress < 1) {
+      requestAnimationFrame(animate)
+    } else {
+      animatedValues.value[key] = endValue
+    }
+  }
+
+  requestAnimationFrame(animate)
+}
 
 // 计算未读消息数量
 const calculateUnreadCounts = () => {
   unreadCounts.value = {
+    total: messages.value.filter((msg) => !msg.isRead).length,
     system: messages.value.filter((msg) => msg.type === 'system' && !msg.isRead).length,
     order: messages.value.filter((msg) => msg.type === 'order' && !msg.isRead).length,
     comment: messages.value.filter((msg) => msg.type === 'comment' && !msg.isRead).length
   }
 }
+
+// 总计统计
+const totalStats = computed(() => {
+  return {
+    total: messages.value.length,
+    todayMessages: messages.value.filter(msg => {
+      const msgDate = new Date(msg.time)
+      const today = new Date()
+      return msgDate.toDateString() === today.toDateString()
+    }).length
+  }
+})
+
+// 监听未读消息变化，触发动画
+import { watch } from 'vue'
+watch(unreadCounts, (newVal) => {
+  animateValue('total', newVal.total)
+  animateValue('system', newVal.system)
+  animateValue('order', newVal.order)
+  animateValue('comment', newVal.comment)
+}, { deep: true })
 
 // 更新筛选
 const updateFilter = () => {
@@ -47,6 +109,15 @@ const updateFilter = () => {
     return activeCategory.value === 'all' || message.type === activeCategory.value
   })
   calculateUnreadCounts() // 更新未读消息统计
+}
+
+// 刷新消息
+const refreshMessages = () => {
+  loading.value = true
+  setTimeout(() => {
+    loading.value = false
+    ElMessage.success('刷新成功')
+  }, 500)
 }
 
 // 页面加载时初始化
@@ -163,57 +234,130 @@ const markAllAsRead = () => {
 
 <template>
   <div class="messages-management-container">
+    <!-- 头部 -->
     <div class="messages-header">
       <div class="header-left">
-        <h3 class="page-title">【消息中心】</h3>
+        <h3 class="page-title">消息中心</h3>
+        <p class="page-subtitle">管理您的所有通知和消息</p>
       </div>
       <div class="header-right" v-if="!selectedMessage">
-        <el-button type="success" @click="markAllAsRead"> 全部标记为已读 </el-button>
+        <el-button type="success" @click="markAllAsRead" :icon="Check">
+          全部标记为已读
+        </el-button>
+        <el-button type="default" @click="refreshMessages" :loading="loading" :icon="Refresh">
+          刷新
+        </el-button>
+        <CommonBackButton />
+      </div>
+    </div>
+
+    <!-- 统计卡片 -->
+    <div class="stats-section" v-if="!selectedMessage">
+      <div class="stat-card total">
+        <div class="stat-icon">
+          <el-icon :size="28"><ChatDotRound /></el-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value animated-number">{{ totalStats.total }}</div>
+          <div class="stat-label">总消息</div>
+        </div>
+      </div>
+
+      <div class="stat-card unread">
+        <div class="stat-icon">
+          <el-icon :size="28"><Bell /></el-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value animated-number">{{ animatedValues.total }}</div>
+          <div class="stat-label">未读消息</div>
+        </div>
+      </div>
+
+      <div class="stat-card system">
+        <div class="stat-icon">
+          <el-icon :size="28"><Notification /></el-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value animated-number">{{ animatedValues.system }}</div>
+          <div class="stat-label">系统通知</div>
+        </div>
+      </div>
+
+      <div class="stat-card order">
+        <div class="stat-icon">
+          <el-icon :size="28"><Bell /></el-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value animated-number">{{ animatedValues.order }}</div>
+          <div class="stat-label">订单消息</div>
+        </div>
+      </div>
+
+      <div class="stat-card comment">
+        <div class="stat-icon">
+          <el-icon :size="28"><ChatLineSquare /></el-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value animated-number">{{ animatedValues.comment }}</div>
+          <div class="stat-label">评价消息</div>
+        </div>
       </div>
     </div>
 
     <div class="messages-content">
       <!-- 消息分类与列表 -->
       <div class="messages-list-container" v-if="!selectedMessage">
+        <!-- 分类筛选 -->
         <div class="category-section">
-          <span class="category-label">📋 消息分类：</span>
-          <el-tag
-            v-for="category in ['all', 'system', 'order', 'comment']"
-            :key="category"
-            :type="activeCategory === category ? 'primary' : 'info'"
-            effect="plain"
-            @click="
-              () => {
-                activeCategory = category
-                updateFilter()
-              }
-            "
-            class="category-tag"
-          >
-            {{ messageCategories[category] }}
-            <el-badge
-              v-if="category !== 'all' && unreadCounts[category]"
-              :value="unreadCounts[category]"
-              type="danger"
-            />
-          </el-tag>
+          <div class="filter-header">
+            <el-icon class="filter-icon"><Filter /></el-icon>
+            <span class="filter-label">消息分类</span>
+          </div>
+          <div class="category-tags">
+            <div
+              v-for="category in ['all', 'system', 'order', 'comment']"
+              :key="category"
+              :class="['category-tag', `category-tag-${category}`, { 'active': activeCategory === category }]"
+              @click="() => { activeCategory = category; updateFilter() }"
+            >
+              <el-icon class="tag-icon">
+                <component :is="messageCategories[category].icon" />
+              </el-icon>
+              <span class="tag-text">{{ messageCategories[category].text }}</span>
+              <el-badge
+                v-if="category !== 'all' && unreadCounts[category] > 0"
+                :value="unreadCounts[category]"
+                type="danger"
+                class="tag-badge"
+              />
+            </div>
+          </div>
         </div>
 
-        <div class="messages-list">
+        <!-- 消息列表 -->
+        <div class="messages-list" v-loading="loading">
           <div
             v-for="message in filteredMessages"
             :key="message.id"
-            class="message-item"
-            :class="{ 'unread-message': !message.isRead }"
+            :class="['message-item', { 'unread-message': !message.isRead }]"
             @click="viewMessageDetail(message)"
           >
-            <div class="message-icon">🔔</div>
+            <div class="message-left">
+              <div class="message-icon" :class="`icon-${message.type}`">
+                <el-icon :size="20">
+                  <component :is="messageCategories[message.type]?.icon || Notification" />
+                </el-icon>
+              </div>
+              <div class="message-indicator" v-if="!message.isRead"></div>
+            </div>
+
             <div class="message-content">
               <div class="message-title">{{ message.title }}</div>
+              <div class="message-preview" v-if="message.content">{{ message.content.substring(0, 50) }}...</div>
               <div class="message-meta">
                 <span class="message-time">{{ message.time }}</span>
-                <el-tag :type="message.isRead ? 'success' : 'warning'">
-                  {{ message.isRead ? '🔘 已读' : '✅ 未读' }}
+                <el-tag :type="message.isRead ? 'success' : 'warning'" size="small">
+                  {{ message.isRead ? '已读' : '未读' }}
                 </el-tag>
               </div>
             </div>
@@ -221,7 +365,7 @@ const markAllAsRead = () => {
         </div>
 
         <!-- 空数据提示 -->
-        <div v-if="filteredMessages.length === 0" class="empty-messages">
+        <div v-if="filteredMessages.length === 0 && !loading" class="empty-messages">
           <el-empty description="暂无消息"></el-empty>
         </div>
       </div>
@@ -230,19 +374,24 @@ const markAllAsRead = () => {
       <div class="message-detail-container" v-if="selectedMessage">
         <div class="detail-header">
           <div class="detail-title">
+            <div class="title-icon" :class="`icon-${selectedMessage.type}`">
+              <el-icon :size="24">
+                <component :is="messageCategories[selectedMessage.type]?.icon || Notification" />
+              </el-icon>
+            </div>
             <h3>{{ selectedMessage.title }}</h3>
             <el-tag :type="selectedMessage.isRead ? 'success' : 'warning'">
               {{ selectedMessage.isRead ? '已读' : '未读' }}
             </el-tag>
           </div>
           <div class="detail-meta">
-            <div class="sender-info">
-              <span class="sender-label">发送者:</span>
-              <span>{{ selectedMessage.sender }}</span>
+            <div class="meta-item" v-if="selectedMessage.sender">
+              <span class="meta-label">发送者:</span>
+              <span class="meta-value">{{ selectedMessage.sender }}</span>
             </div>
-            <div class="time-info">
-              <span class="time-label">时间:</span>
-              <span>{{ selectedMessage.time }}</span>
+            <div class="meta-item">
+              <span class="meta-label">时间:</span>
+              <span class="meta-value">{{ selectedMessage.time }}</span>
             </div>
           </div>
         </div>
@@ -272,32 +421,342 @@ const markAllAsRead = () => {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    padding: 24px 28px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 20px;
+    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.25);
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
 
-    .page-title {
-      font-size: 18px;
-      font-weight: 600;
-      margin: 0;
+    &::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -10%;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+
+    .header-left {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      position: relative;
+      z-index: 1;
+
+      .page-title {
+        font-size: 26px;
+        font-weight: 700;
+        margin: 0;
+        color: #ffffff;
+        letter-spacing: 0.8px;
+        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      }
+
+      .page-subtitle {
+        font-size: 14px;
+        color: rgba(255, 255, 255, 0.95);
+        margin: 0;
+        font-weight: 400;
+      }
+    }
+
+    .header-right {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      position: relative;
+      z-index: 1;
+
+      :deep(.el-button) {
+        backdrop-filter: blur(12px);
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        color: #ffffff;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        font-weight: 500;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+        &:hover {
+          transform: translateY(-2px);
+          background: rgba(255, 255, 255, 0.25);
+          box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        &:active {
+          transform: translateY(0);
+        }
+      }
+    }
+  }
+
+  // 统计卡片
+  .stats-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: stretch;
+    padding: 20px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #f3f4f6 100%);
+    border: 1px solid #e8eef5;
+    border-radius: 20px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 16px;
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.04);
+
+    .stat-card {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      padding: 22px 24px;
+      background: #ffffff;
+      border-radius: 18px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+      transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+      flex: 1;
+      min-width: 160px;
+      border: 1px solid #e8eef5;
+      position: relative;
+      overflow: hidden;
+
+      &::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 5px;
+        transition: width 0.3s ease;
+      }
+
+      &:hover {
+        transform: translateY(-6px) scale(1.01);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+
+        &::before {
+          width: 6px;
+        }
+
+        .stat-icon {
+          transform: scale(1.1) rotate(5deg);
+        }
+      }
+
+      &:active {
+        transform: translateY(-3px) scale(1.005);
+      }
+
+      .stat-icon {
+        width: 56px;
+        height: 56px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        border-radius: 16px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+        .el-icon {
+          color: inherit;
+        }
+      }
+
+      .stat-content {
+        flex: 1;
+
+        .stat-value {
+          font-size: 28px;
+          font-weight: 700;
+          color: #1f2937;
+          line-height: 1.1;
+          margin-bottom: 4px;
+        }
+
+        .stat-label {
+          font-size: 13px;
+          color: #6b7280;
+          font-weight: 500;
+          letter-spacing: 0.3px;
+        }
+      }
+
+      &.total {
+        &::before {
+          background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+        }
+        .stat-icon {
+          background: linear-gradient(135deg, rgba(102, 126, 234, 0.12) 0%, rgba(118, 75, 162, 0.08) 100%);
+          color: #667eea;
+          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+        }
+        .stat-value {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+      }
+
+      &.unread {
+        &::before {
+          background: linear-gradient(180deg, #f56c6c 0%, #ff8787 100%);
+        }
+        .stat-icon {
+          background: linear-gradient(135deg, rgba(245, 108, 108, 0.12) 0%, rgba(255, 135, 135, 0.08) 100%);
+          color: #f56c6c;
+          box-shadow: 0 4px 12px rgba(245, 108, 108, 0.15);
+        }
+        .stat-value { color: #f56c6c; }
+      }
+
+      &.system {
+        &::before {
+          background: linear-gradient(180deg, #e6a23c 0%, #f0a858 100%);
+        }
+        .stat-icon {
+          background: linear-gradient(135deg, rgba(230, 162, 60, 0.12) 0%, rgba(240, 168, 88, 0.08) 100%);
+          color: #e6a23c;
+          box-shadow: 0 4px 12px rgba(230, 162, 60, 0.15);
+        }
+        .stat-value { color: #e6a23c; }
+      }
+
+      &.order {
+        &::before {
+          background: linear-gradient(180deg, #409eff 0%, #66b1ff 100%);
+        }
+        .stat-icon {
+          background: linear-gradient(135deg, rgba(64, 158, 255, 0.12) 0%, rgba(102, 177, 255, 0.08) 100%);
+          color: #409eff;
+          box-shadow: 0 4px 12px rgba(64, 158, 255, 0.15);
+        }
+        .stat-value { color: #409eff; }
+      }
+
+      &.comment {
+        &::before {
+          background: linear-gradient(180deg, #67c23a 0%, #7bcf58 100%);
+        }
+        .stat-icon {
+          background: linear-gradient(135deg, rgba(103, 194, 58, 0.12) 0%, rgba(123, 207, 88, 0.08) 100%);
+          color: #67c23a;
+          box-shadow: 0 4px 12px rgba(103, 194, 58, 0.15);
+        }
+        .stat-value { color: #67c23a; }
+      }
     }
   }
 
   .messages-content {
     .messages-list-container {
       .category-section {
-        margin-bottom: 24px;
         display: flex;
-        align-items: center;
+        flex-direction: column;
         gap: 12px;
+        padding: 16px 20px;
+        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+        border-radius: 12px;
+        margin-bottom: 16px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+        border: 1px solid #e8eef5;
 
-        .category-label {
-          font-weight: 500;
+        .filter-header {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+
+          .filter-icon {
+            font-size: 16px;
+            color: #667eea;
+          }
+
+          .filter-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #303133;
+          }
         }
 
-        .category-tag {
-          cursor: pointer;
+        .category-tags {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
 
-          &:hover {
-            opacity: 0.8;
+          .category-tag {
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            padding: 6px 12px;
+            font-size: 13px;
+            font-weight: 500;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            user-select: none;
+            position: relative;
+
+            .tag-icon {
+              font-size: 14px;
+            }
+
+            .tag-text {
+              font-size: 13px;
+            }
+
+            .tag-badge {
+              margin-left: 4px;
+            }
+
+            &:hover {
+              transform: translateY(-1px);
+              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+            }
+
+            &.category-tag-all {
+              background: #f0f2f5;
+              color: #606266;
+              border: 1px solid #dcdfe6;
+              &.active {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: #ffffff;
+                border-color: #667eea;
+                box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
+              }
+            }
+
+            &.category-tag-system {
+              background: #fff7e6;
+              color: #e6a23c;
+              border: 1px solid #ffd591;
+              &.active {
+                background: linear-gradient(135deg, #e6a23c 0%, #f0a858 100%);
+                color: #ffffff;
+              }
+            }
+
+            &.category-tag-order {
+              background: #e6f7ff;
+              color: #409eff;
+              border: 1px solid #91d5ff;
+              &.active {
+                background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
+                color: #ffffff;
+              }
+            }
+
+            &.category-tag-comment {
+              background: #f6ffed;
+              color: #67c23a;
+              border: 1px solid #b7eb8f;
+              &.active {
+                background: linear-gradient(135deg, #67c23a 0%, #7bcf58 100%);
+                color: #ffffff;
+              }
+            }
           }
         }
       }
@@ -306,35 +765,128 @@ const markAllAsRead = () => {
         .message-item {
           display: flex;
           align-items: flex-start;
-          padding: 16px;
-          border: 1px solid #e4e7ed;
-          border-radius: 4px;
+          padding: 18px 22px;
+          border: 2px solid #e8eef5;
+          border-radius: 14px;
           margin-bottom: 12px;
           background-color: #fff;
           cursor: pointer;
-          transition: box-shadow 0.3s;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+          position: relative;
+          overflow: hidden;
+
+          &::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: #e8eef5;
+            transition: all 0.3s ease;
+            border-radius: 14px 0 0 14px;
+          }
 
           &:hover {
-            box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+            box-shadow: 0 8px 28px rgba(0, 0, 0, 0.1);
+            border-color: #cbd5e1;
+            transform: translateY(-3px);
+
+            .message-icon {
+              transform: scale(1.08);
+            }
+
+            .message-title {
+              color: #667eea;
+            }
+          }
+
+          &:active {
+            transform: translateY(-1px);
           }
 
           &.unread-message {
-            border-left: 4px solid #409eff;
-            background-color: rgba(64, 158, 255, 0.05);
+            background: linear-gradient(to right, #fef2f2 0%, #ffffff 35%);
+            border-color: #fca5a5;
+
+            &::before {
+              background: linear-gradient(180deg, #f56c6c 0%, #ff8787 100%);
+              box-shadow: 0 0 12px rgba(245, 108, 108, 0.4);
+            }
+
+            .message-title {
+              color: #1f2937;
+              font-weight: 700;
+            }
+
+            .message-preview {
+              color: #4b5563;
+            }
           }
 
-          .message-icon {
-            font-size: 24px;
-            margin: 4px 16px 0 0;
+          .message-left {
+            position: relative;
+            margin-right: 18px;
+
+            .message-icon {
+              width: 48px;
+              height: 48px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              border-radius: 14px;
+              transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+              &.icon-system {
+                background: linear-gradient(135deg, rgba(230, 162, 60, 0.12) 0%, rgba(230, 162, 60, 0.06) 100%);
+                color: #e6a23c;
+                box-shadow: 0 4px 12px rgba(230, 162, 60, 0.12);
+              }
+
+              &.icon-order {
+                background: linear-gradient(135deg, rgba(64, 158, 255, 0.12) 0%, rgba(64, 158, 255, 0.06) 100%);
+                color: #409eff;
+                box-shadow: 0 4px 12px rgba(64, 158, 255, 0.12);
+              }
+
+              &.icon-comment {
+                background: linear-gradient(135deg, rgba(103, 194, 58, 0.12) 0%, rgba(103, 194, 58, 0.06) 100%);
+                color: #67c23a;
+                box-shadow: 0 4px 12px rgba(103, 194, 58, 0.12);
+              }
+            }
+
+            .message-indicator {
+              position: absolute;
+              top: -3px;
+              right: -3px;
+              width: 12px;
+              height: 12px;
+              background: linear-gradient(135deg, #f56c6c 0%, #ff8787 100%);
+              border: 2.5px solid #fff;
+              border-radius: 50%;
+              box-shadow: 0 2px 8px rgba(245, 108, 108, 0.4);
+              animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            }
           }
 
           .message-content {
             flex: 1;
 
             .message-title {
-              font-size: 14px;
-              font-weight: 500;
-              margin-bottom: 8px;
+              font-size: 15px;
+              font-weight: 600;
+              margin-bottom: 7px;
+              color: #1f2937;
+              transition: color 0.2s ease;
+            }
+
+            .message-preview {
+              font-size: 13px;
+              color: #6b7280;
+              margin-bottom: 10px;
+              line-height: 1.6;
             }
 
             .message-meta {
@@ -342,11 +894,7 @@ const markAllAsRead = () => {
               justify-content: space-between;
               align-items: center;
               font-size: 12px;
-              color: #909399;
-
-              .message-time {
-                flex: 1;
-              }
+              color: #9ca3af;
             }
           }
         }
@@ -363,6 +911,10 @@ const markAllAsRead = () => {
 
       .detail-header {
         margin-bottom: 20px;
+        padding: 20px;
+        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+        border-radius: 12px;
+        border: 1px solid #e8eef5;
 
         .detail-title {
           display: flex;
@@ -370,29 +922,57 @@ const markAllAsRead = () => {
           gap: 12px;
           margin-bottom: 15px;
 
+          .title-icon {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+
+            &.icon-system {
+              background: linear-gradient(135deg, rgba(230, 162, 60, 0.15) 0%, rgba(230, 162, 60, 0.08) 100%);
+              color: #e6a23c;
+            }
+
+            &.icon-order {
+              background: linear-gradient(135deg, rgba(64, 158, 255, 0.15) 0%, rgba(64, 158, 255, 0.08) 100%);
+              color: #409eff;
+            }
+
+            &.icon-comment {
+              background: linear-gradient(135deg, rgba(103, 194, 58, 0.15) 0%, rgba(103, 194, 58, 0.08) 100%);
+              color: #67c23a;
+            }
+          }
+
           h3 {
             font-size: 20px;
             margin: 0;
+            flex: 1;
           }
         }
 
         .detail-meta {
           display: flex;
           flex-direction: column;
-          gap: 10px;
+          gap: 8px;
           font-size: 14px;
 
-          .sender-info,
-          .time-info {
+          .meta-item {
             display: flex;
             align-items: center;
             gap: 8px;
-          }
 
-          .sender-label,
-          .time-label {
-            color: #909399;
-            font-weight: 500;
+            .meta-label {
+              color: #909399;
+              font-weight: 500;
+              min-width: 60px;
+            }
+
+            .meta-value {
+              color: #303133;
+            }
           }
         }
       }
@@ -401,15 +981,96 @@ const markAllAsRead = () => {
         font-size: 16px;
         line-height: 1.8;
         margin-bottom: 30px;
-        padding: 20px;
-        background-color: #f5f7fa;
-        border-radius: 4px;
+        padding: 24px;
+        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+        border-radius: 12px;
+        border: 1px solid #e8eef5;
+        color: #303133;
       }
 
       .detail-actions {
         display: flex;
         justify-content: flex-end;
-        gap: 10px;
+        gap: 12px;
+      }
+    }
+  }
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+// 响应式设计
+@media (max-width: 768px) {
+  .messages-management-container {
+    padding: 12px;
+
+    .messages-header {
+      flex-direction: column;
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    .stats-section {
+      gap: 10px;
+
+      .stat-card {
+        min-width: calc(50% - 5px);
+        padding: 16px;
+
+        .stat-value {
+          font-size: 20px !important;
+        }
+      }
+    }
+
+    .messages-content {
+      .messages-list-container {
+        .category-section {
+          padding: 12px;
+
+          .category-tags {
+            .category-tag {
+              padding: 4px 10px;
+              font-size: 12px;
+            }
+          }
+        }
+
+        .messages-list {
+          .message-item {
+            padding: 14px;
+
+            .message-left {
+              .message-icon {
+                width: 38px;
+                height: 38px;
+              }
+            }
+
+            .message-content {
+              .message-title {
+                font-size: 14px;
+              }
+
+              .message-preview {
+                font-size: 12px;
+              }
+            }
+          }
+        }
       }
     }
   }
