@@ -46,6 +46,15 @@ const sending = ref(false)
 // 当前用户ID
 const currentUserId = ref('')
 
+// 模拟数据开关
+const USE_MOCK_DATA = true
+
+// 会话列表宽度
+const conversationListWidth = ref(250)
+
+// 拖拽相关状态
+const isResizing = ref(false)
+
 // ==================== 计算属性 ====================
 
 // 会话类型
@@ -75,10 +84,209 @@ const filteredConversations = computed(() => {
   return sortConversationsByUnread(result)
 })
 
+// ==================== 模拟数据 ====================
+
+// 模拟会话列表
+const getMockConversations = () => {
+  const now = new Date()
+  return [
+    {
+      id: 'user001',
+      type: 'private',
+      name: '张三',
+      avatar: '👨',
+      lastMessage: '请问今天的套餐还有吗？',
+      time: new Date(now - 5 * 60000).toISOString().slice(0, 19).replace('T', ' '),
+      unreadCount: 2,
+      relatedOrder: true
+    },
+    {
+      id: 'user002',
+      type: 'private',
+      name: '李四',
+      avatar: '👩',
+      lastMessage: '好的，我马上下单',
+      time: new Date(now - 30 * 60000).toISOString().slice(0, 19).replace('T', ' '),
+      unreadCount: 0
+    },
+    {
+      id: 'user003',
+      type: 'private',
+      name: '王五',
+      avatar: '👴',
+      lastMessage: '什么时候能送到？',
+      time: new Date(now - 2 * 3600000).toISOString().slice(0, 19).replace('T', ' '),
+      unreadCount: 1,
+      relatedOrder: true
+    },
+    {
+      id: 'group001',
+      type: 'group',
+      name: '今日订单群',
+      avatar: '👥',
+      lastMessage: '【订单同步】张三：请问今天的套餐还有吗？',
+      time: new Date(now - 10 * 60000).toISOString().slice(0, 19).replace('T', ' '),
+      unreadCount: 5,
+      memberCount: 32
+    },
+    {
+      id: 'group002',
+      type: 'group',
+      name: 'VIP客户群',
+      avatar: '👥',
+      lastMessage: '李四：好的，我马上下单',
+      time: new Date(now - 1 * 3600000).toISOString().slice(0, 19).replace('T', ' '),
+      unreadCount: 0,
+      memberCount: 18
+    },
+    {
+      id: 'user004',
+      type: 'private',
+      name: '赵六',
+      avatar: '👵',
+      lastMessage: '谢谢，收到订单了',
+      time: new Date(now - 4 * 3600000).toISOString().slice(0, 19).replace('T', ' '),
+      unreadCount: 0
+    },
+    {
+      id: 'user005',
+      type: 'private',
+      name: '小明',
+      avatar: '👦',
+      lastMessage: '能不能加个辣？',
+      time: new Date(now - 1 * 86400000).toISOString().slice(0, 19).replace('T', ' '),
+      unreadCount: 3
+    }
+  ]
+}
+
+// 模拟聊天记录
+const getMockMessages = (conversationId) => {
+  const now = new Date()
+  const messagesMap = {
+    'user001': [
+      {
+        id: 1,
+        sender: 'customer',
+        content: '你好，在吗？',
+        time: new Date(now - 30 * 60000).toISOString().slice(0, 19).replace('T', ' '),
+        isRead: true
+      },
+      {
+        id: 2,
+        sender: 'merchant',
+        content: '在的，请问有什么需要帮助的？',
+        time: new Date(now - 25 * 60000).toISOString().slice(0, 19).replace('T', ' '),
+        isRead: true
+      },
+      {
+        id: 3,
+        sender: 'customer',
+        content: '请问今天的套餐还有吗？',
+        time: new Date(now - 5 * 60000).toISOString().slice(0, 19).replace('T', ' '),
+        isRead: false
+      }
+    ],
+    'user002': [
+      {
+        id: 1,
+        sender: 'merchant',
+        content: '您好，感谢关注我们的店铺！',
+        time: new Date(now - 1 * 3600000).toISOString().slice(0, 19).replace('T', ' '),
+        isRead: true
+      },
+      {
+        id: 2,
+        sender: 'customer',
+        content: '好的，我马上下单',
+        time: new Date(now - 30 * 60000).toISOString().slice(0, 19).replace('T', ' '),
+        isRead: true
+      }
+    ],
+    'user003': [
+      {
+        id: 1,
+        sender: 'customer',
+        content: '我下单了',
+        time: new Date(now - 3 * 3600000).toISOString().slice(0, 19).replace('T', ' '),
+        isRead: true
+      },
+      {
+        id: 2,
+        sender: 'merchant',
+        content: '好的，收到您的订单了',
+        time: new Date(now - 2.5 * 3600000).toISOString().slice(0, 19).replace('T', ' '),
+        isRead: true
+      },
+      {
+        id: 3,
+        sender: 'customer',
+        content: '什么时候能送到？',
+        time: new Date(now - 2 * 3600000).toISOString().slice(0, 19).replace('T', ' '),
+        isRead: false
+      }
+    ],
+    'group001': [
+      {
+        id: 1,
+        sender: '张三',
+        content: '大家好，今天有什么推荐？',
+        time: new Date(now - 1 * 3600000).toISOString().slice(0, 19).replace('T', ' '),
+        isRead: true
+      },
+      {
+        id: 2,
+        sender: '我',
+        content: '今天有红烧肉套餐和鱼香肉丝套餐',
+        time: new Date(now - 55 * 60000).toISOString().slice(0, 19).replace('T', ' '),
+        isRead: true
+      },
+      {
+        id: 3,
+        sender: '李四',
+        content: '我要一份红烧肉套餐',
+        time: new Date(now - 50 * 60000).toISOString().slice(0, 19).replace('T', ' '),
+        isRead: true
+      },
+      {
+        id: 4,
+        sender: '我',
+        content: '收到，马上为您准备',
+        time: new Date(now - 45 * 60000).toISOString().slice(0, 19).replace('T', ' '),
+        isRead: true
+      }
+    ],
+    'group002': [
+      {
+        id: 1,
+        sender: '王总',
+        content: '明天的团餐准备好了吗？',
+        time: new Date(now - 2 * 3600000).toISOString().slice(0, 19).replace('T', ' '),
+        isRead: true
+      },
+      {
+        id: 2,
+        sender: '我',
+        content: '正在准备中，明天早上准时送到',
+        time: new Date(now - 1.5 * 3600000).toISOString().slice(0, 19).replace('T', ' '),
+        isRead: true
+      }
+    ]
+  }
+  return messagesMap[conversationId] || []
+}
+
 // ==================== 初始化 ====================
 
 // 页面加载
 onMounted(async () => {
+  // 使用模拟数据时跳过用户ID验证
+  if (USE_MOCK_DATA) {
+    // 加载模拟会话列表
+    await loadSessions()
+    return
+  }
+
   // 获取当前用户ID
   currentUserId.value = getCurrentUserId()
 
@@ -113,7 +321,16 @@ onMounted(async () => {
 // 加载会话列表
 const loadSessions = async () => {
   try {
-    const sessions = await getChatSessions(currentUserId.value)
+    let sessions
+
+    if (USE_MOCK_DATA) {
+      // 使用模拟数据
+      sessions = getMockConversations()
+      currentUserId.value = 'merchant001'
+    } else {
+      // 从 API 获取数据
+      sessions = await getChatSessions(currentUserId.value)
+    }
 
     if (sessions.length > 0) {
       conversations.value = sessions
@@ -132,14 +349,21 @@ const loadSessions = async () => {
 // 加载聊天记录
 const loadMessages = async (conversation) => {
   try {
-    // 构建会话ID
-    const sessionId = buildSessionId(
-      currentUserId.value,
-      conversation.id,
-      conversation.type
-    )
+    let messages
 
-    const messages = await getChatMessages(sessionId, currentUserId.value)
+    if (USE_MOCK_DATA) {
+      // 使用模拟数据
+      messages = getMockMessages(conversation.id)
+    } else {
+      // 从 API 获取数据
+      const sessionId = buildSessionId(
+        currentUserId.value,
+        conversation.id,
+        conversation.type
+      )
+      messages = await getChatMessages(sessionId, currentUserId.value)
+    }
+
     chatMessages.value = messages
   } catch (error) {
     console.error('加载聊天记录失败:', error)
@@ -156,15 +380,19 @@ const selectConversation = async (conversation) => {
   // 标记已读
   if (conversation.unreadCount > 0) {
     conversation.unreadCount = 0
-    ElMessage.success('消息已标记为已读')
 
-    // 调用API标记已读
-    const sessionId = buildSessionId(
-      currentUserId.value,
-      conversation.id,
-      conversation.type
-    )
-    await markMessagesAsRead(sessionId)
+    // 仅在非模拟数据模式下显示提示和调用API
+    if (!USE_MOCK_DATA) {
+      ElMessage.success('消息已标记为已读')
+
+      // 调用API标记已读
+      const sessionId = buildSessionId(
+        currentUserId.value,
+        conversation.id,
+        conversation.type
+      )
+      await markMessagesAsRead(sessionId)
+    }
   }
 
   // 加载聊天记录
@@ -275,6 +503,42 @@ const handleUploadFile = (file) => {
 const handleUploadImage = (file) => {
   ElMessage.info('图片上传功能开发中...')
 }
+
+// ==================== 拖拽调整宽度 ====================
+
+// 开始拖拽
+const startResize = (e) => {
+  isResizing.value = true
+  document.addEventListener('mousemove', onResize)
+  document.addEventListener('mouseup', stopResize)
+  e.preventDefault()
+}
+
+// 拖拽中
+const onResize = (e) => {
+  if (!isResizing.value) return
+
+  const container = document.querySelector('.chat-content')
+  if (!container) return
+
+  const containerRect = container.getBoundingClientRect()
+  const newWidth = e.clientX - containerRect.left
+
+  // 限制最小和最大宽度
+  const minWidth = 220
+  const maxWidth = 600
+
+  if (newWidth >= minWidth && newWidth <= maxWidth) {
+    conversationListWidth.value = newWidth
+  }
+}
+
+// 停止拖拽
+const stopResize = () => {
+  isResizing.value = false
+  document.removeEventListener('mousemove', onResize)
+  document.removeEventListener('mouseup', stopResize)
+}
 </script>
 
 <template>
@@ -301,13 +565,27 @@ const handleUploadImage = (file) => {
     <!-- 聊天内容 -->
     <div class="chat-content">
       <!-- 会话列表 -->
-      <ConversationList
-        :conversations="filteredConversations"
-        :selected-conversation="selectedConversation"
-        :search-keyword="searchKeyword"
-        :show-unread-only="showUnreadOnly"
-        @select="selectConversation"
-      />
+      <div
+        class="conversation-list-container"
+        :style="{ width: conversationListWidth + 'px' }"
+      >
+        <ConversationList
+          :conversations="filteredConversations"
+          :selected-conversation="selectedConversation"
+          :search-keyword="searchKeyword"
+          :show-unread-only="showUnreadOnly"
+          @select="selectConversation"
+        />
+      </div>
+
+      <!-- 拖拽条 -->
+      <div
+        class="resize-handle"
+        @mousedown="startResize"
+        :class="{ 'is-resizing': isResizing }"
+      >
+        <div class="resize-handle-bar"></div>
+      </div>
 
       <!-- 聊天区域 -->
       <div v-if="selectedConversation" class="chat-area">
@@ -392,13 +670,64 @@ const handleUploadImage = (file) => {
 
   .chat-content {
     display: flex;
-    gap: 20px;
+    gap: 0;
     height: calc(100vh - 180px);
+
+    .conversation-list-container {
+      flex-shrink: 0;
+      transition: width 0.1s ease;
+      border: 1px solid #e8eef5;
+      border-right: none;
+      border-radius: 16px 0 0 16px;
+      overflow: hidden;
+      background: #ffffff;
+      height: 100%;
+    }
+
+    .resize-handle {
+      width: 6px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: col-resize;
+      background: #e8eef5;
+      transition: all 0.2s ease;
+      position: relative;
+      user-select: none;
+
+      &:hover {
+        background: #667eea;
+        width: 8px;
+
+        .resize-handle-bar {
+          background: #ffffff;
+        }
+      }
+
+      &.is-resizing {
+        background: #667eea;
+        width: 8px;
+
+        .resize-handle-bar {
+          background: #ffffff;
+        }
+      }
+
+      .resize-handle-bar {
+        width: 3px;
+        height: 40px;
+        background: #cbd5e1;
+        border-radius: 2px;
+        transition: all 0.2s ease;
+      }
+    }
 
     .chat-area {
       flex: 1;
       border: 1px solid #e8eef5;
-      border-radius: 16px;
+      border-left: none;
+      border-radius: 0 16px 16px 0;
       display: flex;
       flex-direction: column;
       background: #ffffff;

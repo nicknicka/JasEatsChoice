@@ -67,6 +67,49 @@ const getAvatarContent = (avatar) => {
   }
   return { type: 'emoji', content: avatar }
 }
+
+// 格式化时间显示
+const formatTime = (timeStr) => {
+  if (!timeStr) return ''
+
+  const now = new Date()
+  const time = new Date(timeStr)
+  const diff = now - time
+
+  // 小于1分钟 - 刚刚
+  if (diff < 60000) {
+    return '刚刚'
+  }
+
+  // 小于1小时 - X分钟前
+  if (diff < 3600000) {
+    return `${Math.floor(diff / 60000)}分钟前`
+  }
+
+  // 今天 - X小时前
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  if (time >= today) {
+    return `${Math.floor(diff / 3600000)}小时前`
+  }
+
+  // 昨天
+  const yesterday = new Date(today)
+  yesterday.setDate(yesterday.getDate() - 1)
+  if (time >= yesterday) {
+    return '昨天'
+  }
+
+  // 前天
+  const dayBeforeYesterday = new Date(today)
+  dayBeforeYesterday.setDate(dayBeforeYesterday.getDate() - 2)
+  if (time >= dayBeforeYesterday) {
+    return '前天'
+  }
+
+  // 更早 - 显示日期（月/日）
+  return `${time.getMonth() + 1}/${time.getDate()}`
+}
 </script>
 
 <template>
@@ -118,7 +161,7 @@ const getAvatarContent = (avatar) => {
         <div class="conversation-info">
           <div class="name-time">
             <span class="name">{{ conversation.name }}</span>
-            <span class="time">{{ conversation.time }}</span>
+            <span class="time">{{ formatTime(conversation.time) }}</span>
           </div>
           <div class="last-message">{{ conversation.lastMessage }}</div>
           <div v-if="conversation.type === 'group' && conversation.memberCount" class="member-count">
@@ -141,10 +184,7 @@ const getAvatarContent = (avatar) => {
   display: flex;
   flex-direction: column;
   background: #ffffff;
-  border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-  border: 1px solid #e8eef5;
 
   .list-header {
     padding: 18px 20px;
@@ -264,6 +304,7 @@ const getAvatarContent = (avatar) => {
           justify-content: space-between;
           align-items: center;
           margin-bottom: 5px;
+          gap: 8px;
 
           .name {
             font-weight: 600;
@@ -272,6 +313,8 @@ const getAvatarContent = (avatar) => {
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+            flex: 1;
+            min-width: 0;
           }
 
           .time {
@@ -279,7 +322,10 @@ const getAvatarContent = (avatar) => {
             color: #9ca3af;
             font-weight: 500;
             flex-shrink: 0;
-            margin-left: 8px;
+            max-width: 60px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
           }
         }
 

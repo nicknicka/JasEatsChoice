@@ -144,17 +144,17 @@ defineExpose({
         margin-left: auto;
 
         .message-content {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: #ffffff;
-          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+          background: #dbeafe;
+          border: 1px solid #93c5fd;
+          color: #1e3a8a;
+          box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
 
           .message-text {
             font-weight: 500;
           }
 
           .message-time {
-            opacity: 0.85;
-            color: #ffffff;
+            color: #60a5fa;
           }
         }
       }
