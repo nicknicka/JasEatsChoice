@@ -230,7 +230,7 @@ const formatTime = (timeStr) => {
 
       &.active {
         background: linear-gradient(135deg, #ecf5ff 0%, #e3f2fd 100%);
-        border-left: 3px solid #667eea;
+        border-left: 3px solid #3b82f6;
         padding-left: 13px;
       }
 

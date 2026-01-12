@@ -47,7 +47,7 @@ const sending = ref(false)
 const currentUserId = ref('')
 
 // 模拟数据开关
-const USE_MOCK_DATA = true
+const USE_MOCK_DATA = false
 
 // 会话列表宽度
 const conversationListWidth = ref(250)
@@ -697,7 +697,7 @@ const stopResize = () => {
       user-select: none;
 
       &:hover {
-        background: #667eea;
+        background: #3b82f6;
         width: 8px;
 
         .resize-handle-bar {
@@ -706,7 +706,7 @@ const stopResize = () => {
       }
 
       &.is-resizing {
-        background: #667eea;
+        background: #3b82f6;
         width: 8px;
 
         .resize-handle-bar {

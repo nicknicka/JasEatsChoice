@@ -163,9 +163,14 @@ defineExpose({
         align-self: flex-start;
 
         .message-content {
-          background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
-          border: 1px solid #e5e7eb;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+          background: #f0fdf4;
+          border: 1px solid #86efac;
+          color: #166534;
+          box-shadow: 0 2px 8px rgba(34, 197, 94, 0.15);
+
+          .message-time {
+            color: #4ade80;
+          }
         }
       }
 

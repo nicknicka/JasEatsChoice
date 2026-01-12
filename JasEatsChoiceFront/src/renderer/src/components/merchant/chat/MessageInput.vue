@@ -157,8 +157,8 @@ defineExpose({
         resize: none;
 
         &:focus {
-          border-color: #667eea;
-          box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+          border-color: #3b82f6;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
 
         &:disabled {
@@ -173,15 +173,15 @@ defineExpose({
       border-radius: 10px;
       font-weight: 600;
       padding: 10px 24px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
       border: none;
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
       transition: all 0.2s ease;
       height: auto;
 
       &:hover:not(:disabled) {
         transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+        box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
       }
 
       &:active:not(:disabled) {

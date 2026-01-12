@@ -422,9 +422,9 @@ const markAllAsRead = () => {
     justify-content: space-between;
     align-items: center;
     padding: 24px 28px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
     border-radius: 20px;
-    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.25);
+    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.25);
     margin-bottom: 24px;
     position: relative;
     overflow: hidden;
@@ -586,15 +586,15 @@ const markAllAsRead = () => {
 
       &.total {
         &::before {
-          background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+          background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
         }
         .stat-icon {
-          background: linear-gradient(135deg, rgba(102, 126, 234, 0.12) 0%, rgba(118, 75, 162, 0.08) 100%);
-          color: #667eea;
-          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+          background: linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(37, 99, 235, 0.08) 100%);
+          color: #3b82f6;
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
         }
         .stat-value {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           background-clip: text;
@@ -671,7 +671,7 @@ const markAllAsRead = () => {
 
           .filter-icon {
             font-size: 16px;
-            color: #667eea;
+            color: #3b82f6;
           }
 
           .filter-label {
@@ -721,10 +721,10 @@ const markAllAsRead = () => {
               color: #606266;
               border: 1px solid #dcdfe6;
               &.active {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
                 color: #ffffff;
-                border-color: #667eea;
-                box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
+                border-color: #3b82f6;
+                box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
               }
             }
 
@@ -798,7 +798,7 @@ const markAllAsRead = () => {
             }
 
             .message-title {
-              color: #667eea;
+              color: #3b82f6;
             }
           }
 
