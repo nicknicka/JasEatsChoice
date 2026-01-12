@@ -1,7 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue'
-import { ElMessage } from 'element-plus'
-import { ChatDotRound, Paperclip, Mic } from '@element-plus/icons-vue'
+import { ChatDotRound } from '@element-plus/icons-vue'
 
 const props = defineProps({
   disabled: {
@@ -29,7 +28,6 @@ const props = defineProps({
 const emit = defineEmits(['send', 'update:syncToGroup', 'upload-file', 'upload-image'])
 
 const messageContent = ref('')
-const showUploadMenu = ref(false)
 
 // 是否可以发送
 const canSend = computed(() => {
@@ -56,31 +54,15 @@ const sendMessage = () => {
   messageContent.value = ''
 }
 
-// 上传文件
-const handleFileUpload = (file) => {
-  emit('upload-file', file)
-  showUploadMenu.value = false
-}
-
-// 上传图片
-const handleImageUpload = (file) => {
-  if (!file.type.startsWith('image/')) {
-    ElMessage.error('请选择图片文件')
-    return
-  }
-  emit('upload-image', file)
-  showUploadMenu.value = false
+// 聚焦输入框
+const inputRef = ref(null)
+const focus = () => {
+  inputRef.value?.focus()
 }
 
 // 清空输入
 const clearInput = () => {
   messageContent.value = ''
-}
-
-// 聚焦输入框
-const inputRef = ref(null)
-const focus = () => {
-  inputRef.value?.focus()
 }
 
 // 暴露方法给父组件
@@ -94,46 +76,13 @@ defineExpose({
   <div class="message-input-wrapper">
     <!-- 同步至群聊开关 -->
     <div v-if="showSyncToggle" class="sync-toggle">
-      <el-checkbox v-model="syncToGroup" @change="emit('update:syncToGroup', $event)">
+      <el-checkbox :model-value="syncToGroup" @change="emit('update:syncToGroup', $event)">
         <span class="sync-label">同步至群聊</span>
       </el-checkbox>
     </div>
 
     <!-- 工具栏和输入框 -->
     <div class="input-container">
-      <div class="toolbar">
-        <el-dropdown trigger="click" v-model="showUploadMenu">
-          <el-button circle size="small" :icon="Paperclip" />
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item @click="() => $refs.fileInput?.click()">
-                <el-icon><Paperclip /></el-icon>
-                <span>上传文件</span>
-              </el-dropdown-item>
-              <el-dropdown-item @click="() => $refs.imageInput?.click()">
-                <el-icon><Picture /></el-icon>
-                <span>上传图片</span>
-              </el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
-
-        <!-- 隐藏的文件输入 -->
-        <input
-          ref="fileInput"
-          type="file"
-          style="display: none"
-          @change="(e) => handleFileUpload(e.target.files[0])"
-        />
-        <input
-          ref="imageInput"
-          type="file"
-          accept="image/*"
-          style="display: none"
-          @change="(e) => handleImageUpload(e.target.files[0])"
-        />
-      </div>
-
       <el-input
         ref="inputRef"
         v-model="messageContent"
@@ -193,24 +142,6 @@ defineExpose({
     display: flex;
     gap: 12px;
     align-items: flex-end;
-
-    .toolbar {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      padding-bottom: 2px;
-
-      :deep(.el-button) {
-        transition: all 0.2s ease;
-
-        &:hover {
-          transform: scale(1.1);
-          background-color: #667eea;
-          border-color: #667eea;
-          color: #ffffff;
-        }
-      }
-    }
 
     .message-textarea {
       flex: 1;
@@ -273,27 +204,6 @@ defineExpose({
       color: #9ca3af;
       font-weight: 500;
     }
-  }
-}
-
-// 下拉菜单样式
-:deep(.el-dropdown-menu__item) {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-
-  .el-icon {
-    font-size: 16px;
-  }
-
-  span {
-    font-size: 13px;
-  }
-
-  &:hover {
-    background-color: #f0f9ff;
-    color: #0369a1;
   }
 }
 </style>

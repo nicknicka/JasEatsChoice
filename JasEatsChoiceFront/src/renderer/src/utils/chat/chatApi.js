@@ -4,13 +4,14 @@
 import api, { decodeJwt } from '../api'
 import { ElMessage } from 'element-plus'
 import router from '../../router'
+import { useAuthStore } from '../../store/authStore'
 
 /**
  * 获取当前用户ID
  * @returns {string|number} 用户ID
  */
 export const getCurrentUserId = () => {
-  const authStore = require('../../store/authStore').useAuthStore()
+  const authStore = useAuthStore()
   const token = authStore.token
 
   if (token) {
@@ -32,7 +33,7 @@ export const handleAuthError = (error) => {
     ElMessage.error('登录已过期，请重新登录')
 
     // 清除认证信息
-    const authStore = require('../../store/authStore').useAuthStore()
+    const authStore = useAuthStore()
     authStore.clearAuth()
 
     // 跳转到登录页
