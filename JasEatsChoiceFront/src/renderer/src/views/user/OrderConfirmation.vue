@@ -1,384 +1,236 @@
 <template>
   <div class="order-confirmation-container">
-    <div class="main-content">
-      <div class="page-header">
+    <!-- 顶部导航 -->
+    <div class="page-header">
+      <div class="header-content">
         <common-back-button type="text" size="small" />
         <h2 class="page-title">
           <template v-if="fromChat">
-            <span class="chat-indicator">{{ fromSingleChat ? '👤 ' : '👥 ' }}</span>
-            来自{{ fromSingleChat ? '单聊' : '群聊' }}的订单确认
+            <el-tag :type="fromSingleChat ? 'primary' : 'success'" size="large" class="chat-tag">
+              {{ fromSingleChat ? '单聊' : '群聊' }}
+            </el-tag>
+            订单确认
           </template>
           <template v-else> 订单确认 </template>
         </h2>
       </div>
+    </div>
 
-      <el-card class="order-card">
-        <template #header>
-          <div class="card-header">
-            <span class="card-title">订单信息</span>
-          </div>
-        </template>
-
-        <!-- 订单概览 -->
-        <div class="order-section order-overview">
-          <div class="section-title">📋 订单概览</div>
-          <div class="overview-info">
-            <div class="overview-item">
-              <span class="info-label">订单号：</span>
-              <span class="info-value">{{ orderInfo.orderId }}</span>
+    <div class="main-content">
+      <!-- 左侧主要内容区 -->
+      <div class="content-left">
+        <!-- 商家信息卡片 -->
+        <el-card class="info-card merchant-card" shadow="hover">
+          <div class="merchant-info">
+            <div class="merchant-avatar">
+              <el-icon :size="40"><Shop /></el-icon>
             </div>
-            <div class="overview-item">
-              <span class="info-label">{{ isGroupOrder ? '群名称' : '用户名' }}：</span>
-              <span class="info-value">{{
+            <div class="merchant-details">
+              <div class="merchant-name">{{ merchantInfo.name }}</div>
+              <div class="merchant-meta">
+                <span class="rating">{{ merchantInfo.rating }} 分</span>
+                <span class="separator">|</span>
+                <span class="delivery-time">{{ merchantInfo.deliveryTime }}</span>
+                <span class="separator">|</span>
+                <span class="delivery-fee">配送 ¥{{ merchantInfo.deliveryFee }}</span>
+              </div>
+            </div>
+          </div>
+        </el-card>
+
+        <!-- 订单概览卡片 -->
+        <el-card class="info-card" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span class="card-title">订单概览</span>
+              <el-tag type="info" size="small">{{ orderInfo.orderId }}</el-tag>
+            </div>
+          </template>
+
+          <div class="order-summary">
+            <div class="summary-row">
+              <span class="label">{{ isGroupOrder ? '群聊名称' : '下单用户' }}</span>
+              <span class="value">{{
                 isGroupOrder ? orderInfo.groupName : orderInfo.userName || '未知用户'
               }}</span>
             </div>
-            <div class="overview-item paid-amount">
-              <span class="info-label">已支付金额：</span>
-              <span class="info-value">{{ orderInfo.totalPaid.toFixed(2) }}元</span>
-              <span class="payee-info" v-if="orderInfo.paidItems.length > 0"
-                >({{ orderInfo.paidItems[0].payee }}·个人支付)</span
-              >
-            </div>
-            <div class="overview-item unpaid-amount">
-              <span class="info-label">未支付金额：</span>
-              <span class="info-value">{{ orderInfo.totalUnpaid.toFixed(2) }}元</span>
-              <span class="payment-note">(仅需支付未支付部分)</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- 已支付订单 -->
-        <div class="order-section paid-orders">
-          <div class="section-title">✅ 已支付订单（已锁定不可修改）</div>
-          <div class="order-items">
-            <div class="order-item" v-for="item in orderInfo.paidItems" :key="item.id">
-              <div class="item-info">
-                <div class="item-name">📌 {{ item.name }}</div>
-                <div class="item-details">
-                  <span class="item-quantity">×{{ item.quantity }}</span>
-                  <span class="item-price">→ {{ item.price.toFixed(2) }}元/份</span>
-                  <span class="item-total"
-                    >→
-                    {{
-                      (item.totalPrice || item.total || item.price * item.quantity).toFixed(2)
-                    }}元</span
-                  >
-                </div>
-
-                <!-- 食材组成 -->
-                <div
-                  class="item-ingredients"
-                  v-if="item.requiredIngredients || item.selectedOptionalIngredients"
-                >
-                  <div
-                    v-if="item.requiredIngredients && item.requiredIngredients.length > 0"
-                    class="ingredient-group"
-                  >
-                    <span class="ingredient-label">必选食材:</span>
-                    <div class="ingredient-list">
-                      <span
-                        class="ingredient-item"
-                        v-for="ingredient in item.requiredIngredients"
-                        :key="ingredient"
-                        >{{ ingredient }}</span
-                      >
-                    </div>
-                  </div>
-                  <div
-                    v-if="
-                      item.selectedOptionalIngredients &&
-                      item.selectedOptionalIngredients.length > 0
-                    "
-                    class="ingredient-group"
-                  >
-                    <span class="ingredient-label">可选食材:</span>
-                    <div class="ingredient-list">
-                      <span
-                        class="ingredient-item"
-                        v-for="ingredient in item.selectedOptionalIngredients"
-                        :key="ingredient.id || ingredient"
-                        >{{ ingredient.name || ingredient }}</span
-                      >
-                    </div>
-                  </div>
-                </div>
-
-                <!-- 菜品备注 -->
-                <div class="item-note" v-if="item.note">
-                  <span class="note-label">备注:</span>
-                  <span class="note-content">{{ item.note }}</span>
-                </div>
+            <div class="summary-row amount-row">
+              <div class="amount-item">
+                <div class="amount-label">已支付</div>
+                <div class="amount-value paid">¥{{ orderInfo.totalPaid.toFixed(2) }}</div>
               </div>
-              <div class="payment-info">
-                <div class="payee">👤 支付人：{{ item.payee }}</div>
-                <div class="payment-method">💳 支付方式：{{ item.paymentMethod }}</div>
-                <div class="payment-status">✅ 已完成</div>
+              <div class="amount-divider"></div>
+              <div class="amount-item">
+                <div class="amount-label">待支付</div>
+                <div class="amount-value unpaid">¥{{ orderInfo.totalUnpaid.toFixed(2) }}</div>
               </div>
             </div>
           </div>
-        </div>
+        </el-card>
 
-        <!-- 未支付订单 -->
-        <div class="order-section unpaid-orders">
-          <div class="section-title">⏳ 未支付订单（可支付/修改）</div>
-          <div class="order-items">
-            <div class="order-item" v-for="item in orderInfo.unpaidItems" :key="item.id">
-              <div class="item-info">
-                <div class="item-name">🔥 {{ item.name }}</div>
-                <div class="item-details">
-                  <span class="item-quantity">×{{ item.quantity }}</span>
-                  <span class="item-price">→ {{ item.price.toFixed(2) }}元/份</span>
-                  <span class="item-total"
-                    >→ {{ (item.totalPrice || item.price * item.quantity).toFixed(2) }}元</span
-                  >
-                </div>
-
-                <!-- 食材组成 -->
-                <div
-                  class="item-ingredients"
-                  v-if="item.requiredIngredients || item.selectedOptionalIngredients"
-                >
-                  <div
-                    v-if="item.requiredIngredients && item.requiredIngredients.length > 0"
-                    class="ingredient-group"
-                  >
-                    <span class="ingredient-label">必选食材:</span>
-                    <div class="ingredient-list">
-                      <span
-                        class="ingredient-item"
-                        v-for="ingredient in item.requiredIngredients"
-                        :key="ingredient"
-                        >{{ ingredient }}</span
-                      >
-                    </div>
-                  </div>
-                  <div
-                    v-if="
-                      item.selectedOptionalIngredients &&
-                      item.selectedOptionalIngredients.length > 0
-                    "
-                    class="ingredient-group"
-                  >
-                    <span class="ingredient-label">可选食材:</span>
-                    <div class="ingredient-list">
-                      <span
-                        class="ingredient-item"
-                        v-for="ingredient in item.selectedOptionalIngredients"
-                        :key="ingredient.id || ingredient"
-                        >{{ ingredient.name || ingredient }}</span
-                      >
-                    </div>
-                  </div>
-                </div>
-
-                <!-- 菜品备注 -->
-                <div class="item-note" v-if="item.note">
-                  <span class="note-label">备注:</span>
-                  <span class="note-content">{{ item.note }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="unpaid-total">
-            <div class="price-breakdown">
-              <span class="total-label">💰 未支付总价：</span>
-              <span class="total-value">{{ orderInfo.totalUnpaid.toFixed(2) }}元</span>
-            </div>
-
-            <!-- 折叠价格组成详情 -->
-            <el-collapse-transition>
-              <div v-show="isPriceDetailsOpen" class="price-details-container">
-                <div class="price-details">
-                  <div
-                    class="detail-item"
-                    v-for="(item, index) in orderInfo.unpaidItems"
-                    :key="index"
-                  >
-                    <span class="item-name">{{ item.name }} ×{{ item.quantity }}</span>
-                    <span class="item-amount"
-                      >¥{{ (item.totalPrice || item.price * item.quantity).toFixed(2) }}</span
-                    >
-                  </div>
-
-                  <!-- 优惠信息 -->
-                  <div
-                    v-if="
-                      orderInfo.originalTotal && orderInfo.originalTotal > orderInfo.totalUnpaid
-                    "
-                    class="detail-item discount-item"
-                  >
-                    <span class="item-name">优惠:</span>
-                    <span class="item-amount discount-amount"
-                      >-¥{{ (orderInfo.originalTotal - orderInfo.totalUnpaid).toFixed(2) }}</span
-                    >
-                  </div>
-                </div>
-              </div>
-            </el-collapse-transition>
-
-            <!-- 折叠按钮 -->
-            <div class="price-details-toggle">
-              <el-button type="text" size="small" @click="isPriceDetailsOpen = !isPriceDetailsOpen">
-                {{ isPriceDetailsOpen ? '▲' : '▶' }}
-                {{ isPriceDetailsOpen ? '收起详情' : '展开详情' }}
+        <!-- 订单商品卡片 -->
+        <el-card class="info-card" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span class="card-title">订单商品</span>
+              <el-button type="text" size="small" @click="cartVisible = true">
+                <el-icon><Edit /></el-icon>
+                编辑订单
               </el-button>
             </div>
-          </div>
-        </div>
+          </template>
 
-        <!-- 支付规则说明 -->
-        <div class="order-section rules">
-          <div class="section-title">💡 支付规则说明</div>
-          <div class="rule-item">
-            <span class="rule-icon">✅ </span>
-            <span class="rule-text">已支付订单：已完成支付，不可修改或取消</span>
+          <!-- 已支付订单 -->
+          <div v-if="orderInfo.paidItems.length > 0" class="order-section">
+            <div class="section-header">
+              <el-icon color="#67c23a"><CircleCheck /></el-icon>
+              <span class="section-title">已支付商品</span>
+              <el-tag type="success" size="small" effect="plain">不可修改</el-tag>
+            </div>
+            <order-item-list :items="orderInfo.paidItems" :show-payment-info="true" />
           </div>
-          <div class="rule-item">
-            <span class="rule-icon">⏳ </span>
-            <span class="rule-text">未支付订单：仅需支付此部分金额，支持修改菜品和支付方式</span>
-          </div>
-        </div>
 
-        <!-- 支付方式 -->
-        <div class="order-section payment-methods-section">
-          <div class="section-title">🎯 未支付订单支付方式</div>
-          <div class="payment-options">
+          <!-- 未支付订单 -->
+          <div class="order-section" :class="{ 'mt-20': orderInfo.paidItems.length > 0 }">
+            <div class="section-header">
+              <el-icon color="#e6a23c"><Clock /></el-icon>
+              <span class="section-title">待支付商品</span>
+              <el-tag type="warning" size="small" effect="plain">可编辑</el-tag>
+            </div>
+            <order-item-list :items="orderInfo.unpaidItems" :show-payment-info="false" />
+          </div>
+        </el-card>
+
+        <!-- 支付方式卡片 -->
+        <el-card class="info-card" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span class="card-title">支付方式</span>
+            </div>
+          </template>
+
+          <div class="payment-methods">
             <div
-              class="payment-option"
               v-for="option in paymentMethods"
               :key="option.id"
+              class="payment-method-item"
               :class="{ active: selectedPaymentMethod.id === option.id }"
               @click="selectedPaymentMethod = option"
             >
-              <div class="option-icon">{{ option.icon }}</div>
-              <div class="option-name">{{ option.name }}</div>
-              <el-radio
-                v-model="selectedPaymentMethod.id"
-                :label="option.id"
-                class="option-radio"
-              ></el-radio>
+              <div class="method-icon">{{ option.icon }}</div>
+              <div class="method-info">
+                <div class="method-name">{{ option.name }}</div>
+                <div class="method-desc" v-if="option.desc">{{ option.desc }}</div>
+              </div>
+              <el-radio v-model="selectedPaymentMethod.id" :label="option.id"></el-radio>
             </div>
           </div>
-        </div>
-
-        <!-- 可用优惠 -->
-        <div class="order-section discounts">
-          <div class="section-title">📥 可用优惠</div>
-          <div class="discount-item" v-for="discount in discounts" :key="discount.id">
-            <div class="discount-info">
-              <span class="discount-icon">🎁 </span>
-              <span class="discount-text">{{ discount.name }}</span>
-            </div>
-            <div v-if="!discount.used">
-              <el-button type="text" class="use-discount" @click="useDiscount">立即使用</el-button>
-            </div>
-            <div v-else>
-              <span class="discount-used-text">已使用</span>
-              <el-button type="text" class="cancel-discount" @click="cancelDiscount"
-                >取消</el-button
-              >
-            </div>
-          </div>
-        </div>
-
-        <!-- 支付渠道 -->
-        <div class="order-section payment-channels">
-          <div class="section-title">📱 支付渠道</div>
-          <div class="channel-item">
-            <div class="channel-left">
-              <span class="channel-icon">💳 </span>
-              <span class="channel-text">平台币支付</span>
-            </div>
-            <span class="channel-balance">可用余额：{{ platformBalance.toFixed(2) }}元</span>
-          </div>
-        </div>
-      </el-card>
-    </div>
-
-    <!-- 可拖动悬浮购物车 - 订单确认页面隐藏该按钮 -->
-    <div
-      ref="cartBallRef"
-      class="draggable-cart-ball"
-      @mousedown="startDrag"
-      @click="viewCart"
-      style="display: none"
-    >
-      <div class="cart-icon">🛒</div>
-      <el-badge :value="cartItems.length" class="cart-badge" />
-      <div class="cart-amount">¥{{ totalAmount.toFixed(2) }}</div>
-    </div>
-
-    <!-- 底部支付按钮 -->
-    <div class="bottom-action">
-      <div class="total-amount-info">
-        <div class="total-label">实付金额：</div>
-        <div class="total-amount">¥{{ orderInfo.totalUnpaid.toFixed(2) }}</div>
+        </el-card>
       </div>
-      <el-button type="primary" size="large" class="confirm-order-btn" @click="confirmOrder">
-        确认支付未支付订单
-      </el-button>
+
+      <!-- 右侧支付信息区 -->
+      <div class="content-right">
+        <el-card class="payment-summary-card" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span class="card-title">支付明细</span>
+            </div>
+          </template>
+
+          <div class="payment-details">
+            <div class="detail-row">
+              <span class="detail-label">商品总额</span>
+              <span class="detail-value">¥{{ orderInfo.totalUnpaid.toFixed(2) }}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">配送费</span>
+              <span class="detail-value">¥{{ merchantInfo.deliveryFee }}</span>
+            </div>
+            <div class="detail-row" v-if="discountApplied">
+              <span class="detail-label">优惠减免</span>
+              <span class="detail-value discount">-¥{{ discountAmount }}</span>
+            </div>
+
+            <el-divider></el-divider>
+
+            <div class="detail-row total-row">
+              <span class="total-label">应付金额</span>
+              <span class="total-value">¥{{ finalAmount.toFixed(2) }}</span>
+            </div>
+          </div>
+
+          <!-- 优惠券 -->
+          <div class="coupon-section" v-if="discounts.length > 0">
+            <div class="coupon-item" v-for="discount in discounts" :key="discount.id">
+              <div class="coupon-info">
+                <el-icon color="#e6a23c"><Ticket /></el-icon>
+                <span class="coupon-name">{{ discount.name }}</span>
+              </div>
+              <el-button
+                v-if="!discount.used"
+                type="warning"
+                size="small"
+                plain
+                @click="useDiscount"
+              >
+                使用
+              </el-button>
+              <el-button v-else type="danger" size="small" plain @click="cancelDiscount">
+                取消
+              </el-button>
+            </div>
+          </div>
+
+          <el-divider></el-divider>
+
+          <!-- 支付渠道余额 -->
+          <div class="balance-info">
+            <div class="balance-item">
+              <span class="balance-label">平台币余额</span>
+              <span class="balance-value">¥{{ platformBalance.toFixed(2) }}</span>
+            </div>
+          </div>
+        </el-card>
+
+        <!-- 提交订单按钮 -->
+        <el-button
+          type="primary"
+          size="large"
+          class="submit-button"
+          @click="confirmOrder"
+          :loading="submitting"
+        >
+          {{ submitButtonText }}
+        </el-button>
+
+        <!-- 支付规则提示 -->
+        <div class="payment-tips">
+          <el-icon color="#909399" :size="14"><InfoFilled /></el-icon>
+          <span>已支付订单不可修改，仅支付未支付部分</span>
+        </div>
+      </div>
     </div>
 
-    <!-- 购物车弹窗 -->
-    <el-dialog v-model="cartVisible" title="我的购物车" width="500px" @close="closeCart">
+    <!-- 购物车编辑弹窗 -->
+    <el-dialog v-model="cartVisible" title="编辑订单" width="600px" @close="closeCart">
       <div v-if="cartItems.length === 0" class="empty-cart">
-        <div class="empty-cart-icon">🛒</div>
-        <div class="empty-cart-text">购物车是空的</div>
+        <el-empty description="购物车是空的"></el-empty>
       </div>
       <div v-else class="cart-items">
-        <div class="cart-item" v-for="(item, index) in cartItems" :key="item.id">
-          <div class="cart-item-info">
-            <div class="cart-item-name">{{ item.name }}</div>
-            <!-- Optional ingredients display -->
-            <div
-              v-if="item.selectedOptionalIngredients && item.selectedOptionalIngredients.length > 0"
-              class="cart-item-ingredients"
-            >
-              <span
-                v-for="(ingredient, idx) in item.selectedOptionalIngredients"
-                :key="idx"
-                class="ingredient-tag"
-              >
-                +{{ ingredient.name }} (¥{{ ingredient.price.toFixed(2) }})
-              </span>
-            </div>
-            <!-- Note input -->
-            <div class="cart-item-note">
-              <el-input
-                v-model="item.note"
-                placeholder="添加备注..."
-                size="small"
-                type="textarea"
-                :rows="1"
-                resize="none"
-              />
-            </div>
-            <div class="cart-item-price">¥{{ item.price.toFixed(2) }}</div>
+        <div class="cart-item" v-for="item in cartItems" :key="item.id">
+          <div class="cart-item-main">
+            <div class="item-name">{{ item.name }}</div>
+            <div class="item-price">¥{{ item.price.toFixed(2) }}</div>
           </div>
-          <div class="cart-item-quantity">
-            <el-button
-              type="text"
+          <div class="cart-item-controls">
+            <el-input-number
+              v-model="item.quantity"
+              :min="0"
+              :max="99"
               size="small"
-              @click="
-                () => {
-                  cartItems[index].quantity--
-                  if (cartItems[index].quantity <= 0) cartItems.splice(index, 1)
-                }
-              "
-            >
-              -
-            </el-button>
-            <span class="quantity-value">{{ item.quantity }}</span>
-            <el-button type="text" size="small" @click="cartItems[index].quantity++"> + </el-button>
-          </div>
-          <div class="cart-item-total">¥{{ item.totalPrice.toFixed(2) }}</div>
-        </div>
-        <div class="cart-total">
-          <div class="total-text">总计:</div>
-          <div class="total-price">
-            ¥{{ cartItems.reduce((total, item) => total + item.totalPrice, 0).toFixed(2) }}
+              @change="updateItemTotal(item)"
+            />
+            <div class="item-total">¥{{ (item.totalPrice || item.price * item.quantity).toFixed(2) }}</div>
           </div>
         </div>
       </div>
@@ -386,7 +238,7 @@
         <span class="dialog-footer">
           <el-button @click="closeCart">取消</el-button>
           <el-button type="primary" v-if="cartItems.length > 0" @click="updateOrderInfo">
-            更新订单
+            确认修改
           </el-button>
         </span>
       </template>
@@ -402,7 +254,7 @@
           </div>
           <div class="info-item">
             <span class="info-label">参与人数:</span>
-            <span class="info-value">{{ orderInfo.members.length }}人</span>
+            <span class="info-value">{{ orderInfo.members?.length || 2 }}人</span>
           </div>
           <div class="info-item">
             <span class="info-label">每人需支付:</span>
@@ -453,10 +305,19 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter } from 'vue-router'
+import {
+  Shop,
+  Edit,
+  CircleCheck,
+  Clock,
+  Ticket,
+  InfoFilled
+} from '@element-plus/icons-vue'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
+import OrderItemList from './components/OrderItemList.vue'
 
 const router = useRouter()
 
@@ -466,12 +327,12 @@ const pendingOrder = JSON.parse(sessionStorage.getItem('pendingOrder')) || {}
 // 检查订单是否为空
 const isEmptyOrder = !pendingOrder.cartItems || pendingOrder.cartItems.length === 0
 
-// 订单信息（将购物车商品作为未支付订单）
+// 订单信息
 const orderInfo = ref({
   orderId: `JD${new Date().getTime()}`,
   groupName: pendingOrder.groupName || '默认订单群',
   userName: pendingOrder.userName || '',
-  creator: pendingOrder.creator || '', // 添加订单创建者信息
+  creator: pendingOrder.creator || '',
   paidItems: [],
   unpaidItems: pendingOrder.cartItems || [],
   totalPaid: 0.0,
@@ -489,131 +350,64 @@ if (isEmptyOrder) {
   router.back()
 }
 
-// 购物车数据（用于悬浮购物车显示）
+// 商家信息
+const merchantInfo = ref({
+  name: '佳食优选餐厅',
+  rating: 4.8,
+  deliveryTime: '约30分钟',
+  deliveryFee: 5.0
+})
+
+// 购物车数据
 const cartItems = ref(pendingOrder.cartItems || [])
-const totalAmount = ref(pendingOrder.totalAmount || 0)
 const cartVisible = ref(false)
 
-// 可拖动购物车相关
-const cartBallRef = ref(null)
-let isDragging = false
-let startX = 0
-let startY = 0
-let initialX = 0
-let initialY = 0
-
-// 开始拖动
-const startDrag = (e) => {
-  if (!cartBallRef.value) return
-
-  isDragging = true
-  startX = e.clientX
-  startY = e.clientY
-
-  // 获取购物车球的初始位置
-  const rect = cartBallRef.value.getBoundingClientRect()
-  initialX = rect.left
-  initialY = rect.top
-
-  // 添加事件监听
-  document.addEventListener('mousemove', onDrag)
-  document.addEventListener('mouseup', stopDrag)
-
-  // 阻止点击事件
-  e.stopPropagation()
-}
-
-// 拖动中
-const onDrag = (e) => {
-  if (!isDragging || !cartBallRef.value) return
-
-  const dx = e.clientX - startX
-  const dy = e.clientY - startY
-
-  // 计算新位置
-  let newX = initialX + dx
-  let newY = initialY + dy
-
-  // 限制在视窗内
-  const windowWidth = window.innerWidth
-  const windowHeight = window.innerHeight
-  const cartWidth = cartBallRef.value.offsetWidth
-  const cartHeight = cartBallRef.value.offsetHeight
-
-  newX = Math.max(0, Math.min(newX, windowWidth - cartWidth))
-  newY = Math.max(0, Math.min(newY, windowHeight - cartHeight))
-
-  // 更新位置
-  cartBallRef.value.style.left = `${newX}px`
-  cartBallRef.value.style.top = `${newY}px`
-}
-
-// 停止拖动
-const stopDrag = () => {
-  isDragging = false
-  document.removeEventListener('mousemove', onDrag)
-  document.removeEventListener('mouseup', stopDrag)
-}
-
-// 查看购物车
-const viewCart = () => {
-  if (!isDragging) {
-    cartVisible.value = true
-  }
-}
-
-// 关闭购物车
-const closeCart = () => {
-  cartVisible.value = false
-}
-
-// 更新订单信息
-const updateOrderInfo = () => {
-  // 更新订单信息
-  orderInfo.value.unpaidItems = cartItems.value
-  orderInfo.value.totalUnpaid = cartItems.reduce((total, item) => total + item.totalPrice, 0)
-
-  // 保存更新后的购物车到会话存储
-  const updatedOrder = { ...pendingOrder }
-  updatedOrder.cartItems = cartItems.value
-  updatedOrder.totalAmount = orderInfo.value.totalUnpaid
-  sessionStorage.setItem('pendingOrder', JSON.stringify(updatedOrder))
-
-  // 关闭购物车并提示
-  closeCart()
-  ElMessage.success('订单已更新')
-}
-
-// 检测订单类型：群聊订单或单独订单
+// 检测订单类型
 const isGroupOrder = ref(orderInfo.value.groupName !== '默认订单群')
-// 检测是否来自聊天（群聊或单聊）
 const fromChat = ref(pendingOrder.fromChat || false)
-// 检测是否来自单聊
 const fromSingleChat = ref(fromChat.value && !isGroupOrder.value)
 
-// 支付方式 - 根据订单类型和身份动态显示
-// 仅订单发起者可以看到AA支付和自定义分摊
-const paymentMethods = ref(
-  isGroupOrder.value
-    ? [
-        { id: 1, name: '个人下单', icon: '👤' },
-        // 仅订单发起者显示其他支付方式
-        ...(orderInfo.value.creator === '我'
-          ? [
-              { id: 2, name: '统一提交集中支付', icon: '🧮' },
-              { id: 3, name: 'AA自动拆分', icon: '🎉' },
-              { id: 4, name: '自定义分摊', icon: '📝' }
-            ]
-          : [])
-      ]
-    : [
-        { id: 1, name: '个人支付', icon: '💳' },
-        { id: 2, name: '他人代付', icon: '🤝' }
-      ]
-)
+// 支付方式
+const paymentMethods = computed(() => {
+  if (isGroupOrder.value) {
+    const methods = [{ id: 1, name: '个人支付', icon: '💳', desc: '仅支付我的部分' }]
+    if (orderInfo.value.creator === '我') {
+      methods.push(
+        { id: 2, name: '统一支付', icon: '🧮', desc: '一人支付全部订单' },
+        { id: 3, name: 'AA支付', icon: '🎉', desc: '平均分摊订单金额' },
+        { id: 4, name: '自定义分摊', icon: '📝', desc: '按需分配订单金额' }
+      )
+    }
+    return methods
+  } else {
+    return [
+      { id: 1, name: '个人支付', icon: '💳', desc: '使用账户余额支付' },
+      { id: 2, name: '他人代付', icon: '🤝', desc: '邀请好友代为支付' }
+    ]
+  }
+})
 
-// 更新默认选中支付方式
 const selectedPaymentMethod = ref(paymentMethods.value[0])
+
+// 提交状态
+const submitting = ref(false)
+
+// 提交按钮文字
+const submitButtonText = computed(() => {
+  const method = selectedPaymentMethod.value
+  switch (method.id) {
+    case 1:
+      return isGroupOrder.value ? '立即支付' : '确认支付'
+    case 2:
+      return isGroupOrder.value ? '统一支付' : '请求代付'
+    case 3:
+      return '发起AA支付'
+    case 4:
+      return '自定义分摊'
+    default:
+      return '确认支付'
+  }
+})
 
 // AA支付相关
 const aaPaymentModalVisible = ref(false)
@@ -623,22 +417,45 @@ const aaShareAmount = ref(0)
 const customShareModalVisible = ref(false)
 const customShares = ref([])
 
+// 平台币余额
+const platformBalance = ref(125.0)
+
+// 优惠券
+const discounts = ref([
+  {
+    id: 1,
+    name: '新用户专享50元优惠券',
+    amount: 50.0,
+    available: true,
+    used: false
+  }
+])
+
+const selectedDiscount = ref(null)
+const discountApplied = computed(() => selectedDiscount.value !== null)
+const discountAmount = computed(() => {
+  return selectedDiscount.value ? selectedDiscount.value.amount : 0
+})
+
+// 最终金额（注意：orderInfo.totalUnpaid 已经在 useDiscount 中被修改过了）
+const finalAmount = computed(() => {
+  return orderInfo.value.totalUnpaid + merchantInfo.value.deliveryFee
+})
+
 // 计算AA支付每人金额
 const calculateAAShare = () => {
-  if (orderInfo.value && orderInfo.value.totalUnpaid && orderInfo.value.members.length > 0) {
-    const share = orderInfo.value.totalUnpaid / orderInfo.value.members.length
-    aaShareAmount.value = parseFloat(share.toFixed(2))
-  }
+  const memberCount = orderInfo.value.members?.length || 2
+  const share = finalAmount.value / memberCount
+  aaShareAmount.value = parseFloat(share.toFixed(2))
 }
 
 // 初始化自定义分摊
 const initCustomShares = () => {
-  if (orderInfo.value && orderInfo.value.members.length > 0) {
-    customShares.value = orderInfo.value.members.map((member) => ({
-      member,
-      amount: parseFloat((orderInfo.value.totalUnpaid / orderInfo.value.members.length).toFixed(2))
-    }))
-  }
+  const members = orderInfo.value.members || ['我', '好友']
+  customShares.value = members.map((member) => ({
+    member,
+    amount: parseFloat((finalAmount.value / members.length).toFixed(2))
+  }))
 }
 
 // 打开AA支付模态框
@@ -655,37 +472,34 @@ const openCustomShareModal = () => {
 
 // 确认AA支付
 const confirmAAPayment = () => {
-  // 这里可以添加AA支付的实际逻辑
+  submitting.value = true
   aaPaymentModalVisible.value = false
   ElMessage.success('AA支付已发起，将自动为每位成员创建支付订单')
 
-  // 清除会话存储中的未完成订单
   sessionStorage.removeItem('pendingOrder')
 
-  // 跳转到订单列表页
   setTimeout(() => {
+    submitting.value = false
     router.push('/user/home/orders')
   }, 1500)
 }
 
 // 确认自定义分摊
 const confirmCustomShare = () => {
-  // 验证分摊总额是否等于订单总额
   const totalShare = customShares.value.reduce((sum, share) => sum + share.amount, 0)
-  if (Math.abs(totalShare - orderInfo.value.totalUnpaid) > 0.01) {
+  if (Math.abs(totalShare - finalAmount.value) > 0.01) {
     ElMessage.error('分摊总额必须等于订单总额')
     return
   }
 
-  // 这里可以添加自定义分摊的实际逻辑
+  submitting.value = true
   customShareModalVisible.value = false
   ElMessage.success('自定义分摊已发起，将为每位成员创建对应金额的支付订单')
 
-  // 清除会话存储中的未完成订单
   sessionStorage.removeItem('pendingOrder')
 
-  // 跳转到订单列表页
   setTimeout(() => {
+    submitting.value = false
     router.push('/user/home/orders')
   }, 1500)
 }
@@ -695,41 +509,18 @@ const updateCustomShare = (index, amount) => {
   customShares.value[index].amount = parseFloat(amount)
 }
 
-// 平台币余额
-const platformBalance = ref(125.0)
-
-// 可用优惠
-const discounts = ref([
-  {
-    id: 1,
-    name: '新用户专享50元优惠券',
-    amount: 50.0,
-    available: true,
-    used: false
-  }
-])
-
-// 已选择的优惠
-const selectedDiscount = ref(null)
-
-// 价格详情折叠状态
-const isPriceDetailsOpen = ref(true)
-
 // 使用优惠
 const useDiscount = () => {
   const discount = discounts.value[0]
   if (!discount || !discount.available || discount.used) return
 
-  // 应用优惠
   selectedDiscount.value = discount
   discount.used = true
 
-  // 保存原价
   if (!orderInfo.value.originalTotal) {
     orderInfo.value.originalTotal = orderInfo.value.totalUnpaid
   }
 
-  // 更新订单金额
   const discountAmount = Math.min(discount.amount, orderInfo.value.totalUnpaid)
   orderInfo.value.totalUnpaid -= discountAmount
 
@@ -740,699 +531,582 @@ const useDiscount = () => {
 const cancelDiscount = () => {
   if (!selectedDiscount.value) return
 
-  // 恢复订单金额
   const discountAmount = Math.min(
     selectedDiscount.value.amount,
     orderInfo.value.totalUnpaid + selectedDiscount.value.amount
   )
   orderInfo.value.totalUnpaid += discountAmount
 
-  // 移除原价记录
   delete orderInfo.value.originalTotal
 
-  // 标记优惠为未使用
   selectedDiscount.value.used = false
   selectedDiscount.value = null
 
   ElMessage.success('优惠已取消')
 }
 
+// 关闭购物车
+const closeCart = () => {
+  cartVisible.value = false
+}
+
+// 更新单项总价
+const updateItemTotal = (item) => {
+  item.totalPrice = item.price * item.quantity
+}
+
+// 更新订单信息
+const updateOrderInfo = () => {
+  orderInfo.value.unpaidItems = cartItems.value.filter(item => item.quantity > 0)
+  orderInfo.value.totalUnpaid = cartItems.value
+    .filter(item => item.quantity > 0)
+    .reduce((total, item) => total + (item.totalPrice || item.price * item.quantity), 0)
+
+  const updatedOrder = { ...pendingOrder }
+  updatedOrder.cartItems = cartItems.value.filter(item => item.quantity > 0)
+  updatedOrder.totalAmount = orderInfo.value.totalUnpaid
+  sessionStorage.setItem('pendingOrder', JSON.stringify(updatedOrder))
+
+  closeCart()
+  ElMessage.success('订单已更新')
+}
+
+// 确认订单
 const confirmOrder = () => {
-  // 根据不同支付方式处理
-  switch (selectedPaymentMethod.value.id) {
-    case 2: // 统一提交集中支付
-      // 普通支付流程
-      ElMessageBox.confirm('请确认订单信息无误后支付', '订单确认', {
-        confirmButtonText: '立即支付',
-        cancelButtonText: '取消',
-        type: 'warning'
-      })
-        .then(() => {
-          // 清除会话存储中的未完成订单
-          sessionStorage.removeItem('pendingOrder')
+  const methodId = selectedPaymentMethod.value.id
 
-          ElMessage.success('支付成功！您的订单正在处理中')
-          setTimeout(() => {
-            router.push('/user/home/orders')
-          }, 1500)
-        })
-        .catch(() => {
-          ElMessage.info('已取消支付')
-        })
-      break
-
-    case 3: // AA自动拆分
-      openAAPaymentModal()
-      break
-
-    case 4: // 自定义分摊
-      openCustomShareModal()
-      break
-
-    case 2: // 他人代付
-      // 现有他人代付逻辑保持不变
-      ElMessageBox.prompt('请输入代付人手机号码或昵称:', '他人代付', {
-        confirmButtonText: '确认',
-        cancelButtonText: '取消',
-        inputPattern: /^1[3456789]\d{9}$|^[\u4e00-\u9fa5]{2,8}$/,
-        inputErrorMessage: '请输入有效的手机号码或2-8位中文昵称'
-      })
-        .then(({ value }) => {
-          // 这里可以添加发送代付请求的逻辑
-          // 清除会话存储中的未完成订单
-          sessionStorage.removeItem('pendingOrder')
-
-          ElMessage.success(`代付请求已发送给${value}！`)
-          setTimeout(() => {
-            router.push('/user/home/orders')
-          }, 1500)
-        })
-        .catch(() => {
-          ElMessage.info('已取消代付')
-        })
-      break
-
-    default: // 个人支付
-      // 普通支付流程
-      ElMessageBox.confirm('请确认订单信息无误后支付', '订单确认', {
-        confirmButtonText: '立即支付',
-        cancelButtonText: '取消',
-        type: 'warning'
-      })
-        .then(() => {
-          // 清除会话存储中的未完成订单
-          sessionStorage.removeItem('pendingOrder')
-
-          ElMessage.success('支付成功！您的订单正在处理中')
-          setTimeout(() => {
-            router.push('/user/home/orders')
-          }, 1500)
-        })
-        .catch(() => {
-          ElMessage.info('已取消支付')
-        })
-      break
+  if (methodId === 3) {
+    openAAPaymentModal()
+    return
   }
+
+  if (methodId === 4) {
+    openCustomShareModal()
+    return
+  }
+
+  if (methodId === 2 && !isGroupOrder.value) {
+    ElMessageBox.prompt('请输入代付人手机号码或昵称:', '他人代付', {
+      confirmButtonText: '确认',
+      cancelButtonText: '取消',
+      inputPattern: /^1[3456789]\d{9}$|^[\u4e00-\u9fa5]{2,8}$/,
+      inputErrorMessage: '请输入有效的手机号码或2-8位中文昵称'
+    })
+      .then(({ value }) => {
+        submitting.value = true
+        sessionStorage.removeItem('pendingOrder')
+        ElMessage.success(`代付请求已发送给${value}！`)
+        setTimeout(() => {
+          submitting.value = false
+          router.push('/user/home/orders')
+        }, 1500)
+      })
+      .catch(() => {
+        ElMessage.info('已取消代付')
+      })
+    return
+  }
+
+  // 普通支付流程
+  ElMessageBox.confirm('请确认订单信息无误后支付', '订单确认', {
+    confirmButtonText: '立即支付',
+    cancelButtonText: '取消',
+    type: 'warning'
+  })
+    .then(() => {
+      submitting.value = true
+      sessionStorage.removeItem('pendingOrder')
+      ElMessage.success('支付成功！您的订单正在处理中')
+      setTimeout(() => {
+        submitting.value = false
+        router.push('/user/home/orders')
+      }, 1500)
+    })
+    .catch(() => {
+      ElMessage.info('已取消支付')
+    })
 }
 </script>
 
 <style scoped lang="less">
 .order-confirmation-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  padding-bottom: 100px;
+  background: #f5f7fa;
+  padding-bottom: 40px;
 
-  .main-content {
-    max-width: 900px;
-    margin: 30px auto;
-    padding: 20px;
+  .page-header {
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    position: sticky;
+    top: 0;
+    z-index: 100;
 
-    .page-header {
-      margin-bottom: 25px;
-      padding: 20px;
-      background: rgba(255, 255, 255, 0.95);
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-
-      .back-button {
-        font-size: 18px;
-        margin-bottom: 10px;
-        color: #409eff;
-        &:hover {
-          color: #66b1ff;
-        }
-      }
+    .header-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
 
       .page-title {
-        font-size: 24px;
-        font-weight: 700;
+        font-size: 20px;
+        font-weight: 600;
         margin: 0;
         color: #2c3e50;
+        display: flex;
+        align-items: center;
+        gap: 12px;
 
-        .chat-indicator {
-          font-size: 28px;
-          margin-right: 8px;
+        .chat-tag {
+          font-size: 14px;
+        }
+      }
+    }
+  }
+
+  .main-content {
+    max-width: 1200px;
+    margin: 24px auto;
+    padding: 0 24px;
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 24px;
+
+    @media (max-width: 1024px) {
+      grid-template-columns: 1fr;
+    }
+
+    .content-left {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .content-right {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+
+      @media (max-width: 1024px) {
+        order: -1;
+      }
+    }
+  }
+
+  .info-card {
+    border-radius: 12px;
+    border: none;
+
+    :deep(.el-card__header) {
+      padding: 16px 20px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    :deep(.el-card__body) {
+      padding: 20px;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+
+      .card-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: #2c3e50;
+      }
+    }
+  }
+
+  // 商家信息卡片
+  .merchant-card {
+    .merchant-info {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+
+      .merchant-avatar {
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+      }
+
+      .merchant-details {
+        flex: 1;
+
+        .merchant-name {
+          font-size: 18px;
+          font-weight: 600;
+          color: #2c3e50;
+          margin-bottom: 8px;
+        }
+
+        .merchant-meta {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 14px;
+          color: #7f8c8d;
+
+          .separator {
+            color: #dcdfe6;
+          }
+        }
+      }
+    }
+  }
+
+  // 订单概览
+  .order-summary {
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid #f5f7fa;
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      .label {
+        color: #7f8c8d;
+        font-size: 14px;
+      }
+
+      .value {
+        color: #2c3e50;
+        font-weight: 500;
+      }
+
+      &.amount-row {
+        display: flex;
+        justify-content: space-around;
+        padding: 20px 0;
+        margin-top: 8px;
+        background: #f8f9fa;
+        border-radius: 8px;
+
+        .amount-item {
+          text-align: center;
+          flex: 1;
+
+          .amount-label {
+            font-size: 13px;
+            color: #7f8c8d;
+            margin-bottom: 8px;
+          }
+
+          .amount-value {
+            font-size: 24px;
+            font-weight: 700;
+
+            &.paid {
+              color: #67c23a;
+            }
+
+            &.unpaid {
+              color: #e6a23c;
+            }
+          }
+        }
+
+        .amount-divider {
+          width: 1px;
+          background: #dcdfe6;
+        }
+      }
+    }
+  }
+
+  // 订单商品
+  .order-section {
+    &.mt-20 {
+      margin-top: 20px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+
+      .section-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: #2c3e50;
+        flex: 1;
+      }
+    }
+  }
+
+  // 支付方式
+  .payment-methods {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    .payment-method-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px;
+      border: 2px solid #e4e7ed;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s;
+
+      &:hover {
+        border-color: #409eff;
+        background: #f5f7fa;
+      }
+
+      &.active {
+        border-color: #409eff;
+        background: rgba(64, 158, 255, 0.05);
+      }
+
+      .method-icon {
+        font-size: 28px;
+      }
+
+      .method-info {
+        flex: 1;
+
+        .method-name {
+          font-size: 15px;
+          font-weight: 500;
+          color: #2c3e50;
+        }
+
+        .method-desc {
+          font-size: 13px;
+          color: #7f8c8d;
+          margin-top: 4px;
+        }
+      }
+    }
+  }
+
+  // 支付明细卡片
+  .payment-summary-card {
+
+    .payment-details {
+      .detail-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+
+        .detail-label {
+          color: #7f8c8d;
+          font-size: 14px;
+        }
+
+        .detail-value {
+          color: #2c3e50;
+          font-weight: 500;
+
+          &.discount {
+            color: #f56c6c;
+          }
+        }
+
+        &.total-row {
+          padding-top: 12px;
+
+          .total-label {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2c3e50;
+          }
+
+          .total-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #e6a23c;
+          }
         }
       }
     }
 
-    .order-card {
-      margin-bottom: 20px;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    .coupon-section {
+      margin: 16px 0;
 
-      .card-header {
-        .card-title {
-          font-size: 18px;
-          font-weight: 600;
-          color: #2c3e50;
-        }
-      }
-
-      .order-section {
-        margin-bottom: 36px;
+      .coupon-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px;
+        background: #fff9e6;
+        border: 1px solid #ffe58f;
+        border-radius: 6px;
+        margin-bottom: 8px;
 
         &:last-child {
           margin-bottom: 0;
         }
 
-        .section-title {
-          font-size: 16px;
-          font-weight: 600;
-          color: #34495e;
-          margin-bottom: 20px;
+        .coupon-info {
           display: flex;
           align-items: center;
           gap: 8px;
-        }
 
-        // 订单概览
-        &.order-overview {
-          .overview-info {
-            .overview-item {
-              margin-bottom: 14px;
-              display: flex;
-              flex-wrap: wrap;
-              align-items: center;
-              padding: 10px 12px;
-              background: rgba(255, 255, 255, 0.85);
-              border-radius: 8px;
-              transition: all 0.3s ease;
-
-              &:hover {
-                background: rgba(255, 255, 255, 1);
-                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-              }
-
-              .info-label {
-                font-weight: 600;
-                color: #555;
-                min-width: 100px;
-              }
-
-              .info-value {
-                color: #2c3e50;
-                font-size: 15px;
-              }
-
-              &.paid-amount {
-                border-left: 4px solid #67c23a; // 绿色左边框
-
-                .info-value {
-                  color: #67c23a; // 绿色
-                  font-weight: 600;
-                }
-              }
-
-              &.unpaid-amount {
-                border-left: 4px solid #e6a23c; // 黄色左边框
-
-                .info-value {
-                  color: #e6a23c; // 黄色
-                  font-weight: 600;
-                }
-              }
-
-              .payee-info,
-              .payment-note {
-                font-size: 13px;
-                color: #909399;
-                margin-left: 10px;
-              }
-            }
-          }
-        }
-
-        // 订单列表
-        .order-items {
-          margin-bottom: 28px;
-
-          .order-item {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 18px;
-            padding: 16px;
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 10px;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
-            transition: all 0.3s ease;
-
-            &:hover {
-              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-              transform: translateY(-1px);
-            }
-
-            &:last-child {
-              margin-bottom: 0;
-            }
-
-            .item-info {
-              .item-name {
-                font-size: 17px;
-                font-weight: 600;
-                margin-bottom: 6px;
-                color: #2c3e50;
-              }
-
-              .item-details {
-                font-size: 14px;
-                color: #666;
-                gap: 12px;
-                display: flex;
-                flex-wrap: wrap;
-                margin-bottom: 10px;
-              }
-
-              .item-ingredients {
-                background: rgba(240, 242, 245, 0.7);
-                padding: 10px 12px;
-                border-radius: 6px;
-                margin-bottom: 10px;
-                font-size: 14px;
-
-                .ingredient-group {
-                  margin-bottom: 6px;
-
-                  &:last-child {
-                    margin-bottom: 0;
-                  }
-                }
-
-                .ingredient-label {
-                  font-weight: 600;
-                  color: #333;
-                  margin-right: 8px;
-                }
-
-                .ingredient-list {
-                  display: inline;
-
-                  .ingredient-item {
-                    margin-right: 8px;
-                    padding: 4px 8px;
-                    background: rgba(255, 255, 255, 0.8);
-                    border-radius: 4px;
-                    color: #555;
-                    font-size: 13px;
-                  }
-                }
-              }
-
-              .item-note {
-                background: rgba(255, 248, 225, 0.7);
-                padding: 10px 12px;
-                border-radius: 6px;
-                font-size: 14px;
-                display: flex;
-                align-items: flex-start;
-
-                .note-label {
-                  font-weight: 600;
-                  color: #856404;
-                  margin-right: 8px;
-                  white-space: nowrap;
-                }
-
-                .note-content {
-                  color: #856404;
-                  flex: 1;
-                }
-              }
-            }
-
-            .payment-info {
-              font-size: 13px;
-              text-align: right;
-              display: flex;
-              flex-direction: column;
-              gap: 4px;
-              color: #666;
-
-              .payee {
-                font-weight: 600;
-                color: #333;
-              }
-            }
-          }
-        }
-
-        // 未支付订单
-        &.unpaid-orders {
-          .unpaid-total {
-            padding: 20px;
-            background: rgba(255, 248, 225, 0.9);
-            border-radius: 8px;
-            border: 1px solid #fff3cd;
-
-            .price-breakdown {
-              display: flex;
-              justify-content: flex-end;
-              align-items: center;
-              margin-bottom: 0;
-            }
-
-            .price-details-toggle {
-              text-align: right;
-              margin-top: 8px;
-            }
-
-            .price-details-container {
-              margin-top: 16px;
-              border-top: 1px dashed #ffeeba;
-              padding-top: 12px;
-            }
-
-            .price-details {
-              .detail-item {
-                display: flex;
-                justify-content: space-between;
-                font-size: 14px;
-                margin-bottom: 8px;
-                color: #666;
-
-                &.discount-item {
-                  color: #67c23a;
-
-                  .item-amount.discount-amount {
-                    color: #f56c6c;
-                  }
-                }
-              }
-            }
-
-            .total-label {
-              font-size: 18px;
-              font-weight: 600;
-              color: #856404;
-            }
-
-            .total-value {
-              font-size: 32px;
-              font-weight: 700;
-              color: #e6a23c; // 黄色
-              margin-left: 20px;
-            }
-          }
-        }
-
-        // 规则说明
-        &.rules {
-          .rule-item {
-            margin-bottom: 12px;
+          .coupon-name {
             font-size: 14px;
-            padding: 10px 14px;
-            background: rgba(255, 255, 255, 0.85);
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            transition: all 0.3s ease;
-
-            &:hover {
-              background: rgba(255, 255, 255, 1);
-            }
-
-            .rule-icon {
-              font-weight: bold;
-              color: #409eff;
-            }
-
-            .rule-text {
-              color: #555;
-            }
+            color: #856404;
           }
         }
+      }
+    }
 
-        // 支付方式
-        .payment-options {
-          display: flex;
-          flex-direction: column;
-          gap: 15px;
+    .balance-info {
+      .balance-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 12px;
+        background: #f0f9ff;
+        border-radius: 6px;
 
-          .payment-option {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            padding: 18px 20px;
-            border-radius: 12px;
-            border: 2px solid #e0e0e0;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            background: rgba(255, 255, 255, 0.95);
-
-            &:hover {
-              border-color: #409eff;
-              transform: translateY(-2px);
-              box-shadow: 0 4px 16px rgba(64, 158, 255, 0.2);
-            }
-
-            &.active {
-              border-color: #409eff;
-              background-color: rgba(64, 158, 255, 0.08);
-              box-shadow: 0 4px 16px rgba(64, 158, 255, 0.2);
-            }
-
-            .option-icon {
-              font-size: 28px;
-              line-height: 1;
-            }
-
-            .option-name {
-              flex: 1;
-              font-size: 17px;
-              font-weight: 500;
-              color: #2c3e50;
-            }
-
-            .option-radio {
-              margin-left: auto;
-            }
-          }
+        .balance-label {
+          font-size: 13px;
+          color: #7f8c8d;
         }
 
-        // 优惠
-        &.discounts {
-          .discount-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 16px;
-            padding: 18px 20px;
-            background: linear-gradient(135deg, #fffbe8 0%, #fef9c3 100%);
-            border: 2px solid #ffeeba;
-            border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(234, 162, 60, 0.1);
-
-            .discount-info {
-              display: flex;
-              align-items: center;
-              gap: 12px;
-            }
-
-            .discount-icon {
-              font-size: 24px;
-            }
-
-            .discount-text {
-              font-size: 15px;
-              font-weight: 600;
-              color: #856404;
-            }
-
-            .use-discount {
-              color: #e6a23c;
-              font-weight: 600;
-              transition: color 0.3s ease;
-
-              &:hover {
-                color: #d89a33;
-              }
-            }
-
-            .discount-used-text {
-              color: #67c23a;
-              font-weight: 600;
-              margin-right: 8px;
-            }
-
-            .cancel-discount {
-              color: #f56c6c;
-              font-weight: 600;
-              transition: color 0.3s ease;
-
-              &:hover {
-                color: #f78989;
-              }
-            }
-          }
-        }
-
-        // 支付渠道
-        &.payment-channels {
-          .channel-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            padding: 16px 20px;
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 10px;
-
-            .channel-left {
-              display: flex;
-              align-items: center;
-              gap: 14px;
-            }
-
-            .channel-icon {
-              font-size: 24px;
-            }
-
-            .channel-text {
-              font-size: 16px;
-              font-weight: 500;
-            }
-
-            .channel-balance {
-              color: #67c23a;
-              font-weight: 600;
-              font-size: 16px;
-            }
-          }
+        .balance-value {
+          font-size: 15px;
+          font-weight: 600;
+          color: #67c23a;
         }
       }
     }
   }
 
-  .bottom-action {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px 40px;
-    background: rgba(255, 255, 255, 0.98);
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
-    backdrop-filter: blur(10px);
-
-    .total-amount-info {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-
-      .total-label {
-        font-size: 14px;
-        color: #7f8c8d;
-      }
-
-      .total-amount {
-        font-size: 36px;
-        font-weight: 700;
-        color: #e6a23c; // 黄色
-      }
-    }
-
-    .confirm-order-btn {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      border: none;
-      padding: 16px 48px;
-      font-size: 18px;
-      font-weight: 600;
-      color: white;
-      border-radius: 50px;
-      box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-      &:hover {
-        background: linear-gradient(135deg, #7c8ff0 0%, #865aba 100%);
-        box-shadow: 0 6px 24px rgba(102, 126, 234, 0.6);
-        transform: translateY(-2px);
-      }
-
-      &:active {
-        transform: translateY(0);
-      }
-    }
-  }
-
-  // 可拖动悬浮购物车
-  .draggable-cart-ball {
-    position: fixed;
-    right: 24px;
-    bottom: 80px;
-    width: 88px;
-    height: 88px;
+  // 提交按钮
+  .submit-button {
+    width: 100%;
+    height: 50px;
+    font-size: 17px;
+    font-weight: 600;
+    border-radius: 25px;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 50%;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    cursor: grab;
-    box-shadow: 0 8px 32px rgba(102, 126, 234, 0.6);
-    color: white;
-    font-size: 12px;
-    transition: all 0.3s ease;
-    z-index: 9999;
-    border: 3px solid rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(10px);
-
-    &:active {
-      cursor: grabbing;
-      transform: scale(1.05);
-      box-shadow: 0 12px 48px rgba(102, 126, 234, 0.8);
-    }
+    border: none;
+    box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
 
     &:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 12px 48px rgba(102, 126, 234, 0.8);
+      background: linear-gradient(135deg, #7c8ff0 0%, #865aba 100%);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+      transform: translateY(-2px);
     }
 
-    .cart-icon {
-      font-size: 32px;
-      margin-bottom: 2px;
-      position: relative;
-    }
-
-    .cart-badge {
-      position: absolute;
-      top: -8px;
-      right: -8px;
-    }
-
-    .cart-amount {
-      font-size: 11px;
-      font-weight: 600;
+    &:active {
+      transform: translateY(0);
     }
   }
 
-  // 购物车列表样式
-  .cart-items {
-    max-height: 300px; /* 设置购物车最大高度 */
-    overflow-y: auto; /* 超出部分显示滚动条 */
-    padding-right: 8px; /* 为滚动条预留空间 */
+  // 支付提示
+  .payment-tips {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #7f8c8d;
+    text-align: center;
+    justify-content: center;
   }
 }
 
-/* AA支付模态框样式 */
+// 购物车弹窗
+.cart-items {
+  max-height: 400px;
+  overflow-y: auto;
+
+  .cart-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    border: 1px solid #f0f0f0;
+    border-radius: 8px;
+    margin-bottom: 12px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    .cart-item-main {
+      flex: 1;
+
+      .item-name {
+        font-size: 15px;
+        font-weight: 500;
+        color: #2c3e50;
+        margin-bottom: 6px;
+      }
+
+      .item-price {
+        font-size: 14px;
+        color: #7f8c8d;
+      }
+    }
+
+    .cart-item-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
+      .item-total {
+        font-size: 16px;
+        font-weight: 600;
+        color: #e6a23c;
+        min-width: 80px;
+        text-align: right;
+      }
+    }
+  }
+}
+
+.empty-cart {
+  padding: 40px 0;
+}
+
+// AA支付模态框
 .aa-payment-content {
   padding: 20px 0;
 
   .aa-info {
     .info-item {
-      margin-bottom: 15px;
       display: flex;
       justify-content: space-between;
+      margin-bottom: 16px;
+      padding: 12px;
+      background: #f8f9fa;
+      border-radius: 6px;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
 
       .info-label {
-        font-weight: 600;
+        font-weight: 500;
+        color: #7f8c8d;
       }
 
       .info-value {
         font-size: 16px;
-        color: #303133;
+        color: #2c3e50;
+        font-weight: 500;
 
         &.highlight {
           color: #e6a23c;
@@ -1444,7 +1118,7 @@ const confirmOrder = () => {
   }
 }
 
-/* 自定义分摊模态框样式 */
+// 自定义分摊模态框
 .custom-share-content {
   padding: 20px 0;
 
@@ -1454,14 +1128,19 @@ const confirmOrder = () => {
     .info-item {
       display: flex;
       justify-content: space-between;
+      padding: 12px;
+      background: #f8f9fa;
+      border-radius: 6px;
 
       .info-label {
-        font-weight: 600;
+        font-weight: 500;
+        color: #7f8c8d;
       }
 
       .info-value {
         font-size: 16px;
-        color: #303133;
+        color: #2c3e50;
+        font-weight: 500;
       }
     }
   }
@@ -1471,10 +1150,18 @@ const confirmOrder = () => {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 15px;
+      padding: 12px;
+      border: 1px solid #f0f0f0;
+      border-radius: 6px;
+      margin-bottom: 12px;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
 
       .member-name {
         font-weight: 500;
+        color: #2c3e50;
       }
     }
   }
