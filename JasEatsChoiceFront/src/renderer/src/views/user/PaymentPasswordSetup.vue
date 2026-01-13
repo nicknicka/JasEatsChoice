@@ -178,6 +178,8 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Lock } from '@element-plus/icons-vue'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
+import paymentApi from '../../api/payment'
+import userApi from '../../api/user'
 import { useAuthStore } from '../../store/authStore'
 
 const router = useRouter()
@@ -259,8 +261,7 @@ const checkPaymentPasswordStatus = async () => {
 	if (userId <= 0) return
 
 	try {
-		const response = await fetch(`http://localhost:8080/v1/payment-password/check/${userId}`)
-		const result = await response.json()
+		const result = await paymentApi.checkPaymentPassword(userId)
 		if (result.code === '200' && result.data) {
 			hasPassword.value = result.data.hasPaymentPassword || false
 		}
@@ -275,8 +276,7 @@ const fetchUserPhone = async () => {
 	if (userId <= 0) return
 
 	try {
-		const response = await fetch(`http://localhost:8080/v1/user/${userId}`)
-		const result = await response.json()
+		const result = await userApi.getUserInfo(userId)
 		if (result.code === '200' && result.data) {
 			userPhone.value = result.data.phone || ''
 			// 脱敏显示
@@ -304,27 +304,16 @@ const submitPassword = async () => {
 
 	submitting.value = true
 	try {
-		const url = hasPassword.value
-			? 'http://localhost:8080/v1/payment-password/change'
-			: 'http://localhost:8080/v1/payment-password/setup'
-
-		const params = new URLSearchParams({ userId: userId.toString() })
+		let result
 		if (hasPassword.value) {
-			params.append('oldPassword', passwordForm.value.oldPassword)
-			params.append('newPassword', passwordForm.value.newPassword)
+			result = await paymentApi.changePaymentPassword(
+				userId,
+				passwordForm.value.oldPassword,
+				passwordForm.value.newPassword
+			)
 		} else {
-			params.append('password', passwordForm.value.newPassword)
+			result = await paymentApi.setupPaymentPassword(userId, passwordForm.value.newPassword, null)
 		}
-
-		const response = await fetch(url, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/x-www-form-urlencoded',
-			},
-			body: params,
-		})
-
-		const result = await response.json()
 
 		if (result.code === '200') {
 			ElMessage.success(hasPassword.value ? '支付密码修改成功' : '支付密码设置成功')
@@ -366,21 +355,11 @@ const confirmReset = async () => {
 
 	resetting.value = true
 	try {
-		const params = new URLSearchParams({
-			userId: userId.toString(),
-			newPassword: resetForm.value.newPassword,
-			verificationCode: resetForm.value.verificationCode,
-		})
-
-		const response = await fetch('http://localhost:8080/v1/payment-password/reset', {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/x-www-form-urlencoded',
-			},
-			body: params,
-		})
-
-		const result = await response.json()
+		const result = await paymentApi.resetPaymentPassword(
+			userId,
+			resetForm.value.newPassword,
+			resetForm.value.verificationCode
+		)
 
 		if (result.code === '200') {
 			ElMessage.success('支付密码重置成功')

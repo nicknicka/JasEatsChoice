@@ -207,6 +207,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Search, Refresh } from '@element-plus/icons-vue'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
+import walletApi from '../../api/wallet'
 import { useAuthStore } from '../../store/authStore'
 
 const router = useRouter()
@@ -326,8 +327,7 @@ const fetchWalletBalance = async () => {
 	if (userId <= 0) return
 
 	try {
-		const response = await fetch(`http://localhost:8080/v1/wallet/balance/${userId}`)
-		const result = await response.json()
+		const result = await walletApi.getBalance(userId)
 		if (result.code === '200') {
 			walletBalance.value = result.data || 0
 		}
@@ -346,22 +346,23 @@ const fetchTransactions = async () => {
 
 	loading.value = true
 	try {
-		const params = new URLSearchParams({
-			userId: userId.toString(),
-			type: filterForm.value.type || 'all',
-			page: pagination.value.page.toString(),
-			pageSize: pagination.value.pageSize.toString(),
-		})
+		const startDate =
+			filterForm.value.dateRange && filterForm.value.dateRange.length === 2
+				? formatDate(filterForm.value.dateRange[0])
+				: null
+		const endDate =
+			filterForm.value.dateRange && filterForm.value.dateRange.length === 2
+				? formatDate(filterForm.value.dateRange[1])
+				: null
 
-		if (filterForm.value.dateRange && filterForm.value.dateRange.length === 2) {
-			params.append('startDate', formatDate(filterForm.value.dateRange[0]))
-			params.append('endDate', formatDate(filterForm.value.dateRange[1]))
-		}
-
-		const response = await fetch(
-			`http://localhost:8080/v1/consume-history?${params.toString()}`
+		const result = await walletApi.getConsumeHistory(
+			userId,
+			filterForm.value.type || 'all',
+			pagination.value.page,
+			pagination.value.pageSize,
+			startDate,
+			endDate
 		)
-		const result = await response.json()
 
 		if (result.code === '200' && result.data) {
 			transactions.value = result.data.records || []
