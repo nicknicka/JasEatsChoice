@@ -36,10 +36,13 @@ public class OrderController {
      */
     @PostMapping
     public ResponseResult<?> createOrder(@RequestBody Order order) {
+        log.info("开始创建订单，订单信息：{}", order);
         boolean success = orderService.save(order);
         if (success) {
+            log.info("订单创建成功，订单ID：{}", order.getId());
             return ResponseResult.success(order.getId()); // 返回订单ID
         }
+        log.error("订单创建失败");
         return ResponseResult.fail("500", "创建订单失败");
     }
 

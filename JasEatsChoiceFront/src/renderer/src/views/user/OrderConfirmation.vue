@@ -347,6 +347,7 @@ import CommonBackButton from '../../components/common/CommonBackButton.vue'
 import OrderItemList from './components/OrderItemList.vue'
 import walletApi from '../../api/wallet'
 import paymentApi from '../../api/payment'
+import orderApi from '../../api/order'
 import { useAuthStore } from '../../store/authStore'
 
 const router = useRouter()
@@ -357,6 +358,10 @@ const pendingOrder = JSON.parse(sessionStorage.getItem('pendingOrder')) || {}
 
 // 检查订单是否为空
 const isEmptyOrder = !pendingOrder.cartItems || pendingOrder.cartItems.length === 0
+
+// 从pendingOrder中提取商家ID
+const merchantId = ref(pendingOrder.merchant?.id || '1')
+console.log('商家ID:', merchantId.value)
 
 // 订单信息
 const orderInfo = ref({
@@ -381,12 +386,13 @@ if (isEmptyOrder) {
   router.back()
 }
 
-// 商家信息
+// 商家信息 - 从pendingOrder中获取，如果没有则使用默认值
 const merchantInfo = ref({
-  name: '佳食优选餐厅',
-  rating: 4.8,
-  deliveryTime: '约30分钟',
-  deliveryFee: 5.0
+  id: pendingOrder.merchant?.id || 1,
+  name: pendingOrder.merchant?.name || '佳食优选餐厅',
+  rating: pendingOrder.merchant?.rating || 4.8,
+  deliveryTime: pendingOrder.merchant?.deliveryTime || '约30分钟',
+  deliveryFee: pendingOrder.merchant?.deliveryFee || 5.0
 })
 
 // 购物车数据
@@ -439,6 +445,7 @@ onMounted(async () => {
     const userId = parseInt(authStore.userId || '0', 10)
     if (userId > 0) {
       const response = await walletApi.getBalance(userId)
+      console.log('余额获取响应:', response)
       if (response.code === '200') {
         platformBalance.value = response.data || 0.0
       }
@@ -720,12 +727,42 @@ const confirmOrder = async () => {
       try {
         submitting.value = true
 
+        console.log('开始创建订单...', {
+          orderId: orderInfo.value.orderId,
+          userId: String(userId),
+          merchantId: String(merchantId.value),
+          totalAmount: finalAmount.value,
+          items: orderInfo.value.unpaidItems
+        })
+
+        // 先创建订单
+        const createOrderResponse = await orderApi.createOrder({
+          id: orderInfo.value.orderId,
+          userId: String(userId),
+          merchantId: String(merchantId.value),
+          totalAmount: finalAmount.value,
+          status: 0 // 0-待支付
+        })
+
+        console.log('创建订单响应:', createOrderResponse)
+
+        if (createOrderResponse.code !== '200') {
+          submitting.value = false
+          ElMessage.error(createOrderResponse.message || '创建订单失败')
+          return
+        }
+
+        // 使用后端返回的订单ID
+        const actualOrderId = createOrderResponse.data || orderInfo.value.orderId
+        console.log('订单创建成功，订单ID:', actualOrderId)
+
         // 调用支付API
         const response = await paymentApi.payOrder(
-          orderInfo.value.orderId,
-          userId,
+          actualOrderId,
+          String(userId),
           'wallet'
         )
+        console.log('支付结果:', response)
 
         if (response.code === '200') {
           sessionStorage.removeItem('pendingOrder')

@@ -1,115 +1,237 @@
 <template>
   <div class="my-collection-container">
+    <!-- 头部区域 -->
     <div class="header">
       <common-back-button />
-      <h2>我的收藏</h2>
+      <div class="header-content">
+        <h2>我的收藏</h2>
+        <div class="collection-stats">
+          <el-tag type="info" size="large">
+            共 {{ filteredCollections.length }} 个收藏
+          </el-tag>
+        </div>
+      </div>
     </div>
 
+    <!-- 筛选工具栏 -->
     <div class="filter-bar">
-      <el-select
-        v-model="filterType"
-        placeholder="筛选类型"
-        style="width: 150px; margin-right: 10px"
-      >
-        <el-option label="全部" value="all" />
-        <el-option label="商家" value="merchant" />
-        <el-option label="菜品" value="dish" />
-        <el-option label="文章" value="article" />
-      </el-select>
-
-      <el-button type="primary" size="small" @click="applyFilter">
-        <el-icon><Search /></el-icon> 查询
-      </el-button>
-
-      <el-button type="default" size="small" @click="resetFilter">
-        <el-icon><Refresh /></el-icon> 重置
-      </el-button>
-
-      <el-button type="danger" size="small" @click="clearAll" style="margin-left: auto">
-        <el-icon><Delete /></el-icon> 清空全部
-      </el-button>
-    </div>
-
-    <div class="collection-grid">
-      <el-card
-        v-for="item in filteredCollections"
-        :key="item.id"
-        class="collection-card"
-        shadow="hover"
-      >
-        <div class="card-header">
-          <div
-            class="item-type"
-            :class="
-              item.type === 'merchant'
-                ? 'type-merchant'
-                : item.type === 'dish'
-                  ? 'type-dish'
-                  : 'type-article'
-            "
-          >
-            {{ item.type === 'merchant' ? '商家' : item.type === 'dish' ? '菜品' : '文章' }}
-          </div>
-          <el-button type="text" size="small" danger @click.stop="removeCollection(item.id)">
-            <el-icon><Delete /></el-icon>
-            删除
-          </el-button>
-        </div>
-
-        <div class="card-body">
-          <img :src="item.image || defaultImage" :alt="item.title" class="collection-image" />
-          <h3 class="collection-title">{{ item.title }}</h3>
-          <p class="collection-description">{{ item.description }}</p>
-          <div class="collection-meta">
-            <span class="meta-item">
-              <el-icon><Calendar /></el-icon>
-              {{ item.date }}
+      <div class="filter-left">
+        <el-select
+          v-model="filterType"
+          placeholder="筛选类型"
+          class="filter-select"
+          @change="handleFilterChange"
+        >
+          <el-option label="全部" value="all">
+            <span class="option-label">
+              <el-icon><Grid /></el-icon>
+              全部
             </span>
-          </div>
-        </div>
+          </el-option>
+          <el-option label="商家" value="merchant">
+            <span class="option-label">
+              <el-icon><Shop /></el-icon>
+              商家
+            </span>
+          </el-option>
+          <el-option label="菜品" value="dish">
+            <span class="option-label">
+              <el-icon><Food /></el-icon>
+              菜品
+            </span>
+          </el-option>
+          <el-option label="文章" value="article">
+            <span class="option-label">
+              <el-icon><Document /></el-icon>
+              文章
+            </span>
+          </el-option>
+        </el-select>
 
-        <div class="card-footer">
-          <el-button type="primary" size="small" @click.stop="viewDetails(item)">
-            <el-icon><View /></el-icon>
-            查看详情
+        <div class="filter-summary">
+          <span v-if="filterType !== 'all'" class="filter-active">
+            已筛选: <el-tag size="small" closable @close="resetFilter">
+              {{ getFilterTypeName(filterType) }}
+            </el-tag>
+          </span>
+        </div>
+      </div>
+
+      <div class="filter-right">
+        <el-button-group>
+          <el-button type="default" size="small" @click="applyFilter">
+            <el-icon><Search /></el-icon>
+            查询
+          </el-button>
+          <el-button type="default" size="small" @click="resetFilter" :disabled="filterType === 'all'">
+            <el-icon><Refresh /></el-icon>
+            重置
+          </el-button>
+        </el-button-group>
+
+        <el-divider direction="vertical" />
+
+        <el-button type="danger" size="small" @click="clearAll" :disabled="filteredCollections.length === 0">
+          <el-icon><Delete /></el-icon>
+          清空全部
+        </el-button>
+      </div>
+    </div>
+
+    <!-- 加载状态 -->
+    <div v-if="loading" class="loading-state">
+      <el-skeleton :rows="3" animated />
+    </div>
+
+    <!-- 收藏列表 -->
+    <div v-else-if="paginatedCollections.length > 0" class="collection-grid">
+      <transition-group name="collection-fade">
+        <div
+          v-for="item in paginatedCollections"
+          :key="item.id"
+          class="collection-card-wrapper"
+        >
+          <el-card
+            class="collection-card"
+            shadow="hover"
+            @click="viewDetails(item)"
+          >
+            <!-- 类型标签和删除按钮 -->
+            <div class="card-header">
+              <div
+                class="item-type-badge"
+                :class="`type-${item.type}`"
+              >
+                <el-icon class="type-icon">
+                  <component :is="getTypeIcon(item.type)" />
+                </el-icon>
+                <span>{{ getTypeName(item.type) }}</span>
+              </div>
+              <el-button
+                type="danger"
+                :icon="Delete"
+                circle
+                size="small"
+                class="delete-btn"
+                @click.stop="removeCollection(item.id)"
+              />
+            </div>
+
+            <!-- 卡片内容 -->
+            <div class="card-body">
+              <!-- 图片区域 -->
+              <div class="image-wrapper">
+                <img
+                  :src="item.image || defaultImage"
+                  :alt="item.title"
+                  class="collection-image"
+                  @error="handleImageError($event, item)"
+                />
+                <div class="image-overlay">
+                  <el-icon class="view-icon"><View /></el-icon>
+                  <span>点击查看</span>
+                </div>
+              </div>
+
+              <!-- 标题和描述 -->
+              <h3 class="collection-title" :title="item.title">{{ item.title }}</h3>
+              <p class="collection-description">{{ item.description }}</p>
+
+              <!-- 元信息 -->
+              <div class="collection-meta">
+                <div class="meta-item">
+                  <el-icon><Calendar /></el-icon>
+                  <span>收藏于 {{ item.date }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 卡片底部操作栏 -->
+            <div class="card-footer">
+              <el-button
+                type="primary"
+                size="small"
+                class="view-btn"
+                @click.stop="viewDetails(item)"
+              >
+                <el-icon><View /></el-icon>
+                查看详情
+              </el-button>
+            </div>
+          </el-card>
+        </div>
+      </transition-group>
+    </div>
+
+    <!-- 空状态 -->
+    <div v-else class="empty-state">
+      <div class="empty-content">
+        <el-icon class="empty-icon"><Star /></el-icon>
+        <h3 class="empty-title">{{ getEmptyTitle() }}</h3>
+        <p class="empty-description">{{ getEmptyDescription() }}</p>
+        <div class="empty-actions">
+          <el-button type="primary" @click="goToHome">
+            <el-icon><House /></el-icon>
+            去首页看看
+          </el-button>
+          <el-button v-if="filterType !== 'all'" @click="resetFilter">
+            <el-icon><RefreshLeft /></el-icon>
+            查看全部收藏
           </el-button>
         </div>
-      </el-card>
+      </div>
     </div>
 
-    <div v-if="filteredCollections.length === 0" class="empty-state">
-      <el-icon class="empty-icon"><Star /></el-icon>
-      <p>您还没有收藏任何内容</p>
-      <el-button type="primary" @click="goToHome">
-        <el-icon><House /></el-icon>
-        去首页看看
-      </el-button>
-    </div>
-
-    <div class="pagination">
+    <!-- 分页 -->
+    <div v-if="!loading && filteredCollections.length > 0" class="pagination-container">
       <el-pagination
         v-model:current-page="currentPage"
         v-model:page-size="pageSize"
         :page-sizes="[9, 18, 36]"
         :total="filteredCollections.length"
         layout="total, sizes, prev, pager, next, jumper"
+        background
         @size-change="handleSizeChange"
         @current-change="handleCurrentChange"
       />
     </div>
+
+    <!-- 菜品详情弹窗 -->
+    <DishDetailDialog
+      v-model="dishDialogVisible"
+      :dish-data="selectedDish"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Search, Refresh, Delete, Calendar, View, Star, House } from '@element-plus/icons-vue'
+import {
+  Search,
+  Refresh,
+  Delete,
+  Calendar,
+  View,
+  Star,
+  House,
+  InfoFilled,
+  Grid,
+  Shop,
+  Food,
+  Document,
+  RefreshLeft
+} from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
+import DishDetailDialog from '../../components/dish/DishDetailDialog.vue'
 import axios from 'axios'
 import { API_CONFIG } from '../../config/index.js'
 
 const router = useRouter()
+
+// 加载状态
+const loading = ref(true)
 
 // 默认图片
 const defaultImage =
@@ -124,6 +246,10 @@ const filterType = ref('all')
 // 分页
 const currentPage = ref(1)
 const pageSize = ref(9)
+
+// 菜品详情弹窗
+const dishDialogVisible = ref(false)
+const selectedDish = ref(null)
 
 // 计算过滤后的收藏
 const filteredCollections = computed(() => {
@@ -143,6 +269,59 @@ const paginatedCollections = computed(() => {
   const end = start + pageSize.value
   return filteredCollections.value.slice(start, end)
 })
+
+// 获取类型图标
+const getTypeIcon = (type) => {
+  const iconMap = {
+    merchant: Shop,
+    dish: Food,
+    article: Document
+  }
+  return iconMap[type] || Star
+}
+
+// 获取类型名称
+const getTypeName = (type) => {
+  const nameMap = {
+    merchant: '商家',
+    dish: '菜品',
+    article: '文章'
+  }
+  return nameMap[type] || '未知'
+}
+
+// 获取筛选类型名称
+const getFilterTypeName = (type) => {
+  return getTypeName(type)
+}
+
+// 获取空状态标题
+const getEmptyTitle = () => {
+  if (filterType.value !== 'all') {
+    return `没有找到${getFilterTypeName(filterType.value)}收藏`
+  }
+  return '还没有收藏任何内容'
+}
+
+// 获取空状态描述
+const getEmptyDescription = () => {
+  if (filterType.value !== 'all') {
+    return `您还没有收藏任何${getFilterTypeName(filterType.value)}，去首页看看吧`
+  }
+  return '收藏喜欢的商家和菜品，随时查看'
+}
+
+// 处理图片加载错误
+const handleImageError = (event, item) => {
+  event.target.src = defaultImage
+  event.target.onerror = null
+}
+
+// 筛选变化处理
+const handleFilterChange = () => {
+  currentPage.value = 1
+  ElMessage.success(`已切换到${getFilterTypeName(filterType.value)}收藏`)
+}
 
 // 应用筛选
 const applyFilter = () => {
@@ -206,19 +385,35 @@ const removeCollection = (id) => {
 const viewDetails = (item) => {
   switch (item.type) {
     case 'merchant':
-      router.push({ path: '/user/home/merchant-detail', query: { id: item.id } })
+      // 跳转到商家详情页
+      router.push({ path: '/user/home/merchant-detail', query: { id: item.collectableId } })
       break
     case 'dish':
-      // 这里可以跳转到菜品详情页
-      ElMessage.info('菜品详情页面正在开发中')
+      // 显示菜品详情弹窗
+      selectedDish.value = item.dishData
+      dishDialogVisible.value = true
       break
     case 'article':
-      // 这里可以跳转到文章详情页
-      ElMessage.info('文章详情页面正在开发中')
+      // 文章功能提示
+      ElMessageBox.alert(
+        '文章收藏功能正在开发中，敬请期待！您可以先收藏商家和菜品。',
+        '温馨提示',
+        {
+          confirmButtonText: '我知道了',
+          type: 'info',
+          icon: InfoFilled
+        }
+      )
       break
     default:
-      ElMessage.info('未知类型')
+      ElMessage.info('未知收藏类型')
   }
+}
+
+// 关闭菜品详情弹窗
+const closeDishDialog = () => {
+  dishDialogVisible.value = false
+  selectedDish.value = null
 }
 
 // 清空全部
@@ -228,18 +423,25 @@ const clearAll = () => {
     cancelButtonText: '取消',
     type: 'danger'
   })
-    .then(() => {
-      collections.value = []
+    .then(async () => {
+      try {
+        // 获取当前用户ID
+        const userId = localStorage.getItem('userId') || '1'
 
-      // 更新本地存储
-      localStorage.setItem('myCollections', JSON.stringify(collections.value))
+        // 调用后端API清空所有收藏
+        const response = await axios.delete(`${API_CONFIG.baseURL}/v1/collections/user/${userId}`)
 
-      // 更新用户信息中的收藏数量
-      const userInfo = JSON.parse(localStorage.getItem('userInfo'))
-      userInfo.collections = 0
-      localStorage.setItem('userInfo', JSON.stringify(userInfo))
-
-      ElMessage.success('所有收藏已清空')
+        if (response.data && response.data.code === '200') {
+          // 清空本地数据
+          collections.value = []
+          ElMessage.success('所有收藏已清空')
+        } else {
+          ElMessage.error('清空收藏失败：' + (response.data?.message || '未知错误'))
+        }
+      } catch (error) {
+        console.error('清空收藏失败:', error)
+        ElMessage.error('清空收藏失败，请稍后重试')
+      }
     })
     .catch(() => {
       ElMessage.info('已取消清空')
@@ -264,31 +466,91 @@ const handleCurrentChange = (val) => {
 
 // 从后端加载收藏数据
 onMounted(async () => {
+  loading.value = true
   try {
     // 获取当前用户ID（从localStorage中获取）
-    const userId = localStorage.getItem('userId') || 1
+    const userId = localStorage.getItem('userId') || '1'
     // 从后端获取收藏数据
     const response = await axios.get(`${API_CONFIG.baseURL}/v1/collections`, {
       params: { userId }
     })
     if (response.data && response.data.code === '200') {
       const rawCollections = response.data.data
-      // 这里需要根据收藏类型和ID获取具体的内容信息
-      // 目前暂时将数据转换为前端需要的格式
-      collections.value = rawCollections.map((item) => ({
-        id: item.id,
-        type: item.collectableType,
-        title: `${item.collectableType === 'merchant' ? '商家' : item.collectableType === 'dish' ? '菜品' : '文章'} ${item.collectableId}`,
-        description: `这是${item.collectableType === 'merchant' ? '商家' : item.collectableType === 'dish' ? '菜品' : '文章'}的描述`,
-        image: defaultImage,
-        date: new Date(item.createTime).toISOString().split('T')[0]
-      }))
+
+      // 处理收藏数据,根据类型获取详细信息
+      const processedCollections = await Promise.all(
+        rawCollections.map(async (item) => {
+          const baseCollection = {
+            id: item.id,
+            collectableId: item.collectableId,
+            type: item.collectableType,
+            date: new Date(item.createTime).toISOString().split('T')[0]
+          }
+
+          try {
+            if (item.collectableType === 'merchant') {
+              // 获取商家详情
+              const merchantRes = await axios.get(
+                `${API_CONFIG.baseURL}/v1/merchant/${item.collectableId}`
+              )
+              if (merchantRes.data?.code === '200' && merchantRes.data?.data) {
+                const merchant = merchantRes.data.data
+                return {
+                  ...baseCollection,
+                  title: merchant.name || '未知商家',
+                  description: merchant.description || `这是${merchant.name || '商家'}的简介`,
+                  image: merchant.image || defaultImage
+                }
+              }
+            } else if (item.collectableType === 'dish') {
+              // 菜品详情 - 从菜单中获取
+              // 注意: 这里需要根据实际情况调整API调用
+              // 暂时显示基本信息,实际使用时需要获取菜品详细数据
+              return {
+                ...baseCollection,
+                title: `菜品 ${item.collectableId}`,
+                description: '美味的菜品,欢迎查看详情',
+                image: defaultImage,
+                dishData: {
+                  id: item.collectableId,
+                  name: `菜品 ${item.collectableId}`,
+                  price: 0,
+                  description: '美味的菜品',
+                  category: '招牌菜'
+                }
+              }
+            } else if (item.collectableType === 'article') {
+              // 文章暂不支持
+              return {
+                ...baseCollection,
+                title: `文章 ${item.collectableId}`,
+                description: '文章收藏功能正在开发中',
+                image: defaultImage
+              }
+            }
+          } catch (error) {
+            console.error(`加载${item.collectableType}详情失败:`, error)
+          }
+
+          // 默认返回值
+          return {
+            ...baseCollection,
+            title: `${item.collectableType === 'merchant' ? '商家' : item.collectableType === 'dish' ? '菜品' : '文章'} ${item.collectableId}`,
+            description: `这是${item.collectableType === 'merchant' ? '商家' : item.collectableType === 'dish' ? '菜品' : '文章'}的描述`,
+            image: defaultImage
+          }
+        })
+      )
+
+      collections.value = processedCollections
     } else {
       ElMessage.error('加载收藏数据失败：' + (response.data?.message || '未知错误'))
     }
   } catch (error) {
     console.error('加载收藏数据失败:', error)
     ElMessage.error('加载收藏数据失败，请稍后重试')
+  } finally {
+    loading.value = false
   }
 })
 </script>
@@ -296,132 +558,481 @@ onMounted(async () => {
 <style scoped lang="less">
 .my-collection-container {
   padding: 0 20px 20px 20px;
+  min-height: calc(100vh - 40px);
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
 
   .header {
     display: flex;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 24px;
+    padding: 20px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
 
-    /* 移除自定义返回按钮样式，使用组件默认样式 */
+    .header-content {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-left: 20px;
 
-    h2 {
-      font-size: 24px;
-      margin: 0;
+      h2 {
+        font-size: 28px;
+        margin: 0;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-weight: 700;
+      }
+
+      .collection-stats {
+        :deep(.el-tag) {
+          font-size: 14px;
+          padding: 8px 16px;
+          font-weight: 500;
+        }
+      }
     }
   }
 
   .filter-bar {
-    margin: 20px 0;
+    margin-bottom: 24px;
+    padding: 20px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
     display: flex;
+    justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 16px;
+
+    .filter-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex: 1;
+      min-width: 300px;
+
+      .filter-select {
+        width: 200px;
+
+        :deep(.el-input__wrapper) {
+          border-radius: 8px;
+        }
+
+        .option-label {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+
+          .el-icon {
+            font-size: 16px;
+          }
+        }
+      }
+
+      .filter-summary {
+        .filter-active {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 14px;
+          color: #606266;
+        }
+      }
+    }
+
+    .filter-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
+      :deep(.el-divider--vertical) {
+        height: 24px;
+        margin: 0;
+      }
+    }
+  }
+
+  .loading-state {
+    padding: 40px 20px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
   }
 
   .collection-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 20px;
-    margin: 20px 0;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 24px;
+    margin-bottom: 24px;
 
-    .collection-card {
+    // 列表动画
+    .collection-fade-enter-active,
+    .collection-fade-leave-active {
+      transition: all 0.3s ease;
+    }
+
+    .collection-fade-enter-from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+
+    .collection-fade-leave-to {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+
+    .collection-card-wrapper {
       height: 100%;
-      display: flex;
-      flex-direction: column;
 
-      .card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+      .collection-card {
+        height: 100%;
+        border-radius: 16px;
+        border: none;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+        overflow: hidden;
 
-        .item-type {
-          padding: 2px 8px;
-          border-radius: 4px;
-          font-size: 12px;
-          color: white;
-          font-weight: bold;
+        &:hover {
+          transform: translateY(-8px);
+          box-shadow: 0 12px 40px rgba(102, 126, 234, 0.25);
+        }
 
-          &.type-merchant {
-            background-color: #4caf50;
+        :deep(.el-card__body) {
+          padding: 0;
+          height: 100%;
+          display: flex;
+          flex-direction: column;
+        }
+
+        .card-header {
+          padding: 16px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+          border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+
+          .item-type-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            color: white;
+            transition: all 0.3s ease;
+
+            .type-icon {
+              font-size: 16px;
+            }
+
+            &.type-merchant {
+              background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+            }
+
+            &.type-dish {
+              background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+            }
+
+            &.type-article {
+              background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+            }
           }
 
-          &.type-dish {
-            background-color: #ff9800;
-          }
+          .delete-btn {
+            opacity: 0;
+            transition: all 0.3s ease;
 
-          &.type-article {
-            background-color: #2196f3;
-          }
-        }
-      }
-
-      .card-body {
-        flex: 1;
-
-        .collection-image {
-          width: 100%;
-          height: 150px;
-          object-fit: cover;
-          margin-bottom: 15px;
-          border-radius: 4px;
-        }
-
-        .collection-title {
-          font-size: 18px;
-          font-weight: bold;
-          margin: 0 0 10px 0;
-        }
-
-        .collection-description {
-          font-size: 14px;
-          color: #666;
-          margin: 0 0 15px 0;
-          height: 42px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          line-clamp: 2;
-          -webkit-box-orient: vertical;
-        }
-
-        .collection-meta {
-          font-size: 12px;
-          color: #999;
-
-          .meta-item {
-            margin-right: 20px;
+            &:hover {
+              transform: rotate(90deg) scale(1.1);
+            }
           }
         }
-      }
 
-      .card-footer {
-        text-align: right;
-        margin-top: 15px;
+        &:hover .delete-btn {
+          opacity: 1;
+        }
+
+        .card-body {
+          flex: 1;
+          padding: 16px;
+          display: flex;
+          flex-direction: column;
+
+          .image-wrapper {
+            position: relative;
+            width: 100%;
+            height: 200px;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+            .collection-image {
+              width: 100%;
+              height: 100%;
+              object-fit: cover;
+              transition: transform 0.3s ease;
+            }
+
+            .image-overlay {
+              position: absolute;
+              top: 0;
+              left: 0;
+              width: 100%;
+              height: 100%;
+              background: rgba(0, 0, 0, 0.5);
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              gap: 8px;
+              color: white;
+              opacity: 0;
+              transition: opacity 0.3s ease;
+
+              .view-icon {
+                font-size: 32px;
+              }
+
+              span {
+                font-size: 14px;
+                font-weight: 500;
+              }
+            }
+          }
+
+          &:hover {
+            .collection-image {
+              transform: scale(1.1);
+            }
+
+            .image-overlay {
+              opacity: 1;
+            }
+          }
+
+          .collection-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin: 0 0 12px 0;
+            color: #2c3e50;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+
+          .collection-description {
+            font-size: 14px;
+            color: #666;
+            margin: 0 0 16px 0;
+            line-height: 1.6;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-height: 42px;
+          }
+
+          .collection-meta {
+            margin-top: auto;
+
+            .meta-item {
+              display: flex;
+              align-items: center;
+              gap: 6px;
+              font-size: 13px;
+              color: #999;
+              padding: 8px 12px;
+              background: #f8f9fa;
+              border-radius: 8px;
+
+              .el-icon {
+                font-size: 14px;
+              }
+            }
+          }
+        }
+
+        .card-footer {
+          padding: 16px;
+          border-top: 1px solid rgba(0, 0, 0, 0.05);
+          background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+
+          .view-btn {
+            width: 100%;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+
+            &:hover {
+              transform: translateY(-2px);
+              box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            }
+          }
+        }
       }
     }
   }
 
   .empty-state {
+    padding: 80px 20px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
     text-align: center;
-    padding: 80px 0;
 
-    .empty-icon {
-      font-size: 64px;
-      color: #ccc;
-      margin-bottom: 20px;
-    }
+    .empty-content {
+      .empty-icon {
+        font-size: 120px;
+        color: #ddd;
+        margin-bottom: 24px;
+        animation: float 3s ease-in-out infinite;
+      }
 
-    p {
-      font-size: 18px;
-      color: #666;
-      margin-bottom: 30px;
+      .empty-title {
+        font-size: 24px;
+        font-weight: 600;
+        color: #2c3e50;
+        margin: 0 0 12px 0;
+      }
+
+      .empty-description {
+        font-size: 16px;
+        color: #999;
+        margin: 0 0 32px 0;
+      }
+
+      .empty-actions {
+        display: flex;
+        justify-content: center;
+        gap: 16px;
+      }
     }
   }
 
-  .pagination {
-    margin-top: 20px;
-    text-align: right;
+  .pagination-container {
+    padding: 24px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    display: flex;
+    justify-content: center;
+
+    :deep(.el-pagination) {
+      .btn-prev,
+      .btn-next,
+      .el-pager li {
+        border-radius: 8px;
+        font-weight: 500;
+      }
+
+      .el-pager li.is-active {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+      }
+    }
+  }
+}
+
+// 浮动动画
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+// 响应式设计
+@media (max-width: 768px) {
+  .my-collection-container {
+    padding: 0 10px 10px 10px;
+
+    .header {
+      padding: 16px;
+
+      .header-content {
+        margin-left: 12px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+
+        h2 {
+          font-size: 22px;
+        }
+      }
+    }
+
+    .filter-bar {
+      padding: 16px;
+      flex-direction: column;
+      align-items: stretch;
+
+      .filter-left {
+        flex-direction: column;
+        align-items: stretch;
+        min-width: auto;
+
+        .filter-select {
+          width: 100%;
+        }
+      }
+
+      .filter-right {
+        justify-content: space-between;
+
+        .el-button-group {
+          display: flex;
+          flex: 1;
+
+          .el-button {
+            flex: 1;
+          }
+        }
+      }
+    }
+
+    .collection-grid {
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+
+    .empty-state {
+      padding: 40px 16px;
+
+      .empty-content {
+        .empty-icon {
+          font-size: 80px;
+        }
+
+        .empty-title {
+          font-size: 20px;
+        }
+
+        .empty-description {
+          font-size: 14px;
+        }
+
+        .empty-actions {
+          flex-direction: column;
+          gap: 12px;
+
+          .el-button {
+            width: 100%;
+          }
+        }
+      }
+    }
   }
 }
 </style>
