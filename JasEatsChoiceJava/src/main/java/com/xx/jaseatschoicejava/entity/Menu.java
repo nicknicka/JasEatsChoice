@@ -32,6 +32,7 @@ public class Menu {
 
     @TableField("name")
     @ApiModelProperty(value = "菜单名称")
+    @JsonProperty("menuName") // 前端使用的字段名是menuName
     private String name; // 菜单名称
 
     @TableField("type")

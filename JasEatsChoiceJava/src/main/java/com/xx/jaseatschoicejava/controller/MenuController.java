@@ -1,6 +1,8 @@
 package com.xx.jaseatschoicejava.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.StringUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xx.jaseatschoicejava.common.ResponseResult;
 import com.xx.jaseatschoicejava.entity.Dish;
 import com.xx.jaseatschoicejava.entity.Menu;
@@ -16,6 +18,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import com.xx.jaseatschoicejava.dto.MenuWithDishStatusDTO;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -69,6 +73,8 @@ public class MenuController {
                         String fieldName = pd.getName();
                         if ("type".equals(fieldName)) {
                             menuMap.put("category", value);
+                        } else if ("name".equals(fieldName)) {
+                            menuMap.put("menuName", value); // 前端期望 menuName
                         } else {
                             menuMap.put(fieldName, value);
                         }
@@ -82,13 +88,23 @@ public class MenuController {
                 // 根据菜品ID查询完整的菜品信息
                 List<Map<String, Object>> dishes = menuDishes.stream()
                         .map(menuDish -> dishService.getById(menuDish.getDishId()))
-                        .filter(dish -> dish != null) // 过滤掉可能已删除的菜品
-                        .map(dish -> {
+                        .filter(dishObj -> dishObj != null) // 过滤掉可能已删除的菜品
+                        .map(dishObj -> {
+                            Dish dish = (Dish) dishObj; // 显式转换
                             Map<String, Object> dishMap = new java.util.HashMap<>();
                             dishMap.put("id", dish.getId());
                             dishMap.put("name", dish.getName());
                             dishMap.put("price", dish.getPrice());
                             dishMap.put("status", dish.getStatus());
+                            dishMap.put("category", dish.getCategory()); // 添加菜品分类
+                            dishMap.put("description", dish.getDescription()); // 添加描述
+                            dishMap.put("calorie", dish.getCalorie()); // 添加卡路里
+
+                            // 解析食材数据
+                            Map<String, Object> ingredientsData = parseIngredients(dish.getIngredients());
+                            dishMap.put("optionalIngredients", ingredientsData.get("optionalIngredients"));
+                            dishMap.put("requiredIngredients", ingredientsData.get("requiredIngredients"));
+
                             return dishMap;
                         })
                         .collect(java.util.stream.Collectors.toList());
@@ -530,5 +546,74 @@ public class MenuController {
         } catch (Exception e) {
             return ResponseResult.fail("500", "更新菜单失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * 解析食材JSON字符串
+     * 支持多种JSON格式，返回前端需要的格式
+     */
+    private Map<String, Object> parseIngredients(String ingredientsJson) {
+        Map<String, Object> result = new HashMap<>();
+        List<Object> optionalIngredients = new ArrayList<>();
+        List<String> requiredIngredients = new ArrayList<>();
+
+        // 如果食材为空或null，返回空数组
+        if (ingredientsJson == null || ingredientsJson.trim().isEmpty()) {
+            result.put("optionalIngredients", optionalIngredients);
+            result.put("requiredIngredients", requiredIngredients);
+            return result;
+        }
+
+        try {
+            // 使用 TypeReference 来避免类型擦除问题
+            ObjectMapper objectMapper = new ObjectMapper();
+            // 尝试解析为Map，使用 Map<String, Object> 类型
+            Map<String, Object> ingredientsMap = objectMapper.readValue(
+                ingredientsJson,
+                new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {}
+            );
+
+            // 处理必选食材
+            if (ingredientsMap.containsKey("requiredIngredients")) {
+                Object required = ingredientsMap.get("requiredIngredients");
+                if (required instanceof List) {
+                    for (Object item : (List<?>) required) {
+                        if (item != null) {
+                            requiredIngredients.add(item.toString());
+                        }
+                    }
+                }
+            } else if (ingredientsMap.containsKey("required")) {
+                Object required = ingredientsMap.get("required");
+                if (required instanceof List) {
+                    for (Object item : (List<?>) required) {
+                        if (item != null) {
+                            requiredIngredients.add(item.toString());
+                        }
+                    }
+                }
+            }
+
+            // 处理可选食材
+            if (ingredientsMap.containsKey("optionalIngredients")) {
+                Object optional = ingredientsMap.get("optionalIngredients");
+                if (optional instanceof List) {
+                    optionalIngredients.addAll((List<?>) optional);
+                }
+            } else if (ingredientsMap.containsKey("optional")) {
+                Object optional = ingredientsMap.get("optional");
+                if (optional instanceof List) {
+                    optionalIngredients.addAll((List<?>) optional);
+                }
+            }
+
+        } catch (Exception e) {
+            // JSON解析失败，返回空数组
+            System.err.println("解析食材JSON失败: " + e.getMessage());
+        }
+
+        result.put("optionalIngredients", optionalIngredients);
+        result.put("requiredIngredients", requiredIngredients);
+        return result;
     }
 }

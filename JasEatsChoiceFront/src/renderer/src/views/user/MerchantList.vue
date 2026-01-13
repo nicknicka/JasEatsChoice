@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
+import { Search, RefreshLeft, Location, ShoppingCart, Shop } from '@element-plus/icons-vue'
 
 // 引入API配置
 import { API_CONFIG } from '../../config/index.js'
@@ -171,6 +172,21 @@ const filteredMerchants = computed(() => {
 
   return result
 })
+
+// 格式化评分显示
+const formatRating = (rating) => {
+  if (!rating || rating === 0) return '暂无评价'
+  return rating.toFixed(1)
+}
+
+// 跳转到商家详情页
+const goToMerchantDetail = (merchant) => {
+  sessionStorage.setItem('selectedMerchant', JSON.stringify(merchant))
+  router.push({
+    path: '/user/home/merchant-detail',
+    query: { viewMode: 'detail' }
+  })
+}
 </script>
 
 <template>
@@ -179,46 +195,43 @@ const filteredMerchants = computed(() => {
 
     <!-- 搜索和筛选区 -->
     <div class="search-filter-section">
-      <el-input
-        v-model="searchKeyword"
-        placeholder="搜索商家名称、类型或特色..."
-        clearable
-        class="search-input"
-        aria-label="搜索商家名称、类型或特色"
-      >
-        <template #prefix>
-          <span class="el-input__icon">🔍</span>
-        </template>
-      </el-input>
-
-      <div class="filter-row">
-        <el-select
-          v-model="filters.type"
-          placeholder="筛选类型"
-          size="small"
-          style="width: 140px"
-          class="type-select"
+      <div class="search-row">
+        <el-input
+          v-model="searchKeyword"
+          placeholder="搜索商家名称、类型或特色..."
+          clearable
+          class="search-input"
+          aria-label="搜索商家名称、类型或特色"
         >
-          <el-option
-            v-for="option in typeOptions"
-            :key="option.value"
-            :label="option.label"
-            :value="option.value"
-          />
-        </el-select>
+          <template #prefix>
+            <el-icon><Search /></el-icon>
+          </template>
+        </el-input>
 
-        <el-select v-model="filters.sort" placeholder="排序方式" size="small" style="width: 140px">
-          <el-option
-            v-for="option in sortOptions"
-            :key="option.value"
-            :label="option.label"
-            :value="option.value"
-          />
-        </el-select>
+        <el-button @click="resetFilters" class="reset-btn" :icon="RefreshLeft">重置</el-button>
+      </div>
 
-        <el-button type="default" size="small" @click="resetFilters" class="reset-btn">
-          重置
-        </el-button>
+      <div class="filter-tags">
+        <div
+          v-for="option in typeOptions"
+          :key="option.value"
+          :class="['filter-tag', { active: filters.type === option.value }]"
+          @click="filters.type = option.value"
+        >
+          {{ option.label }}
+        </div>
+      </div>
+
+      <div class="sort-options">
+        <span class="sort-label">排序方式：</span>
+        <div
+          v-for="option in sortOptions"
+          :key="option.value"
+          :class="['sort-tag', { active: filters.sort === option.value }]"
+          @click="filters.sort = option.value"
+        >
+          {{ option.label }}
+        </div>
       </div>
     </div>
 
@@ -232,6 +245,7 @@ const filteredMerchants = computed(() => {
         :key="merchant.id"
         :class="['merchant-card', merchant.isOpen ? 'merchant-card-open' : 'merchant-card-closed']"
         v-else-if="filteredMerchants.length > 0"
+        @click="goToMerchantDetail(merchant)"
       >
         <div class="card-header">
           <div class="merchant-image">
@@ -241,14 +255,22 @@ const filteredMerchants = computed(() => {
               :alt="merchant.name"
               class="merchant-img"
             />
-            <span v-else>🏪</span>
+            <div v-else class="default-icon">
+              <el-icon :size="40"><Shop /></el-icon>
+            </div>
           </div>
           <div class="merchant-info">
             <div class="merchant-name">{{ merchant.name }}</div>
             <div class="merchant-meta">
               <div class="merchant-rating">
-                <el-rate v-model="merchant.rating" :disabled="true" show-text size="small" />
-                <span class="distance">{{ merchant.distance || '未知距离' }}</span>
+                <div class="rating-wrapper">
+                  <el-rate v-model="merchant.rating" :disabled="true" size="small" />
+                  <span class="rating-number">{{ formatRating(merchant.rating) }}</span>
+                </div>
+                <span class="distance">
+                  <el-icon class="distance-icon"><Location /></el-icon>
+                  {{ merchant.distance || '未知距离' }}
+                </span>
               </div>
               <div class="merchant-status">
                 <el-tag :type="merchant.isOpen ? 'success' : 'danger'" size="small">
@@ -286,14 +308,10 @@ const filteredMerchants = computed(() => {
         </div>
 
         <div class="card-actions">
-          <el-button
-            type="primary"
-            size="small"
-            icon="el-icon-shopping-cart-2"
-            icon-position="left"
-            @click="orderNow(merchant)"
-            >立即下单</el-button
-          >
+          <el-button type="primary" size="small" @click.stop="orderNow(merchant)">
+            <el-icon class="btn-icon"><ShoppingCart /></el-icon>
+            立即下单
+          </el-button>
         </div>
       </el-card>
 
@@ -325,13 +343,13 @@ const filteredMerchants = computed(() => {
     font-weight: 800;
     letter-spacing: -0.5px;
 
-    // 添加装饰性下划线
+    // 添加装饰性下划线 - 蓝色渐变
     &::after {
       content: '';
       display: block;
       width: 60px;
       height: 4px;
-      background: linear-gradient(135deg, #23d160 0%, #20c997 100%);
+      background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
       border-radius: 2px;
       margin-top: 12px;
     }
@@ -339,52 +357,64 @@ const filteredMerchants = computed(() => {
 
   .search-filter-section {
     display: flex;
-    flex-direction: column; // 修改为垂直布局
-    gap: 12px; // 搜索框和筛选区之间的间距
+    flex-direction: column;
+    gap: 12px;
     margin-bottom: 24px;
     padding: 20px;
-    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); // 渐变背景
+    background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
     border-radius: 20px;
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08); // 更明显的阴影
-    width: 100%; // 确保宽度为100%
-    box-sizing: border-box; // 确保padding和border不会增加额外宽度
+    box-shadow: 0 6px 24px rgba(59, 130, 246, 0.12);
+    border: 1px solid rgba(59, 130, 246, 0.1);
+    width: 100%;
+    box-sizing: border-box;
+
+    .search-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
 
     .search-input {
-      width: 100%;
+      flex: 1;
 
-      :deep(.el-input__inner) {
+      :deep(.el-input__wrapper) {
         border-radius: 14px;
-        border: none; /* 去掉搜索框的方形边框 */
-        height: 48px;
-        font-size: 15px;
-        padding-left: 17px;
-        padding-right: 21px;
+        border: 2px solid rgba(59, 130, 246, 0.15);
+        padding: 8px 16px;
         transition: all 0.3s ease;
         background-color: #ffffff;
+        box-shadow: none;
+
+        &:hover {
+          border-color: rgba(59, 130, 246, 0.3);
+        }
+
+        &.is-focus {
+          border-color: #3b82f6;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+      }
+
+      :deep(.el-input__inner) {
+        font-size: 15px;
+        color: #1e293b;
       }
 
       :deep(.el-input__prefix) {
-        left: 20px;
-        top: 50%;
+        color: #3b82f6;
+        font-size: 18px;
       }
 
-      /* 搜索图标样式 */
-      :deep(.el-input__prefix-inner .el-input__icon) {
-        color: #94a3b8;
-        font-size: 20px;
-      }
+      :deep(.el-input__suffix) {
+        .el-icon {
+          font-size: 16px;
+          color: #cbd5e1;
 
-      :deep(.el-input__suffix-inner .el-icon-circle-close) {
-        font-size: 20px;
-        color: #cbd5e1;
+          &:hover {
+            color: #3b82f6;
+          }
+        }
       }
-    }
-
-    .filter-row {
-      display: flex;
-      gap: 15px;
-      justify-content: center; /* 居中对齐 */
-      align-items: center; /* 垂直居中 */
     }
 
     /* 重置按钮样式 */
@@ -392,28 +422,122 @@ const filteredMerchants = computed(() => {
       flex-shrink: 0;
       border-radius: 14px;
       height: 48px;
+      padding: 0 24px;
       font-size: 15px;
-      padding: 0 32px;
       transition: all 0.3s ease;
-      /* 确保按钮文本居中 */
-      display: flex !important;
-      align-items: center !important;
-      justify-content: center !important;
+      background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+      border: 1px solid #cbd5e1;
+      color: #475569;
+
+      &:hover {
+        background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+        border-color: #94a3b8;
+        color: #1e293b;
+      }
     }
 
-    :deep(.el-select) {
-      flex: 1;
-      min-width: 180px;
+    .filter-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      padding-bottom: 4px;
 
-      :deep(.el-select__wrapper) {
-        border-radius: 14px;
-        border: 2px solid #e2e8f0;
-        height: 48px;
-        transition: all 0.3s ease;
+      .filter-tag {
+        padding: 8px 18px;
+        border-radius: 20px;
+        font-size: 14px;
+        color: #64748b;
+        background: #ffffff;
+        border: 1px solid rgba(59, 130, 246, 0.1);
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        user-select: none;
+        position: relative;
+
+        &:hover {
+          color: #3b82f6;
+          border-color: rgba(59, 130, 246, 0.3);
+          background: rgba(59, 130, 246, 0.05);
+          transform: translateY(-1px);
+        }
+
+        &:active {
+          transform: translateY(0) scale(0.98);
+        }
+
+        &.active {
+          color: #ffffff;
+          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+          border-color: transparent;
+          font-weight: 500;
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+
+          &:hover {
+            box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+            transform: translateY(-2px);
+          }
+
+          &:active {
+            transform: translateY(0) scale(0.98);
+          }
+        }
+      }
+    }
+
+    .sort-options {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      padding-top: 8px;
+      border-top: 1px dashed rgba(59, 130, 246, 0.15);
+
+      .sort-label {
+        font-size: 13px;
+        color: #64748b;
+        font-weight: 500;
+        margin-right: 4px;
       }
 
-      :deep(.el-select__input) {
-        font-size: 15px;
+      .sort-tag {
+        padding: 6px 16px;
+        border-radius: 18px;
+        font-size: 13px;
+        color: #64748b;
+        background: #ffffff;
+        border: 1px solid rgba(59, 130, 246, 0.1);
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        user-select: none;
+
+        &:hover {
+          color: #3b82f6;
+          border-color: rgba(59, 130, 246, 0.3);
+          background: rgba(59, 130, 246, 0.05);
+          transform: translateY(-1px);
+        }
+
+        &:active {
+          transform: translateY(0) scale(0.98);
+        }
+
+        &.active {
+          color: #ffffff;
+          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+          border-color: transparent;
+          font-weight: 500;
+          box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+
+          &:hover {
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+            transform: translateY(-1px);
+          }
+
+          &:active {
+            transform: translateY(0) scale(0.98);
+          }
+        }
       }
     }
   }
@@ -421,41 +545,73 @@ const filteredMerchants = computed(() => {
   .merchant-grid {
     display: flex;
     flex-direction: row;
-    flex-wrap: wrap; /* 允许卡片换行 */
-    gap: 20px;
+    flex-wrap: wrap;
+    gap: 24px;
     padding: 0 20px;
-    justify-content: center; /* 卡片居中排列 */
+    justify-content: center;
   }
 
   .merchant-card {
-    flex: 1 1 300px; /* 卡片自适应宽度，最小300px */
-    max-width: 500px; /* 最大宽度限制 */
+    flex: 1 1 320px;
+    max-width: 480px;
     box-sizing: border-box;
-    transition: all 0.3s ease;
-    border-radius: 12px;
-    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 16px;
+    box-shadow: 0 2px 15px rgba(59, 130, 246, 0.08);
+    border: 1px solid rgba(59, 130, 246, 0.08);
+    background: linear-gradient(to bottom, #ffffff 0%, #f8fafc 100%);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #3b82f6 0%, #06b6d4 100%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
 
     &:hover {
-      box-shadow: 0 4px 25px rgba(0, 0, 0, 0.12);
+      box-shadow: 0 12px 40px rgba(59, 130, 246, 0.18);
+      transform: translateY(-6px);
+      border-color: rgba(59, 130, 246, 0.25);
+
+      &::before {
+        opacity: 1;
+      }
+    }
+
+    &:active {
       transform: translateY(-2px);
     }
   }
 
-  // 营业中商家卡片 - 非悬停状态
+  // 营业中商家卡片 - 蓝色光晕效果
   .merchant-card-open {
-    // 恢复卡片基础样式，移除绿色光晕
-    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
-    transition: all 0.3s ease;
+    box-shadow: 0 2px 15px rgba(59, 130, 246, 0.08);
 
     &:hover {
-      // 卡片悬浮时保持基础阴影增强效果
-      box-shadow: 0 4px 25px rgba(0, 0, 0, 0.12);
-      transform: translateY(-2px);
+      box-shadow: 0 12px 40px rgba(59, 130, 246, 0.22);
 
-      // 卡片悬浮时，为营业中标签添加绿色光晕和阴影
-      .merchant-status .el-tag[type='success'] {
-        box-shadow: 0 0 30px rgba(35, 209, 96, 0.8); /* 标签的绿色光晕效果 */
+      // 卡片悬浮时，为营业中标签添加蓝色光晕
+      .merchant-status .el-tag--success {
+        box-shadow: 0 0 20px rgba(59, 130, 246, 0.6);
+        transform: scale(1.05);
       }
+    }
+  }
+
+  // 已停业商家卡片
+  .merchant-card-closed {
+    opacity: 0.85;
+
+    &:hover {
+      opacity: 1;
     }
   }
 
@@ -464,34 +620,57 @@ const filteredMerchants = computed(() => {
     .card-header {
       display: flex;
       gap: 20px;
-      margin-bottom: 15px;
+      margin-bottom: 20px;
       align-items: center;
+      padding: 4px;
 
       .merchant-image {
         font-size: 50px;
         display: flex;
         align-items: center;
         justify-content: center;
+        flex-shrink: 0;
 
         .merchant-img {
           width: 80px;
           height: 80px;
           border-radius: 50%;
           object-fit: cover;
+          border: 3px solid rgba(59, 130, 246, 0.1);
+          transition: all 0.3s ease;
+        }
+
+        .default-icon {
+          width: 80px;
+          height: 80px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #ffffff;
+          filter: drop-shadow(0 2px 8px rgba(59, 130, 246, 0.15));
         }
       }
 
       .merchant-info {
         display: flex;
-        flex-direction: column; /* 垂直布局 */
-        align-items: flex-start; /* 左对齐 */
-        gap: 8px; /* 调整间距 */
-        flex: 1; /* 占据剩余空间 */
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+        flex: 1;
+        min-width: 0; /* 防止文本溢出 */
 
         .merchant-name {
-          font-size: 18px;
-          font-weight: bold;
-          margin-bottom: 4px;
+          font-size: 20px;
+          font-weight: 700;
+          margin-bottom: 2px;
+          background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          letter-spacing: -0.3px;
+          line-height: 1.3;
         }
 
         .merchant-meta {
@@ -499,53 +678,99 @@ const filteredMerchants = computed(() => {
           align-items: center;
           justify-content: space-between;
           width: 100%;
+          gap: 12px;
         }
 
         .merchant-rating {
           display: flex;
-          align-items: center;
-          gap: 10px;
+          flex-direction: column;
+          gap: 6px;
+          flex: 1;
+          min-width: 0;
+
+          .rating-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+
+            :deep(.el-rate) {
+              .el-rate__icon {
+                font-size: 16px;
+              }
+            }
+
+            .rating-number {
+              font-size: 15px;
+              font-weight: 600;
+              color: #f59e0b;
+              background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+              -webkit-background-clip: text;
+              -webkit-text-fill-color: transparent;
+              background-clip: text;
+            }
+          }
 
           .distance {
-            font-size: 14px;
-            color: #666;
+            font-size: 13px;
+            color: #64748b;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 500;
+
+            .distance-icon {
+              font-size: 14px;
+              color: #94a3b8;
+            }
           }
         }
 
         .merchant-status {
-          // 营业中标签样式
-          .el-tag[type='success'] {
-            :deep(.el-tag__content) {
-              color: white !important;
+          flex-shrink: 0;
+
+          .el-tag {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          }
+
+          // 营业中标签样式 - 蓝色系
+          .el-tag--success {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            border: none;
+            color: white;
+            font-weight: 500;
+            padding: 4px 12px;
+
+            &:hover {
+              background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+              transform: scale(1.05);
             }
-            background-color: #23d160 !important; /* 使用稍微浅一点的绿色 */
-            border-color: #23d160 !important; /* 边框颜色同步 */
-            transition: box-shadow 0.3s ease; /* 光晕过渡效果 */
           }
 
           // 非营业中标签样式
-          .el-tag[type='danger'] {
-            :deep(.el-tag__content) {
-              color: white !important;
-            }
-            background-color: #ff4d4f !important; /* 红色 */
-            border-color: #ff4d4f !important; /* 边框颜色同步 */
-            box-shadow: none; /* 非营业中标签没有光晕 */
+          .el-tag--danger {
+            background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
+            border: none;
+            color: white;
+            font-weight: 500;
+            padding: 4px 12px;
           }
         }
       }
     }
 
     .merchant-details {
-      margin-bottom: 20px;
+      margin-bottom: 16px;
+      padding: 12px;
       display: flex;
       flex-wrap: wrap;
-      gap: 10px; /* 调整元素之间的间距 */
-      align-items: center; /* 垂直居中对齐 */
+      gap: 8px;
+      align-items: center;
+      background: rgba(59, 130, 246, 0.03);
+      border-radius: 10px;
     }
 
     .merchant-type {
-      margin: 0; /* 重置margin */
+      margin: 0;
     }
 
     .merchant-features {
@@ -554,21 +779,45 @@ const filteredMerchants = computed(() => {
     }
 
     .merchant-tags {
-      margin: 0; /* 重置margin */
+      margin: 0;
       display: flex;
       gap: 8px;
+      flex-wrap: wrap;
     }
 
     .card-actions {
       display: flex;
-      justify-content: center; /* 将按钮居中 */
+      justify-content: center;
       padding-top: 16px;
-      border-top: 1px solid #f0f0f0;
+      border-top: 1px solid rgba(59, 130, 246, 0.1);
 
       .el-button {
-        width: 100%; /* 按钮宽度占满 */
-        border-radius: 8px;
-        font-weight: 500;
+        width: 100%;
+        border-radius: 12px;
+        font-weight: 600;
+        height: 46px;
+        font-size: 15px;
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        border: none;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+
+        .btn-icon {
+          font-size: 18px;
+        }
+
+        &:hover {
+          background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(59, 130, 246, 0.45);
+        }
+
+        &:active {
+          transform: translateY(0);
+        }
       }
     }
   }
@@ -585,28 +834,30 @@ const filteredMerchants = computed(() => {
     flex-shrink: 0;
     text-align: center;
     padding: 80px 20px;
-    background-color: #f8f9fa;
-    border-radius: 8px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+    background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
+    border-radius: 16px;
+    border: 2px dashed rgba(59, 130, 246, 0.2);
 
     .empty-icon {
       font-size: 80px;
       margin-bottom: 20px;
-      opacity: 0.6;
+      opacity: 0.7;
     }
 
     .empty-text {
-      color: #666;
+      color: #475569;
 
       h3 {
         font-size: 20px;
         margin: 0 0 10px 0;
-        color: #333;
+        color: #1e40af;
+        font-weight: 600;
       }
 
       p {
         font-size: 14px;
         margin: 0;
+        color: #64748b;
       }
     }
 
@@ -614,8 +865,16 @@ const filteredMerchants = computed(() => {
       margin-top: 30px;
 
       .el-button {
-        padding: 8px 24px;
+        padding: 10px 28px;
         font-size: 14px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        border: none;
+
+        &:hover {
+          background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
       }
     }
   }

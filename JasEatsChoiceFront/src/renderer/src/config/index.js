@@ -112,8 +112,11 @@ export const API_CONFIG = {
 
   // 收藏API端点
   collection: {
-    list: '/v1/collections/user/{userId}', // 获取用户收藏列表
-    remove: '/v1/collections/{id}', // 移除单个收藏
+    list: '/v1/collections', // 获取用户收藏列表 (参数: userId)
+    listByType: '/v1/collections/type', // 根据类型获取收藏 (参数: userId, type)
+    add: '/v1/collections', // 添加收藏
+    remove: '/v1/collections', // 取消收藏 (参数: userId, type, id)
+    check: '/v1/collections/check', // 检查是否已收藏 (参数: userId, type, id)
     clear: '/v1/collections/user/{userId}' // 清空用户所有收藏
   }
 }

@@ -78,18 +78,13 @@
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
 
-        <!-- 验证码生成工具 kaptcha -->
-        <dependency>
-            <groupId>com.github.penggle</groupId>
-            <artifactId>kaptcha</artifactId>
-            <version>2.3.2</version>
-        </dependency>
+        <!-- kaptcha dependency removed: replaced by Hutool captcha usage in code -->
 
         <!-- Hutool工具库 - 完整包，包含验证码功能 -->
         <dependency>
             <groupId>cn.hutool</groupId>
             <artifactId>hutool-all</artifactId>
-            <version>5.8.20</version>
+            <version>5.8.21</version>
         </dependency>
 
         <!-- JWT -->

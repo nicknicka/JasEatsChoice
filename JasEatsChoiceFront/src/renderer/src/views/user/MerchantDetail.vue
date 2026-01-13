@@ -8,39 +8,85 @@
 
       <!-- 商家头部信息 -->
       <div class="merchant-header">
-        <div class="header-left">
-          <div class="merchant-name-main">{{ merchant.nickname }}</div>
-          <el-button type="text" size="small" class="favorite-button" @click="toggleFavorite">
-            {{ isFavorite ? '❤️' : '🤍' }} {{ isFavorite ? '已收藏' : '收藏' }}
-          </el-button>
+        <div class="header-content">
+          <div class="merchant-avatar">
+            <img
+              v-if="merchant.image && merchant.image !== '未知'"
+              :src="merchant.image"
+              :alt="merchant.name"
+              class="avatar-img"
+            />
+            <div v-else class="avatar-placeholder">
+              <el-icon :size="40"><Shop /></el-icon>
+            </div>
+          </div>
+          <div class="merchant-info-section">
+            <div class="merchant-name-row">
+              <h1 class="merchant-name-main">{{ merchant.name }}</h1>
+              <el-button type="text" size="small" class="favorite-button" @click="toggleFavorite">
+                <el-icon class="favorite-icon">
+                  <component :is="isFavorite ? 'StarFilled' : 'Star'" />
+                </el-icon>
+                {{ isFavorite ? '已收藏' : '收藏' }}
+              </el-button>
+            </div>
+            <div class="merchant-meta-tags">
+              <el-tag v-if="merchant.type" type="primary" size="small" class="meta-tag">
+                {{ merchant.type }}
+              </el-tag>
+              <el-tag
+                v-for="tag in merchant.tags?.slice(0, 3)"
+                :key="tag"
+                size="small"
+                class="meta-tag"
+              >
+                {{ tag }}
+              </el-tag>
+            </div>
+          </div>
         </div>
-        <div class="header-right"></div>
       </div>
 
-      <!-- 商家Banner区 -->
-      <div class="merchant-banner">
-        <div class="banner-content">
-          {{ merchant.image }}
-        </div>
-      </div>
-
-      <!-- 商家基本信息 -->
+      <!-- 商家基本信息卡片 -->
       <div class="merchant-basic-info">
-        <div class="basic-info-section">
-          <div class="merchant-rating-main">
-            <el-rate v-model="merchant.rating" :disabled="true" show-text :max="5" :precision="1" />
+        <div class="info-grid">
+          <div class="info-item">
+            <div class="info-icon rating-icon">
+              <el-icon><StarFilled /></el-icon>
+            </div>
+            <div class="info-content">
+              <div class="info-label">评分</div>
+              <div class="info-value">
+                {{ merchant.rating ? merchant.rating.toFixed(1) : '暂无评价' }}
+              </div>
+            </div>
           </div>
-          <div class="merchant-location">
-            <el-icon class="location-icon">📍</el-icon>
-            <span>中关村大街123号</span>
+          <div class="info-item">
+            <div class="info-icon location-icon">
+              <el-icon><Location /></el-icon>
+            </div>
+            <div class="info-content">
+              <div class="info-label">距离</div>
+              <div class="info-value">{{ merchant.distance || '未知距离' }}</div>
+            </div>
           </div>
-          <div class="merchant-hours">
-            <el-icon class="clock-icon">⏰</el-icon>
-            <span>11:00-22:00</span>
+          <div class="info-item">
+            <div class="info-icon time-icon">
+              <el-icon><Clock /></el-icon>
+            </div>
+            <div class="info-content">
+              <div class="info-label">营业时间</div>
+              <div class="info-value">11:00-22:00</div>
+            </div>
           </div>
-          <div class="merchant-average">
-            <el-icon class="money-icon">💰</el-icon>
-            <span>人均88元</span>
+          <div class="info-item">
+            <div class="info-icon price-icon">
+              <el-icon><Coin /></el-icon>
+            </div>
+            <div class="info-content">
+              <div class="info-label">人均消费</div>
+              <div class="info-value">¥88</div>
+            </div>
           </div>
         </div>
       </div>
@@ -70,31 +116,29 @@
           <h2 class="menu-name-title">{{ currentMenuName }}</h2>
         </div>
 
-        <!-- 招牌菜 -->
+        <!-- 动态渲染所有菜品分类 -->
         <div
-          v-if="
-            activeMenuTab !== 'comments' &&
-            menuItems.some((item) => item.menuId === activeMenuTab && item.category === 'signature')
-          "
+          v-for="category in currentMenuCategories"
+          :key="category"
           class="dish-category-section"
         >
-          <h3 class="category-title">🔥 招牌菜</h3>
+          <h3 class="category-title">{{ getCategoryEmoji(category) }} {{ category }}</h3>
           <div class="dish-grid">
             <div
               class="dish-card"
               v-for="item in menuItems.filter(
-                (item) => item.menuId === activeMenuTab && item.category === 'signature'
+                (item) => item.menuId === activeMenuTab && item.category === category
               )"
               :key="item.id"
             >
-              <div class="dish-image">{{ item.image || '🍱' }}</div>
+              <div class="dish-image">{{ getCategoryEmoji(category) }}</div>
               <div class="dish-name">{{ item.name }}</div>
               <div class="dish-price">¥{{ calculateRealTimePrice(item).toFixed(2) }}</div>
               <div class="dish-desc">{{ item.description }}</div>
 
               <!-- 食材组成 -->
               <div class="dish-ingredients">
-                <div class="ingredient-section">
+                <div class="ingredient-section" v-if="item.requiredIngredients && item.requiredIngredients.length > 0">
                   <span class="ingredient-title">必选食材:</span>
                   <div class="ingredient-list">
                     <span
@@ -106,155 +150,17 @@
                   </div>
                 </div>
 
-                <div class="ingredient-section">
+                <div class="ingredient-section" v-if="item.optionalIngredients && item.optionalIngredients.length > 0">
                   <span class="ingredient-title">可选食材:</span>
                   <div class="ingredient-list">
                     <el-checkbox
                       v-for="ingredient in item.optionalIngredients"
-                      :key="ingredient.id"
+                      :key="ingredient.id || ingredient.name"
                       v-model="ingredient.selected"
                       class="ingredient-checkbox"
                     >
                       {{ ingredient.name }}
-                      <span class="ingredient-price">(+¥{{ ingredient.price.toFixed(2) }})</span>
-                    </el-checkbox>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 数量选择 -->
-              <div class="dish-quantity">
-                <el-input-number
-                  v-model="item.quantity"
-                  :min="1"
-                  :max="10"
-                  label="数量"
-                  style="width: 100%"
-                />
-              </div>
-
-              <el-button type="primary" size="small" @click="addMenuItem(item)" style="width: 100%">
-                {{ viewMode === 'order' ? '立即购买' : '加入购物车' }}
-              </el-button>
-            </div>
-          </div>
-        </div>
-
-        <!-- 主食 -->
-        <div
-          v-if="
-            activeMenuTab !== 'comments' &&
-            menuItems.some((item) => item.menuId === activeMenuTab && item.category === 'staple')
-          "
-          class="dish-category-section"
-        >
-          <h3 class="category-title">🍚 主食</h3>
-          <div class="dish-grid">
-            <div
-              class="dish-card"
-              v-for="item in menuItems.filter(
-                (item) => item.menuId === activeMenuTab && item.category === 'staple'
-              )"
-              :key="item.id"
-            >
-              <div class="dish-image">🍚</div>
-              <div class="dish-name">{{ item.name }}</div>
-              <div class="dish-price">¥{{ calculateRealTimePrice(item).toFixed(2) }}</div>
-
-              <!-- 食材组成 -->
-              <div class="dish-ingredients">
-                <div class="ingredient-section">
-                  <span class="ingredient-title">必选食材:</span>
-                  <div class="ingredient-list">
-                    <span
-                      class="ingredient-item"
-                      v-for="ingredient in item.requiredIngredients"
-                      :key="ingredient"
-                      >{{ ingredient }}</span
-                    >
-                  </div>
-                </div>
-
-                <div class="ingredient-section">
-                  <span class="ingredient-title">可选食材:</span>
-                  <div class="ingredient-list">
-                    <el-checkbox
-                      v-for="ingredient in item.optionalIngredients"
-                      :key="ingredient.id"
-                      v-model="ingredient.selected"
-                      class="ingredient-checkbox"
-                    >
-                      {{ ingredient.name }}
-                      <span class="ingredient-price">(+¥{{ ingredient.price.toFixed(2) }})</span>
-                    </el-checkbox>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 数量选择 -->
-              <div class="dish-quantity">
-                <el-input-number
-                  v-model="item.quantity"
-                  :min="1"
-                  :max="10"
-                  label="数量"
-                  style="width: 100%"
-                />
-              </div>
-
-              <el-button type="primary" size="small" @click="addMenuItem(item)" style="width: 100%">
-                {{ viewMode === 'order' ? '立即购买' : '加入购物车' }}
-              </el-button>
-            </div>
-          </div>
-        </div>
-
-        <!-- 饮品 -->
-        <div
-          v-if="
-            activeMenuTab !== 'comments' &&
-            menuItems.some((item) => item.menuId === activeMenuTab && item.category === 'drink')
-          "
-          class="dish-category-section"
-        >
-          <h3 class="category-title">🥤 饮品</h3>
-          <div class="dish-grid">
-            <div
-              class="dish-card"
-              v-for="item in menuItems.filter(
-                (item) => item.menuId === activeMenuTab && item.category === 'drink'
-              )"
-              :key="item.id"
-            >
-              <div class="dish-image">🥤</div>
-              <div class="dish-name">{{ item.name }}</div>
-              <div class="dish-price">¥{{ calculateRealTimePrice(item).toFixed(2) }}</div>
-
-              <!-- 食材组成 -->
-              <div class="dish-ingredients">
-                <div class="ingredient-section">
-                  <span class="ingredient-title">必选食材:</span>
-                  <div class="ingredient-list">
-                    <span
-                      class="ingredient-item"
-                      v-for="ingredient in item.requiredIngredients"
-                      :key="ingredient"
-                      >{{ ingredient }}</span
-                    >
-                  </div>
-                </div>
-
-                <div class="ingredient-section">
-                  <span class="ingredient-title">可选食材:</span>
-                  <div class="ingredient-list">
-                    <el-checkbox
-                      v-for="ingredient in item.optionalIngredients"
-                      :key="ingredient.id"
-                      v-model="ingredient.selected"
-                      class="ingredient-checkbox"
-                    >
-                      {{ ingredient.name }}
-                      <span class="ingredient-price">(+¥{{ ingredient.price.toFixed(2) }})</span>
+                      <span class="ingredient-price" v-if="ingredient.price">(+¥{{ ingredient.price.toFixed(2) }})</span>
                     </el-checkbox>
                   </div>
                 </div>
@@ -279,59 +185,97 @@
         </div>
 
         <!-- 用户评价 -->
-        <div v-else-if="activeMenuTab === 'comments'" class="comments-section">
-          <h3 class="category-title">⭐ 用户评价</h3>
+        <div v-if="activeMenuTab === 'comments'" class="comments-section">
+          <div class="comments-header">
+            <h3 class="comments-title">用户评价</h3>
+            <div class="comments-stats">
+              <div class="average-rating">
+                <div class="rating-number">4.7</div>
+                <div class="rating-stars">
+                  <el-rate :model-value="4.7" :disabled="true" size="small" show-score />
+                </div>
+              </div>
+              <div class="total-comments">共 {{ comments.length }} 条评价</div>
+            </div>
+          </div>
 
           <!-- 商家没有菜单的提示 -->
           <div v-if="!hasMenus" class="no-menus-notice">
+            <div class="notice-icon">📋</div>
             <p class="notice-text">当前商家还没有上架菜单</p>
           </div>
 
           <div class="comments-list">
             <div class="comment-card" v-for="comment in comments" :key="comment.id">
-              <div class="comment-header">
-                <div class="comment-user-info">
-                  <span class="user-name">{{ comment.userName }}</span>
-                  <span class="comment-date">{{ comment.date }}</span>
+              <div class="comment-main">
+                <div class="comment-avatar">
+                  <el-icon :size="24"><User /></el-icon>
                 </div>
-                <el-rate v-model="comment.rating" :disabled="true" size="small" show-text />
-              </div>
-              <div class="comment-content">
-                {{ comment.comment }}
-              </div>
+                <div class="comment-body">
+                  <div class="comment-header">
+                    <div class="comment-user-info">
+                      <span class="user-name">{{ comment.userName }}</span>
+                      <el-tag size="small" class="user-badge">VIP会员</el-tag>
+                    </div>
+                    <span class="comment-date">{{ comment.date }}</span>
+                  </div>
+                  <div class="comment-rating">
+                    <el-rate v-model="comment.rating" :disabled="true" size="small" />
+                  </div>
+                  <div class="comment-content">
+                    {{ comment.comment }}
+                  </div>
 
-              <!-- 展开/折叠回复按钮 -->
-              <div v-if="comment.replies && comment.replies.length > 0" class="reply-toggle">
-                <el-button
-                  type="text"
-                  size="small"
-                  @click="comment.expandReplies = !comment.expandReplies"
-                >
-                  {{
-                    comment.expandReplies
-                      ? '▼ 收起回复'
-                      : '▶ 查看回复 (' + comment.replies.length + ')'
-                  }}
-                </el-button>
+                  <!-- 展开/折叠回复按钮 -->
+                  <div v-if="comment.replies && comment.replies.length > 0" class="reply-toggle">
+                    <el-button
+                      text
+                      size="small"
+                      @click="comment.expandReplies = !comment.expandReplies"
+                      class="toggle-button"
+                    >
+                      <el-icon class="toggle-icon">
+                        <component :is="comment.expandReplies ? 'ArrowUp' : 'ArrowDown'" />
+                      </el-icon>
+                      {{ comment.expandReplies ? '收起回复' : `查看回复 (${comment.replies.length})` }}
+                    </el-button>
+                  </div>
+                </div>
               </div>
 
               <!-- 回复列表 -->
-              <div v-if="comment.expandReplies && comment.replies.length > 0" class="replies-list">
-                <div
-                  class="reply-card"
-                  v-for="reply in comment.replies"
-                  :key="reply.id"
-                  :class="{ 'merchant-reply': reply.type === 'merchant' }"
-                >
-                  <div class="reply-header">
-                    <span class="reply-username">
-                      {{ reply.userName }}
-                      <span v-if="reply.type === 'merchant'" class="merchant-badge">商家</span>
-                    </span>
-                    <span class="reply-date">{{ reply.date }}</span>
-                  </div>
-                  <div class="reply-content">
-                    {{ reply.comment }}
+              <div v-if="comment.expandReplies && comment.replies.length > 0" class="replies-wrapper">
+                <div class="replies-list">
+                  <div
+                    class="reply-card"
+                    v-for="reply in comment.replies"
+                    :key="reply.id"
+                    :class="{ 'merchant-reply': reply.type === 'merchant' }"
+                  >
+                    <div class="reply-avatar">
+                      <el-icon :size="20">
+                        <component :is="reply.type === 'merchant' ? 'Shop' : 'User'" />
+                      </el-icon>
+                    </div>
+                    <div class="reply-body">
+                      <div class="reply-header">
+                        <div class="reply-user-info">
+                          <span class="reply-username">{{ reply.userName }}</span>
+                          <el-tag
+                            v-if="reply.type === 'merchant'"
+                            size="small"
+                            type="success"
+                            class="merchant-badge"
+                          >
+                            商家
+                          </el-tag>
+                        </div>
+                        <span class="reply-date">{{ reply.date }}</span>
+                      </div>
+                      <div class="reply-content">
+                        {{ reply.comment }}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -354,7 +298,9 @@
 
       <!-- 可拖动悬浮购物车 -->
       <div ref="cartBallRef" class="draggable-cart-ball" @mousedown="startDrag" @click="viewCart">
-        <div class="cart-icon">🛒</div>
+        <div class="cart-icon">
+          <el-icon :size="32"><ShoppingCart /></el-icon>
+        </div>
         <el-badge :value="cartTotalQuantity" class="cart-badge" />
         <div class="cart-amount">¥{{ cartTotalAmount.toFixed(2) }}</div>
       </div>
@@ -370,7 +316,9 @@
     >
       <div class="cart-content">
         <div v-if="cartItems.length === 0" class="empty-cart">
-          <div class="empty-cart-icon">🛒</div>
+          <div class="empty-cart-icon">
+            <el-icon :size="64"><ShoppingCart /></el-icon>
+          </div>
           <div class="empty-cart-text">购物车是空的</div>
         </div>
         <div v-else class="cart-items">
@@ -462,11 +410,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { Star, StarFilled, Location, Clock, Coin, ShoppingCart, Shop, User, ArrowUp, ArrowDown } from '@element-plus/icons-vue'
 import axios from 'axios'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
+import { useAuthStore } from '../../store/authStore'
+import { useUserStore } from '../../store/userStore'
 
 // 引入API配置
 import { API_CONFIG } from '../../config/index.js'
@@ -474,10 +425,14 @@ import { API_CONFIG } from '../../config/index.js'
 const router = useRouter()
 const route = useRoute()
 
+// 获取 Pinia 存储
+const authStore = useAuthStore()
+const userStore = useUserStore()
+
 // 商家信息
 const merchant = ref({
   id: 0,
-  name: '',
+  name: '', // 后端字段名是 name，不是 nickname
   type: '',
   rating: 4.5, // Default to 4.5 for mock data
   distance: '',
@@ -526,6 +481,25 @@ const hasMenus = ref(false)
 const currentMenuName = computed(() => {
   const activeTab = menuTabs.value.find((tab) => tab.value === activeMenuTab.value)
   return activeTab ? activeTab.label : ''
+})
+
+// 动态获取当前菜单中的所有菜品分类
+const currentMenuCategories = computed(() => {
+  if (activeMenuTab.value === 'comments') {
+    return []
+  }
+
+  // 获取当前菜单的所有菜品
+  const currentMenuItems = menuItems.value.filter(
+    (item) => item.menuId === activeMenuTab.value
+  )
+
+  // 提取所有唯一的分类
+  const categories = [...new Set(currentMenuItems.map((item) => item.category))].filter(
+    (category) => category && category.trim() !== ''
+  )
+
+  return categories
 })
 
 // 评价数据
@@ -713,6 +687,9 @@ onMounted(() => {
       cartItemsByMerchant.value[merchant.value.id] = []
     }
     cartItems.value = cartItemsByMerchant.value[merchant.value.id]
+
+    // 检查商家是否已被收藏
+    checkFavoriteStatus()
   } else {
     // 如果没有商家信息，返回商家列表
     router.push('/user/home/merchants')
@@ -750,97 +727,185 @@ onMounted(() => {
 })
 
 // 从后端加载完整的商家详情和菜品信息
-const loadMerchantDetails = (merchantId) => {
-  axios
-    .get(API_CONFIG.baseURL + API_CONFIG.merchant.detail, {
-      params: { merchantId }
-    })
-    .then((response) => {
-      // 假设后端返回的数据结构如下：
-      // {
-      //   data: {
-      //     merchant: { ...完整的商家信息... },
-      //     menuItems: [ ...菜品列表... ]
-      //   }
-      // }
+const loadMerchantDetails = async (merchantId) => {
+  try {
+    // 1. 先获取商家详情
+    const merchantResponse = await axios.get(API_CONFIG.baseURL + API_CONFIG.merchant.detail + merchantId)
+    console.log("获取商家详情 response:", merchantResponse.data)
 
-      if (response.data && response.data.merchant) {
-        // 更新商家信息
-        merchant.value = {
-          ...merchant.value,
-          ...response.data.merchant
-        }
+    if (merchantResponse.data?.code === "200" && merchantResponse.data?.data) {
+      // 更新商家信息
+      merchant.value = {
+        ...merchant.value,
+        ...merchantResponse.data.data
+      }
+    }
 
-        // 更新菜单信息
-        if (response.data.menus && response.data.menus.length > 0) {
-          // 为菜单项目添加必要的属性
-          const allMenuItems = []
+    // 2. 再获取商家的菜单数据
+    const menuResponse = await axios.get(`${API_CONFIG.baseURL}/v1/menus/merchants/${merchantId}/menu`)
+    console.log("获取商家菜单 response:", menuResponse.data)
 
-          // 遍历所有菜单
-          response.data.menus.forEach((menu) => {
-            menu.dishes.forEach((dish) => {
-              allMenuItems.push({
-                ...dish,
-                menuId: menu.menuId, // 保存菜单ID
-                menuName: menu.menuName, // 保存菜单名称
-                quantity: 1, // 默认数量为1
-                optionalIngredients: dish.optionalIngredients || [], // 确保可选食材数组存在
-                selectedOptionalIngredients: [], // 初始化选中的可选食材
-                note: '', // 添加备注字段
-                tempNote: '', // 添加临时备注字段
-                isEditingNote: false // 添加编辑状态字段
-              })
+    if (menuResponse.data?.code === "200" && menuResponse.data?.data && menuResponse.data.data.length > 0) {
+      console.log("✅ 菜单数据存在，菜单数量:", menuResponse.data.data.length)
+
+      // 为菜单项目添加必要的属性
+      const allMenuItems = []
+
+      // 遍历所有菜单
+      menuResponse.data.data.forEach((menu) => {
+        console.log("📋 处理菜单:", menu.menuName, "菜单ID:", menu.id, "菜品数量:", menu.dishes?.length || 0)
+        if (menu.dishes && menu.dishes.length > 0) {
+          menu.dishes.forEach((dish) => {
+            console.log("  🍲 菜品:", dish.name, "category:", dish.category, "id:", dish.id)
+            allMenuItems.push({
+              ...dish,
+              menuId: menu.id, // 保存菜单ID (后端使用id字段)
+              menuName: menu.menuName, // 保存菜单名称
+              quantity: 1, // 默认数量为1
+              optionalIngredients: dish.optionalIngredients || [], // 确保可选食材数组存在
+              selectedOptionalIngredients: [], // 初始化选中的可选食材
+              note: '', // 添加备注字段
+              tempNote: '', // 添加临时备注字段
+              isEditingNote: false // 添加编辑状态字段
             })
           })
-
-          menuItems.value = allMenuItems
-
-          // 确保可选食材有selected属性
-          menuItems.value.forEach((item) => {
-            item.optionalIngredients.forEach((ingredient) => {
-              ingredient.selected = ingredient.selected || false
-            })
-          })
-
-          // 根据后端返回的菜单生成标签
-          menuTabs.value = response.data.menus.map((menu) => ({
-            value: menu.menuId,
-            label: menu.menuName
-          }))
-
-          // 添加用户评价标签
-          menuTabs.value.push({ value: 'comments', label: '用户评价' })
-
-          // 默认激活第一个菜单
-          activeMenuTab.value = response.data.menus[0].menuId
-
-          hasMenus.value = true
-        } else {
-          // 商家没有菜单
-          menuItems.value = []
-          menuTabs.value = [{ value: 'comments', label: '用户评价' }]
-          activeMenuTab.value = 'comments'
-          hasMenus.value = false
         }
+      })
+
+      menuItems.value = allMenuItems
+      console.log("📦 最终 menuItems 数量:", menuItems.value.length)
+      console.log("📦 menuItems 详情:", menuItems.value.map(item => ({
+        name: item.name,
+        menuId: item.menuId,
+        category: item.category,
+        price: item.price,
+        description: item.description,
+        image: item.image,
+        requiredIngredients: item.requiredIngredients,
+        optionalIngredients: item.optionalIngredients
+      })))
+      console.log("📦 第一个菜品的完整数据:", menuItems.value[0])
+
+      // 确保可选食材有selected属性
+      menuItems.value.forEach((item) => {
+        if (item.optionalIngredients) {
+          item.optionalIngredients.forEach((ingredient) => {
+            ingredient.selected = ingredient.selected || false
+          })
+        }
+      })
+
+      // 根据后端返回的菜单生成标签
+      menuTabs.value = menuResponse.data.data.map((menu) => ({
+        value: menu.id,
+        label: menu.menuName
+      }))
+      console.log("🏷️ 生成的标签页:", menuTabs.value)
+
+      // 添加用户评价标签
+      menuTabs.value.push({ value: 'comments', label: '用户评价' })
+
+      // 默认激活第一个菜单
+      activeMenuTab.value = menuResponse.data.data[0].id
+      console.log("🎯 默认激活的标签页 (activeMenuTab):", activeMenuTab.value, "类型:", typeof activeMenuTab.value)
+
+      hasMenus.value = true
+    } else {
+      // 商家没有菜单
+      menuItems.value = []
+      menuTabs.value = [{ value: 'comments', label: '用户评价' }]
+      activeMenuTab.value = 'comments'
+      hasMenus.value = false
+    }
+  } catch (error) {
+    console.error('加载商家详情和菜单失败:', error)
+    // 失败时使用模拟数据作为备份
+    ElMessage.warning('加载商家详情失败，将使用模拟数据')
+    // 设置hasMenus为true，因为模拟数据有菜单
+    hasMenus.value = true
+  }
+}
+
+// 检查商家是否已被收藏
+const checkFavoriteStatus = async () => {
+  try {
+    // 从 authStore 或 userStore 获取用户ID
+    // 注意：userStore.userInfo 中的字段名是 userId，不是 id
+    const userId = userStore.userInfo?.userId || authStore.userId
+    if (!userId) {
+      console.log('用户未登录，跳过收藏状态检查')
+      return
+    }
+
+    const response = await axios.get(API_CONFIG.baseURL + API_CONFIG.collection.check, {
+      params: {
+        userId: userId,
+        type: 'merchant', // 商家类型
+        id: merchant.value.id
       }
     })
-    .catch((error) => {
-      console.error('加载商家详情和菜单失败:', error)
-      // 失败时使用模拟数据作为备份
-      ElMessage.warning('加载商家详情失败，将使用模拟数据')
-      // 设置hasMenus为true，因为模拟数据有菜单
-      hasMenus.value = true
-    })
+
+    // 后端返回格式: { success: true, code: "200", message: "成功", data: true/false }
+    if (response.data && response.data.success && response.data.code === "200") {
+      isFavorite.value = response.data.data === true
+    }
+  } catch (error) {
+    console.error('检查收藏状态失败:', error)
+  }
 }
 
 // 切换收藏状态
-const toggleFavorite = () => {
-  isFavorite.value = !isFavorite.value
-  ElMessage.success(
-    isFavorite.value ? `${merchant.value.nickname} 已加入收藏` : `${merchant.value.nickname} 已取消收藏`
-  )
-  // 这里可以添加真实的收藏逻辑，比如保存到数据库或本地存储
-  console.log('收藏状态:', isFavorite.value)
+const toggleFavorite = async () => {
+  try {
+    // 从 authStore 或 userStore 获取用户ID
+    // 注意：userStore.userInfo 中的字段名是 userId，不是 id
+    const userId = userStore.userInfo?.userId || authStore.userId
+    if (!userId) {
+      ElMessage.warning('请先登录')
+      return
+    }
+
+    if (isFavorite.value) {
+      // 取消收藏
+      const response = await axios.delete(API_CONFIG.baseURL + API_CONFIG.collection.remove, {
+        params: {
+          userId: userId,
+          type: 'merchant',
+          id: merchant.value.id
+        }
+      })
+
+      // 后端返回格式: { success: true, code: "200", message: "成功", data: null }
+      if (response.data && response.data.success && response.data.code === "200") {
+        isFavorite.value = false
+        ElMessage.success(`${merchant.value.name} 已取消收藏`)
+      } else {
+        ElMessage.error(response.data?.message || '取消收藏失败')
+      }
+    } else {
+      // 添加收藏
+      const collectionData = {
+        userId: userId,
+        collectableType: 'merchant',
+        collectableId: merchant.value.id
+      }
+
+      const response = await axios.post(API_CONFIG.baseURL + API_CONFIG.collection.add, collectionData)
+
+      // 后端返回格式: { success: true, code: "200", message: "成功", data: 14(收藏ID) }
+      if (response.data && response.data.success && response.data.code === "200") {
+        isFavorite.value = true
+        ElMessage.success(`${merchant.value.name} 已加入收藏`)
+      } else {
+        ElMessage.error(response.data?.message || '收藏失败')
+      }
+    }
+  } catch (error) {
+    console.error('收藏操作失败:', error)
+    ElMessage.error('操作失败，请稍后重试')
+    // 恢复原状态
+    isFavorite.value = !isFavorite.value
+  }
 }
 
 // 购物车数据 - 每个商家有独立的购物车
@@ -986,11 +1051,31 @@ menuItems.value.forEach((item) => {
 
 // 计算实时价格函数
 const calculateRealTimePrice = (item) => {
-  if (!item) return 0
+  if (!item) {
+    console.log("calculateRealTimePrice: item is null/undefined")
+    return 0
+  }
   const optionalTotal = item.optionalIngredients.reduce((sum, ingredient) => {
     return sum + (ingredient.selected ? ingredient.price : 0)
   }, 0)
-  return item.price + optionalTotal
+  const result = item.price + optionalTotal
+  console.log(`💰 计算价格 - 菜品: ${item.name}, basePrice: ${item.price}, optionalTotal: ${optionalTotal}, finalPrice: ${result}`)
+  return result
+}
+
+// 根据菜品分类返回对应的 emoji 图标
+const getCategoryEmoji = (category) => {
+  const emojiMap = {
+    '招牌菜': '🔥',
+    '主食': '🍚',
+    '饮品': '🥤',
+    '小吃': '🍢',
+    '甜点': '🍰',
+    '汤': '🍲',
+    '凉菜': '🥗',
+    '热菜': '🍛'
+  }
+  return emojiMap[category] || '🍽️'
 }
 
 // 添加菜单项到购物车
@@ -1072,6 +1157,57 @@ const goToOrderConfirmation = () => {
   router.push('/user/home/order-confirmation')
 }
 
+// 监听标签页切换，输出过滤结果
+watch(activeMenuTab, (newTab, oldTab) => {
+  console.log("🔄 标签页切换")
+  console.log("  旧标签:", oldTab, "类型:", typeof oldTab)
+  console.log("  新标签:", newTab, "类型:", typeof newTab)
+
+  // 测试招牌菜过滤
+  const signatureDishes = menuItems.value.filter(
+    (item) => item.menuId === newTab && item.category === '招牌菜'
+  )
+  console.log("  🔥 招牌菜过滤结果数量:", signatureDishes.length)
+  if (signatureDishes.length > 0) {
+    console.log("  🔥 招牌菜详情:", signatureDishes.map(d => ({
+      name: d.name,
+      menuId: d.menuId,
+      category: d.category
+    })))
+  }
+
+  // 测试主食过滤
+  const stapleDishes = menuItems.value.filter(
+    (item) => item.menuId === newTab && item.category === '主食'
+  )
+  console.log("  🍚 主食过滤结果数量:", stapleDishes.length)
+  if (stapleDishes.length > 0) {
+    console.log("  🍚 主食详情:", stapleDishes.map(d => ({
+      name: d.name,
+      menuId: d.menuId,
+      category: d.category
+    })))
+  }
+
+  // 测试饮品过滤
+  const drinkDishes = menuItems.value.filter(
+    (item) => item.menuId === newTab && item.category === '饮品'
+  )
+  console.log("  🥤 饮品过滤结果数量:", drinkDishes.length)
+
+  // 测试所有菜品的 menuId 匹配
+  const allMatchingItems = menuItems.value.filter((item) => item.menuId === newTab)
+  console.log("  📋 所有匹配当前标签的菜品数量:", allMatchingItems.length)
+  if (allMatchingItems.length === 0) {
+    console.log("  ⚠️ 没有找到匹配的菜品！")
+    console.log("  📦 所有 menuItems 的 menuId:", menuItems.value.map(item => ({
+      name: item.name,
+      menuId: item.menuId,
+      menuIdType: typeof item.menuId
+    })))
+  }
+})
+
 // 监听滚动事件的代码已合并到上面的onMounted钩子中
 </script>
 
@@ -1108,102 +1244,194 @@ const goToOrderConfirmation = () => {
 
     // 商家头部信息
     .merchant-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 16px 24px;
-      background-color: #ffffff;
+      padding: 20px 24px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      position: relative;
+      overflow: hidden;
 
-      .header-left {
+      &::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -10%;
+        width: 400px;
+        height: 400px;
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+        border-radius: 50%;
+      }
+
+      .header-content {
         display: flex;
-        justify-content: space-between;
+        gap: 20px;
         align-items: center;
-        gap: 16px;
-        width: 100%; // Ensure it takes full width
+        position: relative;
+        z-index: 1;
 
-        .back-button {
-          font-size: 14px;
-          color: #666666;
+        .merchant-avatar {
+          flex-shrink: 0;
+          width: 80px;
+          height: 80px;
+          border-radius: 50%;
+          overflow: hidden;
+          border: 3px solid rgba(255, 255, 255, 0.3);
+          background: rgba(255, 255, 255, 0.1);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
 
-          &:hover {
-            color: #ff6b6b;
+          .avatar-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+          }
+
+          .avatar-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%);
+            color: #ffffff;
           }
         }
 
-        .merchant-name-main {
-          font-size: 20px;
-          font-weight: bold;
-          color: #333333;
-        }
-      }
+        .merchant-info-section {
+          flex: 1;
+          min-width: 0;
 
-      .header-right {
-        .favorite-button {
-          font-size: 14px;
-          color: #666666;
+          .merchant-name-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 12px;
 
-          &:hover {
-            color: #ff6b6b;
+            .merchant-name-main {
+              font-size: 24px;
+              font-weight: 700;
+              color: #ffffff;
+              margin: 0;
+              letter-spacing: -0.5px;
+              text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            }
+
+            .favorite-button {
+              color: rgba(255, 255, 255, 0.9);
+              background: rgba(255, 255, 255, 0.15);
+              border: 1px solid rgba(255, 255, 255, 0.2);
+              padding: 8px 16px;
+              border-radius: 20px;
+              backdrop-filter: blur(10px);
+              transition: all 0.3s ease;
+              font-weight: 500;
+
+              .favorite-icon {
+                margin-right: 4px;
+                font-size: 16px;
+              }
+
+              &:hover {
+                background: rgba(255, 255, 255, 0.25);
+                border-color: rgba(255, 255, 255, 0.3);
+                color: #ffffff;
+                transform: translateY(-1px);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+              }
+            }
+          }
+
+          .merchant-meta-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+
+            .meta-tag {
+              background: rgba(255, 255, 255, 0.2);
+              border: 1px solid rgba(255, 255, 255, 0.3);
+              color: #ffffff;
+              backdrop-filter: blur(10px);
+            }
           }
         }
-
-        .cart-button {
-          position: relative;
-
-          .cart-badge {
-            position: absolute;
-            top: -5px;
-            right: -15px;
-          }
-        }
-      }
-    }
-
-    // 商家Banner区
-    .merchant-banner {
-      width: 100%;
-      height: 200px;
-      background-color: #f0f0f0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-
-      .banner-content {
-        font-size: 48px;
-        color: #cccccc;
       }
     }
 
     // 商家基本信息
     .merchant-basic-info {
       padding: 24px;
-      background-color: #ffffff;
+      background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
+      border-bottom: 1px solid rgba(59, 130, 246, 0.1);
 
-      .basic-info-section {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 32px;
-        align-items: center;
+      .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 16px;
 
-        .merchant-rating-main {
-          .el-rate {
-            font-size: 24px;
-          }
-        }
-
-        .merchant-location,
-        .merchant-hours,
-        .merchant-average {
+        .info-item {
           display: flex;
           align-items: center;
-          gap: 8px;
-          font-size: 14px;
-          color: #666666;
+          gap: 12px;
+          padding: 16px;
+          background: #ffffff;
+          border-radius: 12px;
+          box-shadow: 0 2px 8px rgba(59, 130, 246, 0.08);
+          transition: all 0.3s ease;
 
-          .location-icon,
-          .clock-icon,
-          .money-icon {
-            font-size: 16px;
+          &:hover {
+            box-shadow: 0 4px 16px rgba(59, 130, 246, 0.15);
+            transform: translateY(-2px);
+          }
+
+          .info-icon {
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            flex-shrink: 0;
+            color: #ffffff;
+            font-size: 20px;
+
+            &.rating-icon {
+              background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            }
+
+            &.location-icon {
+              background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            }
+
+            &.time-icon {
+              background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            }
+
+            &.price-icon {
+              background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
+            }
+          }
+
+          .info-content {
+            flex: 1;
+            min-width: 0;
+
+            .info-label {
+              font-size: 12px;
+              color: #64748b;
+              margin-bottom: 4px;
+              font-weight: 500;
+            }
+
+            .info-value {
+              font-size: 15px;
+              color: #1e293b;
+              font-weight: 600;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+            }
           }
         }
       }
@@ -1281,67 +1509,93 @@ const goToOrderConfirmation = () => {
         // 菜品网格布局
         .dish-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-          gap: 20px;
+          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+          gap: 24px;
         }
 
         // 菜品卡片
         .dish-card {
-          border: 1px solid #e8e8e8;
-          border-radius: 12px;
-          padding: 20px;
+          border: 1px solid rgba(59, 130, 246, 0.1);
+          border-radius: 16px;
+          padding: 24px;
           display: flex;
           flex-direction: column;
-          align-items: center;
-          gap: 12px;
-          background-color: #ffffff;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-          transition: all 0.3s ease;
+          background: linear-gradient(to bottom, #ffffff 0%, #f8fafc 100%);
+          box-shadow: 0 2px 12px rgba(59, 130, 246, 0.08);
+          transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+          position: relative;
+          overflow: hidden;
+
+          &::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #3b82f6 0%, #06b6d4 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+          }
 
           &:hover {
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(59, 130, 246, 0.18);
+            transform: translateY(-6px);
+            border-color: rgba(59, 130, 246, 0.2);
+
+            &::before {
+              opacity: 1;
+            }
           }
 
           .dish-image {
-            font-size: 56px;
-            margin-bottom: 8px;
+            font-size: 64px;
+            margin-bottom: 16px;
             text-align: center;
+            filter: drop-shadow(0 4px 8px rgba(59, 130, 246, 0.15));
           }
 
           .dish-name {
-            font-size: 17px;
-            font-weight: 600;
-            color: #303133;
+            font-size: 18px;
+            font-weight: 700;
+            color: #1e293b;
             text-align: center;
             line-height: 1.4;
+            margin-bottom: 8px;
           }
 
           .dish-price {
-            font-size: 20px;
-            color: #e6a23c;
-            font-weight: 600;
+            font-size: 24px;
+            color: #f59e0b;
+            font-weight: 700;
+            text-align: center;
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 12px;
           }
 
           .dish-desc {
-            font-size: 14px;
-            color: #909399;
+            font-size: 13px;
+            color: #64748b;
             text-align: center;
-            margin-bottom: 12px;
-            line-height: 1.5;
+            margin-bottom: 16px;
+            line-height: 1.6;
+            padding: 0 8px;
           }
 
           // 食材组成
           .dish-ingredients {
             width: 100%;
-            margin: 10px 0;
-            padding: 12px;
-            background-color: #fafafa;
-            border-radius: 8px;
-            font-size: 13px;
+            margin: 12px 0;
+            padding: 16px;
+            background: rgba(59, 130, 246, 0.03);
+            border-radius: 12px;
+            border: 1px solid rgba(59, 130, 246, 0.08);
 
             .ingredient-section {
-              margin-bottom: 12px;
+              margin-bottom: 16px;
 
               &:last-child {
                 margin-bottom: 0;
@@ -1350,28 +1604,46 @@ const goToOrderConfirmation = () => {
               .ingredient-title {
                 display: block;
                 font-weight: 600;
-                color: #303133;
-                margin-bottom: 6px;
+                color: #334155;
+                margin-bottom: 8px;
+                font-size: 13px;
               }
 
               .ingredient-list {
                 display: flex;
                 flex-direction: column;
-                gap: 6px;
+                gap: 8px;
 
                 .ingredient-item {
-                  background-color: #ecf5ff;
-                  color: #66b1ff;
-                  padding: 4px 8px;
-                  border-radius: 4px;
+                  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+                  color: #ffffff;
+                  padding: 6px 12px;
+                  border-radius: 6px;
                   font-size: 12px;
                   display: inline-block;
+                  font-weight: 500;
+                  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
                 }
 
                 .ingredient-checkbox {
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                  padding: 8px;
+                  background: #ffffff;
+                  border-radius: 8px;
+                  border: 1px solid rgba(59, 130, 246, 0.1);
+                  transition: all 0.3s ease;
+
+                  &:hover {
+                    background: rgba(59, 130, 246, 0.05);
+                    border-color: rgba(59, 130, 246, 0.2);
+                  }
+
                   .ingredient-price {
-                    color: #909399;
-                    font-size: 11px;
+                    color: #f59e0b;
+                    font-size: 12px;
+                    font-weight: 600;
                   }
                 }
               }
@@ -1381,20 +1653,43 @@ const goToOrderConfirmation = () => {
           // 数量选择
           .dish-quantity {
             width: 100%;
-            margin: 8px 0;
+            margin: 12px 0;
+
+            :deep(.el-input-number) {
+              width: 100%;
+
+              .el-input-number__decrease,
+              .el-input-number__increase {
+                background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+                border-color: transparent;
+                color: #ffffff;
+
+                &:hover {
+                  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+                }
+              }
+            }
           }
 
           .el-button {
             width: 100%;
-            background-color: #ff6b6b;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
             border: none;
-            border-radius: 8px;
-            height: 38px;
-            font-size: 14px;
-            font-weight: 500;
+            border-radius: 12px;
+            height: 44px;
+            font-size: 15px;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 
             &:hover {
-              background-color: #ff5252;
+              background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+              transform: translateY(-2px);
+              box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+            }
+
+            &:active {
+              transform: translateY(0);
             }
           }
         }
@@ -1404,116 +1699,289 @@ const goToOrderConfirmation = () => {
       .comments-section {
         margin-bottom: 32px;
 
-        .category-title {
-          font-size: 18px;
-          font-weight: bold;
-          color: #333333;
-          margin-bottom: 16px;
+        .comments-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 24px;
+          padding: 20px;
+          background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
+          border-radius: 12px;
+          border: 1px solid rgba(59, 130, 246, 0.1);
+
+          .comments-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1e40af;
+            margin: 0;
+          }
+
+          .comments-stats {
+            display: flex;
+            gap: 24px;
+            align-items: center;
+
+            .average-rating {
+              display: flex;
+              align-items: center;
+              gap: 12px;
+
+              .rating-number {
+                font-size: 32px;
+                font-weight: 700;
+                color: #f59e0b;
+                line-height: 1;
+              }
+
+              .rating-stars {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+              }
+            }
+
+            .total-comments {
+              font-size: 14px;
+              color: #64748b;
+              font-weight: 500;
+              padding-left: 24px;
+              border-left: 2px solid rgba(59, 130, 246, 0.2);
+            }
+          }
+        }
+
+        // 没有菜单的提示
+        .no-menus-notice {
+          margin: 24px 0;
+          padding: 32px;
+          background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+          border-radius: 12px;
+          text-align: center;
+          border: 1px solid rgba(251, 191, 36, 0.3);
+
+          .notice-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+          }
+
+          .notice-text {
+            color: #92400e;
+            font-size: 16px;
+            font-weight: 500;
+            margin: 0;
+          }
         }
 
         .comments-list {
           display: flex;
           flex-direction: column;
-          gap: 16px;
+          gap: 20px;
         }
 
         .comment-card {
-          padding: 16px;
-          border: 1px solid #e8e8e8;
-          border-radius: 8px;
+          background: #ffffff;
+          border-radius: 16px;
+          box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+          border: 1px solid rgba(59, 130, 246, 0.08);
+          overflow: hidden;
+          transition: all 0.3s ease;
 
-          .comment-header {
+          &:hover {
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.12);
+            transform: translateY(-2px);
+          }
+
+          .comment-main {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
+            gap: 16px;
+            padding: 20px;
 
-            .comment-user-info {
-              .user-name {
-                font-size: 14px;
-                font-weight: bold;
-                color: #333333;
-                margin-right: 16px;
-              }
-
-              .comment-date {
-                font-size: 12px;
-                color: #999999;
-              }
+            .comment-avatar {
+              width: 48px;
+              height: 48px;
+              border-radius: 50%;
+              background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              color: #ffffff;
+              flex-shrink: 0;
+              box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
             }
-          }
 
-          .comment-content {
-            font-size: 14px;
-            color: #666666;
-            line-height: 1.6;
-            margin-bottom: 12px;
-          }
+            .comment-body {
+              flex: 1;
+              min-width: 0;
 
-          .reply-toggle {
-            margin-top: 8px;
-            padding: 8px 0;
-
-            button {
-              padding: 0;
-              font-size: 13px;
-              color: #66b1ff;
-            }
-          }
-
-          .replies-list {
-            margin-top: 12px;
-            padding-left: 24px;
-            border-left: 2px solid #ecf5ff;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-
-            .reply-card {
-              padding: 14px;
-              border-radius: 8px;
-              background-color: #fafafa;
-
-              .reply-header {
+              .comment-header {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                margin-bottom: 8px;
+                margin-bottom: 12px;
 
-                .reply-username {
-                  font-size: 14px;
-                  font-weight: 500;
-                  color: #303133;
+                .comment-user-info {
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
 
-                  .merchant-badge {
-                    display: inline-block;
-                    margin-left: 6px;
-                    padding: 2px 6px;
-                    background-color: #67c23a;
-                    color: #ffffff;
-                    font-size: 10px;
-                    border-radius: 4px;
+                  .user-name {
+                    font-size: 15px;
+                    font-weight: 600;
+                    color: #1e293b;
+                  }
+
+                  .user-badge {
+                    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+                    border: none;
+                    color: white;
+                    font-size: 11px;
+                    padding: 2px 8px;
+                    height: auto;
+                    font-weight: 500;
                   }
                 }
 
-                .reply-date {
-                  font-size: 11px;
-                  color: #c0c4cc;
+                .comment-date {
+                  font-size: 12px;
+                  color: #94a3b8;
+                  font-weight: 500;
                 }
               }
 
-              .reply-content {
-                font-size: 13px;
-                color: #606266;
-                line-height: 1.6;
+              .comment-rating {
+                margin-bottom: 12px;
+
+                :deep(.el-rate) {
+                  .el-rate__icon {
+                    font-size: 16px;
+                  }
+                }
               }
 
-              &.merchant-reply {
-                background-color: #ecfdf3;
-                border-left: 3px solid #67c23a;
+              .comment-content {
+                font-size: 14px;
+                color: #475569;
+                line-height: 1.7;
+                margin-bottom: 12px;
+                font-weight: 400;
+              }
 
-                .reply-username {
-                  color: #67c23a;
+              .reply-toggle {
+                margin-top: 12px;
+                padding-top: 12px;
+                border-top: 1px dashed rgba(59, 130, 246, 0.15);
+
+                .toggle-button {
+                  color: #3b82f6;
+                  font-weight: 500;
+                  padding: 0;
+                  font-size: 13px;
+
+                  &:hover {
+                    color: #2563eb;
+                    background: transparent;
+                  }
+
+                  .toggle-icon {
+                    margin-right: 4px;
+                    font-size: 14px;
+                  }
+                }
+              }
+            }
+          }
+
+          .replies-wrapper {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border-top: 1px solid rgba(59, 130, 246, 0.1);
+            padding: 16px 20px;
+
+            .replies-list {
+              display: flex;
+              flex-direction: column;
+              gap: 12px;
+              margin: 0;
+              padding: 0;
+
+              .reply-card {
+                display: flex;
+                gap: 12px;
+                padding: 0;
+                background: transparent;
+                border-radius: 0;
+                transition: all 0.3s ease;
+
+                &:hover {
+                  background: rgba(59, 130, 246, 0.03);
+                  border-radius: 8px;
+                  padding: 8px;
+                  margin: -8px;
+                }
+
+                .reply-avatar {
+                  width: 36px;
+                  height: 36px;
+                  border-radius: 50%;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  flex-shrink: 0;
+                  background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+                  color: #ffffff;
+                  box-shadow: 0 2px 8px rgba(100, 116, 139, 0.3);
+                }
+
+                .reply-body {
+                  flex: 1;
+                  min-width: 0;
+
+                  .reply-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 8px;
+
+                    .reply-user-info {
+                      display: flex;
+                      align-items: center;
+                      gap: 8px;
+
+                      .reply-username {
+                        font-size: 14px;
+                        font-weight: 600;
+                        color: #334155;
+                      }
+
+                      .merchant-badge {
+                        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                        border: none;
+                        color: white;
+                        font-size: 11px;
+                        padding: 2px 8px;
+                        height: auto;
+                        font-weight: 500;
+                      }
+                    }
+
+                    .reply-date {
+                      font-size: 11px;
+                      color: #94a3b8;
+                      font-weight: 500;
+                    }
+                  }
+
+                  .reply-content {
+                    font-size: 13px;
+                    color: #475569;
+                    line-height: 1.6;
+                  }
+                }
+
+                &.merchant-reply {
+                  .reply-avatar {
+                    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+                  }
                 }
               }
             }
@@ -1526,16 +1994,27 @@ const goToOrderConfirmation = () => {
     .quick-order-section {
       padding: 24px;
       background-color: #ffffff;
+      border-top: 1px solid rgba(59, 130, 246, 0.1);
 
       .quick-order-button {
         width: 100%;
-        height: 48px;
+        height: 52px;
         font-size: 16px;
-        background-color: #ff6b6b;
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
         border: none;
+        border-radius: 12px;
+        font-weight: 600;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
 
         &:hover {
-          background-color: #ff5252;
+          background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+          transform: translateY(-2px);
+          box-shadow: 0 6px 24px rgba(59, 130, 246, 0.4);
+        }
+
+        &:active {
+          transform: translateY(0);
         }
       }
     }
@@ -1548,36 +2027,41 @@ const goToOrderConfirmation = () => {
 
   .empty-cart {
     text-align: center;
-    padding: 40px 0;
+    padding: 48px 20px;
 
     .empty-cart-icon {
-      font-size: 48px;
-      color: #e8e8e8;
-      margin-bottom: 16px;
+      margin-bottom: 20px;
+      opacity: 0.4;
+      color: #94a3b8;
     }
 
     .empty-cart-text {
       font-size: 16px;
-      color: #999999;
+      color: #64748b;
+      font-weight: 500;
     }
   }
 
   .cart-items {
-    max-height: 400px; // 设置购物车最大高度
-    overflow-y: auto; // 超出部分显示滚动条
-    padding-right: 8px; // 为滚动条预留空间
+    max-height: 450px;
+    overflow-y: auto;
+    padding-right: 8px;
+
     .cart-item {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      padding: 18px;
+      padding: 20px;
       margin-bottom: 16px;
-      background-color: #fafafa;
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
       border-radius: 12px;
+      border: 1px solid rgba(59, 130, 246, 0.08);
       transition: all 0.3s ease;
 
       &:hover {
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 4px 16px rgba(59, 130, 246, 0.12);
+        border-color: rgba(59, 130, 246, 0.15);
+        transform: translateY(-2px);
       }
 
       .cart-item-info {
@@ -1586,16 +2070,16 @@ const goToOrderConfirmation = () => {
         margin-right: 16px;
 
         .cart-item-name {
-          font-size: 15px;
+          font-size: 16px;
           font-weight: 600;
-          color: #333333;
+          color: #1e293b;
           margin-bottom: 8px;
         }
 
         .cart-item-price {
-          font-size: 13px;
-          color: #ff6b6b;
-          font-weight: 500;
+          font-size: 14px;
+          color: #3b82f6;
+          font-weight: 600;
           margin-bottom: 4px;
         }
       }
@@ -1603,22 +2087,36 @@ const goToOrderConfirmation = () => {
       .cart-item-quantity {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 12px;
         margin: 0 24px;
 
+        .el-button {
+          color: #3b82f6;
+          font-weight: 600;
+
+          &:hover {
+            background: rgba(59, 130, 246, 0.1);
+          }
+        }
+
         .quantity {
-          width: 40px;
+          min-width: 32px;
           text-align: center;
-          font-size: 14px;
-          font-weight: 500;
+          font-size: 15px;
+          font-weight: 600;
+          color: #1e293b;
         }
       }
 
       .cart-item-total {
-        font-size: 16px;
-        font-weight: bold;
-        color: #ff6b6b;
+        font-size: 18px;
+        font-weight: 700;
+        color: #3b82f6;
         white-space: nowrap;
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
       }
     }
 
@@ -1627,104 +2125,107 @@ const goToOrderConfirmation = () => {
       justify-content: flex-end;
       align-items: center;
       gap: 20px;
-      padding: 20px 0;
-      border-top: 2px solid #ff6b6b;
+      padding: 24px 0;
+      border-top: 2px solid rgba(59, 130, 246, 0.2);
       margin-top: 20px;
+      background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
+      border-radius: 12px;
+      padding: 20px;
 
       .total-text {
         font-size: 18px;
-        font-weight: bold;
-        color: #333333;
+        font-weight: 600;
+        color: #334155;
       }
 
       .total-price {
-        font-size: 24px;
-        font-weight: bold;
-        color: #ff6b6b;
+        font-size: 28px;
+        font-weight: 700;
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
       }
     }
 
-    // Optional ingredients styles
     .cart-item-ingredients {
-      margin: 4px 0;
+      margin: 6px 0;
 
       .ingredient-tag {
         font-size: 12px;
-        color: #909399;
-        background-color: #ecf5ff;
-        padding: 2px 6px;
-        border-radius: 4px;
-        margin-right: 4px;
+        color: #3b82f6;
+        background: rgba(59, 130, 246, 0.1);
+        padding: 4px 10px;
+        border-radius: 6px;
+        margin-right: 6px;
+        margin-bottom: 4px;
+        display: inline-block;
+        font-weight: 500;
       }
     }
 
-    // Note input styles
     .cart-item-note {
-      margin: 4px 0;
+      margin: 6px 0;
       position: relative;
-      max-width: 100%; /* 确保不超过容器宽度 */
 
       .note-display {
         display: flex;
         align-items: center;
         gap: 8px;
-        padding: 4px 8px;
-        background-color: #f5f7fa;
-        border-radius: 4px;
-        min-height: 24px;
+        padding: 8px 12px;
+        background: rgba(59, 130, 246, 0.05);
+        border-radius: 8px;
+        min-height: 32px;
         justify-content: space-between;
+        border: 1px solid rgba(59, 130, 246, 0.1);
 
         .note-text {
-          font-size: 12px;
-          color: #333;
-          max-height: 54px; /* 约三行高度 */
-          overflow: hidden;
-          text-overflow: ellipsis;
-          display: -webkit-box;
-          -webkit-line-clamp: 3;
-          -webkit-box-orient: vertical;
-          line-clamp: 3; /* 标准属性 */
-          box-orient: vertical; /* 标准属性 */
+          font-size: 13px;
+          color: #334155;
           flex: 1;
-          word-wrap: break-word; /* 自动换行 */
-          word-break: break-all; /* 确保长单词也能换行 */
+          word-wrap: break-word;
+          word-break: break-all;
         }
 
         .note-empty {
-          font-size: 12px;
-          color: #999;
+          font-size: 13px;
+          color: #94a3b8;
           flex: 1;
         }
 
         .edit-note-btn {
-          padding: 2px 4px;
+          padding: 4px 8px;
           height: auto;
-          background-color: #ccc; /* 灰色背景 */
-          border-color: #ccc; /* 灰色边框 */
+          background: rgba(59, 130, 246, 0.1);
+          border-color: rgba(59, 130, 246, 0.2);
+          border-radius: 6px;
+          color: #3b82f6;
+          transition: all 0.3s ease;
 
           .edit-icon {
-            font-size: 12px;
-            color: #fff; /* 白色图标 */
+            font-size: 14px;
           }
 
           &:hover {
-            background-color: #999; /*  hover时加深灰色 */
-            border-color: #999;
+            background: rgba(59, 130, 246, 0.2);
+            border-color: rgba(59, 130, 246, 0.3);
           }
         }
       }
 
       .note-edit {
         .el-input__inner {
-          font-size: 12px;
-          height: 32px;
-          border-radius: 6px;
+          font-size: 13px;
         }
 
         .note-actions {
           display: flex;
           gap: 8px;
-          margin-top: 4px;
+          margin-top: 8px;
+
+          .el-button {
+            border-radius: 6px;
+          }
         }
       }
     }
@@ -1735,50 +2236,57 @@ const goToOrderConfirmation = () => {
 .draggable-cart-ball {
   position: fixed;
   right: 24px;
-  bottom: 80px; // 向上调整避免被可能的底部导航遮挡
-  width: 88px;
-  height: 88px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  bottom: 100px;
+  width: 96px;
+  height: 96px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   border-radius: 50%;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   cursor: grab;
-  box-shadow: 0 8px 32px rgba(102, 126, 234, 0.6);
+  box-shadow: 0 8px 32px rgba(59, 130, 246, 0.5);
   color: white;
   font-size: 12px;
-  transition: all 0.3s ease;
-  z-index: 9999; // 设置更高的z-index确保浮在所有内容之上
-  border: 3px solid rgba(255, 255, 255, 0.9); // 添加白色边框增强圆形感
-  backdrop-filter: blur(10px); // 添加轻微模糊效果增强层次感
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 9999;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
 
   &:active {
     cursor: grabbing;
-    transform: scale(1.05);
-    box-shadow: 0 8px 32px rgba(102, 126, 234, 0.6);
+    transform: scale(1.08);
+    box-shadow: 0 12px 40px rgba(59, 130, 246, 0.6);
   }
 
   &:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 32px rgba(102, 126, 234, 0.6);
+    transform: translateY(-6px);
+    box-shadow: 0 12px 40px rgba(59, 130, 246, 0.5);
   }
 
   .cart-icon {
-    font-size: 32px;
-    margin-bottom: 2px;
+    margin-bottom: 4px;
     position: relative;
+    color: #ffffff;
   }
 
   .cart-badge {
     position: absolute;
-    top: -8px;
-    right: -8px;
+    top: -6px;
+    right: -6px;
+
+    :deep(.el-badge__content) {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      border: 2px solid #ffffff;
+      font-weight: 700;
+    }
   }
 
   .cart-amount {
-    font-size: 11px;
-    font-weight: 600;
+    font-size: 12px;
+    font-weight: 700;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
   }
 }
 </style>

@@ -178,6 +178,41 @@ const currentMenu = computed(() => {
   return menuData[userRole.value] ? menuData[userRole.value] : menuData.user || []
 })
 
+// 智能匹配父级菜单 - 根据路径模式匹配到相关的父级菜单
+const smartMatchParentMenu = (path, role) => {
+  // 用户端路径映射
+  const userPathMappings = [
+    { pattern: /\/user\/home\/merchant-detail/, menuIndex: '3' }, // 商家详情 → 商家查找
+    { pattern: /\/user\/home\/order-confirmation/, menuIndex: '8' }, // 订单确认 → 查看订单
+    { pattern: /\/user\/home\/order-detail/, menuIndex: '8' }, // 订单详情 → 查看订单
+    { pattern: /\/user\/home\/system-notification/, menuIndex: '9' }, // 系统通知 → 消息中心
+    { pattern: /\/user\/home\/address/, menuIndex: '7' }, // 地址管理 → 用户中心
+    { pattern: /\/user\/home\/contact/, menuIndex: '7' }, // 联系客服 → 用户中心
+    { pattern: /\/user\/home\/my-collection/, menuIndex: '2' }, // 我的收藏 → 我的推荐
+    { pattern: /\/user\/home\/tutorials/, menuIndex: '2' } // 制作教程 → 我的推荐
+  ]
+
+  // 商家端路径映射
+  const merchantPathMappings = [
+    { pattern: /\/merchant\/home\/order-detail/, menuIndex: '2-2' }, // 订单详情 → 全部订单
+    { pattern: /\/merchant\/home\/menu-edit/, menuIndex: '3-1' }, // 菜单编辑 → 菜单管理
+    { pattern: /\/merchant\/home\/dish-edit/, menuIndex: '3-2' } // 菜品编辑 → 菜品管理
+  ]
+
+  // 根据角色选择对应的映射表
+  const mappings = role === 'merchant' ? merchantPathMappings : userPathMappings
+
+  // 遍历映射表，查找匹配的路径模式
+  for (const mapping of mappings) {
+    if (mapping.pattern.test(path)) {
+      return mapping.menuIndex
+    }
+  }
+
+  // 没有匹配到
+  return null
+}
+
 // 根据当前路由计算并设置激活的菜单项索引 - 支持分组菜单
 const updateActiveMenuIndex = () => {
   const currentPath = router.currentRoute.value.path
@@ -261,9 +296,16 @@ const updateActiveMenuIndex = () => {
     }
   }
 
-  // 如果没有匹配到，默认激活第一个菜单项
-  activeMenuIndex.value = currentMenu.value[0]?.index || '1'
-  console.log('未匹配到菜单项，默认激活第一个')
+  // 如果没有精确匹配到菜单项，尝试智能匹配父级菜单
+  const parentMenuIndex = smartMatchParentMenu(currentPath, userRole.value)
+  if (parentMenuIndex) {
+    activeMenuIndex.value = parentMenuIndex
+    console.log('智能匹配到父级菜单:', parentMenuIndex)
+  } else {
+    // 实在没有匹配，才激活第一个菜单项
+    activeMenuIndex.value = currentMenu.value[0]?.index || '1'
+    console.log('未匹配到菜单项，默认激活第一个')
+  }
 
   // 重置侧边栏宽度为默认值，防止自动展开菜单时宽度变宽
   sidebarWidth.value = '170px' // 这里的默认宽度要和初始化时一致
