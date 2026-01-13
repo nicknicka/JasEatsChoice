@@ -37,7 +37,7 @@ public class CollectionServiceImpl implements CollectionService {
     }
 
     @Override
-    UserCollection addCollection(UserCollection collection) {
+    public UserCollection addCollection(UserCollection collection) {
         collection.setCreateTime(LocalDateTime.now());
         collectionMapper.insert(collection);
         return collection;

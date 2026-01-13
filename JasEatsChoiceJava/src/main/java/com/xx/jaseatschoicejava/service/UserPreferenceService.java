@@ -13,7 +13,7 @@ public interface UserPreferenceService extends IService<UserPreference> {
      * @param userId 用户ID
      * @return 用户推荐偏好
      */
-    UserPreference getByUserId(Long userId);
+    UserPreference getByUserId(String userId);
 
     /**
      * 更新用户推荐偏好

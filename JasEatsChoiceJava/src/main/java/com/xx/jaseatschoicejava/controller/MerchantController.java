@@ -1029,7 +1029,7 @@ public class MerchantController {
     @PostMapping("/{merchantId}/announcements")
     public ResponseResult<?> addAnnouncement(@PathVariable String merchantId, @RequestBody Announcement announcement) {
         try {
-            announcement.setMerchantId(Long.valueOf(merchantId));
+            announcement.setMerchantId(merchantId);
             boolean success = announcementService.save(announcement);
             if (success) {
                 // 重新查询数据库以获取完整的字段值（包括自动填充的createTime和updateTime）
@@ -1054,13 +1054,13 @@ public class MerchantController {
         try {
             // 验证公告属于该商家
             Announcement existingAnnouncement = announcementService.getById(announcementId);
-            if (existingAnnouncement == null || !existingAnnouncement.getMerchantId().equals(Long.valueOf(merchantId))) {
+            if (existingAnnouncement == null || !existingAnnouncement.getMerchantId().equals(merchantId)) {
                 return ResponseResult.fail("404", "公告不存在");
             }
 
             // 确保ID一致
-            announcement.setId(Long.valueOf(announcementId));
-            announcement.setMerchantId(Long.valueOf(merchantId));
+            announcement.setId(announcementId);
+            announcement.setMerchantId(merchantId);
 
             boolean success = announcementService.updateById(announcement);
             if (success) {

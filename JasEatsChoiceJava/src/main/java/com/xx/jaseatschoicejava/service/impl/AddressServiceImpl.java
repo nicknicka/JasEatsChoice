@@ -18,7 +18,7 @@ import java.util.List;
 public class AddressServiceImpl extends ServiceImpl<AddressMapper, Address> implements AddressService {
 
     @Override
-    public List<Address> getAddressesByUserId(Long userId) {
+    public List<Address> getAddressesByUserId(String userId) {
         LambdaQueryWrapper<Address> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Address::getUserId, userId);
         return list(queryWrapper);
@@ -58,7 +58,7 @@ public class AddressServiceImpl extends ServiceImpl<AddressMapper, Address> impl
     }
 
     @Override
-    public boolean deleteAddress(Long addressId, Long userId) {
+    public boolean deleteAddress(String addressId, String userId) {
         LambdaQueryWrapper<Address> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Address::getId, addressId)
                 .eq(Address::getUserId, userId);

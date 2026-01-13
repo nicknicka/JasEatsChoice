@@ -45,8 +45,8 @@ public class CollectionController {
      */
     @PostMapping
     public ResponseResult<?> addCollection(@RequestBody UserCollection collection) {
-        Long id = collectionService.addCollection(collection);
-        return ResponseResult.success(id);
+        UserCollection savedCollection = collectionService.addCollection(collection);
+        return ResponseResult.success(savedCollection);
     }
 
     /**
@@ -56,7 +56,7 @@ public class CollectionController {
     public ResponseResult<?> removeCollection(
             @RequestParam String userId,
             @RequestParam String type,
-            @RequestParam Long id) {
+            @RequestParam String id) {
         boolean success = collectionService.removeCollection(userId, type, id);
         return success ? ResponseResult.success() : ResponseResult.fail("500", "取消收藏失败");
     }
@@ -68,7 +68,7 @@ public class CollectionController {
     public ResponseResult<?> checkCollection(
             @RequestParam String userId,
             @RequestParam String type,
-            @RequestParam Long id) {
+            @RequestParam String id) {
         boolean isCollected = collectionService.isCollected(userId, type, id);
         return ResponseResult.success(isCollected);
     }

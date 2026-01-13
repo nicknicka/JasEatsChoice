@@ -15,7 +15,7 @@ public interface AddressService extends IService<Address> {
      * @param userId 用户ID
      * @return 地址列表
      */
-    List<Address> getAddressesByUserId(Long userId);
+    List<Address> getAddressesByUserId(String userId);
 
     /**
      * 新增地址
@@ -37,5 +37,5 @@ public interface AddressService extends IService<Address> {
      * @param userId 用户ID
      * @return 删除是否成功
      */
-    boolean deleteAddress(Long addressId, Long userId);
+    boolean deleteAddress(String addressId, String userId);
 }

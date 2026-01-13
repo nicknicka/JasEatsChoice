@@ -14,7 +14,7 @@ import org.springframework.stereotype.Service;
 public class UserPreferenceServiceImpl extends ServiceImpl<UserPreferenceMapper, UserPreference> implements UserPreferenceService {
 
     @Override
-    public UserPreference getByUserId(Long userId) {
+    public UserPreference getByUserId(String userId) {
         LambdaQueryWrapper<UserPreference> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(UserPreference::getUserId, userId);
         return getOne(queryWrapper);

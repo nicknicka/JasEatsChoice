@@ -128,7 +128,7 @@ public class RecommendController {
     @PostMapping("/recommend/{userId}/replace")
     public ResponseResult<?> replaceRecommendDishes(@PathVariable String userId, @RequestBody Map<String, Object> params) {
         // 获取用户要替换的菜品ID列表
-        List<String> replaceDishIds = (List<Long>) params.get("replaceDishIds");
+        List<String> replaceDishIds = (List<String>) params.get("replaceDishIds");
         if (replaceDishIds == null || replaceDishIds.isEmpty()) {
             return ResponseResult.fail("400", "请提供要替换的菜品ID列表");
         }
