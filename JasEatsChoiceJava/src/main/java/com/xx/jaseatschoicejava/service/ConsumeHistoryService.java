@@ -1,9 +1,10 @@
 package com.xx.jaseatschoicejava.service;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.IService;
 import com.xx.jaseatschoicejava.entity.ConsumeHistory;
 
-public interface ConsumeHistoryService {
+public interface ConsumeHistoryService extends IService<ConsumeHistory> {
 
     /**
      * 根据用户ID获取消费记录分页

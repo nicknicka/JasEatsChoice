@@ -42,6 +42,18 @@ public class Order {
     @ApiModelProperty(value = "订单状态：0-待支付、1-待接单、2-备菜中、3-烹饪中、4-待上菜、5-已完成、6-已取消")
     private Integer status; // 订单状态：0-待支付、1-待接单、2-备菜中、3-烹饪中、4-待上菜、5-已完成、6-已取消
 
+    @TableField("payment_id")
+    @ApiModelProperty(value = "支付记录ID")
+    private Long paymentId; // 支付记录ID
+
+    @TableField("paid_amount")
+    @ApiModelProperty(value = "已支付金额")
+    private BigDecimal paidAmount; // 已支付金额
+
+    @TableField("payment_time")
+    @ApiModelProperty(value = "支付时间")
+    private LocalDateTime paymentTime; // 支付时间
+
     @TableField("address_id")
     @ApiModelProperty(value = "配送地址ID")
     private Long addressId; // 配送地址ID

@@ -376,6 +376,7 @@ import CommonAvatar from "../../components/CommonAvatar.vue";
 import api from "../../utils/api";
 import { API_CONFIG } from "../../config";
 import QRCode from "qrcode";
+import walletApi from "../../api/wallet";
 
 // 导入状态管理
 import { useAuthStore } from "../../store/authStore";
@@ -581,7 +582,13 @@ const goToAddress = () => {
 
 // 钱包功能
 // 充值功能
-const recharge = () => {
+const recharge = async () => {
+	const userId = parseInt(authStore.userId || "0", 10);
+	if (userId <= 0) {
+		ElMessage.error("用户未登录，请重新登录");
+		return;
+	}
+
 	// 创建充值表单对话框
 	ElMessageBox.prompt("请输入充值金额(单位:平台币)", "充值", {
 		inputPattern: /^[1-9]\d*$/,
@@ -595,40 +602,29 @@ const recharge = () => {
 			return true;
 		},
 	})
-		.then(({ value }) => {
-			// 模拟充值成功
-			const newBalance = (
-				Number(userInfo.value.wallet.balance) + Number(value)
-			).toString();
-			userInfo.value.wallet.balance = newBalance;
+		.then(async ({ value }) => {
+			try {
+				// 生成充值流水号
+				const rechargeNo = "RCH" + new Date().getTime() + Math.floor(Math.random() * 1000);
 
-			// 创建交易记录
-			const rechargeRecord = {
-				id: Date.now(),
-				date: new Date().toISOString().replace("T", " ").substring(0, 19),
-				type: "recharge",
-				amount: Number(value),
-				description: "平台币充值",
-				status: "success",
-			};
+				// 调用充值API
+				const response = await walletApi.recharge(userId, Number(value), rechargeNo);
 
-			// 保存到交易历史
-			let history = localStorage.getItem("consumeHistory");
-			if (history) {
-				history = JSON.parse(history);
-				history.push(rechargeRecord);
-			} else {
-				history = [rechargeRecord];
+				if (response.code === "200") {
+					// 更新本地余额
+					userInfo.value.wallet.balance = response.data.balance || 0;
+
+					ElMessage.success(`充值成功!已到账${value}平台币`);
+
+					// 跳转到消费记录页面查看交易
+					router.push("/user/home/consume-history");
+				} else {
+					ElMessage.error(response.message || "充值失败，请重试");
+				}
+			} catch (error) {
+				console.error("充值失败:", error);
+				ElMessage.error(error.message || "充值失败，请重试");
 			}
-			localStorage.setItem("consumeHistory", JSON.stringify(history));
-
-			// 更新本地存储
-			localStorage.setItem("userInfo", JSON.stringify(userInfo.value));
-
-			// 跳转到消费记录页面查看交易
-			router.push("/user/home/consume-history");
-
-			ElMessage.success(`充值成功!已到账${value}平台币`);
 		})
 		.catch(() => {
 			ElMessage.info("已取消充值");
@@ -636,7 +632,23 @@ const recharge = () => {
 };
 
 // 提现功能
-const withdraw = () => {
+const withdraw = async () => {
+	const userId = parseInt(authStore.userId || "0", 10);
+	if (userId <= 0) {
+		ElMessage.error("用户未登录，请重新登录");
+		return;
+	}
+
+	// 获取最新余额
+	try {
+		const balanceResponse = await walletApi.getBalance(userId);
+		if (balanceResponse.code === "200") {
+			userInfo.value.wallet.balance = balanceResponse.data || 0;
+		}
+	} catch (error) {
+		console.error("获取余额失败:", error);
+	}
+
 	// 创建提现表单对话框
 	ElMessageBox.prompt("请输入提现金额(单位:平台币)", "提现", {
 		inputPattern: /^[1-9]\d*$/,
@@ -658,40 +670,29 @@ const withdraw = () => {
 			return true;
 		},
 	})
-		.then(({ value }) => {
-			// 模拟提现成功
-			const newBalance = (
-				Number(userInfo.value.wallet.balance) - Number(value)
-			).toString();
-			userInfo.value.wallet.balance = newBalance;
+		.then(async ({ value }) => {
+			try {
+				// 生成提现流水号
+				const withdrawNo = "WTH" + new Date().getTime() + Math.floor(Math.random() * 1000);
 
-			// 创建交易记录
-			const withdrawRecord = {
-				id: Date.now(),
-				date: new Date().toISOString().replace("T", " ").substring(0, 19),
-				type: "withdraw",
-				amount: Number(value),
-				description: "平台币提现",
-				status: "success",
-			};
+				// 调用提现API
+				const response = await walletApi.withdraw(userId, Number(value), withdrawNo);
 
-			// 保存到交易历史
-			let history = localStorage.getItem("consumeHistory");
-			if (history) {
-				history = JSON.parse(history);
-				history.push(withdrawRecord);
-			} else {
-				history = [withdrawRecord];
+				if (response.code === "200") {
+					// 更新本地余额
+					userInfo.value.wallet.balance = response.data.balance || 0;
+
+					ElMessage.success(`提现成功!已转出${value}平台币`);
+
+					// 跳转到消费记录页面查看交易
+					router.push("/user/home/consume-history");
+				} else {
+					ElMessage.error(response.message || "提现失败，请重试");
+				}
+			} catch (error) {
+				console.error("提现失败:", error);
+				ElMessage.error(error.message || "提现失败，请重试");
 			}
-			localStorage.setItem("consumeHistory", JSON.stringify(history));
-
-			// 更新本地存储
-			localStorage.setItem("userInfo", JSON.stringify(userInfo.value));
-
-			// 跳转到消费记录页面查看交易
-			router.push("/user/home/consume-history");
-
-			ElMessage.success(`提现成功!已转出${value}平台币`);
 		})
 		.catch(() => {
 			ElMessage.info("已取消提现");

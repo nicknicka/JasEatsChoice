@@ -2,6 +2,7 @@ package com.xx.jaseatschoicejava.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.xx.jaseatschoicejava.entity.ConsumeHistory;
 import com.xx.jaseatschoicejava.mapper.ConsumeHistoryMapper;
 import com.xx.jaseatschoicejava.service.ConsumeHistoryService;
@@ -14,7 +15,7 @@ import java.time.LocalTime;
 
 @Service
 @RequiredArgsConstructor
-public class ConsumeHistoryServiceImpl implements ConsumeHistoryService {
+public class ConsumeHistoryServiceImpl extends ServiceImpl<ConsumeHistoryMapper, ConsumeHistory> implements ConsumeHistoryService {
 
     private final ConsumeHistoryMapper consumeHistoryMapper;
 

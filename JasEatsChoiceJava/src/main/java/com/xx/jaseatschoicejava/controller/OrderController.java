@@ -3,21 +3,33 @@ package com.xx.jaseatschoicejava.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.xx.jaseatschoicejava.common.ResponseResult;
 import com.xx.jaseatschoicejava.entity.Order;
+import com.xx.jaseatschoicejava.entity.PaymentRecord;
 import com.xx.jaseatschoicejava.service.OrderService;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.xx.jaseatschoicejava.service.PaymentService;
+import com.xx.jaseatschoicejava.service.WalletService;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
  * 订单控制器
  */
+@Slf4j
+@Api(tags = "订单管理")
 @RestController
 @RequestMapping("/v1/orders")
+@RequiredArgsConstructor
 public class OrderController {
 
-    @Autowired
-    private OrderService orderService;
+    private final OrderService orderService;
+    private final PaymentService paymentService;
+    private final WalletService walletService;
 
     /**
      * 创建订单
@@ -78,5 +90,80 @@ public class OrderController {
             return ResponseResult.success("更新成功");
         }
         return ResponseResult.fail("500", "更新失败");
+    }
+
+    /**
+     * 订单支付
+     */
+    @ApiOperation("订单支付")
+    @PostMapping("/{orderId}/pay")
+    public ResponseResult<?> payOrder(
+        @PathVariable String orderId,
+        @ApiParam("用户ID") @RequestParam Long userId,
+        @ApiParam("支付方式") @RequestParam(defaultValue = "wallet") String paymentMethod
+    ) {
+        try {
+            // 获取订单信息
+            Order order = orderService.getById(orderId);
+            if (order == null) {
+                return ResponseResult.fail("404", "订单不存在");
+            }
+
+            // 检查订单状态
+            if (order.getStatus() != 0) {
+                return ResponseResult.fail("400", "订单状态异常，无法支付");
+            }
+
+            // 转换类型
+            Long userIdLong = Long.parseLong(order.getUserId());
+            Long merchantIdLong = Long.parseLong(order.getMerchantId());
+
+            // 检查余额
+            if ("wallet".equals(paymentMethod)) {
+                boolean enough = walletService.checkBalance(userIdLong, order.getTotalAmount());
+                if (!enough) {
+                    return ResponseResult.fail("400", "余额不足");
+                }
+            }
+
+            // 创建支付记录
+            PaymentRecord paymentRecord = paymentService.createPayment(
+                orderId,
+                userIdLong,
+                merchantIdLong,
+                order.getTotalAmount(),
+                paymentMethod
+            );
+
+            // 处理支付
+            boolean success = paymentService.processPayment(paymentRecord.getPaymentNo());
+            if (success) {
+                return ResponseResult.success("支付成功");
+            } else {
+                return ResponseResult.fail("500", "支付失败");
+            }
+
+        } catch (Exception e) {
+            log.error("订单支付失败，订单ID：{}", orderId, e);
+            return ResponseResult.fail("500", "支付失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取订单支付记录
+     */
+    @ApiOperation("获取订单支付记录")
+    @GetMapping("/{orderId}/payment")
+    public ResponseResult<?> getOrderPayment(@PathVariable String orderId) {
+        try {
+            PaymentRecord paymentRecord = paymentService.getPaymentByOrderId(orderId);
+            if (paymentRecord != null) {
+                return ResponseResult.success(paymentRecord);
+            }
+            return ResponseResult.fail("404", "支付记录不存在");
+        } catch (Exception e) {
+            log.error("获取支付记录失败，订单ID：{}", orderId, e);
+            return ResponseResult.fail("500", "获取支付记录失败：" + e.getMessage());
+        }
     }
 }

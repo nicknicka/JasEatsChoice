@@ -73,7 +73,7 @@
           <template #header>
             <div class="card-header">
               <span class="card-title">订单商品</span>
-              <el-button type="text" size="small" @click="cartVisible = true">
+              <el-button type="text" size="small" @click="openCart">
                 <el-icon><Edit /></el-icon>
                 编辑订单
               </el-button>
@@ -221,6 +221,32 @@
           <div class="cart-item-main">
             <div class="item-name">{{ item.name }}</div>
             <div class="item-price">¥{{ item.price.toFixed(2) }}</div>
+            <!-- 食材信息 -->
+            <div class="item-specs" v-if="hasIngredients(item)">
+              <el-tag
+                v-if="item.requiredIngredients && item.requiredIngredients.length > 0"
+                size="small"
+                type="info"
+                effect="plain"
+                class="ingredient-tag"
+              >
+                必选: {{ item.requiredIngredients.join('、') }}
+              </el-tag>
+              <el-tag
+                v-if="item.selectedOptionalIngredients && item.selectedOptionalIngredients.length > 0"
+                size="small"
+                type="success"
+                effect="plain"
+                class="ingredient-tag"
+              >
+                加选: {{ formatOptionalIngredients(item.selectedOptionalIngredients) }}
+              </el-tag>
+            </div>
+            <!-- 备注信息 -->
+            <div class="item-note" v-if="item.note">
+              <el-icon><Document /></el-icon>
+              <span>{{ item.note }}</span>
+            </div>
           </div>
           <div class="cart-item-controls">
             <el-input-number
@@ -305,7 +331,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter } from 'vue-router'
 import {
@@ -314,12 +340,17 @@ import {
   CircleCheck,
   Clock,
   Ticket,
-  InfoFilled
+  InfoFilled,
+  Document
 } from '@element-plus/icons-vue'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
 import OrderItemList from './components/OrderItemList.vue'
+import walletApi from '../../api/wallet'
+import paymentApi from '../../api/payment'
+import { useAuthStore } from '../../store/authStore'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 // 从会话存储获取订单信息
 const pendingOrder = JSON.parse(sessionStorage.getItem('pendingOrder')) || {}
@@ -359,8 +390,15 @@ const merchantInfo = ref({
 })
 
 // 购物车数据
-const cartItems = ref(pendingOrder.cartItems || [])
+const cartItems = ref([])
 const cartVisible = ref(false)
+
+// 打开购物车编辑弹窗
+const openCart = () => {
+  // 创建深拷贝，避免直接修改原始数据
+  cartItems.value = JSON.parse(JSON.stringify(orderInfo.value.unpaidItems))
+  cartVisible.value = true
+}
 
 // 检测订单类型
 const isGroupOrder = ref(orderInfo.value.groupName !== '默认订单群')
@@ -392,6 +430,25 @@ const selectedPaymentMethod = ref(paymentMethods.value[0])
 // 提交状态
 const submitting = ref(false)
 
+// 平台币余额 - 从后端获取
+const platformBalance = ref(0.0)
+
+// 初始化余额
+onMounted(async () => {
+  try {
+    const userId = parseInt(authStore.userId || '0', 10)
+    if (userId > 0) {
+      const response = await walletApi.getBalance(userId)
+      if (response.code === '200') {
+        platformBalance.value = response.data || 0.0
+      }
+    }
+  } catch (error) {
+    console.error('获取余额失败:', error)
+    ElMessage.warning('获取余额失败，请刷新页面重试')
+  }
+})
+
 // 提交按钮文字
 const submitButtonText = computed(() => {
   const method = selectedPaymentMethod.value
@@ -417,9 +474,6 @@ const aaShareAmount = ref(0)
 const customShareModalVisible = ref(false)
 const customShares = ref([])
 
-// 平台币余额
-const platformBalance = ref(125.0)
-
 // 优惠券
 const discounts = ref([
   {
@@ -434,7 +488,9 @@ const discounts = ref([
 const selectedDiscount = ref(null)
 const discountApplied = computed(() => selectedDiscount.value !== null)
 const discountAmount = computed(() => {
-  return selectedDiscount.value ? selectedDiscount.value.amount : 0
+  if (!selectedDiscount.value || !orderInfo.value.originalTotal) return 0
+  // 计算实际优惠金额：原始总额 - 当前总额
+  return orderInfo.value.originalTotal - orderInfo.value.totalUnpaid
 })
 
 // 最终金额（注意：orderInfo.totalUnpaid 已经在 useDiscount 中被修改过了）
@@ -531,11 +587,17 @@ const useDiscount = () => {
 const cancelDiscount = () => {
   if (!selectedDiscount.value) return
 
-  const discountAmount = Math.min(
-    selectedDiscount.value.amount,
-    orderInfo.value.totalUnpaid + selectedDiscount.value.amount
-  )
-  orderInfo.value.totalUnpaid += discountAmount
+  // 使用保存的原始总额恢复
+  if (orderInfo.value.originalTotal) {
+    orderInfo.value.totalUnpaid = orderInfo.value.originalTotal
+  } else {
+    // 如果没有保存原始总额，则重新计算（兜底逻辑）
+    const discountAmount = Math.min(
+      selectedDiscount.value.amount,
+      orderInfo.value.totalUnpaid + selectedDiscount.value.amount
+    )
+    orderInfo.value.totalUnpaid += discountAmount
+  }
 
   delete orderInfo.value.originalTotal
 
@@ -548,6 +610,7 @@ const cancelDiscount = () => {
 // 关闭购物车
 const closeCart = () => {
   cartVisible.value = false
+  cartItems.value = [] // 清空编辑数据
 }
 
 // 更新单项总价
@@ -558,9 +621,22 @@ const updateItemTotal = (item) => {
 // 更新订单信息
 const updateOrderInfo = () => {
   orderInfo.value.unpaidItems = cartItems.value.filter(item => item.quantity > 0)
-  orderInfo.value.totalUnpaid = cartItems.value
+
+  // 计算新的商品总额
+  const newTotalUnpaid = cartItems.value
     .filter(item => item.quantity > 0)
     .reduce((total, item) => total + (item.totalPrice || item.price * item.quantity), 0)
+
+  // 如果有已使用的优惠券，需要重新应用
+  if (selectedDiscount.value) {
+    // 保存新的原始总额
+    orderInfo.value.originalTotal = newTotalUnpaid
+    // 应用优惠券折扣
+    const discountAmount = Math.min(selectedDiscount.value.amount, newTotalUnpaid)
+    orderInfo.value.totalUnpaid = newTotalUnpaid - discountAmount
+  } else {
+    orderInfo.value.totalUnpaid = newTotalUnpaid
+  }
 
   const updatedOrder = { ...pendingOrder }
   updatedOrder.cartItems = cartItems.value.filter(item => item.quantity > 0)
@@ -571,8 +647,23 @@ const updateOrderInfo = () => {
   ElMessage.success('订单已更新')
 }
 
+// 判断是否有食材信息
+const hasIngredients = (item) => {
+  return (
+    (item.requiredIngredients && item.requiredIngredients.length > 0) ||
+    (item.selectedOptionalIngredients && item.selectedOptionalIngredients.length > 0)
+  )
+}
+
+// 格式化可选食材
+const formatOptionalIngredients = (ingredients) => {
+  return ingredients
+    .map((ing) => (typeof ing === 'object' ? ing.name : ing))
+    .join('、')
+}
+
 // 确认订单
-const confirmOrder = () => {
+const confirmOrder = async () => {
   const methodId = selectedPaymentMethod.value.id
 
   if (methodId === 3) {
@@ -607,20 +698,58 @@ const confirmOrder = () => {
     return
   }
 
+  // 检查余额
+  const userId = parseInt(authStore.userId || '0', 10)
+  if (userId <= 0) {
+    ElMessage.error('用户未登录，请重新登录')
+    return
+  }
+
+  if (platformBalance.value < finalAmount.value) {
+    ElMessage.error(`余额不足！当前余额：¥${platformBalance.value.toFixed(2)}，需要：¥${finalAmount.value.toFixed(2)}`)
+    return
+  }
+
   // 普通支付流程
   ElMessageBox.confirm('请确认订单信息无误后支付', '订单确认', {
     confirmButtonText: '立即支付',
     cancelButtonText: '取消',
     type: 'warning'
   })
-    .then(() => {
-      submitting.value = true
-      sessionStorage.removeItem('pendingOrder')
-      ElMessage.success('支付成功！您的订单正在处理中')
-      setTimeout(() => {
+    .then(async () => {
+      try {
+        submitting.value = true
+
+        // 调用支付API
+        const response = await paymentApi.payOrder(
+          orderInfo.value.orderId,
+          userId,
+          'wallet'
+        )
+
+        if (response.code === '200') {
+          sessionStorage.removeItem('pendingOrder')
+          ElMessage.success('支付成功！您的订单正在处理中')
+
+          // 更新余额
+          const balanceResponse = await walletApi.getBalance(userId)
+          if (balanceResponse.code === '200') {
+            platformBalance.value = balanceResponse.data || 0.0
+          }
+
+          setTimeout(() => {
+            submitting.value = false
+            router.push('/user/home/orders')
+          }, 1500)
+        } else {
+          submitting.value = false
+          ElMessage.error(response.message || '支付失败，请重试')
+        }
+      } catch (error) {
+        console.error('支付失败:', error)
         submitting.value = false
-        router.push('/user/home/orders')
-      }, 1500)
+        ElMessage.error(error.message || '支付失败，请重试')
+      }
     })
     .catch(() => {
       ElMessage.info('已取消支付')
@@ -1035,7 +1164,7 @@ const confirmOrder = () => {
   .cart-item {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     padding: 12px;
     border: 1px solid #f0f0f0;
     border-radius: 8px;
@@ -1047,6 +1176,7 @@ const confirmOrder = () => {
 
     .cart-item-main {
       flex: 1;
+      padding-right: 12px;
 
       .item-name {
         font-size: 15px;
@@ -1058,6 +1188,29 @@ const confirmOrder = () => {
       .item-price {
         font-size: 14px;
         color: #7f8c8d;
+        margin-bottom: 8px;
+      }
+
+      .item-specs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 8px;
+
+        .ingredient-tag {
+          font-size: 12px;
+        }
+      }
+
+      .item-note {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 6px 10px;
+        background: #fff9e6;
+        border-radius: 4px;
+        font-size: 12px;
+        color: #856404;
       }
     }
 
