@@ -16,5 +16,5 @@ public interface ConsumeHistoryService extends IService<ConsumeHistory> {
      * @param pageSize 每页条数
      * @return 分页结果
      */
-    Page<ConsumeHistory> getConsumeHistoryByUserId(Long userId, String type, String startDate, String endDate, Integer pageNum, Integer pageSize);
+    Page<ConsumeHistory> getConsumeHistoryByUserId(String userId, String type, String startDate, String endDate, Integer pageNum, Integer pageSize);
 }

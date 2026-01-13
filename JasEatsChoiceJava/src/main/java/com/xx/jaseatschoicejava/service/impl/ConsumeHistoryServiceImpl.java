@@ -20,7 +20,7 @@ public class ConsumeHistoryServiceImpl extends ServiceImpl<ConsumeHistoryMapper,
     private final ConsumeHistoryMapper consumeHistoryMapper;
 
     @Override
-    public Page<ConsumeHistory> getConsumeHistoryByUserId(Long userId, String type, String startDate, String endDate, Integer pageNum, Integer pageSize) {
+    public Page<ConsumeHistory> getConsumeHistoryByUserId(String userId, String type, String startDate, String endDate, Integer pageNum, Integer pageSize) {
         LambdaQueryWrapper<ConsumeHistory> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(ConsumeHistory::getUserId, userId);
 

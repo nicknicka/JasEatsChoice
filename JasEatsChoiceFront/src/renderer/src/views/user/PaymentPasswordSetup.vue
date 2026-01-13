@@ -257,8 +257,8 @@ const resetRules = {
 
 // 检查是否已设置支付密码
 const checkPaymentPasswordStatus = async () => {
-	const userId = parseInt(authStore.userId || '0', 10)
-	if (userId <= 0) return
+	const userId = authStore.userId
+	if (!userId || userId === '0') return
 
 	try {
 		const result = await paymentApi.checkPaymentPassword(userId)
@@ -272,8 +272,8 @@ const checkPaymentPasswordStatus = async () => {
 
 // 获取用户手机号
 const fetchUserPhone = async () => {
-	const userId = parseInt(authStore.userId || '0', 10)
-	if (userId <= 0) return
+	const userId = authStore.userId
+	if (!userId || userId === '0') return
 
 	try {
 		const result = await userApi.getUserInfo(userId)
@@ -296,8 +296,8 @@ const fetchUserPhone = async () => {
 const submitPassword = async () => {
 	await passwordFormRef.value.validate()
 
-	const userId = parseInt(authStore.userId || '0', 10)
-	if (userId <= 0) {
+	const userId = authStore.userId
+	if (!userId || userId === '0') {
 		ElMessage.error('用户未登录')
 		return
 	}
@@ -347,8 +347,8 @@ const sendVerificationCode = () => {
 const confirmReset = async () => {
 	await resetFormRef.value.validate()
 
-	const userId = parseInt(authStore.userId || '0', 10)
-	if (userId <= 0) {
+	const userId = authStore.userId
+	if (!userId || userId === '0') {
 		ElMessage.error('用户未登录')
 		return
 	}

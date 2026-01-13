@@ -323,8 +323,8 @@ const getDetailTagType = (type) => {
 
 // 获取钱包余额
 const fetchWalletBalance = async () => {
-	const userId = parseInt(authStore.userId || '0', 10)
-	if (userId <= 0) return
+	const userId = authStore.userId
+	if (!userId || userId === '0') return
 
 	try {
 		const result = await walletApi.getBalance(userId)
@@ -338,8 +338,8 @@ const fetchWalletBalance = async () => {
 
 // 获取交易记录
 const fetchTransactions = async () => {
-	const userId = parseInt(authStore.userId || '0', 10)
-	if (userId <= 0) {
+	const userId = authStore.userId
+	if (!userId || userId === '0') {
 		ElMessage.error('用户未登录')
 		return
 	}

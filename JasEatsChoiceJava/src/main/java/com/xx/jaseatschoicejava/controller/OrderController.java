@@ -50,7 +50,7 @@ public class OrderController {
      * 根据用户ID获取订单列表
      */
     @GetMapping("/user/{userId}")
-    public ResponseResult<?> getOrdersByUserId(@PathVariable Long userId) {
+    public ResponseResult<?> getOrdersByUserId(@PathVariable String userId) {
         LambdaQueryWrapper<Order> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Order::getUserId, userId);
         List<Order> orders = orderService.list(queryWrapper);
@@ -61,7 +61,7 @@ public class OrderController {
      * 获取订单详情
      */
     @GetMapping("/{orderId}")
-    public ResponseResult<?> getOrderDetail(@PathVariable Long orderId) {
+    public ResponseResult<?> getOrderDetail(@PathVariable String orderId) {
         Order order = orderService.getById(orderId);
         if (order != null) {
             return ResponseResult.success(order);
@@ -73,7 +73,7 @@ public class OrderController {
      * 根据商家ID获取订单列表
      */
     @GetMapping("/merchant/{merchantId}")
-    public ResponseResult<?> getOrdersByMerchantId(@PathVariable Long merchantId) {
+    public ResponseResult<?> getOrdersByMerchantId(@PathVariable String merchantId) {
         LambdaQueryWrapper<Order> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Order::getMerchantId, merchantId);
         List<Order> orders = orderService.list(queryWrapper);

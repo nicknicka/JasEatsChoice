@@ -121,7 +121,16 @@
             <div class="card-body">
               <!-- 图片区域 -->
               <div class="image-wrapper">
+                <!-- 文章类型显示首字母 -->
+                <div
+                  v-if="item.type === 'article' && !item.image && item.firstChar"
+                  class="article-first-char"
+                >
+                  {{ item.firstChar }}
+                </div>
+                <!-- 其他类型显示图片 -->
                 <img
+                  v-else
                   :src="item.image || defaultImage"
                   :alt="item.title"
                   class="collection-image"
@@ -503,29 +512,37 @@ onMounted(async () => {
                 }
               }
             } else if (item.collectableType === 'dish') {
-              // 菜品详情 - 从菜单中获取
-              // 注意: 这里需要根据实际情况调整API调用
-              // 暂时显示基本信息,实际使用时需要获取菜品详细数据
-              return {
-                ...baseCollection,
-                title: `菜品 ${item.collectableId}`,
-                description: '美味的菜品,欢迎查看详情',
-                image: defaultImage,
-                dishData: {
-                  id: item.collectableId,
-                  name: `菜品 ${item.collectableId}`,
-                  price: 0,
-                  description: '美味的菜品',
-                  category: '招牌菜'
+              // 获取菜品详情
+              const dishRes = await axios.get(
+                `${API_CONFIG.baseURL}/v1/dishes/${item.collectableId}`
+              )
+              if (dishRes.data?.code === '200' && dishRes.data?.data) {
+                const dish = dishRes.data.data
+                return {
+                  ...baseCollection,
+                  title: dish.name || '未知菜品',
+                  description: dish.description || `这是${dish.name || '菜品'}的简介`,
+                  image: dish.image || defaultImage,
+                  dishData: {
+                    id: dish.id,
+                    name: dish.name,
+                    price: dish.price || 0,
+                    description: dish.description,
+                    category: dish.category,
+                    image: dish.image
+                  }
                 }
               }
             } else if (item.collectableType === 'article') {
-              // 文章暂不支持
+              // 文章收藏 - 使用标题首字母作为图片
+              const articleTitle = `文章 ${item.collectableId}`
+              const firstChar = articleTitle.charAt(0)
               return {
                 ...baseCollection,
-                title: `文章 ${item.collectableId}`,
+                title: articleTitle,
                 description: '文章收藏功能正在开发中',
-                image: defaultImage
+                image: null, // 使用null来触发首字母显示
+                firstChar: firstChar // 添加首字母字段
               }
             }
           } catch (error) {
@@ -533,11 +550,15 @@ onMounted(async () => {
           }
 
           // 默认返回值
+          const defaultTitle = `${item.collectableType === 'merchant' ? '商家' : item.collectableType === 'dish' ? '菜品' : '文章'} ${item.collectableId}`
+          const isArticle = item.collectableType === 'article'
+
           return {
             ...baseCollection,
-            title: `${item.collectableType === 'merchant' ? '商家' : item.collectableType === 'dish' ? '菜品' : '文章'} ${item.collectableId}`,
+            title: defaultTitle,
             description: `这是${item.collectableType === 'merchant' ? '商家' : item.collectableType === 'dish' ? '菜品' : '文章'}的描述`,
-            image: defaultImage
+            image: isArticle ? null : defaultImage, // 文章使用null触发首字母显示
+            firstChar: isArticle ? defaultTitle.charAt(0) : undefined // 文章添加首字母
           }
         })
       )
@@ -781,6 +802,20 @@ onMounted(async () => {
               transition: transform 0.3s ease;
             }
 
+            .article-first-char {
+              width: 100%;
+              height: 100%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 96px;
+              font-weight: 700;
+              color: white;
+              background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+              text-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+              transition: transform 0.3s ease;
+            }
+
             .image-overlay {
               position: absolute;
               top: 0;
@@ -811,6 +846,10 @@ onMounted(async () => {
           &:hover {
             .collection-image {
               transform: scale(1.1);
+            }
+
+            .article-first-char {
+              transform: scale(1.05);
             }
 
             .image-overlay {

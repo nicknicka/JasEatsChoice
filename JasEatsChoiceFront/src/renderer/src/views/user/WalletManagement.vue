@@ -200,7 +200,6 @@ import { ElMessage } from 'element-plus'
 import {
 	InfoFilled,
 	WalletFilled,
-	Money,
 	List,
 	ArrowRight,
 } from '@element-plus/icons-vue'
@@ -303,8 +302,8 @@ const getAmountClass = (type) => {
 
 // 获取钱包信息
 const fetchWalletInfo = async () => {
-	const userId = parseInt(authStore.userId || '0', 10)
-	if (userId <= 0) {
+	const userId = authStore.userId
+	if (!userId || userId === '0') {
 		ElMessage.error('用户未登录，请重新登录')
 		return
 	}
@@ -322,8 +321,8 @@ const fetchWalletInfo = async () => {
 
 // 获取最近交易记录
 const fetchRecentTransactions = async () => {
-	const userId = parseInt(authStore.userId || '0', 10)
-	if (userId <= 0) return
+	const userId = authStore.userId
+	if (!userId || userId === '0') return
 
 	try {
 		// 使用 walletApi 调用消费记录API
@@ -354,8 +353,8 @@ const confirmRecharge = async () => {
 		return
 	}
 
-	const userId = parseInt(authStore.userId || '0', 10)
-	if (userId <= 0) {
+	const userId = authStore.userId
+	if (!userId || userId === '0') {
 		ElMessage.error('用户未登录，请重新登录')
 		return
 	}
@@ -407,8 +406,8 @@ const confirmWithdraw = async () => {
 		return
 	}
 
-	const userId = parseInt(authStore.userId || '0', 10)
-	if (userId <= 0) {
+	const userId = authStore.userId
+	if (!userId || userId === '0') {
 		ElMessage.error('用户未登录，请重新登录')
 		return
 	}

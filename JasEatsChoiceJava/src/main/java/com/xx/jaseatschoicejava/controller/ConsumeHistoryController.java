@@ -29,7 +29,7 @@ public class ConsumeHistoryController {
      */
     @GetMapping
     public ResponseResult<?> getConsumeHistory(
-            @RequestParam Long userId,
+            @RequestParam String userId,
             @RequestParam(defaultValue = "all") String type,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate,
