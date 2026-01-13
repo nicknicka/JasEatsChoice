@@ -33,6 +33,14 @@ public class User {
     @ApiModelProperty(value = "密码")
     private String password; // 密码
 
+    @TableField("payment_password")
+    @ApiModelProperty(value = "支付密码（加密存储）")
+    private String paymentPassword; // 支付密码（加密存储）
+
+    @TableField("has_payment_password")
+    @ApiModelProperty(value = "是否已设置支付密码：0-未设置，1-已设置")
+    private Boolean hasPaymentPassword; // 是否已设置支付密码
+
     @TableField("nickname")
     @ApiModelProperty(value = "昵称")
     private String nickname; // 昵称

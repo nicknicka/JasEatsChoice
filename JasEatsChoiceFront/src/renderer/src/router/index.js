@@ -23,6 +23,10 @@ const UserAI = () => import('../views/user/AI.vue') // AI饮食助手
 const UserOrderConfirmation = () => import('../views/user/OrderConfirmation.vue') // 订单确认
 const UserSettings = () => import('../views/user/Settings.vue') // 设置
 const UserProfile = () => import('../views/user/Profile.vue') // 用户中心
+const UserWalletManagement = () => import('../views/user/WalletManagement.vue') // 钱包管理
+const UserWalletTransactions = () => import('../views/user/WalletTransactions.vue') // 钱包交易记录
+const UserPaymentPasswordSetup = () => import('../views/user/PaymentPasswordSetup.vue') // 支付密码设置
+const UserWalletSecurity = () => import('../views/user/WalletSecurity.vue') // 钱包安全设置
 const UserAddress = () => import('../views/user/Address.vue') // 地址管理
 const UserContact = () => import('../views/user/Contact.vue') // 联系客服
 
@@ -196,6 +200,30 @@ const router = createRouter({
           name: 'user-profile',
           component: UserProfile,
           meta: { title: '佳食宜选-用户中心' }
+        },
+        {
+          path: 'wallet-management',
+          name: 'user-wallet-management',
+          component: UserWalletManagement,
+          meta: { title: '佳食宜选-钱包管理' }
+        },
+        {
+          path: 'wallet-transactions',
+          name: 'user-wallet-transactions',
+          component: UserWalletTransactions,
+          meta: { title: '佳食宜选-钱包交易记录' }
+        },
+        {
+          path: 'payment-password-setup',
+          name: 'user-payment-password-setup',
+          component: UserPaymentPasswordSetup,
+          meta: { title: '佳食宜选-支付密码设置' }
+        },
+        {
+          path: 'wallet-security',
+          name: 'user-wallet-security',
+          component: UserWalletSecurity,
+          meta: { title: '佳食宜选-钱包安全设置' }
         },
         {
           path: 'address',

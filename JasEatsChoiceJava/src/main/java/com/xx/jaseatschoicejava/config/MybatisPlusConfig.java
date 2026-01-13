@@ -57,6 +57,9 @@ public class MyBatisPlusConfig {
         sqlSessionFactory.setConfiguration(configuration);
         sqlSessionFactory.setGlobalConfig(globalConfig);
 
+        // 添加MybatisPlusInterceptor插件（包含乐观锁和分页插件）
+        sqlSessionFactory.setPlugins(mybatisPlusInterceptor());
+
         return sqlSessionFactory;
     }
 

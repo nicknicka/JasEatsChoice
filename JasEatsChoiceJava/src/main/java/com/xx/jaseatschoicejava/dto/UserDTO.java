@@ -25,6 +25,13 @@ public class UserDTO {
     private String avatar;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
+
+    // 支付密码相关
+    private Boolean hasPaymentPassword; // 是否已设置支付密码
+
+    // 钱包信息
+    private WalletDTO wallet;
+
     /**
      * 从User实体转换为UserDTO
      * @param user 用户实体
@@ -46,7 +53,8 @@ public class UserDTO {
         userDTO.setAvatar(user.getAvatar());
         userDTO.setCreateTime(user.getCreateTime());
         userDTO.setUpdateTime(user.getUpdateTime());
-        // 敏感信息如password已自动隐藏，不进行设置
+        userDTO.setHasPaymentPassword(user.getHasPaymentPassword());
+        // 敏感信息如password、paymentPassword已自动隐藏，不进行设置
         return userDTO;
     }
 }

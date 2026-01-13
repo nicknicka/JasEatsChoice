@@ -39,6 +39,9 @@ public class UserController {
     @Autowired
     private UserPreferenceService userPreferenceService;
 
+    @Autowired
+    private com.xx.jaseatschoicejava.service.WalletService walletService;
+
     /**
      * 用户注册
      */
@@ -173,11 +176,22 @@ public class UserController {
                 user.setAvatar(avatarBase64);
             }
 
-//            log.info("user entity: {}", user);
+            // 转换为UserDTO
+            com.xx.jaseatschoicejava.dto.UserDTO userDTO = com.xx.jaseatschoicejava.dto.UserDTO.fromUser(user);
 
+            // 获取钱包信息并集成到UserDTO中
+            try {
+                com.xx.jaseatschoicejava.entity.Wallet wallet = walletService.getWalletByUserId(userId);
+                if (wallet != null) {
+                    userDTO.setWallet(com.xx.jaseatschoicejava.dto.WalletDTO.fromWallet(wallet));
+                }
+            } catch (Exception e) {
+                log.warn("Failed to get wallet info for user {}: {}", userId, e.getMessage());
+                // 钱包信息获取失败不影响用户信息的返回
+            }
 
-            // 返回包含base64头像的用户信息
-            return ResponseResult.success(user);
+            // 返回包含钱包信息和base64头像的用户信息
+            return ResponseResult.success(userDTO);
         }
         return ResponseResult.fail("404", "用户不存在");
     }

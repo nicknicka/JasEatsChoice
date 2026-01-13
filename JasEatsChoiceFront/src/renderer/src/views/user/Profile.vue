@@ -126,9 +126,10 @@
 
 			<div class="wallet-module">
 				<h3 class="module-title">💰 钱包模块</h3>
-				<div class="wallet-card">
+				<div class="wallet-card" @click="goToWalletManagement">
 					<div class="wallet-header">
 						<div class="wallet-label">平台币余额</div>
+						<div class="wallet-hint">点击查看详情 →</div>
 					</div>
 					<div class="wallet-balance">
 						<span class="balance-number">{{
@@ -136,26 +137,19 @@
 						}}</span>
 						<span class="balance-unit">个</span>
 					</div>
-					<div class="wallet-actions">
-						<el-button
-							type="primary"
-							size="small"
-							class="wallet-action-btn"
-							@click="recharge"
-						>
-							💸 充值
-						</el-button>
-						<el-button
-							type="primary"
-							size="small"
-							class="wallet-action-btn withdraw-btn"
-							@click="withdraw"
-						>
-							📥 提现
-						</el-button>
-						<el-button type="text" size="small" @click="goToConsumeHistory">
-							📊 消费记录
-						</el-button>
+					<div class="wallet-summary">
+						<div class="summary-item">
+							<span class="summary-label">累计充值</span>
+							<span class="summary-value">{{
+								userInfo.wallet?.totalRecharge || 0
+							}}</span>
+						</div>
+						<div class="summary-item">
+							<span class="summary-label">累计消费</span>
+							<span class="summary-value">{{
+								userInfo.wallet?.totalConsume || 0
+							}}</span>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -376,11 +370,11 @@ import CommonAvatar from "../../components/CommonAvatar.vue";
 import api from "../../utils/api";
 import { API_CONFIG } from "../../config";
 import QRCode from "qrcode";
-import walletApi from "../../api/wallet";
 
 // 导入状态管理
 import { useAuthStore } from "../../store/authStore";
 import { useUserStore } from "../../store/userStore";
+import walletApi from "../../api/wallet";
 
 // 初始化路由和状态管理
 const router = useRouter();
@@ -503,6 +497,18 @@ onMounted(async () => {
 	}
 
 	console.log("userInfo:", userInfo.value);
+
+	// 获取实时钱包数据，确保显示最新的余额信息
+	try {
+		const walletResponse = await walletApi.getWalletInfo(userId);
+		if (walletResponse.code === '200' && walletResponse.data) {
+			// 更新userInfo中的钱包数据
+			userInfo.value.wallet = walletResponse.data;
+			console.log("钱包信息已更新:", walletResponse.data);
+		}
+	} catch (error) {
+		console.error("获取钱包信息失败:", error);
+	}
 });
 
 // 头像相关功能
@@ -565,6 +571,11 @@ const goToOrdersByStatus = (status) => {
 	});
 };
 
+// 跳转到钱包管理页面
+const goToWalletManagement = () => {
+	router.push("/user/home/wallet-management");
+};
+
 // 跳转到消费记录页面
 const goToConsumeHistory = () => {
 	router.push("/user/home/consume-history");
@@ -578,125 +589,6 @@ const goToMyCollection = () => {
 // 跳转到地址管理页面
 const goToAddress = () => {
 	router.push("/user/home/address");
-};
-
-// 钱包功能
-// 充值功能
-const recharge = async () => {
-	const userId = parseInt(authStore.userId || "0", 10);
-	if (userId <= 0) {
-		ElMessage.error("用户未登录，请重新登录");
-		return;
-	}
-
-	// 创建充值表单对话框
-	ElMessageBox.prompt("请输入充值金额(单位:平台币)", "充值", {
-		inputPattern: /^[1-9]\d*$/,
-		inputValidator: (value) => {
-			if (!value) {
-				return "请输入充值金额";
-			}
-			if (Number(value) <= 0) {
-				return "充值金额必须大于0";
-			}
-			return true;
-		},
-	})
-		.then(async ({ value }) => {
-			try {
-				// 生成充值流水号
-				const rechargeNo = "RCH" + new Date().getTime() + Math.floor(Math.random() * 1000);
-
-				// 调用充值API
-				const response = await walletApi.recharge(userId, Number(value), rechargeNo);
-
-				if (response.code === "200") {
-					// 更新本地余额
-					userInfo.value.wallet.balance = response.data.balance || 0;
-
-					ElMessage.success(`充值成功!已到账${value}平台币`);
-
-					// 跳转到消费记录页面查看交易
-					router.push("/user/home/consume-history");
-				} else {
-					ElMessage.error(response.message || "充值失败，请重试");
-				}
-			} catch (error) {
-				console.error("充值失败:", error);
-				ElMessage.error(error.message || "充值失败，请重试");
-			}
-		})
-		.catch(() => {
-			ElMessage.info("已取消充值");
-		});
-};
-
-// 提现功能
-const withdraw = async () => {
-	const userId = parseInt(authStore.userId || "0", 10);
-	if (userId <= 0) {
-		ElMessage.error("用户未登录，请重新登录");
-		return;
-	}
-
-	// 获取最新余额
-	try {
-		const balanceResponse = await walletApi.getBalance(userId);
-		if (balanceResponse.code === "200") {
-			userInfo.value.wallet.balance = balanceResponse.data || 0;
-		}
-	} catch (error) {
-		console.error("获取余额失败:", error);
-	}
-
-	// 创建提现表单对话框
-	ElMessageBox.prompt("请输入提现金额(单位:平台币)", "提现", {
-		inputPattern: /^[1-9]\d*$/,
-		inputValidator: (value) => {
-			if (!value) {
-				return "请输入提现金额";
-			}
-			const numValue = Number(value);
-			const balance = Number(userInfo.value.wallet.balance);
-
-			if (numValue <= 0) {
-				return "提现金额必须大于0";
-			}
-
-			if (numValue > balance) {
-				return `提现金额不能超过余额${balance}平台币`;
-			}
-
-			return true;
-		},
-	})
-		.then(async ({ value }) => {
-			try {
-				// 生成提现流水号
-				const withdrawNo = "WTH" + new Date().getTime() + Math.floor(Math.random() * 1000);
-
-				// 调用提现API
-				const response = await walletApi.withdraw(userId, Number(value), withdrawNo);
-
-				if (response.code === "200") {
-					// 更新本地余额
-					userInfo.value.wallet.balance = response.data.balance || 0;
-
-					ElMessage.success(`提现成功!已转出${value}平台币`);
-
-					// 跳转到消费记录页面查看交易
-					router.push("/user/home/consume-history");
-				} else {
-					ElMessage.error(response.message || "提现失败，请重试");
-				}
-			} catch (error) {
-				console.error("提现失败:", error);
-				ElMessage.error(error.message || "提现失败，请重试");
-			}
-		})
-		.catch(() => {
-			ElMessage.info("已取消提现");
-		});
 };
 
 // 跳转到联系客服页面
@@ -1224,15 +1116,31 @@ const copyShareLink = async () => {
 	padding: 25px;
 	border-radius: 12px;
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+	cursor: pointer;
+	transition: all 0.3s ease;
+}
+
+.wallet-card:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 6px 16px rgba(214, 158, 46, 0.2);
 }
 
 .wallet-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
 	margin-bottom: 10px;
 }
 
 .wallet-label {
 	font-size: 16px;
 	color: #718096;
+	font-weight: 500;
+}
+
+.wallet-hint {
+	font-size: 14px;
+	color: #d69e2e;
 	font-weight: 500;
 }
 
@@ -1256,33 +1164,28 @@ const copyShareLink = async () => {
 	font-weight: 500;
 }
 
-.wallet-actions {
+.wallet-summary {
 	display: flex;
-	flex-wrap: wrap;
-	gap: 12px;
-	align-items: center;
+	gap: 30px;
+	padding-top: 15px;
+	border-top: 1px solid rgba(214, 158, 46, 0.2);
 }
 
-.wallet-action-btn {
-	background: linear-gradient(135deg, #f6e05e 0%, #ecc94b 100%);
-	border: none;
-	color: #2d3748;
+.summary-item {
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+}
+
+.summary-label {
+	font-size: 13px;
+	color: #718096;
+}
+
+.summary-value {
+	font-size: 16px;
 	font-weight: 600;
-	transition: transform 0.2s ease;
-}
-
-.wallet-action-btn:hover {
-	transform: translateY(-2px);
-	box-shadow: 0 4px 8px rgba(246, 224, 94, 0.4);
-}
-
-.withdraw-btn {
-	background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
-	color: #fff;
-}
-
-.withdraw-btn:hover {
-	box-shadow: 0 4px 8px rgba(66, 153, 225, 0.4);
+	color: #2d3748;
 }
 
 /* 其他模块 */
