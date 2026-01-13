@@ -31,7 +31,7 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentRecordMapper, Payment
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public PaymentRecord createPayment(String orderId, Long userId, Long merchantId, BigDecimal amount, String paymentMethod) {
+    public PaymentRecord createPayment(String orderId, String userId, String merchantId, BigDecimal amount, String paymentMethod) {
         // 生成支付流水号
         String paymentNo = generatePaymentNo();
 

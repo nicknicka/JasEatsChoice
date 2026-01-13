@@ -23,7 +23,7 @@ public class NotificationController {
      * 根据用户ID获取通知列表
      */
     @GetMapping("/user/{userId}")
-    public ResponseResult<?> getNotificationsByUserId(@PathVariable Long userId) {
+    public ResponseResult<?> getNotificationsByUserId(@PathVariable String userId) {
         LambdaQueryWrapper<Notification> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Notification::getUserId, userId);
         queryWrapper.orderByDesc(Notification::getCreateTime); // 按创建时间降序排列
@@ -35,7 +35,7 @@ public class NotificationController {
      * 获取通知详情
      */
     @GetMapping("/{notificationId}")
-    public ResponseResult<?> getNotificationDetail(@PathVariable Long notificationId) {
+    public ResponseResult<?> getNotificationDetail(@PathVariable String notificationId) {
         Notification notification = notificationService.getById(notificationId);
         if (notification != null) {
             // 标记为已读
@@ -50,7 +50,7 @@ public class NotificationController {
      * 标记通知为已读
      */
     @PutMapping("/{notificationId}/read")
-    public ResponseResult<?> markAsRead(@PathVariable Long notificationId) {
+    public ResponseResult<?> markAsRead(@PathVariable String notificationId) {
         Notification notification = new Notification();
         notification.setId(notificationId);
         notification.setReadStatus(true);

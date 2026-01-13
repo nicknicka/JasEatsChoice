@@ -23,18 +23,15 @@ import java.time.LocalDateTime;
 @ApiModel(description = "联系人关系实体")
 public class Contact {
 
-    @TableId(type = IdType.AUTO)
-    @JsonSerialize(using = ToStringSerializer.class)
+    @TableId(type = IdType.ASSIGN_ID)
     @ApiModelProperty(value = "联系人ID")
-    private Long id; // 联系人ID
+    private String id; // 联系人ID
 
-    @JsonSerialize(using = ToStringSerializer.class)
     @ApiModelProperty(value = "用户ID")
-    private Long userId; // 用户ID
+    private String userId; // 用户ID
 
-    @JsonSerialize(using = ToStringSerializer.class)
     @ApiModelProperty(value = "目标ID（好友ID或群ID）")
-    private Long targetId; // 目标ID（好友ID或群ID）
+    private String targetId; // 目标ID（好友ID或群ID）
 
     @ApiModelProperty(value = "关系类型：friend(好友)、group(群成员)")
     private String relationType; // 关系类型：friend(好友)、group(群成员)

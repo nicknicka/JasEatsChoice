@@ -26,7 +26,7 @@ public class ContactController {
      */
     @ApiOperation("获取我的好友列表")
     @GetMapping("/friends")
-    public ResponseResult<?> getMyFriends(@RequestParam Long userId) {
+    public ResponseResult<?> getMyFriends(@RequestParam String userId) {
         List<Contact> friends = contactService.lambdaQuery()
                 .eq(Contact::getUserId, userId)
                 .eq(Contact::getRelationType, "friend")
@@ -69,7 +69,7 @@ public class ContactController {
      */
     @ApiOperation("退出群")
     @DeleteMapping("/groups/leave")
-    public ResponseResult<?> leaveGroup(@RequestParam Long userId, @RequestParam Long groupId) {
+    public ResponseResult<?> leaveGroup(@RequestParam String userId, @RequestParam String groupId) {
         boolean success = contactService.remove(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Contact>()
                 .eq(Contact::getUserId, userId)
                 .eq(Contact::getTargetId, groupId)
@@ -102,7 +102,7 @@ public class ContactController {
      */
     @ApiOperation("删除好友")
     @DeleteMapping("/friends")
-    public ResponseResult<?> deleteFriend(@RequestParam Long userId, @RequestParam Long friendId) {
+    public ResponseResult<?> deleteFriend(@RequestParam String userId, @RequestParam String friendId) {
         // 删除双向好友关系
         boolean success1 = contactService.remove(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Contact>()
                 .eq(Contact::getUserId, userId)

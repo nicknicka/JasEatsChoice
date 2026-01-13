@@ -13,14 +13,14 @@ import java.time.LocalDateTime;
 @TableName("t_collection")
 public class UserCollection {
 
-    @TableId(type = IdType.AUTO)
-    private Long id; // 主键ID
+    @TableId(type = IdType.ASSIGN_ID)
+    private String id; // 主键ID
 
-    private Long userId; // 用户ID
+    private String userId; // 用户ID
 
     private String collectableType; // 收藏类型：merchant, dish, article, recipe等
 
-    private Long collectableId; // 收藏对象ID
+    private String collectableId; // 收藏对象ID
 
     private LocalDateTime createTime; // 创建时间
 }

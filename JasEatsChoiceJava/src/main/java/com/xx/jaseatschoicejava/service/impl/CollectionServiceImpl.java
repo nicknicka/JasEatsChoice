@@ -20,7 +20,7 @@ public class CollectionServiceImpl implements CollectionService {
     private final CollectionMapper collectionMapper;
 
     @Override
-    public List<UserCollection> getCollectionsByUserId(Long userId) {
+    public List<UserCollection> getCollectionsByUserId(String userId) {
         LambdaQueryWrapper<UserCollection> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(UserCollection::getUserId, userId)
                 .orderByDesc(UserCollection::getCreateTime);
@@ -28,7 +28,7 @@ public class CollectionServiceImpl implements CollectionService {
     }
 
     @Override
-    public List<UserCollection> getCollectionsByUserIdAndType(Long userId, String type) {
+    public List<UserCollection> getCollectionsByUserIdAndType(String userId, String type) {
         LambdaQueryWrapper<UserCollection> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(UserCollection::getUserId, userId)
                 .eq(UserCollection::getCollectableType, type)
@@ -37,14 +37,14 @@ public class CollectionServiceImpl implements CollectionService {
     }
 
     @Override
-    public Long addCollection(UserCollection collection) {
+    UserCollection addCollection(UserCollection collection) {
         collection.setCreateTime(LocalDateTime.now());
         collectionMapper.insert(collection);
-        return collection.getId();
+        return collection;
     }
 
     @Override
-    public boolean removeCollection(Long userId, String collectableType, Long collectableId) {
+    public boolean removeCollection(String userId, String collectableType, String collectableId) {
         LambdaQueryWrapper<UserCollection> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(UserCollection::getUserId, userId)
                 .eq(UserCollection::getCollectableType, collectableType)
@@ -53,7 +53,7 @@ public class CollectionServiceImpl implements CollectionService {
     }
 
     @Override
-    public boolean isCollected(Long userId, String collectableType, Long collectableId) {
+    public boolean isCollected(String userId, String collectableType, String collectableId) {
         LambdaQueryWrapper<UserCollection> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(UserCollection::getUserId, userId)
                 .eq(UserCollection::getCollectableType, collectableType)

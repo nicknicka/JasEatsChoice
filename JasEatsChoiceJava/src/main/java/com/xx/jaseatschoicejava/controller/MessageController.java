@@ -24,7 +24,7 @@ public class MessageController {
      * 获取消息列表
      */
     @GetMapping("/list")
-    public ResponseResult<?> getMessageList(@RequestParam Long userId,
+    public ResponseResult<?> getMessageList(@RequestParam String userId,
                                             @RequestParam(defaultValue = "10") Integer pageSize,
                                             @RequestParam(defaultValue = "1") Integer pageNum) {
         try {
@@ -44,8 +44,8 @@ public class MessageController {
     public ResponseResult<?> sendMessage(@RequestBody Map<String, Object> message) {
         try {
             // 解析请求参数
-            Long senderId = Long.parseLong(message.get("senderId").toString());
-            Long receiverId = Long.parseLong(message.get("receiverId").toString());
+            String senderId = message.get("senderId").toString();
+            String receiverId = message.get("receiverId").toString();
             String content = message.get("content").toString();
             String messageType = message.containsKey("messageType") ? message.get("messageType").toString() : "text";
 

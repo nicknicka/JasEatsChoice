@@ -22,9 +22,9 @@ import java.util.Map;
 @ApiModel(description = "食谱实体")
 public class Recipe {
 
-    @TableId(value = "id", type = IdType.AUTO)
+    @TableId(value = "id", type = IdType.ASSIGN_ID)
     @ApiModelProperty(value = "食谱ID")
-    private Long id;
+    private String id;
 
     @ApiModelProperty(value = "用户ID")
     private String userId;

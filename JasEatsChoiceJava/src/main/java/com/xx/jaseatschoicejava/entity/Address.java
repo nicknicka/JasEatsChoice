@@ -13,13 +13,13 @@ import java.time.LocalDateTime;
 @Data
 @TableName("t_address")
 public class Address {
-    @TableId(value = "id", type = IdType.AUTO)
-    private Long id;
+    @TableId(value = "id", type = IdType.ASSIGN_ID)
+    private String id;
 
     /**
      * 用户ID
      */
-    private Long userId;
+    private String userId;
 
     /**
      * 收货人姓名

@@ -30,7 +30,7 @@ public class MessageRecordController {
      * @return 消息记录列表
      */
     @GetMapping("/records")
-    public ResponseResult<?> getMessageRecords(@RequestParam Long userId,
+    public ResponseResult<?> getMessageRecords(@RequestParam String userId,
                                               @RequestParam(defaultValue = "10") Integer pageSize,
                                               @RequestParam(defaultValue = "1") Integer pageNum) {
         List<MessageRecord> records = messageRecordService.getMessageRecordsByUserId(userId, pageSize, pageNum);
@@ -44,7 +44,7 @@ public class MessageRecordController {
      * @return 未读消息数量
      */
     @GetMapping("/unread-count")
-    public ResponseResult<?> getUnreadMessageCount(@RequestParam Long userId) {
+    public ResponseResult<?> getUnreadMessageCount(@RequestParam String userId) {
         Integer count = messageRecordService.getUnreadMessageCountByUserId(userId);
         return ResponseResult.success(count);
     }
@@ -77,7 +77,7 @@ public class MessageRecordController {
      * @return 标记结果
      */
     @PutMapping("/records/{messageId}/read")
-    public ResponseResult<?> markMessageAsRead(@PathVariable Long messageId) {
+    public ResponseResult<?> markMessageAsRead(@PathVariable String messageId) {
         Boolean success = messageRecordService.markMessageAsRead(messageId);
         if (success) {
             return ResponseResult.success("消息已标记为已读");
@@ -93,7 +93,7 @@ public class MessageRecordController {
      * @return 标记结果
      */
     @PutMapping("/records/all-read")
-    public ResponseResult<?> markAllMessagesAsRead(@RequestParam Long userId) {
+    public ResponseResult<?> markAllMessagesAsRead(@RequestParam String userId) {
         Boolean success = messageRecordService.markAllMessagesAsRead(userId);
         if (success) {
             return ResponseResult.success("所有消息已标记为已读");

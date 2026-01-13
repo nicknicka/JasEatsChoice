@@ -23,19 +23,19 @@ public class MessageRecordServiceImpl extends ServiceImpl<MessageRecordMapper, M
     private MessageRecordMapper messageRecordMapper;
 
     @Override
-    public List<MessageRecord> getMessageRecordsByUserId(Long userId, Integer pageSize, Integer pageNum) {
+    public List<MessageRecord> getMessageRecordsByUserId(String userId, Integer pageSize, Integer pageNum) {
         // 计算分页起始索引
         int startIndex = (pageNum - 1) * pageSize;
         return messageRecordMapper.getMessageRecordsByUserId(userId, pageSize, startIndex);
     }
 
     @Override
-    public Integer getUnreadMessageCountByUserId(Long userId) {
+    public Integer getUnreadMessageCountByUserId(String userId) {
         return messageRecordMapper.getUnreadMessageCountByUserId(userId);
     }
 
     @Override
-    public Boolean sendMessage(Long senderId, Long receiverId, String content, String messageType) {
+    public Boolean sendMessage(String senderId, String receiverId, String content, String messageType) {
         // 创建消息记录对象
         MessageRecord messageRecord = new MessageRecord();
         messageRecord.setSenderId(senderId);
@@ -50,7 +50,7 @@ public class MessageRecordServiceImpl extends ServiceImpl<MessageRecordMapper, M
     }
 
     @Override
-    public Boolean markMessageAsRead(Long messageId) {
+    public Boolean markMessageAsRead(String messageId) {
         // 创建更新对象
         MessageRecord messageRecord = new MessageRecord();
         messageRecord.setId(messageId);
@@ -61,7 +61,7 @@ public class MessageRecordServiceImpl extends ServiceImpl<MessageRecordMapper, M
     }
 
     @Override
-    public Boolean markAllMessagesAsRead(Long userId) {
+    public Boolean markAllMessagesAsRead(String userId) {
         // 更新所有接收者为当前用户的消息为已读
         return lambdaUpdate()
                 .eq(MessageRecord::getReceiverId, userId)

@@ -22,7 +22,7 @@ public class AddressController {
      * 获取地址列表
      */
     @GetMapping("/{userId}/addresses")
-    public ResponseResult<?> getAddresses(@PathVariable Long userId) {
+    public ResponseResult<?> getAddresses(@PathVariable String userId) {
         List<Address> addresses = addressService.getAddressesByUserId(userId);
         return ResponseResult.success(addresses);
     }
@@ -31,7 +31,7 @@ public class AddressController {
      * 新增地址
      */
     @PostMapping("/{userId}/addresses")
-    public ResponseResult<?> addAddress(@PathVariable Long userId, @RequestBody Address address) {
+    public ResponseResult<?> addAddress(@PathVariable String userId, @RequestBody Address address) {
         // 确保地址属于当前用户
         address.setUserId(userId);
         boolean success = addressService.addAddress(address);
@@ -45,7 +45,7 @@ public class AddressController {
      * 更新地址
      */
     @PutMapping("/{userId}/addresses/{addressId}")
-    public ResponseResult<?> updateAddress(@PathVariable Long userId, @PathVariable Long addressId, @RequestBody Address address) {
+    public ResponseResult<?> updateAddress(@PathVariable String userId, @PathVariable String addressId, @RequestBody Address address) {
         // 确保地址属于当前用户
         address.setUserId(userId);
         address.setId(addressId);
@@ -60,7 +60,7 @@ public class AddressController {
      * 删除地址
      */
     @DeleteMapping("/{userId}/addresses/{addressId}")
-    public ResponseResult<?> deleteAddress(@PathVariable Long userId, @PathVariable Long addressId) {
+    public ResponseResult<?> deleteAddress(@PathVariable String userId, @PathVariable String addressId) {
         boolean success = addressService.deleteAddress(addressId, userId);
         if (success) {
             return ResponseResult.success("删除地址成功");

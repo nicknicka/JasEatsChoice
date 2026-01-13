@@ -153,8 +153,8 @@ public class NettyChatHandler extends SimpleChannelInboundHandler<TextWebSocketF
                 com.fasterxml.jackson.databind.JsonNode msgNode = objectMapper.readTree(message);
 
                 // 提取消息内容
-                Long fromId = msgNode.get("fromId").asLong();
-                Long toId = msgNode.get("toId").asLong();
+                String fromId = msgNode.get("fromId").asText();
+                String toId = msgNode.get("toId").asText();
                 String msgType = msgNode.get("msgType").asText();
                 String content = msgNode.get("content").asText();
 

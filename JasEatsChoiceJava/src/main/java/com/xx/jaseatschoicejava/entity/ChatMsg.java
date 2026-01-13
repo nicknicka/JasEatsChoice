@@ -21,17 +21,17 @@ import java.time.LocalDateTime;
 @ApiModel(description = "聊天消息实体")
 public class ChatMsg {
 
-    @TableId
+    @TableId(type = com.baomidou.mybatisplus.annotation.IdType.ASSIGN_ID)
     @ApiModelProperty(value = "消息ID")
-    private Long id; // 消息ID
+    private String id; // 消息ID
 
     @TableField("from_id")
     @ApiModelProperty(value = "发送者ID")
-    private Long fromId; // 发送者ID
+    private String fromId; // 发送者ID
 
     @TableField("to_id")
     @ApiModelProperty(value = "接收者ID")
-    private Long toId; // 接收者ID
+    private String toId; // 接收者ID
 
     @TableField("msg_type")
     @ApiModelProperty(value = "消息类型（single/group/order_sync/order_status）")

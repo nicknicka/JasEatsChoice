@@ -18,18 +18,18 @@ public class MessageRecord {
     /**
      * 主键ID
      */
-    @TableId(type = IdType.AUTO)
-    private Long id;
+    @TableId(type = IdType.ASSIGN_ID)
+    private String id;
 
     /**
      * 发送者ID
      */
-    private Long senderId;
+    private String senderId;
 
     /**
      * 接收者ID
      */
-    private Long receiverId;
+    private String receiverId;
 
     /**
      * 消息内容

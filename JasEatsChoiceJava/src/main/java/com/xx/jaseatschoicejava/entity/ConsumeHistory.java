@@ -11,10 +11,10 @@ import java.time.LocalDateTime;
 @TableName("t_consume_history")
 public class ConsumeHistory {
 
-    @TableId(type = IdType.AUTO)
-    private Long id; // 记录ID
+    @TableId(type = IdType.ASSIGN_ID)
+    private String id; // 记录ID
 
-    private Long userId; // 用户ID
+    private String userId; // 用户ID
 
     private String type; // 类型：recharge（充值）、consume（消费）、withdraw（提现）
 

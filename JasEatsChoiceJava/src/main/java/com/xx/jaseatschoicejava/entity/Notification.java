@@ -21,13 +21,13 @@ import java.time.LocalDateTime;
 @ApiModel(description = "系统通知实体")
 public class Notification {
 
-    @TableId
+    @TableId(type = com.baomidou.mybatisplus.annotation.IdType.ASSIGN_ID)
     @ApiModelProperty(value = "通知ID")
-    private Long id; // 通知ID
+    private String id; // 通知ID
 
     @TableField("user_id")
     @ApiModelProperty(value = "用户ID")
-    private Long userId; // 用户ID
+    private String userId; // 用户ID
 
     @TableField("title")
     @ApiModelProperty(value = "通知标题")

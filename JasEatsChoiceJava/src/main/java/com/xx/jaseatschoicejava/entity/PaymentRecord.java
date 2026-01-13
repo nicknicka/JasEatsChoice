@@ -22,9 +22,9 @@ import java.time.LocalDateTime;
 @ApiModel(description = "支付记录实体")
 public class PaymentRecord {
 
-    @TableId(type = IdType.AUTO)
+    @TableId(type = IdType.ASSIGN_ID)
     @ApiModelProperty(value = "支付记录ID")
-    private Long id; // 支付记录ID
+    private String id; // 支付记录ID
 
     @ApiModelProperty(value = "支付流水号")
     private String paymentNo; // 支付流水号
@@ -33,10 +33,10 @@ public class PaymentRecord {
     private String orderId; // 订单ID
 
     @ApiModelProperty(value = "支付用户ID")
-    private Long userId; // 支付用户ID
+    private String userId; // 支付用户ID
 
     @ApiModelProperty(value = "商家ID")
-    private Long merchantId; // 商家ID
+    private String merchantId; // 商家ID
 
     @ApiModelProperty(value = "支付金额")
     private BigDecimal amount; // 支付金额

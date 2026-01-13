@@ -44,7 +44,7 @@ public class Order {
 
     @TableField("payment_id")
     @ApiModelProperty(value = "支付记录ID")
-    private Long paymentId; // 支付记录ID
+    private String paymentId; // 支付记录ID
 
     @TableField("paid_amount")
     @ApiModelProperty(value = "已支付金额")
@@ -56,7 +56,7 @@ public class Order {
 
     @TableField("address_id")
     @ApiModelProperty(value = "配送地址ID")
-    private Long addressId; // 配送地址ID
+    private String addressId; // 配送地址ID
 
     @TableField("remark")
     @ApiModelProperty(value = "订单备注")

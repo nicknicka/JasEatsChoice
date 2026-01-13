@@ -134,7 +134,7 @@ public class ChatController {
      */
     @ApiOperation("标记消息已读")
     @PutMapping("/messages/{messageId}/read")
-    public ResponseResult<?> markMessageAsRead(@PathVariable Long messageId) {
+    public ResponseResult<?> markMessageAsRead(@PathVariable String messageId) {
         ChatMsg chatMsg = new ChatMsg();
         chatMsg.setId(messageId);
         chatMsg.setReadStatus(true);

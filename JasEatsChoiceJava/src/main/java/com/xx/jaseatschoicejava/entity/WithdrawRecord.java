@@ -22,15 +22,15 @@ import java.time.LocalDateTime;
 @ApiModel(description = "提现记录实体")
 public class WithdrawRecord {
 
-    @TableId(type = IdType.AUTO)
+    @TableId(type = IdType.ASSIGN_ID)
     @ApiModelProperty(value = "提现记录ID")
-    private Long id; // 提现记录ID
+    private String id; // 提现记录ID
 
     @ApiModelProperty(value = "提现流水号")
     private String withdrawNo; // 提现流水号
 
     @ApiModelProperty(value = "用户ID")
-    private Long userId; // 用户ID
+    private String userId; // 用户ID
 
     @ApiModelProperty(value = "提现金额")
     private BigDecimal amount; // 提现金额

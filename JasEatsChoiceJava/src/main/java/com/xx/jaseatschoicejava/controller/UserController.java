@@ -157,7 +157,7 @@ public class UserController {
      * 获取用户信息
      */
     @GetMapping("/{userId}")
-    public ResponseResult<?> getUserInfo(@PathVariable Long userId) {
+    public ResponseResult<?> getUserInfo(@PathVariable String userId) {
         log.info("Getting user info for userId: {}", userId);
         User user = userService.getById(userId);
         if (user != null) {
@@ -215,7 +215,7 @@ public class UserController {
      * 更新用户信息
      */
     @PutMapping("/{userId}")
-    public ResponseResult<?> updateUser(@PathVariable Long userId, @RequestBody Map<String, Object> updateData) {
+    public ResponseResult<?> updateUser(@PathVariable String userId, @RequestBody Map<String, Object> updateData) {
         try {
             User user = userService.getById(userId);
             if (user == null) {
@@ -290,7 +290,7 @@ public class UserController {
      * 获取用户偏好设置
      */
     @GetMapping("/{userId}/preferences")
-    public ResponseResult<?> getPreferences(@PathVariable Long userId) {
+    public ResponseResult<?> getPreferences(@PathVariable String userId) {
         UserPreference userPreference = userPreferenceService.getByUserId(userId);
         if (userPreference != null) {
             return ResponseResult.success(userPreference);
@@ -350,7 +350,7 @@ public class UserController {
      * 更新用户偏好设置
      */
     @PutMapping("/{userId}/preferences")
-    public ResponseResult<?> updatePreferences(@PathVariable Long userId, @RequestBody UserPreference preferences) {
+    public ResponseResult<?> updatePreferences(@PathVariable String userId, @RequestBody UserPreference preferences) {
         try {
             UserPreference existingPreference = userPreferenceService.getByUserId(userId);
 
@@ -395,7 +395,7 @@ public class UserController {
      * 上传用户头像 - 文件上传
      */
     @PostMapping("/{userId}/avatar")
-    public ResponseResult<?> uploadAvatar(@PathVariable Long userId,
+    public ResponseResult<?> uploadAvatar(@PathVariable String userId,
                                          @RequestParam("file") MultipartFile file) {
         try {
             User user = userService.getById(userId);
@@ -438,7 +438,7 @@ public class UserController {
      * 上传用户头像 - Base64格式
      */
     @PutMapping("/{userId}/avatar/base64")
-    public ResponseResult<?> uploadAvatarBase64(@PathVariable Long userId,
+    public ResponseResult<?> uploadAvatarBase64(@PathVariable String userId,
                                                 @RequestBody Map<String, Object> base64Data) {
         log.info("Received base64 data from user {} : {}",userId, base64Data);
         try {
@@ -490,7 +490,7 @@ public class UserController {
      * 更新用户信息 - 包括头像
      */
     @PutMapping("/{userId}/info")
-    public ResponseResult<?> updateUserInfo(@PathVariable Long userId,
+    public ResponseResult<?> updateUserInfo(@PathVariable String userId,
                                             @RequestBody Map<String, Object> updateData) {
         try {
             User user = userService.getById(userId);

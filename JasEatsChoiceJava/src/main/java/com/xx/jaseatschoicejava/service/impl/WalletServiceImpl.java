@@ -26,7 +26,7 @@ public class WalletServiceImpl implements WalletService {
     private final ConsumeHistoryService consumeHistoryService;
 
     @Override
-    public Wallet getWalletByUserId(Long userId) {
+    public Wallet getWalletByUserId(String userId) {
         LambdaQueryWrapper<Wallet> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Wallet::getUserId, userId);
         Wallet wallet = walletMapper.selectOne(queryWrapper);
@@ -40,14 +40,14 @@ public class WalletServiceImpl implements WalletService {
     }
 
     @Override
-    public BigDecimal getBalance(Long userId) {
+    public BigDecimal getBalance(String userId) {
         Wallet wallet = getWalletByUserId(userId);
         return wallet != null ? wallet.getBalance() : BigDecimal.ZERO;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Wallet recharge(Long userId, BigDecimal amount, String rechargeNo) {
+    public Wallet recharge(String userId, BigDecimal amount, String rechargeNo) {
         // 参数校验
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("充值金额必须大于0");
@@ -83,19 +83,24 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean deductBalance(Long userId, BigDecimal amount, String description) {
+    public boolean deductBalance(String userId, BigDecimal amount, String description) {
         // 参数校验
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("扣减金额必须大于0");
+        }
+
+        // 获取钱包
+        Wallet wallet = getWalletByUserId(userId);
+
+        // 检查钱包状态
+        if ("frozen".equals(wallet.getStatus())) {
+            throw new RuntimeException("钱包已冻结，无法进行交易");
         }
 
         // 检查余额
         if (!checkBalance(userId, amount)) {
             throw new RuntimeException("余额不足");
         }
-
-        // 获取钱包
-        Wallet wallet = getWalletByUserId(userId);
 
         // 扣减余额
         wallet.setBalance(wallet.getBalance().subtract(amount));
@@ -124,19 +129,24 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean withdraw(Long userId, BigDecimal amount, String withdrawNo) {
+    public boolean withdraw(String userId, BigDecimal amount, String withdrawNo) {
         // 参数校验
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("提现金额必须大于0");
+        }
+
+        // 获取钱包
+        Wallet wallet = getWalletByUserId(userId);
+
+        // 检查钱包状态
+        if ("frozen".equals(wallet.getStatus())) {
+            throw new RuntimeException("钱包已冻结，无法进行交易");
         }
 
         // 检查余额
         if (!checkBalance(userId, amount)) {
             throw new RuntimeException("余额不足");
         }
-
-        // 获取钱包
-        Wallet wallet = getWalletByUserId(userId);
 
         // 扣减余额
         wallet.setBalance(wallet.getBalance().subtract(amount));
@@ -165,7 +175,7 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean refund(Long userId, BigDecimal amount, String description) {
+    public boolean refund(String userId, BigDecimal amount, String description) {
         // 参数校验
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("退款金额必须大于0");
@@ -200,9 +210,12 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Wallet createWallet(Long userId) {
-        // 检查是否已存在
-        Wallet existWallet = getWalletByUserId(userId);
+    public Wallet createWallet(String userId) {
+        // 直接查询数据库，避免调用getWalletByUserId导致无限递归
+        LambdaQueryWrapper<Wallet> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Wallet::getUserId, userId);
+        Wallet existWallet = walletMapper.selectOne(queryWrapper);
+
         if (existWallet != null) {
             return existWallet;
         }
@@ -225,14 +238,14 @@ public class WalletServiceImpl implements WalletService {
     }
 
     @Override
-    public boolean checkBalance(Long userId, BigDecimal amount) {
+    public boolean checkBalance(String userId, BigDecimal amount) {
         BigDecimal balance = getBalance(userId);
         return balance.compareTo(amount) >= 0;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean freezeWallet(Long userId) {
+    public boolean freezeWallet(String userId) {
         Wallet wallet = getWalletByUserId(userId);
         wallet.setStatus("frozen");
         wallet.setUpdateTime(LocalDateTime.now());
@@ -242,7 +255,7 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean unfreezeWallet(Long userId) {
+    public boolean unfreezeWallet(String userId) {
         Wallet wallet = getWalletByUserId(userId);
         wallet.setStatus("active");
         wallet.setUpdateTime(LocalDateTime.now());

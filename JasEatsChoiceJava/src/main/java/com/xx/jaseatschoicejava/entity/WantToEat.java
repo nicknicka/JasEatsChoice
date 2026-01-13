@@ -15,18 +15,18 @@ public class WantToEat {
     /**
      * 主键ID
      */
-    @TableId
-    private Long id;
+    @TableId(type = com.baomidou.mybatisplus.annotation.IdType.ASSIGN_ID)
+    private String id;
 
     /**
      * 用户ID
      */
-    private Long userId;
+    private String userId;
 
     /**
      * 菜品ID
      */
-    private Long itemId;
+    private String itemId;
 
     /**
      * 审核状态：pending-待审核, approved-已通过, rejected-已拒绝

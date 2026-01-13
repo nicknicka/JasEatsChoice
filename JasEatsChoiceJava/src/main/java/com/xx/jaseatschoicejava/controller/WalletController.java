@@ -29,7 +29,7 @@ public class WalletController {
      */
     @ApiOperation("获取用户钱包信息")
     @GetMapping("/info/{userId}")
-    public ResponseResult<?> getWalletInfo(@PathVariable Long userId) {
+    public ResponseResult<?> getWalletInfo(@PathVariable String userId) {
         try {
             Wallet wallet = walletService.getWalletByUserId(userId);
             return ResponseResult.success(wallet);
@@ -44,7 +44,7 @@ public class WalletController {
      */
     @ApiOperation("获取用户余额")
     @GetMapping("/balance/{userId}")
-    public ResponseResult<?> getBalance(@PathVariable Long userId) {
+    public ResponseResult<?> getBalance(@PathVariable String userId) {
         try {
             BigDecimal balance = walletService.getBalance(userId);
             return ResponseResult.success(balance);
@@ -60,7 +60,7 @@ public class WalletController {
     @ApiOperation("检查余额是否足够")
     @GetMapping("/check")
     public ResponseResult<?> checkBalance(
-        @ApiParam("用户ID") @RequestParam Long userId,
+        @ApiParam("用户ID") @RequestParam String userId,
         @ApiParam("金额") @RequestParam BigDecimal amount
     ) {
         try {
@@ -78,7 +78,7 @@ public class WalletController {
     @ApiOperation("钱包充值")
     @PostMapping("/recharge")
     public ResponseResult<?> recharge(
-        @ApiParam("用户ID") @RequestParam Long userId,
+        @ApiParam("用户ID") @RequestParam String userId,
         @ApiParam("充值金额") @RequestParam BigDecimal amount,
         @ApiParam("充值流水号") @RequestParam String rechargeNo
     ) {
@@ -97,7 +97,7 @@ public class WalletController {
     @ApiOperation("钱包提现")
     @PostMapping("/withdraw")
     public ResponseResult<?> withdraw(
-        @ApiParam("用户ID") @RequestParam Long userId,
+        @ApiParam("用户ID") @RequestParam String userId,
         @ApiParam("提现金额") @RequestParam BigDecimal amount,
         @ApiParam("提现流水号") @RequestParam String withdrawNo
     ) {

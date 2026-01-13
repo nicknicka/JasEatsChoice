@@ -36,7 +36,7 @@ public class RecommendController {
      * 获取个性化推荐菜品
      */
     @GetMapping("/recommend/{userId}")
-    public ResponseResult<?> getRecommendDishes(@PathVariable Long userId,
+    public ResponseResult<?> getRecommendDishes(@PathVariable String userId,
                                                @RequestParam(required = false) Double longitude,
                                                @RequestParam(required = false) Double latitude) {
         Map<String, Object> recommendResult = new HashMap<>();
@@ -109,7 +109,7 @@ public class RecommendController {
      * 设置推荐偏好
      */
     @PutMapping("/users/{userId}/prefer")
-    public ResponseResult<?> setRecommendPreference(@PathVariable Long userId, @RequestBody Map<String, Object> params) {
+    public ResponseResult<?> setRecommendPreference(@PathVariable String userId, @RequestBody Map<String, Object> params) {
         UserPreference preference = new UserPreference();
         preference.setUserId(userId);
         preference.setTagWeights((String) params.get("tags"));
@@ -126,9 +126,9 @@ public class RecommendController {
      * 替换推荐菜品
      */
     @PostMapping("/recommend/{userId}/replace")
-    public ResponseResult<?> replaceRecommendDishes(@PathVariable Long userId, @RequestBody Map<String, Object> params) {
+    public ResponseResult<?> replaceRecommendDishes(@PathVariable String userId, @RequestBody Map<String, Object> params) {
         // 获取用户要替换的菜品ID列表
-        List<Long> replaceDishIds = (List<Long>) params.get("replaceDishIds");
+        List<String> replaceDishIds = (List<Long>) params.get("replaceDishIds");
         if (replaceDishIds == null || replaceDishIds.isEmpty()) {
             return ResponseResult.fail("400", "请提供要替换的菜品ID列表");
         }
@@ -165,7 +165,7 @@ public class RecommendController {
      * 筛选推荐菜品
      */
     @PostMapping("/recommend/{userId}/filter")
-    public ResponseResult<?> filterRecommendDishes(@PathVariable Long userId, @RequestBody Map<String, Object> params) {
+    public ResponseResult<?> filterRecommendDishes(@PathVariable String userId, @RequestBody Map<String, Object> params) {
         // 获取用户推荐偏好
         UserPreference userPreference = userPreferenceService.getByUserId(userId);
         List<Dish> filteredDishes = dishService.list();
@@ -230,7 +230,7 @@ public class RecommendController {
      * 一键生成购物清单
      */
     @GetMapping("/recipe/{userId}/shopping-list")
-    public ResponseResult<?> generateShoppingList(@PathVariable Long userId, @RequestParam(required = false) String date) {
+    public ResponseResult<?> generateShoppingList(@PathVariable String userId, @RequestParam(required = false) String date) {
         // 获取用户推荐偏好
         UserPreference userPreference = userPreferenceService.getByUserId(userId);
 

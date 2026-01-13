@@ -21,7 +21,7 @@ public interface MessageRecordService extends IService<MessageRecord> {
      * @param pageNum 当前页码
      * @return 消息记录列表
      */
-    List<MessageRecord> getMessageRecordsByUserId(Long userId, Integer pageSize, Integer pageNum);
+    List<MessageRecord> getMessageRecordsByUserId(String userId, Integer pageSize, Integer pageNum);
 
     /**
      * 根据用户ID获取未读消息数量
@@ -29,7 +29,7 @@ public interface MessageRecordService extends IService<MessageRecord> {
      * @param userId 用户ID
      * @return 未读消息数量
      */
-    Integer getUnreadMessageCountByUserId(Long userId);
+    Integer getUnreadMessageCountByUserId(String userId);
 
     /**
      * 发送消息
@@ -40,7 +40,7 @@ public interface MessageRecordService extends IService<MessageRecord> {
      * @param messageType 消息类型
      * @return 发送结果
      */
-    Boolean sendMessage(Long senderId, Long receiverId, String content, String messageType);
+    Boolean sendMessage(String senderId, String receiverId, String content, String messageType);
 
     /**
      * 标记消息为已读
@@ -48,7 +48,7 @@ public interface MessageRecordService extends IService<MessageRecord> {
      * @param messageId 消息ID
      * @return 标记结果
      */
-    Boolean markMessageAsRead(Long messageId);
+    Boolean markMessageAsRead(String messageId);
 
     /**
      * 标记所有消息为已读
@@ -56,5 +56,5 @@ public interface MessageRecordService extends IService<MessageRecord> {
      * @param userId 用户ID
      * @return 标记结果
      */
-    Boolean markAllMessagesAsRead(Long userId);
+    Boolean markAllMessagesAsRead(String userId);
 }

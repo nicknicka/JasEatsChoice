@@ -19,7 +19,7 @@ public interface PaymentService extends IService<PaymentRecord> {
      * @param paymentMethod 支付方式
      * @return 支付记录
      */
-    PaymentRecord createPayment(String orderId, Long userId, Long merchantId, BigDecimal amount, String paymentMethod);
+    PaymentRecord createPayment(String orderId, String userId, String merchantId, BigDecimal amount, String paymentMethod);
 
     /**
      * 处理支付

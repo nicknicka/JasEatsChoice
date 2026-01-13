@@ -23,13 +23,13 @@ import java.math.BigDecimal;
 @ApiModel(description = "菜品实体")
 public class Dish {
 
-    @TableId(type = com.baomidou.mybatisplus.annotation.IdType.AUTO)
+    @TableId(type = com.baomidou.mybatisplus.annotation.IdType.ASSIGN_ID)
     @ApiModelProperty(value = "菜品ID")
-    private Long id; // 菜品ID
+    private String id; // 菜品ID
 
     @TableField("merchant_id")
     @ApiModelProperty(value = "商家ID")
-    private Long merchantId; // 商家ID
+    private String merchantId; // 商家ID
 
     @TableField("name")
     @ApiModelProperty(value = "菜品名称")

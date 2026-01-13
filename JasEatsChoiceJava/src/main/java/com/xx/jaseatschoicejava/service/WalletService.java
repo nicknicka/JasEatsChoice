@@ -14,14 +14,14 @@ public interface WalletService {
      * @param userId 用户ID
      * @return 钱包信息
      */
-    Wallet getWalletByUserId(Long userId);
+    Wallet getWalletByUserId(String userId);
 
     /**
      * 获取用户余额
      * @param userId 用户ID
      * @return 当前余额
      */
-    BigDecimal getBalance(Long userId);
+    BigDecimal getBalance(String userId);
 
     /**
      * 充值
@@ -30,7 +30,7 @@ public interface WalletService {
      * @param rechargeNo 充值流水号
      * @return 充值后的钱包
      */
-    Wallet recharge(Long userId, BigDecimal amount, String rechargeNo);
+    Wallet recharge(String userId, BigDecimal amount, String rechargeNo);
 
     /**
      * 扣减余额（用于支付）
@@ -39,7 +39,7 @@ public interface WalletService {
      * @param description 描述
      * @return 是否成功
      */
-    boolean deductBalance(Long userId, BigDecimal amount, String description);
+    boolean deductBalance(String userId, BigDecimal amount, String description);
 
     /**
      * 提现
@@ -48,7 +48,7 @@ public interface WalletService {
      * @param withdrawNo 提现流水号
      * @return 是否成功
      */
-    boolean withdraw(Long userId, BigDecimal amount, String withdrawNo);
+    boolean withdraw(String userId, BigDecimal amount, String withdrawNo);
 
     /**
      * 退款（增加余额）
@@ -57,14 +57,14 @@ public interface WalletService {
      * @param description 描述
      * @return 是否成功
      */
-    boolean refund(Long userId, BigDecimal amount, String description);
+    boolean refund(String userId, BigDecimal amount, String description);
 
     /**
      * 创建用户钱包
      * @param userId 用户ID
      * @return 创建的钱包
      */
-    Wallet createWallet(Long userId);
+    Wallet createWallet(String userId);
 
     /**
      * 检查余额是否足够
@@ -72,19 +72,19 @@ public interface WalletService {
      * @param amount 金额
      * @return 是否足够
      */
-    boolean checkBalance(Long userId, BigDecimal amount);
+    boolean checkBalance(String userId, BigDecimal amount);
 
     /**
      * 冻结钱包
      * @param userId 用户ID
      * @return 是否成功
      */
-    boolean freezeWallet(Long userId);
+    boolean freezeWallet(String userId);
 
     /**
      * 解冻钱包
      * @param userId 用户ID
      * @return 是否成功
      */
-    boolean unfreezeWallet(Long userId);
+    boolean unfreezeWallet(String userId);
 }

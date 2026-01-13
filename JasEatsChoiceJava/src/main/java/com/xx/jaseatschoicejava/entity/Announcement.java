@@ -11,12 +11,12 @@ import java.time.LocalDateTime;
 @Data
 @TableName("announcement")
 public class Announcement {
-    @TableId(type = IdType.AUTO)
+    @TableId(type = IdType.ASSIGN_ID)
     @ApiModelProperty(value = "公告ID")
-    private Long id;
+    private String id;
 
     @ApiModelProperty(value = "商家ID")
-    private Long merchantId;
+    private String merchantId;
 
     @ApiModelProperty(value = "公告标题")
     private String title;

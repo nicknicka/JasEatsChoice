@@ -206,7 +206,7 @@ public class MerchantController {
      * 获取商家详情
      */
     @GetMapping("/{merchantId}")
-    public ResponseResult<?> getMerchantDetail(@PathVariable Long merchantId) {
+    public ResponseResult<?> getMerchantDetail(@PathVariable String merchantId) {
         Merchant merchant = merchantService.getById(merchantId);
         if (merchant != null) {
             // 隐藏敏感信息
@@ -430,7 +430,7 @@ public class MerchantController {
      * 更新商家状态
      */
     @PutMapping("/{merchantId}/status")
-    public ResponseResult<?> updateMerchantStatus(@PathVariable Long merchantId) {
+    public ResponseResult<?> updateMerchantStatus(@PathVariable String merchantId) {
         // 参数验证
         if (merchantId == null) {
             return ResponseResult.fail("400", "参数错误");

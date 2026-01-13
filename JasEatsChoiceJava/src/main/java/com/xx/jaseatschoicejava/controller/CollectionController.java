@@ -26,7 +26,7 @@ public class CollectionController {
      * 根据用户ID获取所有收藏
      */
     @GetMapping
-    public ResponseResult<?> getCollectionsByUserId(@RequestParam Long userId) {
+    public ResponseResult<?> getCollectionsByUserId(@RequestParam String userId) {
         List<UserCollection> collections = collectionService.getCollectionsByUserId(userId);
         return ResponseResult.success(collections);
     }
@@ -35,7 +35,7 @@ public class CollectionController {
      * 根据用户ID和类型获取收藏
      */
     @GetMapping("/type")
-    public ResponseResult<?> getCollectionsByType(@RequestParam Long userId, @RequestParam String type) {
+    public ResponseResult<?> getCollectionsByType(@RequestParam String userId, @RequestParam String type) {
         List<UserCollection> collections = collectionService.getCollectionsByUserIdAndType(userId, type);
         return ResponseResult.success(collections);
     }
@@ -54,7 +54,7 @@ public class CollectionController {
      */
     @DeleteMapping
     public ResponseResult<?> removeCollection(
-            @RequestParam Long userId,
+            @RequestParam String userId,
             @RequestParam String type,
             @RequestParam Long id) {
         boolean success = collectionService.removeCollection(userId, type, id);
@@ -66,7 +66,7 @@ public class CollectionController {
      */
     @GetMapping("/check")
     public ResponseResult<?> checkCollection(
-            @RequestParam Long userId,
+            @RequestParam String userId,
             @RequestParam String type,
             @RequestParam Long id) {
         boolean isCollected = collectionService.isCollected(userId, type, id);

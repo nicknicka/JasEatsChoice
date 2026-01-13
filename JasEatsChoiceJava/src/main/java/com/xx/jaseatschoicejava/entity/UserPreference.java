@@ -11,13 +11,13 @@ import lombok.Data;
 @Data
 @TableName("t_user_preference")
 public class UserPreference {
-    @TableId(value = "id", type = IdType.AUTO)
-    private Long id;
+    @TableId(value = "id", type = IdType.ASSIGN_ID)
+    private String id;
 
     /**
      * 用户ID
      */
-    private Long userId;
+    private String userId;
 
     /**
      * 标签权重，JSON格式（如 {"spicy": 0.1, "sweet": 0.8}）

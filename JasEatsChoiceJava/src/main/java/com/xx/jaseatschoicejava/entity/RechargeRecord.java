@@ -22,15 +22,15 @@ import java.time.LocalDateTime;
 @ApiModel(description = "充值记录实体")
 public class RechargeRecord {
 
-    @TableId(type = IdType.AUTO)
+    @TableId(type = IdType.ASSIGN_ID)
     @ApiModelProperty(value = "充值记录ID")
-    private Long id; // 充值记录ID
+    private String id; // 充值记录ID
 
     @ApiModelProperty(value = "充值流水号")
     private String rechargeNo; // 充值流水号
 
     @ApiModelProperty(value = "用户ID")
-    private Long userId; // 用户ID
+    private String userId; // 用户ID
 
     @ApiModelProperty(value = "充值金额")
     private BigDecimal amount; // 充值金额

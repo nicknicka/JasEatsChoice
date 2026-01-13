@@ -82,14 +82,24 @@ public class OrderController {
      */
     @PutMapping("/{orderId}/status")
     public ResponseResult<?> updateOrderStatus(@PathVariable String orderId, @RequestParam Integer status) {
-        Order order = new Order();
-        order.setId(orderId);
-        order.setStatus(status);
-        boolean success = orderService.updateById(order);
-        if (success) {
-            return ResponseResult.success("更新成功");
+        try {
+            // 先查询订单是否存在
+            Order order = orderService.getById(orderId);
+            if (order == null) {
+                return ResponseResult.fail("404", "订单不存在");
+            }
+
+            // 只更新状态字段
+            order.setStatus(status);
+            boolean success = orderService.updateById(order);
+            if (success) {
+                return ResponseResult.success("更新成功");
+            }
+            return ResponseResult.fail("500", "更新失败");
+        } catch (Exception e) {
+            log.error("更新订单状态失败，订单ID：{}，状态：{}", orderId, status, e);
+            return ResponseResult.fail("500", "更新失败：" + e.getMessage());
         }
-        return ResponseResult.fail("500", "更新失败");
     }
 
     /**
@@ -99,7 +109,7 @@ public class OrderController {
     @PostMapping("/{orderId}/pay")
     public ResponseResult<?> payOrder(
         @PathVariable String orderId,
-        @ApiParam("用户ID") @RequestParam Long userId,
+        @ApiParam("用户ID") @RequestParam String userId,
         @ApiParam("支付方式") @RequestParam(defaultValue = "wallet") String paymentMethod
     ) {
         try {
@@ -114,13 +124,9 @@ public class OrderController {
                 return ResponseResult.fail("400", "订单状态异常，无法支付");
             }
 
-            // 转换类型
-            Long userIdLong = Long.parseLong(order.getUserId());
-            Long merchantIdLong = Long.parseLong(order.getMerchantId());
-
             // 检查余额
             if ("wallet".equals(paymentMethod)) {
-                boolean enough = walletService.checkBalance(userIdLong, order.getTotalAmount());
+                boolean enough = walletService.checkBalance(order.getUserId(), order.getTotalAmount());
                 if (!enough) {
                     return ResponseResult.fail("400", "余额不足");
                 }
@@ -129,8 +135,8 @@ public class OrderController {
             // 创建支付记录
             PaymentRecord paymentRecord = paymentService.createPayment(
                 orderId,
-                userIdLong,
-                merchantIdLong,
+                order.getUserId(),
+                order.getMerchantId(),
                 order.getTotalAmount(),
                 paymentMethod
             );

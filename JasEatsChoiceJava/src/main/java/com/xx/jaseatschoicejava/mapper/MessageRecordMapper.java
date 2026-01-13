@@ -24,7 +24,7 @@ public interface MessageRecordMapper extends BaseMapper<MessageRecord> {
      * @param pageNum 当前页码
      * @return 消息记录列表
      */
-    List<MessageRecord> getMessageRecordsByUserId(@Param("userId") Long userId,
+    List<MessageRecord> getMessageRecordsByUserId(@Param("userId") String userId,
                                                   @Param("pageSize") Integer pageSize,
                                                   @Param("pageNum") Integer pageNum);
 
@@ -34,5 +34,5 @@ public interface MessageRecordMapper extends BaseMapper<MessageRecord> {
      * @param userId 用户ID
      * @return 未读消息数量
      */
-    Integer getUnreadMessageCountByUserId(@Param("userId") Long userId);
+    Integer getUnreadMessageCountByUserId(@Param("userId") String userId);
 }

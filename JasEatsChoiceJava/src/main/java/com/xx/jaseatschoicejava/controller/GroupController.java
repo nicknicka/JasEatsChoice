@@ -40,7 +40,7 @@ public class GroupController {
      */
     @ApiOperation("根据群ID获取群信息")
     @GetMapping("/{groupId}")
-    public ResponseResult<?> getGroupById(@PathVariable Long groupId) {
+    public ResponseResult<?> getGroupById(@PathVariable String groupId) {
         Group group = groupService.getById(groupId);
         if (group != null) {
             return ResponseResult.success(group);
@@ -69,7 +69,7 @@ public class GroupController {
      */
     @ApiOperation("删除群")
     @DeleteMapping("/{groupId}")
-    public ResponseResult<?> deleteGroup(@PathVariable Long groupId) {
+    public ResponseResult<?> deleteGroup(@PathVariable String groupId) {
         boolean success = groupService.removeById(groupId);
         if (success) {
             return ResponseResult.success("删除群成功");
