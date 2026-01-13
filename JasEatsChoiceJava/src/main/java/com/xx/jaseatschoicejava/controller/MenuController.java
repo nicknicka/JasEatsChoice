@@ -565,51 +565,54 @@ public class MenuController {
         }
 
         try {
-            // 使用 TypeReference 来避免类型擦除问题
+            // 创建 ObjectMapper 实例，配置为忽略未知属性
             ObjectMapper objectMapper = new ObjectMapper();
             // 尝试解析为Map，使用 Map<String, Object> 类型
-            Map<String, Object> ingredientsMap = objectMapper.readValue(
-                ingredientsJson,
-                new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {}
-            );
+            @SuppressWarnings("unchecked")
+            Map<String, Object> ingredientsMap = objectMapper.readValue(ingredientsJson, Map.class);
 
             // 处理必选食材
-            if (ingredientsMap.containsKey("requiredIngredients")) {
-                Object required = ingredientsMap.get("requiredIngredients");
-                if (required instanceof List) {
-                    for (Object item : (List<?>) required) {
-                        if (item != null) {
-                            requiredIngredients.add(item.toString());
-                        }
-                    }
-                }
-            } else if (ingredientsMap.containsKey("required")) {
-                Object required = ingredientsMap.get("required");
-                if (required instanceof List) {
-                    for (Object item : (List<?>) required) {
-                        if (item != null) {
-                            requiredIngredients.add(item.toString());
-                        }
+            Object required = ingredientsMap.get("requiredIngredients");
+            if (required == null) {
+                required = ingredientsMap.get("required");
+            }
+            if (required instanceof List) {
+                for (Object item : (List<?>) required) {
+                    if (item != null) {
+                        requiredIngredients.add(item.toString());
                     }
                 }
             }
 
             // 处理可选食材
-            if (ingredientsMap.containsKey("optionalIngredients")) {
-                Object optional = ingredientsMap.get("optionalIngredients");
-                if (optional instanceof List) {
-                    optionalIngredients.addAll((List<?>) optional);
-                }
-            } else if (ingredientsMap.containsKey("optional")) {
-                Object optional = ingredientsMap.get("optional");
-                if (optional instanceof List) {
-                    optionalIngredients.addAll((List<?>) optional);
+            Object optional = ingredientsMap.get("optionalIngredients");
+            if (optional == null) {
+                optional = ingredientsMap.get("optional");
+            }
+            if (optional instanceof List) {
+                for (Object item : (List<?>) optional) {
+                    if (item != null) {
+                        // 如果是 Map，转换为可选食材对象
+                        if (item instanceof Map) {
+                            @SuppressWarnings("unchecked")
+                            Map<String, Object> ingredientMap = (Map<String, Object>) item;
+                            Map<String, Object> ingredient = new HashMap<>();
+                            ingredient.put("id", ingredientMap.get("id"));
+                            ingredient.put("name", ingredientMap.get("name"));
+                            ingredient.put("price", ingredientMap.get("price"));
+                            ingredient.put("selected", false);
+                            optionalIngredients.add(ingredient);
+                        } else {
+                            optionalIngredients.add(item);
+                        }
+                    }
                 }
             }
 
         } catch (Exception e) {
             // JSON解析失败，返回空数组
-            System.err.println("解析食材JSON失败: " + e.getMessage());
+            System.err.println("解析食材JSON失败: " + ingredientsJson + ", 错误: " + e.getMessage());
+            e.printStackTrace();
         }
 
         result.put("optionalIngredients", optionalIngredients);

@@ -297,11 +297,11 @@
       </div>
 
       <!-- 可拖动悬浮购物车 -->
-      <div ref="cartBallRef" class="draggable-cart-ball" @mousedown="startDrag" @click="viewCart">
-        <div class="cart-icon">
-          <el-icon :size="32"><ShoppingCart /></el-icon>
+      <div ref="cartBallRef" class="draggable-cart-ball" @pointerdown="startDrag" @click="viewCart">
+        <div class="cart-icon-wrapper">
+          <el-icon class="cart-icon" :size="28"><ShoppingCart /></el-icon>
+          <el-badge :value="cartTotalQuantity" class="cart-badge" />
         </div>
-        <el-badge :value="cartTotalQuantity" class="cart-badge" />
         <div class="cart-amount">¥{{ cartTotalAmount.toFixed(2) }}</div>
       </div>
     </el-card>
@@ -321,11 +321,51 @@
           </div>
           <div class="empty-cart-text">购物车是空的</div>
         </div>
-        <div v-else class="cart-items">
-          <div class="cart-item" v-for="(item, index) in cartItems" :key="item.id">
-            <div class="cart-item-info">
+        <div v-else class="cart-items-list">
+          <div class="cart-item-card" v-for="(item, index) in cartItems" :key="item.id">
+            <!-- 商品信息区(左侧) -->
+            <div class="cart-item-left">
               <div class="cart-item-name">{{ item.name }}</div>
-              <!-- Optional ingredients display -->
+
+              <!-- 单价 -->
+              <div class="cart-item-price">¥{{ item.price.toFixed(2) }}</div>
+
+              <!-- 备注区域 -->
+              <div class="cart-item-note">
+                <div class="note-display" v-if="!item.isEditingNote">
+                  <div class="note-content-wrapper">
+                    <span v-if="item.note" class="note-text">{{ item.note }}</span>
+                    <span v-else class="note-empty">暂无备注</span>
+                  </div>
+                  <el-button
+                    size="small"
+                    class="edit-note-btn"
+                    @click="item.isEditingNote = true"
+                    text
+                  >
+                    <el-icon class="edit-icon"><Edit /></el-icon>
+                  </el-button>
+                </div>
+                <div class="note-edit" v-else>
+                  <el-input
+                    v-model="item.tempNote"
+                    placeholder="输入备注..."
+                    size="small"
+                    type="textarea"
+                    :rows="2"
+                    resize="none"
+                    autofocus
+                  />
+                  <div class="note-actions">
+                    <el-button size="small" type="primary" @click="confirmNote(item)" class="confirm-note-btn">
+                      确认
+                    </el-button>
+                    <el-button size="small" @click="cancelNote(item)" class="cancel-note-btn">取消</el-button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 可选食材展示 -->
               <div
                 v-if="
                   item.selectedOptionalIngredients && item.selectedOptionalIngredients.length > 0
@@ -340,58 +380,56 @@
                   +{{ ingredient.name }} (¥{{ ingredient.price.toFixed(2) }})
                 </span>
               </div>
-              <!-- Note display and edit -->
-              <div class="cart-item-note">
-                <div class="note-display" v-if="!item.isEditingNote">
-                  <span v-if="item.note" class="note-text">{{ item.note }}</span>
-                  <span v-else class="note-empty">暂无备注</span>
-                  <el-button size="small" class="edit-note-btn" @click="item.isEditingNote = true">
-                    <el-icon class="edit-icon">✏️</el-icon>
-                  </el-button>
-                </div>
-                <div class="note-edit" v-else>
-                  <el-input
-                    v-model="item.tempNote"
-                    placeholder="输入备注..."
-                    size="small"
-                    type="textarea"
-                    :rows="1"
-                    resize="none"
-                    autofocus
-                  />
-                  <div class="note-actions">
-                    <el-button size="small" type="primary" @click="confirmNote(item)">
-                      确认
-                    </el-button>
-                    <el-button size="small" @click="cancelNote(item)"> 取消 </el-button>
-                  </div>
-                </div>
+            </div>
+
+            <!-- 数量和总价区(右侧) -->
+            <div class="cart-item-right">
+              <!-- 数量调整 -->
+              <div class="quantity-control">
+                <el-button
+                  class="quantity-btn quantity-btn-decrease"
+                  :disabled="item.quantity <= 1"
+                  @click="
+                    () => {
+                      if (item.quantity > 1) {
+                        item.quantity--
+                        item.totalPrice = (item.price + getOptionalPrice(item)) * item.quantity
+                      } else {
+                        cartItems.splice(index, 1)
+                        updateCartStats()
+                      }
+                    }
+                  "
+                  circle
+                  size="small"
+                >
+                  <el-icon><Minus /></el-icon>
+                </el-button>
+                <span class="quantity-number">{{ item.quantity }}</span>
+                <el-button
+                  class="quantity-btn quantity-btn-increase"
+                  @click="
+                    () => {
+                      item.quantity++
+                      item.totalPrice = (item.price + getOptionalPrice(item)) * item.quantity
+                    }
+                  "
+                  circle
+                  size="small"
+                >
+                  <el-icon><Plus /></el-icon>
+                </el-button>
               </div>
-              <div class="cart-item-price">¥{{ item.price.toFixed(2) }}</div>
+
+              <!-- 商品总价 -->
+              <div class="cart-item-total">¥{{ item.totalPrice.toFixed(2) }}</div>
             </div>
-            <div class="cart-item-quantity">
-              <el-button
-                type="text"
-                size="small"
-                @click="
-                  () => {
-                    cartItems[index].quantity--
-                    if (cartItems[index].quantity <= 0) cartItems.splice(index, 1)
-                  }
-                "
-              >
-                -
-              </el-button>
-              <span class="quantity">{{ item.quantity }}</span>
-              <el-button type="text" size="small" @click="cartItems[index].quantity++">
-                +
-              </el-button>
-            </div>
-            <div class="cart-item-total">¥{{ item.totalPrice.toFixed(2) }}</div>
           </div>
-          <div class="cart-total">
-            <div class="total-text">总计:</div>
-            <div class="total-price">
+
+          <!-- 总计区域 -->
+          <div class="cart-total-section">
+            <div class="total-label">总计</div>
+            <div class="total-amount">
               ¥{{ cartItems.reduce((total, item) => total + item.totalPrice, 0).toFixed(2) }}
             </div>
           </div>
@@ -399,8 +437,8 @@
       </div>
       <template #footer>
         <span class="dialog-footer">
-          <el-button @click="closeCart">取消</el-button>
-          <el-button type="primary" v-if="cartItems.length > 0" @click="submitOrder">
+          <el-button class="cancel-btn" @click="closeCart">取消</el-button>
+          <el-button type="primary" v-if="cartItems.length > 0" @click="submitOrder" class="submit-btn">
             提交订单
           </el-button>
         </span>
@@ -413,7 +451,7 @@
 import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Star, StarFilled, Location, Clock, Coin, ShoppingCart, Shop, User, ArrowUp, ArrowDown } from '@element-plus/icons-vue'
+import { Star, StarFilled, Location, Clock, Coin, ShoppingCart, Shop, User, ArrowUp, ArrowDown, Edit, Plus, Minus } from '@element-plus/icons-vue'
 import axios from 'axios'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
 import { useAuthStore } from '../../store/authStore'
@@ -786,11 +824,23 @@ const loadMerchantDetails = async (merchantId) => {
       })))
       console.log("📦 第一个菜品的完整数据:", menuItems.value[0])
 
-      // 确保可选食材有selected属性
+      // 确保可选食材有selected属性，并处理可能的字符串格式
       menuItems.value.forEach((item) => {
-        if (item.optionalIngredients) {
-          item.optionalIngredients.forEach((ingredient) => {
-            ingredient.selected = ingredient.selected || false
+        if (item.optionalIngredients && item.optionalIngredients.length > 0) {
+          item.optionalIngredients = item.optionalIngredients.map((ingredient) => {
+            // 如果是字符串，转换为对象格式
+            if (typeof ingredient === 'string') {
+              return {
+                name: ingredient,
+                price: 0,
+                selected: false
+              }
+            }
+            // 如果已经是对象，确保有selected属性
+            return {
+              ...ingredient,
+              selected: ingredient.selected || false
+            }
           })
         }
       })
@@ -950,9 +1000,12 @@ const startDrag = (e) => {
   initialX = rect.left
   initialY = rect.top
 
-  // 添加事件监听
-  document.addEventListener('mousemove', onDrag)
-  document.addEventListener('mouseup', stopDrag)
+  // 拖动时移除过渡动画，消除阻尼感
+  cartBallRef.value.style.transition = 'none'
+
+  // 添加事件监听（使用 pointer 事件以支持触摸屏）
+  document.addEventListener('pointermove', onDrag, { passive: false })
+  document.addEventListener('pointerup', stopDrag)
 }
 
 // 拖动中
@@ -977,28 +1030,50 @@ const onDrag = (e) => {
   newX = Math.max(0, Math.min(newX, windowWidth - cartWidth))
   newY = Math.max(0, Math.min(newY, windowHeight - cartHeight))
 
-  // 更新位置
-  cartBallRef.value.style.left = `${newX}px`
-  cartBallRef.value.style.top = `${newY}px`
+  // 使用 transform 替代 left/top，性能更好
+  cartBallRef.value.style.transform = `translate(${newX - initialX}px, ${newY - initialY}px) scale(1.08)`
+  cartBallRef.value.style.left = `${initialX}px`
+  cartBallRef.value.style.top = `${initialY}px`
 }
 
 // 停止拖动
 const stopDrag = () => {
+  if (!cartBallRef.value) return
+
   // 重置拖动状态
   const wasDragging = hasDragged
   isDragging = false
   hasDragged = false
 
-  document.removeEventListener('mousemove', onDrag)
-  document.removeEventListener('mouseup', stopDrag)
+  document.removeEventListener('pointermove', onDrag)
+  document.removeEventListener('pointerup', stopDrag)
 
-  // 如果有拖动，标记刚刚结束拖动
+  // 如果有拖动，保存最终位置并恢复过渡效果
   if (wasDragging) {
+    // 获取当前位置
+    const rect = cartBallRef.value.getBoundingClientRect()
+
+    // 保存最终位置
+    cartBallRef.value.style.left = `${rect.left}px`
+    cartBallRef.value.style.top = `${rect.top}px`
+    cartBallRef.value.style.transform = 'scale(1)'
+
+    // 恢复过渡效果
+    requestAnimationFrame(() => {
+      if (cartBallRef.value) {
+        cartBallRef.value.style.transition = ''
+      }
+    })
+
     justDragged = true
     // 设置一个短暂的延迟来重置标记，确保click事件能检测到
     setTimeout(() => {
       justDragged = false
     }, 100)
+  } else {
+    // 如果没有拖动，恢复过渡效果
+    cartBallRef.value.style.transition = ''
+    cartBallRef.value.style.transform = ''
   }
 }
 
@@ -1041,12 +1116,24 @@ const updateCart = (item) => {
   updateCartStats()
 }
 
-// 初始化数量和可选食材选中状态
+// 初始化数量和可选食材选中状态（仅用于模拟数据）
 menuItems.value.forEach((item) => {
   item.quantity = 1
-  item.optionalIngredients.forEach((ingredient) => {
-    ingredient.selected = false
-  })
+  if (item.optionalIngredients && Array.isArray(item.optionalIngredients)) {
+    item.optionalIngredients = item.optionalIngredients.map((ingredient) => {
+      if (typeof ingredient === 'string') {
+        return {
+          name: ingredient,
+          price: 0,
+          selected: false
+        }
+      }
+      return {
+        ...ingredient,
+        selected: false
+      }
+    })
+  }
 })
 
 // 计算实时价格函数
@@ -1137,6 +1224,14 @@ const cancelNote = (item) => {
   item.tempNote = item.note // Reset temp note to current note
   item.isEditingNote = false // Exit edit mode
   ElMessage.info('已取消备注修改')
+}
+
+// 计算可选食材总价
+const getOptionalPrice = (item) => {
+  if (!item.selectedOptionalIngredients || item.selectedOptionalIngredients.length === 0) {
+    return 0
+  }
+  return item.selectedOptionalIngredients.reduce((sum, ingredient) => sum + ingredient.price, 0)
 }
 
 // 跳转到订单确认页
@@ -2023,15 +2118,15 @@ watch(activeMenuTab, (newTab, oldTab) => {
 
 // 购物车弹窗样式
 .cart-content {
-  padding: 20px;
+  padding: 0;
 
   .empty-cart {
     text-align: center;
-    padding: 48px 20px;
+    padding: 60px 20px;
 
     .empty-cart-icon {
       margin-bottom: 20px;
-      opacity: 0.4;
+      opacity: 0.3;
       color: #94a3b8;
     }
 
@@ -2042,29 +2137,30 @@ watch(activeMenuTab, (newTab, oldTab) => {
     }
   }
 
-  .cart-items {
-    max-height: 450px;
+  .cart-items-list {
+    max-height: 500px;
     overflow-y: auto;
-    padding-right: 8px;
+    padding: 16px;
 
-    .cart-item {
+    // 商品卡片
+    .cart-item-card {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      padding: 20px;
+      padding: 16px;
       margin-bottom: 16px;
-      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+      background: #ffffff;
       border-radius: 12px;
-      border: 1px solid rgba(59, 130, 246, 0.08);
+      border: 1px solid #e8e8e8;
       transition: all 0.3s ease;
 
       &:hover {
-        box-shadow: 0 4px 16px rgba(59, 130, 246, 0.12);
-        border-color: rgba(59, 130, 246, 0.15);
-        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        border-color: #1890ff;
       }
 
-      .cart-item-info {
+      // 左侧商品信息区
+      .cart-item-left {
         flex: 1;
         min-width: 0;
         margin-right: 16px;
@@ -2072,161 +2168,227 @@ watch(activeMenuTab, (newTab, oldTab) => {
         .cart-item-name {
           font-size: 16px;
           font-weight: 600;
-          color: #1e293b;
+          color: #1a1a1a;
           margin-bottom: 8px;
+          line-height: 1.4;
         }
 
         .cart-item-price {
           font-size: 14px;
-          color: #3b82f6;
-          font-weight: 600;
-          margin-bottom: 4px;
+          color: #1890ff;
+          font-weight: 500;
+          margin-bottom: 12px;
         }
-      }
 
-      .cart-item-quantity {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin: 0 24px;
+        // 备注区域
+        .cart-item-note {
+          margin: 8px 0;
 
-        .el-button {
-          color: #3b82f6;
-          font-weight: 600;
+          .note-display {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 8px 12px;
+            background: #f5f7fa;
+            border-radius: 6px;
+            min-height: 36px;
 
-          &:hover {
-            background: rgba(59, 130, 246, 0.1);
+            .note-content-wrapper {
+              flex: 1;
+              min-width: 0;
+
+              .note-text {
+                font-size: 13px;
+                color: #333333;
+                word-wrap: break-word;
+                word-break: break-all;
+                line-height: 1.5;
+              }
+
+              .note-empty {
+                font-size: 13px;
+                color: #999999;
+              }
+            }
+
+            .edit-note-btn {
+              flex-shrink: 0;
+              padding: 4px;
+              color: #1890ff;
+              transition: all 0.3s ease;
+
+              .edit-icon {
+                font-size: 16px;
+              }
+
+              &:hover {
+                background: rgba(24, 144, 255, 0.1);
+                border-radius: 4px;
+              }
+            }
+          }
+
+          .note-edit {
+            .el-textarea {
+              margin-bottom: 8px;
+
+              :deep(.el-textarea__inner) {
+                font-size: 13px;
+                padding: 8px;
+                border-radius: 6px;
+              }
+            }
+
+            .note-actions {
+              display: flex;
+              gap: 8px;
+
+              .confirm-note-btn {
+                border-radius: 6px;
+                padding: 6px 16px;
+                background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+                border: none;
+                font-weight: 500;
+                transition: all 0.3s ease;
+
+                &:hover {
+                  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+                  transform: translateY(-1px);
+                  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+                }
+              }
+
+              .cancel-note-btn {
+                border-radius: 6px;
+                padding: 6px 16px;
+                border: 1px solid #d9d9d9;
+                color: #666;
+                background: #ffffff;
+                font-weight: 500;
+                transition: all 0.3s ease;
+
+                &:hover {
+                  color: #3b82f6;
+                  border-color: #3b82f6;
+                  background: rgba(59, 130, 246, 0.05);
+                  transform: translateY(-1px);
+                }
+              }
+            }
           }
         }
 
-        .quantity {
-          min-width: 32px;
-          text-align: center;
-          font-size: 15px;
-          font-weight: 600;
-          color: #1e293b;
+        // 可选食材标签
+        .cart-item-ingredients {
+          margin-top: 8px;
+
+          .ingredient-tag {
+            display: inline-block;
+            font-size: 12px;
+            color: #1890ff;
+            background: #e6f7ff;
+            border: 1px solid #91d5ff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin-right: 6px;
+            margin-bottom: 4px;
+            font-weight: 500;
+          }
         }
       }
 
-      .cart-item-total {
-        font-size: 18px;
-        font-weight: 700;
-        color: #3b82f6;
-        white-space: nowrap;
-        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
+      // 右侧数量和总价区
+      .cart-item-right {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        flex-shrink: 0;
+
+        // 数量控制器
+        .quantity-control {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+
+          .quantity-btn {
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #d9d9d9;
+            transition: all 0.3s ease;
+
+            &.quantity-btn-decrease {
+              &:not(:disabled):hover {
+                color: #1890ff;
+                border-color: #1890ff;
+              }
+
+              &:disabled {
+                color: #d9d9d9;
+                border-color: #d9d9d9;
+                cursor: not-allowed;
+              }
+            }
+
+            &.quantity-btn-increase {
+              background: #1890ff;
+              border-color: #1890ff;
+              color: #ffffff;
+
+              &:hover {
+                background: #40a9ff;
+                border-color: #40a9ff;
+              }
+            }
+          }
+
+          .quantity-number {
+            min-width: 24px;
+            text-align: center;
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a1a1a;
+          }
+        }
+
+        // 商品总价
+        .cart-item-total {
+          font-size: 16px;
+          font-weight: 700;
+          color: #1890ff;
+          text-align: center;
+          min-width: 80px;
+        }
       }
     }
 
-    .cart-total {
+    // 总计区域
+    .cart-total-section {
       display: flex;
       justify-content: flex-end;
       align-items: center;
-      gap: 20px;
-      padding: 24px 0;
-      border-top: 2px solid rgba(59, 130, 246, 0.2);
-      margin-top: 20px;
-      background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
+      padding: 16px 20px;
+      margin-top: 8px;
+      background: linear-gradient(135deg, #f0f5ff 0%, #e6f7ff 100%);
       border-radius: 12px;
-      padding: 20px;
+      border: 1px solid #adc6ff;
 
-      .total-text {
-        font-size: 18px;
+      .total-label {
+        font-size: 16px;
         font-weight: 600;
-        color: #334155;
+        color: #333333;
+        margin-right: 12px;
       }
 
-      .total-price {
-        font-size: 28px;
+      .total-amount {
+        font-size: 20px;
         font-weight: 700;
-        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-      }
-    }
-
-    .cart-item-ingredients {
-      margin: 6px 0;
-
-      .ingredient-tag {
-        font-size: 12px;
-        color: #3b82f6;
-        background: rgba(59, 130, 246, 0.1);
-        padding: 4px 10px;
-        border-radius: 6px;
-        margin-right: 6px;
-        margin-bottom: 4px;
-        display: inline-block;
-        font-weight: 500;
-      }
-    }
-
-    .cart-item-note {
-      margin: 6px 0;
-      position: relative;
-
-      .note-display {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 12px;
-        background: rgba(59, 130, 246, 0.05);
-        border-radius: 8px;
-        min-height: 32px;
-        justify-content: space-between;
-        border: 1px solid rgba(59, 130, 246, 0.1);
-
-        .note-text {
-          font-size: 13px;
-          color: #334155;
-          flex: 1;
-          word-wrap: break-word;
-          word-break: break-all;
-        }
-
-        .note-empty {
-          font-size: 13px;
-          color: #94a3b8;
-          flex: 1;
-        }
-
-        .edit-note-btn {
-          padding: 4px 8px;
-          height: auto;
-          background: rgba(59, 130, 246, 0.1);
-          border-color: rgba(59, 130, 246, 0.2);
-          border-radius: 6px;
-          color: #3b82f6;
-          transition: all 0.3s ease;
-
-          .edit-icon {
-            font-size: 14px;
-          }
-
-          &:hover {
-            background: rgba(59, 130, 246, 0.2);
-            border-color: rgba(59, 130, 246, 0.3);
-          }
-        }
-      }
-
-      .note-edit {
-        .el-input__inner {
-          font-size: 13px;
-        }
-
-        .note-actions {
-          display: flex;
-          gap: 8px;
-          margin-top: 8px;
-
-          .el-button {
-            border-radius: 6px;
-          }
-        }
+        color: #1890ff;
       }
     }
   }
@@ -2237,8 +2399,8 @@ watch(activeMenuTab, (newTab, oldTab) => {
   position: fixed;
   right: 24px;
   bottom: 100px;
-  width: 96px;
-  height: 96px;
+  width: 88px;
+  height: 88px;
   background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   border-radius: 50%;
   display: flex;
@@ -2248,45 +2410,125 @@ watch(activeMenuTab, (newTab, oldTab) => {
   cursor: grab;
   box-shadow: 0 8px 32px rgba(59, 130, 246, 0.5);
   color: white;
-  font-size: 12px;
-  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: box-shadow 0.3s ease, transform 0.2s ease;
   z-index: 9999;
   border: 3px solid rgba(255, 255, 255, 0.3);
   backdrop-filter: blur(10px);
+  user-select: none;
+  touch-action: none;
+  will-change: transform, left, top;
+  padding: 8px;
+  box-sizing: border-box;
 
   &:active {
     cursor: grabbing;
-    transform: scale(1.08);
-    box-shadow: 0 12px 40px rgba(59, 130, 246, 0.6);
   }
 
-  &:hover {
-    transform: translateY(-6px);
+  &:hover:not(:active) {
+    transform: translateY(-4px);
     box-shadow: 0 12px 40px rgba(59, 130, 246, 0.5);
   }
 
-  .cart-icon {
-    margin-bottom: 4px;
+  // 购物车图标容器
+  .cart-icon-wrapper {
     position: relative;
-    color: #ffffff;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 4px;
+    pointer-events: none;
+
+    .cart-icon {
+      color: #ffffff;
+      font-size: 28px;
+    }
   }
 
+  // 徽章样式
   .cart-badge {
     position: absolute;
-    top: -6px;
-    right: -6px;
+    top: -4px;
+    right: -8px;
+    transform: translate(50%, -50%);
+    pointer-events: none;
+    z-index: 1;
 
     :deep(.el-badge__content) {
       background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
       border: 2px solid #ffffff;
       font-weight: 700;
+      font-size: 11px;
+      min-width: 18px;
+      height: 18px;
+      line-height: 18px;
+      padding: 0 5px;
+      box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
     }
   }
 
+  // 金额显示
   .cart-amount {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    color: #ffffff;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    pointer-events: none;
+    white-space: nowrap;
+    line-height: 1.2;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // 当金额过长时调整字体
+  .cart-amount.long {
+    font-size: 10px;
+  }
+}
+
+// 对话框footer按钮样式
+:deep(.el-dialog__footer) {
+  .dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+
+    .cancel-btn {
+      min-width: 80px;
+      height: 38px;
+      border: 1px solid #d9d9d9;
+      color: #666;
+      background: #ffffff;
+      border-radius: 8px;
+      font-weight: 500;
+      transition: all 0.3s ease;
+
+      &:hover {
+        color: #3b82f6;
+        border-color: #3b82f6;
+        background: rgba(59, 130, 246, 0.05);
+        transform: translateY(-1px);
+      }
+    }
+
+    .submit-btn {
+      min-width: 100px;
+      height: 38px;
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+
+      &:hover {
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+      }
+    }
   }
 }
 </style>
