@@ -50,7 +50,18 @@ const loadOrders = () => {
       .get(API_CONFIG.baseURL + API_CONFIG.order.list + userId)
       .then((response) => {
         if (response.data.data) {
-          orders.value = response.data.data
+          // 转换后端Order实体到前端期望的格式
+          orders.value = response.data.data.map(order => ({
+            id: order.id,
+            orderNo: order.id, // 使用订单ID作为订单号
+            status: orderStatusToText(order.status), // 转换状态码为文本
+            merchant: `商家${order.merchantId}`, // TODO: 从商家API获取商家名称
+            total: order.totalAmount, // totalAmount -> total
+            time: formatTime(order.createTime), // 格式化时间
+            items: order.items || [], // TODO: 从订单详情获取商品列表
+            // 保留原始数据用于详情查看
+            _raw: order
+          }))
         }
       })
       .catch((error) => {
@@ -147,6 +158,32 @@ const statusTagTypeMap = {
   delivered: 'success',
   completed: 'success',  // 已完成订单使用绿色更合理
   cancelled: 'danger'
+}
+
+// 将后端状态码转换为前端状态文本
+const orderStatusToText = (statusCode) => {
+  const statusMap = {
+    0: 'pending',        // 待支付
+    1: 'processing',    // 待接单
+    2: 'processing',    // 备菜中
+    3: 'processing',    // 烹饪中
+    4: 'processing',    // 待上菜
+    5: 'delivered',      // 已送达
+    6: 'cancelled'       // 已取消
+  }
+  return statusMap[statusCode] || 'pending'
+}
+
+// 格式化时间
+const formatTime = (time) => {
+  if (!time) return ''
+  const date = new Date(time)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  return `${year}-${month}-${day} ${hours}:${minutes}`
 }
 
 // WebSocket实例

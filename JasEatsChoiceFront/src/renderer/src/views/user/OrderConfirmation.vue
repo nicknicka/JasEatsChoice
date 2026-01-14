@@ -140,15 +140,15 @@
           <div class="payment-details">
             <div class="detail-row">
               <span class="detail-label">商品总额</span>
-              <span class="detail-value">¥{{ orderInfo.totalUnpaid.toFixed(2) }}</span>
+              <span class="detail-value">¥{{ (orderInfo.originalTotal || orderInfo.totalUnpaid).toFixed(2) }}</span>
             </div>
             <div class="detail-row">
               <span class="detail-label">配送费</span>
-              <span class="detail-value">¥{{ merchantInfo.deliveryFee }}</span>
+              <span class="detail-value">¥{{ merchantInfo.deliveryFee.toFixed(2) }}</span>
             </div>
             <div class="detail-row" v-if="discountApplied">
               <span class="detail-label">优惠减免</span>
-              <span class="detail-value discount">-¥{{ discountAmount }}</span>
+              <span class="detail-value discount">-¥{{ discountAmount.toFixed(2) }}</span>
             </div>
 
             <el-divider></el-divider>
@@ -162,9 +162,17 @@
           <!-- 优惠券 -->
           <div class="coupon-section" v-if="discounts.length > 0">
             <div class="coupon-item" v-for="discount in discounts" :key="discount.id">
-              <div class="coupon-info">
-                <el-icon color="#e6a23c"><Ticket /></el-icon>
-                <span class="coupon-name">{{ discount.name }}</span>
+              <div class="coupon-info-main">
+                <div class="coupon-left">
+                  <el-icon color="#e6a23c"><Ticket /></el-icon>
+                  <div class="coupon-details">
+                    <span class="coupon-name">{{ discount.name }}</span>
+                    <span class="coupon-desc" v-if="discount.minAmount > 0">
+                      满{{ discount.minAmount }}元可用
+                    </span>
+                  </div>
+                </div>
+                <div class="coupon-amount">¥{{ discount.amount.toFixed(2) }}</div>
               </div>
               <el-button
                 v-if="!discount.used"
@@ -348,6 +356,7 @@ import OrderItemList from './components/OrderItemList.vue'
 import walletApi from '../../api/wallet'
 import paymentApi from '../../api/payment'
 import orderApi from '../../api/order'
+// import couponApi from '../../api/coupon' // TODO: 后端优惠券API待实现，暂时注释
 import { useAuthStore } from '../../store/authStore'
 
 const router = useRouter()
@@ -439,20 +448,25 @@ const submitting = ref(false)
 // 平台币余额 - 从后端获取
 const platformBalance = ref(0.0)
 
-// 初始化余额
+// 初始化余额和优惠券
 onMounted(async () => {
   try {
     const userId = parseInt(authStore.userId || '0', 10)
     if (userId > 0) {
-      const response = await walletApi.getBalance(userId)
-      console.log('余额获取响应:', response)
-      if (response.code === '200') {
-        platformBalance.value = response.data || 0.0
+      // 获取余额
+      const balanceResponse = await walletApi.getBalance(userId)
+      console.log('余额获取响应:', balanceResponse)
+      if (balanceResponse.code === '200') {
+        platformBalance.value = balanceResponse.data || 0.0
       }
+
+      // TODO: 获取用户优惠券 - 后端API待实现
+      // 暂时使用默认优惠券数据
+      console.log('使用默认优惠券数据，后端优惠券API待实现')
     }
   } catch (error) {
-    console.error('获取余额失败:', error)
-    ElMessage.warning('获取余额失败，请刷新页面重试')
+    console.error('初始化失败:', error)
+    ElMessage.warning('初始化失败，请刷新页面重试')
   }
 })
 
@@ -484,9 +498,10 @@ const customShares = ref([])
 // 优惠券
 const discounts = ref([
   {
-    id: 1,
+    id: '1',
     name: '新用户专享50元优惠券',
     amount: 50.0,
+    minAmount: 100, // 满100元可用
     available: true,
     used: false
   }
@@ -577,6 +592,15 @@ const useDiscount = () => {
   const discount = discounts.value[0]
   if (!discount || !discount.available || discount.used) return
 
+  // 检查最低消费限制（如果有）
+  const minAmount = discount.minAmount || 0
+  const currentAmount = orderInfo.value.totalUnpaid + merchantInfo.value.deliveryFee
+
+  if (currentAmount < minAmount) {
+    ElMessage.warning(`此优惠券需满${minAmount}元可用，当前订单金额为¥${currentAmount.toFixed(2)}`)
+    return
+  }
+
   selectedDiscount.value = discount
   discount.used = true
 
@@ -587,7 +611,15 @@ const useDiscount = () => {
   const discountAmount = Math.min(discount.amount, orderInfo.value.totalUnpaid)
   orderInfo.value.totalUnpaid -= discountAmount
 
-  ElMessage.success('优惠已使用')
+  console.log('优惠券使用成功:', {
+    优惠券ID: discount.id,
+    优惠券名称: discount.name,
+    优惠金额: discountAmount,
+    原始总额: orderInfo.value.originalTotal,
+    优惠后总额: orderInfo.value.totalUnpaid
+  })
+
+  ElMessage.success(`优惠已使用，减免¥${discountAmount.toFixed(2)}`)
 }
 
 // 取消使用优惠
@@ -732,7 +764,9 @@ const confirmOrder = async () => {
           userId: String(userId),
           merchantId: String(merchantId.value),
           totalAmount: finalAmount.value,
-          items: orderInfo.value.unpaidItems
+          items: orderInfo.value.unpaidItems,
+          couponId: selectedDiscount.value?.id || null,
+          couponAmount: discountAmount.value || 0
         })
 
         // 先创建订单
@@ -741,7 +775,9 @@ const confirmOrder = async () => {
           userId: String(userId),
           merchantId: String(merchantId.value),
           totalAmount: finalAmount.value,
-          status: 0 // 0-待支付
+          status: 0, // 0-待支付
+          address: pendingOrder.address || '商家地址', // TODO: 从地址簿选择或使用用户默认地址
+          remark: selectedDiscount.value ? `使用优惠券: ${selectedDiscount.value.name}` : null
         })
 
         console.log('创建订单响应:', createOrderResponse)
@@ -1108,26 +1144,63 @@ const confirmOrder = async () => {
 
       .coupon-item {
         display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 12px;
-        background: #fff9e6;
+        flex-direction: column;
+        gap: 12px;
+        padding: 16px;
+        background: linear-gradient(135deg, #fff9e6 0%, #fff3cd 100%);
         border: 1px solid #ffe58f;
-        border-radius: 6px;
-        margin-bottom: 8px;
+        border-radius: 12px;
+        margin-bottom: 12px;
+        transition: all 0.3s ease;
 
         &:last-child {
           margin-bottom: 0;
         }
 
-        .coupon-info {
-          display: flex;
-          align-items: center;
-          gap: 8px;
+        &:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(230, 162, 60, 0.2);
+        }
 
-          .coupon-name {
-            font-size: 14px;
-            color: #856404;
+        .coupon-info-main {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 12px;
+
+          .coupon-left {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+
+            .el-icon {
+              font-size: 24px;
+            }
+
+            .coupon-details {
+              display: flex;
+              flex-direction: column;
+              gap: 4px;
+
+              .coupon-name {
+                font-size: 15px;
+                font-weight: 600;
+                color: #856404;
+              }
+
+              .coupon-desc {
+                font-size: 12px;
+                color: #a67c00;
+              }
+            }
+          }
+
+          .coupon-amount {
+            font-size: 20px;
+            font-weight: 700;
+            color: #e6a23c;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
           }
         }
       }

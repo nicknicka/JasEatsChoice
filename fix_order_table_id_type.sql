@@ -1,7 +1,7 @@
 -- 修复 t_order 表的 ID 字段类型
 -- 将 INT 类型改为 VARCHAR 以支持字符串类型的 ID（如 'JD1768309113785'）
 
-USE jaseatschoice;
+USE jia_shi_yi_xuan;
 
 -- 修改订单表 t_order 的 ID 字段类型
 ALTER TABLE t_order

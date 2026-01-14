@@ -3,7 +3,9 @@ package com.xx.jaseatschoicejava.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.xx.jaseatschoicejava.common.ResponseResult;
 import com.xx.jaseatschoicejava.entity.Order;
+import com.xx.jaseatschoicejava.entity.OrderDish;
 import com.xx.jaseatschoicejava.entity.PaymentRecord;
+import com.xx.jaseatschoicejava.service.OrderDishService;
 import com.xx.jaseatschoicejava.service.OrderService;
 import com.xx.jaseatschoicejava.service.PaymentService;
 import com.xx.jaseatschoicejava.service.WalletService;
@@ -30,6 +32,7 @@ public class OrderController {
     private final OrderService orderService;
     private final PaymentService paymentService;
     private final WalletService walletService;
+    private final OrderDishService orderDishService;
 
     /**
      * 创建订单
@@ -67,6 +70,17 @@ public class OrderController {
             return ResponseResult.success(order);
         }
         return ResponseResult.fail("404", "订单不存在");
+    }
+
+    /**
+     * 获取订单的菜品列表
+     */
+    @GetMapping("/{orderId}/dishes")
+    public ResponseResult<?> getOrderDishes(@PathVariable String orderId) {
+        LambdaQueryWrapper<OrderDish> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(OrderDish::getOrderId, orderId);
+        List<OrderDish> orderDishes = orderDishService.list(queryWrapper);
+        return ResponseResult.success(orderDishes);
     }
 
     /**

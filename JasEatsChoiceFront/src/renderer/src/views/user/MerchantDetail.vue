@@ -6,90 +6,15 @@
         <common-back-button />
       </div>
 
-      <!-- 商家头部信息 -->
-      <div class="merchant-header">
-        <div class="header-content">
-          <div class="merchant-avatar">
-            <img
-              v-if="merchant.image && merchant.image !== '未知'"
-              :src="merchant.image"
-              :alt="merchant.name"
-              class="avatar-img"
-            />
-            <div v-else class="avatar-placeholder">
-              <el-icon :size="40"><Shop /></el-icon>
-            </div>
-          </div>
-          <div class="merchant-info-section">
-            <div class="merchant-name-row">
-              <h1 class="merchant-name-main">{{ merchant.name }}</h1>
-              <el-button type="text" size="small" class="favorite-button" @click="toggleFavorite">
-                <el-icon class="favorite-icon">
-                  <component :is="isFavorite ? 'StarFilled' : 'Star'" />
-                </el-icon>
-                {{ isFavorite ? '已收藏' : '收藏' }}
-              </el-button>
-            </div>
-            <div class="merchant-meta-tags">
-              <el-tag v-if="merchant.type" type="primary" size="small" class="meta-tag">
-                {{ merchant.type }}
-              </el-tag>
-              <el-tag
-                v-for="tag in merchant.tags?.slice(0, 3)"
-                :key="tag"
-                size="small"
-                class="meta-tag"
-              >
-                {{ tag }}
-              </el-tag>
-            </div>
-          </div>
-        </div>
-      </div>
+      <!-- 使用子组件：商家头部信息 -->
+      <merchant-header
+        :merchant="merchant"
+        :is-favorite="isFavorite"
+        @toggle-favorite="toggleFavorite"
+      />
 
-      <!-- 商家基本信息卡片 -->
-      <div class="merchant-basic-info">
-        <div class="info-grid">
-          <div class="info-item">
-            <div class="info-icon rating-icon">
-              <el-icon><StarFilled /></el-icon>
-            </div>
-            <div class="info-content">
-              <div class="info-label">评分</div>
-              <div class="info-value">
-                {{ merchant.rating ? merchant.rating.toFixed(1) : '暂无评价' }}
-              </div>
-            </div>
-          </div>
-          <div class="info-item">
-            <div class="info-icon location-icon">
-              <el-icon><Location /></el-icon>
-            </div>
-            <div class="info-content">
-              <div class="info-label">距离</div>
-              <div class="info-value">{{ merchant.distance || '未知距离' }}</div>
-            </div>
-          </div>
-          <div class="info-item">
-            <div class="info-icon time-icon">
-              <el-icon><Clock /></el-icon>
-            </div>
-            <div class="info-content">
-              <div class="info-label">营业时间</div>
-              <div class="info-value">11:00-22:00</div>
-            </div>
-          </div>
-          <div class="info-item">
-            <div class="info-icon price-icon">
-              <el-icon><Coin /></el-icon>
-            </div>
-            <div class="info-content">
-              <div class="info-label">人均消费</div>
-              <div class="info-value">¥88</div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <!-- 使用子组件：商家基本信息 -->
+      <merchant-basic-info :merchant="merchant" />
 
       <!-- 菜单类型切换 -->
       <div class="menu-tabs">
@@ -124,163 +49,29 @@
         >
           <h3 class="category-title">{{ getCategoryEmoji(category) }} {{ category }}</h3>
           <div class="dish-grid">
-            <div
-              class="dish-card"
+            <dish-card
               v-for="item in menuItems.filter(
                 (item) => item.menuId === activeMenuTab && item.category === category
               )"
               :key="item.id"
-            >
-              <div class="dish-image">{{ getCategoryEmoji(category) }}</div>
-              <div class="dish-name">{{ item.name }}</div>
-              <div class="dish-price">¥{{ calculateRealTimePrice(item).toFixed(2) }}</div>
-              <div class="dish-desc">{{ item.description }}</div>
-
-              <!-- 食材组成 -->
-              <div class="dish-ingredients">
-                <div class="ingredient-section" v-if="item.requiredIngredients && item.requiredIngredients.length > 0">
-                  <span class="ingredient-title">必选食材:</span>
-                  <div class="ingredient-list">
-                    <span
-                      class="ingredient-item"
-                      v-for="ingredient in item.requiredIngredients"
-                      :key="ingredient"
-                      >{{ ingredient }}</span
-                    >
-                  </div>
-                </div>
-
-                <div class="ingredient-section" v-if="item.optionalIngredients && item.optionalIngredients.length > 0">
-                  <span class="ingredient-title">可选食材:</span>
-                  <div class="ingredient-list">
-                    <el-checkbox
-                      v-for="ingredient in item.optionalIngredients"
-                      :key="ingredient.id || ingredient.name"
-                      v-model="ingredient.selected"
-                      class="ingredient-checkbox"
-                    >
-                      {{ ingredient.name }}
-                      <span class="ingredient-price" v-if="ingredient.price">(+¥{{ ingredient.price.toFixed(2) }})</span>
-                    </el-checkbox>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 数量选择 -->
-              <div class="dish-quantity">
-                <el-input-number
-                  v-model="item.quantity"
-                  :min="1"
-                  :max="10"
-                  label="数量"
-                  style="width: 100%"
-                />
-              </div>
-
-              <el-button type="primary" size="small" @click="addMenuItem(item)" style="width: 100%">
-                {{ viewMode === 'order' ? '立即购买' : '加入购物车' }}
-              </el-button>
-            </div>
+              :dish="item"
+              :category-emoji="getCategoryEmoji(category)"
+              :view-mode="viewMode"
+              @add-to-cart="addMenuItem"
+            />
           </div>
         </div>
 
         <!-- 用户评价 -->
-        <div v-if="activeMenuTab === 'comments'" class="comments-section">
-          <div class="comments-header">
-            <h3 class="comments-title">用户评价</h3>
-            <div class="comments-stats">
-              <div class="average-rating">
-                <div class="rating-number">4.7</div>
-                <div class="rating-stars">
-                  <el-rate :model-value="4.7" :disabled="true" size="small" show-score />
-                </div>
-              </div>
-              <div class="total-comments">共 {{ comments.length }} 条评价</div>
-            </div>
-          </div>
-
+        <div v-if="activeMenuTab === 'comments'">
           <!-- 商家没有菜单的提示 -->
           <div v-if="!hasMenus" class="no-menus-notice">
             <div class="notice-icon">📋</div>
             <p class="notice-text">当前商家还没有上架菜单</p>
           </div>
 
-          <div class="comments-list">
-            <div class="comment-card" v-for="comment in comments" :key="comment.id">
-              <div class="comment-main">
-                <div class="comment-avatar">
-                  <el-icon :size="24"><User /></el-icon>
-                </div>
-                <div class="comment-body">
-                  <div class="comment-header">
-                    <div class="comment-user-info">
-                      <span class="user-name">{{ comment.userName }}</span>
-                      <el-tag size="small" class="user-badge">VIP会员</el-tag>
-                    </div>
-                    <span class="comment-date">{{ comment.date }}</span>
-                  </div>
-                  <div class="comment-rating">
-                    <el-rate v-model="comment.rating" :disabled="true" size="small" />
-                  </div>
-                  <div class="comment-content">
-                    {{ comment.comment }}
-                  </div>
-
-                  <!-- 展开/折叠回复按钮 -->
-                  <div v-if="comment.replies && comment.replies.length > 0" class="reply-toggle">
-                    <el-button
-                      text
-                      size="small"
-                      @click="comment.expandReplies = !comment.expandReplies"
-                      class="toggle-button"
-                    >
-                      <el-icon class="toggle-icon">
-                        <component :is="comment.expandReplies ? 'ArrowUp' : 'ArrowDown'" />
-                      </el-icon>
-                      {{ comment.expandReplies ? '收起回复' : `查看回复 (${comment.replies.length})` }}
-                    </el-button>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 回复列表 -->
-              <div v-if="comment.expandReplies && comment.replies.length > 0" class="replies-wrapper">
-                <div class="replies-list">
-                  <div
-                    class="reply-card"
-                    v-for="reply in comment.replies"
-                    :key="reply.id"
-                    :class="{ 'merchant-reply': reply.type === 'merchant' }"
-                  >
-                    <div class="reply-avatar">
-                      <el-icon :size="20">
-                        <component :is="reply.type === 'merchant' ? 'Shop' : 'User'" />
-                      </el-icon>
-                    </div>
-                    <div class="reply-body">
-                      <div class="reply-header">
-                        <div class="reply-user-info">
-                          <span class="reply-username">{{ reply.userName }}</span>
-                          <el-tag
-                            v-if="reply.type === 'merchant'"
-                            size="small"
-                            type="success"
-                            class="merchant-badge"
-                          >
-                            商家
-                          </el-tag>
-                        </div>
-                        <span class="reply-date">{{ reply.date }}</span>
-                      </div>
-                      <div class="reply-content">
-                        {{ reply.comment }}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <!-- 使用子组件：评价区域 -->
+          <comments-section :comments="comments" />
         </div>
       </div>
 
@@ -306,144 +97,13 @@
       </div>
     </el-card>
 
-    <!-- 购物车弹窗 -->
-    <el-dialog
+    <!-- 使用子组件：购物车弹窗 -->
+    <shopping-cart-dialog
       v-model="cartVisible"
-      title="我的购物车"
-      width="500px"
-      @close="closeCart"
-      :lock-scroll="false"
-    >
-      <div class="cart-content">
-        <div v-if="cartItems.length === 0" class="empty-cart">
-          <div class="empty-cart-icon">
-            <el-icon :size="64"><ShoppingCart /></el-icon>
-          </div>
-          <div class="empty-cart-text">购物车是空的</div>
-        </div>
-        <div v-else class="cart-items-list">
-          <div class="cart-item-card" v-for="(item, index) in cartItems" :key="item.id">
-            <!-- 商品信息区(左侧) -->
-            <div class="cart-item-left">
-              <div class="cart-item-name">{{ item.name }}</div>
-
-              <!-- 单价 -->
-              <div class="cart-item-price">¥{{ item.price.toFixed(2) }}</div>
-
-              <!-- 备注区域 -->
-              <div class="cart-item-note">
-                <div class="note-display" v-if="!item.isEditingNote">
-                  <div class="note-content-wrapper">
-                    <span v-if="item.note" class="note-text">{{ item.note }}</span>
-                    <span v-else class="note-empty">暂无备注</span>
-                  </div>
-                  <el-button
-                    size="small"
-                    class="edit-note-btn"
-                    @click="item.isEditingNote = true"
-                    text
-                  >
-                    <el-icon class="edit-icon"><Edit /></el-icon>
-                  </el-button>
-                </div>
-                <div class="note-edit" v-else>
-                  <el-input
-                    v-model="item.tempNote"
-                    placeholder="输入备注..."
-                    size="small"
-                    type="textarea"
-                    :rows="2"
-                    resize="none"
-                    autofocus
-                  />
-                  <div class="note-actions">
-                    <el-button size="small" type="primary" @click="confirmNote(item)" class="confirm-note-btn">
-                      确认
-                    </el-button>
-                    <el-button size="small" @click="cancelNote(item)" class="cancel-note-btn">取消</el-button>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 可选食材展示 -->
-              <div
-                v-if="
-                  item.selectedOptionalIngredients && item.selectedOptionalIngredients.length > 0
-                "
-                class="cart-item-ingredients"
-              >
-                <span
-                  v-for="(ingredient, idx) in item.selectedOptionalIngredients"
-                  :key="idx"
-                  class="ingredient-tag"
-                >
-                  +{{ ingredient.name }} (¥{{ ingredient.price.toFixed(2) }})
-                </span>
-              </div>
-            </div>
-
-            <!-- 数量和总价区(右侧) -->
-            <div class="cart-item-right">
-              <!-- 数量调整 -->
-              <div class="quantity-control">
-                <el-button
-                  class="quantity-btn quantity-btn-decrease"
-                  :disabled="item.quantity <= 1"
-                  @click="
-                    () => {
-                      if (item.quantity > 1) {
-                        item.quantity--
-                        item.totalPrice = (item.price + getOptionalPrice(item)) * item.quantity
-                      } else {
-                        cartItems.splice(index, 1)
-                        updateCartStats()
-                      }
-                    }
-                  "
-                  circle
-                  size="small"
-                >
-                  <el-icon><Minus /></el-icon>
-                </el-button>
-                <span class="quantity-number">{{ item.quantity }}</span>
-                <el-button
-                  class="quantity-btn quantity-btn-increase"
-                  @click="
-                    () => {
-                      item.quantity++
-                      item.totalPrice = (item.price + getOptionalPrice(item)) * item.quantity
-                    }
-                  "
-                  circle
-                  size="small"
-                >
-                  <el-icon><Plus /></el-icon>
-                </el-button>
-              </div>
-
-              <!-- 商品总价 -->
-              <div class="cart-item-total">¥{{ item.totalPrice.toFixed(2) }}</div>
-            </div>
-          </div>
-
-          <!-- 总计区域 -->
-          <div class="cart-total-section">
-            <div class="total-label">总计</div>
-            <div class="total-amount">
-              ¥{{ cartItems.reduce((total, item) => total + item.totalPrice, 0).toFixed(2) }}
-            </div>
-          </div>
-        </div>
-      </div>
-      <template #footer>
-        <span class="dialog-footer">
-          <el-button class="cancel-btn" @click="closeCart">取消</el-button>
-          <el-button type="primary" v-if="cartItems.length > 0" @click="submitOrder" class="submit-btn">
-            提交订单
-          </el-button>
-        </span>
-      </template>
-    </el-dialog>
+      :cart-items="cartItems"
+      @update-cart="handleUpdateCart"
+      @submit-order="submitOrder"
+    />
   </div>
 </template>
 
@@ -451,11 +111,18 @@
 import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Star, StarFilled, Location, Clock, Coin, ShoppingCart, Shop, User, ArrowUp, ArrowDown, Edit, Plus, Minus } from '@element-plus/icons-vue'
+import { ShoppingCart } from '@element-plus/icons-vue'
 import axios from 'axios'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
 import { useAuthStore } from '../../store/authStore'
 import { useUserStore } from '../../store/userStore'
+
+// 引入子组件
+import MerchantHeader from './components/MerchantHeader.vue'
+import MerchantBasicInfo from './components/MerchantBasicInfo.vue'
+import DishCard from './components/DishCard.vue'
+import CommentsSection from './components/CommentsSection.vue'
+import ShoppingCartDialog from './components/ShoppingCart.vue'
 
 // 引入API配置
 import { API_CONFIG } from '../../config/index.js'
@@ -541,173 +208,10 @@ const currentMenuCategories = computed(() => {
 })
 
 // 评价数据
-const comments = ref([
-  {
-    id: 1,
-    userName: '张三',
-    rating: 5,
-    comment: '这家店的健康餐特别好吃，食材新鲜，味道不错！',
-    date: '2024-05-20',
-    replies: [
-      {
-        id: 11,
-        type: 'customer',
-        userName: '张三',
-        comment: '追加评论：今天又点了一次，还是一样的好吃！',
-        date: '2024-05-21'
-      },
-      {
-        id: 12,
-        type: 'merchant',
-        userName: 'XX餐厅客服',
-        comment: '感谢您的喜爱和追加评价，我们会继续保持品质！',
-        date: '2024-05-21'
-      }
-    ],
-    expandReplies: false
-  },
-  {
-    id: 2,
-    userName: '李四',
-    rating: 4,
-    comment: '味道很好，配送也很快，下次还会再来！',
-    date: '2024-05-19',
-    replies: [
-      {
-        id: 21,
-        type: 'merchant',
-        userName: 'XX餐厅客服',
-        comment: '感谢您的支持，祝您用餐愉快！',
-        date: '2024-05-19'
-      }
-    ],
-    expandReplies: false
-  },
-  {
-    id: 3,
-    userName: '王五',
-    rating: 3,
-    comment: '价格有点贵，但是味道还可以。',
-    date: '2024-05-18',
-    replies: [],
-    expandReplies: false
-  }
-])
+const comments = ref([])
 
 // 菜单数据
-const menuItems = ref([
-  {
-    id: 1,
-    name: '经典健康套餐',
-    category: 'signature',
-    price: 28.8,
-    description: '包含新鲜蔬菜沙拉、烤鸡胸肉和糙米饭',
-    requiredIngredients: ['新鲜蔬菜沙拉', '烤鸡胸肉', '糙米饭'],
-    optionalIngredients: [
-      { id: 101, name: '额外鸡胸肉', price: 8.0, selected: false },
-      { id: 102, name: '煎蛋', price: 2.5, selected: false },
-      { id: 103, name: '额外蔬菜', price: 3.0, selected: false }
-    ]
-  },
-  {
-    id: 2,
-    name: '高蛋白健身餐',
-    category: 'signature',
-    price: 35.0,
-    description: '适合增肌人群的高蛋白套餐',
-    requiredIngredients: ['烤牛肉', '煮鸡蛋', '西兰花', '糙米饭'],
-    optionalIngredients: [
-      { id: 201, name: '额外牛肉', price: 12.0 },
-      { id: 202, name: '蛋白粉', price: 5.0 }
-    ]
-  },
-  {
-    id: 3,
-    name: '素食套餐',
-    category: 'signature',
-    price: 22.5,
-    description: '全素食，健康无负担',
-    requiredIngredients: ['素食沙拉', '烤蔬菜', '藜麦饭'],
-    optionalIngredients: [
-      { id: 301, name: '额外素食沙拉', price: 4.0 },
-      { id: 302, name: '坚果', price: 3.5 }
-    ]
-  },
-  // 新增饮品数据
-  {
-    id: 4,
-    category: 'drink',
-    name: '可乐',
-    price: 5.0,
-    description: '碳酸饮料',
-    requiredIngredients: ['可乐'],
-    optionalIngredients: [
-      { id: 401, name: '加冰', price: 0.0 },
-      { id: 402, name: '加柠檬', price: 0.5 }
-    ]
-  },
-  {
-    id: 5,
-    category: 'drink',
-    name: '雪碧',
-    price: 6.0,
-    description: '碳酸饮料',
-    requiredIngredients: ['雪碧'],
-    optionalIngredients: [
-      { id: 501, name: '加冰', price: 0.0 },
-      { id: 502, name: '加薄荷', price: 0.5 }
-    ]
-  },
-  {
-    id: 6,
-    category: 'drink',
-    name: '酸梅汤',
-    price: 7.0,
-    description: '传统饮品',
-    requiredIngredients: ['酸梅汤'],
-    optionalIngredients: [
-      { id: 601, name: '加冰', price: 0.0 },
-      { id: 602, name: '加桂花', price: 0.5 }
-    ]
-  },
-  // 新增主食数据
-  {
-    id: 7,
-    category: 'staple',
-    name: '米饭',
-    price: 2.0,
-    description: '主食',
-    requiredIngredients: ['米饭'],
-    optionalIngredients: [
-      { id: 701, name: '加量', price: 1.0 },
-      { id: 702, name: '小米饭', price: 0.5 }
-    ]
-  },
-  {
-    id: 8,
-    category: 'staple',
-    name: '面条',
-    price: 3.0,
-    description: '主食',
-    requiredIngredients: ['面条'],
-    optionalIngredients: [
-      { id: 801, name: '加量', price: 1.5 },
-      { id: 802, name: '鸡蛋面', price: 1.0 }
-    ]
-  },
-  {
-    id: 9,
-    category: 'staple',
-    name: '烧饼',
-    price: 1.5,
-    description: '主食',
-    requiredIngredients: ['烧饼'],
-    optionalIngredients: [
-      { id: 901, name: '夹肉', price: 2.0 },
-      { id: 902, name: '夹鸡蛋', price: 1.0 }
-    ]
-  }
-])
+const menuItems = ref([])
 
 // 组件挂载时加载商家信息和恢复购物车
 onMounted(() => {
@@ -869,10 +373,8 @@ const loadMerchantDetails = async (merchantId) => {
     }
   } catch (error) {
     console.error('加载商家详情和菜单失败:', error)
-    // 失败时使用模拟数据作为备份
-    ElMessage.warning('加载商家详情失败，将使用模拟数据')
-    // 设置hasMenus为true，因为模拟数据有菜单
-    hasMenus.value = true
+    ElMessage.error('加载商家详情失败，请稍后重试')
+    hasMenus.value = false
   }
 }
 
@@ -1116,26 +618,6 @@ const updateCart = (item) => {
   updateCartStats()
 }
 
-// 初始化数量和可选食材选中状态（仅用于模拟数据）
-menuItems.value.forEach((item) => {
-  item.quantity = 1
-  if (item.optionalIngredients && Array.isArray(item.optionalIngredients)) {
-    item.optionalIngredients = item.optionalIngredients.map((ingredient) => {
-      if (typeof ingredient === 'string') {
-        return {
-          name: ingredient,
-          price: 0,
-          selected: false
-        }
-      }
-      return {
-        ...ingredient,
-        selected: false
-      }
-    })
-  }
-})
-
 // 计算实时价格函数
 const calculateRealTimePrice = (item) => {
   if (!item) {
@@ -1212,27 +694,18 @@ const closeCart = () => {
   cartVisible.value = false
 }
 
-// 确认添加备注
-const confirmNote = (item) => {
-  item.note = item.tempNote
-  item.isEditingNote = false // Exit edit mode
-  ElMessage.success('备注已保存')
-}
-
-// 取消添加备注
-const cancelNote = (item) => {
-  item.tempNote = item.note // Reset temp note to current note
-  item.isEditingNote = false // Exit edit mode
-  ElMessage.info('已取消备注修改')
-}
-
-// 计算可选食材总价
-const getOptionalPrice = (item) => {
-  if (!item.selectedOptionalIngredients || item.selectedOptionalIngredients.length === 0) {
-    return 0
+// 处理购物车更新
+const handleUpdateCart = ({ action, index }) => {
+  if (action === 'remove') {
+    // 移除商品
+    cartItems.value.splice(index, 1)
+  } else if (action === 'update') {
+    // 更新商品
+    // 商品已经在 ShoppingCart 组件中更新
   }
-  return item.selectedOptionalIngredients.reduce((sum, ingredient) => sum + ingredient.price, 0)
+  updateCartStats()
 }
+
 
 // 跳转到订单确认页
 const goToOrderConfirmation = () => {
@@ -1337,201 +810,6 @@ watch(activeMenuTab, (newTab, oldTab) => {
       }
     }
 
-    // 商家头部信息
-    .merchant-header {
-      padding: 20px 24px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      position: relative;
-      overflow: hidden;
-
-      &::before {
-        content: '';
-        position: absolute;
-        top: -50%;
-        right: -10%;
-        width: 400px;
-        height: 400px;
-        background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
-        border-radius: 50%;
-      }
-
-      .header-content {
-        display: flex;
-        gap: 20px;
-        align-items: center;
-        position: relative;
-        z-index: 1;
-
-        .merchant-avatar {
-          flex-shrink: 0;
-          width: 80px;
-          height: 80px;
-          border-radius: 50%;
-          overflow: hidden;
-          border: 3px solid rgba(255, 255, 255, 0.3);
-          background: rgba(255, 255, 255, 0.1);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-
-          .avatar-img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-          }
-
-          .avatar-placeholder {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%);
-            color: #ffffff;
-          }
-        }
-
-        .merchant-info-section {
-          flex: 1;
-          min-width: 0;
-
-          .merchant-name-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 16px;
-            margin-bottom: 12px;
-
-            .merchant-name-main {
-              font-size: 24px;
-              font-weight: 700;
-              color: #ffffff;
-              margin: 0;
-              letter-spacing: -0.5px;
-              text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-            }
-
-            .favorite-button {
-              color: rgba(255, 255, 255, 0.9);
-              background: rgba(255, 255, 255, 0.15);
-              border: 1px solid rgba(255, 255, 255, 0.2);
-              padding: 8px 16px;
-              border-radius: 20px;
-              backdrop-filter: blur(10px);
-              transition: all 0.3s ease;
-              font-weight: 500;
-
-              .favorite-icon {
-                margin-right: 4px;
-                font-size: 16px;
-              }
-
-              &:hover {
-                background: rgba(255, 255, 255, 0.25);
-                border-color: rgba(255, 255, 255, 0.3);
-                color: #ffffff;
-                transform: translateY(-1px);
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-              }
-            }
-          }
-
-          .merchant-meta-tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-
-            .meta-tag {
-              background: rgba(255, 255, 255, 0.2);
-              border: 1px solid rgba(255, 255, 255, 0.3);
-              color: #ffffff;
-              backdrop-filter: blur(10px);
-            }
-          }
-        }
-      }
-    }
-
-    // 商家基本信息
-    .merchant-basic-info {
-      padding: 24px;
-      background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
-      border-bottom: 1px solid rgba(59, 130, 246, 0.1);
-
-      .info-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-        gap: 16px;
-
-        .info-item {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 16px;
-          background: #ffffff;
-          border-radius: 12px;
-          box-shadow: 0 2px 8px rgba(59, 130, 246, 0.08);
-          transition: all 0.3s ease;
-
-          &:hover {
-            box-shadow: 0 4px 16px rgba(59, 130, 246, 0.15);
-            transform: translateY(-2px);
-          }
-
-          .info-icon {
-            width: 48px;
-            height: 48px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 12px;
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-            flex-shrink: 0;
-            color: #ffffff;
-            font-size: 20px;
-
-            &.rating-icon {
-              background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            }
-
-            &.location-icon {
-              background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            }
-
-            &.time-icon {
-              background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-            }
-
-            &.price-icon {
-              background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
-            }
-          }
-
-          .info-content {
-            flex: 1;
-            min-width: 0;
-
-            .info-label {
-              font-size: 12px;
-              color: #64748b;
-              margin-bottom: 4px;
-              font-weight: 500;
-            }
-
-            .info-value {
-              font-size: 15px;
-              color: #1e293b;
-              font-weight: 600;
-              white-space: nowrap;
-              overflow: hidden;
-              text-overflow: ellipsis;
-            }
-          }
-        }
-      }
-    }
-
     // 菜单类型切换
     .menu-tabs {
       padding: 0 24px;
@@ -1607,480 +885,27 @@ watch(activeMenuTab, (newTab, oldTab) => {
           grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
           gap: 24px;
         }
-
-        // 菜品卡片
-        .dish-card {
-          border: 1px solid rgba(59, 130, 246, 0.1);
-          border-radius: 16px;
-          padding: 24px;
-          display: flex;
-          flex-direction: column;
-          background: linear-gradient(to bottom, #ffffff 0%, #f8fafc 100%);
-          box-shadow: 0 2px 12px rgba(59, 130, 246, 0.08);
-          transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-          position: relative;
-          overflow: hidden;
-
-          &::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, #3b82f6 0%, #06b6d4 100%);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-          }
-
-          &:hover {
-            box-shadow: 0 12px 40px rgba(59, 130, 246, 0.18);
-            transform: translateY(-6px);
-            border-color: rgba(59, 130, 246, 0.2);
-
-            &::before {
-              opacity: 1;
-            }
-          }
-
-          .dish-image {
-            font-size: 64px;
-            margin-bottom: 16px;
-            text-align: center;
-            filter: drop-shadow(0 4px 8px rgba(59, 130, 246, 0.15));
-          }
-
-          .dish-name {
-            font-size: 18px;
-            font-weight: 700;
-            color: #1e293b;
-            text-align: center;
-            line-height: 1.4;
-            margin-bottom: 8px;
-          }
-
-          .dish-price {
-            font-size: 24px;
-            color: #f59e0b;
-            font-weight: 700;
-            text-align: center;
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 12px;
-          }
-
-          .dish-desc {
-            font-size: 13px;
-            color: #64748b;
-            text-align: center;
-            margin-bottom: 16px;
-            line-height: 1.6;
-            padding: 0 8px;
-          }
-
-          // 食材组成
-          .dish-ingredients {
-            width: 100%;
-            margin: 12px 0;
-            padding: 16px;
-            background: rgba(59, 130, 246, 0.03);
-            border-radius: 12px;
-            border: 1px solid rgba(59, 130, 246, 0.08);
-
-            .ingredient-section {
-              margin-bottom: 16px;
-
-              &:last-child {
-                margin-bottom: 0;
-              }
-
-              .ingredient-title {
-                display: block;
-                font-weight: 600;
-                color: #334155;
-                margin-bottom: 8px;
-                font-size: 13px;
-              }
-
-              .ingredient-list {
-                display: flex;
-                flex-direction: column;
-                gap: 8px;
-
-                .ingredient-item {
-                  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-                  color: #ffffff;
-                  padding: 6px 12px;
-                  border-radius: 6px;
-                  font-size: 12px;
-                  display: inline-block;
-                  font-weight: 500;
-                  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
-                }
-
-                .ingredient-checkbox {
-                  display: flex;
-                  align-items: center;
-                  gap: 8px;
-                  padding: 8px;
-                  background: #ffffff;
-                  border-radius: 8px;
-                  border: 1px solid rgba(59, 130, 246, 0.1);
-                  transition: all 0.3s ease;
-
-                  &:hover {
-                    background: rgba(59, 130, 246, 0.05);
-                    border-color: rgba(59, 130, 246, 0.2);
-                  }
-
-                  .ingredient-price {
-                    color: #f59e0b;
-                    font-size: 12px;
-                    font-weight: 600;
-                  }
-                }
-              }
-            }
-          }
-
-          // 数量选择
-          .dish-quantity {
-            width: 100%;
-            margin: 12px 0;
-
-            :deep(.el-input-number) {
-              width: 100%;
-
-              .el-input-number__decrease,
-              .el-input-number__increase {
-                background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-                border-color: transparent;
-                color: #ffffff;
-
-                &:hover {
-                  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-                }
-              }
-            }
-          }
-
-          .el-button {
-            width: 100%;
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-            border: none;
-            border-radius: 12px;
-            height: 44px;
-            font-size: 15px;
-            font-weight: 600;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-
-            &:hover {
-              background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-              transform: translateY(-2px);
-              box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
-            }
-
-            &:active {
-              transform: translateY(0);
-            }
-          }
-        }
       }
 
-      // 用户评价
-      .comments-section {
-        margin-bottom: 32px;
+      // 没有菜单的提示
+      .no-menus-notice {
+        margin: 24px 0;
+        padding: 32px;
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        border-radius: 12px;
+        text-align: center;
+        border: 1px solid rgba(251, 191, 36, 0.3);
 
-        .comments-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 24px;
-          padding: 20px;
-          background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
-          border-radius: 12px;
-          border: 1px solid rgba(59, 130, 246, 0.1);
-
-          .comments-title {
-            font-size: 20px;
-            font-weight: 700;
-            color: #1e40af;
-            margin: 0;
-          }
-
-          .comments-stats {
-            display: flex;
-            gap: 24px;
-            align-items: center;
-
-            .average-rating {
-              display: flex;
-              align-items: center;
-              gap: 12px;
-
-              .rating-number {
-                font-size: 32px;
-                font-weight: 700;
-                color: #f59e0b;
-                line-height: 1;
-              }
-
-              .rating-stars {
-                display: flex;
-                flex-direction: column;
-                align-items: flex-start;
-              }
-            }
-
-            .total-comments {
-              font-size: 14px;
-              color: #64748b;
-              font-weight: 500;
-              padding-left: 24px;
-              border-left: 2px solid rgba(59, 130, 246, 0.2);
-            }
-          }
+        .notice-icon {
+          font-size: 48px;
+          margin-bottom: 12px;
         }
 
-        // 没有菜单的提示
-        .no-menus-notice {
-          margin: 24px 0;
-          padding: 32px;
-          background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-          border-radius: 12px;
-          text-align: center;
-          border: 1px solid rgba(251, 191, 36, 0.3);
-
-          .notice-icon {
-            font-size: 48px;
-            margin-bottom: 12px;
-          }
-
-          .notice-text {
-            color: #92400e;
-            font-size: 16px;
-            font-weight: 500;
-            margin: 0;
-          }
-        }
-
-        .comments-list {
-          display: flex;
-          flex-direction: column;
-          gap: 20px;
-        }
-
-        .comment-card {
-          background: #ffffff;
-          border-radius: 16px;
-          box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-          border: 1px solid rgba(59, 130, 246, 0.08);
-          overflow: hidden;
-          transition: all 0.3s ease;
-
-          &:hover {
-            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.12);
-            transform: translateY(-2px);
-          }
-
-          .comment-main {
-            display: flex;
-            gap: 16px;
-            padding: 20px;
-
-            .comment-avatar {
-              width: 48px;
-              height: 48px;
-              border-radius: 50%;
-              background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              color: #ffffff;
-              flex-shrink: 0;
-              box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-            }
-
-            .comment-body {
-              flex: 1;
-              min-width: 0;
-
-              .comment-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 12px;
-
-                .comment-user-info {
-                  display: flex;
-                  align-items: center;
-                  gap: 8px;
-
-                  .user-name {
-                    font-size: 15px;
-                    font-weight: 600;
-                    color: #1e293b;
-                  }
-
-                  .user-badge {
-                    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-                    border: none;
-                    color: white;
-                    font-size: 11px;
-                    padding: 2px 8px;
-                    height: auto;
-                    font-weight: 500;
-                  }
-                }
-
-                .comment-date {
-                  font-size: 12px;
-                  color: #94a3b8;
-                  font-weight: 500;
-                }
-              }
-
-              .comment-rating {
-                margin-bottom: 12px;
-
-                :deep(.el-rate) {
-                  .el-rate__icon {
-                    font-size: 16px;
-                  }
-                }
-              }
-
-              .comment-content {
-                font-size: 14px;
-                color: #475569;
-                line-height: 1.7;
-                margin-bottom: 12px;
-                font-weight: 400;
-              }
-
-              .reply-toggle {
-                margin-top: 12px;
-                padding-top: 12px;
-                border-top: 1px dashed rgba(59, 130, 246, 0.15);
-
-                .toggle-button {
-                  color: #3b82f6;
-                  font-weight: 500;
-                  padding: 0;
-                  font-size: 13px;
-
-                  &:hover {
-                    color: #2563eb;
-                    background: transparent;
-                  }
-
-                  .toggle-icon {
-                    margin-right: 4px;
-                    font-size: 14px;
-                  }
-                }
-              }
-            }
-          }
-
-          .replies-wrapper {
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-            border-top: 1px solid rgba(59, 130, 246, 0.1);
-            padding: 16px 20px;
-
-            .replies-list {
-              display: flex;
-              flex-direction: column;
-              gap: 12px;
-              margin: 0;
-              padding: 0;
-
-              .reply-card {
-                display: flex;
-                gap: 12px;
-                padding: 0;
-                background: transparent;
-                border-radius: 0;
-                transition: all 0.3s ease;
-
-                &:hover {
-                  background: rgba(59, 130, 246, 0.03);
-                  border-radius: 8px;
-                  padding: 8px;
-                  margin: -8px;
-                }
-
-                .reply-avatar {
-                  width: 36px;
-                  height: 36px;
-                  border-radius: 50%;
-                  display: flex;
-                  align-items: center;
-                  justify-content: center;
-                  flex-shrink: 0;
-                  background: linear-gradient(135deg, #64748b 0%, #475569 100%);
-                  color: #ffffff;
-                  box-shadow: 0 2px 8px rgba(100, 116, 139, 0.3);
-                }
-
-                .reply-body {
-                  flex: 1;
-                  min-width: 0;
-
-                  .reply-header {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    margin-bottom: 8px;
-
-                    .reply-user-info {
-                      display: flex;
-                      align-items: center;
-                      gap: 8px;
-
-                      .reply-username {
-                        font-size: 14px;
-                        font-weight: 600;
-                        color: #334155;
-                      }
-
-                      .merchant-badge {
-                        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-                        border: none;
-                        color: white;
-                        font-size: 11px;
-                        padding: 2px 8px;
-                        height: auto;
-                        font-weight: 500;
-                      }
-                    }
-
-                    .reply-date {
-                      font-size: 11px;
-                      color: #94a3b8;
-                      font-weight: 500;
-                    }
-                  }
-
-                  .reply-content {
-                    font-size: 13px;
-                    color: #475569;
-                    line-height: 1.6;
-                  }
-                }
-
-                &.merchant-reply {
-                  .reply-avatar {
-                    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-                    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
-                  }
-                }
-              }
-            }
-          }
+        .notice-text {
+          color: #92400e;
+          font-size: 16px;
+          font-weight: 500;
+          margin: 0;
         }
       }
     }
@@ -2111,284 +936,6 @@ watch(activeMenuTab, (newTab, oldTab) => {
         &:active {
           transform: translateY(0);
         }
-      }
-    }
-  }
-}
-
-// 购物车弹窗样式
-.cart-content {
-  padding: 0;
-
-  .empty-cart {
-    text-align: center;
-    padding: 60px 20px;
-
-    .empty-cart-icon {
-      margin-bottom: 20px;
-      opacity: 0.3;
-      color: #94a3b8;
-    }
-
-    .empty-cart-text {
-      font-size: 16px;
-      color: #64748b;
-      font-weight: 500;
-    }
-  }
-
-  .cart-items-list {
-    max-height: 500px;
-    overflow-y: auto;
-    padding: 16px;
-
-    // 商品卡片
-    .cart-item-card {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      padding: 16px;
-      margin-bottom: 16px;
-      background: #ffffff;
-      border-radius: 12px;
-      border: 1px solid #e8e8e8;
-      transition: all 0.3s ease;
-
-      &:hover {
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        border-color: #1890ff;
-      }
-
-      // 左侧商品信息区
-      .cart-item-left {
-        flex: 1;
-        min-width: 0;
-        margin-right: 16px;
-
-        .cart-item-name {
-          font-size: 16px;
-          font-weight: 600;
-          color: #1a1a1a;
-          margin-bottom: 8px;
-          line-height: 1.4;
-        }
-
-        .cart-item-price {
-          font-size: 14px;
-          color: #1890ff;
-          font-weight: 500;
-          margin-bottom: 12px;
-        }
-
-        // 备注区域
-        .cart-item-note {
-          margin: 8px 0;
-
-          .note-display {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 8px;
-            padding: 8px 12px;
-            background: #f5f7fa;
-            border-radius: 6px;
-            min-height: 36px;
-
-            .note-content-wrapper {
-              flex: 1;
-              min-width: 0;
-
-              .note-text {
-                font-size: 13px;
-                color: #333333;
-                word-wrap: break-word;
-                word-break: break-all;
-                line-height: 1.5;
-              }
-
-              .note-empty {
-                font-size: 13px;
-                color: #999999;
-              }
-            }
-
-            .edit-note-btn {
-              flex-shrink: 0;
-              padding: 4px;
-              color: #1890ff;
-              transition: all 0.3s ease;
-
-              .edit-icon {
-                font-size: 16px;
-              }
-
-              &:hover {
-                background: rgba(24, 144, 255, 0.1);
-                border-radius: 4px;
-              }
-            }
-          }
-
-          .note-edit {
-            .el-textarea {
-              margin-bottom: 8px;
-
-              :deep(.el-textarea__inner) {
-                font-size: 13px;
-                padding: 8px;
-                border-radius: 6px;
-              }
-            }
-
-            .note-actions {
-              display: flex;
-              gap: 8px;
-
-              .confirm-note-btn {
-                border-radius: 6px;
-                padding: 6px 16px;
-                background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-                border: none;
-                font-weight: 500;
-                transition: all 0.3s ease;
-
-                &:hover {
-                  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-                  transform: translateY(-1px);
-                  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-                }
-              }
-
-              .cancel-note-btn {
-                border-radius: 6px;
-                padding: 6px 16px;
-                border: 1px solid #d9d9d9;
-                color: #666;
-                background: #ffffff;
-                font-weight: 500;
-                transition: all 0.3s ease;
-
-                &:hover {
-                  color: #3b82f6;
-                  border-color: #3b82f6;
-                  background: rgba(59, 130, 246, 0.05);
-                  transform: translateY(-1px);
-                }
-              }
-            }
-          }
-        }
-
-        // 可选食材标签
-        .cart-item-ingredients {
-          margin-top: 8px;
-
-          .ingredient-tag {
-            display: inline-block;
-            font-size: 12px;
-            color: #1890ff;
-            background: #e6f7ff;
-            border: 1px solid #91d5ff;
-            padding: 4px 8px;
-            border-radius: 4px;
-            margin-right: 6px;
-            margin-bottom: 4px;
-            font-weight: 500;
-          }
-        }
-      }
-
-      // 右侧数量和总价区
-      .cart-item-right {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 12px;
-        flex-shrink: 0;
-
-        // 数量控制器
-        .quantity-control {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-
-          .quantity-btn {
-            width: 32px;
-            height: 32px;
-            padding: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 1px solid #d9d9d9;
-            transition: all 0.3s ease;
-
-            &.quantity-btn-decrease {
-              &:not(:disabled):hover {
-                color: #1890ff;
-                border-color: #1890ff;
-              }
-
-              &:disabled {
-                color: #d9d9d9;
-                border-color: #d9d9d9;
-                cursor: not-allowed;
-              }
-            }
-
-            &.quantity-btn-increase {
-              background: #1890ff;
-              border-color: #1890ff;
-              color: #ffffff;
-
-              &:hover {
-                background: #40a9ff;
-                border-color: #40a9ff;
-              }
-            }
-          }
-
-          .quantity-number {
-            min-width: 24px;
-            text-align: center;
-            font-size: 16px;
-            font-weight: 600;
-            color: #1a1a1a;
-          }
-        }
-
-        // 商品总价
-        .cart-item-total {
-          font-size: 16px;
-          font-weight: 700;
-          color: #1890ff;
-          text-align: center;
-          min-width: 80px;
-        }
-      }
-    }
-
-    // 总计区域
-    .cart-total-section {
-      display: flex;
-      justify-content: flex-end;
-      align-items: center;
-      padding: 16px 20px;
-      margin-top: 8px;
-      background: linear-gradient(135deg, #f0f5ff 0%, #e6f7ff 100%);
-      border-radius: 12px;
-      border: 1px solid #adc6ff;
-
-      .total-label {
-        font-size: 16px;
-        font-weight: 600;
-        color: #333333;
-        margin-right: 12px;
-      }
-
-      .total-amount {
-        font-size: 20px;
-        font-weight: 700;
-        color: #1890ff;
       }
     }
   }
@@ -2485,50 +1032,6 @@ watch(activeMenuTab, (newTab, oldTab) => {
   // 当金额过长时调整字体
   .cart-amount.long {
     font-size: 10px;
-  }
-}
-
-// 对话框footer按钮样式
-:deep(.el-dialog__footer) {
-  .dialog-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-
-    .cancel-btn {
-      min-width: 80px;
-      height: 38px;
-      border: 1px solid #d9d9d9;
-      color: #666;
-      background: #ffffff;
-      border-radius: 8px;
-      font-weight: 500;
-      transition: all 0.3s ease;
-
-      &:hover {
-        color: #3b82f6;
-        border-color: #3b82f6;
-        background: rgba(59, 130, 246, 0.05);
-        transform: translateY(-1px);
-      }
-    }
-
-    .submit-btn {
-      min-width: 100px;
-      height: 38px;
-      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-      border: none;
-      border-radius: 8px;
-      font-weight: 600;
-      transition: all 0.3s ease;
-      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-
-      &:hover {
-        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-        transform: translateY(-1px);
-        box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
-      }
-    }
   }
 }
 </style>

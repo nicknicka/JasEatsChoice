@@ -1,6 +1,7 @@
 package com.xx.jaseatschoicejava.entity;
 
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.TableField;
 import io.swagger.annotations.ApiModel;
@@ -22,7 +23,7 @@ import java.math.BigDecimal;
 @ApiModel(description = "订单实体")
 public class Order {
 
-    @TableId
+    @TableId(type = IdType.INPUT)
     @ApiModelProperty(value = "订单ID")
     private String id; // 订单ID
 
@@ -57,6 +58,10 @@ public class Order {
     @TableField("address_id")
     @ApiModelProperty(value = "配送地址ID")
     private String addressId; // 配送地址ID
+
+    @TableField("address")
+    @ApiModelProperty(value = "配送地址")
+    private String address; // 配送地址
 
     @TableField("remark")
     @ApiModelProperty(value = "订单备注")

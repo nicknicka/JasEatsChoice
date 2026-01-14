@@ -4,10 +4,45 @@ import CommonLocationPicker from '../../components/CommonLocationPicker.vue'
 import CommonWeatherWidget from '../../components/CommonWeatherWidget.vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import axios from 'axios'
-import { API_CONFIG } from '../../config/index.js'
+import { useDebounceFn } from '@vueuse/core'
+import { useRecommendations } from '../../composables/useRecommendations.js'
+import { useFavorites } from '../../composables/useFavorites.js'
+import { useRecommendationFilters } from '../../composables/useRecommendationFilters.js'
+import { RECOMMENDATION_TYPE_TAGS } from '../../constants/recommendationConstants.js'
 
 const router = useRouter()
+
+// 使用composables
+const {
+  recommendations,
+  isLoading,
+  refreshing,
+  loadAllRecommendations,
+  rejectRecommendation,
+  onRefresh
+} = useRecommendations()
+
+const {
+  favorites,
+  favoritesCount,
+  initFavorites,
+  toggleFavorite,
+  isFavoritedItem
+} = useFavorites()
+
+const {
+  selectedCalorieRange,
+  selectedTypes,
+  selectedSources,
+  searchKeyword,
+  sortBy,
+  CALORIE_RANGES,
+  RECOMMENDATION_TYPES,
+  filteredAndSortedRecommendations,
+  availableTypes,
+  hasActiveFilters,
+  resetFilters
+} = useRecommendationFilters(recommendations)
 
 // 定位相关
 const locationPicker = ref(null)
@@ -18,20 +53,25 @@ const currentCity = ref('')
 // 天气相关
 const weatherWidget = ref(null)
 
-// 定位变化处理
-const handleLocationChanged = (locationData) => {
+// UI状态
+const showFilters = ref(false)
+const showNutritionDetail = ref(null)
+
+// 定位变化处理（防抖优化）
+const handleLocationChanged = useDebounceFn((locationData) => {
   currentLocation.value = locationData.location
   currentCity.value = locationData.city
   // 根据位置更新推荐
   updateRecommendationsByLocation(locationData)
-}
+}, 1000)
 
-// 天气变化处理
-const handleWeatherUpdated = (weatherData) => {
+// 天气变化处理（防抖优化）
+const handleWeatherUpdated = useDebounceFn((weatherData) => {
   // 根据天气数据更新推荐
-  // 这里可以使用weatherData.weatherTags直接生成推荐
   console.log('天气数据更新:', weatherData)
-}
+  // 重新加载推荐
+  loadAllRecommendations()
+}, 2000)
 
 // 定位成功后的处理
 const handleLocationSuccess = (position) => {
@@ -57,7 +97,6 @@ const handleLocationSuccess = (position) => {
   } else {
     locationError.value = false
     ElMessage.success(`定位成功，误差${Math.round(accuracy)}米`)
-    // 可以在这里调用根据位置更新推荐的函数
     updateRecommendationsByLocation({ latitude, longitude })
   }
 }
@@ -67,7 +106,6 @@ const handleLocationError = (error) => {
   let errorMessage = '定位失败'
   switch (error.code) {
     case error.PERMISSION_DENIED:
-      // 用户拒绝定位请求，不显示错误信息，避免重复打扰
       locationError.value = true
       return
     case error.POSITION_UNAVAILABLE:
@@ -98,393 +136,30 @@ const getCurrentLocation = () => {
   }
 }
 
-// 天气与时间双维度推荐逻辑
-const updateRecommendationsByWeatherAndTime = async () => {
-  // 检查用户是否已关闭天气推荐
-  const savedSettings = localStorage.getItem('userSettings')
-  let weatherRecommendationEnabled = true
-
-  if (savedSettings) {
-    const parsedSettings = JSON.parse(savedSettings)
-    weatherRecommendationEnabled = parsedSettings.privacy?.weatherRecommendation !== false
-  }
-
-  if (!weatherRecommendationEnabled) {
-    console.log('用户已关闭天气推荐')
-    return
-  }
-
-  try {
-    // 调用真实天气API获取天气数据
-    const response = await axios.get(API_CONFIG.baseURL + API_CONFIG.weather.current, {
-      params: { city: '北京' } // 默认查询北京天气，实际应用中可以先获取定位再查询
-    })
-    const weatherData = response.data.data
-    const { temperature, humidity } = weatherData
-    const now = new Date()
-    const hour = now.getHours()
-
-    // 时间维度推荐：早餐、午餐、晚餐、夜宵
-    let timeType = ''
-    if (hour >= 6 && hour < 10) timeType = '早餐'
-    else if (hour >= 10 && hour < 14) timeType = '午餐'
-    else if (hour >= 14 && hour < 18) timeType = '下午茶'
-    else if (hour >= 18 && hour < 22) timeType = '晚餐'
-    else timeType = '夜宵'
-
-    // 天气维度推荐
-    let weatherTags = []
-    if (temperature > 30) weatherTags.push('冰饮', '凉菜', '轻食')
-    else if (temperature < 10) weatherTags.push('热饮', '热菜', '火锅')
-    if (humidity > 80) weatherTags.push('祛湿粥品', '清淡饮食')
-
-    // 根据天气和时间推荐菜品（模拟）
-    const weatherTimeRecommendations = generateWeatherTimeRecommendations(
-      timeType,
-      weatherTags,
-      weatherData
-    )
-
-    // 将天气时间推荐添加到推荐列表
-    recommendations.value = [...recommendations.value, ...weatherTimeRecommendations]
-
-    // 为标签分配随机类型
-    assignRandomTagTypes(recommendations.value)
-  } catch (error) {
-    console.error('天气推荐失败:', error)
-    ElMessage.error('天气推荐功能暂时不可用')
-  }
-}
-
-// 根据天气和时间生成推荐菜品（模拟）
-const generateWeatherTimeRecommendations = (timeType, weatherTags) => {
-  const rejectionHistory = loadRejectionHistory()
-  // 模拟菜品数据库
-  const dishes = [
-    {
-      name: '冰爽柠檬水',
-      type: '冰饮',
-      calories: 50,
-      tags: ['冰饮', '夏季', '解渴']
-    },
-    { name: '凉拌黄瓜', type: '凉菜', calories: 80, tags: ['凉菜', '夏季', '清爽'] },
-    { name: '鸡肉沙拉', type: '轻食', calories: 350, tags: ['轻食', '健康', '低卡'] },
-    { name: '南瓜粥', type: '热饮', calories: 120, tags: ['热饮', '早餐', '营养'] },
-    { name: '红烧肉', type: '热菜', calories: 450, tags: ['热菜', '晚餐', '贴秋膘'] },
-    { name: '羊肉火锅', type: '火锅', calories: 600, tags: ['火锅', '冬季', '暖胃'] },
-    {
-      name: '红豆薏米粥',
-      type: '祛湿粥品',
-      calories: 150,
-      tags: ['祛湿粥品', '养生', '清淡']
-    },
-    { name: '菊花茶', type: '热饮', calories: 30, tags: ['热饮', '下午茶', '清火'] }
-  ]
-
-  // 根据时间、天气标签和用户拒绝历史过滤菜品
-  const filteredDishes = dishes.filter((dish) => {
-    // 时间和天气标签过滤
-    const matchesCriteria =
-      dish.type.includes(timeType) || weatherTags.some((tag) => dish.tags.includes(tag))
-
-    // 检查该菜品是否被拒绝过多次
-    const rejectionEntry = rejectionHistory.find(
-      (entry) => entry.name.includes(dish.name) || dish.name.includes(entry.name)
-    )
-
-    // 如果匹配时间和天气标签，且拒绝次数小于等于2次，推荐；否则不推荐
-    return matchesCriteria && (!rejectionEntry || rejectionEntry.count <= 2)
-  })
-
-  // 转换为推荐格式
-  return filteredDishes.map((dish, index) => ({
-    id: recommendations.value.length + index + 1,
-    name: `${timeType}推荐: ${dish.name}`,
-    type: timeType,
-    calories: dish.calories,
-    tags: [...dish.tags, timeType],
-    reason: `${timeType}${weatherTags.length > 0 ? `，${weatherTags.join('、')}适合` : '适合'}`,
-    rating: 4.8,
-    image: '🍱'
-  }))
-}
-
-// 根据位置更新推荐（模拟）
+// 根据位置更新推荐
 const updateRecommendationsByLocation = (location) => {
-  // 这里可以添加根据经纬度获取附近商家和推荐菜品的逻辑
   console.log('根据位置更新推荐:', location)
+  // 这里可以添加根据经纬度获取附近商家和推荐菜品的逻辑
 }
 
-// 节日/节气与特色菜品映射
-const festivalDishes = {
-  // 节气
-  立春: ['春卷', '春饼', '菠菜汤'],
-  雨水: ['南瓜粥', '豆苗炒鸡蛋', '清蒸鲈鱼'],
-  惊蛰: ['春笋', '韭菜炒鸡蛋', '山药排骨汤'],
-  春分: ['春茶', '青团', '马兰头拌香干'],
-  清明: ['清明粿', '青团', '乌米饭'],
-  谷雨: ['谷雨茶', '香椿炒蛋', '鲫鱼炖豆腐'],
-  立夏: ['立夏饭', '乌米饭', '咸鸭蛋'],
-  小满: ['苦菜', '苦瓜炒鸡蛋', '绿豆汤'],
-  芒种: ['青梅酒', '芒果布丁', '凉拌黄瓜'],
-  夏至: ['夏至面', '绿豆汤', '西瓜'],
-  小暑: ['凉面', '冰淇淋', '薄荷茶'],
-  大暑: ['大暑羊', '凉茶', '西瓜'],
-  立秋: ['贴秋膘', '红烧肉', '炖鸡'],
-  处暑: ['老鸭汤', '莲藕排骨汤', '炒菱角'],
-  白露: ['白露茶', '桂圆莲子粥', '烤鸭'],
-  秋分: ['秋分蟹', '大闸蟹', '葡萄'],
-  寒露: ['菊花酒', '芝麻糕', '银耳羹'],
-  霜降: ['柿子', '牛肉火锅', '萝卜汤'],
-  立冬: ['立冬饺', '羊肉汤', '板栗'],
-  小雪: ['腊味', '火锅', '热奶茶'],
-  大雪: ['腌肉', '羊肉火锅', '红薯粥'],
-  冬至: ['冬至饺', '汤圆', '羊肉汤'],
-  小寒: ['腊八粥', '炖羊肉', '热可可'],
-  大寒: ['大寒粥', '涮羊肉', '暖锅'],
-
-  // 节日
-  春节: ['饺子', '年糕', '年夜饭'],
-  元宵: ['元宵', '汤圆', '花灯'],
-  端午: ['粽子', '雄黄酒', '咸鸭蛋'],
-  中秋: ['月饼', '柚子', '螃蟹'],
-  重阳: ['重阳糕', '菊花酒', '登高'],
-  腊八: ['腊八粥', '腊八蒜', '腊八豆腐']
+// 处理收藏点击
+const handleFavoriteClick = async (item) => {
+  await toggleFavorite(item)
+  // 更新收藏状态
+  initFavorites()
 }
 
-// 判断当前日期对应的节气或节日（简化实现）
-const getCurrentFestival = () => {
-  const now = new Date()
-  const month = now.getMonth() + 1
-  const day = now.getDate()
-
-  // 简化的节气判断（实际应该使用更精确的算法）
-  const solarTerms = [
-    { name: '小寒', month: 1, day: 5 },
-    { name: '大寒', month: 1, day: 20 },
-    { name: '立春', month: 2, day: 4 },
-    { name: '雨水', month: 2, day: 19 },
-    { name: '惊蛰', month: 3, day: 5 },
-    { name: '春分', month: 3, day: 20 },
-    { name: '清明', month: 4, day: 4 },
-    { name: '谷雨', month: 4, day: 19 },
-    { name: '立夏', month: 5, day: 5 },
-    { name: '小满', month: 5, day: 20 },
-    { name: '芒种', month: 6, day: 5 },
-    { name: '夏至', month: 6, day: 21 },
-    { name: '小暑', month: 7, day: 7 },
-    { name: '大暑', month: 7, day: 22 },
-    { name: '立秋', month: 8, day: 7 },
-    { name: '处暑', month: 8, day: 23 },
-    { name: '白露', month: 9, day: 7 },
-    { name: '秋分', month: 9, day: 23 },
-    { name: '寒露', month: 10, day: 8 },
-    { name: '霜降', month: 10, day: 23 },
-    { name: '立冬', month: 11, day: 7 },
-    { name: '小雪', month: 11, day: 22 },
-    { name: '大雪', month: 12, day: 7 },
-    { name: '冬至', month: 12, day: 21 }
-  ]
-
-  // 检查节日
-  if (month === 1 && day === 1) return '春节'
-  if (month === 1 && day >= 15) return '元宵'
-  if (month === 5 && day === 5) return '端午'
-  if (month === 8 && day === 15) return '中秋'
-  if (month === 9 && day === 9) return '重阳'
-  if (month === 12 && day === 8) return '腊八'
-
-  // 检查节气
-  for (const term of solarTerms) {
-    if (term.month === month && term.day === day) {
-      return term.name
-    }
-  }
-
-  return null
+// 显示营养详情
+const showNutritionDialog = (item) => {
+  showNutritionDetail.value = item
 }
 
-// 根据节日/节气添加特色菜品推荐
-const addFestivalRecommendations = () => {
-  const currentFestival = getCurrentFestival()
-  if (currentFestival && festivalDishes[currentFestival]) {
-    const festivalDishList = festivalDishes[currentFestival]
-    const rejectionHistory = loadRejectionHistory()
-
-    // 为每个特色菜品创建推荐项
-    const festivalRecommendations = festivalDishList
-      .filter((dishName) => {
-        // 检查该菜品是否被拒绝过多次
-        const rejectionEntry = rejectionHistory.find(
-          (entry) => entry.name.includes(dishName) || dishName.includes(entry.name)
-        )
-        // 如果拒绝次数小于等于2次，仍然推荐；否则不推荐
-        return !rejectionEntry || rejectionEntry.count <= 2
-      })
-      .map((dishName, index) => {
-        // 根据菜品名称选择合适的图标
-        let icon = '🍲'
-        if (dishName.includes('饺子') || dishName.includes('饺')) icon = '🥟'
-        if (dishName.includes('粽子') || dishName.includes('粽')) icon = '🍙'
-        if (dishName.includes('月饼') || dishName.includes('饼')) icon = '🥮'
-        if (dishName.includes('汤') || dishName.includes('羹')) icon = '🍵'
-        if (dishName.includes('茶')) icon = '🍵'
-
-        return {
-          id: recommendations.value.length + index + 1,
-          name: `${currentFestival}特色: ${dishName}`,
-          type: '节日特供',
-          calories: 0,
-          tags: ['节日特供', currentFestival],
-          reason: `${currentFestival}传统特色美食`,
-          rating: 4.9,
-          image: icon
-        }
-      })
-
-    // 将节日推荐添加到推荐列表
-    recommendations.value = [...festivalRecommendations, ...recommendations.value]
-
-    // 为标签分配随机类型
-    assignRandomTagTypes(recommendations.value)
-  }
-}
-
-// 加载用户拒绝的推荐历史
-const loadRejectionHistory = () => {
-  const saved = localStorage.getItem('rejectionHistory')
-  return saved ? JSON.parse(saved) : []
-}
-
-// 保存用户拒绝的推荐历史
-const saveRejectionHistory = (history) => {
-  localStorage.setItem('rejectionHistory', JSON.stringify(history))
-}
-
-// 拒绝推荐
-const rejectRecommendation = (item) => {
-  // 获取当前拒绝历史
-  let rejectionHistory = loadRejectionHistory()
-
-  // 查找是否已经拒绝过该菜品
-  const existingIndex = rejectionHistory.findIndex(
-    (entry) => entry.name === item.name && entry.type === item.type
-  )
-
-  if (existingIndex > -1) {
-    // 如果已经拒绝过，增加拒绝次数
-    rejectionHistory[existingIndex].count += 1
-  } else {
-    // 如果没有拒绝过，添加到历史
-    rejectionHistory.push({
-      name: item.name,
-      type: item.type,
-      tags: item.tags,
-      count: 1,
-      rejectedAt: new Date().toISOString()
-    })
-  }
-
-  // 保存更新后的拒绝历史
-  saveRejectionHistory(rejectionHistory)
-
-  // 从当前推荐列表中移除该菜品
-  const itemIndex = recommendations.value.findIndex((rec) => rec.id === item.id)
-  if (itemIndex > -1) {
-    recommendations.value.splice(itemIndex, 1)
-  }
-
-  ElMessage.success('已标记为不感兴趣')
-}
-
-// 定义随机标签类型数组
-const tagTypes = ['primary', 'success', 'warning', 'info', 'danger']
-
-// 获取随机标签类型
-const getRandomTagType = () => {
-  return tagTypes[Math.floor(Math.random() * tagTypes.length)]
-}
-
-// 为每个推荐项的标签分配随机类型（只在数据加载时执行一次）
-const assignRandomTagTypes = (recommendations) => {
-  recommendations.forEach((item) => {
-    if (item.tags && Array.isArray(item.tags)) {
-      // 为每个标签创建带有随机类型的对象
-      item.tagsWithType = item.tags
-        .map((tag) => ({
-          name: tag,
-          type: getRandomTagType()
-        }))
-        .filter((tag) => tag.name && tag.name.trim() !== '') // 过滤空标签
-    } else {
-      item.tagsWithType = []
-    }
-  })
-}
-
-// 从后端获取推荐数据
-const fetchRecommendationsFromBackend = async () => {
-  try {
-    isLoading.value = true
-    // 获取用户ID（从localStorage中获取，与其他页面保持一致）
-    const userId = parseInt(localStorage.getItem('userId') || '1', 10)
-
-    // 调用后端个性化推荐接口
-    const response = await axios.get(`${API_CONFIG.baseURL}/v1/recommend/recommend/${userId}`)
-
-    // 检查响应结构并提取推荐菜品
-    const data = response.data.data
-    if (data && data.dishes) {
-      recommendations.value = data.dishes
-
-      // 添加推荐理由等信息
-      recommendations.value.forEach((dish) => {
-        // 根据菜品信息生成推荐理由
-        if (!dish.reason) {
-          dish.reason = '基于您的饮食偏好推荐'
-        }
-        // 确保每个菜品有必要的字段
-        dish.rating = dish.rating || 4.5
-        dish.image = dish.image || '🍱'
-      })
-
-      // 为标签分配随机类型
-      assignRandomTagTypes(recommendations.value)
-
-      return data.dishes
-    } else {
-      recommendations.value = []
-      return []
-    }
-  } catch (error) {
-    console.error('获取推荐数据失败:', error)
-
-    // 后端接口失败时，继续使用mock数据作为后备
-    ElMessage.warning('个性化推荐服务暂时不可用，将为您提供基于节日和天气的推荐')
-
-    // 先清除现有推荐数据，避免重复
-    recommendations.value = []
-    // 保持现有的mock数据生成逻辑
-    addFestivalRecommendations()
-    updateRecommendationsByWeatherAndTime()
-
-    return null
-  } finally {
-    isLoading.value = false
-  }
-}
-
-// 页面加载时获取定位和后端推荐数据
+// 页面加载时获取定位和推荐数据
 onMounted(async () => {
   getCurrentLocation()
-  await fetchRecommendationsFromBackend()
+  await loadAllRecommendations()
+  initFavorites()
 })
-
-// 加载状态
-const isLoading = ref(false)
-
-// 我的推荐数据
-const recommendations = ref([])
 </script>
 
 <template>
@@ -503,86 +178,243 @@ const recommendations = ref([])
 
     <h2>我的推荐</h2>
 
-    <!-- 加载中状态 -->
-    <div class="loading-skeleton" v-if="isLoading">
-      <el-skeleton :rows="6" type="card" :border="false" />
+    <!-- 筛选和排序工具栏 -->
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <el-input
+          v-model="searchKeyword"
+          placeholder="搜索推荐菜品..."
+          prefix-icon="Search"
+          clearable
+          style="width: 300px"
+        />
+      </div>
+      <div class="toolbar-right">
+        <el-button
+          :type="showFilters ? 'primary' : 'default'"
+          :icon="showFilters ? 'FilterFilled' : 'Filter'"
+          @click="showFilters = !showFilters"
+        >
+          筛选
+        </el-button>
+        <el-select v-model="sortBy" placeholder="排序方式" style="width: 150px; margin-left: 10px">
+          <el-option label="默认排序" value="default" />
+          <el-option label="卡路里从低到高" value="calories_asc" />
+          <el-option label="卡路里从高到低" value="calories_desc" />
+          <el-option label="评分从高到低" value="rating_desc" />
+          <el-option label="评分从低到高" value="rating_asc" />
+        </el-select>
+      </div>
     </div>
 
-    <!-- 推荐列表 -->
-    <transition-group
-      name="recommend-card"
-      tag="div"
-      class="recommend-grid"
-      v-else-if="recommendations.length > 0"
-    >
-      <el-card v-for="item in recommendations" :key="item.id" class="recommend-card">
-        <div class="card-header">
-          <div class="dish-image">{{ item.image }}</div>
-          <div class="dish-info">
-            <div class="dish-name">{{ item.name }}</div>
-            <div class="dish-type">
-              <el-tag type="primary" size="small" v-if="item.type">{{ item.type }}</el-tag>
-              <el-tag type="info" size="small" effect="plain" v-else>未分类</el-tag>
+    <!-- 筛选面板 -->
+    <transition name="filter-slide">
+      <div class="filter-panel" v-show="showFilters">
+        <div class="filter-section">
+          <div class="filter-title">卡路里范围</div>
+          <el-radio-group v-model="selectedCalorieRange">
+            <el-radio :label="null">全部</el-radio>
+            <el-radio
+              v-for="range in CALORIE_RANGES"
+              :key="range.label"
+              :label="range"
+            >{{ range.label }}</el-radio>
+          </el-radio-group>
+        </div>
+
+        <div class="filter-section">
+          <div class="filter-title">餐食类型</div>
+          <el-checkbox-group v-model="selectedTypes">
+            <el-checkbox label="全部" :indeterminate="selectedTypes.length > 0 && selectedTypes.length < availableTypes.length" @change="checked => checked ? selectedTypes = [...availableTypes] : selectedTypes = []"/>
+            <el-checkbox
+              v-for="type in availableTypes.slice(0, 10)"
+              :key="type"
+              :label="type"
+            >{{ type }}</el-checkbox>
+          </el-checkbox-group>
+        </div>
+
+        <div class="filter-section">
+          <div class="filter-title">推荐来源</div>
+          <el-checkbox-group v-model="selectedSources">
+            <el-checkbox label="全部" @change="checked => checked ? selectedSources = Object.values(RECOMMENDATION_TYPES) : selectedSources = []"/>
+            <el-checkbox
+              v-for="(label, key) in RECOMMENDATION_TYPES"
+              :key="key"
+              :label="label"
+            >{{ label }}</el-checkbox>
+          </el-checkbox-group>
+        </div>
+
+        <div class="filter-actions">
+          <el-button type="primary" @click="showFilters = false">应用筛选</el-button>
+          <el-button @click="resetFilters">重置</el-button>
+        </div>
+      </div>
+    </transition>
+
+    <!-- 筛选结果提示 -->
+    <div class="filter-info" v-if="hasActiveFilters">
+      <span>找到 {{ filteredAndSortedRecommendations.length }} 个推荐结果</span>
+      <el-button type="text" size="small" @click="resetFilters">清除筛选</el-button>
+    </div>
+
+    <!-- 下拉刷新 -->
+    <el-pull-refresh v-model="refreshing" @refresh="onRefresh">
+      <!-- 加载中状态 -->
+      <div class="loading-skeleton" v-if="isLoading && recommendations.length === 0">
+        <el-skeleton :rows="6" type="card" :border="false" />
+      </div>
+
+      <!-- 推荐列表 -->
+      <transition-group
+        name="recommend-card"
+        tag="div"
+        class="recommend-grid"
+        v-else-if="filteredAndSortedRecommendations.length > 0"
+      >
+        <el-card
+          v-for="item in filteredAndSortedRecommendations"
+          :key="item.id"
+          class="recommend-card"
+          :class="{ featured: item.rating >= 4.9 }"
+        >
+          <!-- 推荐来源标签 -->
+          <div class="recommend-source-tag" v-if="item.recommendSource">
+            <el-tag
+              :type="RECOMMENDATION_TYPE_TAGS[item.recommendSource]?.type || 'info'"
+              size="small"
+              effect="dark"
+            >
+              {{ item.recommendSource }}
+            </el-tag>
+          </div>
+
+          <div class="card-header">
+            <div class="dish-image">{{ item.image }}</div>
+            <div class="dish-info">
+              <div class="dish-name">{{ item.name }}</div>
+              <div class="dish-type">
+                <el-tag type="primary" size="small" v-if="item.type">{{ item.type }}</el-tag>
+                <el-tag type="info" size="small" effect="plain" v-else>未分类</el-tag>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="calories-info" v-if="item.calories">
-          <span>🔥</span>
-          <span>{{ item.calories }} kcal</span>
-        </div>
-        <div class="calories-info-unavailable" v-else>
-          <span>🔥</span>
-          <span>卡路里信息暂不可用</span>
-        </div>
-
-        <div class="tags-section">
-          <el-tag v-for="tag in item.tagsWithType" :key="tag.name" size="small" :type="tag.type">
-            {{ tag.name }}
-          </el-tag>
-        </div>
-
-        <div class="reason-section">
-          <div class="reason-title">推荐理由</div>
-          <div class="reason-text" :class="{ 'empty-reason': !item.reason }">
-            {{ item.reason || '暂无推荐理由' }}
+          <!-- 卡路里信息（带营养详情） -->
+          <div class="calories-info" v-if="item.calories">
+            <span>🔥</span>
+            <span>{{ item.calories }} kcal</span>
+            <el-button
+              type="text"
+              size="small"
+              @click="showNutritionDialog(item)"
+              v-if="item.nutrition"
+              style="margin-left: auto"
+            >
+              营养详情
+            </el-button>
           </div>
-        </div>
+          <div class="calories-info-unavailable" v-else>
+            <span>🔥</span>
+            <span>卡路里信息暂不可用</span>
+          </div>
 
-        <div class="rating">
-          <el-rate v-model="item.rating" :disabled="true" show-text />
-        </div>
+          <!-- 标签 -->
+          <div class="tags-section">
+            <el-tag
+              v-for="tag in item.tagsWithType"
+              :key="tag.name"
+              size="small"
+              :type="tag.type"
+            >
+              {{ tag.name }}
+            </el-tag>
+          </div>
 
-        <div class="card-actions">
-          <el-button
-            type="primary"
-            size="small"
-            @click="
-              router.push({
-                path: '/user/home/merchants',
-                query: {
-                  search: item.name.replace(/(.*推荐:|.*特色:)/, '').trim()
-                }
-              })
-            "
-            >立即下单</el-button
-          >
-          <el-button type="text" size="small" @click="rejectRecommendation(item)"
-            >不感兴趣</el-button
-          >
-        </div>
-      </el-card>
-    </transition-group>
+          <!-- 推荐理由 -->
+          <div class="reason-section">
+            <div class="reason-title">推荐理由</div>
+            <div class="reason-text" :class="{ 'empty-reason': !item.reason }">
+              {{ item.reason || '暂无推荐理由' }}
+            </div>
+          </div>
 
-    <!-- 空状态提示 -->
-    <div class="empty-state" v-else>
-      <div class="empty-icon">🥺</div>
-      <div class="empty-text">暂无推荐数据</div>
-      <div class="empty-subtext">系统正在努力为您生成个性化推荐</div>
-      <el-button type="primary" size="small" @click="fetchRecommendationsFromBackend"
-        >重试获取推荐</el-button
-      >
-    </div>
+          <!-- 评分 -->
+          <div class="rating">
+            <el-rate v-model="item.rating" :disabled="true" show-text />
+          </div>
+
+          <!-- 操作按钮 -->
+          <div class="card-actions">
+            <el-button
+              type="primary"
+              size="small"
+              @click="
+                router.push({
+                  path: '/user/home/merchants',
+                  query: {
+                    search: item.name.replace(/(.*推荐:|.*特色:)/, '').trim()
+                  }
+                })
+              "
+            >
+              立即下单
+            </el-button>
+            <el-button
+              :type="isFavoritedItem(item) ? 'warning' : 'default'"
+              size="small"
+              :icon="isFavoritedItem(item) ? 'StarFilled' : 'Star'"
+              @click="handleFavoriteClick(item)"
+            >
+              {{ isFavoritedItem(item) ? '已收藏' : '收藏' }}
+            </el-button>
+            <el-button type="text" size="small" @click="rejectRecommendation(item)">
+              不感兴趣
+            </el-button>
+          </div>
+        </el-card>
+      </transition-group>
+
+      <!-- 空状态提示 -->
+      <div class="empty-state" v-else>
+        <div class="empty-icon">🥺</div>
+        <div class="empty-text">
+          {{ hasActiveFilters ? '没有找到符合条件的推荐' : '暂无推荐数据' }}
+        </div>
+        <div class="empty-subtext">
+          {{ hasActiveFilters ? '试试调整筛选条件' : '系统正在努力为您生成个性化推荐' }}
+        </div>
+        <el-button
+          type="primary"
+          size="small"
+          @click="hasActiveFilters ? resetFilters() : onRefresh()"
+        >
+          {{ hasActiveFilters ? '清除筛选' : '重新获取推荐' }}
+        </el-button>
+      </div>
+    </el-pull-refresh>
+
+    <!-- 营养详情弹窗 -->
+    <el-dialog v-model="showNutritionDetail" title="营养成分详情" width="400px">
+      <div class="nutrition-detail" v-if="showNutritionDetail?.nutrition">
+        <div class="nutrition-item">
+          <span class="nutrition-label">碳水化合物</span>
+          <span class="nutrition-value">{{ showNutritionDetail.nutrition.carbs }}g</span>
+        </div>
+        <div class="nutrition-item">
+          <span class="nutrition-label">蛋白质</span>
+          <span class="nutrition-value">{{ showNutritionDetail.nutrition.protein }}g</span>
+        </div>
+        <div class="nutrition-item">
+          <span class="nutrition-label">脂肪</span>
+          <span class="nutrition-value">{{ showNutritionDetail.nutrition.fat }}g</span>
+        </div>
+      </div>
+      <div class="nutrition-empty" v-else>
+        暂无详细营养信息
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -597,7 +429,6 @@ const recommendations = ref([])
     font-weight: 800;
     letter-spacing: -0.5px;
 
-    // 添加装饰性下划线
     &::after {
       content: '';
       display: block;
@@ -607,6 +438,84 @@ const recommendations = ref([])
       border-radius: 2px;
       margin-top: 12px;
     }
+  }
+
+  // 工具栏
+  .toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px 20px 20px;
+    gap: 15px;
+
+    .toolbar-left {
+      display: flex;
+      gap: 15px;
+    }
+
+    .toolbar-right {
+      display: flex;
+      gap: 10px;
+    }
+  }
+
+  // 筛选面板
+  .filter-panel {
+    background: #f9fafb;
+    border-radius: 12px;
+    padding: 20px;
+    margin: 0 20px 20px 20px;
+    border: 1px solid #e5e7eb;
+
+    .filter-section {
+      margin-bottom: 20px;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+
+      .filter-title {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 12px;
+        font-size: 14px;
+      }
+    }
+
+    .filter-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #e5e7eb;
+    }
+  }
+
+  .filter-slide-enter-active,
+  .filter-slide-leave-active {
+    transition: all 0.3s ease;
+    max-height: 500px;
+    overflow: hidden;
+  }
+
+  .filter-slide-enter-from,
+  .filter-slide-leave-to {
+    max-height: 0;
+    opacity: 0;
+  }
+
+  // 筛选信息
+  .filter-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    margin: 0 20px 20px 20px;
+    background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+    border-radius: 8px;
+    color: #333;
+    font-size: 14px;
   }
 
   .recommend-grid {
@@ -622,10 +531,29 @@ const recommendations = ref([])
     transition: all 0.3s ease;
     border-radius: 12px;
     box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
+    position: relative;
 
     &:hover {
       box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
       transform: translateY(-8px) scale(1.02);
+    }
+
+    // 精选推荐卡片
+    &.featured {
+      border: 2px solid #f59e0b;
+      box-shadow: 0 4px 20px rgba(245, 158, 11, 0.2);
+
+      &:hover {
+        box-shadow: 0 10px 40px rgba(245, 158, 11, 0.3);
+      }
+    }
+
+    // 推荐来源标签
+    .recommend-source-tag {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      z-index: 1;
     }
 
     .card-header {
@@ -722,11 +650,12 @@ const recommendations = ref([])
 
     .card-actions {
       display: flex;
-      justify-content: center; // 居中显示按钮
+      justify-content: center;
       align-items: center;
-      gap: 15px; // 按钮间距
+      gap: 15px;
       padding-top: 16px;
       border-top: 1px solid #f0f0f0;
+      flex-wrap: wrap;
 
       .el-button {
         border-radius: 8px;
@@ -796,6 +725,84 @@ const recommendations = ref([])
     border-radius: 8px;
     font-weight: 500;
     padding: 10px 24px;
+  }
+}
+
+// 营养详情弹窗
+.nutrition-detail {
+  padding: 20px 0;
+
+  .nutrition-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 0;
+    border-bottom: 1px solid #f0f0f0;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    .nutrition-label {
+      font-size: 15px;
+      color: #666;
+    }
+
+    .nutrition-value {
+      font-size: 18px;
+      font-weight: bold;
+      color: #333;
+    }
+  }
+}
+
+.nutrition-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: #999;
+}
+
+// 响应式优化
+@media (max-width: 768px) {
+  .recommend-container {
+    padding: 0 10px 20px 10px;
+
+    h2 {
+      font-size: 24px;
+      margin: 0 0 20px 10px;
+    }
+
+    .toolbar {
+      flex-direction: column;
+      align-items: stretch;
+
+      .toolbar-left {
+        flex-direction: column;
+      }
+
+      .toolbar-right {
+        flex-direction: column;
+
+        .el-select {
+          width: 100% !important;
+          margin-left: 0 !important;
+        }
+      }
+    }
+
+    .recommend-grid {
+      grid-template-columns: 1fr;
+      gap: 12px;
+      padding: 0 10px;
+    }
+
+    .filter-panel {
+      margin: 0 10px 20px 10px;
+    }
+
+    .filter-info {
+      margin: 0 10px 20px 10px;
+    }
   }
 }
 </style>
