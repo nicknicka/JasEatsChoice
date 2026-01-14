@@ -39,98 +39,92 @@ const handleRefresh = () => {
 }
 
 // 加载用户订单数据
-const loadOrders = () => {
-  return new Promise((resolve, reject) => {
-    // 显示加载状态
-    loading.value = true
+const loadOrders = async () => {
+  loading.value = true
 
-    const userId = parseInt(localStorage.getItem('userId') || '1', 10) // 临时使用固定用户ID
+  try {
+    const userId = parseInt(localStorage.getItem('userId') || '1', 10)
 
-    axios
-      .get(API_CONFIG.baseURL + API_CONFIG.order.list + userId)
-      .then((response) => {
-        if (response.data.data) {
-          // 转换后端Order实体到前端期望的格式
-          orders.value = response.data.data.map(order => ({
-            id: order.id,
-            orderNo: order.id, // 使用订单ID作为订单号
-            status: orderStatusToText(order.status), // 转换状态码为文本
-            merchant: `商家${order.merchantId}`, // TODO: 从商家API获取商家名称
-            total: order.totalAmount, // totalAmount -> total
-            time: formatTime(order.createTime), // 格式化时间
-            items: order.items || [], // TODO: 从订单详情获取商品列表
-            // 保留原始数据用于详情查看
-            _raw: order
-          }))
-        }
-      })
-      .catch((error) => {
-        console.error('加载订单失败:', error)
-        // 使用默认数据作为 fallback
-        orders.value = [
-          {
-            id: 1,
-          orderNo: 'JD20231123001',
-          status: 'delivered',
-          merchant: '健康轻食馆',
-          total: 28.8,
-          time: '2023-11-23 12:30',
-          items: ['健康轻食套餐', '矿泉水']
-        },
-        {
-          id: 2,
-          orderNo: 'JD20231123002',
-          status: 'processing',
-          merchant: '营养早餐店',
-          total: 15.5,
-          time: '2023-11-23 10:15',
-          items: ['营养早餐组合']
-        },
-        {
-          id: 3,
-          orderNo: 'JD20231122001',
-          status: 'completed',
-          merchant: '美食天地',
-          total: 42.0,
-          time: '2023-11-22 18:45',
-          items: ['宫保鸡丁', '麻婆豆腐', '米饭']
-        },
-        {
-          id: 4,
-          orderNo: 'JD20231121001',
-          status: 'cancelled',
-          merchant: '健身餐厅',
-          total: 35.0,
-          time: '2023-11-21 19:30',
-          items: ['健身餐套餐']
-        },
-        {
-          id: 5,
-          orderNo: 'JD20231124001',
-          status: 'pending',
-          merchant: '中式快餐',
-          total: 32.0,
-          time: '2023-11-24 12:00',
-          items: ['红烧肉盖饭', '青菜豆腐汤']
-        },
-        {
-          id: 6,
-          orderNo: 'JD20231124002',
-          status: 'pendingComment',
-          merchant: '西式餐厅',
-          total: 68.0,
-          time: '2023-11-24 18:30',
-          items: ['牛排套餐', '柠檬红茶']
-        }
-      ]
-      ElMessage.error('加载订单失败，将显示默认数据')
-    })
-    .finally(() => {
-      // 隐藏加载状态
-      loading.value = false
-      resolve()
-    })
-  })
+    const response = await axios.get(API_CONFIG.baseURL + API_CONFIG.order.list + userId)
+
+    if (response.data.data) {
+      // 转换后端Order实体到前端期望的格式，并加载菜品信息
+      const ordersWithItems = await Promise.all(
+        response.data.data.map(async (order) => {
+          try {
+            // 获取订单菜品信息
+            const dishesResponse = await axios.get(
+              `${API_CONFIG.baseURL}/v1/orders/${order.id}/dishes`
+            )
+
+            // 处理菜品列表，获取菜品详细信息
+            let items = []
+            if (dishesResponse.data?.data && dishesResponse.data.data.length > 0) {
+              items = await Promise.all(
+                dishesResponse.data.data.map(async (orderDish) => {
+                  try {
+                    // 获取菜品详情
+                    const dishResponse = await axios.get(
+                      `${API_CONFIG.baseURL}/dishes/${orderDish.dishId}`
+                    )
+                    const dish = dishResponse.data?.data
+                    return {
+                      name: dish?.name || `菜品${orderDish.dishId}`,
+                      quantity: orderDish.quantity,
+                      price: orderDish.price,
+                      customization: orderDish.customization,
+                      image: dish?.image || ''
+                    }
+                  } catch (error) {
+                    console.error(`获取菜品${orderDish.dishId}详情失败:`, error)
+                    return {
+                      name: `菜品${orderDish.dishId}`,
+                      quantity: orderDish.quantity,
+                      price: orderDish.price,
+                      image: ''
+                    }
+                  }
+                })
+              )
+            }
+
+            return {
+              id: order.id,
+              orderNo: order.id,
+              status: orderStatusToText(order.status),
+              merchant: `商家${order.merchantId}`,
+              total: order.totalAmount,
+              time: formatTime(order.createTime),
+              items: items,
+              itemCount: items.reduce((sum, item) => sum + item.quantity, 0),
+              _raw: order
+            }
+          } catch (error) {
+            console.error(`加载订单${order.id}的菜品失败:`, error)
+            return {
+              id: order.id,
+              orderNo: order.id,
+              status: orderStatusToText(order.status),
+              merchant: `商家${order.merchantId}`,
+              total: order.totalAmount,
+              time: formatTime(order.createTime),
+              items: [],
+              itemCount: 0,
+              _raw: order
+            }
+          }
+        })
+      )
+
+      orders.value = ordersWithItems
+    }
+  } catch (error) {
+    console.error('加载订单失败:', error)
+    ElMessage.error('加载订单失败，请稍后重试')
+    orders.value = []
+  } finally {
+    loading.value = false
+  }
 }
 
 // 订单状态筛选
@@ -324,6 +318,19 @@ const goToEvaluate = (order) => {
     params: { id: order.id }
   })
 }
+
+// 处理图片加载错误
+const handleImageError = (event) => {
+  const img = event.target
+  img.style.display = 'none'
+  const parent = img.parentElement
+  if (parent && !parent.querySelector('.no-image')) {
+    const noImageDiv = document.createElement('div')
+    noImageDiv.className = 'no-image'
+    noImageDiv.innerHTML = '<span>菜</span>'
+    parent.appendChild(noImageDiv)
+  }
+}
 </script>
 
 <template>
@@ -369,12 +376,46 @@ const goToEvaluate = (order) => {
           </div>
         </div>
 
+        <!-- 菜品列表 -->
         <div class="order-items">
-          <div class="item-title">商品:</div>
-          <div class="item-list">
-            <el-tag v-for="item in order.items" :key="item" type="info" size="small">{{
-              item
-            }}</el-tag>
+          <div class="items-header">
+            <span class="item-count">共 {{ order.itemCount || 0 }} 件商品</span>
+          </div>
+
+          <div class="items-list">
+            <div v-for="(item, index) in order.items" :key="index" class="item-row">
+              <!-- 商品图片 -->
+              <div class="item-image">
+                <img
+                  v-if="item.image"
+                  :src="item.image"
+                  :alt="item.name"
+                  @error="handleImageError($event)"
+                />
+                <div v-else class="no-image">
+                  <span>{{ item.name?.charAt(0) || '菜' }}</span>
+                </div>
+              </div>
+
+              <!-- 商品信息 -->
+              <div class="item-info">
+                <div class="item-name">{{ item.name }}</div>
+                <div v-if="item.customization" class="item-customization">
+                  备注: {{ item.customization }}
+                </div>
+              </div>
+
+              <!-- 数量和价格 -->
+              <div class="item-price-info">
+                <div class="item-quantity">x{{ item.quantity }}</div>
+                <div class="item-price">¥{{ (item.price * item.quantity).toFixed(2) }}</div>
+              </div>
+            </div>
+
+            <!-- 空状态 -->
+            <div v-if="!order.items || order.items.length === 0" class="items-empty">
+              暂无商品信息
+            </div>
           </div>
         </div>
 
@@ -480,16 +521,121 @@ const goToEvaluate = (order) => {
 
     .order-items {
       margin-bottom: 15px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 12px;
 
-      .item-title {
-        font-weight: bold;
+      .items-header {
         margin-bottom: 10px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #e0e0e0;
+
+        .item-count {
+          font-size: 14px;
+          color: #606266;
+          font-weight: 500;
+        }
       }
 
-      .item-list {
+      .items-list {
         display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .item-row {
+        display: flex;
+        align-items: center;
+        padding: 10px;
+        background: white;
+        border-radius: 6px;
+        transition: all 0.2s;
+
+        &:hover {
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+          transform: translateY(-2px);
+        }
+
+        .item-image {
+          width: 60px;
+          height: 60px;
+          border-radius: 6px;
+          overflow: hidden;
+          margin-right: 12px;
+          flex-shrink: 0;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+          img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+          }
+
+          .no-image {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            span {
+              font-size: 24px;
+              font-weight: bold;
+              color: white;
+            }
+          }
+        }
+
+        .item-info {
+          flex: 1;
+          min-width: 0;
+
+          .item-name {
+            font-size: 15px;
+            font-weight: 500;
+            color: #303133;
+            margin-bottom: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+
+          .item-customization {
+            font-size: 12px;
+            color: #909399;
+            display: flex;
+            align-items: center;
+
+            &::before {
+              content: '📝';
+              margin-right: 4px;
+            }
+          }
+        }
+
+        .item-price-info {
+          text-align: right;
+          flex-shrink: 0;
+
+          .item-quantity {
+            font-size: 13px;
+            color: #909399;
+            margin-bottom: 4px;
+          }
+
+          .item-price {
+            font-size: 16px;
+            font-weight: bold;
+            color: #ff6b6b;
+          }
+        }
+      }
+
+      .items-empty {
+        text-align: center;
+        padding: 20px;
+        color: #909399;
+        font-size: 14px;
       }
     }
 
@@ -550,6 +696,40 @@ const goToEvaluate = (order) => {
 
         .order-status {
           margin-top: 10px;
+        }
+      }
+
+      .order-items {
+        padding: 10px;
+
+        .item-row {
+          padding: 8px;
+
+          .item-image {
+            width: 50px;
+            height: 50px;
+            margin-right: 10px;
+          }
+
+          .item-info {
+            .item-name {
+              font-size: 14px;
+            }
+
+            .item-customization {
+              font-size: 11px;
+            }
+          }
+
+          .item-price-info {
+            .item-quantity {
+              font-size: 12px;
+            }
+
+            .item-price {
+              font-size: 15px;
+            }
+          }
         }
       }
 

@@ -6,53 +6,68 @@ import { API_CONFIG } from '../config/index.js'
 
 /**
  * 获取用户收藏列表
- * @param {number} userId - 用户ID
+ * @param {string} userId - 用户ID
  * @returns {Promise}
  */
 export const getUserFavorites = (userId) => {
-  return axios.get(`${API_CONFIG.baseURL}/v1/favorites/user/${userId}`)
+  return axios.get(`${API_CONFIG.baseURL}/v1/collections`, {
+    params: { userId }
+  })
+}
+
+/**
+ * 根据类型获取用户收藏
+ * @param {string} userId - 用户ID
+ * @param {string} type - 收藏类型
+ * @returns {Promise}
+ */
+export const getUserFavoritesByType = (userId, type) => {
+  return axios.get(`${API_CONFIG.baseURL}/v1/collections/type`, {
+    params: { userId, type }
+  })
 }
 
 /**
  * 添加收藏
  * @param {Object} data - 收藏数据
- * @param {number} data.userId - 用户ID
- * @param {number} data.dishId - 菜品ID
- * @param {string} data.dishName - 菜品名称
- * @param {string} data.dishType - 菜品类型
- * @param {number} data.calories - 卡路里
- * @param {Array} data.tags - 标签
- * @param {string} data.image - 图片
- * @param {number} data.rating - 评分
+ * @param {string} data.userId - 用户ID
+ * @param {string} data.type - 收藏类型 (dish/merchant/menu等)
+ * @param {string} data.id - 收藏对象ID
  * @returns {Promise}
  */
 export const addFavorite = (data) => {
-  return axios.post(`${API_CONFIG.baseURL}/v1/favorites`, data)
+  return axios.post(`${API_CONFIG.baseURL}/v1/collections`, data)
 }
 
 /**
  * 取消收藏
- * @param {number} favoriteId - 收藏ID
+ * @param {string} userId - 用户ID
+ * @param {string} type - 收藏类型
+ * @param {string} id - 收藏对象ID
  * @returns {Promise}
  */
-export const removeFavorite = (favoriteId) => {
-  return axios.delete(`${API_CONFIG.baseURL}/v1/favorites/${favoriteId}`)
+export const removeFavorite = (userId, type, id) => {
+  return axios.delete(`${API_CONFIG.baseURL}/v1/collections`, {
+    params: { userId, type, id }
+  })
 }
 
 /**
- * 检查菜品是否已收藏
- * @param {number} userId - 用户ID
- * @param {number} dishId - 菜品ID
+ * 检查是否已收藏
+ * @param {string} userId - 用户ID
+ * @param {string} type - 收藏类型
+ * @param {string} id - 收藏对象ID
  * @returns {Promise}
  */
-export const checkFavorite = (userId, dishId) => {
-  return axios.get(`${API_CONFIG.baseURL}/v1/favorites/check`, {
-    params: { userId, dishId }
+export const checkFavorite = (userId, type, id) => {
+  return axios.get(`${API_CONFIG.baseURL}/v1/collections/check`, {
+    params: { userId, type, id }
   })
 }
 
 export default {
   getUserFavorites,
+  getUserFavoritesByType,
   addFavorite,
   removeFavorite,
   checkFavorite

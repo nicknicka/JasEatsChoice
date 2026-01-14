@@ -167,6 +167,8 @@
   },
   "active": "25380c94f56f550b",
   "lastOpenFiles": [
+    "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/dto/OrderCreateDTO.class",
+    "JasEatsChoiceJava/src/main/java/com/xx/jaseatschoicejava/dto/OrderCreateDTO.java",
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/controller/OrderController.class",
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/entity/Order.class",
     "订单创建流程验证报告.md",
@@ -180,8 +182,6 @@
     "JasEatsChoiceFront/src/renderer/src/api/coupon.example.js",
     "JasEatsChoiceFront/src/renderer/src/composables/useFavorites.js",
     "JasEatsChoiceFront/src/renderer/src/composables/useRecommendations.js",
-    "JasEatsChoiceFront/src/renderer/src/constants/recommendationConstants.js",
-    "JasEatsChoiceFront/src/renderer/src/constants/festivalDishes.js",
     "JasEatsChoiceFront/node_modules/app-builder-lib/templates/icons/proton-native/linux/64x64.png",
     "JasEatsChoiceFront/node_modules/app-builder-lib/templates/icons/proton-native/linux/512x512.png",
     "JasEatsChoiceFront/node_modules/app-builder-lib/templates/icons/proton-native/linux/48x48.png",

@@ -39,9 +39,9 @@ export const WEATHER_TAGS = {
 
 // 卡路里范围定义
 export const CALORIE_RANGES = [
-  { label: '低卡路里 (0-200)', min: 0, max: 200 },
-  { label: '中卡路里 (200-400)', min: 200, max: 400 },
-  { label: '高卡路里 (400+)', min: 400, max: Infinity }
+  { id: 1, label: '低卡路里 (0-200)', min: 0, max: 200 },
+  { id: 2, label: '中卡路里 (200-400)', min: 200, max: 400 },
+  { id: 3, label: '高卡路里 (400+)', min: 400, max: Infinity }
 ]
 
 // 模拟菜品数据库

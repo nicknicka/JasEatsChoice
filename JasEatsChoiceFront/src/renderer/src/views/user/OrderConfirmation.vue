@@ -769,15 +769,26 @@ const confirmOrder = async () => {
           couponAmount: discountAmount.value || 0
         })
 
-        // 先创建订单
+        // 将购物车项转换为订单菜品格式
+        const dishes = orderInfo.value.unpaidItems.map(item => ({
+          dishId: String(item.id || item.dishId),
+          quantity: item.quantity,
+          price: item.price,
+          customization: item.note || item.customization || null
+        }))
+
+        // 先创建订单(包含菜品列表)
         const createOrderResponse = await orderApi.createOrder({
-          id: orderInfo.value.orderId,
-          userId: String(userId),
-          merchantId: String(merchantId.value),
-          totalAmount: finalAmount.value,
-          status: 0, // 0-待支付
-          address: pendingOrder.address || '商家地址', // TODO: 从地址簿选择或使用用户默认地址
-          remark: selectedDiscount.value ? `使用优惠券: ${selectedDiscount.value.name}` : null
+          order: {
+            id: orderInfo.value.orderId,
+            userId: String(userId),
+            merchantId: String(merchantId.value),
+            totalAmount: finalAmount.value,
+            status: 0, // 0-待支付
+            address: pendingOrder.address || '商家地址', // TODO: 从地址簿选择或使用用户默认地址
+            remark: selectedDiscount.value ? `使用优惠券: ${selectedDiscount.value.name}` : null
+          },
+          dishes: dishes
         })
 
         console.log('创建订单响应:', createOrderResponse)

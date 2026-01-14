@@ -50,7 +50,7 @@
     </div>
 
     <el-button type="primary" size="small" @click="handleAddToCart" style="width: 100%">
-      {{ viewMode === 'order' ? '立即购买' : '加入购物车' }}
+      加入购物车
     </el-button>
   </div>
 </template>
@@ -66,10 +66,6 @@ const props = defineProps({
   categoryEmoji: {
     type: String,
     default: '🍽️'
-  },
-  viewMode: {
-    type: String,
-    default: 'order'
   }
 })
 

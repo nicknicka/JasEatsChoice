@@ -20,12 +20,13 @@ export function useRecommendationFilters(recommendations) {
   const filterByCalories = (items) => {
     if (!selectedCalorieRange.value) return items
 
+    // 通过 ID 找到对应的范围对象
+    const range = CALORIE_RANGES.find(r => r.id === selectedCalorieRange.value)
+    if (!range) return items
+
     return items.filter((item) => {
       const calories = item.calories || 0
-      return (
-        calories >= selectedCalorieRange.value.min &&
-        calories <= selectedCalorieRange.value.max
-      )
+      return calories >= range.min && calories <= range.max
     })
   }
 

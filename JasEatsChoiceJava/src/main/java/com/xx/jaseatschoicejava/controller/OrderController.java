@@ -2,6 +2,7 @@ package com.xx.jaseatschoicejava.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.xx.jaseatschoicejava.common.ResponseResult;
+import com.xx.jaseatschoicejava.dto.OrderCreateDTO;
 import com.xx.jaseatschoicejava.entity.Order;
 import com.xx.jaseatschoicejava.entity.OrderDish;
 import com.xx.jaseatschoicejava.entity.PaymentRecord;
@@ -35,18 +36,32 @@ public class OrderController {
     private final OrderDishService orderDishService;
 
     /**
-     * 创建订单
+     * 创建订单(支持菜品列表)
      */
     @PostMapping
-    public ResponseResult<?> createOrder(@RequestBody Order order) {
-        log.info("开始创建订单，订单信息：{}", order);
-        boolean success = orderService.save(order);
-        if (success) {
-            log.info("订单创建成功，订单ID：{}", order.getId());
-            return ResponseResult.success(order.getId()); // 返回订单ID
+    public ResponseResult<?> createOrder(@RequestBody OrderCreateDTO orderCreateDTO) {
+        log.info("开始创建订单，订单信息：{}，菜品数量：{}",
+                orderCreateDTO.getOrder(),
+                orderCreateDTO.getDishes() != null ? orderCreateDTO.getDishes().size() : 0);
+
+        try {
+            // 使用事务方法同时创建订单和菜品
+            boolean success = orderService.createOrderWithDishes(
+                    orderCreateDTO.getOrder(),
+                    orderCreateDTO.getDishes()
+            );
+
+            if (success) {
+                log.info("订单创建成功，订单ID：{}", orderCreateDTO.getOrder().getId());
+                return ResponseResult.success(orderCreateDTO.getOrder().getId());
+            } else {
+                log.error("订单创建失败");
+                return ResponseResult.fail("500", "创建订单失败");
+            }
+        } catch (Exception e) {
+            log.error("创建订单异常", e);
+            return ResponseResult.fail("500", "创建订单失败：" + e.getMessage());
         }
-        log.error("订单创建失败");
-        return ResponseResult.fail("500", "创建订单失败");
     }
 
     /**
@@ -116,6 +131,37 @@ public class OrderController {
         } catch (Exception e) {
             log.error("更新订单状态失败，订单ID：{}，状态：{}", orderId, status, e);
             return ResponseResult.fail("500", "更新失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 取消订单
+     */
+    @PutMapping("/{orderId}/cancel")
+    public ResponseResult<?> cancelOrder(@PathVariable String orderId) {
+        try {
+            // 先查询订单是否存在
+            Order order = orderService.getById(orderId);
+            if (order == null) {
+                return ResponseResult.fail("404", "订单不存在");
+            }
+
+            // 检查订单状态：只有待支付状态(0)的订单可以取消
+            if (order.getStatus() != 0) {
+                return ResponseResult.fail("400", "只有待支付的订单可以取消");
+            }
+
+            // 更新订单状态为已取消(6)
+            order.setStatus(6);
+            boolean success = orderService.updateById(order);
+            if (success) {
+                log.info("订单取消成功，订单ID：{}", orderId);
+                return ResponseResult.success("订单已取消");
+            }
+            return ResponseResult.fail("500", "取消订单失败");
+        } catch (Exception e) {
+            log.error("取消订单失败，订单ID：{}", orderId, e);
+            return ResponseResult.fail("500", "取消订单失败：" + e.getMessage());
         }
     }
 

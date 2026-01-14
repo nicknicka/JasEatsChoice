@@ -213,11 +213,11 @@ onMounted(async () => {
         <div class="filter-section">
           <div class="filter-title">卡路里范围</div>
           <el-radio-group v-model="selectedCalorieRange">
-            <el-radio :label="null">全部</el-radio>
+            <el-radio :label="0">全部</el-radio>
             <el-radio
               v-for="range in CALORIE_RANGES"
-              :key="range.label"
-              :label="range"
+              :key="range.id"
+              :label="range.id"
             >{{ range.label }}</el-radio>
           </el-radio-group>
         </div>
@@ -259,9 +259,17 @@ onMounted(async () => {
       <el-button type="text" size="small" @click="resetFilters">清除筛选</el-button>
     </div>
 
-    <!-- 下拉刷新 -->
-    <el-pull-refresh v-model="refreshing" @refresh="onRefresh">
-      <!-- 加载中状态 -->
+    <!-- 刷新按钮 -->
+    <div class="refresh-bar">
+      <el-button
+        :icon="refreshing ? 'Loading' : 'Refresh'"
+        :loading="refreshing"
+        @click="onRefresh"
+        circle
+      />
+    </div>
+
+    <!-- 加载中状态 -->
       <div class="loading-skeleton" v-if="isLoading && recommendations.length === 0">
         <el-skeleton :rows="6" type="card" :border="false" />
       </div>
@@ -393,7 +401,6 @@ onMounted(async () => {
           {{ hasActiveFilters ? '清除筛选' : '重新获取推荐' }}
         </el-button>
       </div>
-    </el-pull-refresh>
 
     <!-- 营养详情弹窗 -->
     <el-dialog v-model="showNutritionDetail" title="营养成分详情" width="400px">
@@ -516,6 +523,13 @@ onMounted(async () => {
     border-radius: 8px;
     color: #333;
     font-size: 14px;
+  }
+
+  // 刷新按钮
+  .refresh-bar {
+    display: flex;
+    justify-content: center;
+    padding: 20px;
   }
 
   .recommend-grid {

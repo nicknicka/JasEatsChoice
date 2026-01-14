@@ -32,22 +32,101 @@ const statusTagTypeMap = {
   cancelled: 'danger'
 }
 
-// 加载订单详情
-const loadOrderDetail = () => {
+// 将后端状态码转换为前端状态文本
+const orderStatusToText = (statusCode) => {
+  const statusMap = {
+    0: 'pending',        // 待支付
+    1: 'processing',    // 待接单
+    2: 'processing',    // 备菜中
+    3: 'processing',    // 烹饪中
+    4: 'processing',    // 待上菜
+    5: 'delivered',      // 已送达
+    6: 'cancelled'       // 已取消
+  }
+  return statusMap[statusCode] || 'pending'
+}
+
+// 格式化时间
+const formatTime = (time) => {
+  if (!time) return ''
+  const date = new Date(time)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  return `${year}-${month}-${day} ${hours}:${minutes}`
+}
+
+// 加载订单详情(包含菜品信息)
+const loadOrderDetail = async () => {
   loading.value = true
-  axios.get(API_CONFIG.baseURL + API_CONFIG.order.detail + orderId.value)
-    .then((response) => {
-      if (response.data.data) {
-        order.value = response.data.data
-      }
-    })
-    .catch((error) => {
-      console.error('加载订单详情失败:', error)
-      ElMessage.error('加载订单详情失败')
-    })
-    .finally(() => {
-      loading.value = false
-    })
+  try {
+    // 1. 获取订单基本信息
+    const orderResponse = await axios.get(
+      API_CONFIG.baseURL + API_CONFIG.order.detail + orderId.value
+    )
+
+    if (!orderResponse.data?.data) {
+      throw new Error('订单不存在')
+    }
+
+    const orderData = orderResponse.data.data
+
+    // 2. 获取订单菜品信息
+    const dishesResponse = await axios.get(
+      `${API_CONFIG.baseURL}/v1/orders/${orderData.id}/dishes`
+    )
+
+    // 3. 获取菜品详情
+    let items = []
+    if (dishesResponse.data?.data && dishesResponse.data.data.length > 0) {
+      items = await Promise.all(
+        dishesResponse.data.data.map(async (orderDish) => {
+          try {
+            const dishResponse = await axios.get(
+              `${API_CONFIG.baseURL}/dishes/${orderDish.dishId}`
+            )
+            const dish = dishResponse.data?.data
+            return {
+              name: dish?.name || `菜品${orderDish.dishId}`,
+              quantity: orderDish.quantity,
+              price: orderDish.price,
+              customization: orderDish.customization,
+              image: dish?.image || ''
+            }
+          } catch (error) {
+            console.error(`获取菜品${orderDish.dishId}详情失败:`, error)
+            return {
+              name: `菜品${orderDish.dishId}`,
+              quantity: orderDish.quantity,
+              price: orderDish.price,
+              image: ''
+            }
+          }
+        })
+      )
+    }
+
+    // 4. 组装订单数据
+    order.value = {
+      id: orderData.id,
+      orderNo: orderData.id,
+      status: orderStatusToText(orderData.status),
+      merchant: `商家${orderData.merchantId}`,
+      total: orderData.totalAmount,
+      time: formatTime(orderData.createTime),
+      items: items,
+      itemCount: items.reduce((sum, item) => sum + item.quantity, 0),
+      _raw: orderData
+    }
+  } catch (error) {
+    console.error('加载订单详情失败:', error)
+    ElMessage.error('加载订单详情失败')
+    order.value = null
+  } finally {
+    loading.value = false
+  }
 }
 
 // 组件挂载时加载订单详情
@@ -105,9 +184,23 @@ const cancelOrder = (order) => {
 
         <!-- 商品列表 -->
         <div class="product-list">
-          <div class="product-title">商品列表</div>
-          <div class="product-item" v-for="item in order.items" :key="item">
-            <div class="product-name">{{ item }}</div>
+          <div class="product-title">商品列表 (共{{ order.itemCount || 0 }}件)</div>
+          <div v-if="order.items && order.items.length > 0">
+            <div class="product-item" v-for="(item, index) in order.items" :key="index">
+              <div class="product-details">
+                <div class="product-name">{{ item.name }}</div>
+                <div class="product-meta">
+                  <span class="product-quantity">x{{ item.quantity }}</span>
+                  <span class="product-price">¥{{ item.price }} × {{ item.quantity }} = ¥{{ (item.price * item.quantity).toFixed(2) }}</span>
+                </div>
+                <div v-if="item.customization" class="product-customization">
+                  备注: {{ item.customization }}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div v-else class="product-empty">
+            暂无商品信息
           </div>
         </div>
 
@@ -116,7 +209,7 @@ const cancelOrder = (order) => {
         <!-- 订单金额 -->
         <div class="order-total">
           <div class="total-text">总金额:</div>
-          <div class="total-amount">¥{{ order.total.toFixed(2) }}</div>
+          <div class="total-amount">¥{{ order.total ? order.total.toFixed(2) : '0.00' }}</div>
         </div>
 
         <el-divider />
@@ -124,7 +217,7 @@ const cancelOrder = (order) => {
         <!-- 订单时间 -->
         <div class="order-time">
           <div class="time-text">下单时间:</div>
-          <div class="time-value">{{ order.time }}</div>
+          <div class="time-value">{{ order.time || '-' }}</div>
         </div>
 
         <div class="order-actions">
@@ -208,17 +301,61 @@ const cancelOrder = (order) => {
       .product-title {
         font-weight: bold;
         margin-bottom: 10px;
+        font-size: 16px;
       }
 
       .product-item {
-        margin-bottom: 8px;
-        padding: 8px 12px;
+        margin-bottom: 12px;
+        padding: 12px;
         background-color: #f5f7fa;
-        border-radius: 4px;
+        border-radius: 6px;
+        transition: all 0.2s;
 
-        .product-name {
-          font-size: 14px;
+        &:hover {
+          background-color: #e8f0fe;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
+
+        .product-details {
+          .product-name {
+            font-size: 15px;
+            font-weight: 500;
+            color: #303133;
+            margin-bottom: 8px;
+          }
+
+          .product-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+
+            .product-quantity {
+              color: #606266;
+            }
+
+            .product-price {
+              color: #ff6b6b;
+              font-weight: bold;
+            }
+          }
+
+          .product-customization {
+            margin-top: 8px;
+            padding: 6px 10px;
+            background: #fff9e6;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #856404;
+          }
+        }
+      }
+
+      .product-empty {
+        text-align: center;
+        padding: 20px;
+        color: #909399;
+        font-size: 14px;
       }
     }
 
