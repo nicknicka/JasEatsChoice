@@ -167,6 +167,7 @@ const handleAddToCart = () => {
     background: rgba(59, 130, 246, 0.03);
     border-radius: 12px;
     border: 1px solid rgba(59, 130, 246, 0.08);
+    box-sizing: border-box;
 
     .ingredient-section {
       margin-bottom: 16px;
@@ -186,7 +187,9 @@ const handleAddToCart = () => {
       .ingredient-list {
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 6px;
+        width: 100%;
+        box-sizing: border-box;
 
         .ingredient-item {
           background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
@@ -203,21 +206,35 @@ const handleAddToCart = () => {
           display: flex;
           align-items: center;
           gap: 8px;
-          padding: 8px;
+          padding: 6px 8px;
+          margin: 0;
           background: #ffffff;
-          border-radius: 8px;
+          border-radius: 6px;
           border: 1px solid rgba(59, 130, 246, 0.1);
           transition: all 0.3s ease;
+          width: 100%;
+          max-width: 100%;
+          box-sizing: border-box;
+          overflow: hidden;
 
           &:hover {
             background: rgba(59, 130, 246, 0.05);
             border-color: rgba(59, 130, 246, 0.2);
           }
 
+          :deep(.el-checkbox__label) {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex: 1;
+            width: auto;
+          }
+
           .ingredient-price {
             color: #f59e0b;
             font-size: 12px;
             font-weight: 600;
+            margin-left: auto;
           }
         }
       }

@@ -61,4 +61,13 @@ public interface PaymentService extends IService<PaymentRecord> {
      * @return 流水号
      */
     String generatePaymentNo();
+
+    /**
+     * 退款支付
+     * @param orderId 订单ID
+     * @param refundAmount 退款金额
+     * @param reason 退款原因
+     * @return 是否成功
+     */
+    boolean refundPayment(String orderId, BigDecimal refundAmount, String reason);
 }

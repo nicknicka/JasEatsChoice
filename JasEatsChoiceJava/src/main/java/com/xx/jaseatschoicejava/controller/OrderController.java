@@ -135,10 +135,13 @@ public class OrderController {
     }
 
     /**
-     * 取消订单
+     * 取消订单（支持退款）
      */
     @PutMapping("/{orderId}/cancel")
-    public ResponseResult<?> cancelOrder(@PathVariable String orderId) {
+    public ResponseResult<?> cancelOrder(
+        @PathVariable String orderId,
+        @RequestParam(required = false, defaultValue = "用户取消订单") String reason
+    ) {
         try {
             // 先查询订单是否存在
             Order order = orderService.getById(orderId);
@@ -146,13 +149,37 @@ public class OrderController {
                 return ResponseResult.fail("404", "订单不存在");
             }
 
-            // 检查订单状态：只有待支付状态(0)的订单可以取消
-            if (order.getStatus() != 0) {
-                return ResponseResult.fail("400", "只有待支付的订单可以取消");
+            // 检查订单状态：只有待支付(0)或待接单(1)的订单可以取消
+            if (order.getStatus() != 0 && order.getStatus() != 1) {
+                return ResponseResult.fail("400", "只有待支付或待接单的订单可以取消");
+            }
+
+            // 如果订单已支付，需要退款
+            if (order.getStatus() != 0 && order.getPaidAmount() != null
+                && order.getPaidAmount().compareTo(java.math.BigDecimal.ZERO) > 0) {
+
+                try {
+                    // 调用退款服务
+                    boolean refundSuccess = paymentService.refundPayment(
+                        orderId,
+                        order.getPaidAmount(),
+                        reason
+                    );
+
+                    if (!refundSuccess) {
+                        return ResponseResult.fail("500", "退款失败，无法取消订单");
+                    }
+
+                    log.info("订单退款成功，订单ID：{}，退款金额：{}", orderId, order.getPaidAmount());
+                } catch (Exception e) {
+                    log.error("订单退款失败，订单ID：{}", orderId, e);
+                    return ResponseResult.fail("500", "退款失败：" + e.getMessage());
+                }
             }
 
             // 更新订单状态为已取消(6)
             order.setStatus(6);
+            order.setUpdateTime(java.time.LocalDateTime.now());
             boolean success = orderService.updateById(order);
             if (success) {
                 log.info("订单取消成功，订单ID：{}", orderId);

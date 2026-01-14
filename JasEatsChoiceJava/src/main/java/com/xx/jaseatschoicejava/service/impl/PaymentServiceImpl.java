@@ -165,8 +165,60 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentRecordMapper, Payment
     }
 
     @Override
-    public String generatePaymentNo() {
-        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
-        return "PAY" + timestamp + (int)(Math.random() * 1000);
+    @Transactional(rollbackFor = Exception.class)
+    public boolean refundPayment(String orderId, BigDecimal refundAmount, String reason) {
+        // 1. 查询支付记录
+        PaymentRecord paymentRecord = getPaymentByOrderId(orderId);
+        if (paymentRecord == null) {
+            throw new RuntimeException("支付记录不存在");
+        }
+
+        // 2. 检查支付状态
+        if (!"success".equals(paymentRecord.getPaymentStatus())) {
+            throw new RuntimeException("只能退款已支付的订单");
+        }
+
+        // 3. 检查是否已经退款过
+        BigDecimal currentRefundAmount = paymentRecord.getRefundAmount() != null
+            ? paymentRecord.getRefundAmount()
+            : BigDecimal.ZERO;
+        BigDecimal totalRefundAmount = currentRefundAmount.add(refundAmount);
+
+        if (totalRefundAmount.compareTo(paymentRecord.getAmount()) > 0) {
+            throw new RuntimeException("退款金额超过支付金额");
+        }
+
+        // 4. 根据支付方式处理退款
+        if ("wallet".equals(paymentRecord.getPaymentMethod())) {
+            // 钱包支付 - 原路退回钱包
+            String description = "订单退款 - " + orderId + (reason != null ? " (" + reason + ")" : "");
+            boolean success = walletService.refund(
+                paymentRecord.getUserId(),
+                refundAmount,
+                description
+            );
+
+            if (!success) {
+                throw new RuntimeException("钱包退款失败");
+            }
+
+            // 5. 更新支付记录
+            paymentRecord.setRefundAmount(totalRefundAmount);
+
+            // 如果全额退款，更新支付状态为已退款
+            if (totalRefundAmount.compareTo(paymentRecord.getAmount()) == 0) {
+                paymentRecord.setPaymentStatus("refund");
+            }
+
+            paymentRecord.setUpdateTime(LocalDateTime.now());
+            updateById(paymentRecord);
+
+            log.info("钱包退款成功，订单：{}，退款金额：{}，总退款：{}",
+                orderId, refundAmount, totalRefundAmount);
+            return true;
+        }
+
+        // 其他支付方式（微信、支付宝）的退款预留
+        throw new RuntimeException("暂不支持该支付方式的退款");
     }
 }
