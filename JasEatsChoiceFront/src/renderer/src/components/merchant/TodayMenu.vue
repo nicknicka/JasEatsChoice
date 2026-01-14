@@ -256,9 +256,9 @@ onMounted(() => {
             <div class="menu-card-header">
               <div class="menu-icon">
                 <el-icon :size="24">
-                  <Sunny v-if="menu.name.includes('早餐') || menu.name.includes('午餐')" />
-                  <Moon v-else-if="menu.name.includes('晚餐')" />
-                  <Coffee v-else-if="menu.name.includes('加餐')" />
+                  <Sunny v-if="menu.name && (menu.name.includes('早餐') || menu.name.includes('午餐'))" />
+                  <Moon v-else-if="menu.name && menu.name.includes('晚餐')" />
+                  <Coffee v-else-if="menu.name && menu.name.includes('加餐')" />
                   <Dish v-else />
                 </el-icon>
               </div>

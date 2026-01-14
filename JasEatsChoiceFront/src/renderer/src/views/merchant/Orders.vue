@@ -19,14 +19,18 @@ import {
   List,
   Calendar
 } from '@element-plus/icons-vue'
-import axios from 'axios'
-import { API_CONFIG } from '../../config/index.js'
+import api from '../../utils/api.js'
 import { useRouter, useRoute } from 'vue-router'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
+import { useAuthStore } from '../../store/authStore'
 
 const router = useRouter()
 const route = useRoute()
+const authStore = useAuthStore()
 const loading = ref(false)
+
+// 获取商家ID
+const merchantId = authStore.merchantId || localStorage.getItem('auth_merchantId')
 
 // 订单状态映射（对应后端状态码）
 // 0-待支付、1-待接单、2-备菜中、3-烹饪中、4-待上菜、5-已完成、6-已取消
@@ -116,12 +120,11 @@ const filteredOrders = computed(() => {
         activeStatusFilter.value === '' ||
         statusFilters.includes(order.status)
 
-      // 搜索筛选
+      // 搜索筛选（按订单ID或地址搜索）
       const searchMatch =
         !searchKeyword.value ||
-        order.orderNo?.toLowerCase().includes(searchKeyword.value.toLowerCase()) ||
-        order.user?.includes(searchKeyword.value) ||
-        order.phone?.includes(searchKeyword.value)
+        (order.id && order.id.toLowerCase().includes(searchKeyword.value.toLowerCase())) ||
+        (order.address && order.address.toLowerCase().includes(searchKeyword.value.toLowerCase()))
 
       return statusMatch && searchMatch
     })
@@ -160,37 +163,76 @@ watch(orderOverview, (newVal) => {
 
 // 查看订单详情
 const viewOrderDetails = (order) => {
-  if (order.unread) {
-    order.unread = false
-    ElMessage.success('订单已标记为已读')
-  }
   router.push(`/merchant/home/order-detail/${order.id}`)
 }
 
 // 更新订单状态
-const updateOrderStatus = (order, newStatus) => {
-  order.status = newStatus
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const day = String(now.getDate()).padStart(2, '0')
-  const hours = String(now.getHours()).padStart(2, '0')
-  const minutes = String(now.getMinutes()).padStart(2, '0')
-  order.updateTime = `${year}-${month}-${day} ${hours}:${minutes}`
-  ElMessage.success(`订单状态已更新为${orderStatusMap[newStatus].text}`)
+const updateOrderStatus = async (order, newStatus) => {
+  try {
+    const response = await api.put(`/v1/orders/${order.id}/status?status=${newStatus}`)
+    if (response.success) {
+      order.status = newStatus
+      ElMessage.success(`订单状态已更新为${orderStatusMap[newStatus].text}`)
+    } else {
+      ElMessage.error(response.message || '更新失败')
+    }
+  } catch (error) {
+    console.error('更新订单状态失败:', error)
+    ElMessage.error('更新订单状态失败')
+  }
+}
+
+// 拒绝接单
+const rejectOrder = async (order) => {
+  ElMessageBox.prompt('请输入拒绝原因（可选）', '拒绝接单', {
+    confirmButtonText: '确定拒绝',
+    cancelButtonText: '取消',
+    type: 'warning',
+    distinguishCancelAndClose: true,
+    inputPattern: /^.{0,200}$/,
+    inputErrorMessage: '拒绝原因不能超过200个字符'
+  })
+    .then(async ({ value }) => {
+      const reason = value || '商家拒绝接单'
+      try {
+        // 使用取消订单API来拒绝订单
+        const response = await api.put(`/v1/orders/${order.id}/cancel`)
+        if (response.success) {
+          order.status = 6
+          order.rejectReason = reason
+          ElMessage.warning(`已拒绝接单: ${reason}`)
+        } else {
+          ElMessage.error(response.message || '拒绝接单失败')
+        }
+      } catch (error) {
+        console.error('拒绝接单失败:', error)
+        ElMessage.error('拒绝接单失败')
+      }
+    })
+    .catch(() => {})
 }
 
 // 取消订单
-const cancelOrder = (order) => {
+const cancelOrder = async (order) => {
   ElMessageBox.confirm('确定要取消此订单吗？取消后将影响商家信誉。', '取消订单确认', {
     confirmButtonText: '确定取消',
     cancelButtonText: '再想想',
     type: 'warning',
     distinguishCancelAndClose: true
   })
-    .then(() => {
-      updateOrderStatus(order, 6)
-      ElMessage.warning('订单已取消')
+    .then(async () => {
+      try {
+        const response = await api.put(`/v1/orders/${order.id}/cancel`)
+        if (response.success) {
+          order.status = 6
+          ElMessage.warning('订单已取消')
+        } else {
+          ElMessage.error(response.message || '取消订单失败')
+        }
+      } catch (error) {
+        console.error('取消订单失败:', error)
+        ElMessage.error('取消订单失败')
+      }
     })
     .catch(() => {})
 }
@@ -211,22 +253,6 @@ const deleteOrder = (order) => {
       }
     })
     .catch(() => {})
-}
-
-// 批量操作：标记所有为已读
-const markAllAsRead = () => {
-  let count = 0
-  filteredOrders.value.forEach((order) => {
-    if (order.unread) {
-      order.unread = false
-      count++
-    }
-  })
-  if (count > 0) {
-    ElMessage.success(`已将 ${count} 个订单标记为已读`)
-  } else {
-    ElMessage.info('没有未读订单')
-  }
 }
 
 // 获取标签类型
@@ -289,11 +315,67 @@ const getEmptyDescription = () => {
 }
 
 // 刷新订单数据
-const refreshOrders = () => {
+const refreshOrders = async () => {
+  await fetchOrders()
+}
+
+// 获取订单数据
+const fetchOrders = async () => {
+  console.log('[Orders] 开始获取订单列表')
+  console.log('[Orders] 商家ID:', merchantId)
+
+  if (!merchantId) {
+    console.error('[Orders] 商家ID为空')
+    ElMessage.warning('未找到商家信息，请重新登录')
+    return
+  }
+
   loading.value = true
-  setTimeout(() => {
+  try {
+    const apiUrl = `/v1/orders/merchant/${merchantId}`
+    console.log('[Orders] 请求API:', apiUrl)
+
+    const response = await api.get(apiUrl)
+    console.log('[Orders] API响应:', response)
+    console.log('[Orders] success字段:', response.success)
+    console.log('[Orders] message字段:', response.message)
+
+    if (response.success) {
+      const ordersData = response.data || []
+      console.log('[Orders] 订单数量:', ordersData.length)
+
+      // 为每个订单获取菜品列表
+      for (const order of ordersData) {
+        try {
+          const dishesResponse = await api.get(`/v1/orders/${order.id}/dishes`)
+          if (dishesResponse.success) {
+            order.orderDishes = dishesResponse.data || []
+          }
+        } catch (error) {
+          console.error('[Orders] 获取订单菜品失败:', order.id, error)
+          order.orderDishes = []
+        }
+      }
+
+      console.log('[Orders] 订单数据:', ordersData)
+      orders.value = ordersData
+    } else {
+      console.error('[Orders] API返回失败:', response)
+      ElMessage.error(response.message || '获取订单列表失败')
+    }
+  } catch (error) {
+    console.error('[Orders] 加载订单异常:', error)
+    console.error('[Orders] 错误详情:', {
+      message: error.message,
+      status: error.status,
+      data: error.data
+    })
+    ElMessage.error('加载订单失败')
+    orders.value = []
+  } finally {
     loading.value = false
-  }, 300)
+    console.log('[Orders] 获取订单完成，loading设置为false')
+  }
 }
 
 // 页面加载时初始化
@@ -310,22 +392,8 @@ onMounted(() => {
     searchKeyword.value = searchParam
   }
 
-  // 模拟商家ID，实际应用中应从登录信息获取
-  const merchantId = 1
-
   // 从API获取订单数据
-  axios
-    .get(`${API_CONFIG.baseURL}/v1/orders/merchant/${merchantId}`)
-    .then((response) => {
-      if (response.data && response.data.success) {
-        orders.value = response.data.data
-      }
-    })
-    .catch((error) => {
-      console.error('加载订单失败:', error)
-      // 使用模拟数据用于展示
-      orders.value = []
-    })
+  fetchOrders()
 })
 </script>
 
@@ -484,14 +552,14 @@ onMounted(() => {
 
     <!-- 订单列表 -->
     <div v-loading="loading" class="orders-list-section">
-      <div v-for="order in filteredOrders" :key="order.id" :class="['order-item', `status-${order.status}`, order.unread ? 'unread-order' : '']">
+      <div v-for="order in filteredOrders" :key="order.id" :class="['order-item', `status-${order.status}`]">
         <div class="order-main">
           <div class="order-content">
             <div class="order-left">
               <div class="order-basic-info">
                 <div class="order-no">
                   <span class="no-label">订单号</span>
-                  <span class="no-value">{{ order.orderNo || order.id }}</span>
+                  <span class="no-value">{{ order.id }}</span>
                 </div>
                 <div class="order-amount">
                   <span class="amount-label">金额</span>
@@ -504,16 +572,8 @@ onMounted(() => {
               </div>
 
               <div class="order-user-info">
-                <div class="user-name">
-                  <span class="info-label">用户</span>
-                  <span class="info-value">{{ order.user || '--' }}</span>
-                </div>
-                <div class="user-phone">
-                  <span class="info-label">电话</span>
-                  <span class="info-value">{{ order.phone || '--' }}</span>
-                </div>
-                <div class="user-address">
-                  <span class="info-label">地址</span>
+                <div class="user-address" style="grid-column: 1 / -1;">
+                  <span class="info-label">📍 地址</span>
                   <span class="info-value">{{ order.address || '--' }}</span>
                 </div>
               </div>
@@ -524,7 +584,6 @@ onMounted(() => {
                 <el-tag :type="orderStatusMap[order.status]?.type || 'info'" size="large">
                   {{ orderStatusMap[order.status]?.text || '未知' }}
                 </el-tag>
-                <el-badge v-if="order.unread" :value="''" type="danger" class="unread-badge" />
               </div>
             </div>
           </div>
@@ -552,6 +611,17 @@ onMounted(() => {
               >
                 <el-icon><CircleCheck /></el-icon>
                 <span>接单</span>
+              </el-button>
+
+              <el-button
+                v-if="order.status === 1"
+                type="danger"
+                size="small"
+                @click="rejectOrder(order)"
+                class="action-btn"
+              >
+                <el-icon><CircleClose /></el-icon>
+                <span>拒绝</span>
               </el-button>
 
               <el-button

@@ -14,15 +14,20 @@ import {
   Delete,
   Search,
   Refresh,
-  Reading,
   Filter,
   List
 } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
+import api from '../../utils/api.js'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
+import { useAuthStore } from '../../store/authStore'
 
 const router = useRouter()
+const authStore = useAuthStore()
 const loading = ref(false)
+
+// 获取商家ID
+const merchantId = authStore.merchantId || localStorage.getItem('auth_merchantId')
 
 // 菜品列表展开状态
 const expandedItems = ref(new Set())
@@ -97,8 +102,6 @@ const getRelativeTime = (timeStr) => {
 // 获取订单卡片样式类
 const getOrderCardClass = (order) => {
   const classes = []
-  if (order.unread) classes.push('unread-order')
-  if (order.priority === 'high') classes.push('urgent-order')
   classes.push(`status-${order.status}`)
   return classes.join(' ')
 }
@@ -125,156 +128,6 @@ const statusFilterMap = {
   5: { text: '已完成', value: 5 }
 }
 
-// 生成今天的模拟订单数据（匹配后端实体结构）
-const generateTodayOrders = () => {
-  const today = new Date()
-  const year = today.getFullYear()
-  const month = String(today.getMonth() + 1).padStart(2, '0')
-  const day = String(today.getDate()).padStart(2, '0')
-  const dateStr = `${year}-${month}-${day}`
-  const orderNumSuffix = `${year}${month}${day}`
-
-  return [
-    {
-      id: '1',
-      orderNo: `JD${orderNumSuffix}001`,
-      status: 1, // 待接单
-      userId: 'u001',
-      user: '小明',
-      phone: '138****8888',
-      address: '科技园A栋12楼',
-      totalAmount: 78.0,
-      createTime: `${dateStr} 10:30`,
-      updateTime: `${dateStr} 10:30`,
-      // 订单菜品（对应OrderDish实体）
-      orderDishes: [
-        { dishId: 'd001', dishName: '宫保鸡丁', quantity: 1, price: 38.0, customization: '' },
-        { dishId: 'd002', dishName: '米饭', quantity: 2, price: 2.0, customization: '' }
-      ],
-      remark: '少辣',
-      unread: true,
-      priority: 'high'
-    },
-    {
-      id: '2',
-      orderNo: `JD${orderNumSuffix}002`,
-      status: 2, // 备菜中
-      userId: 'u002',
-      user: '小红',
-      phone: '139****9999',
-      address: '幸福小区3号楼',
-      totalAmount: 45.0,
-      createTime: `${dateStr} 10:35`,
-      updateTime: `${dateStr} 10:40`,
-      orderDishes: [
-        { dishId: 'd003', dishName: '鱼香肉丝', quantity: 1, price: 28.0, customization: '' },
-        { dishId: 'd004', dishName: '麻婆豆腐', quantity: 1, price: 17.0, customization: '' }
-      ],
-      remark: '',
-      unread: false,
-      priority: 'normal'
-    },
-    {
-      id: '3',
-      orderNo: `JD${orderNumSuffix}003`,
-      status: 5, // 已完成
-      userId: 'u003',
-      user: '小刚',
-      phone: '137****7777',
-      address: '大学城南区5栋',
-      totalAmount: 62.0,
-      createTime: `${dateStr} 10:40`,
-      updateTime: `${dateStr} 11:20`,
-      orderDishes: [
-        { dishId: 'd005', dishName: '回锅肉', quantity: 1, price: 32.0, customization: '' },
-        { dishId: 'd006', dishName: '青菜', quantity: 2, price: 8.0, customization: '' },
-        { dishId: 'd002', dishName: '米饭', quantity: 3, price: 2.0, customization: '' }
-      ],
-      remark: '多加饭',
-      unread: false,
-      priority: 'normal'
-    },
-    {
-      id: '4',
-      orderNo: `JD${orderNumSuffix}004`,
-      status: 1, // 待接单
-      userId: 'u004',
-      user: '小李',
-      phone: '136****6666',
-      address: '万达广场写字楼B座',
-      totalAmount: 128.0,
-      createTime: `${dateStr} 11:00`,
-      updateTime: `${dateStr} 11:00`,
-      orderDishes: [
-        { dishId: 'd007', dishName: '水煮鱼', quantity: 1, price: 68.0, customization: '微辣' },
-        { dishId: 'd008', dishName: '夫妻肺片', quantity: 1, price: 38.0, customization: '' },
-        { dishId: 'd002', dishName: '米饭', quantity: 4, price: 2.0, customization: '' }
-      ],
-      remark: '尽快送达',
-      unread: true,
-      priority: 'high'
-    },
-    {
-      id: '5',
-      orderNo: `JD${orderNumSuffix}005`,
-      status: 3, // 烹饪中
-      userId: 'u005',
-      user: '小王',
-      phone: '135****5555',
-      address: '中心公园附近',
-      totalAmount: 96.0,
-      createTime: `${dateStr} 11:15`,
-      updateTime: `${dateStr} 11:30`,
-      orderDishes: [
-        { dishId: 'd009', dishName: '糖醋排骨', quantity: 1, price: 48.0, customization: '' },
-        { dishId: 'd010', dishName: '西红柿炒蛋', quantity: 1, price: 18.0, customization: '' }
-      ],
-      remark: '',
-      unread: false,
-      priority: 'normal'
-    },
-    {
-      id: '6',
-      orderNo: `JD${orderNumSuffix}006`,
-      status: 1, // 待接单
-      userId: 'u006',
-      user: '小张',
-      phone: '134****4444',
-      address: '第一人民医院',
-      totalAmount: 58.5,
-      createTime: `${dateStr} 11:30`,
-      updateTime: `${dateStr} 11:30`,
-      orderDishes: [
-        { dishId: 'd011', dishName: '酸辣土豆丝', quantity: 1, price: 18.0, customization: '' },
-        { dishId: 'd012', dishName: '青椒肉丝', quantity: 1, price: 32.5, customization: '少油' }
-      ],
-      remark: '清淡口味',
-      unread: true,
-      priority: 'high'
-    },
-    {
-      id: '7',
-      orderNo: `JD${orderNumSuffix}007`,
-      status: 5, // 已完成
-      userId: 'u007',
-      user: '小赵',
-      phone: '133****3333',
-      address: '火车站北广场',
-      totalAmount: 156.0,
-      createTime: `${dateStr} 10:25`,
-      updateTime: `${dateStr} 11:10`,
-      orderDishes: [
-        { dishId: 'd013', dishName: '毛血旺', quantity: 1, price: 68.0, customization: '' },
-        { dishId: 'd014', dishName: '蒜蓉西兰花', quantity: 2, price: 16.0, customization: '' },
-        { dishId: 'd002', dishName: '米饭', quantity: 5, price: 2.0, customization: '' }
-      ],
-      remark: '不要香菜',
-      unread: false,
-      priority: 'normal'
-    }
-  ]
-}
-
 // 全部订单数据
 const orders = ref([])
 
@@ -292,12 +145,11 @@ const filteredOrders = computed(() => {
       const statusMatch =
         activeStatusFilter.value === 'all' || order.status === activeStatusFilter.value
 
-      // 搜索筛选
+      // 搜索筛选（按订单ID或地址搜索）
       const searchMatch =
         !searchKeyword.value ||
-        order.orderNo.toLowerCase().includes(searchKeyword.value.toLowerCase()) ||
-        order.user.includes(searchKeyword.value) ||
-        order.phone.includes(searchKeyword.value)
+        (order.id && order.id.toLowerCase().includes(searchKeyword.value.toLowerCase())) ||
+        (order.address && order.address.toLowerCase().includes(searchKeyword.value.toLowerCase()))
 
       return statusMatch && searchMatch
     })
@@ -317,14 +169,13 @@ const today = computed(() => {
 // 订单概览统计
 const orderOverview = computed(() => {
   const total = filteredOrders.value.length
-  const totalAmount = filteredOrders.value.reduce((sum, order) => sum + order.totalAmount, 0)
+  const totalAmount = filteredOrders.value.reduce((sum, order) => sum + (order.totalAmount || 0), 0)
   // 使用数字状态码统计：1-待接单、2-备菜中、3-烹饪中、4-待上菜、5-已完成
   const pendingCount = filteredOrders.value.filter((order) => order.status === 1).length
   const preparingCount = filteredOrders.value.filter((order) => order.status === 2 || order.status === 3).length
   const cookingCount = filteredOrders.value.filter((order) => order.status === 3).length
   const readyCount = filteredOrders.value.filter((order) => order.status === 4).length
   const completedCount = filteredOrders.value.filter((order) => order.status === 5).length
-  const unreadCount = filteredOrders.value.filter((order) => order.unread).length
 
   return {
     total,
@@ -333,8 +184,7 @@ const orderOverview = computed(() => {
     preparingCount,
     cookingCount,
     readyCount,
-    completedCount,
-    unreadCount
+    completedCount
   }
 })
 
@@ -350,13 +200,68 @@ watch(orderOverview, (newVal) => {
 // 是否有数据
 const hasOrders = computed(() => orders.value.length > 0)
 
-// 刷新订单数据
-const refreshOrders = () => {
+// 获取订单数据
+const fetchOrders = async () => {
+  console.log('[今日订单] 开始获取订单列表')
+  console.log('[今日订单] 商家ID:', merchantId)
+
+  if (!merchantId) {
+    console.error('[今日订单] 商家ID为空')
+    ElMessage.warning('未找到商家信息,请重新登录')
+    return
+  }
+
   loading.value = true
-  setTimeout(() => {
-    orders.value = generateTodayOrders()
+  try {
+    const apiUrl = `/v1/orders/merchant/${merchantId}`
+    console.log('[今日订单] 请求API:', apiUrl)
+
+    const response = await api.get(apiUrl)
+    console.log('[今日订单] API响应:', response)
+    console.log('[今日订单] success字段:', response.success)
+    console.log('[今日订单] message字段:', response.message)
+
+    if (response.success) {
+      const ordersData = response.data || []
+      console.log('[今日订单] 订单数量:', ordersData.length)
+
+      // 为每个订单获取菜品列表
+      for (const order of ordersData) {
+        try {
+          const dishesResponse = await api.get(`/v1/orders/${order.id}/dishes`)
+          if (dishesResponse.success) {
+            order.orderDishes = dishesResponse.data || []
+          }
+        } catch (error) {
+          console.error('[今日订单] 获取订单菜品失败:', order.id, error)
+          order.orderDishes = []
+        }
+      }
+
+      console.log('[今日订单] 订单数据:', ordersData)
+      orders.value = ordersData
+    } else {
+      console.error('[今日订单] API返回失败:', response)
+      ElMessage.error(response.message || '获取订单列表失败')
+    }
+  } catch (error) {
+    console.error('[今日订单] 加载订单异常:', error)
+    console.error('[今日订单] 错误详情:', {
+      message: error.message,
+      status: error.status,
+      data: error.data
+    })
+    ElMessage.error('加载订单失败')
+    orders.value = []
+  } finally {
     loading.value = false
-  }, 300)
+    console.log('[今日订单] 获取订单完成，loading设置为false')
+  }
+}
+
+// 刷新订单数据
+const refreshOrders = async () => {
+  await fetchOrders()
 }
 
 // 查看订单详情
@@ -372,30 +277,72 @@ const viewOrderDetails = (order) => {
 }
 
 // 更新订单状态
-const updateOrderStatus = (order, newStatus) => {
-  order.status = newStatus
-  // 同时更新 updateTime
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const day = String(now.getDate()).padStart(2, '0')
-  const hours = String(now.getHours()).padStart(2, '0')
-  const minutes = String(now.getMinutes()).padStart(2, '0')
-  order.updateTime = `${year}-${month}-${day} ${hours}:${minutes}`
-  ElMessage.success(`订单状态已更新为${orderStatusMap[newStatus].text}`)
+const updateOrderStatus = async (order, newStatus) => {
+  try {
+    const response = await api.put(`/v1/orders/${order.id}/status?status=${newStatus}`)
+    if (response.success) {
+      order.status = newStatus
+      ElMessage.success(`订单状态已更新为${orderStatusMap[newStatus].text}`)
+    } else {
+      ElMessage.error(response.message || '更新失败')
+    }
+  } catch (error) {
+    console.error('更新订单状态失败:', error)
+    ElMessage.error('更新订单状态失败')
+  }
+}
+
+// 拒绝接单
+const rejectOrder = async (order) => {
+  ElMessageBox.prompt('请输入拒绝原因（可选）', '拒绝接单', {
+    confirmButtonText: '确定拒绝',
+    cancelButtonText: '取消',
+    type: 'warning',
+    distinguishCancelAndClose: true,
+    inputPattern: /^.{0,200}$/,
+    inputErrorMessage: '拒绝原因不能超过200个字符'
+  })
+    .then(async ({ value }) => {
+      const reason = value || '商家拒绝接单'
+      try {
+        // 使用状态更新接口将订单状态改为已取消(6)
+        const response = await api.put(`/v1/orders/${order.id}/status?status=6`)
+        if (response.success) {
+          order.status = 6
+          order.rejectReason = reason
+          ElMessage.warning(`已拒绝接单: ${reason}`)
+        } else {
+          ElMessage.error(response.message || '拒绝接单失败')
+        }
+      } catch (error) {
+        console.error('拒绝接单失败:', error)
+        ElMessage.error('拒绝接单失败')
+      }
+    })
+    .catch(() => {})
 }
 
 // 取消订单
-const cancelOrder = (order) => {
+const cancelOrder = async (order) => {
   ElMessageBox.confirm('确定要取消此订单吗？取消后将影响商家信誉。', '取消订单确认', {
     confirmButtonText: '确定取消',
     cancelButtonText: '再想想',
     type: 'warning',
     distinguishCancelAndClose: true
   })
-    .then(() => {
-      updateOrderStatus(order, 'cancelled')
-      ElMessage.warning('订单已取消')
+    .then(async () => {
+      try {
+        const response = await api.put(`/v1/orders/${order.id}/cancel`)
+        if (response.success) {
+          order.status = 6
+          ElMessage.warning('订单已取消')
+        } else {
+          ElMessage.error(response.message || '取消订单失败')
+        }
+      } catch (error) {
+        console.error('取消订单失败:', error)
+        ElMessage.error('取消订单失败')
+      }
     })
     .catch(() => {})
 }
@@ -416,22 +363,6 @@ const deleteOrder = (order) => {
       }
     })
     .catch(() => {})
-}
-
-// 批量操作：标记所有为已读
-const markAllAsRead = () => {
-  let count = 0
-  filteredOrders.value.forEach((order) => {
-    if (order.unread) {
-      order.unread = false
-      count++
-    }
-  })
-  if (count > 0) {
-    ElMessage.success(`已将 ${count} 个订单标记为已读`)
-  } else {
-    ElMessage.info('没有未读订单')
-  }
 }
 
 // 获取标签类型
@@ -478,7 +409,7 @@ const getEmptyDescription = () => {
 
 // 页面加载时初始化
 onMounted(() => {
-  refreshOrders()
+  fetchOrders()
 })</script>
 
 <template>
@@ -490,14 +421,6 @@ onMounted(() => {
         <span class="current-date">{{ today }}</span>
       </div>
       <div class="header-right">
-        <el-button
-          v-if="orderOverview.unreadCount > 0"
-          type="primary"
-          size="small"
-          @click="markAllAsRead"
-        >
-          全部已读 ({{ orderOverview.unreadCount }})
-        </el-button>
         <el-button size="small" :loading="loading" @click="refreshOrders">
           刷新
         </el-button>
@@ -613,16 +536,6 @@ onMounted(() => {
     <div class="quick-actions">
       <div class="quick-actions-left">
         <el-button
-          v-if="orderOverview.unreadCount > 0"
-          type="warning"
-          size="small"
-          @click="markAllAsRead"
-          class="quick-action-btn"
-        >
-          <el-icon><Reading /></el-icon>
-          <span>全部已读</span>
-        </el-button>
-        <el-button
           size="small"
           @click="refreshOrders"
           :loading="loading"
@@ -649,20 +562,11 @@ onMounted(() => {
                 <div class="order-basic-info">
                   <div class="order-no">
                     <span class="no-label">订单号</span>
-                    <span class="no-value">{{ order.orderNo }}</span>
-                    <el-tag
-                      v-if="order.priority === 'high'"
-                      size="small"
-                      type="danger"
-                      effect="dark"
-                      class="priority-tag"
-                    >
-                      加急
-                    </el-tag>
+                    <span class="no-value">{{ order.id }}</span>
                   </div>
                   <div class="order-amount">
                     <span class="amount-label">金额</span>
-                    <span class="amount-value">¥{{ order.totalAmount.toFixed(2) }}</span>
+                    <span class="amount-value">¥{{ (order.totalAmount || 0).toFixed(2) }}</span>
                   </div>
                   <div class="order-time" :title="order.createTime">
                     <span class="time-label">时间</span>
@@ -670,23 +574,13 @@ onMounted(() => {
                   </div>
                 </div>
 
-                <!-- 可折叠的用户信息 -->
-                <transition name="slide-fade">
-                  <div v-show="expandedUserInfo.has(order.id)" class="order-user-info">
-                    <div class="user-name">
-                      <span class="info-label">用户</span>
-                      <span class="info-value">{{ order.user }}</span>
-                    </div>
-                    <div class="user-phone">
-                      <span class="info-label">电话</span>
-                      <span class="info-value">{{ order.phone }}</span>
-                    </div>
-                    <div class="user-address">
-                      <span class="info-label">地址</span>
-                      <span class="info-value">{{ order.address }}</span>
-                    </div>
+                <!-- 配送地址（始终显示） -->
+                <div v-if="order.address" class="order-user-info" style="margin-top: 10px; margin-bottom: 10px;">
+                  <div class="user-address" style="grid-column: 1 / -1;">
+                    <span class="info-label">📍 配送地址</span>
+                    <span class="info-value">{{ order.address }}</span>
                   </div>
-                </transition>
+                </div>
 
                 <!-- 订单备注（始终显示） -->
                 <div v-if="order.remark" class="order-remark">
@@ -700,47 +594,54 @@ onMounted(() => {
                 <div class="order-items">
                   <div class="items-label">菜品</div>
                   <div class="items-list">
-                    <template v-if="order.orderDishes.length > 3 && !expandedItems.has(order.id)">
-                      <el-tag
-                        v-for="(dish, index) in order.orderDishes.slice(0, 3)"
-                        :key="index"
-                        size="small"
-                        type="info"
-                        effect="plain"
-                        class="item-tag"
-                      >
-                        {{ dish.dishName }}x{{ dish.quantity }}
-                        <span v-if="dish.customization" class="customization">({{ dish.customization }})</span>
-                      </el-tag>
-                      <el-tag
-                        size="small"
-                        class="more-tag"
-                        @click="toggleItemsExpand(order.id)"
-                      >
-                        +{{ order.orderDishes.length - 3 }}
-                      </el-tag>
+                    <template v-if="order.orderDishes && order.orderDishes.length > 0">
+                      <template v-if="order.orderDishes.length > 3 && !expandedItems.has(order.id)">
+                        <el-tag
+                          v-for="(dish, index) in order.orderDishes.slice(0, 3)"
+                          :key="index"
+                          size="small"
+                          type="info"
+                          effect="plain"
+                          class="item-tag"
+                        >
+                          菜品 #{{ dish.dishId }} x{{ dish.quantity }}
+                          <span v-if="dish.customization" class="customization">({{ dish.customization }})</span>
+                        </el-tag>
+                        <el-tag
+                          size="small"
+                          class="more-tag"
+                          @click="toggleItemsExpand(order.id)"
+                        >
+                          +{{ order.orderDishes.length - 3 }}
+                        </el-tag>
+                      </template>
+                      <template v-else>
+                        <el-tag
+                          v-for="(dish, index) in order.orderDishes"
+                          :key="index"
+                          size="small"
+                          type="info"
+                          effect="plain"
+                          class="item-tag"
+                        >
+                          菜品 #{{ dish.dishId }} x{{ dish.quantity }}
+                          <span v-if="dish.customization" class="customization">({{ dish.customization }})</span>
+                        </el-tag>
+                        <el-tag
+                          v-if="order.orderDishes.length > 3"
+                          size="small"
+                          type="warning"
+                          effect="plain"
+                          class="collapse-tag"
+                          @click="toggleItemsExpand(order.id)"
+                        >
+                          收起
+                        </el-tag>
+                      </template>
                     </template>
                     <template v-else>
-                      <el-tag
-                        v-for="(dish, index) in order.orderDishes"
-                        :key="index"
-                        size="small"
-                        type="info"
-                        effect="plain"
-                        class="item-tag"
-                      >
-                        {{ dish.dishName }}x{{ dish.quantity }}
-                        <span v-if="dish.customization" class="customization">({{ dish.customization }})</span>
-                      </el-tag>
-                      <el-tag
-                        v-if="order.orderDishes.length > 3"
-                        size="small"
-                        type="warning"
-                        effect="plain"
-                        class="collapse-tag"
-                        @click="toggleItemsExpand(order.id)"
-                      >
-                        收起
+                      <el-tag size="small" type="info" effect="plain">
+                        暂无菜品信息
                       </el-tag>
                     </template>
                   </div>
@@ -752,7 +653,6 @@ onMounted(() => {
                   <el-tag :type="orderStatusMap[order.status].type" size="large">
                     {{ orderStatusMap[order.status].text }}
                   </el-tag>
-                  <el-badge v-if="order.unread" :value="''" type="danger" class="unread-badge" />
                 </div>
               </div>
             </div>
@@ -782,6 +682,17 @@ onMounted(() => {
                 >
                   <el-icon><CircleCheck /></el-icon>
                   <span>接单</span>
+                </el-button>
+
+                <el-button
+                  v-if="order.status === 1"
+                  type="danger"
+                  size="small"
+                  @click="rejectOrder(order)"
+                  class="action-btn"
+                >
+                  <el-icon><CircleClose /></el-icon>
+                  <span>拒绝</span>
                 </el-button>
 
                 <el-button
