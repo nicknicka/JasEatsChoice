@@ -13,8 +13,7 @@ import {
   Search,
   Coffee,
   Document,
-  Refresh,
-  Edit
+  Refresh
 } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import api from '../../utils/api.js'
@@ -570,96 +569,68 @@ onMounted(async () => {
       />
     </div>
 
-    <!-- 天气信息区域 -->
-    <div class="weather-section" role="region" aria-label="天气信息">
+    <!-- 天气信息区域 - 新设计 -->
+    <div class="weather-section-new" role="region" aria-label="天气信息">
       <!-- 天气骨架屏 -->
       <div v-if="showWeatherSkeleton" class="weather-skeleton-wrapper">
-        <el-card shadow="hover" class="weather-card skeleton-weather">
+        <div class="weather-card-new skeleton-weather">
           <el-skeleton animated>
             <template #template>
-              <div class="weather-skeleton-content">
-                <el-skeleton-item variant="circle" style="width: 80px; height: 80px" />
-                <el-skeleton-item
-                  variant="text"
-                  style="width: 120px; height: 56px; margin-left: 16px"
-                />
-                <div style="flex: 1; margin-left: 24px">
-                  <el-skeleton-item variant="text" style="width: 60%" />
-                  <el-skeleton-item variant="text" style="width: 80%; margin-top: 12px" />
-                  <el-skeleton-item variant="text" style="width: 70%; margin-top: 12px" />
-                </div>
+              <div class="weather-skeleton-vertical">
+                <el-skeleton-item variant="text" style="width: 80px; height: 24px" />
+                <el-skeleton-item variant="text" style="width: 100px; height: 18px; margin-top: 12px" />
+                <el-skeleton-item variant="text" style="width: 120px; height: 16px; margin-top: 12px" />
+                <el-skeleton-item variant="text" style="width: 140px; height: 16px; margin-top: 12px" />
+                <el-skeleton-item variant="text" style="width: 150px; height: 16px; margin-top: 12px" />
               </div>
             </template>
           </el-skeleton>
-        </el-card>
+        </div>
       </div>
 
-      <!-- 天气卡片 -->
-      <el-card
-        v-else
-        shadow="hover"
-        class="weather-card enhanced-weather"
-        :style="{ background: weatherGradient }"
-      >
-        <div class="weather-content">
-          <!-- 左侧：天气图标和温度 -->
-          <div class="weather-visual">
-            <div class="weather-icon-wrapper" @click="showWeatherDetail">
-              <span class="weather-emoji">{{ weatherEmoji }}</span>
-            </div>
-            <div class="temp-display">
-              <span class="temp-value">{{ weather.temp }}</span>
-              <span class="temp-unit">°C</span>
-            </div>
-            <!-- 温度范围 -->
-            <div v-if="tempRangeText" class="temp-range">
-              {{ tempRangeText }}
-            </div>
+      <!-- 天气卡片 - 新设计 -->
+      <div v-else class="weather-card-new" :style="{ background: weatherGradient }">
+        <div class="weather-content-new">
+          <!-- 温度显示 -->
+          <div class="weather-temp-line">
+            <span class="weather-icon-new">{{ weatherEmoji }}</span>
+            <span class="temp-value-new">{{ weather.temp }}°C</span>
           </div>
 
-          <!-- 右侧：详细信息和推荐 -->
-          <div class="weather-info">
-            <!-- 位置信息 -->
-            <div class="location-section">
-              <div class="location-label">
-                <el-icon class="location-icon"><Location /></el-icon>
-                <span class="label-text">当前位置</span>
-              </div>
-              <el-button
-                type="text"
-                size="small"
-                @click="locationDialogVisible = true"
-                class="location-button"
-                :title="weather.address || weather.city || '点击选择位置'"
-              >
-                <span class="location-text">
-                  {{ weather.address || weather.city || '点击选择位置' }}
-                </span>
-                <el-icon class="edit-icon"><Edit /></el-icon>
-              </el-button>
-            </div>
+          <!-- 温度范围 -->
+          <div v-if="tempRangeText" class="temp-range-new">
+            {{ tempRangeText }}
+          </div>
 
-            <!-- 天气状况和推荐 -->
-            <div class="weather-details">
-              <div class="condition-badge" @click="showWeatherDetail" style="cursor: pointer">
-                <span class="condition-icon">{{ weatherEmoji }}</span>
-                <span class="condition-text">{{ weather.condition || '未知天气' }}</span>
-                <el-icon class="info-icon"><Edit /></el-icon>
-              </div>
+          <!-- 位置信息 -->
+          <div class="location-line">
+            <span class="location-icon-new">📍</span>
+            <span class="location-text-new">当前位置</span>
+            <button
+              class="location-select-btn"
+              @click="locationDialogVisible = true"
+              :title="weather.address || weather.city || '点击选择位置'"
+            >
+              点击选择位置 ↗
+            </button>
+          </div>
 
-              <div class="recommendation-card">
-                <div class="recommendation-header">
-                  <span class="sparkle-icon">✨</span>
-                  <span class="recommendation-label">今日推荐</span>
-                </div>
-                <div class="recommendation-content" :title="getWeatherRecommendation()">
-                  {{ getWeatherRecommendation() }}
-                </div>
-              </div>
+          <!-- 天气状况 -->
+          <div class="weather-condition-line" @click="showWeatherDetail" style="cursor: pointer">
+            <span class="weather-icon-new">{{ weatherEmoji }}</span>
+            <span class="weather-condition-text">{{ weather.condition || '未知天气' }}</span>
+          </div>
+
+          <!-- 今日推荐 -->
+          <div class="recommendation-line">
+            <span class="sparkle-icon-new">✨</span>
+            <span class="recommendation-label-new">今日推荐</span>
+            <div class="recommendation-text-new" :title="getWeatherRecommendation()">
+              {{ getWeatherRecommendation() }}
             </div>
           </div>
         </div>
-      </el-card>
+      </div>
     </div>
 
     <!-- 天气详情弹窗 -->
@@ -1702,6 +1673,218 @@ onMounted(async () => {
     50% {
       opacity: 0.6;
       transform: scale(1.1);
+    }
+  }
+
+  // 新的天气部分样式
+  .weather-section-new {
+    margin-bottom: 20px;
+    padding: 0 20px;
+
+    .weather-card-new {
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      overflow: hidden;
+      position: relative;
+
+      &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+        pointer-events: none;
+      }
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+      }
+
+      .weather-content-new {
+        position: relative;
+        z-index: 1;
+        padding: 20px 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        color: #fff;
+
+        // 温度行
+        .weather-temp-line {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+
+          .weather-icon-new {
+            font-size: 32px;
+            filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.2));
+            animation: icon-float 3s ease-in-out infinite;
+          }
+
+          .temp-value-new {
+            font-size: 48px;
+            font-weight: 700;
+            line-height: 1;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            letter-spacing: -1px;
+            background: linear-gradient(180deg, #ffffff 0%, rgba(255, 255, 255, 0.9) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+          }
+        }
+
+        // 温度范围
+        .temp-range-new {
+          font-size: 18px;
+          font-weight: 500;
+          opacity: 0.95;
+          text-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+          letter-spacing: 0.5px;
+          margin-top: -4px;
+        }
+
+        // 位置信息行
+        .location-line {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+
+          .location-icon-new {
+            font-size: 18px;
+            filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.15));
+            animation: location-pulse 2s ease-in-out infinite;
+          }
+
+          .location-text-new {
+            font-size: 16px;
+            font-weight: 500;
+            opacity: 0.95;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+          }
+
+          .location-select-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #64b5f6;
+            padding: 6px 14px;
+            border-radius: 16px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(8px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            text-shadow: none;
+
+            &:hover {
+              background: rgba(255, 255, 255, 0.3);
+              transform: translateY(-1px);
+              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            }
+
+            &:active {
+              transform: translateY(0);
+            }
+          }
+        }
+
+        // 天气状况行
+        .weather-condition-line {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          transition: all 0.25s ease;
+
+          &:hover {
+            transform: translateX(4px);
+          }
+
+          .weather-icon-new {
+            font-size: 22px;
+            filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.15));
+          }
+
+          .weather-condition-text {
+            font-size: 16px;
+            font-weight: 600;
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+          }
+        }
+
+        // 推荐行
+        .recommendation-line {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 12px 16px;
+          background: rgba(255, 255, 255, 0.15);
+          backdrop-filter: blur(10px);
+          border-radius: 12px;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+
+          &:hover {
+            background: rgba(255, 255, 255, 0.22);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+          }
+
+          .sparkle-icon-new {
+            font-size: 20px;
+            animation: sparkle 2s ease-in-out infinite;
+            filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.4));
+          }
+
+          .recommendation-label-new {
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            opacity: 0.9;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+          }
+
+          .recommendation-text-new {
+            font-size: 15px;
+            font-weight: 600;
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+        }
+      }
+    }
+
+    // 图标浮动动画
+    @keyframes icon-float {
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+      50% {
+        transform: translateY(-6px);
+      }
+    }
+
+    // 骨架屏样式
+    .skeleton-weather {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
+      border: 1px solid rgba(0, 0, 0, 0.06);
+
+      .weather-skeleton-vertical {
+        padding: 20px 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
     }
   }
 
