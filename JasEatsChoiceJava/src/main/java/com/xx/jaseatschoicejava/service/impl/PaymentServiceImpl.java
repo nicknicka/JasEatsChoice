@@ -165,6 +165,14 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentRecordMapper, Payment
     }
 
     @Override
+    public String generatePaymentNo() {
+        // 生成支付流水号：PAY + 年月日时分秒 + 4位随机数
+        String datetime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        int random = (int) (Math.random() * 10000);
+        return String.format("PAY%s%04d", datetime, random);
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean refundPayment(String orderId, BigDecimal refundAmount, String reason) {
         // 1. 查询支付记录

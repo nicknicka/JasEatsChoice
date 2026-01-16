@@ -1,8 +1,20 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
+import { ElNotification } from 'element-plus'
 import { useLocation } from '../../composables/useLocation.js'
 // 导入 Element Plus 图标
-import { Sunny, Cloudy, Location, VideoCamera, ArrowRight } from '@element-plus/icons-vue'
+import {
+  Sunny,
+  Cloudy,
+  Location,
+  VideoCamera,
+  ArrowRight,
+  Star,
+  Share,
+  Search,
+  Coffee,
+  Document
+} from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import api from '../../utils/api.js'
 import { API_CONFIG } from '../../config/index.js'
@@ -26,6 +38,9 @@ const handleImageError = (event) => {
 
 // 加载状态
 const nearbyLoading = ref(false)
+const recommendedDishesLoading = ref(true)
+const tutorialsLoading = ref(true)
+const refreshing = ref(false)
 
 // 教程数据 - 从后端获取
 const featuredTutorials = ref([])
@@ -36,6 +51,10 @@ const recommendedDishes = ref([])
 const recommendEmptyMessage = ref('暂无推荐菜品')
 // 今日热点 - 从后端获取
 const hotTopic = ref('')
+// 收藏的菜品ID列表
+const favoriteDishIds = ref(new Set())
+// 搜索关键字
+const searchKeyword = ref('')
 
 // 天气和位置数据
 const weather = ref({
@@ -96,48 +115,56 @@ const getRecommendedDishesSeries = () => {
 }
 
 // 从后端获取推荐菜品
-const fetchRecommendedDishes = () => {
-  api
-    .get(API_CONFIG.recipe.recommend)
-    .then((response) => {
-      // Check if response has a message
-      if (response.message) {
-        recommendEmptyMessage.value = response.message
-      }
+const fetchRecommendedDishes = async () => {
+  recommendedDishesLoading.value = true
+  try {
+    const response = await retryFetch(async () => {
+      return await api.get(API_CONFIG.recipe.recommend)
+    })
 
-      // Handle both null/undefined and empty array cases
-      if (response.data && Array.isArray(response.data) && response.data.length > 0) {
-        recommendedDishes.value = response.data
-      } else {
-        // Set to empty array to show empty state
-        recommendedDishes.value = []
-      }
-    })
-    .catch((error) => {
-      console.error('加载推荐菜品失败:', error)
-      // Reset to default message on error
-      recommendEmptyMessage.value = '暂无推荐菜品'
-    })
+    // Check if response has a message
+    if (response.message) {
+      recommendEmptyMessage.value = response.message
+    }
+
+    // Handle both null/undefined and empty array cases
+    if (response.data && Array.isArray(response.data) && response.data.length > 0) {
+      recommendedDishes.value = response.data
+      // 预加载图片
+      preloadImages(response.data)
+    } else {
+      // Set to empty array to show empty state
+      recommendedDishes.value = []
+    }
+  } catch (error) {
+    console.error('加载推荐菜品失败:', error)
+    // Reset to default message on error
+    recommendEmptyMessage.value = '加载失败,请重试'
+    showError('加载推荐菜品失败,请检查网络连接')
+  } finally {
+    recommendedDishesLoading.value = false
+  }
 }
 
 // 从后端获取今日热点
-const fetchHotTopic = () => {
-  // 假设后端提供了获取今日热点的API
-  api
-    .get(API_CONFIG.home.hotTopic)
-    .then((response) => {
-      if (response.data) {
-        hotTopic.value = response.data
-      } else {
-        // 接口成功但返回空数据时，清空热点
-        hotTopic.value = ''
-      }
+const fetchHotTopic = async () => {
+  try {
+    const response = await retryFetch(async () => {
+      return await api.get(API_CONFIG.home.hotTopic)
     })
-    .catch((error) => {
-      console.error('加载今日热点失败:', error)
-      // 请求失败时使用默认文本
+
+    if (response.data) {
+      hotTopic.value = response.data
+    } else {
+      // 接口成功但返回空数据时,清空热点
       hotTopic.value = ''
-    })
+    }
+  } catch (error) {
+    console.error('加载今日热点失败:', error)
+    // 请求失败时使用默认文本
+    hotTopic.value = ''
+    // 热点不是关键功能,只记录错误不显示通知
+  }
 }
 
 // 处理自动定位
@@ -253,6 +280,72 @@ const handleTutorialClick = (tutorial) => {
   // TODO: 跳转到教程详情页或执行其他操作
   console.log('点击教程:', tutorial.name)
   // router.push(`/user/home/tutorials/${tutorial.id}`)
+}
+
+// 处理菜品卡片点击
+const handleDishClick = (dish) => {
+  console.log('点击菜品:', dish.name)
+  // 跳转到菜品详情页,需要后端提供菜品详情API和路由
+  // router.push(`/user/home/dish/${dish.id}`)
+}
+
+// 过滤后的推荐菜品(基于搜索关键字)
+const filteredDishes = computed(() => {
+  if (!searchKeyword.value) {
+    return recommendedDishes.value
+  }
+  const keyword = searchKeyword.value.toLowerCase()
+  return recommendedDishes.value.filter((dish) => {
+    return (
+      dish.name?.toLowerCase().includes(keyword) ||
+      dish.category?.toLowerCase().includes(keyword) ||
+      dish.tags?.toLowerCase().includes(keyword)
+    )
+  })
+})
+
+// 处理搜索
+const handleSearch = () => {
+  console.log('搜索:', searchKeyword.value)
+  // 可以添加搜索分析或跳转到搜索结果页
+}
+
+// 清空搜索
+const clearSearch = () => {
+  searchKeyword.value = ''
+}
+
+// 错误提示函数
+const showError = (message, duration = 3000) => {
+  ElNotification.error({
+    title: '错误',
+    message,
+    duration
+  })
+}
+
+const showSuccess = (message, duration = 2000) => {
+  ElNotification.success({
+    title: '成功',
+    message,
+    duration
+  })
+}
+
+// 带重试机制的请求函数
+const retryFetch = async (fetchFn, maxRetries = 3, delay = 1000) => {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fetchFn()
+    } catch (error) {
+      console.error(`请求失败 (尝试 ${i + 1}/${maxRetries}):`, error)
+      if (i === maxRetries - 1) {
+        throw error
+      }
+      // 指数退避
+      await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)))
+    }
+  }
 }
 
 // WebSocket 连接
@@ -379,29 +472,126 @@ if (!listenersRegistered && window.api) {
 }
 
 // 从后端获取精选教程数据
-const fetchFeaturedTutorials = () => {
-  api
-    .get(API_CONFIG.tutorial.featured)
-    .then((response) => {
-      // Handle both null/undefined and empty array cases for consistency
-      if (response.data && Array.isArray(response.data) && response.data.length > 0) {
-        featuredTutorials.value = response.data
-      } else {
-        featuredTutorials.value = []
-      }
+const fetchFeaturedTutorials = async () => {
+  tutorialsLoading.value = true
+  try {
+    const response = await retryFetch(async () => {
+      return await api.get(API_CONFIG.tutorial.featured)
     })
-    .catch((error) => {
-      console.error('加载精选教程失败:', error)
-      // 失败时使用模拟数据作为备份
-      featuredTutorials.value = [
-        { name: '青木瓜沙拉制作教程', type: 'video' },
-        { name: '夏日低卡饮食指南', type: 'article' }
-      ]
-    })
+
+    // Handle both null/undefined and empty array cases for consistency
+    if (response.data && Array.isArray(response.data) && response.data.length > 0) {
+      featuredTutorials.value = response.data
+    } else {
+      featuredTutorials.value = []
+    }
+  } catch (error) {
+    console.error('加载精选教程失败:', error)
+    // 失败时使用模拟数据作为备份
+    featuredTutorials.value = [
+      { name: '青木瓜沙拉制作教程', type: 'video' },
+      { name: '夏日低卡饮食指南', type: 'article' }
+    ]
+    showError('加载教程失败,显示默认内容')
+  } finally {
+    tutorialsLoading.value = false
+  }
+}
+
+// 图片预加载功能
+const preloadImages = (items) => {
+  items.forEach((item) => {
+    if (item.image || item.thumbnail) {
+      const img = new Image()
+      img.src = item.image || item.thumbnail
+    }
+  })
+}
+
+// 下拉刷新功能
+const onRefresh = async () => {
+  refreshing.value = true
+  try {
+    await Promise.all([
+      fetchFeaturedTutorials(),
+      fetchRecommendedDishes(),
+      fetchHotTopic(),
+      fetchWeather()
+    ])
+  } catch (error) {
+    console.error('刷新失败:', error)
+  } finally {
+    refreshing.value = false
+  }
+}
+
+// 收藏功能
+const loadFavorites = () => {
+  const saved = localStorage.getItem('favoriteDishes')
+  if (saved) {
+    try {
+      favoriteDishIds.value = new Set(JSON.parse(saved))
+    } catch (error) {
+      console.error('加载收藏失败:', error)
+      favoriteDishIds.value = new Set()
+    }
+  }
+}
+
+const saveFavorites = () => {
+  localStorage.setItem('favoriteDishes', JSON.stringify([...favoriteDishIds.value]))
+}
+
+const isFavorite = (dish) => {
+  return favoriteDishIds.value.has(dish.id || dish.name)
+}
+
+const toggleFavorite = (dish, event) => {
+  event.stopPropagation() // 阻止事件冒泡,避免触发卡片点击
+  const dishId = dish.id || dish.name
+
+  if (favoriteDishIds.value.has(dishId)) {
+    favoriteDishIds.value.delete(dishId)
+    showSuccess(`已取消收藏: ${dish.name}`)
+  } else {
+    favoriteDishIds.value.add(dishId)
+    showSuccess(`已收藏: ${dish.name}`)
+  }
+
+  saveFavorites()
+}
+
+// 分享功能
+const shareDish = async (dish, event) => {
+  event.stopPropagation()
+
+  const shareData = {
+    title: dish.name,
+    text: `${dish.name} - ${dish.kcal} 卡路里`,
+    url: window.location.href
+  }
+
+  try {
+    if (navigator.share) {
+      await navigator.share(shareData)
+      showSuccess('分享成功')
+    } else {
+      // 降级处理:复制到剪贴板
+      const shareText = `${shareData.title}\n${shareData.text}\n${shareData.url}`
+      await navigator.clipboard.writeText(shareText)
+      showSuccess('已复制到剪贴板')
+    }
+  } catch (error) {
+    if (error.name !== 'AbortError') {
+      console.error('分享失败:', error)
+      showError('分享失败,请重试')
+    }
+  }
 }
 
 // 在挂载时初始化WebSocket
 onMounted(async () => {
+  loadFavorites() // 加载收藏列表
   fetchFeaturedTutorials()
   fetchRecommendedDishes()
   await fetchWeather()
@@ -414,8 +604,28 @@ onMounted(async () => {
 </script>
 
 <template>
-  <!-- Right Content Area -->
-  <div class="weather-section">
+  <el-pull-refresh v-model="refreshing" @refresh="onRefresh" aria-label="下拉刷新内容">
+    <!-- 搜索框 -->
+    <div class="search-section" role="search">
+      <el-input
+        v-model="searchKeyword"
+        placeholder="搜索菜品、教程..."
+        :prefix-icon="Search"
+        clearable
+        size="large"
+        class="search-input"
+        @keyup.enter="handleSearch"
+        @clear="clearSearch"
+        aria-label="搜索菜品和教程"
+      >
+        <template #append>
+          <el-button :icon="Search" @click="handleSearch" aria-label="执行搜索">搜索</el-button>
+        </template>
+      </el-input>
+    </div>
+
+    <!-- Right Content Area -->
+    <div class="weather-section" role="region" aria-label="天气信息">
     <el-card shadow="hover" class="weather-card">
       <div class="weather-content">
         <el-icon class="weather-icon"><component :is="getWeatherIcon()" /></el-icon>
@@ -442,26 +652,49 @@ onMounted(async () => {
     </el-card>
   </div>
 
-  <div class="recommendation-section">
-    <h3>今日推荐</h3>
+  <div class="recommendation-section" role="region" aria-label="今日推荐菜品">
+    <h3 id="recommendations-heading">今日推荐</h3>
+    <!-- 骨架屏加载中 -->
+    <div v-if="recommendedDishesLoading" class="skeleton-wrapper">
+      <el-skeleton animated>
+        <template #template>
+          <el-skeleton-item variant="image" style="width: 100%; height: 320px; border-radius: 8px" />
+        </template>
+      </el-skeleton>
+    </div>
     <!-- When there are no recommended dishes -->
-    <div v-if="recommendedDishes.length === 0" class="empty-recommendations">
+    <div v-else-if="recommendedDishes.length === 0" class="empty-recommendations">
       <el-empty :description="recommendEmptyMessage">
+        <template #image>
+          <div class="empty-icon">
+            <el-icon :size="80"><Coffee /></el-icon>
+          </div>
+        </template>
         <el-button type="primary" @click="fetchRecommendedDishes">重新加载</el-button>
       </el-empty>
     </div>
 
     <!-- When there are recommended dishes -->
-    <div v-else>
+    <div v-else class="fade-in">
       <el-carousel
         :interval="3000"
         height="320px"
         indicator-position="outside"
         arrow="never"
         class="recommendation-carousel"
+        role="region"
+        :aria-label="'推荐菜品轮播,共' + filteredDishes.length + '个'"
       >
-        <el-carousel-item v-for="(dish, index) in recommendedDishes" :key="index">
-          <el-card shadow="hover" class="dish-card enhanced-card">
+        <el-carousel-item v-for="(dish, index) in filteredDishes" :key="index">
+          <el-card
+            shadow="hover"
+            class="dish-card enhanced-card"
+            @click="handleDishClick(dish)"
+            :aria-label="`菜品: ${dish.name}, ${dish.kcal} 卡路里, 评分: ${dish.rating}分`"
+            role="article"
+            tabindex="0"
+            @keyup.enter="handleDishClick(dish)"
+          >
             <!-- 菜品图片区域 - 作为背景层 -->
             <div class="dish-image-background">
               <img
@@ -475,7 +708,34 @@ onMounted(async () => {
             </div>
             <!-- 菜品信息区域 - 覆盖在图片上方 -->
             <div class="dish-info-overlay">
-              <div class="dish-name">{{ dish.name }}</div>
+              <div class="dish-header">
+                <div class="dish-name">{{ dish.name }}</div>
+                <div class="dish-actions">
+                  <el-button
+                    circle
+                    size="small"
+                    class="share-btn"
+                    @click="shareDish(dish, $event)"
+                    :aria-label="`分享 ${dish.name}`"
+                    tabindex="0"
+                    @keyup.enter="shareDish(dish, $event)"
+                  >
+                    <el-icon><Share /></el-icon>
+                  </el-button>
+                  <el-button
+                    circle
+                    size="small"
+                    class="favorite-btn"
+                    @click="toggleFavorite(dish, $event)"
+                    :class="{ 'is-favorite': isFavorite(dish) }"
+                    :aria-label="`${isFavorite(dish) ? '取消收藏' : '收藏'} ${dish.name}`"
+                    tabindex="0"
+                    @keyup.enter="toggleFavorite(dish, $event)"
+                  >
+                    <el-icon><Star /></el-icon>
+                  </el-button>
+                </div>
+              </div>
               <div class="dish-meta">
                 <span class="dish-kcal">{{ dish.kcal }} kcal</span>
                 <span v-if="dish.tags" class="dish-tags">{{ dish.tags }}</span>
@@ -527,30 +787,58 @@ onMounted(async () => {
     </el-button>
   </div>
 
-  <div class="tutorial-section">
+  <div class="tutorial-section" role="region" aria-label="制作教程与指南">
     <div class="section-header">
-      <h3>制作教程与指南</h3>
-      <el-button text type="primary" @click="navigateTo('/user/home/tutorials')" class="view-all-btn">
+      <h3 id="tutorials-heading">制作教程与指南</h3>
+      <el-button
+        text
+        type="primary"
+        @click="navigateTo('/user/home/tutorials')"
+        class="view-all-btn"
+        aria-label="查看所有教程"
+      >
         查看全部 <el-icon><ArrowRight /></el-icon>
       </el-button>
     </div>
 
+    <!-- 教程骨架屏 -->
+    <div v-if="tutorialsLoading" class="tutorial-skeleton">
+      <div class="tutorial-grid">
+        <el-skeleton v-for="i in 4" :key="i" animated>
+          <template #template>
+            <el-skeleton-item variant="image" style="width: 100%; height: 120px; border-radius: 4px" />
+            <el-skeleton-item variant="h3" style="width: 80%; margin: 12px 0 8px" />
+            <el-skeleton-item variant="text" style="width: 60%" />
+          </template>
+        </el-skeleton>
+      </div>
+    </div>
+
     <!-- 当教程数据为空时显示 -->
-    <div v-if="featuredTutorials.length === 0" class="empty-tutorials">
+    <div v-else-if="featuredTutorials.length === 0" class="empty-tutorials">
       <el-empty description="暂无教程数据">
+        <template #image>
+          <div class="empty-icon">
+            <el-icon :size="80"><Document /></el-icon>
+          </div>
+        </template>
         <el-button type="primary" @click="fetchFeaturedTutorials">重新加载</el-button>
       </el-empty>
     </div>
 
     <!-- 当教程数据不为空时显示 -->
-    <div v-else>
-      <div class="tutorial-grid">
+    <div v-else class="fade-in">
+      <div class="tutorial-grid" role="list" aria-label="教程列表">
         <el-card
           shadow="hover"
           class="tutorial-card enhanced"
           v-for="(tutorial, index) in featuredTutorials.slice(0, 4)"
           :key="index"
           @click="handleTutorialClick(tutorial)"
+          :aria-label="`教程: ${tutorial.name}, ${tutorial.duration || '5分钟'}`"
+          role="listitem"
+          tabindex="0"
+          @keyup.enter="handleTutorialClick(tutorial)"
         >
           <div class="tutorial-thumbnail">
             <img
@@ -611,6 +899,7 @@ onMounted(async () => {
       </span>
     </template>
   </el-dialog>
+  </el-pull-refresh>
 </template>
 
 <style scoped lang="less">
@@ -682,6 +971,43 @@ onMounted(async () => {
   padding: 20px;
   background-color: #fafafa;
   overflow-y: auto;
+
+  .search-section {
+    margin-bottom: 16px;
+
+    .search-input {
+      :deep(.el-input__wrapper) {
+        border-radius: 24px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s ease;
+
+        &:hover {
+          box-shadow: 0 4px 16px rgba(255, 107, 107, 0.15);
+        }
+
+        &.is-focus {
+          box-shadow: 0 4px 16px rgba(255, 107, 107, 0.25);
+        }
+      }
+
+      :deep(.el-input-group__append) {
+        border-radius: 0 24px 24px 0;
+        background-color: #ff6b6b;
+        border-color: #ff6b6b;
+        color: #fff;
+
+        .el-button {
+          background-color: transparent;
+          border: none;
+          color: #fff;
+
+          &:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+          }
+        }
+      }
+    }
+  }
 
   .weather-section {
     margin-bottom: 16px;
@@ -809,10 +1135,15 @@ onMounted(async () => {
       overflow: hidden;
       position: relative;
       transition: all 0.3s ease;
+      cursor: pointer;
 
       &:hover {
         transform: translateY(-4px);
         box-shadow: 0 8px 24px rgba(255, 107, 107, 0.15);
+      }
+
+      &:active {
+        transform: translateY(-2px);
       }
 
       .dish-image-background {
@@ -859,15 +1190,58 @@ onMounted(async () => {
         padding: 20px;
         background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.3) 50%, transparent 100%);
 
-        .dish-name {
-          font-size: 20px;
-          font-weight: bold;
+        .dish-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 12px;
           margin-bottom: 8px;
-          color: #fff;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-          text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+
+          .dish-name {
+            flex: 1;
+            font-size: 20px;
+            font-weight: bold;
+            color: #fff;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+          }
+
+          .dish-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+          }
+
+          .share-btn,
+          .favorite-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            backdrop-filter: blur(4px);
+            color: #fff;
+            transition: all 0.3s ease;
+
+            &:hover {
+              background: rgba(255, 255, 255, 0.3);
+              transform: scale(1.1);
+            }
+
+            &:active {
+              transform: scale(0.95);
+            }
+          }
+
+          .favorite-btn {
+            &.is-favorite {
+              background: #ff6b6b;
+              color: #fff;
+
+              .el-icon {
+                animation: star-bounce 0.3s ease;
+              }
+            }
+          }
         }
 
         .dish-meta {
@@ -929,6 +1303,11 @@ onMounted(async () => {
       background-color: #fafafa;
       border-radius: 10px;
       box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.06);
+
+      .empty-icon {
+        color: #ddd;
+        margin-bottom: 20px;
+      }
     }
   }
 
@@ -1183,6 +1562,11 @@ onMounted(async () => {
       background-color: #fafafa;
       border-radius: 10px;
       box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.06);
+
+      .empty-icon {
+        color: #ddd;
+        margin-bottom: 20px;
+      }
     }
 
     /* 美化空状态的文本 */
@@ -1221,6 +1605,161 @@ onMounted(async () => {
         font-size: 12px;
         color: #909399;
         margin-top: 5px;
+      }
+    }
+  }
+
+  // 星星收藏动画
+  @keyframes star-bounce {
+    0% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.3);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  // 淡入动画
+  .fade-in {
+    animation: fadeIn 0.5s ease-in;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  // 骨架屏样式
+  .skeleton-wrapper {
+    margin-bottom: 16px;
+  }
+
+  .tutorial-skeleton {
+    margin-bottom: 16px;
+  }
+
+  // 移动端响应式适配
+  @media (max-width: 768px) {
+    padding: 12px;
+
+    .weather-section {
+      .weather-content {
+        gap: 12px;
+
+        .weather-icon {
+          font-size: 40px;
+        }
+
+        .weather-info {
+          font-size: 14px;
+
+          .location {
+            .location-button {
+              padding: 2px 6px;
+
+              .location-text {
+                max-width: 120px;
+                font-size: 12px;
+              }
+            }
+          }
+
+          .temp-section {
+            .temp {
+              font-size: 24px;
+            }
+
+            .weather-condition {
+              font-size: 14px;
+            }
+          }
+
+          .recommendation {
+            font-size: 13px;
+          }
+        }
+      }
+    }
+
+    .recommendation-section {
+      h3 {
+        font-size: 18px;
+      }
+
+      .dish-card {
+        height: 280px;
+
+        .dish-info-overlay {
+          padding: 12px;
+
+          .dish-name {
+            font-size: 16px;
+          }
+
+          .dish-meta {
+            font-size: 12px;
+            gap: 8px;
+          }
+
+          .dish-rating {
+            :deep(.el-rate) {
+              font-size: 12px;
+            }
+          }
+        }
+      }
+    }
+
+    .tutorial-section {
+      .section-header {
+        h3 {
+          font-size: 18px;
+        }
+
+        .view-all-btn {
+          font-size: 12px;
+        }
+      }
+
+      .tutorial-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 12px;
+      }
+
+      .tutorial-card {
+        height: 180px;
+
+        .tutorial-thumbnail {
+          height: 100px;
+        }
+
+        .tutorial-content {
+          padding: 8px;
+
+          .tutorial-title {
+            font-size: 13px;
+          }
+
+          .tutorial-meta {
+            font-size: 11px;
+          }
+        }
+      }
+    }
+
+    .nearby-section {
+      .nearby-btn {
+        height: 44px;
+        font-size: 14px;
       }
     }
   }
