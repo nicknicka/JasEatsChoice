@@ -167,6 +167,9 @@
   },
   "active": "25380c94f56f550b",
   "lastOpenFiles": [
+    "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/controller/OrderController.class",
+    "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/entity/Order.class",
+    "JasEatsChoiceJava/target/test-classes",
     "WEATHER_OPTIMIZATION_SUMMARY.md",
     "BUG_FIXES_SUMMARY.md",
     "JasEatsChoiceFront/src/renderer/src/composables/useWeather.js",
@@ -178,8 +181,6 @@
     "JasEatsChoiceFront/src/renderer/src/views/user/components/home/SearchBar.vue",
     "JasEatsChoiceFront/src/renderer/src/views/user/components/home",
     "JasEatsChoiceFront/src/renderer/src/composables/index.ts",
-    "JasEatsChoiceFront/src/renderer/src/composables/useWebSocket.ts",
-    "JasEatsChoiceFront/src/renderer/src/composables/useShare.ts",
     "JasEatsChoiceFront/src/renderer/src/docs/饮食记录页面优化总结.md",
     "JasEatsChoiceFront/node_modules/fsevents/README.md",
     "订单创建流程验证报告.md",
@@ -211,7 +212,6 @@
     "JasEatsChoiceFront/node_modules/@nodelib/fs.walk/README.md",
     "JasEatsChoiceFront/node_modules/@nodelib/fs.stat/README.md",
     "JasEatsChoiceFront/node_modules/@nodelib/fs.scandir/README.md",
-    "JasEatsChoiceFront/node_modules/@types/node/README.md",
-    "JasEatsChoiceFront/node_modules/@types/web-bluetooth/README.md"
+    "JasEatsChoiceFront/node_modules/@types/node/README.md"
   ]
 }

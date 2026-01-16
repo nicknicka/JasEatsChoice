@@ -5,7 +5,7 @@ import axios from 'axios'
 import { API_CONFIG, WS_CONFIG } from '../../config'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
-import { Refresh, ArrowDown, EditPen } from '@element-plus/icons-vue'
+import { Refresh, ArrowDown, EditPen, Check, Search, Delete, Clock, Calendar, Timer, Coin, Wallet } from '@element-plus/icons-vue'
 import orderApi from '../../api/order'
 
 const router = useRouter()
@@ -194,6 +194,31 @@ const activeStatus = ref('all')
 // 明确按钮顺序的状态列表
 const statusList = ref(['all', 'pendingAccept', 'processing', 'pending', 'pendingComment', 'delivered', 'completed', 'cancelled'])
 
+// 排序选项
+const sortBy = ref('timeDesc') // 默认按时间倒序
+
+// 搜索关键词
+const searchKeyword = ref('')
+
+// 排序选项列表
+const sortOptions = [
+  { value: 'timeDesc', label: '最新订单', icon: Clock, iconName: 'Clock' },
+  { value: 'timeAsc', label: '最早订单', icon: Calendar, iconName: 'Calendar' },
+  { value: 'statusPriority', label: '待处理优先', icon: Timer, iconName: 'Timer' },
+  { value: 'amountDesc', label: '金额最高', icon: Coin, iconName: 'Coin' },
+  { value: 'amountAsc', label: '金额最低', icon: Wallet, iconName: 'Wallet' }
+]
+
+// 订单状态优先级（数值越小优先级越高）
+const statusPriority = {
+  pending: 1,          // 待支付 - 最高优先级
+  pendingAccept: 2,    // 待接单
+  processing: 3,       // 进行中
+  delivered: 4,        // 已送达
+  completed: 5,        // 已完成
+  cancelled: 6         // 已取消 - 最低优先级
+}
+
 // 订单状态映射
 const orderStatusMap = {
   all: '全部订单',
@@ -326,23 +351,89 @@ watch(
   }
 )
 
-// 筛选后的订单
+// 筛选后的订单（整合搜索功能）
 const filteredOrders = computed(() => {
-  if (activeStatus.value === 'all') {
-    return orders.value
+  let result = orders.value
+
+  // 先应用搜索
+  if (searchKeyword.value && searchKeyword.value.trim() !== '') {
+    result = searchOrders(result, searchKeyword.value)
   }
-  return orders.value.filter((order) => order.status === activeStatus.value)
+
+  // 再应用状态筛选
+  if (activeStatus.value !== 'all') {
+    result = result.filter((order) => order.status === activeStatus.value)
+  }
+
+  return result
+})
+
+// 排序函数
+const sortOrders = (ordersToSort) => {
+  const sortedOrders = [...ordersToSort]
+
+  switch (sortBy.value) {
+    case 'timeDesc': // 最新订单（时间倒序）
+      return sortedOrders.sort((a, b) => {
+        const timeA = new Date(a._raw?.createTime || a.time).getTime()
+        const timeB = new Date(b._raw?.createTime || b.time).getTime()
+        return timeB - timeA
+      })
+
+    case 'timeAsc': // 最早订单（时间正序）
+      return sortedOrders.sort((a, b) => {
+        const timeA = new Date(a._raw?.createTime || a.time).getTime()
+        const timeB = new Date(b._raw?.createTime || b.time).getTime()
+        return timeA - timeB
+      })
+
+    case 'statusPriority': // 待处理优先
+      return sortedOrders.sort((a, b) => {
+        const priorityA = statusPriority[a.status] || 999
+        const priorityB = statusPriority[b.status] || 999
+        // 如果优先级相同，按时间倒序
+        if (priorityA !== priorityB) {
+          return priorityA - priorityB
+        }
+        const timeA = new Date(a._raw?.createTime || a.time).getTime()
+        const timeB = new Date(b._raw?.createTime || b.time).getTime()
+        return timeB - timeA
+      })
+
+    case 'amountDesc': // 金额最高
+      return sortedOrders.sort((a, b) => {
+        return b.total - a.total
+      })
+
+    case 'amountAsc': // 金额最低
+      return sortedOrders.sort((a, b) => {
+        return a.total - b.total
+      })
+
+    default:
+      return sortedOrders
+  }
+}
+
+// 排序后的订单
+const sortedOrders = computed(() => {
+  return sortOrders(filteredOrders.value)
 })
 
 // 分页相关
 const currentPage = ref(1)
 const pageSize = ref(5)
 
+// 监听排序变化，重置到第一页
+watch(sortBy, () => {
+  currentPage.value = 1
+})
+
 // 分页后的订单
 const paginatedOrders = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value
   const end = start + pageSize.value
-  return filteredOrders.value.slice(start, end)
+  return sortedOrders.value.slice(start, end)
 })
 
 // 查看订单详情
@@ -426,6 +517,63 @@ const handleImageError = (event) => {
     parent.appendChild(noImageDiv)
   }
 }
+
+// 获取当前排序选项
+const getCurrentSortOption = () => {
+  return sortOptions.find(option => option.value === sortBy.value) || sortOptions[0]
+}
+
+// 处理排序变化
+const handleSortChange = (value) => {
+  sortBy.value = value
+  ElMessage.success(`已切换排序：${getCurrentSortOption().label}`)
+}
+
+// 搜索订单
+const searchOrders = (ordersToSearch, keyword) => {
+  if (!keyword || keyword.trim() === '') {
+    return ordersToSearch
+  }
+
+  const searchTerm = keyword.toLowerCase().trim()
+
+  return ordersToSearch.filter(order => {
+    // 搜索订单号
+    if (order.orderNo && order.orderNo.toString().toLowerCase().includes(searchTerm)) {
+      return true
+    }
+
+    // 搜索商家名称
+    if (order.merchant && order.merchant.toLowerCase().includes(searchTerm)) {
+      return true
+    }
+
+    // 搜索菜品名称
+    if (order.items && order.items.length > 0) {
+      return order.items.some(item =>
+        item.name && item.name.toLowerCase().includes(searchTerm)
+      )
+    }
+
+    // 搜索总金额
+    if (order.total && order.total.toString().includes(searchTerm)) {
+      return true
+    }
+
+    return false
+  })
+}
+
+// 清除搜索
+const clearSearch = () => {
+  searchKeyword.value = ''
+  ElMessage.info('已清除搜索')
+}
+
+// 监听搜索关键词变化，重置到第一页
+watch(searchKeyword, () => {
+  currentPage.value = 1
+})
 </script>
 
 <template>
@@ -449,18 +597,91 @@ const handleImageError = (event) => {
       </div>
     </div>
 
+    <!-- 搜索栏 -->
+    <div class="search-bar">
+      <el-input
+        v-model="searchKeyword"
+        placeholder="搜索订单号、商家名称、菜品名称、金额..."
+        clearable
+        size="default"
+        class="search-input"
+      >
+        <template #prefix>
+          <el-icon class="search-icon">
+            <Search />
+          </el-icon>
+        </template>
+        <template #suffix>
+          <el-icon
+            v-if="searchKeyword"
+            class="clear-icon"
+            @click="clearSearch"
+          >
+            <Delete />
+          </el-icon>
+        </template>
+      </el-input>
+      <div v-if="searchKeyword" class="search-result-info">
+        找到 <span class="result-count">{{ filteredOrders.length }}</span> 个相关订单
+        <el-button
+          type="primary"
+          link
+          size="small"
+          @click="clearSearch"
+          class="clear-search-btn"
+        >
+          清除搜索
+        </el-button>
+      </div>
+    </div>
+
     <!-- 订单筛选 -->
     <div class="order-filters">
-      <el-button
-        v-for="status in statusList"
-        :key="status"
-        type="primary"
-        :plain="activeStatus !== status"
-        @click="activeStatus = status"
-        size="small"
-      >
-        {{ orderStatusMap[status] }}
-      </el-button>
+      <div class="filter-buttons">
+        <el-button
+          v-for="status in statusList"
+          :key="status"
+          type="primary"
+          :plain="activeStatus !== status"
+          @click="activeStatus = status"
+          size="small"
+        >
+          {{ orderStatusMap[status] }}
+        </el-button>
+      </div>
+
+      <!-- 排序选择器 -->
+      <div class="sort-selector">
+        <el-dropdown trigger="click" @command="handleSortChange">
+          <el-button type="default" size="small" class="sort-dropdown-btn">
+            <el-icon class="sort-icon">
+              <component :is="getCurrentSortOption().icon" />
+            </el-icon>
+            <span class="sort-label">{{ getCurrentSortOption().label }}</span>
+            <el-icon class="el-icon--right">
+              <ArrowDown />
+            </el-icon>
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item
+                v-for="option in sortOptions"
+                :key="option.value"
+                :command="option.value"
+                :class="{ 'is-active': sortBy === option.value }"
+              >
+                <el-icon class="sort-option-icon">
+                  <component :is="option.icon" />
+                </el-icon>
+                <span class="sort-option-label">{{ option.label }}</span>
+                <el-icon v-if="sortBy === option.value" class="check-icon">
+                  <Check />
+                </el-icon>
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+      </div>
     </div>
 
     <!-- 订单列表 -->
@@ -632,10 +853,10 @@ const handleImageError = (event) => {
 
     <!-- 分页组件 -->
     <el-pagination
-      v-if="filteredOrders.length > 0"
+      v-if="sortedOrders.length > 0"
       background
       layout="total, sizes, prev, pager, next, jumper"
-      :total="filteredOrders.length"
+      :total="sortedOrders.length"
       :current-page="currentPage"
       :page-size="pageSize"
       @current-change="(page) => currentPage = page"
@@ -672,8 +893,114 @@ const handleImageError = (event) => {
     font-weight: 600;
   }
 
+  .search-bar {
+    margin-bottom: 16px;
+    padding: 16px 20px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+
+    .search-input {
+      :deep(.el-input__wrapper) {
+        border-radius: 24px;
+        padding: 8px 16px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+        border: 1px solid rgba(179, 212, 252, 0.3);
+        background: linear-gradient(135deg, #f8faff 0%, #ffffff 100%);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+        &:hover {
+          box-shadow: 0 4px 12px rgba(92, 142, 255, 0.15);
+          border-color: rgba(92, 142, 255, 0.4);
+        }
+
+        &.is-focus {
+          box-shadow: 0 4px 16px rgba(92, 142, 255, 0.25);
+          border-color: #6ba4ff;
+          background: #ffffff;
+        }
+      }
+
+      :deep(.el-input__inner) {
+        font-size: 14px;
+        color: #2c5282;
+        font-weight: 400;
+
+        &::placeholder {
+          color: #94a3b8;
+          font-weight: 300;
+        }
+      }
+
+      .search-icon {
+        color: #5c8eff;
+        font-size: 16px;
+        animation: search-glow 2s ease-in-out infinite;
+      }
+
+      @keyframes search-glow {
+        0%, 100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 0.7;
+          transform: scale(1.1);
+        }
+      }
+
+      .clear-icon {
+        color: #94a3b8;
+        font-size: 16px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+
+        &:hover {
+          color: #ff6b6b;
+          transform: rotate(90deg) scale(1.1);
+        }
+      }
+    }
+
+    .search-result-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+      padding: 8px 12px;
+      background: linear-gradient(135deg, #e7f5ff 0%, #f0f9ff 100%);
+      border-radius: 8px;
+      font-size: 13px;
+      color: #1971c2;
+      border: 1px solid rgba(92, 142, 255, 0.2);
+
+      .result-count {
+        font-weight: 700;
+        font-size: 16px;
+        color: #5c8eff;
+        padding: 0 4px;
+      }
+
+      .clear-search-btn {
+        margin-left: auto;
+        font-size: 13px;
+        font-weight: 500;
+        color: #5c8eff;
+        transition: all 0.3s ease;
+
+        &:hover {
+          color: #4c7eff;
+          transform: translateX(2px);
+        }
+      }
+    }
+  }
+
   .order-filters {
     display: flex;
+    justify-content: space-between;
+    align-items: center;
     gap: 10px;
     margin-bottom: 20px;
     padding: 12px 16px;
@@ -682,6 +1009,13 @@ const handleImageError = (event) => {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     border: 1px solid rgba(0, 0, 0, 0.06);
     flex-wrap: wrap;
+
+    .filter-buttons {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      flex: 1;
+    }
 
     :deep(.el-button) {
       border-radius: 20px;
@@ -708,6 +1042,88 @@ const handleImageError = (event) => {
           background: #f0f9ff;
           border-color: #6ba4ff;
           color: #4c7eff;
+        }
+      }
+    }
+
+    // 排序选择器样式
+    .sort-selector {
+      flex-shrink: 0;
+
+      .sort-dropdown-btn {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        border-radius: 20px;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border: 1px solid #dee2e6;
+        color: #495057;
+        font-weight: 500;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+
+        &:hover {
+          background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+          border-color: #adb5bd;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .sort-icon {
+          font-size: 16px;
+          color: #5c8eff;
+        }
+
+        .sort-label {
+          font-size: 13px;
+        }
+
+        .el-icon {
+          font-size: 12px;
+          transition: transform 0.3s ease;
+        }
+      }
+
+      :deep(.el-dropdown-menu__item) {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        border-radius: 8px;
+        margin: 4px 8px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+        &.is-active {
+          background: linear-gradient(135deg, #e7f5ff 0%, #d0ebff 100%);
+          color: #1971c2;
+          font-weight: 600;
+
+          .sort-option-icon {
+            transform: scale(1.1);
+          }
+        }
+
+        &:hover {
+          background: #f8f9fa;
+          transform: translateX(2px);
+        }
+
+        .sort-option-icon {
+          font-size: 16px;
+          color: #5c8eff;
+          transition: transform 0.3s ease;
+        }
+
+        .sort-option-label {
+          flex: 1;
+          font-size: 13px;
+        }
+
+        .check-icon {
+          color: #1971c2;
+          font-size: 14px;
+          font-weight: bold;
         }
       }
     }
