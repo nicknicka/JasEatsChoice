@@ -2,7 +2,22 @@
 import { useAuthStore } from '../../store/authStore'
 import { useUserStore } from '../../store/userStore'
 import { computed, onMounted, ref } from 'vue'
-import { ElMessage, ElTag, ElIcon, ElButton, ElDialog, ElForm, ElFormItem, ElInput, ElInputNumber, ElSwitch, ElUpload, ElMessageBox, ElCascader, ElTimePicker } from 'element-plus'
+import {
+  ElMessage,
+  ElTag,
+  ElIcon,
+  ElButton,
+  ElDialog,
+  ElForm,
+  ElFormItem,
+  ElInput,
+  ElInputNumber,
+  ElSwitch,
+  ElUpload,
+  ElMessageBox,
+  ElCascader,
+  ElTimePicker
+} from 'element-plus'
 import {
   Location,
   Phone,
@@ -112,7 +127,16 @@ const fetchCommonCategories = async () => {
         ElMessage.warning('常用品类数据加载失败，使用缓存数据')
       } else {
         // 如果没有缓存，使用默认数据
-        commonCategories.value = ['中式快餐', '火锅', '烧烤', '川菜', '湘菜', '粤菜', '西餐', '日韩料理']
+        commonCategories.value = [
+          '中式快餐',
+          '火锅',
+          '烧烤',
+          '川菜',
+          '湘菜',
+          '粤菜',
+          '西餐',
+          '日韩料理'
+        ]
         ElMessage.warning('常用品类数据加载失败，使用默认数据')
       }
     }
@@ -125,7 +149,16 @@ const fetchCommonCategories = async () => {
       ElMessage.warning('常用品类数据加载失败，使用缓存数据')
     } else {
       // 如果没有缓存，使用默认数据
-      commonCategories.value = ['中式快餐', '火锅', '烧烤', '川菜', '湘菜', '粤菜', '西餐', '日韩料理']
+      commonCategories.value = [
+        '中式快餐',
+        '火锅',
+        '烧烤',
+        '川菜',
+        '湘菜',
+        '粤菜',
+        '西餐',
+        '日韩料理'
+      ]
       ElMessage.warning('常用品类数据加载失败，使用默认数据')
     }
   }
@@ -177,11 +210,9 @@ const remoteSearchCategory = async (query) => {
     }
 
     // 从所有品类中搜索匹配的结果
-    const filtered = allCategories.value.filter(category =>
-      category.includes(query)
-    )
+    const filtered = allCategories.value.filter((category) => category.includes(query))
 
-    categoryOptions.value = filtered.map(category => ({
+    categoryOptions.value = filtered.map((category) => ({
       value: category,
       label: category
     }))
@@ -233,7 +264,11 @@ const showSearchResults = ref(false)
 
 // 地理位置搜索定位功能
 const searchLocation = async () => {
-  if (!editForm.value.areaAddress || editForm.value.areaAddress.length < 3 || !editForm.value.detailAddress) {
+  if (
+    !editForm.value.areaAddress ||
+    editForm.value.areaAddress.length < 3 ||
+    !editForm.value.detailAddress
+  ) {
     ElMessage.warning('请先选择完整区域地址并输入详细地址')
     return
   }
@@ -300,20 +335,23 @@ const closeSearchResults = () => {
 }
 
 // 从 userStore 中获取商家信息
-const merchantInfo = computed(() => userStore.merchantInfo || {
-  id: authStore.merchantId,
-  name: '',
-  rating: 0,
-  phone: '',
-  email: '',
-  address: '',
-  avatar: '',
-  status: false,
-  businessHours: '',
-  category: '',
-  averagePrice: 0,
-  businessScope: []
-})
+const merchantInfo = computed(
+  () =>
+    userStore.merchantInfo || {
+      id: authStore.merchantId,
+      name: '',
+      rating: 0,
+      phone: '',
+      email: '',
+      address: '',
+      avatar: '',
+      status: false,
+      businessHours: '',
+      category: '',
+      averagePrice: 0,
+      businessScope: []
+    }
+)
 
 // 获取商家信息
 const fetchMerchantInfo = async () => {
@@ -366,10 +404,13 @@ const formatBusinessScope = (scope) => {
   let processedScope = scope
   if (typeof processedScope === 'string') {
     // 去除可能存在的引号和括号
-    processedScope = processedScope.replace(/^\[|\]$/g, '').replace(/\"/g, '').replace(/\'/g, '')
+    processedScope = processedScope
+      .replace(/^\[|\]$/g, '')
+      .replace(/\"/g, '')
+      .replace(/\'/g, '')
     // 如果包含逗号，则分割成数组
     if (processedScope.includes(',')) {
-      processedScope = processedScope.split(',').map(item => item.trim())
+      processedScope = processedScope.split(',').map((item) => item.trim())
     }
   }
 
@@ -377,7 +418,7 @@ const formatBusinessScope = (scope) => {
   const scopeArray = Array.isArray(processedScope) ? processedScope : [processedScope]
 
   // 过滤空字符串
-  const filteredScope = scopeArray.filter(item => item && item.trim())
+  const filteredScope = scopeArray.filter((item) => item && item.trim())
 
   if (filteredScope.length === 0) return '暂无'
 
@@ -437,7 +478,11 @@ const handleEditClick = () => {
   // 确保营业时间格式正确
   if (info.businessHours) {
     // 如果是 JSON 对象格式，转换为数组格式以便 TimePicker 组件使用
-    if (typeof info.businessHours === 'object' && info.businessHours.start && info.businessHours.end) {
+    if (
+      typeof info.businessHours === 'object' &&
+      info.businessHours.start &&
+      info.businessHours.end
+    ) {
       info.businessHours = [info.businessHours.start, info.businessHours.end]
     } else if (typeof info.businessHours === 'string') {
       // 如果是字符串格式，确保格式正确
@@ -456,7 +501,7 @@ const handleEditClick = () => {
   if (info.category) {
     if (typeof info.category === 'string') {
       // 如果是字符串，按顿号分割
-      info.category = info.category.split('、').filter(item => item.trim())
+      info.category = info.category.split('、').filter((item) => item.trim())
     } else if (!Array.isArray(info.category)) {
       // 如果是其他类型，转换为数组
       info.category = [info.category]
@@ -503,7 +548,11 @@ const validateForm = () => {
   }
 
   // 区域地址验证：确保选择了完整的地址（省/市/区）
-  if (!editForm.value.areaAddress || !Array.isArray(editForm.value.areaAddress) || editForm.value.areaAddress.length < 3) {
+  if (
+    !editForm.value.areaAddress ||
+    !Array.isArray(editForm.value.areaAddress) ||
+    editForm.value.areaAddress.length < 3
+  ) {
     ElMessage.warning('请选择完整的区域地址（省/市/区）')
     return false
   }
@@ -535,7 +584,10 @@ const validateForm = () => {
 
   // 检查时间格式是否正确
   const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/
-  if (!timePattern.test(editForm.value.businessHours[0]) || !timePattern.test(editForm.value.businessHours[1])) {
+  if (
+    !timePattern.test(editForm.value.businessHours[0]) ||
+    !timePattern.test(editForm.value.businessHours[1])
+  ) {
     ElMessage.warning('请选择有效的营业时间格式')
     return false
   }
@@ -545,7 +597,11 @@ const validateForm = () => {
     return false
   }
 
-  if (editForm.value.averagePrice === null || editForm.value.averagePrice === undefined || editForm.value.averagePrice < 0) {
+  if (
+    editForm.value.averagePrice === null ||
+    editForm.value.averagePrice === undefined ||
+    editForm.value.averagePrice < 0
+  ) {
     ElMessage.warning('请输入有效的平均价格')
     return false
   }
@@ -567,7 +623,8 @@ const handleSaveEdit = async () => {
 
     // 将区域地址数组转换为字符串（用 "/" 分隔），并与详细地址合并
     if (Array.isArray(formData.areaAddress)) {
-      formData.address = formData.areaAddress.join('/') + '/' + (formData.detailAddress || '').trim()
+      formData.address =
+        formData.areaAddress.join('/') + '/' + (formData.detailAddress || '').trim()
     }
 
     // 将经营品类数组转换为字符串（用 "、" 分隔）
@@ -596,7 +653,10 @@ const handleSaveEdit = async () => {
     }
 
     // 调用API更新商家信息
-    const response = await api.put(API_CONFIG.merchant.update.replace('{merchantId}', authStore.merchantId), formData)
+    const response = await api.put(
+      API_CONFIG.merchant.update.replace('{merchantId}', authStore.merchantId),
+      formData
+    )
     if (response.code === '200') {
       // 更新用户存储中的信息
       await userStore.fetchMerchantInfo()
@@ -631,19 +691,13 @@ const editFormRules = {
     { required: true, message: '请输入邮箱地址', trigger: 'blur' },
     { type: 'email', message: '请输入有效的邮箱地址', trigger: 'blur' }
   ],
-  areaAddress: [
-    { required: true, message: '请选择区域地址', trigger: 'change' }
-  ],
+  areaAddress: [{ required: true, message: '请选择区域地址', trigger: 'change' }],
   detailAddress: [
     { required: true, message: '请输入详细地址', trigger: 'blur' },
     { min: 5, message: '详细地址长度至少5个字符', trigger: 'blur' }
   ],
-  businessHours: [
-    { required: true, message: '请选择营业时间', trigger: 'change' }
-  ],
-  category: [
-    { required: true, message: '请输入经营品类', trigger: 'blur' }
-  ],
+  businessHours: [{ required: true, message: '请选择营业时间', trigger: 'change' }],
+  category: [{ required: true, message: '请输入经营品类', trigger: 'blur' }],
   averagePrice: [
     { required: true, message: '请输入平均价格', trigger: 'blur' },
     { type: 'number', min: 0, message: '平均价格必须大于等于0', trigger: 'blur' }
@@ -663,9 +717,14 @@ const editFormRules = {
     <div v-else class="info-content">
       <div class="info-header">
         <div class="avatar-section">
-          <img v-if="merchantInfo.avatar" :src="merchantInfo.avatar" class="avatar" alt="商家头像" />
+          <img
+            v-if="merchantInfo.avatar"
+            :src="merchantInfo.avatar"
+            class="avatar"
+            alt="商家头像"
+          />
           <div v-else class="avatar-placeholder">
-            <ShoppingBag style="font-size: 32px; color: #409eff;" />
+            <ShoppingBag style="font-size: 32px; color: #409eff" />
           </div>
         </div>
 
@@ -683,12 +742,7 @@ const editFormRules = {
                 {{ merchantInfo.status ? '营业中' : '已打烊' }}
               </ElTag>
             </div>
-            <ElButton
-              type="primary"
-              size="small"
-              @click="handleEditClick"
-              class="edit-button"
-            >
+            <ElButton type="primary" size="small" @click="handleEditClick" class="edit-button">
               <ElIcon><Edit /></ElIcon>
               <span>编辑信息</span>
             </ElButton>
@@ -756,7 +810,9 @@ const editFormRules = {
   >
     <div class="edit-form">
       <div class="info-item">
-        <span class="info-label"><ElIcon><Document /></ElIcon> 商家名称</span>
+        <span class="info-label"
+          ><ElIcon><Document /></ElIcon> 商家名称</span
+        >
         <ElInput
           v-model="editForm.name"
           placeholder="请输入商家名称"
@@ -766,7 +822,9 @@ const editFormRules = {
       </div>
 
       <div class="info-item">
-        <span class="info-label"><ElIcon><Phone /></ElIcon> 联系电话</span>
+        <span class="info-label"
+          ><ElIcon><Phone /></ElIcon> 联系电话</span
+        >
         <ElInput
           v-model="editForm.phone"
           placeholder="请输入联系电话"
@@ -776,7 +834,9 @@ const editFormRules = {
       </div>
 
       <div class="info-item">
-        <span class="info-label"><ElIcon><Message /></ElIcon> 邮箱地址</span>
+        <span class="info-label"
+          ><ElIcon><Message /></ElIcon> 邮箱地址</span
+        >
         <ElInput
           v-model="editForm.email"
           placeholder="请输入邮箱地址"
@@ -786,7 +846,9 @@ const editFormRules = {
       </div>
 
       <div class="info-item">
-        <span class="info-label"><ElIcon><Location /></ElIcon> 区域地址</span>
+        <span class="info-label"
+          ><ElIcon><Location /></ElIcon> 区域地址</span
+        >
         <ElCascader
           v-model="editForm.areaAddress"
           :options="addressOptions"
@@ -799,9 +861,11 @@ const editFormRules = {
         />
       </div>
 
-      <div class="info-item" style="position: relative;">
-        <span class="info-label"><ElIcon><Location /></ElIcon> 详细地址</span>
-        <div style="display: flex; gap: 8px; align-items: center;">
+      <div class="info-item" style="position: relative">
+        <span class="info-label"
+          ><ElIcon><Location /></ElIcon> 详细地址</span
+        >
+        <div style="display: flex; gap: 8px; align-items: center">
           <ElInput
             v-model="editForm.detailAddress"
             placeholder="请输入街道、门牌号等详细地址"
@@ -812,7 +876,11 @@ const editFormRules = {
             type="primary"
             size="small"
             @click="searchLocation"
-            :disabled="!editForm.areaAddress || editForm.areaAddress.length < 3 || !editForm.detailAddress?.trim()"
+            :disabled="
+              !editForm.areaAddress ||
+              editForm.areaAddress.length < 3 ||
+              !editForm.detailAddress?.trim()
+            "
           >
             <ElIcon><Location /></ElIcon>
             搜索定位
@@ -822,12 +890,7 @@ const editFormRules = {
         <div v-if="showSearchResults" class="search-results-dropdown">
           <div class="dropdown-header">
             <span>找到 {{ searchResults.length }} 个匹配地址</span>
-            <ElButton
-              type="text"
-              size="small"
-              @click="closeSearchResults"
-              style="padding: 0"
-            >
+            <ElButton type="text" size="small" @click="closeSearchResults" style="padding: 0">
               <ElIcon><CircleClose /></ElIcon>
             </ElButton>
           </div>
@@ -841,7 +904,9 @@ const editFormRules = {
               @mouseleave="result.hover = false"
             >
               <div class="result-name">{{ result.name || '未命名地址' }}</div>
-              <div class="result-address">{{ result.address || result.pname + result.cityname + result.adname }}</div>
+              <div class="result-address">
+                {{ result.address || result.pname + result.cityname + result.adname }}
+              </div>
               <div class="result-location" v-if="result.latitude && result.longitude">
                 <ElIcon><Location /></ElIcon>
                 {{ result.latitude.toFixed(6) }}, {{ result.longitude.toFixed(6) }}
@@ -852,8 +917,10 @@ const editFormRules = {
       </div>
 
       <div class="info-item">
-        <span class="info-label"><ElIcon><Clock /></ElIcon> 营业时间</span>
-        <div style="width: 300px;">
+        <span class="info-label"
+          ><ElIcon><Clock /></ElIcon> 营业时间</span
+        >
+        <div style="width: 300px">
           <ElTimePicker
             v-model="editForm.businessHours"
             is-range
@@ -868,8 +935,10 @@ const editFormRules = {
         </div>
       </div>
 
-      <div class="info-item" style="position: relative; align-items: flex-start;">
-        <span class="info-label"><ElIcon><ShoppingBag /></ElIcon> 经营品类</span>
+      <div class="info-item" style="position: relative; align-items: flex-start">
+        <span class="info-label"
+          ><ElIcon><ShoppingBag /></ElIcon> 经营品类</span
+        >
         <div class="category-selector">
           <!-- 选择器 -->
           <ElSelect
@@ -898,7 +967,7 @@ const editFormRules = {
           <div class="quick-categories">
             <div class="quick-header" @click="toggleQuickCategories">
               <span class="quick-label">快捷选择</span>
-              <ElIcon :class="{ 'rotate': !quickCategoriesExpanded }"><Switch /></ElIcon>
+              <ElIcon :class="{ rotate: !quickCategoriesExpanded }"><Switch /></ElIcon>
             </div>
             <div class="quick-tags" v-if="quickCategoriesExpanded">
               <ElTag
@@ -908,7 +977,9 @@ const editFormRules = {
                 @click="toggleCategory(tag)"
                 :class="[
                   'quick-tag',
-                  editForm.category && editForm.category.includes(tag) ? 'quick-tag-selected' : 'quick-tag-default'
+                  editForm.category && editForm.category.includes(tag)
+                    ? 'quick-tag-selected'
+                    : 'quick-tag-default'
                 ]"
               >
                 {{ tag }}
@@ -919,7 +990,9 @@ const editFormRules = {
       </div>
 
       <div class="info-item">
-        <span class="info-label"><ElIcon><Money /></ElIcon> 平均价格</span>
+        <span class="info-label"
+          ><ElIcon><Money /></ElIcon> 平均价格</span
+        >
         <ElInputNumber
           v-model="editForm.averagePrice"
           :min="0"
@@ -931,7 +1004,9 @@ const editFormRules = {
       </div>
 
       <div class="info-item">
-        <span class="info-label"><ElIcon><Switch /></ElIcon> 营业状态</span>
+        <span class="info-label"
+          ><ElIcon><Switch /></ElIcon> 营业状态</span
+        >
         <ElSwitch
           v-model="editForm.status"
           active-text="营业中"
@@ -955,7 +1030,9 @@ const editFormRules = {
 /* 对话框淡入动画 */
 :deep(.dialog-fade-enter-active),
 :deep(.dialog-fade-leave-active) {
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
 }
 
 :deep(.dialog-fade-enter-from) {
@@ -1290,7 +1367,6 @@ const editFormRules = {
   top: 100%;
 }
 
-
 .dropdown-header {
   display: flex;
   justify-content: space-between;
@@ -1600,7 +1676,8 @@ const editFormRules = {
 }
 
 // 状态标签和评分标签样式优化
-.status-tag, .rating-tag {
+.status-tag,
+.rating-tag {
   cursor: pointer;
   line-height: 28px;
   white-space: nowrap;

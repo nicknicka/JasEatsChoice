@@ -111,7 +111,7 @@ export const useUserStore = defineStore('user', {
 
     setUserInfo(info: UserInfo) {
       // 确保height和weight是数字类型（处理可能的数组类型）
-      const userData = { ...info };
+      const userData = { ...info }
       // 如果是数组，取第一个元素；否则直接转换
       if (Array.isArray(userData.height)) {
         userData.height = Number(userData.height[0]) || null

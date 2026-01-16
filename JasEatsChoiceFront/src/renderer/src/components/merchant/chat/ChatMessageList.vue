@@ -83,9 +83,13 @@ const scrollToBottom = (smooth = true) => {
 }
 
 // 监听消息变化，自动滚动到底部
-watch(() => props.messages, () => {
-  scrollToBottom()
-}, { deep: true })
+watch(
+  () => props.messages,
+  () => {
+    scrollToBottom()
+  },
+  { deep: true }
+)
 
 // 暴露方法给父组件
 defineExpose({

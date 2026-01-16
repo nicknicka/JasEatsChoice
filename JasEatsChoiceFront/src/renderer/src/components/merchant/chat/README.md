@@ -10,20 +10,20 @@
 
 #### Props
 
-| 参数 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| conversations | Array | [] | 会话列表数据 |
-| selectedConversation | Object | null | 当前选中的会话 |
-| searchKeyword | String | '' | 搜索关键词 |
-| showUnreadOnly | Boolean | false | 是否仅显示未读 |
+| 参数                 | 类型    | 默认值 | 说明           |
+| -------------------- | ------- | ------ | -------------- |
+| conversations        | Array   | []     | 会话列表数据   |
+| selectedConversation | Object  | null   | 当前选中的会话 |
+| searchKeyword        | String  | ''     | 搜索关键词     |
+| showUnreadOnly       | Boolean | false  | 是否仅显示未读 |
 
 #### Events
 
-| 事件名 | 参数 | 说明 |
-|--------|------|------|
-| select | conversation: Object | 选择会话时触发 |
-| search | keyword: String | 搜索时触发 |
-| filter | filterData: Object | 筛选条件变化时触发 |
+| 事件名 | 参数                 | 说明               |
+| ------ | -------------------- | ------------------ |
+| select | conversation: Object | 选择会话时触发     |
+| search | keyword: String      | 搜索时触发         |
+| filter | filterData: Object   | 筛选条件变化时触发 |
 
 #### 使用示例
 
@@ -73,23 +73,23 @@ const selectConversation = (conversation) => {
 
 #### Props
 
-| 参数 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| messages | Array | [] | 消息列表数据 |
-| conversationType | String | 'private' | 会话类型：'private' 或 'group' |
-| currentUserId | String/Number | null | 当前用户ID |
+| 参数             | 类型          | 默认值    | 说明                           |
+| ---------------- | ------------- | --------- | ------------------------------ |
+| messages         | Array         | []        | 消息列表数据                   |
+| conversationType | String        | 'private' | 会话类型：'private' 或 'group' |
+| currentUserId    | String/Number | null      | 当前用户ID                     |
 
 #### Events
 
-| 事件名 | 参数 | 说明 |
-|--------|------|------|
-| scroll-to-bottom | - | 滚动到底部时触发 |
+| 事件名           | 参数 | 说明             |
+| ---------------- | ---- | ---------------- |
+| scroll-to-bottom | -    | 滚动到底部时触发 |
 
 #### 暴露方法
 
-| 方法名 | 参数 | 返回值 | 说明 |
-|--------|------|--------|------|
-| scrollToBottom | smooth: Boolean = true | void | 滚动到消息列表底部 |
+| 方法名         | 参数                   | 返回值 | 说明               |
+| -------------- | ---------------------- | ------ | ------------------ |
+| scrollToBottom | smooth: Boolean = true | void   | 滚动到消息列表底部 |
 
 #### 使用示例
 
@@ -135,29 +135,29 @@ const scrollBottom = () => {
 
 #### Props
 
-| 参数 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| disabled | Boolean | false | 是否禁用 |
-| sending | Boolean | false | 是否发送中 |
-| placeholder | String | '输入消息内容...' | 占位文本 |
-| showSyncToggle | Boolean | false | 是否显示同步至群聊开关 |
-| syncToGroup | Boolean | false | 是否同步至群聊 |
+| 参数           | 类型    | 默认值            | 说明                   |
+| -------------- | ------- | ----------------- | ---------------------- |
+| disabled       | Boolean | false             | 是否禁用               |
+| sending        | Boolean | false             | 是否发送中             |
+| placeholder    | String  | '输入消息内容...' | 占位文本               |
+| showSyncToggle | Boolean | false             | 是否显示同步至群聊开关 |
+| syncToGroup    | Boolean | false             | 是否同步至群聊         |
 
 #### Events
 
-| 事件名 | 参数 | 说明 |
-|--------|------|------|
-| send | content: String | 发送消息时触发 |
-| update:syncToGroup | value: Boolean | 同步至群聊状态变化时触发 |
-| upload-file | file: File | 上传文件时触发 |
-| upload-image | file: File | 上传图片时触发 |
+| 事件名             | 参数            | 说明                     |
+| ------------------ | --------------- | ------------------------ |
+| send               | content: String | 发送消息时触发           |
+| update:syncToGroup | value: Boolean  | 同步至群聊状态变化时触发 |
+| upload-file        | file: File      | 上传文件时触发           |
+| upload-image       | file: File      | 上传图片时触发           |
 
 #### 暴露方法
 
-| 方法名 | 参数 | 返回值 | 说明 |
-|--------|------|--------|------|
-| focus | - | void | 聚焦输入框 |
-| clearInput | - | void | 清空输入内容 |
+| 方法名     | 参数 | 返回值 | 说明         |
+| ---------- | ---- | ------ | ------------ |
+| focus      | -    | void   | 聚焦输入框   |
+| clearInput | -    | void   | 清空输入内容 |
 
 #### 快捷键
 
@@ -218,15 +218,15 @@ const handleUploadImage = (file) => {
 
 #### Props
 
-| 参数 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| order | Object | null | 订单数据对象 |
+| 参数  | 类型   | 默认值 | 说明         |
+| ----- | ------ | ------ | ------------ |
+| order | Object | null   | 订单数据对象 |
 
 #### Events
 
-| 事件名 | 参数 | 说明 |
-|--------|------|------|
-| status-update | { orderId, status } | 订单状态更新时触发 |
+| 事件名        | 参数                 | 说明               |
+| ------------- | -------------------- | ------------------ |
+| status-update | { orderId, status }  | 订单状态更新时触发 |
 | send-reminder | { orderId, content } | 发送订单提醒时触发 |
 
 #### 订单数据格式
@@ -294,16 +294,16 @@ const handleSendReminder = ({ orderId, content }) => {
 
 ```javascript
 import {
-  sanitizeMessage,          // XSS防护
-  filterSensitiveInfo,      // 过滤敏感信息
-  formatMessageTime,        // 格式化消息时间
-  formatConversationTime,   // 格式化会话时间
-  truncateMessage,          // 截断消息
-  cleanMessage,             // 清理消息（XSS+敏感信息过滤）
-  generateMessageId,        // 生成唯一消息ID
-  isImageMessage,           // 判断是否为图片消息
-  isFileMessage,            // 判断是否为文件消息
-  calculateUnreadCount,     // 计算未读消息数量
+  sanitizeMessage, // XSS防护
+  filterSensitiveInfo, // 过滤敏感信息
+  formatMessageTime, // 格式化消息时间
+  formatConversationTime, // 格式化会话时间
+  truncateMessage, // 截断消息
+  cleanMessage, // 清理消息（XSS+敏感信息过滤）
+  generateMessageId, // 生成唯一消息ID
+  isImageMessage, // 判断是否为图片消息
+  isFileMessage, // 判断是否为文件消息
+  calculateUnreadCount, // 计算未读消息数量
   sortConversationsByUnread // 按未读排序会话
 } from '@/utils/chat/messageUtils'
 ```
@@ -331,16 +331,16 @@ const time = formatMessageTime('2024-01-12 12:30:00')
 
 ```javascript
 import {
-  getCurrentUserId,           // 获取当前用户ID
-  handleAuthError,            // 处理认证错误
-  handleApiError,             // 处理API错误
-  getChatSessions,            // 获取会话列表
-  getChatMessages,            // 获取聊天记录
-  sendMessage,                // 发送消息
-  markMessagesAsRead,         // 标记消息已读
-  buildSessionId,             // 构建会话ID
-  formatMessageForSend,       // 格式化消息用于发送
-  createLocalMessage          // 创建本地消息对象
+  getCurrentUserId, // 获取当前用户ID
+  handleAuthError, // 处理认证错误
+  handleApiError, // 处理API错误
+  getChatSessions, // 获取会话列表
+  getChatMessages, // 获取聊天记录
+  sendMessage, // 发送消息
+  markMessagesAsRead, // 标记消息已读
+  buildSessionId, // 构建会话ID
+  formatMessageForSend, // 格式化消息用于发送
+  createLocalMessage // 创建本地消息对象
 } from '@/utils/chat/chatApi'
 ```
 
@@ -470,16 +470,10 @@ const sendMessage = async (content) => {
       />
 
       <!-- 消息列表 -->
-      <ChatMessageList
-        :messages="chatMessages"
-        :conversation-type="selectedConversation.type"
-      />
+      <ChatMessageList :messages="chatMessages" :conversation-type="selectedConversation.type" />
 
       <!-- 消息输入 -->
-      <MessageInput
-        :sending="sending"
-        @send="sendMessage"
-      />
+      <MessageInput :sending="sending" @send="sendMessage" />
     </div>
   </div>
 </template>
@@ -495,11 +489,7 @@ const sendMessage = async (content) => {
 
 ```vue
 <template>
-  <el-table
-    :data="chatMessages"
-    height="400"
-    virtual-scrolling
-  >
+  <el-table :data="chatMessages" height="400" virtual-scrolling>
     <!-- 消息项 -->
   </el-table>
 </template>

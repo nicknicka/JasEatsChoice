@@ -46,7 +46,13 @@
 
     <!-- 数量选择 -->
     <div class="dish-quantity">
-      <el-input-number v-model="dish.quantity" :min="1" :max="10" label="数量" style="width: 100%" />
+      <el-input-number
+        v-model="dish.quantity"
+        :min="1"
+        :max="10"
+        label="数量"
+        style="width: 100%"
+      />
     </div>
 
     <el-button type="primary" size="small" @click="handleAddToCart" style="width: 100%">

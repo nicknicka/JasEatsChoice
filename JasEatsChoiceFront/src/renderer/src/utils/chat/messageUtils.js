@@ -205,7 +205,10 @@ export const generateMessageId = () => {
  * @returns {boolean} 是否为图片消息
  */
 export const isImageMessage = (message) => {
-  return message.messageType === 'image' || (message.content && message.content.match(/^https?:.*\.(jpg|jpeg|png|gif|webp)$/i))
+  return (
+    message.messageType === 'image' ||
+    (message.content && message.content.match(/^https?:.*\.(jpg|jpeg|png|gif|webp)$/i))
+  )
 }
 
 /**

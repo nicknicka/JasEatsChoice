@@ -387,11 +387,9 @@ updateFilter()
                   </div>
                   <!-- 追评列表 - 只显示前2个或全部 -->
                   <div
-                    v-for="(reply, index) in (
-                      isReplyExpanded[comment.id]
-                      ? (comment.replies || [])
-                      : (comment.replies || []).slice(0, 2 - (comment.reply ? 1 : 0))
-                    )"
+                    v-for="(reply, index) in isReplyExpanded[comment.id]
+                      ? comment.replies || []
+                      : (comment.replies || []).slice(0, 2 - (comment.reply ? 1 : 0))"
                     :key="index"
                     class="comment-reply comment-reply-followup"
                   >
@@ -404,7 +402,13 @@ updateFilter()
                     class="reply-expand-btn"
                     @click="isReplyExpanded[comment.id] = !isReplyExpanded[comment.id]"
                   >
-                    <span class="btn-text">{{ isReplyExpanded[comment.id] ? '收起' : '查看所有 ' + (1 + (comment.reply ? 1 : 0) + (comment.replies?.length || 0)) + ' 条评价' }}</span>
+                    <span class="btn-text">{{
+                      isReplyExpanded[comment.id]
+                        ? '收起'
+                        : '查看所有 ' +
+                          (1 + (comment.reply ? 1 : 0) + (comment.replies?.length || 0)) +
+                          ' 条评价'
+                    }}</span>
                     <el-icon class="arrow-icon">
                       <ArrowDown v-if="!isReplyExpanded[comment.id]" />
                       <ArrowUp v-else />
@@ -444,7 +448,11 @@ updateFilter()
     </div>
 
     <!-- 回复对话框 -->
-    <el-dialog v-model="showReplyDialog" :title="currentComment?.status === 'replied' ? '追评' : '回复评价'" width="500px">
+    <el-dialog
+      v-model="showReplyDialog"
+      :title="currentComment?.status === 'replied' ? '追评' : '回复评价'"
+      width="500px"
+    >
       <el-input
         v-model="replyComment"
         type="textarea"

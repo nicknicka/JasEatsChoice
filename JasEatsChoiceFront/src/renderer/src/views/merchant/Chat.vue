@@ -18,7 +18,11 @@ import {
   createLocalMessage,
   handleApiError
 } from '../../utils/chat/chatApi'
-import { formatConversationTime, cleanMessage, sortConversationsByUnread } from '../../utils/chat/messageUtils'
+import {
+  formatConversationTime,
+  cleanMessage,
+  sortConversationsByUnread
+} from '../../utils/chat/messageUtils'
 
 // ==================== 数据定义 ====================
 
@@ -69,15 +73,16 @@ const filteredConversations = computed(() => {
   // 搜索过滤
   if (searchKeyword.value) {
     const keyword = searchKeyword.value.toLowerCase()
-    result = result.filter(conv =>
-      conv.name.toLowerCase().includes(keyword) ||
-      conv.lastMessage.toLowerCase().includes(keyword)
+    result = result.filter(
+      (conv) =>
+        conv.name.toLowerCase().includes(keyword) ||
+        conv.lastMessage.toLowerCase().includes(keyword)
     )
   }
 
   // 仅显示未读
   if (showUnreadOnly.value) {
-    result = result.filter(conv => conv.unreadCount > 0)
+    result = result.filter((conv) => conv.unreadCount > 0)
   }
 
   // 排序
@@ -164,7 +169,7 @@ const getMockConversations = () => {
 const getMockMessages = (conversationId) => {
   const now = new Date()
   const messagesMap = {
-    'user001': [
+    user001: [
       {
         id: 1,
         sender: 'customer',
@@ -187,7 +192,7 @@ const getMockMessages = (conversationId) => {
         isRead: false
       }
     ],
-    'user002': [
+    user002: [
       {
         id: 1,
         sender: 'merchant',
@@ -203,7 +208,7 @@ const getMockMessages = (conversationId) => {
         isRead: true
       }
     ],
-    'user003': [
+    user003: [
       {
         id: 1,
         sender: 'customer',
@@ -226,7 +231,7 @@ const getMockMessages = (conversationId) => {
         isRead: false
       }
     ],
-    'group001': [
+    group001: [
       {
         id: 1,
         sender: '张三',
@@ -256,7 +261,7 @@ const getMockMessages = (conversationId) => {
         isRead: true
       }
     ],
-    'group002': [
+    group002: [
       {
         id: 1,
         sender: '王总',
@@ -356,11 +361,7 @@ const loadMessages = async (conversation) => {
       messages = getMockMessages(conversation.id)
     } else {
       // 从 API 获取数据
-      const sessionId = buildSessionId(
-        currentUserId.value,
-        conversation.id,
-        conversation.type
-      )
+      const sessionId = buildSessionId(currentUserId.value, conversation.id, conversation.type)
       messages = await getChatMessages(sessionId, currentUserId.value)
     }
 
@@ -386,11 +387,7 @@ const selectConversation = async (conversation) => {
       ElMessage.success('消息已标记为已读')
 
       // 调用API标记已读
-      const sessionId = buildSessionId(
-        currentUserId.value,
-        conversation.id,
-        conversation.type
-      )
+      const sessionId = buildSessionId(currentUserId.value, conversation.id, conversation.type)
       await markMessagesAsRead(sessionId)
     }
   }
@@ -425,10 +422,7 @@ const sendMessage = async (content) => {
 
     if (result.success) {
       // 创建本地消息对象
-      const localMessage = createLocalMessage(
-        cleanedContent,
-        selectedConversation.value.type
-      )
+      const localMessage = createLocalMessage(cleanedContent, selectedConversation.value.type)
 
       // 添加到聊天记录
       chatMessages.value.push(localMessage)
@@ -557,18 +551,13 @@ const stopResize = () => {
         clearable
         class="search-input"
       />
-      <el-checkbox v-model="showUnreadOnly" @change="toggleUnreadOnly">
-        仅显示未读
-      </el-checkbox>
+      <el-checkbox v-model="showUnreadOnly" @change="toggleUnreadOnly"> 仅显示未读 </el-checkbox>
     </div>
 
     <!-- 聊天内容 -->
     <div class="chat-content">
       <!-- 会话列表 -->
-      <div
-        class="conversation-list-container"
-        :style="{ width: conversationListWidth + 'px' }"
-      >
+      <div class="conversation-list-container" :style="{ width: conversationListWidth + 'px' }">
         <ConversationList
           :conversations="filteredConversations"
           :selected-conversation="selectedConversation"
@@ -579,11 +568,7 @@ const stopResize = () => {
       </div>
 
       <!-- 拖拽条 -->
-      <div
-        class="resize-handle"
-        @mousedown="startResize"
-        :class="{ 'is-resizing': isResizing }"
-      >
+      <div class="resize-handle" @mousedown="startResize" :class="{ 'is-resizing': isResizing }">
         <div class="resize-handle-bar"></div>
       </div>
 

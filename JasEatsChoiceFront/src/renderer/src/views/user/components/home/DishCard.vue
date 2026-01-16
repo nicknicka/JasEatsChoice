@@ -166,7 +166,11 @@ const props = defineProps<Props>()
       position: absolute;
       top: 16px;
       left: 16px;
-      background: linear-gradient(135deg, rgba(255, 107, 107, 0.95) 0%, rgba(255, 135, 135, 0.95) 100%);
+      background: linear-gradient(
+        135deg,
+        rgba(255, 107, 107, 0.95) 0%,
+        rgba(255, 135, 135, 0.95) 100%
+      );
       color: white;
       padding: 8px 16px;
       border-radius: 20px;

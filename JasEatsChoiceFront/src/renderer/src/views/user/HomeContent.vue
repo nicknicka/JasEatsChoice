@@ -265,7 +265,7 @@ const retryFetch = async (fetchFn, maxRetries = 3, delay = 1000) => {
         throw error
       }
       // 指数退避
-      await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)))
+      await new Promise((resolve) => setTimeout(resolve, delay * Math.pow(2, i)))
     }
   }
 }
@@ -579,7 +579,10 @@ onMounted(async () => {
             <template #template>
               <div class="weather-skeleton-content">
                 <el-skeleton-item variant="circle" style="width: 80px; height: 80px" />
-                <el-skeleton-item variant="text" style="width: 120px; height: 56px; margin-left: 16px" />
+                <el-skeleton-item
+                  variant="text"
+                  style="width: 120px; height: 56px; margin-left: 16px"
+                />
                 <div style="flex: 1; margin-left: 24px">
                   <el-skeleton-item variant="text" style="width: 60%" />
                   <el-skeleton-item variant="text" style="width: 80%; margin-top: 12px" />
@@ -660,7 +663,12 @@ onMounted(async () => {
     </div>
 
     <!-- 天气详情弹窗 -->
-    <el-dialog v-model="weatherDetailVisible" title="天气详情" width="500px" class="weather-detail-dialog">
+    <el-dialog
+      v-model="weatherDetailVisible"
+      title="天气详情"
+      width="500px"
+      class="weather-detail-dialog"
+    >
       <div class="weather-detail-content">
         <div class="detail-item">
           <span class="detail-label">当前温度</span>
@@ -707,258 +715,264 @@ onMounted(async () => {
       </div>
     </el-dialog>
 
-  <div class="recommendation-section" role="region" aria-label="今日推荐菜品">
-    <h3 id="recommendations-heading">今日推荐</h3>
-    <!-- 骨架屏加载中 -->
-    <div v-if="recommendedDishesLoading" class="skeleton-wrapper">
-      <el-skeleton animated>
-        <template #template>
-          <el-skeleton-item variant="image" style="width: 100%; height: 320px; border-radius: 8px" />
-        </template>
-      </el-skeleton>
-    </div>
-    <!-- When there are no recommended dishes -->
-    <div v-else-if="recommendedDishes.length === 0" class="empty-recommendations">
-      <el-empty :description="recommendEmptyMessage">
-        <template #image>
-          <div class="empty-icon">
-            <el-icon :size="80"><Coffee /></el-icon>
-          </div>
-        </template>
-        <el-button type="primary" @click="fetchRecommendedDishes">重新加载</el-button>
-      </el-empty>
-    </div>
-
-    <!-- When there are recommended dishes -->
-    <div v-else class="fade-in">
-      <el-carousel
-        :interval="3000"
-        height="320px"
-        indicator-position="outside"
-        arrow="never"
-        class="recommendation-carousel"
-        role="region"
-        :aria-label="'推荐菜品轮播,共' + filteredDishes.length + '个'"
-      >
-        <el-carousel-item v-for="(dish, index) in filteredDishes" :key="index">
-          <el-card
-            shadow="hover"
-            class="dish-card enhanced-card"
-            @click="handleDishClick(dish)"
-            :aria-label="`菜品: ${dish.name}, ${dish.kcal} 卡路里, 评分: ${dish.rating}分`"
-            role="article"
-            tabindex="0"
-            @keyup.enter="handleDishClick(dish)"
-          >
-            <!-- 菜品图片区域 - 作为背景层 -->
-            <div class="dish-image-background">
-              <img
-                :src="dish.image || defaultDishImage"
-                :alt="dish.name"
-                loading="lazy"
-                @error="handleImageError"
-              />
-              <!-- 分类标签 -->
-              <span class="dish-category">{{ dish.category || '推荐' }}</span>
-            </div>
-            <!-- 菜品信息区域 - 覆盖在图片上方 -->
-            <div class="dish-info-overlay">
-              <div class="dish-header">
-                <div class="dish-name">{{ dish.name }}</div>
-                <div class="dish-actions">
-                  <el-button
-                    circle
-                    size="small"
-                    class="share-btn"
-                    @click="shareDish(dish, $event)"
-                    :aria-label="`分享 ${dish.name}`"
-                    tabindex="0"
-                    @keyup.enter="shareDish(dish, $event)"
-                  >
-                    <el-icon><Share /></el-icon>
-                  </el-button>
-                  <el-button
-                    circle
-                    size="small"
-                    class="favorite-btn"
-                    @click="toggleFavorite(dish, $event)"
-                    :class="{ 'is-favorite': isFavorite(dish) }"
-                    :aria-label="`${isFavorite(dish) ? '取消收藏' : '收藏'} ${dish.name}`"
-                    tabindex="0"
-                    @keyup.enter="toggleFavorite(dish, $event)"
-                  >
-                    <el-icon><Star /></el-icon>
-                  </el-button>
-                </div>
-              </div>
-              <div class="dish-meta">
-                <span class="dish-kcal">{{ dish.kcal }} kcal</span>
-                <span v-if="dish.tags" class="dish-tags">{{ dish.tags }}</span>
-              </div>
-              <div class="dish-rating">
-                <el-rate
-                  v-if="dish.rating && dish.rating > 0"
-                  v-model="dish.rating"
-                  disabled
-                  show-score
-                  text-color="#FF6B6B"
-                  class="rating"
-                ></el-rate>
-                <div v-else class="no-rating">
-                  <el-icon><Star /></el-icon>
-                  <span>暂无评分</span>
-                </div>
-              </div>
-            </div>
-          </el-card>
-        </el-carousel-item>
-      </el-carousel>
-    </div>
-  </div>
-
-  <!-- 今日热点 - 只有当有数据时显示 -->
-  <div class="hot-section" v-if="hotTopic">
-    <el-card shadow="hover" class="hot-card">
-      <div class="hot-content">
-        <div class="hot-icon-wrapper">
-          <span class="fire-icon">🔥</span>
-          <span class="hot-badge">HOT</span>
-        </div>
-        <div class="hot-text">
-          <span class="hot-label">今日热点</span>
-          <span class="hot-description">{{ hotTopic }}</span>
-        </div>
-        <el-icon class="hot-arrow"><ArrowRight /></el-icon>
-      </div>
-    </el-card>
-  </div>
-
-  <div class="nearby-section">
-    <el-button
-      type="primary"
-      size="large"
-      class="nearby-btn"
-      @click="handleNearbySearch"
-      :loading="nearbyLoading"
-      :loading-icon="Location"
-    >
-      <el-icon v-if="!nearbyLoading"><Location /></el-icon>
-      {{ nearbyLoading ? '定位中...' : '查找附近商家' }}
-    </el-button>
-  </div>
-
-  <div class="tutorial-section" role="region" aria-label="制作教程与指南">
-    <div class="section-header">
-      <h3 id="tutorials-heading">制作教程与指南</h3>
-      <el-button
-        text
-        type="primary"
-        @click="navigateTo('/user/home/tutorials')"
-        class="view-all-btn"
-        aria-label="查看所有教程"
-      >
-        查看全部 <el-icon><ArrowRight /></el-icon>
-      </el-button>
-    </div>
-
-    <!-- 教程骨架屏 -->
-    <div v-if="tutorialsLoading" class="tutorial-skeleton">
-      <div class="tutorial-grid">
-        <el-skeleton v-for="i in 4" :key="i" animated>
+    <div class="recommendation-section" role="region" aria-label="今日推荐菜品">
+      <h3 id="recommendations-heading">今日推荐</h3>
+      <!-- 骨架屏加载中 -->
+      <div v-if="recommendedDishesLoading" class="skeleton-wrapper">
+        <el-skeleton animated>
           <template #template>
-            <el-skeleton-item variant="image" style="width: 100%; height: 120px; border-radius: 4px" />
-            <el-skeleton-item variant="h3" style="width: 80%; margin: 12px 0 8px" />
-            <el-skeleton-item variant="text" style="width: 60%" />
+            <el-skeleton-item
+              variant="image"
+              style="width: 100%; height: 320px; border-radius: 8px"
+            />
           </template>
         </el-skeleton>
       </div>
-    </div>
+      <!-- When there are no recommended dishes -->
+      <div v-else-if="recommendedDishes.length === 0" class="empty-recommendations">
+        <el-empty :description="recommendEmptyMessage">
+          <template #image>
+            <div class="empty-icon">
+              <el-icon :size="80"><Coffee /></el-icon>
+            </div>
+          </template>
+          <el-button type="primary" @click="fetchRecommendedDishes">重新加载</el-button>
+        </el-empty>
+      </div>
 
-    <!-- 当教程数据为空时显示 -->
-    <div v-else-if="featuredTutorials.length === 0" class="empty-tutorials">
-      <el-empty description="暂无教程数据">
-        <template #image>
-          <div class="empty-icon">
-            <el-icon :size="80"><Document /></el-icon>
-          </div>
-        </template>
-        <el-button type="primary" @click="fetchFeaturedTutorials">重新加载</el-button>
-      </el-empty>
-    </div>
-
-    <!-- 当教程数据不为空时显示 -->
-    <div v-else class="fade-in">
-      <div class="tutorial-grid" role="list" aria-label="教程列表">
-        <el-card
-          shadow="hover"
-          class="tutorial-card enhanced"
-          v-for="(tutorial, index) in featuredTutorials.slice(0, 4)"
-          :key="index"
-          @click="handleTutorialClick(tutorial)"
-          :aria-label="`教程: ${tutorial.name}, ${tutorial.duration || '5分钟'}`"
-          role="listitem"
-          tabindex="0"
-          @keyup.enter="handleTutorialClick(tutorial)"
+      <!-- When there are recommended dishes -->
+      <div v-else class="fade-in">
+        <el-carousel
+          :interval="3000"
+          height="320px"
+          indicator-position="outside"
+          arrow="never"
+          class="recommendation-carousel"
+          role="region"
+          :aria-label="'推荐菜品轮播,共' + filteredDishes.length + '个'"
         >
-          <div class="tutorial-thumbnail">
-            <img
-              :src="tutorial.thumbnail || defaultTutorialThumbnail"
-              :alt="tutorial.name"
-              loading="lazy"
-            />
-            <div class="tutorial-type-badge">
-              <el-icon v-if="tutorial.type === 'video'"><VideoCamera /></el-icon>
-              <span v-else>💡</span>
-            </div>
-          </div>
-          <div class="tutorial-content">
-            <h4 class="tutorial-title">{{ tutorial.name }}</h4>
-            <div class="tutorial-meta">
-              <span class="tutorial-duration">{{ tutorial.duration || '5分钟' }}</span>
-              <el-rate
-                v-if="tutorial.rating"
-                v-model="tutorial.rating"
-                disabled
-                size="small"
-                show-score
-              />
-            </div>
-          </div>
-        </el-card>
+          <el-carousel-item v-for="(dish, index) in filteredDishes" :key="index">
+            <el-card
+              shadow="hover"
+              class="dish-card enhanced-card"
+              @click="handleDishClick(dish)"
+              :aria-label="`菜品: ${dish.name}, ${dish.kcal} 卡路里, 评分: ${dish.rating}分`"
+              role="article"
+              tabindex="0"
+              @keyup.enter="handleDishClick(dish)"
+            >
+              <!-- 菜品图片区域 - 作为背景层 -->
+              <div class="dish-image-background">
+                <img
+                  :src="dish.image || defaultDishImage"
+                  :alt="dish.name"
+                  loading="lazy"
+                  @error="handleImageError"
+                />
+                <!-- 分类标签 -->
+                <span class="dish-category">{{ dish.category || '推荐' }}</span>
+              </div>
+              <!-- 菜品信息区域 - 覆盖在图片上方 -->
+              <div class="dish-info-overlay">
+                <div class="dish-header">
+                  <div class="dish-name">{{ dish.name }}</div>
+                  <div class="dish-actions">
+                    <el-button
+                      circle
+                      size="small"
+                      class="share-btn"
+                      @click="shareDish(dish, $event)"
+                      :aria-label="`分享 ${dish.name}`"
+                      tabindex="0"
+                      @keyup.enter="shareDish(dish, $event)"
+                    >
+                      <el-icon><Share /></el-icon>
+                    </el-button>
+                    <el-button
+                      circle
+                      size="small"
+                      class="favorite-btn"
+                      @click="toggleFavorite(dish, $event)"
+                      :class="{ 'is-favorite': isFavorite(dish) }"
+                      :aria-label="`${isFavorite(dish) ? '取消收藏' : '收藏'} ${dish.name}`"
+                      tabindex="0"
+                      @keyup.enter="toggleFavorite(dish, $event)"
+                    >
+                      <el-icon><Star /></el-icon>
+                    </el-button>
+                  </div>
+                </div>
+                <div class="dish-meta">
+                  <span class="dish-kcal">{{ dish.kcal }} kcal</span>
+                  <span v-if="dish.tags" class="dish-tags">{{ dish.tags }}</span>
+                </div>
+                <div class="dish-rating">
+                  <el-rate
+                    v-if="dish.rating && dish.rating > 0"
+                    v-model="dish.rating"
+                    disabled
+                    show-score
+                    text-color="#FF6B6B"
+                    class="rating"
+                  ></el-rate>
+                  <div v-else class="no-rating">
+                    <el-icon><Star /></el-icon>
+                    <span>暂无评分</span>
+                  </div>
+                </div>
+              </div>
+            </el-card>
+          </el-carousel-item>
+        </el-carousel>
       </div>
     </div>
-  </div>
 
-  <!-- Location Selection Dialog -->
-  <el-dialog v-model="locationDialogVisible" title="选择位置" width="400px">
-    <div class="location-dialog-content">
-      <!-- Auto-location button -->
-      <el-button type="primary" class="auto-location-btn" @click="handleAutoLocation">
-        <el-icon><Location /></el-icon>
-        自动定位
+    <!-- 今日热点 - 只有当有数据时显示 -->
+    <div class="hot-section" v-if="hotTopic">
+      <el-card shadow="hover" class="hot-card">
+        <div class="hot-content">
+          <div class="hot-icon-wrapper">
+            <span class="fire-icon">🔥</span>
+            <span class="hot-badge">HOT</span>
+          </div>
+          <div class="hot-text">
+            <span class="hot-label">今日热点</span>
+            <span class="hot-description">{{ hotTopic }}</span>
+          </div>
+          <el-icon class="hot-arrow"><ArrowRight /></el-icon>
+        </div>
+      </el-card>
+    </div>
+
+    <div class="nearby-section">
+      <el-button
+        type="primary"
+        size="large"
+        class="nearby-btn"
+        @click="handleNearbySearch"
+        :loading="nearbyLoading"
+        :loading-icon="Location"
+      >
+        <el-icon v-if="!nearbyLoading"><Location /></el-icon>
+        {{ nearbyLoading ? '定位中...' : '查找附近商家' }}
       </el-button>
+    </div>
 
-      <!-- Manual location selection -->
-      <div class="manual-location-section">
-        <h4>手动选择</h4>
-        <el-cascader
-          v-model="manualLocation"
-          :options="cascaderLocationData"
-          placeholder="请选择省/市/区"
-          style="width: 100%"
-          @change="handleManualLocationSelect"
-          clearable
-        />
+    <div class="tutorial-section" role="region" aria-label="制作教程与指南">
+      <div class="section-header">
+        <h3 id="tutorials-heading">制作教程与指南</h3>
+        <el-button
+          text
+          type="primary"
+          @click="navigateTo('/user/home/tutorials')"
+          class="view-all-btn"
+          aria-label="查看所有教程"
+        >
+          查看全部 <el-icon><ArrowRight /></el-icon>
+        </el-button>
+      </div>
+
+      <!-- 教程骨架屏 -->
+      <div v-if="tutorialsLoading" class="tutorial-skeleton">
+        <div class="tutorial-grid">
+          <el-skeleton v-for="i in 4" :key="i" animated>
+            <template #template>
+              <el-skeleton-item
+                variant="image"
+                style="width: 100%; height: 120px; border-radius: 4px"
+              />
+              <el-skeleton-item variant="h3" style="width: 80%; margin: 12px 0 8px" />
+              <el-skeleton-item variant="text" style="width: 60%" />
+            </template>
+          </el-skeleton>
+        </div>
+      </div>
+
+      <!-- 当教程数据为空时显示 -->
+      <div v-else-if="featuredTutorials.length === 0" class="empty-tutorials">
+        <el-empty description="暂无教程数据">
+          <template #image>
+            <div class="empty-icon">
+              <el-icon :size="80"><Document /></el-icon>
+            </div>
+          </template>
+          <el-button type="primary" @click="fetchFeaturedTutorials">重新加载</el-button>
+        </el-empty>
+      </div>
+
+      <!-- 当教程数据不为空时显示 -->
+      <div v-else class="fade-in">
+        <div class="tutorial-grid" role="list" aria-label="教程列表">
+          <el-card
+            shadow="hover"
+            class="tutorial-card enhanced"
+            v-for="(tutorial, index) in featuredTutorials.slice(0, 4)"
+            :key="index"
+            @click="handleTutorialClick(tutorial)"
+            :aria-label="`教程: ${tutorial.name}, ${tutorial.duration || '5分钟'}`"
+            role="listitem"
+            tabindex="0"
+            @keyup.enter="handleTutorialClick(tutorial)"
+          >
+            <div class="tutorial-thumbnail">
+              <img
+                :src="tutorial.thumbnail || defaultTutorialThumbnail"
+                :alt="tutorial.name"
+                loading="lazy"
+              />
+              <div class="tutorial-type-badge">
+                <el-icon v-if="tutorial.type === 'video'"><VideoCamera /></el-icon>
+                <span v-else>💡</span>
+              </div>
+            </div>
+            <div class="tutorial-content">
+              <h4 class="tutorial-title">{{ tutorial.name }}</h4>
+              <div class="tutorial-meta">
+                <span class="tutorial-duration">{{ tutorial.duration || '5分钟' }}</span>
+                <el-rate
+                  v-if="tutorial.rating"
+                  v-model="tutorial.rating"
+                  disabled
+                  size="small"
+                  show-score
+                />
+              </div>
+            </div>
+          </el-card>
+        </div>
       </div>
     </div>
 
-    <template #footer>
-      <span class="dialog-footer">
-        <el-button @click="locationDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleConfirmLocation"> 确认 </el-button>
-      </span>
-    </template>
-  </el-dialog>
+    <!-- Location Selection Dialog -->
+    <el-dialog v-model="locationDialogVisible" title="选择位置" width="400px">
+      <div class="location-dialog-content">
+        <!-- Auto-location button -->
+        <el-button type="primary" class="auto-location-btn" @click="handleAutoLocation">
+          <el-icon><Location /></el-icon>
+          自动定位
+        </el-button>
+
+        <!-- Manual location selection -->
+        <div class="manual-location-section">
+          <h4>手动选择</h4>
+          <el-cascader
+            v-model="manualLocation"
+            :options="cascaderLocationData"
+            placeholder="请选择省/市/区"
+            style="width: 100%"
+            @change="handleManualLocationSelect"
+            clearable
+          />
+        </div>
+      </div>
+
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="locationDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="handleConfirmLocation"> 确认 </el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -1053,7 +1067,9 @@ onMounted(async () => {
           border-radius: 50%;
           background: rgba(255, 255, 255, 0.3);
           transform: translate(-50%, -50%);
-          transition: width 0.6s, height 0.6s;
+          transition:
+            width 0.6s,
+            height 0.6s;
         }
 
         &:hover::before {
@@ -1118,12 +1134,7 @@ onMounted(async () => {
       left: -100%;
       width: 100%;
       height: 100%;
-      background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(255, 255, 255, 0.3),
-        transparent
-      );
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
       transition: left 0.6s;
     }
 
@@ -1304,7 +1315,11 @@ onMounted(async () => {
 
     .weather-skeleton-wrapper {
       .weather-card {
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
+        background: linear-gradient(
+          135deg,
+          rgba(255, 255, 255, 0.9) 0%,
+          rgba(255, 255, 255, 0.7) 100%
+        );
         border: 1px solid rgba(0, 0, 0, 0.06);
 
         .weather-skeleton-content {
@@ -1375,23 +1390,33 @@ onMounted(async () => {
           .weather-icon-wrapper {
             width: 80px;
             height: 80px;
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.15));
+            background: linear-gradient(
+              135deg,
+              rgba(255, 255, 255, 0.3),
+              rgba(255, 255, 255, 0.15)
+            );
             backdrop-filter: blur(12px);
             border-radius: 24px;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18),
-                        inset 0 1px 1px rgba(255, 255, 255, 0.3);
+            box-shadow:
+              0 8px 20px rgba(0, 0, 0, 0.18),
+              inset 0 1px 1px rgba(255, 255, 255, 0.3);
             transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
             border: 1px solid rgba(255, 255, 255, 0.25);
             cursor: pointer;
 
             &:hover {
               transform: scale(1.06) rotate(6deg);
-              background: linear-gradient(135deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.2));
-              box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22),
-                          inset 0 1px 1px rgba(255, 255, 255, 0.4);
+              background: linear-gradient(
+                135deg,
+                rgba(255, 255, 255, 0.35),
+                rgba(255, 255, 255, 0.2)
+              );
+              box-shadow:
+                0 12px 28px rgba(0, 0, 0, 0.22),
+                inset 0 1px 1px rgba(255, 255, 255, 0.4);
             }
 
             .weather-emoji {
@@ -1423,7 +1448,9 @@ onMounted(async () => {
               background-clip: text;
               filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.25));
               letter-spacing: -2px;
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+              font-family:
+                -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+                sans-serif;
             }
 
             .temp-unit {
@@ -1481,7 +1508,11 @@ onMounted(async () => {
               gap: 8px;
               color: #fff;
               padding: 10px 18px;
-              background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.15));
+              background: linear-gradient(
+                135deg,
+                rgba(255, 255, 255, 0.25),
+                rgba(255, 255, 255, 0.15)
+              );
               backdrop-filter: blur(12px);
               border-radius: 20px;
               transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1492,7 +1523,11 @@ onMounted(async () => {
               max-width: 100%;
 
               &:hover {
-                background: linear-gradient(135deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0.2));
+                background: linear-gradient(
+                  135deg,
+                  rgba(255, 255, 255, 0.32),
+                  rgba(255, 255, 255, 0.2)
+                );
                 transform: translateY(-2px);
                 box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
 
@@ -1538,7 +1573,11 @@ onMounted(async () => {
               align-items: center;
               gap: 8px;
               padding: 8px 16px;
-              background: linear-gradient(135deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.12));
+              background: linear-gradient(
+                135deg,
+                rgba(255, 255, 255, 0.22),
+                rgba(255, 255, 255, 0.12)
+              );
               backdrop-filter: blur(10px);
               border-radius: 18px;
               border: 1px solid rgba(255, 255, 255, 0.18);
@@ -1548,7 +1587,11 @@ onMounted(async () => {
 
               &:hover {
                 transform: translateX(3px);
-                background: linear-gradient(135deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.16));
+                background: linear-gradient(
+                  135deg,
+                  rgba(255, 255, 255, 0.28),
+                  rgba(255, 255, 255, 0.16)
+                );
               }
 
               .condition-icon {
@@ -1567,22 +1610,32 @@ onMounted(async () => {
             }
 
             .recommendation-card {
-              background: linear-gradient(135deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.16));
+              background: linear-gradient(
+                135deg,
+                rgba(255, 255, 255, 0.28),
+                rgba(255, 255, 255, 0.16)
+              );
               backdrop-filter: blur(12px);
               border-radius: 16px;
               padding: 12px 18px;
               border: 1px solid rgba(255, 255, 255, 0.22);
-              box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12),
-                          inset 0 1px 1px rgba(255, 255, 255, 0.25);
+              box-shadow:
+                0 4px 14px rgba(0, 0, 0, 0.12),
+                inset 0 1px 1px rgba(255, 255, 255, 0.25);
               transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
               max-width: 100%;
               overflow: hidden;
 
               &:hover {
                 transform: translateY(-1px);
-                background: linear-gradient(135deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.22));
-                box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16),
-                            inset 0 1px 1px rgba(255, 255, 255, 0.3);
+                background: linear-gradient(
+                  135deg,
+                  rgba(255, 255, 255, 0.35),
+                  rgba(255, 255, 255, 0.22)
+                );
+                box-shadow:
+                  0 6px 18px rgba(0, 0, 0, 0.16),
+                  inset 0 1px 1px rgba(255, 255, 255, 0.3);
               }
 
               .recommendation-header {
@@ -1626,7 +1679,8 @@ onMounted(async () => {
 
     // 位置脉冲动画
     @keyframes location-pulse {
-      0%, 100% {
+      0%,
+      100% {
         opacity: 1;
         transform: scale(1);
       }
@@ -1735,7 +1789,11 @@ onMounted(async () => {
           position: absolute;
           top: 16px;
           left: 16px;
-          background: linear-gradient(135deg, rgba(255, 107, 107, 0.95) 0%, rgba(255, 135, 135, 0.95) 100%);
+          background: linear-gradient(
+            135deg,
+            rgba(255, 107, 107, 0.95) 0%,
+            rgba(255, 135, 135, 0.95) 100%
+          );
           color: white;
           padding: 8px 16px;
           border-radius: 20px;

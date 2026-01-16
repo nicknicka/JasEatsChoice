@@ -602,7 +602,7 @@
         >
           <div class="merchant-avatar">{{ merchant.avatar }}</div>
           <div class="merchant-info">
-            <h3 class="merchant-name">{{ merchant-name }}</h3>
+            <h3 class="merchant-name">{{ merchant - name }}</h3>
             <p class="merchant-type">{{ merchant.type }}</p>
           </div>
         </div>
@@ -1049,7 +1049,7 @@ const selectMerchant = (merchant) => {
   if (selectedConversation.value && groupOrders.value[selectedConversation.value.id]) {
     const currentOrder = groupOrders.value[selectedConversation.value.id]
     currentOrder.merchantId = merchant.id
-    currentOrder.merchantName = merchant-name
+    currentOrder.merchantName = merchant - name
   }
 
   // 发送系统消息通知群成员已选择/更换商家
@@ -1057,13 +1057,13 @@ const selectMerchant = (merchant) => {
   const merchantSelectedMsg = {
     id: chatMessages.value.length + 1,
     sender: '系统',
-    content: `已${action}商家：${merchant-name}${action === '更换' ? '，购物车已清空' : '，大家可以开始点餐了'}！`,
+    content: `已${action}商家：${merchant - name}${action === '更换' ? '，购物车已清空' : '，大家可以开始点餐了'}！`,
     time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   }
   chatMessages.value.push(merchantSelectedMsg)
 
   // 更新会话列表的最后一条消息
-  selectedConversation.value.lastMessage = `系统: 已选择商家：${merchant-name}`
+  selectedConversation.value.lastMessage = `系统: 已选择商家：${merchant - name}`
   selectedConversation.value.time = merchantSelectedMsg.time
 
   // 打开商品选择对话框

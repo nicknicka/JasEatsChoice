@@ -18,7 +18,11 @@ import {
   createLocalMessage,
   handleApiError
 } from '../../utils/chat/chatApi'
-import { formatConversationTime, cleanMessage, sortConversationsByUnread } from '../../utils/chat/messageUtils'
+import {
+  formatConversationTime,
+  cleanMessage,
+  sortConversationsByUnread
+} from '../../utils/chat/messageUtils'
 
 // ==================== 数据定义 ====================
 
@@ -60,15 +64,16 @@ const filteredConversations = computed(() => {
   // 搜索过滤
   if (searchKeyword.value) {
     const keyword = searchKeyword.value.toLowerCase()
-    result = result.filter(conv =>
-      conv.name.toLowerCase().includes(keyword) ||
-      conv.lastMessage.toLowerCase().includes(keyword)
+    result = result.filter(
+      (conv) =>
+        conv.name.toLowerCase().includes(keyword) ||
+        conv.lastMessage.toLowerCase().includes(keyword)
     )
   }
 
   // 仅显示未读
   if (showUnreadOnly.value) {
-    result = result.filter(conv => conv.unreadCount > 0)
+    result = result.filter((conv) => conv.unreadCount > 0)
   }
 
   // 排序
@@ -133,11 +138,7 @@ const loadSessions = async () => {
 const loadMessages = async (conversation) => {
   try {
     // 构建会话ID
-    const sessionId = buildSessionId(
-      currentUserId.value,
-      conversation.id,
-      conversation.type
-    )
+    const sessionId = buildSessionId(currentUserId.value, conversation.id, conversation.type)
 
     const messages = await getChatMessages(sessionId, currentUserId.value)
     chatMessages.value = messages
@@ -159,11 +160,7 @@ const selectConversation = async (conversation) => {
     ElMessage.success('消息已标记为已读')
 
     // 调用API标记已读
-    const sessionId = buildSessionId(
-      currentUserId.value,
-      conversation.id,
-      conversation.type
-    )
+    const sessionId = buildSessionId(currentUserId.value, conversation.id, conversation.type)
     await markMessagesAsRead(sessionId)
   }
 
@@ -197,10 +194,7 @@ const sendMessage = async (content) => {
 
     if (result.success) {
       // 创建本地消息对象
-      const localMessage = createLocalMessage(
-        cleanedContent,
-        selectedConversation.value.type
-      )
+      const localMessage = createLocalMessage(cleanedContent, selectedConversation.value.type)
 
       // 添加到聊天记录
       chatMessages.value.push(localMessage)
@@ -293,9 +287,7 @@ const handleUploadImage = (file) => {
         clearable
         class="search-input"
       />
-      <el-checkbox v-model="showUnreadOnly" @change="toggleUnreadOnly">
-        仅显示未读
-      </el-checkbox>
+      <el-checkbox v-model="showUnreadOnly" @change="toggleUnreadOnly"> 仅显示未读 </el-checkbox>
     </div>
 
     <!-- 聊天内容 -->

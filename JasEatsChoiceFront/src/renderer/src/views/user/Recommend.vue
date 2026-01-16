@@ -22,13 +22,7 @@ const {
   onRefresh
 } = useRecommendations()
 
-const {
-  favorites,
-  favoritesCount,
-  initFavorites,
-  toggleFavorite,
-  isFavoritedItem
-} = useFavorites()
+const { favorites, favoritesCount, initFavorites, toggleFavorite, isFavoritedItem } = useFavorites()
 
 const {
   selectedCalorieRange,
@@ -214,35 +208,46 @@ onMounted(async () => {
           <div class="filter-title">卡路里范围</div>
           <el-radio-group v-model="selectedCalorieRange">
             <el-radio :label="0">全部</el-radio>
-            <el-radio
-              v-for="range in CALORIE_RANGES"
-              :key="range.id"
-              :label="range.id"
-            >{{ range.label }}</el-radio>
+            <el-radio v-for="range in CALORIE_RANGES" :key="range.id" :label="range.id">{{
+              range.label
+            }}</el-radio>
           </el-radio-group>
         </div>
 
         <div class="filter-section">
           <div class="filter-title">餐食类型</div>
           <el-checkbox-group v-model="selectedTypes">
-            <el-checkbox label="全部" :indeterminate="selectedTypes.length > 0 && selectedTypes.length < availableTypes.length" @change="checked => checked ? selectedTypes = [...availableTypes] : selectedTypes = []"/>
             <el-checkbox
-              v-for="type in availableTypes.slice(0, 10)"
-              :key="type"
-              :label="type"
-            >{{ type }}</el-checkbox>
+              label="全部"
+              :indeterminate="
+                selectedTypes.length > 0 && selectedTypes.length < availableTypes.length
+              "
+              @change="
+                (checked) =>
+                  checked ? (selectedTypes = [...availableTypes]) : (selectedTypes = [])
+              "
+            />
+            <el-checkbox v-for="type in availableTypes.slice(0, 10)" :key="type" :label="type">{{
+              type
+            }}</el-checkbox>
           </el-checkbox-group>
         </div>
 
         <div class="filter-section">
           <div class="filter-title">推荐来源</div>
           <el-checkbox-group v-model="selectedSources">
-            <el-checkbox label="全部" @change="checked => checked ? selectedSources = Object.values(RECOMMENDATION_TYPES) : selectedSources = []"/>
             <el-checkbox
-              v-for="(label, key) in RECOMMENDATION_TYPES"
-              :key="key"
-              :label="label"
-            >{{ label }}</el-checkbox>
+              label="全部"
+              @change="
+                (checked) =>
+                  checked
+                    ? (selectedSources = Object.values(RECOMMENDATION_TYPES))
+                    : (selectedSources = [])
+              "
+            />
+            <el-checkbox v-for="(label, key) in RECOMMENDATION_TYPES" :key="key" :label="label">{{
+              label
+            }}</el-checkbox>
           </el-checkbox-group>
         </div>
 
@@ -270,137 +275,132 @@ onMounted(async () => {
     </div>
 
     <!-- 加载中状态 -->
-      <div class="loading-skeleton" v-if="isLoading && recommendations.length === 0">
-        <el-skeleton :rows="6" type="card" :border="false" />
-      </div>
+    <div class="loading-skeleton" v-if="isLoading && recommendations.length === 0">
+      <el-skeleton :rows="6" type="card" :border="false" />
+    </div>
 
-      <!-- 推荐列表 -->
-      <transition-group
-        name="recommend-card"
-        tag="div"
-        class="recommend-grid"
-        v-else-if="filteredAndSortedRecommendations.length > 0"
+    <!-- 推荐列表 -->
+    <transition-group
+      name="recommend-card"
+      tag="div"
+      class="recommend-grid"
+      v-else-if="filteredAndSortedRecommendations.length > 0"
+    >
+      <el-card
+        v-for="item in filteredAndSortedRecommendations"
+        :key="item.id"
+        class="recommend-card"
+        :class="{ featured: item.rating >= 4.9 }"
       >
-        <el-card
-          v-for="item in filteredAndSortedRecommendations"
-          :key="item.id"
-          class="recommend-card"
-          :class="{ featured: item.rating >= 4.9 }"
-        >
-          <!-- 推荐来源标签 -->
-          <div class="recommend-source-tag" v-if="item.recommendSource">
-            <el-tag
-              :type="RECOMMENDATION_TYPE_TAGS[item.recommendSource]?.type || 'info'"
-              size="small"
-              effect="dark"
-            >
-              {{ item.recommendSource }}
-            </el-tag>
-          </div>
+        <!-- 推荐来源标签 -->
+        <div class="recommend-source-tag" v-if="item.recommendSource">
+          <el-tag
+            :type="RECOMMENDATION_TYPE_TAGS[item.recommendSource]?.type || 'info'"
+            size="small"
+            effect="dark"
+          >
+            {{ item.recommendSource }}
+          </el-tag>
+        </div>
 
-          <div class="card-header">
-            <div class="dish-image">{{ item.image }}</div>
-            <div class="dish-info">
-              <div class="dish-name">{{ item.name }}</div>
-              <div class="dish-type">
-                <el-tag type="primary" size="small" v-if="item.type">{{ item.type }}</el-tag>
-                <el-tag type="info" size="small" effect="plain" v-else>未分类</el-tag>
-              </div>
+        <div class="card-header">
+          <div class="dish-image">{{ item.image }}</div>
+          <div class="dish-info">
+            <div class="dish-name">{{ item.name }}</div>
+            <div class="dish-type">
+              <el-tag type="primary" size="small" v-if="item.type">{{ item.type }}</el-tag>
+              <el-tag type="info" size="small" effect="plain" v-else>未分类</el-tag>
             </div>
           </div>
-
-          <!-- 卡路里信息（带营养详情） -->
-          <div class="calories-info" v-if="item.calories">
-            <span>🔥</span>
-            <span>{{ item.calories }} kcal</span>
-            <el-button
-              type="text"
-              size="small"
-              @click="showNutritionDialog(item)"
-              v-if="item.nutrition"
-              style="margin-left: auto"
-            >
-              营养详情
-            </el-button>
-          </div>
-          <div class="calories-info-unavailable" v-else>
-            <span>🔥</span>
-            <span>卡路里信息暂不可用</span>
-          </div>
-
-          <!-- 标签 -->
-          <div class="tags-section">
-            <el-tag
-              v-for="tag in item.tagsWithType"
-              :key="tag.name"
-              size="small"
-              :type="tag.type"
-            >
-              {{ tag.name }}
-            </el-tag>
-          </div>
-
-          <!-- 推荐理由 -->
-          <div class="reason-section">
-            <div class="reason-title">推荐理由</div>
-            <div class="reason-text" :class="{ 'empty-reason': !item.reason }">
-              {{ item.reason || '暂无推荐理由' }}
-            </div>
-          </div>
-
-          <!-- 评分 -->
-          <div class="rating">
-            <el-rate v-model="item.rating" :disabled="true" show-text />
-          </div>
-
-          <!-- 操作按钮 -->
-          <div class="card-actions">
-            <el-button
-              type="primary"
-              size="small"
-              @click="
-                router.push({
-                  path: '/user/home/merchants',
-                  query: {
-                    search: item.name.replace(/(.*推荐:|.*特色:)/, '').trim()
-                  }
-                })
-              "
-            >
-              立即下单
-            </el-button>
-            <el-button
-              :type="isFavoritedItem(item) ? 'warning' : 'default'"
-              size="small"
-              :icon="isFavoritedItem(item) ? 'StarFilled' : 'Star'"
-              @click="handleFavoriteClick(item)"
-            >
-              {{ isFavoritedItem(item) ? '已收藏' : '收藏' }}
-            </el-button>
-            <el-button type="text" size="small" @click="rejectRecommendation(item)">
-              不感兴趣
-            </el-button>
-          </div>
-        </el-card>
-      </transition-group>
-
-      <!-- 空状态提示 -->
-      <div class="empty-state" v-else>
-        <div class="empty-icon">🥺</div>
-        <div class="empty-text">
-          {{ hasActiveFilters ? '没有找到符合条件的推荐' : '暂无推荐数据' }}
         </div>
-        <div class="empty-subtext">
-          {{ hasActiveFilters ? '试试调整筛选条件' : '系统正在努力为您生成个性化推荐' }}
+
+        <!-- 卡路里信息（带营养详情） -->
+        <div class="calories-info" v-if="item.calories">
+          <span>🔥</span>
+          <span>{{ item.calories }} kcal</span>
+          <el-button
+            type="text"
+            size="small"
+            @click="showNutritionDialog(item)"
+            v-if="item.nutrition"
+            style="margin-left: auto"
+          >
+            营养详情
+          </el-button>
         </div>
-        <el-button
-          type="primary"
-          size="small"
-          @click="hasActiveFilters ? resetFilters() : onRefresh()"
-        >
-          {{ hasActiveFilters ? '清除筛选' : '重新获取推荐' }}
-        </el-button>
+        <div class="calories-info-unavailable" v-else>
+          <span>🔥</span>
+          <span>卡路里信息暂不可用</span>
+        </div>
+
+        <!-- 标签 -->
+        <div class="tags-section">
+          <el-tag v-for="tag in item.tagsWithType" :key="tag.name" size="small" :type="tag.type">
+            {{ tag.name }}
+          </el-tag>
+        </div>
+
+        <!-- 推荐理由 -->
+        <div class="reason-section">
+          <div class="reason-title">推荐理由</div>
+          <div class="reason-text" :class="{ 'empty-reason': !item.reason }">
+            {{ item.reason || '暂无推荐理由' }}
+          </div>
+        </div>
+
+        <!-- 评分 -->
+        <div class="rating">
+          <el-rate v-model="item.rating" :disabled="true" show-text />
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="card-actions">
+          <el-button
+            type="primary"
+            size="small"
+            @click="
+              router.push({
+                path: '/user/home/merchants',
+                query: {
+                  search: item.name.replace(/(.*推荐:|.*特色:)/, '').trim()
+                }
+              })
+            "
+          >
+            立即下单
+          </el-button>
+          <el-button
+            :type="isFavoritedItem(item) ? 'warning' : 'default'"
+            size="small"
+            :icon="isFavoritedItem(item) ? 'StarFilled' : 'Star'"
+            @click="handleFavoriteClick(item)"
+          >
+            {{ isFavoritedItem(item) ? '已收藏' : '收藏' }}
+          </el-button>
+          <el-button type="text" size="small" @click="rejectRecommendation(item)">
+            不感兴趣
+          </el-button>
+        </div>
+      </el-card>
+    </transition-group>
+
+    <!-- 空状态提示 -->
+    <div class="empty-state" v-else>
+      <div class="empty-icon">🥺</div>
+      <div class="empty-text">
+        {{ hasActiveFilters ? '没有找到符合条件的推荐' : '暂无推荐数据' }}
       </div>
+      <div class="empty-subtext">
+        {{ hasActiveFilters ? '试试调整筛选条件' : '系统正在努力为您生成个性化推荐' }}
+      </div>
+      <el-button
+        type="primary"
+        size="small"
+        @click="hasActiveFilters ? resetFilters() : onRefresh()"
+      >
+        {{ hasActiveFilters ? '清除筛选' : '重新获取推荐' }}
+      </el-button>
+    </div>
 
     <!-- 营养详情弹窗 -->
     <el-dialog v-model="showNutritionDetail" title="营养成分详情" width="400px">
@@ -418,9 +418,7 @@ onMounted(async () => {
           <span class="nutrition-value">{{ showNutritionDetail.nutrition.fat }}g</span>
         </div>
       </div>
-      <div class="nutrition-empty" v-else>
-        暂无详细营养信息
-      </div>
+      <div class="nutrition-empty" v-else>暂无详细营养信息</div>
     </el-dialog>
   </div>
 </template>

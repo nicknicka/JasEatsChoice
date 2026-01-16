@@ -21,7 +21,7 @@ export function useRecommendationFilters(recommendations) {
     if (!selectedCalorieRange.value) return items
 
     // 通过 ID 找到对应的范围对象
-    const range = CALORIE_RANGES.find(r => r.id === selectedCalorieRange.value)
+    const range = CALORIE_RANGES.find((r) => r.id === selectedCalorieRange.value)
     if (!range) return items
 
     return items.filter((item) => {

@@ -83,7 +83,6 @@ const calculateTotalCalories = () => {
 // 菜品分类选项
 const categories = ['主食', '汤品', '饮料', '小吃']
 
-
 // 页面加载
 onMounted(() => {
   // 可以从路由参数获取菜品ID并加载菜品数据
@@ -179,7 +178,7 @@ const handleUpload = (file) => {
             filterable
             allow-create
             default-first-option
-            @create="(inputValue) => dishInfo.category = inputValue"
+            @create="(inputValue) => (dishInfo.category = inputValue)"
           >
             <el-option
               v-for="category in categories"
@@ -351,27 +350,27 @@ const handleUpload = (file) => {
     }
   }
 }
-  .calorie-display {
-    font-size: 16px;
-    font-weight: 600;
-    color: #f56c6c;
-  }
+.calorie-display {
+  font-size: 16px;
+  font-weight: 600;
+  color: #f56c6c;
+}
 
-  .optional-ingredients-container {
+.optional-ingredients-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 300px;
+
+  .input-button-row {
     display: flex;
-    flex-direction: column;
-    gap: 8px;
-    width: 300px;
-
-    .input-button-row {
-      display: flex;
-      align-items: center;
-    }
-
-    .ingredients-tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
+    align-items: center;
   }
+
+  .ingredients-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
 </style>

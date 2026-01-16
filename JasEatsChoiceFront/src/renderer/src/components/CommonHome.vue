@@ -229,7 +229,7 @@ const updateActiveMenuIndex = () => {
   // 清除所有菜单的激活状态
   nextTick(() => {
     const menuTitles = document.querySelectorAll('.menu-list .el-sub-menu__title')
-    menuTitles.forEach(title => title.classList.remove('is-active'))
+    menuTitles.forEach((title) => title.classList.remove('is-active'))
   })
 
   // 查找当前路由对应的菜单项 - 包括分组内的子菜单
@@ -467,7 +467,7 @@ watch(
     // 清除所有菜单的激活状态
     nextTick(() => {
       const menuTitles = document.querySelectorAll('.menu-list .el-sub-menu__title')
-      menuTitles.forEach(title => title.classList.remove('is-active'))
+      menuTitles.forEach((title) => title.classList.remove('is-active'))
 
       // 更新激活的菜单项
       updateActiveMenuIndex()
@@ -484,7 +484,7 @@ watch(
     // 清除所有菜单的激活状态
     nextTick(() => {
       const menuTitles = document.querySelectorAll('.menu-list .el-sub-menu__title')
-      menuTitles.forEach(title => title.classList.remove('is-active'))
+      menuTitles.forEach((title) => title.classList.remove('is-active'))
 
       // 更新激活的菜单项
       updateActiveMenuIndex()
@@ -493,7 +493,7 @@ watch(
   { deep: true }
 )
 
-// 监听商家注册状态变化 
+// 监听商家注册状态变化
 
 // Watch for route changes to update role automatically
 watch(
@@ -514,7 +514,7 @@ watch(
         // 商户端信息从userStore.merchantInfo获取
         userStore.userInfo = {
           name: '商户端',
-          avatar: userStore.merchantInfo?.avatar || '',
+          avatar: userStore.merchantInfo?.avatar || ''
         }
       } else if (userRole.value === 'user') {
         // 从authStore获取token并解码用户名
@@ -635,7 +635,11 @@ const handleSearch = (value) => {
           >
           </CommonAvatar>
           <div class="username">
-            {{ userRole === 'merchant' ? userStore.merchantInfo?.nickname : userStore.userInfo?.nickname }}
+            {{
+              userRole === 'merchant'
+                ? userStore.merchantInfo?.nickname
+                : userStore.userInfo?.nickname
+            }}
           </div>
         </div>
 
@@ -674,10 +678,7 @@ const handleSearch = (value) => {
                 </el-sub-menu>
 
                 <!-- 普通菜单项 -->
-                <el-menu-item
-                  v-else
-                  :index="menuItem.index"
-                >
+                <el-menu-item v-else :index="menuItem.index">
                   <el-icon>
                     <component :is="menuItem.icon" />
                   </el-icon>
@@ -690,10 +691,7 @@ const handleSearch = (value) => {
 
         <!-- 设置菜单 - 固定在底部 -->
         <div class="setting-menu-container">
-          <el-menu
-            class="setting-menu-list"
-            @select="handleMenuSelect"
-          >
+          <el-menu class="setting-menu-list" @select="handleMenuSelect">
             <template v-for="menuItem in currentMenu" :key="menuItem.index">
               <!-- 只渲染设置菜单 -->
               <el-menu-item
@@ -778,7 +776,9 @@ const handleSearch = (value) => {
 
     .user-icon,
     .merchant-icon {
-      transition: transform 0.3s ease, color 0.3s ease;
+      transition:
+        transform 0.3s ease,
+        color 0.3s ease;
       font-size: 18px;
     }
 
@@ -831,14 +831,15 @@ const handleSearch = (value) => {
   }
 
   /* 当一级菜单组包含激活的子菜单时，保持高亮 */
-/* 确保即使在 scoped 样式下，激活状态也能正确应用 */
-.menu-list, .setting-menu-list {
-  :deep(.el-menu-item.is-active),
-  :deep(.el-sub-menu__title.is-active) {
-    background-color: var(--el-menu-item-hover-bg-color) !important;
-    color: var(--el-menu-active-color) !important;
+  /* 确保即使在 scoped 样式下，激活状态也能正确应用 */
+  .menu-list,
+  .setting-menu-list {
+    :deep(.el-menu-item.is-active),
+    :deep(.el-sub-menu__title.is-active) {
+      background-color: var(--el-menu-item-hover-bg-color) !important;
+      color: var(--el-menu-active-color) !important;
+    }
   }
-}
 
   .setting-menu-container {
     border-top: 1px solid #eee;

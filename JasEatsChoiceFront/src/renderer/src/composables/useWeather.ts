@@ -27,7 +27,9 @@ export function useWeather() {
       if (selectedCity) {
         // 为选择的城市获取天气信息
         weather.value.city = selectedCity
-        const weatherResponse = await api.get(`${API_CONFIG.weather.current}?city=${encodeURIComponent(selectedCity)}`)
+        const weatherResponse = await api.get(
+          `${API_CONFIG.weather.current}?city=${encodeURIComponent(selectedCity)}`
+        )
 
         if (weatherResponse?.data) {
           const { temperature, condition } = weatherResponse.data

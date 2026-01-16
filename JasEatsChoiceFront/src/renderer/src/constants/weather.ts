@@ -40,22 +40,28 @@ export function getRecommendedDishesSeries(condition: string, temp: number): str
   if (!condition) return WEATHER_RULES.DEFAULT
 
   // 高温天气推荐
-  if (temp > WEATHER_RULES.HOT.TEMP_THRESHOLD || WEATHER_RULES.HOT.CONDITIONS.some(c => condition.includes(c))) {
+  if (
+    temp > WEATHER_RULES.HOT.TEMP_THRESHOLD ||
+    WEATHER_RULES.HOT.CONDITIONS.some((c) => condition.includes(c))
+  ) {
     return WEATHER_RULES.HOT.SERIES
   }
 
   // 低温天气推荐
-  if (temp < WEATHER_RULES.COLD.TEMP_THRESHOLD || WEATHER_RULES.COLD.CONDITIONS.some(c => condition.includes(c))) {
+  if (
+    temp < WEATHER_RULES.COLD.TEMP_THRESHOLD ||
+    WEATHER_RULES.COLD.CONDITIONS.some((c) => condition.includes(c))
+  ) {
     return WEATHER_RULES.COLD.SERIES
   }
 
   // 雨天推荐
-  if (WEATHER_RULES.RAINY.CONDITIONS.some(c => condition.includes(c))) {
+  if (WEATHER_RULES.RAINY.CONDITIONS.some((c) => condition.includes(c))) {
     return WEATHER_RULES.RAINY.SERIES
   }
 
   // 多云阴天推荐
-  if (WEATHER_RULES.CLOUDY.CONDITIONS.some(c => condition.includes(c))) {
+  if (WEATHER_RULES.CLOUDY.CONDITIONS.some((c) => condition.includes(c))) {
     return WEATHER_RULES.CLOUDY.SERIES
   }
 

@@ -91,9 +91,13 @@ const loadOrderDetail = async () => {
 // 更新订单状态
 const updateOrderStatus = async (newStatus) => {
   try {
-    const response = await axios.put(`${API_CONFIG.baseURL}/api/v1/orders/${orderDetail.value.id}/status`, null, {
-      params: { status: newStatus }
-    })
+    const response = await axios.put(
+      `${API_CONFIG.baseURL}/api/v1/orders/${orderDetail.value.id}/status`,
+      null,
+      {
+        params: { status: newStatus }
+      }
+    )
 
     if (response.data && response.data.success) {
       orderDetail.value.status = newStatus
@@ -419,13 +423,27 @@ onMounted(() => {
         transition: all 0.3s ease;
       }
 
-      &.status-0::before { background: linear-gradient(180deg, #909399 0%, #a6a9ad 100%); }
-      &.status-1::before { background: linear-gradient(180deg, #f56c6c 0%, #ff7875 100%); }
-      &.status-2::before { background: linear-gradient(180deg, #e6a23c 0%, #f0a858 100%); }
-      &.status-3::before { background: linear-gradient(180deg, #ff9800 0%, #ffa726 100%); }
-      &.status-4::before { background: linear-gradient(180deg, #409eff 0%, #66b1ff 100%); }
-      &.status-5::before { background: linear-gradient(180deg, #67c23a 0%, #7bcf58 100%); }
-      &.status-6::before { background: linear-gradient(180deg, #c0c4cc 0%, #d3d4d6 100%); }
+      &.status-0::before {
+        background: linear-gradient(180deg, #909399 0%, #a6a9ad 100%);
+      }
+      &.status-1::before {
+        background: linear-gradient(180deg, #f56c6c 0%, #ff7875 100%);
+      }
+      &.status-2::before {
+        background: linear-gradient(180deg, #e6a23c 0%, #f0a858 100%);
+      }
+      &.status-3::before {
+        background: linear-gradient(180deg, #ff9800 0%, #ffa726 100%);
+      }
+      &.status-4::before {
+        background: linear-gradient(180deg, #409eff 0%, #66b1ff 100%);
+      }
+      &.status-5::before {
+        background: linear-gradient(180deg, #67c23a 0%, #7bcf58 100%);
+      }
+      &.status-6::before {
+        background: linear-gradient(180deg, #c0c4cc 0%, #d3d4d6 100%);
+      }
 
       .status-header {
         display: flex;

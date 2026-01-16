@@ -1,32 +1,17 @@
 <template>
-  <el-dialog
-    v-model="visible"
-    title="菜品详情"
-    width="600px"
-    @close="handleClose"
-  >
+  <el-dialog v-model="visible" title="菜品详情" width="600px" @close="handleClose">
     <div v-if="dish" class="dish-detail-container">
       <!-- 菜品头部 -->
       <div class="dish-header">
         <div class="dish-image-wrapper">
-          <img
-            v-if="dish.image"
-            :src="dish.image"
-            :alt="dish.name"
-            class="dish-image"
-          />
+          <img v-if="dish.image" :src="dish.image" :alt="dish.name" class="dish-image" />
           <div v-else class="dish-image-placeholder">
             <el-icon :size="80"><Food /></el-icon>
           </div>
         </div>
         <div class="dish-basic-info">
           <h2 class="dish-name">{{ dish.name || '未知菜品' }}</h2>
-          <el-tag
-            v-if="dish.category"
-            type="success"
-            size="large"
-            class="dish-category"
-          >
+          <el-tag v-if="dish.category" type="success" size="large" class="dish-category">
             {{ dish.category }}
           </el-tag>
           <div class="dish-price">¥{{ (dish.price || 0).toFixed(2) }}</div>
@@ -45,7 +30,10 @@
       </div>
 
       <!-- 必选食材 -->
-      <div v-if="dish.requiredIngredients && dish.requiredIngredients.length > 0" class="dish-section">
+      <div
+        v-if="dish.requiredIngredients && dish.requiredIngredients.length > 0"
+        class="dish-section"
+      >
         <h3 class="section-title">
           <el-icon><CircleCheck /></el-icon>
           必选食材
@@ -65,7 +53,10 @@
       </div>
 
       <!-- 可选食材 -->
-      <div v-if="dish.optionalIngredients && dish.optionalIngredients.length > 0" class="dish-section">
+      <div
+        v-if="dish.optionalIngredients && dish.optionalIngredients.length > 0"
+        class="dish-section"
+      >
         <h3 class="section-title">
           <el-icon><Plus /></el-icon>
           可选食材
@@ -88,7 +79,10 @@
       </div>
 
       <!-- 营养信息 -->
-      <div v-if="dish.calories || dish.protein || dish.fat || dish.carbs" class="dish-section nutrition-info">
+      <div
+        v-if="dish.calories || dish.protein || dish.fat || dish.carbs"
+        class="dish-section nutrition-info"
+      >
         <h3 class="section-title">
           <el-icon><TrendCharts /></el-icon>
           营养信息
@@ -121,13 +115,7 @@
         </h3>
         <div class="merchant-info">
           <span class="merchant-name">{{ dish.merchantName }}</span>
-          <el-button
-            type="primary"
-            size="small"
-            @click="goToMerchant"
-          >
-            查看商家
-          </el-button>
+          <el-button type="primary" size="small" @click="goToMerchant"> 查看商家 </el-button>
         </div>
       </div>
     </div>
@@ -140,11 +128,7 @@
     <template #footer>
       <div class="dialog-footer">
         <el-button @click="handleClose">关闭</el-button>
-        <el-button
-          v-if="dish && dish.merchantId"
-          type="primary"
-          @click="orderDish"
-        >
+        <el-button v-if="dish && dish.merchantId" type="primary" @click="orderDish">
           立即订购
         </el-button>
       </div>
@@ -156,7 +140,15 @@
 import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Food, Document, CircleCheck, Plus, TrendCharts, Shop, Loading } from '@element-plus/icons-vue'
+import {
+  Food,
+  Document,
+  CircleCheck,
+  Plus,
+  TrendCharts,
+  Shop,
+  Loading
+} from '@element-plus/icons-vue'
 import axios from 'axios'
 import { API_CONFIG } from '../../config/index.js'
 
@@ -183,12 +175,15 @@ const dish = ref(props.dishData)
 const loading = ref(false)
 
 // 监听 modelValue 变化
-watch(() => props.modelValue, (newVal) => {
-  visible.value = newVal
-  if (newVal && props.dishId) {
-    loadDishDetail()
+watch(
+  () => props.modelValue,
+  (newVal) => {
+    visible.value = newVal
+    if (newVal && props.dishId) {
+      loadDishDetail()
+    }
   }
-})
+)
 
 // 监听 visible 变化
 watch(visible, (newVal) => {
@@ -232,10 +227,13 @@ const handleClose = () => {
 const goToMerchant = () => {
   if (dish.value && dish.value.merchantId) {
     // 存储商家信息到sessionStorage
-    sessionStorage.setItem('selectedMerchant', JSON.stringify({
-      id: dish.value.merchantId,
-      name: dish.value.merchantName
-    }))
+    sessionStorage.setItem(
+      'selectedMerchant',
+      JSON.stringify({
+        id: dish.value.merchantId,
+        name: dish.value.merchantName
+      })
+    )
     router.push({
       path: '/user/home/merchant-detail',
       query: { id: dish.value.merchantId }
@@ -248,10 +246,13 @@ const goToMerchant = () => {
 const orderDish = () => {
   if (dish.value && dish.value.merchantId) {
     // 存储商家信息到sessionStorage
-    sessionStorage.setItem('selectedMerchant', JSON.stringify({
-      id: dish.value.merchantId,
-      name: dish.value.merchantName
-    }))
+    sessionStorage.setItem(
+      'selectedMerchant',
+      JSON.stringify({
+        id: dish.value.merchantId,
+        name: dish.value.merchantName
+      })
+    )
     router.push({
       path: '/user/home/merchant-detail',
       query: {

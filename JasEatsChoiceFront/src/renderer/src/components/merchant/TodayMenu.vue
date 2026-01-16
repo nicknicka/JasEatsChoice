@@ -66,13 +66,14 @@ const menuStatusMap = {
 // 统计数据
 const menuStatistics = computed(() => {
   const total = todayMenus.value.length
-  const online = todayMenus.value.filter(m => m.status === 'online').length
+  const online = todayMenus.value.filter((m) => m.status === 'online').length
   const totalDishes = todayMenus.value.reduce((sum, menu) => sum + (menu.dishes || 0), 0)
-  const latestUpdate = todayMenus.value.length > 0
-    ? todayMenus.value.reduce((latest, menu) => {
-        return !latest || (menu.updateTime && menu.updateTime > latest) ? menu.updateTime : latest
-      }, '')
-    : '暂无'
+  const latestUpdate =
+    todayMenus.value.length > 0
+      ? todayMenus.value.reduce((latest, menu) => {
+          return !latest || (menu.updateTime && menu.updateTime > latest) ? menu.updateTime : latest
+        }, '')
+      : '暂无'
 
   return {
     total,
@@ -92,7 +93,7 @@ const fetchTodayMenus = () => {
           ...menu,
           // 后端直接返回 online/offline，不需要转换
           status: menu.status || 'offline',
-          dishes: Array.isArray(menu.dishes) ? menu.dishes.length : (menu.dishes || 0),
+          dishes: Array.isArray(menu.dishes) ? menu.dishes.length : menu.dishes || 0,
           updateTime: menu.updateTime ? menu.updateTime.replace('T', ' ') : '',
           autoOnline: menu.autoOnline ? menu.autoOnline.replace('T', ' ') : '',
           autoOffline: menu.autoOffline ? menu.autoOffline.replace('T', ' ') : ''
@@ -173,28 +174,36 @@ onMounted(() => {
     <!-- 统计概览卡片 -->
     <div class="statistics-overview">
       <div class="stat-card stat-total">
-        <div class="stat-icon"><el-icon :size="28"><Document /></el-icon></div>
+        <div class="stat-icon">
+          <el-icon :size="28"><Document /></el-icon>
+        </div>
         <div class="stat-content">
           <div class="stat-value">{{ menuStatistics.total }}</div>
           <div class="stat-label">总菜单</div>
         </div>
       </div>
       <div class="stat-card stat-online">
-        <div class="stat-icon"><el-icon :size="28"><CircleCheck /></el-icon></div>
+        <div class="stat-icon">
+          <el-icon :size="28"><CircleCheck /></el-icon>
+        </div>
         <div class="stat-content">
           <div class="stat-value">{{ menuStatistics.online }}</div>
           <div class="stat-label">上架中</div>
         </div>
       </div>
       <div class="stat-card stat-dishes">
-        <div class="stat-icon"><el-icon :size="28"><Dish /></el-icon></div>
+        <div class="stat-icon">
+          <el-icon :size="28"><Dish /></el-icon>
+        </div>
         <div class="stat-content">
           <div class="stat-value">{{ menuStatistics.totalDishes }}</div>
           <div class="stat-label">总菜品</div>
         </div>
       </div>
       <div class="stat-card stat-time">
-        <div class="stat-icon"><el-icon :size="28"><Clock /></el-icon></div>
+        <div class="stat-icon">
+          <el-icon :size="28"><Clock /></el-icon>
+        </div>
         <div class="stat-content">
           <div class="stat-value-small">{{ menuStatistics.latestUpdate }}</div>
           <div class="stat-label">最近更新</div>
@@ -205,7 +214,9 @@ onMounted(() => {
     <!-- 菜单卡片 -->
     <div class="quick-actions-card today-menu-card">
       <div class="menu-header">
-        <h3 class="card-title"><el-icon :size="22"><Document /></el-icon> 今日菜单</h3>
+        <h3 class="card-title">
+          <el-icon :size="22"><Document /></el-icon> 今日菜单
+        </h3>
         <div class="filter-section">
           <span class="filter-label">分类：</span>
           <el-tag
@@ -230,9 +241,13 @@ onMounted(() => {
             class="menu-status-tag"
             :class="[
               { active: activeMenuFilter === status.value },
-              status.value === 'online' ? 'tag-online' :
-              status.value === 'offline' ? 'tag-offline' :
-              status.value === 'draft' ? 'tag-draft' : ''
+              status.value === 'online'
+                ? 'tag-online'
+                : status.value === 'offline'
+                  ? 'tag-offline'
+                  : status.value === 'draft'
+                    ? 'tag-draft'
+                    : ''
             ]"
             @click="filterMenus(status.value, 'status')"
             >{{ status.label }}</el-tag
@@ -247,16 +262,15 @@ onMounted(() => {
             v-for="menu in filteredMenus"
             :key="menu.id"
             class="menu-card"
-            :class="[
-              { selected: selectedMenu?.id === menu.id },
-              `status-${menu.status}`
-            ]"
+            :class="[{ selected: selectedMenu?.id === menu.id }, `status-${menu.status}`]"
             @click="switchMenu(menu)"
           >
             <div class="menu-card-header">
               <div class="menu-icon">
                 <el-icon :size="24">
-                  <Sunny v-if="menu.name && (menu.name.includes('早餐') || menu.name.includes('午餐'))" />
+                  <Sunny
+                    v-if="menu.name && (menu.name.includes('早餐') || menu.name.includes('午餐'))"
+                  />
                   <Moon v-else-if="menu.name && menu.name.includes('晚餐')" />
                   <Coffee v-else-if="menu.name && menu.name.includes('加餐')" />
                   <Dish v-else />
@@ -273,12 +287,22 @@ onMounted(() => {
             </div>
             <div class="menu-name">{{ menu.name }}</div>
             <div class="menu-info">
-              <span class="dishes-count"><el-icon :size="14"><Dish /></el-icon> {{ menu.dishes }} 菜品</span>
-              <span class="update-time"><el-icon :size="14"><Clock /></el-icon> {{ formatTime(menu.updateTime) }}</span>
+              <span class="dishes-count"
+                ><el-icon :size="14"><Dish /></el-icon> {{ menu.dishes }} 菜品</span
+              >
+              <span class="update-time"
+                ><el-icon :size="14"><Clock /></el-icon> {{ formatTime(menu.updateTime) }}</span
+              >
             </div>
             <div class="menu-auto-time" v-if="menu.autoOnline || menu.autoOffline">
-              <span v-if="menu.autoOnline"><el-icon :size="12"><ArrowRight /></el-icon> {{ formatTime(menu.autoOnline) }}</span>
-              <span v-if="menu.autoOffline"><el-icon :size="12"><ArrowRight /></el-icon> {{ formatTime(menu.autoOffline) }}</span>
+              <span v-if="menu.autoOnline"
+                ><el-icon :size="12"><ArrowRight /></el-icon>
+                {{ formatTime(menu.autoOnline) }}</span
+              >
+              <span v-if="menu.autoOffline"
+                ><el-icon :size="12"><ArrowRight /></el-icon>
+                {{ formatTime(menu.autoOffline) }}</span
+              >
             </div>
           </div>
         </div>
@@ -286,7 +310,9 @@ onMounted(() => {
 
       <!-- 空状态 -->
       <div v-if="filteredMenus.length === 0" class="empty-state">
-        <div class="empty-icon"><el-icon :size="64"><Dish /></el-icon></div>
+        <div class="empty-icon">
+          <el-icon :size="64"><Dish /></el-icon>
+        </div>
         <p class="empty-text">今日暂未设置菜单</p>
       </div>
 
@@ -463,7 +489,8 @@ onMounted(() => {
             }
 
             &.tag-online {
-              &:hover, &.active {
+              &:hover,
+              &.active {
                 background: #67c23a;
                 border-color: #67c23a;
                 color: #ffffff;
@@ -471,7 +498,8 @@ onMounted(() => {
             }
 
             &.tag-offline {
-              &:hover, &.active {
+              &:hover,
+              &.active {
                 background: #909399;
                 border-color: #909399;
                 color: #ffffff;
@@ -479,7 +507,8 @@ onMounted(() => {
             }
 
             &.tag-draft {
-              &:hover, &.active {
+              &:hover,
+              &.active {
                 background: #e6a23c;
                 border-color: #e6a23c;
                 color: #ffffff;
@@ -798,7 +827,8 @@ onMounted(() => {
               }
 
               &.tag-online {
-                &:hover, &.active {
+                &:hover,
+                &.active {
                   background: #67c23a;
                   border-color: #67c23a;
                   color: #ffffff;
@@ -806,7 +836,8 @@ onMounted(() => {
               }
 
               &.tag-offline {
-                &:hover, &.active {
+                &:hover,
+                &.active {
                   background: #909399;
                   border-color: #909399;
                   color: #ffffff;
@@ -814,7 +845,8 @@ onMounted(() => {
               }
 
               &.tag-draft {
-                &:hover, &.active {
+                &:hover,
+                &.active {
                   background: #e6a23c;
                   border-color: #e6a23c;
                   color: #ffffff;

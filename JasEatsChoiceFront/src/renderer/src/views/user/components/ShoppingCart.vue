@@ -29,12 +29,7 @@
                   <span v-if="item.note" class="note-text">{{ item.note }}</span>
                   <span v-else class="note-empty">暂无备注</span>
                 </div>
-                <el-button
-                  size="small"
-                  class="edit-note-btn"
-                  @click="startEditNote(item)"
-                  text
-                >
+                <el-button size="small" class="edit-note-btn" @click="startEditNote(item)" text>
                   <el-icon class="edit-icon"><Edit /></el-icon>
                 </el-button>
               </div>
@@ -49,10 +44,17 @@
                   autofocus
                 />
                 <div class="note-actions">
-                  <el-button size="small" type="primary" @click="confirmNote(item)" class="confirm-note-btn">
+                  <el-button
+                    size="small"
+                    type="primary"
+                    @click="confirmNote(item)"
+                    class="confirm-note-btn"
+                  >
                     确认
                   </el-button>
-                  <el-button size="small" @click="cancelNote(item)" class="cancel-note-btn">取消</el-button>
+                  <el-button size="small" @click="cancelNote(item)" class="cancel-note-btn"
+                    >取消</el-button
+                  >
                 </div>
               </div>
             </div>
@@ -113,7 +115,12 @@
     <template #footer>
       <span class="dialog-footer">
         <el-button class="cancel-btn" @click="handleClose">取消</el-button>
-        <el-button type="primary" v-if="cartItems.length > 0" @click="handleSubmitOrder" class="submit-btn">
+        <el-button
+          type="primary"
+          v-if="cartItems.length > 0"
+          @click="handleSubmitOrder"
+          class="submit-btn"
+        >
           提交订单
         </el-button>
       </span>

@@ -5,7 +5,19 @@ import axios from 'axios'
 import { API_CONFIG, WS_CONFIG } from '../../config'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
-import { Refresh, ArrowDown, EditPen, Check, Search, Delete, Clock, Calendar, Timer, Coin, Wallet } from '@element-plus/icons-vue'
+import {
+  Refresh,
+  ArrowDown,
+  EditPen,
+  Check,
+  Search,
+  Delete,
+  Clock,
+  Calendar,
+  Timer,
+  Coin,
+  Wallet
+} from '@element-plus/icons-vue'
 import orderApi from '../../api/order'
 
 const router = useRouter()
@@ -37,9 +49,7 @@ const toggleOrderExpand = (orderId) => {
 }
 
 // 判断订单是否展开
-const isOrderExpanded = (orderId) => {
-  return expandedOrderIds.value.has(orderId)
-}
+const isOrderExpanded = (orderId) => expandedOrderIds.value.has(orderId)
 
 // 获取订单显示的商品列表（超过3个商品时，收起状态只显示前3个）
 const getDisplayItems = (order) => {
@@ -51,9 +61,7 @@ const getDisplayItems = (order) => {
 }
 
 // 判断是否有更多商品
-const hasMoreItems = (order) => {
-  return order.items.length > 3
-}
+const hasMoreItems = (order) => order.items.length > 3
 
 // 处理刷新点击
 const handleRefresh = () => {
@@ -192,7 +200,16 @@ const loadOrders = async () => {
 const activeStatus = ref('all')
 
 // 明确按钮顺序的状态列表
-const statusList = ref(['all', 'pendingAccept', 'processing', 'pending', 'pendingComment', 'delivered', 'completed', 'cancelled'])
+const statusList = ref([
+  'all',
+  'pendingAccept',
+  'processing',
+  'pending',
+  'pendingComment',
+  'delivered',
+  'completed',
+  'cancelled'
+])
 
 // 排序选项
 const sortBy = ref('timeDesc') // 默认按时间倒序
@@ -202,21 +219,21 @@ const searchKeyword = ref('')
 
 // 排序选项列表
 const sortOptions = [
-  { value: 'timeDesc', label: '最新订单', icon: Clock, iconName: 'Clock' },
-  { value: 'timeAsc', label: '最早订单', icon: Calendar, iconName: 'Calendar' },
-  { value: 'statusPriority', label: '待处理优先', icon: Timer, iconName: 'Timer' },
-  { value: 'amountDesc', label: '金额最高', icon: Coin, iconName: 'Coin' },
-  { value: 'amountAsc', label: '金额最低', icon: Wallet, iconName: 'Wallet' }
+  { value: 'timeDesc', label: '最新订单', icon: Clock },
+  { value: 'timeAsc', label: '最早订单', icon: Calendar },
+  { value: 'statusPriority', label: '待处理优先', icon: Timer },
+  { value: 'amountDesc', label: '金额最高', icon: Coin },
+  { value: 'amountAsc', label: '金额最低', icon: Wallet }
 ]
 
 // 订单状态优先级（数值越小优先级越高）
 const statusPriority = {
-  pending: 1,          // 待支付 - 最高优先级
-  pendingAccept: 2,    // 待接单
-  processing: 3,       // 进行中
-  delivered: 4,        // 已送达
-  completed: 5,        // 已完成
-  cancelled: 6         // 已取消 - 最低优先级
+  pending: 1, // 待支付 - 最高优先级
+  pendingAccept: 2, // 待接单
+  processing: 3, // 进行中
+  delivered: 4, // 已送达
+  completed: 5, // 已完成
+  cancelled: 6 // 已取消 - 最低优先级
 }
 
 // 订单状态映射
@@ -238,21 +255,21 @@ const statusTagTypeMap = {
   pending: 'info',
   pendingComment: 'info',
   delivered: 'success',
-  completed: 'success',  // 已完成订单使用绿色更合理
+  completed: 'success', // 已完成订单使用绿色更合理
   cancelled: 'danger'
 }
 
 // 将后端状态码转换为前端状态文本
 const orderStatusToText = (statusCode) => {
   const statusMap = {
-    0: 'pending',        // 待支付
-    1: 'pendingAccept',  // 待接单
-    2: 'processing',     // 备菜中
-    3: 'processing',     // 烹饪中
-    4: 'processing',     // 待上菜
-    5: 'delivered',      // 已送达
-    6: 'cancelled',      // 已取消
-    7: 'completed'       // 已完成
+    0: 'pending', // 待支付
+    1: 'pendingAccept', // 待接单
+    2: 'processing', // 备菜中
+    3: 'processing', // 烹饪中
+    4: 'processing', // 待上菜
+    5: 'delivered', // 已送达
+    6: 'cancelled', // 已取消
+    7: 'completed' // 已完成
   }
   return statusMap[statusCode] || 'pending'
 }
@@ -310,7 +327,7 @@ const initWebSocket = () => {
         const orderUpdate = JSON.parse(event.data)
 
         // 更新本地订单状态
-        const index = orders.value.findIndex(order => order.id === orderUpdate.id)
+        const index = orders.value.findIndex((order) => order.id === orderUpdate.id)
         if (index !== -1) {
           orders.value[index].status = orderUpdate.status
 
@@ -401,14 +418,10 @@ const sortOrders = (ordersToSort) => {
       })
 
     case 'amountDesc': // 金额最高
-      return sortedOrders.sort((a, b) => {
-        return b.total - a.total
-      })
+      return sortedOrders.sort((a, b) => b.total - a.total)
 
     case 'amountAsc': // 金额最低
-      return sortedOrders.sort((a, b) => {
-        return a.total - b.total
-      })
+      return sortedOrders.sort((a, b) => a.total - b.total)
 
     default:
       return sortedOrders
@@ -416,9 +429,7 @@ const sortOrders = (ordersToSort) => {
 }
 
 // 排序后的订单
-const sortedOrders = computed(() => {
-  return sortOrders(filteredOrders.value)
-})
+const sortedOrders = computed(() => sortOrders(filteredOrders.value))
 
 // 分页相关
 const currentPage = ref(1)
@@ -438,7 +449,6 @@ const paginatedOrders = computed(() => {
 
 // 查看订单详情
 const viewOrderDetails = (order) => {
-  // 导航到订单详情页
   router.push({
     path: `/user/home/order-detail/${order.id}`,
     name: 'user-order-detail',
@@ -448,8 +458,8 @@ const viewOrderDetails = (order) => {
 
 // 取消订单
 const cancelOrder = (order) => {
-  // 调用后端API取消订单
-  axios.put(API_CONFIG.baseURL + API_CONFIG.order.detail + order.id + '/cancel')
+  axios
+    .put(API_CONFIG.baseURL + API_CONFIG.order.detail + order.id + '/cancel')
     .then((response) => {
       if (response.data.success) {
         order.status = 'cancelled'
@@ -467,15 +477,11 @@ const cancelOrder = (order) => {
 // 确认收货
 const confirmReceipt = async (order) => {
   try {
-    await ElMessageBox.confirm(
-      '确认已收到餐品并完成订单吗？',
-      '确认收货',
-      {
-        confirmButtonText: '确认收货',
-        cancelButtonText: '取消',
-        type: 'info'
-      }
-    )
+    await ElMessageBox.confirm('确认已收到餐品并完成订单吗？', '确认收货', {
+      confirmButtonText: '确认收货',
+      cancelButtonText: '取消',
+      type: 'info'
+    })
 
     // 调用确认收货API
     const response = await orderApi.confirmReceipt(order.id)
@@ -497,7 +503,6 @@ const confirmReceipt = async (order) => {
 
 // 跳转到评价页面
 const goToEvaluate = (order) => {
-  // 导航到评价页面
   router.push({
     path: `/user/home/evaluate-order/${order.id}`,
     name: 'user-evaluate-order',
@@ -519,9 +524,8 @@ const handleImageError = (event) => {
 }
 
 // 获取当前排序选项
-const getCurrentSortOption = () => {
-  return sortOptions.find(option => option.value === sortBy.value) || sortOptions[0]
-}
+const getCurrentSortOption = () =>
+  sortOptions.find((option) => option.value === sortBy.value) || sortOptions[0]
 
 // 处理排序变化
 const handleSortChange = (value) => {
@@ -537,7 +541,7 @@ const searchOrders = (ordersToSearch, keyword) => {
 
   const searchTerm = keyword.toLowerCase().trim()
 
-  return ordersToSearch.filter(order => {
+  return ordersToSearch.filter((order) => {
     // 搜索订单号
     if (order.orderNo && order.orderNo.toString().toLowerCase().includes(searchTerm)) {
       return true
@@ -550,9 +554,7 @@ const searchOrders = (ordersToSearch, keyword) => {
 
     // 搜索菜品名称
     if (order.items && order.items.length > 0) {
-      return order.items.some(item =>
-        item.name && item.name.toLowerCase().includes(searchTerm)
-      )
+      return order.items.some((item) => item.name && item.name.toLowerCase().includes(searchTerm))
     }
 
     // 搜索总金额
@@ -585,9 +587,13 @@ watch(searchKeyword, () => {
         <el-button
           type="default"
           size="small"
-          @click="handleRefresh"
           :loading="loading"
-          :class="{ 'refresh-btn': true, 'is-refreshing': isRefreshing, 'is-success': refreshSuccess }"
+          :class="{
+            'refresh-btn': true,
+            'is-refreshing': isRefreshing,
+            'is-success': refreshSuccess
+          }"
+          @click="handleRefresh"
         >
           <el-icon :class="{ 'refresh-rotating': isRefreshing, 'refresh-success': refreshSuccess }">
             <Refresh />
@@ -612,24 +618,14 @@ watch(searchKeyword, () => {
           </el-icon>
         </template>
         <template #suffix>
-          <el-icon
-            v-if="searchKeyword"
-            class="clear-icon"
-            @click="clearSearch"
-          >
+          <el-icon v-if="searchKeyword" class="clear-icon" @click="clearSearch">
             <Delete />
           </el-icon>
         </template>
       </el-input>
       <div v-if="searchKeyword" class="search-result-info">
         找到 <span class="result-count">{{ filteredOrders.length }}</span> 个相关订单
-        <el-button
-          type="primary"
-          link
-          size="small"
-          @click="clearSearch"
-          class="clear-search-btn"
-        >
+        <el-button type="primary" link size="small" class="clear-search-btn" @click="clearSearch">
           清除搜索
         </el-button>
       </div>
@@ -643,8 +639,8 @@ watch(searchKeyword, () => {
           :key="status"
           type="primary"
           :plain="activeStatus !== status"
-          @click="activeStatus = status"
           size="small"
+          @click="activeStatus = status"
         >
           {{ orderStatusMap[status] }}
         </el-button>
@@ -685,7 +681,12 @@ watch(searchKeyword, () => {
     </div>
 
     <!-- 订单列表 -->
-    <div class="order-list" v-loading="loading" element-loading-text="加载中..." :class="listTransitionName">
+    <div
+      v-loading="loading"
+      class="order-list"
+      element-loading-text="加载中..."
+      :class="listTransitionName"
+    >
       <el-card v-for="order in paginatedOrders" :key="order.id" class="order-card">
         <div class="order-header">
           <div class="order-info">
@@ -714,11 +715,11 @@ watch(searchKeyword, () => {
               type="primary"
               link
               size="small"
-              @click="toggleOrderExpand(order.id)"
               class="expand-btn"
+              @click="toggleOrderExpand(order.id)"
             >
               {{ isOrderExpanded(order.id) ? '收起' : `展开全部 (${order.itemCount}件)` }}
-              <el-icon :class="{ 'expand-icon': true, 'expanded': isOrderExpanded(order.id) }">
+              <el-icon :class="{ 'expand-icon': true, expanded: isOrderExpanded(order.id) }">
                 <ArrowDown />
               </el-icon>
             </el-button>
@@ -754,30 +755,42 @@ watch(searchKeyword, () => {
                 <div class="item-name">{{ item.name }}</div>
 
                 <!-- 必选食材 -->
-                <div v-if="item.requiredIngredients && item.requiredIngredients.length > 0" class="item-ingredients">
+                <div
+                  v-if="item.requiredIngredients && item.requiredIngredients.length > 0"
+                  class="item-ingredients"
+                >
                   <div class="ingredients-label">
                     <span class="label-text">必选:</span>
                   </div>
                   <div class="ingredients-list">
-                    <span class="ingredient-tag required" v-for="ing in item.requiredIngredients" :key="ing">
+                    <span
+                      v-for="ing in item.requiredIngredients"
+                      :key="ing"
+                      class="ingredient-tag required"
+                    >
                       {{ ing }}
                     </span>
                   </div>
                 </div>
 
                 <!-- 可选食材 -->
-                <div v-if="item.optionalIngredients && item.optionalIngredients.length > 0" class="item-ingredients">
+                <div
+                  v-if="item.optionalIngredients && item.optionalIngredients.length > 0"
+                  class="item-ingredients"
+                >
                   <div class="ingredients-label">
                     <span class="label-text">可选:</span>
                   </div>
                   <div class="ingredients-list">
                     <span
-                      class="ingredient-tag optional"
                       v-for="ing in item.optionalIngredients"
                       :key="ing.id || ing.name"
+                      class="ingredient-tag optional"
                     >
                       {{ ing.name }}
-                      <span v-if="ing.price" class="ingredient-price">+¥{{ ing.price.toFixed(2) }}</span>
+                      <span v-if="ing.price" class="ingredient-price"
+                        >+¥{{ ing.price.toFixed(2) }}</span
+                      >
                     </span>
                   </div>
                 </div>
@@ -791,18 +804,16 @@ watch(searchKeyword, () => {
                 <!-- 自定义信息（兼容旧数据） -->
                 <div v-if="item.customization && !item.dishNote" class="item-customization">
                   <el-icon><EditPen /></el-icon>
-                  <el-tooltip
-                    :content="item.customization"
-                    placement="top"
-                    :show-after="500"
-                  >
+                  <el-tooltip :content="item.customization" placement="top" :show-after="500">
                     <span class="customization-text">{{ item.customization }}</span>
                   </el-tooltip>
                 </div>
 
                 <div class="item-price-detail">
                   <span class="unit-price">¥{{ item.price.toFixed(2) }} /份</span>
-                  <span class="total-price">小计 ¥{{ (item.price * item.quantity).toFixed(2) }}</span>
+                  <span class="total-price"
+                    >小计 ¥{{ (item.price * item.quantity).toFixed(2) }}</span
+                  >
                 </div>
               </div>
             </div>
@@ -859,13 +870,21 @@ watch(searchKeyword, () => {
       :total="sortedOrders.length"
       :current-page="currentPage"
       :page-size="pageSize"
-      @current-change="(page) => currentPage = page"
-      @size-change="(size) => { pageSize = size; currentPage = 1; }"
       class="order-pagination"
+      @current-change="(page) => (currentPage = page)"
+      @size-change="
+        (size) => {
+          pageSize = size
+          currentPage = 1
+        }
+      "
     />
 
     <!-- 空数据提示 -->
-    <el-empty v-if="filteredOrders.length === 0" description="暂无订单记录，快去下单吧！"></el-empty>
+    <el-empty
+      v-if="filteredOrders.length === 0"
+      description="暂无订单记录，快去下单吧！"
+    ></el-empty>
   </div>
 </template>
 
@@ -940,7 +959,8 @@ watch(searchKeyword, () => {
       }
 
       @keyframes search-glow {
-        0%, 100% {
+        0%,
+        100% {
           opacity: 1;
           transform: scale(1);
         }
@@ -1187,13 +1207,19 @@ watch(searchKeyword, () => {
         bottom: 0;
         border-radius: 16px;
         padding: 2px;
-        background: linear-gradient(135deg,
+        background: linear-gradient(
+          135deg,
           rgba(92, 142, 255, 0.2) 0%,
           rgba(138, 180, 248, 0.15) 50%,
-          rgba(92, 142, 255, 0.2) 100%);
-        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+          rgba(92, 142, 255, 0.2) 100%
+        );
+        -webkit-mask:
+          linear-gradient(#fff 0 0) content-box,
+          linear-gradient(#fff 0 0);
         -webkit-mask-composite: xor;
-        mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        mask:
+          linear-gradient(#fff 0 0) content-box,
+          linear-gradient(#fff 0 0);
         mask-composite: exclude;
         pointer-events: none;
       }
@@ -1494,7 +1520,11 @@ watch(searchKeyword, () => {
                 transition: all 0.2s ease;
 
                 &.required {
-                  background: linear-gradient(135deg, rgba(103, 194, 58, 0.9) 0%, rgba(93, 175, 52, 0.9) 100%);
+                  background: linear-gradient(
+                    135deg,
+                    rgba(103, 194, 58, 0.9) 0%,
+                    rgba(93, 175, 52, 0.9) 100%
+                  );
                   color: white;
                   font-weight: 500;
                   box-shadow: 0 1px 4px rgba(103, 194, 58, 0.25);
@@ -1758,7 +1788,8 @@ watch(searchKeyword, () => {
   }
 
   @keyframes text-pulse {
-    0%, 100% {
+    0%,
+    100% {
       opacity: 1;
       transform: scale(1);
     }
@@ -1850,12 +1881,24 @@ watch(searchKeyword, () => {
     animation: card-slide-in 0.5s cubic-bezier(0.4, 0, 0.2, 1) backwards;
 
     /* 为每个卡片添加递增的延迟，创建交错效果 */
-    &:nth-child(1) { animation-delay: 0s; }
-    &:nth-child(2) { animation-delay: 0.08s; }
-    &:nth-child(3) { animation-delay: 0.16s; }
-    &:nth-child(4) { animation-delay: 0.24s; }
-    &:nth-child(5) { animation-delay: 0.32s; }
-    &:nth-child(n+6) { animation-delay: 0.4s; }
+    &:nth-child(1) {
+      animation-delay: 0s;
+    }
+    &:nth-child(2) {
+      animation-delay: 0.08s;
+    }
+    &:nth-child(3) {
+      animation-delay: 0.16s;
+    }
+    &:nth-child(4) {
+      animation-delay: 0.24s;
+    }
+    &:nth-child(5) {
+      animation-delay: 0.32s;
+    }
+    &:nth-child(n + 6) {
+      animation-delay: 0.4s;
+    }
   }
 
   /* 为订单卡片添加入场动画 */

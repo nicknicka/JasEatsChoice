@@ -113,10 +113,7 @@ onMounted(() => {
               item.key === 'sales' ? businessOverview.sales.toFixed(0) : businessOverview[item.key]
             }}
           </div>
-          <div
-            class="item-trend"
-            :class="getTrendClass(businessOverview[item.trendKey])"
-          >
+          <div class="item-trend" :class="getTrendClass(businessOverview[item.trendKey])">
             {{ businessOverview[item.trendKey] }}
           </div>
         </div>

@@ -12,9 +12,7 @@
         aria-label="搜索菜品和教程"
       >
         <template #append>
-          <el-button :icon="Search" @click="handleSearch" aria-label="执行搜索">
-            搜索
-          </el-button>
+          <el-button :icon="Search" @click="handleSearch" aria-label="执行搜索"> 搜索 </el-button>
         </template>
       </el-input>
     </div>
@@ -137,7 +135,9 @@ const onRefresh = () => {
           border-radius: 50%;
           background: rgba(255, 255, 255, 0.3);
           transform: translate(-50%, -50%);
-          transition: width 0.6s, height 0.6s;
+          transition:
+            width 0.6s,
+            height 0.6s;
         }
 
         &:hover::before {
@@ -196,12 +196,7 @@ const onRefresh = () => {
       left: -100%;
       width: 100%;
       height: 100%;
-      background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(255, 255, 255, 0.3),
-        transparent
-      );
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
       transition: left 0.6s;
     }
 

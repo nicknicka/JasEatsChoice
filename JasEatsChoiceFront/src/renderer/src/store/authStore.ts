@@ -4,9 +4,13 @@ export const useAuthStore = defineStore('auth', {
   // 严格的 Pinia 状态声明
   state: () => ({
     token: localStorage.getItem('auth_token') || '',
-    userId: localStorage.getItem('auth_userId') ? Number(localStorage.getItem('auth_userId')) : null,
+    userId: localStorage.getItem('auth_userId')
+      ? Number(localStorage.getItem('auth_userId'))
+      : null,
     phone: localStorage.getItem('auth_phone') || '',
-    merchantId: localStorage.getItem('auth_merchantId') ? Number(localStorage.getItem('auth_merchantId')) : null,
+    merchantId: localStorage.getItem('auth_merchantId')
+      ? Number(localStorage.getItem('auth_merchantId'))
+      : null,
     currentRole: localStorage.getItem('auth_currentRole') || ''
   }),
 

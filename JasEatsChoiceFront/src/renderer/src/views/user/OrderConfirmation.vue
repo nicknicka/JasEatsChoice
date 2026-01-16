@@ -175,7 +175,9 @@
           <div class="payment-details">
             <div class="detail-row">
               <span class="detail-label">商品总额</span>
-              <span class="detail-value">¥{{ (orderInfo.originalTotal || orderInfo.totalUnpaid).toFixed(2) }}</span>
+              <span class="detail-value"
+                >¥{{ (orderInfo.originalTotal || orderInfo.totalUnpaid).toFixed(2) }}</span
+              >
             </div>
             <div class="detail-row">
               <span class="detail-label">配送费</span>
@@ -286,7 +288,9 @@
                 必选: {{ item.requiredIngredients.join('、') }}
               </el-tag>
               <el-tag
-                v-if="item.selectedOptionalIngredients && item.selectedOptionalIngredients.length > 0"
+                v-if="
+                  item.selectedOptionalIngredients && item.selectedOptionalIngredients.length > 0
+                "
                 size="small"
                 type="success"
                 effect="plain"
@@ -316,7 +320,9 @@
               size="small"
               @change="updateItemTotal(item)"
             />
-            <div class="item-total">¥{{ (item.totalPrice || item.price * item.quantity).toFixed(2) }}</div>
+            <div class="item-total">
+              ¥{{ (item.totalPrice || item.price * item.quantity).toFixed(2) }}
+            </div>
           </div>
         </div>
       </div>
@@ -394,14 +400,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter } from 'vue-router'
-import {
-  Shop,
-  Edit,
-  CircleCheck,
-  Clock,
-  Ticket,
-  InfoFilled
-} from '@element-plus/icons-vue'
+import { Shop, Edit, CircleCheck, Clock, Ticket, InfoFilled } from '@element-plus/icons-vue'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
 import OrderItemList from './components/OrderItemList.vue'
 import walletApi from '../../api/wallet'
@@ -463,13 +462,7 @@ const cartVisible = ref(false)
 const orderRemark = ref('')
 
 // 快速备注选项
-const quickRemarks = ref([
-  '尽快配送',
-  '准时配送',
-  '请提前联系',
-  '配送时电话联系',
-  '不要按门铃'
-])
+const quickRemarks = ref(['尽快配送', '准时配送', '请提前联系', '配送时电话联系', '不要按门铃'])
 
 // 添加快速备注
 const addQuickRemark = (remark) => {
@@ -735,11 +728,11 @@ const updateItemTotal = (item) => {
 
 // 更新订单信息
 const updateOrderInfo = () => {
-  orderInfo.value.unpaidItems = cartItems.value.filter(item => item.quantity > 0)
+  orderInfo.value.unpaidItems = cartItems.value.filter((item) => item.quantity > 0)
 
   // 计算新的商品总额
   const newTotalUnpaid = cartItems.value
-    .filter(item => item.quantity > 0)
+    .filter((item) => item.quantity > 0)
     .reduce((total, item) => total + (item.totalPrice || item.price * item.quantity), 0)
 
   // 如果有已使用的优惠券，需要重新应用
@@ -754,7 +747,7 @@ const updateOrderInfo = () => {
   }
 
   const updatedOrder = { ...pendingOrder }
-  updatedOrder.cartItems = cartItems.value.filter(item => item.quantity > 0)
+  updatedOrder.cartItems = cartItems.value.filter((item) => item.quantity > 0)
   updatedOrder.totalAmount = orderInfo.value.totalUnpaid
   sessionStorage.setItem('pendingOrder', JSON.stringify(updatedOrder))
 
@@ -772,9 +765,7 @@ const hasIngredients = (item) => {
 
 // 格式化可选食材
 const formatOptionalIngredients = (ingredients) => {
-  return ingredients
-    .map((ing) => (typeof ing === 'object' ? ing.name : ing))
-    .join('、')
+  return ingredients.map((ing) => (typeof ing === 'object' ? ing.name : ing)).join('、')
 }
 
 // 确认订单
@@ -821,7 +812,9 @@ const confirmOrder = async () => {
   }
 
   if (platformBalance.value < finalAmount.value) {
-    ElMessage.error(`余额不足！当前余额：¥${platformBalance.value.toFixed(2)}，需要：¥${finalAmount.value.toFixed(2)}`)
+    ElMessage.error(
+      `余额不足！当前余额：¥${platformBalance.value.toFixed(2)}，需要：¥${finalAmount.value.toFixed(2)}`
+    )
     return
   }
 
@@ -847,7 +840,7 @@ const confirmOrder = async () => {
         })
 
         // 将购物车项转换为订单菜品格式
-        const dishes = orderInfo.value.unpaidItems.map(item => ({
+        const dishes = orderInfo.value.unpaidItems.map((item) => ({
           dishId: String(item.id || item.dishId),
           quantity: item.quantity,
           price: item.price,
@@ -893,11 +886,7 @@ const confirmOrder = async () => {
         console.log('订单创建成功，订单ID:', actualOrderId)
 
         // 调用支付API
-        const response = await paymentApi.payOrder(
-          actualOrderId,
-          String(userId),
-          'wallet'
-        )
+        const response = await paymentApi.payOrder(actualOrderId, String(userId), 'wallet')
         console.log('支付结果:', response)
 
         if (response.code === '200') {
@@ -1263,7 +1252,6 @@ const confirmOrder = async () => {
 
   // 支付明细卡片
   .payment-summary-card {
-
     .payment-details {
       .detail-row {
         display: flex;

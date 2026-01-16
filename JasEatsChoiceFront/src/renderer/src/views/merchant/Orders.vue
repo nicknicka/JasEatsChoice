@@ -136,7 +136,9 @@ const orderOverview = computed(() => {
   const total = filteredOrders.value.length
   const totalAmount = filteredOrders.value.reduce((sum, order) => sum + (order.totalAmount || 0), 0)
   const pendingCount = filteredOrders.value.filter((order) => order.status === 1).length
-  const preparingCount = filteredOrders.value.filter((order) => order.status === 2 || order.status === 3).length
+  const preparingCount = filteredOrders.value.filter(
+    (order) => order.status === 2 || order.status === 3
+  ).length
   const completedCount = filteredOrders.value.filter((order) => order.status === 5).length
   const cancelledCount = filteredOrders.value.filter((order) => order.status === 6).length
 
@@ -152,14 +154,18 @@ const orderOverview = computed(() => {
 
 // 监听订单概览变化，触发动画
 import { watch } from 'vue'
-watch(orderOverview, (newVal) => {
-  animateValue('total', newVal.total)
-  animateValue('totalAmount', newVal.totalAmount)
-  animateValue('pendingCount', newVal.pendingCount)
-  animateValue('preparingCount', newVal.preparingCount)
-  animateValue('completedCount', newVal.completedCount)
-  animateValue('cancelledCount', newVal.cancelledCount)
-}, { deep: true })
+watch(
+  orderOverview,
+  (newVal) => {
+    animateValue('total', newVal.total)
+    animateValue('totalAmount', newVal.totalAmount)
+    animateValue('pendingCount', newVal.pendingCount)
+    animateValue('preparingCount', newVal.preparingCount)
+    animateValue('completedCount', newVal.completedCount)
+    animateValue('cancelledCount', newVal.cancelledCount)
+  },
+  { deep: true }
+)
 
 // 查看订单详情
 const viewOrderDetails = (order) => {
@@ -264,7 +270,7 @@ const getTagType = (status) => {
 // 获取状态的订单数量
 const getStatusCount = (status) => {
   if (status === 'all') return orders.value.length
-  return orders.value.filter(o => o.status === status).length
+  return orders.value.filter((o) => o.status === status).length
 }
 
 // 获取状态标签文本
@@ -415,9 +421,7 @@ onMounted(() => {
         >
           全部已读
         </el-button>
-        <el-button size="small" :loading="loading" @click="refreshOrders">
-          刷新
-        </el-button>
+        <el-button size="small" :loading="loading" @click="refreshOrders"> 刷新 </el-button>
         <common-back-button type="default" />
       </div>
     </div>
@@ -426,7 +430,12 @@ onMounted(() => {
     <div class="overview-section">
       <div class="stat-card total">
         <div class="stat-icon">
-          <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path d="M912 160H128c-35.3 0-64 28.7-64 64v576c0 35.3 28.7 64 64 64h784c35.3 0 64-28.7 64-64V224c0-35.3-28.7-64-64-64z m-56 464H472c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h384c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8z m0-192H472c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h384c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8z m0-192H472c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h384c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8z M168 624h200c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H168c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8z m0-192h200c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H168c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8z m0-192h200c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H168c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8z" fill="currentColor"/></svg>
+          <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M912 160H128c-35.3 0-64 28.7-64 64v576c0 35.3 28.7 64 64 64h784c35.3 0 64-28.7 64-64V224c0-35.3-28.7-64-64-64z m-56 464H472c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h384c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8z m0-192H472c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h384c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8z m0-192H472c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h384c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8z M168 624h200c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H168c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8z m0-192h200c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H168c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8z m0-192h200c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H168c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8z"
+              fill="currentColor"
+            />
+          </svg>
         </div>
         <div class="stat-content">
           <div class="stat-value animated-number">{{ animatedValues.total }}</div>
@@ -436,7 +445,12 @@ onMounted(() => {
 
       <div class="stat-card amount highlight">
         <div class="stat-icon">
-          <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64z m0 820c-205.4 0-372-166.6-372-372s166.6-372 372-372 372 166.6 372 372-166.6 372-372 372z m151.2-500.2L534.6 536.2c-3.1 3.1-8.2 3.1-11.3 0l-109-109c-3.1-3.1-3.1-8.2 0-11.3l36.4-36.4c3.1-3.1 8.2-3.1 11.3 0l82 82 214.6-214.6c3.1-3.1 8.2-3.1 11.3 0l36.4 36.4c3.1 3.1 3.1 8.2 0 11.3z" fill="currentColor"/></svg>
+          <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64z m0 820c-205.4 0-372-166.6-372-372s166.6-372 372-372 372 166.6 372 372-166.6 372-372 372z m151.2-500.2L534.6 536.2c-3.1 3.1-8.2 3.1-11.3 0l-109-109c-3.1-3.1-3.1-8.2 0-11.3l36.4-36.4c3.1-3.1 8.2-3.1 11.3 0l82 82 214.6-214.6c3.1-3.1 8.2-3.1 11.3 0l36.4 36.4c3.1 3.1 3.1 8.2 0 11.3z"
+              fill="currentColor"
+            />
+          </svg>
         </div>
         <div class="stat-content">
           <div class="stat-value animated-number">¥{{ animatedValues.totalAmount.toFixed(0) }}</div>
@@ -446,7 +460,12 @@ onMounted(() => {
 
       <div class="stat-card pending">
         <div class="stat-icon">
-          <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64z m0 820c-205.4 0-372-166.6-372-372s166.6-372 372-372 372 166.6 372 372-166.6 372-372 372z" fill="currentColor"/></svg>
+          <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64z m0 820c-205.4 0-372-166.6-372-372s166.6-372 372-372 372 166.6 372 372-166.6 372-372 372z"
+              fill="currentColor"
+            />
+          </svg>
         </div>
         <div class="stat-content">
           <div class="stat-value animated-number">{{ animatedValues.pendingCount }}</div>
@@ -456,7 +475,12 @@ onMounted(() => {
 
       <div class="stat-card preparing">
         <div class="stat-icon">
-          <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64z m193.5 301.7l-210.6 292c-12.7 17.7-39 17.7-51.7 0L318.5 484.9c-3.8-5.3 0-12.7 6.5-12.7h46.9c10.2 0 19.9 4.9 25.9 13.3l71.2 98.8 157.2-218c6-8.3 15.6-13.3 25.9-13.3H699c6.5 0 10.3 7.4 6.5 12.7z" fill="currentColor"/></svg>
+          <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64z m193.5 301.7l-210.6 292c-12.7 17.7-39 17.7-51.7 0L318.5 484.9c-3.8-5.3 0-12.7 6.5-12.7h46.9c10.2 0 19.9 4.9 25.9 13.3l71.2 98.8 157.2-218c6-8.3 15.6-13.3 25.9-13.3H699c6.5 0 10.3 7.4 6.5 12.7z"
+              fill="currentColor"
+            />
+          </svg>
         </div>
         <div class="stat-content">
           <div class="stat-value animated-number">{{ animatedValues.preparingCount }}</div>
@@ -466,7 +490,12 @@ onMounted(() => {
 
       <div class="stat-card completed">
         <div class="stat-icon">
-          <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64z m193.5 301.7l-210.6 292c-12.7 17.7-39 17.7-51.7 0L318.5 484.9c-3.8-5.3 0-12.7 6.5-12.7h46.9c10.2 0 19.9 4.9 25.9 13.3l71.2 98.8 157.2-218c6-8.3 15.6-13.3 25.9-13.3H699c6.5 0 10.3 7.4 6.5 12.7z" fill="currentColor"/></svg>
+          <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64z m193.5 301.7l-210.6 292c-12.7 17.7-39 17.7-51.7 0L318.5 484.9c-3.8-5.3 0-12.7 6.5-12.7h46.9c10.2 0 19.9 4.9 25.9 13.3l71.2 98.8 157.2-218c6-8.3 15.6-13.3 25.9-13.3H699c6.5 0 10.3 7.4 6.5 12.7z"
+              fill="currentColor"
+            />
+          </svg>
         </div>
         <div class="stat-content">
           <div class="stat-value animated-number">{{ animatedValues.completedCount }}</div>
@@ -486,7 +515,11 @@ onMounted(() => {
           <div
             v-for="status in ['all', '2-3', 0, 1, 2, 3, 4, 5, 6]"
             :key="status"
-            :class="['custom-status-tag', `status-tag-${status}`, { 'active': activeStatusFilter === status, 'zero-count': getStatusCount(status) === 0 }]"
+            :class="[
+              'custom-status-tag',
+              `status-tag-${status}`,
+              { active: activeStatusFilter === status, 'zero-count': getStatusCount(status) === 0 }
+            ]"
             @click="activeStatusFilter = status"
           >
             <template v-if="status === 'all'">
@@ -535,12 +568,7 @@ onMounted(() => {
     <!-- 快捷操作栏 -->
     <div class="quick-actions">
       <div class="quick-actions-left">
-        <el-button
-          size="small"
-          @click="refreshOrders"
-          :loading="loading"
-          class="quick-action-btn"
-        >
+        <el-button size="small" @click="refreshOrders" :loading="loading" class="quick-action-btn">
           <el-icon><Refresh /></el-icon>
           <span>刷新</span>
         </el-button>
@@ -554,7 +582,11 @@ onMounted(() => {
 
     <!-- 订单列表 -->
     <div v-loading="loading" class="orders-list-section">
-      <div v-for="order in filteredOrders" :key="order.id" :class="['order-item', `status-${order.status}`]">
+      <div
+        v-for="order in filteredOrders"
+        :key="order.id"
+        :class="['order-item', `status-${order.status}`]"
+      >
         <div class="order-main">
           <div class="order-content">
             <div class="order-left">
@@ -574,7 +606,10 @@ onMounted(() => {
               </div>
 
               <!-- 菜品列表 -->
-              <div v-if="order.orderDishes && order.orderDishes.length > 0" class="order-dishes-list">
+              <div
+                v-if="order.orderDishes && order.orderDishes.length > 0"
+                class="order-dishes-list"
+              >
                 <div class="dishes-header">
                   <span class="dishes-title">🍽️ 菜品清单</span>
                   <span class="dishes-count">共{{ order.orderDishes.length }}件</span>
@@ -585,13 +620,15 @@ onMounted(() => {
                       <span class="dish-name">{{ dish.dishName || '未知菜品' }}</span>
                       <span class="dish-quantity">× {{ dish.quantity || 0 }}</span>
                     </div>
-                    <div class="dish-price">¥{{ ((dish.price || 0) * (dish.quantity || 0)).toFixed(2) }}</div>
+                    <div class="dish-price">
+                      ¥{{ ((dish.price || 0) * (dish.quantity || 0)).toFixed(2) }}
+                    </div>
                   </div>
                 </div>
               </div>
 
               <div class="order-user-info">
-                <div class="user-address" style="grid-column: 1 / -1;">
+                <div class="user-address" style="grid-column: 1 / -1">
                   <span class="info-label">📍 地址</span>
                   <span class="info-value">{{ order.address || '--' }}</span>
                 </div>
@@ -732,7 +769,7 @@ onMounted(() => {
     justify-content: space-between;
     align-items: center;
     padding: 20px 24px;
-    background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+    background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
     border-radius: 16px;
     box-shadow: 0 4px 16px rgba(33, 150, 243, 0.3);
 
@@ -842,47 +879,79 @@ onMounted(() => {
       &.total {
         border-left: 4px solid #667eea;
         .stat-icon {
-          background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(102, 126, 234, 0.08) 100%);
+          background: linear-gradient(
+            135deg,
+            rgba(102, 126, 234, 0.15) 0%,
+            rgba(102, 126, 234, 0.08) 100%
+          );
           color: #667eea;
         }
-        .stat-value { color: #667eea; }
+        .stat-value {
+          color: #667eea;
+        }
       }
 
       &.amount {
         border-left: 4px solid #f56c6c;
         .stat-icon {
-          background: linear-gradient(135deg, rgba(245, 108, 108, 0.15) 0%, rgba(245, 108, 108, 0.08) 100%);
+          background: linear-gradient(
+            135deg,
+            rgba(245, 108, 108, 0.15) 0%,
+            rgba(245, 108, 108, 0.08) 100%
+          );
           color: #f56c6c;
         }
-        .stat-value { color: #d32f2f; }
-        &.highlight .stat-value { font-size: 28px; }
+        .stat-value {
+          color: #d32f2f;
+        }
+        &.highlight .stat-value {
+          font-size: 28px;
+        }
       }
 
       &.pending {
         border-left: 4px solid #ff9800;
         .stat-icon {
-          background: linear-gradient(135deg, rgba(255, 152, 0, 0.15) 0%, rgba(255, 152, 0, 0.08) 100%);
+          background: linear-gradient(
+            135deg,
+            rgba(255, 152, 0, 0.15) 0%,
+            rgba(255, 152, 0, 0.08) 100%
+          );
           color: #ff9800;
         }
-        .stat-value { color: #f57c00; }
+        .stat-value {
+          color: #f57c00;
+        }
       }
 
       &.preparing {
         border-left: 4px solid #ff9800;
         .stat-icon {
-          background: linear-gradient(135deg, rgba(255, 152, 0, 0.15) 0%, rgba(255, 152, 0, 0.08) 100%);
+          background: linear-gradient(
+            135deg,
+            rgba(255, 152, 0, 0.15) 0%,
+            rgba(255, 152, 0, 0.08) 100%
+          );
           color: #ff9800;
         }
-        .stat-value { color: #f57c00; }
+        .stat-value {
+          color: #f57c00;
+        }
       }
 
       &.completed {
         border-left: 4px solid #4caf50;
         .stat-icon {
-          background: linear-gradient(135deg, rgba(76, 175, 80, 0.15) 0%, rgba(76, 175, 80, 0.08) 100%);
+          background: linear-gradient(
+            135deg,
+            rgba(76, 175, 80, 0.15) 0%,
+            rgba(76, 175, 80, 0.08) 100%
+          );
           color: #4caf50;
         }
-        .stat-value { color: #388e3c; }
+        .stat-value {
+          color: #388e3c;
+        }
       }
     }
   }
@@ -1065,7 +1134,9 @@ onMounted(() => {
           }
 
           &.is-focus {
-            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2), 0 2px 8px rgba(102, 126, 234, 0.3);
+            box-shadow:
+              0 0 0 2px rgba(102, 126, 234, 0.2),
+              0 2px 8px rgba(102, 126, 234, 0.3);
           }
         }
       }
@@ -1158,7 +1229,13 @@ onMounted(() => {
 
         .order-divider {
           height: 1px;
-          background: linear-gradient(90deg, transparent 0%, #e2e8f0 10%, #e2e8f0 90%, transparent 100%);
+          background: linear-gradient(
+            90deg,
+            transparent 0%,
+            #e2e8f0 10%,
+            #e2e8f0 90%,
+            transparent 100%
+          );
           margin: 0;
         }
 
@@ -1297,7 +1374,6 @@ onMounted(() => {
               font-weight: 500;
             }
           }
-
         }
         // 菜品列表样式
         .order-dishes-list {
@@ -1373,7 +1449,11 @@ onMounted(() => {
                   color: #667eea;
                   font-weight: 600;
                   flex-shrink: 0;
-                  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(102, 126, 234, 0.05) 100%);
+                  background: linear-gradient(
+                    135deg,
+                    rgba(102, 126, 234, 0.1) 0%,
+                    rgba(102, 126, 234, 0.05) 100%
+                  );
                   padding: 2px 8px;
                   border-radius: 12px;
                 }

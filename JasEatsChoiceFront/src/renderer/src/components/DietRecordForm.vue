@@ -8,12 +8,7 @@
     class="add-diet-dialog"
     @close="handleClose"
   >
-    <el-form
-      ref="formRef"
-      :model="formData"
-      :rules="formRules"
-      label-width="120px"
-    >
+    <el-form ref="formRef" :model="formData" :rules="formRules" label-width="120px">
       <!-- 餐次选择 -->
       <el-row justify="center">
         <el-col :xs="24" :sm="20">
@@ -24,11 +19,7 @@
                 <span>餐&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;次</span>
               </div>
             </template>
-            <el-select
-              v-model="formData.mealType"
-              placeholder="请选择餐次"
-              size="large"
-            >
+            <el-select v-model="formData.mealType" placeholder="请选择餐次" size="large">
               <el-option
                 v-for="mealOption in mealTypeOptions"
                 :key="mealOption.value"
@@ -226,12 +217,7 @@
     <template #footer>
       <div class="dialog-footer">
         <el-button size="large" @click="handleClose">取消</el-button>
-        <el-button
-          type="primary"
-          size="large"
-          @click="handleSubmit"
-          :loading="loading"
-        >
+        <el-button type="primary" size="large" @click="handleSubmit" :loading="loading">
           <el-icon><Check /></el-icon>
           {{ mode === 'add' ? '确认添加' : '保存修改' }}
         </el-button>
@@ -302,12 +288,8 @@ const formData = ref({
 
 // 表单验证规则
 const formRules = {
-  mealType: [
-    { required: true, message: '请选择餐次', trigger: 'change' }
-  ],
-  time: [
-    { required: true, message: '请选择时间', trigger: 'change' }
-  ],
+  mealType: [{ required: true, message: '请选择餐次', trigger: 'change' }],
+  time: [{ required: true, message: '请选择时间', trigger: 'change' }],
   foodName: [
     { required: true, message: '请输入食物名称', trigger: 'blur' },
     { min: 1, max: 50, message: '食物名称长度在1-50个字符之间', trigger: 'blur' }
@@ -316,32 +298,32 @@ const formRules = {
     { required: true, message: '请输入卡路里', trigger: 'blur' },
     { type: 'number', min: 0, max: 10000, message: '卡路里范围为0-10000', trigger: 'blur' }
   ],
-  protein: [
-    { type: 'number', min: 0, max: 1000, message: '蛋白质范围为0-1000g', trigger: 'blur' }
-  ],
-  fat: [
-    { type: 'number', min: 0, max: 1000, message: '脂肪范围为0-1000g', trigger: 'blur' }
-  ],
+  protein: [{ type: 'number', min: 0, max: 1000, message: '蛋白质范围为0-1000g', trigger: 'blur' }],
+  fat: [{ type: 'number', min: 0, max: 1000, message: '脂肪范围为0-1000g', trigger: 'blur' }],
   carbohydrate: [
     { type: 'number', min: 0, max: 1000, message: '碳水化合物范围为0-1000g', trigger: 'blur' }
   ]
 }
 
 // 监听记录变化，用于编辑模式
-watch(() => props.record, (newRecord) => {
-  if (props.mode === 'edit' && newRecord && Object.keys(newRecord).length > 0) {
-    formData.value = {
-      mealType: newRecord.mealType || 'breakfast',
-      time: newRecord.time || '',
-      foodName: newRecord.foodName || '',
-      calories: newRecord.calories || 0,
-      protein: newRecord.protein || 0,
-      fat: newRecord.fat || 0,
-      carbohydrate: newRecord.carbohydrate || 0,
-      description: newRecord.description || ''
+watch(
+  () => props.record,
+  (newRecord) => {
+    if (props.mode === 'edit' && newRecord && Object.keys(newRecord).length > 0) {
+      formData.value = {
+        mealType: newRecord.mealType || 'breakfast',
+        time: newRecord.time || '',
+        foodName: newRecord.foodName || '',
+        calories: newRecord.calories || 0,
+        protein: newRecord.protein || 0,
+        fat: newRecord.fat || 0,
+        carbohydrate: newRecord.carbohydrate || 0,
+        description: newRecord.description || ''
+      }
     }
-  }
-}, { immediate: true, deep: true })
+  },
+  { immediate: true, deep: true }
+)
 
 // 监听对话框打开，重置表单（添加模式）
 watch(dialogVisible, (newValue) => {

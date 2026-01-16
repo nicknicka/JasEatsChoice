@@ -48,7 +48,14 @@ export default {
   /**
    * 获取消费记录（交易记录）
    */
-  getConsumeHistory(userId, type = 'all', page = 1, pageSize = 10, startDate = null, endDate = null) {
+  getConsumeHistory(
+    userId,
+    type = 'all',
+    page = 1,
+    pageSize = 10,
+    startDate = null,
+    endDate = null
+  ) {
     return api.get('/v1/consume-history', {
       params: { userId, type, page, pageSize, startDate, endDate }
     })

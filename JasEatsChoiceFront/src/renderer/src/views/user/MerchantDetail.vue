@@ -195,9 +195,7 @@ const currentMenuCategories = computed(() => {
   }
 
   // 获取当前菜单的所有菜品
-  const currentMenuItems = menuItems.value.filter(
-    (item) => item.menuId === activeMenuTab.value
-  )
+  const currentMenuItems = menuItems.value.filter((item) => item.menuId === activeMenuTab.value)
 
   // 提取所有唯一的分类
   const categories = [...new Set(currentMenuItems.map((item) => item.category))].filter(
@@ -272,10 +270,12 @@ onMounted(() => {
 const loadMerchantDetails = async (merchantId) => {
   try {
     // 1. 先获取商家详情
-    const merchantResponse = await axios.get(API_CONFIG.baseURL + API_CONFIG.merchant.detail + merchantId)
-    console.log("获取商家详情 response:", merchantResponse.data)
+    const merchantResponse = await axios.get(
+      API_CONFIG.baseURL + API_CONFIG.merchant.detail + merchantId
+    )
+    console.log('获取商家详情 response:', merchantResponse.data)
 
-    if (merchantResponse.data?.code === "200" && merchantResponse.data?.data) {
+    if (merchantResponse.data?.code === '200' && merchantResponse.data?.data) {
       // 更新商家信息
       merchant.value = {
         ...merchant.value,
@@ -284,21 +284,34 @@ const loadMerchantDetails = async (merchantId) => {
     }
 
     // 2. 再获取商家的菜单数据
-    const menuResponse = await axios.get(`${API_CONFIG.baseURL}/v1/menus/merchants/${merchantId}/menu`)
-    console.log("获取商家菜单 response:", menuResponse.data)
+    const menuResponse = await axios.get(
+      `${API_CONFIG.baseURL}/v1/menus/merchants/${merchantId}/menu`
+    )
+    console.log('获取商家菜单 response:', menuResponse.data)
 
-    if (menuResponse.data?.code === "200" && menuResponse.data?.data && menuResponse.data.data.length > 0) {
-      console.log("✅ 菜单数据存在，菜单数量:", menuResponse.data.data.length)
+    if (
+      menuResponse.data?.code === '200' &&
+      menuResponse.data?.data &&
+      menuResponse.data.data.length > 0
+    ) {
+      console.log('✅ 菜单数据存在，菜单数量:', menuResponse.data.data.length)
 
       // 为菜单项目添加必要的属性
       const allMenuItems = []
 
       // 遍历所有菜单
       menuResponse.data.data.forEach((menu) => {
-        console.log("📋 处理菜单:", menu.menuName, "菜单ID:", menu.id, "菜品数量:", menu.dishes?.length || 0)
+        console.log(
+          '📋 处理菜单:',
+          menu.menuName,
+          '菜单ID:',
+          menu.id,
+          '菜品数量:',
+          menu.dishes?.length || 0
+        )
         if (menu.dishes && menu.dishes.length > 0) {
           menu.dishes.forEach((dish) => {
-            console.log("  🍲 菜品:", dish.name, "category:", dish.category, "id:", dish.id)
+            console.log('  🍲 菜品:', dish.name, 'category:', dish.category, 'id:', dish.id)
             allMenuItems.push({
               ...dish,
               menuId: menu.id, // 保存菜单ID (后端使用id字段)
@@ -315,18 +328,21 @@ const loadMerchantDetails = async (merchantId) => {
       })
 
       menuItems.value = allMenuItems
-      console.log("📦 最终 menuItems 数量:", menuItems.value.length)
-      console.log("📦 menuItems 详情:", menuItems.value.map(item => ({
-        name: item.name,
-        menuId: item.menuId,
-        category: item.category,
-        price: item.price,
-        description: item.description,
-        image: item.image,
-        requiredIngredients: item.requiredIngredients,
-        optionalIngredients: item.optionalIngredients
-      })))
-      console.log("📦 第一个菜品的完整数据:", menuItems.value[0])
+      console.log('📦 最终 menuItems 数量:', menuItems.value.length)
+      console.log(
+        '📦 menuItems 详情:',
+        menuItems.value.map((item) => ({
+          name: item.name,
+          menuId: item.menuId,
+          category: item.category,
+          price: item.price,
+          description: item.description,
+          image: item.image,
+          requiredIngredients: item.requiredIngredients,
+          optionalIngredients: item.optionalIngredients
+        }))
+      )
+      console.log('📦 第一个菜品的完整数据:', menuItems.value[0])
 
       // 确保可选食材有selected属性，并处理可能的字符串格式
       menuItems.value.forEach((item) => {
@@ -354,14 +370,19 @@ const loadMerchantDetails = async (merchantId) => {
         value: menu.id,
         label: menu.menuName
       }))
-      console.log("🏷️ 生成的标签页:", menuTabs.value)
+      console.log('🏷️ 生成的标签页:', menuTabs.value)
 
       // 添加用户评价标签
       menuTabs.value.push({ value: 'comments', label: '用户评价' })
 
       // 默认激活第一个菜单
       activeMenuTab.value = menuResponse.data.data[0].id
-      console.log("🎯 默认激活的标签页 (activeMenuTab):", activeMenuTab.value, "类型:", typeof activeMenuTab.value)
+      console.log(
+        '🎯 默认激活的标签页 (activeMenuTab):',
+        activeMenuTab.value,
+        '类型:',
+        typeof activeMenuTab.value
+      )
 
       hasMenus.value = true
     } else {
@@ -398,7 +419,7 @@ const checkFavoriteStatus = async () => {
     })
 
     // 后端返回格式: { success: true, code: "200", message: "成功", data: true/false }
-    if (response.data && response.data.success && response.data.code === "200") {
+    if (response.data && response.data.success && response.data.code === '200') {
       isFavorite.value = response.data.data === true
     }
   } catch (error) {
@@ -428,7 +449,7 @@ const toggleFavorite = async () => {
       })
 
       // 后端返回格式: { success: true, code: "200", message: "成功", data: null }
-      if (response.data && response.data.success && response.data.code === "200") {
+      if (response.data && response.data.success && response.data.code === '200') {
         isFavorite.value = false
         ElMessage.success(`${merchant.value.name} 已取消收藏`)
       } else {
@@ -442,10 +463,13 @@ const toggleFavorite = async () => {
         collectableId: merchant.value.id
       }
 
-      const response = await axios.post(API_CONFIG.baseURL + API_CONFIG.collection.add, collectionData)
+      const response = await axios.post(
+        API_CONFIG.baseURL + API_CONFIG.collection.add,
+        collectionData
+      )
 
       // 后端返回格式: { success: true, code: "200", message: "成功", data: 14(收藏ID) }
-      if (response.data && response.data.success && response.data.code === "200") {
+      if (response.data && response.data.success && response.data.code === '200') {
         isFavorite.value = true
         ElMessage.success(`${merchant.value.name} 已加入收藏`)
       } else {
@@ -621,28 +645,30 @@ const updateCart = (item) => {
 // 计算实时价格函数
 const calculateRealTimePrice = (item) => {
   if (!item) {
-    console.log("calculateRealTimePrice: item is null/undefined")
+    console.log('calculateRealTimePrice: item is null/undefined')
     return 0
   }
   const optionalTotal = item.optionalIngredients.reduce((sum, ingredient) => {
     return sum + (ingredient.selected ? ingredient.price : 0)
   }, 0)
   const result = item.price + optionalTotal
-  console.log(`💰 计算价格 - 菜品: ${item.name}, basePrice: ${item.price}, optionalTotal: ${optionalTotal}, finalPrice: ${result}`)
+  console.log(
+    `💰 计算价格 - 菜品: ${item.name}, basePrice: ${item.price}, optionalTotal: ${optionalTotal}, finalPrice: ${result}`
+  )
   return result
 }
 
 // 根据菜品分类返回对应的 emoji 图标
 const getCategoryEmoji = (category) => {
   const emojiMap = {
-    '招牌菜': '🔥',
-    '主食': '🍚',
-    '饮品': '🥤',
-    '小吃': '🍢',
-    '甜点': '🍰',
-    '汤': '🍲',
-    '凉菜': '🥗',
-    '热菜': '🍛'
+    招牌菜: '🔥',
+    主食: '🍚',
+    饮品: '🥤',
+    小吃: '🍢',
+    甜点: '🍰',
+    汤: '🍲',
+    凉菜: '🥗',
+    热菜: '🍛'
   }
   return emojiMap[category] || '🍽️'
 }
@@ -706,7 +732,6 @@ const handleUpdateCart = ({ action, index }) => {
   updateCartStats()
 }
 
-
 // 跳转到订单确认页
 const goToOrderConfirmation = () => {
   // 将订单信息存储到会话存储
@@ -727,52 +752,61 @@ const goToOrderConfirmation = () => {
 
 // 监听标签页切换，输出过滤结果
 watch(activeMenuTab, (newTab, oldTab) => {
-  console.log("🔄 标签页切换")
-  console.log("  旧标签:", oldTab, "类型:", typeof oldTab)
-  console.log("  新标签:", newTab, "类型:", typeof newTab)
+  console.log('🔄 标签页切换')
+  console.log('  旧标签:', oldTab, '类型:', typeof oldTab)
+  console.log('  新标签:', newTab, '类型:', typeof newTab)
 
   // 测试招牌菜过滤
   const signatureDishes = menuItems.value.filter(
     (item) => item.menuId === newTab && item.category === '招牌菜'
   )
-  console.log("  🔥 招牌菜过滤结果数量:", signatureDishes.length)
+  console.log('  🔥 招牌菜过滤结果数量:', signatureDishes.length)
   if (signatureDishes.length > 0) {
-    console.log("  🔥 招牌菜详情:", signatureDishes.map(d => ({
-      name: d.name,
-      menuId: d.menuId,
-      category: d.category
-    })))
+    console.log(
+      '  🔥 招牌菜详情:',
+      signatureDishes.map((d) => ({
+        name: d.name,
+        menuId: d.menuId,
+        category: d.category
+      }))
+    )
   }
 
   // 测试主食过滤
   const stapleDishes = menuItems.value.filter(
     (item) => item.menuId === newTab && item.category === '主食'
   )
-  console.log("  🍚 主食过滤结果数量:", stapleDishes.length)
+  console.log('  🍚 主食过滤结果数量:', stapleDishes.length)
   if (stapleDishes.length > 0) {
-    console.log("  🍚 主食详情:", stapleDishes.map(d => ({
-      name: d.name,
-      menuId: d.menuId,
-      category: d.category
-    })))
+    console.log(
+      '  🍚 主食详情:',
+      stapleDishes.map((d) => ({
+        name: d.name,
+        menuId: d.menuId,
+        category: d.category
+      }))
+    )
   }
 
   // 测试饮品过滤
   const drinkDishes = menuItems.value.filter(
     (item) => item.menuId === newTab && item.category === '饮品'
   )
-  console.log("  🥤 饮品过滤结果数量:", drinkDishes.length)
+  console.log('  🥤 饮品过滤结果数量:', drinkDishes.length)
 
   // 测试所有菜品的 menuId 匹配
   const allMatchingItems = menuItems.value.filter((item) => item.menuId === newTab)
-  console.log("  📋 所有匹配当前标签的菜品数量:", allMatchingItems.length)
+  console.log('  📋 所有匹配当前标签的菜品数量:', allMatchingItems.length)
   if (allMatchingItems.length === 0) {
-    console.log("  ⚠️ 没有找到匹配的菜品！")
-    console.log("  📦 所有 menuItems 的 menuId:", menuItems.value.map(item => ({
-      name: item.name,
-      menuId: item.menuId,
-      menuIdType: typeof item.menuId
-    })))
+    console.log('  ⚠️ 没有找到匹配的菜品！')
+    console.log(
+      '  📦 所有 menuItems 的 menuId:',
+      menuItems.value.map((item) => ({
+        name: item.name,
+        menuId: item.menuId,
+        menuIdType: typeof item.menuId
+      }))
+    )
   }
 })
 
@@ -957,7 +991,9 @@ watch(activeMenuTab, (newTab, oldTab) => {
   cursor: grab;
   box-shadow: 0 8px 32px rgba(59, 130, 246, 0.5);
   color: white;
-  transition: box-shadow 0.3s ease, transform 0.2s ease;
+  transition:
+    box-shadow 0.3s ease,
+    transform 0.2s ease;
   z-index: 9999;
   border: 3px solid rgba(255, 255, 255, 0.3);
   backdrop-filter: blur(10px);

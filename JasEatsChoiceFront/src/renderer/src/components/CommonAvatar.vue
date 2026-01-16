@@ -167,7 +167,7 @@ watch(
       const img = new Image()
 
       // 直接使用原始URL
-      const urlWithTimestamp = newUrl;
+      const urlWithTimestamp = newUrl
 
       img.onload = () => {
         isLoading.value = false

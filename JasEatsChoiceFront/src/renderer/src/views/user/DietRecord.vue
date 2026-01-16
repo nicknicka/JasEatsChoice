@@ -45,9 +45,7 @@
           class="stat-progress"
           :stroke-width="6"
         />
-        <div v-if="dailyCalorieGoal > 0" class="stat-detail">
-          目标: {{ dailyCalorieGoal }} kcal
-        </div>
+        <div v-if="dailyCalorieGoal > 0" class="stat-detail">目标: {{ dailyCalorieGoal }} kcal</div>
       </div>
 
       <div class="stat-divider"></div>
@@ -72,7 +70,9 @@
         </div>
 
         <div class="stat-item nutrient-stat">
-          <div class="nutrient-value">{{ totalCarbohydrate }}<span class="nutrient-unit">g</span></div>
+          <div class="nutrient-value">
+            {{ totalCarbohydrate }}<span class="nutrient-unit">g</span>
+          </div>
           <div class="nutrient-label">碳水</div>
         </div>
       </template>
@@ -217,9 +217,7 @@
               <el-icon><Plus /></el-icon>
               开始记录第一餐
             </el-button>
-            <div class="empty-tips">
-              💡 小提示：记录饮食可以帮助你更好地管理健康
-            </div>
+            <div class="empty-tips">💡 小提示：记录饮食可以帮助你更好地管理健康</div>
           </template>
         </el-empty>
       </div>
@@ -355,7 +353,9 @@ const totalFat = computed(() => {
 
 // 计算总碳水化合物
 const totalCarbohydrate = computed(() => {
-  return dietRecords.value.reduce((total, record) => total + (record.carbohydrate || 0), 0).toFixed(1)
+  return dietRecords.value
+    .reduce((total, record) => total + (record.carbohydrate || 0), 0)
+    .toFixed(1)
 })
 
 // ==================== 方法 ====================

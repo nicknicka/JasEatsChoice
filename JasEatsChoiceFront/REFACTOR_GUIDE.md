@@ -42,21 +42,25 @@ src/renderer/src/
 ## 主要改进
 
 ### 1. 类型安全
+
 - ✅ 添加了完整的 TypeScript 类型定义
 - ✅ 所有 API 响应都有类型约束
 - ✅ 组件 Props 和 Emits 都有类型检查
 
 ### 2. 代码复用
+
 - ✅ 提取了 6 个可复用的 Composables
 - ✅ 创建了 4 个可复用的子组件
 - ✅ 常量配置统一管理
 
 ### 3. 可维护性
+
 - ✅ 单一职责原则：每个文件只负责一个功能
 - ✅ 主组件代码量减少约 60%
 - ✅ 更容易进行单元测试
 
 ### 4. 性能优化
+
 - ✅ 图片懒加载优化
 - ✅ 计算属性缓存
 - ✅ 防抖搜索（可选）
@@ -66,6 +70,7 @@ src/renderer/src/
 ### 方案 A: 逐步迁移（推荐）
 
 1. **测试新组件**
+
    ```bash
    # 先在路由中测试重构后的组件
    # 修改路由配置，临时指向新组件
@@ -77,6 +82,7 @@ src/renderer/src/
    - 依次替换其他组件
 
 3. **完成切换**
+
    ```bash
    # 备份原文件
    mv HomeContent.vue HomeContent.vue.bak
@@ -104,6 +110,7 @@ cp HomeContentRefactored.vue HomeContent.vue
 ### 1. 缺少的 Composable
 
 重构代码中引用了 `useLocation` composable，但这个文件在原始代码中已经存在：
+
 ```typescript
 import { useLocation } from '../../composables/useLocation.js'
 ```
@@ -115,6 +122,7 @@ import { useLocation } from '../../composables/useLocation.js'
 由于样式代码量很大，重构后的主组件只保留了部分核心样式。您有两个选择：
 
 **选项 1: 保留原样式文件**
+
 ```vue
 <style scoped lang="less">
 @import './HomeContent.styles.less';
@@ -122,12 +130,14 @@ import { useLocation } from '../../composables/useLocation.js'
 ```
 
 **选项 2: 逐步将样式迁移到子组件**
+
 - 每个子组件应该包含自己的样式
 - 主组件只保留布局相关的样式
 
 ### 3. API 配置
 
 确保以下配置文件存在且路径正确：
+
 - `src/config/index.js` - 导出 `API_CONFIG`
 - `src/constants/wsConstants.js` - 导出 `WS_CONFIG`
 
@@ -183,6 +193,7 @@ const { isFavorite, toggleFavorite } = useFavorites()
 ## 后续优化建议
 
 1. **添加单元测试**
+
    ```bash
    # 安装测试依赖
    npm install -D vitest @vue/test-utils
@@ -208,6 +219,7 @@ const { isFavorite, toggleFavorite } = useFavorites()
 ## 问题反馈
 
 如遇到问题，请检查：
+
 1. TypeScript 配置是否正确
 2. 路径别名配置（`@` 或 `../../`）
 3. API 配置文件是否存在
@@ -216,6 +228,7 @@ const { isFavorite, toggleFavorite } = useFavorites()
 ## 总结
 
 重构后的代码具有以下优势：
+
 - ✅ 代码量减少 60%
 - ✅ 类型安全
 - ✅ 更易维护

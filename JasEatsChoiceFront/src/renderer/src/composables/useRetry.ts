@@ -26,7 +26,7 @@ export function useRetry() {
         }
 
         // 指数退避
-        await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)))
+        await new Promise((resolve) => setTimeout(resolve, delay * Math.pow(2, i)))
       }
     }
 

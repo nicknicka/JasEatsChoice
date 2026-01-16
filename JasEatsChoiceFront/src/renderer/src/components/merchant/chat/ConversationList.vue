@@ -31,15 +31,16 @@ const filteredConversations = computed(() => {
   // 搜索过滤
   if (props.searchKeyword) {
     const keyword = props.searchKeyword.toLowerCase()
-    result = result.filter(conv =>
-      conv.name.toLowerCase().includes(keyword) ||
-      conv.lastMessage.toLowerCase().includes(keyword)
+    result = result.filter(
+      (conv) =>
+        conv.name.toLowerCase().includes(keyword) ||
+        conv.lastMessage.toLowerCase().includes(keyword)
     )
   }
 
   // 仅显示未读
   if (props.showUnreadOnly) {
-    result = result.filter(conv => conv.unreadCount > 0)
+    result = result.filter((conv) => conv.unreadCount > 0)
   }
 
   // 按未读消息排序
@@ -119,7 +120,11 @@ const formatTime = (timeStr) => {
       <div class="header-title">
         <el-icon :size="18"><ChatDotRound /></el-icon>
         <span>会话列表</span>
-        <el-badge v-if="filteredConversations.length > 0" :value="filteredConversations.length" class="item" />
+        <el-badge
+          v-if="filteredConversations.length > 0"
+          :value="filteredConversations.length"
+          class="item"
+        />
       </div>
     </div>
 
@@ -153,9 +158,7 @@ const formatTime = (timeStr) => {
           </div>
 
           <!-- 订单指示器 -->
-          <div v-if="conversation.relatedOrder" class="order-indicator" title="有关联订单">
-            📋
-          </div>
+          <div v-if="conversation.relatedOrder" class="order-indicator" title="有关联订单">📋</div>
         </div>
 
         <div class="conversation-info">
@@ -164,7 +167,10 @@ const formatTime = (timeStr) => {
             <span class="time">{{ formatTime(conversation.time) }}</span>
           </div>
           <div class="last-message">{{ conversation.lastMessage }}</div>
-          <div v-if="conversation.type === 'group' && conversation.memberCount" class="member-count">
+          <div
+            v-if="conversation.type === 'group' && conversation.memberCount"
+            class="member-count"
+          >
             {{ conversation.memberCount }}人
           </div>
         </div>

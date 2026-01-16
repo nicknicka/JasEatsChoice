@@ -6,9 +6,7 @@
       <div class="header-content">
         <h2>我的收藏</h2>
         <div class="collection-stats">
-          <el-tag type="info" size="large">
-            共 {{ filteredCollections.length }} 个收藏
-          </el-tag>
+          <el-tag type="info" size="large"> 共 {{ filteredCollections.length }} 个收藏 </el-tag>
         </div>
       </div>
     </div>
@@ -50,7 +48,8 @@
 
         <div class="filter-summary">
           <span v-if="filterType !== 'all'" class="filter-active">
-            已筛选: <el-tag size="small" closable @close="resetFilter">
+            已筛选:
+            <el-tag size="small" closable @close="resetFilter">
               {{ getFilterTypeName(filterType) }}
             </el-tag>
           </span>
@@ -63,7 +62,12 @@
             <el-icon><Search /></el-icon>
             查询
           </el-button>
-          <el-button type="default" size="small" @click="resetFilter" :disabled="filterType === 'all'">
+          <el-button
+            type="default"
+            size="small"
+            @click="resetFilter"
+            :disabled="filterType === 'all'"
+          >
             <el-icon><Refresh /></el-icon>
             重置
           </el-button>
@@ -71,7 +75,12 @@
 
         <el-divider direction="vertical" />
 
-        <el-button type="danger" size="small" @click="clearAll" :disabled="filteredCollections.length === 0">
+        <el-button
+          type="danger"
+          size="small"
+          @click="clearAll"
+          :disabled="filteredCollections.length === 0"
+        >
           <el-icon><Delete /></el-icon>
           清空全部
         </el-button>
@@ -86,22 +95,11 @@
     <!-- 收藏列表 -->
     <div v-else-if="paginatedCollections.length > 0" class="collection-grid">
       <transition-group name="collection-fade">
-        <div
-          v-for="item in paginatedCollections"
-          :key="item.id"
-          class="collection-card-wrapper"
-        >
-          <el-card
-            class="collection-card"
-            shadow="hover"
-            @click="viewDetails(item)"
-          >
+        <div v-for="item in paginatedCollections" :key="item.id" class="collection-card-wrapper">
+          <el-card class="collection-card" shadow="hover" @click="viewDetails(item)">
             <!-- 类型标签和删除按钮 -->
             <div class="card-header">
-              <div
-                class="item-type-badge"
-                :class="`type-${item.type}`"
-              >
+              <div class="item-type-badge" :class="`type-${item.type}`">
                 <el-icon class="type-icon">
                   <component :is="getTypeIcon(item.type)" />
                 </el-icon>
@@ -206,10 +204,7 @@
     </div>
 
     <!-- 菜品详情弹窗 -->
-    <DishDetailDialog
-      v-model="dishDialogVisible"
-      :dish-data="selectedDish"
-    />
+    <DishDetailDialog v-model="dishDialogVisible" :dish-data="selectedDish" />
   </div>
 </template>
 
@@ -404,15 +399,11 @@ const viewDetails = (item) => {
       break
     case 'article':
       // 文章功能提示
-      ElMessageBox.alert(
-        '文章收藏功能正在开发中，敬请期待！您可以先收藏商家和菜品。',
-        '温馨提示',
-        {
-          confirmButtonText: '我知道了',
-          type: 'info',
-          icon: InfoFilled
-        }
-      )
+      ElMessageBox.alert('文章收藏功能正在开发中，敬请期待！您可以先收藏商家和菜品。', '温馨提示', {
+        confirmButtonText: '我知道了',
+        type: 'info',
+        icon: InfoFilled
+      })
       break
     default:
       ElMessage.info('未知收藏类型')

@@ -59,13 +59,13 @@ const orderProgressSteps = computed(() => {
 
   // 根据订单状态调整进度
   const statusIndexMap = {
-    'pending': 0,
-    'pendingAccept': 1,
-    'processing': 2,
-    'delivered': 3,
-    'completed': 4,
-    'cancelled': 2,
-    'pendingComment': 4
+    pending: 0,
+    pendingAccept: 1,
+    processing: 2,
+    delivered: 3,
+    completed: 4,
+    cancelled: 2,
+    pendingComment: 4
   }
 
   const currentIndex = statusIndexMap[order.value.status] || 0
@@ -86,13 +86,13 @@ const orderProgressSteps = computed(() => {
 // 将后端状态码转换为前端状态文本
 const orderStatusToText = (statusCode) => {
   const statusMap = {
-    0: 'pending',        // 待支付
-    1: 'pendingAccept',  // 待接单
-    2: 'processing',     // 备菜中
-    3: 'processing',     // 烹饪中
-    4: 'processing',     // 待上菜
-    5: 'delivered',      // 已送达
-    6: 'cancelled'       // 已取消
+    0: 'pending', // 待支付
+    1: 'pendingAccept', // 待接单
+    2: 'processing', // 备菜中
+    3: 'processing', // 烹饪中
+    4: 'processing', // 待上菜
+    5: 'delivered', // 已送达
+    6: 'cancelled' // 已取消
   }
   return statusMap[statusCode] || 'pending'
 }
@@ -138,9 +138,7 @@ const loadOrderDetail = async () => {
     const orderData = orderResponse.data.data
 
     // 2. 获取订单菜品信息
-    const dishesResponse = await axios.get(
-      `${API_CONFIG.baseURL}/v1/orders/${orderData.id}/dishes`
-    )
+    const dishesResponse = await axios.get(`${API_CONFIG.baseURL}/v1/orders/${orderData.id}/dishes`)
 
     // 3. 获取菜品详情
     let items = []
@@ -148,9 +146,7 @@ const loadOrderDetail = async () => {
       items = await Promise.all(
         dishesResponse.data.data.map(async (orderDish) => {
           try {
-            const dishResponse = await axios.get(
-              `${API_CONFIG.baseURL}/dishes/${orderDish.dishId}`
-            )
+            const dishResponse = await axios.get(`${API_CONFIG.baseURL}/dishes/${orderDish.dishId}`)
             const dish = dishResponse.data?.data
             return {
               id: dish?.id || orderDish.dishId,
@@ -217,7 +213,8 @@ onMounted(() => {
 
 // 取消订单
 const cancelOrder = (order) => {
-  axios.put(API_CONFIG.baseURL + API_CONFIG.order.detail + order.id + '/cancel')
+  axios
+    .put(API_CONFIG.baseURL + API_CONFIG.order.detail + order.id + '/cancel')
     .then((response) => {
       if (response.data.success) {
         order.status = 'cancelled'
@@ -249,13 +246,13 @@ const getActiveStep = () => {
   if (!order.value) return 0
 
   const statusStepMap = {
-    'pending': 0,
-    'pendingAccept': 1,
-    'processing': 2,
-    'delivered': 3,
-    'completed': 4,
-    'cancelled': 2,
-    'pendingComment': 4
+    pending: 0,
+    pendingAccept: 1,
+    processing: 2,
+    delivered: 3,
+    completed: 4,
+    cancelled: 2,
+    pendingComment: 4
   }
 
   return statusStepMap[order.value.status] || 0
@@ -335,7 +332,10 @@ const getActiveStep = () => {
               <span class="label">配送费:</span>
               <span class="value">¥{{ order.deliveryFee.toFixed(2) }}</span>
             </div>
-            <div class="delivery-item" v-if="order.status === 'processing' || order.status === 'delivered'">
+            <div
+              class="delivery-item"
+              v-if="order.status === 'processing' || order.status === 'delivered'"
+            >
               <span class="label">预计送达:</span>
               <span class="value highlight">约30分钟</span>
             </div>
@@ -376,19 +376,29 @@ const getActiveStep = () => {
                 <div class="item-name">{{ item.name }}</div>
 
                 <!-- 必选食材 -->
-                <div v-if="item.requiredIngredients && item.requiredIngredients.length > 0" class="item-ingredients">
+                <div
+                  v-if="item.requiredIngredients && item.requiredIngredients.length > 0"
+                  class="item-ingredients"
+                >
                   <div class="ingredients-label">
                     <span class="label-text">必选:</span>
                   </div>
                   <div class="ingredients-list">
-                    <span class="ingredient-tag required" v-for="ing in item.requiredIngredients" :key="ing">
+                    <span
+                      class="ingredient-tag required"
+                      v-for="ing in item.requiredIngredients"
+                      :key="ing"
+                    >
                       {{ ing }}
                     </span>
                   </div>
                 </div>
 
                 <!-- 可选食材 -->
-                <div v-if="item.optionalIngredients && item.optionalIngredients.length > 0" class="item-ingredients">
+                <div
+                  v-if="item.optionalIngredients && item.optionalIngredients.length > 0"
+                  class="item-ingredients"
+                >
                   <div class="ingredients-label">
                     <span class="label-text">可选:</span>
                   </div>
@@ -399,7 +409,9 @@ const getActiveStep = () => {
                       :key="ing.id || ing.name"
                     >
                       {{ ing.name }}
-                      <span v-if="ing.price" class="ingredient-price">+¥{{ ing.price.toFixed(2) }}</span>
+                      <span v-if="ing.price" class="ingredient-price"
+                        >+¥{{ ing.price.toFixed(2) }}</span
+                      >
                     </span>
                   </div>
                 </div>
@@ -418,7 +430,9 @@ const getActiveStep = () => {
 
                 <div class="item-price-detail">
                   <span class="unit-price">¥{{ item.price.toFixed(2) }} /份</span>
-                  <span class="total-price">小计 ¥{{ (item.price * item.quantity).toFixed(2) }}</span>
+                  <span class="total-price"
+                    >小计 ¥{{ (item.price * item.quantity).toFixed(2) }}</span
+                  >
                 </div>
               </div>
             </div>
@@ -942,7 +956,11 @@ const getActiveStep = () => {
               transition: all 0.2s ease;
 
               &.required {
-                background: linear-gradient(135deg, rgba(103, 194, 58, 0.9) 0%, rgba(93, 175, 52, 0.9) 100%);
+                background: linear-gradient(
+                  135deg,
+                  rgba(103, 194, 58, 0.9) 0%,
+                  rgba(93, 175, 52, 0.9) 100%
+                );
                 color: white;
                 font-weight: 500;
                 box-shadow: 0 1px 4px rgba(103, 194, 58, 0.25);

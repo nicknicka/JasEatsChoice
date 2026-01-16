@@ -86,7 +86,7 @@ const calculateUnreadCounts = () => {
 const totalStats = computed(() => {
   return {
     total: messages.value.length,
-    todayMessages: messages.value.filter(msg => {
+    todayMessages: messages.value.filter((msg) => {
       const msgDate = new Date(msg.time)
       const today = new Date()
       return msgDate.toDateString() === today.toDateString()
@@ -96,12 +96,16 @@ const totalStats = computed(() => {
 
 // 监听未读消息变化，触发动画
 import { watch } from 'vue'
-watch(unreadCounts, (newVal) => {
-  animateValue('total', newVal.total)
-  animateValue('system', newVal.system)
-  animateValue('order', newVal.order)
-  animateValue('comment', newVal.comment)
-}, { deep: true })
+watch(
+  unreadCounts,
+  (newVal) => {
+    animateValue('total', newVal.total)
+    animateValue('system', newVal.system)
+    animateValue('order', newVal.order)
+    animateValue('comment', newVal.comment)
+  },
+  { deep: true }
+)
 
 // 更新筛选
 const updateFilter = () => {
@@ -241,9 +245,7 @@ const markAllAsRead = () => {
         <p class="page-subtitle">管理您的所有通知和消息</p>
       </div>
       <div class="header-right" v-if="!selectedMessage">
-        <el-button type="success" @click="markAllAsRead" :icon="Check">
-          全部标记为已读
-        </el-button>
+        <el-button type="success" @click="markAllAsRead" :icon="Check"> 全部标记为已读 </el-button>
         <el-button type="default" @click="refreshMessages" :loading="loading" :icon="Refresh">
           刷新
         </el-button>
@@ -317,8 +319,17 @@ const markAllAsRead = () => {
             <div
               v-for="category in ['all', 'system', 'order', 'comment']"
               :key="category"
-              :class="['category-tag', `category-tag-${category}`, { 'active': activeCategory === category }]"
-              @click="() => { activeCategory = category; updateFilter() }"
+              :class="[
+                'category-tag',
+                `category-tag-${category}`,
+                { active: activeCategory === category }
+              ]"
+              @click="
+                () => {
+                  activeCategory = category
+                  updateFilter()
+                }
+              "
             >
               <el-icon class="tag-icon">
                 <component :is="messageCategories[category].icon" />
@@ -353,7 +364,9 @@ const markAllAsRead = () => {
 
             <div class="message-content">
               <div class="message-title">{{ message.title }}</div>
-              <div class="message-preview" v-if="message.content">{{ message.content.substring(0, 50) }}...</div>
+              <div class="message-preview" v-if="message.content">
+                {{ message.content.substring(0, 50) }}...
+              </div>
               <div class="message-meta">
                 <span class="message-time">{{ message.time }}</span>
                 <el-tag :type="message.isRead ? 'success' : 'warning'" size="small">
@@ -589,7 +602,11 @@ const markAllAsRead = () => {
           background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
         }
         .stat-icon {
-          background: linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(37, 99, 235, 0.08) 100%);
+          background: linear-gradient(
+            135deg,
+            rgba(59, 130, 246, 0.12) 0%,
+            rgba(37, 99, 235, 0.08) 100%
+          );
           color: #3b82f6;
           box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
         }
@@ -606,11 +623,17 @@ const markAllAsRead = () => {
           background: linear-gradient(180deg, #f56c6c 0%, #ff8787 100%);
         }
         .stat-icon {
-          background: linear-gradient(135deg, rgba(245, 108, 108, 0.12) 0%, rgba(255, 135, 135, 0.08) 100%);
+          background: linear-gradient(
+            135deg,
+            rgba(245, 108, 108, 0.12) 0%,
+            rgba(255, 135, 135, 0.08) 100%
+          );
           color: #f56c6c;
           box-shadow: 0 4px 12px rgba(245, 108, 108, 0.15);
         }
-        .stat-value { color: #f56c6c; }
+        .stat-value {
+          color: #f56c6c;
+        }
       }
 
       &.system {
@@ -618,11 +641,17 @@ const markAllAsRead = () => {
           background: linear-gradient(180deg, #e6a23c 0%, #f0a858 100%);
         }
         .stat-icon {
-          background: linear-gradient(135deg, rgba(230, 162, 60, 0.12) 0%, rgba(240, 168, 88, 0.08) 100%);
+          background: linear-gradient(
+            135deg,
+            rgba(230, 162, 60, 0.12) 0%,
+            rgba(240, 168, 88, 0.08) 100%
+          );
           color: #e6a23c;
           box-shadow: 0 4px 12px rgba(230, 162, 60, 0.15);
         }
-        .stat-value { color: #e6a23c; }
+        .stat-value {
+          color: #e6a23c;
+        }
       }
 
       &.order {
@@ -630,11 +659,17 @@ const markAllAsRead = () => {
           background: linear-gradient(180deg, #409eff 0%, #66b1ff 100%);
         }
         .stat-icon {
-          background: linear-gradient(135deg, rgba(64, 158, 255, 0.12) 0%, rgba(102, 177, 255, 0.08) 100%);
+          background: linear-gradient(
+            135deg,
+            rgba(64, 158, 255, 0.12) 0%,
+            rgba(102, 177, 255, 0.08) 100%
+          );
           color: #409eff;
           box-shadow: 0 4px 12px rgba(64, 158, 255, 0.15);
         }
-        .stat-value { color: #409eff; }
+        .stat-value {
+          color: #409eff;
+        }
       }
 
       &.comment {
@@ -642,11 +677,17 @@ const markAllAsRead = () => {
           background: linear-gradient(180deg, #67c23a 0%, #7bcf58 100%);
         }
         .stat-icon {
-          background: linear-gradient(135deg, rgba(103, 194, 58, 0.12) 0%, rgba(123, 207, 88, 0.08) 100%);
+          background: linear-gradient(
+            135deg,
+            rgba(103, 194, 58, 0.12) 0%,
+            rgba(123, 207, 88, 0.08) 100%
+          );
           color: #67c23a;
           box-shadow: 0 4px 12px rgba(103, 194, 58, 0.15);
         }
-        .stat-value { color: #67c23a; }
+        .stat-value {
+          color: #67c23a;
+        }
       }
     }
   }
@@ -839,19 +880,31 @@ const markAllAsRead = () => {
               transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
               &.icon-system {
-                background: linear-gradient(135deg, rgba(230, 162, 60, 0.12) 0%, rgba(230, 162, 60, 0.06) 100%);
+                background: linear-gradient(
+                  135deg,
+                  rgba(230, 162, 60, 0.12) 0%,
+                  rgba(230, 162, 60, 0.06) 100%
+                );
                 color: #e6a23c;
                 box-shadow: 0 4px 12px rgba(230, 162, 60, 0.12);
               }
 
               &.icon-order {
-                background: linear-gradient(135deg, rgba(64, 158, 255, 0.12) 0%, rgba(64, 158, 255, 0.06) 100%);
+                background: linear-gradient(
+                  135deg,
+                  rgba(64, 158, 255, 0.12) 0%,
+                  rgba(64, 158, 255, 0.06) 100%
+                );
                 color: #409eff;
                 box-shadow: 0 4px 12px rgba(64, 158, 255, 0.12);
               }
 
               &.icon-comment {
-                background: linear-gradient(135deg, rgba(103, 194, 58, 0.12) 0%, rgba(103, 194, 58, 0.06) 100%);
+                background: linear-gradient(
+                  135deg,
+                  rgba(103, 194, 58, 0.12) 0%,
+                  rgba(103, 194, 58, 0.06) 100%
+                );
                 color: #67c23a;
                 box-shadow: 0 4px 12px rgba(103, 194, 58, 0.12);
               }
@@ -931,17 +984,29 @@ const markAllAsRead = () => {
             border-radius: 10px;
 
             &.icon-system {
-              background: linear-gradient(135deg, rgba(230, 162, 60, 0.15) 0%, rgba(230, 162, 60, 0.08) 100%);
+              background: linear-gradient(
+                135deg,
+                rgba(230, 162, 60, 0.15) 0%,
+                rgba(230, 162, 60, 0.08) 100%
+              );
               color: #e6a23c;
             }
 
             &.icon-order {
-              background: linear-gradient(135deg, rgba(64, 158, 255, 0.15) 0%, rgba(64, 158, 255, 0.08) 100%);
+              background: linear-gradient(
+                135deg,
+                rgba(64, 158, 255, 0.15) 0%,
+                rgba(64, 158, 255, 0.08) 100%
+              );
               color: #409eff;
             }
 
             &.icon-comment {
-              background: linear-gradient(135deg, rgba(103, 194, 58, 0.15) 0%, rgba(103, 194, 58, 0.08) 100%);
+              background: linear-gradient(
+                135deg,
+                rgba(103, 194, 58, 0.15) 0%,
+                rgba(103, 194, 58, 0.08) 100%
+              );
               color: #67c23a;
             }
           }

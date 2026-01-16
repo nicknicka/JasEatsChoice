@@ -7,9 +7,22 @@ import relativeTime from 'dayjs/plugin/relativeTime'
 dayjs.extend(relativeTime)
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  ArrowDown, ArrowUp, Edit, Delete, Download,
-  Check, CirclePlus, CircleCheck, CircleClose, InfoFilled, Clock, Food,
-  Document, Grid, Switch, Search
+  ArrowDown,
+  ArrowUp,
+  Edit,
+  Delete,
+  Download,
+  Check,
+  CirclePlus,
+  CircleCheck,
+  CircleClose,
+  InfoFilled,
+  Clock,
+  Food,
+  Document,
+  Grid,
+  Switch,
+  Search
 } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
@@ -133,29 +146,30 @@ watch(
 
 // 切换状态并同步到后端
 const toggleMenuStatus = (menu) => {
-  let newStatus = menu.status === 'online' ? 'offline' : 'online';
+  let newStatus = menu.status === 'online' ? 'offline' : 'online'
 
   // 从authStore获取商家ID
-  const authStore = useAuthStore();
-  const merchantId = authStore.merchantId;
+  const authStore = useAuthStore()
+  const merchantId = authStore.merchantId
 
-  axios.put(
-    `${API_CONFIG.baseURL}${API_CONFIG.merchant.menu.replace('{merchantId}', merchantId)}/${menu.id}`,
-    { status: newStatus }
-  )
-  .then((response) => {
-    if (response.data && response.data.success) {
-      menu.status = newStatus;
-      updateFilter();
-      ElMessage.success(`菜单已${menuStatusMap[newStatus].text}`);
-    } else {
-      ElMessage.error('更新菜单状态失败: ' + (response.data.message || '未知错误'));
-    }
-  })
-  .catch((error) => {
-    console.error('更新菜单状态失败:', error);
-    ElMessage.error('更新菜单状态失败');
-  });
+  axios
+    .put(
+      `${API_CONFIG.baseURL}${API_CONFIG.merchant.menu.replace('{merchantId}', merchantId)}/${menu.id}`,
+      { status: newStatus }
+    )
+    .then((response) => {
+      if (response.data && response.data.success) {
+        menu.status = newStatus
+        updateFilter()
+        ElMessage.success(`菜单已${menuStatusMap[newStatus].text}`)
+      } else {
+        ElMessage.error('更新菜单状态失败: ' + (response.data.message || '未知错误'))
+      }
+    })
+    .catch((error) => {
+      console.error('更新菜单状态失败:', error)
+      ElMessage.error('更新菜单状态失败')
+    })
 }
 
 // 编辑菜单
@@ -237,11 +251,21 @@ const exportMenu = (menu) => {
     [
       menu.name,
       menuStatusMap[menu.status].text,
-      Array.isArray(menu.dishes) ? menu.dishes.length : (menu.dishes || 0),
+      Array.isArray(menu.dishes) ? menu.dishes.length : menu.dishes || 0,
       dayjs(menu.updateTime).format('YYYY-MM-DD HH:mm:ss'),
-      menu.autoOnline ? (menu.autoOnline.includes('T') || menu.autoOnline.length > 8 ? dayjs(menu.autoOnline).format('HH:mm') : dayjs(menu.autoOnline, 'HH:mm:ss').format('HH:mm')) : '',
-      menu.autoOffline ? (menu.autoOffline.includes('T') || menu.autoOffline.length > 8 ? dayjs(menu.autoOffline).format('HH:mm') : dayjs(menu.autoOffline, 'HH:mm:ss').format('HH:mm')) : ''
-    ].map(item => `"${item}"`).join(',') // 转义包含逗号或引号的内容
+      menu.autoOnline
+        ? menu.autoOnline.includes('T') || menu.autoOnline.length > 8
+          ? dayjs(menu.autoOnline).format('HH:mm')
+          : dayjs(menu.autoOnline, 'HH:mm:ss').format('HH:mm')
+        : '',
+      menu.autoOffline
+        ? menu.autoOffline.includes('T') || menu.autoOffline.length > 8
+          ? dayjs(menu.autoOffline).format('HH:mm')
+          : dayjs(menu.autoOffline, 'HH:mm:ss').format('HH:mm')
+        : ''
+    ]
+      .map((item) => `"${item}"`)
+      .join(',') // 转义包含逗号或引号的内容
   ].join('\n')
 
   // 创建Blob对象
@@ -340,8 +364,7 @@ const saveNewMenu = () => {
         updateFilter()
         addMenuDialogVisible.value = false
         ElMessage.success('菜单已添加')
-      }else
-      {
+      } else {
         ElMessage.error(`保存菜单失败: ${response.data.message || '未知错误'}`)
       }
     })
@@ -425,7 +448,7 @@ const toggleSelectAll = () => {
             "
             class="status-filter"
           >
-            <el-icon v-if="status !== 'all' && status === 'online'"><CircleCheck /></el-icon> 
+            <el-icon v-if="status !== 'all' && status === 'online'"><CircleCheck /></el-icon>
             <el-icon v-if="status !== 'all' && status === 'draft'"><CirclePlus /></el-icon>
             <el-icon v-if="status !== 'all' && status === 'offline'"><CircleClose /></el-icon>
             {{ status === 'all' ? '全部菜单' : menuStatusMap[status].text }}
@@ -434,7 +457,11 @@ const toggleSelectAll = () => {
 
         <div class="filter-section">
           <span class="filter-label">排序：</span>
-          <el-select v-model="sortField" style="width: 120px; margin-right: 8px" @change="updateFilter">
+          <el-select
+            v-model="sortField"
+            style="width: 120px; margin-right: 8px"
+            @change="updateFilter"
+          >
             <el-option label="更新时间" value="updateTime" />
             <el-option label="菜单名称" value="name" />
           </el-select>
@@ -460,7 +487,10 @@ const toggleSelectAll = () => {
             @change="toggleSelectAll"
           />
           全选
-          <span class="selected-count" :style="{ visibility: selectedMenus.length > 0 ? 'visible' : 'hidden' }">
+          <span
+            class="selected-count"
+            :style="{ visibility: selectedMenus.length > 0 ? 'visible' : 'hidden' }"
+          >
             ({{ selectedMenus.length }}/{{ filteredMenus.length }})
           </span>
         </span>
@@ -515,11 +545,7 @@ const toggleSelectAll = () => {
 
     <div class="menu-list">
       <div class="menu-list-container">
-        <div
-          class="menu-item"
-          v-for="menu in paginatedMenus"
-          :key="menu.id"
-        >
+        <div class="menu-item" v-for="menu in paginatedMenus" :key="menu.id">
           <div class="menu-selection">
             <el-checkbox
               :model-value="selectedMenus.includes(menu)"
@@ -533,9 +559,19 @@ const toggleSelectAll = () => {
                 <span class="name">{{ menu.name }}</span>
                 <!-- 菜单类型标签，不同类型不同样式 -->
                 <el-tag
-                  :type="menu.category === '早餐' ? 'success' : menu.category === '午餐' ? 'primary' : menu.category === '晚餐' ? 'warning' : menu.category === '加餐' ? 'info' : 'info'"
+                  :type="
+                    menu.category === '早餐'
+                      ? 'success'
+                      : menu.category === '午餐'
+                        ? 'primary'
+                        : menu.category === '晚餐'
+                          ? 'warning'
+                          : menu.category === '加餐'
+                            ? 'info'
+                            : 'info'
+                  "
                   size="small"
-                  style="margin-right: 8px;"
+                  style="margin-right: 8px"
                 >
                   {{ menu.category }}
                 </el-tag>
@@ -556,15 +592,11 @@ const toggleSelectAll = () => {
               <div class="menu-dishes">
                 <el-tooltip
                   v-if="menu.dishes && Array.isArray(menu.dishes) && menu.dishes.length > 0"
-                  :content="menu.dishes.map(dish => dish.name || dish).join(', ')"
+                  :content="menu.dishes.map((dish) => dish.name || dish).join(', ')"
                   placement="top"
                 >
                   <div class="dishes-tags-container">
-                    <el-tag
-                      v-for="(dish, index) in menu.dishes"
-                      :key="index"
-                      size="small"
-                    >
+                    <el-tag v-for="(dish, index) in menu.dishes" :key="index" size="small">
                       {{ dish.name || dish }}
                     </el-tag>
                   </div>
@@ -579,11 +611,17 @@ const toggleSelectAll = () => {
                   </div>
                 </el-tooltip>
                 <!-- 兼容旧数据结构（菜品数量） -->
-                <div v-else-if="menu.dishes && typeof menu.dishes === 'number'" class="dishes-count">
+                <div
+                  v-else-if="menu.dishes && typeof menu.dishes === 'number'"
+                  class="dishes-count"
+                >
                   <el-icon><Food /></el-icon> {{ menu.dishes }} 菜品
                 </div>
                 <!-- 当 dishes 是空数组时显示 0 菜品 -->
-                <div v-else-if="menu.dishes && Array.isArray(menu.dishes) && menu.dishes.length === 0" class="dishes-count">
+                <div
+                  v-else-if="menu.dishes && Array.isArray(menu.dishes) && menu.dishes.length === 0"
+                  class="dishes-count"
+                >
                   <el-icon><Food /></el-icon> 0 菜品
                 </div>
                 <!-- 无菜品时的显示 -->
@@ -602,11 +640,19 @@ const toggleSelectAll = () => {
               <div class="auto-times">
                 <span v-if="menu.autoOnline" class="auto-online">
                   <el-icon><Clock /></el-icon>
-                  自动上架：{{ menu.autoOnline.includes('T') || menu.autoOnline.length > 8 ? dayjs(menu.autoOnline).format('HH:mm') : dayjs(menu.autoOnline, 'HH:mm:ss').format('HH:mm') }}
+                  自动上架：{{
+                    menu.autoOnline.includes('T') || menu.autoOnline.length > 8
+                      ? dayjs(menu.autoOnline).format('HH:mm')
+                      : dayjs(menu.autoOnline, 'HH:mm:ss').format('HH:mm')
+                  }}
                 </span>
                 <span v-if="menu.autoOffline" class="auto-offline">
                   <el-icon><Clock /></el-icon>
-                  自动下架：{{ menu.autoOffline.includes('T') || menu.autoOffline.length > 8 ? dayjs(menu.autoOffline).format('HH:mm') : dayjs(menu.autoOffline, 'HH:mm:ss').format('HH:mm') }}
+                  自动下架：{{
+                    menu.autoOffline.includes('T') || menu.autoOffline.length > 8
+                      ? dayjs(menu.autoOffline).format('HH:mm')
+                      : dayjs(menu.autoOffline, 'HH:mm:ss').format('HH:mm')
+                  }}
                 </span>
               </div>
             </div>
@@ -645,7 +691,9 @@ const toggleSelectAll = () => {
     <!-- 空数据提示 -->
     <el-empty v-if="filteredMenus.length === 0" description="您还没有创建任何菜单~">
       <template #bottom>
-        <el-button type="primary" size="small" @click="addMenuDialogVisible = true">新增菜单</el-button>
+        <el-button type="primary" size="small" @click="addMenuDialogVisible = true"
+          >新增菜单</el-button
+        >
       </template>
     </el-empty>
 
@@ -653,7 +701,9 @@ const toggleSelectAll = () => {
     <el-dialog v-model="addMenuDialogVisible" title="添加菜单" width="600px" top="10%">
       <div class="add-menu-form">
         <div class="info-item">
-          <span class="info-label"><el-icon><Document /></el-icon> 菜单名称</span>
+          <span class="info-label"
+            ><el-icon><Document /></el-icon> 菜单名称</span
+          >
           <el-input
             v-model="newMenu.name"
             placeholder="请输入菜单名称"
@@ -662,7 +712,9 @@ const toggleSelectAll = () => {
           ></el-input>
         </div>
         <div class="info-item">
-          <span class="info-label"><el-icon><Grid /></el-icon> 菜单分类</span>
+          <span class="info-label"
+            ><el-icon><Grid /></el-icon> 菜单分类</span
+          >
           <el-select
             v-model="newMenu.category"
             placeholder="选择菜单分类"
@@ -676,7 +728,9 @@ const toggleSelectAll = () => {
           </el-select>
         </div>
         <div class="info-item">
-          <span class="info-label"><el-icon><Clock /></el-icon> 自动上架时间</span>
+          <span class="info-label"
+            ><el-icon><Clock /></el-icon> 自动上架时间</span
+          >
           <el-time-picker
             v-model="newMenu.autoOnline"
             type="fixed-time"
@@ -687,7 +741,9 @@ const toggleSelectAll = () => {
           ></el-time-picker>
         </div>
         <div class="info-item">
-          <span class="info-label"><el-icon><Clock /></el-icon> 自动下架时间</span>
+          <span class="info-label"
+            ><el-icon><Clock /></el-icon> 自动下架时间</span
+          >
           <el-time-picker
             v-model="newMenu.autoOffline"
             type="fixed-time"
@@ -698,7 +754,9 @@ const toggleSelectAll = () => {
           ></el-time-picker>
         </div>
         <div class="info-item">
-          <span class="info-label"><el-icon><Switch /></el-icon> 菜单状态</span>
+          <span class="info-label"
+            ><el-icon><Switch /></el-icon> 菜单状态</span
+          >
           <el-select
             v-model="newMenu.status"
             placeholder="选择菜单状态"
@@ -873,7 +931,7 @@ const toggleSelectAll = () => {
       overflow: hidden;
 
       &::before {
-        content: "";
+        content: '';
         position: absolute;
         top: 0;
         left: 0;

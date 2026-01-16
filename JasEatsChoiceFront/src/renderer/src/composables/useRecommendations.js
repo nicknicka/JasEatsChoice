@@ -5,11 +5,7 @@ import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import axios from 'axios'
 import { API_CONFIG } from '../config/index.js'
-import {
-  FESTIVAL_DISHES,
-  getCurrentFestival,
-  getDishIcon
-} from '../constants/festivalDishes.js'
+import { FESTIVAL_DISHES, getCurrentFestival, getDishIcon } from '../constants/festivalDishes.js'
 import {
   RECOMMENDATION_TYPES,
   MOCK_DISHES,
@@ -202,9 +198,7 @@ export function useRecommendations() {
       isLoading.value = true
       const userId = parseInt(localStorage.getItem('userId') || '1', 10)
 
-      const response = await axios.get(
-        `${API_CONFIG.baseURL}/v1/recommend/recommend/${userId}`
-      )
+      const response = await axios.get(`${API_CONFIG.baseURL}/v1/recommend/recommend/${userId}`)
 
       const data = response.data.data
       if (data && data.dishes) {

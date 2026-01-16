@@ -56,13 +56,15 @@ const updateOrderStatus = (newStatus) => {
       cancelButtonText: '取消',
       type: 'warning'
     }
-  ).then(() => {
-    emit('status-update', {
-      orderId: props.order.orderId,
-      status: newStatus
+  )
+    .then(() => {
+      emit('status-update', {
+        orderId: props.order.orderId,
+        status: newStatus
+      })
+      ElMessage.success('订单状态已更新')
     })
-    ElMessage.success('订单状态已更新')
-  }).catch(() => {})
+    .catch(() => {})
 }
 
 // 发送订单提醒
@@ -162,13 +164,9 @@ const sendReminder = () => {
       <div class="detail-actions">
         <div class="actions-title">快捷操作</div>
         <div class="action-buttons">
-          <el-button size="small" @click="viewOrderDetail" :icon="View">
-            查看订单
-          </el-button>
+          <el-button size="small" @click="viewOrderDetail" :icon="View"> 查看订单 </el-button>
           <el-dropdown trigger="click">
-            <el-button type="primary" size="small" :icon="Refresh">
-              更新状态
-            </el-button>
+            <el-button type="primary" size="small" :icon="Refresh"> 更新状态 </el-button>
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item

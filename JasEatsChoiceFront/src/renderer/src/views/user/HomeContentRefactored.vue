@@ -46,7 +46,8 @@ const { weather, loading: weatherLoading, fetchWeather } = useWeather()
 const { favoriteDishIds, loadFavorites, isFavorite, toggleFavorite, showError } = useFavorites()
 const shareDish = useShare()
 const { initializeWebSocket, setupWebSocketListeners } = useWebSocket()
-const { cascaderLocationData, locationDialogVisible, manualLocation, handleManualLocationSelect } = useLocation()
+const { cascaderLocationData, locationDialogVisible, manualLocation, handleManualLocationSelect } =
+  useLocation()
 const { retryFetch } = useRetry()
 
 // 加载状态
@@ -68,7 +69,13 @@ const getWeatherIcon = () => {
   const condition = weather.value.condition
   if (!condition) return Sunny
   if (condition.includes('晴')) return Sunny
-  if (condition.includes('云') || condition.includes('阴') || condition.includes('雨') || condition.includes('雷') || condition.includes('雪'))
+  if (
+    condition.includes('云') ||
+    condition.includes('阴') ||
+    condition.includes('雨') ||
+    condition.includes('雷') ||
+    condition.includes('雪')
+  )
     return Cloudy
   return Sunny
 }
@@ -151,7 +158,9 @@ const handleConfirmLocation = () => {
     const fullAddress = manualLocation.value.join('')
     const city = manualLocation.value[1] || manualLocation.value[0] || ''
 
-    weather.value.address = Array.isArray(fullAddress) ? '未获取到详细地址' : fullAddress || '未获取到详细地址'
+    weather.value.address = Array.isArray(fullAddress)
+      ? '未获取到详细地址'
+      : fullAddress || '未获取到详细地址'
     weather.value.city = Array.isArray(city) ? city.join('') : city || '未知城市'
 
     fetchWeather(city).then(() => {
@@ -270,7 +279,9 @@ onMounted(async () => {
 
             <div class="weather-details">
               <div class="condition-badge">
-                <span class="condition-icon">{{ weather.condition?.includes('晴') ? '☀️' : '☁️' }}</span>
+                <span class="condition-icon">{{
+                  weather.condition?.includes('晴') ? '☀️' : '☁️'
+                }}</span>
                 <span class="condition-text">{{ weather.condition || '未知天气' }}</span>
               </div>
 
@@ -297,7 +308,10 @@ onMounted(async () => {
       <div v-if="recommendedDishesLoading" class="skeleton-wrapper">
         <el-skeleton animated>
           <template #template>
-            <el-skeleton-item variant="image" style="width: 100%; height: 320px; border-radius: 8px" />
+            <el-skeleton-item
+              variant="image"
+              style="width: 100%; height: 320px; border-radius: 8px"
+            />
           </template>
         </el-skeleton>
       </div>
@@ -376,7 +390,10 @@ onMounted(async () => {
         <div class="tutorial-grid">
           <el-skeleton v-for="i in 4" :key="i" animated>
             <template #template>
-              <el-skeleton-item variant="image" style="width: 100%; height: 120px; border-radius: 4px" />
+              <el-skeleton-item
+                variant="image"
+                style="width: 100%; height: 120px; border-radius: 4px"
+              />
               <el-skeleton-item variant="h3" style="width: 80%; margin: 12px 0 8px" />
               <el-skeleton-item variant="text" style="width: 60%" />
             </template>
@@ -400,7 +417,10 @@ onMounted(async () => {
       <div v-else class="fade-in">
         <div class="tutorial-grid" role="list" aria-label="教程列表">
           <TutorialCard
-            v-for="(tutorial, index) in featuredTutorials.slice(0, HOME_CONSTANTS.TUTORIAL.MAX_DISPLAY)"
+            v-for="(tutorial, index) in featuredTutorials.slice(
+              0,
+              HOME_CONSTANTS.TUTORIAL.MAX_DISPLAY
+            )"
             :key="index"
             :tutorial="tutorial"
             @click="handleTutorialClick"

@@ -80,9 +80,7 @@ const hasIngredients = (item) => {
 
 // 格式化可选食材
 const formatOptionalIngredients = (ingredients) => {
-  return ingredients
-    .map((ing) => (typeof ing === 'object' ? ing.name : ing))
-    .join('、')
+  return ingredients.map((ing) => (typeof ing === 'object' ? ing.name : ing)).join('、')
 }
 </script>
 

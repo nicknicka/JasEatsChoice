@@ -34,7 +34,7 @@ const addToLocationHistory = (location) => {
   if (!location || location === '未获取到详细地址') return
 
   // 移除重复项
-  locationHistory.value = locationHistory.value.filter(item => item !== location)
+  locationHistory.value = locationHistory.value.filter((item) => item !== location)
 
   // 添加到开头
   locationHistory.value.unshift(location)
@@ -255,16 +255,12 @@ export function useWeather() {
 
   // 显示错误对话框
   const showWeatherErrorDialog = (onRetry, onManualSelect) => {
-    ElMessageBox.confirm(
-      '无法获取位置信息，是否手动选择位置？',
-      '定位失败',
-      {
-        confirmButtonText: '手动选择',
-        cancelButtonText: '重试',
-        type: 'warning',
-        distinguishCancelAndClose: true
-      }
-    )
+    ElMessageBox.confirm('无法获取位置信息，是否手动选择位置？', '定位失败', {
+      confirmButtonText: '手动选择',
+      cancelButtonText: '重试',
+      type: 'warning',
+      distinguishCancelAndClose: true
+    })
       .then(() => {
         // 用户选择手动选择
         if (onManualSelect) onManualSelect()

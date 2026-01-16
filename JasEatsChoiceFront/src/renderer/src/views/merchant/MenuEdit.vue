@@ -143,7 +143,7 @@ const hasUnsavedChanges = () => {
   // 比较菜品详细信息
   for (let i = 0; i < dishesList.value.length; i++) {
     const currentDish = dishesList.value[i]
-    const originalDish = originalDishesList.value.find(d => d.id === currentDish.id)
+    const originalDish = originalDishesList.value.find((d) => d.id === currentDish.id)
 
     if (!originalDish) {
       return true
@@ -318,7 +318,7 @@ const selectedDishIdsBatch = ref([])
 // 添加菜品
 const addDish = () => {
   if (selectedDishId.value) {
-    const dish = availableDishes.value.find(d => d.id === selectedDishId.value)
+    const dish = availableDishes.value.find((d) => d.id === selectedDishId.value)
     if (dish) {
       // 检查菜品是否已在菜单中
       const isExist = dishesList.value.some((item) => item.id === dish.id)
@@ -375,7 +375,7 @@ const batchAssociateDishes = () => {
     let existingCount = 0
 
     selectedDishIdsBatch.value.forEach((dishId) => {
-      const dish = availableDishes.value.find(d => d.id === dishId)
+      const dish = availableDishes.value.find((d) => d.id === dishId)
       if (dish) {
         const isExist = dishesList.value.some((existingDish) => existingDish.id === dish.id)
         if (!isExist) {
