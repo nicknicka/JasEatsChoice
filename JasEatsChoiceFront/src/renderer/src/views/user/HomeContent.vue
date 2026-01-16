@@ -982,7 +982,7 @@ onMounted(async () => {
 
   .search-section {
     flex: 1;
-    margin-bottom: 0;
+    margin: 0;
     display: flex;
     align-items: center;
 
@@ -990,6 +990,7 @@ onMounted(async () => {
       // 确保输入框容器没有额外间距
       display: inline-flex;
       width: 100%;
+      height: 48px;
 
       :deep(.el-input__wrapper) {
         // 左侧圆角，右侧直角以便与按钮完美衔接
@@ -999,6 +1000,9 @@ onMounted(async () => {
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         padding-right: 0;
         background: rgba(255, 255, 255, 0.95);
+        height: 48px;
+        display: flex;
+        align-items: center;
 
         &:hover {
           box-shadow: 0 4px 16px rgba(255, 107, 107, 0.15);
@@ -1026,6 +1030,9 @@ onMounted(async () => {
         position: relative;
         z-index: 1; // 确保按钮覆盖在输入框边框上
         overflow: hidden;
+        height: 48px;
+        display: flex;
+        align-items: center;
 
         // 添加波纹效果
         &::before {
@@ -1052,13 +1059,16 @@ onMounted(async () => {
           color: #fff;
           font-weight: 600;
           padding: 16px 24px;
-          height: 100%;
+          height: 48px;
           border-radius: 0 24px 24px 0;
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           box-shadow: none;
           margin: 0;
           position: relative;
           z-index: 1;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
 
           &:hover {
             background-color: rgba(255, 255, 255, 0.15);

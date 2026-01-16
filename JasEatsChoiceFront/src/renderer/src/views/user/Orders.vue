@@ -399,7 +399,7 @@ const handleImageError = (event) => {
   <div class="orders-container">
     <div class="page-header">
       <CommonBackButton />
-      <h2 style="margin-left: 15px">查看订单</h2>
+      <h2 style="margin-left: 15px">订单中心</h2>
       <div style="flex: 1; text-align: right">
         <el-button
           type="default"

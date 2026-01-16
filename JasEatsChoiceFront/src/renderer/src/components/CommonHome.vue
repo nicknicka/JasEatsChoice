@@ -85,7 +85,7 @@ const menuData = {
       icon: User,
       children: [
         { index: '7', name: '用户中心', icon: User, path: '/user/home/profile' },
-        { index: '8', name: '查看订单', icon: List, path: '/user/home/orders' }
+        { index: '8', name: '订单中心', icon: List, path: '/user/home/orders' }
       ]
     },
     // 智能助手分组
