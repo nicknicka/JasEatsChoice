@@ -2,10 +2,9 @@
 import { ref, onMounted, computed } from 'vue'
 import { ElNotification } from 'element-plus'
 import { useLocation } from '../../composables/useLocation.js'
+import { useWeather } from '../../composables/useWeather.js'
 // 导入 Element Plus 图标
 import {
-  Sunny,
-  Cloudy,
   Location,
   VideoCamera,
   ArrowRight,
@@ -24,6 +23,25 @@ import { API_CONFIG } from '../../config/index.js'
 import { WS_CONFIG } from '../../constants/wsConstants.js'
 
 const router = useRouter()
+
+// 使用天气组合式函数
+const {
+  weather,
+  weatherDetailVisible,
+  showWeatherSkeleton,
+  tempRangeText,
+  weatherGradient,
+  weatherIcon,
+  weatherEmoji,
+  aqiInfo,
+  clothingAdvice,
+  exerciseAdvice,
+  fetchWeather: fetchWeatherData,
+  showWeatherDetail,
+  getRecommendedDishesSeries: getWeatherRecommendation,
+  getLocationHistory,
+  clearWeatherCache
+} = useWeather()
 
 // 默认菜品占位图 - 更精美的设计
 const defaultDishImage =
@@ -58,63 +76,9 @@ const favoriteDishIds = ref(new Set())
 // 搜索关键字
 const searchKeyword = ref('')
 
-// 天气和位置数据
-const weather = ref({
-  temp: 32,
-  condition: '晴天',
-  city: '',
-  address: ''
-})
-
 // 使用位置选择组合式函数
 const { cascaderLocationData, locationDialogVisible, manualLocation, handleManualLocationSelect } =
   useLocation()
-
-// 根据天气条件获取对应的图标
-const getWeatherIcon = () => {
-  const condition = weather.value.condition
-  if (!condition) return Sunny
-  if (condition.includes('晴')) return Sunny
-  if (
-    condition.includes('云') ||
-    condition.includes('阴') ||
-    condition.includes('雨') ||
-    condition.includes('雷') ||
-    condition.includes('雪')
-  )
-    return Cloudy
-  return Sunny
-}
-
-// 根据天气条件获取推荐的菜品系列
-const getRecommendedDishesSeries = () => {
-  const condition = weather.value.condition
-  const temp = weather.value.temp
-
-  // 默认值
-  if (condition === undefined) {
-    return '热门推荐'
-  }
-
-  // 高温天气推荐
-  if (temp > 28 || condition.includes('晴')) {
-    return '冰饮/凉菜系列'
-  }
-  // 低温天气推荐
-  if (temp < 15 || condition.includes('雪')) {
-    return '热食/火锅系列'
-  }
-  // 雨天推荐
-  if (condition.includes('雨')) {
-    return '汤品/暖食系列'
-  }
-  // 多云阴天推荐
-  if (condition.includes('云') || condition.includes('阴')) {
-    return '均衡饮食系列'
-  }
-  // 默认推荐
-  return '特色菜品系列'
-}
 
 // 从后端获取推荐菜品
 const fetchRecommendedDishes = async () => {
@@ -204,59 +168,15 @@ const handleConfirmLocation = () => {
 // 从后端获取位置和天气数据
 const fetchWeather = async (selectedCity = null) => {
   try {
-    if (selectedCity) {
-      // 为选择的城市获取天气信息
-      weather.value.city = selectedCity
-      const weatherResponse = await api.get(
-        `${API_CONFIG.weather.current}?city=${encodeURIComponent(selectedCity)}`
-      )
-      if (weatherResponse?.data) {
-        const { temperature, condition } = weatherResponse.data
-        // 仅当值已定义时才更新
-        if (temperature !== undefined) {
-          weather.value.temp = temperature
-        }
-        if (condition !== undefined) {
-          weather.value.condition = condition
-        }
+    await fetchWeatherData(selectedCity, {
+      onRetry: () => fetchWeather(selectedCity),
+      onManualSelect: () => {
+        locationDialogVisible.value = true
       }
-    } else {
-      // 步骤1: 从后端获取当前位置
-      const locationResponse = await api.get(API_CONFIG.location.location)
-      if (locationResponse.data) {
-        let { city, address } = locationResponse.data
-
-        // 处理异常数据格式
-        if (Array.isArray(city)) {
-          city = city.join('')
-        }
-        if (Array.isArray(address) || address === '[][]') {
-          address = '未获取到详细地址'
-        }
-
-        weather.value.city = city
-        weather.value.address = address
-
-        // 步骤2: 根据城市获取天气信息
-        const weatherResponse = await api.get(
-          `${API_CONFIG.weather.current}?city=${encodeURIComponent(city)}`
-        )
-        if (weatherResponse?.data) {
-          const { temperature, condition } = weatherResponse.data
-          // 仅当值已定义时才更新
-          if (temperature !== undefined) {
-            weather.value.temp = temperature
-          }
-          if (condition !== undefined) {
-            weather.value.condition = condition
-          }
-        }
-      }
-    }
+    })
   } catch (error) {
-    console.error(selectedCity ? '加载天气失败:' : '加载天气或位置失败:', error)
+    console.error('加载天气失败:', error)
   }
-  console.log('获取天气数据:', weather.value)
 }
 
 // 处理菜单导航
@@ -352,7 +272,8 @@ const retryFetch = async (fetchFn, maxRetries = 3, delay = 1000) => {
 
 // WebSocket 连接
 let wsAttempts = 0
-const maxAttempts = 10
+const maxAttempts = 3 // 减少最大重连次数
+let wsAuthenticated = false // 添加认证状态标志
 
 // 使用主进程 WebSocket 初始化带有自动重连功能的 WebSocket 连接
 const initializeWebSocket = () => {
@@ -385,6 +306,7 @@ if (!listenersRegistered && window.api) {
   // 监听来自主进程的 WebSocket 事件
   window.api?.onWebSocketOpen(() => {
     console.log('WebSocket connection established')
+    wsAuthenticated = false // 重置认证状态
 
     // 必要时发送身份验证
     const authMsg = {
@@ -420,6 +342,9 @@ if (!listenersRegistered && window.api) {
       switch (msgType) {
         case 'auth':
           console.log('Authentication response:', content)
+          // 标记认证成功
+          wsAuthenticated = true
+          wsAttempts = 0 // 重置重连计数器
           break
 
         case 'orderUpdate':
@@ -449,14 +374,19 @@ if (!listenersRegistered && window.api) {
   window.api?.onWebSocketClose((code, reason) => {
     console.log('WebSocket connection closed:', code, reason)
 
+    // 如果已经认证成功但连接关闭，不重连（避免频繁重连）
     // 如果未达到最大尝试次数则自动重连
-    if (wsAttempts < maxAttempts) {
+    if (!wsAuthenticated && wsAttempts < maxAttempts) {
       wsAttempts++
-      const delay = Math.min(3000 * wsAttempts, 30000) // 指数退避
+      const delay = Math.min(5000 * wsAttempts, 30000) // 增加初始延迟到 5 秒
       setTimeout(() => {
         console.log(`Reconnecting WebSocket... Attempt ${wsAttempts}/${maxAttempts}`)
         initializeWebSocket()
       }, delay)
+    } else if (wsAuthenticated) {
+      console.log('WebSocket 已认证成功但连接关闭，可能是服务端问题，停止重连')
+    } else {
+      console.log('WebSocket 已达到最大重连次数，停止重连')
     }
   })
 
@@ -642,16 +572,45 @@ onMounted(async () => {
 
     <!-- 天气信息区域 -->
     <div class="weather-section" role="region" aria-label="天气信息">
-      <el-card shadow="hover" class="weather-card enhanced-weather">
+      <!-- 天气骨架屏 -->
+      <div v-if="showWeatherSkeleton" class="weather-skeleton-wrapper">
+        <el-card shadow="hover" class="weather-card skeleton-weather">
+          <el-skeleton animated>
+            <template #template>
+              <div class="weather-skeleton-content">
+                <el-skeleton-item variant="circle" style="width: 80px; height: 80px" />
+                <el-skeleton-item variant="text" style="width: 120px; height: 56px; margin-left: 16px" />
+                <div style="flex: 1; margin-left: 24px">
+                  <el-skeleton-item variant="text" style="width: 60%" />
+                  <el-skeleton-item variant="text" style="width: 80%; margin-top: 12px" />
+                  <el-skeleton-item variant="text" style="width: 70%; margin-top: 12px" />
+                </div>
+              </div>
+            </template>
+          </el-skeleton>
+        </el-card>
+      </div>
+
+      <!-- 天气卡片 -->
+      <el-card
+        v-else
+        shadow="hover"
+        class="weather-card enhanced-weather"
+        :style="{ background: weatherGradient }"
+      >
         <div class="weather-content">
           <!-- 左侧：天气图标和温度 -->
           <div class="weather-visual">
-            <div class="weather-icon-wrapper">
-              <el-icon class="weather-icon"><component :is="getWeatherIcon()" /></el-icon>
+            <div class="weather-icon-wrapper" @click="showWeatherDetail">
+              <span class="weather-emoji">{{ weatherEmoji }}</span>
             </div>
             <div class="temp-display">
               <span class="temp-value">{{ weather.temp }}</span>
               <span class="temp-unit">°C</span>
+            </div>
+            <!-- 温度范围 -->
+            <div v-if="tempRangeText" class="temp-range">
+              {{ tempRangeText }}
             </div>
           </div>
 
@@ -679,9 +638,10 @@ onMounted(async () => {
 
             <!-- 天气状况和推荐 -->
             <div class="weather-details">
-              <div class="condition-badge">
-                <span class="condition-icon">{{ weather.condition?.includes('晴') ? '☀️' : '☁️' }}</span>
+              <div class="condition-badge" @click="showWeatherDetail" style="cursor: pointer">
+                <span class="condition-icon">{{ weatherEmoji }}</span>
                 <span class="condition-text">{{ weather.condition || '未知天气' }}</span>
+                <el-icon class="info-icon"><Edit /></el-icon>
               </div>
 
               <div class="recommendation-card">
@@ -689,8 +649,8 @@ onMounted(async () => {
                   <span class="sparkle-icon">✨</span>
                   <span class="recommendation-label">今日推荐</span>
                 </div>
-                <div class="recommendation-content" :title="getRecommendedDishesSeries()">
-                  {{ getRecommendedDishesSeries() }}
+                <div class="recommendation-content" :title="getWeatherRecommendation()">
+                  {{ getWeatherRecommendation() }}
                 </div>
               </div>
             </div>
@@ -698,6 +658,54 @@ onMounted(async () => {
         </div>
       </el-card>
     </div>
+
+    <!-- 天气详情弹窗 -->
+    <el-dialog v-model="weatherDetailVisible" title="天气详情" width="500px" class="weather-detail-dialog">
+      <div class="weather-detail-content">
+        <div class="detail-item">
+          <span class="detail-label">当前温度</span>
+          <span class="detail-value">{{ weather.temp }}°C</span>
+        </div>
+        <div v-if="tempRangeText" class="detail-item">
+          <span class="detail-label">温度范围</span>
+          <span class="detail-value">{{ tempRangeText }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">天气状况</span>
+          <span class="detail-value">
+            {{ weatherEmoji }} {{ weather.condition || '未知天气' }}
+          </span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">湿度</span>
+          <span class="detail-value">{{ weather.humidity }}%</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">风速</span>
+          <span class="detail-value">{{ weather.windSpeed }} m/s</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">空气质量</span>
+          <span class="detail-value" :style="{ color: aqiInfo.color }">
+            {{ aqiInfo.text }} (AQI: {{ weather.aqi }})
+          </span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">位置</span>
+          <span class="detail-value">{{ weather.city }} {{ weather.address }}</span>
+        </div>
+        <div class="detail-advice">
+          <div class="advice-item">
+            <span class="advice-label">穿衣建议</span>
+            <span class="advice-text">{{ clothingAdvice }}</span>
+          </div>
+          <div class="advice-item">
+            <span class="advice-label">运动建议</span>
+            <span class="advice-text">{{ exerciseAdvice }}</span>
+          </div>
+        </div>
+      </div>
+    </el-dialog>
 
   <div class="recommendation-section" role="region" aria-label="今日推荐菜品">
     <h3 id="recommendations-heading">今日推荐</h3>
@@ -1294,18 +1302,29 @@ onMounted(async () => {
   .weather-section {
     margin-bottom: 20px;
 
+    .weather-skeleton-wrapper {
+      .weather-card {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
+        border: 1px solid rgba(0, 0, 0, 0.06);
+
+        .weather-skeleton-content {
+          display: flex;
+          align-items: center;
+        }
+      }
+    }
+
     .weather-card {
-      background: linear-gradient(135deg, #ff9a56 0%, #ff6b6b 100%);
       border: none;
       overflow: visible;
       position: relative;
       border-radius: 16px;
-      box-shadow: 0 8px 24px rgba(255, 107, 107, 0.25);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
       &:hover {
         transform: translateY(-4px);
-        box-shadow: 0 12px 32px rgba(255, 107, 107, 0.35);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
       }
 
       &::before {
@@ -1366,12 +1385,19 @@ onMounted(async () => {
                         inset 0 1px 1px rgba(255, 255, 255, 0.3);
             transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
             border: 1px solid rgba(255, 255, 255, 0.25);
+            cursor: pointer;
 
             &:hover {
               transform: scale(1.06) rotate(6deg);
               background: linear-gradient(135deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.2));
               box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22),
                           inset 0 1px 1px rgba(255, 255, 255, 0.4);
+            }
+
+            .weather-emoji {
+              font-size: 40px;
+              filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.25));
+              animation: emoji-bounce 2s ease-in-out infinite;
             }
 
             .weather-icon {
@@ -1407,6 +1433,15 @@ onMounted(async () => {
               text-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
               letter-spacing: -0.3px;
             }
+          }
+
+          .temp-range {
+            font-size: 14px;
+            font-weight: 600;
+            opacity: 0.85;
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+            letter-spacing: 0.5px;
+            margin-top: 4px;
           }
         }
 
@@ -2368,6 +2403,91 @@ onMounted(async () => {
 
     100% {
       background-position: -200% 0;
+    }
+  }
+
+  // Emoji 弹跳动画
+  @keyframes emoji-bounce {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+
+    50% {
+      transform: translateY(-8px);
+    }
+  }
+
+  // 天气详情弹窗样式
+  .weather-detail-dialog {
+    :deep(.el-dialog__body) {
+      padding: 20px;
+    }
+
+    .weather-detail-content {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+
+      .detail-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 16px;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 12px;
+        transition: all 0.3s ease;
+
+        &:hover {
+          background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+          transform: translateX(4px);
+        }
+
+        .detail-label {
+          font-size: 14px;
+          color: #666;
+          font-weight: 600;
+        }
+
+        .detail-value {
+          font-size: 15px;
+          color: #333;
+          font-weight: 700;
+        }
+      }
+
+      .detail-advice {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 8px;
+        padding-top: 16px;
+        border-top: 1px solid #e9ecef;
+
+        .advice-item {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          padding: 12px;
+          background: linear-gradient(135deg, #fff9f0 0%, #fff3e0 100%);
+          border-radius: 10px;
+          border-left: 3px solid #ff9800;
+
+          .advice-label {
+            font-size: 13px;
+            color: #ff9800;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+
+          .advice-text {
+            font-size: 14px;
+            color: #555;
+            line-height: 1.5;
+          }
+        }
+      }
     }
   }
 

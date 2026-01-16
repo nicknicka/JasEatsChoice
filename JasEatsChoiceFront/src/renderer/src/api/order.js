@@ -39,5 +39,14 @@ export default {
     return api.put(`/v1/orders/${orderId}/status`, null, {
       params: { status }
     })
+  },
+
+  /**
+   * 确认收货（将订单从已送达状态更新为已完成状态）
+   */
+  confirmReceipt(orderId) {
+    return api.put(`/v1/orders/${orderId}/status`, null, {
+      params: { status: 7 } // 7表示已完成
+    })
   }
 }

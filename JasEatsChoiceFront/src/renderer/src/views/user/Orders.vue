@@ -3,9 +3,10 @@ import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
 import { API_CONFIG, WS_CONFIG } from '../../config'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
 import { Refresh, ArrowDown, EditPen } from '@element-plus/icons-vue'
+import orderApi from '../../api/order'
 
 const router = useRouter()
 const route = useRoute()
@@ -225,7 +226,8 @@ const orderStatusToText = (statusCode) => {
     3: 'processing',     // 烹饪中
     4: 'processing',     // 待上菜
     5: 'delivered',      // 已送达
-    6: 'cancelled'       // 已取消
+    6: 'cancelled',      // 已取消
+    7: 'completed'       // 已完成
   }
   return statusMap[statusCode] || 'pending'
 }
@@ -369,6 +371,37 @@ const cancelOrder = (order) => {
       console.error('取消订单失败:', error)
       ElMessage.error('取消订单失败，请稍后重试')
     })
+}
+
+// 确认收货
+const confirmReceipt = async (order) => {
+  try {
+    await ElMessageBox.confirm(
+      '确认已收到餐品并完成订单吗？',
+      '确认收货',
+      {
+        confirmButtonText: '确认收货',
+        cancelButtonText: '取消',
+        type: 'info'
+      }
+    )
+
+    // 调用确认收货API
+    const response = await orderApi.confirmReceipt(order.id)
+
+    if (response.data.success) {
+      // 更新本地订单状态为已完成
+      order.status = 'completed'
+      ElMessage.success('已确认收货，订单完成')
+    } else {
+      ElMessage.error(response.data.message || '确认收货失败')
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('确认收货失败:', error)
+      ElMessage.error('确认收货失败，请稍后重试')
+    }
+  }
 }
 
 // 跳转到评价页面
@@ -576,6 +609,14 @@ const handleImageError = (event) => {
             @click="cancelOrder(order)"
           >
             取消订单
+          </el-button>
+          <el-button
+            v-if="order.status === 'delivered'"
+            type="success"
+            size="small"
+            @click="confirmReceipt(order)"
+          >
+            确认收货
           </el-button>
           <el-button
             v-if="order.status === 'pendingComment'"

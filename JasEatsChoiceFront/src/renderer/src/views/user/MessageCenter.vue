@@ -67,6 +67,14 @@ const deleteSelected = () => {
   // 实际应用中实现批量删除功能
   console.log('批量删除消息')
 }
+
+// 全部标记为已读
+const markAllAsRead = () => {
+  messages.value.forEach((message) => {
+    message.read = true
+  })
+  console.log('已将所有消息标记为已读')
+}
 </script>
 
 <template>

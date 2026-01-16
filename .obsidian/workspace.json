@@ -167,6 +167,11 @@
   },
   "active": "25380c94f56f550b",
   "lastOpenFiles": [
+    "WEATHER_OPTIMIZATION_SUMMARY.md",
+    "BUG_FIXES_SUMMARY.md",
+    "JasEatsChoiceFront/src/renderer/src/composables/useWeather.js",
+    "JasEatsChoiceFront/REFACTOR_GUIDE.md",
+    "JasEatsChoiceFront/src/renderer/src/views/user/HomeContentRefactored.vue",
     "JasEatsChoiceFront/src/renderer/src/views/user/components/home/HotTopicCard.vue",
     "JasEatsChoiceFront/src/renderer/src/views/user/components/home/TutorialCard.vue",
     "JasEatsChoiceFront/src/renderer/src/views/user/components/home/DishCard.vue",
@@ -175,9 +180,6 @@
     "JasEatsChoiceFront/src/renderer/src/composables/index.ts",
     "JasEatsChoiceFront/src/renderer/src/composables/useWebSocket.ts",
     "JasEatsChoiceFront/src/renderer/src/composables/useShare.ts",
-    "JasEatsChoiceFront/src/renderer/src/composables/useRetry.ts",
-    "JasEatsChoiceFront/src/renderer/src/composables/useSearch.ts",
-    "JasEatsChoiceFront/src/renderer/src/composables/useFavorites.ts",
     "JasEatsChoiceFront/src/renderer/src/docs/饮食记录页面优化总结.md",
     "JasEatsChoiceFront/node_modules/fsevents/README.md",
     "订单创建流程验证报告.md",
@@ -210,8 +212,6 @@
     "JasEatsChoiceFront/node_modules/@nodelib/fs.stat/README.md",
     "JasEatsChoiceFront/node_modules/@nodelib/fs.scandir/README.md",
     "JasEatsChoiceFront/node_modules/@types/node/README.md",
-    "JasEatsChoiceFront/node_modules/@types/web-bluetooth/README.md",
-    "JasEatsChoiceFront/node_modules/@types/yauzl/README.md",
-    "JasEatsChoiceFront/node_modules/@types/verror/README.md"
+    "JasEatsChoiceFront/node_modules/@types/web-bluetooth/README.md"
   ]
 }
