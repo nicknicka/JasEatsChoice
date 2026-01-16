@@ -11,6 +11,22 @@ import { WS_CONFIG } from '../../constants/wsConstants.js'
 
 const router = useRouter()
 
+// 默认菜品占位图
+const defaultDishImage =
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23f0f0f0" width="400" height="300"/%3E%3Ctext fill="%23999" font-family="Arial" font-size="24" x="50%25" y="50%25" text-anchor="middle" dominant-baseline="middle"%3E暂无图片%3C/text%3E%3C/svg%3E'
+
+// 默认教程缩略图
+const defaultTutorialThumbnail =
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="200"%3E%3Crect fill="%23f5f5f5" width="300" height="200"/%3E%3Ctext fill="%23999" font-family="Arial" font-size="20" x="50%25" y="50%25" text-anchor="middle" dominant-baseline="middle"%3E教程缩略图%3C/text%3E%3C/svg%3E'
+
+// 图片加载错误处理
+const handleImageError = (event) => {
+  event.target.src = defaultDishImage
+}
+
+// 加载状态
+const nearbyLoading = ref(false)
+
 // 教程数据 - 从后端获取
 const featuredTutorials = ref([])
 
@@ -219,6 +235,26 @@ const navigateTo = (path) => {
   router.push(path)
 }
 
+// 处理查找附近商家
+const handleNearbySearch = async () => {
+  nearbyLoading.value = true
+  try {
+    await router.push('/user/home/merchants')
+  } finally {
+    // 延迟重置加载状态,确保用户看到反馈
+    setTimeout(() => {
+      nearbyLoading.value = false
+    }, 500)
+  }
+}
+
+// 处理教程卡片点击
+const handleTutorialClick = (tutorial) => {
+  // TODO: 跳转到教程详情页或执行其他操作
+  console.log('点击教程:', tutorial.name)
+  // router.push(`/user/home/tutorials/${tutorial.id}`)
+}
+
 // WebSocket 连接
 let wsAttempts = 0
 const maxAttempts = 10
@@ -380,25 +416,27 @@ onMounted(async () => {
 <template>
   <!-- Right Content Area -->
   <div class="weather-section">
-    <el-card shadow="hover">
+    <el-card shadow="hover" class="weather-card">
       <div class="weather-content">
         <el-icon class="weather-icon"><component :is="getWeatherIcon()" /></el-icon>
         <div class="weather-info">
           <div class="location">
-            <el-button
-              type="text"
-              size="small"
-              @click="locationDialogVisible = true"
-              title="选择位置"
-              class="location-icon-button"
-            >
+            <el-button type="text" size="small" @click="locationDialogVisible = true" class="location-button">
               <el-icon><Location /></el-icon>
-              <span v-if="weather.address"> {{ weather.address }}</span>
-              <span v-else-if="weather.city">{{ weather.city }}</span>
+              <span class="location-text">
+                {{ weather.address || weather.city || '选择位置' }}
+              </span>
+              <el-tag size="small" type="info" effect="plain" round>切换</el-tag>
             </el-button>
           </div>
-          <div class="temp">{{ weather.temp }}℃</div>
-          <div class="condition">今日推荐：{{ getRecommendedDishesSeries() }}</div>
+          <div class="temp-section">
+            <span class="temp">{{ weather.temp }}℃</span>
+            <span class="weather-condition">{{ weather.condition }}</span>
+          </div>
+          <div class="recommendation">
+            <el-icon class="sparkle-icon">✨</el-icon>
+            <span>{{ getRecommendedDishesSeries() }}</span>
+          </div>
         </div>
       </div>
     </el-card>
@@ -415,12 +453,33 @@ onMounted(async () => {
 
     <!-- When there are recommended dishes -->
     <div v-else>
-      <el-carousel :interval="3000" height="180px">
+      <el-carousel
+        :interval="3000"
+        height="320px"
+        indicator-position="outside"
+        arrow="never"
+        class="recommendation-carousel"
+      >
         <el-carousel-item v-for="(dish, index) in recommendedDishes" :key="index">
-          <el-card shadow="hover" class="dish-card">
-            <div class="dish-info">
+          <el-card shadow="hover" class="dish-card enhanced-card">
+            <!-- 菜品图片区域 - 作为背景层 -->
+            <div class="dish-image-background">
+              <img
+                :src="dish.image || defaultDishImage"
+                :alt="dish.name"
+                loading="lazy"
+                @error="handleImageError"
+              />
+              <!-- 分类标签 -->
+              <span class="dish-category">{{ dish.category || '推荐' }}</span>
+            </div>
+            <!-- 菜品信息区域 - 覆盖在图片上方 -->
+            <div class="dish-info-overlay">
               <div class="dish-name">{{ dish.name }}</div>
-              <div class="dish-kcal">{{ dish.kcal }}</div>
+              <div class="dish-meta">
+                <span class="dish-kcal">{{ dish.kcal }} kcal</span>
+                <span v-if="dish.tags" class="dish-tags">{{ dish.tags }}</span>
+              </div>
               <div class="dish-rating">
                 <el-rate
                   v-model="dish.rating"
@@ -439,10 +498,17 @@ onMounted(async () => {
 
   <!-- 今日热点 - 只有当有数据时显示 -->
   <div class="hot-section" v-if="hotTopic">
-    <el-card shadow="hover">
+    <el-card shadow="hover" class="hot-card">
       <div class="hot-content">
-        <el-icon class="fire-icon">🔥</el-icon>
-        <span>今日热点：{{ hotTopic }}</span>
+        <div class="hot-icon-wrapper">
+          <span class="fire-icon">🔥</span>
+          <span class="hot-badge">HOT</span>
+        </div>
+        <div class="hot-text">
+          <span class="hot-label">今日热点</span>
+          <span class="hot-description">{{ hotTopic }}</span>
+        </div>
+        <el-icon class="hot-arrow"><ArrowRight /></el-icon>
       </div>
     </el-card>
   </div>
@@ -452,15 +518,22 @@ onMounted(async () => {
       type="primary"
       size="large"
       class="nearby-btn"
-      @click="navigateTo('/user/home/merchants')"
+      @click="handleNearbySearch"
+      :loading="nearbyLoading"
+      :loading-icon="Location"
     >
-      <el-icon><Location /></el-icon>
-      查找附近商家
+      <el-icon v-if="!nearbyLoading"><Location /></el-icon>
+      {{ nearbyLoading ? '定位中...' : '查找附近商家' }}
     </el-button>
   </div>
 
   <div class="tutorial-section">
-    <h3>制作教程与指南</h3>
+    <div class="section-header">
+      <h3>制作教程与指南</h3>
+      <el-button text type="primary" @click="navigateTo('/user/home/tutorials')" class="view-all-btn">
+        查看全部 <el-icon><ArrowRight /></el-icon>
+      </el-button>
+    </div>
 
     <!-- 当教程数据为空时显示 -->
     <div v-if="featuredTutorials.length === 0" class="empty-tutorials">
@@ -474,26 +547,37 @@ onMounted(async () => {
       <div class="tutorial-grid">
         <el-card
           shadow="hover"
-          class="tutorial-card"
-          v-for="(tutorial, index) in featuredTutorials"
+          class="tutorial-card enhanced"
+          v-for="(tutorial, index) in featuredTutorials.slice(0, 4)"
           :key="index"
+          @click="handleTutorialClick(tutorial)"
         >
-          <el-icon :class="tutorial.type === 'video' ? 'video-icon' : 'light-icon'">
-            <VideoCamera v-if="tutorial.type === 'video'" />
-            <span v-else>💡</span>
-          </el-icon>
-          <span>{{ tutorial.name }}</span>
+          <div class="tutorial-thumbnail">
+            <img
+              :src="tutorial.thumbnail || defaultTutorialThumbnail"
+              :alt="tutorial.name"
+              loading="lazy"
+            />
+            <div class="tutorial-type-badge">
+              <el-icon v-if="tutorial.type === 'video'"><VideoCamera /></el-icon>
+              <span v-else>💡</span>
+            </div>
+          </div>
+          <div class="tutorial-content">
+            <h4 class="tutorial-title">{{ tutorial.name }}</h4>
+            <div class="tutorial-meta">
+              <span class="tutorial-duration">{{ tutorial.duration || '5分钟' }}</span>
+              <el-rate
+                v-if="tutorial.rating"
+                v-model="tutorial.rating"
+                disabled
+                size="small"
+                show-score
+              />
+            </div>
+          </div>
         </el-card>
       </div>
-      <el-button
-        type="primary"
-        size="large"
-        class="more-link"
-        @click="navigateTo('/user/home/tutorials')"
-      >
-        <el-icon><ArrowRight /></el-icon>
-        <span>查看更多教程</span>
-      </el-button>
     </div>
   </div>
 
@@ -600,7 +684,16 @@ onMounted(async () => {
   overflow-y: auto;
 
   .weather-section {
-    margin-bottom: 20px;
+    margin-bottom: 16px;
+
+    .weather-card {
+      background: linear-gradient(135deg, #fff9f0 0%, #fff 100%);
+      border: 1px solid #ffe8cc;
+
+      :deep(.el-card__body) {
+        padding: 20px;
+      }
+    }
 
     .weather-content {
       display: flex;
@@ -608,78 +701,229 @@ onMounted(async () => {
       gap: 20px;
 
       .weather-icon {
-        font-size: 48px;
+        font-size: 56px;
         color: #f7b267;
+        flex-shrink: 0;
       }
 
       .weather-info {
+        flex: 1;
         font-size: 18px;
 
         .location {
           font-size: 14px;
-          color: #999;
-          margin-bottom: 5px;
+          color: #666;
+          margin-bottom: 8px;
 
-          .city-select {
-            width: 120px;
-            margin-right: 10px;
-            vertical-align: middle;
-          }
+          .location-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 8px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
 
-          .location-icon-button {
-            margin-right: 10px;
-            vertical-align: middle;
-            color: #999;
-            padding: 0;
+            &:hover {
+              background-color: rgba(255, 107, 107, 0.1);
+            }
+
+            .location-text {
+              font-size: 14px;
+              color: #333;
+              max-width: 200px;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+            }
+
+            .el-tag {
+              margin-left: 4px;
+              font-size: 11px;
+              padding: 0 8px;
+              height: 20px;
+              line-height: 20px;
+            }
           }
         }
 
-        .temp {
-          font-size: 24px;
-          font-weight: bold;
-          color: #ff6b6b;
+        .temp-section {
+          display: flex;
+          align-items: baseline;
+          gap: 12px;
+          margin-bottom: 8px;
+
+          .temp {
+            font-size: 32px;
+            font-weight: bold;
+            color: #ff6b6b;
+          }
+
+          .weather-condition {
+            font-size: 16px;
+            color: #999;
+          }
+        }
+
+        .recommendation {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 15px;
+          color: #666;
+
+          .sparkle-icon {
+            font-size: 16px;
+            animation: sparkle 1.5s ease-in-out infinite;
+          }
         }
       }
     }
   }
 
+  // 星光动画
+  @keyframes sparkle {
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.6;
+      transform: scale(1.2);
+    }
+  }
+
   .recommendation-section {
-    margin-bottom: 20px;
+    margin-bottom: 16px;
 
     h3 {
-      margin-bottom: 10px;
+      margin-bottom: 12px;
       font-size: 20px;
       font-weight: bold;
     }
 
     .dish-card {
-      height: 160px;
+      height: 320px;
       display: flex;
-      align-items: center;
-      justify-content: center;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+      transition: all 0.3s ease;
 
-      .dish-info {
-        text-align: center;
+      &:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(255, 107, 107, 0.15);
+      }
 
-        .dish-name {
-          font-size: 24px;
-          font-weight: bold;
+      .dish-image-background {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+
+        img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          transition: transform 0.3s ease;
         }
 
-        .dish-kcal {
-          font-size: 16px;
-          color: #999;
+        &:hover img {
+          transform: scale(1.05);
+        }
+
+        .dish-category {
+          position: absolute;
+          top: 12px;
+          left: 12px;
+          background: rgba(255, 107, 107, 0.9);
+          color: white;
+          padding: 4px 12px;
+          border-radius: 12px;
+          font-size: 12px;
+          font-weight: bold;
+          backdrop-filter: blur(4px);
+          z-index: 2;
+        }
+      }
+
+      .dish-info-overlay {
+        position: relative;
+        z-index: 2;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        padding: 20px;
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.3) 50%, transparent 100%);
+
+        .dish-name {
+          font-size: 20px;
+          font-weight: bold;
+          margin-bottom: 8px;
+          color: #fff;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .dish-meta {
+          display: flex;
+          justify-content: flex-start;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 8px;
+          font-size: 14px;
+
+          .dish-kcal {
+            color: #fff;
+            font-weight: 500;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+          }
+
+          .dish-tags {
+            color: #fff;
+            font-size: 12px;
+            padding: 2px 8px;
+            background: rgba(255, 107, 107, 0.8);
+            border-radius: 8px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+          }
         }
 
         .dish-rating {
-          margin-top: 10px;
+          margin-top: 4px;
+
+          :deep(.el-rate__text) {
+            color: #fff !important;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+          }
+        }
+      }
+    }
+
+    // 轮播指示器样式优化
+    :deep(.el-carousel__indicators) {
+      .el-carousel__indicator {
+        .el-carousel__button {
+          width: 24px;
+          height: 3px;
+          border-radius: 2px;
+          background-color: #ddd;
+        }
+
+        &.is-active .el-carousel__button {
+          background-color: #ff6b6b;
         }
       }
     }
 
     /* Empty recommendations styling */
     .empty-recommendations {
-      margin-bottom: 20px;
+      margin-bottom: 16px;
       text-align: center;
       padding: 60px 0;
       background-color: #fafafa;
@@ -689,71 +933,247 @@ onMounted(async () => {
   }
 
   .hot-section {
-    margin-bottom: 20px;
+    margin-bottom: 16px;
+
+    .hot-card {
+      background: linear-gradient(135deg, #fff5f5 0%, #fff 100%);
+      border: 1px solid #ffe0e0;
+
+      :deep(.el-card__body) {
+        padding: 16px 20px;
+      }
+    }
 
     .hot-content {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 16px;
 
-      .fire-icon {
-        font-size: 24px;
+      .hot-icon-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+
+        .fire-icon {
+          font-size: 28px;
+          animation: fire-pulse 1.5s ease-in-out infinite;
+          display: inline-block;
+        }
+
+        .hot-badge {
+          background: #ff6b6b;
+          color: white;
+          padding: 2px 10px;
+          border-radius: 12px;
+          font-size: 11px;
+          font-weight: bold;
+          letter-spacing: 0.5px;
+          box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+        }
+      }
+
+      .hot-text {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+
+        .hot-label {
+          font-size: 12px;
+          color: #999;
+          font-weight: 500;
+        }
+
+        .hot-description {
+          font-size: 16px;
+          color: #333;
+          font-weight: 500;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+      }
+
+      .hot-arrow {
         color: #ff6b6b;
+        font-size: 18px;
+        flex-shrink: 0;
+        transition: transform 0.3s ease;
+
+        &:hover {
+          transform: translateX(4px);
+        }
       }
     }
   }
 
+  // 火焰动画
+  @keyframes fire-pulse {
+    0%,
+    100% {
+      transform: scale(1) rotate(0deg);
+    }
+    25% {
+      transform: scale(1.05) rotate(-3deg);
+    }
+    50% {
+      transform: scale(1.1) rotate(0deg);
+    }
+    75% {
+      transform: scale(1.05) rotate(3deg);
+    }
+  }
+
   .nearby-section {
-    margin-bottom: 20px;
+    margin-bottom: 16px;
 
     .nearby-btn {
       background-color: #ff6b6b;
       border: none;
+      width: 100%;
+      height: 48px;
+      font-size: 16px;
+      font-weight: 500;
 
       &:hover {
         background-color: #ff5252;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+      }
+
+      &:active {
+        transform: translateY(0);
       }
     }
   }
 
   .tutorial-section {
-    margin-bottom: 20px;
+    margin-bottom: 16px;
 
-    h3 {
-      margin-bottom: 20px;
-      font-size: 20px;
-      font-weight: bold;
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+
+      h3 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: bold;
+        color: #333;
+      }
+
+      .view-all-btn {
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+
+        &:hover {
+          .el-icon {
+            transform: translateX(4px);
+          }
+        }
+
+        .el-icon {
+          transition: transform 0.3s ease;
+        }
+      }
     }
 
     .tutorial-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 15px;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
       margin-bottom: 20px;
     }
 
     .tutorial-card {
-      height: 150px;
+      height: 200px;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.3s ease;
 
-      .video-icon {
-        font-size: 36px;
-        color: #ff6b6b;
+      &:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(255, 107, 107, 0.15);
+
+        .tutorial-thumbnail img {
+          transform: scale(1.05);
+        }
       }
 
-      .light-icon {
-        font-size: 36px;
-        color: #f7b267;
-      }
-    }
+      .tutorial-thumbnail {
+        width: 100%;
+        height: 120px;
+        position: relative;
+        overflow: hidden;
 
-    .more-link {
-      font-size: 14px;
-      margin: 0;
+        img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          transition: transform 0.3s ease;
+        }
+
+        .tutorial-type-badge {
+          position: absolute;
+          top: 8px;
+          right: 8px;
+          width: 32px;
+          height: 32px;
+          background: rgba(0, 0, 0, 0.6);
+          backdrop-filter: blur(4px);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-size: 14px;
+
+          .el-icon {
+            font-size: 16px;
+          }
+        }
+      }
+
+      .tutorial-content {
+        flex: 1;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+
+        .tutorial-title {
+          margin: 0 0 8px 0;
+          font-size: 15px;
+          font-weight: 600;
+          color: #333;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .tutorial-meta {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-top: auto;
+          font-size: 13px;
+
+          .tutorial-duration {
+            color: #999;
+          }
+
+          .el-rate {
+            :deep(.el-rate__text) {
+              font-size: 12px;
+            }
+          }
+        }
+      }
     }
 
     .empty-tutorials {

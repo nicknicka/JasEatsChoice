@@ -461,7 +461,9 @@ const handleImageError = (event) => {
                   <span>{{ item.name?.charAt(0) || '菜' }}</span>
                 </div>
                 <!-- 数量徽章 -->
-                <div class="quantity-badge">×{{ item.quantity }}</div>
+                <div class="quantity-badge" :class="{ 'large-number': item.quantity > 9 }">
+                  {{ item.quantity }}
+                </div>
               </div>
 
               <!-- 商品信息 -->
@@ -579,96 +581,236 @@ const handleImageError = (event) => {
 <style scoped lang="less">
 .orders-container {
   padding: 0 20px 20px 20px;
-  background: linear-gradient(180deg, #f0f7ff 0%, #ffffff 100%);
+  background: #f5f7fa;
   min-height: calc(100vh - 80px);
 
   .page-header {
     display: flex;
     align-items: center;
     margin-bottom: 20px;
+    padding: 16px 20px;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.06);
   }
 
   h2 {
     font-size: 24px;
     margin: 0;
+    color: #2c5282;
+    font-weight: 600;
   }
 
   .order-filters {
     display: flex;
     gap: 10px;
     margin-bottom: 20px;
+    padding: 12px 16px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    flex-wrap: wrap;
+
+    :deep(.el-button) {
+      border-radius: 20px;
+      border-color: rgba(179, 212, 252, 0.4);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+      &.el-button--primary {
+        background: linear-gradient(135deg, #6ba4ff 0%, #5c8eff 100%);
+        border-color: transparent;
+        box-shadow: 0 2px 8px rgba(92, 142, 255, 0.3);
+
+        &:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(92, 142, 255, 0.4);
+        }
+      }
+
+      &.is-plain {
+        background: #ffffff;
+        color: #5c8eff;
+        border-color: #d9d9d9;
+
+        &:hover {
+          background: #f0f9ff;
+          border-color: #6ba4ff;
+          color: #4c7eff;
+        }
+      }
+    }
   }
 
   .order-list {
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 16px;
   }
 
   .order-pagination {
-    margin-top: 20px;
+    margin-top: 24px;
     text-align: center;
+
+    :deep(.el-pagination) {
+      .btn-prev,
+      .btn-next,
+      .el-pager li {
+        border-radius: 8px;
+        border: 1px solid rgba(179, 212, 252, 0.3);
+        background: rgba(255, 255, 255, 0.8);
+
+        &:hover {
+          color: #5c8eff;
+          border-color: #6ba4ff;
+          background: rgba(235, 244, 255, 0.6);
+        }
+
+        &.active {
+          background: linear-gradient(135deg, #6ba4ff 0%, #5c8eff 100%);
+          color: white;
+          border-color: transparent;
+        }
+      }
+    }
   }
 
   .order-card {
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    position: relative;
+
+    // 添加悬浮时的上移效果
+    &:hover {
+      transform: translateY(-4px) scale(1.01);
+      box-shadow: 0 12px 32px rgba(92, 142, 255, 0.18);
+      border-color: rgba(92, 142, 255, 0.4);
+
+      // 为卡片添加微妙的渐变边框效果
+      &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        border-radius: 16px;
+        padding: 2px;
+        background: linear-gradient(135deg,
+          rgba(92, 142, 255, 0.2) 0%,
+          rgba(138, 180, 248, 0.15) 50%,
+          rgba(92, 142, 255, 0.2) 100%);
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        mask-composite: exclude;
+        pointer-events: none;
+      }
+    }
+
+    // 点击时的反馈
+    &:active {
+      transform: translateY(-2px) scale(1.005);
+      box-shadow: 0 8px 24px rgba(92, 142, 255, 0.15);
+    }
+
+    :deep(.el-card__body) {
+      padding: 20px;
+    }
+
     .order-header {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      margin-bottom: 15px;
+      margin-bottom: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 
       .order-info {
         .order-no {
-          font-weight: bold;
-          margin-bottom: 5px;
+          font-weight: 600;
+          margin-bottom: 6px;
+          color: #2c5282;
+          font-size: 15px;
         }
         .order-merchant,
         .order-time {
-          font-size: 14px;
-          color: #606266;
-          margin-bottom: 3px;
+          font-size: 13px;
+          color: #64748b;
+          margin-bottom: 4px;
+        }
+      }
+
+      .order-status {
+        :deep(.el-tag) {
+          border-radius: 20px;
+          padding: 6px 14px;
+          font-weight: 500;
+          border: none;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
         }
       }
     }
 
     .order-items {
-      margin-bottom: 15px;
-      background: linear-gradient(135deg, #e3f2fd 0%, #f0f7ff 100%);
-      border-radius: 8px;
-      padding: 12px;
+      margin-bottom: 16px;
+      background: #fafbfc;
+      border-radius: 12px;
+      padding: 14px;
+      border: 1px solid rgba(0, 0, 0, 0.06);
 
       .items-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 10px;
-        padding-bottom: 8px;
-        border-bottom: 1px solid #bbdefb;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 
         .header-left {
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 10px;
         }
 
         .item-count {
-          font-size: 14px;
-          color: #606266;
+          font-size: 13px;
+          color: #64748b;
           font-weight: 500;
         }
 
         .item-tag {
           font-size: 12px;
+          border-radius: 12px;
+          background: #e6f7ff;
+          border-color: #91d5ff;
+          color: #1890ff;
         }
 
         .expand-btn {
           font-size: 13px;
-          padding: 4px 8px;
+          padding: 6px 12px;
           height: auto;
+          border-radius: 16px;
+          background: #ffffff;
+          border: 1px solid #d9d9d9;
+          color: #5c8eff;
+          transition: all 0.3s ease;
+
+          &:hover {
+            background: #f0f9ff;
+            border-color: #6ba4ff;
+            transform: translateY(-1px);
+          }
 
           .expand-icon {
-            transition: transform 0.3s ease;
-            margin-left: 2px;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-left: 4px;
 
             &.expanded {
               transform: rotate(180deg);
@@ -680,52 +822,68 @@ const handleImageError = (event) => {
       .items-list {
         display: flex;
         flex-direction: column;
-        gap: 10px;
+        gap: 12px;
       }
 
       .item-row {
         display: flex;
         align-items: stretch;
-        padding: 12px;
-        background: white;
-        border-radius: 8px;
-        transition: all 0.2s;
+        padding: 14px;
+        background: #ffffff;
+        border-radius: 12px;
+        transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
         position: relative;
-        border: 1px solid #e3f2fd;
+        border: 1px solid rgba(0, 0, 0, 0.06);
         min-height: 94px;
         cursor: pointer;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 
         &:hover {
-          box-shadow: 0 4px 16px rgba(33, 150, 243, 0.15);
-          transform: translateY(-2px);
-          border-color: #90caf9;
+          box-shadow: 0 6px 20px rgba(92, 142, 255, 0.2);
+          transform: translateY(-3px) scale(1.015);
+          border-color: rgba(92, 142, 255, 0.5);
+          background: linear-gradient(to bottom, #ffffff 0%, #f8faff 100%);
+
+          // 添加高亮边框效果
+          &::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 12px;
+            box-shadow: inset 0 0 0 1px rgba(92, 142, 255, 0.3);
+            pointer-events: none;
+          }
         }
 
         &:active {
-          transform: translateY(0);
-          box-shadow: 0 2px 8px rgba(33, 150, 243, 0.15);
+          transform: translateY(-1px) scale(1.008);
+          box-shadow: 0 3px 12px rgba(92, 142, 255, 0.15);
         }
 
         .item-image {
           width: 70px;
           min-height: 70px;
           height: 70px;
-          border-radius: 8px;
+          border-radius: 10px;
           overflow: visible;
           margin-right: 14px;
           flex-shrink: 0;
-          background: linear-gradient(135deg, #64b5f6 0%, #42a5f5 100%);
+          background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
           position: relative;
-          box-shadow: 0 2px 8px rgba(33, 150, 243, 0.2);
+          z-index: 1;
+          box-shadow: 0 2px 8px rgba(24, 144, 255, 0.15);
           display: flex;
           align-items: center;
           justify-content: center;
+          border: 1px solid #91d5ff;
 
           img {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            border-radius: 8px;
+            border-radius: 10px;
+            position: relative;
+            z-index: 1;
           }
 
           .no-image {
@@ -737,28 +895,65 @@ const handleImageError = (event) => {
 
             span {
               font-size: 28px;
-              font-weight: bold;
-              color: white;
+              font-weight: 600;
+              color: #1890ff;
             }
           }
 
           .quantity-badge {
             position: absolute;
-            top: -6px;
-            right: -6px;
-            background: linear-gradient(135deg, #ff5252 0%, #ff1744 100%);
+            top: -4px;
+            right: -4px;
+            background: linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%);
             color: white;
             font-size: 11px;
-            font-weight: 600;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            box-shadow: 0 2px 6px rgba(255, 82, 82, 0.4);
-            z-index: 10;
+            font-weight: 700;
+            min-width: 18px;
+            height: 18px;
+            padding: 0 5px;
+            border-radius: 9px;
+            box-shadow:
+              0 2px 6px rgba(255, 77, 79, 0.4),
+              0 0 0 1.5px rgba(255, 255, 255, 1);
+            z-index: 100;
             display: flex;
             align-items: center;
             justify-content: center;
             line-height: 1;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: badge-bounce 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            pointer-events: none;
+
+            // 悬浮效果
+            .item-row:hover & {
+              transform: scale(1.1) rotate(-3deg);
+              box-shadow:
+                0 3px 8px rgba(255, 77, 79, 0.5),
+                0 0 0 1.5px rgba(255, 255, 255, 1);
+              background: linear-gradient(135deg, #ff4d4f 0%, #ff2626 100%);
+            }
+
+            // 数量大于9时显示更紧凑
+            &.large-number {
+              font-size: 9px;
+              min-width: 20px;
+              padding: 0 4px;
+            }
+          }
+
+          // 徽章弹跳动画
+          @keyframes badge-bounce {
+            0% {
+              transform: scale(0) rotate(-180deg);
+              opacity: 0;
+            }
+            50% {
+              transform: scale(1.2) rotate(10deg);
+            }
+            100% {
+              transform: scale(1) rotate(0deg);
+              opacity: 1;
+            }
           }
         }
 
@@ -772,8 +967,8 @@ const handleImageError = (event) => {
           .item-name {
             font-size: 15px;
             font-weight: 600;
-            color: #303133;
-            margin-bottom: 6px;
+            color: #2c5282;
+            margin-bottom: 8px;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
@@ -784,14 +979,14 @@ const handleImageError = (event) => {
             display: flex;
             align-items: flex-start;
             gap: 6px;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
             font-size: 12px;
 
             .ingredients-label {
               flex-shrink: 0;
 
               .label-text {
-                color: #606266;
+                color: #64748b;
                 font-weight: 500;
               }
             }
@@ -799,33 +994,35 @@ const handleImageError = (event) => {
             .ingredients-list {
               display: flex;
               flex-wrap: wrap;
-              gap: 4px;
+              gap: 5px;
               flex: 1;
 
               .ingredient-tag {
                 display: inline-flex;
                 align-items: center;
-                gap: 2px;
-                padding: 2px 6px;
-                border-radius: 3px;
+                gap: 3px;
+                padding: 3px 8px;
+                border-radius: 6px;
                 font-size: 11px;
                 line-height: 1.4;
+                transition: all 0.2s ease;
 
                 &.required {
-                  background: linear-gradient(135deg, #67c23a 0%, #5daf34 100%);
+                  background: linear-gradient(135deg, rgba(103, 194, 58, 0.9) 0%, rgba(93, 175, 52, 0.9) 100%);
                   color: white;
                   font-weight: 500;
+                  box-shadow: 0 1px 4px rgba(103, 194, 58, 0.25);
                 }
 
                 &.optional {
-                  background: #e8f4e8;
-                  color: #67c23a;
-                  border: 1px solid #b3e19d;
+                  background: rgba(232, 244, 232, 0.8);
+                  color: #5da842;
+                  border: 1px solid rgba(179, 225, 157, 0.5);
                 }
 
                 .ingredient-price {
                   font-size: 10px;
-                  opacity: 0.9;
+                  opacity: 0.85;
                   margin-left: 2px;
                 }
               }
@@ -835,19 +1032,20 @@ const handleImageError = (event) => {
           .item-note {
             display: flex;
             align-items: flex-start;
-            gap: 4px;
-            margin-bottom: 6px;
+            gap: 5px;
+            margin-bottom: 8px;
             font-size: 12px;
-            color: #e6a23c;
-            padding: 4px 8px;
-            background: #fdf6ec;
-            border-radius: 4px;
-            border: 1px solid #f5dab1;
-            line-height: 1.4;
+            color: #c4873a;
+            padding: 6px 10px;
+            background: rgba(253, 246, 236, 0.8);
+            border-radius: 8px;
+            border: 1px solid rgba(245, 218, 177, 0.5);
+            line-height: 1.5;
+            box-shadow: 0 1px 4px rgba(230, 162, 60, 0.08);
 
             .el-icon {
               font-size: 13px;
-              color: #e6a23c;
+              color: #c4873a;
               flex-shrink: 0;
               margin-top: 1px;
             }
@@ -859,19 +1057,20 @@ const handleImageError = (event) => {
           }
 
           .item-customization {
-            font-size: 13px;
-            color: #1976d2;
-            margin-bottom: 6px;
-            padding: 4px 8px;
-            background: #e3f2fd;
-            border-radius: 4px;
-            border: 1px solid #bbdefb;
-            line-height: 1.4;
+            font-size: 12px;
+            color: #3a7bd5;
+            margin-bottom: 8px;
+            padding: 6px 10px;
+            background: rgba(227, 242, 253, 0.7);
+            border-radius: 8px;
+            border: 1px solid rgba(187, 222, 251, 0.5);
+            line-height: 1.5;
             max-height: 40px;
             overflow: hidden;
             display: flex;
             align-items: flex-start;
-            gap: 4px;
+            gap: 5px;
+            box-shadow: 0 1px 4px rgba(33, 150, 243, 0.08);
 
             .customization-text {
               flex: 1;
@@ -886,7 +1085,7 @@ const handleImageError = (event) => {
 
             .el-icon {
               font-size: 14px;
-              color: #2196f3;
+              color: #4a90e2;
               flex-shrink: 0;
               margin-top: 1px;
             }
@@ -900,13 +1099,13 @@ const handleImageError = (event) => {
             flex-shrink: 0;
 
             .unit-price {
-              font-size: 13px;
-              color: #909399;
+              font-size: 12px;
+              color: #94a3b8;
             }
 
             .total-price {
-              font-size: 15px;
-              font-weight: bold;
+              font-size: 16px;
+              font-weight: 700;
               color: #ff6b6b;
             }
           }
@@ -915,8 +1114,8 @@ const handleImageError = (event) => {
 
       .items-empty {
         text-align: center;
-        padding: 20px;
-        color: #909399;
+        padding: 24px;
+        color: #94a3b8;
         font-size: 14px;
       }
     }
@@ -925,17 +1124,21 @@ const handleImageError = (event) => {
       display: flex;
       justify-content: flex-end;
       align-items: center;
-      margin-bottom: 15px;
+      margin-bottom: 16px;
+      padding-top: 4px;
 
       .total-text {
-        margin-right: 10px;
-        color: #606266;
+        margin-right: 12px;
+        color: #64748b;
+        font-size: 14px;
+        font-weight: 500;
       }
 
       .total-amount {
-        font-size: 18px;
-        font-weight: bold;
+        font-size: 20px;
+        font-weight: 700;
         color: #ff6b6b;
+        text-shadow: 0 1px 2px rgba(255, 107, 107, 0.1);
       }
     }
 
@@ -943,6 +1146,48 @@ const handleImageError = (event) => {
       display: flex;
       justify-content: flex-end;
       gap: 10px;
+
+      :deep(.el-button) {
+        border-radius: 20px;
+        padding: 8px 18px;
+        font-weight: 500;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+
+        &:hover {
+          transform: translateY(-1px);
+        }
+
+        &.el-button--primary {
+          background: linear-gradient(135deg, #6ba4ff 0%, #5c8eff 100%);
+          border-color: transparent;
+          box-shadow: 0 3px 10px rgba(92, 142, 255, 0.3);
+
+          &:hover {
+            box-shadow: 0 4px 14px rgba(92, 142, 255, 0.4);
+          }
+        }
+
+        &.el-button--danger {
+          background: linear-gradient(135deg, #ff8a80 0%, #ff6b6b 100%);
+          border-color: transparent;
+          box-shadow: 0 3px 10px rgba(255, 107, 107, 0.3);
+
+          &:hover {
+            box-shadow: 0 4px 14px rgba(255, 107, 107, 0.4);
+          }
+        }
+
+        &.el-button--success {
+          background: linear-gradient(135deg, #81c784 0%, #66bb6a 100%);
+          border-color: transparent;
+          box-shadow: 0 3px 10px rgba(102, 187, 106, 0.3);
+
+          &:hover {
+            box-shadow: 0 4px 14px rgba(102, 187, 106, 0.4);
+          }
+        }
+      }
     }
   }
 
@@ -963,19 +1208,37 @@ const handleImageError = (event) => {
   /* 响应式设计 */
   @media (max-width: 768px) {
     .orders-container {
-      padding: 0 10px 10px 10px;
-      background: linear-gradient(180deg, #f5f9ff 0%, #ffffff 100%);
+      padding: 0 12px 16px 12px;
+      background: #f5f7fa;
+
+      .page-header {
+        padding: 14px 16px;
+        border-radius: 14px;
+      }
     }
 
     .order-filters {
-      flex-wrap: wrap;
+      padding: 10px 12px;
+      border-radius: 10px;
       gap: 8px;
     }
 
+    .order-list {
+      gap: 12px;
+    }
+
     .order-card {
+      border-radius: 14px;
+
+      :deep(.el-card__body) {
+        padding: 16px;
+      }
+
       .order-header {
         flex-direction: column;
         align-items: flex-start !important;
+        margin-bottom: 12px;
+        padding-bottom: 12px;
 
         .order-status {
           margin-top: 10px;
@@ -983,40 +1246,62 @@ const handleImageError = (event) => {
       }
 
       .order-items {
-        padding: 10px;
+        padding: 12px;
+        border-radius: 10px;
 
         .items-header {
+          margin-bottom: 10px;
+          padding-bottom: 8px;
+
           .header-left {
             gap: 6px;
           }
 
           .expand-btn {
             font-size: 12px;
+            padding: 5px 10px;
           }
         }
 
         .item-row {
-          padding: 10px;
+          padding: 12px;
           min-height: 80px;
+          border-radius: 10px;
 
           .item-image {
             width: 56px;
             min-height: 56px;
             height: 56px;
-            margin-right: 10px;
-            border-radius: 6px;
+            margin-right: 12px;
+            border-radius: 8px;
             overflow: visible;
+            position: relative;
+            z-index: 1;
 
             img {
-              border-radius: 6px;
+              border-radius: 8px;
+              position: relative;
+              z-index: 1;
             }
 
             .quantity-badge {
-              width: 18px;
-              height: 18px;
+              min-width: 16px;
+              height: 16px;
               font-size: 10px;
-              top: -5px;
-              right: -5px;
+              padding: 0 4px;
+              top: -3px;
+              right: -3px;
+              border-radius: 8px;
+              z-index: 100;
+              box-shadow:
+                0 2px 5px rgba(255, 77, 79, 0.4),
+                0 0 0 1px rgba(255, 255, 255, 1);
+
+              &.large-number {
+                font-size: 8px;
+                min-width: 18px;
+                padding: 0 3px;
+              }
             }
 
             .no-image span {
@@ -1027,23 +1312,30 @@ const handleImageError = (event) => {
           .item-info {
             .item-name {
               font-size: 14px;
+              margin-bottom: 6px;
             }
 
             .item-ingredients {
               font-size: 11px;
-              margin-bottom: 4px;
+              margin-bottom: 6px;
+              gap: 5px;
 
               .ingredients-list {
+                gap: 4px;
+
                 .ingredient-tag {
                   font-size: 10px;
-                  padding: 2px 4px;
+                  padding: 2px 6px;
+                  border-radius: 4px;
                 }
               }
             }
 
             .item-note {
               font-size: 11px;
-              padding: 3px 6px;
+              padding: 5px 8px;
+              margin-bottom: 6px;
+              border-radius: 6px;
 
               .el-icon {
                 font-size: 12px;
@@ -1051,10 +1343,12 @@ const handleImageError = (event) => {
             }
 
             .item-customization {
-              font-size: 12px;
-              padding: 3px 6px;
+              font-size: 11px;
+              padding: 5px 8px;
               max-height: 36px;
               min-height: 28px;
+              border-radius: 6px;
+              margin-bottom: 6px;
 
               .el-icon {
                 font-size: 12px;
@@ -1067,29 +1361,42 @@ const handleImageError = (event) => {
               gap: 4px;
 
               .unit-price {
-                font-size: 12px;
+                font-size: 11px;
               }
 
               .total-price {
-                font-size: 14px;
+                font-size: 15px;
               }
             }
           }
         }
       }
 
-      .order-total, .order-actions {
-        justify-content: flex-start !important;
+      .order-total {
+        margin-bottom: 12px;
+
+        .total-text {
+          font-size: 13px;
+        }
+
+        .total-amount {
+          font-size: 18px;
+        }
       }
 
       .order-actions {
         flex-direction: column;
         gap: 8px;
 
-        el-button {
+        :deep(.el-button) {
           width: 100%;
+          padding: 10px;
         }
       }
+    }
+
+    .order-pagination {
+      margin-top: 20px;
     }
   }
 }

@@ -2,7 +2,19 @@
 	<div class="profile-container">
 		<h2 class="page-title">个人中心</h2>
 
-		<el-card class="profile-card">
+		<!-- 加载状态 -->
+		<div v-if="loading" class="loading-container">
+			<el-skeleton animated>
+				<template #template>
+					<el-skeleton-item variant="circle" style="width: 120px; height: 120px; margin: 0 auto 20px" />
+					<el-skeleton-item variant="h1" style="width: 50%; margin: 0 auto 20px" />
+					<el-skeleton-item variant="rect" style="height: 200px; margin-bottom: 20px" />
+					<el-skeleton-item variant="rect" style="height: 150px" />
+				</template>
+			</el-skeleton>
+		</div>
+
+		<el-card v-else class="profile-card">
 			<!-- 顶部头像区域 -->
 			<div class="profile-header">
 				<!-- 单独拎出的名字 -->
@@ -45,13 +57,13 @@
 									<div class="stat-item">
 										<span class="stat-label">今日摄入</span>
 										<span class="stat-value calorie-highlight">{{
-											userInfo.todayCalorie || "0kcal"
+											todayCalorieDisplay
 										}}</span>
 									</div>
 									<div class="stat-item">
 										<span class="stat-label">本周均衡度</span>
 										<span class="stat-value balance-highlight">{{
-											userInfo.weekBalance || "0%"
+											weekBalanceDisplay
 										}}</span>
 									</div>
 								</div>
@@ -64,22 +76,28 @@
 								size="small"
 								class="action-btn upload-avatar-btn"
 								@click="triggerAvatarUpload"
-								>📸 更换头像</el-button
 							>
+								<el-icon><Camera /></el-icon>
+								<span style="margin-left: 5px">更换头像</span>
+							</el-button>
 							<el-button
 								type="primary"
 								size="small"
 								class="action-btn share-btn"
 								@click="shareProfile"
-								>📤 分享</el-button
 							>
+								<el-icon><Share /></el-icon>
+								<span style="margin-left: 5px">分享</span>
+							</el-button>
 							<el-button
 								type="primary"
 								size="small"
 								class="action-btn edit-btn"
 								@click="editProfile"
-								>✏️ 编辑资料</el-button
 							>
+								<el-icon><Edit /></el-icon>
+								<span style="margin-left: 5px">编辑资料</span>
+							</el-button>
 						</div>
 					</div>
 				</div>
@@ -88,7 +106,10 @@
 			<el-divider />
 
 			<div class="order-module">
-				<h3 class="module-title">📜 订单模块</h3>
+				<h3 class="module-title">
+					<el-icon><Document /></el-icon>
+					<span>订单模块</span>
+				</h3>
 				<div class="order-stats">
 					<div
 						class="order-stat-card"
@@ -117,7 +138,8 @@
 				</div>
 				<div style="display: flex; justify-content: flex-end; margin-top: 10px">
 					<el-button type="primary" size="small" @click="goToAllOrders">
-						<span>🔍 查看所有订单</span>
+						<el-icon><Search /></el-icon>
+						<span style="margin-left: 5px">查看所有订单</span>
 					</el-button>
 				</div>
 			</div>
@@ -125,7 +147,10 @@
 			<el-divider />
 
 			<div class="wallet-module">
-				<h3 class="module-title">💰 钱包模块</h3>
+				<h3 class="module-title">
+					<el-icon><Wallet /></el-icon>
+					<span>钱包模块</span>
+				</h3>
 				<div class="wallet-card" @click="goToWalletManagement">
 					<div class="wallet-header">
 						<div class="wallet-label">平台币余额</div>
@@ -160,7 +185,9 @@
 				<div class="module-grid">
 					<div class="module-item-card" @click="goToMyCollection">
 						<div class="module-item-content">
-							<div class="module-item-icon">🎁</div>
+							<div class="module-item-icon">
+								<el-icon :size="24"><StarFilled /></el-icon>
+							</div>
 							<div class="module-item-info">
 								<div class="module-item-title">我的收藏</div>
 								<div class="module-item-desc">
@@ -180,7 +207,9 @@
 
 					<div class="module-item-card" @click="goToAddress">
 						<div class="module-item-content">
-							<div class="module-item-icon">📝</div>
+							<div class="module-item-icon">
+								<el-icon :size="24"><Location /></el-icon>
+							</div>
 							<div class="module-item-info">
 								<div class="module-item-title">我的地址</div>
 								<div class="module-item-desc">
@@ -205,15 +234,18 @@
 			<el-divider />
 
 			<div class="bottom-actions">
-				<el-button type="text" size="small" @click="goToContact"
-					>📞 联系客服</el-button
-				>
-				<el-button type="text" size="small" @click="submitFeedback"
-					>🙋‍♂️ 反馈建议</el-button
-				>
-				<el-button type="text" size="small" danger @click="logout"
-					>🔚 退出登录</el-button
-				>
+				<el-button type="text" size="small" @click="goToContact">
+					<el-icon><Service /></el-icon>
+					<span style="margin-left: 5px">联系客服</span>
+				</el-button>
+				<el-button type="text" size="small" @click="submitFeedback">
+					<el-icon><ChatDotSquare /></el-icon>
+					<span style="margin-left: 5px">反馈建议</span>
+				</el-button>
+				<el-button type="text" size="small" danger @click="logout">
+					<el-icon><SwitchButton /></el-icon>
+					<span style="margin-left: 5px">退出登录</span>
+				</el-button>
 			</div>
 		</el-card>
 
@@ -229,7 +261,8 @@
 						class="copy-btn"
 						@click="copyShareLink"
 					>
-						📋 复制链接
+						<el-icon><DocumentCopy /></el-icon>
+						<span style="margin-left: 5px">复制链接</span>
 					</el-button>
 				</div>
 
@@ -250,14 +283,14 @@
 		<el-dialog
 			v-model="editProfileDialogVisible"
 			title="编辑资料"
-			width="400px"
+			width="500px"
 			center
 		>
 			<el-form
 				ref="editFormRef"
 				:model="editForm"
 				:rules="editFormRules"
-				label-width="80px"
+				label-width="100px"
 				style="margin-top: 20px"
 			>
 				<el-form-item label="昵称" prop="nickname">
@@ -281,69 +314,48 @@
 				</el-form-item>
 
 				<el-form-item label="所在地" prop="location">
-					<el-select
-						v-model="selectedProvince"
-						placeholder="请选择省份"
-						style="width: 25%; margin-right: 10px"
-						@change="handleProvinceChange"
-					>
-						<el-option
-							v-for="province in provinces"
-							:key="province.value"
-							:label="province.label"
-							:value="province.value"
-						/>
-					</el-select>
-					<el-select
-						v-model="selectedCity"
-						placeholder="请选择城市"
-						style="width: 25%; margin-right: 10px"
-						@change="handleCityChange"
-					>
-						<el-option
-							v-for="city in cities"
-							:key="city.value"
-							:label="city.label"
-							:value="city.value"
-						/>
-					</el-select>
-					<el-select
-						v-model="selectedDistrict"
-						placeholder="请选择区/县"
-						style="width: 25%"
-						@change="handleDistrictChange"
-					>
-						<el-option
-							v-for="district in districts"
-							:key="district.value"
-							:label="district.label"
-							:value="district.value"
-						/>
-					</el-select>
+					<el-cascader
+						v-model="selectedLocation"
+						:options="cascaderData"
+						:props="cascaderProps"
+						placeholder="请选择所在地"
+						clearable
+						filterable
+						style="width: 100%"
+						@change="handleLocationChange"
+					/>
 				</el-form-item>
 
-				<!-- 身高输入框，允许输入小数点后一位 -->
-				<el-form-item label="身高 (cm)" prop="height">
-					<el-input
-						v-model.number="editForm.height"
+				<el-form-item label="身高" prop="height">
+					<el-input-number
+						v-model="editForm.height"
+						:min="30"
+						:max="280"
+						:precision="1"
+						:step="0.1"
+						controls-position="right"
 						placeholder="请输入身高"
-						type="number"
-						step="0.1"
-					></el-input>
+						style="width: 100%"
+					/>
+					<span class="unit-hint">cm</span>
 				</el-form-item>
 
-				<!-- 体重输入框，允许输入小数点后一位 -->
-				<el-form-item label="体重 (kg)" prop="weight">
-					<el-input
-						v-model.number="editForm.weight"
+				<el-form-item label="体重" prop="weight">
+					<el-input-number
+						v-model="editForm.weight"
+						:min="5"
+						:max="300"
+						:precision="1"
+						:step="0.1"
+						controls-position="right"
 						placeholder="请输入体重"
-						type="number"
-						step="0.1"
-					></el-input>
+						style="width: 100%"
+					/>
+					<span class="unit-hint">kg</span>
 				</el-form-item>
 
 				<el-form-item label="饮食目标" prop="dietGoal">
-					<el-select v-model="editForm.dietGoal" placeholder="请选择饮食目标">
+					<el-select v-model="editForm.dietGoal" placeholder="请选择饮食目标" style="width: 100%">
 						<el-option label="减肥" value="减肥" />
 						<el-option label="增肌" value="增肌" />
 						<el-option label="保持健康" value="保持健康" />
@@ -354,7 +366,7 @@
 			<template #footer>
 				<div class="dialog-footer">
 					<el-button @click="editProfileDialogVisible = false">取消</el-button>
-					<el-button type="primary" @click="saveEditProfile">保存</el-button>
+					<el-button type="primary" @click="saveEditProfile" :loading="saving">保存</el-button>
 				</div>
 			</template>
 		</el-dialog>
@@ -366,6 +378,20 @@
 import { ref, onMounted, computed, reactive } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
+import {
+	Camera,
+	Share,
+	Edit,
+	Document,
+	Search,
+	Wallet,
+	StarFilled,
+	Location,
+	Service,
+	ChatDotSquare,
+	SwitchButton,
+	DocumentCopy,
+} from "@element-plus/icons-vue";
 import CommonAvatar from "../../components/CommonAvatar.vue";
 import api from "../../utils/api";
 import { API_CONFIG } from "../../config";
@@ -381,20 +407,17 @@ const router = useRouter();
 const authStore = useAuthStore();
 const userStore = useUserStore();
 
-// 计算属性
-// 头像来源 - 统一使用userStore中的头像信息
-const avatarSrc = computed(() => {
-	return userStore.userInfo?.avatar;
-});
-
 // 响应式变量 & Refs
+const loading = ref(true);
+const saving = ref(false);
+
 // 用户信息
 const userInfo = ref({
 	name: "",
 	phone: "",
 	location: "",
-	todayCalorie: "0kcal",
-	weekBalance: "0%",
+	todayCalorie: 0,
+	weekBalance: 0,
 	orders: {
 		inProgress: 0,
 		pending: 0,
@@ -402,6 +425,8 @@ const userInfo = ref({
 	},
 	wallet: {
 		balance: 0,
+		totalRecharge: 0,
+		totalConsume: 0,
 	},
 	collections: 0,
 	addresses: 0,
@@ -409,10 +434,29 @@ const userInfo = ref({
 	avatar: "",
 	height: 0,
 	weight: 0,
+	dietGoal: "",
 });
 
 // 组件引用
 const commonAvatarRef = ref(null);
+
+// 计算属性
+// 头像来源 - 统一使用userStore中的头像信息
+const avatarSrc = computed(() => {
+	return userStore.userInfo?.avatar;
+});
+
+// 今日摄入显示
+const todayCalorieDisplay = computed(() => {
+	const calorie = userInfo.value.todayCalorie || 0;
+	return `${calorie}kcal`;
+});
+
+// 本周均衡度显示
+const weekBalanceDisplay = computed(() => {
+	const balance = userInfo.value.weekBalance || 0;
+	return `${balance}%`;
+});
 
 // 分享功能变量
 const shareDialogVisible = ref(false);
@@ -432,13 +476,14 @@ const editForm = reactive({
 });
 
 // 地址选择功能变量
-const selectedProvince = ref('');
-const selectedCity = ref('');
-const selectedDistrict = ref('');
-const provinces = ref([]);
-const cities = ref([]);
-const districts = ref([]);
+const selectedLocation = ref([]);
 const cascaderData = ref([]);
+const cascaderProps = {
+	value: "value",
+	label: "label",
+	children: "children",
+	expandTrigger: "hover",
+};
 
 // 资料编辑表单验证规则
 const editFormRules = ref({
@@ -450,32 +495,71 @@ const editFormRules = ref({
 		{ type: "email", message: "请输入正确的邮箱地址", trigger: ["blur", "change"] },
 	],
 	location: [
-		{ max: 50, message: "所在地长度不超过 50 个字符", trigger: ["blur", "change"] },
+		{ required: false, message: "请选择所在地", trigger: ["blur", "change"] },
 	],
-// height 和 weight 的验证将在提交时手动处理
-	height: [],
-	weight: [],
+	height: [
+		{
+			type: "number",
+			min: 30,
+			max: 280,
+			message: "身高范围在 30 到 280 cm",
+			trigger: ["blur", "change"],
+		},
+	],
+	weight: [
+		{
+			type: "number",
+			min: 5,
+			max: 300,
+			message: "体重范围在 5 到 300 kg",
+			trigger: ["blur", "change"],
+		},
+	],
 	dietGoal: [{ required: true, message: "请选择饮食目标", trigger: "change" }],
 });
 
-// 生命周期钩子
-// 页面加载时初始化
+// 编辑表单引用
+const editFormRef = ref(null);
+
+// 生命周期钩子 - 统一的初始化入口
 onMounted(async () => {
-	// 从authStore获取userId
-	let userId = parseInt(authStore.userId || "0", 10);
+	await initPage();
+});
 
-	console.log("userId:", userId);
+// 页面初始化
+const initPage = async () => {
+	try {
+		loading.value = true;
 
-	// 检查userId是否有效
+		// 并行执行所有数据获取
+		await Promise.all([
+			fetchUserInfo(),
+			fetchWalletInfo(),
+			fetchAddressData(),
+			fetchHealthData(),
+			fetchOrderStats(),
+		]);
+	} catch (error) {
+		console.error("初始化页面失败:", error);
+		ElMessage.error("加载用户信息失败，请刷新重试");
+	} finally {
+		loading.value = false;
+	}
+};
+
+// 获取用户信息
+const fetchUserInfo = async () => {
+	const userId = parseInt(authStore.userId || "0", 10);
+
 	if (isNaN(userId) || userId <= 0) {
 		ElMessage.error("用户未登录或登录信息无效，请重新登录");
 		setTimeout(() => {
 			router.push("/login");
 		}, 1000);
-		return;
+		throw new Error("无效的用户ID");
 	}
 
-	// 如果当前用户信息为空或不完整，从后端API获取用户信息
+	// 检查是否需要从后端获取
 	const isUserInfoEmpty =
 		!userStore.userInfo ||
 		Object.keys(userStore.userInfo).length === 0 ||
@@ -485,36 +569,102 @@ onMounted(async () => {
 		!userStore.userInfo.avatar.length;
 
 	if (isUserInfoEmpty) {
-		console.log(
-			"当前用户信息为空或不完整，从后端API获取用户信息",
-			userStore.userInfo
-		);
-		// 从后端API获取用户信息
+		console.log("从后端API获取用户信息");
 		userInfo.value = await userStore.fetchUserInfo(userId);
 	} else {
-		// 使用store中的用户信息
-		userInfo.value = userStore.userInfo;
+		userInfo.value = { ...userStore.userInfo };
 	}
 
-	console.log("userInfo:", userInfo.value);
+	console.log("用户信息:", userInfo.value);
+};
 
-	// 获取实时钱包数据，确保显示最新的余额信息
+// 获取钱包信息
+const fetchWalletInfo = async () => {
 	try {
+		const userId = parseInt(authStore.userId || "0", 10);
 		const walletResponse = await walletApi.getWalletInfo(userId);
-		if (walletResponse.code === '200' && walletResponse.data) {
-			// 更新userInfo中的钱包数据
+
+		if (walletResponse.code === "200" && walletResponse.data) {
 			userInfo.value.wallet = walletResponse.data;
 			console.log("钱包信息已更新:", walletResponse.data);
 		}
 	} catch (error) {
 		console.error("获取钱包信息失败:", error);
+		// 钱包信息获取失败不影响其他功能
 	}
-});
+};
+
+// 获取地址数据
+const fetchAddressData = async () => {
+	try {
+		const response = await api.get("/v1/location/cascader");
+		console.log("获取地址数据成功:", response);
+
+		if (response.code === "200" && response.data) {
+			cascaderData.value = response.data;
+		}
+	} catch (error) {
+		console.error("获取地址数据失败:", error);
+		// 地址数据获取失败不影响其他功能
+	}
+};
+
+// 获取健康数据（今日摄入、本周均衡度）
+const fetchHealthData = async () => {
+	try {
+		// TODO: 调用实际的健康数据API
+		// const userId = parseInt(authStore.userId || "0", 10);
+		// const response = await api.get(`/v1/users/${userId}/health-stats`);
+		// userInfo.value.todayCalorie = response.data.todayCalorie || 0;
+		// userInfo.value.weekBalance = response.data.weekBalance || 0;
+
+		// 暂时使用默认值
+		userInfo.value.todayCalorie = 0;
+		userInfo.value.weekBalance = 0;
+	} catch (error) {
+		console.error("获取健康数据失败:", error);
+		userInfo.value.todayCalorie = 0;
+		userInfo.value.weekBalance = 0;
+	}
+};
+
+// 获取订单统计
+const fetchOrderStats = async () => {
+	try {
+		// TODO: 调用实际的订单统计API
+		// const userId = parseInt(authStore.userId || "0", 10);
+		// const response = await api.get(`/v1/users/${userId}/order-stats`);
+		// userInfo.value.orders = response.data || {
+		// 	inProgress: 0,
+		// 	pending: 0,
+		// 	pendingComment: 0,
+		// };
+
+		// 暂时使用默认值
+		userInfo.value.orders = {
+			inProgress: 0,
+			pending: 0,
+			pendingComment: 0,
+		};
+	} catch (error) {
+		console.error("获取订单统计失败:", error);
+		userInfo.value.orders = {
+			inProgress: 0,
+			pending: 0,
+			pendingComment: 0,
+		};
+	}
+};
+
+// 刷新页面数据
+const refreshData = async () => {
+	await initPage();
+	ElMessage.success("数据已刷新");
+};
 
 // 头像相关功能
 // 触发头像上传
 const triggerAvatarUpload = () => {
-	// Trigger the hidden file input in the CommonAvatar component
 	commonAvatarRef.value?.$refs?.avatarInput?.click();
 };
 
@@ -524,11 +674,9 @@ const handleAvatarUpload = (file) => {
 
 	const reader = new FileReader();
 	reader.onload = async (e) => {
-		// 获取完整的base64数据
 		const base64Image = e.target.result;
 
 		try {
-			// 获取当前登录用户的ID
 			const userId = authStore.userId;
 			if (!userId) {
 				ElMessage.error("用户未登录，请重新登录");
@@ -539,11 +687,11 @@ const handleAvatarUpload = (file) => {
 			const response = await api.put(`/v1/users/${userId}/avatar/base64`, {
 				avatarBase64: base64Image,
 			});
+
 			console.log("update avatar response:", response);
 			if (response.code === "200") {
 				console.log("update avatar success");
 				userInfo.value = await userStore.fetchUserInfo(userId);
-
 				ElMessage.success("头像上传成功");
 			} else {
 				ElMessage.error("头像上传失败: " + response.message);
@@ -576,11 +724,6 @@ const goToWalletManagement = () => {
 	router.push("/user/home/wallet-management");
 };
 
-// 跳转到消费记录页面
-const goToConsumeHistory = () => {
-	router.push("/user/home/consume-history");
-};
-
 // 跳转到我的收藏页面
 const goToMyCollection = () => {
 	router.push("/user/home/my-collection");
@@ -605,17 +748,7 @@ const submitFeedback = () => {
 // 资料编辑功能
 // 编辑资料
 const editProfile = () => {
-	// 处理 height 和 weight，确保它们不是数组类型
-  console.log("userInfo:", userInfo.value);
-	const userHeight = userInfo.value.height;
-	const processedHeight = Array.isArray(userHeight)
-		? Number(userHeight[0]) || 0
-		: Number(userHeight) || 0;
-
-	const userWeight = userInfo.value.weight;
-	const processedWeight = Array.isArray(userWeight)
-		? Number(userWeight[0]) || 0
-		: Number(userWeight) || 0;
+	console.log("userInfo:", userInfo.value);
 
 	// 将当前用户信息填充到编辑表单
 	Object.assign(editForm, {
@@ -623,9 +756,8 @@ const editProfile = () => {
 		phone: userInfo.value.phone || "",
 		email: userInfo.value.email || "",
 		location: userInfo.value.location || "",
-		// 确保 height 和 weight 始终为数字类型
-		height: processedHeight,
-		weight: processedWeight,
+		height: Number(userInfo.value.height) || 0,
+		weight: Number(userInfo.value.weight) || 0,
 		dietGoal: userInfo.value.dietGoal || "",
 	});
 
@@ -636,84 +768,63 @@ const editProfile = () => {
 	editProfileDialogVisible.value = true;
 };
 
+// 地址选择变化处理
+const handleLocationChange = (value) => {
+	if (value && value.length > 0) {
+		editForm.location = value.join(" ");
+	} else {
+		editForm.location = "";
+	}
+};
+
+// 初始化地址选择器
+const initLocationSelect = (location) => {
+	if (!location) {
+		selectedLocation.value = [];
+		return;
+	}
+
+	const parts = location.split(" ").filter(Boolean);
+	selectedLocation.value = parts;
+};
+
 // 更新保存编辑的资料方法
 const saveEditProfile = () => {
 	if (editFormRef.value) {
-    console.log("editForm:", editForm);
+		console.log("editForm:", editForm);
 		editFormRef.value.validate(async (valid) => {
 			if (valid) {
-				// 手动验证身高和体重
-				let isHeightValid = true;
-				let isWeightValid = true;
-
-				// 验证身高
-				if (editForm.height !== null && editForm.height !== undefined && editForm.height !== '') {
-					const heightNum = Number(editForm.height);
-					if (isNaN(heightNum)) {
-						isHeightValid = false;
-						ElMessage.error("请输入有效的身高数值");
-					} else if (heightNum < 30 || heightNum > 280) {
-						isHeightValid = false;
-						ElMessage.error("身高范围在 30 到 280 cm");
-					}
-				}
-
-				// 验证体重
-				if (editForm.weight !== null && editForm.weight !== undefined && editForm.weight !== '') {
-					const weightNum = Number(editForm.weight);
-					if (isNaN(weightNum)) {
-						isWeightValid = false;
-						ElMessage.error("请输入有效的体重数值");
-					} else if (weightNum < 5 || weightNum > 300) {
-						isWeightValid = false;
-						ElMessage.error("体重范围在 5 到 300 kg");
-					}
-				}
-
-				// 如果验证失败，返回
-				if (!isHeightValid || !isWeightValid) {
-					return;
-				}
-
-				// 再次确保提交前 height 和 weight 不是数组类型
-				const submitForm = { ...editForm };
-				if (Array.isArray(submitForm.height)) {
-					submitForm.height = Number(submitForm.height[0]) || null;
-				} else if (submitForm.height) {
-					submitForm.height = Number(submitForm.height);
-				}
-
-				if (Array.isArray(submitForm.weight)) {
-					submitForm.weight = Number(submitForm.weight[0]) || null;
-				} else if (submitForm.weight) {
-					submitForm.weight = Number(submitForm.weight);
-				}
 				try {
+					saving.value = true;
+
 					const userId = parseInt(localStorage.getItem("userId"), 10);
+
 					// 发送PUT请求更新用户资料
 					const response = await api.put(
 						API_CONFIG.user.update.replace("{userId}", userId),
-						submitForm
+						editForm
 					);
 
-          console.log("更新用户信息响应:", response);
+					console.log("更新用户信息响应:", response);
 					if (response.code === "200") {
 						// 更新本地用户信息
 						const updatedUserInfo = { ...userInfo.value, ...editForm };
 						userInfo.value = updatedUserInfo;
+
 						// 更新store中的用户信息并保存到localStorage
 						userStore.setUserInfo(updatedUserInfo);
+
 						// 关闭对话框
 						editProfileDialogVisible.value = false;
 						ElMessage.success("资料更新成功");
 					} else {
-						ElMessage.error(
-							"资料更新失败: " + (response.message || "未知错误")
-						);
+						ElMessage.error("资料更新失败: " + (response.message || "未知错误"));
 					}
 				} catch (error) {
 					console.error("更新资料失败:", error);
 					ElMessage.error("网络请求失败，请稍后重试");
+				} finally {
+					saving.value = false;
 				}
 			} else {
 				ElMessage.error("表单验证失败，请检查输入");
@@ -722,10 +833,8 @@ const saveEditProfile = () => {
 	}
 };
 
-// 设置功能
 // 退出登录
 const logout = () => {
-	// 弹出确认对话框
 	ElMessageBox.confirm("确认要退出登录吗？", "提示", {
 		confirmButtonText: "确定",
 		cancelButtonText: "取消",
@@ -738,7 +847,6 @@ const logout = () => {
 			localStorage.removeItem("phone");
 			localStorage.removeItem("userId");
 			localStorage.removeItem("token");
-			// localStorage.removeItem('savedAccounts') // 也可以考虑清除保存的账号
 
 			// 清除Store中的用户信息
 			authStore.clearAuth();
@@ -749,124 +857,14 @@ const logout = () => {
 			ElMessage.success("已退出登录");
 		})
 		.catch(() => {
-			// 取消退出登录
 			ElMessage.info("已取消退出登录");
 		});
 };
 
-// 地址选择功能
-
-// 从后端获取地址数据
-const fetchAddressData = async () => {
-	try {
-		const response = await api.get('/v1/location/cascader');
-		console.log('获取地址数据成功:', response);
-    if (response.code === '200' && response.data) {
-			cascaderData.value = response.data;
-			// 初始化省份列表
-			provinces.value = cascaderData.value.map(province => ({
-				label: province.label,
-				value: province.value
-			}));
-		}
-	} catch (error) {
-		console.error('获取地址数据失败:', error);
-		ElMessage.error('获取地址数据失败，请稍后重试');
-	}
-};
-
-// 省份选择变化
-const handleProvinceChange = () => {
-	selectedCity.value = '';
-	selectedDistrict.value = '';
-	districts.value = [];
-	if (selectedProvince.value) {
-		// 从级联数据中找到对应的省份
-		const currentProvince = cascaderData.value.find(province => province.value === selectedProvince.value);
-		if (currentProvince && currentProvince.children) {
-			cities.value = currentProvince.children.map(city => ({
-				label: city.label,
-				value: city.value
-			}));
-		} else {
-			cities.value = [];
-		}
-	} else {
-		cities.value = [];
-	}
-	updateLocation();
-};
-
-// 城市选择变化
-const handleCityChange = () => {
-	selectedDistrict.value = '';
-	if (selectedProvince.value && selectedCity.value) {
-		// 从级联数据中找到对应的省份和城市
-		const currentProvince = cascaderData.value.find(province => province.value === selectedProvince.value);
-		if (currentProvince && currentProvince.children) {
-			const currentCity = currentProvince.children.find(city => city.value === selectedCity.value);
-			if (currentCity && currentCity.children) {
-				districts.value = currentCity.children.map(district => ({
-					label: district.label,
-					value: district.value
-				}));
-			} else {
-				districts.value = [];
-			}
-		} else {
-			districts.value = [];
-		}
-	} else {
-		districts.value = [];
-	}
-	updateLocation();
-};
-
-// 区县选择变化
-const handleDistrictChange = () => {
-	updateLocation();
-};
-
-// 页面加载时获取地址数据
-onMounted(async () => {
-	await fetchAddressData();
-});
-
-// 更新完整地址到表单
-const updateLocation = () => {
-	const locationParts = [selectedProvince.value, selectedCity.value, selectedDistrict.value].filter(Boolean);
-	editForm.location = locationParts.join(' ');
-};
-
-// 初始化地址选择器
-const initLocationSelect = (location) => {
-	if (!location) return;
-	const parts = location.split(' ');
-	if (parts.length >= 1) {
-		selectedProvince.value = parts[0];
-		handleProvinceChange();
-		if (parts.length >= 2) {
-			// 需要延迟一下，等待cities数据更新
-			setTimeout(() => {
-				selectedCity.value = parts[1];
-				handleCityChange();
-				if (parts.length >= 3) {
-					setTimeout(() => {
-						selectedDistrict.value = parts[2];
-					}, 0);
-				}
-			}, 0);
-		}
-	}
-};
-
-// 编辑表单引用
-const editFormRef = ref(null);
-
 // 分享功能
 const shareProfile = () => {
 	// 生成分享链接
-	const userId = parseInt(localStorage.getItem("userId") || "1", 10); // 模拟用户ID，实际应该从登录状态中获取
+	const userId = parseInt(localStorage.getItem("userId") || "1", 10);
 	shareLink.value = `${window.location.origin}/user/profile/${userId}`;
 
 	// 生成二维码
@@ -893,6 +891,11 @@ const copyShareLink = async () => {
 		ElMessage.error("复制失败，请手动复制");
 	}
 };
+
+// 暴露刷新方法给外部使用
+defineExpose({
+	refreshData,
+});
 </script>
 
 <style scoped>
@@ -900,6 +903,13 @@ const copyShareLink = async () => {
 .profile-container {
 	padding: 0 20px 20px 20px;
 	min-height: 100vh;
+}
+
+.loading-container {
+	padding: 40px;
+	background: #fff;
+	border-radius: 12px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .profile-card {
@@ -922,36 +932,39 @@ const copyShareLink = async () => {
 	margin: 0 0 20px 0;
 	font-weight: 700;
 	color: #2d3748;
+	display: flex;
+	align-items: center;
+	gap: 8px;
 }
 
 /* 顶部头像区域 */
 .profile-header {
 	display: flex;
-	flex-direction: column; /* 改为纵向排列 */
-	align-items: center; /* 居中对齐 */
-	justify-content: center; /* 居中对齐 */
-	gap: 25px; /* 元素间间距 */
-	padding: 25px; /* 增加内边距 */
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 25px;
+	padding: 25px;
 	flex-wrap: wrap;
 }
 
 .user-name-container {
 	width: 100%;
-	text-align: center; /* 名字居中 */
+	text-align: center;
 }
 
 .user-name {
-	font-size: 32px; /* 文字大小 */
-	font-weight: 800; /* 字体粗细 */
-	margin: 10px 0 20px 0; /* 上下间距 */
-	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); /* 文字渐变 */
-	-webkit-background-clip: text; /* 将渐变应用到文字 */
-	-webkit-text-fill-color: transparent; /* 文字填充为透明以显示渐变 */
-	background-clip: text; /* 标准属性 */
-	text-shadow: 2px 2px 4px rgba(102, 126, 234, 0.15); /* 文字阴影增强质感 */
-	display: inline-block; /* 适应内容宽度 */
-	letter-spacing: 1px; /* 字间距 */
-	line-height: 1.2; /* 行高 */
+	font-size: 32px;
+	font-weight: 800;
+	margin: 10px 0 20px 0;
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	background-clip: text;
+	text-shadow: 2px 2px 4px rgba(102, 126, 234, 0.15);
+	display: inline-block;
+	letter-spacing: 1px;
+	line-height: 1.2;
 }
 
 /* 头像和用户信息内容区 */
@@ -960,7 +973,7 @@ const copyShareLink = async () => {
 	flex-direction: row;
 	justify-content: space-evenly;
 	align-items: center;
-	gap: clamp(25px, 5vw, 45px); /* 响应式间距 */
+	gap: clamp(25px, 5vw, 45px);
 	width: 100%;
 	flex-wrap: wrap;
 }
@@ -971,11 +984,11 @@ const copyShareLink = async () => {
 }
 
 .user-info-section {
-	min-width: 300px; /* 减小最小宽度，允许在更窄的屏幕上保持并排 */
+	min-width: 300px;
 	padding-right: 20px;
 	display: flex;
 	flex-direction: column;
-	align-items: flex-end; /* 内容右对齐 */
+	align-items: flex-end;
 }
 
 .user-basic-info {
@@ -990,7 +1003,7 @@ const copyShareLink = async () => {
 
 .stat-row {
 	display: flex;
-	gap: clamp(25px, 4vw, 40px); /* 响应式间距 */
+	gap: clamp(25px, 4vw, 40px);
 	margin-bottom: 12px;
 	flex-wrap: wrap;
 }
@@ -1000,10 +1013,7 @@ const copyShareLink = async () => {
 	flex-direction: column;
 	gap: 4px;
 	text-align: center;
-}
-
-.user-stats .stat-item {
-	min-width: clamp(120px, 20vw, 140px); /* 响应式最小宽度 */
+	min-width: clamp(120px, 20vw, 140px);
 }
 
 .stat-label {
@@ -1039,7 +1049,7 @@ const copyShareLink = async () => {
 /* 操作按钮 */
 .action-buttons {
 	display: flex;
-	justify-content: flex-end; /* 按钮右对齐 */
+	justify-content: flex-end;
 	gap: 12px;
 	flex-wrap: wrap;
 }
@@ -1051,10 +1061,6 @@ const copyShareLink = async () => {
 .action-btn:hover {
 	transform: translateY(-2px);
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.basic-info .info-item span {
-	font-weight: bold;
 }
 
 /* 订单统计 */
@@ -1074,6 +1080,7 @@ const copyShareLink = async () => {
 	text-align: center;
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 	transition: transform 0.3s ease, box-shadow 0.3s ease;
+	cursor: pointer;
 }
 
 .order-stat-card:hover {
@@ -1093,21 +1100,16 @@ const copyShareLink = async () => {
 	margin-bottom: 2px;
 }
 
-.order-stat-card small {
-	font-size: 12px;
-	color: #a0aec0;
-}
-
 .order-in-progress {
-	color: #2b6cb0; /* 蓝色 */
+	color: #2b6cb0;
 }
 
 .order-pending {
-	color: #dd6b20; /* 橙色 */
+	color: #dd6b20;
 }
 
 .order-pending-comment {
-	color: #805ad5; /* 紫色 */
+	color: #805ad5;
 }
 
 /* 钱包模块 */
@@ -1223,8 +1225,14 @@ const copyShareLink = async () => {
 }
 
 .module-item-icon {
-	font-size: 24px;
-	line-height: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 40px;
+	height: 40px;
+	background: rgba(43, 108, 176, 0.1);
+	border-radius: 8px;
+	color: #2b6cb0;
 }
 
 .module-item-info {
@@ -1264,6 +1272,9 @@ const copyShareLink = async () => {
 	border-radius: 8px;
 	font-weight: 600;
 	transition: transform 0.2s ease;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
 
 .bottom-actions .el-button:hover {
@@ -1323,5 +1334,41 @@ const copyShareLink = async () => {
 	height: 200px;
 	margin: 0 auto;
 	display: block;
+}
+
+/* 单位提示 */
+.unit-hint {
+	margin-left: 10px;
+	color: #909399;
+	font-size: 14px;
+}
+
+/* 响应式优化 */
+@media (max-width: 768px) {
+	.profile-content {
+		flex-direction: column;
+		align-items: center;
+	}
+
+	.user-info-section {
+		align-items: center;
+		padding-right: 0;
+		min-width: auto;
+		width: 100%;
+	}
+
+	.action-buttons {
+		justify-content: center;
+		width: 100%;
+	}
+
+	.action-btn {
+		flex: 1;
+		min-width: 100px;
+	}
+
+	.bottom-actions .el-button {
+		min-width: 100px;
+	}
 }
 </style>
