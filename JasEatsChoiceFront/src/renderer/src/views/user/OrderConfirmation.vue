@@ -68,6 +68,67 @@
           </div>
         </el-card>
 
+        <!-- 支付方式卡片 -->
+        <el-card class="info-card" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span class="card-title">支付方式</span>
+            </div>
+          </template>
+
+          <div class="payment-methods">
+            <div
+              v-for="option in paymentMethods"
+              :key="option.id"
+              class="payment-method-item"
+              :class="{ active: selectedPaymentMethod.id === option.id }"
+              @click="selectedPaymentMethod = option"
+            >
+              <div class="method-icon">{{ option.icon }}</div>
+              <div class="method-info">
+                <div class="method-name">{{ option.name }}</div>
+                <div class="method-desc" v-if="option.desc">{{ option.desc }}</div>
+              </div>
+              <el-radio v-model="selectedPaymentMethod.id" :label="option.id"></el-radio>
+            </div>
+          </div>
+        </el-card>
+
+        <!-- 订单备注卡片 -->
+        <el-card class="info-card" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span class="card-title">订单备注</span>
+              <el-tag type="info" size="small">选填</el-tag>
+            </div>
+          </template>
+
+          <div class="order-remark-section">
+            <el-input
+              v-model="orderRemark"
+              type="textarea"
+              :rows="3"
+              placeholder="填写订单备注，如：配送时间、联系方式等要求"
+              maxlength="200"
+              show-word-limit
+              resize="none"
+            />
+            <div class="quick-remarks">
+              <span class="quick-remark-label">快速备注：</span>
+              <el-tag
+                v-for="quickRemark in quickRemarks"
+                :key="quickRemark"
+                size="small"
+                effect="plain"
+                class="quick-remark-tag"
+                @click="addQuickRemark(quickRemark)"
+              >
+                {{ quickRemark }}
+              </el-tag>
+            </div>
+          </div>
+        </el-card>
+
         <!-- 订单商品卡片 -->
         <el-card class="info-card" shadow="hover">
           <template #header>
@@ -98,32 +159,6 @@
               <el-tag type="warning" size="small" effect="plain">可编辑</el-tag>
             </div>
             <order-item-list :items="orderInfo.unpaidItems" :show-payment-info="false" />
-          </div>
-        </el-card>
-
-        <!-- 支付方式卡片 -->
-        <el-card class="info-card" shadow="hover">
-          <template #header>
-            <div class="card-header">
-              <span class="card-title">支付方式</span>
-            </div>
-          </template>
-
-          <div class="payment-methods">
-            <div
-              v-for="option in paymentMethods"
-              :key="option.id"
-              class="payment-method-item"
-              :class="{ active: selectedPaymentMethod.id === option.id }"
-              @click="selectedPaymentMethod = option"
-            >
-              <div class="method-icon">{{ option.icon }}</div>
-              <div class="method-info">
-                <div class="method-name">{{ option.name }}</div>
-                <div class="method-desc" v-if="option.desc">{{ option.desc }}</div>
-              </div>
-              <el-radio v-model="selectedPaymentMethod.id" :label="option.id"></el-radio>
-            </div>
           </div>
         </el-card>
       </div>
@@ -199,22 +234,32 @@
             </div>
           </div>
         </el-card>
+      </div>
+    </div>
 
-        <!-- 提交订单按钮 -->
-        <el-button
-          type="primary"
-          size="large"
-          class="submit-button"
-          @click="confirmOrder"
-          :loading="submitting"
-        >
-          {{ submitButtonText }}
-        </el-button>
-
-        <!-- 支付规则提示 -->
-        <div class="payment-tips">
-          <el-icon color="#909399" :size="14"><InfoFilled /></el-icon>
-          <span>已支付订单不可修改，仅支付未支付部分</span>
+    <!-- 底部提交栏 -->
+    <div class="bottom-submit-bar">
+      <div class="submit-bar-content">
+        <div class="submit-bar-left">
+          <div class="payment-tips">
+            <el-icon color="#909399" :size="16"><InfoFilled /></el-icon>
+            <span>已支付订单不可修改，仅支付未支付部分</span>
+          </div>
+        </div>
+        <div class="submit-bar-right">
+          <div class="total-info">
+            <span class="total-label">应付金额：</span>
+            <span class="total-amount">¥{{ finalAmount.toFixed(2) }}</span>
+          </div>
+          <el-button
+            type="primary"
+            size="large"
+            class="submit-button-fixed"
+            @click="confirmOrder"
+            :loading="submitting"
+          >
+            {{ submitButtonText }}
+          </el-button>
         </div>
       </div>
     </div>
@@ -250,10 +295,17 @@
                 加选: {{ formatOptionalIngredients(item.selectedOptionalIngredients) }}
               </el-tag>
             </div>
-            <!-- 备注信息 -->
-            <div class="item-note" v-if="item.note">
-              <el-icon><Document /></el-icon>
-              <span>{{ item.note }}</span>
+            <!-- 备注编辑 -->
+            <div class="item-note-edit">
+              <el-input
+                v-model="item.note"
+                type="textarea"
+                :rows="2"
+                placeholder="添加备注，如：少辣、不要香菜等"
+                maxlength="100"
+                show-word-limit
+                size="small"
+              />
             </div>
           </div>
           <div class="cart-item-controls">
@@ -348,8 +400,7 @@ import {
   CircleCheck,
   Clock,
   Ticket,
-  InfoFilled,
-  Document
+  InfoFilled
 } from '@element-plus/icons-vue'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
 import OrderItemList from './components/OrderItemList.vue'
@@ -407,6 +458,31 @@ const merchantInfo = ref({
 // 购物车数据
 const cartItems = ref([])
 const cartVisible = ref(false)
+
+// 订单备注
+const orderRemark = ref('')
+
+// 快速备注选项
+const quickRemarks = ref([
+  '尽快配送',
+  '准时配送',
+  '请提前联系',
+  '配送时电话联系',
+  '不要按门铃'
+])
+
+// 添加快速备注
+const addQuickRemark = (remark) => {
+  if (orderRemark.value) {
+    // 如果已有备注，追加备注
+    if (!orderRemark.value.includes(remark)) {
+      orderRemark.value += '，' + remark
+    }
+  } else {
+    // 如果没有备注，直接设置
+    orderRemark.value = remark
+  }
+}
 
 // 打开购物车编辑弹窗
 const openCart = () => {
@@ -766,7 +842,8 @@ const confirmOrder = async () => {
           totalAmount: finalAmount.value,
           items: orderInfo.value.unpaidItems,
           couponId: selectedDiscount.value?.id || null,
-          couponAmount: discountAmount.value || 0
+          couponAmount: discountAmount.value || 0,
+          orderRemark: orderRemark.value
         })
 
         // 将购物车项转换为订单菜品格式
@@ -778,6 +855,18 @@ const confirmOrder = async () => {
         }))
 
         // 先创建订单(包含菜品列表)
+        // 构建订单备注（合并优惠券信息和用户备注）
+        let orderRemarkText = ''
+        if (selectedDiscount.value) {
+          orderRemarkText += `使用优惠券: ${selectedDiscount.value.name}`
+        }
+        if (orderRemark.value) {
+          if (orderRemarkText) {
+            orderRemarkText += ' | '
+          }
+          orderRemarkText += orderRemark.value
+        }
+
         const createOrderResponse = await orderApi.createOrder({
           order: {
             id: orderInfo.value.orderId,
@@ -786,7 +875,7 @@ const confirmOrder = async () => {
             totalAmount: finalAmount.value,
             status: 0, // 0-待支付
             address: pendingOrder.address || '商家地址', // TODO: 从地址簿选择或使用用户默认地址
-            remark: selectedDiscount.value ? `使用优惠券: ${selectedDiscount.value.name}` : null
+            remark: orderRemarkText || null
           },
           dishes: dishes
         })
@@ -845,7 +934,7 @@ const confirmOrder = async () => {
 .order-confirmation-container {
   min-height: 100vh;
   background: #f5f7fa;
-  padding-bottom: 40px;
+  padding-bottom: 100px; // 为底部栏留出空间
 
   .page-header {
     background: #fff;
@@ -1108,6 +1197,70 @@ const confirmOrder = async () => {
     }
   }
 
+  // 订单备注卡片
+  .order-remark-section {
+    .order-remark-textarea {
+      margin-bottom: 12px;
+
+      :deep(.el-textarea__inner) {
+        border-radius: 8px;
+        font-size: 14px;
+        padding: 12px;
+        background: #fafafa;
+        transition: all 0.3s;
+
+        &:focus {
+          background: #fff;
+          border-color: #409eff;
+          box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.1);
+        }
+
+        &::placeholder {
+          color: #bbb;
+          font-size: 13px;
+        }
+      }
+
+      :deep(.el-input__count) {
+        font-size: 12px;
+        color: #999;
+        background: transparent;
+      }
+    }
+
+    .quick-remarks {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding-top: 8px;
+      border-top: 1px solid #f0f0f0;
+
+      .quick-remark-label {
+        font-size: 13px;
+        color: #7f8c8d;
+        font-weight: 500;
+      }
+
+      .quick-remark-tag {
+        cursor: pointer;
+        transition: all 0.3s;
+        user-select: none;
+
+        &:hover {
+          background: #409eff;
+          color: #fff;
+          border-color: #409eff;
+          transform: translateY(-1px);
+        }
+
+        &:active {
+          transform: translateY(0);
+        }
+      }
+    }
+  }
+
   // 支付明细卡片
   .payment-summary-card {
 
@@ -1240,28 +1393,6 @@ const confirmOrder = async () => {
     }
   }
 
-  // 提交按钮
-  .submit-button {
-    width: 100%;
-    height: 50px;
-    font-size: 17px;
-    font-weight: 600;
-    border-radius: 25px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border: none;
-    box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
-
-    &:hover {
-      background: linear-gradient(135deg, #7c8ff0 0%, #865aba 100%);
-      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
-      transform: translateY(-2px);
-    }
-
-    &:active {
-      transform: translateY(0);
-    }
-  }
-
   // 支付提示
   .payment-tips {
     display: flex;
@@ -1274,6 +1405,108 @@ const confirmOrder = async () => {
     color: #7f8c8d;
     text-align: center;
     justify-content: center;
+  }
+}
+
+// 底部提交栏
+.bottom-submit-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 999;
+  background: #fff;
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
+  border-top: 1px solid #e4e7ed;
+
+  .submit-bar-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 16px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 24px;
+
+    @media (max-width: 768px) {
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .submit-bar-left {
+      flex: 1;
+
+      .payment-tips {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        color: #7f8c8d;
+        text-align: left;
+        justify-content: flex-start;
+        padding: 0;
+        background: transparent;
+        border-radius: 0;
+      }
+    }
+
+    .submit-bar-right {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+
+      @media (max-width: 768px) {
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      .total-info {
+        text-align: right;
+
+        @media (max-width: 768px) {
+          flex: 1;
+        }
+
+        .total-label {
+          font-size: 14px;
+          color: #7f8c8d;
+          margin-right: 8px;
+        }
+
+        .total-amount {
+          font-size: 28px;
+          font-weight: 700;
+          color: #e6a23c;
+        }
+      }
+
+      .submit-button-fixed {
+        min-width: 180px;
+        height: 48px;
+        font-size: 16px;
+        font-weight: 600;
+        border-radius: 24px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+
+        &:hover {
+          background: linear-gradient(135deg, #7c8ff0 0%, #865aba 100%);
+          box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+          transform: translateY(-2px);
+        }
+
+        &:active {
+          transform: translateY(0);
+        }
+
+        @media (max-width: 768px) {
+          min-width: 140px;
+          height: 44px;
+          font-size: 15px;
+        }
+      }
+    }
   }
 }
 
@@ -1323,15 +1556,32 @@ const confirmOrder = async () => {
         }
       }
 
-      .item-note {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        padding: 6px 10px;
-        background: #fff9e6;
-        border-radius: 4px;
-        font-size: 12px;
-        color: #856404;
+      .item-note-edit {
+        margin-top: 8px;
+
+        :deep(.el-textarea__inner) {
+          border-radius: 6px;
+          font-size: 13px;
+          padding: 8px 12px;
+          background: #fafafa;
+          transition: all 0.3s;
+
+          &:focus {
+            background: #fff;
+            border-color: #409eff;
+          }
+
+          &::placeholder {
+            color: #bbb;
+            font-size: 12px;
+          }
+        }
+
+        :deep(.el-input__count) {
+          font-size: 11px;
+          color: #999;
+          background: transparent;
+        }
       }
     }
 

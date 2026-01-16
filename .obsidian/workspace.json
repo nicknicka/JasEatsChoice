@@ -167,17 +167,18 @@
   },
   "active": "25380c94f56f550b",
   "lastOpenFiles": [
+    "JasEatsChoiceFront/src/renderer/src/composables/useShare.ts",
+    "JasEatsChoiceFront/src/renderer/src/composables/useRetry.ts",
+    "JasEatsChoiceFront/src/renderer/src/composables/useSearch.ts",
+    "JasEatsChoiceFront/src/renderer/src/composables/useFavorites.ts",
+    "JasEatsChoiceFront/src/renderer/src/composables/useWeather.ts",
+    "JasEatsChoiceFront/src/renderer/src/constants/weather.ts",
+    "JasEatsChoiceFront/src/renderer/src/constants/home.ts",
+    "JasEatsChoiceFront/src/renderer/src/types/index.ts",
+    "JasEatsChoiceFront/src/renderer/src/types/api.ts",
+    "JasEatsChoiceFront/src/renderer/src/types/websocket.ts",
+    "JasEatsChoiceFront/src/renderer/src/types/tutorial.ts",
     "JasEatsChoiceFront/src/renderer/src/docs/饮食记录页面优化总结.md",
-    "JasEatsChoiceFront/src/renderer/src/docs",
-    "JasEatsChoiceJava/target/test-classes/com/xx/jaseatschoicejava/IdGeneratorTest.class",
-    "JasEatsChoiceJava/target/test-classes/com/xx/jaseatschoicejava",
-    "JasEatsChoiceJava/target/test-classes/com/xx",
-    "JasEatsChoiceJava/target/test-classes/com",
-    "JasEatsChoiceJava/target/test-classes",
-    "JasEatsChoiceJava/target/generated-test-sources/test-annotations",
-    "JasEatsChoiceJava/target/generated-test-sources",
-    "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/service/PaymentService.class",
-    "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/controller/OrderController.class",
     "JasEatsChoiceFront/node_modules/fsevents/README.md",
     "订单创建流程验证报告.md",
     "数据库快速参考.md",
@@ -211,7 +212,6 @@
     "JasEatsChoiceFront/node_modules/@types/node/README.md",
     "JasEatsChoiceFront/node_modules/@types/web-bluetooth/README.md",
     "JasEatsChoiceFront/node_modules/@types/yauzl/README.md",
-    "JasEatsChoiceFront/node_modules/@types/verror/README.md",
-    "JasEatsChoiceFront/node_modules/@types/responselike/README.md"
+    "JasEatsChoiceFront/node_modules/@types/verror/README.md"
   ]
 }

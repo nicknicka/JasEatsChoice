@@ -13,7 +13,9 @@ import {
   Share,
   Search,
   Coffee,
-  Document
+  Document,
+  Refresh,
+  Edit
 } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import api from '../../utils/api.js'
@@ -23,13 +25,13 @@ import { WS_CONFIG } from '../../constants/wsConstants.js'
 
 const router = useRouter()
 
-// 默认菜品占位图
+// 默认菜品占位图 - 更精美的设计
 const defaultDishImage =
-  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23f0f0f0" width="400" height="300"/%3E%3Ctext fill="%23999" font-family="Arial" font-size="24" x="50%25" y="50%25" text-anchor="middle" dominant-baseline="middle"%3E暂无图片%3C/text%3E%3C/svg%3E'
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Cdefs%3E%3ClinearGradient id="grad1" x1="0%25" y1="0%25" x2="100%25" y2="100%25"%3E%3Cstop offset="0%25" style="stop-color:%23ff6b6b;stop-opacity:0.1" /%3E%3Cstop offset="100%25" style="stop-color:%23ffa8a8;stop-opacity:0.2" /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect fill="url(%23grad1)" width="400" height="300"/%3E%3Ccircle cx="200" cy="130" r="50" fill="%23ff6b6b" opacity="0.15"/%3E%3Ctext x="200" y="130" font-size="48" text-anchor="middle" fill="%23ff6b6b" opacity="0.3"%3E🍽️%3C/text%3E%3Ctext x="200" y="200" font-family="Arial, sans-serif" font-size="20" font-weight="600" text-anchor="middle" fill="%23999"%3E暂无图片%3C/text%3E%3Ctext x="200" y="230" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="%23bbb"%3E精彩美食即将呈现%3C/text%3E%3C/svg%3E'
 
-// 默认教程缩略图
+// 默认教程缩略图 - 更精美的设计
 const defaultTutorialThumbnail =
-  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="200"%3E%3Crect fill="%23f5f5f5" width="300" height="200"/%3E%3Ctext fill="%23999" font-family="Arial" font-size="20" x="50%25" y="50%25" text-anchor="middle" dominant-baseline="middle"%3E教程缩略图%3C/text%3E%3C/svg%3E'
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="200"%3E%3Cdefs%3E%3ClinearGradient id="grad2" x1="0%25" y1="0%25" x2="100%25" y2="100%25"%3E%3Cstop offset="0%25" style="stop-color:%236ba4ff;stop-opacity:0.1" /%3E%3Cstop offset="100%25" style="stop-color:%23a8c8ff;stop-opacity:0.2" /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect fill="url(%23grad2)" width="300" height="200"/%3E%3Ccircle cx="150" cy="85" r="40" fill="%236ba4ff" opacity="0.15"/%3E%3Ctext x="150" y="90" font-size="40" text-anchor="middle" fill="%236ba4ff" opacity="0.3"%3E📖%3C/text%3E%3Ctext x="150" y="150" font-family="Arial, sans-serif" font-size="16" font-weight="600" text-anchor="middle" fill="%23999"%3E暂无缩略图%3C/text%3E%3Ctext x="150" y="175" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="%23bbb"%3E教程内容加载中%3C/text%3E%3C/svg%3E'
 
 // 图片加载错误处理
 const handleImageError = (event) => {
@@ -604,53 +606,98 @@ onMounted(async () => {
 </script>
 
 <template>
-  <el-pull-refresh v-model="refreshing" @refresh="onRefresh" aria-label="下拉刷新内容">
-    <!-- 搜索框 -->
-    <div class="search-section" role="search">
-      <el-input
-        v-model="searchKeyword"
-        placeholder="搜索菜品、教程..."
-        :prefix-icon="Search"
-        clearable
+  <!-- 主内容区域 -->
+  <div class="main-content-wrapper">
+    <!-- 顶部操作栏 -->
+    <div class="top-action-bar">
+      <div class="search-section" role="search">
+        <el-input
+          v-model="searchKeyword"
+          placeholder="搜索菜品、教程..."
+          clearable
+          size="large"
+          class="search-input"
+          @keyup.enter="handleSearch"
+          @clear="clearSearch"
+          aria-label="搜索菜品和教程"
+        >
+          <template #append>
+            <el-button :icon="Search" @click="handleSearch" aria-label="执行搜索">搜索</el-button>
+          </template>
+        </el-input>
+      </div>
+
+      <!-- 刷新按钮 -->
+      <el-button
+        type="primary"
+        :icon="Refresh"
+        :loading="refreshing"
+        @click="onRefresh"
+        class="refresh-action-btn"
+        circle
         size="large"
-        class="search-input"
-        @keyup.enter="handleSearch"
-        @clear="clearSearch"
-        aria-label="搜索菜品和教程"
-      >
-        <template #append>
-          <el-button :icon="Search" @click="handleSearch" aria-label="执行搜索">搜索</el-button>
-        </template>
-      </el-input>
+        title="刷新内容"
+      />
     </div>
 
-    <!-- Right Content Area -->
+    <!-- 天气信息区域 -->
     <div class="weather-section" role="region" aria-label="天气信息">
-    <el-card shadow="hover" class="weather-card">
-      <div class="weather-content">
-        <el-icon class="weather-icon"><component :is="getWeatherIcon()" /></el-icon>
-        <div class="weather-info">
-          <div class="location">
-            <el-button type="text" size="small" @click="locationDialogVisible = true" class="location-button">
-              <el-icon><Location /></el-icon>
-              <span class="location-text">
-                {{ weather.address || weather.city || '选择位置' }}
-              </span>
-              <el-tag size="small" type="info" effect="plain" round>切换</el-tag>
-            </el-button>
+      <el-card shadow="hover" class="weather-card enhanced-weather">
+        <div class="weather-content">
+          <!-- 左侧：天气图标和温度 -->
+          <div class="weather-visual">
+            <div class="weather-icon-wrapper">
+              <el-icon class="weather-icon"><component :is="getWeatherIcon()" /></el-icon>
+            </div>
+            <div class="temp-display">
+              <span class="temp-value">{{ weather.temp }}</span>
+              <span class="temp-unit">°C</span>
+            </div>
           </div>
-          <div class="temp-section">
-            <span class="temp">{{ weather.temp }}℃</span>
-            <span class="weather-condition">{{ weather.condition }}</span>
-          </div>
-          <div class="recommendation">
-            <el-icon class="sparkle-icon">✨</el-icon>
-            <span>{{ getRecommendedDishesSeries() }}</span>
+
+          <!-- 右侧：详细信息和推荐 -->
+          <div class="weather-info">
+            <!-- 位置信息 -->
+            <div class="location-section">
+              <div class="location-label">
+                <el-icon class="location-icon"><Location /></el-icon>
+                <span class="label-text">当前位置</span>
+              </div>
+              <el-button
+                type="text"
+                size="small"
+                @click="locationDialogVisible = true"
+                class="location-button"
+                :title="weather.address || weather.city || '点击选择位置'"
+              >
+                <span class="location-text">
+                  {{ weather.address || weather.city || '点击选择位置' }}
+                </span>
+                <el-icon class="edit-icon"><Edit /></el-icon>
+              </el-button>
+            </div>
+
+            <!-- 天气状况和推荐 -->
+            <div class="weather-details">
+              <div class="condition-badge">
+                <span class="condition-icon">{{ weather.condition?.includes('晴') ? '☀️' : '☁️' }}</span>
+                <span class="condition-text">{{ weather.condition || '未知天气' }}</span>
+              </div>
+
+              <div class="recommendation-card">
+                <div class="recommendation-header">
+                  <span class="sparkle-icon">✨</span>
+                  <span class="recommendation-label">今日推荐</span>
+                </div>
+                <div class="recommendation-content" :title="getRecommendedDishesSeries()">
+                  {{ getRecommendedDishesSeries() }}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </el-card>
-  </div>
+      </el-card>
+    </div>
 
   <div class="recommendation-section" role="region" aria-label="今日推荐菜品">
     <h3 id="recommendations-heading">今日推荐</h3>
@@ -742,12 +789,17 @@ onMounted(async () => {
               </div>
               <div class="dish-rating">
                 <el-rate
+                  v-if="dish.rating && dish.rating > 0"
                   v-model="dish.rating"
                   disabled
                   show-score
                   text-color="#FF6B6B"
                   class="rating"
                 ></el-rate>
+                <div v-else class="no-rating">
+                  <el-icon><Star /></el-icon>
+                  <span>暂无评分</span>
+                </div>
               </div>
             </div>
           </el-card>
@@ -899,10 +951,215 @@ onMounted(async () => {
       </span>
     </template>
   </el-dialog>
-  </el-pull-refresh>
+  </div>
 </template>
 
 <style scoped lang="less">
+// 主内容包裹层
+.main-content-wrapper {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  background-color: #fafafa;
+}
+
+// 顶部操作栏
+.top-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background: #ffffff;
+  border-radius: 0 0 16px 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  margin-bottom: 20px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(10px);
+  background-color: rgba(255, 255, 255, 0.95);
+
+  .search-section {
+    flex: 1;
+    margin-bottom: 0;
+    display: flex;
+    align-items: center;
+
+    .search-input {
+      // 确保输入框容器没有额外间距
+      display: inline-flex;
+      width: 100%;
+
+      :deep(.el-input__wrapper) {
+        // 左侧圆角，右侧直角以便与按钮完美衔接
+        border-radius: 24px 0 0 24px;
+        border-right: none;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        padding-right: 0;
+        background: rgba(255, 255, 255, 0.95);
+
+        &:hover {
+          box-shadow: 0 4px 16px rgba(255, 107, 107, 0.15);
+          background: rgba(255, 255, 255, 1);
+        }
+
+        &.is-focus {
+          box-shadow: 0 4px 24px rgba(255, 107, 107, 0.3);
+          border-right: none;
+          background: rgba(255, 255, 255, 1);
+        }
+      }
+
+      :deep(.el-input-group__append) {
+        // 左侧直角，右侧圆角
+        border-radius: 0 24px 24px 0;
+        background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%);
+        border: none;
+        border-left: none;
+        padding: 0;
+        margin: 0;
+        margin-left: -1px; // 负边距确保无缝衔接
+        box-shadow: 0 2px 12px rgba(255, 107, 107, 0.3);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        z-index: 1; // 确保按钮覆盖在输入框边框上
+        overflow: hidden;
+
+        // 添加波纹效果
+        &::before {
+          content: '';
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          width: 0;
+          height: 0;
+          border-radius: 50%;
+          background: rgba(255, 255, 255, 0.3);
+          transform: translate(-50%, -50%);
+          transition: width 0.6s, height 0.6s;
+        }
+
+        &:hover::before {
+          width: 300px;
+          height: 300px;
+        }
+
+        .el-button {
+          background-color: transparent;
+          border: none;
+          color: #fff;
+          font-weight: 600;
+          padding: 16px 24px;
+          height: 100%;
+          border-radius: 0 24px 24px 0;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: none;
+          margin: 0;
+          position: relative;
+          z-index: 1;
+
+          &:hover {
+            background-color: rgba(255, 255, 255, 0.15);
+            transform: scale(1.02);
+            box-shadow: none;
+          }
+
+          &:active {
+            transform: scale(0.98);
+          }
+        }
+      }
+
+      // 修复输入框组整体的边框问题
+      :deep(.el-input-group__append),
+      :deep(.el-input-group__prepend) {
+        box-shadow: none;
+      }
+    }
+  }
+
+  // 刷新按钮样式
+  .refresh-action-btn {
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #6ba4ff 0%, #5c8eff 100%);
+    border: none;
+    box-shadow: 0 4px 12px rgba(92, 142, 255, 0.3);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+
+    // 添加渐变光泽效果
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.3),
+        transparent
+      );
+      transition: left 0.6s;
+    }
+
+    &:hover {
+      transform: translateY(-2px) scale(1.08);
+      box-shadow: 0 8px 20px rgba(92, 142, 255, 0.5);
+      background: linear-gradient(135deg, #7ab4ff 0%, #6c9eff 100%);
+
+      &::before {
+        left: 100%;
+      }
+
+      .el-icon {
+        transform: rotate(180deg);
+      }
+    }
+
+    &:active {
+      transform: translateY(0) scale(0.95);
+      box-shadow: 0 2px 8px rgba(92, 142, 255, 0.3);
+    }
+
+    .el-icon {
+      transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    // 加载状态
+    &.is-loading {
+      .el-icon {
+        animation: loading-spin 1s linear infinite;
+      }
+    }
+  }
+}
+
+// 刷新旋转动画
+@keyframes refresh-rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes loading-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
 .app-container {
   height: 100vh;
   display: flex;
@@ -976,8 +1233,14 @@ onMounted(async () => {
     margin-bottom: 16px;
 
     .search-input {
+      // 确保输入框容器没有额外间距
+      display: inline-flex;
+      width: 100%;
+
       :deep(.el-input__wrapper) {
-        border-radius: 24px;
+        // 左侧圆角，右侧直角以便与按钮完美衔接
+        border-radius: 24px 0 0 24px;
+        border-right: none;
         box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
         transition: all 0.3s ease;
 
@@ -991,15 +1254,24 @@ onMounted(async () => {
       }
 
       :deep(.el-input-group__append) {
+        // 左侧直角，右侧圆角
         border-radius: 0 24px 24px 0;
         background-color: #ff6b6b;
         border-color: #ff6b6b;
+        border-left: none;
         color: #fff;
+        padding: 0;
+        margin: 0;
+        margin-left: -1px; // 负边距确保无缝衔接
+        position: relative;
+        z-index: 1; // 确保按钮覆盖在输入框边框上
 
         .el-button {
           background-color: transparent;
           border: none;
           color: #fff;
+          border-radius: 0 24px 24px 0;
+          margin: 0;
 
           &:hover {
             background-color: rgba(255, 255, 255, 0.1);
@@ -1010,98 +1282,312 @@ onMounted(async () => {
   }
 
   .weather-section {
-    margin-bottom: 16px;
+    margin-bottom: 20px;
 
     .weather-card {
-      background: linear-gradient(135deg, #fff9f0 0%, #fff 100%);
-      border: 1px solid #ffe8cc;
+      background: linear-gradient(135deg, #ff9a56 0%, #ff6b6b 100%);
+      border: none;
+      overflow: visible;
+      position: relative;
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(255, 107, 107, 0.25);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+      &:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 32px rgba(255, 107, 107, 0.35);
+      }
+
+      &::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -10%;
+        width: 200px;
+        height: 200px;
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, transparent 70%);
+        border-radius: 50%;
+        pointer-events: none;
+      }
+
+      &::after {
+        content: '';
+        position: absolute;
+        bottom: -30%;
+        left: -5%;
+        width: 150px;
+        height: 150px;
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 70%);
+        border-radius: 50%;
+        pointer-events: none;
+      }
 
       :deep(.el-card__body) {
-        padding: 20px;
+        padding: 24px 28px;
+        position: relative;
+        z-index: 1;
       }
     }
 
-    .weather-content {
-      display: flex;
-      align-items: center;
-      gap: 20px;
+    &.enhanced-weather {
+      .weather-content {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+        color: #fff;
 
-      .weather-icon {
-        font-size: 56px;
-        color: #f7b267;
-        flex-shrink: 0;
-      }
-
-      .weather-info {
-        flex: 1;
-        font-size: 18px;
-
-        .location {
-          font-size: 14px;
-          color: #666;
-          margin-bottom: 8px;
-
-          .location-button {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 4px 8px;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-
-            &:hover {
-              background-color: rgba(255, 107, 107, 0.1);
-            }
-
-            .location-text {
-              font-size: 14px;
-              color: #333;
-              max-width: 200px;
-              overflow: hidden;
-              text-overflow: ellipsis;
-              white-space: nowrap;
-            }
-
-            .el-tag {
-              margin-left: 4px;
-              font-size: 11px;
-              padding: 0 8px;
-              height: 20px;
-              line-height: 20px;
-            }
-          }
-        }
-
-        .temp-section {
-          display: flex;
-          align-items: baseline;
-          gap: 12px;
-          margin-bottom: 8px;
-
-          .temp {
-            font-size: 32px;
-            font-weight: bold;
-            color: #ff6b6b;
-          }
-
-          .weather-condition {
-            font-size: 16px;
-            color: #999;
-          }
-        }
-
-        .recommendation {
+        .weather-visual {
           display: flex;
           align-items: center;
-          gap: 6px;
-          font-size: 15px;
-          color: #666;
+          gap: 16px;
+          flex-shrink: 0;
 
-          .sparkle-icon {
-            font-size: 16px;
-            animation: sparkle 1.5s ease-in-out infinite;
+          .weather-icon-wrapper {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.15));
+            backdrop-filter: blur(12px);
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18),
+                        inset 0 1px 1px rgba(255, 255, 255, 0.3);
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+
+            &:hover {
+              transform: scale(1.06) rotate(6deg);
+              background: linear-gradient(135deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.2));
+              box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22),
+                          inset 0 1px 1px rgba(255, 255, 255, 0.4);
+            }
+
+            .weather-icon {
+              font-size: 48px;
+              color: #fff;
+              filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.25));
+            }
+          }
+
+          .temp-display {
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+            padding: 4px 0;
+
+            .temp-value {
+              font-size: 56px;
+              font-weight: 800;
+              line-height: 1;
+              background: linear-gradient(180deg, #ffffff 0%, rgba(255, 255, 255, 0.85) 100%);
+              -webkit-background-clip: text;
+              -webkit-text-fill-color: transparent;
+              background-clip: text;
+              filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.25));
+              letter-spacing: -2px;
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            }
+
+            .temp-unit {
+              font-size: 24px;
+              font-weight: 600;
+              opacity: 0.9;
+              text-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+              letter-spacing: -0.3px;
+            }
           }
         }
+
+        .weather-info {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          gap: 14px;
+          min-width: 0;
+
+          .location-section {
+            .location-label {
+              display: flex;
+              align-items: center;
+              gap: 6px;
+              margin-bottom: 8px;
+              font-size: 11px;
+              font-weight: 600;
+              letter-spacing: 1px;
+              text-transform: uppercase;
+              opacity: 0.85;
+
+              .location-icon {
+                font-size: 14px;
+                animation: location-pulse 2s ease-in-out infinite;
+              }
+
+              .label-text {
+                text-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+              }
+            }
+
+            .location-button {
+              display: inline-flex;
+              align-items: center;
+              gap: 8px;
+              color: #fff;
+              padding: 10px 18px;
+              background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.15));
+              backdrop-filter: blur(12px);
+              border-radius: 20px;
+              transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+              border: 1px solid rgba(255, 255, 255, 0.2);
+              font-size: 14px;
+              box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1);
+              min-width: 0;
+              max-width: 100%;
+
+              &:hover {
+                background: linear-gradient(135deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0.2));
+                transform: translateY(-2px);
+                box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+
+                .edit-icon {
+                  transform: rotate(90deg) scale(1.1);
+                }
+              }
+
+              &:active {
+                transform: translateY(0);
+              }
+
+              .location-text {
+                font-size: 14px;
+                font-weight: 600;
+                flex: 1;
+                min-width: 0;
+                max-width: 280px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                letter-spacing: 0.3px;
+                text-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+                line-height: 1.3;
+              }
+
+              .edit-icon {
+                font-size: 16px;
+                opacity: 0.85;
+                transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                flex-shrink: 0;
+              }
+            }
+          }
+
+          .weather-details {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+
+            .condition-badge {
+              display: inline-flex;
+              align-items: center;
+              gap: 8px;
+              padding: 8px 16px;
+              background: linear-gradient(135deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.12));
+              backdrop-filter: blur(10px);
+              border-radius: 18px;
+              border: 1px solid rgba(255, 255, 255, 0.18);
+              box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+              align-self: flex-start;
+              transition: all 0.25s ease;
+
+              &:hover {
+                transform: translateX(3px);
+                background: linear-gradient(135deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.16));
+              }
+
+              .condition-icon {
+                font-size: 20px;
+                filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.15));
+                line-height: 1;
+              }
+
+              .condition-text {
+                font-size: 14px;
+                font-weight: 600;
+                letter-spacing: 0.5px;
+                text-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+                line-height: 1.3;
+              }
+            }
+
+            .recommendation-card {
+              background: linear-gradient(135deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.16));
+              backdrop-filter: blur(12px);
+              border-radius: 16px;
+              padding: 12px 18px;
+              border: 1px solid rgba(255, 255, 255, 0.22);
+              box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12),
+                          inset 0 1px 1px rgba(255, 255, 255, 0.25);
+              transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+              max-width: 100%;
+              overflow: hidden;
+
+              &:hover {
+                transform: translateY(-1px);
+                background: linear-gradient(135deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.22));
+                box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16),
+                            inset 0 1px 1px rgba(255, 255, 255, 0.3);
+              }
+
+              .recommendation-header {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                margin-bottom: 6px;
+                font-size: 10px;
+                font-weight: 600;
+                letter-spacing: 1.2px;
+                text-transform: uppercase;
+                opacity: 0.9;
+
+                .sparkle-icon {
+                  font-size: 14px;
+                  animation: sparkle 2s ease-in-out infinite;
+                  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.5));
+                  line-height: 1;
+                }
+
+                .recommendation-label {
+                  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+                }
+              }
+
+              .recommendation-content {
+                font-size: 15px;
+                font-weight: 700;
+                line-height: 1.4;
+                letter-spacing: 0.4px;
+                text-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // 位置脉冲动画
+    @keyframes location-pulse {
+      0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+      50% {
+        opacity: 0.7;
+        transform: scale(1.1);
       }
     }
   }
@@ -1113,9 +1599,35 @@ onMounted(async () => {
       opacity: 1;
       transform: scale(1);
     }
+
     50% {
       opacity: 0.6;
-      transform: scale(1.2);
+      transform: scale(1.1);
+    }
+  }
+
+  // 火焰闪烁动画
+  @keyframes flame-flicker {
+    0% {
+      transform: scale(1) rotate(-2deg);
+      opacity: 0.9;
+    }
+
+    100% {
+      transform: scale(1.1) rotate(2deg);
+      opacity: 1;
+    }
+  }
+
+  // 浮动动画
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0px);
+    }
+
+    50% {
+      transform: translateY(-10px);
     }
   }
 
@@ -1134,16 +1646,28 @@ onMounted(async () => {
       flex-direction: column;
       overflow: hidden;
       position: relative;
-      transition: all 0.3s ease;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
       cursor: pointer;
+      border-radius: 16px;
 
       &:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 8px 24px rgba(255, 107, 107, 0.15);
+        transform: translateY(-8px) scale(1.02);
+        box-shadow: 0 16px 40px rgba(255, 107, 107, 0.3);
+
+        .dish-image-background img {
+          transform: scale(1.1);
+        }
+
+        .share-btn,
+        .favorite-btn {
+          opacity: 1;
+          transform: translateY(0);
+        }
       }
 
       &:active {
-        transform: translateY(-2px);
+        transform: translateY(-4px) scale(0.98);
+        transition: all 0.1s ease;
       }
 
       .dish-image-background {
@@ -1158,25 +1682,25 @@ onMounted(async () => {
           width: 100%;
           height: 100%;
           object-fit: cover;
-          transition: transform 0.3s ease;
-        }
-
-        &:hover img {
-          transform: scale(1.05);
+          transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+          filter: brightness(0.95) contrast(1.05) saturate(1.05);
         }
 
         .dish-category {
           position: absolute;
-          top: 12px;
-          left: 12px;
-          background: rgba(255, 107, 107, 0.9);
+          top: 16px;
+          left: 16px;
+          background: linear-gradient(135deg, rgba(255, 107, 107, 0.95) 0%, rgba(255, 135, 135, 0.95) 100%);
           color: white;
-          padding: 4px 12px;
-          border-radius: 12px;
-          font-size: 12px;
-          font-weight: bold;
-          backdrop-filter: blur(4px);
+          padding: 8px 16px;
+          border-radius: 20px;
+          font-size: 13px;
+          font-weight: 700;
+          backdrop-filter: blur(8px);
+          box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
           z-index: 2;
+          letter-spacing: 0.5px;
+          border: 1px solid rgba(255, 255, 255, 0.2);
         }
       }
 
@@ -1187,25 +1711,32 @@ onMounted(async () => {
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
-        padding: 20px;
-        background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.3) 50%, transparent 100%);
+        padding: 24px;
+        background: linear-gradient(
+          to top,
+          rgba(0, 0, 0, 0.88) 0%,
+          rgba(0, 0, 0, 0.65) 35%,
+          rgba(0, 0, 0, 0.35) 65%,
+          transparent 100%
+        );
 
         .dish-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
           gap: 12px;
-          margin-bottom: 8px;
+          margin-bottom: 12px;
 
           .dish-name {
             flex: 1;
-            font-size: 20px;
-            font-weight: bold;
+            font-size: 24px;
+            font-weight: 700;
             color: #fff;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+            letter-spacing: 0.5px;
           }
 
           .dish-actions {
@@ -1216,26 +1747,33 @@ onMounted(async () => {
 
           .share-btn,
           .favorite-btn {
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            backdrop-filter: blur(4px);
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(8px);
             color: #fff;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0.9;
 
             &:hover {
-              background: rgba(255, 255, 255, 0.3);
-              transform: scale(1.1);
+              background: rgba(255, 255, 255, 0.35);
+              transform: scale(1.15) translateY(-2px);
+              box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+              opacity: 1;
             }
 
             &:active {
-              transform: scale(0.95);
+              transform: scale(1.05) translateY(0);
             }
           }
 
           .favorite-btn {
             &.is-favorite {
-              background: #ff6b6b;
-              color: #fff;
+              background: rgba(255, 215, 0, 0.35);
+              border-color: rgba(255, 215, 0, 0.5);
+              color: #ffd700;
+              box-shadow: 0 0 16px rgba(255, 215, 0, 0.4);
 
               .el-icon {
                 animation: star-bounce 0.3s ease;
@@ -1249,31 +1787,74 @@ onMounted(async () => {
           justify-content: flex-start;
           align-items: center;
           gap: 12px;
-          margin-bottom: 8px;
+          margin-bottom: 12px;
           font-size: 14px;
 
           .dish-kcal {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
             color: #fff;
-            font-weight: 500;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+            font-weight: 700;
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ff8787 100%);
+            border-radius: 20px;
+            backdrop-filter: blur(8px);
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 3px 10px rgba(255, 107, 107, 0.4);
+            font-size: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+
+            &::before {
+              content: '🔥';
+              font-size: 16px;
+              animation: flame-flicker 0.5s ease-in-out infinite alternate;
+            }
           }
 
           .dish-tags {
-            color: #fff;
-            font-size: 12px;
-            padding: 2px 8px;
-            background: rgba(255, 107, 107, 0.8);
-            border-radius: 8px;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+            color: rgba(255, 255, 255, 0.95);
+            font-size: 13px;
+            font-weight: 600;
+            padding: 6px 14px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(8px);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
           }
         }
 
         .dish-rating {
           margin-top: 4px;
 
+          :deep(.el-rate) {
+            .el-rate__icon {
+              font-size: 22px;
+              color: #ffd700;
+              text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+            }
+          }
+
           :deep(.el-rate__text) {
             color: #fff !important;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+            font-size: 16px;
+            font-weight: 700;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+          }
+
+          .no-rating {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+            font-weight: 500;
+
+            .el-icon {
+              font-size: 18px;
+              opacity: 0.6;
+            }
           }
         }
       }
@@ -1299,56 +1880,115 @@ onMounted(async () => {
     .empty-recommendations {
       margin-bottom: 16px;
       text-align: center;
-      padding: 60px 0;
-      background-color: #fafafa;
-      border-radius: 10px;
-      box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.06);
+      padding: 60px 20px;
+      background: linear-gradient(135deg, #fff9f9 0%, #fff 100%);
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(255, 107, 107, 0.08);
+      border: 1px solid rgba(255, 107, 107, 0.1);
+      transition: all 0.3s ease;
+
+      &:hover {
+        box-shadow: 0 6px 20px rgba(255, 107, 107, 0.12);
+        transform: translateY(-2px);
+      }
 
       .empty-icon {
-        color: #ddd;
-        margin-bottom: 20px;
+        color: #ff9a9a;
+        margin-bottom: 24px;
+        animation: float 3s ease-in-out infinite;
+      }
+
+      /* 美化空状态的文本 */
+      :deep(.el-empty__description) {
+        color: #666;
+        font-size: 15px;
+        margin-top: 16px;
+        font-weight: 500;
+      }
+
+      /* 美化重新加载按钮 */
+      :deep(.el-button) {
+        margin-top: 24px;
+        border-radius: 24px;
+        padding: 10px 32px;
+        font-size: 14px;
+        font-weight: 600;
+        background: linear-gradient(135deg, #ff6b6b 0%, #ff8787 100%);
+        border: none;
+        box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+        transition: all 0.3s ease;
+
+        &:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 16px rgba(255, 107, 107, 0.4);
+        }
+
+        &:active {
+          transform: translateY(0);
+        }
       }
     }
   }
 
   .hot-section {
-    margin-bottom: 16px;
+    margin-bottom: 20px;
 
     .hot-card {
-      background: linear-gradient(135deg, #fff5f5 0%, #fff 100%);
-      border: 1px solid #ffe0e0;
+      background: linear-gradient(135deg, #fff5f5 0%, #ffe8e8 50%, #fff 100%);
+      border: none;
+      overflow: hidden;
+      position: relative;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 16px rgba(255, 107, 107, 0.1);
+
+      &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: linear-gradient(180deg, #ff6b6b 0%, #ff8787 100%);
+      }
+
+      &:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(255, 107, 107, 0.2);
+      }
 
       :deep(.el-card__body) {
-        padding: 16px 20px;
+        padding: 20px 24px;
       }
     }
 
     .hot-content {
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 20px;
 
       .hot-icon-wrapper {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 12px;
         flex-shrink: 0;
 
         .fire-icon {
-          font-size: 28px;
-          animation: fire-pulse 1.5s ease-in-out infinite;
+          font-size: 36px;
+          animation: fire-pulse 2s ease-in-out infinite;
           display: inline-block;
+          filter: drop-shadow(0 2px 4px rgba(255, 107, 107, 0.3));
         }
 
         .hot-badge {
-          background: #ff6b6b;
+          background: linear-gradient(135deg, #ff6b6b 0%, #ff8787 100%);
           color: white;
-          padding: 2px 10px;
-          border-radius: 12px;
-          font-size: 11px;
-          font-weight: bold;
-          letter-spacing: 0.5px;
-          box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+          padding: 6px 14px;
+          border-radius: 16px;
+          font-size: 12px;
+          font-weight: 700;
+          letter-spacing: 1px;
+          box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
+          border: 1px solid rgba(255, 255, 255, 0.2);
         }
       }
 
@@ -1356,32 +1996,39 @@ onMounted(async () => {
         flex: 1;
         display: flex;
         flex-direction: column;
-        gap: 4px;
+        gap: 6px;
 
         .hot-label {
-          font-size: 12px;
+          font-size: 13px;
           color: #999;
-          font-weight: 500;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
         }
 
         .hot-description {
-          font-size: 16px;
+          font-size: 17px;
           color: #333;
-          font-weight: 500;
+          font-weight: 600;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
+          line-height: 1.4;
         }
       }
 
       .hot-arrow {
         color: #ff6b6b;
-        font-size: 18px;
+        font-size: 20px;
         flex-shrink: 0;
-        transition: transform 0.3s ease;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        background: rgba(255, 107, 107, 0.1);
+        padding: 8px;
+        border-radius: 12px;
 
         &:hover {
-          transform: translateX(4px);
+          transform: translateX(6px);
+          background: rgba(255, 107, 107, 0.2);
         }
       }
     }
@@ -1624,13 +2271,13 @@ onMounted(async () => {
 
   // 淡入动画
   .fade-in {
-    animation: fadeIn 0.5s ease-in;
+    animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  @keyframes fadeIn {
+  @keyframes fadeInUp {
     from {
       opacity: 0;
-      transform: translateY(10px);
+      transform: translateY(20px);
     }
     to {
       opacity: 1;
@@ -1638,13 +2285,80 @@ onMounted(async () => {
     }
   }
 
+  // 为轮播项添加交错动画
+  :deep(.el-carousel-item) {
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+
+    &.is-active {
+      .dish-card {
+        animation: cardSlideIn 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+    }
+  }
+
+  @keyframes cardSlideIn {
+    0% {
+      opacity: 0;
+      transform: translateX(30px) scale(0.95);
+    }
+    100% {
+      opacity: 1;
+      transform: translateX(0) scale(1);
+    }
+  }
+
   // 骨架屏样式
   .skeleton-wrapper {
     margin-bottom: 16px;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+
+    :deep(.el-skeleton) {
+      padding: 0;
+
+      .el-skeleton__item {
+        background: linear-gradient(
+          90deg,
+          rgba(0, 0, 0, 0.06) 25%,
+          rgba(0, 0, 0, 0.12) 50%,
+          rgba(0, 0, 0, 0.06) 75%
+        );
+        background-size: 200% 100%;
+        animation: skeleton-loading 1.5s ease-in-out infinite;
+      }
+    }
   }
 
   .tutorial-skeleton {
     margin-bottom: 16px;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+
+    :deep(.el-skeleton) {
+      .el-skeleton__item {
+        background: linear-gradient(
+          90deg,
+          rgba(0, 0, 0, 0.06) 25%,
+          rgba(0, 0, 0, 0.12) 50%,
+          rgba(0, 0, 0, 0.06) 75%
+        );
+        background-size: 200% 100%;
+        animation: skeleton-loading 1.5s ease-in-out infinite;
+      }
+    }
+  }
+
+  // 骨架屏加载动画
+  @keyframes skeleton-loading {
+    0% {
+      background-position: 200% 0;
+    }
+
+    100% {
+      background-position: -200% 0;
+    }
   }
 
   // 移动端响应式适配
@@ -1652,39 +2366,112 @@ onMounted(async () => {
     padding: 12px;
 
     .weather-section {
-      .weather-content {
-        gap: 12px;
+      .weather-card {
+        :deep(.el-card__body) {
+          padding: 18px 20px;
+        }
+      }
 
-        .weather-icon {
-          font-size: 40px;
+      .weather-content {
+        flex-direction: column;
+        gap: 16px;
+
+        .weather-visual {
+          width: 100%;
+          justify-content: center;
+
+          .weather-icon-wrapper {
+            width: 64px;
+            height: 64px;
+
+            .weather-icon {
+              font-size: 36px;
+            }
+          }
+
+          .temp-display {
+            .temp-value {
+              font-size: 42px;
+              letter-spacing: -1.5px;
+            }
+
+            .temp-unit {
+              font-size: 18px;
+            }
+          }
         }
 
         .weather-info {
-          font-size: 14px;
+          width: 100%;
+          gap: 12px;
 
-          .location {
+          .location-section {
+            .location-label {
+              font-size: 10px;
+              gap: 4px;
+              margin-bottom: 6px;
+
+              .location-icon {
+                font-size: 12px;
+              }
+            }
+
             .location-button {
-              padding: 2px 6px;
+              padding: 8px 14px;
+              font-size: 13px;
+              width: 100%;
+              justify-content: center;
 
               .location-text {
-                max-width: 120px;
-                font-size: 12px;
+                font-size: 13px;
+                max-width: 200px;
+              }
+
+              .edit-icon {
+                font-size: 14px;
               }
             }
           }
 
-          .temp-section {
-            .temp {
-              font-size: 24px;
+          .weather-details {
+            gap: 8px;
+
+            .condition-badge {
+              padding: 6px 12px;
+              width: 100%;
+              justify-content: center;
+
+              .condition-icon {
+                font-size: 16px;
+              }
+
+              .condition-text {
+                font-size: 13px;
+              }
             }
 
-            .weather-condition {
-              font-size: 14px;
-            }
-          }
+            .recommendation-card {
+              padding: 10px 14px;
+              width: 100%;
 
-          .recommendation {
-            font-size: 13px;
+              .recommendation-header {
+                gap: 4px;
+                margin-bottom: 4px;
+
+                .sparkle-icon {
+                  font-size: 12px;
+                }
+
+                .recommendation-label {
+                  font-size: 9px;
+                }
+              }
+
+              .recommendation-content {
+                font-size: 13px;
+                text-align: center;
+              }
+            }
           }
         }
       }

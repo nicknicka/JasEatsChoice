@@ -29,9 +29,6 @@ const loading = ref(false)
 // 获取商家ID
 const merchantId = authStore.merchantId || localStorage.getItem('auth_merchantId')
 
-// 菜品列表展开状态
-const expandedItems = ref(new Set())
-
 // 用户信息展开状态
 const expandedUserInfo = ref(new Set())
 
@@ -76,15 +73,6 @@ const animateValue = (key, endValue, duration = 1000) => {
   requestAnimationFrame(animate)
 }
 
-// 切换菜品列表展开状态
-const toggleItemsExpand = (orderId) => {
-  if (expandedItems.value.has(orderId)) {
-    expandedItems.value.delete(orderId)
-  } else {
-    expandedItems.value.add(orderId)
-  }
-}
-
 // 获取相对时间显示
 const getRelativeTime = (timeStr) => {
   const orderTime = new Date(timeStr)
@@ -116,16 +104,6 @@ const orderStatusMap = {
   4: { text: '待上菜', type: 'primary', color: '#409eff' },
   5: { text: '已完成', type: 'success', color: '#67c23a' },
   6: { text: '已取消', type: 'info', color: '#c0c4cc' }
-}
-
-// 状态筛选映射（用于筛选标签）
-const statusFilterMap = {
-  all: { text: '全部', value: 'all' },
-  1: { text: '待接单', value: 1 },
-  2: { text: '备菜中', value: 2 },
-  3: { text: '烹饪中', value: 3 },
-  4: { text: '待上菜', value: 4 },
-  5: { text: '已完成', value: 5 }
 }
 
 // 全部订单数据
@@ -197,9 +175,6 @@ watch(orderOverview, (newVal) => {
   animateValue('completedCount', newVal.completedCount)
 }, { deep: true })
 
-// 是否有数据
-const hasOrders = computed(() => orders.value.length > 0)
-
 // 获取订单数据
 const fetchOrders = async () => {
   console.log('[今日订单] 开始获取订单列表')
@@ -229,6 +204,8 @@ const fetchOrders = async () => {
       for (const order of ordersData) {
         try {
           const dishesResponse = await api.get(`/v1/orders/${order.id}/dishes`)
+          console.log('[今日订单] 订单菜品API响应:', order.id, dishesResponse)
+          console.log('[今日订单] 订单菜品数据:', JSON.stringify(dishesResponse.data, null, 2))
           if (dishesResponse.success) {
             order.orderDishes = dishesResponse.data || []
           }
@@ -363,12 +340,6 @@ const deleteOrder = (order) => {
       }
     })
     .catch(() => {})
-}
-
-// 获取标签类型
-const getTagType = (status) => {
-  if (status === 'all') return 'primary'
-  return orderStatusMap[status]?.type || 'info'
 }
 
 // 获取状态标签文本（显示全部订单的数量，不受搜索影响）
@@ -582,6 +553,26 @@ onMounted(() => {
                   </div>
                 </div>
 
+                <!-- 用户详细信息（可展开/收起） -->
+                <div v-if="expandedUserInfo.has(order.id)" class="order-user-info" style="margin-top: 10px; margin-bottom: 10px; padding: 12px; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 10px; border: 1px solid #bae6fd;">
+                  <div class="user-detail-item" style="grid-column: 1 / -1;">
+                    <span class="info-label">👤 用户ID</span>
+                    <span class="info-value">{{ order.userId || '未知' }}</span>
+                  </div>
+                  <div v-if="order.paymentTime" class="user-detail-item">
+                    <span class="info-label">💳 支付时间</span>
+                    <span class="info-value">{{ order.paymentTime || '未支付' }}</span>
+                  </div>
+                  <div v-if="order.paidAmount" class="user-detail-item">
+                    <span class="info-label">💰 已付金额</span>
+                    <span class="info-value">¥{{ order.paidAmount ? order.paidAmount.toFixed(2) : '0.00' }}</span>
+                  </div>
+                  <div v-if="order.addressId" class="user-detail-item">
+                    <span class="info-label">📍 地址ID</span>
+                    <span class="info-value">{{ order.addressId }}</span>
+                  </div>
+                </div>
+
                 <!-- 订单备注（始终显示） -->
                 <div v-if="order.remark" class="order-remark">
                   <div class="remark-icon">📝</div>
@@ -591,59 +582,21 @@ onMounted(() => {
                   </div>
                 </div>
 
-                <div class="order-items">
-                  <div class="items-label">菜品</div>
-                  <div class="items-list">
-                    <template v-if="order.orderDishes && order.orderDishes.length > 0">
-                      <template v-if="order.orderDishes.length > 3 && !expandedItems.has(order.id)">
-                        <el-tag
-                          v-for="(dish, index) in order.orderDishes.slice(0, 3)"
-                          :key="index"
-                          size="small"
-                          type="info"
-                          effect="plain"
-                          class="item-tag"
-                        >
-                          菜品 #{{ dish.dishId }} x{{ dish.quantity }}
-                          <span v-if="dish.customization" class="customization">({{ dish.customization }})</span>
-                        </el-tag>
-                        <el-tag
-                          size="small"
-                          class="more-tag"
-                          @click="toggleItemsExpand(order.id)"
-                        >
-                          +{{ order.orderDishes.length - 3 }}
-                        </el-tag>
-                      </template>
-                      <template v-else>
-                        <el-tag
-                          v-for="(dish, index) in order.orderDishes"
-                          :key="index"
-                          size="small"
-                          type="info"
-                          effect="plain"
-                          class="item-tag"
-                        >
-                          菜品 #{{ dish.dishId }} x{{ dish.quantity }}
-                          <span v-if="dish.customization" class="customization">({{ dish.customization }})</span>
-                        </el-tag>
-                        <el-tag
-                          v-if="order.orderDishes.length > 3"
-                          size="small"
-                          type="warning"
-                          effect="plain"
-                          class="collapse-tag"
-                          @click="toggleItemsExpand(order.id)"
-                        >
-                          收起
-                        </el-tag>
-                      </template>
-                    </template>
-                    <template v-else>
-                      <el-tag size="small" type="info" effect="plain">
-                        暂无菜品信息
-                      </el-tag>
-                    </template>
+                <!-- 菜品列表 -->
+                <div v-if="order.orderDishes && order.orderDishes.length > 0" class="order-dishes-list">
+                  <div class="dishes-header">
+                    <span class="dishes-title">🍽️ 菜品清单</span>
+                    <span class="dishes-count">共{{ order.orderDishes.length }}件</span>
+                  </div>
+                  <div class="dishes-items">
+                    <div v-for="dish in order.orderDishes" :key="dish.id" class="dish-item">
+                      <div class="dish-info">
+                        <span class="dish-name">{{ dish.dishName || '未知菜品' }}</span>
+                        <span class="dish-quantity">× {{ dish.quantity || 0 }}</span>
+                        <span v-if="dish.customization" class="dish-customization">({{ dish.customization }})</span>
+                      </div>
+                      <div class="dish-price">¥{{ ((dish.price || 0) * (dish.quantity || 0)).toFixed(2) }}</div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1659,78 +1612,99 @@ onMounted(() => {
           }
         }
 
-        .order-items {
-          display: flex;
-          align-items: flex-start;
-          gap: 10px;
-          margin-top: 10px;
-          padding: 10px 14px;
-          background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+        // 菜品列表样式
+        .order-dishes-list {
+          margin-top: 12px;
+          padding: 12px 16px;
+          background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
           border-radius: 10px;
-          border: 1px solid #e8e8e8;
+          border: 1px solid #e8eef5;
+          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 
-          .items-label {
-            font-size: 12px;
-            font-weight: 600;
-            color: #606266;
-            flex-shrink: 0;
-            min-width: 36px;
+          .dishes-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px dashed #e2e8f0;
+
+            .dishes-title {
+              font-size: 13px;
+              font-weight: 600;
+              color: #303133;
+            }
+
+            .dishes-count {
+              font-size: 12px;
+              color: #909399;
+              background: #f0f2f5;
+              padding: 2px 8px;
+              border-radius: 10px;
+            }
           }
 
-          .items-list {
+          .dishes-items {
             display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            flex: 1;
+            flex-direction: column;
+            gap: 8px;
 
-            .item-tag {
-              font-size: 12px;
-              font-weight: 500;
-              padding: 3px 10px;
-              transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-              background: #fff;
-              border-color: #d9d9d9;
-              color: #595959;
+            .dish-item {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              padding: 8px 12px;
+              background: #ffffff;
+              border-radius: 8px;
+              border: 1px solid #f0f0f0;
+              transition: all 0.2s ease;
 
-              .customization {
-                color: #e6a23c;
+              &:hover {
+                border-color: #2196f3;
+                box-shadow: 0 2px 8px rgba(33, 150, 243, 0.1);
+                transform: translateX(4px);
+              }
+
+              .dish-info {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                flex: 1;
+                min-width: 0;
+
+                .dish-name {
+                  font-size: 14px;
+                  font-weight: 500;
+                  color: #303133;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                  white-space: nowrap;
+                }
+
+                .dish-quantity {
+                  font-size: 13px;
+                  color: #2196f3;
+                  font-weight: 600;
+                  flex-shrink: 0;
+                  background: linear-gradient(135deg, rgba(33, 150, 243, 0.1) 0%, rgba(33, 150, 243, 0.05) 100%);
+                  padding: 2px 8px;
+                  border-radius: 12px;
+                }
+
+                .dish-customization {
+                  font-size: 12px;
+                  color: #e6a23c;
+                  font-weight: 500;
+                  font-style: italic;
+                }
+              }
+
+              .dish-price {
+                font-size: 14px;
                 font-weight: 600;
-                font-size: 11px;
-              }
-
-              &:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
-              }
-            }
-
-            .more-tag {
-              cursor: pointer;
-              background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
-              border-color: #1890ff;
-              color: white;
-              font-weight: 500;
-              transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-
-              &:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 4px 8px rgba(24, 144, 255, 0.4);
-              }
-            }
-
-            .collapse-tag {
-              cursor: pointer;
-              font-weight: 500;
-              background: #fff;
-              border-color: #faad14;
-              color: #faad14;
-              transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-
-              &:hover {
-                transform: translateY(-2px);
-                background: #faad14;
-                color: white;
-                box-shadow: 0 2px 6px rgba(250, 173, 20, 0.3);
+                color: #f56c6c;
+                font-family: 'Consolas', 'Monaco', monospace;
+                flex-shrink: 0;
               }
             }
           }

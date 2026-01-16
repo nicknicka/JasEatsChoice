@@ -17,8 +17,12 @@ const orders = ref([])
 const loading = ref(false)
 // 刷新动画状态
 const isRefreshing = ref(false)
+// 刷新成功状态
+const refreshSuccess = ref(false)
 // 展开的订单ID集合
 const expandedOrderIds = ref(new Set())
+// 列表过渡动画状态
+const listTransitionName = ref('list-fade')
 
 // 切换订单展开状态
 const toggleOrderExpand = (orderId) => {
@@ -54,6 +58,8 @@ const hasMoreItems = (order) => {
 const handleRefresh = () => {
   // 启动刷新动画
   isRefreshing.value = true
+  refreshSuccess.value = false
+  listTransitionName.value = 'list-fade-out'
 
   // 确保动画至少持续一点时间
   const startTime = Date.now()
@@ -62,10 +68,25 @@ const handleRefresh = () => {
   loadOrders().finally(() => {
     const duration = Date.now() - startTime
     // 如果加载太快，延迟关闭动画以提供更好的视觉反馈
-    const delay = Math.max(0, 500 - duration)
+    const delay = Math.max(0, 600 - duration)
 
     setTimeout(() => {
       isRefreshing.value = false
+      refreshSuccess.value = true
+      listTransitionName.value = 'list-fade-in'
+
+      // 显示成功提示
+      ElMessage.success({
+        message: '刷新成功',
+        duration: 2000,
+        offset: 60
+      })
+
+      // 重置成功状态
+      setTimeout(() => {
+        refreshSuccess.value = false
+        listTransitionName.value = ''
+      }, 300)
     }, delay)
   })
 }
@@ -380,9 +401,17 @@ const handleImageError = (event) => {
       <CommonBackButton />
       <h2 style="margin-left: 15px">查看订单</h2>
       <div style="flex: 1; text-align: right">
-        <el-button type="default" size="small" @click="handleRefresh" :loading="loading">
-          <el-icon :class="{ 'refresh-rotating': isRefreshing }"><Refresh /></el-icon>
-          刷新
+        <el-button
+          type="default"
+          size="small"
+          @click="handleRefresh"
+          :loading="loading"
+          :class="{ 'refresh-btn': true, 'is-refreshing': isRefreshing, 'is-success': refreshSuccess }"
+        >
+          <el-icon :class="{ 'refresh-rotating': isRefreshing, 'refresh-success': refreshSuccess }">
+            <Refresh />
+          </el-icon>
+          <span class="refresh-text">{{ refreshSuccess ? '完成' : '刷新' }}</span>
         </el-button>
       </div>
     </div>
@@ -402,7 +431,7 @@ const handleImageError = (event) => {
     </div>
 
     <!-- 订单列表 -->
-    <div class="order-list" v-loading="loading" element-loading-text="加载中...">
+    <div class="order-list" v-loading="loading" element-loading-text="加载中..." :class="listTransitionName">
       <el-card v-for="order in paginatedOrders" :key="order.id" class="order-card">
         <div class="order-header">
           <div class="order-info">
@@ -1191,9 +1220,75 @@ const handleImageError = (event) => {
     }
   }
 
-  /* 刷新按钮旋转动画 */
+  /* 刷新按钮动画优化 */
+  .refresh-btn {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* 按钮内图标和文字的容器 */
+    :deep(.el-icon) {
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* 刷新文字动画 */
+    .refresh-text {
+      display: inline-block;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* 刷新中的状态 */
+    &.is-refreshing {
+      background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%) !important;
+      border-color: #69c0ff !important;
+      color: #1890ff !important;
+      box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3);
+
+      .refresh-text {
+        animation: text-pulse 1s ease-in-out infinite;
+      }
+
+      /* 添加脉冲波纹效果 */
+      &::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(24, 144, 255, 0.3);
+        transform: translate(-50%, -50%);
+        animation: ripple 1.5s ease-out infinite;
+      }
+    }
+
+    /* 刷新成功的状态 */
+    &.is-success {
+      background: linear-gradient(135deg, #f6ffed 0%, #d9f7be 100%) !important;
+      border-color: #95de64 !important;
+      color: #52c41a !important;
+      box-shadow: 0 2px 8px rgba(82, 196, 26, 0.3);
+
+      /* 成功时的缩放动画 */
+      animation: success-bounce 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+      .refresh-text {
+        color: #52c41a;
+        font-weight: 600;
+      }
+    }
+  }
+
+  /* 刷新图标旋转动画 */
   .refresh-rotating {
     animation: refresh-rotate 0.8s linear infinite;
+  }
+
+  /* 刷新成功时的图标动画 */
+  .refresh-success {
+    animation: success-check 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    color: #52c41a;
   }
 
   @keyframes refresh-rotate {
@@ -1202,6 +1297,119 @@ const handleImageError = (event) => {
     }
     100% {
       transform: rotate(360deg);
+    }
+  }
+
+  @keyframes text-pulse {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.7;
+      transform: scale(0.95);
+    }
+  }
+
+  @keyframes ripple {
+    0% {
+      width: 0;
+      height: 0;
+      opacity: 0.6;
+    }
+    100% {
+      width: 200px;
+      height: 200px;
+      opacity: 0;
+    }
+  }
+
+  @keyframes success-bounce {
+    0% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.05);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  @keyframes success-check {
+    0% {
+      transform: scale(0) rotate(-180deg);
+      opacity: 0;
+    }
+    50% {
+      transform: scale(1.2) rotate(10deg);
+    }
+    100% {
+      transform: scale(1) rotate(0deg);
+      opacity: 1;
+    }
+  }
+
+  /* 订单列表过渡动画 */
+  .order-list {
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* 淡出动画 */
+    &.list-fade-out {
+      animation: list-fade-out 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    /* 淡入动画 */
+    &.list-fade-in {
+      animation: list-fade-in 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+  }
+
+  @keyframes list-fade-out {
+    0% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+  }
+
+  @keyframes list-fade-in {
+    0% {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* 订单卡片动画优化 */
+  .order-card {
+    /* 为每个卡片添加交错动画延迟 */
+    animation: card-slide-in 0.5s cubic-bezier(0.4, 0, 0.2, 1) backwards;
+
+    /* 为每个卡片添加递增的延迟，创建交错效果 */
+    &:nth-child(1) { animation-delay: 0s; }
+    &:nth-child(2) { animation-delay: 0.08s; }
+    &:nth-child(3) { animation-delay: 0.16s; }
+    &:nth-child(4) { animation-delay: 0.24s; }
+    &:nth-child(5) { animation-delay: 0.32s; }
+    &:nth-child(n+6) { animation-delay: 0.4s; }
+  }
+
+  /* 为订单卡片添加入场动画 */
+  @keyframes card-slide-in {
+    0% {
+      opacity: 0;
+      transform: translateY(20px) scale(0.95);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
     }
   }
 

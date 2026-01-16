@@ -348,6 +348,8 @@ const fetchOrders = async () => {
       for (const order of ordersData) {
         try {
           const dishesResponse = await api.get(`/v1/orders/${order.id}/dishes`)
+          console.log('[Orders] 订单菜品API响应:', order.id, dishesResponse)
+          console.log('[Orders] 订单菜品数据:', JSON.stringify(dishesResponse.data, null, 2))
           if (dishesResponse.success) {
             order.orderDishes = dishesResponse.data || []
           }
@@ -568,6 +570,23 @@ onMounted(() => {
                 <div class="order-time" :title="order.createTime">
                   <span class="time-label">时间</span>
                   <span class="time-value">{{ order.createTime || '--' }}</span>
+                </div>
+              </div>
+
+              <!-- 菜品列表 -->
+              <div v-if="order.orderDishes && order.orderDishes.length > 0" class="order-dishes-list">
+                <div class="dishes-header">
+                  <span class="dishes-title">🍽️ 菜品清单</span>
+                  <span class="dishes-count">共{{ order.orderDishes.length }}件</span>
+                </div>
+                <div class="dishes-items">
+                  <div v-for="dish in order.orderDishes" :key="dish.id" class="dish-item">
+                    <div class="dish-info">
+                      <span class="dish-name">{{ dish.dishName || '未知菜品' }}</span>
+                      <span class="dish-quantity">× {{ dish.quantity || 0 }}</span>
+                    </div>
+                    <div class="dish-price">¥{{ ((dish.price || 0) * (dish.quantity || 0)).toFixed(2) }}</div>
+                  </div>
                 </div>
               </div>
 
@@ -1276,6 +1295,97 @@ onMounted(() => {
 
             .time-value {
               font-weight: 500;
+            }
+          }
+
+        }
+        // 菜品列表样式
+        .order-dishes-list {
+          margin-top: 12px;
+          padding: 12px 16px;
+          background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+          border-radius: 10px;
+          border: 1px solid #e8eef5;
+          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+
+          .dishes-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px dashed #e2e8f0;
+
+            .dishes-title {
+              font-size: 13px;
+              font-weight: 600;
+              color: #303133;
+            }
+
+            .dishes-count {
+              font-size: 12px;
+              color: #909399;
+              background: #f0f2f5;
+              padding: 2px 8px;
+              border-radius: 10px;
+            }
+          }
+
+          .dishes-items {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+
+            .dish-item {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              padding: 8px 12px;
+              background: #ffffff;
+              border-radius: 8px;
+              border: 1px solid #f0f0f0;
+              transition: all 0.2s ease;
+
+              &:hover {
+                border-color: #667eea;
+                box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+                transform: translateX(4px);
+              }
+
+              .dish-info {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                flex: 1;
+                min-width: 0;
+
+                .dish-name {
+                  font-size: 14px;
+                  font-weight: 500;
+                  color: #303133;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                  white-space: nowrap;
+                }
+
+                .dish-quantity {
+                  font-size: 13px;
+                  color: #667eea;
+                  font-weight: 600;
+                  flex-shrink: 0;
+                  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(102, 126, 234, 0.05) 100%);
+                  padding: 2px 8px;
+                  border-radius: 12px;
+                }
+              }
+
+              .dish-price {
+                font-size: 14px;
+                font-weight: 600;
+                color: #f56c6c;
+                font-family: 'Consolas', 'Monaco', monospace;
+                flex-shrink: 0;
+              }
             }
           }
         }

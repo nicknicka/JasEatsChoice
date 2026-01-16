@@ -3,6 +3,7 @@ package com.xx.jaseatschoicejava.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.xx.jaseatschoicejava.common.ResponseResult;
 import com.xx.jaseatschoicejava.dto.OrderCreateDTO;
+import com.xx.jaseatschoicejava.dto.OrderDishVO;
 import com.xx.jaseatschoicejava.entity.Order;
 import com.xx.jaseatschoicejava.entity.OrderDish;
 import com.xx.jaseatschoicejava.entity.PaymentRecord;
@@ -88,24 +89,35 @@ public class OrderController {
     }
 
     /**
-     * 获取订单的菜品列表
+     * 获取订单的菜品列表（包含菜品详细信息）
      */
     @GetMapping("/{orderId}/dishes")
     public ResponseResult<?> getOrderDishes(@PathVariable String orderId) {
-        LambdaQueryWrapper<OrderDish> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(OrderDish::getOrderId, orderId);
-        List<OrderDish> orderDishes = orderDishService.list(queryWrapper);
+        List<OrderDishVO> orderDishes = orderDishService.getOrderDishesWithDetails(orderId);
         return ResponseResult.success(orderDishes);
     }
 
     /**
-     * 根据商家ID获取订单列表
+     * 根据商家ID获取今日订单列表
      */
     @GetMapping("/merchant/{merchantId}")
     public ResponseResult<?> getOrdersByMerchantId(@PathVariable String merchantId) {
         LambdaQueryWrapper<Order> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Order::getMerchantId, merchantId);
+
+        // 筛选今日订单（根据创建时间）
+        // 获取今天的开始时间（00:00:00）和结束时间（23:59:59）
+        java.time.LocalDateTime todayStart = java.time.LocalDateTime.now().toLocalDate().atStartOfDay();
+        java.time.LocalDateTime todayEnd = todayStart.plusDays(1).minusNanos(1);
+
+        queryWrapper.ge(Order::getCreateTime, todayStart);
+        queryWrapper.le(Order::getCreateTime, todayEnd);
+
+        // 按创建时间倒序排序
+        queryWrapper.orderByDesc(Order::getCreateTime);
+
         List<Order> orders = orderService.list(queryWrapper);
+        log.info("商家{}今日订单数量：{}", merchantId, orders.size());
         return ResponseResult.success(orders);
     }
 
