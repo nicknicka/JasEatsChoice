@@ -70,7 +70,7 @@ app.whenReady().then(() => {
             " style-src 'self' 'unsafe-inline' https://webapi.amap.com;" +
             " img-src 'self' data: https: http: https://webapi.amap.com https://restapi.amap.com;" +
             " font-src 'self' data: https://webapi.amap.com;" +
-            " connect-src 'self' ws://localhost:* ws://127.0.0.1:* http://localhost:* http://127.0.0.1:* https: https://webapi.amap.com https://restapi.amap.com;" +
+            " connect-src 'self' ws://localhost:* wss://localhost:* ws://127.0.0.1:* wss://127.0.0.1:* http://localhost:* http://127.0.0.1:* https://localhost:* https://127.0.0.1:* https: https://webapi.amap.com https://restapi.amap.com;" +
             " media-src 'self' blob:;" +
             " object-src 'none';" +
             " base-uri 'self';" +

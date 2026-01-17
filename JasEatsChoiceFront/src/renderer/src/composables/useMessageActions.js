@@ -244,12 +244,14 @@ export function useMessageActions({ chatHistory, chatMessages, userId, formatMes
   /**
    * 确认转发
    */
-  const confirmForward = async (conversations, selectedConversation, chatMessages) => {
+  const confirmForward = async () => {
     if (!selectedForwardTarget.value) {
       ElMessage.warning('请选择转发目标')
       return
     }
 
+    // 由于这个函数在 composable 中无法直接访问 conversations 和 selectedConversation
+    // 这里只返回需要的数据，由调用方处理
     try {
       const messageData = {
         fromId: userId.value.toString(),
@@ -264,12 +266,7 @@ export function useMessageActions({ chatHistory, chatMessages, userId, formatMes
       if (response.code === '200') {
         ElMessage.success('转发成功')
         forwardDialogVisible.value = false
-
-        if (
-          selectedForwardTarget.value === selectedConversation.value?.id
-        ) {
-          chatMessages.value.push(response.data)
-        }
+        return response.data
       }
     } catch (error) {
       console.error('转发失败:', error)
