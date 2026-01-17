@@ -335,7 +335,8 @@
       "Bash(awk:*)",
       "Bash(timeout 5 npm run dev:*)",
       "Bash(timeout:*)",
-      "Bash(npx prettier --write:*)"
+      "Bash(npx prettier --write:*)",
+      "Bash(./node_modules/electron/dist/Electron.app/Contents/MacOS/Electron -v)"
     ],
     "deny": [],
     "ask": []

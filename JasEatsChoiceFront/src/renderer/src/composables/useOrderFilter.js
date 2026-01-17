@@ -2,7 +2,7 @@
  * 订单筛选和排序组合式函数
  */
 import { ref, computed } from 'vue'
-import { STATUS_LIST, STATUS_PRIORITY } from '../../utils/orderStatus'
+import { STATUS_LIST, STATUS_PRIORITY } from '../utils/orderStatus'
 
 /**
  * 排序选项配置

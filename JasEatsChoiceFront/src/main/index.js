@@ -182,14 +182,20 @@ ipcMain.handle('websocket:connect', async (event, url) => {
       // Dispatch message to specific handlers based on message type
       try {
         const parsedMessage = JSON.parse(message)
-        switch (parsedMessage.type) {
+        // 后端使用 msgType 字段，兼容 type 字段
+        const messageType = parsedMessage.msgType || parsedMessage.type
+        switch (messageType) {
           case 'auth':
             mainWindow.webContents.send('websocket:auth', message)
             break
           case 'orderUpdate':
+          case 'order_status':
+          case 'order_sync':
             mainWindow.webContents.send('websocket:orderUpdate', message)
             break
           case 'chat':
+          case 'single':
+          case 'group':
             mainWindow.webContents.send('websocket:chat', message)
             break
           case 'merchantUpdate':
@@ -199,10 +205,12 @@ ipcMain.handle('websocket:connect', async (event, url) => {
             mainWindow.webContents.send('websocket:recommend', message)
             break
           case 'notification':
+          case 'avatar_update':
             mainWindow.webContents.send('websocket:notification', message)
             break
           default:
-            // Handle other message types
+            // 记录未知消息类型用于调试
+            console.log('WebSocket message type:', messageType, 'full message:', parsedMessage)
             break
         }
       } catch (error) {

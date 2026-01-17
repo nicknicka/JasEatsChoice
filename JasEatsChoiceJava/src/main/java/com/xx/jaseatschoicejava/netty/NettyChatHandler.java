@@ -114,6 +114,26 @@ public class NettyChatHandler extends SimpleChannelInboundHandler<TextWebSocketF
                     // 订单状态通知，发送给指定用户
                     sendMessageToUser(toId, objectMapper.writeValueAsString(responseMsg));
                     break;
+                case "auth":
+                    // 身份验证消息，验证用户身份
+                    // 从fromId获取用户ID（前端发送auth消息时，fromId应为用户ID）
+                    if (!fromId.isEmpty()) {
+                        // 绑定用户ID与Channel
+                        USER_CHANNEL_MAP.put(fromId, ctx.channel());
+
+                        // 返回认证成功响应
+                        responseMsg.put("content", "认证成功");
+                        responseMsg.put("authenticated", true);
+                        ctx.writeAndFlush(new TextWebSocketFrame(objectMapper.writeValueAsString(responseMsg)));
+                        logger.info("User {} authenticated successfully", fromId);
+                    } else {
+                        // 认证失败
+                        responseMsg.put("content", "认证失败：用户ID为空");
+                        responseMsg.put("authenticated", false);
+                        ctx.writeAndFlush(new TextWebSocketFrame(objectMapper.writeValueAsString(responseMsg)));
+                        logger.warn("Authentication failed: userId is empty");
+                    }
+                    break;
                 default:
                     // 未知消息类型，发送错误提示
                     responseMsg.put("content", "未知消息类型");

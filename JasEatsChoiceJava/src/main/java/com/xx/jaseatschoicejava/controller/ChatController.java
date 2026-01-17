@@ -1,10 +1,6 @@
 package com.xx.jaseatschoicejava.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import java.util.List;
-import java.util.Map;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.xx.jaseatschoicejava.common.ResponseResult;
 import com.xx.jaseatschoicejava.entity.ChatMsg;
@@ -15,7 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.Map;
 
 /**
  * 聊天消息控制器
@@ -28,51 +24,9 @@ public class ChatController {
     @Autowired
     private ChatMsgService chatMsgService;
 
-    /**
-     * 获取聊天会话列表
-     */
-    @ApiOperation("获取聊天会话列表")
-    @GetMapping("/users/{userId}/chat-sessions")
-    public ResponseResult<?> getChatSessions(@PathVariable String userId) {
-        // 会话列表是与该用户有过聊天记录的所有用户/群组的列表
-        // 查询条件：fromId或toId等于当前用户ID，然后按时间倒序取最新的消息
-        LambdaQueryWrapper<ChatMsg> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.or(wrapper -> wrapper.eq(ChatMsg::getFromId, userId)
-                .or().eq(ChatMsg::getToId, userId))
-                .orderByDesc(ChatMsg::getCreateTime);
-
-        // 查询所有相关聊天记录
-        List<ChatMsg> chatMessages = chatMsgService.list(queryWrapper);
-
-        // 将聊天记录按会话分组，取每个会话的最新一条消息
-        // 会话标识：单聊是对方用户ID，群聊是群组ID（toId）
-        Map<String, ChatMsg> sessionMap = new LinkedHashMap<>();
-
-        for (ChatMsg message : chatMessages) {
-            String sessionId = "";
-            if ("group".equals(message.getMsgType())) {
-                // 群聊：会话ID是toId
-                sessionId = message.getToId().toString();
-            } else {
-                // 单聊：会话ID是对方用户ID
-                sessionId = message.getFromId().equals(userId) ? message.getToId().toString() : message.getFromId().toString();
-            }
-
-            // 如果会话不存在，则将当前消息加入
-            if (!sessionMap.containsKey(sessionId)) {
-                sessionMap.put(sessionId, message);
-            }
-            // 否则保留第一条（因为已经按时间倒序排列）
-        }
-
-        // 转换为会话列表
-        List<ChatMsg> sessionList = new ArrayList<>(sessionMap.values());
-
-        return ResponseResult.success(sessionList);
-    }
 
     /**
-     * 获取聊天记录
+     * 获取聊天记录（分页）
      * @param sessionId 会话ID，可以是：
      *                  1. 单聊：两个用户ID用"_"拼接，如"user1_user2"
      *                  2. 群聊：群组ID，如"group123"
@@ -102,12 +56,24 @@ public class ChatController {
             queryWrapper.eq(ChatMsg::getToId, sessionId);
         }
 
-        // 按时间倒序排序
+        // 按时间倒序排序(最新的在前)
         queryWrapper.orderByDesc(ChatMsg::getCreateTime);
 
         // 查询结果
         Page<ChatMsg> result = chatMsgService.page(chatMsgPage, queryWrapper);
-        return ResponseResult.success(result);
+
+        // 将消息按时间正序排列(旧的在前,方便前端显示)
+        java.util.Collections.reverse(result.getRecords());
+
+        // 返回符合前端期望的格式
+        Map<String, Object> responseData = new java.util.HashMap<>();
+        responseData.put("records", result.getRecords());
+        responseData.put("total", result.getTotal());
+        responseData.put("current", result.getCurrent());
+        responseData.put("pages", result.getPages());
+        responseData.put("size", result.getSize());
+
+        return ResponseResult.success(responseData);
     }
 
     /**

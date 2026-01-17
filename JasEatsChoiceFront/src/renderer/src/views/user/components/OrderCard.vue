@@ -41,7 +41,7 @@
         取消订单
       </el-button>
       <el-button
-        v-if="canConfirmReceipt"
+        v-if="canConfirmReceiptOrder"
         type="success"
         size="small"
         @click="handleConfirmReceipt"
@@ -110,7 +110,7 @@ const canCancel = computed(() => canCancelOrder(props.order.status))
 /**
  * 是否可以确认收货
  */
-const canConfirmReceipt = computed(() => canConfirmReceipt(props.order.status))
+const canConfirmReceiptOrder = computed(() => canConfirmReceipt(props.order.status))
 
 /**
  * 是否可以评价

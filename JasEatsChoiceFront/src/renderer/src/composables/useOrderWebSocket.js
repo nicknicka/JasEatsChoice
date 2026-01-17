@@ -2,9 +2,9 @@
  * 订单 WebSocket 管理组合式函数
  */
 import { ref, onUnmounted } from 'vue'
-import { WS_CONFIG } from '../../config'
+import { WS_CONFIG } from '../config'
 import { ElMessage } from 'element-plus'
-import { ORDER_STATUS_MAP } from '../../utils/orderStatus'
+import { ORDER_STATUS_MAP } from '../utils/orderStatus'
 
 // WebSocket 配置常量
 const MAX_RETRIES = 3
@@ -88,7 +88,9 @@ export function useOrderWebSocket(onOrderUpdate) {
         ws.value.send(
           JSON.stringify({
             msgType: 'auth',
-            userId,
+            fromId: userId,
+            toId: '',
+            content: '',
             token
           })
         )

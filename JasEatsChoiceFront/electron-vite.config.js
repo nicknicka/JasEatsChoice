@@ -4,20 +4,7 @@ import vue from '@vitejs/plugin-vue'
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()],
-    build: {
-      outDir: 'out/main',
-      rollupOptions: {
-        input: {
-          index: resolve(__dirname, 'src/main/index.js')
-        },
-        external: ['electron'],
-        output: {
-          format: 'cjs',
-          entryFileNames: '[name].js'
-        }
-      }
-    }
+    plugins: [externalizeDepsPlugin()]
   },
   preload: {
     plugins: [externalizeDepsPlugin()]

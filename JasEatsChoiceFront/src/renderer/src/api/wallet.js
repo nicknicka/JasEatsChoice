@@ -54,10 +54,13 @@ export default {
     page = 1,
     pageSize = 10,
     startDate = null,
-    endDate = null
+    endDate = null,
+    status = null
   ) {
-    return api.get('/v1/consume-history', {
-      params: { userId, type, page, pageSize, startDate, endDate }
-    })
+    const params = { userId, type, page, pageSize }
+    if (startDate) params.startDate = startDate
+    if (endDate) params.endDate = endDate
+    if (status) params.status = status
+    return api.get('/v1/consume-history', { params })
   }
 }

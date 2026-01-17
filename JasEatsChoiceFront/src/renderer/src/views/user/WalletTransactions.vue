@@ -339,7 +339,8 @@ const fetchTransactions = async () => {
       pagination.value.page,
       pagination.value.pageSize,
       startDate,
-      endDate
+      endDate,
+      filterForm.value.status || null
     )
 
     if (result.code === '200' && result.data) {
@@ -368,6 +369,7 @@ const formatDate = (date) => {
 // 筛选条件改变
 const handleFilterChange = () => {
   pagination.value.page = 1
+  fetchTransactions()
 }
 
 // 重置筛选

@@ -313,8 +313,10 @@ if (!listenersRegistered && window.api) {
     // 必要时发送身份验证
     const authMsg = {
       msgType: 'auth',
-      userId: localStorage.getItem('userId'), // 替换为实际用户 ID
-      token: 'test-token' // 替换为实际令牌
+      fromId: localStorage.getItem('userId'), // 用户ID作为发送者ID
+      toId: '', // auth消息不需要接收者
+      content: '', // auth消息不需要内容
+      token: localStorage.getItem('token') // 使用实际的token
     }
     sendWebSocketMessage(authMsg)
   })

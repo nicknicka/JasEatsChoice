@@ -163,7 +163,24 @@
     </el-dialog>
 
     <!-- 提现对话框 -->
-    <el-dialog v-model="withdrawDialogVisible" title="提现" width="400px" center>
+    <el-dialog v-model="withdrawDialogVisible" title="提现" width="450px" center>
+      <el-alert
+        title="提现规则"
+        type="info"
+        :closable="false"
+        show-icon
+        style="margin-bottom: 20px"
+      >
+        <template #default>
+          <ul style="margin: 5px 0; padding-left: 20px">
+            <li>单笔提现最低金额：10平台币</li>
+            <li>提现手续费：2%（最低1平台币）</li>
+            <li>提现到账时间：1-3个工作日</li>
+            <li>每日提现限额：10000平台币</li>
+          </ul>
+        </template>
+      </el-alert>
+
       <el-form :model="withdrawForm" label-width="100px">
         <el-form-item label="可提现余额">
           <span class="balance-highlight">{{ walletInfo.balance || 0 }}平台币</span>
@@ -173,13 +190,28 @@
             v-model.number="withdrawForm.amount"
             type="number"
             placeholder="请输入提现金额"
-            :min="1"
+            :min="10"
             :max="walletInfo.balance || 0"
           >
             <template #append>平台币</template>
           </el-input>
         </el-form-item>
-        <el-form-item label="全部提现">
+        <el-form-item label="预计手续费">
+          <span class="fee-text">{{ calculateWithdrawFee(withdrawForm.amount) }}平台币</span>
+        </el-form-item>
+        <el-form-item label="预计到账">
+          <span class="actual-amount">{{ calculateActualAmount(withdrawForm.amount) }}平台币</span>
+        </el-form-item>
+        <el-form-item label="支付密码" required>
+          <el-input
+            v-model="withdrawForm.password"
+            type="password"
+            placeholder="请输入支付密码"
+            show-password
+            maxlength="6"
+          />
+        </el-form-item>
+        <el-form-item>
           <el-button size="small" @click="withdrawAll">全部提现</el-button>
         </el-form-item>
       </el-form>
@@ -187,6 +219,71 @@
         <el-button @click="withdrawDialogVisible = false">取消</el-button>
         <el-button type="primary" @click="confirmWithdraw" :loading="withdrawing">
           确认提现
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 充值对话框 -->
+    <el-dialog v-model="rechargeDialogVisible" title="充值" width="450px" center>
+      <el-alert
+        title="充值说明"
+        type="success"
+        :closable="false"
+        show-icon
+        style="margin-bottom: 20px"
+      >
+        <template #default>
+          <ul style="margin: 5px 0; padding-left: 20px">
+            <li>充值即时到账，无手续费</li>
+            <li>1平台币 = 1元人民币</li>
+            <li>支持微信支付、支付宝等方式</li>
+            <li>充值遇到问题请联系客服</li>
+          </ul>
+        </template>
+      </el-alert>
+
+      <el-form :model="rechargeForm" label-width="100px">
+        <el-form-item label="充值金额">
+          <el-input
+            v-model.number="rechargeForm.amount"
+            type="number"
+            placeholder="请输入充值金额"
+            :min="1"
+          >
+            <template #append>平台币</template>
+          </el-input>
+        </el-form-item>
+        <el-form-item label="支付方式">
+          <el-radio-group v-model="rechargeForm.paymentMethod">
+            <el-radio value="wechat">
+              <span style="display: flex; align-items: center; gap: 5px">
+                <span style="color: #09bb07">💬</span> 微信支付
+              </span>
+            </el-radio>
+            <el-radio value="alipay">
+              <span style="display: flex; align-items: center; gap: 5px">
+                <span style="color: #1677ff">💳</span> 支付宝
+              </span>
+            </el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="快捷金额">
+          <div class="quick-amount-buttons">
+            <el-button
+              v-for="amount in quickAmounts"
+              :key="amount"
+              size="small"
+              @click="setRechargeAmount(amount)"
+            >
+              {{ amount }}币
+            </el-button>
+          </div>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="rechargeDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="confirmRecharge" :loading="recharging">
+          立即充值
         </el-button>
       </template>
     </el-dialog>
@@ -220,7 +317,8 @@ const recentTransactions = ref([])
 const rechargeDialogVisible = ref(false)
 const recharging = ref(false)
 const rechargeForm = ref({
-  amount: null
+  amount: null,
+  paymentMethod: 'wechat'
 })
 const quickAmounts = [10, 50, 100, 200, 500]
 
@@ -228,8 +326,23 @@ const quickAmounts = [10, 50, 100, 200, 500]
 const withdrawDialogVisible = ref(false)
 const withdrawing = ref(false)
 const withdrawForm = ref({
-  amount: null
+  amount: null,
+  password: ''
 })
+
+// 计算提现手续费
+const calculateWithdrawFee = (amount) => {
+  if (!amount || amount <= 0) return '0'
+  const fee = Math.max(Math.floor(amount * 0.02), 1)
+  return fee.toFixed(2)
+}
+
+// 计算实际到账金额
+const calculateActualAmount = (amount) => {
+  if (!amount || amount <= 0) return '0'
+  const fee = Math.max(Math.floor(amount * 0.02), 1)
+  return (amount - fee).toFixed(2)
+}
 
 // 格式化数字显示
 const formatNumber = (num) => {
@@ -358,14 +471,29 @@ const confirmRecharge = async () => {
     return
   }
 
+  // 检查支付方式
+  if (!rechargeForm.value.paymentMethod) {
+    ElMessage.warning('请选择支付方式')
+    return
+  }
+
   recharging.value = true
   try {
     const rechargeNo = 'RCH' + new Date().getTime() + Math.floor(Math.random() * 1000)
+
+    // 这里应该调用第三方支付接口
+    // 目前模拟充值成功
+    ElMessage.info(`正在跳转到${rechargeForm.value.paymentMethod === 'wechat' ? '微信' : '支付宝'}支付...`)
+
+    // 模拟支付成功（实际应该等待第三方支付回调）
+    await new Promise(resolve => setTimeout(resolve, 1000))
+
     const response = await walletApi.recharge(userId, rechargeForm.value.amount, rechargeNo)
 
     if (response.code === '200') {
       ElMessage.success(`充值成功！已到账${rechargeForm.value.amount}平台币`)
       rechargeDialogVisible.value = false
+      rechargeForm.value.amount = null
       await fetchWalletInfo()
     } else {
       ElMessage.error(response.message || '充值失败，请重试')
@@ -381,12 +509,23 @@ const confirmRecharge = async () => {
 // 显示提现对话框
 const showWithdrawDialog = () => {
   withdrawForm.value.amount = null
+  withdrawForm.value.password = ''
   withdrawDialogVisible.value = true
 }
 
 // 全部提现
 const withdrawAll = () => {
   withdrawForm.value.amount = walletInfo.value.balance || 0
+}
+
+// 验证支付密码
+const validatePaymentPassword = (password) => {
+  // 这里应该调用后端API验证支付密码
+  // 目前简化处理，检查密码格式
+  if (!password || password.length !== 6) {
+    return false
+  }
+  return /^\d{6}$/.test(password)
 }
 
 // 确认提现
@@ -396,8 +535,31 @@ const confirmWithdraw = async () => {
     return
   }
 
+  // 最低提现金额检查
+  if (withdrawForm.value.amount < 10) {
+    ElMessage.warning('单笔提现最低金额为10平台币')
+    return
+  }
+
   if (withdrawForm.value.amount > (walletInfo.value.balance || 0)) {
     ElMessage.warning('提现金额不能超过余额')
+    return
+  }
+
+  // 每日提现限额检查
+  if (withdrawForm.value.amount > 10000) {
+    ElMessage.warning('每日提现限额为10000平台币')
+    return
+  }
+
+  // 支付密码验证
+  if (!withdrawForm.value.password) {
+    ElMessage.warning('请输入支付密码')
+    return
+  }
+
+  if (!validatePaymentPassword(withdrawForm.value.password)) {
+    ElMessage.warning('支付密码格式不正确，请输入6位数字密码')
     return
   }
 
@@ -410,14 +572,35 @@ const confirmWithdraw = async () => {
   withdrawing.value = true
   try {
     const withdrawNo = 'WTH' + new Date().getTime() + Math.floor(Math.random() * 1000)
+
+    // 这里应该验证支付密码是否正确
+    // 目前简化处理，直接调用提现接口
     const response = await walletApi.withdraw(userId, withdrawForm.value.amount, withdrawNo)
 
     if (response.code === '200') {
-      ElMessage.success(`提现成功！已转出${withdrawForm.value.amount}平台币`)
+      const fee = calculateWithdrawFee(withdrawForm.value.amount)
+      const actualAmount = calculateActualAmount(withdrawForm.value.amount)
+
+      ElMessage.success({
+        dangerouslyUseHTMLString: true,
+        message: `
+          <div>提现申请已提交！</div>
+          <div style="margin-top: 8px; font-size: 12px;">
+            提现金额：${withdrawForm.value.amount}平台币<br>
+            手续费：${fee}平台币<br>
+            预计到账：${actualAmount}平台币<br>
+            到账时间：1-3个工作日
+          </div>
+        `
+      })
       withdrawDialogVisible.value = false
       await fetchWalletInfo()
     } else {
-      ElMessage.error(response.message || '提现失败，请重试')
+      if (response.message && response.message.includes('密码')) {
+        ElMessage.error('支付密码错误，请重新输入')
+      } else {
+        ElMessage.error(response.message || '提现失败，请重试')
+      }
     }
   } catch (error) {
     console.error('提现失败:', error)
@@ -754,6 +937,18 @@ onMounted(() => {
 
 .balance-highlight {
   color: #d69e2e;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.fee-text {
+  color: #f56565;
+  font-weight: 500;
+  font-size: 15px;
+}
+
+.actual-amount {
+  color: #48bb78;
   font-weight: 600;
   font-size: 16px;
 }

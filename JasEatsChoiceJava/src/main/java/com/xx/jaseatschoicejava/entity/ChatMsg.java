@@ -41,6 +41,22 @@ public class ChatMsg {
     @ApiModelProperty(value = "消息内容")
     private String content; // 消息内容
 
+    @TableField("reply_to")
+    @ApiModelProperty(value = "回复的消息ID")
+    private String replyTo; // 回复的消息ID
+
+    @TableField("reply_content")
+    @ApiModelProperty(value = "被回复的消息内容")
+    private String replyContent; // 被回复的消息内容
+
+    @TableField("reply_from_id")
+    @ApiModelProperty(value = "被回复消息的发送者ID")
+    private String replyFromId; // 被回复消息的发送者ID
+
+    @TableField("reply_from_name")
+    @ApiModelProperty(value = "被回复消息的发送者名称")
+    private String replyFromName; // 被回复消息的发送者名称
+
     @TableField("read_status")
     @ApiModelProperty(value = "已读状态：true-已读，false-未读")
     private Boolean readStatus; // 已读状态：true-已读，false-未读

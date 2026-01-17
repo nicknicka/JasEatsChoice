@@ -9,204 +9,323 @@
     />
     <h2>消费记录</h2>
 
-    <div class="filter-bar">
-      <el-select
-        v-model="filterType"
-        placeholder="筛选类型"
-        style="width: 150px; margin-right: 10px"
-      >
-        <el-option label="全部" value="all" />
-        <el-option label="充值" value="recharge" />
-        <el-option label="消费" value="consume" />
-        <el-option label="提现" value="withdraw" />
-      </el-select>
-
-      <el-date-picker
-        v-model="dateRange"
-        type="daterange"
-        range-separator="至"
-        start-placeholder="开始日期"
-        end-placeholder="结束日期"
-        style="width: 300px; margin-right: 10px"
-      />
-
-      <el-button type="primary" size="small" @click="applyFilter">
-        <el-icon><Search /></el-icon> 查询
-      </el-button>
-
-      <el-button type="default" size="small" @click="resetFilter">
-        <el-icon><Refresh /></el-icon> 重置
-      </el-button>
-    </div>
-
-    <div class="total-balance">
-      <span class="label">当前平台币余额:</span>
-      <span class="balance">{{ currentBalance }}个</span>
-    </div>
-
-    <el-table :data="paginatedHistory" style="width: 100%; margin-top: 20px">
-      <el-table-column prop="date" label="日期" width="150" />
-      <el-table-column prop="type" label="类型" width="100">
-        <template #default="scope">
-          <el-tag
-            :type="
-              scope.row.type === 'recharge'
-                ? 'success'
-                : scope.row.type === 'withdraw'
-                  ? 'danger'
-                  : 'info'
-            "
-          >
-            {{
-              scope.row.type === 'recharge'
-                ? '充值'
-                : scope.row.type === 'withdraw'
-                  ? '提现'
-                  : '消费'
-            }}
-          </el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column prop="amount" label="金额" width="120">
-        <template #default="scope">
-          <span :class="scope.row.type === 'recharge' ? 'income' : 'expense'">
-            {{ scope.row.type === 'recharge' ? '+' : '-' }}{{ scope.row.amount }}
-          </span>
-        </template>
-      </el-table-column>
-      <el-table-column prop="description" label="描述" />
-      <el-table-column prop="status" label="状态" width="100">
-        <template #default="scope">
-          <el-tag :type="scope.row.status === 'success' ? 'success' : 'warning'">
-            {{ scope.row.status === 'success' ? '成功' : '失败' }}
-          </el-tag>
-        </template>
-      </el-table-column>
-
-      <!-- 无数据显示 -->
-      <template #empty>
-        <div class="empty-state">
-          <el-icon class="empty-icon"><Money /></el-icon>
-          <p>您还没有任何消费记录</p>
+    <!-- 统计卡片 -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-icon balance-icon">💰</div>
+        <div class="stat-content">
+          <div class="stat-label">当前余额</div>
+          <div class="stat-value balance-color">{{ formatNumber(currentBalance) }}个</div>
         </div>
-      </template>
-    </el-table>
-
-    <div class="pagination">
-      <el-pagination
-        v-model:current-page="currentPage"
-        v-model:page-size="pageSize"
-        :page-sizes="[10, 20, 50]"
-        :total="total"
-        layout="total, sizes, prev, pager, next, jumper"
-        @size-change="handleSizeChange"
-        @current-change="handleCurrentChange"
-      />
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon recharge-icon">📈</div>
+        <div class="stat-content">
+          <div class="stat-label">总收入</div>
+          <div class="stat-value recharge-color">+{{ formatNumber(totalIncome) }}</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon expense-icon">📉</div>
+        <div class="stat-content">
+          <div class="stat-label">总支出</div>
+          <div class="stat-value expense-color">-{{ formatNumber(totalExpense) }}</div>
+        </div>
+      </div>
     </div>
+
+    <!-- 筛选条件卡片 -->
+    <el-card class="filter-card" shadow="hover">
+      <div class="filter-bar">
+        <el-select
+          v-model="filterType"
+          placeholder="筛选类型"
+          style="width: 150px"
+          clearable
+          @change="handleFilterChange"
+        >
+          <el-option label="全部" value="all" />
+          <el-option label="充值" value="recharge" />
+          <el-option label="消费" value="consume" />
+          <el-option label="提现" value="withdraw" />
+        </el-select>
+
+        <el-select
+          v-model="filterStatus"
+          placeholder="交易状态"
+          style="width: 150px"
+          clearable
+          @change="handleFilterChange"
+        >
+          <el-option label="全部" value="" />
+          <el-option label="成功" value="success" />
+          <el-option label="失败" value="failed" />
+        </el-select>
+
+        <el-date-picker
+          v-model="dateRange"
+          type="daterange"
+          range-separator="至"
+          start-placeholder="开始日期"
+          end-placeholder="结束日期"
+          style="width: 300px"
+          @change="handleFilterChange"
+        />
+
+        <el-button type="primary" @click="applyFilter">
+          <el-icon><Search /></el-icon> 查询
+        </el-button>
+
+        <el-button @click="resetFilter">
+          <el-icon><Refresh /></el-icon> 重置
+        </el-button>
+      </div>
+    </el-card>
+
+    <!-- 交易列表 -->
+    <el-card class="transactions-card" shadow="hover">
+      <div v-loading="loading" class="transactions-list">
+        <div v-if="history.length > 0">
+          <div
+            v-for="item in history"
+            :key="item.id"
+            class="transaction-item"
+            @click="viewDetail(item)"
+          >
+            <div class="transaction-icon" :class="getIconClass(item.type)">
+              {{ getIcon(item.type) }}
+            </div>
+            <div class="transaction-info">
+              <div class="transaction-header">
+                <span class="transaction-type">{{ getTypeText(item.type) }}</span>
+                <el-tag
+                  :type="item.status === 'success' ? 'success' : 'danger'"
+                  size="small"
+                >
+                  {{ item.status === 'success' ? '成功' : '失败' }}
+                </el-tag>
+              </div>
+              <div class="transaction-desc">{{ item.description }}</div>
+              <div class="transaction-time">{{ formatDateTime(item.date) }}</div>
+            </div>
+            <div class="transaction-amount" :class="item.type === 'recharge' ? 'income' : 'expense'">
+              {{ item.type === 'recharge' ? '+' : '-' }}{{ formatNumber(item.amount) }}
+            </div>
+          </div>
+        </div>
+        <el-empty v-else description="暂无消费记录">
+          <el-icon class="empty-icon"><Money /></el-icon>
+        </el-empty>
+      </div>
+
+      <!-- 分页 -->
+      <div v-if="total > 0" class="pagination">
+        <el-pagination
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
+          :page-sizes="[10, 20, 50]"
+          :total="total"
+          layout="total, sizes, prev, pager, next, jumper"
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+        />
+      </div>
+    </el-card>
+
+    <!-- 交易详情对话框 -->
+    <el-dialog v-model="detailDialogVisible" title="交易详情" width="500px" center>
+      <div v-if="selectedItem" class="detail-content">
+        <div class="detail-row">
+          <span class="detail-label">交易类型：</span>
+          <el-tag :type="getDetailTagType(selectedItem.type)">
+            {{ getTypeText(selectedItem.type) }}
+          </el-tag>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">交易金额：</span>
+          <span class="detail-amount" :class="selectedItem.type === 'recharge' ? 'income' : 'expense'">
+            {{ formatNumber(selectedItem.amount) }} 平台币
+          </span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">交易状态：</span>
+          <el-tag :type="selectedItem.status === 'success' ? 'success' : 'danger'">
+            {{ selectedItem.status === 'success' ? '成功' : '失败' }}
+          </el-tag>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">交易描述：</span>
+          <span class="detail-value">{{ selectedItem.description }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">交易时间：</span>
+          <span class="detail-value">{{ formatDateTime(selectedItem.date) }}</span>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="detailDialogVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { Search, Refresh, Money } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
-import axios from 'axios'
-import { API_CONFIG } from '../../config/index.js'
+import walletApi from '../../api/wallet'
+import { useAuthStore } from '../../store/authStore'
 
-// 路由实例
 const router = useRouter()
-
-// 返回个人中心
-const goBack = () => {
-  router.push('/user/home/profile')
-}
+const authStore = useAuthStore()
 
 // 消费记录数据
 const history = ref([])
-const total = ref(0) // 总记录数
-const loading = ref(false) // 加载状态
+const total = ref(0)
+const loading = ref(false)
 
 // 筛选条件
 const filterType = ref('all')
-const dateRange = ref([])
+const filterStatus = ref('')
+const dateRange = ref(null)
 
 // 分页参数
 const currentPage = ref(1)
 const pageSize = ref(10)
 
 // 当前余额
-const currentBalance = ref('177')
+const currentBalance = ref(0)
 
-// 计算属性：过滤后的历史记录
-const filteredHistory = computed(() => {
-  let filtered = [...history.value]
-
-  // 类型过滤
-  if (filterType.value !== 'all') {
-    filtered = filtered.filter((item) => item.type === filterType.value)
-  }
-
-  // 日期范围过滤
-  if (dateRange.value && dateRange.value.length === 2) {
-    const startDate = new Date(dateRange.value[0])
-    const endDate = new Date(dateRange.value[1])
-    filtered = filtered.filter((item) => {
-      const itemDate = new Date(item.date)
-      return itemDate >= startDate && itemDate <= endDate
-    })
-  }
-
-  return filtered
+// 统计数据
+const totalIncome = computed(() => {
+  return history.value
+    .filter((t) => t.type === 'recharge' && t.status === 'success')
+    .reduce((sum, t) => sum + Number(t.amount || 0), 0)
 })
 
-// 计算属性：分页后的历史记录
-const paginatedHistory = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value
-  const end = start + pageSize.value
-  return filteredHistory.value.slice(start, end)
+const totalExpense = computed(() => {
+  return history.value
+    .filter((t) => (t.type === 'consume' || t.type === 'withdraw') && t.status === 'success')
+    .reduce((sum, t) => sum + Number(t.amount || 0), 0)
 })
+
+// 交易详情对话框
+const detailDialogVisible = ref(false)
+const selectedItem = ref(null)
+
+// 格式化数字
+const formatNumber = (num) => {
+  if (!num) return '0'
+  return Number(num).toLocaleString('zh-CN', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2
+  })
+}
+
+// 格式化日期时间
+const formatDateTime = (dateTime) => {
+  if (!dateTime) return ''
+  const date = new Date(dateTime)
+  return date.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  })
+}
+
+// 获取交易图标
+const getIcon = (type) => {
+  const icons = {
+    recharge: '💰',
+    consume: '🛒',
+    withdraw: '🏦'
+  }
+  return icons[type] || '📄'
+}
+
+// 获取图标样式类
+const getIconClass = (type) => {
+  const classes = {
+    recharge: 'icon-recharge',
+    consume: 'icon-consume',
+    withdraw: 'icon-withdraw'
+  }
+  return classes[type] || ''
+}
+
+// 获取交易类型文本
+const getTypeText = (type) => {
+  const texts = {
+    recharge: '充值',
+    consume: '消费',
+    withdraw: '提现'
+  }
+  return texts[type] || '其他'
+}
+
+// 获取详情标签类型
+const getDetailTagType = (type) => {
+  const types = {
+    recharge: 'success',
+    consume: 'warning',
+    withdraw: 'info'
+  }
+  return types[type] || ''
+}
+
+// 获取钱包余额
+const fetchWalletBalance = async () => {
+  const userId = authStore.userId
+  if (!userId || userId === '0') return
+
+  try {
+    const result = await walletApi.getBalance(userId)
+    if (result.code === '200') {
+      currentBalance.value = result.data || 0
+    }
+  } catch (error) {
+    console.error('获取钱包余额失败:', error)
+  }
+}
 
 // 从后端获取消费记录
 const fetchConsumeHistory = async () => {
+  const userId = authStore.userId
+  if (!userId || userId === '0') {
+    ElMessage.error('用户未登录')
+    return
+  }
+
+  loading.value = true
   try {
-    loading.value = true
+    const startDate =
+      dateRange.value && dateRange.value.length === 2
+        ? formatDate(dateRange.value[0])
+        : null
+    const endDate =
+      dateRange.value && dateRange.value.length === 2
+        ? formatDate(dateRange.value[1])
+        : null
 
-    // 获取当前用户ID（从localStorage中获取）
-    const userId = localStorage.getItem('userId') || 1
-
-    // 构造请求参数
-    const params = {
+    const result = await walletApi.getConsumeHistory(
       userId,
-      page: currentPage.value,
-      pageSize: pageSize.value,
-      type: filterType.value,
-      // 日期范围处理：转换为字符串格式
-      ...(dateRange.value && dateRange.value.length === 2
-        ? {
-            startDate: dateRange.value[0].toISOString().split('T')[0],
-            endDate: dateRange.value[1].toISOString().split('T')[0]
-          }
-        : {})
-    }
+      filterType.value || 'all',
+      currentPage.value,
+      pageSize.value,
+      startDate,
+      endDate
+    )
 
-    // 发送请求到后端
-    const response = await axios.get(`${API_CONFIG.baseURL}/v1/consume-history`, {
-      params
-    })
-
-    // 处理响应数据
-    if (response.data && response.data.code === '200') {
-      // 确保每条记录都有唯一id
-      history.value = response.data.data.records.map((item, index) => ({
-        ...item,
-        id: item.id || Date.now() + index
-      }))
-      total.value = response.data.data.total
-      ElMessage.success('消费记录加载成功')
+    if (result.code === '200' && result.data) {
+      history.value = result.data.records || []
+      total.value = result.data.total || 0
     } else {
-      ElMessage.error('消费记录加载失败：' + (response.data?.message || '未知错误'))
+      ElMessage.error(result.message || '获取消费记录失败')
     }
   } catch (error) {
     console.error('获取消费记录失败:', error)
@@ -216,16 +335,32 @@ const fetchConsumeHistory = async () => {
   }
 }
 
+// 格式化日期
+const formatDate = (date) => {
+  const d = new Date(date)
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+// 筛选条件改变
+const handleFilterChange = () => {
+  currentPage.value = 1
+  fetchConsumeHistory()
+}
+
 // 应用筛选
 const applyFilter = () => {
-  currentPage.value = 1 // 筛选后回到第一页
+  currentPage.value = 1
   fetchConsumeHistory()
 }
 
 // 重置筛选
 const resetFilter = () => {
   filterType.value = 'all'
-  dateRange.value = []
+  filterStatus.value = ''
+  dateRange.value = null
   currentPage.value = 1
   fetchConsumeHistory()
   ElMessage.info('筛选条件已重置')
@@ -244,82 +379,271 @@ const handleCurrentChange = (val) => {
   fetchConsumeHistory()
 }
 
-// 从localStorage加载用户信息和交易记录
+// 查看详情
+const viewDetail = (item) => {
+  selectedItem.value = item
+  detailDialogVisible.value = true
+}
+
+// 返回个人中心
+const goBack = () => {
+  router.push('/user/home/profile')
+}
+
+// 页面加载时获取数据
 onMounted(() => {
-  const savedUserInfo = localStorage.getItem('userInfo')
-  if (savedUserInfo) {
-    const userInfo = JSON.parse(savedUserInfo)
-    currentBalance.value = userInfo.wallet ? userInfo.wallet.balance : '177'
-  }
-
-  const savedHistory = localStorage.getItem('consumeHistory')
-  if (savedHistory) {
-    // 加载并确保每条记录都有唯一id
-    const loadedHistory = JSON.parse(savedHistory)
-    history.value = loadedHistory.map((item, index) => ({
-      ...item,
-      id: item.id || Date.now() + index
-    }))
-    total.value = history.value.length // 设置总记录数
-  }
+  fetchWalletBalance()
+  fetchConsumeHistory()
 })
-
-// 监听历史记录变化，保存到localStorage
-watch(
-  () => history.value,
-  () => {
-    // 直接保存到localStorage，不再修改原始数组
-    localStorage.setItem('consumeHistory', JSON.stringify(history.value))
-    total.value = history.value.length // 更新总记录数
-  },
-  { deep: true }
-)
 </script>
 
 <style scoped>
 .consume-history-container {
   padding: 0 20px 20px 20px;
+  min-height: 100vh;
+  background: #f5f7fa;
+}
+
+h2 {
+  font-size: 28px;
+  margin: 0 0 20px 0;
+  color: #333;
+  font-weight: 700;
+}
+
+/* 统计卡片 */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.stat-icon {
+  font-size: 40px;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f7fafc;
+  border-radius: 12px;
+}
+
+.balance-icon {
+  background: linear-gradient(135deg, #fef5e7 0%, #fdebd0 100%);
+}
+
+.recharge-icon {
+  background: linear-gradient(135deg, #c6f6d5 0%, #9ae6b4 100%);
+}
+
+.expense-icon {
+  background: linear-gradient(135deg, #fed7d7 0%, #feb2b2 100%);
+}
+
+.stat-content {
+  flex: 1;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #718096;
+  margin-bottom: 5px;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #2d3748;
+}
+
+.balance-color {
+  color: #d69e2e;
+}
+
+.recharge-color {
+  color: #48bb78;
+}
+
+.expense-color {
+  color: #f56565;
+}
+
+/* 筛选卡片 */
+.filter-card {
+  border-radius: 16px;
+  margin-bottom: 20px;
+  border: none;
 }
 
 .filter-bar {
-  margin: 20px 0;
   display: flex;
   align-items: center;
+  gap: 12px;
   flex-wrap: wrap;
+}
+
+/* 交易列表 */
+.transactions-card {
+  border-radius: 16px;
+  border: none;
+}
+
+.transactions-list {
+  min-height: 300px;
+}
+
+.transaction-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.transaction-item:hover {
+  background: #edf2f7;
+  transform: translateX(4px);
+}
+
+.transaction-item:last-child {
+  margin-bottom: 0;
+}
+
+.transaction-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  background: white;
+  flex-shrink: 0;
+}
+
+.icon-recharge {
+  background: linear-gradient(135deg, #c6f6d5 0%, #9ae6b4 100%);
+}
+
+.icon-consume {
+  background: linear-gradient(135deg, #fed7d7 0%, #feb2b2 100%);
+}
+
+.icon-withdraw {
+  background: linear-gradient(135deg, #bee3f8 0%, #90cdf4 100%);
+}
+
+.transaction-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.transaction-header {
+  display: flex;
+  align-items: center;
   gap: 10px;
+  margin-bottom: 5px;
 }
 
-.total-balance {
-  margin: 10px 0;
-  padding: 15px;
-  background-color: #f5f7fa;
-  border-radius: 5px;
-  font-size: 16px;
+.transaction-type {
+  font-size: 15px;
+  font-weight: 600;
+  color: #2d3748;
 }
 
-.total-balance .label {
-  font-weight: bold;
+.transaction-desc {
+  font-size: 13px;
+  color: #718096;
+  margin-bottom: 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.total-balance .balance {
-  color: #67c23a;
-  font-weight: bold;
-  font-size: 20px;
-  margin-left: 10px;
+.transaction-time {
+  font-size: 12px;
+  color: #a0aec0;
+}
+
+.transaction-amount {
+  font-size: 18px;
+  font-weight: 600;
+  flex-shrink: 0;
 }
 
 .income {
-  color: #67c23a;
-  font-weight: bold;
+  color: #48bb78;
 }
 
 .expense {
-  color: #f56c6c;
-  font-weight: bold;
+  color: #f56565;
 }
 
 .pagination {
   margin-top: 20px;
-  text-align: right;
+  display: flex;
+  justify-content: center;
+}
+
+/* 详情对话框 */
+.detail-content {
+  padding: 10px 0;
+}
+
+.detail-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.detail-label {
+  font-size: 14px;
+  color: #718096;
+  width: 100px;
+  flex-shrink: 0;
+}
+
+.detail-value {
+  font-size: 14px;
+  color: #2d3748;
+}
+
+.detail-amount {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.empty-icon {
+  font-size: 64px;
+  color: #dcdfe6;
 }
 </style>

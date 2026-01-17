@@ -49,6 +49,7 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { ArrowDown, Check, Clock, Calendar, Timer, Coin, Wallet } from '@element-plus/icons-vue'
 import { ORDER_STATUS_MAP } from '../../../utils/orderStatus'
 

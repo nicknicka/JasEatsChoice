@@ -96,17 +96,36 @@
               >
             </div>
           </div>
-          <!-- 群聊操作 - 创建/加入群订单 -->
-          <div class="chat-actions" v-if="selectedConversation.type === 'group'">
-            <el-button
-              type="primary"
+          <div class="header-actions">
+            <!-- 消息搜索 -->
+            <el-input
+              v-model="searchKeyword"
+              placeholder="搜索消息记录"
               size="small"
-              @click="createGroupOrder"
-              v-if="!groupOrders[selectedConversation.id]"
-              >创建群订单</el-button
+              style="width: 200px; margin-right: 10px"
+              @input="searchMessages"
+              clearable
             >
-            <el-button size="small" @click="joinGroupOrder">加入群订单</el-button>
-            <el-button size="small" @click="openGroupDetail">群聊详情</el-button>
+              <template #prefix>
+                <el-icon><Search /></el-icon>
+              </template>
+            </el-input>
+            <!-- 导出聊天记录 -->
+            <el-button size="small" @click="exportChatHistory" style="margin-right: 10px">
+              <el-icon><Download /></el-icon> 导出记录
+            </el-button>
+            <!-- 群聊操作 - 创建/加入群订单 -->
+            <div class="chat-actions" v-if="selectedConversation.type === 'group'">
+              <el-button
+                type="primary"
+                size="small"
+                @click="createGroupOrder"
+                v-if="!groupOrders[selectedConversation.id]"
+                >创建群订单</el-button
+              >
+              <el-button size="small" @click="joinGroupOrder">加入群订单</el-button>
+              <el-button size="small" @click="openGroupDetail">群聊详情</el-button>
+            </div>
           </div>
         </div>
 
@@ -280,36 +299,106 @@
           </div>
         </el-drawer>
 
+        <!-- 搜索结果面板 -->
+        <div v-if="isSearching" class="search-results-panel">
+          <div class="search-header">
+            <span>找到 {{ messageSearchResults.length }} 条结果</span>
+            <el-button type="text" size="small" @click="clearSearch">
+              <el-icon><Close /></el-icon> 清除
+            </el-button>
+          </div>
+          <div class="search-results-list">
+            <div
+              v-for="(result, index) in messageSearchResults"
+              :key="result.id"
+              class="search-result-item"
+              :class="{ 'active': currentSearchIndex === index }"
+              @click="jumpToSearchResult(index)"
+            >
+              <div class="result-time">{{ result.formattedTime || formatMessageTime(result.createTime) }}</div>
+              <div class="result-content" v-html="result.highlightedContent"></div>
+            </div>
+          </div>
+        </div>
+
         <!-- 聊天内容 -->
-        <div class="messages-container">
+        <div class="messages-container" ref="messagesContainerRef">
+          <!-- 加载更多提示 -->
+          <div
+            v-if="msgPageNum > 1 || (totalMessages > msgPageSize)"
+            class="load-more-tip"
+            @click="hasMoreMessages && !isLoadingMessages && loadMoreMessages()"
+          >
+            <span v-if="isLoadingMessages" class="loading-text">
+              <el-icon class="is-loading"><Loading /></el-icon> 加载中...
+            </span>
+            <span v-else-if="hasMoreMessages" class="clickable-text">点击加载更多消息</span>
+            <span v-else class="no-more-text">没有更多消息了</span>
+          </div>
+
           <div
             v-for="message in chatMessages"
             :key="message.id"
             class="message-item"
             :class="{
               'others-message': message.fromId !== userId.toString(),
-              'my-message': message.fromId === userId.toString()
+              'my-message': message.fromId === userId.toString(),
+              'message-sending': message.status === 'sending',
+              'message-failed': message.status === 'failed'
             }"
           >
             <div class="message-header">
               <span class="sender-name">{{
                 message.fromId === userId.toString() ? '我' : message.fromId
               }}</span>
+              <span v-if="message.status === 'sending'" class="message-status">发送中...</span>
+              <span v-else-if="message.status === 'failed'" class="message-status failed">发送失败</span>
             </div>
             <div class="message-content">
+              <!-- 回复引用 -->
+              <div v-if="message.replyTo" class="message-reply-quote">
+                <div class="quote-bar"></div>
+                <div class="quote-content">
+                  <div class="quote-author">{{ message.replyFromName || message.replyFromId }}</div>
+                  <div class="quote-text">{{ message.replyContent }}</div>
+                </div>
+              </div>
+
               {{ message.content }}
               <div class="message-time">
-                {{
-                  new Date(message.createTime).toLocaleString([], {
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
-                  })
-                }}
+                {{ message.formattedTime || formatMessageTime(message.createTime || message.time) }}
               </div>
+              <!-- 消息操作按钮 -->
+              <el-dropdown
+                trigger="click"
+                @command="(cmd) => handleMessageCommand(cmd, message)"
+              >
+                <el-button type="text" size="small" class="msg-action-btn">⋯</el-button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item command="reply">回复</el-dropdown-item>
+                    <el-dropdown-item command="forward">转发</el-dropdown-item>
+                    <el-dropdown-item
+                      v-if="message.fromId === userId.toString() && canRecallMessage(message)"
+                      command="recall"
+                    >
+                      撤回消息
+                    </el-dropdown-item>
+                    <el-dropdown-item command="copy">复制</el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+              <!-- 重发按钮 -->
+              <el-button
+                v-if="message.status === 'failed' && message.canResend"
+                type="warning"
+                size="small"
+                text
+                @click="resendMessage(message)"
+                class="resend-btn"
+              >
+                点击重发
+              </el-button>
             </div>
           </div>
         </div>
@@ -321,6 +410,17 @@
 
         <!-- 消息输入框 -->
         <div class="message-input-container">
+          <!-- 回复预览 -->
+          <div v-if="replyingTo" class="reply-preview">
+            <div class="reply-content">
+              <div class="reply-header">
+                <span class="reply-label">回复 @{{ replyingTo.senderName || replyingTo.fromId }}</span>
+                <el-icon @click="cancelReply" style="cursor: pointer"><Close /></el-icon>
+              </div>
+              <div class="reply-text">{{ replyingTo.content }}</div>
+            </div>
+          </div>
+
           <el-input
             v-model="newMessage"
             type="textarea"
@@ -730,6 +830,35 @@
       </template>
     </el-dialog>
 
+    <!-- 转发消息对话框 -->
+    <el-dialog v-model="forwardDialogVisible" title="转发消息" width="400px">
+      <div v-if="forwardMessage" class="forward-dialog-content">
+        <div class="forward-preview">转发内容: {{ forwardMessage.content }}</div>
+        <div class="forward-target-select">
+          <div class="select-label">选择转发到:</div>
+          <el-select v-model="selectedForwardTarget" placeholder="选择会话" style="width: 100%">
+            <el-option
+              v-for="conv in conversations"
+              :key="conv.id"
+              :label="conv.name"
+              :value="conv.id"
+            >
+              <div class="conversation-option">
+                <span>{{ conv.name }}</span>
+                <span class="conversation-type-badge">{{ conv.type === 'group' ? '群聊' : '私聊' }}</span>
+              </div>
+            </el-option>
+          </el-select>
+        </div>
+      </div>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="forwardDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="confirmForward">确认转发</el-button>
+        </div>
+      </template>
+    </el-dialog>
+
     <!-- 群聊详情对话框 -->
     <el-dialog v-model="groupDetailDialogVisible" title="群聊详情" width="500px">
       <div v-if="currentGroupInfo" class="group-detail-content">
@@ -756,10 +885,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ShoppingCart, Search, ArrowDown } from '@element-plus/icons-vue'
+import { ShoppingCart, Search, ArrowDown, Loading, Close, Download } from '@element-plus/icons-vue'
 import api from '../../utils/api.js'
 import { decodeJwt } from '../../utils/api.js'
 
@@ -791,6 +920,22 @@ const chatMessages = ref([])
 
 // 当前选中的会话
 const selectedConversation = ref(null)
+
+// 消息搜索相关
+const searchKeyword = ref('')
+const messageSearchResults = ref([])
+const isSearching = ref(false)
+const currentSearchIndex = ref(-1)
+
+// 消息回复相关
+const replyingTo = ref(null) // 当前正在回复的消息
+
+// 消息分页相关
+const msgPageNum = ref(1)
+const msgPageSize = ref(50)
+const totalMessages = ref(0)
+const hasMoreMessages = ref(true)
+const isLoadingMessages = ref(false)
 
 // 模拟群订单数据
 // 群订单 - 改为对象存储，key为群聊会话ID，实现多群订单独立
@@ -1246,7 +1391,13 @@ const sortedConversations = computed(() => {
 
 // 页面加载
 onMounted(async () => {
-  // 从后端获取会话列表、好友列表和群列表
+  // 1. 从本地加载聊天历史
+  loadChatHistoryFromLocal()
+
+  // 2. 初始化 WebSocket 连接
+  initWebSocket()
+
+  // 3. 从后端获取会话列表、好友列表和群列表
   try {
     // 1. 获取会话列表
     const conversationsResponse = await api.get(`/v1/chat/users/${userId.value}/chat-sessions`)
@@ -1285,38 +1436,750 @@ onMounted(() => {
   document.addEventListener('click', closeContextMenu)
 })
 
-// 在组件卸载时移除事件监听器
+// 在组件卸载时移除事件监听器和清理资源
 onBeforeUnmount(() => {
   document.removeEventListener('click', closeContextMenu)
+  // 关闭 WebSocket 连接
+  closeWebSocket()
+  // 保存聊天历史到本地
+  saveChatHistoryToLocal()
 })
 
 // 加载聊天记录的函数
-const loadChatMessages = async (sessionId) => {
-  // 如果聊天记录已经存在，直接使用
-  if (chatHistory.value[sessionId]) {
-    chatMessages.value = Array.isArray(chatHistory.value[sessionId])
-      ? chatHistory.value[sessionId]
-      : chatHistory.value[sessionId].records
+const loadChatMessages = async (sessionId, loadMore = false) => {
+  // 如果不是加载更多,重置分页
+  if (!loadMore) {
+    msgPageNum.value = 1
+    hasMoreMessages.value = true
+  }
+
+  // 如果聊天记录已经存在且不是加载更多,直接使用
+  if (!loadMore && chatHistory.value[sessionId]) {
+    chatMessages.value = chatHistory.value[sessionId]
+    // 滚动到底部
+    setTimeout(() => scrollToBottom(), 100)
     return
   }
 
+  // 如果正在加载或没有更多消息,直接返回
+  if (isLoadingMessages.value || !hasMoreMessages.value) {
+    return
+  }
+
+  isLoadingMessages.value = true
+
   // 从后端获取聊天记录
   try {
-    // 假设获取聊天记录的API路径为 /api/v1/chat/{sessionId}/messages
-    const response = await api.get(`/v1/chat/${sessionId}/messages`)
+    const response = await api.get(`/v1/chat/${sessionId}/messages`, {
+      params: {
+        pageNum: msgPageNum.value,
+        pageSize: msgPageSize.value,
+        userId: userId.value
+      }
+    })
 
     if (response.code === '200') {
-      const messages = response.data
-      // 检查是否是分页对象，如果是则取records属性
-      const messagesArray = messages.records || messages
-      chatHistory.value[sessionId] = messagesArray
-      chatMessages.value = messagesArray
+      const data = response.data
+      const messages = data.records || []
+
+      // 预处理消息：格式化时间、去重等
+      const processedMessages = preprocessMessages(messages)
+
+      if (loadMore) {
+        // 加载更多时,将新消息添加到前面
+        chatMessages.value = [...processedMessages, ...chatMessages.value]
+        // 保持滚动位置
+        const scrollTop = messagesContainerRef.value?.scrollTop || 0
+        setTimeout(() => {
+          if (messagesContainerRef.value) {
+            messagesContainerRef.value.scrollTop = scrollTop + 100
+          }
+        }, 100)
+      } else {
+        // 首次加载
+        chatHistory.value[sessionId] = processedMessages
+        chatMessages.value = processedMessages
+        // 滚动到底部
+        setTimeout(() => scrollToBottom(), 100)
+      }
+
+      // 更新分页信息
+      totalMessages.value = data.total || 0
+      hasMoreMessages.value = data.records && data.records.length >= msgPageSize.value
+
+      // 持久化到本地
+      saveChatHistoryToLocal()
     }
   } catch (error) {
     console.error('加载聊天记录失败:', error)
     ElMessage.error('加载聊天记录失败，请稍后重试')
-    // 加载失败时使用空数据
-    chatMessages.value = []
+    // 加载失败时如果是首次加载,使用空数据
+    if (!loadMore) {
+      chatMessages.value = []
+    }
+  } finally {
+    isLoadingMessages.value = false
+  }
+}
+
+// 加载更多消息
+const loadMoreMessages = async () => {
+  if (!selectedConversation.value || isLoadingMessages.value || !hasMoreMessages.value) {
+    return
+  }
+
+  msgPageNum.value++
+  await loadChatMessages(selectedConversation.value.id, true)
+}
+
+// ========== 聊天记录优化相关函数 ==========
+
+// 消息容器引用
+const messagesContainerRef = ref(null)
+
+// 监听滚动事件,实现加载更多
+const setupScrollListener = () => {
+  if (!messagesContainerRef.value) return
+
+  const container = messagesContainerRef.value
+  let scrollTimer = null
+
+  container.addEventListener('scroll', () => {
+    // 防抖处理
+    if (scrollTimer) clearTimeout(scrollTimer)
+
+    scrollTimer = setTimeout(() => {
+      // 当滚动到顶部附近时加载更多
+      if (container.scrollTop < 100 && hasMoreMessages.value && !isLoadingMessages.value) {
+        loadMoreMessages()
+      }
+    }, 200)
+  })
+}
+
+// 在选择会话后设置滚动监听
+watch(() => selectedConversation.value, (newVal) => {
+  if (newVal) {
+    setTimeout(() => {
+      setupScrollListener()
+    }, 300)
+  }
+})
+
+// 滚动到底部
+const scrollToBottom = () => {
+  if (messagesContainerRef.value) {
+    messagesContainerRef.value.scrollTop = messagesContainerRef.value.scrollHeight
+  }
+}
+
+// 预处理消息：格式化时间、去重等
+const preprocessMessages = (messages) => {
+  if (!Array.isArray(messages)) return []
+
+  // 去重：根据消息ID去重
+  const uniqueMessages = []
+  const messageIds = new Set()
+
+  messages.forEach(msg => {
+    if (!messageIds.has(msg.id)) {
+      messageIds.add(msg.id)
+      uniqueMessages.push({
+        ...msg,
+        // 格式化时间显示
+        formattedTime: formatMessageTime(msg.createTime || msg.time),
+        // 确保有 fromId 字段
+        fromId: msg.fromId || msg.sender || '未知'
+      })
+    }
+  })
+
+  return uniqueMessages
+}
+
+// 搜索消息
+const searchMessages = () => {
+  if (!searchKeyword.value.trim()) {
+    // 清空搜索,显示所有消息
+    isSearching.value = false
+    messageSearchResults.value = []
+    return
+  }
+
+  if (!selectedConversation.value) return
+
+  const keyword = searchKeyword.value.toLowerCase().trim()
+
+  // 在当前会话的所有历史消息中搜索
+  const allMessages = chatHistory.value[selectedConversation.value.id] || []
+  const results = []
+
+  allMessages.forEach((msg, index) => {
+    if (msg.content && msg.content.toLowerCase().includes(keyword)) {
+      // 高亮关键词
+      const highlightedContent = msg.content.replace(
+        new RegExp(`(${keyword})`, 'gi'),
+        '<mark>$1</mark>'
+      )
+
+      results.push({
+        ...msg,
+        originalIndex: index,
+        highlightedContent: highlightedContent
+      })
+    }
+  })
+
+  messageSearchResults.value = results
+  isSearching.value = results.length > 0
+
+  if (results.length > 0) {
+    ElMessage.success(`找到 ${results.length} 条相关消息`)
+  } else {
+    ElMessage.info('未找到相关消息')
+  }
+}
+
+// 跳转到指定搜索结果
+const jumpToSearchResult = (index) => {
+  currentSearchIndex.value = index
+  const result = messageSearchResults.value[index]
+
+  if (!result) return
+
+  // 加载包含该消息的聊天记录
+  if (!chatHistory.value[selectedConversation.value.id]) {
+    chatHistory.value[selectedConversation.value.id] = chatMessages.value
+  }
+
+  // 滚动到该消息位置
+  setTimeout(() => {
+    const messageElement = document.querySelector(`[data-message-id="${result.id}"]`)
+    if (messageElement) {
+      messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      // 高亮显示
+      messageElement.style.backgroundColor = '#fff3cd'
+      setTimeout(() => {
+        messageElement.style.backgroundColor = ''
+      }, 2000)
+    }
+  }, 100)
+}
+
+// 清除搜索
+const clearSearch = () => {
+  searchKeyword.value = ''
+  isSearching.value = false
+  messageSearchResults.value = []
+  currentSearchIndex.value = -1
+}
+
+// 导出聊天记录
+const exportChatHistory = () => {
+  if (!selectedConversation.value) {
+    ElMessage.warning('请先选择一个会话')
+    return
+  }
+
+  const messages = chatHistory.value[selectedConversation.value.id] || chatMessages.value
+
+  if (messages.length === 0) {
+    ElMessage.info('当前会话暂无聊天记录')
+    return
+  }
+
+  // 格式化导出内容
+  let content = `与 ${selectedConversation.value.name} 的聊天记录\n`
+  content += `导出时间: ${new Date().toLocaleString('zh-CN')}\n`
+  content += `消息数量: ${messages.length} 条\n`
+  content += `${'='.repeat(50)}\n\n`
+
+  messages.forEach(msg => {
+    const time = msg.formattedTime || formatMessageTime(msg.createTime || msg.time)
+    const sender = msg.fromId === userId.value.toString() ? '我' : (msg.senderName || msg.fromId)
+    const status = msg.readStatus !== false ? '' : ' (未读)'
+
+    content += `[${time}] ${sender}${status}\n`
+    content += `${msg.content}\n`
+    content += `${'-'.repeat(30)}\n\n`
+  })
+
+  // 创建Blob并下载
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `聊天记录_${selectedConversation.value.name}_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.txt`
+  a.click()
+
+  // 释放URL
+  URL.revokeObjectURL(url)
+
+  ElMessage.success('聊天记录已导出')
+}
+
+// 格式化消息时间
+const formatMessageTime = (time) => {
+  if (!time) return ''
+
+  const date = new Date(time)
+  const now = new Date()
+  const diffMs = now - date
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+  const diffDays = Math.floor(diffMs / 86400000)
+
+  // 今天
+  if (diffDays === 0) {
+    if (diffMins < 1) return '刚刚'
+    if (diffMins < 60) return `${diffMins}分钟前`
+    if (diffHours < 24) return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+  }
+  // 昨天
+  else if (diffDays === 1) {
+    return `昨天 ${date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`
+  }
+  // 更早
+  else if (diffDays < 7) {
+    return `${diffDays}天前`
+  }
+
+  // 超过一周显示完整日期
+  return date.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+// 保存聊天历史到本地存储
+const saveChatHistoryToLocal = () => {
+  try {
+    // 从配置获取存储策略,默认值: 7天, 每个会话100条
+    const storageDays = parseInt(localStorage.getItem('chatStorageDays') || '7', 10)
+    const maxMessagesPerSession = parseInt(localStorage.getItem('chatMaxMessagesPerSession') || '100', 10)
+
+    const cutoffTime = Date.now() - storageDays * 24 * 60 * 60 * 1000
+    const filteredHistory = {}
+
+    Object.keys(chatHistory.value).forEach(sessionId => {
+      const recentMessages = chatHistory.value[sessionId].filter(msg => {
+        const msgTime = new Date(msg.createTime || msg.time).getTime()
+        return msgTime > cutoffTime
+      })
+
+      // 只保存最近的N条消息
+      if (recentMessages.length > 0) {
+        filteredHistory[sessionId] = recentMessages.slice(-maxMessagesPerSession)
+      }
+    })
+
+    localStorage.setItem('chatHistory', JSON.stringify(filteredHistory))
+  } catch (error) {
+    console.error('保存聊天历史失败:', error)
+  }
+}
+
+// 从本地存储加载聊天历史
+const loadChatHistoryFromLocal = () => {
+  try {
+    const saved = localStorage.getItem('chatHistory')
+    if (saved) {
+      const parsedHistory = JSON.parse(saved)
+      // 合并到内存中的聊天历史
+      Object.keys(parsedHistory).forEach(sessionId => {
+        if (!chatHistory.value[sessionId]) {
+          chatHistory.value[sessionId] = parsedHistory[sessionId]
+        }
+      })
+    }
+  } catch (error) {
+    console.error('加载聊天历史失败:', error)
+  }
+}
+
+// ========== WebSocket 实时消息相关 ==========
+
+let websocket = null
+let reconnectTimer = null
+let heartbeatTimer = null
+const isConnected = ref(false)
+
+// WebSocket消息去重 - 使用Set存储最近收到的消息ID
+const receivedMessageIds = ref(new Set())
+const MAX_RECEIVED_IDS = 1000 // 最多保存1000个消息ID
+
+// 检查消息是否已接收(去重)
+const isMessageReceived = (messageId) => {
+  return receivedMessageIds.value.has(messageId)
+}
+
+// 标记消息已接收
+const markMessageReceived = (messageId) => {
+  receivedMessageIds.value.add(messageId)
+  // 清理过期的消息ID(避免内存泄漏)
+  cleanOldMessageIds()
+}
+
+// 清理过期的消息ID
+const cleanOldMessageIds = () => {
+  if (receivedMessageIds.value.size > MAX_RECEIVED_IDS) {
+    // 清空一半的旧ID
+    const idsArray = Array.from(receivedMessageIds.value)
+    receivedMessageIds.value = new Set(idsArray.slice(Math.floor(MAX_RECEIVED_IDS / 2)))
+  }
+}
+
+// WebSocket重连配置
+let reconnectAttempts = 0
+const maxReconnectAttempts = 10 // 最大重连次数
+const baseReconnectDelay = 2000 // 基础重连延迟(毫秒)
+
+// 计算重连延迟(指数退避策略)
+const calculateReconnectDelay = () => {
+  const delay = Math.min(baseReconnectDelay * Math.pow(2, reconnectAttempts), 30000) // 最大30秒
+  // 添加随机抖动,避免同时重连
+  return delay + Math.random() * 1000
+}
+
+// 重置重连计数
+const resetReconnectAttempts = () => {
+  reconnectAttempts = 0
+}
+
+// 初始化 WebSocket 连接
+const initWebSocket = () => {
+  if (websocket && (websocket.readyState === WebSocket.CONNECTING || websocket.readyState === WebSocket.OPEN)) {
+    return
+  }
+
+  // 检查是否超过最大重连次数
+  if (reconnectAttempts >= maxReconnectAttempts) {
+    console.error('WebSocket重连次数已达上限,停止重连')
+    ElMessage.error('连接已断开,请刷新页面重新连接')
+    return
+  }
+
+  try {
+    // 构建 WebSocket URL（根据你的后端地址调整）
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const wsUrl = `${wsProtocol}//${window.location.hostname}:8088/ws/chat?userId=${userId.value}&token=${token}`
+
+    websocket = new WebSocket(wsUrl)
+
+    websocket.onopen = () => {
+      console.log('WebSocket 连接成功')
+      isConnected.value = true
+      // 连接成功后重置重连计数
+      resetReconnectAttempts()
+      // 启动心跳
+      startHeartbeat()
+      // 清除重连定时器
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer)
+        reconnectTimer = null
+      }
+    }
+
+    websocket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data)
+        handleWebSocketMessage(data)
+      } catch (error) {
+        console.error('解析 WebSocket 消息失败:', error)
+      }
+    }
+
+    websocket.onerror = (error) => {
+      console.error('WebSocket 错误:', error)
+    }
+
+    websocket.onclose = () => {
+      console.log('WebSocket 连接关闭')
+      isConnected.value = false
+      stopHeartbeat()
+
+      // 自动重连(使用指数退避策略)
+      if (reconnectAttempts < maxReconnectAttempts) {
+        const delay = calculateReconnectDelay()
+        console.log(`将在${Math.round(delay / 1000)}秒后尝试第${reconnectAttempts + 1}次重连...`)
+
+        reconnectTimer = setTimeout(() => {
+          reconnectAttempts++
+          initWebSocket()
+        }, delay)
+      } else {
+        console.error('WebSocket重连失败,已达到最大重连次数')
+        ElMessage.error('连接已断开,请刷新页面重新连接')
+      }
+    }
+  } catch (error) {
+    console.error('初始化 WebSocket 失败:', error)
+  }
+}
+
+// 处理 WebSocket 收到的消息
+const handleWebSocketMessage = (data) => {
+  switch (data.type) {
+    case 'chat':
+      // 新消息
+      handleNewMessage(data.content)
+      break
+    case 'notification':
+      // 系统通知
+      ElMessage.info(data.content)
+      break
+    case 'heartbeat':
+      // 心跳响应
+      console.log('收到心跳响应')
+      break
+    default:
+      console.log('未知的消息类型:', data.type)
+  }
+}
+
+// 处理新消息
+const handleNewMessage = (message) => {
+  const sessionId = message.sessionId || message.toId
+
+  // WebSocket消息去重检查
+  if (isMessageReceived(message.id)) {
+    console.log('重复消息已忽略:', message.id)
+    return
+  }
+
+  // 标记消息已接收
+  markMessageReceived(message.id)
+
+  // 如果是当前会话的消息，添加到聊天记录
+  if (selectedConversation.value && sessionId === selectedConversation.value.id) {
+    // 检查消息是否已存在（本地去重）
+    const exists = chatMessages.value.some(msg => msg.id === message.id)
+    if (!exists) {
+      const processedMsg = {
+        ...message,
+        formattedTime: formatMessageTime(message.createTime || message.time),
+        fromId: message.fromId || message.sender || '未知'
+      }
+      chatMessages.value.push(processedMsg)
+      chatHistory.value[sessionId] = chatMessages.value
+      // 滚动到底部
+      setTimeout(() => scrollToBottom(), 100)
+      // 持久化
+      saveChatHistoryToLocal()
+    }
+  }
+
+  // 更新会话列表的最后一条消息
+  const conversation = conversations.value.find(conv => conv.id === sessionId)
+  if (conversation) {
+    conversation.lastMessage = message.content
+    conversation.time = message.time || new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+    // 如果不是当前会话，增加未读数
+    if (selectedConversation.value?.id !== sessionId) {
+      conversation.unreadCount = (conversation.unreadCount || 0) + 1
+    }
+  }
+}
+
+// 启动心跳
+const startHeartbeat = () => {
+  heartbeatTimer = setInterval(() => {
+    if (websocket && websocket.readyState === WebSocket.OPEN) {
+      websocket.send(JSON.stringify({ type: 'heartbeat' }))
+    }
+  }, 30000) // 每30秒发送一次心跳
+}
+
+// 停止心跳
+const stopHeartbeat = () => {
+  if (heartbeatTimer) {
+    clearInterval(heartbeatTimer)
+    heartbeatTimer = null
+  }
+}
+
+// 关闭 WebSocket 连接
+const closeWebSocket = () => {
+  if (websocket) {
+    websocket.close()
+    websocket = null
+  }
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer)
+    reconnectTimer = null
+  }
+  stopHeartbeat()
+}
+
+// ========== 消息重发机制 ==========
+
+// 重发消息
+const resendMessage = async (failedMessage) => {
+  try {
+    // 创建新的消息对象
+    const messageData = {
+      fromId: userId.value.toString(),
+      toId: selectedConversation.value.id,
+      msgType: selectedConversation.value.type || 'single',
+      content: failedMessage.content
+    }
+
+    const response = await api.post('/v1/chat/messages', messageData)
+
+    if (response.code === '200') {
+      // 移除失败的消息
+      const index = chatMessages.value.findIndex(msg => msg.id === failedMessage.id)
+      if (index !== -1) {
+        chatMessages.value.splice(index, 1)
+      }
+
+      // 添加新的消息
+      const sentMessage = response.data
+      chatMessages.value.push(sentMessage)
+      chatHistory.value[selectedConversation.value.id] = chatMessages.value
+
+      // 更新会话列表
+      selectedConversation.value.lastMessage = sentMessage.content
+      selectedConversation.value.time = sentMessage.time
+
+      ElMessage.success('消息重发成功')
+    }
+  } catch (error) {
+    console.error('重发消息失败:', error)
+    ElMessage.error('重发消息失败，请稍后重试')
+  }
+}
+
+// 判断消息是否可以撤回(2分钟内)
+const canRecallMessage = (message) => {
+  if (!message.createTime && !message.time) return false
+
+  const msgTime = new Date(message.createTime || message.time)
+  const now = new Date()
+  const diffMinutes = (now - msgTime) / 1000 / 60
+
+  return diffMinutes <= 2 && message.content !== '消息已撤回'
+}
+
+// 处理消息操作命令
+const handleMessageCommand = async (command, message) => {
+  if (command === 'recall') {
+    try {
+      await ElMessageBox.confirm('确认撤回这条消息吗?', '撤回消息', {
+        confirmButtonText: '确认',
+        cancelButtonText: '取消',
+        type: 'warning'
+      })
+
+      const response = await api.post(`/v1/chat/messages/${message.id}/recall`, {
+        userId: userId.value.toString()
+      })
+
+      if (response.code === '200') {
+        // 更新消息内容
+        const index = chatMessages.value.findIndex(msg => msg.id === message.id)
+        if (index !== -1) {
+          chatMessages.value[index].content = '消息已撤回'
+        }
+
+        // 更新会话列表的最后消息
+        selectedConversation.value.lastMessage = '消息已撤回'
+
+        ElMessage.success('消息已撤回')
+      }
+    } catch (error) {
+      if (error !== 'cancel') {
+        console.error('撤回消息失败:', error)
+        ElMessage.error('撤回消息失败')
+      }
+    }
+  } else if (command === 'reply') {
+    // 设置回复消息
+    replyingTo.value = message
+    // 聚焦到输入框
+    document.querySelector('.chat-input textarea')?.focus()
+  } else if (command === 'forward') {
+    // 显示转发对话框
+    showForwardDialog(message)
+  } else if (command === 'copy') {
+    // 复制消息内容
+    copyMessageContent(message.content)
+  }
+}
+
+// 取消回复
+const cancelReply = () => {
+  replyingTo.value = null
+}
+
+// 转发对话框
+const forwardDialogVisible = ref(false)
+const forwardMessage = ref(null)
+const selectedForwardTarget = ref('')
+
+// 显示转发对话框
+const showForwardDialog = (message) => {
+  forwardMessage.value = message
+  selectedForwardTarget.value = ''
+  forwardDialogVisible.value = true
+}
+
+// 执行转发
+const confirmForward = async () => {
+  if (!selectedForwardTarget.value) {
+    ElMessage.warning('请选择转发目标')
+    return
+  }
+
+  try {
+    const messageData = {
+      fromId: userId.value.toString(),
+      toId: selectedForwardTarget.value,
+      msgType: 'single',
+      content: forwardMessage.value.content,
+      forwardedFrom: forwardMessage.value.id // 标记是转发消息
+    }
+
+    const response = await api.post('/v1/chat/messages', messageData)
+
+    if (response.code === '200') {
+      ElMessage.success('转发成功')
+      forwardDialogVisible.value = false
+
+      // 如果转发给当前会话,添加到聊天记录
+      if (selectedForwardTarget.value === selectedConversation.value.id) {
+        chatMessages.value.push(response.data)
+        chatHistory.value[selectedConversation.value.id] = chatMessages.value
+        setTimeout(() => scrollToBottom(), 100)
+      }
+    }
+  } catch (error) {
+    console.error('转发失败:', error)
+    ElMessage.error('转发失败')
+  }
+}
+
+// 复制消息内容
+const copyMessageContent = async (content) => {
+  try {
+    await navigator.clipboard.writeText(content)
+    ElMessage.success('已复制到剪贴板')
+  } catch (error) {
+    // 降级方案: 使用传统方法
+    const textarea = document.createElement('textarea')
+    textarea.value = content
+    document.body.appendChild(textarea)
+    textarea.select()
+    try {
+      document.execCommand('copy')
+      ElMessage.success('已复制到剪贴板')
+    } catch (err) {
+      ElMessage.error('复制失败')
+    }
+    document.body.removeChild(textarea)
   }
 }
 
@@ -1776,55 +2639,94 @@ const sendMessage = async () => {
     content: newMessage.value.trim() // 消息内容
   }
 
+  // 如果是回复消息,添加回复信息
+  if (replyingTo.value) {
+    messageData.replyTo = replyingTo.value.id
+    messageData.replyContent = replyingTo.value.content
+    messageData.replyFromId = replyingTo.value.fromId
+    messageData.replyFromName = replyingTo.value.senderName || replyingTo.value.fromId
+  }
+
+  // 临时显示消息在界面上（乐观更新）
+  const tempMessage = {
+    id: Date.now(),
+    fromId: userId.value.toString(),
+    toId: selectedConversation.value.id,
+    msgType: messageData.msgType,
+    content: messageData.content,
+    replyTo: messageData.replyTo,
+    replyContent: messageData.replyContent,
+    replyFromId: messageData.replyFromId,
+    replyFromName: messageData.replyFromName,
+    createTime: new Date().toISOString(),
+    formattedTime: '刚刚',
+    status: 'sending' // 发送中状态
+  }
+
+  chatMessages.value.push(tempMessage)
+  chatHistory.value[selectedConversation.value.id] = chatMessages.value
+  // 滚动到底部
+  setTimeout(() => scrollToBottom(), 100)
+
+  // 清空输入框
+  const messageContent = newMessage.value
+  newMessage.value = ''
+
+  // 清除回复状态
+  if (replyingTo.value) {
+    replyingTo.value = null
+  }
+
   try {
     // 发送消息到后端
     const response = await api.post('/v1/chat/messages', messageData)
 
     if (response.code === '200') {
-      // 如果后端返回消息对象，使用后端返回的消息
+      // 后端返回的消息对象
       const sentMessage = response.data
 
-      // 添加到聊天记录
-      chatMessages.value.push(sentMessage)
+      // 替换临时消息
+      const index = chatMessages.value.findIndex(msg => msg.id === tempMessage.id)
+      if (index !== -1) {
+        chatMessages.value[index] = {
+          ...sentMessage,
+          formattedTime: formatMessageTime(sentMessage.createTime || sentMessage.time),
+          fromId: sentMessage.fromId || userId.value.toString()
+        }
+      }
 
       // 更新会话列表的最后一条消息
       selectedConversation.value.lastMessage = sentMessage.content
-      selectedConversation.value.time = sentMessage.time
+      selectedConversation.value.time = sentMessage.time || new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
 
       // 将消息保存到对应的聊天历史中
       chatHistory.value[selectedConversation.value.id] = chatMessages.value
 
-      // 清空输入框
-      newMessage.value = ''
+      // 保存到本地
+      saveChatHistoryToLocal()
+
+      // 滚动到底部
+      setTimeout(() => scrollToBottom(), 100)
 
       ElMessage.success('消息发送成功')
     }
   } catch (error) {
     console.error('发送消息失败:', error)
-    ElMessage.error('发送消息失败，请稍后重试')
+    ElMessage.error('发送消息失败，可点击消息重试')
 
-    // 如果发送失败，可以选择将消息添加到本地聊天记录中，并标记为发送失败
-    const failedMessage = {
-      id: Date.now(),
-      sender: '我',
-      content: newMessage.value.trim(),
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      isRead: true,
-      status: 'failed' // 标记为发送失败
+    // 更新临时消息状态为失败
+    const index = chatMessages.value.findIndex(msg => msg.id === tempMessage.id)
+    if (index !== -1) {
+      chatMessages.value[index].status = 'failed'
+      chatMessages.value[index].canResend = true // 标记可以重发
     }
 
-    // 添加到聊天记录
-    chatMessages.value.push(failedMessage)
-
-    // 更新会话列表的最后一条消息
-    selectedConversation.value.lastMessage = failedMessage.content
-    selectedConversation.value.time = failedMessage.time
+    // 更新会话列表
+    selectedConversation.value.lastMessage = messageContent
+    selectedConversation.value.time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
 
     // 将消息保存到对应的聊天历史中
     chatHistory.value[selectedConversation.value.id] = chatMessages.value
-
-    // 清空输入框
-    newMessage.value = ''
   }
 }
 
@@ -2350,12 +3252,111 @@ const goToOrderConfirmation = () => {
         }
       }
 
+      .chat-area {
+        display: flex;
+        flex-direction: column;
+        position: relative;
+
+        .search-results-panel {
+          position: absolute;
+          top: 60px;
+          right: 20px;
+          width: 350px;
+          max-height: 400px;
+          background: white;
+          border-radius: 8px;
+          box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+          z-index: 100;
+          display: flex;
+          flex-direction: column;
+
+          .search-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid #ebeef5;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 500;
+            font-size: 14px;
+          }
+
+          .search-results-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+
+            .search-result-item {
+              padding: 10px;
+              border-radius: 6px;
+              cursor: pointer;
+              transition: background-color 0.2s;
+              margin-bottom: 4px;
+
+              &:hover {
+                background-color: #f5f7fa;
+              }
+
+              &.active {
+                background-color: #e6f7ff;
+                border: 1px solid #1890ff;
+              }
+
+              .result-time {
+                font-size: 11px;
+                color: #909399;
+                margin-bottom: 4px;
+              }
+
+              .result-content {
+                font-size: 13px;
+                color: #303133;
+                line-height: 1.5;
+                word-break: break-word;
+
+                :deep(mark) {
+                  background-color: #ffeb3b;
+                  padding: 0 2px;
+                  border-radius: 2px;
+                }
+              }
+            }
+          }
+        }
+      }
+
       .messages-container {
         flex: 1;
         padding: 11px;
         overflow-y: auto;
         display: flex;
         flex-direction: column;
+
+        .load-more-tip {
+          text-align: center;
+          padding: 10px;
+          margin-bottom: 10px;
+          font-size: 12px;
+          color: #909399;
+          cursor: pointer;
+          user-select: none;
+          background-color: #f5f7fa;
+          border-radius: 4px;
+
+          .loading-text {
+            color: #409eff;
+          }
+
+          .clickable-text {
+            color: #409eff;
+            &:hover {
+              text-decoration: underline;
+            }
+          }
+
+          .no-more-text {
+            color: #c0c4cc;
+          }
+        }
 
         .message-item {
           margin-bottom: 16px;
@@ -2367,17 +3368,86 @@ const goToOrderConfirmation = () => {
               font-size: 12px;
               color: #666;
             }
+
+            .message-status {
+              font-size: 11px;
+              margin-left: 8px;
+              color: #909399;
+
+              &.failed {
+                color: #f56c6c;
+              }
+            }
           }
 
           .message-content {
             border-radius: 10px;
             padding: 7px;
             font-size: 12px;
+            position: relative;
+
+            // 回复引用样式
+            .message-reply-quote {
+              display: flex;
+              gap: 8px;
+              padding: 8px;
+              margin-bottom: 8px;
+              background-color: rgba(0, 0, 0, 0.05);
+              border-radius: 6px;
+              border-left: 3px solid #ddd;
+
+              .quote-bar {
+                width: 3px;
+                background-color: #ddd;
+                border-radius: 2px;
+              }
+
+              .quote-content {
+                flex: 1;
+                min-width: 0;
+
+                .quote-author {
+                  font-size: 11px;
+                  font-weight: 500;
+                  color: #606266;
+                  margin-bottom: 4px;
+                }
+
+                .quote-text {
+                  font-size: 11px;
+                  color: #909399;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                  white-space: nowrap;
+                }
+              }
+            }
 
             .message-time {
               text-align: right;
               font-size: 10px;
               margin-top: 4px;
+              opacity: 0.8;
+            }
+
+            .msg-action-btn {
+              position: absolute;
+              top: 5px;
+              right: 5px;
+              opacity: 0;
+              transition: opacity 0.2s;
+              padding: 2px 8px;
+              font-size: 14px;
+            }
+
+            .resend-btn {
+              margin-top: 4px;
+              padding: 2px 8px;
+              font-size: 11px;
+            }
+
+            &:hover .msg-action-btn {
+              opacity: 0.6;
             }
           }
 
@@ -2406,6 +3476,25 @@ const goToOrderConfirmation = () => {
               }
             }
           }
+
+          // 发送中状态
+          &.message-sending {
+            opacity: 0.6;
+
+            .message-content {
+              background-color: #e0e0e0;
+              color: #666;
+            }
+          }
+
+          // 发送失败状态
+          &.message-failed {
+            .message-content {
+              background-color: #fef0f0;
+              border: 1px solid #fbc4c4;
+              color: #f56c6c;
+            }
+          }
         }
       }
 
@@ -2413,7 +3502,47 @@ const goToOrderConfirmation = () => {
         padding: 12px;
         border-top: 1px solid #e4e7ed;
         display: flex;
+        flex-direction: column;
         gap: 12px;
+
+        // 回复预览样式
+        .reply-preview {
+          padding: 10px 12px;
+          background-color: #f5f7fa;
+          border-radius: 6px;
+          border-left: 3px solid #409eff;
+
+          .reply-content {
+            .reply-header {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 6px;
+
+              .reply-label {
+                font-size: 13px;
+                font-weight: 500;
+                color: #409eff;
+              }
+            }
+
+            .reply-text {
+              font-size: 12px;
+              color: #606266;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              display: -webkit-box;
+              -webkit-line-clamp: 2;
+              -webkit-box-orient: vertical;
+            }
+          }
+        }
+
+        > div:not(.reply-preview) {
+          display: flex;
+          gap: 12px;
+          width: 100%;
+        }
 
         .el-input {
           flex: 1;
@@ -2613,6 +3742,44 @@ const goToOrderConfirmation = () => {
 
     &:hover {
       background-color: #f5f7fa;
+    }
+  }
+
+  /* 转发对话框样式 */
+  .forward-dialog-content {
+    padding: 10px 0;
+
+    .forward-preview {
+      padding: 12px;
+      background-color: #f5f7fa;
+      border-radius: 6px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      color: #606266;
+      word-break: break-word;
+    }
+
+    .forward-target-select {
+      .select-label {
+        margin-bottom: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        color: #303133;
+      }
+
+      .conversation-option {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+
+        .conversation-type-badge {
+          font-size: 12px;
+          padding: 2px 6px;
+          border-radius: 4px;
+          background-color: #ecf5ff;
+          color: #409eff;
+        }
+      }
     }
   }
 

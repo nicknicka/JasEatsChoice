@@ -3,10 +3,10 @@
  */
 import { ref } from 'vue'
 import axios from 'axios'
-import { API_CONFIG } from '../../config'
+import { API_CONFIG } from '../config'
 import { ElMessage } from 'element-plus'
-import { orderStatusToText } from '../../utils/orderStatus'
-import { formatTime, calculateItemCount } from '../../utils/formatters'
+import { orderStatusToText } from '../utils/orderStatus'
+import { formatTime, calculateItemCount } from '../utils/formatters'
 
 // 显示常量
 const MAX_DISPLAY_ITEMS = 3
