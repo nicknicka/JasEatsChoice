@@ -1865,7 +1865,7 @@ const initWebSocket = () => {
   try {
     // 构建 WebSocket URL（根据你的后端地址调整）
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const wsUrl = `${wsProtocol}//${window.location.hostname}:8088/ws/chat?userId=${userId.value}&token=${token}`
+    const wsUrl = `${wsProtocol}//${window.location.hostname}:11277/ws/chat?userId=${userId.value}&token=${token}`
 
     websocket = new WebSocket(wsUrl)
 
