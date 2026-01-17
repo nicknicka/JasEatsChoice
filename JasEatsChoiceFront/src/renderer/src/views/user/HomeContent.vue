@@ -951,18 +951,33 @@ onMounted(async () => {
   backdrop-filter: blur(10px);
   background-color: rgba(255, 255, 255, 0.95);
 
+  // 确保所有元素使用相同的盒模型
+  * {
+    box-sizing: border-box;
+  }
+
+  // 确保所有直接子元素在垂直方向上对齐
+  > * {
+    align-self: center;
+  }
+
   .search-section {
     flex: 1;
     margin: 0;
     display: flex;
-    align-items: center;
+    align-items: stretch;
     height: 48px;
 
     .search-input {
       // 确保输入框容器没有额外间距
-      display: inline-flex;
+      display: flex;
       width: 100%;
       height: 100%;
+
+      :deep(.el-input) {
+        height: 100%;
+        display: flex;
+      }
 
       :deep(.el-input__wrapper) {
         // 左侧圆角，右侧直角以便与按钮完美衔接
@@ -971,10 +986,18 @@ onMounted(async () => {
         box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         padding-right: 0;
+        padding-top: 0;
+        padding-bottom: 0;
         background: rgba(255, 255, 255, 0.95);
         height: 100%;
         display: flex;
-        align-items: center;
+        align-items: stretch;
+
+        // 重置内部输入框的样式
+        .el-input__inner {
+          height: 100% !important;
+          line-height: normal !important;
+        }
 
         &:hover {
           box-shadow: 0 4px 16px rgba(255, 107, 107, 0.15);
@@ -995,6 +1018,8 @@ onMounted(async () => {
         border: none;
         border-left: none;
         padding: 0;
+        padding-top: 0;
+        padding-bottom: 0;
         margin: 0;
         margin-left: -1px; // 负边距确保无缝衔接
         box-shadow: 0 2px 12px rgba(255, 107, 107, 0.3);
@@ -1004,7 +1029,7 @@ onMounted(async () => {
         overflow: hidden;
         height: 100%;
         display: flex;
-        align-items: center;
+        align-items: stretch;
 
         // 添加波纹效果
         &::before {
@@ -1032,7 +1057,7 @@ onMounted(async () => {
           border: none;
           color: #fff;
           font-weight: 600;
-          padding: 16px 24px;
+          padding: 0 24px;
           height: 100%;
           border-radius: 0 24px 24px 0;
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);

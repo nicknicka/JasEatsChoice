@@ -38,97 +38,6 @@
           </div>
         </el-card>
 
-        <!-- 订单概览卡片 -->
-        <el-card class="info-card" shadow="hover">
-          <template #header>
-            <div class="card-header">
-              <span class="card-title">订单概览</span>
-              <el-tag type="info" size="small">{{ orderInfo.orderId }}</el-tag>
-            </div>
-          </template>
-
-          <div class="order-summary">
-            <div class="summary-row">
-              <span class="label">{{ isGroupOrder ? '群聊名称' : '下单用户' }}</span>
-              <span class="value">{{
-                isGroupOrder ? orderInfo.groupName : orderInfo.userName || '未知用户'
-              }}</span>
-            </div>
-            <div class="summary-row amount-row">
-              <div class="amount-item">
-                <div class="amount-label">已支付</div>
-                <div class="amount-value paid">¥{{ orderInfo.totalPaid.toFixed(2) }}</div>
-              </div>
-              <div class="amount-divider"></div>
-              <div class="amount-item">
-                <div class="amount-label">待支付</div>
-                <div class="amount-value unpaid">¥{{ orderInfo.totalUnpaid.toFixed(2) }}</div>
-              </div>
-            </div>
-          </div>
-        </el-card>
-
-        <!-- 支付方式卡片 -->
-        <el-card class="info-card" shadow="hover">
-          <template #header>
-            <div class="card-header">
-              <span class="card-title">支付方式</span>
-            </div>
-          </template>
-
-          <div class="payment-methods">
-            <div
-              v-for="option in paymentMethods"
-              :key="option.id"
-              class="payment-method-item"
-              :class="{ active: selectedPaymentMethod.id === option.id }"
-              @click="selectedPaymentMethod = option"
-            >
-              <div class="method-icon">{{ option.icon }}</div>
-              <div class="method-info">
-                <div class="method-name">{{ option.name }}</div>
-                <div class="method-desc" v-if="option.desc">{{ option.desc }}</div>
-              </div>
-              <el-radio v-model="selectedPaymentMethod.id" :label="option.id"></el-radio>
-            </div>
-          </div>
-        </el-card>
-
-        <!-- 订单备注卡片 -->
-        <el-card class="info-card" shadow="hover">
-          <template #header>
-            <div class="card-header">
-              <span class="card-title">订单备注</span>
-              <el-tag type="info" size="small">选填</el-tag>
-            </div>
-          </template>
-
-          <div class="order-remark-section">
-            <el-input
-              v-model="orderRemark"
-              type="textarea"
-              :rows="3"
-              placeholder="填写订单备注，如：配送时间、联系方式等要求"
-              maxlength="200"
-              show-word-limit
-              resize="none"
-            />
-            <div class="quick-remarks">
-              <span class="quick-remark-label">快速备注：</span>
-              <el-tag
-                v-for="quickRemark in quickRemarks"
-                :key="quickRemark"
-                size="small"
-                effect="plain"
-                class="quick-remark-tag"
-                @click="addQuickRemark(quickRemark)"
-              >
-                {{ quickRemark }}
-              </el-tag>
-            </div>
-          </div>
-        </el-card>
-
         <!-- 订单商品卡片 -->
         <el-card class="info-card" shadow="hover">
           <template #header>
@@ -161,11 +70,9 @@
             <order-item-list :items="orderInfo.unpaidItems" :show-payment-info="false" />
           </div>
         </el-card>
-      </div>
 
-      <!-- 右侧支付信息区 -->
-      <div class="content-right">
-        <el-card class="payment-summary-card" shadow="hover">
+        <!-- 支付明细卡片 -->
+        <el-card class="info-card payment-summary-card" shadow="hover">
           <template #header>
             <div class="card-header">
               <span class="card-title">支付明细</span>
@@ -233,6 +140,67 @@
             <div class="balance-item">
               <span class="balance-label">平台币余额</span>
               <span class="balance-value">¥{{ platformBalance.toFixed(2) }}</span>
+            </div>
+          </div>
+        </el-card>
+
+        <!-- 订单备注卡片 -->
+        <el-card class="info-card" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span class="card-title">订单备注</span>
+              <el-tag type="info" size="small">选填</el-tag>
+            </div>
+          </template>
+
+          <div class="order-remark-section">
+            <el-input
+              v-model="orderRemark"
+              type="textarea"
+              :rows="3"
+              placeholder="填写订单备注，如：配送时间、联系方式等要求"
+              maxlength="200"
+              show-word-limit
+              resize="none"
+            />
+            <div class="quick-remarks">
+              <span class="quick-remark-label">快速备注：</span>
+              <el-tag
+                v-for="quickRemark in quickRemarks"
+                :key="quickRemark"
+                size="small"
+                effect="plain"
+                class="quick-remark-tag"
+                @click="addQuickRemark(quickRemark)"
+              >
+                {{ quickRemark }}
+              </el-tag>
+            </div>
+          </div>
+        </el-card>
+
+        <!-- 支付方式卡片 -->
+        <el-card class="info-card" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span class="card-title">支付方式</span>
+            </div>
+          </template>
+
+          <div class="payment-methods">
+            <div
+              v-for="option in paymentMethods"
+              :key="option.id"
+              class="payment-method-item"
+              :class="{ active: selectedPaymentMethod.id === option.id }"
+              @click="selectedPaymentMethod = option"
+            >
+              <div class="method-icon">{{ option.icon }}</div>
+              <div class="method-info">
+                <div class="method-name">{{ option.name }}</div>
+                <div class="method-desc" v-if="option.desc">{{ option.desc }}</div>
+              </div>
+              <el-radio v-model="selectedPaymentMethod.id" :label="option.id"></el-radio>
             </div>
           </div>
         </el-card>
@@ -960,28 +928,11 @@ const confirmOrder = async () => {
     max-width: 1200px;
     margin: 24px auto;
     padding: 0 24px;
-    display: grid;
-    grid-template-columns: 1fr 380px;
-    gap: 24px;
-
-    @media (max-width: 1024px) {
-      grid-template-columns: 1fr;
-    }
 
     .content-left {
       display: flex;
       flex-direction: column;
       gap: 20px;
-    }
-
-    .content-right {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-
-      @media (max-width: 1024px) {
-        order: -1;
-      }
     }
   }
 

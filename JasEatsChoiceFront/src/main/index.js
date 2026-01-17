@@ -1,7 +1,7 @@
 // CommonJS syntax for Electron main process
 
 // 直接导入 electron 模块
-const { app, shell, BrowserWindow, ipcMain } = require('electron')
+const { app, shell, BrowserWindow, ipcMain, session } = require('electron')
 const path = require('path')
 const fs = require('fs/promises')
 const Store = require('electron-store')
@@ -25,7 +25,12 @@ function createWindow() {
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
-      sandbox: false
+      sandbox: false,
+      nodeIntegration: false,
+      contextIsolation: true,
+      enableRemoteModule: false,
+      webSecurity: true,
+      allowRunningInsecureContent: false
     }
   })
 
@@ -50,6 +55,30 @@ function createWindow() {
 // This method will be called when Electron has finished initialization
 app.whenReady().then(() => {
   app.setAppUserModelId('com.electron')
+
+  // 设置内容安全策略 (CSP) - 根据环境动态配置
+  const scriptSrcPolicy = isDev
+    ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://webapi.amap.com https://restapi.amap.com"
+    : "script-src 'self' 'unsafe-inline' https://webapi.amap.com https://restapi.amap.com"
+
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [
+          `default-src 'self'; ${scriptSrcPolicy};` +
+            " style-src 'self' 'unsafe-inline' https://webapi.amap.com;" +
+            " img-src 'self' data: https: http: https://webapi.amap.com https://restapi.amap.com;" +
+            " font-src 'self' data: https://webapi.amap.com;" +
+            " connect-src 'self' ws://localhost:* ws://127.0.0.1:* http://localhost:* http://127.0.0.1:* https: https://webapi.amap.com https://restapi.amap.com;" +
+            " media-src 'self' blob:;" +
+            " object-src 'none';" +
+            " base-uri 'self';" +
+            " form-action 'self';"
+        ]
+      }
+    })
+  })
 
   // Initialize electron-store now that app is ready
   store = new Store({
