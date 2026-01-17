@@ -6,12 +6,16 @@
     <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src * data: blob:; connect-src 'self' http://localhost:9091 http://localhost:8080 ws://localhost:11277 wss://localhost:11277;"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://webapi.amap.com https://restapi.amap.com; style-src 'self' 'unsafe-inline'; img-src * data: blob: https://webapi.amap.com; connect-src 'self' http://localhost:9091 http://localhost:8080 https://restapi.amap.com https://webapi.amap.com ws://localhost:11277 wss://localhost:11277;"
     />
   </head>
 
   <body>
     <div id="app"></div>
+    <!-- 高德地图 SDK -->
+    <script
+      src="https://webapi.amap.com/maps?v=2.0&key=140e4ebfe143855a4cc7440533ff27b3&plugin=AMap.Scale,AMap.ToolBar,AMap.Geocoder,AMap.PlaceSearch"
+    ></script>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

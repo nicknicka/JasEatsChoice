@@ -1,7 +1,6 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { ElNotification } from 'element-plus'
-import { useLocation } from '../../composables/useLocation.js'
 import { useWeather } from '../../composables/useWeather.js'
 // 导入 Element Plus 图标
 import {
@@ -15,6 +14,7 @@ import {
   Document,
   Refresh
 } from '@element-plus/icons-vue'
+import CommonMapLocationPicker from '../../components/CommonMapLocationPicker.vue'
 import { useRouter } from 'vue-router'
 import api from '../../utils/api.js'
 import { API_CONFIG } from '../../config/index.js'
@@ -75,9 +75,8 @@ const favoriteDishIds = ref(new Set())
 // 搜索关键字
 const searchKeyword = ref('')
 
-// 使用位置选择组合式函数
-const { cascaderLocationData, locationDialogVisible, manualLocation, handleManualLocationSelect } =
-  useLocation()
+// 位置选择弹窗
+const mapLocationPickerVisible = ref(false)
 
 // 从后端获取推荐菜品
 const fetchRecommendedDishes = async () => {
@@ -132,36 +131,40 @@ const fetchHotTopic = async () => {
   }
 }
 
-// 处理自动定位
-const handleAutoLocation = async () => {
-  // 调用现有 fetchWeather 函数（无参数）获取自动定位
-  await fetchWeather()
-  // 定位成功后关闭对话框
-  locationDialogVisible.value = false
+// 处理位置选择
+const handleLocationSelected = (locationData) => {
+  const { address } = locationData
+
+  // 更新天气位置信息
+  weather.value.address = address || '已选择位置'
+  weather.value.city = extractCityFromAddress(address)
+
+  // 获取详细天气信息
+  fetchWeather(weather.value.city)
+
+  ElMessage.success(`已选择位置：${address}`)
 }
 
-// 处理位置确认
-const handleConfirmLocation = () => {
-  if (manualLocation.value && manualLocation.value.length > 0) {
-    // 对于级联选择器，将数组拼接成完整地址字符串
-    const fullAddress = manualLocation.value.join('')
-    // 从位置数组中提取城市用于天气API (简化逻辑)
-    const city = manualLocation.value[1] || manualLocation.value[0] || ''
+// 从地址中提取城市名称
+const extractCityFromAddress = (address) => {
+  if (!address) return '北京'
 
-    // 立即在UI上更新地址 - 确保不是数组或空数组
-    weather.value.address = Array.isArray(fullAddress)
-      ? '未获取到详细地址'
-      : fullAddress || '未获取到详细地址'
-    weather.value.city = Array.isArray(city) ? city.join('') : city || '未知城市'
-
-    // 获取详细天气信息
-    fetchWeather(city).then(() => {
-      locationDialogVisible.value = false
-    })
-  } else {
-    // 如果未选择手动位置，则使用自动定位
-    handleAutoLocation()
+  // 简单的提取逻辑，可以根据实际地址格式调整
+  const cityMatch = address.match(/(北京市|上海市|广州市|深圳市|杭州市|成都市|武汉市|西安市|南京市|重庆市|天津市|青岛市|大连市|厦门市|苏州市|无锡市|宁波市|长沙市|郑州市)/)
+  if (cityMatch) {
+    return cityMatch[1].replace('市', '')
   }
+
+  // 如果没有匹配到，尝试提取省/市
+  const parts = address.split('省')
+  if (parts.length > 1) {
+    const cityParts = parts[1].split('市')
+    if (cityParts.length > 1) {
+      return cityParts[0]
+    }
+  }
+
+  return '北京'
 }
 
 // 从后端获取位置和天气数据
@@ -608,7 +611,7 @@ onMounted(async () => {
             <span class="location-text-new">当前位置</span>
             <button
               class="location-select-btn"
-              @click="locationDialogVisible = true"
+              @click="mapLocationPickerVisible = true"
               :title="weather.address || weather.city || '点击选择位置'"
             >
               点击选择位置 ↗
@@ -914,36 +917,11 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- Location Selection Dialog -->
-    <el-dialog v-model="locationDialogVisible" title="选择位置" width="400px">
-      <div class="location-dialog-content">
-        <!-- Auto-location button -->
-        <el-button type="primary" class="auto-location-btn" @click="handleAutoLocation">
-          <el-icon><Location /></el-icon>
-          自动定位
-        </el-button>
-
-        <!-- Manual location selection -->
-        <div class="manual-location-section">
-          <h4>手动选择</h4>
-          <el-cascader
-            v-model="manualLocation"
-            :options="cascaderLocationData"
-            placeholder="请选择省/市/区"
-            style="width: 100%"
-            @change="handleManualLocationSelect"
-            clearable
-          />
-        </div>
-      </div>
-
-      <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="locationDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="handleConfirmLocation"> 确认 </el-button>
-        </span>
-      </template>
-    </el-dialog>
+    <!-- 地图位置选择弹窗 -->
+    <CommonMapLocationPicker
+      v-model:visible="mapLocationPickerVisible"
+      @location-selected="handleLocationSelected"
+    />
   </div>
 </template>
 
@@ -978,12 +956,13 @@ onMounted(async () => {
     margin: 0;
     display: flex;
     align-items: center;
+    height: 48px;
 
     .search-input {
       // 确保输入框容器没有额外间距
       display: inline-flex;
       width: 100%;
-      height: 48px;
+      height: 100%;
 
       :deep(.el-input__wrapper) {
         // 左侧圆角，右侧直角以便与按钮完美衔接
@@ -993,7 +972,7 @@ onMounted(async () => {
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         padding-right: 0;
         background: rgba(255, 255, 255, 0.95);
-        height: 48px;
+        height: 100%;
         display: flex;
         align-items: center;
 
@@ -1023,7 +1002,7 @@ onMounted(async () => {
         position: relative;
         z-index: 1; // 确保按钮覆盖在输入框边框上
         overflow: hidden;
-        height: 48px;
+        height: 100%;
         display: flex;
         align-items: center;
 
@@ -1054,7 +1033,7 @@ onMounted(async () => {
           color: #fff;
           font-weight: 600;
           padding: 16px 24px;
-          height: 48px;
+          height: 100%;
           border-radius: 0 24px 24px 0;
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           box-shadow: none;
@@ -2515,30 +2494,6 @@ onMounted(async () => {
       border-radius: 25px;
       padding: 8px 32px;
       font-size: 14px;
-    }
-  }
-
-  /* Location dialog styles */
-  .location-dialog-content {
-    padding: 20px 0;
-
-    .auto-location-btn {
-      margin-bottom: 20px;
-      width: 100%;
-    }
-
-    .manual-location-section {
-      h4 {
-        margin: 0 0 10px 0;
-        font-size: 14px;
-        font-weight: bold;
-      }
-
-      .location-note {
-        font-size: 12px;
-        color: #909399;
-        margin-top: 5px;
-      }
     }
   }
 

@@ -167,20 +167,21 @@
   },
   "active": "25380c94f56f550b",
   "lastOpenFiles": [
+    "JasEatsChoiceFront/src/renderer/src/views/user/Orders.vue.bak",
+    "JasEatsChoiceFront/src/renderer/src/views/user/components/OrderCard.vue",
+    "地图位置选择弹窗使用说明.md",
+    "JasEatsChoiceFront/src/renderer/src/views/user/components/OrderItemsList.vue",
+    "JasEatsChoiceFront/src/renderer/src/components/CommonMapLocationPicker.vue",
+    "JasEatsChoiceFront/src/renderer/src/views/user/components/OrderFilterBar.vue",
+    "JasEatsChoiceFront/src/renderer/src/views/user/components/OrderSearchBar.vue",
+    "JasEatsChoiceFront/src/renderer/src/composables/useOrderWebSocket.js",
+    "JasEatsChoiceFront/src/renderer/src/composables/useOrderPagination.js",
     "JasEatsChoiceFront/src/renderer/src/composables/useOrderFilter.js",
     "JasEatsChoiceFront/src/renderer/src/composables/useOrderData.js",
     "JasEatsChoiceFront/src/renderer/src/utils/formatters.js",
-    "JasEatsChoiceFront/src/renderer/src/utils/orderStatus.js",
-    "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/controller/OrderController.class",
-    "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/entity/Order.class",
-    "JasEatsChoiceJava/target/test-classes",
     "WEATHER_OPTIMIZATION_SUMMARY.md",
     "BUG_FIXES_SUMMARY.md",
-    "JasEatsChoiceFront/src/renderer/src/composables/useWeather.js",
     "JasEatsChoiceFront/REFACTOR_GUIDE.md",
-    "JasEatsChoiceFront/src/renderer/src/views/user/HomeContentRefactored.vue",
-    "JasEatsChoiceFront/src/renderer/src/views/user/components/home/HotTopicCard.vue",
-    "JasEatsChoiceFront/src/renderer/src/views/user/components/home/TutorialCard.vue",
     "JasEatsChoiceFront/src/renderer/src/docs/饮食记录页面优化总结.md",
     "JasEatsChoiceFront/node_modules/fsevents/README.md",
     "订单创建流程验证报告.md",
@@ -211,7 +212,6 @@
     "JasEatsChoiceFront/node_modules/vue/README.md",
     "JasEatsChoiceFront/node_modules/@nodelib/fs.walk/README.md",
     "JasEatsChoiceFront/node_modules/@nodelib/fs.stat/README.md",
-    "JasEatsChoiceFront/node_modules/@nodelib/fs.scandir/README.md",
-    "JasEatsChoiceFront/node_modules/@types/node/README.md"
+    "JasEatsChoiceFront/node_modules/@nodelib/fs.scandir/README.md"
   ]
 }
