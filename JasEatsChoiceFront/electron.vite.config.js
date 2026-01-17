@@ -4,10 +4,11 @@ import vue from '@vitejs/plugin-vue'
 
 export default defineConfig({
   main: {
-    // 不使用 externalizeDepsPlugin，以便正确打包 electron 模块
+    // 确保主进程正确加载 electron 模块
+    // electron-vite 默认会将 electron 模块外部化，这是正确的行为
   },
   preload: {
-    // 不使用 externalizeDepsPlugin，以便正确打包 electron 模块
+    // 确保预加载脚本正确加载 electron 模块
   },
   renderer: {
     resolve: {

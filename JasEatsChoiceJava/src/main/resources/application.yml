@@ -32,11 +32,12 @@ spring:
 
 # MyBatis-Plus配置
 mybatis-plus:
-  mapper-locations: classpath*:/mapper/**/*.xml
+  mapper-locations: classpath:mapper/*.xml
   type-aliases-package: com.xx.jaseatschoicejava.entity
   type-handlers-package: com.xx.jaseatschoicejava.handler  # 注册类型处理器
   configuration:
     map-underscore-to-camel-case: true  # 自动驼峰命名转换
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl  # 开启 SQL 日志
   global-config:
     db-config:
       id-type: AUTO  # 主键自动递增
