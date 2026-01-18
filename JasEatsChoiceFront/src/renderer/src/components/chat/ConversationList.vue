@@ -81,10 +81,6 @@ defineEmits(['select', 'contextmenu', 'toggle-pin'])
   height: 100%;
   display: flex;
   flex-direction: column;
-  border: 1px solid #e4e7ed;
-  border-radius: 8px;
-  background-color: #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 
   .conversation-list-scroll {
     flex: 1;
@@ -280,21 +276,22 @@ defineEmits(['select', 'contextmenu', 'toggle-pin'])
     padding: 60px 20px;
 
     .empty-icon {
-      font-size: 64px;
-      margin-bottom: 16px;
-      opacity: 0.6;
+      font-size: 80px;
+      margin-bottom: 24px;
+      opacity: 0.8;
+      animation: float 3s ease-in-out infinite;
     }
 
     .empty-title {
-      font-size: 16px;
-      font-weight: 600;
-      color: #303133;
+      font-size: 18px;
+      font-weight: 500;
+      color: #1a1a1a;
       margin: 0 0 8px 0;
     }
 
     .empty-tip {
-      font-size: 13px;
-      color: #909399;
+      font-size: 14px;
+      color: #666;
       margin: 0;
       line-height: 1.6;
     }
@@ -307,6 +304,15 @@ defineEmits(['select', 'contextmenu', 'toggle-pin'])
   }
   50% {
     transform: scale(1.05);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
   }
 }
 </style>

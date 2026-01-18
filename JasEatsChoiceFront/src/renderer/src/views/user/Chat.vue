@@ -754,6 +754,18 @@ const fetchFriends = async () => {
       height: 100%;
       display: flex;
       flex-direction: column;
+      border: 1px solid #e4e7ed;
+      border-radius: 12px;
+      background-color: #fff;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      transform: translateY(0);
+
+      &:hover {
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+        transform: translateY(-4px);
+      }
     }
 
     .chat-area {
@@ -761,9 +773,16 @@ const fetchFriends = async () => {
       display: flex;
       flex-direction: column;
       border: 1px solid #e4e7ed;
-      border-radius: 4px;
+      border-radius: 8px;
       background-color: #fff;
       position: relative;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+      overflow: hidden;
+      transition: box-shadow 0.3s ease;
+
+      &:hover {
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+      }
 
       .messages-container {
         flex: 1;
