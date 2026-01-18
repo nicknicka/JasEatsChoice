@@ -183,6 +183,8 @@ const handleCommand = (command) => {
     gap: 12px;
     flex: 1;
     min-height: 50px;
+    position: relative;
+    z-index: 101;
 
     .conversation-avatar {
       width: 42px;
@@ -314,7 +316,9 @@ const handleCommand = (command) => {
     top: 50%;
     transform: translateY(-50%);
     margin-right: 8px;
-    width: 280px;
+    min-width: 180px;
+    max-width: 320px;
+    width: auto;
     z-index: 100;
   }
 

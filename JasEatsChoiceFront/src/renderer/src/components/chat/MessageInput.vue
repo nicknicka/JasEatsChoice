@@ -30,11 +30,9 @@
         v-model="inputValue"
         type="textarea"
         placeholder="输入消息... (Enter发送，Shift+Enter换行)"
-        :rows="1"
-        @keydown.enter.exact="handleSend"
-        @keydown.enter.shift.prevent
+        :autosize="{ minRows: 1, maxRows: 3 }"
+        @keydown.enter.exact.prevent="handleSend"
         :disabled="disabled"
-        resize="none"
         class="message-textarea"
       />
 
