@@ -104,10 +104,6 @@
         <div class="empty-icon">💬</div>
         <p class="empty-title">请选择一个会话开始交流</p>
         <p class="empty-tip">或点击上方按钮创建新会话</p>
-        <el-button type="primary" @click="createNewChat" class="start-chat-btn">
-          <el-icon><ChatDotRound /></el-icon>
-          开始聊天
-        </el-button>
       </div>
     </div>
 
@@ -177,7 +173,7 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Loading, ChatDotRound } from '@element-plus/icons-vue'
+import { Loading } from '@element-plus/icons-vue'
 
 // Composables
 import { useWebSocketChat } from '../../composables/useWebSocketChat'
@@ -819,12 +815,17 @@ const fetchFriends = async () => {
       border-radius: 8px;
       background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);
       color: #666;
+      padding: 60px 20px;
+      min-height: 400px;
 
       .empty-icon {
         font-size: 80px;
         margin-bottom: 24px;
         opacity: 0.8;
         animation: float 3s ease-in-out infinite;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
 
       .empty-title {
@@ -832,24 +833,19 @@ const fetchFriends = async () => {
         font-weight: 500;
         color: #1a1a1a;
         margin: 0 0 8px 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
 
       .empty-tip {
         font-size: 14px;
         color: #666;
-        margin: 0 0 24px 0;
-      }
-
-      .start-chat-btn {
-        font-size: 15px;
-        padding: 12px 24px;
-        border-radius: 6px;
-        transition: all 0.3s ease;
-
-        &:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
-        }
+        margin: 0;
+        line-height: 1.6;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
 
       @keyframes float {
