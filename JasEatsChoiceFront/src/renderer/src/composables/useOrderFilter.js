@@ -53,9 +53,7 @@ export function useOrderFilter(orders) {
 
       // 搜索菜品名称
       if (order.items && order.items.length > 0) {
-        return order.items.some((item) =>
-          item.name && item.name.toLowerCase().includes(searchTerm)
-        )
+        return order.items.some((item) => item.name && item.name.toLowerCase().includes(searchTerm))
       }
 
       // 搜索总金额
@@ -141,8 +139,8 @@ export function useOrderFilter(orders) {
   /**
    * 获取当前排序选项
    */
-  const currentSortOption = computed(() =>
-    SORT_OPTIONS.find((option) => option.value === sortBy.value) || SORT_OPTIONS[0]
+  const currentSortOption = computed(
+    () => SORT_OPTIONS.find((option) => option.value === sortBy.value) || SORT_OPTIONS[0]
   )
 
   /**

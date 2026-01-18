@@ -6,17 +6,17 @@
  * 订单状态
  */
 export const ORDER_STATUS = {
-  ACTIVE: 'active',       // 活动中
-  CLOSED: 'closed',       // 已关闭
-  PAID: 'paid'           // 已支付
+  ACTIVE: 'active', // 活动中
+  CLOSED: 'closed', // 已关闭
+  PAID: 'paid' // 已支付
 }
 
 /**
  * 订单配置
  */
 export const ORDER_CONFIG = {
-  ORDER_ID_PREFIX: 'GO',      // 群订单ID前缀
-  DEFAULT_MEMBER: '我'         // 默认成员名称
+  ORDER_ID_PREFIX: 'GO', // 群订单ID前缀
+  DEFAULT_MEMBER: '我' // 默认成员名称
 }
 
 /**

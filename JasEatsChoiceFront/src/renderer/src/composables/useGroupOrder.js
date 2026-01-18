@@ -5,7 +5,12 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { findExistingOrderItem, mergeOrderItem, calculateOrderTotal, validateOrderItems } from '@/utils/orderHelper'
+import {
+  findExistingOrderItem,
+  mergeOrderItem,
+  calculateOrderTotal,
+  validateOrderItems
+} from '@/utils/orderHelper'
 import { ORDER_STATUS, ORDER_CONFIG } from '@/constants/orderConstants'
 
 export function useGroupOrder({ selectedConversation, chatMessages }) {

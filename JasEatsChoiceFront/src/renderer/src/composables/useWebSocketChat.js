@@ -92,7 +92,7 @@ export function useWebSocketChat({ userId, token, onMessage }) {
       (websocket.value.readyState === WebSocket.CONNECTING ||
         websocket.value.readyState === WebSocket.OPEN)
     ) {
-      console.log('WebSocket连接已存在或正在连接中');
+      console.log('WebSocket连接已存在或正在连接中')
       return
     }
 
@@ -110,7 +110,7 @@ export function useWebSocketChat({ userId, token, onMessage }) {
       const wsUrl = `${wsProtocol}//localhost:11277/ws/chat?userId=${userId.value}&token=${token}`
 
       console.log('尝试连接到WebSocket服务器:', wsUrl)
-      
+
       websocket.value = new WebSocket(wsUrl)
 
       websocket.value.onopen = () => {
@@ -123,7 +123,7 @@ export function useWebSocketChat({ userId, token, onMessage }) {
           clearTimeout(reconnectTimer.value)
           reconnectTimer.value = null
         }
-        
+
         // 重置重连尝试次数
         reconnectAttempts.value = 0
       }
@@ -196,27 +196,27 @@ export function useWebSocketChat({ userId, token, onMessage }) {
    */
   const closeWebSocket = () => {
     console.log('正在关闭WebSocket连接...')
-    
+
     if (websocket.value) {
       // 移除所有事件监听器
       websocket.value.onopen = null
       websocket.value.onmessage = null
       websocket.value.onerror = null
       websocket.value.onclose = null
-      
+
       // 关闭连接
       websocket.value.close()
       websocket.value = null
     }
-    
+
     if (reconnectTimer.value) {
       clearTimeout(reconnectTimer.value)
       reconnectTimer.value = null
     }
-    
+
     stopHeartbeat()
     isConnected.value = false
-    
+
     console.log('WebSocket连接已关闭')
   }
 

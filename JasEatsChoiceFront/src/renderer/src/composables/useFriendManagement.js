@@ -138,8 +138,7 @@ export function useFriendManagement({ userId, conversations, chatHistory }) {
       })
 
       if (response.code === '200') {
-        const userName =
-          user.nickname || user.username || user.email || user.phone || '未知用户'
+        const userName = user.nickname || user.username || user.email || user.phone || '未知用户'
         ElMessage.success(`已向 ${userName} 发送好友请求`)
         return true
       } else {

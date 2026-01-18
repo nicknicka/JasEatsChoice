@@ -39,9 +39,7 @@ export function useOrderData() {
    */
   async function fetchOrderDishes(order) {
     try {
-      const dishesResponse = await axios.get(
-        `${API_CONFIG.baseURL}/v1/orders/${order.id}/dishes`
-      )
+      const dishesResponse = await axios.get(`${API_CONFIG.baseURL}/v1/orders/${order.id}/dishes`)
 
       let items = []
       if (dishesResponse.data?.data && dishesResponse.data.data.length > 0) {
@@ -66,9 +64,7 @@ export function useOrderData() {
    */
   async function fetchDishDetail(orderDish) {
     try {
-      const dishResponse = await axios.get(
-        `${API_CONFIG.baseURL}/dishes/${orderDish.dishId}`
-      )
+      const dishResponse = await axios.get(`${API_CONFIG.baseURL}/dishes/${orderDish.dishId}`)
       const dish = dishResponse.data?.data
 
       return {
@@ -127,9 +123,7 @@ export function useOrderData() {
 
     try {
       const userId = getUserId()
-      const response = await axios.get(
-        API_CONFIG.baseURL + API_CONFIG.order.list + userId
-      )
+      const response = await axios.get(API_CONFIG.baseURL + API_CONFIG.order.list + userId)
 
       if (response.data.data) {
         // 并行获取所有订单的菜品信息

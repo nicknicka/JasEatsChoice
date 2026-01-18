@@ -63,11 +63,14 @@ export function useOrderPagination(sortedOrders, onReset) {
   /**
    * 监听排序变化，重置到第一页
    */
-  watch(() => sortedOrders.value.length, () => {
-    if (currentPage.value > Math.ceil(total.value / pageSize.value)) {
-      resetToFirstPage()
+  watch(
+    () => sortedOrders.value.length,
+    () => {
+      if (currentPage.value > Math.ceil(total.value / pageSize.value)) {
+        resetToFirstPage()
+      }
     }
-  })
+  )
 
   return {
     // 状态

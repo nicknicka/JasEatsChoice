@@ -1,11 +1,7 @@
 <template>
   <div class="chat-container" @click="handleGlobalClick">
     <!-- 使用新的头部组件 -->
-    <ChatHeader
-      @create-new-chat="createNewChat"
-      @add-friend="openAddFriendDialog"
-      @create-group="createNewGroup"
-    />
+    <ChatHeader @open-action-panel="openActionPanelWithTab" />
 
     <div class="chat-content">
       <!-- 左侧会话列表 -->
@@ -100,40 +96,23 @@
       </div>
 
       <!-- 空选择提示 -->
-      <div v-else class="empty-select">
+      <div v-else class="empty-select" @click="createNewChat">
         <div class="empty-icon">💬</div>
         <p class="empty-title">请选择一个会话开始交流</p>
-        <p class="empty-tip">或点击上方按钮创建新会话</p>
+        <p class="empty-tip">或点击此处创建新会话</p>
       </div>
     </div>
 
-    <!-- 对话框组件 -->
-    <NewChatDialog
-      v-model="newChatDialogVisible"
+    <!-- 统一操作面板 -->
+    <NewActionPanel
+      v-model="actionPanelVisible"
       :friends="friends"
       :conversations="conversations"
-      @select="selectFriendForChat"
-    />
-
-    <AddFriendDialog
-      v-model="addFriendDialogVisible"
       :user-id="userId"
-      @friend-request-sent="handleFriendRequestSent"
-    />
-
-    <CreateGroupDialog
-      v-model="groupDialogVisible"
-      :members="groupForm.members"
-      @create="handleCreateGroup"
-      @show-friend-selection="showFriendSelectionDialog"
-    />
-
-    <FriendSelectionDialog
-      v-model="friendSelectionDialogVisible"
-      :friends="friends"
-      :selected-members="selectedGroupMembers"
-      @confirm="confirmFriendSelection"
-      @toggle="toggleFriendSelection"
+      @start-chat="startChatFromPanel"
+      @create-group="createGroupFromPanel"
+      @add-friend="handleAddFriendFromPanel"
+      @refresh-friends="fetchFriends"
     />
 
     <ForwardMessageDialog
@@ -192,10 +171,7 @@ import GroupOrderFloatingButton from '../../components/chat/GroupOrderFloatingBu
 import MessageSearchPanel from '../../components/chat/MessageSearchPanel.vue'
 
 // Dialog Components
-import NewChatDialog from '../../components/chat/dialogs/NewChatDialog.vue'
-import AddFriendDialog from '../../components/chat/dialogs/AddFriendDialog.vue'
-import CreateGroupDialog from '../../components/chat/dialogs/CreateGroupDialog.vue'
-import FriendSelectionDialog from '../../components/chat/dialogs/FriendSelectionDialog.vue'
+import NewActionPanel from '../../components/chat/dialogs/NewActionPanel.vue'
 import ForwardMessageDialog from '../../components/chat/dialogs/ForwardMessageDialog.vue'
 import GroupDetailDialog from '../../components/chat/dialogs/GroupDetailDialog.vue'
 import MerchantSelectDialog from '../../components/chat/dialogs/MerchantSelectDialog.vue'
@@ -333,18 +309,10 @@ const merchants = ref([
 ])
 
 // ========== 对话框状态管理 ==========
-const newChatDialogVisible = ref(false)
-const addFriendDialogVisible = ref(false)
-const groupDialogVisible = ref(false)
-const friendSelectionDialogVisible = ref(false)
+const actionPanelVisible = ref(false)
 const groupDetailDialogVisible = ref(false)
 
 const friends = ref([])
-const groupForm = ref({
-  name: '',
-  members: ''
-})
-const selectedGroupMembers = ref([])
 const currentGroupInfo = ref(null)
 
 // ========== 全局点击事件 ==========
@@ -497,28 +465,20 @@ const resendMessage = async (failedMessage) => {
 }
 
 // ========== 对话框操作 ==========
-const createNewChat = () => {
-  newChatDialogVisible.value = true
+const openActionPanelWithTab = () => {
+  // 打开统一操作面板
+  actionPanelVisible.value = true
 }
 
-const openAddFriendDialog = () => {
-  addFriendDialogVisible.value = true
-}
-
-const createNewGroup = () => {
-  groupDialogVisible.value = true
-  selectedGroupMembers.value = []
-  groupForm.value.members = ''
-}
-
-const selectFriendForChat = (friend) => {
-  const existingConversation = conversations.value.find((conv) => conv.id === friend.id)
+// ========== 统一操作面板事件处理 ==========
+const startChatFromPanel = (user) => {
+  const existingConversation = conversations.value.find((conv) => conv.id === user.id)
 
   if (existingConversation) {
     selectedConversation.value = existingConversation
   } else {
     const newConversation = {
-      ...friend,
+      ...user,
       lastMessage: '开始聊天吧！',
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
@@ -529,20 +489,13 @@ const selectFriendForChat = (friend) => {
     chatHistory.value[newConversation.id] = []
   }
 
-  newChatDialogVisible.value = false
+  ElMessage.success(`已开始与 ${user.name} 的对话`)
 }
 
-const handleFriendRequestSent = () => {
-  addFriendDialogVisible.value = false
-}
-
-const handleCreateGroup = (data) => {
+const createGroupFromPanel = (data) => {
   const newGroupId = Date.now()
 
-  const memberNames = data.members
-    .split(',')
-    .map((name) => name.trim())
-    .filter((name) => name)
+  const memberNames = data.members.map((member) => member.name)
 
   const newGroup = {
     id: newGroupId,
@@ -570,31 +523,14 @@ const handleCreateGroup = (data) => {
 
   newGroup.lastMessage = systemMsg.content
 
-  groupDialogVisible.value = false
+  selectedConversation.value = newGroup
 
-  ElMessage.success('群聊已创建')
+  ElMessage.success(`群聊 "${data.name}" 已创建`)
 }
 
-const showFriendSelectionDialog = () => {
-  friendSelectionDialogVisible.value = true
-}
-
-const confirmFriendSelection = () => {
-  const selectedFriendNames = friends.value
-    .filter((friend) => selectedGroupMembers.value.includes(friend.id))
-    .map((friend) => friend.name)
-
-  groupForm.value.members = selectedFriendNames.join(', ')
-  friendSelectionDialogVisible.value = false
-}
-
-const toggleFriendSelection = (friend) => {
-  const index = selectedGroupMembers.value.indexOf(friend.id)
-  if (index === -1) {
-    selectedGroupMembers.value.push(friend.id)
-  } else {
-    selectedGroupMembers.value.splice(index, 1)
-  }
+const handleAddFriendFromPanel = (user) => {
+  ElMessage.success(`已向 ${user.name} 发送好友申请`)
+  fetchFriends()
 }
 
 const openGroupDetail = () => {
@@ -817,6 +753,24 @@ const fetchFriends = async () => {
       color: #666;
       padding: 60px 20px;
       min-height: 400px;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.3s ease;
+
+      &:hover {
+        border-color: #409eff;
+        box-shadow: 0 4px 16px rgba(64, 158, 255, 0.2);
+        transform: translateY(-2px);
+
+        .empty-icon {
+          transform: scale(1.1);
+        }
+      }
+
+      &:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
+      }
 
       .empty-icon {
         font-size: 80px;
@@ -826,6 +780,7 @@ const fetchFriends = async () => {
         display: flex;
         align-items: center;
         justify-content: center;
+        transition: transform 0.3s ease;
       }
 
       .empty-title {
@@ -849,7 +804,8 @@ const fetchFriends = async () => {
       }
 
       @keyframes float {
-        0%, 100% {
+        0%,
+        100% {
           transform: translateY(0px);
         }
         50% {

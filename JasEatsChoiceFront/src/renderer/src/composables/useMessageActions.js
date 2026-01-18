@@ -101,8 +101,7 @@ export function useMessageActions({ chatHistory, chatMessages, userId, formatMes
       return
     }
 
-    const messages =
-      chatHistory.value[selectedConversation.id] || chatMessages.value
+    const messages = chatHistory.value[selectedConversation.id] || chatMessages.value
 
     if (messages.length === 0) {
       ElMessage.info('当前会话暂无聊天记录')
@@ -117,8 +116,7 @@ export function useMessageActions({ chatHistory, chatMessages, userId, formatMes
 
     messages.forEach((msg) => {
       const time = msg.formattedTime || formatMessageTime(msg.createTime || msg.time)
-      const sender =
-        msg.fromId === userId.value.toString() ? '我' : msg.senderName || msg.fromId
+      const sender = msg.fromId === userId.value.toString() ? '我' : msg.senderName || msg.fromId
       const status = msg.readStatus !== false ? '' : ' (未读)'
 
       content += `[${time}] ${sender}${status}\n`

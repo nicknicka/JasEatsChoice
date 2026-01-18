@@ -177,10 +177,7 @@ export function useOrderWebSocket(onOrderUpdate) {
     }
 
     retryCount.value++
-    const delay = Math.min(
-      RETRY_DELAY_BASE * retryCount.value,
-      RETRY_DELAY_MAX
-    )
+    const delay = Math.min(RETRY_DELAY_BASE * retryCount.value, RETRY_DELAY_MAX)
 
     console.log(`${delay}ms 后尝试第 ${retryCount.value} 次重连...`)
 
