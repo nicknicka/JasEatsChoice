@@ -102,7 +102,12 @@
       <!-- 空选择提示 -->
       <div v-else class="empty-select">
         <div class="empty-icon">💬</div>
-        <p>请选择一个会话开始交流</p>
+        <p class="empty-title">请选择一个会话开始交流</p>
+        <p class="empty-tip">或点击上方按钮创建新会话</p>
+        <el-button type="primary" @click="createNewChat" class="start-chat-btn">
+          <el-icon><ChatDotRound /></el-icon>
+          开始聊天
+        </el-button>
       </div>
     </div>
 
@@ -116,6 +121,7 @@
 
     <AddFriendDialog
       v-model="addFriendDialogVisible"
+      :user-id="userId"
       @friend-request-sent="handleFriendRequestSent"
     />
 
@@ -171,7 +177,7 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Loading } from '@element-plus/icons-vue'
+import { Loading, ChatDotRound } from '@element-plus/icons-vue'
 
 // Composables
 import { useWebSocketChat } from '../../composables/useWebSocketChat'
@@ -213,7 +219,7 @@ const msgPageSize = MESSAGE_CONFIG.DEFAULT_PAGE_SIZE
 if (token) {
   const decodedToken = decodeJwt(token)
   if (decodedToken && decodedToken.userId) {
-    userId.value = decodedToken.userId
+    userId.value = parseInt(decodedToken.userId, 10)
   }
 }
 
@@ -729,18 +735,25 @@ const fetchFriends = async () => {
 
 <style scoped lang="less">
 .chat-container {
-  padding: 20px;
+  padding: 16px;
   background-color: #f5f7fa;
-  min-height: calc(100vh - 40px);
+  height: 100vh;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
 
   .chat-content {
     display: flex;
     gap: 16px;
-    height: calc(100vh - 140px);
+    flex: 1;
+    min-height: 0;
 
     .conversation-list-wrapper {
-      width: 37%;
-      position: relative;
+      width: 280px;
+      min-width: 250px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
     }
 
     .chat-area {
@@ -783,12 +796,50 @@ const fetchFriends = async () => {
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      background-color: #fafafa;
-      color: #999;
+      border: 1px solid #e4e7ed;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);
+      color: #666;
 
       .empty-icon {
-        font-size: 48px;
-        margin-bottom: 16px;
+        font-size: 80px;
+        margin-bottom: 24px;
+        opacity: 0.8;
+        animation: float 3s ease-in-out infinite;
+      }
+
+      .empty-title {
+        font-size: 18px;
+        font-weight: 500;
+        color: #1a1a1a;
+        margin: 0 0 8px 0;
+      }
+
+      .empty-tip {
+        font-size: 14px;
+        color: #666;
+        margin: 0 0 24px 0;
+      }
+
+      .start-chat-btn {
+        font-size: 15px;
+        padding: 12px 24px;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+
+        &:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
+        }
+      }
+
+      @keyframes float {
+        0%, 100% {
+          transform: translateY(0px);
+        }
+        50% {
+          transform: translateY(-10px);
+        }
       }
     }
   }
