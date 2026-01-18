@@ -14,7 +14,6 @@
           <span v-if="conversation.type === 'group'" class="member-count">
             ({{ conversation.memberCount || '0' }}人)
           </span>
-          <el-tag v-if="conversation.pinned" size="small" type="warning" effect="plain">置顶</el-tag>
         </div>
         <div class="status-info">
           <span class="online-status"></span>
@@ -25,15 +24,37 @@
 
     <div class="header-actions">
       <!-- 搜索按钮（带图标） -->
-      <el-tooltip content="搜索消息" placement="bottom">
-        <el-button
-          :icon="Search"
-          circle
-          size="small"
-          @click="toggleSearch"
-          :class="{ 'is-active': showSearch }"
-        />
-      </el-tooltip>
+      <div class="search-button-wrapper">
+        <el-tooltip content="搜索消息" placement="bottom">
+          <el-button
+            :icon="Search"
+            circle
+            size="small"
+            @click="toggleSearch"
+            :class="{ 'is-active': showSearch }"
+          />
+        </el-tooltip>
+
+        <!-- 搜索展开面板 -->
+        <transition name="slide-left">
+          <div v-if="showSearch" class="search-panel-outer">
+            <div class="search-panel">
+              <el-input
+                v-model="searchKeyword"
+                placeholder="搜索消息记录..."
+                size="default"
+                @input="$emit('search', searchKeyword)"
+                clearable
+                autofocus
+              >
+                <template #prefix>
+                  <el-icon><Search /></el-icon>
+                </template>
+              </el-input>
+            </div>
+          </div>
+        </transition>
+      </div>
 
       <!-- 更多操作下拉菜单 -->
       <el-dropdown trigger="click" @command="handleCommand">
@@ -52,6 +73,9 @@
           </el-dropdown-menu>
         </template>
       </el-dropdown>
+
+      <!-- 置顶标签 -->
+      <el-tag v-if="conversation.pinned" size="small" type="warning" effect="plain" class="pinned-tag">置顶</el-tag>
 
       <!-- 群聊快速操作 -->
       <div class="group-quick-actions" v-if="conversation.type === 'group'">
@@ -75,24 +99,6 @@
         </el-tooltip>
       </div>
     </div>
-
-    <!-- 搜索展开面板 -->
-    <transition name="slide-down">
-      <div v-if="showSearch" class="search-panel">
-        <el-input
-          v-model="searchKeyword"
-          placeholder="搜索消息记录..."
-          size="default"
-          @input="$emit('search', searchKeyword)"
-          clearable
-          autofocus
-        >
-          <template #prefix>
-            <el-icon><Search /></el-icon>
-          </template>
-        </el-input>
-      </div>
-    </transition>
   </div>
 </template>
 
@@ -162,8 +168,10 @@ const handleCommand = (command) => {
 <style scoped lang="less">
 .chat-area-header {
   display: flex;
-  flex-direction: column;
-  padding: 6px 10px;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
   background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
   border-bottom: 1px solid #e8ecef;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
@@ -172,20 +180,22 @@ const handleCommand = (command) => {
   .conversation-info {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
     flex: 1;
+    min-height: 50px;
 
     .conversation-avatar {
-      width: 29px;
-      height: 29px;
-      border-radius: 6px;
+      width: 42px;
+      height: 42px;
+      border-radius: 8px;
       overflow: hidden;
       display: flex;
       align-items: center;
       justify-content: center;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      box-shadow: 0 2px 5px rgba(102, 126, 234, 0.15);
+      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
       transition: all 0.3s ease;
+      flex-shrink: 0;
 
       img {
         width: 100%;
@@ -194,12 +204,12 @@ const handleCommand = (command) => {
       }
 
       span {
-        font-size: 14px;
+        font-size: 18px;
       }
 
       &:hover {
-        transform: scale(1.03);
-        box-shadow: 0 3px 10px rgba(102, 126, 234, 0.25);
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
       }
     }
 
@@ -214,14 +224,14 @@ const handleCommand = (command) => {
         gap: 6px;
 
         .name {
-          font-size: 11px;
+          font-size: 14px;
           font-weight: 600;
           color: #1a1a1a;
           letter-spacing: 0.2px;
         }
 
         .member-count {
-          font-size: 9px;
+          font-size: 11px;
           color: #8b949e;
           font-weight: 500;
         }
@@ -233,8 +243,8 @@ const handleCommand = (command) => {
         gap: 4px;
 
         .online-status {
-          width: 4px;
-          height: 4px;
+          width: 6px;
+          height: 6px;
           border-radius: 50%;
           background: linear-gradient(135deg, #10b981 0%, #059669 100%);
           box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.1);
@@ -242,7 +252,7 @@ const handleCommand = (command) => {
         }
 
         .status-text {
-          font-size: 9px;
+          font-size: 11px;
           color: #8b949e;
         }
       }
@@ -252,7 +262,22 @@ const handleCommand = (command) => {
   .header-actions {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
+
+    .search-button-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .pinned-tag {
+      font-size: 12px;
+      padding: 2px 8px;
+      height: 22px;
+      line-height: 18px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
 
     :deep(.el-button) {
       border: 1px solid #e8ecef;
@@ -276,17 +301,24 @@ const handleCommand = (command) => {
 
     .group-quick-actions {
       display: flex;
-      gap: 6px;
-      margin-left: 6px;
-      padding-left: 6px;
+      gap: 8px;
+      margin-left: 8px;
+      padding-left: 8px;
       border-left: 2px solid #e8ecef;
     }
   }
 
-  .search-panel {
-    margin-top: 5px;
-    animation: slideDown 0.3s ease;
+  .search-panel-outer {
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    margin-right: 8px;
+    width: 280px;
+    z-index: 100;
+  }
 
+  .search-panel {
     :deep(.el-input) {
       .el-input__wrapper {
         border-radius: 10px;
@@ -315,22 +347,22 @@ const handleCommand = (command) => {
   }
 }
 
-@keyframes slideDown {
+@keyframes slideLeft {
   from {
     opacity: 0;
-    transform: translateY(-6px);
+    transform: translate(10px, -50%);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translate(0, -50%);
   }
 }
 
-.slide-down-enter-active {
-  animation: slideDown 0.25s ease;
+.slide-left-enter-active {
+  animation: slideLeft 0.25s ease;
 }
 
-.slide-down-leave-active {
-  animation: slideDown 0.2s ease reverse;
+.slide-left-leave-active {
+  animation: slideLeft 0.2s ease reverse;
 }
 </style>
