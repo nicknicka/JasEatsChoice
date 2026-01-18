@@ -1,26 +1,28 @@
 package com.xx.jaseatschoicejava.util;
 
+import com.xx.jaseatschoicejava.config.JwtConfig;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
-import javax.crypto.spec.SecretKeySpec;
-import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * JWT工具类
+ * 使用Spring配置，支持从配置文件读取密钥和过期时间
+ *
+ * @Author nickxiao
+ * @Date 2025/11/22
+ */
+@Component
 public class JwtUtil {
 
-    // 使用原生JCE创建HMAC密钥，避免Keys.hmacShaKeyFor的类加载问题
-    private static final Key SECRET_KEY = new SecretKeySpec(
-        "jaseatschoice_secret_key_123456789012345678901234567890".getBytes(StandardCharsets.UTF_8),
-        SignatureAlgorithm.HS256.getJcaName()
-    );
-
-    // Token expiration time (1 hour)
-    private static final long EXPIRATION_TIME = 3600000;
+    @Autowired
+    private JwtConfig jwtConfig;
 
     /**
      * Generate JWT token
@@ -28,7 +30,7 @@ public class JwtUtil {
      * @param phone User phone number
      * @return JWT token
      */
-    public static String generateToken(String userId, String phone) {
+    public String generateToken(String userId, String phone) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
         claims.put("phone", phone);
@@ -37,8 +39,8 @@ public class JwtUtil {
                 .claims(claims)
                 .subject(phone)
                 .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
-                .signWith(SECRET_KEY)
+                .expiration(new Date(System.currentTimeMillis() + jwtConfig.getExpiration()))
+                .signWith(jwtConfig.getSigningKey())
                 .compact();
     }
 
@@ -48,8 +50,10 @@ public class JwtUtil {
      * @return Claims
      */
     @SuppressWarnings("deprecation")
-    public static Claims extractClaims(String token) {
-        return Jwts.parser().setSigningKey(SECRET_KEY).build()
+    public Claims extractClaims(String token) {
+        return Jwts.parser()
+                .setSigningKey(jwtConfig.getSigningKey())
+                .build()
                 .parseSignedClaims(token)
                 .getBody();
     }
@@ -59,7 +63,7 @@ public class JwtUtil {
      * @param token JWT token
      * @return User ID
      */
-    public static String extractUserId(String token) {
+    public String extractUserId(String token) {
         return extractClaims(token).get("userId", String.class);
     }
 
@@ -68,7 +72,7 @@ public class JwtUtil {
      * @param token JWT token
      * @return Phone number
      */
-    public static String extractPhone(String token) {
+    public String extractPhone(String token) {
         return extractClaims(token).getSubject();
     }
 
@@ -77,7 +81,7 @@ public class JwtUtil {
      * @param token JWT token
      * @return true if expired, false otherwise
      */
-    public static boolean isTokenExpired(String token) {
+    public boolean isTokenExpired(String token) {
         return extractClaims(token).getExpiration().before(new Date());
     }
 
@@ -87,7 +91,7 @@ public class JwtUtil {
      * @param phone Phone number
      * @return true if valid, false otherwise
      */
-    public static boolean validateToken(String token, String phone) {
+    public boolean validateToken(String token, String phone) {
         return (extractPhone(token).equals(phone) && !isTokenExpired(token));
     }
 }

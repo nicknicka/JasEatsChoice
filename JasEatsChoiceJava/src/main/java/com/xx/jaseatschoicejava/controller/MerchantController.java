@@ -84,6 +84,9 @@ public class MerchantController {
     @Autowired
     private AnnouncementService announcementService;
 
+    @Autowired
+    private JwtUtil jwtUtil;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
@@ -134,7 +137,7 @@ public class MerchantController {
                     // 从Authorization头中提取token
                     String token = authorizationHeader.replace("Bearer ", "").trim();
                     // 提取当前用户ID
-                    String currentUserId = JwtUtil.extractUserId(token);
+                    String currentUserId = jwtUtil.extractUserId(token);
 
                     // 将merchantId存入user表
                     User user = userService.getById(currentUserId);

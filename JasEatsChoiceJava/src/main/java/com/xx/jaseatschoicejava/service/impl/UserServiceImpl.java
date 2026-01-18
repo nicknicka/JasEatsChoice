@@ -6,6 +6,7 @@ import com.xx.jaseatschoicejava.mapper.UserMapper;
 import com.xx.jaseatschoicejava.service.UserService;
 import com.xx.jaseatschoicejava.util.JwtUtil;
 import com.xx.jaseatschoicejava.util.IdGenerator;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -18,6 +19,9 @@ import java.util.List;
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
 
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+
+    @Autowired
+    private JwtUtil jwtUtil;
 
     /**
      * 注册用户并对密码进行加密
@@ -51,7 +55,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         // 检查用户是否存在并验证密码是否正确
         if (user != null && passwordEncoder.matches(password, user.getPassword())) {
             // 生成JWT令牌
-            return JwtUtil.generateToken(user.getUserId(), user.getPhone());
+            return jwtUtil.generateToken(user.getUserId(), user.getPhone());
         }
         return null;
     }

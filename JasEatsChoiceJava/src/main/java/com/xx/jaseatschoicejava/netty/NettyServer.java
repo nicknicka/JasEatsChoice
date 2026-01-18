@@ -2,6 +2,7 @@ package com.xx.jaseatschoicejava.netty;
 
 import com.xx.jaseatschoicejava.config.NettyConfig;
 import com.xx.jaseatschoicejava.service.ChatMsgService;
+import com.xx.jaseatschoicejava.util.JwtUtil;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -37,6 +38,9 @@ public class NettyServer {
 
     @Autowired
     private ChatMsgService chatMsgService;
+
+    @Autowired
+    private JwtUtil jwtUtil;
 
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
@@ -84,8 +88,10 @@ public class NettyServer {
                             pipeline.addLast(new io.netty.handler.codec.http.HttpServerCodec());
                             // HTTP请求聚合器
                             pipeline.addLast(new io.netty.handler.codec.http.HttpObjectAggregator(65536));
-                            // WebSocket协议处理器，指定路径为/ws
-                            pipeline.addLast(new io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler("/ws"));
+                            // WebSocket握手认证处理器（在WebSocket协议处理器之前）
+                            pipeline.addLast(new WebSocketAuthHandler(jwtUtil));
+                            // WebSocket协议处理器，指定路径为/ws/chat
+                            pipeline.addLast(new io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler("/ws/chat"));
                             // 字符串解码器
                             pipeline.addLast(new StringDecoder(CharsetUtil.UTF_8));
                             // 字符串编码器

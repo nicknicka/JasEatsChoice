@@ -327,8 +327,19 @@ const selectConversation = async (conversation) => {
 
   // 清空未读消息
   if (conversation.unreadCount > 0) {
-    conversation.unreadCount = 0
-    ElMessage.success('消息已标记为已读')
+    try {
+      // 调用后端API清空未读数
+      await api.post(`/v1/chat/sessions/${conversation.id}/unread-clear`, {
+        userId: userId.value.toString()
+      })
+
+      conversation.unreadCount = 0
+      ElMessage.success('消息已标记为已读')
+    } catch (error) {
+      console.error('标记已读失败:', error)
+      // 即使API调用失败，也清空前端未读数（用户体验优先）
+      conversation.unreadCount = 0
+    }
   }
 
   await loadChatMessages(conversation.id)
@@ -493,40 +504,109 @@ const startChatFromPanel = (user) => {
   ElMessage.success(`已开始与 ${user.name} 的对话`)
 }
 
-const createGroupFromPanel = (data) => {
-  const newGroupId = Date.now()
+const createGroupFromPanel = async (data) => {
+  try {
+    // 1. 先调用后端API创建群
+    const groupResponse = await api.post('/v1/groups', {
+      groupName: data.name.trim(),
+      creatorId: userId.value,
+      memberCount: data.members.length + 1
+    })
 
-  const memberNames = data.members.map((member) => member.name)
+    if (groupResponse.code !== '200' || !groupResponse.data) {
+      ElMessage.error('创建群失败，请稍后重试')
+      return
+    }
 
-  const newGroup = {
-    id: newGroupId,
-    type: 'group',
-    name: data.name,
-    avatar: '👥',
-    lastMessage: '暂无消息',
-    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    unreadCount: 0,
-    memberCount: memberNames.length + 1,
-    pinned: false
+    const groupId = groupResponse.data.id
+    const groupName = data.name.trim()
+
+    // 2. 将创建者添加到群成员关系
+    await api.post('/v1/contacts/groups/join', {
+      userId: userId.value.toString(),
+      targetId: groupId.toString(),
+      relationType: 'group',
+      status: 'normal'
+    })
+
+    // 3. 将选中的成员添加到群成员关系
+    for (const member of data.members) {
+      try {
+        await api.post('/v1/contacts/groups/join', {
+          userId: member.id.toString(),
+          targetId: groupId.toString(),
+          relationType: 'group',
+          status: 'normal'
+        })
+      } catch (error) {
+        console.error(`添加成员 ${member.name} 到群失败:`, error)
+      }
+    }
+
+    // 4. 创建前端会话对象
+    const newGroup = {
+      id: groupId,
+      type: 'group',
+      name: groupName,
+      avatar: '👥',
+      lastMessage: '暂无消息',
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      unreadCount: 0,
+      memberCount: data.members.length + 1,
+      pinned: false
+    }
+
+    conversations.value.push(newGroup)
+    chatHistory.value[groupId] = []
+
+    // 5. 添加系统消息
+    const systemMsg = {
+      id: 1,
+      sender: '系统',
+      content: `群聊 "${groupName}" 已创建`,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    }
+    chatHistory.value[groupId].push(systemMsg)
+    newGroup.lastMessage = systemMsg.content
+
+    selectedConversation.value = newGroup
+
+    ElMessage.success(`群聊 "${groupName}" 已创建`)
+  } catch (error) {
+    console.error('创建群失败:', error)
+
+    // 如果后端调用失败，降级使用前端模拟（仅开发模式）
+    const newGroupId = Date.now()
+    const memberNames = data.members.map((member) => member.name)
+
+    const newGroup = {
+      id: newGroupId,
+      type: 'group',
+      name: data.name,
+      avatar: '👥',
+      lastMessage: '暂无消息',
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      unreadCount: 0,
+      memberCount: memberNames.length + 1,
+      pinned: false
+    }
+
+    conversations.value.push(newGroup)
+    chatHistory.value[newGroupId] = []
+
+    const systemMsg = {
+      id: 1,
+      sender: '系统',
+      content: `群聊 "${newGroup.name}" 已创建`,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    }
+    chatHistory.value[newGroupId].push(systemMsg)
+    newGroup.lastMessage = systemMsg.content
+
+    selectedConversation.value = newGroup
+
+    ElMessage.success(`群聊 "${data.name}" 已创建（离线模式）`)
   }
-
-  conversations.value.push(newGroup)
-
-  chatHistory.value[newGroupId] = []
-
-  const systemMsg = {
-    id: 1,
-    sender: '系统',
-    content: `群聊 "${newGroup.name}" 已创建`,
-    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-  }
-  chatHistory.value[newGroupId].push(systemMsg)
-
-  newGroup.lastMessage = systemMsg.content
-
-  selectedConversation.value = newGroup
-
-  ElMessage.success(`群聊 "${data.name}" 已创建`)
 }
 
 const handleAddFriendFromPanel = (user) => {
@@ -650,15 +730,38 @@ const fetchFriends = async () => {
   try {
     const response = await api.get(`/v1/contacts/friends?userId=${userId.value}`)
     if (response.code === '200') {
-      friends.value = response.data.map((contact) => ({
-        id: contact.targetId,
-        name: '好友',
-        avatar: '👤',
-        lastMessage: '',
-        time: '',
-        unreadCount: 0,
-        type: 'friend'
-      }))
+      // 获取每个好友的详细信息
+      const friendsWithInfo = await Promise.all(
+        response.data.map(async (contact) => {
+          try {
+            const userResponse = await api.get(`/v1/users/${contact.targetId}`)
+            if (userResponse.code === '200' && userResponse.data) {
+              return {
+                id: contact.targetId,
+                name: userResponse.data.nickname || userResponse.data.username || '好友',
+                avatar: userResponse.data.avatar || '👤',
+                lastMessage: '',
+                time: '',
+                unreadCount: 0,
+                type: 'friend'
+              }
+            }
+          } catch (error) {
+            console.error(`获取好友 ${contact.targetId} 信息失败:`, error)
+          }
+          // 降级方案：显示基本信息
+          return {
+            id: contact.targetId,
+            name: '好友',
+            avatar: '👤',
+            lastMessage: '',
+            time: '',
+            unreadCount: 0,
+            type: 'friend'
+          }
+        })
+      )
+      friends.value = friendsWithInfo
     }
   } catch (error) {
     console.error('获取好友列表失败:', error)

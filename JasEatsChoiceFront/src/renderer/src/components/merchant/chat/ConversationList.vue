@@ -63,7 +63,7 @@ const selectConversation = (conversation) => {
 
 // 获取头像显示内容
 const getAvatarContent = (avatar) => {
-  if (avatar.match(/^https?:/)) {
+  if (avatar.match(/^https?:/) || avatar.match(/^data:image/)) {
     return { type: 'image', content: avatar }
   }
   return { type: 'emoji', content: avatar }

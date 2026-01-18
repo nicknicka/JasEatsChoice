@@ -14,14 +14,14 @@
         @contextmenu.prevent="$emit('contextmenu', conversation, $event)"
       >
         <div class="conversation-avatar">
-          <div v-if="conversation.avatar && conversation.avatar.match(/^https?:/)">
+          <div v-if="conversation.avatar && (conversation.avatar.match(/^https?:/) || conversation.avatar.match(/^data:image/))">
             <img :src="conversation.avatar" alt="" />
           </div>
           <div v-else class="emoji-avatar">
-            {{ conversation.avatar || (conversation.type === 'group' ? '👥' : '💬') }}
+            {{ conversation.type === 'group' ? '👥' : '💬' }}
           </div>
           <div v-if="conversation.unreadCount > 0" class="unread-count">
-            {{ conversation.unreadCount }}
+            {{ conversation.unreadCount > 99 ? '99+' : conversation.unreadCount }}
           </div>
           <!-- 群聊标签 -->
           <div v-if="conversation.type === 'group'" class="group-tag">群聊</div>

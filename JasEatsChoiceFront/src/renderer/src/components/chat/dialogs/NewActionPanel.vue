@@ -50,7 +50,10 @@
               class="user-card"
               @click="startChat(user)"
             >
-              <div class="user-avatar">{{ user.avatar || '👤' }}</div>
+              <div class="user-avatar">
+                <img v-if="isImageAvatar(user.avatar)" :src="user.avatar" alt="" />
+                <span v-else>{{ user.avatar || '👤' }}</span>
+              </div>
               <div class="user-name">{{ user.name }}</div>
               <div class="user-reason">{{ user.reason }}</div>
             </div>
@@ -68,7 +71,10 @@
               class="user-item"
               @click="startChat(user)"
             >
-              <div class="user-avatar">{{ user.avatar || '👤' }}</div>
+              <div class="user-avatar">
+                <img v-if="isImageAvatar(user.avatar)" :src="user.avatar" alt="" />
+                <span v-else>{{ user.avatar || '👤' }}</span>
+              </div>
               <div class="user-info">
                 <div class="user-name">{{ user.name }}</div>
                 <div class="user-detail">{{ user.detail || '用户ID: ' + user.id }}</div>
@@ -115,7 +121,9 @@
               class="member-tag"
               @close="removeMember(member)"
             >
-              {{ member.avatar || '👤' }} {{ member.name }}
+              <img v-if="isImageAvatar(member.avatar)" :src="member.avatar" class="member-tag-avatar" />
+              <span v-else class="member-tag-emoji">{{ member.avatar || '👤' }}</span>
+              {{ member.name }}
             </el-tag>
           </div>
 
@@ -131,7 +139,10 @@
 
             <div class="friend-list">
               <div v-for="friend in filteredFriends" :key="friend.id" class="friend-item">
-                <div class="friend-avatar">{{ friend.avatar || '👤' }}</div>
+                <div class="friend-avatar">
+                  <img v-if="isImageAvatar(friend.avatar)" :src="friend.avatar" alt="" />
+                  <span v-else>{{ friend.avatar || '👤' }}</span>
+                </div>
                 <div class="friend-info">
                   <div class="friend-name">{{ friend.name }}</div>
                 </div>
@@ -177,7 +188,10 @@
 
           <div v-else class="search-result-list">
             <div v-for="user in friendSearchResults" :key="user.id" class="result-user-item">
-              <div class="user-avatar">{{ user.avatar || '👤' }}</div>
+              <div class="user-avatar">
+                <img v-if="isImageAvatar(user.avatar)" :src="user.avatar" alt="" />
+                <span v-else>{{ user.avatar || '👤' }}</span>
+              </div>
               <div class="user-info">
                 <div class="user-name">{{ user.name }}</div>
                 <div v-if="user.phone" class="user-detail">手机: {{ user.phone }}</div>
@@ -291,6 +305,15 @@ const switchTab = (tab) => {
   }
 }
 
+// ========== 头像显示辅助函数 ==========
+/**
+ * 判断头像是否为图片（URL或base64）
+ */
+const isImageAvatar = (avatar) => {
+  if (!avatar) return false
+  return avatar.match(/^https?:/) || avatar.match(/^data:image/)
+}
+
 // ========== 快速搜索 ==========
 const searchResults = ref([])
 
@@ -301,14 +324,6 @@ const handleQuickSearch = () => {
   }
 
   // 实时搜索逻辑
-  performSearch(searchQuery.value.trim())
-}
-
-const handleQuickSearchAction = () => {
-  if (!searchQuery.value.trim()) {
-    ElMessage.warning('请输入搜索内容')
-    return
-  }
   performSearch(searchQuery.value.trim())
 }
 
@@ -496,15 +511,20 @@ const addFriend = async (user) => {
   user.adding = true
 
   try {
-    const response = await api.post('/v1/contacts/friend-requests', {
-      fromId: props.userId,
-      toId: user.id,
+    const response = await api.post('/v1/contacts/friends/request', {
+      userId: props.userId.toString(),
+      targetId: user.id.toString(),
+      relationType: 'friend',
+      status: 'pending',
       message: '你好，我想加你为好友'
     })
 
     if (response.code === '200') {
       user.added = true
       ElMessage.success('好友申请已发送')
+
+      // 触发刷新好友列表
+      emit('refreshFriends')
     }
   } catch (error) {
     console.error('添加好友失败:', error)
@@ -815,6 +835,13 @@ generateRecommendations()
           margin-bottom: 14px;
           transition: transform 0.3s ease;
           box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+          overflow: hidden;
+
+          img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+          }
         }
 
         .user-name {
@@ -867,6 +894,13 @@ generateRecommendations()
             border-radius: 50%;
             margin-right: 16px;
             box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            overflow: hidden;
+
+            img {
+              width: 100%;
+              height: 100%;
+              object-fit: cover;
+            }
           }
 
           .user-info {
@@ -928,6 +962,9 @@ generateRecommendations()
         color: #fff;
         font-weight: 500;
         border-radius: 8px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
 
         :deep(.el-tag__close) {
           color: #fff;
@@ -935,6 +972,17 @@ generateRecommendations()
           &:hover {
             background-color: rgba(255, 255, 255, 0.2);
           }
+        }
+
+        .member-tag-avatar {
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          object-fit: cover;
+        }
+
+        .member-tag-emoji {
+          font-size: 16px;
         }
       }
     }
@@ -989,6 +1037,13 @@ generateRecommendations()
             border-radius: 50%;
             margin-right: 14px;
             box-shadow: 0 3px 10px rgba(59, 130, 246, 0.3);
+            overflow: hidden;
+
+            img {
+              width: 100%;
+              height: 100%;
+              object-fit: cover;
+            }
           }
 
           .friend-info {
@@ -1080,6 +1135,13 @@ generateRecommendations()
           border-radius: 50%;
           margin-right: 16px;
           box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+          overflow: hidden;
+
+          img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+          }
         }
 
         .user-info {
