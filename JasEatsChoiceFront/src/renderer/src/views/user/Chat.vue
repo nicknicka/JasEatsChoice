@@ -681,8 +681,8 @@ const fetchFriends = async () => {
     min-height: 0;
 
     .conversation-list-wrapper {
-      width: 280px;
-      min-width: 250px;
+      width: 240px;
+      min-width: 220px;
       height: 100%;
       display: flex;
       flex-direction: column;

@@ -109,7 +109,7 @@ defineEmits(['select', 'contextmenu', 'toggle-pin'])
     .conversation-item {
       display: flex;
       align-items: center;
-      padding: 16px;
+      padding: 10px 12px;
       cursor: pointer;
       border-bottom: 1px solid #f0f2f5;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -143,13 +143,13 @@ defineEmits(['select', 'contextmenu', 'toggle-pin'])
 
       .pin-btn {
         position: absolute;
-        top: 8px;
-        right: 8px;
-        font-size: 14px;
+        top: 6px;
+        right: 6px;
+        font-size: 12px;
         cursor: pointer;
         opacity: 0;
         transition: all 0.2s;
-        padding: 4px;
+        padding: 3px;
 
         &:hover {
           opacity: 1;
@@ -162,61 +162,61 @@ defineEmits(['select', 'contextmenu', 'toggle-pin'])
       }
 
       .conversation-avatar {
-        margin-right: 12px;
+        margin-right: 10px;
         position: relative;
 
         img {
-          width: 45px;
-          height: 45px;
-          border-radius: 8px;
+          width: 36px;
+          height: 36px;
+          border-radius: 6px;
           object-fit: contain;
           aspect-ratio: 1 / 1;
-          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
         }
 
         .emoji-avatar {
-          width: 45px;
-          height: 45px;
-          border-radius: 8px;
+          width: 36px;
+          height: 36px;
+          border-radius: 6px;
           background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 24px;
+          font-size: 20px;
           text-align: center;
-          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
         }
 
         .unread-count {
           background: linear-gradient(135deg, #f56c6c 0%, #e85a5a 100%);
           color: #fff;
-          border-radius: 10px;
-          padding: 2px 6px;
-          font-size: 11px;
+          border-radius: 8px;
+          padding: 1px 5px;
+          font-size: 10px;
           position: absolute;
-          top: -4px;
-          right: -4px;
+          top: -3px;
+          right: -3px;
           transform: translate(0, 0);
           z-index: 1;
-          min-width: 18px;
+          min-width: 16px;
           text-align: center;
           font-weight: 600;
-          box-shadow: 0 2px 4px rgba(245, 108, 108, 0.4);
+          box-shadow: 0 2px 3px rgba(245, 108, 108, 0.4);
           animation: pulse 2s infinite;
         }
 
         .group-tag {
           background: linear-gradient(135deg, #409eff 0%, #337ecc 100%);
           color: #fff;
-          font-size: 9px;
-          padding: 2px 6px;
-          border-radius: 4px;
+          font-size: 8px;
+          padding: 1px 4px;
+          border-radius: 3px;
           position: absolute;
-          bottom: -4px;
-          right: -4px;
+          bottom: -3px;
+          right: -3px;
           z-index: 2;
           font-weight: 500;
-          box-shadow: 0 2px 4px rgba(64, 158, 255, 0.3);
+          box-shadow: 0 2px 3px rgba(64, 158, 255, 0.3);
         }
       }
 
@@ -228,8 +228,8 @@ defineEmits(['select', 'contextmenu', 'toggle-pin'])
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 6px;
-          font-size: 14px;
+          margin-bottom: 4px;
+          font-size: 13px;
 
           .name {
             font-weight: 600;
@@ -237,18 +237,18 @@ defineEmits(['select', 'contextmenu', 'toggle-pin'])
             overflow: hidden;
             text-overflow: ellipsis;
             flex: 1;
-            margin-right: 8px;
+            margin-right: 6px;
             color: #303133;
 
             .member-count {
-              font-size: 11px;
+              font-size: 10px;
               color: #909399;
               font-weight: 400;
             }
           }
 
           .time {
-            font-size: 11px;
+            font-size: 10px;
             white-space: nowrap;
             color: #909399;
             font-weight: 400;
@@ -256,12 +256,12 @@ defineEmits(['select', 'contextmenu', 'toggle-pin'])
         }
 
         .last-message {
-          font-size: 12px;
+          font-size: 11px;
           color: #606266;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
-          line-height: 1.5;
+          line-height: 1.4;
         }
       }
     }

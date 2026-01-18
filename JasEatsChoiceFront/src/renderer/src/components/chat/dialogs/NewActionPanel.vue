@@ -28,12 +28,7 @@
         :prefix-icon="Search"
         clearable
         @input="handleQuickSearch"
-        @keyup.enter="handleQuickSearchAction"
-      >
-        <template #append>
-          <el-button type="primary" @click="handleQuickSearchAction">搜索</el-button>
-        </template>
-      </el-input>
+      />
     </div>
 
     <!-- 内容区域 -->
