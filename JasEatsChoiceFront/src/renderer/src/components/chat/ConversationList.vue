@@ -1,6 +1,7 @@
 <template>
   <div class="conversation-list">
-    <div class="conversation-list-scroll">
+    <!-- 会话列表 -->
+    <div v-if="conversations.length > 0" class="conversation-list-scroll">
       <div
         v-for="conversation in conversations"
         :key="conversation.id"
@@ -52,7 +53,7 @@
     </div>
 
     <!-- 会话列表空数据提示 -->
-    <div v-if="conversations.length === 0" class="empty-conversations">
+    <div v-else class="empty-conversations">
       <div class="empty-icon">📭</div>
       <p class="empty-title">暂无会话</p>
       <p class="empty-tip">点击上方"新建聊天"按钮开始对话</p>
@@ -274,12 +275,16 @@ defineEmits(['select', 'contextmenu', 'toggle-pin'])
     justify-content: center;
     text-align: center;
     padding: 60px 20px;
+    min-height: 400px;
 
     .empty-icon {
       font-size: 80px;
       margin-bottom: 24px;
       opacity: 0.8;
       animation: float 3s ease-in-out infinite;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .empty-title {
@@ -287,6 +292,9 @@ defineEmits(['select', 'contextmenu', 'toggle-pin'])
       font-weight: 500;
       color: #1a1a1a;
       margin: 0 0 8px 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .empty-tip {
@@ -294,6 +302,9 @@ defineEmits(['select', 'contextmenu', 'toggle-pin'])
       color: #666;
       margin: 0;
       line-height: 1.6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
   }
 }
