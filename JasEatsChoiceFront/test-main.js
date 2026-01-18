@@ -1,13 +1,7 @@
-const { app, BrowserWindow } = require('electron')
-
-console.log('App:', app)
-console.log('BrowserWindow:', BrowserWindow)
-
-app.on('ready', () => {
-  console.log('App is ready!')
-  app.quit()
-})
-
-app.on('window-all-closed', () => {
-  app.quit()
+const { app } = require('electron')
+console.log('electron.app:', app)
+console.log('app.whenReady:', app.whenReady)
+app.whenReady().then(() => {
+  console.log('Electron app is ready!')
+  setTimeout(() => app.quit(), 1000)
 })

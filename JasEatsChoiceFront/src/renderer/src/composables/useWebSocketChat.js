@@ -92,6 +92,7 @@ export function useWebSocketChat({ userId, token, onMessage }) {
       (websocket.value.readyState === WebSocket.CONNECTING ||
         websocket.value.readyState === WebSocket.OPEN)
     ) {
+      console.log('WebSocket连接已存在或正在连接中');
       return
     }
 
@@ -103,10 +104,13 @@ export function useWebSocketChat({ userId, token, onMessage }) {
     }
 
     try {
-      // 构建 WebSocket URL
+      // 构建 WebSocket URL - 修改为正确的格式
       const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-      const wsUrl = `${wsProtocol}//${window.location.hostname}:11277/ws/chat?userId=${userId.value}&token=${token}`
+      // 使用固定的端口11277，后端Netty服务器配置的端口
+      const wsUrl = `${wsProtocol}//localhost:11277/ws/chat?userId=${userId.value}&token=${token}`
 
+      console.log('尝试连接到WebSocket服务器:', wsUrl)
+      
       websocket.value = new WebSocket(wsUrl)
 
       websocket.value.onopen = () => {
@@ -119,6 +123,9 @@ export function useWebSocketChat({ userId, token, onMessage }) {
           clearTimeout(reconnectTimer.value)
           reconnectTimer.value = null
         }
+        
+        // 重置重连尝试次数
+        reconnectAttempts.value = 0
       }
 
       websocket.value.onmessage = (event) => {
@@ -142,10 +149,17 @@ export function useWebSocketChat({ userId, token, onMessage }) {
 
       websocket.value.onerror = (error) => {
         console.error('WebSocket 错误:', error)
+        // 发生错误时，尝试立即重连
+        if (reconnectAttempts.value < WEBSOCKET_CONFIG.MAX_RECONNECT_ATTEMPTS) {
+          setTimeout(() => {
+            reconnectAttempts.value++
+            initWebSocket()
+          }, 1000) // 错误后1秒重连
+        }
       }
 
-      websocket.value.onclose = () => {
-        console.log('WebSocket 连接关闭')
+      websocket.value.onclose = (event) => {
+        console.log('WebSocket 连接关闭，代码:', event.code, '原因:', event.reason)
         isConnected.value = false
         stopHeartbeat()
 
@@ -167,6 +181,13 @@ export function useWebSocketChat({ userId, token, onMessage }) {
       }
     } catch (error) {
       console.error('初始化 WebSocket 失败:', error)
+      // 如果初始化失败，也尝试重连
+      if (reconnectAttempts.value < WEBSOCKET_CONFIG.MAX_RECONNECT_ATTEMPTS) {
+        setTimeout(() => {
+          reconnectAttempts.value++
+          initWebSocket()
+        }, 1000)
+      }
     }
   }
 
@@ -174,15 +195,29 @@ export function useWebSocketChat({ userId, token, onMessage }) {
    * 关闭 WebSocket 连接
    */
   const closeWebSocket = () => {
+    console.log('正在关闭WebSocket连接...')
+    
     if (websocket.value) {
+      // 移除所有事件监听器
+      websocket.value.onopen = null
+      websocket.value.onmessage = null
+      websocket.value.onerror = null
+      websocket.value.onclose = null
+      
+      // 关闭连接
       websocket.value.close()
       websocket.value = null
     }
+    
     if (reconnectTimer.value) {
       clearTimeout(reconnectTimer.value)
       reconnectTimer.value = null
     }
+    
     stopHeartbeat()
+    isConnected.value = false
+    
+    console.log('WebSocket连接已关闭')
   }
 
   /**
@@ -193,6 +228,7 @@ export function useWebSocketChat({ userId, token, onMessage }) {
       websocket.value.send(JSON.stringify(message))
       return true
     }
+    console.warn('WebSocket未连接，无法发送消息:', message)
     return false
   }
 

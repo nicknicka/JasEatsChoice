@@ -336,7 +336,9 @@
       "Bash(timeout 5 npm run dev:*)",
       "Bash(timeout:*)",
       "Bash(npx prettier --write:*)",
-      "Bash(./node_modules/electron/dist/Electron.app/Contents/MacOS/Electron -v)"
+      "Bash(./node_modules/electron/dist/Electron.app/Contents/MacOS/Electron -v)",
+      "Bash(redis-server:*)",
+      "Bash(npx electron-vite:*)"
     ],
     "deny": [],
     "ask": []
