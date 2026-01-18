@@ -97,7 +97,7 @@
       </div>
 
       <!-- 空选择提示 -->
-      <div v-else class="empty-select" @click="createNewChat">
+      <div v-else class="empty-select" @click="openActionPanelWithTab">
         <div class="empty-icon">💬</div>
         <p class="empty-title">请选择一个会话开始交流</p>
         <p class="empty-tip">或点击此处创建新会话</p>
