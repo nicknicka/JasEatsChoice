@@ -730,38 +730,15 @@ const fetchFriends = async () => {
   try {
     const response = await api.get(`/v1/contacts/friends?userId=${userId.value}`)
     if (response.code === '200') {
-      // 获取每个好友的详细信息
-      const friendsWithInfo = await Promise.all(
-        response.data.map(async (contact) => {
-          try {
-            const userResponse = await api.get(`/v1/users/${contact.targetId}`)
-            if (userResponse.code === '200' && userResponse.data) {
-              return {
-                id: contact.targetId,
-                name: userResponse.data.nickname || userResponse.data.username || '好友',
-                avatar: userResponse.data.avatar || '👤',
-                lastMessage: '',
-                time: '',
-                unreadCount: 0,
-                type: 'friend'
-              }
-            }
-          } catch (error) {
-            console.error(`获取好友 ${contact.targetId} 信息失败:`, error)
-          }
-          // 降级方案：显示基本信息
-          return {
-            id: contact.targetId,
-            name: '好友',
-            avatar: '👤',
-            lastMessage: '',
-            time: '',
-            unreadCount: 0,
-            type: 'friend'
-          }
-        })
-      )
-      friends.value = friendsWithInfo
+      friends.value = response.data.map((contact) => ({
+        id: contact.targetId,
+        name: '好友',
+        avatar: '👤',
+        lastMessage: '',
+        time: '',
+        unreadCount: 0,
+        type: 'friend'
+      }))
     }
   } catch (error) {
     console.error('获取好友列表失败:', error)
@@ -777,12 +754,14 @@ const fetchFriends = async () => {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 
   .chat-content {
     display: flex;
     gap: 16px;
     flex: 1;
     min-height: 0;
+    overflow: hidden;
 
     .conversation-list-wrapper {
       width: 240px;
