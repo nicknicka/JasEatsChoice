@@ -154,7 +154,7 @@ export function useMessageActions({ chatHistory, chatMessages, userId, formatMes
   /**
    * 撤回消息
    */
-  const recallMessage = async (message, chatMessages, selectedConversation) => {
+  const recallMessage = async (message, chatMessages, selectedConv) => {
     try {
       await ElMessageBox.confirm('确认撤回这条消息吗？', '撤回消息', {
         confirmButtonText: '确认',
@@ -172,8 +172,8 @@ export function useMessageActions({ chatHistory, chatMessages, userId, formatMes
           chatMessages.value[index].content = '消息已撤回'
         }
 
-        if (selectedConversation.value) {
-          selectedConversation.value.lastMessage = '消息已撤回'
+        if (selectedConv && selectedConv.value) {
+          selectedConv.value.lastMessage = '消息已撤回'
         }
 
         ElMessage.success('消息已撤回')
@@ -189,10 +189,10 @@ export function useMessageActions({ chatHistory, chatMessages, userId, formatMes
   /**
    * 处理消息操作命令
    */
-  const handleMessageCommand = async (command, message, conversations) => {
+  const handleMessageCommand = async (command, message, selectedConv) => {
     switch (command) {
       case 'recall':
-        await recallMessage(message, chatMessages, selectedConversation)
+        await recallMessage(message, chatMessages, selectedConv)
         break
       case 'reply':
         replyingTo.value = message

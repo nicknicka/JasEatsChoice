@@ -112,5 +112,52 @@ public class ChatController {
             return ResponseResult.fail("500", "消息标记已读失败");
         }
     }
+
+    /**
+     * 撤回消息
+     */
+    @ApiOperation("撤回消息")
+    @PostMapping("/messages/{messageId}/recall")
+    public ResponseResult<?> recallMessage(
+            @PathVariable String messageId,
+            @RequestBody Map<String, String> request) {
+
+        // 获取消息
+        ChatMsg chatMsg = chatMsgService.getById(messageId);
+        if (chatMsg == null) {
+            return ResponseResult.fail("404", "消息不存在");
+        }
+
+        // 验证用户身份（只有发送者才能撤回）
+        String userId = request.get("userId");
+        if (!chatMsg.getFromId().equals(userId)) {
+            return ResponseResult.fail("403", "无权撤回此消息");
+        }
+
+        // 检查消息是否已过期（2分钟内可以撤回）
+        LocalDateTime createTime = chatMsg.getCreateTime();
+        LocalDateTime now = LocalDateTime.now();
+        long minutesDiff = java.time.Duration.between(createTime, now).toMinutes();
+        if (minutesDiff > 2) {
+            return ResponseResult.fail("400", "消息已超过2分钟，无法撤回");
+        }
+
+        // 检查消息内容是否已被撤回
+        if ("消息已撤回".equals(chatMsg.getContent())) {
+            return ResponseResult.fail("400", "消息已被撤回");
+        }
+
+        // 更新消息内容为"消息已撤回"
+        ChatMsg updateMsg = new ChatMsg();
+        updateMsg.setId(messageId);
+        updateMsg.setContent("消息已撤回");
+
+        boolean success = chatMsgService.updateById(updateMsg);
+        if (success) {
+            return ResponseResult.success("消息撤回成功");
+        } else {
+            return ResponseResult.fail("500", "消息撤回失败");
+        }
+    }
 }
 

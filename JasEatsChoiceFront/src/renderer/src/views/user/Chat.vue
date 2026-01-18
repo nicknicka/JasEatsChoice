@@ -120,7 +120,7 @@
       v-model="forwardDialogVisible"
       :message="forwardMessage"
       :conversations="conversations"
-      @confirm="confirmForward"
+      @confirm="handleForwardConfirm"
     />
 
     <GroupDetailDialog v-model="groupDetailDialogVisible" :group-info="currentGroupInfo" />
@@ -233,6 +233,7 @@ const {
   replyingTo,
   forwardDialogVisible,
   forwardMessage,
+  selectedForwardTarget,
   searchMessages,
   clearSearch,
   jumpToSearchResult,
@@ -368,7 +369,25 @@ const selectConversation = async (conversation) => {
 
 // ========== 消息操作 ==========
 const handleMessageCommand = async (command, message) => {
-  await handleMessageCommandBase(command, message, conversations)
+  // 如果是回复命令，为消息对象添加 senderName 属性
+  if (command === 'reply') {
+    const messageWithName = {
+      ...message,
+      senderName: message.fromId === userId.value.toString()
+        ? '我'
+        : selectedConversation.value?.name || message.fromId
+    }
+    await handleMessageCommandBase(command, messageWithName, selectedConversation)
+  } else {
+    await handleMessageCommandBase(command, message, selectedConversation)
+  }
+}
+
+const handleForwardConfirm = async (data) => {
+  // 设置转发目标
+  selectedForwardTarget.value = data.targetId
+  // 调用转发确认函数
+  await confirmForward()
 }
 
 const sendMessage = async (content) => {
@@ -387,7 +406,15 @@ const sendMessage = async (content) => {
     messageData.replyTo = replyingTo.value.id
     messageData.replyContent = replyingTo.value.content
     messageData.replyFromId = replyingTo.value.fromId
-    messageData.replyFromName = replyingTo.value.senderName || replyingTo.value.fromId
+
+    // 确定回复消息的发送者显示名称
+    if (replyingTo.value.fromId === userId.value.toString()) {
+      // 回复自己的消息
+      messageData.replyFromName = '我'
+    } else {
+      // 回复他人的消息，使用会话名称
+      messageData.replyFromName = selectedConversation.value.name || replyingTo.value.fromId
+    }
   }
 
   const tempMessage = {

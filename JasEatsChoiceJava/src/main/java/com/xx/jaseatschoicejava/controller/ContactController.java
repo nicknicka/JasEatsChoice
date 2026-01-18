@@ -120,4 +120,70 @@ public class ContactController {
             return ResponseResult.fail("500", "删除好友失败");
         }
     }
+
+    /**
+     * 获取待处理的好友请求列表
+     */
+    @ApiOperation("获取待处理的好友请求列表")
+    @GetMapping("/friends/requests")
+    public ResponseResult<?> getFriendRequests(@RequestParam String userId) {
+        // 查找发给当前用户的待处理好友请求
+        List<Contact> requests = contactService.lambdaQuery()
+                .eq(Contact::getTargetId, userId)
+                .eq(Contact::getRelationType, "friend")
+                .eq(Contact::getStatus, "pending")
+                .orderByDesc(Contact::getCreateTime)
+                .list();
+        return ResponseResult.success(requests);
+    }
+
+    /**
+     * 接受好友请求
+     */
+    @ApiOperation("接受好友请求")
+    @PostMapping("/friends/accept")
+    public ResponseResult<?> acceptFriendRequest(@RequestParam String userId, @RequestParam String requesterId) {
+        // 1. 将请求者的记录状态改为normal
+        boolean success1 = contactService.lambdaUpdate()
+                .eq(Contact::getUserId, requesterId)
+                .eq(Contact::getTargetId, userId)
+                .eq(Contact::getRelationType, "friend")
+                .eq(Contact::getStatus, "pending")
+                .set(Contact::getStatus, "normal")
+                .update();
+
+        // 2. 为接受者创建双向好友关系
+        Contact newContact = new Contact();
+        newContact.setUserId(userId);
+        newContact.setTargetId(requesterId);
+        newContact.setRelationType("friend");
+        newContact.setStatus("normal");
+        boolean success2 = contactService.save(newContact);
+
+        if (success1 && success2) {
+            return ResponseResult.success("已接受好友请求");
+        } else {
+            return ResponseResult.fail("500", "接受好友请求失败");
+        }
+    }
+
+    /**
+     * 拒绝好友请求
+     */
+    @ApiOperation("拒绝好友请求")
+    @PostMapping("/friends/reject")
+    public ResponseResult<?> rejectFriendRequest(@RequestParam String userId, @RequestParam String requesterId) {
+        // 删除好友请求记录
+        boolean success = contactService.remove(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Contact>()
+                .eq(Contact::getUserId, requesterId)
+                .eq(Contact::getTargetId, userId)
+                .eq(Contact::getRelationType, "friend")
+                .eq(Contact::getStatus, "pending"));
+
+        if (success) {
+            return ResponseResult.success("已拒绝好友请求");
+        } else {
+            return ResponseResult.fail("500", "拒绝好友请求失败");
+        }
+    }
 }

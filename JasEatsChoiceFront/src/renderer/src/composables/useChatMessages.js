@@ -21,6 +21,20 @@ export function useChatMessages({ userId, selectedConversation }) {
   const messagesContainerRef = ref(null)
 
   /**
+   * 获取回复消息的显示名称
+   */
+  const getReplyDisplayName = (replyFromId) => {
+    if (!replyFromId) return '未知'
+
+    if (replyFromId === userId.value.toString()) {
+      return '我'
+    }
+
+    // 返回会话名称（对于单聊是对手的名字，对于群聊是群名称）
+    return selectedConversation.value?.name || replyFromId
+  }
+
+  /**
    * 格式化消息时间
    */
   const formatMessageTime = (time) => {
@@ -71,11 +85,18 @@ export function useChatMessages({ userId, selectedConversation }) {
     messages.forEach((msg) => {
       if (!messageIds.has(msg.id)) {
         messageIds.add(msg.id)
-        uniqueMessages.push({
+        const processedMsg = {
           ...msg,
           formattedTime: formatMessageTime(msg.createTime || msg.time),
           fromId: msg.fromId || msg.sender || '未知'
-        })
+        }
+
+        // 如果有回复信息但没有回复者名称，则生成显示名称
+        if (msg.replyTo && !msg.replyFromName) {
+          processedMsg.replyFromName = getReplyDisplayName(msg.replyFromId)
+        }
+
+        uniqueMessages.push(processedMsg)
       }
     })
 
@@ -233,6 +254,12 @@ export function useChatMessages({ userId, selectedConversation }) {
         formattedTime: formatMessageTime(message.createTime || message.time),
         fromId: message.fromId || message.sender || '未知'
       }
+
+      // 如果有回复信息但没有回复者名称，则生成显示名称
+      if (message.replyTo && !message.replyFromName) {
+        processedMsg.replyFromName = getReplyDisplayName(message.replyFromId)
+      }
+
       chatMessages.value.push(processedMsg)
       chatHistory.value[sessionId] = chatMessages.value
       scrollToBottom()
