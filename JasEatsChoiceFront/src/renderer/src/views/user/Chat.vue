@@ -12,6 +12,7 @@
           @select="selectConversation"
           @contextmenu="showContextMenu"
           @toggle-pin="togglePin"
+          @create-new="openActionPanelWithTab"
         />
 
         <!-- 会话右键菜单 -->

@@ -53,10 +53,10 @@
     </div>
 
     <!-- 会话列表空数据提示 -->
-    <div v-else class="empty-conversations">
+    <div v-else class="empty-conversations" @click="$emit('create-new')">
       <div class="empty-icon">📭</div>
       <p class="empty-title">暂无会话</p>
-      <p class="empty-tip">点击上方"新建聊天"按钮开始对话</p>
+      <p class="empty-tip">点击此处或上方"新建"按钮开始对话</p>
     </div>
   </div>
 </template>
@@ -73,7 +73,7 @@ defineProps({
   }
 })
 
-defineEmits(['select', 'contextmenu', 'toggle-pin'])
+defineEmits(['select', 'contextmenu', 'toggle-pin', 'create-new'])
 </script>
 
 <style scoped lang="less">
@@ -276,6 +276,29 @@ defineEmits(['select', 'contextmenu', 'toggle-pin'])
     text-align: center;
     padding: 60px 20px;
     min-height: 400px;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.3s ease;
+
+    &:hover {
+      background: linear-gradient(135deg, #f0f7ff 0%, #e6f2ff 100%);
+
+      .empty-icon {
+        transform: scale(1.1);
+      }
+
+      .empty-title {
+        color: #3b82f6;
+      }
+
+      .empty-tip {
+        color: #60a5fa;
+      }
+    }
+
+    &:active {
+      transform: scale(0.98);
+    }
 
     .empty-icon {
       font-size: 80px;
@@ -285,6 +308,7 @@ defineEmits(['select', 'contextmenu', 'toggle-pin'])
       display: flex;
       align-items: center;
       justify-content: center;
+      transition: transform 0.3s ease;
     }
 
     .empty-title {
@@ -295,6 +319,7 @@ defineEmits(['select', 'contextmenu', 'toggle-pin'])
       display: flex;
       align-items: center;
       justify-content: center;
+      transition: color 0.3s ease;
     }
 
     .empty-tip {
@@ -305,6 +330,7 @@ defineEmits(['select', 'contextmenu', 'toggle-pin'])
       display: flex;
       align-items: center;
       justify-content: center;
+      transition: color 0.3s ease;
     }
   }
 }

@@ -552,7 +552,7 @@ generateRecommendations()
 
 :deep(.el-dialog__header) {
   padding: 24px 24px 16px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
   margin: 0;
 
   .el-dialog__title {
@@ -619,16 +619,16 @@ generateRecommendations()
       left: 0;
       right: 0;
       bottom: 0;
-      background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(29, 78, 216, 0.1) 100%);
       opacity: 0;
       transition: opacity 0.3s ease;
     }
 
     &:hover {
       background-color: #fff;
-      border-color: #667eea;
+      border-color: #3b82f6;
       transform: translateY(-4px);
-      box-shadow: 0 8px 24px rgba(102, 126, 234, 0.25);
+      box-shadow: 0 8px 24px rgba(59, 130, 246, 0.25);
 
       &::before {
         opacity: 1;
@@ -640,9 +640,9 @@ generateRecommendations()
     }
 
     &.active {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      border-color: #667eea;
-      box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+      border-color: #3b82f6;
+      box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);
       transform: translateY(-2px);
 
       .tab-icon {
@@ -687,8 +687,8 @@ generateRecommendations()
 
       &:hover,
       &.is-focus {
-        border-color: #667eea;
-        box-shadow: 0 4px 16px rgba(102, 126, 234, 0.2);
+        border-color: #3b82f6;
+        box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
       }
     }
 
@@ -737,11 +737,11 @@ generateRecommendations()
   }
 
   &::-webkit-scrollbar-thumb {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
     border-radius: 4px;
 
     &:hover {
-      background: linear-gradient(135deg, #5568d3 0%, #653a8a 100%);
+      background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
     }
   }
 
@@ -783,16 +783,16 @@ generateRecommendations()
           left: 0;
           right: 0;
           height: 4px;
-          background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+          background: linear-gradient(90deg, #3b82f6 0%, #1d4ed8 100%);
           transform: scaleX(0);
           transition: transform 0.3s ease;
         }
 
         &:hover {
           background: #fff;
-          border-color: #667eea;
+          border-color: #3b82f6;
           transform: translateY(-6px);
-          box-shadow: 0 12px 24px rgba(102, 126, 234, 0.2);
+          box-shadow: 0 12px 24px rgba(59, 130, 246, 0.2);
 
           &::before {
             transform: scaleX(1);
@@ -810,11 +810,11 @@ generateRecommendations()
           display: flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
           border-radius: 50%;
           margin-bottom: 14px;
           transition: transform 0.3s ease;
-          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
         }
 
         .user-name {
@@ -851,9 +851,9 @@ generateRecommendations()
 
           &:hover {
             background: #fff;
-            border-color: #667eea;
+            border-color: #3b82f6;
             transform: translateX(6px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
           }
 
           .user-avatar {
@@ -863,10 +863,10 @@ generateRecommendations()
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
             border-radius: 50%;
             margin-right: 16px;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
           }
 
           .user-info {
@@ -923,7 +923,7 @@ generateRecommendations()
       .member-tag {
         font-size: 14px;
         padding: 8px 14px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
         border: none;
         color: #fff;
         font-weight: 500;
@@ -974,8 +974,8 @@ generateRecommendations()
 
           &:hover {
             background: #fff;
-            border-color: #667eea;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+            border-color: #3b82f6;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
           }
 
           .friend-avatar {
@@ -985,10 +985,10 @@ generateRecommendations()
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
             border-radius: 50%;
             margin-right: 14px;
-            box-shadow: 0 3px 10px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 3px 10px rgba(59, 130, 246, 0.3);
           }
 
           .friend-info {
@@ -1024,17 +1024,17 @@ generateRecommendations()
             transition: all 0.3s ease;
 
             &:hover {
-              border-color: #667eea;
-              color: #667eea;
+              border-color: #3b82f6;
+              color: #3b82f6;
             }
           }
 
           &.is-active {
             .el-radio-button__inner {
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-              border-color: #667eea;
+              background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+              border-color: #3b82f6;
               color: #fff;
-              box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+              box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
             }
           }
         }
@@ -1065,8 +1065,8 @@ generateRecommendations()
 
         &:hover {
           background: #fff;
-          border-color: #667eea;
-          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+          border-color: #3b82f6;
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
         }
 
         .user-avatar {
@@ -1076,10 +1076,10 @@ generateRecommendations()
           display: flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
           border-radius: 50%;
           margin-right: 16px;
-          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
         }
 
         .user-info {
@@ -1102,12 +1102,12 @@ generateRecommendations()
           border-radius: 8px;
           padding: 10px 20px;
           font-weight: 500;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
           border: none;
 
           &:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
           }
 
           &:disabled {
@@ -1138,12 +1138,12 @@ generateRecommendations()
     }
 
     &.el-button--primary {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
       border: none;
 
       &:hover {
-        background: linear-gradient(135deg, #5568d3 0%, #653a8a 100%);
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
       }
 
       &:disabled {
