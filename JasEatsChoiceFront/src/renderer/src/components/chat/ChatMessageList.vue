@@ -38,7 +38,7 @@
       </div>
 
       <div class="message-content">
-        <!-- 回复引用 -->
+        <!-- 引用引用 -->
         <div v-if="message.replyTo" class="message-reply-quote">
           <div class="quote-bar"></div>
           <div class="quote-content">
@@ -61,7 +61,7 @@
           <el-button type="text" size="small" class="msg-action-btn">⋯</el-button>
           <template #dropdown>
             <el-dropdown-menu>
-              <el-dropdown-item command="reply">回复</el-dropdown-item>
+              <el-dropdown-item command="reply">引用</el-dropdown-item>
               <el-dropdown-item command="forward">转发</el-dropdown-item>
               <el-dropdown-item
                 v-if="message.fromId === currentUserId && canRecall(message)"

@@ -2,7 +2,7 @@
   <div v-if="replyingTo" class="reply-preview">
     <div class="reply-content">
       <div class="reply-header">
-        <span class="reply-label">回复 @{{ replyingTo.senderName || replyingTo.fromId }}</span>
+        <span class="reply-label">引用 @{{ replyingTo.senderName || replyingTo.fromId }}</span>
         <el-icon @click="$emit('cancel')" style="cursor: pointer"><Close /></el-icon>
       </div>
       <div class="reply-text">{{ replyingTo.content }}</div>

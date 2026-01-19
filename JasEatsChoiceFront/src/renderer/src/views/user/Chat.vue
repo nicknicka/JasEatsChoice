@@ -777,7 +777,7 @@ const fetchFriends = async () => {
 .chat-container {
   padding: 16px;
   background-color: #f5f7fa;
-  height: 100vh;
+  height: 85vh;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;

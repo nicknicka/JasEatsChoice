@@ -1,6 +1,6 @@
 <template>
   <div class="message-input-container">
-    <!-- 回复预览 -->
+    <!-- 引用预览 -->
     <ReplyPreview :replying-to="replyingTo" @cancel="$emit('cancel-reply')" />
 
     <div class="input-wrapper">
