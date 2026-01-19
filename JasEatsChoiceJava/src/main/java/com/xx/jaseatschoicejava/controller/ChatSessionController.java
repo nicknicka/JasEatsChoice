@@ -9,6 +9,7 @@ import com.xx.jaseatschoicejava.service.ChatMsgService;
 import com.xx.jaseatschoicejava.service.ChatSessionService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,6 +21,7 @@ import java.util.stream.Collectors;
 /**
  * 聊天会话控制器
  */
+@Slf4j
 @Api(tags = "聊天会话管理")
 @RestController
 @RequestMapping("/v1/chat")
@@ -42,8 +44,9 @@ public class ChatSessionController {
         queryWrapper.orderByDesc(ChatSession::getPinned); // 置顶的在前
         queryWrapper.orderByDesc(ChatSession::getLastMessageTime); // 按最后消息时间降序
 
+        log.info("获取用户会话列表: userId={}", userId);
         List<ChatSession> sessions = chatSessionService.list(queryWrapper);
-
+        log.info("获取用户会话列表: {}", sessions);
         // 转换为前端需要的格式
         List<Map<String, Object>> result = sessions.stream()
                 .map(session -> {

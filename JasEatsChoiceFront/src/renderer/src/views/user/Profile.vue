@@ -747,7 +747,7 @@ const saveEditProfile = () => {
         try {
           saving.value = true
 
-          const userId = parseInt(localStorage.getItem('userId'), 10)
+          const userId = parseInt(String(authStore.userId || 1), 10)
 
           // 发送PUT请求更新用户资料
           const response = await api.put(
@@ -814,7 +814,7 @@ const logout = () => {
 // 分享功能
 const shareProfile = () => {
   // 生成分享链接
-  const userId = parseInt(localStorage.getItem('userId') || '1', 10)
+  const userId = parseInt(String(authStore.userId || 1) || '1', 10)
   shareLink.value = `${window.location.origin}/user/profile/${userId}`
 
   // 生成二维码

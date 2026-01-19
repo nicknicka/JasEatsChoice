@@ -185,12 +185,17 @@ import api from '../../utils/api.js'
 import { decodeJwt } from '../../utils/api.js'
 
 // ========== 用户信息 ==========
-const userId = ref(parseInt(localStorage.getItem('userId') || '1', 10))
-const token = localStorage.getItem('token')
+import pinia from '../../store'
+import { useAuthStore } from '../../store/authStore'
+
+const authStore = useAuthStore(pinia)
+const userId = ref(authStore.userId || 1)
+const token = ref(authStore.token || '')
 const msgPageSize = MESSAGE_CONFIG.DEFAULT_PAGE_SIZE
 
-if (token) {
-  const decodedToken = decodeJwt(token)
+// 如果 token 存在，解码获取 userId
+if (token.value) {
+  const decodedToken = decodeJwt(token.value)
   if (decodedToken && decodedToken.userId) {
     userId.value = parseInt(decodedToken.userId, 10)
   }
@@ -270,7 +275,7 @@ const handleWebSocketMessage = (data) => {
       ElMessage.info(data.content?.message || '收到新通知')
       break
     default:
-      console.log('未知消息类型:', data.type)
+      console.log('未知消息类型:', data)
   }
 }
 
@@ -729,26 +734,41 @@ const goToOrderConfirmation = () => {
 
 // ========== 生命周期 ==========
 onMounted(async () => {
+  console.log('🚀 [Chat] Chat组件挂载，开始初始化')
   try {
     // 先从本地加载聊天历史缓存（同步函数）
     loadChatHistoryFromLocal()
+    console.log('📦 [Chat] 本地缓存加载完成', Object.keys(chatHistory.value))
 
     const conversationsResponse = await api.get(`/v1/chat/users/${userId.value}/chat-sessions`)
+
+    console.log('🚀 [Chat] 会话列表, conversationsResponse', conversationsResponse)
+    console.log('📡 [Chat] 会话列表API响应', {
+      code: conversationsResponse.code,
+      dataLength: conversationsResponse.data?.length,
+      userId: userId.value
+    })
 
     await fetchFriends()
 
     if (conversationsResponse.code === '200') {
       conversations.value = conversationsResponse.data
+      console.log(`👥 [Chat] 会话列表已更新 - 共 ${conversations.value.length} 个会话`)
 
       if (sortedConversations.value.length > 0) {
         selectedConversation.value = sortedConversations.value[0]
+        console.log(`✅ [Chat] 自动选择第一个会话 - ID: ${selectedConversation.value.id}, 名称: ${selectedConversation.value.name}`)
         await loadChatMessages(selectedConversation.value.id)
+      } else {
+        console.warn('⚠️ [Chat] 会话列表为空，没有可显示的会话')
       }
+    } else {
+      console.error(`❌ [Chat] 获取会话列表失败 - code: ${conversationsResponse.code}`)
     }
 
     initWebSocket()
   } catch (error) {
-    console.error('加载数据失败:', error)
+    console.error('❌ [Chat] 加载数据失败:', error)
     ElMessage.error('加载数据失败，请稍后重试')
   }
 })

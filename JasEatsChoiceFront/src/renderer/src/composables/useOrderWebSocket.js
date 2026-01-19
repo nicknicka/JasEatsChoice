@@ -5,6 +5,8 @@ import { ref, onUnmounted } from 'vue'
 import { WS_CONFIG } from '../config'
 import { ElMessage } from 'element-plus'
 import { ORDER_STATUS_MAP } from '../utils/orderStatus'
+import pinia from '../store'
+import { useAuthStore } from '../store/authStore'
 
 // WebSocket 配置常量
 const MAX_RETRIES = 3
@@ -17,6 +19,7 @@ const HEARTBEAT_INTERVAL = 30000 // 30秒心跳
  * @param {Function} onOrderUpdate - 订单更新回调函数
  */
 export function useOrderWebSocket(onOrderUpdate) {
+  const authStore = useAuthStore(pinia)
   const ws = ref(null)
   const isConnected = ref(false)
   const retryCount = ref(0)
@@ -80,8 +83,13 @@ export function useOrderWebSocket(onOrderUpdate) {
    * 发送认证消息
    */
   function sendAuthMessage() {
-    const userId = localStorage.getItem('userId') || '1'
-    const token = localStorage.getItem('token') || 'test-token'
+    const userId = authStore.userId || '1'
+    const token = authStore.token || ''
+
+    if (!token) {
+      console.error('未找到认证 token，无法发送认证消息')
+      return
+    }
 
     try {
       if (ws.value && ws.value.readyState === WebSocket.OPEN) {
@@ -94,6 +102,7 @@ export function useOrderWebSocket(onOrderUpdate) {
             token
           })
         )
+        console.log('认证消息已发送，userId:', userId)
       }
     } catch (error) {
       console.error('发送认证消息失败:', error)

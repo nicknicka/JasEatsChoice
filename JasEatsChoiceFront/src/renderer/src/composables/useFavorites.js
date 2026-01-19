@@ -1,6 +1,12 @@
 /**
  * 收藏功能相关逻辑
  */
+
+import pinia from '../../store'
+import { useAuthStore } from '../../store/authStore'
+
+const authStore = useAuthStore(pinia)
+
 import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import axios from 'axios'
@@ -39,7 +45,7 @@ export function useFavorites() {
   const fetchFavoritesFromBackend = async () => {
     try {
       isLoading.value = true
-      const userId = localStorage.getItem('userId') || '1'
+      const userId = String(authStore.userId || 1) || '1'
 
       const response = await axios.get(`${API_CONFIG.baseURL}/v1/collections`, {
         params: { userId }
@@ -66,7 +72,7 @@ export function useFavorites() {
    */
   const addFavorite = async (item) => {
     try {
-      const userId = localStorage.getItem('userId') || '1'
+      const userId = String(authStore.userId || 1) || '1'
 
       // 检查是否已收藏
       const isFavorited = favorites.value.some(
@@ -116,7 +122,7 @@ export function useFavorites() {
       if (!isFavorited) {
         favorites.value.push({
           id: Date.now(),
-          userId: localStorage.getItem('userId') || '1',
+          userId: String(authStore.userId || 1) || '1',
           collectableType: item.type,
           collectableId: String(item.id),
           createTime: new Date().toISOString(),
@@ -143,7 +149,7 @@ export function useFavorites() {
    */
   const removeFavorite = async (item) => {
     try {
-      const userId = localStorage.getItem('userId') || '1'
+      const userId = String(authStore.userId || 1) || '1'
 
       // 找到收藏项
       const favoriteItem = favorites.value.find(

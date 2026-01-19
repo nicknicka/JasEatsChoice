@@ -1,10 +1,10 @@
 /**
  * 聊天消息管理
  */
-import { ref, watch, nextTick } from 'vue'
+import { ref, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import api from '@/utils/api.js'
-import { MESSAGE_CONFIG, STORAGE_CONFIG, MESSAGE_STATUS } from '@/constants/chatConstants'
+import { MESSAGE_CONFIG, STORAGE_CONFIG } from '@/constants/chatConstants'
 
 export function useChatMessages({ userId, selectedConversation }) {
   // 聊天记录
@@ -174,18 +174,20 @@ export function useChatMessages({ userId, selectedConversation }) {
       hasMoreMessages.value = true
     }
 
-    // 使用缓存
+    // 先显示缓存（快速响应用户体验）
     if (!loadMore && chatHistory.value[sessionId]) {
       chatMessages.value = chatHistory.value[sessionId]
       scrollToBottom()
-      return
+      console.log(`💾 [Chat] 已加载缓存消息 - sessionId: ${sessionId}, 消息数: ${chatMessages.value.length}条`)
     }
 
     if (isLoadingMessages.value || !hasMoreMessages.value) {
+      console.log(`⏸️ [Chat] 跳过加载 - isLoading: ${isLoadingMessages.value}, hasMore: ${hasMoreMessages.value}`)
       return
     }
 
     isLoadingMessages.value = true
+    console.log(`🔄 [Chat] 开始加载会话消息 - sessionId: ${sessionId}, pageNum: ${msgPageNum.value}, loadMore: ${loadMore}`)
 
     try {
       const response = await api.get(`/v1/chat/${sessionId}/messages`, {
@@ -196,12 +198,22 @@ export function useChatMessages({ userId, selectedConversation }) {
         }
       })
 
+      console.log(`📡 [Chat] API响应 -`, {
+        code: response.code,
+        total: response.data?.total,
+        recordsCount: response.data?.records?.length,
+        pageNum: msgPageNum.value
+      })
+
       if (response.code === '200') {
         const data = response.data
         const messages = data.records || []
         const processedMessages = preprocessMessages(messages)
 
+        console.log(`✅ [Chat] 消息处理完成 - 原始: ${messages.length}条, 去重后: ${processedMessages.length}条`)
+
         if (loadMore) {
+          const previousCount = chatMessages.value.length
           chatMessages.value = [...processedMessages, ...chatMessages.value]
           const scrollTop = messagesContainerRef.value?.scrollTop || 0
           nextTick(() => {
@@ -209,26 +221,36 @@ export function useChatMessages({ userId, selectedConversation }) {
               messagesContainerRef.value.scrollTop = scrollTop + 100
             }
           })
+          console.log(`📜 [Chat] 加载更多消息 - 之前: ${previousCount}条, 新增: ${processedMessages.length}条, 总计: ${chatMessages.value.length}条`)
         } else {
+          // 用后端数据覆盖缓存数据（保证数据准确性）
           chatHistory.value[sessionId] = processedMessages
           chatMessages.value = processedMessages
           scrollToBottom()
+          console.log(`📝 [Chat] 从服务器加载消息 - 共: ${processedMessages.length}条, 已更新缓存和显示`)
         }
 
         totalMessages.value = data.total || 0
         hasMoreMessages.value =
           data.records && data.records.length >= MESSAGE_CONFIG.DEFAULT_PAGE_SIZE
 
+        console.log(`📊 [Chat] 分页信息 - 总消息数: ${totalMessages.value}, 是否有更多: ${hasMoreMessages.value}`)
+
         saveChatHistoryToLocal()
       }
     } catch (error) {
-      console.error('加载聊天记录失败:', error)
+      console.error('❌ [Chat] 加载聊天记录失败 -', {
+        sessionId,
+        error: error.message,
+        stack: error.stack
+      })
       ElMessage.error('加载聊天记录失败，请稍后重试')
       if (!loadMore) {
         chatMessages.value = []
       }
     } finally {
       isLoadingMessages.value = false
+      console.log(`✅ [Chat] 加载完成 - isLoading: ${isLoadingMessages.value}`)
     }
   }
 

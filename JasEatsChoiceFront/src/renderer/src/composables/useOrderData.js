@@ -1,6 +1,12 @@
 /**
  * 订单数据获取组合式函数
  */
+
+import pinia from '../../store'
+import { useAuthStore } from '../../store/authStore'
+
+const authStore = useAuthStore(pinia)
+
 import { ref } from 'vue'
 import axios from 'axios'
 import { API_CONFIG } from '../config'
@@ -28,7 +34,7 @@ export function useOrderData() {
    * @returns {number} 用户ID
    */
   function getUserId() {
-    const userId = localStorage.getItem('userId') || DEFAULT_USER_ID
+    const userId = String(authStore.userId || 1) || DEFAULT_USER_ID
     return parseInt(userId, 10)
   }
 

@@ -4,8 +4,12 @@
 import { ref, onBeforeUnmount } from 'vue'
 import { ElMessage } from 'element-plus'
 import { WEBSOCKET_CONFIG, MESSAGE_TYPES } from '@/constants/chatConstants'
+import pinia from '@/store'
+import { useAuthStore } from '@/store/authStore'
 
 export function useWebSocketChat({ userId, token, onMessage }) {
+  // 使用 authStore 获取认证信息
+  const authStore = useAuthStore(pinia)
   const websocket = ref(null)
   const reconnectTimer = ref(null)
   const heartbeatTimer = ref(null)
@@ -107,9 +111,13 @@ export function useWebSocketChat({ userId, token, onMessage }) {
       // 构建 WebSocket URL - 修改为正确的格式
       const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
       // 使用固定的端口11277，后端Netty服务器配置的端口
-      const wsUrl = `${wsProtocol}//localhost:11277/ws/chat?userId=${userId.value}&token=${token}`
+      // 从 authStore 获取 token 和 userId
+      const authToken = authStore.token || token
+      const authUserId = authStore.userId || userId.value
+      const wsUrl = `${wsProtocol}//localhost:11277/ws/chat?userId=${authUserId}&token=${authToken}`
 
       console.log('尝试连接到WebSocket服务器:', wsUrl)
+      console.log('当前用户:', authUserId, 'Token存在:', !!authToken)
 
       websocket.value = new WebSocket(wsUrl)
 

@@ -209,6 +209,11 @@
 </template>
 
 <script setup>
+import pinia from '../../store'
+import { useAuthStore } from '../../store/authStore'
+
+const authStore = useAuthStore(pinia)
+
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import {
@@ -358,7 +363,7 @@ const removeCollection = (id) => {
     .then(async () => {
       try {
         // 获取当前用户ID
-        const userId = localStorage.getItem('userId') || 1
+        const userId = String(authStore.userId || 1) || 1
         // 发送删除请求到后端
         const response = await axios.delete(`${API_CONFIG.baseURL}/v1/collections`, {
           params: {
@@ -426,7 +431,7 @@ const clearAll = () => {
     .then(async () => {
       try {
         // 获取当前用户ID
-        const userId = localStorage.getItem('userId') || '1'
+        const userId = String(authStore.userId || 1) || '1'
 
         // 调用后端API清空所有收藏
         const response = await axios.delete(`${API_CONFIG.baseURL}/v1/collections/user/${userId}`)
@@ -469,7 +474,7 @@ onMounted(async () => {
   loading.value = true
   try {
     // 获取当前用户ID（从localStorage中获取）
-    const userId = localStorage.getItem('userId') || '1'
+    const userId = String(authStore.userId || 1) || '1'
     // 从后端获取收藏数据
     const response = await axios.get(`${API_CONFIG.baseURL}/v1/collections`, {
       params: { userId }

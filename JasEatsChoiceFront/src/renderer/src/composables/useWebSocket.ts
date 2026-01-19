@@ -4,8 +4,11 @@
 import { WS_CONFIG } from '../constants/wsConstants'
 import { HOME_CONSTANTS } from '../constants/home'
 import type { WebSocketMessage, WebSocketAuthMessage } from '../types'
+import pinia from '../store'
+import { useAuthStore } from '../store/authStore'
 
 export function useWebSocket() {
+  const authStore = useAuthStore(pinia)
   let wsAttempts = 0
   const maxAttempts = HOME_CONSTANTS.WS.MAX_ATTEMPTS
 
@@ -41,10 +44,17 @@ export function useWebSocket() {
   const sendAuthMessage = () => {
     const authMsg: WebSocketAuthMessage = {
       msgType: 'auth',
-      userId: localStorage.getItem('userId') || '',
-      token: localStorage.getItem('token') || 'test-token'
+      userId: String(authStore.userId || ''),
+      token: authStore.token || ''
     }
+
+    if (!authMsg.token) {
+      console.error('未找到认证 token，无法发送认证消息')
+      return
+    }
+
     sendWebSocketMessage(authMsg)
+    console.log('认证消息已发送，userId:', authMsg.userId)
   }
 
   /**

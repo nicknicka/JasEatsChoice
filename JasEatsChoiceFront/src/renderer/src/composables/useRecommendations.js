@@ -1,6 +1,12 @@
 /**
  * 推荐系统相关逻辑
  */
+
+import pinia from '../../store'
+import { useAuthStore } from '../../store/authStore'
+
+const authStore = useAuthStore(pinia)
+
 import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import axios from 'axios'
@@ -196,7 +202,7 @@ export function useRecommendations() {
   const fetchRecommendationsFromBackend = async () => {
     try {
       isLoading.value = true
-      const userId = parseInt(localStorage.getItem('userId') || '1', 10)
+      const userId = parseInt(String(authStore.userId || 1) || '1', 10)
 
       const response = await axios.get(`${API_CONFIG.baseURL}/v1/recommend/recommend/${userId}`)
 

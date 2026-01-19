@@ -1,4 +1,9 @@
 <script setup>
+import pinia from '../../store'
+import { useAuthStore } from '../../store/authStore'
+
+const authStore = useAuthStore(pinia)
+
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Loading, Select, Close } from '@element-plus/icons-vue'
@@ -7,7 +12,7 @@ import { API_CONFIG } from '../../config/index.js'
 import { useFriendManagement } from '../../composables/useFriendManagement.js'
 
 // 用户ID
-const userId = ref(parseInt(localStorage.getItem('userId') || '1', 10))
+const userId = ref(parseInt(String(authStore.userId || 1) || '1', 10))
 
 // ========== 好友管理 ==========
 const {

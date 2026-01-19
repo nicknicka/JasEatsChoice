@@ -171,6 +171,11 @@
 </template>
 
 <script setup>
+import pinia from '../../store'
+import { useAuthStore } from '../../store/authStore'
+
+const authStore = useAuthStore(pinia)
+
 import { ref, reactive, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Edit, Delete, Plus } from '@element-plus/icons-vue'
@@ -248,7 +253,7 @@ onMounted(async () => {
 
   try {
     // 从localStorage获取当前用户ID
-    const userId = localStorage.getItem('userId') || 1
+    const userId = String(authStore.userId || 1) || 1
 
     // 调用后端API获取地址列表
     const response = await axios.get(`${API_CONFIG.baseURL}/v1/users/${userId}/addresses`)
@@ -293,7 +298,7 @@ onMounted(async () => {
 const addAddress = async () => {
   try {
     // 从localStorage获取当前用户ID
-    const userId = localStorage.getItem('userId') || 1
+    const userId = String(authStore.userId || 1) || 1
 
     // 映射前端表单数据为后端需要的格式
     const addressData = {
@@ -317,7 +322,7 @@ const addAddress = async () => {
       // 重新加载地址列表
       try {
         // 从localStorage获取当前用户ID
-        const userId = localStorage.getItem('userId') || 1
+        const userId = String(authStore.userId || 1) || 1
         // 调用后端API获取地址列表
         const response = await axios.get(`${API_CONFIG.baseURL}/v1/users/${userId}/addresses`)
 
@@ -381,7 +386,7 @@ const editAddress = (address) => {
 const updateAddress = async () => {
   try {
     // 从localStorage获取当前用户ID
-    const userId = localStorage.getItem('userId') || 1
+    const userId = String(authStore.userId || 1) || 1
 
     // 映射前端表单数据为后端需要的格式
     const addressData = {
@@ -442,7 +447,7 @@ const deleteAddress = async (address) => {
 
   try {
     // 从localStorage获取当前用户ID
-    const userId = localStorage.getItem('userId') || 1
+    const userId = String(authStore.userId || 1) || 1
 
     // 调用后端API删除地址
     const response = await axios.delete(
@@ -481,7 +486,7 @@ const deleteAddress = async (address) => {
 const setDefault = async (address) => {
   try {
     // 从localStorage获取当前用户ID
-    const userId = localStorage.getItem('userId') || 1
+    const userId = String(authStore.userId || 1) || 1
 
     // 映射前端地址数据为后端需要的格式
     const addressData = {

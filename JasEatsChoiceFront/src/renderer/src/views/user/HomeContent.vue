@@ -20,8 +20,12 @@ import api from '../../utils/api.js'
 import { API_CONFIG } from '../../config/index.js'
 // 导入 WebSocket 常量
 import { WS_CONFIG } from '../../constants/wsConstants.js'
+// 导入 authStore
+import pinia from '../../store'
+import { useAuthStore } from '../../store/authStore'
 
 const router = useRouter()
+const authStore = useAuthStore(pinia)
 
 // 使用天气组合式函数
 const {
@@ -313,12 +317,19 @@ if (!listenersRegistered && window.api) {
     // 必要时发送身份验证
     const authMsg = {
       msgType: 'auth',
-      fromId: localStorage.getItem('userId'), // 用户ID作为发送者ID
+      fromId: String(authStore.userId || ''), // 用户ID作为发送者ID
       toId: '', // auth消息不需要接收者
       content: '', // auth消息不需要内容
-      token: localStorage.getItem('token') // 使用实际的token
+      token: authStore.token || '' // 使用实际的token
     }
+
+    if (!authMsg.token) {
+      console.error('未找到认证 token，WebSocket 认证失败')
+      return
+    }
+
     sendWebSocketMessage(authMsg)
+    console.log('认证消息已发送，userId:', authMsg.fromId)
   })
 
   window.api?.onWebSocketMessage((message) => {

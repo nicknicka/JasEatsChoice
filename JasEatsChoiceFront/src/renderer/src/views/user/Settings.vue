@@ -270,6 +270,10 @@ import { ref, onMounted, inject } from 'vue'
 import { ElMessage, ElDialog, ElInput, ElForm, ElFormItem } from 'element-plus'
 import api, { decodeJwt } from '../../utils/api.js'
 import { API_CONFIG } from '../../config/index.js'
+import pinia from '../../store'
+import { useAuthStore } from '../../store/authStore'
+
+const authStore = useAuthStore(pinia)
 
 // User information
 const userInfo = ref({
@@ -336,8 +340,8 @@ const passwordForm = ref({
 onMounted(() => {
   // Fetch user information from backend
   const fetchUserInfo = () => {
-    const token = localStorage.getItem('token')
-    let userId = parseInt(localStorage.getItem('userId') || '1', 10) // 默认值
+    const token = authStore.token
+    let userId = authStore.userId || 1
 
     if (token) {
       const decodedToken = decodeJwt(token)
