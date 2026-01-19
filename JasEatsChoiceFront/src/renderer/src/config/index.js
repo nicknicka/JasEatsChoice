@@ -123,5 +123,6 @@ export const API_CONFIG = {
 
 // WebSocket配置
 export const WS_CONFIG = {
-  url: 'ws://localhost:11277/ws' // WebSocket服务器地址 (包含路径/ws)
+  url: 'ws://localhost:11277/ws', // WebSocket服务器地址 - 通用端点（用于订单等）
+  chatUrl: 'ws://localhost:11277/ws/chat' // 聊天专用端点
 }

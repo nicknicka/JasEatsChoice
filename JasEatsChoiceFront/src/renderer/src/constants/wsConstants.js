@@ -1,7 +1,7 @@
 // WebSocket配置
 export const WS_CONFIG = {
   URL: 'ws://localhost:11277', // WebSocket服务器地址
-  ENDPOINT: '/ws' // WebSocket端点路径
+  ENDPOINT: '/ws/chat' // WebSocket端点路径（必须与后端NettyServer配置一致）
 }
 
 // WebSocket消息类型

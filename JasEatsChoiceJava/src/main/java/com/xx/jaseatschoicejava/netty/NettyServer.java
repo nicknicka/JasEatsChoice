@@ -42,6 +42,12 @@ public class NettyServer {
     @Autowired
     private JwtUtil jwtUtil;
 
+    @Autowired
+    private NettyChatHandler chatHandler;
+
+    @Autowired
+    private NettyOrderHandler orderHandler;
+
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
     private EventExecutorGroup businessGroup;
@@ -90,15 +96,15 @@ public class NettyServer {
                             pipeline.addLast(new io.netty.handler.codec.http.HttpObjectAggregator(65536));
                             // WebSocket握手认证处理器（在WebSocket协议处理器之前）
                             pipeline.addLast(new WebSocketAuthHandler(jwtUtil));
-                            // WebSocket协议处理器，指定路径为/ws/chat
-                            pipeline.addLast(new io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler("/ws/chat"));
+                            // WebSocket协议处理器，统一使用/ws路径
+                            pipeline.addLast(new io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler("/ws"));
                             // 字符串解码器
                             pipeline.addLast(new StringDecoder(CharsetUtil.UTF_8));
                             // 字符串编码器
                             pipeline.addLast(new StringEncoder(CharsetUtil.UTF_8));
 
-                            // 消息处理Handler，放在业务线程池处理
-                            pipeline.addLast(businessGroup, new NettyChatHandler(chatMsgService));
+                            // 路径路由处理器（根据原始路径分发到不同的业务Handler）
+                            pipeline.addLast(businessGroup, new PathRoutingWebSocketHandler(chatHandler, orderHandler));
                         }
                     });
 

@@ -90,3 +90,11 @@ aliyun:
     templateCode: 100001
     # 验证码有效期（可选，默认5分钟）
     codeExpireMinutes: 5
+
+# ==================== ID生成器配置 ====================
+# XOR雪花算法ID生成器配置
+id:
+  generator:
+    worker-id: ${WORKER_ID:1}          # 机器ID（0-31），可通过环境变量覆盖
+    datacenter-id: ${DATACENTER_ID:1}  # 数据中心ID（0-31），可通过环境变量覆盖
+    epoch: 1704067200000                  # 纪元时间（2024-01-01 00:00:00 CST）

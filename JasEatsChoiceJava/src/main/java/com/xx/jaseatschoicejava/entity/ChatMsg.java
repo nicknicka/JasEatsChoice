@@ -33,6 +33,10 @@ public class ChatMsg {
     @ApiModelProperty(value = "接收者ID")
     private String toId; // 接收者ID
 
+    @TableField("session_id")
+    @ApiModelProperty(value = "会话ID（单聊为生成的会话标识，群聊为群ID）")
+    private String sessionId; // 会话ID
+
     @TableField("msg_type")
     @ApiModelProperty(value = "消息类型（single/group/order_sync/order_status）")
     private String msgType; // 消息类型（single/group/order_sync/order_status）

@@ -262,10 +262,25 @@ const handleWebSocketMessage = (data) => {
   switch (data.type) {
     case 'chat':
       if (data.content) {
+        const fromId = data.content.fromId || data.content.sender || '未知'
+
+        // 确定发送者显示名称
+        let senderName = null
+        if (fromId !== userId.value.toString()) {
+          if (data.content.senderName || data.content.username || data.content.nickname) {
+            senderName = data.content.senderName || data.content.username || data.content.nickname
+          } else if (selectedConversation.value?.type === 'single') {
+            senderName = selectedConversation.value.name
+          } else if (selectedConversation.value?.type === 'group') {
+            senderName = fromId
+          }
+        }
+
         const message = {
           ...data.content,
           formattedTime: formatMessageTime(data.content.createTime || data.content.time),
-          fromId: data.content.fromId || data.content.sender || '未知'
+          fromId,
+          senderName
         }
         addMessage(message, data.content.toId)
         updateConversationLastMessage(data.content.toId, message)
@@ -781,15 +796,39 @@ const fetchFriends = async () => {
   try {
     const response = await api.get(`/v1/contacts/friends?userId=${userId.value}`)
     if (response.code === '200') {
-      friends.value = response.data.map((contact) => ({
-        id: contact.targetId,
-        name: '好友',
-        avatar: '👤',
-        lastMessage: '',
-        time: '',
-        unreadCount: 0,
-        type: 'friend'
-      }))
+      // 为每个好友获取详细信息
+      const friendsWithDetails = await Promise.all(
+        response.data.map(async (contact) => {
+          try {
+            const userResponse = await api.get(`/v1/users/${contact.targetId}`)
+            const userData = userResponse.data
+
+            return {
+              id: contact.targetId,
+              name: userData.nickname || userData.username || '好友',
+              avatar: userData.avatar || '👤',
+              lastMessage: '',
+              time: '',
+              unreadCount: 0,
+              type: 'friend'
+            }
+          } catch (error) {
+            console.error(`获取好友 ${contact.targetId} 信息失败:`, error)
+            // 如果获取用户信息失败，返回基本信息
+            return {
+              id: contact.targetId,
+              name: '好友',
+              avatar: '👤',
+              lastMessage: '',
+              time: '',
+              unreadCount: 0,
+              type: 'friend'
+            }
+          }
+        })
+      )
+
+      friends.value = friendsWithDetails
     }
   } catch (error) {
     console.error('获取好友列表失败:', error)

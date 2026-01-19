@@ -283,10 +283,27 @@ let wsAuthenticated = false // 添加认证状态标志
 
 // 使用主进程 WebSocket 初始化带有自动重连功能的 WebSocket 连接
 const initializeWebSocket = () => {
-  // 使用 WebSocket 常量构建完整 URL
-  const wsUrl = `${WS_CONFIG.URL}${WS_CONFIG.ENDPOINT}` // 后端 Netty 服务器 URL
+  // 检查 token 是否存在
+  const token = authStore.token
+  const userId = authStore.userId
 
-  console.log('Connecting to WebSocket server:', wsUrl)
+  if (!token) {
+    console.error('❌ 无法连接 WebSocket: token 不存在，请先登录')
+    ElMessage.error('未登录，无法连接实时消息服务')
+    return
+  }
+
+  if (!userId) {
+    console.error('❌ 无法连接 WebSocket: userId 不存在')
+    ElMessage.error('用户信息不完整，请重新登录')
+    return
+  }
+
+  // 使用 WebSocket 常量构建完整 URL，并添加认证参数
+  const wsUrl = `${WS_CONFIG.URL}${WS_CONFIG.ENDPOINT}?userId=${userId}&token=${token}`
+
+  console.log('🔌 Connecting to WebSocket server:', wsUrl)
+  console.log('📝 当前用户:', userId, 'Token存在:', !!token)
 
   // 通过 IPC 使用主进程的 WebSocket
   if (window.api) {
@@ -311,25 +328,10 @@ const listenersRegistered =
 if (!listenersRegistered && window.api) {
   // 监听来自主进程的 WebSocket 事件
   window.api?.onWebSocketOpen(() => {
-    console.log('WebSocket connection established')
-    wsAuthenticated = false // 重置认证状态
-
-    // 必要时发送身份验证
-    const authMsg = {
-      msgType: 'auth',
-      fromId: String(authStore.userId || ''), // 用户ID作为发送者ID
-      toId: '', // auth消息不需要接收者
-      content: '', // auth消息不需要内容
-      token: authStore.token || '' // 使用实际的token
-    }
-
-    if (!authMsg.token) {
-      console.error('未找到认证 token，WebSocket 认证失败')
-      return
-    }
-
-    sendWebSocketMessage(authMsg)
-    console.log('认证消息已发送，userId:', authMsg.fromId)
+    console.log('✅ WebSocket 连接已建立')
+    wsAuthenticated = true // 标记为已认证（握手阶段已完成）
+    wsAttempts = 0 // 重置重连计数器
+    console.log('🔐 认证成功，userId:', authStore.userId)
   })
 
   window.api?.onWebSocketMessage((message) => {
@@ -387,26 +389,86 @@ if (!listenersRegistered && window.api) {
   })
 
   window.api?.onWebSocketClose((code, reason) => {
-    console.log('WebSocket connection closed:', code, reason)
+    console.log('⚠️ WebSocket 连接已关闭')
+    console.log('📊 关闭代码:', code)
+    console.log('📝 关闭原因:', reason)
+
+    // 常见错误码说明
+    let errorDesc = ''
+    switch (code) {
+      case 1000:
+        errorDesc = '正常关闭'
+        break
+      case 1001:
+        errorDesc = '端点离开'
+        break
+      case 1002:
+        errorDesc = '协议错误'
+        break
+      case 1003:
+        errorDesc = '不支持的数据类型'
+        break
+      case 1006:
+        errorDesc = '连接异常关闭'
+        break
+      case 1007:
+        errorDesc = '数据类型不一致'
+        break
+      case 1008:
+        errorDesc = '违反政策'
+        break
+      case 1009:
+        errorDesc = '消息过大'
+        break
+      case 1010:
+        errorDesc = '缺少扩展'
+        break
+      case 1011:
+        errorDesc = '内部错误'
+        break
+      case 1015:
+        errorDesc = 'TLS握手失败'
+        break
+      default:
+        errorDesc = `未知错误 (${code})`
+    }
+    console.log('❌ 错误描述:', errorDesc)
 
     // 如果已经认证成功但连接关闭，不重连（避免频繁重连）
     // 如果未达到最大尝试次数则自动重连
     if (!wsAuthenticated && wsAttempts < maxAttempts) {
       wsAttempts++
       const delay = Math.min(5000 * wsAttempts, 30000) // 增加初始延迟到 5 秒
+      console.log(`🔄 ${delay / 1000}秒后尝试第 ${wsAttempts}/${maxAttempts} 次重连...`)
       setTimeout(() => {
-        console.log(`Reconnecting WebSocket... Attempt ${wsAttempts}/${maxAttempts}`)
         initializeWebSocket()
       }, delay)
     } else if (wsAuthenticated) {
-      console.log('WebSocket 已认证成功但连接关闭，可能是服务端问题，停止重连')
+      console.log('ℹ️ WebSocket 已认证成功但连接关闭，可能是服务端问题，停止重连')
     } else {
-      console.log('WebSocket 已达到最大重连次数，停止重连')
+      console.error('❌ WebSocket 已达到最大重连次数，停止重连')
+      if (code === 1006) {
+        ElMessage.error('连接服务器失败，请检查网络或重新登录')
+      }
     }
   })
 
   window.api?.onWebSocketError((error) => {
-    console.error('WebSocket error:', error)
+    console.error('❌ WebSocket 错误:', error)
+
+    // 检查是否是认证错误
+    if (error && error.message && error.message.includes('401')) {
+      console.error('🔐 认证失败，可能的原因：')
+      console.error('  1. Token 已过期')
+      console.error('  2. Token 无效')
+      console.error('  3. 未登录')
+
+      ElMessage.error({
+        message: '认证失败，请重新登录',
+        duration: 5000,
+        showClose: true
+      })
+    }
   })
 
   // 在添加属性之前检查 api 是否可扩展

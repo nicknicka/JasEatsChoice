@@ -5,6 +5,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.util.AttributeKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,6 +19,10 @@ import org.slf4j.LoggerFactory;
 public class WebSocketAuthHandler extends ChannelInboundHandlerAdapter {
 
     private static final Logger logger = LoggerFactory.getLogger(WebSocketAuthHandler.class);
+
+    // 定义AttributeKey用于存储路径和用户ID
+    public static final AttributeKey<String> PATH_KEY = AttributeKey.valueOf("wsPath");
+    public static final AttributeKey<String> USER_ID_KEY = AttributeKey.valueOf("userId");
 
     private final JwtUtil jwtUtil;
 
@@ -36,6 +41,22 @@ public class WebSocketAuthHandler extends ChannelInboundHandlerAdapter {
             // 获取URI中的token参数
             String uri = request.uri();
             logger.debug("WebSocket握手请求URI: {}", uri);
+
+            // 提取并保存原始路径（移除查询参数）
+            String originalPath = uri;
+            if (uri != null && uri.contains("?")) {
+                originalPath = uri.substring(0, uri.indexOf("?"));
+            }
+
+            // 验证路径是否合法（支持/ws和/ws/chat，最终都会路由到/ws）
+            if (!"/ws".equals(originalPath) && !"/ws/chat".equals(originalPath)) {
+                logger.warn("WebSocket握手失败：不支持的路径 - {}", originalPath);
+                sendErrorResponse(ctx, request, HttpResponseStatus.NOT_FOUND, "不支持的WebSocket路径");
+                return;
+            }
+
+            // 保存原始路径到Channel属性中，供后续路由使用
+            ctx.channel().attr(PATH_KEY).set(originalPath);
 
             // 解析查询参数
             String userId = null;
@@ -81,13 +102,14 @@ public class WebSocketAuthHandler extends ChannelInboundHandlerAdapter {
                     return;
                 }
 
-                logger.info("WebSocket认证成功: userId={}", tokenUserId);
+                logger.info("WebSocket认证成功: userId={}, path={}", tokenUserId, originalPath);
 
                 // 将userId存储到Channel属性中，供后续Handler使用
-                ctx.channel().attr(io.netty.util.AttributeKey.valueOf("userId")).set(tokenUserId);
+                ctx.channel().attr(USER_ID_KEY).set(tokenUserId);
 
-                // 重置URI，移除查询参数（WebSocketServerProtocolHandler需要干净的路径）
-                request.setUri("/ws/chat");
+                // 所有WebSocket请求都统一使用/ws路径（WebSocketServerProtocolHandler只支持单一路径）
+                // 但原始路径已保存在PATH_KEY中，后续业务handler可以根据原始路径路由
+                request.setUri("/ws");
 
                 // 认证成功，传递给下一个Handler
                 ctx.fireChannelRead(msg);

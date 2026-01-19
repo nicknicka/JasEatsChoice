@@ -20,30 +20,30 @@
       </div>
     </div>
 
-    <!-- 快速搜索区域 -->
-    <div class="quick-search">
-      <el-input
-        v-model="searchQuery"
-        placeholder="输入手机号/用户ID/昵称快速搜索"
-        :prefix-icon="Search"
-        clearable
-        @input="handleQuickSearch"
-      />
-    </div>
-
     <!-- 内容区域 -->
     <div class="content-area">
       <!-- 新建单聊 -->
       <transition name="tab-fade" mode="out-in">
         <div v-if="activeTab === 'chat'" key="chat" class="tab-content">
-        <div v-if="!searchQuery" class="recommend-section">
+        <!-- 单聊搜索框 -->
+        <div class="chat-search">
+          <el-input
+            v-model="chatSearchQuery"
+            placeholder="搜索好友"
+            :prefix-icon="Search"
+            clearable
+          />
+        </div>
+
+        <!-- 推荐好友（未搜索时显示） -->
+        <div v-if="!chatSearchQuery" class="recommend-section">
           <div class="section-title">
             <span>推荐好友</span>
             <el-button text type="primary" size="small" @click="refreshRecommendations">
               <el-icon><Refresh /></el-icon> 换一批
             </el-button>
           </div>
-          <div class="user-grid">
+          <div v-if="recommendedFriends.length > 0" class="user-grid">
             <div
               v-for="user in recommendedFriends"
               :key="user.id"
@@ -58,15 +58,21 @@
               <div class="user-reason">{{ user.reason }}</div>
             </div>
           </div>
+          <div v-else class="empty-friends">
+            <el-empty description="暂无好友，请先添加好友">
+              <el-button type="primary" @click="switchTab('friend')">去加好友</el-button>
+            </el-empty>
+          </div>
         </div>
 
+        <!-- 搜索结果 -->
         <div v-else class="search-results">
-          <div v-if="searchResults.length === 0" class="empty-result">
-            <el-empty description="未找到相关用户" />
+          <div v-if="filteredChatFriends.length === 0" class="empty-result">
+            <el-empty description="未找到相关好友" />
           </div>
           <div v-else class="user-list">
             <div
-              v-for="user in searchResults"
+              v-for="user in filteredChatFriends"
               :key="user.id"
               class="user-item"
               @click="startChat(user)"
@@ -129,30 +135,86 @@
 
           <!-- 成员选择区域 -->
           <div class="member-select-area">
-            <el-input
-              v-model="memberSearchQuery"
-              placeholder="搜索好友添加到群聊"
-              :prefix-icon="Search"
-              clearable
-              @input="handleMemberSearch"
-            />
+            <!-- 切换搜索模式 -->
+            <div class="search-mode-toggle">
+              <el-radio-group v-model="memberSearchMode" size="small">
+                <el-radio-button label="friends">好友列表</el-radio-button>
+                <el-radio-button label="search">搜索用户</el-radio-button>
+              </el-radio-group>
+            </div>
 
-            <div class="friend-list">
-              <div v-for="friend in filteredFriends" :key="friend.id" class="friend-item">
-                <div class="friend-avatar">
-                  <img v-if="isImageAvatar(friend.avatar)" :src="friend.avatar" alt="" />
-                  <span v-else>{{ friend.avatar || '👤' }}</span>
+            <!-- 好友列表模式 -->
+            <div v-if="memberSearchMode === 'friends'">
+              <el-input
+                v-model="memberSearchQuery"
+                placeholder="搜索好友添加到群聊"
+                :prefix-icon="Search"
+                clearable
+              />
+
+              <div v-if="filteredFriends.length === 0" class="empty-friend-list">
+                <el-empty description="暂无好友">
+                  <el-button type="primary" @click="switchToSearchMode">去搜索用户</el-button>
+                </el-empty>
+              </div>
+              <div v-else class="friend-list">
+                <div v-for="friend in filteredFriends" :key="friend.id" class="friend-item">
+                  <div class="friend-avatar">
+                    <img v-if="isImageAvatar(friend.avatar)" :src="friend.avatar" alt="" />
+                    <span v-else>{{ friend.avatar || '👤' }}</span>
+                  </div>
+                  <div class="friend-info">
+                    <div class="friend-name">{{ friend.name }}</div>
+                  </div>
+                  <el-button
+                    :type="isMemberSelected(friend) ? 'danger' : 'primary'"
+                    size="small"
+                    @click="toggleMember(friend)"
+                  >
+                    {{ isMemberSelected(friend) ? '移除' : '添加' }}
+                  </el-button>
                 </div>
-                <div class="friend-info">
-                  <div class="friend-name">{{ friend.name }}</div>
+              </div>
+            </div>
+
+            <!-- 搜索用户模式 -->
+            <div v-else>
+              <el-input
+                v-model="globalSearchQuery"
+                placeholder="输入手机号/用户ID/昵称搜索"
+                :prefix-icon="Search"
+                clearable
+                @input="handleGlobalSearch"
+              />
+
+              <div v-if="!globalSearchQuery" class="search-hint">
+                <el-empty description="输入关键词搜索用户">
+                  <template #image>
+                    <div class="empty-icon">🔍</div>
+                  </template>
+                </el-empty>
+              </div>
+              <div v-else-if="globalSearchResults.length === 0" class="search-hint">
+                <el-empty description="未找到相关用户" />
+              </div>
+              <div v-else class="friend-list">
+                <div v-for="user in globalSearchResults" :key="user.id" class="friend-item">
+                  <div class="friend-avatar">
+                    <img v-if="isImageAvatar(user.avatar)" :src="user.avatar" alt="" />
+                    <span v-else>{{ user.avatar || '👤' }}</span>
+                  </div>
+                  <div class="friend-info">
+                    <div class="friend-name">{{ user.name }}</div>
+                    <div class="friend-detail">{{ user.detail }}</div>
+                  </div>
+                  <el-button
+                    :type="isMemberSelected(user) ? 'danger' : 'primary'"
+                    size="small"
+                    @click="toggleMember(user)"
+                  >
+                    {{ isMemberSelected(user) ? '移除' : '添加' }}
+                  </el-button>
                 </div>
-                <el-button
-                  :type="isMemberSelected(friend) ? 'danger' : 'primary'"
-                  size="small"
-                  @click="toggleMember(friend)"
-                >
-                  {{ isMemberSelected(friend) ? '移除' : '添加' }}
-                </el-button>
               </div>
             </div>
           </div>
@@ -166,11 +228,26 @@
         <div class="add-friend-content">
           <!-- 搜索类型选择 -->
           <div class="search-type-selector">
-            <el-radio-group v-model="friendSearchType" size="small">
+            <el-radio-group v-model="friendSearchType" size="small" @change="handleFriendSearchTypeChange">
               <el-radio-button label="nickname">用户名/昵称</el-radio-button>
               <el-radio-button label="phone">手机号</el-radio-button>
               <el-radio-button label="email">邮箱</el-radio-button>
             </el-radio-group>
+          </div>
+
+          <!-- 搜索输入框 -->
+          <div class="friend-search-input">
+            <el-input
+              v-model="friendSearchKeyword"
+              placeholder="请输入关键词搜索用户"
+              :prefix-icon="Search"
+              clearable
+              @input="handleFriendSearch"
+            >
+              <template #append>
+                <el-button :icon="Search" @click="handleFriendSearch">搜索</el-button>
+              </template>
+            </el-input>
           </div>
 
           <!-- 搜索结果 -->
@@ -268,6 +345,9 @@ const visible = ref(props.modelValue)
 const activeTab = ref('chat')
 const searchQuery = ref('')
 
+// ========== 单聊相关 ==========
+const chatSearchQuery = ref('')
+
 // ========== Tab 配置 ==========
 const tabs = [
   { key: 'chat', label: '单聊', icon: '💬' },
@@ -317,35 +397,15 @@ const isImageAvatar = (avatar) => {
 // ========== 快速搜索 ==========
 const searchResults = ref([])
 
-const handleQuickSearch = () => {
-  if (!searchQuery.value.trim()) {
-    searchResults.value = []
-    return
+// 单聊好友过滤
+const filteredChatFriends = computed(() => {
+  if (!chatSearchQuery.value.trim()) {
+    return []
   }
-
-  // 实时搜索逻辑
-  performSearch(searchQuery.value.trim())
-}
-
-const performSearch = async (keyword) => {
-  try {
-    const response = await api.get('/v1/users/search', {
-      params: { keyword }
-    })
-
-    if (response.code === '200') {
-      searchResults.value = (response.data || []).map((user) => ({
-        id: user.userId,
-        name: user.nickname || user.username,
-        avatar: user.avatar,
-        detail: `用户ID: ${user.userId}`
-      }))
-    }
-  } catch (error) {
-    console.error('搜索失败:', error)
-    ElMessage.error('搜索失败，请稍后重试')
-  }
-}
+  return props.friends.filter((friend) =>
+    friend.name.toLowerCase().includes(chatSearchQuery.value.toLowerCase())
+  )
+})
 
 // ========== 推荐好友 ==========
 const recommendedFriends = ref([])
@@ -399,6 +459,9 @@ const groupForm = ref({
 
 const selectedMembers = ref([])
 const memberSearchQuery = ref('')
+const memberSearchMode = ref('friends') // 'friends' | 'search'
+const globalSearchQuery = ref('')
+const globalSearchResults = ref([])
 
 const filteredFriends = computed(() => {
   if (!memberSearchQuery.value.trim()) {
@@ -438,8 +501,33 @@ const clearAllMembers = () => {
   selectedMembers.value = []
 }
 
-const handleMemberSearch = () => {
-  // 搜索逻辑已在 computed 中处理
+const switchToSearchMode = () => {
+  memberSearchMode.value = 'search'
+}
+
+const handleGlobalSearch = async () => {
+  if (!globalSearchQuery.value.trim()) {
+    globalSearchResults.value = []
+    return
+  }
+
+  try {
+    const response = await api.get('/v1/users/search', {
+      params: { keyword: globalSearchQuery.value.trim() }
+    })
+
+    if (response.code === '200') {
+      globalSearchResults.value = (response.data || []).map((user) => ({
+        id: user.userId,
+        name: user.nickname || user.username,
+        avatar: user.avatar,
+        detail: `用户ID: ${user.userId}`
+      }))
+    }
+  } catch (error) {
+    console.error('搜索失败:', error)
+    ElMessage.error('搜索失败，请稍后重试')
+  }
 }
 
 const canCreateGroup = computed(() => {
@@ -462,27 +550,28 @@ const createGroup = () => {
 
 // ========== 加好友 ==========
 const friendSearchType = ref('nickname')
+const friendSearchKeyword = ref('')
 const friendSearchResults = ref([])
 const friendSearched = ref(false)
 
-watch(searchQuery, async (newVal) => {
-  if (activeTab.value === 'friend' && newVal.trim()) {
-    await performFriendSearch()
-  } else {
+const handleFriendSearchTypeChange = () => {
+  // 当搜索类型改变时，如果有搜索关键词，自动重新搜索
+  if (friendSearchKeyword.value.trim()) {
+    handleFriendSearch()
+  }
+}
+
+const handleFriendSearch = async () => {
+  if (!friendSearchKeyword.value.trim()) {
     friendSearchResults.value = []
     friendSearched.value = false
-  }
-})
-
-const performFriendSearch = async () => {
-  if (!searchQuery.value.trim()) {
     return
   }
 
   try {
     const response = await api.get('/v1/users/search', {
       params: {
-        keyword: searchQuery.value.trim(),
+        keyword: friendSearchKeyword.value.trim(),
         searchType: friendSearchType.value
       }
     })
@@ -539,9 +628,15 @@ const resetState = () => {
   searchQuery.value = ''
   activeTab.value = 'chat'
   searchResults.value = []
+  chatSearchQuery.value = ''
   groupForm.value.name = ''
   selectedMembers.value = []
   memberSearchQuery.value = ''
+  memberSearchMode.value = 'friends'
+  globalSearchQuery.value = ''
+  globalSearchResults.value = []
+  friendSearchType.value = 'nickname'
+  friendSearchKeyword.value = ''
   friendSearchResults.value = []
   friendSearched.value = false
   generateRecommendations()
@@ -765,6 +860,45 @@ generateRecommendations()
     }
   }
 
+  // 单聊搜索框
+  .chat-search {
+    margin-bottom: 20px;
+
+    :deep(.el-input) {
+      .el-input__wrapper {
+        border-radius: 10px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        border: 2px solid transparent;
+        transition: all 0.3s ease;
+
+        &:hover,
+        &.is-focus {
+          border-color: #3b82f6;
+          box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
+        }
+      }
+    }
+  }
+
+  // 空好友提示
+  .empty-friends {
+    margin-top: 60px;
+    text-align: center;
+
+    :deep(.el-button) {
+      margin-top: 16px;
+      border-radius: 8px;
+      padding: 10px 24px;
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+      border: none;
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+      }
+    }
+  }
+
   .tab-content {
     .section-title {
       display: flex;
@@ -943,6 +1077,70 @@ generateRecommendations()
       }
     }
 
+    .search-mode-toggle {
+      margin-bottom: 16px;
+
+      :deep(.el-radio-group) {
+        display: flex;
+        gap: 12px;
+
+        .el-radio-button {
+          .el-radio-button__inner {
+            border-radius: 8px;
+            border: 2px solid #e2e8f0;
+            background: #fff;
+            color: #4a5568;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            padding: 10px 20px;
+
+            &:hover {
+              border-color: #3b82f6;
+              color: #3b82f6;
+            }
+          }
+
+          &.is-active {
+            .el-radio-button__inner {
+              background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+              border-color: #3b82f6;
+              color: #fff;
+              box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            }
+          }
+        }
+      }
+    }
+
+    .empty-friend-list {
+      margin-top: 60px;
+      text-align: center;
+
+      :deep(.el-button) {
+        margin-top: 16px;
+        border-radius: 8px;
+        padding: 10px 24px;
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        border: none;
+
+        &:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+      }
+    }
+
+    .search-hint {
+      margin-top: 60px;
+      text-align: center;
+
+      .empty-icon {
+        font-size: 80px;
+        margin-bottom: 20px;
+        opacity: 0.8;
+      }
+    }
+
     .selected-members {
       display: flex;
       flex-wrap: wrap;
@@ -1090,6 +1288,48 @@ generateRecommendations()
               border-color: #3b82f6;
               color: #fff;
               box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            }
+          }
+        }
+      }
+    }
+
+    .friend-search-input {
+      margin-bottom: 24px;
+
+      :deep(.el-input) {
+        .el-input__wrapper {
+          border-radius: 10px;
+          box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+          border: 2px solid transparent;
+          transition: all 0.3s ease;
+
+          &:hover,
+          &.is-focus {
+            border-color: #3b82f6;
+            box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
+          }
+        }
+
+        .el-input__inner {
+          font-size: 15px;
+        }
+
+        .el-input-group__append {
+          background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+          border: none;
+          color: #fff;
+          border-radius: 0 10px 10px 0;
+          padding: 0 20px;
+
+          .el-button {
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-weight: 500;
+
+            &:hover {
+              background: rgba(255, 255, 255, 0.1);
             }
           }
         }

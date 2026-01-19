@@ -2,8 +2,8 @@
  * 订单数据获取组合式函数
  */
 
-import pinia from '../../store'
-import { useAuthStore } from '../../store/authStore'
+import pinia from '../store'
+import { useAuthStore } from '../store/authStore'
 
 const authStore = useAuthStore(pinia)
 

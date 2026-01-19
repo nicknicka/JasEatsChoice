@@ -2,12 +2,7 @@
  * 推荐系统相关逻辑
  */
 
-import pinia from '../../store'
-import { useAuthStore } from '../../store/authStore'
-
-const authStore = useAuthStore(pinia)
-
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import axios from 'axios'
 import { API_CONFIG } from '../config/index.js'
@@ -20,8 +15,13 @@ import {
   getRandomTagType,
   getCurrentTimePeriod
 } from '../constants/recommendationConstants.js'
+import pinia from '../store'
+import { useAuthStore } from '../store/authStore'
 
 export function useRecommendations() {
+  // 在函数内部获取 store，避免模块加载时的初始化问题
+  const authStore = useAuthStore(pinia)
+
   // 状态管理
   const recommendations = ref([])
   const isLoading = ref(false)

@@ -26,34 +26,37 @@
 
       {{ message.content }}
 
-      <div class="message-time">
-        {{ formattedTime }}
+      <!-- 时间和操作区域 -->
+      <div class="message-footer">
+        <div class="message-time">
+          {{ formattedTime }}
+        </div>
+
+        <!-- 消息操作按钮 -->
+        <el-dropdown trigger="click" @command="(cmd) => $emit('command', cmd, message)">
+          <el-button type="text" size="small" class="msg-action-btn">⋯</el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="reply">引用</el-dropdown-item>
+              <el-dropdown-item command="forward">转发</el-dropdown-item>
+              <el-dropdown-item v-if="canRecall" command="recall">撤回消息</el-dropdown-item>
+              <el-dropdown-item command="copy">复制</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+
+        <!-- 重发按钮 -->
+        <el-button
+          v-if="isFailed && message.canResend"
+          type="warning"
+          size="small"
+          text
+          @click="$emit('resend', message)"
+          class="resend-btn"
+        >
+          点击重发
+        </el-button>
       </div>
-
-      <!-- 消息操作按钮 -->
-      <el-dropdown trigger="click" @command="(cmd) => $emit('command', cmd, message)">
-        <el-button type="text" size="small" class="msg-action-btn">⋯</el-button>
-        <template #dropdown>
-          <el-dropdown-menu>
-            <el-dropdown-item command="reply">引用</el-dropdown-item>
-            <el-dropdown-item command="forward">转发</el-dropdown-item>
-            <el-dropdown-item v-if="canRecall" command="recall">撤回消息</el-dropdown-item>
-            <el-dropdown-item command="copy">复制</el-dropdown-item>
-          </el-dropdown-menu>
-        </template>
-      </el-dropdown>
-
-      <!-- 重发按钮 -->
-      <el-button
-        v-if="isFailed && message.canResend"
-        type="warning"
-        size="small"
-        text
-        @click="$emit('resend', message)"
-        class="resend-btn"
-      >
-        点击重发
-      </el-button>
     </div>
   </div>
 </template>
@@ -99,7 +102,11 @@ const canRecall = computed(() => {
 })
 
 const senderName = computed(() => {
-  return isMyMessage.value ? '我' : props.message.fromId
+  if (isMyMessage.value) {
+    return '我'
+  }
+  // 优先使用消息中的 senderName 或 fromName 字段
+  return props.message.senderName || props.message.fromName || props.message.fromId
 })
 
 const formattedTime = computed(() => {
@@ -208,29 +215,41 @@ const formattedTime = computed(() => {
       }
     }
 
-    .message-time {
-      font-size: 11px;
-      color: #999;
+    .message-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
       margin-top: 4px;
-      display: inline-block;
+      flex-wrap: wrap;
+
+      .message-time {
+        font-size: 11px;
+        color: #999;
+        display: block;
+        line-height: 1.4;
+        word-break: break-word;
+        flex: 1;
+        min-width: 0;
+      }
+
+      .msg-action-btn {
+        opacity: 0;
+        transition: opacity 0.2s;
+        font-size: 16px;
+        padding: 0;
+        width: 20px;
+        height: 20px;
+        flex-shrink: 0;
+      }
+
+      .resend-btn {
+        font-size: 12px;
+        flex-shrink: 0;
+      }
     }
 
-    .msg-action-btn {
-      margin-left: 8px;
-      opacity: 0;
-      transition: opacity 0.2s;
-      font-size: 16px;
-      padding: 0;
-      width: 20px;
-      height: 20px;
-    }
-
-    .resend-btn {
-      margin-left: 8px;
-      font-size: 12px;
-    }
-
-    &:hover .msg-action-btn {
+    &:hover .message-footer .msg-action-btn {
       opacity: 1;
     }
   }

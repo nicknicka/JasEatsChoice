@@ -30,7 +30,21 @@ export function useOrderWebSocket(onOrderUpdate) {
    */
   function initWebSocket() {
     try {
-      ws.value = new WebSocket(WS_CONFIG.url)
+      // 获取认证信息
+      const userId = authStore.userId || '1'
+      const token = authStore.token || ''
+
+      if (!token) {
+        console.error('未找到认证 token，无法连接WebSocket')
+        ElMessage.error('未登录，无法接收实时订单更新')
+        return
+      }
+
+      // 构建带认证参数的WebSocket URL
+      const wsUrl = `${WS_CONFIG.url}?userId=${userId}&token=${token}`
+      console.log('连接订单WebSocket:', wsUrl)
+
+      ws.value = new WebSocket(wsUrl)
 
       setupWebSocketHandlers()
     } catch (error) {

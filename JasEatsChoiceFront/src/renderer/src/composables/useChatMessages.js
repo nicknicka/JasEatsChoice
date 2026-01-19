@@ -47,23 +47,32 @@ export function useChatMessages({ userId, selectedConversation }) {
     const diffHours = Math.floor(diffMs / 3600000)
     const diffDays = Math.floor(diffMs / 86400000)
 
+    // 获取时间部分
+    const timeStr = date.toLocaleTimeString('zh-CN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    })
+
     // 今天
     if (diffDays === 0) {
       if (diffMins < 1) return '刚刚'
       if (diffMins < 60) return `${diffMins}分钟前`
-      if (diffHours < 24)
-        return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+      if (diffHours < 24) {
+        // 今天的消息：只显示时间
+        return timeStr
+      }
     }
     // 昨天
     else if (diffDays === 1) {
-      return `昨天 ${date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`
+      return `昨天 ${timeStr}`
     }
-    // 更早
+    // 更早但在一周内
     else if (diffDays < 7) {
-      return `${diffDays}天前`
+      return `${diffDays}天前 ${timeStr}`
     }
 
-    // 超过一周显示完整日期
+    // 超过一周显示完整日期和时间
     return date.toLocaleString('zh-CN', {
       year: 'numeric',
       month: '2-digit',
@@ -85,10 +94,30 @@ export function useChatMessages({ userId, selectedConversation }) {
     messages.forEach((msg) => {
       if (!messageIds.has(msg.id)) {
         messageIds.add(msg.id)
+
+        // 确定发送者显示名称
+        let senderName = null
+        const fromId = msg.fromId || msg.sender || '未知'
+
+        if (fromId === userId.value.toString()) {
+          // 自己的消息，不需要显示名称（在UI中会显示"我"）
+          senderName = null
+        } else if (msg.senderName) {
+          // 后端返回的发送者名称
+          senderName = msg.senderName
+        } else if (selectedConversation.value?.type === 'single') {
+          // 单聊：使用会话名称
+          senderName = selectedConversation.value.name
+        } else if (selectedConversation.value?.type === 'group') {
+          // 群聊：尝试使用后端返回的名称，如果没有则显示ID
+          senderName = msg.username || msg.nickname || fromId
+        }
+
         const processedMsg = {
           ...msg,
           formattedTime: formatMessageTime(msg.createTime || msg.time),
-          fromId: msg.fromId || msg.sender || '未知'
+          fromId,
+          senderName
         }
 
         // 如果有回复信息但没有回复者名称，则生成显示名称
@@ -271,10 +300,23 @@ export function useChatMessages({ userId, selectedConversation }) {
   const addMessage = (message, sessionId) => {
     const exists = chatMessages.value.some((msg) => msg.id === message.id)
     if (!exists) {
+      const fromId = message.fromId || message.sender || '未知'
+
+      // 确定发送者显示名称（如果消息中没有）
+      let senderName = message.senderName
+      if (!senderName && fromId !== userId.value.toString()) {
+        if (selectedConversation.value?.type === 'single') {
+          senderName = selectedConversation.value.name
+        } else if (selectedConversation.value?.type === 'group') {
+          senderName = message.username || message.nickname || fromId
+        }
+      }
+
       const processedMsg = {
         ...message,
         formattedTime: formatMessageTime(message.createTime || message.time),
-        fromId: message.fromId || message.sender || '未知'
+        fromId,
+        senderName
       }
 
       // 如果有回复信息但没有回复者名称，则生成显示名称

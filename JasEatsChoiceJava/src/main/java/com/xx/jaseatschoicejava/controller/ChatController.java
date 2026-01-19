@@ -7,6 +7,7 @@ import com.xx.jaseatschoicejava.entity.ChatMsg;
 import com.xx.jaseatschoicejava.entity.ChatSession;
 import com.xx.jaseatschoicejava.service.ChatMsgService;
 import com.xx.jaseatschoicejava.service.ChatSessionService;
+import com.xx.jaseatschoicejava.util.ChatSessionIdGenerator;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -90,6 +91,14 @@ public class ChatController {
         // 设置默认值
         chatMsg.setReadStatus(false);
         chatMsg.setCreateTime(LocalDateTime.now());
+
+        // ⭐ 生成并设置 session_id
+        String sessionId = ChatSessionIdGenerator.generateSessionId(
+            chatMsg.getMsgType(),
+            chatMsg.getFromId(),
+            chatMsg.getToId()
+        );
+        chatMsg.setSessionId(sessionId);
 
         // 保存消息
         boolean success = chatMsgService.save(chatMsg);

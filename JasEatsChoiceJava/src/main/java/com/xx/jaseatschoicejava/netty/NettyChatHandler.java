@@ -15,6 +15,7 @@ import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -27,6 +28,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @Date 2025/11/22
  */
 @ChannelHandler.Sharable
+@Component
 public class NettyChatHandler extends SimpleChannelInboundHandler<TextWebSocketFrame> {
 
     private static final Logger logger = LoggerFactory.getLogger(NettyChatHandler.class);
