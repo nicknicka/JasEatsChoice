@@ -223,7 +223,8 @@ const {
   loadChatMessages,
   loadMoreMessages,
   addMessage,
-  scrollToBottom
+  scrollToBottom,
+  loadChatHistoryFromLocal
 } = useChatMessages({ userId, selectedConversation })
 
 const {
@@ -729,6 +730,9 @@ const goToOrderConfirmation = () => {
 // ========== 生命周期 ==========
 onMounted(async () => {
   try {
+    // 先从本地加载聊天历史缓存（同步函数）
+    loadChatHistoryFromLocal()
+
     const conversationsResponse = await api.get(`/v1/chat/users/${userId.value}/chat-sessions`)
 
     await fetchFriends()

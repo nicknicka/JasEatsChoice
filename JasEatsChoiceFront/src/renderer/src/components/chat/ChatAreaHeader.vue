@@ -219,6 +219,8 @@ const handleCommand = (command) => {
       display: flex;
       flex-direction: column;
       gap: 2px;
+      min-width: 0;
+      flex: 1;
 
       .name-row {
         display: flex;
@@ -226,16 +228,21 @@ const handleCommand = (command) => {
         gap: 6px;
 
         .name {
-          font-size: 14px;
+          font-size: 15px;
           font-weight: 600;
           color: #1a1a1a;
           letter-spacing: 0.2px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          max-width: 200px;
         }
 
         .member-count {
-          font-size: 11px;
+          font-size: 12px;
           color: #8b949e;
           font-weight: 500;
+          flex-shrink: 0;
         }
       }
 

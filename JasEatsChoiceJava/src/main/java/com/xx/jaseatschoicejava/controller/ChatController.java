@@ -247,9 +247,9 @@ public class ChatController {
      */
     private String getSessionName(String sessionType, String otherId) {
         if ("group".equals(sessionType)) {
-            return "群聊 " + otherId;
+            return "\u7fa4\u804a " + otherId;
         } else {
-            return "用户 " + otherId;
+            return "\u7528\u6237 " + otherId;
         }
     }
 

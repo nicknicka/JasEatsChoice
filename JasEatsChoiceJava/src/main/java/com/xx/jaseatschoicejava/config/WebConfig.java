@@ -1,6 +1,8 @@
 package com.xx.jaseatschoicejava.config;
 
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -9,12 +11,25 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.NonNull;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
     @Autowired
     private FileUploadConfig fileUploadConfig;
+
+    /**
+     * 配置HTTP消息转换器，强制使用UTF-8编码
+     */
+    @Override
+    public void configureMessageConverters(@NonNull List<HttpMessageConverter<?>> converters) {
+        // 添加字符串转换器，明确指定UTF-8编码
+        StringHttpMessageConverter stringConverter = new StringHttpMessageConverter(StandardCharsets.UTF_8);
+        stringConverter.setWriteAcceptCharset(false); // 避免在响应头中添加charset
+        converters.add(0, stringConverter);
+    }
 
     /**
      * 配置静态资源访问路径
