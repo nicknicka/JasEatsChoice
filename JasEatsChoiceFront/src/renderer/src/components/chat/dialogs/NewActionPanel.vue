@@ -29,73 +29,47 @@
       <div class="content-area">
       <!-- 新建单聊 -->
       <transition name="tab-fade" mode="out-in">
-        <div v-if="activeTab === 'chat'" key="chat" class="tab-content">
+        <div v-if="activeTab === 'chat'" key="chat" class="tab-content" :class="{ 'is-searching': chatSearchQuery }">
         <!-- 单聊搜索框 -->
-        <div class="chat-search">
-          <el-input
-            v-model="chatSearchQuery"
-            placeholder="搜索好友"
-            :prefix-icon="Search"
-            clearable
-          />
-        </div>
-
-        <!-- 推荐好友（未搜索时显示） -->
-        <div v-if="!chatSearchQuery" class="recommend-section">
-          <div class="section-title">
-            <span>推荐好友</span>
-            <el-button text type="primary" size="small" @click="refreshRecommendations">
-              <el-icon><Refresh /></el-icon> 换一批
-            </el-button>
-          </div>
-          <div v-if="recommendedFriends.length > 0" class="user-grid">
-            <div
-              v-for="user in recommendedFriends"
-              :key="user.id"
-              class="user-card"
-              @click="startChat(user)"
-            >
-              <div class="user-avatar">
-                <img v-if="isImageAvatar(user.avatar)" :src="user.avatar" alt="" />
-                <span v-else>{{ user.avatar || '👤' }}</span>
-              </div>
-              <div class="user-name">{{ user.name }}</div>
-              <div class="user-reason">{{ user.reason }}</div>
-            </div>
-          </div>
-          <div v-else class="empty-friends">
-            <el-empty description="暂无好友，请先添加好友">
-              <el-button type="primary" @click="switchTab('friend')">去加好友</el-button>
-            </el-empty>
+        <div class="chat-search-wrapper">
+          <div class="chat-search">
+            <el-input
+              v-model="chatSearchQuery"
+              placeholder="搜索好友"
+              :prefix-icon="Search"
+              clearable
+            />
           </div>
         </div>
 
         <!-- 搜索结果 -->
-        <div v-else class="search-results">
-          <div v-if="filteredChatFriends.length === 0" class="empty-result">
-            <el-empty description="未找到相关好友" />
-          </div>
-          <div v-else class="user-list">
-            <div
-              v-for="user in filteredChatFriends"
-              :key="user.id"
-              class="user-item"
-              @click="startChat(user)"
-            >
-              <div class="user-avatar">
-                <img v-if="isImageAvatar(user.avatar)" :src="user.avatar" alt="" />
-                <span v-else>{{ user.avatar || '👤' }}</span>
+        <transition name="search-result-fade">
+          <div v-if="chatSearchQuery" class="search-results">
+            <div v-if="filteredChatFriends.length === 0" class="empty-result">
+              <el-empty description="未找到相关好友" />
+            </div>
+            <div v-else class="user-list">
+              <div
+                v-for="user in filteredChatFriends"
+                :key="user.id"
+                class="user-item"
+                @click="startChat(user)"
+              >
+                <div class="user-avatar">
+                  <img v-if="isImageAvatar(user.avatar)" :src="user.avatar" alt="" />
+                  <span v-else>{{ user.avatar || '👤' }}</span>
+                </div>
+                <div class="user-info">
+                  <div class="user-name">{{ user.name }}</div>
+                  <div class="user-detail">{{ user.detail || '用户ID: ' + user.id }}</div>
+                </div>
+                <el-button type="primary" size="small" circle>
+                  <el-icon><ChatDotRound /></el-icon>
+                </el-button>
               </div>
-              <div class="user-info">
-                <div class="user-name">{{ user.name }}</div>
-                <div class="user-detail">{{ user.detail || '用户ID: ' + user.id }}</div>
-              </div>
-              <el-button type="primary" size="small" circle>
-                <el-icon><ChatDotRound /></el-icon>
-              </el-button>
             </div>
           </div>
-        </div>
+        </transition>
       </div>
       </transition>
 
@@ -353,6 +327,16 @@ const searchQuery = ref('')
 // ========== 单聊相关 ==========
 const chatSearchQuery = ref('')
 
+// 单聊好友过滤
+const filteredChatFriends = computed(() => {
+  if (!chatSearchQuery.value.trim()) {
+    return []
+  }
+  return props.friends.filter((friend) =>
+    friend.name.toLowerCase().includes(chatSearchQuery.value.toLowerCase())
+  )
+})
+
 // ========== Tab 配置 ==========
 const tabs = [
   { key: 'chat', label: '单聊', icon: '💬' },
@@ -401,55 +385,6 @@ const isImageAvatar = (avatar) => {
 
 // ========== 快速搜索 ==========
 const searchResults = ref([])
-
-// 单聊好友过滤
-const filteredChatFriends = computed(() => {
-  if (!chatSearchQuery.value.trim()) {
-    return []
-  }
-  return props.friends.filter((friend) =>
-    friend.name.toLowerCase().includes(chatSearchQuery.value.toLowerCase())
-  )
-})
-
-// ========== 推荐好友 ==========
-const recommendedFriends = ref([])
-
-const generateRecommendations = () => {
-  // 基于好友列表生成推荐
-  const recommendations = []
-
-  // 最近聊天的好友（从会话列表中提取）
-  const recentChats = props.conversations
-    .filter((conv) => conv.type === 'friend' || conv.type === 'private')
-    .slice(0, 3)
-    .map((conv) => ({
-      id: conv.id,
-      name: conv.name,
-      avatar: conv.avatar,
-      reason: '最近联系'
-    }))
-
-  recommendations.push(...recentChats)
-
-  // 随机选择一些好友作为推荐
-  const randomFriends = props.friends
-    .filter((f) => !recommendations.find((r) => r.id === f.id))
-    .sort(() => Math.random() - 0.5)
-    .slice(0, 3)
-    .map((f) => ({
-      ...f,
-      reason: '推荐好友'
-    }))
-
-  recommendations.push(...randomFriends)
-
-  recommendedFriends.value = recommendations.slice(0, 6)
-}
-
-const refreshRecommendations = () => {
-  generateRecommendations()
-}
 
 // ========== 新建单聊 ==========
 const startChat = (user) => {
@@ -656,7 +591,6 @@ const resetState = () => {
   friendSearchKeyword.value = ''
   friendSearchResults.value = []
   friendSearched.value = false
-  generateRecommendations()
 }
 
 const resetSearchStates = () => {
@@ -671,16 +605,15 @@ const handleClose = () => {
 }
 
 // ========== 初始化 ==========
-generateRecommendations()
 </script>
 
 <style scoped lang="less">
 // 对话框样式优化
 :deep(.el-dialog) {
   border-radius: 16px;
-  overflow: visible;
+  overflow: hidden;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-  max-height: 80vh;
+  max-height: 85vh;
   display: flex;
   flex-direction: column;
 
@@ -692,8 +625,8 @@ generateRecommendations()
   }
 
   .el-dialog__body {
-    // 移除滚动条，让内容自然撑开
-    overflow: visible;
+    // 移除滚动条，让内容区域内部处理滚动
+    overflow: hidden;
   }
 
   .el-dialog__footer {
@@ -742,7 +675,7 @@ generateRecommendations()
 .dialog-container {
   display: flex;
   gap: 16px;
-  min-height: 400px;
+  height: 480px;
 }
 
 // 功能选项卡 - 左侧垂直布局
@@ -752,6 +685,7 @@ generateRecommendations()
   justify-content: space-evenly;
   width: 100px;
   flex-shrink: 0;
+  height: 100%;
   padding: 12px 8px;
   background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
   border-radius: 12px;
@@ -883,9 +817,10 @@ generateRecommendations()
 // 内容区域
 .content-area {
   flex: 1;
+  height: 100%;
   overflow-y: auto;
-  padding-right: 4px;
-  max-height: 450px;
+  overflow-x: hidden;
+  padding-right: 6px;
 
   &::-webkit-scrollbar {
     width: 6px;
@@ -907,7 +842,7 @@ generateRecommendations()
 
   // 单聊搜索框
   .chat-search {
-    margin-bottom: 12px;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 
     :deep(.el-input) {
       .el-input__wrapper {
@@ -922,128 +857,115 @@ generateRecommendations()
           box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
         }
       }
-    }
-  }
 
-  // 空好友提示
-  .empty-friends {
-    margin-top: 40px;
-    text-align: center;
+      .el-input__inner {
+        font-size: 15px;
 
-    :deep(.el-button) {
-      margin-top: 16px;
-      border-radius: 8px;
-      padding: 10px 24px;
-      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-      border: none;
-
-      &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        &::placeholder {
+          color: #a0aec0;
+        }
       }
     }
   }
 
   .tab-content {
+    // 单聊搜索包装器 - 用于居中和过渡动画
+    .chat-search-wrapper {
+      width: 100%;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    // 搜索状态下的布局
+    &.is-searching {
+      display: flex;
+      flex-direction: column;
+
+      .chat-search-wrapper {
+        flex-shrink: 0;
+      }
+
+      .chat-search {
+        margin-bottom: 12px;
+
+        :deep(.el-input) {
+          .el-input__inner {
+            text-align: left;
+          }
+        }
+      }
+    }
+
+    // 非搜索状态下的居中布局
+    &:not(.is-searching) {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+
+      .chat-search-wrapper {
+        max-width: 400px;
+        width: 100%;
+        padding: 0 20px;
+      }
+
+      .chat-search {
+        :deep(.el-input) {
+          .el-input__inner {
+            text-align: center;
+          }
+        }
+      }
+    }
+
     .section-title {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 12px;
+      margin-bottom: 8px;
       font-size: 14px;
       font-weight: 600;
       color: #2d3748;
       padding: 0 4px;
     }
 
-    // 用户网格
-    .user-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-      gap: 12px;
-
-      .user-card {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 12px;
-        border-radius: 12px;
-        background: linear-gradient(135deg, #ffffff 0%, #f7fafc 100%);
-        cursor: pointer;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        border: 2px solid #e2e8f0;
-        position: relative;
-        overflow: hidden;
-
-        &::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          height: 4px;
-          background: linear-gradient(90deg, #3b82f6 0%, #1d4ed8 100%);
-          transform: scaleX(0);
-          transition: transform 0.3s ease;
-        }
-
-        &:hover {
-          background: #fff;
-          border-color: #3b82f6;
-          transform: translateY(-6px);
-          box-shadow: 0 12px 24px rgba(59, 130, 246, 0.2);
-
-          &::before {
-            transform: scaleX(1);
-          }
-
-          .user-avatar {
-            transform: scale(1.08);
-          }
-        }
-
-        .user-avatar {
-          width: 50px;
-          height: 50px;
-          font-size: 26px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-          border-radius: 50%;
-          margin-bottom: 8px;
-          transition: transform 0.3s ease;
-          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-          overflow: hidden;
-
-          img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-          }
-        }
-
-        .user-name {
-          font-size: 13px;
-          font-weight: 600;
-          color: #2d3748;
-          margin-bottom: 5px;
-          text-align: center;
-        }
-
-        .user-reason {
-          font-size: 10px;
-          color: #718096;
-          background-color: #edf2f7;
-          padding: 3px 8px;
-          border-radius: 10px;
-        }
-      }
-    }
-
     // 搜索结果列表
     .search-results {
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+
+      .empty-result {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        min-height: 200px;
+      }
+
       .user-list {
+        max-height: 200px;
+        overflow-y: auto;
+        padding-right: 4px;
+
+        &::-webkit-scrollbar {
+          width: 4px;
+        }
+
+        &::-webkit-scrollbar-track {
+          background: #f1f1f1;
+          border-radius: 2px;
+        }
+
+        &::-webkit-scrollbar-thumb {
+          background: #cbd5e0;
+          border-radius: 2px;
+
+          &:hover {
+            background: #a0aec0;
+          }
+        }
+
         .user-item {
           display: flex;
           align-items: center;
@@ -1098,10 +1020,6 @@ generateRecommendations()
             }
           }
         }
-      }
-
-      .empty-result {
-        margin-top: 80px;
       }
     }
   }
@@ -1240,9 +1158,9 @@ generateRecommendations()
       }
 
       .friend-list {
-        max-height: 280px;
+        max-height: 200px;
         overflow-y: auto;
-        padding-right: 8px;
+        padding-right: 4px;
 
         &::-webkit-scrollbar {
           width: 6px;
@@ -1393,12 +1311,34 @@ generateRecommendations()
     }
 
     .search-result-list {
+      max-height: 200px;
+      overflow-y: auto;
+      padding-right: 4px;
+
+      &::-webkit-scrollbar {
+        width: 4px;
+      }
+
+      &::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 2px;
+      }
+
+      &::-webkit-scrollbar-thumb {
+        background: #cbd5e0;
+        border-radius: 2px;
+
+        &:hover {
+          background: #a0aec0;
+        }
+      }
+
       .result-user-item {
         display: flex;
         align-items: center;
-        padding: 10px;
+        padding: 14px 16px;
         border-radius: 10px;
-        margin-bottom: 8px;
+        margin-bottom: 10px;
         background: linear-gradient(135deg, #ffffff 0%, #f7fafc 100%);
         transition: all 0.3s ease;
         border: 2px solid #e2e8f0;
@@ -1410,15 +1350,15 @@ generateRecommendations()
         }
 
         .user-avatar {
-          width: 42px;
-          height: 42px;
-          font-size: 22px;
+          width: 48px;
+          height: 48px;
+          font-size: 24px;
           display: flex;
           align-items: center;
           justify-content: center;
           background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
           border-radius: 50%;
-          margin-right: 12px;
+          margin-right: 14px;
           box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
           overflow: hidden;
 
@@ -1433,14 +1373,14 @@ generateRecommendations()
           flex: 1;
 
           .user-name {
-            font-size: 13px;
+            font-size: 14px;
             font-weight: 600;
             color: #2d3748;
-            margin-bottom: 5px;
+            margin-bottom: 6px;
           }
 
           .user-detail {
-            font-size: 11px;
+            font-size: 12px;
             color: #718096;
           }
         }
@@ -1525,6 +1465,31 @@ generateRecommendations()
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+// 搜索结果淡入动画
+.search-result-fade-enter-active {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.search-result-fade-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.search-result-fade-enter-from {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.search-result-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.search-result-fade-enter-to,
+.search-result-fade-leave-from {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 .tab-fade-enter-from {
   opacity: 0;
   transform: translateY(20px) scale(0.95);
@@ -1543,26 +1508,6 @@ generateRecommendations()
 .tab-fade-leave-from {
   opacity: 1;
   transform: translateY(0) scale(1);
-}
-
-// 推荐卡片动画
-.tab-content {
-  .user-grid {
-    .user-card {
-      animation: cardFadeIn 0.5s ease backwards;
-    }
-  }
-}
-
-@keyframes cardFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 // 列表项动画
@@ -1588,8 +1533,6 @@ generateRecommendations()
     transform: translateX(0);
   }
 }
-
-// 加好友搜索结果动画
 .add-friend-content {
   .search-result-list {
     .result-user-item {
@@ -1620,8 +1563,8 @@ generateRecommendations()
 
 // 响应式优化
 @media screen and (max-height: 800px) {
-  .content-area {
-    max-height: 350px;
+  .dialog-container {
+    height: 400px;
   }
 }
 
@@ -1633,11 +1576,14 @@ generateRecommendations()
 
   .dialog-container {
     flex-direction: column;
+    height: auto;
+    min-height: 400px;
   }
 
   .action-tabs {
     flex-direction: row;
     width: 100%;
+    height: auto;
     gap: 8px;
 
     .tab-item {
@@ -1658,7 +1604,7 @@ generateRecommendations()
   }
 
   .content-area {
-    max-height: 350px;
+    height: 380px;
   }
 }
 </style>
