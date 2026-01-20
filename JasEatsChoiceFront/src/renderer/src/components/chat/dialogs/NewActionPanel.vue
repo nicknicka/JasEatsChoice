@@ -2,29 +2,31 @@
   <el-dialog
     v-model="visible"
     title="新建对话"
-    width="560px"
+    width="680px"
     :close-on-click-modal="false"
     :close-on-press-escape="true"
     draggable
     @close="handleClose"
     class="new-action-dialog"
   >
-    <!-- 功能选项卡 -->
-    <div class="action-tabs">
-      <div
-        v-for="tab in tabs"
-        :key="tab.key"
-        class="tab-item"
-        :class="{ active: activeTab === tab.key }"
-        @click="switchTab(tab.key)"
-      >
-        <div class="tab-icon">{{ tab.icon }}</div>
-        <div class="tab-label">{{ tab.label }}</div>
+    <!-- 左右布局容器 -->
+    <div class="dialog-container">
+      <!-- 左侧功能选项卡 -->
+      <div class="action-tabs">
+        <div
+          v-for="tab in tabs"
+          :key="tab.key"
+          class="tab-item"
+          :class="{ active: activeTab === tab.key }"
+          @click="switchTab(tab.key)"
+        >
+          <div class="tab-icon">{{ tab.icon }}</div>
+          <div class="tab-label">{{ tab.label }}</div>
+        </div>
       </div>
-    </div>
 
-    <!-- 内容区域 -->
-    <div class="content-area">
+      <!-- 右侧内容区域 -->
+      <div class="content-area">
       <!-- 新建单聊 -->
       <transition name="tab-fade" mode="out-in">
         <div v-if="activeTab === 'chat'" key="chat" class="tab-content">
@@ -243,7 +245,6 @@
             <el-input
               v-model="friendSearchKeyword"
               placeholder="请输入关键词搜索用户"
-              :prefix-icon="Search"
               clearable
               @input="handleFriendSearch"
             >
@@ -291,6 +292,7 @@
         </div>
       </div>
       </transition>
+      </div>
     </div>
 
     <!-- 底部操作栏 -->
@@ -736,14 +738,22 @@ generateRecommendations()
   border-top: 1px solid #e8eaf0;
 }
 
-// 功能选项卡
+// 布局容器
+.dialog-container {
+  display: flex;
+  gap: 16px;
+  min-height: 400px;
+}
+
+// 功能选项卡 - 左侧垂直布局
 .action-tabs {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-bottom: 12px;
-  padding: 12px;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  width: 100px;
+  flex-shrink: 0;
+  padding: 12px 8px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
   border-radius: 12px;
   box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.05);
 
@@ -752,10 +762,10 @@ generateRecommendations()
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 10px 8px;
+    padding: 16px 8px;
     border-radius: 10px;
     cursor: pointer;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     background-color: rgba(255, 255, 255, 0.6);
     border: 2px solid transparent;
     position: relative;
@@ -776,8 +786,8 @@ generateRecommendations()
     &:hover {
       background-color: #fff;
       border-color: #3b82f6;
-      transform: translateY(-4px);
-      box-shadow: 0 8px 24px rgba(59, 130, 246, 0.25);
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
 
       &::before {
         opacity: 1;
@@ -791,8 +801,8 @@ generateRecommendations()
     &.active {
       background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
       border-color: #3b82f6;
-      box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);
-      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+      transform: scale(1.05);
 
       .tab-icon {
         transform: scale(1.05);
@@ -805,7 +815,7 @@ generateRecommendations()
     }
 
     .tab-icon {
-      font-size: 28px;
+      font-size: 32px;
       margin-bottom: 6px;
       transition: transform 0.3s ease;
       position: relative;
@@ -813,12 +823,13 @@ generateRecommendations()
     }
 
     .tab-label {
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 500;
       color: #4a5568;
       transition: all 0.3s ease;
       position: relative;
       z-index: 1;
+      text-align: center;
     }
   }
 }
@@ -871,8 +882,28 @@ generateRecommendations()
 
 // 内容区域
 .content-area {
-  // 移除高度限制和滚动条，让内容自然撑开
-  padding-right: 8px;
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 4px;
+  max-height: 450px;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border-radius: 3px;
+
+    &:hover {
+      background: #a0aec0;
+    }
+  }
 
   // 单聊搜索框
   .chat-search {
@@ -1313,7 +1344,7 @@ generateRecommendations()
 
       :deep(.el-input) {
         .el-input__wrapper {
-          border-radius: 10px;
+          border-radius: 10px 0 0 10px;
           box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
           border: 2px solid transparent;
           transition: all 0.3s ease;
@@ -1589,8 +1620,8 @@ generateRecommendations()
 
 // 响应式优化
 @media screen and (max-height: 800px) {
-  :deep(.el-dialog__body) {
-    max-height: 55vh;
+  .content-area {
+    max-height: 350px;
   }
 }
 
@@ -1600,21 +1631,34 @@ generateRecommendations()
     max-width: 700px;
   }
 
+  .dialog-container {
+    flex-direction: column;
+  }
+
   .action-tabs {
-    grid-template-columns: 1fr;
+    flex-direction: row;
+    width: 100%;
     gap: 8px;
 
     .tab-item {
       flex-direction: row;
-      justify-content: flex-start;
-      padding: 12px 16px;
+      justify-content: center;
+      padding: 10px 16px;
 
       .tab-icon {
-        font-size: 28px;
+        font-size: 24px;
         margin-bottom: 0;
-        margin-right: 12px;
+        margin-right: 8px;
+      }
+
+      .tab-label {
+        font-size: 13px;
       }
     }
+  }
+
+  .content-area {
+    max-height: 350px;
   }
 }
 </style>
