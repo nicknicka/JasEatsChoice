@@ -750,9 +750,7 @@ const openGroupDetail = async () => {
 
           return {
             id: contact.userId,
-            name: isCurrentUser
-              ? '我'
-              : (userData.nickname || userData.username || '未知用户'),
+            name: userData.nickname || userData.username || '未知用户',
             role: contact.role || 'member',
             isCurrentUser
           }
@@ -760,7 +758,7 @@ const openGroupDetail = async () => {
           console.error(`获取成员 ${contact.userId} 信息失败:`, error)
           return {
             id: contact.userId,
-            name: contact.userId === userId.value.toString() ? '我' : '未知用户',
+            name: '未知用户',
             role: contact.role || 'member',
             isCurrentUser: contact.userId === userId.value.toString()
           }

@@ -35,7 +35,7 @@
         <div class="stat-divider"></div>
         <div class="stat-item">
           <div class="stat-content">
-            <div class="stat-value">{{ groupInfo.creator }}</div>
+            <div class="stat-value">{{ creatorName }}</div>
             <div class="stat-label">群主</div>
           </div>
         </div>
@@ -63,40 +63,16 @@
             :key="member.id"
             class="member-card"
             :class="{ 'creator-card': member.id === groupInfo.creatorId }"
-            :style="{ 'animation-delay': `${index * 0.05}s` }"
+            :style="{ '--animation-delay': `${index * 0.1}s` }"
           >
             <div class="member-avatar">
               {{ getMemberAvatar(member.name) }}
             </div>
             <div class="member-info">
               <div class="member-name">
-                {{ member.name }}
-                <el-tag
-                  v-if="member.id === groupInfo.creatorId"
-                  size="small"
-                  effect="dark"
-                  class="role-tag creator-tag"
-                >
-                  👑 群主
-                </el-tag>
-                <el-tag
-                  v-if="member.role === 'admin'"
-                  type="warning"
-                  size="small"
-                  effect="dark"
-                  class="role-tag"
-                >
-                  管理员
-                </el-tag>
-                <el-tag
-                  v-if="member.isCurrentUser"
-                  type="success"
-                  size="small"
-                  effect="dark"
-                  class="role-tag"
-                >
-                  我
-                </el-tag>
+                <span>{{ member.name }}</span>
+                <el-tag v-if="member.id === groupInfo.creatorId" class="creator-tag" size="small">群主</el-tag>
+                <el-tag v-if="member.isCurrentUser && member.id !== groupInfo.creatorId" class="current-user-tag" size="small">我</el-tag>
               </div>
               <div class="member-id">ID: {{ member.id }}</div>
             </div>
@@ -165,6 +141,16 @@ const sortedMembers = computed(() => {
 
     return 0
   })
+})
+
+// 获取群主的真实用户名
+const creatorName = computed(() => {
+  if (!props.groupInfo?.memberDetails || !props.groupInfo.creatorId) {
+    return props.groupInfo?.creator || '未知'
+  }
+
+  const creator = props.groupInfo.memberDetails.find(m => m.id === props.groupInfo.creatorId)
+  return creator?.name || props.groupInfo?.creator || '未知'
 })
 
 // 根据成员名生成头像emoji
@@ -332,6 +318,7 @@ const handleClose = () => {
     border: 2px solid rgba(59, 130, 246, 0.1);
     position: relative;
     overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
     &::before {
       content: '';
@@ -343,6 +330,12 @@ const handleClose = () => {
       background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%);
     }
 
+    &:hover {
+      box-shadow: 0 12px 40px rgba(59, 130, 246, 0.2);
+      transform: translateY(-4px) scale(1.02);
+      border-color: rgba(59, 130, 246, 0.2);
+    }
+
     .stat-item {
       display: flex;
       flex-direction: column;
@@ -352,9 +345,34 @@ const handleClose = () => {
       justify-content: center;
       position: relative;
       z-index: 1;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      padding: 8px;
+      border-radius: 12px;
+
+      &:hover {
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
+        transform: translateY(-2px) scale(1.05);
+
+        .stat-content {
+          .stat-value {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation-play-state: paused;
+          }
+
+          .stat-label {
+            color: #3b82f6;
+            font-weight: 600;
+          }
+        }
+      }
 
       .stat-content {
         text-align: center;
+        transition: all 0.3s ease;
 
         .stat-value {
           font-size: 20px;
@@ -364,6 +382,7 @@ const handleClose = () => {
           -webkit-text-fill-color: transparent;
           background-clip: text;
           margin-bottom: 4px;
+          transition: all 0.3s ease;
 
           &.text-sm {
             font-size: 13px;
@@ -374,8 +393,27 @@ const handleClose = () => {
           font-size: 12px;
           color: #6b7280;
           font-weight: 500;
+          transition: all 0.3s ease;
         }
       }
+    }
+
+    // 第一个数据值（群成员数）
+    .stat-item:nth-child(1) .stat-value {
+      animation: float 3s ease-in-out infinite;
+      animation-delay: 0s;
+    }
+
+    // 第二个数据值（群主）
+    .stat-item:nth-child(3) .stat-value {
+      animation: float 3s ease-in-out infinite;
+      animation-delay: 1s;
+    }
+
+    // 第三个数据值（创建时间）
+    .stat-item:nth-child(5) .stat-value {
+      animation: float 3s ease-in-out infinite;
+      animation-delay: 2s;
     }
 
     .stat-divider {
@@ -464,6 +502,7 @@ const handleClose = () => {
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         cursor: pointer;
         animation: slideInLeft 0.5s ease backwards;
+        animation-delay: var(--animation-delay, 0s);
         position: relative;
         overflow: hidden;
         max-width: 100%;
@@ -517,6 +556,18 @@ const handleClose = () => {
           .member-avatar {
             transform: rotate(3deg) scale(1.03);
           }
+
+          .member-name span {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+          }
+
+          .member-id {
+            background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+            color: #4338ca;
+          }
         }
 
         // 群主卡片hover效果
@@ -527,6 +578,13 @@ const handleClose = () => {
 
           .member-avatar {
             background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+          }
+
+          .member-name span {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
           }
         }
 
@@ -561,19 +619,47 @@ const handleClose = () => {
             gap: 8px;
             flex-wrap: wrap;
 
-            .role-tag {
-              font-size: 11px;
+            span {
+              transition: all 0.3s ease;
+            }
+
+            .current-user-tag {
+              font-size: 12px;
               padding: 4px 10px;
-              height: 20px;
-              line-height: 20px;
+              height: auto;
               border-radius: 10px;
               font-weight: 600;
-              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+              box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+              white-space: nowrap;
+              background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+              border: none;
+              /* 覆盖父元素的渐变文字效果 */
+              -webkit-text-fill-color: #ffffff !important;
+              background-clip: border-box !important;
+              -webkit-background-clip: border-box !important;
 
-              &.creator-tag {
-                background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-                border: none;
-                box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+              :deep(.el-tag__content) {
+                -webkit-text-fill-color: #ffffff !important;
+              }
+            }
+
+            .creator-tag {
+              font-size: 12px;
+              padding: 4px 10px;
+              height: auto;
+              border-radius: 10px;
+              font-weight: 600;
+              box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+              white-space: nowrap;
+              background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+              border: none;
+              /* 覆盖父元素的渐变文字效果 */
+              -webkit-text-fill-color: #ffffff !important;
+              background-clip: border-box !important;
+              -webkit-background-clip: border-box !important;
+
+              :deep(.el-tag__content) {
+                -webkit-text-fill-color: #ffffff !important;
               }
             }
           }
@@ -587,6 +673,7 @@ const handleClose = () => {
             border-radius: 8px;
             display: inline-block;
             font-weight: 500;
+            transition: all 0.3s ease;
           }
         }
 
