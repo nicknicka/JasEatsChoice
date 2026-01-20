@@ -15,10 +15,6 @@
             ({{ conversation.memberCount || '0' }}人)
           </span>
         </div>
-        <div class="status-info">
-          <span class="online-status"></span>
-          <span class="status-text">{{ getStatusText() }}</span>
-        </div>
       </div>
     </div>
 
@@ -129,15 +125,6 @@ const isImageAvatar = (avatar) => {
   return avatar.match(/^https?:/) || avatar.match(/^data:image/)
 }
 
-// 获取状态文本
-const getStatusText = () => {
-  if (props.conversation.type === 'group') {
-    return '群聊'
-  }
-  // 这里可以根据实际情况判断在线状态
-  return '在线'
-}
-
 // 切换搜索面板
 const toggleSearch = () => {
   showSearch.value = !showSearch.value
@@ -246,25 +233,6 @@ const handleCommand = (command) => {
         }
       }
 
-      .status-info {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-
-        .online-status {
-          width: 6px;
-          height: 6px;
-          border-radius: 50%;
-          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-          box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.1);
-          animation: pulse 2s infinite;
-        }
-
-        .status-text {
-          font-size: 11px;
-          color: #8b949e;
-        }
-      }
     }
   }
 
@@ -344,17 +312,6 @@ const handleCommand = (command) => {
         }
       }
     }
-  }
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.8;
-    transform: scale(1.1);
   }
 }
 
