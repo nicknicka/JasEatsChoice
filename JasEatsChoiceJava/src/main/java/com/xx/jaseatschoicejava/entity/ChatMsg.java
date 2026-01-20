@@ -21,7 +21,7 @@ import java.time.LocalDateTime;
 @ApiModel(description = "聊天消息实体")
 public class ChatMsg {
 
-    @TableId(type = com.baomidou.mybatisplus.annotation.IdType.ASSIGN_ID)
+    @TableId(type = com.baomidou.mybatisplus.annotation.IdType.INPUT)
     @ApiModelProperty(value = "消息ID")
     private String id; // 消息ID
 

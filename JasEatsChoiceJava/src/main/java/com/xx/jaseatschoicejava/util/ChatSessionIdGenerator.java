@@ -9,9 +9,10 @@ import java.util.UUID;
  * 聊天会话ID生成工具类
  *
  * 提供多种会话ID生成策略：
- * 1. MD5哈希（推荐）：快速、安全、固定长度
- * 2. SHA-256哈希：更安全、但较长
- * 3. UUID命名：标准格式、可扩展
+ * 1. IdGenerator（推荐）：无序、不可预测、16位数字
+ * 2. MD5哈希：快速、安全、固定长度
+ * 3. SHA-256哈希：更安全、但较长
+ * 4. UUID命名：标准格式、可扩展
  *
  * @author xx
  * @date 2026-01-19
@@ -28,6 +29,30 @@ public class ChatSessionIdGenerator {
 
     // 盐值（可选，用于增强安全性）
     private static final String SALT = "JasEatsChoice_Chat_2026";
+
+    /**
+     * ========== 推荐方案：使用IdGenerator（无序、不可预测） ==========
+     * 生成单聊会话ID - 使用IdGenerator
+     *
+     * 特点：
+     * - 16位数字
+     * - 完全无序、不可预测
+     * - 高碰撞安全性
+     * - 与系统其他ID保持一致
+     *
+     * @param userId1 用户1的ID
+     * @param userId2 用户2的ID
+     * @return 会话ID（格式：S + 16位数字）
+     */
+    public static String generateSingleChatSessionIdWithIdGenerator(String userId1, String userId2) {
+        if (userId1 == null || userId2 == null) {
+            throw new IllegalArgumentException("用户ID不能为空");
+        }
+
+        // 使用IdGenerator生成16位随机数字ID
+        Long id = IdGenerator.generateId();
+        return SINGLE_CHAT_PREFIX + id;
+    }
 
     /**
      * ========== 方案1：MD5哈希（推荐） ==========
@@ -139,7 +164,7 @@ public class ChatSessionIdGenerator {
 
     /**
      * 根据消息类型生成会话ID
-     * 默认使用MD5哈希方案
+     * 默认使用IdGenerator方案（推荐：无序、不可预测）
      *
      * @param msgType 消息类型
      * @param fromId  发送者ID
@@ -150,7 +175,8 @@ public class ChatSessionIdGenerator {
         if ("group".equals(msgType)) {
             return getGroupChatSessionId(toId);
         } else {
-            return generateSingleChatSessionId(fromId, toId);
+            // 使用IdGenerator生成单聊会话ID（无序、不可预测）
+            return generateSingleChatSessionIdWithIdGenerator(fromId, toId);
         }
     }
 

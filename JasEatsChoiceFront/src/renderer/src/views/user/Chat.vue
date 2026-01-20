@@ -662,20 +662,113 @@ const handleAddFriendFromPanel = (user) => {
   fetchFriends()
 }
 
-const openGroupDetail = () => {
+const openGroupDetail = async () => {
   if (!selectedConversation.value || selectedConversation.value.type !== 'group') return
 
-  currentGroupInfo.value = {
-    id: selectedConversation.value.id,
-    name: selectedConversation.value.name,
-    avatar: selectedConversation.value.avatar,
-    memberCount: selectedConversation.value.memberCount,
-    members: ['我', '张三', '李四', '王五', '赵六'],
-    creator: '我',
-    createdAt: '2024-01-15 10:30:00'
-  }
+  try {
+    const groupId = selectedConversation.value.id
 
-  groupDetailDialogVisible.value = true
+    // 1. 并行获取群信息和群成员列表
+    const [groupResponse, membersResponse] = await Promise.all([
+      api.get(`/v1/groups/${groupId}`),
+      api.get(`/v1/contacts/groups/${groupId}/members`)
+    ])
+
+    if (groupResponse.code !== '200' || !groupResponse.data) {
+      ElMessage.error('获取群信息失败')
+      return
+    }
+
+    if (membersResponse.code !== '200') {
+      ElMessage.error('获取群成员失败')
+      return
+    }
+
+    const groupData = groupResponse.data
+    const membersData = membersResponse.data || []
+
+    // 2. 获取每个成员的用户信息
+    const membersWithNames = await Promise.all(
+      membersData.map(async (contact) => {
+        try {
+          const userResponse = await api.get(`/v1/users/${contact.userId}`)
+          const userData = userResponse.data
+
+          // 判断是否是当前用户
+          const isCurrentUser = contact.userId === userId.value.toString()
+
+          return {
+            id: contact.userId,
+            name: isCurrentUser
+              ? '我'
+              : (userData.nickname || userData.username || '未知用户'),
+            role: contact.role || 'member',
+            isCurrentUser
+          }
+        } catch (error) {
+          console.error(`获取成员 ${contact.userId} 信息失败:`, error)
+          return {
+            id: contact.userId,
+            name: contact.userId === userId.value.toString() ? '我' : '未知用户',
+            role: contact.role || 'member',
+            isCurrentUser: contact.userId === userId.value.toString()
+          }
+        }
+      })
+    )
+
+    // 3. 获取创建人信息
+    let creatorName = '未知用户'
+    if (groupData.creatorId) {
+      try {
+        const creatorResponse = await api.get(`/v1/users/${groupData.creatorId}`)
+        const creatorData = creatorResponse.data
+        creatorName = groupData.creatorId === userId.value.toString()
+          ? '我'
+          : (creatorData.nickname || creatorData.username || '未知用户')
+      } catch (error) {
+        console.error('获取创建人信息失败:', error)
+        creatorName = groupData.creatorId === userId.value.toString() ? '我' : '未知用户'
+      }
+    }
+
+    // 4. 格式化创建时间
+    let formattedCreateTime = '未知时间'
+    if (groupData.createTime) {
+      try {
+        const createTime = new Date(groupData.createTime)
+        formattedCreateTime = createTime.toLocaleString('zh-CN', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        })
+      } catch (error) {
+        console.error('格式化时间失败:', error)
+      }
+    }
+
+    // 5. 组装群详情数据
+    currentGroupInfo.value = {
+      id: groupData.id,
+      name: groupData.groupName || selectedConversation.value.name,
+      avatar: selectedConversation.value.avatar,
+      memberCount: membersWithNames.length, // 使用实际成员数量
+      members: membersWithNames.map(m => m.name), // 成员名称列表
+      memberDetails: membersWithNames, // 保存详细信息供后续使用
+      creator: creatorName,
+      creatorId: groupData.creatorId,
+      createdAt: formattedCreateTime
+    }
+
+    groupDetailDialogVisible.value = true
+  } catch (error) {
+    console.error('获取群详情失败:', error)
+    ElMessage.error('获取群详情失败，请稍后重试')
+  }
 }
 
 // ========== 群订单操作 ==========

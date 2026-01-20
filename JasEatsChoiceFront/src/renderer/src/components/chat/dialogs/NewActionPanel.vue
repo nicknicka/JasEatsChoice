@@ -4,7 +4,10 @@
     title="新建对话"
     width="700px"
     :close-on-click-modal="false"
+    :close-on-press-escape="true"
+    draggable
     @close="handleClose"
+    class="new-action-dialog"
   >
     <!-- 功能选项卡 -->
     <div class="action-tabs">
@@ -661,8 +664,27 @@ generateRecommendations()
 // 对话框样式优化
 :deep(.el-dialog) {
   border-radius: 16px;
-  overflow: hidden;
+  overflow: visible;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+
+  // 确保对话框不会超出视口
+  .el-dialog__header {
+    flex-shrink: 0;
+    cursor: move;
+    user-select: none;
+  }
+
+  .el-dialog__body {
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .el-dialog__footer {
+    flex-shrink: 0;
+  }
 }
 
 :deep(.el-dialog__header) {
@@ -694,6 +716,25 @@ generateRecommendations()
 :deep(.el-dialog__body) {
   padding: 24px;
   background: linear-gradient(to bottom, #f8f9fe 0%, #ffffff 100%);
+
+  // 美化滚动条
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    border-radius: 4px;
+
+    &:hover {
+      background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+    }
+  }
 }
 
 :deep(.el-dialog__footer) {
@@ -1570,6 +1611,37 @@ generateRecommendations()
 
   &:hover {
     transform: translateY(-2px);
+  }
+}
+
+// 响应式优化
+@media screen and (max-height: 800px) {
+  :deep(.el-dialog__body) {
+    max-height: 55vh;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  :deep(.el-dialog) {
+    width: 95vw !important;
+    max-width: 700px;
+  }
+
+  .action-tabs {
+    grid-template-columns: 1fr;
+    gap: 8px;
+
+    .tab-item {
+      flex-direction: row;
+      justify-content: flex-start;
+      padding: 12px 16px;
+
+      .tab-icon {
+        font-size: 28px;
+        margin-bottom: 0;
+        margin-right: 12px;
+      }
+    }
   }
 }
 </style>
