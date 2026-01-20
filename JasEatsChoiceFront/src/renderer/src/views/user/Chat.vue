@@ -570,14 +570,21 @@ const createGroupFromPanel = async (data) => {
     const groupName = data.name.trim()
 
     // 2. 将创建者添加到群成员关系
-    await api.post('/v1/contacts/groups/join', {
-      userId: userId.value.toString(),
-      targetId: groupId.toString(),
-      relationType: 'group',
-      status: 'normal'
-    })
+    try {
+      await api.post('/v1/contacts/groups/join', {
+        userId: userId.value.toString(),
+        targetId: groupId.toString(),
+        relationType: 'group',
+        status: 'normal'
+      })
+    } catch (error) {
+      console.error('添加创建者到群成员关系失败:', error)
+      ElMessage.error('添加群成员关系失败，请稍后重试')
+      return
+    }
 
     // 3. 将选中的成员添加到群成员关系
+    const memberJoinResults = []
     for (const member of data.members) {
       try {
         await api.post('/v1/contacts/groups/join', {
@@ -586,74 +593,117 @@ const createGroupFromPanel = async (data) => {
           relationType: 'group',
           status: 'normal'
         })
+        memberJoinResults.push({ member: member.name, success: true })
       } catch (error) {
         console.error(`添加成员 ${member.name} 到群失败:`, error)
+        memberJoinResults.push({ member: member.name, success: false, error })
       }
     }
 
-    // 4. 创建前端会话对象
-    const newGroup = {
-      id: groupId,
-      type: 'group',
-      name: groupName,
+    // 检查是否有成员添加失败
+    const failedMembers = memberJoinResults.filter(r => !r.success)
+    if (failedMembers.length > 0) {
+      ElMessage.warning(`部分成员添加失败: ${failedMembers.map(f => f.member).join(', ')}`)
+    }
+
+    // 4. 为所有成员创建聊天会话记录（并行执行以提高性能）
+    const sessionCreatePromises = []
+    const sessionResults = []
+
+    // 为创建者创建会话
+    const creatorSessionPromise = api.post('/v1/chat/sessions', {
+      userId: userId.value.toString(),
+      sessionId: groupId.toString(),
+      sessionType: 'group',
+      sessionName: groupName,
       avatar: '👥',
-      lastMessage: '暂无消息',
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      unreadCount: 0,
-      memberCount: data.members.length + 1,
-      pinned: false
+      memberCount: data.members.length + 1
+    }).then(response => {
+      sessionResults.push({ user: '我', success: response.code === '200', response })
+      return response
+    }).catch(error => {
+      sessionResults.push({ user: '我', success: false, error })
+      throw error
+    })
+    sessionCreatePromises.push(creatorSessionPromise)
+
+    // 为每个成员创建会话
+    for (const member of data.members) {
+      const memberSessionPromise = api.post('/v1/chat/sessions', {
+        userId: member.id.toString(),
+        sessionId: groupId.toString(),
+        sessionType: 'group',
+        sessionName: groupName,
+        avatar: '👥',
+        memberCount: data.members.length + 1
+      }).then(response => {
+        sessionResults.push({ user: member.name, success: response.code === '200', response })
+        return response
+      }).catch(error => {
+        sessionResults.push({ user: member.name, success: false, error })
+        throw error
+      })
+      sessionCreatePromises.push(memberSessionPromise)
     }
 
-    conversations.value.push(newGroup)
-    chatHistory.value[groupId] = []
+    // 等待所有会话创建完成，任何一个失败都会抛出错误
+    try {
+      await Promise.all(sessionCreatePromises)
+    } catch (error) {
+      console.error('会话创建失败:', error)
 
-    // 5. 添加系统消息
-    const systemMsg = {
-      id: 1,
-      sender: '系统',
-      content: `群聊 "${groupName}" 已创建`,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      // 分析失败的会话
+      const failedSessions = sessionResults.filter(r => !r.success)
+
+      if (failedSessions.length > 0) {
+        ElMessage.error(
+          `会话创建失败: ${failedSessions.map(f => f.user).join(', ')}。请稍后重试`
+        )
+        return
+      }
     }
-    chatHistory.value[groupId].push(systemMsg)
-    newGroup.lastMessage = systemMsg.content
 
-    selectedConversation.value = newGroup
+    // 验证会话创建结果
+    const failedSessions = sessionResults.filter(r => !r.success)
+    if (failedSessions.length > 0) {
+      ElMessage.error(
+        `部分会话创建失败: ${failedSessions.map(f => f.user).join(', ')}。群聊可能无法正常使用`
+      )
+      return
+    }
 
-    ElMessage.success(`群聊 "${groupName}" 已创建`)
+    console.log('✅ 所有群聊会话记录创建成功', sessionResults)
+
+    // 5. 从服务器刷新会话列表，确保数据同步
+    const refreshSuccess = await fetchConversations()
+    if (!refreshSuccess) {
+      ElMessage.warning('群聊已创建，但会话列表刷新失败，请手动刷新')
+    }
+
+    // 6. 查找新创建的群聊会话
+    const newGroupConversation = conversations.value.find(c => c.id === groupId)
+    if (newGroupConversation) {
+      selectedConversation.value = newGroupConversation
+      chatHistory.value[groupId] = []
+
+      // 添加系统消息
+      const systemMsg = {
+        id: 1,
+        sender: '系统',
+        content: `群聊 "${groupName}" 已创建`,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }
+      chatHistory.value[groupId].push(systemMsg)
+    } else {
+      console.error('未找到新创建的群聊会话:', groupId)
+      ElMessage.error('群聊创建成功，但无法打开会话')
+      return
+    }
+
+    ElMessage.success(`群聊 "${groupName}" 已创建，共 ${data.members.length + 1} 人`)
   } catch (error) {
     console.error('创建群失败:', error)
-
-    // 如果后端调用失败，降级使用前端模拟（仅开发模式）
-    const newGroupId = Date.now()
-    const memberNames = data.members.map((member) => member.name)
-
-    const newGroup = {
-      id: newGroupId,
-      type: 'group',
-      name: data.name,
-      avatar: '👥',
-      lastMessage: '暂无消息',
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      unreadCount: 0,
-      memberCount: memberNames.length + 1,
-      pinned: false
-    }
-
-    conversations.value.push(newGroup)
-    chatHistory.value[newGroupId] = []
-
-    const systemMsg = {
-      id: 1,
-      sender: '系统',
-      content: `群聊 "${newGroup.name}" 已创建`,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    }
-    chatHistory.value[newGroupId].push(systemMsg)
-    newGroup.lastMessage = systemMsg.content
-
-    selectedConversation.value = newGroup
-
-    ElMessage.success(`群聊 "${data.name}" 已创建（离线模式）`)
+    ElMessage.error(`创建群失败: ${error.message || '请稍后重试'}`)
   }
 }
 
@@ -896,10 +946,19 @@ const fetchFriends = async () => {
             const userResponse = await api.get(`/v1/users/${contact.targetId}`)
             const userData = userResponse.data
 
+            // 判断头像是否为有效的图片 URL
+            const isValidAvatarUrl = (avatar) => {
+              if (!avatar) return false
+              // 只接受 http://、https:// 或 data:image 开头的 URL
+              return /^https?:\/\//.test(avatar) || /^data:image/.test(avatar)
+            }
+
+            const avatar = isValidAvatarUrl(userData.avatar) ? userData.avatar : '👤'
+
             return {
               id: contact.targetId,
               name: userData.nickname || userData.username || '好友',
-              avatar: userData.avatar || '👤',
+              avatar: avatar,
               lastMessage: '',
               time: '',
               unreadCount: 0,
@@ -925,6 +984,25 @@ const fetchFriends = async () => {
     }
   } catch (error) {
     console.error('获取好友列表失败:', error)
+  }
+}
+
+// 获取会话列表
+const fetchConversations = async () => {
+  try {
+    const conversationsResponse = await api.get(`/v1/chat/users/${userId.value}/chat-sessions`)
+
+    if (conversationsResponse.code === '200') {
+      conversations.value = conversationsResponse.data
+      console.log(`👥 [Chat] 会话列表已更新 - 共 ${conversations.value.length} 个会话`)
+      return true
+    } else {
+      console.error(`❌ [Chat] 获取会话列表失败 - code: ${conversationsResponse.code}`)
+      return false
+    }
+  } catch (error) {
+    console.error('❌ [Chat] 获取会话列表失败:', error)
+    return false
   }
 }
 </script>

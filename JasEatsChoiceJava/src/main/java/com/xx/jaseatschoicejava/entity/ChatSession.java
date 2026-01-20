@@ -25,10 +25,6 @@ import java.time.LocalDateTime;
 @ApiModel(description = "聊天会话实体")
 public class ChatSession {
 
-    @TableId(type = com.baomidou.mybatisplus.annotation.IdType.AUTO)
-    @ApiModelProperty(value = "主键ID")
-    private Long id; // 主键ID（自增，MyBatis-Plus要求）
-
     @TableField("session_id")
     @ApiModelProperty(value = "会话标识（业务唯一键的一部分）")
     private String sessionId; // 会话标识（私聊为双方用户ID组合，群聊为群ID）

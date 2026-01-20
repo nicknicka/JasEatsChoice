@@ -2,7 +2,7 @@
   <el-dialog
     v-model="visible"
     title="新建对话"
-    width="700px"
+    width="560px"
     :close-on-click-modal="false"
     :close-on-press-escape="true"
     draggable
@@ -520,10 +520,16 @@ const handleGlobalSearch = async () => {
     })
 
     if (response.code === '200') {
+      // 判断头像是否为有效的图片 URL
+      const isValidAvatarUrl = (avatar) => {
+        if (!avatar) return false
+        return /^https?:\/\//.test(avatar) || /^data:image/.test(avatar)
+      }
+
       globalSearchResults.value = (response.data || []).map((user) => ({
         id: user.userId,
         name: user.nickname || user.username,
-        avatar: user.avatar,
+        avatar: isValidAvatarUrl(user.avatar) ? user.avatar : '👤',
         detail: `用户ID: ${user.userId}`
       }))
     }
@@ -580,10 +586,16 @@ const handleFriendSearch = async () => {
     })
 
     if (response.code === '200') {
+      // 判断头像是否为有效的图片 URL
+      const isValidAvatarUrl = (avatar) => {
+        if (!avatar) return false
+        return /^https?:\/\//.test(avatar) || /^data:image/.test(avatar)
+      }
+
       friendSearchResults.value = (response.data || []).map((user) => ({
         id: user.userId,
         name: user.nickname || user.username,
-        avatar: user.avatar,
+        avatar: isValidAvatarUrl(user.avatar) ? user.avatar : '👤',
         phone: user.phone,
         email: user.email,
         adding: false,
@@ -666,7 +678,7 @@ generateRecommendations()
   border-radius: 16px;
   overflow: visible;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-  max-height: 90vh;
+  max-height: 80vh;
   display: flex;
   flex-direction: column;
 
@@ -678,8 +690,8 @@ generateRecommendations()
   }
 
   .el-dialog__body {
-    flex: 1;
-    overflow-y: auto;
+    // 移除滚动条，让内容自然撑开
+    overflow: visible;
   }
 
   .el-dialog__footer {
@@ -688,13 +700,13 @@ generateRecommendations()
 }
 
 :deep(.el-dialog__header) {
-  padding: 24px 24px 16px;
+  padding: 20px 20px 14px;
   background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
   margin: 0;
 
   .el-dialog__title {
     color: #fff;
-    font-size: 20px;
+    font-size: 17px;
     font-weight: 600;
   }
 
@@ -714,27 +726,8 @@ generateRecommendations()
 }
 
 :deep(.el-dialog__body) {
-  padding: 24px;
+  padding: 16px;
   background: linear-gradient(to bottom, #f8f9fe 0%, #ffffff 100%);
-
-  // 美化滚动条
-  &::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-    border-radius: 4px;
-
-    &:hover {
-      background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
-    }
-  }
 }
 
 :deep(.el-dialog__footer) {
@@ -747,11 +740,11 @@ generateRecommendations()
 .action-tabs {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  margin-bottom: 24px;
-  padding: 20px;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 12px;
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  border-radius: 16px;
+  border-radius: 12px;
   box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.05);
 
   .tab-item {
@@ -759,8 +752,8 @@ generateRecommendations()
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 20px 16px;
-    border-radius: 14px;
+    padding: 10px 8px;
+    border-radius: 10px;
     cursor: pointer;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     background-color: rgba(255, 255, 255, 0.6);
@@ -812,15 +805,15 @@ generateRecommendations()
     }
 
     .tab-icon {
-      font-size: 42px;
-      margin-bottom: 10px;
+      font-size: 28px;
+      margin-bottom: 6px;
       transition: transform 0.3s ease;
       position: relative;
       z-index: 1;
     }
 
     .tab-label {
-      font-size: 15px;
+      font-size: 13px;
       font-weight: 500;
       color: #4a5568;
       transition: all 0.3s ease;
@@ -878,32 +871,12 @@ generateRecommendations()
 
 // 内容区域
 .content-area {
-  min-height: 420px;
-  max-height: 520px;
-  overflow-y: auto;
+  // 移除高度限制和滚动条，让内容自然撑开
   padding-right: 8px;
-
-  &::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-    border-radius: 4px;
-
-    &:hover {
-      background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
-    }
-  }
 
   // 单聊搜索框
   .chat-search {
-    margin-bottom: 20px;
+    margin-bottom: 12px;
 
     :deep(.el-input) {
       .el-input__wrapper {
@@ -923,7 +896,7 @@ generateRecommendations()
 
   // 空好友提示
   .empty-friends {
-    margin-top: 60px;
+    margin-top: 40px;
     text-align: center;
 
     :deep(.el-button) {
@@ -945,8 +918,8 @@ generateRecommendations()
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 20px;
-      font-size: 17px;
+      margin-bottom: 12px;
+      font-size: 14px;
       font-weight: 600;
       color: #2d3748;
       padding: 0 4px;
@@ -955,15 +928,15 @@ generateRecommendations()
     // 用户网格
     .user-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-      gap: 20px;
+      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+      gap: 12px;
 
       .user-card {
         display: flex;
         flex-direction: column;
         align-items: center;
-        padding: 20px;
-        border-radius: 16px;
+        padding: 12px;
+        border-radius: 12px;
         background: linear-gradient(135deg, #ffffff 0%, #f7fafc 100%);
         cursor: pointer;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -999,15 +972,15 @@ generateRecommendations()
         }
 
         .user-avatar {
-          width: 70px;
-          height: 70px;
-          font-size: 38px;
+          width: 50px;
+          height: 50px;
+          font-size: 26px;
           display: flex;
           align-items: center;
           justify-content: center;
           background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
           border-radius: 50%;
-          margin-bottom: 14px;
+          margin-bottom: 8px;
           transition: transform 0.3s ease;
           box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
           overflow: hidden;
@@ -1020,19 +993,19 @@ generateRecommendations()
         }
 
         .user-name {
-          font-size: 15px;
+          font-size: 13px;
           font-weight: 600;
           color: #2d3748;
-          margin-bottom: 6px;
+          margin-bottom: 5px;
           text-align: center;
         }
 
         .user-reason {
-          font-size: 12px;
+          font-size: 10px;
           color: #718096;
           background-color: #edf2f7;
-          padding: 4px 10px;
-          border-radius: 12px;
+          padding: 3px 8px;
+          border-radius: 10px;
         }
       }
     }
@@ -1043,9 +1016,9 @@ generateRecommendations()
         .user-item {
           display: flex;
           align-items: center;
-          padding: 16px;
-          border-radius: 12px;
-          margin-bottom: 12px;
+          padding: 10px;
+          border-radius: 10px;
+          margin-bottom: 8px;
           background: linear-gradient(135deg, #ffffff 0%, #f7fafc 100%);
           cursor: pointer;
           transition: all 0.3s ease;
@@ -1054,20 +1027,20 @@ generateRecommendations()
           &:hover {
             background: #fff;
             border-color: #3b82f6;
-            transform: translateX(6px);
+            transform: translateX(4px);
             box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
           }
 
           .user-avatar {
-            width: 56px;
-            height: 56px;
-            font-size: 30px;
+            width: 42px;
+            height: 42px;
+            font-size: 22px;
             display: flex;
             align-items: center;
             justify-content: center;
             background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
             border-radius: 50%;
-            margin-right: 16px;
+            margin-right: 12px;
             box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
             overflow: hidden;
 
@@ -1082,14 +1055,14 @@ generateRecommendations()
             flex: 1;
 
             .user-name {
-              font-size: 15px;
+              font-size: 13px;
               font-weight: 600;
               color: #2d3748;
-              margin-bottom: 6px;
+              margin-bottom: 5px;
             }
 
             .user-detail {
-              font-size: 13px;
+              font-size: 11px;
               color: #718096;
             }
           }
@@ -1108,18 +1081,18 @@ generateRecommendations()
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
       padding: 0 4px;
 
       .section-title {
-        font-size: 15px;
+        font-size: 13px;
         font-weight: 600;
         color: #2d3748;
       }
     }
 
     .search-mode-toggle {
-      margin-bottom: 16px;
+      margin-bottom: 12px;
 
       :deep(.el-radio-group) {
         display: flex;
@@ -1154,7 +1127,7 @@ generateRecommendations()
     }
 
     .empty-friend-list {
-      margin-top: 60px;
+      margin-top: 40px;
       text-align: center;
 
       :deep(.el-button) {
@@ -1172,12 +1145,12 @@ generateRecommendations()
     }
 
     .search-hint {
-      margin-top: 60px;
+      margin-top: 40px;
       text-align: center;
 
       .empty-icon {
-        font-size: 80px;
-        margin-bottom: 20px;
+        font-size: 60px;
+        margin-bottom: 16px;
         opacity: 0.8;
       }
     }
@@ -1185,17 +1158,17 @@ generateRecommendations()
     .selected-members {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 20px;
-      padding: 16px;
+      gap: 8px;
+      margin-bottom: 12px;
+      padding: 12px;
       background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
-      border-radius: 12px;
-      min-height: 56px;
+      border-radius: 10px;
+      min-height: 48px;
       border: 2px dashed #cbd5e0;
 
       .member-tag {
-        font-size: 14px;
-        padding: 8px 14px;
+        font-size: 12px;
+        padding: 6px 12px;
         background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
         border: none;
         color: #fff;
@@ -1228,7 +1201,7 @@ generateRecommendations()
 
     .member-select-area {
       :deep(.el-input) {
-        margin-bottom: 16px;
+        margin-bottom: 12px;
 
         .el-input__wrapper {
           border-radius: 10px;
@@ -1236,7 +1209,7 @@ generateRecommendations()
       }
 
       .friend-list {
-        max-height: 320px;
+        max-height: 280px;
         overflow-y: auto;
         padding-right: 8px;
 
@@ -1252,9 +1225,9 @@ generateRecommendations()
         .friend-item {
           display: flex;
           align-items: center;
-          padding: 14px;
+          padding: 10px;
           border-radius: 10px;
-          margin-bottom: 10px;
+          margin-bottom: 6px;
           background: linear-gradient(135deg, #ffffff 0%, #f7fafc 100%);
           transition: all 0.3s ease;
           border: 2px solid #e2e8f0;
@@ -1266,15 +1239,15 @@ generateRecommendations()
           }
 
           .friend-avatar {
-            width: 48px;
-            height: 48px;
-            font-size: 26px;
+            width: 38px;
+            height: 38px;
+            font-size: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
             background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
             border-radius: 50%;
-            margin-right: 14px;
+            margin-right: 10px;
             box-shadow: 0 3px 10px rgba(59, 130, 246, 0.3);
             overflow: hidden;
 
@@ -1289,7 +1262,7 @@ generateRecommendations()
             flex: 1;
 
             .friend-name {
-              font-size: 15px;
+              font-size: 13px;
               font-weight: 600;
               color: #2d3748;
             }
@@ -1302,7 +1275,7 @@ generateRecommendations()
   // 加好友
   .add-friend-content {
     .search-type-selector {
-      margin-bottom: 20px;
+      margin-bottom: 12px;
 
       :deep(.el-radio-group) {
         display: flex;
@@ -1336,7 +1309,7 @@ generateRecommendations()
     }
 
     .friend-search-input {
-      margin-bottom: 24px;
+      margin-bottom: 16px;
 
       :deep(.el-input) {
         .el-input__wrapper {
@@ -1378,12 +1351,12 @@ generateRecommendations()
     }
 
     .empty-state {
-      margin-top: 80px;
+      margin-top: 60px;
       text-align: center;
 
       .empty-icon {
-        font-size: 80px;
-        margin-bottom: 20px;
+        font-size: 60px;
+        margin-bottom: 16px;
         opacity: 0.8;
       }
     }
@@ -1392,9 +1365,9 @@ generateRecommendations()
       .result-user-item {
         display: flex;
         align-items: center;
-        padding: 18px;
-        border-radius: 12px;
-        margin-bottom: 14px;
+        padding: 10px;
+        border-radius: 10px;
+        margin-bottom: 8px;
         background: linear-gradient(135deg, #ffffff 0%, #f7fafc 100%);
         transition: all 0.3s ease;
         border: 2px solid #e2e8f0;
@@ -1406,15 +1379,15 @@ generateRecommendations()
         }
 
         .user-avatar {
-          width: 56px;
-          height: 56px;
-          font-size: 30px;
+          width: 42px;
+          height: 42px;
+          font-size: 22px;
           display: flex;
           align-items: center;
           justify-content: center;
           background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
           border-radius: 50%;
-          margin-right: 16px;
+          margin-right: 12px;
           box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
           overflow: hidden;
 
@@ -1429,14 +1402,14 @@ generateRecommendations()
           flex: 1;
 
           .user-name {
-            font-size: 15px;
+            font-size: 13px;
             font-weight: 600;
             color: #2d3748;
-            margin-bottom: 6px;
+            margin-bottom: 5px;
           }
 
           .user-detail {
-            font-size: 13px;
+            font-size: 11px;
             color: #718096;
           }
         }
@@ -1498,10 +1471,10 @@ generateRecommendations()
 }
 
 .group-form {
-  margin-bottom: 24px;
-  padding: 20px;
+  margin-bottom: 12px;
+  padding: 12px;
   background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
-  border-radius: 12px;
+  border-radius: 10px;
 
   :deep(.el-form-item) {
     margin-bottom: 0;
