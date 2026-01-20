@@ -12,7 +12,11 @@ import lombok.AllArgsConstructor;
 import java.time.LocalDateTime;
 
 /**
- * 聊天会话实体类
+ * 聊天会话实体类（优化版）
+ * 优化点：
+ * 1. 使用自增ID作为主键（MyBatis-Plus要求）
+ * 2. session_id和user_id作为业务唯一键，添加唯一索引
+ * 3. 保留user_id用于区分不同用户的会话视图（置顶、未读数等）
  */
 @Data
 @NoArgsConstructor
@@ -21,17 +25,17 @@ import java.time.LocalDateTime;
 @ApiModel(description = "聊天会话实体")
 public class ChatSession {
 
-    @TableId(type = com.baomidou.mybatisplus.annotation.IdType.ASSIGN_ID)
-    @ApiModelProperty(value = "会话ID")
-    private String id; // 会话ID
-
-    @TableField("user_id")
-    @ApiModelProperty(value = "用户ID")
-    private String userId; // 用户ID
+    @TableId(type = com.baomidou.mybatisplus.annotation.IdType.AUTO)
+    @ApiModelProperty(value = "主键ID")
+    private Long id; // 主键ID（自增，MyBatis-Plus要求）
 
     @TableField("session_id")
-    @ApiModelProperty(value = "会话标识(私聊为对方用户ID,群聊为群ID)")
-    private String sessionId; // 会话标识
+    @ApiModelProperty(value = "会话标识（业务唯一键的一部分）")
+    private String sessionId; // 会话标识（私聊为双方用户ID组合，群聊为群ID）
+
+    @TableField("user_id")
+    @ApiModelProperty(value = "用户ID（业务唯一键的一部分）")
+    private String userId; // 用户ID
 
     @TableField("session_type")
     @ApiModelProperty(value = "会话类型: single-私聊, group-群聊")
@@ -59,10 +63,10 @@ public class ChatSession {
 
     @TableField("pinned")
     @ApiModelProperty(value = "是否置顶")
-    private Boolean pinned; // 是否置顶
+    private Integer pinned; // 是否置顶（0-未置顶，1-置顶）
 
     @TableField("member_count")
-    @ApiModelProperty(value = "成员数量(群聊)")
+    @ApiModelProperty(value = "成员数量（群聊）")
     private Integer memberCount; // 成员数量
 
     @TableField("create_time")

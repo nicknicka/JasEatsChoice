@@ -3,7 +3,6 @@ package com.xx.jaseatschoicejava.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.xx.jaseatschoicejava.common.ResponseResult;
-import com.xx.jaseatschoicejava.entity.ChatMsg;
 import com.xx.jaseatschoicejava.entity.ChatSession;
 import com.xx.jaseatschoicejava.service.ChatMsgService;
 import com.xx.jaseatschoicejava.service.ChatSessionService;
@@ -59,7 +58,7 @@ public class ChatSessionController {
                             "time", session.getLastMessageTime() != null ?
                                     session.getLastMessageTime().toString().substring(11, 16) : "",
                             "unreadCount", session.getUnreadCount() != null ? session.getUnreadCount() : 0,
-                            "pinned", session.getPinned() != null ? session.getPinned() : false,
+                            "pinned", session.getPinned() != null ? session.getPinned() == 1 : false,
                             "memberCount", session.getMemberCount() != null ? session.getMemberCount() : 0
                     );
                     return sessionMap;
@@ -100,7 +99,7 @@ public class ChatSessionController {
             session.setAvatar(avatar);
             session.setMemberCount(memberCount);
             session.setUnreadCount(0);
-            session.setPinned(false);
+            session.setPinned(0);  // 0-未置顶
             session.setCreateTime(LocalDateTime.now());
             session.setUpdateTime(LocalDateTime.now());
             chatSessionService.save(session);
@@ -202,10 +201,12 @@ public class ChatSessionController {
         );
 
         if (session != null) {
-            session.setPinned(!session.getPinned());
+            // 切换置顶状态：0变1，1变0
+            int newPinned = (session.getPinned() == null || session.getPinned() == 0) ? 1 : 0;
+            session.setPinned(newPinned);
             session.setUpdateTime(LocalDateTime.now());
             chatSessionService.updateById(session);
-            return ResponseResult.success(session.getPinned());
+            return ResponseResult.success(newPinned == 1);
         }
 
         return ResponseResult.fail("404", "会话不存在");

@@ -90,13 +90,13 @@ public class ChatController {
     @PostMapping("/messages")
     public ResponseResult<?> sendMessage(@RequestBody ChatMsg chatMsg) {
         // 设置默认值
-        chatMsg.setReadStatus(false);
+        chatMsg.setReadStatus(0);  // 0-未读
         chatMsg.setCreateTime(LocalDateTime.now());
 
         // ⭐ 生成消息ID（使用IdGenerator）
-        if (chatMsg.getId() == null || chatMsg.getId().isEmpty()) {
+        if (chatMsg.getMsgId() == null || chatMsg.getMsgId().isEmpty()) {
             String messageId = IdGenerator.toChatMsgIdString(IdGenerator.generateId());
-            chatMsg.setId(messageId);
+            chatMsg.setMsgId(messageId);
         }
 
         // ⭐ 生成并设置 session_id
@@ -173,7 +173,6 @@ public class ChatController {
         if (session == null) {
             // 创建新会话
             session = new ChatSession();
-            session.setId(String.valueOf(System.currentTimeMillis()));
             session.setUserId(userId);
             session.setSessionId(sessionId);
             session.setSessionType(sessionType);
@@ -181,7 +180,7 @@ public class ChatController {
             session.setAvatar("group".equals(sessionType) ? "👥" : "💬");
             session.setMemberCount("group".equals(sessionType) ? 0 : null);
             session.setUnreadCount(0);
-            session.setPinned(false);
+            session.setPinned(0);  // 0-未置顶
             session.setCreateTime(LocalDateTime.now());
         }
 
@@ -191,11 +190,7 @@ public class ChatController {
         session.setUpdateTime(LocalDateTime.now());
 
         // 保存会话
-        if (session.getId() == null || chatSessionService.getById(session.getId()) == null) {
-            chatSessionService.save(session);
-        } else {
-            chatSessionService.updateById(session);
-        }
+        chatSessionService.saveOrUpdate(session);
     }
 
     /**
@@ -222,7 +217,6 @@ public class ChatController {
         if (session == null) {
             // 创建新会话
             session = new ChatSession();
-            session.setId(String.valueOf(System.currentTimeMillis()));
             session.setUserId(receiverId);
             session.setSessionId(sessionId);
             session.setSessionType(sessionType);
@@ -230,7 +224,7 @@ public class ChatController {
             session.setAvatar("group".equals(sessionType) ? "👥" : "💬");
             session.setMemberCount(isGroup ? 0 : null);
             session.setUnreadCount(1);  // 新会话，初始未读数为1
-            session.setPinned(false);
+            session.setPinned(0);  // 0-未置顶
             session.setCreateTime(LocalDateTime.now());
             session.setLastMessage(content);
             session.setLastMessageTime(messageTime);
@@ -276,8 +270,8 @@ public class ChatController {
     @PutMapping("/messages/{messageId}/read")
     public ResponseResult<?> markMessageAsRead(@PathVariable String messageId) {
         ChatMsg chatMsg = new ChatMsg();
-        chatMsg.setId(messageId);
-        chatMsg.setReadStatus(true);
+        chatMsg.setMsgId(messageId);
+        chatMsg.setReadStatus(1);  // 1-已读
 
         boolean success = chatMsgService.updateById(chatMsg);
         if (success) {
@@ -323,7 +317,7 @@ public class ChatController {
 
         // 更新消息内容为"消息已撤回"
         ChatMsg updateMsg = new ChatMsg();
-        updateMsg.setId(messageId);
+        updateMsg.setMsgId(messageId);
         updateMsg.setContent("消息已撤回");
 
         boolean success = chatMsgService.updateById(updateMsg);
