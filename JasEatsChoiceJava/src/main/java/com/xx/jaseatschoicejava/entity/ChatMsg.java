@@ -55,7 +55,7 @@ public class ChatMsg {
 
     @TableField("read_status")
     @ApiModelProperty(value = "已读状态：0-未读，1-已读")
-    private Integer readStatus; // 已读状态（改为Integer类型，与数据库TINYINT对应）
+    private Boolean readStatus; // 已读状态（改为Integer类型，与数据库TINYINT对应）
 
     @TableField("create_time")
     @ApiModelProperty(value = "创建时间")

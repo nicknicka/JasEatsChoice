@@ -75,10 +75,10 @@ public class SessionIdMigration {
                     if (updated) {
                         migratedCount++;
                         log.debug("迁移消息ID: {} 旧session_id: {} -> 新session_id: {}",
-                                msg.getId(), oldSessionId, newSessionId);
+                                msg.getMsgId(), oldSessionId, newSessionId);
                     }
                 } catch (Exception e) {
-                    log.error("迁移消息ID: {} 失败: {}", msg.getId(), e.getMessage());
+                    log.error("迁移消息ID: {} 失败: {}", msg.getMsgId(), e.getMessage());
                 }
             }
 

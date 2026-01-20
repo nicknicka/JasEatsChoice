@@ -90,7 +90,7 @@ public class ChatController {
     @PostMapping("/messages")
     public ResponseResult<?> sendMessage(@RequestBody ChatMsg chatMsg) {
         // 设置默认值
-        chatMsg.setReadStatus(0);  // 0-未读
+        chatMsg.setReadStatus(false);  // 0-未读
         chatMsg.setCreateTime(LocalDateTime.now());
 
         // ⭐ 生成消息ID（使用IdGenerator）
@@ -271,7 +271,7 @@ public class ChatController {
     public ResponseResult<?> markMessageAsRead(@PathVariable String messageId) {
         ChatMsg chatMsg = new ChatMsg();
         chatMsg.setMsgId(messageId);
-        chatMsg.setReadStatus(1);  // 1-已读
+        chatMsg.setReadStatus(true);  // 1-已读
 
         boolean success = chatMsgService.updateById(chatMsg);
         if (success) {
