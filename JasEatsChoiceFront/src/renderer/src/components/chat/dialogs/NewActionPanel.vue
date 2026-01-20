@@ -29,7 +29,7 @@
       <div class="content-area">
       <!-- 新建单聊 -->
       <transition name="tab-fade" mode="out-in">
-        <div v-if="activeTab === 'chat'" key="chat" class="tab-content" :class="{ 'is-searching': chatSearchQuery }">
+        <div v-if="activeTab === 'chat'" key="chat" class="tab-content" :class="{ 'is-editing': isChatSearching }">
         <!-- 单聊搜索框 -->
         <div class="chat-search-wrapper">
           <div class="chat-search">
@@ -70,13 +70,14 @@
             </div>
           </div>
         </transition>
-      </div>
+        </div>
       </transition>
 
       <!-- 新建群聊 -->
       <transition name="tab-fade" mode="out-in">
-        <div v-if="activeTab === 'group'" key="group" class="tab-content">
-        <div class="group-form">
+        <div v-if="activeTab === 'group'" key="group" class="tab-content" :class="{ 'is-editing': isGroupEditing }">
+        <div class="group-form-wrapper">
+          <div class="group-form">
           <el-form :model="groupForm" label-width="80px">
             <el-form-item label="群名称">
               <el-input
@@ -88,8 +89,10 @@
             </el-form-item>
           </el-form>
         </div>
+        </div>
 
-        <div class="member-selection">
+        <transition name="search-result-fade">
+          <div v-if="isGroupEditing" class="member-selection">
           <div class="section-header">
             <span class="section-title">已选成员 ({{ selectedMembers.length }}/50)</span>
             <div class="section-actions">
@@ -198,13 +201,15 @@
             </div>
           </div>
         </div>
+        </transition>
       </div>
       </transition>
 
       <!-- 加好友 -->
       <transition name="tab-fade" mode="out-in">
-        <div v-if="activeTab === 'friend'" key="friend" class="tab-content">
-        <div class="add-friend-content">
+        <div v-if="activeTab === 'friend'" key="friend" class="tab-content" :class="{ 'is-editing': isFriendSearching }">
+        <div class="add-friend-content-wrapper">
+          <div class="add-friend-content">
           <!-- 搜索类型选择 -->
           <div class="search-type-selector">
             <el-radio-group v-model="friendSearchType" size="small" @change="handleFriendSearchTypeChange">
@@ -227,42 +232,47 @@
               </template>
             </el-input>
           </div>
+          </div>
 
           <!-- 搜索结果 -->
-          <div v-if="friendSearchResults.length === 0 && !friendSearched" class="empty-state">
-            <el-empty description="输入关键词搜索用户">
-              <template #image>
-                <div class="empty-icon">🔍</div>
-              </template>
-            </el-empty>
-          </div>
-
-          <div v-else-if="friendSearchResults.length === 0 && friendSearched" class="empty-state">
-            <el-empty description="未找到相关用户" />
-          </div>
-
-          <div v-else class="search-result-list">
-            <div v-for="user in friendSearchResults" :key="user.id" class="result-user-item">
-              <div class="user-avatar">
-                <img v-if="isImageAvatar(user.avatar)" :src="user.avatar" alt="" />
-                <span v-else>{{ user.avatar || '👤' }}</span>
-              </div>
-              <div class="user-info">
-                <div class="user-name">{{ user.name }}</div>
-                <div v-if="user.phone" class="user-detail">手机: {{ user.phone }}</div>
-                <div v-if="user.email" class="user-detail">邮箱: {{ user.email }}</div>
-              </div>
-              <el-button
-                type="primary"
-                size="small"
-                :loading="user.adding"
-                :disabled="user.added"
-                @click="addFriend(user)"
-              >
-                {{ user.added ? '已发送' : '加好友' }}
-              </el-button>
+          <transition name="search-result-fade">
+            <div v-if="isFriendSearching" class="friend-search-results">
+            <div v-if="friendSearchResults.length === 0 && !friendSearched" class="empty-state">
+              <el-empty description="输入关键词搜索用户">
+                <template #image>
+                  <div class="empty-icon">🔍</div>
+                </template>
+              </el-empty>
             </div>
-          </div>
+
+            <div v-else-if="friendSearchResults.length === 0 && friendSearched" class="empty-state">
+              <el-empty description="未找到相关用户" />
+            </div>
+
+            <div v-else class="search-result-list">
+              <div v-for="user in friendSearchResults" :key="user.id" class="result-user-item">
+                <div class="user-avatar">
+                  <img v-if="isImageAvatar(user.avatar)" :src="user.avatar" alt="" />
+                  <span v-else>{{ user.avatar || '👤' }}</span>
+                </div>
+                <div class="user-info">
+                  <div class="user-name">{{ user.name }}</div>
+                  <div v-if="user.phone" class="user-detail">手机: {{ user.phone }}</div>
+                  <div v-if="user.email" class="user-detail">邮箱: {{ user.email }}</div>
+                </div>
+                <el-button
+                  type="primary"
+                  size="small"
+                  :loading="user.adding"
+                  :disabled="user.added"
+                  @click="addFriend(user)"
+                >
+                  {{ user.added ? '已发送' : '加好友' }}
+                </el-button>
+              </div>
+            </div>
+            </div>
+          </transition>
         </div>
       </div>
       </transition>
@@ -335,6 +345,23 @@ const filteredChatFriends = computed(() => {
   return props.friends.filter((friend) =>
     friend.name.toLowerCase().includes(chatSearchQuery.value.toLowerCase())
   )
+})
+
+// 判断单聊是否在搜索状态
+const isChatSearching = computed(() => {
+  return chatSearchQuery.value.trim().length > 0
+})
+
+// ========== 群聊相关 ==========
+// 判断群聊是否在编辑状态
+const isGroupEditing = computed(() => {
+  return groupForm.value.name.trim().length > 0 || selectedMembers.value.length > 0
+})
+
+// ========== 加好友相关 ==========
+// 判断加好友是否在搜索状态
+const isFriendSearching = computed(() => {
+  return friendSearchKeyword.value.trim().length > 0
 })
 
 // ========== Tab 配置 ==========
@@ -875,12 +902,26 @@ const handleClose = () => {
       transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    // 搜索状态下的布局
-    &.is-searching {
+    // 群聊表单包装器 - 用于居中和过渡动画
+    .group-form-wrapper {
+      width: 100%;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    // 加好友内容包装器 - 用于居中和过渡动画
+    .add-friend-content-wrapper {
+      width: 100%;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    // 编辑状态下的布局
+    &.is-editing {
       display: flex;
       flex-direction: column;
 
-      .chat-search-wrapper {
+      .chat-search-wrapper,
+      .group-form-wrapper,
+      .add-friend-content-wrapper {
         flex-shrink: 0;
       }
 
@@ -893,10 +934,15 @@ const handleClose = () => {
           }
         }
       }
+
+      .group-form,
+      .add-friend-content {
+        margin-bottom: 12px;
+      }
     }
 
-    // 非搜索状态下的居中布局
-    &:not(.is-searching) {
+    // 非编辑状态下的居中布局
+    &:not(.is-editing) {
       display: flex;
       align-items: center;
       justify-content: center;
@@ -904,6 +950,18 @@ const handleClose = () => {
 
       .chat-search-wrapper {
         max-width: 400px;
+        width: 100%;
+        padding: 0 20px;
+      }
+
+      .group-form-wrapper {
+        max-width: 450px;
+        width: 100%;
+        padding: 0 20px;
+      }
+
+      .add-friend-content-wrapper {
+        max-width: 500px;
         width: 100%;
         padding: 0 20px;
       }
@@ -940,11 +998,11 @@ const handleClose = () => {
         align-items: center;
         justify-content: center;
         height: 100%;
-        min-height: 200px;
+        min-height: 360px;
       }
 
       .user-list {
-        max-height: 200px;
+        max-height: 360px;
         overflow-y: auto;
         padding-right: 4px;
 
@@ -1018,6 +1076,118 @@ const handleClose = () => {
               font-size: 11px;
               color: #718096;
             }
+          }
+        }
+      }
+    }
+  }
+
+  // 加好友搜索结果
+  .friend-search-results {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+
+    .empty-state {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      min-height: 360px;
+    }
+
+    .search-result-list {
+      max-height: 360px;
+      overflow-y: auto;
+      padding-right: 4px;
+
+      &::-webkit-scrollbar {
+        width: 4px;
+      }
+
+      &::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 2px;
+      }
+
+      &::-webkit-scrollbar-thumb {
+        background: #cbd5e0;
+        border-radius: 2px;
+
+        &:hover {
+          background: #a0aec0;
+        }
+      }
+
+      .result-user-item {
+        display: flex;
+        align-items: center;
+        padding: 14px 16px;
+        border-radius: 10px;
+        margin-bottom: 10px;
+        background: linear-gradient(135deg, #ffffff 0%, #f7fafc 100%);
+        transition: all 0.3s ease;
+        border: 2px solid #e2e8f0;
+
+        &:hover {
+          background: #fff;
+          border-color: #3b82f6;
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+        }
+
+        .user-avatar {
+          width: 48px;
+          height: 48px;
+          font-size: 24px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+          border-radius: 50%;
+          margin-right: 14px;
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+          overflow: hidden;
+
+          img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+          }
+        }
+
+        .user-info {
+          flex: 1;
+
+          .user-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 6px;
+          }
+
+          .user-detail {
+            font-size: 12px;
+            color: #718096;
+          }
+        }
+
+        :deep(.el-button) {
+          border-radius: 8px;
+          padding: 10px 20px;
+          font-weight: 500;
+          background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+          border: none;
+
+          &:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+          }
+
+          &:disabled {
+            background: #cbd5e0;
+            transform: none;
+            box-shadow: none;
           }
         }
       }
@@ -1158,7 +1328,7 @@ const handleClose = () => {
       }
 
       .friend-list {
-        max-height: 200px;
+        max-height: 360px;
         overflow-y: auto;
         padding-right: 4px;
 
@@ -1307,102 +1477,6 @@ const handleClose = () => {
         font-size: 60px;
         margin-bottom: 16px;
         opacity: 0.8;
-      }
-    }
-
-    .search-result-list {
-      max-height: 200px;
-      overflow-y: auto;
-      padding-right: 4px;
-
-      &::-webkit-scrollbar {
-        width: 4px;
-      }
-
-      &::-webkit-scrollbar-track {
-        background: #f1f1f1;
-        border-radius: 2px;
-      }
-
-      &::-webkit-scrollbar-thumb {
-        background: #cbd5e0;
-        border-radius: 2px;
-
-        &:hover {
-          background: #a0aec0;
-        }
-      }
-
-      .result-user-item {
-        display: flex;
-        align-items: center;
-        padding: 14px 16px;
-        border-radius: 10px;
-        margin-bottom: 10px;
-        background: linear-gradient(135deg, #ffffff 0%, #f7fafc 100%);
-        transition: all 0.3s ease;
-        border: 2px solid #e2e8f0;
-
-        &:hover {
-          background: #fff;
-          border-color: #3b82f6;
-          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
-        }
-
-        .user-avatar {
-          width: 48px;
-          height: 48px;
-          font-size: 24px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-          border-radius: 50%;
-          margin-right: 14px;
-          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-          overflow: hidden;
-
-          img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-          }
-        }
-
-        .user-info {
-          flex: 1;
-
-          .user-name {
-            font-size: 14px;
-            font-weight: 600;
-            color: #2d3748;
-            margin-bottom: 6px;
-          }
-
-          .user-detail {
-            font-size: 12px;
-            color: #718096;
-          }
-        }
-
-        :deep(.el-button) {
-          border-radius: 8px;
-          padding: 10px 20px;
-          font-weight: 500;
-          background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-          border: none;
-
-          &:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-          }
-
-          &:disabled {
-            background: #cbd5e0;
-            transform: none;
-            box-shadow: none;
-          }
-        }
       }
     }
   }

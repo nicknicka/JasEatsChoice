@@ -40,7 +40,7 @@ public class ContactController {
      */
     @ApiOperation("获取群成员列表")
     @GetMapping("/groups/{groupId}/members")
-    public ResponseResult<?> getGroupMembers(@PathVariable Long groupId) {
+    public ResponseResult<?> getGroupMembers(@PathVariable String groupId) {
         List<Contact> members = contactService.lambdaQuery()
                 .eq(Contact::getTargetId, groupId)
                 .eq(Contact::getRelationType, "group")

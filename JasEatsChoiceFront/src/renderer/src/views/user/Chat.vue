@@ -716,6 +716,7 @@ const openGroupDetail = async () => {
   if (!selectedConversation.value || selectedConversation.value.type !== 'group') return
 
   try {
+    // 直接使用群ID（后端已支持带 "G" 前缀的格式）
     const groupId = selectedConversation.value.id
 
     // 1. 并行获取群信息和群成员列表
