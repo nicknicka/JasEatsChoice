@@ -875,9 +875,13 @@ onMounted(() => {
 }
 
 .content-area {
-  padding: 20px;
+  padding: 20px 20px 0 20px; /* 移除底部padding */
   background-color: #fafafa;
   overflow-y: auto;
+  height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
 }
 
 .ai-chat-container {
@@ -886,6 +890,7 @@ onMounted(() => {
   flex-direction: column;
   max-width: 900px;
   margin: 0 auto;
+  padding-bottom: 0; /* 确保容器底部没有padding */
 
   .chat-header {
     display: flex;
@@ -919,11 +924,13 @@ onMounted(() => {
     border-radius: 16px;
     overflow: hidden;
     box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+    height: 100%; /* 确保tabs容器有明确高度 */
 
     :deep(.el-tabs__header) {
       margin: 0;
       background: linear-gradient(135deg, #fff9fa 0%, #fff 100%);
       border-bottom: 2px solid #ffe0e3;
+      flex-shrink: 0; /* 防止头部被压缩 */
     }
 
     :deep(.el-tabs__nav) {
@@ -948,12 +955,17 @@ onMounted(() => {
 
     :deep(.el-tabs__content) {
       flex: 1;
-      overflow-y: auto;
-      padding: 24px 0;
+      overflow: hidden;
+      padding: 0 !important; /* 完全移除padding */
+      display: flex;
+      flex-direction: column;
     }
 
-    :deep(.el-tabs__content-item) {
+    :deep(.el-tab-pane) {
       height: 100%;
+      display: flex;
+      flex-direction: column;
+      padding: 8px 0 0 0 !important; /* 只给顶部少量padding */
     }
   }
 
@@ -962,7 +974,8 @@ onMounted(() => {
     display: flex;
     flex-direction: column;
     height: 100%;
-    gap: 12px;
+    gap: 8px; /* 减小gap */
+    overflow: hidden; /* 防止内容溢出 */
   }
 
   .chat-messages {
@@ -1060,7 +1073,7 @@ onMounted(() => {
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px; /* 减小gap */
   }
 
   /* 快捷提问面板 */
@@ -1117,8 +1130,9 @@ onMounted(() => {
     background: linear-gradient(to bottom, #ffffff 0%, #fafbfc 100%);
     border: 1px solid #e8ecef;
     border-radius: 12px;
-    padding: 10px 14px;
+    padding: 10px 14px; /* 保持原有padding */
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    margin-bottom: 0; /* 确保没有底部margin */
 
     .input-wrapper {
       display: flex;
