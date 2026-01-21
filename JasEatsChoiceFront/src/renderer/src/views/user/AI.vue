@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, nextTick, watch } from 'vue'
-import { ChatRound, Camera, Document, Loading, Delete, Picture, Pointer } from '@element-plus/icons-vue'
+import { ChatRound, Camera, Document, Loading, Delete, Picture } from '@element-plus/icons-vue'
 import axios from 'axios'
 
 // 从配置中导入API地址
@@ -15,9 +15,8 @@ const quickQuestions = ref([
   '适合运动后的食物'
 ])
 
-// 表情选择器
-const emojiPicker = ref(false)
-const emojis = ['😊', '👍', '🍎', '🥗', '💪', '🔥', '❤️', '✨', '🎯', '👨‍🍳']
+// 快捷提问显示状态
+const showQuickQuestions = ref(true)
 
 // Chat messages
 const messages = ref([])
@@ -262,12 +261,6 @@ const recognizeDish = () => {
   }, 2000)
 }
 
-// 添加表情到输入框
-const addEmoji = (emoji) => {
-  inputMessage.value += emoji
-  emojiPicker.value = false
-}
-
 // Simulate AI recipe optimization
 const optimizeRecipe = () => {
   // Validate recipe content
@@ -460,90 +453,123 @@ onMounted(() => {
           <!-- Tab Menu -->
           <el-tabs v-model="activeTab" type="border-card" class="ai-tabs">
             <el-tab-pane label="AI聊天" name="chat" :icon="ChatRound">
-              <!-- 常用问题快捷入口 -->
-              <div class="quick-questions">
-                <div class="quick-questions-title">💡 快捷提问：</div>
-                <el-tag
-                  v-for="q in quickQuestions"
-                  :key="q"
-                  @click="inputMessage = q"
-                  class="question-tag"
-                  type="info"
-                  effect="plain"
-                >
-                  {{ q }}
-                </el-tag>
-              </div>
-
-              <div class="chat-messages">
-                <div
-                  v-for="message in messages"
-                  :key="message.id"
-                  class="chat-message"
-                  :class="{
-                    'user-message': message.sender === 'user',
-                    'ai-message': message.sender === 'ai'
-                  }"
-                >
-                  <div class="message-avatar">{{ message.avatar }}</div>
-                  <div class="message-content">
-                    <div class="message-text">{{ message.content }}</div>
-                    <div class="message-time">{{ message.time }}</div>
-                  </div>
-                </div>
-
-                <div v-if="isLoading" class="chat-message ai-message loading">
-                  <div class="message-avatar">🤖</div>
-                  <div class="message-content">
-                    <el-skeleton :rows="2" style="width: 200px"></el-skeleton>
-                  </div>
-                </div>
-              </div>
-
-              <div class="chat-input-area">
-                <div class="input-wrapper">
-                  <div class="input-toolbar">
-                    <el-button @click="emojiPicker = !emojiPicker" size="small" text>
-                      😊 表情
-                    </el-button>
-                    <!-- 表情选择器 -->
-                    <div v-if="emojiPicker" class="emoji-picker">
-                      <span
-                        v-for="emoji in emojis"
-                        :key="emoji"
-                        @click="addEmoji(emoji)"
-                        class="emoji-item"
-                      >
-                        {{ emoji }}
-                      </span>
+              <div class="chat-content-wrapper">
+                <!-- 聊天消息区域 - flex: 1 -->
+                <div class="chat-messages">
+                  <div
+                    v-for="message in messages"
+                    :key="message.id"
+                    class="chat-message"
+                    :class="{
+                      'user-message': message.sender === 'user',
+                      'ai-message': message.sender === 'ai'
+                    }"
+                  >
+                    <div class="message-avatar">{{ message.avatar }}</div>
+                    <div class="message-content">
+                      <div class="message-text">{{ message.content }}</div>
+                      <div class="message-time">{{ message.time }}</div>
                     </div>
                   </div>
 
-                  <el-input
-                    v-model="inputMessage"
-                    placeholder="请输入您的问题...（例如：推荐适合减肥的食谱）&#10;Enter 发送，Shift+Enter 换行"
-                    clearable
-                    resize="none"
-                    :rows="2"
-                    type="textarea"
-                    @keydown="handleKeyDown"
-                    maxlength="500"
-                    show-word-limit
-                  />
-                  <div class="input-footer">
-                    <span class="input-hint">💡 按 Enter 发送，Shift+Enter 换行</span>
+                  <div v-if="isLoading" class="chat-message ai-message loading">
+                    <div class="message-avatar">🤖</div>
+                    <div class="message-content">
+                      <el-skeleton :rows="2" style="width: 200px"></el-skeleton>
+                    </div>
                   </div>
                 </div>
-                <el-button
-                  type="primary"
-                  size="large"
-                  class="send-btn"
-                  @click="sendMessage"
-                  :disabled="isLoading || isTyping"
-                >
-                  <el-icon><ChatRound /></el-icon>
-                  发送
-                </el-button>
+
+                <!-- 底部输入区域容器 -->
+                <div class="bottom-input-container">
+                  <!-- 快捷提问区域 - 可关闭 -->
+                  <transition name="slide-down">
+                    <div v-if="showQuickQuestions" class="quick-questions-panel">
+                      <div class="quick-questions-header">
+                        <span class="quick-questions-title">💡 快捷提问</span>
+                        <el-button
+                          :icon="Delete"
+                          circle
+                          size="small"
+                          text
+                          @click="showQuickQuestions = false"
+                        />
+                      </div>
+                      <div class="quick-questions-list">
+                        <el-tag
+                          v-for="q in quickQuestions"
+                          :key="q"
+                          @click="inputMessage = q"
+                          class="question-tag"
+                          type="info"
+                          effect="plain"
+                        >
+                          {{ q }}
+                        </el-tag>
+                      </div>
+                    </div>
+                  </transition>
+
+                  <!-- 输入框区域 -->
+                  <div class="message-input-container">
+                    <div class="input-wrapper">
+                      <!-- 工具栏 -->
+                      <div class="toolbar">
+                        <div class="toolbar-left">
+                          <el-tooltip content="表情" placement="top">
+                            <el-button
+                              :icon="ChatRound"
+                              circle
+                              size="small"
+                            />
+                          </el-tooltip>
+                          <el-tooltip content="上传图片" placement="top">
+                            <el-button :icon="Picture" circle size="small" />
+                          </el-tooltip>
+                          <div class="toolbar-divider"></div>
+                          <el-tooltip content="清空" placement="top">
+                            <el-button :icon="Delete" circle size="small" @click="inputMessage = ''" />
+                          </el-tooltip>
+                        </div>
+                        <div class="toolbar-right">
+                          <el-button
+                            v-if="!showQuickQuestions"
+                            link
+                            type="primary"
+                            @click="showQuickQuestions = true"
+                          >
+                            💡 快捷提问
+                          </el-button>
+                        </div>
+                      </div>
+
+                      <!-- 输入框和发送按钮 -->
+                      <div class="input-area">
+                        <el-input
+                          v-model="inputMessage"
+                          placeholder="请输入您的问题...（例如：推荐适合减肥的食谱）"
+                          clearable
+                          resize="none"
+                          :rows="2"
+                          type="textarea"
+                          @keydown="handleKeyDown"
+                          maxlength="500"
+                          show-word-limit
+                          class="message-textarea"
+                        />
+                        <el-button
+                          type="primary"
+                          class="send-btn"
+                          @click="sendMessage"
+                          :disabled="isLoading || isTyping"
+                          :icon="ChatRound"
+                        >
+                          发送
+                        </el-button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </el-tab-pane>
 
@@ -865,17 +891,24 @@ onMounted(() => {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #f0f0f0;
 
     h2 {
-      font-size: 24px;
-      font-weight: bold;
+      font-size: 26px;
+      font-weight: 700;
       margin: 0;
+      background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
 
     .chat-info {
       display: flex;
-      gap: 10px;
+      gap: 12px;
+      align-items: center;
     }
   }
 
@@ -883,11 +916,40 @@ onMounted(() => {
     flex: 1;
     display: flex;
     flex-direction: column;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+
+    :deep(.el-tabs__header) {
+      margin: 0;
+      background: linear-gradient(135deg, #fff9fa 0%, #fff 100%);
+      border-bottom: 2px solid #ffe0e3;
+    }
+
+    :deep(.el-tabs__nav) {
+      border: none;
+    }
+
+    :deep(.el-tabs__item) {
+      font-size: 15px;
+      font-weight: 600;
+      color: #606266;
+      transition: all 0.3s ease;
+
+      &:hover {
+        color: #ff6b6b;
+      }
+
+      &.is-active {
+        color: #ff6b6b;
+        background: linear-gradient(135deg, #ffe8e8 0%, #fff 100%);
+      }
+    }
 
     :deep(.el-tabs__content) {
       flex: 1;
       overflow-y: auto;
-      padding: 20px 0;
+      padding: 24px 0;
     }
 
     :deep(.el-tabs__content-item) {
@@ -895,23 +957,29 @@ onMounted(() => {
     }
   }
 
+  /* 聊天内容包装器 - flex布局 */
+  .chat-content-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    gap: 12px;
+  }
+
   .chat-messages {
-    /* 响应式聊天框高度 */
+    /* flex: 1 占据剩余空间 */
     flex: 1;
-    min-height: 400px;
-    max-height: calc(100vh - 500px);
+    min-height: 0; /* 重要：允许flex子元素滚动 */
     overflow-y: auto;
     background-color: #fff;
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.08);
-    margin-bottom: 20px;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 2px 16px 0 rgba(0, 0, 0, 0.06);
 
     .chat-message {
       display: flex;
-      gap: 15px;
-      margin-bottom: 20px;
-      animation: messageFadeIn 0.3s ease-out;
+      gap: 12px;
+      margin-bottom: 24px;
+      animation: messageFadeIn 0.4s ease-out;
 
       &.user-message {
         flex-direction: row-reverse;
@@ -923,8 +991,9 @@ onMounted(() => {
           .message-text {
             background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%);
             color: #fff;
-            border-radius: 18px 18px 0 18px;
-            box-shadow: 0 2px 8px rgba(255, 107, 107, 0.2);
+            border-radius: 20px 20px 4px 20px;
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.25);
+            font-weight: 500;
           }
         }
       }
@@ -937,11 +1006,11 @@ onMounted(() => {
           align-items: flex-start;
 
           .message-text {
-            background: linear-gradient(135deg, #fff5f5 0%, #ffe8e8 100%);
-            color: #d32f2f;
-            border-radius: 18px 18px 18px 0;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-            border: 1px solid #ffcdd2;
+            background: linear-gradient(135deg, #fff9fa 0%, #fff3f4 100%);
+            color: #c8232c;
+            border-radius: 20px 20px 20px 4px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            border: 1px solid #ffe0e3;
           }
         }
       }
@@ -953,149 +1022,259 @@ onMounted(() => {
       }
 
       .message-avatar {
-        font-size: 40px;
+        font-size: 42px;
         flex-shrink: 0;
-        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+        filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.15));
+        line-height: 1;
       }
 
       .message-content {
         display: flex;
         flex-direction: column;
-        gap: 5px;
+        gap: 6px;
 
         .message-text {
-          max-width: 70%;
-          padding: 12px 16px;
-          border-radius: 18px;
-          line-height: 1.6;
-          transition: transform 0.2s ease;
+          max-width: 75%;
+          padding: 14px 18px;
+          border-radius: 20px;
+          line-height: 1.7;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          font-size: 15px;
 
           &:hover {
-            transform: translateY(-2px);
+            transform: translateY(-2px) scale(1.01);
           }
         }
 
         .message-time {
           font-size: 12px;
-          color: #909399;
+          color: #a8abb2;
+          margin-top: 2px;
         }
       }
     }
   }
 
-  .chat-input-area {
-    /* 固定发送消息区域在页面底部 */
-    position: sticky;
-    bottom: 0;
-    background-color: #fafafa;
-    padding: 10px 0 20px 0;
-    z-index: 100;
+  /* 底部输入容器 */
+  .bottom-input-container {
+    flex-shrink: 0;
     display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
+    flex-direction: column;
+    gap: 8px;
+  }
 
-    .input-wrapper {
-      flex: 1;
-      position: relative;
+  /* 快捷提问面板 */
+  .quick-questions-panel {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e8f4fd 100%);
+    border: 1px solid #d1e9ff;
+    border-radius: 12px;
+    padding: 12px 16px;
+    box-shadow: 0 2px 8px rgba(64, 158, 255, 0.08);
 
-      .el-input {
-        textarea {
-          min-height: 80px;
-          border-radius: 12px;
-          transition: all 0.3s ease;
+    .quick-questions-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
 
-          &:focus {
-            box-shadow: 0 0 0 2px rgba(255, 107, 107, 0.1);
-          }
+      .quick-questions-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #2c7be5;
+      }
+    }
+
+    .quick-questions-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+
+      .question-tag {
+        margin: 0;
+        padding: 6px 14px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 13px;
+        font-weight: 500;
+        border-radius: 20px;
+        background-color: #fff;
+        border-color: #b3e0ff;
+        color: #409eff;
+
+        &:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(64, 158, 255, 0.25);
+          background: linear-gradient(135deg, #409eff 0%, #5dade2 100%);
+          color: #fff;
+          border-color: transparent;
         }
       }
+    }
+  }
 
-      .input-footer {
-        position: absolute;
-        bottom: 8px;
-        right: 12px;
+  /* 消息输入容器 - 参考MessageInput设计 */
+  .message-input-container {
+    background: linear-gradient(to bottom, #ffffff 0%, #fafbfc 100%);
+    border: 1px solid #e8ecef;
+    border-radius: 12px;
+    padding: 10px 14px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 
-        .input-hint {
-          font-size: 12px;
-          color: #909399;
-          background-color: rgba(255, 255, 255, 0.9);
-          padding: 2px 8px;
-          border-radius: 4px;
+    .input-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 2px;
+
+      .toolbar-left,
+      .toolbar-right {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+      }
+
+      .toolbar-divider {
+        width: 1px;
+        height: 16px;
+        background: #e8ecef;
+        margin: 0 4px;
+      }
+
+      :deep(.el-button) {
+        border: 1px solid #e8ecef;
+        background: #ffffff;
+        color: #5a6c7d;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        font-weight: 500;
+
+        &:hover {
+          border-color: #667eea;
+          color: #667eea;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
+          background: #ffffff;
+        }
+
+        &:active {
+          transform: translateY(0);
         }
       }
     }
 
-    .send-btn {
-      align-self: flex-end;
-      background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%);
-      border: none;
-      height: 80px;
-      padding: 0 30px;
-      font-weight: bold;
-      transition: all 0.3s ease;
+    .input-area {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
 
-      &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
+      .message-textarea {
+        flex: 1;
+
+        :deep(.el-textarea__inner) {
+          border-radius: 10px;
+          border: 2px solid #e8ecef;
+          background: #ffffff;
+          padding: 8px 12px;
+          font-size: 14px;
+          line-height: 1.6;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          resize: none;
+
+          &:focus {
+            border-color: #ff6b6b;
+            box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.12);
+            background: #ffffff;
+          }
+
+          &:hover:not(:focus) {
+            border-color: #d0d7de;
+          }
+        }
       }
 
-      &:active {
-        transform: translateY(0);
-      }
+      .send-btn {
+        flex-shrink: 0;
+        background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%);
+        border: none;
+        padding: 8px 24px;
+        font-size: 14px;
+        font-weight: 600;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(255, 107, 107, 0.25);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        height: 60px;
 
-      &:disabled {
-        background: #c0c4cc;
-        transform: none;
-        box-shadow: none;
+        &:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 16px rgba(255, 107, 107, 0.35);
+        }
+
+        &:active:not(:disabled) {
+          transform: translateY(0);
+        }
+
+        &:disabled {
+          background: #e9ecef;
+          box-shadow: none;
+          color: #adb5bd;
+        }
       }
     }
   }
 
   /* Dish Recognition Section */
   .recognition-section {
-    padding: 20px;
+    padding: 24px;
     background-color: #fff;
-    border-radius: 12px;
-    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.08);
+    border-radius: 16px;
+    box-shadow: 0 2px 16px 0 rgba(0, 0, 0, 0.06);
 
     .upload-area {
-      margin-bottom: 20px;
+      margin-bottom: 24px;
 
       .upload-zone {
         border: 3px dashed #ff6b6b;
-        border-radius: 12px;
-        padding: 40px;
+        border-radius: 16px;
+        padding: 48px;
         text-align: center;
         cursor: pointer;
-        transition: all 0.3s ease;
-        background: linear-gradient(135deg, #fff5f5 0%, #fff 100%);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        background: linear-gradient(135deg, #fff9fa 0%, #fff 100%);
 
         &:hover {
           border-color: #ff5252;
           background: linear-gradient(135deg, #ffe8e8 0%, #fff 100%);
-          transform: scale(1.02);
+          transform: scale(1.01);
+          box-shadow: 0 4px 16px rgba(255, 107, 107, 0.15);
         }
 
         &.has-image {
           padding: 0;
           border-style: solid;
+          border-width: 2px;
         }
 
         .upload-placeholder {
           .el-icon {
             color: #ff6b6b;
-            margin-bottom: 15px;
+            margin-bottom: 16px;
+            font-size: 56px;
           }
 
           .upload-text {
-            font-size: 16px;
-            font-weight: 500;
+            font-size: 17px;
+            font-weight: 600;
             color: #303133;
-            margin: 10px 0;
+            margin: 12px 0;
           }
 
           .upload-hint {
-            font-size: 13px;
+            font-size: 14px;
             color: #909399;
           }
         }
@@ -1103,9 +1282,9 @@ onMounted(() => {
         .image-preview {
           position: relative;
           width: 100%;
-          height: 300px;
+          height: 320px;
           overflow: hidden;
-          border-radius: 8px;
+          border-radius: 12px;
 
           img {
             width: 100%;
@@ -1119,7 +1298,7 @@ onMounted(() => {
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.6);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1136,21 +1315,23 @@ onMounted(() => {
 
     .recognize-btn {
       width: 100%;
-      height: 50px;
-      font-size: 16px;
-      font-weight: bold;
+      height: 54px;
+      font-size: 17px;
+      font-weight: 600;
       margin-bottom: 20px;
       background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%);
       border: none;
-      transition: all 0.3s ease;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: 14px;
 
       &:hover:not(:disabled) {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 16px rgba(255, 107, 107, 0.4);
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(255, 107, 107, 0.4);
       }
 
       &:disabled {
-        background: #c0c4cc;
+        background: linear-gradient(135deg, #d3d4d6 0%, #c8c9cc 100%);
+        cursor: not-allowed;
       }
     }
 
@@ -1159,11 +1340,11 @@ onMounted(() => {
 
       .result-header {
         text-align: center;
-        margin-bottom: 24px;
+        margin-bottom: 28px;
 
         h4 {
-          font-size: 20px;
-          font-weight: bold;
+          font-size: 22px;
+          font-weight: 700;
           color: #303133;
           margin: 0;
         }
@@ -1171,19 +1352,19 @@ onMounted(() => {
 
       .result-cards {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 15px;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 18px;
 
         .result-card {
-          background: linear-gradient(135deg, #fff 0%, #fff5f5 100%);
-          border: 2px solid #ffcdd2;
-          border-radius: 12px;
-          padding: 20px;
-          transition: all 0.3s ease;
+          background: linear-gradient(135deg, #fff 0%, #fff9fa 100%);
+          border: 2px solid #ffe0e3;
+          border-radius: 16px;
+          padding: 24px;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
           &:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 4px 16px rgba(255, 107, 107, 0.2);
+            transform: translateY(-6px);
+            box-shadow: 0 8px 24px rgba(255, 107, 107, 0.2);
             border-color: #ff6b6b;
           }
 
@@ -1193,21 +1374,22 @@ onMounted(() => {
             border: none;
 
             .card-label {
-              color: rgba(255, 255, 255, 0.9);
+              color: rgba(255, 255, 255, 0.95);
+              font-size: 15px;
             }
 
             .card-value {
               color: #fff;
-              font-size: 24px;
-              font-weight: bold;
+              font-size: 28px;
+              font-weight: 700;
             }
           }
 
           &.calories-card {
             .card-value.highlight {
               color: #ff6b6b;
-              font-size: 28px;
-              font-weight: bold;
+              font-size: 32px;
+              font-weight: 700;
             }
           }
 
@@ -1216,21 +1398,23 @@ onMounted(() => {
           }
 
           .card-label {
-            font-size: 13px;
+            font-size: 14px;
+            font-weight: 600;
             color: #909399;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
           }
 
           .card-value {
-            font-size: 16px;
-            font-weight: 500;
+            font-size: 17px;
+            font-weight: 600;
             color: #303133;
 
             .ingredient-tag,
             .tag-item {
-              margin: 4px;
-              padding: 6px 12px;
-              font-weight: normal;
+              margin: 5px;
+              padding: 8px 14px;
+              font-weight: 500;
+              border-radius: 20px;
             }
           }
         }
@@ -1240,21 +1424,24 @@ onMounted(() => {
 
   /* Recipe Optimization Section */
   .recipe-section {
-    padding: 20px;
+    padding: 24px;
     background-color: #fff;
-    border-radius: 12px;
-    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.08);
+    border-radius: 16px;
+    box-shadow: 0 2px 16px 0 rgba(0, 0, 0, 0.06);
 
     .recipe-input {
-      margin-bottom: 20px;
+      margin-bottom: 24px;
 
       .el-input {
         textarea {
-          border-radius: 12px;
+          border-radius: 14px;
           transition: all 0.3s ease;
+          font-size: 15px;
+          padding: 14px 16px;
 
           &:focus {
-            box-shadow: 0 0 0 2px rgba(255, 107, 107, 0.1);
+            box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.12);
+            border-color: #ff6b6b;
           }
         }
       }
@@ -1262,21 +1449,23 @@ onMounted(() => {
 
     .optimize-btn {
       width: 100%;
-      height: 50px;
-      font-size: 16px;
-      font-weight: bold;
-      margin-bottom: 20px;
+      height: 54px;
+      font-size: 17px;
+      font-weight: 600;
+      margin-bottom: 24px;
       background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%);
       border: none;
-      transition: all 0.3s ease;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: 14px;
 
       &:hover:not(:disabled) {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 16px rgba(255, 107, 107, 0.4);
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(255, 107, 107, 0.4);
       }
 
       &:disabled {
-        background: #c0c4cc;
+        background: linear-gradient(135deg, #d3d4d6 0%, #c8c9cc 100%);
+        cursor: not-allowed;
       }
     }
 
@@ -1285,11 +1474,11 @@ onMounted(() => {
 
       .result-header {
         text-align: center;
-        margin-bottom: 24px;
+        margin-bottom: 28px;
 
         h4 {
-          font-size: 20px;
-          font-weight: bold;
+          font-size: 22px;
+          font-weight: 700;
           color: #303133;
           margin: 0;
         }
@@ -1298,8 +1487,8 @@ onMounted(() => {
       .recipe-comparison {
         display: flex;
         align-items: stretch;
-        gap: 20px;
-        margin-bottom: 30px;
+        gap: 24px;
+        margin-bottom: 32px;
 
         @media (max-width: 768px) {
           flex-direction: column;
@@ -1308,31 +1497,31 @@ onMounted(() => {
         .recipe-card {
           flex: 1;
           background: #fff;
-          border: 2px solid #ffcdd2;
-          border-radius: 12px;
+          border: 2px solid #ffe0e3;
+          border-radius: 16px;
           overflow: hidden;
-          transition: all 0.3s ease;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
           &:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 4px 16px rgba(255, 107, 107, 0.2);
+            transform: translateY(-6px);
+            box-shadow: 0 8px 24px rgba(255, 107, 107, 0.2);
           }
 
           .card-header {
-            padding: 15px 20px;
-            background: linear-gradient(135deg, #fff5f5 0%, #ffe8e8 100%);
-            border-bottom: 2px solid #ffcdd2;
+            padding: 18px 24px;
+            background: linear-gradient(135deg, #fff9fa 0%, #ffe8e8 100%);
+            border-bottom: 2px solid #ffe0e3;
 
             .card-title {
-              font-size: 16px;
-              font-weight: bold;
+              font-size: 17px;
+              font-weight: 700;
               color: #303133;
             }
           }
 
           .card-content {
-            padding: 20px;
-            max-height: 400px;
+            padding: 24px;
+            max-height: 420px;
             overflow-y: auto;
 
             pre {
@@ -1340,8 +1529,9 @@ onMounted(() => {
               white-space: pre-wrap;
               word-wrap: break-word;
               font-family: inherit;
-              line-height: 1.8;
+              line-height: 1.9;
               color: #606266;
+              font-size: 15px;
             }
           }
 
@@ -1360,9 +1550,10 @@ onMounted(() => {
         .recipe-arrow {
           display: flex;
           align-items: center;
-          font-size: 36px;
+          font-size: 40px;
           color: #ff6b6b;
-          font-weight: bold;
+          font-weight: 700;
+          flex-shrink: 0;
 
           @media (max-width: 768px) {
             transform: rotate(90deg);
@@ -1373,25 +1564,26 @@ onMounted(() => {
       .improvements-section {
         background: linear-gradient(135deg, #fff 0%, #f0f9ff 100%);
         border: 2px solid #b3e0ff;
-        border-radius: 12px;
-        padding: 20px;
+        border-radius: 16px;
+        padding: 24px;
 
         .improvements-title {
-          font-size: 16px;
-          font-weight: bold;
+          font-size: 17px;
+          font-weight: 700;
           color: #303133;
-          margin-bottom: 15px;
+          margin-bottom: 18px;
         }
 
         .improvements-tags {
           display: flex;
           flex-wrap: wrap;
-          gap: 10px;
+          gap: 12px;
 
           .el-tag {
-            padding: 10px 20px;
-            font-size: 14px;
-            font-weight: 500;
+            padding: 12px 24px;
+            font-size: 15px;
+            font-weight: 600;
+            border-radius: 24px;
           }
         }
       }
@@ -1402,102 +1594,39 @@ onMounted(() => {
   @keyframes messageFadeIn {
     from {
       opacity: 0;
-      transform: translateY(10px);
+      transform: translateY(15px) scale(0.98);
     }
     to {
       opacity: 1;
-      transform: translateY(0);
+      transform: translateY(0) scale(1);
     }
   }
 
   @keyframes resultFadeIn {
     from {
       opacity: 0;
-      transform: scale(0.95);
+      transform: scale(0.95) translateY(10px);
     }
     to {
       opacity: 1;
-      transform: scale(1);
+      transform: scale(1) translateY(0);
     }
   }
 
-  /* 快捷提问样式 */
-  .quick-questions {
-    background: linear-gradient(135deg, #f0f9ff 0%, #fff 100%);
-    border: 2px solid #b3e0ff;
-    border-radius: 12px;
-    padding: 15px 20px;
-    margin-bottom: 20px;
-
-    .quick-questions-title {
-      font-size: 14px;
-      font-weight: bold;
-      color: #303133;
-      margin-bottom: 12px;
-    }
-
-    .question-tag {
-      margin: 5px;
-      padding: 8px 16px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      font-size: 13px;
-
-      &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
-        background-color: #409eff;
-        color: #fff;
-        border-color: #409eff;
-      }
-    }
+  /* 快捷提问面板滑入滑出动画 */
+  .slide-down-enter-active,
+  .slide-down-leave-active {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  /* 表情选择器样式 */
-  .input-toolbar {
-    position: relative;
-    margin-bottom: 10px;
-
-    .emoji-picker {
-      position: absolute;
-      top: 100%;
-      left: 0;
-      background-color: #fff;
-      border: 2px solid #e6e8eb;
-      border-radius: 12px;
-      padding: 10px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-      z-index: 1000;
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 5px;
-      animation: emojiFadeIn 0.2s ease-out;
-
-      .emoji-item {
-        font-size: 24px;
-        cursor: pointer;
-        padding: 5px;
-        border-radius: 8px;
-        transition: all 0.2s ease;
-        text-align: center;
-
-        &:hover {
-          background-color: #f0f2f5;
-          transform: scale(1.2);
-        }
-      }
-    }
+  .slide-down-enter-from {
+    opacity: 0;
+    transform: translateY(-12px);
   }
 
-  @keyframes emojiFadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(-10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+  .slide-down-leave-to {
+    opacity: 0;
+    transform: translateY(-12px);
   }
 
   /* 菜品识别增强样式 */

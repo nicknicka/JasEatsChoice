@@ -268,6 +268,7 @@ import GroupOrderDrawer from '../../components/chat/dialogs/GroupOrderDrawer.vue
 
 // Constants
 import { MESSAGE_CONFIG } from '../../constants/chatConstants'
+import { MERCHANT_API } from '../../constants/apiConstants'
 import api from '../../utils/api.js'
 import { decodeJwt } from '../../utils/api.js'
 
@@ -392,7 +393,7 @@ const groupOrders = ref({})
 const orderDrawerVisible = ref(false)
 
 const hasGroupOrder = computed(() => {
-  return (
+  return Boolean(
     selectedConversation.value &&
     selectedConversation.value.type === 'group' &&
     groupOrders.value[selectedConversation.value.id]
@@ -931,7 +932,7 @@ const joinGroupOrder = () => {
   ElMessage.info('已加入群订单')
 }
 
-const openMerchantSelectDialog = () => {
+const openMerchantSelectDialog = async () => {
   if (!selectedConversation.value || !hasGroupOrder.value) {
     ElMessage.error('请先创建群订单')
     return
@@ -941,11 +942,13 @@ const openMerchantSelectDialog = () => {
     selectedMerchant.value = orderingMerchant.value
     productSelectDialogVisible.value = true
   } else {
+    // 从后端获取商家列表
+    await fetchMerchants()
     merchantSelectDialogVisible.value = true
   }
 }
 
-const selectMerchant = (merchant) => {
+const selectMerchant = async (merchant) => {
   selectedMerchant.value = merchant
   orderingMerchant.value = merchant
   merchantSelectDialogVisible.value = false
@@ -956,6 +959,8 @@ const selectMerchant = (merchant) => {
     currentOrder.merchantName = merchant.name
   }
 
+  // 从后端获取商家菜品数据
+  await fetchMerchantProducts(merchant.id)
   productSelectDialogVisible.value = true
 }
 
@@ -1089,6 +1094,47 @@ const fetchConversations = async () => {
   } catch (error) {
     console.error('❌ [Chat] 获取会话列表失败:', error)
     return false
+  }
+}
+
+// 获取商家列表
+const fetchMerchants = async () => {
+  try {
+    ElMessage.info('正在加载商家列表...')
+    const response = await api.get(MERCHANT_API.LIST)
+
+    if (response.code === '200' || response.data) {
+      merchants.value = response.data || []
+      console.log(`🏪 [Chat] 商家列表已加载 - 共 ${merchants.value.length} 个商家`)
+      ElMessage.success(`已加载 ${merchants.value.length} 个商家`)
+    } else {
+      ElMessage.error('获取商家列表失败')
+    }
+  } catch (error) {
+    console.error('❌ [Chat] 获取商家列表失败:', error)
+    ElMessage.error('获取商家列表失败，请稍后重试')
+  }
+}
+
+// 获取商家菜品（菜单）
+const fetchMerchantProducts = async (merchantId) => {
+  try {
+    ElMessage.info('正在加载菜品信息...')
+    const response = await api.get(`/v1/menus/merchants/${merchantId}/menu`)
+
+    if (response.code === '200' || response.data) {
+      const menuData = response.data
+      if (selectedMerchant.value) {
+        selectedMerchant.value.products = menuData?.products || menuData || []
+      }
+      console.log(`🍽️ [Chat] 已加载商家菜品 - 共 ${selectedMerchant.value?.products?.length || 0} 个菜品`)
+      ElMessage.success(`已加载 ${selectedMerchant.value?.products?.length || 0} 个菜品`)
+    } else {
+      ElMessage.error('获取菜品信息失败')
+    }
+  } catch (error) {
+    console.error('❌ [Chat] 获取商家菜品失败:', error)
+    ElMessage.error('获取菜品信息失败，请稍后重试')
   }
 }
 </script>

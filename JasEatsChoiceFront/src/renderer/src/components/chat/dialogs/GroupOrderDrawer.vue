@@ -1,129 +1,135 @@
 <template>
   <el-drawer
     v-model="visible"
-    title="当前群订单"
     direction="rtl"
     size="45%"
     :close-on-click-modal="true"
+    class="group-order-drawer"
   >
+    <template #header>
+      <div class="drawer-header">
+        <div class="header-left">
+          <el-icon :size="20" color="#409eff"><ShoppingCart /></el-icon>
+          <span class="header-title">群订单详情</span>
+        </div>
+        <div class="header-right">
+          <el-tag
+            :type="groupOrder?.status === 'active' ? 'success' : 'info'"
+            size="default"
+            effect="dark"
+          >
+            {{ groupOrder?.status === 'active' ? '进行中' : '已结束' }}
+          </el-tag>
+        </div>
+      </div>
+    </template>
+
     <div v-if="groupOrder" class="drawer-content">
       <!-- 订单概览 -->
       <div class="order-overview">
-        <div class="overview-item">
-          <span class="info-label">群名称：</span>
-          <span class="info-value">{{ groupOrder.groupName }}</span>
-        </div>
-        <div class="overview-item">
-          <span class="info-label">订单创建人：</span>
-          <span class="info-value">{{ groupOrder.creator }}</span>
-        </div>
-        <div class="overview-item" v-if="groupOrder.merchantName">
-          <span class="info-label">已选商家：</span>
-          <span class="info-value">
-            {{ groupOrder.merchantName }}
-            <el-button
-              type="text"
-              size="small"
-              style="margin-left: 10px; color: #409eff"
-              @click="$emit('change-merchant')"
-              v-if="canChangeMerchant"
-            >
-              更换商家
-            </el-button>
-          </span>
-        </div>
-        <div class="overview-item">
-          <span class="info-label">总金额：</span>
-          <span class="info-value">¥{{ groupOrder.totalAmount.toFixed(2) }}</span>
-        </div>
-        <div class="overview-item">
-          <span class="info-label">参与人数：</span>
-          <span class="info-value">{{ groupOrder.members.length }}人</span>
+        <div class="overview-card">
+          <div class="overview-header">
+            <el-icon :size="17" color="#409eff"><InfoFilled /></el-icon>
+            <span class="overview-title">订单信息</span>
+          </div>
+
+          <div class="overview-grid">
+            <div class="overview-item">
+              <div class="item-icon">👥</div>
+              <div class="item-content">
+                <div class="item-label">群名称</div>
+                <div class="item-value">{{ groupOrder.groupName }}</div>
+              </div>
+            </div>
+
+            <div class="overview-item">
+              <div class="item-icon">👤</div>
+              <div class="item-content">
+                <div class="item-label">创建人</div>
+                <div class="item-value">{{ groupOrder.creator }}</div>
+              </div>
+            </div>
+
+            <div class="overview-item" v-if="groupOrder.merchantName">
+              <div class="item-icon">🏪</div>
+              <div class="item-content">
+                <div class="item-label">已选商家</div>
+                <div class="item-value">
+                  {{ groupOrder.merchantName }}
+                  <el-button
+                    type="primary"
+                    size="small"
+                    text
+                    @click="$emit('change-merchant')"
+                    v-if="canChangeMerchant"
+                    class="change-merchant-btn"
+                  >
+                    <el-icon><Refresh /></el-icon> 更换
+                  </el-button>
+                </div>
+              </div>
+            </div>
+
+            <div class="overview-item">
+              <div class="item-icon">💰</div>
+              <div class="item-content">
+                <div class="item-label">总金额</div>
+                <div class="item-value price">¥{{ groupOrder.totalAmount.toFixed(2) }}</div>
+              </div>
+            </div>
+
+            <div class="overview-item">
+              <div class="item-icon">👥</div>
+              <div class="item-content">
+                <div class="item-label">参与人数</div>
+                <div class="item-value">{{ groupOrder.members.length }} 人</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       <!-- 快速点餐入口 -->
       <div
         class="quick-order-entry"
-        v-if="hasMerchant && groupOrder.status === 'active'"
+        v-if="groupOrder.status === 'active'"
       >
-        <el-button type="primary" size="small" @click="$emit('continue-order')">
-          + 继续点餐
-        </el-button>
-      </div>
-
-      <!-- 订单商品列表 -->
-      <div class="order-items">
-        <h4
-          class="section-title"
-          v-if="groupOrder.orderItems && groupOrder.orderItems.length > 0"
-        >
-          订单商品
-        </h4>
-        <div class="item-list">
-          <el-card
-            v-for="item in groupOrder.orderItems"
-            :key="item.id"
-            class="order-item-card"
-            size="small"
+        <div class="quick-order-card">
+          <div class="quick-order-content">
+            <el-icon :size="24" color="#67c23a"><Plus /></el-icon>
+            <div class="quick-order-text">
+              <div class="quick-order-title">{{ hasMerchant ? '继续点餐' : '开始点餐' }}</div>
+              <div class="quick-order-desc">{{ hasMerchant ? '添加更多商品到订单' : '选择商家并开始点餐' }}</div>
+            </div>
+          </div>
+          <el-button
+            type="success"
+            size="default"
+            @click="hasMerchant ? $emit('continue-order') : $emit('select-merchant')"
+            class="quick-order-btn"
           >
-            <div class="order-item-header">
-              <span class="item-name">{{ item.name }}</span>
-              <span class="item-quantity">×{{ item.quantity }}</span>
-              <span class="item-price">¥{{ item.price.toFixed(2) }}</span>
-            </div>
-
-            <!-- 必选食材 -->
-            <div
-              class="item-ingredients"
-              v-if="item.requiredIngredients && item.requiredIngredients.length > 0"
-            >
-              <div class="ingredient-label">必选食材:</div>
-              <div class="ingredient-list">
-                <el-tag
-                  v-for="ingredient in item.requiredIngredients"
-                  :key="ingredient"
-                  size="small"
-                  type="info"
-                  style="margin: 0 4px 4px 0"
-                >
-                  {{ ingredient }}
-                </el-tag>
-              </div>
-            </div>
-
-            <!-- 可选食材 -->
-            <div
-              class="item-ingredients"
-              v-if="item.selectedOptionalIngredients && item.selectedOptionalIngredients.length > 0"
-            >
-              <div class="ingredient-label">已选可选食材:</div>
-              <div class="ingredient-list">
-                <el-tag
-                  v-for="ingredient in item.selectedOptionalIngredients"
-                  :key="ingredient.id || ingredient"
-                  size="small"
-                  type="success"
-                  style="margin: 0 4px 4px 0"
-                >
-                  {{ ingredient.name }}
-                </el-tag>
-              </div>
-            </div>
-
-            <!-- 商品备注 -->
-            <div class="item-remark" v-if="item.remark">
-              <div class="remark-label">备注:</div>
-              <div class="remark-content">{{ item.remark }}</div>
-            </div>
-          </el-card>
+            <el-icon><ShoppingCart /></el-icon> {{ hasMerchant ? '立即点餐' : '选择商家' }}
+          </el-button>
         </div>
       </div>
 
       <!-- 底部按钮 -->
       <div class="drawer-footer">
-        <el-button @click="$emit('select-merchant')">选择商家和商品</el-button>
-        <el-button type="success" @click="$emit('go-to-pay')">去支付</el-button>
+        <div class="footer-actions">
+          <el-button size="default" @click="$emit('select-merchant')">
+            <el-icon><Shop /></el-icon>
+            选择商家
+          </el-button>
+          <el-button
+            type="success"
+            size="default"
+            @click="$emit('go-to-pay')"
+            :disabled="!hasMerchant"
+          >
+            <el-icon><Wallet /></el-icon>
+            去支付
+          </el-button>
+        </div>
       </div>
     </div>
   </el-drawer>
@@ -131,6 +137,14 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
+import {
+  ShoppingCart,
+  InfoFilled,
+  Refresh,
+  Plus,
+  Shop,
+  Wallet
+} from '@element-plus/icons-vue'
 
 const props = defineProps({
   modelValue: {
@@ -180,121 +194,187 @@ const canChangeMerchant = computed(() => {
 </script>
 
 <style scoped lang="less">
+.group-order-drawer {
+  :deep(.el-drawer__header) {
+    margin-bottom: 0;
+    padding: 14px 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+  }
+
+  :deep(.el-drawer__body) {
+    padding: 14px;
+    background-color: #f5f7fa;
+  }
+}
+
+.drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    .header-title {
+      font-size: 17px;
+      font-weight: 600;
+      color: white;
+    }
+  }
+}
+
 .drawer-content {
   display: flex;
   flex-direction: column;
   height: 100%;
+  gap: 14px;
 
   .order-overview {
-    margin-bottom: 20px;
+    .overview-card {
+      background: white;
+      border-radius: 10px;
+      padding: 14px;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
 
-    .overview-item {
-      margin-bottom: 12px;
-      display: flex;
-      align-items: center;
+      .overview-header {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #f0f0f0;
 
-      .info-label {
-        font-weight: 500;
-        color: #606266;
-        margin-right: 8px;
+        .overview-title {
+          font-size: 14px;
+          font-weight: 600;
+          color: #303133;
+        }
       }
 
-      .info-value {
-        color: #303133;
+      .overview-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 10px;
+
+        .overview-item {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 10px;
+          background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);
+          border-radius: 8px;
+          transition: all 0.3s;
+
+          &:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          }
+
+          .item-icon {
+            font-size: 24px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border-radius: 8px;
+          }
+
+          .item-content {
+            flex: 1;
+
+            .item-label {
+              font-size: 11px;
+              color: #909399;
+              margin-bottom: 3px;
+            }
+
+            .item-value {
+              font-size: 13px;
+              font-weight: 500;
+              color: #303133;
+
+              &.price {
+                font-size: 16px;
+                color: #f56c6c;
+                font-weight: 600;
+              }
+
+              .change-merchant-btn {
+                margin-left: 6px;
+              }
+            }
+          }
+        }
       }
     }
   }
 
   .quick-order-entry {
-    margin-bottom: 20px;
-    padding: 12px;
-    background-color: #ecf5ff;
-    border-radius: 4px;
-    text-align: center;
-  }
+    .quick-order-card {
+      background: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);
+      border-radius: 10px;
+      padding: 14px;
+      color: white;
+      box-shadow: 0 4px 16px rgba(103, 194, 58, 0.3);
 
-  .order-items {
-    flex: 1;
-    overflow-y: auto;
+      .quick-order-content {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
 
-    .section-title {
-      font-size: 16px;
-      font-weight: 600;
-      margin-bottom: 12px;
-      color: #303133;
-    }
+        .quick-order-text {
+          flex: 1;
 
-    .item-list {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-
-      .order-item-card {
-        .order-item-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 8px;
-
-          .item-name {
-            font-weight: 500;
-            font-size: 14px;
-          }
-
-          .item-quantity {
-            color: #909399;
-            font-size: 13px;
-          }
-
-          .item-price {
-            color: #e6a23c;
+          .quick-order-title {
+            font-size: 15px;
             font-weight: 600;
+            margin-bottom: 3px;
+          }
+
+          .quick-order-desc {
+            font-size: 12px;
+            opacity: 0.9;
           }
         }
+      }
 
-        .item-ingredients {
-          margin-top: 8px;
+      .quick-order-btn {
+        width: 100%;
+        background: white;
+        color: #67c23a;
+        border: none;
+        font-weight: 600;
 
-          .ingredient-label {
-            font-size: 12px;
-            color: #909399;
-            margin-bottom: 4px;
-          }
-
-          .ingredient-list {
-            display: flex;
-            flex-wrap: wrap;
-          }
-        }
-
-        .item-remark {
-          margin-top: 8px;
-          padding: 8px;
-          background-color: #f5f7fa;
-          border-radius: 4px;
-
-          .remark-label {
-            font-size: 12px;
-            color: #909399;
-            margin-bottom: 4px;
-          }
-
-          .remark-content {
-            font-size: 13px;
-            color: #606266;
-          }
+        &:hover {
+          background: #f0f9ff;
+          color: #67c23a;
         }
       }
     }
   }
 
   .drawer-footer {
-    margin-top: 20px;
-    padding-top: 20px;
-    border-top: 1px solid #e4e7ed;
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
+    background: white;
+    border-radius: 10px;
+    padding: 14px;
+    box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
+
+    .footer-actions {
+      display: flex;
+      gap: 10px;
+
+      .el-button {
+        flex: 1;
+        font-weight: 500;
+      }
+    }
   }
 }
 </style>

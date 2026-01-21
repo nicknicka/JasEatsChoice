@@ -339,7 +339,8 @@
       "Bash(./node_modules/electron/dist/Electron.app/Contents/MacOS/Electron -v)",
       "Bash(redis-server:*)",
       "Bash(npx electron-vite:*)",
-      "Bash(npx prettier:*)"
+      "Bash(npx prettier:*)",
+      "Bash(npm rebuild:*)"
     ],
     "deny": [],
     "ask": []

@@ -1,11 +1,9 @@
 // CommonJS syntax for Electron main process
-
-// 直接导入 electron 模块
 const { app, shell, BrowserWindow, ipcMain, session } = require('electron')
 const path = require('path')
 const fs = require('fs/promises')
 const Store = require('electron-store')
-const sharp = require('sharp') // Image processing library
+const WebSocket = require('ws')
 
 // Check if we're in development mode
 const isDev = process.env.NODE_ENV === 'development' || process.env.ELECTRON_IS_DEV
@@ -14,6 +12,7 @@ const icon = path.join(__dirname, '../../resources/icon.png')
 // Initialize electron-store later when app is ready
 let store
 let mainWindow
+let webSocketClient = null
 
 function createWindow() {
   // Create the browser window.
@@ -60,6 +59,11 @@ app.whenReady().then(() => {
   const scriptSrcPolicy = isDev
     ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://webapi.amap.com https://restapi.amap.com"
     : "script-src 'self' 'unsafe-inline' https://webapi.amap.com https://restapi.amap.com"
+
+  // 忽略高德地图相关的证书错误（仅开发环境）
+  if (isDev) {
+    app.commandLine.appendSwitch('ignore-certificate-errors')
+  }
 
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     callback({
@@ -111,26 +115,17 @@ app.whenReady().then(() => {
     return { userDataPath, imagesPath, chatDataPath }
   }
 
-  // Handle image upload and processing
+  // Handle image upload (without sharp for now)
   ipcMain.handle('user:uploadImage', async (event, imageData) => {
     try {
       console.log('Received image data for upload:', imageData)
-      // Resize image and return as data URL instead of file path
-      const buffer = Buffer.from(imageData.base64, 'base64')
       const ext = imageData.type.split('/')[1] || 'png'
 
-      // Generate thumbnail
-      const thumbnailBuffer = await sharp(buffer)
-        .resize({ width: 200, height: 200, fit: 'cover' })
-        .toBuffer()
-
-      // Convert to base64 and create data URL
-      const thumbnailBase64 = thumbnailBuffer.toString('base64')
-      const thumbnailDataUrl = `data:${imageData.type};base64,${thumbnailBase64}`
-
+      // Return original image without processing for now
+      // TODO: Re-enable sharp when compatible version is found
       return {
         original: `data:${imageData.type};base64,${imageData.base64}`,
-        thumbnail: thumbnailDataUrl,
+        thumbnail: `data:${imageData.type};base64,${imageData.base64}`,
         filename: `${Date.now()}.${ext}`,
         ext
       }
@@ -157,11 +152,6 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })
-
-// WebSocket implementation
-const WebSocket = require('ws')
-
-let webSocketClient = null
 
 // WebSocket IPC handlers
 ipcMain.handle('websocket:connect', async (event, url) => {
