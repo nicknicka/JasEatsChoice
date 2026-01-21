@@ -3,9 +3,13 @@
     <!-- 使用新的头部组件 -->
     <ChatHeader @open-action-panel="openActionPanelWithTab" />
 
-    <div class="chat-content">
+    <div class="chat-content" :class="{ 'is-resizing': isResizing }">
       <!-- 左侧会话列表 -->
-      <div class="conversation-list-wrapper">
+      <div
+        class="conversation-list-wrapper"
+        :style="{ width: leftPanelWidth + 'px' }"
+        :class="{ 'is-resizing': isResizing }"
+      >
         <ConversationList
           v-model="selectedConversation"
           :conversations="sortedConversations"
@@ -23,6 +27,23 @@
           @toggle-pin="togglePin"
           @delete="deleteConversation"
         />
+      </div>
+
+      <!-- 可拖动分隔条 -->
+      <div
+        class="resize-divider"
+        @mousedown="startResize"
+        @dblclick="resetPanelWidth"
+        :class="{
+          'is-resizing': isResizing,
+          'near-min-width': isNearMinWidth,
+          'near-max-width': isNearMaxWidth
+        }"
+        title="拖动调整宽度，双击重置"
+      >
+        <div v-if="isResizing" class="resize-tooltip">
+          {{ Math.round(leftPanelWidth) }}px
+        </div>
       </div>
 
       <!-- 右侧聊天区域 -->
@@ -154,6 +175,72 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Loading } from '@element-plus/icons-vue'
+
+// ========== 面板宽度控制 ==========
+const leftPanelWidth = ref(280) // 左侧面板默认宽度
+const isResizing = ref(false) // 是否正在拖动
+const isNearMinWidth = ref(false) // 是否接近最小宽度
+const isNearMaxWidth = ref(false) // 是否接近最大宽度
+let animationFrameId = null // 动画帧ID
+
+// 开始拖动
+const startResize = (e) => {
+  isResizing.value = true
+  document.addEventListener('mousemove', handleResize)
+  document.addEventListener('mouseup', stopResize)
+  e.preventDefault() // 防止拖动时选中文字
+}
+
+// 处理拖动
+const handleResize = (e) => {
+  // 使用 requestAnimationFrame 优化性能
+  if (animationFrameId) {
+    cancelAnimationFrame(animationFrameId)
+  }
+
+  animationFrameId = requestAnimationFrame(() => {
+    const container = document.querySelector('.chat-content')
+    if (!container) return
+
+    const containerRect = container.getBoundingClientRect()
+    const newWidth = e.clientX - containerRect.left
+
+    // 限制最小和最大宽度
+    const minWidth = 220
+    const maxWidth = 500
+    const minThreshold = minWidth + 30
+    const maxThreshold = maxWidth - 30
+
+    if (newWidth >= minWidth && newWidth <= maxWidth) {
+      leftPanelWidth.value = newWidth
+
+      // 检测是否接近边界
+      isNearMinWidth.value = newWidth <= minThreshold
+      isNearMaxWidth.value = newWidth >= maxThreshold
+    }
+  })
+}
+
+// 停止拖动
+const stopResize = () => {
+  isResizing.value = false
+  isNearMinWidth.value = false
+  isNearMaxWidth.value = false
+  if (animationFrameId) {
+    cancelAnimationFrame(animationFrameId)
+    animationFrameId = null
+  }
+  document.removeEventListener('mousemove', handleResize)
+  document.removeEventListener('mouseup', stopResize)
+}
+
+// 重置面板宽度
+const resetPanelWidth = () => {
+  leftPanelWidth.value = 280
+  isNearMinWidth.value = false
+  isNearMaxWidth.value = false
+  ElMessage.success('面板宽度已重置为 280px')
+}
 
 // Composables
 import { useWebSocketChat } from '../../composables/useWebSocketChat'
@@ -1018,13 +1105,24 @@ const fetchConversations = async () => {
 
   .chat-content {
     display: flex;
-    gap: 16px;
+    gap: 8px;
     flex: 1;
     min-height: 0;
     overflow: hidden;
 
+    // 拖动时的全局优化
+    &.is-resizing {
+      // 禁用用户选择，提升性能
+      user-select: none;
+      cursor: col-resize;
+
+      // 拖动时优化子元素渲染
+      * {
+        pointer-events: none;
+      }
+    }
+
     .conversation-list-wrapper {
-      width: 240px;
       min-width: 220px;
       height: 100%;
       display: flex;
@@ -1034,12 +1132,181 @@ const fetchConversations = async () => {
       background-color: #fff;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
       overflow: hidden;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                  transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       transform: translateY(0);
 
       &:hover {
         box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
         transform: translateY(-4px);
+      }
+
+      // 拖动时添加弹性反馈动画
+      &.is-resizing {
+        animation: subtle-pulse 1.5s ease-in-out infinite;
+      }
+    }
+
+    @keyframes subtle-pulse {
+      0%, 100% {
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      }
+      50% {
+        box-shadow: 0 4px 25px rgba(64, 158, 255, 0.2);
+      }
+    }
+
+    .resize-divider {
+      width: 8px;
+      height: 100%;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        #e4e7ed 40%,
+        #c0c4cc 50%,
+        #e4e7ed 60%,
+        transparent 100%
+      );
+      cursor: col-resize;
+      position: relative;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      flex-shrink: 0;
+      align-self: center;
+      border-radius: 4px;
+
+      // 分隔条中间的拖动手柄样式 - 使用虚线效果
+      &::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 2px;
+        height: 60px;
+        background: repeating-linear-gradient(
+          to bottom,
+          #909399 0px,
+          #909399 4px,
+          transparent 4px,
+          transparent 8px
+        );
+        border-radius: 1px;
+        opacity: 0.6;
+        transition: all 0.3s ease;
+      }
+
+      &:hover {
+        background: linear-gradient(
+          90deg,
+          transparent 0%,
+          #dcdfe6 40%,
+          #b0b4bc 50%,
+          #dcdfe6 60%,
+          transparent 100%
+        );
+
+        &::before {
+          opacity: 1;
+          background: repeating-linear-gradient(
+            to bottom,
+            #409eff 0px,
+            #409eff 4px,
+            transparent 4px,
+            transparent 8px
+          );
+          height: 70px;
+        }
+      }
+
+      // 接近最小宽度时的警告样式
+      &.near-min-width::before {
+        background: repeating-linear-gradient(
+          to bottom,
+          #e6a23c 0px,
+          #e6a23c 4px,
+          transparent 4px,
+          transparent 8px
+        ) !important;
+        opacity: 1 !important;
+      }
+
+      // 接近最大宽度时的警告样式
+      &.near-max-width::before {
+        background: repeating-linear-gradient(
+          to bottom,
+          #f56c6c 0px,
+          #f56c6c 4px,
+          transparent 4px,
+          transparent 8px
+        ) !important;
+        opacity: 1 !important;
+      }
+
+      &.is-resizing {
+        background: linear-gradient(
+          90deg,
+          transparent 0%,
+          #409eff 40%,
+          #66b1ff 50%,
+          #409eff 60%,
+          transparent 100%
+        );
+        box-shadow: 0 0 12px rgba(64, 158, 255, 0.5);
+        transition: none;
+
+        &::before {
+          opacity: 1;
+          background: #ffffff;
+          height: 80px;
+          transition: none;
+        }
+      }
+
+      // 拖动时禁用文本选择
+      &.is-resizing,
+      &:hover {
+        user-select: none;
+      }
+
+      // 拖动提示
+      .resize-tooltip {
+        position: absolute;
+        top: -40px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #409eff;
+        color: #fff;
+        padding: 6px 14px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 500;
+        white-space: nowrap;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        animation: tooltip-fadein 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        pointer-events: none;
+        z-index: 100;
+
+        &::after {
+          content: '';
+          position: absolute;
+          bottom: -6px;
+          left: 50%;
+          transform: translateX(-50%);
+          border-left: 6px solid transparent;
+          border-right: 6px solid transparent;
+          border-top: 6px solid #409eff;
+        }
+      }
+
+      @keyframes tooltip-fadein {
+        from {
+          opacity: 0;
+          transform: translateX(-50%) translateY(8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(-50%) translateY(0);
+        }
       }
     }
 
