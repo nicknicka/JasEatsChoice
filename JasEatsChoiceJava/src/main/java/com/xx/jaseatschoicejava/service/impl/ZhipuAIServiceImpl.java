@@ -92,16 +92,9 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
             requestBody.put("messages", messages);
             log.info("总消息数: {}", messages.size());
 
-            // 启用深度思考模式（GLM-4.7-Flash新特性）
-            Map<String, String> thinking = new HashMap<>();
-            thinking.put("type", "enabled");
-            requestBody.put("thinking", thinking);
-            log.info("深度思考模式: enabled");
-
-            // 可选参数
+            // 可选参数（移除深度思考模式，glm-4-flash不支持）
             requestBody.put("temperature", 0.7);
             requestBody.put("top_p", 0.9);
-            requestBody.put("max_tokens", 65536);
 
             // 发送请求（暂时不使用流式，保持原有逻辑）
             log.info("发送HTTP请求到智谱AI...");

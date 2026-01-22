@@ -103,8 +103,12 @@ id:
 zhipuai:
   # API密钥（从 https://open.bigmodel.cn/usercenter/apikeys 获取）
   api-key: 03221a26791e408c8b90fc60153b21c8.cQtSYhnFrFEoT27u
-  # 模型选择（glm-4.7-flash为最新免费模型，支持深度思考）
-  model: ${ZHIPU_MODEL:glm-4.7-flash}
+  # 模型选择（正确的模型名称）
+  # glm-4-flash: 标准Flash版本，免费，速度快，并发限制中等（推荐）
+  # glm-4-air: 轻量级版本，免费，更低的并发限制
+  # glm-4: 标准版，需要付费，能力强
+  # glm-4-plus: 增强版，需要付费，能力最强
+  model: ${ZHIPU_MODEL:glm-4-flash}
   # API地址
   base-url: https://open.bigmodel.cn/api/paas/v4/chat/completions
   # 超时时间（毫秒）
