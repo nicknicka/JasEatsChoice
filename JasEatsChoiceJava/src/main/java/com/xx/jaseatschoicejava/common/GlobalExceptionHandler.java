@@ -1,6 +1,7 @@
 package com.xx.jaseatschoicejava.common;
 
 import com.xx.jaseatschoicejava.exception.BusinessException;
+import org.apache.catalina.connector.ClientAbortException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -30,6 +31,21 @@ public class GlobalExceptionHandler {
         logger.error("Business Exception: Code={}, Message={}", e.getCode(), e.getMessage());
         // 返回标准化的失败响应
         return ResponseResult.fail(e.getCode(), e.getMessage());
+    }
+
+    /**
+     * 处理客户端断开连接异常
+     * 当客户端在服务器完成响应之前断开连接时调用此方法
+     * 这通常是因为用户刷新页面、关闭浏览器或取消请求导致的
+     * @param e 客户端断开连接异常对象
+     * @return null（因为连接已经断开，无需返回响应）
+     */
+    @ExceptionHandler(ClientAbortException.class)
+    public ResponseResult<?> handleClientAbortException(ClientAbortException e) {
+        // 仅在 DEBUG 级别记录日志，避免日志污染
+        logger.debug("Client aborted the connection: {}", e.getMessage());
+        // 连接已断开，无需返回响应
+        return null;
     }
 
     /**

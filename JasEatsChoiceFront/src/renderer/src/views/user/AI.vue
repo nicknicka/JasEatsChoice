@@ -1,6 +1,7 @@
 <script setup>
-import { ref, onMounted, nextTick, watch } from 'vue'
-import { ChatRound, Camera, Document, Loading, Delete, Picture } from '@element-plus/icons-vue'
+import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { ChatRound, Camera, Document, Loading, Delete, Picture, ChatDotRound, Close } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import axios from 'axios'
 
 // 从配置中导入API地址
@@ -17,6 +18,20 @@ const quickQuestions = ref([
 
 // 快捷提问显示状态
 const showQuickQuestions = ref(true)
+
+// 表情选择器状态
+const showEmojiPicker = ref(false)
+const inputContainerRef = ref(null)
+
+// 常用表情列表
+const commonEmojis = [
+  '😊', '😂', '🤔', '👍', '👎', '❤️', '🔥', '✨',
+  '🍎', '🥗', '🍲', '🍜', '🍕', '🍰', '☕', '🥤',
+  '💪', '🏃', '🧘', '😋', '🤤', '😌', '🤗', '😎'
+]
+
+// 上传的图片
+const uploadedImages = ref([])
 
 // Chat messages
 const messages = ref([])
@@ -336,6 +351,91 @@ const optimizeRecipe = () => {
     })
 }
 
+// 清空所有输入内容（文本 + 图片）
+const clearAllInput = () => {
+  inputMessage.value = ''
+  uploadedImages.value = []
+  ElMessage.success('已清空')
+}
+
+// 切换表情面板
+const toggleEmoji = () => {
+  showEmojiPicker.value = !showEmojiPicker.value
+}
+
+// 选择表情
+const selectEmoji = (emoji) => {
+  inputMessage.value += emoji
+  showEmojiPicker.value = false
+  nextTick(() => {
+    // 聚焦回输入框
+    const textarea = document.querySelector('.message-textarea textarea')
+    if (textarea) textarea.focus()
+  })
+}
+
+// 点击外部区域关闭表情面板
+const handleClickOutside = (event) => {
+  if (inputContainerRef.value && !inputContainerRef.value.contains(event.target)) {
+    showEmojiPicker.value = false
+  }
+}
+
+onMounted(() => {
+  activeTab.value = 'chat'
+  loadMessages() // 加载聊天历史记录
+  document.addEventListener('click', handleClickOutside)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
+
+// 处理聊天图片上传
+const handleChatImageUpload = async (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+
+  // 验证文件类型
+  if (!file.type.startsWith('image/')) {
+    ElMessage.error('请选择图片文件')
+    return
+  }
+
+  // 验证文件大小（10MB）
+  if (file.size > 10 * 1024 * 1024) {
+    ElMessage.error('图片大小不能超过10MB')
+    return
+  }
+
+  try {
+    // 创建预览
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      uploadedImages.value.push({
+        id: Date.now(),
+        url: e.target.result,
+        file: file
+      })
+      ElMessage.success('图片上传成功')
+    }
+    reader.readAsDataURL(file)
+  } catch (error) {
+    ElMessage.error('图片上传失败')
+  }
+
+  // 清空input，允许重复上传同一张图片
+  event.target.value = ''
+}
+
+// 移除上传的图片
+const removeUploadedImage = (imageId) => {
+  const index = uploadedImages.value.findIndex(img => img.id === imageId)
+  if (index > -1) {
+    uploadedImages.value.splice(index, 1)
+  }
+}
+
 // Handle keydown event for textarea
 const handleKeyDown = (event) => {
   // Shift+Enter for newline, Enter to send
@@ -358,6 +458,14 @@ const sendMessage = () => {
     return
   }
 
+  // ========== 日志记录：请求开始 ==========
+  const requestStartTime = Date.now()
+  console.log('==================== AI聊天请求开始 ====================')
+  console.log('⏰ 请求时间:', new Date().toLocaleString())
+  console.log('📝 用户消息:', trimmedMsg)
+  console.log('📏 消息长度:', trimmedMsg.length, '字符')
+  console.log('📊 当前消息数量:', messages.value.length)
+
   // Add user message
   const userMsg = {
     id: messages.value.length + 1,
@@ -373,12 +481,26 @@ const sendMessage = () => {
   // Call backend AI API
   isLoading.value = true
 
+  // ========== 日志记录：API调用 ==========
+  console.log('🌐 发送API请求到:', API_CONFIG.baseURL + API_CONFIG.ai.chat)
+  console.log('📦 请求体:', { message: userInput })
+
   // 使用后端API获取AI回复
   axios
     .post(API_CONFIG.baseURL + API_CONFIG.ai.chat, { message: userInput })
     .then(async (response) => {
+      // ========== 日志记录：响应接收 ==========
+      const responseTime = Date.now() - requestStartTime
+      console.log('✅ API响应成功，耗时:', responseTime, 'ms')
+      console.log('📦 HTTP状态码:', response.status)
+      console.log('📋 响应数据:', response.data)
+
       // Check if response is valid
       if (response.data && response.data.data && response.data.data.content) {
+        const aiContent = response.data.data.content
+        console.log('🤖 AI回复内容长度:', aiContent.length, '字符')
+        console.log('📝 AI回复预览:', aiContent.length > 100 ? aiContent.substring(0, 100) + '...' : aiContent)
+
         // 创建AI消息对象
         const aiResponse = {
           id: messages.value.length + 1,
@@ -390,18 +512,31 @@ const sendMessage = () => {
         messages.value.push(aiResponse)
 
         // 使用打字机效果显示回复
-        await typeWriterEffect(aiResponse, response.data.data.content)
+        console.log('⌨️ 开始打字机效果...')
+        await typeWriterEffect(aiResponse, aiContent)
+
+        const totalTime = Date.now() - requestStartTime
+        console.log('✨ 整体请求完成，总耗时:', totalTime, 'ms')
+        console.log('==================== AI聊天请求完成 ====================\n')
       } else {
         throw new Error('Invalid response format')
       }
     })
     .catch((error) => {
-      console.error('AI聊天接口调用失败:', error)
+      // ========== 日志记录：错误处理 ==========
+      const errorTime = Date.now() - requestStartTime
+      console.error('❌ API请求失败，耗时:', errorTime, 'ms')
+      console.error('📋 错误对象:', error)
+      console.error('❌ 错误消息:', error.message)
+
       let errorMsg = '对不起，暂时无法获取AI回复，请稍后重试。'
 
       // Add more specific error messages
       if (error.response) {
         // Server responded with error status code
+        console.error('🔴 服务器错误状态码:', error.response.status)
+        console.error('📄 错误响应数据:', error.response.data)
+
         if (error.response.status === 404) {
           errorMsg = 'AI聊天服务暂时不可用，请稍后重试。'
         } else if (error.response.status === 500) {
@@ -409,6 +544,7 @@ const sendMessage = () => {
         }
       } else if (error.request) {
         // No response received from server
+        console.error('🔴 网络错误，无响应')
         errorMsg = '网络连接超时，请检查网络设置。'
       }
 
@@ -420,6 +556,9 @@ const sendMessage = () => {
         avatar: '🤖'
       }
       messages.value.push(aiResponse)
+
+      const totalTime = Date() - requestStartTime
+      console.log('==================== AI聊天请求失败 ====================\n')
     })
     .finally(() => {
       isLoading.value = false
@@ -443,10 +582,6 @@ onMounted(() => {
             <h2>AI饮食助手</h2>
             <div class="chat-info">
               <el-tag type="success">在线</el-tag>
-              <el-button @click="clearChat" type="danger" size="small" plain>
-                <el-icon><Delete /></el-icon>
-                清空对话
-              </el-button>
             </div>
           </div>
 
@@ -488,7 +623,7 @@ onMounted(() => {
                       <div class="quick-questions-header">
                         <span class="quick-questions-title">💡 快捷提问</span>
                         <el-button
-                          :icon="Delete"
+                          :icon="Close"
                           circle
                           size="small"
                           text
@@ -511,27 +646,56 @@ onMounted(() => {
                   </transition>
 
                   <!-- 输入框区域 -->
-                  <div class="message-input-container">
+                  <div class="message-input-container" ref="inputContainerRef">
                     <div class="input-wrapper">
                       <!-- 工具栏 -->
                       <div class="toolbar">
                         <div class="toolbar-left">
+                          <!-- 表情按钮 -->
                           <el-tooltip content="表情" placement="top">
                             <el-button
-                              :icon="ChatRound"
+                              :icon="ChatDotRound"
                               circle
                               size="small"
+                              @click="toggleEmoji"
+                              :class="{ 'is-active': showEmojiPicker }"
                             />
                           </el-tooltip>
+
+                          <!-- 图片上传按钮 -->
+                          <input
+                            type="file"
+                            accept="image/*"
+                            @change="handleChatImageUpload"
+                            style="display: none"
+                            ref="chatImageInput"
+                          />
                           <el-tooltip content="上传图片" placement="top">
-                            <el-button :icon="Picture" circle size="small" />
+                            <el-button
+                              :icon="Picture"
+                              circle
+                              size="small"
+                              @click="$refs.chatImageInput.click()"
+                            />
                           </el-tooltip>
+
                           <div class="toolbar-divider"></div>
-                          <el-tooltip content="清空" placement="top">
-                            <el-button :icon="Delete" circle size="small" @click="inputMessage = ''" />
+
+                          <!-- 清空输入按钮 -->
+                          <el-tooltip content="清空输入" placement="top">
+                            <el-button :icon="Delete" circle size="small" @click="clearAllInput" />
                           </el-tooltip>
                         </div>
                         <div class="toolbar-right">
+                          <!-- 清空对话记录按钮 -->
+                          <el-button
+                            link
+                            type="danger"
+                            @click="clearChat"
+                          >
+                            🗑️ 清空对话
+                          </el-button>
+
                           <el-button
                             v-if="!showQuickQuestions"
                             link
@@ -540,6 +704,36 @@ onMounted(() => {
                           >
                             💡 快捷提问
                           </el-button>
+                        </div>
+                      </div>
+
+                      <!-- 表情面板 -->
+                      <transition name="slide-up">
+                        <div v-if="showEmojiPicker" class="emoji-panel">
+                          <div class="emoji-grid">
+                            <span
+                              v-for="emoji in commonEmojis"
+                              :key="emoji"
+                              class="emoji-item"
+                              @click="selectEmoji(emoji)"
+                            >
+                              {{ emoji }}
+                            </span>
+                          </div>
+                        </div>
+                      </transition>
+
+                      <!-- 已上传图片预览 -->
+                      <div v-if="uploadedImages.length > 0" class="uploaded-images-preview">
+                        <div v-for="img in uploadedImages" :key="img.id" class="uploaded-image-item">
+                          <img :src="img.url" alt="上传的图片" />
+                          <el-button
+                            :icon="Delete"
+                            circle
+                            size="small"
+                            class="remove-image-btn"
+                            @click="removeUploadedImage(img.id)"
+                          />
                         </div>
                       </div>
 
@@ -1138,6 +1332,7 @@ onMounted(() => {
       display: flex;
       flex-direction: column;
       gap: 8px;
+      position: relative;
     }
 
     .toolbar {
@@ -1177,6 +1372,18 @@ onMounted(() => {
 
         &:active {
           transform: translateY(0);
+        }
+
+        &.is-active {
+          border-color: #667eea;
+          color: #667eea;
+          background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+          box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15),
+                      0 2px 8px rgba(102, 126, 234, 0.2);
+
+          &:hover {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+          }
         }
       }
     }
@@ -1237,6 +1444,111 @@ onMounted(() => {
           box-shadow: none;
           color: #adb5bd;
         }
+      }
+    }
+  }
+
+  /* 表情面板样式 - 参考对话界面设计 */
+  .emoji-panel {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    right: 0;
+    background: #ffffff;
+    border: 1px solid #e8ecef;
+    border-radius: 8px;
+    padding: 10px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    margin-bottom: 6px;
+    max-height: 180px;
+    overflow-y: auto;
+    z-index: 100;
+
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: #dee2e6;
+      border-radius: 3px;
+
+      &:hover {
+        background: #adb5bd;
+      }
+    }
+
+    .emoji-grid {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 4px;
+
+      .emoji-item {
+        font-size: 20px;
+        text-align: center;
+        padding: 6px 4px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        user-select: none;
+
+        &:hover {
+          background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+          transform: scale(1.2);
+        }
+
+        &:active {
+          transform: scale(1.05);
+        }
+      }
+    }
+  }
+
+  /* 上传图片预览样式 */
+  .uploaded-images-preview {
+    display: flex;
+    gap: 12px;
+    padding: 12px;
+    background-color: #f8f9fa;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+
+    .uploaded-image-item {
+      position: relative;
+      width: 100px;
+      height: 100px;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .remove-image-btn {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        width: 24px;
+        height: 24px;
+        min-height: 24px;
+        padding: 0;
+        background-color: rgba(0, 0, 0, 0.6);
+        border: none;
+        color: #fff;
+        opacity: 0;
+        transition: all 0.2s ease;
+
+        &:hover {
+          background-color: rgba(255, 107, 107, 0.9);
+          transform: scale(1.1);
+        }
+      }
+
+      &:hover .remove-image-btn {
+        opacity: 1;
       }
     }
   }
@@ -1641,6 +1953,22 @@ onMounted(() => {
   .slide-down-leave-to {
     opacity: 0;
     transform: translateY(-12px);
+  }
+
+  /* 表情面板滑入滑出动画 */
+  .slide-up-enter-active,
+  .slide-up-leave-active {
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .slide-up-enter-from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  .slide-up-leave-to {
+    opacity: 0;
+    transform: translateY(6px);
   }
 
   /* 菜品识别增强样式 */

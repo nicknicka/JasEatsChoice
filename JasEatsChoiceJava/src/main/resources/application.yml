@@ -98,3 +98,14 @@ id:
     worker-id: ${WORKER_ID:1}          # 机器ID（0-31），可通过环境变量覆盖
     datacenter-id: ${DATACENTER_ID:1}  # 数据中心ID（0-31），可通过环境变量覆盖
     epoch: 1704067200000                  # 纪元时间（2024-01-01 00:00:00 CST）
+
+# ==================== 智谱AI配置 ====================
+zhipuai:
+  # API密钥（从 https://open.bigmodel.cn/usercenter/apikeys 获取）
+  api-key: 03221a26791e408c8b90fc60153b21c8.cQtSYhnFrFEoT27u
+  # 模型选择（glm-4.7-flash为最新免费模型，支持深度思考）
+  model: ${ZHIPU_MODEL:glm-4.7-flash}
+  # API地址
+  base-url: https://open.bigmodel.cn/api/paas/v4/chat/completions
+  # 超时时间（毫秒）
+  timeout: 30000
