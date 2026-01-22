@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSE流式传输测试工具</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #ff6b6b;
+            padding-bottom: 10px;
+        }
+        .input-group {
+            margin: 20px 0;
+        }
+        input[type="text"] {
+            width: 70%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button {
+            padding: 10px 30px;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .output {
+            margin-top: 20px;
+        }
+        .output-box {
+            background: #f9f9f9;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 10px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .output-box .log {
+            color: #666;
+            border-bottom: 1px solid #eee;
+            padding: 5px 0;
+        }
+        .output-box .success {
+            color: #28a745;
+        }
+        .output-box .error {
+            color: #dc3545;
+        }
+        .output-box .data {
+            color: #007bff;
+        }
+        .stats {
+            margin-top: 10px;
+            padding: 10px;
+            background: #e8f4fd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .stats span {
+            display: inline-block;
+            margin-right: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 SSE流式传输测试工具</h1>
+
+        <div class="input-group">
+            <input type="text" id="message" placeholder="输入测试消息..." value="你好">
+            <button id="sendBtn" onclick="sendRequest()">发送请求</button>
+            <button onclick="clearOutput()">清空输出</button>
+        </div>
+
+        <div class="stats" id="stats" style="display: none;">
+            <span>数据块数量: <strong id="chunkCount">0</strong></span>
+            <span>总字节数: <strong id="totalBytes">0</strong></span>
+            <span>总耗时: <strong id="duration">0</strong> ms</span>
+        </div>
+
+        <div class="output">
+            <h3>📋 响应日志：</h3>
+            <div class="output-box" id="output"></div>
+        </div>
+    </div>
+
+    <script>
+        let chunkCount = 0;
+        let totalBytes = 0;
+        let startTime = 0;
+
+        function log(message, type = 'log') {
+            const output = document.getElementById('output');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'log' ? '' : type;
+            output.innerHTML += `<div class="log ${className}">[${timestamp}] ${message}</div>`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearOutput() {
+            document.getElementById('output').innerHTML = '';
+            chunkCount = 0;
+            totalBytes = 0;
+            document.getElementById('stats').style.display = 'none';
+        }
+
+        async function sendRequest() {
+            const message = document.getElementById('message').value.trim();
+            if (!message) {
+                alert('请输入消息');
+                return;
+            }
+
+            const sendBtn = document.getElementById('sendBtn');
+            sendBtn.disabled = true;
+            sendBtn.textContent = '发送中...';
+
+            clearOutput();
+            chunkCount = 0;
+            totalBytes = 0;
+            startTime = Date.now();
+
+            document.getElementById('stats').style.display = 'block';
+
+            log('🚀 开始发送请求', 'log');
+            log(`📝 消息内容: ${message}`, 'log');
+            log(`🌐 请求URL: http://localhost:8080/api/v1/ai/stream/chat`, 'log');
+
+            try {
+                const response = await fetch('http://localhost:8080/api/v1/ai/stream/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'text/event-stream'
+                    },
+                    body: JSON.stringify({ message: message })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                log('✅ 连接成功', 'success');
+                log('🔍 开始读取流式数据...', 'log');
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+
+                    if (done) {
+                        log('✅ 流式传输完成', 'success');
+                        break;
+                    }
+
+                    const chunk = decoder.decode(value, { stream: true });
+                    chunkCount++;
+                    totalBytes += chunk.length;
+
+                    log(`📦 数据块 #${chunkCount} (${chunk.length} 字节):`, 'data');
+                    log(chunk, 'data');
+
+                    buffer += chunk;
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+
+                    for (let i = 0; i < lines.length; i++) {
+                        const line = lines[i];
+                        log(`  行${i + 1}: ${line}`, 'data');
+
+                        if (line.trim().startsWith('data:')) {
+                            const data = line.trim().substring(5).trim();
+                            log(`    ✂️ 提取data: "${data}"`, 'data');
+
+                            if (data === '[DONE]' || data === '{"done":true}' || data === '{"done": true}') {
+                                log('    ✅ 收到完成标记', 'success');
+                                break;
+                            }
+
+                            try {
+                                const parsed = JSON.parse(data);
+                                log(`    🔍 解析结果: ${JSON.stringify(parsed)}`, 'success');
+
+                                if (parsed.content) {
+                                    log(`    ✨ 内容: "${parsed.content}"`, 'success');
+                                }
+                                if (parsed.error) {
+                                    log(`    ❌ 错误: "${parsed.error}"`, 'error');
+                                }
+                            } catch (parseError) {
+                                log(`    ❌ JSON解析失败: ${parseError.message}`, 'error');
+                            }
+                        }
+                    }
+                }
+
+                const duration = Date.now() - startTime;
+                document.getElementById('chunkCount').textContent = chunkCount;
+                document.getElementById('totalBytes').textContent = totalBytes;
+                document.getElementById('duration').textContent = duration;
+
+                log(`📊 统计: ${chunkCount} 个数据块, 共 ${totalBytes} 字节, 耗时 ${duration} ms`, 'success');
+
+            } catch (error) {
+                log(`❌ 请求失败: ${error.message}`, 'error');
+                console.error('Error:', error);
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.textContent = '发送请求';
+            }
+        }
+
+        // 按Enter发送
+        document.getElementById('message').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendRequest();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -42,7 +42,8 @@ const inputMaxLength = 500 // Maximum message length for chat
 
 // Loading state for chat
 const isLoading = ref(false)
-const isTyping = ref(false) // 打字机效果状态
+const isStreaming = ref(false) // 流式传输状态
+const abortController = ref(null) // 用于取消请求
 
 // 聊天历史记录持久化
 const STORAGE_KEY = 'ai-chat-history'
@@ -120,6 +121,13 @@ const clearChat = () => {
     ]
     saveMessages()
     ElMessage.success('聊天记录已清空')
+    // 清空后滚动到顶部
+    nextTick(() => {
+      const chatContainer = document.querySelector('.chat-messages')
+      if (chatContainer) {
+        chatContainer.scrollTop = 0
+      }
+    })
   }).catch(() => {})
 }
 
@@ -128,24 +136,93 @@ watch(messages, () => {
   saveMessages()
 }, { deep: true })
 
-// 打字机效果：逐字显示AI回复
-const typeWriterEffect = async (messageObj, text) => {
-  isTyping.value = true
-  messageObj.content = ''
-
-  for (let i = 0; i < text.length; i++) {
-    messageObj.content += text[i]
-    await new Promise(resolve => setTimeout(resolve, 30))
-
-    // 自动滚动到底部
-    await nextTick()
+// 滚动到底部函数
+const scrollToBottom = (smooth = true) => {
+  nextTick(() => {
     const chatContainer = document.querySelector('.chat-messages')
     if (chatContainer) {
-      chatContainer.scrollTop = chatContainer.scrollHeight
+      if (smooth) {
+        chatContainer.scrollTo({
+          top: chatContainer.scrollHeight,
+          behavior: 'smooth'
+        })
+      } else {
+        chatContainer.scrollTop = chatContainer.scrollHeight
+      }
     }
-  }
+  })
+}
 
-  isTyping.value = false
+// 流式传输：逐块读取AI回复
+// 前端职责：接收后端发来的 content 和 done 两个字段，追加文本内容
+const streamResponse = async (messageIndex, reader) => {
+  isStreaming.value = true
+  messages.value[messageIndex].content = ''
+
+  const decoder = new TextDecoder()
+  let buffer = ''
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      const chunk = decoder.decode(value, { stream: true })
+      // console.log('chunk:', chunk)
+      buffer += chunk
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || ''
+
+      for (const line of lines) {
+        const trimmedLine = line.trim()
+        if (!trimmedLine.startsWith('data:')) continue
+
+        const data = trimmedLine.substring(5).trim()
+        if (!data) continue
+
+        try {
+          // 解析SSE数据（可能是数组格式或直接的对象）
+          let parsedData
+
+          if (data.startsWith('[')) {
+            // Spring Boot的SseEmitter数组格式：[{...}, {...}, {...}]
+            const dataArray = JSON.parse(data)
+
+            // 查找mediaType为null的元素（包含实际数据）
+            const actualDataItem = dataArray.find(item => item.mediaType === null)
+
+            if (actualDataItem && actualDataItem.data) {
+              parsedData = actualDataItem.data
+            }
+          } else {
+            // 直接的对象格式：{ content: string, done: boolean }
+            parsedData = JSON.parse(data)
+          }
+
+          if (!parsedData) continue
+
+          // 接收 done 字段：检查是否结束
+          if (parsedData.done === true) {
+            // console.log('✅ 接收完成')
+            return
+          }
+
+          // 接收 content 字段：追加文本
+          if (parsedData.content) {
+            messages.value[messageIndex].content += parsedData.content
+            await nextTick()
+            scrollToBottom(false)
+          }
+        } catch (error) {
+          // console.log('⚠️ 跳过无效数据:', data)
+        }
+      }
+    }
+  } catch (error) {
+    console.error('❌ 流式传输错误:', error)
+    throw error
+  } finally {
+    isStreaming.value = false
+  }
 }
 
 // Tab selection - AI聊天已设置为默认
@@ -445,8 +522,17 @@ const handleKeyDown = (event) => {
   }
 }
 
+// 停止流式传输
+const stopStreaming = () => {
+  if (abortController.value) {
+    // console.log('🛑 用户主动停止流式传输')
+    abortController.value.abort()
+    ElMessage.info('已停止AI回复')
+  }
+}
+
 // Send message to AI
-const sendMessage = () => {
+const sendMessage = async () => {
   // Validate message content
   const trimmedMsg = inputMessage.value.trim()
   if (!trimmedMsg) {
@@ -460,11 +546,11 @@ const sendMessage = () => {
 
   // ========== 日志记录：请求开始 ==========
   const requestStartTime = Date.now()
-  console.log('==================== AI聊天请求开始 ====================')
-  console.log('⏰ 请求时间:', new Date().toLocaleString())
-  console.log('📝 用户消息:', trimmedMsg)
-  console.log('📏 消息长度:', trimmedMsg.length, '字符')
-  console.log('📊 当前消息数量:', messages.value.length)
+  // console.log('==================== AI聊天请求开始 ====================')
+  // console.log('⏰ 请求时间:', new Date().toLocaleString())
+  // console.log('📝 用户消息:', trimmedMsg)
+  // console.log('📏 消息长度:', trimmedMsg.length, '字符')
+  // console.log('📊 当前消息数量:', messages.value.length)
 
   // Add user message
   const userMsg = {
@@ -478,97 +564,116 @@ const sendMessage = () => {
   const userInput = trimmedMsg
   inputMessage.value = ''
 
+  // 滚动到底部（用户消息发送后）
+  scrollToBottom(true)
+
   // Call backend AI API
   isLoading.value = true
 
+  // 创建AI消息对象（初始为空）
+  const aiResponse = {
+    id: messages.value.length + 1,
+    sender: 'ai',
+    content: '',
+    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    avatar: '🤖'
+  }
+  messages.value.push(aiResponse)
+
+  // 保存AI消息的索引，用于后续更新
+  const aiMessageIndex = messages.value.length - 1
+
+  // 再次滚动到底部，确保AI消息气泡可见
+  scrollToBottom(false)
+
   // ========== 日志记录：API调用 ==========
-  console.log('🌐 发送API请求到:', API_CONFIG.baseURL + API_CONFIG.ai.chat)
-  console.log('📦 请求体:', { message: userInput })
+  const apiUrl = API_CONFIG.baseURL + API_CONFIG.ai.chat
+  // console.log('🌐 发送流式API请求到:', apiUrl)
+  // console.log('📦 请求体:', { message: userInput })
 
-  // 使用后端API获取AI回复
-  axios
-    .post(API_CONFIG.baseURL + API_CONFIG.ai.chat, { message: userInput })
-    .then(async (response) => {
-      // ========== 日志记录：响应接收 ==========
-      const responseTime = Date.now() - requestStartTime
-      console.log('✅ API响应成功，耗时:', responseTime, 'ms')
-      console.log('📦 HTTP状态码:', response.status)
-      console.log('📋 响应数据:', response.data)
+  // 创建新的AbortController用于取消请求
+  abortController.value = new AbortController()
 
-      // Check if response is valid
-      if (response.data && response.data.data && response.data.data.content) {
-        const aiContent = response.data.data.content
-        console.log('🤖 AI回复内容长度:', aiContent.length, '字符')
-        console.log('📝 AI回复预览:', aiContent.length > 100 ? aiContent.substring(0, 100) + '...' : aiContent)
+  try {
+    // 使用fetch API发起流式请求
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'text/event-stream'
+      },
+      body: JSON.stringify({ message: userInput }),
+      signal: abortController.value.signal
+    })
 
-        // 创建AI消息对象
-        const aiResponse = {
-          id: messages.value.length + 1,
-          sender: 'ai',
-          content: '', // 初始为空，由打字机效果填充
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          avatar: '🤖'
-        }
-        messages.value.push(aiResponse)
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
 
-        // 使用打字机效果显示回复
-        console.log('⌨️ 开始打字机效果...')
-        await typeWriterEffect(aiResponse, aiContent)
+    // ========== 日志记录：响应接收 ==========
+    const responseTime = Date.now() - requestStartTime
+    // console.log('✅ 连接成功，耗时:', responseTime, 'ms')
 
-        const totalTime = Date.now() - requestStartTime
-        console.log('✨ 整体请求完成，总耗时:', totalTime, 'ms')
-        console.log('==================== AI聊天请求完成 ====================\n')
+    // 获取流式读取器
+    const reader = response.body.getReader()
+
+    // 使用流式传输处理响应（传入消息索引而不是消息对象）
+    await streamResponse(aiMessageIndex, reader)
+
+    const totalTime = Date.now() - requestStartTime
+    // console.log('✨ 整体请求完成，总耗时:', totalTime, 'ms')
+    // console.log('📝 AI回复最终内容长度:', messages.value[aiMessageIndex].content.length, '字符')
+    // console.log('==================== AI聊天请求完成 ====================\n')
+
+  } catch (error) {
+    // ========== 日志记录：错误处理 ==========
+    const errorTime = Date.now() - requestStartTime
+    console.error('❌ API请求失败，耗时:', errorTime, 'ms')
+    console.error('📋 错误对象:', error)
+    console.error('❌ 错误消息:', error.message)
+
+    let errorMsg = '对不起，暂时无法获取AI回复，请稍后重试。'
+
+    // Add more specific error messages
+    if (error.name === 'AbortError') {
+      errorMsg = '请求已取消'
+    } else if (error.message.includes('HTTP error')) {
+      const statusCode = parseInt(error.message.match(/\d+/)?.[0] || '500')
+      console.error('🔴 服务器错误状态码:', statusCode)
+
+      if (statusCode === 404) {
+        errorMsg = 'AI聊天服务暂时不可用，请稍后重试。'
+      } else if (statusCode === 500) {
+        errorMsg = '服务器内部错误，请稍后重试。'
       } else {
-        throw new Error('Invalid response format')
+        errorMsg = `服务器错误(${statusCode})，请稍后重试。`
       }
-    })
-    .catch((error) => {
-      // ========== 日志记录：错误处理 ==========
-      const errorTime = Date.now() - requestStartTime
-      console.error('❌ API请求失败，耗时:', errorTime, 'ms')
-      console.error('📋 错误对象:', error)
-      console.error('❌ 错误消息:', error.message)
+    } else if (error.message.includes('fetch')) {
+      // Network error
+      console.error('🔴 网络错误，无响应')
+      errorMsg = '网络连接超时，请检查网络设置。'
+    }
 
-      let errorMsg = '对不起，暂时无法获取AI回复，请稍后重试。'
+    // 只有当内容为空时才显示错误消息
+    if (!messages.value[aiMessageIndex].content) {
+      messages.value[aiMessageIndex].content = errorMsg
+    }
 
-      // Add more specific error messages
-      if (error.response) {
-        // Server responded with error status code
-        console.error('🔴 服务器错误状态码:', error.response.status)
-        console.error('📄 错误响应数据:', error.response.data)
+    const totalTime = Date.now() - requestStartTime
+    // console.log('==================== AI聊天请求失败 ====================\n')
 
-        if (error.response.status === 404) {
-          errorMsg = 'AI聊天服务暂时不可用，请稍后重试。'
-        } else if (error.response.status === 500) {
-          errorMsg = '服务器内部错误，请稍后重试。'
-        }
-      } else if (error.request) {
-        // No response received from server
-        console.error('🔴 网络错误，无响应')
-        errorMsg = '网络连接超时，请检查网络设置。'
-      }
-
-      const aiResponse = {
-        id: messages.value.length + 1,
-        sender: 'ai',
-        content: errorMsg,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        avatar: '🤖'
-      }
-      messages.value.push(aiResponse)
-
-      const totalTime = Date() - requestStartTime
-      console.log('==================== AI聊天请求失败 ====================\n')
-    })
-    .finally(() => {
-      isLoading.value = false
-    })
+  } finally {
+    isLoading.value = false
+    abortController.value = null
+  }
 }
 
 // Ensure AI聊天 is the default tab on component mount
 onMounted(() => {
   activeTab.value = 'chat'
   loadMessages() // 加载聊天历史记录
+  // 组件加载后滚动到底部
+  scrollToBottom(false)
 })
 </script>
 
@@ -604,13 +709,6 @@ onMounted(() => {
                     <div class="message-content">
                       <div class="message-text">{{ message.content }}</div>
                       <div class="message-time">{{ message.time }}</div>
-                    </div>
-                  </div>
-
-                  <div v-if="isLoading" class="chat-message ai-message loading">
-                    <div class="message-avatar">🤖</div>
-                    <div class="message-content">
-                      <el-skeleton :rows="2" style="width: 200px"></el-skeleton>
                     </div>
                   </div>
                 </div>
@@ -752,13 +850,13 @@ onMounted(() => {
                           class="message-textarea"
                         />
                         <el-button
-                          type="primary"
+                          :type="isStreaming ? 'danger' : 'primary'"
                           class="send-btn"
-                          @click="sendMessage"
-                          :disabled="isLoading || isTyping"
-                          :icon="ChatRound"
+                          @click="isStreaming ? stopStreaming() : sendMessage()"
+                          :disabled="isLoading && !isStreaming"
+                          :icon="isStreaming ? Close : ChatRound"
                         >
-                          发送
+                          {{ isStreaming ? '停止' : '发送' }}
                         </el-button>
                       </div>
                     </div>
@@ -1219,12 +1317,6 @@ onMounted(() => {
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
             border: 1px solid #ffe0e3;
           }
-        }
-      }
-
-      &.loading {
-        .message-text {
-          background-color: #f5f7fa;
         }
       }
 
