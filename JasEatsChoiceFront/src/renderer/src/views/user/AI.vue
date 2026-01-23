@@ -86,8 +86,8 @@ const getUserId = () => {
 	return String(authStore.userId || "1");
 };
 
-// AI个性化数据开关状态
-const aiPersonalDataEnabled = ref(true);
+// AI个性化数据开关状态（隐私保护原则：默认未授权）
+const aiPersonalDataEnabled = ref(false);
 
 // 加载用户偏好设置
 const loadUserPreference = async () => {
@@ -98,13 +98,14 @@ const loadUserPreference = async () => {
 		const response = await axios.get(`${API_CONFIG.baseURL}/v1/users/${userId}/preferences`);
 
 		if (response.data && response.data.data) {
-			aiPersonalDataEnabled.value = response.data.data.enableAiPersonalData !== false;
+			// 只有明确设置为 true 时才启用（隐私保护原则）
+			aiPersonalDataEnabled.value = response.data.data.enableAiPersonalData === true;
 			console.log("✅ 用户偏好加载成功:", aiPersonalDataEnabled.value);
 		}
 	} catch (error) {
 		console.error("❌ 加载用户偏好失败:", error);
-		// 失败时使用默认值
-		aiPersonalDataEnabled.value = true;
+		// 失败时使用默认值（隐私保护原则：默认未授权）
+		aiPersonalDataEnabled.value = false;
 	}
 };
 
@@ -380,6 +381,12 @@ const streamResponse = async (messageIndex, reader) => {
 			}
 		}
 	} catch (error) {
+		// 用户主动取消，不显示错误日志
+		if (error.name === 'AbortError') {
+			console.log("ℹ️ 用户主动停止流式传输");
+			return;
+		}
+		// 其他错误正常处理
 		console.error("❌ 流式传输错误:", error);
 		throw error;
 	} finally {
@@ -800,6 +807,15 @@ const sendMessage = async () => {
 		console.log("==================== AI聊天请求完成 ====================\n");
 	} catch (error) {
 		// ========== 日志记录：错误处理 ==========
+
+		// 用户主动取消，静默处理，不显示错误日志
+		if (error.name === "AbortError") {
+			console.log("ℹ️ 用户主动取消AI回复");
+			console.log("==================== AI聊天请求已取消 ====================\n");
+			return;  // 直接返回，不执行后续错误处理
+		}
+
+		// 其他错误的处理
 		const errorTime = Date.now() - requestStartTime;
 		console.error("❌ API请求失败，耗时:", errorTime, "ms");
 		console.error("📋 错误对象:", error);
@@ -808,9 +824,7 @@ const sendMessage = async () => {
 		let errorMsg = "对不起，暂时无法获取AI回复，请稍后重试。";
 
 		// Add more specific error messages
-		if (error.name === "AbortError") {
-			errorMsg = "请求已取消";
-		} else if (error.message.includes("HTTP error")) {
+		if (error.message.includes("HTTP error")) {
 			const statusCode = parseInt(error.message.match(/\d+/)?.[0] || "500");
 			console.error("🔴 服务器错误状态码:", statusCode);
 

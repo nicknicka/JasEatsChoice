@@ -123,6 +123,7 @@ public class AIStreamController {
 
     /**
      * 获取用户是否启用AI个性化数据
+     * 隐私保护原则：默认未授权，需要用户主动开启
      */
     private boolean getEnableAiPersonalData(String userId) {
         if (userId == null) {
@@ -138,7 +139,7 @@ public class AIStreamController {
             log.warn("获取用户偏好设置失败: userId={}, error={}", userId, e.getMessage());
         }
 
-        return true;  // 默认启用
+        return false;  // 默认未授权（隐私保护原则）
     }
 
     /**
