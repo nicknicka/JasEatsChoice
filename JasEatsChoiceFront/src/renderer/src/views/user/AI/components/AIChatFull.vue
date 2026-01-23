@@ -2,21 +2,8 @@
   <div class="chat-content-wrapper">
     <!-- 聊天消息区域 -->
     <div class="chat-messages" ref="chatContainerRef">
-      <!-- 加载中 -->
-      <div v-if="isLoading" class="loading-state">
-        <el-icon class="is-loading" :size="32"><Loading /></el-icon>
-        <p>正在加载聊天记录...</p>
-      </div>
-
-      <!-- 空状态 -->
-      <div v-else-if="messages.length === 0" class="empty-state">
-        <el-icon :size="64"><ChatDotRound /></el-icon>
-        <p>暂无消息</p>
-        <p class="hint">开始对话吧！</p>
-      </div>
-
       <!-- 消息列表 -->
-      <template v-else>
+      <template v-if="messages.length > 0">
         <div
           v-for="message in messages"
           :key="message.id"
@@ -191,41 +178,52 @@
             <div class="toolbar-right">
               <!-- AI个性化数据开关 -->
               <el-tooltip content="开启后AI将使用您的个人数据提供个性化建议" placement="bottom">
-                <el-switch
-                  v-model="aiPersonalDataEnabled"
-                  active-text="个性化"
-                  inactive-text="通用"
-                  @change="handlePersonalDataToggle"
-                  size="small"
-                  style="margin-right: 12px"
-                />
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <el-switch
+                    v-model="aiPersonalDataEnabled"
+                    @change="handlePersonalDataToggle"
+                    size="small"
+                  />
+                </div>
               </el-tooltip>
 
               <!-- Markdown开关 -->
-              <el-switch
-                v-model="enableMarkdown"
-                active-text="Markdown"
-                inactive-text="纯文本"
-                size="small"
-                style="margin-right: 12px"
-              />
-
-              <!-- 字数统计 -->
-              <span class="char-count">{{ inputMessage.length }}/500</span>
+              <el-tooltip content="切换Markdown渲染模式" placement="bottom">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <el-switch
+                    v-model="enableMarkdown"
+                    size="small"
+                  />
+                </div>
+              </el-tooltip>
             </div>
           </div>
 
           <!-- 文本输入框 -->
-          <el-input
-            v-model="inputMessage"
-            placeholder="请输入您的问题...（支持Markdown格式）"
-            :rows="2"
-            type="textarea"
-            :maxlength="500"
-            :disabled="isLoading"
-            @keydown="handleKeydown"
-            class="message-input"
-          />
+          <div class="input-with-counter">
+            <el-input
+              v-model="inputMessage"
+              placeholder="请输入您的问题...（支持Markdown格式）"
+              :rows="2"
+              type="textarea"
+              :maxlength="500"
+              :disabled="isLoading"
+              @keydown="handleKeydown"
+              class="message-input"
+            />
+            <!-- 字数统计 -->
+            <div class="char-count-wrapper">
+              <span
+                class="char-count"
+                :class="{
+                  'near-limit': inputMessage.length >= 450 && inputMessage.length < 500,
+                  'at-limit': inputMessage.length >= 500
+                }"
+              >
+                {{ inputMessage.length }}/500
+              </span>
+            </div>
+          </div>
         </div>
 
         <el-button
@@ -246,7 +244,6 @@
 import { ref, nextTick, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  Loading,
   ChatDotRound,
   Close,
   ChatDotRound as ChatDotRoundIcon,
@@ -922,7 +919,6 @@ onUnmounted(() => {
     }
   }
 
-  .loading-state,
   .empty-state {
     display: flex;
     flex-direction: column;
@@ -1336,15 +1332,21 @@ onUnmounted(() => {
   align-items: flex-end;
   background: linear-gradient(to bottom, #ffffff 0%, #fafbfc 100%);
   border: 1px solid #e8ecef;
-  border-radius: 12px;
-  padding: 12px 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border-radius: 16px;
+  padding: 16px 18px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+
+  &:hover {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+    border-color: #e0e4e8;
+  }
 
   .input-wrapper {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 10px;
   }
 
   .toolbar {
@@ -1352,29 +1354,81 @@ onUnmounted(() => {
     justify-content: space-between;
     align-items: center;
     padding: 0 2px;
+    margin-bottom: 6px;
 
     .toolbar-left {
       display: flex;
-      gap: 6px;
+      gap: 8px;
       align-items: center;
     }
 
     .toolbar-right {
       display: flex;
-      gap: 12px;
+      gap: 16px;
       align-items: center;
+    }
 
-      .char-count {
-        font-size: 12px;
-        color: #909399;
-      }
+    .input-with-counter {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 8px;
     }
 
     .toolbar-divider {
       width: 1px;
-      height: 16px;
-      background: #e8ecef;
-      margin: 0 4px;
+      height: 20px;
+      background: linear-gradient(to bottom, transparent, #e8ecef, transparent);
+      margin: 0 2px;
+    }
+
+    // 开关样式优化
+    :deep(.el-switch) {
+      --el-switch-on-color: #ff6b6b;
+      --el-switch-off-color: #dcdfe6;
+
+      &.el-switch--small {
+        height: 20px;
+
+        .el-switch__core {
+          height: 20px;
+          min-width: 40px;
+          border-radius: 10px;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+          &::after {
+            width: 16px;
+            height: 16px;
+            top: 1px;
+            left: 1px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          }
+
+          &.is-checked::after {
+            left: calc(100% - 17px);
+          }
+        }
+
+        &:hover .el-switch__core {
+          transform: scale(1.02);
+        }
+      }
+
+      .el-switch__action {
+        background-color: #fff;
+      }
+
+      .el-switch__label {
+        font-size: 12px;
+        font-weight: 600;
+        color: #606266;
+
+        &.is-active {
+          color: #ff6b6b;
+        }
+      }
     }
 
     :deep(.el-button) {
@@ -1383,29 +1437,40 @@ onUnmounted(() => {
       color: #5a6c7d;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       font-weight: 500;
+      width: 32px;
+      height: 32px;
+      padding: 0;
 
       &:hover {
-        border-color: #667eea;
-        color: #667eea;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
-        background: #ffffff;
+        border-color: #ff6b6b;
+        color: #ff6b6b;
+        transform: translateY(-2px) scale(1.05);
+        box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+        background: #fff;
       }
 
       &:active {
-        transform: translateY(0);
+        transform: translateY(0) scale(1);
       }
 
       &.is-active {
-        border-color: #667eea;
-        color: #667eea;
+        border-color: #ff6b6b;
+        color: #ff6b6b;
         background: linear-gradient(
           135deg,
-          rgba(102, 126, 234, 0.1) 0%,
-          rgba(118, 75, 162, 0.1) 100%
+          rgba(255, 107, 107, 0.1) 0%,
+          rgba(255, 82, 82, 0.1) 100%
         );
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15),
-          0 2px 8px rgba(102, 126, 234, 0.2);
+        box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.15),
+          0 2px 8px rgba(255, 107, 107, 0.2);
+
+        &:hover {
+          background: linear-gradient(
+            135deg,
+            rgba(255, 107, 107, 0.15) 0%,
+            rgba(255, 82, 82, 0.15) 100%
+          );
+        }
       }
     }
   }
@@ -1432,6 +1497,59 @@ onUnmounted(() => {
       &:hover:not(:focus) {
         border-color: #d0d7de;
       }
+    }
+  }
+
+  // 字数统计包装器
+  .char-count-wrapper {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 0 2px;
+    margin-top: 4px;
+
+    .char-count {
+      font-size: 12px;
+      color: #909399;
+      padding: 4px 12px;
+      background: linear-gradient(135deg, #f5f7fa 0%, #eef1f6 100%);
+      border-radius: 12px;
+      font-weight: 600;
+      border: 1px solid #e8ecef;
+      transition: all 0.3s ease;
+      display: inline-block;
+      user-select: none;
+
+      &:hover {
+        background: linear-gradient(135deg, #eef1f6 0%, #e8ebf1 100%);
+        border-color: #d0d7de;
+        transform: translateY(-1px);
+      }
+
+      // 接近上限时的样式
+      &.near-limit {
+        color: #e6a23c;
+        background: linear-gradient(135deg, #fef0e6 0%, #fde6d3 100%);
+        border-color: #f5dab1;
+      }
+
+      // 达到上限时的样式
+      &.at-limit {
+        color: #f56c6c;
+        background: linear-gradient(135deg, #fee 0%, #fecaca 100%);
+        border-color: #fbc4c4;
+        animation: pulse 1.5s ease-in-out infinite;
+      }
+    }
+  }
+
+  // 字数接近上限时的脉冲动画
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
     }
   }
 
