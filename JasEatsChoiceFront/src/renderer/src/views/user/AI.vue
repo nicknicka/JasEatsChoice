@@ -22,13 +22,9 @@
               <DishRecognition />
             </el-tab-pane>
 
-            <!-- 食谱优化 - 占位符 -->
+            <!-- 食谱优化 -->
             <el-tab-pane label="食谱优化" name="recipe">
-              <div class="chat-placeholder">
-                <el-icon :size="64"><Document /></el-icon>
-                <p>食谱优化功能开发中...</p>
-                <p class="hint">即将推出</p>
-              </div>
+              <RecipeOptimization />
             </el-tab-pane>
           </el-tabs>
         </div>
@@ -38,16 +34,23 @@
 </template>
 
 <script setup>
-import { ref, defineAsyncComponent } from 'vue'
-import {
-  Document
-} from '@element-plus/icons-vue'
+import { ref, defineAsyncComponent, h } from 'vue'
 import AIChatSimple from './AI/components/AIChatFull.vue'
 
 // 使用异步加载组件，避免编译错误
 const DishRecognition = defineAsyncComponent(() =>
   import('./AI/components/DishRecognition.vue')
 )
+
+const RecipeOptimization = defineAsyncComponent({
+  loader: () => import('./AI/components/RecipeOptimization.vue'),
+  errorComponent: () => h('div', { style: 'padding: 20px; text-align: center; color: #909399;' }, [
+    h('p', '食谱优化组件加载失败'),
+    h('p', { style: 'font-size: 14px; margin-top: 8px;' }, '请刷新页面重试')
+  ]),
+  delay: 200,
+  timeout: 3000
+})
 
 const activeTab = ref('chat')
 </script>

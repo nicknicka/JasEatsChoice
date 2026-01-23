@@ -1,9 +1,15 @@
 import { resolve } from 'path'
-import { defineConfig } from 'electron-vite'
+import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import vue from '@vitejs/plugin-vue'
 
 export default defineConfig({
   main: {
+    plugins: [externalizeDepsPlugin()],
+    build: {
+      rollupOptions: {
+        external: ['electron', 'electron-store', 'ws']
+      }
+    },
     resolve: {
       alias: {
         '@': resolve('src/renderer/src'),
@@ -13,7 +19,12 @@ export default defineConfig({
     }
   },
   preload: {
-    // 确保预加载脚本正确加载 electron 模块
+    plugins: [externalizeDepsPlugin()],
+    build: {
+      rollupOptions: {
+        external: ['electron', '@electron-toolkit/preload']
+      }
+    }
   },
   renderer: {
     resolve: {

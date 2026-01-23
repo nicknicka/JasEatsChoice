@@ -78,15 +78,6 @@ export function validateRecipe(recipe) {
     return { valid: false, error: ERROR_MESSAGES.EMPTY_RECIPE }
   }
 
-  if (trimmed.length < CHAT_CONFIG.RECIPE_MIN_LENGTH) {
-    return {
-      valid: false,
-      error: formatErrorMessage(ERROR_MESSAGES.RECIPE_TOO_SHORT, {
-        min: CHAT_CONFIG.RECIPE_MIN_LENGTH
-      })
-    }
-  }
-
   if (trimmed.length > CHAT_CONFIG.RECIPE_MAX_LENGTH) {
     return {
       valid: false,

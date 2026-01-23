@@ -21,9 +21,32 @@
         @click="optimizeRecipe"
         :disabled="!originalRecipe || optimizationLoading"
       >
-        <el-icon v-if="optimizationLoading"><Loading /></el-icon>
+        <el-icon v-if="optimizationLoading" class="rotating"><Loading /></el-icon>
         {{ optimizationLoading ? '优化中...' : '✨ 开始优化食谱' }}
       </el-button>
+
+      <!-- 优化中动画 -->
+      <div v-if="optimizationLoading" class="optimization-loading">
+        <div class="loading-animation">
+          <div class="loading-dot"></div>
+          <div class="loading-dot"></div>
+          <div class="loading-dot"></div>
+        </div>
+        <div class="loading-steps">
+          <div class="step-item" :class="{ active: loadingStep >= 1 }">
+            <span class="step-icon">🔍</span>
+            <span class="step-text">分析食谱内容</span>
+          </div>
+          <div class="step-item" :class="{ active: loadingStep >= 2 }">
+            <span class="step-icon">🧠</span>
+            <span class="step-text">AI智能优化</span>
+          </div>
+          <div class="step-item" :class="{ active: loadingStep >= 3 }">
+            <span class="step-icon">✨</span>
+            <span class="step-text">生成完美食谱</span>
+          </div>
+        </div>
+      </div>
 
       <div v-if="optimizedRecipe" class="recipe-result">
         <div class="result-header">
@@ -76,20 +99,21 @@ import { ref } from 'vue'
 import { Loading } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import axios from 'axios'
-import { API_CONFIG } from '../../../config/index'
-import { validateRecipe } from '../../../utils/imageValidator'
-import { handleApiError } from '../../../utils/errorHandler'
-import { logger } from '../../../config/chatConfig'
+import { API_CONFIG } from '../../../../config/index'
+import { validateRecipe } from '../../../../utils/imageValidator'
+import { handleApiError } from '../../../../utils/errorHandler'
+import { logger } from '../../../../config/chatConfig'
 
 // 状态
 const originalRecipe = ref('')
 const optimizedRecipe = ref(null)
 const optimizationLoading = ref(false)
+const loadingStep = ref(0)
 
 /**
  * 优化食谱
  */
-const optimizeRecipe = () => {
+const optimizeRecipe = async () => {
   // 验证食谱
   const validation = validateRecipe(originalRecipe.value)
   if (!validation.valid) {
@@ -98,6 +122,14 @@ const optimizeRecipe = () => {
   }
 
   optimizationLoading.value = true
+  loadingStep.value = 0
+
+  // 模拟步骤进度
+  const stepTimer = setInterval(() => {
+    if (loadingStep.value < 3) {
+      loadingStep.value++
+    }
+  }, 800)
 
   // 调用后端API
   axios
@@ -139,7 +171,9 @@ const optimizeRecipe = () => {
       ElMessage.error(handleApiError(error))
     })
     .finally(() => {
+      clearInterval(stepTimer)
       optimizationLoading.value = false
+      loadingStep.value = 0
     })
 }
 </script>
@@ -195,6 +229,10 @@ const optimizeRecipe = () => {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border-radius: 14px;
 
+    .rotating {
+      animation: rotate 1s linear infinite;
+    }
+
     &:hover:not(:disabled) {
       transform: translateY(-3px);
       box-shadow: 0 8px 20px rgba(255, 107, 107, 0.4);
@@ -203,6 +241,76 @@ const optimizeRecipe = () => {
     &:disabled {
       background: linear-gradient(135deg, #d3d4d6 0%, #c8c9cc 100%);
       cursor: not-allowed;
+    }
+  }
+
+  // 优化中动画
+  .optimization-loading {
+    background: linear-gradient(135deg, #fff9fa 0%, #ffe8e8 100%);
+    border: 2px solid #ffe0e3;
+    border-radius: 16px;
+    padding: 32px 24px;
+    margin-bottom: 24px;
+    animation: loadingFadeIn 0.5s ease-out;
+
+    .loading-animation {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+
+      .loading-dot {
+        width: 12px;
+        height: 12px;
+        background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%);
+        border-radius: 50%;
+        animation: bounce 1.4s infinite ease-in-out both;
+
+        &:nth-child(1) {
+          animation-delay: -0.32s;
+        }
+
+        &:nth-child(2) {
+          animation-delay: -0.16s;
+        }
+      }
+    }
+
+    .loading-steps {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+
+      .step-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        opacity: 0.3;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        transform: scale(0.9);
+
+        &.active {
+          opacity: 1;
+          transform: scale(1);
+
+          .step-icon {
+            animation: pulse 1.5s ease-in-out infinite;
+          }
+        }
+
+        .step-icon {
+          font-size: 32px;
+          transition: all 0.3s ease;
+        }
+
+        .step-text {
+          font-size: 14px;
+          font-weight: 600;
+          color: #606266;
+        }
+      }
     }
   }
 
@@ -335,6 +443,49 @@ const optimizeRecipe = () => {
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes bounce {
+  0%,
+  80%,
+  100% {
+    transform: scale(0);
+  }
+  40% {
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+@keyframes loadingFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 </style>
