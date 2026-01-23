@@ -19,7 +19,10 @@ export function validateImageFile(file) {
 
   // 检查图片类型是否支持
   if (!CHAT_CONFIG.IMAGE_TYPES.includes(file.type)) {
-    return { valid: false, error: `不支持的图片格式，仅支持：${CHAT_CONFIG.IMAGE_TYPES.map(t => t.split('/')[1]).join('、')}` }
+    return {
+      valid: false,
+      error: `不支持的图片格式，仅支持：${CHAT_CONFIG.IMAGE_TYPES.map((t) => t.split('/')[1]).join('、')}`
+    }
   }
 
   // 检查文件大小

@@ -7,10 +7,10 @@ import { rafThrottle } from '../utils/performanceUtils'
 
 export function useVirtualList(options = {}) {
   const {
-    itemHeight = 80,           // 预估项目高度
-    containerHeight = 0,       // 容器高度
-    buffer = 5,                // 缓冲区大小
-    overscan = 3               // 预渲染数量
+    itemHeight = 80, // 预估项目高度
+    containerHeight = 0, // 容器高度
+    buffer = 5, // 缓冲区大小
+    overscan = 3 // 预渲染数量
   } = options
 
   // 状态
@@ -134,8 +134,9 @@ export function useVirtualList(options = {}) {
     return {
       data: listData.value[index],
       height: itemHeights.value.get(index) || itemHeight,
-      offset: Array.from({ length: index }, (_, i) =>
-        itemHeights.value.get(i) || itemHeight
+      offset: Array.from(
+        { length: index },
+        (_, i) => itemHeights.value.get(i) || itemHeight
       ).reduce((sum, h) => sum + h, 0)
     }
   }
@@ -161,7 +162,7 @@ export function useVirtualList(options = {}) {
       visibleItems: visibleRange.value.endIndex - visibleRange.value.startIndex,
       totalHeight: totalHeight.value,
       cachedHeights: itemHeights.value.size,
-      cacheHitRate: (itemHeights.value.size / listData.value.length * 100).toFixed(2) + '%'
+      cacheHitRate: ((itemHeights.value.size / listData.value.length) * 100).toFixed(2) + '%'
     }
   }
 

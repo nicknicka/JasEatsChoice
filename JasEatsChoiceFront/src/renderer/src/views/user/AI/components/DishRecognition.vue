@@ -177,8 +177,8 @@
 import { ref } from 'vue'
 import { Camera, Delete, Loading } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { validateImageFile } from '../../../utils/imageValidator'
-import { logger } from '../../../config/chatConfig'
+import { validateImageFile } from '../../../../utils/imageValidator'
+import { logger } from '../../../../config/chatConfig'
 
 // 状态
 const selectedImage = ref(null)
@@ -262,8 +262,9 @@ const handleDrop = (event) => {
 /**
  * 识别菜品
  */
-const recognizeDish = () => {
-  if (!selectedImage.value) {
+const recognizeDish = async () => {
+  if (!selectedFile.value) {
+    ElMessage.warning('请先上传菜品图片')
     return
   }
 
@@ -277,26 +278,55 @@ const recognizeDish = () => {
     }
   }, 150)
 
-  // Mock AI识别（实际应该调用后端API）
-  setTimeout(() => {
-    clearInterval(progressInterval)
-    recognitionProgress.value = 100
-    recognitionResult.value = {
-      name: '宫保鸡丁',
-      ingredients: ['鸡肉', '花生米', '辣椒', '黄瓜', '胡萝卜'],
-      calories: 450,
-      protein: 28,
-      fat: 18,
-      carbs: 15,
-      difficulty: '中等',
-      preparationTime: '25分钟',
-      tags: ['川菜', '经典', '蛋白质丰富'],
-      nutritionScore: 85
+  try {
+    logger.log('开始识别菜品，文件名:', selectedFile.value.name)
+
+    // 构建FormData
+    const formData = new FormData()
+    formData.append('image', selectedFile.value)
+    // 可选：添加用户ID（如果有的话）
+    // formData.append('userId', 'xxx')
+
+    // 调用后端API
+    const response = await fetch('http://localhost:8080/api/v1/ai/dish-recognize', {
+      method: 'POST',
+      body: formData
+    })
+
+    const result = await response.json()
+
+    if (result.code === '200' && result.data) {
+      clearInterval(progressInterval)
+      recognitionProgress.value = 100
+
+      // 映射后端返回的数据结构
+      recognitionResult.value = {
+        name: result.data.name,
+        calories: result.data.calories,
+        protein: result.data.protein,
+        fat: result.data.fat,
+        carbs: result.data.carbs,
+        difficulty: result.data.difficulty,
+        preparationTime: result.data.preparationTime,
+        ingredients: result.data.ingredients || [],
+        tags: result.data.tags || [],
+        confidence: result.data.confidence,
+        nutritionScore: result.data.nutritionScore
+      }
+
+      recognitionLoading.value = false
+      ElMessage.success('识别成功！')
+      logger.log('✅ 菜品识别完成:', recognitionResult.value.name)
+    } else {
+      throw new Error(result.msg || '识别失败')
     }
+  } catch (error) {
+    clearInterval(progressInterval)
     recognitionLoading.value = false
-    ElMessage.success('识别成功！')
-    logger.log('✅ 菜品识别完成:', recognitionResult.value.name)
-  }, 2000)
+    recognitionProgress.value = 0
+    ElMessage.error('识别失败：' + error.message)
+    logger.error('❌ 菜品识别失败:', error)
+  }
 }
 
 /**

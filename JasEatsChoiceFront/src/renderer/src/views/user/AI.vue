@@ -17,13 +17,9 @@
               <AIChatSimple />
             </el-tab-pane>
 
-            <!-- 菜品识别 - 占位符 -->
+            <!-- 菜品识别 -->
             <el-tab-pane label="菜品识别" name="recognition">
-              <div class="chat-placeholder">
-                <el-icon :size="64"><Camera /></el-icon>
-                <p>菜品识别功能开发中...</p>
-                <p class="hint">即将推出</p>
-              </div>
+              <DishRecognition />
             </el-tab-pane>
 
             <!-- 食谱优化 - 占位符 -->
@@ -42,12 +38,16 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, defineAsyncComponent } from 'vue'
 import {
-  Camera,
   Document
 } from '@element-plus/icons-vue'
 import AIChatSimple from './AI/components/AIChatFull.vue'
+
+// 使用异步加载组件，避免编译错误
+const DishRecognition = defineAsyncComponent(() =>
+  import('./AI/components/DishRecognition.vue')
+)
 
 const activeTab = ref('chat')
 </script>

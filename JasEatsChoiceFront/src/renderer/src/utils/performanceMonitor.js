@@ -52,7 +52,8 @@ class PerformanceMonitor {
   log(label, duration) {
     if (!this.isEnabled) return
 
-    const style = duration > 1000 ? 'color: #f56c6c' : duration > 500 ? 'color: #e6a23c' : 'color: #67c23a'
+    const style =
+      duration > 1000 ? 'color: #f56c6c' : duration > 500 ? 'color: #e6a23c' : 'color: #67c23a'
     console.log(`%c[Performance] ${label}: ${duration.toFixed(2)}ms`, style)
   }
 
@@ -133,7 +134,10 @@ class PerformanceMonitor {
       used: (performance.memory.usedJSHeapSize / 1048576).toFixed(2), // MB
       total: (performance.memory.totalJSHeapSize / 1048576).toFixed(2),
       limit: (performance.memory.jsHeapSizeLimit / 1048576).toFixed(2),
-      percentage: ((performance.memory.usedJSHeapSize / performance.memory.jsHeapSizeLimit) * 100).toFixed(2)
+      percentage: (
+        (performance.memory.usedJSHeapSize / performance.memory.jsHeapSizeLimit) *
+        100
+      ).toFixed(2)
     }
   }
 
@@ -180,7 +184,7 @@ class PerformanceMonitor {
    */
   getFirstPaint() {
     const paintEntries = performance.getEntriesByType('paint')
-    const fp = paintEntries.find(entry => entry.name === 'first-paint')
+    const fp = paintEntries.find((entry) => entry.name === 'first-paint')
     return fp ? fp.startTime.toFixed(2) : null
   }
 
@@ -195,7 +199,7 @@ class PerformanceMonitor {
    * 断开所有观察者
    */
   disconnect() {
-    this.observers.forEach(observer => observer.disconnect())
+    this.observers.forEach((observer) => observer.disconnect())
     this.observers = []
   }
 

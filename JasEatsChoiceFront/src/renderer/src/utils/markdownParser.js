@@ -58,13 +58,16 @@ export function parseMarkdown(text) {
   html = html.replace(/^(\-{3,}|\*{3,})$/gm, '<hr>')
 
   // 链接 ([text](url))
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+  html = html.replace(
+    /\[([^\]]+)\]\(([^)]+)\)/g,
+    '<a href="$2" target="_blank" rel="noopener">$1</a>'
+  )
 
   // 图片 (![alt](url))
   html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" />')
 
   // 换行（两个空格+换行 或 单个换行）
-  html = html.replace(/  \n/g, '<br>')
+  html = html.replace(/ {2}\n/g, '<br>')
   html = html.replace(/\n/g, '<br>')
 
   return html
@@ -83,7 +86,7 @@ function escapeHtml(text) {
     '"': '&quot;',
     "'": '&#039;'
   }
-  return text.replace(/[&<>"']/g, m => map[m])
+  return text.replace(/[&<>"']/g, (m) => map[m])
 }
 
 /**
@@ -93,22 +96,22 @@ function escapeHtml(text) {
  */
 export function hasMarkdownSyntax(text) {
   const markdownPatterns = [
-    /```/,           // 代码块
-    /`[^`]+`/,       // 行内代码
+    /```/, // 代码块
+    /`[^`]+`/, // 行内代码
     /\*\*[^*]+\*\*/, // 粗体
-    /__[^_]+__/,     // 粗体
-    /\*[^*]+\*/,     // 斜体
-    /_[^_]+_/,       // 斜体
-    /~~[^~]+~~/,     // 删除线
-    /^#{1,6}\s/,     // 标题
-    /^\s*[-*]\s/,    // 无序列表
-    /^\s*\d+\.\s/,   // 有序列表
-    /^\s*>/,         // 引用
-    /\[.*\]\(.*\)/,  // 链接
-    /!\[.*\]\(.*\)/  // 图片
+    /__[^_]+__/, // 粗体
+    /\*[^*]+\*/, // 斜体
+    /_[^_]+_/, // 斜体
+    /~~[^~]+~~/, // 删除线
+    /^#{1,6}\s/, // 标题
+    /^\s*[-*]\s/, // 无序列表
+    /^\s*\d+\.\s/, // 有序列表
+    /^\s*>/, // 引用
+    /\[.*\]\(.*\)/, // 链接
+    /!\[.*\]\(.*\)/ // 图片
   ]
 
-  return markdownPatterns.some(pattern => pattern.test(text))
+  return markdownPatterns.some((pattern) => pattern.test(text))
 }
 
 /**

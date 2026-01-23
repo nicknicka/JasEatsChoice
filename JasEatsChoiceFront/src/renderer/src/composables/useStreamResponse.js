@@ -31,7 +31,7 @@ export function useStreamResponse() {
       if (data.startsWith('[')) {
         const dataArray = JSON.parse(data)
         // 查找mediaType为null的元素（包含实际数据）
-        const actualDataItem = dataArray.find(item => item.mediaType === null)
+        const actualDataItem = dataArray.find((item) => item.mediaType === null)
 
         if (actualDataItem && actualDataItem.data) {
           parsedData = actualDataItem.data

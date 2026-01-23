@@ -252,13 +252,70 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
         // 注意：GLM-4.7-Flash不支持图片识别，需要使用GLM-4V
         // 这里暂时返回模拟数据
         log.warn("GLM-4.7-Flash不支持图片识别，返回模拟数据");
-        Map<String, Object> result = new HashMap<>();
-        result.put("name", "宫保鸡丁");
-        result.put("calorie", 450);
-        result.put("difficulty", "中等");
-        result.put("ingredients", Arrays.asList("鸡肉", "花生米", "辣椒", "黄瓜", "胡萝卜"));
-        result.put("confidence", 0.95);
-        return result;
+
+        // 模拟多种菜品识别结果
+        List<Map<String, Object>> mockDishes = Arrays.asList(
+            createMockDish("宫保鸡丁", 450, 28, 18, 15, "中等", "25分钟",
+                Arrays.asList("鸡肉", "花生米", "辣椒", "黄瓜", "胡萝卜"),
+                Arrays.asList("川菜", "经典", "蛋白质丰富"), 0.95),
+            createMockDish("红烧肉", 580, 22, 35, 20, "中等", "45分钟",
+                Arrays.asList("五花肉", "冰糖", "生抽", "老抽", "姜", "葱"),
+                Arrays.asList("家常菜", "下饭菜", "经典"), 0.92),
+            createMockDish("清蒸鲈鱼", 280, 30, 8, 12, "简单", "20分钟",
+                Arrays.asList("鲈鱼", "姜", "葱", "料酒", "蒸鱼豉油"),
+                Arrays.asList("粤菜", "清淡", "高蛋白", "低脂"), 0.98),
+            createMockDish("麻婆豆腐", 320, 18, 22, 18, "简单", "15分钟",
+                Arrays.asList("豆腐", "牛肉末", "豆瓣酱", "花椒", "蒜苗"),
+                Arrays.asList("川菜", "素食", "下饭"), 0.90),
+            createMockDish("糖醋排骨", 520, 25, 28, 25, "中等", "40分钟",
+                Arrays.asList("排骨", "冰糖", "醋", "生抽", "姜"),
+                Arrays.asList("家常菜", "酸甜口", "经典"), 0.88)
+        );
+
+        // 随机返回一个菜品（实际AI会根据图片内容识别）
+        int randomIndex = (int) (Math.random() * mockDishes.size());
+        return mockDishes.get(randomIndex);
+    }
+
+    /**
+     * 创建模拟菜品数据
+     */
+    private Map<String, Object> createMockDish(String name, int calories, int protein, int fat,
+                                                int carbs, String difficulty, String prepTime,
+                                                List<String> ingredients, List<String> tags, double confidence) {
+        Map<String, Object> dish = new HashMap<>();
+        dish.put("name", name);
+        dish.put("calories", calories);
+        dish.put("protein", protein);
+        dish.put("fat", fat);
+        dish.put("carbs", carbs);
+        dish.put("difficulty", difficulty);
+        dish.put("preparationTime", prepTime);
+        dish.put("ingredients", ingredients);
+        dish.put("tags", tags);
+        dish.put("confidence", confidence);
+        dish.put("nutritionScore", calculateNutritionScore(calories, protein, fat, carbs));
+        return dish;
+    }
+
+    /**
+     * 计算营养评分（简单算法）
+     */
+    private int calculateNutritionScore(int calories, int protein, int fat, int carbs) {
+        double score = 100;
+
+        // 根据热量调整评分
+        if (calories > 600) score -= 10;
+        else if (calories > 500) score -= 5;
+        else if (calories < 300) score += 5;
+
+        // 蛋白质越高越好
+        score += protein * 0.5;
+
+        // 脂肪越低越好
+        score -= fat * 0.3;
+
+        return Math.max(60, Math.min(95, (int) score));
     }
 
     @Override

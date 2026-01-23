@@ -124,8 +124,8 @@ export function isInViewport(element, threshold = 0.1) {
   const windowHeight = window.innerHeight || document.documentElement.clientHeight
   const windowWidth = window.innerWidth || document.documentElement.clientWidth
 
-  const vertInView = (rect.top <= windowHeight) && ((rect.top + rect.height) >= 0)
-  const horInView = (rect.left <= windowWidth) && ((rect.left + rect.width) >= 0)
+  const vertInView = rect.top <= windowHeight && rect.top + rect.height >= 0
+  const horInView = rect.left <= windowWidth && rect.left + rect.width >= 0
 
   const visibleHeight = Math.min(rect.height, windowHeight - rect.top, rect.bottom)
   const visibleWidth = Math.min(rect.width, windowWidth - rect.left, rect.right)

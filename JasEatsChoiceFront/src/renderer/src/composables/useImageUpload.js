@@ -62,7 +62,7 @@ export function useImageUpload() {
    * @param {number} imageId - 图片ID
    */
   const removeUploadedImage = (imageId) => {
-    const index = uploadedImages.value.findIndex(img => img.id === imageId)
+    const index = uploadedImages.value.findIndex((img) => img.id === imageId)
     if (index > -1) {
       const removed = uploadedImages.value.splice(index, 1)[0]
 
@@ -79,7 +79,7 @@ export function useImageUpload() {
    * 清空所有已上传的图片
    */
   const clearUploadedImages = () => {
-    uploadedImages.value.forEach(img => {
+    uploadedImages.value.forEach((img) => {
       if (img.url && img.url.startsWith('blob:')) {
         URL.revokeObjectURL(img.url)
       }

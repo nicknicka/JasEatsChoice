@@ -88,13 +88,15 @@ export function useAIChat() {
       logger.error('❌ 加载聊天记录失败:', error)
 
       // 加载失败时显示欢迎消息
-      messages.value = [{
-        id: 1,
-        sender: 'ai',
-        content: WELCOME_MESSAGE,
-        time: formatTime(),
-        avatar: '🤖'
-      }]
+      messages.value = [
+        {
+          id: 1,
+          sender: 'ai',
+          content: WELCOME_MESSAGE,
+          time: formatTime(),
+          avatar: '🤖'
+        }
+      ]
     }
   }
 
@@ -157,10 +159,9 @@ export function useAIChat() {
       logger.log('🗑️ 开始清空聊天记录，userId:', userId)
 
       // 调用后端API清空聊天记录
-      const clearResponse = await axios.delete(
-        API_CONFIG.baseURL + API_CONFIG.ai.clear,
-        { params: { userId } }
-      )
+      const clearResponse = await axios.delete(API_CONFIG.baseURL + API_CONFIG.ai.clear, {
+        params: { userId }
+      })
 
       if (clearResponse.data.code === 200) {
         logger.log('✅ 后端清空成功')
@@ -248,7 +249,7 @@ export function useAIChat() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'text/event-stream'
+          Accept: 'text/event-stream'
         },
         body: JSON.stringify({ message }),
         signal: abortController.value.signal

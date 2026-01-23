@@ -1,12 +1,16 @@
 package com.xx.jaseatschoicejava.controller;
 
 import com.xx.jaseatschoicejava.common.ResponseResult;
+import com.xx.jaseatschoicejava.config.FileUploadConfig;
 import com.xx.jaseatschoicejava.service.ZhipuAIService;
+import com.xx.jaseatschoicejava.util.FileUploadUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -22,13 +26,45 @@ public class AIController {
     @Resource
     private ZhipuAIService zhipuAIService;
 
+    @Resource
+    private FileUploadConfig fileUploadConfig;
+
     /**
      * AI菜品识别
      * 注意：GLM-4-Flash不支持图片识别，需要GLM-4V
      * 当前返回模拟数据
      */
-    @PostMapping("/dish-recognize")
-    public ResponseResult<?> dishRecognize(@RequestBody Map<String, Object> params) {
+    @PostMapping(value = "/dish-recognize", consumes = "multipart/form-data")
+    public ResponseResult<?> dishRecognize(@RequestParam("image") MultipartFile image,
+                                          @RequestParam(value = "userId", required = false) String userId) {
+        try {
+            log.info("接收到菜品识别请求，文件名：{}, 大小：{}", image.getOriginalFilename(), image.getSize());
+
+            // 1. 上传图片到服务器
+            String uploadDir = fileUploadConfig.getUploadPath() + "dish-recognition/";
+            String fileName = FileUploadUtil.uploadImage(image, uploadDir, userId);
+            String imageUrl = fileUploadConfig.getUrlPrefix() + "dish-recognition/" + fileName;
+
+            log.info("图片上传成功，URL：{}", imageUrl);
+
+            // 2. 调用AI识别服务
+            Map<String, Object> result = zhipuAIService.recognizeDish(imageUrl);
+
+            // 3. 添加图片URL到结果中
+            result.put("imageUrl", imageUrl);
+
+            return ResponseResult.success(result);
+        } catch (Exception e) {
+            log.error("菜品识别失败", e);
+            return ResponseResult.fail("500", "菜品识别失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 兼容旧接口：通过JSON传图片URL识别（不推荐使用）
+     */
+    @PostMapping("/dish-recognize-url")
+    public ResponseResult<?> dishRecognizeByUrl(@RequestBody Map<String, Object> params) {
         try {
             String imageUrl = (String) params.get("imageUrl");
             Map<String, Object> result = zhipuAIService.recognizeDish(imageUrl);
