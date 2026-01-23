@@ -27,11 +27,29 @@
             </div>
 
             <!-- 消息文本（支持Markdown或纯文本） -->
-            <div
-              class="message-text"
-              :class="{ 'markdown-content': message.enableMarkdown }"
-              v-html="renderContent(message.content, message.enableMarkdown)"
-            ></div>
+            <div class="message-text">
+              <div
+                class="message-text-content"
+                :class="{ 'markdown-content': message.enableMarkdown }"
+                v-html="renderContent(message.content, message.enableMarkdown)"
+              ></div>
+              <!-- 更多操作按钮 -->
+              <el-dropdown trigger="click" @command="(cmd) => handleMessageAction(cmd, message.content)">
+                <span class="more-btn">
+                  <el-icon :size="12">
+                    <More />
+                  </el-icon>
+                </span>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item command="copy">
+                      <el-icon><DocumentCopy /></el-icon>
+                      <span>复制</span>
+                    </el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+            </div>
             <div class="message-time">{{ message.time }}</div>
           </div>
         </div>
@@ -186,16 +204,6 @@
                   />
                 </div>
               </el-tooltip>
-
-              <!-- Markdown开关 -->
-              <el-tooltip content="切换Markdown渲染模式" placement="bottom">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <el-switch
-                    v-model="enableMarkdown"
-                    size="small"
-                  />
-                </div>
-              </el-tooltip>
             </div>
           </div>
 
@@ -249,7 +257,9 @@ import {
   ChatDotRound as ChatDotRoundIcon,
   Delete,
   Picture,
-  ChatLineRound
+  ChatLineRound,
+  DocumentCopy,
+  More
 } from '@element-plus/icons-vue'
 import { parseMarkdown } from '../../../../utils/markdownParser'
 import axios from 'axios'
@@ -275,7 +285,6 @@ const bottomContainerRef = ref(null)
 const showQuickQuestions = ref(true)
 const showEmojiPicker = ref(false)
 const uploadedImages = ref([])
-const enableMarkdown = ref(true)
 
 // AI个性化数据开关状态（隐私保护原则：默认未授权）
 const aiPersonalDataEnabled = ref(false)
@@ -346,7 +355,7 @@ const loadMessages = async () => {
           minute: '2-digit'
         }),
         avatar: item.sender === 'ai' ? '🤖' : '👤',
-        enableMarkdown: enableMarkdown.value
+        enableMarkdown: true
       }))
       console.log('✅ 成功加载聊天历史:', messages.value.length, '条消息')
     } else {
@@ -363,7 +372,7 @@ const loadMessages = async () => {
             minute: '2-digit'
           }),
           avatar: '🤖',
-          enableMarkdown: enableMarkdown.value
+          enableMarkdown: true
         }
       ]
       console.log('💾 保存欢迎消息到后端')
@@ -386,7 +395,7 @@ const loadMessages = async () => {
           minute: '2-digit'
         }),
         avatar: '🤖',
-        enableMarkdown: enableMarkdown.value
+        enableMarkdown: true
       }
     ]
     isLoading.value = false
@@ -559,7 +568,7 @@ const sendMessage = async () => {
     content: '',
     time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     avatar: '🤖',
-    enableMarkdown: enableMarkdown.value
+    enableMarkdown: true
   })
 
   // 再次滚动到底部，确保AI消息气泡可见
@@ -872,6 +881,27 @@ const handlePersonalDataToggle = async (value) => {
   }
 }
 
+// 复制消息
+const copyMessage = async (content) => {
+  try {
+    await navigator.clipboard.writeText(content)
+    ElMessage.success('复制成功')
+  } catch (error) {
+    console.error('复制失败:', error)
+    ElMessage.error('复制失败,请手动复制')
+  }
+}
+
+// 处理消息操作菜单命令
+const handleMessageAction = async (command, content) => {
+  switch (command) {
+    case 'copy':
+      await copyMessage(content)
+      break
+    // 可以在这里添加更多操作
+  }
+}
+
 // 生命周期
 onMounted(async () => {
   document.addEventListener('click', handleClickOutside)
@@ -1018,6 +1048,53 @@ onUnmounted(() => {
         font-size: 15px;
         white-space: pre-wrap;
         word-break: break-word;
+        display: inline;
+        position: relative;
+
+        .message-text-content {
+          display: inline;
+        }
+
+        // 更多操作按钮（内联在文本末尾）
+        :deep(.el-dropdown) {
+          display: inline;
+          vertical-align: middle;
+        }
+
+        .more-btn {
+          display: inline;
+          cursor: pointer;
+          opacity: 0;
+          transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          color: inherit;
+          vertical-align: middle;
+          margin-left: 2px;
+          user-select: none;
+
+          &:active {
+            transform: scale(0.95);
+          }
+        }
+
+        &:hover .more-btn {
+          opacity: 0.5;
+        }
+
+        .more-btn:hover {
+          opacity: 1 !important;
+        }
+
+        // 下拉菜单样式
+        :deep(.el-dropdown-menu__item) {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 16px;
+
+          .el-icon {
+            font-size: 16px;
+          }
+        }
 
         &:hover {
           transform: translateY(-2px) scale(1.01);

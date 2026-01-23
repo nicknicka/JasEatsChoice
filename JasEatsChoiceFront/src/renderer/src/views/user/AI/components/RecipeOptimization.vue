@@ -57,6 +57,15 @@
           <div class="recipe-card original-recipe-card">
             <div class="card-header">
               <span class="card-title">📝 原食谱</span>
+              <el-button
+                type="primary"
+                size="small"
+                class="copy-btn"
+                @click="copyToClipboard(optimizedRecipe.original, '原食谱')"
+              >
+                <el-icon><DocumentCopy /></el-icon>
+                复制
+              </el-button>
             </div>
             <div class="card-content">
               <pre>{{ optimizedRecipe.original }}</pre>
@@ -68,6 +77,15 @@
           <div class="recipe-card optimized-recipe-card">
             <div class="card-header">
               <span class="card-title">⭐ 优化后</span>
+              <el-button
+                type="success"
+                size="small"
+                class="copy-btn"
+                @click="copyToClipboard(optimizedRecipe.optimized, '优化后食谱')"
+              >
+                <el-icon><DocumentCopy /></el-icon>
+                复制
+              </el-button>
             </div>
             <div class="card-content">
               <pre>{{ optimizedRecipe.optimized }}</pre>
@@ -96,7 +114,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import { Loading } from '@element-plus/icons-vue'
+import { Loading, DocumentCopy } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import axios from 'axios'
 import { API_CONFIG } from '../../../../config/index'
@@ -109,6 +127,34 @@ const originalRecipe = ref('')
 const optimizedRecipe = ref(null)
 const optimizationLoading = ref(false)
 const loadingStep = ref(0)
+
+/**
+ * 复制到剪贴板
+ */
+const copyToClipboard = async (text, name) => {
+  try {
+    await navigator.clipboard.writeText(text)
+    ElMessage.success(`${name}已复制到剪贴板`)
+    logger.log(`✅ 已复制${name}:`, text.substring(0, 50) + '...')
+  } catch (error) {
+    // 降级方案：使用传统方法
+    try {
+      const textArea = document.createElement('textarea')
+      textArea.value = text
+      textArea.style.position = 'fixed'
+      textArea.style.opacity = '0'
+      document.body.appendChild(textArea)
+      textArea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textArea)
+      ElMessage.success(`${name}已复制到剪贴板`)
+      logger.log(`✅ 已复制${name}:`, text.substring(0, 50) + '...')
+    } catch (fallbackError) {
+      logger.error('❌ 复制失败:', fallbackError)
+      ElMessage.error('复制失败，请手动复制')
+    }
+  }
+}
 
 /**
  * 优化食谱
@@ -356,11 +402,35 @@ const optimizeRecipe = async () => {
           padding: 18px 24px;
           background: linear-gradient(135deg, #fff9fa 0%, #ffe8e8 100%);
           border-bottom: 2px solid #ffe0e3;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 12px;
 
           .card-title {
             font-size: 17px;
             font-weight: 700;
             color: #303133;
+            flex: 1;
+          }
+
+          .copy-btn {
+            flex-shrink: 0;
+            border-radius: 8px;
+            padding: 6px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+
+            .el-icon {
+              margin-right: 4px;
+              font-size: 14px;
+            }
+
+            &:hover {
+              transform: translateY(-2px);
+              box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+            }
           }
         }
 
@@ -387,6 +457,19 @@ const optimizeRecipe = async () => {
 
             .card-title {
               color: #fff;
+            }
+
+            .copy-btn {
+              background: rgba(255, 255, 255, 0.2);
+              border: 1px solid rgba(255, 255, 255, 0.3);
+              color: #fff;
+              backdrop-filter: blur(10px);
+
+              &:hover {
+                background: rgba(255, 255, 255, 0.3);
+                border-color: rgba(255, 255, 255, 0.5);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+              }
             }
           }
         }
