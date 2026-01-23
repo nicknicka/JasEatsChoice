@@ -9,7 +9,12 @@ export const API_CONFIG = {
     chatLegacy: '/v1/ai/chat', // AI聊天接口（普通接口，备用）
     recipe: '/v1/ai/recipe', // 食谱推荐接口
     nutrient: '/v1/ai/nutrient', // 营养分析接口
-    recognizeDish: '/v1/ai/dish-recognize' // 菜品识别接口
+    recognizeDish: '/v1/ai/dish-recognize', // 菜品识别接口
+    // AI聊天历史管理
+    history: '/v1/ai/chat/history', // 获取聊天历史
+    save: '/v1/ai/chat/save', // 保存聊天消息
+    clear: '/v1/ai/chat/clear', // 清空聊天记录
+    hasHistory: '/v1/ai/chat/has-history' // 检查是否有聊天历史
   },
 
   // 用户API端点

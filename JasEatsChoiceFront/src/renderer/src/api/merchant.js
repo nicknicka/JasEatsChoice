@@ -133,10 +133,7 @@ export default {
    * @param {Object} announcement - 公告数据
    */
   updateAnnouncement(merchantId, announcementId, announcement) {
-    return api.put(
-      `/v1/merchant/${merchantId}/announcements/${announcementId}`,
-      announcement
-    )
+    return api.put(`/v1/merchant/${merchantId}/announcements/${announcementId}`, announcement)
   },
 
   /**
@@ -146,10 +143,7 @@ export default {
    * @param {string} status - 状态
    */
   toggleAnnouncementStatus(merchantId, announcementId, status) {
-    return api.put(
-      `/v1/merchant/${merchantId}/announcements/${announcementId}/status`,
-      { status }
-    )
+    return api.put(`/v1/merchant/${merchantId}/announcements/${announcementId}/status`, { status })
   },
 
   /**
@@ -158,8 +152,6 @@ export default {
    * @param {string} announcementId - 公告ID
    */
   deleteAnnouncement(merchantId, announcementId) {
-    return api.delete(
-      `/v1/merchant/${merchantId}/announcements/${announcementId}`
-    )
+    return api.delete(`/v1/merchant/${merchantId}/announcements/${announcementId}`)
   }
 }
