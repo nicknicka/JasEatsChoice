@@ -341,7 +341,8 @@
       "Bash(npx electron-vite:*)",
       "Bash(npx prettier:*)",
       "Bash(npm rebuild:*)",
-      "Bash(npm run lint:fix:*)"
+      "Bash(npm run lint:fix:*)",
+      "Bash(file=\"./components/$component.vue\")"
     ],
     "deny": [],
     "ask": []
