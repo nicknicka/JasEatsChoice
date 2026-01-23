@@ -10,29 +10,21 @@
             </div>
           </div>
 
-          <!-- 功能标签页 -->
+          <!-- Tab Menu -->
           <el-tabs v-model="activeTab" type="border-card" class="ai-tabs">
-            <!-- AI聊天 - 使用简化版组件 -->
-            <el-tab-pane label="AI聊天" name="chat">
-              <AIChatSimple />
+            <!-- AI聊天 -->
+            <el-tab-pane label="AI聊天" name="chat" :icon="ChatRound">
+              <AIChatPanel />
             </el-tab-pane>
 
-            <!-- 菜品识别 - 占位符 -->
-            <el-tab-pane label="菜品识别" name="recognition">
-              <div class="chat-placeholder">
-                <el-icon :size="64"><Camera /></el-icon>
-                <p>菜品识别功能开发中...</p>
-                <p class="hint">即将推出</p>
-              </div>
+            <!-- 菜品识别 -->
+            <el-tab-pane label="菜品识别" name="recognition" :icon="Camera">
+              <DishRecognition />
             </el-tab-pane>
 
-            <!-- 食谱优化 - 占位符 -->
-            <el-tab-pane label="食谱优化" name="recipe">
-              <div class="chat-placeholder">
-                <el-icon :size="64"><Document /></el-icon>
-                <p>食谱优化功能开发中...</p>
-                <p class="hint">即将推出</p>
-              </div>
+            <!-- 食谱优化 -->
+            <el-tab-pane label="食谱优化" name="recipe" :icon="Document">
+              <RecipeOptimization />
             </el-tab-pane>
           </el-tabs>
         </div>
@@ -42,14 +34,22 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import {
+  ChatRound,
   Camera,
   Document
 } from '@element-plus/icons-vue'
-import AIChatSimple from './AI/components/AIChatFull.vue'
+import AIChatPanel from './components/AIChatPanel.vue'
+import DishRecognition from './components/DishRecognition.vue'
+import RecipeOptimization from './components/RecipeOptimization.vue'
 
+// 当前激活的tab
 const activeTab = ref('chat')
+
+onMounted(() => {
+  activeTab.value = 'chat'
+})
 </script>
 
 <style scoped lang="less">
@@ -79,8 +79,7 @@ const activeTab = ref('chat')
   height: 100%;
   display: flex;
   flex-direction: column;
-  max-width: 1400px;
-  width: 95%;
+  max-width: 900px;
   margin: 0 auto;
   padding-bottom: 0;
 
@@ -159,25 +158,6 @@ const activeTab = ref('chat')
       flex-direction: column;
       padding: 8px 0 0 0 !important;
     }
-  }
-}
-
-.chat-placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: #909399;
-
-  p {
-    margin: 12px 0 0 0;
-    font-size: 16px;
-  }
-
-  .hint {
-    font-size: 14px;
-    color: #c0c4cc;
   }
 }
 </style>

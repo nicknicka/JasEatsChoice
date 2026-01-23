@@ -340,7 +340,8 @@
       "Bash(redis-server:*)",
       "Bash(npx electron-vite:*)",
       "Bash(npx prettier:*)",
-      "Bash(npm rebuild:*)"
+      "Bash(npm rebuild:*)",
+      "Bash(npm run lint:fix:*)"
     ],
     "deny": [],
     "ask": []

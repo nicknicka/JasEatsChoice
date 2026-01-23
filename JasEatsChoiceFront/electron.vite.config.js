@@ -8,7 +8,8 @@ export default defineConfig({
       alias: {
         '@': resolve('src/renderer/src'),
         '@renderer': resolve('src/renderer/src')
-      }
+      },
+      extensions: ['.js', '.ts', '.json', '.node']
     }
   },
   preload: {
@@ -19,7 +20,8 @@ export default defineConfig({
       alias: {
         '@': resolve('src/renderer/src'),
         '@renderer': resolve('src/renderer/src')
-      }
+      },
+      extensions: ['.js', '.ts', '.jsx', '.tsx', '.json', '.vue']
     },
     plugins: [vue()],
     css: {
