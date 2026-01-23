@@ -3,6 +3,10 @@ package com.xx.jaseatschoicejava.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
+import com.xx.jaseatschoicejava.entity.UserPreference;
+import com.xx.jaseatschoicejava.service.UserContextService;
+import com.xx.jaseatschoicejava.service.UserPreferenceService;
+import com.xx.jaseatschoicejava.util.JwtUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -23,6 +27,7 @@ import java.util.Map;
 /**
  * AI流式对话控制器 - 参考智谱AI官方API设计
  * 后端职责：接收智谱AI的SSE数据，提取content，封装成{content, done}格式发送给前端
+ * 支持用户个性化上下文注入
  */
 @Slf4j
 @RestController
@@ -31,6 +36,15 @@ public class AIStreamController {
 
     @Resource
     private ZhipuAIConfig zhipuAIConfig;
+
+    @Resource
+    private UserContextService userContextService;
+
+    @Resource
+    private UserPreferenceService userPreferenceService;
+
+    @Resource
+    private JwtUtil jwtUtil;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -49,9 +63,12 @@ public class AIStreamController {
      * 流式AI聊天接口（SSE）
      * 前端发送: { "message": "用户的问题" }
      * 后端响应: { "content": "文本片段", "done": false } 或 { "content": "", "done": true }
+     * 支持用户个性化上下文注入
      */
     @PostMapping(value = "/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter streamChat(@RequestBody Map<String, Object> params) {
+    public SseEmitter streamChat(
+            @RequestBody Map<String, Object> params,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
         // 创建SSE发射器，超时时间60秒
         SseEmitter emitter = new SseEmitter(60000L);
 
@@ -60,10 +77,24 @@ public class AIStreamController {
             try {
                 String userMessage = (String) params.get("message");
 
-                // 构建请求参数（参考官方API示例结构）
-                Map<String, Object> requestBody = buildChatRequest(userMessage);
+                // 1. 从JWT提取userId
+                String userId = extractUserId(authHeader);
+                log.debug("AI聊天请求 - userId: {}, message: {}", userId, userMessage);
 
-                // 发送SSE流式请求到智谱AI并转发给前端
+                // 2. 获取用户偏好设置
+                boolean enablePersonalData = getEnableAiPersonalData(userId);
+                log.debug("用户个性化数据授权 - userId: {}, enabled: {}", userId, enablePersonalData);
+
+                // 3. 构建用户上下文
+                String userContext = userContextService.buildUserContext(userId, enablePersonalData);
+                if (!userContext.isEmpty()) {
+                    log.info("已注入用户上下文 - userId: {}, context length: {}", userId, userContext.length());
+                }
+
+                // 4. 构建请求参数（参考官方API示例结构）
+                Map<String, Object> requestBody = buildChatRequest(userMessage, userContext);
+
+                // 5. 发送SSE流式请求到智谱AI并转发给前端
                 processStreamResponse(emitter, requestBody);
 
             } catch (Exception e) {
@@ -76,9 +107,46 @@ public class AIStreamController {
     }
 
     /**
-     * 构建聊天请求参数（参考官方API示例）
+     * 从Authorization header中提取userId
      */
-    private Map<String, Object> buildChatRequest(String userMessage) {
+    private String extractUserId(String authHeader) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            try {
+                String token = authHeader.substring(7);
+                return jwtUtil.extractUserId(token);
+            } catch (Exception e) {
+                log.warn("从JWT提取userId失败: {}", e.getMessage());
+            }
+        }
+        return null;  // 未登录用户返回null
+    }
+
+    /**
+     * 获取用户是否启用AI个性化数据
+     */
+    private boolean getEnableAiPersonalData(String userId) {
+        if (userId == null) {
+            return false;  // 未登录用户不使用个性化数据
+        }
+
+        try {
+            UserPreference preference = userPreferenceService.getByUserId(userId);
+            if (preference != null && preference.getEnableAiPersonalData() != null) {
+                return preference.getEnableAiPersonalData();
+            }
+        } catch (Exception e) {
+            log.warn("获取用户偏好设置失败: userId={}, error={}", userId, e.getMessage());
+        }
+
+        return true;  // 默认启用
+    }
+
+    /**
+     * 构建聊天请求参数（参考官方API示例）
+     * @param userMessage 用户消息
+     * @param userContext 用户上下文（可为空）
+     */
+    private Map<String, Object> buildChatRequest(String userMessage, String userContext) {
         Map<String, Object> request = new HashMap<>();
         request.put("model", zhipuAIConfig.getModel());
 
@@ -88,7 +156,9 @@ public class AIStreamController {
         // 系统提示词（对应官方API的SYSTEM角色）
         Map<String, String> systemMessage = new HashMap<>();
         systemMessage.put("role", "system");
-        systemMessage.put("content", DIET_ASSISTANT_PROMPT);
+        // 将用户上下文注入到系统提示词中
+        String fullPrompt = DIET_ASSISTANT_PROMPT + userContext;
+        systemMessage.put("content", fullPrompt);
         messages.add(systemMessage);
 
         // 用户消息（对应官方API的USER角色）

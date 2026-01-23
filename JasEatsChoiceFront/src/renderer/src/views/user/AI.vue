@@ -86,6 +86,49 @@ const getUserId = () => {
 	return String(authStore.userId || "1");
 };
 
+// AI个性化数据开关状态
+const aiPersonalDataEnabled = ref(true);
+
+// 加载用户偏好设置
+const loadUserPreference = async () => {
+	try {
+		const userId = getUserId();
+		console.log("📥 加载用户偏好设置，userId:", userId);
+
+		const response = await axios.get(`${API_CONFIG.baseURL}/v1/users/${userId}/preferences`);
+
+		if (response.data && response.data.data) {
+			aiPersonalDataEnabled.value = response.data.data.enableAiPersonalData !== false;
+			console.log("✅ 用户偏好加载成功:", aiPersonalDataEnabled.value);
+		}
+	} catch (error) {
+		console.error("❌ 加载用户偏好失败:", error);
+		// 失败时使用默认值
+		aiPersonalDataEnabled.value = true;
+	}
+};
+
+// 切换个性化数据开关
+const handlePersonalDataToggle = async (value) => {
+	try {
+		const userId = getUserId();
+		console.log("🔄 切换AI个性化数据:", value);
+
+		await axios.put(`${API_CONFIG.baseURL}/v1/users/${userId}/preferences`, {
+			enableAiPersonalData: value,
+		});
+
+		ElMessage.success(value ? "已开启个性化建议" : "已关闭个性化建议");
+		console.log("✅ 用户偏好更新成功");
+	} catch (error) {
+		console.error("❌ 更新偏好设置失败:", error);
+		ElMessage.error("设置保存失败");
+
+		// 恢复原状态
+		aiPersonalDataEnabled.value = !value;
+	}
+};
+
 // 从后端加载聊天记录
 const loadMessages = async () => {
 	try {
@@ -582,6 +625,7 @@ const handleClickOutside = (event) => {
 onMounted(() => {
 	activeTab.value = "chat";
 	loadMessages(); // 加载聊天历史记录
+	loadUserPreference(); // 加载用户偏好设置
 	document.addEventListener("click", handleClickOutside);
 	// 组件加载后滚动到底部
 	scrollToBottom(false);
@@ -937,6 +981,21 @@ const sendMessage = async () => {
 													</el-tooltip>
 												</div>
 												<div class="toolbar-right">
+													<!-- AI个性化数据开关 -->
+													<el-tooltip
+														content="开启后AI将使用您的个人数据提供个性化建议"
+														placement="bottom"
+													>
+														<el-switch
+															v-model="aiPersonalDataEnabled"
+															active-text="个性化"
+															inactive-text="通用"
+															@change="handlePersonalDataToggle"
+															size="small"
+															style="margin-right: 8px"
+														/>
+													</el-tooltip>
+
 													<!-- 清空对话记录按钮 -->
 													<el-button
 														link

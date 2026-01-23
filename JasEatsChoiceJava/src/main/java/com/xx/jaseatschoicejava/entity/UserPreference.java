@@ -40,6 +40,11 @@ public class UserPreference {
     private String allergies;
 
     /**
+     * 是否允许AI使用个人数据（true-允许，false-不允许）
+     */
+    private Boolean enableAiPersonalData;
+
+    /**
      * 更新时间
      */
     private String updateTime;

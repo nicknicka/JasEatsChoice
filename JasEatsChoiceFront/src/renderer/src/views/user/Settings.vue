@@ -147,6 +147,16 @@
         </div>
 
         <div class="form-row">
+          <div class="form-label">AI个性化建议</div>
+          <div class="form-content">
+            <el-switch v-model="privacy.aiPersonalData" />
+            <span style="margin-left: 10px; color: #909399; font-size: 12px">
+              允许AI使用身高、体重、饮食记录等数据提供个性化建议
+            </span>
+          </div>
+        </div>
+
+        <div class="form-row">
           <div class="form-content">
             <el-button type="warning" size="small" style="margin-right: 10px" @click="clearCache"
               >清除缓存</el-button
@@ -268,6 +278,7 @@
 <script setup>
 import { ref, onMounted, inject } from 'vue'
 import { ElMessage, ElDialog, ElInput, ElForm, ElFormItem } from 'element-plus'
+import axios from 'axios'
 import api, { decodeJwt } from '../../utils/api.js'
 import { API_CONFIG } from '../../config/index.js'
 import pinia from '../../store'
@@ -295,7 +306,8 @@ const officialSettings = ref({
   privacy: {
     location: true,
     recommendation: true,
-    weatherRecommendation: true // 添加天气推荐设置
+    weatherRecommendation: true, // 添加天气推荐设置
+    aiPersonalData: true // AI个性化建议
   }
 })
 
@@ -412,7 +424,7 @@ onMounted(() => {
 })
 
 // Handle save settings with localStorage persistence
-const saveSettings = () => {
+const saveSettings = async () => {
   // 将临时修改的设置同步到正式设置数据中
   const updatedSettings = {
     fontSize: fontSize.value,
@@ -426,6 +438,18 @@ const saveSettings = () => {
 
   // 保存到localStorage
   localStorage.setItem('userSettings', JSON.stringify(officialSettings.value))
+
+  // 同步AI偏好设置到后端
+  try {
+    const userId = authStore.userId || '1'
+    await axios.put(`${API_CONFIG.baseURL}/v1/users/${userId}/preferences`, {
+      enableAiPersonalData: privacy.value.aiPersonalData
+    })
+    console.log('✅ AI偏好设置同步成功')
+  } catch (error) {
+    console.error('❌ 保存AI偏好失败:', error)
+    // 不影响其他设置的保存
+  }
 
   ElMessage.success('设置已保存')
   console.log('Saved settings:', officialSettings.value)
