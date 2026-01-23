@@ -189,6 +189,18 @@
               </el-tooltip>
             </div>
             <div class="toolbar-right">
+              <!-- AI个性化数据开关 -->
+              <el-tooltip content="开启后AI将使用您的个人数据提供个性化建议" placement="bottom">
+                <el-switch
+                  v-model="aiPersonalDataEnabled"
+                  active-text="个性化"
+                  inactive-text="通用"
+                  @change="handlePersonalDataToggle"
+                  size="small"
+                  style="margin-right: 12px"
+                />
+              </el-tooltip>
+
               <!-- Markdown开关 -->
               <el-switch
                 v-model="enableMarkdown"
@@ -875,9 +887,6 @@ onMounted(async () => {
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
 })
-
-// 初始化
-loadMessages()
 </script>
 
 <style scoped lang="less">
