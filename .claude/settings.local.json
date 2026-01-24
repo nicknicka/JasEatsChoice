@@ -345,6 +345,9 @@
       "Bash(file=\"./components/$component.vue\")"
     ],
     "deny": [],
-    "ask": []
+    "ask": [],
+    "additionalDirectories": [
+      "/tmp"
+    ]
   }
 }
