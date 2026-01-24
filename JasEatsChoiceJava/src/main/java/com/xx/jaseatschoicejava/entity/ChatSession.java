@@ -1,5 +1,6 @@
 package com.xx.jaseatschoicejava.entity;
 
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.TableField;
@@ -24,6 +25,10 @@ import java.time.LocalDateTime;
 @TableName("t_chat_session")
 @ApiModel(description = "聊天会话实体")
 public class ChatSession {
+
+    @TableId(value = "id", type = IdType.AUTO)
+    @ApiModelProperty(value = "主键ID")
+    private Long id;
 
     @TableField("session_id")
     @ApiModelProperty(value = "会话标识（业务唯一键的一部分）")
