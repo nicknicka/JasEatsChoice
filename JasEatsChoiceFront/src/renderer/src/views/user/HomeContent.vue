@@ -11,8 +11,7 @@ import {
   Share,
   Search,
   Coffee,
-  Document,
-  Refresh
+  Document
 } from '@element-plus/icons-vue'
 import CommonMapLocationPicker from '../../components/CommonMapLocationPicker.vue'
 import { useRouter } from 'vue-router'
@@ -63,7 +62,6 @@ const handleImageError = (event) => {
 const nearbyLoading = ref(false)
 const recommendedDishesLoading = ref(true)
 const tutorialsLoading = ref(true)
-const refreshing = ref(false)
 
 // 教程数据 - 从后端获取
 const featuredTutorials = ref([])
@@ -517,23 +515,6 @@ const preloadImages = (items) => {
   })
 }
 
-// 下拉刷新功能
-const onRefresh = async () => {
-  refreshing.value = true
-  try {
-    await Promise.all([
-      fetchFeaturedTutorials(),
-      fetchRecommendedDishes(),
-      fetchHotTopic(),
-      fetchWeather()
-    ])
-  } catch (error) {
-    console.error('刷新失败:', error)
-  } finally {
-    refreshing.value = false
-  }
-}
-
 // 收藏功能
 const loadFavorites = () => {
   const saved = localStorage.getItem('favoriteDishes')
@@ -633,18 +614,6 @@ onMounted(async () => {
           </template>
         </el-input>
       </div>
-
-      <!-- 刷新按钮 -->
-      <el-button
-        type="primary"
-        :icon="Refresh"
-        :loading="refreshing"
-        @click="onRefresh"
-        class="refresh-action-btn"
-        circle
-        size="large"
-        title="刷新内容"
-      />
     </div>
 
     <!-- 天气信息区域 - 新设计 -->
@@ -1040,7 +1009,7 @@ onMounted(async () => {
     flex: 1;
     margin: 0;
     display: flex;
-    align-items: stretch;
+    align-items: center;
     height: 48px;
 
     .search-input {
@@ -1048,10 +1017,12 @@ onMounted(async () => {
       display: flex;
       width: 100%;
       height: 100%;
+      align-items: center;
 
       :deep(.el-input) {
         height: 100%;
         display: flex;
+        align-items: center;
       }
 
       :deep(.el-input__wrapper) {
@@ -1066,12 +1037,14 @@ onMounted(async () => {
         background: rgba(255, 255, 255, 0.95);
         height: 100%;
         display: flex;
-        align-items: stretch;
+        align-items: center;
 
         // 重置内部输入框的样式
         .el-input__inner {
           height: 100% !important;
-          line-height: normal !important;
+          line-height: 48px !important;
+          display: flex;
+          align-items: center;
         }
 
         &:hover {
@@ -1104,7 +1077,7 @@ onMounted(async () => {
         overflow: hidden;
         height: 100%;
         display: flex;
-        align-items: stretch;
+        align-items: center;
 
         // 添加波纹效果
         &::before {
@@ -1160,61 +1133,6 @@ onMounted(async () => {
       :deep(.el-input-group__append),
       :deep(.el-input-group__prepend) {
         box-shadow: none;
-      }
-    }
-  }
-
-  // 刷新按钮样式
-  .refresh-action-btn {
-    flex-shrink: 0;
-    width: 48px;
-    height: 48px;
-    background: linear-gradient(135deg, #6ba4ff 0%, #5c8eff 100%);
-    border: none;
-    box-shadow: 0 4px 12px rgba(92, 142, 255, 0.3);
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    overflow: hidden;
-
-    // 添加渐变光泽效果
-    &::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-      transition: left 0.6s;
-    }
-
-    &:hover {
-      transform: translateY(-2px) scale(1.08);
-      box-shadow: 0 8px 20px rgba(92, 142, 255, 0.5);
-      background: linear-gradient(135deg, #7ab4ff 0%, #6c9eff 100%);
-
-      &::before {
-        left: 100%;
-      }
-
-      .el-icon {
-        transform: rotate(180deg);
-      }
-    }
-
-    &:active {
-      transform: translateY(0) scale(0.95);
-      box-shadow: 0 2px 8px rgba(92, 142, 255, 0.3);
-    }
-
-    .el-icon {
-      transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    // 加载状态
-    &.is-loading {
-      .el-icon {
-        animation: loading-spin 1s linear infinite;
       }
     }
   }

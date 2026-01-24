@@ -95,4 +95,34 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
         return getBaseMapper().selectList(queryWrapper);
     }
+
+    /**
+     * 检查邮箱是否已被注册
+     * @param email 邮箱地址
+     * @return 如果邮箱已存在返回true，否则返回false
+     */
+    @Override
+    public boolean isEmailExists(String email) {
+        if (email == null || email.trim().isEmpty()) {
+            return false;
+        }
+        return lambdaQuery()
+                .eq(User::getEmail, email.trim())
+                .count() > 0;
+    }
+
+    /**
+     * 检查手机号是否已被注册
+     * @param phone 手机号
+     * @return 如果手机号已存在返回true，否则返回false
+     */
+    @Override
+    public boolean isPhoneExists(String phone) {
+        if (phone == null || phone.trim().isEmpty()) {
+            return false;
+        }
+        return lambdaQuery()
+                .eq(User::getPhone, phone.trim())
+                .count() > 0;
+    }
 }

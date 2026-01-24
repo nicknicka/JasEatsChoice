@@ -59,6 +59,18 @@ public class UserController {
                 return ResponseResult.fail("400", "验证码错误或已过期");
             }
 
+            // 检查手机号是否已被注册
+            if (userService.isPhoneExists(registerRequest.getPhone())) {
+                return ResponseResult.fail("400", "该手机号已被注册，请更换其他手机号");
+            }
+
+            // 检查邮箱是否已被注册
+            if (registerRequest.getEmail() != null && !registerRequest.getEmail().trim().isEmpty()) {
+                if (userService.isEmailExists(registerRequest.getEmail())) {
+                    return ResponseResult.fail("400", "该邮箱已被注册，请更换其他邮箱");
+                }
+            }
+
             // 创建User对象并设置属性
             User user = new User();
             user.setPhone(registerRequest.getPhone());
@@ -72,10 +84,6 @@ public class UserController {
                 return ResponseResult.success("注册成功");
             }
             return ResponseResult.fail("500", "注册失败");
-        } catch (org.springframework.dao.DuplicateKeyException e) {
-            // 处理手机号重复的情况
-            e.printStackTrace();
-            return ResponseResult.fail("400", "该手机号已被注册，请更换其他手机号");
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseResult.fail("500", "注册失败");
@@ -93,6 +101,9 @@ public class UserController {
 
     @Autowired
     private AliyunSMSService aliyunSMSService;
+
+    @Autowired
+    private com.xx.jaseatschoicejava.service.EmailService emailService;
 
     @Autowired
     private FileUploadConfig fileUploadConfig;
@@ -350,11 +361,24 @@ public class UserController {
             return ResponseResult.fail("400", "邮箱地址不能为空");
         }
 
-        // TODO: Implement actual email sending logic here
-        // For demonstration, generate a random 6-digit code
+        // 验证邮箱格式
+        if (!email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")) {
+            return ResponseResult.fail("400", "邮箱格式错误");
+        }
+
+        // 生成6位随机验证码
         String code = String.format("%06d", (int)(Math.random() * 1000000));
 
-        // Store code in Redis with 5 minutes expiration
+        try {
+            // 使用邮件服务发送验证码
+            emailService.sendEmailVerifyCode(email, code);
+            System.out.println("邮件发送成功！邮箱：" + email + "，验证码：" + code);
+        } catch (Exception e) {
+            e.printStackTrace();
+            // 即使邮件发送失败也返回成功，防止暴力破解
+        }
+
+        // 将验证码存储到Redis，有效期5分钟
         redisTemplate.opsForValue().set("email-code:" + email, code, 5, TimeUnit.MINUTES);
 
         return ResponseResult.success("邮箱验证码已发送");

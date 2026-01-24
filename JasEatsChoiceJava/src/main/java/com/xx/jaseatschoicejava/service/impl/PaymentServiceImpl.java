@@ -8,6 +8,7 @@ import com.xx.jaseatschoicejava.entity.Wallet;
 import com.xx.jaseatschoicejava.mapper.PaymentRecordMapper;
 import com.xx.jaseatschoicejava.service.OrderService;
 import com.xx.jaseatschoicejava.service.PaymentService;
+import com.xx.jaseatschoicejava.service.PaymentPasswordService;
 import com.xx.jaseatschoicejava.service.WalletService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +29,7 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentRecordMapper, Payment
 
     private final WalletService walletService;
     private final OrderService orderService;
+    private final PaymentPasswordService paymentPasswordService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -121,6 +123,65 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentRecordMapper, Payment
 
         } catch (Exception e) {
             log.error("钱包支付失败，流水号：{}", paymentNo, e);
+            paymentRecord.setPaymentStatus("failed");
+            paymentRecord.setUpdateTime(LocalDateTime.now());
+            updateById(paymentRecord);
+            throw new RuntimeException("支付失败：" + e.getMessage());
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean walletPaymentWithPassword(String paymentNo, String paymentPassword) {
+        PaymentRecord paymentRecord = getPaymentByPaymentNo(paymentNo);
+        if (paymentRecord == null) {
+            throw new RuntimeException("支付记录不存在");
+        }
+
+        if (!"pending".equals(paymentRecord.getPaymentStatus())) {
+            throw new RuntimeException("支付状态异常");
+        }
+
+        // 验证支付密码
+        if (!paymentPasswordService.verifyPaymentPassword(paymentRecord.getUserId(), paymentPassword)) {
+            throw new RuntimeException("支付密码错误");
+        }
+
+        try {
+            // 扣减钱包余额
+            String description = "支付订单 - " + paymentRecord.getOrderId();
+            boolean success = walletService.deductBalance(
+                paymentRecord.getUserId(),
+                paymentRecord.getAmount(),
+                description
+            );
+
+            if (!success) {
+                throw new RuntimeException("扣费失败");
+            }
+
+            // 更新支付状态
+            paymentRecord.setPaymentStatus("success");
+            paymentRecord.setPaidTime(LocalDateTime.now());
+            paymentRecord.setUpdateTime(LocalDateTime.now());
+            updateById(paymentRecord);
+
+            // 更新订单状态
+            Order order = orderService.getById(paymentRecord.getOrderId());
+            if (order != null) {
+                order.setStatus(1); // 待接单
+                order.setPaymentId(paymentRecord.getId());
+                order.setPaidAmount(paymentRecord.getAmount());
+                order.setPaymentTime(LocalDateTime.now());
+                order.setUpdateTime(LocalDateTime.now());
+                orderService.updateById(order);
+            }
+
+            log.info("钱包支付成功（含密码验证），流水号：{}，金额：{}", paymentNo, paymentRecord.getAmount());
+            return true;
+
+        } catch (Exception e) {
+            log.error("钱包支付失败（含密码验证），流水号：{}", paymentNo, e);
             paymentRecord.setPaymentStatus("failed");
             paymentRecord.setUpdateTime(LocalDateTime.now());
             updateById(paymentRecord);

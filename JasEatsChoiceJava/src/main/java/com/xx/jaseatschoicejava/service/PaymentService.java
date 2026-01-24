@@ -36,6 +36,14 @@ public interface PaymentService extends IService<PaymentRecord> {
     boolean walletPayment(String paymentNo);
 
     /**
+     * 钱包支付（带支付密码验证）
+     * @param paymentNo 支付流水号
+     * @param paymentPassword 支付密码
+     * @return 是否成功
+     */
+    boolean walletPaymentWithPassword(String paymentNo, String paymentPassword);
+
+    /**
      * 取消支付
      * @param paymentNo 支付流水号
      * @return 是否成功

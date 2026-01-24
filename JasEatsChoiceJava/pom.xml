@@ -175,6 +175,12 @@
             <artifactId>okhttp</artifactId>
         </dependency>
 
+        <!-- 邮件服务依赖 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
         <!-- JUnit 5 依赖 -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>

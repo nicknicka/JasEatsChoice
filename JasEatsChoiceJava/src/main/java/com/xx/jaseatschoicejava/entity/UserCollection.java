@@ -23,4 +23,13 @@ public class UserCollection {
     private String collectableId; // 收藏对象ID
 
     private LocalDateTime createTime; // 创建时间
+
+    // 显式声明 getter 方法，确保编译器能识别
+    public String getCollectableType() {
+        return collectableType;
+    }
+
+    public String getCollectableId() {
+        return collectableId;
+    }
 }

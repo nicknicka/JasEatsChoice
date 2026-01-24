@@ -113,3 +113,21 @@ zhipuai:
   base-url: https://open.bigmodel.cn/api/paas/v4/chat/completions
   # 超时时间（毫秒）
   timeout: 30000
+
+# ==================== 邮件服务配置 ====================
+email:
+  # SMTP服务器地址（根据邮箱服务商填写）
+  # QQ邮箱: smtp.qq.com
+  # 163邮箱: smtp.163.com
+  # Gmail: smtp.gmail.com
+  host: smtp.qq.com
+  # SMTP端口（SSL加密通常使用465，TLS加密通常使用587）
+  port: 465
+  # 发件人邮箱账号
+  username: 1640343748@qq.com
+  # 邮箱密码或授权码（QQ邮箱需要使用授权码，不是登录密码）
+  password: mcpnkooawmwueged
+  # 是否启用SSL加密（推荐true）
+  ssl-enable: true
+  # 是否启用STARTTLS（SSL开启时通常设为false）
+  starttls-enable: false

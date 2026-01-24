@@ -45,14 +45,14 @@ export const STATUS_TAG_TYPE_MAP = {
  * 订单筛选按钮顺序
  */
 export const STATUS_LIST = [
-  'all',
-  'pendingAccept',
-  'processing',
-  'pending',
-  'pendingComment',
-  'delivered',
-  'completed',
-  'cancelled'
+  { value: 'all', label: '全部订单' },
+  { value: 'pendingAccept', label: '待接单' },
+  { value: 'processing', label: '进行中' },
+  { value: 'pending', label: '待支付' },
+  { value: 'pendingComment', label: '待评价' },
+  { value: 'delivered', label: '已送达' },
+  { value: 'completed', label: '已完成' },
+  { value: 'cancelled', label: '已取消' }
 ]
 
 /**
