@@ -113,6 +113,62 @@
         </div>
       </div>
 
+      <!-- 加菜功能入口 -->
+      <div
+        class="add-dish-section"
+        v-if="groupOrder.status === 'active' && hasMerchant"
+      >
+        <div class="add-dish-header">
+          <div class="add-dish-title">
+            <el-icon :size="18" color="#e6a23c"><Plus /></el-icon>
+            <span>加菜功能</span>
+          </div>
+        </div>
+
+        <div class="add-dish-actions">
+          <el-button
+            type="warning"
+            size="default"
+            @click="$emit('open-add-dish-dialog')"
+            class="add-dish-btn"
+          >
+            <el-icon><Dish /></el-icon>
+            我要加菜
+          </el-button>
+
+          <el-button
+            v-if="isInitiator"
+            type="primary"
+            size="default"
+            @click="$emit('open-add-dish-review')"
+            class="review-btn"
+          >
+            <el-icon><DocumentChecked /></el-icon>
+            查看审核
+            <el-badge
+              v-if="pendingReviewCount > 0"
+              :value="pendingReviewCount"
+              class="review-badge"
+            />
+          </el-button>
+
+          <el-button
+            v-if="hasPendingPayments"
+            type="success"
+            size="default"
+            @click="$emit('open-pending-payment')"
+            class="payment-btn"
+          >
+            <el-icon><Wallet /></el-icon>
+            待支付加菜
+            <el-badge
+              :value="pendingPaymentCount"
+              class="payment-badge"
+            />
+          </el-button>
+        </div>
+      </div>
+
       <!-- 底部按钮 -->
       <div class="drawer-footer">
         <div class="footer-actions">
@@ -143,7 +199,9 @@ import {
   Refresh,
   Plus,
   Shop,
-  Wallet
+  Wallet,
+  Dish,
+  DocumentChecked
 } from '@element-plus/icons-vue'
 
 const props = defineProps({
@@ -158,6 +216,14 @@ const props = defineProps({
   currentUserId: {
     type: [String, Number],
     required: true
+  },
+  pendingReviewCount: {
+    type: Number,
+    default: 0
+  },
+  pendingPaymentCount: {
+    type: Number,
+    default: 0
   }
 })
 
@@ -166,7 +232,10 @@ const emit = defineEmits([
   'change-merchant',
   'continue-order',
   'select-merchant',
-  'go-to-pay'
+  'go-to-pay',
+  'open-add-dish-dialog',
+  'open-add-dish-review',
+  'open-pending-payment'
 ])
 
 const visible = ref(props.modelValue)
@@ -190,6 +259,16 @@ const canChangeMerchant = computed(() => {
     props.groupOrder.orderItems.length === 0 &&
     props.groupOrder.status === 'active'
   )
+})
+
+// 是否为发起者
+const isInitiator = computed(() => {
+  return props.groupOrder && props.groupOrder.creator === '我'
+})
+
+// 是否有待支付的加菜订单
+const hasPendingPayments = computed(() => {
+  return props.pendingPaymentCount > 0
 })
 </script>
 
