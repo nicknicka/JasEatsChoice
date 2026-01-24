@@ -163,10 +163,32 @@
       v-model="orderDrawerVisible"
       :group-order="currentGroupOrder"
       :current-user-id="userId"
+      :pending-review-count="pendingReviewCount"
+      :pending-payment-count="pendingPaymentCount"
       @change-merchant="changeMerchant"
       @continue-order="openMerchantSelectDialog"
       @select-merchant="openMerchantSelectDialog"
       @go-to-pay="goToOrderConfirmation"
+      @open-add-dish-dialog="openAddDishDialog"
+      @open-add-dish-review="openAddDishReview"
+      @open-pending-payment="openPendingPayment"
+    />
+
+    <!-- 加菜对话框 -->
+    <AddDishDialog
+      v-model="addDishDialogVisible"
+      :group-order-id="currentGroupOrderId"
+      :ordered-dishes="orderedDishes"
+      :available-dishes="availableDishes"
+      :allergy-conflicts="allergyConflicts"
+      @success="handleAddDishSuccess"
+    />
+
+    <!-- 加菜审核面板 -->
+    <AddDishReviewPanel
+      v-model="addDishReviewVisible"
+      :group-order-id="currentGroupOrderId"
+      @refresh="loadPendingReviewCount"
     />
   </div>
 </template>
@@ -265,6 +287,8 @@ import GroupDetailDialog from '../../components/chat/dialogs/GroupDetailDialog.v
 import MerchantSelectDialog from '../../components/chat/dialogs/MerchantSelectDialog.vue'
 import ProductSelectDialog from '../../components/chat/dialogs/ProductSelectDialog.vue'
 import GroupOrderDrawer from '../../components/chat/dialogs/GroupOrderDrawer.vue'
+import AddDishDialog from '../../components/chat/dialogs/AddDishDialog.vue'
+import AddDishReviewPanel from '../../components/chat/dialogs/AddDishReviewPanel.vue'
 
 // Constants
 import { MESSAGE_CONFIG } from '../../constants/chatConstants'
@@ -425,6 +449,111 @@ const groupDetailDialogVisible = ref(false)
 
 const friends = ref([])
 const currentGroupInfo = ref(null)
+
+// ========== 加菜功能 ==========
+const addDishDialogVisible = ref(false)
+const addDishReviewVisible = ref(false)
+const pendingReviewCount = ref(0)
+const pendingPaymentCount = ref(0)
+
+// 当前群订单ID
+const currentGroupOrderId = computed(() => {
+  return currentGroupOrder.value?.orderId || null
+})
+
+// 已点菜品列表
+const orderedDishes = ref([])
+
+// 可用菜品列表
+const availableDishes = ref([])
+
+// 饮食禁忌冲突
+const allergyConflicts = ref([])
+
+// ========== 加菜功能方法 ==========
+
+// 加载已点菜品
+const loadOrderedDishes = async () => {
+  if (!currentGroupOrder.value) return
+
+  try {
+    // 从群订单中获取已点菜品
+    orderedDishes.value = currentGroupOrder.value?.orderItems || []
+  } catch (error) {
+    console.error('加载已点菜品失败:', error)
+  }
+}
+
+// 加载可用菜品
+const loadAvailableDishes = async () => {
+  if (!currentGroupOrder.value?.merchantId) return
+
+  try {
+    const response = await api.get(`/v1/dishes/merchant/${currentGroupOrder.value.merchantId}`)
+    availableDishes.value = response.data.data || []
+  } catch (error) {
+    console.error('加载可用菜品失败:', error)
+  }
+}
+
+// 检查饮食禁忌冲突
+const checkAllergyConflicts = async (dishItems) => {
+  try {
+    const response = await api.post('/v1/add-dish/check-allergy', {
+      groupOrderId: currentGroupOrderId.value,
+      dishItems: dishItems.map(dish => ({
+        dishId: dish.dishId,
+        quantity: dish.quantity
+      }))
+    })
+
+    if (response.data.data?.hasConflict) {
+      allergyConflicts.value = response.data.data.conflicts || []
+    } else {
+      allergyConflicts.value = []
+    }
+  } catch (error) {
+    console.error('检查饮食禁忌失败:', error)
+    allergyConflicts.value = []
+  }
+}
+
+// 打开加菜对话框
+const openAddDishDialog = async () => {
+  await loadOrderedDishes()
+  await loadAvailableDishes()
+  addDishDialogVisible.value = true
+}
+
+// 打开审核面板
+const openAddDishReview = () => {
+  addDishReviewVisible.value = true
+}
+
+// 打开待支付池（可选功能）
+const openPendingPayment = () => {
+  ElMessage.info('待支付加菜池功能开发中')
+}
+
+// 加菜成功回调
+const handleAddDishSuccess = async () => {
+  ElMessage.success('加菜请求已提交')
+  await loadPendingReviewCount()
+  await loadOrderedDishes()
+}
+
+// 加载待审核数量
+const loadPendingReviewCount = async () => {
+  if (!currentGroupOrderId.value) return
+
+  try {
+    const response = await api.get(`/v1/add-dish/review-list/${currentGroupOrderId.value}`)
+    const reviewList = response.data.data || []
+    pendingReviewCount.value = reviewList.length
+  } catch (error) {
+    console.error('加载待审核数量失败:', error)
+  }
+}
 
 // ========== 全局点击事件 ==========
 const handleGlobalClick = () => {
@@ -980,6 +1109,15 @@ const changeMerchant = () => {
 const goToOrderConfirmation = () => {
   ElMessage.info('跳转到订单确认页面')
 }
+
+// ========== 监听群订单抽屉状态 ==========
+watch(orderDrawerVisible, async (newVal) => {
+  if (newVal) {
+    // 抽屉打开时加载待审核数量和已点菜品
+    await loadPendingReviewCount()
+    await loadOrderedDishes()
+  }
+})
 
 // ========== 生命周期 ==========
 onMounted(async () => {

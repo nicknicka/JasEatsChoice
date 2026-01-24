@@ -439,6 +439,68 @@ const hasPendingPayments = computed(() => {
     }
   }
 
+  .add-dish-section {
+    background: linear-gradient(135deg, #fff7e6 0%, #ffe8cc 100%);
+    border-radius: 10px;
+    padding: 14px;
+    box-shadow: 0 2px 12px rgba(230, 162, 60, 0.2);
+    border: 1px solid #ffe8cc;
+
+    .add-dish-header {
+      margin-bottom: 12px;
+
+      .add-dish-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        color: #e6a23c;
+      }
+    }
+
+    .add-dish-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+
+      .el-button {
+        width: 100%;
+        font-weight: 500;
+        position: relative;
+
+        .review-badge,
+        .payment-badge {
+          position: absolute;
+          top: -8px;
+          right: -8px;
+        }
+      }
+
+      .add-dish-btn {
+        background: white;
+        color: #e6a23c;
+        border: 1px solid #e6a23c;
+
+        &:hover {
+          background: #fff7e6;
+          color: #e6a23c;
+          border-color: #d9983b;
+        }
+      }
+
+      .review-btn,
+      .payment-btn {
+        background: white;
+        border: 1px solid #409eff;
+
+        &:hover {
+          background: #ecf5ff;
+        }
+      }
+    }
+  }
+
   .drawer-footer {
     background: white;
     border-radius: 10px;

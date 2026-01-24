@@ -55,23 +55,21 @@ public class Dish {
     @ApiModelProperty(value = "菜品描述")
     private String description; // 菜品描述
 
+    @TableField("image")
+    @ApiModelProperty(value = "菜品图片URL")
+    private String image; // 菜品图片URL
+
+    @TableField("score")
+    @ApiModelProperty(value = "推荐得分")
+    private BigDecimal score; // 推荐得分
+
+    @TableField("avg_rating")
+    @ApiModelProperty(value = "平均评分")
+    private BigDecimal avgRating; // 平均评分
+
     @TableField("status")
     @ApiModelProperty(value = "状态：true-上架，false-下架")
     private Boolean status; // 状态：true-上架，false-下架
-
-    /**
-     * 获取状态
-     */
-    public Boolean getStatus() {
-        return status;
-    }
-
-    /**
-     * 设置状态
-     */
-    public void setStatus(Boolean status) {
-        this.status = status;
-    }
 
     @TableField("create_time")
     @ApiModelProperty(value = "创建时间")
