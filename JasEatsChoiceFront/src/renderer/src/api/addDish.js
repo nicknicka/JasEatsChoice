@@ -1,7 +1,7 @@
 /**
  * 加菜功能API接口
  */
-import api from './index'
+import api from '../utils/api'
 
 export default {
   /**

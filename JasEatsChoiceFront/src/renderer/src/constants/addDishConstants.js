@@ -66,3 +66,6 @@ export const STATUS_TAG_MAP = {
     text: '超时驳回'
   }
 }
+
+// 单独导出常用的常量，方便组件直接使用
+export const DEFAULT_REJECT_REASONS = ADD_DISH_CONFIG.DEFAULT_REJECT_REASONS

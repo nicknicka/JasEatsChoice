@@ -56,14 +56,16 @@ const menuData = {
   // 用户端菜单 - 分组折叠版本
   user: [
     { index: '1', name: '首页', icon: HomeFilled, path: '/user/home' }, // 首页入口
+    // AI饮食助手 - 单独一级菜单
+    { index: '2', name: 'AI饮食助手', icon: ChatDotRound, path: '/user/home/ai' },
     // 推荐与发现分组
     {
       index: 'group-1',
       name: '推荐与发现',
       icon: Menu,
       children: [
-        { index: '2', name: '我的推荐', icon: Menu, path: '/user/home/recommend' },
-        { index: '3', name: '商家查找', icon: Shop, path: '/user/home/merchants' }
+        { index: '3', name: '我的推荐', icon: Menu, path: '/user/home/recommend' },
+        { index: '4', name: '商家查找', icon: Shop, path: '/user/home/merchants' }
       ]
     },
     // 饮食管理分组
@@ -72,10 +74,10 @@ const menuData = {
       name: '饮食管理',
       icon: Calendar,
       children: [
-        { index: '4', name: '今日食谱', icon: Calendar, path: '/user/home/today-recipe' },
+        { index: '5', name: '今日食谱', icon: Calendar, path: '/user/home/today-recipe' },
         { index: '61', name: '饮食记录', icon: Calendar, path: '/user/home/diet-record' },
-        { index: '5', name: '卡路里统计', icon: DataAnalysis, path: '/user/home/calorie' },
-        { index: '6', name: '我的食谱', icon: Document, path: '/user/home/my-recipe' }
+        { index: '6', name: '卡路里统计', icon: DataAnalysis, path: '/user/home/calorie' },
+        { index: '7', name: '我的食谱', icon: Document, path: '/user/home/my-recipe' }
       ]
     },
     // 个人中心分组
@@ -84,24 +86,24 @@ const menuData = {
       name: '个人中心',
       icon: User,
       children: [
-        { index: '7', name: '用户中心', icon: User, path: '/user/home/profile' },
-        { index: '8', name: '订单中心', icon: List, path: '/user/home/orders' }
+        { index: '8', name: '用户中心', icon: User, path: '/user/home/profile' },
+        { index: '9', name: '订单中心', icon: List, path: '/user/home/orders' }
       ]
     },
-    // 智能助手分组
+    // 消息沟通分组
     {
       index: 'group-4',
-      name: '智能助手',
-      icon: ChatDotRound,
+      name: '消息沟通',
+      icon: Message,
       children: [
-        { index: '9', name: '消息中心', icon: Message, path: '/user/home/message-center' },
+        { index: '10', name: '消息中心', icon: Message, path: '/user/home/message-center' },
         { index: '11', name: '聊天消息', icon: ChatDotRound, path: '/user/home/chat' },
-        { index: '10', name: 'AI饮食助手', icon: ChatDotRound, path: '/user/home/ai' }
+        { index: '12', name: '通讯录', icon: User, path: '/user/home/contacts' }
       ]
     },
     // 设置菜单
     {
-      index: '12',
+      index: '13',
       name: '设置',
       icon: Setting,
       path: '/user/home/settings',

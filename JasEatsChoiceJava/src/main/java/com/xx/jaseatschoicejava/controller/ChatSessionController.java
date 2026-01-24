@@ -102,7 +102,26 @@ public class ChatSessionController {
             session.setPinned(0);  // 0-未置顶
             session.setCreateTime(LocalDateTime.now());
             session.setUpdateTime(LocalDateTime.now());
-            chatSessionService.save(session);
+
+            // 使用 saveOrUpdate 避免并发插入导致的唯一键冲突
+            try {
+                chatSessionService.saveOrUpdate(session);
+            } catch (Exception e) {
+                // 如果保存失败，可能是并发导致的唯一键冲突，重新查询并更新
+                log.warn("保存会话失败，尝试重新查询并更新: userId={}, sessionId={}, error={}",
+                        userId, sessionId, e.getMessage());
+                ChatSession existingSession = chatSessionService.getOne(queryWrapper);
+                if (existingSession != null) {
+                    existingSession.setSessionName(sessionName);
+                    existingSession.setAvatar(avatar);
+                    existingSession.setMemberCount(memberCount);
+                    existingSession.setUpdateTime(LocalDateTime.now());
+                    chatSessionService.updateById(existingSession);
+                    return ResponseResult.success(existingSession);
+                } else {
+                    throw e;
+                }
+            }
         } else {
             // 更新会话信息
             session.setSessionName(sessionName);

@@ -342,9 +342,11 @@ const filteredChatFriends = computed(() => {
   if (!chatSearchQuery.value.trim()) {
     return []
   }
-  return props.friends.filter((friend) =>
-    friend.name.toLowerCase().includes(chatSearchQuery.value.toLowerCase())
-  )
+  return props.friends
+    .filter((friend) => friend.id !== props.userId.toString()) // 过滤掉当前用户自己
+    .filter((friend) =>
+      friend.name.toLowerCase().includes(chatSearchQuery.value.toLowerCase())
+    )
 })
 
 // 判断单聊是否在搜索状态
@@ -431,10 +433,13 @@ const globalSearchQuery = ref('')
 const globalSearchResults = ref([])
 
 const filteredFriends = computed(() => {
+  // 先过滤掉当前用户，再按搜索关键词过滤
+  let result = props.friends.filter((friend) => friend.id !== props.userId.toString())
+
   if (!memberSearchQuery.value.trim()) {
-    return props.friends
+    return result
   }
-  return props.friends.filter((friend) =>
+  return result.filter((friend) =>
     friend.name.toLowerCase().includes(memberSearchQuery.value.toLowerCase())
   )
 })
@@ -444,6 +449,12 @@ const isMemberSelected = (friend) => {
 }
 
 const toggleMember = (friend) => {
+  // 防止添加当前用户自己
+  if (friend.id === props.userId.toString()) {
+    ElMessage.warning('不能添加自己为群成员')
+    return
+  }
+
   const index = selectedMembers.value.findIndex((m) => m.id === friend.id)
 
   if (index === -1) {
@@ -490,12 +501,14 @@ const handleGlobalSearch = async () => {
         return /^https?:\/\//.test(avatar) || /^data:image/.test(avatar)
       }
 
-      globalSearchResults.value = (response.data || []).map((user) => ({
-        id: user.userId,
-        name: user.nickname || user.username,
-        avatar: isValidAvatarUrl(user.avatar) ? user.avatar : '👤',
-        detail: `用户ID: ${user.userId}`
-      }))
+      globalSearchResults.value = (response.data || [])
+        .filter((user) => user.userId !== props.userId.toString()) // 过滤掉当前用户自己
+        .map((user) => ({
+          id: user.userId,
+          name: user.nickname || user.username,
+          avatar: isValidAvatarUrl(user.avatar) ? user.avatar : '👤',
+          detail: `用户ID: ${user.userId}`
+        }))
     }
   } catch (error) {
     console.error('搜索失败:', error)
@@ -556,15 +569,17 @@ const handleFriendSearch = async () => {
         return /^https?:\/\//.test(avatar) || /^data:image/.test(avatar)
       }
 
-      friendSearchResults.value = (response.data || []).map((user) => ({
-        id: user.userId,
-        name: user.nickname || user.username,
-        avatar: isValidAvatarUrl(user.avatar) ? user.avatar : '👤',
-        phone: user.phone,
-        email: user.email,
-        adding: false,
-        added: false
-      }))
+      friendSearchResults.value = (response.data || [])
+        .filter((user) => user.userId !== props.userId.toString()) // 过滤掉当前用户自己
+        .map((user) => ({
+          id: user.userId,
+          name: user.nickname || user.username,
+          avatar: isValidAvatarUrl(user.avatar) ? user.avatar : '👤',
+          phone: user.phone,
+          email: user.email,
+          adding: false,
+          added: false
+        }))
       friendSearched.value = true
     }
   } catch (error) {

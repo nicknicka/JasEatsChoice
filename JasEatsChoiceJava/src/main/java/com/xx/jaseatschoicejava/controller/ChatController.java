@@ -99,12 +99,18 @@ public class ChatController {
             chatMsg.setMsgId(messageId);
         }
 
-        // ⭐ 生成并设置 session_id
-        String sessionId = ChatSessionIdGenerator.generateSessionId(
-            chatMsg.getMsgType(),
-            chatMsg.getFromId(),
-            chatMsg.getToId()
-        );
+        // ⭐ 生成并设置 session_id（使用确定性算法，确保相同用户产生相同会话ID）
+        String sessionId;
+        if ("group".equals(chatMsg.getMsgType())) {
+            // 群聊：直接使用群ID
+            sessionId = chatMsg.getToId();
+        } else {
+            // 私聊：使用MD5哈希，保证确定性
+            sessionId = ChatSessionIdGenerator.generateSingleChatSessionId(
+                chatMsg.getFromId(),
+                chatMsg.getToId()
+            );
+        }
         chatMsg.setSessionId(sessionId);
 
         // 保存消息
@@ -161,7 +167,15 @@ public class ChatController {
 
         // 判断会话类型
         String sessionType = "group".equals(msgType) ? "group" : "single";
-        String sessionId = "group".equals(msgType) ? otherId : buildSessionId(userId, otherId);
+        // 生成sessionId（与消息表保持一致，使用确定性算法）
+        String sessionId;
+        if ("group".equals(msgType)) {
+            // 群聊：直接使用群ID
+            sessionId = otherId;
+        } else {
+            // 私聊：使用MD5哈希，保证确定性
+            sessionId = ChatSessionIdGenerator.generateSingleChatSessionId(userId, otherId);
+        }
 
         // 查找现有会话
         LambdaQueryWrapper<ChatSession> queryWrapper = new LambdaQueryWrapper<>();
@@ -205,7 +219,15 @@ public class ChatController {
             boolean isGroup) {
 
         String sessionType = isGroup ? "group" : "single";
-        String sessionId = isGroup ? receiverId : buildSessionId(receiverId, senderId);
+        // 生成sessionId（与消息表保持一致，使用确定性算法）
+        String sessionId;
+        if (isGroup) {
+            // 群聊：直接使用群ID
+            sessionId = receiverId;
+        } else {
+            // 私聊：使用MD5哈希，保证确定性
+            sessionId = ChatSessionIdGenerator.generateSingleChatSessionId(receiverId, senderId);
+        }
 
         // 查找现有会话
         LambdaQueryWrapper<ChatSession> queryWrapper = new LambdaQueryWrapper<>();

@@ -194,7 +194,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Loading } from '@element-plus/icons-vue'
 
@@ -369,7 +369,7 @@ const {
 
 // ========== WebSocket 消息处理 ==========
 const handleWebSocketMessage = (data) => {
-  console.log('收到 WebSocket 消息:', data)
+  // console.log('收到 WebSocket 消息:', data)
 
   switch (data.type) {
     case 'chat':
@@ -402,7 +402,7 @@ const handleWebSocketMessage = (data) => {
       ElMessage.info(data.content?.message || '收到新通知')
       break
     default:
-      console.log('未知消息类型:', data)
+      // console.log('未知消息类型:', data)
   }
 }
 
@@ -771,6 +771,13 @@ const startChatFromPanel = (user) => {
 
 const createGroupFromPanel = async (data) => {
   try {
+    // 0. 验证成员列表中不能包含当前用户
+    const hasCurrentUser = data.members.some(member => member.id === userId.value.toString())
+    if (hasCurrentUser) {
+      ElMessage.error('不能将自己添加为群成员')
+      return
+    }
+
     // 1. 先调用后端API创建群
     const groupResponse = await api.post('/v1/groups', {
       groupName: data.name.trim(),
@@ -889,7 +896,7 @@ const createGroupFromPanel = async (data) => {
       return
     }
 
-    console.log('✅ 所有群聊会话记录创建成功', sessionResults)
+    // console.log('✅ 所有群聊会话记录创建成功', sessionResults)
 
     // 5. 从服务器刷新会话列表，确保数据同步
     const refreshSuccess = await fetchConversations()
@@ -1121,16 +1128,16 @@ watch(orderDrawerVisible, async (newVal) => {
 
 // ========== 生命周期 ==========
 onMounted(async () => {
-  console.log('🚀 [Chat] Chat组件挂载，开始初始化')
+   // console.log('🚀 [Chat] Chat组件挂载，开始初始化')
   try {
     // 先从本地加载聊天历史缓存（同步函数）
     loadChatHistoryFromLocal()
-    console.log('📦 [Chat] 本地缓存加载完成', Object.keys(chatHistory.value))
+    // console.log('📦 [Chat] 本地缓存加载完成', Object.keys(chatHistory.value))
 
     const conversationsResponse = await api.get(`/v1/chat/users/${userId.value}/chat-sessions`)
 
-    console.log('🚀 [Chat] 会话列表, conversationsResponse', conversationsResponse)
-    console.log('📡 [Chat] 会话列表API响应', {
+    // console.log('🚀 [Chat] 会话列表, conversationsResponse', conversationsResponse)
+     console.log('📡 [Chat] 会话列表API响应', {
       code: conversationsResponse.code,
       dataLength: conversationsResponse.data?.length,
       userId: userId.value
@@ -1140,11 +1147,11 @@ onMounted(async () => {
 
     if (conversationsResponse.code === '200') {
       conversations.value = conversationsResponse.data
-      console.log(`👥 [Chat] 会话列表已更新 - 共 ${conversations.value.length} 个会话`)
+      // console.log(`👥 [Chat] 会话列表已更新 - 共 ${conversations.value.length} 个会话`)
 
       if (sortedConversations.value.length > 0) {
         selectedConversation.value = sortedConversations.value[0]
-        console.log(`✅ [Chat] 自动选择第一个会话 - ID: ${selectedConversation.value.id}, 名称: ${selectedConversation.value.name}`)
+        // console.log(`✅ [Chat] 自动选择第一个会话 - ID: ${selectedConversation.value.id}, 名称: ${selectedConversation.value.name}`)
         await loadChatMessages(selectedConversation.value.id)
       } else {
         console.warn('⚠️ [Chat] 会话列表为空，没有可显示的会话')
@@ -1223,7 +1230,7 @@ const fetchConversations = async () => {
 
     if (conversationsResponse.code === '200') {
       conversations.value = conversationsResponse.data
-      console.log(`👥 [Chat] 会话列表已更新 - 共 ${conversations.value.length} 个会话`)
+      // console.log(`👥 [Chat] 会话列表已更新 - 共 ${conversations.value.length} 个会话`)
       return true
     } else {
       console.error(`❌ [Chat] 获取会话列表失败 - code: ${conversationsResponse.code}`)
@@ -1243,7 +1250,7 @@ const fetchMerchants = async () => {
 
     if (response.code === '200' || response.data) {
       merchants.value = response.data || []
-      console.log(`🏪 [Chat] 商家列表已加载 - 共 ${merchants.value.length} 个商家`)
+      // console.log(`🏪 [Chat] 商家列表已加载 - 共 ${merchants.value.length} 个商家`)
       ElMessage.success(`已加载 ${merchants.value.length} 个商家`)
     } else {
       ElMessage.error('获取商家列表失败')
@@ -1265,7 +1272,7 @@ const fetchMerchantProducts = async (merchantId) => {
       if (selectedMerchant.value) {
         selectedMerchant.value.products = menuData?.products || menuData || []
       }
-      console.log(`🍽️ [Chat] 已加载商家菜品 - 共 ${selectedMerchant.value?.products?.length || 0} 个菜品`)
+      // console.log(`🍽️ [Chat] 已加载商家菜品 - 共 ${selectedMerchant.value?.products?.length || 0} 个菜品`)
       ElMessage.success(`已加载 ${selectedMerchant.value?.products?.length || 0} 个菜品`)
     } else {
       ElMessage.error('获取菜品信息失败')

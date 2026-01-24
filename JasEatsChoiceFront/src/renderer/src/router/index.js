@@ -184,6 +184,12 @@ const router = createRouter({
           meta: { title: '佳食宜选-消息中心' }
         },
         {
+          path: 'contacts',
+          name: 'user-contacts',
+          component: () => import('../views/user/Contacts.vue'),
+          meta: { title: '佳食宜选-通讯录' }
+        },
+        {
           path: 'ai',
           name: 'user-ai',
           component: UserAI,
