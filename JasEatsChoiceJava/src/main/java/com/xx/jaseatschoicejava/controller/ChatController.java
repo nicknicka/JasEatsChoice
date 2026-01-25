@@ -8,13 +8,17 @@ import com.xx.jaseatschoicejava.entity.ChatSession;
 import com.xx.jaseatschoicejava.service.ChatMsgService;
 import com.xx.jaseatschoicejava.service.ChatSessionService;
 import com.xx.jaseatschoicejava.util.ChatSessionIdGenerator;
+import com.xx.jaseatschoicejava.util.FileUploadUtil;
 import com.xx.jaseatschoicejava.util.IdGenerator;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -31,6 +35,94 @@ public class ChatController {
     @Autowired
     private ChatSessionService chatSessionService;
 
+    @Value("${file.upload.url-prefix}")
+    private String fileUrlPrefix;
+
+    @Value("${file.upload.server-url}")
+    private String serverUrl;
+
+    /**
+     * 上传图片
+     */
+    @ApiOperation("上传聊天图片")
+    @PostMapping("/upload-image")
+    public ResponseResult<?> uploadImage(@RequestParam("file") MultipartFile file) {
+        try {
+            // 验证文件
+            if (file.isEmpty()) {
+                return ResponseResult.fail("400", "文件不能为空");
+            }
+
+            // 验证文件类型
+            String contentType = file.getContentType();
+            if (contentType == null || !contentType.startsWith("image/")) {
+                return ResponseResult.fail("400", "只支持图片文件");
+            }
+
+            // 验证文件大小（5MB）
+            long maxSize = 5 * 1024 * 1024;
+            if (file.getSize() > maxSize) {
+                return ResponseResult.fail("400", "图片大小不能超过5MB");
+            }
+
+            // 上传文件，返回相对URL路径（如：chat/abc123.jpg）
+            String relativeUrl = FileUploadUtil.uploadImage(file, "chat");
+
+            // 构建返回数据
+            Map<String, Object> result = new HashMap<>();
+            // fileUrl保存相对路径，用于存储到数据库
+            result.put("fileUrl", relativeUrl);
+            result.put("fileName", file.getOriginalFilename());
+            result.put("fileSize", file.getSize());
+            result.put("fileType", contentType);
+            // 构建完整的URL（包含服务器地址和前缀）
+            // 例如：http://localhost:8080 + /api/uploads/ + chat/abc123.jpg
+            String fullUrl = serverUrl + fileUrlPrefix + relativeUrl;
+            result.put("fullUrl", fullUrl);
+
+            return ResponseResult.success(result);
+        } catch (Exception e) {
+            return ResponseResult.fail("500", "图片上传失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 上传文件
+     */
+    @ApiOperation("上传聊天文件")
+    @PostMapping("/upload-file")
+    public ResponseResult<?> uploadFile(@RequestParam("file") MultipartFile file) {
+        try {
+            // 验证文件
+            if (file.isEmpty()) {
+                return ResponseResult.fail("400", "文件不能为空");
+            }
+
+            // 验证文件大小（10MB）
+            long maxSize = 10 * 1024 * 1024;
+            if (file.getSize() > maxSize) {
+                return ResponseResult.fail("400", "文件大小不能超过10MB");
+            }
+
+            // 上传文件，返回相对URL路径（如：chat/abc123.pdf）
+            String relativeUrl = FileUploadUtil.uploadFile(file, "chat");
+
+            // 构建返回数据
+            Map<String, Object> result = new HashMap<>();
+            // fileUrl保存相对路径，用于存储到数据库
+            result.put("fileUrl", relativeUrl);
+            result.put("fileName", file.getOriginalFilename());
+            result.put("fileSize", file.getSize());
+            result.put("fileType", file.getContentType());
+            // 构建完整的URL（包含服务器地址和前缀）
+            String fullUrl = serverUrl + fileUrlPrefix + relativeUrl;
+            result.put("fullUrl", fullUrl);
+
+            return ResponseResult.success(result);
+        } catch (Exception e) {
+            return ResponseResult.fail("500", "文件上传失败: " + e.getMessage());
+        }
+    }
 
     /**
      * 获取聊天记录（分页）

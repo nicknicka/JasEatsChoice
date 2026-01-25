@@ -46,7 +46,22 @@ public enum MsgType {
     /**
      * 实时推荐推送
      */
-    REALTIME_RECOMMEND("realtime_recommend", "实时推荐推送");
+    REALTIME_RECOMMEND("realtime_recommend", "实时推荐推送"),
+
+    /**
+     * 文本消息
+     */
+    TEXT("text", "文本消息"),
+
+    /**
+     * 图片消息
+     */
+    IMAGE("image", "图片消息"),
+
+    /**
+     * 文件消息
+     */
+    FILE("file", "文件消息");
 
     private String value;
     private String desc;

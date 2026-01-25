@@ -13,10 +13,16 @@ public class FileUploadConfig {
     private String uploadPath;
 
     /**
-     * 访问URL前缀
+     * 访问URL前缀（相对路径）
      */
     @Value("${file.upload.url-prefix:/api/uploads/}")
     private String urlPrefix;
+
+    /**
+     * 服务器完整URL
+     */
+    @Value("${file.upload.server-url:http://localhost:8080}")
+    private String serverUrl;
 
     public String getUploadPath() {
         return uploadPath;
@@ -32,5 +38,13 @@ public class FileUploadConfig {
 
     public void setUrlPrefix(String urlPrefix) {
         this.urlPrefix = urlPrefix;
+    }
+
+    public String getServerUrl() {
+        return serverUrl;
+    }
+
+    public void setServerUrl(String serverUrl) {
+        this.serverUrl = serverUrl;
     }
 }

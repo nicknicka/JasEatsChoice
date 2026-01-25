@@ -24,7 +24,56 @@
         </div>
       </div>
 
-      {{ message.content }}
+      <!-- 文本消息 -->
+      <div v-if="message.msgType !== 'image' && message.msgType !== 'file'" class="text-content">
+        {{ message.content }}
+      </div>
+
+      <!-- 图片消息 -->
+      <div v-if="message.msgType === 'image'" class="image-content">
+        <!-- 骨架屏加载中 -->
+        <div v-if="message.isLoading" class="image-skeleton">
+          <el-skeleton animated>
+            <template #template>
+              <el-skeleton-item variant="image" style="width: 200px; height: 150px" />
+            </template>
+          </el-skeleton>
+          <div class="loading-text">正在上传...</div>
+        </div>
+        <!-- 正常显示图片 -->
+        <el-image
+          v-else
+          :src="message.fullUrl || message.fileUrl"
+          :preview-src-list="[message.fullUrl || message.fileUrl]"
+          fit="cover"
+          class="message-image"
+          lazy
+        >
+          <template #error>
+            <div class="image-error">
+              <el-icon><Picture /></el-icon>
+              <span>图片加载失败</span>
+            </div>
+          </template>
+        </el-image>
+      </div>
+
+      <!-- 文件消息 -->
+      <div v-else-if="message.msgType === 'file'" class="file-content">
+        <div class="file-info" @click="handleDownloadFile">
+          <div class="file-icon">
+            <el-icon :size="32"><Document /></el-icon>
+          </div>
+          <div class="file-details">
+            <div class="file-name">{{ message.fileName || message.content }}</div>
+            <div class="file-size">{{ formatFileSize(message.fileSize) }}</div>
+          </div>
+          <el-button type="primary" size="small" text>
+            <el-icon><Download /></el-icon>
+            下载
+          </el-button>
+        </div>
+      </div>
 
       <!-- 时间和操作区域 -->
       <div class="message-footer">
@@ -63,6 +112,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { Picture, Document, Download } from '@element-plus/icons-vue'
 
 const props = defineProps({
   message: {
@@ -112,6 +162,33 @@ const senderName = computed(() => {
 const formattedTime = computed(() => {
   return props.message.formattedTime || props.formatMessageTime(props.message.createTime || props.message.time)
 })
+
+// 格式化文件大小
+const formatFileSize = (bytes) => {
+  if (!bytes) return '未知大小'
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i]
+}
+
+// 处理文件下载
+const handleDownloadFile = () => {
+  const fileUrl = props.message.fileUrl || props.message.fullUrl
+  const fileName = props.message.fileName || '下载文件'
+
+  if (fileUrl) {
+    // 创建一个隐藏的a标签来下载文件
+    const link = document.createElement('a')
+    link.href = fileUrl
+    link.download = fileName
+    link.target = '_blank'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+}
 </script>
 
 <style scoped lang="less">
@@ -178,6 +255,102 @@ const formattedTime = computed(() => {
     position: relative;
     word-break: break-word;
     white-space: pre-wrap;
+
+    .text-content {
+      white-space: pre-wrap;
+    }
+
+    .image-content {
+      .image-skeleton {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+
+        .loading-text {
+          font-size: 12px;
+          color: #909399;
+        }
+
+        :deep(.el-skeleton) {
+          background-color: #f5f7fa;
+          border-radius: 8px;
+          padding: 8px;
+        }
+      }
+
+      .message-image {
+        max-width: 300px;
+        max-height: 300px;
+        border-radius: 8px;
+        cursor: pointer;
+
+        :deep(.el-image__inner) {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+      }
+
+      .image-error {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 200px;
+        height: 150px;
+        background-color: #f5f7fa;
+        border-radius: 8px;
+        color: #909399;
+        gap: 8px;
+
+        .el-icon {
+          font-size: 32px;
+        }
+      }
+    }
+
+    .file-content {
+      .file-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        background-color: #f5f7fa;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+
+        &:hover {
+          background-color: #e4e7ed;
+        }
+
+        .file-icon {
+          color: #409eff;
+          flex-shrink: 0;
+        }
+
+        .file-details {
+          flex: 1;
+          min-width: 0;
+
+          .file-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: #303133;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+
+          .file-size {
+            font-size: 12px;
+            color: #909399;
+            margin-top: 4px;
+          }
+        }
+      }
+    }
 
     .message-reply-quote {
       background-color: #f5f7fa;

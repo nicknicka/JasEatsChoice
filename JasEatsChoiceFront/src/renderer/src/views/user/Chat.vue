@@ -114,6 +114,8 @@
           :disabled="!selectedConversation"
           @send="sendMessage"
           @cancel-reply="cancelReply"
+          @send-image="sendImageMessage"
+          @send-file="sendFileMessage"
         />
       </div>
 
@@ -709,6 +711,149 @@ const sendMessage = async (content) => {
   }
 }
 
+// 发送图片消息
+const sendImageMessage = async (fileInfo) => {
+  if (!selectedConversation.value) {
+    return
+  }
+
+  // 创建临时消息，显示骨架屏
+  const tempMessage = {
+    id: Date.now(),
+    fromId: userId.value.toString(),
+    toId: selectedConversation.value.id,
+    msgType: 'image',
+    content: '[图片]',
+    fileUrl: fileInfo.fileUrl,
+    fullUrl: fileInfo.fullUrl,
+    fileName: fileInfo.fileName,
+    fileSize: fileInfo.fileSize,
+    fileType: fileInfo.fileType,
+    createTime: new Date().toISOString(),
+    formattedTime: '刚刚',
+    status: 'sending',
+    isLoading: true  // 标记为加载中，用于显示骨架屏
+  }
+
+  chatMessages.value.push(tempMessage)
+  chatHistory.value[selectedConversation.value.id] = chatMessages.value
+  setTimeout(() => scrollToBottom(), 100)
+
+  try {
+    const messageData = {
+      fromId: userId.value.toString(),
+      toId: selectedConversation.value.id,
+      msgType: 'image',
+      content: '[图片]',
+      fileUrl: fileInfo.fileUrl,
+      fileName: fileInfo.fileName,
+      fileSize: fileInfo.fileSize,
+      fileType: fileInfo.fileType
+    }
+
+    const response = await api.post('/v1/chat/messages', messageData)
+
+    if (response.code === '200') {
+      const sentMessage = response.data
+
+      const index = chatMessages.value.findIndex((msg) => msg.id === tempMessage.id)
+      if (index !== -1) {
+        chatMessages.value[index] = {
+          ...sentMessage,
+          // 保留fullUrl，因为后端返回的数据可能没有这个字段
+          fullUrl: sentMessage.fullUrl || tempMessage.fullUrl,
+          formattedTime: formatMessageTime(sentMessage.createTime || sentMessage.time),
+          fromId: sentMessage.fromId || userId.value.toString(),
+          status: 'success',
+          isLoading: false
+        }
+      }
+
+      updateConversationLastMessage(selectedConversation.value.id, sentMessage)
+    }
+  } catch (error) {
+    console.error('发送图片消息失败:', error)
+
+    const index = chatMessages.value.findIndex((msg) => msg.id === tempMessage.id)
+    if (index !== -1) {
+      chatMessages.value[index].status = 'failed'
+      chatMessages.value[index].canResend = true
+      chatMessages.value[index].isLoading = false
+    }
+
+    ElMessage.error('发送失败，请点击重发')
+  }
+}
+
+// 发送文件消息
+const sendFileMessage = async (fileInfo) => {
+  if (!selectedConversation.value) {
+    return
+  }
+
+  // 创建临时消息，显示加载状态
+  const tempMessage = {
+    id: Date.now(),
+    fromId: userId.value.toString(),
+    toId: selectedConversation.value.id,
+    msgType: 'file',
+    content: `[文件] ${fileInfo.fileName}`,
+    fileUrl: fileInfo.fileUrl,
+    fullUrl: fileInfo.fullUrl,
+    fileName: fileInfo.fileName,
+    fileSize: fileInfo.fileSize,
+    fileType: fileInfo.fileType,
+    createTime: new Date().toISOString(),
+    formattedTime: '刚刚',
+    status: 'sending'
+  }
+
+  chatMessages.value.push(tempMessage)
+  chatHistory.value[selectedConversation.value.id] = chatMessages.value
+  setTimeout(() => scrollToBottom(), 100)
+
+  try {
+    const messageData = {
+      fromId: userId.value.toString(),
+      toId: selectedConversation.value.id,
+      msgType: 'file',
+      content: `[文件] ${fileInfo.fileName}`,
+      fileUrl: fileInfo.fileUrl,
+      fileName: fileInfo.fileName,
+      fileSize: fileInfo.fileSize,
+      fileType: fileInfo.fileType
+    }
+
+    const response = await api.post('/v1/chat/messages', messageData)
+
+    if (response.code === '200') {
+      const sentMessage = response.data
+
+      const index = chatMessages.value.findIndex((msg) => msg.id === tempMessage.id)
+      if (index !== -1) {
+        chatMessages.value[index] = {
+          ...sentMessage,
+          formattedTime: formatMessageTime(sentMessage.createTime || sentMessage.time),
+          fromId: sentMessage.fromId || userId.value.toString(),
+          status: 'success'
+        }
+      }
+
+      updateConversationLastMessage(selectedConversation.value.id, sentMessage)
+    }
+  } catch (error) {
+    console.error('发送文件消息失败:', error)
+
+    const index = chatMessages.value.findIndex((msg) => msg.id === tempMessage.id)
+    if (index !== -1) {
+      chatMessages.value[index].status = 'failed'
+      chatMessages.value[index].canResend = true
+    }
+
+    ElMessage.error('发送失败，请点击重发')
+  }
+}
+
 const resendMessage = async (failedMessage) => {
   try {
     const messageData = {
@@ -1174,6 +1319,7 @@ onBeforeUnmount(() => {
 const fetchFriends = async () => {
   try {
     const response = await api.get(`/v1/contacts/friends?userId=${userId.value}`)
+    console.log('🚀 [Chat] 获取好友列表, response', response)
     if (response.code === '200') {
       // 为每个好友获取详细信息
       const friendsWithDetails = await Promise.all(

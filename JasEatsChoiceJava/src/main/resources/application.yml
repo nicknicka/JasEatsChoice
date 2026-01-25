@@ -56,7 +56,8 @@ jwt:
 file:
   upload:
     path: /Users/nickxiao/JasEatsChoice/uploads/  # 文件上传保存路径
-    url-prefix: /api/uploads/  # 访问URL前缀
+    url-prefix: /api/uploads/  # 访问URL前缀（相对路径）
+    server-url: http://localhost:8080  # 服务器完整URL（用于构建完整访问地址）
 
 # Netty配置
 netty:

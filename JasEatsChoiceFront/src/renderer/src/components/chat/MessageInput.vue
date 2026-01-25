@@ -121,6 +121,7 @@ import {
   Promotion
 } from '@element-plus/icons-vue'
 import ReplyPreview from './ReplyPreview.vue'
+import chatApi from '@/api/chat'
 
 const props = defineProps({
   replyingTo: {
@@ -133,7 +134,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['send', 'cancel-reply'])
+const emit = defineEmits(['send', 'cancel-reply', 'send-image', 'send-file'])
 
 const inputValue = ref('')
 const showEmoji = ref(false)
@@ -244,7 +245,7 @@ const handleFileUpload = () => {
   fileInputRef.value?.click()
 }
 
-const handleImageSelected = (event) => {
+const handleImageSelected = async (event) => {
   const file = event.target.files?.[0]
   if (file) {
     if (file.size > 5 * 1024 * 1024) {
@@ -252,15 +253,32 @@ const handleImageSelected = (event) => {
       return
     }
 
-    // 这里可以添加上传图片的逻辑
-    ElMessage.success('图片已选择，准备上传')
-    console.log('选择的图片:', file.name)
+    try {
+      ElMessage.info('正在上传图片...')
+      const response = await chatApi.uploadChatImage(file)
+
+      if (response && response.code === '200') {
+        const fileInfo = {
+          fileUrl: response.data.fileUrl,
+          fileName: response.data.fileName,
+          fileSize: response.data.fileSize,
+          fileType: response.data.fileType,
+          fullUrl: response.data.fullUrl
+        }
+        emit('send-image', fileInfo)
+      } else {
+        ElMessage.error(response?.message || '图片上传失败')
+      }
+    } catch (error) {
+      console.error('上传图片失败:', error)
+      ElMessage.error('图片上传失败，请重试')
+    }
   }
   // 重置input，以便可以重复选择同一文件
   event.target.value = ''
 }
 
-const handleFileSelected = (event) => {
+const handleFileSelected = async (event) => {
   const file = event.target.files?.[0]
   if (file) {
     if (file.size > 10 * 1024 * 1024) {
@@ -268,9 +286,26 @@ const handleFileSelected = (event) => {
       return
     }
 
-    // 这里可以添加上传文件的逻辑
-    ElMessage.success('文件已选择，准备上传')
-    console.log('选择的文件:', file.name)
+    try {
+      ElMessage.info('正在上传文件...')
+      const response = await chatApi.uploadChatFile(file)
+
+      if (response && response.code === '200') {
+        const fileInfo = {
+          fileUrl: response.data.fileUrl,
+          fileName: response.data.fileName,
+          fileSize: response.data.fileSize,
+          fileType: response.data.fileType,
+          fullUrl: response.data.fullUrl
+        }
+        emit('send-file', fileInfo)
+      } else {
+        ElMessage.error(response?.message || '文件上传失败')
+      }
+    } catch (error) {
+      console.error('上传文件失败:', error)
+      ElMessage.error('文件上传失败，请重试')
+    }
   }
   event.target.value = ''
 }

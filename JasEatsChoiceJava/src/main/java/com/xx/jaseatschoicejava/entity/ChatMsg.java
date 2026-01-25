@@ -61,6 +61,22 @@ public class ChatMsg {
     @ApiModelProperty(value = "创建时间")
     private LocalDateTime createTime; // 创建时间
 
+    @TableField("file_url")
+    @ApiModelProperty(value = "文件URL（图片/文件消息时使用）")
+    private String fileUrl; // 文件URL
+
+    @TableField("file_name")
+    @ApiModelProperty(value = "文件名（文件消息时使用）")
+    private String fileName; // 文件名
+
+    @TableField("file_size")
+    @ApiModelProperty(value = "文件大小（字节）")
+    private Long fileSize; // 文件大小
+
+    @TableField("file_type")
+    @ApiModelProperty(value = "文件MIME类型")
+    private String fileType; // 文件MIME类型
+
     // ============ 非数据库字段（用于前端展示）============
 
     @TableField(exist = false)
