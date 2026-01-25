@@ -167,6 +167,8 @@
   },
   "active": "25380c94f56f550b",
   "lastOpenFiles": [
+    "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/controller/ChatController.class",
+    "uploads/chat/76361eac-5448-4aa3-88f0-a748a798fb93.png",
     "uploads/chat/2f58eeca-b067-4acc-bc6d-461c66980adc.png",
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/service/impl/RecipeServiceImpl.class",
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/service/impl/CollectionServiceImpl.class",
@@ -203,8 +205,6 @@
     "JasEatsChoiceFront/node_modules/app-builder-lib/templates/icons/proton-native/linux/16x16.png",
     "JasEatsChoiceFront/node_modules/app-builder-lib/templates/icons/proton-native/linux/128x128.png",
     "JasEatsChoiceFront/node_modules/app-builder-lib/templates/icons/proton-native/linux/1024x1024.png",
-    "JasEatsChoiceFront/node_modules/app-builder-lib/templates/icons/proton-native/proton-native.svg",
-    "JasEatsChoiceFront/node_modules/app-builder-lib/templates/icons/electron-linux/64x64.png",
     "JasEatsChoiceFront/node_modules/app-builder-lib/templates/nsis/README.md",
     "JasEatsChoiceFront/node_modules/app-builder-lib/node_modules/universalify/README.md",
     "JasEatsChoiceFront/node_modules/app-builder-lib/node_modules/jsonfile/README.md",

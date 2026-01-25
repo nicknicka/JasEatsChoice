@@ -644,9 +644,24 @@ const sendMessage = async (content) => {
     return
   }
 
+  console.log('📤 [sendMessage] 准备发送消息')
+  console.log('📤 [sendMessage] 会话信息:', {
+    id: selectedConversation.value.id,
+    groupId: selectedConversation.value.groupId,
+    name: selectedConversation.value.name,
+    type: selectedConversation.value.type
+  })
+
+  // ⭐ 对于群聊，使用 groupId 而不是 sessionId 作为 toId
+  const toId = selectedConversation.value.type === 'group' && selectedConversation.value.groupId
+    ? selectedConversation.value.groupId
+    : selectedConversation.value.id
+
+  console.log('📤 [sendMessage] 使用的toId:', toId, '(原会话ID:', selectedConversation.value.id + ')')
+
   const messageData = {
     fromId: userId.value.toString(),
-    toId: selectedConversation.value.id,
+    toId: toId,  // ⭐ 修正：群聊使用 groupId，单聊使用会话 id
     sessionType: selectedConversation.value.type || 'single',  // 会话类型
     msgType: 'text',                                             // 消息类型
     content: content.trim()
@@ -727,11 +742,26 @@ const sendImageMessage = async (fileInfo) => {
     return
   }
 
+  console.log('📤 [sendImageMessage] 准备发送图片消息')
+  console.log('📤 [sendImageMessage] 会话信息:', {
+    id: selectedConversation.value.id,
+    groupId: selectedConversation.value.groupId,
+    name: selectedConversation.value.name,
+    type: selectedConversation.value.type
+  })
+
+  // ⭐ 对于群聊，使用 groupId 而不是 sessionId 作为 toId
+  const toId = selectedConversation.value.type === 'group' && selectedConversation.value.groupId
+    ? selectedConversation.value.groupId
+    : selectedConversation.value.id
+
+  console.log('📤 [sendImageMessage] 使用的toId:', toId, '(原会话ID:', selectedConversation.value.id + ')')
+
   // 创建临时消息，显示骨架屏
   const tempMessage = {
     id: Date.now(),
     fromId: userId.value.toString(),
-    toId: selectedConversation.value.id,
+    toId: toId,
     msgType: 'image',
     content: '[图片]',
     fileUrl: fileInfo.fileUrl,
@@ -752,7 +782,7 @@ const sendImageMessage = async (fileInfo) => {
   try {
     const messageData = {
       fromId: userId.value.toString(),
-      toId: selectedConversation.value.id,
+      toId: toId,  // ⭐ 修正：群聊使用 groupId，单聊使用会话 id
       sessionType: selectedConversation.value.type || 'single',  // 会话类型
       msgType: 'image',                                            // 消息类型
       content: '[图片]',
@@ -802,11 +832,26 @@ const sendFileMessage = async (fileInfo) => {
     return
   }
 
+  console.log('📤 [sendFileMessage] 准备发送文件消息')
+  console.log('📤 [sendFileMessage] 会话信息:', {
+    id: selectedConversation.value.id,
+    groupId: selectedConversation.value.groupId,
+    name: selectedConversation.value.name,
+    type: selectedConversation.value.type
+  })
+
+  // ⭐ 对于群聊，使用 groupId 而不是 sessionId 作为 toId
+  const toId = selectedConversation.value.type === 'group' && selectedConversation.value.groupId
+    ? selectedConversation.value.groupId
+    : selectedConversation.value.id
+
+  console.log('📤 [sendFileMessage] 使用的toId:', toId, '(原会话ID:', selectedConversation.value.id + ')')
+
   // 创建临时消息，显示加载状态
   const tempMessage = {
     id: Date.now(),
     fromId: userId.value.toString(),
-    toId: selectedConversation.value.id,
+    toId: toId,
     msgType: 'file',
     content: `[文件] ${fileInfo.fileName}`,
     fileUrl: fileInfo.fileUrl,
@@ -826,7 +871,7 @@ const sendFileMessage = async (fileInfo) => {
   try {
     const messageData = {
       fromId: userId.value.toString(),
-      toId: selectedConversation.value.id,
+      toId: toId,  // ⭐ 修正：群聊使用 groupId，单聊使用会话 id
       sessionType: selectedConversation.value.type || 'single',  // 会话类型
       msgType: 'file',                                             // 消息类型
       content: `[文件] ${fileInfo.fileName}`,

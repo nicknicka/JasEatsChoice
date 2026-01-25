@@ -185,6 +185,14 @@ public class ChatController {
         chatMsg.setReadStatus(false);  // 0-未读
         chatMsg.setCreateTime(LocalDateTime.now());
 
+        // 🔍 调试日志：检查接收到的消息数据
+        System.out.println("📨 [Chat] 接收到消息");
+        System.out.println("  - fromId: " + chatMsg.getFromId());
+        System.out.println("  - toId: " + chatMsg.getToId());
+        System.out.println("  - sessionType: " + chatMsg.getSessionType());
+        System.out.println("  - msgType: " + chatMsg.getMsgType());
+        System.out.println("  - content: " + chatMsg.getContent());
+
         // ⭐ 生成消息ID（使用IdGenerator）
         if (chatMsg.getMsgId() == null || chatMsg.getMsgId().isEmpty()) {
             String messageId = IdGenerator.toChatMsgIdString(IdGenerator.generateId());
@@ -195,24 +203,19 @@ public class ChatController {
         String sessionId;
         if ("group".equals(chatMsg.getSessionType())) {
             // 群聊：使用 ChatSessionIdGenerator 生成 S 开头的会话ID
+            System.out.println("  - 群聊消息，使用 toId 生成 sessionId: " + chatMsg.getToId());
             sessionId = ChatSessionIdGenerator.getGroupChatSessionId(chatMsg.getToId());
+            System.out.println("  - 生成的 sessionId: " + sessionId);
         } else {
             // 私聊：使用MD5哈希，保证确定性
+            System.out.println("  - 单聊消息，使用 fromId 和 toId 生成 sessionId");
             sessionId = ChatSessionIdGenerator.generateSingleChatSessionId(
                 chatMsg.getFromId(),
                 chatMsg.getToId()
             );
+            System.out.println("  - 生成的 sessionId: " + sessionId);
         }
         chatMsg.setSessionId(sessionId);
-
-        // 🔍 调试日志：检查接收到的消息数据
-        System.out.println("📨 [Chat] 接收到消息 - sessionType: " + chatMsg.getSessionType()
-            + ", msgType: " + chatMsg.getMsgType()
-            + ", content: " + chatMsg.getContent()
-            + ", fileUrl: " + chatMsg.getFileUrl()
-            + ", fileName: " + chatMsg.getFileName()
-            + ", fileSize: " + chatMsg.getFileSize()
-            + ", fileType: " + chatMsg.getFileType());
 
         // 保存消息
         boolean success = chatMsgService.save(chatMsg);
