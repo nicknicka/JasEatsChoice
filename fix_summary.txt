@@ -1,7 +1,0 @@
-已修复的内容：
-1. 在loadTodayRecipes函数中确保所有食谱都有items数组
-2. 修复模板中的v-for循环，处理recipe.items可能为undefined或空的情况
-3. 在下拉菜单中添加空检查
-4. 在deleteDish和confirmReplaceDish函数中添加空检查
-
-修复后将不会再出现'Cannot read properties of undefined (reading length)'错误
