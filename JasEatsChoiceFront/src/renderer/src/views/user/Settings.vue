@@ -196,16 +196,28 @@
 
     <!-- Edit Phone Dialog -->
     <el-dialog v-model="editPhoneDialogVisible" title="修改手机号" width="400px">
-      <el-form ref="phoneFormRef" :model="phoneForm" label-width="80px">
-        <el-form-item label="手机号">
+      <el-form ref="phoneFormRef" :model="phoneForm" label-width="120px">
+        <el-form-item label="验证原手机号" prop="oldPhoneVerify">
+          <el-input
+            v-model="phoneForm.oldPhoneVerify"
+            placeholder="请输入原手机号的中间4位"
+            maxlength="4"
+            style="width: 150px"
+          />
+          <div style="font-size: 12px; color: #909399; margin-top: 4px;">
+            请输入原手机号的中间4位数字进行验证（例如：138****5678，请输入****部分）
+          </div>
+        </el-form-item>
+        <el-form-item label="新手机号" prop="phone">
           <el-input v-model="phoneForm.phone" placeholder="请输入新手机号" />
         </el-form-item>
-        <el-form-item label="验证码">
+        <el-form-item label="验证码" prop="verificationCode">
           <div style="display: flex">
             <el-input
               v-model="phoneForm.verificationCode"
               placeholder="请输入验证码"
               style="width: 150px; margin-right: 10px"
+              maxlength="6"
             />
             <el-button type="primary" :disabled="smsCodeCountdown > 0" @click="sendSmsCode">
               {{ smsCodeCountdown > 0 ? `${smsCodeCountdown}秒后重新发送` : '获取验证码' }}
@@ -223,8 +235,18 @@
 
     <!-- Edit Email Dialog -->
     <el-dialog v-model="editEmailDialogVisible" title="修改邮箱" width="400px">
-      <el-form ref="emailFormRef" :model="emailForm" label-width="80px">
-        <el-form-item label="邮箱" prop="email">
+      <el-form ref="emailFormRef" :model="emailForm" label-width="120px">
+        <el-form-item label="验证原邮箱" prop="oldEmailVerify">
+          <el-input
+            v-model="emailForm.oldEmailVerify"
+            placeholder="请输入原邮箱地址"
+            style="width: 100%"
+          />
+          <div style="font-size: 12px; color: #909399; margin-top: 4px;">
+            请再次输入完整的原邮箱地址进行验证
+          </div>
+        </el-form-item>
+        <el-form-item label="新邮箱" prop="email">
           <el-input v-model="emailForm.email" placeholder="请输入新邮箱" />
         </el-form-item>
         <el-form-item label="验证码" prop="verificationCode">
@@ -366,12 +388,16 @@ const editPasswordDialogVisible = ref(false)
 
 // Form data
 const phoneForm = ref({
-  phone: '',
+  oldPhone: '',           // 原手机号，只读显示
+  oldPhoneVerify: '',     // 原手机号中间4位验证
+  phone: '',              // 新手机号
   verificationCode: ''
 })
 
 const emailForm = ref({
-  email: '',
+  oldEmail: '',        // 原邮箱，只读显示
+  oldEmailVerify: '',  // 原邮箱验证
+  email: '',           // 新邮箱
   verificationCode: ''
 })
 
@@ -553,37 +579,56 @@ const handleAvatarClick = () => {
 
 const handleAvatarUpload = async (event) => {
   const file = event.target.files[0]
-  if (file) {
-    const reader = new FileReader()
-    reader.onload = async (e) => {
-      const newAvatarBase64 = e.target.result
-
-      try {
-        // 上传到后端
-        const userId = authStore.userId || userInfo.value.userId
-        const response = await api.put(
-          API_CONFIG.user.uploadAvatar.replace('{userId}', userId),
-          { avatarBase64: newAvatarBase64 }
-        )
-
-        if (response && (response.code === '200' || response.success)) {
-          // ✅ 直接更新userStore，会自动同步到所有使用该store的地方
-          userStore.userInfo.avatar = response.data.avatarBase64
-
-          // 保存到localStorage作为备份
-          localStorage.setItem('userAvatar', response.data.avatarBase64)
-
-          ElMessage.success('头像已更换')
-        } else {
-          ElMessage.error(response.message || '头像上传失败')
-        }
-      } catch (error) {
-        console.error('头像上传失败:', error)
-        ElMessage.error('头像上传失败，请重试')
-      }
-    }
-    reader.readAsDataURL(file)
+  if (!file) {
+    return
   }
+
+  // 校验文件类型
+  const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+  if (!validTypes.includes(file.type)) {
+    ElMessage.warning('只支持 JPG、PNG、GIF、WebP 格式的图片')
+    // 清空input，允许重新选择同一文件
+    event.target.value = ''
+    return
+  }
+
+  // 校验文件大小（限制2MB）
+  const maxSize = 2 * 1024 * 1024
+  if (file.size > maxSize) {
+    ElMessage.warning('图片大小不能超过2MB')
+    event.target.value = ''
+    return
+  }
+
+  const reader = new FileReader()
+  reader.onload = async (e) => {
+    const newAvatarBase64 = e.target.result
+
+    try {
+      // 上传到后端
+      const userId = authStore.userId || userInfo.value.userId
+      const response = await api.put(
+        API_CONFIG.user.uploadAvatar.replace('{userId}', userId),
+        { avatarBase64: newAvatarBase64 }
+      )
+
+      if (response && (response.code === '200' || response.success)) {
+        // ✅ 直接更新userStore，会自动同步到所有使用该store的地方
+        userStore.userInfo.avatar = response.data.avatarBase64
+
+        // 保存到localStorage作为备份
+        localStorage.setItem('userAvatar', response.data.avatarBase64)
+
+        ElMessage.success('头像已更换')
+      } else {
+        ElMessage.error(response.message || '头像上传失败')
+      }
+    } catch (error) {
+      console.error('头像上传失败:', error)
+      ElMessage.error('头像上传失败，请重试')
+    }
+  }
+  reader.readAsDataURL(file)
 }
 
 // Handle send SMS verification code
@@ -629,50 +674,100 @@ const sendSmsCode = () => {
 // Handle edit phone
 const handleEditPhone = () => {
   editPhoneDialogVisible.value = true
-  // Auto-fill current phone number
-  phoneForm.value.phone = userInfo.value.phone || ''
+  // 重置表单并自动填充当前手机号
+  const currentPhone = userInfo.value.phone || ''
+  phoneForm.value = {
+    oldPhone: currentPhone,      // 原手机号，只读显示
+    oldPhoneVerify: '',          // 原手机号中间4位验证
+    phone: '',                   // 新手机号，用户需要输入
+    verificationCode: ''
+  }
 }
 
 const submitPhoneEdit = () => {
-  if (phoneForm.value.phone && phoneForm.value.verificationCode) {
-    // 手机号格式验证
-    const phoneRegex = /^1[3-9]\d{9}$/
-    if (!phoneRegex.test(phoneForm.value.phone)) {
-      ElMessage.warning('请输入有效的手机号')
-      return
-    }
+  // 显示原手机号提示，让用户确认
+  const oldPhone = phoneForm.value.oldPhone || userInfo.value.phone || ''
 
-    // 验证码长度验证
-    if (phoneForm.value.verificationCode.length !== 6) {
-      ElMessage.warning('请输入6位验证码')
-      return
-    }
-
-    // Call backend API to update phone number
-    // 后端期望的字段名是 smsCode，不是 verificationCode
-    api
-      .put(API_CONFIG.user.update.replace('{userId}', userInfo.value.userId), {
-        phone: phoneForm.value.phone,
-        smsCode: phoneForm.value.verificationCode  // ← 使用 smsCode
-      })
-      .then((response) => {
-        const isSuccess = response.code === '200' || response.success
-        if (isSuccess) {
-          ElMessage.success('手机号已修改')
-          // 更新userStore中的用户信息
-          userStore.userInfo.phone = phoneForm.value.phone
-          editPhoneDialogVisible.value = false
-          phoneForm.value = { phone: '', verificationCode: '' }
-        } else {
-          ElMessage.error(response.message || '手机号修改失败')
-        }
-      })
-      .catch((error) => {
-        ElMessage.error(error.message || '手机号修改失败')
-      })
-  } else {
-    ElMessage.warning('请填写完整信息')
+  // 验证原手机号的中间4位
+  const oldPhoneVerify = (phoneForm.value.oldPhoneVerify || '').trim()
+  if (!oldPhoneVerify || oldPhoneVerify.length !== 4) {
+    ElMessage.warning('请输入原手机号的中间4位')
+    return
   }
+
+  // 提取原手机号的中间4位（第3-6位）
+  if (oldPhone.length === 11) {
+    const oldPhoneMiddle4 = oldPhone.substring(3, 7)
+    if (oldPhoneVerify !== oldPhoneMiddle4) {
+      ElMessage.warning('原手机号中间4位验证失败，请检查后重新输入')
+      console.log('❌ 验证失败:', {
+        输入: oldPhoneVerify,
+        正确: oldPhoneMiddle4,
+        完整号码: oldPhone
+      })
+      return
+    }
+  } else {
+    ElMessage.warning('原手机号格式异常，无法验证')
+    return
+  }
+
+  // 检查新手机号是否填写
+  const newPhone = (phoneForm.value.phone || '').trim()
+  if (!newPhone || newPhone.length === 0) {
+    ElMessage.warning('请输入新手机号')
+    return
+  }
+
+  // 检查新手机号是否与原手机号相同
+  if (newPhone === oldPhone) {
+    ElMessage.warning('新手机号不能与原手机号相同')
+    return
+  }
+
+  // 检查验证码是否填写
+  if (!phoneForm.value.verificationCode || phoneForm.value.verificationCode.trim().length === 0) {
+    ElMessage.warning('请输入验证码')
+    return
+  }
+
+  // 手机号格式验证
+  const phoneRegex = /^1[3-9]\d{9}$/
+  if (!phoneRegex.test(newPhone)) {
+    ElMessage.warning('请输入有效的手机号')
+    return
+  }
+
+  // 验证码格式验证（必须是6位数字）
+  const codeRegex = /^\d{6}$/
+  if (!codeRegex.test(phoneForm.value.verificationCode)) {
+    ElMessage.warning('请输入6位数字验证码')
+    return
+  }
+
+  // 直接调用后端API更新手机号
+  const userId = authStore.userId || userInfo.value.userId
+  api
+    .put(API_CONFIG.user.update.replace('{userId}', userId), {
+      phone: newPhone,
+      smsCode: phoneForm.value.verificationCode
+    })
+    .then((response) => {
+      const isSuccess = response.code === '200' || response.success
+      if (isSuccess) {
+        ElMessage.success(`手机号已从 ${oldPhone} 修改为 ${newPhone}`)
+        // 更新userStore中的用户信息
+        userStore.userInfo.phone = newPhone
+        editPhoneDialogVisible.value = false
+        // 重置表单
+        phoneForm.value = { oldPhone: '', oldPhoneVerify: '', phone: '', verificationCode: '' }
+      } else {
+        ElMessage.error(response.message || '手机号修改失败')
+      }
+    })
+    .catch((error) => {
+      ElMessage.error(error.message || '手机号修改失败')
+    })
 }
 
 // Handle send email verification code
@@ -719,20 +814,61 @@ const sendEmailCode = () => {
 const handleEditEmail = () => {
   editEmailDialogVisible.value = true
   // 重置表单并自动填充当前邮箱
+  const currentEmail = userInfo.value.email || ''
   emailForm.value = {
-    email: userInfo.value.email || '',
+    oldEmail: currentEmail,     // 原邮箱，只读显示
+    oldEmailVerify: '',         // 原邮箱验证
+    email: '',                  // 新邮箱，用户需要输入
     verificationCode: ''
   }
 }
 
 const submitEmailEdit = () => {
+  // 显示原邮箱提示，让用户确认
+  const oldEmail = emailForm.value.oldEmail || userInfo.value.email || ''
+
+  // 验证原邮箱
+  const oldEmailVerify = (emailForm.value.oldEmailVerify || '').trim()
+  if (!oldEmailVerify || oldEmailVerify.length === 0) {
+    ElMessage.warning('请输入原邮箱地址进行验证')
+    return
+  }
+
+  // 验证两次输入的邮箱是否一致
+  if (oldEmailVerify.toLowerCase() !== oldEmail.toLowerCase()) {
+    ElMessage.warning('原邮箱验证失败，请检查后重新输入')
+    console.log('❌ 邮箱验证失败:', {
+      输入: oldEmailVerify,
+      正确: oldEmail
+    })
+    return
+  }
+
   // 去除首尾空格，避免空格导致验证失败
-  const email = (emailForm.value.email || '').trim()
+  const newEmail = (emailForm.value.email || '').trim()
   const verificationCode = (emailForm.value.verificationCode || '').trim()
 
   // 检查是否填写完整（使用字符串长度判断更准确）
-  if (!email || email.length === 0) {
-    ElMessage.warning('请输入邮箱地址')
+  if (!newEmail || newEmail.length === 0) {
+    ElMessage.warning('请输入新邮箱地址')
+    return
+  }
+
+  // 检查邮箱长度（RFC 5321限制：254字符）
+  if (newEmail.length > 254) {
+    ElMessage.warning('邮箱地址过长')
+    return
+  }
+
+  // 检查新邮箱是否与原邮箱相同
+  if (newEmail === oldEmail) {
+    ElMessage.warning('新邮箱不能与原邮箱相同')
+    return
+  }
+
+  // 检查验证的原邮箱是否与新邮箱相同
+  if (newEmail.toLowerCase() === oldEmailVerify.toLowerCase()) {
+    ElMessage.warning('验证的原邮箱不能与新邮箱相同')
     return
   }
 
@@ -743,7 +879,7 @@ const submitEmailEdit = () => {
 
   // 邮箱格式验证
   const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
-  if (!emailRegex.test(email)) {
+  if (!emailRegex.test(newEmail)) {
     ElMessage.warning('请输入有效的邮箱地址')
     return
   }
@@ -755,20 +891,22 @@ const submitEmailEdit = () => {
     return
   }
 
-  // Call backend API to update email（注意：后端期望的字段名是 emailCode）
+  // 直接调用后端API更新邮箱
+  const userId = authStore.userId || userInfo.value.userId
   api
-    .put(API_CONFIG.user.update.replace('{userId}', userInfo.value.userId), {
-      email: email,
+    .put(API_CONFIG.user.update.replace('{userId}', userId), {
+      email: newEmail,
       emailCode: verificationCode
     })
     .then((response) => {
       const isSuccess = response.code === '200' || response.success
       if (isSuccess) {
-        ElMessage.success('邮箱已修改')
+        ElMessage.success(`邮箱已从 ${oldEmail} 修改为 ${newEmail}`)
         // 更新userStore中的用户信息
-        userStore.userInfo.email = email
+        userStore.userInfo.email = newEmail
         editEmailDialogVisible.value = false
-        emailForm.value = { email: '', verificationCode: '' }
+        // 重置表单
+        emailForm.value = { oldEmail: '', oldEmailVerify: '', email: '', verificationCode: '' }
       } else {
         ElMessage.error(response.message || '邮箱修改失败')
       }
@@ -794,8 +932,36 @@ const submitPasswordEdit = async () => {
       return
     }
 
+    // 密码长度校验
     if (passwordForm.value.newPassword.length < 6) {
       ElMessage.warning('新密码长度不能少于6位')
+      return
+    }
+
+    if (passwordForm.value.newPassword.length > 20) {
+      ElMessage.warning('新密码长度不能超过20位')
+      return
+    }
+
+    // 密码复杂度校验
+    const newPassword = passwordForm.value.newPassword
+    const hasUpperCase = /[A-Z]/.test(newPassword)
+    const hasLowerCase = /[a-z]/.test(newPassword)
+    const hasNumber = /\d/.test(newPassword)
+    const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword)
+
+    // 至少包含3种字符类型
+    const complexityScore = [hasUpperCase, hasLowerCase, hasNumber, hasSpecial]
+      .filter(Boolean).length
+
+    if (complexityScore < 2) {
+      ElMessage.warning('密码强度不足，请至少包含以下2种字符：大写字母、小写字母、数字、特殊符号')
+      return
+    }
+
+    // 检查新密码是否与旧密码相同
+    if (passwordForm.value.newPassword === passwordForm.value.oldPassword) {
+      ElMessage.warning('新密码不能与旧密码相同')
       return
     }
 
@@ -812,7 +978,7 @@ const submitPasswordEdit = async () => {
 
       const isSuccess = response.code === '200' || response.success
       if (isSuccess) {
-        ElMessage.success('密码已修改')
+        ElMessage.success('密码已修改，请妥善保管')
         editPasswordDialogVisible.value = false
         passwordForm.value = { oldPassword: '', newPassword: '', confirmPassword: '' }
       } else {
@@ -828,60 +994,172 @@ const submitPasswordEdit = async () => {
 
 // Handle clear cache
 const clearCache = () => {
-  // Clear localStorage except for user settings and avatar
-  const userSettings = localStorage.getItem('userSettings')
-  const userAvatar = localStorage.getItem('userAvatar')
+  // 定义需要保留的重要数据
+  const keysToKeep = [
+    'userSettings',        // 用户设置
+    'userAvatar',          // 用户头像
+    'authToken',           // 认证令牌
+    'userInfo',            // 用户信息
+    'userId',              // 用户ID
+    'userRole',            // 用户角色
+    'selectedRole'         // 选中的角色
+  ]
 
+  // 保存需要保留的数据
+  const preservedData = {}
+  keysToKeep.forEach(key => {
+    const value = localStorage.getItem(key)
+    if (value) {
+      preservedData[key] = value
+    }
+  })
+
+  // 清空所有localStorage
   localStorage.clear()
 
-  if (userSettings) localStorage.setItem('userSettings', userSettings)
-  if (userAvatar) localStorage.setItem('userAvatar', userAvatar)
+  // 恢复需要保留的数据
+  Object.keys(preservedData).forEach(key => {
+    localStorage.setItem(key, preservedData[key])
+  })
 
-  ElMessage.success('缓存已清除')
-  console.log('Cache cleared')
+  // 记录清除的缓存大小
+  const cacheSize = JSON.stringify(preservedData).length
+  console.log(`✅ 缓存已清除（保留了 ${cacheSize} 字节的重要数据）`, preservedData)
+
+  ElMessage.success(`缓存已清除（保留了用户设置和登录信息）`)
+
+  // 可选：提示用户刷新页面以确保所有缓存生效
+  // setTimeout(() => {
+  //   location.reload()
+  // }, 1000)
 }
 
 // Handle data export
 const exportData = () => {
-  // Create data to export
-  const userData = {
-    profile: {
-      phone: userInfo.value.phone || '未设置',
-      email: userInfo.value.email || '未设置'
-    },
-    settings: JSON.parse(localStorage.getItem('userSettings') || '{}'),
-    exportDate: new Date().toISOString()
+  try {
+    // 收集用户基本信息
+    const userData = {
+      exportInfo: {
+        exportDate: new Date().toISOString(),
+        exportTime: new Date().toLocaleString('zh-CN'),
+        appVersion: '1.0.0',
+        userId: authStore.userId || userInfo.value.userId
+      },
+      profile: {
+        userId: userInfo.value.userId || '',
+        phone: userInfo.value.phone || '未设置',
+        email: userInfo.value.email || '未设置',
+        nickname: userInfo.value.nickname || '未设置',
+        avatar: userInfo.value.avatar || '未设置',
+        location: userInfo.value.location || '未设置',
+        registerDate: userInfo.value.registerDate || '未知'
+      },
+      settings: {
+        fontSize: fontSize.value,
+        theme: theme.value ? '深色' : '浅色',
+        notifications: { ...notifications.value },
+        privacy: { ...privacy.value }
+      },
+      localStorage: {
+        userSettings: JSON.parse(localStorage.getItem('userSettings') || '{}'),
+        keys: Object.keys(localStorage).filter(key =>
+          !key.includes('password') &&  // 排除敏感信息
+          !key.includes('token')
+        )
+      },
+      disclaimer: '本数据为个人数据导出，请妥善保管。如需恢复数据，请联系客服。'
+    }
+
+    // 收集localStorage中的其他非敏感数据
+    userData.localStorage.data = {}
+    Object.keys(localStorage).forEach(key => {
+      if (!key.includes('password') &&
+          !key.includes('token') &&
+          !key.includes('secret') &&
+          key !== 'userAvatar' &&  // 头像数据太大，单独处理
+          key !== 'userSettings') {  // 设置已在上面处理
+        try {
+          userData.localStorage.data[key] = JSON.parse(localStorage[key])
+        } catch {
+          userData.localStorage.data[key] = localStorage[key]
+        }
+      }
+    })
+
+    // Convert to JSON and download
+    const dataStr = JSON.stringify(userData, null, 2)
+    const dataBlob = new Blob([dataStr], { type: 'application/json' })
+    const dataUrl = URL.createObjectURL(dataBlob)
+
+    const a = document.createElement('a')
+    a.href = dataUrl
+    // 生成文件名：佳食宜选_用户数据_2025-01-25.json
+    const dateStr = new Date().toISOString().split('T')[0]
+    a.download = `佳食宜选_用户数据_${dateStr}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(dataUrl)
+
+    ElMessage.success('数据导出成功')
+    console.log('✅ 数据导出完成:', {
+      dataSize: dataStr.length,
+      dataKeys: Object.keys(userData)
+    })
+  } catch (error) {
+    console.error('❌ 数据导出失败:', error)
+    ElMessage.error('数据导出失败，请重试')
   }
-
-  // Convert to JSON and download
-  const dataStr = JSON.stringify(userData, null, 2)
-  const dataBlob = new Blob([dataStr], { type: 'application/json' })
-  const dataUrl = URL.createObjectURL(dataBlob)
-
-  const a = document.createElement('a')
-  a.href = dataUrl
-  a.download = '用户数据导出.json'
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(dataUrl)
-
-  ElMessage.success('数据导出成功')
-  console.log('Data export completed:', userData)
 }
 
 // Handle check for updates
-const checkUpdate = () => {
-  // 模拟检查更新
-  updateDialogVisible.value = true
-  // 在实际应用中，这里应该调用API检查最新版本
-  // latestVersion.value = '1.0.1'
-  // hasUpdate.value = latestVersion.value !== '1.0.0'
+const checkUpdate = async () => {
+  try {
+    ElMessage.info('正在检查更新...')
+
+    // 模拟API调用检查版本（实际项目中应该调用真实API）
+    // const response = await api.get('/api/version/check')
+    // const versionInfo = response.data
+    // latestVersion.value = versionInfo.latestVersion
+    // hasUpdate.value = versionInfo.hasUpdate
+
+    // 模拟版本检查
+    const currentVersion = '1.0.0'
+    const remoteVersion = '1.0.0' // 实际应该从API获取
+
+    hasUpdate.value = remoteVersion !== currentVersion
+    latestVersion.value = remoteVersion
+
+    updateDialogVisible.value = true
+
+    if (!hasUpdate.value) {
+      ElMessage.success('当前已是最新版本')
+    } else {
+      ElMessage.info('发现新版本')
+    }
+  } catch (error) {
+    console.error('检查更新失败:', error)
+    ElMessage.error('检查更新失败，请稍后重试')
+  }
 }
 
 // Handle download update
 const downloadUpdate = () => {
-  ElMessage.info('更新功能即将推出')
+  // 在实际应用中，这里应该：
+  // 1. 下载新版本的安装包
+  // 2. 提示用户保存并安装
+  // 3. 或者直接自动更新（Electron应用）
+
+  ElMessage.info('更新功能即将推出，请关注官网获取最新版本')
+  console.log('📦 下载更新:', {
+    currentVersion: '1.0.0',
+    latestVersion: latestVersion.value,
+    downloadUrl: 'https://example.com/download/latest' // 实际应该是真实下载地址
+  })
+
+  // 可选：打开下载页面
+  // window.open('https://example.com/download', '_blank')
+
   updateDialogVisible.value = false
 }
 

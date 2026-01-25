@@ -167,6 +167,7 @@
   },
   "active": "25380c94f56f550b",
   "lastOpenFiles": [
+    "JasEatsChoiceFront/src/renderer/src/views/user/Settings功能实现说明.md",
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/controller/UserController.class",
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/service/impl/UserServiceImpl.class",
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/service/UserService.class",
@@ -187,7 +188,6 @@
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/service/impl/CollectionServiceImpl.class",
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/service/impl/ConsumeHistoryServiceImpl.class",
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/service/impl/AliyunSMSServiceImpl.class",
-    "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/service/impl/MenuServiceImpl.class",
     "JasEatsChoiceFront/node_modules/@emnapi/runtime/README.md",
     "CHAT_REFACTOR_SUMMARY.md",
     "CHAT_REFACTOR_GUIDE.md",
