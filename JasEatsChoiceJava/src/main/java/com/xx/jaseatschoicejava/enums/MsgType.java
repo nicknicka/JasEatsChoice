@@ -26,7 +26,27 @@ public enum MsgType {
     /**
      * 订单状态消息
      */
-    ORDER_STATUS("order_status", "订单状态消息");
+    ORDER_STATUS("order_status", "订单状态消息"),
+
+    /**
+     * 个性化推荐消息
+     */
+    RECOMMENDATION("recommendation", "个性化推荐消息"),
+
+    /**
+     * 推荐更新通知
+     */
+    RECOMMENDATION_UPDATE("recommend_update", "推荐更新通知"),
+
+    /**
+     * 新菜品推荐
+     */
+    NEW_DISH_RECOMMEND("new_dish_recommend", "新菜品推荐"),
+
+    /**
+     * 实时推荐推送
+     */
+    REALTIME_RECOMMEND("realtime_recommend", "实时推荐推送");
 
     private String value;
     private String desc;

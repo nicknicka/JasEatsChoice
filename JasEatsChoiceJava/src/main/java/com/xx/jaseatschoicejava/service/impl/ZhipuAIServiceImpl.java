@@ -51,6 +51,17 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
             ]
             """;
 
+    // 推荐理由生成系统提示词
+    private static final String RECOMMENDATION_REASON_PROMPT = """
+            你是"佳食宜选"的智能推荐系统。请根据菜品信息、用户画像和上下文，生成有说服力的推荐理由。
+            要求：
+            1. 理由要个性化，结合用户偏好
+            2. 突出菜品的营养价值和特色
+            3. 考虑当前时间和天气因素
+            4. 语言简洁有力，15-30字
+            5. 避免空洞的套话
+            """;
+
     @Override
     public String chat(String message, List<Map<String, String>> conversationHistory) {
         long startTime = System.currentTimeMillis();
@@ -452,5 +463,111 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
         result.put("calorie", 250.0);
         result.put("improvements", Arrays.asList("减少油盐", "增加蔬菜", "营养均衡"));
         return result;
+    }
+
+    @Override
+    public String generateRecommendationReason(String dishName, Map<String, Object> userProfile, Map<String, Object> context) {
+        try {
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("model", zhipuAIConfig.getModel());
+
+            List<Map<String, String>> messages = new ArrayList<>();
+
+            Map<String, String> systemMessage = new HashMap<>();
+            systemMessage.put("role", "system");
+            systemMessage.put("content", RECOMMENDATION_REASON_PROMPT);
+            messages.add(systemMessage);
+
+            // 构建用户提示词
+            StringBuilder promptBuilder = new StringBuilder();
+            promptBuilder.append("请为菜品\"").append(dishName).append("\"生成推荐理由。\n");
+
+            if (userProfile != null && !userProfile.isEmpty()) {
+                promptBuilder.append("\n用户画像：\n");
+                if (userProfile.containsKey("dietGoal")) {
+                    promptBuilder.append("- 饮食目标：").append(userProfile.get("dietGoal")).append("\n");
+                }
+                if (userProfile.containsKey("flavorPreference")) {
+                    promptBuilder.append("- 口味偏好：").append(userProfile.get("flavorPreference")).append("\n");
+                }
+                if (userProfile.containsKey("preferenceTags")) {
+                    promptBuilder.append("- 偏好标签：").append(userProfile.get("preferenceTags")).append("\n");
+                }
+            }
+
+            if (context != null && !context.isEmpty()) {
+                promptBuilder.append("\n当前上下文：\n");
+                context.forEach((key, value) -> promptBuilder.append("- ").append(key).append("：").append(value).append("\n"));
+            }
+
+            promptBuilder.append("\n请生成15-30字的推荐理由：");
+
+            Map<String, String> userMessage = new HashMap<>();
+            userMessage.put("role", "user");
+            userMessage.put("content", promptBuilder.toString());
+            messages.add(userMessage);
+
+            requestBody.put("messages", messages);
+            requestBody.put("temperature", 0.8); // 提高创造性
+
+            String response = sendRequest(requestBody);
+
+            JsonNode jsonResponse = objectMapper.readTree(response);
+            JsonNode choices = jsonResponse.get("choices");
+            if (choices != null && choices.isArray() && choices.size() > 0) {
+                String content = choices.get(0).get("message").get("content").asText();
+                log.info("AI生成的推荐理由: {}", content);
+                return content;
+            }
+
+            // 如果AI调用失败，返回默认推荐理由
+            return generateDefaultReason(dishName, userProfile, context);
+
+        } catch (Exception e) {
+            log.error("AI生成推荐理由失败，使用默认理由", e);
+            return generateDefaultReason(dishName, userProfile, context);
+        }
+    }
+
+    /**
+     * 生成默认推荐理由（AI失败时的降级方案）
+     */
+    private String generateDefaultReason(String dishName, Map<String, Object> userProfile, Map<String, Object> context) {
+        List<String> reasons = new ArrayList<>();
+
+        // 基于饮食目标
+        if (userProfile != null && userProfile.containsKey("dietGoal")) {
+            String goal = (String) userProfile.get("dietGoal");
+            if ("low_calorie".equals(goal)) {
+                reasons.add("低卡健康");
+            } else if ("high_protein".equals(goal)) {
+                reasons.add("高蛋白营养丰富");
+            } else if ("balanced".equals(goal)) {
+                reasons.add("营养均衡");
+            }
+        }
+
+        // 基于上下文
+        if (context != null) {
+            if (context.containsKey("weather")) {
+                String weather = (String) context.get("weather");
+                if ("cold".equals(weather)) {
+                    reasons.add("暖胃驱寒");
+                } else if ("hot".equals(weather)) {
+                    reasons.add("清爽解腻");
+                }
+            }
+            if (context.containsKey("timePeriod")) {
+                String timePeriod = (String) context.get("timePeriod");
+                reasons.add("适合" + timePeriod);
+            }
+        }
+
+        // 如果没有任何理由，返回默认值
+        if (reasons.isEmpty()) {
+            return "符合您的口味偏好，营养丰富又健康";
+        }
+
+        return String.join("，", reasons);
     }
 }

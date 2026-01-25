@@ -43,4 +43,13 @@ public interface ZhipuAIService {
      * @return 优化后的食谱
      */
     Map<String, Object> optimizeRecipe(String originalRecipe);
+
+    /**
+     * AI生成推荐理由
+     * @param dishName 菜品名称
+     * @param userProfile 用户画像信息
+     * @param context 上下文信息（天气、时间等）
+     * @return 推荐理由
+     */
+    String generateRecommendationReason(String dishName, Map<String, Object> userProfile, Map<String, Object> context);
 }

@@ -180,13 +180,84 @@ public class DishFeatureServiceImpl implements DishFeatureService {
 
     @Override
     public double calculateCollaborativeSimilarity(String dishIdA, String dishIdB) {
-        // 简化实现：基于共同用户行为的相似度
-        // 实际应该使用更复杂的协同过滤算法（如矩阵分解）
+        try {
+            // 基于用户行为的协同过滤算法
+            // 使用余弦相似度计算两个菜品的相似性
 
-        // 未来可以从user_behavior表统计两个菜品的共同用户
-        // 相似度 = 共同用户数 / sqrt(用户A数 * 用户B数)
+            // 1. 获取喜欢菜品A的用户集合
+            List<String> usersA = getUsersWhoLikedDish(dishIdA);
 
-        return 0.5; // 暂时返回固定值
+            // 2. 获取喜欢菜品B的用户集合
+            List<String> usersB = getUsersWhoLikedDish(dishIdB);
+
+            if (usersA.isEmpty() || usersB.isEmpty()) {
+                return 0.0;
+            }
+
+            // 3. 计算Jaccard相似度
+            // Jaccard = |A ∩ B| / |A ∪ B|
+            Set<String> intersection = new HashSet<>(usersA);
+            intersection.retainAll(usersB);
+
+            Set<String> union = new HashSet<>(usersA);
+            union.addAll(usersB);
+
+            double jaccardSimilarity = union.isEmpty() ? 0.0 :
+                (double) intersection.size() / union.size();
+
+            // 4. 计算余弦相似度
+            // 创建用户-菜品向量
+            Set<String> allUsers = union;
+            double dotProduct = 0.0;
+            double normA = 0.0;
+            double normB = 0.0;
+
+            for (String user : allUsers) {
+                double ratingA = getUserRatingForDish(user, dishIdA);
+                double ratingB = getUserRatingForDish(user, dishIdB);
+
+                dotProduct += ratingA * ratingB;
+                normA += ratingA * ratingA;
+                normB += ratingB * ratingB;
+            }
+
+            double cosineSimilarity = (Math.sqrt(normA) * Math.sqrt(normB)) == 0.0 ? 0.0 :
+                dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+
+            // 5. 综合两种相似度（加权平均）
+            double combinedSimilarity = 0.6 * cosineSimilarity + 0.4 * jaccardSimilarity;
+
+            log.debug("协同过滤相似度计算: {} <-> {} = {} (余弦={}, Jaccard={})",
+                dishIdA, dishIdB, combinedSimilarity, cosineSimilarity, jaccardSimilarity);
+
+            return combinedSimilarity;
+
+        } catch (Exception e) {
+            log.error("计算协同过滤相似度失败: {} <-> {}", dishIdA, dishIdB, e);
+            return 0.0;
+        }
+    }
+
+    /**
+     * 获取喜欢某个菜品的用户列表
+     */
+    private List<String> getUsersWhoLikedDish(String dishId) {
+        // TODO: 从user_behavior表查询
+        // SELECT DISTINCT user_id FROM user_behavior WHERE item_type='dish' AND item_id=dishId AND behavior_type IN ('click', 'order', 'favorite')
+
+        // 暂时返回空列表，实际应该从数据库查询
+        return new ArrayList<>();
+    }
+
+    /**
+     * 获取用户对菜品的评分（基于行为）
+     */
+    private double getUserRatingForDish(String userId, String dishId) {
+        // TODO: 从user_behavior表计算用户对菜品的偏好分数
+        // order=3.0, favorite=2.0, click=1.0
+
+        // 暂时返回0，实际应该从数据库查询并计算
+        return 0.0;
     }
 
     @Override

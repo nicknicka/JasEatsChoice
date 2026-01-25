@@ -49,6 +49,9 @@ public class RecommendationServiceImpl implements RecommendationService {
     @Autowired
     private RecommendationLogMapper recommendationLogMapper;
 
+    @Autowired
+    private ZhipuAIService zhipuAIService;
+
     @Override
     public List<RecommendationResultDTO> getRecommendations(RecommendationRequestDTO request) {
         log.info("开始生成推荐：userId={}, scene={}, limit={}",
@@ -177,31 +180,53 @@ public class RecommendationServiceImpl implements RecommendationService {
 
     @Override
     public String getRecommendationReason(String dishId, String userId) {
-        StringBuilder reason = new StringBuilder();
-        UserProfile profile = userProfileService.getUserProfile(userId);
-
-        // 基于用户偏好生成推荐理由
-        if (profile != null && profile.getPreferenceTags() != null) {
+        try {
+            // 获取菜品信息
             Dish dish = dishMapper.selectById(dishId);
-            if (dish != null) {
-                // 查找匹配的偏好标签
-                for (UserProfile.PreferenceTag tag : profile.getPreferenceTags()) {
-                    if (tag.getTag().equals(dish.getCategory())) {
-                        reason.append("您喜欢").append(tag.getTag()).append("，");
-                        break;
-                    }
+            if (dish == null) {
+                return "暂无推荐理由";
+            }
+
+            // 获取用户画像
+            UserProfile profile = userProfileService.getUserProfile(userId);
+
+            // 构建用户画像信息
+            Map<String, Object> userProfileInfo = new HashMap<>();
+            if (profile != null) {
+                if (profile.getDietGoal() != null) {
+                    userProfileInfo.put("dietGoal", profile.getDietGoal());
+                }
+                if (profile.getFlavorPreference() != null) {
+                    userProfileInfo.put("flavorPreference", profile.getFlavorPreference());
                 }
             }
-        }
 
-        // 基于上下文生成推荐理由
-        if (reason.length() > 0) {
-            reason.append("符合您的口味偏好");
-        } else {
-            reason.append("根据热门推荐算法推荐");
-        }
+            // 构建上下文信息
+            Map<String, Object> context = new HashMap<>();
+            context.put("timePeriod", getCurrentTimePeriod());
 
-        return reason.toString();
+            // 调用AI生成推荐理由
+            return zhipuAIService.generateRecommendationReason(
+                    dish.getName() != null ? dish.getName() : "该菜品",
+                    userProfileInfo,
+                    context
+            );
+        } catch (Exception e) {
+            log.error("生成推荐理由失败", e);
+            return "根据您的口味偏好推荐";
+        }
+    }
+
+    /**
+     * 获取当前时间段
+     */
+    private String getCurrentTimePeriod() {
+        int hour = java.time.LocalDateTime.now().getHour();
+        if (hour >= 6 && hour < 10) return "早餐";
+        if (hour >= 10 && hour < 14) return "午餐";
+        if (hour >= 14 && hour < 18) return "下午茶";
+        if (hour >= 18 && hour < 22) return "晚餐";
+        return "夜宵";
     }
 
     /**
