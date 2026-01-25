@@ -193,9 +193,9 @@ public class ChatController {
 
         // ⭐ 生成并设置 session_id（使用确定性算法，确保相同用户产生相同会话ID）
         String sessionId;
-        if ("group".equals(chatMsg.getMsgType())) {
-            // 群聊：直接使用群ID
-            sessionId = chatMsg.getToId();
+        if ("group".equals(chatMsg.getSessionType())) {
+            // 群聊：使用 ChatSessionIdGenerator 生成 S 开头的会话ID
+            sessionId = ChatSessionIdGenerator.getGroupChatSessionId(chatMsg.getToId());
         } else {
             // 私聊：使用MD5哈希，保证确定性
             sessionId = ChatSessionIdGenerator.generateSingleChatSessionId(
@@ -269,8 +269,8 @@ public class ChatController {
         // 生成sessionId（与消息表保持一致，使用确定性算法）
         String sessionId;
         if ("group".equals(sessionType)) {
-            // 群聊：直接使用群ID
-            sessionId = otherId;
+            // 群聊：使用 ChatSessionIdGenerator 生成 S 开头的会话ID
+            sessionId = ChatSessionIdGenerator.getGroupChatSessionId(otherId);
         } else {
             // 私聊：使用MD5哈希，保证确定性
             sessionId = ChatSessionIdGenerator.generateSingleChatSessionId(userId, otherId);
@@ -320,8 +320,8 @@ public class ChatController {
         // 生成sessionId（与消息表保持一致，使用确定性算法）
         String sessionId;
         if (isGroup) {
-            // 群聊：直接使用群ID
-            sessionId = receiverId;
+            // 群聊：使用 ChatSessionIdGenerator 生成 S 开头的会话ID
+            sessionId = ChatSessionIdGenerator.getGroupChatSessionId(receiverId);
         } else {
             // 私聊：使用MD5哈希，保证确定性
             sessionId = ChatSessionIdGenerator.generateSingleChatSessionId(receiverId, senderId);

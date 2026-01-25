@@ -70,6 +70,10 @@ public class ChatSession {
     @ApiModelProperty(value = "成员数量（群聊）")
     private Integer memberCount; // 成员数量
 
+    @TableField("group_id")
+    @ApiModelProperty(value = "群组ID（仅群聊会话有效）")
+    private String groupId; // 群组ID（仅群聊会话有值）
+
     @TableField("create_time")
     @ApiModelProperty(value = "创建时间")
     private LocalDateTime createTime; // 创建时间

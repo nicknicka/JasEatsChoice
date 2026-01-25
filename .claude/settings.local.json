@@ -343,7 +343,8 @@
       "Bash(npm rebuild:*)",
       "Bash(npm run lint:fix:*)",
       "Bash(file=\"./components/$component.vue\")",
-      "Bash(/Users/nickxiao/JasEatsChoice/JasEatsChoiceJava/mvnw clean compile:*)"
+      "Bash(/Users/nickxiao/JasEatsChoice/JasEatsChoiceJava/mvnw clean compile:*)",
+      "Bash(/Users/nickxiao/JasEatsChoice/JasEatsChoiceJava/mvnw:*)"
     ],
     "deny": [],
     "ask": [],

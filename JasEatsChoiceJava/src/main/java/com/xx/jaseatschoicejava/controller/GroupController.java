@@ -1,14 +1,20 @@
 package com.xx.jaseatschoicejava.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.xx.jaseatschoicejava.common.ResponseResult;
+import com.xx.jaseatschoicejava.entity.ChatMsg;
 import com.xx.jaseatschoicejava.entity.Group;
+import com.xx.jaseatschoicejava.service.ChatMsgService;
 import com.xx.jaseatschoicejava.service.GroupService;
+import com.xx.jaseatschoicejava.util.ChatSessionIdGenerator;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 群信息控制器
@@ -20,6 +26,7 @@ import java.util.List;
 public class GroupController {
 
     private final GroupService groupService;
+    private final ChatMsgService chatMsgService;
 
     /**
      * 创建群
@@ -29,18 +36,46 @@ public class GroupController {
     public ResponseResult<?> createGroup(@RequestBody Group group) {
         boolean success = groupService.save(group);
         if (success) {
-            return ResponseResult.success(group);
+            // ⭐ 生成并返回 sessionId（用于前端查找会话）
+            String sessionId = ChatSessionIdGenerator.getGroupChatSessionId(group.getId());
+
+            // 构建返回数据，包含群信息和 sessionId
+            Map<String, Object> result = new HashMap<>();
+            result.put("group", group);
+            result.put("groupId", group.getId());
+            result.put("sessionId", sessionId);
+
+            return ResponseResult.success(result);
         } else {
             return ResponseResult.fail("500", "创建群失败");
         }
     }
 
     /**
-     * 根据群ID获取群信息
+     * 根据群ID或会话ID获取群信息
      */
-    @ApiOperation("根据群ID获取群信息")
-    @GetMapping("/{groupId}")
-    public ResponseResult<?> getGroupById(@PathVariable String groupId) {
+    @ApiOperation("根据群ID或会话ID获取群信息")
+    @GetMapping("/{groupIdOrSessionId}")
+    public ResponseResult<?> getGroupById(@PathVariable String groupIdOrSessionId) {
+        String groupId = groupIdOrSessionId;
+
+        // 如果传入的是 sessionId（S开头），需要查找对应的 groupId
+        if (groupIdOrSessionId != null && groupIdOrSessionId.startsWith("S")) {
+            // 通过 sessionId 查询对应的 groupId
+            LambdaQueryWrapper<ChatMsg> queryWrapper = new LambdaQueryWrapper<>();
+            queryWrapper.eq(ChatMsg::getSessionId, groupIdOrSessionId);
+            queryWrapper.eq(ChatMsg::getSessionType, "group");
+            queryWrapper.orderByDesc(ChatMsg::getCreateTime);
+            queryWrapper.last("LIMIT 1");
+
+            ChatMsg chatMsg = chatMsgService.getOne(queryWrapper);
+            if (chatMsg != null && chatMsg.getToId() != null) {
+                groupId = chatMsg.getToId();
+            } else {
+                return ResponseResult.fail("404", "找不到对应的群信息");
+            }
+        }
+
         Group group = groupService.getById(groupId);
         if (group != null) {
             return ResponseResult.success(group);

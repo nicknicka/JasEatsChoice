@@ -121,16 +121,34 @@ export function useConversations() {
    */
   const updateConversationLastMessage = (sessionId, message) => {
     const conversation = conversations.value.find((conv) => conv.id === sessionId)
-    if (conversation) {
-      conversation.lastMessage = message.content
-      conversation.time =
-        message.time ||
-        new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
 
-      // 如果不是当前会话，增加未读数
-      if (selectedConversation.value?.id !== sessionId) {
-        conversation.unreadCount = (conversation.unreadCount || 0) + 1
-      }
+    if (!conversation) {
+      console.warn('⚠️ [updateConversationLastMessage] 未找到会话, sessionId:', sessionId)
+      console.warn('⚠️ [updateConversationLastMessage] 当前会话列表:', conversations.value.map(c => ({ id: c.id, name: c.name })))
+      return
+    }
+
+    console.log('📝 [updateConversationLastMessage] 更新会话消息:', {
+      sessionId,
+      conversationName: conversation.name,
+      oldMessage: conversation.lastMessage,
+      newMessage: message.content
+    })
+
+    conversation.lastMessage = message.content
+    conversation.time =
+      message.time ||
+      new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+
+    // 如果不是当前会话，增加未读数
+    if (selectedConversation.value?.id !== sessionId) {
+      const oldUnreadCount = conversation.unreadCount || 0
+      conversation.unreadCount = oldUnreadCount + 1
+      console.log('🔔 [updateConversationLastMessage] 未读数增加:', {
+        sessionId,
+        oldUnreadCount,
+        newUnreadCount: conversation.unreadCount
+      })
     }
   }
 

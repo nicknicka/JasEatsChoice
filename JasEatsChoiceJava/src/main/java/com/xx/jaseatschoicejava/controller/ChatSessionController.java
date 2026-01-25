@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -50,18 +51,19 @@ public class ChatSessionController {
         // 转换为前端需要的格式
         List<Map<String, Object>> result = sessions.stream()
                 .map(session -> {
-                    Map<String, Object> sessionMap = Map.of(
-                            "id", session.getSessionId(),
-                            "type", session.getSessionType(),
-                            "name", session.getSessionName(),
-                            "avatar", session.getAvatar() != null ? session.getAvatar() : (session.getSessionType().equals("group") ? "👥" : "💬"),
-                            "lastMessage", session.getLastMessage() != null ? session.getLastMessage() : "暂无消息",
-                            "time", session.getLastMessageTime() != null ?
-                                    session.getLastMessageTime().toString().substring(11, 16) : "",
-                            "unreadCount", session.getUnreadCount() != null ? session.getUnreadCount() : 0,
-                            "pinned", session.getPinned() != null ? session.getPinned() == 1 : false,
-                            "memberCount", session.getMemberCount() != null ? session.getMemberCount() : 0
-                    );
+                    Map<String, Object> sessionMap = new HashMap<>();
+                    sessionMap.put("id", session.getSessionId());
+                    sessionMap.put("type", session.getSessionType());
+                    sessionMap.put("name", session.getSessionName());
+                    sessionMap.put("avatar", session.getAvatar() != null ? session.getAvatar() : (session.getSessionType().equals("group") ? "👥" : "💬"));
+                    sessionMap.put("lastMessage", session.getLastMessage() != null ? session.getLastMessage() : "暂无消息");
+                    sessionMap.put("time", session.getLastMessageTime() != null ?
+                            session.getLastMessageTime().toString().substring(11, 16) : "");
+                    sessionMap.put("unreadCount", session.getUnreadCount() != null ? session.getUnreadCount() : 0);
+                    sessionMap.put("pinned", session.getPinned() != null ? session.getPinned() == 1 : false);
+                    sessionMap.put("memberCount", session.getMemberCount() != null ? session.getMemberCount() : 0);
+                    // ⭐ 添加 groupId（仅群聊会话有值）
+                    sessionMap.put("groupId", session.getGroupId());
                     return sessionMap;
                 })
                 .collect(Collectors.toList());
@@ -83,9 +85,20 @@ public class ChatSessionController {
         Integer memberCount = params.get("memberCount") != null ?
                 (Integer) params.get("memberCount") : 0;
 
-        // ⭐ 对群聊的sessionId进行转换（使用IdGenerator生成）
+        String groupId = (String) params.get("groupId"); // ⭐ 直接从请求参数中获取groupId
+
+        // ⭐ 对群聊的sessionId进行转换
         if ("group".equals(sessionType)) {
-            sessionId = ChatSessionIdGenerator.getGroupChatSessionId(sessionId);
+            // 如果没有传groupId，且sessionId是G开头的，从sessionId中提取
+            if (groupId == null && sessionId != null && sessionId.startsWith("G")) {
+                groupId = sessionId;
+            }
+
+            // 如果 sessionId 不是 S 开头，需要转换
+            if (sessionId != null && !sessionId.startsWith("S")) {
+                sessionId = ChatSessionIdGenerator.getGroupChatSessionId(sessionId);
+            }
+            // 如果已经是 S 开头，直接使用
         } else {
             // 单聊：使用IdGenerator生成sessionId
             sessionId = ChatSessionIdGenerator.generateSingleChatSessionIdWithIdGenerator(
@@ -110,6 +123,7 @@ public class ChatSessionController {
             session.setSessionName(sessionName);
             session.setAvatar(avatar);
             session.setMemberCount(memberCount);
+            session.setGroupId(groupId); // ⭐ 保存 groupId（仅群聊有值）
             session.setUnreadCount(0);
             session.setPinned(0);  // 0-未置顶
             session.setCreateTime(LocalDateTime.now());

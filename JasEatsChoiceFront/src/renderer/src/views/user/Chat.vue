@@ -371,7 +371,13 @@ const {
 
 // ========== WebSocket 消息处理 ==========
 const handleWebSocketMessage = (data) => {
-  // console.log('收到 WebSocket 消息:', data)
+  console.log('🔔 [WebSocket] 收到消息:', {
+    type: data.type,
+    hasContent: !!data.content,
+    messageId: data.content?.id,
+    fromId: data.content?.fromId,
+    toId: data.content?.toId
+  })
 
   switch (data.type) {
     case 'chat':
@@ -396,15 +402,18 @@ const handleWebSocketMessage = (data) => {
           fromId,
           senderName
         }
+
+        console.log('💬 [WebSocket] 处理聊天消息, toId:', data.content.toId)
         addMessage(message, data.content.toId)
         updateConversationLastMessage(data.content.toId, message)
       }
       break
     case 'notification':
+      console.log('📢 [WebSocket] 收到通知:', data.content?.message)
       ElMessage.info(data.content?.message || '收到新通知')
       break
     default:
-      // console.log('未知消息类型:', data)
+      console.log('⚠️ [WebSocket] 未知消息类型:', data.type)
   }
 }
 
@@ -897,11 +906,16 @@ const openActionPanelWithTab = () => {
 
 // ========== 统一操作面板事件处理 ==========
 const startChatFromPanel = (user) => {
+  console.log('💬 [startChatFromPanel] 开始聊天:', user)
+  console.log('💬 [startChatFromPanel] 当前会话列表:', conversations.value.map(c => ({ id: c.id, name: c.name })))
+
   const existingConversation = conversations.value.find((conv) => conv.id === user.id)
 
   if (existingConversation) {
+    console.log('💬 [startChatFromPanel] 会话已存在，直接选中:', existingConversation)
     selectedConversation.value = existingConversation
   } else {
+    console.log('💬 [startChatFromPanel] 会话不存在，创建新会话')
     const newConversation = {
       ...user,
       lastMessage: '开始聊天吧！',
@@ -909,6 +923,7 @@ const startChatFromPanel = (user) => {
     }
 
     conversations.value.unshift(newConversation)
+    console.log('💬 [startChatFromPanel] 新会话已添加，当前会话数量:', conversations.value.length)
     selectedConversation.value = newConversation
 
     chatHistory.value[newConversation.id] = []
@@ -938,7 +953,11 @@ const createGroupFromPanel = async (data) => {
       return
     }
 
-    const groupId = groupResponse.data.id
+    console.log('📦 [创建群] 后端返回数据:', groupResponse.data)
+    const groupId = groupResponse.data.groupId || groupResponse.data.id
+    const sessionId = groupResponse.data.sessionId
+    console.log('📦 [创建群] 提取的 groupId:', groupId)
+    console.log('📦 [创建群] 提取的 sessionId:', sessionId)
     const groupName = data.name.trim()
 
     // 2. 将创建者添加到群成员关系
@@ -985,11 +1004,12 @@ const createGroupFromPanel = async (data) => {
     // 为创建者创建会话
     const creatorSessionPromise = api.post('/v1/chat/sessions', {
       userId: userId.value.toString(),
-      sessionId: groupId.toString(),
+      sessionId: sessionId,
       sessionType: 'group',
       sessionName: groupName,
       avatar: '👥',
-      memberCount: data.members.length + 1
+      memberCount: data.members.length + 1,
+      groupId: groupId.toString() // ⭐ 传入groupId
     }).then(response => {
       sessionResults.push({ user: '我', success: response.code === '200', response })
       return response
@@ -1003,11 +1023,12 @@ const createGroupFromPanel = async (data) => {
     for (const member of data.members) {
       const memberSessionPromise = api.post('/v1/chat/sessions', {
         userId: member.id.toString(),
-        sessionId: groupId.toString(),
+        sessionId: sessionId,
         sessionType: 'group',
         sessionName: groupName,
         avatar: '👥',
-        memberCount: data.members.length + 1
+        memberCount: data.members.length + 1,
+        groupId: groupId.toString() // ⭐ 传入groupId
       }).then(response => {
         sessionResults.push({ user: member.name, success: response.code === '200', response })
         return response
@@ -1047,16 +1068,23 @@ const createGroupFromPanel = async (data) => {
     // console.log('✅ 所有群聊会话记录创建成功', sessionResults)
 
     // 5. 从服务器刷新会话列表，确保数据同步
+    console.log('🔄 [createGroupFromPanel] 准备刷新会话列表')
+    console.log('🔄 [createGroupFromPanel] 刷新前会话数量:', conversations.value.length)
     const refreshSuccess = await fetchConversations()
     if (!refreshSuccess) {
       ElMessage.warning('群聊已创建，但会话列表刷新失败，请手动刷新')
     }
 
     // 6. 查找新创建的群聊会话
-    const newGroupConversation = conversations.value.find(c => c.id === groupId)
+    console.log('🔍 [createGroupFromPanel] 查找新创建的群聊会话, sessionId:', sessionId)
+    const newGroupConversation = conversations.value.find(c => c.id === sessionId)
     if (newGroupConversation) {
+      console.log('✅ [createGroupFromPanel] 找到新创建的群聊会话:', newGroupConversation)
+      // ⭐ 在会话对象中添加 groupId 字段（用于后续获取群信息）
+      newGroupConversation.groupId = groupId
+
       selectedConversation.value = newGroupConversation
-      chatHistory.value[groupId] = []
+      chatHistory.value[sessionId] = []
 
       // 添加系统消息
       const systemMsg = {
@@ -1065,16 +1093,18 @@ const createGroupFromPanel = async (data) => {
         content: `群聊 "${groupName}" 已创建`,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }
-      chatHistory.value[groupId].push(systemMsg)
+      chatHistory.value[sessionId].push(systemMsg)
     } else {
-      console.error('未找到新创建的群聊会话:', groupId)
+      console.error('❌ [createGroupFromPanel] 未找到新创建的群聊会话:', sessionId)
+      console.error('❌ [createGroupFromPanel] 当前会话列表:', conversations.value.map(c => ({ id: c.id, name: c.name })))
+      console.error('❌ [createGroupFromPanel] groupId:', groupId)
       ElMessage.error('群聊创建成功，但无法打开会话')
       return
     }
 
     ElMessage.success(`群聊 "${groupName}" 已创建，共 ${data.members.length + 1} 人`)
   } catch (error) {
-    console.error('创建群失败:', error)
+    console.error('❌ [createGroupFromPanel] 创建群失败:', error)
     ElMessage.error(`创建群失败: ${error.message || '请稍后重试'}`)
   }
 }
@@ -1088,8 +1118,10 @@ const openGroupDetail = async () => {
   if (!selectedConversation.value || selectedConversation.value.type !== 'group') return
 
   try {
-    // 直接使用群ID（后端已支持带 "G" 前缀的格式）
-    const groupId = selectedConversation.value.id
+    // ⭐ 优先使用 groupId（如果存在），否则使用 id
+    const groupId = selectedConversation.value.groupId || selectedConversation.value.id
+
+    console.log('📋 [群详情] 获取群信息，groupId:', groupId)
 
     // 1. 并行获取群信息和群成员列表
     const [groupResponse, membersResponse] = await Promise.all([
@@ -1276,30 +1308,36 @@ watch(orderDrawerVisible, async (newVal) => {
 
 // ========== 生命周期 ==========
 onMounted(async () => {
-   // console.log('🚀 [Chat] Chat组件挂载，开始初始化')
+   console.log('🚀 [Chat] Chat组件挂载，开始初始化')
   try {
     // 先从本地加载聊天历史缓存（同步函数）
     loadChatHistoryFromLocal()
-    // console.log('📦 [Chat] 本地缓存加载完成', Object.keys(chatHistory.value))
+    console.log('📦 [Chat] 本地缓存加载完成', Object.keys(chatHistory.value))
 
     const conversationsResponse = await api.get(`/v1/chat/users/${userId.value}/chat-sessions`)
 
-    // console.log('🚀 [Chat] 会话列表, conversationsResponse', conversationsResponse)
-     console.log('📡 [Chat] 会话列表API响应', {
+    console.log('📡 [Chat] 会话列表API响应', {
       code: conversationsResponse.code,
       dataLength: conversationsResponse.data?.length,
-      userId: userId.value
+      userId: userId.value,
+      sessionIds: conversationsResponse.data?.map(c => ({ id: c.id, name: c.name, groupId: c.groupId }))
     })
 
     await fetchFriends()
 
     if (conversationsResponse.code === '200') {
       conversations.value = conversationsResponse.data
-      // console.log(`👥 [Chat] 会话列表已更新 - 共 ${conversations.value.length} 个会话`)
+      console.log(`👥 [Chat] 会话列表已更新 - 共 ${conversations.value.length} 个会话`)
+      console.log('👥 [Chat] 会话详情:', conversations.value.map(c => ({
+        id: c.id,
+        name: c.name,
+        type: c.type,
+        groupId: c.groupId
+      })))
 
       if (sortedConversations.value.length > 0) {
         selectedConversation.value = sortedConversations.value[0]
-        // console.log(`✅ [Chat] 自动选择第一个会话 - ID: ${selectedConversation.value.id}, 名称: ${selectedConversation.value.name}`)
+        console.log(`✅ [Chat] 自动选择第一个会话 - ID: ${selectedConversation.value.id}, 名称: ${selectedConversation.value.name}`)
         await loadChatMessages(selectedConversation.value.id)
       } else {
         console.warn('⚠️ [Chat] 会话列表为空，没有可显示的会话')
@@ -1375,18 +1413,43 @@ const fetchFriends = async () => {
 // 获取会话列表
 const fetchConversations = async () => {
   try {
+    console.log('📡 [fetchConversations] 开始获取会话列表')
+    console.log('📡 [fetchConversations] 当前会话数量:', conversations.value.length)
+    console.log('📡 [fetchConversations] 当前会话IDs:', conversations.value.map(c => c.id))
+
     const conversationsResponse = await api.get(`/v1/chat/users/${userId.value}/chat-sessions`)
 
+    console.log('📡 [fetchConversations] 后端返回:', {
+      code: conversationsResponse.code,
+      dataLength: conversationsResponse.data?.length,
+      sessionIds: conversationsResponse.data?.map(c => ({ id: c.id, name: c.name, groupId: c.groupId }))
+    })
+
     if (conversationsResponse.code === '200') {
+      const oldConversationIds = new Set(conversations.value.map(c => c.id))
+
+      // 检测是否有新增的会话
+      const addedConversations = conversationsResponse.data.filter(c => !oldConversationIds.has(c.id))
+      if (addedConversations.length > 0) {
+        console.log('➕ [fetchConversations] 检测到新增会话:', addedConversations.map(c => ({ id: c.id, name: c.name })))
+      }
+
+      // 检测是否有被移除的会话
+      const newConversationIds = new Set(conversationsResponse.data.map(c => c.id))
+      const removedConversations = conversations.value.filter(c => !newConversationIds.has(c.id))
+      if (removedConversations.length > 0) {
+        console.log('➖ [fetchConversations] 检测到移除会话:', removedConversations.map(c => ({ id: c.id, name: c.name })))
+      }
+
       conversations.value = conversationsResponse.data
-      // console.log(`👥 [Chat] 会话列表已更新 - 共 ${conversations.value.length} 个会话`)
+      console.log(`✅ [fetchConversations] 会话列表已更新 - 共 ${conversations.value.length} 个会话`)
       return true
     } else {
-      console.error(`❌ [Chat] 获取会话列表失败 - code: ${conversationsResponse.code}`)
+      console.error(`❌ [fetchConversations] 获取会话列表失败 - code: ${conversationsResponse.code}`)
       return false
     }
   } catch (error) {
-    console.error('❌ [Chat] 获取会话列表失败:', error)
+    console.error('❌ [fetchConversations] 获取会话列表失败:', error)
     return false
   }
 }
