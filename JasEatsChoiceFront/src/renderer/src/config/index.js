@@ -23,7 +23,10 @@ export const API_CONFIG = {
     register: '/v1/users/register', // 注册接口
     profile: '/v1/users/{userId}', // 用户信息接口
     update: '/v1/users/{userId}', // 更新用户信息接口
+    updatePassword: '/v1/users/{userId}/password', // 修改密码接口
+    uploadAvatar: '/v1/users/{userId}/avatar/base64', // 上传头像接口
     preferences: '/v1/users/{userId}/preferences', // 用户偏好接口
+    feedback: '/v1/users/feedback', // 提交反馈接口
     sendSmsCode: '/v1/users/send-sms-code', // 发送手机验证码接口
     sendEmailCode: '/v1/users/send-email-code' // 发送邮箱验证码接口
   },

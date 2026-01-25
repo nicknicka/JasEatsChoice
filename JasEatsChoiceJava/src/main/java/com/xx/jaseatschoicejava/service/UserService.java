@@ -45,4 +45,13 @@ public interface UserService extends IService<User> {
      * @return 如果手机号已存在返回true，否则返回false
      */
     boolean isPhoneExists(String phone);
+
+    /**
+     * 修改密码
+     * @param userId 用户ID
+     * @param oldPassword 旧密码
+     * @param newPassword 新密码
+     * @return 修改成功返回true，否则返回false
+     */
+    boolean updatePassword(String userId, String oldPassword, String newPassword);
 }

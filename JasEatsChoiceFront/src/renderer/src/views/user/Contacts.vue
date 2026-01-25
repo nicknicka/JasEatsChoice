@@ -21,93 +21,123 @@
           placeholder="搜索好友（姓名/ID）"
           :prefix-icon="Search"
           clearable
-          size="large"
           @input="handleSearch"
-        >
-          <template #append>
-            <el-button :icon="Search" @click="handleSearch">搜索</el-button>
-          </template>
-        </el-input>
+        />
       </div>
 
       <!-- 筛选选项 -->
       <div class="filter-options">
-        <el-radio-group v-model="filterType" size="large" @change="handleFilter">
-          <el-radio-button label="all">全部好友 ({{ totalCount }})</el-radio-button>
-          <el-radio-button label="recent">最近聊天 ({{ recentCount }})</el-radio-button>
+        <el-radio-group v-model="filterType" size="small" @change="handleFilter">
+          <el-radio-button label="all">全部 ({{ totalCount }})</el-radio-button>
+          <el-radio-button label="recent">最近联系 ({{ recentCount }})</el-radio-button>
         </el-radio-group>
       </div>
     </div>
 
+    <!-- 内容区域：好友列表 + 字母索引 -->
+    <div v-if="!loading && filteredFriends.length > 0" class="contacts-content">
+      <!-- 好友列表 -->
+      <div class="friends-list-wrapper">
+        <!-- 按字母分组的好友列表 -->
+        <div class="friends-list-scroll">
+          <div v-for="(group, letter) in groupedFriends" :key="letter" class="friend-group">
+            <!-- 字母标题 -->
+            <div class="group-letter">{{ letter }}</div>
+
+            <!-- 该字母下的好友 -->
+            <div
+              v-for="friend in group"
+              :key="friend.id"
+              class="friend-item"
+              :class="{ 'has-recent-chat': friend.recentChatTime }"
+              @click="startChat(friend)"
+              @contextmenu.prevent="showContextMenu($event, friend)"
+            >
+              <!-- 头像 -->
+              <div class="friend-avatar">
+                <img v-if="isImageAvatar(friend.avatar)" :src="friend.avatar" alt="头像" />
+                <span v-else class="avatar-emoji">{{ friend.avatar || '👤' }}</span>
+                <!-- 最近聊天标签 -->
+                <div v-if="friend.recentChatTime" class="recent-chat-badge" :title="`最近: ${formatRecentTime(friend.recentChatTime)}`">
+                  💬
+                </div>
+              </div>
+
+              <!-- 好友信息 -->
+              <div class="friend-info">
+                <div class="friend-name-row">
+                  <span class="friend-name">{{ friend.name }}</span>
+                  <span v-if="friend.recentChatTime" class="recent-time">
+                    {{ formatRecentTime(friend.recentChatTime) }}
+                  </span>
+                </div>
+                <div class="friend-id">ID: {{ friend.id }}</div>
+              </div>
+
+              <!-- 快捷操作按钮 -->
+              <div class="friend-quick-actions">
+                <el-button
+                  type="primary"
+                  :icon="ChatDotRound"
+                  circle
+                  size="small"
+                  class="chat-btn"
+                  @click.stop="startChat(friend)"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 字母索引导航 -->
+      <div class="alphabet-index">
+        <div
+          v-for="letter in availableLetters"
+          :key="letter"
+          class="alphabet-item"
+          :class="{ active: activeLetter === letter }"
+          @click="scrollToLetter(letter)"
+        >
+          {{ letter }}
+        </div>
+      </div>
+    </div>
+
     <!-- 加载状态 -->
-    <div v-if="loading" class="loading-container">
+    <div v-else-if="loading" class="loading-container">
       <el-skeleton :rows="5" animated />
     </div>
 
     <!-- 空状态 -->
-    <div v-else-if="filteredFriends.length === 0" class="empty-container">
-      <el-empty :description="emptyText">
-        <template #image>
-          <div class="empty-icon">👥</div>
-        </template>
-        <el-button v-if="searchQuery || filterType !== 'all'" type="primary" @click="resetFilter">
-          清除筛选
-        </el-button>
-        <el-button v-else type="primary" @click="openAddFriendDialog">
-          去添加好友
-        </el-button>
-      </el-empty>
+    <div v-else class="empty-container" @click="handleEmptyClick">
+      <div class="empty-icon">👥</div>
+      <p class="empty-title">{{ emptyText }}</p>
+      <p v-if="!searchQuery && filterType === 'all'" class="empty-tip">点击此处或上方"添加好友"按钮</p>
+      <el-button v-if="searchQuery || filterType !== 'all'" type="primary" @click.stop="resetFilter">
+        清除筛选
+      </el-button>
     </div>
 
-    <!-- 好友列表 -->
-    <div v-else class="friends-list">
-      <div
-        v-for="friend in filteredFriends"
-        :key="friend.id"
-        class="friend-card"
-        @click="startChat(friend)"
-      >
-        <!-- 头像 -->
-        <div class="friend-avatar">
-          <img v-if="isImageAvatar(friend.avatar)" :src="friend.avatar" alt="头像" />
-          <span v-else class="avatar-emoji">{{ friend.avatar || '👤' }}</span>
-          <!-- 在线状态指示器 -->
-          <div v-if="friend.isOnline" class="online-indicator"></div>
-        </div>
-
-        <!-- 好友信息 -->
-        <div class="friend-info">
-          <div class="friend-header">
-            <h3 class="friend-name">{{ friend.name }}</h3>
-            <el-tag v-if="friend.recentChatTime" type="info" size="small" class="recent-tag">
-              最近: {{ formatRecentTime(friend.recentChatTime) }}
-            </el-tag>
-          </div>
-          <div class="friend-details">
-            <span class="detail-item">ID: {{ friend.id }}</span>
-          </div>
-        </div>
-
-        <!-- 操作按钮 -->
-        <div class="friend-actions">
-          <el-button
-            type="primary"
-            :icon="ChatDotRound"
-            circle
-            size="large"
-            @click.stop="startChat(friend)"
-            title="开始聊天"
-          />
-          <el-dropdown trigger="click" @command="(cmd) => handleCommand(cmd, friend)">
-            <el-button :icon="MoreFilled" circle size="large" />
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item command="view" :icon="User">查看详情</el-dropdown-item>
-                <el-dropdown-item command="delete" :icon="Delete" divided>删除好友</el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
-        </div>
+    <!-- 右键菜单 -->
+    <div
+      v-if="contextMenuVisible"
+      class="context-menu"
+      :style="{ top: contextMenuPosition.y + 'px', left: contextMenuPosition.x + 'px' }"
+      @click="closeContextMenu"
+    >
+      <div class="context-menu-item" @click="viewFriendDetail(contextMenuFriend)">
+        <el-icon><User /></el-icon>
+        <span>查看详情</span>
+      </div>
+      <div class="context-menu-item" @click="startChat(contextMenuFriend)">
+        <el-icon><ChatDotRound /></el-icon>
+        <span>开始聊天</span>
+      </div>
+      <div class="context-menu-divider"></div>
+      <div class="context-menu-item danger" @click="deleteFriend(contextMenuFriend)">
+        <el-icon><Delete /></el-icon>
+        <span>删除好友</span>
       </div>
     </div>
 
@@ -203,7 +233,6 @@ import {
   Search,
   Plus,
   ChatDotRound,
-  MoreFilled,
   User,
   Delete
 } from '@element-plus/icons-vue'
@@ -220,6 +249,12 @@ const searchQuery = ref('')
 const filterType = ref('all')
 const friends = ref([])
 const userId = ref(1)
+const activeLetter = ref('')
+
+// ========== 右键菜单状态 ==========
+const contextMenuVisible = ref(false)
+const contextMenuPosition = ref({ x: 0, y: 0 })
+const contextMenuFriend = ref(null)
 
 // ========== 对话框状态 ==========
 const addFriendDialogVisible = ref(false)
@@ -252,6 +287,48 @@ const filteredFriends = computed(() => {
   return result
 })
 
+// 按字母分组的好友
+const groupedFriends = computed(() => {
+  const groups = {}
+
+  // 对好友按拼音首字母分组（简化版：按首字母）
+  filteredFriends.value.forEach(friend => {
+    // 获取首字母（如果是中文，使用简单的拼音转换；否则使用首字符）
+    let firstChar = friend.name.charAt(0).toUpperCase()
+    // 如果是中文字符，使用 # 作为分组
+    if (/[\u4e00-\u9fa5]/.test(firstChar)) {
+      firstChar = '#'
+    }
+    // 如果是数字，使用 # 作为分组
+    if (/[0-9]/.test(firstChar)) {
+      firstChar = '#'
+    }
+
+    if (!groups[firstChar]) {
+      groups[firstChar] = []
+    }
+    groups[firstChar].push(friend)
+  })
+
+  // 对每个分组内的好友按名称排序
+  Object.keys(groups).forEach(letter => {
+    groups[letter].sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
+  })
+
+  // 按字母顺序排序分组
+  const sortedGroups = {}
+  Object.keys(groups).sort().forEach(letter => {
+    sortedGroups[letter] = groups[letter]
+  })
+
+  return sortedGroups
+})
+
+// 可用的字母列表
+const availableLetters = computed(() => {
+  return Object.keys(groupedFriends.value).sort()
+})
+
 const totalCount = computed(() => friends.value.length)
 const recentCount = computed(() => friends.value.filter(f => f.recentChatTime).length)
 
@@ -260,7 +337,7 @@ const emptyText = computed(() => {
     return '未找到匹配的好友'
   }
   if (filterType.value === 'recent') {
-    return '暂无最近聊天的好友'
+    return '暂无最近联系的好友'
   }
   return '还没有好友，快去添加吧'
 })
@@ -371,15 +448,37 @@ const startChat = (friend) => {
   })
 }
 
-// ========== 处理命令 ==========
-const handleCommand = (command, friend) => {
-  switch (command) {
-    case 'view':
-      viewFriendDetail(friend)
-      break
-    case 'delete':
-      deleteFriend(friend)
-      break
+// ========== 右键菜单操作 ==========
+const showContextMenu = (event, friend) => {
+  contextMenuFriend.value = friend
+  contextMenuPosition.value = {
+    x: event.clientX,
+    y: event.clientY
+  }
+  contextMenuVisible.value = true
+}
+
+const closeContextMenu = () => {
+  contextMenuVisible.value = false
+}
+
+// ========== 字母索引操作 ==========
+const scrollToLetter = (letter) => {
+  activeLetter.value = letter
+  const element = document.querySelector(`.group-letter[data-letter="${letter}"]`)
+  if (element) {
+    element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+  // 2秒后清除激活状态
+  setTimeout(() => {
+    activeLetter.value = ''
+  }, 2000)
+}
+
+// ========== 空状态点击 ==========
+const handleEmptyClick = () => {
+  if (!searchQuery.value && filterType.value === 'all') {
+    openAddFriendDialog()
   }
 }
 
@@ -505,6 +604,13 @@ const sendFriendRequest = async (user) => {
 onMounted(() => {
   userId.value = getUserId()
   fetchFriends()
+
+  // 全局点击事件，关闭右键菜单
+  document.addEventListener('click', () => {
+    if (contextMenuVisible.value) {
+      contextMenuVisible.value = false
+    }
+  })
 })
 </script>
 
@@ -520,8 +626,8 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
-  padding: 20px;
+  margin-bottom: 20px;
+  padding: 16px 20px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
@@ -531,12 +637,12 @@ onMounted(() => {
     align-items: center;
     margin: 0;
     color: #fff;
-    font-size: 24px;
+    font-size: 22px;
     font-weight: 600;
 
     .title-icon {
-      margin-right: 12px;
-      font-size: 28px;
+      margin-right: 10px;
+      font-size: 26px;
     }
   }
 
@@ -545,6 +651,7 @@ onMounted(() => {
       background: rgba(255, 255, 255, 0.2);
       border: 1px solid rgba(255, 255, 255, 0.3);
       color: #fff;
+      font-weight: 500;
 
       &:hover {
         background: rgba(255, 255, 255, 0.3);
@@ -556,27 +663,21 @@ onMounted(() => {
 
 // 搜索和筛选区域
 .search-filter-section {
-  margin-bottom: 24px;
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
 
   .search-box {
-    margin-bottom: 16px;
+    flex: 1;
 
     :deep(.el-input) {
       .el-input__wrapper {
-        border-radius: 12px;
-        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-      }
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s ease;
 
-      .el-input-group__append {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border: none;
-        color: #fff;
-        border-radius: 0 12px 12px 0;
-
-        .el-button {
-          background: transparent;
-          border: none;
-          color: #fff;
+        &:hover {
+          box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
         }
       }
     }
@@ -585,16 +686,16 @@ onMounted(() => {
   .filter-options {
     :deep(.el-radio-group) {
       display: flex;
-      gap: 12px;
+      gap: 8px;
 
       .el-radio-button {
         .el-radio-button__inner {
-          border-radius: 10px;
+          border-radius: 8px;
           border: 2px solid #e2e8f0;
           background: #fff;
           color: #4a5568;
           font-weight: 500;
-          padding: 12px 20px;
+          padding: 10px 16px;
           transition: all 0.3s ease;
 
           &:hover {
@@ -608,9 +709,250 @@ onMounted(() => {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border-color: #667eea;
             color: #fff;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
           }
         }
+      }
+    }
+  }
+}
+
+// 内容区域
+.contacts-content {
+  display: flex;
+  gap: 12px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  height: calc(100vh - 280px);
+  min-height: 400px;
+
+  .friends-list-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+
+    .friends-list-scroll {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+
+      &::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      &::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+      }
+
+      &::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 3px;
+
+        &:hover {
+          background: #a8a8a8;
+        }
+      }
+
+      .friend-group {
+        .group-letter {
+          padding: 8px 16px;
+          background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+          color: #667eea;
+          font-size: 14px;
+          font-weight: 600;
+          position: sticky;
+          top: 0;
+          z-index: 10;
+          border-bottom: 1px solid #e4e7ed;
+          transition: all 0.3s ease;
+
+          &.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            animation: letter-highlight 0.5s ease;
+          }
+        }
+
+        .friend-item {
+          display: flex;
+          align-items: center;
+          padding: 10px 16px;
+          cursor: pointer;
+          border-bottom: 1px solid #f0f2f5;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          position: relative;
+
+          &:hover {
+            background-color: #f5f7fa;
+            transform: translateX(2px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+          }
+
+          &:active {
+            transform: translateX(1px) scale(0.99);
+          }
+
+          &.has-recent-chat {
+            background: linear-gradient(90deg, #fffbe6 0%, #fffcf5 100%);
+
+            &:hover {
+              background: linear-gradient(90deg, #fff7e6 0%, #fffaf0 100%);
+            }
+          }
+
+          .friend-avatar {
+            margin-right: 12px;
+            position: relative;
+            flex-shrink: 0;
+
+            img {
+              width: 40px;
+              height: 40px;
+              border-radius: 8px;
+              object-fit: cover;
+              box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+            }
+
+            .avatar-emoji {
+              width: 40px;
+              height: 40px;
+              border-radius: 8px;
+              background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 22px;
+              box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+            }
+
+            .recent-chat-badge {
+              position: absolute;
+              top: -4px;
+              right: -4px;
+              width: 18px;
+              height: 18px;
+              background: linear-gradient(135deg, #409eff 0%, #337ecc 100%);
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 10px;
+              box-shadow: 0 2px 3px rgba(64, 158, 255, 0.3);
+              animation: pulse 2s infinite;
+            }
+          }
+
+          .friend-info {
+            flex: 1;
+            min-width: 0;
+
+            .friend-name-row {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 4px;
+
+              .friend-name {
+                font-size: 14px;
+                font-weight: 600;
+                color: #303133;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+              }
+
+              .recent-time {
+                font-size: 11px;
+                color: #909399;
+                white-space: nowrap;
+                flex-shrink: 0;
+              }
+            }
+
+            .friend-id {
+              font-size: 12px;
+              color: #909399;
+            }
+          }
+
+          .friend-quick-actions {
+            flex-shrink: 0;
+            opacity: 0;
+            transition: opacity 0.2s;
+
+            .chat-btn {
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              border: none;
+
+              &:hover {
+                transform: scale(1.1);
+                box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+              }
+            }
+          }
+
+          &:hover .friend-quick-actions {
+            opacity: 1;
+          }
+        }
+      }
+    }
+  }
+
+  .alphabet-index {
+    width: 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px 0;
+    background: #f5f7fa;
+    border-left: 1px solid #e4e7ed;
+    overflow-y: auto;
+    flex-shrink: 0;
+
+    &::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: #dcdfe6;
+      border-radius: 2px;
+    }
+
+    .alphabet-item {
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 500;
+      color: #606266;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-bottom: 2px;
+
+      &:hover {
+        background: #667eea;
+        color: #fff;
+        transform: scale(1.1);
+      }
+
+      &.active {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #fff;
+        font-weight: 600;
+        box-shadow: 0 2px 6px rgba(102, 126, 234, 0.4);
+        animation: letter-active 0.3s ease;
       }
     }
   }
@@ -630,123 +972,94 @@ onMounted(() => {
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: linear-gradient(135deg, #f0f7ff 0%, #e6f2ff 100%);
+    transform: translateY(-2px);
+
+    .empty-icon {
+      transform: scale(1.1);
+    }
+
+    .empty-title {
+      color: #3b82f6;
+    }
+
+    .empty-tip {
+      color: #60a5fa;
+    }
+  }
 
   .empty-icon {
     font-size: 80px;
     margin-bottom: 20px;
     opacity: 0.8;
+    animation: float 3s ease-in-out infinite;
+    transition: transform 0.3s ease;
+  }
+
+  .empty-title {
+    font-size: 18px;
+    font-weight: 500;
+    color: #1a1a1a;
+    margin: 0 0 8px 0;
+    transition: color 0.3s ease;
+  }
+
+  .empty-tip {
+    font-size: 14px;
+    color: #666;
+    margin: 0 0 20px 0;
+    transition: color 0.3s ease;
   }
 }
 
-// 好友列表
-.friends-list {
-  display: grid;
-  gap: 16px;
+// 右键菜单
+.context-menu {
+  position: fixed;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  padding: 8px 0;
+  min-width: 150px;
+  z-index: 9999;
+  animation: context-menu-fadein 0.2s ease;
 
-  .friend-card {
+  .context-menu-item {
     display: flex;
     align-items: center;
-    padding: 20px;
-    background: #fff;
-    border-radius: 12px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    gap: 10px;
+    padding: 10px 16px;
+    font-size: 14px;
+    color: #303133;
     cursor: pointer;
-    transition: all 0.3s ease;
-    border: 2px solid transparent;
+    transition: all 0.2s ease;
 
     &:hover {
-      border-color: #667eea;
-      box-shadow: 0 4px 20px rgba(102, 126, 234, 0.2);
-      transform: translateY(-2px);
+      background: #f5f7fa;
+      color: #667eea;
     }
 
-    .friend-avatar {
-      position: relative;
-      width: 60px;
-      height: 60px;
-      margin-right: 16px;
-      flex-shrink: 0;
-
-      img,
-      .avatar-emoji {
-        width: 100%;
-        height: 100%;
-        border-radius: 50%;
-        object-fit: cover;
-      }
-
-      .avatar-emoji {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 32px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      }
-
-      .online-indicator {
-        position: absolute;
-        bottom: 2px;
-        right: 2px;
-        width: 14px;
-        height: 14px;
-        background: #67c23a;
-        border: 2px solid #fff;
-        border-radius: 50%;
-      }
+    .el-icon {
+      font-size: 16px;
     }
 
-    .friend-info {
-      flex: 1;
-      min-width: 0;
-
-      .friend-header {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin-bottom: 6px;
-
-        .friend-name {
-          margin: 0;
-          font-size: 16px;
-          font-weight: 600;
-          color: #2d3748;
-        }
-
-        .recent-tag {
-          flex-shrink: 0;
-        }
-      }
-
-      .friend-details {
-        display: flex;
-        gap: 16px;
-        font-size: 13px;
-        color: #718096;
-
-        .detail-item {
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
+    &.danger {
+      &:hover {
+        background: #fef0f0;
+        color: #f56c6c;
       }
     }
+  }
 
-    .friend-actions {
-      display: flex;
-      gap: 8px;
-      flex-shrink: 0;
-
-      :deep(.el-button) {
-        &.el-button--primary {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          border: none;
-
-          &:hover {
-            transform: scale(1.1);
-          }
-        }
-      }
-    }
+  .context-menu-divider {
+    height: 1px;
+    background: #e4e7ed;
+    margin: 6px 0;
   }
 }
 
@@ -930,6 +1243,60 @@ onMounted(() => {
         color: #f0f0f0;
       }
     }
+  }
+}
+
+// 动画
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes letter-highlight {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes letter-active {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes context-menu-fadein {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 </style>

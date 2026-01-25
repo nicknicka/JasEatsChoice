@@ -8,7 +8,7 @@
         <div class="form-row">
           <div class="form-label">头像</div>
           <div class="form-content">
-            <el-avatar :size="60" class="user-avatar" :src="userInfo.avatarUrl">👤</el-avatar>
+            <el-avatar :size="60" class="user-avatar" :src="userInfo.avatar || ''">👤</el-avatar>
             <input
               id="avatar-upload"
               type="file"
@@ -29,7 +29,7 @@
         <div class="form-row">
           <div class="form-label">手机号</div>
           <div class="form-content">
-            <el-input v-model="userInfo.phone" readonly style="width: 200px" />
+            <el-input :model-value="userInfo.phone" readonly style="width: 200px" />
             <el-button type="text" size="small" style="margin-left: 10px" @click="handleEditPhone"
               >修改</el-button
             >
@@ -39,7 +39,7 @@
         <div class="form-row">
           <div class="form-label">邮箱</div>
           <div class="form-content">
-            <el-input v-model="userInfo.email" readonly style="width: 200px" />
+            <el-input :model-value="userInfo.email" readonly style="width: 200px" />
             <el-button type="text" size="small" style="margin-left: 10px" @click="handleEditEmail"
               >修改</el-button
             >
@@ -224,15 +224,16 @@
     <!-- Edit Email Dialog -->
     <el-dialog v-model="editEmailDialogVisible" title="修改邮箱" width="400px">
       <el-form ref="emailFormRef" :model="emailForm" label-width="80px">
-        <el-form-item label="邮箱">
+        <el-form-item label="邮箱" prop="email">
           <el-input v-model="emailForm.email" placeholder="请输入新邮箱" />
         </el-form-item>
-        <el-form-item label="验证码">
+        <el-form-item label="验证码" prop="verificationCode">
           <div style="display: flex">
             <el-input
               v-model="emailForm.verificationCode"
               placeholder="请输入验证码"
               style="width: 150px; margin-right: 10px"
+              maxlength="6"
             />
             <el-button type="primary" :disabled="emailCodeCountdown > 0" @click="sendEmailCode">
               {{ emailCodeCountdown > 0 ? `${emailCodeCountdown}秒后重新发送` : '获取验证码' }}
@@ -272,26 +273,64 @@
         </div>
       </template>
     </el-dialog>
+
+    <!-- Feedback Dialog -->
+    <el-dialog v-model="feedbackDialogVisible" title="反馈建议" width="500px">
+      <el-form ref="feedbackFormRef" :model="feedbackForm" label-width="80px">
+        <el-form-item label="反馈内容">
+          <el-input
+            v-model="feedbackForm.content"
+            type="textarea"
+            :rows="5"
+            placeholder="请输入您的建议或反馈（最多500字）"
+            maxlength="500"
+            show-word-limit
+          />
+        </el-form-item>
+        <el-form-item label="联系方式">
+          <el-input v-model="feedbackForm.contact" placeholder="选填，方便我们联系您" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="feedbackDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="submitFeedbackForm">提交</el-button>
+        </div>
+      </template>
+    </el-dialog>
+
+    <!-- Update Dialog -->
+    <el-dialog v-model="updateDialogVisible" title="检查更新" width="400px">
+      <div class="update-content">
+        <p>当前版本：1.0.0</p>
+        <p>最新版本：{{ latestVersion }}</p>
+        <p v-if="hasUpdate" style="color: #409eff">有新版本可用，建议更新</p>
+        <p v-else style="color: #67c23a">当前已是最新版本</p>
+      </div>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="updateDialogVisible = false">关闭</el-button>
+          <el-button v-if="hasUpdate" type="primary" @click="downloadUpdate">下载更新</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, inject } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { ElMessage, ElDialog, ElInput, ElForm, ElFormItem } from 'element-plus'
-import axios from 'axios'
-import api, { decodeJwt } from '../../utils/api.js'
+import api from '../../utils/api.js'
 import { API_CONFIG } from '../../config/index.js'
 import pinia from '../../store'
 import { useAuthStore } from '../../store/authStore'
+import { useUserStore } from '../../store/userStore'
 
 const authStore = useAuthStore(pinia)
+const userStore = useUserStore(pinia)
 
-// User information
-const userInfo = ref({
-  phone: '',
-  email: '',
-  avatarUrl: ''
-})
+// 使用userStore中的用户信息（计算属性，避免undefined错误）
+const userInfo = computed(() => userStore.userInfo || { phone: '', email: '', avatar: '', userId: '' })
 
 // 正式设置数据（用于保存到localStorage）
 const officialSettings = ref({
@@ -346,38 +385,25 @@ const passwordForm = ref({
   confirmPassword: ''
 })
 
+// Feedback and update dialogs
+const feedbackDialogVisible = ref(false)
+const updateDialogVisible = ref(false)
+const feedbackForm = ref({
+  content: '',
+  contact: ''
+})
+const latestVersion = ref('1.0.0')
+const hasUpdate = ref(false)
+
 // Avatar upload
 
-// Load saved settings from localStorage on mount and fetch user info from backend
+// Load saved settings from localStorage on mount
 onMounted(() => {
-  // Fetch user information from backend
-  const fetchUserInfo = () => {
-    const token = authStore.token
-    let userId = authStore.userId || 1
-
-    if (token) {
-      const decodedToken = decodeJwt(token)
-      if (decodedToken && decodedToken.userId) {
-        userId = decodedToken.userId
-      }
-    }
-
-    // 调用后端API获取用户信息
-    api
-      .get(API_CONFIG.user.profile.replace('{userId}', userId))
-      .then((response) => {
-        if (response && response.code === '200') {
-          userInfo.value = response.data
-
-          // Load avatar from backend or use default
-          if (userInfo.value.avatar) {
-            userInfo.value.avatarUrl = userInfo.value.avatar
-          }
-        }
-      })
-      .catch((error) => {
-        console.error('加载用户信息失败:', error)
-      })
+  // 如果userStore中没有用户信息，则从后端获取
+  if (!userStore.userInfo) {
+    userStore.fetchUserInfo().catch((error) => {
+      console.error('加载用户信息失败:', error)
+    })
   }
 
   // Load saved settings
@@ -412,15 +438,6 @@ onMounted(() => {
     updateTheme()
     updateFontSize()
   }
-
-  // Fetch user info from backend
-  fetchUserInfo()
-
-  // Load avatar from localStorage as fallback
-  const savedAvatar = localStorage.getItem('userAvatar')
-  if (savedAvatar) {
-    userInfo.value.avatarUrl = savedAvatar
-  }
 })
 
 // Handle save settings with localStorage persistence
@@ -439,15 +456,19 @@ const saveSettings = async () => {
   // 保存到localStorage
   localStorage.setItem('userSettings', JSON.stringify(officialSettings.value))
 
-  // 同步AI偏好设置到后端
+  // 同步偏好设置到后端
   try {
     const userId = authStore.userId || '1'
-    await axios.put(`${API_CONFIG.baseURL}/v1/users/${userId}/preferences`, {
-      enableAiPersonalData: privacy.value.aiPersonalData
+    await api.put(API_CONFIG.user.preferences.replace('{userId}', userId), {
+      enableAiPersonalData: privacy.value.aiPersonalData,
+      enableOrderNotification: notifications.value.order,
+      enableActivityNotification: notifications.value.activity,
+      enableMerchantReplyNotification: notifications.value.merchantReply,
+      enableGroupChatNotification: notifications.value.groupChat
     })
-    console.log('✅ AI偏好设置同步成功')
+    console.log('✅ 偏好设置同步成功')
   } catch (error) {
-    console.error('❌ 保存AI偏好失败:', error)
+    console.error('❌ 保存偏好设置失败:', error)
     // 不影响其他设置的保存
   }
 
@@ -524,32 +545,42 @@ const updateFontSize = () => {
 }
 
 // Avatar upload functionality
-// Get the update function from CommonHome.vue
-const updateSidebarAvatar = inject('updateSidebarAvatar')
+// 不再需要手动调用updateSidebarAvatar，因为更新userStore会自动同步
 
 const handleAvatarClick = () => {
   document.getElementById('avatar-upload').click()
 }
 
-const handleAvatarUpload = (event) => {
+const handleAvatarUpload = async (event) => {
   const file = event.target.files[0]
   if (file) {
     const reader = new FileReader()
-    reader.onload = (e) => {
-      const newAvatarUrl = e.target.result
+    reader.onload = async (e) => {
+      const newAvatarBase64 = e.target.result
 
-      // Update local user info
-      userInfo.value.avatarUrl = newAvatarUrl
+      try {
+        // 上传到后端
+        const userId = authStore.userId || userInfo.value.userId
+        const response = await api.put(
+          API_CONFIG.user.uploadAvatar.replace('{userId}', userId),
+          { avatarBase64: newAvatarBase64 }
+        )
 
-      // Update sidebar avatar
-      if (updateSidebarAvatar) {
-        updateSidebarAvatar(newAvatarUrl)
+        if (response && (response.code === '200' || response.success)) {
+          // ✅ 直接更新userStore，会自动同步到所有使用该store的地方
+          userStore.userInfo.avatar = response.data.avatarBase64
+
+          // 保存到localStorage作为备份
+          localStorage.setItem('userAvatar', response.data.avatarBase64)
+
+          ElMessage.success('头像已更换')
+        } else {
+          ElMessage.error(response.message || '头像上传失败')
+        }
+      } catch (error) {
+        console.error('头像上传失败:', error)
+        ElMessage.error('头像上传失败，请重试')
       }
-
-      // Save to localStorage
-      localStorage.setItem('userAvatar', newAvatarUrl)
-
-      ElMessage.success('头像已更换')
     }
     reader.readAsDataURL(file)
   }
@@ -599,7 +630,7 @@ const sendSmsCode = () => {
 const handleEditPhone = () => {
   editPhoneDialogVisible.value = true
   // Auto-fill current phone number
-  phoneForm.value.phone = userInfo.value.phone
+  phoneForm.value.phone = userInfo.value.phone || ''
 }
 
 const submitPhoneEdit = () => {
@@ -618,17 +649,18 @@ const submitPhoneEdit = () => {
     }
 
     // Call backend API to update phone number
+    // 后端期望的字段名是 smsCode，不是 verificationCode
     api
-      .put(API_CONFIG.user.update.replace('{userId}', userInfo.value.id), {
+      .put(API_CONFIG.user.update.replace('{userId}', userInfo.value.userId), {
         phone: phoneForm.value.phone,
-        verificationCode: phoneForm.value.verificationCode
+        smsCode: phoneForm.value.verificationCode  // ← 使用 smsCode
       })
       .then((response) => {
         const isSuccess = response.code === '200' || response.success
         if (isSuccess) {
           ElMessage.success('手机号已修改')
-          // Update local user info
-          userInfo.value.phone = phoneForm.value.phone
+          // 更新userStore中的用户信息
+          userStore.userInfo.phone = phoneForm.value.phone
           editPhoneDialogVisible.value = false
           phoneForm.value = { phone: '', verificationCode: '' }
         } else {
@@ -686,49 +718,64 @@ const sendEmailCode = () => {
 // Handle edit email
 const handleEditEmail = () => {
   editEmailDialogVisible.value = true
-  // Auto-fill current email
-  emailForm.value.email = userInfo.value.email
+  // 重置表单并自动填充当前邮箱
+  emailForm.value = {
+    email: userInfo.value.email || '',
+    verificationCode: ''
+  }
 }
 
 const submitEmailEdit = () => {
-  if (emailForm.value.email && emailForm.value.verificationCode) {
-    // 邮箱格式验证
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
-    if (!emailRegex.test(emailForm.value.email)) {
-      ElMessage.warning('请输入有效的邮箱地址')
-      return
-    }
+  // 去除首尾空格，避免空格导致验证失败
+  const email = (emailForm.value.email || '').trim()
+  const verificationCode = (emailForm.value.verificationCode || '').trim()
 
-    // 验证码长度验证
-    if (emailForm.value.verificationCode.length !== 6) {
-      ElMessage.warning('请输入6位验证码')
-      return
-    }
-
-    // Call backend API to update email
-    api
-      .put(API_CONFIG.user.update.replace('{userId}', userInfo.value.id), {
-        email: emailForm.value.email,
-        verificationCode: emailForm.value.verificationCode
-      })
-      .then((response) => {
-        const isSuccess = response.code === '200' || response.success
-        if (isSuccess) {
-          ElMessage.success('邮箱已修改')
-          // Update local user info
-          userInfo.value.email = emailForm.value.email
-          editEmailDialogVisible.value = false
-          emailForm.value = { email: '', verificationCode: '' }
-        } else {
-          ElMessage.error(response.message || '邮箱修改失败')
-        }
-      })
-      .catch((error) => {
-        ElMessage.error(error.message || '邮箱修改失败')
-      })
-  } else {
-    ElMessage.warning('请填写完整信息')
+  // 检查是否填写完整（使用字符串长度判断更准确）
+  if (!email || email.length === 0) {
+    ElMessage.warning('请输入邮箱地址')
+    return
   }
+
+  if (!verificationCode || verificationCode.length === 0) {
+    ElMessage.warning('请输入验证码')
+    return
+  }
+
+  // 邮箱格式验证
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+  if (!emailRegex.test(email)) {
+    ElMessage.warning('请输入有效的邮箱地址')
+    return
+  }
+
+  // 验证码格式验证（必须是6位数字）
+  const codeRegex = /^\d{6}$/
+  if (!codeRegex.test(verificationCode)) {
+    ElMessage.warning('请输入6位数字验证码')
+    return
+  }
+
+  // Call backend API to update email（注意：后端期望的字段名是 emailCode）
+  api
+    .put(API_CONFIG.user.update.replace('{userId}', userInfo.value.userId), {
+      email: email,
+      emailCode: verificationCode
+    })
+    .then((response) => {
+      const isSuccess = response.code === '200' || response.success
+      if (isSuccess) {
+        ElMessage.success('邮箱已修改')
+        // 更新userStore中的用户信息
+        userStore.userInfo.email = email
+        editEmailDialogVisible.value = false
+        emailForm.value = { email: '', verificationCode: '' }
+      } else {
+        ElMessage.error(response.message || '邮箱修改失败')
+      }
+    })
+    .catch((error) => {
+      ElMessage.error(error.message || '邮箱修改失败')
+    })
 }
 
 // Handle edit password
@@ -736,7 +783,7 @@ const handleEditPassword = () => {
   editPasswordDialogVisible.value = true
 }
 
-const submitPasswordEdit = () => {
+const submitPasswordEdit = async () => {
   if (
     passwordForm.value.oldPassword &&
     passwordForm.value.newPassword &&
@@ -746,10 +793,34 @@ const submitPasswordEdit = () => {
       ElMessage.warning('新密码和确认密码不一致')
       return
     }
-    // In real app: call API to update password
-    ElMessage.success('密码已修改')
-    editPasswordDialogVisible.value = false
-    passwordForm.value = { oldPassword: '', newPassword: '', confirmPassword: '' }
+
+    if (passwordForm.value.newPassword.length < 6) {
+      ElMessage.warning('新密码长度不能少于6位')
+      return
+    }
+
+    try {
+      // 调用后端API修改密码
+      const userId = authStore.userId || userInfo.value.userId
+      const response = await api.put(
+        API_CONFIG.user.updatePassword.replace('{userId}', userId),
+        {
+          oldPassword: passwordForm.value.oldPassword,
+          newPassword: passwordForm.value.newPassword
+        }
+      )
+
+      const isSuccess = response.code === '200' || response.success
+      if (isSuccess) {
+        ElMessage.success('密码已修改')
+        editPasswordDialogVisible.value = false
+        passwordForm.value = { oldPassword: '', newPassword: '', confirmPassword: '' }
+      } else {
+        ElMessage.error(response.message || '密码修改失败')
+      }
+    } catch (error) {
+      ElMessage.error(error.message || '密码修改失败')
+    }
   } else {
     ElMessage.warning('请填写完整信息')
   }
@@ -801,16 +872,50 @@ const exportData = () => {
 
 // Handle check for updates
 const checkUpdate = () => {
-  // In real app: call API to check for updates
-  ElMessage.info('当前已是最新版本')
-  console.log('Checked for updates')
+  // 模拟检查更新
+  updateDialogVisible.value = true
+  // 在实际应用中，这里应该调用API检查最新版本
+  // latestVersion.value = '1.0.1'
+  // hasUpdate.value = latestVersion.value !== '1.0.0'
 }
 
-// Handle feedback
+// Handle download update
+const downloadUpdate = () => {
+  ElMessage.info('更新功能即将推出')
+  updateDialogVisible.value = false
+}
+
+// Handle feedback dialog open
 const submitFeedback = () => {
-  // In real app: call API to submit feedback
-  ElMessage.success('反馈已提交')
-  console.log('Feedback submitted')
+  feedbackDialogVisible.value = true
+}
+
+// Handle submit feedback form
+const submitFeedbackForm = async () => {
+  if (!feedbackForm.value.content || feedbackForm.value.content.trim().length === 0) {
+    ElMessage.warning('请输入反馈内容')
+    return
+  }
+
+  try {
+    const userId = authStore.userId || '1'
+    const response = await api.post(API_CONFIG.user.feedback, {
+      userId: userId,
+      content: feedbackForm.value.content,
+      contact: feedbackForm.value.contact || ''
+    })
+
+    const isSuccess = response.code === '200' || response.success
+    if (isSuccess) {
+      ElMessage.success('反馈已提交，感谢您的建议')
+      feedbackDialogVisible.value = false
+      feedbackForm.value = { content: '', contact: '' }
+    } else {
+      ElMessage.error(response.message || '反馈提交失败')
+    }
+  } catch (error) {
+    ElMessage.error(error.message || '反馈提交失败')
+  }
 }
 </script>
 
@@ -860,6 +965,11 @@ const submitFeedback = () => {
 
 .settings-container .user-avatar {
   background-color: transparent; /* 移除额外的背景颜色 */
+}
+
+.update-content p {
+  margin: 10px 0;
+  font-size: 14px;
 }
 </style>
 

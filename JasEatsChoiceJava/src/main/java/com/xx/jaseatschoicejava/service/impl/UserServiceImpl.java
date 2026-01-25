@@ -125,4 +125,34 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
                 .eq(User::getPhone, phone.trim())
                 .count() > 0;
     }
+
+    /**
+     * 修改密码
+     * @param userId 用户ID
+     * @param oldPassword 旧密码
+     * @param newPassword 新密码
+     * @return 修改成功返回true，否则返回false
+     */
+    @Override
+    public boolean updatePassword(String userId, String oldPassword, String newPassword) {
+        // 获取用户信息
+        User user = lambdaQuery()
+                .eq(User::getUserId, userId)
+                .one();
+
+        if (user == null) {
+            return false; // 用户不存在
+        }
+
+        // 验证旧密码是否正确
+        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+            return false; // 旧密码错误
+        }
+
+        // 加密新密码并更新
+        String encryptedNewPassword = passwordEncoder.encode(newPassword);
+        user.setPassword(encryptedNewPassword);
+
+        return updateById(user);
+    }
 }

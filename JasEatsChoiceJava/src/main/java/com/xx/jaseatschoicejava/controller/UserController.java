@@ -574,4 +574,65 @@ public class UserController {
             return ResponseResult.fail("500", "系统错误");
         }
     }
+
+    /**
+     * 修改密码
+     */
+    @PutMapping("/{userId}/password")
+    public ResponseResult<?> updatePassword(@PathVariable String userId,
+                                            @RequestBody Map<String, String> passwordData) {
+        try {
+            String oldPassword = passwordData.get("oldPassword");
+            String newPassword = passwordData.get("newPassword");
+
+            // 参数验证
+            if (oldPassword == null || oldPassword.isEmpty()) {
+                return ResponseResult.fail("400", "旧密码不能为空");
+            }
+            if (newPassword == null || newPassword.isEmpty()) {
+                return ResponseResult.fail("400", "新密码不能为空");
+            }
+            if (newPassword.length() < 6) {
+                return ResponseResult.fail("400", "新密码长度不能少于6位");
+            }
+
+            // 调用服务层修改密码
+            boolean success = userService.updatePassword(userId, oldPassword, newPassword);
+            if (success) {
+                return ResponseResult.success("密码修改成功");
+            }
+            return ResponseResult.fail("400", "旧密码错误");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseResult.fail("500", "密码修改失败");
+        }
+    }
+
+    /**
+     * 提交用户反馈
+     */
+    @PostMapping("/feedback")
+    public ResponseResult<?> submitFeedback(@RequestBody Map<String, String> feedbackData) {
+        try {
+            String userId = feedbackData.get("userId");
+            String content = feedbackData.get("content");
+            String contact = feedbackData.get("contact");
+
+            // 参数验证
+            if (content == null || content.isEmpty()) {
+                return ResponseResult.fail("400", "反馈内容不能为空");
+            }
+            if (content.length() > 500) {
+                return ResponseResult.fail("400", "反馈内容不能超过500字");
+            }
+
+            // 记录反馈（实际项目中应该保存到数据库）
+            log.info("收到用户反馈 - 用户ID: {}, 联系方式: {}, 内容: {}", userId, contact, content);
+
+            return ResponseResult.success("反馈已提交，感谢您的建议");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseResult.fail("500", "反馈提交失败");
+        }
+    }
 }

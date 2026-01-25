@@ -45,6 +45,26 @@ public class UserPreference {
     private Boolean enableAiPersonalData;
 
     /**
+     * 订单通知开关
+     */
+    private Boolean enableOrderNotification;
+
+    /**
+     * 活动通知开关
+     */
+    private Boolean enableActivityNotification;
+
+    /**
+     * 商家回复通知开关
+     */
+    private Boolean enableMerchantReplyNotification;
+
+    /**
+     * 群聊消息通知开关
+     */
+    private Boolean enableGroupChatNotification;
+
+    /**
      * 更新时间
      */
     private String updateTime;

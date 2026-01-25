@@ -88,33 +88,13 @@ export function useChatMessages({ userId, selectedConversation }) {
   const preprocessMessages = (messages) => {
     if (!Array.isArray(messages)) return []
 
-    console.log('🔍 [preprocessMessages] 开始处理消息列表', {
-      原始消息数量: messages.length,
-      完整数据: messages.map(msg => ({
-        id: msg.id || msg.msgId,
-        msgType: msg.msgType,
-        content: msg.content?.substring(0, 30),
-        fileUrl: msg.fileUrl,
-        fullUrl: msg.fullUrl,
-        fileName: msg.fileName
-      }))
-    })
-
     const uniqueMessages = []
     const messageIds = new Set()
 
     messages.forEach((msg, index) => {
       // ⭐ 修复：使用 msgId 或 id 作为唯一标识
-      const messageId = msg.msgId || msg.id
-      console.log(`📝 [preprocessMessages] 处理第${index + 1}条消息`, {
-        原始msgId: messageId,
-        msgType: msg.msgType,
-        content: msg.content,
-        fileUrl: msg.fileUrl,
-        fullUrl: msg.fullUrl,
-        fileName: msg.fileName,
-        fileType: msg.fileType
-      })
+      const messageId = msg.msgId
+
 
       if (!messageIds.has(messageId)) {
         messageIds.add(messageId)
@@ -147,10 +127,6 @@ export function useChatMessages({ userId, selectedConversation }) {
           // 构建完整URL（与上传时的逻辑一致）
           const serverUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
           fullUrl = `${serverUrl}/api/uploads/${fileUrl}`
-          console.log('🔗 [preprocessMessages] 构建完整URL:', {
-            相对路径: fileUrl,
-            完整URL: fullUrl
-          })
         }
 
         // 确保 id 字段存在（优先使用 msgId）
@@ -158,11 +134,6 @@ export function useChatMessages({ userId, selectedConversation }) {
 
         // 确定消息类型
         let msgType = msg.msgType
-        if (msg.msgType === 'image' || msg.content === '[图片]' || fileUrl) {
-          msgType = 'image'
-        } else if (msg.msgType === 'file' || msg.content?.startsWith('[文件]') || msg.fileName) {
-          msgType = 'file'
-        }
 
         const processedMsg = {
           ...msg,
@@ -176,22 +147,6 @@ export function useChatMessages({ userId, selectedConversation }) {
           fullUrl
         }
 
-        // 打印调试信息
-        if (msgType === 'image') {
-          console.log('📸 [preprocessMessages] 处理图片消息', {
-            msgId: normalizedId,
-            fileUrl: processedMsg.fileUrl,
-            fullUrl: processedMsg.fullUrl,
-            最终URL: processedMsg.fullUrl || processedMsg.fileUrl
-          })
-        } else if (msgType === 'file') {
-          console.log('📎 [preprocessMessages] 处理文件消息', {
-            msgId: normalizedId,
-            fileName: processedMsg.fileName,
-            fileUrl: processedMsg.fileUrl
-          })
-        }
-
         // 如果有回复信息但没有回复者名称，则生成显示名称
         if (msg.replyTo && !msg.replyFromName) {
           processedMsg.replyFromName = getReplyDisplayName(msg.replyFromId)
@@ -200,19 +155,6 @@ export function useChatMessages({ userId, selectedConversation }) {
         uniqueMessages.push(processedMsg)
       }
     })
-
-    // 🔍 调试：打印所有图片消息的详细信息
-    const imageMessages = uniqueMessages.filter(msg => msg.msgType === 'image')
-    if (imageMessages.length > 0) {
-      console.log('🖼️ [preprocessMessages] 处理后的图片消息列表:', imageMessages.map(msg => ({
-        id: msg.id,
-        msgType: msg.msgType,
-        content: msg.content,
-        fileUrl: msg.fileUrl,
-        fullUrl: msg.fullUrl,
-        fileName: msg.fileName
-      })))
-    }
 
     return uniqueMessages
   }
@@ -271,16 +213,6 @@ export function useChatMessages({ userId, selectedConversation }) {
         Object.keys(parsedHistory).forEach((sessionId) => {
           if (!chatHistory.value[sessionId]) {
             chatHistory.value[sessionId] = parsedHistory[sessionId]
-            // 🔍 调试：检查缓存中的图片消息
-            const imageMessages = parsedHistory[sessionId].filter(msg => msg.msgType === 'image')
-            if (imageMessages.length > 0) {
-              console.log('📦 [缓存] 会话', sessionId, '中的图片消息:', imageMessages.map(msg => ({
-                id: msg.id,
-                msgType: msg.msgType,
-                fileUrl: msg.fileUrl,
-                fullUrl: msg.fullUrl
-              })))
-            }
           }
         })
       }
@@ -293,17 +225,11 @@ export function useChatMessages({ userId, selectedConversation }) {
    * 加载聊天记录
    */
   const loadChatMessages = async (sessionId, loadMore = false) => {
-    console.log('🚀 [loadChatMessages] 开始执行', {
-      sessionId,
-      loadMore,
-      currentPage: msgPageNum.value,
-      pageSize: MESSAGE_CONFIG.DEFAULT_PAGE_SIZE
-    })
+
 
     if (!loadMore) {
       msgPageNum.value = 1
       hasMoreMessages.value = true
-      console.log('🔄 [loadChatMessages] 重置分页为第1页')
     }
 
     // 先显示缓存（快速响应用户体验）
@@ -311,35 +237,13 @@ export function useChatMessages({ userId, selectedConversation }) {
       const cachedMessages = chatHistory.value[sessionId]
       chatMessages.value = cachedMessages
       scrollToBottom()
-
-      console.log('💾 [loadChatMessages] 已从缓存加载消息', {
-        sessionId,
-        缓存消息数: cachedMessages.length,
-        图片消息数: cachedMessages.filter(msg => msg.msgType === 'image').length,
-        文件消息数: cachedMessages.filter(msg => msg.msgType === 'file').length
-      })
     }
 
     if (isLoadingMessages.value || !hasMoreMessages.value) {
-      console.log('⏸️ [loadChatMessages] 跳过加载', {
-        reason: isLoadingMessages.value ? '正在加载中' : '没有更多消息',
-        isLoading: isLoadingMessages.value,
-        hasMore: hasMoreMessages.value
-      })
       return
     }
 
     isLoadingMessages.value = true
-    console.log('📡 [loadChatMessages] 准备请求后端API', {
-      url: `/v1/chat/${sessionId}/messages`,
-      params: {
-        pageNum: msgPageNum.value,
-        pageSize: MESSAGE_CONFIG.DEFAULT_PAGE_SIZE,
-        userId: userId.value
-      }
-    })
-
-    const startTime = Date.now()
 
     try {
       const response = await api.get(`/v1/chat/${sessionId}/messages`, {
@@ -350,40 +254,13 @@ export function useChatMessages({ userId, selectedConversation }) {
         }
       })
 
-      const requestTime = Date.now() - startTime
-
-      console.log('📥 [loadChatMessages] 收到API响应', {
-        响应码: response.code,
-        请求耗时: `${requestTime}ms`,
-        总消息数: response.data?.total,
-        当前页消息数: response.data?.records?.length,
-        当前页码: response.data?.current,
-        总页数: response.data?.pages
-      })
-
       if (response.code === '200') {
         const data = response.data
         const messages = data.records || []
 
-        console.log('🔍 [loadChatMessages] 开始处理消息', {
-          原始消息数: messages.length,
-          消息类型分布: {
-            text: messages.filter(m => m.msgType === 'text').length,
-            image: messages.filter(m => m.msgType === 'image').length,
-            file: messages.filter(m => m.msgType === 'file').length
-          }
-        })
-
         const processedMessages = preprocessMessages(messages)
 
-        console.log('✅ [loadChatMessages] 消息处理完成', {
-          原始消息: messages.length,
-          去重后: processedMessages.length,
-          去重数量: messages.length - processedMessages.length
-        })
-
         if (loadMore) {
-          const previousCount = chatMessages.value.length
           chatMessages.value = [...processedMessages, ...chatMessages.value]
           const scrollTop = messagesContainerRef.value?.scrollTop || 0
           nextTick(() => {
@@ -391,62 +268,29 @@ export function useChatMessages({ userId, selectedConversation }) {
               messagesContainerRef.value.scrollTop = scrollTop + 100
             }
           })
-          console.log('📜 [loadChatMessages] 加载更多完成', {
-            之前消息数: previousCount,
-            新增消息数: processedMessages.length,
-            总计消息数: chatMessages.value.length
-          })
         } else {
           // 用后端数据覆盖缓存数据（保证数据准确性）
           chatHistory.value[sessionId] = processedMessages
           chatMessages.value = processedMessages
           scrollToBottom()
-          console.log('📝 [loadChatMessages] 首次加载完成', {
-            消息总数: processedMessages.length,
-            已更新缓存: true,
-            已滚动到底部: true
-          })
         }
 
         totalMessages.value = data.total || 0
         hasMoreMessages.value =
           data.records && data.records.length >= MESSAGE_CONFIG.DEFAULT_PAGE_SIZE
 
-        console.log('📊 [loadChatMessages] 分页状态', {
-          总消息数: totalMessages.value,
-          当前页: msgPageNum.value,
-          每页大小: MESSAGE_CONFIG.DEFAULT_PAGE_SIZE,
-          是否有更多: hasMoreMessages.value,
-          是否最后一页: !hasMoreMessages.value
-        })
-
         saveChatHistoryToLocal()
       } else {
-        console.warn('⚠️ [loadChatMessages] API返回非200状态码', {
-          code: response.code,
-          message: response.message
-        })
+        console.warn('[loadChatMessages] API返回非200状态码', response.code, response.message)
       }
     } catch (error) {
-      console.error('❌ [loadChatMessages] 请求失败', {
-        sessionId,
-        pageNum: msgPageNum.value,
-        错误信息: error.message,
-        错误堆栈: error.stack,
-        响应数据: error.response?.data
-      })
+      console.error('[loadChatMessages] 请求失败:', error.message)
       ElMessage.error('加载聊天记录失败，请稍后重试')
       if (!loadMore) {
         chatMessages.value = []
       }
     } finally {
       isLoadingMessages.value = false
-      const totalTime = Date.now() - startTime
-      console.log('✅ [loadChatMessages] 执行完成', {
-        总耗时: `${totalTime}ms`,
-        当前消息数: chatMessages.value.length,
-        isLoading: isLoadingMessages.value
-      })
     }
   }
 
@@ -500,13 +344,6 @@ export function useChatMessages({ userId, selectedConversation }) {
         // 显式确保 URL 字段存在
         fileUrl,
         fullUrl
-      }
-
-      // 打印调试信息
-      if (msgType === 'image') {
-        console.log('📸 [Chat] WebSocket 处理图片消息 - msgId:', message.id, 'fileUrl:', processedMsg.fileUrl, 'fullUrl:', processedMsg.fullUrl)
-      } else if (msgType === 'file') {
-        console.log('📎 [Chat] WebSocket 处理文件消息 - msgId:', message.id, 'fileName:', processedMsg.fileName)
       }
 
       // 如果有回复信息但没有回复者名称，则生成显示名称
