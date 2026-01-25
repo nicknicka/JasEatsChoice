@@ -137,32 +137,52 @@ public class ChatController {
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "20") Integer size) {
 
+        // ========== 日志：开始加载聊天消息 ==========
+        System.out.println("📡 [Chat] 开始加载聊天消息");
+        System.out.println("  - sessionId: " + sessionId);
+        System.out.println("  - page: " + page);
+        System.out.println("  - size: " + size);
+        System.out.println("  - 会话类型: " + (sessionId.contains("_") ? "单聊" : "群聊"));
+
         Page<ChatMsg> chatMsgPage = new Page<>(page, size);
         LambdaQueryWrapper<ChatMsg> queryWrapper = new LambdaQueryWrapper<>();
 
         // 判断是单聊还是群聊
-        if (sessionId.contains("_")) {
-            // 单聊：会话ID格式为 "fromId_toId" 或 "toId_fromId"
-            String[] userIds = sessionId.split("_");
-            queryWrapper.and(wrapper -> wrapper
-                    .eq(ChatMsg::getFromId, userIds[0])
-                    .eq(ChatMsg::getToId, userIds[1]))
-                    .or(wrapper -> wrapper
-                            .eq(ChatMsg::getFromId, userIds[1])
-                            .eq(ChatMsg::getToId, userIds[0]));
-        } else {
-            // 群聊：会话ID就是群组ID，作为toId
-            queryWrapper.eq(ChatMsg::getToId, sessionId);
-        }
+        queryWrapper.eq(ChatMsg::getSessionId, sessionId);
 
         // 按时间倒序排序(最新的在前)
         queryWrapper.orderByDesc(ChatMsg::getCreateTime);
 
         // 查询结果
+        long startTime = System.currentTimeMillis();
         Page<ChatMsg> result = chatMsgService.page(chatMsgPage, queryWrapper);
+        long queryTime = System.currentTimeMillis() - startTime;
 
         // 将消息按时间正序排列(旧的在前,方便前端显示)
         java.util.Collections.reverse(result.getRecords());
+
+        // ========== 日志：查询结果 ==========
+        System.out.println("✅ [Chat] 查询完成");
+        System.out.println("  - 查询耗时: " + queryTime + "ms");
+        System.out.println("  - 总消息数: " + result.getTotal());
+        System.out.println("  - 当前页消息数: " + result.getRecords().size());
+        System.out.println("  - 总页数: " + result.getPages());
+        System.out.println("  - 当前页: " + result.getCurrent());
+
+        // 打印前3条消息的摘要
+        if (result.getRecords() != null && !result.getRecords().isEmpty()) {
+            System.out.println("  - 消息摘要(前3条):");
+            int printCount = Math.min(3, result.getRecords().size());
+            for (int i = 0; i < printCount; i++) {
+                ChatMsg msg = result.getRecords().get(i);
+                System.out.println("    [" + (i + 1) + "] msgId=" + msg.getMsgId() +
+                        ", fromId=" + msg.getFromId() +
+                        ", toId=" + msg.getToId() +
+                        ", type=" + msg.getMsgType() +
+                        ", content=" + (msg.getContent() != null && msg.getContent().length() > 20
+                                ? msg.getContent().substring(0, 20) + "..." : msg.getContent()));
+            }
+        }
 
         // 返回符合前端期望的格式
         Map<String, Object> responseData = new java.util.HashMap<>();
@@ -172,6 +192,7 @@ public class ChatController {
         responseData.put("pages", result.getPages());
         responseData.put("size", result.getSize());
 
+        System.out.println("📤 [Chat] 返回数据给前端");
         return ResponseResult.success(responseData);
     }
 

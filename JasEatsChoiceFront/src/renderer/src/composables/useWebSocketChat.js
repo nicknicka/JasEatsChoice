@@ -138,7 +138,15 @@ export function useWebSocketChat({ userId, token, onMessage }) {
 
       websocket.value.onmessage = (event) => {
         try {
+          console.log('📨 [WebSocket] 收到原始消息:', event.data)
           const data = JSON.parse(event.data)
+          console.log('📨 [WebSocket] 解析后的数据:', data)
+          console.log('📨 [WebSocket] 数据结构:', {
+            type: data.type,
+            hasContent: !!data.content,
+            contentKeys: data.content ? Object.keys(data.content) : [],
+            所有字段: Object.keys(data)
+          })
 
           // 消息去重
           if (data.content && data.content.id) {
@@ -152,6 +160,7 @@ export function useWebSocketChat({ userId, token, onMessage }) {
           onMessage(data)
         } catch (error) {
           console.error('解析 WebSocket 消息失败:', error)
+          console.error('原始消息内容:', event.data)
         }
       }
 

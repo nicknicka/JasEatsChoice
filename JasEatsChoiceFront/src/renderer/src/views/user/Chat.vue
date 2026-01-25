@@ -792,15 +792,33 @@ const sendImageMessage = async (fileInfo) => {
       fileType: fileInfo.fileType
     }
 
+    console.log('📤 [sendImageMessage] 发送消息数据:', messageData)
+
     const response = await api.post('/v1/chat/messages', messageData)
+
+    console.log('📥 [sendImageMessage] 收到后端响应:', response)
 
     if (response.code === '200') {
       const sentMessage = response.data
+      console.log('✅ [sendImageMessage] 后端返回的消息:', {
+        原始数据: sentMessage,
+        msgId: sentMessage.msgId || sentMessage.id,
+        fileUrl: sentMessage.fileUrl,
+        fullUrl: sentMessage.fullUrl
+      })
 
       const index = chatMessages.value.findIndex((msg) => msg.id === tempMessage.id)
+      console.log('🔍 [sendImageMessage] 查找临时消息:', {
+        临时ID: tempMessage.id,
+        找到索引: index,
+        当前消息数: chatMessages.value.length
+      })
+
       if (index !== -1) {
-        chatMessages.value[index] = {
+        // ⭐ 确保使用正确的消息ID
+        const finalMessage = {
           ...sentMessage,
+          id: sentMessage.msgId || sentMessage.id || tempMessage.id,  // 优先使用后端返回的ID
           // 保留fullUrl，因为后端返回的数据可能没有这个字段
           fullUrl: sentMessage.fullUrl || tempMessage.fullUrl,
           formattedTime: formatMessageTime(sentMessage.createTime || sentMessage.time),
@@ -808,6 +826,13 @@ const sendImageMessage = async (fileInfo) => {
           status: 'success',
           isLoading: false
         }
+
+        console.log('✅ [sendImageMessage] 更新消息:', {
+          旧消息: chatMessages.value[index],
+          新消息: finalMessage
+        })
+
+        chatMessages.value[index] = finalMessage
       }
 
       updateConversationLastMessage(selectedConversation.value.id, sentMessage)

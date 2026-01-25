@@ -173,8 +173,23 @@ const emit = defineEmits(['command', 'resend'])
 // ========== 移动端检测 ==========
 const isMobile = ref(false)
 
+// ========== 初始化和调试日志 ==========
 onMounted(() => {
+  // 检测是否为移动端
   isMobile.value = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+
+  // 调试日志：打印图片消息信息
+  if (props.message.msgType === 'image') {
+    console.log('🖼️ [MessageItem] 渲染图片消息', {
+      msgId: props.message.id,
+      msgType: props.message.msgType,
+      content: props.message.content,
+      fileUrl: props.message.fileUrl,
+      fullUrl: props.message.fullUrl,
+      fileName: props.message.fileName,
+      最终URL: props.message.fullUrl || props.message.fileUrl
+    })
+  }
 })
 
 // ========== 文件扩展名获取 ==========
