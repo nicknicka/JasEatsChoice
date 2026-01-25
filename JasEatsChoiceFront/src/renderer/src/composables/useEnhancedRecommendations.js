@@ -27,7 +27,8 @@ const RECOMMENDATION_SOURCE_MAP = {
  */
 export function useEnhancedRecommendations() {
   const authStore = useAuthStore(pinia)
-  const { trackBehavior, trackRecommendFeedback, startAutoFlush, stopTracking } = useBehaviorTracking()
+  const { trackBehavior, trackRecommendFeedback, startAutoFlush, stopTracking } =
+    useBehaviorTracking()
 
   // 状态管理
   const recommendations = ref([])
@@ -95,7 +96,7 @@ export function useEnhancedRecommendations() {
 
       // 获取天气和时段信息
       const timePeriod = getCurrentTimePeriod()
-      const weather = options.weather || await getCurrentWeather()
+      const weather = options.weather || (await getCurrentWeather())
 
       // 构建请求参数
       const params = {
@@ -120,19 +121,14 @@ export function useEnhancedRecommendations() {
         )
 
         // 记录推荐展示行为
-        await trackBehavior(
-          'view',
-          'recommendation',
-          'recommendation_list',
-          {
-            context: {
-              count: recommendations.value.length,
-              scene: params.scene,
-              timePeriod: params.timePeriod,
-              weather: params.weather
-            }
+        await trackBehavior('view', 'recommendation', 'recommendation_list', {
+          context: {
+            count: recommendations.value.length,
+            scene: params.scene,
+            timePeriod: params.timePeriod,
+            weather: params.weather
           }
-        )
+        })
 
         return recommendations.value
       }
@@ -196,11 +192,7 @@ export function useEnhancedRecommendations() {
       })
 
       // 记录推荐反馈
-      await trackRecommendFeedback(
-        dish.dishId,
-        currentRecommendationId.value,
-        { isClicked: true }
-      )
+      await trackRecommendFeedback(dish.dishId, currentRecommendationId.value, { isClicked: true })
 
       return true
     } catch (error) {
@@ -224,11 +216,10 @@ export function useEnhancedRecommendations() {
       })
 
       // 记录推荐反馈
-      await trackRecommendFeedback(
-        dish.dishId,
-        currentRecommendationId.value,
-        { isClicked: true, isOrdered: true }
-      )
+      await trackRecommendFeedback(dish.dishId, currentRecommendationId.value, {
+        isClicked: true,
+        isOrdered: true
+      })
 
       return true
     } catch (error) {
@@ -264,7 +255,7 @@ export function useEnhancedRecommendations() {
       })
 
       // 从列表中移除
-      const index = recommendations.value.findIndex(r => r.dishId === dish.dishId)
+      const index = recommendations.value.findIndex((r) => r.dishId === dish.dishId)
       if (index > -1) {
         recommendations.value.splice(index, 1)
       }
@@ -310,7 +301,7 @@ export function useEnhancedRecommendations() {
 
         // 替换原列表中的菜品
         dishIds.forEach((dishId, index) => {
-          const existingIndex = recommendations.value.findIndex(r => r.dishId === dishId)
+          const existingIndex = recommendations.value.findIndex((r) => r.dishId === dishId)
           if (existingIndex > -1 && newDishes[index]) {
             recommendations.value[existingIndex] = newDishes[index]
           }
@@ -343,7 +334,7 @@ export function useEnhancedRecommendations() {
       const data = response.data.data
 
       if (data && data.filteredDishes) {
-        return data.filteredDishes.map(dish => ({
+        return data.filteredDishes.map((dish) => ({
           id: dish.id,
           dishId: String(dish.id),
           name: dish.name,

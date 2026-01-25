@@ -41,21 +41,55 @@
           <div class="loading-text">正在上传...</div>
         </div>
         <!-- 正常显示图片 -->
-        <el-image
+        <div
           v-else
-          :src="message.fullUrl || message.fileUrl"
-          :preview-src-list="[message.fullUrl || message.fileUrl]"
-          fit="cover"
-          class="message-image"
-          lazy
+          class="image-wrapper"
+          @mouseenter="!isMobile && (showImageInfo = true)"
+          @mouseleave="!isMobile && (showImageInfo = false)"
+          :class="{ 'is-mobile': isMobile }"
         >
-          <template #error>
-            <div class="image-error">
-              <el-icon><Picture /></el-icon>
-              <span>图片加载失败</span>
+          <el-image
+            :src="message.fullUrl || message.fileUrl"
+            :preview-src-list="[message.fullUrl || message.fileUrl]"
+            :fit="imageFit"
+            :class="['message-image', imageOrientation]"
+            lazy
+            @load="handleImageLoad"
+            @error="handleImageError"
+          >
+            <template #placeholder>
+              <div class="image-placeholder">
+                <el-icon class="is-loading"><Loading /></el-icon>
+              </div>
+            </template>
+            <template #error>
+              <div class="image-error">
+                <el-icon><Picture /></el-icon>
+                <span>图片加载失败</span>
+              </div>
+            </template>
+          </el-image>
+
+          <!-- 图片信息遮罩 -->
+          <transition name="fade">
+            <div v-if="showImageInfo || isMobile" class="image-info-overlay" :class="{ 'always-show': isMobile }">
+              <div class="image-info">
+                <span v-if="imageDimensions" class="image-dimensions">{{ imageDimensions }}</span>
+                <span v-if="message.fileSize" class="file-size">{{ formatFileSize(message.fileSize) }}</span>
+              </div>
+              <el-button
+                type="primary"
+                size="small"
+                circle
+                @click.stop="downloadImage"
+                class="download-btn"
+                title="下载图片"
+              >
+                <el-icon><Download /></el-icon>
+              </el-button>
             </div>
-          </template>
-        </el-image>
+          </transition>
+        </div>
       </div>
 
       <!-- 文件消息 -->
@@ -111,8 +145,9 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { Picture, Document, Download } from '@element-plus/icons-vue'
+import { computed, ref, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
+import { Picture, Document, Download, Loading } from '@element-plus/icons-vue'
 
 const props = defineProps({
   message: {
@@ -134,6 +169,26 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['command', 'resend'])
+
+// ========== 移动端检测 ==========
+const isMobile = ref(false)
+
+onMounted(() => {
+  isMobile.value = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+})
+
+// ========== 文件扩展名获取 ==========
+const getFileExtension = (url) => {
+  if (!url) return 'jpg'
+  const match = url.match(/\.([^.?]+)(?:\?|$)/)
+  return match ? match[1].toLowerCase() : 'jpg'
+}
+
+// 图片相关响应式变量
+const showImageInfo = ref(false)
+const imageDimensions = ref(null)
+const imageOrientation = ref('landscape')
+const imageFit = ref('cover')
 
 const isMyMessage = computed(
   () => props.message.fromId === props.userId.toString()
@@ -173,20 +228,156 @@ const formatFileSize = (bytes) => {
   return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i]
 }
 
-// 处理文件下载
-const handleDownloadFile = () => {
+// 处理图片加载完成
+const handleImageLoad = (e) => {
+  const img = e.target || e
+  const width = img.naturalWidth || img.width
+  const height = img.naturalHeight || img.height
+
+  // 设置图片尺寸信息
+  imageDimensions.value = `${width} x ${height}`
+
+  // 根据图片比例确定方向和适配方式
+  const ratio = width / height
+
+  if (ratio > 1.5) {
+    // 横图：宽度优先
+    imageOrientation.value = 'landscape'
+    imageFit.value = 'cover'
+  } else if (ratio < 0.67) {
+    // 竖图：高度优先
+    imageOrientation.value = 'portrait'
+    imageFit.value = 'cover'
+  } else {
+    // 方图或接近方形
+    imageOrientation.value = 'square'
+    imageFit.value = 'cover'
+  }
+}
+
+// 处理图片加载错误
+const handleImageError = () => {
+  console.error('图片加载失败:', props.message.fileUrl)
+  imageDimensions.value = null
+}
+
+// 下载图片（改进版 - 支持跨域）
+const downloadImage = async () => {
+  const imageUrl = props.message.fullUrl || props.message.fileUrl
+  if (!imageUrl) {
+    ElMessage.error('图片地址无效')
+    return
+  }
+
+  const extension = getFileExtension(imageUrl)
+  const fileName = props.message.fileName || `image_${Date.now()}.${extension}`
+
+  ElMessage.info({
+    message: '正在下载图片...',
+    duration: 1000
+  })
+
+  try {
+    // 使用 fetch API 下载（支持跨域）
+    const response = await fetch(imageUrl, {
+      mode: 'cors',
+      credentials: 'include'
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
+
+    const blob = await response.blob()
+    const url = window.URL.createObjectURL(blob)
+
+    // 创建临时下载链接
+    const link = document.createElement('a')
+    link.href = url
+    link.download = fileName
+    link.style.display = 'none'
+    document.body.appendChild(link)
+
+    // 触发下载
+    link.click()
+
+    // 清理
+    setTimeout(() => {
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    }, 100)
+
+    ElMessage.success({
+      message: '下载成功',
+      duration: 2000
+    })
+  } catch (error) {
+    console.error('下载图片失败:', error)
+
+    // 降级方案：在新标签页打开
+    ElMessage.warning({
+      message: '自动下载失败，正在打开图片...',
+      duration: 2000
+    })
+
+    setTimeout(() => {
+      window.open(imageUrl, '_blank')
+      ElMessage.info('请右键点击图片选择"图片另存为"')
+    }, 500)
+  }
+}
+
+// 处理文件下载（改进版 - 支持跨域）
+const handleDownloadFile = async () => {
   const fileUrl = props.message.fileUrl || props.message.fullUrl
+  if (!fileUrl) {
+    ElMessage.error('文件地址无效')
+    return
+  }
+
   const fileName = props.message.fileName || '下载文件'
 
-  if (fileUrl) {
-    // 创建一个隐藏的a标签来下载文件
+  ElMessage.info({
+    message: '正在下载文件...',
+    duration: 1000
+  })
+
+  try {
+    // 使用 fetch API 下载
+    const response = await fetch(fileUrl, {
+      mode: 'cors',
+      credentials: 'include'
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
+
+    const blob = await response.blob()
+    const url = window.URL.createObjectURL(blob)
+
     const link = document.createElement('a')
-    link.href = fileUrl
+    link.href = url
     link.download = fileName
-    link.target = '_blank'
+    link.style.display = 'none'
     document.body.appendChild(link)
     link.click()
-    document.body.removeChild(link)
+
+    setTimeout(() => {
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    }, 100)
+
+    ElMessage.success({
+      message: '下载成功',
+      duration: 2000
+    })
+  } catch (error) {
+    console.error('下载文件失败:', error)
+    ElMessage.warning('自动下载失败，正在打开文件...')
+    setTimeout(() => {
+      window.open(fileUrl, '_blank')
+    }, 500)
   }
 }
 </script>
@@ -279,16 +470,166 @@ const handleDownloadFile = () => {
         }
       }
 
-      .message-image {
-        max-width: 300px;
-        max-height: 300px;
-        border-radius: 8px;
-        cursor: pointer;
+      .image-wrapper {
+        position: relative;
+        display: inline-block;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
-        :deep(.el-image__inner) {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
+        &:hover {
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+          transform: translateY(-2px);
+
+          .message-image {
+            transform: scale(1.02);
+          }
+        }
+
+        // 移动端样式
+        &.is-mobile {
+          .image-info-overlay {
+            opacity: 1 !important;
+            background: linear-gradient(
+              to top,
+              rgba(0, 0, 0, 0.75) 0%,
+              rgba(0, 0, 0, 0.6) 50%,
+              transparent 100%
+            );
+            pointer-events: auto;
+
+            &.always-show {
+              position: absolute;
+              bottom: 0;
+              left: 0;
+              right: 0;
+              padding: 10px 12px;
+            }
+          }
+        }
+
+        .message-image {
+          display: block;
+          border-radius: 12px;
+          cursor: pointer;
+          transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+          // 根据图片方向调整尺寸
+          &.landscape {
+            max-width: 400px;
+            max-height: 300px;
+          }
+
+          &.portrait {
+            max-width: 250px;
+            max-height: 400px;
+          }
+
+          &.square {
+            max-width: 300px;
+            max-height: 300px;
+          }
+
+          :deep(.el-image__inner) {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 12px;
+            // 添加渐显动画
+            animation: image-fadein 0.4s ease-out;
+          }
+        }
+
+        // 图片加载占位符
+        .image-placeholder {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 200px;
+          height: 150px;
+          background: linear-gradient(135deg, #f5f7fa 0%, #e4e7ed 100%);
+          border-radius: 12px;
+          color: #909399;
+
+          .el-icon {
+            font-size: 32px;
+            animation: spin 1s linear infinite;
+          }
+        }
+
+        // 图片信息遮罩层
+        .image-info-overlay {
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, transparent 100%);
+          padding: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+          border-radius: 0 0 12px 12px;
+
+          .image-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            color: #fff;
+            font-size: 12px;
+
+            .image-dimensions {
+              font-weight: 500;
+            }
+
+            .file-size {
+              opacity: 0.8;
+              font-size: 11px;
+            }
+          }
+
+          .download-btn {
+            flex-shrink: 0;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            min-width: 36px;
+            min-height: 36px;
+
+            &:hover {
+              background: rgba(255, 255, 255, 0.3);
+              border-color: rgba(255, 255, 255, 0.5);
+              transform: scale(1.1);
+            }
+
+            &:active {
+              transform: scale(0.95);
+            }
+
+            // 移动端下载按钮样式优化
+            .image-wrapper.is-mobile & {
+              min-width: 40px;
+              min-height: 40px;
+
+              &:active {
+                transform: scale(0.9);
+                background: rgba(255, 255, 255, 0.4);
+              }
+            }
+          }
+        }
+
+        // 渐显动画
+        .fade-enter-active,
+        .fade-leave-active {
+          transition: opacity 0.3s ease;
+        }
+
+        .fade-enter-from,
+        .fade-leave-to {
+          opacity: 0;
         }
       }
 
@@ -299,10 +640,11 @@ const handleDownloadFile = () => {
         justify-content: center;
         width: 200px;
         height: 150px;
-        background-color: #f5f7fa;
-        border-radius: 8px;
-        color: #909399;
+        background: linear-gradient(135deg, #fef0f0 0%, #fde2e2 100%);
+        border-radius: 12px;
+        color: #f56c6c;
         gap: 8px;
+        box-shadow: 0 2px 8px rgba(245, 108, 108, 0.1);
 
         .el-icon {
           font-size: 32px;
@@ -425,6 +767,27 @@ const handleDownloadFile = () => {
     &:hover .message-footer .msg-action-btn {
       opacity: 1;
     }
+  }
+}
+
+// 全局动画关键帧
+@keyframes image-fadein {
+  from {
+    opacity: 0;
+    filter: blur(10px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
   }
 }
 </style>

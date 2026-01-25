@@ -12,11 +12,7 @@ export const ADD_DISH_CONFIG = {
   ADD_DISH_PREFIX: '【加购】',
 
   // 默认驳回原因
-  DEFAULT_REJECT_REASONS: [
-    '超出聚餐预算',
-    '菜品已备齐',
-    '其他原因'
-  ],
+  DEFAULT_REJECT_REASONS: ['超出聚餐预算', '菜品已备齐', '其他原因'],
 
   // 刷新间隔（毫秒）
   REFRESH_INTERVAL: 30000
@@ -26,19 +22,19 @@ export const ADD_DISH_CONFIG = {
  * 加菜审核状态
  */
 export const ADD_DISH_APPROVAL_STATUS = {
-  PENDING: 0,          // 待审核
-  APPROVED: 1,         // 审核通过
-  REJECTED: 2,         // 审核驳回
-  WITHDRAWN: 3,        // 已撤回
-  TIMEOUT_REJECTED: 4  // 超时驳回
+  PENDING: 0, // 待审核
+  APPROVED: 1, // 审核通过
+  REJECTED: 2, // 审核驳回
+  WITHDRAWN: 3, // 已撤回
+  TIMEOUT_REJECTED: 4 // 超时驳回
 }
 
 /**
  * 加菜权限类型
  */
 export const ADD_DISH_PERMISSION = {
-  ALL_MEMBERS: 0,      // 全员可加菜
-  INITIATOR_ONLY: 1    // 仅发起者可加菜
+  ALL_MEMBERS: 0, // 全员可加菜
+  INITIATOR_ONLY: 1 // 仅发起者可加菜
 }
 
 /**

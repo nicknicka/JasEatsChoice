@@ -11,23 +11,23 @@ import { API_CONFIG } from '../config/index.js'
  * 行为类型枚举
  */
 export const BEHAVIOR_TYPES = {
-  VIEW: 'view',           // 浏览
-  CLICK: 'click',         // 点击
-  FAVORITE: 'favorite',   // 收藏
-  ORDER: 'order',         // 下单
-  REJECT: 'reject',       // 拒绝
-  SHARE: 'share',         // 分享
-  SEARCH: 'search'        // 搜索
+  VIEW: 'view', // 浏览
+  CLICK: 'click', // 点击
+  FAVORITE: 'favorite', // 收藏
+  ORDER: 'order', // 下单
+  REJECT: 'reject', // 拒绝
+  SHARE: 'share', // 分享
+  SEARCH: 'search' // 搜索
 }
 
 /**
  * 项目类型枚举
  */
 export const ITEM_TYPES = {
-  DISH: 'dish',           // 菜品
+  DISH: 'dish', // 菜品
   RECOMMENDATION: 'recommendation', // 推荐
-  MERCHANT: 'merchant',   // 商家
-  CATEGORY: 'category'    // 分类
+  MERCHANT: 'merchant', // 商家
+  CATEGORY: 'category' // 分类
 }
 
 /**
@@ -106,7 +106,7 @@ export function useBehaviorTracking() {
     try {
       // 批量发送行为记录
       await Promise.all(
-        behaviorsToSend.map(behavior =>
+        behaviorsToSend.map((behavior) =>
           axios.post(`${API_CONFIG.baseURL}/v1/recommend/behavior`, behavior)
         )
       )
@@ -122,72 +122,47 @@ export function useBehaviorTracking() {
    * 页面浏览埋点
    */
   const trackPageView = (pageName, options = {}) => {
-    return trackBehavior(
-      BEHAVIOR_TYPES.VIEW,
-      ITEM_TYPES.RECOMMENDATION,
-      pageName,
-      {
-        context: {
-          page: pageName,
-          referrer: document.referrer,
-          userAgent: navigator.userAgent,
-          ...options.context
-        }
+    return trackBehavior(BEHAVIOR_TYPES.VIEW, ITEM_TYPES.RECOMMENDATION, pageName, {
+      context: {
+        page: pageName,
+        referrer: document.referrer,
+        userAgent: navigator.userAgent,
+        ...options.context
       }
-    )
+    })
   }
 
   /**
    * 菜品点击埋点
    */
   const trackDishClick = (dishId, options = {}) => {
-    return trackBehavior(
-      BEHAVIOR_TYPES.CLICK,
-      ITEM_TYPES.DISH,
-      dishId,
-      options
-    )
+    return trackBehavior(BEHAVIOR_TYPES.CLICK, ITEM_TYPES.DISH, dishId, options)
   }
 
   /**
    * 菜品收藏埋点
    */
   const trackDishFavorite = (dishId, options = {}) => {
-    return trackBehavior(
-      BEHAVIOR_TYPES.FAVORITE,
-      ITEM_TYPES.DISH,
-      dishId,
-      options
-    )
+    return trackBehavior(BEHAVIOR_TYPES.FAVORITE, ITEM_TYPES.DISH, dishId, options)
   }
 
   /**
    * 菜品下单埋点
    */
   const trackDishOrder = (dishId, options = {}) => {
-    return trackBehavior(
-      BEHAVIOR_TYPES.ORDER,
-      ITEM_TYPES.DISH,
-      dishId,
-      options
-    )
+    return trackBehavior(BEHAVIOR_TYPES.ORDER, ITEM_TYPES.DISH, dishId, options)
   }
 
   /**
    * 推荐菜品拒绝埋点
    */
   const trackRecommendReject = (dishId, reason, options = {}) => {
-    return trackBehavior(
-      BEHAVIOR_TYPES.REJECT,
-      ITEM_TYPES.DISH,
-      dishId,
-      {
-        context: {
-          reason,
-          ...options.context
-        }
+    return trackBehavior(BEHAVIOR_TYPES.REJECT, ITEM_TYPES.DISH, dishId, {
+      context: {
+        reason,
+        ...options.context
       }
-    )
+    })
   }
 
   /**
@@ -219,35 +194,25 @@ export function useBehaviorTracking() {
    * 搜索行为埋点
    */
   const trackSearch = (keyword, resultCount, options = {}) => {
-    return trackBehavior(
-      BEHAVIOR_TYPES.SEARCH,
-      ITEM_TYPES.CATEGORY,
-      keyword,
-      {
-        context: {
-          keyword,
-          resultCount,
-          ...options.context
-        }
+    return trackBehavior(BEHAVIOR_TYPES.SEARCH, ITEM_TYPES.CATEGORY, keyword, {
+      context: {
+        keyword,
+        resultCount,
+        ...options.context
       }
-    )
+    })
   }
 
   /**
    * 分享行为埋点
    */
   const trackShare = (itemType, itemId, shareChannel, options = {}) => {
-    return trackBehavior(
-      BEHAVIOR_TYPES.SHARE,
-      itemType,
-      itemId,
-      {
-        context: {
-          shareChannel,
-          ...options.context
-        }
+    return trackBehavior(BEHAVIOR_TYPES.SHARE, itemType, itemId, {
+      context: {
+        shareChannel,
+        ...options.context
       }
-    )
+    })
   }
 
   /**

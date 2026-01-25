@@ -205,6 +205,15 @@ public class ChatController {
         }
         chatMsg.setSessionId(sessionId);
 
+        // 🔍 调试日志：检查接收到的消息数据
+        System.out.println("📨 [Chat] 接收到消息 - sessionType: " + chatMsg.getSessionType()
+            + ", msgType: " + chatMsg.getMsgType()
+            + ", content: " + chatMsg.getContent()
+            + ", fileUrl: " + chatMsg.getFileUrl()
+            + ", fileName: " + chatMsg.getFileName()
+            + ", fileSize: " + chatMsg.getFileSize()
+            + ", fileType: " + chatMsg.getFileType());
+
         // 保存消息
         boolean success = chatMsgService.save(chatMsg);
         if (success) {
@@ -214,18 +223,18 @@ public class ChatController {
             createOrUpdateSessionForUser(
                 chatMsg.getFromId(),
                 chatMsg.getToId(),
-                chatMsg.getMsgType(),
+                chatMsg.getSessionType(),
                 chatMsg.getContent(),
                 chatMsg.getCreateTime()
             );
 
             // 2. 为接收者创建或更新会话（如果是群聊，所有成员都会收到消息）
-            if ("group".equals(chatMsg.getMsgType())) {
+            if ("group".equals(chatMsg.getSessionType())) {
                 // 群聊：更新群组会话
                 updateSessionForReceiver(
                     chatMsg.getToId(),  // 群ID
                     chatMsg.getFromId(),  // 发送者ID
-                    chatMsg.getMsgType(),
+                    chatMsg.getSessionType(),
                     chatMsg.getContent(),
                     chatMsg.getCreateTime(),
                     true  // 是群聊
@@ -235,7 +244,7 @@ public class ChatController {
                 createOrUpdateSessionForUser(
                     chatMsg.getToId(),
                     chatMsg.getFromId(),
-                    chatMsg.getMsgType(),
+                    chatMsg.getSessionType(),
                     chatMsg.getContent(),
                     chatMsg.getCreateTime()
                 );
@@ -253,15 +262,13 @@ public class ChatController {
     private void createOrUpdateSessionForUser(
             String userId,
             String otherId,
-            String msgType,
+            String sessionType,
             String content,
             LocalDateTime messageTime) {
 
-        // 判断会话类型
-        String sessionType = "group".equals(msgType) ? "group" : "single";
         // 生成sessionId（与消息表保持一致，使用确定性算法）
         String sessionId;
-        if ("group".equals(msgType)) {
+        if ("group".equals(sessionType)) {
             // 群聊：直接使用群ID
             sessionId = otherId;
         } else {
@@ -305,12 +312,11 @@ public class ChatController {
     private void updateSessionForReceiver(
             String receiverId,
             String senderId,
-            String msgType,
+            String sessionType,
             String content,
             LocalDateTime messageTime,
             boolean isGroup) {
 
-        String sessionType = isGroup ? "group" : "single";
         // 生成sessionId（与消息表保持一致，使用确定性算法）
         String sessionId;
         if (isGroup) {

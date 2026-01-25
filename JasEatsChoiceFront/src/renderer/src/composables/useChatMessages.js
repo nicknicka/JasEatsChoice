@@ -120,6 +120,22 @@ export function useChatMessages({ userId, selectedConversation }) {
           senderName
         }
 
+        // 修复消息类型和文件信息
+        // 如果消息内容是 "[图片]" 或者有 fileUrl 但没有 msgType，设置为图片消息
+        if ((msg.content === '[图片]' || msg.fileUrl || msg.fullUrl) && !msg.msgType) {
+          processedMsg.msgType = 'image'
+          processedMsg.fileUrl = msg.fileUrl || msg.fullUrl
+          processedMsg.fullUrl = msg.fullUrl || msg.fileUrl
+          console.log('📸 [Chat] 修复图片消息 - msgId:', msg.id, 'fileUrl:', processedMsg.fileUrl)
+        }
+        // 如果消息内容是 "[文件] xxx" 或者有 fileName 但没有 msgType，设置为文件消息
+        else if ((msg.content?.startsWith('[文件]') || msg.fileName) && !msg.msgType) {
+          processedMsg.msgType = 'file'
+          processedMsg.fileUrl = msg.fileUrl || msg.fullUrl
+          processedMsg.fullUrl = msg.fullUrl || msg.fileUrl
+          console.log('📎 [Chat] 修复文件消息 - msgId:', msg.id, 'fileName:', processedMsg.fileName)
+        }
+
         // 如果有回复信息但没有回复者名称，则生成显示名称
         if (msg.replyTo && !msg.replyFromName) {
           processedMsg.replyFromName = getReplyDisplayName(msg.replyFromId)
@@ -331,6 +347,22 @@ export function useChatMessages({ userId, selectedConversation }) {
         formattedTime: formatMessageTime(message.createTime || message.time),
         fromId,
         senderName
+      }
+
+      // 修复消息类型和文件信息
+      // 如果消息内容是 "[图片]" 或者有 fileUrl 但没有 msgType，设置为图片消息
+      if ((message.content === '[图片]' || message.fileUrl || message.fullUrl) && !message.msgType) {
+        processedMsg.msgType = 'image'
+        processedMsg.fileUrl = message.fileUrl || message.fullUrl
+        processedMsg.fullUrl = message.fullUrl || message.fileUrl
+        console.log('📸 [Chat] WebSocket 修复图片消息 - msgId:', message.id, 'fileUrl:', processedMsg.fileUrl)
+      }
+      // 如果消息内容是 "[文件] xxx" 或者有 fileName 但没有 msgType，设置为文件消息
+      else if ((message.content?.startsWith('[文件]') || message.fileName) && !message.msgType) {
+        processedMsg.msgType = 'file'
+        processedMsg.fileUrl = message.fileUrl || message.fullUrl
+        processedMsg.fullUrl = message.fullUrl || message.fileUrl
+        console.log('📎 [Chat] WebSocket 修复文件消息 - msgId:', message.id, 'fileName:', processedMsg.fileName)
       }
 
       // 如果有回复信息但没有回复者名称，则生成显示名称

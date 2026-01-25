@@ -42,8 +42,12 @@ public class ChatMsg {
     private String sessionId; // 会话ID
 
     @TableField("msg_type")
-    @ApiModelProperty(value = "消息类型：single/group/order_sync/order_status")
+    @ApiModelProperty(value = "消息类型：text/image/file")
     private String msgType; // 消息类型
+
+    @TableField("session_type")
+    @ApiModelProperty(value = "会话类型：single/group")
+    private String sessionType; // 会话类型
 
     @TableField("content")
     @ApiModelProperty(value = "消息内容")

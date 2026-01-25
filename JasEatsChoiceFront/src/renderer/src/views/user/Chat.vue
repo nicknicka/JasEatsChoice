@@ -638,7 +638,8 @@ const sendMessage = async (content) => {
   const messageData = {
     fromId: userId.value.toString(),
     toId: selectedConversation.value.id,
-    msgType: selectedConversation.value.type || 'single',
+    sessionType: selectedConversation.value.type || 'single',  // 会话类型
+    msgType: 'text',                                             // 消息类型
     content: content.trim()
   }
 
@@ -743,7 +744,8 @@ const sendImageMessage = async (fileInfo) => {
     const messageData = {
       fromId: userId.value.toString(),
       toId: selectedConversation.value.id,
-      msgType: 'image',
+      sessionType: selectedConversation.value.type || 'single',  // 会话类型
+      msgType: 'image',                                            // 消息类型
       content: '[图片]',
       fileUrl: fileInfo.fileUrl,
       fileName: fileInfo.fileName,
@@ -816,7 +818,8 @@ const sendFileMessage = async (fileInfo) => {
     const messageData = {
       fromId: userId.value.toString(),
       toId: selectedConversation.value.id,
-      msgType: 'file',
+      sessionType: selectedConversation.value.type || 'single',  // 会话类型
+      msgType: 'file',                                             // 消息类型
       content: `[文件] ${fileInfo.fileName}`,
       fileUrl: fileInfo.fileUrl,
       fileName: fileInfo.fileName,
