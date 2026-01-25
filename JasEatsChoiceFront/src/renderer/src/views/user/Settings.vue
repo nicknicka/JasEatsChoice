@@ -29,7 +29,7 @@
         <div class="form-row">
           <div class="form-label">手机号</div>
           <div class="form-content">
-            <el-input :model-value="userInfo.phone" readonly style="width: 200px" />
+            <el-input :model-value="maskedPhone" readonly style="width: 200px" />
             <el-button type="text" size="small" style="margin-left: 10px" @click="handleEditPhone"
               >修改</el-button
             >
@@ -39,7 +39,7 @@
         <div class="form-row">
           <div class="form-label">邮箱</div>
           <div class="form-content">
-            <el-input :model-value="userInfo.email" readonly style="width: 200px" />
+            <el-input :model-value="maskedEmail" readonly style="width: 200px" />
             <el-button type="text" size="small" style="margin-left: 10px" @click="handleEditEmail"
               >修改</el-button
             >
@@ -205,7 +205,7 @@
             style="width: 150px"
           />
           <div style="font-size: 12px; color: #909399; margin-top: 4px;">
-            请输入原手机号的中间4位数字进行验证（例如：138****5678，请输入****部分）
+            您的原手机号：{{ maskedPhone }}，请输入中间4位数字进行验证
           </div>
         </el-form-item>
         <el-form-item label="新手机号" prop="phone">
@@ -243,7 +243,7 @@
             style="width: 100%"
           />
           <div style="font-size: 12px; color: #909399; margin-top: 4px;">
-            请再次输入完整的原邮箱地址进行验证
+            您的原邮箱：{{ maskedEmail }}，请输入完整的原邮箱地址进行验证
           </div>
         </el-form-item>
         <el-form-item label="新邮箱" prop="email">
@@ -353,6 +353,31 @@ const userStore = useUserStore(pinia)
 
 // 使用userStore中的用户信息（计算属性，避免undefined错误）
 const userInfo = computed(() => userStore.userInfo || { phone: '', email: '', avatar: '', userId: '' })
+
+// 手机号脱敏显示（中间四位不显示）
+const maskedPhone = computed(() => {
+  const phone = userInfo.value.phone || ''
+  if (phone.length === 11) {
+    return phone.substring(0, 3) + '****' + phone.substring(7)
+  }
+  return phone
+})
+
+// 邮箱脱敏显示（只显示第一个字符和@及后缀）
+const maskedEmail = computed(() => {
+  const email = userInfo.value.email || ''
+  if (!email) return email
+
+  const atIndex = email.indexOf('@')
+  if (atIndex > 1) {
+    // 保留第一个字符和@及域名部分，中间用***代替
+    return email[0] + '***' + email.substring(atIndex)
+  } else if (atIndex === 1) {
+    // 如果@前面只有一个字符，如 a@b.com
+    return email
+  }
+  return email
+})
 
 // 正式设置数据（用于保存到localStorage）
 const officialSettings = ref({

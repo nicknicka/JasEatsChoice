@@ -2,10 +2,18 @@
   <div class="contacts-container">
     <!-- 页面头部 -->
     <div class="contacts-header">
-      <h2 class="page-title">
-        <span class="title-icon">👥</span>
-        通讯录
-      </h2>
+      <div class="header-content">
+        <h2 class="page-title">
+          <span class="title-icon">👥</span>
+          通讯录
+        </h2>
+        <div class="header-stats">
+          <div class="stat-item">
+            <span class="stat-label">总好友</span>
+            <span class="stat-value">{{ totalCount }}</span>
+          </div>
+        </div>
+      </div>
       <div class="header-actions">
         <el-button type="primary" :icon="Plus" @click="openAddFriendDialog">
           添加好友
@@ -29,7 +37,6 @@
       <div class="filter-options">
         <el-radio-group v-model="filterType" size="small" @change="handleFilter">
           <el-radio-button label="all">全部 ({{ totalCount }})</el-radio-button>
-          <el-radio-button label="recent">最近联系 ({{ recentCount }})</el-radio-button>
         </el-radio-group>
       </div>
     </div>
@@ -42,14 +49,13 @@
         <div class="friends-list-scroll">
           <div v-for="(group, letter) in groupedFriends" :key="letter" class="friend-group">
             <!-- 字母标题 -->
-            <div class="group-letter">{{ letter }}</div>
+            <div class="group-letter" :data-letter="letter">{{ letter }}</div>
 
             <!-- 该字母下的好友 -->
             <div
               v-for="friend in group"
               :key="friend.id"
               class="friend-item"
-              :class="{ 'has-recent-chat': friend.recentChatTime }"
               @click="startChat(friend)"
               @contextmenu.prevent="showContextMenu($event, friend)"
             >
@@ -57,19 +63,12 @@
               <div class="friend-avatar">
                 <img v-if="isImageAvatar(friend.avatar)" :src="friend.avatar" alt="头像" />
                 <span v-else class="avatar-emoji">{{ friend.avatar || '👤' }}</span>
-                <!-- 最近聊天标签 -->
-                <div v-if="friend.recentChatTime" class="recent-chat-badge" :title="`最近: ${formatRecentTime(friend.recentChatTime)}`">
-                  💬
-                </div>
               </div>
 
               <!-- 好友信息 -->
               <div class="friend-info">
                 <div class="friend-name-row">
                   <span class="friend-name">{{ friend.name }}</span>
-                  <span v-if="friend.recentChatTime" class="recent-time">
-                    {{ formatRecentTime(friend.recentChatTime) }}
-                  </span>
                 </div>
                 <div class="friend-id">ID: {{ friend.id }}</div>
               </div>
@@ -159,16 +158,18 @@
         </div>
 
         <!-- 搜索输入框 -->
-        <el-input
-          v-model="friendSearchKeyword"
-          placeholder="请输入搜索关键词"
-          clearable
-          @keyup.enter="handleFriendSearch"
-        >
-          <template #append>
-            <el-button :icon="Search" @click="handleFriendSearch">搜索</el-button>
-          </template>
-        </el-input>
+        <div class="friend-search-input">
+          <el-input
+            v-model="friendSearchKeyword"
+            placeholder="请输入搜索关键词"
+            clearable
+            @keyup.enter="handleFriendSearch"
+          >
+            <template #append>
+              <el-button :icon="Search" @click="handleFriendSearch">搜索</el-button>
+            </template>
+          </el-input>
+        </div>
 
         <!-- 搜索结果 -->
         <div v-if="searchResults.length > 0" class="search-results">
@@ -179,8 +180,8 @@
             </div>
             <div class="user-info">
               <div class="user-name">{{ user.name }}</div>
-              <div v-if="user.phone" class="user-detail">手机: {{ user.phone }}</div>
-              <div v-if="user.email" class="user-detail">邮箱: {{ user.email }}</div>
+              <div v-if="user.phone" class="user-detail">手机: {{ maskPhone(user.phone) }}</div>
+              <div v-if="user.email" class="user-detail">邮箱: {{ maskEmail(user.email) }}</div>
             </div>
             <el-button
               type="primary"
@@ -270,11 +271,6 @@ const searchResults = ref([])
 const filteredFriends = computed(() => {
   let result = [...friends.value]
 
-  // 根据筛选类型过滤
-  if (filterType.value === 'recent') {
-    result = result.filter(friend => friend.recentChatTime)
-  }
-
   // 根据搜索关键词过滤
   if (searchQuery.value.trim()) {
     const keyword = searchQuery.value.toLowerCase().trim()
@@ -330,14 +326,10 @@ const availableLetters = computed(() => {
 })
 
 const totalCount = computed(() => friends.value.length)
-const recentCount = computed(() => friends.value.filter(f => f.recentChatTime).length)
 
 const emptyText = computed(() => {
   if (searchQuery.value.trim()) {
     return '未找到匹配的好友'
-  }
-  if (filterType.value === 'recent') {
-    return '暂无最近联系的好友'
   }
   return '还没有好友，快去添加吧'
 })
@@ -359,46 +351,128 @@ const isImageAvatar = (avatar) => {
   return /^https?:\/\//.test(avatar) || /^data:image/.test(avatar)
 }
 
+// ========== 手机号脱敏 ==========
+const maskPhone = (phone) => {
+  if (!phone) return phone
+  if (phone.length === 11) {
+    return phone.substring(0, 3) + '****' + phone.substring(7)
+  }
+  return phone
+}
+
+// ========== 邮箱脱敏 ==========
+const maskEmail = (email) => {
+  if (!email) return email
+
+  const atIndex = email.indexOf('@')
+  if (atIndex > 1) {
+    return email[0] + '***' + email.substring(atIndex)
+  } else if (atIndex === 1) {
+    return email
+  }
+  return email
+}
+
+// ========== 移除未使用的函数 ==========
+// formatRecentTime 函数已移除，因为不再显示最近联系时间
+
+// ========== 从本地存储加载好友列表 ==========
+const loadFriendsFromLocal = () => {
+  try {
+    const cachedFriends = localStorage.getItem(`friends_${userId.value}`)
+    if (cachedFriends) {
+      const parsedFriends = JSON.parse(cachedFriends)
+      if (Array.isArray(parsedFriends) && parsedFriends.length > 0) {
+        console.log('📦 [Contacts] 从本地缓存加载好友列表 - 共', parsedFriends.length, '个好友')
+        friends.value = parsedFriends
+        return true
+      }
+    }
+  } catch (error) {
+    console.error('❌ [Contacts] 加载本地缓存失败:', error)
+  }
+  return false
+}
+
+// ========== 保存好友列表到本地 ==========
+const saveFriendsToLocal = (friendsData) => {
+  try {
+    localStorage.setItem(`friends_${userId.value}`, JSON.stringify(friendsData))
+    console.log('💾 [Contacts] 好友列表已保存到本地缓存')
+  } catch (error) {
+    console.error('❌ [Contacts] 保存本地缓存失败:', error)
+  }
+}
+
 // ========== 获取好友列表 ==========
 const fetchFriends = async () => {
+  console.log('🚀 [Contacts] 开始获取好友列表, userId:', userId.value)
+
   loading.value = true
+
   try {
     const response = await api.get(`/v1/contacts/friends?userId=${userId.value}`)
+
+    console.log('📡 [Contacts] 好友列表 API 响应:', {
+      code: response.code,
+      dataLength: response.data?.length,
+      userId: userId.value
+    })
+
     if (response.code === '200') {
+      const contacts = response.data || []
+
       // 获取每个好友的详细信息
       const friendsWithDetails = await Promise.all(
-        response.data.map(async (contact) => {
+        contacts.map(async (contact) => {
           try {
             const userResponse = await api.get(`/v1/users/${contact.targetId}`)
             const userData = userResponse.data
 
+            // 判断头像是否为有效的图片 URL
+            const isValidAvatarUrl = (avatar) => {
+              if (!avatar) return false
+              return /^https?:\/\//.test(avatar) || /^data:image/.test(avatar)
+            }
+
+            const avatar = isValidAvatarUrl(userData.avatar) ? userData.avatar : '👤'
+
             return {
               id: contact.targetId,
               name: userData.nickname || userData.username || '好友',
-              avatar: userData.avatar || '👤',
-              isOnline: false,
-              recentChatTime: null
+              avatar: avatar
             }
           } catch (error) {
-            console.error(`获取好友 ${contact.targetId} 信息失败:`, error)
+            console.error(`❌ [Contacts] 获取好友 ${contact.targetId} 信息失败:`, error)
+            // 返回默认信息，确保一个好友失败不影响其他好友
             return {
               id: contact.targetId,
               name: '好友',
-              avatar: '👤',
-              isOnline: false,
-              recentChatTime: null
+              avatar: '👤'
             }
           }
         })
       )
 
       friends.value = friendsWithDetails
+      console.log(`✅ [Contacts] 好友列表已更新 - 共 ${friendsWithDetails.length} 个好友`)
+
+      // 保存到本地缓存
+      saveFriendsToLocal(friendsWithDetails)
     } else {
+      console.error(`❌ [Contacts] 获取好友列表失败 - code: ${response.code}`)
       ElMessage.error('获取好友列表失败')
     }
   } catch (error) {
-    console.error('获取好友列表失败:', error)
-    ElMessage.error('获取好友列表失败')
+    console.error('❌ [Contacts] 获取好友列表失败:', error)
+
+    // 如果网络请求失败，尝试从本地缓存加载
+    const hasLocalData = loadFriendsFromLocal()
+    if (hasLocalData) {
+      ElMessage.warning('网络连接失败，已加载本地缓存数据')
+    } else {
+      ElMessage.error('获取好友列表失败，请检查网络连接')
+    }
   } finally {
     loading.value = false
   }
@@ -442,6 +516,7 @@ const formatRecentTime = (time) => {
 
 // ========== 开始聊天 ==========
 const startChat = (friend) => {
+  console.log('💬 [Contacts] 开始聊天:', friend)
   router.push({
     path: '/user/home/chat',
     query: { friendId: friend.id, friendName: friend.name }
@@ -509,18 +584,26 @@ const deleteFriend = async (friend) => {
       }
     )
 
+    console.log('🗑️ [Contacts] 开始删除好友:', friend)
+
     const response = await api.delete(`/v1/contacts/friends/${userId.value}/${friend.id}`)
 
     if (response.code === '200') {
-      ElMessage.success('删除好友成功')
       // 从列表中移除
       friends.value = friends.value.filter(f => f.id !== friend.id)
+
+      // 更新本地缓存
+      saveFriendsToLocal(friends.value)
+
+      console.log('✅ [Contacts] 删除好友成功')
+      ElMessage.success('删除好友成功')
     } else {
+      console.error('❌ [Contacts] 删除好友失败 - code:', response.code)
       ElMessage.error('删除好友失败')
     }
   } catch (error) {
     if (error !== 'cancel') {
-      console.error('删除好友失败:', error)
+      console.error('❌ [Contacts] 删除好友失败:', error)
       ElMessage.error('删除好友失败')
     }
   }
@@ -540,12 +623,22 @@ const handleFriendSearch = async () => {
     return
   }
 
+  console.log('🔍 [Contacts] 搜索用户:', {
+    keyword: friendSearchKeyword.value.trim(),
+    searchType: friendSearchType.value
+  })
+
   try {
     const response = await api.get('/v1/users/search', {
       params: {
         keyword: friendSearchKeyword.value.trim(),
         searchType: friendSearchType.value
       }
+    })
+
+    console.log('📡 [Contacts] 搜索用户 API 响应:', {
+      code: response.code,
+      dataLength: response.data?.length
     })
 
     if (response.code === '200') {
@@ -559,14 +652,17 @@ const handleFriendSearch = async () => {
         added: false
       }))
 
+      console.log(`✅ [Contacts] 搜索完成，找到 ${searchResults.value.length} 个用户`)
+
       if (searchResults.value.length === 0) {
         ElMessage.info('未找到相关用户')
       }
     } else {
+      console.error('❌ [Contacts] 搜索失败 - code:', response.code)
       ElMessage.error('搜索失败')
     }
   } catch (error) {
-    console.error('搜索用户失败:', error)
+    console.error('❌ [Contacts] 搜索用户失败:', error)
     ElMessage.error('搜索失败')
   }
 }
@@ -574,6 +670,8 @@ const handleFriendSearch = async () => {
 // ========== 发送好友请求 ==========
 const sendFriendRequest = async (user) => {
   if (user.added) return
+
+  console.log('📤 [Contacts] 发送好友请求:', user)
 
   user.adding = true
 
@@ -588,12 +686,14 @@ const sendFriendRequest = async (user) => {
 
     if (response.code === '200') {
       user.added = true
+      console.log('✅ [Contacts] 好友请求已发送')
       ElMessage.success(`已向 ${user.name} 发送好友请求`)
     } else {
+      console.error('❌ [Contacts] 发送好友请求失败 - code:', response.code)
       ElMessage.error('发送好友请求失败')
     }
   } catch (error) {
-    console.error('发送好友请求失败:', error)
+    console.error('❌ [Contacts] 发送好友请求失败:', error)
     ElMessage.error('发送好友请求失败')
   } finally {
     user.adding = false
@@ -601,9 +701,21 @@ const sendFriendRequest = async (user) => {
 }
 
 // ========== 生命周期 ==========
-onMounted(() => {
+onMounted(async () => {
+  console.log('🚀 [Contacts] Contacts组件挂载，开始初始化')
   userId.value = getUserId()
-  fetchFriends()
+
+  try {
+    // 先从本地加载缓存（同步操作，快速显示）
+    loadFriendsFromLocal()
+
+    // 再从服务器获取最新数据
+    await fetchFriends()
+
+    console.log('✅ [Contacts] 初始化完成')
+  } catch (error) {
+    console.error('❌ [Contacts] 初始化失败:', error)
+  }
 
   // 全局点击事件，关闭右键菜单
   document.addEventListener('click', () => {
@@ -616,9 +728,29 @@ onMounted(() => {
 
 <style scoped lang="less">
 .contacts-container {
-  padding: 20px;
-  background-color: #f5f7fa;
+  padding: 24px;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
   min-height: calc(100vh - 100px);
+  position: relative;
+  overflow-x: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 20% 30%, rgba(59, 130, 246, 0.06) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(96, 165, 250, 0.06) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  > * {
+    position: relative;
+    z-index: 1;
+  }
 }
 
 // 页面头部
@@ -627,44 +759,110 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
-  padding: 16px 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  padding: 20px 24px;
+  background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.35);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:hover {
+    box-shadow: 0 12px 32px rgba(59, 130, 246, 0.45);
+    transform: translateY(-2px);
+  }
+
+  .header-content {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+  }
 
   .page-title {
     display: flex;
     align-items: center;
     margin: 0;
     color: #fff;
-    font-size: 22px;
-    font-weight: 600;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
 
     .title-icon {
-      margin-right: 10px;
-      font-size: 26px;
+      margin-right: 12px;
+      font-size: 28px;
+      animation: icon-pulse 2s ease-in-out infinite;
+    }
+  }
+
+  .header-stats {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+    backdrop-filter: blur(10px);
+
+    .stat-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      .stat-label {
+        font-size: 13px;
+        color: rgba(255, 255, 255, 0.9);
+        font-weight: 500;
+      }
+
+      .stat-value {
+        font-size: 18px;
+        font-weight: 700;
+        color: #fff;
+      }
+    }
+
+    .stat-divider {
+      width: 1px;
+      height: 24px;
+      background: rgba(255, 255, 255, 0.3);
     }
   }
 
   .header-actions {
     :deep(.el-button) {
-      background: rgba(255, 255, 255, 0.2);
-      border: 1px solid rgba(255, 255, 255, 0.3);
+      background: rgba(255, 255, 255, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.4);
       color: #fff;
-      font-weight: 500;
+      font-weight: 600;
+      padding: 12px 24px;
+      font-size: 14px;
+      backdrop-filter: blur(10px);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
       &:hover {
-        background: rgba(255, 255, 255, 0.3);
-        transform: translateY(-2px);
+        background: rgba(255, 255, 255, 0.35);
+        transform: translateY(-2px) scale(1.02);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+
+      &:active {
+        transform: translateY(0) scale(0.98);
       }
     }
+  }
+}
+
+@keyframes icon-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
   }
 }
 
 // 搜索和筛选区域
 .search-filter-section {
   display: flex;
-  gap: 12px;
+  gap: 16px;
   margin-bottom: 20px;
 
   .search-box {
@@ -672,12 +870,20 @@ onMounted(() => {
 
     :deep(.el-input) {
       .el-input__wrapper {
-        border-radius: 10px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-        transition: all 0.3s ease;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 2px solid #e4e7ed;
+        padding: 8px 16px;
 
         &:hover {
-          box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+          border-color: #c0c4cc;
+        }
+
+        &.is-focus {
+          border-color: #3b82f6;
+          box-shadow: 0 4px 20px rgba(59, 130, 246, 0.2);
         }
       }
     }
@@ -686,30 +892,34 @@ onMounted(() => {
   .filter-options {
     :deep(.el-radio-group) {
       display: flex;
-      gap: 8px;
+      gap: 10px;
 
       .el-radio-button {
         .el-radio-button__inner {
-          border-radius: 8px;
+          border-radius: 10px;
           border: 2px solid #e2e8f0;
           background: #fff;
           color: #4a5568;
-          font-weight: 500;
-          padding: 10px 16px;
-          transition: all 0.3s ease;
+          font-weight: 600;
+          padding: 12px 20px;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 
           &:hover {
-            border-color: #667eea;
-            color: #667eea;
+            border-color: #3b82f6;
+            color: #3b82f6;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.15);
           }
         }
 
         &.is-active {
           .el-radio-button__inner {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-color: #667eea;
+            background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+            border-color: #3b82f6;
             color: #fff;
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+            transform: translateY(-1px);
           }
         }
       }
@@ -722,17 +932,23 @@ onMounted(() => {
   display: flex;
   gap: 12px;
   background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   overflow: hidden;
   height: calc(100vh - 280px);
   min-height: 400px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:hover {
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+  }
 
   .friends-list-wrapper {
     flex: 1;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    border-radius: 16px 0 0 16px;
 
     .friends-list-scroll {
       flex: 1;
@@ -740,109 +956,91 @@ onMounted(() => {
       overflow-x: hidden;
 
       &::-webkit-scrollbar {
-        width: 6px;
+        width: 8px;
       }
 
       &::-webkit-scrollbar-track {
-        background: #f1f1f1;
-        border-radius: 3px;
+        background: #f5f7fa;
+        border-radius: 4px;
       }
 
       &::-webkit-scrollbar-thumb {
-        background: #c1c1c1;
-        border-radius: 3px;
+        background: linear-gradient(135deg, #c0c4cc 0%, #dcdfe6 100%);
+        border-radius: 4px;
+        transition: all 0.3s ease;
 
         &:hover {
-          background: #a8a8a8;
+          background: linear-gradient(135deg, #909399 0%, #b0b4bc 100%);
         }
       }
 
       .friend-group {
         .group-letter {
-          padding: 8px 16px;
-          background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
-          color: #667eea;
-          font-size: 14px;
-          font-weight: 600;
+          padding: 12px 20px;
+          background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+          color: #3b82f6;
+          font-size: 15px;
+          font-weight: 700;
           position: sticky;
           top: 0;
           z-index: 10;
-          border-bottom: 1px solid #e4e7ed;
-          transition: all 0.3s ease;
+          border-bottom: 2px solid #bfdbfe;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          letter-spacing: 0.5px;
 
           &.active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
             color: #fff;
             animation: letter-highlight 0.5s ease;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
           }
         }
 
         .friend-item {
           display: flex;
           align-items: center;
-          padding: 10px 16px;
+          padding: 14px 20px;
           cursor: pointer;
           border-bottom: 1px solid #f0f2f5;
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           position: relative;
+          background: #fff;
 
           &:hover {
-            background-color: #f5f7fa;
-            transform: translateX(2px);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            background: linear-gradient(90deg, #eff6ff 0%, #ffffff 100%);
+            transform: translateX(4px);
+            box-shadow: 0 4px 16px rgba(59, 130, 246, 0.12);
+            border-left: 3px solid #3b82f6;
           }
 
           &:active {
-            transform: translateX(1px) scale(0.99);
-          }
-
-          &.has-recent-chat {
-            background: linear-gradient(90deg, #fffbe6 0%, #fffcf5 100%);
-
-            &:hover {
-              background: linear-gradient(90deg, #fff7e6 0%, #fffaf0 100%);
-            }
+            transform: translateX(2px) scale(0.99);
           }
 
           .friend-avatar {
-            margin-right: 12px;
+            margin-right: 16px;
             position: relative;
             flex-shrink: 0;
 
             img {
-              width: 40px;
-              height: 40px;
-              border-radius: 8px;
+              width: 48px;
+              height: 48px;
+              border-radius: 12px;
               object-fit: cover;
-              box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+              transition: all 0.3s ease;
             }
 
             .avatar-emoji {
-              width: 40px;
-              height: 40px;
-              border-radius: 8px;
-              background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+              width: 48px;
+              height: 48px;
+              border-radius: 12px;
+              background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
               display: flex;
               align-items: center;
               justify-content: center;
-              font-size: 22px;
-              box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
-            }
-
-            .recent-chat-badge {
-              position: absolute;
-              top: -4px;
-              right: -4px;
-              width: 18px;
-              height: 18px;
-              background: linear-gradient(135deg, #409eff 0%, #337ecc 100%);
-              border-radius: 50%;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              font-size: 10px;
-              box-shadow: 0 2px 3px rgba(64, 158, 255, 0.3);
-              animation: pulse 2s infinite;
+              font-size: 24px;
+              box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
             }
           }
 
@@ -852,51 +1050,57 @@ onMounted(() => {
 
             .friend-name-row {
               display: flex;
-              justify-content: space-between;
               align-items: center;
-              margin-bottom: 4px;
+              margin-bottom: 6px;
 
               .friend-name {
-                font-size: 14px;
+                font-size: 15px;
                 font-weight: 600;
                 color: #303133;
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
-              }
-
-              .recent-time {
-                font-size: 11px;
-                color: #909399;
-                white-space: nowrap;
-                flex-shrink: 0;
+                letter-spacing: 0.3px;
               }
             }
 
             .friend-id {
-              font-size: 12px;
+              font-size: 13px;
               color: #909399;
+              font-weight: 500;
+              letter-spacing: 0.3px;
             }
           }
 
           .friend-quick-actions {
             flex-shrink: 0;
             opacity: 0;
-            transition: opacity 0.2s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateX(-10px);
 
             .chat-btn {
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
               border: none;
+              box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+              transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
               &:hover {
-                transform: scale(1.1);
-                box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+                transform: scale(1.15) rotate(5deg);
+                box-shadow: 0 4px 16px rgba(59, 130, 246, 0.45);
               }
             }
           }
 
-          &:hover .friend-quick-actions {
-            opacity: 1;
+          &:hover {
+            .friend-quick-actions {
+              opacity: 1;
+              transform: translateX(0);
+            }
+
+            .friend-avatar img {
+              transform: scale(1.05);
+              box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+            }
           }
         }
       }
@@ -904,15 +1108,16 @@ onMounted(() => {
   }
 
   .alphabet-index {
-    width: 40px;
+    width: 50px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 12px 0;
-    background: #f5f7fa;
-    border-left: 1px solid #e4e7ed;
+    padding: 16px 0;
+    background: linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%);
+    border-left: 2px solid #bfdbfe;
     overflow-y: auto;
     flex-shrink: 0;
+    border-radius: 0 16px 16px 0;
 
     &::-webkit-scrollbar {
       width: 4px;
@@ -928,31 +1133,34 @@ onMounted(() => {
     }
 
     .alphabet-item {
-      width: 28px;
-      height: 28px;
+      width: 32px;
+      height: 32px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 12px;
-      font-weight: 500;
+      font-size: 13px;
+      font-weight: 600;
       color: #606266;
-      border-radius: 6px;
+      border-radius: 8px;
       cursor: pointer;
-      transition: all 0.3s ease;
-      margin-bottom: 2px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      margin-bottom: 4px;
+      letter-spacing: 0.3px;
 
       &:hover {
-        background: #667eea;
+        background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
         color: #fff;
-        transform: scale(1.1);
+        transform: scale(1.15);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
       }
 
       &.active {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
         color: #fff;
-        font-weight: 600;
-        box-shadow: 0 2px 6px rgba(102, 126, 234, 0.4);
+        font-weight: 700;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
         animation: letter-active 0.3s ease;
+        transform: scale(1.2);
       }
     }
   }
@@ -960,29 +1168,41 @@ onMounted(() => {
 
 // 加载状态
 .loading-container {
-  padding: 40px;
+  padding: 60px;
   background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  min-height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 // 空状态
 .empty-container {
-  padding: 60px 20px;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  padding: 80px 20px;
+  background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   text-align: center;
   cursor: pointer;
   user-select: none;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 2px dashed #bfdbfe;
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 
   &:hover {
-    background: linear-gradient(135deg, #f0f7ff 0%, #e6f2ff 100%);
-    transform: translateY(-2px);
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border-color: #3b82f6;
+    transform: translateY(-4px);
+    box-shadow: 0 8px 30px rgba(59, 130, 246, 0.2);
 
     .empty-icon {
-      transform: scale(1.1);
+      transform: scale(1.15) rotate(5deg);
     }
 
     .empty-title {
@@ -994,27 +1214,34 @@ onMounted(() => {
     }
   }
 
+  &:active {
+    transform: translateY(-2px);
+  }
+
   .empty-icon {
-    font-size: 80px;
-    margin-bottom: 20px;
-    opacity: 0.8;
+    font-size: 100px;
+    margin-bottom: 24px;
+    opacity: 0.9;
     animation: float 3s ease-in-out infinite;
     transition: transform 0.3s ease;
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.1));
   }
 
   .empty-title {
-    font-size: 18px;
-    font-weight: 500;
+    font-size: 20px;
+    font-weight: 600;
     color: #1a1a1a;
-    margin: 0 0 8px 0;
+    margin: 0 0 12px 0;
     transition: color 0.3s ease;
+    letter-spacing: 0.5px;
   }
 
   .empty-tip {
-    font-size: 14px;
+    font-size: 15px;
     color: #666;
-    margin: 0 0 20px 0;
+    margin: 0 0 24px 0;
     transition: color 0.3s ease;
+    line-height: 1.6;
   }
 }
 
@@ -1022,35 +1249,48 @@ onMounted(() => {
 .context-menu {
   position: fixed;
   background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
   padding: 8px 0;
-  min-width: 150px;
+  min-width: 180px;
   z-index: 9999;
-  animation: context-menu-fadein 0.2s ease;
+  animation: context-menu-fadein 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid #e4e7ed;
+  backdrop-filter: blur(10px);
 
   .context-menu-item {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 10px 16px;
+    gap: 12px;
+    padding: 12px 18px;
     font-size: 14px;
     color: #303133;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    font-weight: 500;
 
     &:hover {
-      background: #f5f7fa;
-      color: #667eea;
+      background: linear-gradient(90deg, #eff6ff 0%, #ffffff 100%);
+      color: #3b82f6;
+      transform: translateX(2px);
+    }
+
+    &:active {
+      transform: translateX(1px);
     }
 
     .el-icon {
-      font-size: 16px;
+      font-size: 18px;
+      transition: transform 0.2s ease;
+    }
+
+    &:hover .el-icon {
+      transform: scale(1.1);
     }
 
     &.danger {
       &:hover {
-        background: #fef0f0;
+        background: linear-gradient(90deg, #fef0f0 0%, #ffffff 100%);
         color: #f56c6c;
       }
     }
@@ -1058,15 +1298,15 @@ onMounted(() => {
 
   .context-menu-divider {
     height: 1px;
-    background: #e4e7ed;
-    margin: 6px 0;
+    background: linear-gradient(90deg, transparent 0%, #e4e7ed 50%, transparent 100%);
+    margin: 8px 0;
   }
 }
 
 // 添加好友对话框
 .add-friend-content {
   .search-type-selector {
-    margin-bottom: 16px;
+    margin-bottom: 12px;
 
     :deep(.el-radio-group) {
       display: flex;
@@ -1077,19 +1317,64 @@ onMounted(() => {
           border-radius: 8px;
           border: 2px solid #e2e8f0;
           background: #fff;
+          color: #4a5568;
           font-weight: 500;
+          transition: all 0.3s ease;
 
           &:hover {
-            border-color: #667eea;
-            color: #667eea;
+            border-color: #3b82f6;
+            color: #3b82f6;
           }
         }
 
         &.is-active {
           .el-radio-button__inner {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-color: #667eea;
+            background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+            border-color: #3b82f6;
             color: #fff;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+          }
+        }
+      }
+    }
+  }
+
+  .friend-search-input {
+    margin-bottom: 16px;
+
+    :deep(.el-input) {
+      .el-input__wrapper {
+        border-radius: 10px 0 0 10px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        border: 2px solid transparent;
+        transition: all 0.3s ease;
+
+        &:hover,
+        &.is-focus {
+          border-color: #3b82f6;
+          box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
+        }
+      }
+
+      .el-input__inner {
+        font-size: 15px;
+      }
+
+      .el-input-group__append {
+        background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+        border: none;
+        color: #fff;
+        border-radius: 0 10px 10px 0;
+        padding: 0 20px;
+
+        .el-button {
+          background: transparent;
+          border: none;
+          color: #fff;
+          font-weight: 500;
+
+          &:hover {
+            background: rgba(255, 255, 255, 0.1);
           }
         }
       }
@@ -1097,45 +1382,71 @@ onMounted(() => {
   }
 
   .search-results {
-    margin-top: 20px;
+    margin-top: 16px;
     max-height: 400px;
     overflow-y: auto;
+    padding-right: 4px;
+
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 3px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: linear-gradient(135deg, #c0c4cc 0%, #dcdfe6 100%);
+      border-radius: 3px;
+
+      &:hover {
+        background: linear-gradient(135deg, #909399 0%, #b0b4bc 100%);
+      }
+    }
 
     .result-item {
       display: flex;
       align-items: center;
-      padding: 12px;
+      padding: 14px 16px;
       border-radius: 10px;
       margin-bottom: 10px;
-      background: #f7fafc;
-      border: 2px solid #e2e8f0;
+      background: linear-gradient(135deg, #ffffff 0%, #f7fafc 100%);
       transition: all 0.3s ease;
+      border: 2px solid #e2e8f0;
+      animation: fadeInUp 0.5s ease backwards;
 
       &:hover {
-        border-color: #667eea;
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+        background: #fff;
+        border-color: #3b82f6;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+        transform: translateX(4px);
       }
 
       .user-avatar {
-        width: 50px;
-        height: 50px;
-        margin-right: 12px;
+        width: 48px;
+        height: 48px;
+        margin-right: 14px;
         flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+        border-radius: 50%;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+        overflow: hidden;
 
-        img,
-        span {
+        img {
           width: 100%;
           height: 100%;
-          border-radius: 50%;
           object-fit: cover;
         }
 
         span {
+          font-size: 24px;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 24px;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
       }
 
@@ -1147,7 +1458,7 @@ onMounted(() => {
           font-size: 14px;
           font-weight: 600;
           color: #2d3748;
-          margin-bottom: 4px;
+          margin-bottom: 6px;
         }
 
         .user-detail {
@@ -1157,19 +1468,37 @@ onMounted(() => {
       }
 
       :deep(.el-button) {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 8px;
+        padding: 10px 20px;
+        font-weight: 500;
+        background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
         border: none;
         flex-shrink: 0;
+        transition: all 0.3s ease;
 
-        &:hover {
+        &:hover:not(:disabled) {
           transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
         }
 
         &:disabled {
           background: #cbd5e0;
+          transform: none;
+          box-shadow: none;
         }
       }
     }
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -1195,7 +1524,7 @@ onMounted(() => {
       align-items: center;
       justify-content: center;
       font-size: 60px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
     }
   }
 
@@ -1222,22 +1551,29 @@ onMounted(() => {
 
 // 对话框样式
 :deep(.el-dialog) {
-  border-radius: 12px;
+  border-radius: 16px;
   overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
 }
 
 :deep(.el-dialog__header) {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 20px;
+  background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+  padding: 20px 24px;
+  margin: 0;
 
   .el-dialog__title {
     color: #fff;
     font-weight: 600;
+    font-size: 17px;
   }
 
   .el-dialog__headerbtn {
+    top: 20px;
+    right: 20px;
+
     .el-dialog__close {
       color: #fff;
+      font-size: 20px;
 
       &:hover {
         color: #f0f0f0;
@@ -1246,13 +1582,26 @@ onMounted(() => {
   }
 }
 
+:deep(.el-dialog__body) {
+  padding: 20px 24px;
+  background: linear-gradient(to bottom, #eff6ff 0%, #ffffff 100%);
+}
+
+:deep(.el-dialog__footer) {
+  padding: 16px 24px;
+  background-color: #eff6ff;
+  border-top: 1px solid #dbeafe;
+}
+
 // 动画
 @keyframes pulse {
   0%, 100% {
     transform: scale(1);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
   }
   50% {
-    transform: scale(1.05);
+    transform: scale(1.08);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.6);
   }
 }
 
@@ -1261,19 +1610,22 @@ onMounted(() => {
     transform: translateY(0px);
   }
   50% {
-    transform: translateY(-10px);
+    transform: translateY(-12px);
   }
 }
 
 @keyframes letter-highlight {
   0% {
     transform: scale(1);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
   }
   50% {
-    transform: scale(1.05);
+    transform: scale(1.03);
+    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.45);
   }
   100% {
     transform: scale(1);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
   }
 }
 
@@ -1282,7 +1634,7 @@ onMounted(() => {
     transform: scale(1);
   }
   50% {
-    transform: scale(1.2);
+    transform: scale(1.25);
   }
   100% {
     transform: scale(1);
@@ -1292,11 +1644,11 @@ onMounted(() => {
 @keyframes context-menu-fadein {
   from {
     opacity: 0;
-    transform: scale(0.95);
+    transform: scale(0.92) translateY(-8px);
   }
   to {
     opacity: 1;
-    transform: scale(1);
+    transform: scale(1) translateY(0);
   }
 }
 </style>
