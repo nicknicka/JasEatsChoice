@@ -31,14 +31,15 @@ public class ChatSessionIdGenerator {
     private static final String SALT = "JasEatsChoice_Chat_2026";
 
     /**
-     * ========== 推荐方案：使用IdGenerator（无序、不可预测） ==========
      * 生成单聊会话ID - 使用IdGenerator
      *
      * 特点：
      * - 16位数字
-     * - 完全无序、不可预测
-     * - 高碰撞安全性
+     * - 确定性（相同用户对生成相同ID）
+     * - 不可预测（ID外观随机）
+     * - 用户ID作为影响因子
      * - 与系统其他ID保持一致
+     * - 高性能：使用优化的哈希算法
      *
      * @param userId1 用户1的ID
      * @param userId2 用户2的ID
@@ -49,13 +50,59 @@ public class ChatSessionIdGenerator {
             throw new IllegalArgumentException("用户ID不能为空");
         }
 
-        // 使用IdGenerator生成16位随机数字ID
-        Long id = IdGenerator.generateId();
+        // 按字典序排序，确保唯一性（相同的用户对生成相同的sessionId）
+        String seed;
+        if (userId1.compareTo(userId2) < 0) {
+            seed = userId1 + "_" + userId2 + "_" + SALT;
+        } else {
+            seed = userId2 + "_" + userId1 + "_" + SALT;
+        }
+
+        // 使用优化的种子ID生成方法（高性能）
+        Long id = generateOptimizedIdFromSeed(seed);
         return SINGLE_CHAT_PREFIX + id;
     }
 
     /**
-     * ========== 方案1：MD5哈希（推荐） ==========
+     * 优化的ID生成方法（高性能版本）
+     *
+     * @param seed 种子字符串
+     * @return 16位数字ID
+     */
+    private static Long generateOptimizedIdFromSeed(String seed) {
+        // 使用Java内置的hashCode + 自定义混淆算法
+        // 性能远高于SHA-256，同时保持足够的随机性
+
+        // 1. 计算种子的哈希值
+        int hash = seed.hashCode();
+
+        // 2. 添加盐值的哈希值（增强随机性）
+        int saltHash = SALT.hashCode();
+
+        // 3. 组合哈希值（使用位运算避免溢出）
+        long combined = ((long) hash << 32) | (saltHash & 0xFFFFFFFFL);
+
+        // 4. 使用黄金比例常量进行混合（增强随机性）
+        long goldenRatio = 0x9E3779B97F4A7C15L;
+        combined = combined ^ goldenRatio;
+        combined = Long.rotateLeft(combined, 17);
+
+        // 5. 确保是正数
+        combined = combined & Long.MAX_VALUE;
+
+        // 6. 取模确保16位数字（最大9999999999999999）
+        long maxId = 9999999999999999L;
+        long id = combined % maxId;
+
+        // 7. 确保至少16位（不足前面补0，但Long会自动去掉前导0）
+        // 所以加一个基数确保总是16位
+        long base = 1000000000000000L;
+        id = base + (id % (maxId - base));
+
+        return id;
+    }
+
+    /**
      * 生成单聊会话ID - 使用MD5哈希
      *
      * 特点：
@@ -86,98 +133,78 @@ public class ChatSessionIdGenerator {
         return SINGLE_CHAT_PREFIX + hash;
     }
 
-    /**
-     * ========== 方案2：SHA-256哈希（更安全） ==========
-     * 生成单聊会话ID - 使用SHA-256哈希
-     *
-     * 特点：
-     * - 固定64字符长度
-     * - 更安全的哈希算法
-     * - 不可逆
-     *
-     * @param userId1 用户1的ID
-     * @param userId2 用户2的ID
-     * @return 会话ID（格式：S + 64位SHA-256哈希）
-     */
-    public static String generateSingleChatSessionIdWithSHA256(String userId1, String userId2) {
-        if (userId1 == null || userId2 == null) {
-            throw new IllegalArgumentException("用户ID不能为空");
-        }
 
-        // 按字典序排序
-        String sorted;
-        if (userId1.compareTo(userId2) < 0) {
-            sorted = userId1 + "_" + userId2;
-        } else {
-            sorted = userId2 + "_" + userId1;
-        }
-
-        // 生成SHA-256哈希
-        String hash = sha256Hash(sorted + SALT);
-        return SINGLE_CHAT_PREFIX + hash;
-    }
-
-    /**
-     * ========== 方案3：UUID命名空间（标准格式） ==========
-     * 生成单聊会话ID - 使用UUID v5
-     *
-     * 特点：
-     * - 标准UUID格式（36字符）
-     * - 基于命名空间
-     * - 可扩展性好
-     *
-     * @param userId1 用户1的ID
-     * @param userId2 用户2的ID
-     * @return 会话ID（UUID格式）
-     */
-    public static String generateSingleChatSessionIdWithUUID(String userId1, String userId2) {
-        if (userId1 == null || userId2 == null) {
-            throw new IllegalArgumentException("用户ID不能为空");
-        }
-
-        // 按字典序排序
-        String sorted;
-        if (userId1.compareTo(userId2) < 0) {
-            sorted = userId1 + "_" + userId2;
-        } else {
-            sorted = userId2 + "_" + userId1;
-        }
-
-        // 使用UUID v5生成（基于命名空间的UUID）
-        UUID namespace = UUID.nameUUIDFromBytes((SALT + sorted).getBytes(StandardCharsets.UTF_8));
-        return SINGLE_CHAT_PREFIX + namespace.toString().replace("-", "");
-    }
 
     /**
      * 获取群聊会话ID
-     * 规则：直接使用群组ID（群聊ID已经有规范的格式）
+     * 规则：使用群组ID作为种子生成确定性的会话ID
+     *
+     * 特点：
+     * - 16位数字
+     * - 确定性（相同群组ID生成相同ID）
+     * - 不可预测（ID外观随机）
+     * - 群组ID作为影响因子
+     * - 高性能：使用优化的哈希算法
+     * - 统一使用S前缀（与单聊保持一致）
      *
      * @param groupId 群组ID
-     * @return 会话ID（群组ID）
+     * @return 会话ID（格式：S + 16位数字）
      */
     public static String getGroupChatSessionId(String groupId) {
         if (groupId == null) {
             throw new IllegalArgumentException("群组ID不能为空");
         }
-        return groupId;
+
+        // 清理groupId：如果已有前缀（S或G），先移除（避免重复前缀）
+        String cleanGroupId = groupId;
+        if (groupId.startsWith(SINGLE_CHAT_PREFIX) || groupId.startsWith(GROUP_CHAT_PREFIX)) {
+            cleanGroupId = groupId.substring(1);
+        }
+
+        // 使用群组ID + 盐值作为种子
+        String seed = "GROUP_" + cleanGroupId + "_" + SALT;
+
+        // 使用优化的种子ID生成方法（高性能，确定性）
+        Long id = generateOptimizedIdFromSeed(seed);
+        return SINGLE_CHAT_PREFIX + id;
     }
 
     /**
-     * 根据消息类型生成会话ID
-     * 默认使用IdGenerator方案（推荐：无序、不可预测）
+     * 根据会话类型生成会话ID
+     * 统一使用优化的哈希算法（确定性、高性能）
+     * 注意：单聊和群聊都使用S前缀
      *
-     * @param msgType 消息类型
-     * @param fromId  发送者ID
-     * @param toId    接收者ID
-     * @return 会话ID
+     * @param sessionType 会话类型（single-单聊, group-群聊）
+     * @param fromId      发送者ID（单聊时使用）
+     * @param toId        接收者ID（群聊时为群ID，单聊时为对方ID）
+     * @return 会话ID（格式：S + 16位数字）
      */
-    public static String generateSessionId(String msgType, String fromId, String toId) {
-        if ("group".equals(msgType)) {
+    public static String generateSessionId(String sessionType, String fromId, String toId) {
+        if ("group".equals(sessionType)) {
+            // 群聊：使用群组ID作为种子生成sessionId（确定性、高性能）
             return getGroupChatSessionId(toId);
         } else {
-            // 使用IdGenerator生成单聊会话ID（无序、不可预测）
+            // 单聊：使用用户ID作为种子生成sessionId（确定性、高性能）
             return generateSingleChatSessionIdWithIdGenerator(fromId, toId);
         }
+    }
+
+    /**
+     * 判断会话ID的类型
+     *
+     * @param sessionId 会话ID
+     * @return "group"-群聊，"single"-单聊，"unknown"-未知
+     */
+    public static String getSessionType(String sessionId) {
+        if (sessionId == null) {
+            return "unknown";
+        }
+        if (sessionId.startsWith(GROUP_CHAT_PREFIX)) {
+            return "group";
+        } else if (sessionId.startsWith(SINGLE_CHAT_PREFIX)) {
+            return "single";
+        }
+        return "unknown";
     }
 
     /**

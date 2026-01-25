@@ -6,6 +6,7 @@ import com.xx.jaseatschoicejava.common.ResponseResult;
 import com.xx.jaseatschoicejava.entity.ChatSession;
 import com.xx.jaseatschoicejava.service.ChatMsgService;
 import com.xx.jaseatschoicejava.service.ChatSessionService;
+import com.xx.jaseatschoicejava.util.ChatSessionIdGenerator;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
@@ -81,6 +82,17 @@ public class ChatSessionController {
         String avatar = (String) params.get("avatar");
         Integer memberCount = params.get("memberCount") != null ?
                 (Integer) params.get("memberCount") : 0;
+
+        // ⭐ 对群聊的sessionId进行转换（使用IdGenerator生成）
+        if ("group".equals(sessionType)) {
+            sessionId = ChatSessionIdGenerator.getGroupChatSessionId(sessionId);
+        } else {
+            // 单聊：使用IdGenerator生成sessionId
+            sessionId = ChatSessionIdGenerator.generateSingleChatSessionIdWithIdGenerator(
+                userId,
+                sessionId
+            );
+        }
 
         // 查找是否已存在该会话
         LambdaQueryWrapper<ChatSession> queryWrapper = new LambdaQueryWrapper<>();
