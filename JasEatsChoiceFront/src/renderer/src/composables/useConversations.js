@@ -8,11 +8,33 @@ import api from '@/utils/api'
 export function useConversations(userId = ref(null)) {
   const conversations = ref([])
   const selectedConversation = ref(null)
+  const isLoadingSessions = ref(false)
 
   // 右键菜单
   const contextMenuVisible = ref(false)
   const selectedContextConversation = ref(null)
   const contextMenuPosition = ref({ x: 0, y: 0 })
+
+  /**
+   * 加载会话列表
+   */
+  const loadConversations = async () => {
+    if (!userId.value) return
+
+    try {
+      isLoadingSessions.value = true
+      const response = await api.get(`/v1/chat/users/${userId.value}/chat-sessions`)
+
+      if (response.data && response.data.success) {
+        conversations.value = response.data.data
+        console.log('✅ [loadConversations] 会话列表加载成功，共', conversations.value.length, '个会话')
+      }
+    } catch (error) {
+      console.error('❌ [loadConversations] 加载会话列表失败:', error)
+    } finally {
+      isLoadingSessions.value = false
+    }
+  }
 
   /**
    * 排序后的会话列表
@@ -155,7 +177,7 @@ export function useConversations(userId = ref(null)) {
   /**
    * 更新会话最后一条消息
    */
-  const updateConversationLastMessage = (sessionId, message) => {
+  const updateConversationLastMessage = async (sessionId, message) => {
     const conversation = conversations.value.find((conv) => conv.id === sessionId)
 
     if (!conversation) {
@@ -164,6 +186,10 @@ export function useConversations(userId = ref(null)) {
         '⚠️ [updateConversationLastMessage] 当前会话列表:',
         conversations.value.map((c) => ({ id: c.id, name: c.name }))
       )
+
+      // ⭐ 如果找不到会话，可能是新会话，重新加载会话列表
+      console.log('🔄 [updateConversationLastMessage] 重新加载会话列表...')
+      await loadConversations()
       return
     }
 
@@ -202,6 +228,8 @@ export function useConversations(userId = ref(null)) {
     togglePin,
     deleteConversation,
     selectConversation,
-    updateConversationLastMessage
+    updateConversationLastMessage,
+    loadConversations,
+    isLoadingSessions
   }
 }

@@ -332,7 +332,8 @@ const {
   closeContextMenu,
   togglePin,
   deleteConversation,
-  updateConversationLastMessage
+  updateConversationLastMessage,
+  loadConversations
 } = useConversations(userId)
 
 const {
@@ -389,6 +390,34 @@ const handleWebSocketMessage = (data) => {
       if (data.content) {
         const fromId = data.content.fromId || data.content.sender || '未知'
 
+        // ⭐ 获取会话ID（优先使用后端返回的sessionId，否则根据fromId和toId生成）
+        let sessionId = data.content.sessionId
+        if (!sessionId) {
+          // 如果后端没有返回sessionId，根据消息类型和fromId/toId生成
+          const toId = data.content.toId
+          const sessionType = data.content.sessionType ||
+            (toId?.startsWith('G') ? 'group' : 'single')
+
+          if (sessionType === 'group') {
+            // 群聊：使用群ID作为sessionId（后端已转换为S开头）
+            sessionId = toId
+          } else {
+            // 单聊：使用双方ID生成哈希sessionId（与后端保持一致）
+            const ids = [fromId, toId].sort()
+            const combined = ids[0] + '_' + ids[1] + '_JasEatsChoice_Chat_2026'
+            // 简单的哈希生成（模拟后端逻辑）
+            let hash = 0
+            for (let i = 0; i < combined.length; i++) {
+              const char = combined.charCodeAt(i)
+              hash = ((hash << 5) - hash) + char
+              hash = hash & hash // Convert to 32bit integer
+            }
+            sessionId = 'S' + Math.abs(hash).toString(16).padStart(32, '0')
+          }
+
+          console.log('⚠️ [WebSocket] 后端未返回sessionId，前端生成:', sessionId)
+        }
+
         // 确定发送者显示名称
         let senderName = null
         if (fromId !== userId.value.toString()) {
@@ -401,16 +430,28 @@ const handleWebSocketMessage = (data) => {
           }
         }
 
+        // ⭐ 确保消息有正确的 id 字段（优先使用 msgId）
+        const messageId = data.content.msgId || data.content.id || Date.now()
+
         const message = {
           ...data.content,
+          id: messageId,  // ⭐ 标准化为 id 字段
           formattedTime: formatMessageTime(data.content.createTime || data.content.time),
           fromId,
           senderName
         }
 
-        console.log('💬 [WebSocket] 处理聊天消息, toId:', data.content.toId)
-        addMessage(message, data.content.toId)
-        updateConversationLastMessage(data.content.toId, message)
+        console.log('💬 [WebSocket] 处理聊天消息:', {
+          sessionId,
+          messageId,
+          fromId,
+          toId: data.content.toId,
+          content: message.content?.substring(0, 50)
+        })
+
+        // ⭐ 使用正确的sessionId和message
+        addMessage(message, sessionId)
+        updateConversationLastMessage(sessionId, message)
       }
       break
     case 'notification':
@@ -683,7 +724,7 @@ const sendMessage = async (content) => {
 
   const messageData = {
     fromId: userId.value.toString(),
-    toId: toId,  // ⭐ 修正：群聊使用 groupId，单聊使用会话 id
+    toId: toId,  // ⭐ 修正：群聊使用 groupId，单聊使用target id
     sessionType: selectedConversation.value.type || 'single',  // 会话类型
     msgType: 'text',                                             // 消息类型
     content: content.trim()
@@ -726,6 +767,7 @@ const sendMessage = async (content) => {
   try {
     const response = await api.post('/v1/chat/messages', messageData)
 
+    console.log('📤 [sendMessage] 发送成功，返回数据:', response.data)
     if (response.code === '200') {
       const sentMessage = response.data
 

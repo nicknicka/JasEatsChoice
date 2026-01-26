@@ -148,13 +148,13 @@ export function useWebSocketChat({ userId, token, onMessage }) {
             所有字段: Object.keys(data)
           })
 
-          // 消息去重
-          if (data.content && data.content.id) {
-            if (isMessageReceived(data.content.id)) {
-              console.log('重复消息已忽略:', data.content.id)
+          // 消息去重 - 使用 msgId
+          if (data.content && data.content.msgId) {
+            if (isMessageReceived(data.content.msgId)) {
+              console.log('重复消息已忽略:', data.content.msgId)
               return
             }
-            markMessageReceived(data.content.id)
+            markMessageReceived(data.content.msgId)
           }
 
           onMessage(data)

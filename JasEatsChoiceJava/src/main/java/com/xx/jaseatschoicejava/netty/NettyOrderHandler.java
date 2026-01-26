@@ -46,22 +46,26 @@ public class NettyOrderHandler extends SimpleChannelInboundHandler<TextWebSocket
             String text = msg.text();
             logger.info("收到订单WebSocket消息: {}", text);
 
-            // 解析消息
-            ChatMsg chatMsg = objectMapper.readValue(text, ChatMsg.class);
+            // ⭐ 先解析为 JsonNode 获取消息类型，避免反序列化失败
+            com.fasterxml.jackson.databind.JsonNode jsonNode = objectMapper.readTree(text);
+            String msgType = jsonNode.has("msgType") ? jsonNode.get("msgType").asText() : "";
 
             // 处理不同类型的消息
-            switch (chatMsg.getMsgType()) {
+            switch (msgType) {
                 case "auth":
-                    handleAuth(ctx, chatMsg);
+                    // 认证消息不包含 token 字段，直接处理
+                    handleAuth(ctx);
                     break;
                 case "heartbeat":
                     handleHeartbeat(ctx);
                     break;
                 case "orderUpdate":
+                    // 订单更新消息需要完整的 ChatMsg 对象
+                    ChatMsg chatMsg = objectMapper.treeToValue(jsonNode, ChatMsg.class);
                     handleOrderUpdate(chatMsg);
                     break;
                 default:
-                    logger.warn("未知的消息类型: {}", chatMsg.getMsgType());
+                    logger.warn("未知的消息类型: {}", msgType);
             }
         } catch (Exception e) {
             logger.error("处理订单WebSocket消息失败", e);
@@ -73,7 +77,7 @@ public class NettyOrderHandler extends SimpleChannelInboundHandler<TextWebSocket
      * 处理认证消息
      * 注意：实际认证已在WebSocket握手时完成，这里只是确认客户端身份
      */
-    private void handleAuth(ChannelHandlerContext ctx, ChatMsg chatMsg) {
+    private void handleAuth(ChannelHandlerContext ctx) {
         try {
             // 从Channel属性中获取已认证的用户ID
             String userId = ctx.channel().attr(WebSocketAuthHandler.USER_ID_KEY).get();

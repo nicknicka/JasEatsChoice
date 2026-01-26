@@ -14,6 +14,7 @@ import com.xx.jaseatschoicejava.entity.Group;
 import com.xx.jaseatschoicejava.util.ChatSessionIdGenerator;
 import com.xx.jaseatschoicejava.util.FileUploadUtil;
 import com.xx.jaseatschoicejava.util.IdGenerator;
+import com.xx.jaseatschoicejava.websocket.WebSocketMessageService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,6 +45,9 @@ public class ChatController {
 
     @Autowired
     private GroupService groupService;
+
+    @Autowired
+    private WebSocketMessageService webSocketMessageService;
 
     @Value("${file.upload.url-prefix}")
     private String fileUrlPrefix;
@@ -172,27 +176,27 @@ public class ChatController {
         java.util.Collections.reverse(result.getRecords());
 
         // ========== 日志：查询结果 ==========
-        System.out.println("✅ [Chat] 查询完成");
-        System.out.println("  - 查询耗时: " + queryTime + "ms");
-        System.out.println("  - 总消息数: " + result.getTotal());
-        System.out.println("  - 当前页消息数: " + result.getRecords().size());
-        System.out.println("  - 总页数: " + result.getPages());
-        System.out.println("  - 当前页: " + result.getCurrent());
+//        System.out.println("✅ [Chat] 查询完成");
+//        System.out.println("  - 查询耗时: " + queryTime + "ms");
+//        System.out.println("  - 总消息数: " + result.getTotal());
+//        System.out.println("  - 当前页消息数: " + result.getRecords().size());
+//        System.out.println("  - 总页数: " + result.getPages());
+//        System.out.println("  - 当前页: " + result.getCurrent());
 
-        // 打印前3条消息的摘要
-        if (result.getRecords() != null && !result.getRecords().isEmpty()) {
-            System.out.println("  - 消息摘要(前3条):");
-            int printCount = Math.min(3, result.getRecords().size());
-            for (int i = 0; i < printCount; i++) {
-                ChatMsg msg = result.getRecords().get(i);
-                System.out.println("    [" + (i + 1) + "] msgId=" + msg.getMsgId() +
-                        ", fromId=" + msg.getFromId() +
-                        ", toId=" + msg.getToId() +
-                        ", type=" + msg.getMsgType() +
-                        ", content=" + (msg.getContent() != null && msg.getContent().length() > 20
-                                ? msg.getContent().substring(0, 20) + "..." : msg.getContent()));
-            }
-        }
+//        // 打印前3条消息的摘要
+//        if (result.getRecords() != null && !result.getRecords().isEmpty()) {
+//            System.out.println("  - 消息摘要(前3条):");
+//            int printCount = Math.min(3, result.getRecords().size());
+//            for (int i = 0; i < printCount; i++) {
+//                ChatMsg msg = result.getRecords().get(i);
+//                System.out.println("    [" + (i + 1) + "] msgId=" + msg.getMsgId() +
+//                        ", fromId=" + msg.getFromId() +
+//                        ", toId=" + msg.getToId() +
+//                        ", type=" + msg.getMsgType() +
+//                        ", content=" + (msg.getContent() != null && msg.getContent().length() > 20
+//                                ? msg.getContent().substring(0, 20) + "..." : msg.getContent()));
+//            }
+//        }
 
         // 返回符合前端期望的格式
         Map<String, Object> responseData = new java.util.HashMap<>();
@@ -283,6 +287,22 @@ public class ChatController {
                     chatMsg.getContent(),
                     chatMsg.getCreateTime()
                 );
+            }
+
+            // ========== ⭐ WebSocket实时推送消息给接收方 ==========
+            try {
+                if ("group".equals(chatMsg.getSessionType())) {
+                    // 群聊：推送给群ID（暂时简化处理）
+                    webSocketMessageService.pushChatMessageToUser(chatMsg.getToId(), chatMsg);
+                    System.out.println("📡 [WebSocket] 群聊消息已推送给群组: " + chatMsg.getToId());
+                } else {
+                    // 单聊：推送给接收方
+                    webSocketMessageService.pushChatMessageToUser(chatMsg.getToId(), chatMsg);
+                    System.out.println("📡 [WebSocket] 消息已推送给用户: " + chatMsg.getToId());
+                }
+            } catch (Exception e) {
+                System.err.println("❌ [WebSocket] 推送消息失败: " + e.getMessage());
+                // 推送失败不影响消息保存，只记录错误
             }
 
             return ResponseResult.success(chatMsg);

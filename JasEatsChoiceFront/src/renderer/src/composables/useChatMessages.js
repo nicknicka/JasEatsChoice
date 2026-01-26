@@ -91,12 +91,12 @@ export function useChatMessages({ userId, selectedConversation }) {
     const uniqueMessages = []
     const messageIds = new Set()
 
-    messages.forEach((msg, index) => {
-      // ⭐ 修复：使用 msgId 或 id 作为唯一标识
-      const messageId = msg.msgId
+    messages.forEach((msg) => {
+      // ⭐ 修复：使用 msgId 作为唯一标识
+      const messageMsgId = msg.msgId || msg.id
 
-      if (!messageIds.has(messageId)) {
-        messageIds.add(messageId)
+      if (!messageIds.has(messageMsgId)) {
+        messageIds.add(messageMsgId)
 
         // 确定发送者显示名称
         let senderName = null
@@ -128,15 +128,13 @@ export function useChatMessages({ userId, selectedConversation }) {
           fullUrl = `${serverUrl}/api/uploads/${fileUrl}`
         }
 
-        // 确保 id 字段存在（优先使用 msgId）
-        const normalizedId = messageId
-
         // 确定消息类型
         let msgType = msg.msgType
 
         const processedMsg = {
           ...msg,
-          id: normalizedId, // ⭐ 标准化 id 字段
+          msgId: messageMsgId,  // ⭐ 标准化 msgId 字段
+          id: messageMsgId,     // 同时保留 id 字段用于兼容
           msgType,
           formattedTime: formatMessageTime(msg.createTime || msg.time),
           fromId,
@@ -306,7 +304,10 @@ export function useChatMessages({ userId, selectedConversation }) {
    * 添加新消息
    */
   const addMessage = (message, sessionId) => {
-    const exists = chatMessages.value.some((msg) => msg.id === message.id)
+    // ⭐ 修改：使用 msgId 进行消息去重检测
+    const messageMsgId = message.msgId || message.id
+    const exists = chatMessages.value.some((msg) => (msg.msgId || msg.id) === messageMsgId)
+
     if (!exists) {
       const fromId = message.fromId || message.sender || '未知'
 
@@ -338,6 +339,7 @@ export function useChatMessages({ userId, selectedConversation }) {
 
       const processedMsg = {
         ...message,
+        msgId: messageMsgId,  // ⭐ 确保 msgId 字段存在
         msgType,
         formattedTime: formatMessageTime(message.createTime || message.time),
         fromId,

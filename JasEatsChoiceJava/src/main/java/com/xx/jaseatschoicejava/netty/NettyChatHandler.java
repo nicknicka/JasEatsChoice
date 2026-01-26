@@ -5,6 +5,7 @@ import com.xx.jaseatschoicejava.constants.Constant;
 import com.xx.jaseatschoicejava.enums.MsgType;
 import com.xx.jaseatschoicejava.entity.ChatMsg;
 import com.xx.jaseatschoicejava.service.ChatMsgService;
+import com.xx.jaseatschoicejava.websocket.WebSocketMessageService;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -57,9 +58,37 @@ public class NettyChatHandler extends SimpleChannelInboundHandler<TextWebSocketF
     }
 
     @Override
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        // 处理WebSocket握手完成事件
+        if (evt instanceof io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler.HandshakeComplete) {
+            logger.info("WebSocket握手完成: {}", ctx.channel().remoteAddress());
+
+            // ⭐ 从Channel属性中获取userId（在WebSocketAuthHandler中设置的）
+            String userId = ctx.channel().attr(com.xx.jaseatschoicejava.netty.WebSocketAuthHandler.USER_ID_KEY).get();
+
+            if (userId != null && !userId.isEmpty()) {
+                // 绑定用户ID与Channel
+                USER_CHANNEL_MAP.put(userId, ctx.channel());
+
+                // ⭐ 注册到WebSocketMessageService（用于HTTP API推送）
+                WebSocketMessageService.registerChannel(userId, ctx.channel());
+
+                logger.info("✅ [WebSocket] 用户 {} 的Channel已自动注册", userId);
+            } else {
+                logger.warn("⚠️ [WebSocket] Channel属性中未找到userId，等待客户端发送auth消息");
+            }
+        } else {
+            super.userEventTriggered(ctx, evt);
+        }
+    }
+
+    @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         // 移除Channel
         CHANNEL_GROUP.remove(ctx.channel());
+
+        // ⭐ 从WebSocketMessageService中移除Channel
+        WebSocketMessageService.removeChannel(ctx.channel());
 
         // 移除用户映射
         USER_CHANNEL_MAP.entrySet().removeIf(entry -> entry.getValue().equals(ctx.channel()));
@@ -98,6 +127,11 @@ public class NettyChatHandler extends SimpleChannelInboundHandler<TextWebSocketF
             // 将用户ID与Channel绑定
             USER_CHANNEL_MAP.putIfAbsent(fromId, ctx.channel());
 
+            // ⭐ 注册到WebSocketMessageService（用于HTTP API推送）
+            if (!fromId.isEmpty()) {
+                WebSocketMessageService.registerChannel(fromId, ctx.channel());
+            }
+
             // 根据消息类型处理
             switch (msgType) {
                 case "single":
@@ -122,6 +156,9 @@ public class NettyChatHandler extends SimpleChannelInboundHandler<TextWebSocketF
                     if (!fromId.isEmpty()) {
                         // 绑定用户ID与Channel
                         USER_CHANNEL_MAP.put(fromId, ctx.channel());
+
+                        // ⭐ 注册到WebSocketMessageService（用于HTTP API推送）
+                        WebSocketMessageService.registerChannel(fromId, ctx.channel());
 
                         // 返回认证成功响应
                         responseMsg.put("content", "认证成功");
