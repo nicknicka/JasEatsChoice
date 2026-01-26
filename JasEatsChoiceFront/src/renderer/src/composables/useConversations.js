@@ -2,10 +2,10 @@
  * 会话管理
  */
 import { ref, computed } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '@/utils/api'
 
-export function useConversations() {
+export function useConversations(userId = ref(null)) {
   const conversations = ref([])
   const selectedConversation = ref(null)
 
@@ -72,23 +72,59 @@ export function useConversations() {
   /**
    * 删除会话
    */
-  const deleteConversation = (conversation) => {
-    const index = conversations.value.findIndex((item) => item.id === conversation.id)
-    if (index !== -1) {
-      conversations.value.splice(index, 1)
-      contextMenuVisible.value = false
-      selectedContextConversation.value = null
+  const deleteConversation = async (conversation) => {
+    try {
+      // 显示确认对话框
+      await ElMessageBox.confirm(
+        `确定要删除与 "${conversation.name}" 的会话吗？删除后聊天记录也将被清除。`,
+        '删除会话',
+        {
+          confirmButtonText: '确定删除',
+          cancelButtonText: '取消',
+          type: 'warning',
+          distinguishCancelAndClose: true
+        }
+      )
 
-      if (selectedConversation.value?.id === conversation.id) {
-        selectedConversation.value = null
-      }
+      // 调用后端API删除会话
+      console.log('🗑️ [deleteConversation] 删除会话:', conversation)
 
-      ElMessage({
-        message: '会话已删除',
-        type: 'success'
+      const response = await api.delete(`/v1/chat/sessions/${conversation.id}`, {
+        params: {
+          userId: userId.value?.toString() || '1'
+        }
       })
 
-      // TODO: 调用后端API删除会话
+      if (response.code === '200' || response.success) {
+        // 从前端列表中移除
+        const index = conversations.value.findIndex((item) => item.id === conversation.id)
+        if (index !== -1) {
+          conversations.value.splice(index, 1)
+        }
+
+        // 关闭右键菜单
+        contextMenuVisible.value = false
+        selectedContextConversation.value = null
+
+        // 如果删除的是当前选中的会话，清空选中状态
+        if (selectedConversation.value?.id === conversation.id) {
+          selectedConversation.value = null
+        }
+
+        console.log('✅ [deleteConversation] 会话删除成功')
+        ElMessage.success('会话已删除')
+      } else {
+        console.error('❌ [deleteConversation] 删除会话失败:', response.message)
+        ElMessage.error(response.message || '删除会话失败')
+      }
+    } catch (error) {
+      if (error === 'cancel') {
+        console.log('🚫 [deleteConversation] 用户取消删除')
+        // 用户点击了取消，不做任何操作
+      } else {
+        console.error('❌ [deleteConversation] 删除会话异常:', error)
+        ElMessage.error('删除会话失败，请稍后重试')
+      }
     }
   }
 
@@ -124,7 +160,10 @@ export function useConversations() {
 
     if (!conversation) {
       console.warn('⚠️ [updateConversationLastMessage] 未找到会话, sessionId:', sessionId)
-      console.warn('⚠️ [updateConversationLastMessage] 当前会话列表:', conversations.value.map(c => ({ id: c.id, name: c.name })))
+      console.warn(
+        '⚠️ [updateConversationLastMessage] 当前会话列表:',
+        conversations.value.map((c) => ({ id: c.id, name: c.name }))
+      )
       return
     }
 
@@ -137,8 +176,7 @@ export function useConversations() {
 
     conversation.lastMessage = message.content
     conversation.time =
-      message.time ||
-      new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+      message.time || new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
 
     // 如果不是当前会话，增加未读数
     if (selectedConversation.value?.id !== sessionId) {

@@ -440,7 +440,8 @@ const fetchFriends = async () => {
             return {
               id: contact.targetId,
               name: userData.nickname || userData.username || '好友',
-              avatar: avatar
+              avatar: avatar,
+              createTime: contact.createTime // 保留创建时间用于去重时选择最新的
             }
           } catch (error) {
             console.error(`❌ [Contacts] 获取好友 ${contact.targetId} 信息失败:`, error)
@@ -448,17 +449,39 @@ const fetchFriends = async () => {
             return {
               id: contact.targetId,
               name: '好友',
-              avatar: '👤'
+              avatar: '👤',
+              createTime: contact.createTime
             }
           }
         })
       )
 
-      friends.value = friendsWithDetails
-      console.log(`✅ [Contacts] 好友列表已更新 - 共 ${friendsWithDetails.length} 个好友`)
+      // 对相同用户的多个好友关系进行去重，只保留最新的一个
+      const friendMap = new Map()
+      friendsWithDetails.forEach((friend) => {
+        const existingFriend = friendMap.get(friend.id)
+        if (!existingFriend) {
+          // 第一次添加该用户
+          friendMap.set(friend.id, friend)
+        } else {
+          // 比较创建时间，保留最新的
+          const existingTime = new Date(existingFriend.createTime || 0).getTime()
+          const newTime = new Date(friend.createTime || 0).getTime()
+          if (newTime > existingTime) {
+            friendMap.set(friend.id, friend)
+            console.log(`🔄 [Contacts] 发现重复好友关系，保留最新的 - id: ${friend.id}`)
+          }
+        }
+      })
 
-      // 保存到本地缓存
-      saveFriendsToLocal(friendsWithDetails)
+      // 转换回数组
+      const uniqueFriends = Array.from(friendMap.values())
+
+      friends.value = uniqueFriends
+      console.log(`✅ [Contacts] 好友列表已更新 - 共 ${uniqueFriends.length} 个好友 (去重后)`)
+
+      // 保存到本地缓存（保存去重后的数据）
+      saveFriendsToLocal(uniqueFriends)
     } else {
       console.error(`❌ [Contacts] 获取好友列表失败 - code: ${response.code}`)
       ElMessage.error('获取好友列表失败')
@@ -625,14 +648,16 @@ const handleFriendSearch = async () => {
 
   console.log('🔍 [Contacts] 搜索用户:', {
     keyword: friendSearchKeyword.value.trim(),
-    searchType: friendSearchType.value
+    searchType: friendSearchType.value,
+    userId: userId.value
   })
 
   try {
     const response = await api.get('/v1/users/search', {
       params: {
         keyword: friendSearchKeyword.value.trim(),
-        searchType: friendSearchType.value
+        searchType: friendSearchType.value,
+        userId: userId.value // 传递当前用户ID，让后端过滤自己
       }
     })
 

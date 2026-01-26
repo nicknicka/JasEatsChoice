@@ -3,8 +3,54 @@
  * 负责好友列表获取、搜索用户、添加好友、新建聊天等功能
  */
 import { ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '@/utils/api'
+
+/**
+ * 验证并处理用户头像数据
+ * @param {string} avatar - 原始头像数据
+ * @returns {string} 处理后的头像数据（有效头像或默认emoji）
+ */
+const processAvatar = (avatar) => {
+  // 如果头像为空，返回默认头像
+  if (!avatar) {
+    return '👤'
+  }
+
+  // 如果是默认emoji或短文本，直接返回
+  if (avatar === '👤' || avatar.length <= 10) {
+    return avatar
+  }
+
+  // 如果是HTTP/HTTPS URL，直接返回
+  if (avatar.startsWith('http://') || avatar.startsWith('https://')) {
+    return avatar
+  }
+
+  // 如果是base64格式，验证其完整性
+  if (avatar.startsWith('data:image')) {
+    const parts = avatar.split(',')
+    if (parts.length < 2) {
+      // base64格式不正确
+      console.warn('头像base64格式不正确，已使用默认头像')
+      return '👤'
+    }
+
+    const base64Data = parts[1]
+    if (!base64Data || base64Data.length < 100) {
+      // base64数据太短，可能被截断
+      console.warn('头像base64数据不完整，长度:', base64Data?.length, '已使用默认头像')
+      return '👤'
+    }
+
+    // base64数据完整，返回原始数据
+    return avatar
+  }
+
+  // 如果不是以上任何一种有效格式，使用默认头像
+  console.warn('头像格式未知，已使用默认头像。原始数据:', typeof avatar === 'string' ? avatar.substring(0, 50) : avatar)
+  return '👤'
+}
 
 export function useFriendManagement({ userId, conversations, chatHistory }) {
   // ========== 状态管理 ==========
@@ -31,7 +77,7 @@ export function useFriendManagement({ userId, conversations, chatHistory }) {
                 return {
                   id: contact.targetId,
                   name: userResponse.data.nickname || userResponse.data.username || '好友',
-                  avatar: userResponse.data.avatar || '👤',
+                  avatar: processAvatar(userResponse.data.avatar),
                   lastMessage: '',
                   time: '',
                   unreadCount: 0,
@@ -126,19 +172,41 @@ export function useFriendManagement({ userId, conversations, chatHistory }) {
       if (params.searchType) {
         searchParams.append('searchType', params.searchType)
       }
+      // 传递当前用户ID，让后端在数据库层面过滤自己
+      searchParams.append('userId', String(userId.value))
 
       const response = await api.get(`/v1/users/search?${searchParams.toString()}`)
 
       if (response.code === '200') {
-        return response.data.map((user) => ({
-          id: user.userId,
-          nickname: user.nickname,
-          username: user.username,
-          phone: user.phone,
-          email: user.email,
-          avatar: '👤',
-          isFriend: false
-        }))
+        // 获取当前用户的好友列表
+        let friendIdSet = new Set()
+        try {
+          const friendsResponse = await api.get(`/v1/contacts/friends?userId=${userId.value}`)
+          if (friendsResponse.code === '200') {
+            friendIdSet = new Set(friendsResponse.data.map(contact => String(contact.targetId)))
+          }
+        } catch (error) {
+          console.error('获取好友列表失败:', error)
+        }
+
+        // 前端只过滤已经是好友的用户（后端已过滤自己）
+        const filteredUsers = response.data
+          .filter((user) => {
+            const userIdStr = String(user.userId)
+            // 只过滤已经是好友的用户
+            return !friendIdSet.has(userIdStr)
+          })
+          .map((user) => ({
+            id: user.userId,
+            nickname: user.nickname,
+            username: user.username,
+            phone: user.phone,
+            email: user.email,
+            avatar: processAvatar(user.avatar),
+            isFriend: false
+          }))
+
+        return filteredUsers
       } else {
         ElMessage.error('搜索用户失败')
         return []
@@ -151,26 +219,85 @@ export function useFriendManagement({ userId, conversations, chatHistory }) {
   }
 
   /**
+   * 检查是否已有待处理的好友请求
+   */
+  const hasPendingRequest = async (targetId) => {
+    try {
+      const response = await api.get(`/v1/contacts/friends/requests`, {
+        params: { userId: userId.value }
+      })
+      if (response.code === '200') {
+        // 使用字符串比较，确保类型一致
+        const targetIdStr = String(targetId)
+        const userIdStr = String(userId.value)
+        return response.data.some(request =>
+          String(request.userId) === targetIdStr || String(request.targetId) === userIdStr
+        )
+      }
+      return false
+    } catch (error) {
+      console.error('检查好友请求失败:', error)
+      return false
+    }
+  }
+
+  /**
    * 发送好友请求
    */
   const sendFriendRequest = async (user) => {
     try {
-      const response = await api.post(`/v1/contacts/friends/request`, {
-        userId: userId.value,
-        targetId: user.id
-      })
+      // 1. 检查是否已有待处理的好友请求
+      const pendingRequest = await hasPendingRequest(user.id)
+
+      // 如果已有待处理请求，给出提示但仍允许发送
+      if (pendingRequest) {
+        const userName = user.nickname || user.username || user.email || user.phone || '未知用户'
+        // 使用确认对话框让用户选择是否继续
+        try {
+          await ElMessageBox.confirm(
+            `你已向 ${userName} 发送过好友请求，或对方已向你发送请求。确定要再次发送吗？`,
+            '重复发送提示',
+            {
+              confirmButtonText: '继续发送',
+              cancelButtonText: '取消',
+              type: 'warning'
+            }
+          )
+        } catch {
+          // 用户取消
+          return false
+        }
+      }
+
+      // 2. 发送好友请求
+      // 确保ID转换为字符串类型
+      const requestData = {
+        userId: String(userId.value),
+        targetId: String(user.id)
+      }
+
+      console.log('发送好友请求，参数:', requestData)
+
+      const response = await api.post(`/v1/contacts/friends/request`, requestData)
+
+      console.log('好友请求响应:', response)
 
       if (response.code === '200') {
         const userName = user.nickname || user.username || user.email || user.phone || '未知用户'
         ElMessage.success(`已向 ${userName} 发送好友请求`)
         return true
       } else {
-        ElMessage.error('发送好友请求失败: ' + response.message)
+        console.error('发送好友请求失败，响应:', response)
+        const errorMsg = response.message || response.data || '未知错误'
+        ElMessage.error('发送好友请求失败: ' + errorMsg)
         return false
       }
     } catch (error) {
-      console.error('发送好友请求失败:', error)
-      ElMessage.error('发送好友请求失败')
+      if (error !== 'cancel') {
+        console.error('发送好友请求异常:', error)
+        const errorMsg = error.response?.data?.message || error.message || '网络错误'
+        ElMessage.error('发送好友请求失败: ' + errorMsg)
+      }
       return false
     }
   }
@@ -204,7 +331,7 @@ export function useFriendManagement({ userId, conversations, chatHistory }) {
                   requesterInfo: {
                     id: userResponse.data.userId,
                     nickname: userResponse.data.nickname || '未知用户',
-                    avatar: userResponse.data.avatar || '👤',
+                    avatar: processAvatar(userResponse.data.avatar),
                     phone: userResponse.data.phone,
                     email: userResponse.data.email
                   }
@@ -313,6 +440,9 @@ export function useFriendManagement({ userId, conversations, chatHistory }) {
     sendFriendRequest,
     getFriendRequests,
     acceptFriendRequest,
-    rejectFriendRequest
+    rejectFriendRequest,
+
+    // 工具函数
+    processAvatar
   }
 }

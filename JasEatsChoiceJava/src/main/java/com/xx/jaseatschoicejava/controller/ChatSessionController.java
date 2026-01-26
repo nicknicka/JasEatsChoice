@@ -100,11 +100,10 @@ public class ChatSessionController {
             }
             // 如果已经是 S 开头，直接使用
         } else {
-            // 单聊：使用IdGenerator生成sessionId
-            sessionId = ChatSessionIdGenerator.generateSingleChatSessionIdWithIdGenerator(
-                userId,
-                sessionId
-            );
+            // ⭐ 单聊：直接使用对方的 userId 作为 sessionId，不进行转换
+            // 这样前端发送消息时可以直接使用 sessionId 作为 toId
+            // 不再使用 ChatSessionIdGenerator 生成格式化的 sessionId
+            // sessionId 保持为对方的 userId（如 "2"）
         }
 
         // 查找是否已存在该会话

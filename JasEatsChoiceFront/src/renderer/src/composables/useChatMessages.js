@@ -95,7 +95,6 @@ export function useChatMessages({ userId, selectedConversation }) {
       // ⭐ 修复：使用 msgId 或 id 作为唯一标识
       const messageId = msg.msgId
 
-
       if (!messageIds.has(messageId)) {
         messageIds.add(messageId)
 
@@ -137,7 +136,7 @@ export function useChatMessages({ userId, selectedConversation }) {
 
         const processedMsg = {
           ...msg,
-          id: normalizedId,  // ⭐ 标准化 id 字段
+          id: normalizedId, // ⭐ 标准化 id 字段
           msgType,
           formattedTime: formatMessageTime(msg.createTime || msg.time),
           fromId,
@@ -225,8 +224,6 @@ export function useChatMessages({ userId, selectedConversation }) {
    * 加载聊天记录
    */
   const loadChatMessages = async (sessionId, loadMore = false) => {
-
-
     if (!loadMore) {
       msgPageNum.value = 1
       hasMoreMessages.value = true
@@ -331,7 +328,11 @@ export function useChatMessages({ userId, selectedConversation }) {
       let msgType = message.msgType
       if (message.msgType === 'image' || message.content === '[图片]' || fileUrl) {
         msgType = 'image'
-      } else if (message.msgType === 'file' || message.content?.startsWith('[文件]') || message.fileName) {
+      } else if (
+        message.msgType === 'file' ||
+        message.content?.startsWith('[文件]') ||
+        message.fileName
+      ) {
         msgType = 'file'
       }
 

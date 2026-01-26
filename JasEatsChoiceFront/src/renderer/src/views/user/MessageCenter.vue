@@ -83,9 +83,61 @@ const loadFriendRequests = async () => {
   loadingRequests.value = true
   try {
     console.log('MessageCenter: 开始加载好友请求')
+
+    // 1. 获取当前用户的好友列表
+    let friendIdSet = new Set()
+    try {
+      const friendsResponse = await api.get(`/v1/contacts/friends?userId=${userId.value}`)
+      if (friendsResponse.code === '200') {
+        friendIdSet = new Set(friendsResponse.data.map(contact => String(contact.targetId)))
+        console.log('MessageCenter: 当前好友列表:', Array.from(friendIdSet))
+      }
+    } catch (error) {
+      console.error('获取好友列表失败:', error)
+    }
+
+    // 2. 获取好友请求
     const requests = await getFriendRequests()
     console.log('MessageCenter: 获取到的好友请求:', requests)
-    friendRequests.value = requests
+
+    // 3. 对相同用户的请求进行去重，只保留最新的一个
+    const requestMap = new Map()
+
+    requests.forEach((request) => {
+      const requestUserId = request.userId || request.requesterInfo?.id
+      if (requestUserId) {
+        // 如果该用户已有请求，比较创建时间，保留最新的
+        const existingRequest = requestMap.get(requestUserId)
+        if (!existingRequest) {
+          // 第一次添加该用户的请求
+          requestMap.set(requestUserId, request)
+        } else {
+          // 比较创建时间，保留最新的
+          const existingTime = new Date(existingRequest.createTime || 0).getTime()
+          const newTime = new Date(request.createTime || 0).getTime()
+          if (newTime > existingTime) {
+            requestMap.set(requestUserId, request)
+          }
+        }
+      }
+    })
+
+    // 转换回数组
+    let uniqueRequests = Array.from(requestMap.values())
+    console.log('MessageCenter: 去重后的好友请求:', uniqueRequests)
+
+    // 4. 过滤掉已经是好友的请求
+    uniqueRequests = uniqueRequests.filter((request) => {
+      const requestUserId = String(request.userId || request.requesterInfo?.id)
+      const isFriend = friendIdSet.has(requestUserId)
+      if (isFriend) {
+        console.log(`MessageCenter: 过滤掉已是好友的请求 - userId: ${requestUserId}`)
+      }
+      return !isFriend
+    })
+
+    console.log('MessageCenter: 最终好友请求列表（已过滤好友）:', uniqueRequests)
+    friendRequests.value = uniqueRequests
     console.log('MessageCenter: 设置后的 friendRequests.value:', friendRequests.value)
   } catch (error) {
     console.error('加载好友请求失败:', error)
@@ -316,6 +368,11 @@ const markMessageAsRead = async (messageId) => {
 // 未读消息数量
 const unreadCount = ref(0)
 
+// 总未读数（包括好友请求和通知消息）
+const totalUnreadCount = computed(() => {
+  return unreadCount.value + friendRequestCount.value
+})
+
 const loadUnreadCount = async () => {
   try {
     const response = await api.get('/notifications/unread-count', {
@@ -332,10 +389,82 @@ const loadUnreadCount = async () => {
 
 /**
  * 判断头像是否为图片URL
+ * 增强版：过滤不完整的base64数据
  */
 const isImageAvatar = (avatar) => {
   if (!avatar) return false
-  return avatar.match(/^https?:/) || avatar.match(/^data:image/)
+
+  // 如果是emoji或短文本，不是图片
+  if (avatar.length <= 10 || avatar === '👤') {
+    return false
+  }
+
+  // 检查是否是HTTP/HTTPS URL
+  if (avatar.match(/^https?:\/\//)) {
+    return true
+  }
+
+  // 检查是否是完整的base64图片
+  if (avatar.match(/^data:image/)) {
+    const parts = avatar.split(',')
+    if (parts.length >= 2 && parts[1] && parts[1].length >= 100) {
+      return true
+    }
+    // base64数据不完整，不当作图片处理
+    console.warn('头像base64数据不完整，将显示为文本:', avatar.substring(0, 50))
+    return false
+  }
+
+  return false
+}
+
+/**
+ * 获取空状态描述
+ */
+const getEmptyDescription = () => {
+  const descriptions = {
+    all: '暂无消息',
+    order: '暂无订单消息',
+    system: '暂无系统通知',
+    promotion: '暂无优惠活动',
+    friend: '暂无好友请求'
+  }
+  return descriptions[activeTab.value] || '暂无消息'
+}
+
+/**
+ * 获取空状态图标
+ */
+const getEmptyIcon = () => {
+  const icons = {
+    all: '📭',
+    order: '📦',
+    system: '📢',
+    promotion: '🎉',
+    friend: '👋'
+  }
+  return icons[activeTab.value] || '📭'
+}
+
+/**
+ * 获取消息类型图标
+ */
+const getMessageIcon = (type) => {
+  const icons = {
+    order: '📦',
+    system: '📢',
+    promotion: '🎉',
+    all: '📭'
+  }
+  return icons[type] || '📭'
+}
+
+/**
+ * 从详情页删除消息
+ */
+const handleDeleteFromDetail = async (messageId) => {
+  await deleteMessage(messageId)
+  showDetailModal.value = false
 }
 </script>
 
@@ -343,19 +472,54 @@ const isImageAvatar = (avatar) => {
   <div class="message-center-container">
     <h2>消息中心</h2>
 
+    <!-- 消息中心汇总卡片 -->
+    <transition name="summary-fade">
+      <div v-if="totalUnreadCount > 0" class="message-summary-card">
+        <div class="summary-content">
+          <div class="summary-icon">🔔</div>
+          <div class="summary-text">
+            <div class="summary-title">您有 {{ totalUnreadCount }} 条未读消息</div>
+            <div class="summary-details">
+              <span v-if="unreadCount > 0">{{ unreadCount }} 条通知消息</span>
+              <span v-if="unreadCount > 0 && friendRequestCount > 0" class="divider">|</span>
+              <span v-if="friendRequestCount > 0">{{ friendRequestCount }} 个好友请求</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </transition>
+
     <!-- 消息分类标签页 -->
     <el-tabs v-model="activeTab" class="message-tabs">
       <el-tab-pane label="全部消息" name="all">
         <template #label>
           <span class="tab-label">
             <span>全部消息</span>
-            <el-badge v-if="unreadCount > 0" :value="unreadCount" class="tab-badge" />
+            <el-badge v-if="totalUnreadCount > 0" :value="totalUnreadCount" class="tab-badge" />
           </span>
         </template>
       </el-tab-pane>
-      <el-tab-pane label="订单消息" name="order"></el-tab-pane>
-      <el-tab-pane label="系统通知" name="system"></el-tab-pane>
-      <el-tab-pane label="优惠活动" name="promotion"></el-tab-pane>
+      <el-tab-pane label="订单消息" name="order">
+        <template #label>
+          <span class="tab-label">
+            <span>订单消息</span>
+          </span>
+        </template>
+      </el-tab-pane>
+      <el-tab-pane label="系统通知" name="system">
+        <template #label>
+          <span class="tab-label">
+            <span>系统通知</span>
+          </span>
+        </template>
+      </el-tab-pane>
+      <el-tab-pane label="优惠活动" name="promotion">
+        <template #label>
+          <span class="tab-label">
+            <span>优惠活动</span>
+          </span>
+        </template>
+      </el-tab-pane>
       <el-tab-pane name="friend">
         <template #label>
           <span class="friend-tab">
@@ -508,10 +672,15 @@ const isImageAvatar = (avatar) => {
         <!-- 空数据提示 -->
         <transition name="empty-fade" mode="out-in">
           <div v-if="filteredMessages.length === 0" class="empty-state-wrapper" key="empty">
-            <el-empty description="暂无消息">
+            <el-empty :description="getEmptyDescription()">
               <template #image>
                 <div class="empty-icon-animated">
-                  <div class="empty-icon-circle">📭</div>
+                  <div class="empty-icon-circle">{{ getEmptyIcon() }}</div>
+                </div>
+              </template>
+              <template v-if="activeTab === 'friend' && friendRequestCount === 0" #extra>
+                <div class="empty-tips">
+                  <p>💡 快去添加好友，一起分享美食吧！</p>
                 </div>
               </template>
             </el-empty>
@@ -524,35 +693,65 @@ const isImageAvatar = (avatar) => {
     <!-- 消息详情模态框 -->
     <el-dialog
       v-model="showDetailModal"
-      :title="messageDetail ? messageDetail.title : ''"
-      width="600px"
-      top="20%"
+      width="700px"
+      :close-on-click-modal="false"
+      class="message-detail-dialog"
     >
-      <div v-if="messageDetail" class="message-detail-content">
-        <div class="detail-header">
-          <el-tag
-            :type="
-              messageDetail.type === 'order'
-                ? 'primary'
-                : messageDetail.type === 'system'
-                  ? 'warning'
-                  : 'success'
-            "
-          >
-            {{
-              messageDetail.type === 'order'
-                ? '订单消息'
-                : messageDetail.type === 'system'
-                  ? '系统通知'
-                  : '优惠活动'
-            }}
-          </el-tag>
-          <span class="detail-time">{{ messageDetail.time }}</span>
+      <template #header>
+        <div class="detail-modal-header">
+          <div class="header-left">
+            <div class="detail-icon-wrapper">
+              <span class="detail-icon">{{ getMessageIcon(messageDetail?.type) }}</span>
+            </div>
+            <div class="header-title-section">
+              <h3 class="detail-modal-title">{{ messageDetail?.title }}</h3>
+              <div class="detail-meta">
+                <el-tag
+                  :type="
+                    messageDetail?.type === 'order'
+                      ? 'primary'
+                      : messageDetail?.type === 'system'
+                        ? 'warning'
+                        : 'success'
+                  "
+                  size="small"
+                >
+                  {{
+                    messageDetail?.type === 'order'
+                      ? '订单消息'
+                      : messageDetail?.type === 'system'
+                        ? '系统通知'
+                        : '优惠活动'
+                  }}
+                </el-tag>
+                <span class="detail-time">{{ messageDetail?.time }}</span>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="detail-content">
-          {{ messageDetail.content }}
+      </template>
+
+      <div v-if="messageDetail" class="message-detail-content">
+        <div class="detail-body">
+          <div class="detail-text">
+            {{ messageDetail.content }}
+          </div>
         </div>
       </div>
+
+      <template #footer>
+        <div class="detail-footer">
+          <el-button @click="showDetailModal = false">关闭</el-button>
+          <el-button
+            v-if="messageDetail"
+            type="danger"
+            plain
+            @click="handleDeleteFromDetail(messageDetail.id)"
+          >
+            删除此消息
+          </el-button>
+        </div>
+      </template>
     </el-dialog>
   </div>
 </template>
@@ -634,9 +833,73 @@ const isImageAvatar = (avatar) => {
 .message-center-container {
   padding: 0 20px 20px 20px;
 
+  // 全局按钮圆角统一
+  :deep(.el-button) {
+    border-radius: 10px;
+  }
+
+  // Badge 徽章圆角
+  :deep(.el-badge__content) {
+    border-radius: 12px;
+  }
+
+  // Tag 标签圆角
+  :deep(.el-tag) {
+    border-radius: 8px;
+  }
+
+  // Checkbox 复选框圆角
+  :deep(.el-checkbox__inner) {
+    border-radius: 6px;
+  }
+
   h2 {
     font-size: 24px;
     margin: 0 0 20px 0;
+  }
+
+  // 汇总卡片样式
+  .message-summary-card {
+    margin-bottom: 20px;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    border-radius: 20px;
+    box-shadow: 0 4px 16px rgba(79, 172, 254, 0.35);
+    animation: slideInDown 0.5s ease-out;
+
+    .summary-content {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+
+      .summary-icon {
+        font-size: 36px;
+        animation: ring 2s ease-in-out infinite;
+      }
+
+      .summary-text {
+        flex: 1;
+        color: #ffffff;
+
+        .summary-title {
+          font-size: 16px;
+          font-weight: 600;
+          margin-bottom: 6px;
+        }
+
+        .summary-details {
+          font-size: 14px;
+          opacity: 0.95;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+
+          .divider {
+            opacity: 0.7;
+          }
+        }
+      }
+    }
   }
 
   .message-tabs {
@@ -721,6 +984,7 @@ const isImageAvatar = (avatar) => {
 
       .request-card {
         transition: all 0.3s ease;
+        border-radius: 16px;
 
         &:hover {
           transform: translateY(-2px);
@@ -742,7 +1006,7 @@ const isImageAvatar = (avatar) => {
             .requester-avatar {
               width: 64px;
               height: 64px;
-              border-radius: 50%;
+              border-radius: 16px;
               overflow: hidden;
               background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
               display: flex;
@@ -791,7 +1055,7 @@ const isImageAvatar = (avatar) => {
             flex-shrink: 0;
 
             .el-button {
-              border-radius: 8px;
+              border-radius: 12px;
               padding: 10px 20px;
               font-weight: 500;
               transition: all 0.3s ease;
@@ -813,10 +1077,10 @@ const isImageAvatar = (avatar) => {
       justify-content: space-between;
       align-items: center;
       padding: 12px 16px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      border-radius: 8px;
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+      border-radius: 16px;
       margin-bottom: 16px;
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+      box-shadow: 0 4px 12px rgba(79, 172, 254, 0.3);
 
       // 使复选框文字在深色背景上更清晰
       :deep(.el-checkbox__label) {
@@ -878,15 +1142,33 @@ const isImageAvatar = (avatar) => {
       :deep(.el-empty__description) {
         animation: emptyFadeIn 0.8s ease-out 0.3s both;
       }
+
+      // 空状态提示
+      .empty-tips {
+        margin-top: 16px;
+        padding: 12px 20px;
+        background: linear-gradient(135deg, #fff5f5 0%, #ffe4e4 100%);
+        border-radius: 12px;
+        animation: emptyFadeIn 0.8s ease-out 0.5s both;
+
+        p {
+          margin: 0;
+          font-size: 14px;
+          color: #666;
+          text-align: center;
+        }
+      }
     }
   }
 
   .message-card {
     cursor: pointer;
     transition: all 0.3s;
+    border-radius: 16px;
 
     &:hover {
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      transform: translateY(-2px);
     }
 
     &.unread {
@@ -951,24 +1233,103 @@ const isImageAvatar = (avatar) => {
   }
 
   /* 消息详情模态框样式 */
-  .message-detail-content {
-    .detail-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
+  :deep(.message-detail-dialog) {
+    border-radius: 16px;
 
-      .detail-time {
-        font-size: 14px;
-        color: #909399;
+    .el-dialog__header {
+      padding: 0;
+      margin: 0;
+    }
+
+    .el-dialog__body {
+      padding: 0 20px 20px 20px;
+    }
+
+    .el-dialog__footer {
+      padding: 16px 20px;
+      border-top: 1px solid #ebeef5;
+      border-radius: 0 0 16px 16px;
+    }
+  }
+
+  .detail-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px;
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    border-radius: 16px 16px 0 0;
+    margin: -20px -20px 0 -20px;
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex: 1;
+
+      .detail-icon-wrapper {
+        width: 56px;
+        height: 56px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.25);
+        border-radius: 16px;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+        .detail-icon {
+          font-size: 32px;
+          filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+        }
+      }
+
+      .header-title-section {
+        flex: 1;
+        color: #ffffff;
+
+        .detail-modal-title {
+          margin: 0 0 8px 0;
+          font-size: 20px;
+          font-weight: 600;
+          color: #ffffff;
+          line-height: 1.3;
+        }
+
+        .detail-meta {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+
+          .detail-time {
+            font-size: 13px;
+            opacity: 0.95;
+            color: #ffffff;
+          }
+        }
       }
     }
+  }
 
-    .detail-content {
-      font-size: 16px;
-      color: #303133;
-      line-height: 1.6;
+  .message-detail-content {
+    .detail-body {
+      padding: 24px 0;
+
+      .detail-text {
+        font-size: 15px;
+        line-height: 1.8;
+        color: #303133;
+        text-align: justify;
+        word-wrap: break-word;
+        white-space: pre-wrap;
+      }
     }
+  }
+
+  .detail-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
   }
 }
 
@@ -1005,5 +1366,49 @@ const isImageAvatar = (avatar) => {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+@keyframes ring {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  10%, 30% {
+    transform: rotate(-10deg);
+  }
+  20%, 40% {
+    transform: rotate(10deg);
+  }
+  50% {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.summary-fade-enter-active {
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.summary-fade-leave-active {
+  transition: all 0.4s cubic-bezier(0.4, 0, 1, 1);
+}
+
+.summary-fade-enter-from {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+
+.summary-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-20px) scale(0.95);
 }
 </style>

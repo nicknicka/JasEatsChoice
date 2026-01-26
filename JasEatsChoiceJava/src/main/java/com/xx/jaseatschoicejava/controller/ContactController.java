@@ -88,6 +88,27 @@ public class ContactController {
     @ApiOperation("发送好友请求")
     @PostMapping("/friends/request")
     public ResponseResult<?> sendFriendRequest(@RequestBody Contact contact) {
+        String userId = contact.getUserId();
+        String targetId = contact.getTargetId();
+
+        // 1. 检查是否添加自己
+        if (userId.equals(targetId)) {
+            return ResponseResult.fail("400", "不能添加自己为好友");
+        }
+
+        // 2. 检查是否已经是好友
+        List<Contact> existingFriends = contactService.lambdaQuery()
+                .eq(Contact::getUserId, userId)
+                .eq(Contact::getTargetId, targetId)
+                .eq(Contact::getRelationType, "friend")
+                .eq(Contact::getStatus, "normal")
+                .list();
+
+        if (!existingFriends.isEmpty()) {
+            return ResponseResult.fail("400", "对方已经是你的好友了");
+        }
+
+        // 3. 发送好友请求（允许重复发送）
         contact.setRelationType("friend");
         contact.setStatus("pending");
         boolean success = contactService.save(contact);

@@ -197,6 +197,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Loading } from '@element-plus/icons-vue'
 
@@ -315,6 +316,10 @@ if (token.value) {
   }
 }
 
+// ========== 路由信息 ==========
+const router = useRouter()
+const route = useRoute()
+
 // ========== 使用 Composables ==========
 const {
   conversations,
@@ -328,7 +333,7 @@ const {
   togglePin,
   deleteConversation,
   updateConversationLastMessage
-} = useConversations()
+} = useConversations(userId)
 
 const {
   chatHistory,
@@ -647,15 +652,24 @@ const sendMessage = async (content) => {
   console.log('📤 [sendMessage] 准备发送消息')
   console.log('📤 [sendMessage] 会话信息:', {
     id: selectedConversation.value.id,
+    targetId: selectedConversation.value.targetId,
     groupId: selectedConversation.value.groupId,
     name: selectedConversation.value.name,
     type: selectedConversation.value.type
   })
 
-  // ⭐ 对于群聊，使用 groupId 而不是 sessionId 作为 toId
-  const toId = selectedConversation.value.type === 'group' && selectedConversation.value.groupId
-    ? selectedConversation.value.groupId
-    : selectedConversation.value.id
+  // ⭐ 对于群聊，使用 groupId 作为 toId
+  // ⭐ 对于单聊，使用 targetId（对方的 userId）作为 toId
+  let toId
+  if (selectedConversation.value.type === 'group' && selectedConversation.value.groupId) {
+    toId = selectedConversation.value.groupId
+  } else if (selectedConversation.value.type === 'single' && selectedConversation.value.targetId) {
+    toId = selectedConversation.value.targetId
+  } else {
+    // 兼容旧数据，如果没有 targetId，尝试从 id 中解析
+    toId = selectedConversation.value.id
+    console.warn('⚠️ [sendMessage] 会话没有 targetId，使用 id 作为 toId:', toId)
+  }
 
   console.log('📤 [sendMessage] 使用的toId:', toId, '(原会话ID:', selectedConversation.value.id + ')')
 
@@ -745,15 +759,24 @@ const sendImageMessage = async (fileInfo) => {
   console.log('📤 [sendImageMessage] 准备发送图片消息')
   console.log('📤 [sendImageMessage] 会话信息:', {
     id: selectedConversation.value.id,
+    targetId: selectedConversation.value.targetId,
     groupId: selectedConversation.value.groupId,
     name: selectedConversation.value.name,
     type: selectedConversation.value.type
   })
 
-  // ⭐ 对于群聊，使用 groupId 而不是 sessionId 作为 toId
-  const toId = selectedConversation.value.type === 'group' && selectedConversation.value.groupId
-    ? selectedConversation.value.groupId
-    : selectedConversation.value.id
+  // ⭐ 对于群聊，使用 groupId 作为 toId
+  // ⭐ 对于单聊，使用 targetId（对方的 userId）作为 toId
+  let toId
+  if (selectedConversation.value.type === 'group' && selectedConversation.value.groupId) {
+    toId = selectedConversation.value.groupId
+  } else if (selectedConversation.value.type === 'single' && selectedConversation.value.targetId) {
+    toId = selectedConversation.value.targetId
+  } else {
+    // 兼容旧数据，如果没有 targetId，尝试从 id 中解析
+    toId = selectedConversation.value.id
+    console.warn('⚠️ [sendImageMessage] 会话没有 targetId，使用 id 作为 toId:', toId)
+  }
 
   console.log('📤 [sendImageMessage] 使用的toId:', toId, '(原会话ID:', selectedConversation.value.id + ')')
 
@@ -860,15 +883,24 @@ const sendFileMessage = async (fileInfo) => {
   console.log('📤 [sendFileMessage] 准备发送文件消息')
   console.log('📤 [sendFileMessage] 会话信息:', {
     id: selectedConversation.value.id,
+    targetId: selectedConversation.value.targetId,
     groupId: selectedConversation.value.groupId,
     name: selectedConversation.value.name,
     type: selectedConversation.value.type
   })
 
-  // ⭐ 对于群聊，使用 groupId 而不是 sessionId 作为 toId
-  const toId = selectedConversation.value.type === 'group' && selectedConversation.value.groupId
-    ? selectedConversation.value.groupId
-    : selectedConversation.value.id
+  // ⭐ 对于群聊，使用 groupId 作为 toId
+  // ⭐ 对于单聊，使用 targetId（对方的 userId）作为 toId
+  let toId
+  if (selectedConversation.value.type === 'group' && selectedConversation.value.groupId) {
+    toId = selectedConversation.value.groupId
+  } else if (selectedConversation.value.type === 'single' && selectedConversation.value.targetId) {
+    toId = selectedConversation.value.targetId
+  } else {
+    // 兼容旧数据，如果没有 targetId，尝试从 id 中解析
+    toId = selectedConversation.value.id
+    console.warn('⚠️ [sendFileMessage] 会话没有 targetId，使用 id 作为 toId:', toId)
+  }
 
   console.log('📤 [sendFileMessage] 使用的toId:', toId, '(原会话ID:', selectedConversation.value.id + ')')
 
@@ -938,10 +970,22 @@ const sendFileMessage = async (fileInfo) => {
 
 const resendMessage = async (failedMessage) => {
   try {
+    // ⭐ 确定正确的 toId
+    let toId
+    if (selectedConversation.value.type === 'group' && selectedConversation.value.groupId) {
+      toId = selectedConversation.value.groupId
+    } else if (selectedConversation.value.type === 'single' && selectedConversation.value.targetId) {
+      toId = selectedConversation.value.targetId
+    } else {
+      toId = selectedConversation.value.id
+      console.warn('⚠️ [resendMessage] 会话没有 targetId，使用 id 作为 toId:', toId)
+    }
+
     const messageData = {
       fromId: userId.value.toString(),
-      toId: selectedConversation.value.id,
-      msgType: selectedConversation.value.type || 'single',
+      toId: toId, // ⭐ 使用正确的 toId
+      sessionType: selectedConversation.value.type || 'single',
+      msgType: failedMessage.msgType || 'text',
       content: failedMessage.content
     }
 
@@ -1421,6 +1465,15 @@ watch(orderDrawerVisible, async (newVal) => {
   }
 })
 
+// ========== 监听路由变化 ==========
+watch(() => route.query, async (newQuery) => {
+  // 当路由参数中的 friendId 变化时，处理从联系人页面跳转
+  if (newQuery.friendId) {
+    console.log('📍 [Chat] 检测到路由参数变化:', newQuery)
+    await handleChatFromContact()
+  }
+}, { deep: true })
+
 // ========== 生命周期 ==========
 onMounted(async () => {
    console.log('🚀 [Chat] Chat组件挂载，开始初始化')
@@ -1462,6 +1515,9 @@ onMounted(async () => {
     }
 
     initWebSocket()
+
+    // 处理从联系人页面跳转到聊天页面
+    await handleChatFromContact()
   } catch (error) {
     console.error('❌ [Chat] 加载数据失败:', error)
     ElMessage.error('加载数据失败，请稍后重试')
@@ -1567,6 +1623,110 @@ const fetchConversations = async () => {
     console.error('❌ [fetchConversations] 获取会话列表失败:', error)
     return false
   }
+}
+
+// ========== 处理从联系人页面跳转 ==========
+/**
+ * 处理从联系人页面跳转到聊天页面
+ * 检查是否存在会话，如果不存在则创建新会话
+ */
+const handleChatFromContact = async () => {
+  const friendId = route.query.friendId
+  const friendName = route.query.friendName
+
+  if (!friendId) {
+    console.log('💬 [handleChatFromContact] 没有friendId参数，跳过处理')
+    return
+  }
+
+  console.log('💬 [handleChatFromContact] 从联系人页面跳转:', { friendId, friendName })
+
+  // 检查会话列表中是否已存在与该好友的会话
+  // 对于单聊，会话的id就是对方的userId
+  const existingConversation = conversations.value.find(
+    (conv) => conv.type === 'single' && conv.id === friendId.toString()
+  )
+
+  if (existingConversation) {
+    console.log('💬 [handleChatFromContact] 会话已存在，直接选中:', existingConversation)
+    selectedConversation.value = existingConversation
+    await loadChatMessages(existingConversation.id)
+  } else {
+    console.log('💬 [handleChatFromContact] 会话不存在，创建新会话')
+
+    try {
+      // 调用后端API创建会话
+      const sessionId = friendId.toString() // 单聊的sessionId就是对方的userId
+      const response = await api.post('/v1/chat/sessions', {
+        userId: userId.value.toString(),
+        sessionId: sessionId,
+        sessionType: 'single',
+        sessionName: friendName || friendId.toString(),
+        avatar: '👤'
+      })
+
+      if (response.code === '200') {
+        console.log('✅ [handleChatFromContact] 会话创建成功, 响应数据:', response.data)
+
+        // 刷新会话列表
+        const refreshSuccess = await fetchConversations()
+
+        if (refreshSuccess) {
+          console.log('🔄 [handleChatFromContact] 会话列表刷新成功，当前会话列表:', conversations.value.map(c => ({ id: c.id, name: c.name })))
+
+          // 查找新创建的会话 - 使用多种匹配方式
+          let newConversation = conversations.value.find((conv) => conv.id === sessionId)
+
+          // 如果没找到，尝试通过会话名称匹配
+          if (!newConversation && friendName) {
+            newConversation = conversations.value.find((conv) => conv.name === friendName && conv.type === 'single')
+            console.log('🔍 [handleChatFromContact] 通过名称匹配会话:', newConversation)
+          }
+
+          // 如果还是没找到，直接创建一个临时会话对象
+          if (!newConversation) {
+            console.warn('⚠️ [handleChatFromContact] 会话列表中未找到，创建临时会话对象')
+            newConversation = {
+              id: sessionId,
+              name: friendName || friendId.toString(),
+              type: 'single',
+              avatar: '👤',
+              lastMessage: '开始聊天吧！',
+              time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+              unreadCount: 0,
+              targetId: friendId.toString() // ⭐ 保存对方的 userId，用于发送消息
+            }
+            // 添加到会话列表的开头
+            conversations.value.unshift(newConversation)
+            console.log('➕ [handleChatFromContact] 已创建临时会话并添加到列表')
+          } else {
+            // ⭐ 如果找到了会话，确保它有 targetId 字段
+            if (!newConversation.targetId && newConversation.type === 'single') {
+              newConversation.targetId = friendId.toString()
+              console.log('🔧 [handleChatFromContact] 为会话添加 targetId:', friendId)
+            }
+          }
+
+          console.log('✅ [handleChatFromContact] 找到新创建的会话:', newConversation)
+          selectedConversation.value = newConversation
+          chatHistory.value[newConversation.id] = []
+          ElMessage.success(`已开始与 ${friendName || '好友'} 的对话`)
+        } else {
+          console.error('❌ [handleChatFromContact] 刷新会话列表失败')
+          ElMessage.error('刷新会话列表失败')
+        }
+      } else {
+        console.error('❌ [handleChatFromContact] 创建会话失败:', response)
+        ElMessage.error('创建会话失败')
+      }
+    } catch (error) {
+      console.error('❌ [handleChatFromContact] 创建会话异常:', error)
+      ElMessage.error('创建会话失败')
+    }
+  }
+
+  // 清除路由参数，避免重复处理
+  router.replace({ query: {} })
 }
 
 // 获取商家列表

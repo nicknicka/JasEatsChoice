@@ -167,12 +167,12 @@
   },
   "active": "25380c94f56f550b",
   "lastOpenFiles": [
+    "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/controller/ContactController.class",
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/controller/NotificationController.class",
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/entity/Notification.class",
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/dto/FriendRequestActionDTO.class",
     "JasEatsChoiceJava/src/main/java/com/xx/jaseatschoicejava/dto/FriendRequestActionDTO.java",
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/controller/MessageRecordController.class",
-    "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/controller/ContactController.class",
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/service/MessageRecordService.class",
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/service/impl/MessageRecordServiceImpl.class",
     "JasEatsChoiceFront/src/renderer/src/components/chat/dialogs/BatchCustomizeDialog.vue",

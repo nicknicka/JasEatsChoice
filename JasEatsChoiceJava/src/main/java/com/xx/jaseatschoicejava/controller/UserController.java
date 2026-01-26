@@ -22,8 +22,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * 用户控制器
@@ -416,15 +418,31 @@ public class UserController {
      * 搜索用户
      * @param keyword 搜索关键词
      * @param searchType 搜索类型：nickname(昵称), phone(手机号), email(邮箱)
+     * @param userId 当前用户ID（用于过滤自己）
      * @return 匹配的用户列表
      */
     @GetMapping("/search")
     public ResponseResult<?> searchUsers(@RequestParam String keyword,
-                                        @RequestParam(required = false) String searchType) {
+                                        @RequestParam(required = false) String searchType,
+                                        @RequestParam(required = false) String userId) {
         try {
-            return ResponseResult.success(userService.searchUsers(keyword, searchType));
+            log.info("搜索用户 - 关键词: {}, 搜索类型: {}, 当前用户ID: {}", keyword, searchType, userId);
+
+            // 调用服务层搜索用户
+            List<User> users = userService.searchUsers(keyword, searchType);
+
+            // 如果提供了userId，过滤掉自己
+            if (userId != null && !userId.trim().isEmpty()) {
+                users = users.stream()
+                        .filter(user -> !userId.equals(user.getUserId()))
+                        .collect(Collectors.toList());
+                log.info("过滤自己后的用户数量: {}", users.size());
+            }
+
+            return ResponseResult.success(users);
         } catch (Exception e) {
             e.printStackTrace();
+            log.error("用户搜索失败: {}", e.getMessage());
             return ResponseResult.fail("500", "用户搜索失败");
         }
     }
