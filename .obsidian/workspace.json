@@ -167,6 +167,8 @@
   },
   "active": "25380c94f56f550b",
   "lastOpenFiles": [
+    "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/controller/NotificationController.class",
+    "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/entity/Notification.class",
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/dto/FriendRequestActionDTO.class",
     "JasEatsChoiceJava/src/main/java/com/xx/jaseatschoicejava/dto/FriendRequestActionDTO.java",
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/controller/MessageRecordController.class",
@@ -177,8 +179,6 @@
     "JasEatsChoiceFront/src/renderer/src/components/chat/dialogs/ProductCustomizeDialog.vue",
     "JasEatsChoiceFront/src/renderer/src/components/chat/dialogs/ProductDetailDialog.vue",
     "JasEatsChoiceFront/src/renderer/src/views/user/Settings功能实现说明.md",
-    "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/controller/UserController.class",
-    "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/service/impl/UserServiceImpl.class",
     "uploads/3384650106421960/4d60fa71-a4fa-4346-94c2-5a1ed316bbab.png",
     "uploads/3384650106421960/c609861b-92a2-405c-a004-87f07c11ccbe.png",
     "uploads/3384650106421960/8b05d820-6453-48f2-8f4c-11706a4a02ee.png",

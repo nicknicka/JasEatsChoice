@@ -4,7 +4,7 @@ import { useAuthStore } from '../../store/authStore'
 
 const authStore = useAuthStore(pinia)
 
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Loading, Select, Close, Delete } from '@element-plus/icons-vue'
 import api from '../../utils/api.js'
@@ -45,25 +45,34 @@ onMounted(async () => {
  */
 const loadMessages = async () => {
   try {
-    const response = await api.get(API_CONFIG.message.list, {
-      params: { userId: userId.value }
-    })
+    console.log('🚀 开始加载系统消息...')
+    // 修改API调用路径：使用路径参数而不是查询参数
+    const response = await api.get(`${API_CONFIG.message.list}/${userId.value}`)
 
-    if (response && response.code === '200') {
+    // 修复：兼容字符串和数字类型的code
+    if (response && (response.code === '200' || response.code === 200)) {
+      console.log('✅ 消息API返回成功，数据量:', response.data.length)
+
       // 转换后端返回的数据格式以匹配前端期望的字段
-      const formattedMessages = response.data.map((message) => ({
-        id: message.id,
-        title: message.content,
-        content: message.content,
-        time: message.sendTime,
-        read: message.readStatus,
-        type: message.type || 'system'
-      }))
+      const formattedMessages = response.data.map((message) => {
+        return {
+          id: message.id,
+          title: message.title || message.content,
+          content: message.content,
+          time: message.sendTime || message.createTime,
+          read: message.readStatus,
+          type: message.type || 'system'
+        }
+      })
 
       messages.value = formattedMessages
+      console.log('✅ 消息已设置到messages.value，数量:', messages.value.length)
+      console.log('📋 当前activeTab:', activeTab.value)
+    } else {
+      console.warn('❌ 消息API返回失败:', response)
     }
   } catch (error) {
-    console.error('加载消息失败:', error)
+    console.error('❌ 加载消息失败:', error)
   }
 }
 
@@ -88,12 +97,32 @@ const loadFriendRequests = async () => {
 // 切换消息分类
 const activeTab = ref('all')
 
+// 监听tab切换，切换到好友请求时重新加载数据
+watch(activeTab, async (newTab) => {
+  console.log('Tab切换到:', newTab)
+  if (newTab === 'friend') {
+    console.log('切换到好友请求tab，重新加载数据')
+    await loadFriendRequests()
+  }
+})
+
 // 筛选消息
 const filteredMessages = computed(() => {
+  console.log('🔄 filteredMessages computed被调用，activeTab=', activeTab.value, '消息总数=', messages.value.length)
+
+  let result
   if (activeTab.value === 'all') {
-    return messages.value
+    result = messages.value
+  } else {
+    result = messages.value.filter((msg) => {
+      const match = msg.type === activeTab.value
+      console.log(`  检查消息: type=${msg.type}, tab=${activeTab.value}, 匹配=${match}`)
+      return match
+    })
   }
-  return messages.value.filter((msg) => msg.type === activeTab.value)
+
+  console.log('  ✅ 筛选完成，结果数量:', result.length)
+  return result
 })
 
 // 好友请求数量
@@ -149,7 +178,7 @@ const deleteMessage = async (messageId) => {
     })
 
     // 调用后端接口删除消息
-    const response = await api.delete(`${API_CONFIG.message.list}/${messageId}`)
+    const response = await api.delete(`/notifications/${messageId}`)
     if (response.code === '200') {
       ElMessage.success('消息删除成功')
       // 从前端列表中移除
@@ -220,7 +249,7 @@ const deleteSelected = async () => {
 
     // 调用后端接口批量删除
     const messageIds = selectedMessages.value.map((msg) => msg.id)
-    const response = await api.delete(`${API_CONFIG.message.list}/batch`, { data: messageIds })
+    const response = await api.delete('/notifications/batch', { data: messageIds })
     if (response.code === '200') {
       ElMessage.success(`成功删除 ${messageIds.length} 条消息`)
       // 从前端列表中移除
@@ -244,7 +273,7 @@ const deleteSelected = async () => {
 // 全部标记为已读
 const markAllAsRead = async () => {
   try {
-    const response = await api.put(`${API_CONFIG.message.list}/all-read`, null, {
+    const response = await api.put('/notifications/all-read', null, {
       params: { userId: userId.value }
     })
 
@@ -268,7 +297,7 @@ const markAllAsRead = async () => {
 // 标记单条消息为已读
 const markMessageAsRead = async (messageId) => {
   try {
-    const response = await api.put(`${API_CONFIG.message.list}/${messageId}/read`)
+    const response = await api.put(`/notifications/${messageId}/read`)
 
     if (response.code === '200') {
       // 更新前端状态
@@ -289,7 +318,7 @@ const unreadCount = ref(0)
 
 const loadUnreadCount = async () => {
   try {
-    const response = await api.get(`${API_CONFIG.message.list}/unread-count`, {
+    const response = await api.get('/notifications/unread-count', {
       params: { userId: userId.value }
     })
 
@@ -315,7 +344,7 @@ const isImageAvatar = (avatar) => {
     <h2>消息中心</h2>
 
     <!-- 消息分类标签页 -->
-    <el-tabs v-model:active-name="activeTab" class="message-tabs" @tab-change="activeTab === 'friend' && loadFriendRequests()">
+    <el-tabs v-model="activeTab" class="message-tabs">
       <el-tab-pane label="全部消息" name="all">
         <template #label>
           <span class="tab-label">
@@ -340,18 +369,6 @@ const isImageAvatar = (avatar) => {
     <!-- 好友请求列表 -->
     <transition name="tab-fade-slide" mode="out-in">
       <div v-if="activeTab === 'friend'" key="friend" class="friend-requests">
-        <!-- 临时调试信息 -->
-        <div style="background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 4px;">
-          <p><strong>调试信息：</strong></p>
-          <p>好友请求数量: {{ friendRequests.length }}</p>
-          <p>activeTab: {{ activeTab }}</p>
-          <p>loadingRequests: {{ loadingRequests }}</p>
-          <details>
-            <summary>点击展开原始数据</summary>
-            <pre style="font-size: 12px; overflow: auto;">{{ JSON.stringify(friendRequests, null, 2) }}</pre>
-          </details>
-        </div>
-
       <div v-if="loadingRequests" class="loading-container">
         <el-icon class="is-loading" :size="30"><Loading /></el-icon>
         <p>加载中...</p>

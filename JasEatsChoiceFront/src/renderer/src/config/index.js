@@ -69,8 +69,8 @@ export const API_CONFIG = {
 
   // 消息API端点
   message: {
-    list: '/v1/message/records', // 消息列表接口
-    send: '/v1/message/send' // 发送消息接口
+    list: '/notifications/user', // 消息列表接口（系统通知）
+    send: '/v1/message/send' // 发送消息接口（聊天消息）
   },
 
   // 教程API端点

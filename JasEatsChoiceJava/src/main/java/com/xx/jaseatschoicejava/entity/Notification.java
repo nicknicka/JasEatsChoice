@@ -37,6 +37,14 @@ public class Notification {
     @ApiModelProperty(value = "通知内容")
     private String content; // 通知内容
 
+    @TableField("type")
+    @ApiModelProperty(value = "消息类型")
+    private String type; // 消息类型: order-订单消息, system-系统通知, promotion-优惠活动
+
+    @TableField("send_time")
+    @ApiModelProperty(value = "发送时间")
+    private LocalDateTime sendTime; // 发送时间
+
     @TableField("read_status")
     @ApiModelProperty(value = "已读状态：true-已读，false-未读")
     private Boolean readStatus; // 已读状态：true-已读，false-未读
