@@ -41,6 +41,77 @@
       </div>
     </div>
 
+    <!-- 好友请求列表 -->
+    <div v-if="friendRequests.length > 0" class="friend-requests-section">
+      <div class="section-header">
+        <h3 class="section-title">
+          <span class="title-icon">👋</span>
+          好友请求 ({{ friendRequests.length }})
+        </h3>
+        <el-button
+          type="text"
+          size="small"
+          @click="showFriendRequests = !showFriendRequests"
+        >
+          {{ showFriendRequests ? '收起' : '展开' }}
+          <el-icon :class="{ 'rotate-180': showFriendRequests }">
+            <component :is="ArrowDown" />
+          </el-icon>
+        </el-button>
+      </div>
+
+      <transition name="el-zoom-in-top">
+        <div v-show="showFriendRequests" class="requests-list">
+          <el-card
+            v-for="request in friendRequests"
+            :key="request.id"
+            class="request-card"
+            shadow="hover"
+          >
+            <div class="request-content">
+              <div class="requester-info">
+                <div class="requester-avatar">
+                  <img
+                    v-if="isImageAvatar(request.requesterInfo?.avatar)"
+                    :src="request.requesterInfo.avatar"
+                    alt="头像"
+                  />
+                  <span v-else class="avatar-emoji">
+                    {{ request.requesterInfo?.avatar || '👤' }}
+                  </span>
+                </div>
+
+                <div class="requester-details">
+                  <h4 class="requester-name">
+                    {{ request.requesterInfo?.nickname || '未知用户' }}
+                  </h4>
+                  <p class="requester-id">用户ID: {{ request.requesterInfo?.id }}</p>
+                  <p v-if="request.createTime" class="request-time">
+                    {{ request.createTime }}
+                  </p>
+                </div>
+              </div>
+
+              <div class="request-actions">
+                <el-button
+                  type="primary"
+                  size="default"
+                  @click="handleAcceptRequest(request)"
+                >
+                  <el-icon><Select /></el-icon>
+                  接受
+                </el-button>
+                <el-button size="default" @click="handleRejectRequest(request)">
+                  <el-icon><Close /></el-icon>
+                  拒绝
+                </el-button>
+              </div>
+            </div>
+          </el-card>
+        </div>
+      </transition>
+    </div>
+
     <!-- 内容区域：好友列表 + 字母索引 -->
     <div v-if="!loading && filteredFriends.length > 0" class="contacts-content">
       <!-- 好友列表 -->
@@ -227,7 +298,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, inject } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -235,7 +306,10 @@ import {
   Plus,
   ChatDotRound,
   User,
-  Delete
+  Delete,
+  Select,
+  Close,
+  ArrowDown
 } from '@element-plus/icons-vue'
 import api from '../../utils/api'
 import { decodeJwt } from '../../utils/api'
@@ -244,6 +318,9 @@ import { useAuthStore } from '../../store/authStore'
 const router = useRouter()
 const authStore = useAuthStore()
 
+// 注入父组件提供的刷新方法
+const refreshUnreadCount = inject('refreshUnreadCount', null)
+
 // ========== 状态管理 ==========
 const loading = ref(true)
 const searchQuery = ref('')
@@ -251,6 +328,11 @@ const filterType = ref('all')
 const friends = ref([])
 const userId = ref(1)
 const activeLetter = ref('')
+
+// ========== 好友请求管理 ==========
+const friendRequests = ref([])
+const loadingRequests = ref(false)
+const showFriendRequests = ref(false) // 控制是否显示好友请求列表
 
 // ========== 右键菜单状态 ==========
 const contextMenuVisible = ref(false)
@@ -725,6 +807,179 @@ const sendFriendRequest = async (user) => {
   }
 }
 
+// ========== 好友请求相关功能 ==========
+/**
+ * 加载好友请求列表
+ */
+const loadFriendRequests = async () => {
+  loadingRequests.value = true
+  try {
+    console.log('Contacts: 开始加载好友请求')
+
+    // 1. 获取当前用户的好友列表
+    let friendIdSet = new Set()
+    try {
+      const friendsResponse = await api.get(`/v1/contacts/friends?userId=${userId.value}`)
+      if (friendsResponse.code === '200') {
+        friendIdSet = new Set(friendsResponse.data.map(contact => String(contact.targetId)))
+        console.log('Contacts: 当前好友列表:', Array.from(friendIdSet))
+      }
+    } catch (error) {
+      console.error('获取好友列表失败:', error)
+    }
+
+    // 2. 获取好友请求
+    const response = await api.get(`/v1/contacts/friends/requests`, {
+      params: { userId: userId.value }
+    })
+
+    console.log('Contacts: 获取到的好友请求:', response)
+
+    if (response.code === '200' && response.data) {
+      // 3. 对相同用户的请求进行去重，只保留最新的一个
+      const requestMap = new Map()
+
+      response.data.forEach((request) => {
+        const requestUserId = request.userId || request.requesterInfo?.id
+        if (requestUserId) {
+          // 如果该用户已有请求，比较创建时间，保留最新的
+          const existingRequest = requestMap.get(requestUserId)
+          if (!existingRequest) {
+            // 第一次添加该用户的请求
+            requestMap.set(requestUserId, request)
+          } else {
+            // 比较创建时间，保留最新的
+            const existingTime = new Date(existingRequest.createTime || 0).getTime()
+            const newTime = new Date(request.createTime || 0).getTime()
+            if (newTime > existingTime) {
+              requestMap.set(requestUserId, request)
+            }
+          }
+        }
+      })
+
+      // 转换回数组
+      let uniqueRequests = Array.from(requestMap.values())
+      console.log('Contacts: 去重后的好友请求:', uniqueRequests)
+
+      // 4. 获取每个请求者的详细信息
+      const requestsWithInfo = await Promise.all(
+        uniqueRequests.map(async (request) => {
+          try {
+            const userResponse = await api.get(`/v1/users/${request.userId}`)
+            if (userResponse.code === '200' && userResponse.data) {
+              return {
+                ...request,
+                requesterInfo: {
+                  id: userResponse.data.userId,
+                  nickname: userResponse.data.nickname || '未知用户',
+                  avatar: isImageAvatar(userResponse.data.avatar) ? userResponse.data.avatar : '👤',
+                  phone: userResponse.data.phone,
+                  email: userResponse.data.email
+                }
+              }
+            }
+          } catch (error) {
+            console.error(`获取用户 ${request.userId} 信息失败:`, error)
+          }
+
+          // 降级方案：使用基本信息
+          return {
+            ...request,
+            requesterInfo: {
+              id: request.userId,
+              nickname: '未知用户',
+              avatar: '👤'
+            }
+          }
+        })
+      )
+
+      // 5. 过滤掉已经是好友的请求
+      const filteredRequests = requestsWithInfo.filter((request) => {
+        const requestUserId = String(request.userId || request.requesterInfo?.id)
+        const isFriend = friendIdSet.has(requestUserId)
+        if (isFriend) {
+          console.log(`Contacts: 过滤掉已是好友的请求 - userId: ${requestUserId}`)
+        }
+        return !isFriend
+      })
+
+      console.log('Contacts: 最终好友请求列表（已过滤好友）:', filteredRequests)
+      friendRequests.value = filteredRequests
+    } else {
+      friendRequests.value = []
+    }
+  } catch (error) {
+    console.error('加载好友请求失败:', error)
+    friendRequests.value = []
+  } finally {
+    loadingRequests.value = false
+  }
+}
+
+/**
+ * 接受好友请求
+ */
+const handleAcceptRequest = async (request) => {
+  try {
+    const response = await api.post(`/v1/contacts/friends/accept`, {
+      userId: userId.value,
+      requesterId: request.userId
+    })
+
+    if (response.code === '200') {
+      ElMessage.success('已接受好友请求')
+      // 从列表中移除已处理的请求
+      const index = friendRequests.value.findIndex((r) => r.id === request.id)
+      if (index !== -1) {
+        friendRequests.value.splice(index, 1)
+      }
+      // 刷新好友列表
+      await fetchFriends()
+      // 刷新父组件的未读徽章
+      if (refreshUnreadCount) {
+        refreshUnreadCount()
+      }
+    } else {
+      ElMessage.error('接受好友请求失败: ' + response.message)
+    }
+  } catch (error) {
+    console.error('接受好友请求失败:', error)
+    ElMessage.error('接受好友请求失败')
+  }
+}
+
+/**
+ * 拒绝好友请求
+ */
+const handleRejectRequest = async (request) => {
+  try {
+    const response = await api.post(`/v1/contacts/friends/reject`, {
+      userId: userId.value,
+      requesterId: request.userId
+    })
+
+    if (response.code === '200') {
+      ElMessage.success('已拒绝好友请求')
+      // 从列表中移除已处理的请求
+      const index = friendRequests.value.findIndex((r) => r.id === request.id)
+      if (index !== -1) {
+        friendRequests.value.splice(index, 1)
+      }
+      // 刷新父组件的未读徽章
+      if (refreshUnreadCount) {
+        refreshUnreadCount()
+      }
+    } else {
+      ElMessage.error('拒绝好友请求失败: ' + response.message)
+    }
+  } catch (error) {
+    console.error('拒绝好友请求失败:', error)
+    ElMessage.error('拒绝好友请求失败')
+  }
+}
+
 // ========== 生命周期 ==========
 onMounted(async () => {
   console.log('🚀 [Contacts] Contacts组件挂载，开始初始化')
@@ -736,6 +991,9 @@ onMounted(async () => {
 
     // 再从服务器获取最新数据
     await fetchFriends()
+
+    // 加载好友请求列表
+    await loadFriendRequests()
 
     console.log('✅ [Contacts] 初始化完成')
   } catch (error) {
@@ -775,6 +1033,167 @@ onMounted(async () => {
   > * {
     position: relative;
     z-index: 1;
+  }
+}
+
+// 好友请求区域
+.friend-requests-section {
+  margin-bottom: 20px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:hover {
+    box-shadow: 0 8px 30px rgba(59, 130, 246, 0.2);
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+    border-bottom: 1px solid #e4e7ed;
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #fff;
+
+      .title-icon {
+        margin-right: 8px;
+        font-size: 20px;
+      }
+    }
+
+    :deep(.el-button) {
+      color: #fff;
+      font-weight: 500;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      .el-icon {
+        transition: transform 0.3s ease;
+
+        &.rotate-180 {
+          transform: rotate(180deg);
+        }
+      }
+    }
+  }
+
+  .requests-list {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
+
+    .request-card {
+      border-radius: 12px;
+      border: 2px solid #e4e7ed;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(59, 130, 246, 0.2);
+        border-color: #3b82f6;
+      }
+
+      :deep(.el-card__body) {
+        padding: 16px;
+      }
+
+      .request-content {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+
+        .requester-info {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          flex: 1;
+
+          .requester-avatar {
+            width: 56px;
+            height: 56px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #f5f7fa;
+            border: 2px solid #e4e7ed;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+
+            img {
+              width: 100%;
+              height: 100%;
+              object-fit: cover;
+            }
+
+            .avatar-emoji {
+              font-size: 32px;
+            }
+          }
+
+          .requester-details {
+            flex: 1;
+
+            .requester-name {
+              font-size: 15px;
+              font-weight: 600;
+              color: #303133;
+              margin: 0 0 6px 0;
+            }
+
+            .requester-id {
+              font-size: 12px;
+              color: #909399;
+              margin: 0 0 4px 0;
+            }
+
+            .request-time {
+              font-size: 12px;
+              color: #c0c4cc;
+              margin: 0;
+            }
+          }
+        }
+
+        .request-actions {
+          display: flex;
+          gap: 12px;
+          flex-shrink: 0;
+
+          :deep(.el-button) {
+            border-radius: 10px;
+            padding: 10px 20px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+
+            &:hover {
+              transform: translateY(-2px);
+              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            }
+          }
+
+          .el-button--primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+            border: none;
+          }
+        }
+      }
+    }
   }
 }
 

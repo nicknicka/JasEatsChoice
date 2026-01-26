@@ -666,9 +666,17 @@ const sendMessage = async (content) => {
   } else if (selectedConversation.value.type === 'single' && selectedConversation.value.targetId) {
     toId = selectedConversation.value.targetId
   } else {
-    // 兼容旧数据，如果没有 targetId，尝试从 id 中解析
-    toId = selectedConversation.value.id
-    console.warn('⚠️ [sendMessage] 会话没有 targetId，使用 id 作为 toId:', toId)
+    // ❌ 不兼容旧数据，直接报错
+    const errorInfo = {
+      会话类型: selectedConversation.value.type,
+      会话ID: selectedConversation.value.id,
+      会话名称: selectedConversation.value.name,
+      有无groupId: !!selectedConversation.value.groupId,
+      有无targetId: !!selectedConversation.value.targetId
+    }
+    console.error('❌ [sendMessage] 会话数据不完整，无法发送消息:', errorInfo)
+    ElMessage.error('会话数据异常，请重新选择会话')
+    return
   }
 
   console.log('📤 [sendMessage] 使用的toId:', toId, '(原会话ID:', selectedConversation.value.id + ')')
@@ -773,9 +781,17 @@ const sendImageMessage = async (fileInfo) => {
   } else if (selectedConversation.value.type === 'single' && selectedConversation.value.targetId) {
     toId = selectedConversation.value.targetId
   } else {
-    // 兼容旧数据，如果没有 targetId，尝试从 id 中解析
-    toId = selectedConversation.value.id
-    console.warn('⚠️ [sendImageMessage] 会话没有 targetId，使用 id 作为 toId:', toId)
+    // ❌ 不兼容旧数据，直接报错
+    const errorInfo = {
+      会话类型: selectedConversation.value.type,
+      会话ID: selectedConversation.value.id,
+      会话名称: selectedConversation.value.name,
+      有无groupId: !!selectedConversation.value.groupId,
+      有无targetId: !!selectedConversation.value.targetId
+    }
+    console.error('❌ [sendImageMessage] 会话数据不完整，无法发送消息:', errorInfo)
+    ElMessage.error('会话数据异常，请重新选择会话')
+    return
   }
 
   console.log('📤 [sendImageMessage] 使用的toId:', toId, '(原会话ID:', selectedConversation.value.id + ')')
@@ -897,9 +913,17 @@ const sendFileMessage = async (fileInfo) => {
   } else if (selectedConversation.value.type === 'single' && selectedConversation.value.targetId) {
     toId = selectedConversation.value.targetId
   } else {
-    // 兼容旧数据，如果没有 targetId，尝试从 id 中解析
-    toId = selectedConversation.value.id
-    console.warn('⚠️ [sendFileMessage] 会话没有 targetId，使用 id 作为 toId:', toId)
+    // ❌ 不兼容旧数据，直接报错
+    const errorInfo = {
+      会话类型: selectedConversation.value.type,
+      会话ID: selectedConversation.value.id,
+      会话名称: selectedConversation.value.name,
+      有无groupId: !!selectedConversation.value.groupId,
+      有无targetId: !!selectedConversation.value.targetId
+    }
+    console.error('❌ [sendFileMessage] 会话数据不完整，无法发送消息:', errorInfo)
+    ElMessage.error('会话数据异常，请重新选择会话')
+    return
   }
 
   console.log('📤 [sendFileMessage] 使用的toId:', toId, '(原会话ID:', selectedConversation.value.id + ')')
@@ -977,8 +1001,17 @@ const resendMessage = async (failedMessage) => {
     } else if (selectedConversation.value.type === 'single' && selectedConversation.value.targetId) {
       toId = selectedConversation.value.targetId
     } else {
-      toId = selectedConversation.value.id
-      console.warn('⚠️ [resendMessage] 会话没有 targetId，使用 id 作为 toId:', toId)
+      // ❌ 不兼容旧数据，直接报错
+      const errorInfo = {
+        会话类型: selectedConversation.value.type,
+        会话ID: selectedConversation.value.id,
+        会话名称: selectedConversation.value.name,
+        有无groupId: !!selectedConversation.value.groupId,
+        有无targetId: !!selectedConversation.value.targetId
+      }
+      console.error('❌ [resendMessage] 会话数据不完整，无法重发消息:', errorInfo)
+      ElMessage.error('会话数据异常，请重新选择会话')
+      return
     }
 
     const messageData = {
@@ -1642,7 +1675,6 @@ const handleChatFromContact = async () => {
   console.log('💬 [handleChatFromContact] 从联系人页面跳转:', { friendId, friendName })
 
   // 检查会话列表中是否已存在与该好友的会话
-  // 对于单聊，会话的id就是对方的userId
   const existingConversation = conversations.value.find(
     (conv) => conv.type === 'single' && conv.id === friendId.toString()
   )

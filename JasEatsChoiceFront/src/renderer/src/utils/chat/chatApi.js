@@ -73,34 +73,32 @@ export const getChatSessions = async (userId) => {
     const response = await api.get(`/v1/chat/users/${userId}/chat-sessions`)
 
     if (response.data && response.data.success) {
-      // 转换数据格式
+      // ⭐ 适配后端新数据结构
+      // 后端返回格式：{ id, type, name, avatar, lastMessage, time, unreadCount, pinned, memberCount, groupId, targetId }
       const sessions = response.data.data.map((session) => {
-        const isGroupChat = session.msgType === 'group'
+        const isGroupChat = session.type === 'group'
 
         return {
-          id: isGroupChat
-            ? session.toId
-            : session.fromId === userId
-              ? session.toId
-              : session.fromId,
-          type: isGroupChat ? 'group' : 'private',
-          name: isGroupChat
-            ? session.toId
-            : `用户${session.fromId === userId ? session.toId : session.fromId}`,
-          avatar: isGroupChat ? '👥' : '👤',
-          lastMessage: session.content,
-          time: session.createTime,
-          unreadCount: 0,
-          memberCount: isGroupChat ? Math.floor(Math.random() * 50) + 10 : undefined,
+          id: session.id, // ⭐ 使用后端返回的 sessionId（S开头的哈希值）
+          type: session.type, // 'single' | 'group'
+          name: session.name || session.sessionName,
+          avatar: session.avatar,
+          lastMessage: session.lastMessage || '暂无消息',
+          time: session.time,
+          unreadCount: session.unreadCount || 0,
+          pinned: session.pinned || false,
+          memberCount: session.memberCount,
+          // ⭐ 新增字段
+          groupId: session.groupId, // 仅群聊有值
+          targetId: session.targetId, // 仅单聊有值（对方的userId）
+          // ⚠️ 兼容旧字段
           userId: isGroupChat
             ? undefined
-            : session.fromId === userId
-              ? session.toId
-              : session.fromId
+            : session.targetId // 单聊时，userId就是对方的targetId
         }
       })
 
-      // 按时间排序
+      // 按时间排序（最新的在前）
       sessions.sort((a, b) => {
         return new Date(b.time) - new Date(a.time)
       })
@@ -178,13 +176,17 @@ export const sendMessage = async (messageData) => {
 }
 
 /**
- * 标记消息为已读
+ * 标记消息为已读（清除会话未读数）
  * @param {string} sessionId - 会话ID
+ * @param {string|number} userId - 用户ID
  * @returns {Promise} API响应
  */
-export const markMessagesAsRead = async (sessionId) => {
+export const markMessagesAsRead = async (sessionId, userId) => {
   try {
-    const response = await api.put(`/v1/chat/sessions/${sessionId}/read`)
+    // ⭐ 使用后端正确的端点：POST /v1/chat/sessions/{sessionId}/unread-clear
+    const response = await api.post(`/v1/chat/sessions/${sessionId}/unread-clear`, {
+      userId: String(userId)
+    })
 
     return {
       success: response.data?.success || false
@@ -199,7 +201,11 @@ export const markMessagesAsRead = async (sessionId) => {
 }
 
 /**
- * 构建会话ID
+ * 构建会话ID（统一使用后端的会话ID）
+ * ⭐ 注意：此函数已废弃，请直接使用后端返回的 sessionId
+ * ⭐ 后端统一使用 ChatSessionIdGenerator 生成会话ID
+ *   - 单聊：S + MD5哈希
+ *   - 群聊：S + 16位数字
  * @param {string|number} fromId - 发送者ID
  * @param {string|number} toId - 接收者ID
  * @param {string} type - 会话类型 ('private' | 'group')
@@ -207,10 +213,16 @@ export const markMessagesAsRead = async (sessionId) => {
  */
 export const buildSessionId = (fromId, toId, type) => {
   if (type === 'group') {
+    // ⚠️ 群聊应该使用后端返回的 groupId 或 sessionId
+    console.warn('⚠️ [buildSessionId] 群聊会话ID应该由后端生成，不建议前端构建')
     return String(toId)
   }
 
-  // 单聊：按字典序排列确保唯一性
+  // ⚠️ 单聊：前端不再手动构建sessionId，应该由后端统一生成
+  // ⚠️ 这里仅用于兼容旧代码，新代码应直接使用后端返回的 sessionId
+  console.warn('⚠️ [buildSessionId] 单聊会话ID应该由后端生成，不建议前端构建')
+
+  // 临时兼容：按字典序排列（与后端逻辑保持一致）
   const ids = [String(fromId), String(toId)]
   ids.sort()
   return ids.join('_')

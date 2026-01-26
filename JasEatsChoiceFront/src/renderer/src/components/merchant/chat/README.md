@@ -337,32 +337,63 @@ import {
   getChatSessions, // 获取会话列表
   getChatMessages, // 获取聊天记录
   sendMessage, // 发送消息
-  markMessagesAsRead, // 标记消息已读
-  buildSessionId, // 构建会话ID
+  markMessagesAsRead, // 标记消息已读（清除未读数）
+  buildSessionId, // ⚠️ 已废弃，仅用于兼容旧代码
   formatMessageForSend, // 格式化消息用于发送
   createLocalMessage // 创建本地消息对象
 } from '@/utils/chat/chatApi'
 ```
 
+#### ⭐ 会话ID重要说明
+
+**会话ID现在由后端统一生成，前端不应再手动构建！**
+
+- **单聊会话ID**：`S` + MD5哈希（例如：`Sa1b2c3d4e5f6...`）
+- **群聊会话ID**：`S` + 16位数字（例如：`S1234567890123456`）
+
+后端返回的会话数据包含：
+- `id`: 会话ID（S开头）
+- `type`: 会话类型（`single` | `group`）
+- `targetId`: 对方用户ID（仅单聊）
+- `groupId`: 群组ID（仅群聊）
+
 #### 使用示例
 
 ```javascript
-import { getChatSessions, sendMessage, buildSessionId } from '@/utils/chat/chatApi'
+import { getChatSessions, sendMessage, markMessagesAsRead } from '@/utils/chat/chatApi'
 
 // 获取会话列表
 const sessions = await getChatSessions(userId)
 
-// 发送消息
+// ⭐ 直接使用后端返回的 sessionId（conversation.id）
+// ⚠️ 不要再使用 buildSessionId 函数！
+const sessionId = sessions[0].id
+
+// 获取聊天消息
+const messages = await getChatMessages(sessionId, userId)
+
+// 标记消息已读（清除未读数）
+await markMessagesAsRead(sessionId, userId)
+
+// 发送消息（群聊使用 groupId，单聊使用 targetId）
 const result = await sendMessage({
   fromId: '1',
-  toId: '2',
+  toId: sessions[0].type === 'group'
+    ? sessions[0].groupId    // 群聊：使用 groupId
+    : sessions[0].targetId,  // 单聊：使用 targetId
   content: '你好',
-  msgType: 'private'
+  msgType: sessions[0].type === 'group' ? 'group' : 'single'
 })
+```
 
-// 构建会话ID
-const sessionId = buildSessionId('1', '2', 'private')
-// 输出: "1_2"
+#### ⚠️ 已废弃的用法
+
+```javascript
+// ❌ 旧代码（已废弃）
+const sessionId = buildSessionId('1', '2', 'private') // 不要再使用！
+
+// ✅ 新代码（正确做法）
+const sessionId = conversation.id // 直接使用后端返回的 sessionId
 ```
 
 ---

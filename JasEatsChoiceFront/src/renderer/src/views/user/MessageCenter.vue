@@ -1,29 +1,21 @@
 <script setup>
 import pinia from '../../store'
 import { useAuthStore } from '../../store/authStore'
+import { inject } from 'vue'
 
 const authStore = useAuthStore(pinia)
 
-import { ref, computed, onMounted, watch } from 'vue'
+// 注入父组件提供的刷新方法
+const refreshUnreadCount = inject('refreshUnreadCount', null)
+
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Loading, Select, Close, Delete } from '@element-plus/icons-vue'
+import { Delete } from '@element-plus/icons-vue'
 import api from '../../utils/api.js'
 import { API_CONFIG } from '../../config/index.js'
-import { useFriendManagement } from '../../composables/useFriendManagement.js'
 
 // 用户ID
 const userId = ref(parseInt(String(authStore.userId || 1) || '1', 10))
-
-// ========== 好友管理 ==========
-const {
-  getFriendRequests,
-  acceptFriendRequest,
-  rejectFriendRequest
-} = useFriendManagement({ userId, conversations: ref([]), chatHistory: ref({}) })
-
-// 好友请求列表
-const friendRequests = ref([])
-const loadingRequests = ref(false)
 
 // ========== 消息中心数据 ==========
 const messages = ref([])
@@ -32,9 +24,6 @@ const messages = ref([])
 onMounted(async () => {
   // 加载系统消息
   await loadMessages()
-
-  // 加载好友请求
-  await loadFriendRequests()
 
   // 加载未读消息数量
   await loadUnreadCount()
@@ -76,87 +65,8 @@ const loadMessages = async () => {
   }
 }
 
-/**
- * 加载好友请求列表
- */
-const loadFriendRequests = async () => {
-  loadingRequests.value = true
-  try {
-    console.log('MessageCenter: 开始加载好友请求')
-
-    // 1. 获取当前用户的好友列表
-    let friendIdSet = new Set()
-    try {
-      const friendsResponse = await api.get(`/v1/contacts/friends?userId=${userId.value}`)
-      if (friendsResponse.code === '200') {
-        friendIdSet = new Set(friendsResponse.data.map(contact => String(contact.targetId)))
-        console.log('MessageCenter: 当前好友列表:', Array.from(friendIdSet))
-      }
-    } catch (error) {
-      console.error('获取好友列表失败:', error)
-    }
-
-    // 2. 获取好友请求
-    const requests = await getFriendRequests()
-    console.log('MessageCenter: 获取到的好友请求:', requests)
-
-    // 3. 对相同用户的请求进行去重，只保留最新的一个
-    const requestMap = new Map()
-
-    requests.forEach((request) => {
-      const requestUserId = request.userId || request.requesterInfo?.id
-      if (requestUserId) {
-        // 如果该用户已有请求，比较创建时间，保留最新的
-        const existingRequest = requestMap.get(requestUserId)
-        if (!existingRequest) {
-          // 第一次添加该用户的请求
-          requestMap.set(requestUserId, request)
-        } else {
-          // 比较创建时间，保留最新的
-          const existingTime = new Date(existingRequest.createTime || 0).getTime()
-          const newTime = new Date(request.createTime || 0).getTime()
-          if (newTime > existingTime) {
-            requestMap.set(requestUserId, request)
-          }
-        }
-      }
-    })
-
-    // 转换回数组
-    let uniqueRequests = Array.from(requestMap.values())
-    console.log('MessageCenter: 去重后的好友请求:', uniqueRequests)
-
-    // 4. 过滤掉已经是好友的请求
-    uniqueRequests = uniqueRequests.filter((request) => {
-      const requestUserId = String(request.userId || request.requesterInfo?.id)
-      const isFriend = friendIdSet.has(requestUserId)
-      if (isFriend) {
-        console.log(`MessageCenter: 过滤掉已是好友的请求 - userId: ${requestUserId}`)
-      }
-      return !isFriend
-    })
-
-    console.log('MessageCenter: 最终好友请求列表（已过滤好友）:', uniqueRequests)
-    friendRequests.value = uniqueRequests
-    console.log('MessageCenter: 设置后的 friendRequests.value:', friendRequests.value)
-  } catch (error) {
-    console.error('加载好友请求失败:', error)
-  } finally {
-    loadingRequests.value = false
-  }
-}
-
 // 切换消息分类
 const activeTab = ref('all')
-
-// 监听tab切换，切换到好友请求时重新加载数据
-watch(activeTab, async (newTab) => {
-  console.log('Tab切换到:', newTab)
-  if (newTab === 'friend') {
-    console.log('切换到好友请求tab，重新加载数据')
-    await loadFriendRequests()
-  }
-})
 
 // 筛选消息
 const filteredMessages = computed(() => {
@@ -177,9 +87,6 @@ const filteredMessages = computed(() => {
   return result
 })
 
-// 好友请求数量
-const friendRequestCount = computed(() => friendRequests.value.length)
-
 // 消息详情模态框
 const messageDetail = ref(null)
 const showDetailModal = ref(false)
@@ -192,30 +99,6 @@ const viewMessage = async (message) => {
   }
   messageDetail.value = message
   showDetailModal.value = true
-}
-
-// 接受好友请求
-const handleAcceptRequest = async (request) => {
-  const success = await acceptFriendRequest(request.userId)
-  if (success) {
-    // 从列表中移除已处理的请求
-    const index = friendRequests.value.findIndex((r) => r.id === request.id)
-    if (index !== -1) {
-      friendRequests.value.splice(index, 1)
-    }
-  }
-}
-
-// 拒绝好友请求
-const handleRejectRequest = async (request) => {
-  const success = await rejectFriendRequest(request.userId)
-  if (success) {
-    // 从列表中移除已处理的请求
-    const index = friendRequests.value.findIndex((r) => r.id === request.id)
-    if (index !== -1) {
-      friendRequests.value.splice(index, 1)
-    }
-  }
 }
 
 // ========== 消息操作功能 ==========
@@ -240,6 +123,10 @@ const deleteMessage = async (messageId) => {
       }
       // 重新加载未读数量
       await loadUnreadCount()
+      // 刷新父组件的未读徽章
+      if (refreshUnreadCount) {
+        refreshUnreadCount()
+      }
     } else {
       ElMessage.error(response.message || '删除失败')
     }
@@ -311,6 +198,10 @@ const deleteSelected = async () => {
       selectAll.value = false
       // 重新加载未读数量
       await loadUnreadCount()
+      // 刷新父组件的未读徽章
+      if (refreshUnreadCount) {
+        refreshUnreadCount()
+      }
     } else {
       ElMessage.error(response.message || '批量删除失败')
     }
@@ -336,6 +227,10 @@ const markAllAsRead = async () => {
       })
       // 重新加载未读数量
       await loadUnreadCount()
+      // 刷新父组件的未读徽章
+      if (refreshUnreadCount) {
+        refreshUnreadCount()
+      }
       ElMessage.success('已将所有消息标记为已读')
     } else {
       ElMessage.error(response.message || '标记失败')
@@ -359,6 +254,10 @@ const markMessageAsRead = async (messageId) => {
       }
       // 重新加载未读数量
       await loadUnreadCount()
+      // 刷新父组件的未读徽章
+      if (refreshUnreadCount) {
+        refreshUnreadCount()
+      }
     }
   } catch (error) {
     console.error('标记消息已读失败:', error)
@@ -367,11 +266,6 @@ const markMessageAsRead = async (messageId) => {
 
 // 未读消息数量
 const unreadCount = ref(0)
-
-// 总未读数（包括好友请求和通知消息）
-const totalUnreadCount = computed(() => {
-  return unreadCount.value + friendRequestCount.value
-})
 
 const loadUnreadCount = async () => {
   try {
@@ -388,37 +282,6 @@ const loadUnreadCount = async () => {
 }
 
 /**
- * 判断头像是否为图片URL
- * 增强版：过滤不完整的base64数据
- */
-const isImageAvatar = (avatar) => {
-  if (!avatar) return false
-
-  // 如果是emoji或短文本，不是图片
-  if (avatar.length <= 10 || avatar === '👤') {
-    return false
-  }
-
-  // 检查是否是HTTP/HTTPS URL
-  if (avatar.match(/^https?:\/\//)) {
-    return true
-  }
-
-  // 检查是否是完整的base64图片
-  if (avatar.match(/^data:image/)) {
-    const parts = avatar.split(',')
-    if (parts.length >= 2 && parts[1] && parts[1].length >= 100) {
-      return true
-    }
-    // base64数据不完整，不当作图片处理
-    console.warn('头像base64数据不完整，将显示为文本:', avatar.substring(0, 50))
-    return false
-  }
-
-  return false
-}
-
-/**
  * 获取空状态描述
  */
 const getEmptyDescription = () => {
@@ -426,8 +289,7 @@ const getEmptyDescription = () => {
     all: '暂无消息',
     order: '暂无订单消息',
     system: '暂无系统通知',
-    promotion: '暂无优惠活动',
-    friend: '暂无好友请求'
+    promotion: '暂无优惠活动'
   }
   return descriptions[activeTab.value] || '暂无消息'
 }
@@ -440,8 +302,7 @@ const getEmptyIcon = () => {
     all: '📭',
     order: '📦',
     system: '📢',
-    promotion: '🎉',
-    friend: '👋'
+    promotion: '🎉'
   }
   return icons[activeTab.value] || '📭'
 }
@@ -474,16 +335,11 @@ const handleDeleteFromDetail = async (messageId) => {
 
     <!-- 消息中心汇总卡片 -->
     <transition name="summary-fade">
-      <div v-if="totalUnreadCount > 0" class="message-summary-card">
+      <div v-if="unreadCount > 0" class="message-summary-card">
         <div class="summary-content">
           <div class="summary-icon">🔔</div>
           <div class="summary-text">
-            <div class="summary-title">您有 {{ totalUnreadCount }} 条未读消息</div>
-            <div class="summary-details">
-              <span v-if="unreadCount > 0">{{ unreadCount }} 条通知消息</span>
-              <span v-if="unreadCount > 0 && friendRequestCount > 0" class="divider">|</span>
-              <span v-if="friendRequestCount > 0">{{ friendRequestCount }} 个好友请求</span>
-            </div>
+            <div class="summary-title">您有 {{ unreadCount }} 条未读通知</div>
           </div>
         </div>
       </div>
@@ -495,7 +351,7 @@ const handleDeleteFromDetail = async (messageId) => {
         <template #label>
           <span class="tab-label">
             <span>全部消息</span>
-            <el-badge v-if="totalUnreadCount > 0" :value="totalUnreadCount" class="tab-badge" />
+            <el-badge v-if="unreadCount > 0" :value="unreadCount" class="tab-badge" />
           </span>
         </template>
       </el-tab-pane>
@@ -520,78 +376,11 @@ const handleDeleteFromDetail = async (messageId) => {
           </span>
         </template>
       </el-tab-pane>
-      <el-tab-pane name="friend">
-        <template #label>
-          <span class="friend-tab">
-            <span>好友请求</span>
-            <el-badge v-if="friendRequestCount > 0" :value="friendRequestCount" class="friend-badge" />
-          </span>
-        </template>
-      </el-tab-pane>
     </el-tabs>
-
-    <!-- 好友请求列表 -->
-    <transition name="tab-fade-slide" mode="out-in">
-      <div v-if="activeTab === 'friend'" key="friend" class="friend-requests">
-      <div v-if="loadingRequests" class="loading-container">
-        <el-icon class="is-loading" :size="30"><Loading /></el-icon>
-        <p>加载中...</p>
-      </div>
-
-      <div v-else-if="friendRequests.length === 0" class="empty-requests">
-        <transition name="empty-fade" mode="out-in" appear>
-          <el-empty description="暂无好友请求" key="empty-friend">
-            <template #image>
-              <div class="empty-icon-animated">
-                <div class="empty-icon-circle friend-empty">👋</div>
-              </div>
-            </template>
-          </el-empty>
-        </transition>
-      </div>
-
-      <div v-else class="request-list">
-        <transition-group name="list">
-          <el-card
-            v-for="request in friendRequests"
-            :key="request.id"
-            class="request-card"
-            shadow="hover"
-          >
-          <div class="request-content">
-            <div class="requester-info">
-              <div class="requester-avatar">
-                <img v-if="isImageAvatar(request.requesterInfo?.avatar)" :src="request.requesterInfo.avatar" alt="头像" />
-                <span v-else class="avatar-emoji">{{ request.requesterInfo?.avatar || '👤' }}</span>
-              </div>
-
-              <div class="requester-details">
-                <h4 class="requester-name">{{ request.requesterInfo?.nickname || '未知用户' }}</h4>
-                <p class="requester-id">用户ID: {{ request.requesterInfo?.id }}</p>
-                <p v-if="request.createTime" class="request-time">{{ request.createTime }}</p>
-              </div>
-            </div>
-
-            <div class="request-actions">
-              <el-button type="primary" size="default" @click="handleAcceptRequest(request)">
-                <el-icon><Select /></el-icon>
-                接受
-              </el-button>
-              <el-button size="default" @click="handleRejectRequest(request)">
-                <el-icon><Close /></el-icon>
-                拒绝
-              </el-button>
-            </div>
-          </div>
-        </el-card>
-        </transition-group>
-      </div>
-    </div>
-    </transition>
 
     <!-- 消息列表 -->
     <transition name="tab-fade-slide" mode="out-in">
-      <div v-if="activeTab !== 'friend'" key="messages" class="message-list-container">
+      <div key="messages" class="message-list-container">
       <!-- 操作工具栏 - 只在有选中消息或全部标记已读可用时显示 -->
       <transition name="toolbar-slide">
         <div v-if="selectedMessages.length > 0 || unreadCount > 0" class="message-toolbar">
@@ -676,11 +465,6 @@ const handleDeleteFromDetail = async (messageId) => {
               <template #image>
                 <div class="empty-icon-animated">
                   <div class="empty-icon-circle">{{ getEmptyIcon() }}</div>
-                </div>
-              </template>
-              <template v-if="activeTab === 'friend' && friendRequestCount === 0" #extra>
-                <div class="empty-tips">
-                  <p>💡 快去添加好友，一起分享美食吧！</p>
                 </div>
               </template>
             </el-empty>
@@ -1008,7 +792,8 @@ const handleDeleteFromDetail = async (messageId) => {
               height: 64px;
               border-radius: 16px;
               overflow: hidden;
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              background: #f5f7fa;
+              border: 1px solid #e4e7ed;
               display: flex;
               align-items: center;
               justify-content: center;

@@ -360,8 +360,9 @@ const loadMessages = async (conversation) => {
       // 使用模拟数据
       messages = getMockMessages(conversation.id)
     } else {
-      // 从 API 获取数据
-      const sessionId = buildSessionId(currentUserId.value, conversation.id, conversation.type)
+      // ⭐ 直接使用后端返回的 sessionId（conversation.id）
+      // ⚠️ 不再使用 buildSessionId，因为后端已经统一生成了sessionId
+      const sessionId = conversation.id
       messages = await getChatMessages(sessionId, currentUserId.value)
     }
 
@@ -386,9 +387,10 @@ const selectConversation = async (conversation) => {
     if (!USE_MOCK_DATA) {
       ElMessage.success('消息已标记为已读')
 
-      // 调用API标记已读
-      const sessionId = buildSessionId(currentUserId.value, conversation.id, conversation.type)
-      await markMessagesAsRead(sessionId)
+      // ⭐ 直接使用后端返回的 sessionId（conversation.id）
+      // ⚠️ 不再使用 buildSessionId，因为后端已经统一生成了sessionId
+      const sessionId = conversation.id
+      await markMessagesAsRead(sessionId, currentUserId.value) // ⭐ 需要传入 userId
     }
   }
 

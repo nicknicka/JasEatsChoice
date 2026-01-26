@@ -64,6 +64,8 @@ public class ChatSessionController {
                     sessionMap.put("memberCount", session.getMemberCount() != null ? session.getMemberCount() : 0);
                     // ⭐ 添加 groupId（仅群聊会话有值）
                     sessionMap.put("groupId", session.getGroupId());
+                    // ⭐ 添加 targetId（仅单聊会话有值）
+                    sessionMap.put("targetId", session.getTargetId());
                     return sessionMap;
                 })
                 .collect(Collectors.toList());
@@ -86,9 +88,11 @@ public class ChatSessionController {
                 (Integer) params.get("memberCount") : 0;
 
         String groupId = (String) params.get("groupId"); // ⭐ 直接从请求参数中获取groupId
+        String targetId = (String) params.get("targetId"); // ⭐ 提前声明 targetId，避免作用域问题
 
-        // ⭐ 对群聊的sessionId进行转换
+        // ⭐ 统一生成sessionId的规则
         if ("group".equals(sessionType)) {
+            // 群聊：使用 ChatSessionIdGenerator 生成 S 开头的会话ID
             // 如果没有传groupId，且sessionId是G开头的，从sessionId中提取
             if (groupId == null && sessionId != null && sessionId.startsWith("G")) {
                 groupId = sessionId;
@@ -100,10 +104,25 @@ public class ChatSessionController {
             }
             // 如果已经是 S 开头，直接使用
         } else {
-            // ⭐ 单聊：直接使用对方的 userId 作为 sessionId，不进行转换
-            // 这样前端发送消息时可以直接使用 sessionId 作为 toId
-            // 不再使用 ChatSessionIdGenerator 生成格式化的 sessionId
-            // sessionId 保持为对方的 userId（如 "2"）
+            // ⭐ 单聊：如果前端没有传sessionId，或者sessionId不合法，则自动生成
+            // 使用双方的 userId 生成确定性的 sessionId（MD5哈希）
+            if (sessionId == null || sessionId.isEmpty() || !sessionId.startsWith("S")) {
+                // 从请求中获取对方的ID（优先使用 targetId，其次从 sessionId 解析）
+                if (targetId == null && sessionId != null && !sessionId.startsWith("S")) {
+                    // 如果没有 targetId，尝试使用 sessionId 作为 targetId
+                    targetId = sessionId;
+                }
+
+                if (targetId != null && !targetId.isEmpty()) {
+                    // 使用双方ID生成sessionId（确定性哈希）
+                    sessionId = ChatSessionIdGenerator.generateSingleChatSessionId(userId, targetId);
+                    log.info("自动生成单聊sessionId: userId={}, targetId={}, sessionId={}",
+                            userId, targetId, sessionId);
+                } else {
+                    // 如果没有 targetId，使用传入的 sessionId（兼容旧逻辑）
+                    log.warn("未提供targetId，使用传入的sessionId: {}", sessionId);
+                }
+            }
         }
 
         // 查找是否已存在该会话
@@ -127,6 +146,11 @@ public class ChatSessionController {
             session.setPinned(0);  // 0-未置顶
             session.setCreateTime(LocalDateTime.now());
             session.setUpdateTime(LocalDateTime.now());
+
+            // ⭐ 设置 targetId（仅单聊）
+            if ("single".equals(sessionType) && targetId != null && !targetId.isEmpty()) {
+                session.setTargetId(targetId);
+            }
 
             // 使用 saveOrUpdate 避免并发插入导致的唯一键冲突
             try {

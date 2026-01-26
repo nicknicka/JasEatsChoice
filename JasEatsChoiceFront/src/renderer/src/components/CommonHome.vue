@@ -22,6 +22,7 @@ import {
 import { decodeJwt } from '../utils/api.js'
 import { useAuthStore } from '../store/authStore'
 import { useUserStore } from '../store/userStore'
+import api from '../utils/api.js'
 // 导入CommonAvatar组件
 import CommonAvatar from './CommonAvatar.vue'
 
@@ -544,6 +545,109 @@ watch(
 
 const searchQuery = ref('')
 
+// ========== 未读消息管理 ==========
+// 未读消息数量 - 分开存储
+const unreadNotificationCount = ref(0) // 系统通知未读数
+const unreadFriendRequestCount = ref(0) // 好友请求未读数
+
+/**
+ * 获取未读消息数量（分开计算系统通知和好友请求）
+ */
+const fetchUnreadMessageCount = async () => {
+  try {
+    // 只在用户端获取未读消息
+    if (userRole.value !== 'user') {
+      unreadNotificationCount.value = 0
+      unreadFriendRequestCount.value = 0
+      return
+    }
+
+    // 获取当前用户ID
+    const userId = authStore.userId || 1
+
+    // 获取未读系统消息数量
+    const notificationResponse = await api.get('/notifications/unread-count', {
+      params: { userId }
+    })
+
+    if (notificationResponse.code === '200') {
+      unreadNotificationCount.value = notificationResponse.data || 0
+    } else {
+      unreadNotificationCount.value = 0
+    }
+
+    // 获取好友请求数量
+    try {
+      const friendsResponse = await api.get(`/v1/contacts/friends/requests`, {
+        params: { userId }
+      })
+
+      if (friendsResponse.code === '200' && friendsResponse.data) {
+        // 获取当前好友列表，过滤掉已经是好友的请求
+        let friendIdSet = new Set()
+        try {
+          const friendsListResponse = await api.get(`/v1/contacts/friends?userId=${userId}`)
+          if (friendsListResponse.code === '200') {
+            friendIdSet = new Set(friendsListResponse.data.map(contact => String(contact.targetId)))
+          }
+        } catch (error) {
+          console.error('获取好友列表失败:', error)
+        }
+
+        // 过滤掉已经是好友的请求
+        unreadFriendRequestCount.value = friendsResponse.data.filter(request => {
+          const requestUserId = String(request.userId || request.requesterInfo?.id)
+          return !friendIdSet.has(requestUserId)
+        }).length
+      } else {
+        unreadFriendRequestCount.value = 0
+      }
+    } catch (error) {
+      console.error('获取好友请求数量失败:', error)
+      unreadFriendRequestCount.value = 0
+    }
+  } catch (error) {
+    console.error('获取未读消息数量失败:', error)
+    unreadNotificationCount.value = 0
+    unreadFriendRequestCount.value = 0
+  }
+}
+
+/**
+ * 暴露刷新方法供子组件调用
+ */
+const refreshUnreadCount = () => {
+  fetchUnreadMessageCount()
+}
+
+// 将刷新方法提供给子组件
+provide('refreshUnreadCount', refreshUnreadCount)
+
+// 在组件挂载时获取未读消息数量
+onMounted(() => {
+  fetchUnreadMessageCount()
+
+  // 每30秒刷新一次未读消息数量
+  setInterval(() => {
+    fetchUnreadMessageCount()
+  }, 30000)
+})
+
+// 监听路由变化，当从消息中心返回时刷新未读数量
+watch(
+  () => router.currentRoute.value?.path,
+  (newPath, oldPath) => {
+    // 当离开消息中心相关页面时，刷新未读数量
+    if (oldPath?.includes('/message-center') && !newPath?.includes('/message-center')) {
+      fetchUnreadMessageCount()
+    }
+    // 当离开通讯录页面时，刷新未读数量（可能处理了好友请求）
+    if (oldPath?.includes('/contacts') && !newPath?.includes('/contacts')) {
+      fetchUnreadMessageCount()
+    }
+  }
+)
+
 const handleSearch = (value) => {
   // 实现搜索逻辑
   try {
@@ -675,7 +779,25 @@ const handleSearch = (value) => {
                     <el-icon>
                       <component :is="childItem.icon" />
                     </el-icon>
-                    <template #title>{{ childItem.name }}</template>
+                    <template #title>
+                      <div class="menu-item-with-badge">
+                        <span class="menu-text">{{ childItem.name }}</span>
+                        <!-- 消息中心：只显示系统通知未读数 -->
+                        <span
+                          v-if="childItem.index === '10' && unreadNotificationCount > 0"
+                          class="unread-badge"
+                        >
+                          {{ unreadNotificationCount > 99 ? '99+' : unreadNotificationCount }}
+                        </span>
+                        <!-- 通讯录：显示好友请求未读数 -->
+                        <span
+                          v-if="childItem.index === '12' && unreadFriendRequestCount > 0"
+                          class="unread-badge"
+                        >
+                          {{ unreadFriendRequestCount > 99 ? '99+' : unreadFriendRequestCount }}
+                        </span>
+                      </div>
+                    </template>
                   </el-menu-item>
                 </el-sub-menu>
 
@@ -840,6 +962,36 @@ const handleSearch = (value) => {
     :deep(.el-sub-menu__title.is-active) {
       background-color: var(--el-menu-item-hover-bg-color) !important;
       color: var(--el-menu-active-color) !important;
+    }
+  }
+
+  /* 菜单项带徽章容器 */
+  .menu-item-with-badge {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 8px;
+
+    .menu-text {
+      flex: 1;
+    }
+
+    .unread-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #f56c6c;
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 500;
+      height: 18px;
+      line-height: 18px;
+      padding: 0 6px;
+      min-width: 18px;
+      border-radius: 9px;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
   }
 

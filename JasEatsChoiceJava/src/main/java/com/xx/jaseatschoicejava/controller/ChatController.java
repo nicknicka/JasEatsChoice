@@ -7,6 +7,10 @@ import com.xx.jaseatschoicejava.entity.ChatMsg;
 import com.xx.jaseatschoicejava.entity.ChatSession;
 import com.xx.jaseatschoicejava.service.ChatMsgService;
 import com.xx.jaseatschoicejava.service.ChatSessionService;
+import com.xx.jaseatschoicejava.service.UserService;
+import com.xx.jaseatschoicejava.service.GroupService;
+import com.xx.jaseatschoicejava.entity.User;
+import com.xx.jaseatschoicejava.entity.Group;
 import com.xx.jaseatschoicejava.util.ChatSessionIdGenerator;
 import com.xx.jaseatschoicejava.util.FileUploadUtil;
 import com.xx.jaseatschoicejava.util.IdGenerator;
@@ -34,6 +38,12 @@ public class ChatController {
 
     @Autowired
     private ChatSessionService chatSessionService;
+
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private GroupService groupService;
 
     @Value("${file.upload.url-prefix}")
     private String fileUrlPrefix;
@@ -220,7 +230,7 @@ public class ChatController {
             chatMsg.setMsgId(messageId);
         }
 
-        // ⭐ 生成并设置 session_id（使用确定性算法，确保相同用户产生相同会话ID）
+        // ⭐ 生成并设置 session_id（统一使用双方ID生成哈希）
         String sessionId;
         if ("group".equals(chatMsg.getSessionType())) {
             // 群聊：使用 ChatSessionIdGenerator 生成 S 开头的会话ID
@@ -228,12 +238,13 @@ public class ChatController {
             sessionId = ChatSessionIdGenerator.getGroupChatSessionId(chatMsg.getToId());
             System.out.println("  - 生成的 sessionId: " + sessionId);
         } else {
-            // 私聊：使用MD5哈希，保证确定性
+            // 单聊：使用双方 userId 生成哈希 sessionId（与会话创建逻辑保持一致）
             System.out.println("  - 单聊消息，使用 fromId 和 toId 生成 sessionId");
             sessionId = ChatSessionIdGenerator.generateSingleChatSessionId(
                 chatMsg.getFromId(),
                 chatMsg.getToId()
             );
+            System.out.println("  - fromId: " + chatMsg.getFromId() + ", toId: " + chatMsg.getToId());
             System.out.println("  - 生成的 sessionId: " + sessionId);
         }
         chatMsg.setSessionId(sessionId);
@@ -290,13 +301,13 @@ public class ChatController {
             String content,
             LocalDateTime messageTime) {
 
-        // 生成sessionId（与消息表保持一致，使用确定性算法）
+        // ⭐ 生成sessionId（统一使用双方ID生成哈希）
         String sessionId;
         if ("group".equals(sessionType)) {
             // 群聊：使用 ChatSessionIdGenerator 生成 S 开头的会话ID
             sessionId = ChatSessionIdGenerator.getGroupChatSessionId(otherId);
         } else {
-            // 私聊：使用MD5哈希，保证确定性
+            // 单聊：使用双方 userId 生成哈希 sessionId（与会话创建逻辑保持一致）
             sessionId = ChatSessionIdGenerator.generateSingleChatSessionId(userId, otherId);
         }
 
@@ -319,6 +330,11 @@ public class ChatController {
             session.setUnreadCount(0);
             session.setPinned(0);  // 0-未置顶
             session.setCreateTime(LocalDateTime.now());
+
+            // ⭐ 设置 targetId（仅单聊）
+            if ("single".equals(sessionType)) {
+                session.setTargetId(otherId);
+            }
         }
 
         // 更新会话信息
@@ -341,13 +357,13 @@ public class ChatController {
             LocalDateTime messageTime,
             boolean isGroup) {
 
-        // 生成sessionId（与消息表保持一致，使用确定性算法）
+        // ⭐ 生成sessionId（统一使用双方ID生成哈希）
         String sessionId;
         if (isGroup) {
             // 群聊：使用 ChatSessionIdGenerator 生成 S 开头的会话ID
             sessionId = ChatSessionIdGenerator.getGroupChatSessionId(receiverId);
         } else {
-            // 私聊：使用MD5哈希，保证确定性
+            // 单聊：使用双方 userId 生成哈希 sessionId（与会话创建逻辑保持一致）
             sessionId = ChatSessionIdGenerator.generateSingleChatSessionId(receiverId, senderId);
         }
 
@@ -373,6 +389,12 @@ public class ChatController {
             session.setLastMessage(content);
             session.setLastMessageTime(messageTime);
             session.setUpdateTime(LocalDateTime.now());
+
+            // ⭐ 设置 targetId（仅单聊）
+            if (!isGroup) {
+                session.setTargetId(senderId);  // 接收者的会话中，targetId 是发送者
+            }
+
             chatSessionService.save(session);
         } else {
             // 更新现有会话，增加未读数
@@ -397,12 +419,32 @@ public class ChatController {
     }
 
     /**
-     * 获取会话名称
+     * 获取会话名称（查询真实名称）
      */
     private String getSessionName(String sessionType, String otherId) {
         if ("group".equals(sessionType)) {
+            // 群聊：查询群信息获取群名
+            try {
+                Group group = groupService.getById(otherId);
+                if (group != null && group.getGroupName() != null && !group.getGroupName().isEmpty()) {
+                    return group.getGroupName();
+                }
+            } catch (Exception e) {
+                System.err.println("查询群信息失败: " + e.getMessage());
+            }
+            // 查询失败时返回默认名称
             return "\u7fa4\u804a " + otherId;
         } else {
+            // 单聊：查询用户信息获取昵称
+            try {
+                User user = userService.getById(otherId);
+                if (user != null && user.getNickname() != null && !user.getNickname().isEmpty()) {
+                    return user.getNickname();
+                }
+            } catch (Exception e) {
+                System.err.println("查询用户信息失败: " + e.getMessage());
+            }
+            // 查询失败时返回默认名称
             return "\u7528\u6237 " + otherId;
         }
     }
