@@ -1,7 +1,7 @@
 <template>
   <el-dialog
     v-model="visible"
-    width="720px"
+    width="900px"
     @close="handleClose"
     class="product-select-dialog"
     :close-on-click-modal="false"
@@ -17,160 +17,170 @@
         </div>
         <div class="header-right">
           <el-tag type="success" size="large" effect="dark">
-            {{ selectedProducts.length }} 个已选
+            {{ selectedProducts.length }} / {{ filteredProducts.length }} 已选
           </el-tag>
         </div>
       </div>
     </template>
 
+    <!-- 搜索和筛选 -->
+    <div class="filter-section">
+      <el-input
+        v-model="searchKeyword"
+        placeholder="搜索商品名称..."
+        clearable
+        class="search-input"
+      >
+        <template #prefix>
+          <el-icon><Search /></el-icon>
+        </template>
+      </el-input>
+    </div>
+
+    <!-- 批量操作栏 -->
+    <div v-if="filteredProducts.length > 0" class="batch-actions">
+      <span class="select-all">
+        <el-checkbox
+          :indeterminate="selectAllState === 1"
+          :model-value="selectAllState === 2"
+          @change="toggleSelectAll"
+        />
+        <span class="select-text">
+          全选
+          <span v-if="selectedProducts.length > 0" class="selected-count">
+            ({{ selectedProducts.length }}/{{ filteredProducts.length }})
+          </span>
+        </span>
+      </span>
+
+      <el-button
+        type="primary"
+        :disabled="selectedProducts.length === 0"
+        @click="openBatchCustomize"
+        class="batch-btn"
+      >
+        <el-icon><Setting /></el-icon>
+        批量定制 ({{ selectedProducts.length }})
+      </el-button>
+
+      <el-button
+        type="success"
+        :disabled="selectedProductsWithCustomization.length === 0"
+        @click="handleBatchAddToCart"
+        class="batch-btn"
+      >
+        <el-icon><ShoppingCart /></el-icon>
+        批量加入订单 ({{ selectedProductsWithCustomization.length }})
+      </el-button>
+    </div>
+
+    <!-- 商品列表 -->
     <div class="product-list" v-if="merchant && merchant.products">
       <div
-        v-for="product in merchant.products"
+        v-for="product in filteredProducts"
         :key="product.id"
-        class="product-card"
+        class="product-item"
         :class="{ selected: isProductSelected(product.id) }"
       >
-        <div class="product-main">
-          <div class="product-image">
-            <img v-if="product.image" :src="product.image" :alt="product.name" />
-            <div v-else class="image-placeholder">
-              <el-icon :size="48"><Food /></el-icon>
-            </div>
-            <div class="product-price-badge">
-              <span class="price">¥{{ (product.price || 0).toFixed(2) }}</span>
-            </div>
+        <!-- 左侧复选框 -->
+        <div class="product-checkbox">
+          <el-checkbox
+            :model-value="isProductSelected(product.id)"
+            @change="toggleProductSelection(product)"
+          />
+        </div>
+
+        <!-- 商品图片 -->
+        <div class="product-image">
+          <img v-if="product.image" :src="product.image" :alt="product.name" />
+          <div v-else class="image-placeholder">
+            <el-icon :size="48"><Food /></el-icon>
           </div>
-
-          <div class="product-content">
-            <h4 class="product-name">{{ product.name }}</h4>
-            <p class="product-description">{{ product.description }}</p>
-
-            <!-- 必选食材 -->
-            <div
-              class="ingredients-section"
-              v-if="product.requiredIngredients && product.requiredIngredients.length > 0"
-            >
-              <div class="ingredients-header">
-                <el-icon :size="16" color="#f56c6c"><Star /></el-icon>
-                <span>必选食材</span>
-              </div>
-              <div class="ingredients-tags">
-                <el-tag
-                  v-for="ingredient in product.requiredIngredients"
-                  :key="ingredient"
-                  size="small"
-                  type="danger"
-                  effect="plain"
-                >
-                  {{ ingredient }}
-                </el-tag>
-              </div>
-            </div>
-
-            <!-- 可选食材提示 -->
-            <div
-              class="optional-hint"
-              v-if="product.optionalIngredients && product.optionalIngredients.length > 0"
-            >
-              <el-icon :size="14"><InfoFilled /></el-icon>
-              <span>可选 {{ product.optionalIngredients.length }} 种食材</span>
-            </div>
-          </div>
-
-          <div class="product-action">
-            <el-button
-              :type="isProductSelected(product.id) ? 'success' : 'primary'"
-              size="large"
-              @click="handleToggleProduct(product)"
-              class="select-btn"
-            >
-              <el-icon>
-                <Select v-if="!isProductSelected(product.id)" />
-                <CircleCheck v-else />
-              </el-icon>
-              {{ isProductSelected(product.id) ? '已选择' : '选择商品' }}
-            </el-button>
+          <div class="product-price-badge">
+            <span class="price">¥{{ (product.price || 0).toFixed(2) }}</span>
           </div>
         </div>
 
-        <!-- 展开的面板 - 选择后显示 -->
-        <transition name="panel-slide">
-          <div v-if="isProductSelected(product.id)" class="product-panel">
-            <div class="panel-content">
-              <!-- 数量控制 -->
-              <div class="control-section">
-                <div class="control-header">
-                  <el-icon><Histogram /></el-icon>
-                  <span>数量</span>
-                </div>
-                <el-input-number
-                  :model-value="getProductQuantity(product.id)"
-                  @change="(val) => handleUpdateQuantity(product, val - getProductQuantity(product.id))"
-                  :min="1"
-                  :max="99"
-                  size="large"
-                />
-              </div>
-
-              <!-- 可选食材 -->
-              <div
-                class="control-section"
+        <!-- 商品内容 -->
+        <div class="product-content">
+          <div class="product-header">
+            <h4 class="product-name">{{ product.name }}</h4>
+            <div class="product-badges">
+              <el-tag
+                v-if="product.requiredIngredients && product.requiredIngredients.length > 0"
+                type="danger"
+                size="small"
+                effect="plain"
+              >
+                <el-icon><Star /></el-icon>
+                {{ product.requiredIngredients.length }}种必选
+              </el-tag>
+              <el-tag
                 v-if="product.optionalIngredients && product.optionalIngredients.length > 0"
+                type="info"
+                size="small"
+                effect="plain"
               >
-                <div class="control-header">
-                  <el-icon><CirclePlus /></el-icon>
-                  <span>可选食材</span>
-                </div>
-                <el-checkbox-group
-                  :model-value="getProductOptionalIngredients(product.id)"
-                  @change="handleUpdateOptionalIngredients(product.id, $event)"
-                >
-                  <div class="ingredients-grid">
-                    <el-checkbox
-                      v-for="ingredient in product.optionalIngredients"
-                      :key="ingredient.id"
-                      :label="ingredient"
-                      class="ingredient-checkbox"
-                    >
-                      <span class="ingredient-name">{{ ingredient.name }}</span>
-                      <span v-if="ingredient.price" class="ingredient-price">
-                        +¥{{ ingredient.price.toFixed(2) }}
-                      </span>
-                    </el-checkbox>
-                  </div>
-                </el-checkbox-group>
-              </div>
-
-              <!-- 备注 -->
-              <div class="control-section">
-                <div class="control-header">
-                  <el-icon><Edit /></el-icon>
-                  <span>备注</span>
-                </div>
-                <el-input
-                  :model-value="getProductRemark(product.id)"
-                  @input="handleUpdateRemark(product.id, $event)"
-                  placeholder="添加备注，如：少辣、不要香菜等..."
-                  type="textarea"
-                  :rows="2"
-                  maxlength="100"
-                  show-word-limit
-                />
-              </div>
-
-              <!-- 加入购物车按钮 -->
-              <el-button
-                type="success"
-                size="large"
-                @click="handleAddToCart(product)"
-                class="add-cart-btn"
-              >
-                <el-icon><ShoppingCart /></el-icon>
-                加入订单
-              </el-button>
+                <el-icon><CirclePlus /></el-icon>
+                {{ product.optionalIngredients.length }}种可选
+              </el-tag>
             </div>
           </div>
-        </transition>
+
+          <p class="product-description">{{ product.description }}</p>
+
+          <!-- 已选配置摘要 -->
+          <div v-if="getProductCustomization(product.id)" class="customization-summary">
+            <el-tag size="small" type="success" closable @close="clearProductCustomization(product.id)">
+              {{ getProductCustomizationSummary(product.id) }}
+            </el-tag>
+          </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="product-actions">
+          <el-button
+            size="small"
+            @click="viewProductDetail(product)"
+            class="action-btn"
+          >
+            <el-icon><View /></el-icon>
+            详情
+          </el-button>
+
+          <el-button
+            v-if="!isProductSelected(product.id)"
+            type="primary"
+            size="small"
+            @click="customizeProduct(product)"
+            class="action-btn"
+          >
+            <el-icon><Edit /></el-icon>
+            定制
+          </el-button>
+
+          <el-button
+            v-else
+            type="success"
+            size="small"
+            @click="customizeProduct(product)"
+            class="action-btn"
+          >
+            <el-icon><Edit /></el-icon>
+            修改
+          </el-button>
+
+          <el-button
+            v-if="getProductCustomization(product.id)"
+            type="warning"
+            size="small"
+            @click="handleAddToCart(product)"
+            class="action-btn"
+          >
+            <el-icon><ShoppingCart /></el-icon>
+            加入订单
+          </el-button>
+        </div>
       </div>
     </div>
 
@@ -185,43 +195,62 @@
         <el-button size="large" @click="handleClose">
           <el-icon><Close /></el-icon> 取消
         </el-button>
-        <el-button size="large" @click="handleClose">
-          <el-icon><Clock /></el-icon> 稍后再看
-        </el-button>
         <el-button
           type="primary"
           size="large"
           @click="handleConfirmAll"
-          :disabled="selectedProducts.length === 0"
+          :disabled="selectedProductsWithCustomization.length === 0"
         >
           <el-icon><ShoppingCartFull /></el-icon>
-          全部加入订单 ({{ selectedProducts.length }})
+          确认选择 ({{ selectedProductsWithCustomization.length }}个商品)
         </el-button>
       </div>
     </template>
   </el-dialog>
+
+  <!-- 商品详情对话框 -->
+  <ProductDetailDialog
+    v-model="productDetailVisible"
+    :product="currentProduct"
+  />
+
+  <!-- 商品定制对话框 -->
+  <ProductCustomizeDialog
+    v-model="productCustomizeVisible"
+    :product="currentProduct"
+    :customization="currentProductCustomization"
+    @confirm="handleProductCustomized"
+  />
+
+  <!-- 批量定制对话框 -->
+  <BatchCustomizeDialog
+    v-model="batchCustomizeVisible"
+    :products="selectedProducts"
+    @confirm="handleBatchCustomized"
+  />
 </template>
 
 <script setup>
 import { ref, watch, computed } from 'vue'
 import {
   Food,
-  Star,
-  InfoFilled,
-  Select,
-  CircleCheck,
-  Histogram,
-  CirclePlus,
-  Edit,
+  Search,
+  Setting,
   ShoppingCart,
+  ShoppingCartFull,
   Close,
-  Clock,
-  ShoppingCartFull
+  View,
+  Edit,
+  Star,
+  CirclePlus
 } from '@element-plus/icons-vue'
+import ProductDetailDialog from './ProductDetailDialog.vue'
+import ProductCustomizeDialog from './ProductCustomizeDialog.vue'
+import BatchCustomizeDialog from './BatchCustomizeDialog.vue'
 
 /**
- * 商品选择对话框组件
- * @description 用于选择商家的商品，支持可选食材、备注、数量调整
+ * 商品选择对话框组件（重构版）
+ * @description 支持复选框多选、批量操作、商品详情查看、自定义配置
  */
 const props = defineProps({
   modelValue: {
@@ -231,32 +260,229 @@ const props = defineProps({
   merchant: {
     type: Object,
     default: null
-  },
-  selectedProducts: {
-    type: Array,
-    default: () => []
-  },
-  productRemarks: {
-    type: Object,
-    default: () => ({})
-  },
-  productOptionalIngredients: {
-    type: Object,
-    default: () => ({})
   }
 })
 
-const emit = defineEmits([
-  'update:modelValue',
-  'toggleProduct',
-  'updateQuantity',
-  'updateRemark',
-  'updateOptionalIngredients',
-  'addToCart',
-  'confirmAll'
-])
+const emit = defineEmits(['update:modelValue', 'addToCart', 'confirmAll'])
 
+// 对话框状态
 const visible = ref(props.modelValue)
+const searchKeyword = ref('')
+
+// 商品选择状态
+const selectedProducts = ref([])
+const productCustomizations = ref({}) // 存储每个商品的定制信息 { productId: { quantity, optionalIngredients, remark } }
+
+// 当前操作的商品
+const currentProduct = ref(null)
+const currentProductCustomization = ref(null)
+
+// 子对话框状态
+const productDetailVisible = ref(false)
+const productCustomizeVisible = ref(false)
+const batchCustomizeVisible = ref(false)
+
+/**
+ * 筛选后的商品列表
+ */
+const filteredProducts = computed(() => {
+  if (!props.merchant || !props.merchant.products) return []
+
+  if (!searchKeyword.value) {
+    return props.merchant.products
+  }
+
+  const keyword = searchKeyword.value.toLowerCase()
+  return props.merchant.products.filter(product =>
+    product.name.toLowerCase().includes(keyword) ||
+    (product.description && product.description.toLowerCase().includes(keyword))
+  )
+})
+
+/**
+ * 全选状态：0=未选择，1=部分选择，2=全选
+ */
+const selectAllState = computed(() => {
+  if (selectedProducts.value.length === 0) return 0
+  if (selectedProducts.value.length === filteredProducts.value.length) return 2
+  return 1
+})
+
+/**
+ * 已配置的商品列表
+ */
+const selectedProductsWithCustomization = computed(() => {
+  return selectedProducts.value.filter(product =>
+    productCustomizations.value[product.id]
+  )
+})
+
+/**
+ * 检查商品是否已选择
+ */
+const isProductSelected = (productId) => {
+  return selectedProducts.value.some(item => item.id === productId)
+}
+
+/**
+ * 切换商品选择状态
+ */
+const toggleProductSelection = (product) => {
+  const index = selectedProducts.value.findIndex(item => item.id === product.id)
+  if (index === -1) {
+    selectedProducts.value.push(product)
+  } else {
+    selectedProducts.value.splice(index, 1)
+    // 如果取消选择，同时清除定制信息
+    if (!isProductSelected(product.id)) {
+      delete productCustomizations.value[product.id]
+    }
+  }
+}
+
+/**
+ * 全选/取消全选
+ */
+const toggleSelectAll = () => {
+  if (selectAllState.value === 2) {
+    // 取消全选
+    selectedProducts.value = []
+    productCustomizations.value = {}
+  } else {
+    // 全选
+    selectedProducts.value = [...filteredProducts.value]
+  }
+}
+
+/**
+ * 获取商品定制信息
+ */
+const getProductCustomization = (productId) => {
+  return productCustomizations.value[productId] || null
+}
+
+/**
+ * 获取商品定制摘要
+ */
+const getProductCustomizationSummary = (productId) => {
+  const customization = getProductCustomization(productId)
+  if (!customization) return ''
+
+  const parts = []
+  if (customization.quantity > 1) {
+    parts.push(`×${customization.quantity}`)
+  }
+  if (customization.optionalIngredients && customization.optionalIngredients.length > 0) {
+    parts.push(`${customization.optionalIngredients.length}种加料`)
+  }
+  if (customization.remark) {
+    parts.push('有备注')
+  }
+
+  return parts.join(' | ') || '默认配置'
+}
+
+/**
+ * 清除商品定制信息
+ */
+const clearProductCustomization = (productId) => {
+  delete productCustomizations.value[productId]
+}
+
+/**
+ * 查看商品详情
+ */
+const viewProductDetail = (product) => {
+  currentProduct.value = product
+  productDetailVisible.value = true
+}
+
+/**
+ * 定制单个商品
+ */
+const customizeProduct = (product) => {
+  currentProduct.value = product
+  currentProductCustomization.value = getProductCustomization(product.id) || {
+    quantity: 1,
+    optionalIngredients: [],
+    remark: ''
+  }
+  productCustomizeVisible.value = true
+}
+
+/**
+ * 批量定制
+ */
+const openBatchCustomize = () => {
+  if (selectedProducts.value.length === 0) {
+    return
+  }
+  batchCustomizeVisible.value = true
+}
+
+/**
+ * 处理商品定制确认
+ */
+const handleProductCustomized = (data) => {
+  const { productId, customization } = data
+  productCustomizations.value[productId] = customization
+
+  // 如果商品还未选择，自动添加到选择列表
+  if (!isProductSelected(productId)) {
+    const product = props.merchant.products.find(p => p.id === productId)
+    if (product) {
+      selectedProducts.value.push(product)
+    }
+  }
+}
+
+/**
+ * 处理批量定制确认
+ */
+const handleBatchCustomized = (customizations) => {
+  // 更新所有商品的定制信息
+  Object.keys(customizations).forEach(productId => {
+    productCustomizations.value[productId] = customizations[productId]
+  })
+}
+
+/**
+ * 单个商品加入购物车
+ */
+const handleAddToCart = (product) => {
+  const customization = getProductCustomization(product.id)
+
+  emit('addToCart', {
+    product,
+    customization: customization || {
+      quantity: 1,
+      optionalIngredients: [],
+      remark: ''
+    }
+  })
+}
+
+/**
+ * 批量加入购物车
+ */
+const handleBatchAddToCart = () => {
+  const items = selectedProductsWithCustomization.value.map(product => ({
+    product,
+    customization: productCustomizations.value[product.id]
+  }))
+
+  items.forEach(item => {
+    emit('addToCart', item)
+  })
+}
+
+/**
+ * 确认所有选择
+ */
+const handleConfirmAll = () => {
+  handleBatchAddToCart()
+  handleClose()
+}
 
 /**
  * 关闭对话框
@@ -267,82 +493,16 @@ const handleClose = () => {
 }
 
 /**
- * 检查商品是否已选择
- */
-const isProductSelected = (productId) => {
-  return props.selectedProducts.some((item) => item.id === productId)
-}
-
-/**
- * 获取商品数量
- */
-const getProductQuantity = (productId) => {
-  const product = props.selectedProducts.find((item) => item.id === productId)
-  return product ? product.quantity : 0
-}
-
-/**
- * 获取商品备注
- */
-const getProductRemark = (productId) => {
-  return props.productRemarks[productId] || ''
-}
-
-/**
- * 获取商品可选食材
- */
-const getProductOptionalIngredients = (productId) => {
-  return props.productOptionalIngredients[productId] || []
-}
-
-/**
- * 切换商品选择
- */
-const handleToggleProduct = (product) => {
-  emit('toggleProduct', product)
-}
-
-/**
- * 更新商品数量
- */
-const handleUpdateQuantity = (product, change) => {
-  emit('updateQuantity', { product, change })
-}
-
-/**
- * 更新商品备注
- */
-const handleUpdateRemark = (productId, remark) => {
-  emit('updateRemark', { productId, remark })
-}
-
-/**
- * 更新可选食材
- */
-const handleUpdateOptionalIngredients = (productId, ingredients) => {
-  emit('updateOptionalIngredients', { productId, ingredients })
-}
-
-/**
- * 单个商品加入购物车
- */
-const handleAddToCart = (product) => {
-  emit('addToCart', product)
-}
-
-/**
- * 一键加入购物车
- */
-const handleConfirmAll = () => {
-  emit('confirmAll')
-  handleClose()
-}
-
-/**
  * 监听外部 modelValue 变化
  */
 watch(() => props.modelValue, (newVal) => {
   visible.value = newVal
+  if (newVal) {
+    // 对话框打开时重置状态
+    selectedProducts.value = []
+    productCustomizations.value = {}
+    searchKeyword.value = ''
+  }
 })
 
 /**
@@ -406,219 +566,173 @@ watch(visible, (newVal) => {
   }
 }
 
+.filter-section {
+  padding: 16px 20px;
+  background: white;
+  border-bottom: 1px solid #e4e7ed;
+
+  .search-input {
+    width: 100%;
+    max-width: 400px;
+  }
+}
+
+.batch-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 20px;
+  background: white;
+  border-bottom: 1px solid #e4e7ed;
+
+  .select-all {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+    color: #303133;
+    cursor: pointer;
+
+    .select-text {
+      font-size: 14px;
+
+      .selected-count {
+        color: #909399;
+        font-size: 12px;
+      }
+    }
+  }
+
+  .batch-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+}
+
 .product-list {
-  max-height: 600px;
+  max-height: 500px;
   overflow-y: auto;
   padding: 16px;
 
-  .product-card {
+  .product-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
     background: white;
     border-radius: 12px;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     transition: all 0.3s;
-    overflow: hidden;
+    border: 2px solid transparent;
 
     &:hover {
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
     }
 
     &.selected {
-      border: 2px solid #67c23a;
-      box-shadow: 0 4px 16px rgba(103, 194, 58, 0.2);
+      border-color: #67c23a;
+      background: linear-gradient(135deg, #f0f9ff 0%, #ffffff 100%);
     }
 
-    .product-main {
-      display: flex;
-      gap: 16px;
-      padding: 20px;
+    .product-checkbox {
+      flex-shrink: 0;
+    }
 
-      .product-image {
-        position: relative;
-        width: 120px;
-        height: 120px;
-        flex-shrink: 0;
-        border-radius: 8px;
-        overflow: hidden;
-        background: linear-gradient(135deg, #e4e7ed 0%, #dcdfe6 100%);
+    .product-image {
+      position: relative;
+      width: 100px;
+      height: 100px;
+      flex-shrink: 0;
+      border-radius: 8px;
+      overflow: hidden;
+      background: linear-gradient(135deg, #e4e7ed 0%, #dcdfe6 100%);
 
-        img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
-
-        .image-placeholder {
-          width: 100%;
-          height: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: #909399;
-        }
-
-        .product-price-badge {
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          right: 0;
-          background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
-          padding: 8px 12px;
-          color: white;
-
-          .price {
-            font-size: 18px;
-            font-weight: 700;
-          }
-        }
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
       }
 
-      .product-content {
-        flex: 1;
+      .image-placeholder {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #909399;
+      }
+
+      .product-price-badge {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
+        padding: 6px 10px;
+        color: white;
+
+        .price {
+          font-size: 16px;
+          font-weight: 700;
+        }
+      }
+    }
+
+    .product-content {
+      flex: 1;
+      min-width: 0;
+
+      .product-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
 
         .product-name {
-          font-size: 18px;
+          font-size: 16px;
           font-weight: 600;
-          margin: 0 0 8px 0;
+          margin: 0;
           color: #303133;
         }
 
-        .product-description {
-          font-size: 14px;
-          color: #909399;
-          margin: 0 0 12px 0;
-          line-height: 1.6;
-        }
-
-        .ingredients-section {
-          margin-bottom: 8px;
-
-          .ingredients-header {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 13px;
-            color: #f56c6c;
-            margin-bottom: 8px;
-            font-weight: 500;
-          }
-
-          .ingredients-tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-          }
-        }
-
-        .optional-hint {
+        .product-badges {
           display: flex;
-          align-items: center;
           gap: 6px;
-          font-size: 12px;
-          color: #409eff;
-          background: #ecf5ff;
-          padding: 6px 12px;
-          border-radius: 4px;
-          width: fit-content;
+          flex-shrink: 0;
         }
       }
 
-      .product-action {
-        flex-shrink: 0;
-        display: flex;
-        align-items: center;
+      .product-description {
+        font-size: 13px;
+        color: #909399;
+        margin: 0 0 8px 0;
+        line-height: 1.6;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
 
-        .select-btn {
-          min-width: 120px;
-        }
+      .customization-summary {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
       }
     }
 
-    .product-panel {
-      border-top: 1px solid #e4e7ed;
-      background: #fafbfc;
+    .product-actions {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
 
-      .panel-content {
-        padding: 20px;
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 20px;
-
-        .control-section {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-
-          .control-header {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 14px;
-            font-weight: 500;
-            color: #606266;
-          }
-
-          .ingredients-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 12px;
-
-            .ingredient-checkbox {
-              margin: 0;
-              padding: 12px;
-              background: white;
-              border: 1px solid #e4e7ed;
-              border-radius: 8px;
-              transition: all 0.3s;
-
-              &:hover {
-                border-color: #409eff;
-              }
-
-              :deep(.el-checkbox__label) {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                width: 100%;
-                padding-left: 8px;
-
-                .ingredient-name {
-                  flex: 1;
-                }
-
-                .ingredient-price {
-                  font-size: 12px;
-                  color: #f56c6c;
-                  font-weight: 500;
-                }
-              }
-            }
-          }
-        }
-
-        .add-cart-btn {
-          grid-column: 1 / -1;
-          height: 48px;
-          font-size: 16px;
-          font-weight: 600;
-        }
+      .action-btn {
+        min-width: 90px;
       }
     }
   }
-}
-
-// 面板滑动动画
-.panel-slide-enter-active,
-.panel-slide-leave-active {
-  transition: all 0.3s ease;
-  max-height: 800px;
-  overflow: hidden;
-}
-
-.panel-slide-enter-from,
-.panel-slide-leave-to {
-  max-height: 0;
-  opacity: 0;
 }
 
 .empty-state {

@@ -1,6 +1,7 @@
 package com.xx.jaseatschoicejava.controller;
 
 import com.xx.jaseatschoicejava.common.ResponseResult;
+import com.xx.jaseatschoicejava.dto.FriendRequestActionDTO;
 import com.xx.jaseatschoicejava.entity.Contact;
 import com.xx.jaseatschoicejava.service.ContactService;
 import io.swagger.annotations.Api;
@@ -134,6 +135,10 @@ public class ContactController {
                 .eq(Contact::getStatus, "pending")
                 .orderByDesc(Contact::getCreateTime)
                 .list();
+        System.out.println("获取好友请求列表，userId: " + userId + ", 请求数量: " + requests.size());
+        for (Contact contact : requests) {
+            System.out.println("好友请求: " + contact);
+        }
         return ResponseResult.success(requests);
     }
 
@@ -142,7 +147,10 @@ public class ContactController {
      */
     @ApiOperation("接受好友请求")
     @PostMapping("/friends/accept")
-    public ResponseResult<?> acceptFriendRequest(@RequestParam String userId, @RequestParam String requesterId) {
+    public ResponseResult<?> acceptFriendRequest(@RequestBody FriendRequestActionDTO dto) {
+        String userId = dto.getUserId();
+        String requesterId = dto.getRequesterId();
+
         // 1. 将请求者的记录状态改为normal
         boolean success1 = contactService.lambdaUpdate()
                 .eq(Contact::getUserId, requesterId)
@@ -172,7 +180,10 @@ public class ContactController {
      */
     @ApiOperation("拒绝好友请求")
     @PostMapping("/friends/reject")
-    public ResponseResult<?> rejectFriendRequest(@RequestParam String userId, @RequestParam String requesterId) {
+    public ResponseResult<?> rejectFriendRequest(@RequestBody FriendRequestActionDTO dto) {
+        String userId = dto.getUserId();
+        String requesterId = dto.getRequesterId();
+
         // 删除好友请求记录
         boolean success = contactService.remove(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Contact>()
                 .eq(Contact::getUserId, requesterId)

@@ -57,4 +57,20 @@ public interface MessageRecordService extends IService<MessageRecord> {
      * @return 标记结果
      */
     Boolean markAllMessagesAsRead(String userId);
+
+    /**
+     * 删除单条消息
+     *
+     * @param messageId 消息ID
+     * @return 删除结果
+     */
+    Boolean deleteMessage(String messageId);
+
+    /**
+     * 批量删除消息
+     *
+     * @param messageIds 消息ID列表
+     * @return 删除结果
+     */
+    Boolean batchDeleteMessages(List<String> messageIds);
 }

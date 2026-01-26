@@ -180,33 +180,46 @@ export function useFriendManagement({ userId, conversations, chatHistory }) {
    */
   const getFriendRequests = async () => {
     try {
+      console.log('开始获取好友请求，用户ID:', userId.value)
       const response = await api.get(`/v1/contacts/friends/requests`, {
         params: { userId: userId.value }
       })
 
+      console.log('好友请求响应:', response)
+
       if (response.code === '200') {
+        console.log('原始好友请求列表:', response.data)
+
         // 获取每个请求者的详细信息
         const requestsWithInfo = await Promise.all(
           response.data.map(async (contact) => {
+            console.log('处理联系人:', contact)
             try {
               const userResponse = await api.get(`/v1/users/${contact.userId}`)
+              console.log(`用户 ${contact.userId} 信息响应:`, userResponse)
+
               if (userResponse.code === '200' && userResponse.data) {
-                return {
+                const userInfo = {
                   ...contact,
                   requesterInfo: {
                     id: userResponse.data.userId,
-                    nickname: userResponse.data.nickname || userResponse.data.username,
-                    username: userResponse.data.username,
-                    avatar: userResponse.data.avatar,
+                    nickname: userResponse.data.nickname || '未知用户',
+                    avatar: userResponse.data.avatar || '👤',
                     phone: userResponse.data.phone,
                     email: userResponse.data.email
                   }
                 }
+                console.log('成功构建用户信息:', userInfo)
+                return userInfo
+              } else {
+                console.warn(`获取用户 ${contact.userId} 失败，响应码:`, userResponse.code)
               }
             } catch (error) {
               console.error(`获取用户 ${contact.userId} 信息失败:`, error)
             }
-            return {
+
+            // 降级方案：使用基本信息
+            const fallbackInfo = {
               ...contact,
               requesterInfo: {
                 id: contact.userId,
@@ -214,11 +227,16 @@ export function useFriendManagement({ userId, conversations, chatHistory }) {
                 avatar: '👤'
               }
             }
+            console.log('使用降级方案:', fallbackInfo)
+            return fallbackInfo
           })
         )
+
+        console.log('最终好友请求列表:', requestsWithInfo)
         return requestsWithInfo
       } else {
-        ElMessage.error('获取好友请求失败')
+        console.error('获取好友请求失败，响应码:', response.code)
+        ElMessage.error('获取好友请求失败: ' + response.message)
         return []
       }
     } catch (error) {

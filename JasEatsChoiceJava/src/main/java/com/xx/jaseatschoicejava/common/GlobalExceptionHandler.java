@@ -5,9 +5,12 @@ import org.apache.catalina.connector.ClientAbortException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+
+import javax.servlet.http.HttpServletRequest;
 
 /**
  * 全局异常处理类
@@ -46,6 +49,27 @@ public class GlobalExceptionHandler {
         logger.debug("Client aborted the connection: {}", e.getMessage());
         // 连接已断开，无需返回响应
         return null;
+    }
+
+    /**
+     * 处理请求方法不支持异常
+     * 当前端使用的HTTP方法与后端定义的不匹配时调用此方法
+     * @param e 请求方法不支持异常对象
+     * @param request HTTP请求对象
+     * @return 标准化的响应结果
+     */
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseResult<?> handleHttpRequestMethodNotSupported(
+            HttpRequestMethodNotSupportedException e, HttpServletRequest request) {
+        // 记录详细的异常日志，包括请求URL和方法
+        logger.error("HttpRequestMethodNotSupportedException: URI={}, Method={}, SupportedMethods={}",
+            request.getRequestURI(),
+            request.getMethod(),
+            e.getSupportedMethods());
+
+        // 返回标准化的错误响应
+        return ResponseResult.fail("405", "请求方法不支持: " + request.getMethod() +
+            "。该接口仅支持: " + (e.getSupportedMethods() != null ? String.join(", ", e.getSupportedMethods()) : "其他方法"));
     }
 
     /**

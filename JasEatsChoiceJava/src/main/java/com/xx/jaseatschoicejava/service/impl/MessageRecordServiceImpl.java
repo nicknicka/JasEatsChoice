@@ -26,12 +26,24 @@ public class MessageRecordServiceImpl extends ServiceImpl<MessageRecordMapper, M
     public List<MessageRecord> getMessageRecordsByUserId(String userId, Integer pageSize, Integer pageNum) {
         // 计算分页起始索引
         int startIndex = (pageNum - 1) * pageSize;
-        return messageRecordMapper.getMessageRecordsByUserId(userId, pageSize, startIndex);
+        // 直接使用 MyBatis-Plus 的 lambdaQuery 查询，避免 XML 映射问题
+        return lambdaQuery()
+                .and(wrapper -> wrapper
+                        .eq(MessageRecord::getReceiverId, userId)
+                        .or()
+                        .eq(MessageRecord::getSenderId, userId))
+                .orderByDesc(MessageRecord::getSendTime)
+                .last("LIMIT " + pageSize + " OFFSET " + startIndex)
+                .list();
     }
 
     @Override
     public Integer getUnreadMessageCountByUserId(String userId) {
-        return messageRecordMapper.getUnreadMessageCountByUserId(userId);
+        // 使用 MyBatis-Plus 的 lambdaQuery 查询未读消息数量
+        return Math.toIntExact(lambdaQuery()
+                .eq(MessageRecord::getReceiverId, userId)
+                .eq(MessageRecord::getReadStatus, 0)
+                .count());
     }
 
     @Override
@@ -67,5 +79,20 @@ public class MessageRecordServiceImpl extends ServiceImpl<MessageRecordMapper, M
                 .eq(MessageRecord::getReceiverId, userId)
                 .set(MessageRecord::getReadStatus, 1)
                 .update();
+    }
+
+    @Override
+    public Boolean deleteMessage(String messageId) {
+        // 删除单条消息
+        return this.removeById(messageId);
+    }
+
+    @Override
+    public Boolean batchDeleteMessages(List<String> messageIds) {
+        // 批量删除消息
+        if (messageIds == null || messageIds.isEmpty()) {
+            return false;
+        }
+        return this.removeByIds(messageIds);
     }
 }

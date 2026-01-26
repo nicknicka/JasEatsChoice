@@ -50,6 +50,18 @@ public class MessageRecordController {
     }
 
     /**
+     * 根据用户ID获取未读消息数量（兼容前端路径）
+     *
+     * @param userId 用户ID
+     * @return 未读消息数量
+     */
+    @GetMapping("/records/unread-count")
+    public ResponseResult<?> getUnreadMessageCountCompat(@RequestParam String userId) {
+        Integer count = messageRecordService.getUnreadMessageCountByUserId(userId);
+        return ResponseResult.success(count);
+    }
+
+    /**
      * 发送消息
      *
      * @param messageRecord 消息记录对象
@@ -99,6 +111,38 @@ public class MessageRecordController {
             return ResponseResult.success("所有消息已标记为已读");
         } else {
             return ResponseResult.fail("500", "消息标记失败");
+        }
+    }
+
+    /**
+     * 删除单条消息
+     *
+     * @param messageId 消息ID
+     * @return 删除结果
+     */
+    @DeleteMapping("/records/{messageId}")
+    public ResponseResult<?> deleteMessage(@PathVariable String messageId) {
+        Boolean success = messageRecordService.deleteMessage(messageId);
+        if (success) {
+            return ResponseResult.success("消息删除成功");
+        } else {
+            return ResponseResult.fail("500", "消息删除失败");
+        }
+    }
+
+    /**
+     * 批量删除消息
+     *
+     * @param messageIds 消息ID列表
+     * @return 删除结果
+     */
+    @DeleteMapping("/records/batch")
+    public ResponseResult<?> batchDeleteMessages(@RequestBody List<String> messageIds) {
+        Boolean success = messageRecordService.batchDeleteMessages(messageIds);
+        if (success) {
+            return ResponseResult.success("成功删除 " + messageIds.size() + " 条消息");
+        } else {
+            return ResponseResult.fail("500", "批量删除失败");
         }
     }
 }

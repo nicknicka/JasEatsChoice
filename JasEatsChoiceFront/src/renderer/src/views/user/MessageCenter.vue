@@ -5,8 +5,8 @@ import { useAuthStore } from '../../store/authStore'
 const authStore = useAuthStore(pinia)
 
 import { ref, computed, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
-import { Loading, Select, Close } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Loading, Select, Close, Delete } from '@element-plus/icons-vue'
 import api from '../../utils/api.js'
 import { API_CONFIG } from '../../config/index.js'
 import { useFriendManagement } from '../../composables/useFriendManagement.js'
@@ -35,6 +35,9 @@ onMounted(async () => {
 
   // 加载好友请求
   await loadFriendRequests()
+
+  // 加载未读消息数量
+  await loadUnreadCount()
 })
 
 /**
@@ -70,8 +73,11 @@ const loadMessages = async () => {
 const loadFriendRequests = async () => {
   loadingRequests.value = true
   try {
+    console.log('MessageCenter: 开始加载好友请求')
     const requests = await getFriendRequests()
+    console.log('MessageCenter: 获取到的好友请求:', requests)
     friendRequests.value = requests
+    console.log('MessageCenter: 设置后的 friendRequests.value:', friendRequests.value)
   } catch (error) {
     console.error('加载好友请求失败:', error)
   } finally {
@@ -98,8 +104,11 @@ const messageDetail = ref(null)
 const showDetailModal = ref(false)
 
 // 查看消息详情
-const viewMessage = (message) => {
-  message.read = true
+const viewMessage = async (message) => {
+  // 调用后端接口标记为已读
+  if (!message.read) {
+    await markMessageAsRead(message.id)
+  }
   messageDetail.value = message
   showDetailModal.value = true
 }
@@ -128,17 +137,168 @@ const handleRejectRequest = async (request) => {
   }
 }
 
-// 批量删除消息
-const deleteSelected = () => {
-  console.log('批量删除消息')
+// ========== 消息操作功能 ==========
+
+// 单条消息删除
+const deleteMessage = async (messageId) => {
+  try {
+    await ElMessageBox.confirm('确认删除这条消息吗？', '删除消息', {
+      confirmButtonText: '确认删除',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+
+    // 调用后端接口删除消息
+    const response = await api.delete(`${API_CONFIG.message.list}/${messageId}`)
+    if (response.code === '200') {
+      ElMessage.success('消息删除成功')
+      // 从前端列表中移除
+      const index = messages.value.findIndex((msg) => msg.id === messageId)
+      if (index !== -1) {
+        messages.value.splice(index, 1)
+      }
+      // 重新加载未读数量
+      await loadUnreadCount()
+    } else {
+      ElMessage.error(response.message || '删除失败')
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除消息失败:', error)
+      ElMessage.error('删除消息失败')
+    }
+  }
+}
+
+// 批量删除相关
+const selectedMessages = ref([])
+const selectAll = ref(false)
+
+// 判断消息是否被选中
+const isMessageSelected = (messageId) => {
+  return selectedMessages.value.some((msg) => msg.id === messageId)
+}
+
+// 处理单条消息选择
+const handleMessageSelect = (message, checked) => {
+  if (checked) {
+    if (!isMessageSelected(message.id)) {
+      selectedMessages.value.push(message)
+    }
+  } else {
+    selectedMessages.value = selectedMessages.value.filter((msg) => msg.id !== message.id)
+  }
+  // 更新全选状态
+  selectAll.value = selectedMessages.value.length === filteredMessages.value.length && filteredMessages.value.length > 0
+}
+
+// 处理全选/取消全选
+const handleSelectAll = (checked) => {
+  if (checked) {
+    selectedMessages.value = [...filteredMessages.value]
+  } else {
+    selectedMessages.value = []
+  }
+}
+
+const deleteSelected = async () => {
+  if (selectedMessages.value.length === 0) {
+    ElMessage.warning('请先选择要删除的消息')
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      `确认删除选中的 ${selectedMessages.value.length} 条消息吗？`,
+      '批量删除消息',
+      {
+        confirmButtonText: '确认删除',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    // 调用后端接口批量删除
+    const messageIds = selectedMessages.value.map((msg) => msg.id)
+    const response = await api.delete(`${API_CONFIG.message.list}/batch`, { data: messageIds })
+    if (response.code === '200') {
+      ElMessage.success(`成功删除 ${messageIds.length} 条消息`)
+      // 从前端列表中移除
+      const idsToDelete = selectedMessages.value.map((msg) => msg.id)
+      messages.value = messages.value.filter((msg) => !idsToDelete.includes(msg.id))
+      selectedMessages.value = []
+      selectAll.value = false
+      // 重新加载未读数量
+      await loadUnreadCount()
+    } else {
+      ElMessage.error(response.message || '批量删除失败')
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('批量删除失败:', error)
+      ElMessage.error('批量删除失败')
+    }
+  }
 }
 
 // 全部标记为已读
-const markAllAsRead = () => {
-  messages.value.forEach((message) => {
-    message.read = true
-  })
-  console.log('已将所有消息标记为已读')
+const markAllAsRead = async () => {
+  try {
+    const response = await api.put(`${API_CONFIG.message.list}/all-read`, null, {
+      params: { userId: userId.value }
+    })
+
+    if (response.code === '200') {
+      // 更新前端状态
+      messages.value.forEach((message) => {
+        message.read = true
+      })
+      // 重新加载未读数量
+      await loadUnreadCount()
+      ElMessage.success('已将所有消息标记为已读')
+    } else {
+      ElMessage.error(response.message || '标记失败')
+    }
+  } catch (error) {
+    console.error('标记全部已读失败:', error)
+    ElMessage.error('标记全部已读失败')
+  }
+}
+
+// 标记单条消息为已读
+const markMessageAsRead = async (messageId) => {
+  try {
+    const response = await api.put(`${API_CONFIG.message.list}/${messageId}/read`)
+
+    if (response.code === '200') {
+      // 更新前端状态
+      const message = messages.value.find((msg) => msg.id === messageId)
+      if (message) {
+        message.read = true
+      }
+      // 重新加载未读数量
+      await loadUnreadCount()
+    }
+  } catch (error) {
+    console.error('标记消息已读失败:', error)
+  }
+}
+
+// 未读消息数量
+const unreadCount = ref(0)
+
+const loadUnreadCount = async () => {
+  try {
+    const response = await api.get(`${API_CONFIG.message.list}/unread-count`, {
+      params: { userId: userId.value }
+    })
+
+    if (response.code === '200') {
+      unreadCount.value = response.data || 0
+    }
+  } catch (error) {
+    console.error('获取未读消息数量失败:', error)
+  }
 }
 
 /**
@@ -156,7 +316,14 @@ const isImageAvatar = (avatar) => {
 
     <!-- 消息分类标签页 -->
     <el-tabs v-model:active-name="activeTab" class="message-tabs" @tab-change="activeTab === 'friend' && loadFriendRequests()">
-      <el-tab-pane label="全部消息" name="all"></el-tab-pane>
+      <el-tab-pane label="全部消息" name="all">
+        <template #label>
+          <span class="tab-label">
+            <span>全部消息</span>
+            <el-badge v-if="unreadCount > 0" :value="unreadCount" class="tab-badge" />
+          </span>
+        </template>
+      </el-tab-pane>
       <el-tab-pane label="订单消息" name="order"></el-tab-pane>
       <el-tab-pane label="系统通知" name="system"></el-tab-pane>
       <el-tab-pane label="优惠活动" name="promotion"></el-tab-pane>
@@ -171,27 +338,45 @@ const isImageAvatar = (avatar) => {
     </el-tabs>
 
     <!-- 好友请求列表 -->
-    <div v-if="activeTab === 'friend'" class="friend-requests">
+    <transition name="tab-fade-slide" mode="out-in">
+      <div v-if="activeTab === 'friend'" key="friend" class="friend-requests">
+        <!-- 临时调试信息 -->
+        <div style="background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 4px;">
+          <p><strong>调试信息：</strong></p>
+          <p>好友请求数量: {{ friendRequests.length }}</p>
+          <p>activeTab: {{ activeTab }}</p>
+          <p>loadingRequests: {{ loadingRequests }}</p>
+          <details>
+            <summary>点击展开原始数据</summary>
+            <pre style="font-size: 12px; overflow: auto;">{{ JSON.stringify(friendRequests, null, 2) }}</pre>
+          </details>
+        </div>
+
       <div v-if="loadingRequests" class="loading-container">
         <el-icon class="is-loading" :size="30"><Loading /></el-icon>
         <p>加载中...</p>
       </div>
 
       <div v-else-if="friendRequests.length === 0" class="empty-requests">
-        <el-empty description="暂无好友请求">
-          <template #image>
-            <div class="empty-icon">👋</div>
-          </template>
-        </el-empty>
+        <transition name="empty-fade" mode="out-in" appear>
+          <el-empty description="暂无好友请求" key="empty-friend">
+            <template #image>
+              <div class="empty-icon-animated">
+                <div class="empty-icon-circle friend-empty">👋</div>
+              </div>
+            </template>
+          </el-empty>
+        </transition>
       </div>
 
       <div v-else class="request-list">
-        <el-card
-          v-for="request in friendRequests"
-          :key="request.id"
-          class="request-card"
-          shadow="hover"
-        >
+        <transition-group name="list">
+          <el-card
+            v-for="request in friendRequests"
+            :key="request.id"
+            class="request-card"
+            shadow="hover"
+          >
           <div class="request-content">
             <div class="requester-info">
               <div class="requester-avatar">
@@ -218,55 +403,106 @@ const isImageAvatar = (avatar) => {
             </div>
           </div>
         </el-card>
+        </transition-group>
       </div>
     </div>
+    </transition>
 
     <!-- 消息列表 -->
-    <div v-else class="message-list">
-      <el-card
-        v-for="message in filteredMessages"
-        :key="message.id"
-        class="message-card"
-        :class="{ unread: !message.read }"
-      >
-        <div class="message-header">
-          <div class="message-type">
-            <el-tag
-              :type="
-                message.type === 'order'
-                  ? 'primary'
-                  : message.type === 'system'
-                    ? 'warning'
-                    : 'success'
-              "
-              size="small"
+    <transition name="tab-fade-slide" mode="out-in">
+      <div v-if="activeTab !== 'friend'" key="messages" class="message-list-container">
+      <!-- 操作工具栏 - 只在有选中消息或全部标记已读可用时显示 -->
+      <transition name="toolbar-slide">
+        <div v-if="selectedMessages.length > 0 || unreadCount > 0" class="message-toolbar">
+          <el-checkbox v-model="selectAll" @change="handleSelectAll">全选</el-checkbox>
+          <div class="toolbar-actions">
+            <el-button
+              type="danger"
+              :disabled="selectedMessages.length === 0"
+              @click="deleteSelected"
+              :icon="Delete"
             >
-              {{
-                message.type === 'order'
-                  ? '订单消息'
-                  : message.type === 'system'
-                    ? '系统通知'
-                    : '优惠活动'
-              }}
-            </el-tag>
+              批量删除 ({{ selectedMessages.length }})
+            </el-button>
+            <el-button type="primary" @click="markAllAsRead" :disabled="unreadCount === 0">
+              全部标记为已读
+            </el-button>
           </div>
-          <div class="message-time">{{ message.time }}</div>
         </div>
+      </transition>
 
-        <div class="message-content">
-          <h3 class="message-title">{{ message.title }}</h3>
-          <p class="message-text">{{ message.content }}</p>
-        </div>
+      <!-- 消息列表 -->
+      <div class="message-list">
+        <transition-group name="list">
+          <el-card
+            v-for="message in filteredMessages"
+            :key="message.id"
+            class="message-card"
+            :class="{ unread: !message.read, selected: isMessageSelected(message.id) }"
+          >
+          <div class="message-card-content">
+            <el-checkbox
+              :model-value="isMessageSelected(message.id)"
+              @change="handleMessageSelect(message, $event)"
+              class="message-checkbox"
+            ></el-checkbox>
 
-        <div class="message-actions">
-          <el-button type="text" size="small" @click="viewMessage(message)"> 查看详情 </el-button>
-          <el-button type="text" size="small" danger> 删除 </el-button>
-        </div>
-      </el-card>
+            <div class="message-body" @click="viewMessage(message)">
+              <div class="message-header">
+                <div class="message-type">
+                  <el-tag
+                    :type="
+                      message.type === 'order'
+                        ? 'primary'
+                        : message.type === 'system'
+                          ? 'warning'
+                          : 'success'
+                    "
+                    size="small"
+                  >
+                    {{
+                      message.type === 'order'
+                        ? '订单消息'
+                        : message.type === 'system'
+                          ? '系统通知'
+                          : '优惠活动'
+                    }}
+                  </el-tag>
+                </div>
+                <div class="message-time">{{ message.time }}</div>
+              </div>
 
-      <!-- 空数据提示 -->
-      <el-empty v-if="filteredMessages.length === 0" description="暂无消息"></el-empty>
+              <div class="message-content">
+                <h3 class="message-title">{{ message.title }}</h3>
+                <p class="message-text">{{ message.content }}</p>
+              </div>
+            </div>
+
+            <div class="message-actions">
+              <el-button type="text" size="small" @click.stop="viewMessage(message)"> 查看详情 </el-button>
+              <el-button type="text" size="small" danger @click.stop="deleteMessage(message.id)">
+                删除
+              </el-button>
+            </div>
+          </div>
+        </el-card>
+        </transition-group>
+
+        <!-- 空数据提示 -->
+        <transition name="empty-fade" mode="out-in">
+          <div v-if="filteredMessages.length === 0" class="empty-state-wrapper" key="empty">
+            <el-empty description="暂无消息">
+              <template #image>
+                <div class="empty-icon-animated">
+                  <div class="empty-icon-circle">📭</div>
+                </div>
+              </template>
+            </el-empty>
+          </div>
+        </transition>
+      </div>
     </div>
+    </transition>
 
     <!-- 消息详情模态框 -->
     <el-dialog
@@ -305,6 +541,79 @@ const isImageAvatar = (avatar) => {
 </template>
 
 <style scoped lang="less">
+// Tabs切换动画
+.tab-fade-slide-enter-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tab-fade-slide-leave-active {
+  transition: all 0.25s cubic-bezier(0.4, 0, 1, 1);
+}
+
+.tab-fade-slide-enter-from {
+  opacity: 0;
+  transform: translateY(20px) scale(0.98);
+}
+
+.tab-fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-15px) scale(0.98);
+}
+
+// 列表项动画
+.list-enter-active,
+.list-leave-active {
+  transition: all 0.3s ease;
+}
+
+.list-enter-from {
+  opacity: 0;
+  transform: translateX(-30px);
+}
+
+.list-leave-to {
+  opacity: 0;
+  transform: translateX(30px);
+}
+
+// 工具栏滑动动画
+.toolbar-slide-enter-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.toolbar-slide-leave-active {
+  transition: all 0.25s cubic-bezier(0.4, 0, 1, 1);
+}
+
+.toolbar-slide-enter-from {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.toolbar-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+// 空状态动画
+.empty-fade-enter-active {
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.empty-fade-leave-active {
+  transition: all 0.4s cubic-bezier(0.4, 0, 1, 1);
+}
+
+.empty-fade-enter-from {
+  opacity: 0;
+  transform: scale(0.8) translateY(20px);
+}
+
+.empty-fade-leave-to {
+  opacity: 0;
+  transform: scale(0.9) translateY(-10px);
+}
+
 .message-center-container {
   padding: 0 20px 20px 20px;
 
@@ -315,6 +624,19 @@ const isImageAvatar = (avatar) => {
 
   .message-tabs {
     margin-bottom: 20px;
+
+    .tab-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      .tab-badge {
+        :deep(.el-badge__content) {
+          background-color: #f56c6c;
+          border-color: #f56c6c;
+        }
+      }
+    }
 
     .friend-tab {
       display: flex;
@@ -347,10 +669,31 @@ const isImageAvatar = (avatar) => {
     }
 
     .empty-requests {
-      .empty-icon {
-        font-size: 80px;
-        margin-bottom: 20px;
-        opacity: 0.8;
+      padding: 60px 20px;
+
+      .empty-icon-animated {
+        .empty-icon-circle {
+          width: 120px;
+          height: 120px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 64px;
+          margin: 0 auto 20px;
+          background: linear-gradient(135deg, #f5f7fa 0%, #e4e7ed 100%);
+          border-radius: 50%;
+          animation: emptyFloat 3s ease-in-out infinite;
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+
+          &.friend-empty {
+            background: linear-gradient(135deg, #fff5f5 0%, #ffe4e4 100%);
+            animation: waveHand 2s ease-in-out infinite;
+          }
+        }
+      }
+
+      :deep(.el-empty__description) {
+        animation: emptyFadeIn 0.8s ease-out 0.3s both;
       }
     }
 
@@ -447,10 +790,78 @@ const isImageAvatar = (avatar) => {
   }
 
   // 消息列表样式
-  .message-list {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
+  .message-list-container {
+    .message-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 8px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+
+      // 使复选框文字在深色背景上更清晰
+      :deep(.el-checkbox__label) {
+        color: #ffffff;
+        font-weight: 500;
+      }
+
+      :deep(.el-checkbox__input.is-checked + .el-checkbox__label) {
+        color: #ffffff;
+      }
+
+      :deep(.el-checkbox__inner) {
+        background-color: rgba(255, 255, 255, 0.2);
+        border-color: rgba(255, 255, 255, 0.4);
+      }
+
+      :deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
+        background-color: #ffffff;
+        border-color: #ffffff;
+      }
+
+      :deep(.el-checkbox__input.is-checked .el-checkbox__inner::after) {
+        border-color: #667eea;
+      }
+
+      .toolbar-actions {
+        display: flex;
+        gap: 12px;
+      }
+    }
+
+    .message-list {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    // 空状态包装器
+    .empty-state-wrapper {
+      padding: 40px 20px;
+
+      .empty-icon-animated {
+        .empty-icon-circle {
+          width: 120px;
+          height: 120px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 64px;
+          margin: 0 auto 20px;
+          background: linear-gradient(135deg, #f5f7fa 0%, #e4e7ed 100%);
+          border-radius: 50%;
+          animation: emptyFloat 3s ease-in-out infinite;
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+        }
+      }
+
+      // 为空状态描述添加动画延迟
+      :deep(.el-empty__description) {
+        animation: emptyFadeIn 0.8s ease-out 0.3s both;
+      }
+    }
   }
 
   .message-card {
@@ -463,6 +874,33 @@ const isImageAvatar = (avatar) => {
 
     &.unread {
       border-left: 4px solid #409eff;
+    }
+
+    &.selected {
+      background-color: #ecf5ff;
+    }
+
+    .message-card-content {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+
+      .message-checkbox {
+        margin-top: 20px;
+        flex-shrink: 0;
+      }
+
+      .message-body {
+        flex: 1;
+        cursor: pointer;
+      }
+
+      .message-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        flex-shrink: 0;
+      }
     }
 
     .message-header {
@@ -493,10 +931,6 @@ const isImageAvatar = (avatar) => {
         margin: 0;
       }
     }
-
-    .message-actions {
-      text-align: right;
-    }
   }
 
   /* 消息详情模态框样式 */
@@ -518,6 +952,41 @@ const isImageAvatar = (avatar) => {
       color: #303133;
       line-height: 1.6;
     }
+  }
+}
+
+// 关键帧动画定义
+@keyframes emptyFloat {
+  0%,
+  100% {
+    transform: translateY(0px) scale(1);
+  }
+  50% {
+    transform: translateY(-10px) scale(1.02);
+  }
+}
+
+@keyframes waveHand {
+  0%,
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
+  25% {
+    transform: rotate(-10deg) scale(1.05);
+  }
+  75% {
+    transform: rotate(10deg) scale(1.05);
+  }
+}
+
+@keyframes emptyFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 </style>

@@ -1350,13 +1350,58 @@ const selectMerchant = async (merchant) => {
   productSelectDialogVisible.value = true
 }
 
-const addProductToCart = () => {
-  ElMessage.success('商品已加入购物车')
+// 群订单购物车
+const groupOrderCart = ref({})
+
+/**
+ * 添加商品到购物车
+ */
+const addProductToCart = ({ product, customization }) => {
+  if (!selectedConversation.value || !hasGroupOrder.value) {
+    ElMessage.warning('请先创建群订单')
+    return
+  }
+
+  const currentOrder = groupOrders.value[selectedConversation.value.id]
+  if (!currentOrder) return
+
+  // 构建购物车项
+  const cartItemId = `${product.id}_${Date.now()}`
+  const cartItem = {
+    id: cartItemId,
+    productId: product.id,
+    productName: product.name,
+    productPrice: product.price || 0,
+    productImage: product.image,
+    quantity: customization.quantity || 1,
+    optionalIngredients: customization.optionalIngredients || [],
+    remark: customization.remark || '',
+    // 计算小计
+    subtotal: (product.price || 0) * (customization.quantity || 1) +
+      (customization.optionalIngredients || []).reduce((sum, ing) => sum + (ing.price || 0), 0)
+  }
+
+  // 添加到购物车
+  if (!groupOrderCart.value[currentOrder.orderId]) {
+    groupOrderCart.value[currentOrder.orderId] = []
+  }
+  groupOrderCart.value[currentOrder.orderId].push(cartItem)
+
+  // 更新群订单的商品项
+  if (!currentOrder.orderItems) {
+    currentOrder.orderItems = []
+  }
+  currentOrder.orderItems.push(cartItem)
+
+  ElMessage.success(`已添加 ${customization.quantity || 1}份 ${product.name}`)
 }
 
+/**
+ * 确认商品选择
+ */
 const confirmProductSelection = () => {
-  ElMessage.success('商品已添加到群订单')
   productSelectDialogVisible.value = false
+  ElMessage.success('商品选择完成')
 }
 
 const changeMerchant = () => {
@@ -1552,9 +1597,49 @@ const fetchMerchantProducts = async (merchantId) => {
     if (response.code === '200' || response.data) {
       const menuData = response.data
       if (selectedMerchant.value) {
-        selectedMerchant.value.products = menuData?.products || menuData || []
+        // 处理商品数据，确保包含必选食材、可选食材等信息
+        const products = menuData?.products || menuData || []
+        selectedMerchant.value.products = products.map(product => ({
+          ...product,
+          // 确保基本字段存在
+          id: product.id || product.dishId || Date.now() + Math.random(),
+          name: product.name || product.dishName || '未命名商品',
+          price: product.price || 0,
+          description: product.description || product.desc || '',
+          image: product.image || product.img || product.dishImg || null,
+          category: product.category || '其他',
+          status: product.status !== undefined ? product.status : 'available',
+          // 处理必选食材
+          requiredIngredients: product.requiredIngredients || product.ingredients?.mandatory || [],
+          // 处理可选食材
+          optionalIngredients: (product.optionalIngredients || product.ingredients?.optional || []).map(ing => {
+            if (typeof ing === 'string') {
+              return {
+                id: `ing_${Date.now()}_${Math.random()}`,
+                name: ing,
+                price: 0,
+                description: ''
+              }
+            }
+            return {
+              id: ing.id || `ing_${Date.now()}_${Math.random()}`,
+              name: ing.name || ing.ingredientName || '',
+              price: ing.price || ing.extraPrice || 0,
+              description: ing.description || ing.desc || ''
+            }
+          }),
+          // 营养信息
+          nutritionInfo: product.nutritionInfo || {
+            calories: product.calories || product.calorie || 0,
+            protein: product.protein || 0,
+            fat: product.fat || 0,
+            carbohydrate: product.carbohydrate || 0
+          },
+          // 注意事项
+          allergyInfo: product.allergyInfo || product.allergens || [],
+          tips: product.tips || ''
+        }))
       }
-      // console.log(`🍽️ [Chat] 已加载商家菜品 - 共 ${selectedMerchant.value?.products?.length || 0} 个菜品`)
       ElMessage.success(`已加载 ${selectedMerchant.value?.products?.length || 0} 个菜品`)
     } else {
       ElMessage.error('获取菜品信息失败')
