@@ -117,9 +117,14 @@ public class WebSocketMessageService {
             if (sender != null) {
                 dto.put("senderName", sender.getNickname());
                 dto.put("username", sender.getNickname());
+                logger.info("📛 [WebSocket] 查询到发送者信息: userId={}, nickname={}",
+                    chatMsg.getFromId(), sender.getNickname());
+            } else {
+                logger.warn("⚠️ [WebSocket] 未找到发送者用户信息: userId={}", chatMsg.getFromId());
             }
         } catch (Exception e) {
-            logger.warn("查询发送者信息失败: {}", e.getMessage());
+            logger.error("❌ [WebSocket] 查询发送者信息失败: userId={}, error={}",
+                chatMsg.getFromId(), e.getMessage(), e);
         }
 
         // ⭐ 查询并添加会话信息

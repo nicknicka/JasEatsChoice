@@ -1,6 +1,8 @@
 package com.xx.jaseatschoicejava.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.StringUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xx.jaseatschoicejava.common.ResponseResult;
 import com.xx.jaseatschoicejava.dto.MenuWithDishStatusDTO;
 import com.xx.jaseatschoicejava.entity.Dish;
@@ -11,14 +13,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 菜品控制器
  */
 @Slf4j
 @RestController
-@RequestMapping("/dishes")
+@RequestMapping("/v1/dishes")
 public class DishController {
 
     @Autowired
@@ -34,7 +39,7 @@ public class DishController {
     public ResponseResult<?> getDishes(@RequestParam(required = false) String category,
                                       @RequestParam(required = false) String keyword,
                                       @RequestParam(required = false) String merchantId) {
-        log.info("获取菜品列表 {} ", merchantId);
+        log.info("获取菜品列表, merchantId: {}", merchantId);
         LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();
         if (category != null) {
             queryWrapper.eq(Dish::getCategory, category);
@@ -46,7 +51,135 @@ public class DishController {
             queryWrapper.eq(Dish::getMerchantId, merchantId);
         }
         List<Dish> dishes = dishService.list(queryWrapper);
-        return ResponseResult.success(dishes);
+
+        // 转换为包含食材数据的Map列表
+        List<Map<String, Object>> resultDishes = dishes.stream().map(dish -> {
+            Map<String, Object> dishMap = new HashMap<>();
+            dishMap.put("id", dish.getId());
+            dishMap.put("name", dish.getName());
+            dishMap.put("price", dish.getPrice());
+            dishMap.put("category", dish.getCategory());
+            dishMap.put("description", dish.getDescription());
+            dishMap.put("calorie", dish.getCalorie());
+            dishMap.put("image", dish.getImage());
+            dishMap.put("status", dish.getStatus());
+            dishMap.put("merchantId", dish.getMerchantId());
+
+            // 解析食材数据
+            Map<String, Object> ingredientsData = parseIngredients(dish.getIngredients());
+            dishMap.put("optionalIngredients", ingredientsData.get("optionalIngredients"));
+            dishMap.put("requiredIngredients", ingredientsData.get("requiredIngredients"));
+
+            return dishMap;
+        }).collect(java.util.stream.Collectors.toList());
+
+        return ResponseResult.success(resultDishes);
+    }
+
+    /**
+     * 根据商家ID获取菜品列表
+     */
+    @GetMapping("/merchant/{merchantId}")
+    public ResponseResult<?> getDishesByMerchant(@PathVariable String merchantId) {
+        log.info("根据商家ID获取菜品列表, merchantId: {}", merchantId);
+        LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Dish::getMerchantId, merchantId);
+        queryWrapper.eq(Dish::getStatus, true); // 只返回上架的菜品
+        List<Dish> dishes = dishService.list(queryWrapper);
+
+        // 转换为包含食材数据的Map列表
+        List<Map<String, Object>> resultDishes = dishes.stream().map(dish -> {
+            Map<String, Object> dishMap = new HashMap<>();
+            dishMap.put("id", dish.getId());
+            dishMap.put("name", dish.getName());
+            dishMap.put("price", dish.getPrice());
+            dishMap.put("category", dish.getCategory());
+            dishMap.put("description", dish.getDescription());
+            dishMap.put("calorie", dish.getCalorie());
+            dishMap.put("image", dish.getImage());
+            dishMap.put("status", dish.getStatus());
+            dishMap.put("merchantId", dish.getMerchantId());
+
+            // 解析食材数据
+            Map<String, Object> ingredientsData = parseIngredients(dish.getIngredients());
+            dishMap.put("optionalIngredients", ingredientsData.get("optionalIngredients"));
+            dishMap.put("requiredIngredients", ingredientsData.get("requiredIngredients"));
+
+            return dishMap;
+        }).collect(java.util.stream.Collectors.toList());
+
+        return ResponseResult.success(resultDishes);
+    }
+
+    /**
+     * 解析食材JSON字符串
+     * 支持多种JSON格式，返回前端需要的格式
+     */
+    private Map<String, Object> parseIngredients(String ingredientsJson) {
+        Map<String, Object> result = new HashMap<>();
+        List<Object> optionalIngredients = new ArrayList<>();
+        List<String> requiredIngredients = new ArrayList<>();
+
+        // 如果食材为空或null，返回空数组
+        if (ingredientsJson == null || ingredientsJson.trim().isEmpty()) {
+            result.put("optionalIngredients", optionalIngredients);
+            result.put("requiredIngredients", requiredIngredients);
+            return result;
+        }
+
+        try {
+            // 创建 ObjectMapper 实例
+            ObjectMapper objectMapper = new ObjectMapper();
+            // 尝试解析为Map
+            @SuppressWarnings("unchecked")
+            Map<String, Object> ingredientsMap = objectMapper.readValue(ingredientsJson, Map.class);
+
+            // 处理必选食材
+            Object required = ingredientsMap.get("requiredIngredients");
+            if (required == null) {
+                required = ingredientsMap.get("required");
+            }
+            if (required instanceof List) {
+                for (Object item : (List<?>) required) {
+                    if (item != null) {
+                        requiredIngredients.add(item.toString());
+                    }
+                }
+            }
+
+            // 处理可选食材
+            Object optional = ingredientsMap.get("optionalIngredients");
+            if (optional == null) {
+                optional = ingredientsMap.get("optional");
+            }
+            if (optional instanceof List) {
+                for (Object item : (List<?>) optional) {
+                    if (item != null) {
+                        // 如果是 Map，转换为可选食材对象
+                        if (item instanceof Map) {
+                            @SuppressWarnings("unchecked")
+                            Map<String, Object> ingredientMap = (Map<String, Object>) item;
+                            Map<String, Object> ingredient = new HashMap<>();
+                            ingredient.put("id", ingredientMap.get("id"));
+                            ingredient.put("name", ingredientMap.get("name"));
+                            ingredient.put("price", ingredientMap.get("price"));
+                            ingredient.put("selected", false);
+                            optionalIngredients.add(ingredient);
+                        } else {
+                            optionalIngredients.add(item);
+                        }
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            // JSON解析失败，返回空数组
+            log.error("解析食材JSON失败: {}", ingredientsJson, e);
+        }
+
+        result.put("optionalIngredients", optionalIngredients);
+        result.put("requiredIngredients", requiredIngredients);
+        return result;
     }
 
     /**

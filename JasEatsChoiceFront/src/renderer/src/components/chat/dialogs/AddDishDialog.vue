@@ -81,9 +81,54 @@
             <div class="dish-details">
               <div class="dish-name">{{ dish.name }}</div>
               <div class="dish-price">¥{{ dish.price?.toFixed(2) || '0.00' }}</div>
+
+              <!-- 食材组成 -->
+              <div class="dish-ingredients">
+                <!-- 必选食材 -->
+                <div
+                  class="ingredient-section required"
+                  v-if="dish.requiredIngredients && dish.requiredIngredients.length > 0"
+                >
+                  <span class="ingredient-title">必选:</span>
+                  <div class="ingredient-list">
+                    <span
+                      class="ingredient-item"
+                      v-for="ingredient in dish.requiredIngredients"
+                      :key="ingredient"
+                    >
+                      {{ ingredient }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- 可选食材 -->
+                <div
+                  class="ingredient-section optional"
+                  v-if="dish.optionalIngredients && dish.optionalIngredients.length > 0"
+                >
+                  <span class="ingredient-title">可选:</span>
+                  <div class="ingredient-list">
+                    <el-checkbox
+                      v-for="ingredient in dish.optionalIngredients"
+                      :key="ingredient.id || ingredient.name"
+                      v-model="ingredient.selected"
+                      size="small"
+                      class="ingredient-checkbox"
+                    >
+                      {{ ingredient.name }}
+                      <span class="ingredient-price" v-if="ingredient.price">
+                        (+¥{{ ingredient.price.toFixed(2) }})
+                      </span>
+                    </el-checkbox>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
           <div class="dish-actions">
+            <div class="dish-total-price" v-if="isDishSelected(dish.id)">
+              ¥{{ calculateDishPrice(dish).toFixed(2) }}
+            </div>
             <el-input-number
               v-model="dish.quantity"
               :min="1"
@@ -167,9 +212,20 @@ const remark = ref('')
 
 const ADD_DISH_PREFIX = ADD_DISH_CONFIG.ADD_DISH_PREFIX
 
+// 计算单个菜品价格(包含可选食材)
+const calculateDishPrice = (dish) => {
+  if (!dish) return 0
+  const basePrice = dish.price || 0
+  const optionalPrice = (dish.optionalIngredients || []).reduce((sum, ingredient) => {
+    return sum + (ingredient.selected ? (ingredient.price || 0) : 0)
+  }, 0)
+  return basePrice + optionalPrice
+}
+
 const totalAmount = computed(() => {
   return selectedDishes.value.reduce((sum, dish) => {
-    return sum + (dish.price || 0) * (dish.quantity || 1)
+    const dishPrice = calculateDishPrice(dish)
+    return sum + dishPrice * (dish.quantity || 1)
   }, 0)
 })
 
@@ -196,11 +252,23 @@ const handleClose = () => {
 
 const handleSubmit = async () => {
   try {
-    const dishItems = selectedDishes.value.map(dish => ({
-      dishId: dish.id,
-      quantity: dish.quantity,
-      customization: remark.value
-    }))
+    const dishItems = selectedDishes.value.map(dish => {
+      // 获取选中的可选食材
+      const selectedOptional = (dish.optionalIngredients || [])
+        .filter(ing => ing.selected)
+        .map(ing => ({
+          id: ing.id,
+          name: ing.name,
+          price: ing.price
+        }))
+
+      return {
+        dishId: dish.id,
+        quantity: dish.quantity,
+        customization: remark.value,
+        selectedOptionalIngredients: selectedOptional
+      }
+    })
 
     const data = {
       groupOrderId: props.groupOrderId,
@@ -318,6 +386,20 @@ const handleSubmit = async () => {
     flex: 1;
   }
 
+  .dish-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    .dish-total-price {
+      font-size: 18px;
+      color: #f56c6c;
+      font-weight: 600;
+      min-width: 80px;
+      text-align: right;
+    }
+  }
+
   .dish-name {
     font-size: 14px;
     font-weight: 500;
@@ -328,6 +410,68 @@ const handleSubmit = async () => {
     font-size: 16px;
     color: #f56c6c;
     font-weight: 500;
+  }
+
+  // 食材组成
+  .dish-ingredients {
+    margin-top: 8px;
+    padding: 8px;
+    background: #f5f7fa;
+    border-radius: 4px;
+    font-size: 12px;
+
+    .ingredient-section {
+      margin-bottom: 8px;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+
+      .ingredient-title {
+        display: inline-block;
+        font-weight: 600;
+        color: #606266;
+        margin-right: 6px;
+      }
+
+      .ingredient-list {
+        display: inline;
+
+        .ingredient-item {
+          display: inline-block;
+          background: linear-gradient(135deg, #409eff 0%, #53a8ff 100%);
+          color: #ffffff;
+          padding: 2px 8px;
+          border-radius: 4px;
+          font-size: 11px;
+          margin-right: 4px;
+          margin-bottom: 4px;
+          font-weight: 500;
+        }
+
+        .ingredient-checkbox {
+          display: inline-block;
+          margin-right: 8px;
+          margin-bottom: 4px;
+          padding: 2px 6px;
+          background: #ffffff;
+          border: 1px solid #dcdfe6;
+          border-radius: 4px;
+          font-size: 11px;
+
+          :deep(.el-checkbox__label) {
+            font-size: 11px;
+            padding-left: 4px;
+          }
+
+          .ingredient-price {
+            color: #f56c6c;
+            font-weight: 600;
+            font-size: 11px;
+          }
+        }
+      }
+    }
   }
 }
 

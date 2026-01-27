@@ -63,8 +63,8 @@ export const API_CONFIG = {
 
   // 菜品API端点
   dish: {
-    list: '/dishes', // 菜品列表接口
-    detail: '/dishes/' // 菜品详情接口
+    list: '/v1/dishes', // 菜品列表接口
+    detail: '/v1/dishes/' // 菜品详情接口
   },
 
   // 消息API端点

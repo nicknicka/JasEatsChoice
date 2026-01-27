@@ -421,12 +421,24 @@ const handleWebSocketMessage = (data) => {
         // 确定发送者显示名称
         let senderName = null
         if (fromId !== userId.value.toString()) {
+          // ⭐ 优先使用后端返回的发送者名称
           if (data.content.senderName || data.content.username || data.content.nickname) {
             senderName = data.content.senderName || data.content.username || data.content.nickname
+            console.log('📛 [WebSocket] 使用后端返回的发送者名称:', senderName)
           } else if (selectedConversation.value?.type === 'single') {
+            // 单聊：使用会话名称（对方的名字）
             senderName = selectedConversation.value.name
+            console.log('📛 [WebSocket] 单聊：使用会话名称:', senderName)
           } else if (selectedConversation.value?.type === 'group') {
-            senderName = fromId
+            // ⭐ 群聊：不应该直接使用 fromId，而是尝试查询或显示"未知用户"
+            console.warn('⚠️ [WebSocket] 群聊消息缺少发送者名称, fromId:', fromId)
+            console.warn('⚠️ [WebSocket] 后端返回的字段:', {
+              senderName: data.content.senderName,
+              username: data.content.username,
+              nickname: data.content.nickname,
+              fromId: fromId
+            })
+            senderName = fromId // 临时使用 fromId，但应该显示为"未知用户"或查询用户信息
           }
         }
 
@@ -607,10 +619,11 @@ const loadPendingReviewCount = async () => {
 
   try {
     const response = await api.get(`/v1/add-dish/review-list/${currentGroupOrderId.value}`)
-    const reviewList = response.data.data || []
+    const reviewList = response?.data?.data || []
     pendingReviewCount.value = reviewList.length
   } catch (error) {
     console.error('加载待审核数量失败:', error)
+    pendingReviewCount.value = 0
   }
 }
 
@@ -1830,11 +1843,25 @@ const fetchMerchantProducts = async (merchantId) => {
     ElMessage.info('正在加载菜品信息...')
     const response = await api.get(`/v1/menus/merchants/${merchantId}/menu`)
 
-    if (response.code === '200' || response.data) {
+    if (response.code === '200' && response.data) {
       const menuData = response.data
       if (selectedMerchant.value) {
+        // MenuController返回的是菜单数组,每个菜单包含dishes
+        // 需要合并所有菜单的菜品
+        let products = []
+
+        if (Array.isArray(menuData)) {
+          // 遍历所有菜单,提取菜品
+          menuData.forEach(menu => {
+            if (menu.dishes && Array.isArray(menu.dishes)) {
+              products = products.concat(menu.dishes)
+            }
+          })
+        }
+
+        console.log(`📦 [Chat] 从 ${menuData.length} 个菜单中加载了 ${products.length} 个菜品`)
+
         // 处理商品数据，确保包含必选食材、可选食材等信息
-        const products = menuData?.products || menuData || []
         selectedMerchant.value.products = products.map(product => ({
           ...product,
           // 确保基本字段存在
@@ -1846,22 +1873,22 @@ const fetchMerchantProducts = async (merchantId) => {
           category: product.category || '其他',
           status: product.status !== undefined ? product.status : 'available',
           // 处理必选食材
-          requiredIngredients: product.requiredIngredients || product.ingredients?.mandatory || [],
+          requiredIngredients: product.requiredIngredients || [],
           // 处理可选食材
-          optionalIngredients: (product.optionalIngredients || product.ingredients?.optional || []).map(ing => {
+          optionalIngredients: (product.optionalIngredients || []).map(ing => {
             if (typeof ing === 'string') {
               return {
                 id: `ing_${Date.now()}_${Math.random()}`,
                 name: ing,
                 price: 0,
-                description: ''
+                selected: false
               }
             }
             return {
               id: ing.id || `ing_${Date.now()}_${Math.random()}`,
               name: ing.name || ing.ingredientName || '',
               price: ing.price || ing.extraPrice || 0,
-              description: ing.description || ing.desc || ''
+              selected: ing.selected || false
             }
           }),
           // 营养信息
@@ -1878,6 +1905,7 @@ const fetchMerchantProducts = async (merchantId) => {
       }
       ElMessage.success(`已加载 ${selectedMerchant.value?.products?.length || 0} 个菜品`)
     } else {
+      console.error('❌ [Chat] 获取菜品失败:', response)
       ElMessage.error('获取菜品信息失败')
     }
   } catch (error) {
