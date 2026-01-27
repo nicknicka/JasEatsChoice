@@ -49,6 +49,9 @@ public class ChatController {
     @Autowired
     private WebSocketMessageService webSocketMessageService;
 
+    @Autowired
+    private com.xx.jaseatschoicejava.service.ContactService contactService;
+
     @Value("${file.upload.url-prefix}")
     private String fileUrlPrefix;
 
@@ -292,9 +295,41 @@ public class ChatController {
             // ========== ⭐ WebSocket实时推送消息给接收方 ==========
             try {
                 if ("group".equals(chatMsg.getSessionType())) {
-                    // 群聊：推送给群ID（暂时简化处理）
-                    webSocketMessageService.pushChatMessageToUser(chatMsg.getToId(), chatMsg);
-                    System.out.println("📡 [WebSocket] 群聊消息已推送给群组: " + chatMsg.getToId());
+                    // ⭐ 群聊：查询所有群成员，逐个推送给在线成员
+                    String groupId = chatMsg.getToId();
+                    System.out.println("📡 [WebSocket] 开始推送群聊消息，群组ID: " + groupId);
+
+                    // 查询群成员列表
+                    java.util.List<com.xx.jaseatschoicejava.entity.Contact> groupMembers =
+                        contactService.lambdaQuery()
+                            .eq(com.xx.jaseatschoicejava.entity.Contact::getTargetId, groupId)
+                            .eq(com.xx.jaseatschoicejava.entity.Contact::getRelationType, "group")
+                            .eq(com.xx.jaseatschoicejava.entity.Contact::getStatus, "normal")
+                            .list();
+
+                    System.out.println("📋 [WebSocket] 群成员数量: " + groupMembers.size());
+
+                    // 推送给每个在线的群成员（不包括发送者）
+                    int successCount = 0;
+                    for (com.xx.jaseatschoicejava.entity.Contact member : groupMembers) {
+                        String memberUserId = member.getUserId();
+
+                        // 不推送给发送者自己
+                        if (memberUserId.equals(chatMsg.getFromId())) {
+                            System.out.println("  ⊗ 跳过发送者: " + memberUserId);
+                            continue;
+                        }
+
+                        try {
+                            webSocketMessageService.pushChatMessageToUser(memberUserId, chatMsg);
+                            successCount++;
+                            System.out.println("  ✅ 推送给成员: " + memberUserId);
+                        } catch (Exception e) {
+                            System.err.println("  ❌ 推送给成员 " + memberUserId + " 失败: " + e.getMessage());
+                        }
+                    }
+
+                    System.out.println("📡 [WebSocket] 群聊消息推送完成，成功: " + successCount + "/" + groupMembers.size());
                 } else {
                     // 单聊：推送给接收方
                     webSocketMessageService.pushChatMessageToUser(chatMsg.getToId(), chatMsg);
@@ -302,6 +337,7 @@ public class ChatController {
                 }
             } catch (Exception e) {
                 System.err.println("❌ [WebSocket] 推送消息失败: " + e.getMessage());
+                e.printStackTrace();
                 // 推送失败不影响消息保存，只记录错误
             }
 

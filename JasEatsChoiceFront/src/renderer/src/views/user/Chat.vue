@@ -430,12 +430,13 @@ const handleWebSocketMessage = (data) => {
           }
         }
 
-        // ⭐ 确保消息有正确的 id 字段（优先使用 msgId）
+        // ⭐ 确保消息有正确的 id 和 msgId 字段（优先使用 msgId）
         const messageId = data.content.msgId || data.content.id || Date.now()
 
         const message = {
           ...data.content,
-          id: messageId,  // ⭐ 标准化为 id 字段
+          msgId: messageId,  // ⭐ 确保保留 msgId 字段
+          id: messageId,     // ⭐ 标准化为 id 字段（兼容）
           formattedTime: formatMessageTime(data.content.createTime || data.content.time),
           fromId,
           senderName
@@ -444,6 +445,7 @@ const handleWebSocketMessage = (data) => {
         console.log('💬 [WebSocket] 处理聊天消息:', {
           sessionId,
           messageId,
+          msgId: messageId,
           fromId,
           toId: data.content.toId,
           content: message.content?.substring(0, 50)
