@@ -156,41 +156,59 @@
 
           <p class="product-description">{{ product.description }}</p>
 
-          <!-- 必选食材列表 -->
-          <div v-if="getRequiredIngredients(product).length > 0" class="required-ingredients">
-            <el-tag
-              v-for="ingredient in getRequiredIngredients(product)"
-              :key="ingredient"
-              type="danger"
-              size="small"
-              effect="plain"
-              class="ingredient-tag"
-            >
-              <el-icon :size="12"><Star /></el-icon>
-              {{ ingredient }}
-            </el-tag>
-          </div>
-          <div v-else class="no-data-hint">
-            <span class="no-data-text">-</span>
-          </div>
-
-          <!-- 可选食材列表 -->
-          <div v-if="getOptionalIngredients(product).length > 0" class="optional-ingredients">
-            <div class="section-label">
-              <el-icon :size="14"><CirclePlus /></el-icon>
-              <span>可选食材（{{ getOptionalIngredients(product).length }}种）</span>
+          <!-- 食材信息 -->
+          <div class="product-ingredients">
+            <!-- 必选食材 -->
+            <div class="ingredients-section">
+              <div class="ingredients-title">
+                <el-icon :size="14" color="#f56c6c"><Star /></el-icon>
+                <span>必选食材</span>
+              </div>
+              <div v-if="getRequiredIngredients(product).length > 0" class="ingredients-tags">
+                <el-tag
+                  v-for="(ingredient, index) in getRequiredIngredients(product).slice(0, 5)"
+                  :key="index"
+                  type="danger"
+                  effect="plain"
+                  size="small"
+                  class="ingredient-tag"
+                >
+                  {{ ingredient }}
+                </el-tag>
+                <span v-if="getRequiredIngredients(product).length > 5" class="more-ingredients">
+                  +{{ getRequiredIngredients(product).length - 5 }}
+                </span>
+              </div>
+              <div v-else class="no-ingredients">
+                <span class="no-ingredients-text">暂无必选食材</span>
+              </div>
             </div>
-            <el-tag
-              v-for="ingredient in getOptionalIngredients(product)"
-              :key="ingredient"
-              type="info"
-              size="small"
-              effect="plain"
-              class="ingredient-tag"
-            >
-              <el-icon :size="12"><CirclePlus /></el-icon>
-              {{ ingredient }}
-            </el-tag>
+
+            <!-- 可选食材 -->
+            <div class="ingredients-section">
+              <div class="ingredients-title">
+                <el-icon :size="14" color="#409eff"><CirclePlus /></el-icon>
+                <span>可选食材</span>
+              </div>
+              <div v-if="getOptionalIngredients(product).length > 0" class="ingredients-tags">
+                <el-tag
+                  v-for="(ingredient, index) in getOptionalIngredients(product).slice(0, 5)"
+                  :key="index"
+                  type="primary"
+                  effect="plain"
+                  size="small"
+                  class="ingredient-tag"
+                >
+                  {{ ingredient }}
+                </el-tag>
+                <span v-if="getOptionalIngredients(product).length > 5" class="more-ingredients">
+                  +{{ getOptionalIngredients(product).length - 5 }}
+                </span>
+              </div>
+              <div v-else class="no-ingredients">
+                <span class="no-ingredients-text">暂无可选食材</span>
+              </div>
+            </div>
           </div>
 
           <!-- 已选配置摘要 -->
@@ -955,7 +973,7 @@ watch(visible, (newVal) => {
       .product-description {
         font-size: 13px;
         color: #909399;
-        margin: 0 0 8px 0;
+        margin: 0 0 12px 0;
         line-height: 1.6;
         display: -webkit-box;
         -webkit-line-clamp: 2;
@@ -963,66 +981,64 @@ watch(visible, (newVal) => {
         overflow: hidden;
       }
 
-      .required-ingredients {
-        display: flex;
-        gap: 6px;
-        flex-wrap: wrap;
-        margin-bottom: 8px;
+      .product-ingredients {
+        margin-bottom: 12px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #f0f0f0;
 
-        .ingredient-tag {
-          font-size: 12px;
-          padding: 2px 8px;
-          height: auto;
-          display: inline-flex;
-          align-items: center;
+        .ingredients-section {
+          margin-bottom: 12px;
 
-          .el-icon {
-            display: inline-flex;
-            align-items: center;
-            vertical-align: middle;
-            margin-right: 4px;
+          &:last-child {
+            margin-bottom: 0;
           }
-        }
-      }
 
-      .optional-ingredients {
-        margin-bottom: 8px;
-
-        .section-label {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          font-size: 12px;
-          color: #606266;
-          margin-bottom: 6px;
-          font-weight: 500;
-        }
-
-        .ingredient-tag {
-          font-size: 12px;
-          padding: 2px 8px;
-          height: auto;
-          display: inline-flex;
-          align-items: center;
-          margin-right: 6px;
-          margin-bottom: 4px;
-
-          .el-icon {
-            display: inline-flex;
+          .ingredients-title {
+            display: flex;
             align-items: center;
-            vertical-align: middle;
-            margin-right: 4px;
+            gap: 6px;
+            margin-bottom: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #4a5568;
           }
-        }
-      }
 
-      .no-data-hint {
-        margin-bottom: 8px;
-        min-height: 24px;
+          .ingredients-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
 
-        .no-data-text {
-          font-size: 12px;
-          color: #c0c4cc;
+            .ingredient-tag {
+              border-radius: 6px;
+              font-size: 12px;
+              padding: 2px 8px;
+              height: 24px;
+              line-height: 20px;
+            }
+
+            .more-ingredients {
+              font-size: 12px;
+              color: #909399;
+              font-weight: 500;
+              padding: 2px 6px;
+              background-color: #f5f7fa;
+              border-radius: 6px;
+            }
+          }
+
+          .no-ingredients {
+            padding: 8px 12px;
+            background-color: #fafafa;
+            border-radius: 6px;
+            border: 1px dashed #e4e7ed;
+
+            .no-ingredients-text {
+              font-size: 12px;
+              color: #909399;
+              font-weight: 400;
+            }
+          }
         }
       }
 
@@ -1040,7 +1056,58 @@ watch(visible, (newVal) => {
       gap: 8px;
 
       .action-btn {
-        min-width: 90px;
+        width: 100px;
+        height: 32px;
+        padding: 0 12px !important;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        box-sizing: border-box;
+        border-radius: 4px;
+        line-height: 32px;
+
+        // 重置所有按钮类型的默认样式差异
+        &.el-button {
+          margin: 0;
+          vertical-align: top;
+        }
+
+        :deep(.el-icon) {
+          font-size: 14px;
+          width: 14px;
+          height: 14px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          vertical-align: middle;
+        }
+
+        :deep(span) {
+          font-size: 14px;
+          line-height: 1;
+          display: inline-block;
+          vertical-align: middle;
+        }
+
+        // 确保所有按钮的边框和内边距一致
+        &.el-button--default,
+        &.el-button--primary,
+        &.el-button--success,
+        &.el-button--warning {
+          border-width: 1px;
+          box-sizing: border-box;
+        }
+
+        // 深度选择器重置 Element Plus 内部样式
+        :deep(.el-button__content) {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 4px;
+          width: 100%;
+          height: 100%;
+        }
       }
     }
   }

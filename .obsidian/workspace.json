@@ -167,9 +167,9 @@
   },
   "active": "25380c94f56f550b",
   "lastOpenFiles": [
+    "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/controller/DishController.class",
     "JasEatsChoiceJava/src/main/resources/db/migration/V2026012701__add_stock_to_dish.sql",
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/netty/NettyChatHandler.class",
-    "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/controller/DishController.class",
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/websocket/WebSocketMessageService.class",
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/websocket",
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/controller/ChatController.class",

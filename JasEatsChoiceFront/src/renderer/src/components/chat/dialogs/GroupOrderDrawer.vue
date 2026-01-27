@@ -468,6 +468,26 @@ const hasPendingPayments = computed(() => {
         width: 100%;
         font-weight: 500;
         position: relative;
+        height: 40px;
+        margin: 0;
+        border: 1px solid;
+
+        // 重置默认样式
+        :deep(.el-button__content) {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          width: 100%;
+          height: 100%;
+        }
+
+        :deep(.el-icon) {
+          font-size: 16px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
 
         .review-badge,
         .payment-badge {
@@ -480,7 +500,7 @@ const hasPendingPayments = computed(() => {
       .add-dish-btn {
         background: white;
         color: #e6a23c;
-        border: 1px solid #e6a23c;
+        border-color: #e6a23c;
 
         &:hover {
           background: #fff7e6;
@@ -489,13 +509,27 @@ const hasPendingPayments = computed(() => {
         }
       }
 
-      .review-btn,
-      .payment-btn {
+      .review-btn {
         background: white;
-        border: 1px solid #409eff;
+        color: #409eff;
+        border-color: #409eff;
+        font-weight: 600;
 
         &:hover {
           background: #ecf5ff;
+          color: #409eff;
+          border-color: #409eff;
+        }
+      }
+
+      .payment-btn {
+        background: white;
+        color: #67c23a;
+        border-color: #67c23a;
+
+        &:hover {
+          background: #f0f9ff;
+          color: #67c23a;
         }
       }
     }

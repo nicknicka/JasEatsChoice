@@ -56,15 +56,12 @@
       </div>
 
       <!-- 必选食材 -->
-      <div
-        v-if="product.requiredIngredients && product.requiredIngredients.length > 0"
-        class="detail-section"
-      >
+      <div class="detail-section">
         <div class="section-title">
           <el-icon :size="18" color="#f56c6c"><Star /></el-icon>
           <span>必选食材</span>
         </div>
-        <div class="ingredients-list">
+        <div v-if="product.requiredIngredients && product.requiredIngredients.length > 0" class="ingredients-list">
           <el-tag
             v-for="(ingredient, index) in product.requiredIngredients"
             :key="index"
@@ -77,19 +74,19 @@
             {{ ingredient }}
           </el-tag>
         </div>
-        <p class="section-tip">以上食材为商品必配，无法取消</p>
+        <div v-else class="no-ingredients-hint">
+          <span class="no-ingredients-text">暂无必选食材</span>
+        </div>
+        <p v-if="product.requiredIngredients && product.requiredIngredients.length > 0" class="section-tip">以上食材为商品必配，无法取消</p>
       </div>
 
       <!-- 可选食材 -->
-      <div
-        v-if="product.optionalIngredients && product.optionalIngredients.length > 0"
-        class="detail-section"
-      >
+      <div class="detail-section">
         <div class="section-title">
           <el-icon :size="18" color="#409eff"><CirclePlus /></el-icon>
           <span>可选食材</span>
         </div>
-        <div class="optional-ingredients-list">
+        <div v-if="product.optionalIngredients && product.optionalIngredients.length > 0" class="optional-ingredients-list">
           <el-tag
             v-for="ingredient in product.optionalIngredients"
             :key="ingredient.id || ingredient.name"
@@ -105,7 +102,10 @@
             </span>
           </el-tag>
         </div>
-        <p class="section-tip">可根据个人喜好添加，额外收费</p>
+        <div v-else class="no-ingredients-hint">
+          <span class="no-ingredients-text">暂无可选食材</span>
+        </div>
+        <p v-if="product.optionalIngredients && product.optionalIngredients.length > 0" class="section-tip">可根据个人喜好添加，额外收费</p>
       </div>
 
       <!-- 营养信息 -->
@@ -351,6 +351,21 @@ watch(visible, (newVal) => {
         align-items: center;
         vertical-align: middle;
       }
+    }
+  }
+
+  .no-ingredients-hint {
+    padding: 16px 20px;
+    background-color: #fafafa;
+    border-radius: 8px;
+    border: 1px dashed #e4e7ed;
+    text-align: center;
+    margin-bottom: 8px;
+
+    .no-ingredients-text {
+      font-size: 14px;
+      color: #909399;
+      font-weight: 400;
     }
   }
 
