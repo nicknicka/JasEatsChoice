@@ -106,8 +106,9 @@ public class NettyChatHandler extends SimpleChannelInboundHandler<TextWebSocketF
             // 解析JSON消息
             com.fasterxml.jackson.databind.JsonNode msgNode = objectMapper.readTree(message);
 
-            // 获取消息类型
-            String msgType = msgNode.has("msgType") ? msgNode.get("msgType").asText() : "";
+            // 获取消息类型（兼容 type 和 msgType 两种字段）
+            String msgType = msgNode.has("msgType") ? msgNode.get("msgType").asText() :
+                            msgNode.has("type") ? msgNode.get("type").asText() : "";
             // 获取发送方
             String fromId = msgNode.has("fromId") ? msgNode.get("fromId").asText() : "";
             // 获取接收方
@@ -134,6 +135,10 @@ public class NettyChatHandler extends SimpleChannelInboundHandler<TextWebSocketF
 
             // 根据消息类型处理
             switch (msgType) {
+                case "heartbeat":
+                    // 心跳消息，直接忽略，不需要回复
+                    logger.debug("收到心跳消息 from: {}", fromId);
+                    break;
                 case "single":
                     // 单聊，发送给指定用户
                     sendMessageToUser(toId, objectMapper.writeValueAsString(responseMsg));

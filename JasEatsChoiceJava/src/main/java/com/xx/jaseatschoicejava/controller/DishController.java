@@ -134,10 +134,13 @@ public class DishController {
             @SuppressWarnings("unchecked")
             Map<String, Object> ingredientsMap = objectMapper.readValue(ingredientsJson, Map.class);
 
-            // 处理必选食材
+            // 处理必选食材（支持多种字段名）
             Object required = ingredientsMap.get("requiredIngredients");
             if (required == null) {
                 required = ingredientsMap.get("required");
+            }
+            if (required == null) {
+                required = ingredientsMap.get("mandatory"); // 前端使用的字段名
             }
             if (required instanceof List) {
                 for (Object item : (List<?>) required) {
@@ -238,7 +241,7 @@ public class DishController {
         }
         dish.setStatus(status);
         boolean updated = dishService.updateById(dish);
-        log.info("更新菜品状态 {} {}", dishId, status);
+            log.info("更新菜品状态 {} {}", dishId, status);
         log.info("updated {} ", updated);
         if (updated) {
             // 当菜品下架时，同步更新该菜品在所有菜单中的状态为下架

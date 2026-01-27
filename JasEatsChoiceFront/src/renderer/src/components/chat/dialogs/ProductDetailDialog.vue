@@ -73,6 +73,7 @@
             size="large"
             class="ingredient-tag"
           >
+            <el-icon :size="14"><Star /></el-icon>
             {{ ingredient }}
           </el-tag>
         </div>
@@ -89,21 +90,20 @@
           <span>可选食材</span>
         </div>
         <div class="optional-ingredients-list">
-          <div
+          <el-tag
             v-for="ingredient in product.optionalIngredients"
             :key="ingredient.id || ingredient.name"
-            class="optional-ingredient-item"
+            type="primary"
+            effect="plain"
+            size="large"
+            class="ingredient-tag"
           >
-            <div class="ingredient-info">
-              <span class="ingredient-name">{{ ingredient.name }}</span>
-              <span v-if="ingredient.price" class="ingredient-price">
-                +¥{{ ingredient.price.toFixed(2) }}
-              </span>
-            </div>
-            <p v-if="ingredient.description" class="ingredient-description">
-              {{ ingredient.description }}
-            </p>
-          </div>
+            <el-icon :size="14"><CirclePlus /></el-icon>
+            {{ ingredient.name }}
+            <span v-if="ingredient.price" class="ingredient-price">
+              +¥{{ ingredient.price.toFixed(2) }}
+            </span>
+          </el-tag>
         </div>
         <p class="section-tip">可根据个人喜好添加，额外收费</p>
       </div>
@@ -341,6 +341,16 @@ watch(visible, (newVal) => {
     .ingredient-tag {
       padding: 8px 16px;
       font-size: 14px;
+      min-height: 32px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+
+      .el-icon {
+        display: inline-flex;
+        align-items: center;
+        vertical-align: middle;
+      }
     }
   }
 
@@ -352,47 +362,29 @@ watch(visible, (newVal) => {
   }
 
   .optional-ingredients-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    display: flex;
     gap: 12px;
+    flex-wrap: wrap;
     margin-bottom: 8px;
 
-    .optional-ingredient-item {
-      padding: 12px;
-      background: #f5f7fa;
-      border-radius: 8px;
-      border: 1px solid #e4e7ed;
-      transition: all 0.3s;
+    .ingredient-tag {
+      padding: 8px 16px;
+      font-size: 14px;
+      min-height: 32px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
 
-      &:hover {
-        border-color: #409eff;
-        box-shadow: 0 2px 8px rgba(64, 158, 255, 0.2);
-      }
-
-      .ingredient-info {
-        display: flex;
-        justify-content: space-between;
+      .el-icon {
+        display: inline-flex;
         align-items: center;
-        margin-bottom: 4px;
-
-        .ingredient-name {
-          font-size: 14px;
-          font-weight: 500;
-          color: #303133;
-        }
-
-        .ingredient-price {
-          font-size: 14px;
-          font-weight: 600;
-          color: #f56c6c;
-        }
+        vertical-align: middle;
       }
 
-      .ingredient-description {
-        font-size: 12px;
-        color: #909399;
-        margin: 0;
-        line-height: 1.4;
+      .ingredient-price {
+        margin-left: 4px;
+        font-weight: 600;
+        opacity: 0.9;
       }
     }
   }

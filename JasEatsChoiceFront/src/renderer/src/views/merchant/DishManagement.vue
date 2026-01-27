@@ -16,7 +16,9 @@ import {
   SwitchButton as StatusIcon,
   List as IngredientsIcon,
   Document as DetailsIcon,
-  Warning as FlameIcon
+  Warning as FlameIcon,
+  Star as StarIcon,
+  CirclePlus as CirclePlusIcon
 } from '@element-plus/icons-vue'
 
 // 创建路由实例
@@ -63,7 +65,6 @@ onMounted(() => {
       }
     })
     .then((response) => {
-      console.log('菜品响应数据:', response)
       if (response.data && response.data.code === '200') {
         // 预处理菜品数据，确保所有菜品都有有效的状态和时间格式
         const processedDishes = response.data.data.map((dish) => {
@@ -94,6 +95,17 @@ onMounted(() => {
             dish.price = dish.price.toString()
           }
 
+          // 将布尔值的 status 转换为显示用的字符串
+          if (typeof dish.status === 'boolean') {
+            // 保持布尔值不变，用于判断
+            dish.statusBoolean = dish.status
+            dish.statusString = dish.status ? 'online' : 'offline'
+          } else {
+            // 如果已经是字符串，保持不变
+            dish.statusBoolean = dish.status === 'online'
+            dish.statusString = dish.status || 'offline'
+          }
+
           // 处理库存空值情况
           if (dish.stock == null || dish.stock === '') {
             dish.stock = 0
@@ -105,7 +117,8 @@ onMounted(() => {
             dish.category = `分类${dish.category.replace('category_', '')}`
           }
 
-          // 将食材 JSON 字符串解析为对象
+          // 处理食材数据 - 支持多种格式
+          // 优先使用 ingredients 字段，如果没有则从 optionalIngredients 和 requiredIngredients 构建
           if (dish.ingredients && typeof dish.ingredients === 'string') {
             try {
               dish.ingredients = JSON.parse(dish.ingredients)
@@ -113,6 +126,30 @@ onMounted(() => {
               console.error('解析食材信息失败:', error)
               dish.ingredients = { mandatory: [], optional: [] }
             }
+          } else if (!dish.ingredients || (typeof dish.ingredients === 'object' && !dish.ingredients.mandatory && !dish.ingredients.optional)) {
+            // 如果没有 ingredients 对象，或者 ingredients 对象中没有 mandatory 和 optional 字段
+            // 尝试从 optionalIngredients 和 requiredIngredients 构建兼容格式
+            const mandatory = dish.requiredIngredients || []
+            const optional = dish.optionalIngredients || []
+
+            dish.ingredients = {
+              mandatory: Array.isArray(mandatory) ? mandatory : [],
+              optional: Array.isArray(optional) ? optional.map(item => {
+                // 处理可选食材可能是字符串或对象的情况
+                return typeof item === 'string' ? item : (item.name || String(item))
+              }) : []
+            }
+          }
+
+          // 确保 ingredients 有正确的结构
+          if (!dish.ingredients) {
+            dish.ingredients = { mandatory: [], optional: [] }
+          }
+          if (!dish.ingredients.mandatory) {
+            dish.ingredients.mandatory = []
+          }
+          if (!dish.ingredients.optional) {
+            dish.ingredients.optional = []
           }
 
           // 将后端的 calorie 字段映射到前端的 totalCalories 字段
@@ -175,24 +212,81 @@ const saveEditedDish = () => {
 
   // 准备请求数据，将 ingredients 对象序列化为 JSON 字符串，并将 totalCalories 映射为 calorie
   const requestData = {
-    ...editDishForm.value,
+    id: editDishForm.value.id,
+    merchantId: editDishForm.value.merchantId,
+    name: editDishForm.value.name,
+    price: editDishForm.value.price,
+    category: editDishForm.value.category,
+    description: editDishForm.value.description,
+    stock: editDishForm.value.stock || 0,
     calorie: editDishForm.value.totalCalories,
-    ingredients: JSON.stringify(editDishForm.value.ingredients)
+    image: editDishForm.value.image,
+    ingredients: JSON.stringify(editDishForm.value.ingredients),
+    status: editDishForm.value.statusString === 'online' // 将 statusString 转换为布尔值
   }
-  // 删除不需要的 totalCalories 字段
-  delete requestData.totalCalories
 
   // 发送后端请求
   axios
     .put(`${API_CONFIG.baseURL}${API_CONFIG.dish.detail}${requestData.id}`, requestData)
     .then((response) => {
-      if (response.status === 200 && response.data && response.data.success) {
+      console.log('编辑菜品响应:', response)
+      if (response.data && response.data.code === '200') {
         // 从后端返回中获取更新后的菜品数据
-        const updatedDish = response.data.data
+        let updatedDish = response.data.data
+
+        // 处理后端返回的食材数据格式
+        if (updatedDish) {
+          // 处理 status 字段
+          if (typeof updatedDish.status === 'boolean') {
+            updatedDish.statusBoolean = updatedDish.status
+            updatedDish.statusString = updatedDish.status ? 'online' : 'offline'
+          }
+
+          // 如果 ingredients 是字符串，解析它
+          if (typeof updatedDish.ingredients === 'string') {
+            try {
+              updatedDish.ingredients = JSON.parse(updatedDish.ingredients)
+            } catch (error) {
+              console.error('解析食材信息失败:', error)
+              updatedDish.ingredients = { mandatory: [], optional: [] }
+            }
+          }
+
+          // 如果后端返回的是 optionalIngredients 和 requiredIngredients，转换为 ingredients 格式
+          if (!updatedDish.ingredients || (typeof updatedDish.ingredients === 'object' && !updatedDish.ingredients.mandatory && !updatedDish.ingredients.optional)) {
+            const mandatory = updatedDish.requiredIngredients || []
+            const optional = updatedDish.optionalIngredients || []
+
+            updatedDish.ingredients = {
+              mandatory: Array.isArray(mandatory) ? mandatory : [],
+              optional: Array.isArray(optional) ? optional.map(item => {
+                return typeof item === 'string' ? item : (item.name || String(item))
+              }) : []
+            }
+          }
+
+          // 确保 ingredients 有正确的结构
+          if (!updatedDish.ingredients) {
+            updatedDish.ingredients = { mandatory: [], optional: [] }
+          }
+          if (!updatedDish.ingredients.mandatory) {
+            updatedDish.ingredients.mandatory = []
+          }
+          if (!updatedDish.ingredients.optional) {
+            updatedDish.ingredients.optional = []
+          }
+
+          // 映射 calorie 字段
+          if (updatedDish.calorie !== undefined) {
+            updatedDish.totalCalories = updatedDish.calorie
+          }
+        }
 
         // 更新本地菜品列表
         const index = dishesList.value.findIndex((item) => item.id === updatedDish.id)
         if (index !== -1) {
+          console.log('更新前菜品数据:', dishesList.value[index])
+          console.log('更新后菜品数据:', updatedDish)
           dishesList.value[index] = updatedDish
           updateFilter()
           editDishDialogVisible.value = false
@@ -210,9 +304,9 @@ const saveEditedDish = () => {
 
 // 切换菜品状态（上架/下架）
 const toggleDishStatus = (dish) => {
-  const newStatus = dish.status === 'online' ? 'offline' : 'online'
-  const statusText = newStatus === 'online' ? '上架' : '下架'
-  const statusBoolean = newStatus === 'online' ? true : false
+  const currentStatus = dish.statusBoolean
+  const newStatus = !currentStatus
+  const statusText = newStatus ? '上架' : '下架'
 
   ElMessageBox.confirm(`确定要将该菜品${statusText}吗？`, '提示', {
     confirmButtonText: '确定',
@@ -222,17 +316,18 @@ const toggleDishStatus = (dish) => {
     .then(() => {
       // 调用后端API更新菜品状态
       axios
-        .put(`${API_CONFIG.baseURL}/dishes/${dish.id}/status`, {
-          status: statusBoolean
+        .put(`${API_CONFIG.baseURL}${API_CONFIG.dish.status}/${dish.id}/status`, {
+          status: newStatus
         })
         .then((response) => {
           console.log('更改菜品状态响应:', response)
           if (response.data && response.data.code === '200') {
-            dish.status = newStatus
+            dish.statusBoolean = newStatus
+            dish.statusString = newStatus ? 'online' : 'offline'
             ElMessage.success(`菜品已${statusText}`)
 
             // 当菜品下架时，同步更新该菜品在所有菜单中的状态为下架
-            if (!statusBoolean) {
+            if (!newStatus) {
               axios
                 .get(`${API_CONFIG.baseURL}/v1/menus/dishes/${dish.id}/menus`)
                 .then((menuResponse) => {
@@ -450,7 +545,7 @@ const batchOperation = (operation) => {
 
         // 调用后端API批量更新菜品状态
         axios
-          .put(`${API_CONFIG.baseURL}/dishes/batch/status`, {
+          .put(`${API_CONFIG.baseURL}${API_CONFIG.dish.batchStatus}`, {
             dishIds: dishIds,
             status: statusBoolean
           })
@@ -458,7 +553,8 @@ const batchOperation = (operation) => {
             if (response.data && response.data.code === '200') {
               // 更新前端状态
               selectedDishes.value.forEach((dish) => {
-                dish.status = operation
+                dish.statusBoolean = statusBoolean
+                dish.statusString = statusBoolean ? 'online' : 'offline'
               })
               updateFilter()
               selectedDishes.value = []
@@ -502,6 +598,7 @@ const newDish = ref({
   price: 0,
   category: '主食',
   stock: 100,
+  status: 'online', // 默认上架
   ingredients: {
     mandatory: [], // 必选食材改为字符串数组
     optional: [] // 可选食材改为字符串数组
@@ -621,19 +718,18 @@ const editRemoveOptionalIngredient = (index) => {
 // 打开编辑菜品对话框
 const openEditDishDialog = (dish) => {
   // 复制菜品数据到编辑表单，确保包含食材信息且为数组
-  // 排除status字段，状态由菜单管理
-  const { status, ...dishWithoutStatus } = dish
-
   editDishForm.value = JSON.parse(
     JSON.stringify({
-      ...dishWithoutStatus,
+      ...dish,
       ingredients: {
         mandatory: Array.isArray(dish.ingredients?.mandatory) ? dish.ingredients.mandatory : [],
         optional: Array.isArray(dish.ingredients?.optional) ? dish.ingredients.optional : []
       },
-      totalCalories: dish.totalCalories || 0
+      totalCalories: dish.totalCalories || 0,
+      statusString: dish.statusString || (dish.statusBoolean ? 'online' : 'offline')
     })
   )
+
   editDishDialogVisible.value = true
 }
 
@@ -670,18 +766,71 @@ const saveNewDish = () => {
     name: newDish.value.name,
     price: newDish.value.price,
     category: newDish.value.category,
-    stock: newDish.value.stock,
+    stock: newDish.value.stock || 100,
     ingredients: JSON.stringify(newDish.value.ingredients),
     calorie: newDish.value.totalCalories,
-    merchantId
+    merchantId,
+    description: newDish.value.description,
+    image: newDish.value.image,
+    status: newDish.value.status === 'online' || newDish.value.status === true // 转换为布尔值，默认上架
   }
 
   // 发送后端请求
   axios
     .post(`${API_CONFIG.baseURL}${API_CONFIG.dish.list}`, requestData)
     .then((response) => {
-      if (response.status === 200 && response.data && response.data.success) {
-        const dishData = response.data.data // 获取后端返回的完整菜品数据
+      console.log('新增菜品响应:', response)
+      if (response.data && response.data.code === '200') {
+        let dishData = response.data.data // 获取后端返回的完整菜品数据
+
+        // 处理后端返回的食材数据格式
+        if (dishData) {
+          // 处理 status 字段
+          if (typeof dishData.status === 'boolean') {
+            dishData.statusBoolean = dishData.status
+            dishData.statusString = dishData.status ? 'online' : 'offline'
+          }
+
+          // 如果 ingredients 是字符串，解析它
+          if (typeof dishData.ingredients === 'string') {
+            try {
+              dishData.ingredients = JSON.parse(dishData.ingredients)
+            } catch (error) {
+              console.error('解析食材信息失败:', error)
+              dishData.ingredients = { mandatory: [], optional: [] }
+            }
+          }
+
+          // 如果后端返回的是 optionalIngredients 和 requiredIngredients，转换为 ingredients 格式
+          if (!dishData.ingredients || (typeof dishData.ingredients === 'object' && !dishData.ingredients.mandatory && !dishData.ingredients.optional)) {
+            const mandatory = dishData.requiredIngredients || []
+            const optional = dishData.optionalIngredients || []
+
+            dishData.ingredients = {
+              mandatory: Array.isArray(mandatory) ? mandatory : [],
+              optional: Array.isArray(optional) ? optional.map(item => {
+                return typeof item === 'string' ? item : (item.name || String(item))
+              }) : []
+            }
+          }
+
+          // 确保 ingredients 有正确的结构
+          if (!dishData.ingredients) {
+            dishData.ingredients = { mandatory: [], optional: [] }
+          }
+          if (!dishData.ingredients.mandatory) {
+            dishData.ingredients.mandatory = []
+          }
+          if (!dishData.ingredients.optional) {
+            dishData.ingredients.optional = []
+          }
+
+          // 映射 calorie 字段
+          if (dishData.calorie !== undefined) {
+            dishData.totalCalories = dishData.calorie
+          }
+        }
+
         dishesList.value.push(dishData)
         updateFilter()
         addDishDialogVisible.value = false
@@ -813,11 +962,11 @@ const getDishCheckedState = (dish) => {
               <div class="dish-name">
                 <span class="name">{{ dish.name }}</span>
                 <el-tag
-                  :type="dish.status ? 'success' : 'danger'"
+                  :type="dish.statusBoolean ? 'success' : 'danger'"
                   size="small"
                   style="margin-left: 8px; font-size: 12px"
                 >
-                  {{ dish.status ? '上架' : '下架' }}
+                  {{ dish.statusBoolean ? '上架' : '下架' }}
                 </el-tag>
               </div>
 
@@ -832,11 +981,66 @@ const getDishCheckedState = (dish) => {
                 </div>
                 <div class="stat-item">
                   <span class="stat-label">📦 库存：</span>
-                  <span class="stat-value">{{ dish.stock }}</span>
+                  <span class="stat-value">{{ dish.stock || 0 }}</span>
                 </div>
                 <div class="stat-item">
                   <span class="stat-label">⏰ 更新时间：</span>
                   <span class="stat-value">{{ dish.updateTime }}</span>
+                </div>
+              </div>
+
+              <!-- 食材信息 -->
+              <div v-if="dish.ingredients" class="dish-ingredients">
+                <!-- 必选食材 -->
+                <div class="ingredients-section">
+                  <div class="ingredients-title">
+                    <el-icon :size="14" color="#f56c6c"><StarIcon /></el-icon>
+                    <span>必选食材</span>
+                  </div>
+                  <div v-if="dish.ingredients.mandatory && dish.ingredients.mandatory.length > 0" class="ingredients-tags">
+                    <el-tag
+                      v-for="(ingredient, index) in dish.ingredients.mandatory.slice(0, 5)"
+                      :key="index"
+                      type="danger"
+                      effect="plain"
+                      size="small"
+                      class="ingredient-tag"
+                    >
+                      {{ ingredient }}
+                    </el-tag>
+                    <span v-if="dish.ingredients.mandatory.length > 5" class="more-ingredients">
+                      +{{ dish.ingredients.mandatory.length - 5 }}
+                    </span>
+                  </div>
+                  <div v-else class="no-ingredients">
+                    <span class="no-ingredients-text">暂无必选食材</span>
+                  </div>
+                </div>
+
+                <!-- 可选食材 -->
+                <div class="ingredients-section">
+                  <div class="ingredients-title">
+                    <el-icon :size="14" color="#409eff"><CirclePlusIcon /></el-icon>
+                    <span>可选食材</span>
+                  </div>
+                  <div v-if="dish.ingredients.optional && dish.ingredients.optional.length > 0" class="ingredients-tags">
+                    <el-tag
+                      v-for="(ingredient, index) in dish.ingredients.optional.slice(0, 5)"
+                      :key="index"
+                      type="primary"
+                      effect="plain"
+                      size="small"
+                      class="ingredient-tag"
+                    >
+                      {{ ingredient }}
+                    </el-tag>
+                    <span v-if="dish.ingredients.optional.length > 5" class="more-ingredients">
+                      +{{ dish.ingredients.optional.length - 5 }}
+                    </span>
+                  </div>
+                  <div v-else class="no-ingredients">
+                    <span class="no-ingredients-text">暂无可选食材</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1203,7 +1407,7 @@ const getDishCheckedState = (dish) => {
                 <span>状&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;态</span>
               </div>
             </template>
-            <el-select v-model="editDishForm.status" style="width: 100%">
+            <el-select v-model="editDishForm.statusString" style="width: 100%">
               <el-option label="上架" value="online" />
               <el-option label="即将售罄" value="almost_sold" />
               <el-option label="下架" value="offline" />
@@ -1914,6 +2118,69 @@ const getDishCheckedState = (dish) => {
                 color: #4a5568;
                 font-size: 14px;
                 font-weight: 600;
+              }
+            }
+          }
+
+          .dish-ingredients {
+            margin-top: 16px;
+            margin-bottom: 20px;
+            padding-top: 16px;
+            padding-bottom: 8px;
+            border-top: 1px solid #f0f0f0;
+
+            .ingredients-section {
+              margin-bottom: 12px;
+
+              &:last-child {
+                margin-bottom: 0;
+              }
+
+              .ingredients-title {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                margin-bottom: 8px;
+                font-size: 13px;
+                font-weight: 600;
+                color: #4a5568;
+              }
+
+              .ingredients-tags {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+                align-items: center;
+
+                .ingredient-tag {
+                  border-radius: 6px;
+                  font-size: 12px;
+                  padding: 2px 8px;
+                  height: 24px;
+                  line-height: 20px;
+                }
+
+                .more-ingredients {
+                  font-size: 12px;
+                  color: #909399;
+                  font-weight: 500;
+                  padding: 2px 6px;
+                  background-color: #f5f7fa;
+                  border-radius: 6px;
+                }
+              }
+
+              .no-ingredients {
+                padding: 8px 12px;
+                background-color: #fafafa;
+                border-radius: 6px;
+                border: 1px dashed #e4e7ed;
+
+                .no-ingredients-text {
+                  font-size: 12px;
+                  color: #909399;
+                  font-weight: 400;
+                }
               }
             }
           }

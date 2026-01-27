@@ -71,6 +71,10 @@ public class Dish {
     @ApiModelProperty(value = "状态：true-上架，false-下架")
     private Boolean status; // 状态：true-上架，false-下架
 
+    @TableField("stock")
+    @ApiModelProperty(value = "库存数量")
+    private Integer stock; // 库存数量
+
     @TableField("create_time")
     @ApiModelProperty(value = "创建时间")
     private LocalDateTime createTime; // 创建时间

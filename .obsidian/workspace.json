@@ -167,6 +167,8 @@
   },
   "active": "25380c94f56f550b",
   "lastOpenFiles": [
+    "JasEatsChoiceJava/src/main/resources/db/migration/V2026012701__add_stock_to_dish.sql",
+    "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/netty/NettyChatHandler.class",
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/controller/DishController.class",
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/websocket/WebSocketMessageService.class",
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/websocket",
@@ -176,8 +178,6 @@
     "JasEatsChoiceJava/target/generated-test-sources",
     "JasEatsChoiceJava/target/maven-status/maven-compiler-plugin/compile/default-compile/inputFiles.lst",
     "JasEatsChoiceJava/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst",
-    "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/enums/MenuType.class",
-    "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/service/impl/UserProfileServiceImpl.class",
     "uploads/4590322501655448/4b88c01d-3ad5-464b-85e8-b67bfcd1ae79.png",
     "JasEatsChoiceFront/src/renderer/src/views/user/Settings功能实现说明.md",
     "uploads/3384650106421960/4d60fa71-a4fa-4346-94c2-5a1ed316bbab.png",

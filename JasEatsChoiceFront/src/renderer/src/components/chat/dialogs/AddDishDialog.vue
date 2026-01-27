@@ -2,13 +2,17 @@
   <el-dialog
     v-model="visible"
     title="加菜"
-    width="70%"
+    width="900px"
     @close="handleClose"
     :close-on-click-modal="false"
+    class="add-dish-dialog"
   >
     <!-- 订单进度 -->
     <div class="order-progress">
-      <h4>订单进度</h4>
+      <div class="progress-header">
+        <el-icon :size="16" color="#409eff"><Clock /></el-icon>
+        <span>订单进度</span>
+      </div>
       <el-steps :active="currentStep" finish-status="success" simple>
         <el-step title="待接单"></el-step>
         <el-step title="备菜中"></el-step>
@@ -19,23 +23,26 @@
 
     <!-- 已点菜品清单 -->
     <div class="ordered-dishes">
-      <h4>已点菜品</h4>
-      <el-table :data="orderedDishes" max-height="200">
-        <el-table-column prop="dishName" label="菜品">
+      <div class="section-header">
+        <el-icon :size="16" color="#67c23a"><Dish /></el-icon>
+        <span>已点菜品</span>
+      </div>
+      <el-table :data="orderedDishes" max-height="200" size="small">
+        <el-table-column prop="dishName" label="菜品" min-width="120">
           <template #default="{ row }">
-            <span v-if="row.isAddDish" class="add-dish-tag">
+            <el-tag v-if="row.isAddDish" type="danger" size="small" class="add-dish-tag">
               {{ ADD_DISH_PREFIX }}
-            </span>
-            {{ row.dishName }}
+            </el-tag>
+            <span style="margin-left: 8px">{{ row.dishName }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="quantity" label="数量" width="80"></el-table-column>
-        <el-table-column prop="price" label="单价" width="100">
+        <el-table-column prop="quantity" label="数量" width="80" align="center"></el-table-column>
+        <el-table-column prop="price" label="单价" width="100" align="right">
           <template #default="{ row }">
             ¥{{ row.price?.toFixed(2) || '0.00' }}
           </template>
         </el-table-column>
-        <el-table-column prop="addDishUser" label="加菜人" width="120">
+        <el-table-column prop="addDishUser" label="加菜人" width="120" align="center">
           <template #default="{ row }">
             {{ row.isAddDish ? row.addDishUser : '-' }}
           </template>
@@ -65,7 +72,10 @@
 
     <!-- 菜品选择区域 -->
     <div class="dish-selection">
-      <h4>选择加菜菜品</h4>
+      <div class="section-header">
+        <el-icon :size="16" color="#e6a23c"><ShoppingCart /></el-icon>
+        <span>选择加菜菜品</span>
+      </div>
       <div class="dish-list">
         <div
           v-for="dish in availableDishes"
@@ -73,51 +83,72 @@
           class="dish-item"
           :class="{ selected: isDishSelected(dish.id) }"
         >
-          <div class="dish-info">
-            <img v-if="dish.image" :src="dish.image" class="dish-image" />
-            <div class="dish-no-image" v-else>
-              <el-icon :size="32"><Food /></el-icon>
+          <div class="dish-main">
+            <!-- 菜品图片 -->
+            <div class="dish-image-wrapper">
+              <img v-if="dish.image" :src="dish.image" class="dish-image" />
+              <div class="dish-no-image" v-else>
+                <el-icon :size="28"><Food /></el-icon>
+              </div>
             </div>
-            <div class="dish-details">
-              <div class="dish-name">{{ dish.name }}</div>
-              <div class="dish-price">¥{{ dish.price?.toFixed(2) || '0.00' }}</div>
+
+            <!-- 菜品信息 -->
+            <div class="dish-info">
+              <div class="dish-name-price">
+                <div class="dish-name">{{ dish.name }}</div>
+                <div class="dish-price">¥{{ dish.price?.toFixed(2) || '0.00' }}</div>
+              </div>
 
               <!-- 食材组成 -->
-              <div class="dish-ingredients">
+              <div class="dish-ingredients" v-if="hasIngredients(dish)">
                 <!-- 必选食材 -->
                 <div
-                  class="ingredient-section required"
+                  class="ingredient-section"
                   v-if="dish.requiredIngredients && dish.requiredIngredients.length > 0"
                 >
-                  <span class="ingredient-title">必选:</span>
-                  <div class="ingredient-list">
-                    <span
-                      class="ingredient-item"
+                  <div class="ingredient-header">
+                    <el-icon :size="12" color="#409eff"><CircleCheck /></el-icon>
+                    <span class="ingredient-label">必选食材</span>
+                    <span class="ingredient-count">{{ dish.requiredIngredients.length }}</span>
+                  </div>
+                  <div class="ingredient-tags">
+                    <el-tag
                       v-for="ingredient in dish.requiredIngredients"
                       :key="ingredient"
+                      size="small"
+                      type="primary"
+                      effect="plain"
+                      class="required-tag"
                     >
+                      <el-icon :size="10" style="margin-right: 2px"><Check /></el-icon>
                       {{ ingredient }}
-                    </span>
+                    </el-tag>
                   </div>
                 </div>
 
                 <!-- 可选食材 -->
                 <div
-                  class="ingredient-section optional"
+                  class="ingredient-section"
                   v-if="dish.optionalIngredients && dish.optionalIngredients.length > 0"
                 >
-                  <span class="ingredient-title">可选:</span>
-                  <div class="ingredient-list">
+                  <div class="ingredient-header">
+                    <el-icon :size="12" color="#67c23a"><CirclePlus /></el-icon>
+                    <span class="ingredient-label">可选食材</span>
+                    <span class="ingredient-count">{{ dish.optionalIngredients.length }}</span>
+                  </div>
+                  <div class="ingredient-options">
                     <el-checkbox
                       v-for="ingredient in dish.optionalIngredients"
                       :key="ingredient.id || ingredient.name"
                       v-model="ingredient.selected"
                       size="small"
-                      class="ingredient-checkbox"
+                      class="option-checkbox"
                     >
-                      {{ ingredient.name }}
-                      <span class="ingredient-price" v-if="ingredient.price">
-                        (+¥{{ ingredient.price.toFixed(2) }})
+                      <span class="checkbox-content">
+                        <span class="checkbox-name">{{ ingredient.name }}</span>
+                        <span class="ingredient-price" v-if="ingredient.price">
+                          +¥{{ ingredient.price.toFixed(2) }}
+                        </span>
                       </span>
                     </el-checkbox>
                   </div>
@@ -125,21 +156,24 @@
               </div>
             </div>
           </div>
+
+          <!-- 操作区域 -->
           <div class="dish-actions">
-            <div class="dish-total-price" v-if="isDishSelected(dish.id)">
-              ¥{{ calculateDishPrice(dish).toFixed(2) }}
+            <div class="action-row" v-if="isDishSelected(dish.id)">
+              <span class="total-price">¥{{ calculateDishPrice(dish).toFixed(2) }}</span>
+              <el-input-number
+                v-model="dish.quantity"
+                :min="1"
+                :max="99"
+                size="small"
+                :controls-position="'right'"
+              />
             </div>
-            <el-input-number
-              v-model="dish.quantity"
-              :min="1"
-              :max="99"
-              size="small"
-              v-if="isDishSelected(dish.id)"
-            />
             <el-button
-              type="primary"
+              :type="isDishSelected(dish.id) ? 'danger' : 'primary'"
               size="small"
               @click="toggleDish(dish)"
+              class="action-btn"
             >
               {{ isDishSelected(dish.id) ? '取消' : '添加' }}
             </el-button>
@@ -164,10 +198,21 @@
     <template #footer>
       <div class="footer-content">
         <div class="total-info">
-          <span>已选 {{ selectedDishes.length }} 道菜</span>
-          <span class="total-amount">累计金额: ¥{{ totalAmount.toFixed(2) }}</span>
+          <div class="info-item">
+            <el-icon :size="18"><ShoppingCart /></el-icon>
+            <span>已选 <strong>{{ selectedDishes.length }}</strong> 道菜</span>
+          </div>
+          <div class="info-item amount">
+            <el-icon :size="18"><Wallet /></el-icon>
+            <span>累计: <strong>¥{{ totalAmount.toFixed(2) }}</strong></span>
+          </div>
         </div>
-        <el-button type="primary" @click="handleSubmit" :disabled="selectedDishes.length === 0">
+        <el-button
+          type="primary"
+          @click="handleSubmit"
+          :disabled="selectedDishes.length === 0"
+          size="default"
+        >
           提交加菜请求
         </el-button>
       </div>
@@ -178,7 +223,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Food } from '@element-plus/icons-vue'
+import { Food, Clock, Dish, ShoppingCart, Wallet, CircleCheck, CirclePlus, Check } from '@element-plus/icons-vue'
 import { ADD_DISH_CONFIG } from '@/constants/addDishConstants'
 import addDishApi from '@/api/addDish'
 
@@ -211,6 +256,12 @@ const selectedDishes = ref([])
 const remark = ref('')
 
 const ADD_DISH_PREFIX = ADD_DISH_CONFIG.ADD_DISH_PREFIX
+
+// 检查菜品是否有食材信息
+const hasIngredients = (dish) => {
+  return (dish.requiredIngredients && dish.requiredIngredients.length > 0) ||
+         (dish.optionalIngredients && dish.optionalIngredients.length > 0)
+}
 
 // 计算单个菜品价格(包含可选食材)
 const calculateDishPrice = (dish) => {
@@ -287,215 +338,370 @@ const handleSubmit = async () => {
 </script>
 
 <style scoped lang="scss">
-.order-progress {
-  margin-bottom: 20px;
+.add-dish-dialog {
+  :deep(.el-dialog__body) {
+    padding: 16px 20px;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+}
 
-  h4 {
-    margin: 0 0 12px 0;
-    font-size: 16px;
-    font-weight: 500;
+.order-progress {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border-radius: 8px;
+
+  .progress-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #409eff;
+  }
+
+  :deep(.el-steps--simple) {
+    background: transparent;
+    padding: 0;
   }
 }
 
 .ordered-dishes {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 
-  h4 {
-    margin: 0 0 12px 0;
-    font-size: 16px;
-    font-weight: 500;
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #67c23a;
   }
 
   .add-dish-tag {
-    color: #f56c6c;
     font-weight: 500;
   }
 }
 
 .allergy-warning {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 
-  .conflict-content {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
+  :deep(.el-alert) {
+    .el-alert__content {
+      .conflict-content {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+    }
   }
 }
 
 .dish-selection {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 
-  h4 {
-    margin: 0 0 12px 0;
-    font-size: 16px;
-    font-weight: 500;
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #e6a23c;
   }
 
   .dish-list {
-    max-height: 300px;
+    max-height: 400px;
     overflow-y: auto;
+    padding-right: 4px;
+
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: #dcdfe6;
+      border-radius: 3px;
+
+      &:hover {
+        background: #c0c4cc;
+      }
+    }
   }
 
   .dish-item {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: stretch;
     padding: 12px;
-    border: 1px solid #ebeef5;
-    border-radius: 4px;
-    margin-bottom: 8px;
-    transition: all 0.3s;
+    border: 2px solid #e4e7ed;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    background: white;
+    transition: all 0.3s ease;
 
     &:hover {
       border-color: #409eff;
+      box-shadow: 0 2px 12px rgba(64, 158, 255, 0.15);
     }
 
     &.selected {
-      background-color: #f0f9ff;
+      background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
       border-color: #409eff;
+    }
+  }
+
+  .dish-main {
+    display: flex;
+    flex: 1;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .dish-image-wrapper {
+    flex-shrink: 0;
+    width: 80px;
+    height: 80px;
+
+    .dish-image {
+      width: 100%;
+      height: 100%;
+      border-radius: 8px;
+      object-fit: cover;
+      border: 1px solid #e4e7ed;
+    }
+
+    .dish-no-image {
+      width: 100%;
+      height: 100%;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #f5f7fa 0%, #e4e7ed 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #909399;
+      border: 1px solid #e4e7ed;
     }
   }
 
   .dish-info {
-    display: flex;
-    align-items: center;
     flex: 1;
-  }
-
-  .dish-image {
-    width: 60px;
-    height: 60px;
-    border-radius: 4px;
-    object-fit: cover;
-    margin-right: 12px;
-  }
-
-  .dish-no-image {
-    width: 60px;
-    height: 60px;
-    border-radius: 4px;
-    background-color: #f5f7fa;
+    min-width: 0;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: 12px;
-    color: #909399;
-  }
-
-  .dish-details {
-    flex: 1;
-  }
-
-  .dish-actions {
-    display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: 8px;
+  }
 
-    .dish-total-price {
+  .dish-name-price {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+
+    .dish-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: #303133;
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .dish-price {
       font-size: 18px;
       color: #f56c6c;
-      font-weight: 600;
-      min-width: 80px;
-      text-align: right;
+      font-weight: 700;
+      flex-shrink: 0;
     }
   }
 
-  .dish-name {
-    font-size: 14px;
-    font-weight: 500;
-    margin-bottom: 4px;
-  }
-
-  .dish-price {
-    font-size: 16px;
-    color: #f56c6c;
-    font-weight: 500;
-  }
-
-  // 食材组成
   .dish-ingredients {
-    margin-top: 8px;
-    padding: 8px;
+    padding: 10px 12px;
     background: #f5f7fa;
-    border-radius: 4px;
+    border-radius: 6px;
     font-size: 12px;
 
     .ingredient-section {
-      margin-bottom: 8px;
+      margin-bottom: 10px;
 
       &:last-child {
         margin-bottom: 0;
       }
 
-      .ingredient-title {
-        display: inline-block;
-        font-weight: 600;
-        color: #606266;
-        margin-right: 6px;
-      }
+      .ingredient-header {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 8px;
 
-      .ingredient-list {
-        display: inline;
-
-        .ingredient-item {
-          display: inline-block;
-          background: linear-gradient(135deg, #409eff 0%, #53a8ff 100%);
-          color: #ffffff;
-          padding: 2px 8px;
-          border-radius: 4px;
-          font-size: 11px;
-          margin-right: 4px;
-          margin-bottom: 4px;
-          font-weight: 500;
+        .ingredient-label {
+          font-weight: 600;
+          color: #303133;
+          font-size: 12px;
         }
 
-        .ingredient-checkbox {
-          display: inline-block;
-          margin-right: 8px;
-          margin-bottom: 4px;
-          padding: 2px 6px;
-          background: #ffffff;
-          border: 1px solid #dcdfe6;
-          border-radius: 4px;
+        .ingredient-count {
+          margin-left: auto;
+          padding: 2px 8px;
+          background: #e4e7ed;
+          border-radius: 10px;
           font-size: 11px;
+          color: #606266;
+          font-weight: 600;
+        }
+      }
 
-          :deep(.el-checkbox__label) {
-            font-size: 11px;
-            padding-left: 4px;
+      .ingredient-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+
+        .required-tag {
+          :deep(.el-tag__content) {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+          }
+        }
+      }
+
+      .ingredient-options {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+
+        .option-checkbox {
+          margin: 0;
+          padding: 6px 10px;
+          background: white;
+          border: 1px solid #dcdfe6;
+          border-radius: 6px;
+          transition: all 0.2s;
+
+          &:hover {
+            border-color: #67c23a;
+            background: #f0f9ff;
+            box-shadow: 0 2px 4px rgba(103, 194, 58, 0.1);
           }
 
-          .ingredient-price {
-            color: #f56c6c;
-            font-weight: 600;
-            font-size: 11px;
+          &.is-checked {
+            border-color: #67c23a;
+            background: #ecf5ff;
+          }
+
+          :deep(.el-checkbox__label) {
+            font-size: 12px;
+            padding-left: 6px;
+          }
+
+          .checkbox-content {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+
+            .checkbox-name {
+              font-weight: 500;
+            }
+
+            .ingredient-price {
+              color: #f56c6c;
+              font-weight: 700;
+              font-size: 11px;
+            }
           }
         }
       }
     }
   }
+
+  .dish-actions {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 8px;
+    flex-shrink: 0;
+    margin-left: 12px;
+    min-width: 100px;
+
+    .action-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 4px 8px;
+      background: white;
+      border-radius: 6px;
+      border: 1px solid #e4e7ed;
+
+      .total-price {
+        font-size: 16px;
+        color: #f56c6c;
+        font-weight: 700;
+      }
+
+      :deep(.el-input-number) {
+        width: 90px;
+      }
+    }
+
+    .action-btn {
+      width: 100%;
+      font-weight: 600;
+      height: 32px;
+    }
+  }
 }
 
 .remark-section {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .footer-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  width: 100%;
+  gap: 16px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);
+  border-radius: 8px;
+  border: 1px solid #e4e7ed;
 
   .total-info {
     display: flex;
-    align-items: center;
-    gap: 16px;
-    font-size: 14px;
+    gap: 20px;
+    flex: 1;
+
+    .info-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 14px;
+      color: #606266;
+
+      strong {
+        color: #303133;
+        font-size: 16px;
+      }
+
+      &.amount strong {
+        color: #f56c6c;
+        font-size: 18px;
+      }
+    }
   }
 
-  .total-amount {
-    font-size: 18px;
-    font-weight: 500;
-    color: #f56c6c;
+  .el-button {
+    height: 38px;
+    padding: 0 24px;
+    font-size: 14px;
+    font-weight: 600;
+    flex-shrink: 0;
   }
 }
 </style>

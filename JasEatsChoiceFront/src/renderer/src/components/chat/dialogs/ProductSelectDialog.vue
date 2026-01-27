@@ -3,8 +3,10 @@
     v-model="visible"
     width="900px"
     @close="handleClose"
+    @opened="handleDialogOpened"
     class="product-select-dialog"
     :close-on-click-modal="false"
+    :close-on-press-escape="true"
   >
     <template #header>
       <div class="dialog-header">
@@ -25,16 +27,34 @@
 
     <!-- 搜索和筛选 -->
     <div class="filter-section">
-      <el-input
-        v-model="searchKeyword"
-        placeholder="搜索商品名称..."
-        clearable
-        class="search-input"
-      >
-        <template #prefix>
-          <el-icon><Search /></el-icon>
-        </template>
-      </el-input>
+      <div class="filter-row">
+        <el-input
+          v-model="searchInput"
+          placeholder="搜索商品名称..."
+          clearable
+          class="search-input"
+          @input="handleSearchInput"
+        >
+          <template #prefix>
+            <el-icon><Search /></el-icon>
+          </template>
+        </el-input>
+
+        <el-select
+          v-model="sortBy"
+          placeholder="排序方式"
+          class="sort-select"
+          @change="handleSortChange"
+        >
+          <el-option label="默认排序" value="default" />
+          <el-option label="价格从低到高" value="price-asc">
+            <el-icon><Sort /></el-icon> 价格从低到高
+          </el-option>
+          <el-option label="价格从高到低" value="price-desc">
+            <el-icon><Sort /></el-icon> 价格从高到低
+          </el-option>
+        </el-select>
+      </div>
     </div>
 
     <!-- 批量操作栏 -->
@@ -75,12 +95,22 @@
     </div>
 
     <!-- 商品列表 -->
-    <div class="product-list" v-if="merchant && merchant.products">
+    <div v-loading="isLoading" class="product-list" v-if="merchant && merchant.products">
+      <div v-if="filteredProducts.length === 0 && searchKeyword" class="no-results">
+        <el-empty description="未找到匹配的商品">
+          <el-button type="primary" @click="clearSearch">清除搜索</el-button>
+        </el-empty>
+      </div>
+
       <div
-        v-for="product in filteredProducts"
+        v-for="product in sortedProducts"
         :key="product.id"
         class="product-item"
         :class="{ selected: isProductSelected(product.id) }"
+        role="option"
+        :aria-selected="isProductSelected(product.id)"
+        tabindex="0"
+        @keydown="handleProductKeydown($event, product)"
       >
         <!-- 左侧复选框 -->
         <div class="product-checkbox">
@@ -92,7 +122,13 @@
 
         <!-- 商品图片 -->
         <div class="product-image">
-          <img v-if="product.image" :src="product.image" :alt="product.name" />
+          <img
+            v-if="product.image"
+            :src="product.image"
+            :alt="product.name"
+            loading="lazy"
+            @error="handleImageError($event, product)"
+          />
           <div v-else class="image-placeholder">
             <el-icon :size="48"><Food /></el-icon>
           </div>
@@ -107,27 +143,55 @@
             <h4 class="product-name">{{ product.name }}</h4>
             <div class="product-badges">
               <el-tag
-                v-if="product.requiredIngredients && product.requiredIngredients.length > 0"
+                v-if="getRequiredIngredients(product).length > 0"
                 type="danger"
                 size="small"
                 effect="plain"
               >
                 <el-icon><Star /></el-icon>
-                {{ product.requiredIngredients.length }}种必选
-              </el-tag>
-              <el-tag
-                v-if="product.optionalIngredients && product.optionalIngredients.length > 0"
-                type="info"
-                size="small"
-                effect="plain"
-              >
-                <el-icon><CirclePlus /></el-icon>
-                {{ product.optionalIngredients.length }}种可选
+                {{ getRequiredIngredients(product).length }}种必选
               </el-tag>
             </div>
           </div>
 
           <p class="product-description">{{ product.description }}</p>
+
+          <!-- 必选食材列表 -->
+          <div v-if="getRequiredIngredients(product).length > 0" class="required-ingredients">
+            <el-tag
+              v-for="ingredient in getRequiredIngredients(product)"
+              :key="ingredient"
+              type="danger"
+              size="small"
+              effect="plain"
+              class="ingredient-tag"
+            >
+              <el-icon :size="12"><Star /></el-icon>
+              {{ ingredient }}
+            </el-tag>
+          </div>
+          <div v-else class="no-data-hint">
+            <span class="no-data-text">-</span>
+          </div>
+
+          <!-- 可选食材列表 -->
+          <div v-if="getOptionalIngredients(product).length > 0" class="optional-ingredients">
+            <div class="section-label">
+              <el-icon :size="14"><CirclePlus /></el-icon>
+              <span>可选食材（{{ getOptionalIngredients(product).length }}种）</span>
+            </div>
+            <el-tag
+              v-for="ingredient in getOptionalIngredients(product)"
+              :key="ingredient"
+              type="info"
+              size="small"
+              effect="plain"
+              class="ingredient-tag"
+            >
+              <el-icon :size="12"><CirclePlus /></el-icon>
+              {{ ingredient }}
+            </el-tag>
+          </div>
 
           <!-- 已选配置摘要 -->
           <div v-if="getProductCustomization(product.id)" class="customization-summary">
@@ -186,7 +250,13 @@
 
     <div v-else class="empty-state">
       <el-empty description="该商家暂无商品">
-        <el-icon :size="64" color="#c0c4cc"><Food /></el-icon>
+        <template #image>
+          <el-icon :size="64" color="#c0c4cc"><Food /></el-icon>
+        </template>
+        <template #description>
+          <p class="empty-description">该商家暂无商品</p>
+          <p class="empty-hint">试试切换其他商家看看？</p>
+        </template>
       </el-empty>
     </div>
 
@@ -231,7 +301,8 @@
 </template>
 
 <script setup>
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ElMessage } from 'element-plus'
 import {
   Food,
   Search,
@@ -242,15 +313,16 @@ import {
   View,
   Edit,
   Star,
-  CirclePlus
+  CirclePlus,
+  Sort
 } from '@element-plus/icons-vue'
 import ProductDetailDialog from './ProductDetailDialog.vue'
 import ProductCustomizeDialog from './ProductCustomizeDialog.vue'
 import BatchCustomizeDialog from './BatchCustomizeDialog.vue'
 
 /**
- * 商品选择对话框组件（重构版）
- * @description 支持复选框多选、批量操作、商品详情查看、自定义配置
+ * 商品选择对话框组件（优化版）
+ * @description 支持复选框多选、批量操作、商品详情查看、自定义配置、搜索防抖、价格排序、快捷键、可访问性
  */
 const props = defineProps({
   modelValue: {
@@ -263,11 +335,16 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['update:modelValue', 'addToCart', 'confirmAll'])
+const emit = defineEmits(['update:modelValue', 'addToCart', 'confirm', 'confirmAll'])
 
 // 对话框状态
 const visible = ref(props.modelValue)
+const searchInput = ref('')
 const searchKeyword = ref('')
+const sortBy = ref('default')
+const isLoading = ref(false)
+const previousActiveElement = ref(null)
+let searchDebounceTimer = null
 
 // 商品选择状态
 const selectedProducts = ref([])
@@ -300,13 +377,95 @@ const filteredProducts = computed(() => {
 })
 
 /**
+ * 排序后的商品列表
+ */
+const sortedProducts = computed(() => {
+  if (sortBy.value === 'default') return filteredProducts.value
+
+  return [...filteredProducts.value].sort((a, b) => {
+    const priceA = a.price || 0
+    const priceB = b.price || 0
+    return sortBy.value === 'price-asc' ? priceA - priceB : priceB - priceA
+  })
+})
+
+/**
  * 全选状态：0=未选择，1=部分选择，2=全选
  */
 const selectAllState = computed(() => {
   if (selectedProducts.value.length === 0) return 0
-  if (selectedProducts.value.length === filteredProducts.value.length) return 2
+  if (selectedProducts.value.length === sortedProducts.value.length) return 2
   return 1
 })
+
+/**
+ * 处理搜索输入（带防抖）
+ */
+const handleSearchInput = (value) => {
+  clearTimeout(searchDebounceTimer)
+  searchDebounceTimer = setTimeout(() => {
+    searchKeyword.value = value
+  }, 300)
+}
+
+/**
+ * 清除搜索
+ */
+const clearSearch = () => {
+  searchInput.value = ''
+  searchKeyword.value = ''
+}
+
+/**
+ * 处理排序变化
+ */
+const handleSortChange = () => {
+  // 排序变化时可以添加动画或反馈
+}
+
+/**
+ * 处理图片加载错误
+ */
+const handleImageError = (event, product) => {
+  event.target.src = ''
+  ElMessage.warning(`商品"${product.name}"的图片加载失败`)
+}
+
+/**
+ * 处理商品键盘事件
+ */
+const handleProductKeydown = (event, product) => {
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault()
+    toggleProductSelection(product)
+  }
+}
+
+/**
+ * 处理对话框打开
+ */
+const handleDialogOpened = () => {
+  // 保存当前焦点元素，用于关闭后恢复
+  previousActiveElement.value = document.activeElement
+}
+
+/**
+ * 全局快捷键处理
+ */
+const handleGlobalKeydown = (event) => {
+  if (!visible.value) return
+
+  // ESC键关闭对话框
+  if (event.key === 'Escape') {
+    handleClose()
+  }
+
+  // Ctrl+A 全选
+  if (event.ctrlKey && event.key === 'a') {
+    event.preventDefault()
+    toggleSelectAll()
+  }
+}
 
 /**
  * 已配置的商品列表
@@ -322,6 +481,53 @@ const selectedProductsWithCustomization = computed(() => {
  */
 const isProductSelected = (productId) => {
   return selectedProducts.value.some(item => item.id === productId)
+}
+
+/**
+ * 解析食材列表（处理可能是JSON字符串或对象数组的情况）
+ */
+const parseIngredients = (ingredients) => {
+  if (!ingredients) return []
+
+  let parsed = ingredients
+
+  // 如果是字符串，尝试解析
+  if (typeof ingredients === 'string') {
+    try {
+      parsed = JSON.parse(ingredients)
+    } catch {
+      // 解析失败，可能就是普通字符串
+      return [ingredients]
+    }
+  }
+
+  // 如果解析后是数组
+  if (Array.isArray(parsed)) {
+    return parsed.map(item => {
+      // 如果是对象，提取name字段
+      if (typeof item === 'object' && item !== null) {
+        return item.name || String(item)
+      }
+      // 如果是字符串，直接使用
+      return String(item)
+    })
+  }
+
+  return []
+}
+
+/**
+ * 获取必选食材列表
+ */
+const getRequiredIngredients = (product) => {
+  return parseIngredients(product.requiredIngredients)
+}
+
+/**
+ * 获取可选食材列表
+ */
+const getOptionalIngredients = (product) => {
+  return parseIngredients(product.optionalIngredients)
 }
 
 /**
@@ -481,6 +687,7 @@ const handleBatchAddToCart = () => {
  */
 const handleConfirmAll = () => {
   handleBatchAddToCart()
+  emit('confirm')
   handleClose()
 }
 
@@ -490,7 +697,24 @@ const handleConfirmAll = () => {
 const handleClose = () => {
   visible.value = false
   emit('update:modelValue', false)
+
+  // 恢复焦点到之前的元素
+  nextTick(() => {
+    previousActiveElement.value?.focus()
+  })
 }
+
+/**
+ * 生命周期钩子
+ */
+onMounted(() => {
+  document.addEventListener('keydown', handleGlobalKeydown)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleGlobalKeydown)
+  clearTimeout(searchDebounceTimer)
+})
 
 /**
  * 监听外部 modelValue 变化
@@ -571,9 +795,21 @@ watch(visible, (newVal) => {
   background: white;
   border-bottom: 1px solid #e4e7ed;
 
-  .search-input {
-    width: 100%;
-    max-width: 400px;
+  .filter-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+
+    .search-input {
+      flex: 1;
+      min-width: 200px;
+      max-width: 400px;
+    }
+
+    .sort-select {
+      width: 160px;
+    }
   }
 }
 
@@ -701,6 +937,18 @@ watch(visible, (newVal) => {
           display: flex;
           gap: 6px;
           flex-shrink: 0;
+
+          .el-tag {
+            display: inline-flex;
+            align-items: center;
+
+            .el-icon {
+              display: inline-flex;
+              align-items: center;
+              vertical-align: middle;
+              margin-right: 4px;
+            }
+          }
         }
       }
 
@@ -713,6 +961,69 @@ watch(visible, (newVal) => {
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
+      }
+
+      .required-ingredients {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-bottom: 8px;
+
+        .ingredient-tag {
+          font-size: 12px;
+          padding: 2px 8px;
+          height: auto;
+          display: inline-flex;
+          align-items: center;
+
+          .el-icon {
+            display: inline-flex;
+            align-items: center;
+            vertical-align: middle;
+            margin-right: 4px;
+          }
+        }
+      }
+
+      .optional-ingredients {
+        margin-bottom: 8px;
+
+        .section-label {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 12px;
+          color: #606266;
+          margin-bottom: 6px;
+          font-weight: 500;
+        }
+
+        .ingredient-tag {
+          font-size: 12px;
+          padding: 2px 8px;
+          height: auto;
+          display: inline-flex;
+          align-items: center;
+          margin-right: 6px;
+          margin-bottom: 4px;
+
+          .el-icon {
+            display: inline-flex;
+            align-items: center;
+            vertical-align: middle;
+            margin-right: 4px;
+          }
+        }
+      }
+
+      .no-data-hint {
+        margin-bottom: 8px;
+        min-height: 24px;
+
+        .no-data-text {
+          font-size: 12px;
+          color: #c0c4cc;
+        }
       }
 
       .customization-summary {
@@ -741,6 +1052,23 @@ watch(visible, (newVal) => {
   background: white;
   margin: 16px;
   border-radius: 12px;
+
+  .empty-description {
+    font-size: 14px;
+    color: #606266;
+    margin: 0 0 8px 0;
+  }
+
+  .empty-hint {
+    font-size: 13px;
+    color: #909399;
+    margin: 0;
+  }
+}
+
+.no-results {
+  padding: 40px 20px;
+  text-align: center;
 }
 
 .dialog-footer {
@@ -753,4 +1081,110 @@ watch(visible, (newVal) => {
     font-weight: 500;
   }
 }
+
+/* 响应式布局 */
+@media (max-width: 768px) {
+  .product-select-dialog {
+    :deep(.el-dialog) {
+      width: 95% !important;
+      margin: 0 auto;
+    }
+  }
+
+  .dialog-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+
+    .header-right {
+      width: 100%;
+    }
+  }
+
+  .filter-section {
+    .filter-row {
+      flex-direction: column;
+      align-items: stretch;
+
+      .search-input {
+        max-width: 100%;
+      }
+
+      .sort-select {
+        width: 100%;
+      }
+    }
+  }
+
+  .batch-actions {
+    flex-direction: column;
+    align-items: stretch;
+
+    .select-all {
+      width: 100%;
+    }
+
+    .batch-btn {
+      width: 100%;
+    }
+  }
+
+  .product-list {
+    padding: 12px;
+
+    .product-item {
+      flex-direction: column;
+      align-items: stretch;
+      padding: 12px;
+
+      .product-image {
+        width: 100%;
+        height: 180px;
+      }
+
+      .product-checkbox {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        z-index: 1;
+      }
+
+      .product-content {
+        width: 100%;
+      }
+
+      .product-actions {
+        flex-direction: row;
+        justify-content: space-between;
+        width: 100%;
+
+        .action-btn {
+          flex: 1;
+        }
+      }
+    }
+  }
+
+  .dialog-footer {
+    flex-direction: column-reverse;
+
+    .el-button {
+      width: 100%;
+    }
+  }
+}
+
+/* 优化焦点样式 */
+.product-item {
+  &:focus-visible {
+    outline: 2px solid #409eff;
+    outline-offset: 2px;
+  }
+
+  &:focus-within {
+    outline: 2px solid #409eff;
+    outline-offset: 2px;
+  }
+}
+
 </style>
