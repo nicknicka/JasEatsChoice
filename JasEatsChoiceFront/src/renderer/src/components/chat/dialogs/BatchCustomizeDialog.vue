@@ -119,7 +119,7 @@
                 <div class="optional-ingredients-compact">
                   <el-tag
                     v-for="ingredient in product.optionalIngredients"
-                    :key="ingredient.id || ingredient.name"
+                    :key="getIngredientKey(ingredient)"
                     :type="isIngredientSelected(product.id, ingredient) ? 'success' : 'info'"
                     effect="plain"
                     size="small"
@@ -127,9 +127,9 @@
                     @close="toggleProductIngredient(product.id, ingredient)"
                     class="ingredient-tag"
                   >
-                    {{ ingredient.name }}
-                    <span v-if="ingredient.price" class="ingredient-price">
-                      +¥{{ ingredient.price.toFixed(2) }}
+                    {{ getIngredientName(ingredient) }}
+                    <span v-if="getIngredientPrice(ingredient) > 0" class="ingredient-price">
+                      +¥{{ getIngredientPrice(ingredient).toFixed(2) }}
                     </span>
                   </el-tag>
                   <el-button
@@ -201,7 +201,7 @@
         <div class="ingredient-list">
           <div
             v-for="ingredient in getCurrentProductOptionalIngredients()"
-            :key="ingredient.id || ingredient.name"
+            :key="getIngredientKey(ingredient)"
             class="ingredient-item"
             @click="toggleProductIngredient(currentProductId, ingredient)"
           >
@@ -212,9 +212,9 @@
             </div>
             <div class="ingredient-content">
               <div class="ingredient-header">
-                <span class="ingredient-name">{{ ingredient.name }}</span>
-                <span v-if="ingredient.price" class="ingredient-price">
-                  +¥{{ ingredient.price.toFixed(2) }}
+                <span class="ingredient-name">{{ getIngredientName(ingredient) }}</span>
+                <span v-if="getIngredientPrice(ingredient) > 0" class="ingredient-price">
+                  +¥{{ getIngredientPrice(ingredient).toFixed(2) }}
                 </span>
               </div>
               <p v-if="ingredient.description" class="ingredient-description">
@@ -331,11 +331,51 @@ const getCurrentProductOptionalIngredients = () => {
 }
 
 /**
+ * 获取食材名称（兼容字符串和对象格式）
+ */
+const getIngredientName = (ingredient) => {
+  if (typeof ingredient === 'string') {
+    return ingredient
+  }
+  if (typeof ingredient === 'object' && ingredient !== null) {
+    return ingredient.name || ingredient.ingredientName || ''
+  }
+  return String(ingredient)
+}
+
+/**
+ * 获取食材价格（兼容字符串和对象格式）
+ */
+const getIngredientPrice = (ingredient) => {
+  if (typeof ingredient === 'string') {
+    return 0
+  }
+  if (typeof ingredient === 'object' && ingredient !== null) {
+    return ingredient.price || ingredient.extraPrice || 0
+  }
+  return 0
+}
+
+/**
+ * 获取食材唯一标识（用于key）
+ */
+const getIngredientKey = (ingredient) => {
+  if (typeof ingredient === 'string') {
+    return ingredient
+  }
+  if (typeof ingredient === 'object' && ingredient !== null) {
+    return ingredient.id || ingredient.name || ingredient.ingredientName || ''
+  }
+  return String(ingredient)
+}
+
+/**
  * 检查食材是否已选择
  */
 const isIngredientSelected = (productId, ingredient) => {
+  const ingredientName = getIngredientName(ingredient)
   return productSettings.value[productId]?.optionalIngredients.some(
-    item => item.name === ingredient.name
+    item => item.name === ingredientName
   )
 }
 
@@ -346,14 +386,17 @@ const toggleProductIngredient = (productId, ingredient) => {
   const settings = productSettings.value[productId]
   if (!settings) return
 
+  const ingredientName = getIngredientName(ingredient)
+  const ingredientPrice = getIngredientPrice(ingredient)
+
   const index = settings.optionalIngredients.findIndex(
-    item => item.name === ingredient.name
+    item => item.name === ingredientName
   )
 
   if (index === -1) {
     settings.optionalIngredients.push({
-      name: ingredient.name,
-      price: ingredient.price || 0
+      name: ingredientName,
+      price: ingredientPrice
     })
   } else {
     settings.optionalIngredients.splice(index, 1)

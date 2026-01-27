@@ -88,17 +88,17 @@
         </div>
         <div v-if="product.optionalIngredients && product.optionalIngredients.length > 0" class="optional-ingredients-list">
           <el-tag
-            v-for="ingredient in product.optionalIngredients"
-            :key="ingredient.id || ingredient.name"
+            v-for="(ingredient, index) in product.optionalIngredients"
+            :key="ingredient.id || ingredient.name || index"
             type="primary"
             effect="plain"
             size="large"
             class="ingredient-tag"
           >
             <el-icon :size="14"><CirclePlus /></el-icon>
-            {{ ingredient.name }}
-            <span v-if="ingredient.price" class="ingredient-price">
-              +¥{{ ingredient.price.toFixed(2) }}
+            {{ getIngredientName(ingredient) }}
+            <span v-if="getIngredientPrice(ingredient) > 0" class="ingredient-price">
+              +¥{{ getIngredientPrice(ingredient).toFixed(2) }}
             </span>
           </el-tag>
         </div>
@@ -217,6 +217,32 @@ const handleClose = () => {
 watch(() => props.modelValue, (newVal) => {
   visible.value = newVal
 })
+
+/**
+ * 获取食材名称（兼容字符串和对象格式）
+ */
+const getIngredientName = (ingredient) => {
+  if (typeof ingredient === 'string') {
+    return ingredient
+  }
+  if (typeof ingredient === 'object' && ingredient !== null) {
+    return ingredient.name || ingredient.ingredientName || ''
+  }
+  return String(ingredient)
+}
+
+/**
+ * 获取食材价格（兼容字符串和对象格式）
+ */
+const getIngredientPrice = (ingredient) => {
+  if (typeof ingredient === 'string') {
+    return 0
+  }
+  if (typeof ingredient === 'object' && ingredient !== null) {
+    return ingredient.price || ingredient.extraPrice || 0
+  }
+  return 0
+}
 
 /**
  * 监听内部 visible 变化

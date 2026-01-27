@@ -1862,46 +1862,44 @@ const fetchMerchantProducts = async (merchantId) => {
         console.log(`📦 [Chat] 从 ${menuData.length} 个菜单中加载了 ${products.length} 个菜品`)
 
         // 处理商品数据，确保包含必选食材、可选食材等信息
-        selectedMerchant.value.products = products.map(product => ({
-          ...product,
-          // 确保基本字段存在
-          id: product.id || product.dishId || Date.now() + Math.random(),
-          name: product.name || product.dishName || '未命名商品',
-          price: product.price || 0,
-          description: product.description || product.desc || '',
-          image: product.image || product.img || product.dishImg || null,
-          category: product.category || '其他',
-          status: product.status !== undefined ? product.status : 'available',
-          // 处理必选食材
-          requiredIngredients: product.requiredIngredients || [],
-          // 处理可选食材
-          optionalIngredients: (product.optionalIngredients || []).map(ing => {
-            if (typeof ing === 'string') {
-              return {
-                id: `ing_${Date.now()}_${Math.random()}`,
-                name: ing,
-                price: 0,
-                selected: false
-              }
-            }
-            return {
-              id: ing.id || `ing_${Date.now()}_${Math.random()}`,
-              name: ing.name || ing.ingredientName || '',
-              price: ing.price || ing.extraPrice || 0,
-              selected: ing.selected || false
-            }
-          }),
-          // 营养信息
-          nutritionInfo: product.nutritionInfo || {
-            calories: product.calories || product.calorie || 0,
-            protein: product.protein || 0,
-            fat: product.fat || 0,
-            carbohydrate: product.carbohydrate || 0
-          },
-          // 注意事项
-          allergyInfo: product.allergyInfo || product.allergens || [],
-          tips: product.tips || ''
-        }))
+        selectedMerchant.value.products = products.map(product => {
+          // 后端返回的是 requiredIngredients (字符串数组) 和 optionalIngredients (对象数组)
+          let mandatoryIngredients = product.requiredIngredients || []
+          let optionalIngredients = product.optionalIngredients || []
+
+          return {
+            ...product,
+            // 确保基本字段存在
+            id: product.id || product.dishId || Date.now() + Math.random(),
+            name: product.name || product.dishName || '未命名商品',
+            price: product.price || 0,
+            description: product.description || product.desc || '',
+            image: product.image || product.img || product.dishImg || null,
+            category: product.category || '其他',
+            status: product.status !== undefined ? product.status : 'available',
+
+            // 转换为商家端标准格式 ingredients.mandatory 和 ingredients.optional
+            ingredients: {
+              mandatory: mandatoryIngredients,
+              optional: optionalIngredients
+            },
+
+            // 保留向后兼容的旧字段
+            requiredIngredients: mandatoryIngredients,
+            optionalIngredients: optionalIngredients,
+
+            // 营养信息
+            nutritionInfo: product.nutritionInfo || {
+              calories: product.calories || product.calorie || 0,
+              protein: product.protein || 0,
+              fat: product.fat || 0,
+              carbohydrate: product.carbohydrate || 0
+            },
+            // 注意事项
+            allergyInfo: product.allergyInfo || product.allergens || [],
+            tips: product.tips || ''
+          }
+        })
       }
       ElMessage.success(`已加载 ${selectedMerchant.value?.products?.length || 0} 个菜品`)
     } else {

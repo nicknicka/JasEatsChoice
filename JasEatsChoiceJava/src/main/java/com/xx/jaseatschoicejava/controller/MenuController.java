@@ -571,10 +571,13 @@ public class MenuController {
             @SuppressWarnings("unchecked")
             Map<String, Object> ingredientsMap = objectMapper.readValue(ingredientsJson, Map.class);
 
-            // 处理必选食材
+            // 处理必选食材 - 支持多种字段名
             Object required = ingredientsMap.get("requiredIngredients");
             if (required == null) {
                 required = ingredientsMap.get("required");
+            }
+            if (required == null) {
+                required = ingredientsMap.get("mandatory"); // 支持 mandatory 字段
             }
             if (required instanceof List) {
                 for (Object item : (List<?>) required) {

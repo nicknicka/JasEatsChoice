@@ -38,7 +38,7 @@
         <div class="optional-ingredients-grid">
           <div
             v-for="ingredient in product.optionalIngredients"
-            :key="ingredient.id || ingredient.name"
+            :key="getIngredientKey(ingredient)"
             class="ingredient-checkbox-wrapper"
             :class="{ checked: isIngredientSelected(ingredient) }"
             @click="toggleIngredient(ingredient)"
@@ -46,7 +46,7 @@
             <div class="ingredient-card">
               <div class="ingredient-header">
                 <div class="ingredient-icon-wrap">
-                  <span class="ingredient-emoji">{{ getIngredientEmoji(ingredient.name) }}</span>
+                  <span class="ingredient-emoji">{{ getIngredientEmoji(getIngredientName(ingredient)) }}</span>
                   <el-checkbox
                     :model-value="isIngredientSelected(ingredient)"
                     @change="toggleIngredient(ingredient)"
@@ -54,9 +54,9 @@
                   />
                 </div>
                 <div class="ingredient-info">
-                  <span class="ingredient-name">{{ ingredient.name }}</span>
-                  <span v-if="ingredient.price" class="ingredient-price">
-                    +¥{{ ingredient.price.toFixed(2) }}
+                  <span class="ingredient-name">{{ getIngredientName(ingredient) }}</span>
+                  <span v-if="getIngredientPrice(ingredient) > 0" class="ingredient-price">
+                    +¥{{ getIngredientPrice(ingredient).toFixed(2) }}
                   </span>
                 </div>
               </div>
@@ -239,11 +239,51 @@ const initFormData = () => {
 }
 
 /**
+ * 获取食材名称（兼容字符串和对象格式）
+ */
+const getIngredientName = (ingredient) => {
+  if (typeof ingredient === 'string') {
+    return ingredient
+  }
+  if (typeof ingredient === 'object' && ingredient !== null) {
+    return ingredient.name || ingredient.ingredientName || ''
+  }
+  return String(ingredient)
+}
+
+/**
+ * 获取食材价格（兼容字符串和对象格式）
+ */
+const getIngredientPrice = (ingredient) => {
+  if (typeof ingredient === 'string') {
+    return 0
+  }
+  if (typeof ingredient === 'object' && ingredient !== null) {
+    return ingredient.price || ingredient.extraPrice || 0
+  }
+  return 0
+}
+
+/**
+ * 获取食材唯一标识（用于key）
+ */
+const getIngredientKey = (ingredient) => {
+  if (typeof ingredient === 'string') {
+    return ingredient
+  }
+  if (typeof ingredient === 'object' && ingredient !== null) {
+    return ingredient.id || ingredient.name || ingredient.ingredientName || ''
+  }
+  return String(ingredient)
+}
+
+/**
  * 检查食材是否已选择
  */
 const isIngredientSelected = (ingredient) => {
+  const ingredientName = getIngredientName(ingredient)
   return formData.value.optionalIngredients.some(
-    item => item.name === ingredient.name
+    item => item.name === ingredientName
   )
 }
 
@@ -277,15 +317,18 @@ const toggleQuickRemark = (remark) => {
  * 切换食材选择
  */
 const toggleIngredient = (ingredient) => {
+  const ingredientName = getIngredientName(ingredient)
+  const ingredientPrice = getIngredientPrice(ingredient)
+
   const index = formData.value.optionalIngredients.findIndex(
-    item => item.name === ingredient.name
+    item => item.name === ingredientName
   )
 
   if (index === -1) {
     // 添加食材
     formData.value.optionalIngredients.push({
-      name: ingredient.name,
-      price: ingredient.price || 0
+      name: ingredientName,
+      price: ingredientPrice
     })
   } else {
     // 移除食材

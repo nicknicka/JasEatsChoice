@@ -538,6 +538,11 @@ const parseIngredients = (ingredients) => {
  * 获取必选食材列表
  */
 const getRequiredIngredients = (product) => {
+  // 优先使用 ingredients.mandatory 格式(商家端标准格式)
+  if (product.ingredients?.mandatory && Array.isArray(product.ingredients.mandatory)) {
+    return product.ingredients.mandatory
+  }
+  // 兼容 requiredIngredients 格式
   return parseIngredients(product.requiredIngredients)
 }
 
@@ -545,6 +550,11 @@ const getRequiredIngredients = (product) => {
  * 获取可选食材列表
  */
 const getOptionalIngredients = (product) => {
+  // 优先使用 ingredients.optional 格式(商家端标准格式)
+  if (product.ingredients?.optional && Array.isArray(product.ingredients.optional)) {
+    return product.ingredients.optional
+  }
+  // 兼容 optionalIngredients 格式
   return parseIngredients(product.optionalIngredients)
 }
 

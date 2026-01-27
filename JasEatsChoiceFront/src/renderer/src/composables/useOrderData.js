@@ -70,7 +70,7 @@ export function useOrderData() {
    */
   async function fetchDishDetail(orderDish) {
     try {
-      const dishResponse = await axios.get(`${API_CONFIG.baseURL}/dishes/${orderDish.dishId}`)
+      const dishResponse = await axios.get(`${API_CONFIG.baseURL}${API_CONFIG.dish.detail}${orderDish.dishId}`)
       const dish = dishResponse.data?.data
 
       return {
