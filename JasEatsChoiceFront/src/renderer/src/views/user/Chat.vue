@@ -1527,6 +1527,9 @@ const addProductToCart = ({ product, customization }) => {
   }
   currentOrder.orderItems.push(cartItem)
 
+  // 更新总金额
+  currentOrder.totalAmount = (currentOrder.totalAmount || 0) + cartItem.subtotal
+
   ElMessage.success(`已添加 ${customization.quantity || 1}份 ${product.name}`)
 }
 
@@ -1543,7 +1546,43 @@ const changeMerchant = () => {
 }
 
 const goToOrderConfirmation = () => {
-  ElMessage.info('跳转到订单确认页面')
+  if (!selectedConversation.value || !groupOrders.value[selectedConversation.value.id]) {
+    ElMessage.error('当前没有群订单')
+    return
+  }
+
+  const currentOrder = groupOrders.value[selectedConversation.value.id]
+
+  if (!currentOrder.orderItems || currentOrder.orderItems.length === 0) {
+    ElMessage.warning('购物车为空，无法进行订单确认')
+    return
+  }
+
+  // 构建待支付订单数据
+  const pendingOrder = {
+    cartItems: currentOrder.orderItems.map((item) => ({
+      ...item,
+      price: item.price || item.productPrice || 0,
+      remark: item.remark || ''
+    })),
+    totalAmount: currentOrder.totalAmount,
+    fromChat: true,
+    groupName: currentOrder.groupName,
+    orderId: currentOrder.orderId,
+    creator: currentOrder.creator,
+    members: currentOrder.members,
+    // 商家信息以对象格式传递，符合OrderConfirmation页面的期望
+    merchant: {
+      id: currentOrder.merchantId,
+      name: currentOrder.merchantName
+    }
+  }
+
+  // 保存到sessionStorage
+  sessionStorage.setItem('pendingOrder', JSON.stringify(pendingOrder))
+
+  // 跳转到订单确认页面
+  router.push('/user/home/order-confirmation')
 }
 
 // ========== 监听群订单抽屉状态 ==========

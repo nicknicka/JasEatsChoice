@@ -694,6 +694,17 @@ const handleAddToCart = (product) => {
       remark: ''
     }
   })
+
+  // 重置该商品的定制配置
+  clearProductCustomization(product.id)
+
+  // 取消选中该商品（可选，根据需求决定是否保留选中状态）
+  const index = selectedProducts.value.findIndex(item => item.id === product.id)
+  if (index !== -1) {
+    selectedProducts.value.splice(index, 1)
+  }
+
+  ElMessage.success(`${product.name} 已加入订单，配置已重置`)
 }
 
 /**
@@ -708,6 +719,16 @@ const handleBatchAddToCart = () => {
   items.forEach(item => {
     emit('addToCart', item)
   })
+
+  // 重置所有商品的定制配置
+  items.forEach(item => {
+    clearProductCustomization(item.product.id)
+  })
+
+  // 清空已选商品列表
+  selectedProducts.value = []
+
+  ElMessage.success(`已批量加入 ${items.length} 个商品，配置已重置`)
 }
 
 /**

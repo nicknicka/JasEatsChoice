@@ -113,6 +113,73 @@
         </div>
       </div>
 
+      <!-- 商品列表 -->
+      <div class="order-items-section">
+        <div class="section-header">
+          <div class="section-title">
+            <el-icon :size="18" color="#409eff"><ShoppingCart /></el-icon>
+            <span>已选商品 ({{ groupOrder.orderItems?.length || 0 }})</span>
+          </div>
+        </div>
+
+        <div v-if="groupOrder.orderItems && groupOrder.orderItems.length > 0" class="order-items-list">
+          <div
+            v-for="(item, index) in groupOrder.orderItems"
+            :key="item.id || index"
+            class="order-item-card"
+          >
+            <div class="item-image">
+              <img
+                v-if="item.productImage"
+                :src="item.productImage"
+                :alt="item.productName"
+              />
+              <div v-else class="image-placeholder">
+                <el-icon :size="32"><Food /></el-icon>
+              </div>
+            </div>
+
+            <div class="item-content">
+              <div class="item-name">{{ item.productName }}</div>
+              <div class="item-price">¥{{ item.productPrice?.toFixed(2) || '0.00' }}</div>
+
+              <!-- 可选食材 -->
+              <div v-if="item.optionalIngredients && item.optionalIngredients.length > 0" class="item-ingredients">
+                <el-tag
+                  v-for="(ing, idx) in item.optionalIngredients"
+                  :key="idx"
+                  size="small"
+                  type="primary"
+                  effect="plain"
+                >
+                  +{{ ing.name || ing }}
+                </el-tag>
+              </div>
+
+              <!-- 备注 -->
+              <div v-if="item.remark" class="item-remark">
+                <el-icon :size="12"><Edit /></el-icon>
+                {{ item.remark }}
+              </div>
+            </div>
+
+            <div class="item-actions">
+              <div class="item-quantity">×{{ item.quantity }}</div>
+              <div class="item-subtotal">¥{{ item.subtotal?.toFixed(2) || '0.00' }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 空状态提示 -->
+        <div v-else class="empty-cart">
+          <el-empty description="暂无商品，快去点餐吧！">
+            <template #image>
+              <el-icon :size="64" color="#c0c4cc"><ShoppingCart /></el-icon>
+            </template>
+          </el-empty>
+        </div>
+      </div>
+
       <!-- 加菜功能入口 -->
       <div
         class="add-dish-section"
@@ -201,7 +268,9 @@ import {
   Shop,
   Wallet,
   Dish,
-  DocumentChecked
+  DocumentChecked,
+  Food,
+  Edit
 } from '@element-plus/icons-vue'
 
 const props = defineProps({
@@ -436,6 +505,141 @@ const hasPendingPayments = computed(() => {
           color: #67c23a;
         }
       }
+    }
+  }
+
+  .order-items-section {
+    background: white;
+    border-radius: 10px;
+    padding: 14px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #f0f0f0;
+
+      .section-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 15px;
+        font-weight: 600;
+        color: #303133;
+      }
+    }
+
+    .order-items-list {
+      max-height: 400px;
+      overflow-y: auto;
+
+      .order-item-card {
+        display: flex;
+        gap: 12px;
+        padding: 12px;
+        background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);
+        border-radius: 8px;
+        margin-bottom: 10px;
+        border: 1px solid #e4e7ed;
+        transition: all 0.3s;
+
+        &:hover {
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          border-color: #409eff;
+        }
+
+        .item-image {
+          width: 60px;
+          height: 60px;
+          flex-shrink: 0;
+          border-radius: 6px;
+          overflow: hidden;
+          background: #f0f0f0;
+
+          img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+          }
+
+          .image-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #c0c4cc;
+            background: linear-gradient(135deg, #e4e7ed 0%, #dcdfe6 100%);
+          }
+        }
+
+        .item-content {
+          flex: 1;
+          min-width: 0;
+
+          .item-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #303133;
+            margin-bottom: 6px;
+            line-height: 1.4;
+          }
+
+          .item-price {
+            font-size: 13px;
+            color: #f56c6c;
+            font-weight: 500;
+            margin-bottom: 8px;
+          }
+
+          .item-ingredients {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-bottom: 6px;
+          }
+
+          .item-remark {
+            font-size: 12px;
+            color: #909399;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            background: #f5f7fa;
+            border-radius: 4px;
+          }
+        }
+
+        .item-actions {
+          flex-shrink: 0;
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+          justify-content: center;
+          gap: 6px;
+
+          .item-quantity {
+            font-size: 14px;
+            font-weight: 600;
+            color: #409eff;
+          }
+
+          .item-subtotal {
+            font-size: 16px;
+            font-weight: 700;
+            color: #f56c6c;
+          }
+        }
+      }
+    }
+
+    .empty-cart {
+      padding: 30px 20px;
+      text-align: center;
     }
   }
 
