@@ -98,8 +98,8 @@
           <div class="quick-order-content">
             <el-icon :size="24" color="#67c23a"><Plus /></el-icon>
             <div class="quick-order-text">
-              <div class="quick-order-title">{{ hasMerchant ? '继续点餐' : '开始点餐' }}</div>
-              <div class="quick-order-desc">{{ hasMerchant ? '添加更多商品到订单' : '选择商家并开始点餐' }}</div>
+              <div class="quick-order-title">{{ hasMerchant ? '选择菜品' : '开始点餐' }}</div>
+              <div class="quick-order-desc">{{ hasMerchant ? '浏览并添加商品' : '选择商家并开始点餐' }}</div>
             </div>
           </div>
           <el-button
@@ -108,7 +108,7 @@
             @click="$emit('select-merchant')"
             class="quick-order-btn"
           >
-            <el-icon><ShoppingCart /></el-icon> {{ hasMerchant ? '立即点餐' : '选择商家' }}
+            <el-icon><ShoppingCart /></el-icon> {{ hasMerchant ? '选择菜品' : '选择商家' }}
           </el-button>
         </div>
       </div>
@@ -307,7 +307,7 @@
 
             <el-button size="default" @click="$emit('select-merchant')">
               <el-icon><Shop /></el-icon>
-              选择商家
+              {{ hasMerchant ? '去点菜' : '选择商家' }}
             </el-button>
             <el-button
               type="success"

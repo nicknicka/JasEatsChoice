@@ -17,6 +17,17 @@
             <span class="header-subtitle">选择您喜欢的商品</span>
           </div>
         </div>
+        <div class="header-right">
+          <el-button
+            type="warning"
+            size="small"
+            @click="$emit('change-merchant')"
+            class="change-merchant-btn"
+          >
+            <el-icon><RefreshRight /></el-icon>
+            切换商家
+          </el-button>
+        </div>
       </div>
     </template>
 
@@ -52,6 +63,44 @@
       </div>
     </div>
 
+    <!-- 批量操作栏 -->
+    <div v-if="filteredProducts.length > 0" class="batch-actions">
+      <span class="select-all">
+        <el-checkbox
+          :indeterminate="selectAllState === 1"
+          :model-value="selectAllState === 2"
+          @change="toggleSelectAll"
+        />
+        <span class="select-text">
+          全选
+          <span v-if="selectedProducts.length > 0" class="selected-count">
+            ({{ selectedProducts.length }}/{{ filteredProducts.length }})
+          </span>
+        </span>
+      </span>
+
+      <div class="batch-buttons">
+        <el-button
+          type="primary"
+          :disabled="selectedProducts.length === 0"
+          @click="openBatchCustomize"
+          class="batch-btn"
+        >
+          <el-icon><Setting /></el-icon>
+          批量定制 ({{ selectedProducts.length }})
+        </el-button>
+
+        <el-button
+          type="success"
+          :disabled="selectedProducts.length === 0"
+          @click="handleBatchAddToCart"
+          class="batch-btn"
+        >
+          <el-icon><ShoppingCart /></el-icon>
+          加入订单 ({{ selectedProducts.length }})
+        </el-button>
+      </div>
+    </div>
 
     <!-- 商品列表 -->
     <div v-loading="isLoading" class="product-list" v-if="merchant && merchant.products">
@@ -72,6 +121,14 @@
         @click="handleProductCardClick(product, $event)"
         @keydown="handleProductKeydown($event, product)"
       >
+        <!-- 左侧复选框 -->
+        <div class="product-checkbox">
+          <el-checkbox
+            :model-value="isProductSelected(product.id)"
+            @change="toggleProductSelection(product)"
+          />
+        </div>
+
         <!-- 商品图片 -->
         <div class="product-image">
           <img
@@ -235,6 +292,12 @@
     @confirm="handleProductCustomized"
   />
 
+  <!-- 批量定制对话框 -->
+  <BatchCustomizeDialog
+    v-model="batchCustomizeVisible"
+    :products="selectedProducts"
+    @confirm="handleBatchCustomized"
+  />
 </template>
 
 <script setup>
@@ -243,15 +306,23 @@ import { ElMessage } from 'element-plus'
 import {
   Food,
   Search,
+  Setting,
   ShoppingCart,
   View,
   Edit,
   Star,
   CirclePlus,
-  Sort
+  Sort,
+  RefreshRight
 } from '@element-plus/icons-vue'
 import ProductDetailDialog from './ProductDetailDialog.vue'
 import ProductCustomizeDialog from './ProductCustomizeDialog.vue'
+import BatchCustomizeDialog from './BatchCustomizeDialog.vue'
+
+// 禁用属性继承，避免多根节点警告
+defineOptions({
+  inheritAttrs: false
+})
 
 /**
  * 商品选择对话框组件（优化版）
@@ -265,10 +336,14 @@ const props = defineProps({
   merchant: {
     type: Object,
     default: null
+  },
+  existingItems: {
+    type: Array,
+    default: () => []
   }
 })
 
-const emit = defineEmits(['update:modelValue', 'addToCart', 'confirm', 'confirmAll'])
+const emit = defineEmits(['update:modelValue', 'addToCart', 'confirm', 'confirmAll', 'change-merchant'])
 
 // 对话框状态
 const visible = ref(props.modelValue)
@@ -279,7 +354,8 @@ const isLoading = ref(false)
 const previousActiveElement = ref(null)
 let searchDebounceTimer = null
 
-// 商品定制信息
+// 商品选择状态
+const selectedProducts = ref([])
 const productCustomizations = ref({}) // 存储每个商品的定制信息 { productId: { quantity, optionalIngredients, remark } }
 
 // 当前操作的商品
@@ -289,6 +365,7 @@ const currentProductCustomization = ref(null)
 // 子对话框状态
 const productDetailVisible = ref(false)
 const productCustomizeVisible = ref(false)
+const batchCustomizeVisible = ref(false)
 
 /**
  * 筛选后的商品列表
@@ -318,6 +395,15 @@ const sortedProducts = computed(() => {
     const priceB = b.price || 0
     return sortBy.value === 'price-asc' ? priceA - priceB : priceB - priceA
   })
+})
+
+/**
+ * 全选状态：0=未选择，1=部分选择，2=全选
+ */
+const selectAllState = computed(() => {
+  if (selectedProducts.value.length === 0) return 0
+  if (selectedProducts.value.length === sortedProducts.value.length) return 2
+  return 1
 })
 
 /**
@@ -381,13 +467,19 @@ const handleGlobalKeydown = (event) => {
   if (event.key === 'Escape') {
     handleClose()
   }
+
+  // Ctrl+A 全选
+  if (event.ctrlKey && event.key === 'a') {
+    event.preventDefault()
+    toggleSelectAll()
+  }
 }
 
 /**
  * 检查商品是否已选择
  */
 const isProductSelected = (productId) => {
-  return productId in productCustomizations.value
+  return selectedProducts.value.some(item => item.id === productId)
 }
 
 /**
@@ -448,6 +540,36 @@ const getOptionalIngredients = (product) => {
 }
 
 /**
+ * 切换商品选择状态
+ */
+const toggleProductSelection = (product) => {
+  const index = selectedProducts.value.findIndex(item => item.id === product.id)
+  if (index === -1) {
+    selectedProducts.value.push(product)
+  } else {
+    selectedProducts.value.splice(index, 1)
+    // 如果取消选择，同时清除定制信息
+    if (!isProductSelected(product.id)) {
+      delete productCustomizations.value[product.id]
+    }
+  }
+}
+
+/**
+ * 全选/取消全选
+ */
+const toggleSelectAll = () => {
+  if (selectAllState.value === 2) {
+    // 取消全选
+    selectedProducts.value = []
+    productCustomizations.value = {}
+  } else {
+    // 全选
+    selectedProducts.value = [...filteredProducts.value]
+  }
+}
+
+/**
  * 获取商品定制信息
  */
 const getProductCustomization = (productId) => {
@@ -504,20 +626,49 @@ const customizeProduct = (product) => {
 }
 
 /**
+ * 批量定制
+ */
+const openBatchCustomize = () => {
+  if (selectedProducts.value.length === 0) {
+    return
+  }
+  batchCustomizeVisible.value = true
+}
+
+/**
  * 处理商品定制确认
  */
 const handleProductCustomized = (data) => {
   const { productId, customization } = data
   productCustomizations.value[productId] = customization
+
+  // 如果商品还未选择，自动添加到选择列表
+  if (!isProductSelected(productId)) {
+    const product = props.merchant.products.find(p => p.id === productId)
+    if (product) {
+      selectedProducts.value.push(product)
+    }
+  }
+}
+
+/**
+ * 处理批量定制确认
+ */
+const handleBatchCustomized = (customizations) => {
+  // 更新所有商品的定制信息
+  Object.keys(customizations).forEach(productId => {
+    productCustomizations.value[productId] = customizations[productId]
+  })
 }
 
 /**
  * 处理商品卡片点击 - 打开定制对话框
  */
 const handleProductCardClick = (product, event) => {
-  // 如果点击的是按钮等交互元素，不触发定制对话框
+  // 如果点击的是 checkbox、按钮等交互元素，不触发定制对话框
   const target = event.target
   const isInteractiveElement =
+    target.closest('.product-checkbox') ||
     target.closest('.action-btn') ||
     target.tagName === 'INPUT' ||
     target.tagName === 'BUTTON'
@@ -526,7 +677,12 @@ const handleProductCardClick = (product, event) => {
     return
   }
 
-  // 直接打开定制对话框
+  // 打开定制对话框（自动选中该商品）
+  if (!isProductSelected(product.id)) {
+    toggleProductSelection(product)
+  }
+
+  // 打开定制对话框
   customizeProduct(product)
 }
 
@@ -548,7 +704,46 @@ const handleAddToCart = (product) => {
   // 重置该商品的定制配置
   clearProductCustomization(product.id)
 
+  // 取消选中该商品（可选，根据需求决定是否保留选中状态）
+  const index = selectedProducts.value.findIndex(item => item.id === product.id)
+  if (index !== -1) {
+    selectedProducts.value.splice(index, 1)
+  }
+
   ElMessage.success(`${product.name} 已加入订单，配置已重置`)
+}
+
+/**
+ * 批量加入购物车
+ */
+const handleBatchAddToCart = () => {
+  // 获取所有选中的商品，没有配置的使用默认配置
+  const items = selectedProducts.value.map((product) => {
+    const customization =
+      productCustomizations.value[product.id] || {
+        quantity: 1,
+        optionalIngredients: [],
+        remark: ''
+      }
+    return { product, customization }
+  })
+
+  items.forEach((item) => {
+    emit('addToCart', item)
+  })
+
+  // 重置所有商品的定制配置
+  selectedProducts.value.forEach((product) => {
+    clearProductCustomization(product.id)
+  })
+
+  // 清空已选商品列表
+  selectedProducts.value = []
+
+  ElMessage.success(`已批量加入 ${items.length} 个商品`)
+
+  // ========== 关闭对话框 ==========
+  handleClose()
 }
 
 /**
@@ -582,11 +777,51 @@ onUnmounted(() => {
 watch(() => props.modelValue, (newVal) => {
   visible.value = newVal
   if (newVal) {
-    // 对话框打开时重置状态
-    productCustomizations.value = {}
+    // 对话框打开时，从已有订单中恢复选择状态
+    restoreFromExistingItems()
     searchKeyword.value = ''
   }
 })
+
+/**
+ * 从已有订单项恢复选择状态
+ */
+const restoreFromExistingItems = () => {
+  if (!props.merchant || !props.existingItems || props.existingItems.length === 0) {
+    // 没有已有订单，重置状态
+    selectedProducts.value = []
+    productCustomizations.value = {}
+    return
+  }
+
+  // 清空当前选择
+  selectedProducts.value = []
+  productCustomizations.value = {}
+
+  // 遍历已有订单项，恢复选择状态
+  props.existingItems.forEach((item) => {
+    // 查找对应的商品
+    const product = props.merchant.products?.find(p => p.id === item.productId)
+    if (!product) return
+
+    // 添加到已选商品列表
+    if (!selectedProducts.value.some(p => p.id === product.id)) {
+      selectedProducts.value.push(product)
+    }
+
+    // 恢复定制信息
+    productCustomizations.value[product.id] = {
+      quantity: item.quantity || 1,
+      optionalIngredients: item.optionalIngredients || [],
+      remark: item.remark || ''
+    }
+  })
+
+  console.log('✅ 已从订单恢复选择状态:', {
+    selectedCount: selectedProducts.value.length,
+    customizations: productCustomizations.value
+  })
+}
 
 /**
  * 监听内部 visible 变化
@@ -619,7 +854,7 @@ watch(visible, (newVal) => {
 
 .dialog-header {
   display: flex;
-  justify-content: flex-start;
+  justify-content: space-between;
   align-items: center;
   padding: 14px 16px;
   background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
@@ -644,6 +879,27 @@ watch(visible, (newVal) => {
         font-size: 12px;
         opacity: 0.9;
         margin-top: 3px;
+      }
+    }
+  }
+
+  .header-right {
+    .change-merchant-btn {
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: white;
+      backdrop-filter: blur(10px);
+      transition: all 0.3s ease;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.3);
+        border-color: rgba(255, 255, 255, 0.5);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+
+      :deep(.el-icon) {
+        margin-right: 4px;
       }
     }
   }
@@ -672,6 +928,46 @@ watch(visible, (newVal) => {
   }
 }
 
+.batch-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 16px;
+  background: white;
+  border-bottom: 1px solid #e4e7ed;
+
+  .select-all {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+    color: #303133;
+    cursor: pointer;
+
+    .select-text {
+      font-size: 14px;
+
+      .selected-count {
+        color: #909399;
+        font-size: 12px;
+      }
+    }
+  }
+
+  .batch-buttons {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .batch-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+}
+
 .product-list {
   max-height: 60vh;
   overflow-y: auto;
@@ -696,6 +992,10 @@ watch(visible, (newVal) => {
     &.selected {
       border-color: #67c23a;
       background: linear-gradient(135deg, #f0f9ff 0%, #ffffff 100%);
+    }
+
+    .product-checkbox {
+      flex-shrink: 0;
     }
 
     .product-image {
@@ -963,6 +1263,25 @@ watch(visible, (newVal) => {
     }
   }
 
+  .batch-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+
+    .select-all {
+      width: 100%;
+    }
+
+    .batch-buttons {
+      width: 100%;
+      flex-direction: column;
+    }
+
+    .batch-btn {
+      width: 100%;
+    }
+  }
+
   .product-list {
     padding: 10px;
 
@@ -974,6 +1293,13 @@ watch(visible, (newVal) => {
       .product-image {
         width: 100%;
         height: 140px;
+      }
+
+      .product-checkbox {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 1;
       }
 
       .product-content {

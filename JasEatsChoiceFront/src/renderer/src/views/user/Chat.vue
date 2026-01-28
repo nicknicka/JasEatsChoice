@@ -157,8 +157,10 @@
     <ProductSelectDialog
       v-model="productSelectDialogVisible"
       :merchant="selectedMerchant"
+      :existing-items="currentGroupOrder?.orderItems || []"
       @add-to-cart="addProductToCart"
       @confirm="confirmProductSelection"
+      @change-merchant="handleChangeMerchantFromProductDialog"
     />
 
     <GroupOrderDrawer
@@ -489,6 +491,60 @@ const { initWebSocket, closeWebSocket } = useWebSocketChat({
 const groupOrders = ref({})
 const orderDrawerVisible = ref(false)
 
+// ========== SessionStorage 持久化工具函数（带用户ID，避免多账号混淆）==========
+/**
+ * 生成带用户ID的存储键
+ */
+const getStorageKey = (key) => {
+  return `user_${userId.value}_${key}`
+}
+
+const STORAGE_KEYS = {
+  SELECTED_MERCHANT: 'chat_selected_merchant',
+  ORDERING_MERCHANT: 'chat_ordering_merchant',
+  GROUP_ORDER_CART: 'chat_group_order_cart'
+}
+
+/**
+ * 保存数据到 sessionStorage（会话级别，不会跨用户混淆）
+ */
+const saveToStorage = (key, data) => {
+  try {
+    const storageKey = getStorageKey(key)
+    sessionStorage.setItem(storageKey, JSON.stringify(data))
+    console.log(`💾 [Storage] 已保存到 sessionStorage: ${storageKey}`)
+  } catch (error) {
+    console.error('保存到sessionStorage失败:', error)
+  }
+}
+
+/**
+ * 从 sessionStorage 读取数据
+ */
+const loadFromStorage = (key) => {
+  try {
+    const storageKey = getStorageKey(key)
+    const data = sessionStorage.getItem(storageKey)
+    return data ? JSON.parse(data) : null
+  } catch (error) {
+    console.error('从sessionStorage读取失败:', error)
+    return null
+  }
+}
+
+/**
+ * 清除 sessionStorage 数据
+ */
+const clearFromStorage = (key) => {
+  try {
+    const storageKey = getStorageKey(key)
+    sessionStorage.removeItem(storageKey)
+    console.log(`🗑️ [Storage] 已清除 sessionStorage: ${storageKey}`)
+  } catch (error) {
+    console.error('清除sessionStorage失败:', error)
+  }
+}
+
 const hasGroupOrder = computed(() => {
   return Boolean(
     selectedConversation.value &&
@@ -511,6 +567,23 @@ const merchantSelectDialogVisible = ref(false)
 const productSelectDialogVisible = ref(false)
 const selectedMerchant = ref(null)
 const orderingMerchant = ref(null)
+
+// ========== 监听商家选择变化，自动保存到 localStorage ==========
+watch(selectedMerchant, (newMerchant) => {
+  if (newMerchant) {
+    saveToStorage(STORAGE_KEYS.SELECTED_MERCHANT, newMerchant)
+  } else {
+    clearFromStorage(STORAGE_KEYS.SELECTED_MERCHANT)
+  }
+}, { deep: true })
+
+watch(orderingMerchant, (newMerchant) => {
+  if (newMerchant) {
+    saveToStorage(STORAGE_KEYS.ORDERING_MERCHANT, newMerchant)
+  } else {
+    clearFromStorage(STORAGE_KEYS.ORDERING_MERCHANT)
+  }
+}, { deep: true })
 
 const merchants = ref([
   // 模拟商家数据
@@ -766,6 +839,12 @@ const selectConversation = async (conversation) => {
             groupOrders.value[conversation.id].totalAmount = justPaidOrder.totalAmount || 0
             groupOrders.value[conversation.id].draftStatus = 1 // 更新后端状态
             console.log('✅ [selectConversation] 已更新订单状态为已支付')
+
+            // ========== 支付成功后清除商家和购物车数据 ==========
+            selectedMerchant.value = null
+            orderingMerchant.value = null
+            groupOrderCart.value = {}
+            console.log('✅ [selectConversation] 已清除商家和购物车数据')
 
             // 清除sessionStorage中的标记
             sessionStorage.removeItem('paidGroupOrderId')
@@ -1700,13 +1779,45 @@ const openMerchantSelectDialog = async () => {
     return
   }
 
-  if (orderingMerchant.value) {
+  const currentOrder = groupOrders.value[selectedConversation.value.id]
+
+  // 如果群订单已经有商家信息，直接打开商品选择对话框
+  if (currentOrder && currentOrder.merchantName && orderingMerchant.value) {
     selectedMerchant.value = orderingMerchant.value
     productSelectDialogVisible.value = true
-  } else {
-    // 从后端获取商家列表
+    return
+  }
+
+  // 没有商家，显示商家选择对话框
+  await fetchMerchants()
+  merchantSelectDialogVisible.value = true
+}
+
+/**
+ * 从商品选择对话框切换商家
+ */
+const handleChangeMerchantFromProductDialog = async () => {
+  // 关闭商品选择对话框
+  productSelectDialogVisible.value = false
+
+  // 提示用户是否确认切换
+  try {
+    await ElMessageBox.confirm(
+      `切换商家将清空当前已选商品，确定要切换吗？`,
+      '确认切换',
+      {
+        confirmButtonText: '确定切换',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    // 用户确认切换，获取商家列表并打开商家选择对话框
     await fetchMerchants()
     merchantSelectDialogVisible.value = true
+  } catch {
+    // 用户取消，重新打开商品选择对话框
+    productSelectDialogVisible.value = true
   }
 }
 
@@ -1721,13 +1832,24 @@ const selectMerchant = async (merchant) => {
     currentOrder.merchantName = merchant.name
   }
 
-  // 从后端获取商家菜品数据
-  await fetchMerchantProducts(merchant.id)
+  // 从后端获取商家菜品数据（显示加载提示）
+  await fetchMerchantProducts(merchant.id, false)
+
+  // 打开商品选择对话框
   productSelectDialogVisible.value = true
 }
 
 // 群订单购物车
 const groupOrderCart = ref({})
+
+// ========== 监听购物车变化，自动保存到 localStorage ==========
+watch(groupOrderCart, (newCart) => {
+  if (newCart && Object.keys(newCart).length > 0) {
+    saveToStorage(STORAGE_KEYS.GROUP_ORDER_CART, newCart)
+  } else {
+    clearFromStorage(STORAGE_KEYS.GROUP_ORDER_CART)
+  }
+}, { deep: true })
 
 /**
  * 添加商品到购物车
@@ -1817,7 +1939,9 @@ const goToOrderConfirmation = () => {
     merchant: {
       id: currentOrder.merchantId,
       name: currentOrder.merchantName
-    }
+    },
+    // ========== 标记这是从群订单跳转的，支付成功后需要清除商家和购物车数据 ==========
+    shouldClearMerchantData: true
   }
 
   // 保存到sessionStorage
@@ -1845,6 +1969,12 @@ const handleCancelGroupOrder = async () => {
     if (response.data && response.data.success) {
       // 清空本地状态
       delete groupOrders.value[selectedConversation.value.id]
+
+      // ========== 清除 localStorage 中的商家和购物车数据 ==========
+      selectedMerchant.value = null
+      orderingMerchant.value = null
+      groupOrderCart.value = {}
+      // watch 会自动清除 localStorage
 
       // 发送系统消息到群聊
       const cancelMsg = {
@@ -1972,7 +2102,8 @@ watch(() => route.query, async (newQuery) => {
 
 // ========== 生命周期 ==========
 onMounted(async () => {
-   console.log('🚀 [Chat] Chat组件挂载，开始初始化')
+  console.log('🚀 [Chat] Chat组件挂载，开始初始化')
+
   try {
     // 先从本地加载聊天历史缓存（同步函数）
     loadChatHistoryFromLocal()
@@ -2019,6 +2150,41 @@ onMounted(async () => {
 
     // 处理从联系人页面跳转到聊天页面
     await handleChatFromContact()
+
+    // ========== 从 sessionStorage 恢复商家和购物车数据（会话恢复）==========
+    const savedSelectedMerchant = loadFromStorage(STORAGE_KEYS.SELECTED_MERCHANT)
+    const savedOrderingMerchant = loadFromStorage(STORAGE_KEYS.ORDERING_MERCHANT)
+    const savedGroupOrderCart = loadFromStorage(STORAGE_KEYS.GROUP_ORDER_CART)
+
+    if (savedSelectedMerchant) {
+      selectedMerchant.value = savedSelectedMerchant
+      // 静默获取商品数据（不显示消息提示）
+      if (savedSelectedMerchant.id) {
+        await fetchMerchantProducts(savedSelectedMerchant.id, true)
+      }
+      console.log('✅ [Chat] 已恢复选择的商家:', savedSelectedMerchant.name)
+    }
+
+    if (savedOrderingMerchant) {
+      orderingMerchant.value = savedOrderingMerchant
+      console.log('✅ [Chat] 已恢复点餐商家:', savedOrderingMerchant.name)
+
+      // ========== 同步更新 groupOrder 的商家信息 ==========
+      // 只有当有群订单且商家信息为空时才更新
+      if (selectedConversation.value && groupOrders.value[selectedConversation.value.id]) {
+        const currentOrder = groupOrders.value[selectedConversation.value.id]
+        if (!currentOrder.merchantId || !currentOrder.merchantName) {
+          currentOrder.merchantId = savedOrderingMerchant.id
+          currentOrder.merchantName = savedOrderingMerchant.name
+          console.log('✅ [Chat] 已同步群订单的商家信息')
+        }
+      }
+    }
+
+    if (savedGroupOrderCart) {
+      groupOrderCart.value = savedGroupOrderCart
+      console.log('✅ [Chat] 已恢复购物车数据:', Object.keys(savedGroupOrderCart))
+    }
   } catch (error) {
     console.error('❌ [Chat] 加载数据失败:', error)
     ElMessage.error('加载数据失败，请稍后重试')
@@ -2249,9 +2415,15 @@ const fetchMerchants = async () => {
 }
 
 // 获取商家菜品（菜单）
-const fetchMerchantProducts = async (merchantId) => {
+/**
+ * @param {number|string} merchantId - 商家ID
+ * @param {boolean} silent - 是否静默加载（不显示消息提示，用于恢复数据时）
+ */
+const fetchMerchantProducts = async (merchantId, silent = false) => {
   try {
-    ElMessage.info('正在加载菜品信息...')
+    if (!silent) {
+      ElMessage.info('正在加载菜品信息...')
+    }
     const response = await api.get(`/v1/menus/merchants/${merchantId}/menu`)
 
     if (response.code === '200' && response.data) {
@@ -2311,15 +2483,26 @@ const fetchMerchantProducts = async (merchantId) => {
             tips: product.tips || ''
           }
         })
+
+        // ========== 商品数据加载完成后，手动保存完整的商家信息到 sessionStorage ==========
+        saveToStorage(STORAGE_KEYS.SELECTED_MERCHANT, selectedMerchant.value)
+        saveToStorage(STORAGE_KEYS.ORDERING_MERCHANT, selectedMerchant.value)
+        console.log('💾 [Chat] 商品数据加载完成，已保存完整商家信息')
       }
-      ElMessage.success(`已加载 ${selectedMerchant.value?.products?.length || 0} 个菜品`)
+      if (!silent) {
+        ElMessage.success(`已加载 ${selectedMerchant.value?.products?.length || 0} 个菜品`)
+      }
     } else {
       console.error('❌ [Chat] 获取菜品失败:', response)
-      ElMessage.error('获取菜品信息失败')
+      if (!silent) {
+        ElMessage.error('获取菜品信息失败')
+      }
     }
   } catch (error) {
     console.error('❌ [Chat] 获取商家菜品失败:', error)
-    ElMessage.error('获取菜品信息失败，请稍后重试')
+    if (!silent) {
+      ElMessage.error('获取菜品信息失败，请稍后重试')
+    }
   }
 }
 </script>

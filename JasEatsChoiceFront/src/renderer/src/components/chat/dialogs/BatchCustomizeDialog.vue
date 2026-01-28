@@ -99,7 +99,7 @@
                   <span>数量</span>
                 </div>
                 <el-input-number
-                  v-model="productSettings[product.id]?.quantity"
+                  v-model="productSettings[product.id].quantity"
                   :min="1"
                   :max="99"
                   size="small"
@@ -150,7 +150,7 @@
                   <span>备注</span>
                 </div>
                 <el-input
-                  v-model="productSettings[product.id]?.remark"
+                  v-model="productSettings[product.id].remark"
                   placeholder="添加备注..."
                   size="small"
                   maxlength="50"
