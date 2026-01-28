@@ -6,9 +6,11 @@
  * 订单状态
  */
 export const ORDER_STATUS = {
+  DRAFT: 'draft', // 草稿状态
   ACTIVE: 'active', // 活动中
-  CLOSED: 'closed', // 已关闭
-  PAID: 'paid' // 已支付
+  PAID: 'paid', // 已支付
+  COMPLETED: 'completed', // 已完成
+  CANCELLED: 'cancelled' // 已取消
 }
 
 /**

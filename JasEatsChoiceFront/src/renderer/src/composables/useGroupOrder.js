@@ -383,6 +383,63 @@ export function useGroupOrder({ selectedConversation, chatMessages }) {
   }
 
   /**
+   * 取消群订单（创建者）
+   * ⭐ 删除草稿订单，清空本地状态
+   */
+  const cancelGroupOrder = async () => {
+    if (!selectedConversation.value) {
+      ElMessage.error('请先选择一个群聊')
+      return false
+    }
+
+    const currentOrder = groupOrders.value[selectedConversation.value.id]
+    if (!currentOrder) {
+      ElMessage.error('当前没有群订单')
+      return false
+    }
+
+    try {
+      // 调用后端API删除订单
+      const response = await api.delete(`/v1/group-orders/group-orders/${currentOrder.orderId}`)
+
+      if (response.data && response.data.success) {
+        // 清空本地状态
+        delete groupOrders.value[selectedConversation.value.id]
+
+        // 发送系统消息到群聊
+        const cancelMsg = {
+          id: Date.now(),
+          fromId: authStore.decodedToken?.userId || '',
+          toId: currentOrder.groupId,
+          sessionType: 'group',
+          msgType: 'text',
+          content: '我取消了群订单',
+          createTime: new Date().toISOString(),
+          formattedTime: '刚刚',
+          sender: '我',
+          avatar: '👤'
+        }
+
+        chatMessages.value.push(cancelMsg)
+        if (selectedConversation.value) {
+          selectedConversation.value.lastMessage = '系统: 我取消了群订单'
+          selectedConversation.value.time = cancelMsg.formattedTime
+        }
+
+        ElMessage.success('群订单已取消')
+        return true
+      } else {
+        ElMessage.error(response.data?.message || '取消订单失败')
+        return false
+      }
+    } catch (error) {
+      console.error('取消群订单失败:', error)
+      ElMessage.error('取消订单失败，请稍后重试')
+      return false
+    }
+  }
+
+  /**
    * 跳转到订单确认页
    */
   const goToOrderConfirmation = () => {
@@ -465,6 +522,7 @@ export function useGroupOrder({ selectedConversation, chatMessages }) {
     loadDraftOrder,
     createGroupOrder,
     joinGroupOrder,
+    cancelGroupOrder,
     goToOrderConfirmation
   }
 }

@@ -168,12 +168,14 @@
       :pending-review-count="pendingReviewCount"
       :pending-payment-count="pendingPaymentCount"
       @change-merchant="changeMerchant"
-      @continue-order="openMerchantSelectDialog"
       @select-merchant="openMerchantSelectDialog"
       @go-to-pay="goToOrderConfirmation"
       @open-add-dish-dialog="openAddDishDialog"
       @open-add-dish-review="openAddDishReview"
       @open-pending-payment="openPendingPayment"
+      @cancel-group-order="handleCancelGroupOrder"
+      @view-history="handleViewHistory"
+      @continue-order="handleCreateNewOrder"
     />
 
     <!-- 加菜对话框 -->
@@ -198,7 +200,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Loading } from '@element-plus/icons-vue'
 
 // ========== 面板宽度控制 ==========
@@ -709,6 +711,91 @@ const selectConversation = async (conversation) => {
       }
     } catch (error) {
       console.error('🔴 [selectConversation] 加载草稿订单失败:', error)
+      // 静默失败，不影响用户体验
+    }
+
+    // ⭐ 加载已支付订单历史
+    try {
+      console.log('🔵 [selectConversation] 开始加载已支付订单历史')
+      const groupId = conversation.groupId || conversation.id
+
+      // 调用后端API获取该群的所有已支付订单
+      const paidOrdersResponse = await api.get(`/v1/group-orders/groups/${groupId}/orders`, {
+        params: {
+          status: 1, // 1表示已支付
+          page: 1,
+          size: 10
+        }
+      })
+
+      console.log('🔵 [selectConversation] 已支付订单API响应:', paidOrdersResponse.data)
+
+      let paidOrders = []
+      if (paidOrdersResponse.data && paidOrdersResponse.data.success) {
+        paidOrders = paidOrdersResponse.data.data || []
+      } else if (Array.isArray(paidOrdersResponse.data)) {
+        paidOrders = paidOrdersResponse.data
+      }
+
+      // 转换为前端格式并添加到当前订单
+      if (paidOrders.length > 0 && groupOrders.value[conversation.id]) {
+        groupOrders.value[conversation.id].paidOrders = paidOrders.map(order => ({
+          orderId: order.id,
+          totalAmount: order.totalAmount || 0,
+          status: order.status === 5 ? 'completed' : 'paid', // 5=已完成, 1=已支付
+          paymentTime: order.updateTime || order.createTime,
+          createTime: order.createTime,
+          remark: order.remark,
+          orderItems: order.dishItems?.map(dish => ({
+            productName: dish.dishName || dish.name,
+            quantity: dish.quantity,
+            productPrice: dish.price
+          })) || []
+        }))
+
+        console.log('✅ [selectConversation] 已加载已支付订单历史:', groupOrders.value[conversation.id].paidOrders.length)
+
+        // ⭐ 检查是否有刚刚支付的群订单
+        const paidGroupOrderId = sessionStorage.getItem('paidGroupOrderId')
+        if (paidGroupOrderId) {
+          // 查找刚支付的订单
+          const justPaidOrder = paidOrders.find(order => order.id === paidGroupOrderId)
+          if (justPaidOrder) {
+            // 更新当前订单状态为已支付
+            groupOrders.value[conversation.id].status = 'paid'
+            groupOrders.value[conversation.id].totalAmount = justPaidOrder.totalAmount || 0
+            groupOrders.value[conversation.id].draftStatus = 1 // 更新后端状态
+            console.log('✅ [selectConversation] 已更新订单状态为已支付')
+
+            // 清除sessionStorage中的标记
+            sessionStorage.removeItem('paidGroupOrderId')
+            sessionStorage.removeItem('paidGroupOrderAmount')
+
+            // 发送系统消息通知群成员
+            const paidMsg = {
+              id: Date.now(),
+              fromId: userId.value,
+              toId: groupId,
+              sessionType: 'group',
+              msgType: 'text',
+              content: `群订单已支付完成，金额：¥${justPaidOrder.totalAmount?.toFixed(2) || '0.00'}`,
+              createTime: new Date().toISOString(),
+              formattedTime: '刚刚',
+              sender: '系统',
+              avatar: '💰'
+            }
+            chatMessages.value.push(paidMsg)
+
+            // 更新会话最后消息
+            if (selectedConversation.value) {
+              selectedConversation.value.lastMessage = '系统: 群订单已支付完成'
+              selectedConversation.value.time = paidMsg.formattedTime
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('🔴 [selectConversation] 加载已支付订单历史失败:', error)
       // 静默失败，不影响用户体验
     }
 
@@ -1738,6 +1825,131 @@ const goToOrderConfirmation = () => {
 
   // 跳转到订单确认页面
   router.push('/user/home/order-confirmation')
+}
+
+/**
+ * 处理取消群订单
+ */
+const handleCancelGroupOrder = async () => {
+  if (!selectedConversation.value || !groupOrders.value[selectedConversation.value.id]) {
+    ElMessage.error('当前没有群订单')
+    return
+  }
+
+  try {
+    const currentOrder = groupOrders.value[selectedConversation.value.id]
+
+    // 调用后端API删除订单
+    const response = await api.delete(`/v1/group-orders/group-orders/${currentOrder.orderId}`)
+
+    if (response.data && response.data.success) {
+      // 清空本地状态
+      delete groupOrders.value[selectedConversation.value.id]
+
+      // 发送系统消息到群聊
+      const cancelMsg = {
+        id: Date.now(),
+        fromId: userId.value,
+        toId: currentOrder.groupId,
+        sessionType: 'group',
+        msgType: 'text',
+        content: '我取消了群订单',
+        createTime: new Date().toISOString(),
+        formattedTime: '刚刚',
+        sender: '我',
+        avatar: '👤'
+      }
+
+      chatMessages.value.push(cancelMsg)
+      if (selectedConversation.value) {
+        selectedConversation.value.lastMessage = '系统: 我取消了群订单'
+        selectedConversation.value.time = cancelMsg.formattedTime
+      }
+
+      ElMessage.success('群订单已取消')
+      orderDrawerVisible.value = false
+    } else {
+      ElMessage.error(response.data?.message || '取消订单失败')
+    }
+  } catch (error) {
+    console.error('取消群订单失败:', error)
+    ElMessage.error('取消订单失败，请稍后重试')
+  }
+}
+
+/**
+ * 查看历史订单
+ */
+const handleViewHistory = () => {
+  ElMessage.info('历史订单功能开发中...')
+  // TODO: 实现历史订单查看功能
+}
+
+/**
+ * 创建新订单
+ */
+const handleCreateNewOrder = async () => {
+  if (!selectedConversation.value || !groupOrders.value[selectedConversation.value.id]) {
+    ElMessage.error('当前没有群订单')
+    return
+  }
+
+  const currentOrder = groupOrders.value[selectedConversation.value.id]
+
+  // 如果当前有商品且未支付，提示用户
+  if (currentOrder.orderItems && currentOrder.orderItems.length > 0 && currentOrder.status === 'active') {
+    try {
+      await ElMessageBox.confirm(
+        '当前购物车还有未支付的商品，确定要重新开始吗？未支付的订单将会被清空。',
+        '提示',
+        {
+          confirmButtonText: '确定清空',
+          cancelButtonText: '继续点餐',
+          type: 'warning'
+        }
+      )
+
+      // 用户确认清空
+      currentOrder.orderItems = []
+      currentOrder.totalAmount = 0
+      ElMessage.success('已清空购物车，可以开始新的订单了')
+    } catch {
+      // 用户取消，不做任何操作
+      return
+    }
+  } else if (['paid', 'completed'].includes(currentOrder.status)) {
+    // 已支付订单：清空当前商品列表，保留历史记录，允许继续点餐
+    // 将当前的商品（如果有）保存到历史记录
+    if (currentOrder.orderItems && currentOrder.orderItems.length > 0) {
+      if (!currentOrder.paidOrders) {
+        currentOrder.paidOrders = []
+      }
+
+      // 将当前订单作为历史记录保存
+      currentOrder.paidOrders.unshift({
+        orderId: currentOrder.orderId,
+        totalAmount: currentOrder.totalAmount,
+        status: currentOrder.status,
+        paymentTime: new Date().toLocaleString(),
+        createTime: currentOrder.createTime,
+        remark: currentOrder.remark,
+        orderItems: [...currentOrder.orderItems]
+      })
+    }
+
+    // 清空商品列表，准备接收新的订单
+    currentOrder.orderItems = []
+    currentOrder.totalAmount = 0
+    currentOrder.status = 'active' // 改回进行中状态，允许继续点餐
+
+    ElMessage.success('可以开始追加新的订单了')
+  }
+
+  // 重新打开抽屉
+  orderDrawerVisible.value = false
+  setTimeout(() => {
+    orderDrawerVisible.value = true
+  }, 100)
 }
 
 // ========== 监听群订单抽屉状态 ==========

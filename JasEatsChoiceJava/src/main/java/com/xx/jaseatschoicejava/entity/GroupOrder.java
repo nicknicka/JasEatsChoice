@@ -42,7 +42,12 @@ public class GroupOrder {
     private String remark;
 
     /**
-     * 订单状态：0-待支付、1-待接单、2-备菜中、3-烹饪中、4-待上菜、5-已完成、6-已取消
+     * 订单总金额
+     */
+    private Double totalAmount;
+
+    /**
+     * 订单状态：-1-草稿、0-待支付、1-待接单、2-备菜中、3-烹饪中、4-待上菜、5-已完成、6-已取消
      */
     private Integer status;
 

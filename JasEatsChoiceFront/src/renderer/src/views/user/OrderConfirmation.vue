@@ -376,6 +376,7 @@ import paymentApi from '../../api/payment'
 import orderApi from '../../api/order'
 // import couponApi from '../../api/coupon' // TODO: 后端优惠券API待实现，暂时注释
 import { useAuthStore } from '../../store/authStore'
+import api from '../../utils/api'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -865,6 +866,28 @@ const confirmOrder = async () => {
           const balanceResponse = await walletApi.getBalance(userId)
           if (balanceResponse.code === '200') {
             platformBalance.value = balanceResponse.data || 0.0
+          }
+
+          // ⭐ 如果是群订单，更新群订单状态为已支付
+          if (pendingOrder.fromChat && pendingOrder.orderId) {
+            try {
+              console.log('更新群订单状态 - orderId:', pendingOrder.orderId)
+
+              // 调用后端API更新群订单状态为1（待接单/已支付）
+              await api.put(`/v1/group-orders/group-orders/${pendingOrder.orderId}/status`, {
+                status: 1, // 1表示待接单（已支付）
+                totalAmount: finalAmount.value
+              })
+
+              console.log('群订单状态更新成功')
+
+              // 保存支付成功的群订单ID，用于返回聊天页面时识别
+              sessionStorage.setItem('paidGroupOrderId', pendingOrder.orderId)
+              sessionStorage.setItem('paidGroupOrderAmount', finalAmount.value)
+            } catch (error) {
+              console.error('更新群订单状态失败:', error)
+              // 不阻塞支付流程，仅记录错误
+            }
           }
 
           setTimeout(() => {

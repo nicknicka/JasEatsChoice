@@ -14,11 +14,11 @@
         </div>
         <div class="header-right">
           <el-tag
-            :type="groupOrder?.status === 'active' ? 'success' : 'info'"
+            :type="getOrderStatusType(groupOrder?.status)"
             size="default"
             effect="dark"
           >
-            {{ groupOrder?.status === 'active' ? '进行中' : '已结束' }}
+            {{ getOrderStatusText(groupOrder?.status) }}
           </el-tag>
         </div>
       </div>
@@ -89,10 +89,10 @@
         </div>
       </div>
 
-      <!-- 快速点餐入口 -->
+      <!-- 快速点餐入口（仅草稿和进行中状态显示） -->
       <div
         class="quick-order-entry"
-        v-if="groupOrder.status === 'active'"
+        v-if="['draft', 'active'].includes(groupOrder.status)"
       >
         <div class="quick-order-card">
           <div class="quick-order-content">
@@ -105,7 +105,7 @@
           <el-button
             type="success"
             size="default"
-            @click="hasMerchant ? $emit('continue-order') : $emit('select-merchant')"
+            @click="$emit('select-merchant')"
             class="quick-order-btn"
           >
             <el-icon><ShoppingCart /></el-icon> {{ hasMerchant ? '立即点餐' : '选择商家' }}
@@ -180,10 +180,60 @@
         </div>
       </div>
 
-      <!-- 加菜功能入口 -->
+      <!-- 已支付订单历史记录 -->
+      <div
+        v-if="groupOrder.paidOrders && groupOrder.paidOrders.length > 0"
+        class="paid-orders-section"
+      >
+        <div class="section-header">
+          <div class="section-title">
+            <el-icon :size="18" color="#67c23a"><Clock /></el-icon>
+            <span>已支付订单 ({{ groupOrder.paidOrders.length }})</span>
+          </div>
+        </div>
+
+        <div class="paid-orders-list">
+          <div
+            v-for="(paidOrder, index) in groupOrder.paidOrders"
+            :key="paidOrder.orderId || index"
+            class="paid-order-card"
+          >
+            <div class="paid-order-header">
+              <div class="paid-order-info">
+                <el-tag :type="paidOrder.status === 'completed' ? '' : 'warning'" size="small">
+                  {{ paidOrder.status === 'completed' ? '已完成' : '已支付' }}
+                </el-tag>
+                <span class="paid-order-time">{{ paidOrder.paymentTime || paidOrder.createTime }}</span>
+              </div>
+              <div class="paid-order-amount">¥{{ paidOrder.totalAmount?.toFixed(2) || '0.00' }}</div>
+            </div>
+
+            <div class="paid-order-items">
+              <div
+                v-for="(item, idx) in paidOrder.orderItems.slice(0, 3)"
+                :key="idx"
+                class="paid-order-item"
+              >
+                <span class="item-name">{{ item.productName }}</span>
+                <span class="item-quantity">×{{ item.quantity }}</span>
+              </div>
+              <div v-if="paidOrder.orderItems.length > 3" class="more-items">
+                等 {{ paidOrder.orderItems.length }} 件商品
+              </div>
+            </div>
+
+            <div v-if="paidOrder.remark" class="paid-order-remark">
+              <el-icon><Edit /></el-icon>
+              {{ paidOrder.remark }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 加菜功能入口（支付后显示） -->
       <div
         class="add-dish-section"
-        v-if="groupOrder.status === 'active' && hasMerchant"
+        v-if="['paid', 'completed'].includes(groupOrder.status) && hasMerchant"
       >
         <div class="add-dish-header">
           <div class="add-dish-title">
@@ -239,19 +289,52 @@
       <!-- 底部按钮 -->
       <div class="drawer-footer">
         <div class="footer-actions">
-          <el-button size="default" @click="$emit('select-merchant')">
-            <el-icon><Shop /></el-icon>
-            选择商家
-          </el-button>
-          <el-button
-            type="success"
-            size="default"
-            @click="$emit('go-to-pay')"
-            :disabled="!hasMerchant"
-          >
-            <el-icon><Wallet /></el-icon>
-            去支付
-          </el-button>
+          <!-- 草稿订单：显示取消订单和去支付按钮 -->
+          <template v-if="isDraftOrder || groupOrder.status === 'active'">
+            <el-button
+              v-if="isDraftOrder"
+              type="danger"
+              size="default"
+              @click="handleCancelGroupOrder"
+            >
+              <el-icon><Delete /></el-icon>
+              取消订单
+            </el-button>
+
+            <el-button size="default" @click="$emit('select-merchant')">
+              <el-icon><Shop /></el-icon>
+              选择商家
+            </el-button>
+            <el-button
+              type="success"
+              size="default"
+              @click="$emit('go-to-pay')"
+              :disabled="!hasMerchant"
+            >
+              <el-icon><Wallet /></el-icon>
+              去支付
+            </el-button>
+          </template>
+
+          <!-- 已支付订单：显示继续点餐按钮 -->
+          <template v-else-if="['paid', 'completed'].includes(groupOrder.status)">
+            <el-button
+              type="info"
+              size="default"
+              @click="$emit('view-history')"
+            >
+              <el-icon><Clock /></el-icon>
+              查看历史
+            </el-button>
+            <el-button
+              type="primary"
+              size="default"
+              @click="$emit('continue-order')"
+            >
+              <el-icon><Plus /></el-icon>
+              继续点餐
+            </el-button>
+          </template>
         </div>
       </div>
     </div>
@@ -270,8 +353,11 @@ import {
   Dish,
   DocumentChecked,
   Food,
-  Edit
+  Edit,
+  Delete,
+  Clock
 } from '@element-plus/icons-vue'
+import { ElMessageBox } from 'element-plus'
 
 const props = defineProps({
   modelValue: {
@@ -304,7 +390,10 @@ const emit = defineEmits([
   'go-to-pay',
   'open-add-dish-dialog',
   'open-add-dish-review',
-  'open-pending-payment'
+  'open-pending-payment',
+  'cancel-group-order',
+  'view-history',
+  'create-new-order'
 ])
 
 const visible = ref(props.modelValue)
@@ -339,6 +428,55 @@ const isInitiator = computed(() => {
 const hasPendingPayments = computed(() => {
   return props.pendingPaymentCount > 0
 })
+
+// 是否为草稿订单
+const isDraftOrder = computed(() => {
+  return props.groupOrder && props.groupOrder.draftStatus === -1
+})
+
+// 获取订单状态文本
+const getOrderStatusText = (status) => {
+  const statusMap = {
+    draft: '草稿',
+    active: '进行中',
+    paid: '已支付',
+    completed: '已完成',
+    cancelled: '已取消'
+  }
+  return statusMap[status] || '未知状态'
+}
+
+// 获取订单状态标签类型
+const getOrderStatusType = (status) => {
+  const typeMap = {
+    draft: 'info',
+    active: 'success',
+    paid: 'warning',
+    completed: '',
+    cancelled: 'danger'
+  }
+  return typeMap[status] || 'info'
+}
+
+// 处理取消群订单
+const handleCancelGroupOrder = async () => {
+  try {
+    await ElMessageBox.confirm(
+      '取消后将删除该群订单，所有成员将无法访问。是否继续？',
+      '取消群订单',
+      {
+        confirmButtonText: '确认取消',
+        cancelButtonText: '再想想',
+        type: 'warning',
+        confirmButtonClass: 'el-button--danger'
+      }
+    )
+
+    emit('cancel-group-order')
+  } catch {
+    // 用户取消了操作
+  }
+}
 </script>
 
 <style scoped lang="less">
@@ -640,6 +778,124 @@ const hasPendingPayments = computed(() => {
     .empty-cart {
       padding: 30px 20px;
       text-align: center;
+    }
+  }
+
+  .paid-orders-section {
+    background: white;
+    border-radius: 10px;
+    padding: 14px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    margin-bottom: 14px;
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #f0f0f0;
+
+      .section-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 15px;
+        font-weight: 600;
+        color: #303133;
+      }
+    }
+
+    .paid-orders-list {
+      max-height: 400px;
+      overflow-y: auto;
+
+      .paid-order-card {
+        background: linear-gradient(135deg, #f0f9ff 0%, #ffffff 100%);
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 10px;
+        border: 1px solid #e4e7ed;
+        transition: all 0.3s;
+
+        &:hover {
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          border-color: #67c23a;
+        }
+
+        .paid-order-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 10px;
+          padding-bottom: 8px;
+          border-bottom: 1px dashed #e4e7ed;
+
+          .paid-order-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+
+            .paid-order-time {
+              font-size: 12px;
+              color: #909399;
+            }
+          }
+
+          .paid-order-amount {
+            font-size: 16px;
+            font-weight: 600;
+            color: #67c23a;
+          }
+        }
+
+        .paid-order-items {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          margin-bottom: 8px;
+
+          .paid-order-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            padding: 4px 8px;
+            background: white;
+            border-radius: 4px;
+
+            .item-name {
+              color: #606266;
+              flex: 1;
+            }
+
+            .item-quantity {
+              color: #909399;
+              font-size: 12px;
+            }
+          }
+
+          .more-items {
+            font-size: 12px;
+            color: #409eff;
+            text-align: center;
+            padding: 4px;
+            background: #ecf5ff;
+            border-radius: 4px;
+          }
+        }
+
+        .paid-order-remark {
+          font-size: 12px;
+          color: #909399;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          padding: 6px 8px;
+          background: #f5f7fa;
+          border-radius: 4px;
+        }
+      }
     }
   }
 

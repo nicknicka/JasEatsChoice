@@ -110,6 +110,7 @@
         role="option"
         :aria-selected="isProductSelected(product.id)"
         tabindex="0"
+        @click="handleProductCardClick(product, $event)"
         @keydown="handleProductKeydown($event, product)"
       >
         <!-- 左侧复选框 -->
@@ -678,6 +679,31 @@ const handleBatchCustomized = (customizations) => {
   Object.keys(customizations).forEach(productId => {
     productCustomizations.value[productId] = customizations[productId]
   })
+}
+
+/**
+ * 处理商品卡片点击 - 打开定制对话框
+ */
+const handleProductCardClick = (product, event) => {
+  // 如果点击的是 checkbox、按钮等交互元素，不触发定制对话框
+  const target = event.target
+  const isInteractiveElement =
+    target.closest('.product-checkbox') ||
+    target.closest('.action-btn') ||
+    target.tagName === 'INPUT' ||
+    target.tagName === 'BUTTON'
+
+  if (isInteractiveElement) {
+    return
+  }
+
+  // 打开定制对话框（自动选中该商品）
+  if (!isProductSelected(product.id)) {
+    toggleProductSelection(product)
+  }
+
+  // 打开定制对话框
+  customizeProduct(product)
 }
 
 /**

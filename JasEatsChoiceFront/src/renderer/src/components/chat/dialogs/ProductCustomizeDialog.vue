@@ -475,6 +475,14 @@ watch(visible, (newVal) => {
       gap: 8px;
       margin-bottom: 16px;
 
+      // 缩小标签大小
+      :deep(.el-tag) {
+        height: 20px;
+        line-height: 20px;
+        padding: 0 6px;
+        font-size: 11px;
+      }
+
       .section-title {
         font-size: 15px;
         font-weight: 600;
@@ -498,31 +506,31 @@ watch(visible, (newVal) => {
         transition: all 0.3s;
 
         .ingredient-card {
-          padding: 12px;
+          padding: 10px;
           background: white;
           border: 2px solid #e4e7ed;
-          border-radius: 8px;
+          border-radius: 6px;
           transition: all 0.3s;
 
           .ingredient-header {
             display: flex;
             align-items: center;
-            gap: 10px;
-            margin-bottom: 8px;
+            gap: 8px;
+            margin-bottom: 6px;
 
             .ingredient-icon-wrap {
               position: relative;
-              width: 40px;
-              height: 40px;
+              width: 32px;
+              height: 32px;
               display: flex;
               align-items: center;
               justify-content: center;
               background: #f5f7fa;
-              border-radius: 8px;
+              border-radius: 6px;
               flex-shrink: 0;
 
               .ingredient-emoji {
-                font-size: 22px;
+                font-size: 18px;
                 line-height: 1;
               }
 
@@ -551,7 +559,7 @@ watch(visible, (newVal) => {
               min-width: 0;
 
               .ingredient-name {
-                font-size: 14px;
+                font-size: 13px;
                 font-weight: 500;
                 color: #303133;
                 white-space: nowrap;
@@ -597,15 +605,15 @@ watch(visible, (newVal) => {
       .required-ingredient-item {
         display: flex;
         align-items: center;
-        gap: 10px;
-        padding: 12px;
+        gap: 8px;
+        padding: 8px 10px;
         background: #fef0f0;
         border: 1px solid #fde2e2;
-        border-radius: 8px;
+        border-radius: 6px;
         opacity: 0.9;
 
         .ingredient-icon {
-          font-size: 24px;
+          font-size: 20px;
           flex-shrink: 0;
         }
 
@@ -617,7 +625,7 @@ watch(visible, (newVal) => {
           min-width: 0;
 
           .ingredient-name {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 500;
             color: #303133;
             white-space: nowrap;
@@ -626,7 +634,7 @@ watch(visible, (newVal) => {
           }
 
           .ingredient-tip {
-            font-size: 11px;
+            font-size: 10px;
             color: #909399;
           }
         }
@@ -647,6 +655,10 @@ watch(visible, (newVal) => {
         cursor: pointer;
         user-select: none;
         transition: all 0.3s;
+        height: 24px;
+        line-height: 24px;
+        padding: 0 8px;
+        font-size: 12px;
 
         &:hover {
           transform: translateY(-1px);

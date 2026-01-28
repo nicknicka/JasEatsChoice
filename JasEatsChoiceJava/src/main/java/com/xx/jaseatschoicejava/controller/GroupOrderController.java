@@ -191,4 +191,90 @@ public class GroupOrderController {
                 "status", "synced"
         ));
     }
+
+    /**
+     * 删除群订单（取消群订单）
+     * ⭐ 只能删除草稿状态的订单（status=-1）
+     */
+    @DeleteMapping("/group-orders/{groupOrderId}")
+    public ResponseResult<?> cancelGroupOrder(@PathVariable String groupOrderId) {
+        try {
+            // 查询订单
+            GroupOrder groupOrder = groupOrderService.getGroupOrderDetail(groupOrderId);
+            if (groupOrder == null) {
+                return ResponseResult.fail("404", "群订单不存在");
+            }
+
+            // 只能删除草稿状态的订单
+            if (groupOrder.getStatus() != -1) {
+                return ResponseResult.fail("400", "只能取消未支付的草稿订单");
+            }
+
+            // 删除订单
+            boolean deleted = groupOrderService.removeById(groupOrderId);
+            if (deleted) {
+                logger.info("删除草稿订单成功 - orderId: {}, groupId: {}", groupOrderId, groupOrder.getGroupId());
+                return ResponseResult.success("订单已取消");
+            } else {
+                return ResponseResult.fail("500", "取消订单失败");
+            }
+        } catch (Exception e) {
+            logger.error("取消群订单失败", e);
+            return ResponseResult.fail("500", "取消订单失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 更新群订单状态
+     * ⭐ 用于支付成功后更新订单状态
+     */
+    @PutMapping("/group-orders/{groupOrderId}/status")
+    public ResponseResult<?> updateGroupOrderStatus(
+            @PathVariable String groupOrderId,
+            @RequestBody Map<String, Object> params) {
+        try {
+            // 查询订单
+            GroupOrder groupOrder = groupOrderService.getGroupOrderDetail(groupOrderId);
+            if (groupOrder == null) {
+                return ResponseResult.fail("404", "群订单不存在");
+            }
+
+            // 获取新状态
+            Integer newStatus = Integer.valueOf(params.get("status").toString());
+
+            // 状态验证：-1=草稿, 0=待支付, 1=待接单(已支付), 2-4=处理中, 5=已完成, 6=已取消
+            if (newStatus < -1 || newStatus > 6) {
+                return ResponseResult.fail("400", "无效的状态值");
+            }
+
+            // 记录旧状态用于日志
+            Integer oldStatus = groupOrder.getStatus();
+
+            // 更新状态
+            groupOrder.setStatus(newStatus);
+            groupOrder.setUpdateTime(LocalDateTime.now());
+
+            // 如果提供了总金额，也更新总金额
+            if (params.containsKey("totalAmount")) {
+                groupOrder.setTotalAmount(Double.valueOf(params.get("totalAmount").toString()));
+            }
+
+            // 保存更新
+            boolean updated = groupOrderService.updateById(groupOrder);
+            if (updated) {
+                logger.info("更新群订单状态成功 - orderId: {}, status: {} -> {}",
+                        groupOrderId, oldStatus, newStatus);
+                return ResponseResult.success(Map.of(
+                        "groupOrderId", groupOrderId,
+                        "status", newStatus,
+                        "message", "状态更新成功"
+                ));
+            } else {
+                return ResponseResult.fail("500", "更新状态失败");
+            }
+        } catch (Exception e) {
+            logger.error("更新群订单状态失败", e);
+            return ResponseResult.fail("500", "更新状态失败：" + e.getMessage());
+        }
+    }
 }
