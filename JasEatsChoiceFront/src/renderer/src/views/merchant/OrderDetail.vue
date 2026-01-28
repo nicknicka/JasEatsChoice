@@ -388,14 +388,21 @@ onMounted(() => {
       align-items: center;
 
       :deep(.el-button) {
+        height: 32px;
+        padding: 6px 14px;
+        font-size: 13px;
+        font-weight: 500;
+        white-space: nowrap;
         backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.3);
         background: rgba(255, 255, 255, 0.1);
         color: #ffffff;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
         &:hover {
           background: rgba(255, 255, 255, 0.2);
-          transform: translateY(-2px);
+          transform: translateY(-1px);
+          box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
         }
       }
     }
@@ -472,6 +479,52 @@ onMounted(() => {
         .status-actions {
           display: flex;
           gap: 8px;
+          justify-content: flex-end;
+
+          :deep(.el-button) {
+            height: 32px;
+            padding: 6px 14px;
+            font-size: 13px;
+            font-weight: 500;
+            white-space: nowrap;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 6px;
+
+            &:hover {
+              transform: translateY(-1px);
+              box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+            }
+
+            &.el-button--success {
+              background: linear-gradient(135deg, #81c784 0%, #66bb6a 100%);
+              border-color: transparent;
+              box-shadow: 0 2px 6px rgba(102, 187, 106, 0.25);
+
+              &:hover {
+                box-shadow: 0 4px 10px rgba(102, 187, 106, 0.35);
+              }
+            }
+
+            &.el-button--warning {
+              background: linear-gradient(135deg, #ffb74d 0%, #ffa726 100%);
+              border-color: transparent;
+              box-shadow: 0 2px 6px rgba(255, 167, 38, 0.25);
+
+              &:hover {
+                box-shadow: 0 4px 10px rgba(255, 167, 38, 0.35);
+              }
+            }
+
+            &.el-button--primary {
+              background: linear-gradient(135deg, #6ba4ff 0%, #5c8eff 100%);
+              border-color: transparent;
+              box-shadow: 0 2px 6px rgba(92, 142, 255, 0.25);
+
+              &:hover {
+                box-shadow: 0 4px 10px rgba(92, 142, 255, 0.35);
+              }
+            }
+          }
         }
       }
 

@@ -196,7 +196,8 @@
           <div
             v-for="(paidOrder, index) in groupOrder.paidOrders"
             :key="paidOrder.orderId || index"
-            class="paid-order-card"
+            class="paid-order-card clickable"
+            @click="handleViewOrderDetail(paidOrder.orderId)"
           >
             <div class="paid-order-header">
               <div class="paid-order-info">
@@ -205,7 +206,10 @@
                 </el-tag>
                 <span class="paid-order-time">{{ paidOrder.paymentTime || paidOrder.createTime }}</span>
               </div>
-              <div class="paid-order-amount">¥{{ paidOrder.totalAmount?.toFixed(2) || '0.00' }}</div>
+              <div class="paid-order-amount-right">
+                <div class="paid-order-amount">¥{{ paidOrder.totalAmount?.toFixed(2) || '0.00' }}</div>
+                <el-icon class="click-icon"><Right /></el-icon>
+              </div>
             </div>
 
             <div class="paid-order-items">
@@ -343,6 +347,7 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import {
   ShoppingCart,
   InfoFilled,
@@ -355,9 +360,12 @@ import {
   Food,
   Edit,
   Delete,
-  Clock
+  Clock,
+  Right
 } from '@element-plus/icons-vue'
 import { ElMessageBox } from 'element-plus'
+
+const router = useRouter()
 
 const props = defineProps({
   modelValue: {
@@ -456,6 +464,22 @@ const getOrderStatusType = (status) => {
     cancelled: 'danger'
   }
   return typeMap[status] || 'info'
+}
+
+// 跳转到订单详情页
+const handleViewOrderDetail = (orderId) => {
+  if (!orderId) {
+    console.error('订单ID不存在')
+    return
+  }
+
+  // 判断当前用户角色并跳转到对应的订单详情页
+  const currentRole = localStorage.getItem('currentRole')
+  if (currentRole === 'merchant') {
+    router.push(`/merchant/home/order-detail/${orderId}`)
+  } else {
+    router.push(`/user/home/order-detail/${orderId}`)
+  }
 }
 
 // 处理取消群订单
@@ -818,9 +842,18 @@ const handleCancelGroupOrder = async () => {
         border: 1px solid #e4e7ed;
         transition: all 0.3s;
 
-        &:hover {
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-          border-color: #67c23a;
+        &.clickable {
+          cursor: pointer;
+
+          &:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border-color: #409eff;
+            transform: translateY(-2px);
+          }
+
+          &:active {
+            transform: translateY(0);
+          }
         }
 
         .paid-order-header {
@@ -842,10 +875,27 @@ const handleCancelGroupOrder = async () => {
             }
           }
 
+          .paid-order-amount-right {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+
           .paid-order-amount {
             font-size: 16px;
             font-weight: 600;
             color: #67c23a;
+          }
+
+          .click-icon {
+            color: #409eff;
+            font-size: 16px;
+            transition: transform 0.3s;
+          }
+        }
+
+        &.clickable:hover {
+          .click-icon {
+            transform: translateX(4px);
           }
         }
 

@@ -1,7 +1,7 @@
 <template>
   <el-dialog
     v-model="visible"
-    width="900px"
+    width="750px"
     @close="handleClose"
     @opened="handleDialogOpened"
     class="product-select-dialog"
@@ -85,12 +85,12 @@
 
       <el-button
         type="success"
-        :disabled="selectedProductsWithCustomization.length === 0"
+        :disabled="selectedProducts.length === 0"
         @click="handleBatchAddToCart"
         class="batch-btn"
       >
         <el-icon><ShoppingCart /></el-icon>
-        批量加入订单 ({{ selectedProductsWithCustomization.length }})
+        批量加入订单 ({{ selectedProducts.length }})
       </el-button>
     </div>
 
@@ -131,7 +131,7 @@
             @error="handleImageError($event, product)"
           />
           <div v-else class="image-placeholder">
-            <el-icon :size="48"><Food /></el-icon>
+            <el-icon :size="28"><Food /></el-icon>
           </div>
           <div class="product-price-badge">
             <span class="price">¥{{ (product.price || 0).toFixed(2) }}</span>
@@ -142,17 +142,6 @@
         <div class="product-content">
           <div class="product-header">
             <h4 class="product-name">{{ product.name }}</h4>
-            <div class="product-badges">
-              <el-tag
-                v-if="getRequiredIngredients(product).length > 0"
-                type="danger"
-                size="small"
-                effect="plain"
-              >
-                <el-icon><Star /></el-icon>
-                {{ getRequiredIngredients(product).length }}种必选
-              </el-tag>
-            </div>
           </div>
 
           <p class="product-description">{{ product.description }}</p>
@@ -288,10 +277,10 @@
           type="primary"
           size="large"
           @click="handleConfirmAll"
-          :disabled="selectedProductsWithCustomization.length === 0"
+          :disabled="selectedProducts.length === 0"
         >
           <el-icon><ShoppingCartFull /></el-icon>
-          确认选择 ({{ selectedProductsWithCustomization.length }}个商品)
+          确认选择 ({{ selectedProducts.length }}个商品)
         </el-button>
       </div>
     </template>
@@ -485,15 +474,6 @@ const handleGlobalKeydown = (event) => {
     toggleSelectAll()
   }
 }
-
-/**
- * 已配置的商品列表
- */
-const selectedProductsWithCustomization = computed(() => {
-  return selectedProducts.value.filter(product =>
-    productCustomizations.value[product.id]
-  )
-})
 
 /**
  * 检查商品是否已选择
@@ -737,24 +717,29 @@ const handleAddToCart = (product) => {
  * 批量加入购物车
  */
 const handleBatchAddToCart = () => {
-  const items = selectedProductsWithCustomization.value.map(product => ({
-    product,
-    customization: productCustomizations.value[product.id]
-  }))
+  // 获取所有选中的商品，没有配置的使用默认配置
+  const items = selectedProducts.value.map(product => {
+    const customization = productCustomizations.value[product.id] || {
+      quantity: 1,
+      optionalIngredients: [],
+      remark: ''
+    }
+    return { product, customization }
+  })
 
   items.forEach(item => {
     emit('addToCart', item)
   })
 
   // 重置所有商品的定制配置
-  items.forEach(item => {
-    clearProductCustomization(item.product.id)
+  selectedProducts.value.forEach(product => {
+    clearProductCustomization(product.id)
   })
 
   // 清空已选商品列表
   selectedProducts.value = []
 
-  ElMessage.success(`已批量加入 ${items.length} 个商品，配置已重置`)
+  ElMessage.success(`已批量加入 ${items.length} 个商品`)
 }
 
 /**
@@ -827,7 +812,7 @@ watch(visible, (newVal) => {
   }
 
   :deep(.el-dialog__footer) {
-    padding: 16px 20px;
+    padding: 12px 16px;
     background: white;
     border-top: 1px solid #e4e7ed;
   }
@@ -837,53 +822,53 @@ watch(visible, (newVal) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px;
+  padding: 14px 16px;
   background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
   color: white;
 
   .header-left {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
 
     .header-title-group {
       display: flex;
       flex-direction: column;
 
       .header-title {
-        font-size: 20px;
+        font-size: 18px;
         font-weight: 600;
         line-height: 1.2;
       }
 
       .header-subtitle {
-        font-size: 13px;
+        font-size: 12px;
         opacity: 0.9;
-        margin-top: 4px;
+        margin-top: 3px;
       }
     }
   }
 }
 
 .filter-section {
-  padding: 16px 20px;
+  padding: 10px 16px;
   background: white;
   border-bottom: 1px solid #e4e7ed;
 
   .filter-row {
     display: flex;
-    gap: 12px;
+    gap: 8px;
     align-items: center;
     flex-wrap: wrap;
 
     .search-input {
       flex: 1;
-      min-width: 200px;
-      max-width: 400px;
+      min-width: 180px;
+      max-width: 320px;
     }
 
     .sort-select {
-      width: 160px;
+      width: 140px;
     }
   }
 }
@@ -891,8 +876,8 @@ watch(visible, (newVal) => {
 .batch-actions {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 12px 20px;
+  gap: 10px;
+  padding: 8px 16px;
   background: white;
   border-bottom: 1px solid #e4e7ed;
 
@@ -922,20 +907,20 @@ watch(visible, (newVal) => {
 }
 
 .product-list {
-  max-height: 500px;
+  max-height: 60vh;
   overflow-y: auto;
-  padding: 16px;
+  padding: 10px 12px;
 
   .product-item {
     display: flex;
     align-items: center;
-    gap: 16px;
-    padding: 16px;
+    gap: 10px;
+    padding: 8px 10px;
     background: white;
-    border-radius: 12px;
-    margin-bottom: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    transition: all 0.3s;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+    transition: all 0.2s;
     border: 2px solid transparent;
 
     &:hover {
@@ -953,10 +938,10 @@ watch(visible, (newVal) => {
 
     .product-image {
       position: relative;
-      width: 100px;
-      height: 100px;
+      width: 70px;
+      height: 70px;
       flex-shrink: 0;
-      border-radius: 8px;
+      border-radius: 6px;
       overflow: hidden;
       background: linear-gradient(135deg, #e4e7ed 0%, #dcdfe6 100%);
 
@@ -973,6 +958,10 @@ watch(visible, (newVal) => {
         align-items: center;
         justify-content: center;
         color: #909399;
+
+        .el-icon {
+          font-size: 28px;
+        }
       }
 
       .product-price-badge {
@@ -981,11 +970,11 @@ watch(visible, (newVal) => {
         left: 0;
         right: 0;
         background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
-        padding: 6px 10px;
+        padding: 4px 8px;
         color: white;
 
         .price {
-          font-size: 16px;
+          font-size: 13px;
           font-weight: 700;
         }
       }
@@ -999,52 +988,34 @@ watch(visible, (newVal) => {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin-bottom: 8px;
+        margin-bottom: 6px;
 
         .product-name {
-          font-size: 16px;
+          font-size: 15px;
           font-weight: 600;
           margin: 0;
           color: #303133;
         }
-
-        .product-badges {
-          display: flex;
-          gap: 6px;
-          flex-shrink: 0;
-
-          .el-tag {
-            display: inline-flex;
-            align-items: center;
-
-            .el-icon {
-              display: inline-flex;
-              align-items: center;
-              vertical-align: middle;
-              margin-right: 4px;
-            }
-          }
-        }
       }
 
       .product-description {
-        font-size: 13px;
+        font-size: 12px;
         color: #909399;
-        margin: 0 0 12px 0;
-        line-height: 1.6;
+        margin: 0 0 8px 0;
+        line-height: 1.5;
         display: -webkit-box;
-        -webkit-line-clamp: 2;
+        -webkit-line-clamp: 1;
         -webkit-box-orient: vertical;
         overflow: hidden;
       }
 
       .product-ingredients {
-        margin-bottom: 12px;
-        padding-bottom: 12px;
+        margin-bottom: 8px;
+        padding-bottom: 8px;
         border-bottom: 1px solid #f0f0f0;
 
         .ingredients-section {
-          margin-bottom: 12px;
+          margin-bottom: 8px;
 
           &:last-child {
             margin-bottom: 0;
@@ -1053,9 +1024,9 @@ watch(visible, (newVal) => {
           .ingredients-title {
             display: flex;
             align-items: center;
-            gap: 6px;
-            margin-bottom: 8px;
-            font-size: 13px;
+            gap: 4px;
+            margin-bottom: 6px;
+            font-size: 12px;
             font-weight: 600;
             color: #4a5568;
           }
@@ -1063,35 +1034,35 @@ watch(visible, (newVal) => {
           .ingredients-tags {
             display: flex;
             flex-wrap: wrap;
-            gap: 6px;
+            gap: 4px;
             align-items: center;
 
             .ingredient-tag {
-              border-radius: 6px;
-              font-size: 12px;
-              padding: 2px 8px;
-              height: 24px;
-              line-height: 20px;
+              border-radius: 4px;
+              font-size: 11px;
+              padding: 2px 6px;
+              height: 20px;
+              line-height: 16px;
             }
 
             .more-ingredients {
-              font-size: 12px;
+              font-size: 11px;
               color: #909399;
               font-weight: 500;
-              padding: 2px 6px;
+              padding: 2px 4px;
               background-color: #f5f7fa;
-              border-radius: 6px;
+              border-radius: 4px;
             }
           }
 
           .no-ingredients {
-            padding: 8px 12px;
+            padding: 4px 8px;
             background-color: #fafafa;
-            border-radius: 6px;
+            border-radius: 4px;
             border: 1px dashed #e4e7ed;
 
             .no-ingredients-text {
-              font-size: 12px;
+              font-size: 11px;
               color: #909399;
               font-weight: 400;
             }
@@ -1101,7 +1072,7 @@ watch(visible, (newVal) => {
 
       .customization-summary {
         display: flex;
-        gap: 6px;
+        gap: 4px;
         flex-wrap: wrap;
       }
     }
@@ -1110,19 +1081,20 @@ watch(visible, (newVal) => {
       flex-shrink: 0;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
 
       .action-btn {
-        width: 100px;
-        height: 32px;
-        padding: 0 12px !important;
+        width: 80px;
+        padding: 0 8px !important;
+        height: 26px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        gap: 4px;
+        gap: 3px;
+        font-size: 12px;
         box-sizing: border-box;
         border-radius: 4px;
-        line-height: 32px;
+        line-height: 26px;
 
         // 重置所有按钮类型的默认样式差异
         &.el-button {
@@ -1131,9 +1103,9 @@ watch(visible, (newVal) => {
         }
 
         :deep(.el-icon) {
-          font-size: 14px;
-          width: 14px;
-          height: 14px;
+          font-size: 12px;
+          width: 12px;
+          height: 12px;
           display: inline-flex;
           align-items: center;
           justify-content: center;
@@ -1141,7 +1113,7 @@ watch(visible, (newVal) => {
         }
 
         :deep(span) {
-          font-size: 14px;
+          font-size: 12px;
           line-height: 1;
           display: inline-block;
           vertical-align: middle;
@@ -1218,7 +1190,7 @@ watch(visible, (newVal) => {
   .dialog-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 12px;
+    gap: 10px;
 
     .header-right {
       width: 100%;
@@ -1254,22 +1226,22 @@ watch(visible, (newVal) => {
   }
 
   .product-list {
-    padding: 12px;
+    padding: 10px;
 
     .product-item {
       flex-direction: column;
       align-items: stretch;
-      padding: 12px;
+      padding: 10px;
 
       .product-image {
         width: 100%;
-        height: 180px;
+        height: 140px;
       }
 
       .product-checkbox {
         position: absolute;
-        top: 12px;
-        left: 12px;
+        top: 10px;
+        left: 10px;
         z-index: 1;
       }
 

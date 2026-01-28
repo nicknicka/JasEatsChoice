@@ -8,13 +8,10 @@ import {
   ElIcon,
   ElButton,
   ElDialog,
-  ElForm,
-  ElFormItem,
   ElInput,
   ElInputNumber,
   ElSwitch,
   ElUpload,
-  ElMessageBox,
   ElCascader,
   ElTimePicker
 } from 'element-plus'
@@ -39,6 +36,13 @@ import { API_CONFIG } from '../../config/index.js'
 const authStore = useAuthStore()
 const userStore = useUserStore()
 const loading = ref(false)
+
+// 头像上传相关
+const avatarUploadDialogVisible = ref(false)
+const avatarFileList = ref([])
+const avatarUploading = ref(false)
+const tempAvatarUrl = ref('')
+const avatarFile = ref(null)
 
 // 编辑对话框相关
 const editDialogVisible = ref(false)
@@ -234,13 +238,6 @@ const handleCategoryVisibleChange = (visible) => {
 // 处理选择器变化事件
 const handleCategoryChange = () => {
   categoryOptions.value = []
-}
-
-// 移除经营品类
-const removeCategory = (index) => {
-  if (editForm.value.category && editForm.value.category.length > 0) {
-    editForm.value.category.splice(index, 1)
-  }
 }
 
 // 切换经营品类（用于常用品类点击，支持添加/移除）
@@ -677,31 +674,93 @@ const handleCancelEdit = () => {
   editFormRef.value?.resetFields()
 }
 
-// 表单验证规则
-const editFormRules = {
-  name: [
-    { required: true, message: '请输入商家名称', trigger: 'blur' },
-    { min: 2, max: 50, message: '商家名称长度应在 2 到 50 个字符之间', trigger: 'blur' }
-  ],
-  phone: [
-    { required: true, message: '请输入联系电话', trigger: 'blur' },
-    { pattern: /^1[3-9]\d{9}$/, message: '请输入有效的手机号码', trigger: 'blur' }
-  ],
-  email: [
-    { required: true, message: '请输入邮箱地址', trigger: 'blur' },
-    { type: 'email', message: '请输入有效的邮箱地址', trigger: 'blur' }
-  ],
-  areaAddress: [{ required: true, message: '请选择区域地址', trigger: 'change' }],
-  detailAddress: [
-    { required: true, message: '请输入详细地址', trigger: 'blur' },
-    { min: 5, message: '详细地址长度至少5个字符', trigger: 'blur' }
-  ],
-  businessHours: [{ required: true, message: '请选择营业时间', trigger: 'change' }],
-  category: [{ required: true, message: '请输入经营品类', trigger: 'blur' }],
-  averagePrice: [
-    { required: true, message: '请输入平均价格', trigger: 'blur' },
-    { type: 'number', min: 0, message: '平均价格必须大于等于0', trigger: 'blur' }
-  ]
+// 打开头像上传对话框
+const handleAvatarUpload = () => {
+  avatarUploadDialogVisible.value = true
+  tempAvatarUrl.value = merchantInfo.value.avatar || ''
+  avatarFileList.value = []
+  avatarFile.value = null
+}
+
+// 关闭头像上传对话框
+const handleCloseAvatarDialog = () => {
+  avatarUploadDialogVisible.value = false
+  tempAvatarUrl.value = ''
+  avatarFileList.value = []
+  avatarFile.value = null
+}
+
+// 头像上传前的处理
+const handleBeforeAvatarUpload = (file) => {
+  const isImage = file.type.startsWith('image/')
+  const isLt2M = file.size / 1024 / 1024 < 2
+
+  if (!isImage) {
+    ElMessage.error('只能上传图片文件!')
+    return false
+  }
+  if (!isLt2M) {
+    ElMessage.error('图片大小不能超过 2MB!')
+    return false
+  }
+
+  // 保存文件对象
+  avatarFile.value = file
+
+  // 读取文件并转换为 Base64 用于预览
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    tempAvatarUrl.value = e.target.result
+  }
+  reader.readAsDataURL(file)
+  return true // 阻止自动上传
+}
+
+// 头像文件变化处理
+const handleAvatarChange = (uploadFile) => {
+  if (uploadFile.raw) {
+    handleBeforeAvatarUpload(uploadFile.raw)
+  }
+}
+
+// 保存头像
+const handleSaveAvatar = async () => {
+  if (!avatarFile.value) {
+    ElMessage.warning('请先选择头像图片')
+    return
+  }
+
+  avatarUploading.value = true
+  try {
+    // 创建 FormData 对象
+    const formData = new FormData()
+    formData.append('avatar', avatarFile.value)
+
+    // 调用API上传头像 - 使用POST方法，发送FormData
+    const response = await api.post(
+      API_CONFIG.merchant.avatar.replace('{merchantId}', authStore.merchantId),
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      }
+    )
+
+    if (response.code === '200') {
+      // 更新商家信息
+      await userStore.fetchMerchantInfo()
+      ElMessage.success('头像更新成功')
+      handleCloseAvatarDialog()
+    } else {
+      ElMessage.error('头像更新失败：' + (response.data?.message || '未知错误'))
+    }
+  } catch (error) {
+    console.error('更新头像失败:', error)
+    ElMessage.error('头像更新失败')
+  } finally {
+    avatarUploading.value = false
+  }
 }
 </script>
 
@@ -717,14 +776,25 @@ const editFormRules = {
     <div v-else class="info-content">
       <div class="info-header">
         <div class="avatar-section">
-          <img
-            v-if="merchantInfo.avatar"
-            :src="merchantInfo.avatar"
-            class="avatar"
-            alt="商家头像"
-          />
-          <div v-else class="avatar-placeholder">
-            <ShoppingBag style="font-size: 32px; color: #409eff" />
+          <div class="avatar-wrapper">
+            <img
+              v-if="merchantInfo.avatar"
+              :src="merchantInfo.avatar"
+              class="avatar"
+              alt="商家头像"
+            />
+            <div v-else class="avatar-placeholder">
+              <ShoppingBag style="font-size: 32px; color: #409eff" />
+            </div>
+            <ElButton
+              type="primary"
+              size="small"
+              circle
+              class="avatar-edit-btn"
+              @click="handleAvatarUpload"
+            >
+              <ElIcon><Edit /></ElIcon>
+            </ElButton>
           </div>
         </div>
 
@@ -1021,6 +1091,61 @@ const editFormRules = {
       <span class="dialog-footer">
         <ElButton @click="handleCancelEdit">取消</ElButton>
         <ElButton type="primary" @click="handleSaveEdit">保存</ElButton>
+      </span>
+    </template>
+  </ElDialog>
+
+  <!-- 头像上传对话框 -->
+  <ElDialog
+    v-model="avatarUploadDialogVisible"
+    title="更换头像"
+    width="500px"
+    :before-close="handleCloseAvatarDialog"
+  >
+    <div class="avatar-upload-content">
+      <div class="avatar-preview">
+        <img
+          v-if="tempAvatarUrl"
+          :src="tempAvatarUrl"
+          class="preview-avatar"
+          alt="头像预览"
+        />
+        <div v-else class="preview-avatar-placeholder">
+          <ShoppingBag style="font-size: 64px; color: #c0c4cc" />
+          <p>暂无头像</p>
+        </div>
+      </div>
+
+      <ElUpload
+        class="avatar-uploader"
+        :show-file-list="false"
+        :on-change="handleAvatarChange"
+        :auto-upload="false"
+        accept="image/*"
+      >
+        <ElButton type="primary">
+          <ElIcon><Edit /></ElIcon>
+          选择图片
+        </ElButton>
+        <template #tip>
+          <div class="el-upload__tip">
+            只能上传 JPG/PNG/GIF 格式的图片，且不超过 2MB
+          </div>
+        </template>
+      </ElUpload>
+    </div>
+
+    <template #footer>
+      <span class="dialog-footer">
+        <ElButton @click="handleCloseAvatarDialog">取消</ElButton>
+        <ElButton
+          type="primary"
+          @click="handleSaveAvatar"
+          :loading="avatarUploading"
+          :disabled="!tempAvatarUrl"
+        >
+          保存
+        </ElButton>
       </span>
     </template>
   </ElDialog>
@@ -1547,22 +1672,45 @@ const editFormRules = {
       .avatar-section {
         flex-shrink: 0;
 
-        .avatar {
-          width: 80px;
-          height: 80px;
-          border-radius: 50%;
-          object-fit: cover;
-          border: 3px solid #f0f9ff;
-        }
+        .avatar-wrapper {
+          position: relative;
+          display: inline-block;
 
-        .avatar-placeholder {
-          width: 80px;
-          height: 80px;
-          border-radius: 50%;
-          background-color: #f0f9ff;
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          .avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #f0f9ff;
+          }
+
+          .avatar-placeholder {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background-color: #f0f9ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+
+          .avatar-edit-btn {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 28px;
+            height: 28px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+
+            &:hover {
+              transform: scale(1.1);
+            }
+          }
         }
       }
 
@@ -1751,6 +1899,70 @@ const editFormRules = {
       flex-direction: column;
       gap: 16px;
     }
+  }
+}
+
+/* 头像上传对话框样式 */
+.avatar-upload-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  padding: 20px 0;
+}
+
+.avatar-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+
+  .preview-avatar {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid #f0f9ff;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  }
+
+  .preview-avatar-placeholder {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    background-color: #f5f7fa;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 4px solid #e4e7ed;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+
+    p {
+      margin: 8px 0 0 0;
+      font-size: 14px;
+      color: #909399;
+    }
+  }
+}
+
+.avatar-uploader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+
+  .el-button {
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-weight: 500;
+  }
+
+  .el-upload__tip {
+    font-size: 12px;
+    color: #909399;
+    line-height: 1.5;
+    text-align: center;
   }
 }
 </style>

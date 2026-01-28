@@ -333,8 +333,55 @@ onMounted(() => {
 
       .order-actions {
         display: flex;
+        justify-content: flex-end;
+        align-items: center;
         gap: 8px;
         flex-wrap: wrap;
+
+        :deep(.el-button) {
+          height: 32px;
+          padding: 6px 14px;
+          font-size: 13px;
+          font-weight: 500;
+          white-space: nowrap;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          border-radius: 6px;
+
+          &:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+          }
+
+          &.el-button--primary {
+            background: linear-gradient(135deg, #6ba4ff 0%, #5c8eff 100%);
+            border-color: transparent;
+            box-shadow: 0 2px 6px rgba(92, 142, 255, 0.25);
+
+            &:hover {
+              box-shadow: 0 4px 12px rgba(92, 142, 255, 0.35);
+            }
+          }
+
+          &.el-button--success {
+            background: linear-gradient(135deg, #81c784 0%, #66bb6a 100%);
+            border-color: transparent;
+            box-shadow: 0 2px 6px rgba(102, 187, 106, 0.25);
+
+            &:hover {
+              box-shadow: 0 4px 12px rgba(102, 187, 106, 0.35);
+            }
+          }
+
+          &.el-button--warning {
+            background: linear-gradient(135deg, #ffb74d 0%, #ffa726 100%);
+            border-color: transparent;
+            box-shadow: 0 2px 6px rgba(255, 167, 38, 0.25);
+
+            &:hover {
+              box-shadow: 0 4px 12px rgba(255, 167, 38, 0.35);
+            }
+          }
+        }
       }
     }
   }

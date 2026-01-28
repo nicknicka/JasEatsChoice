@@ -167,6 +167,7 @@
   },
   "active": "25380c94f56f550b",
   "lastOpenFiles": [
+    "uploads/avatar-7638432224340229-1769587220410.png",
     "JasEatsChoiceFront/src/renderer/src/components/chat/dialogs/QuickAddDialog.vue",
     "JasEatsChoiceJava/src/main/resources/db/migration/V2026012801__add_total_amount_to_group_order.sql",
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/entity/GroupOrder.class",
@@ -177,7 +178,6 @@
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/netty/NettyChatHandler.class",
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/websocket/WebSocketMessageService.class",
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/websocket",
-    "JasEatsChoiceJava/target/test-classes",
     "uploads/4590322501655448/4b88c01d-3ad5-464b-85e8-b67bfcd1ae79.png",
     "JasEatsChoiceFront/src/renderer/src/views/user/Settings功能实现说明.md",
     "uploads/3384650106421960/4d60fa71-a4fa-4346-94c2-5a1ed316bbab.png",

@@ -1844,8 +1844,11 @@ onMounted(() => {
           display: inline-flex;
           align-items: center;
           gap: 4px;
-          padding: 6px 12px;
+          height: 32px;
+          padding: 6px 14px;
+          font-size: 13px;
           font-weight: 500;
+          white-space: nowrap;
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           border-radius: 8px;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -1855,8 +1858,8 @@ onMounted(() => {
           }
 
           &:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
           }
 
           &:active {
@@ -1870,6 +1873,7 @@ onMounted(() => {
 
             &:hover {
               background: linear-gradient(135deg, #5568d3 0%, #653a8b 100%);
+              box-shadow: 0 4px 10px rgba(102, 126, 234, 0.35);
             }
           }
 
@@ -1885,7 +1889,7 @@ onMounted(() => {
 
             &:hover {
               background: linear-gradient(135deg, #0e837a 0%, #2ed16b 100%);
-              box-shadow: 0 4px 12px rgba(56, 239, 125, 0.4);
+              box-shadow: 0 4px 10px rgba(56, 239, 125, 0.35);
             }
           }
 

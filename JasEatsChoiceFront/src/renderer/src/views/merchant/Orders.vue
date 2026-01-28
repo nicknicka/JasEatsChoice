@@ -413,14 +413,6 @@ onMounted(() => {
         <h3 class="page-title">{{ pageTitle }}</h3>
       </div>
       <div class="header-right">
-        <el-button
-          v-if="orderOverview.total > 0"
-          type="primary"
-          size="small"
-          @click="markAllAsRead"
-        >
-          全部已读
-        </el-button>
         <el-button size="small" :loading="loading" @click="refreshOrders"> 刷新 </el-button>
         <common-back-button type="default" />
       </div>
@@ -795,17 +787,35 @@ onMounted(() => {
 
     .header-right {
       display: flex;
-      gap: 10px;
+      gap: 8px;
       align-items: center;
 
       :deep(.el-button) {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        padding: 8px 14px;
+        font-size: 13px;
+        font-weight: 500;
+        border-radius: 6px;
+        height: 34px;
         backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.3);
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+        .el-icon {
+          font-size: 14px;
+        }
 
         &:hover {
-          transform: translateY(-2px);
+          transform: translateY(-1px);
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        &:active {
+          transform: translateY(0);
         }
       }
     }
@@ -962,7 +972,7 @@ onMounted(() => {
     align-items: center;
     padding: 12px 20px;
     background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-    border-radius: 12px;
+    border-radius: 10px;
     margin-bottom: 16px;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
     border: 1px solid #e8eef5;
@@ -979,7 +989,7 @@ onMounted(() => {
         gap: 6px;
 
         .filter-icon {
-          font-size: 16px;
+          font-size: 15px;
           color: #667eea;
         }
 
@@ -999,7 +1009,7 @@ onMounted(() => {
         .custom-status-tag {
           cursor: pointer;
           transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-          padding: 4px 10px;
+          padding: 5px 10px;
           font-size: 12px;
           font-weight: 500;
           border-radius: 6px;
@@ -1007,6 +1017,7 @@ onMounted(() => {
           align-items: center;
           gap: 4px;
           user-select: none;
+          height: 26px;
 
           .tag-icon {
             font-size: 12px;
@@ -1147,50 +1158,58 @@ onMounted(() => {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px 20px;
+    padding: 12px 20px;
     background: #ffffff;
-    border-radius: 12px;
-    margin-bottom: 20px;
+    border-radius: 10px;
+    margin-bottom: 16px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     border: 1px solid #f0f0f0;
 
     .quick-actions-left {
       display: flex;
-      gap: 10px;
+      gap: 8px;
 
       .quick-action-btn {
         display: inline-flex;
         align-items: center;
+        justify-content: center;
         gap: 6px;
         padding: 8px 16px;
-        border-radius: 8px;
+        border-radius: 6px;
+        font-size: 13px;
         font-weight: 500;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        height: 34px;
 
         .el-icon {
           font-size: 14px;
         }
 
         &:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          transform: translateY(-1px);
+          box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
+        }
+
+        &:active {
+          transform: translateY(0);
         }
       }
     }
 
     .quick-actions-right {
       .order-count-info {
-        font-size: 14px;
+        font-size: 13px;
         color: #606266;
-        padding: 8px 16px;
+        padding: 8px 14px;
         background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-        border-radius: 8px;
+        border-radius: 6px;
         border: 1px solid #bae6fd;
+        font-weight: 500;
 
         strong {
           color: #667eea;
-          font-size: 16px;
+          font-size: 15px;
           font-weight: 700;
         }
       }
@@ -1522,36 +1541,45 @@ onMounted(() => {
 
       .order-actions {
         display: flex;
-        gap: 8px;
         justify-content: flex-end;
         align-items: center;
+        gap: 8px;
         width: 100%;
-        padding-top: 4px;
+        padding-top: 12px;
+        flex-wrap: wrap;
 
         .primary-actions {
           display: flex;
-          gap: 6px;
+          gap: 8px;
+          align-items: center;
           flex-wrap: wrap;
-          justify-content: flex-end;
         }
 
         :deep(.el-button) {
           display: inline-flex;
           align-items: center;
+          justify-content: center;
           gap: 4px;
-          padding: 6px 12px;
+          padding: 6px 14px;
+          font-size: 13px;
           font-weight: 500;
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          border-radius: 8px;
+          border-radius: 6px;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          height: 32px;
+          white-space: nowrap;
 
           .el-icon {
             font-size: 14px;
           }
 
           &:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+          }
+
+          &:active {
+            transform: translateY(0);
           }
 
           &.detail-btn {
@@ -1566,7 +1594,7 @@ onMounted(() => {
 
           &.action-btn {
             min-width: 70px;
-            font-weight: 600;
+            font-weight: 500;
           }
 
           &.complete-btn {
@@ -1576,12 +1604,12 @@ onMounted(() => {
 
             &:hover {
               background: linear-gradient(135deg, #0e837a 0%, #2ed16b 100%);
-              box-shadow: 0 4px 12px rgba(56, 239, 125, 0.4);
+              box-shadow: 0 3px 10px rgba(56, 239, 125, 0.3);
             }
           }
 
           &:disabled {
-            opacity: 0.6;
+            opacity: 0.5;
             cursor: not-allowed;
             background: #f5f5f5;
             border-color: #d9d9d9;
@@ -1595,6 +1623,8 @@ onMounted(() => {
         }
 
         .more-dropdown {
+          flex-shrink: 0;
+
           :deep(.el-button) {
             &.more-btn {
               width: 32px;
@@ -1603,7 +1633,7 @@ onMounted(() => {
               display: inline-flex;
               align-items: center;
               justify-content: center;
-              border-radius: 50%;
+              border-radius: 6px;
             }
           }
         }
@@ -1614,6 +1644,7 @@ onMounted(() => {
             align-items: center;
             gap: 8px;
             padding: 8px 16px;
+            font-size: 13px;
 
             .el-icon {
               font-size: 16px;
@@ -1704,18 +1735,37 @@ onMounted(() => {
           }
 
           .order-actions {
-            flex-direction: column;
+            flex-direction: row;
             width: 100%;
-            gap: 10px;
+            gap: 6px;
+            padding-top: 12px;
+            justify-content: space-between;
 
             .primary-actions {
-              width: 100%;
-              justify-content: center;
+              flex: 1;
+              justify-content: flex-start;
+              gap: 6px;
             }
 
             :deep(.el-button) {
-              width: 100%;
-              justify-content: center;
+              flex: 1;
+              min-width: 0;
+              padding: 6px 8px;
+              font-size: 12px;
+              height: 32px;
+
+              span {
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+              }
+            }
+
+            .more-dropdown {
+              :deep(.el-button) {
+                width: 32px;
+                flex: none;
+              }
             }
           }
         }
