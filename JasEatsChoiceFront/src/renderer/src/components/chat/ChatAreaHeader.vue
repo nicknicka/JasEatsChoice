@@ -82,7 +82,7 @@
             size="small"
             type="primary"
             v-if="!hasGroupOrder"
-            @click="$emit('create-group-order')"
+            @click="handleCreateGroupOrder"
           />
         </el-tooltip>
         <el-tooltip content="群聊详情" placement="bottom">
@@ -149,6 +149,13 @@ const handleCommand = (command) => {
       ElMessage.success('聊天记录已清空')
       break
   }
+}
+
+// 处理创建群订单
+const handleCreateGroupOrder = () => {
+  console.log('🟢 [ChatAreaHeader] 创建群订单按钮被点击')
+  console.log('🟢 [ChatAreaHeader] conversation:', props.conversation)
+  emit('create-group-order')
 }
 </script>
 

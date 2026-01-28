@@ -272,15 +272,35 @@ public class ChatController {
 
             // 2. 为接收者创建或更新会话（如果是群聊，所有成员都会收到消息）
             if ("group".equals(chatMsg.getSessionType())) {
-                // 群聊：更新群组会话
-                updateSessionForReceiver(
-                    chatMsg.getToId(),  // 群ID
-                    chatMsg.getFromId(),  // 发送者ID
-                    chatMsg.getSessionType(),
-                    chatMsg.getContent(),
-                    chatMsg.getCreateTime(),
-                    true  // 是群聊
-                );
+                // ⭐ 群聊：查询所有群成员，为每个成员创建或更新会话
+                String groupId = chatMsg.getToId();
+
+                // 查询群成员列表
+                java.util.List<com.xx.jaseatschoicejava.entity.Contact> groupMembers =
+                    contactService.lambdaQuery()
+                        .eq(com.xx.jaseatschoicejava.entity.Contact::getTargetId, groupId)
+                        .eq(com.xx.jaseatschoicejava.entity.Contact::getRelationType, "group")
+                        .eq(com.xx.jaseatschoicejava.entity.Contact::getStatus, "normal")
+                        .list();
+
+                // 为每个群成员创建或更新会话（不包括发送者）
+                for (com.xx.jaseatschoicejava.entity.Contact member : groupMembers) {
+                    String memberUserId = member.getUserId();
+
+                    // 不为发送者创建会话（已经在步骤1中创建了）
+                    if (memberUserId.equals(chatMsg.getFromId())) {
+                        continue;
+                    }
+
+                    // 为该成员创建或更新会话
+                    createOrUpdateSessionForUser(
+                        memberUserId,  // 成员的userId
+                        groupId,       // 群ID
+                        chatMsg.getSessionType(),
+                        chatMsg.getContent(),
+                        chatMsg.getCreateTime()
+                    );
+                }
             } else {
                 // 单聊：为接收者创建会话
                 createOrUpdateSessionForUser(
@@ -387,8 +407,12 @@ public class ChatController {
             session.setPinned(0);  // 0-未置顶
             session.setCreateTime(LocalDateTime.now());
 
+            // ⭐ 设置 groupId（仅群聊）
+            if ("group".equals(sessionType)) {
+                session.setGroupId(otherId);
+            }
             // ⭐ 设置 targetId（仅单聊）
-            if ("single".equals(sessionType)) {
+            else if ("single".equals(sessionType)) {
                 session.setTargetId(otherId);
             }
         }
@@ -446,8 +470,12 @@ public class ChatController {
             session.setLastMessageTime(messageTime);
             session.setUpdateTime(LocalDateTime.now());
 
+            // ⭐ 设置 groupId（仅群聊）
+            if (isGroup) {
+                session.setGroupId(receiverId);  // 群聊会话，groupId 就是群ID
+            }
             // ⭐ 设置 targetId（仅单聊）
-            if (!isGroup) {
+            else {
                 session.setTargetId(senderId);  // 接收者的会话中，targetId 是发送者
             }
 

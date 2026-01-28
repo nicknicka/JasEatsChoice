@@ -1,5 +1,6 @@
 package com.xx.jaseatschoicejava.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.xx.jaseatschoicejava.common.ResponseResult;
 import com.xx.jaseatschoicejava.entity.GroupOrder;
 import com.xx.jaseatschoicejava.entity.GroupOrderDish;
@@ -10,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -29,7 +31,53 @@ public class GroupOrderController {
     private GroupChatService groupChatService;
 
     /**
+     * 获取或创建群组的草稿订单
+     * ⭐ 用于前端恢复未完成的群订单
+     */
+    @GetMapping("/groups/{groupId}/draft-order")
+    public ResponseResult<?> getOrCreateDraftOrder(@PathVariable String groupId,
+                                                   @RequestParam String initiatorId) {
+        try {
+            // 查询该群的草稿订单
+            LambdaQueryWrapper<GroupOrder> queryWrapper = new LambdaQueryWrapper<>();
+            queryWrapper.eq(GroupOrder::getGroupId, groupId);
+            queryWrapper.eq(GroupOrder::getInitiatorId, initiatorId);
+            queryWrapper.eq(GroupOrder::getStatus, -1); // 草稿状态
+            queryWrapper.orderByDesc(GroupOrder::getCreateTime);
+            queryWrapper.last("LIMIT 1");
+
+            GroupOrder draftOrder = groupOrderService.getOne(queryWrapper);
+
+            if (draftOrder != null) {
+                // 返回已有的草稿订单
+                return ResponseResult.success(draftOrder);
+            } else {
+                // 创建新的草稿订单
+                GroupOrder newDraftOrder = new GroupOrder();
+                newDraftOrder.setInitiatorId(initiatorId);
+                newDraftOrder.setGroupId(groupId);
+                newDraftOrder.setStatus(-1); // 草稿状态
+                newDraftOrder.setCreateTime(LocalDateTime.now());
+                newDraftOrder.setUpdateTime(LocalDateTime.now());
+
+                boolean saved = groupOrderService.save(newDraftOrder);
+                if (saved) {
+                    return ResponseResult.success(newDraftOrder);
+                } else {
+                    return ResponseResult.fail("500", "创建草稿订单失败");
+                }
+            }
+        } catch (Exception e) {
+            logger.error("获取或创建草稿订单失败", e);
+            return ResponseResult.fail("500", "获取或创建草稿订单失败：" + e.getMessage());
+        }
+    }
+
+    /**
      * 创建群订单
+     * ⭐ 支持两种模式：
+     * 1. 完整模式：提供所有信息立即创建订单
+     * 2. 初始模式：仅提供基本信息，创建初始状态订单（status=-1 表示草稿）
      */
     @PostMapping("/group-orders")
     public ResponseResult<?> createGroupOrder(@RequestBody Map<String, Object> request) {
@@ -37,10 +85,23 @@ public class GroupOrderController {
             // 解析群订单信息
             GroupOrder groupOrder = new GroupOrder();
             groupOrder.setInitiatorId(request.get("initiatorId").toString());
-            groupOrder.setMerchantId(request.get("merchantId").toString());
             groupOrder.setGroupId(request.get("groupId").toString());
-            groupOrder.setAddressId(request.get("addressId").toString());
+
+            // ⭐ 支持初始模式：可选字段
+            if (request.containsKey("merchantId") && request.get("merchantId") != null) {
+                groupOrder.setMerchantId(request.get("merchantId").toString());
+            }
+            if (request.containsKey("addressId") && request.get("addressId") != null) {
+                groupOrder.setAddressId(request.get("addressId").toString());
+            }
             groupOrder.setRemark((String) request.get("remark"));
+
+            // ⭐ 如果没有提供商家ID，设置为草稿状态
+            if (groupOrder.getMerchantId() == null || groupOrder.getMerchantId().isEmpty()) {
+                groupOrder.setStatus(-1); // 草稿状态
+            } else {
+                groupOrder.setStatus(0); // 待支付状态
+            }
 
             // 解析菜品列表 - 添加@SuppressWarnings消除未检查转换警告
             @SuppressWarnings("unchecked")

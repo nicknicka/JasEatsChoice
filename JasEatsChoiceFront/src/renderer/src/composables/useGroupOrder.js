@@ -5,6 +5,8 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import api from '@/utils/api'
+import { useAuthStore } from '@/store/authStore'
 import {
   findExistingOrderItem,
   mergeOrderItem,
@@ -15,10 +17,12 @@ import { ORDER_STATUS, ORDER_CONFIG } from '@/constants/orderConstants'
 
 export function useGroupOrder({ selectedConversation, chatMessages }) {
   const router = useRouter()
+  const authStore = useAuthStore()
 
   // ========== 状态管理 ==========
   const groupOrders = ref({})
   const orderDrawerVisible = ref(false)
+  const loadingDraftOrder = ref(false)
 
   // 商家选择相关
   const merchantSelectDialogVisible = ref(false)
@@ -223,39 +227,120 @@ export function useGroupOrder({ selectedConversation, chatMessages }) {
   // ========== 订单管理 ==========
 
   /**
-   * 创建群订单
+   * 从后端加载草稿订单
    */
-  const createGroupOrder = () => {
+  const loadDraftOrder = async (groupId) => {
+    if (!authStore.token || loadingDraftOrder.value) {
+      return null
+    }
+
+    try {
+      loadingDraftOrder.value = true
+
+      // 获取当前用户ID
+      const decodedToken = authStore.decodedToken || JSON.parse(atob(authStore.token.split('.')[1]))
+      const userId = decodedToken.userId
+
+      // 调用后端API获取或创建草稿订单
+      const response = await api.get(`/v1/group-orders/groups/${groupId}/draft-order`, {
+        params: { initiatorId: userId }
+      })
+
+      if (response.data && response.data.success) {
+        const draftOrder = response.data.data
+
+        // 转换为前端格式
+        const frontendOrder = {
+          orderId: draftOrder.id, // 使用后端返回的正式ID
+          groupId: draftOrder.groupId,
+          groupName: selectedConversation.value?.name || '群订单',
+          creator: ORDER_CONFIG.DEFAULT_MEMBER,
+          members: [ORDER_CONFIG.DEFAULT_MEMBER],
+          orderItems: [],
+          totalAmount: 0,
+          status: ORDER_STATUS.ACTIVE,
+          createTime: draftOrder.createTime || new Date().toISOString(),
+          // 保存后端订单信息
+          merchantId: draftOrder.merchantId,
+          addressId: draftOrder.addressId,
+          remark: draftOrder.remark,
+          draftStatus: draftOrder.status // -1 表示草稿
+        }
+
+        // 保存到本地状态
+        groupOrders.value[groupId] = frontendOrder
+
+        return frontendOrder
+      }
+    } catch (error) {
+      console.error('加载草稿订单失败:', error)
+      // 静默失败，不影响用户体验
+    } finally {
+      loadingDraftOrder.value = false
+    }
+
+    return null
+  }
+
+  /**
+   * 创建群订单
+   * ⭐ 立即调用后端API创建草稿订单
+   */
+  const createGroupOrder = async () => {
     if (!selectedConversation.value) {
       ElMessage.error('请先选择一个群聊')
       return
     }
 
-    const order = {
-      orderId: `${ORDER_CONFIG.ORDER_ID_PREFIX}${Date.now()}`,
-      groupId: selectedConversation.value.id,
-      groupName: selectedConversation.value.name,
-      creator: ORDER_CONFIG.DEFAULT_MEMBER,
-      members: [ORDER_CONFIG.DEFAULT_MEMBER],
-      orderItems: [],
-      totalAmount: 0,
-      status: ORDER_STATUS.ACTIVE,
-      createTime: new Date().toISOString()
+    try {
+      // 获取当前用户ID
+      const decodedToken = authStore.decodedToken || JSON.parse(atob(authStore.token.split('.')[1]))
+      const userId = decodedToken.userId
+
+      // 调用后端API获取或创建草稿订单
+      const response = await api.get(`/v1/group-orders/groups/${selectedConversation.value.id}/draft-order`, {
+        params: { initiatorId: userId }
+      })
+
+      if (response.data && response.data.success) {
+        const draftOrder = response.data.data
+
+        // 转换为前端格式
+        const order = {
+          orderId: draftOrder.id, // ⭐ 使用后端返回的正式ID
+          groupId: draftOrder.groupId,
+          groupName: selectedConversation.value.name,
+          creator: ORDER_CONFIG.DEFAULT_MEMBER,
+          members: [ORDER_CONFIG.DEFAULT_MEMBER],
+          orderItems: [],
+          totalAmount: 0,
+          status: ORDER_STATUS.ACTIVE,
+          createTime: draftOrder.createTime,
+          // 保存后端订单信息
+          merchantId: draftOrder.merchantId,
+          addressId: draftOrder.addressId,
+          remark: draftOrder.remark,
+          draftStatus: draftOrder.status // -1 表示草稿
+        }
+
+        groupOrders.value[selectedConversation.value.id] = order
+        ElMessage.success('群订单已创建')
+
+        const orderMsg = {
+          id: chatMessages.value.length + 1,
+          sender: '系统',
+          content: '我创建了一个群订单，大家可以加入并添加商品',
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }
+        chatMessages.value.push(orderMsg)
+
+        selectedConversation.value.lastMessage = '系统: 我创建了一个群订单'
+        selectedConversation.value.time = orderMsg.time
+      }
+    } catch (error) {
+      console.error('创建群订单失败:', error)
+      ElMessage.error('创建群订单失败，请稍后重试')
     }
-
-    groupOrders.value[selectedConversation.value.id] = order
-    ElMessage.success('群订单已创建')
-
-    const orderMsg = {
-      id: chatMessages.value.length + 1,
-      sender: '系统',
-      content: '我创建了一个群订单，大家可以加入并添加商品',
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    }
-    chatMessages.value.push(orderMsg)
-
-    selectedConversation.value.lastMessage = '系统: 我创建了一个群订单'
-    selectedConversation.value.time = orderMsg.time
   }
 
   /**
@@ -350,6 +435,7 @@ export function useGroupOrder({ selectedConversation, chatMessages }) {
     // 状态
     groupOrders,
     orderDrawerVisible,
+    loadingDraftOrder,
     merchantSelectDialogVisible,
     productSelectDialogVisible,
     selectedMerchant,
@@ -376,6 +462,7 @@ export function useGroupOrder({ selectedConversation, chatMessages }) {
     confirmProductSelection,
 
     // 订单管理
+    loadDraftOrder,
     createGroupOrder,
     joinGroupOrder,
     goToOrderConfirmation

@@ -634,6 +634,7 @@ const handleGlobalClick = () => {
 
 // ========== 会话操作 ==========
 const selectConversation = async (conversation) => {
+  console.log('🟢🟢🟢 [selectConversation] 函数被调用！conversation:', conversation.name, 'type:', conversation.type, 'groupId:', conversation.groupId)
   selectedConversation.value = conversation
 
   // 清空未读消息
@@ -655,8 +656,63 @@ const selectConversation = async (conversation) => {
 
   await loadChatMessages(conversation.id)
 
-  // 加载群订单信息（如果是群聊）
+  // ⭐ 加载群订单信息（如果是群聊）
   if (conversation.type === 'group') {
+    try {
+      console.log('🔵 [selectConversation] 开始加载草稿订单')
+      // ⭐ 使用真正的 groupId（G开头），而不是 sessionId（S开头）
+      const groupId = conversation.groupId || conversation.id
+      console.log('🔵 [selectConversation] groupId:', groupId)
+
+      const response = await api.get(`/v1/group-orders/groups/${groupId}/draft-order`, {
+        params: { initiatorId: userId.value.toString() }
+      })
+
+      console.log('🔵 [selectConversation] API响应:', response.data)
+      console.log('🔵 [selectConversation] response.data.success:', response.data?.success)
+      console.log('🔵 [selectConversation] response.data.id:', response.data?.id)
+
+      let draftOrder = null
+
+      // 处理两种响应格式
+      if (response.data && response.data.success) {
+        // 格式1: {success: true, data: {...}}
+        draftOrder = response.data.data
+        console.log('🟢 [selectConversation] 使用格式1: success/data')
+      } else if (response.data && response.data.id) {
+        // 格式2: 直接是订单对象 {...}
+        draftOrder = response.data
+        console.log('🟢 [selectConversation] 使用格式2: 直接订单对象')
+      }
+
+      // 如果有草稿订单，恢复它
+      if (draftOrder) {
+        groupOrders.value[conversation.id] = {
+          orderId: draftOrder.id,
+          groupId: draftOrder.groupId,
+          groupName: conversation.name,
+          creator: '我',
+          members: ['我'],
+          orderItems: [],
+          totalAmount: 0,
+          status: 'active',
+          createTime: draftOrder.createTime,
+          merchantId: draftOrder.merchantId,
+          addressId: draftOrder.addressId,
+          remark: draftOrder.remark,
+          draftStatus: draftOrder.status
+        }
+        console.log('✅ [selectConversation] 已从后端恢复草稿订单:', draftOrder)
+        console.log('✅ [selectConversation] groupOrders.value[conversation.id]:', groupOrders.value[conversation.id])
+      } else {
+        console.log('ℹ️ [selectConversation] 没有找到草稿订单')
+      }
+    } catch (error) {
+      console.error('🔴 [selectConversation] 加载草稿订单失败:', error)
+      // 静默失败，不影响用户体验
+    }
+
+    // 兼容旧逻辑：检查 sessionStorage 中的待处理订单
     const pendingOrder = JSON.parse(sessionStorage.getItem('pendingOrder'))
     if (pendingOrder && pendingOrder.fromChat) {
       if (pendingOrder.groupName === conversation.name) {
@@ -1429,23 +1485,122 @@ const openGroupDetail = async () => {
 }
 
 // ========== 群订单操作 ==========
-const createGroupOrder = () => {
-  if (!selectedConversation.value) return
+const createGroupOrder = async () => {
+  console.log('🔵 [createGroupOrder] 开始执行')
+  console.log('🔵 [createGroupOrder] selectedConversation:', selectedConversation.value)
 
-  const newOrder = {
-    orderId: Date.now(),
-    groupId: selectedConversation.value.id,
-    groupName: selectedConversation.value.name,
-    creator: '我',
-    members: ['我'],
-    orderItems: [],
-    totalAmount: 0,
-    status: 'active',
-    createTime: new Date().toISOString()
+  if (!selectedConversation.value) {
+    console.log('🔴 [createGroupOrder] 没有选择的会话，返回')
+    return
   }
 
-  groupOrders.value[selectedConversation.value.id] = newOrder
-  ElMessage.success('群订单已创建')
+  try {
+    // ⭐ 使用真正的 groupId（G开头），而不是 sessionId（S开头）
+    const groupId = selectedConversation.value.groupId || selectedConversation.value.id
+    console.log('🔵 [createGroupOrder] groupId:', groupId)
+    console.log('🔵 [createGroupOrder] userId:', userId.value)
+
+    const response = await api.get(`/v1/group-orders/groups/${groupId}/draft-order`, {
+      params: { initiatorId: userId.value.toString() }
+    })
+
+    console.log('🔵 [createGroupOrder] API响应:', response.data)
+    console.log('🔵 [createGroupOrder] response.data.success:', response.data?.success)
+    console.log('🔵 [createGroupOrder] response.data.data:', response.data?.data)
+
+    if (response.data && response.data.success) {
+      const draftOrder = response.data.data
+
+      // 转换为前端格式
+      const newOrder = {
+        orderId: draftOrder.id, // ⭐ 使用后端返回的正式ID
+        groupId: draftOrder.groupId,
+        groupName: selectedConversation.value.name,
+        creator: '我',
+        members: ['我'],
+        orderItems: [],
+        totalAmount: 0,
+        status: 'active',
+        createTime: draftOrder.createTime || new Date().toISOString(),
+        // 保存后端订单信息
+        merchantId: draftOrder.merchantId,
+        addressId: draftOrder.addressId,
+        remark: draftOrder.remark,
+        draftStatus: draftOrder.status
+      }
+
+      groupOrders.value[selectedConversation.value.id] = newOrder
+      ElMessage.success('群订单已创建')
+
+      // 发送系统消息到聊天
+      const orderMsg = {
+        id: Date.now(),
+        fromId: userId.value.toString(),
+        toId: groupId,
+        sessionType: 'group',
+        msgType: 'text',
+        content: '我创建了一个群订单，大家可以加入并添加商品',
+        createTime: new Date().toISOString(),
+        formattedTime: '刚刚',
+        sender: '我',
+        avatar: '👤'
+      }
+
+      chatMessages.value.push(orderMsg)
+      chatHistory.value[selectedConversation.value.id] = chatMessages.value
+      setTimeout(() => scrollToBottom(), 100)
+    } else if (response.data && response.data.id) {
+      // ⭐ 如果响应直接是订单数据（没有包装在 success/data 中）
+      console.log('🟡 [createGroupOrder] 响应数据直接是订单对象，使用 response.data')
+      const draftOrder = response.data
+
+      // 转换为前端格式
+      const newOrder = {
+        orderId: draftOrder.id, // ⭐ 使用后端返回的正式ID
+        groupId: draftOrder.groupId,
+        groupName: selectedConversation.value.name,
+        creator: '我',
+        members: ['我'],
+        orderItems: [],
+        totalAmount: 0,
+        status: 'active',
+        createTime: draftOrder.createTime || new Date().toISOString(),
+        // 保存后端订单信息
+        merchantId: draftOrder.merchantId,
+        addressId: draftOrder.addressId,
+        remark: draftOrder.remark,
+        draftStatus: draftOrder.status
+      }
+
+      groupOrders.value[selectedConversation.value.id] = newOrder
+      console.log('✅ [createGroupOrder] 群订单已保存:', newOrder)
+      ElMessage.success('群订单已创建')
+
+      // 发送系统消息到聊天
+      const orderMsg = {
+        id: Date.now(),
+        fromId: userId.value.toString(),
+        toId: groupId,
+        sessionType: 'group',
+        msgType: 'text',
+        content: '我创建了一个群订单，大家可以加入并添加商品',
+        createTime: new Date().toISOString(),
+        formattedTime: '刚刚',
+        sender: '我',
+        avatar: '👤'
+      }
+
+      chatMessages.value.push(orderMsg)
+      chatHistory.value[selectedConversation.value.id] = chatMessages.value
+      setTimeout(() => scrollToBottom(), 100)
+    } else {
+      console.log('🔴 [createGroupOrder] 未知的响应格式:', response)
+    }
+  } catch (error) {
+    console.error('🔴 [createGroupOrder] 错误:', error)
+    console.error('🔴 [createGroupOrder] 错误详情:', error.response?.data || error.message)
+    ElMessage.error('创建群订单失败，请稍后重试')
+  }
 }
 
 const joinGroupOrder = () => {
@@ -1633,9 +1788,14 @@ onMounted(async () => {
       })))
 
       if (sortedConversations.value.length > 0) {
-        selectedConversation.value = sortedConversations.value[0]
-        console.log(`✅ [Chat] 自动选择第一个会话 - ID: ${selectedConversation.value.id}, 名称: ${selectedConversation.value.name}`)
-        await loadChatMessages(selectedConversation.value.id)
+        // ⭐ 优先选择群聊会话
+        const groupConversation = sortedConversations.value.find(c => c.type === 'group')
+        const conversationToSelect = groupConversation || sortedConversations.value[0]
+
+        console.log(`✅ [Chat] 自动选择会话 - ID: ${conversationToSelect.id}, 名称: ${conversationToSelect.name}, 类型: ${conversationToSelect.type}`)
+
+        // ⭐ 使用 selectConversation 而不是直接赋值，这样可以触发加载草稿订单
+        await selectConversation(conversationToSelect)
       } else {
         console.warn('⚠️ [Chat] 会话列表为空，没有可显示的会话')
       }
