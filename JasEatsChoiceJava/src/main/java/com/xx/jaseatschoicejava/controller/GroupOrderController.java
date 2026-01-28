@@ -4,8 +4,10 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.xx.jaseatschoicejava.common.ResponseResult;
 import com.xx.jaseatschoicejava.entity.GroupOrder;
 import com.xx.jaseatschoicejava.entity.GroupOrderDish;
+import com.xx.jaseatschoicejava.entity.PaymentRecord;
 import com.xx.jaseatschoicejava.service.GroupChatService;
 import com.xx.jaseatschoicejava.service.GroupOrderService;
+import com.xx.jaseatschoicejava.service.PaymentService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +31,9 @@ public class GroupOrderController {
 
     @Autowired
     private GroupChatService groupChatService;
+
+    @Autowired
+    private PaymentService paymentService;
 
     /**
      * 获取或创建群组的草稿订单
@@ -194,7 +199,7 @@ public class GroupOrderController {
 
     /**
      * 删除群订单（取消群订单）
-     * ⭐ 只能删除草稿状态的订单（status=-1）
+     * ⭐ 支持取消草稿和已支付但未接单的订单
      */
     @DeleteMapping("/group-orders/{groupOrderId}")
     public ResponseResult<?> cancelGroupOrder(@PathVariable String groupOrderId) {
@@ -205,16 +210,48 @@ public class GroupOrderController {
                 return ResponseResult.fail("404", "群订单不存在");
             }
 
-            // 只能删除草稿状态的订单
-            if (groupOrder.getStatus() != -1) {
-                return ResponseResult.fail("400", "只能取消未支付的草稿订单");
+            Integer status = groupOrder.getStatus();
+
+            // 检查订单状态：只允许取消草稿(-1)、待支付(0)、待接单(1)的订单
+            if (status < -1 || status > 1) {
+                return ResponseResult.fail("400", "只能取消待接单之前的订单（草稿/待支付/待接单）");
             }
 
-            // 删除订单
-            boolean deleted = groupOrderService.removeById(groupOrderId);
-            if (deleted) {
-                logger.info("删除草稿订单成功 - orderId: {}, groupId: {}", groupOrderId, groupOrder.getGroupId());
-                return ResponseResult.success("订单已取消");
+            // 如果订单已支付（status >= 0），需要退款
+            if (status >= 0) {
+                try {
+                    // 查询支付记录
+                    PaymentRecord paymentRecord = paymentService.getPaymentByOrderId(groupOrderId);
+                    if (paymentRecord != null && paymentRecord.getAmount() != null) {
+                        // 调用退款服务
+                        boolean refundSuccess = paymentService.refundPayment(
+                            groupOrderId,
+                            paymentRecord.getAmount(),
+                            "群订单取消"
+                        );
+
+                        if (!refundSuccess) {
+                            return ResponseResult.fail("500", "退款失败，无法取消订单");
+                        }
+
+                        logger.info("群订单退款成功 - orderId: {}, 退款金额: {}",
+                            groupOrderId, paymentRecord.getAmount());
+                    }
+                } catch (Exception e) {
+                    logger.error("群订单退款失败 - orderId: {}", groupOrderId, e);
+                    return ResponseResult.fail("500", "退款失败：" + e.getMessage());
+                }
+            }
+
+            // 更新订单状态为已取消(6)
+            groupOrder.setStatus(6);
+            groupOrder.setUpdateTime(LocalDateTime.now());
+            boolean updated = groupOrderService.updateById(groupOrder);
+
+            if (updated) {
+                logger.info("取消群订单成功 - orderId: {}, groupId: {}, 原状态: {}",
+                    groupOrderId, groupOrder.getGroupId(), status);
+                return ResponseResult.success(status >= 0 ? "订单已取消并退款" : "订单已取消");
             } else {
                 return ResponseResult.fail("500", "取消订单失败");
             }

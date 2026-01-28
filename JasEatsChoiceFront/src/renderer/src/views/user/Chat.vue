@@ -1966,7 +1966,7 @@ const handleCancelGroupOrder = async () => {
     // 调用后端API删除订单
     const response = await api.delete(`/v1/group-orders/group-orders/${currentOrder.orderId}`)
 
-    if (response.data && response.data.success) {
+    if (response && response.success) {
       // 清空本地状态
       delete groupOrders.value[selectedConversation.value.id]
 
@@ -1999,7 +1999,7 @@ const handleCancelGroupOrder = async () => {
       ElMessage.success('群订单已取消')
       orderDrawerVisible.value = false
     } else {
-      ElMessage.error(response.data?.message || '取消订单失败')
+      ElMessage.error(response?.message || '取消订单失败')
     }
   } catch (error) {
     console.error('取消群订单失败:', error)

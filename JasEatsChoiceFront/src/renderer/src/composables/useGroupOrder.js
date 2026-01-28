@@ -246,8 +246,8 @@ export function useGroupOrder({ selectedConversation, chatMessages }) {
         params: { initiatorId: userId }
       })
 
-      if (response.data && response.data.success) {
-        const draftOrder = response.data.data
+      if (response && response.success) {
+        const draftOrder = response.data
 
         // 转换为前端格式
         const frontendOrder = {
@@ -302,8 +302,8 @@ export function useGroupOrder({ selectedConversation, chatMessages }) {
         params: { initiatorId: userId }
       })
 
-      if (response.data && response.data.success) {
-        const draftOrder = response.data.data
+      if (response && response.success) {
+        const draftOrder = response.data
 
         // 转换为前端格式
         const order = {
@@ -402,7 +402,7 @@ export function useGroupOrder({ selectedConversation, chatMessages }) {
       // 调用后端API删除订单
       const response = await api.delete(`/v1/group-orders/group-orders/${currentOrder.orderId}`)
 
-      if (response.data && response.data.success) {
+      if (response && response.success) {
         // 清空本地状态
         delete groupOrders.value[selectedConversation.value.id]
 
@@ -429,7 +429,7 @@ export function useGroupOrder({ selectedConversation, chatMessages }) {
         ElMessage.success('群订单已取消')
         return true
       } else {
-        ElMessage.error(response.data?.message || '取消订单失败')
+        ElMessage.error(response?.message || '取消订单失败')
         return false
       }
     } catch (error) {

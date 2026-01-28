@@ -201,8 +201,8 @@ const rejectOrder = async (order) => {
     .then(async ({ value }) => {
       const reason = value || '商家拒绝接单'
       try {
-        // 使用取消订单API来拒绝订单
-        const response = await api.put(`/v1/orders/${order.id}/cancel`)
+        // 使用取消订单API来拒绝订单，传递拒绝原因
+        const response = await api.put(`/v1/orders/${order.id}/cancel?reason=${encodeURIComponent(reason)}`)
         if (response.success) {
           order.status = 6
           order.rejectReason = reason
@@ -228,7 +228,8 @@ const cancelOrder = async (order) => {
   })
     .then(async () => {
       try {
-        const response = await api.put(`/v1/orders/${order.id}/cancel`)
+        // 商家取消订单时传递明确的取消原因
+        const response = await api.put(`/v1/orders/${order.id}/cancel?reason=${encodeURIComponent('商家取消订单')}`)
         if (response.success) {
           order.status = 6
           ElMessage.warning('订单已取消')
@@ -724,7 +725,7 @@ onMounted(() => {
               <template #dropdown>
                 <el-dropdown-menu>
                   <el-dropdown-item
-                    v-if="order.status < 5 && order.status !== 6"
+                    v-if="order.status === 0 || order.status === 1"
                     divided
                     @click="cancelOrder(order)"
                   >
