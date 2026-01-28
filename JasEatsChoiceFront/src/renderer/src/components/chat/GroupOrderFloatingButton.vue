@@ -30,7 +30,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onBeforeUnmount } from 'vue'
 import { ShoppingCart } from '@element-plus/icons-vue'
 
 const props = defineProps({
@@ -290,22 +290,26 @@ onBeforeUnmount(() => {
 
     .cart-count {
       position: absolute;
-      top: -6px;
-      right: -6px;
+      top: -22px;
+      right: -22px;
       background: linear-gradient(135deg, #f56c6c 0%, #f78989 100%);
       color: #fff;
       border-radius: 50%;
-      min-width: 24px;
-      height: 24px;
-      padding: 0 6px;
-      font-size: 12px;
+      width: 20px;
+      height: 20px;
+      padding: 0;
+      font-size: 11px;
       font-weight: 700;
+      line-height: 20px;
       display: flex;
       align-items: center;
       justify-content: center;
-      border: 3px solid #fff;
-      box-shadow: 0 2px 8px rgba(245, 108, 108, 0.4);
+      border: 2px solid #fff;
+      box-shadow:
+        0 2px 8px rgba(245, 108, 108, 0.5),
+        0 0 0 2px rgba(245, 108, 108, 0.2);
       animation: bounce-in 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+      z-index: 10;
     }
 
     @keyframes bounce-in {
