@@ -876,20 +876,21 @@ const handleCancelGroupOrder = async () => {
           }
 
           .paid-order-amount-right {
-          display: flex;
-          align-items: center;
-          gap: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
 
-          .paid-order-amount {
-            font-size: 16px;
-            font-weight: 600;
-            color: #67c23a;
-          }
+            .paid-order-amount {
+              font-size: 16px;
+              font-weight: 600;
+              color: #67c23a;
+            }
 
-          .click-icon {
-            color: #409eff;
-            font-size: 16px;
-            transition: transform 0.3s;
+            .click-icon {
+              color: #409eff;
+              font-size: 16px;
+              transition: transform 0.3s;
+            }
           }
         }
 

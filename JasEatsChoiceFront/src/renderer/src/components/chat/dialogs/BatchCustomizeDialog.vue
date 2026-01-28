@@ -99,7 +99,7 @@
                   <span>数量</span>
                 </div>
                 <el-input-number
-                  v-model="productSettings[product.id].quantity"
+                  v-model="productSettings[product.id]?.quantity"
                   :min="1"
                   :max="99"
                   size="small"
@@ -150,7 +150,7 @@
                   <span>备注</span>
                 </div>
                 <el-input
-                  v-model="productSettings[product.id].remark"
+                  v-model="productSettings[product.id]?.remark"
                   placeholder="添加备注..."
                   size="small"
                   maxlength="50"
@@ -305,6 +305,32 @@ const initProductSettings = () => {
 }
 
 /**
+ * 同步商品设置（当商品列表变化时调用）
+ */
+const syncProductSettings = () => {
+  // 获取当前商品ID集合
+  const currentProductIds = new Set(props.products.map(p => p.id))
+
+  // 移除已删除商品的设置
+  Object.keys(productSettings.value).forEach(productId => {
+    if (!currentProductIds.has(productId)) {
+      delete productSettings.value[productId]
+    }
+  })
+
+  // 添加新商品的设置
+  props.products.forEach(product => {
+    if (!productSettings.value[product.id]) {
+      productSettings.value[product.id] = {
+        quantity: 1,
+        optionalIngredients: [],
+        remark: ''
+      }
+    }
+  })
+}
+
+/**
  * 检查商品是否展开
  */
 const isProductExpanded = (productId) => {
@@ -373,8 +399,11 @@ const getIngredientKey = (ingredient) => {
  * 检查食材是否已选择
  */
 const isIngredientSelected = (productId, ingredient) => {
+  const settings = productSettings.value[productId]
+  if (!settings || !settings.optionalIngredients) return false
+
   const ingredientName = getIngredientName(ingredient)
-  return productSettings.value[productId]?.optionalIngredients.some(
+  return settings.optionalIngredients.some(
     item => item.name === ingredientName
   )
 }
@@ -417,10 +446,10 @@ const showIngredientSelector = (productId) => {
 const getProductSubtotal = (productId) => {
   const product = props.products.find(p => p.id === productId)
   const settings = productSettings.value[productId]
-  if (!product || !settings) return 0
+  if (!product || !settings || !settings.quantity) return 0
 
   const basePrice = product.price || 0
-  const extrasPrice = settings.optionalIngredients.reduce(
+  const extrasPrice = (settings.optionalIngredients || []).reduce(
     (sum, ingredient) => sum + (ingredient.price || 0),
     0
   )
@@ -475,6 +504,13 @@ const handleClose = () => {
   visible.value = false
   emit('update:modelValue', false)
 }
+
+/**
+ * 监听商品列表变化
+ */
+watch(() => props.products, () => {
+  syncProductSettings()
+}, { deep: true })
 
 /**
  * 监听对话框打开
