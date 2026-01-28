@@ -41,16 +41,28 @@ public class WebConfig implements WebMvcConfigurer {
         File uploadDir = new File(uploadPath);
         String absolutePath = uploadDir.getAbsolutePath();
 
-        // 确保路径以/结尾
+        // 确保路径以文件分隔符结尾
         if (!absolutePath.endsWith(File.separator)) {
             absolutePath += File.separator;
         }
+
+        // 打印调试信息
+        System.out.println("配置静态资源映射：");
+        System.out.println("  - uploadPath: " + uploadPath);
+        System.out.println("  - absolutePath: " + absolutePath);
+        System.out.println("  - url pattern: /uploads/**");
+        System.out.println("  - resource location: file:" + absolutePath);
 
         // 配置上传文件访问路径
         // 注意：由于 context-path 是 /api，所以这里配置 /uploads/** 后，实际访问路径是 /api/uploads/**
         registry.addResourceHandler("/uploads/**")
                 .addResourceLocations("file:" + absolutePath)
                 .setCachePeriod(0); // 禁用缓存，便于调试
+
+        // 同时配置不带 /api 前缀的映射（用于兼容）
+        registry.addResourceHandler("/api/uploads/**")
+                .addResourceLocations("file:" + absolutePath)
+                .setCachePeriod(0);
     }
 
     /**

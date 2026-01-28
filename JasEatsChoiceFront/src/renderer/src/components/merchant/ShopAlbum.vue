@@ -49,7 +49,29 @@ const fetchMerchantAlbum = async () => {
       API_CONFIG.merchant.album.replace('{merchantId}', props.merchantId)
     )
     if (response.success && response.data) {
-      shopAlbum.value = response.data
+      console.log('相册原始数据:', response.data)
+
+      // 后端返回的应该已经是完整的URL，直接使用
+      // 如果返回的是相对路径，需要拼接
+      const processImageUrls = (urls) => {
+        if (!urls) return []
+        return urls.map((url) => {
+          console.log('处理图片URL:', url)
+          // 如果URL已经是完整的HTTP地址，直接返回
+          if (url.startsWith('http://') || url.startsWith('https://')) {
+            return url
+          }
+          // 其他情况，返回原值（后端应该已经处理好）
+          return url
+        })
+      }
+
+      shopAlbum.value = {
+        environment: processImageUrls(response.data.environment || []),
+        dishes: processImageUrls(response.data.dishes || [])
+      }
+
+      console.log('处理后的相册数据:', shopAlbum.value)
     }
   } catch (error) {
     console.error('获取相册数据失败:', error)
