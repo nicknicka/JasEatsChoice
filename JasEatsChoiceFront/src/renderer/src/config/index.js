@@ -77,8 +77,26 @@ export const API_CONFIG = {
 
   // 教程API端点
   tutorial: {
+    // 用户端
     featured: '/v1/tutorial/featured', // 精选教程接口（用于首页展示）
-    list: '/v1/tutorial/list' // 全部教程接口
+    list: '/v1/tutorial/list', // 全部教程接口
+    detail: '/v1/tutorial/', // 教程详情接口（需要拼接id）
+    page: '/v1/tutorial/page', // 分页查询教程
+
+    // 管理员端
+    adminCreate: '/v1/tutorial/admin/create', // 管理员创建教程
+    adminPending: '/v1/tutorial/admin/pending', // 获取待审核列表
+    adminApprove: '/v1/tutorial/admin/', // 审核通过（需要拼接id + '/approve'）
+    adminReject: '/v1/tutorial/admin/', // 审核拒绝（需要拼接id + '/reject'）
+    adminToggleFeatured: '/v1/tutorial/admin/', // 设置精选（需要拼接id + '/featured'）
+    adminDelete: '/v1/tutorial/admin/', // 删除教程（需要拼接id）
+
+    // 商家端
+    merchantCreate: '/v1/tutorial/merchant/create', // 商家创建教程
+    merchantUpdate: '/v1/tutorial/merchant/', // 商家更新教程（需要拼接id）
+    merchantSubmit: '/v1/tutorial/merchant/', // 提交审核（需要拼接id + '/submit'）
+    merchantMy: '/v1/tutorial/merchant/my', // 获取商家教程列表
+    merchantDelete: '/v1/tutorial/merchant/' // 商家删除教程（需要拼接id）
   },
 
   // 首页API端点

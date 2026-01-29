@@ -11,7 +11,10 @@ import {
   Share,
   Search,
   Coffee,
-  Document
+  Document,
+  Check,
+  Shop,
+  MagicStick
 } from '@element-plus/icons-vue'
 import CommonMapLocationPicker from '../../components/CommonMapLocationPicker.vue'
 import { useRouter } from 'vue-router'
@@ -203,9 +206,13 @@ const handleNearbySearch = async () => {
 
 // 处理教程卡片点击
 const handleTutorialClick = (tutorial) => {
-  // TODO: 跳转到教程详情页或执行其他操作
-  console.log('点击教程:', tutorial.name)
-  // router.push(`/user/home/tutorials/${tutorial.id}`)
+  // 跳转到教程详情页
+  const tutorialId = tutorial.id
+  if (tutorialId) {
+    router.push(`/user/home/tutorials/${tutorialId}`)
+  } else {
+    console.warn('教程缺少ID:', tutorial)
+  }
 }
 
 // 处理菜品卡片点击
@@ -927,15 +934,15 @@ onMounted(async () => {
             v-for="(tutorial, index) in featuredTutorials.slice(0, 4)"
             :key="index"
             @click="handleTutorialClick(tutorial)"
-            :aria-label="`教程: ${tutorial.name}, ${tutorial.duration || '5分钟'}`"
+            :aria-label="`教程: ${tutorial.name || tutorial.title}, ${tutorial.duration || '5分钟'}`"
             role="listitem"
             tabindex="0"
             @keyup.enter="handleTutorialClick(tutorial)"
           >
             <div class="tutorial-thumbnail">
               <img
-                :src="tutorial.thumbnail || defaultTutorialThumbnail"
-                :alt="tutorial.name"
+                :src="tutorial.thumbnail || tutorial.coverImage || defaultTutorialThumbnail"
+                :alt="tutorial.name || tutorial.title"
                 loading="lazy"
               />
               <div class="tutorial-type-badge">
@@ -944,7 +951,38 @@ onMounted(async () => {
               </div>
             </div>
             <div class="tutorial-content">
-              <h4 class="tutorial-title">{{ tutorial.name }}</h4>
+              <!-- 来源标签 -->
+              <div class="tutorial-source-badges">
+                <!-- 官方认证标签 -->
+                <el-tag v-if="tutorial.source_type === 'ADMIN' && tutorial.is_official"
+                        type="danger"
+                        size="small"
+                        effect="dark">
+                  <el-icon><Check /></el-icon> 官方认证
+                </el-tag>
+
+                <!-- 商家标签 -->
+                <el-tag v-if="tutorial.source_type === 'MERCHANT'"
+                        type="warning"
+                        size="small"
+                        effect="plain">
+                  <el-icon><Shop /></el-icon> {{ tutorial.merchantName || '商家' }}
+                </el-tag>
+
+                <!-- AI生成标签 -->
+                <el-tag v-if="tutorial.source_type === 'AI_GENERATED'"
+                        :type="tutorial.review_status === 'APPROVED' ? 'success' : 'info'"
+                        size="small"
+                        effect="plain">
+                  <el-icon><MagicStick /></el-icon>
+                  AI生成
+                  <span v-if="tutorial.review_status === 'APPROVED'" class="reviewed-badge">
+                    ✓ 人工审核
+                  </span>
+                </el-tag>
+              </div>
+
+              <h4 class="tutorial-title">{{ tutorial.name || tutorial.title }}</h4>
               <div class="tutorial-meta">
                 <span class="tutorial-duration">{{ tutorial.duration || '5分钟' }}</span>
                 <el-rate
@@ -2463,6 +2501,34 @@ onMounted(async () => {
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
+        }
+
+        .tutorial-source-badges {
+          display: flex;
+          gap: 6px;
+          margin-bottom: 8px;
+          flex-wrap: wrap;
+
+          .el-tag {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            height: 20px;
+            line-height: 1;
+
+            .el-icon {
+              font-size: 12px;
+            }
+
+            .reviewed-badge {
+              margin-left: 4px;
+              padding-left: 4px;
+              border-left: 1px solid currentColor;
+            }
+          }
         }
 
         .tutorial-meta {
