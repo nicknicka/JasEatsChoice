@@ -30,42 +30,77 @@ export function useRecommendations() {
   /**
    * 加载用户拒绝的推荐历史
    */
-  const loadRejectionHistory = () => {
-    const saved = localStorage.getItem('rejectionHistory')
-    return saved ? JSON.parse(saved) : []
+  const loadRejectionHistory = async () => {
+    try {
+      const userId = String(authStore.userId || 1)
+      const response = await axios.get(`${API_CONFIG.baseURL}${API_CONFIG.recommendReject.list}`, {
+        params: { userId }
+      })
+      // 返回已拒绝的菜品ID列表
+      return response.data.data || []
+    } catch (error) {
+      console.error('加载拒绝历史失败:', error)
+      // 如果后端失败，尝试从 localStorage 读取作为后备
+      const saved = localStorage.getItem('rejectionHistory')
+      return saved ? JSON.parse(saved) : []
+    }
   }
 
   /**
-   * 保存用户拒绝的推荐历史
+   * 保存用户拒绝的推荐历史到后端
    */
-  const saveRejectionHistory = (history) => {
-    localStorage.setItem('rejectionHistory', JSON.stringify(history))
+  const saveRejectionHistory = async (userId, dishId) => {
+    try {
+      await axios.post(`${API_CONFIG.baseURL}${API_CONFIG.recommendReject.add}`, null, {
+        params: { userId, dishId }
+      })
+      // 清除本地缓存，以使用后端数据
+      localStorage.removeItem('rejectionHistory')
+    } catch (error) {
+      console.error('保存拒绝历史失败:', error)
+      // 如果后端失败，保存到 localStorage 作为后备
+      let history = []
+      const saved = localStorage.getItem('rejectionHistory')
+      if (saved) {
+        history = JSON.parse(saved)
+      }
+      const existingIndex = history.findIndex(
+        (entry) => entry.dishId === dishId
+      )
+      if (existingIndex > -1) {
+        history[existingIndex].count += 1
+      } else {
+        history.push({
+          dishId,
+          count: 1,
+          rejectedAt: new Date().toISOString()
+        })
+      }
+      localStorage.setItem('rejectionHistory', JSON.stringify(history))
+    }
+  }
+
+  /**
+   * 检查菜品是否被拒绝过
+   */
+  const isRejected = (rejectedDishIds, dishId) => {
+    if (!rejectedDishIds || rejectedDishIds.length === 0) return false
+    // 支持两种格式：字符串ID和数字ID
+    const normalizedDishId = String(dishId)
+    return rejectedDishIds.some(id => String(id) === normalizedDishId)
   }
 
   /**
    * 拒绝推荐
    */
-  const rejectRecommendation = (item) => {
-    let rejectionHistory = loadRejectionHistory()
+  const rejectRecommendation = async (item) => {
+    const userId = String(authStore.userId || 1)
+    const dishId = String(item.dishId || item.id || '')
 
-    const existingIndex = rejectionHistory.findIndex(
-      (entry) => entry.name === item.name && entry.type === item.type
-    )
+    // 保存拒绝记录到后端
+    await saveRejectionHistory(userId, dishId)
 
-    if (existingIndex > -1) {
-      rejectionHistory[existingIndex].count += 1
-    } else {
-      rejectionHistory.push({
-        name: item.name,
-        type: item.type,
-        tags: item.tags,
-        count: 1,
-        rejectedAt: new Date().toISOString()
-      })
-    }
-
-    saveRejectionHistory(rejectionHistory)
-
+    // 从推荐列表中移除
     const itemIndex = recommendations.value.findIndex((rec) => rec.id === item.id)
     if (itemIndex > -1) {
       recommendations.value.splice(itemIndex, 1)
@@ -95,22 +130,24 @@ export function useRecommendations() {
   /**
    * 根据天气和时间生成推荐菜品
    */
-  const generateWeatherTimeRecommendations = (timeType, weatherTags) => {
-    const rejectionHistory = loadRejectionHistory()
-
+  const generateWeatherTimeRecommendations = (timeType, weatherTags, rejectedDishIds) => {
     const filteredDishes = MOCK_DISHES.filter((dish) => {
       const matchesCriteria =
         dish.type.includes(timeType) || weatherTags.some((tag) => dish.tags.includes(tag))
 
-      const rejectionEntry = rejectionHistory.find(
-        (entry) => entry.name.includes(dish.name) || dish.name.includes(entry.name)
-      )
+      // 检查是否被拒绝过（基于菜品名称匹配）
+      const isRejectedDish = rejectedDishIds && rejectedDishIds.some(id => {
+        // 这里使用名称匹配作为临时方案，因为 MOCK_DISHES 没有 dishId
+        const rejectedDish = MOCK_DISHES.find(d => String(d.id || '') === String(id))
+        return rejectedDish && rejectedDish.name === dish.name
+      })
 
-      return matchesCriteria && (!rejectionEntry || rejectionEntry.count <= REJECTION_THRESHOLD)
+      return matchesCriteria && !isRejectedDish
     })
 
     return filteredDishes.map((dish, index) => ({
       id: Date.now() + index,
+      dishId: String(dish.id || Date.now() + index), // 添加 dishId 用于后端记录
       name: `${timeType}推荐: ${dish.name}`,
       type: RECOMMENDATION_TYPES.TIME,
       calories: dish.calories,
@@ -126,25 +163,26 @@ export function useRecommendations() {
   /**
    * 根据节日/节气添加特色菜品推荐
    */
-  const addFestivalRecommendations = () => {
+  const addFestivalRecommendations = (rejectedDishIds) => {
     const currentFestival = getCurrentFestival()
     if (!currentFestival || !FESTIVAL_DISHES[currentFestival]) {
       return []
     }
 
     const festivalDishList = FESTIVAL_DISHES[currentFestival]
-    const rejectionHistory = loadRejectionHistory()
 
     const festivalRecommendations = festivalDishList
       .filter((dishName) => {
-        const rejectionEntry = rejectionHistory.find(
-          (entry) => entry.name.includes(dishName) || dishName.includes(entry.name)
-        )
-        return !rejectionEntry || rejectionEntry.count <= REJECTION_THRESHOLD
+        // 检查是否被拒绝过
+        return !rejectedDishIds || !rejectedDishIds.some(id => {
+          // 这里使用名称匹配作为临时方案
+          return String(id).includes(dishName) || dishName.includes(String(id))
+        })
       })
       .map((dishName, index) => {
         return {
           id: Date.now() + index + 1000,
+          dishId: `festival_${currentFestival}_${dishName}`, // 添加 dishId 用于后端记录
           name: `${currentFestival}特色: ${dishName}`,
           type: RECOMMENDATION_TYPES.FESTIVAL,
           calories: 0,
@@ -162,7 +200,7 @@ export function useRecommendations() {
   /**
    * 天气与时间双维度推荐逻辑
    */
-  const updateRecommendationsByWeatherAndTime = async () => {
+  const updateRecommendationsByWeatherAndTime = async (rejectedDishIds) => {
     const savedSettings = localStorage.getItem('userSettings')
     let weatherRecommendationEnabled = true
 
@@ -189,7 +227,7 @@ export function useRecommendations() {
       else if (temperature < 10) weatherTags.push('热饮', '热菜', '火锅')
       if (humidity > 80) weatherTags.push('祛湿粥品', '清淡饮食')
 
-      return generateWeatherTimeRecommendations(timeType, weatherTags)
+      return generateWeatherTimeRecommendations(timeType, weatherTags, rejectedDishIds)
     } catch (error) {
       console.error('天气推荐失败:', error)
       return []
@@ -199,21 +237,27 @@ export function useRecommendations() {
   /**
    * 从后端获取推荐数据
    */
-  const fetchRecommendationsFromBackend = async () => {
+  const fetchRecommendationsFromBackend = async (rejectedDishIds) => {
     try {
-      isLoading.value = true
       const userId = parseInt(String(authStore.userId || 1) || '1', 10)
 
-      const response = await axios.get(`${API_CONFIG.baseURL}/v1/recommend/recommend/${userId}`)
+      const response = await axios.get(`${API_CONFIG.baseURL}/v1/recommendations/${userId}`)
 
       const data = response.data.data
       if (data && data.dishes) {
-        const personalizedRecs = data.dishes.map((dish, index) => ({
-          ...dish,
-          id: Date.now() + index + 2000,
-          recommendSource: RECOMMENDATION_TYPES.PERSONALIZED,
-          reason: dish.reason || '基于您的饮食偏好推荐'
-        }))
+        const personalizedRecs = data.dishes
+          .filter(dish => {
+            // 过滤掉被拒绝的菜品
+            if (!rejectedDishIds || rejectedDishIds.length === 0) return true
+            return !isRejected(rejectedDishIds, dish.dishId || dish.id)
+          })
+          .map((dish, index) => ({
+            ...dish,
+            id: Date.now() + index + 2000,
+            dishId: dish.dishId || dish.id || String(Date.now() + index + 2000), // 确保 dishId 存在
+            recommendSource: RECOMMENDATION_TYPES.PERSONALIZED,
+            reason: dish.reason || '基于您的饮食偏好推荐'
+          }))
 
         assignRandomTagTypes(personalizedRecs)
         return personalizedRecs
@@ -222,8 +266,6 @@ export function useRecommendations() {
     } catch (error) {
       console.error('获取推荐数据失败:', error)
       return null
-    } finally {
-      isLoading.value = false
     }
   }
 
@@ -274,13 +316,16 @@ export function useRecommendations() {
     try {
       isLoading.value = true
 
+      // 加载拒绝历史（从后端）
+      const rejectedDishIds = await loadRejectionHistory()
+
       // 并行加载多种推荐
       const [personalizedRecs, weatherTimeRecs] = await Promise.all([
-        fetchRecommendationsFromBackend(),
-        updateRecommendationsByWeatherAndTime()
+        fetchRecommendationsFromBackend(rejectedDishIds),
+        updateRecommendationsByWeatherAndTime(rejectedDishIds)
       ])
 
-      const festivalRecs = addFestivalRecommendations()
+      const festivalRecs = addFestivalRecommendations(rejectedDishIds)
 
       // 合并推荐
       let allRecommendations = []

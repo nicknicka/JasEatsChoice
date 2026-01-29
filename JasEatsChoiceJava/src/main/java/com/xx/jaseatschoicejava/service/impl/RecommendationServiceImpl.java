@@ -52,6 +52,9 @@ public class RecommendationServiceImpl implements RecommendationService {
     @Autowired
     private ZhipuAIService zhipuAIService;
 
+    @Autowired
+    private RejectRecommendationService rejectRecommendationService;
+
     @Override
     public List<RecommendationResultDTO> getRecommendations(RecommendationRequestDTO request) {
         log.info("开始生成推荐：userId={}, scene={}, limit={}",
@@ -64,19 +67,23 @@ public class RecommendationServiceImpl implements RecommendationService {
         // 1. 获取用户画像
         UserProfile profile = userProfileService.getUserProfile(userId);
 
-        // 2. 执行多种召回策略
-        List<Dish> recalledDishes = executeRecallStrategies(profile, context, limit);
+        // 2. 获取用户拒绝的菜品列表（拒绝次数>=2的菜品）
+        List<String> frequentlyRejectedDishIds = rejectRecommendationService.getFrequentlyRejectedDishIds(userId, 2);
+        log.debug("用户拒绝的菜品：{}", frequentlyRejectedDishIds);
 
-        // 3. 排序
+        // 3. 执行多种召回策略
+        List<Dish> recalledDishes = executeRecallStrategies(profile, context, limit, frequentlyRejectedDishIds);
+
+        // 4. 排序
         List<Dish> rankedDishes = rankDishes(recalledDishes, profile, context);
 
-        // 4. 多样性处理
+        // 5. 多样性处理
         List<Dish> diversifiedDishes = ensureDiversity(rankedDishes, limit);
 
-        // 5. 转换为DTO并生成推荐理由
+        // 6. 转换为DTO并生成推荐理由
         List<RecommendationResultDTO> results = convertToDTO(diversifiedDishes, profile, context);
 
-        // 6. 记录推荐日志
+        // 7. 记录推荐日志
         saveRecommendationLog(userId, results);
 
         log.info("推荐生成完成：返回{}个推荐", results.size());
@@ -232,23 +239,23 @@ public class RecommendationServiceImpl implements RecommendationService {
     /**
      * 执行多种召回策略
      */
-    private List<Dish> executeRecallStrategies(UserProfile profile, Map<String, Object> context, int totalCount) {
+    private List<Dish> executeRecallStrategies(UserProfile profile, Map<String, Object> context, int totalCount, List<String> rejectedDishIds) {
         List<Dish> allCandidates = new ArrayList<>();
 
         // 1. 用户画像召回（权重40%）
-        List<Dish> profileRecall = userProfileRecall(profile, (int)(totalCount * 0.4));
+        List<Dish> profileRecall = userProfileRecall(profile, (int)(totalCount * 0.4), rejectedDishIds);
         allCandidates.addAll(profileRecall);
 
         // 2. 协同过滤召回（权重30%）
-        List<Dish> collaborativeRecall = collaborativeFilteringRecall(profile, (int)(totalCount * 0.3));
+        List<Dish> collaborativeRecall = collaborativeFilteringRecall(profile, (int)(totalCount * 0.3), rejectedDishIds);
         allCandidates.addAll(collaborativeRecall);
 
         // 3. 热门菜品召回（权重20%）
-        List<Dish> hotRecall = hotDishRecall((int)(totalCount * 0.2));
+        List<Dish> hotRecall = hotDishRecall((int)(totalCount * 0.2), rejectedDishIds);
         allCandidates.addAll(hotRecall);
 
         // 4. 上下文召回（权重10%）
-        List<Dish> contextRecall = contextRecall(context, (int)(totalCount * 0.1));
+        List<Dish> contextRecall = contextRecall(context, (int)(totalCount * 0.1), rejectedDishIds);
         allCandidates.addAll(contextRecall);
 
         // 去重
@@ -264,17 +271,24 @@ public class RecommendationServiceImpl implements RecommendationService {
     /**
      * 用户画像召回
      */
-    private List<Dish> userProfileRecall(UserProfile profile, int count) {
+    private List<Dish> userProfileRecall(UserProfile profile, int count, List<String> rejectedDishIds) {
         if (profile == null || profile.getPreferenceTags() == null || profile.getPreferenceTags().isEmpty()) {
             return new ArrayList<>();
         }
 
         List<Dish> allDishes = dishMapper.selectList(null);
 
-        // 基于偏好标签匹配
+        // 基于偏好标签匹配，并过滤掉被拒绝的菜品
         List<Dish> matchedDishes = allDishes.stream()
-                .filter(dish -> profile.getPreferenceTags().stream()
-                        .anyMatch(tag -> tag.getTag().equals(dish.getCategory())))
+                .filter(dish -> {
+                    // 过滤被拒绝的菜品
+                    if (rejectedDishIds != null && rejectedDishIds.contains(String.valueOf(dish.getId()))) {
+                        return false;
+                    }
+                    // 匹配偏好标签
+                    return profile.getPreferenceTags().stream()
+                            .anyMatch(tag -> tag.getTag().equals(dish.getCategory()));
+                })
                 .limit(count * 2) // 获取更多候选
                 .collect(Collectors.toList());
 
@@ -293,7 +307,7 @@ public class RecommendationServiceImpl implements RecommendationService {
     /**
      * 协同过滤召回
      */
-    private List<Dish> collaborativeFilteringRecall(UserProfile profile, int count) {
+    private List<Dish> collaborativeFilteringRecall(UserProfile profile, int count, List<String> rejectedDishIds) {
         // 获取用户喜欢的菜品
         List<String> likedDishes = userBehaviorService.getUserLikedDishes(profile.getUserId());
         if (likedDishes.isEmpty()) {
@@ -315,9 +329,14 @@ public class RecommendationServiceImpl implements RecommendationService {
             }
         }
 
-        // 转换为菜品对象
+        // 转换为菜品对象，过滤掉被拒绝的菜品
         List<Dish> result = new ArrayList<>();
         for (String dishId : similarDishIds) {
+            // 过滤被拒绝的菜品
+            if (rejectedDishIds != null && rejectedDishIds.contains(dishId)) {
+                continue;
+            }
+
             Dish dish = dishMapper.selectById(dishId);
             if (dish != null && dish.getStatus()) {
                 result.add(dish);
@@ -347,26 +366,33 @@ public class RecommendationServiceImpl implements RecommendationService {
     /**
      * 热门菜品召回
      */
-    private List<Dish> hotDishRecall(int count) {
+    private List<Dish> hotDishRecall(int count, List<String> rejectedDishIds) {
         // 获取热门菜品特征列表
-        List<DishFeature> hotFeatures = dishFeatureMapper.getHotDishes(0.3, count);
+        List<DishFeature> hotFeatures = dishFeatureMapper.getHotDishes(0.3, count * 2);
 
-        // 转换为Dish对象
+        // 转换为Dish对象，过滤掉被拒绝的菜品
         List<Dish> hotDishes = new ArrayList<>();
         for (DishFeature feature : hotFeatures) {
+            // 过滤被拒绝的菜品
+            if (rejectedDishIds != null && rejectedDishIds.contains(feature.getDishId())) {
+                continue;
+            }
+
             Dish dish = dishMapper.selectById(feature.getDishId());
             if (dish != null && dish.getStatus()) {
                 hotDishes.add(dish);
             }
         }
 
-        return hotDishes;
+        return hotDishes.stream()
+                .limit(count)
+                .collect(Collectors.toList());
     }
 
     /**
      * 上下文召回
      */
-    private List<Dish> contextRecall(Map<String, Object> context, int count) {
+    private List<Dish> contextRecall(Map<String, Object> context, int count, List<String> rejectedDishIds) {
         List<Dish> allDishes = dishMapper.selectList(null);
 
         // 基于时间
@@ -376,6 +402,11 @@ public class RecommendationServiceImpl implements RecommendationService {
 
         return allDishes.stream()
                 .filter(dish -> {
+                    // 过滤被拒绝的菜品
+                    if (rejectedDishIds != null && rejectedDishIds.contains(String.valueOf(dish.getId()))) {
+                        return false;
+                    }
+
                     DishFeature feature = dishFeatureService.getDishFeature(String.valueOf(dish.getId()));
                     if (feature == null) return false;
 

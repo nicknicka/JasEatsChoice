@@ -10,12 +10,12 @@ export type TutorialType = 'video' | 'article'
 /**
  * 来源类型
  */
-export type SourceType = 'ADMIN' | 'MERCHANT' | 'AI_GENERATED'
+export type SourceType = 'ADMIN' | 'MERCHANT' | 'USER' | 'AI_GENERATED'
 
 /**
  * 作者类型
  */
-export type AuthorType = 'ADMIN' | 'MERCHANT' | 'AI'
+export type AuthorType = 'ADMIN' | 'MERCHANT' | 'USER' | 'AI'
 
 /**
  * 状态类型
@@ -160,6 +160,7 @@ export interface ApiResponse<T = any> {
 export const SOURCE_TYPE_MAP: Record<SourceType, string> = {
   ADMIN: '管理员',
   MERCHANT: '商家',
+  USER: '用户',
   AI_GENERATED: 'AI生成'
 }
 
@@ -169,6 +170,7 @@ export const SOURCE_TYPE_MAP: Record<SourceType, string> = {
 export const AUTHOR_TYPE_MAP: Record<AuthorType, string> = {
   ADMIN: '管理员',
   MERCHANT: '商家',
+  USER: '用户',
   AI: 'AI'
 }
 

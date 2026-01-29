@@ -260,6 +260,18 @@ const router = createRouter({
           name: 'user-tutorial-detail',
           component: () => import('../views/user/TutorialDetail.vue'),
           meta: { title: '佳食宜选-教程详情' }
+        },
+        {
+          path: 'publish-tutorial',
+          name: 'user-publish-tutorial',
+          component: () => import('../views/user/PublishTutorial.vue'),
+          meta: { title: '佳食宜选-发布教程' }
+        },
+        {
+          path: 'my-tutorials',
+          name: 'user-my-tutorials',
+          component: () => import('../views/user/MyTutorials.vue'),
+          meta: { title: '佳食宜选-我的教程' }
         }
       ]
     },
@@ -348,6 +360,45 @@ const router = createRouter({
           name: 'merchant-settings',
           component: () => import('../views/user/Settings.vue'), // 复用用户端设置页面
           meta: { title: '佳食宜选-商家设置' }
+        },
+        {
+          path: 'tutorials', // 商家教程管理
+          name: 'merchant-tutorials',
+          component: () => import('../views/merchant/TutorialManage.vue'),
+          meta: { title: '佳食宜选-教程管理' }
+        }
+      ]
+    },
+    // 管理员模块路由
+    {
+      path: '/admin',
+      name: 'admin',
+      redirect: '/admin/dashboard',
+      meta: { title: '佳食宜选-管理员中心' },
+      children: [
+        {
+          path: '',
+          name: 'admin-dashboard',
+          component: () => import('../views/admin/Dashboard.vue'),
+          meta: { title: '佳食宜选-管理员控制台' }
+        },
+        {
+          path: 'tutorials/review', // 教程审核
+          name: 'admin-tutorial-review',
+          component: () => import('../views/admin/TutorialReview.vue'),
+          meta: { title: '佳食宜选-教程审核' }
+        },
+        {
+          path: 'tutorials/manage', // 教程管理
+          name: 'admin-tutorial-manage',
+          component: () => import('../views/admin/TutorialManage.vue'),
+          meta: { title: '佳食宜选-教程管理' }
+        },
+        {
+          path: 'settings', // 管理员设置
+          name: 'admin-settings',
+          component: () => import('../views/admin/Settings.vue'),
+          meta: { title: '佳食宜选-系统设置' }
         }
       ]
     }

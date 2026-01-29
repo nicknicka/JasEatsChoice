@@ -77,11 +77,18 @@ export const API_CONFIG = {
 
   // 教程API端点
   tutorial: {
-    // 用户端
+    // 用户端（公开）
     featured: '/v1/tutorial/featured', // 精选教程接口（用于首页展示）
     list: '/v1/tutorial/list', // 全部教程接口
     detail: '/v1/tutorial/', // 教程详情接口（需要拼接id）
     page: '/v1/tutorial/page', // 分页查询教程
+
+    // 普通用户（需要认证）
+    userCreate: '/v1/tutorial/user/create', // 用户创建教程
+    userMy: '/v1/tutorial/user/my', // 获取我的教程列表
+    userUpdate: '/v1/tutorial/user/', // 更新教程（需要拼接id）
+    userSubmit: '/v1/tutorial/user/', // 提交审核（需要拼接id + '/submit'）
+    userDelete: '/v1/tutorial/user/', // 删除教程（需要拼接id）
 
     // 管理员端
     adminCreate: '/v1/tutorial/admin/create', // 管理员创建教程
@@ -101,7 +108,9 @@ export const API_CONFIG = {
 
   // 首页API端点
   home: {
-    hotTopic: '/v1/home/hot-topic' // 今日热点接口
+    hotTopic: '/v1/home/hot-topic', // 今日热点接口
+    hotTopicClick: '/v1/home/hot-topic/click', // 记录热点点击
+    hotTopicShare: '/v1/home/hot-topic/share' // 记录热点分享
   },
 
   // 天气API端点
@@ -147,6 +156,15 @@ export const API_CONFIG = {
     remove: '/v1/collections', // 取消收藏 (参数: userId, type, id)
     check: '/v1/collections/check', // 检查是否已收藏 (参数: userId, type, id)
     clear: '/v1/collections/user/{userId}' // 清空用户所有收藏
+  },
+
+  // 推荐拒绝API端点
+  recommendReject: {
+    add: '/v1/recommendations/rejects', // 记录拒绝推荐 (参数: userId, dishId, reason?)
+    count: '/v1/recommendations/rejects/count', // 统计拒绝次数 (参数: userId, dishId)
+    list: '/v1/recommendations/rejects/list', // 获取已拒绝菜品列表 (参数: userId)
+    frequent: '/v1/recommendations/rejects/frequent', // 获取频繁拒绝的菜品 (参数: userId, threshold?)
+    clear: '/v1/recommendations/rejects' // 清除拒绝记录 (参数: userId, dishId)
   }
 }
 

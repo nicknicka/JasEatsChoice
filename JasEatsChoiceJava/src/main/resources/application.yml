@@ -132,3 +132,17 @@ email:
   ssl-enable: true
   # 是否启用STARTTLS（SSL开启时通常设为false）
   starttls-enable: false
+
+# ==================== 今日热点配置 ====================
+hot-topic:
+  # 第三方API配置（备选数据源）
+  api:
+    # 是否启用第三方API（默认关闭，需要配置URL后才能启用）
+    enabled: false
+    # API地址（例如：微博热搜API、知乎热榜API等）
+    # 示例格式：https://api.example.com/hot-search
+    url: ""
+    # API密钥（如果需要的话）
+    key: ""
+    # 请求超时时间（毫秒）
+    timeout: 5000

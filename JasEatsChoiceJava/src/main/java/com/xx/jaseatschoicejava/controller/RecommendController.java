@@ -29,7 +29,7 @@ import java.util.Map;
  */
 @Slf4j
 @RestController
-@RequestMapping("/v1/recommend")
+@RequestMapping("/v1/recommendations")
 @Api(tags = "推荐系统管理")
 public class RecommendController {
 
@@ -49,7 +49,7 @@ public class RecommendController {
      * 获取个性化推荐菜品（主接口）
      * 整合多种召回策略和排序策略
      */
-    @GetMapping("/recommend/{userId}")
+    @GetMapping("/{userId}")
     @ApiOperation(value = "获取个性化推荐", notes = "基于用户画像、协同过滤、热门菜品等多种策略生成推荐")
     public ResponseResult<?> getRecommendDishes(
             @ApiParam(value = "用户ID", required = true) @PathVariable String userId,
@@ -102,7 +102,7 @@ public class RecommendController {
     /**
      * 刷新推荐（用户主动刷新）
      */
-    @PostMapping("/recommend/{userId}/refresh")
+    @PostMapping("/{userId}/refresh")
     @ApiOperation(value = "刷新推荐", notes = "用户主动刷新推荐列表")
     public ResponseResult<?> refreshRecommendations(
             @ApiParam(value = "用户ID", required = true) @PathVariable String userId) {
@@ -169,7 +169,7 @@ public class RecommendController {
     /**
      * 记录推荐拒绝行为
      */
-    @PostMapping("/recommend/{userId}/reject")
+    @PostMapping("/{userId}/reject")
     @ApiOperation(value = "拒绝推荐", notes = "用户拒绝某个推荐菜品")
     public ResponseResult<?> recordRejectBehavior(
             @ApiParam(value = "用户ID", required = true) @PathVariable String userId,
@@ -212,7 +212,7 @@ public class RecommendController {
     /**
      * 替换推荐菜品
      */
-    @PostMapping("/recommend/{userId}/replace")
+    @PostMapping("/{userId}/replace")
     @ApiOperation(value = "替换推荐", notes = "用户不满意的推荐菜品，替换为其他菜品")
     public ResponseResult<?> replaceRecommendDishes(
             @ApiParam(value = "用户ID", required = true) @PathVariable String userId,
@@ -243,7 +243,7 @@ public class RecommendController {
     /**
      * 筛选推荐菜品
      */
-    @PostMapping("/recommend/{userId}/filter")
+    @PostMapping("/{userId}/filter")
     @ApiOperation(value = "筛选推荐", notes = "根据分类、卡路里、价格等条件筛选菜品")
     public ResponseResult<?> filterRecommendDishes(
             @ApiParam(value = "用户ID", required = true) @PathVariable String userId,
@@ -278,7 +278,7 @@ public class RecommendController {
     /**
      * 获取推荐理由
      */
-    @GetMapping("/recommend/{userId}/reason/{dishId}")
+    @GetMapping("/{userId}/reason/{dishId}")
     @ApiOperation(value = "获取推荐理由", notes = "获取某个菜品被推荐的理由")
     public ResponseResult<?> getRecommendationReason(
             @ApiParam(value = "用户ID", required = true) @PathVariable String userId,

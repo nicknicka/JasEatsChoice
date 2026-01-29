@@ -1,8 +1,10 @@
 package com.xx.jaseatschoicejava.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -33,11 +35,13 @@ public class UserProfile {
     /**
      * 偏好标签: [{"tag": "川菜", "score": 0.8}, ...]
      */
+    @TableField(typeHandler = JacksonTypeHandler.class)
     private List<PreferenceTag> preferenceTags;
 
     /**
      * 饮食禁忌: ["过敏原", "宗教禁忌"]
      */
+    @TableField(typeHandler = JacksonTypeHandler.class)
     private List<String> dietaryRestrictions;
 
     /**
@@ -48,26 +52,31 @@ public class UserProfile {
     /**
      * 口味偏好: {"spicy": 0.7, "sweet": 0.3, "salty": 0.5}
      */
+    @TableField(typeHandler = JacksonTypeHandler.class)
     private Map<String, Double> flavorPreference;
 
     /**
      * 价格偏好: {"min": 10, "max": 50, "optimal": 25}
      */
+    @TableField(typeHandler = JacksonTypeHandler.class)
     private PricePreference pricePreference;
 
     /**
      * 营养目标: {"calories": 2000, "protein": 100}
      */
+    @TableField(typeHandler = JacksonTypeHandler.class)
     private NutritionGoals nutritionGoals;
 
     /**
      * 用餐模式: {"breakfast": "07:00", "lunch": "12:00", "dinner": "18:30"}
      */
+    @TableField(typeHandler = JacksonTypeHandler.class)
     private Map<String, String> mealPattern;
 
     /**
      * 统计数据: {total_orders, avg_order_amount, fav_categories}
      */
+    @TableField(typeHandler = JacksonTypeHandler.class)
     private UserStatistics statistics;
 
     /**

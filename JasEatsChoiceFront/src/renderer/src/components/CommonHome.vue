@@ -17,7 +17,8 @@ import {
   CircleClose,
   CircleCheckFilled,
   Goods,
-  Dish
+  Dish,
+  VideoCamera
 } from '@element-plus/icons-vue'
 import { decodeJwt } from '../utils/api.js'
 import { useAuthStore } from '../store/authStore'
@@ -66,7 +67,8 @@ const menuData = {
       icon: Menu,
       children: [
         { index: '3', name: '我的推荐', icon: Menu, path: '/user/home/recommend' },
-        { index: '4', name: '商家查找', icon: Shop, path: '/user/home/merchants' }
+        { index: '4', name: '商家查找', icon: Shop, path: '/user/home/merchants' },
+        { index: '5', name: '教程广场', icon: VideoCamera, path: '/user/home/tutorials' }
       ]
     },
     // 饮食管理分组
@@ -75,10 +77,10 @@ const menuData = {
       name: '饮食管理',
       icon: Calendar,
       children: [
-        { index: '5', name: '今日食谱', icon: Calendar, path: '/user/home/today-recipe' },
-        { index: '61', name: '饮食记录', icon: Calendar, path: '/user/home/diet-record' },
-        { index: '6', name: '卡路里统计', icon: DataAnalysis, path: '/user/home/calorie' },
-        { index: '7', name: '我的食谱', icon: Document, path: '/user/home/my-recipe' }
+        { index: '6', name: '今日食谱', icon: Calendar, path: '/user/home/today-recipe' },
+        { index: '71', name: '饮食记录', icon: Calendar, path: '/user/home/diet-record' },
+        { index: '7', name: '卡路里统计', icon: DataAnalysis, path: '/user/home/calorie' },
+        { index: '8', name: '我的食谱', icon: Document, path: '/user/home/my-recipe' }
       ]
     },
     // 个人中心分组
@@ -87,8 +89,8 @@ const menuData = {
       name: '个人中心',
       icon: User,
       children: [
-        { index: '8', name: '用户中心', icon: User, path: '/user/home/profile' },
-        { index: '9', name: '订单中心', icon: List, path: '/user/home/orders' }
+        { index: '9', name: '用户中心', icon: User, path: '/user/home/profile' },
+        { index: '10', name: '订单中心', icon: List, path: '/user/home/orders' }
       ]
     },
     // 消息沟通分组
@@ -97,14 +99,14 @@ const menuData = {
       name: '消息沟通',
       icon: Message,
       children: [
-        { index: '10', name: '消息中心', icon: Message, path: '/user/home/message-center' },
-        { index: '11', name: '聊天消息', icon: ChatDotRound, path: '/user/home/chat' },
-        { index: '12', name: '通讯录', icon: User, path: '/user/home/contacts' }
+        { index: '11', name: '消息中心', icon: Message, path: '/user/home/message-center' },
+        { index: '12', name: '聊天消息', icon: ChatDotRound, path: '/user/home/chat' },
+        { index: '13', name: '通讯录', icon: User, path: '/user/home/contacts' }
       ]
     },
     // 设置菜单
     {
-      index: '13',
+      index: '14',
       name: '设置',
       icon: Setting,
       path: '/user/home/settings',
@@ -186,13 +188,13 @@ const smartMatchParentMenu = (path, role) => {
   // 用户端路径映射
   const userPathMappings = [
     { pattern: /\/user\/home\/merchant-detail/, menuIndex: '3' }, // 商家详情 → 商家查找
-    { pattern: /\/user\/home\/order-confirmation/, menuIndex: '8' }, // 订单确认 → 查看订单
-    { pattern: /\/user\/home\/order-detail/, menuIndex: '8' }, // 订单详情 → 查看订单
-    { pattern: /\/user\/home\/system-notification/, menuIndex: '9' }, // 系统通知 → 消息中心
-    { pattern: /\/user\/home\/address/, menuIndex: '7' }, // 地址管理 → 用户中心
-    { pattern: /\/user\/home\/contact/, menuIndex: '7' }, // 联系客服 → 用户中心
+    { pattern: /\/user\/home\/order-confirmation/, menuIndex: '10' }, // 订单确认 → 订单中心
+    { pattern: /\/user\/home\/order-detail/, menuIndex: '10' }, // 订单详情 → 订单中心
+    { pattern: /\/user\/home\/system-notification/, menuIndex: '11' }, // 系统通知 → 消息中心
+    { pattern: /\/user\/home\/address/, menuIndex: '9' }, // 地址管理 → 用户中心
+    { pattern: /\/user\/home\/contact/, menuIndex: '9' }, // 联系客服 → 用户中心
     { pattern: /\/user\/home\/my-collection/, menuIndex: '2' }, // 我的收藏 → 我的推荐
-    { pattern: /\/user\/home\/tutorials/, menuIndex: '2' } // 制作教程 → 我的推荐
+    { pattern: /\/user\/home\/tutorials/, menuIndex: '5' } // 教程广场 → 教程广场
   ]
 
   // 商家端路径映射

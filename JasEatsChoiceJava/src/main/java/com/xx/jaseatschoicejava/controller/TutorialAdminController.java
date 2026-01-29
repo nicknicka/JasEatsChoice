@@ -5,6 +5,7 @@ import com.xx.jaseatschoicejava.entity.Tutorial;
 import com.xx.jaseatschoicejava.service.TutorialService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -23,8 +24,10 @@ public class TutorialAdminController {
     /**
      * 管理员创建教程（直接发布）
      * POST /api/v1/tutorial/admin/create
+     * 权限: 需要ADMIN角色
      */
     @PostMapping("/create")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Tutorial> createByAdmin(@RequestBody Tutorial tutorial) {
         Tutorial created = tutorialService.createByAdmin(tutorial);
         return ResponseEntity.ok(created);
@@ -33,8 +36,10 @@ public class TutorialAdminController {
     /**
      * 获取待审核的教程列表
      * GET /api/v1/tutorial/admin/pending?page=0&size=10
+     * 权限: 需要ADMIN角色
      */
     @GetMapping("/pending")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Page<Tutorial>> getPendingTutorials(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
@@ -46,12 +51,15 @@ public class TutorialAdminController {
      * 审核通过
      * POST /api/v1/tutorial/admin/{id}/approve
      * Body: { "comment": "审核意见", "setFeatured": true }
+     * 权限: 需要ADMIN角色
      */
     @PostMapping("/{id}/approve")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> approveTutorial(
             @PathVariable String id,
             @RequestBody Map<String, Object> request) {
-        String reviewerId = "1"; // TODO: 从认证上下文获取管理员ID
+        // TODO: 从Spring Security上下文获取管理员ID
+        String reviewerId = "1";
         String comment = (String) request.get("comment");
         Boolean setFeatured = (Boolean) request.getOrDefault("setFeatured", false);
 
@@ -68,12 +76,15 @@ public class TutorialAdminController {
      * 审核拒绝
      * POST /api/v1/tutorial/admin/{id}/reject
      * Body: { "comment": "拒绝原因" }
+     * 权限: 需要ADMIN角色
      */
     @PostMapping("/{id}/reject")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> rejectTutorial(
             @PathVariable String id,
             @RequestBody Map<String, String> request) {
-        String reviewerId = "1"; // TODO: 从认证上下文获取管理员ID
+        // TODO: 从Spring Security上下文获取管理员ID
+        String reviewerId = "1";
         String comment = request.get("comment");
 
         boolean success = tutorialService.rejectTutorial(id, Long.valueOf(reviewerId), comment);
@@ -89,8 +100,10 @@ public class TutorialAdminController {
      * 设置/取消精选
      * PUT /api/v1/tutorial/admin/{id}/featured
      * Body: { "featured": true }
+     * 权限: 需要ADMIN角色
      */
     @PutMapping("/{id}/featured")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> toggleFeatured(
             @PathVariable String id,
             @RequestBody Map<String, Boolean> request) {
@@ -107,8 +120,10 @@ public class TutorialAdminController {
     /**
      * 删除教程
      * DELETE /api/v1/tutorial/admin/{id}
+     * 权限: 需要ADMIN角色
      */
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> deleteTutorial(@PathVariable String id) {
         boolean success = tutorialService.removeById(id);
 

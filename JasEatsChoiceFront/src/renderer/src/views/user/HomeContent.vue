@@ -73,8 +73,14 @@ const featuredTutorials = ref([])
 const recommendedDishes = ref([])
 // 推荐菜品空状态消息
 const recommendEmptyMessage = ref('暂无推荐菜品')
-// 今日热点 - 从后端获取
-const hotTopic = ref('')
+// 今日热点 - 从后端获取（包含详细信息）
+const hotTopic = ref({
+  content: '',
+  sourceType: '',
+  sourceId: '',
+  redirectUrl: '',
+  clickable: false
+})
 // 收藏的菜品ID列表
 const favoriteDishIds = ref(new Set())
 // 搜索关键字
@@ -123,16 +129,52 @@ const fetchHotTopic = async () => {
     })
 
     if (response.data) {
-      hotTopic.value = response.data
+      // 新API返回的是对象，包含content、sourceType、clickable等信息
+      if (typeof response.data === 'object') {
+        hotTopic.value = response.data
+      } else {
+        // 兼容旧API（返回字符串）
+        hotTopic.value = {
+          content: response.data,
+          clickable: false
+        }
+      }
     } else {
       // 接口成功但返回空数据时,清空热点
-      hotTopic.value = ''
+      hotTopic.value = { content: '', clickable: false }
     }
   } catch (error) {
     console.error('加载今日热点失败:', error)
     // 请求失败时使用默认文本
-    hotTopic.value = ''
+    hotTopic.value = { content: '', clickable: false }
     // 热点不是关键功能,只记录错误不显示通知
+  }
+}
+
+// 处理热点点击
+const handleHotTopicClick = () => {
+  if (!hotTopic.value.clickable) {
+    ElMessage.info('该热点暂无详情页')
+    return
+  }
+
+  // 记录点击
+  api.post(API_CONFIG.home.hotTopicClick, { content: hotTopic.value.content }).catch(err => {
+    console.error('记录热点点击失败:', err)
+  })
+
+  // 根据redirectUrl跳转
+  if (hotTopic.value.redirectUrl) {
+    if (hotTopic.value.redirectUrl.startsWith('http')) {
+      // 外部链接，使用shell.openExternal
+      window.api?.openExternal(hotTopic.value.redirectUrl)
+    } else {
+      // 内部路由
+      router.push(hotTopic.value.redirectUrl)
+    }
+  } else if (hotTopic.value.sourceType === 'TUTORIAL' && hotTopic.value.sourceId) {
+    // 教程来源，跳转到教程详情
+    router.push(`/user/home/tutorials/${hotTopic.value.sourceId}`)
   }
 }
 
@@ -853,8 +895,8 @@ onMounted(async () => {
     </div>
 
     <!-- 今日热点 - 只有当有数据时显示 -->
-    <div class="hot-section" v-if="hotTopic">
-      <el-card shadow="hover" class="hot-card">
+    <div class="hot-section" v-if="hotTopic.content" @click="handleHotTopicClick">
+      <el-card shadow="hover" class="hot-card" :class="{ 'is-clickable': hotTopic.clickable }">
         <div class="hot-content">
           <div class="hot-icon-wrapper">
             <span class="fire-icon">🔥</span>
@@ -862,9 +904,9 @@ onMounted(async () => {
           </div>
           <div class="hot-text">
             <span class="hot-label">今日热点</span>
-            <span class="hot-description">{{ hotTopic }}</span>
+            <span class="hot-description">{{ hotTopic.content }}</span>
           </div>
-          <el-icon class="hot-arrow"><ArrowRight /></el-icon>
+          <el-icon class="hot-arrow" v-if="hotTopic.clickable"><ArrowRight /></el-icon>
         </div>
       </el-card>
     </div>
@@ -2261,6 +2303,7 @@ onMounted(async () => {
       position: relative;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       box-shadow: 0 4px 16px rgba(255, 107, 107, 0.1);
+      cursor: default;
 
       &::before {
         content: '';
@@ -2273,8 +2316,30 @@ onMounted(async () => {
       }
 
       &:hover {
-        transform: translateY(-4px);
+        transform: translateY(-2px);
         box-shadow: 0 8px 24px rgba(255, 107, 107, 0.2);
+      }
+
+      // 可点击状态
+      &.is-clickable {
+        cursor: pointer;
+
+        &:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 8px 24px rgba(255, 107, 107, 0.3);
+        }
+
+        .hot-content {
+          .hot-description {
+            color: #ff6b6b;
+            font-weight: 600;
+          }
+
+          .hot-arrow {
+            opacity: 1;
+            transform: translateX(4px);
+          }
+        }
       }
 
       :deep(.el-card__body) {
@@ -2346,6 +2411,7 @@ onMounted(async () => {
         background: rgba(255, 107, 107, 0.1);
         padding: 8px;
         border-radius: 12px;
+        opacity: 0.5;
 
         &:hover {
           transform: translateX(6px);
@@ -2409,6 +2475,32 @@ onMounted(async () => {
         font-size: 20px;
         font-weight: bold;
         color: #333;
+      }
+
+      .header-actions {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .publish-btn {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        border-radius: 20px;
+        padding: 8px 16px;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.3s;
+
+        &:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
+        }
+
+        .el-icon {
+          font-size: 16px;
+        }
       }
 
       .view-all-btn {
@@ -2920,6 +3012,19 @@ onMounted(async () => {
       .section-header {
         h3 {
           font-size: 18px;
+        }
+
+        .header-actions {
+          gap: 8px;
+        }
+
+        .publish-btn {
+          padding: 6px 12px;
+          font-size: 12px;
+
+          .el-icon {
+            font-size: 14px;
+          }
         }
 
         .view-all-btn {
