@@ -167,6 +167,8 @@
   },
   "active": "25380c94f56f550b",
   "lastOpenFiles": [
+    "fix_hot_topic_encoding.sql",
+    "JasEatsChoiceFront/src/renderer/src/views/user/HotTopicDetail.vue",
     "database_tables.sql",
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/entity/UserProfile.class",
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/entity/UserProfile$UserStatistics.class",
@@ -176,8 +178,6 @@
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/handler/JsonTypeHandler.class",
     "JasEatsChoiceJava/src/main/java/com/xx/jaseatschoicejava/handler/JsonTypeHandler.java",
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/controller/RecommendController.class",
-    "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/mapper/TutorialMapper.class",
-    "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/controller/HomeController.class",
     "后端数据获取详解.md",
     "降级策略详解.md",
     "推荐拒绝功能实现检查清单.md",

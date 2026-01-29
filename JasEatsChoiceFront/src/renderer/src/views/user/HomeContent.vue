@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { ElNotification } from 'element-plus'
+import { ElNotification, ElMessage } from 'element-plus'
 import { useWeather } from '../../composables/useWeather.js'
 // 导入 Element Plus 图标
 import {
@@ -153,29 +153,16 @@ const fetchHotTopic = async () => {
 
 // 处理热点点击
 const handleHotTopicClick = () => {
-  if (!hotTopic.value.clickable) {
-    ElMessage.info('该热点暂无详情页')
-    return
-  }
+  // 保存热点数据到 localStorage，供详情页使用
+  localStorage.setItem('currentHotTopic', JSON.stringify(hotTopic.value))
 
   // 记录点击
   api.post(API_CONFIG.home.hotTopicClick, { content: hotTopic.value.content }).catch(err => {
     console.error('记录热点点击失败:', err)
   })
 
-  // 根据redirectUrl跳转
-  if (hotTopic.value.redirectUrl) {
-    if (hotTopic.value.redirectUrl.startsWith('http')) {
-      // 外部链接，使用shell.openExternal
-      window.api?.openExternal(hotTopic.value.redirectUrl)
-    } else {
-      // 内部路由
-      router.push(hotTopic.value.redirectUrl)
-    }
-  } else if (hotTopic.value.sourceType === 'TUTORIAL' && hotTopic.value.sourceId) {
-    // 教程来源，跳转到教程详情
-    router.push(`/user/home/tutorials/${hotTopic.value.sourceId}`)
-  }
+  // 跳转到热点详情页
+  router.push('/user/home/hot-topic')
 }
 
 // 处理位置选择
@@ -226,11 +213,6 @@ const fetchWeather = async (selectedCity = null) => {
   } catch (error) {
     console.error('加载天气失败:', error)
   }
-}
-
-// 处理菜单导航
-const navigateTo = (path) => {
-  router.push(path)
 }
 
 // 处理查找附近商家
@@ -931,7 +913,7 @@ onMounted(async () => {
         <el-button
           text
           type="primary"
-          @click="navigateTo('/user/home/tutorials')"
+          @click="router.push('/user/home/tutorials?fromSidebar=true')"
           class="view-all-btn"
           aria-label="查看所有教程"
         >

@@ -30,8 +30,15 @@ import CommonAvatar from './CommonAvatar.vue'
 const router = useRouter()
 
 // 导航到指定路径
-const navigateTo = (path) => {
-  router.push(path)
+const navigateTo = (path, fromSidebar = false) => {
+  // 如果是从侧边栏跳转，添加查询参数
+  if (fromSidebar) {
+    // 检查路径是否已经有查询参数
+    const separator = path.includes('?') ? '&' : '?'
+    router.push(`${path}${separator}fromSidebar=true`)
+  } else {
+    router.push(path)
+  }
 }
 
 // 获取 Pinia 存储
@@ -356,9 +363,9 @@ const handleMenuSelect = (index) => {
     }
   }
 
-  // 如果找到目标菜单，进行跳转
+  // 如果找到目标菜单，进行跳转（从侧边栏跳转，添加 fromSidebar 参数）
   if (targetMenuItem) {
-    navigateTo(targetMenuItem.path)
+    navigateTo(targetMenuItem.path, true)
   }
 }
 

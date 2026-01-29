@@ -272,6 +272,12 @@ const router = createRouter({
           name: 'user-my-tutorials',
           component: () => import('../views/user/MyTutorials.vue'),
           meta: { title: '佳食宜选-我的教程' }
+        },
+        {
+          path: 'hot-topic/:data?',
+          name: 'user-hot-topic-detail',
+          component: () => import('../views/user/HotTopicDetail.vue'),
+          meta: { title: '佳食宜选-今日热点' }
         }
       ]
     },

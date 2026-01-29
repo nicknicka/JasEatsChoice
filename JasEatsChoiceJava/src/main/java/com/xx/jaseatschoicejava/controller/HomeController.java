@@ -10,6 +10,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 /**
  * 首页控制器
  */
@@ -45,13 +47,14 @@ public class HomeController {
     /**
      * 记录热点点击
      *
-     * @param content 热点内容
+     * @param params 请求参数，包含 content 字段
      * @return 操作结果
      */
     @PostMapping("/hot-topic/click")
     @ApiOperation("记录热点点击")
-    public ResponseResult<Void> recordClick(@RequestParam String content) {
+    public ResponseResult<Void> recordClick(@RequestBody Map<String, String> params) {
         try {
+            String content = params.get("content");
             hotTopicService.recordClick(content);
             return ResponseResult.success();
         } catch (Exception e) {
@@ -63,13 +66,14 @@ public class HomeController {
     /**
      * 记录热点分享
      *
-     * @param content 热点内容
+     * @param params 请求参数，包含 content 字段
      * @return 操作结果
      */
     @PostMapping("/hot-topic/share")
     @ApiOperation("记录热点分享")
-    public ResponseResult<Void> recordShare(@RequestParam String content) {
+    public ResponseResult<Void> recordShare(@RequestBody Map<String, String> params) {
         try {
+            String content = params.get("content");
             hotTopicService.recordShare(content);
             return ResponseResult.success();
         } catch (Exception e) {
