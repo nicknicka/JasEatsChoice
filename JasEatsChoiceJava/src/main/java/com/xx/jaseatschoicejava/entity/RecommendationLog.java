@@ -1,8 +1,10 @@
 package com.xx.jaseatschoicejava.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -43,6 +45,7 @@ public class RecommendationLog {
     /**
      * 推荐排序位置
      */
+    @TableField("`rank`")
     private Integer rank;
 
     /**
@@ -58,6 +61,7 @@ public class RecommendationLog {
     /**
      * 推荐理由: {primary: "主要理由", factors: [{type, name, score}]}
      */
+    @TableField(typeHandler = JacksonTypeHandler.class)
     private RecommendationReason reason;
 
     /**

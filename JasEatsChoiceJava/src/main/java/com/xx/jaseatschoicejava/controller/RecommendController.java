@@ -83,6 +83,7 @@ public class RecommendController {
             behaviorDTO.setUserId(userId);
             behaviorDTO.setBehaviorType("view");
             behaviorDTO.setItemType("recommendation");
+            behaviorDTO.setItemId("recommendation_list_" + scene); // 为推荐列表设置一个标识符
             behaviorDTO.setContext(context);
             userBehaviorService.recordBehaviorAsync(behaviorDTO);
 

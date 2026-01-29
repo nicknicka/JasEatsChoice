@@ -66,11 +66,12 @@ public interface UserBehaviorMapper extends BaseMapper<UserBehavior> {
     int checkBehaviorExists(@Param("userId") String userId, @Param("itemId") String itemId, @Param("behaviorType") String behaviorType);
 
     /**
-     * 获取用户喜欢的菜品（下单或收藏）
+     * 获取用户喜欢的菜品（下单或收藏），按最近行为时间排序
      */
-    @Select("SELECT DISTINCT item_id FROM user_behavior " +
+    @Select("SELECT item_id FROM user_behavior " +
             "WHERE user_id = #{userId} AND item_type = 'dish' " +
             "AND behavior_type IN ('order', 'favorite') " +
-            "ORDER BY created_time DESC")
+            "GROUP BY item_id " +
+            "ORDER BY MAX(created_time) DESC")
     List<String> getUserLikedDishes(@Param("userId") String userId);
 }

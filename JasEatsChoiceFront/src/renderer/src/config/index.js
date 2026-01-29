@@ -165,6 +165,12 @@ export const API_CONFIG = {
     list: '/v1/recommendations/rejects/list', // 获取已拒绝菜品列表 (参数: userId)
     frequent: '/v1/recommendations/rejects/frequent', // 获取频繁拒绝的菜品 (参数: userId, threshold?)
     clear: '/v1/recommendations/rejects' // 清除拒绝记录 (参数: userId, dishId)
+  },
+
+  // 文件上传API端点
+  upload: {
+    image: '/v1/chat/upload-image', // 上传图片接口
+    file: '/v1/chat/upload-file' // 上传文件接口
   }
 }
 

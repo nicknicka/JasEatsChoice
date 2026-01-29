@@ -1,8 +1,10 @@
 package com.xx.jaseatschoicejava.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -48,6 +50,7 @@ public class UserBehavior {
      * 上下文信息: {time, weather, location, device}
      * 存储为JSON格式
      */
+    @TableField(typeHandler = JacksonTypeHandler.class)
     private Map<String, Object> context;
 
     /**

@@ -1,8 +1,8 @@
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { VideoCamera, Document, Upload, ArrowLeft, View, Edit } from '@element-plus/icons-vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import api from '../../utils/api.js'
 import { API_CONFIG } from '../../config/index.js'
 
@@ -27,6 +27,12 @@ const tutorialForm = ref({
 
 // 提交状态
 const submitting = ref(false)
+
+// 图片上传相关
+const uploading = ref(false)
+const uploadProgress = ref(0)
+const uploadDialogVisible = ref(false)
+const uploadPreviewUrl = ref('')
 
 // Markdown 预览模式：'edit' | 'preview' | 'split'
 const previewMode = ref('edit')
@@ -57,64 +63,6 @@ const handleContentInput = () => {
   autoResizeTextarea()
 }
 
-// 悬浮球配置
-const floatingButtons = computed(() => {
-  // 主操作按钮（上方）
-  const primaryButton = {
-    REVIEW: {
-      icon: '⏳',
-      color: 'linear-gradient(135deg, #f57c00 0%, #ff9800 100%)',
-      text: '撤回审核',
-      action: 'withdraw',
-      disabled: false
-    },
-    DRAFT: {
-      icon: '✨',
-      color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      text: '提交审核',
-      action: 'submit',
-      disabled: false
-    },
-    EDIT: {
-      icon: '🚀',
-      color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      text: '提交审核',
-      action: 'submit',
-      disabled: false
-    }
-  }
-
-  // 辅助操作按钮（下方）
-  const secondaryButton = {
-    REVIEW: {
-      icon: '💾',
-      color: 'linear-gradient(135deg, #90caf9 0%, #64b5f6 100%)',
-      text: '保存草稿',
-      action: 'save',
-      disabled: true  // 审核中禁用保存
-    },
-    DRAFT: {
-      icon: '💾',
-      color: 'linear-gradient(135deg, #409eff 0%, #66b1ff 100%)',
-      text: '保存草稿',
-      action: 'save',
-      disabled: false
-    },
-    EDIT: {
-      icon: '💾',
-      color: 'linear-gradient(135deg, #409eff 0%, #66b1ff 100%)',
-      text: '保存草稿',
-      action: 'save',
-      disabled: false
-    }
-  }
-
-  return {
-    primary: primaryButton[currentStatus.value],
-    secondary: secondaryButton[currentStatus.value]
-  }
-})
-
 // 快速模板
 const quickTemplates = [
   {
@@ -136,17 +84,6 @@ const quickTemplates = [
     contentTemplate: '## 食谱名称\n\n### 食材\n\n### 步骤\n\n### 注意事项'
   }
 ]
-
-// 计算当前状态
-const currentStatus = computed(() => {
-  if (tutorialForm.value.review_status === 'PENDING') {
-    return 'REVIEW' // 审核中
-  } else if (tutorialForm.value.status === 'DRAFT') {
-    return 'DRAFT' // 草稿
-  } else {
-    return 'EDIT' // 编辑中
-  }
-})
 
 // 切换预览模式
 const togglePreviewMode = (mode) => {
@@ -271,57 +208,69 @@ const saveDraft = async () => {
   }
 }
 
-// 撤回审核
-const withdrawReview = async () => {
+// 图片上传处理
+const handleImageUpload = async (file) => {
+  // 验证文件类型
+  const isImage = file.type.startsWith('image/')
+  if (!isImage) {
+    ElMessage.error('只能上传图片文件！')
+    return false
+  }
+
+  // 验证文件大小（5MB）
+  const isLt5M = file.size / 1024 / 1024 < 5
+  if (!isLt5M) {
+    ElMessage.error('图片大小不能超过 5MB！')
+    return false
+  }
+
+  uploading.value = true
+  uploadProgress.value = 0
+
   try {
-    await ElMessageBox.confirm(
-      '撤回审核后，教程将恢复为草稿状态。您可以继续编辑后再次提交。',
-      '确认撤回',
-      {
-        confirmButtonText: '确认撤回',
-        cancelButtonText: '取消',
-        type: 'warning'
+    // 创建 FormData
+    const formData = new FormData()
+    formData.append('file', file)
+
+    // 使用原生 axios 进行上传，以便监听进度
+    const response = await api.post(API_CONFIG.upload.image, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      onUploadProgress: (progressEvent) => {
+        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+        uploadProgress.value = percentCompleted
       }
-    )
+    })
 
-    submitting.value = true
-
-    const data = {
-      ...tutorialForm.value,
-      status: 'DRAFT',
-      review_status: 'NOT_SUBMITTED'
-    }
-
-    const response = await api.put(`${API_CONFIG.tutorial.userUpdate}/${tutorialForm.value.id}`, data)
-
-    if (response.data) {
-      tutorialForm.value.status = 'DRAFT'
-      tutorialForm.value.review_status = 'NOT_SUBMITTED'
-
-      ElMessage.success('已撤回审核，教程恢复为草稿状态')
+    if (response.data && response.data.fullUrl) {
+      tutorialForm.value.cover_image = response.data.fullUrl
+      ElMessage.success('图片上传成功！')
+    } else {
+      throw new Error('上传响应格式错误')
     }
   } catch (error) {
-    if (error !== 'cancel') {
-      console.error('撤回失败:', error)
-      ElMessage.error('撤回失败，请稍后重试')
-    }
+    console.error('图片上传失败:', error)
+    ElMessage.error('图片上传失败，请稍后重试')
   } finally {
-    submitting.value = false
+    uploading.value = false
+    uploadProgress.value = 0
   }
+
+  return false // 阻止 el-upload 的默认上传行为
 }
 
-// 悬浮球点击处理
-const handleFloatingButtonClick = (action) => {
-  switch (action) {
-    case 'save':
-      saveDraft()
-      break
-    case 'submit':
-      submitTutorial()
-      break
-    case 'withdraw':
-      withdrawReview()
-      break
+// 删除封面图
+const removeCoverImage = () => {
+  tutorialForm.value.cover_image = ''
+  ElMessage.success('已删除封面图')
+}
+
+// 预览封面图
+const previewCoverImage = () => {
+  if (tutorialForm.value.cover_image) {
+    uploadPreviewUrl.value = tutorialForm.value.cover_image
+    uploadDialogVisible.value = true
   }
 }
 
@@ -498,15 +447,63 @@ watch(() => tutorialForm.value.content, () => {
             </el-form-item>
 
             <el-form-item label="封面图">
-              <el-input
-                v-model="tutorialForm.cover_image"
-                placeholder="图片URL（可选）"
-                size="large"
-              >
-                <template #append>
-                  <el-button :icon="Upload">上传图片</el-button>
-                </template>
-              </el-input>
+              <div class="cover-upload-container">
+                <!-- 上传区域 -->
+                <el-upload
+                  class="cover-uploader"
+                  :show-file-list="false"
+                  :before-upload="handleImageUpload"
+                  :disabled="uploading"
+                  accept="image/*"
+                  drag
+                >
+                  <div v-if="uploading" class="uploading-state">
+                    <el-progress
+                      type="circle"
+                      :percentage="uploadProgress"
+                      :width="60"
+                    />
+                    <p>正在上传... {{ uploadProgress }}%</p>
+                  </div>
+                  <div v-else class="upload-placeholder">
+                    <el-icon class="upload-icon"><Upload /></el-icon>
+                    <div class="upload-text">
+                      <p>点击或拖拽上传</p>
+                      <p class="upload-hint">支持 jpg、png、gif</p>
+                    </div>
+                  </div>
+                </el-upload>
+
+                <!-- 已有封面图时显示预览 -->
+                <div v-if="tutorialForm.cover_image" class="cover-preview-wrapper">
+                  <div class="cover-image-box">
+                    <img
+                      :src="tutorialForm.cover_image"
+                      alt="封面图"
+                      class="cover-preview-image"
+                      @click="previewCoverImage"
+                    />
+                    <div class="cover-image-actions">
+                      <el-button
+                        type="primary"
+                        size="small"
+                        @click="previewCoverImage"
+                        :disabled="uploading"
+                      >
+                        <el-icon><View /></el-icon> 预览
+                      </el-button>
+                      <el-button
+                        type="danger"
+                        size="small"
+                        @click="removeCoverImage"
+                        :disabled="uploading"
+                      >
+                        删除
+                      </el-button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </el-form-item>
           </el-form>
         </el-card>
@@ -691,36 +688,17 @@ watch(() => tutorialForm.value.content, () => {
       </div>
     </div>
 
-    <!-- 智能悬浮球组 -->
-    <div class="floating-buttons-container">
-      <!-- 主操作按钮（上方） -->
-      <div
-        v-show="floatingButtons.primary"
-        class="floating-action-button primary-button"
-        :style="{ background: floatingButtons.primary.color }"
-        :class="{ disabled: floatingButtons.primary.disabled }"
-        @click="!floatingButtons.primary.disabled && handleFloatingButtonClick(floatingButtons.primary.action)"
-      >
-        <span class="floating-icon">{{ floatingButtons.primary.icon }}</span>
-        <div class="floating-tooltip">
-          <span class="tooltip-text">{{ floatingButtons.primary.text }}</span>
-        </div>
+    <!-- 图片预览对话框 -->
+    <el-dialog
+      v-model="uploadDialogVisible"
+      title="封面图预览"
+      width="60%"
+      :close-on-click-modal="true"
+    >
+      <div class="preview-dialog-content">
+        <img :src="uploadPreviewUrl" alt="封面图预览" class="preview-dialog-image" />
       </div>
-
-      <!-- 辅助操作按钮（下方） -->
-      <div
-        v-show="floatingButtons.secondary"
-        class="floating-action-button secondary-button"
-        :style="{ background: floatingButtons.secondary.color }"
-        :class="{ disabled: floatingButtons.secondary.disabled }"
-        @click="!floatingButtons.secondary.disabled && handleFloatingButtonClick(floatingButtons.secondary.action)"
-      >
-        <span class="floating-icon">{{ floatingButtons.secondary.icon }}</span>
-        <div class="floating-tooltip">
-          <span class="tooltip-text">{{ floatingButtons.secondary.text }}</span>
-        </div>
-      </div>
-    </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -751,6 +729,10 @@ watch(() => tutorialForm.value.content, () => {
         flex: 1;
 
         .title-section {
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+
           h1 {
             margin: 0 0 8px 0;
             font-size: 32px;
@@ -773,19 +755,33 @@ watch(() => tutorialForm.value.content, () => {
         gap: 10px;
         flex-shrink: 0;
         min-width: 140px;
+        justify-content: center;
 
         .el-button {
           width: 100%;
           min-width: auto;
           font-weight: 500;
           border: none;
-          display: flex;
+          display: inline-flex;
           align-items: center;
           justify-content: center;
           padding: 8px 16px;
+          height: 40px;
+          line-height: 1;
+          box-sizing: border-box;
+          text-align: center;
 
           :deep(.el-icon) {
-            margin-right: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+          }
+
+          :deep(span) {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
           }
 
           &:not(.el-button--primary) {
@@ -1133,6 +1129,135 @@ watch(() => tutorialForm.value.content, () => {
           font-size: 13px;
         }
 
+        // 封面图上传容器
+        .cover-upload-container {
+          width: 100%;
+          display: flex;
+          align-items: flex-start;
+          gap: 16px;
+
+          .cover-preview-wrapper {
+            margin-top: 0;
+            margin-bottom: 0;
+
+            .cover-image-box {
+              position: relative;
+              width: 100%;
+              max-width: 160px;
+              border-radius: 12px;
+              overflow: hidden;
+              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+              margin-bottom: 12px;
+
+              .cover-preview-image {
+                width: 100%;
+                height: auto;
+                display: block;
+                cursor: pointer;
+                transition: transform 0.3s;
+
+                &:hover {
+                  transform: scale(1.02);
+                }
+              }
+
+              .cover-image-actions {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                padding: 12px;
+                background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
+                display: flex;
+                justify-content: center;
+                gap: 8px;
+                opacity: 0;
+                transition: opacity 0.3s;
+
+                .cover-image-box:hover & {
+                  opacity: 1;
+                }
+              }
+            }
+
+            .cover-url-display {
+              :deep(.el-input__inner) {
+                background: #f5f7fa;
+                color: #909399;
+              }
+            }
+          }
+
+          .cover-uploader {
+            width: 33.33%;
+            aspect-ratio: 1 / 1;
+
+            :deep(.el-upload) {
+              width: 100%;
+              height: 100%;
+            }
+
+            :deep(.el-upload-dragger) {
+              width: 100%;
+              height: 100%;
+              padding: 20px 10px;
+              border: 2px dashed #dcdfe6;
+              border-radius: 12px;
+              background: linear-gradient(135deg, #fafbfc 0%, #f5f7fa 100%);
+              transition: all 0.3s;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+
+              &:hover {
+                border-color: #667eea;
+                background: linear-gradient(135deg, #f0f3ff 0%, #fafbfc 100%);
+              }
+            }
+
+            .uploading-state {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              gap: 8px;
+
+              p {
+                margin: 0;
+                font-size: 12px;
+                color: #606266;
+              }
+            }
+
+            .upload-placeholder {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              gap: 8px;
+
+              .upload-icon {
+                font-size: 32px;
+                color: #667eea;
+              }
+
+              .upload-text {
+                text-align: center;
+
+                p {
+                  margin: 0;
+                  font-size: 12px;
+                  color: #303133;
+
+                  &.upload-hint {
+                    margin-top: 2px;
+                    font-size: 10px;
+                    color: #909399;
+                  }
+                }
+              }
+            }
+          }
+        }
+
         .content-help {
           margin-top: 16px;
           padding: 16px;
@@ -1225,7 +1350,7 @@ watch(() => tutorialForm.value.content, () => {
         .preview-cover {
           position: relative;
           width: 100%;
-          height: 220px;
+          height: 140px;
           border-radius: 12px;
           overflow: hidden;
           margin-bottom: 20px;
@@ -1448,152 +1573,21 @@ watch(() => tutorialForm.value.content, () => {
         }
       }
     }
-
-    // 移动端悬浮球组调整
-    .floating-buttons-container {
-      right: 20px;
-      top: auto;
-      bottom: 100px;
-      transform: none !important;
-      flex-direction: row;
-      gap: 12px;
-
-      .floating-action-button {
-        width: 56px;
-        height: 56px;
-
-        &.secondary-button {
-          width: 50px;
-          height: 50px;
-
-          .floating-icon {
-            font-size: 22px;
-          }
-        }
-
-        &:hover {
-          transform: scale(1.05) !important;
-        }
-
-        &:active {
-          transform: scale(0.95) !important;
-        }
-
-        .floating-icon {
-          font-size: 24px;
-        }
-
-        .floating-tooltip {
-          display: none;
-        }
-      }
-    }
   }
+}
 
-  // 智能悬浮球组
-  .floating-buttons-container {
-    position: fixed;
-    right: 6%;
-    top: 50%;
-    transform: translateY(-50%);
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    z-index: 1000;
+// 图片预览对话框
+.preview-dialog-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
 
-    .floating-action-button {
-      position: relative;
-      width: 64px;
-      height: 64px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      backdrop-filter: blur(10px);
-
-      &:not(.disabled):hover {
-        transform: scale(1.1);
-        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
-
-        .floating-tooltip {
-          opacity: 1;
-          transform: translateY(-50%) translateX(-12px);
-        }
-      }
-
-      &:not(.disabled):active {
-        transform: scale(0.95);
-      }
-
-      &.disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-        filter: grayscale(0.3);
-      }
-
-      .floating-icon {
-        font-size: 28px;
-        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
-      }
-
-      .floating-tooltip {
-        position: absolute;
-        right: 76px;
-        top: 50%;
-        transform: translateY(-50%) translateX(-8px);
-        background: rgba(0, 0, 0, 0.85);
-        color: white;
-        padding: 8px 16px;
-        border-radius: 6px;
-        font-size: 13px;
-        font-weight: 500;
-        white-space: nowrap;
-        opacity: 0;
-        transition: all 0.3s ease;
-        pointer-events: none;
-
-        &::after {
-          content: '';
-          position: absolute;
-          right: -6px;
-          top: 50%;
-          transform: translateY(-50%);
-          width: 0;
-          height: 0;
-          border-left: 6px solid rgba(0, 0, 0, 0.85);
-          border-top: 6px solid transparent;
-          border-bottom: 6px solid transparent;
-        }
-      }
-
-      // 主按钮样式
-      &.primary-button {
-        animation: pulse-subtle 2s ease-in-out infinite;
-      }
-
-      // 辅助按钮样式
-      &.secondary-button {
-        // 稍微小一点
-        width: 56px;
-        height: 56px;
-
-        .floating-icon {
-          font-size: 24px;
-        }
-      }
-    }
-  }
-
-  @keyframes pulse-subtle {
-    0%, 100% {
-      box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
-    }
-    50% {
-      box-shadow: 0 8px 32px rgba(102, 126, 234, 0.6);
-    }
+  .preview-dialog-image {
+    max-width: 100%;
+    max-height: 70vh;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   }
 }
 </style>
