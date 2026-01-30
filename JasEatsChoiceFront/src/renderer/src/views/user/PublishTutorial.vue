@@ -166,12 +166,21 @@ const submitTutorial = async () => {
 
   try {
     // 先保存教程（创建或更新）
+    // 构建请求数据，将前端字段名转换为后端期望的字段名
     const data = {
-      ...tutorialForm.value,
+      id: tutorialForm.value.id,
+      title: tutorialForm.value.title,
+      type: tutorialForm.value.type,
+      content: tutorialForm.value.content,
+      difficulty: tutorialForm.value.difficulty,
+      duration: tutorialForm.value.duration,
+      calories: tutorialForm.value.calories,
+      prepTime: tutorialForm.value.prep_time,
+      servings: tutorialForm.value.servings,
+      coverImage: tutorialForm.value.cover_image, // 转换为驼峰命名
+      tags: tutorialForm.value.tags,
       status: 'DRAFT',
-      review_status: 'NOT_SUBMITTED',
-      // 确保标签不为空字符串
-      tags: tutorialForm.value.tags || null
+      reviewStatus: 'NOT_SUBMITTED' // 转换为驼峰命名
     }
 
     let tutorialId = tutorialForm.value.id
@@ -236,24 +245,34 @@ const saveDraft = async () => {
   console.log('当前教程ID:', tutorialForm.value.id)
 
   try {
+    // 构建请求数据，将前端字段名转换为后端期望的字段名
     const data = {
-      ...tutorialForm.value,
+      id: tutorialForm.value.id,
+      title: tutorialForm.value.title,
+      type: tutorialForm.value.type,
+      content: tutorialForm.value.content,
+      difficulty: tutorialForm.value.difficulty,
+      duration: tutorialForm.value.duration,
+      calories: tutorialForm.value.calories,
+      // 将下划线命名转换为驼峰命名
+      prepTime: tutorialForm.value.prep_time,
+      servings: tutorialForm.value.servings,
+      coverImage: tutorialForm.value.cover_image, // 转换为驼峰命名
+      tags: tutorialForm.value.tags,
       status: 'DRAFT',
-      review_status: 'NOT_SUBMITTED',
-      // 确保标签不为空字符串
-      tags: tutorialForm.value.tags || null
+      reviewStatus: 'NOT_SUBMITTED' // 转换为驼峰命名
     }
+
+    console.log('请求数据（转换后）:', data)
 
     let response
     if (tutorialForm.value.id) {
       // 更新现有草稿
       console.log('更新现有草稿，URL:', `${API_CONFIG.tutorial.userUpdate}/${tutorialForm.value.id}`)
-      console.log('请求数据:', data)
       response = await api.put(`${API_CONFIG.tutorial.userUpdate}/${tutorialForm.value.id}`, data)
     } else {
       // 创建新草稿
       console.log('创建新草稿，URL:', API_CONFIG.tutorial.userCreate)
-      console.log('请求数据:', data)
       response = await api.post(API_CONFIG.tutorial.userCreate, data)
     }
 
@@ -261,8 +280,13 @@ const saveDraft = async () => {
     console.log('response.data:', response.data)
     console.log('response.status:', response.status)
 
-    // 判断响应是否成功：response本身是教程对象，或包含data字段，或有status字段
+    // 判断响应是否成功：
+    // 1. 创建操作：response本身是教程对象（有id）
+    // 2. 更新操作：response包含success=true或message字段
+    // 3. 标准格式：response包含data或status字段
     const isSuccess = response && (
+      (response.success === true) ||                          // 操作成功标识
+      (response.message && response.message.includes('成功')) || // 成功消息
       (response.data && typeof response.data === 'object') || // response.data存在
       (response.id && typeof response.id === 'string') ||      // response本身是教程对象
       response.status === 200 ||                                // 有status字段
@@ -481,6 +505,18 @@ const loadTutorialData = async (tutorialId) => {
     }
 
     if (tutorial) {
+      // 详细打印所有字段，帮助调试
+      console.log('教程对象所有字段:', {
+        id: tutorial.id,
+        title: tutorial.title,
+        type: tutorial.type,
+        coverImage: tutorial.coverImage,
+        cover_image: tutorial.cover_image,
+        content: tutorial.content ? tutorial.content.substring(0, 50) + '...' : '',
+        difficulty: tutorial.difficulty,
+        duration: tutorial.duration
+      })
+
       // 将后端数据映射到表单字段（处理驼峰命名差异）
       tutorialForm.value = {
         id: tutorial.id,
@@ -500,6 +536,7 @@ const loadTutorialData = async (tutorialId) => {
 
       console.log('✅ 教程数据加载成功:', tutorialForm.value.title)
       console.log('表单数据:', tutorialForm.value)
+      console.log('封面图URL:', tutorialForm.value.cover_image)
 
       // 自动调整textarea高度
       setTimeout(() => {

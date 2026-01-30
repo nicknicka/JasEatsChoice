@@ -175,7 +175,7 @@ const publishNew = () => {
 
 // 查看教程
 const viewTutorial = (tutorial) => {
-  router.push(`/user/home/tutorials/${tutorial.id}`)
+  router.push(`/user/home/tutorials/${tutorial.id}?from=my`)
 }
 
 // 获取状态标签

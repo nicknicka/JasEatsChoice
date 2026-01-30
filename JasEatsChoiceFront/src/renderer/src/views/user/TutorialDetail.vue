@@ -10,9 +10,21 @@ import { ElMessage } from 'element-plus'
 const router = useRouter()
 const route = useRoute()
 
-// 返回教程列表页面
+// 返回教程列表页面（根据来源决定返回哪里）
 const goBackToList = () => {
-  router.push('/user/home/tutorials')
+  // 检查URL参数中的from字段
+  const from = route.query.from
+
+  if (from === 'my') {
+    // 从"我的教程"来的，返回到我的教程
+    router.push('/user/home/tutorials/my')
+  } else if (from === 'square') {
+    // 从"教程广场"来的，返回到教程广场
+    router.push('/user/home/tutorials')
+  } else {
+    // 默认返回到我的教程（因为通常用户是从自己的教程进入的）
+    router.push('/user/home/tutorials/my')
+  }
 }
 
 // 当前教程
