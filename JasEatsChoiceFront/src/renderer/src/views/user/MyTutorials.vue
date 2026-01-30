@@ -26,9 +26,9 @@ const stats = computed(() => {
   return {
     total: all.length,
     draft: all.filter(t => t.status === 'DRAFT').length,
-    pending: all.filter(t => t.review_status === 'PENDING').length,
+    pending: all.filter(t => t.status === 'PENDING').length,
     published: all.filter(t => t.status === 'PUBLISHED').length,
-    rejected: all.filter(t => t.review_status === 'REJECTED').length
+    rejected: all.filter(t => t.status === 'REJECTED').length
   }
 })
 
@@ -73,6 +73,31 @@ const fetchMyTutorials = async () => {
       myTutorials.value = tutorials
       console.log('✅ 成功加载教程列表，共', tutorials.length, '条')
       console.log('教程列表:', tutorials)
+
+      // 调试：检查每个教程的status和review_status
+      tutorials.forEach((t, index) => {
+        console.log(`教程${index + 1}:`, {
+          id: t.id,
+          title: t.title,
+          status: t.status,
+          review_status: t.review_status
+        })
+      })
+
+      // 调试：统计所有可能的状态值
+      const allStatuses = [...new Set(tutorials.map(t => t.status))]
+      const allReviewStatuses = [...new Set(tutorials.map(t => t.review_status))]
+      console.log('📊 所有 status 值:', allStatuses)
+      console.log('📊 所有 review_status 值:', allReviewStatuses)
+
+      // 详细统计
+      console.log('📊 详细统计:')
+      console.log('- DRAFT (草稿):', tutorials.filter(t => t.status === 'DRAFT').length)
+      console.log('- PUBLISHED (已发布):', tutorials.filter(t => t.status === 'PUBLISHED').length)
+      console.log('- review_status = PENDING:', tutorials.filter(t => t.review_status === 'PENDING').length)
+      console.log('- review_status = APPROVED:', tutorials.filter(t => t.review_status === 'APPROVED').length)
+      console.log('- review_status = REJECTED:', tutorials.filter(t => t.review_status === 'REJECTED').length)
+      console.log('- review_status = NOT_SUBMITTED:', tutorials.filter(t => t.review_status === 'NOT_SUBMITTED').length)
     } else {
       console.warn('⚠️ 响应格式异常，无法解析教程列表')
       console.warn('最终解析结果:', tutorials)
@@ -96,7 +121,7 @@ const fetchMyTutorials = async () => {
 // 编辑教程
 const editTutorial = (tutorial) => {
   // 只能编辑草稿或被拒绝的教程
-  if (tutorial.status !== 'DRAFT' && tutorial.review_status !== 'REJECTED') {
+  if (tutorial.status !== 'DRAFT' && tutorial.status !== 'REJECTED') {
     ElMessage.warning('只能编辑草稿或被拒绝的教程')
     return
   }
@@ -107,7 +132,7 @@ const editTutorial = (tutorial) => {
 
 // 提交审核
 const submitForReview = async (tutorial) => {
-  if (tutorial.review_status !== 'NOT_SUBMITTED' && tutorial.review_status !== 'REJECTED') {
+  if (tutorial.status !== 'DRAFT' && tutorial.status !== 'REJECTED') {
     ElMessage.warning('该教程已提交或在审核中')
     return
   }
@@ -189,17 +214,6 @@ const getStatusTag = (status) => {
   return map[status] || { type: '', text: status, icon: '' }
 }
 
-// 获取审核状态标签
-const getReviewStatusTag = (status) => {
-  const map = {
-    NOT_SUBMITTED: { type: 'info', effect: 'plain', text: '未提交', icon: '📝' },
-    PENDING: { type: 'warning', effect: 'plain', text: '待审核', icon: '⏳' },
-    APPROVED: { type: 'success', effect: 'dark', text: '已通过', icon: '✅' },
-    REJECTED: { type: 'danger', effect: 'plain', text: '已拒绝', icon: '❌' }
-  }
-  return map[status] || { type: '', text: status, icon: '' }
-}
-
 // 获取难度标签
 const getDifficultyTag = (difficulty) => {
   const map = {
@@ -212,12 +226,12 @@ const getDifficultyTag = (difficulty) => {
 
 // 判断是否可编辑
 const isEditable = (tutorial) => {
-  return tutorial.status === 'DRAFT' || tutorial.review_status === 'REJECTED'
+  return tutorial.status === 'DRAFT' || tutorial.status === 'REJECTED'
 }
 
 // 判断是否可提交
 const canSubmit = (tutorial) => {
-  return tutorial.review_status === 'NOT_SUBMITTED' || tutorial.review_status === 'REJECTED'
+  return tutorial.status === 'DRAFT' || tutorial.status === 'REJECTED'
 }
 
 // 判断是否可删除
@@ -231,11 +245,11 @@ const filteredTutorials = computed(() => {
     case 'draft':
       return myTutorials.value.filter(t => t.status === 'DRAFT')
     case 'pending':
-      return myTutorials.value.filter(t => t.review_status === 'PENDING')
+      return myTutorials.value.filter(t => t.status === 'PENDING')
     case 'published':
       return myTutorials.value.filter(t => t.status === 'PUBLISHED')
     case 'rejected':
-      return myTutorials.value.filter(t => t.review_status === 'REJECTED')
+      return myTutorials.value.filter(t => t.status === 'REJECTED')
     default:
       return myTutorials.value
   }
