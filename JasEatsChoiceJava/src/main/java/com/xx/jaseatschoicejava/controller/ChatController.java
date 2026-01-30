@@ -115,10 +115,10 @@ public class ChatController {
                 return ResponseResult.fail("400", "文件不能为空");
             }
 
-            // 验证文件大小（10MB）
-            long maxSize = 10 * 1024 * 1024;
+            // 验证文件大小（200MB - 支持视频上传）
+            long maxSize = 200 * 1024 * 1024;
             if (file.getSize() > maxSize) {
-                return ResponseResult.fail("400", "文件大小不能超过10MB");
+                return ResponseResult.fail("400", "文件大小不能超过200MB");
             }
 
             // 上传文件，返回相对URL路径（如：chat/abc123.pdf）

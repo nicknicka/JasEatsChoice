@@ -9,6 +9,7 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -93,6 +94,21 @@ public class GlobalExceptionHandler {
 
         // 处理其他类型不匹配情况
         return ResponseResult.fail("400", "参数类型错误：" + e.getPropertyName() + " 应是 " + e.getRequiredType().getSimpleName() + " 类型");
+    }
+
+    /**
+     * 处理文件上传大小超限异常
+     * 当上传的文件大小超过配置的限制时调用此方法
+     * @param e 文件上传大小超限异常对象
+     * @return 标准化的响应结果
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseResult<?> handleMaxUploadSizeExceeded(MaxUploadSizeExceededException e) {
+        // 记录异常日志
+        logger.error("MaxUploadSizeExceededException: {}", e.getMessage());
+
+        // 返回友好的错误提示
+        return ResponseResult.fail("400", "文件大小超过限制（最大200MB）");
     }
 
     /**

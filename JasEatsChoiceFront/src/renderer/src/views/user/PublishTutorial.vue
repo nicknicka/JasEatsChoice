@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { VideoCamera, Document, Upload, ArrowLeft, View, Edit } from '@element-plus/icons-vue'
+import { VideoCamera, Document, Upload, ArrowLeft, View, Edit, Close } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import api from '../../utils/api.js'
 import { API_CONFIG } from '../../config/index.js'
@@ -21,6 +21,7 @@ const tutorialForm = ref({
   prep_time: '',
   servings: null,
   cover_image: '',
+  video_url: '', // 视频URL（视频教程专用）
   tags: null, // 改为 null，避免空字符串导致数据库 JSON 字段报错
   status: 'DRAFT',
   review_status: 'NOT_SUBMITTED'
@@ -34,6 +35,13 @@ const uploading = ref(false)
 const uploadProgress = ref(0)
 const uploadDialogVisible = ref(false)
 const uploadPreviewUrl = ref('')
+
+// 视频上传相关
+const uploadingVideo = ref(false)
+const videoUploadProgress = ref(0)
+const videoPreviewDialogVisible = ref(false)
+const videoPreviewUrl = ref('')
+const videoFileInfo = ref(null) // 保存视频文件信息
 
 // Markdown 预览模式：'edit' | 'preview' | 'split'
 const previewMode = ref('edit')
@@ -178,6 +186,7 @@ const submitTutorial = async () => {
       prepTime: tutorialForm.value.prep_time,
       servings: tutorialForm.value.servings,
       coverImage: tutorialForm.value.cover_image, // 转换为驼峰命名
+      videoUrl: tutorialForm.value.video_url, // 转换为驼峰命名
       tags: tutorialForm.value.tags,
       status: 'DRAFT',
       reviewStatus: 'NOT_SUBMITTED' // 转换为驼峰命名
@@ -258,6 +267,7 @@ const saveDraft = async () => {
       prepTime: tutorialForm.value.prep_time,
       servings: tutorialForm.value.servings,
       coverImage: tutorialForm.value.cover_image, // 转换为驼峰命名
+      videoUrl: tutorialForm.value.video_url, // 转换为驼峰命名
       tags: tutorialForm.value.tags,
       status: 'DRAFT',
       reviewStatus: 'NOT_SUBMITTED' // 转换为驼峰命名
@@ -391,6 +401,104 @@ const previewCoverImage = () => {
   if (tutorialForm.value.cover_image) {
     uploadPreviewUrl.value = tutorialForm.value.cover_image
     uploadDialogVisible.value = true
+  }
+}
+
+// 视频上传处理
+const handleVideoUpload = async (file) => {
+  // 验证文件类型
+  const isVideo = file.type.startsWith('video/')
+  if (!isVideo) {
+    ElMessage.error('只能上传视频文件！')
+    return false
+  }
+
+  // 验证文件大小（200MB）
+  const isLt200M = file.size / 1024 / 1024 < 200
+  if (!isLt200M) {
+    ElMessage.error('视频大小不能超过 200MB！')
+    return false
+  }
+
+  uploadingVideo.value = true
+  videoUploadProgress.value = 0
+
+  try {
+    // 创建 FormData
+    const formData = new FormData()
+    formData.append('file', file)
+
+    console.log('=== 开始上传视频 ===')
+    console.log('文件名:', file.name)
+    console.log('文件大小:', file.size)
+    console.log('文件类型:', file.type)
+
+    // 保存文件信息用于显示
+    videoFileInfo.value = {
+      name: file.name,
+      size: file.size,
+      type: file.type
+    }
+
+    // 使用原生 axios 进行上传，以便监听进度
+    const response = await api.post(API_CONFIG.upload.file, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      onUploadProgress: (progressEvent) => {
+        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+        videoUploadProgress.value = percentCompleted
+      }
+    })
+
+    console.log('=== 视频上传响应 ===')
+    console.log('完整响应:', response)
+    console.log('响应类型:', typeof response)
+    console.log('response.data:', response?.data)
+
+    // 与图片上传保持一致的响应解析逻辑
+    if (response.data && response.data.fullUrl) {
+      tutorialForm.value.video_url = response.data.fullUrl
+      ElMessage.success('视频上传成功！')
+    } else {
+      console.error('❌ 响应格式错误')
+      console.error('期望格式: { data: { fullUrl: "..." } }')
+      console.error('实际响应:', response)
+      throw new Error('上传响应格式错误')
+    }
+  } catch (error) {
+    console.error('视频上传失败:', error)
+    ElMessage.error('视频上传失败，请稍后重试')
+  } finally {
+    uploadingVideo.value = false
+    videoUploadProgress.value = 0
+  }
+
+  return false // 阻止 el-upload 的默认上传行为
+}
+
+// 格式化文件大小
+const formatFileSize = (bytes) => {
+  if (!bytes || bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  const size = bytes / Math.pow(k, i)
+  return `${size.toFixed(i === 0 ? 0 : 2)} ${sizes[i]}`
+}
+
+// 删除视频
+const removeVideo = () => {
+  tutorialForm.value.video_url = ''
+  videoFileInfo.value = null
+  ElMessage.success('已删除视频')
+}
+
+// 预览视频
+const previewVideo = () => {
+  if (tutorialForm.value.video_url) {
+    videoPreviewUrl.value = tutorialForm.value.video_url
+    videoPreviewDialogVisible.value = true
   }
 }
 
@@ -529,6 +637,7 @@ const loadTutorialData = async (tutorialId) => {
         prep_time: tutorial.prepTime || tutorial.prep_time || '',
         servings: tutorial.servings || null,
         cover_image: tutorial.coverImage || tutorial.cover_image || '',
+        video_url: tutorial.videoUrl || tutorial.video_url || '', // 加载视频URL
         tags: tutorial.tags || null,
         status: tutorial.status || 'DRAFT',
         review_status: tutorial.reviewStatus || tutorial.review_status || 'NOT_SUBMITTED'
@@ -805,6 +914,63 @@ watch(() => tutorialForm.value.content, () => {
                 </div>
               </div>
             </el-form-item>
+
+            <!-- 视频上传（仅视频教程显示） -->
+            <el-form-item v-if="tutorialForm.type === 'video'" label="视频文件">
+              <div class="cover-upload-container">
+                <!-- 上传区域 -->
+                <el-upload
+                  class="cover-uploader"
+                  :show-file-list="false"
+                  :before-upload="handleVideoUpload"
+                  :disabled="uploadingVideo"
+                  accept="video/*"
+                  drag
+                >
+                  <div v-if="uploadingVideo" class="uploading-state">
+                    <el-progress
+                      type="circle"
+                      :percentage="videoUploadProgress"
+                      :width="60"
+                    />
+                    <p>正在上传... {{ videoUploadProgress }}%</p>
+                  </div>
+                  <div v-else class="upload-placeholder">
+                    <el-icon class="upload-icon"><VideoCamera /></el-icon>
+                    <div class="upload-text">
+                      <p>点击或拖拽上传视频</p>
+                      <p class="upload-hint">支持 mp4、avi、mov等格式，最大200MB</p>
+                    </div>
+                  </div>
+                </el-upload>
+
+                <!-- 已有视频时显示预览 -->
+                <div v-if="tutorialForm.video_url" class="cover-preview-wrapper">
+                  <div class="video-preview-box">
+                    <video
+                      :src="tutorialForm.video_url"
+                      class="video-preview-player"
+                      preload="metadata"
+                      @click="previewVideo"
+                    ></video>
+                    <!-- 删除按钮 -->
+                    <div
+                      class="video-delete-btn"
+                      @click="removeVideo"
+                      :disabled="uploadingVideo"
+                      title="删除视频"
+                    >
+                      <el-icon><Close /></el-icon>
+                    </div>
+                    <!-- 文件信息 -->
+                    <div v-if="videoFileInfo" class="video-file-info">
+                      <span class="file-name">{{ videoFileInfo.name }}</span>
+                      <span class="file-size">{{ formatFileSize(videoFileInfo.size) }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </el-form-item>
           </el-form>
         </el-card>
 
@@ -997,6 +1163,23 @@ watch(() => tutorialForm.value.content, () => {
     >
       <div class="preview-dialog-content">
         <img :src="uploadPreviewUrl" alt="封面图预览" class="preview-dialog-image" />
+      </div>
+    </el-dialog>
+
+    <!-- 视频预览对话框 -->
+    <el-dialog
+      v-model="videoPreviewDialogVisible"
+      title="视频预览"
+      width="70%"
+      :close-on-click-modal="true"
+    >
+      <div class="video-preview-dialog-content">
+        <video
+          :src="videoPreviewUrl"
+          controls
+          autoplay
+          class="video-preview-dialog-player"
+        ></video>
       </div>
     </el-dialog>
 
@@ -1486,21 +1669,33 @@ watch(() => tutorialForm.value.content, () => {
                 }
               }
 
-              .cover-image-actions {
+              .video-file-info {
                 position: absolute;
                 bottom: 0;
                 left: 0;
                 right: 0;
-                padding: 12px;
-                background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
                 display: flex;
-                justify-content: center;
-                gap: 8px;
-                opacity: 0;
-                transition: opacity 0.3s;
+                justify-content: space-between;
+                align-items: center;
+                padding: 8px 12px;
+                background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+                border-radius: 0 0 12px 12px;
+                font-size: 12px;
+                color: white;
 
-                .cover-image-box:hover & {
-                  opacity: 1;
+                .file-name {
+                  flex: 1;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                  white-space: nowrap;
+                  font-weight: 500;
+                }
+
+                .file-size {
+                  margin-left: 8px;
+                  opacity: 0.85;
+                  font-size: 11px;
+                  white-space: nowrap;
                 }
               }
             }
@@ -1509,6 +1704,98 @@ watch(() => tutorialForm.value.content, () => {
               :deep(.el-input__inner) {
                 background: #f5f7fa;
                 color: #909399;
+              }
+            }
+
+            .video-preview-box {
+              position: relative;
+              width: 100%;
+              max-width: 320px;
+              border-radius: 12px;
+              overflow: hidden;
+              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+              margin-bottom: 12px;
+              background: #000;
+
+              .video-preview-player {
+                width: 100%;
+                height: auto;
+                display: block;
+                max-height: 240px;
+                cursor: pointer;
+                transition: transform 0.3s ease;
+
+                &:hover {
+                  transform: scale(1.02);
+                }
+              }
+
+              // 右上角删除按钮
+              .video-delete-btn {
+                position: absolute;
+                top: 8px;
+                right: 8px;
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.95);
+                backdrop-filter: blur(10px);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                z-index: 10;
+                opacity: 0;
+                transform: scale(0.8);
+
+                &:hover {
+                  background: rgba(255, 107, 107, 0.95);
+                  transform: scale(1.1);
+                }
+
+                .el-icon {
+                  color: #303133;
+                  font-size: 16px;
+                  font-weight: bold;
+                }
+              }
+
+              // 鼠标悬停时显示删除按钮
+              &:hover .video-delete-btn {
+                opacity: 1;
+                transform: scale(1);
+              }
+
+              // 文件信息
+              .video-file-info {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 8px 12px;
+                background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+                border-radius: 0 0 12px 12px;
+                font-size: 12px;
+                color: white;
+
+                .file-name {
+                  flex: 1;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                  white-space: nowrap;
+                  font-weight: 500;
+                }
+
+                .file-size {
+                  margin-left: 8px;
+                  opacity: 0.85;
+                  font-size: 11px;
+                  white-space: nowrap;
+                }
               }
             }
           }
