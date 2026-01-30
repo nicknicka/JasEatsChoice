@@ -1,12 +1,13 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { VideoCamera, Document, Upload, ArrowLeft, View, Edit } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import api from '../../utils/api.js'
 import { API_CONFIG } from '../../config/index.js'
 
 const router = useRouter()
+const route = useRoute()
 
 // 表单数据
 const tutorialForm = ref({
@@ -224,12 +225,15 @@ const submitTutorial = async () => {
 
 // 保存为草稿
 const saveDraft = async () => {
+  console.log('=== saveDraft 开始执行 ===')
+
   if (!tutorialForm.value.title) {
     ElMessage.warning('请至少输入教程标题')
     return
   }
 
   submitting.value = true
+  console.log('当前教程ID:', tutorialForm.value.id)
 
   try {
     const data = {
@@ -243,24 +247,60 @@ const saveDraft = async () => {
     let response
     if (tutorialForm.value.id) {
       // 更新现有草稿
+      console.log('更新现有草稿，URL:', `${API_CONFIG.tutorial.userUpdate}/${tutorialForm.value.id}`)
+      console.log('请求数据:', data)
       response = await api.put(`${API_CONFIG.tutorial.userUpdate}/${tutorialForm.value.id}`, data)
     } else {
       // 创建新草稿
+      console.log('创建新草稿，URL:', API_CONFIG.tutorial.userCreate)
+      console.log('请求数据:', data)
       response = await api.post(API_CONFIG.tutorial.userCreate, data)
     }
 
-    if (response.data) {
-      tutorialForm.value.id = response.data.id || tutorialForm.value.id
+    console.log('API响应完整内容:', response)
+    console.log('response.data:', response.data)
+    console.log('response.status:', response.status)
+
+    // 判断响应是否成功：response本身是教程对象，或包含data字段，或有status字段
+    const isSuccess = response && (
+      (response.data && typeof response.data === 'object') || // response.data存在
+      (response.id && typeof response.id === 'string') ||      // response本身是教程对象
+      response.status === 200 ||                                // 有status字段
+      response.status === 201
+    )
+
+    if (isSuccess) {
+      // 尝试从不同位置获取id
+      const newId = response.data?.id || response.id || tutorialForm.value.id
+
+      if (newId) {
+        tutorialForm.value.id = newId
+        console.log('教程ID已更新:', newId)
+      }
+
       tutorialForm.value.status = 'DRAFT'
       tutorialForm.value.review_status = 'NOT_SUBMITTED'
 
+      console.log('✅ 草稿保存成功')
       ElMessage.success('草稿已保存！')
+    } else {
+      console.warn('❌ 响应格式异常，response:', response)
+      ElMessage.warning('保存完成，但响应格式异常')
     }
   } catch (error) {
-    console.error('保存草稿失败:', error)
-    ElMessage.error('保存失败，请稍后重试')
+    console.error('=== 保存草稿失败 ===')
+    console.error('错误对象:', error)
+    console.error('错误消息:', error.message)
+    console.error('响应数据:', error.response?.data)
+    console.error('响应状态:', error.response?.status)
+    console.error('请求配置:', error.config)
+
+    // 显示更详细的错误信息
+    const errorMsg = error.response?.data?.message || error.message || '保存失败，请稍后重试'
+    ElMessage.error(errorMsg)
   } finally {
     submitting.value = false
+    console.log('=== saveDraft 执行结束 ===')
   }
 }
 
@@ -388,17 +428,16 @@ const handleDragMove = (event) => {
 const handleDragEnd = (type) => {
   console.log('悬浮球拖拽结束:', type, 'hasMoved:', floatingBalls.value[type].hasMoved)
   const ball = floatingBalls.value[type]
+
+  // 立即重置所有状态，确保click事件能正常触发
   ball.dragging = false
   ball.scale = 1
-  // 如果没有真正移动（只是点击），立即重置hasMoved
-  // 如果有移动，延迟重置以防止误触发点击
-  if (!ball.hasMoved) {
+
+  // 使用nextTick确保DOM更新完成后再重置hasMoved
+  // 这样可以避免阻止click事件的触发
+  setTimeout(() => {
     ball.hasMoved = false
-  } else {
-    setTimeout(() => {
-      ball.hasMoved = false
-    }, 100)
-  }
+  }, 0)
 }
 
 // 初始化悬浮球位置
@@ -421,8 +460,86 @@ const initFloatingBalls = () => {
   floatingBalls.value.submit.hasMoved = false
 }
 
+// 加载教程数据（用于编辑）
+const loadTutorialData = async (tutorialId) => {
+  console.log('=== loadTutorialData 开始执行 ===')
+  console.log('教程ID:', tutorialId)
+
+  try {
+    const response = await api.get(`${API_CONFIG.tutorial.detail}${tutorialId}`)
+
+    console.log('API响应完整内容:', response)
+
+    // 支持多种响应格式
+    let tutorial = null
+    if (response.data && typeof response.data === 'object' && response.data.id) {
+      tutorial = response.data
+      console.log('使用 response.data')
+    } else if (response && typeof response === 'object' && response.id) {
+      tutorial = response
+      console.log('使用 response')
+    }
+
+    if (tutorial) {
+      // 将后端数据映射到表单字段（处理驼峰命名差异）
+      tutorialForm.value = {
+        id: tutorial.id,
+        title: tutorial.title || '',
+        type: tutorial.type || 'article',
+        content: tutorial.content || '',
+        difficulty: tutorial.difficulty || 'BEGINNER',
+        duration: tutorial.duration || '',
+        calories: tutorial.calories || null,
+        prep_time: tutorial.prepTime || tutorial.prep_time || '',
+        servings: tutorial.servings || null,
+        cover_image: tutorial.coverImage || tutorial.cover_image || '',
+        tags: tutorial.tags || null,
+        status: tutorial.status || 'DRAFT',
+        review_status: tutorial.reviewStatus || tutorial.review_status || 'NOT_SUBMITTED'
+      }
+
+      console.log('✅ 教程数据加载成功:', tutorialForm.value.title)
+      console.log('表单数据:', tutorialForm.value)
+
+      // 自动调整textarea高度
+      setTimeout(() => {
+        autoResizeTextarea()
+      }, 200)
+    } else {
+      console.warn('⚠️ 未找到教程数据')
+      ElMessage.warning('未找到教程数据')
+    }
+  } catch (error) {
+    console.error('❌ 加载教程数据失败')
+    console.error('错误对象:', error)
+    console.error('错误消息:', error.message)
+
+    if (error.response?.status === 404) {
+      ElMessage.error('教程不存在')
+    } else {
+      ElMessage.error(error.response?.data?.message || error.message || '加载教程数据失败')
+    }
+
+    // 如果加载失败，跳转回我的教程页面
+    setTimeout(() => {
+      router.push('/user/home/tutorials/my')
+    }, 1500)
+  } finally {
+    console.log('=== loadTutorialData 执行结束 ===')
+  }
+}
+
 // 初始化和监听
-onMounted(() => {
+onMounted(async () => {
+  // 检查URL参数，如果有id则加载教程数据（编辑模式）
+  const tutorialId = route.query.id
+  if (tutorialId) {
+    console.log('检测到教程ID，进入编辑模式:', tutorialId)
+    await loadTutorialData(tutorialId)
+  } else {
+    console.log('未检测到教程ID，进入新建模式')
+  }
+
   // 初始化textarea高度
   setTimeout(() => {
     autoResizeTextarea()

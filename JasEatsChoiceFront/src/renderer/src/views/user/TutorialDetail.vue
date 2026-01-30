@@ -22,124 +22,55 @@ const loading = ref(true)
 // 从后端获取教程详情
 const fetchTutorialDetail = async () => {
   loading.value = true
+  console.log('=== fetchTutorialDetail 开始执行 ===')
+  console.log('教程ID:', route.params.id)
+  console.log('请求URL:', `${API_CONFIG.tutorial.detail}${route.params.id}`)
+
   try {
     const tutorialId = route.params.id
     const response = await api.get(`${API_CONFIG.tutorial.detail}${tutorialId}`)
 
-    if (response.data) {
-      currentTutorial.value = response.data
+    console.log('API响应完整内容:', response)
+    console.log('response.data:', response.data)
+    console.log('response.id:', response.id)
+    console.log('response.title:', response.title)
+
+    // 支持多种响应格式：
+    // 1. response.data 是教程对象
+    // 2. response 本身是教程对象
+    let tutorial = null
+
+    if (response.data && typeof response.data === 'object' && response.data.id) {
+      tutorial = response.data
+      console.log('使用 response.data (教程对象)')
+    } else if (response && typeof response === 'object' && response.id) {
+      tutorial = response
+      console.log('使用 response (教程对象)')
+    }
+
+    if (tutorial) {
+      currentTutorial.value = tutorial
+      console.log('✅ 成功加载教程详情:', tutorial.title)
     } else {
+      console.warn('⚠️ 教程不存在或响应格式异常')
       ElMessage.error('教程不存在')
       goBackToList()
     }
   } catch (error) {
-    console.error('获取教程详情失败:', error)
-    ElMessage.error('加载教程失败')
-    // 失败时使用模拟数据作为备份
-    loadMockData()
+    console.error('❌ 获取教程详情失败')
+    console.error('错误对象:', error)
+    console.error('错误消息:', error.message)
+    console.error('响应状态:', error.response?.status)
+
+    if (error.response?.status === 404) {
+      ElMessage.error('教程不存在')
+    } else {
+      ElMessage.error(error.response?.data?.message || error.message || '加载教程失败')
+    }
   } finally {
     loading.value = false
+    console.log('=== fetchTutorialDetail 执行结束 ===')
   }
-}
-
-// 模拟数据（作为备份）
-const loadMockData = () => {
-  const tutorialId = parseInt(route.params.id)
-  const mockTutorials = [
-    {
-      id: 1,
-      title: '青木瓜沙拉制作教程',
-      type: 'video',
-      duration: '5:30',
-      views: '12.5k',
-      view_count: 12500,
-      cover_image: 'https://picsum.photos/id/109/800/600',
-      source_type: 'ADMIN',
-      is_official: true,
-      author: '官方营养师',
-      rating: 4.8,
-      rating_count: 156,
-      difficulty: 'BEGINNER',
-      content: `### 制作步骤
-1. 将青木瓜去皮，用刨刀切成细丝
-2. 加入花生碎、红辣椒丝、蒜末
-3. 调制料汁：鱼露2勺+柠檬汁3勺+糖1勺
-4. 将料汁倒入木瓜丝，用手抓拌均匀
-5. 最后加入西红柿片和生菜叶点缀即可
-
-### 小贴士
-- 选择未成熟的青木瓜，口感更脆爽
-- 根据个人口味调整辣椒和鱼露用量`
-    },
-    {
-      id: 2,
-      title: '夏日低卡饮食指南',
-      type: 'article',
-      duration: '8分钟',
-      views: '8.2k',
-      view_count: 8200,
-      cover_image: 'https://picsum.photos/id/215/800/600',
-      source_type: 'ADMIN',
-      is_official: true,
-      author: '官方营养师',
-      rating: 4.9,
-      rating_count: 234,
-      difficulty: 'BEGINNER',
-      content: `## 夏日低卡饮食黄金法则
-
-### 🌞 早餐篇
-- 选择燕麦粥配水果（约300卡）
-- 全麦面包+水煮蛋+无糖豆浆（约350卡）
-
-### 🥗 午餐篇
-- 鸡胸肉沙拉配油醋汁（约400卡）
-- 荞麦面配时蔬（约450卡）
-
-### 🌙 晚餐篇
-- 清蒸鱼+时蔬（约350卡）
-- 豆腐汤+小碗糙米饭（约400卡）
-
-### 💡 关键提示
-1. 多喝水，每天至少2L
-2. 避免含糖饮料
-3. 选择蒸煮等健康烹饪方式
-4. 控制份量，七分饱即可`
-    },
-    {
-      id: 3,
-      title: '健康早餐搭配技巧',
-      type: 'video',
-      duration: '3:45',
-      views: '9.7k',
-      view_count: 9700,
-      cover_image: 'https://picsum.photos/id/1045/800/600',
-      source_type: 'ADMIN',
-      is_official: true,
-      author: '官方营养师',
-      rating: 4.6,
-      rating_count: 189,
-      difficulty: 'INTERMEDIATE',
-      content: `## 均衡早餐四要素
-
-### 1. 优质碳水（拳头大小）
-- 燕麦粥、全麦面包、糙米饭
-
-### 2. 优质蛋白（手掌大小）
-- 鸡蛋、牛奶、豆浆、瘦肉
-
-### 3. 蔬菜水果（双手捧起大小）
-- 香蕉、苹果、菠菜、西红柿
-
-### 4. 健康脂肪（拇指大小）
-- 坚果、牛油果、橄榄油
-
-### ⏰ 时间优化
-- 前一天晚上准备食材
-- 利用微波炉快速加热
-- 选择快手食谱`
-    }
-  ]
-  currentTutorial.value = mockTutorials.find((t) => t.id === tutorialId)
 }
 
 // 获取难度显示名称
@@ -152,10 +83,39 @@ const getDifficultyName = (difficulty) => {
   return map[difficulty] || difficulty
 }
 
+// Markdown 转 HTML（简单的实现）
+const renderMarkdown = (content) => {
+  if (!content) return ''
+
+  let html = content
+    // 标题（需要按顺序替换，避免 # 被处理多次）
+    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+    .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+    // 粗体
+    .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
+    // 斜体
+    .replace(/\*(.*?)\*/gim, '<em>$1</em>')
+    // 链接
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/gim, '<a href="$2" target="_blank">$1</a>')
+    // 无序列表
+    .replace(/^\- (.*$)/gim, '<li>$1</li>')
+    // 有序列表
+    .replace(/^\d+\. (.*$)/gim, '<li>$1</li>')
+    // 将连续的列表项包装在 ul 中
+    .replace(/(<li>.*<\/li>)/gim, '<ul>$1</ul>')
+    // 合并相邻的 ul
+    .replace(/<\/ul>\s*<ul>/gim, '')
+    // 换行（除了在 HTML 标签后的换行）
+    .replace(/\n/gim, '<br>')
+
+  return html
+}
+
 // 格式化内容（支持Markdown）
 const formatContent = (content) => {
   if (!content) return ''
-  return content
+  return renderMarkdown(content)
 }
 
 // 页面加载时获取教程数据

@@ -167,6 +167,7 @@
   },
   "active": "25380c94f56f550b",
   "lastOpenFiles": [
+    "uploads/chat/fa2f1ce4-b9d0-4532-be7d-36ae918ff465.png",
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/config/SecurityConfig$RequestLoggingFilter.class",
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/config/SecurityConfig$WebSecurityCustomizer.class",
     "uploads/chat/65137d9b-2379-44a9-ac72-45f64846a578.png",
@@ -181,7 +182,6 @@
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/entity/RecommendationLog$ReasonFactor.class",
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/entity/RecommendationLog$RecommendationReason.class",
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/mapper/UserBehaviorMapper.class",
-    "fix_hot_topic_encoding.sql",
     "后端数据获取详解.md",
     "降级策略详解.md",
     "推荐拒绝功能实现检查清单.md",

@@ -6,7 +6,12 @@ import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import axios from 'axios'
 import { API_CONFIG } from '../config/index.js'
-import { FESTIVAL_DISHES, getCurrentFestival, getDishIcon } from '../constants/festivalDishes.js'
+import {
+  FESTIVAL_DISHES,
+  getCurrentFestival,
+  getDishIcon,
+  getDishCalories
+} from '../constants/festivalDishes.js'
 import {
   RECOMMENDATION_TYPES,
   MOCK_DISHES,
@@ -171,8 +176,16 @@ export function useRecommendations() {
 
     const festivalDishList = FESTIVAL_DISHES[currentFestival]
 
+    // 非食品项目列表（需要过滤掉）
+    const nonFoodItems = ['花灯', '年夜饭', '贴秋膘'] // 贴秋膘是习俗不是菜品
+
     const festivalRecommendations = festivalDishList
       .filter((dishName) => {
+        // 过滤非食品项目
+        if (nonFoodItems.some(nonFood => dishName.includes(nonFood))) {
+          return false
+        }
+
         // 检查是否被拒绝过
         return !rejectedDishIds || !rejectedDishIds.some(id => {
           // 这里使用名称匹配作为临时方案
@@ -185,7 +198,7 @@ export function useRecommendations() {
           dishId: `festival_${currentFestival}_${dishName}`, // 添加 dishId 用于后端记录
           name: `${currentFestival}特色: ${dishName}`,
           type: RECOMMENDATION_TYPES.FESTIVAL,
-          calories: 0,
+          calories: getDishCalories(dishName), // 使用卡路里估算函数
           tags: ['节日特供', currentFestival],
           reason: `${currentFestival}传统特色美食`,
           rating: 4.9,

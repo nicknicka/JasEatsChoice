@@ -35,18 +35,61 @@ const stats = computed(() => {
 // 获取我的教程
 const fetchMyTutorials = async () => {
   loading.value = true
+  console.log('=== fetchMyTutorials 开始执行 ===')
+  console.log('请求URL:', API_CONFIG.tutorial.userMy)
+
   try {
     const response = await api.get(API_CONFIG.tutorial.userMy)
-    if (response.data) {
-      myTutorials.value = response.data
+    console.log('API响应完整内容:', response)
+    console.log('response.data:', response.data)
+    console.log('response类型:', typeof response)
+    console.log('是否为数组:', Array.isArray(response))
+    console.log('response.data是否为数组:', Array.isArray(response.data))
+
+    // 支持多种响应格式：
+    // 1. response.data 是数组
+    // 2. response 本身是数组
+    // 3. response 是分页对象（包含 records 字段）
+    // 4. response.data 是对象但包含数据
+    let tutorials = null
+
+    if (Array.isArray(response.data)) {
+      tutorials = response.data
+      console.log('使用 response.data (数组)')
+    } else if (Array.isArray(response)) {
+      tutorials = response
+      console.log('使用 response (数组)')
+    } else if (response && Array.isArray(response.records)) {
+      // 分页对象格式：{records: [], total: 10, ...}
+      tutorials = response.records
+      console.log('使用 response.records (分页对象)')
+    } else if (response && typeof response === 'object' && response.data && typeof response.data === 'object') {
+      // response.data 是对象，可能需要进一步处理
+      tutorials = response.data.data || response.data.list || response.data.items || response.data.records || response.data
+      console.log('从 response.data 对象中提取数据:', tutorials)
+    }
+
+    if (Array.isArray(tutorials)) {
+      myTutorials.value = tutorials
+      console.log('✅ 成功加载教程列表，共', tutorials.length, '条')
+      console.log('教程列表:', tutorials)
+    } else {
+      console.warn('⚠️ 响应格式异常，无法解析教程列表')
+      console.warn('最终解析结果:', tutorials)
+      myTutorials.value = []
     }
   } catch (error) {
-    console.error('获取教程列表失败:', error)
-    ElMessage.error('加载失败，请稍后重试')
-    // 使用模拟数据作为后备
+    console.error('❌ 获取教程列表失败')
+    console.error('错误对象:', error)
+    console.error('错误消息:', error.message)
+    console.error('响应数据:', error.response?.data)
+    console.error('响应状态:', error.response?.status)
+
+    ElMessage.error(error.response?.data?.message || error.message || '加载失败，请稍后重试')
     myTutorials.value = []
   } finally {
     loading.value = false
+    console.log('=== fetchMyTutorials 执行结束 ===')
   }
 }
 
@@ -362,15 +405,26 @@ onMounted(() => {
             @click="viewTutorial(tutorial)"
           >
             <!-- 教程封面 -->
-            <div class="tutorial-cover" v-if="tutorial.cover_image">
-              <img :src="tutorial.cover_image" :alt="tutorial.title" />
+            <div class="tutorial-cover" v-if="tutorial.cover_image || tutorial.coverImage">
+              <img :src="tutorial.cover_image || tutorial.coverImage" :alt="tutorial.title" />
               <div class="cover-type-badge" :class="tutorial.type">
                 <el-icon v-if="tutorial.type === 'video'"><VideoCamera /></el-icon>
                 <el-icon v-else><Document /></el-icon>
               </div>
             </div>
-            <div class="tutorial-cover placeholder" v-else>
-              <el-icon :size="48"><Document /></el-icon>
+            <div class="tutorial-cover placeholder" :class="`type-${tutorial.type}`" v-else>
+              <div class="placeholder-content">
+                <div class="placeholder-icon">
+                  <el-icon :size="64">
+                    <VideoCamera v-if="tutorial.type === 'video'" />
+                    <Document v-else />
+                  </el-icon>
+                </div>
+                <div class="placeholder-text">
+                  <span class="placeholder-type">{{ tutorial.type === 'video' ? '视频教程' : '图文指南' }}</span>
+                  <span class="placeholder-hint">暂无封面</span>
+                </div>
+              </div>
               <div class="cover-type-badge" :class="tutorial.type">
                 <el-icon v-if="tutorial.type === 'video'"><VideoCamera /></el-icon>
                 <el-icon v-else><Document /></el-icon>
@@ -749,11 +803,78 @@ onMounted(() => {
             }
 
             &.placeholder {
-              background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
               display: flex;
               align-items: center;
               justify-content: center;
-              color: #909399;
+              color: white;
+              position: relative;
+
+              // 视频教程的渐变背景
+              &.type-video {
+                background: linear-gradient(135deg, #ff6b6b 0%, #ff8e8e 50%, #ffa8a8 100%);
+              }
+
+              // 图文指南的渐变背景
+              &.type-article {
+                background: linear-gradient(135deg, #f7b267 0%, #ffcc80 50%, #ffd699 100%);
+              }
+
+              // 装饰性图案
+              &::before {
+                content: '';
+                position: absolute;
+                top: -50%;
+                left: -50%;
+                width: 200%;
+                height: 200%;
+                background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+                animation: rotate 20s linear infinite;
+              }
+
+              @keyframes rotate {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+              }
+
+              .placeholder-content {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 12px;
+                z-index: 1;
+                position: relative;
+
+                .placeholder-icon {
+                  opacity: 0.9;
+                  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
+                  animation: float 3s ease-in-out infinite;
+                }
+
+                @keyframes float {
+                  0%, 100% { transform: translateY(0); }
+                  50% { transform: translateY(-8px); }
+                }
+
+                .placeholder-text {
+                  display: flex;
+                  flex-direction: column;
+                  align-items: center;
+                  gap: 4px;
+
+                  .placeholder-type {
+                    font-size: 16px;
+                    font-weight: 600;
+                    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                  }
+
+                  .placeholder-hint {
+                    font-size: 12px;
+                    opacity: 0.85;
+                    font-weight: 400;
+                  }
+                }
+              }
             }
 
             .cover-type-badge {
@@ -768,6 +889,7 @@ onMounted(() => {
               justify-content: center;
               backdrop-filter: blur(10px);
               color: white;
+              z-index: 2;
 
               &.video {
                 background: rgba(255, 107, 107, 0.9);

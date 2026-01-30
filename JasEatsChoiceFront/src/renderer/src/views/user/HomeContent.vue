@@ -2,6 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { ElNotification, ElMessage } from 'element-plus'
 import { useWeather } from '../../composables/useWeather.js'
+import { useRecommendations } from '../../composables/useRecommendations.js'
 // 导入 Element Plus 图标
 import {
   Location,
@@ -48,6 +49,9 @@ const {
   clearWeatherCache
 } = useWeather()
 
+// 使用智能推荐系统
+const { loadAllRecommendations } = useRecommendations()
+
 // 默认菜品占位图 - 更精美的设计
 const defaultDishImage =
   'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Cdefs%3E%3ClinearGradient id="grad1" x1="0%25" y1="0%25" x2="100%25" y2="100%25"%3E%3Cstop offset="0%25" style="stop-color:%23ff6b6b;stop-opacity:0.1" /%3E%3Cstop offset="100%25" style="stop-color:%23ffa8a8;stop-opacity:0.2" /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect fill="url(%23grad1)" width="400" height="300"/%3E%3Ccircle cx="200" cy="130" r="50" fill="%23ff6b6b" opacity="0.15"/%3E%3Ctext x="200" y="130" font-size="48" text-anchor="middle" fill="%23ff6b6b" opacity="0.3"%3E🍽️%3C/text%3E%3Ctext x="200" y="200" font-family="Arial, sans-serif" font-size="20" font-weight="600" text-anchor="middle" fill="%23999"%3E暂无图片%3C/text%3E%3Ctext x="200" y="230" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="%23bbb"%3E精彩美食即将呈现%3C/text%3E%3C/svg%3E'
@@ -89,31 +93,52 @@ const searchKeyword = ref('')
 // 位置选择弹窗
 const mapLocationPickerVisible = ref(false)
 
-// 从后端获取推荐菜品
+// 从后端获取推荐菜品 - 使用智能推荐算法
 const fetchRecommendedDishes = async () => {
   recommendedDishesLoading.value = true
   try {
-    const response = await retryFetch(async () => {
-      return await api.get(API_CONFIG.recipe.recommend)
-    })
+    // 使用智能推荐系统（个性化推荐 + 天气推荐 + 节日推荐）
+    const allRecommendations = await loadAllRecommendations()
 
-    // Check if response has a message
-    if (response.message) {
-      recommendEmptyMessage.value = response.message
-    }
+    // 转换数据格式以兼容轮播组件
+    if (allRecommendations && allRecommendations.length > 0) {
+      // 取前3个推荐用于首页轮播
+      const topRecommendations = allRecommendations.slice(0, 3)
 
-    // Handle both null/undefined and empty array cases
-    if (response.data && Array.isArray(response.data) && response.data.length > 0) {
-      recommendedDishes.value = response.data
-      // 预加载图片
-      preloadImages(response.data)
+      // 转换数据格式以匹配原recipe格式
+      recommendedDishes.value = topRecommendations.map(rec => {
+        // 将tags数组转换为字符串（如果存在）
+        const tagsString = Array.isArray(rec.tags)
+          ? rec.tags.slice(0, 3).join(' ') // 最多取前3个标签
+          : (rec.tags || '')
+
+        return {
+          id: rec.id,
+          name: rec.name,
+          image: rec.image || '🍱', // 智能推荐使用emoji作为图片
+          category: rec.recommendSource || rec.type || '推荐',
+          kcal: rec.calories || 0, // 使用kcal字段以兼容模板
+          calories: rec.calories || 0, // 同时保留calories字段
+          tags: tagsString, // 转换为字符串
+          nutrition: rec.nutrition || null,
+          reason: rec.reason || '',
+          rating: rec.rating || 4.8,
+          // 保留原始推荐数据以便后续使用
+          _rawRecommendation: rec
+        }
+      })
+
+      // 预加载图片（如果有真实图片URL）
+      preloadImages(recommendedDishes.value)
+
+      recommendEmptyMessage.value = '暂无推荐菜品'
     } else {
-      // Set to empty array to show empty state
       recommendedDishes.value = []
+      recommendEmptyMessage.value = '暂无推荐菜品'
     }
   } catch (error) {
     console.error('加载推荐菜品失败:', error)
-    // Reset to default message on error
+    recommendedDishes.value = []
     recommendEmptyMessage.value = '加载失败,请重试'
     showError('加载推荐菜品失败,请检查网络连接')
   } finally {
@@ -256,7 +281,8 @@ const filteredDishes = computed(() => {
     return (
       dish.name?.toLowerCase().includes(keyword) ||
       dish.category?.toLowerCase().includes(keyword) ||
-      dish.tags?.toLowerCase().includes(keyword)
+      dish.tags?.toLowerCase().includes(keyword) ||
+      dish.reason?.toLowerCase().includes(keyword)
     )
   })
 })
@@ -539,9 +565,15 @@ const fetchFeaturedTutorials = async () => {
 // 图片预加载功能
 const preloadImages = (items) => {
   items.forEach((item) => {
-    if (item.image || item.thumbnail) {
-      const img = new Image()
-      img.src = item.image || item.thumbnail
+    const imageUrl = item.image || item.thumbnail
+    // 只预加载真实图片URL（跳过emoji和data: URL）
+    if (imageUrl && !imageUrl.startsWith('data:') && !imageUrl.startsWith('http')) {
+      try {
+        const img = new Image()
+        img.src = imageUrl
+      } catch (error) {
+        console.warn('图片预加载失败:', imageUrl, error)
+      }
     }
   })
 }
