@@ -1,6 +1,7 @@
 package com.xx.jaseatschoicejava.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.xx.jaseatschoicejava.dto.ReorderResponseDTO;
 import com.xx.jaseatschoicejava.entity.Order;
 import com.xx.jaseatschoicejava.entity.OrderDish;
 
@@ -18,4 +19,11 @@ public interface OrderService extends IService<Order> {
      * @return 是否创建成功
      */
     boolean createOrderWithDishes(Order order, List<OrderDish> orderDishes);
+
+    /**
+     * 再来一单 - 智能复购
+     * @param orderId 原订单ID
+     * @return 再来一单响应数据
+     */
+    ReorderResponseDTO reorder(String orderId);
 }

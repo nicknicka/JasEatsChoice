@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.xx.jaseatschoicejava.common.ResponseResult;
 import com.xx.jaseatschoicejava.dto.OrderCreateDTO;
 import com.xx.jaseatschoicejava.dto.OrderDishVO;
+import com.xx.jaseatschoicejava.dto.ReorderResponseDTO;
 import com.xx.jaseatschoicejava.entity.Order;
 import com.xx.jaseatschoicejava.entity.OrderDish;
 import com.xx.jaseatschoicejava.entity.PaymentRecord;
@@ -272,6 +273,35 @@ public class OrderController {
         } catch (Exception e) {
             log.error("获取支付记录失败，订单ID：{}", orderId, e);
             return ResponseResult.fail("500", "获取支付记录失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 再来一单 - 智能复购
+     * 检查菜品状态、价格变动，并推荐替换菜品
+     */
+    @ApiOperation("再来一单 - 智能复购")
+    @PostMapping("/{orderId}/reorder")
+    public ResponseResult<?> reorder(@PathVariable String orderId) {
+        try {
+            log.info("再来一单请求，订单ID：{}", orderId);
+
+            ReorderResponseDTO reorderResponse = orderService.reorder(orderId);
+
+            if (reorderResponse.getAllItemsUnavailable()) {
+                return ResponseResult.fail("400", "抱歉，订单中的所有菜品均已下架或库存不足");
+            }
+
+            log.info("再来一单处理成功，订单ID：{}, 菜品变动数：{}",
+                orderId, reorderResponse.getSoldOutCount() + reorderResponse.getPriceIncreasedCount());
+
+            return ResponseResult.success(reorderResponse);
+        } catch (RuntimeException e) {
+            log.error("再来一单失败，订单ID：{}，错误信息：{}", orderId, e.getMessage());
+            return ResponseResult.fail("400", e.getMessage());
+        } catch (Exception e) {
+            log.error("再来一单异常，订单ID：{}", orderId, e);
+            return ResponseResult.fail("500", "再来一单失败：" + e.getMessage());
         }
     }
 }

@@ -264,6 +264,62 @@ onMounted(() => {
       updateCartStats()
     }
   }
+
+  // 处理"再来一单"功能
+  // 处理单个商品添加（替换推荐菜品）
+  const addToCart = route.query.addToCart
+  if (addToCart) {
+    try {
+      const itemToAdd = JSON.parse(addToCart)
+      // 添加到购物车
+      updateCart({
+        id: itemToAdd.dishId,
+        name: itemToAdd.dishName,
+        price: itemToAdd.price,
+        totalPrice: itemToAdd.price * itemToAdd.quantity,
+        quantity: itemToAdd.quantity,
+        selectedOptionalIngredients: [],
+        note: itemToAdd.customization || ''
+      })
+      ElMessage.success(`已添加"${itemToAdd.dishName}"到购物车`)
+
+      // 清除query参数，避免重复添加
+      router.replace({ query: {} })
+    } catch (error) {
+      console.error('解析addToCart参数失败:', error)
+    }
+  }
+
+  // 处理多个商品添加（再来一单确认）
+  const reorderItems = route.query.reorderItems
+  if (reorderItems) {
+    try {
+      const itemsToAdd = JSON.parse(reorderItems)
+
+      // 清空当前购物车
+      cartItemsByMerchant.value[merchant.value.id] = []
+
+      // 添加所有选中的菜品
+      itemsToAdd.forEach(item => {
+        updateCart({
+          id: item.dishId,
+          name: item.dishName,
+          price: item.price,
+          totalPrice: item.price * item.quantity,
+          quantity: item.quantity,
+          selectedOptionalIngredients: [],
+          note: item.customization || ''
+        })
+      })
+
+      ElMessage.success(`已添加${itemsToAdd.length}个菜品到购物车`)
+
+      // 清除query参数
+      router.replace({ query: {} })
+    } catch (error) {
+      console.error('解析reorderItems参数失败:', error)
+    }
+  }
 })
 
 // 从后端加载完整的商家详情和菜品信息

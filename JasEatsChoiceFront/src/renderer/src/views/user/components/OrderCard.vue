@@ -56,6 +56,14 @@
       >
         去评价
       </el-button>
+      <el-button
+        v-if="canReorder"
+        type="warning"
+        size="small"
+        @click="handleReorder"
+      >
+        再来一单
+      </el-button>
     </div>
   </el-card>
 </template>
@@ -86,7 +94,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['view-details', 'cancel', 'confirm-receipt', 'evaluate', 'image-error'])
+const emit = defineEmits(['view-details', 'cancel', 'confirm-receipt', 'evaluate', 'reorder', 'image-error'])
 
 /**
  * 获取状态文本
@@ -118,6 +126,14 @@ const canConfirmReceiptOrder = computed(() => canConfirmReceipt(props.order.stat
 const canEvaluate = computed(() => canEvaluateOrder(props.order.status))
 
 /**
+ * 是否可以再来一单
+ */
+const canReorder = computed(() => {
+  // 已完成(7)或已取消(6)的订单可以再来一单
+  return props.order.status === 'completed' || props.order.status === 'cancelled'
+})
+
+/**
  * 查看详情
  */
 function handleViewDetails() {
@@ -143,6 +159,13 @@ function handleConfirmReceipt() {
  */
 function handleEvaluate() {
   emit('evaluate', props.order)
+}
+
+/**
+ * 再来一单
+ */
+function handleReorder() {
+  emit('reorder', props.order)
 }
 
 /**

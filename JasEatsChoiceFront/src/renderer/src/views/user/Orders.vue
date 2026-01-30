@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, watch } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
@@ -7,6 +7,7 @@ import CommonBackButton from '../../components/common/CommonBackButton.vue'
 import OrderSearchBar from './components/OrderSearchBar.vue'
 import OrderFilterBar from './components/OrderFilterBar.vue'
 import OrderCard from './components/OrderCard.vue'
+import ReorderDialog from '../../components/ReorderDialog.vue'
 import { useOrderData } from '../../composables/useOrderData'
 import { useOrderFilter } from '../../composables/useOrderFilter'
 import { useOrderPagination } from '../../composables/useOrderPagination'
@@ -131,6 +132,43 @@ function goToEvaluate(order) {
   })
 }
 
+// 再来一单相关状态
+const reorderDialogVisible = ref(false)
+const currentOrderId = ref('')
+
+/**
+ * 再来一单
+ */
+function handleReorder(order) {
+  currentOrderId.value = order.id
+  reorderDialogVisible.value = true
+}
+
+/**
+ * 确认再来一单
+ */
+function handleReorderConfirm(data) {
+  // 保存商家信息到sessionStorage
+  const merchantInfo = {
+    id: data.merchantId,
+    name: data.merchantName
+  }
+  sessionStorage.setItem('selectedMerchant', JSON.stringify(merchantInfo))
+
+  // 跳转到商家页面，传递选中的菜品信息
+  router.push({
+    path: '/user/home/merchant-detail',
+    query: {
+      reorderItems: JSON.stringify(data.items),
+      originalRemark: data.originalRemark || '',
+      originalAddressId: data.originalAddressId || '',
+      merchantId: data.merchantId
+    }
+  })
+
+  ElMessage.success('已跳转到商家页面，请确认订单信息')
+}
+
 /**
  * 监听筛选和排序变化，重置分页
  */
@@ -215,6 +253,7 @@ onMounted(() => {
         @cancel="cancelOrder"
         @confirm-receipt="confirmReceipt"
         @evaluate="goToEvaluate"
+        @reorder="handleReorder"
         @image-error="handleImageError"
       />
     </div>
@@ -237,6 +276,13 @@ onMounted(() => {
     <el-empty
       v-if="sortedOrders.length === 0 && !loading"
       description="暂无订单记录，快去下单吧！"
+    />
+
+    <!-- 再来一单弹窗 -->
+    <ReorderDialog
+      v-model:visible="reorderDialogVisible"
+      :order-id="currentOrderId"
+      @confirm="handleReorderConfirm"
     />
   </div>
 </template>

@@ -69,6 +69,7 @@ public class OrderDishServiceImpl extends ServiceImpl<OrderDishMapper, OrderDish
             // 从菜品表获取菜品信息
             Dish dish = dishMap.get(orderDish.getDishId());
             if (dish != null) {
+                vo.setDish(dish); // 设置完整的菜品对象
                 vo.setDishName(dish.getName());
                 vo.setCategory(dish.getCategory());
                 vo.setCalorie(dish.getCalorie());

@@ -3,6 +3,7 @@ package com.xx.jaseatschoicejava.dto;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.xx.jaseatschoicejava.entity.Dish;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
@@ -53,4 +54,7 @@ public class OrderDishVO {
 
     @ApiModelProperty(value = "卡路里含量")
     private Integer calorie; // 卡路里含量
+
+    @ApiModelProperty(value = "菜品详细信息")
+    private Dish dish; // 菜品完整信息对象
 }
