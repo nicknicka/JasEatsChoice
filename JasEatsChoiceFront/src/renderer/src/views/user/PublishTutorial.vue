@@ -42,6 +42,7 @@ const videoUploadProgress = ref(0)
 const videoPreviewDialogVisible = ref(false)
 const videoPreviewUrl = ref('')
 const videoFileInfo = ref(null) // 保存视频文件信息
+const videoPlayerRef = ref(null) // 视频播放器引用
 
 // Markdown 预览模式：'edit' | 'preview' | 'split'
 const previewMode = ref('edit')
@@ -499,6 +500,15 @@ const previewVideo = () => {
   if (tutorialForm.value.video_url) {
     videoPreviewUrl.value = tutorialForm.value.video_url
     videoPreviewDialogVisible.value = true
+  }
+}
+
+// 关闭视频预览对话框时暂停并销毁视频
+const handleVideoDialogClose = () => {
+  if (videoPlayerRef.value) {
+    videoPlayerRef.value.pause()
+    videoPlayerRef.value.src = ''
+    videoPlayerRef.value.load()
   }
 }
 
@@ -1172,9 +1182,11 @@ watch(() => tutorialForm.value.content, () => {
       title="视频预览"
       width="70%"
       :close-on-click-modal="true"
+      @close="handleVideoDialogClose"
     >
       <div class="video-preview-dialog-content">
         <video
+          ref="videoPlayerRef"
           :src="videoPreviewUrl"
           controls
           autoplay
@@ -1647,20 +1659,24 @@ watch(() => tutorialForm.value.content, () => {
           .cover-preview-wrapper {
             margin-top: 0;
             margin-bottom: 0;
+            width: 33.33%;
+            aspect-ratio: 1 / 1;
 
             .cover-image-box {
               position: relative;
               width: 100%;
-              max-width: 160px;
-              border-radius: 12px;
+              height: 100%;
+              border-radius: 10px;
               overflow: hidden;
-              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-              margin-bottom: 12px;
+              box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+              margin-bottom: 0;
+              background: #f5f7fa;
 
               .cover-preview-image {
                 width: 100%;
-                height: auto;
+                height: 100%;
                 display: block;
+                object-fit: cover;
                 cursor: pointer;
                 transition: transform 0.3s;
 
@@ -1669,34 +1685,25 @@ watch(() => tutorialForm.value.content, () => {
                 }
               }
 
-              .video-file-info {
+              .cover-image-actions {
                 position: absolute;
-                bottom: 0;
-                left: 0;
-                right: 0;
+                top: 6px;
+                right: 6px;
                 display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 8px 12px;
-                background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
-                border-radius: 0 0 12px 12px;
-                font-size: 12px;
-                color: white;
+                gap: 6px;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+                z-index: 10;
 
-                .file-name {
-                  flex: 1;
-                  overflow: hidden;
-                  text-overflow: ellipsis;
-                  white-space: nowrap;
-                  font-weight: 500;
+                .el-button {
+                  padding: 6px 10px;
+                  font-size: 13px;
+                  backdrop-filter: blur(10px);
                 }
+              }
 
-                .file-size {
-                  margin-left: 8px;
-                  opacity: 0.85;
-                  font-size: 11px;
-                  white-space: nowrap;
-                }
+              &:hover .cover-image-actions {
+                opacity: 1;
               }
             }
 
@@ -1710,18 +1717,18 @@ watch(() => tutorialForm.value.content, () => {
             .video-preview-box {
               position: relative;
               width: 100%;
-              max-width: 320px;
-              border-radius: 12px;
+              height: 100%;
+              border-radius: 10px;
               overflow: hidden;
-              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-              margin-bottom: 12px;
+              box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+              margin-bottom: 0;
               background: #000;
 
               .video-preview-player {
                 width: 100%;
-                height: auto;
+                height: 100%;
                 display: block;
-                max-height: 240px;
+                object-fit: cover;
                 cursor: pointer;
                 transition: transform 0.3s ease;
 
@@ -1733,10 +1740,10 @@ watch(() => tutorialForm.value.content, () => {
               // 右上角删除按钮
               .video-delete-btn {
                 position: absolute;
-                top: 8px;
-                right: 8px;
-                width: 32px;
-                height: 32px;
+                top: 6px;
+                right: 6px;
+                width: 28px;
+                height: 28px;
                 border-radius: 50%;
                 background: rgba(255, 255, 255, 0.95);
                 backdrop-filter: blur(10px);
@@ -1778,9 +1785,10 @@ watch(() => tutorialForm.value.content, () => {
                 align-items: center;
                 padding: 8px 12px;
                 background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
-                border-radius: 0 0 12px 12px;
+                border-radius: 0 0 10px 10px;
                 font-size: 12px;
                 color: white;
+                pointer-events: none;
 
                 .file-name {
                   flex: 1;
@@ -2198,6 +2206,22 @@ watch(() => tutorialForm.value.content, () => {
   .preview-dialog-image {
     max-width: 100%;
     max-height: 70vh;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  }
+}
+
+// 视频预览对话框
+.video-preview-dialog-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+
+  .video-preview-dialog-player {
+    width: 100%;
+    max-height: 70vh;
+    object-fit: contain;
     border-radius: 8px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   }

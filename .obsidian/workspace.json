@@ -167,6 +167,10 @@
   },
   "active": "25380c94f56f550b",
   "lastOpenFiles": [
+    "uploads/chat/e58857a1-89b4-4bfd-bb83-77b7541c4bf4.mov",
+    "uploads/chat/8f9b1a05-4965-41f1-a744-91e29de10514.mov",
+    "uploads/chat/edf3f5d0-a0e8-496d-84ba-03b34107adc3.mov",
+    "PRD功能实现情况分析.md",
     "uploads/chat/4a98f7f1-2193-475f-a4ea-218f4e9e7474.mov",
     "uploads/chat/990b65e7-c50a-4f48-803b-3443e3b4465a.mov",
     "uploads/chat/45c522c1-cfd4-498d-9394-5d9da03a762f.mov",
@@ -182,12 +186,9 @@
     "uploads/chat/99313cdd-46e1-4323-850c-0c78383bd872.png",
     "uploads/chat/90e6975d-6006-4492-a91e-c7a56d7735a1.png",
     "uploads/chat/fa2f1ce4-b9d0-4532-be7d-36ae918ff465.png",
-    "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/config/SecurityConfig$RequestLoggingFilter.class",
-    "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/config/SecurityConfig$WebSecurityCustomizer.class",
     "uploads/chat/65137d9b-2379-44a9-ac72-45f64846a578.png",
     "uploads/chat/391e6680-2ceb-477e-8d18-a6c092a06343.png",
     "uploads/chat/fdc7b240-a508-45a2-a637-b3063a28e9fe.png",
-    "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/entity/UserBehavior.class",
     "后端数据获取详解.md",
     "降级策略详解.md",
     "推荐拒绝功能实现检查清单.md",
@@ -211,7 +212,6 @@
     "数据库快速参考.md",
     "数据库统一配置更新.md",
     "数据库配置说明.md",
-    "JasEatsChoiceFront/node_modules/app-builder-lib/templates/nsis/README.md",
-    "JasEatsChoiceFront/node_modules/app-builder-lib/node_modules/universalify/README.md"
+    "JasEatsChoiceFront/node_modules/app-builder-lib/templates/nsis/README.md"
   ]
 }
