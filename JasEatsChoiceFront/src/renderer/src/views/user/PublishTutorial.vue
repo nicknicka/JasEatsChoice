@@ -20,7 +20,7 @@ const tutorialForm = ref({
   prep_time: '',
   servings: null,
   cover_image: '',
-  tags: [],
+  tags: null, // 改为 null，避免空字符串导致数据库 JSON 字段报错
   status: 'DRAFT',
   review_status: 'NOT_SUBMITTED'
 })
@@ -39,6 +39,30 @@ const previewMode = ref('edit')
 
 // Textarea引用
 const contentTextarea = ref(null)
+
+// 悬浮球相关
+const floatingBalls = ref({
+  draft: {
+    visible: true,
+    dragging: false,
+    position: { x: 0, y: 0 },
+    offset: { x: 0, y: 0 },
+    scale: 1,
+    hasMoved: false,
+    startX: 0,
+    startY: 0
+  },
+  submit: {
+    visible: true,
+    dragging: false,
+    position: { x: 0, y: 0 },
+    offset: { x: 0, y: 0 },
+    scale: 1,
+    hasMoved: false,
+    startX: 0,
+    startY: 0
+  }
+})
 
 // 自动调整textarea高度
 const autoResizeTextarea = () => {
@@ -125,6 +149,8 @@ const useTemplate = (template) => {
 
 // 提交教程
 const submitTutorial = async () => {
+  console.log('submitTutorial 被调用')
+
   // 验证表单
   if (!tutorialForm.value.title) {
     ElMessage.warning('请输入教程标题')
@@ -138,31 +164,59 @@ const submitTutorial = async () => {
   submitting.value = true
 
   try {
+    // 先保存教程（创建或更新）
     const data = {
       ...tutorialForm.value,
-      status: 'PUBLISHED',
-      review_status: 'PENDING'
+      status: 'DRAFT',
+      review_status: 'NOT_SUBMITTED',
+      // 确保标签不为空字符串
+      tags: tutorialForm.value.tags || null
     }
 
-    let response
-    if (tutorialForm.value.id) {
+    let tutorialId = tutorialForm.value.id
+    console.log('教程ID:', tutorialId)
+
+    if (tutorialId) {
       // 更新现有教程
-      response = await api.put(`${API_CONFIG.tutorial.userUpdate}/${tutorialForm.value.id}`, data)
+      console.log('更新现有教程')
+      await api.put(`${API_CONFIG.tutorial.userUpdate}/${tutorialId}`, data)
     } else {
       // 创建新教程
-      response = await api.post(API_CONFIG.tutorial.userCreate, data)
+      console.log('创建新教程，请求数据:', data)
+      const createResponse = await api.post(API_CONFIG.tutorial.userCreate, data)
+      console.log('创建响应完整内容:', createResponse)
+      console.log('创建响应的data:', createResponse.data)
+
+      if (!createResponse) {
+        throw new Error('创建教程失败：服务器未返回数据')
+      }
+
+      tutorialId = createResponse.id || createResponse.data?.id
+      if (!tutorialId) {
+        console.error('无法从响应中获取教程ID，响应内容:', createResponse)
+        throw new Error('创建教程失败：无法获取教程ID')
+      }
+
+      tutorialForm.value.id = tutorialId
+      console.log('创建成功，教程ID:', tutorialId)
     }
 
-    if (response.data) {
-      tutorialForm.value.id = response.data.id || tutorialForm.value.id
-      tutorialForm.value.status = 'PUBLISHED'
+    // 然后调用专门的提交审核接口
+    console.log('提交审核，教程ID:', tutorialId)
+    const submitResponse = await api.post(`${API_CONFIG.tutorial.userSubmit}/${tutorialId}/submit`)
+    console.log('提交审核响应:', submitResponse)
+
+    if (submitResponse && submitResponse.success) {
+      tutorialForm.value.status = 'PENDING'
       tutorialForm.value.review_status = 'PENDING'
 
       ElMessage.success('提交成功！您的教程已进入审核队列')
+    } else {
+      throw new Error(submitResponse?.message || '提交失败')
     }
   } catch (error) {
     console.error('提交失败:', error)
-    ElMessage.error('提交失败，请稍后重试')
+    ElMessage.error(error.response?.data?.message || error.message || '提交失败，请稍后重试')
   } finally {
     submitting.value = false
   }
@@ -181,7 +235,9 @@ const saveDraft = async () => {
     const data = {
       ...tutorialForm.value,
       status: 'DRAFT',
-      review_status: 'NOT_SUBMITTED'
+      review_status: 'NOT_SUBMITTED',
+      // 确保标签不为空字符串
+      tags: tutorialForm.value.tags || null
     }
 
     let response
@@ -279,12 +335,108 @@ const goBack = () => {
   router.back()
 }
 
+// 悬浮球拖拽开始
+const handleDragStart = (event, type) => {
+  console.log('悬浮球拖拽开始:', type)
+  const ball = floatingBalls.value[type]
+  ball.dragging = true
+  ball.scale = 1.05
+  ball.hasMoved = false
+  ball.startX = event.clientX
+  ball.startY = event.clientY
+  ball.offset.x = event.clientX - ball.position.x
+  ball.offset.y = event.clientY - ball.position.y
+}
+
+// 悬浮球拖拽中（使用requestAnimationFrame优化性能）
+let animationFrameId = null
+const handleDragMove = (event) => {
+  if (animationFrameId) {
+    cancelAnimationFrame(animationFrameId)
+  }
+
+  animationFrameId = requestAnimationFrame(() => {
+    const types = ['draft', 'submit']
+    types.forEach(type => {
+      const ball = floatingBalls.value[type]
+      if (ball.dragging) {
+        // 检查是否真正移动了（避免误点击）
+        const moveDistance = Math.sqrt(
+          Math.pow(event.clientX - ball.startX, 2) +
+          Math.pow(event.clientY - ball.startY, 2)
+        )
+        if (moveDistance > 5) {
+          ball.hasMoved = true
+        }
+
+        ball.position.x = event.clientX - ball.offset.x
+        ball.position.y = event.clientY - ball.offset.y
+
+        // 边界检查，防止拖出屏幕
+        const ballSize = type === 'submit' ? 64 : 56
+        const maxX = window.innerWidth - ballSize
+        const maxY = window.innerHeight - ballSize
+
+        ball.position.x = Math.max(0, Math.min(maxX, ball.position.x))
+        ball.position.y = Math.max(0, Math.min(maxY, ball.position.y))
+      }
+    })
+  })
+}
+
+// 悬浮球拖拽结束
+const handleDragEnd = (type) => {
+  console.log('悬浮球拖拽结束:', type, 'hasMoved:', floatingBalls.value[type].hasMoved)
+  const ball = floatingBalls.value[type]
+  ball.dragging = false
+  ball.scale = 1
+  // 如果没有真正移动（只是点击），立即重置hasMoved
+  // 如果有移动，延迟重置以防止误触发点击
+  if (!ball.hasMoved) {
+    ball.hasMoved = false
+  } else {
+    setTimeout(() => {
+      ball.hasMoved = false
+    }, 100)
+  }
+}
+
+// 初始化悬浮球位置
+const initFloatingBalls = () => {
+  const windowWidth = window.innerWidth
+  const windowHeight = window.innerHeight
+
+  // 保存草稿悬浮球：右侧边缘，垂直方向居中
+  floatingBalls.value.draft.position = {
+    x: windowWidth - 76, // 右边距20px
+    y: windowHeight * 0.45
+  }
+  floatingBalls.value.draft.hasMoved = false
+
+  // 提交审核悬浮球：在保存草稿下方
+  floatingBalls.value.submit.position = {
+    x: windowWidth - 84, // 右边距20px
+    y: windowHeight * 0.45 + 72
+  }
+  floatingBalls.value.submit.hasMoved = false
+}
+
 // 初始化和监听
 onMounted(() => {
   // 初始化textarea高度
   setTimeout(() => {
     autoResizeTextarea()
   }, 100)
+
+  // 初始化悬浮球位置
+  initFloatingBalls()
+
+  // 添加全局鼠标移动事件
+  document.addEventListener('mousemove', handleDragMove)
+  document.addEventListener('mouseup', () => {
+    handleDragEnd('draft')
+    handleDragEnd('submit')
+  })
 })
 
 // 监听内容变化（处理编程式的内容变更）
@@ -309,12 +461,6 @@ watch(() => tutorialForm.value.content, () => {
         <div class="header-actions">
           <el-button @click="goBack" size="default">
             <el-icon><ArrowLeft /></el-icon> 取消
-          </el-button>
-          <el-button type="info" @click="saveDraft" size="default" :loading="submitting">
-            <el-icon><Document /></el-icon> 保存草稿
-          </el-button>
-          <el-button type="primary" @click="submitTutorial" size="default" :loading="submitting">
-            <el-icon><Upload /></el-icon> 提交审核
           </el-button>
         </div>
       </div>
@@ -699,6 +845,45 @@ watch(() => tutorialForm.value.content, () => {
         <img :src="uploadPreviewUrl" alt="封面图预览" class="preview-dialog-image" />
       </div>
     </el-dialog>
+
+    <!-- 智能悬浮球 -->
+    <div class="floating-balls-container">
+      <!-- 保存草稿悬浮球 -->
+      <div
+        class="floating-ball floating-ball-draft"
+        :class="{ 'is-dragging': floatingBalls.draft.dragging }"
+        :style="{
+          transform: `translate(${floatingBalls.draft.position.x}px, ${floatingBalls.draft.position.y}px) scale(${floatingBalls.draft.scale})`
+        }"
+        @mousedown="handleDragStart($event, 'draft')"
+        @click="!floatingBalls.draft.dragging && !floatingBalls.draft.hasMoved && saveDraft()"
+        title="保存草稿"
+      >
+        <div class="floating-ball-icon">
+          <el-icon :size="22"><Document /></el-icon>
+        </div>
+        <div class="floating-ball-tooltip">保存草稿</div>
+        <el-icon class="drag-hint" :size="10"><Upload /></el-icon>
+      </div>
+
+      <!-- 提交审核悬浮球 -->
+      <div
+        class="floating-ball floating-ball-submit"
+        :class="{ 'is-dragging': floatingBalls.submit.dragging }"
+        :style="{
+          transform: `translate(${floatingBalls.submit.position.x}px, ${floatingBalls.submit.position.y}px) scale(${floatingBalls.submit.scale})`
+        }"
+        @mousedown="handleDragStart($event, 'submit')"
+        @click="!floatingBalls.submit.dragging && !floatingBalls.submit.hasMoved && submitTutorial()"
+        title="提交审核"
+      >
+        <div class="floating-ball-icon">
+          <el-icon :size="26"><Upload /></el-icon>
+        </div>
+        <div class="floating-ball-tooltip">提交审核</div>
+        <el-icon class="drag-hint" :size="10"><Upload /></el-icon>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -770,6 +955,9 @@ watch(() => tutorialForm.value.content, () => {
           line-height: 1;
           box-sizing: border-box;
           text-align: center;
+          background: rgba(255, 255, 255, 0.2);
+          color: white;
+          backdrop-filter: blur(10px);
 
           :deep(.el-icon) {
             display: inline-flex;
@@ -784,25 +972,8 @@ watch(() => tutorialForm.value.content, () => {
             margin: 0;
           }
 
-          &:not(.el-button--primary) {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            backdrop-filter: blur(10px);
-
-            &:hover {
-              background: rgba(255, 255, 255, 0.3);
-            }
-          }
-
-          &.el-button--primary {
-            background: white;
-            color: #667eea;
-
-            &:hover {
-              background: #f0f0f0;
-              transform: translateY(-2px);
-              box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-            }
+          &:hover {
+            background: rgba(255, 255, 255, 0.3);
           }
         }
       }
@@ -1588,6 +1759,164 @@ watch(() => tutorialForm.value.content, () => {
     max-height: 70vh;
     border-radius: 8px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  }
+}
+
+// 智能悬浮球样式
+.floating-balls-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9999;
+
+  .floating-ball {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    pointer-events: auto;
+    will-change: transform;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(10px);
+    user-select: none;
+
+    // 非拖拽状态下的平滑过渡
+    &:not(.is-dragging) {
+      transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease;
+    }
+
+    &:hover {
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+
+      .floating-ball-tooltip {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+
+      .drag-hint {
+        opacity: 1;
+      }
+
+      .floating-ball-icon {
+        .el-icon {
+          transform: scale(1.1);
+        }
+      }
+    }
+
+    &:active {
+      cursor: grabbing;
+    }
+
+    &.is-dragging {
+      cursor: grabbing;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+      transition: none; // 拖拽时移除过渡，实现丝滑跟随
+    }
+
+    &.floating-ball-draft {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    &.floating-ball-submit {
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+    }
+
+    .floating-ball-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+
+      .el-icon {
+        transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+    }
+
+    .floating-ball-tooltip {
+      position: absolute;
+      bottom: -36px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-8px);
+      background: rgba(0, 0, 0, 0.85);
+      color: white;
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      white-space: nowrap;
+      opacity: 0;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      pointer-events: none;
+      backdrop-filter: blur(10px);
+      font-weight: 500;
+
+      &::after {
+        content: '';
+        position: absolute;
+        top: -5px;
+        left: 50%;
+        transform: translateX(-50%);
+        border-left: 5px solid transparent;
+        border-right: 5px solid transparent;
+        border-bottom: 5px solid rgba(0, 0, 0, 0.85);
+      }
+    }
+
+    .drag-hint {
+      position: absolute;
+      bottom: 6px;
+      right: 6px;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      transform: rotate(45deg);
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    // 脉冲动画效果（更柔和）
+    &::before {
+      content: '';
+      position: absolute;
+      top: -3px;
+      left: -3px;
+      right: -3px;
+      bottom: -3px;
+      border-radius: 50%;
+      background: inherit;
+      opacity: 0;
+      animation: pulse 2.5s infinite;
+      z-index: -1;
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: scale(1);
+        opacity: 0.3;
+      }
+      50% {
+        transform: scale(1.15);
+        opacity: 0.15;
+      }
+      100% {
+        transform: scale(1);
+        opacity: 0;
+      }
+    }
   }
 }
 </style>

@@ -262,13 +262,13 @@ const router = createRouter({
           meta: { title: '佳食宜选-教程详情' }
         },
         {
-          path: 'publish-tutorial',
+          path: 'tutorials/publish',
           name: 'user-publish-tutorial',
           component: () => import('../views/user/PublishTutorial.vue'),
           meta: { title: '佳食宜选-发布教程' }
         },
         {
-          path: 'my-tutorials',
+          path: 'tutorials/my',
           name: 'user-my-tutorials',
           component: () => import('../views/user/MyTutorials.vue'),
           meta: { title: '佳食宜选-我的教程' }

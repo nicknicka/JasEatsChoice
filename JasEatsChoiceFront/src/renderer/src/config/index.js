@@ -86,24 +86,24 @@ export const API_CONFIG = {
     // 普通用户（需要认证）
     userCreate: '/v1/tutorial/user/create', // 用户创建教程
     userMy: '/v1/tutorial/user/my', // 获取我的教程列表
-    userUpdate: '/v1/tutorial/user/', // 更新教程（需要拼接id）
-    userSubmit: '/v1/tutorial/user/', // 提交审核（需要拼接id + '/submit'）
-    userDelete: '/v1/tutorial/user/', // 删除教程（需要拼接id）
+    userUpdate: '/v1/tutorial/user', // 更新教程（需要拼接 '/' + id）
+    userSubmit: '/v1/tutorial/user', // 提交审核（需要拼接 '/' + id + '/submit'）
+    userDelete: '/v1/tutorial/user', // 删除教程（需要拼接 '/' + id）
 
     // 管理员端
     adminCreate: '/v1/tutorial/admin/create', // 管理员创建教程
     adminPending: '/v1/tutorial/admin/pending', // 获取待审核列表
-    adminApprove: '/v1/tutorial/admin/', // 审核通过（需要拼接id + '/approve'）
-    adminReject: '/v1/tutorial/admin/', // 审核拒绝（需要拼接id + '/reject'）
-    adminToggleFeatured: '/v1/tutorial/admin/', // 设置精选（需要拼接id + '/featured'）
-    adminDelete: '/v1/tutorial/admin/', // 删除教程（需要拼接id）
+    adminApprove: '/v1/tutorial/admin', // 审核通过（需要拼接 '/' + id + '/approve'）
+    adminReject: '/v1/tutorial/admin', // 审核拒绝（需要拼接 '/' + id + '/reject'）
+    adminToggleFeatured: '/v1/tutorial/admin', // 设置精选（需要拼接 '/' + id + '/featured'）
+    adminDelete: '/v1/tutorial/admin', // 删除教程（需要拼接 '/' + id）
 
     // 商家端
     merchantCreate: '/v1/tutorial/merchant/create', // 商家创建教程
-    merchantUpdate: '/v1/tutorial/merchant/', // 商家更新教程（需要拼接id）
-    merchantSubmit: '/v1/tutorial/merchant/', // 提交审核（需要拼接id + '/submit'）
+    merchantUpdate: '/v1/tutorial/merchant', // 商家更新教程（需要拼接 '/' + id）
+    merchantSubmit: '/v1/tutorial/merchant', // 提交审核（需要拼接 '/' + id + '/submit'）
     merchantMy: '/v1/tutorial/merchant/my', // 获取商家教程列表
-    merchantDelete: '/v1/tutorial/merchant/' // 商家删除教程（需要拼接id）
+    merchantDelete: '/v1/tutorial/merchant' // 商家删除教程（需要拼接 '/' + id）
   },
 
   // 首页API端点

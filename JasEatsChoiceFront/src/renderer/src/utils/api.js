@@ -119,6 +119,7 @@ api.interceptors.response.use(
     const formattedError = new Error('网络请求失败，请稍后重试')
     if (error.response) {
       formattedError.status = error.response.status
+      formattedError.response = error.response // 保留完整的 response，以便访问 data
       formattedError.data = error.response.data
 
       // 根据状态码设置不同的错误消息
@@ -155,6 +156,7 @@ api.interceptors.response.use(
     }
 
     console.error('API请求失败:', formattedError)
+    console.error('错误详情:', error.response?.data || error.message)
     return Promise.reject(formattedError)
   }
 )

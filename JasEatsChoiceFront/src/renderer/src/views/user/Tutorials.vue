@@ -227,10 +227,10 @@ onMounted(() => {
         >
           返回
         </el-button>
-        <el-button @click="router.push('/user/home/my-tutorials')" class="action-btn">
+        <el-button @click="router.push('/user/home/tutorials/my')" class="action-btn">
           <el-icon><User /></el-icon> 我的教程
         </el-button>
-        <el-button type="primary" @click="router.push('/user/home/publish-tutorial')" class="publish-btn">
+        <el-button type="primary" @click="router.push('/user/home/tutorials/publish')" class="publish-btn">
           <el-icon><Plus /></el-icon> 发布教程
         </el-button>
       </div>

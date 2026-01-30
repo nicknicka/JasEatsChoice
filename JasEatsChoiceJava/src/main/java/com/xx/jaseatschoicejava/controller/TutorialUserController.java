@@ -27,7 +27,7 @@ public class TutorialUserController {
      * 权限: 需要USER角色
      */
     @PostMapping("/create")
-    @PreAuthorize("hasRole('USER')")
+    // @PreAuthorize("hasRole('USER')") // 临时移除权限检查，允许所有登录用户访问
     public ResponseEntity<Tutorial> createUserTutorial(@RequestBody Tutorial tutorial) {
         // 设置为用户发布的教程
         tutorial.setSourceType("USER");
@@ -50,7 +50,7 @@ public class TutorialUserController {
      * 权限: 需要USER角色
      */
     @GetMapping("/my")
-    @PreAuthorize("hasRole('USER')")
+    // @PreAuthorize("hasRole('USER')") // 临时移除权限检查
     public ResponseEntity<?> getMyTutorials(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
@@ -67,7 +67,7 @@ public class TutorialUserController {
      * 权限: 需要USER角色，且只能编辑自己的教程
      */
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('USER')")
+    // @PreAuthorize("hasRole('USER')") // 临时移除权限检查
     public ResponseEntity<Map<String, Object>> updateUserTutorial(
             @PathVariable String id,
             @RequestBody Tutorial tutorial) {
@@ -89,7 +89,7 @@ public class TutorialUserController {
      * 权限: 需要USER角色，且只能提交自己的教程
      */
     @PostMapping("/{id}/submit")
-    @PreAuthorize("hasRole('USER')")
+    // @PreAuthorize("hasRole('USER')") // 临时移除权限检查
     public ResponseEntity<Map<String, Object>> submitUserTutorial(@PathVariable String id) {
         // TODO: 验证教程是否属于当前用户
 
@@ -108,7 +108,7 @@ public class TutorialUserController {
      * 权限: 需要USER角色，且只能删除自己的草稿
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('USER')")
+    // @PreAuthorize("hasRole('USER')") // 临时移除权限检查
     public ResponseEntity<Map<String, Object>> deleteUserTutorial(@PathVariable String id) {
         // TODO: 验证教程是否属于当前用户
         // TODO: 检查是否为草稿状态

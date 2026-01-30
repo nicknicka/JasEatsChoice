@@ -169,7 +169,16 @@ public class TutorialServiceImpl extends ServiceImpl<TutorialMapper, Tutorial> i
         tutorial.setCreateTime(new Date());
         tutorial.setUpdateTime(new Date());
 
-        save(tutorial);
+        boolean saved = save(tutorial);
+        if (!saved) {
+            throw new RuntimeException("保存教程失败");
+        }
+
+        // 确保ID已生成
+        if (tutorial.getId() == null) {
+            throw new RuntimeException("教程ID生成失败");
+        }
+
         return tutorial;
     }
 
