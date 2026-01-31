@@ -167,6 +167,7 @@
   },
   "active": "25380c94f56f550b",
   "lastOpenFiles": [
+    "JasEatsChoiceFront/src/renderer/src/utils/avatar.js",
     "修复角色名称乱码问题.md",
     "fix_admin_charset.sql",
     "JasEatsChoiceFront/src/renderer/src/views/admin/Password.vue",
@@ -205,7 +206,6 @@
     "节日场景化推荐功能实现报告.md",
     "API接口测试文档.md",
     "想吃列表审核系统实现报告.md",
-    "备注冲突智能提示功能实现报告.md",
     "uploads/chat/94e040f0-f905-42f6-9856-26c3d8ee7dfc.png",
     "uploads/chat/5a9d962f-914f-4b93-94b6-91c38c008872.png",
     "uploads/chat/8fc5c0ca-f9c2-4ff7-a45f-36c7a39fece0.png",

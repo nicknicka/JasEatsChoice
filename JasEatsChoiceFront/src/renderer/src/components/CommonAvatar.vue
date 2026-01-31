@@ -80,6 +80,7 @@
 
 <script setup>
 import { ref, watch, computed } from 'vue'
+import { getAvatarUrl } from '@/utils/avatar'
 
 // 加载状态
 const isLoading = ref(false)
@@ -87,7 +88,8 @@ const isLoaded = ref(false)
 
 // 计算头像URL
 const timestampedAvatarUrl = computed(() => {
-  return props.avatarUrl || ''
+  // 使用getAvatarUrl工具函数处理头像URL
+  return getAvatarUrl(props.avatarUrl)
 })
 
 // 组件属性定义

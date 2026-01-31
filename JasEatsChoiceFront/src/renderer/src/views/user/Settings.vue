@@ -8,7 +8,7 @@
         <div class="form-row">
           <div class="form-label">头像</div>
           <div class="form-content">
-            <el-avatar :size="60" class="user-avatar" :src="userInfo.avatar || ''">👤</el-avatar>
+            <el-avatar :size="60" class="user-avatar" :src="getAvatarUrl(userInfo.avatar)">👤</el-avatar>
             <input
               id="avatar-upload"
               type="file"
@@ -347,6 +347,7 @@ import { API_CONFIG } from '../../config/index.js'
 import pinia from '../../store'
 import { useAuthStore } from '../../store/authStore'
 import { useUserStore } from '../../store/userStore'
+import { getAvatarUrl } from '@/utils/avatar'
 
 const authStore = useAuthStore(pinia)
 const userStore = useUserStore(pinia)

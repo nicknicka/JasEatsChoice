@@ -29,7 +29,7 @@
 
         <el-form-item label="头像">
           <div class="avatar-upload">
-            <el-avatar :size="100" :src="profileForm.avatar">
+            <el-avatar :size="100" :src="getAvatarUrl(profileForm.avatar)">
               {{ profileForm.realName ? profileForm.realName.charAt(0) : 'A' }}
             </el-avatar>
             <el-upload
@@ -81,6 +81,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getAdminInfo } from '@/utils/auth'
 import { updateAdminProfile } from '@/api/admin'
+import { getAvatarUrl } from '@/utils/avatar'
 
 const profileFormRef = ref(null)
 const loading = ref(false)

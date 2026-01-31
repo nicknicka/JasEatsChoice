@@ -99,28 +99,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Download } from '@element-plus/icons-vue'
 import { getUserList, getUserDetail, deleteUser } from '@/api/admin'
 import { exportToExcel } from '@/utils/export.js'
-import { API_CONFIG } from '@/config'
-
-// 获取完整的头像URL
-const getAvatarUrl = (avatar) => {
-  if (!avatar) {
-    // 返回默认头像
-    return 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
-  }
-
-  // 如果已经是完整URL，直接返回
-  if (avatar.startsWith('http://') || avatar.startsWith('https://')) {
-    return avatar
-  }
-
-  // 如果是相对路径，添加baseURL
-  if (avatar.startsWith('/api/')) {
-    return API_CONFIG.baseURL + avatar
-  }
-
-  // 其他情况，直接返回
-  return avatar
-}
+import { getAvatarUrl } from '@/utils/avatar'
 
 const loading = ref(false)
 const userList = ref([])
