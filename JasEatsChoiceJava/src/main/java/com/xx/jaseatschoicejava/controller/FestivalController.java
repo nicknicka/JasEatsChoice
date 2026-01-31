@@ -88,6 +88,43 @@ public class FestivalController {
     }
 
     /**
+     * 获取当前节日推荐（匹配前端API路径）
+     *
+     * @param request HTTP请求
+     * @return 节日推荐列表
+     */
+    @GetMapping("/recommendations/current")
+    public ResponseResult<List<FestivalRecommendVO>> getCurrentRecommendations(HttpServletRequest request) {
+        String userId = (String) request.getAttribute("userId");
+        if (userId == null) {
+            userId = "test_user";
+        }
+
+        List<FestivalRecommendVO> recommends = festivalService.getActiveFestivalRecommends(userId);
+        return ResponseResult.success(recommends);
+    }
+
+    /**
+     * 根据节日ID获取推荐
+     *
+     * @param festivalId 节日ID
+     * @param request HTTP请求
+     * @return 节日推荐列表
+     */
+    @GetMapping("/recommendations/festival/{festivalId}")
+    public ResponseResult<List<FestivalRecommendVO>> getRecommendationsByFestival(
+            @PathVariable String festivalId,
+            HttpServletRequest request) {
+        String userId = (String) request.getAttribute("userId");
+        if (userId == null) {
+            userId = "test_user";
+        }
+
+        List<FestivalRecommendVO> recommends = festivalService.getFestivalRecommendsById(userId, festivalId);
+        return ResponseResult.success(recommends);
+    }
+
+    /**
      * 获取首页推荐
      *
      * @param limit 限制数量

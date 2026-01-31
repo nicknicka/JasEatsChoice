@@ -43,6 +43,15 @@ public interface FestivalService {
     List<FestivalRecommendVO> getFestivalRecommendsByType(String userId, String festivalType);
 
     /**
+     * 根据节日ID获取推荐
+     *
+     * @param userId 用户ID
+     * @param festivalId 节日ID
+     * @return 节日推荐列表
+     */
+    List<FestivalRecommendVO> getFestivalRecommendsById(String userId, String festivalId);
+
+    /**
      * 获取首页推荐菜品
      *
      * @param userId 用户ID

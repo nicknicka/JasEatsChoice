@@ -66,6 +66,16 @@ public class FestivalServiceImpl implements FestivalService {
     }
 
     @Override
+    public List<FestivalRecommendVO> getFestivalRecommendsById(String userId, String festivalId) {
+        Festival festival = festivalMapper.selectById(festivalId);
+        if (festival == null) {
+            return new ArrayList<>();
+        }
+        List<Festival> festivals = List.of(festival);
+        return buildFestivalRecommendVOs(userId, festivals);
+    }
+
+    @Override
     public List<FestivalRecommendVO> getHomepageRecommends(String userId, int limit) {
         // 获取当前生效和即将到来的节日
         List<Festival> activeFestivals = festivalMapper.selectActiveFestivals();

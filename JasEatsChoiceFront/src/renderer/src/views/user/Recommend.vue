@@ -2,8 +2,6 @@
 import { ref, onMounted } from 'vue'
 import CommonLocationPicker from '../../components/CommonLocationPicker.vue'
 import CommonWeatherWidget from '../../components/CommonWeatherWidget.vue'
-import FestivalRecommendList from '../../components/FestivalRecommendList.vue'
-import UserCustomEventDialog from '../../components/UserCustomEventDialog.vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useDebounceFn } from '@vueuse/core'
@@ -11,7 +9,6 @@ import { useRecommendations } from '../../composables/useRecommendations.js'
 import { useFavorites } from '../../composables/useFavorites.js'
 import { useRecommendationFilters } from '../../composables/useRecommendationFilters.js'
 import { RECOMMENDATION_TYPE_TAGS } from '../../constants/recommendationConstants.js'
-import { Calendar } from '@element-plus/icons-vue'
 
 const router = useRouter()
 
@@ -149,40 +146,6 @@ const handleFavoriteClick = async (item) => {
 // 显示营养详情
 const showNutritionDialog = (item) => {
   showNutritionDetail.value = item
-}
-
-// 节日推荐相关
-const showMyEvents = ref(false)
-
-// 节日菜品点击
-const handleFestivalDishClick = (dish) => {
-  console.log('节日菜品点击:', dish)
-  // TODO: 跳转到菜品详情或商家页面
-}
-
-// 节日推荐加入购物车
-const handleFestivalAddToCart = async (dish) => {
-  try {
-    // TODO: 调用加入购物车API
-    ElMessage.success('已加入购物车')
-  } catch (error) {
-    ElMessage.error('操作失败')
-  }
-}
-
-// 节日推荐反馈
-const handleFestivalFeedback = async (feedback) => {
-  try {
-    await api.post('/v1/festival/feedback', feedback)
-    ElMessage.success('感谢您的反馈')
-  } catch (error) {
-    ElMessage.error('反馈提交失败')
-  }
-}
-
-// 用户事件创建成功
-const handleEventSuccess = () => {
-  ElMessage.success('纪念日添加成功')
 }
 
 // 页面加载时获取定位和推荐数据
@@ -439,23 +402,6 @@ onMounted(async () => {
       </el-button>
     </div>
 
-    <!-- 节日推荐区域 -->
-    <div class="festival-section">
-      <div class="section-header">
-        <h3>节日美食推荐</h3>
-        <el-button type="text" @click="showMyEvents = true">
-          <el-icon><Calendar /></el-icon>
-          我的纪念日
-        </el-button>
-      </div>
-      <festival-recommend-list
-        v-if="!showFestivalsOnly"
-        @dish-click="handleFestivalDishClick"
-        @add-to-cart="handleFestivalAddToCart"
-        @feedback="handleFestivalFeedback"
-      />
-    </div>
-
     <!-- 营养详情弹窗 -->
     <el-dialog v-model="showNutritionDetail" title="营养成分详情" width="400px">
       <div class="nutrition-detail" v-if="showNutritionDetail?.nutrition">
@@ -474,12 +420,6 @@ onMounted(async () => {
       </div>
       <div class="nutrition-empty" v-else>暂无详细营养信息</div>
     </el-dialog>
-
-    <!-- 用户自定义事件弹窗 -->
-    <user-custom-event-dialog
-      v-model:visible="showMyEvents"
-      @success="handleEventSuccess"
-    />
   </div>
 </template>
 
