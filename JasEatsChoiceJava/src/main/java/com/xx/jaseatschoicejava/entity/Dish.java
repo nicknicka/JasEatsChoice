@@ -47,6 +47,18 @@ public class Dish {
     @ApiModelProperty(value = "卡路里含量")
     private Integer calorie; // 卡路里含量
 
+    @TableField("cooking_minutes")
+    @ApiModelProperty(value = "标准烹饪时长（分钟）")
+    private Integer cookingMinutes; // 标准烹饪时长（分钟）
+
+    @TableField("is_fast_food")
+    @ApiModelProperty(value = "是否为快餐：true-是，false-否")
+    private Boolean isFastFood; // 是否为快餐
+
+    @TableField("step_template")
+    @ApiModelProperty(value = "步骤模板：NORMAL-正餐流程, FAST-快餐流程")
+    private String stepTemplate; // 步骤模板
+
     @TableField("ingredients")
     @ApiModelProperty(value = "食材列表（JSON格式）")
     private String ingredients; // 食材列表（JSON格式）

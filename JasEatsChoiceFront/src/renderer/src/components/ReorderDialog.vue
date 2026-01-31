@@ -183,7 +183,8 @@ const dialogVisible = computed({
 const loading = ref(false)
 const submitting = ref(false)
 const reorderData = ref(null)
-const defaultImage = 'https://via.placeholder.com/60?text=暂无图片'
+// 使用本地 SVG data URL 作为默认图片，避免依赖外部服务
+const defaultImage = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNGNUY3RjYiIHJ4PSI4Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiM5Q0EzQUYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiPuinhumike5piDwvdGV4dD48L3N2Zz4='
 
 // 选中的菜品数量
 const selectedCount = computed(() => {
