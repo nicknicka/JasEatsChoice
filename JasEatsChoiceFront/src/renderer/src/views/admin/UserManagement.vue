@@ -97,7 +97,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Download } from '@element-plus/icons-vue'
-import api from '@/utils/api'
+import { getUserList, getUserDetail, deleteUser } from '@/api/admin'
 import { exportToExcel } from '@/utils/export.js'
 
 const loading = ref(false)
@@ -119,21 +119,21 @@ const pagination = reactive({
 const fetchUserList = async () => {
   loading.value = true
   try {
-    const response = await api.get('http://localhost:8080/api/admin/users', {
-      params: {
-        page: pagination.page,
-        pageSize: pagination.pageSize,
-        keyword: searchForm.keyword
-      }
+    console.log('[用户管理] 获取用户列表, 页码:', pagination.page, '每页:', pagination.pageSize)
+    const response = await getUserList({
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+      keyword: searchForm.keyword
     })
 
     if (response.data) {
       userList.value = response.data.records || []
       pagination.total = response.data.total || 0
+      console.log('[用户管理] 获取用户列表成功, 总数:', pagination.total)
     }
   } catch (error) {
-    console.error('获取用户列表失败:', error)
-    ElMessage.error('获取用户列表失败')
+    console.error('[用户管理] 获取用户列表失败:', error)
+    ElMessage.error('获取用户列表失败: ' + (error.message || '网络错误'))
   } finally {
     loading.value = false
   }
@@ -178,14 +178,19 @@ const handleExport = () => {
 // 查看用户详情
 const handleView = async (row) => {
   try {
-    const response = await api.get(`http://localhost:8080/api/admin/users/${row.userId}`)
-    if (response.data?.success) {
-      currentUser.value = response.data.user
+    console.log('[用户管理] 查看用户详情, 用户ID:', row.userId)
+    const response = await getUserDetail(row.userId)
+
+    if (response.success && response.user) {
+      currentUser.value = response.user
       detailDialogVisible.value = true
+      console.log('[用户管理] 获取用户详情成功')
+    } else {
+      ElMessage.error(response.message || '获取用户详情失败')
     }
   } catch (error) {
-    console.error('获取用户详情失败:', error)
-    ElMessage.error('获取用户详情失败')
+    console.error('[用户管理] 获取用户详情失败:', error)
+    ElMessage.error('获取用户详情失败: ' + (error.message || '网络错误'))
   }
 }
 
@@ -208,18 +213,20 @@ const handleDelete = async (row) => {
       }
     )
 
-    const response = await api.delete(`http://localhost:8080/api/admin/users/${row.userId}`)
+    console.log('[用户管理] 删除用户, 用户ID:', row.userId)
+    const response = await deleteUser(row.userId)
 
-    if (response.data?.success) {
+    if (response.success) {
       ElMessage.success('删除成功')
       fetchUserList()
+      console.log('[用户管理] 删除用户成功')
     } else {
-      ElMessage.error(response.data?.message || '删除失败')
+      ElMessage.error(response.message || '删除失败')
     }
   } catch (error) {
     if (error !== 'cancel') {
-      console.error('删除用户失败:', error)
-      ElMessage.error('删除用户失败')
+      console.error('[用户管理] 删除用户失败:', error)
+      ElMessage.error('删除用户失败: ' + (error.message || '网络错误'))
     }
   }
 }

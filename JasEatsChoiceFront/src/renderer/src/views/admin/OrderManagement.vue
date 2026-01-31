@@ -183,7 +183,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Search, Refresh } from '@element-plus/icons-vue'
-import api from '@/utils/api'
+import { getOrderList, getOrderDetail } from '@/api/admin'
 
 const loading = ref(false)
 const orderList = ref([])
@@ -219,18 +219,17 @@ const statusForm = reactive({
 const fetchOrderList = async () => {
   loading.value = true
   try {
-    const response = await api.get('http://localhost:8080/api/admin/orders', {
-      params: {
-        page: pagination.page,
-        pageSize: pagination.pageSize,
-        keyword: searchForm.keyword,
-        status: searchForm.status
-      }
+    console.log('[订单管理] 获取订单列表, 页码:', pagination.page, '每页:', pagination.pageSize)
+    const response = await getOrderList({
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+      keyword: searchForm.keyword,
+      status: searchForm.status
     })
 
-    if (response) {
-      orderList.value = response.records || []
-      pagination.total = response.total || 0
+    if (response.data) {
+      orderList.value = response.data.records || []
+      pagination.total = response.data.total || 0
 
       // 更新统计数据
       stats.pending = orderList.value.filter(o => o.status === 'PENDING').length
@@ -238,10 +237,11 @@ const fetchOrderList = async () => {
         ['CONFIRMED', 'PREPARING', 'DELIVERING'].includes(o.status)
       ).length
       stats.completed = orderList.value.filter(o => o.status === 'COMPLETED').length
+      console.log('[订单管理] 获取订单列表成功, 总数:', pagination.total)
     }
   } catch (error) {
-    console.error('获取订单列表失败:', error)
-    ElMessage.error('获取订单列表失败')
+    console.error('[订单管理] 获取订单列表失败:', error)
+    ElMessage.error('获取订单列表失败: ' + (error.message || '网络错误'))
   } finally {
     loading.value = false
   }
@@ -291,14 +291,19 @@ const handleReset = () => {
 // 查看订单详情
 const handleView = async (row) => {
   try {
-    const response = await api.get(`http://localhost:8080/api/admin/orders/${row.orderId}`)
-    if (response) {
-      currentOrder.value = response
+    console.log('[订单管理] 查看订单详情, 订单ID:', row.orderId)
+    const response = await getOrderDetail(row.orderId)
+
+    if (response.success || response.data) {
+      currentOrder.value = response.data || response
       detailDialogVisible.value = true
+      console.log('[订单管理] 获取订单详情成功')
+    } else {
+      ElMessage.error(response.message || '获取订单详情失败')
     }
   } catch (error) {
-    console.error('获取订单详情失败:', error)
-    ElMessage.error('获取订单详情失败')
+    console.error('[订单管理] 获取订单详情失败:', error)
+    ElMessage.error('获取订单详情失败: ' + (error.message || '网络错误'))
   }
 }
 

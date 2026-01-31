@@ -149,7 +149,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh } from '@element-plus/icons-vue'
-import api from '@/utils/api'
+import { getMerchantList, auditMerchant, updateMerchantStatus } from '@/api/admin'
 
 const loading = ref(false)
 const merchantList = ref([])
@@ -185,13 +185,12 @@ const auditForm = reactive({
 const fetchMerchantList = async () => {
   loading.value = true
   try {
-    const response = await api.get('http://localhost:8080/api/admin/merchants', {
-      params: {
-        page: pagination.page,
-        pageSize: pagination.pageSize,
-        keyword: searchForm.keyword,
-        status: searchForm.status
-      }
+    console.log('[商家管理] 获取商家列表, 页码:', pagination.page, '每页:', pagination.pageSize)
+    const response = await getMerchantList({
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+      keyword: searchForm.keyword,
+      status: searchForm.status
     })
 
     if (response.data) {
@@ -203,10 +202,11 @@ const fetchMerchantList = async () => {
       stats.active = merchantList.value.filter(m => m.status === 'ACTIVE').length
       stats.pending = merchantList.value.filter(m => m.status === 'PENDING').length
       stats.inactive = merchantList.value.filter(m => m.status === 'INACTIVE').length
+      console.log('[商家管理] 获取商家列表成功, 总数:', pagination.total)
     }
   } catch (error) {
-    console.error('获取商家列表失败:', error)
-    ElMessage.error('获取商家列表失败')
+    console.error('[商家管理] 获取商家列表失败:', error)
+    ElMessage.error('获取商家列表失败: ' + (error.message || '网络错误'))
   } finally {
     loading.value = false
   }
@@ -265,41 +265,56 @@ const handleAudit = (row) => {
 // 提交审核
 const submitAudit = async () => {
   try {
-    const response = await api.put(
-      `http://localhost:8080/api/admin/merchants/${auditForm.merchantId}/audit`,
-      {
-        status: auditForm.status,
-        reason: auditForm.reason
-      }
-    )
+    console.log('[商家管理] 提交审核, 商家ID:', auditForm.merchantId, '状态:', auditForm.status)
+    const response = await auditMerchant(auditForm.merchantId, {
+      status: auditForm.status,
+      reason: auditForm.reason
+    })
 
-    if (response.data?.success) {
+    if (response.success) {
       ElMessage.success('审核完成')
       auditDialogVisible.value = false
       detailDialogVisible.value = false
       fetchMerchantList()
+      console.log('[商家管理] 审核成功')
     } else {
-      ElMessage.error(response.data?.message || '审核失败')
+      ElMessage.error(response.message || '审核失败')
     }
   } catch (error) {
-    console.error('审核失败:', error)
-    ElMessage.error('审核失败')
+    console.error('[商家管理] 审核失败:', error)
+    ElMessage.error('审核失败: ' + (error.message || '网络错误'))
   }
 }
 
 // 修改状态
 const handleEditStatus = async (row) => {
   try {
-    await ElMessageBox.prompt('请输入新状态（ACTIVE/INACTIVE）', '修改状态', {
+    const { value } = await ElMessageBox.prompt('请选择新状态', '修改状态', {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
+      inputType: 'select',
+      inputOptions: [
+        { value: 'ACTIVE', label: '营业中' },
+        { value: 'INACTIVE', label: '已暂停' }
+      ],
       inputValue: row.status
     })
 
-    ElMessage.info('状态修改功能开发中...')
-    // TODO: 实现状态修改
-  } catch {
-    // 用户取消
+    console.log('[商家管理] 修改商家状态, 商家ID:', row.merchantId, '状态:', value)
+    const response = await updateMerchantStatus(row.merchantId, value)
+
+    if (response.success) {
+      ElMessage.success('状态修改成功')
+      fetchMerchantList()
+      console.log('[商家管理] 状态修改成功')
+    } else {
+      ElMessage.error(response.message || '状态修改失败')
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('[商家管理] 状态修改失败:', error)
+      ElMessage.error('状态修改失败: ' + (error.message || '网络错误'))
+    }
   }
 }
 

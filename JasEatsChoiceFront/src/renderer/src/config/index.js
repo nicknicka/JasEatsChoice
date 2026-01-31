@@ -171,6 +171,56 @@ export const API_CONFIG = {
   upload: {
     image: '/v1/chat/upload-image', // 上传图片接口
     file: '/v1/chat/upload-file' // 上传文件接口
+  },
+
+  // 管理员API端点
+  admin: {
+    // 认证
+    login: '/admin/login', // 管理员登录
+    current: '/admin/current', // 获取当前管理员信息
+    list: '/admin/list', // 获取管理员列表
+    create: '/admin/create', // 创建管理员
+    updateStatus: '/admin/{adminId}/status', // 修改管理员状态
+    resetPassword: '/admin/{adminId}/password', // 重置管理员密码
+
+    // 统计
+    dashboard: '/admin/statistics/dashboard', // 控制台统计数据
+    userStats: '/admin/statistics/users', // 用户统计数据
+    orderStats: '/admin/statistics/orders', // 订单统计数据
+    revenueStats: '/admin/statistics/revenue', // 收入统计数据
+
+    // 用户管理
+    userList: '/admin/users', // 用户列表
+    userDetail: '/admin/users/{userId}', // 用户详情
+    updateUserStatus: '/admin/users/{userId}/status', // 修改用户状态
+    deleteUser: '/admin/users/{userId}', // 删除用户
+
+    // 商家管理
+    merchantList: '/admin/merchants', // 商家列表
+    merchantDetail: '/admin/merchants/{merchantId}', // 商家详情
+    auditMerchant: '/admin/merchants/{merchantId}/audit', // 审核商家
+    updateMerchantStatus: '/admin/merchants/{merchantId}/status', // 修改商家状态
+
+    // 订单管理
+    orderList: '/admin/orders', // 订单列表
+    orderDetail: '/admin/orders/{orderId}', // 订单详情
+
+    // 菜品管理
+    dishList: '/admin/dishes', // 菜品列表
+    dishDetail: '/admin/dishes/{dishId}', // 菜品详情
+    auditDish: '/admin/dishes/{dishId}/audit', // 审核菜品
+    updateDishStatus: '/admin/dishes/{dishId}/status', // 修改菜品状态
+
+    // 财务管理
+    withdrawalList: '/admin/finance/withdrawals', // 提现申请列表
+    auditWithdrawal: '/admin/finance/withdrawals/{id}/audit', // 审核提现
+    rechargeList: '/admin/finance/recharges', // 充值记录
+    refundList: '/admin/finance/refunds', // 退款记录
+
+    // 系统日志
+    operationLogs: '/admin/logs/operations', // 操作日志
+    systemLogs: '/admin/logs/system', // 系统日志
+    loginLogs: '/admin/logs/login' // 登录日志
   }
 }
 

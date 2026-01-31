@@ -60,11 +60,10 @@ import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { User, Lock, Platform } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import api from '@/utils/api'
-import { useAuthStore } from '../../store/authStore'
+import { adminLogin } from '@/api/admin'
+import { setAdminToken, setAdminInfo } from '@/utils/auth'
 
 const router = useRouter()
-const authStore = useAuthStore()
 
 const loginFormRef = ref(null)
 const loading = ref(false)
@@ -93,23 +92,15 @@ const handleLogin = async () => {
     await loginFormRef.value.validate()
     loading.value = true
 
-    // 调用登录API
-    const response = await api.post('http://localhost:8080/api/admin/login', {
-      username: loginForm.username,
-      password: loginForm.password
-    })
+    // 使用新的管理员API服务
+    const response = await adminLogin(loginForm.username, loginForm.password)
 
     if (response.success) {
       // 保存 token 到 localStorage（管理员专用）
-      localStorage.setItem('admin_token', response.token)
-
-      // 使用 auth store 保存 token
-      authStore.setToken(response.token)
-      authStore.setUserId(response.admin.adminId)
-      authStore.setPhone(response.admin.username)
+      setAdminToken(response.token)
 
       // 保存管理员信息
-      localStorage.setItem('admin_info', JSON.stringify(response.admin))
+      setAdminInfo(response.admin)
 
       ElMessage.success('登录成功')
 
@@ -120,7 +111,7 @@ const handleLogin = async () => {
     }
   } catch (error) {
     console.error('登录失败:', error)
-    ElMessage.error(error.response?.data?.message || '登录失败，请检查用户名和密码')
+    ElMessage.error(error.message || '登录失败，请检查用户名和密码')
   } finally {
     loading.value = false
   }

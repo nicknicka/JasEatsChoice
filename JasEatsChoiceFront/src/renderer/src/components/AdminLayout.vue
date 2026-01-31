@@ -134,9 +134,9 @@
           <el-dropdown class="user-dropdown" @command="handleCommand">
             <div class="user-info">
               <el-avatar :size="32">
-                {{ (adminInfo.realName || adminInfo.username).charAt(0).toUpperCase() }}
+                {{ getDisplayName().charAt(0) }}
               </el-avatar>
-              <span class="username">{{ adminInfo.realName || adminInfo.username }}</span>
+              <span class="username">{{ getDisplayName() }}</span>
               <el-tag v-if="adminInfo.roleName" size="small" type="warning">{{ adminInfo.roleName }}</el-tag>
               <el-icon class="el-icon--right"><ArrowDown /></el-icon>
             </div>
@@ -196,6 +196,8 @@ import {
   SwitchButton
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { getCurrentAdmin } from '@/api/admin'
+import { getAdminInfo, adminLogout } from '@/utils/auth'
 
 const router = useRouter()
 const route = useRoute()
@@ -203,12 +205,12 @@ const route = useRoute()
 // 侧边栏折叠状态
 const isCollapse = ref(false)
 
-// 管理员信息
-const adminInfo = ref({
-  username: 'admin',
-  realName: '系统管理员',
+// 管理员信息 - 从localStorage获取
+const adminInfo = ref(getAdminInfo() || {
+  username: '',
+  realName: '',
   avatar: '',
-  roleName: '超级管理员'
+  roleName: ''
 })
 
 // 当前激活的菜单
@@ -262,10 +264,8 @@ const handleCommand = async (command) => {
           cancelButtonText: '取消',
           type: 'warning'
         })
-        // 清除token
-        localStorage.removeItem('admin_token')
-        // 跳转到登录页
-        router.push('/admin/login')
+        // 使用统一的登出方法
+        adminLogout()
         ElMessage.success('退出登录成功')
       } catch {
         // 用户取消
@@ -277,13 +277,45 @@ const handleCommand = async (command) => {
 // 获取管理员信息
 const fetchAdminInfo = async () => {
   try {
-    // TODO: 调用API获取管理员信息
-    // const response = await api.get('/api/admin/current')
-    // adminInfo.value = response.data.admin
+    const response = await getCurrentAdmin()
+    if (response.success && response.admin) {
+      // 确保字符串正确编码（处理可能的乱码问题）
+      adminInfo.value = {
+        adminId: response.admin.adminId,
+        username: String(response.admin.username || ''),
+        realName: String(response.admin.realName || '管理员'),
+        avatar: response.admin.avatar || '',
+        roleCode: response.admin.roleCode || '',
+        roleName: String(response.admin.roleName || '超级管理员')
+      }
+      // 更新localStorage中的管理员信息
+      localStorage.setItem('admin_info', JSON.stringify(adminInfo.value))
+      console.log('[AdminLayout] 管理员信息已更新:', adminInfo.value)
+    }
   } catch (error) {
-    console.error('获取管理员信息失败:', error)
+    console.error('[AdminLayout] 获取管理员信息失败:', error)
+    // 如果获取失败，使用localStorage中的缓存数据
+    const cachedInfo = localStorage.getItem('admin_info')
+    if (cachedInfo) {
+      try {
+        adminInfo.value = JSON.parse(cachedInfo)
+        console.log('[AdminLayout] 使用缓存的管理员信息:', adminInfo.value)
+      } catch (parseError) {
+        console.error('[AdminLayout] 解析缓存信息失败:', parseError)
+      }
+    }
   }
 }
+
+// 获取显示名称（安全处理中文和空值）
+const getDisplayName = () => {
+  const name = adminInfo.value.realName || adminInfo.value.username || '管理员'
+  // 确保是字符串并去除首尾空格
+  return String(name).trim()
+}
+
+// 初始化时获取管理员信息
+fetchAdminInfo()
 
 // 监听路由变化
 watch(

@@ -12,19 +12,22 @@ import {
   Checked,
   Clock
 } from '@element-plus/icons-vue'
-import api from '../../utils/api.js'
+import { getDashboardStats } from '@/api/admin'
 import { API_CONFIG } from '../../config/index.js'
 import { ElMessage } from 'element-plus'
+import api from '../../utils/api.js'
 
 const router = useRouter()
 
 // 统计数据
 const stats = ref({
-  totalTutorials: 0,
-  publishedTutorials: 0,
-  pendingReview: 0,
-  totalViews: 0,
-  averageRating: 0
+  totalUsers: 0,
+  todayNewUsers: 0,
+  totalMerchants: 0,
+  todayOrders: 0,
+  todayRevenue: 0,
+  pendingAudits: 0,
+  systemAlerts: 0
 })
 
 // 最近教程
@@ -73,20 +76,19 @@ const sourceDistribution = ref([
 // 获取统计数据
 const fetchStats = async () => {
   try {
-    // TODO: 调用实际的统计API
-    // const response = await api.get(API_CONFIG.tutorial.stats + '/overview')
-    // stats.value = response.data
+    console.log('[Dashboard] 获取控制台统计数据')
+    const response = await getDashboardStats()
 
-    // 临时使用模拟数据
-    stats.value = {
-      totalTutorials: 156,
-      publishedTutorials: 142,
-      pendingReview: 8,
-      totalViews: 45680,
-      averageRating: 4.6
+    if (response.success && response.data) {
+      stats.value = response.data
+      console.log('[Dashboard] 获取统计数据成功:', stats.value)
+    } else {
+      console.warn('[Dashboard] 获取统计数据返回格式异常:', response)
+      ElMessage.warning('获取统计数据失败，显示默认值')
     }
   } catch (error) {
-    console.error('获取统计数据失败:', error)
+    console.error('[Dashboard] 获取统计数据失败:', error)
+    ElMessage.error('获取统计数据失败: ' + (error.message || '网络错误'))
   }
 }
 
@@ -183,51 +185,51 @@ onMounted(() => {
     <div class="stats-grid">
       <div class="stat-card primary">
         <div class="stat-icon">
-          <el-icon :size="40"><Document /></el-icon>
+          <el-icon :size="40"><User /></el-icon>
         </div>
         <div class="stat-info">
-          <div class="stat-value">{{ stats.totalTutorials }}</div>
-          <div class="stat-label">教程总数</div>
+          <div class="stat-value">{{ stats.totalUsers }}</div>
+          <div class="stat-label">用户总数</div>
         </div>
       </div>
 
       <div class="stat-card success">
         <div class="stat-icon">
-          <el-icon :size="40"><Checked /></el-icon>
+          <el-icon :size="40"><Shop /></el-icon>
         </div>
         <div class="stat-info">
-          <div class="stat-value">{{ stats.publishedTutorials }}</div>
-          <div class="stat-label">已发布</div>
+          <div class="stat-value">{{ stats.totalMerchants }}</div>
+          <div class="stat-label">商家总数</div>
         </div>
       </div>
 
       <div class="stat-card warning">
         <div class="stat-icon">
-          <el-icon :size="40"><Clock /></el-icon>
+          <el-icon :size="40"><Document /></el-icon>
         </div>
         <div class="stat-info">
-          <div class="stat-value">{{ stats.pendingReview }}</div>
-          <div class="stat-label">待审核</div>
+          <div class="stat-value">{{ stats.todayOrders }}</div>
+          <div class="stat-label">今日订单</div>
         </div>
       </div>
 
       <div class="stat-card info">
         <div class="stat-icon">
-          <el-icon :size="40"><View /></el-icon>
+          <el-icon :size="40"><TrendCharts /></el-icon>
         </div>
         <div class="stat-info">
-          <div class="stat-value">{{ stats.totalViews.toLocaleString() }}</div>
-          <div class="stat-label">总浏览量</div>
+          <div class="stat-value">¥{{ (stats.todayRevenue || 0).toFixed(2) }}</div>
+          <div class="stat-label">今日收入</div>
         </div>
       </div>
 
       <div class="stat-card rating">
         <div class="stat-icon">
-          <el-icon :size="40"><Star /></el-icon>
+          <el-icon :size="40"><Checked /></el-icon>
         </div>
         <div class="stat-info">
-          <div class="stat-value">{{ stats.averageRating }}</div>
-          <div class="stat-label">平均评分</div>
+          <div class="stat-value">{{ stats.todayNewUsers }}</div>
+          <div class="stat-label">今日新增用户</div>
         </div>
       </div>
     </div>

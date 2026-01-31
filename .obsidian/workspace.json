@@ -167,6 +167,7 @@
   },
   "active": "25380c94f56f550b",
   "lastOpenFiles": [
+    "JasEatsChoiceFront/src/renderer/src/api/admin.js",
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/controller/AdminFinanceController.class",
     "JasEatsChoiceJava/src/main/java/com/xx/jaseatschoicejava/controller/AdminFinanceController.java",
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/controller/AdminDishController.class",
@@ -177,7 +178,6 @@
     "JasEatsChoiceFront/src/renderer/src/views/admin/DishManagement.vue",
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/filter/JwtAuthenticationFilter.class",
     "JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/filter",
-    "JasEatsChoiceJava/src/main/java/com/xx/jaseatschoicejava/filter/JwtAuthenticationFilter.java",
     "管理员面板实现总结.md",
     "JasEatsChoiceFront/node_modules/xlsx/legend.png",
     "JasEatsChoiceFront/node_modules/xlsx/formats.png",

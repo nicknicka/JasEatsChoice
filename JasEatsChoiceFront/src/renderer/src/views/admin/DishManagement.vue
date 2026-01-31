@@ -161,7 +161,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh } from '@element-plus/icons-vue'
-import api from '@/utils/api'
+import { getDishList, getDishDetail, updateDishStatus } from '@/api/admin'
 
 const loading = ref(false)
 const dishList = ref([])
@@ -191,29 +191,29 @@ const pagination = reactive({
 const fetchDishList = async () => {
   loading.value = true
   try {
-    const response = await api.get('http://localhost:8080/api/admin/dishes', {
-      params: {
-        page: pagination.page,
-        pageSize: pagination.pageSize,
-        keyword: searchForm.keyword,
-        category: searchForm.category,
-        status: searchForm.status
-      }
+    console.log('[菜品管理] 获取菜品列表, 页码:', pagination.page, '每页:', pagination.pageSize)
+    const response = await getDishList({
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+      keyword: searchForm.keyword,
+      category: searchForm.category,
+      status: searchForm.status
     })
 
-    if (response) {
-      dishList.value = response.records || []
-      pagination.total = response.total || 0
+    if (response.data) {
+      dishList.value = response.data.records || []
+      pagination.total = response.data.total || 0
 
       // 更新统计数据
       stats.total = pagination.total
       stats.active = dishList.value.filter(d => d.status === 'ACTIVE').length
       stats.inactive = dishList.value.filter(d => d.status === 'INACTIVE').length
       stats.pending = dishList.value.filter(d => d.status === 'PENDING').length
+      console.log('[菜品管理] 获取菜品列表成功, 总数:', pagination.total)
     }
   } catch (error) {
-    console.error('获取菜品列表失败:', error)
-    ElMessage.error('获取菜品列表失败')
+    console.error('[菜品管理] 获取菜品列表失败:', error)
+    ElMessage.error('获取菜品列表失败: ' + (error.message || '网络错误'))
   } finally {
     loading.value = false
   }
@@ -257,14 +257,19 @@ const handleReset = () => {
 // 查看菜品详情
 const handleView = async (row) => {
   try {
-    const response = await api.get(`http://localhost:8080/api/admin/dishes/${row.dishId}`)
-    if (response) {
-      currentDish.value = response
+    console.log('[菜品管理] 查看菜品详情, 菜品ID:', row.dishId)
+    const response = await getDishDetail(row.dishId)
+
+    if (response.success || response.data) {
+      currentDish.value = response.data || response
       detailDialogVisible.value = true
+      console.log('[菜品管理] 获取菜品详情成功')
+    } else {
+      ElMessage.error(response.message || '获取菜品详情失败')
     }
   } catch (error) {
-    console.error('获取菜品详情失败:', error)
-    ElMessage.error('获取菜品详情失败')
+    console.error('[菜品管理] 获取菜品详情失败:', error)
+    ElMessage.error('获取菜品详情失败: ' + (error.message || '网络错误'))
   }
 }
 
@@ -281,20 +286,22 @@ const handleToggleStatus = async (row) => {
     })
 
     const newStatus = isInactive ? 'INACTIVE' : 'ACTIVE'
-    const response = await api.put(
-      `http://localhost:8080/api/admin/dishes/${row.dishId}/status`,
-      { status: newStatus }
-    )
+    console.log('[菜品管理] 修改菜品状态, 菜品ID:', row.dishId, '新状态:', newStatus)
 
-    if (response) {
+    const response = await updateDishStatus(row.dishId, newStatus)
+
+    if (response.success) {
       ElMessage.success(`${actionText}成功`)
       detailDialogVisible.value = false
       fetchDishList()
+      console.log('[菜品管理] 修改菜品状态成功')
+    } else {
+      ElMessage.error(response.message || `${actionText}失败`)
     }
   } catch (error) {
     if (error !== 'cancel') {
-      console.error(`${actionText}失败:`, error)
-      ElMessage.error(`${actionText}失败`)
+      console.error('[菜品管理] 修改菜品状态失败:', error)
+      ElMessage.error(`${actionText}失败: ` + (error.message || '网络错误'))
     }
   }
 }
