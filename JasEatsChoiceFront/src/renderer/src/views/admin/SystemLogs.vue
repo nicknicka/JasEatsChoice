@@ -32,11 +32,11 @@
             v-model="searchForm.username"
             placeholder="用户名"
             clearable
-            style="width="150px"
+            style="width: 150px"
           />
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="全部" clearable style="width="120px">
+          <el-select v-model="searchForm.status" placeholder="全部" clearable style="width: 120px">
             <el-option label="成功" value="SUCCESS" />
             <el-option label="失败" value="FAIL" />
           </el-select>

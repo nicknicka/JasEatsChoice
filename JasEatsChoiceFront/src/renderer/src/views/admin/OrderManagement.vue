@@ -228,9 +228,9 @@ const fetchOrderList = async () => {
       }
     })
 
-    if (response.data) {
-      orderList.value = response.data.records || []
-      pagination.total = response.data.total || 0
+    if (response) {
+      orderList.value = response.records || []
+      pagination.total = response.total || 0
 
       // 更新统计数据
       stats.pending = orderList.value.filter(o => o.status === 'PENDING').length
@@ -292,8 +292,8 @@ const handleReset = () => {
 const handleView = async (row) => {
   try {
     const response = await api.get(`http://localhost:8080/api/admin/orders/${row.orderId}`)
-    if (response.data?.success) {
-      currentOrder.value = response.data.order
+    if (response) {
+      currentOrder.value = response
       detailDialogVisible.value = true
     }
   } catch (error) {
@@ -317,13 +317,11 @@ const submitStatusUpdate = async () => {
       { status: statusForm.status }
     )
 
-    if (response.data?.success) {
+    if (response) {
       ElMessage.success('状态修改成功')
       statusDialogVisible.value = false
       detailDialogVisible.value = false
       fetchOrderList()
-    } else {
-      ElMessage.error(response.data?.message || '状态修改失败')
     }
   } catch (error) {
     console.error('状态修改失败:', error)

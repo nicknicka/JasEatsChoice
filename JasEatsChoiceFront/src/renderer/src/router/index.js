@@ -437,6 +437,18 @@ const router = createRouter({
           meta: { title: '佳食宜选-订单管理' }
         },
         {
+          path: 'dishes',
+          name: 'admin-dishes',
+          component: () => import('../views/admin/DishManagement.vue'),
+          meta: { title: '佳食宜选-菜品管理' }
+        },
+        {
+          path: 'dishes/audit',
+          name: 'admin-dishes-audit',
+          component: () => import('../views/admin/DishAudit.vue'),
+          meta: { title: '佳食宜选-菜品审核' }
+        },
+        {
           path: 'tutorials/manage', // 教程管理
           name: 'admin-tutorial-manage',
           component: AdminTutorialManage,
@@ -465,6 +477,18 @@ const router = createRouter({
           name: 'admin-withdrawals',
           component: () => import('../views/admin/WithdrawalAudit.vue'),
           meta: { title: '佳食宜选-提现审核' }
+        },
+        {
+          path: 'finance/recharges',
+          name: 'admin-recharges',
+          component: () => import('../views/admin/RechargeManagement.vue'),
+          meta: { title: '佳食宜选-充值记录' }
+        },
+        {
+          path: 'finance/refunds',
+          name: 'admin-refunds',
+          component: () => import('../views/admin/RefundManagement.vue'),
+          meta: { title: '佳食宜选-退款管理' }
         },
         {
           path: 'settings', // 管理员设置
