@@ -2,6 +2,13 @@ server:
   port: 8080
   servlet:
     context-path: /api
+    # 强制请求和响应使用UTF-8编码
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+      force-request: true
+      force-response: true
 
 spring:
   # 文件上传配置
@@ -15,12 +22,16 @@ spring:
       charset: UTF-8
       enabled: true
       force: true
-  # 数据库配置
+  # 数据库配置 - 使用utf8mb4字符集
   datasource:
     url: jdbc:mysql://localhost:3306/jia_shi_yi_xuan?useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=GMT%2B8
     username: root
     password: 123456
     driver-class-name: com.mysql.cj.jdbc.Driver
+    # HikariCP连接池配置
+    hikari:
+      connection-init-sql: SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci
+      # 数据库连接初始化SQL，确保使用UTF8MB4字符集
 
   # Redis配置
   data:
@@ -30,11 +41,38 @@ spring:
       password:
       database: 0
       timeout: 10000ms
+      # Redis连接配置（使用lettuce）
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: -1ms
 
-  # Jackson配置
+  # Jackson配置 - JSON序列化编码
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
     time-zone: GMT+8
+    # 确保JSON使用UTF-8编码
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+    # 强制UTF-8编码
+    charset: UTF-8
+    # 禁止转义Unicode字符（让中文直接显示，而不是\uXXXX格式）
+    parser:
+      allow-unquoted-control-chars: true
+    # 非严格JSON解析
+    lenient: true
+
+# Spring MVC配置
+spring.mvc:
+  # 强制响应编码为UTF-8
+  format:
+    date: yyyy-MM-dd HH:mm:ss
+    time: HH:mm:ss
+  # 设置静态资源编码
+  staticpath-pattern: /**
 
 # MyBatis-Plus配置
 mybatis-plus:

@@ -1,8 +1,12 @@
 package com.xx.jaseatschoicejava.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.boot.autoconfigure.jackson.Jackson2ObjectMapperBuilderCustomizer;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.StringHttpMessageConverter;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -29,6 +33,32 @@ public class WebConfig implements WebMvcConfigurer {
         StringHttpMessageConverter stringConverter = new StringHttpMessageConverter(StandardCharsets.UTF_8);
         stringConverter.setWriteAcceptCharset(false); // 避免在响应头中添加charset
         converters.add(0, stringConverter);
+
+        // 配置JSON转换器使用UTF-8
+        for (HttpMessageConverter<?> converter : converters) {
+            if (converter instanceof MappingJackson2HttpMessageConverter) {
+                MappingJackson2HttpMessageConverter jsonConverter = (MappingJackson2HttpMessageConverter) converter;
+                jsonConverter.setDefaultCharset(StandardCharsets.UTF_8);
+            }
+        }
+    }
+
+    /**
+     * 配置Jackson ObjectMapper，确保JSON使用UTF-8编码
+     */
+    @Bean
+    public Jackson2ObjectMapperBuilderCustomizer jackson2ObjectMapperBuilderCustomizer() {
+        return builder -> {
+            // 禁止未知属性报错
+            builder.failOnUnknownProperties(false);
+            // 禁止空Bean报错
+            builder.failOnEmptyBeans(false);
+            // 禁止将日期写为时间戳
+            builder.featuresToDisable(
+                    com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS
+            );
+            // 其他配置通过application.yml完成
+        };
     }
 
     /**
