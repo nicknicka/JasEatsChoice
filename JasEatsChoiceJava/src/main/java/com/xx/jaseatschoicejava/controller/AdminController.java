@@ -167,7 +167,7 @@ public class AdminController {
      * 获取当前登录管理员信息
      */
     @ApiOperation("获取当前管理员信息")
-    @GetMapping("/current")
+    @GetMapping(value = "/current", produces = "application/json;charset=UTF-8")
     public ResponseEntity<Map<String, Object>> getCurrentAdmin() {
         Map<String, Object> response = new HashMap<>();
 
@@ -190,19 +190,23 @@ public class AdminController {
             if (admin != null) {
                 Map<String, Object> adminInfo = new HashMap<>();
                 adminInfo.put("adminId", admin.getAdminId());
-                adminInfo.put("username", admin.getUsername());
-                adminInfo.put("realName", admin.getRealName());
-                adminInfo.put("avatar", admin.getAvatar());
-                adminInfo.put("roleCode", admin.getRoleCode());
-                adminInfo.put("roleName", admin.getRoleName());
+                adminInfo.put("username", admin.getUsername() != null ? admin.getUsername() : "");
+                adminInfo.put("realName", admin.getRealName() != null ? admin.getRealName() : "管理员");
+                adminInfo.put("avatar", admin.getAvatar() != null ? admin.getAvatar() : "");
+                adminInfo.put("roleCode", admin.getRoleCode() != null ? admin.getRoleCode() : "");
+                adminInfo.put("roleName", admin.getRoleName() != null ? admin.getRoleName() : "超级管理员");
                 response.put("success", true);
                 response.put("admin", adminInfo);
-                return ResponseEntity.ok(response);
+                return ResponseEntity.ok()
+                    .header("Content-Type", "application/json;charset=UTF-8")
+                    .body(response);
             }
         }
 
         response.put("success", false);
         response.put("message", "未找到管理员信息");
-        return ResponseEntity.status(404).body(response);
+        return ResponseEntity.status(404)
+            .header("Content-Type", "application/json;charset=UTF-8")
+            .body(response);
     }
 }

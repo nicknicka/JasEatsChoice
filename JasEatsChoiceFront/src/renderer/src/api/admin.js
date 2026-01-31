@@ -118,6 +118,42 @@ export function resetAdminPassword(adminId, password) {
     })
 }
 
+/**
+ * 更新个人信息
+ * @param {Object} profileData - 个人信息数据
+ * @returns {Promise} 更新结果
+ */
+export function updateAdminProfile(profileData) {
+  console.log('[管理员API] 更新个人信息:', profileData)
+  return api.put('/admin/profile', profileData)
+    .then(response => {
+      console.log('[管理员API] 更新个人信息成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 更新个人信息失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 修改密码
+ * @param {Object} passwordData - 密码数据
+ * @returns {Promise} 修改结果
+ */
+export function changeAdminPassword(passwordData) {
+  console.log('[管理员API] 修改密码')
+  return api.put('/admin/password', passwordData)
+    .then(response => {
+      console.log('[管理员API] 修改密码成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 修改密码失败:', error)
+      throw error
+    })
+}
+
 // ==================== 统计数据 ====================
 
 /**

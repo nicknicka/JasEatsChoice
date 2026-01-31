@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.TableField;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -31,10 +32,12 @@ public class User {
 
     @TableField("password")
     @ApiModelProperty(value = "密码")
+    @JsonIgnore
     private String password; // 密码
 
     @TableField("payment_password")
     @ApiModelProperty(value = "支付密码（加密存储）")
+    @JsonIgnore
     private String paymentPassword; // 支付密码（加密存储）
 
     @TableField("has_payment_password")

@@ -200,9 +200,9 @@ const fetchDishList = async () => {
       status: searchForm.status
     })
 
-    if (response.data) {
-      dishList.value = response.data.records || []
-      pagination.total = response.data.total || 0
+    if (response) {
+      dishList.value = response.records || []
+      pagination.total = response.total || 0
 
       // 更新统计数据
       stats.total = pagination.total

@@ -227,5 +227,15 @@ export const API_CONFIG = {
 // WebSocket配置
 export const WS_CONFIG = {
   url: 'ws://localhost:11277/ws', // WebSocket服务器地址 - 通用端点（用于订单等）
-  chatUrl: 'ws://localhost:11277/ws/chat' // 聊天专用端点
+  chatUrl: 'ws://localhost:11277/ws/chat' // 聁天专用端点
+}
+
+// 角色名称映射配置（用于修复数据库中的乱码问题）
+export const ROLE_NAME_MAP = {
+  'SUPER_ADMIN': '超级管理员',
+  'ADMIN': '管理员',
+  'USER_MANAGER': '用户管理员',
+  'MERCHANT_MANAGER': '商家管理员',
+  'CONTENT_MANAGER': '内容管理员',
+  'FINANCE_MANAGER': '财务管理员'
 }

@@ -139,8 +139,8 @@ const fetchRoleList = async () => {
       params: { page: 1, pageSize: 100 }
     })
 
-    if (response.data) {
-      roleList.value = response.data.records || []
+    if (response) {
+      roleList.value = response.records || []
     }
   } catch (error) {
     console.error('获取角色列表失败:', error)

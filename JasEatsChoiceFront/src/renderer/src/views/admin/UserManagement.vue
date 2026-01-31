@@ -31,7 +31,7 @@
         <el-table-column prop="userId" label="用户ID" width="200" />
         <el-table-column label="头像" width="80">
           <template #default="{ row }">
-            <el-avatar :size="40" :src="row.avatar" />
+            <el-avatar :size="40" :src="getAvatarUrl(row.avatar)" />
           </template>
         </el-table-column>
         <el-table-column prop="nickname" label="昵称" min-width="120" />
@@ -99,6 +99,28 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Download } from '@element-plus/icons-vue'
 import { getUserList, getUserDetail, deleteUser } from '@/api/admin'
 import { exportToExcel } from '@/utils/export.js'
+import { API_CONFIG } from '@/config'
+
+// 获取完整的头像URL
+const getAvatarUrl = (avatar) => {
+  if (!avatar) {
+    // 返回默认头像
+    return 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
+  }
+
+  // 如果已经是完整URL，直接返回
+  if (avatar.startsWith('http://') || avatar.startsWith('https://')) {
+    return avatar
+  }
+
+  // 如果是相对路径，添加baseURL
+  if (avatar.startsWith('/api/')) {
+    return API_CONFIG.baseURL + avatar
+  }
+
+  // 其他情况，直接返回
+  return avatar
+}
 
 const loading = ref(false)
 const userList = ref([])
@@ -126,10 +148,13 @@ const fetchUserList = async () => {
       keyword: searchForm.keyword
     })
 
-    if (response.data) {
-      userList.value = response.data.records || []
-      pagination.total = response.data.total || 0
-      console.log('[用户管理] 获取用户列表成功, 总数:', pagination.total)
+    console.log('[用户管理] API响应:', response)
+
+    // api.js返回的是response.data，所以response就是IPage对象
+    if (response) {
+      userList.value = response.records || []
+      pagination.total = response.total || 0
+      console.log('[用户管理] 获取用户列表成功, 总数:', pagination.total, '记录数:', userList.value.length)
     }
   } catch (error) {
     console.error('[用户管理] 获取用户列表失败:', error)

@@ -193,12 +193,12 @@ const fetchMerchantList = async () => {
       status: searchForm.status
     })
 
-    if (response.data) {
-      merchantList.value = response.data.records || []
-      pagination.total = response.data.total || 0
+    if (response) {
+      merchantList.value = response.records || []
+      pagination.total = response.total || 0
 
       // 更新统计数据
-      stats.total = response.data.total || 0
+      stats.total = response.total || 0
       stats.active = merchantList.value.filter(m => m.status === 'ACTIVE').length
       stats.pending = merchantList.value.filter(m => m.status === 'PENDING').length
       stats.inactive = merchantList.value.filter(m => m.status === 'INACTIVE').length

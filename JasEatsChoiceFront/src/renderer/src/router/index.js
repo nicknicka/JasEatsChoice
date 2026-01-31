@@ -497,6 +497,18 @@ const router = createRouter({
           meta: { title: '佳食宜选-系统设置' }
         },
         {
+          path: 'settings/profile', // 管理员个人信息
+          name: 'admin-profile',
+          component: () => import('../views/admin/Profile.vue'),
+          meta: { title: '佳食宜选-个人信息' }
+        },
+        {
+          path: 'settings/password', // 修改密码
+          name: 'admin-password',
+          component: () => import('../views/admin/Password.vue'),
+          meta: { title: '佳食宜选-修改密码' }
+        },
+        {
           path: 'settings/roles',
           name: 'admin-roles',
           component: () => import('../views/admin/RoleManagement.vue'),

@@ -227,9 +227,9 @@ const fetchOrderList = async () => {
       status: searchForm.status
     })
 
-    if (response.data) {
-      orderList.value = response.data.records || []
-      pagination.total = response.data.total || 0
+    if (response) {
+      orderList.value = response.records || []
+      pagination.total = response.total || 0
 
       // 更新统计数据
       stats.pending = orderList.value.filter(o => o.status === 'PENDING').length

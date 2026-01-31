@@ -137,7 +137,7 @@
                 {{ getDisplayName().charAt(0) }}
               </el-avatar>
               <span class="username">{{ getDisplayName() }}</span>
-              <el-tag v-if="adminInfo.roleName" size="small" type="warning">{{ adminInfo.roleName }}</el-tag>
+              <el-tag v-if="getRoleName()" size="small" type="warning">{{ getRoleName() }}</el-tag>
               <el-icon class="el-icon--right"><ArrowDown /></el-icon>
             </div>
             <template #dropdown>
@@ -198,6 +198,7 @@ import {
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getCurrentAdmin } from '@/api/admin'
 import { getAdminInfo, adminLogout } from '@/utils/auth'
+import { ROLE_NAME_MAP } from '@/config'
 
 const router = useRouter()
 const route = useRoute()
@@ -312,6 +313,24 @@ const getDisplayName = () => {
   const name = adminInfo.value.realName || adminInfo.value.username || '管理员'
   // 确保是字符串并去除首尾空格
   return String(name).trim()
+}
+
+// 获取角色名称（修复乱码问题）
+const getRoleName = () => {
+  const roleCode = adminInfo.value.roleCode
+  const roleName = adminInfo.value.roleName
+
+  // 如果有roleCode映射，直接使用映射值（最可靠的方式）
+  if (roleCode && ROLE_NAME_MAP[roleCode]) {
+    return ROLE_NAME_MAP[roleCode]
+  }
+
+  // 检测乱码：包含常见的编码错误字符或异常长的字符串
+  if (!roleName || roleName.length > 50 || /[\u0080-\uFFFF][\u0000-\u007F]/.test(roleName)) {
+    return ROLE_NAME_MAP[roleCode] || ROLE_NAME_MAP['SUPER_ADMIN'] || '超级管理员'
+  }
+
+  return roleName || '超级管理员'
 }
 
 // 初始化时获取管理员信息
