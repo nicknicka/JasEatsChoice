@@ -136,7 +136,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, VideoCamera, Document, Loading } from '@element-plus/icons-vue'
 import ContentExtractionDialog from './ContentExtractionDialog.vue'
 import ExtractionDetailDialog from './ExtractionDetailDialog.vue'
-import api from '@/api'
+import contentExtractionApi from '@/api/contentExtraction'
 
 const loading = ref(false)
 const showAddDialog = ref(false)
@@ -199,9 +199,9 @@ const formatTime = (time) => {
 const loadSources = async () => {
   loading.value = true
   try {
-    const response = await api.get('/v1/content-extraction/sources')
-    if (response.data.code === 200) {
-      sources.value = response.data.data || []
+    const response = await contentExtractionApi.getSources()
+    if (response.code === 200) {
+      sources.value = response.data || []
     }
   } catch (error) {
     console.error('加载失败:', error)
@@ -240,8 +240,8 @@ const deleteSource = async (source) => {
       type: 'warning'
     })
 
-    const response = await api.delete(`/v1/content-extraction/source/${source.id}`)
-    if (response.data.code === 200) {
+    const response = await contentExtractionApi.deleteSource(source.id)
+    if (response.code === 200) {
       ElMessage.success('删除成功')
       loadSources()
     }

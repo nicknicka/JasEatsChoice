@@ -201,7 +201,7 @@
 import { ref, watch, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
-import api from '@/api'
+import contentExtractionApi from '@/api/contentExtraction'
 
 const props = defineProps({
   visible: {
@@ -233,9 +233,9 @@ const loadExtraction = async () => {
 
   loading.value = true
   try {
-    const response = await api.get(`/v1/content-extraction/extraction/${props.extractionId}`)
-    if (response.data.code === 200) {
-      extraction.value = response.data.data
+    const response = await contentExtractionApi.getExtractionDetail(props.extractionId)
+    if (response.code === 200) {
+      extraction.value = response.data
 
       // 确保ingredients和steps是数组
       if (!extraction.value.ingredients) {
@@ -294,7 +294,7 @@ const cancelEdit = () => {
 const saveExtraction = async () => {
   try {
     saving.value = true
-    const response = await api.put('/v1/content-extraction/extraction', {
+    const response = await contentExtractionApi.updateExtraction(extraction.value.id, {
       extractionId: extraction.value.id,
       dishName: extraction.value.dishName,
       dishImage: extraction.value.dishImage,
@@ -307,7 +307,7 @@ const saveExtraction = async () => {
       calories: extraction.value.calories
     })
 
-    if (response.data.code === 200) {
+    if (response.code === 200) {
       ElMessage.success('保存成功')
       isEditing.value = false
     }
@@ -323,11 +323,9 @@ const saveExtraction = async () => {
 const publishAsRecipe = async () => {
   try {
     publishing.value = true
-    const response = await api.post(
-      `/v1/content-extraction/extraction/${extraction.value.id}/publish`
-    )
+    const response = await contentExtractionApi.publishAsRecipe(extraction.value.id, {})
 
-    if (response.data.code === 200) {
+    if (response.code === 200) {
       ElMessage.success('发布成功')
       emit('published')
       handleClose()

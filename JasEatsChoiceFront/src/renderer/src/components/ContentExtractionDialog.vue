@@ -50,7 +50,7 @@
 import { ref, reactive, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Platform } from '@element-plus/icons-vue'
-import api from '@/api'
+import contentExtractionApi from '@/api/contentExtraction'
 
 const props = defineProps({
   visible: {
@@ -101,7 +101,7 @@ const handleSubmit = async () => {
     await formRef.value.validate()
 
     submitting.value = true
-    const response = await api.post('/v1/content-extraction/source', {
+    const response = await contentExtractionApi.createSource({
       contentUrl: form.contentUrl
     })
 

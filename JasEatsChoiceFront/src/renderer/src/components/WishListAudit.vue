@@ -207,7 +207,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Calendar } from '@element-plus/icons-vue'
-import api from '@/api'
+import wishListApi from '@/api/wishList'
 
 const props = defineProps({
   merchantId: {
@@ -304,15 +304,9 @@ const formatTime = (time) => {
 const loadItems = async () => {
   loading.value = true
   try {
-    let url = '/v1/wish-list/merchant/pending'
-    if (activeTab.value === 'all') {
-      // TODO: 需要添加获取全部列表的接口
-      url = '/v1/wish-list/merchant/pending'
-    }
-
-    const response = await api.get(url)
-    if (response.data.code === 200) {
-      items.value = response.data.data || []
+    const response = await wishListApi.getPendingItems(props.merchantId || '')
+    if (response.code === 200) {
+      items.value = response.data || []
 
       // 计算统计
       pendingCount.value = items.value.filter(i => i.auditStatus === 0).length
@@ -357,15 +351,14 @@ const handleAudit = (item, approve) => {
 const confirmAudit = async () => {
   try {
     auditing.value = true
-    const response = await api.post('/v1/wish-list/audit', {
-      wishListItemId: currentItem.value.id,
+    const response = await wishListApi.auditItem(currentItem.value.id, {
       approved: isApprove.value,
       actualAvailableTime: auditForm.actualAvailableTime,
       rejectionReasonCode: auditForm.rejectionReasonCode,
       auditRemark: auditForm.auditRemark
     })
 
-    if (response.data.code === 200) {
+    if (response.code === 200) {
       ElMessage.success(isApprove.value ? '审核通过' : '已拒绝')
       auditDialogVisible.value = false
       loadItems()
@@ -391,12 +384,11 @@ const submitAppeal = async () => {
     await appealFormRef.value.validate()
 
     appealing.value = true
-    const response = await api.post('/v1/wish-list/appeal', {
-      wishListItemId: currentItem.value.id,
+    const response = await wishListApi.appealRejection(currentItem.value.id, {
       appealContent: appealForm.appealContent
     })
 
-    if (response.data.code === 200) {
+    if (response.code === 200) {
       ElMessage.success('申诉提交成功')
       appealDialogVisible.value = false
       loadItems()

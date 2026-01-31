@@ -45,6 +45,7 @@ const MerchantStatistics = () => import('../views/merchant/Statistics.vue') // �
 const MerchantOrderDetail = () => import('../views/merchant/OrderDetail.vue') // 订单详情
 const MerchantComments = () => import('../views/merchant/Comments.vue') // 商家评价中心
 const MerchantRegister = () => import('../views/merchant/MerchantRegister.vue') // 商家注册
+const MerchantWishListAudit = () => import('../views/merchant/WishListAudit.vue') // 想吃列表审核
 
 // 创建路由实例
 const router = createRouter({
@@ -372,6 +373,12 @@ const router = createRouter({
           name: 'merchant-tutorials',
           component: () => import('../views/merchant/TutorialManage.vue'),
           meta: { title: '佳食宜选-教程管理' }
+        },
+        {
+          path: 'wish-list-audit', // 想吃列表审核
+          name: 'merchant-wish-list-audit',
+          component: MerchantWishListAudit,
+          meta: { title: '佳食宜选-想吃列表审核' }
         }
       ]
     },

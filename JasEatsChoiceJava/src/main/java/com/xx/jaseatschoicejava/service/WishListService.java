@@ -64,9 +64,10 @@ public interface WishListService {
      * 商家回复申诉
      *
      * @param dto 申诉回复DTO
+     * @param replierId 回复人ID
      * @return 是否成功
      */
-    boolean replyAppeal(AppealReplyDTO dto);
+    boolean replyAppeal(AppealReplyDTO dto, String replierId);
 
     /**
      * 用户撤回想吃列表项

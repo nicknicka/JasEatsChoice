@@ -99,7 +99,7 @@
 <script setup>
 import { ref, reactive, computed } from 'vue'
 import { ElMessage } from 'element-plus'
-import api from '@/api'
+import festivalApi from '@/api/festival'
 
 const props = defineProps({
   visible: {
@@ -158,9 +158,9 @@ const handleSubmit = async () => {
     await formRef.value.validate()
 
     submitting.value = true
-    const response = await api.post('/v1/festival/custom-event', form)
+    const response = await festivalApi.createCustomEvent(form)
 
-    if (response.data.code === 200) {
+    if (response.code === 200) {
       ElMessage.success('创建成功')
       emit('success')
       handleClose()

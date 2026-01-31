@@ -26,6 +26,11 @@
             <el-tab-pane label="食谱优化" name="recipe">
               <RecipeOptimization />
             </el-tab-pane>
+
+            <!-- 内容提取 - 新增 -->
+            <el-tab-pane label="内容提取" name="extraction">
+              <ContentExtractionTab />
+            </el-tab-pane>
           </el-tabs>
         </div>
       </el-main>
@@ -46,6 +51,17 @@ const RecipeOptimization = defineAsyncComponent({
   loader: () => import('./AI/components/RecipeOptimization.vue'),
   errorComponent: () => h('div', { style: 'padding: 20px; text-align: center; color: #909399;' }, [
     h('p', '食谱优化组件加载失败'),
+    h('p', { style: 'font-size: 14px; margin-top: 8px;' }, '请刷新页面重试')
+  ]),
+  delay: 200,
+  timeout: 3000
+})
+
+// 内容提取组件
+const ContentExtractionTab = defineAsyncComponent({
+  loader: () => import('./AI/components/ContentExtractionTab.vue'),
+  errorComponent: () => h('div', { style: 'padding: 20px; text-align: center; color: #909399;' }, [
+    h('p', '内容提取组件加载失败'),
     h('p', { style: 'font-size: 14px; margin-top: 8px;' }, '请刷新页面重试')
   ]),
   delay: 200,

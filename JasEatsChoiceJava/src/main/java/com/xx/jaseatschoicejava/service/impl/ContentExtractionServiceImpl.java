@@ -451,16 +451,16 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
         // 转换JSON数据为对象
         try {
             if (extraction.getIngredients() != null) {
-                List<ContentExtractionUpdateDTO.IngredientItem> ingredients =
+                List<ContentExtractionDetailVO.IngredientItem> ingredients =
                     objectMapper.readValue(extraction.getIngredients(),
-                        new com.fasterxml.jackson.core.type.TypeReference<List<ContentExtractionUpdateDTO.IngredientItem>>() {});
+                        new com.fasterxml.jackson.core.type.TypeReference<List<ContentExtractionDetailVO.IngredientItem>>() {});
                 vo.setIngredients(ingredients);
             }
 
             if (extraction.getSteps() != null) {
-                List<ContentExtractionUpdateDTO.StepItem> steps =
+                List<ContentExtractionDetailVO.StepItem> steps =
                     objectMapper.readValue(extraction.getSteps(),
-                        new com.fasterxml.jackson.core.type.TypeReference<List<ContentExtractionUpdateDTO.StepItem>>() {});
+                        new com.fasterxml.jackson.core.type.TypeReference<List<ContentExtractionDetailVO.StepItem>>() {});
                 vo.setSteps(steps);
             }
 

@@ -56,7 +56,7 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import FestivalRecommendCard from './FestivalRecommendCard.vue'
-import api from '@/api'
+import festivalApi from '@/api/festival'
 
 const loading = ref(false)
 const activeTab = ref('all')
@@ -68,13 +68,14 @@ const loadFestivals = async () => {
   try {
     let response
     if (activeTab.value === 'all') {
-      response = await api.get('/v1/festival/active')
+      response = await festivalApi.getCurrentRecommendations()
     } else {
-      response = await api.get(`/v1/festival/type/${activeTab.value}`)
+      // 需要根据节日类型获取推荐，这里暂时使用全部接口
+      response = await festivalApi.getCurrentRecommendations()
     }
 
-    if (response.data.code === 200) {
-      festivals.value = response.data.data || []
+    if (response.code === 200) {
+      festivals.value = response.data || []
     }
   } catch (error) {
     console.error('加载节日推荐失败:', error)
@@ -107,9 +108,9 @@ const handleAddToCart = async (dish) => {
 }
 
 // 提交反馈
-const handleSubmitFeedback = async (feedback) => {
+const handleSubmitFeedback = async (data) => {
   try {
-    await api.post('/v1/festival/feedback', feedback)
+    await festivalApi.submitFeedback(data.recommendId, data)
   } catch (error) {
     console.error('提交反馈失败:', error)
   }
