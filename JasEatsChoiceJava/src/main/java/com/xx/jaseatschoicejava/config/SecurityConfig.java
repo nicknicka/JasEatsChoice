@@ -1,5 +1,9 @@
 package com.xx.jaseatschoicejava.config;
 
+import com.xx.jaseatschoicejava.filter.JwtAuthenticationFilter;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.firewall.StrictHttpFirewall;
 import org.springframework.security.web.firewall.HttpFirewall;
 import org.springframework.web.filter.CorsFilter;
@@ -11,11 +15,6 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -28,6 +27,9 @@ import java.io.IOException;
 @EnableWebSecurity
 @EnableGlobalMethodSecurity(prePostEnabled = true) // 启用方法级别的权限控制
 public class SecurityConfig {
+
+    @Autowired
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     // 允许URL中包含双斜杠的防火墙
     @Bean
@@ -80,17 +82,6 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    // Configure in-memory user for testing
-    @Bean
-    public UserDetailsService userDetailsService(PasswordEncoder passwordEncoder) {
-        InMemoryUserDetailsManager manager = new InMemoryUserDetailsManager();
-        manager.createUser(User.withUsername("admin")
-            .password(passwordEncoder.encode("admin"))
-            .roles("ADMIN")
-            .build());
-        return manager;
-    }
-
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -99,7 +90,9 @@ public class SecurityConfig {
             .and()
             // Disable CSRF protection for API endpoints
             .csrf().disable()
-            // Allow all requests without authentication
+            // Add JWT authentication filter
+            .addFilterBefore(jwtAuthenticationFilter, org.springframework.security.web.access.intercept.FilterSecurityInterceptor.class)
+            // Configure authorization
             .authorizeRequests()
             .antMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Allow all OPTIONS requests
             .antMatchers("/**").permitAll()

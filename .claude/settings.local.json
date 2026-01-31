@@ -344,7 +344,9 @@
       "Bash(npm run lint:fix:*)",
       "Bash(file=\"./components/$component.vue\")",
       "Bash(/Users/nickxiao/JasEatsChoice/JasEatsChoiceJava/mvnw clean compile:*)",
-      "Bash(/Users/nickxiao/JasEatsChoice/JasEatsChoiceJava/mvnw:*)"
+      "Bash(/Users/nickxiao/JasEatsChoice/JasEatsChoiceJava/mvnw:*)",
+      "Bash(/opt/homebrew/bin/mysql:*)",
+      "Bash(ps:*)"
     ],
     "deny": [],
     "ask": [],

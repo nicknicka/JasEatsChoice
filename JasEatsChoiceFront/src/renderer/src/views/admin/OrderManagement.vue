@@ -183,7 +183,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Search, Refresh } from '@element-plus/icons-vue'
-import axios from 'axios'
+import api from '@/utils/api'
 
 const loading = ref(false)
 const orderList = ref([])
@@ -219,7 +219,7 @@ const statusForm = reactive({
 const fetchOrderList = async () => {
   loading.value = true
   try {
-    const response = await axios.get('http://localhost:8080/api/admin/orders', {
+    const response = await api.get('http://localhost:8080/api/admin/orders', {
       params: {
         page: pagination.page,
         pageSize: pagination.pageSize,
@@ -291,7 +291,7 @@ const handleReset = () => {
 // 查看订单详情
 const handleView = async (row) => {
   try {
-    const response = await axios.get(`http://localhost:8080/api/admin/orders/${row.orderId}`)
+    const response = await api.get(`http://localhost:8080/api/admin/orders/${row.orderId}`)
     if (response.data?.success) {
       currentOrder.value = response.data.order
       detailDialogVisible.value = true
@@ -312,7 +312,7 @@ const handleUpdateStatus = (row) => {
 // 提交状态修改
 const submitStatusUpdate = async () => {
   try {
-    const response = await axios.put(
+    const response = await api.put(
       `http://localhost:8080/api/admin/orders/${statusForm.orderId}/status`,
       { status: statusForm.status }
     )

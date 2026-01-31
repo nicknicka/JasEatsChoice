@@ -17,7 +17,7 @@ import java.util.Map;
  */
 @Api(tags = "管理员-统计数据")
 @RestController
-@RequestMapping("/api/admin/statistics")
+@RequestMapping("/admin/statistics")
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminStatisticsController {
 

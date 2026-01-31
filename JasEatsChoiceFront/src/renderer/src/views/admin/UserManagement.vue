@@ -97,7 +97,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Download } from '@element-plus/icons-vue'
-import axios from 'axios'
+import api from '@/utils/api'
 import { exportToExcel } from '@/utils/export.js'
 
 const loading = ref(false)
@@ -119,7 +119,7 @@ const pagination = reactive({
 const fetchUserList = async () => {
   loading.value = true
   try {
-    const response = await axios.get('http://localhost:8080/api/admin/users', {
+    const response = await api.get('http://localhost:8080/api/admin/users', {
       params: {
         page: pagination.page,
         pageSize: pagination.pageSize,
@@ -178,7 +178,7 @@ const handleExport = () => {
 // 查看用户详情
 const handleView = async (row) => {
   try {
-    const response = await axios.get(`http://localhost:8080/api/admin/users/${row.userId}`)
+    const response = await api.get(`http://localhost:8080/api/admin/users/${row.userId}`)
     if (response.data?.success) {
       currentUser.value = response.data.user
       detailDialogVisible.value = true
@@ -208,7 +208,7 @@ const handleDelete = async (row) => {
       }
     )
 
-    const response = await axios.delete(`http://localhost:8080/api/admin/users/${row.userId}`)
+    const response = await api.delete(`http://localhost:8080/api/admin/users/${row.userId}`)
 
     if (response.data?.success) {
       ElMessage.success('删除成功')

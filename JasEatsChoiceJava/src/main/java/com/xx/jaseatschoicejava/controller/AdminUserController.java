@@ -19,7 +19,7 @@ import java.util.Map;
  */
 @Api(tags = "管理员-用户管理")
 @RestController
-@RequestMapping("/api/admin/users")
+@RequestMapping("/admin/users")
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminUserController {
 

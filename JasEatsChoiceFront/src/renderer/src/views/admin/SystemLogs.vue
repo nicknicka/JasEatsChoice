@@ -155,7 +155,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Search, Refresh } from '@element-plus/icons-vue'
-import axios from 'axios'
+import api from '@/utils/api'
 
 const loading = ref(false)
 const logList = ref([])
@@ -181,7 +181,7 @@ const fetchLogList = async () => {
   loading.value = true
   try {
     // TODO: 调用实际的日志API
-    // const response = await axios.get('http://localhost:8080/api/admin/settings/logs', {
+    // const response = await api.get('http://localhost:8080/api/admin/settings/logs', {
     //   params: {
     //     page: pagination.page,
     //     pageSize: pagination.pageSize,

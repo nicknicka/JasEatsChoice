@@ -3,9 +3,8 @@
     <!-- 侧边栏 -->
     <el-aside :width="isCollapse ? '64px' : '240px'" class="admin-aside">
       <div class="logo-container">
-        <img v-if="!isCollapse" src="/logo.png" alt="Logo" class="logo-img" />
+        <el-icon class="logo-icon"><Platform /></el-icon>
         <span v-if="!isCollapse" class="logo-text">管理员后台</span>
-        <el-icon v-else class="logo-icon"><Platform /></el-icon>
       </div>
 
       <el-menu
@@ -134,7 +133,9 @@
           <!-- 用户信息下拉菜单 -->
           <el-dropdown class="user-dropdown" @command="handleCommand">
             <div class="user-info">
-              <el-avatar :size="32" :src="adminInfo.avatar || '/default-avatar.png'" />
+              <el-avatar :size="32">
+                {{ (adminInfo.realName || adminInfo.username).charAt(0).toUpperCase() }}
+              </el-avatar>
               <span class="username">{{ adminInfo.realName || adminInfo.username }}</span>
               <el-tag v-if="adminInfo.roleName" size="small" type="warning">{{ adminInfo.roleName }}</el-tag>
               <el-icon class="el-icon--right"><ArrowDown /></el-icon>

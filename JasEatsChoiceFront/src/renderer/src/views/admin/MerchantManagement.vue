@@ -149,7 +149,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh } from '@element-plus/icons-vue'
-import axios from 'axios'
+import api from '@/utils/api'
 
 const loading = ref(false)
 const merchantList = ref([])
@@ -185,7 +185,7 @@ const auditForm = reactive({
 const fetchMerchantList = async () => {
   loading.value = true
   try {
-    const response = await axios.get('http://localhost:8080/api/admin/merchants', {
+    const response = await api.get('http://localhost:8080/api/admin/merchants', {
       params: {
         page: pagination.page,
         pageSize: pagination.pageSize,
@@ -265,7 +265,7 @@ const handleAudit = (row) => {
 // 提交审核
 const submitAudit = async () => {
   try {
-    const response = await axios.put(
+    const response = await api.put(
       `http://localhost:8080/api/admin/merchants/${auditForm.merchantId}/audit`,
       {
         status: auditForm.status,

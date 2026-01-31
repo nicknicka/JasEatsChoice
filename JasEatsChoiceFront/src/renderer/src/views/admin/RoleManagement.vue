@@ -100,7 +100,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
-import axios from 'axios'
+import api from '@/utils/api'
 
 const loading = ref(false)
 const roleList = ref([])
@@ -135,7 +135,7 @@ const permissionTree = ref([])
 const fetchRoleList = async () => {
   loading.value = true
   try {
-    const response = await axios.get('http://localhost:8080/api/admin/settings/roles', {
+    const response = await api.get('http://localhost:8080/api/admin/settings/roles', {
       params: { page: 1, pageSize: 100 }
     })
 
@@ -154,7 +154,7 @@ const fetchRoleList = async () => {
 const fetchPermissionTree = async () => {
   try {
     // TODO: 调用实际的权限树API
-    // const response = await axios.get('http://localhost:8080/api/admin/settings/permissions/tree')
+    // const response = await api.get('http://localhost:8080/api/admin/settings/permissions/tree')
     // permissionTree.value = response.data
 
     // 临时使用模拟数据
@@ -218,7 +218,7 @@ const handleDelete = async (row) => {
       }
     )
 
-    const response = await axios.delete(`http://localhost:8080/api/admin/settings/roles/${row.roleId}`)
+    const response = await api.delete(`http://localhost:8080/api/admin/settings/roles/${row.roleId}`)
 
     if (response.data?.success) {
       ElMessage.success('删除成功')
@@ -243,8 +243,8 @@ const submitRole = async () => {
     submitting.value = true
 
     const response = isEdit.value
-      ? await axios.put(`http://localhost:8080/api/admin/settings/roles/${roleForm.roleId}`, roleForm)
-      : await axios.post('http://localhost:8080/api/admin/settings/roles', roleForm)
+      ? await api.put(`http://localhost:8080/api/admin/settings/roles/${roleForm.roleId}`, roleForm)
+      : await api.post('http://localhost:8080/api/admin/settings/roles', roleForm)
 
     if (response.data?.success) {
       ElMessage.success(isEdit.value ? '更新成功' : '创建成功')
@@ -265,7 +265,7 @@ const submitRole = async () => {
 const handleAssignPermissions = async (row) => {
   try {
     // 获取角色已有的权限
-    const response = await axios.get(`http://localhost:8080/api/admin/settings/roles/${row.roleId}/permissions`)
+    const response = await api.get(`http://localhost:8080/api/admin/settings/roles/${row.roleId}/permissions`)
 
     if (response.data?.success) {
       const permissionIds = response.data.permissionIds || []
@@ -299,7 +299,7 @@ const submitPermissions = async () => {
     const halfCheckedKeys = permissionTreeRef.value.getHalfCheckedKeys()
     const allPermissionIds = [...checkedKeys, ...halfCheckedKeys]
 
-    const response = await axios.post(
+    const response = await api.post(
       `http://localhost:8080/api/admin/settings/roles/${roleForm.roleId}/permissions`,
       { permissionIds: allPermissionIds }
     )

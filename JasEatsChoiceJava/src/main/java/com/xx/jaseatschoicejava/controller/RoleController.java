@@ -21,7 +21,7 @@ import java.util.Map;
  */
 @Api(tags = "角色管理")
 @RestController
-@RequestMapping("/api/admin/settings/roles")
+@RequestMapping("/admin/settings/roles")
 @PreAuthorize("hasRole('ADMIN')")
 public class RoleController {
 

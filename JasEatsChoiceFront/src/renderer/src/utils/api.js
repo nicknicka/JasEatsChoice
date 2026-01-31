@@ -63,8 +63,15 @@ import { useAuthStore } from '../store/authStore'
 api.interceptors.request.use(
   (config) => {
     // 添加请求头，如token等
-    const authStore = useAuthStore(pinia) // 使用 Pinia store 获取 token
-    const token = authStore.token
+    // 优先从 authStore 获取 token（用户端）
+    const authStore = useAuthStore(pinia)
+    let token = authStore.token
+
+    // 如果没有找到 token，尝试从 localStorage 读取管理员 token
+    if (!token) {
+      token = localStorage.getItem('admin_token')
+    }
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }

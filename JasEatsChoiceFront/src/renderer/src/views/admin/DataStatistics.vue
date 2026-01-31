@@ -138,7 +138,7 @@ import { ref, reactive, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Refresh, Download } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
-import axios from 'axios'
+import api from '@/utils/api'
 
 const dateRange = ref('7')
 const customDateRange = ref(null)
@@ -174,7 +174,7 @@ const fetchStatistics = async () => {
   loading.value = true
   try {
     // TODO: 调用实际的统计API
-    // const response = await axios.get('http://localhost:8080/api/admin/statistics/dashboard', {
+    // const response = await api.get('http://localhost:8080/api/admin/statistics/dashboard', {
     //   params: { days: dateRange.value }
     // })
 

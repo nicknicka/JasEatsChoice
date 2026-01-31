@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -34,6 +35,28 @@ public class JwtUtil {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
         claims.put("phone", phone);
+
+        return Jwts.builder()
+                .claims(claims)
+                .subject(phone)
+                .issuedAt(new Date(System.currentTimeMillis()))
+                .expiration(new Date(System.currentTimeMillis() + jwtConfig.getExpiration()))
+                .signWith(jwtConfig.getSigningKey())
+                .compact();
+    }
+
+    /**
+     * Generate JWT token with permissions (for admin)
+     * @param userId User ID
+     * @param phone User phone number
+     * @param permissions Permission list
+     * @return JWT token
+     */
+    public String generateToken(String userId, String phone, List<String> permissions) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("userId", userId);
+        claims.put("phone", phone);
+        claims.put("permissions", permissions);
 
         return Jwts.builder()
                 .claims(claims)
@@ -74,6 +97,20 @@ public class JwtUtil {
      */
     public String extractPhone(String token) {
         return extractClaims(token).getSubject();
+    }
+
+    /**
+     * Extract permissions from JWT token
+     * @param token JWT token
+     * @return List of permissions
+     */
+    @SuppressWarnings("unchecked")
+    public List<String> extractPermissions(String token) {
+        Object permissions = extractClaims(token).get("permissions");
+        if (permissions instanceof List) {
+            return (List<String>) permissions;
+        }
+        return null;
     }
 
     /**

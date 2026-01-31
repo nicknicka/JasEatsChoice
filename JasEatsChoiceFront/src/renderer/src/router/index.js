@@ -512,12 +512,7 @@ router.beforeEach((to, from, next) => {
   if (to.path.startsWith('/admin')) {
     // 管理员登录页面不需要验证
     if (to.path === '/admin/login') {
-      // 如果已登录，跳转到控制台
-      if (isAdminLoggedIn()) {
-        next('/admin/dashboard')
-      } else {
-        next()
-      }
+      next()
       return
     }
 

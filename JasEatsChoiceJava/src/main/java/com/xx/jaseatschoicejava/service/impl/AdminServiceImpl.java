@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.xx.jaseatschoicejava.entity.Admin;
 import com.xx.jaseatschoicejava.entity.AdminOperationLog;
 import com.xx.jaseatschoicejava.mapper.AdminMapper;
+import com.xx.jaseatschoicejava.mapper.PermissionMapper;
 import com.xx.jaseatschoicejava.service.AdminService;
 import com.xx.jaseatschoicejava.service.AdminOperationLogService;
 import com.xx.jaseatschoicejava.util.JwtUtil;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 管理员服务实现
@@ -29,6 +31,9 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
 
     @Autowired
     private AdminOperationLogService operationLogService;
+
+    @Autowired
+    private PermissionMapper permissionMapper;
 
     @Override
     public String login(String username, String password) {
@@ -48,8 +53,50 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
         admin.setLastLoginTime(LocalDateTime.now());
         updateById(admin);
 
-        // 生成JWT令牌（使用管理员ID和用户名）
-        return jwtUtil.generateToken(String.valueOf(admin.getAdminId()), admin.getUsername());
+        // 加载管理员的权限列表
+        List<String> permissions = null;
+        if (admin.getRoleId() != null) {
+            permissions = permissionMapper.selectPermissionCodesByRoleId(admin.getRoleId());
+            // 如果没有权限，默认给所有权限（超级管理员）
+            if (permissions == null || permissions.isEmpty()) {
+                permissions = getAllPermissions();
+            }
+        } else {
+            // 没有角色的管理员，给予所有权限
+            permissions = getAllPermissions();
+        }
+
+        // 生成JWT令牌（使用管理员ID、用户名和权限列表）
+        return jwtUtil.generateToken(String.valueOf(admin.getAdminId()), admin.getUsername(), permissions);
+    }
+
+    /**
+     * 获取所有权限（用于超级管理员）
+     */
+    private List<String> getAllPermissions() {
+        return List.of(
+            "admin:user:list",
+            "admin:user:detail",
+            "admin:user:status",
+            "admin:user:delete",
+            "admin:merchant:list",
+            "admin:merchant:audit",
+            "admin:order:list",
+            "admin:dish:list",
+            "admin:dish:audit",
+            "admin:tutorial:manage",
+            "admin:tutorial:review",
+            "admin:topic:manage",
+            "admin:announcement:manage",
+            "admin:finance:withdrawals",
+            "admin:finance:recharges",
+            "admin:finance:refunds",
+            "admin:setting:role",
+            "admin:setting:permission",
+            "admin:setting:logs",
+            "admin:setting:config",
+            "admin:statistics:view"
+        );
     }
 
     @Override

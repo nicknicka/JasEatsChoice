@@ -111,7 +111,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Refresh } from '@element-plus/icons-vue'
-import axios from 'axios'
+import api from '@/utils/api'
 
 const loading = ref(false)
 const permissionList = ref([])
@@ -171,7 +171,7 @@ const fetchPermissionList = async () => {
   loading.value = true
   try {
     // TODO: 调用实际的权限树API
-    // const response = await axios.get('http://localhost:8080/api/admin/settings/permissions/tree')
+    // const response = await api.get('http://localhost:8080/api/admin/settings/permissions/tree')
 
     // 临时使用模拟数据
     permissionList.value = [

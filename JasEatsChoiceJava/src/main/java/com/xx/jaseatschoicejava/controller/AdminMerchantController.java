@@ -19,7 +19,7 @@ import java.util.Map;
  */
 @Api(tags = "管理员-商家管理")
 @RestController
-@RequestMapping("/api/admin/merchants")
+@RequestMapping("/admin/merchants")
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminMerchantController {
 

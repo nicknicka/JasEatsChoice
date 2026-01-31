@@ -97,7 +97,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
-import axios from 'axios'
+import api from '@/utils/api'
 
 const loading = ref(false)
 const pendingList = ref([])
@@ -127,7 +127,7 @@ const fetchPendingList = async () => {
   loading.value = true
   try {
     // TODO: 调用实际的待审核商家API
-    // const response = await axios.get('http://localhost:8080/api/admin/merchants/pending', {
+    // const response = await api.get('http://localhost:8080/api/admin/merchants/pending', {
     //   params: { page: pagination.page, pageSize: pagination.pageSize }
     // })
 
@@ -171,7 +171,7 @@ const handleAudit = (row, status) => {
 // 提交审核
 const submitAudit = async () => {
   try {
-    const response = await axios.put(
+    const response = await api.put(
       `http://localhost:8080/api/admin/merchants/${auditForm.merchantId}/audit`,
       {
         status: auditForm.status,

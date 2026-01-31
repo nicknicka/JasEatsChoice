@@ -60,16 +60,18 @@ import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { User, Lock, Platform } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import axios from 'axios'
+import api from '@/utils/api'
+import { useAuthStore } from '../../store/authStore'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 const loginFormRef = ref(null)
 const loading = ref(false)
 
 const loginForm = reactive({
-  username: 'admin',
-  password: 'admin123',
+  username: '',
+  password: '',
   remember: false
 })
 
@@ -92,24 +94,29 @@ const handleLogin = async () => {
     loading.value = true
 
     // 调用登录API
-    const response = await axios.post('http://localhost:8080/api/admin/login', {
+    const response = await api.post('http://localhost:8080/api/admin/login', {
       username: loginForm.username,
       password: loginForm.password
     })
 
-    if (response.data.success) {
-      // 保存token
-      localStorage.setItem('admin_token', response.data.token)
+    if (response.success) {
+      // 保存 token 到 localStorage（管理员专用）
+      localStorage.setItem('admin_token', response.token)
+
+      // 使用 auth store 保存 token
+      authStore.setToken(response.token)
+      authStore.setUserId(response.admin.adminId)
+      authStore.setPhone(response.admin.username)
 
       // 保存管理员信息
-      localStorage.setItem('admin_info', JSON.stringify(response.data.admin))
+      localStorage.setItem('admin_info', JSON.stringify(response.admin))
 
       ElMessage.success('登录成功')
 
       // 跳转到控制台
       router.push('/admin/dashboard')
     } else {
-      ElMessage.error(response.data.message || '登录失败')
+      ElMessage.error(response.message || '登录失败')
     }
   } catch (error) {
     console.error('登录失败:', error)
