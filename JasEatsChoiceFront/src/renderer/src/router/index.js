@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { isAdminLoggedIn } from '../utils/auth'
 
 // Import auth views
 const Login = () => import('../views/user/Login.vue')
@@ -46,6 +47,15 @@ const MerchantOrderDetail = () => import('../views/merchant/OrderDetail.vue') //
 const MerchantComments = () => import('../views/merchant/Comments.vue') // 商家评价中心
 const MerchantRegister = () => import('../views/merchant/MerchantRegister.vue') // 商家注册
 const MerchantWishListAudit = () => import('../views/merchant/WishListAudit.vue') // 想吃列表审核
+
+// Import admin layout
+const AdminLayout = () => import('../components/AdminLayout.vue') // 管理员布局
+const AdminLogin = () => import('../views/admin/Login.vue') // 管理员登录
+const AdminDashboard = () => import('../views/admin/Dashboard.vue') // 管理员控制台
+const AdminUserManagement = () => import('../views/admin/UserManagement.vue') // 用户管理
+const AdminTutorialReview = () => import('../views/admin/TutorialReview.vue') // 教程审核
+const AdminTutorialManage = () => import('../views/admin/TutorialManage.vue') // 教程管理
+const AdminSettings = () => import('../views/admin/Settings.vue') // 系统设置
 
 // 创建路由实例
 const router = createRouter({
@@ -382,36 +392,109 @@ const router = createRouter({
         }
       ]
     },
+    // 管理员登录路由
+    {
+      path: '/admin/login',
+      name: 'admin-login',
+      component: AdminLogin,
+      meta: { title: '佳食宜选-管理员登录' }
+    },
     // 管理员模块路由
     {
       path: '/admin',
-      name: 'admin',
+      component: AdminLayout,
       redirect: '/admin/dashboard',
-      meta: { title: '佳食宜选-管理员中心' },
+      meta: { title: '佳食宜选-管理员中心', requiresAuth: true },
       children: [
         {
-          path: '',
+          path: 'dashboard',
           name: 'admin-dashboard',
-          component: () => import('../views/admin/Dashboard.vue'),
+          component: AdminDashboard,
           meta: { title: '佳食宜选-管理员控制台' }
         },
         {
-          path: 'tutorials/review', // 教程审核
-          name: 'admin-tutorial-review',
-          component: () => import('../views/admin/TutorialReview.vue'),
-          meta: { title: '佳食宜选-教程审核' }
+          path: 'users',
+          name: 'admin-users',
+          component: AdminUserManagement,
+          meta: { title: '佳食宜选-用户管理' }
+        },
+        {
+          path: 'merchants',
+          name: 'admin-merchants',
+          component: () => import('../views/admin/MerchantManagement.vue'),
+          meta: { title: '佳食宜选-商家管理' }
+        },
+        {
+          path: 'merchants/audit',
+          name: 'admin-merchants-audit',
+          component: () => import('../views/admin/MerchantAudit.vue'),
+          meta: { title: '佳食宜选-商家审核' }
+        },
+        {
+          path: 'orders',
+          name: 'admin-orders',
+          component: () => import('../views/admin/OrderManagement.vue'),
+          meta: { title: '佳食宜选-订单管理' }
         },
         {
           path: 'tutorials/manage', // 教程管理
           name: 'admin-tutorial-manage',
-          component: () => import('../views/admin/TutorialManage.vue'),
+          component: AdminTutorialManage,
           meta: { title: '佳食宜选-教程管理' }
+        },
+        {
+          path: 'tutorials/review', // 教程审核
+          name: 'admin-tutorial-review',
+          component: AdminTutorialReview,
+          meta: { title: '佳食宜选-教程审核' }
+        },
+        {
+          path: 'topics',
+          name: 'admin-topics',
+          component: () => import('../views/admin/TopicManagement.vue'),
+          meta: { title: '佳食宜选-热点话题管理' }
+        },
+        {
+          path: 'announcements',
+          name: 'admin-announcements',
+          component: () => import('../views/admin/AnnouncementManagement.vue'),
+          meta: { title: '佳食宜选-公告管理' }
+        },
+        {
+          path: 'finance/withdrawals',
+          name: 'admin-withdrawals',
+          component: () => import('../views/admin/WithdrawalAudit.vue'),
+          meta: { title: '佳食宜选-提现审核' }
         },
         {
           path: 'settings', // 管理员设置
           name: 'admin-settings',
-          component: () => import('../views/admin/Settings.vue'),
+          component: AdminSettings,
           meta: { title: '佳食宜选-系统设置' }
+        },
+        {
+          path: 'settings/roles',
+          name: 'admin-roles',
+          component: () => import('../views/admin/RoleManagement.vue'),
+          meta: { title: '佳食宜选-角色管理' }
+        },
+        {
+          path: 'settings/permissions',
+          name: 'admin-permissions',
+          component: () => import('../views/admin/PermissionManagement.vue'),
+          meta: { title: '佳食宜选-权限管理' }
+        },
+        {
+          path: 'settings/logs',
+          name: 'admin-logs',
+          component: () => import('../views/admin/SystemLogs.vue'),
+          meta: { title: '佳食宜选-系统日志' }
+        },
+        {
+          path: 'statistics',
+          name: 'admin-statistics',
+          component: () => import('../views/admin/DataStatistics.vue'),
+          meta: { title: '佳食宜选-数据统计' }
         }
       ]
     }
@@ -425,15 +508,27 @@ router.beforeEach((to, from, next) => {
     document.title = to.meta.title
   }
 
-  // 注释掉开发环境自动清除登录信息的代码，否则会导致登录后无法跳转
-  // 检查是否是开发环境，如果是，自动清除登录信息，方便调试
-  // if (process.env.NODE_ENV === 'development') {
-  //   localStorage.removeItem('token');
-  //   localStorage.removeItem('isLoggedIn');
-  //   localStorage.removeItem('currentRole');
-  // }
+  // 管理员路由权限验证
+  if (to.path.startsWith('/admin')) {
+    // 管理员登录页面不需要验证
+    if (to.path === '/admin/login') {
+      // 如果已登录，跳转到控制台
+      if (isAdminLoggedIn()) {
+        next('/admin/dashboard')
+      } else {
+        next()
+      }
+      return
+    }
 
-  // 移除路由保护逻辑，直接跳转
+    // 其他管理员页面需要验证登录状态
+    if (!isAdminLoggedIn()) {
+      // 未登录，跳转到登录页
+      next('/admin/login')
+      return
+    }
+  }
+
   next()
 })
 

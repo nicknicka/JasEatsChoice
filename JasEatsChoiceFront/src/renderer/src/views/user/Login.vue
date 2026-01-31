@@ -162,6 +162,10 @@
           <span>没有账号？</span>
           <el-link type="primary" @click="toRegister">立即注册</el-link>
         </div>
+
+        <div class="admin-link">
+          <el-link type="info" @click="toAdminLogin">管理员登录</el-link>
+        </div>
       </el-form>
     </div>
   </div>
@@ -471,6 +475,15 @@ const toRegister = () => {
   router.push('/register')
 }
 
+// 跳转到管理员登录页面
+const toAdminLogin = () => {
+  // 重置表单
+  if (loginFormRef.value) {
+    loginFormRef.value.resetFields()
+  }
+  router.push('/admin/login')
+}
+
 // 微信扫码登录
 const wechatScanLogin = () => {
   // 弹出微信扫码登录窗口或显示二维码
@@ -534,6 +547,12 @@ const thirdPartyLogin = (type) => {
   span {
     margin-right: 8px;
   }
+}
+
+.admin-link {
+  text-align: center;
+  margin-top: 10px;
+  font-size: 13px;
 }
 
 // 加载动画样式

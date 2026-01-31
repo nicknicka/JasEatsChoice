@@ -6,6 +6,7 @@ import './assets/css/styles.less'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import router from './router'
 import pinia from './store' // 引入 Pinia 实例
+import permission from './directives/permission' // 引入权限指令
 
 const app = createApp(App)
 
@@ -16,6 +17,9 @@ for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
 
 // 使用 Pinia
 app.use(pinia)
+
+// 注册权限指令
+app.directive('permission', permission)
 
 // 忽略百分比超出范围的Vue警告
 app.config.warnHandler = (msg, vm, trace) => {

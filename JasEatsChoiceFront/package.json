@@ -21,6 +21,7 @@
     "@element-plus/icons-vue": "^2.3.2",
     "axios": "^1.13.2",
     "bufferutil": "^4.0.9",
+    "echarts": "^6.0.0",
     "electron": "^25.9.8",
     "electron-store": "^8.2.0",
     "electron-updater": "^6.1.1",
@@ -30,7 +31,8 @@
     "qrcode": "^1.5.4",
     "utf-8-validate": "^6.0.5",
     "vue-router": "^4.6.3",
-    "ws": "^8.18.3"
+    "ws": "^8.18.3",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@babel/plugin-proposal-decorators": "^7.28.0",
