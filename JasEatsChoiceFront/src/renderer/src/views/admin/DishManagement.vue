@@ -81,12 +81,12 @@
           <template #default="{ row }">
             <el-button type="primary" size="small" link @click="handleView(row)">查看</el-button>
             <el-button
-              :type="row.status === 'ACTIVE' ? 'warning' : 'success'"
+              :type="isActiveStatus(row.status, row.statusCode) ? 'warning' : 'success'"
               size="small"
               link
               @click="handleToggleStatus(row)"
             >
-              {{ row.status === 'ACTIVE' ? '下架' : '上架' }}
+              {{ isActiveStatus(row.status, row.statusCode) ? '下架' : '上架' }}
             </el-button>
           </template>
         </el-table-column>
@@ -221,6 +221,12 @@ const fetchDishList = async () => {
 
 // 获取状态类型
 const getStatusType = (status) => {
+  // 如果是Boolean类型，转换为状态代码
+  if (typeof status === 'boolean') {
+    return status ? 'success' : 'info'
+  }
+
+  // 如果是String类型，使用映射
   const types = {
     'ACTIVE': 'success',
     'INACTIVE': 'info',
@@ -231,12 +237,33 @@ const getStatusType = (status) => {
 
 // 获取状态文本
 const getStatusText = (status) => {
+  // 如果是Boolean类型，转换为文本
+  if (typeof status === 'boolean') {
+    return status ? '已上架' : '已下架'
+  }
+
+  // 如果是String类型，使用映射
   const texts = {
     'ACTIVE': '已上架',
     'INACTIVE': '已下架',
     'PENDING': '待审核'
   }
   return texts[status] || '未知'
+}
+
+// 判断是否为上架状态（支持Boolean和String两种类型）
+const isActiveStatus = (status, statusCode) => {
+  // 优先使用statusCode
+  if (statusCode === 'ACTIVE') return true
+  if (statusCode === 'INACTIVE') return false
+
+  // 如果status是Boolean类型
+  if (typeof status === 'boolean') {
+    return status
+  }
+
+  // 如果status是String类型
+  return status === 'ACTIVE'
 }
 
 // 搜索
@@ -275,8 +302,9 @@ const handleView = async (row) => {
 
 // 切换状态
 const handleToggleStatus = async (row) => {
-  const isInactive = row.status === 'ACTIVE'
-  const actionText = isInactive ? '下架' : '上架'
+  // 判断是否为上架状态（支持Boolean和String两种类型）
+  const isActive = isActiveStatus(row.status, row.statusCode)
+  const actionText = isActive ? '下架' : '上架'
 
   try {
     await ElMessageBox.confirm(`确定要${actionText}该菜品吗？`, '提示', {

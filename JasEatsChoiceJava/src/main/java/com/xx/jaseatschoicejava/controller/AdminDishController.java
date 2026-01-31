@@ -3,7 +3,9 @@ package com.xx.jaseatschoicejava.controller;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.xx.jaseatschoicejava.entity.Dish;
+import com.xx.jaseatschoicejava.entity.Merchant;
 import com.xx.jaseatschoicejava.service.DishService;
+import com.xx.jaseatschoicejava.service.MerchantService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +28,9 @@ public class AdminDishController {
     @Autowired
     private DishService dishService;
 
+    @Autowired
+    private MerchantService merchantService;
+
     /**
      * 获取菜品列表（分页）
      */
@@ -42,6 +47,20 @@ public class AdminDishController {
         Page<Dish> pageParam = new Page<>(page, pageSize);
         IPage<Dish> result = dishService.page(pageParam);
 
+        // 为每个菜品添加商家名称和状态代码
+        result.getRecords().forEach(dish -> {
+            // 设置商家名称
+            if (dish.getMerchantId() != null) {
+                Merchant merchant = merchantService.getById(dish.getMerchantId());
+                if (merchant != null) {
+                    dish.setMerchantName(merchant.getName());
+                }
+            }
+
+            // 设置状态代码
+            dish.setStatusCode(dish.getStatus() ? "ACTIVE" : "INACTIVE");
+        });
+
         return ResponseEntity.ok(result);
     }
 
@@ -56,6 +75,17 @@ public class AdminDishController {
 
         Map<String, Object> response = new HashMap<>();
         if (dish != null) {
+            // 添加商家名称
+            if (dish.getMerchantId() != null) {
+                Merchant merchant = merchantService.getById(dish.getMerchantId());
+                if (merchant != null) {
+                    dish.setMerchantName(merchant.getName());
+                }
+            }
+
+            // 添加状态代码
+            dish.setStatusCode(dish.getStatus() ? "ACTIVE" : "INACTIVE");
+
             response.put("success", true);
             response.put("dish", dish);
             return ResponseEntity.ok(response);

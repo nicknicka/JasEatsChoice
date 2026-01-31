@@ -3,6 +3,7 @@ package com.xx.jaseatschoicejava.entity;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 // import com.fasterxml.jackson.databind.JsonNode;
@@ -25,14 +26,20 @@ public class Dish {
 
     @TableId(type = com.baomidou.mybatisplus.annotation.IdType.ASSIGN_ID)
     @ApiModelProperty(value = "菜品ID")
+    @JsonProperty("dishId")  // 序列化时使用dishId
     private String id; // 菜品ID
 
     @TableField("merchant_id")
     @ApiModelProperty(value = "商家ID")
     private String merchantId; // 商家ID
 
+    @TableField(exist = false)  // 不映射到数据库字段
+    @ApiModelProperty(value = "商家名称")
+    private String merchantName; // 商家名称（用于前端显示）
+
     @TableField("name")
     @ApiModelProperty(value = "菜品名称")
+    @JsonProperty("dishName")  // 序列化时使用dishName
     private String name; // 菜品名称
 
     @TableField("category")
@@ -82,6 +89,10 @@ public class Dish {
     @TableField("status")
     @ApiModelProperty(value = "状态：true-上架，false-下架")
     private Boolean status; // 状态：true-上架，false-下架
+
+    @TableField(exist = false)  // 不映射到数据库字段
+    @ApiModelProperty(value = "状态代码（用于前端显示）")
+    private String statusCode; // 状态代码：ACTIVE-上架，INACTIVE-下架
 
     @TableField("stock")
     @ApiModelProperty(value = "库存数量")

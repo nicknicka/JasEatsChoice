@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
@@ -25,6 +26,7 @@ public class Order {
 
     @TableId(type = IdType.INPUT)
     @ApiModelProperty(value = "订单ID")
+    @JsonProperty("orderId")  // 序列化时使用orderId
     private String id; // 订单ID
 
     @TableField("user_id")
@@ -35,6 +37,10 @@ public class Order {
     @ApiModelProperty(value = "商家ID")
     private String merchantId; // 商家ID
 
+    @TableField(exist = false)  // 不映射到数据库字段
+    @ApiModelProperty(value = "商家名称")
+    private String merchantName; // 商家名称（用于前端显示）
+
     @TableField("total_amount")
     @ApiModelProperty(value = "订单总金额")
     private BigDecimal totalAmount; // 订单总金额
@@ -42,6 +48,10 @@ public class Order {
     @TableField("status")
     @ApiModelProperty(value = "订单状态：0-待支付、1-待接单、2-备菜中、3-烹饪中、4-待上菜、5-已送达、6-已取消、7-已完成")
     private Integer status; // 订单状态：0-待支付、1-待接单、2-备菜中、3-烹饪中、4-待上菜、5-已送达、6-已取消、7-已完成
+
+    @TableField(exist = false)  // 不映射到数据库字段
+    @ApiModelProperty(value = "订单状态文本")
+    private String statusText; // 订单状态文本（用于前端显示）
 
     @TableField("payment_id")
     @ApiModelProperty(value = "支付记录ID")

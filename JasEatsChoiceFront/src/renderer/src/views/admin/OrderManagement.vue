@@ -249,6 +249,22 @@ const fetchOrderList = async () => {
 
 // 获取状态类型
 const getStatusType = (status) => {
+  // 如果status是数字，转换为状态代码
+  let statusCode = status
+  if (typeof status === 'number') {
+    const statusMap = {
+      0: 'PENDING',    // 待支付
+      1: 'CONFIRMED',  // 待接单
+      2: 'PREPARING',  // 备菜中
+      3: 'PREPARING',  // 烹饪中
+      4: 'DELIVERING', // 待上菜
+      5: 'COMPLETED',  // 已送达
+      6: 'CANCELLED',  // 已取消
+      7: 'COMPLETED'   // 已完成
+    }
+    statusCode = statusMap[status] || 'PENDING'
+  }
+
   const types = {
     'PENDING': 'warning',
     'CONFIRMED': 'primary',
@@ -257,11 +273,27 @@ const getStatusType = (status) => {
     'COMPLETED': 'success',
     'CANCELLED': 'danger'
   }
-  return types[status] || 'info'
+  return types[statusCode] || 'info'
 }
 
 // 获取状态文本
 const getStatusText = (status) => {
+  // 如果status是数字，转换为对应的文本
+  if (typeof status === 'number') {
+    const statusTextMap = {
+      0: '待支付',
+      1: '待接单',
+      2: '备菜中',
+      3: '烹饪中',
+      4: '待上菜',
+      5: '已送达',
+      6: '已取消',
+      7: '已完成'
+    }
+    return statusTextMap[status] || '未知'
+  }
+
+  // 如果是字符串状态代码
   const texts = {
     'PENDING': '待处理',
     'CONFIRMED': '已确认',
