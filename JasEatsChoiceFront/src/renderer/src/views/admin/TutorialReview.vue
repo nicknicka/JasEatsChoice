@@ -210,8 +210,8 @@ onMounted(() => {
 
         <el-table-column label="来源" width="120">
           <template #default="{ row }">
-            <el-tag :type="getSourceTypeTag(row.sourceType).type" size="small">
-              {{ getSourceTypeTag(row.sourceType).text }}
+            <el-tag :type="getSourceTypeTag(row.source_type).type" size="small">
+              {{ getSourceTypeTag(row.source_type).text }}
             </el-tag>
           </template>
         </el-table-column>
@@ -235,11 +235,11 @@ onMounted(() => {
 
         <el-table-column label="关联信息" width="150">
           <template #default="{ row }">
-            <span v-if="row.linkedDishId">
-              关联菜品: #{{ row.linkedDishId }}
+            <span v-if="row.linked_dish_id">
+              关联菜品: #{{ row.linked_dish_id }}
             </span>
-            <span v-else-if="row.aiModelVersion" class="ai-info">
-              {{ row.aiModelVersion }}
+            <span v-else-if="row.ai_model_version" class="ai-info">
+              {{ row.ai_model_version }}
             </span>
           </template>
         </el-table-column>

@@ -10,6 +10,7 @@ const tutorials = ref([])
 const loading = ref(false)
 const showEditDialog = ref(false)
 const dialogMode = ref('create')
+const activeTab = ref('all') // 当前激活的标签页
 
 // 表单数据
 const tutorialForm = ref({
@@ -34,9 +35,56 @@ const stats = computed(() => {
     total: all.length,
     published: all.filter(t => t.status === 'PUBLISHED').length,
     pending: all.filter(t => t.review_status === 'PENDING').length,
-    featured: all.filter(t => t.featured).length
+    featured: all.filter(t => t.featured).length,
+    draft: all.filter(t => t.status === 'DRAFT').length,
+    official: all.filter(t => t.source_type === 'ADMIN').length,
+    merchant: all.filter(t => t.source_type === 'MERCHANT').length,
+    user: all.filter(t => t.source_type === 'USER').length,
+    ai: all.filter(t => t.source_type === 'AI_GENERATED').length
   }
 })
+
+// 根据标签页过滤数据
+const filteredTutorials = computed(() => {
+  switch (activeTab.value) {
+    case 'all':
+      return tutorials.value
+    case 'published':
+      return tutorials.value.filter(t => t.status === 'PUBLISHED')
+    case 'pending':
+      return tutorials.value.filter(t => t.review_status === 'PENDING')
+    case 'draft':
+      return tutorials.value.filter(t => t.status === 'DRAFT')
+    case 'featured':
+      return tutorials.value.filter(t => t.featured)
+    case 'official':
+      return tutorials.value.filter(t => t.source_type === 'ADMIN')
+    case 'merchant':
+      return tutorials.value.filter(t => t.source_type === 'MERCHANT')
+    case 'user':
+      return tutorials.value.filter(t => t.source_type === 'USER')
+    case 'ai':
+      return tutorials.value.filter(t => t.source_type === 'AI_GENERATED')
+    default:
+      return tutorials.value
+  }
+})
+
+// 获取各标签页的数量
+const getTabCount = (tab) => {
+  switch (tab) {
+    case 'all': return stats.value.total
+    case 'published': return stats.value.published
+    case 'pending': return stats.value.pending
+    case 'draft': return stats.value.draft
+    case 'featured': return stats.value.featured
+    case 'official': return stats.value.official
+    case 'merchant': return stats.value.merchant
+    case 'user': return stats.value.user
+    case 'ai': return stats.value.ai
+    default: return 0
+  }
+}
 
 // 获取所有教程
 const fetchAllTutorials = async () => {
@@ -273,17 +321,24 @@ onMounted(() => {
       </div>
 
       <!-- Tab切换 -->
-      <el-tabs style="margin-top: 20px">
+      <el-tabs v-model="activeTab" style="margin-top: 20px" class="tutorial-tabs">
+
         <!-- 全部教程 -->
-        <el-tab-pane label="全部教程" name="all">
-          <el-table :data="tutorials" v-loading="loading" stripe>
+        <el-tab-pane name="all">
+          <template #label>
+            <span class="tab-label">
+              全部教程
+              <el-badge v-if="getTabCount('all') > 0" :value="getTabCount('all')" class="tab-badge" />
+            </span>
+          </template>
+          <el-table :data="filteredTutorials" v-loading="loading" stripe>
             <el-table-column prop="id" label="ID" width="80" />
             <el-table-column prop="title" label="教程标题" min-width="200" />
 
             <el-table-column label="来源" width="120">
               <template #default="{ row }">
-                <el-tag :type="getSourceTypeTag(row.sourceType).type" size="small">
-                  {{ getSourceTypeTag(row.sourceType).text }}
+                <el-tag :type="getSourceTypeTag(row.source_type).type" size="small">
+                  {{ getSourceTypeTag(row.source_type).text }}
                 </el-tag>
               </template>
             </el-table-column>
@@ -309,8 +364,8 @@ onMounted(() => {
 
             <el-table-column label="审核状态" width="100">
               <template #default="{ row }">
-                <el-tag :type="getReviewStatusTag(row.reviewStatus).type" size="small">
-                  {{ getReviewStatusTag(row.reviewStatus).text }}
+                <el-tag :type="getReviewStatusTag(row.review_status).type" size="small">
+                  {{ getReviewStatusTag(row.review_status).text }}
                 </el-tag>
               </template>
             </el-table-column>
@@ -333,7 +388,7 @@ onMounted(() => {
 
             <el-table-column label="浏览量" width="120">
               <template #default="{ row }">
-                <span>{{ row.viewCount?.toLocaleString() || 0 }}</span>
+                <span>{{ row.view_count?.toLocaleString() || 0 }}</span>
               </template>
             </el-table-column>
 
@@ -344,6 +399,442 @@ onMounted(() => {
               </template>
             </el-table-column>
 
+            <el-table-column label="操作" width="280" fixed="right">
+              <template #default="{ row }">
+                <el-button size="small" @click="openEditDialog(row)">
+                  <el-icon><Edit /></el-icon> 编辑
+                </el-button>
+                <el-button
+                  :type="row.featured ? 'warning' : 'success'"
+                  size="small"
+                  @click="toggleFeatured(row)"
+                >
+                  {{ row.featured ? '取消精选' : '设为精选' }}
+                </el-button>
+                <el-button type="danger" size="small" @click="deleteTutorial(row)">
+                  <el-icon><Delete /></el-icon> 删除
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-tab-pane>
+
+        <!-- 已发布 -->
+        <el-tab-pane name="published">
+          <template #label>
+            <span class="tab-label">
+              已发布
+              <el-badge v-if="getTabCount('published') > 0" :value="getTabCount('published')" class="tab-badge" type="success" />
+            </span>
+          </template>
+          <el-table :data="filteredTutorials" v-loading="loading" stripe>
+            <el-table-column prop="id" label="ID" width="80" />
+            <el-table-column prop="title" label="教程标题" min-width="200" />
+            <el-table-column label="来源" width="120">
+              <template #default="{ row }">
+                <el-tag :type="getSourceTypeTag(row.source_type).type" size="small">
+                  {{ getSourceTypeTag(row.source_type).text }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="类型" width="100">
+              <template #default="{ row }">
+                <el-icon v-if="row.type === 'video'" class="type-icon video"><VideoCamera /></el-icon>
+                <el-icon v-else class="type-icon article"><Document /></el-icon>
+              </template>
+            </el-table-column>
+            <el-table-column label="难度" width="100">
+              <template #default="{ row }">
+                <el-tag v-if="row.difficulty" type="info" size="small">
+                  {{ getDifficultyName(row.difficulty) }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="浏览量" width="120">
+              <template #default="{ row }">
+                <span>{{ row.view_count?.toLocaleString() || 0 }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="精选" width="80">
+              <template #default="{ row }">
+                <el-tag v-if="row.featured" type="success" size="small">⭐</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="280" fixed="right">
+              <template #default="{ row }">
+                <el-button size="small" @click="openEditDialog(row)">
+                  <el-icon><Edit /></el-icon> 编辑
+                </el-button>
+                <el-button
+                  :type="row.featured ? 'warning' : 'success'"
+                  size="small"
+                  @click="toggleFeatured(row)"
+                >
+                  {{ row.featured ? '取消精选' : '设为精选' }}
+                </el-button>
+                <el-button type="danger" size="small" @click="deleteTutorial(row)">
+                  <el-icon><Delete /></el-icon> 删除
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-tab-pane>
+
+        <!-- 待审核 -->
+        <el-tab-pane name="pending">
+          <template #label>
+            <span class="tab-label">
+              待审核
+              <el-badge v-if="getTabCount('pending') > 0" :value="getTabCount('pending')" class="tab-badge" type="warning" />
+            </span>
+          </template>
+          <el-table :data="filteredTutorials" v-loading="loading" stripe>
+            <el-table-column prop="id" label="ID" width="80" />
+            <el-table-column prop="title" label="教程标题" min-width="200" />
+            <el-table-column label="来源" width="120">
+              <template #default="{ row }">
+                <el-tag :type="getSourceTypeTag(row.source_type).type" size="small">
+                  {{ getSourceTypeTag(row.source_type).text }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="作者" width="120" prop="author" />
+            <el-table-column label="类型" width="100">
+              <template #default="{ row }">
+                <el-icon v-if="row.type === 'video'" class="type-icon video"><VideoCamera /></el-icon>
+                <el-icon v-else class="type-icon article"><Document /></el-icon>
+              </template>
+            </el-table-column>
+            <el-table-column label="审核状态" width="100">
+              <template #default="{ row }">
+                <el-tag :type="getReviewStatusTag(row.review_status).type" size="small">
+                  {{ getReviewStatusTag(row.review_status).text }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="200" fixed="right">
+              <template #default="{ row }">
+                <el-button type="primary" size="small" @click="openEditDialog(row)">
+                  <el-icon><Edit /></el-icon> 审核
+                </el-button>
+                <el-button type="danger" size="small" @click="deleteTutorial(row)">
+                  <el-icon><Delete /></el-icon> 删除
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-tab-pane>
+
+        <!-- 草稿 -->
+        <el-tab-pane name="draft">
+          <template #label>
+            <span class="tab-label">
+              草稿
+              <el-badge v-if="getTabCount('draft') > 0" :value="getTabCount('draft')" class="tab-badge" type="info" />
+            </span>
+          </template>
+          <el-table :data="filteredTutorials" v-loading="loading" stripe>
+            <el-table-column prop="id" label="ID" width="80" />
+            <el-table-column prop="title" label="教程标题" min-width="200" />
+            <el-table-column label="来源" width="120">
+              <template #default="{ row }">
+                <el-tag :type="getSourceTypeTag(row.source_type).type" size="small">
+                  {{ getSourceTypeTag(row.source_type).text }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="author" label="作者" width="120" />
+            <el-table-column prop="create_time" label="创建时间" width="180" />
+            <el-table-column label="操作" width="200" fixed="right">
+              <template #default="{ row }">
+                <el-button type="primary" size="small" @click="openEditDialog(row)">
+                  <el-icon><Edit /></el-icon> 编辑
+                </el-button>
+                <el-button type="danger" size="small" @click="deleteTutorial(row)">
+                  <el-icon><Delete /></el-icon> 删除
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-tab-pane>
+
+        <!-- 精选教程 -->
+        <el-tab-pane name="featured">
+          <template #label>
+            <span class="tab-label">
+              ⭐ 精选
+              <el-badge v-if="getTabCount('featured') > 0" :value="getTabCount('featured')" class="tab-badge" type="warning" />
+            </span>
+          </template>
+          <el-table :data="filteredTutorials" v-loading="loading" stripe>
+            <el-table-column prop="id" label="ID" width="80" />
+            <el-table-column prop="title" label="教程标题" min-width="200" />
+            <el-table-column label="来源" width="120">
+              <template #default="{ row }">
+                <el-tag :type="getSourceTypeTag(row.source_type).type" size="small">
+                  {{ getSourceTypeTag(row.source_type).text }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="类型" width="100">
+              <template #default="{ row }">
+                <el-icon v-if="row.type === 'video'" class="type-icon video"><VideoCamera /></el-icon>
+                <el-icon v-else class="type-icon article"><Document /></el-icon>
+              </template>
+            </el-table-column>
+            <el-table-column label="难度" width="100">
+              <template #default="{ row }">
+                <el-tag v-if="row.difficulty" type="info" size="small">
+                  {{ getDifficultyName(row.difficulty) }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="浏览量" width="120">
+              <template #default="{ row }">
+                <span>{{ row.view_count?.toLocaleString() || 0 }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="评分" width="100">
+              <template #default="{ row }">
+                <span v-if="row.rating">{{ row.rating }} ⭐</span>
+                <span v-else style="color: #909399">-</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="280" fixed="right">
+              <template #default="{ row }">
+                <el-button size="small" @click="openEditDialog(row)">
+                  <el-icon><Edit /></el-icon> 编辑
+                </el-button>
+                <el-button type="warning" size="small" @click="toggleFeatured(row)">
+                  取消精选
+                </el-button>
+                <el-button type="danger" size="small" @click="deleteTutorial(row)">
+                  <el-icon><Delete /></el-icon> 删除
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-tab-pane>
+
+        <!-- 官方教程 -->
+        <el-tab-pane name="official">
+          <template #label>
+            <span class="tab-label">
+              官方教程
+              <el-badge v-if="getTabCount('official') > 0" :value="getTabCount('official')" class="tab-badge" type="danger" />
+            </span>
+          </template>
+          <el-table :data="filteredTutorials" v-loading="loading" stripe>
+            <el-table-column prop="id" label="ID" width="80" />
+            <el-table-column prop="title" label="教程标题" min-width="200" />
+            <el-table-column label="类型" width="100">
+              <template #default="{ row }">
+                <el-icon v-if="row.type === 'video'" class="type-icon video"><VideoCamera /></el-icon>
+                <el-icon v-else class="type-icon article"><Document /></el-icon>
+              </template>
+            </el-table-column>
+            <el-table-column label="难度" width="100">
+              <template #default="{ row }">
+                <el-tag v-if="row.difficulty" type="info" size="small">
+                  {{ getDifficultyName(row.difficulty) }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="状态" width="100">
+              <template #default="{ row }">
+                <el-tag :type="getStatusTag(row.status).type" size="small">
+                  {{ getStatusTag(row.status).text }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="精选" width="80">
+              <template #default="{ row }">
+                <el-tag v-if="row.featured" type="success" size="small">⭐</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="浏览量" width="120">
+              <template #default="{ row }">
+                <span>{{ row.view_count?.toLocaleString() || 0 }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="280" fixed="right">
+              <template #default="{ row }">
+                <el-button size="small" @click="openEditDialog(row)">
+                  <el-icon><Edit /></el-icon> 编辑
+                </el-button>
+                <el-button
+                  :type="row.featured ? 'warning' : 'success'"
+                  size="small"
+                  @click="toggleFeatured(row)"
+                >
+                  {{ row.featured ? '取消精选' : '设为精选' }}
+                </el-button>
+                <el-button type="danger" size="small" @click="deleteTutorial(row)">
+                  <el-icon><Delete /></el-icon> 删除
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-tab-pane>
+
+        <!-- 商家教程 -->
+        <el-tab-pane name="merchant">
+          <template #label>
+            <span class="tab-label">
+              商家教程
+              <el-badge v-if="getTabCount('merchant') > 0" :value="getTabCount('merchant')" class="tab-badge" type="warning" />
+            </span>
+          </template>
+          <el-table :data="filteredTutorials" v-loading="loading" stripe>
+            <el-table-column prop="id" label="ID" width="80" />
+            <el-table-column prop="title" label="教程标题" min-width="200" />
+            <el-table-column prop="author" label="商家名称" width="150" />
+            <el-table-column label="类型" width="100">
+              <template #default="{ row }">
+                <el-icon v-if="row.type === 'video'" class="type-icon video"><VideoCamera /></el-icon>
+                <el-icon v-else class="type-icon article"><Document /></el-icon>
+              </template>
+            </el-table-column>
+            <el-table-column label="状态" width="100">
+              <template #default="{ row }">
+                <el-tag :type="getStatusTag(row.status).type" size="small">
+                  {{ getStatusTag(row.status).text }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="审核状态" width="100">
+              <template #default="{ row }">
+                <el-tag :type="getReviewStatusTag(row.review_status).type" size="small">
+                  {{ getReviewStatusTag(row.review_status).text }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="浏览量" width="120">
+              <template #default="{ row }">
+                <span>{{ row.view_count?.toLocaleString() || 0 }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="280" fixed="right">
+              <template #default="{ row }">
+                <el-button size="small" @click="openEditDialog(row)">
+                  <el-icon><Edit /></el-icon> 编辑
+                </el-button>
+                <el-button
+                  :type="row.featured ? 'warning' : 'success'"
+                  size="small"
+                  @click="toggleFeatured(row)"
+                >
+                  {{ row.featured ? '取消精选' : '设为精选' }}
+                </el-button>
+                <el-button type="danger" size="small" @click="deleteTutorial(row)">
+                  <el-icon><Delete /></el-icon> 删除
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-tab-pane>
+
+        <!-- 用户教程 -->
+        <el-tab-pane name="user">
+          <template #label>
+            <span class="tab-label">
+              用户教程
+              <el-badge v-if="getTabCount('user') > 0" :value="getTabCount('user')" class="tab-badge" type="success" />
+            </span>
+          </template>
+          <el-table :data="filteredTutorials" v-loading="loading" stripe>
+            <el-table-column prop="id" label="ID" width="80" />
+            <el-table-column prop="title" label="教程标题" min-width="200" />
+            <el-table-column prop="author" label="作者" width="120" />
+            <el-table-column label="类型" width="100">
+              <template #default="{ row }">
+                <el-icon v-if="row.type === 'video'" class="type-icon video"><VideoCamera /></el-icon>
+                <el-icon v-else class="type-icon article"><Document /></el-icon>
+              </template>
+            </el-table-column>
+            <el-table-column label="状态" width="100">
+              <template #default="{ row }">
+                <el-tag :type="getStatusTag(row.status).type" size="small">
+                  {{ getStatusTag(row.status).text }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="审核状态" width="100">
+              <template #default="{ row }">
+                <el-tag :type="getReviewStatusTag(row.review_status).type" size="small">
+                  {{ getReviewStatusTag(row.review_status).text }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="浏览量" width="120">
+              <template #default="{ row }">
+                <span>{{ row.view_count?.toLocaleString() || 0 }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="280" fixed="right">
+              <template #default="{ row }">
+                <el-button size="small" @click="openEditDialog(row)">
+                  <el-icon><Edit /></el-icon> 编辑
+                </el-button>
+                <el-button
+                  :type="row.featured ? 'warning' : 'success'"
+                  size="small"
+                  @click="toggleFeatured(row)"
+                >
+                  {{ row.featured ? '取消精选' : '设为精选' }}
+                </el-button>
+                <el-button type="danger" size="small" @click="deleteTutorial(row)">
+                  <el-icon><Delete /></el-icon> 删除
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-tab-pane>
+
+        <!-- AI生成教程 -->
+        <el-tab-pane name="ai">
+          <template #label>
+            <span class="tab-label">
+              AI生成
+              <el-badge v-if="getTabCount('ai') > 0" :value="getTabCount('ai')" class="tab-badge" />
+            </span>
+          </template>
+          <el-table :data="filteredTutorials" v-loading="loading" stripe>
+            <el-table-column prop="id" label="ID" width="80" />
+            <el-table-column prop="title" label="教程标题" min-width="200" />
+            <el-table-column label="类型" width="100">
+              <template #default="{ row }">
+                <el-icon v-if="row.type === 'video'" class="type-icon video"><VideoCamera /></el-icon>
+                <el-icon v-else class="type-icon article"><Document /></el-icon>
+              </template>
+            </el-table-column>
+            <el-table-column label="模型版本" width="150">
+              <template #default="{ row }">
+                <el-tag v-if="row.ai_model_version" type="info" size="small">
+                  {{ row.ai_model_version }}
+                </el-tag>
+                <span v-else style="color: #909399">-</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="审核状态" width="100">
+              <template #default="{ row }">
+                <el-tag :type="getReviewStatusTag(row.review_status).type" size="small">
+                  {{ getReviewStatusTag(row.review_status).text }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="状态" width="100">
+              <template #default="{ row }">
+                <el-tag :type="getStatusTag(row.status).type" size="small">
+                  {{ getStatusTag(row.status).text }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="浏览量" width="120">
+              <template #default="{ row }">
+                <span>{{ row.view_count?.toLocaleString() || 0 }}</span>
+              </template>
+            </el-table-column>
             <el-table-column label="操作" width="280" fixed="right">
               <template #default="{ row }">
                 <el-button size="small" @click="openEditDialog(row)">
@@ -514,6 +1005,87 @@ onMounted(() => {
 
     &.article {
       color: #f7b267;
+    }
+  }
+
+  // 教程标签页样式
+  .tutorial-tabs {
+    :deep(.el-tabs__header) {
+      margin-bottom: 20px;
+    }
+
+    :deep(.el-tabs__nav-wrap::after) {
+      height: 1px;
+    }
+
+    :deep(.el-tabs__item) {
+      font-size: 14px;
+      padding: 0 20px;
+      transition: all 0.3s;
+
+      &:hover {
+        color: #667eea;
+      }
+
+      &.is-active {
+        color: #667eea;
+        font-weight: 600;
+      }
+    }
+
+    :deep(.el-tabs__active-bar) {
+      background-color: #667eea;
+      height: 3px;
+      border-radius: 2px;
+    }
+
+    .tab-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      position: relative;
+
+      .tab-badge {
+        :deep(.el-badge__content) {
+          font-size: 11px;
+          height: 16px;
+          line-height: 16px;
+          padding: 0 5px;
+          min-width: 18px;
+          border-radius: 8px;
+        }
+      }
+    }
+  }
+
+  // 表格样式优化
+  :deep(.el-table) {
+    border-radius: 8px;
+    overflow: hidden;
+
+    .el-table__header th {
+      background-color: #fafafa;
+      font-weight: 600;
+      color: #606266;
+    }
+
+    .el-table__body tr:hover > td {
+      background-color: #f5f7fa;
+    }
+
+    // 优化操作列的内边距
+    .el-table__cell {
+      padding: 12px 8px;
+
+      // 操作列右侧单元格减少右边距
+      &:last-child {
+        padding-right: 12px;
+      }
+    }
+
+    // 操作按钮之间的间距
+    .el-button + .el-button {
+      margin-left: 6px;
     }
   }
 }
