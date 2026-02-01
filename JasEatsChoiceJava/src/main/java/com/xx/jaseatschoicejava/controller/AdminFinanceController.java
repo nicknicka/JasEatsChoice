@@ -2,23 +2,35 @@ package com.xx.jaseatschoicejava.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.xx.jaseatschoicejava.entity.RefundRecord;
+import com.xx.jaseatschoicejava.entity.RechargeRecord;
+import com.xx.jaseatschoicejava.service.RefundRecordService;
+import com.xx.jaseatschoicejava.service.RechargeRecordService;
+import com.xx.jaseatschoicejava.util.AdminContext;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
- * 管理员-财务管理控制器
+ * 管理员-财务管理控制器（更新版）
  */
 @Api(tags = "管理员-财务管理")
 @RestController
 @RequestMapping("/admin/finance")
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminFinanceController {
+
+    @Autowired
+    private RefundRecordService refundRecordService;
+
+    @Autowired(required = false)
+    private RechargeRecordService rechargeRecordService;
 
     /**
      * 获取充值记录列表（分页）
@@ -33,31 +45,11 @@ public class AdminFinanceController {
             @RequestParam(required = false) String paymentMethod,
             @RequestParam(required = false) String status) {
 
-        // 模拟数据
-        List<Map<String, Object>> records = new ArrayList<>();
-        for (int i = 0; i < pageSize; i++) {
-            Map<String, Object> record = new HashMap<>();
-            record.put("rechargeId", 1000L + i);
-            record.put("username", "user" + (i + 1));
-            record.put("amount", 100 + i * 10);
-            record.put("paymentMethod", i % 2 == 0 ? "WECHAT" : "ALIPAY");
-            record.put("status", "SUCCESS");
-            record.put("transactionId", "TXN" + System.currentTimeMillis() + i);
-            record.put("balanceBefore", 500 + i * 20);
-            record.put("balanceAfter", 600 + i * 20);
-            record.put("createTime", LocalDateTime.now().minusDays(i));
-            records.add(record);
-        }
-
-        IPage<Map<String, Object>> result = new Page<>(page, pageSize, 100);
-        result.setRecords(records);
-
+        // TODO: 实现充值记录查询（如果RechargeRecordService可用）
+        // 目前暂时返回模拟数据
         Map<String, Object> response = new HashMap<>();
-        response.put("records", records);
-        response.put("total", 100);
-        response.put("size", pageSize);
-        response.put("current", page);
-        response.put("pages", 10);
+        response.put("message", "充值记录查询功能待完善");
+        response.put("success", false);
 
         return ResponseEntity.ok(response);
     }
@@ -68,20 +60,12 @@ public class AdminFinanceController {
     @ApiOperation("获取充值记录详情")
     @GetMapping("/recharges/{rechargeId}")
     @PreAuthorize("hasAnyAuthority('admin:finance:recharges')")
-    public ResponseEntity<Map<String, Object>> getRechargeDetail(@PathVariable Long rechargeId) {
-        Map<String, Object> record = new HashMap<>();
-        record.put("rechargeId", rechargeId);
-        record.put("username", "user1");
-        record.put("amount", 100);
-        record.put("paymentMethod", "WECHAT");
-        record.put("status", "SUCCESS");
-        record.put("transactionId", "TXN" + System.currentTimeMillis());
-        record.put("balanceBefore", 500);
-        record.put("balanceAfter", 600);
-        record.put("createTime", LocalDateTime.now());
-        record.put("remark", "用户充值");
+    public ResponseEntity<Map<String, Object>> getRechargeDetail(@PathVariable String rechargeId) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "充值记录详情查询功能待完善");
+        response.put("success", false);
 
-        return ResponseEntity.ok(record);
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -96,28 +80,16 @@ public class AdminFinanceController {
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String status) {
 
-        List<Map<String, Object>> records = new ArrayList<>();
-        for (int i = 0; i < pageSize; i++) {
-            Map<String, Object> record = new HashMap<>();
-            record.put("refundId", 2000L + i);
-            record.put("orderId", 3000L + i);
-            record.put("username", "user" + (i + 1));
-            record.put("refundAmount", 50 + i * 5);
-            record.put("reason", i % 3 == 0 ? "商品质量问题" : "不想要了");
-            record.put("status", i == 0 ? "PENDING" : "COMPLETED");
-            record.put("applyTime", LocalDateTime.now().minusDays(i));
-            record.put("processTime", i == 0 ? null : LocalDateTime.now().minusDays(i).plusHours(2));
-            record.put("description", "用户申请退款");
-            record.put("processComment", i == 0 ? null : "同意退款");
-            records.add(record);
-        }
+        Page<RefundRecord> pageParam = new Page<>(page, pageSize);
+        IPage<RefundRecord> result = refundRecordService.getRefundPage(pageParam, keyword, status);
 
         Map<String, Object> response = new HashMap<>();
-        response.put("records", records);
-        response.put("total", 50);
-        response.put("size", pageSize);
-        response.put("current", page);
-        response.put("pages", 5);
+        response.put("success", true);
+        response.put("records", result.getRecords());
+        response.put("total", result.getTotal());
+        response.put("size", result.getSize());
+        response.put("current", result.getCurrent());
+        response.put("pages", result.getPages());
 
         return ResponseEntity.ok(response);
     }
@@ -128,20 +100,19 @@ public class AdminFinanceController {
     @ApiOperation("获取退款详情")
     @GetMapping("/refunds/{refundId}")
     @PreAuthorize("hasAnyAuthority('admin:finance:refunds')")
-    public ResponseEntity<Map<String, Object>> getRefundDetail(@PathVariable Long refundId) {
-        Map<String, Object> record = new HashMap<>();
-        record.put("refundId", refundId);
-        record.put("orderId", 3000L);
-        record.put("username", "user1");
-        record.put("refundAmount", 50);
-        record.put("reason", "商品质量问题");
-        record.put("status", "PENDING");
-        record.put("applyTime", LocalDateTime.now());
-        record.put("processTime", null);
-        record.put("description", "用户申请退款");
-        record.put("processComment", null);
+    public ResponseEntity<Map<String, Object>> getRefundDetail(@PathVariable String refundId) {
+        RefundRecord refundRecord = refundRecordService.getRefundDetail(refundId);
 
-        return ResponseEntity.ok(record);
+        Map<String, Object> response = new HashMap<>();
+        if (refundRecord != null) {
+            response.put("success", true);
+            response.put("data", refundRecord);
+            return ResponseEntity.ok(response);
+        } else {
+            response.put("success", false);
+            response.put("message", "退款记录不存在");
+            return ResponseEntity.status(404).body(response);
+        }
     }
 
     /**
@@ -151,17 +122,61 @@ public class AdminFinanceController {
     @PostMapping("/refunds/{refundId}/process")
     @PreAuthorize("hasAnyAuthority('admin:finance:refunds')")
     public ResponseEntity<Map<String, Object>> processRefund(
-            @PathVariable Long refundId,
+            @PathVariable String refundId,
             @RequestBody Map<String, String> request) {
 
-        String decision = request.get("decision");
+        String decision = request.get("decision"); // APPROVE 或 REJECT
         String comment = request.get("comment");
+
+        // 获取当前管理员ID
+        Long adminId = AdminContext.getAdminId();
+
+        try {
+            boolean success = refundRecordService.processRefund(refundId, decision, comment, adminId);
+
+            Map<String, Object> response = new HashMap<>();
+            if (success) {
+                response.put("success", true);
+                response.put("message", "APPROVE".equals(decision) ? "退款已批准" : "退款已拒绝");
+                return ResponseEntity.ok(response);
+            } else {
+                response.put("success", false);
+                response.put("message", "处理失败");
+                return ResponseEntity.status(500).body(response);
+            }
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "处理失败：" + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+
+    /**
+     * 获取退款统计
+     */
+    @ApiOperation("获取退款统计")
+    @GetMapping("/refunds/statistics")
+    @PreAuthorize("hasAnyAuthority('admin:finance:refunds')")
+    public ResponseEntity<Map<String, Object>> getRefundStatistics() {
+        Map<String, Object> stats = new HashMap<>();
+
+        // 待处理退款数量
+        long pendingCount = refundRecordService.count(
+            new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<RefundRecord>()
+                .eq("status", "PENDING")
+        );
+
+        // 今日退款总额
+        String today = java.time.LocalDate.now().toString();
+        java.math.BigDecimal todayRefund = refundRecordService.sumRefundAmountByStatus("SUCCESS");
+
+        stats.put("pendingCount", pendingCount);
+        stats.put("todayRefund", todayRefund != null ? todayRefund : java.math.BigDecimal.ZERO);
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
-        response.put("message", "处理提交成功");
-        response.put("decision", decision);
-        response.put("comment", comment);
+        response.put("data", stats);
 
         return ResponseEntity.ok(response);
     }

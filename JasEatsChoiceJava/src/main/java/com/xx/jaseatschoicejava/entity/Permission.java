@@ -47,6 +47,10 @@ public class Permission {
     @ApiModelProperty(value = "图标")
     private String icon;
 
+    @TableField("description")
+    @ApiModelProperty(value = "权限描述")
+    private String description;
+
     @TableField("sort_order")
     @ApiModelProperty(value = "排序序号")
     private Integer sortOrder;
@@ -62,4 +66,8 @@ public class Permission {
     @TableField("update_time")
     @ApiModelProperty(value = "更新时间")
     private LocalDateTime updateTime;
+
+    @TableField(exist = false)
+    @ApiModelProperty(value = "子权限列表（非数据库字段，树形结构使用）")
+    private java.util.List<Permission> children;
 }

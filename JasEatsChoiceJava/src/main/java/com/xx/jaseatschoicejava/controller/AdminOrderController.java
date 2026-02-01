@@ -6,6 +6,8 @@ import com.xx.jaseatschoicejava.entity.Merchant;
 import com.xx.jaseatschoicejava.entity.Order;
 import com.xx.jaseatschoicejava.service.MerchantService;
 import com.xx.jaseatschoicejava.service.OrderService;
+import com.xx.jaseatschoicejava.service.SystemLogService;
+import com.xx.jaseatschoicejava.util.AdminContext;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,13 +15,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
- * 管理员-订单管理控制器
+ * 管理员-订单管理控制器（更新版）
  */
 @Api(tags = "管理员-订单管理")
 @RestController
@@ -33,6 +34,9 @@ public class AdminOrderController {
     @Autowired
     private MerchantService merchantService;
 
+    @Autowired(required = false)
+    private SystemLogService systemLogService;
+
     /**
      * 获取订单列表（分页）
      */
@@ -42,11 +46,29 @@ public class AdminOrderController {
     public ResponseEntity<IPage<Order>> getOrderList(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer pageSize,
-            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Integer status,
             @RequestParam(required = false) String keyword) {
 
         Page<Order> pageParam = new Page<>(page, pageSize);
-        IPage<Order> result = orderService.page(pageParam);
+
+        // 构建查询条件
+        var queryWrapper = new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Order>();
+
+        if (status != null) {
+            queryWrapper.eq("status", status);
+        }
+
+        if (keyword != null && !keyword.isEmpty()) {
+            queryWrapper.and(wrapper -> wrapper
+                .like("id", keyword)
+                .or()
+                .like("user_id", keyword)
+            );
+        }
+
+        queryWrapper.orderByDesc("create_time");
+
+        IPage<Order> result = orderService.page(pageParam, queryWrapper);
 
         // 为每个订单添加商家名称和状态文本
         result.getRecords().forEach(order -> {
@@ -63,46 +85,6 @@ public class AdminOrderController {
         });
 
         return ResponseEntity.ok(result);
-    }
-
-    /**
-     * 获取订单状态文本
-     */
-    private String getStatusText(Integer status) {
-        if (status == null) {
-            return "未知";
-        }
-        switch (status) {
-            case 0: return "待支付";
-            case 1: return "待接单";
-            case 2: return "备菜中";
-            case 3: return "烹饪中";
-            case 4: return "待上菜";
-            case 5: return "已送达";
-            case 6: return "已取消";
-            case 7: return "已完成";
-            default: return "未知";
-        }
-    }
-
-    /**
-     * 获取订单状态代码（用于前端匹配）
-     */
-    private String getStatusCode(Integer status) {
-        if (status == null) {
-            return "PENDING";
-        }
-        switch (status) {
-            case 0: return "PENDING";       // 待支付
-            case 1: return "CONFIRMED";     // 待接单
-            case 2: return "PREPARING";     // 备菜中
-            case 3: return "PREPARING";     // 烹饪中
-            case 4: return "DELIVERING";    // 待上菜
-            case 5: return "COMPLETED";     // 已送达
-            case 6: return "CANCELLED";     // 已取消
-            case 7: return "COMPLETED";     // 已完成
-            default: return "PENDING";
-        }
     }
 
     /**
@@ -128,7 +110,7 @@ public class AdminOrderController {
             order.setStatusText(getStatusText(order.getStatus()));
 
             response.put("success", true);
-            response.put("order", order);
+            response.put("data", order);
             return ResponseEntity.ok(response);
         } else {
             response.put("success", false);
@@ -138,26 +120,211 @@ public class AdminOrderController {
     }
 
     /**
-     * 修改订单状态
+     * 修改订单状态 ✨ 已实现
      */
     @ApiOperation("修改订单状态")
     @PutMapping("/{orderId}/status")
     @PreAuthorize("hasAnyAuthority('admin:order:status')")
     public ResponseEntity<Map<String, Object>> updateOrderStatus(
-            @PathVariable Long orderId,
-            @RequestBody Map<String, String> request) {
+            @PathVariable String orderId,
+            @RequestBody Map<String, Object> request) {
 
-        String status = request.get("status");
+        Order order = orderService.getById(orderId);
+        if (order == null) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "订单不存在");
+            return ResponseEntity.status(404).body(response);
+        }
 
-        // TODO: 实现订单状态修改逻辑
-        // 1. 验证状态转换是否合法
-        // 2. 更新订单状态
-        // 3. 发送通知
-        // 4. 记录操作日志
+        Integer oldStatus = order.getStatus();
+        Integer newStatus = (Integer) request.get("status");
+        String reason = (String) request.get("reason");
+
+        // 验证状态转换是否合法
+        if (!isValidStatusTransition(oldStatus, newStatus)) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "无效的状态转换：从 " + getStatusText(oldStatus) + " 到 " + getStatusText(newStatus));
+            return ResponseEntity.status(400).body(response);
+        }
+
+        // 更新订单状态
+        order.setStatus(newStatus);
+        order.setUpdateTime(LocalDateTime.now());
+
+        boolean success = orderService.updateById(order);
+
+        // 记录操作日志
+        if (success && systemLogService != null) {
+            Long adminId = AdminContext.getAdminId();
+            String adminName = AdminContext.getAdminUsername();
+
+            systemLogService.logOperation(
+                "UPDATE", "ORDER", "修改订单状态：" + orderId + " 从 " + getStatusText(oldStatus) + " 到 " + getStatusText(newStatus),
+                adminId, adminName, "ADMIN",
+                "AdminOrderController.updateOrderStatus",
+                "orderId=" + orderId + ", oldStatus=" + oldStatus + ", newStatus=" + newStatus + ", reason=" + reason,
+                null, 0L, null, "SUCCESS"
+            );
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        if (success) {
+            response.put("success", true);
+            response.put("message", "状态修改成功");
+            response.put("data", order);
+            return ResponseEntity.ok(response);
+        } else {
+            response.put("success", false);
+            response.put("message", "状态修改失败");
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+
+    /**
+     * 批量修改订单状态 ✨ 新增
+     */
+    @ApiOperation("批量修改订单状态")
+    @PutMapping("/batch/status")
+    @PreAuthorize("hasAnyAuthority('admin:order:status')")
+    public ResponseEntity<Map<String, Object>> batchUpdateOrderStatus(
+            @RequestBody Map<String, Object> request) {
+
+        @SuppressWarnings("unchecked")
+        java.util.List<String> orderIds = (java.util.List<String>) request.get("orderIds");
+        Integer newStatus = (Integer) request.get("status");
+        String reason = (String) request.get("reason");
+
+        if (orderIds == null || orderIds.isEmpty()) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "订单ID列表不能为空");
+            return ResponseEntity.status(400).body(response);
+        }
+
+        int successCount = 0;
+        int failCount = 0;
+        java.util.List<String> failedOrders = new java.util.ArrayList<>();
+
+        for (String orderId : orderIds) {
+            try {
+                Order order = orderService.getById(orderId);
+                if (order != null && isValidStatusTransition(order.getStatus(), newStatus)) {
+                    order.setStatus(newStatus);
+                    order.setUpdateTime(LocalDateTime.now());
+                    if (orderService.updateById(order)) {
+                        successCount++;
+                    } else {
+                        failCount++;
+                        failedOrders.add(orderId);
+                    }
+                } else {
+                    failCount++;
+                    failedOrders.add(orderId + "(状态转换无效)");
+                }
+            } catch (Exception e) {
+                failCount++;
+                failedOrders.add(orderId + "(" + e.getMessage() + ")");
+            }
+        }
+
+        // 记录操作日志
+        if (systemLogService != null) {
+            Long adminId = AdminContext.getAdminId();
+            String adminName = AdminContext.getAdminUsername();
+
+            systemLogService.logOperation(
+                "UPDATE", "ORDER", "批量修改订单状态：" + successCount + "个成功，" + failCount + "个失败",
+                adminId, adminName, "ADMIN",
+                "AdminOrderController.batchUpdateOrderStatus",
+                "orderIds=" + orderIds.size() + ", newStatus=" + newStatus,
+                null, 0L, null, failCount == 0 ? "SUCCESS" : "PARTIAL"
+            );
+        }
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
-        response.put("message", "状态修改成功");
+        response.put("message", "批量操作完成：成功" + successCount + "个，失败" + failCount + "个");
+        response.put("successCount", successCount);
+        response.put("failCount", failCount);
+        response.put("failedOrders", failedOrders);
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 获取订单统计 ✨ 新增
+     */
+    @ApiOperation("获取订单统计")
+    @GetMapping("/statistics")
+    @PreAuthorize("hasAnyAuthority('admin:order:view')")
+    public ResponseEntity<Map<String, Object>> getOrderStatistics() {
+        Map<String, Object> stats = new HashMap<>();
+
+        // 总订单数
+        long totalOrders = orderService.count();
+
+        // 各状态订单数量
+        Map<String, Long> statusCount = new HashMap<>();
+        statusCount.put("pending", orderService.count(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Order>().eq("status", 0)));
+        statusCount.put("confirmed", orderService.count(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Order>().eq("status", 1)));
+        statusCount.put("preparing", orderService.count(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Order>().in("status", java.util.Arrays.asList(2, 3))));
+        statusCount.put("delivering", orderService.count(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Order>().eq("status", 4)));
+        statusCount.put("completed", orderService.count(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Order>().in("status", java.util.Arrays.asList(5, 7))));
+        statusCount.put("cancelled", orderService.count(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Order>().eq("status", 6)));
+
+        stats.put("totalOrders", totalOrders);
+        stats.put("statusCount", statusCount);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("data", stats);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 验证状态转换是否合法
+     */
+    private boolean isValidStatusTransition(Integer oldStatus, Integer newStatus) {
+        if (oldStatus == null || newStatus == null) {
+            return false;
+        }
+
+        // 已取消或已完成的订单不能修改状态
+        if (oldStatus == 6 || oldStatus == 7) {
+            return false;
+        }
+
+        // 待支付订单只能修改为已取消
+        if (oldStatus == 0 && newStatus != 6) {
+            return false;
+        }
+
+        // 状态只能向前推进（0->1->2->3->4->5/7，或者6->任何状态）
+        if (newStatus < oldStatus && newStatus != 6) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * 获取订单状态文本
+     */
+    private String getStatusText(Integer status) {
+        if (status == null) {
+            return "未知";
+        }
+        switch (status) {
+            case 0: return "待支付";
+            case 1: return "待接单";
+            case 2: return "备菜中";
+            case 3: return "烹饪中";
+            case 4: return "待上菜";
+            case 5: return "已送达";
+            case 6: return "已取消";
+            case 7: return "已完成";
+            default: return "未知";
+        }
     }
 }

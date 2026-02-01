@@ -1,5 +1,11 @@
 package com.xx.jaseatschoicejava.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.xx.jaseatschoicejava.entity.Order;
+import com.xx.jaseatschoicejava.entity.User;
+import com.xx.jaseatschoicejava.entity.Merchant;
+import com.xx.jaseatschoicejava.entity.Dish;
+import com.xx.jaseatschoicejava.entity.Tutorial;
 import com.xx.jaseatschoicejava.service.*;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -8,12 +14,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
- * 管理员-统计数据控制器
+ * 管理员-统计数据控制器（更新版）
  */
 @Api(tags = "管理员-统计数据")
 @RestController
@@ -29,6 +38,12 @@ public class AdminStatisticsController {
 
     @Autowired
     private OrderService orderService;
+
+    @Autowired
+    private DishService dishService;
+
+    @Autowired
+    private TutorialService tutorialService;
 
     /**
      * 获取控制台统计数据
@@ -51,8 +66,10 @@ public class AdminStatisticsController {
         stats.put("todayOrders", getTodayOrders());
         stats.put("todayRevenue", getTodayRevenue());
 
-        // TODO: 添加更多统计数据
-        stats.put("pendingAudits", 0);
+        // 待审核数量
+        stats.put("pendingAudits", getPendingAuditsCount());
+
+        // 系统告警（示例：可以根据实际情况添加）
         stats.put("systemAlerts", 0);
 
         Map<String, Object> response = new HashMap<>();
@@ -72,7 +89,19 @@ public class AdminStatisticsController {
 
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalUsers", userService.count());
-        // TODO: 添加更多用户统计维度
+        stats.put("todayNewUsers", getTodayNewUsers());
+
+        // 本周新增用户
+        LocalDateTime weekStart = LocalDateTime.now().minusDays(7);
+        long weekNewUsers = userService.count(new QueryWrapper<User>()
+            .ge("create_time", weekStart));
+        stats.put("weekNewUsers", weekNewUsers);
+
+        // 本月新增用户
+        LocalDateTime monthStart = LocalDateTime.now().minusDays(30);
+        long monthNewUsers = userService.count(new QueryWrapper<User>()
+            .ge("create_time", monthStart));
+        stats.put("monthNewUsers", monthNewUsers);
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
@@ -91,7 +120,22 @@ public class AdminStatisticsController {
 
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalOrders", orderService.count());
-        // TODO: 添加更多订单统计维度
+        stats.put("todayOrders", getTodayOrders());
+
+        // 本周订单数
+        LocalDateTime weekStart = LocalDateTime.now().minusDays(7);
+        long weekOrders = orderService.count(new QueryWrapper<Order>()
+            .ge("create_time", weekStart));
+        stats.put("weekOrders", weekOrders);
+
+        // 本月订单数
+        LocalDateTime monthStart = LocalDateTime.now().minusDays(30);
+        long monthOrders = orderService.count(new QueryWrapper<Order>()
+            .ge("create_time", monthStart));
+        stats.put("monthOrders", monthOrders);
+
+        // 今日收入
+        stats.put("todayRevenue", getTodayRevenue());
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
@@ -109,7 +153,18 @@ public class AdminStatisticsController {
             @RequestParam(required = false) Integer days) {
 
         Map<String, Object> stats = new HashMap<>();
-        // TODO: 实现收入统计逻辑
+
+        // 今日收入
+        stats.put("todayRevenue", getTodayRevenue());
+
+        // 本周收入
+        stats.put("weekRevenue", getRevenueByDays(7));
+
+        // 本月收入
+        stats.put("monthRevenue", getRevenueByDays(30));
+
+        // 总收入
+        stats.put("totalRevenue", getTotalRevenue());
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
@@ -119,18 +174,99 @@ public class AdminStatisticsController {
 
     // ==================== 私有辅助方法 ====================
 
+    /**
+     * 获取今日新增用户数
+     */
     private long getTodayNewUsers() {
-        // TODO: 实现今日新增用户统计
-        return 0L;
+        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
+        return userService.count(new QueryWrapper<User>()
+            .ge("create_time", todayStart));
     }
 
+    /**
+     * 获取今日订单数
+     */
     private long getTodayOrders() {
-        // TODO: 实现今日订单统计
-        return 0L;
+        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
+        return orderService.count(new QueryWrapper<Order>()
+            .ge("create_time", todayStart)
+            .ne("status", 0)); // 排除待支付订单
     }
 
+    /**
+     * 获取今日收入
+     */
     private double getTodayRevenue() {
-        // TODO: 实现今日收入统计
-        return 0.0;
+        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
+
+        // 查询今日已支付订单
+        List<Order> todayOrders = orderService.list(new QueryWrapper<Order>()
+            .ge("create_time", todayStart)
+            .ne("status", 0)
+            .isNotNull("paid_amount"));
+
+        // 汇总收入
+        return todayOrders.stream()
+            .map(Order::getPaidAmount)
+            .filter(amount -> amount != null)
+            .map(BigDecimal::doubleValue)
+            .mapToDouble(Double::doubleValue)
+            .sum();
+    }
+
+    /**
+     * 获取待审核数量
+     */
+    private long getPendingAuditsCount() {
+        long pendingCount = 0;
+
+        // 待审核商家
+        pendingCount += merchantService.count(new QueryWrapper<Merchant>()
+            .eq("audit_status", "PENDING"));
+
+        // 待审核菜品
+        pendingCount += dishService.count(new QueryWrapper<Dish>()
+            .eq("audit_status", "PENDING"));
+
+        // 待审核教程
+        pendingCount += tutorialService.count(new QueryWrapper<Tutorial>()
+            .eq("review_status", "PENDING"));
+
+        return pendingCount;
+    }
+
+    /**
+     * 获取指定天数内的收入
+     */
+    private double getRevenueByDays(int days) {
+        LocalDateTime startTime = LocalDateTime.now().minusDays(days);
+
+        List<Order> orders = orderService.list(new QueryWrapper<Order>()
+            .ge("create_time", startTime)
+            .ne("status", 0)
+            .isNotNull("paid_amount"));
+
+        return orders.stream()
+            .map(Order::getPaidAmount)
+            .filter(amount -> amount != null)
+            .map(BigDecimal::doubleValue)
+            .mapToDouble(Double::doubleValue)
+            .sum();
+    }
+
+    /**
+     * 获取总收入
+     */
+    private double getTotalRevenue() {
+        List<Order> orders = orderService.list(new QueryWrapper<Order>()
+            .ne("status", 0)
+            .isNotNull("paid_amount"));
+
+        return orders.stream()
+            .map(Order::getPaidAmount)
+            .filter(amount -> amount != null)
+            .map(BigDecimal::doubleValue)
+            .mapToDouble(Double::doubleValue)
+            .sum();
     }
 }

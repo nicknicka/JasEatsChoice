@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.xx.jaseatschoicejava.entity.Merchant;
 import com.xx.jaseatschoicejava.service.MerchantService;
+import com.xx.jaseatschoicejava.service.SystemLogService;
+import com.xx.jaseatschoicejava.util.AdminContext;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,11 +13,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * 管理员-商家管理控制器
+ * 管理员-商家管理控制器（更新版）
  */
 @Api(tags = "管理员-商家管理")
 @RestController
@@ -25,6 +28,9 @@ public class AdminMerchantController {
 
     @Autowired
     private MerchantService merchantService;
+
+    @Autowired(required = false)
+    private SystemLogService systemLogService;
 
     /**
      * 获取商家列表（分页）
@@ -39,7 +45,27 @@ public class AdminMerchantController {
             @RequestParam(required = false) String keyword) {
 
         Page<Merchant> pageParam = new Page<>(page, pageSize);
-        IPage<Merchant> result = merchantService.page(pageParam);
+
+        // 构建查询条件
+        var queryWrapper = new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Merchant>();
+
+        if (status != null && !status.isEmpty()) {
+            queryWrapper.eq("audit_status", status);
+        }
+
+        if (keyword != null && !keyword.isEmpty()) {
+            queryWrapper.and(wrapper -> wrapper
+                .like("shop_name", keyword)
+                .or()
+                .like("contact_name", keyword)
+                .or()
+                .like("contact_phone", keyword)
+            );
+        }
+
+        queryWrapper.orderByDesc("create_time");
+
+        IPage<Merchant> result = merchantService.page(pageParam, queryWrapper);
 
         return ResponseEntity.ok(result);
     }
@@ -56,7 +82,7 @@ public class AdminMerchantController {
         Map<String, Object> response = new HashMap<>();
         if (merchant != null) {
             response.put("success", true);
-            response.put("merchant", merchant);
+            response.put("data", merchant);
             return ResponseEntity.ok(response);
         } else {
             response.put("success", false);
@@ -78,15 +104,56 @@ public class AdminMerchantController {
         String status = (String) request.get("status"); // APPROVED, REJECTED
         String reason = (String) request.get("reason");
 
-        // TODO: 实现商家审核逻辑
-        // 1. 更新商家状态
-        // 2. 发送通知给商家
-        // 3. 记录操作日志
+        Merchant merchant = merchantService.getById(merchantId);
+        if (merchant == null) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "商家不存在");
+            return ResponseEntity.status(404).body(response);
+        }
+
+        // 检查当前状态
+        if (!"PENDING".equals(merchant.getAuditStatus())) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "该商家已审核，无法重复操作");
+            return ResponseEntity.status(400).body(response);
+        }
+
+        // 更新商家状态
+        merchant.setAuditStatus(status);
+        merchant.setAuditReason(reason);
+        merchant.setAuditTime(LocalDateTime.now());
+
+        // 获取当前管理员ID
+        Long adminId = AdminContext.getAdminId();
+        merchant.setAuditBy(adminId != null ? adminId.toString() : "SYSTEM");
+
+        boolean success = merchantService.updateById(merchant);
+
+        // 记录操作日志
+        if (systemLogService != null) {
+            String adminName = AdminContext.getAdminUsername();
+            String operation = "APPROVED".equals(status) ? "审核通过" : "审核拒绝";
+            systemLogService.logOperation(
+                "UPDATE", "MERCHANT", operation + "商家：" + merchant.getName(),
+                adminId, adminName, "ADMIN",
+                "AdminMerchantController.auditMerchant",
+                "merchantId=" + merchantId + ", status=" + status,
+                null, 0L, null, "SUCCESS"
+            );
+        }
 
         Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
-        response.put("message", "审核完成");
-        return ResponseEntity.ok(response);
+        if (success) {
+            response.put("success", true);
+            response.put("message", "APPROVED".equals(status) ? "商家审核通过" : "商家已拒绝");
+            return ResponseEntity.ok(response);
+        } else {
+            response.put("success", false);
+            response.put("message", "审核失败");
+            return ResponseEntity.status(500).body(response);
+        }
     }
 
     /**
@@ -99,13 +166,52 @@ public class AdminMerchantController {
             @PathVariable Long merchantId,
             @RequestBody Map<String, String> request) {
 
-        String status = request.get("status");
+        String newStatus = request.get("status"); // ACTIVE, LOCKED, DELETED
 
-        // TODO: 实现状态修改逻辑
+        Merchant merchant = merchantService.getById(merchantId);
+        if (merchant == null) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "商家不存在");
+            return ResponseEntity.status(404).body(response);
+        }
+
+        // 更新状态（转换为Boolean）
+        // ACTIVE=true, LOCKED=false, DELETED=特殊处理可以设置为false
+        merchant.setStatus("ACTIVE".equalsIgnoreCase(newStatus));
+
+        boolean success = merchantService.updateById(merchant);
 
         Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
-        response.put("message", "状态修改成功");
-        return ResponseEntity.ok(response);
+        if (success) {
+            response.put("success", true);
+            response.put("message", "状态修改成功");
+            return ResponseEntity.ok(response);
+        } else {
+            response.put("success", false);
+            response.put("message", "状态修改失败");
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+
+    /**
+     * 获取待审核商家列表
+     */
+    @ApiOperation("获取待审核商家列表")
+    @GetMapping("/pending")
+    @PreAuthorize("hasAnyAuthority('admin:merchant:audit')")
+    public ResponseEntity<IPage<Merchant>> getPendingMerchants(
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "10") Integer pageSize) {
+
+        Page<Merchant> pageParam = new Page<>(page, pageSize);
+
+        var queryWrapper = new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Merchant>()
+            .eq("audit_status", "PENDING")
+            .orderByDesc("create_time");
+
+        IPage<Merchant> result = merchantService.page(pageParam, queryWrapper);
+
+        return ResponseEntity.ok(result);
     }
 }

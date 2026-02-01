@@ -16,21 +16,25 @@
             <el-option label="创建" value="CREATE" />
             <el-option label="更新" value="UPDATE" />
             <el-option label="删除" value="DELETE" />
-            <el-option label="审核" value="AUDIT" />
+            <el-option label="查询" value="QUERY" />
+            <el-option label="导出" value="EXPORT" />
           </el-select>
         </el-form-item>
         <el-form-item label="模块名称">
-          <el-input
-            v-model="searchForm.moduleName"
-            placeholder="模块名称"
-            clearable
-            style="width: 150px"
-          />
+          <el-select v-model="searchForm.module" placeholder="全部" clearable style="width: 150px">
+            <el-option label="用户管理" value="USER" />
+            <el-option label="商家管理" value="MERCHANT" />
+            <el-option label="订单管理" value="ORDER" />
+            <el-option label="菜品管理" value="DISH" />
+            <el-option label="财务管理" value="FINANCE" />
+            <el-option label="系统管理" value="SYSTEM" />
+            <el-option label="角色管理" value="ROLE" />
+          </el-select>
         </el-form-item>
         <el-form-item label="操作人">
           <el-input
-            v-model="searchForm.username"
-            placeholder="用户名"
+            v-model="searchForm.operatorName"
+            placeholder="操作人姓名"
             clearable
             style="width: 150px"
           />
@@ -38,7 +42,8 @@
         <el-form-item label="状态">
           <el-select v-model="searchForm.status" placeholder="全部" clearable style="width: 120px">
             <el-option label="成功" value="SUCCESS" />
-            <el-option label="失败" value="FAIL" />
+            <el-option label="失败" value="FAILED" />
+            <el-option label="部分成功" value="PARTIAL" />
           </el-select>
         </el-form-item>
         <el-form-item label="日期范围">
@@ -50,20 +55,74 @@
             end-placeholder="结束时间"
             clearable
             style="width: 360px"
+            value-format="YYYY-MM-DD HH:mm:ss"
           />
         </el-form-item>
         <el-form-item>
           <el-button type="primary" :icon="Search" @click="handleSearch">搜索</el-button>
           <el-button :icon="Refresh" @click="handleReset">重置</el-button>
+          <el-button type="danger" :icon="Delete" @click="handleCleanLogs">清理日志</el-button>
         </el-form-item>
       </el-form>
     </el-card>
+
+    <!-- 统计卡片 -->
+    <el-row :gutter="20" class="stats-row">
+      <el-col :span="4">
+        <el-card shadow="hover">
+          <div class="stat-item">
+            <div class="stat-label">总日志数</div>
+            <div class="stat-value">{{ statistics.totalLogs || 0 }}</div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="4">
+        <el-card shadow="hover">
+          <div class="stat-item">
+            <div class="stat-label">登录</div>
+            <div class="stat-value">{{ statistics.operationStats?.LOGIN || 0 }}</div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="4">
+        <el-card shadow="hover">
+          <div class="stat-item">
+            <div class="stat-label">创建</div>
+            <div class="stat-value">{{ statistics.operationStats?.CREATE || 0 }}</div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="4">
+        <el-card shadow="hover">
+          <div class="stat-item">
+            <div class="stat-label">更新</div>
+            <div class="stat-value">{{ statistics.operationStats?.UPDATE || 0 }}</div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="4">
+        <el-card shadow="hover">
+          <div class="stat-item">
+            <div class="stat-label">删除</div>
+            <div class="stat-value">{{ statistics.operationStats?.DELETE || 0 }}</div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="4">
+        <el-card shadow="hover">
+          <div class="stat-item">
+            <div class="stat-label">查询</div>
+            <div class="stat-value">{{ statistics.operationStats?.QUERY || 0 }}</div>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
 
     <!-- 日志列表 -->
     <el-card class="table-card" shadow="never">
       <el-table :data="logList" v-loading="loading" stripe>
         <el-table-column prop="logId" label="日志ID" width="100" />
-        <el-table-column prop="username" label="操作人" width="120" />
+        <el-table-column prop="operatorName" label="操作人" width="120" />
         <el-table-column label="操作类型" width="100">
           <template #default="{ row }">
             <el-tag :type="getOperationTypeColor(row.operationType)">
@@ -71,15 +130,14 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="moduleName" label="模块名称" width="120" />
-        <el-table-column prop="operationDesc" label="操作描述" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="requestMethod" label="请求方法" width="90" />
-        <el-table-column prop="requestUrl" label="请求URL" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="ipAddress" label="IP地址" width="140" />
-        <el-table-column label="状态" width="80">
+        <el-table-column prop="module" label="模块名称" width="100" />
+        <el-table-column prop="description" label="操作描述" min-width="200" show-overflow-tooltip />
+        <el-table-column prop="method" label="执行方法" width="150" show-overflow-tooltip />
+        <el-table-column prop="ip" label="IP地址" width="140" />
+        <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.status === 'SUCCESS' ? 'success' : 'danger'" size="small">
-              {{ row.status === 'SUCCESS' ? '成功' : '失败' }}
+            <el-tag :type="getStatusColor(row.status)" size="small">
+              {{ getStatusText(row.status) }}
             </el-tag>
           </template>
         </el-table-column>
@@ -115,29 +173,31 @@
     >
       <el-descriptions v-if="currentLog" :column="2" border>
         <el-descriptions-item label="日志ID">{{ currentLog.logId }}</el-descriptions-item>
-        <el-descriptions-item label="操作人">{{ currentLog.username }}</el-descriptions-item>
+        <el-descriptions-item label="操作人">{{ currentLog.operatorName }}</el-descriptions-item>
         <el-descriptions-item label="操作类型">
           <el-tag :type="getOperationTypeColor(currentLog.operationType)">
             {{ getOperationTypeText(currentLog.operationType) }}
           </el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="模块名称">{{ currentLog.moduleName }}</el-descriptions-item>
-        <el-descriptions-item label="操作描述" :span="2">{{ currentLog.operationDesc }}</el-descriptions-item>
-        <el-descriptions-item label="请求方法">{{ currentLog.requestMethod }}</el-descriptions-item>
-        <el-descriptions-item label="IP地址">{{ currentLog.ipAddress }}</el-descriptions-item>
-        <el-descriptions-item label="请求URL" :span="2">{{ currentLog.requestUrl }}</el-descriptions-item>
+        <el-descriptions-item label="模块名称">{{ currentLog.module }}</el-descriptions-item>
+        <el-descriptions-item label="角色">{{ currentLog.operatorRole }}</el-descriptions-item>
+        <el-descriptions-item label="IP地址">{{ currentLog.ip }}</el-descriptions-item>
+        <el-descriptions-item label="操作描述" :span="2">{{ currentLog.description }}</el-descriptions-item>
+        <el-descriptions-item label="执行方法" :span="2">{{ currentLog.method }}</el-descriptions-item>
         <el-descriptions-item label="执行时长">{{ currentLog.executeTime }} ms</el-descriptions-item>
         <el-descriptions-item label="状态">
-          <el-tag :type="currentLog.status === 'SUCCESS' ? 'success' : 'danger'">
-            {{ currentLog.status === 'SUCCESS' ? '成功' : '失败' }}
+          <el-tag :type="getStatusColor(currentLog.status)">
+            {{ getStatusText(currentLog.status) }}
           </el-tag>
         </el-descriptions-item>
         <el-descriptions-item label="操作时间" :span="2">{{ currentLog.createTime }}</el-descriptions-item>
-        <el-descriptions-item label="请求参数" :span="2" v-if="currentLog.requestParams">
-          <pre class="json-content">{{ formatJson(currentLog.requestParams) }}</pre>
+        <el-descriptions-item label="浏览器">{{ currentLog.browser || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="操作系统">{{ currentLog.os || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="请求参数" :span="2" v-if="currentLog.params">
+          <pre class="json-content">{{ formatJson(currentLog.params) }}</pre>
         </el-descriptions-item>
-        <el-descriptions-item label="响应结果" :span="2" v-if="currentLog.responseResult">
-          <pre class="json-content">{{ formatJson(currentLog.responseResult) }}</pre>
+        <el-descriptions-item label="返回结果" :span="2" v-if="currentLog.result">
+          <pre class="json-content">{{ formatJson(currentLog.result) }}</pre>
         </el-descriptions-item>
         <el-descriptions-item label="错误信息" :span="2" v-if="currentLog.errorMessage">
           <pre class="error-content">{{ currentLog.errorMessage }}</pre>
@@ -153,19 +213,23 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
-import { Search, Refresh } from '@element-plus/icons-vue'
-import api from '@/utils/api'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Search, Refresh, Delete } from '@element-plus/icons-vue'
+import { getLogList, getLogStatistics, cleanExpiredLogs } from '@/api/admin'
 
 const loading = ref(false)
 const logList = ref([])
 const currentLog = ref(null)
 const detailDialogVisible = ref(false)
+const statistics = ref({
+  totalLogs: 0,
+  operationStats: {}
+})
 
 const searchForm = reactive({
   operationType: '',
-  moduleName: '',
-  username: '',
+  module: '',
+  operatorName: '',
   status: '',
   dateRange: null
 })
@@ -180,94 +244,56 @@ const pagination = reactive({
 const fetchLogList = async () => {
   loading.value = true
   try {
-    // TODO: 调用实际的日志API
-    // const response = await api.get('http://localhost:8080/api/admin/settings/logs', {
-    //   params: {
-    //     page: pagination.page,
-    //     pageSize: pagination.pageSize,
-    //     ...searchForm
-    //   }
-    // })
+    console.log('[系统日志] 获取日志列表')
 
-    // 临时使用模拟数据
-    setTimeout(() => {
-      logList.value = [
-        {
-          logId: 1,
-          adminId: 1,
-          username: 'admin',
-          operationType: 'LOGIN',
-          moduleName: '系统登录',
-          operationDesc: '管理员登录',
-          requestMethod: 'POST',
-          requestUrl: '/api/admin/login',
-          requestParams: '{"username":"admin"}',
-          responseResult: '{"success":true}',
-          ipAddress: '192.168.1.100',
-          executeTime: 125,
-          status: 'SUCCESS',
-          errorMessage: null,
-          createTime: '2025-01-31 10:30:00'
-        },
-        {
-          logId: 2,
-          adminId: 1,
-          username: 'admin',
-          operationType: 'CREATE',
-          moduleName: '用户管理',
-          operationDesc: '创建管理员',
-          requestMethod: 'POST',
-          requestUrl: '/api/admin/create',
-          requestParams: '{"username":"test","roleCode":"ADMIN"}',
-          responseResult: '{"success":true}',
-          ipAddress: '192.168.1.100',
-          executeTime: 85,
-          status: 'SUCCESS',
-          errorMessage: null,
-          createTime: '2025-01-31 10:35:00'
-        },
-        {
-          logId: 3,
-          adminId: 1,
-          username: 'admin',
-          operationType: 'UPDATE',
-          moduleName: '商家管理',
-          operationDesc: '审核商家：通过',
-          requestMethod: 'PUT',
-          requestUrl: '/api/admin/merchants/1/audit',
-          requestParams: '{"status":"APPROVED"}',
-          responseResult: '{"success":true}',
-          ipAddress: '192.168.1.100',
-          executeTime: 156,
-          status: 'SUCCESS',
-          errorMessage: null,
-          createTime: '2025-01-31 10:40:00'
-        },
-        {
-          logId: 4,
-          adminId: 1,
-          username: 'admin',
-          operationType: 'DELETE',
-          moduleName: '用户管理',
-          operationDesc: '删除用户',
-          requestMethod: 'DELETE',
-          requestUrl: '/api/admin/users/U1234567890123456',
-          requestParams: '{}',
-          responseResult: '{"success":true}',
-          ipAddress: '192.168.1.100',
-          executeTime: 95,
-          status: 'SUCCESS',
-          errorMessage: null,
-          createTime: '2025-01-31 10:45:00'
-        }
-      ]
-      pagination.total = 100
-      loading.value = false
-    }, 500)
+    const params = {
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+      operationType: searchForm.operationType || undefined,
+      module: searchForm.module || undefined,
+      operatorName: searchForm.operatorName || undefined,
+      status: searchForm.status || undefined
+    }
+
+    // 处理日期范围
+    if (searchForm.dateRange && searchForm.dateRange.length === 2) {
+      params.startTime = searchForm.dateRange[0]
+      params.endTime = searchForm.dateRange[1]
+    }
+
+    const response = await getLogList(params)
+    console.log('[系统日志] API响应:', response)
+
+    if (response && response.success) {
+      logList.value = response.records || []
+      pagination.total = response.total || 0
+      console.log('[系统日志] 获取日志列表成功, 总数:', pagination.total)
+    } else {
+      logList.value = []
+      pagination.total = 0
+    }
   } catch (error) {
-    console.error('获取日志列表失败:', error)
-    ElMessage.error('获取日志列表失败')
+    console.error('[系统日志] 获取日志列表失败:', error)
+    ElMessage.error('获取日志列表失败: ' + (error.message || '网络错误'))
+    logList.value = []
+    pagination.total = 0
+  } finally {
     loading.value = false
+  }
+}
+
+// 获取统计数据
+const fetchStatistics = async () => {
+  try {
+    console.log('[系统日志] 获取统计数据')
+    const response = await getLogStatistics()
+    console.log('[系统日志] 统计数据响应:', response)
+
+    if (response && response.success && response.data) {
+      statistics.value = response.data
+    }
+  } catch (error) {
+    console.error('[系统日志] 获取统计数据失败:', error)
   }
 }
 
@@ -279,7 +305,8 @@ const getOperationTypeColor = (type) => {
     'CREATE': 'primary',
     'UPDATE': 'warning',
     'DELETE': 'danger',
-    'AUDIT': 'primary'
+    'QUERY': 'info',
+    'EXPORT': 'primary'
   }
   return colors[type] || 'info'
 }
@@ -292,9 +319,30 @@ const getOperationTypeText = (type) => {
     'CREATE': '创建',
     'UPDATE': '更新',
     'DELETE': '删除',
-    'AUDIT': '审核'
+    'QUERY': '查询',
+    'EXPORT': '导出'
   }
   return texts[type] || '未知'
+}
+
+// 获取状态颜色
+const getStatusColor = (status) => {
+  const colors = {
+    'SUCCESS': 'success',
+    'FAILED': 'danger',
+    'PARTIAL': 'warning'
+  }
+  return colors[status] || 'info'
+}
+
+// 获取状态文本
+const getStatusText = (status) => {
+  const texts = {
+    'SUCCESS': '成功',
+    'FAILED': '失败',
+    'PARTIAL': '部分成功'
+  }
+  return texts[status] || '未知'
 }
 
 // 格式化JSON
@@ -316,12 +364,43 @@ const handleSearch = () => {
 // 重置
 const handleReset = () => {
   searchForm.operationType = ''
-  searchForm.moduleName = ''
-  searchForm.username = ''
+  searchForm.module = ''
+  searchForm.operatorName = ''
   searchForm.status = ''
   searchForm.dateRange = null
   pagination.page = 1
   fetchLogList()
+}
+
+// 清理日志
+const handleCleanLogs = async () => {
+  try {
+    await ElMessageBox.confirm(
+      '确定要清理90天前的日志吗？此操作不可恢复！',
+      '警告',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    console.log('[系统日志] 清理过期日志')
+    const response = await cleanExpiredLogs(90)
+
+    if (response && response.success) {
+      ElMessage.success(response.message || '清理成功')
+      fetchLogList()
+      fetchStatistics()
+    } else {
+      ElMessage.error(response.message || '清理失败')
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('[系统日志] 清理日志失败:', error)
+      ElMessage.error('清理日志失败: ' + (error.message || '网络错误'))
+    }
+  }
 }
 
 // 查看详情
@@ -332,6 +411,7 @@ const handleViewDetail = (row) => {
 
 onMounted(() => {
   fetchLogList()
+  fetchStatistics()
 })
 </script>
 
@@ -358,6 +438,26 @@ onMounted(() => {
 
     .search-form {
       margin-bottom: 0;
+    }
+  }
+
+  .stats-row {
+    margin-bottom: 20px;
+
+    .stat-item {
+      text-align: center;
+
+      .stat-label {
+        font-size: 14px;
+        color: #909399;
+        margin-bottom: 8px;
+      }
+
+      .stat-value {
+        font-size: 24px;
+        font-weight: bold;
+        color: #409eff;
+      }
     }
   }
 

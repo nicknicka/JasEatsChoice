@@ -89,6 +89,22 @@ public class Merchant {
     @ApiModelProperty(value = "状态：true-营业，false-休息")
     private Boolean status; // 状态：true-营业，false-休息
 
+    @TableField("audit_status")
+    @ApiModelProperty(value = "审核状态：PENDING-待审核, APPROVED-已通过, REJECTED-已拒绝")
+    private String auditStatus; // 审核状态
+
+    @TableField("audit_reason")
+    @ApiModelProperty(value = "审核备注/原因")
+    private String auditReason; // 审核备注/原因
+
+    @TableField("audit_time")
+    @ApiModelProperty(value = "审核时间")
+    private LocalDateTime auditTime; // 审核时间
+
+    @TableField("audit_by")
+    @ApiModelProperty(value = "审核人ID")
+    private String auditBy; // 审核人ID
+
     @TableField("create_time")
     @ApiModelProperty(value = "创建时间")
     private LocalDateTime createTime; // 创建时间

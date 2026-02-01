@@ -90,6 +90,63 @@
         <el-button type="primary" @click="handleEdit(currentUser)">编辑</el-button>
       </template>
     </el-dialog>
+
+    <!-- 编辑用户对话框 -->
+    <el-dialog
+      v-model="editDialogVisible"
+      title="编辑用户"
+      width="600px"
+      :close-on-click-modal="false"
+    >
+      <el-form :model="editForm" :rules="editRules" ref="editFormRef" label-width="100px">
+        <el-form-item label="昵称" prop="nickname">
+          <el-input v-model="editForm.nickname" placeholder="请输入昵称" maxlength="50" />
+        </el-form-item>
+        <el-form-item label="手机号" prop="phone">
+          <el-input v-model="editForm.phone" placeholder="请输入手机号" maxlength="11" />
+        </el-form-item>
+        <el-form-item label="邮箱" prop="email">
+          <el-input v-model="editForm.email" placeholder="请输入邮箱" maxlength="100" />
+        </el-form-item>
+        <el-form-item label="头像URL" prop="avatar">
+          <el-input v-model="editForm.avatar" placeholder="请输入头像URL" />
+        </el-form-item>
+        <el-form-item label="性别" prop="gender">
+          <el-radio-group v-model="editForm.gender">
+            <el-radio label="">未知</el-radio>
+            <el-radio label="男">男</el-radio>
+            <el-radio label="女">女</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="生日" prop="birthday">
+          <el-date-picker
+            v-model="editForm.birthday"
+            type="date"
+            placeholder="选择生日"
+            value-format="YYYY-MM-DD"
+            style="width: 100%"
+          />
+        </el-form-item>
+        <el-form-item label="位置" prop="location">
+          <el-input v-model="editForm.location" placeholder="请输入位置" maxlength="100" />
+        </el-form-item>
+        <el-form-item label="个人简介" prop="bio">
+          <el-input
+            v-model="editForm.bio"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入个人简介"
+            maxlength="500"
+            show-word-limit
+          />
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="editDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="editLoading" @click="handleSubmitEdit">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -97,7 +154,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Download } from '@element-plus/icons-vue'
-import { getUserList, getUserDetail, deleteUser } from '@/api/admin'
+import { getUserList, getUserDetail, deleteUser, updateUser } from '@/api/admin'
 import { exportToExcel } from '@/utils/export.js'
 import { getAvatarUrl } from '@/utils/avatar'
 
@@ -105,6 +162,9 @@ const loading = ref(false)
 const userList = ref([])
 const currentUser = ref(null)
 const detailDialogVisible = ref(false)
+const editDialogVisible = ref(false)
+const editLoading = ref(false)
+const editFormRef = ref(null)
 
 const searchForm = reactive({
   keyword: ''
@@ -115,6 +175,30 @@ const pagination = reactive({
   pageSize: 10,
   total: 0
 })
+
+const editForm = reactive({
+  userId: '',
+  nickname: '',
+  phone: '',
+  email: '',
+  avatar: '',
+  gender: '',
+  birthday: '',
+  location: '',
+  bio: ''
+})
+
+const editRules = {
+  nickname: [
+    { max: 50, message: '昵称长度不能超过50个字符', trigger: 'blur' }
+  ],
+  phone: [
+    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
+  ],
+  email: [
+    { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
+  ]
+}
 
 // 获取用户列表
 const fetchUserList = async () => {
@@ -200,8 +284,57 @@ const handleView = async (row) => {
 
 // 编辑用户
 const handleEdit = (row) => {
-  ElMessage.info('编辑功能开发中...')
-  // TODO: 实现编辑功能
+  console.log('[用户管理] 编辑用户:', row)
+
+  // 填充表单数据
+  editForm.userId = row.userId
+  editForm.nickname = row.nickname || ''
+  editForm.phone = row.phone || ''
+  editForm.email = row.email || ''
+  editForm.avatar = row.avatar || ''
+  editForm.gender = row.gender || ''
+  editForm.birthday = row.birthday || ''
+  editForm.location = row.location || ''
+  editForm.bio = row.bio || ''
+
+  editDialogVisible.value = true
+}
+
+// 提交编辑
+const handleSubmitEdit = async () => {
+  try {
+    // 验证表单
+    await editFormRef.value.validate()
+
+    editLoading.value = true
+    console.log('[用户管理] 提交编辑:', editForm)
+
+    const response = await updateUser(editForm.userId, {
+      nickname: editForm.nickname,
+      phone: editForm.phone,
+      email: editForm.email,
+      avatar: editForm.avatar,
+      gender: editForm.gender,
+      birthday: editForm.birthday,
+      location: editForm.location,
+      bio: editForm.bio
+    })
+
+    if (response && response.success) {
+      ElMessage.success(response.message || '编辑成功')
+      editDialogVisible.value = false
+      fetchUserList()
+    } else {
+      ElMessage.error(response.message || '编辑失败')
+    }
+  } catch (error) {
+    if (error !== false) { // 表单验证失败时会返回false
+      console.error('[用户管理] 编辑用户失败:', error)
+      ElMessage.error('编辑用户失败: ' + (error.message || '网络错误'))
+    }
+  } finally {
+    editLoading.value = false
+  }
 }
 
 // 删除用户

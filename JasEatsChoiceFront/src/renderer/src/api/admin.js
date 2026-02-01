@@ -622,3 +622,485 @@ export function getLoginLogs(params = {}) {
       throw error
     })
 }
+
+// ==================== 用户管理（新增） ====================
+
+/**
+ * 编辑用户信息
+ * @param {string} userId - 用户ID
+ * @param {Object} userData - 用户数据
+ * @returns {Promise} 编辑结果
+ */
+export function updateUser(userId, userData) {
+  console.log('[管理员API] 编辑用户:', userId, userData)
+  return api.put(`/admin/users/${userId}`, userData)
+    .then(response => {
+      console.log('[管理员API] 编辑用户成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 编辑用户失败:', error)
+      throw error
+    })
+}
+
+// ==================== 订单管理（新增） ====================
+
+/**
+ * 修改订单状态
+ * @param {string} orderId - 订单ID
+ * @param {Object} statusData - 状态数据
+ * @returns {Promise} 修改结果
+ */
+export function updateOrderStatus(orderId, statusData) {
+  console.log('[管理员API] 修改订单状态:', orderId, statusData)
+  return api.put(`/admin/orders/${orderId}/status`, statusData)
+    .then(response => {
+      console.log('[管理员API] 修改订单状态成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 修改订单状态失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 批量修改订单状态
+ * @param {Object} batchData - 批量数据 {orderIds: [], status: number, reason: string}
+ * @returns {Promise} 批量修改结果
+ */
+export function batchUpdateOrderStatus(batchData) {
+  console.log('[管理员API] 批量修改订单状态:', batchData)
+  return api.put('/admin/orders/batch/status', batchData)
+    .then(response => {
+      console.log('[管理员API] 批量修改订单状态成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 批量修改订单状态失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 获取订单统计
+ * @returns {Promise} 订单统计数据
+ */
+export function getOrderStatistics() {
+  console.log('[管理员API] 获取订单统计')
+  return api.get('/admin/orders/statistics')
+    .then(response => {
+      console.log('[管理员API] 获取订单统计成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 获取订单统计失败:', error)
+      throw error
+    })
+}
+
+// ==================== 系统日志（新增） ====================
+
+/**
+ * 获取系统日志列表
+ * @param {Object} params - 查询参数
+ * @returns {Promise} 日志列表
+ */
+export function getLogList(params = {}) {
+  console.log('[管理员API] 获取系统日志列表:', params)
+  return api.get('/admin/system/logs', { params })
+    .then(response => {
+      console.log('[管理员API] 获取系统日志列表成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 获取系统日志列表失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 获取日志统计
+ * @returns {Promise} 日志统计数据
+ */
+export function getLogStatistics() {
+  console.log('[管理员API] 获取日志统计')
+  return api.get('/admin/system/logs/statistics')
+    .then(response => {
+      console.log('[管理员API] 获取日志统计成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 获取日志统计失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 清理过期日志
+ * @param {number} days - 保留天数
+ * @returns {Promise} 清理结果
+ */
+export function cleanExpiredLogs(days = 90) {
+  console.log('[管理员API] 清理过期日志, 天数:', days)
+  return api.delete('/admin/system/logs/clean', { params: { days } })
+    .then(response => {
+      console.log('[管理员API] 清理过期日志成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 清理过期日志失败:', error)
+      throw error
+    })
+}
+
+// ==================== 角色管理（新增） ====================
+
+/**
+ * 获取角色列表
+ * @param {Object} params - 查询参数
+ * @returns {Promise} 角色列表
+ */
+export function getRoleList(params = {}) {
+  console.log('[管理员API] 获取角色列表:', params)
+  return api.get('/admin/roles', { params })
+    .then(response => {
+      console.log('[管理员API] 获取角色列表成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 获取角色列表失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 获取所有角色（不分页）
+ * @returns {Promise} 角色列表
+ */
+export function getAllRoles() {
+  console.log('[管理员API] 获取所有角色')
+  return api.get('/admin/roles/all')
+    .then(response => {
+      console.log('[管理员API] 获取所有角色成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 获取所有角色失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 获取角色详情
+ * @param {number} roleId - 角色ID
+ * @returns {Promise} 角色详情
+ */
+export function getRoleDetail(roleId) {
+  console.log('[管理员API] 获取角色详情:', roleId)
+  return api.get(`/admin/roles/${roleId}`)
+    .then(response => {
+      console.log('[管理员API] 获取角色详情成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 获取角色详情失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 创建角色
+ * @param {Object} roleData - 角色数据
+ * @returns {Promise} 创建结果
+ */
+export function createRole(roleData) {
+  console.log('[管理员API] 创建角色:', roleData)
+  return api.post('/admin/roles', roleData)
+    .then(response => {
+      console.log('[管理员API] 创建角色成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 创建角色失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 更新角色
+ * @param {number} roleId - 角色ID
+ * @param {Object} roleData - 角色数据
+ * @returns {Promise} 更新结果
+ */
+export function updateRole(roleId, roleData) {
+  console.log('[管理员API] 更新角色:', roleId, roleData)
+  return api.put(`/admin/roles/${roleId}`, roleData)
+    .then(response => {
+      console.log('[管理员API] 更新角色成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 更新角色失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 删除角色
+ * @param {number} roleId - 角色ID
+ * @returns {Promise} 删除结果
+ */
+export function deleteRole(roleId) {
+  console.log('[管理员API] 删除角色:', roleId)
+  return api.delete(`/admin/roles/${roleId}`)
+    .then(response => {
+      console.log('[管理员API] 删除角色成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 删除角色失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 为角色分配权限
+ * @param {number} roleId - 角色ID
+ * @param {Object} permissionData - 权限数据 {permissionIds: []}
+ * @returns {Promise} 分配结果
+ */
+export function assignRolePermissions(roleId, permissionData) {
+  console.log('[管理员API] 为角色分配权限:', roleId, permissionData)
+  return api.post(`/admin/roles/${roleId}/permissions`, permissionData)
+    .then(response => {
+      console.log('[管理员API] 为角色分配权限成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 为角色分配权限失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 获取角色的权限列表
+ * @param {number} roleId - 角色ID
+ * @returns {Promise} 权限列表
+ */
+export function getRolePermissions(roleId) {
+  console.log('[管理员API] 获取角色权限:', roleId)
+  return api.get(`/admin/roles/${roleId}/permissions`)
+    .then(response => {
+      console.log('[管理员API] 获取角色权限成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 获取角色权限失败:', error)
+      throw error
+    })
+}
+
+// ==================== 权限管理（新增） ====================
+
+/**
+ * 获取权限列表
+ * @param {Object} params - 查询参数
+ * @returns {Promise} 权限列表
+ */
+export function getPermissionList(params = {}) {
+  console.log('[管理员API] 获取权限列表:', params)
+  return api.get('/admin/permissions', { params })
+    .then(response => {
+      console.log('[管理员API] 获取权限列表成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 获取权限列表失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 获取权限树
+ * @returns {Promise} 权限树
+ */
+export function getPermissionTree() {
+  console.log('[管理员API] 获取权限树')
+  return api.get('/admin/permissions/tree')
+    .then(response => {
+      console.log('[管理员API] 获取权限树成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 获取权限树失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 获取顶级权限
+ * @returns {Promise} 顶级权限列表
+ */
+export function getTopLevelPermissions() {
+  console.log('[管理员API] 获取顶级权限')
+  return api.get('/admin/permissions/top')
+    .then(response => {
+      console.log('[管理员API] 获取顶级权限成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 获取顶级权限失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 获取子权限列表
+ * @param {number} parentId - 父级ID
+ * @returns {Promise} 子权限列表
+ */
+export function getChildPermissions(parentId) {
+  console.log('[管理员API] 获取子权限:', parentId)
+  return api.get(`/admin/permissions/children/${parentId}`)
+    .then(response => {
+      console.log('[管理员API] 获取子权限成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 获取子权限失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 获取权限详情
+ * @param {number} permissionId - 权限ID
+ * @returns {Promise} 权限详情
+ */
+export function getPermissionDetail(permissionId) {
+  console.log('[管理员API] 获取权限详情:', permissionId)
+  return api.get(`/admin/permissions/${permissionId}`)
+    .then(response => {
+      console.log('[管理员API] 获取权限详情成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 获取权限详情失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 创建权限
+ * @param {Object} permissionData - 权限数据
+ * @returns {Promise} 创建结果
+ */
+export function createPermission(permissionData) {
+  console.log('[管理员API] 创建权限:', permissionData)
+  return api.post('/admin/permissions', permissionData)
+    .then(response => {
+      console.log('[管理员API] 创建权限成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 创建权限失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 更新权限
+ * @param {number} permissionId - 权限ID
+ * @param {Object} permissionData - 权限数据
+ * @returns {Promise} 更新结果
+ */
+export function updatePermission(permissionId, permissionData) {
+  console.log('[管理员API] 更新权限:', permissionId, permissionData)
+  return api.put(`/admin/permissions/${permissionId}`, permissionData)
+    .then(response => {
+      console.log('[管理员API] 更新权限成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 更新权限失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 删除权限
+ * @param {number} permissionId - 权限ID
+ * @returns {Promise} 删除结果
+ */
+export function deletePermission(permissionId) {
+  console.log('[管理员API] 删除权限:', permissionId)
+  return api.delete(`/admin/permissions/${permissionId}`)
+    .then(response => {
+      console.log('[管理员API] 删除权限成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 删除权限失败:', error)
+      throw error
+    })
+}
+
+// ==================== 退款管理（新增） ====================
+
+/**
+ * 处理退款申请
+ * @param {string} refundId - 退款ID
+ * @param {Object} processData - 处理数据
+ * @returns {Promise} 处理结果
+ */
+export function processRefund(refundId, processData) {
+  console.log('[管理员API] 处理退款申请:', refundId, processData)
+  return api.post(`/admin/finance/refunds/${refundId}/process`, processData)
+    .then(response => {
+      console.log('[管理员API] 处理退款申请成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 处理退款申请失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 获取退款统计
+ * @returns {Promise} 退款统计数据
+ */
+export function getRefundStatistics() {
+  console.log('[管理员API] 获取退款统计')
+  return api.get('/admin/finance/refunds/statistics')
+    .then(response => {
+      console.log('[管理员API] 获取退款统计成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 获取退款统计失败:', error)
+      throw error
+    })
+}
+
+// ==================== 待审核商家（新增） ====================
+
+/**
+ * 获取待审核商家列表
+ * @param {Object} params - 查询参数
+ * @returns {Promise} 待审核商家列表
+ */
+export function getPendingMerchants(params = {}) {
+  console.log('[管理员API] 获取待审核商家列表:', params)
+  return api.get('/admin/merchants/pending', { params })
+    .then(response => {
+      console.log('[管理员API] 获取待审核商家列表成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 获取待审核商家列表失败:', error)
+      throw error
+    })
+}

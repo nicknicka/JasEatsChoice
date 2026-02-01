@@ -50,4 +50,8 @@ public class Role {
     @TableField("sort_order")
     @ApiModelProperty(value = "排序序号")
     private Integer sortOrder;
+
+    @TableField(exist = false)
+    @ApiModelProperty(value = "权限数量（非数据库字段）")
+    private Integer permissionCount;
 }

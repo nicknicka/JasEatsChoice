@@ -18,6 +18,11 @@
         <el-table-column prop="roleName" label="角色名称" min-width="150" />
         <el-table-column prop="roleCode" label="角色编码" width="180" />
         <el-table-column prop="description" label="描述" min-width="200" />
+        <el-table-column prop="permissionCount" label="权限数量" width="100" align="center">
+          <template #default="{ row }">
+            <el-tag type="info">{{ row.permissionCount || 0 }}</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
             <el-tag :type="row.status === 'ACTIVE' ? 'success' : 'info'">
@@ -100,7 +105,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
-import api from '@/utils/api'
+import { getRoleList, createRole, updateRole, deleteRole, getPermissionTree, assignRolePermissions, getRolePermissions } from '@/api/admin'
 
 const loading = ref(false)
 const roleList = ref([])
@@ -128,23 +133,24 @@ const roleRules = {
   ]
 }
 
-// 权限树数据（模拟数据，实际应从API获取）
+// 权限树数据
 const permissionTree = ref([])
 
 // 获取角色列表
 const fetchRoleList = async () => {
   loading.value = true
   try {
-    const response = await api.get('http://localhost:8080/api/admin/settings/roles', {
-      params: { page: 1, pageSize: 100 }
-    })
+    console.log('[角色管理] 获取角色列表')
+    const response = await getRoleList({ page: 1, pageSize: 100 })
 
-    if (response) {
-      roleList.value = response.records || []
+    console.log('[角色管理] API响应:', response)
+
+    if (response && response.records) {
+      roleList.value = response.records
     }
   } catch (error) {
-    console.error('获取角色列表失败:', error)
-    ElMessage.error('获取角色列表失败')
+    console.error('[角色管理] 获取角色列表失败:', error)
+    ElMessage.error('获取角色列表失败: ' + (error.message || '网络错误'))
   } finally {
     loading.value = false
   }
@@ -153,34 +159,17 @@ const fetchRoleList = async () => {
 // 获取权限树
 const fetchPermissionTree = async () => {
   try {
-    // TODO: 调用实际的权限树API
-    // const response = await api.get('http://localhost:8080/api/admin/settings/permissions/tree')
-    // permissionTree.value = response.data
+    console.log('[角色管理] 获取权限树')
+    const response = await getPermissionTree()
 
-    // 临时使用模拟数据
-    permissionTree.value = [
-      {
-        permissionId: 1,
-        permissionName: '用户管理',
-        children: [
-          { permissionId: 11, permissionName: '用户列表' },
-          { permissionId: 12, permissionName: '用户详情' },
-          { permissionId: 13, permissionName: '修改状态' },
-          { permissionId: 14, permissionName: '删除用户' }
-        ]
-      },
-      {
-        permissionId: 2,
-        permissionName: '商家管理',
-        children: [
-          { permissionId: 21, permissionName: '商家列表' },
-          { permissionId: 22, permissionName: '商家审核' },
-          { permissionId: 23, permissionName: '修改状态' }
-        ]
-      }
-    ]
+    console.log('[角色管理] 权限树响应:', response)
+
+    if (response && response.success) {
+      permissionTree.value = response.data || []
+    }
   } catch (error) {
-    console.error('获取权限树失败:', error)
+    console.error('[角色管理] 获取权限树失败:', error)
+    ElMessage.error('获取权限树失败')
   }
 }
 
@@ -218,18 +207,19 @@ const handleDelete = async (row) => {
       }
     )
 
-    const response = await api.delete(`http://localhost:8080/api/admin/settings/roles/${row.roleId}`)
+    console.log('[角色管理] 删除角色:', row.roleId)
+    const response = await deleteRole(row.roleId)
 
-    if (response.data?.success) {
+    if (response && response.success) {
       ElMessage.success('删除成功')
       fetchRoleList()
     } else {
-      ElMessage.error(response.data?.message || '删除失败')
+      ElMessage.error(response?.message || '删除失败')
     }
   } catch (error) {
     if (error !== 'cancel') {
-      console.error('删除角色失败:', error)
-      ElMessage.error('删除角色失败')
+      console.error('[角色管理] 删除角色失败:', error)
+      ElMessage.error('删除角色失败: ' + (error.message || '网络错误'))
     }
   }
 }
@@ -242,20 +232,24 @@ const submitRole = async () => {
     await roleFormRef.value.validate()
     submitting.value = true
 
-    const response = isEdit.value
-      ? await api.put(`http://localhost:8080/api/admin/settings/roles/${roleForm.roleId}`, roleForm)
-      : await api.post('http://localhost:8080/api/admin/settings/roles', roleForm)
+    console.log('[角色管理] 提交角色:', isEdit.value, roleForm)
 
-    if (response.data?.success) {
+    const response = isEdit.value
+      ? await updateRole(roleForm.roleId, roleForm)
+      : await createRole(roleForm)
+
+    if (response && response.success) {
       ElMessage.success(isEdit.value ? '更新成功' : '创建成功')
       dialogVisible.value = false
       fetchRoleList()
     } else {
-      ElMessage.error(response.data?.message || '操作失败')
+      ElMessage.error(response?.message || '操作失败')
     }
   } catch (error) {
-    console.error('提交失败:', error)
-    ElMessage.error('操作失败')
+    if (error !== false) {
+      console.error('[角色管理] 提交失败:', error)
+      ElMessage.error('操作失败: ' + (error.message || '网络错误'))
+    }
   } finally {
     submitting.value = false
   }
@@ -264,11 +258,13 @@ const submitRole = async () => {
 // 分配权限
 const handleAssignPermissions = async (row) => {
   try {
-    // 获取角色已有的权限
-    const response = await api.get(`http://localhost:8080/api/admin/settings/roles/${row.roleId}/permissions`)
+    console.log('[角色管理] 分配权限, 角色ID:', row.roleId)
 
-    if (response.data?.success) {
-      const permissionIds = response.data.permissionIds || []
+    // 获取角色已有的权限
+    const response = await getRolePermissions(row.roleId)
+
+    if (response && response.success) {
+      const permissionIds = response.permissionIds || []
 
       // 设置当前角色ID
       roleForm.roleId = row.roleId
@@ -282,9 +278,11 @@ const handleAssignPermissions = async (row) => {
       }, 100)
 
       permissionDialogVisible.value = true
+    } else {
+      ElMessage.error('获取角色权限失败')
     }
   } catch (error) {
-    console.error('获取角色权限失败:', error)
+    console.error('[角色管理] 获取角色权限失败:', error)
     ElMessage.error('获取角色权限失败')
   }
 }
@@ -299,20 +297,22 @@ const submitPermissions = async () => {
     const halfCheckedKeys = permissionTreeRef.value.getHalfCheckedKeys()
     const allPermissionIds = [...checkedKeys, ...halfCheckedKeys]
 
-    const response = await api.post(
-      `http://localhost:8080/api/admin/settings/roles/${roleForm.roleId}/permissions`,
-      { permissionIds: allPermissionIds }
-    )
+    console.log('[角色管理] 提交权限分配:', allPermissionIds)
 
-    if (response.data?.success) {
+    const response = await assignRolePermissions(roleForm.roleId, {
+      permissionIds: allPermissionIds
+    })
+
+    if (response && response.success) {
       ElMessage.success('权限分配成功')
       permissionDialogVisible.value = false
+      fetchRoleList()
     } else {
-      ElMessage.error(response.data?.message || '分配失败')
+      ElMessage.error(response?.message || '分配失败')
     }
   } catch (error) {
-    console.error('分配权限失败:', error)
-    ElMessage.error('分配权限失败')
+    console.error('[角色管理] 分配权限失败:', error)
+    ElMessage.error('分配权限失败: ' + (error.message || '网络错误'))
   } finally {
     submitting.value = false
   }

@@ -9,7 +9,7 @@
     <!-- 操作栏 -->
     <div class="toolbar">
       <el-button type="primary" :icon="Plus" @click="handleCreate">新建权限</el-button>
-      <el-button :icon="Refresh" @click="fetchPermissionList">刷新</el-button>
+      <el-button :icon="Refresh" @click="fetchPermissionTree">刷新</el-button>
     </div>
 
     <!-- 权限树表格 -->
@@ -33,6 +33,7 @@
         </el-table-column>
         <el-table-column prop="path" label="路由路径" min-width="180" show-overflow-tooltip />
         <el-table-column prop="icon" label="图标" width="100" />
+        <el-table-column prop="description" label="描述" min-width="150" show-overflow-tooltip />
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
             <el-tag :type="row.status === 'ACTIVE' ? 'success' : 'info'">
@@ -88,6 +89,9 @@
         <el-form-item label="图标" prop="icon">
           <el-input v-model="permissionForm.icon" placeholder="图标名称" />
         </el-form-item>
+        <el-form-item label="描述" prop="description">
+          <el-input v-model="permissionForm.description" type="textarea" :rows="2" placeholder="请输入权限描述" />
+        </el-form-item>
         <el-form-item label="排序" prop="sortOrder">
           <el-input-number v-model="permissionForm.sortOrder" :min="0" />
         </el-form-item>
@@ -111,13 +115,14 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Refresh } from '@element-plus/icons-vue'
-import api from '@/utils/api'
+import { getPermissionTree, createPermission, updatePermission, deletePermission } from '@/api/admin'
 
 const loading = ref(false)
 const permissionList = ref([])
 const dialogVisible = ref(false)
 const submitting = ref(false)
 const isEdit = ref(false)
+const isChild = ref(false)
 const parentPermissionOptions = ref([])
 const permissionFormRef = ref(null)
 
@@ -129,6 +134,7 @@ const permissionForm = reactive({
   resourceType: 'MENU',
   path: '',
   icon: '',
+  description: '',
   sortOrder: 0,
   status: 'ACTIVE'
 })
@@ -143,6 +149,7 @@ const permissionRules = {
 }
 
 const dialogTitle = computed(() => {
+  if (isChild.value) return '添加子权限'
   return isEdit.value ? '编辑权限' : '新建权限'
 })
 
@@ -167,128 +174,30 @@ const getResourceTypeText = (type) => {
 }
 
 // 获取权限列表（树形结构）
-const fetchPermissionList = async () => {
+const fetchPermissionTree = async () => {
   loading.value = true
   try {
-    // TODO: 调用实际的权限树API
-    // const response = await api.get('http://localhost:8080/api/admin/settings/permissions/tree')
+    console.log('[权限管理] 获取权限树')
+    const response = await getPermissionTree()
 
-    // 临时使用模拟数据
-    permissionList.value = [
-      {
-        permissionId: 1,
-        permissionName: '控制台',
-        permissionCode: 'admin:dashboard',
-        resourceType: 'MENU',
-        parentId: 0,
-        path: '/admin/dashboard',
-        icon: 'DataBoard',
-        sortOrder: 1,
-        status: 'ACTIVE',
-        children: []
-      },
-      {
-        permissionId: 2,
-        permissionName: '用户管理',
-        permissionCode: 'admin:user',
-        resourceType: 'MENU',
-        parentId: 0,
-        path: '/admin/users',
-        icon: 'User',
-        sortOrder: 2,
-        status: 'ACTIVE',
-        children: [
-          {
-            permissionId: 21,
-            permissionName: '用户列表',
-            permissionCode: 'admin:user:list',
-            resourceType: 'API',
-            parentId: 2,
-            sortOrder: 1,
-            status: 'ACTIVE'
-          },
-          {
-            permissionId: 22,
-            permissionName: '用户详情',
-            permissionCode: 'admin:user:detail',
-            resourceType: 'API',
-            parentId: 2,
-            sortOrder: 2,
-            status: 'ACTIVE'
-          },
-          {
-            permissionId: 23,
-            permissionName: '修改状态',
-            permissionCode: 'admin:user:status',
-            resourceType: 'BUTTON',
-            parentId: 2,
-            sortOrder: 3,
-            status: 'ACTIVE'
-          },
-          {
-            permissionId: 24,
-            permissionName: '删除用户',
-            permissionCode: 'admin:user:delete',
-            resourceType: 'BUTTON',
-            parentId: 2,
-            sortOrder: 4,
-            status: 'ACTIVE'
-          }
-        ]
-      },
-      {
-        permissionId: 3,
-        permissionName: '商家管理',
-        permissionCode: 'admin:merchant',
-        resourceType: 'MENU',
-        parentId: 0,
-        path: '/admin/merchants',
-        icon: 'Shop',
-        sortOrder: 3,
-        status: 'ACTIVE',
-        children: [
-          {
-            permissionId: 31,
-            permissionName: '商家列表',
-            permissionCode: 'admin:merchant:list',
-            resourceType: 'API',
-            parentId: 3,
-            sortOrder: 1,
-            status: 'ACTIVE'
-          },
-          {
-            permissionId: 32,
-            permissionName: '商家审核',
-            permissionCode: 'admin:merchant:audit',
-            resourceType: 'BUTTON',
-            parentId: 3,
-            sortOrder: 2,
-            status: 'ACTIVE'
-          }
-        ]
-      }
-    ]
+    console.log('[权限管理] 权限树响应:', response)
 
-    // 构建父权限选项（用于下拉选择）
-    parentPermissionOptions.value = buildParentOptions(permissionList.value)
+    if (response && response.success) {
+      permissionList.value = response.data || []
+      parentPermissionOptions.value = response.data || []
+    }
   } catch (error) {
-    console.error('获取权限列表失败:', error)
-    ElMessage.error('获取权限列表失败')
+    console.error('[权限管理] 获取权限树失败:', error)
+    ElMessage.error('获取权限树失败: ' + (error.message || '网络错误'))
   } finally {
     loading.value = false
   }
 }
 
-// 构建父权限选项（添加顶级选项）
-const buildParentOptions = (list) => {
-  return [
-    { permissionId: 0, permissionName: '顶级权限', children: list }
-  ]
-}
-
 // 创建权限
 const handleCreate = () => {
   isEdit.value = false
+  isChild.value = false
   Object.assign(permissionForm, {
     permissionId: null,
     parentId: 0,
@@ -297,6 +206,7 @@ const handleCreate = () => {
     resourceType: 'MENU',
     path: '',
     icon: '',
+    description: '',
     sortOrder: 0,
     status: 'ACTIVE'
   })
@@ -306,14 +216,16 @@ const handleCreate = () => {
 // 创建子权限
 const handleCreateChild = (row) => {
   isEdit.value = false
+  isChild.value = true
   Object.assign(permissionForm, {
     permissionId: null,
     parentId: row.permissionId,
     permissionName: '',
     permissionCode: '',
-    resourceType: 'BUTTON',
+    resourceType: 'API',
     path: '',
     icon: '',
+    description: '',
     sortOrder: 0,
     status: 'ACTIVE'
   })
@@ -323,6 +235,7 @@ const handleCreateChild = (row) => {
 // 编辑权限
 const handleEdit = (row) => {
   isEdit.value = true
+  isChild.value = false
   Object.assign(permissionForm, row)
   dialogVisible.value = true
 }
@@ -330,6 +243,12 @@ const handleEdit = (row) => {
 // 删除权限
 const handleDelete = async (row) => {
   try {
+    // 检查是否有子权限
+    if (row.children && row.children.length > 0) {
+      ElMessage.warning('该权限下有子权限，无法删除')
+      return
+    }
+
     await ElMessageBox.confirm(
       `确定要删除权限 "${row.permissionName}" 吗？此操作不可恢复！`,
       '警告',
@@ -340,13 +259,19 @@ const handleDelete = async (row) => {
       }
     )
 
-    // TODO: 调用删除API
-    ElMessage.success('删除成功')
-    fetchPermissionList()
+    console.log('[权限管理] 删除权限:', row.permissionId)
+    const response = await deletePermission(row.permissionId)
+
+    if (response && response.success) {
+      ElMessage.success('删除成功')
+      fetchPermissionTree()
+    } else {
+      ElMessage.error(response?.message || '删除失败')
+    }
   } catch (error) {
     if (error !== 'cancel') {
-      console.error('删除权限失败:', error)
-      ElMessage.error('删除权限失败')
+      console.error('[权限管理] 删除权限失败:', error)
+      ElMessage.error('删除权限失败: ' + (error.message || '网络错误'))
     }
   }
 }
@@ -359,19 +284,31 @@ const submitPermission = async () => {
     await permissionFormRef.value.validate()
     submitting.value = true
 
-    // TODO: 调用实际的创建/更新API
-    ElMessage.success(isEdit.value ? '更新成功' : '创建成功')
-    dialogVisible.value = false
-    fetchPermissionList()
+    console.log('[权限管理] 提交权限:', permissionForm)
+
+    const response = isEdit.value
+      ? await updatePermission(permissionForm.permissionId, permissionForm)
+      : await createPermission(permissionForm)
+
+    if (response && response.success) {
+      ElMessage.success(isEdit.value ? '更新成功' : '创建成功')
+      dialogVisible.value = false
+      fetchPermissionTree()
+    } else {
+      ElMessage.error(response?.message || '操作失败')
+    }
   } catch (error) {
-    console.error('提交失败:', error)
+    if (error !== false) {
+      console.error('[权限管理] 提交失败:', error)
+      ElMessage.error('操作失败: ' + (error.message || '网络错误'))
+    }
   } finally {
     submitting.value = false
   }
 }
 
 onMounted(() => {
-  fetchPermissionList()
+  fetchPermissionTree()
 })
 </script>
 
