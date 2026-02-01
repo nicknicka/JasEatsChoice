@@ -629,13 +629,12 @@ const loadTutorialData = async (tutorialId) => {
         title: tutorial.title,
         type: tutorial.type,
         coverImage: tutorial.coverImage,
-        cover_image: tutorial.cover_image,
         content: tutorial.content ? tutorial.content.substring(0, 50) + '...' : '',
         difficulty: tutorial.difficulty,
         duration: tutorial.duration
       })
 
-      // 将后端数据映射到表单字段（处理驼峰命名差异）
+      // 将后端数据映射到表单字段（后端返回驼峰命名）
       tutorialForm.value = {
         id: tutorial.id,
         title: tutorial.title || '',
@@ -644,13 +643,13 @@ const loadTutorialData = async (tutorialId) => {
         difficulty: tutorial.difficulty || 'BEGINNER',
         duration: tutorial.duration || '',
         calories: tutorial.calories || null,
-        prep_time: tutorial.prepTime || tutorial.prep_time || '',
+        prep_time: tutorial.prepTime || '',
         servings: tutorial.servings || null,
-        cover_image: tutorial.coverImage || tutorial.cover_image || '',
-        video_url: tutorial.videoUrl || tutorial.video_url || '', // 加载视频URL
+        cover_image: tutorial.coverImage || '',
+        video_url: tutorial.videoUrl || '', // 加载视频URL
         tags: tutorial.tags || null,
         status: tutorial.status || 'DRAFT',
-        review_status: tutorial.reviewStatus || tutorial.review_status || 'NOT_SUBMITTED'
+        review_status: tutorial.reviewStatus || 'NOT_SUBMITTED'
       }
 
       console.log('✅ 教程数据加载成功:', tutorialForm.value.title)

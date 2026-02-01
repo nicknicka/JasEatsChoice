@@ -274,13 +274,13 @@ onMounted(() => {
           <template #default="{ row }">
             <el-tag
               :style="{
-                backgroundColor: getSourceTypeStyle(row.source_type).bg,
-                color: getSourceTypeStyle(row.source_type).color,
+                backgroundColor: getSourceTypeStyle(row.sourceType).bg,
+                color: getSourceTypeStyle(row.sourceType).color,
                 border: 'none'
               }"
               size="small"
             >
-              {{ row.source_type === 'ADMIN' ? '管理员' : row.source_type === 'MERCHANT' ? '商家' : 'AI' }}
+              {{ row.sourceType === 'ADMIN' ? '管理员' : row.sourceType === 'MERCHANT' ? '商家' : 'AI' }}
             </el-tag>
           </template>
         </el-table-column>
@@ -302,7 +302,7 @@ onMounted(() => {
 
         <el-table-column label="浏览量" width="120">
           <template #default="{ row }">
-            <span>{{ row.view_count?.toLocaleString() || 0 }}</span>
+            <span>{{ row.viewCount?.toLocaleString() || 0 }}</span>
           </template>
         </el-table-column>
 

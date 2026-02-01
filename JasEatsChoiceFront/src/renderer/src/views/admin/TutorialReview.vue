@@ -35,44 +35,29 @@ const fetchPendingTutorials = async () => {
       }
     })
 
-    if (response.data) {
-      pendingTutorials.value = response.data.records || response.data
-      pagination.value.total = response.data.total || response.data.length
+    console.log('待审核教程列表响应:', response)
+    console.log('响应类型:', typeof response)
+
+    // api拦截器已经返回了 response.data
+    // 支持多种响应格式：
+    // 1. response 本身是分页对象 {records: [], total: 10}
+    // 2. response.data 是分页对象
+    if (response && response.records) {
+      pendingTutorials.value = response.records
+      pagination.value.total = response.total || 0
+    } else if (response && response.data && response.data.records) {
+      pendingTutorials.value = response.data.records
+      pagination.value.total = response.data.total || 0
+    } else if (Array.isArray(response)) {
+      pendingTutorials.value = response
+      pagination.value.total = response.length
+    } else if (response && response.data && Array.isArray(response.data)) {
+      pendingTutorials.value = response.data
+      pagination.value.total = response.data.length || 0
     }
   } catch (error) {
     console.error('获取待审核列表失败:', error)
-    ElMessage.error('加载失败，显示模拟数据')
-    // 使用模拟数据
-    pendingTutorials.value = [
-      {
-        id: 10,
-        title: '秘制红烧肉做法',
-        type: 'video',
-        source_type: 'MERCHANT',
-        author: '川味香餐厅',
-        status: 'PENDING',
-        review_status: 'PENDING',
-        duration: '12:30',
-        difficulty: 'INTERMEDIATE',
-        content: '## 川味香餐厅招牌红烧肉\n\n### 食材准备\n- 五花肉 500g\n- 冰糖 30g\n- 生抽、老抽适量',
-        cover_image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800',
-        linked_dish_id: 123
-      },
-      {
-        id: 11,
-        title: '番茄鸡蛋面的10种做法',
-        type: 'article',
-        source_type: 'AI_GENERATED',
-        author: 'AI智能助手',
-        status: 'DRAFT',
-        review_status: 'NOT_SUBMITTED',
-        duration: '15分钟',
-        difficulty: 'BEGINNER',
-        content: '## AI生成的番茄鸡蛋面做法大全\n\n### 做法一：经典家常版',
-        cover_image: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=800',
-        ai_model_version: 'GPT-4-v2'
-      }
-    ]
+    ElMessage.error('加载失败，请稍后重试')
   } finally {
     loading.value = false
   }
@@ -164,9 +149,10 @@ const getSourceTypeTag = (type) => {
   const map = {
     ADMIN: { type: 'danger', text: '管理员' },
     MERCHANT: { type: 'warning', text: '商家' },
+    USER: { type: 'success', text: '用户' },
     AI_GENERATED: { type: 'info', text: 'AI生成' }
   }
-  return map[type] || { type: '', text: type }
+  return map[type] || { type: 'info', text: type || '未知' }
 }
 
 // 获取审核状态标签
@@ -177,7 +163,7 @@ const getReviewStatusTag = (status) => {
     APPROVED: { type: 'success', text: '已通过' },
     REJECTED: { type: 'danger', text: '已拒绝' }
   }
-  return map[status] || { type: '', text: status }
+  return map[status] || { type: 'info', text: status || '未知' }
 }
 
 // 获取难度名称
@@ -224,8 +210,8 @@ onMounted(() => {
 
         <el-table-column label="来源" width="120">
           <template #default="{ row }">
-            <el-tag :type="getSourceTypeTag(row.source_type).type" size="small">
-              {{ getSourceTypeTag(row.source_type).text }}
+            <el-tag :type="getSourceTypeTag(row.sourceType).type" size="small">
+              {{ getSourceTypeTag(row.sourceType).text }}
             </el-tag>
           </template>
         </el-table-column>
@@ -249,11 +235,11 @@ onMounted(() => {
 
         <el-table-column label="关联信息" width="150">
           <template #default="{ row }">
-            <span v-if="row.linked_dish_id">
-              关联菜品: #{{ row.linked_dish_id }}
+            <span v-if="row.linkedDishId">
+              关联菜品: #{{ row.linkedDishId }}
             </span>
-            <span v-else-if="row.ai_model_version" class="ai-info">
-              {{ row.ai_model_version }}
+            <span v-else-if="row.aiModelVersion" class="ai-info">
+              {{ row.aiModelVersion }}
             </span>
           </template>
         </el-table-column>
@@ -292,7 +278,7 @@ onMounted(() => {
       <div v-if="currentTutorial" class="tutorial-preview">
         <!-- 封面图 -->
         <div class="cover-section">
-          <img :src="currentTutorial.cover_image" :alt="currentTutorial.title" />
+          <img :src="currentTutorial.coverImage" :alt="currentTutorial.title" />
           <div class="type-badge">
             <el-icon v-if="currentTutorial.type === 'video'"><VideoCamera /></el-icon>
             <el-icon v-else><Document /></el-icon>
@@ -304,8 +290,8 @@ onMounted(() => {
         <div class="meta-section">
           <div class="meta-item">
             <span class="label">来源:</span>
-            <el-tag :type="getSourceTypeTag(currentTutorial.source_type).type" size="small">
-              {{ getSourceTypeTag(currentTutorial.source_type).text }}
+            <el-tag :type="getSourceTypeTag(currentTutorial.sourceType).type" size="small">
+              {{ getSourceTypeTag(currentTutorial.sourceType).text }}
             </el-tag>
           </div>
           <div class="meta-item">
@@ -329,13 +315,13 @@ onMounted(() => {
         </div>
 
         <!-- 关联信息 -->
-        <div class="related-section" v-if="currentTutorial.linked_dish_id || currentTutorial.ai_model_version">
+        <div class="related-section" v-if="currentTutorial.linkedDishId || currentTutorial.aiModelVersion">
           <h4>关联信息</h4>
-          <p v-if="currentTutorial.linked_dish_id">
-            关联菜品ID: {{ currentTutorial.linked_dish_id }}
+          <p v-if="currentTutorial.linkedDishId">
+            关联菜品ID: {{ currentTutorial.linkedDishId }}
           </p>
-          <p v-if="currentTutorial.ai_model_version">
-            AI模型版本: {{ currentTutorial.ai_model_version }}
+          <p v-if="currentTutorial.aiModelVersion">
+            AI模型版本: {{ currentTutorial.aiModelVersion }}
           </p>
         </div>
 

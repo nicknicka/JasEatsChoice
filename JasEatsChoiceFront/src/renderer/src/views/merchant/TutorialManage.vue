@@ -39,9 +39,9 @@ const stats = computed(() => {
   return {
     total: all.length,
     draft: all.filter(t => t.status === 'DRAFT').length,
-    pending: all.filter(t => t.review_status === 'PENDING').length,
+    pending: all.filter(t => t.reviewStatus === 'PENDING').length,
     published: all.filter(t => t.status === 'PUBLISHED').length,
-    rejected: all.filter(t => t.review_status === 'REJECTED').length
+    rejected: all.filter(t => t.reviewStatus === 'REJECTED').length
   }
 })
 
@@ -53,37 +53,31 @@ const fetchMerchantTutorials = async () => {
       params: { page: 0, size: 100 }
     })
 
-    if (response.data) {
-      merchantTutorials.value = response.data.records || response.data
+    console.log('商家教程列表响应:', response)
+    console.log('响应类型:', typeof response)
+
+    // api拦截器已经返回了 response.data
+    // 支持多种响应格式：
+    // 1. response 本身是分页对象 {records: [], total: 10}
+    // 2. response.data 是分页对象
+    if (response && response.records) {
+      merchantTutorials.value = response.records
+    } else if (response && response.data && response.data.records) {
+      merchantTutorials.value = response.data.records
+    } else if (Array.isArray(response)) {
+      merchantTutorials.value = response
+    } else if (response && response.data && Array.isArray(response.data)) {
+      merchantTutorials.value = response.data
     }
   } catch (error) {
     console.error('获取教程列表失败:', error)
-    ElMessage.error('加载失败，显示模拟数据')
-    // 使用模拟数据
-    merchantTutorials.value = [
-      {
-        id: 10,
-        title: '秘制红烧肉做法',
-        type: 'video',
-        source_type: 'MERCHANT',
-        author: '川味香餐厅',
-        status: 'PENDING',
-        review_status: 'PENDING',
-        duration: '12:30',
-        difficulty: 'INTERMEDIATE',
-        content: '## 川味香餐厅招牌红烧肉',
-        cover_image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800',
-        linked_dish_id: 1,
-        create_time: '2025-01-29 10:00:00'
-      },
-      {
-        id: 9,
-        title: '家常豆腐制作',
-        type: 'article',
-        source_type: 'MERCHANT',
-        author: '川味香餐厅',
+    ElMessage.error('加载失败，请稍后重试')
+  } finally {
+    loading.value = false
+  }
+}
         status: 'DRAFT',
-        review_status: 'NOT_SUBMITTED',
+        reviewStatus: 'NOT_SUBMITTED',
         duration: '15分钟',
         difficulty: 'BEGINNER',
         content: '## 家常豆腐制作教程',
@@ -118,7 +112,7 @@ const openCreateDialog = () => {
 // 打开编辑对话框
 const openEditDialog = (tutorial) => {
   // 只能编辑草稿或被拒绝的教程
-  if (tutorial.status !== 'DRAFT' && tutorial.review_status !== 'REJECTED') {
+  if (tutorial.status !== 'DRAFT' && tutorial.reviewStatus !== 'REJECTED') {
     ElMessage.warning('只能编辑草稿或被拒绝的教程')
     return
   }
@@ -249,7 +243,7 @@ const getStatusTag = (status) => {
     PUBLISHED: { type: 'success', text: '已发布' },
     REJECTED: { type: 'danger', text: '已拒绝' }
   }
-  return map[status] || { type: '', text: status }
+  return map[status] || { type: 'info', text: status || '未知' }
 }
 
 // 获取审核状态标签
@@ -260,17 +254,17 @@ const getReviewStatusTag = (status) => {
     APPROVED: { type: 'success', text: '已通过' },
     REJECTED: { type: 'danger', text: '已拒绝' }
   }
-  return map[status] || { type: '', text: status }
+  return map[status] || { type: 'info', text: status || '未知' }
 }
 
 // 判断是否可编辑
 const isEditable = (tutorial) => {
-  return tutorial.status === 'DRAFT' || tutorial.review_status === 'REJECTED'
+  return tutorial.status === 'DRAFT' || tutorial.reviewStatus === 'REJECTED'
 }
 
 // 判断是否可提交
 const canSubmit = (tutorial) => {
-  return tutorial.review_status === 'NOT_SUBMITTED' || tutorial.review_status === 'REJECTED'
+  return tutorial.reviewStatus === 'NOT_SUBMITTED' || tutorial.reviewStatus === 'REJECTED'
 }
 
 // 判断是否可删除
@@ -343,7 +337,7 @@ onMounted(() => {
         <!-- 待审核 -->
         <el-tab-pane label="待审核" name="pending">
           <tutorial-list
-            :tutorials="merchantTutorials.filter(t => t.review_status === 'PENDING')"
+            :tutorials="merchantTutorials.filter(t => t.reviewStatus === 'PENDING')"
             :loading="loading"
             @edit="openEditDialog"
             @submit="submitForReview"
@@ -500,8 +494,8 @@ const TutorialList = {
         </el-table-column>
         <el-table-column label="审核状态" width="120">
           <template #default="{ row }">
-            <el-tag :type="getReviewStatusTag(row.review_status).type" size="small">
-              {{ getReviewStatusTag(row.review_status).text }}
+            <el-tag :type="getReviewStatusTag(row.reviewStatus).type" size="small">
+              {{ getReviewStatusTag(row.reviewStatus).text }}
             </el-tag>
           </template>
         </el-table-column>

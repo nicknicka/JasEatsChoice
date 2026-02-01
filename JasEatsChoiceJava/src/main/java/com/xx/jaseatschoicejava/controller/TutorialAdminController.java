@@ -6,6 +6,8 @@ import com.xx.jaseatschoicejava.service.TutorialService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+
+import java.util.List;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -20,6 +22,18 @@ public class TutorialAdminController {
 
     @Autowired
     private TutorialService tutorialService;
+
+    /**
+     * 获取所有教程（管理员专用）
+     * GET /api/v1/tutorial/admin/list
+     * 权限: 需要ADMIN角色
+     */
+    @GetMapping("/list")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<Tutorial>> getAllTutorials() {
+        List<Tutorial> tutorials = tutorialService.getAllTutorialsForAdmin();
+        return ResponseEntity.ok(tutorials);
+    }
 
     /**
      * 管理员创建教程（直接发布）
@@ -63,7 +77,7 @@ public class TutorialAdminController {
         String comment = (String) request.get("comment");
         Boolean setFeatured = (Boolean) request.getOrDefault("setFeatured", false);
 
-        boolean success = tutorialService.approveTutorial(id, Long.valueOf(reviewerId), comment, setFeatured);
+        boolean success = tutorialService.approveTutorial(id, reviewerId, comment, setFeatured);
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", success);
@@ -87,7 +101,7 @@ public class TutorialAdminController {
         String reviewerId = "1";
         String comment = request.get("comment");
 
-        boolean success = tutorialService.rejectTutorial(id, Long.valueOf(reviewerId), comment);
+        boolean success = tutorialService.rejectTutorial(id, reviewerId, comment);
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", success);

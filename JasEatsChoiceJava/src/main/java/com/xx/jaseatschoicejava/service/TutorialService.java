@@ -36,6 +36,11 @@ public interface TutorialService extends IService<Tutorial> {
     // ========== 管理员操作 ==========
 
     /**
+     * 获取所有教程（管理员专用，包含所有状态）
+     */
+    List<Tutorial> getAllTutorialsForAdmin();
+
+    /**
      * 管理员创建教程（直接发布）
      */
     Tutorial createByAdmin(Tutorial tutorial);
@@ -48,12 +53,12 @@ public interface TutorialService extends IService<Tutorial> {
     /**
      * 审核通过
      */
-    boolean approveTutorial(String tutorialId, Long reviewerId, String comment, boolean setFeatured);
+    boolean approveTutorial(String tutorialId, String reviewerId, String comment, boolean setFeatured);
 
     /**
      * 审核拒绝
      */
-    boolean rejectTutorial(String tutorialId, Long reviewerId, String comment);
+    boolean rejectTutorial(String tutorialId, String reviewerId, String comment);
 
     /**
      * 设置/取消精选
@@ -80,7 +85,14 @@ public interface TutorialService extends IService<Tutorial> {
     /**
      * 获取商家的教程列表
      */
-    Page<Tutorial> getMerchantTutorials(Long merchantId, int page, int size);
+    Page<Tutorial> getMerchantTutorials(String merchantId, int page, int size);
+
+    // ========== 用户操作 ==========
+
+    /**
+     * 获取用户的教程列表
+     */
+    Page<Tutorial> getUserTutorials(String userId, int page, int size);
 
     // ========== AI生成 ==========
 

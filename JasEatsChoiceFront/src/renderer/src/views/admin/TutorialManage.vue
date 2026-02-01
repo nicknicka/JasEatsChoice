@@ -42,61 +42,28 @@ const stats = computed(() => {
 const fetchAllTutorials = async () => {
   loading.value = true
   try {
-    const response = await api.get(API_CONFIG.tutorial.list)
-    if (response.data) {
+    const response = await api.get(API_CONFIG.tutorial.adminList)
+    console.log('管理员教程列表响应:', response)
+    console.log('响应类型:', typeof response)
+    console.log('是否为数组:', Array.isArray(response))
+
+    // api拦截器已经返回了 response.data，所以 response 直接就是数据
+    if (Array.isArray(response)) {
+      tutorials.value = response
+      console.log('✅ 数据已赋值给 tutorials.value，数组长度:', tutorials.value.length)
+      console.log('✅ tutorials.value 前3条数据:', tutorials.value.slice(0, 3))
+    } else if (response && response.data) {
+      // 如果返回的是包装对象，取 data 字段
       tutorials.value = response.data
+      console.log('✅ 数据已从 response.data 赋值，数组长度:', tutorials.value.length)
+    } else {
+      console.warn('⚠️ 响应数据格式不正确:', response)
     }
+    console.log('📊 最终 tutorials.value:', tutorials.value)
   } catch (error) {
     console.error('获取教程列表失败:', error)
-    ElMessage.error('加载失败，显示模拟数据')
-    // 使用模拟数据
-    tutorials.value = [
-      {
-        id: 7,
-        title: '青木瓜沙拉制作教程',
-        type: 'video',
-        source_type: 'ADMIN',
-        status: 'PUBLISHED',
-        review_status: 'APPROVED',
-        featured: true,
-        is_official: true,
-        duration: '5:30',
-        difficulty: 'BEGINNER',
-        view_count: 12500,
-        rating: 4.8,
-        create_time: '2025-01-29'
-      },
-      {
-        id: 8,
-        title: '夏日低卡饮食指南',
-        type: 'article',
-        source_type: 'ADMIN',
-        status: 'PUBLISHED',
-        review_status: 'APPROVED',
-        featured: true,
-        is_official: true,
-        duration: '8分钟',
-        difficulty: 'BEGINNER',
-        view_count: 8200,
-        rating: 4.9,
-        create_time: '2025-01-28'
-      },
-      {
-        id: 10,
-        title: '秘制红烧肉做法',
-        type: 'video',
-        source_type: 'MERCHANT',
-        status: 'PENDING',
-        review_status: 'PENDING',
-        featured: false,
-        is_official: false,
-        duration: '12:30',
-        difficulty: 'INTERMEDIATE',
-        view_count: 0,
-        rating: 0,
-        create_time: '2025-01-27'
-      }
-    ]
+    console.error('错误详情:', error.response?.data)
+    ElMessage.error('加载失败，请稍后重试')
   } finally {
     loading.value = false
   }
@@ -229,9 +196,10 @@ const getSourceTypeTag = (type) => {
   const map = {
     ADMIN: { type: 'danger', text: '管理员' },
     MERCHANT: { type: 'warning', text: '商家' },
+    USER: { type: 'success', text: '用户' },
     AI_GENERATED: { type: 'info', text: 'AI生成' }
   }
-  return map[type] || { type: '', text: type }
+  return map[type] || { type: 'info', text: type || '未知' }
 }
 
 // 获取状态标签
@@ -242,7 +210,7 @@ const getStatusTag = (status) => {
     PUBLISHED: { type: 'success', text: '已发布' },
     REJECTED: { type: 'danger', text: '已拒绝' }
   }
-  return map[status] || { type: '', text: status }
+  return map[status] || { type: 'info', text: status || '未知' }
 }
 
 // 获取审核状态标签
@@ -253,7 +221,7 @@ const getReviewStatusTag = (status) => {
     APPROVED: { type: 'success', text: '已通过' },
     REJECTED: { type: 'danger', text: '已拒绝' }
   }
-  return map[status] || { type: '', text: status }
+  return map[status] || { type: 'info', text: status || '未知' }
 }
 
 // 获取难度名称
@@ -314,8 +282,8 @@ onMounted(() => {
 
             <el-table-column label="来源" width="120">
               <template #default="{ row }">
-                <el-tag :type="getSourceTypeTag(row.source_type).type" size="small">
-                  {{ getSourceTypeTag(row.source_type).text }}
+                <el-tag :type="getSourceTypeTag(row.sourceType).type" size="small">
+                  {{ getSourceTypeTag(row.sourceType).text }}
                 </el-tag>
               </template>
             </el-table-column>
@@ -341,8 +309,8 @@ onMounted(() => {
 
             <el-table-column label="审核状态" width="100">
               <template #default="{ row }">
-                <el-tag :type="getReviewStatusTag(row.review_status).type" size="small">
-                  {{ getReviewStatusTag(row.review_status).text }}
+                <el-tag :type="getReviewStatusTag(row.reviewStatus).type" size="small">
+                  {{ getReviewStatusTag(row.reviewStatus).text }}
                 </el-tag>
               </template>
             </el-table-column>
@@ -365,7 +333,7 @@ onMounted(() => {
 
             <el-table-column label="浏览量" width="120">
               <template #default="{ row }">
-                <span>{{ row.view_count?.toLocaleString() || 0 }}</span>
+                <span>{{ row.viewCount?.toLocaleString() || 0 }}</span>
               </template>
             </el-table-column>
 

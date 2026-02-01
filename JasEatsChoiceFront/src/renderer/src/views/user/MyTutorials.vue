@@ -419,8 +419,8 @@ onMounted(() => {
             @click="viewTutorial(tutorial)"
           >
             <!-- 教程封面 -->
-            <div class="tutorial-cover" v-if="tutorial.cover_image || tutorial.coverImage">
-              <img :src="tutorial.cover_image || tutorial.coverImage" :alt="tutorial.title" />
+            <div class="tutorial-cover" v-if="tutorial.coverImage">
+              <img :src="tutorial.coverImage" :alt="tutorial.title" />
               <div class="cover-type-badge" :class="tutorial.type">
                 <el-icon v-if="tutorial.type === 'video'"><VideoCamera /></el-icon>
                 <el-icon v-else><Document /></el-icon>

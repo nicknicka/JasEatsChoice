@@ -37,7 +37,7 @@ public class TutorialUserController {
         tutorial.setOfficial(false);
 
         // TODO: 从认证上下文获取用户ID
-        Long userId = 1L;
+        String userId = "1";
         tutorial.setAuthorId(userId);
 
         Tutorial created = tutorialService.createByMerchant(tutorial);
@@ -55,9 +55,9 @@ public class TutorialUserController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         // TODO: 从认证上下文获取用户ID
-        Long userId = 1L;
+        String userId = "1";
 
-        var tutorials = tutorialService.getMerchantTutorials(userId, page, size);
+        var tutorials = tutorialService.getUserTutorials(userId, page, size);
         return ResponseEntity.ok(tutorials);
     }
 

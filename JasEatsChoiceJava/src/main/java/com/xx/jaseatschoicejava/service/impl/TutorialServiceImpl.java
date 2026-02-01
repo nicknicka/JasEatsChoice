@@ -77,6 +77,14 @@ public class TutorialServiceImpl extends ServiceImpl<TutorialMapper, Tutorial> i
     // ========== 管理员操作 ==========
 
     @Override
+    public List<Tutorial> getAllTutorialsForAdmin() {
+        QueryWrapper<Tutorial> wrapper = new QueryWrapper<>();
+        // 管理员可以看到所有状态的教程
+        wrapper.orderByDesc("create_time");
+        return list(wrapper);
+    }
+
+    @Override
     @Transactional
     public Tutorial createByAdmin(Tutorial tutorial) {
         tutorial.setSourceType(Tutorial.SourceType.ADMIN.getCode());
@@ -102,7 +110,7 @@ public class TutorialServiceImpl extends ServiceImpl<TutorialMapper, Tutorial> i
 
     @Override
     @Transactional
-    public boolean approveTutorial(String tutorialId, Long reviewerId, String comment, boolean setFeatured) {
+    public boolean approveTutorial(String tutorialId, String reviewerId, String comment, boolean setFeatured) {
         Tutorial tutorial = getById(tutorialId);
         if (tutorial == null) {
             return false;
@@ -121,7 +129,7 @@ public class TutorialServiceImpl extends ServiceImpl<TutorialMapper, Tutorial> i
 
     @Override
     @Transactional
-    public boolean rejectTutorial(String tutorialId, Long reviewerId, String comment) {
+    public boolean rejectTutorial(String tutorialId, String reviewerId, String comment) {
         Tutorial tutorial = getById(tutorialId);
         if (tutorial == null) {
             return false;
@@ -216,11 +224,21 @@ public class TutorialServiceImpl extends ServiceImpl<TutorialMapper, Tutorial> i
     }
 
     @Override
-    public Page<Tutorial> getMerchantTutorials(Long merchantId, int page, int size) {
+    public Page<Tutorial> getMerchantTutorials(String merchantId, int page, int size) {
         Page<Tutorial> pageInfo = new Page<>(page, size);
         QueryWrapper<Tutorial> wrapper = new QueryWrapper<>();
         wrapper.eq("author_id", merchantId)
                .eq("author_type", Tutorial.AuthorType.MERCHANT.getCode())
+               .orderByDesc("create_time");
+        return page(pageInfo, wrapper);
+    }
+
+    @Override
+    public Page<Tutorial> getUserTutorials(String userId, int page, int size) {
+        Page<Tutorial> pageInfo = new Page<>(page, size);
+        QueryWrapper<Tutorial> wrapper = new QueryWrapper<>();
+        wrapper.eq("author_id", userId)
+               .eq("author_type", Tutorial.AuthorType.USER.getCode())
                .orderByDesc("create_time");
         return page(pageInfo, wrapper);
     }

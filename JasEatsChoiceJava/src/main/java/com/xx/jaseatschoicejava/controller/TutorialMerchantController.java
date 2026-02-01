@@ -27,7 +27,7 @@ public class TutorialMerchantController {
     @PostMapping("/create")
     public ResponseEntity<Tutorial> createByMerchant(@RequestBody Tutorial tutorial) {
         // TODO: 从认证上下文获取商家ID
-        Long merchantId = 1L;
+        String merchantId = "1";
         tutorial.setAuthorId(merchantId);
         tutorial.setLinkedMerchantId(merchantId);
 
@@ -78,7 +78,7 @@ public class TutorialMerchantController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         // TODO: 从认证上下文获取商家ID
-        Long merchantId = 1L;
+        String merchantId = "1";
         Page<Tutorial> tutorials = tutorialService.getMerchantTutorials(merchantId, page, size);
         return ResponseEntity.ok(tutorials);
     }

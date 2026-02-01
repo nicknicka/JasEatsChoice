@@ -91,6 +91,7 @@ export const API_CONFIG = {
     userDelete: '/v1/tutorial/user', // 删除教程（需要拼接 '/' + id）
 
     // 管理员端
+    adminList: '/v1/tutorial/admin/list', // 获取所有教程（管理员专用）
     adminCreate: '/v1/tutorial/admin/create', // 管理员创建教程
     adminPending: '/v1/tutorial/admin/pending', // 获取待审核列表
     adminApprove: '/v1/tutorial/admin', // 审核通过（需要拼接 '/' + id + '/approve'）

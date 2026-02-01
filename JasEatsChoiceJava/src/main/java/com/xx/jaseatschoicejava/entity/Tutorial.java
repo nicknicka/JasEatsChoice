@@ -7,7 +7,7 @@ import java.util.Date;
 
 /**
  * 教程实体类
- * 支持三种数据来源：管理员(ADMIN)、商家(MERCHANT)、AI生成(AI_GENERATED)
+ * 支持三种数据来源：管理员(ADMIN)、商家(MERCHANT)、用户(USER)、AI生成(AI_GENERATED)
  */
 @Data
 @TableName("tutorial")
@@ -22,24 +22,24 @@ public class Tutorial {
     private String views; // 浏览数（旧字段，保留兼容）
 
     // ========== 来源信息 ==========
-    private String sourceType; // 来源类型: ADMIN-管理员, MERCHANT-商家, AI_GENERATED-AI生成
-    private Long sourceId; // 来源ID: 管理员ID/商家ID/AI版本
-    private String authorType; // 作者类型: ADMIN, MERCHANT, AI
-    private Long authorId; // 作者ID
+    private String sourceType; // 来源类型: ADMIN-管理员, MERCHANT-商家, USER-用户, AI_GENERATED-AI生成
+    private String sourceId; // 来源ID: 管理员ID/商家ID/用户ID/AI版本
+    private String authorType; // 作者类型: ADMIN, MERCHANT, USER, AI
+    private String authorId; // 作者ID
     private String author; // 作者显示名称
 
     // ========== 状态管理 ==========
     private String status; // 状态: DRAFT-草稿, PENDING-待审核, PUBLISHED-已发布, REJECTED-已拒绝
     private String reviewStatus; // 审核状态: NOT_SUBMITTED-未提交, PENDING-待审核, APPROVED-通过, REJECTED-拒绝
-    private Long reviewerId; // 审核人ID
+    private String reviewerId; // 审核人ID
     private Date reviewTime; // 审核时间
     private String reviewComment; // 审核意见
     private boolean featured; // 是否精选
     private boolean isOfficial; // 是否官方认证（仅管理员）
 
     // ========== 关联信息 ==========
-    private Long linkedMerchantId; // 关联商家ID（商家教程可用）
-    private Long linkedDishId; // 关联菜品ID（商家教程可用）
+    private String linkedMerchantId; // 关联商家ID（商家教程可用）
+    private String linkedDishId; // 关联菜品ID（商家教程可用）
     private String aiModelVersion; // AI模型版本（AI教程）
 
     // ========== 内容 ==========
@@ -214,288 +214,6 @@ public class Tutorial {
             }
             throw new IllegalArgumentException("Unknown difficulty: " + code);
         }
-    }
-
-    // ========== Getter and Setter Methods ==========
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public String getTitle() {
-        return title;
-    }
-
-    public void setTitle(String title) {
-        this.title = title;
-    }
-
-    public String getType() {
-        return type;
-    }
-
-    public void setType(String type) {
-        this.type = type;
-    }
-
-    public String getDuration() {
-        return duration;
-    }
-
-    public void setDuration(String duration) {
-        this.duration = duration;
-    }
-
-    public String getViews() {
-        return views;
-    }
-
-    public void setViews(String views) {
-        this.views = views;
-    }
-
-    public String getSourceType() {
-        return sourceType;
-    }
-
-    public void setSourceType(String sourceType) {
-        this.sourceType = sourceType;
-    }
-
-    public Long getSourceId() {
-        return sourceId;
-    }
-
-    public void setSourceId(Long sourceId) {
-        this.sourceId = sourceId;
-    }
-
-    public String getAuthorType() {
-        return authorType;
-    }
-
-    public void setAuthorType(String authorType) {
-        this.authorType = authorType;
-    }
-
-    public Long getAuthorId() {
-        return authorId;
-    }
-
-    public void setAuthorId(Long authorId) {
-        this.authorId = authorId;
-    }
-
-    public String getAuthor() {
-        return author;
-    }
-
-    public void setAuthor(String author) {
-        this.author = author;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    public String getReviewStatus() {
-        return reviewStatus;
-    }
-
-    public void setReviewStatus(String reviewStatus) {
-        this.reviewStatus = reviewStatus;
-    }
-
-    public Long getReviewerId() {
-        return reviewerId;
-    }
-
-    public void setReviewerId(Long reviewerId) {
-        this.reviewerId = reviewerId;
-    }
-
-    public Date getReviewTime() {
-        return reviewTime;
-    }
-
-    public void setReviewTime(Date reviewTime) {
-        this.reviewTime = reviewTime;
-    }
-
-    public String getReviewComment() {
-        return reviewComment;
-    }
-
-    public void setReviewComment(String reviewComment) {
-        this.reviewComment = reviewComment;
-    }
-
-    public boolean isFeatured() {
-        return featured;
-    }
-
-    public void setFeatured(boolean featured) {
-        this.featured = featured;
-    }
-
-    public boolean isOfficial() {
-        return isOfficial;
-    }
-
-    public void setOfficial(boolean isOfficial) {
-        this.isOfficial = isOfficial;
-    }
-
-    public Long getLinkedMerchantId() {
-        return linkedMerchantId;
-    }
-
-    public void setLinkedMerchantId(Long linkedMerchantId) {
-        this.linkedMerchantId = linkedMerchantId;
-    }
-
-    public Long getLinkedDishId() {
-        return linkedDishId;
-    }
-
-    public void setLinkedDishId(Long linkedDishId) {
-        this.linkedDishId = linkedDishId;
-    }
-
-    public String getAiModelVersion() {
-        return aiModelVersion;
-    }
-
-    public void setAiModelVersion(String aiModelVersion) {
-        this.aiModelVersion = aiModelVersion;
-    }
-
-    public String getContent() {
-        return content;
-    }
-
-    public void setContent(String content) {
-        this.content = content;
-    }
-
-    public String getCoverImage() {
-        return coverImage;
-    }
-
-    public void setCoverImage(String coverImage) {
-        this.coverImage = coverImage;
-    }
-
-    public String getVideoUrl() {
-        return videoUrl;
-    }
-
-    public void setVideoUrl(String videoUrl) {
-        this.videoUrl = videoUrl;
-    }
-
-    public String getTags() {
-        return tags;
-    }
-
-    public void setTags(String tags) {
-        this.tags = tags;
-    }
-
-    public String getDifficulty() {
-        return difficulty;
-    }
-
-    public void setDifficulty(String difficulty) {
-        this.difficulty = difficulty;
-    }
-
-    public Integer getCalories() {
-        return calories;
-    }
-
-    public void setCalories(Integer calories) {
-        this.calories = calories;
-    }
-
-    public String getPrepTime() {
-        return prepTime;
-    }
-
-    public void setPrepTime(String prepTime) {
-        this.prepTime = prepTime;
-    }
-
-    public Integer getServings() {
-        return servings;
-    }
-
-    public void setServings(Integer servings) {
-        this.servings = servings;
-    }
-
-    public BigDecimal getRating() {
-        return rating;
-    }
-
-    public void setRating(BigDecimal rating) {
-        this.rating = rating;
-    }
-
-    public Integer getRatingCount() {
-        return ratingCount;
-    }
-
-    public void setRatingCount(Integer ratingCount) {
-        this.ratingCount = ratingCount;
-    }
-
-    public Integer getFavoriteCount() {
-        return favoriteCount;
-    }
-
-    public void setFavoriteCount(Integer favoriteCount) {
-        this.favoriteCount = favoriteCount;
-    }
-
-    public Integer getViewCount() {
-        return viewCount;
-    }
-
-    public void setViewCount(Integer viewCount) {
-        this.viewCount = viewCount;
-    }
-
-    public Integer getShareCount() {
-        return shareCount;
-    }
-
-    public void setShareCount(Integer shareCount) {
-        this.shareCount = shareCount;
-    }
-
-    public Date getCreateTime() {
-        return createTime;
-    }
-
-    public void setCreateTime(Date createTime) {
-        this.createTime = createTime;
-    }
-
-    public Date getUpdateTime() {
-        return updateTime;
-    }
-
-    public void setUpdateTime(Date updateTime) {
-        this.updateTime = updateTime;
     }
 
     // ========== 便捷方法 ==========
