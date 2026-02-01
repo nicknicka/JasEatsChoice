@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { Edit, Delete, View, VideoCamera, Document, Plus } from '@element-plus/icons-vue'
+import { Edit, Delete, View, VideoCamera, Document, Plus, Star } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../../utils/api.js'
 import { API_CONFIG } from '../../config/index.js'
@@ -25,7 +25,8 @@ const tutorialForm = ref({
   servings: null,
   cover_image: '',
   featured: false,
-  is_official: true
+  is_official: true,
+  author: '官方' // 添加作者字段
 })
 
 // 统计数据
@@ -132,7 +133,8 @@ const openCreateDialog = () => {
     servings: null,
     cover_image: '',
     featured: false,
-    is_official: true
+    is_official: true,
+    author: '官方'
   }
   showEditDialog.value = true
 }
@@ -171,7 +173,7 @@ const saveTutorial = async () => {
   try {
     if (dialogMode.value === 'create') {
       const response = await api.post(API_CONFIG.tutorial.adminCreate, tutorialForm.value)
-      if (response.data) {
+      if (response?.id) {
         ElMessage.success('创建成功！')
         showEditDialog.value = false
         fetchAllTutorials()
@@ -182,7 +184,7 @@ const saveTutorial = async () => {
         `${API_CONFIG.tutorial.merchantUpdate}${tutorialForm.value.id}`,
         tutorialForm.value
       )
-      if (response.data?.success) {
+      if (response?.success) {
         ElMessage.success('更新成功！')
         showEditDialog.value = false
         fetchAllTutorials()
@@ -209,7 +211,7 @@ const deleteTutorial = async (tutorial) => {
 
     const response = await api.delete(`${API_CONFIG.tutorial.adminDelete}${tutorial.id}`)
 
-    if (response.data?.success) {
+    if (response?.success) {
       ElMessage.success('删除成功！')
       fetchAllTutorials()
     }
@@ -229,7 +231,7 @@ const toggleFeatured = async (tutorial) => {
       { featured: !tutorial.featured }
     )
 
-    if (response.data?.success) {
+    if (response?.success) {
       ElMessage.success(tutorial.featured ? '已取消精选' : '已设为精选')
       fetchAllTutorials()
     }
@@ -399,21 +401,24 @@ onMounted(() => {
               </template>
             </el-table-column>
 
-            <el-table-column label="操作" width="280" fixed="right">
+            <el-table-column label="操作" width="180" fixed="right" align="center">
               <template #default="{ row }">
-                <el-button size="small" @click="openEditDialog(row)">
-                  <el-icon><Edit /></el-icon> 编辑
-                </el-button>
-                <el-button
-                  :type="row.featured ? 'warning' : 'success'"
-                  size="small"
-                  @click="toggleFeatured(row)"
-                >
-                  {{ row.featured ? '取消精选' : '设为精选' }}
-                </el-button>
-                <el-button type="danger" size="small" @click="deleteTutorial(row)">
-                  <el-icon><Delete /></el-icon> 删除
-                </el-button>
+                <el-button-group>
+                  <el-button size="small" @click="openEditDialog(row)" title="编辑">
+                    <el-icon><Edit /></el-icon>
+                  </el-button>
+                  <el-button
+                    :type="row.featured ? 'warning' : 'success'"
+                    size="small"
+                    @click="toggleFeatured(row)"
+                    :title="row.featured ? '取消精选' : '设为精选'"
+                  >
+                    <el-icon><Star /></el-icon>
+                  </el-button>
+                  <el-button type="danger" size="small" @click="deleteTutorial(row)" title="删除">
+                    <el-icon><Delete /></el-icon>
+                  </el-button>
+                </el-button-group>
               </template>
             </el-table-column>
           </el-table>
@@ -460,21 +465,24 @@ onMounted(() => {
                 <el-tag v-if="row.featured" type="success" size="small">⭐</el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="280" fixed="right">
+            <el-table-column label="操作" width="180" fixed="right" align="center">
               <template #default="{ row }">
-                <el-button size="small" @click="openEditDialog(row)">
-                  <el-icon><Edit /></el-icon> 编辑
-                </el-button>
-                <el-button
-                  :type="row.featured ? 'warning' : 'success'"
-                  size="small"
-                  @click="toggleFeatured(row)"
-                >
-                  {{ row.featured ? '取消精选' : '设为精选' }}
-                </el-button>
-                <el-button type="danger" size="small" @click="deleteTutorial(row)">
-                  <el-icon><Delete /></el-icon> 删除
-                </el-button>
+                <el-button-group>
+                  <el-button size="small" @click="openEditDialog(row)" title="编辑">
+                    <el-icon><Edit /></el-icon>
+                  </el-button>
+                  <el-button
+                    :type="row.featured ? 'warning' : 'success'"
+                    size="small"
+                    @click="toggleFeatured(row)"
+                    :title="row.featured ? '取消精选' : '设为精选'"
+                  >
+                    <el-icon><Star /></el-icon>
+                  </el-button>
+                  <el-button type="danger" size="small" @click="deleteTutorial(row)" title="删除">
+                    <el-icon><Delete /></el-icon>
+                  </el-button>
+                </el-button-group>
               </template>
             </el-table-column>
           </el-table>
@@ -512,14 +520,16 @@ onMounted(() => {
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="200" fixed="right">
+            <el-table-column label="操作" width="140" fixed="right" align="center">
               <template #default="{ row }">
-                <el-button type="primary" size="small" @click="openEditDialog(row)">
-                  <el-icon><Edit /></el-icon> 审核
-                </el-button>
-                <el-button type="danger" size="small" @click="deleteTutorial(row)">
-                  <el-icon><Delete /></el-icon> 删除
-                </el-button>
+                <el-button-group>
+                  <el-button type="primary" size="small" @click="openEditDialog(row)" title="审核">
+                    <el-icon><Edit /></el-icon>
+                  </el-button>
+                  <el-button type="danger" size="small" @click="deleteTutorial(row)" title="删除">
+                    <el-icon><Delete /></el-icon>
+                  </el-button>
+                </el-button-group>
               </template>
             </el-table-column>
           </el-table>
@@ -545,14 +555,16 @@ onMounted(() => {
             </el-table-column>
             <el-table-column prop="author" label="作者" width="120" />
             <el-table-column prop="create_time" label="创建时间" width="180" />
-            <el-table-column label="操作" width="200" fixed="right">
+            <el-table-column label="操作" width="140" fixed="right" align="center">
               <template #default="{ row }">
-                <el-button type="primary" size="small" @click="openEditDialog(row)">
-                  <el-icon><Edit /></el-icon> 编辑
-                </el-button>
-                <el-button type="danger" size="small" @click="deleteTutorial(row)">
-                  <el-icon><Delete /></el-icon> 删除
-                </el-button>
+                <el-button-group>
+                  <el-button type="primary" size="small" @click="openEditDialog(row)" title="编辑">
+                    <el-icon><Edit /></el-icon>
+                  </el-button>
+                  <el-button type="danger" size="small" @click="deleteTutorial(row)" title="删除">
+                    <el-icon><Delete /></el-icon>
+                  </el-button>
+                </el-button-group>
               </template>
             </el-table-column>
           </el-table>
@@ -600,17 +612,19 @@ onMounted(() => {
                 <span v-else style="color: #909399">-</span>
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="280" fixed="right">
+            <el-table-column label="操作" width="180" fixed="right" align="center">
               <template #default="{ row }">
-                <el-button size="small" @click="openEditDialog(row)">
-                  <el-icon><Edit /></el-icon> 编辑
-                </el-button>
-                <el-button type="warning" size="small" @click="toggleFeatured(row)">
-                  取消精选
-                </el-button>
-                <el-button type="danger" size="small" @click="deleteTutorial(row)">
-                  <el-icon><Delete /></el-icon> 删除
-                </el-button>
+                <el-button-group>
+                  <el-button size="small" @click="openEditDialog(row)" title="编辑">
+                    <el-icon><Edit /></el-icon>
+                  </el-button>
+                  <el-button type="warning" size="small" @click="toggleFeatured(row)" title="取消精选">
+                    <el-icon><Star /></el-icon>
+                  </el-button>
+                  <el-button type="danger" size="small" @click="deleteTutorial(row)" title="删除">
+                    <el-icon><Delete /></el-icon>
+                  </el-button>
+                </el-button-group>
               </template>
             </el-table-column>
           </el-table>
@@ -657,21 +671,24 @@ onMounted(() => {
                 <span>{{ row.view_count?.toLocaleString() || 0 }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="280" fixed="right">
+            <el-table-column label="操作" width="180" fixed="right" align="center">
               <template #default="{ row }">
-                <el-button size="small" @click="openEditDialog(row)">
-                  <el-icon><Edit /></el-icon> 编辑
-                </el-button>
-                <el-button
-                  :type="row.featured ? 'warning' : 'success'"
-                  size="small"
-                  @click="toggleFeatured(row)"
-                >
-                  {{ row.featured ? '取消精选' : '设为精选' }}
-                </el-button>
-                <el-button type="danger" size="small" @click="deleteTutorial(row)">
-                  <el-icon><Delete /></el-icon> 删除
-                </el-button>
+                <el-button-group>
+                  <el-button size="small" @click="openEditDialog(row)" title="编辑">
+                    <el-icon><Edit /></el-icon>
+                  </el-button>
+                  <el-button
+                    :type="row.featured ? 'warning' : 'success'"
+                    size="small"
+                    @click="toggleFeatured(row)"
+                    :title="row.featured ? '取消精选' : '设为精选'"
+                  >
+                    <el-icon><Star /></el-icon>
+                  </el-button>
+                  <el-button type="danger" size="small" @click="deleteTutorial(row)" title="删除">
+                    <el-icon><Delete /></el-icon>
+                  </el-button>
+                </el-button-group>
               </template>
             </el-table-column>
           </el-table>
@@ -714,21 +731,24 @@ onMounted(() => {
                 <span>{{ row.view_count?.toLocaleString() || 0 }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="280" fixed="right">
+            <el-table-column label="操作" width="180" fixed="right" align="center">
               <template #default="{ row }">
-                <el-button size="small" @click="openEditDialog(row)">
-                  <el-icon><Edit /></el-icon> 编辑
-                </el-button>
-                <el-button
-                  :type="row.featured ? 'warning' : 'success'"
-                  size="small"
-                  @click="toggleFeatured(row)"
-                >
-                  {{ row.featured ? '取消精选' : '设为精选' }}
-                </el-button>
-                <el-button type="danger" size="small" @click="deleteTutorial(row)">
-                  <el-icon><Delete /></el-icon> 删除
-                </el-button>
+                <el-button-group>
+                  <el-button size="small" @click="openEditDialog(row)" title="编辑">
+                    <el-icon><Edit /></el-icon>
+                  </el-button>
+                  <el-button
+                    :type="row.featured ? 'warning' : 'success'"
+                    size="small"
+                    @click="toggleFeatured(row)"
+                    :title="row.featured ? '取消精选' : '设为精选'"
+                  >
+                    <el-icon><Star /></el-icon>
+                  </el-button>
+                  <el-button type="danger" size="small" @click="deleteTutorial(row)" title="删除">
+                    <el-icon><Delete /></el-icon>
+                  </el-button>
+                </el-button-group>
               </template>
             </el-table-column>
           </el-table>
@@ -771,21 +791,24 @@ onMounted(() => {
                 <span>{{ row.view_count?.toLocaleString() || 0 }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="280" fixed="right">
+            <el-table-column label="操作" width="180" fixed="right" align="center">
               <template #default="{ row }">
-                <el-button size="small" @click="openEditDialog(row)">
-                  <el-icon><Edit /></el-icon> 编辑
-                </el-button>
-                <el-button
-                  :type="row.featured ? 'warning' : 'success'"
-                  size="small"
-                  @click="toggleFeatured(row)"
-                >
-                  {{ row.featured ? '取消精选' : '设为精选' }}
-                </el-button>
-                <el-button type="danger" size="small" @click="deleteTutorial(row)">
-                  <el-icon><Delete /></el-icon> 删除
-                </el-button>
+                <el-button-group>
+                  <el-button size="small" @click="openEditDialog(row)" title="编辑">
+                    <el-icon><Edit /></el-icon>
+                  </el-button>
+                  <el-button
+                    :type="row.featured ? 'warning' : 'success'"
+                    size="small"
+                    @click="toggleFeatured(row)"
+                    :title="row.featured ? '取消精选' : '设为精选'"
+                  >
+                    <el-icon><Star /></el-icon>
+                  </el-button>
+                  <el-button type="danger" size="small" @click="deleteTutorial(row)" title="删除">
+                    <el-icon><Delete /></el-icon>
+                  </el-button>
+                </el-button-group>
               </template>
             </el-table-column>
           </el-table>
@@ -835,21 +858,24 @@ onMounted(() => {
                 <span>{{ row.view_count?.toLocaleString() || 0 }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="280" fixed="right">
+            <el-table-column label="操作" width="180" fixed="right" align="center">
               <template #default="{ row }">
-                <el-button size="small" @click="openEditDialog(row)">
-                  <el-icon><Edit /></el-icon> 编辑
-                </el-button>
-                <el-button
-                  :type="row.featured ? 'warning' : 'success'"
-                  size="small"
-                  @click="toggleFeatured(row)"
-                >
-                  {{ row.featured ? '取消精选' : '设为精选' }}
-                </el-button>
-                <el-button type="danger" size="small" @click="deleteTutorial(row)">
-                  <el-icon><Delete /></el-icon> 删除
-                </el-button>
+                <el-button-group>
+                  <el-button size="small" @click="openEditDialog(row)" title="编辑">
+                    <el-icon><Edit /></el-icon>
+                  </el-button>
+                  <el-button
+                    :type="row.featured ? 'warning' : 'success'"
+                    size="small"
+                    @click="toggleFeatured(row)"
+                    :title="row.featured ? '取消精选' : '设为精选'"
+                  >
+                    <el-icon><Star /></el-icon>
+                  </el-button>
+                  <el-button type="danger" size="small" @click="deleteTutorial(row)" title="删除">
+                    <el-icon><Delete /></el-icon>
+                  </el-button>
+                </el-button-group>
               </template>
             </el-table-column>
           </el-table>
@@ -1086,6 +1112,17 @@ onMounted(() => {
     // 操作按钮之间的间距
     .el-button + .el-button {
       margin-left: 6px;
+    }
+
+    // 优化按钮组样式
+    .el-button-group {
+      .el-button {
+        padding: 5px 8px;
+
+        .el-icon {
+          font-size: 14px;
+        }
+      }
     }
   }
 }

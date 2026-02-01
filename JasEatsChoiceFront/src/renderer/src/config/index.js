@@ -94,10 +94,10 @@ export const API_CONFIG = {
     adminList: '/v1/tutorial/admin/list', // 获取所有教程（管理员专用）
     adminCreate: '/v1/tutorial/admin/create', // 管理员创建教程
     adminPending: '/v1/tutorial/admin/pending', // 获取待审核列表
-    adminApprove: '/v1/tutorial/admin', // 审核通过（需要拼接 '/' + id + '/approve'）
-    adminReject: '/v1/tutorial/admin', // 审核拒绝（需要拼接 '/' + id + '/reject'）
-    adminToggleFeatured: '/v1/tutorial/admin', // 设置精选（需要拼接 '/' + id + '/featured'）
-    adminDelete: '/v1/tutorial/admin', // 删除教程（需要拼接 '/' + id）
+    adminApprove: '/v1/tutorial/admin/', // 审核通过（需要拼接 id + '/approve'）
+    adminReject: '/v1/tutorial/admin/', // 审核拒绝（需要拼接 id + '/reject'）
+    adminToggleFeatured: '/v1/tutorial/admin/', // 设置精选（需要拼接 id + '/featured'）
+    adminDelete: '/v1/tutorial/admin/', // 删除教程（需要拼接 id）
 
     // 商家端
     merchantCreate: '/v1/tutorial/merchant/create', // 商家创建教程

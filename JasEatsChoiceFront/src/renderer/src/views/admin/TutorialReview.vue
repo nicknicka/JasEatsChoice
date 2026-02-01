@@ -4,6 +4,21 @@ import { Check, Close, View, Star, Document, VideoCamera } from '@element-plus/i
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../../utils/api.js'
 import { API_CONFIG } from '../../config/index.js'
+import { marked } from 'marked'
+import DOMPurify from 'dompurify'
+
+// 配置 marked 选项
+marked.setOptions({
+  breaks: true, // 支持 GitHub 风格的换行
+  gfm: true, // 启用 GitHub 风格的 Markdown
+})
+
+// Markdown 渲染函数（带 XSS 防护）
+const renderMarkdown = (content) => {
+  if (!content) return ''
+  const rawHtml = marked(content)
+  return DOMPurify.sanitize(rawHtml)
+}
 
 // 数据
 const pendingTutorials = ref([])
@@ -92,7 +107,7 @@ const approveTutorial = async () => {
       }
     )
 
-    if (response.data?.success) {
+    if (response?.success) {
       ElMessage.success('审核通过！')
       showReviewDialog.value = false
       fetchPendingTutorials()
@@ -122,7 +137,7 @@ const rejectTutorial = async () => {
       }
     )
 
-    if (response.data?.success) {
+    if (response?.success) {
       ElMessage.success('已拒绝该教程')
       showReviewDialog.value = false
       fetchPendingTutorials()
@@ -205,10 +220,10 @@ onMounted(() => {
 
       <!-- 教程列表 -->
       <el-table v-else :data="pendingTutorials" stripe>
-        <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="title" label="教程标题" min-width="200" />
+        <el-table-column prop="id" label="ID" width="70" />
+        <el-table-column prop="title" label="教程标题" min-width="180" show-overflow-tooltip />
 
-        <el-table-column label="来源" width="120">
+        <el-table-column label="来源" width="100" align="center">
           <template #default="{ row }">
             <el-tag :type="getSourceTypeTag(row.source_type).type" size="small">
               {{ getSourceTypeTag(row.source_type).text }}
@@ -216,16 +231,20 @@ onMounted(() => {
           </template>
         </el-table-column>
 
-        <el-table-column prop="author" label="作者" width="150" />
+        <el-table-column label="作者" width="120" show-overflow-tooltip>
+          <template #default="{ row }">
+            {{ row.author || '未知作者' }}
+          </template>
+        </el-table-column>
 
-        <el-table-column label="类型" width="100">
+        <el-table-column label="类型" width="70" align="center">
           <template #default="{ row }">
             <el-icon v-if="row.type === 'video'" class="type-icon video"><VideoCamera /></el-icon>
             <el-icon v-else class="type-icon article"><Document /></el-icon>
           </template>
         </el-table-column>
 
-        <el-table-column label="难度" width="100">
+        <el-table-column label="难度" width="80" align="center">
           <template #default="{ row }">
             <el-tag v-if="row.difficulty" type="info" size="small">
               {{ getDifficultyName(row.difficulty) }}
@@ -233,10 +252,10 @@ onMounted(() => {
           </template>
         </el-table-column>
 
-        <el-table-column label="关联信息" width="150">
+        <el-table-column label="关联信息" width="130" show-overflow-tooltip>
           <template #default="{ row }">
-            <span v-if="row.linked_dish_id">
-              关联菜品: #{{ row.linked_dish_id }}
+            <span v-if="row.linked_dish_id" class="info-text">
+              菜品#{{ row.linked_dish_id }}
             </span>
             <span v-else-if="row.ai_model_version" class="ai-info">
               {{ row.ai_model_version }}
@@ -244,14 +263,16 @@ onMounted(() => {
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" width="280" fixed="right">
+        <el-table-column label="操作" width="110" fixed="right" align="center">
           <template #default="{ row }">
-            <el-button type="success" size="small" @click="viewDetail(row)">
-              <el-icon><View /></el-icon> 查看
-            </el-button>
-            <el-button type="primary" size="small" @click="viewDetail(row)">
-              <el-icon><Check /></el-icon> 审核
-            </el-button>
+            <el-button-group>
+              <el-button type="success" size="small" @click="viewDetail(row)" title="查看详情">
+                <el-icon><View /></el-icon>
+              </el-button>
+              <el-button type="primary" size="small" @click="viewDetail(row)" title="审核">
+                <el-icon><Check /></el-icon>
+              </el-button>
+            </el-button-group>
           </template>
         </el-table-column>
       </el-table>
@@ -290,8 +311,8 @@ onMounted(() => {
         <div class="meta-section">
           <div class="meta-item">
             <span class="label">来源:</span>
-            <el-tag :type="getSourceTypeTag(currentTutorial.sourceType).type" size="small">
-              {{ getSourceTypeTag(currentTutorial.sourceType).text }}
+            <el-tag :type="getSourceTypeTag(currentTutorial.source_type).type" size="small">
+              {{ getSourceTypeTag(currentTutorial.source_type).text }}
             </el-tag>
           </div>
           <div class="meta-item">
@@ -311,17 +332,17 @@ onMounted(() => {
         <!-- 内容预览 -->
         <div class="content-section">
           <h4>教程内容</h4>
-          <div class="content-text" v-html="currentTutorial.content"></div>
+          <div class="content-text markdown-body" v-html="renderMarkdown(currentTutorial.content)"></div>
         </div>
 
         <!-- 关联信息 -->
-        <div class="related-section" v-if="currentTutorial.linkedDishId || currentTutorial.aiModelVersion">
+        <div class="related-section" v-if="currentTutorial.linked_dish_id || currentTutorial.ai_model_version">
           <h4>关联信息</h4>
-          <p v-if="currentTutorial.linkedDishId">
-            关联菜品ID: {{ currentTutorial.linkedDishId }}
+          <p v-if="currentTutorial.linked_dish_id">
+            关联菜品ID: {{ currentTutorial.linked_dish_id }}
           </p>
-          <p v-if="currentTutorial.aiModelVersion">
-            AI模型版本: {{ currentTutorial.aiModelVersion }}
+          <p v-if="currentTutorial.ai_model_version">
+            AI模型版本: {{ currentTutorial.ai_model_version }}
           </p>
         </div>
 
@@ -382,8 +403,43 @@ onMounted(() => {
     }
   }
 
+  // 表格样式优化
+  :deep(.el-table) {
+    border-radius: 8px;
+    overflow: hidden;
+
+    .el-table__header th {
+      background-color: #fafafa;
+      font-weight: 600;
+      color: #606266;
+    }
+
+    .el-table__body tr:hover > td {
+      background-color: #f5f7fa;
+    }
+
+    .el-table__cell {
+      padding: 10px 8px;
+    }
+
+    // 按钮组样式优化
+    .el-button-group {
+      .el-button {
+        padding: 5px 10px;
+
+        .el-icon {
+          font-size: 14px;
+        }
+      }
+
+      .el-button + .el-button {
+        margin-left: 0;
+      }
+    }
+  }
+
   .type-icon {
-    font-size: 20px;
+    font-size: 18px;
 
     &.video {
       color: #ff6b6b;
@@ -398,6 +454,11 @@ onMounted(() => {
     color: #909399;
     font-size: 12px;
     font-style: italic;
+  }
+
+  .info-text {
+    color: #606266;
+    font-size: 13px;
   }
 
   .pagination-container {
@@ -477,11 +538,157 @@ onMounted(() => {
         font-size: 14px;
         line-height: 1.8;
         color: #606266;
-        max-height: 300px;
+        max-height: 400px;
         overflow-y: auto;
-        padding: 15px;
+        padding: 20px;
         background: #f9f9f9;
-        border-radius: 4px;
+        border-radius: 8px;
+        border: 1px solid #e4e7ed;
+
+        // Markdown 样式
+        :deep(.markdown-body) {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+          font-size: 14px;
+          line-height: 1.8;
+          color: #303133;
+
+          h1, h2, h3, h4, h5, h6 {
+            margin-top: 24px;
+            margin-bottom: 16px;
+            font-weight: 600;
+            line-height: 1.25;
+            color: #303133;
+          }
+
+          h1 {
+            font-size: 2em;
+            border-bottom: 2px solid #e4e7ed;
+            padding-bottom: 8px;
+          }
+
+          h2 {
+            font-size: 1.5em;
+            border-bottom: 1px solid #e4e7ed;
+            padding-bottom: 6px;
+          }
+
+          h3 {
+            font-size: 1.25em;
+          }
+
+          p {
+            margin-top: 0;
+            margin-bottom: 16px;
+          }
+
+          ul, ol {
+            padding-left: 2em;
+            margin-bottom: 16px;
+          }
+
+          li {
+            margin-bottom: 4px;
+          }
+
+          ul li {
+            list-style-type: disc;
+          }
+
+          ol li {
+            list-style-type: decimal;
+          }
+
+          code {
+            padding: 2px 6px;
+            margin: 0 2px;
+            font-size: 85%;
+            background-color: rgba(175, 184, 193, 0.2);
+            border-radius: 3px;
+            font-family: 'Courier New', Courier, monospace;
+            color: #e83e8c;
+          }
+
+          pre {
+            padding: 16px;
+            overflow: auto;
+            font-size: 85%;
+            line-height: 1.45;
+            background-color: #f6f8fa;
+            border-radius: 6px;
+            margin-bottom: 16px;
+
+            code {
+              padding: 0;
+              margin: 0;
+              font-size: 100%;
+              background-color: transparent;
+              color: #303133;
+            }
+          }
+
+          blockquote {
+            padding: 0 1em;
+            color: #606266;
+            border-left: 4px solid #409eff;
+            margin: 0 0 16px 0;
+            background-color: #ecf5ff;
+            padding: 12px 16px;
+            border-radius: 4px;
+          }
+
+          table {
+            border-spacing: 0;
+            border-collapse: collapse;
+            margin-bottom: 16px;
+            width: 100%;
+
+            th, td {
+              padding: 6px 13px;
+              border: 1px solid #dfe6ec;
+            }
+
+            th {
+            font-weight: 600;
+            background-color: #f5f7fa;
+          }
+
+            tr:nth-child(2n) {
+              background-color: #fafafa;
+            }
+          }
+
+          img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+            margin: 8px 0;
+          }
+
+          a {
+            color: #409eff;
+            text-decoration: none;
+
+            &:hover {
+              text-decoration: underline;
+            }
+          }
+
+          strong {
+            font-weight: 600;
+            color: #ff6b6b;
+          }
+
+          em {
+            font-style: italic;
+          }
+
+          hr {
+            height: 1px;
+            border: 0;
+            border-top: 2px solid #e4e7ed;
+            margin: 24px 0;
+          }
+        }
 
         :deep(h1),
         :deep(h2),
