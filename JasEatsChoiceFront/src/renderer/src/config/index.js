@@ -221,7 +221,26 @@ export const API_CONFIG = {
     // 系统日志
     operationLogs: '/admin/logs/operations', // 操作日志
     systemLogs: '/admin/logs/system', // 系统日志
-    loginLogs: '/admin/logs/login' // 登录日志
+    loginLogs: '/admin/logs/login', // 登录日志
+
+    // 内容管理
+    hotTopics: '/v1/admin/hot-topic', // 热点话题管理
+    hotTopicDetail: '/v1/admin/hot-topic/detail', // 热点话题详情
+    hotTopicCreate: '/v1/admin/hot-topic/create', // 创建热点
+    hotTopicUpdate: '/v1/admin/hot-topic/update', // 更新热点
+    hotTopicDelete: '/v1/admin/hot-topic/delete', // 删除热点
+    hotTopicReview: '/v1/admin/hot-topic/review', // 审核热点
+    hotTopicBatchDelete: '/v1/admin/hot-topic/batch-delete', // 批量删除热点
+    hotTopicStatistics: '/v1/admin/hot-topic/statistics', // 热点统计
+
+    announcements: '/admin/announcements', // 公告列表
+    announcementDetail: '/admin/announcements', // 公告详情（需要拼接/{id}）
+    announcementCreate: '/admin/announcements', // 创建公告
+    announcementUpdate: '/admin/announcements', // 更新公告（需要拼接/{id}）
+    announcementDelete: '/admin/announcements', // 删除公告（需要拼接/{id}）
+    announcementBatchDelete: '/admin/announcements/batch', // 批量删除公告
+    announcementUpdateStatus: '/admin/announcements', // 修改状态（需要拼接/{id}/status）
+    announcementStatistics: '/admin/announcements/statistics' // 公告统计
   }
 }
 

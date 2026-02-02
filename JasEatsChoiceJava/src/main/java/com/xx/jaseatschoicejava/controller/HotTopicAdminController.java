@@ -1,17 +1,22 @@
 package com.xx.jaseatschoicejava.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.xx.jaseatschoicejava.common.ResponseResult;
 import com.xx.jaseatschoicejava.entity.HotTopic;
 import com.xx.jaseatschoicejava.service.HotTopicService;
+import com.xx.jaseatschoicejava.service.SystemLogService;
+import com.xx.jaseatschoicejava.util.AdminContext;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiParam;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,6 +27,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/v1/admin/hot-topic")
 @Api(tags = "热点管理")
+@PreAuthorize("hasRole('ADMIN')")
 public class HotTopicAdminController {
 
     private static final Logger log = LoggerFactory.getLogger(HotTopicAdminController.class);
@@ -29,69 +35,82 @@ public class HotTopicAdminController {
     @Autowired
     private HotTopicService hotTopicService;
 
+    @Autowired(required = false)
+    private SystemLogService systemLogService;
+
     /**
      * 分页查询热点列表
-     *
-     * @param page  页码
-     * @param size  每页大小
-     * @param status 状态筛选（可选）
-     * @return 分页结果
      */
-    @GetMapping("/list")
     @ApiOperation("分页查询热点列表")
-    public ResponseResult<Page<HotTopic>> list(
-            @ApiParam("页码") @RequestParam(defaultValue = "1") int page,
-            @ApiParam("每页大小") @RequestParam(defaultValue = "10") int size,
-            @ApiParam("状态筛选") @RequestParam(required = false) String status) {
+    @GetMapping("")
+    public ResponseEntity<IPage<HotTopic>> list(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String status) {
 
         try {
             Page<HotTopic> pageParam = new Page<>(page, size);
 
-            // TODO: 根据status筛选逻辑，这里暂时返回所有数据
-            Page<HotTopic> result = hotTopicService.page(pageParam);
+            // 构建查询条件
+            QueryWrapper<HotTopic> queryWrapper = new QueryWrapper<>();
+
+            // 状态筛选
+            if (status != null && !status.isEmpty()) {
+                queryWrapper.eq("status", status);
+            }
+
+            // 按优先级降序、创建时间倒序
+            queryWrapper.orderByDesc("priority")
+                .orderByDesc("create_time");
+
+            IPage<HotTopic> result = hotTopicService.page(pageParam, queryWrapper);
 
             log.info("查询热点列表成功，页码: {}, 大小: {}, 总数: {}", page, size, result.getTotal());
-            return ResponseResult.success(result);
+            return ResponseEntity.ok(result);
 
         } catch (Exception e) {
             log.error("查询热点列表失败", e);
-            return ResponseResult.fail("500", "查询失败");
+            return ResponseEntity.status(500).body(new Page<>());
         }
     }
 
     /**
      * 获取热点详情
-     *
-     * @param id 热点ID
-     * @return 热点详情
      */
-    @GetMapping("/detail/{id}")
     @ApiOperation("获取热点详情")
-    public ResponseResult<HotTopic> detail(@ApiParam("热点ID") @PathVariable String id) {
+    @GetMapping("/detail/{id}")
+    public ResponseEntity<Map<String, Object>> detail(@PathVariable String id) {
         try {
             HotTopic hotTopic = hotTopicService.getById(id);
             if (hotTopic == null) {
-                return ResponseResult.fail("404", "热点不存在");
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "热点不存在");
+                return ResponseEntity.status(404).body(response);
             }
 
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("data", hotTopic);
+
             log.info("查询热点详情成功: {}", id);
-            return ResponseResult.success(hotTopic);
+            return ResponseEntity.ok(response);
 
         } catch (Exception e) {
             log.error("查询热点详情失败", e);
-            return ResponseResult.fail("500", "查询失败");
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "查询失败");
+            return ResponseEntity.status(500).body(response);
         }
     }
 
     /**
      * 创建热点
-     *
-     * @param hotTopic 热点实体
-     * @return 操作结果
      */
-    @PostMapping("/create")
     @ApiOperation("创建热点")
-    public ResponseResult<HotTopic> create(@RequestBody HotTopic hotTopic) {
+    @PostMapping("/create")
+    public ResponseEntity<Map<String, Object>> create(@RequestBody HotTopic hotTopic) {
         try {
             // 设置默认值
             if (hotTopic.getPriority() == null) {
@@ -113,31 +132,58 @@ public class HotTopicAdminController {
                 hotTopic.setReviewStatus(HotTopic.ReviewStatus.APPROVED.getCode());
             }
 
+            // 设置创建时间
+            if (hotTopic.getCreateTime() == null) {
+                hotTopic.setCreateTime(LocalDateTime.now());
+            }
+
             boolean success = hotTopicService.createHotTopic(hotTopic);
+
             if (success) {
                 log.info("创建热点成功: {}", hotTopic.getContent());
-                return ResponseResult.success(hotTopic, "创建成功");
+
+                // 记录操作日志
+                if (systemLogService != null) {
+                    Long adminId = AdminContext.getAdminId();
+                    String adminName = AdminContext.getAdminUsername();
+
+                    systemLogService.logOperation(
+                        "CREATE", "HOT_TOPIC", "创建热点：" + hotTopic.getContent(),
+                        adminId, adminName, "ADMIN",
+                        "HotTopicAdminController.create",
+                        "content=" + hotTopic.getContent(),
+                        null, 0L, null, "SUCCESS"
+                    );
+                }
+
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", true);
+                response.put("message", "创建成功");
+                response.put("data", hotTopic);
+                return ResponseEntity.ok(response);
             } else {
-                return ResponseResult.fail("500", "创建失败");
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "创建失败");
+                return ResponseEntity.status(500).body(response);
             }
 
         } catch (Exception e) {
             log.error("创建热点失败", e);
-            return ResponseResult.fail("500", "创建失败");
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "创建失败：" + e.getMessage());
+            return ResponseEntity.status(500).body(response);
         }
     }
 
     /**
      * 更新热点
-     *
-     * @param id       热点ID
-     * @param hotTopic 热点实体
-     * @return 操作结果
      */
-    @PutMapping("/update/{id}")
     @ApiOperation("更新热点")
-    public ResponseResult<Void> update(
-            @ApiParam("热点ID") @PathVariable String id,
+    @PutMapping("/update/{id}")
+    public ResponseEntity<Map<String, Object>> update(
+            @PathVariable String id,
             @RequestBody HotTopic hotTopic) {
 
         try {
@@ -146,84 +192,143 @@ public class HotTopicAdminController {
 
             if (success) {
                 log.info("更新热点成功: {}", id);
-                return ResponseResult.success(null, "更新成功");
+
+                // 记录操作日志
+                if (systemLogService != null) {
+                    Long adminId = AdminContext.getAdminId();
+                    String adminName = AdminContext.getAdminUsername();
+
+                    systemLogService.logOperation(
+                        "UPDATE", "HOT_TOPIC", "更新热点：" + id,
+                        adminId, adminName, "ADMIN",
+                        "HotTopicAdminController.update",
+                        "id=" + id,
+                        null, 0L, null, "SUCCESS"
+                    );
+                }
+
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", true);
+                response.put("message", "更新成功");
+                return ResponseEntity.ok(response);
             } else {
-                return ResponseResult.fail("500", "更新失败");
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "更新失败");
+                return ResponseEntity.status(500).body(response);
             }
 
         } catch (Exception e) {
             log.error("更新热点失败", e);
-            return ResponseResult.fail("500", "更新失败");
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "更新失败：" + e.getMessage());
+            return ResponseEntity.status(500).body(response);
         }
     }
 
     /**
      * 删除热点
-     *
-     * @param id 热点ID
-     * @return 操作结果
      */
-    @DeleteMapping("/delete/{id}")
     @ApiOperation("删除热点")
-    public ResponseResult<Void> delete(@ApiParam("热点ID") @PathVariable String id) {
+    @DeleteMapping("/delete/{id}")
+    public ResponseEntity<Map<String, Object>> delete(@PathVariable String id) {
         try {
             boolean success = hotTopicService.deleteHotTopic(id);
 
             if (success) {
                 log.info("删除热点成功: {}", id);
-                return ResponseResult.success(null, "删除成功");
+
+                // 记录操作日志
+                if (systemLogService != null) {
+                    Long adminId = AdminContext.getAdminId();
+                    String adminName = AdminContext.getAdminUsername();
+
+                    systemLogService.logOperation(
+                        "DELETE", "HOT_TOPIC", "删除热点：" + id,
+                        adminId, adminName, "ADMIN",
+                        "HotTopicAdminController.delete",
+                        "id=" + id,
+                        null, 0L, null, "SUCCESS"
+                    );
+                }
+
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", true);
+                response.put("message", "删除成功");
+                return ResponseEntity.ok(response);
             } else {
-                return ResponseResult.fail("404", "热点不存在");
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "热点不存在");
+                return ResponseEntity.status(404).body(response);
             }
 
         } catch (Exception e) {
             log.error("删除热点失败", e);
-            return ResponseResult.fail("500", "删除失败");
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "删除失败：" + e.getMessage());
+            return ResponseEntity.status(500).body(response);
         }
     }
 
     /**
      * 审核热点
-     *
-     * @param id         热点ID
-     * @param reviewerId 审核人ID
-     * @param approved   是否通过
-     * @param comment    审核意见
-     * @return 操作结果
      */
-    @PostMapping("/review/{id}")
     @ApiOperation("审核热点")
-    public ResponseResult<Void> review(
-            @ApiParam("热点ID") @PathVariable String id,
-            @ApiParam("审核人ID") @RequestParam Long reviewerId,
-            @ApiParam("是否通过") @RequestParam boolean approved,
-            @ApiParam("审核意见") @RequestParam(required = false) String comment) {
+    @PostMapping("/review/{id}")
+    public ResponseEntity<Map<String, Object>> review(
+            @PathVariable String id,
+            @RequestParam Long reviewerId,
+            @RequestParam boolean approved,
+            @RequestParam(required = false) String comment) {
 
         try {
             boolean success = hotTopicService.reviewHotTopic(id, reviewerId, approved, comment);
 
             if (success) {
                 log.info("审核热点成功: {}, 通过: {}", id, approved);
-                return ResponseResult.success(null, "审核成功");
+
+                // 记录操作日志
+                if (systemLogService != null) {
+                    String adminName = AdminContext.getAdminUsername();
+
+                    systemLogService.logOperation(
+                        "REVIEW", "HOT_TOPIC", "审核热点：" + id + (approved ? "通过" : "拒绝"),
+                        reviewerId, adminName, "ADMIN",
+                        "HotTopicAdminController.review",
+                        "id=" + id + ", approved=" + approved + ", comment=" + comment,
+                        null, 0L, null, "SUCCESS"
+                    );
+                }
+
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", true);
+                response.put("message", approved ? "审核通过" : "已拒绝");
+                return ResponseEntity.ok(response);
             } else {
-                return ResponseResult.fail("404", "热点不存在");
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "热点不存在");
+                return ResponseEntity.status(404).body(response);
             }
 
         } catch (Exception e) {
             log.error("审核热点失败", e);
-            return ResponseResult.fail("500", "审核失败");
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "审核失败：" + e.getMessage());
+            return ResponseEntity.status(500).body(response);
         }
     }
 
     /**
      * 批量删除热点
-     *
-     * @param ids 热点ID列表
-     * @return 操作结果
      */
-    @DeleteMapping("/batch-delete")
     @ApiOperation("批量删除热点")
-    public ResponseResult<Void> batchDelete(@RequestBody List<String> ids) {
+    @DeleteMapping("/batch-delete")
+    public ResponseEntity<Map<String, Object>> batchDelete(@RequestBody List<String> ids) {
         try {
             int successCount = 0;
             for (String id : ids) {
@@ -233,22 +338,41 @@ public class HotTopicAdminController {
             }
 
             log.info("批量删除热点完成，成功: {}/{}", successCount, ids.size());
-            return ResponseResult.success(null, "成功删除 " + successCount + " 条");
+
+            // 记录操作日志
+            if (systemLogService != null && successCount > 0) {
+                Long adminId = AdminContext.getAdminId();
+                String adminName = AdminContext.getAdminUsername();
+
+                systemLogService.logOperation(
+                    "DELETE", "HOT_TOPIC", "批量删除热点：" + successCount + "条",
+                    adminId, adminName, "ADMIN",
+                    "HotTopicAdminController.batchDelete",
+                    "count=" + ids.size(),
+                    null, 0L, null, "SUCCESS"
+                );
+            }
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "成功删除 " + successCount + " 条");
+            return ResponseEntity.ok(response);
 
         } catch (Exception e) {
             log.error("批量删除热点失败", e);
-            return ResponseResult.fail("500", "批量删除失败");
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "批量删除失败：" + e.getMessage());
+            return ResponseEntity.status(500).body(response);
         }
     }
 
     /**
      * 获取统计数据
-     *
-     * @return 统计数据
      */
-    @GetMapping("/statistics")
     @ApiOperation("获取热点统计数据")
-    public ResponseResult<Map<String, Object>> statistics() {
+    @GetMapping("/statistics")
+    public ResponseEntity<Map<String, Object>> statistics() {
         try {
             List<HotTopic> allTopics = hotTopicService.list();
 
@@ -260,11 +384,18 @@ public class HotTopicAdminController {
             stats.put("totalShares", allTopics.stream().mapToInt(HotTopic::getShareCount).sum());
 
             log.info("查询热点统计成功");
-            return ResponseResult.success(stats);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("data", stats);
+            return ResponseEntity.ok(response);
 
         } catch (Exception e) {
             log.error("查询热点统计失败", e);
-            return ResponseResult.fail("500", "查询统计失败");
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "查询统计失败：" + e.getMessage());
+            return ResponseEntity.status(500).body(response);
         }
     }
 }

@@ -45,11 +45,23 @@ public class AdminFinanceController {
             @RequestParam(required = false) String paymentMethod,
             @RequestParam(required = false) String status) {
 
-        // TODO: 实现充值记录查询（如果RechargeRecordService可用）
-        // 目前暂时返回模拟数据
+        if (rechargeRecordService == null) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "充值记录服务不可用");
+            return ResponseEntity.status(503).body(response);
+        }
+
+        Page<RechargeRecord> pageParam = new Page<>(page, pageSize);
+        IPage<RechargeRecord> result = rechargeRecordService.getRechargePage(pageParam, keyword, paymentMethod, status);
+
         Map<String, Object> response = new HashMap<>();
-        response.put("message", "充值记录查询功能待完善");
-        response.put("success", false);
+        response.put("success", true);
+        response.put("records", result.getRecords());
+        response.put("total", result.getTotal());
+        response.put("size", result.getSize());
+        response.put("current", result.getCurrent());
+        response.put("pages", result.getPages());
 
         return ResponseEntity.ok(response);
     }
@@ -61,11 +73,25 @@ public class AdminFinanceController {
     @GetMapping("/recharges/{rechargeId}")
     @PreAuthorize("hasAnyAuthority('admin:finance:recharges')")
     public ResponseEntity<Map<String, Object>> getRechargeDetail(@PathVariable String rechargeId) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("message", "充值记录详情查询功能待完善");
-        response.put("success", false);
+        if (rechargeRecordService == null) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "充值记录服务不可用");
+            return ResponseEntity.status(503).body(response);
+        }
 
-        return ResponseEntity.ok(response);
+        RechargeRecord rechargeRecord = rechargeRecordService.getRechargeDetail(rechargeId);
+
+        Map<String, Object> response = new HashMap<>();
+        if (rechargeRecord != null) {
+            response.put("success", true);
+            response.put("data", rechargeRecord);
+            return ResponseEntity.ok(response);
+        } else {
+            response.put("success", false);
+            response.put("message", "充值记录不存在");
+            return ResponseEntity.status(404).body(response);
+        }
     }
 
     /**
@@ -173,6 +199,65 @@ public class AdminFinanceController {
 
         stats.put("pendingCount", pendingCount);
         stats.put("todayRefund", todayRefund != null ? todayRefund : java.math.BigDecimal.ZERO);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("data", stats);
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 获取充值统计
+     */
+    @ApiOperation("获取充值统计")
+    @GetMapping("/recharges/statistics")
+    @PreAuthorize("hasAnyAuthority('admin:finance:recharges')")
+    public ResponseEntity<Map<String, Object>> getRechargeStatistics() {
+        if (rechargeRecordService == null) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "充值记录服务不可用");
+            return ResponseEntity.status(503).body(response);
+        }
+
+        Map<String, Object> stats = new HashMap<>();
+
+        // 今日充值总额
+        java.time.LocalDateTime todayStart = java.time.LocalDate.now().atStartOfDay();
+        java.math.BigDecimal todayRecharge = java.math.BigDecimal.ZERO;
+
+        // 计算今日成功充值总额
+        java.util.List<RechargeRecord> todayRecords = rechargeRecordService.list(
+            new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<RechargeRecord>()
+                .eq("recharge_status", "success")
+                .ge("create_time", todayStart)
+        );
+
+        todayRecharge = todayRecords.stream()
+            .map(RechargeRecord::getAmount)
+            .filter(amount -> amount != null)
+            .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+
+        // 总充值金额
+        java.math.BigDecimal totalRecharge = java.math.BigDecimal.ZERO;
+        java.util.List<RechargeRecord> allRecords = rechargeRecordService.list(
+            new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<RechargeRecord>()
+                .eq("recharge_status", "success")
+        );
+
+        totalRecharge = allRecords.stream()
+            .map(RechargeRecord::getAmount)
+            .filter(amount -> amount != null)
+            .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+
+        // 今日充值笔数
+        long todayCount = todayRecords.size();
+
+        stats.put("todayRecharge", todayRecharge);
+        stats.put("totalRecharge", totalRecharge);
+        stats.put("todayCount", todayCount);
+        stats.put("totalCount", allRecords.size());
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
