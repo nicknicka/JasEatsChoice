@@ -39,7 +39,7 @@ public class AdminRoleController {
      */
     @ApiOperation("分页查询角色列表")
     @GetMapping("")
-    @PreAuthorize("hasAnyAuthority('admin:role:list')")
+    @PreAuthorize("hasAnyAuthority('admin:setting:role:list')")
     public ResponseEntity<IPage<Role>> getRoleList(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer pageSize,
@@ -63,7 +63,7 @@ public class AdminRoleController {
      */
     @ApiOperation("获取所有角色")
     @GetMapping("/all")
-    @PreAuthorize("hasAnyAuthority('admin:role:list')")
+    @PreAuthorize("hasAnyAuthority('admin:setting:role:list')")
     public ResponseEntity<List<Role>> getAllRoles() {
         List<Role> roles = roleService.list(
             new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Role>()
@@ -78,7 +78,7 @@ public class AdminRoleController {
      */
     @ApiOperation("获取角色详情")
     @GetMapping("/{roleId}")
-    @PreAuthorize("hasAnyAuthority('admin:role:detail')")
+    @PreAuthorize("hasAnyAuthority('admin:setting:role:detail')")
     public ResponseEntity<Map<String, Object>> getRoleDetail(@PathVariable Long roleId) {
         Role role = roleService.getById(roleId);
 
@@ -105,7 +105,7 @@ public class AdminRoleController {
      */
     @ApiOperation("创建角色")
     @PostMapping("")
-    @PreAuthorize("hasAnyAuthority('admin:role:create')")
+    @PreAuthorize("hasAnyAuthority('admin:setting:role:create')")
     public ResponseEntity<Map<String, Object>> createRole(@RequestBody Map<String, Object> request) {
         String roleName = (String) request.get("roleName");
         String roleCode = (String) request.get("roleCode");
@@ -168,7 +168,7 @@ public class AdminRoleController {
      */
     @ApiOperation("更新角色")
     @PutMapping("/{roleId}")
-    @PreAuthorize("hasAnyAuthority('admin:role:update')")
+    @PreAuthorize("hasAnyAuthority('admin:setting:role:update')")
     public ResponseEntity<Map<String, Object>> updateRole(
             @PathVariable Long roleId,
             @RequestBody Map<String, Object> request) {
@@ -225,7 +225,7 @@ public class AdminRoleController {
      */
     @ApiOperation("删除角色")
     @DeleteMapping("/{roleId}")
-    @PreAuthorize("hasAnyAuthority('admin:role:delete')")
+    @PreAuthorize("hasAnyAuthority('admin:setting:role:delete')")
     public ResponseEntity<Map<String, Object>> deleteRole(@PathVariable Long roleId) {
         Role role = roleService.getById(roleId);
         if (role == null) {
@@ -268,7 +268,7 @@ public class AdminRoleController {
      */
     @ApiOperation("给角色分配权限")
     @PostMapping("/{roleId}/permissions")
-    @PreAuthorize("hasAnyAuthority('admin:role:assign')")
+    @PreAuthorize("hasAnyAuthority('admin:setting:permission')")
     public ResponseEntity<Map<String, Object>> assignPermissions(
             @PathVariable Long roleId,
             @RequestBody Map<String, Object> request) {
@@ -310,7 +310,7 @@ public class AdminRoleController {
      */
     @ApiOperation("获取角色的权限列表")
     @GetMapping("/{roleId}/permissions")
-    @PreAuthorize("hasAnyAuthority('admin:role:detail')")
+    @PreAuthorize("hasAnyAuthority('admin:setting:role:detail')")
     public ResponseEntity<Map<String, Object>> getRolePermissions(@PathVariable Long roleId) {
         List<Permission> permissions = roleService.getPermissionsByRoleId(roleId);
         List<Long> permissionIds = roleService.getPermissionIdsByRoleId(roleId);

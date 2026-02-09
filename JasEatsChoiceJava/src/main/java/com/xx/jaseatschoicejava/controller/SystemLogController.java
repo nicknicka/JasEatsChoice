@@ -33,7 +33,7 @@ public class SystemLogController {
      */
     @ApiOperation("分页查询系统日志")
     @GetMapping("")
-    @PreAuthorize("hasAnyAuthority('admin:system:logs')")
+    @PreAuthorize("hasAnyAuthority('admin:setting:log:view')")
     public ResponseEntity<Map<String, Object>> getLogList(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer pageSize,
@@ -65,7 +65,7 @@ public class SystemLogController {
      */
     @ApiOperation("获取操作统计")
     @GetMapping("/statistics")
-    @PreAuthorize("hasAnyAuthority('admin:system:logs')")
+    @PreAuthorize("hasAnyAuthority('admin:setting:log:view')")
     public ResponseEntity<Map<String, Object>> getLogStatistics() {
         try {
             Map<String, Object> stats = new HashMap<>();
@@ -109,7 +109,7 @@ public class SystemLogController {
      */
     @ApiOperation("清理过期日志")
     @DeleteMapping("/clean")
-    @PreAuthorize("hasAnyAuthority('admin:system:logs:clean')")
+    @PreAuthorize("hasAnyAuthority('admin:setting:log')")
     public ResponseEntity<Map<String, Object>> cleanExpiredLogs(
             @RequestParam(defaultValue = "90") Integer days) {
 
@@ -132,7 +132,7 @@ public class SystemLogController {
      */
     @ApiOperation("导出日志")
     @GetMapping("/export")
-    @PreAuthorize("hasAnyAuthority('admin:system:logs:export')")
+    @PreAuthorize("hasAnyAuthority('admin:setting:log')")
     public ResponseEntity<Map<String, Object>> exportLogs(
             @RequestParam(required = false) String module,
             @RequestParam(required = false) String operationType,

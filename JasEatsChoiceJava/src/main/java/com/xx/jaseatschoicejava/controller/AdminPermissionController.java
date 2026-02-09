@@ -38,7 +38,7 @@ public class AdminPermissionController {
      */
     @ApiOperation("分页查询权限列表")
     @GetMapping("")
-    @PreAuthorize("hasAnyAuthority('admin:permission:list')")
+    @PreAuthorize("hasAnyAuthority('admin:setting:permission')")
     public ResponseEntity<IPage<Permission>> getPermissionList(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer pageSize,
@@ -57,7 +57,7 @@ public class AdminPermissionController {
      */
     @ApiOperation("获取权限树")
     @GetMapping("/tree")
-    @PreAuthorize("hasAnyAuthority('admin:permission:list')")
+    @PreAuthorize("hasAnyAuthority('admin:setting:permission')")
     public ResponseEntity<Map<String, Object>> getPermissionTree() {
         List<Permission> tree = permissionService.getPermissionTree();
 
@@ -72,7 +72,7 @@ public class AdminPermissionController {
      */
     @ApiOperation("获取顶级权限")
     @GetMapping("/top")
-    @PreAuthorize("hasAnyAuthority('admin:permission:list')")
+    @PreAuthorize("hasAnyAuthority('admin:setting:permission')")
     public ResponseEntity<Map<String, Object>> getTopLevelPermissions() {
         List<Permission> permissions = permissionService.getTopLevelPermissions();
 
@@ -87,7 +87,7 @@ public class AdminPermissionController {
      */
     @ApiOperation("根据父级ID获取子权限")
     @GetMapping("/children/{parentId}")
-    @PreAuthorize("hasAnyAuthority('admin:permission:list')")
+    @PreAuthorize("hasAnyAuthority('admin:setting:permission')")
     public ResponseEntity<Map<String, Object>> getChildPermissions(@PathVariable Long parentId) {
         List<Permission> permissions = permissionService.getPermissionsByParentId(parentId);
 
@@ -102,7 +102,7 @@ public class AdminPermissionController {
      */
     @ApiOperation("获取权限详情")
     @GetMapping("/{permissionId}")
-    @PreAuthorize("hasAnyAuthority('admin:permission:detail')")
+    @PreAuthorize("hasAnyAuthority('admin:setting:permission')")
     public ResponseEntity<Map<String, Object>> getPermissionDetail(@PathVariable Long permissionId) {
         Permission permission = permissionService.getById(permissionId);
 
@@ -123,7 +123,7 @@ public class AdminPermissionController {
      */
     @ApiOperation("创建权限")
     @PostMapping("")
-    @PreAuthorize("hasAnyAuthority('admin:permission:create')")
+    @PreAuthorize("hasAnyAuthority('admin:setting:permission')")
     public ResponseEntity<Map<String, Object>> createPermission(@RequestBody Map<String, Object> request) {
         String permissionName = (String) request.get("permissionName");
         String permissionCode = (String) request.get("permissionCode");
@@ -194,7 +194,7 @@ public class AdminPermissionController {
      */
     @ApiOperation("更新权限")
     @PutMapping("/{permissionId}")
-    @PreAuthorize("hasAnyAuthority('admin:permission:update')")
+    @PreAuthorize("hasAnyAuthority('admin:setting:permission')")
     public ResponseEntity<Map<String, Object>> updatePermission(
             @PathVariable Long permissionId,
             @RequestBody Map<String, Object> request) {
@@ -257,7 +257,7 @@ public class AdminPermissionController {
      */
     @ApiOperation("删除权限")
     @DeleteMapping("/{permissionId}")
-    @PreAuthorize("hasAnyAuthority('admin:permission:delete')")
+    @PreAuthorize("hasAnyAuthority('admin:setting:permission')")
     public ResponseEntity<Map<String, Object>> deletePermission(@PathVariable Long permissionId) {
         Permission permission = permissionService.getById(permissionId);
         if (permission == null) {
