@@ -1,56 +1,69 @@
 <template>
-  <div class="withdrawal-audit-container">
-    <!-- 页面标题 -->
-    <div class="page-header">
-      <h1>提现审核</h1>
-      <p class="subtitle">管理用户提现申请</p>
-    </div>
+  <div class="withdrawal-audit-page">
+    <el-card>
+      <template #header>
+        <div class="card-header">
+          <h2>提现审核</h2>
+        </div>
+      </template>
 
-    <!-- 统计卡片 -->
-    <div class="stats-cards">
-      <el-card class="stat-card">
-        <el-statistic title="待审核" :value="stats.pendingCount">
-          <template #prefix>
-            <el-icon style="vertical-align: -0.125em"><Clock /></el-icon>
-          </template>
-        </el-statistic>
-      </el-card>
-      <el-card class="stat-card">
-        <el-statistic title="处理中" :value="stats.processingCount">
-          <template #prefix>
-            <el-icon style="vertical-align: -0.125em"><Loading /></el-icon>
-          </template>
-        </el-statistic>
-      </el-card>
-      <el-card class="stat-card">
-        <el-statistic title="今日提现" :value="stats.todayWithdraw" :precision="2" prefix="¥">
-          <template #prefix>
-            <el-icon style="vertical-align: -0.125em"><Money /></el-icon>
-          </template>
-        </el-statistic>
-      </el-card>
-      <el-card class="stat-card">
-        <el-statistic title="累计提现" :value="stats.totalWithdraw" :precision="2" prefix="¥">
-          <template #prefix>
-            <el-icon style="vertical-align: -0.125em"><WalletFilled /></el-icon>
-          </template>
-        </el-statistic>
-      </el-card>
-    </div>
+      <!-- 统计卡片 -->
+      <el-row :gutter="16" class="stats-row">
+        <el-col :span="6">
+          <el-card shadow="hover">
+            <el-statistic title="待审核" :value="stats.pending">
+              <template #prefix>
+                <el-icon><Clock /></el-icon>
+              </template>
+            </el-statistic>
+          </el-card>
+        </el-col>
+        <el-col :span="6">
+          <el-card shadow="hover">
+            <el-statistic title="处理中" :value="stats.processing">
+              <template #prefix>
+                <el-icon><Loading /></el-icon>
+              </template>
+            </el-statistic>
+          </el-card>
+        </el-col>
+        <el-col :span="6">
+          <el-card shadow="hover">
+            <el-statistic title="今日提现" :value="stats.todayAmount" :precision="2" prefix="¥">
+              <template #prefix>
+                <el-icon><Money /></el-icon>
+              </template>
+            </el-statistic>
+          </el-card>
+        </el-col>
+        <el-col :span="6">
+          <el-card shadow="hover">
+            <el-statistic title="累计提现" :value="stats.totalAmount" :precision="2" prefix="¥">
+              <template #prefix>
+                <el-icon><Wallet /></el-icon>
+              </template>
+            </el-statistic>
+          </el-card>
+        </el-col>
+      </el-row>
 
-    <!-- 搜索栏 -->
-    <el-card class="search-card" shadow="never">
+      <!-- 搜索表单 -->
       <el-form :inline="true" :model="searchForm" class="search-form">
         <el-form-item label="关键词">
           <el-input
             v-model="searchForm.keyword"
-            placeholder="搜索流水号、用户ID"
+            placeholder="流水号/用户ID"
             clearable
-            style="width: 250px"
+            @clear="handleSearch"
           />
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="全部" clearable style="width: 140px">
+          <el-select
+            v-model="searchForm.status"
+            placeholder="全部"
+            clearable
+            @change="handleSearch"
+          >
             <el-option label="待审核" value="pending" />
             <el-option label="已通过" value="approved" />
             <el-option label="已拒绝" value="rejected" />
@@ -60,212 +73,155 @@
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" :icon="Search" @click="handleSearch">搜索</el-button>
-          <el-button :icon="Refresh" @click="handleReset">重置</el-button>
+          <el-button type="primary" @click="handleSearch">搜索</el-button>
+          <el-button @click="handleReset">重置</el-button>
         </el-form-item>
       </el-form>
-    </el-card>
 
-    <!-- 提现记录列表 -->
-    <el-card class="table-card" shadow="never">
-      <template #header>
-        <div class="card-header">
-          <span>提现记录</span>
-          <div v-if="selectedRows.length > 0" class="batch-actions">
-            <el-button size="small" type="success" @click="handleBatchApprove">
-              批量通过 ({{ selectedRows.length }})
-            </el-button>
-            <el-button size="small" type="danger" @click="handleBatchReject">
-              批量拒绝 ({{ selectedRows.length }})
-            </el-button>
-          </div>
-        </div>
-      </template>
-
+      <!-- 数据表格 -->
       <el-table
-        :data="withdrawList"
+        :data="tableData"
         v-loading="loading"
         stripe
         @selection-change="handleSelectionChange"
       >
-        <el-table-column type="selection" width="55" :selectable="(row) => row.withdrawStatus === 'pending'" />
+        <el-table-column type="selection" width="55" />
         <el-table-column prop="withdrawNo" label="流水号" width="180" />
-        <el-table-column prop="userId" label="用户ID" width="150" />
+        <el-table-column prop="userId" label="用户ID" width="120" />
         <el-table-column label="提现金额" width="120">
-          <template #default="{ row }">
-            <span style="color: #f56c6c; font-weight: bold">¥{{ row.amount }}</span>
+          <template #default="scope">
+            <span class="amount-text">¥{{ scope.row.amount }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="实际到账" width="120">
-          <template #default="{ row }">
-            <span style="color: #67c23a; font-weight: bold">¥{{ row.actualAmount || row.amount }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="withdrawMethod" label="提现方式" width="100">
-          <template #default="{ row }">
-            <el-tag size="small" :type="getMethodType(row.withdrawMethod)">
-              {{ getMethodText(row.withdrawMethod) }}
-            </el-tag>
+        <el-table-column label="提现方式" width="100">
+          <template #default="scope">
+            <el-tag v-if="scope.row.withdrawMethod === 'wechat'" type="success">微信</el-tag>
+            <el-tag v-else-if="scope.row.withdrawMethod === 'alipay'" type="primary">支付宝</el-tag>
+            <el-tag v-else type="info">银行卡</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="状态" width="100">
-          <template #default="{ row }">
-            <el-tag :type="getStatusType(row.withdrawStatus)">
-              {{ getStatusText(row.withdrawStatus) }}
+          <template #default="scope">
+            <el-tag :type="getStatusType(scope.row.withdrawStatus)">
+              {{ getStatusText(scope.row.withdrawStatus) }}
             </el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="createTime" label="申请时间" width="180" />
         <el-table-column label="操作" width="200" fixed="right">
-          <template #default="{ row }">
-            <el-button type="primary" size="small" link @click="handleView(row)">查看</el-button>
+          <template #default="scope">
+            <el-button type="primary" link size="small" @click="handleView(scope.row)">查看</el-button>
             <el-button
-              v-if="row.withdrawStatus === 'pending'"
+              v-if="scope.row.withdrawStatus === 'pending'"
               type="success"
-              size="small"
               link
-              @click="handleAudit(row, 'APPROVE')"
+              size="small"
+              @click="handleAudit(scope.row, 'APPROVE')"
             >
               通过
             </el-button>
             <el-button
-              v-if="row.withdrawStatus === 'pending'"
+              v-if="scope.row.withdrawStatus === 'pending'"
               type="danger"
-              size="small"
               link
-              @click="handleAudit(row, 'REJECT')"
+              size="small"
+              @click="handleAudit(scope.row, 'REJECT')"
             >
               拒绝
-            </el-button>
-            <el-button
-              v-if="row.withdrawStatus === 'processing'"
-              type="success"
-              size="small"
-              link
-              @click="handleComplete(row)"
-            >
-              完成
             </el-button>
           </template>
         </el-table-column>
       </el-table>
 
-      <!-- 分页 -->
-      <div class="pagination-container">
-        <el-pagination
-          v-model:current-page="pagination.page"
-          v-model:page-size="pagination.pageSize"
-          :page-sizes="[10, 20, 50, 100]"
-          :total="pagination.total"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="fetchWithdrawList"
-          @current-change="fetchWithdrawList"
-        />
+      <!-- 批量操作按钮 -->
+      <div v-if="selectedRows.length > 0" class="batch-actions">
+        <el-button type="success" @click="handleBatchApprove">
+          批量通过 ({{ selectedRows.length }})
+        </el-button>
+        <el-button type="danger" @click="handleBatchReject">
+          批量拒绝 ({{ selectedRows.length }})
+        </el-button>
       </div>
+
+      <!-- 分页 -->
+      <el-pagination
+        v-model:current-page="pagination.page"
+        v-model:page-size="pagination.pageSize"
+        :page-sizes="[10, 20, 50, 100]"
+        :total="pagination.total"
+        layout="total, sizes, prev, pager, next, jumper"
+        @size-change="fetchData"
+        @current-change="fetchData"
+      />
     </el-card>
 
     <!-- 详情对话框 -->
-    <el-dialog
-      v-model="detailDialogVisible"
-      title="提现详情"
-      width="700px"
-      :close-on-click-modal="false"
-    >
-      <div v-if="currentWithdraw" class="withdraw-detail">
-        <el-descriptions :column="2" border>
-          <el-descriptions-item label="流水号" :span="2">{{ currentWithdraw.withdrawNo }}</el-descriptions-item>
-          <el-descriptions-item label="用户ID">{{ currentWithdraw.userId }}</el-descriptions-item>
-          <el-descriptions-item label="提现方式">
-            <el-tag :type="getMethodType(currentWithdraw.withdrawMethod)" size="small">
-              {{ getMethodText(currentWithdraw.withdrawMethod) }}
-            </el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item label="提现金额">
-            <span style="color: #f56c6c; font-weight: bold">¥{{ currentWithdraw.amount }}</span>
-          </el-descriptions-item>
-          <el-descriptions-item label="手续费">
-            <span style="color: #909399">¥{{ currentWithdraw.fee || 0 }}</span>
-          </el-descriptions-item>
-          <el-descriptions-item label="实际到账" :span="2">
-            <span style="color: #67c23a; font-weight: bold">¥{{ currentWithdraw.actualAmount || currentWithdraw.amount }}</span>
-          </el-descriptions-item>
-          <el-descriptions-item label="提现账号" :span="2">
-            {{ currentWithdraw.accountInfo || '-' }}
-          </el-descriptions-item>
-          <el-descriptions-item label="状态">
-            <el-tag :type="getStatusType(currentWithdraw.withdrawStatus)">
-              {{ getStatusText(currentWithdraw.withdrawStatus) }}
-            </el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item label="申请时间">{{ currentWithdraw.createTime }}</el-descriptions-item>
-          <el-descriptions-item v-if="currentWithdraw.auditTime" label="审核时间">
-            {{ currentWithdraw.auditTime }}
-          </el-descriptions-item>
-          <el-descriptions-item v-if="currentWithdraw.auditUser" label="审核人">
-            {{ currentWithdraw.auditUser }}
-          </el-descriptions-item>
-          <el-descriptions-item v-if="currentWithdraw.rejectReason" label="拒绝原因" :span="2">
-            <span style="color: #f56c6c">{{ currentWithdraw.rejectReason }}</span>
-          </el-descriptions-item>
-          <el-descriptions-item v-if="currentWithdraw.remark" label="备注" :span="2">
-            {{ currentWithdraw.remark }}
-          </el-descriptions-item>
-        </el-descriptions>
-      </div>
-
+    <el-dialog v-model="detailVisible" title="提现详情" width="600px">
+      <el-descriptions v-if="currentRow" :column="2" border>
+        <el-descriptions-item label="流水号" :span="2">{{ currentRow.withdrawNo }}</el-descriptions-item>
+        <el-descriptions-item label="用户ID">{{ currentRow.userId }}</el-descriptions-item>
+        <el-descriptions-item label="提现方式">{{ getMethodText(currentRow.withdrawMethod) }}</el-descriptions-item>
+        <el-descriptions-item label="提现金额">¥{{ currentRow.amount }}</el-descriptions-item>
+        <el-descriptions-item label="手续费">¥{{ currentRow.fee || 0 }}</el-descriptions-item>
+        <el-descriptions-item label="实际到账" :span="2">¥{{ currentRow.actualAmount || currentRow.amount }}</el-descriptions-item>
+        <el-descriptions-item label="提现账号" :span="2">{{ currentRow.accountInfo || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="状态">
+          <el-tag :type="getStatusType(currentRow.withdrawStatus)">
+            {{ getStatusText(currentRow.withdrawStatus) }}
+          </el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="申请时间">{{ currentRow.createTime }}</el-descriptions-item>
+        <el-descriptions-item v-if="currentRow.rejectReason" label="拒绝原因" :span="2">
+          <span class="error-text">{{ currentRow.rejectReason }}</span>
+        </el-descriptions-item>
+      </el-descriptions>
       <template #footer>
-        <el-button @click="detailDialogVisible = false">关闭</el-button>
+        <el-button @click="detailVisible = false">关闭</el-button>
         <el-button
-          v-if="currentWithdraw?.withdrawStatus === 'pending'"
+          v-if="currentRow && currentRow.withdrawStatus === 'pending'"
           type="success"
-          @click="handleAudit(currentWithdraw, 'APPROVE')"
+          @click="handleAudit(currentRow, 'APPROVE')"
         >
           审核通过
         </el-button>
         <el-button
-          v-if="currentWithdraw?.withdrawStatus === 'pending'"
+          v-if="currentRow && currentRow.withdrawStatus === 'pending'"
           type="danger"
-          @click="handleAudit(currentWithdraw, 'REJECT')"
+          @click="handleAudit(currentRow, 'REJECT')"
         >
           审核拒绝
-        </el-button>
-        <el-button
-          v-if="currentWithdraw?.withdrawStatus === 'processing'"
-          type="success"
-          @click="handleComplete(currentWithdraw)"
-        >
-          完成提现
         </el-button>
       </template>
     </el-dialog>
 
     <!-- 审核对话框 -->
     <el-dialog
-      v-model="auditDialogVisible"
-      :title="auditForm.decision === 'APPROVE' ? '审核通过' : '审核拒绝'"
+      v-model="auditVisible"
+      :title="auditDecision === 'APPROVE' ? '审核通过' : '审核拒绝'"
       width="500px"
-      :close-on-click-modal="false"
     >
       <el-form :model="auditForm" label-width="80px">
         <el-form-item label="流水号">
-          <el-input v-model="currentWithdraw?.withdrawNo" disabled />
+          <el-input :value="currentRow?.withdrawNo" disabled />
         </el-form-item>
         <el-form-item label="提现金额">
-          <el-input :value="'¥' + currentWithdraw?.amount" disabled />
+          <el-input :value="'¥' + (currentRow?.amount || 0)" disabled />
         </el-form-item>
         <el-form-item label="审核意见">
           <el-input
             v-model="auditForm.comment"
             type="textarea"
             :rows="3"
-            :placeholder="auditForm.decision === 'APPROVE' ? '请输入通过意见（可选）' : '请输入拒绝原因'"
+            :placeholder="auditDecision === 'APPROVE' ? '请输入通过意见（可选）' : '请输入拒绝原因'"
           />
         </el-form-item>
       </el-form>
-
       <template #footer>
-        <el-button @click="auditDialogVisible = false">取消</el-button>
-        <el-button :type="auditForm.decision === 'APPROVE' ? 'success' : 'danger'" @click="submitAudit">
+        <el-button @click="auditVisible = false">取消</el-button>
+        <el-button
+          :type="auditDecision === 'APPROVE' ? 'success' : 'danger'"
+          @click="submitAudit"
+        >
           确定
         </el-button>
       </template>
@@ -273,13 +229,12 @@
 
     <!-- 批量审核对话框 -->
     <el-dialog
-      v-model="batchAuditDialogVisible"
-      :title="batchAuditForm.decision === 'APPROVE' ? '批量通过' : '批量拒绝'"
+      v-model="batchAuditVisible"
+      :title="batchAuditDecision === 'APPROVE' ? '批量通过' : '批量拒绝'"
       width="500px"
-      :close-on-click-modal="false"
     >
       <el-alert
-        :title="batchAuditTitle"
+        :title="getBatchAuditTitle()"
         type="warning"
         :closable="false"
         style="margin-bottom: 20px"
@@ -290,14 +245,16 @@
             v-model="batchAuditForm.comment"
             type="textarea"
             :rows="3"
-            :placeholder="batchAuditForm.decision === 'APPROVE' ? '请输入通过意见（可选）' : '请输入拒绝原因'"
+            :placeholder="batchAuditDecision === 'APPROVE' ? '请输入通过意见（可选）' : '请输入拒绝原因'"
           />
         </el-form-item>
       </el-form>
-
       <template #footer>
-        <el-button @click="batchAuditDialogVisible = false">取消</el-button>
-        <el-button :type="batchAuditForm.decision === 'APPROVE' ? 'success' : 'danger'" @click="submitBatchAudit">
+        <el-button @click="batchAuditVisible = false">取消</el-button>
+        <el-button
+          :type="batchAuditDecision === 'APPROVE' ? 'success' : 'danger'"
+          @click="submitBatchAudit"
+        >
           确定
         </el-button>
       </template>
@@ -306,36 +263,30 @@
 </template>
 
 <script setup>
-// 版本: 2.0 - 修复模板字符串嵌套问题
-console.log('[WithdrawalAudit] 组件已加载 v2.0')
-
-import { ref, reactive, computed, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import {
-  Search, Refresh, Clock, Loading, Money, WalletFilled
-} from '@element-plus/icons-vue'
+import { ref, reactive, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
+import { Clock, Loading, Money, Wallet } from '@element-plus/icons-vue'
 import {
   getWithdrawList,
   getWithdrawDetail,
   processWithdraw,
   batchProcessWithdraw,
-  completeWithdraw,
   getWithdrawStatistics
 } from '@/api/admin'
 
 const loading = ref(false)
-const withdrawList = ref([])
-const currentWithdraw = ref(null)
-const detailDialogVisible = ref(false)
-const auditDialogVisible = ref(false)
-const batchAuditDialogVisible = ref(false)
+const tableData = ref([])
+const currentRow = ref(null)
+const detailVisible = ref(false)
+const auditVisible = ref(false)
+const batchAuditVisible = ref(false)
 const selectedRows = ref([])
 
 const stats = reactive({
-  pendingCount: 0,
-  processingCount: 0,
-  todayWithdraw: 0,
-  totalWithdraw: 0
+  pending: 0,
+  processing: 0,
+  todayAmount: 0,
+  totalAmount: 0
 })
 
 const searchForm = reactive({
@@ -350,28 +301,20 @@ const pagination = reactive({
 })
 
 const auditForm = reactive({
-  withdrawId: null,
-  decision: '',
   comment: ''
 })
 
 const batchAuditForm = reactive({
-  withdrawIds: [],
-  decision: '',
   comment: ''
 })
 
-// 批量审核对话框标题
-const batchAuditTitle = computed(() => {
-  const action = batchAuditForm.decision === 'APPROVE' ? '通过' : '拒绝'
-  return `确定要${action}选中的 ${selectedRows.value.length} 条提现申请吗？`
-})
+const auditDecision = ref('')
+const batchAuditDecision = ref('')
 
-// 获取提现列表
-const fetchWithdrawList = async () => {
+// 获取数据
+const fetchData = async () => {
   loading.value = true
   try {
-    console.log('[提现审核] 获取提现列表, 页码:', pagination.page, '每页:', pagination.pageSize)
     const response = await getWithdrawList({
       page: pagination.page,
       pageSize: pagination.pageSize,
@@ -380,80 +323,36 @@ const fetchWithdrawList = async () => {
     })
 
     if (response && response.success) {
-      withdrawList.value = response.records || []
+      tableData.value = response.records || []
       pagination.total = response.total || 0
-      console.log('[提现审核] 获取提现列表成功, 总数:', pagination.total)
     }
   } catch (error) {
-    console.error('[提现审核] 获取提现列表失败:', error)
-    ElMessage.error('获取提现列表失败: ' + (error.message || '网络错误'))
+    console.error('[提现审核] 获取数据失败:', error)
+    ElMessage.error('获取数据失败')
   } finally {
     loading.value = false
   }
 }
 
 // 获取统计数据
-const fetchStatistics = async () => {
+const fetchStats = async () => {
   try {
     const response = await getWithdrawStatistics()
-    if (response && response.success) {
-      Object.assign(stats, response.data)
+    if (response && response.success && response.data) {
+      stats.pending = response.data.pendingCount || 0
+      stats.processing = response.data.processingCount || 0
+      stats.todayAmount = response.data.todayWithdraw || 0
+      stats.totalAmount = response.data.totalWithdraw || 0
     }
   } catch (error) {
-    console.error('[提现审核] 获取统计数据失败:', error)
+    console.error('[提现审核] 获取统计失败:', error)
   }
-}
-
-// 获取状态类型
-const getStatusType = (status) => {
-  const types = {
-    'pending': 'warning',
-    'approved': 'primary',
-    'rejected': 'danger',
-    'processing': 'info',
-    'success': 'success',
-    'failed': 'danger'
-  }
-  return types[status] || 'info'
-}
-
-// 获取状态文本
-const getStatusText = (status) => {
-  const texts = {
-    'pending': '待审核',
-    'approved': '已通过',
-    'rejected': '已拒绝',
-    'processing': '处理中',
-    'success': '成功',
-    'failed': '失败'
-  }
-  return texts[status] || '未知'
-}
-
-// 获取提现方式类型
-const getMethodType = (method) => {
-  const types = {
-    'wechat': 'success',
-    'alipay': 'primary',
-    'bank': 'info'
-  }
-  return types[method] || 'info'
-}
-
-// 获取提现方式文本
-const getMethodText = (method) => {
-  const texts = {
-    'wechat': '微信',
-    'alipay': '支付宝',
-    'bank': '银行卡'
-  }
-  return texts[method] || '未知'
 }
 
 // 搜索
 const handleSearch = () => {
   pagination.page = 1
-  fetchWithdrawList()
+  fetchData()
 }
 
 // 重置
@@ -461,7 +360,7 @@ const handleReset = () => {
   searchForm.keyword = ''
   searchForm.status = ''
   pagination.page = 1
-  fetchWithdrawList()
+  fetchData()
 }
 
 // 多选变化
@@ -474,181 +373,185 @@ const handleView = async (row) => {
   try {
     const response = await getWithdrawDetail(row.id)
     if (response && response.success) {
-      currentWithdraw.value = response.data
-      detailDialogVisible.value = true
+      currentRow.value = response.data
+      detailVisible.value = true
     } else {
-      ElMessage.error(response?.message || '获取详情失败')
+      ElMessage.error('获取详情失败')
     }
   } catch (error) {
     console.error('[提现审核] 获取详情失败:', error)
-    ElMessage.error('获取详情失败: ' + (error.message || '网络错误'))
+    ElMessage.error('获取详情失败')
   }
 }
 
 // 审核
 const handleAudit = (row, decision) => {
-  auditForm.withdrawId = row.id
-  auditForm.decision = decision
+  auditDecision.value = decision
   auditForm.comment = ''
-  detailDialogVisible.value = false
-  auditDialogVisible.value = true
+  currentRow.value = row
+  detailVisible.value = false
+  auditVisible.value = true
 }
 
 // 提交审核
 const submitAudit = async () => {
   try {
-    const response = await processWithdraw(auditForm.withdrawId, {
-      decision: auditForm.decision,
+    const response = await processWithdraw(currentRow.value.id, {
+      decision: auditDecision.value,
       comment: auditForm.comment
     })
 
     if (response && response.success) {
-      ElMessage.success(auditForm.decision === 'APPROVE' ? '审核通过' : '已拒绝申请')
-      auditDialogVisible.value = false
-      fetchWithdrawList()
-      fetchStatistics()
+      ElMessage.success(auditDecision.value === 'APPROVE' ? '审核通过' : '已拒绝')
+      auditVisible.value = false
+      fetchData()
+      fetchStats()
     } else {
       ElMessage.error(response?.message || '审核失败')
     }
   } catch (error) {
     console.error('[提现审核] 审核失败:', error)
-    ElMessage.error('审核失败: ' + (error.message || '网络错误'))
+    ElMessage.error('审核失败')
   }
 }
 
 // 批量通过
 const handleBatchApprove = () => {
-  batchAuditForm.withdrawIds = selectedRows.value.map(row => row.id)
-  batchAuditForm.decision = 'APPROVE'
+  batchAuditDecision.value = 'APPROVE'
   batchAuditForm.comment = ''
-  batchAuditDialogVisible.value = true
+  batchAuditVisible.value = true
 }
 
 // 批量拒绝
 const handleBatchReject = () => {
-  batchAuditForm.withdrawIds = selectedRows.value.map(row => row.id)
-  batchAuditForm.decision = 'REJECT'
+  batchAuditDecision.value = 'REJECT'
   batchAuditForm.comment = ''
-  batchAuditDialogVisible.value = true
+  batchAuditVisible.value = true
+}
+
+// 获取批量审核标题
+const getBatchAuditTitle = () => {
+  const action = batchAuditDecision.value === 'APPROVE' ? '通过' : '拒绝'
+  const count = selectedRows.value.length
+  return '确定要' + action + '选中的 ' + count + ' 条提现申请吗？'
 }
 
 // 提交批量审核
 const submitBatchAudit = async () => {
   try {
+    const ids = selectedRows.value.map(row => row.id)
     const response = await batchProcessWithdraw({
-      withdrawIds: batchAuditForm.withdrawIds,
-      decision: batchAuditForm.decision,
+      withdrawIds: ids,
+      decision: batchAuditDecision.value,
       comment: batchAuditForm.comment
     })
 
     if (response && response.success) {
-      const { successCount, failCount } = response
-      const failMsg = failCount > 0 ? `，失败${failCount}个` : ''
-      ElMessage.success(`批量处理完成：成功${successCount}个${failMsg}`)
-      batchAuditDialogVisible.value = false
+      const successCount = response.successCount || 0
+      const failCount = response.failCount || 0
+      let msg = '批量处理完成：成功' + successCount + '个'
+      if (failCount > 0) {
+        msg = msg + '，失败' + failCount + '个'
+      }
+      ElMessage.success(msg)
+      batchAuditVisible.value = false
       selectedRows.value = []
-      fetchWithdrawList()
-      fetchStatistics()
+      fetchData()
+      fetchStats()
     } else {
       ElMessage.error(response?.message || '批量审核失败')
     }
   } catch (error) {
     console.error('[提现审核] 批量审核失败:', error)
-    ElMessage.error('批量审核失败: ' + (error.message || '网络错误'))
+    ElMessage.error('批量审核失败')
   }
 }
 
-// 完成提现
-const handleComplete = async (row) => {
-  try {
-    await ElMessageBox.confirm('确定要将此提现标记为已完成吗？', '确认完成', {
-      type: 'warning'
-    })
-
-    const response = await completeWithdraw(row.id, { remark: '提现已完成' })
-
-    if (response && response.success) {
-      ElMessage.success('提现已完成')
-      detailDialogVisible.value = false
-      fetchWithdrawList()
-      fetchStatistics()
-    } else {
-      ElMessage.error(response?.message || '操作失败')
-    }
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('[提现审核] 完成提现失败:', error)
-      ElMessage.error('操作失败: ' + (error.message || '网络错误'))
-    }
+// 获取状态类型
+const getStatusType = (status) => {
+  const map = {
+    'pending': 'warning',
+    'approved': 'primary',
+    'rejected': 'danger',
+    'processing': 'info',
+    'success': 'success',
+    'failed': 'danger'
   }
+  return map[status] || 'info'
+}
+
+// 获取状态文本
+const getStatusText = (status) => {
+  const map = {
+    'pending': '待审核',
+    'approved': '已通过',
+    'rejected': '已拒绝',
+    'processing': '处理中',
+    'success': '成功',
+    'failed': '失败'
+  }
+  return map[status] || '未知'
+}
+
+// 获取提现方式文本
+const getMethodText = (method) => {
+  const map = {
+    'wechat': '微信',
+    'alipay': '支付宝',
+    'bank': '银行卡'
+  }
+  return map[method] || '未知'
 }
 
 onMounted(() => {
-  fetchWithdrawList()
-  fetchStatistics()
+  fetchData()
+  fetchStats()
 })
 </script>
 
 <style scoped lang="less">
-.withdrawal-audit-container {
-  .page-header {
-    margin-bottom: 20px;
+.withdrawal-audit-page {
+  padding: 20px;
 
-    h1 {
-      font-size: 24px;
-      color: #303133;
-      margin: 0 0 8px 0;
-    }
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 
-    .subtitle {
-      color: #909399;
+    h2 {
       margin: 0;
-      font-size: 14px;
+      font-size: 18px;
+      color: #303133;
     }
   }
 
-  .stats-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 16px;
+  .stats-row {
     margin-bottom: 20px;
-
-    .stat-card {
-      text-align: center;
-    }
   }
 
-  .search-card {
+  .search-form {
     margin-bottom: 20px;
-
-    .search-form {
-      margin-bottom: 0;
-    }
   }
 
-  .table-card {
-    .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-
-      .batch-actions {
-        display: flex;
-        gap: 8px;
-      }
-    }
-
-    .pagination-container {
-      margin-top: 20px;
-      display: flex;
-      justify-content: flex-end;
-    }
+  .batch-actions {
+    margin-top: 16px;
+    display: flex;
+    gap: 10px;
   }
 
-  .withdraw-detail {
-    :deep(.el-descriptions__label) {
-      width: 100px;
-    }
+  .el-pagination {
+    margin-top: 20px;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .amount-text {
+    color: #f56c6c;
+    font-weight: bold;
+  }
+
+  .error-text {
+    color: #f56c6c;
   }
 }
 </style>
