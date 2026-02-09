@@ -64,8 +64,8 @@ spring:
       allow-unquoted-control-chars: true
     # 非严格JSON解析
     lenient: true
-    # 配置属性命名策略为蛇形命名（snake_case）
-    property-naming-strategy: SNAKE_CASE
+    # 使用驼峰命名策略（camelCase），与前端保持一致
+    property-naming-strategy: LOWER_CAMEL_CASE
 
 # Spring MVC配置
 spring.mvc:

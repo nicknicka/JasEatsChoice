@@ -227,6 +227,8 @@ const fetchOrderList = async () => {
       status: searchForm.status
     })
 
+    console.log(response)
+
     if (response) {
       orderList.value = response.records || []
       pagination.total = response.total || 0

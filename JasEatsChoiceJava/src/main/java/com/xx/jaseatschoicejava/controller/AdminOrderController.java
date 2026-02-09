@@ -2,9 +2,11 @@ package com.xx.jaseatschoicejava.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.xx.jaseatschoicejava.dto.OrderDishVO;
 import com.xx.jaseatschoicejava.entity.Merchant;
 import com.xx.jaseatschoicejava.entity.Order;
 import com.xx.jaseatschoicejava.service.MerchantService;
+import com.xx.jaseatschoicejava.service.OrderDishService;
 import com.xx.jaseatschoicejava.service.OrderService;
 import com.xx.jaseatschoicejava.service.SystemLogService;
 import com.xx.jaseatschoicejava.util.AdminContext;
@@ -33,6 +35,9 @@ public class AdminOrderController {
 
     @Autowired
     private MerchantService merchantService;
+
+    @Autowired
+    private OrderDishService orderDishService;
 
     @Autowired(required = false)
     private SystemLogService systemLogService;
@@ -109,8 +114,29 @@ public class AdminOrderController {
             // 添加状态文本
             order.setStatusText(getStatusText(order.getStatus()));
 
+            // 获取订单菜品列表
+            java.util.List<OrderDishVO> dishes = orderDishService.getOrderDishesWithDetails(orderId);
+
+            // 构建返回数据
+            Map<String, Object> data = new HashMap<>();
+            data.put("orderId", order.getId());
+            data.put("userId", order.getUserId());
+            data.put("merchantId", order.getMerchantId());
+            data.put("merchantName", order.getMerchantName());
+            data.put("totalAmount", order.getTotalAmount());
+            data.put("status", order.getStatus());
+            data.put("statusText", order.getStatusText());
+            data.put("paymentId", order.getPaymentId());
+            data.put("paidAmount", order.getPaidAmount());
+            data.put("paymentTime", order.getPaymentTime());
+            data.put("address", order.getAddress());
+            data.put("remark", order.getRemark());
+            data.put("createTime", order.getCreateTime());
+            data.put("updateTime", order.getUpdateTime());
+            data.put("dishes", dishes);
+
             response.put("success", true);
-            response.put("data", order);
+            response.put("data", data);
             return ResponseEntity.ok(response);
         } else {
             response.put("success", false);
