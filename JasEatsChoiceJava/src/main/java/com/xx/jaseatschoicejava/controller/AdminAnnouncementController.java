@@ -47,23 +47,57 @@ public class AdminAnnouncementController {
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) String status) {
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String priority,
+            @RequestParam(required = false) String targetAudience,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
 
         Page<Announcement> pageParam = new Page<>(page, pageSize);
 
         // 构建查询条件
         QueryWrapper<Announcement> queryWrapper = new QueryWrapper<>();
 
-        // 只查询系统级公告（merchantId为null或"SYSTEM"）
-        queryWrapper.and(wrapper -> wrapper
-            .isNull("merchant_id")
-            .or()
-            .eq("merchant_id", "SYSTEM")
-        );
+        // 只查询系统级公告（merchantId为null）
+        queryWrapper.isNull("merchant_id");
 
         // 状态筛选
         if (StringUtils.hasText(status)) {
             queryWrapper.eq("status", status);
+        }
+
+        // 类型筛选
+        if (StringUtils.hasText(type)) {
+            queryWrapper.eq("type", type);
+        }
+
+        // 优先级筛选
+        if (StringUtils.hasText(priority)) {
+            queryWrapper.eq("priority", priority);
+        }
+
+        // 目标群体筛选
+        if (StringUtils.hasText(targetAudience)) {
+            queryWrapper.eq("target_audience", targetAudience);
+        }
+
+        // 创建时间范围筛选
+        if (StringUtils.hasText(startDate)) {
+            try {
+                LocalDateTime start = LocalDateTime.parse(startDate + "T00:00:00");
+                queryWrapper.ge("create_time", start);
+            } catch (Exception e) {
+                log.warn("开始时间格式错误: {}", startDate);
+            }
+        }
+        if (StringUtils.hasText(endDate)) {
+            try {
+                LocalDateTime end = LocalDateTime.parse(endDate + "T23:59:59");
+                queryWrapper.le("create_time", end);
+            } catch (Exception e) {
+                log.warn("结束时间格式错误: {}", endDate);
+            }
         }
 
         // 关键词搜索（标题、内容）
@@ -111,6 +145,10 @@ public class AdminAnnouncementController {
     public ResponseEntity<Map<String, Object>> createAnnouncement(@RequestBody Map<String, Object> request) {
         String title = (String) request.get("title");
         String content = (String) request.get("content");
+        String type = (String) request.get("type");
+        String priority = (String) request.get("priority");
+        String targetAudience = (String) request.get("targetAudience");
+        String status = (String) request.get("status");
         String startTimeStr = (String) request.get("startTime");
         String endTimeStr = (String) request.get("endTime");
 
@@ -131,8 +169,13 @@ public class AdminAnnouncementController {
         Announcement announcement = new Announcement();
         announcement.setTitle(title);
         announcement.setContent(content);
-        announcement.setStatus("active");
-        announcement.setMerchantId("SYSTEM"); // 标记为系统级公告
+        announcement.setType(StringUtils.hasText(type) ? type : "system");
+        announcement.setPriority(StringUtils.hasText(priority) ? priority : "normal");
+        announcement.setTargetAudience(StringUtils.hasText(targetAudience) ? targetAudience : "all");
+        announcement.setStatus(StringUtils.hasText(status) ? status : "active");
+        announcement.setReadCount(0L);
+        announcement.setReadUsers(0L);
+        announcement.setMerchantId(null); // NULL表示系统级公告
 
         // 设置开始和结束时间
         if (StringUtils.hasText(startTimeStr)) {
@@ -161,7 +204,7 @@ public class AdminAnnouncementController {
                 "CREATE", "ANNOUNCEMENT", "创建系统公告：" + title,
                 adminId, adminName, "ADMIN",
                 "AdminAnnouncementController.createAnnouncement",
-                "title=" + title,
+                "title=" + title + ", type=" + announcement.getType() + ", priority=" + announcement.getPriority(),
                 null, 0L, null, "SUCCESS"
             );
         }
@@ -196,8 +239,8 @@ public class AdminAnnouncementController {
             return ResponseEntity.status(404).body(response);
         }
 
-        // 检查是否为系统级公告
-        if (!"SYSTEM".equals(announcement.getMerchantId()) && announcement.getMerchantId() != null) {
+        // 检查是否为系统级公告（merchantId为null）
+        if (announcement.getMerchantId() != null) {
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", "只能修改系统级公告");
@@ -206,12 +249,18 @@ public class AdminAnnouncementController {
 
         String title = (String) request.get("title");
         String content = (String) request.get("content");
+        String type = (String) request.get("type");
+        String priority = (String) request.get("priority");
+        String targetAudience = (String) request.get("targetAudience");
         String status = (String) request.get("status");
         String startTimeStr = (String) request.get("startTime");
         String endTimeStr = (String) request.get("endTime");
 
         if (StringUtils.hasText(title)) announcement.setTitle(title);
         if (StringUtils.hasText(content)) announcement.setContent(content);
+        if (StringUtils.hasText(type)) announcement.setType(type);
+        if (StringUtils.hasText(priority)) announcement.setPriority(priority);
+        if (StringUtils.hasText(targetAudience)) announcement.setTargetAudience(targetAudience);
         if (StringUtils.hasText(status)) announcement.setStatus(status);
 
         if (StringUtils.hasText(startTimeStr)) {
@@ -271,8 +320,8 @@ public class AdminAnnouncementController {
             return ResponseEntity.status(404).body(response);
         }
 
-        // 检查是否为系统级公告
-        if (!"SYSTEM".equals(announcement.getMerchantId()) && announcement.getMerchantId() != null) {
+        // 检查是否为系统级公告（merchantId为null）
+        if (announcement.getMerchantId() != null) {
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", "只能删除系统级公告");
@@ -325,7 +374,8 @@ public class AdminAnnouncementController {
 
         for (String announcementId : announcementIds) {
             Announcement announcement = announcementService.getById(announcementId);
-            if (announcement != null && ("SYSTEM".equals(announcement.getMerchantId()) || announcement.getMerchantId() == null)) {
+            // 只删除系统级公告（merchantId为null）
+            if (announcement != null && announcement.getMerchantId() == null) {
                 if (announcementService.removeById(announcementId)) {
                     successCount++;
                 } else {
@@ -375,15 +425,15 @@ public class AdminAnnouncementController {
             return ResponseEntity.status(404).body(response);
         }
 
-        // 检查是否为系统级公告
-        if (!"SYSTEM".equals(announcement.getMerchantId()) && announcement.getMerchantId() != null) {
+        // 检查是否为系统级公告（merchantId为null）
+        if (announcement.getMerchantId() != null) {
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", "只能修改系统级公告");
             return ResponseEntity.status(403).body(response);
         }
 
-        String status = request.get("status"); // active 或 inactive
+        String status = request.get("status"); // active, draft 或 inactive
         announcement.setStatus(status);
 
         boolean success = announcementService.updateById(announcement);
@@ -393,7 +443,15 @@ public class AdminAnnouncementController {
             Long adminId = AdminContext.getAdminId();
             String adminName = AdminContext.getAdminUsername();
 
-            String operation = "active".equals(status) ? "发布" : "下线";
+            String operation;
+            if ("active".equals(status)) {
+                operation = "发布";
+            } else if ("draft".equals(status)) {
+                operation = "存为草稿";
+            } else {
+                operation = "下线";
+            }
+
             systemLogService.logOperation(
                 "UPDATE", "ANNOUNCEMENT", operation + "系统公告：" + announcement.getTitle(),
                 adminId, adminName, "ADMIN",
@@ -406,7 +464,7 @@ public class AdminAnnouncementController {
         Map<String, Object> response = new HashMap<>();
         if (success) {
             response.put("success", true);
-            response.put("message", "active".equals(status) ? "公告已发布" : "公告已下线");
+            response.put("message", "active".equals(status) ? "公告已发布" : "draft".equals(status) ? "已存为草稿" : "公告已下线");
             return ResponseEntity.ok(response);
         } else {
             response.put("success", false);
@@ -423,42 +481,33 @@ public class AdminAnnouncementController {
     public ResponseEntity<Map<String, Object>> getAnnouncementStatistics() {
         Map<String, Object> stats = new HashMap<>();
 
-        // 总公告数（系统级）
-        long totalCount = announcementService.count(
-            new QueryWrapper<Announcement>()
-                .and(wrapper -> wrapper
-                    .isNull("merchant_id")
-                    .or()
-                    .eq("merchant_id", "SYSTEM")
-                )
-        );
+        // 只查询系统级公告（merchantId为null）
+        QueryWrapper<Announcement> systemWrapper = new QueryWrapper<>();
+        systemWrapper.isNull("merchant_id");
 
-        // 启用中的公告数
-        long activeCount = announcementService.count(
-            new QueryWrapper<Announcement>()
-                .and(wrapper -> wrapper
-                    .isNull("merchant_id")
-                    .or()
-                    .eq("merchant_id", "SYSTEM")
-                )
-                .eq("status", "active")
-        );
+        // 总公告数
+        long totalCount = announcementService.count(systemWrapper);
+
+        // 已发布的公告数
+        QueryWrapper<Announcement> activeWrapper = new QueryWrapper<>();
+        activeWrapper.isNull("merchant_id").eq("status", "active");
+        long activeCount = announcementService.count(activeWrapper);
+
+        // 草稿数
+        QueryWrapper<Announcement> draftWrapper = new QueryWrapper<>();
+        draftWrapper.isNull("merchant_id").eq("status", "draft");
+        long draftCount = announcementService.count(draftWrapper);
 
         // 今日新增公告数
         LocalDateTime todayStart = java.time.LocalDate.now().atStartOfDay();
-        long todayNewCount = announcementService.count(
-            new QueryWrapper<Announcement>()
-                .and(wrapper -> wrapper
-                    .isNull("merchant_id")
-                    .or()
-                    .eq("merchant_id", "SYSTEM")
-                )
-                .ge("create_time", todayStart)
-        );
+        QueryWrapper<Announcement> todayWrapper = new QueryWrapper<>();
+        todayWrapper.isNull("merchant_id").ge("create_time", todayStart);
+        long todayNewCount = announcementService.count(todayWrapper);
 
         stats.put("totalCount", totalCount);
         stats.put("activeCount", activeCount);
-        stats.put("inactiveCount", totalCount - activeCount);
+        stats.put("draftCount", draftCount);
+        stats.put("inactiveCount", totalCount - activeCount - draftCount);
         stats.put("todayNewCount", todayNewCount);
 
         Map<String, Object> response = new HashMap<>();
