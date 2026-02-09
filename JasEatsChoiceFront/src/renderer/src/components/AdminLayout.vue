@@ -279,6 +279,7 @@ const handleCommand = async (command) => {
 const fetchAdminInfo = async () => {
   try {
     const response = await getCurrentAdmin()
+    console.log('获取管理员信息', response)
     if (response.success && response.admin) {
       // 确保字符串正确编码（处理可能的乱码问题）
       adminInfo.value = {
@@ -310,7 +311,7 @@ const fetchAdminInfo = async () => {
 
 // 获取显示名称（安全处理中文和空值）
 const getDisplayName = () => {
-  const name = adminInfo.value.realName || adminInfo.value.username || '管理员'
+  const name = adminInfo.value.username 
   // 确保是字符串并去除首尾空格
   return String(name).trim()
 }

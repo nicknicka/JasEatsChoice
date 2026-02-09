@@ -3,6 +3,7 @@ package com.xx.jaseatschoicejava.entity;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -25,6 +26,7 @@ public class Merchant {
 
     @TableId(type = com.baomidou.mybatisplus.annotation.IdType.INPUT)
     @ApiModelProperty(value = "商家ID")
+    @JsonProperty("merchantId")  // 序列化时使用merchantId
     private String id; // 商家ID (M + 16位数字)
 
     @TableField("name")
