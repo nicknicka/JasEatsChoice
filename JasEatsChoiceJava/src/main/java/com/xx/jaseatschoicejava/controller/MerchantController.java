@@ -27,6 +27,7 @@ import com.xx.jaseatschoicejava.service.MessageRecordService;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -810,11 +811,11 @@ public class MerchantController {
 
         // 计算变化百分比
         BigDecimal change = current.subtract(previous);
-        BigDecimal percentage = change.divide(previous, 4, BigDecimal.ROUND_HALF_UP)
+        BigDecimal percentage = change.divide(previous, 4, RoundingMode.HALF_UP)
                                        .multiply(BigDecimal.valueOf(100));
 
         // 格式化百分比，保留1位小数
-        double percentageValue = percentage.setScale(1, BigDecimal.ROUND_HALF_UP).doubleValue();
+        double percentageValue = percentage.setScale(1, RoundingMode.HALF_UP).doubleValue();
 
         // 判断趋势方向
         if (percentageValue > 0) {

@@ -77,12 +77,27 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         SecurityContextHolder.getContext().setAuthentication(authToken);
                         System.out.println("Authentication set successfully with ROLE_ADMIN and " + (permissions != null ? permissions.size() : 0) + " permissions");
                     } else {
-                        System.out.println("Token expired");
+                        System.out.println("Token expired, returning 401");
+                        // Token过期，返回401错误
+                        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                        response.setContentType("application/json;charset=UTF-8");
+                        response.getWriter().write("{\"code\": 401, \"message\": \"Token已过期，请重新登录\"}");
+                        return; // 阻止继续处理
                     }
                 }
             } catch (Exception e) {
-                // token 无效，忽略
+                // token 无效或过期
                 System.out.println("JWT token validation failed: " + e.getMessage());
+
+                // 如果是过期异常，返回401
+                if (e.getMessage() != null && e.getMessage().contains("expired")) {
+                    System.out.println("Token expired, returning 401");
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.getWriter().write("{\"code\": 401, \"message\": \"Token已过期，请重新登录\"}");
+                    return; // 阻止继续处理
+                }
+
                 logger.debug("JWT token validation failed: " + e.getMessage());
             }
         } else {

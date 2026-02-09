@@ -346,7 +346,11 @@
       "Bash(/Users/nickxiao/JasEatsChoice/JasEatsChoiceJava/mvnw clean compile:*)",
       "Bash(/Users/nickxiao/JasEatsChoice/JasEatsChoiceJava/mvnw:*)",
       "Bash(/opt/homebrew/bin/mysql:*)",
-      "Bash(ps:*)"
+      "Bash(ps:*)",
+      "Bash(tail:*)",
+      "Bash(jstack:*)",
+      "Bash(jcmd:*)",
+      "Bash(jstat:*)"
     ],
     "deny": [],
     "ask": [],

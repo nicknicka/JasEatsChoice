@@ -95,4 +95,16 @@ public class User {
     @TableField("location")
     @ApiModelProperty(value = "用户所在地")
     private String location; // 用户所在地
+
+    @TableField("gender")
+    @ApiModelProperty(value = "性别：male-男，female-女，other-其他")
+    private String gender; // 性别
+
+    @TableField("birthday")
+    @ApiModelProperty(value = "生日")
+    private String birthday; // 生日
+
+    @TableField("bio")
+    @ApiModelProperty(value = "个人简介")
+    private String bio; // 个人简介
 }

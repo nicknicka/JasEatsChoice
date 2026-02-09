@@ -146,7 +146,12 @@ public class RoleController {
             @RequestBody Map<String, Object> request) {
 
         @SuppressWarnings("unchecked")
-        List<Integer> permissionIds = (List<Integer>) request.get("permissionIds");
+        List<Integer> permissionIdsInt = (List<Integer>) request.get("permissionIds");
+
+        // 转换 Integer 为 Long
+        List<Long> permissionIds = permissionIdsInt.stream()
+                .map(Integer::longValue)
+                .toList();
 
         boolean success = roleService.assignPermissions(roleId, permissionIds);
 
