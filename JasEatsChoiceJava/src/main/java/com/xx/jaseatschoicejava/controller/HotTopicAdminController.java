@@ -132,10 +132,15 @@ public class HotTopicAdminController {
                 hotTopic.setReviewStatus(HotTopic.ReviewStatus.APPROVED.getCode());
             }
 
-            // 设置创建时间
+            // 设置创建时间和开始时间
             if (hotTopic.getCreateTime() == null) {
                 hotTopic.setCreateTime(LocalDateTime.now());
             }
+            // 如果没有设置开始时间，默认为当前时间
+            if (hotTopic.getStartDate() == null) {
+                hotTopic.setStartDate(LocalDateTime.now());
+            }
+            // 结束时间可以为空，表示永久生效
 
             boolean success = hotTopicService.createHotTopic(hotTopic);
 
