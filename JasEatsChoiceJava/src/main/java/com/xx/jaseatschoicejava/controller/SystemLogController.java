@@ -67,25 +67,41 @@ public class SystemLogController {
     @GetMapping("/statistics")
     @PreAuthorize("hasAnyAuthority('admin:system:logs')")
     public ResponseEntity<Map<String, Object>> getLogStatistics() {
-        Map<String, Object> stats = new HashMap<>();
+        try {
+            Map<String, Object> stats = new HashMap<>();
 
-        // 各操作类型统计
-        Map<String, Object> operationStats = new HashMap<>();
-        operationStats.put("LOGIN", systemLogService.countByOperationType("LOGIN"));
-        operationStats.put("LOGOUT", systemLogService.countByOperationType("LOGOUT"));
-        operationStats.put("CREATE", systemLogService.countByOperationType("CREATE"));
-        operationStats.put("UPDATE", systemLogService.countByOperationType("UPDATE"));
-        operationStats.put("DELETE", systemLogService.countByOperationType("DELETE"));
-        operationStats.put("QUERY", systemLogService.countByOperationType("QUERY"));
-        operationStats.put("EXPORT", systemLogService.countByOperationType("EXPORT"));
+            // 各操作类型统计
+            Map<String, Object> operationStats = new HashMap<>();
+            operationStats.put("LOGIN", systemLogService.countByOperationType("LOGIN"));
+            operationStats.put("LOGOUT", systemLogService.countByOperationType("LOGOUT"));
+            operationStats.put("CREATE", systemLogService.countByOperationType("CREATE"));
+            operationStats.put("UPDATE", systemLogService.countByOperationType("UPDATE"));
+            operationStats.put("DELETE", systemLogService.countByOperationType("DELETE"));
+            operationStats.put("QUERY", systemLogService.countByOperationType("QUERY"));
+            operationStats.put("EXPORT", systemLogService.countByOperationType("EXPORT"));
 
-        stats.put("operationStats", operationStats);
-        stats.put("totalLogs", systemLogService.count());
+            stats.put("operationStats", operationStats);
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
-        response.put("data", stats);
-        return ResponseEntity.ok(response);
+            // 使用 QueryWrapper 获取总记录数（更安全的方式）
+            com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<SystemLog> wrapper =
+                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>();
+            Long totalLogs = systemLogService.count(wrapper);
+            stats.put("totalLogs", totalLogs);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("data", stats);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            // 记录详细错误日志
+            org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(SystemLogController.class);
+            logger.error("获取系统日志统计失败", e);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "获取统计数据失败: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
     }
 
     /**
