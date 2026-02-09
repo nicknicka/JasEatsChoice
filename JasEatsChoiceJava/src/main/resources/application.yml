@@ -32,6 +32,9 @@ spring:
     hikari:
       connection-init-sql: SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci
       # 数据库连接初始化SQL，确保使用UTF8MB4字符集
+      data-source-properties:
+        useUnicode: true
+        characterEncoding: UTF-8
 
   # Redis配置
   data:
