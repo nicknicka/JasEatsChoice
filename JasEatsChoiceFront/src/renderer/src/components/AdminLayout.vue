@@ -208,10 +208,12 @@ const isCollapse = ref(false)
 
 // 管理员信息 - 从localStorage获取
 const adminInfo = ref(getAdminInfo() || {
-  username: '',
-  realName: '',
+  adminId: '',
+  username: '管理员',
+  realName: '管理员',
   avatar: '',
-  roleName: ''
+  roleCode: '',
+  roleName: '超级管理员'
 })
 
 // 当前激活的菜单
@@ -279,31 +281,33 @@ const handleCommand = async (command) => {
 const fetchAdminInfo = async () => {
   try {
     const response = await getCurrentAdmin()
-    console.log('获取管理员信息', response)
-    if (response.success && response.admin) {
+    console.log('[AdminLayout] 获取管理员信息', response)
+    if (response && response.success && response.admin) {
       // 确保字符串正确编码（处理可能的乱码问题）
-      adminInfo.value = {
+      const newAdminInfo = {
         adminId: response.admin.adminId,
-        username: String(response.admin.username || ''),
+        username: String(response.admin.username || '管理员'),
         realName: String(response.admin.realName || '管理员'),
         avatar: response.admin.avatar || '',
         roleCode: response.admin.roleCode || '',
         roleName: String(response.admin.roleName || '超级管理员')
       }
       // 更新localStorage中的管理员信息
-      localStorage.setItem('admin_info', JSON.stringify(adminInfo.value))
+      localStorage.setItem('admin_info', JSON.stringify(newAdminInfo))
+      adminInfo.value = newAdminInfo
       console.log('[AdminLayout] 管理员信息已更新:', adminInfo.value)
     }
   } catch (error) {
     console.error('[AdminLayout] 获取管理员信息失败:', error)
-    // 如果获取失败，使用localStorage中的缓存数据
-    const cachedInfo = localStorage.getItem('admin_info')
-    if (cachedInfo) {
-      try {
-        adminInfo.value = JSON.parse(cachedInfo)
-        console.log('[AdminLayout] 使用缓存的管理员信息:', adminInfo.value)
-      } catch (parseError) {
-        console.error('[AdminLayout] 解析缓存信息失败:', parseError)
+    // 如果获取失败，确保有默认值
+    if (!adminInfo.value || !adminInfo.value.username) {
+      adminInfo.value = {
+        adminId: '',
+        username: '管理员',
+        realName: '管理员',
+        avatar: '',
+        roleCode: '',
+        roleName: '超级管理员'
       }
     }
   }
@@ -311,27 +315,37 @@ const fetchAdminInfo = async () => {
 
 // 获取显示名称（安全处理中文和空值）
 const getDisplayName = () => {
-  const name = adminInfo.value.username 
-  // 确保是字符串并去除首尾空格
-  return String(name).trim()
+  try {
+    const name = adminInfo.value?.username || '管理员'
+    // 确保是字符串并去除首尾空格
+    return String(name).trim() || '管理员'
+  } catch (error) {
+    console.error('[AdminLayout] 获取显示名称失败:', error)
+    return '管理员'
+  }
 }
 
 // 获取角色名称（修复乱码问题）
 const getRoleName = () => {
-  const roleCode = adminInfo.value.roleCode
-  const roleName = adminInfo.value.roleName
+  try {
+    const roleCode = adminInfo.value?.roleCode
+    const roleName = adminInfo.value?.roleName
 
-  // 如果有roleCode映射，直接使用映射值（最可靠的方式）
-  if (roleCode && ROLE_NAME_MAP[roleCode]) {
-    return ROLE_NAME_MAP[roleCode]
+    // 如果有roleCode映射，直接使用映射值（最可靠的方式）
+    if (roleCode && ROLE_NAME_MAP && ROLE_NAME_MAP[roleCode]) {
+      return ROLE_NAME_MAP[roleCode]
+    }
+
+    // 检测乱码：包含常见的编码错误字符或异常长的字符串
+    if (!roleName || roleName.length > 50 || /[\u0080-\uFFFF][\u0000-\u007F]/.test(roleName)) {
+      return ROLE_NAME_MAP?.[roleCode] || ROLE_NAME_MAP?.['SUPER_ADMIN'] || '超级管理员'
+    }
+
+    return roleName || '超级管理员'
+  } catch (error) {
+    console.error('[AdminLayout] 获取角色名称失败:', error)
+    return '超级管理员'
   }
-
-  // 检测乱码：包含常见的编码错误字符或异常长的字符串
-  if (!roleName || roleName.length > 50 || /[\u0080-\uFFFF][\u0000-\u007F]/.test(roleName)) {
-    return ROLE_NAME_MAP[roleCode] || ROLE_NAME_MAP['SUPER_ADMIN'] || '超级管理员'
-  }
-
-  return roleName || '超级管理员'
 }
 
 // 初始化时获取管理员信息

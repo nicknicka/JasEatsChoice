@@ -494,42 +494,7 @@ export function updateDishStatus(dishId, status) {
 
 // ==================== 财务管理 ====================
 
-/**
- * 获取提现申请列表
- * @param {Object} params - 查询参数
- * @returns {Promise} 提现申请列表
- */
-export function getWithdrawalList(params = {}) {
-  console.log('[管理员API] 获取提现申请列表:', params)
-  return api.get(API_CONFIG.admin.withdrawalList, { params })
-    .then(response => {
-      console.log('[管理员API] 获取提现申请列表成功')
-      return response
-    })
-    .catch(error => {
-      console.error('[管理员API] 获取提现申请列表失败:', error)
-      throw error
-    })
-}
-
-/**
- * 审核提现申请
- * @param {number} id - 提现ID
- * @param {Object} auditData - 审核数据
- * @returns {Promise} 审核结果
- */
-export function auditWithdrawal(id, auditData) {
-  console.log('[管理员API] 审核提现申请:', id, auditData)
-  return api.post(API_CONFIG.admin.auditWithdrawal.replace('{id}', id), auditData)
-    .then(response => {
-      console.log('[管理员API] 审核提现申请成功')
-      return response
-    })
-    .catch(error => {
-      console.error('[管理员API] 审核提现申请失败:', error)
-      throw error
-    })
-}
+// 旧函数已删除，使用下方的 getWithdrawList 替代
 
 /**
  * 获取充值记录列表
@@ -1101,6 +1066,136 @@ export function getPendingMerchants(params = {}) {
     })
     .catch(error => {
       console.error('[管理员API] 获取待审核商家列表失败:', error)
+      throw error
+    })
+}
+
+// ==================== 提现管理（新增） ====================
+
+/**
+ * 获取提现记录列表
+ * @param {Object} params - 查询参数
+ * @returns {Promise} 提现记录列表
+ */
+export function getWithdrawList(params = {}) {
+  console.log('[管理员API] 获取提现记录列表:', params)
+  return api.get(API_CONFIG.admin.withdrawalList, { params })
+    .then(response => {
+      console.log('[管理员API] 获取提现记录列表成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 获取提现记录列表失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 获取提现详情
+ * @param {string} withdrawId - 提现记录ID
+ * @returns {Promise} 提现详情
+ */
+export function getWithdrawDetail(withdrawId) {
+  console.log('[管理员API] 获取提现详情:', withdrawId)
+  return api.get(API_CONFIG.admin.withdrawalDetail.replace('{id}', withdrawId))
+    .then(response => {
+      console.log('[管理员API] 获取提现详情成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 获取提现详情失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 审核提现申请
+ * @param {string} withdrawId - 提现记录ID
+ * @param {Object} auditData - 审核数据 {decision: 'APPROVE'|'REJECT', comment: string}
+ * @returns {Promise} 审核结果
+ */
+export function processWithdraw(withdrawId, auditData) {
+  console.log('[管理员API] 审核提现申请:', withdrawId, auditData)
+  return api.post(API_CONFIG.admin.auditWithdrawal.replace('{id}', withdrawId), auditData)
+    .then(response => {
+      console.log('[管理员API] 审核提现申请成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 审核提现申请失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 批量审核提现
+ * @param {Object} batchData - 批量数据 {withdrawIds: [], decision: string, comment: string}
+ * @returns {Promise} 批量审核结果
+ */
+export function batchProcessWithdraw(batchData) {
+  console.log('[管理员API] 批量审核提现:', batchData)
+  return api.post(API_CONFIG.admin.batchProcessWithdrawal, batchData)
+    .then(response => {
+      console.log('[管理员API] 批量审核提现成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 批量审核提现失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 完成提现
+ * @param {string} withdrawId - 提现记录ID
+ * @param {Object} data - 完成数据 {remark?: string}
+ * @returns {Promise} 完成结果
+ */
+export function completeWithdraw(withdrawId, data = {}) {
+  console.log('[管理员API] 完成提现:', withdrawId)
+  return api.put(API_CONFIG.admin.completeWithdrawal.replace('{id}', withdrawId), data)
+    .then(response => {
+      console.log('[管理员API] 完成提现成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 完成提现失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 标记提现失败
+ * @param {string} withdrawId - 提现记录ID
+ * @param {Object} data - 失败数据 {reason: string}
+ * @returns {Promise} 失败标记结果
+ */
+export function failWithdraw(withdrawId, data) {
+  console.log('[管理员API] 标记提现失败:', withdrawId)
+  return api.put(API_CONFIG.admin.failWithdrawal.replace('{id}', withdrawId), data)
+    .then(response => {
+      console.log('[管理员API] 标记提现失败成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 标记提现失败失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 获取提现统计
+ * @returns {Promise} 提现统计数据
+ */
+export function getWithdrawStatistics() {
+  console.log('[管理员API] 获取提现统计')
+  return api.get(API_CONFIG.admin.withdrawalStatistics)
+    .then(response => {
+      console.log('[管理员API] 获取提现统计成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 获取提现统计失败:', error)
       throw error
     })
 }

@@ -51,7 +51,7 @@ public class AdminWithdrawController {
      */
     @ApiOperation("获取提现记录列表")
     @GetMapping("")
-    @PreAuthorize("hasAnyAuthority('admin:finance:withdrawals')")
+    @PreAuthorize("hasAnyAuthority('admin:finance:withdrawal')")
     public ResponseEntity<Map<String, Object>> getWithdrawList(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer pageSize,
@@ -77,7 +77,7 @@ public class AdminWithdrawController {
      */
     @ApiOperation("获取提现详情")
     @GetMapping("/{withdrawId}")
-    @PreAuthorize("hasAnyAuthority('admin:finance:withdrawals')")
+    @PreAuthorize("hasAnyAuthority('admin:finance:withdrawal')")
     public ResponseEntity<Map<String, Object>> getWithdrawDetail(@PathVariable String withdrawId) {
         WithdrawRecord record = withdrawRecordService.getWithdrawDetail(withdrawId);
 
@@ -111,7 +111,7 @@ public class AdminWithdrawController {
      */
     @ApiOperation("审核提现申请")
     @PostMapping("/{withdrawId}/process")
-    @PreAuthorize("hasAnyAuthority('admin:finance:withdrawals')")
+    @PreAuthorize("hasAnyAuthority('admin:finance:withdrawal')")
     public ResponseEntity<Map<String, Object>> processWithdraw(
             @PathVariable String withdrawId,
             @RequestBody Map<String, String> request) {
@@ -186,7 +186,7 @@ public class AdminWithdrawController {
      */
     @ApiOperation("批量审核提现")
     @PostMapping("/batch/process")
-    @PreAuthorize("hasAnyAuthority('admin:finance:withdrawals')")
+    @PreAuthorize("hasAnyAuthority('admin:finance:withdrawal')")
     public ResponseEntity<Map<String, Object>> batchProcessWithdraw(
             @RequestBody Map<String, Object> request) {
 
@@ -250,7 +250,7 @@ public class AdminWithdrawController {
      */
     @ApiOperation("完成提现")
     @PutMapping("/{withdrawId}/complete")
-    @PreAuthorize("hasAnyAuthority('admin:finance:withdrawals')")
+    @PreAuthorize("hasAnyAuthority('admin:finance:withdrawal')")
     public ResponseEntity<Map<String, Object>> completeWithdraw(
             @PathVariable String withdrawId,
             @RequestBody(required = false) Map<String, String> request) {
@@ -312,7 +312,7 @@ public class AdminWithdrawController {
      */
     @ApiOperation("标记提现失败")
     @PutMapping("/{withdrawId}/fail")
-    @PreAuthorize("hasAnyAuthority('admin:finance:withdrawals')")
+    @PreAuthorize("hasAnyAuthority('admin:finance:withdrawal')")
     public ResponseEntity<Map<String, Object>> failWithdraw(
             @PathVariable String withdrawId,
             @RequestBody Map<String, String> request) {
@@ -384,7 +384,7 @@ public class AdminWithdrawController {
      */
     @ApiOperation("获取提现统计")
     @GetMapping("/statistics")
-    @PreAuthorize("hasAnyAuthority('admin:finance:withdrawals')")
+    @PreAuthorize("hasAnyAuthority('admin:finance:withdrawal')")
     public ResponseEntity<Map<String, Object>> getWithdrawStatistics() {
         Map<String, Object> stats = new HashMap<>();
 

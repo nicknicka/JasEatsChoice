@@ -55,6 +55,19 @@ function createWindow() {
 app.whenReady().then(() => {
   app.setAppUserModelId('com.electron')
 
+  // 开发模式下清除缓存以避免旧代码问题
+  if (isDev) {
+    const clearCache = async () => {
+      console.log('[Main] 清除应用缓存...')
+      await session.defaultSession.clearCache()
+      await session.defaultSession.clearStorageData({
+        storages: ['appcache', 'cookies', 'filesystem', 'indexdb', 'localstorage', 'shadercache', 'websql', 'serviceworkers', 'cachestorage']
+      })
+      console.log('[Main] 缓存已清除')
+    }
+    clearCache()
+  }
+
   // 设置内容安全策略 (CSP) - 根据环境动态配置
   const scriptSrcPolicy = isDev
     ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://webapi.amap.com https://restapi.amap.com"

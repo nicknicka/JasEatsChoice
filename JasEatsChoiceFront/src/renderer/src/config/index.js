@@ -213,8 +213,13 @@ export const API_CONFIG = {
     updateDishStatus: '/admin/dishes/{dishId}/status', // 修改菜品状态
 
     // 财务管理
-    withdrawalList: '/admin/finance/withdrawals', // 提现申请列表
-    auditWithdrawal: '/admin/finance/withdrawals/{id}/audit', // 审核提现
+    withdrawalList: '/admin/withdrawals', // 提现申请列表
+    withdrawalDetail: '/admin/withdrawals/{id}', // 提现详情
+    auditWithdrawal: '/admin/withdrawals/{id}/process', // 审核提现
+    batchProcessWithdrawal: '/admin/withdrawals/batch/process', // 批量审核提现
+    completeWithdrawal: '/admin/withdrawals/{id}/complete', // 完成提现
+    failWithdrawal: '/admin/withdrawals/{id}/fail', // 标记提现失败
+    withdrawalStatistics: '/admin/withdrawals/statistics', // 提现统计
     rechargeList: '/admin/finance/recharges', // 充值记录
     refundList: '/admin/finance/refunds', // 退款记录
 

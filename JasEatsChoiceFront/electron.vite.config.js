@@ -41,6 +41,19 @@ export default defineConfig({
           javascriptEnabled: true
         }
       }
+    },
+    // 禁用文件系统缓存以避免缓存问题
+    server: {
+      fs: {
+        strict: false
+      }
+    },
+    // 强制不使用缓存
+    cache: {
+      dir: undefined
+    },
+    optimizeDeps: {
+      force: true
     }
   }
 })

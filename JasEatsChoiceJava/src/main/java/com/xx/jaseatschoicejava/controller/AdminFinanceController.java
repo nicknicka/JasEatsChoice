@@ -37,7 +37,7 @@ public class AdminFinanceController {
      */
     @ApiOperation("获取充值记录列表")
     @GetMapping("/recharges")
-    @PreAuthorize("hasAnyAuthority('admin:finance:recharges')")
+    @PreAuthorize("hasAnyAuthority('admin:finance:recharge')")
     public ResponseEntity<Map<String, Object>> getRechargeList(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer pageSize,
@@ -71,7 +71,7 @@ public class AdminFinanceController {
      */
     @ApiOperation("获取充值记录详情")
     @GetMapping("/recharges/{rechargeId}")
-    @PreAuthorize("hasAnyAuthority('admin:finance:recharges')")
+    @PreAuthorize("hasAnyAuthority('admin:finance:recharge')")
     public ResponseEntity<Map<String, Object>> getRechargeDetail(@PathVariable String rechargeId) {
         if (rechargeRecordService == null) {
             Map<String, Object> response = new HashMap<>();
@@ -99,7 +99,7 @@ public class AdminFinanceController {
      */
     @ApiOperation("获取退款列表")
     @GetMapping("/refunds")
-    @PreAuthorize("hasAnyAuthority('admin:finance:refunds')")
+    @PreAuthorize("hasAnyAuthority('admin:finance:refund')")
     public ResponseEntity<Map<String, Object>> getRefundList(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer pageSize,
@@ -125,7 +125,7 @@ public class AdminFinanceController {
      */
     @ApiOperation("获取退款详情")
     @GetMapping("/refunds/{refundId}")
-    @PreAuthorize("hasAnyAuthority('admin:finance:refunds')")
+    @PreAuthorize("hasAnyAuthority('admin:finance:refund')")
     public ResponseEntity<Map<String, Object>> getRefundDetail(@PathVariable String refundId) {
         RefundRecord refundRecord = refundRecordService.getRefundDetail(refundId);
 
@@ -146,7 +146,7 @@ public class AdminFinanceController {
      */
     @ApiOperation("处理退款申请")
     @PostMapping("/refunds/{refundId}/process")
-    @PreAuthorize("hasAnyAuthority('admin:finance:refunds')")
+    @PreAuthorize("hasAnyAuthority('admin:finance:refund')")
     public ResponseEntity<Map<String, Object>> processRefund(
             @PathVariable String refundId,
             @RequestBody Map<String, String> request) {
@@ -183,7 +183,7 @@ public class AdminFinanceController {
      */
     @ApiOperation("获取退款统计")
     @GetMapping("/refunds/statistics")
-    @PreAuthorize("hasAnyAuthority('admin:finance:refunds')")
+    @PreAuthorize("hasAnyAuthority('admin:finance:refund')")
     public ResponseEntity<Map<String, Object>> getRefundStatistics() {
         Map<String, Object> stats = new HashMap<>();
 
@@ -212,7 +212,7 @@ public class AdminFinanceController {
      */
     @ApiOperation("获取充值统计")
     @GetMapping("/recharges/statistics")
-    @PreAuthorize("hasAnyAuthority('admin:finance:recharges')")
+    @PreAuthorize("hasAnyAuthority('admin:finance:recharge')")
     public ResponseEntity<Map<String, Object>> getRechargeStatistics() {
         if (rechargeRecordService == null) {
             Map<String, Object> response = new HashMap<>();
