@@ -20,8 +20,14 @@ export function getAvatarUrl(avatar) {
     return avatar
   }
 
-  // 如果是相对路径，添加baseURL
+  // 如果是 /api 开头的路径，直接使用 baseURL（baseURL 已包含 /api）
+  // avatar: /api/uploads/xxx.png -> http://localhost:8080/api/uploads/xxx.png
   if (avatar.startsWith('/api/')) {
+    return API_CONFIG.baseURL + avatar.substring(4) // 去掉 /api 前缀
+  }
+
+  // 如果是 /uploads 开头的路径，添加 baseURL
+  if (avatar.startsWith('/uploads/')) {
     return API_CONFIG.baseURL + avatar
   }
 

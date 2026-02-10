@@ -133,7 +133,7 @@
           <!-- 用户信息下拉菜单 -->
           <el-dropdown class="user-dropdown" @command="handleCommand">
             <div class="user-info">
-              <el-avatar :size="32">
+              <el-avatar :size="32" :src="getAvatarUrlWrapper()">
                 {{ getDisplayName().charAt(0) }}
               </el-avatar>
               <span class="username">{{ getDisplayName() }}</span>
@@ -199,6 +199,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { getCurrentAdmin } from '@/api/admin'
 import { getAdminInfo, adminLogout } from '@/utils/auth'
 import { ROLE_NAME_MAP } from '@/config'
+import { getAvatarUrl } from '@/utils/avatar'
 
 const router = useRouter()
 const route = useRoute()
@@ -348,8 +349,40 @@ const getRoleName = () => {
   }
 }
 
-// 初始化时获取管理员信息
+// 获取头像URL（使用工具函数）
+const getAvatarUrlWrapper = () => {
+  try {
+    const avatar = adminInfo.value?.avatar
+    return getAvatarUrl(avatar)
+  } catch (error) {
+    console.error('[AdminLayout] 获取头像URL失败:', error)
+    return null
+  }
+}
+
+// 监听localStorage中admin_info的变化（用于头像更新）
+const watchLocalStorage = () => {
+  const originalSetItem = localStorage.setItem
+  localStorage.setItem = function (key, value) {
+    originalSetItem.call(this, key, value)
+    if (key === 'admin_info') {
+      try {
+        const newAdminInfo = JSON.parse(value)
+        // 只有当头像发生变化时才更新
+        if (newAdminInfo.avatar !== adminInfo.value.avatar) {
+          adminInfo.value = newAdminInfo
+          console.log('[AdminLayout] 检测到admin_info变化，已更新')
+        }
+      } catch (error) {
+        console.error('[AdminLayout] 更新admin_info失败:', error)
+      }
+    }
+  }
+}
+
+// 初始化时获取管理员信息并监听localStorage变化
 fetchAdminInfo()
+watchLocalStorage()
 
 // 监听路由变化
 watch(

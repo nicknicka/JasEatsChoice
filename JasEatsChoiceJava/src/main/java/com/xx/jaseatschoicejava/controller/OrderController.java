@@ -304,4 +304,55 @@ public class OrderController {
             return ResponseResult.fail("500", "再来一单失败：" + e.getMessage());
         }
     }
+
+    /**
+     * 获取用户订单统计
+     */
+    @ApiOperation("获取用户订单统计")
+    @GetMapping("/user/{userId}/statistics")
+    public ResponseResult<?> getUserOrderStatistics(@PathVariable String userId) {
+        try {
+            // 查询所有订单
+            LambdaQueryWrapper<Order> queryWrapper = new LambdaQueryWrapper<>();
+            queryWrapper.eq(Order::getUserId, userId);
+            List<Order> orders = orderService.list(queryWrapper);
+
+            // 初始化统计数据
+            int inProgress = 0;  // 进行中订单（1-待接单, 2-备菜中, 3-烹饪中, 4-待上菜, 5-已送达）
+            int pending = 0;      // 待确认订单（0-待支付, 1-待接单）
+            int pendingComment = 0;  // 待评价订单（7-已完成但未评价）
+
+            for (Order order : orders) {
+                int status = order.getStatus();
+
+                // 统计进行中订单
+                if (status >= 1 && status <= 5) {
+                    inProgress++;
+                }
+
+                // 统计待确认订单
+                if (status == 0 || status == 1) {
+                    pending++;
+                }
+
+                // 统计待评价订单（已完成的订单）
+                if (status == 7) {
+                    pendingComment++;
+                }
+            }
+
+            // 构建返回结果
+            java.util.Map<String, Object> statistics = new java.util.HashMap<>();
+            statistics.put("inProgress", inProgress);
+            statistics.put("pending", pending);
+            statistics.put("pendingComment", pendingComment);
+
+            log.info("用户{}订单统计：进行中={}, 待确认={}, 待评价={}", userId, inProgress, pending, pendingComment);
+
+            return ResponseResult.success(statistics);
+        } catch (Exception e) {
+            log.error("获取用户订单统计失败，用户ID：{}", userId, e);
+            return ResponseResult.fail("500", "获取订单统计失败：" + e.getMessage());
+        }
+    }
 }

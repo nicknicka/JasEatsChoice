@@ -562,15 +562,41 @@ const fetchAddressData = async () => {
 // 获取健康数据（今日摄入、本周均衡度）
 const fetchHealthData = async () => {
   try {
-    // TODO: 调用实际的健康数据API
-    // const userId = parseInt(authStore.userId || "0", 10);
-    // const response = await api.get(`/v1/users/${userId}/health-stats`);
-    // userInfo.value.todayCalorie = response.data.todayCalorie || 0;
-    // userInfo.value.weekBalance = response.data.weekBalance || 0;
+    const userId = authStore.userId || '0'
 
-    // 暂时使用默认值
-    userInfo.value.todayCalorie = 0
-    userInfo.value.weekBalance = 0
+    // 获取今日营养摄入统计
+    const todayResponse = await api.get(`/calorie-records/user/${userId}/today-summary`)
+    if (todayResponse.code === '200' && todayResponse.data) {
+      userInfo.value.todayCalorie = Math.round(todayResponse.data.totalCalorie || 0)
+    }
+
+    // 获取本周卡路里数据并计算均衡度
+    const weekResponse = await api.get(`/calorie-records/user/${userId}/week`)
+    if (weekResponse.code === '200' && weekResponse.data) {
+      // 计算本周均衡度（简单算法：根据每日摄入是否在合理范围内）
+      const weekData = weekResponse.data || []
+      let totalDays = weekData.length
+      let balancedDays = 0
+
+      // 假设合理摄入范围是1500-2500卡路里
+      const minCalorie = 1500
+      const maxCalorie = 2500
+
+      weekData.forEach(day => {
+        const consumed = day.consumed || 0
+        if (consumed >= minCalorie && consumed <= maxCalorie) {
+          balancedDays++
+        }
+      })
+
+      // 计算均衡度百分比
+      userInfo.value.weekBalance = totalDays > 0 ? Math.round((balancedDays / totalDays) * 100) : 0
+    }
+
+    console.log('健康数据:', {
+      todayCalorie: userInfo.value.todayCalorie,
+      weekBalance: userInfo.value.weekBalance
+    })
   } catch (error) {
     console.error('获取健康数据失败:', error)
     userInfo.value.todayCalorie = 0
@@ -581,21 +607,24 @@ const fetchHealthData = async () => {
 // 获取订单统计
 const fetchOrderStats = async () => {
   try {
-    // TODO: 调用实际的订单统计API
-    // const userId = parseInt(authStore.userId || "0", 10);
-    // const response = await api.get(`/v1/users/${userId}/order-stats`);
-    // userInfo.value.orders = response.data || {
-    // 	inProgress: 0,
-    // 	pending: 0,
-    // 	pendingComment: 0,
-    // };
+    const userId = authStore.userId || '0'
+    const response = await api.get(`/v1/orders/user/${userId}/statistics`)
 
-    // 暂时使用默认值
-    userInfo.value.orders = {
-      inProgress: 0,
-      pending: 0,
-      pendingComment: 0
+    if (response.code === '200' && response.data) {
+      userInfo.value.orders = {
+        inProgress: response.data.inProgress || 0,
+        pending: response.data.pending || 0,
+        pendingComment: response.data.pendingComment || 0
+      }
+    } else {
+      userInfo.value.orders = {
+        inProgress: 0,
+        pending: 0,
+        pendingComment: 0
+      }
     }
+
+    console.log('订单统计:', userInfo.value.orders)
   } catch (error) {
     console.error('获取订单统计失败:', error)
     userInfo.value.orders = {

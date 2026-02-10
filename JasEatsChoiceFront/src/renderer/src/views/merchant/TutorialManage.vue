@@ -76,19 +76,6 @@ const fetchMerchantTutorials = async () => {
     loading.value = false
   }
 }
-        status: 'DRAFT',
-        reviewStatus: 'NOT_SUBMITTED',
-        duration: '15分钟',
-        difficulty: 'BEGINNER',
-        content: '## 家常豆腐制作教程',
-        cover_image: 'https://images.unsplash.com/photo-1583234964237-0e557819c9d9?w=800',
-        create_time: '2025-01-28 15:30:00'
-      }
-    ]
-  } finally {
-    loading.value = false
-  }
-}
 
 // 打开创建对话框
 const openCreateDialog = () => {

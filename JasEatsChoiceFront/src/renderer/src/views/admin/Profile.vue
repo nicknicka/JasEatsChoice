@@ -58,15 +58,20 @@
       <el-divider content-position="left">角色信息</el-divider>
       <el-descriptions :column="2" border>
         <el-descriptions-item label="角色名称">
-          <el-tag type="warning">{{ profileForm.roleName }}</el-tag>
+          {{ profileForm.roleName }}
         </el-descriptions-item>
         <el-descriptions-item label="角色代码">
           {{ profileForm.roleCode }}
         </el-descriptions-item>
         <el-descriptions-item label="账号状态">
-          <el-tag :type="profileForm.status === 'ACTIVE' ? 'success' : 'danger'">
-            {{ profileForm.status === 'ACTIVE' ? '正常' : '禁用' }}
-          </el-tag>
+          <el-tooltip
+            :content="profileForm.status === 'ACTIVE' ? '账号功能正常，可以正常使用系统所有功能' : '账号已被禁用，无法登录和使用系统，请联系超级管理员'"
+            placement="top"
+          >
+            <el-tag :type="profileForm.status === 'ACTIVE' ? 'success' : 'danger'">
+              {{ profileForm.status === 'ACTIVE' ? '正常' : '禁用' }}
+            </el-tag>
+          </el-tooltip>
         </el-descriptions-item>
         <el-descriptions-item label="创建时间">
           {{ profileForm.createTime }}
@@ -82,9 +87,12 @@ import { ElMessage } from 'element-plus'
 import { getAdminInfo } from '@/utils/auth'
 import { updateAdminProfile } from '@/api/admin'
 import { getAvatarUrl } from '@/utils/avatar'
+import api from '@/utils/api'
 
 const profileFormRef = ref(null)
 const loading = ref(false)
+// 临时存储待上传的头像 base64 数据
+const pendingAvatarBase64 = ref(null)
 
 const profileForm = reactive({
   adminId: null,
@@ -113,11 +121,32 @@ const rules = {
 }
 
 // 初始化表单数据
-const initProfile = () => {
-  const adminInfo = getAdminInfo()
-  if (adminInfo) {
-    Object.assign(profileForm, adminInfo)
-    console.log('[个人信息] 加载管理员信息:', adminInfo)
+const initProfile = async () => {
+  try {
+    // 先从后端获取最新数据
+    const response = await api.get('/admin/current')
+    if (response.success && response.admin) {
+      // 更新 localStorage
+      localStorage.setItem('admin_info', JSON.stringify(response.admin))
+      // 更新表单
+      Object.assign(profileForm, response.admin)
+      console.log('[个人信息] 从后端加载最新管理员信息:', response.admin)
+    } else {
+      // 如果后端获取失败，降级从 localStorage 读取
+      const adminInfo = getAdminInfo()
+      if (adminInfo) {
+        Object.assign(profileForm, adminInfo)
+        console.log('[个人信息] 从本地存储加载管理员信息:', adminInfo)
+      }
+    }
+  } catch (error) {
+    console.error('[个人信息] 获取管理员信息失败:', error)
+    // 出错时也从 localStorage 读取
+    const adminInfo = getAdminInfo()
+    if (adminInfo) {
+      Object.assign(profileForm, adminInfo)
+      console.log('[个人信息] 从本地存储加载管理员信息（降级）:', adminInfo)
+    }
   }
 }
 
@@ -137,15 +166,26 @@ const beforeAvatarUpload = (file) => {
   return true
 }
 
-// 上传头像
+// 上传头像（仅前端预览）
 const uploadAvatar = async ({ file }) => {
   try {
-    console.log('[个人信息] 上传头像:', file.name)
-    // TODO: 实现头像上传功能
-    ElMessage.info('头像上传功能开发中...')
+    console.log('[个人信息] 选择头像:', file.name)
+
+    // 将文件转换为base64
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const base64Image = e.target.result
+      // 临时存储 base64 数据，等待保存时上传
+      pendingAvatarBase64.value = base64Image
+      // 立即更新预览
+      profileForm.avatar = base64Image
+      console.log('[个人信息] 头像预览已更新')
+    }
+
+    reader.readAsDataURL(file)
   } catch (error) {
-    console.error('[个人信息] 上传头像失败:', error)
-    ElMessage.error('上传失败')
+    console.error('[个人信息] 读取头像失败:', error)
+    ElMessage.error('读取头像失败')
   }
 }
 
@@ -154,25 +194,67 @@ const handleSubmit = async () => {
   if (!profileFormRef.value) return
 
   try {
+    // 验证表单（如果有验证错误会抛出异常）
     await profileFormRef.value.validate()
     loading.value = true
 
     console.log('[个人信息] 保存个人信息:', profileForm)
 
-    // TODO: 调用更新个人信息API
-    // await updateAdminProfile(profileForm)
+    // 如果有待上传的头像，先上传头像
+    if (pendingAvatarBase64.value) {
+      console.log('[个人信息] 检测到新头像，开始上传...')
 
-    // 更新localStorage中的信息
-    const updatedInfo = {
-      ...profileForm
+      try {
+        const avatarResponse = await api.put('/admin/profile/avatar/base64', {
+          avatarBase64: pendingAvatarBase64.value
+        })
+
+        if (avatarResponse.code !== '200' && !avatarResponse.success) {
+          ElMessage.error('头像上传失败: ' + (avatarResponse.message || '未知错误'))
+          return
+        }
+
+        console.log('[个人信息] 头像上传成功')
+
+        // 清除待上传的头像数据
+        pendingAvatarBase64.value = null
+      } catch (error) {
+        console.error('[个人信息] 头像上传失败:', error)
+        ElMessage.error('头像上传失败: ' + (error.message || '网络错误'))
+        return
+      }
     }
-    localStorage.setItem('admin_info', JSON.stringify(updatedInfo))
 
-    ElMessage.success('保存成功')
+    // 只发送基本信息，不发送 avatar
+    const { adminId, realName, phone, email } = profileForm
+    const updateData = { adminId, realName, phone, email }
+
+    // 调用更新个人信息API
+    const response = await updateAdminProfile(updateData)
+
+    if (response.code === '200' || response.success) {
+      // 重新从后端获取最新的管理员信息（包含新的头像 URL）
+      const currentResponse = await api.get('/admin/current')
+      if (currentResponse.success && currentResponse.admin) {
+        const updatedInfo = {
+          ...profileForm,
+          ...currentResponse.admin
+        }
+        localStorage.setItem('admin_info', JSON.stringify(updatedInfo))
+        // 更新表单
+        Object.assign(profileForm, currentResponse.admin)
+      }
+
+      ElMessage.success('保存成功')
+    } else {
+      ElMessage.error('保存失败: ' + (response.message || '未知错误'))
+    }
   } catch (error) {
+    // 验证错误会被 Element Plus 自动处理，不需要额外提示
     console.error('[个人信息] 保存失败:', error)
-    if (error !== 'cancel') {
-      ElMessage.error('保存失败: ' + (error.message || '网络错误'))
+    // 只在网络错误或其他非验证错误时显示提示
+    if (error.message && !error.message.includes('validation')) {
+      ElMessage.error('保存失败: ' + error.message)
     }
   } finally {
     loading.value = false
