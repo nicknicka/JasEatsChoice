@@ -28,7 +28,7 @@ import java.util.Map;
  */
 @Api(tags = "管理员-提现审核")
 @RestController
-@RequestMapping("/admin/withdrawals")
+@RequestMapping("/admin/finance/withdrawals")
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminWithdrawController {
 
@@ -363,8 +363,6 @@ public class AdminWithdrawController {
     @GetMapping("/statistics")
     @PreAuthorize("hasAnyAuthority('admin:finance:withdrawal')")
     public ResponseEntity<Map<String, Object>> getWithdrawStatistics() {
-        Map<String, Object> stats = new HashMap<>();
-
         // 待审核提现数量
         long pendingCount = withdrawRecordService.count(
             new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<WithdrawRecord>()
@@ -377,20 +375,88 @@ public class AdminWithdrawController {
                 .eq("withdraw_status", "processing")
         );
 
-        // 今日提现总额
-        java.math.BigDecimal todayWithdraw = withdrawRecordService.sumWithdrawAmountByStatus("success");
+        // 今日提现总额（成功状态）
+        LocalDateTime todayStart = java.time.LocalDate.now().atStartOfDay();
+        java.util.List<WithdrawRecord> todayRecords = withdrawRecordService.list(
+            new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<WithdrawRecord>()
+                .eq("withdraw_status", "success")
+                .ge("complete_time", todayStart)
+        );
 
-        // 总提现金额
-        java.math.BigDecimal totalWithdraw = withdrawRecordService.sumWithdrawAmountByStatus("success");
+        java.math.BigDecimal todayWithdraw = todayRecords.stream()
+            .map(WithdrawRecord::getAmount)
+            .filter(amount -> amount != null)
+            .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
 
-        stats.put("pendingCount", pendingCount);
-        stats.put("processingCount", processingCount);
-        stats.put("todayWithdraw", todayWithdraw != null ? todayWithdraw : BigDecimal.ZERO);
-        stats.put("totalWithdraw", totalWithdraw != null ? totalWithdraw : BigDecimal.ZERO);
+        // 总提现金额（成功状态）
+        java.util.List<WithdrawRecord> allSuccessRecords = withdrawRecordService.list(
+            new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<WithdrawRecord>()
+                .eq("withdraw_status", "success")
+        );
+
+        java.math.BigDecimal totalWithdraw = allSuccessRecords.stream()
+            .map(WithdrawRecord::getAmount)
+            .filter(amount -> amount != null)
+            .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
-        response.put("data", stats);
+        response.put("data", Map.of(
+            "pendingCount", pendingCount,
+            "pendingTrend", 0,  // TODO: 计算趋势
+            "processingCount", processingCount,
+            "todayWithdraw", todayWithdraw != null ? todayWithdraw : BigDecimal.ZERO,
+            "todayTrend", 0,  // TODO: 计算趋势
+            "totalWithdraw", totalWithdraw != null ? totalWithdraw : BigDecimal.ZERO
+        ));
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 获取提现趋势图表数据
+     */
+    @ApiOperation("获取提现趋势图表数据")
+    @GetMapping("/trend")
+    @PreAuthorize("hasAnyAuthority('admin:finance:withdrawal')")
+    public ResponseEntity<Map<String, Object>> getWithdrawTrend(@RequestParam(defaultValue = "7") Integer days) {
+        java.util.List<Map<String, Object>> trendData = new java.util.ArrayList<>();
+
+        // 生成最近 N 天的数据
+        for (int i = days - 1; i >= 0; i--) {
+            java.time.LocalDate date = java.time.LocalDate.now().minusDays(i);
+            LocalDateTime dayStart = date.atStartOfDay();
+            LocalDateTime dayEnd = date.plusDays(1).atStartOfDay();
+
+            // 查询当天成功的提现记录
+            java.util.List<WithdrawRecord> dayRecords = withdrawRecordService.list(
+                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<WithdrawRecord>()
+                    .eq("withdraw_status", "success")
+                    .ge("complete_time", dayStart)
+                    .lt("complete_time", dayEnd)
+            );
+
+            // 计算当天的提现总额和笔数
+            java.math.BigDecimal dayAmount = dayRecords.stream()
+                .map(WithdrawRecord::getAmount)
+                .filter(amount -> amount != null)
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+
+            long dayCount = dayRecords.size();
+
+            // 格式化日期为 "MM月DD日"
+            String dateStr = date.getMonthValue() + "月" + date.getDayOfMonth() + "日";
+
+            Map<String, Object> dayData = new HashMap<>();
+            dayData.put("date", dateStr);
+            dayData.put("amount", dayAmount != null ? dayAmount : BigDecimal.ZERO);
+            dayData.put("count", dayCount);
+            trendData.add(dayData);
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("data", trendData);
 
         return ResponseEntity.ok(response);
     }

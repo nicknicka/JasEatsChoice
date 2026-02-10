@@ -1200,6 +1200,24 @@ export function getWithdrawStatistics() {
     })
 }
 
+/**
+ * 获取提现趋势图表数据
+ * @param {number} days - 天数 (7或30)
+ * @returns {Promise} 提现趋势数据
+ */
+export function getWithdrawTrend(days = 7) {
+  console.log('[管理员API] 获取提现趋势, 天数:', days)
+  return api.get('/admin/finance/withdrawals/trend', { params: { days } })
+    .then(response => {
+      console.log('[管理员API] 获取提现趋势成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 获取提现趋势失败:', error)
+      throw error
+    })
+}
+
 // ==================== 系统设置（新增） ====================
 
 /**

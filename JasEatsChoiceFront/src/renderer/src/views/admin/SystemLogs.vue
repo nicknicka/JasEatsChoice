@@ -38,82 +38,68 @@
       <el-collapse-transition>
         <div v-show="isExpanded">
           <el-form :model="searchForm" class="search-form" label-width="80px">
-            <el-row :gutter="20">
-              <el-col :xs="24" :sm="12" :md="8" :lg="6">
-                <el-form-item label="操作类型">
-                  <el-select v-model="searchForm.operationType" placeholder="全部" clearable style="width: 100%">
-                    <el-option label="登录" value="LOGIN" />
-                    <el-option label="退出" value="LOGOUT" />
-                    <el-option label="创建" value="CREATE" />
-                    <el-option label="更新" value="UPDATE" />
-                    <el-option label="删除" value="DELETE" />
-                    <el-option label="查询" value="QUERY" />
-                    <el-option label="导出" value="EXPORT" />
-                  </el-select>
-                </el-form-item>
-              </el-col>
-              <el-col :xs="24" :sm="12" :md="8" :lg="6">
-                <el-form-item label="模块名称">
-                  <el-select v-model="searchForm.module" placeholder="全部" clearable style="width: 100%">
-                    <el-option label="用户管理" value="USER" />
-                    <el-option label="商家管理" value="MERCHANT" />
-                    <el-option label="订单管理" value="ORDER" />
-                    <el-option label="菜品管理" value="DISH" />
-                    <el-option label="财务管理" value="FINANCE" />
-                    <el-option label="系统管理" value="SYSTEM" />
-                    <el-option label="角色管理" value="ROLE" />
-                  </el-select>
-                </el-form-item>
-              </el-col>
-              <el-col :xs="24" :sm="12" :md="8" :lg="6">
-                <el-form-item label="操作人">
-                  <el-input
-                    v-model="searchForm.operatorName"
-                    placeholder="输入操作人姓名"
-                    clearable
-                    :prefix-icon="User"
-                  />
-                </el-form-item>
-              </el-col>
-              <el-col :xs="24" :sm="12" :md="8" :lg="6">
-                <el-form-item label="状态">
-                  <el-select v-model="searchForm.status" placeholder="全部" clearable style="width: 100%">
-                    <el-option label="成功" value="SUCCESS" />
-                    <el-option label="失败" value="FAILED" />
-                    <el-option label="部分成功" value="PARTIAL" />
-                  </el-select>
-                </el-form-item>
-              </el-col>
-            </el-row>
-            <el-row :gutter="20">
-              <el-col :xs="24" :sm="24" :md="12" :lg="12">
-                <el-form-item label="日期范围">
-                  <el-date-picker
-                    v-model="searchForm.dateRange"
-                    type="datetimerange"
-                    range-separator="至"
-                    start-placeholder="开始时间"
-                    end-placeholder="结束时间"
-                    clearable
-                    style="width: 100%"
-                    value-format="YYYY-MM-DD HH:mm:ss"
-                  />
-                </el-form-item>
-              </el-col>
-              <el-col :xs="24" :sm="24" :md="12" :lg="12" class="action-col">
-                <el-form-item label=" ">
-                  <el-button type="primary" :icon="Search" @click="handleSearch">
-                    搜索
-                  </el-button>
-                  <el-button :icon="RefreshLeft" @click="handleReset">
-                    重置
-                  </el-button>
-                  <el-button type="danger" :icon="Delete" @click="handleCleanLogs">
-                    清理日志
-                  </el-button>
-                </el-form-item>
-              </el-col>
-            </el-row>
+            <div class="search-grid">
+              <el-form-item label="操作类型">
+                <el-select v-model="searchForm.operationType" placeholder="全部" clearable style="width: 100%">
+                  <el-option label="登录" value="LOGIN" />
+                  <el-option label="退出" value="LOGOUT" />
+                  <el-option label="创建" value="CREATE" />
+                  <el-option label="更新" value="UPDATE" />
+                  <el-option label="删除" value="DELETE" />
+                  <el-option label="查询" value="QUERY" />
+                  <el-option label="导出" value="EXPORT" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="模块名称">
+                <el-select v-model="searchForm.module" placeholder="全部" clearable style="width: 100%">
+                  <el-option label="用户管理" value="USER" />
+                  <el-option label="商家管理" value="MERCHANT" />
+                  <el-option label="订单管理" value="ORDER" />
+                  <el-option label="菜品管理" value="DISH" />
+                  <el-option label="财务管理" value="FINANCE" />
+                  <el-option label="系统管理" value="SYSTEM" />
+                  <el-option label="角色管理" value="ROLE" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="操作人">
+                <el-input
+                  v-model="searchForm.operatorName"
+                  placeholder="输入操作人姓名"
+                  clearable
+                  :prefix-icon="User"
+                />
+              </el-form-item>
+              <el-form-item label="状态">
+                <el-select v-model="searchForm.status" placeholder="全部" clearable style="width: 100%">
+                  <el-option label="成功" value="SUCCESS" />
+                  <el-option label="失败" value="FAILED" />
+                  <el-option label="部分成功" value="PARTIAL" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="日期范围" class="date-range-item">
+                <el-date-picker
+                  v-model="searchForm.dateRange"
+                  type="datetimerange"
+                  range-separator="至"
+                  start-placeholder="开始时间"
+                  end-placeholder="结束时间"
+                  clearable
+                  style="width: 100%"
+                  value-format="YYYY-MM-DD HH:mm:ss"
+                />
+              </el-form-item>
+              <el-form-item label=" " class="action-col">
+                <el-button type="primary" :icon="Search" @click="handleSearch">
+                  搜索
+                </el-button>
+                <el-button :icon="RefreshLeft" @click="handleReset">
+                  重置
+                </el-button>
+                <el-button type="danger" :icon="Delete" @click="handleCleanLogs">
+                  清理日志
+                </el-button>
+              </el-form-item>
+            </div>
           </el-form>
         </div>
       </el-collapse-transition>
@@ -681,6 +667,7 @@ onMounted(() => {
 
     :deep(.el-card__body) {
       padding: 16px;
+      overflow: visible;
     }
 
     .card-header {
@@ -702,18 +689,38 @@ onMounted(() => {
     }
 
     .search-form {
-      .el-form-item {
-        margin-bottom: 16px;
+      .search-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        align-items: start;
+        width: 100%;
+      }
 
-        &:last-child {
-          margin-bottom: 0;
-        }
+      .date-range-item {
+        grid-column: span 2;
       }
 
       .action-col {
-        .el-form-item {
-          display: flex;
-          align-items: flex-end;
+        grid-column: span 2;
+        display: flex;
+        justify-content: flex-end;
+        align-items: flex-end;
+
+        .el-button {
+          margin-left: 8px;
+
+          &:first-child {
+            margin-left: 0;
+          }
+        }
+      }
+
+      .el-form-item {
+        margin-bottom: 0;
+
+        &:last-child {
+          margin-bottom: 0;
         }
       }
     }
@@ -721,6 +728,7 @@ onMounted(() => {
 
   // 统计卡片行
   .stats-row {
+    margin-top: 20px;
     margin-bottom: 16px;
 
     .stat-card {
@@ -1017,6 +1025,21 @@ onMounted(() => {
 }
 
 // 响应式设计
+@media (max-width: 1200px) {
+  .system-logs-container {
+    .search-form {
+      .search-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      .date-range-item,
+      .action-col {
+        grid-column: span 3;
+      }
+    }
+  }
+}
+
 @media (max-width: 768px) {
   .system-logs-container {
     padding: 12px;
@@ -1029,9 +1052,39 @@ onMounted(() => {
       }
     }
 
+    .search-form {
+      .search-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .date-range-item,
+      .action-col {
+        grid-column: span 2;
+      }
+    }
+
     .stats-row {
       :deep(.el-col) {
         margin-bottom: 12px;
+      }
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .system-logs-container {
+    .search-form {
+      .search-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .date-range-item,
+      .action-col {
+        grid-column: span 1;
+      }
+
+      .action-col {
+        justify-content: flex-start;
       }
     }
   }

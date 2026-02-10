@@ -226,6 +226,21 @@ const pagination = reactive({
   total: 0
 })
 
+// 获取退款统计数据
+const fetchRefundStats = async () => {
+  try {
+    const response = await api.get('http://localhost:8080/api/admin/finance/refunds/stats')
+    if (response) {
+      stats.pending = response.pending || 0
+      stats.todayApproved = response.todayApproved || 0
+      stats.todayRejected = response.todayRejected || 0
+      stats.monthTotal = response.monthTotal || 0
+    }
+  } catch (error) {
+    console.error('获取退款统计失败:', error)
+  }
+}
+
 const processForm = reactive({
   decision: 'approve',
   comment: ''
@@ -247,13 +262,6 @@ const fetchRefundList = async () => {
     if (response) {
       refundList.value = response.records || []
       pagination.total = response.total || 0
-
-      // 更新统计数据
-      stats.pending = refundList.value.filter(r => r.status === 'PENDING').length
-      stats.todayApproved = refundList.value
-        .filter(r => r.status === 'COMPLETED')
-        .reduce((sum, r) => sum + (r.refundAmount || 0), 0)
-      stats.todayRejected = refundList.value.filter(r => r.status === 'REJECTED').length
     }
   } catch (error) {
     console.error('获取退款列表失败:', error)
@@ -361,6 +369,7 @@ const submitProcess = async () => {
 
 onMounted(() => {
   fetchRefundList()
+  fetchRefundStats()
 })
 </script>
 

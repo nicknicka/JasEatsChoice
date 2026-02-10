@@ -182,27 +182,53 @@ public class AdminFinanceController {
      * 获取退款统计
      */
     @ApiOperation("获取退款统计")
-    @GetMapping("/refunds/statistics")
+    @GetMapping("/refunds/stats")
     @PreAuthorize("hasAnyAuthority('admin:finance:refund')")
     public ResponseEntity<Map<String, Object>> getRefundStatistics() {
-        Map<String, Object> stats = new HashMap<>();
-
         // 待处理退款数量
-        long pendingCount = refundRecordService.count(
+        long pending = refundRecordService.count(
             new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<RefundRecord>()
                 .eq("status", "PENDING")
         );
 
-        // 今日退款总额
-        String today = java.time.LocalDate.now().toString();
-        java.math.BigDecimal todayRefund = refundRecordService.sumRefundAmountByStatus("SUCCESS");
+        // 今日已批准退款总额
+        java.time.LocalDateTime todayStart = java.time.LocalDate.now().atStartOfDay();
+        java.util.List<RefundRecord> todayApprovedRecords = refundRecordService.list(
+            new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<RefundRecord>()
+                .eq("status", "COMPLETED")
+                .ge("process_time", todayStart)
+        );
 
-        stats.put("pendingCount", pendingCount);
-        stats.put("todayRefund", todayRefund != null ? todayRefund : java.math.BigDecimal.ZERO);
+        java.math.BigDecimal todayApproved = todayApprovedRecords.stream()
+            .map(RefundRecord::getRefundAmount)
+            .filter(amount -> amount != null)
+            .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+
+        // 今日已拒绝数量
+        long todayRejected = refundRecordService.count(
+            new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<RefundRecord>()
+                .eq("status", "REJECTED")
+                .ge("process_time", todayStart)
+        );
+
+        // 本月退款总额
+        java.time.LocalDateTime monthStart = java.time.LocalDate.now().withDayOfMonth(1).atStartOfDay();
+        java.util.List<RefundRecord> monthRecords = refundRecordService.list(
+            new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<RefundRecord>()
+                .eq("status", "COMPLETED")
+                .ge("process_time", monthStart)
+        );
+
+        java.math.BigDecimal monthTotal = monthRecords.stream()
+            .map(RefundRecord::getRefundAmount)
+            .filter(amount -> amount != null)
+            .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
 
         Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
-        response.put("data", stats);
+        response.put("pending", pending);
+        response.put("todayApproved", todayApproved != null ? todayApproved : java.math.BigDecimal.ZERO);
+        response.put("todayRejected", todayRejected);
+        response.put("monthTotal", monthTotal != null ? monthTotal : java.math.BigDecimal.ZERO);
 
         return ResponseEntity.ok(response);
     }
@@ -211,7 +237,7 @@ public class AdminFinanceController {
      * 获取充值统计
      */
     @ApiOperation("获取充值统计")
-    @GetMapping("/recharges/statistics")
+    @GetMapping("/recharges/stats")
     @PreAuthorize("hasAnyAuthority('admin:finance:recharge')")
     public ResponseEntity<Map<String, Object>> getRechargeStatistics() {
         if (rechargeRecordService == null) {
@@ -221,47 +247,41 @@ public class AdminFinanceController {
             return ResponseEntity.status(503).body(response);
         }
 
-        Map<String, Object> stats = new HashMap<>();
-
-        // 今日充值总额
+        // 今日充值统计
         java.time.LocalDateTime todayStart = java.time.LocalDate.now().atStartOfDay();
-        java.math.BigDecimal todayRecharge = java.math.BigDecimal.ZERO;
-
-        // 计算今日成功充值总额
         java.util.List<RechargeRecord> todayRecords = rechargeRecordService.list(
             new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<RechargeRecord>()
                 .eq("recharge_status", "success")
                 .ge("create_time", todayStart)
         );
 
-        todayRecharge = todayRecords.stream()
+        java.math.BigDecimal todayAmount = todayRecords.stream()
             .map(RechargeRecord::getAmount)
             .filter(amount -> amount != null)
             .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
 
-        // 总充值金额
-        java.math.BigDecimal totalRecharge = java.math.BigDecimal.ZERO;
-        java.util.List<RechargeRecord> allRecords = rechargeRecordService.list(
-            new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<RechargeRecord>()
-                .eq("recharge_status", "success")
-        );
-
-        totalRecharge = allRecords.stream()
-            .map(RechargeRecord::getAmount)
-            .filter(amount -> amount != null)
-            .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
-
-        // 今日充值笔数
         long todayCount = todayRecords.size();
 
-        stats.put("todayRecharge", todayRecharge);
-        stats.put("totalRecharge", totalRecharge);
-        stats.put("todayCount", todayCount);
-        stats.put("totalCount", allRecords.size());
+        // 本月充值统计
+        java.time.LocalDateTime monthStart = java.time.LocalDate.now().withDayOfMonth(1).atStartOfDay();
+        java.util.List<RechargeRecord> monthRecords = rechargeRecordService.list(
+            new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<RechargeRecord>()
+                .eq("recharge_status", "success")
+                .ge("create_time", monthStart)
+        );
+
+        java.math.BigDecimal monthAmount = monthRecords.stream()
+            .map(RechargeRecord::getAmount)
+            .filter(amount -> amount != null)
+            .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+
+        long monthCount = monthRecords.size();
 
         Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
-        response.put("data", stats);
+        response.put("todayAmount", todayAmount != null ? todayAmount : java.math.BigDecimal.ZERO);
+        response.put("todayCount", todayCount);
+        response.put("monthAmount", monthAmount != null ? monthAmount : java.math.BigDecimal.ZERO);
+        response.put("monthCount", monthCount);
 
         return ResponseEntity.ok(response);
     }

@@ -559,7 +559,8 @@ import {
   getWithdrawDetail,
   processWithdraw,
   batchProcessWithdraw,
-  getWithdrawStatistics
+  getWithdrawStatistics,
+  getWithdrawTrend
 } from '@/api/admin'
 
 // ============ 常量配置 ============
@@ -779,18 +780,41 @@ const initChart = () => {
 const updateChart = async () => {
   if (!chartInstance.value) return
 
-  // 模拟图表数据，实际应从后端获取
+  // 从后端获取图表数据
   const days = chartPeriod.value === 'week' ? 7 : 30
   const dates = []
   const amounts = []
   const counts = []
 
-  for (let i = days - 1; i >= 0; i--) {
-    const date = new Date()
-    date.setDate(date.getDate() - i)
-    dates.push(date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' }))
-    amounts.push(Math.random() * 10000 + 5000)
-    counts.push(Math.floor(Math.random() * 50 + 10))
+  try {
+    const response = await getWithdrawTrend(days)
+    if (response && response.data) {
+      // 处理后端返回的数据
+      response.data.forEach(item => {
+        dates.push(item.date)
+        amounts.push(item.amount || 0)
+        counts.push(item.count || 0)
+      })
+    } else {
+      // 如果后端没有返回数据，生成空数据
+      for (let i = days - 1; i >= 0; i--) {
+        const date = new Date()
+        date.setDate(date.getDate() - i)
+        dates.push(date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' }))
+        amounts.push(0)
+        counts.push(0)
+      }
+    }
+  } catch (error) {
+    console.error('[提现审核] 获取图表数据失败:', error)
+    // 出错时生成空数据
+    for (let i = days - 1; i >= 0; i--) {
+      const date = new Date()
+      date.setDate(date.getDate() - i)
+      dates.push(date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' }))
+      amounts.push(0)
+      counts.push(0)
+    }
   }
 
   const option = {

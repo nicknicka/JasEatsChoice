@@ -176,6 +176,21 @@ const pagination = reactive({
   total: 0
 })
 
+// 获取充值统计数据
+const fetchRechargeStats = async () => {
+  try {
+    const response = await api.get('http://localhost:8080/api/admin/finance/recharges/stats')
+    if (response) {
+      stats.todayAmount = response.todayAmount || 0
+      stats.todayCount = response.todayCount || 0
+      stats.monthAmount = response.monthAmount || 0
+      stats.monthCount = response.monthCount || 0
+    }
+  } catch (error) {
+    console.error('获取充值统计失败:', error)
+  }
+}
+
 // 获取充值记录列表
 const fetchRechargeList = async () => {
   loading.value = true
@@ -193,12 +208,6 @@ const fetchRechargeList = async () => {
     if (response) {
       rechargeList.value = response.records || []
       pagination.total = response.total || 0
-
-      // 更新统计数据
-      stats.todayCount = rechargeList.value.filter(r => r.status === 'SUCCESS').length
-      stats.todayAmount = rechargeList.value
-        .filter(r => r.status === 'SUCCESS')
-        .reduce((sum, r) => sum + (r.amount || 0), 0)
     }
   } catch (error) {
     console.error('获取充值记录失败:', error)
@@ -270,6 +279,7 @@ const handleView = async (row) => {
 
 onMounted(() => {
   fetchRechargeList()
+  fetchRechargeStats()
 })
 </script>
 
