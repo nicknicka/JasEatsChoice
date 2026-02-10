@@ -87,4 +87,19 @@ public interface WalletService {
      * @return 是否成功
      */
     boolean unfreezeWallet(String userId);
+
+    /**
+     * 更新钱包锁定状态
+     * @param userId 用户ID
+     * @param locked 是否锁定
+     * @return 是否成功
+     */
+    boolean updateWalletLockStatus(String userId, boolean locked);
+
+    /**
+     * 获取钱包安全设置
+     * @param userId 用户ID
+     * @return 安全设置Map，包含locked、verifyEnabled、dailyLimit等
+     */
+    java.util.Map<String, Object> getWalletSecuritySettings(String userId);
 }

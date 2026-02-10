@@ -71,22 +71,8 @@ export default {
    * @returns {Promise} 更新结果
    */
   updateWalletLockStatus(userId, locked) {
-    // TODO: 后端API实现后启用以下代码
-    // return api.put('/v1/wallet/lock-status', null, {
-    //   params: { userId, locked }
-    // })
-
-    // 临时使用模拟响应
-    console.log(`[模拟] 更新钱包锁定状态: userId=${userId}, locked=${locked}`)
-
-    return Promise.resolve({
-      code: '200',
-      message: locked ? '钱包已锁定' : '钱包已解锁',
-      data: {
-        userId,
-        locked,
-        note: '模拟数据 - 后端钱包锁定API待实现'
-      }
+    return api.put('/v1/wallet/lock-status', null, {
+      params: { userId, locked }
     })
   },
 
@@ -96,22 +82,8 @@ export default {
    * @returns {Promise} 安全设置
    */
   getWalletSecuritySettings(userId) {
-    // TODO: 后端API实现后启用以下代码
-    // return api.get('/v1/wallet/security-settings', {
-    //   params: { userId }
-    // })
-
-    // 临时使用模拟数据
-    return Promise.resolve({
-      code: '200',
-      message: '获取成功',
-      data: {
-        userId,
-        locked: false,
-        verifyEnabled: true,
-        dailyLimit: 5000,
-        note: '模拟数据 - 后端安全设置API待实现'
-      }
+    return api.get('/v1/wallet/security-settings', {
+      params: { userId }
     })
   }
 }

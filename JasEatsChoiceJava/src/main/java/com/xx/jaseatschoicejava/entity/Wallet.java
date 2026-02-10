@@ -49,6 +49,15 @@ public class Wallet {
     @ApiModelProperty(value = "钱包状态：active-正常, frozen-冻结")
     private String status; // 钱包状态
 
+    @ApiModelProperty(value = "是否锁定（用于钱包安全设置）")
+    private Boolean locked; // 是否锁定
+
+    @ApiModelProperty(value = "是否开启支付验证")
+    private Boolean verifyEnabled; // 是否开启大额支付验证
+
+    @ApiModelProperty(value = "单日交易限额")
+    private BigDecimal dailyLimit; // 单日交易限额
+
     @ApiModelProperty(value = "创建时间")
     private LocalDateTime createTime; // 创建时间
 

@@ -262,4 +262,37 @@ public class WalletServiceImpl implements WalletService {
         int rows = walletMapper.updateById(wallet);
         return rows > 0;
     }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean updateWalletLockStatus(String userId, boolean locked) {
+        Wallet wallet = getWalletByUserId(userId);
+
+        // 如果锁定，还需冻结钱包状态
+        if (locked) {
+            wallet.setStatus("frozen");
+        } else if ("frozen".equals(wallet.getStatus()) && !locked) {
+            wallet.setStatus("active");
+        }
+
+        wallet.setLocked(locked);
+        wallet.setUpdateTime(LocalDateTime.now());
+        int rows = walletMapper.updateById(wallet);
+
+        log.info("用户{}钱包锁定状态已更新为：{}", userId, locked);
+        return rows > 0;
+    }
+
+    @Override
+    public java.util.Map<String, Object> getWalletSecuritySettings(String userId) {
+        Wallet wallet = getWalletByUserId(userId);
+
+        java.util.Map<String, Object> settings = new java.util.HashMap<>();
+        settings.put("userId", userId);
+        settings.put("locked", wallet.getLocked() != null ? wallet.getLocked() : false);
+        settings.put("verifyEnabled", wallet.getVerifyEnabled() != null ? wallet.getVerifyEnabled() : true);
+        settings.put("dailyLimit", wallet.getDailyLimit() != null ? wallet.getDailyLimit() : new BigDecimal("5000"));
+
+        return settings;
+    }
 }
