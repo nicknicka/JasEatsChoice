@@ -1,8 +1,15 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { Setting, Notification, Lock, User } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import {
+  getSystemConfigsByGroup,
+  batchUpdateSystemConfigs
+} from '@/api/admin'
 
 const activeTab = ref('system')
+const loading = ref(false)
+const saving = ref(false)
 
 // 系统设置
 const systemSettings = ref({
@@ -26,20 +33,180 @@ const securitySettings = ref({
   passwordMinLength: 6
 })
 
-const saveSystemSettings = () => {
-  console.log('保存系统设置:', systemSettings.value)
-  alert('设置已保存')
+// 配置键映射
+const configKeyMap = {
+  // 系统设置
+  system: {
+    siteName: 'system.site.name',
+    allowUserUpload: 'system.user.upload.enabled',
+    requireTutorialReview: 'system.tutorial.review.required',
+    aiTutorialEnabled: 'system.ai.tutorial.enabled'
+  },
+  // 通知设置
+  notification: {
+    emailEnabled: 'notification.email.enabled',
+    smsEnabled: 'notification.sms.enabled',
+    reviewNotifyEnabled: 'notification.review.notify.enabled'
+  },
+  // 安全设置
+  security: {
+    sessionTimeout: 'security.session.timeout',
+    maxLoginAttempts: 'security.login.maxAttempts',
+    passwordMinLength: 'security.password.minLength'
+  }
 }
 
-const saveNotificationSettings = () => {
-  console.log('保存通知设置:', notificationSettings.value)
-  alert('设置已保存')
+/**
+ * 加载系统配置
+ */
+async function loadSystemSettings() {
+  loading.value = true
+  try {
+    const response = await getSystemConfigsByGroup('system')
+    if (response.success && response.data) {
+      const configs = response.data
+      systemSettings.value.siteName = configs[configKeyMap.system.siteName] || '佳食宜选'
+      systemSettings.value.allowUserUpload = configs[configKeyMap.system.allowUserUpload] === 'true'
+      systemSettings.value.requireTutorialReview = configs[configKeyMap.system.requireTutorialReview] === 'true'
+      systemSettings.value.aiTutorialEnabled = configs[configKeyMap.system.aiTutorialEnabled] === 'true'
+    }
+  } catch (error) {
+    console.error('加载系统设置失败:', error)
+    ElMessage.error('加载系统设置失败')
+  } finally {
+    loading.value = false
+  }
 }
 
-const saveSecuritySettings = () => {
-  console.log('保存安全设置:', securitySettings.value)
-  alert('设置已保存')
+/**
+ * 加载通知配置
+ */
+async function loadNotificationSettings() {
+  loading.value = true
+  try {
+    const response = await getSystemConfigsByGroup('notification')
+    if (response.success && response.data) {
+      const configs = response.data
+      notificationSettings.value.emailEnabled = configs[configKeyMap.notification.emailEnabled] === 'true'
+      notificationSettings.value.smsEnabled = configs[configKeyMap.notification.smsEnabled] === 'true'
+      notificationSettings.value.reviewNotifyEnabled = configs[configKeyMap.notification.reviewNotifyEnabled] === 'true'
+    }
+  } catch (error) {
+    console.error('加载通知设置失败:', error)
+    ElMessage.error('加载通知设置失败')
+  } finally {
+    loading.value = false
+  }
 }
+
+/**
+ * 加载安全配置
+ */
+async function loadSecuritySettings() {
+  loading.value = true
+  try {
+    const response = await getSystemConfigsByGroup('security')
+    if (response.success && response.data) {
+      const configs = response.data
+      securitySettings.value.sessionTimeout = parseInt(configs[configKeyMap.security.sessionTimeout]) || 30
+      securitySettings.value.maxLoginAttempts = parseInt(configs[configKeyMap.security.maxLoginAttempts]) || 5
+      securitySettings.value.passwordMinLength = parseInt(configs[configKeyMap.security.passwordMinLength]) || 6
+    }
+  } catch (error) {
+    console.error('加载安全设置失败:', error)
+    ElMessage.error('加载安全设置失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+/**
+ * 保存系统设置
+ */
+async function saveSystemSettings() {
+  saving.value = true
+  try {
+    const configs = {
+      [configKeyMap.system.siteName]: systemSettings.value.siteName,
+      [configKeyMap.system.allowUserUpload]: String(systemSettings.value.allowUserUpload),
+      [configKeyMap.system.requireTutorialReview]: String(systemSettings.value.requireTutorialReview),
+      [configKeyMap.system.aiTutorialEnabled]: String(systemSettings.value.aiTutorialEnabled)
+    }
+
+    const response = await batchUpdateSystemConfigs('system', configs)
+    if (response.success) {
+      ElMessage.success('系统设置保存成功')
+    } else {
+      ElMessage.error(response.message || '保存失败')
+    }
+  } catch (error) {
+    console.error('保存系统设置失败:', error)
+    ElMessage.error('保存系统设置失败')
+  } finally {
+    saving.value = false
+  }
+}
+
+/**
+ * 保存通知设置
+ */
+async function saveNotificationSettings() {
+  saving.value = true
+  try {
+    const configs = {
+      [configKeyMap.notification.emailEnabled]: String(notificationSettings.value.emailEnabled),
+      [configKeyMap.notification.smsEnabled]: String(notificationSettings.value.smsEnabled),
+      [configKeyMap.notification.reviewNotifyEnabled]: String(notificationSettings.value.reviewNotifyEnabled)
+    }
+
+    const response = await batchUpdateSystemConfigs('notification', configs)
+    if (response.success) {
+      ElMessage.success('通知设置保存成功')
+    } else {
+      ElMessage.error(response.message || '保存失败')
+    }
+  } catch (error) {
+    console.error('保存通知设置失败:', error)
+    ElMessage.error('保存通知设置失败')
+  } finally {
+    saving.value = false
+  }
+}
+
+/**
+ * 保存安全设置
+ */
+async function saveSecuritySettings() {
+  saving.value = true
+  try {
+    const configs = {
+      [configKeyMap.security.sessionTimeout]: String(securitySettings.value.sessionTimeout),
+      [configKeyMap.security.maxLoginAttempts]: String(securitySettings.value.maxLoginAttempts),
+      [configKeyMap.security.passwordMinLength]: String(securitySettings.value.passwordMinLength)
+    }
+
+    const response = await batchUpdateSystemConfigs('security', configs)
+    if (response.success) {
+      ElMessage.success('安全设置保存成功')
+    } else {
+      ElMessage.error(response.message || '保存失败')
+    }
+  } catch (error) {
+    console.error('保存安全设置失败:', error)
+    ElMessage.error('保存安全设置失败')
+  } finally {
+    saving.value = false
+  }
+}
+
+// 组件挂载时加载所有配置
+onMounted(async () => {
+  await Promise.all([
+    loadSystemSettings(),
+    loadNotificationSettings(),
+    loadSecuritySettings()
+  ])
+})
 </script>
 
 <template>
@@ -57,7 +224,7 @@ const saveSecuritySettings = () => {
       <el-tabs v-model="activeTab">
         <!-- 系统设置 -->
         <el-tab-pane label="系统设置" name="system">
-          <el-form :model="systemSettings" label-width="140px" style="max-width: 600px">
+          <el-form :model="systemSettings" label-width="180px" style="max-width: 600px" v-loading="loading">
             <h4>基本设置</h4>
             <el-form-item label="网站名称">
               <el-input v-model="systemSettings.siteName" />
@@ -79,14 +246,14 @@ const saveSecuritySettings = () => {
             </el-form-item>
 
             <el-form-item>
-              <el-button type="primary" @click="saveSystemSettings">保存设置</el-button>
+              <el-button type="primary" @click="saveSystemSettings" :loading="saving">保存设置</el-button>
             </el-form-item>
           </el-form>
         </el-tab-pane>
 
         <!-- 通知设置 -->
         <el-tab-pane label="通知设置" name="notification">
-          <el-form :model="notificationSettings" label-width="140px" style="max-width: 600px">
+          <el-form :model="notificationSettings" label-width="180px" style="max-width: 600px" v-loading="loading">
             <h4>通知方式</h4>
 
             <el-form-item label="邮件通知">
@@ -105,14 +272,14 @@ const saveSecuritySettings = () => {
             </el-form-item>
 
             <el-form-item>
-              <el-button type="primary" @click="saveNotificationSettings">保存设置</el-button>
+              <el-button type="primary" @click="saveNotificationSettings" :loading="saving">保存设置</el-button>
             </el-form-item>
           </el-form>
         </el-tab-pane>
 
         <!-- 安全设置 -->
         <el-tab-pane label="安全设置" name="security">
-          <el-form :model="securitySettings" label-width="140px" style="max-width: 600px">
+          <el-form :model="securitySettings" label-width="180px" style="max-width: 600px" v-loading="loading">
             <h4>会话管理</h4>
 
             <el-form-item label="会话超时时间">
@@ -133,7 +300,7 @@ const saveSecuritySettings = () => {
             </el-form-item>
 
             <el-form-item>
-              <el-button type="primary" @click="saveSecuritySettings">保存设置</el-button>
+              <el-button type="primary" @click="saveSecuritySettings" :loading="saving">保存设置</el-button>
             </el-form-item>
           </el-form>
         </el-tab-pane>

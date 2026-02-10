@@ -1199,3 +1199,167 @@ export function getWithdrawStatistics() {
       throw error
     })
 }
+
+// ==================== 系统设置（新增） ====================
+
+/**
+ * 获取配置列表（分页）
+ * @param {Object} params - 查询参数 {page, pageSize, keyword, configGroup, status}
+ * @returns {Promise} 配置列表
+ */
+export function getSystemConfigList(params = {}) {
+  console.log('[管理员API] 获取配置列表:', params)
+  return api.get('/admin/settings/config', { params })
+    .then(response => {
+      console.log('[管理员API] 获取配置列表成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 获取配置列表失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 获取所有配置分组
+ * @returns {Promise} 配置分组列表
+ */
+export function getSystemConfigGroups() {
+  console.log('[管理员API] 获取配置分组')
+  return api.get('/admin/settings/config/groups')
+    .then(response => {
+      console.log('[管理员API] 获取配置分组成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 获取配置分组失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 根据分组获取配置
+ * @param {string} configGroup - 配置分组 (system/notification/security)
+ * @returns {Promise} 配置数据
+ */
+export function getSystemConfigsByGroup(configGroup) {
+  console.log('[管理员API] 获取分组配置:', configGroup)
+  return api.get(`/admin/settings/config/group/${configGroup}`)
+    .then(response => {
+      console.log('[管理员API] 获取分组配置成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 获取分组配置失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 获取配置详情
+ * @param {string} configId - 配置ID
+ * @returns {Promise} 配置详情
+ */
+export function getSystemConfigDetail(configId) {
+  console.log('[管理员API] 获取配置详情:', configId)
+  return api.get(`/admin/settings/config/${configId}`)
+    .then(response => {
+      console.log('[管理员API] 获取配置详情成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 获取配置详情失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 创建配置
+ * @param {Object} configData - 配置数据
+ * @returns {Promise} 创建结果
+ */
+export function createSystemConfig(configData) {
+  console.log('[管理员API] 创建配置:', configData)
+  return api.post('/admin/settings/config', configData)
+    .then(response => {
+      console.log('[管理员API] 创建配置成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 创建配置失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 更新配置
+ * @param {string} configId - 配置ID
+ * @param {Object} configData - 配置数据
+ * @returns {Promise} 更新结果
+ */
+export function updateSystemConfig(configId, configData) {
+  console.log('[管理员API] 更新配置:', configId, configData)
+  return api.put(`/admin/settings/config/${configId}`, configData)
+    .then(response => {
+      console.log('[管理员API] 更新配置成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 更新配置失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 批量更新配置（按分组）
+ * @param {string} configGroup - 配置分组
+ * @param {Object} configs - 配置键值对
+ * @returns {Promise} 更新结果
+ */
+export function batchUpdateSystemConfigs(configGroup, configs) {
+  console.log('[管理员API] 批量更新配置:', configGroup, configs)
+  return api.post('/admin/settings/config/batch', { configGroup, configs })
+    .then(response => {
+      console.log('[管理员API] 批量更新配置成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 批量更新配置失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 删除配置
+ * @param {string} configId - 配置ID
+ * @returns {Promise} 删除结果
+ */
+export function deleteSystemConfig(configId) {
+  console.log('[管理员API] 删除配置:', configId)
+  return api.delete(`/admin/settings/config/${configId}`)
+    .then(response => {
+      console.log('[管理员API] 删除配置成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 删除配置失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 刷新配置缓存
+ * @returns {Promise} 刷新结果
+ */
+export function refreshSystemConfigCache() {
+  console.log('[管理员API] 刷新配置缓存')
+  return api.post('/admin/settings/config/refresh')
+    .then(response => {
+      console.log('[管理员API] 刷新配置缓存成功')
+      return response
+    })
+    .catch(error => {
+      console.error('[管理员API] 刷新配置缓存失败:', error)
+      throw error
+    })
+}

@@ -133,7 +133,7 @@ public class AdminMerchantController {
             String operation = "APPROVED".equals(status) ? "审核通过" : "审核拒绝";
             SystemLogHelper.logUpdate(
                 "商家管理",
-                operation + "商家：" + merchant.getShopName(),
+                operation + "商家：" + merchant.getName(),
                 AdminContext.getAdminId(),
                 AdminContext.getAdminUsername(),
                 Map.of("merchantId", merchantId, "status", status)

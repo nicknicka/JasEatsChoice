@@ -2,150 +2,253 @@
   <div class="system-logs-container">
     <!-- 页面标题 -->
     <div class="page-header">
-      <h1>系统日志</h1>
-      <p class="subtitle">查看管理员操作日志</p>
+      <div class="header-content">
+        <div class="header-left">
+          <h1>
+            <el-icon class="header-icon"><Document /></el-icon>
+            系统日志
+          </h1>
+          <p class="subtitle">查看和分析管理员操作日志</p>
+        </div>
+        <div class="header-actions">
+          <el-button type="primary" :icon="Refresh" @click="handleRefresh" :loading="loading">
+            刷新
+          </el-button>
+        </div>
+      </div>
     </div>
 
     <!-- 搜索栏 -->
     <el-card class="search-card" shadow="never">
-      <el-form :inline="true" :model="searchForm" class="search-form">
-        <el-form-item label="操作类型">
-          <el-select v-model="searchForm.operationType" placeholder="全部" clearable style="width: 150px">
-            <el-option label="登录" value="LOGIN" />
-            <el-option label="退出" value="LOGOUT" />
-            <el-option label="创建" value="CREATE" />
-            <el-option label="更新" value="UPDATE" />
-            <el-option label="删除" value="DELETE" />
-            <el-option label="查询" value="QUERY" />
-            <el-option label="导出" value="EXPORT" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="模块名称">
-          <el-select v-model="searchForm.module" placeholder="全部" clearable style="width: 150px">
-            <el-option label="用户管理" value="USER" />
-            <el-option label="商家管理" value="MERCHANT" />
-            <el-option label="订单管理" value="ORDER" />
-            <el-option label="菜品管理" value="DISH" />
-            <el-option label="财务管理" value="FINANCE" />
-            <el-option label="系统管理" value="SYSTEM" />
-            <el-option label="角色管理" value="ROLE" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="操作人">
-          <el-input
-            v-model="searchForm.operatorName"
-            placeholder="操作人姓名"
-            clearable
-            style="width: 150px"
-          />
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="全部" clearable style="width: 120px">
-            <el-option label="成功" value="SUCCESS" />
-            <el-option label="失败" value="FAILED" />
-            <el-option label="部分成功" value="PARTIAL" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="日期范围">
-          <el-date-picker
-            v-model="searchForm.dateRange"
-            type="datetimerange"
-            range-separator="至"
-            start-placeholder="开始时间"
-            end-placeholder="结束时间"
-            clearable
-            style="width: 360px"
-            value-format="YYYY-MM-DD HH:mm:ss"
-          />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" :icon="Search" @click="handleSearch">搜索</el-button>
-          <el-button :icon="Refresh" @click="handleReset">重置</el-button>
-          <el-button type="danger" :icon="Delete" @click="handleCleanLogs">清理日志</el-button>
-        </el-form-item>
-      </el-form>
+      <template #header>
+        <div class="card-header">
+          <span class="card-title">
+            <el-icon><Search /></el-icon>
+            筛选条件
+          </span>
+          <el-button text type="primary" @click="toggleExpand">
+            {{ isExpanded ? '收起' : '展开' }}
+            <el-icon class="ml-1">
+              <ArrowUp v-if="isExpanded" />
+              <ArrowDown v-else />
+            </el-icon>
+          </el-button>
+        </div>
+      </template>
+      <el-collapse-transition>
+        <div v-show="isExpanded">
+          <el-form :model="searchForm" class="search-form" label-width="80px">
+            <el-row :gutter="20">
+              <el-col :xs="24" :sm="12" :md="8" :lg="6">
+                <el-form-item label="操作类型">
+                  <el-select v-model="searchForm.operationType" placeholder="全部" clearable style="width: 100%">
+                    <el-option label="登录" value="LOGIN" />
+                    <el-option label="退出" value="LOGOUT" />
+                    <el-option label="创建" value="CREATE" />
+                    <el-option label="更新" value="UPDATE" />
+                    <el-option label="删除" value="DELETE" />
+                    <el-option label="查询" value="QUERY" />
+                    <el-option label="导出" value="EXPORT" />
+                  </el-select>
+                </el-form-item>
+              </el-col>
+              <el-col :xs="24" :sm="12" :md="8" :lg="6">
+                <el-form-item label="模块名称">
+                  <el-select v-model="searchForm.module" placeholder="全部" clearable style="width: 100%">
+                    <el-option label="用户管理" value="USER" />
+                    <el-option label="商家管理" value="MERCHANT" />
+                    <el-option label="订单管理" value="ORDER" />
+                    <el-option label="菜品管理" value="DISH" />
+                    <el-option label="财务管理" value="FINANCE" />
+                    <el-option label="系统管理" value="SYSTEM" />
+                    <el-option label="角色管理" value="ROLE" />
+                  </el-select>
+                </el-form-item>
+              </el-col>
+              <el-col :xs="24" :sm="12" :md="8" :lg="6">
+                <el-form-item label="操作人">
+                  <el-input
+                    v-model="searchForm.operatorName"
+                    placeholder="输入操作人姓名"
+                    clearable
+                    :prefix-icon="User"
+                  />
+                </el-form-item>
+              </el-col>
+              <el-col :xs="24" :sm="12" :md="8" :lg="6">
+                <el-form-item label="状态">
+                  <el-select v-model="searchForm.status" placeholder="全部" clearable style="width: 100%">
+                    <el-option label="成功" value="SUCCESS" />
+                    <el-option label="失败" value="FAILED" />
+                    <el-option label="部分成功" value="PARTIAL" />
+                  </el-select>
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row :gutter="20">
+              <el-col :xs="24" :sm="24" :md="12" :lg="12">
+                <el-form-item label="日期范围">
+                  <el-date-picker
+                    v-model="searchForm.dateRange"
+                    type="datetimerange"
+                    range-separator="至"
+                    start-placeholder="开始时间"
+                    end-placeholder="结束时间"
+                    clearable
+                    style="width: 100%"
+                    value-format="YYYY-MM-DD HH:mm:ss"
+                  />
+                </el-form-item>
+              </el-col>
+              <el-col :xs="24" :sm="24" :md="12" :lg="12" class="action-col">
+                <el-form-item label=" ">
+                  <el-button type="primary" :icon="Search" @click="handleSearch">
+                    搜索
+                  </el-button>
+                  <el-button :icon="RefreshLeft" @click="handleReset">
+                    重置
+                  </el-button>
+                  <el-button type="danger" :icon="Delete" @click="handleCleanLogs">
+                    清理日志
+                  </el-button>
+                </el-form-item>
+              </el-col>
+            </el-row>
+          </el-form>
+        </div>
+      </el-collapse-transition>
     </el-card>
 
     <!-- 统计卡片 -->
-    <el-row :gutter="20" class="stats-row">
-      <el-col :span="4">
-        <el-card shadow="hover">
-          <div class="stat-item">
-            <div class="stat-label">总日志数</div>
+    <el-row :gutter="16" class="stats-row">
+      <el-col :xs="12" :sm="8" :md="6" :lg="4">
+        <div class="stat-card stat-primary">
+          <div class="stat-icon">
+            <el-icon :size="24"><Document /></el-icon>
+          </div>
+          <div class="stat-content">
             <div class="stat-value">{{ statistics.totalLogs || 0 }}</div>
+            <div class="stat-label">总日志数</div>
           </div>
-        </el-card>
+        </div>
       </el-col>
-      <el-col :span="4">
-        <el-card shadow="hover">
-          <div class="stat-item">
-            <div class="stat-label">登录</div>
+      <el-col :xs="12" :sm="8" :md="6" :lg="4">
+        <div class="stat-card stat-success">
+          <div class="stat-icon">
+            <el-icon :size="24"><CircleCheck /></el-icon>
+          </div>
+          <div class="stat-content">
             <div class="stat-value">{{ statistics.operationStats?.LOGIN || 0 }}</div>
+            <div class="stat-label">登录操作</div>
           </div>
-        </el-card>
+        </div>
       </el-col>
-      <el-col :span="4">
-        <el-card shadow="hover">
-          <div class="stat-item">
-            <div class="stat-label">创建</div>
+      <el-col :xs="12" :sm="8" :md="6" :lg="4">
+        <div class="stat-card stat-info">
+          <div class="stat-icon">
+            <el-icon :size="24"><Plus /></el-icon>
+          </div>
+          <div class="stat-content">
             <div class="stat-value">{{ statistics.operationStats?.CREATE || 0 }}</div>
+            <div class="stat-label">创建操作</div>
           </div>
-        </el-card>
+        </div>
       </el-col>
-      <el-col :span="4">
-        <el-card shadow="hover">
-          <div class="stat-item">
-            <div class="stat-label">更新</div>
+      <el-col :xs="12" :sm="8" :md="6" :lg="4">
+        <div class="stat-card stat-warning">
+          <div class="stat-icon">
+            <el-icon :size="24"><Edit /></el-icon>
+          </div>
+          <div class="stat-content">
             <div class="stat-value">{{ statistics.operationStats?.UPDATE || 0 }}</div>
+            <div class="stat-label">更新操作</div>
           </div>
-        </el-card>
+        </div>
       </el-col>
-      <el-col :span="4">
-        <el-card shadow="hover">
-          <div class="stat-item">
-            <div class="stat-label">删除</div>
+      <el-col :xs="12" :sm="8" :md="6" :lg="4">
+        <div class="stat-card stat-danger">
+          <div class="stat-icon">
+            <el-icon :size="24"><Delete /></el-icon>
+          </div>
+          <div class="stat-content">
             <div class="stat-value">{{ statistics.operationStats?.DELETE || 0 }}</div>
+            <div class="stat-label">删除操作</div>
           </div>
-        </el-card>
+        </div>
       </el-col>
-      <el-col :span="4">
-        <el-card shadow="hover">
-          <div class="stat-item">
-            <div class="stat-label">查询</div>
-            <div class="stat-value">{{ statistics.operationStats?.QUERY || 0 }}</div>
+      <el-col :xs="12" :sm="8" :md="6" :lg="4">
+        <div class="stat-card stat-default">
+          <div class="stat-icon">
+            <el-icon :size="24"><Search /></el-icon>
           </div>
-        </el-card>
+          <div class="stat-content">
+            <div class="stat-value">{{ statistics.operationStats?.QUERY || 0 }}</div>
+            <div class="stat-label">查询操作</div>
+          </div>
+        </div>
       </el-col>
     </el-row>
 
     <!-- 日志列表 -->
     <el-card class="table-card" shadow="never">
-      <el-table :data="logList" v-loading="loading" stripe>
-        <el-table-column prop="logId" label="日志ID" width="100" />
-        <el-table-column prop="operatorName" label="操作人" width="120" />
-        <el-table-column label="操作类型" width="100">
+      <template #header>
+        <div class="card-header">
+          <span class="card-title">
+            <el-icon><List /></el-icon>
+            日志列表
+          </span>
+          <div class="card-extra">
+            <span class="record-count">共 {{ pagination.total }} 条记录</span>
+          </div>
+        </div>
+      </template>
+      <el-table
+        :data="logList"
+        v-loading="loading"
+        stripe
+        class="log-table"
+        :row-class-name="getRowClassName"
+      >
+        <el-table-column prop="logId" label="ID" width="100" align="center" />
+        <el-table-column prop="operatorName" label="操作人" width="110" show-overflow-tooltip>
           <template #default="{ row }">
-            <el-tag :type="getOperationTypeColor(row.operationType)">
+            <div class="operator-cell">
+              <el-icon class="operator-icon"><User /></el-icon>
+              <span>{{ row.operatorName }}</span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作类型" width="95" align="center">
+          <template #default="{ row }">
+            <el-tag :type="getOperationTypeColor(row.operationType)" size="small">
               {{ getOperationTypeText(row.operationType) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="module" label="模块名称" width="100" />
-        <el-table-column prop="description" label="操作描述" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="method" label="执行方法" width="150" show-overflow-tooltip />
-        <el-table-column prop="ip" label="IP地址" width="140" />
-        <el-table-column label="状态" width="100">
+        <el-table-column prop="module" label="模块" width="90" align="center" />
+        <el-table-column prop="description" label="操作描述" min-width="180" show-overflow-tooltip />
+        <el-table-column prop="method" label="方法" width="130" show-overflow-tooltip />
+        <el-table-column prop="ip" label="IP地址" width="130" show-overflow-tooltip />
+        <el-table-column label="状态" width="80" align="center">
           <template #default="{ row }">
             <el-tag :type="getStatusColor(row.status)" size="small">
               {{ getStatusText(row.status) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="executeTime" label="耗时(ms)" width="100" />
-        <el-table-column prop="createTime" label="操作时间" width="180" />
-        <el-table-column label="操作" width="100" fixed="right">
+        <el-table-column prop="executeTime" label="耗时" width="80" align="center">
           <template #default="{ row }">
-            <el-button type="primary" size="small" link @click="handleViewDetail(row)">详情</el-button>
+            <span :class="getExecuteTimeClass(row.executeTime)">
+              {{ row.executeTime }}ms
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="createTime" label="操作时间" width="165" />
+        <el-table-column label="操作" width="80" align="center" fixed="right">
+          <template #default="{ row }">
+            <el-button type="primary" size="small" link @click="handleViewDetail(row)">
+              详情
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -160,6 +263,7 @@
           layout="total, sizes, prev, pager, next, jumper"
           @size-change="fetchLogList"
           @current-change="fetchLogList"
+          background
         />
       </div>
     </el-card>
@@ -168,44 +272,115 @@
     <el-dialog
       v-model="detailDialogVisible"
       title="日志详情"
-      width="800px"
+      width="850px"
       :close-on-click-modal="false"
+      class="detail-dialog"
     >
-      <el-descriptions v-if="currentLog" :column="2" border>
-        <el-descriptions-item label="日志ID">{{ currentLog.logId }}</el-descriptions-item>
-        <el-descriptions-item label="操作人">{{ currentLog.operatorName }}</el-descriptions-item>
-        <el-descriptions-item label="操作类型">
-          <el-tag :type="getOperationTypeColor(currentLog.operationType)">
-            {{ getOperationTypeText(currentLog.operationType) }}
-          </el-tag>
-        </el-descriptions-item>
-        <el-descriptions-item label="模块名称">{{ currentLog.module }}</el-descriptions-item>
-        <el-descriptions-item label="角色">{{ currentLog.operatorRole }}</el-descriptions-item>
-        <el-descriptions-item label="IP地址">{{ currentLog.ip }}</el-descriptions-item>
-        <el-descriptions-item label="操作描述" :span="2">{{ currentLog.description }}</el-descriptions-item>
-        <el-descriptions-item label="执行方法" :span="2">{{ currentLog.method }}</el-descriptions-item>
-        <el-descriptions-item label="执行时长">{{ currentLog.executeTime }} ms</el-descriptions-item>
-        <el-descriptions-item label="状态">
-          <el-tag :type="getStatusColor(currentLog.status)">
-            {{ getStatusText(currentLog.status) }}
-          </el-tag>
-        </el-descriptions-item>
-        <el-descriptions-item label="操作时间" :span="2">{{ currentLog.createTime }}</el-descriptions-item>
-        <el-descriptions-item label="浏览器">{{ currentLog.browser || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="操作系统">{{ currentLog.os || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="请求参数" :span="2" v-if="currentLog.params">
-          <pre class="json-content">{{ formatJson(currentLog.params) }}</pre>
-        </el-descriptions-item>
-        <el-descriptions-item label="返回结果" :span="2" v-if="currentLog.result">
-          <pre class="json-content">{{ formatJson(currentLog.result) }}</pre>
-        </el-descriptions-item>
-        <el-descriptions-item label="错误信息" :span="2" v-if="currentLog.errorMessage">
-          <pre class="error-content">{{ currentLog.errorMessage }}</pre>
-        </el-descriptions-item>
-      </el-descriptions>
+      <div v-if="currentLog" class="detail-content">
+        <!-- 基本信息卡片 -->
+        <div class="detail-section">
+          <div class="section-title">
+            <el-icon><InfoFilled /></el-icon>
+            基本信息
+          </div>
+          <el-descriptions :column="2" border class="detail-descriptions">
+            <el-descriptions-item label="日志ID">
+              <el-tag type="info" size="small">#{{ currentLog.logId }}</el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="操作人">
+              <div class="operator-info">
+                <el-icon><User /></el-icon>
+                {{ currentLog.operatorName }}
+              </div>
+            </el-descriptions-item>
+            <el-descriptions-item label="操作类型">
+              <el-tag :type="getOperationTypeColor(currentLog.operationType)">
+                {{ getOperationTypeText(currentLog.operationType) }}
+              </el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="模块名称">
+              <el-tag type="info">{{ currentLog.module }}</el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="角色">{{ currentLog.operatorRole || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="IP地址">
+              <span class="ip-address">{{ currentLog.ip }}</span>
+            </el-descriptions-item>
+            <el-descriptions-item label="操作描述" :span="2">
+              {{ currentLog.description }}
+            </el-descriptions-item>
+          </el-descriptions>
+        </div>
+
+        <!-- 执行信息卡片 -->
+        <div class="detail-section">
+          <div class="section-title">
+            <el-icon><Operation /></el-icon>
+            执行信息
+          </div>
+          <el-descriptions :column="2" border class="detail-descriptions">
+            <el-descriptions-item label="执行方法" :span="2">
+              <code class="method-code">{{ currentLog.method }}</code>
+            </el-descriptions-item>
+            <el-descriptions-item label="执行时长">
+              <el-tag :type="getExecuteTimeTagType(currentLog.executeTime)">
+                {{ currentLog.executeTime }} ms
+              </el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="状态">
+              <el-tag :type="getStatusColor(currentLog.status)">
+                {{ getStatusText(currentLog.status) }}
+              </el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="操作时间" :span="2">
+              {{ currentLog.createTime }}
+            </el-descriptions-item>
+            <el-descriptions-item label="浏览器">
+              <span class="env-info">{{ currentLog.browser || '-' }}</span>
+            </el-descriptions-item>
+            <el-descriptions-item label="操作系统">
+              <span class="env-info">{{ currentLog.os || '-' }}</span>
+            </el-descriptions-item>
+          </el-descriptions>
+        </div>
+
+        <!-- 请求参数 -->
+        <div v-if="currentLog.params" class="detail-section">
+          <div class="section-title">
+            <el-icon><Document /></el-icon>
+            请求参数
+          </div>
+          <div class="code-box">
+            <pre class="json-content">{{ formatJson(currentLog.params) }}</pre>
+          </div>
+        </div>
+
+        <!-- 返回结果 -->
+        <div v-if="currentLog.result" class="detail-section">
+          <div class="section-title">
+            <el-icon><Check /></el-icon>
+            返回结果
+          </div>
+          <div class="code-box">
+            <pre class="json-content">{{ formatJson(currentLog.result) }}</pre>
+          </div>
+        </div>
+
+        <!-- 错误信息 -->
+        <div v-if="currentLog.errorMessage" class="detail-section">
+          <div class="section-title error-title">
+            <el-icon><Warning /></el-icon>
+            错误信息
+          </div>
+          <div class="code-box error-box">
+            <pre class="error-content">{{ currentLog.errorMessage }}</pre>
+          </div>
+        </div>
+      </div>
 
       <template #footer>
-        <el-button @click="detailDialogVisible = false">关闭</el-button>
+        <div class="dialog-footer">
+          <el-button @click="detailDialogVisible = false">关闭</el-button>
+        </div>
       </template>
     </el-dialog>
   </div>
@@ -214,13 +389,18 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh, Delete } from '@element-plus/icons-vue'
+import {
+  Search, Refresh, Delete, Document, CircleCheck, Plus, Edit,
+  ArrowUp, ArrowDown, RefreshLeft, User, List, InfoFilled,
+  Operation, Check, Warning
+} from '@element-plus/icons-vue'
 import { getLogList, getLogStatistics, cleanExpiredLogs } from '@/api/admin'
 
 const loading = ref(false)
 const logList = ref([])
 const currentLog = ref(null)
 const detailDialogVisible = ref(false)
+const isExpanded = ref(true)
 const statistics = ref({
   totalLogs: 0,
   operationStats: {}
@@ -345,6 +525,39 @@ const getStatusText = (status) => {
   return texts[status] || '未知'
 }
 
+// 获取执行时间样式类
+const getExecuteTimeClass = (time) => {
+  if (time >= 1000) return 'execute-time-slow'
+  if (time >= 500) return 'execute-time-medium'
+  return 'execute-time-fast'
+}
+
+// 获取执行时间标签类型
+const getExecuteTimeTagType = (time) => {
+  if (time >= 1000) return 'danger'
+  if (time >= 500) return 'warning'
+  return 'success'
+}
+
+// 获取表格行类名
+const getRowClassName = ({ row }) => {
+  if (row.status === 'FAILED') return 'error-row'
+  if (row.executeTime >= 1000) return 'slow-row'
+  return ''
+}
+
+// 切换展开/收起
+const toggleExpand = () => {
+  isExpanded.value = !isExpanded.value
+}
+
+// 刷新
+const handleRefresh = () => {
+  fetchLogList()
+  fetchStatistics()
+  ElMessage.success('已刷新')
+}
+
 // 格式化JSON
 const formatJson = (jsonStr) => {
   try {
@@ -417,76 +630,409 @@ onMounted(() => {
 
 <style scoped lang="less">
 .system-logs-container {
+  padding: 20px;
+  background: #f5f7fa;
+  min-height: calc(100vh - 40px);
+
+  // 页面标题
   .page-header {
-    margin-bottom: 20px;
+    margin-bottom: 16px;
 
-    h1 {
-      font-size: 24px;
-      color: #303133;
-      margin: 0 0 8px 0;
-    }
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
 
-    .subtitle {
-      color: #909399;
-      margin: 0;
-      font-size: 14px;
+      .header-left {
+        h1 {
+          font-size: 22px;
+          font-weight: 600;
+          color: #1f2937;
+          margin: 0 0 6px 0;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+
+          .header-icon {
+            color: #409eff;
+          }
+        }
+
+        .subtitle {
+          color: #6b7280;
+          margin: 0;
+          font-size: 13px;
+        }
+      }
     }
   }
 
+  // 搜索卡片
   .search-card {
-    margin-bottom: 20px;
+    margin-bottom: 16px;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+
+    :deep(.el-card__header) {
+      padding: 12px 16px;
+      border-bottom: 1px solid #e5e7eb;
+      background: #fafafa;
+    }
+
+    :deep(.el-card__body) {
+      padding: 16px;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+
+      .card-title {
+        font-weight: 500;
+        color: #374151;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .ml-1 {
+        margin-left: 4px;
+      }
+    }
 
     .search-form {
-      margin-bottom: 0;
+      .el-form-item {
+        margin-bottom: 16px;
+
+        &:last-child {
+          margin-bottom: 0;
+        }
+      }
+
+      .action-col {
+        .el-form-item {
+          display: flex;
+          align-items: flex-end;
+        }
+      }
     }
   }
 
+  // 统计卡片行
   .stats-row {
-    margin-bottom: 20px;
+    margin-bottom: 16px;
 
-    .stat-item {
-      text-align: center;
+    .stat-card {
+      background: white;
+      border-radius: 8px;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      transition: all 0.3s ease;
+      border: 1px solid #e5e7eb;
+      cursor: pointer;
 
-      .stat-label {
-        font-size: 14px;
-        color: #909399;
-        margin-bottom: 8px;
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
       }
 
-      .stat-value {
-        font-size: 24px;
-        font-weight: bold;
-        color: #409eff;
+      .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+
+      .stat-content {
+        flex: 1;
+        min-width: 0;
+
+        .stat-value {
+          font-size: 22px;
+          font-weight: 600;
+          line-height: 1.2;
+          margin-bottom: 4px;
+        }
+
+        .stat-label {
+          font-size: 12px;
+          color: #6b7280;
+        }
+      }
+
+      &.stat-primary {
+        .stat-icon {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+        }
+        .stat-value {
+          color: #667eea;
+        }
+      }
+
+      &.stat-success {
+        .stat-icon {
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+          color: white;
+        }
+        .stat-value {
+          color: #10b981;
+        }
+      }
+
+      &.stat-info {
+        .stat-icon {
+          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+          color: white;
+        }
+        .stat-value {
+          color: #3b82f6;
+        }
+      }
+
+      &.stat-warning {
+        .stat-icon {
+          background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+          color: white;
+        }
+        .stat-value {
+          color: #f59e0b;
+        }
+      }
+
+      &.stat-danger {
+        .stat-icon {
+          background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+          color: white;
+        }
+        .stat-value {
+          color: #ef4444;
+        }
+      }
+
+      &.stat-default {
+        .stat-icon {
+          background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+          color: white;
+        }
+        .stat-value {
+          color: #6b7280;
+        }
       }
     }
   }
 
+  // 表格卡片
   .table-card {
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+
+    :deep(.el-card__header) {
+      padding: 12px 16px;
+      border-bottom: 1px solid #e5e7eb;
+      background: #fafafa;
+    }
+
+    :deep(.el-card__body) {
+      padding: 0;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+
+      .card-title {
+        font-weight: 500;
+        color: #374151;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .card-extra {
+        .record-count {
+          font-size: 13px;
+          color: #6b7280;
+        }
+      }
+    }
+
+    .log-table {
+      :deep(.el-table__header) {
+        th {
+          background: #f9fafb;
+          color: #374151;
+          font-weight: 500;
+        }
+      }
+
+      :deep(.error-row) {
+        background: #fef2f2 !important;
+      }
+
+      :deep(.slow-row) {
+        background: #fffbeb !important;
+      }
+
+      .operator-cell {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+
+        .operator-icon {
+          color: #9ca3af;
+        }
+      }
+
+      .execute-time-fast {
+        color: #10b981;
+        font-weight: 500;
+      }
+
+      .execute-time-medium {
+        color: #f59e0b;
+        font-weight: 500;
+      }
+
+      .execute-time-slow {
+        color: #ef4444;
+        font-weight: 500;
+      }
+    }
+
     .pagination-container {
-      margin-top: 20px;
+      padding: 16px;
       display: flex;
       justify-content: flex-end;
+      border-top: 1px solid #e5e7eb;
+      background: #fafafa;
+    }
+  }
+
+  // 详情对话框
+  .detail-dialog {
+    .detail-content {
+      max-height: 60vh;
+      overflow-y: auto;
+
+      .detail-section {
+        margin-bottom: 20px;
+
+        &:last-child {
+          margin-bottom: 0;
+        }
+
+        .section-title {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 14px;
+          font-weight: 500;
+          color: #374151;
+          margin-bottom: 10px;
+          padding: 8px 12px;
+          background: #f3f4f6;
+          border-radius: 6px;
+
+          &.error-title {
+            background: #fef2f2;
+            color: #dc2626;
+          }
+        }
+
+        .detail-descriptions {
+          :deep(.el-descriptions__label) {
+            background: #f9fafb !important;
+            font-weight: 500;
+          }
+        }
+
+        .operator-info {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .ip-address {
+          font-family: 'Courier New', monospace;
+          font-size: 13px;
+        }
+
+        .method-code {
+          font-family: 'Courier New', monospace;
+          font-size: 12px;
+          background: #f3f4f6;
+          padding: 4px 8px;
+          border-radius: 4px;
+        }
+
+        .env-info {
+          color: #6b7280;
+          font-size: 13px;
+        }
+
+        .code-box {
+          border: 1px solid #e5e7eb;
+          border-radius: 6px;
+          overflow: hidden;
+
+          &.error-box {
+            border-color: #fecaca;
+          }
+
+          .json-content,
+          .error-content {
+            margin: 0;
+            padding: 12px;
+            background: #f9fafb;
+            font-size: 12px;
+            line-height: 1.6;
+            max-height: 250px;
+            overflow: auto;
+            font-family: 'Courier New', monospace;
+          }
+
+          .error-content {
+            background: #fef2f2;
+            color: #dc2626;
+          }
+        }
+      }
     }
 
-    .json-content {
-      background: #f5f7fa;
-      padding: 10px;
-      border-radius: 4px;
-      max-height: 200px;
-      overflow: auto;
-      font-size: 12px;
-      line-height: 1.5;
+    .dialog-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+  }
+}
+
+// 响应式设计
+@media (max-width: 768px) {
+  .system-logs-container {
+    padding: 12px;
+
+    .page-header {
+      .header-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+      }
     }
 
-    .error-content {
-      background: #fef0f0;
-      color: #f56c6c;
-      padding: 10px;
-      border-radius: 4px;
-      max-height: 200px;
-      overflow: auto;
-      font-size: 12px;
-      line-height: 1.5;
+    .stats-row {
+      :deep(.el-col) {
+        margin-bottom: 12px;
+      }
     }
   }
 }
