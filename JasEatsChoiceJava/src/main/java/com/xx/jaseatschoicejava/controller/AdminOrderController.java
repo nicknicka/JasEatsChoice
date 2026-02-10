@@ -8,7 +8,7 @@ import com.xx.jaseatschoicejava.entity.Order;
 import com.xx.jaseatschoicejava.service.MerchantService;
 import com.xx.jaseatschoicejava.service.OrderDishService;
 import com.xx.jaseatschoicejava.service.OrderService;
-import com.xx.jaseatschoicejava.service.SystemLogService;
+import com.xx.jaseatschoicejava.util.SystemLogHelper;
 import com.xx.jaseatschoicejava.util.AdminContext;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -38,9 +38,6 @@ public class AdminOrderController {
 
     @Autowired
     private OrderDishService orderDishService;
-
-    @Autowired(required = false)
-    private SystemLogService systemLogService;
 
     /**
      * 获取订单列表（分页）
@@ -182,16 +179,13 @@ public class AdminOrderController {
         boolean success = orderService.updateById(order);
 
         // 记录操作日志
-        if (success && systemLogService != null) {
-            Long adminId = AdminContext.getAdminId();
-            String adminName = AdminContext.getAdminUsername();
-
-            systemLogService.logOperation(
-                "UPDATE", "ORDER", "修改订单状态：" + orderId + " 从 " + getStatusText(oldStatus) + " 到 " + getStatusText(newStatus),
-                adminId, adminName, "ADMIN",
-                "AdminOrderController.updateOrderStatus",
-                "orderId=" + orderId + ", oldStatus=" + oldStatus + ", newStatus=" + newStatus + ", reason=" + reason,
-                null, 0L, null, "SUCCESS"
+        if (success) {
+            SystemLogHelper.logUpdate(
+                "订单管理",
+                "修改订单状态：" + orderId + " 从 " + getStatusText(oldStatus) + " 到 " + getStatusText(newStatus),
+                AdminContext.getAdminId(),
+                AdminContext.getAdminUsername(),
+                Map.of("orderId", orderId, "oldStatus", oldStatus, "newStatus", newStatus)
             );
         }
 
@@ -256,16 +250,13 @@ public class AdminOrderController {
         }
 
         // 记录操作日志
-        if (systemLogService != null) {
-            Long adminId = AdminContext.getAdminId();
-            String adminName = AdminContext.getAdminUsername();
-
-            systemLogService.logOperation(
-                "UPDATE", "ORDER", "批量修改订单状态：" + successCount + "个成功，" + failCount + "个失败",
-                adminId, adminName, "ADMIN",
-                "AdminOrderController.batchUpdateOrderStatus",
-                "orderIds=" + orderIds.size() + ", newStatus=" + newStatus,
-                null, 0L, null, failCount == 0 ? "SUCCESS" : "PARTIAL"
+        if (successCount > 0) {
+            SystemLogHelper.logUpdate(
+                "订单管理",
+                "批量修改订单状态：" + successCount + "个成功",
+                AdminContext.getAdminId(),
+                AdminContext.getAdminUsername(),
+                Map.of("totalCount", orderIds.size(), "successCount", successCount, "failCount", failCount)
             );
         }
 

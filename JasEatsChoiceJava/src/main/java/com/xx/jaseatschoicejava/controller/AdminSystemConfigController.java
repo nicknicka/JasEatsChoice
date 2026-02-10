@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.xx.jaseatschoicejava.entity.SystemConfig;
 import com.xx.jaseatschoicejava.service.SystemConfigService;
-import com.xx.jaseatschoicejava.service.SystemLogService;
+import com.xx.jaseatschoicejava.util.SystemLogHelper;
 import com.xx.jaseatschoicejava.util.AdminContext;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -35,9 +35,6 @@ public class AdminSystemConfigController {
 
     @Autowired
     private SystemConfigService systemConfigService;
-
-    @Autowired(required = false)
-    private SystemLogService systemLogService;
 
     /**
      * 获取配置列表（分页）
@@ -194,16 +191,13 @@ public class AdminSystemConfigController {
         boolean success = systemConfigService.save(config);
 
         // 记录操作日志
-        if (success && systemLogService != null) {
-            Long adminId = AdminContext.getAdminId();
-            String adminName = AdminContext.getAdminUsername();
-
-            systemLogService.logOperation(
-                "CREATE", "SYSTEM_CONFIG", "创建系统配置：" + configName,
-                adminId, adminName, "ADMIN",
-                "AdminSystemConfigController.createConfig",
-                "configKey=" + configKey + ", configGroup=" + configGroup,
-                null, 0L, null, "SUCCESS"
+        if (success) {
+            SystemLogHelper.logCreate(
+                "系统配置",
+                "创建系统配置：" + configName,
+                AdminContext.getAdminId(),
+                AdminContext.getAdminUsername(),
+                Map.of("configKey", configKey, "configGroup", configGroup)
             );
         }
 
@@ -258,16 +252,13 @@ public class AdminSystemConfigController {
         }
 
         // 记录操作日志
-        if (success && systemLogService != null) {
-            Long adminId = AdminContext.getAdminId();
-            String adminName = AdminContext.getAdminUsername();
-
-            systemLogService.logOperation(
-                "UPDATE", "SYSTEM_CONFIG", "更新系统配置：" + config.getConfigName(),
-                adminId, adminName, "ADMIN",
-                "AdminSystemConfigController.updateConfig",
-                "configKey=" + config.getConfigKey(),
-                null, 0L, null, "SUCCESS"
+        if (success) {
+            SystemLogHelper.logUpdate(
+                "系统配置",
+                "更新系统配置：" + config.getConfigName(),
+                AdminContext.getAdminId(),
+                AdminContext.getAdminUsername(),
+                Map.of("configKey", config.getConfigKey())
             );
         }
 
@@ -314,16 +305,13 @@ public class AdminSystemConfigController {
         }
 
         // 记录操作日志
-        if (success && systemLogService != null) {
-            Long adminId = AdminContext.getAdminId();
-            String adminName = AdminContext.getAdminUsername();
-
-            systemLogService.logOperation(
-                "DELETE", "SYSTEM_CONFIG", "删除系统配置：" + config.getConfigName(),
-                adminId, adminName, "ADMIN",
-                "AdminSystemConfigController.deleteConfig",
-                "configKey=" + config.getConfigKey(),
-                null, 0L, null, "SUCCESS"
+        if (success) {
+            SystemLogHelper.logDelete(
+                "系统配置",
+                "删除系统配置：" + config.getConfigName(),
+                AdminContext.getAdminId(),
+                AdminContext.getAdminUsername(),
+                Map.of("configKey", config.getConfigKey())
             );
         }
 
@@ -381,16 +369,13 @@ public class AdminSystemConfigController {
         systemConfigService.refreshConfigCache();
 
         // 记录操作日志
-        if (systemLogService != null && successCount > 0) {
-            Long adminId = AdminContext.getAdminId();
-            String adminName = AdminContext.getAdminUsername();
-
-            systemLogService.logOperation(
-                "UPDATE", "SYSTEM_CONFIG", "批量更新系统配置：" + configGroup + "，" + successCount + "个成功，" + failCount + "个失败",
-                adminId, adminName, "ADMIN",
-                "AdminSystemConfigController.batchUpdateConfigs",
-                "configGroup=" + configGroup + ", count=" + configs.size(),
-                null, 0L, null, failCount == 0 ? "SUCCESS" : "PARTIAL"
+        if (successCount > 0) {
+            SystemLogHelper.logUpdate(
+                "系统配置",
+                "批量更新系统配置：" + configGroup + "，" + successCount + "个成功",
+                AdminContext.getAdminId(),
+                AdminContext.getAdminUsername(),
+                Map.of("configGroup", configGroup, "totalCount", configs.size(), "successCount", successCount)
             );
         }
 
@@ -412,18 +397,13 @@ public class AdminSystemConfigController {
         systemConfigService.refreshConfigCache();
 
         // 记录操作日志
-        if (systemLogService != null) {
-            Long adminId = AdminContext.getAdminId();
-            String adminName = AdminContext.getAdminUsername();
-
-            systemLogService.logOperation(
-                "UPDATE", "SYSTEM_CONFIG", "刷新系统配置缓存",
-                adminId, adminName, "ADMIN",
-                "AdminSystemConfigController.refreshConfigCache",
-                null,
-                null, 0L, null, "SUCCESS"
-            );
-        }
+        SystemLogHelper.logUpdate(
+            "系统配置",
+            "刷新系统配置缓存",
+            AdminContext.getAdminId(),
+            AdminContext.getAdminUsername(),
+            null
+        );
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);

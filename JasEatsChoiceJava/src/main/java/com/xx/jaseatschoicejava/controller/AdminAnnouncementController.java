@@ -5,8 +5,8 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.xx.jaseatschoicejava.entity.Announcement;
 import com.xx.jaseatschoicejava.service.AnnouncementService;
-import com.xx.jaseatschoicejava.service.SystemLogService;
 import com.xx.jaseatschoicejava.util.AdminContext;
+import com.xx.jaseatschoicejava.util.SystemLogHelper;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.slf4j.Logger;
@@ -35,8 +35,6 @@ public class AdminAnnouncementController {
     @Autowired
     private AnnouncementService announcementService;
 
-    @Autowired(required = false)
-    private SystemLogService systemLogService;
 
     /**
      * 获取公告列表（分页）
@@ -196,16 +194,13 @@ public class AdminAnnouncementController {
         boolean success = announcementService.save(announcement);
 
         // 记录操作日志
-        if (success && systemLogService != null) {
-            Long adminId = AdminContext.getAdminId();
-            String adminName = AdminContext.getAdminUsername();
-
-            systemLogService.logOperation(
-                "CREATE", "ANNOUNCEMENT", "创建系统公告：" + title,
-                adminId, adminName, "ADMIN",
-                "AdminAnnouncementController.createAnnouncement",
-                "title=" + title + ", type=" + announcement.getType() + ", priority=" + announcement.getPriority(),
-                null, 0L, null, "SUCCESS"
+        if (success) {
+            SystemLogHelper.logCreate(
+                "公告管理",
+                "创建系统公告：" + title,
+                AdminContext.getAdminId(),
+                AdminContext.getAdminUsername(),
+                Map.of("title", title, "type", announcement.getType(), "priority", announcement.getPriority())
             );
         }
 
@@ -281,16 +276,13 @@ public class AdminAnnouncementController {
         boolean success = announcementService.updateById(announcement);
 
         // 记录操作日志
-        if (success && systemLogService != null) {
-            Long adminId = AdminContext.getAdminId();
-            String adminName = AdminContext.getAdminUsername();
-
-            systemLogService.logOperation(
-                "UPDATE", "ANNOUNCEMENT", "更新系统公告：" + title,
-                adminId, adminName, "ADMIN",
-                "AdminAnnouncementController.updateAnnouncement",
-                "announcementId=" + announcementId,
-                null, 0L, null, "SUCCESS"
+        if (success) {
+            SystemLogHelper.logUpdate(
+                "公告管理",
+                "更新系统公告：" + title,
+                AdminContext.getAdminId(),
+                AdminContext.getAdminUsername(),
+                Map.of("announcementId", announcementId)
             );
         }
 
@@ -331,16 +323,13 @@ public class AdminAnnouncementController {
         boolean success = announcementService.removeById(announcementId);
 
         // 记录操作日志
-        if (success && systemLogService != null) {
-            Long adminId = AdminContext.getAdminId();
-            String adminName = AdminContext.getAdminUsername();
-
-            systemLogService.logOperation(
-                "DELETE", "ANNOUNCEMENT", "删除系统公告：" + announcement.getTitle(),
-                adminId, adminName, "ADMIN",
-                "AdminAnnouncementController.deleteAnnouncement",
-                "announcementId=" + announcementId,
-                null, 0L, null, "SUCCESS"
+        if (success) {
+            SystemLogHelper.logDelete(
+                "公告管理",
+                "删除系统公告：" + announcement.getTitle(),
+                AdminContext.getAdminId(),
+                AdminContext.getAdminUsername(),
+                Map.of("announcementId", announcementId)
             );
         }
 
@@ -387,16 +376,13 @@ public class AdminAnnouncementController {
         }
 
         // 记录操作日志
-        if (systemLogService != null && successCount > 0) {
-            Long adminId = AdminContext.getAdminId();
-            String adminName = AdminContext.getAdminUsername();
-
-            systemLogService.logOperation(
-                "DELETE", "ANNOUNCEMENT", "批量删除系统公告：" + successCount + "个成功，" + failCount + "个失败",
-                adminId, adminName, "ADMIN",
-                "AdminAnnouncementController.batchDeleteAnnouncements",
-                "totalCount=" + announcementIds.size(),
-                null, 0L, null, failCount == 0 ? "SUCCESS" : "PARTIAL"
+        if (successCount > 0) {
+            SystemLogHelper.logDelete(
+                "公告管理",
+                "批量删除系统公告：" + successCount + "个成功",
+                AdminContext.getAdminId(),
+                AdminContext.getAdminUsername(),
+                Map.of("totalCount", announcementIds.size(), "successCount", successCount, "failCount", failCount)
             );
         }
 
@@ -439,10 +425,7 @@ public class AdminAnnouncementController {
         boolean success = announcementService.updateById(announcement);
 
         // 记录操作日志
-        if (success && systemLogService != null) {
-            Long adminId = AdminContext.getAdminId();
-            String adminName = AdminContext.getAdminUsername();
-
+        if (success) {
             String operation;
             if ("active".equals(status)) {
                 operation = "发布";
@@ -452,12 +435,12 @@ public class AdminAnnouncementController {
                 operation = "下线";
             }
 
-            systemLogService.logOperation(
-                "UPDATE", "ANNOUNCEMENT", operation + "系统公告：" + announcement.getTitle(),
-                adminId, adminName, "ADMIN",
-                "AdminAnnouncementController.updateAnnouncementStatus",
-                "announcementId=" + announcementId + ", status=" + status,
-                null, 0L, null, "SUCCESS"
+            SystemLogHelper.logUpdate(
+                "公告管理",
+                operation + "系统公告：" + announcement.getTitle(),
+                AdminContext.getAdminId(),
+                AdminContext.getAdminUsername(),
+                Map.of("announcementId", announcementId, "status", status)
             );
         }
 

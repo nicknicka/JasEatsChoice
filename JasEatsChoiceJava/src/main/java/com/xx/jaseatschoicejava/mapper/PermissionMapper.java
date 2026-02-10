@@ -18,7 +18,7 @@ public interface PermissionMapper extends BaseMapper<Permission> {
      * 根据角色ID查询权限编码列表
      */
     @Select("SELECT p.permission_code FROM t_permission p " +
-            "INNER JOIN t_role_permission rp ON p.permission_id = rp.permission_id " +
+            "INNER JOIN t_role_permission_relation rp ON p.permission_id = rp.permission_id " +
             "WHERE rp.role_id = #{roleId} AND p.status = 'ACTIVE'")
     List<String> selectPermissionCodesByRoleId(@Param("roleId") Long roleId);
 
@@ -26,7 +26,7 @@ public interface PermissionMapper extends BaseMapper<Permission> {
      * 根据角色ID查询权限列表
      */
     @Select("SELECT p.* FROM t_permission p " +
-            "INNER JOIN t_role_permission rp ON p.permission_id = rp.permission_id " +
+            "INNER JOIN t_role_permission_relation rp ON p.permission_id = rp.permission_id " +
             "WHERE rp.role_id = #{roleId} AND p.status = 'ACTIVE' " +
             "ORDER BY p.sort_order")
     List<Permission> selectPermissionsByRoleId(@Param("roleId") Long roleId);

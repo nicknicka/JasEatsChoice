@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.xx.jaseatschoicejava.entity.Merchant;
 import com.xx.jaseatschoicejava.service.MerchantService;
-import com.xx.jaseatschoicejava.service.SystemLogService;
+import com.xx.jaseatschoicejava.util.SystemLogHelper;
 import com.xx.jaseatschoicejava.util.AdminContext;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -28,9 +28,6 @@ public class AdminMerchantController {
 
     @Autowired
     private MerchantService merchantService;
-
-    @Autowired(required = false)
-    private SystemLogService systemLogService;
 
     /**
      * 获取商家列表（分页）
@@ -132,15 +129,14 @@ public class AdminMerchantController {
         boolean success = merchantService.updateById(merchant);
 
         // 记录操作日志
-        if (systemLogService != null) {
-            String adminName = AdminContext.getAdminUsername();
+        if (success) {
             String operation = "APPROVED".equals(status) ? "审核通过" : "审核拒绝";
-            systemLogService.logOperation(
-                "UPDATE", "MERCHANT", operation + "商家：" + merchant.getName(),
-                adminId, adminName, "ADMIN",
-                "AdminMerchantController.auditMerchant",
-                "merchantId=" + merchantId + ", status=" + status,
-                null, 0L, null, "SUCCESS"
+            SystemLogHelper.logUpdate(
+                "商家管理",
+                operation + "商家：" + merchant.getShopName(),
+                AdminContext.getAdminId(),
+                AdminContext.getAdminUsername(),
+                Map.of("merchantId", merchantId, "status", status)
             );
         }
 

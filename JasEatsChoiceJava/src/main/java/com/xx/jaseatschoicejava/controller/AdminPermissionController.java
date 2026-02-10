@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.xx.jaseatschoicejava.entity.Permission;
 import com.xx.jaseatschoicejava.service.PermissionService;
-import com.xx.jaseatschoicejava.service.SystemLogService;
+import com.xx.jaseatschoicejava.util.SystemLogHelper;
 import com.xx.jaseatschoicejava.util.AdminContext;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -29,9 +29,6 @@ public class AdminPermissionController {
 
     @Autowired
     private PermissionService permissionService;
-
-    @Autowired(required = false)
-    private SystemLogService systemLogService;
 
     /**
      * 分页查询权限列表
@@ -163,16 +160,13 @@ public class AdminPermissionController {
         boolean success = permissionService.save(permission);
 
         // 记录操作日志
-        if (success && systemLogService != null) {
-            Long adminId = AdminContext.getAdminId();
-            String adminName = AdminContext.getAdminUsername();
-
-            systemLogService.logOperation(
-                "CREATE", "PERMISSION", "创建权限：" + permissionName,
-                adminId, adminName, "ADMIN",
-                "AdminPermissionController.createPermission",
-                "permissionName=" + permissionName + ", permissionCode=" + permissionCode,
-                null, 0L, null, "SUCCESS"
+        if (success) {
+            SystemLogHelper.logCreate(
+                "权限管理",
+                "创建权限：" + permissionName,
+                AdminContext.getAdminId(),
+                AdminContext.getAdminUsername(),
+                Map.of("permissionName", permissionName, "permissionCode", permissionCode)
             );
         }
 
@@ -227,16 +221,13 @@ public class AdminPermissionController {
         boolean success = permissionService.updateById(permission);
 
         // 记录操作日志
-        if (success && systemLogService != null) {
-            Long adminId = AdminContext.getAdminId();
-            String adminName = AdminContext.getAdminUsername();
-
-            systemLogService.logOperation(
-                "UPDATE", "PERMISSION", "更新权限：" + permissionName,
-                adminId, adminName, "ADMIN",
-                "AdminPermissionController.updatePermission",
-                "permissionId=" + permissionId,
-                null, 0L, null, "SUCCESS"
+        if (success) {
+            SystemLogHelper.logUpdate(
+                "权限管理",
+                "更新权限：" + permissionName,
+                AdminContext.getAdminId(),
+                AdminContext.getAdminUsername(),
+                Map.of("permissionId", permissionId)
             );
         }
 
@@ -283,16 +274,13 @@ public class AdminPermissionController {
         boolean success = permissionService.removeById(permissionId);
 
         // 记录操作日志
-        if (success && systemLogService != null) {
-            Long adminId = AdminContext.getAdminId();
-            String adminName = AdminContext.getAdminUsername();
-
-            systemLogService.logOperation(
-                "DELETE", "PERMISSION", "删除权限：" + permission.getPermissionName(),
-                adminId, adminName, "ADMIN",
-                "AdminPermissionController.deletePermission",
-                "permissionId=" + permissionId,
-                null, 0L, null, "SUCCESS"
+        if (success) {
+            SystemLogHelper.logDelete(
+                "权限管理",
+                "删除权限：" + permission.getPermissionName(),
+                AdminContext.getAdminId(),
+                AdminContext.getAdminUsername(),
+                Map.of("permissionId", permissionId)
             );
         }
 

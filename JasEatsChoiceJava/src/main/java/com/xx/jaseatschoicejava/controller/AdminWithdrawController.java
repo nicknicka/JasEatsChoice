@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.xx.jaseatschoicejava.entity.User;
 import com.xx.jaseatschoicejava.entity.WithdrawRecord;
-import com.xx.jaseatschoicejava.service.SystemLogService;
+import com.xx.jaseatschoicejava.util.SystemLogHelper;
 import com.xx.jaseatschoicejava.service.UserService;
 import com.xx.jaseatschoicejava.service.WalletService;
 import com.xx.jaseatschoicejava.service.WithdrawRecordService;
@@ -42,9 +42,6 @@ public class AdminWithdrawController {
 
     @Autowired(required = false)
     private WalletService walletService;
-
-    @Autowired(required = false)
-    private SystemLogService systemLogService;
 
     /**
      * 获取提现记录列表（分页）
@@ -135,18 +132,14 @@ public class AdminWithdrawController {
 
             if (success) {
                 // 记录操作日志
-                if (systemLogService != null) {
-                    String adminName = AdminContext.getAdminUsername();
-                    String operation = "APPROVE".equals(decision) ? "审核通过" : "审核拒绝";
-
-                    systemLogService.logOperation(
-                        "UPDATE", "WITHDRAW", operation + "提现申请：" + record.getWithdrawNo(),
-                        adminId, adminName, "ADMIN",
-                        "AdminWithdrawController.processWithdraw",
-                        "withdrawId=" + withdrawId + ", decision=" + decision + ", amount=" + record.getAmount(),
-                        null, 0L, null, "SUCCESS"
-                    );
-                }
+                String operation = "APPROVE".equals(decision) ? "审核通过" : "审核拒绝";
+                SystemLogHelper.logUpdate(
+                    "提现管理",
+                    operation + "提现申请：" + record.getWithdrawNo(),
+                    AdminContext.getAdminId(),
+                    AdminContext.getAdminUsername(),
+                    Map.of("withdrawId", withdrawId, "decision", decision, "amount", record.getAmount())
+                );
 
                 Map<String, Object> response = new HashMap<>();
                 response.put("success", true);
@@ -162,17 +155,13 @@ public class AdminWithdrawController {
             log.error("处理提现审核失败: {}", withdrawId, e);
 
             // 记录失败日志
-            if (systemLogService != null) {
-                String adminName = AdminContext.getAdminUsername();
-
-                systemLogService.logOperation(
-                    "UPDATE", "WITHDRAW", "审核提现失败：" + record.getWithdrawNo(),
-                    adminId, adminName, "ADMIN",
-                    "AdminWithdrawController.processWithdraw",
-                    "withdrawId=" + withdrawId + ", error=" + e.getMessage(),
-                    null, 0L, null, "FAILURE"
-                );
-            }
+            SystemLogHelper.logError(
+                "提现管理",
+                "审核提现失败：" + record.getWithdrawNo(),
+                AdminContext.getAdminId(),
+                AdminContext.getAdminUsername(),
+                e
+            );
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
@@ -224,15 +213,13 @@ public class AdminWithdrawController {
         }
 
         // 记录操作日志
-        if (systemLogService != null && successCount > 0) {
-            String adminName = AdminContext.getAdminUsername();
-
-            systemLogService.logOperation(
-                "UPDATE", "WITHDRAW", "批量审核提现：" + successCount + "个成功，" + failCount + "个失败",
-                adminId, adminName, "ADMIN",
-                "AdminWithdrawController.batchProcessWithdraw",
-                "totalCount=" + withdrawIds.size() + ", decision=" + decision,
-                null, 0L, null, failCount == 0 ? "SUCCESS" : "PARTIAL"
+        if (successCount > 0) {
+            SystemLogHelper.logUpdate(
+                "提现管理",
+                "批量审核提现：" + successCount + "个成功",
+                AdminContext.getAdminId(),
+                AdminContext.getAdminUsername(),
+                Map.of("totalCount", withdrawIds.size(), "successCount", successCount, "failCount", failCount)
             );
         }
 
@@ -281,18 +268,13 @@ public class AdminWithdrawController {
 
         if (success) {
             // 记录操作日志
-            if (systemLogService != null) {
-                Long adminId = AdminContext.getAdminId();
-                String adminName = AdminContext.getAdminUsername();
-
-                systemLogService.logOperation(
-                    "UPDATE", "WITHDRAW", "完成提现：" + record.getWithdrawNo(),
-                    adminId, adminName, "ADMIN",
-                    "AdminWithdrawController.completeWithdraw",
-                    "withdrawId=" + withdrawId,
-                    null, 0L, null, "SUCCESS"
-                );
-            }
+            SystemLogHelper.logUpdate(
+                "提现管理",
+                "完成提现：" + record.getWithdrawNo(),
+                AdminContext.getAdminId(),
+                AdminContext.getAdminUsername(),
+                Map.of("withdrawId", withdrawId)
+            );
         }
 
         Map<String, Object> response = new HashMap<>();
@@ -353,18 +335,13 @@ public class AdminWithdrawController {
 
         if (success) {
             // 记录操作日志
-            if (systemLogService != null) {
-                Long adminId = AdminContext.getAdminId();
-                String adminName = AdminContext.getAdminUsername();
-
-                systemLogService.logOperation(
-                    "UPDATE", "WITHDRAW", "提现失败并退款：" + record.getWithdrawNo(),
-                    adminId, adminName, "ADMIN",
-                    "AdminWithdrawController.failWithdraw",
-                    "withdrawId=" + withdrawId + ", reason=" + reason,
-                    null, 0L, null, "SUCCESS"
-                );
-            }
+            SystemLogHelper.logUpdate(
+                "提现管理",
+                "提现失败并退款：" + record.getWithdrawNo(),
+                AdminContext.getAdminId(),
+                AdminContext.getAdminUsername(),
+                Map.of("withdrawId", withdrawId, "reason", reason)
+            );
         }
 
         Map<String, Object> response = new HashMap<>();

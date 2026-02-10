@@ -5,8 +5,8 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.xx.jaseatschoicejava.entity.HotTopic;
 import com.xx.jaseatschoicejava.service.HotTopicService;
-import com.xx.jaseatschoicejava.service.SystemLogService;
 import com.xx.jaseatschoicejava.util.AdminContext;
+import com.xx.jaseatschoicejava.util.SystemLogHelper;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.slf4j.Logger;
@@ -34,9 +34,6 @@ public class HotTopicAdminController {
 
     @Autowired
     private HotTopicService hotTopicService;
-
-    @Autowired(required = false)
-    private SystemLogService systemLogService;
 
     /**
      * 分页查询热点列表
@@ -148,18 +145,13 @@ public class HotTopicAdminController {
                 log.info("创建热点成功: {}", hotTopic.getContent());
 
                 // 记录操作日志
-                if (systemLogService != null) {
-                    Long adminId = AdminContext.getAdminId();
-                    String adminName = AdminContext.getAdminUsername();
-
-                    systemLogService.logOperation(
-                        "CREATE", "HOT_TOPIC", "创建热点：" + hotTopic.getContent(),
-                        adminId, adminName, "ADMIN",
-                        "HotTopicAdminController.create",
-                        "content=" + hotTopic.getContent(),
-                        null, 0L, null, "SUCCESS"
-                    );
-                }
+                SystemLogHelper.logCreate(
+                    "热点管理",
+                    "创建热点：" + hotTopic.getContent(),
+                    AdminContext.getAdminId(),
+                    AdminContext.getAdminUsername(),
+                    Map.of("content", hotTopic.getContent())
+                );
 
                 Map<String, Object> response = new HashMap<>();
                 response.put("success", true);
@@ -199,18 +191,13 @@ public class HotTopicAdminController {
                 log.info("更新热点成功: {}", id);
 
                 // 记录操作日志
-                if (systemLogService != null) {
-                    Long adminId = AdminContext.getAdminId();
-                    String adminName = AdminContext.getAdminUsername();
-
-                    systemLogService.logOperation(
-                        "UPDATE", "HOT_TOPIC", "更新热点：" + id,
-                        adminId, adminName, "ADMIN",
-                        "HotTopicAdminController.update",
-                        "id=" + id,
-                        null, 0L, null, "SUCCESS"
-                    );
-                }
+                SystemLogHelper.logUpdate(
+                    "热点管理",
+                    "更新热点：" + id,
+                    AdminContext.getAdminId(),
+                    AdminContext.getAdminUsername(),
+                    Map.of("id", id)
+                );
 
                 Map<String, Object> response = new HashMap<>();
                 response.put("success", true);
@@ -245,18 +232,13 @@ public class HotTopicAdminController {
                 log.info("删除热点成功: {}", id);
 
                 // 记录操作日志
-                if (systemLogService != null) {
-                    Long adminId = AdminContext.getAdminId();
-                    String adminName = AdminContext.getAdminUsername();
-
-                    systemLogService.logOperation(
-                        "DELETE", "HOT_TOPIC", "删除热点：" + id,
-                        adminId, adminName, "ADMIN",
-                        "HotTopicAdminController.delete",
-                        "id=" + id,
-                        null, 0L, null, "SUCCESS"
-                    );
-                }
+                SystemLogHelper.logDelete(
+                    "热点管理",
+                    "删除热点：" + id,
+                    AdminContext.getAdminId(),
+                    AdminContext.getAdminUsername(),
+                    Map.of("id", id)
+                );
 
                 Map<String, Object> response = new HashMap<>();
                 response.put("success", true);
@@ -296,17 +278,13 @@ public class HotTopicAdminController {
                 log.info("审核热点成功: {}, 通过: {}", id, approved);
 
                 // 记录操作日志
-                if (systemLogService != null) {
-                    String adminName = AdminContext.getAdminUsername();
-
-                    systemLogService.logOperation(
-                        "REVIEW", "HOT_TOPIC", "审核热点：" + id + (approved ? "通过" : "拒绝"),
-                        reviewerId, adminName, "ADMIN",
-                        "HotTopicAdminController.review",
-                        "id=" + id + ", approved=" + approved + ", comment=" + comment,
-                        null, 0L, null, "SUCCESS"
-                    );
-                }
+                SystemLogHelper.logUpdate(
+                    "热点管理",
+                    "审核热点：" + id + (approved ? "通过" : "拒绝"),
+                    AdminContext.getAdminId(),
+                    AdminContext.getAdminUsername(),
+                    Map.of("id", id, "approved", approved, "comment", comment)
+                );
 
                 Map<String, Object> response = new HashMap<>();
                 response.put("success", true);
@@ -345,16 +323,13 @@ public class HotTopicAdminController {
             log.info("批量删除热点完成，成功: {}/{}", successCount, ids.size());
 
             // 记录操作日志
-            if (systemLogService != null && successCount > 0) {
-                Long adminId = AdminContext.getAdminId();
-                String adminName = AdminContext.getAdminUsername();
-
-                systemLogService.logOperation(
-                    "DELETE", "HOT_TOPIC", "批量删除热点：" + successCount + "条",
-                    adminId, adminName, "ADMIN",
-                    "HotTopicAdminController.batchDelete",
-                    "count=" + ids.size(),
-                    null, 0L, null, "SUCCESS"
+            if (successCount > 0) {
+                SystemLogHelper.logDelete(
+                    "热点管理",
+                    "批量删除热点：" + successCount + "条",
+                    AdminContext.getAdminId(),
+                    AdminContext.getAdminUsername(),
+                    Map.of("totalCount", ids.size(), "successCount", successCount)
                 );
             }
 

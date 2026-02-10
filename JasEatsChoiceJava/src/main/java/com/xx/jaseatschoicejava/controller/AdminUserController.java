@@ -5,8 +5,8 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.xx.jaseatschoicejava.entity.User;
 import com.xx.jaseatschoicejava.service.UserService;
-import com.xx.jaseatschoicejava.service.SystemLogService;
 import com.xx.jaseatschoicejava.util.AdminContext;
+import com.xx.jaseatschoicejava.util.SystemLogHelper;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,8 +31,6 @@ public class AdminUserController {
     @Autowired
     private UserService userService;
 
-    @Autowired(required = false)
-    private SystemLogService systemLogService;
 
     /**
      * 获取用户列表（分页）
@@ -153,18 +151,13 @@ public class AdminUserController {
         boolean success = userService.updateById(user);
 
         // 记录操作日志
-        if (success && systemLogService != null) {
-            Long adminId = AdminContext.getAdminId();
-            String adminName = AdminContext.getAdminUsername();
-            String newInfo = String.format("昵称:%s,手机:%s,邮箱:%s",
-                user.getNickname(), user.getPhone(), user.getEmail());
-
-            systemLogService.logOperation(
-                "UPDATE", "USER", "编辑用户信息：" + user.getNickname(),
-                adminId, adminName, "ADMIN",
-                "AdminUserController.updateUser",
-                "userId=" + userId,
-                null, 0L, null, "SUCCESS"
+        if (success) {
+            SystemLogHelper.logUpdate(
+                "用户管理",
+                "编辑用户信息：" + user.getNickname(),
+                AdminContext.getAdminId(),
+                AdminContext.getAdminUsername(),
+                Map.of("userId", userId, "nickname", user.getNickname(), "phone", user.getPhone())
             );
         }
 
@@ -203,18 +196,13 @@ public class AdminUserController {
         String reason = request.get("reason");
 
         // 记录操作日志
-        if (systemLogService != null) {
-            Long adminId = AdminContext.getAdminId();
-            String adminName = AdminContext.getAdminUsername();
-
-            systemLogService.logOperation(
-                "UPDATE", "USER", "修改用户状态：" + user.getNickname() + " -> " + status,
-                adminId, adminName, "ADMIN",
-                "AdminUserController.updateUserStatus",
-                "userId=" + userId + ", status=" + status + ", reason=" + reason,
-                null, 0L, null, "SUCCESS"
-            );
-        }
+        SystemLogHelper.logUpdate(
+            "用户管理",
+            "修改用户状态：" + user.getNickname() + " -> " + status,
+            AdminContext.getAdminId(),
+            AdminContext.getAdminUsername(),
+            Map.of("userId", userId, "status", status, "reason", reason)
+        );
 
         // 注意：User表需要添加status字段，这里只是示例
         // 实际实现需要根据业务需求调整
@@ -242,16 +230,13 @@ public class AdminUserController {
         boolean success = userService.removeById(userId);
 
         // 记录操作日志
-        if (success && systemLogService != null) {
-            Long adminId = AdminContext.getAdminId();
-            String adminName = AdminContext.getAdminUsername();
-
-            systemLogService.logOperation(
-                "DELETE", "USER", "删除用户：" + user.getNickname(),
-                adminId, adminName, "ADMIN",
-                "AdminUserController.deleteUser",
-                "userId=" + userId,
-                null, 0L, null, "SUCCESS"
+        if (success) {
+            SystemLogHelper.logDelete(
+                "用户管理",
+                "删除用户：" + user.getNickname(),
+                AdminContext.getAdminId(),
+                AdminContext.getAdminUsername(),
+                Map.of("userId", userId, "nickname", user.getNickname())
             );
         }
 

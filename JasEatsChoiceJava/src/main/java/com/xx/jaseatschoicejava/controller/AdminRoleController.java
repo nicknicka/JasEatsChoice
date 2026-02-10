@@ -5,8 +5,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.xx.jaseatschoicejava.entity.Permission;
 import com.xx.jaseatschoicejava.entity.Role;
 import com.xx.jaseatschoicejava.service.RoleService;
-import com.xx.jaseatschoicejava.service.SystemLogService;
 import com.xx.jaseatschoicejava.util.AdminContext;
+import com.xx.jaseatschoicejava.util.SystemLogHelper;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,9 +30,6 @@ public class AdminRoleController {
 
     @Autowired
     private RoleService roleService;
-
-    @Autowired(required = false)
-    private SystemLogService systemLogService;
 
     /**
      * 分页查询角色列表
@@ -137,16 +134,13 @@ public class AdminRoleController {
         boolean success = roleService.save(role);
 
         // 记录操作日志
-        if (success && systemLogService != null) {
-            Long adminId = AdminContext.getAdminId();
-            String adminName = AdminContext.getAdminUsername();
-
-            systemLogService.logOperation(
-                "CREATE", "ROLE", "创建角色：" + roleName,
-                adminId, adminName, "ADMIN",
-                "AdminRoleController.createRole",
-                "roleName=" + roleName + ", roleCode=" + roleCode,
-                null, 0L, null, "SUCCESS"
+        if (success) {
+            SystemLogHelper.logCreate(
+                "角色管理",
+                "创建角色：" + roleName,
+                AdminContext.getAdminId(),
+                AdminContext.getAdminUsername(),
+                Map.of("roleName", roleName, "roleCode", roleCode, "description", description)
             );
         }
 
@@ -195,16 +189,13 @@ public class AdminRoleController {
         boolean success = roleService.updateById(role);
 
         // 记录操作日志
-        if (success && systemLogService != null) {
-            Long adminId = AdminContext.getAdminId();
-            String adminName = AdminContext.getAdminUsername();
-
-            systemLogService.logOperation(
-                "UPDATE", "ROLE", "更新角色：" + roleName,
-                adminId, adminName, "ADMIN",
-                "AdminRoleController.updateRole",
-                "roleId=" + roleId,
-                null, 0L, null, "SUCCESS"
+        if (success) {
+            SystemLogHelper.logUpdate(
+                "角色管理",
+                "更新角色：" + roleName,
+                AdminContext.getAdminId(),
+                AdminContext.getAdminUsername(),
+                Map.of("roleId", roleId, "roleName", roleName)
             );
         }
 
@@ -238,16 +229,13 @@ public class AdminRoleController {
         boolean success = roleService.removeById(roleId);
 
         // 记录操作日志
-        if (success && systemLogService != null) {
-            Long adminId = AdminContext.getAdminId();
-            String adminName = AdminContext.getAdminUsername();
-
-            systemLogService.logOperation(
-                "DELETE", "ROLE", "删除角色：" + role.getRoleName(),
-                adminId, adminName, "ADMIN",
-                "AdminRoleController.deleteRole",
-                "roleId=" + roleId,
-                null, 0L, null, "SUCCESS"
+        if (success) {
+            SystemLogHelper.logDelete(
+                "角色管理",
+                "删除角色：" + role.getRoleName(),
+                AdminContext.getAdminId(),
+                AdminContext.getAdminUsername(),
+                Map.of("roleId", roleId, "roleName", role.getRoleName())
             );
         }
 
@@ -279,17 +267,14 @@ public class AdminRoleController {
         boolean success = roleService.assignPermissions(roleId, permissionIds);
 
         // 记录操作日志
-        if (success && systemLogService != null) {
-            Long adminId = AdminContext.getAdminId();
-            String adminName = AdminContext.getAdminUsername();
+        if (success) {
             Role role = roleService.getById(roleId);
-
-            systemLogService.logOperation(
-                "UPDATE", "ROLE", "为角色【" + role.getRoleName() + "】分配" + permissionIds.size() + "个权限",
-                adminId, adminName, "ADMIN",
-                "AdminRoleController.assignPermissions",
-                "roleId=" + roleId + ", permissionCount=" + permissionIds.size(),
-                null, 0L, null, "SUCCESS"
+            SystemLogHelper.logUpdate(
+                "角色管理",
+                "为角色【" + role.getRoleName() + "】分配" + permissionIds.size() + "个权限",
+                AdminContext.getAdminId(),
+                AdminContext.getAdminUsername(),
+                Map.of("roleId", roleId, "permissionCount", permissionIds.size())
             );
         }
 
