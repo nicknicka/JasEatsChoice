@@ -138,7 +138,7 @@ import { ref, reactive, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Refresh, Download } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
-import api from '@/utils/api'
+import statisticsApi from '../../api/statistics'
 
 const dateRange = ref('7')
 const customDateRange = ref(null)
@@ -173,60 +173,39 @@ let userDistributionChart = null
 const fetchStatistics = async () => {
   loading.value = true
   try {
-    // TODO: 调用实际的统计API
-    // const response = await api.get('http://localhost:8080/api/admin/statistics/dashboard', {
-    //   params: { days: dateRange.value }
-    // })
+    // 调用统计API获取数据
+    const response = await statisticsApi.getDashboardStatistics(dateRange.value)
 
-    // 临时使用模拟数据
-    setTimeout(() => {
-      // 核心指标
-      stats.totalUsers = 15680
-      stats.newUsers = 238
-      stats.totalMerchants = 456
-      stats.newMerchants = 12
-      stats.totalOrders = 28930
-      stats.newOrders = 156
-      stats.totalRevenue = 1256800
-      stats.newRevenue = 45600
+    if (response.code === '200' && response.data) {
+      const data = response.data
 
-      // 每日数据
-      const dates = []
-      const newUsersData = []
-      const ordersData = []
-      const revenueData = []
+      // 更新核心指标
+      stats.totalUsers = data.summary.totalUsers || 0
+      stats.newUsers = data.summary.newUsers || 0
+      stats.totalMerchants = data.summary.totalMerchants || 0
+      stats.newMerchants = data.summary.newMerchants || 0
+      stats.totalOrders = data.summary.totalOrders || 0
+      stats.newOrders = data.summary.newOrders || 0
+      stats.totalRevenue = data.summary.totalRevenue || 0
+      stats.newRevenue = data.summary.newRevenue || 0
 
-      for (let i = 6; i >= 0; i--) {
-        const date = new Date()
-        date.setDate(date.getDate() - i)
-        const dateStr = date.toISOString().split('T')[0]
-        dates.push(dateStr)
-        newUsersData.push(Math.floor(Math.random() * 100) + 20)
-        ordersData.push(Math.floor(Math.random() * 200) + 50)
-        revenueData.push(Math.floor(Math.random() * 10000) + 2000)
-      }
-
-      dailyData.value = dates.map((date, index) => ({
-        date,
-        newUsers: newUsersData[index],
-        newMerchants: Math.floor(Math.random() * 10) + 1,
-        totalOrders: ordersData[index],
-        completedOrders: Math.floor(ordersData[index] * 0.8),
-        revenue: revenueData[index],
-        activeUsers: Math.floor(Math.random() * 500) + 200,
-        averageOrderAmount: revenueData[index] / (ordersData[index] * 0.8 || 1)
-      }))
+      // 更新每日数据
+      dailyData.value = data.daily || []
 
       // 渲染图表
       nextTick(() => {
-        renderUserTrendChart(dates, newUsersData)
-        renderOrderTrendChart(dates, ordersData)
-        renderRevenueTrendChart(dates, revenueData)
+        const trends = data.trends || {}
+        renderUserTrendChart(trends.dates || [], trends.newUsers || [])
+        renderOrderTrendChart(trends.dates || [], trends.orders || [])
+        renderRevenueTrendChart(trends.dates || [], trends.revenue || [])
         renderUserDistributionChart()
       })
 
       loading.value = false
-    }, 500)
+    } else {
+      ElMessage.error(response.message || '获取统计数据失败')
+      loading.value = false
+    }
   } catch (error) {
     console.error('获取统计数据失败:', error)
     ElMessage.error('获取统计数据失败')
@@ -407,9 +386,28 @@ const renderUserDistributionChart = () => {
 }
 
 // 导出数据
-const handleExport = () => {
-  ElMessage.info('导出功能开发中...')
-  // TODO: 实现数据导出
+const handleExport = async () => {
+  try {
+    const response = await statisticsApi.exportStatistics({
+      days: dateRange.value,
+      format: 'excel'
+    })
+
+    if (response.code === '200') {
+      if (response.data.downloadUrl) {
+        // 下载文件
+        window.open(response.data.downloadUrl, '_blank')
+        ElMessage.success('数据导出成功')
+      } else {
+        ElMessage.info('数据导出功能开发中，敬请期待')
+      }
+    } else {
+      ElMessage.error(response.message || '导出失败')
+    }
+  } catch (error) {
+    console.error('导出数据失败:', error)
+    ElMessage.error('导出失败，请稍后重试')
+  }
 }
 
 // 窗口大小改变时重新渲染图表

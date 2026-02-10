@@ -55,8 +55,10 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { useRouter } from 'vue-router'
 import FestivalRecommendCard from './FestivalRecommendCard.vue'
 import festivalApi from '@/api/festival'
+import { useCartStore } from '@/store/cartStore'
 
 const loading = ref(false)
 const activeTab = ref('all')
@@ -94,15 +96,32 @@ const handleTabChange = (tab) => {
 // 点击菜品
 const handleDishClick = (dish) => {
   console.log('点击菜品:', dish)
-  // TODO: 跳转到菜品详情页
+  // 跳转到菜品详情页（跳转到商家详情页并显示菜品）
+  router.push({
+    path: '/user/home/merchant-detail',
+    query: {
+      id: dish.merchantId,
+      dishId: dish.dishId
+    }
+  })
 }
 
 // 加入购物车
 const handleAddToCart = async (dish) => {
   try {
-    // TODO: 调用加入购物车API
+    const cartStore = useCartStore()
+    // 调用购物车store的添加方法
+    await cartStore.addToCart({
+      dishId: dish.dishId,
+      merchantId: dish.merchantId,
+      name: dish.dishName,
+      price: dish.price,
+      quantity: 1,
+      image: dish.image
+    })
     ElMessage.success(`已将 ${dish.dishName} 加入购物车`)
   } catch (error) {
+    console.error('加入购物车失败:', error)
     ElMessage.error('加入购物车失败')
   }
 }

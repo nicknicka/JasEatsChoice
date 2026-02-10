@@ -2011,8 +2011,8 @@ const handleCancelGroupOrder = async () => {
  * 查看历史订单
  */
 const handleViewHistory = () => {
-  ElMessage.info('历史订单功能开发中...')
-  // TODO: 实现历史订单查看功能
+  // 跳转到订单列表页面
+  router.push('/user/home/orders')
 }
 
 /**

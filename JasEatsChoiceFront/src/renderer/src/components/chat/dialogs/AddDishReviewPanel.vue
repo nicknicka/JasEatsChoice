@@ -143,6 +143,7 @@ import { ElMessage } from 'element-plus'
 import { Clock } from '@element-plus/icons-vue'
 import { ADD_DISH_CONFIG, DEFAULT_REJECT_REASONS, STATUS_TAG_MAP } from '@/constants/addDishConstants'
 import addDishApi from '@/api/addDish'
+import { useAuthStore } from '@/store/authStore'
 
 const props = defineProps({
   modelValue: Boolean,
@@ -275,8 +276,8 @@ const getStatusTagType = (status) => {
 }
 
 const getCurrentUserId = () => {
-  // TODO: 从store或localStorage获取当前用户ID
-  return 1
+  const authStore = useAuthStore()
+  return parseInt(authStore.userId || '0', 10) || 1
 }
 
 // 监听visible变化，加载数据

@@ -38,6 +38,21 @@
           </div>
         </el-card>
 
+        <!-- 配送地址卡片 -->
+        <el-card class="info-card" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span class="card-title">配送地址</span>
+              <el-tag type="info" size="small">必填</el-tag>
+            </div>
+          </template>
+
+          <address-selector
+            v-model="selectedAddress"
+            @change="handleAddressChange"
+          />
+        </el-card>
+
         <!-- 订单商品卡片 -->
         <el-card class="info-card" shadow="hover">
           <template #header>
@@ -371,10 +386,12 @@ import { useRouter } from 'vue-router'
 import { Shop, Edit, CircleCheck, Clock, Ticket, InfoFilled } from '@element-plus/icons-vue'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
 import OrderItemList from './components/OrderItemList.vue'
+import AddressSelector from '../../components/common/AddressSelector.vue'
 import walletApi from '../../api/wallet'
 import paymentApi from '../../api/payment'
 import orderApi from '../../api/order'
-// import couponApi from '../../api/coupon' // TODO: 后端优惠券API待实现，暂时注释
+import couponApi from '../../api/coupon'
+import addressApi from '../../api/address'
 import { useAuthStore } from '../../store/authStore'
 import api from '../../utils/api'
 
@@ -486,7 +503,16 @@ const submitting = ref(false)
 // 平台币余额 - 从后端获取
 const platformBalance = ref(0.0)
 
-// 初始化余额和优惠券
+// 选中的地址
+const selectedAddress = ref(null)
+
+// 地址变化处理
+const handleAddressChange = (address) => {
+  selectedAddress.value = address
+  console.log('地址已选择:', address?.fullAddress)
+}
+
+// 初始化余额、优惠券和地址
 onMounted(async () => {
   try {
     const userId = parseInt(authStore.userId || '0', 10)
@@ -498,9 +524,37 @@ onMounted(async () => {
         platformBalance.value = balanceResponse.data || 0.0
       }
 
-      // TODO: 获取用户优惠券 - 后端API待实现
-      // 暂时使用默认优惠券数据
-      console.log('使用默认优惠券数据，后端优惠券API待实现')
+      // 获取用户优惠券
+      try {
+        const couponResponse = await couponApi.getUserCoupons(userId)
+        console.log('优惠券获取响应:', couponResponse)
+        if (couponResponse.code === '200') {
+          // 过滤出可用的优惠券
+          const availableCoupons = (couponResponse.data || []).filter(
+            c => c.status === 'available' || c.status === 'valid'
+          )
+          if (availableCoupons.length > 0) {
+            discounts.value = availableCoupons
+          } else {
+            console.log('暂无可用优惠券')
+          }
+        }
+      } catch (couponError) {
+        console.error('获取优惠券失败，使用默认优惠券:', couponError)
+        // 保持使用默认优惠券数据
+      }
+
+      // 获取用户默认地址
+      try {
+        const addressResponse = await addressApi.getDefaultAddress(userId)
+        console.log('默认地址获取响应:', addressResponse)
+        if (addressResponse.code === '200' && addressResponse.data) {
+          selectedAddress.value = addressResponse.data
+          console.log('已加载默认地址:', addressResponse.data.fullAddress)
+        }
+      } catch (addressError) {
+        console.error('获取默认地址失败:', addressError)
+      }
     }
   } catch (error) {
     console.error('初始化失败:', error)
@@ -626,7 +680,7 @@ const updateCustomShare = (index, amount) => {
 }
 
 // 使用优惠
-const useDiscount = () => {
+const useDiscount = async () => {
   const discount = discounts.value[0]
   if (!discount || !discount.available || discount.used) return
 
@@ -637,6 +691,18 @@ const useDiscount = () => {
   if (currentAmount < minAmount) {
     ElMessage.warning(`此优惠券需满${minAmount}元可用，当前订单金额为¥${currentAmount.toFixed(2)}`)
     return
+  }
+
+  // 检查优惠券是否可用（调用后端API）
+  try {
+    const checkResponse = await couponApi.checkCouponAvailable(discount.id, currentAmount)
+    if (checkResponse.code !== '200' || !checkResponse.data.available) {
+      ElMessage.warning(checkResponse.message || '优惠券不可用')
+      return
+    }
+  } catch (error) {
+    console.error('检查优惠券失败:', error)
+    // 继续执行，使用前端验证
   }
 
   selectedDiscount.value = discount
@@ -773,6 +839,12 @@ const confirmOrder = async () => {
     return
   }
 
+  // 检查是否选择了配送地址
+  if (!selectedAddress.value) {
+    ElMessage.warning('请选择配送地址')
+    return
+  }
+
   // 检查余额
   const userId = parseInt(authStore.userId || '0', 10)
   if (userId <= 0) {
@@ -836,7 +908,7 @@ const confirmOrder = async () => {
             merchantId: String(merchantId.value),
             totalAmount: finalAmount.value,
             status: 0, // 0-待支付
-            address: pendingOrder.address || '商家地址', // TODO: 从地址簿选择或使用用户默认地址
+            address: selectedAddress.value?.fullAddress || pendingOrder.address || '商家地址',
             remark: orderRemarkText || null
           },
           dishes: dishes

@@ -403,11 +403,10 @@ const viewDetails = (item) => {
       dishDialogVisible.value = true
       break
     case 'article':
-      // 文章功能提示
-      ElMessageBox.alert('文章收藏功能正在开发中，敬请期待！您可以先收藏商家和菜品。', '温馨提示', {
-        confirmButtonText: '我知道了',
-        type: 'info',
-        icon: InfoFilled
+      // 跳转到文章/教程详情页
+      router.push({
+        path: '/user/home/tutorial-detail',
+        query: { id: item.collectableId }
       })
       break
     default:

@@ -237,8 +237,20 @@ const goToEvaluate = (orderId) => {
 
 // 联系商家
 const contactMerchant = () => {
-  ElMessage.info('正在打开聊天窗口...')
-  // TODO: 实现跳转到商家聊天
+  if (!order.value?.merchantId) {
+    ElMessage.error('商家信息不存在')
+    return
+  }
+
+  // 跳转到聊天页面，并创建与商家的对话
+  router.push({
+    path: '/user/home/chat',
+    query: {
+      type: 'single',
+      targetId: order.value.merchantId,
+      targetName: order.value.merchantName || '商家'
+    }
+  })
 }
 
 // 获取当前活动步骤

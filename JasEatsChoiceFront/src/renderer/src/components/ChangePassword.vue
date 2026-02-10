@@ -66,6 +66,7 @@ import { ElMessage } from 'element-plus'
 import { Check, Close } from '@element-plus/icons-vue'
 import { validatePassword, getPasswordStrength, getPasswordStrengthText, getPasswordStrengthColor } from '@/utils/validator.js'
 import axios from 'axios'
+import { changeAdminPassword } from '../api/admin'
 
 const props = defineProps({
   modelValue: {
@@ -153,20 +154,29 @@ const handleSubmit = async () => {
     await passwordFormRef.value.validate()
     submitting.value = true
 
-    // TODO: 调用修改密码API
-    // const response = await axios.put('http://localhost:8080/api/admin/password', {
-    //   oldPassword: passwordForm.oldPassword,
-    //   newPassword: passwordForm.newPassword
-    // })
+    // 调用修改密码API
+    const response = await changeAdminPassword({
+      oldPassword: passwordForm.oldPassword,
+      newPassword: passwordForm.newPassword
+    })
 
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    if (response.code === '200') {
+      ElMessage.success('密码修改成功，请重新登录')
+      emit('success')
+      handleClose()
 
-    ElMessage.success('密码修改成功，请重新登录')
-    emit('success')
-    handleClose()
+      // 清除登录状态并跳转到登录页
+      setTimeout(() => {
+        localStorage.removeItem('adminToken')
+        localStorage.removeItem('adminInfo')
+        window.location.href = '/admin/login'
+      }, 1500)
+    } else {
+      ElMessage.error(response.message || '密码修改失败，请检查当前密码是否正确')
+    }
   } catch (error) {
     console.error('修改密码失败:', error)
+    ElMessage.error(error.message || '密码修改失败，请稍后重试')
   } finally {
     submitting.value = false
   }

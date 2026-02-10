@@ -151,21 +151,26 @@ const handleSubmit = async () => {
     console.log('[修改密码] 提交密码修改请求')
 
     // 调用修改密码API
-    // TODO: 实现修改密码API
-    // await changeAdminPassword({
-    //   oldPassword: passwordForm.oldPassword,
-    //   newPassword: passwordForm.newPassword
-    // })
+    const response = await changeAdminPassword({
+      oldPassword: passwordForm.oldPassword,
+      newPassword: passwordForm.newPassword
+    })
 
-    // 模拟API调用成功
-    setTimeout(() => {
+    if (response.code === '200') {
       ElMessage.success('密码修改成功，请重新登录')
       handleReset()
+
       // 可以选择跳转到登录页
-      // setTimeout(() => {
-      //   window.location.href = '/admin/login'
-      // }, 1500)
-    }, 500)
+      setTimeout(() => {
+        // 清除登录状态
+        localStorage.removeItem('adminToken')
+        localStorage.removeItem('adminInfo')
+        // 跳转到登录页
+        window.location.href = '/admin/login'
+      }, 1500)
+    } else {
+      ElMessage.error(response.message || '密码修改失败，请检查当前密码是否正确')
+    }
   } catch (error) {
     console.error('[修改密码] 修改失败:', error)
     if (error !== 'cancel') {

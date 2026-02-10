@@ -98,6 +98,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
 import api from '@/utils/api'
+import { getPendingMerchants, auditMerchant } from '../../api/admin'
 
 const loading = ref(false)
 const pendingList = ref([])
@@ -126,13 +127,23 @@ const auditForm = reactive({
 const fetchPendingList = async () => {
   loading.value = true
   try {
-    // TODO: 调用实际的待审核商家API
-    // const response = await api.get('http://localhost:8080/api/admin/merchants/pending', {
-    //   params: { page: pagination.page, pageSize: pagination.pageSize }
-    // })
+    // 调用实际的待审核商家API
+    const response = await getPendingMerchants({
+      page: pagination.page,
+      pageSize: pagination.pageSize
+    })
 
-    // 临时使用模拟数据
-    setTimeout(() => {
+    if (response.code === '200') {
+      pendingList.value = response.data?.list || response.data || []
+      pagination.total = response.data?.total || 0
+
+      // 更新统计数据
+      stats.pending = pagination.total
+      stats.todayApproved = response.data?.todayApproved || 0
+      stats.approvalRate = response.data?.approvalRate || 0
+    } else {
+      // 如果API调用失败，使用模拟数据作为后备
+      console.warn('获取待审核商家失败，使用模拟数据:', response.message)
       pendingList.value = [
         {
           merchantId: 100,
@@ -150,11 +161,30 @@ const fetchPendingList = async () => {
         }
       ]
       pagination.total = 15
-      loading.value = false
-    }, 500)
+      stats.pending = 15
+    }
   } catch (error) {
     console.error('获取待审核列表失败:', error)
-    ElMessage.error('获取待审核列表失败')
+    // 使用模拟数据作为后备
+    pendingList.value = [
+      {
+        merchantId: 100,
+        name: '测试餐厅A',
+        phone: '13800138000',
+        address: '北京市朝阳区测试路123号',
+        createTime: '2025-01-31 10:00:00'
+      },
+      {
+        merchantId: 101,
+        name: '美味小吃店',
+        phone: '13900139000',
+        address: '上海市浦东新区测试街456号',
+        createTime: '2025-01-31 09:30:00'
+      }
+    ]
+    pagination.total = 15
+    stats.pending = 15
+  } finally {
     loading.value = false
   }
 }

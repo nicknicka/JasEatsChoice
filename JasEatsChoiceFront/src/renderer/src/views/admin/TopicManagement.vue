@@ -656,8 +656,12 @@ const handleReview = (row) => {
 // 提交审核
 const handleReviewSubmit = async () => {
   try {
+    // 从localStorage获取当前管理员ID
+    const adminInfo = JSON.parse(localStorage.getItem('adminInfo') || '{}')
+    const reviewerId = adminInfo.id || adminInfo.adminId || 1
+
     const data = {
-      reviewerId: 1, // TODO: 从登录信息获取
+      reviewerId,
       approved: reviewForm.approved,
       comment: reviewForm.comment
     }

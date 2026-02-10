@@ -149,6 +149,7 @@ import { Lock } from '@element-plus/icons-vue'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
 import paymentApi from '../../api/payment'
 import userApi from '../../api/user'
+import verificationApi from '../../api/verification'
 import { useAuthStore } from '../../store/authStore'
 
 const router = useRouter()
@@ -302,16 +303,44 @@ const submitPassword = async () => {
 }
 
 // 发送验证码
-const sendVerificationCode = () => {
-  // TODO: 实现发送验证码逻辑
-  ElMessage.info('验证码发送功能开发中，请稍后')
-  countdown.value = 60
-  const timer = setInterval(() => {
-    countdown.value--
-    if (countdown.value <= 0) {
-      clearInterval(timer)
+const sendVerificationCode = async () => {
+  const userId = authStore.userId
+  if (!userId || userId === '0') {
+    ElMessage.error('用户未登录')
+    return
+  }
+
+  // 获取用户真实手机号（未脱敏的）
+  try {
+    const result = await userApi.getUserInfo(userId)
+    if (result.code !== '200' || !result.data || !result.data.phone) {
+      ElMessage.error('未获取到用户手机号，请先完善个人信息')
+      return
     }
-  }, 1000)
+
+    const realPhone = result.data.phone
+
+    // 调用发送验证码API
+    const response = await verificationApi.sendVerificationCode(realPhone, 'payment')
+
+    if (response.code === '200') {
+      ElMessage.success('验证码已发送，请注意查收')
+
+      // 开始倒计时
+      countdown.value = 60
+      const timer = setInterval(() => {
+        countdown.value--
+        if (countdown.value <= 0) {
+          clearInterval(timer)
+        }
+      }, 1000)
+    } else {
+      ElMessage.error(response.message || '发送验证码失败，请稍后重试')
+    }
+  } catch (error) {
+    console.error('发送验证码失败:', error)
+    ElMessage.error('发送验证码失败，请稍后重试')
+  }
 }
 
 // 确认重置

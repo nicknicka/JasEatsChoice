@@ -166,8 +166,12 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowRight } from '@element-plus/icons-vue'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
+import walletApi from '../../api/wallet'
+import paymentApi from '../../api/payment'
+import { useAuthStore } from '../../store/authStore'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 // 安全等级
 const securityLevel = ref(3)
@@ -291,8 +295,28 @@ const handleWalletLockChange = async (value) => {
       }
     )
 
-    // TODO: 调用后端API更新钱包锁定状态
-    ElMessage.success(`钱包已${action}`)
+    // 调用后端API更新钱包锁定状态
+    const userId = parseInt(authStore.userId || '0', 10)
+    if (userId <= 0) {
+      ElMessage.error('用户未登录')
+      walletLocked.value = !value
+      return
+    }
+
+    try {
+      const response = await walletApi.updateWalletLockStatus(userId, value)
+      if (response.code === '200') {
+        ElMessage.success(`钱包已${action}`)
+        walletLocked.value = value
+      } else {
+        ElMessage.error(response.message || `${action}失败，请稍后重试`)
+        walletLocked.value = !value
+      }
+    } catch (error) {
+      console.error('更新钱包锁定状态失败:', error)
+      ElMessage.error(`${action}失败，请稍后重试`)
+      walletLocked.value = !value
+    }
   } catch {
     // 用户取消操作，恢复开关状态
     walletLocked.value = !value
@@ -313,8 +337,8 @@ const saveLimit = () => {
 
 // 查看全部日志
 const viewAllLogs = () => {
-  // TODO: 跳转到安全日志页面
-  ElMessage.info('安全日志页面开发中')
+  // 跳转到钱包页面，查看交易记录（包含安全日志）
+  router.push('/user/home/wallet')
 }
 
 // 返回
@@ -323,14 +347,38 @@ const goBack = () => {
 }
 
 // 页面加载时初始化
-onMounted(() => {
+onMounted(async () => {
   // 初始化限额表单
   limitForm.value.dailyLimit = dailyLimit.value
   limitForm.value.singleLimit = dailyLimit.value / 5
 
-  // TODO: 从后端获取安全设置数据
-  // checkPaymentPasswordStatus()
-  // fetchWalletStatus()
+  // 从后端获取安全设置数据
+  const userId = parseInt(authStore.userId || '0', 10)
+  if (userId > 0) {
+    try {
+      // 获取钱包安全设置
+      const securityResponse = await walletApi.getWalletSecuritySettings(userId)
+      if (securityResponse.code === '200' && securityResponse.data) {
+        const settings = securityResponse.data
+        walletLocked.value = settings.locked || false
+        needVerify.value = settings.verifyEnabled !== false
+        dailyLimit.value = settings.dailyLimit || 5000
+
+        // 更新限额表单
+        limitForm.value.dailyLimit = dailyLimit.value
+        limitForm.value.singleLimit = dailyLimit.value / 5
+      }
+
+      // 检查是否已设置支付密码
+      const passwordResponse = await paymentApi.checkPaymentPassword(String(userId))
+      if (passwordResponse.code === '200' && passwordResponse.data) {
+        hasPaymentPassword.value = passwordResponse.data.hasPaymentPassword || false
+      }
+    } catch (error) {
+      console.error('获取安全设置失败:', error)
+      // 使用默认值
+    }
+  }
 })
 </script>
 

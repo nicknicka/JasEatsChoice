@@ -403,8 +403,20 @@ const submitAppeal = async () => {
 
 // 查看详情
 const viewDetail = (item) => {
-  ElMessage.info('查看详情功能开发中')
-  // TODO: 实现详情对话框
+  const detailHtml = `
+    <div style="line-height: 1.8;">
+      <p><strong>菜品名称：</strong>${item.dishName || '未命名'}</p>
+      <p><strong>期望上架时间：</strong>${item.expectedAvailableTime || '未设置'}</p>
+      <p><strong>提交时间：</strong>${item.createTime || ''}</p>
+      <p><strong>用户备注：</strong>${item.remark || '无'}</p>
+      ${item.image ? `<p><strong>图片：</strong><br/><img src="${item.image}" style="max-width: 200px; max-height: 200px; border-radius: 8px;" /></p>` : ''}
+    </div>
+  `
+
+  ElMessageBox.alert(detailHtml, '心愿单详情', {
+    dangerouslyUseHTMLString: true,
+    confirmButtonText: '关闭'
+  })
 }
 
 onMounted(() => {
