@@ -70,8 +70,8 @@ app.whenReady().then(() => {
 
   // 设置内容安全策略 (CSP) - 根据环境动态配置
   const scriptSrcPolicy = isDev
-    ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://webapi.amap.com https://restapi.amap.com"
-    : "script-src 'self' 'unsafe-inline' https://webapi.amap.com https://restapi.amap.com"
+    ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://webapi.amap.com https://restapi.amap.com https://vdata.amap.com"
+    : "script-src 'self' 'unsafe-inline' https://webapi.amap.com https://restapi.amap.com https://vdata.amap.com"
 
   // 忽略高德地图相关的证书错误（仅开发环境）
   if (isDev) {
@@ -83,11 +83,12 @@ app.whenReady().then(() => {
       responseHeaders: {
         ...details.responseHeaders,
         'Content-Security-Policy': [
-          `default-src 'self'; ${scriptSrcPolicy};` +
-            " style-src 'self' 'unsafe-inline' https://webapi.amap.com;" +
-            " img-src 'self' data: blob: https: http: https://webapi.amap.com https://restapi.amap.com;" +
-            " font-src 'self' data: https://webapi.amap.com;" +
-            " connect-src 'self' ws://localhost:* wss://localhost:* ws://127.0.0.1:* wss://127.0.0.1:* http://localhost:* http://127.0.0.1:* https://localhost:* https://127.0.0.1:* https: https://webapi.amap.com https://restapi.amap.com;" +
+          `default-src 'self'; ${scriptSrcPolicy} blob:;` +
+            " style-src 'self' 'unsafe-inline' https://webapi.amap.com https://vdata.amap.com;" +
+            " img-src 'self' data: blob: https: http: https://webapi.amap.com https://restapi.amap.com https://vdata.amap.com;" +
+            " font-src 'self' data: https://webapi.amap.com https://vdata.amap.com;" +
+            " worker-src 'self' blob:;" +
+            " connect-src 'self' ws://localhost:* wss://localhost:* ws://127.0.0.1:* wss://127.0.0.1:* http://localhost:* http://127.0.0.1:* https://localhost:* https://127.0.0.1:* https: https://webapi.amap.com https://restapi.amap.com https://vdata.amap.com;" +
             " media-src 'self' blob: http://localhost:8080 http://127.0.0.1:8080;" +
             " object-src 'none';" +
             " base-uri 'self';" +

@@ -99,7 +99,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, watch, onBeforeUnmount } from 'vue'
 import { Search, Location, Loading } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
@@ -154,11 +154,10 @@ const initMap = () => {
   mapLoading.value = true
 
   try {
-    // 创建地图实例
+    // 创建地图实例 - 使用1.4.15兼容配置
     map.value = new AMap.Map('mapContainer', {
       zoom: 15,
       center: [props.defaultPosition.lng, props.defaultPosition.lat],
-      mapStyle: 'amap://styles/normal',
       viewMode: '2D'
     })
 

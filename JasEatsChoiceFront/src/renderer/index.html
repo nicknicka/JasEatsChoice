@@ -7,14 +7,14 @@
     <meta http-equiv="Expires" content="0" />
     <title>Electron</title>
     <!-- 内容安全策略 (CSP) -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://webapi.amap.com https://restapi.amap.com; style-src 'self' 'unsafe-inline' https://webapi.amap.com; img-src 'self' data: blob: https: http: https://webapi.amap.com https://restapi.amap.com; font-src 'self' data: https://webapi.amap.com; connect-src 'self' ws://localhost:* wss://localhost:* ws://127.0.0.1:* wss://127.0.0.1:* http://localhost:* http://127.0.0.1:* https://localhost:* https://127.0.0.1:* https: https://webapi.amap.com https://restapi.amap.com; media-src 'self' blob: http://localhost:8080 http://127.0.0.1:8080; object-src 'none'; base-uri 'self'; form-action 'self';" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://webapi.amap.com https://restapi.amap.com https://vdata.amap.com; style-src 'self' 'unsafe-inline' https://webapi.amap.com; img-src 'self' data: blob: https: http: https://webapi.amap.com https://restapi.amap.com; font-src 'self' data: https://webapi.amap.com; worker-src 'self' blob:; connect-src 'self' ws://localhost:* wss://localhost:* ws://127.0.0.1:* wss://127.0.0.1:* http://localhost:* http://127.0.0.1:* https://localhost:* https://127.0.0.1:* https: https://webapi.amap.com https://restapi.amap.com https://vdata.amap.com; media-src 'self' blob: http://localhost:8080 http://127.0.0.1:8080; object-src 'none'; base-uri 'self'; form-action 'self';" />
   </head>
 
   <body>
     <div id="app"></div>
-    <!-- 高德地图 SDK -->
+    <!-- 高德地图 SDK (使用1.4.15版本，Electron兼容性更好) -->
     <script
-      src="https://webapi.amap.com/maps?v=2.0&key=140e4ebfe143855a4cc7440533ff27b3&plugin=AMap.Scale,AMap.ToolBar,AMap.Geocoder,AMap.PlaceSearch"
+      src="https://webapi.amap.com/maps?v=1.4.15&key=140e4ebfe143855a4cc7440533ff27b3&plugin=AMap.Scale,AMap.ToolBar,AMap.Geocoder,AMap.PlaceSearch"
     ></script>
     <script type="module" src="/src/main.js"></script>
   </body>

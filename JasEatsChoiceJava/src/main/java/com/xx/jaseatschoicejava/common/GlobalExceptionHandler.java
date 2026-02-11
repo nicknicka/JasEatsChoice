@@ -5,13 +5,19 @@ import org.apache.catalina.connector.ClientAbortException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.InvalidDataAccessResourceUsageException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import javax.servlet.http.HttpServletRequest;
+import java.net.BindException;
+import java.sql.SQLException;
 
 /**
  * 全局异常处理类
@@ -139,6 +145,24 @@ public class GlobalExceptionHandler {
 
         // 处理其他数据完整性约束错误
         return ResponseResult.fail("400", "参数错误：数据格式不符合要求");
+    }
+
+    /**
+     * 处理缺少请求参数异常
+     */
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseResult<?> handleMissingServletRequestParameter(MissingServletRequestParameterException e) {
+        logger.error("MissingServletRequestParameterException: Parameter={}", e.getParameterName());
+        return ResponseResult.fail("400", "缺少必需参数: " + e.getParameterName());
+    }
+
+    /**
+     * 处理参数绑定异常
+     */
+    @ExceptionHandler(org.springframework.validation.BindException.class)
+    public ResponseResult<?> handleBindException(org.springframework.validation.BindException e) {
+        logger.error("BindException: {}", e.getMessage());
+        return ResponseResult.fail("400", "参数绑定失败: " + e.getFieldError().getDefaultMessage());
     }
 
     /**

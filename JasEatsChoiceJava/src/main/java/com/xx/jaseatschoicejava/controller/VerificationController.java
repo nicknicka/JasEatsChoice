@@ -1,6 +1,7 @@
 package com.xx.jaseatschoicejava.controller;
 
 import com.xx.jaseatschoicejava.common.ResponseResult;
+import com.xx.jaseatschoicejava.constants.VerificationType;
 import com.xx.jaseatschoicejava.service.VerificationService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -26,7 +27,8 @@ public class VerificationController {
     @PostMapping("/send")
     public ResponseResult<Map<String, Object>> sendVerificationCode(
             @ApiParam("手机号") @RequestParam String phone,
-            @ApiParam("验证码类型") @RequestParam(defaultValue = "register") String type) {
+            @ApiParam("验证码类型: register-注册, login-登录, reset-重置密码, payment-支付密码")
+            @RequestParam(defaultValue = VerificationType.REGISTER) String type) {
 
         boolean success = verificationService.sendVerificationCode(phone, type);
 
@@ -48,7 +50,8 @@ public class VerificationController {
     public ResponseResult<Map<String, Object>> verifyCode(
             @ApiParam("手机号") @RequestParam String phone,
             @ApiParam("验证码") @RequestParam String code,
-            @ApiParam("验证码类型") @RequestParam(defaultValue = "register") String type) {
+            @ApiParam("验证码类型: register-注册, login-登录, reset-重置密码, payment-支付密码")
+            @RequestParam(defaultValue = VerificationType.REGISTER) String type) {
 
         boolean valid = verificationService.verifyCode(phone, code, type);
 

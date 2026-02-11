@@ -137,12 +137,12 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
                             .lt(com.xx.jaseatschoicejava.entity.Order::getCreateTime, dayEnd)
             );
 
-            // 当天已完成订单
+            // 当天已完成订单（状态7=已完成）
             Long completedOrders = orderMapper.selectCount(
                     new LambdaQueryWrapper<>()
-                            .ge(com.xx.jaseatschoice.entity.Order::getCreateTime, dayStart)
-                            .lt(com.xx.jaseatschoice.entity.Order::getCreateTime, dayEnd)
-                            .eq(com.xx.jaseatschoice.entity.Order::getStatus, "completed")
+                            .ge(com.xx.jaseatschoicejava.entity.Order::getCreateTime, dayStart)
+                            .lt(com.xx.jaseatschoicejava.entity.Order::getCreateTime, dayEnd)
+                            .eq(com.xx.jaseatschoicejava.entity.Order::getStatus, 7)
             );
 
             // 当天收入
@@ -152,7 +152,7 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
             Long activeUsers = orderMapper.selectCount(
                     new LambdaQueryWrapper<>()
                             .ge(com.xx.jaseatschoicejava.entity.Order::getCreateTime, dayStart)
-                            .lt(com.xx.jaseatschoice.entity.Order::getCreateTime, dayEnd)
+                            .lt(com.xx.jaseatschoicejava.entity.Order::getCreateTime, dayEnd)
             );
 
             // 平均订单金额
@@ -208,18 +208,10 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
     }
 
     /**
-     * 计算总收入
+     * 计算总收入（优化版：使用SQL SUM函数）
      */
     private BigDecimal calculateTotalRevenue(LocalDateTime startTime) {
-        LambdaQueryWrapper<com.xx.jaseatschoicejava.entity.Order> queryWrapper = new LambdaQueryWrapper<>();
-        if (startTime != null) {
-            queryWrapper.ge(com.xx.jaseatschoicejava.entity.Order::getCreateTime, startTime);
-        }
-        queryWrapper.eq(com.xx.jaseatschoicejava.entity.Order::getStatus, "completed");
-
-        List<com.xx.jaseatschoicejava.entity.Order> orders = orderMapper.selectList(queryWrapper);
-        return orders.stream()
-                .map(com.xx.jaseatschoicejava.entity.Order::getTotalAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        // 使用SQL SUM函数直接在数据库层面计算，避免加载所有订单到内存
+        return orderMapper.sumCompletedOrdersRevenue(startTime);
     }
 }
