@@ -118,16 +118,30 @@ export function useOrderFilter(orders) {
   const filteredOrders = computed(() => {
     let result = orders.value
 
+    // 调试日志
+    console.log('useOrderFilter - 原始订单数量:', orders.value.length)
+    console.log('useOrderFilter - 当前筛选状态:', activeStatus.value)
+
     // 先应用搜索
     if (searchKeyword.value && searchKeyword.value.trim() !== '') {
       result = searchOrders(result, searchKeyword.value)
+      console.log('useOrderFilter - 搜索后数量:', result.length)
     }
 
     // 再应用状态筛选
     if (activeStatus.value !== 'all') {
-      result = result.filter((order) => order.status === activeStatus.value)
+      const beforeFilter = result.length
+      result = result.filter((order) => {
+        const match = order.status === activeStatus.value
+        if (!match && orders.value.length > 0) {
+          console.log(`订单 ${order.id} 状态不匹配: order.status=${order.status}, activeStatus=${activeStatus.value}`)
+        }
+        return match
+      })
+      console.log(`useOrderFilter - 状态筛选: ${beforeFilter} -> ${result.length}`)
     }
 
+    console.log('useOrderFilter - 最终筛选结果数量:', result.length)
     return result
   })
 

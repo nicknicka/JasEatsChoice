@@ -59,8 +59,8 @@ const {
 // WebSocket 订单更新回调
 function handleOrderUpdate(orderUpdate) {
   updateOrderStatus(orderUpdate.id, orderUpdate.status)
-  // 重新加载订单以获取最新数据
-  loadOrders()
+  // 只更新本地状态，不再重新加载所有订单
+  // 重新加载会导致订单显示又消失的问题
 }
 
 // 初始化 WebSocket
@@ -175,6 +175,22 @@ function handleReorderConfirm(data) {
 watch([activeStatus, sortBy], () => {
   resetToFirstPage()
 })
+
+// 调试：监控订单数据变化
+watch(orders, (newOrders) => {
+  console.log('Orders.vue - orders 变化:', {
+    订单数量: newOrders.length,
+    订单列表: newOrders.map(o => ({ id: o.id, status: o.status }))
+  })
+}, { deep: true })
+
+// 调试：监控分页后订单变化
+watch(paginatedOrders, (newPaginated) => {
+  console.log('Orders.vue - paginatedOrders 变化:', {
+    订单数量: newPaginated.length,
+    订单IDs: newPaginated.map(o => o.id)
+  })
+}, { deep: true })
 
 /**
  * 监听搜索关键词变化，重置分页

@@ -120,30 +120,58 @@ export function useOrderData() {
     }
   }
 
+  // 用于防止并发请求的标志
+  let isLoadingRequest = false
+
   /**
    * 加载订单列表
    * @returns {Promise<void>}
    */
   async function loadOrders() {
+    // 防止并发请求
+    if (isLoadingRequest) {
+      console.log('订单正在加载中，跳过重复请求')
+      return
+    }
+
+    isLoadingRequest = true
     loading.value = true
+    // 重置列表动画状态，确保列表可见
+    listTransitionName.value = ''
 
     try {
       const userId = getUserId()
+      console.log('正在加载订单，用户ID:', userId)
       const response = await axios.get(API_CONFIG.baseURL + API_CONFIG.order.list + userId)
 
-      if (response.data.data) {
+      console.log('订单API响应:', response.data)
+
+      const orderList = response.data?.data
+      if (orderList && Array.isArray(orderList)) {
         // 并行获取所有订单的菜品信息
         const ordersWithItems = await Promise.all(
-          response.data.data.map((order) => fetchOrderDishes(order))
+          orderList.map((order) => fetchOrderDishes(order))
         )
         orders.value = ordersWithItems
+        console.log('订单加载成功，共', ordersWithItems.length, '条订单')
+      } else {
+        console.warn('订单数据格式不正确或为空:', orderList)
+        // 只有在确实没有数据时才清空，保留旧数据以防 API 错误
+        if (orderList === undefined || orderList === null) {
+          console.error('API 返回数据结构异常，保留现有订单数据')
+        } else {
+          orders.value = []
+        }
       }
     } catch (error) {
       console.error('加载订单失败:', error)
       ElMessage.error('加载订单失败，请稍后重试')
-      orders.value = []
+      // 加载失败时不清空现有数据，保留用户的订单显示
     } finally {
+      isLoadingRequest = false
       loading.value = false
+      // 确保列表动画状态被重置
+      listTransitionName.value = ''
     }
   }
 
@@ -199,12 +227,19 @@ export function useOrderData() {
   /**
    * 更新订单状态（用于WebSocket更新）
    * @param {number} orderId - 订单ID
-   * @param {string} newStatus - 新状态
+   * @param {string|number} newStatus - 新状态（可能是后端状态码或前端状态文本）
    */
   function updateOrderStatus(orderId, newStatus) {
     const order = orders.value.find((o) => o.id === orderId)
     if (order) {
-      order.status = newStatus
+      // 如果是数字，转换为前端状态文本
+      const statusText = typeof newStatus === 'number'
+        ? orderStatusToText(newStatus)
+        : newStatus
+      order.status = statusText
+      console.log(`订单 ${orderId} 状态已更新为:`, statusText)
+    } else {
+      console.warn(`未找到订单 ${orderId}，无法更新状态`)
     }
   }
 

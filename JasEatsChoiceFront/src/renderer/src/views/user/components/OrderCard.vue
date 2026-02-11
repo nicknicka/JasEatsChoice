@@ -345,27 +345,27 @@ function handleImageError(item) {
 
 /* 订单卡片动画优化 */
 .order-card {
-  /* 为每个卡片添加入场动画 */
-  animation: card-slide-in 0.5s cubic-bezier(0.4, 0, 0.2, 1) backwards;
+  /* 为每个卡片添加入场动画 - 移除 backwards 避免延迟期间不可见 */
+  animation: card-slide-in 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 
   /* 为每个卡片添加递增的延迟，创建交错效果 */
   &:nth-child(1) {
     animation-delay: 0s;
   }
   &:nth-child(2) {
-    animation-delay: 0.08s;
+    animation-delay: 0.05s;
   }
   &:nth-child(3) {
-    animation-delay: 0.16s;
+    animation-delay: 0.1s;
   }
   &:nth-child(4) {
-    animation-delay: 0.24s;
+    animation-delay: 0.15s;
   }
   &:nth-child(5) {
-    animation-delay: 0.32s;
+    animation-delay: 0.2s;
   }
   &:nth-child(n + 6) {
-    animation-delay: 0.4s;
+    animation-delay: 0.25s;
   }
 }
 

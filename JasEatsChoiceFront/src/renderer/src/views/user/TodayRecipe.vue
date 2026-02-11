@@ -970,7 +970,9 @@ const filteredRecipes = computed(() => {
 </script>
 
 <template>
-  <div class="today-recipe-container">
+  <!-- 单一根节点包裹器，用于 Transition 动画 -->
+  <div class="today-recipe-wrapper">
+    <div class="today-recipe-container">
     <div class="recipe-header fade-in-up">
       <h2>今日食谱</h2>
     </div>
@@ -1289,9 +1291,14 @@ const filteredRecipes = computed(() => {
 
   <!-- 添加食谱对话框 -->
   <AddRecipe v-model:visible="addRecipeVisible" @add-recipe="handleAddRecipe" />
+  </div>
 </template>
 
 <style scoped lang="less">
+.today-recipe-wrapper {
+  display: contents;
+}
+
 .today-recipe-container {
   padding: 24px;
   background: #f5f7fa;

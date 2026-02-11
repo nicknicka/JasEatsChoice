@@ -845,7 +845,7 @@ const handleSearch = (value) => {
       <!-- 右侧内容区域，使用router-view实现子组件内容访问 -->
       <el-main class="content-area">
         <router-view v-slot="{ Component, route }">
-          <transition :name="route.meta.transition || 'fade-slide'" mode="out-in">
+          <transition :name="route.meta.transition || 'fade-slide'" :duration="{ enter: 250, leave: 200 }" mode="out-in">
             <component :is="Component" :key="route.path" />
           </transition>
         </router-view>

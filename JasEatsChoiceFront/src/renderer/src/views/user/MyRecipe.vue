@@ -855,16 +855,18 @@ const getTagType = (type) => {
 </script>
 
 <template>
-  <div class="my-recipe-container">
-    <div class="recipe-header fade-in-up">
-      <div>
-        <h2>我的食谱</h2>
-        <div v-if="filteredRecipes.length > 0" class="search-result-count">
-          <span>共找到 {{ filteredRecipes.length }} 个食谱</span>
+  <!-- 单一根节点包裹器，用于 Transition 动画 -->
+  <div class="my-recipe-wrapper">
+    <div class="my-recipe-container">
+      <div class="recipe-header fade-in-up">
+        <div>
+          <h2>我的食谱</h2>
+          <div v-if="filteredRecipes.length > 0" class="search-result-count">
+            <span>共找到 {{ filteredRecipes.length }} 个食谱</span>
+          </div>
         </div>
-      </div>
 
-      <div class="filter-section fade-in-up">
+        <div class="filter-section fade-in-up">
         <el-input
           v-model="searchKeyword"
           placeholder="搜索食谱、菜品或食材"
@@ -1190,9 +1192,14 @@ const getTagType = (type) => {
       <el-button type="primary" @click="confirmImportFromOrder">导入</el-button>
     </template>
   </el-dialog>
+  </div>
 </template>
 
 <style lang="less">
+.my-recipe-wrapper {
+  display: contents;
+}
+
 .my-recipe-container {
   padding: 24px;
 
