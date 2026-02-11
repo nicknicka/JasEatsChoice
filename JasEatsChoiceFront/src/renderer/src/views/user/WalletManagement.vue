@@ -11,12 +11,12 @@
     <h2 class="page-title">钱包管理</h2>
 
     <!-- 钱包概览卡片 -->
-    <el-card class="wallet-overview-card" shadow="hover">
+    <el-card class="wallet-overview-card scale-in" shadow="hover">
       <div class="wallet-overview-content">
         <div class="balance-section">
           <div class="balance-label">平台币余额</div>
           <div class="balance-value">
-            <span class="balance-number">{{ formatNumber(walletInfo.balance) }}</span>
+            <span class="balance-number number-scroll">{{ formatNumber(walletInfo.balance) }}</span>
             <span class="balance-unit">个</span>
           </div>
           <div class="balance-tips">
@@ -73,7 +73,7 @@
     </el-card>
 
     <!-- 快捷功能 -->
-    <el-card class="quick-actions-card" shadow="hover">
+    <el-card class="quick-actions-card stagger-item" shadow="hover">
       <h3 class="card-title">快捷功能</h3>
       <div class="quick-actions-grid">
         <div class="quick-action-item" @click="viewTransactionHistory">
@@ -100,7 +100,7 @@
     </el-card>
 
     <!-- 最近交易 -->
-    <el-card class="recent-transactions-card" shadow="hover">
+    <el-card class="recent-transactions-card stagger-item" shadow="hover">
       <div class="card-header">
         <h3 class="card-title">最近交易</h3>
         <el-button type="primary" link @click="viewTransactionHistory">

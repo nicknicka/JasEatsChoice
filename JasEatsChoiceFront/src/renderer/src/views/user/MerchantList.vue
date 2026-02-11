@@ -191,10 +191,10 @@ const goToMerchantDetail = (merchant) => {
 
 <template>
   <div class="merchant-list-container">
-    <h2>商家查找</h2>
+    <h2 class="fade-in-up">商家查找</h2>
 
     <!-- 搜索和筛选区 -->
-    <div class="search-filter-section">
+    <div class="search-filter-section fade-in-up delay-100">
       <div class="search-row">
         <el-input
           v-model="searchKeyword"
@@ -211,7 +211,7 @@ const goToMerchantDetail = (merchant) => {
         <el-button @click="resetFilters" class="reset-btn" :icon="RefreshLeft">重置</el-button>
       </div>
 
-      <div class="filter-tags">
+      <div class="filter-tags slide-in-left delay-200">
         <div
           v-for="option in typeOptions"
           :key="option.value"
@@ -222,7 +222,7 @@ const goToMerchantDetail = (merchant) => {
         </div>
       </div>
 
-      <div class="sort-options">
+      <div class="sort-options slide-in-left delay-200">
         <span class="sort-label">排序方式：</span>
         <div
           v-for="option in sortOptions"
@@ -243,7 +243,7 @@ const goToMerchantDetail = (merchant) => {
       <el-card
         v-for="merchant in filteredMerchants"
         :key="merchant.id"
-        :class="['merchant-card', merchant.isOpen ? 'merchant-card-open' : 'merchant-card-closed']"
+        :class="['merchant-card stagger-item card-hover-effect', merchant.isOpen ? 'merchant-card-open' : 'merchant-card-closed']"
         v-else-if="filteredMerchants.length > 0"
         @click="goToMerchantDetail(merchant)"
       >

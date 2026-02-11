@@ -126,13 +126,13 @@ const router = createRouter({
           path: 'merchant-detail',
           name: 'user-merchant-detail',
           component: UserMerchantDetail,
-          meta: { title: '商家详情' }
+          meta: { title: '商家详情', transition: 'slide-left' }
         },
         {
           path: 'order-confirmation',
           name: 'user-order-confirmation',
           component: UserOrderConfirmation,
-          meta: { title: '订单确认' }
+          meta: { title: '订单确认', transition: 'slide-up' }
         },
         {
           path: 'today-recipe',
@@ -168,7 +168,7 @@ const router = createRouter({
           path: 'order-detail/:id',
           name: 'user-order-detail',
           component: UserOrderDetail,
-          meta: { title: '订单详情' }
+          meta: { title: '订单详情', transition: 'zoom-fade' }
         },
         {
           path: 'consume-history',
@@ -204,7 +204,7 @@ const router = createRouter({
           path: 'ai',
           name: 'user-ai',
           component: UserAI,
-          meta: { title: 'AI饮食助手' }
+          meta: { title: 'AI饮食助手', transition: 'bounce' }
         },
         {
           path: 'settings',
@@ -216,7 +216,7 @@ const router = createRouter({
           path: 'profile',
           name: 'user-profile',
           component: UserProfile,
-          meta: { title: '用户中心' }
+          meta: { title: '用户中心', transition: 'fade-slide' }
         },
         {
           path: 'wallet-management',
@@ -270,13 +270,13 @@ const router = createRouter({
           path: 'tutorials/:id',
           name: 'user-tutorial-detail',
           component: () => import('../views/user/TutorialDetail.vue'),
-          meta: { title: '教程详情' }
+          meta: { title: '教程详情', transition: 'slide-left' }
         },
         {
           path: 'tutorials/publish',
           name: 'user-publish-tutorial',
           component: () => import('../views/user/PublishTutorial.vue'),
-          meta: { title: '发布教程' }
+          meta: { title: '发布教程', transition: 'slide-up' }
         },
         {
           path: 'tutorials/my',

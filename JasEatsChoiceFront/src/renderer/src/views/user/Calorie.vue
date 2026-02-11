@@ -283,36 +283,36 @@ const healthAdvice = computed(() => {
 
 <template>
   <div class="calorie-container">
-    <h2>卡路里统计</h2>
+    <h2 class="fade-in-up">卡路里统计</h2>
 
     <!-- 今日概览 -->
     <div class="today-overview-section">
       <h3>今日概览</h3>
       <div class="today-overview">
-        <el-card class="overview-card">
+        <el-card class="overview-card scale-in">
           <div class="overview-item">
             <div class="overview-label">今日已摄入</div>
-            <div class="overview-value">{{ calorieData.today.consumed }} kcal</div>
+            <div class="overview-value number-scroll">{{ calorieData.today.consumed }} kcal</div>
           </div>
         </el-card>
 
-        <el-card class="overview-card">
+        <el-card class="overview-card scale-in">
           <div class="overview-item">
             <div class="overview-label">今日剩余</div>
-            <div class="overview-value remaining">{{ calorieData.today.remaining }} kcal</div>
+            <div class="overview-value remaining number-scroll">{{ calorieData.today.remaining }} kcal</div>
           </div>
         </el-card>
 
-        <el-card class="overview-card">
+        <el-card class="overview-card scale-in">
           <div class="overview-item">
             <div class="overview-label">今日目标</div>
-            <div class="overview-value target">{{ calorieData.today.target }} kcal</div>
+            <div class="overview-value target number-scroll">{{ calorieData.today.target }} kcal</div>
           </div>
         </el-card>
       </div>
 
       <!-- 营养比例 -->
-      <el-card class="nutrition-card">
+      <el-card class="nutrition-card fade-in-up delay-100">
         <template #header>
           <div class="card-header">营养摄入比例</div>
         </template>
@@ -320,7 +320,7 @@ const healthAdvice = computed(() => {
           <div
             v-for="item in calorieData.nutrition"
             :key="item.name"
-            class="nutrition-item"
+            class="nutrition-item stagger-item"
             :class="{ 'extreme-value': isExtremeValue(item.value, item.name) }"
           >
             <div class="nutrition-info">
@@ -388,19 +388,19 @@ const healthAdvice = computed(() => {
 
       <!-- 周统计概览 -->
       <div class="weekly-overview">
-        <el-card class="overview-card">
+        <el-card class="overview-card scale-in">
           <div class="overview-item">
             <div class="overview-label">本周总摄入</div>
-            <div class="overview-value total">
+            <div class="overview-value total number-scroll">
               {{ calorieData.weekly.reduce((sum, item) => sum + item.consumed, 0) }} kcal
             </div>
           </div>
         </el-card>
 
-        <el-card class="overview-card">
+        <el-card class="overview-card scale-in">
           <div class="overview-item">
             <div class="overview-label">本周日均</div>
-            <div class="overview-value average">
+            <div class="overview-value average number-scroll">
               {{
                 Math.round(
                   calorieData.weekly.reduce((sum, item) => sum + item.consumed, 0) /
@@ -412,10 +412,10 @@ const healthAdvice = computed(() => {
           </div>
         </el-card>
 
-        <el-card class="overview-card">
+        <el-card class="overview-card scale-in">
           <div class="overview-item">
             <div class="overview-label">每日目标</div>
-            <div class="overview-value target">{{ calorieData.today.target }} kcal</div>
+            <div class="overview-value target number-scroll">{{ calorieData.today.target }} kcal</div>
           </div>
         </el-card>
       </div>
@@ -425,7 +425,7 @@ const healthAdvice = computed(() => {
           <div class="card-header">每日卡路里摄入</div>
         </template>
         <div class="weekly-chart">
-          <div v-for="item in calorieData.weekly" :key="item.day" class="weekly-bar">
+          <div v-for="item in calorieData.weekly" :key="item.day" class="weekly-bar stagger-item">
             <!-- 与营养摄入比例相同的信息布局：周几和卡路里值同行 -->
             <div class="weekly-info">
               <div class="bar-label">{{ item.day }}</div>

@@ -844,7 +844,11 @@ const handleSearch = (value) => {
 
       <!-- 右侧内容区域，使用router-view实现子组件内容访问 -->
       <el-main class="content-area">
-        <router-view />
+        <router-view v-slot="{ Component, route }">
+          <transition :name="route.meta.transition || 'fade-slide'" mode="out-in">
+            <component :is="Component" :key="route.path" />
+          </transition>
+        </router-view>
       </el-main>
     </div>
 
@@ -1024,5 +1028,137 @@ const handleSearch = (value) => {
   padding: 20px;
   background-color: #f5f5f5;
   overflow-y: auto;
+  position: relative; /* 为动画定位 */
+}
+
+/* ========== 页面转换动画样式 ========== */
+
+/* 默认动画：淡入淡出 + 轻微滑动 */
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+/* 从右向左滑入动画 */
+.slide-left-enter-active,
+.slide-left-leave-active {
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  position: absolute;
+  width: 100%;
+}
+
+.slide-left-enter-from {
+  opacity: 0;
+  transform: translateX(100%);
+}
+
+.slide-left-leave-to {
+  opacity: 0;
+  transform: translateX(-100%);
+}
+
+/* 从左向右滑入动画 */
+.slide-right-enter-active,
+.slide-right-leave-active {
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  position: absolute;
+  width: 100%;
+}
+
+.slide-right-enter-from {
+  opacity: 0;
+  transform: translateX(-100%);
+}
+
+.slide-right-leave-to {
+  opacity: 0;
+  transform: translateX(100%);
+}
+
+/* 从下向上滑入动画 */
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  position: absolute;
+  width: 100%;
+}
+
+.slide-up-enter-from {
+  opacity: 0;
+  transform: translateY(30px);
+}
+
+.slide-up-leave-to {
+  opacity: 0;
+  transform: translateY(-30px);
+}
+
+/* 缩放淡入动画 */
+.zoom-fade-enter-active,
+.zoom-fade-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: absolute;
+  width: 100%;
+}
+
+.zoom-fade-enter-from {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+.zoom-fade-leave-to {
+  opacity: 0;
+  transform: scale(1.05);
+}
+
+/* 弹性缩放动画 */
+.bounce-enter-active {
+  animation: bounce-in 0.4s;
+}
+
+.bounce-leave-active {
+  animation: bounce-in 0.4s reverse;
+}
+
+@keyframes bounce-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* 旋转淡入动画 */
+.rotate-fade-enter-active,
+.rotate-fade-leave-active {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: absolute;
+  width: 100%;
+}
+
+.rotate-fade-enter-from {
+  opacity: 0;
+  transform: rotateY(90deg);
+}
+
+.rotate-fade-leave-to {
+  opacity: 0;
+  transform: rotateY(-90deg);
 }
 </style>

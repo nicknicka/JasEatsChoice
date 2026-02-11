@@ -199,7 +199,7 @@ onMounted(() => {
 
 <template>
   <div class="orders-container">
-    <div class="page-header">
+    <div class="page-header fade-in-up">
       <CommonBackButton />
       <h2 style="margin-left: 15px">订单中心</h2>
       <div style="flex: 1; text-align: right">
@@ -227,6 +227,7 @@ onMounted(() => {
       v-model:search-keyword="searchKeyword"
       :filtered-count="sortedOrders.length"
       @clear="clearSearch"
+      class="fade-in-up delay-100"
     />
 
     <!-- 订单筛选 -->
@@ -235,6 +236,7 @@ onMounted(() => {
       v-model:sort-by="sortBy"
       :status-list="statusList"
       :sort-options="sortOptions"
+      class="fade-in-up delay-200"
     />
 
     <!-- 订单列表 -->
@@ -248,6 +250,7 @@ onMounted(() => {
         v-for="order in paginatedOrders"
         :key="order.id"
         :order="order"
+        class="stagger-item"
         :max-display="3"
         @view-details="viewOrderDetails"
         @cancel="cancelOrder"

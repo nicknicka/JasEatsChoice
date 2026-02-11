@@ -1,11 +1,11 @@
 <template>
   <div class="address-container">
-    <div class="header">
+    <div class="header fade-in-up">
       <common-back-button />
       <h2>管理地址</h2>
     </div>
 
-    <el-button type="primary" style="margin-bottom: 20px" @click="showAddDialog = true">
+    <el-button type="primary" class="scale-in" style="margin-bottom: 20px" @click="showAddDialog = true">
       <el-icon><Plus /></el-icon>
       新增地址
     </el-button>
@@ -14,7 +14,7 @@
       <el-card
         v-for="address in addresses"
         :key="address.id"
-        class="address-card"
+        class="address-card stagger-item"
         :class="{ 'default-address': address.isDefault }"
       >
         <div class="address-header">

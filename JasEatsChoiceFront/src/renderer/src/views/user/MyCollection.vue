@@ -1,7 +1,7 @@
 <template>
   <div class="my-collection-container">
     <!-- 头部区域 -->
-    <div class="header">
+    <div class="header fade-in-up">
       <common-back-button />
       <div class="header-content">
         <h2>我的收藏</h2>
@@ -12,7 +12,7 @@
     </div>
 
     <!-- 筛选工具栏 -->
-    <div class="filter-bar">
+    <div class="filter-bar fade-in-up delay-100">
       <div class="filter-left">
         <el-select
           v-model="filterType"
@@ -95,7 +95,7 @@
     <!-- 收藏列表 -->
     <div v-else-if="paginatedCollections.length > 0" class="collection-grid">
       <transition-group name="collection-fade">
-        <div v-for="item in paginatedCollections" :key="item.id" class="collection-card-wrapper">
+        <div v-for="item in paginatedCollections" :key="item.id" class="collection-card-wrapper stagger-item card-hover-effect">
           <el-card class="collection-card" shadow="hover" @click="viewDetails(item)">
             <!-- 类型标签和删除按钮 -->
             <div class="card-header">

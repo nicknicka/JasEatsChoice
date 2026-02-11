@@ -331,7 +331,7 @@ const handleDeleteFromDetail = async (messageId) => {
 
 <template>
   <div class="message-center-container">
-    <h2>消息中心</h2>
+    <h2 class="fade-in-up">消息中心</h2>
 
     <!-- 消息中心汇总卡片 -->
     <transition name="summary-fade">
@@ -346,7 +346,7 @@ const handleDeleteFromDetail = async (messageId) => {
     </transition>
 
     <!-- 消息分类标签页 -->
-    <el-tabs v-model="activeTab" class="message-tabs">
+    <el-tabs v-model="activeTab" class="message-tabs slide-in-left delay-100">
       <el-tab-pane label="全部消息" name="all">
         <template #label>
           <span class="tab-label">
@@ -407,7 +407,7 @@ const handleDeleteFromDetail = async (messageId) => {
           <el-card
             v-for="message in filteredMessages"
             :key="message.id"
-            class="message-card"
+            class="message-card stagger-item"
             :class="{ unread: !message.read, selected: isMessageSelected(message.id) }"
           >
           <div class="message-card-content">

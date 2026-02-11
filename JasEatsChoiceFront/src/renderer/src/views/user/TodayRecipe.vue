@@ -971,12 +971,12 @@ const filteredRecipes = computed(() => {
 
 <template>
   <div class="today-recipe-container">
-    <div class="recipe-header">
+    <div class="recipe-header fade-in-up">
       <h2>今日食谱</h2>
     </div>
 
     <!-- 营养摄入统计 -->
-    <el-card class="nutrition-card">
+    <el-card class="nutrition-card scale-in">
       <template #header>
         <div class="card-header">营养摄入统计</div>
       </template>
@@ -1085,7 +1085,7 @@ const filteredRecipes = computed(() => {
         <el-card
           v-for="recipe in filteredRecipes"
           :key="recipe.id"
-          class="recipe-card"
+          class="recipe-card stagger-item"
           :class="[recipe.type, { 'recipe-card-favorited': recipe.isFavorite }]"
         >
           <template #header>

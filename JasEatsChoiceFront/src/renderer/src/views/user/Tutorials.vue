@@ -210,7 +210,7 @@ onMounted(() => {
 <template>
   <div class="tutorials-plaza-container">
     <!-- 页面头部 -->
-    <div class="page-header">
+    <div class="page-header fade-in-up">
       <div class="header-left">
         <div class="title-section">
           <h2>教程广场</h2>
@@ -290,7 +290,7 @@ onMounted(() => {
     </div>
 
     <!-- 搜索和筛选栏 -->
-    <div class="filter-bar">
+    <div class="filter-bar fade-in-up">
       <div class="filter-left">
         <el-input
           v-model="searchKeyword"
@@ -301,7 +301,7 @@ onMounted(() => {
         />
       </div>
 
-      <div class="filter-right">
+      <div class="filter-right slide-in-left delay-100">
         <el-select v-model="selectedType" placeholder="教程类型" class="filter-select">
           <template #prefix>
             <el-icon><Grid /></el-icon>
@@ -438,7 +438,7 @@ onMounted(() => {
       <el-card
         v-for="tutorial in filteredTutorials"
         :key="tutorial.id"
-        class="tutorial-card"
+        class="tutorial-card stagger-item card-hover-effect"
         shadow="hover"
         @click="router.push(`/user/home/tutorials/${tutorial.id}`)"
       >

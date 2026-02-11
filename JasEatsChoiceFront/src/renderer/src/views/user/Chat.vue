@@ -3,10 +3,10 @@
     <!-- 使用新的头部组件 -->
     <ChatHeader @open-action-panel="openActionPanelWithTab" />
 
-    <div class="chat-content" :class="{ 'is-resizing': isResizing }">
+    <div class="chat-content fade-in-up" :class="{ 'is-resizing': isResizing }">
       <!-- 左侧会话列表 -->
       <div
-        class="conversation-list-wrapper"
+        class="conversation-list-wrapper fade-in-up delay-100"
         :style="{ width: leftPanelWidth + 'px' }"
         :class="{ 'is-resizing': isResizing }"
       >
@@ -76,7 +76,7 @@
         />
 
         <!-- 消息列表 -->
-        <div ref="messagesContainerRef" class="messages-container">
+        <div ref="messagesContainerRef" class="messages-container fade-in-up delay-100">
           <!-- 加载更多提示 -->
           <div
             v-if="msgPageNum > 1 || totalMessages > msgPageSize"
@@ -95,6 +95,7 @@
             v-for="message in chatMessages"
             :key="message.id"
             :message="message"
+            class="stagger-item"
             :user-id="userId"
             :format-message-time="formatMessageTime"
             :can-recall-message="canRecallMessage"
@@ -110,6 +111,7 @@
 
         <!-- 消息输入框 -->
         <MessageInput
+          class="slide-in-left delay-200"
           :replying-to="replyingTo"
           :disabled="!selectedConversation"
           @send="sendMessage"

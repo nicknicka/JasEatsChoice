@@ -3,7 +3,7 @@
     <div class="main-content">
       <el-main class="content-area">
         <div class="ai-chat-container">
-          <div class="chat-header">
+          <div class="chat-header fade-in-up">
             <h2>AI饮食助手</h2>
             <div class="chat-info">
               <el-tag type="success">在线</el-tag>
@@ -11,7 +11,7 @@
           </div>
 
           <!-- 功能标签页 -->
-          <el-tabs v-model="activeTab" type="border-card" class="ai-tabs">
+          <el-tabs v-model="activeTab" type="border-card" class="ai-tabs fade-in-up">
             <!-- AI聊天 - 使用简化版组件 -->
             <el-tab-pane label="AI聊天" name="chat">
               <AIChatSimple />

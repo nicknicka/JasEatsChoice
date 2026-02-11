@@ -17,9 +17,9 @@
       </el-skeleton>
     </div>
 
-    <el-card v-else class="profile-card">
+    <el-card v-else class="profile-card scale-in">
       <!-- 顶部头像区域 -->
-      <div class="profile-header">
+      <div class="profile-header fade-in-up">
         <!-- 单独拎出的名字 -->
         <div class="user-name-container">
           <h3 class="user-name">{{ userInfo.nickname || '未设置' }}</h3>
@@ -100,22 +100,22 @@
 
       <el-divider />
 
-      <div class="order-module">
+      <div class="order-module fade-in-up delay-100">
         <h3 class="module-title">
           <el-icon><Document /></el-icon>
           <span>订单模块</span>
         </h3>
         <div class="order-stats">
-          <div class="order-stat-card" @click="goToOrdersByStatus('processing')">
-            <div class="stat-value order-in-progress">{{ userInfo.orders?.inProgress || 0 }}笔</div>
+          <div class="order-stat-card stagger-item" @click="goToOrdersByStatus('processing')">
+            <div class="stat-value order-in-progress number-scroll">{{ userInfo.orders?.inProgress || 0 }}笔</div>
             <div class="stat-label">进行中订单</div>
           </div>
-          <div class="order-stat-card" @click="goToOrdersByStatus('pending')">
-            <div class="stat-value order-pending">{{ userInfo.orders?.pending || 0 }}笔</div>
+          <div class="order-stat-card stagger-item" @click="goToOrdersByStatus('pending')">
+            <div class="stat-value order-pending number-scroll">{{ userInfo.orders?.pending || 0 }}笔</div>
             <div class="stat-label">待确认订单</div>
           </div>
-          <div class="order-stat-card" @click="goToOrdersByStatus('pendingComment')">
-            <div class="stat-value order-pending-comment">
+          <div class="order-stat-card stagger-item" @click="goToOrdersByStatus('pendingComment')">
+            <div class="stat-value order-pending-comment number-scroll">
               {{ userInfo.orders?.pendingComment || 0 }}笔
             </div>
             <div class="stat-label">待评价订单</div>
@@ -131,18 +131,18 @@
 
       <el-divider />
 
-      <div class="wallet-module">
+      <div class="wallet-module fade-in-up delay-200">
         <h3 class="module-title">
           <el-icon><Wallet /></el-icon>
           <span>钱包模块</span>
         </h3>
-        <div class="wallet-card" @click="goToWalletManagement">
+        <div class="wallet-card scale-in" @click="goToWalletManagement">
           <div class="wallet-header">
             <div class="wallet-label">平台币余额</div>
             <div class="wallet-hint">点击查看详情 →</div>
           </div>
           <div class="wallet-balance">
-            <span class="balance-number">{{ userInfo.wallet?.balance || 0 }}</span>
+            <span class="balance-number number-scroll">{{ userInfo.wallet?.balance || 0 }}</span>
             <span class="balance-unit">个</span>
           </div>
           <div class="wallet-summary">
@@ -160,9 +160,9 @@
 
       <el-divider />
 
-      <div class="other-modules">
+      <div class="other-modules fade-in-up delay-300">
         <div class="module-grid">
-          <div class="module-item-card" @click="goToMyCollection">
+          <div class="module-item-card stagger-item" @click="goToMyCollection">
             <div class="module-item-content">
               <div class="module-item-icon">
                 <el-icon :size="24"><StarFilled /></el-icon>
@@ -182,7 +182,7 @@
             </el-button>
           </div>
 
-          <div class="module-item-card" @click="goToAddress">
+          <div class="module-item-card stagger-item" @click="goToAddress">
             <div class="module-item-content">
               <div class="module-item-icon">
                 <el-icon :size="24"><Location /></el-icon>
@@ -205,7 +205,7 @@
 
       <el-divider />
 
-      <div class="bottom-actions">
+      <div class="bottom-actions fade-in-up delay-400">
         <el-button type="text" size="small" @click="goToContact">
           <el-icon><Service /></el-icon>
           <span style="margin-left: 5px">联系客服</span>

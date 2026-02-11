@@ -161,7 +161,7 @@ onMounted(() => {
     </div>
 
     <!-- 教程详情 -->
-    <el-card v-else-if="currentTutorial" class="tutorial-detail-card" shadow="hover">
+    <el-card v-else-if="currentTutorial" class="tutorial-detail-card scale-in" shadow="hover">
       <!-- 封面图 -->
       <div class="tutorial-cover">
         <img :src="currentTutorial.cover_image || currentTutorial.coverImage" :alt="currentTutorial.title" />
@@ -173,7 +173,7 @@ onMounted(() => {
         </div>
       </div>
 
-      <div class="tutorial-info">
+      <div class="tutorial-info fade-in-up delay-100">
         <!-- 来源标签 -->
         <div class="tutorial-source-badges">
           <!-- 官方认证标签 -->

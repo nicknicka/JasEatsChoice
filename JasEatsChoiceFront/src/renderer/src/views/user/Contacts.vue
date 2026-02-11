@@ -1,7 +1,7 @@
 <template>
   <div class="contacts-container">
     <!-- 页面头部 -->
-    <div class="contacts-header">
+    <div class="contacts-header fade-in-up">
       <div class="header-content">
         <h2 class="page-title">
           <span class="title-icon">👥</span>
@@ -22,7 +22,7 @@
     </div>
 
     <!-- 搜索和筛选区域 -->
-    <div class="search-filter-section">
+    <div class="search-filter-section fade-in-up delay-100">
       <div class="search-box">
         <el-input
           v-model="searchQuery"
@@ -126,7 +126,7 @@
             <div
               v-for="friend in group"
               :key="friend.id"
-              class="friend-item"
+              class="friend-item stagger-item card-hover-effect"
               @click="startChat(friend)"
               @contextmenu.prevent="showContextMenu($event, friend)"
             >

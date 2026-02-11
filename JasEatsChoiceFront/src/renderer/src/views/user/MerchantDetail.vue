@@ -11,10 +11,11 @@
         :merchant="merchant"
         :is-favorite="isFavorite"
         @toggle-favorite="toggleFavorite"
+        class="scale-in"
       />
 
       <!-- 使用子组件：商家基本信息 -->
-      <merchant-basic-info :merchant="merchant" />
+      <merchant-basic-info :merchant="merchant" class="scale-in" />
 
       <!-- 菜单类型切换 -->
       <div class="menu-tabs">
@@ -35,7 +36,7 @@
       </div>
 
       <!-- 菜单展示区 -->
-      <div class="menu-display-area">
+      <div class="menu-display-area fade-in-up delay-100">
         <!-- 当前菜单名称 (仅在非用户评价标签时显示) -->
         <div v-if="activeMenuTab !== 'comments'" class="current-menu-name">
           <h2 class="menu-name-title">{{ currentMenuName }}</h2>
@@ -58,6 +59,7 @@
               :category-emoji="getCategoryEmoji(category)"
               :view-mode="viewMode"
               @add-to-cart="addMenuItem"
+              class="stagger-item"
             />
           </div>
         </div>

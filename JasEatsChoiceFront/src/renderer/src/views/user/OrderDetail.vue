@@ -284,7 +284,7 @@ const getActiveStep = () => {
       <!-- 订单详情内容 -->
       <div v-if="order" class="order-detail-content">
         <!-- 订单状态卡片 -->
-        <el-card class="status-card" shadow="hover">
+        <el-card class="status-card scale-in" shadow="hover">
           <div class="status-header">
             <div class="order-info-basic">
               <div class="order-no">订单号: {{ order.orderNo }}</div>
@@ -307,7 +307,7 @@ const getActiveStep = () => {
         </el-card>
 
         <!-- 商家信息卡片 -->
-        <el-card class="merchant-card" shadow="hover">
+        <el-card class="merchant-card fade-in-up delay-100" shadow="hover">
           <template #header>
             <div class="card-header">
               <el-icon :size="20" color="#6ba4ff"><Shop /></el-icon>
@@ -364,7 +364,7 @@ const getActiveStep = () => {
           </template>
 
           <div class="items-list" v-if="order.items && order.items.length > 0">
-            <div class="item-row" v-for="(item, index) in order.items" :key="index">
+            <div class="item-row stagger-item" v-for="(item, index) in order.items" :key="index">
               <!-- 商品图片 -->
               <div class="item-image">
                 <img
@@ -477,7 +477,7 @@ const getActiveStep = () => {
             <el-divider />
             <div class="amount-row total-row">
               <span class="total-label">实付金额</span>
-              <span class="total-value">¥{{ order.total.toFixed(2) }}</span>
+              <span class="total-value number-scroll">¥{{ order.total.toFixed(2) }}</span>
             </div>
           </div>
         </el-card>

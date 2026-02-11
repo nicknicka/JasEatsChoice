@@ -1,7 +1,7 @@
 <template>
   <div class="diet-record-container">
     <!-- 顶部日历选择区域 -->
-    <div class="calendar-section">
+    <div class="calendar-section fade-in-up">
       <div class="section-header">
         <div class="section-title">
           <el-icon class="title-icon"><CalendarIcon /></el-icon>
@@ -34,8 +34,8 @@
 
     <!-- 优化后的统计卡片 -->
     <div class="stats-card">
-      <div class="stat-item">
-        <div class="stat-number">{{ totalCalories }}<span class="stat-unit">kcal</span></div>
+      <div class="stat-item scale-in">
+        <div class="stat-number number-scroll">{{ totalCalories }}<span class="stat-unit">kcal</span></div>
         <div class="stat-label">总卡路里</div>
         <el-progress
           v-if="dailyCalorieGoal > 0"
@@ -50,8 +50,8 @@
 
       <div class="stat-divider"></div>
 
-      <div class="stat-item">
-        <div class="stat-number">{{ dietRecords.length }}</div>
+      <div class="stat-item scale-in">
+        <div class="stat-number number-scroll">{{ dietRecords.length }}</div>
         <div class="stat-label">记录条数</div>
       </div>
 
@@ -59,18 +59,18 @@
 
       <!-- 营养素统计 -->
       <template v-if="showNutrientStats">
-        <div class="stat-item nutrient-stat">
-          <div class="nutrient-value">{{ totalProtein }}<span class="nutrient-unit">g</span></div>
+        <div class="stat-item nutrient-stat scale-in">
+          <div class="nutrient-value number-scroll">{{ totalProtein }}<span class="nutrient-unit">g</span></div>
           <div class="nutrient-label">蛋白质</div>
         </div>
 
-        <div class="stat-item nutrient-stat">
-          <div class="nutrient-value">{{ totalFat }}<span class="nutrient-unit">g</span></div>
+        <div class="stat-item nutrient-stat scale-in">
+          <div class="nutrient-value number-scroll">{{ totalFat }}<span class="nutrient-unit">g</span></div>
           <div class="nutrient-label">脂肪</div>
         </div>
 
-        <div class="stat-item nutrient-stat">
-          <div class="nutrient-value">
+        <div class="stat-item nutrient-stat scale-in">
+          <div class="nutrient-value number-scroll">
             {{ totalCarbohydrate }}<span class="nutrient-unit">g</span>
           </div>
           <div class="nutrient-label">碳水</div>
@@ -90,7 +90,7 @@
       <!-- 饮食记录内容 -->
       <div v-else class="meal-sections">
         <!-- 早餐 -->
-        <div v-if="getMealsByType('breakfast').length > 0" class="meal-section">
+        <div v-if="getMealsByType('breakfast').length > 0" class="meal-section stagger-item">
           <div
             class="meal-section-header breakfast"
             @click="toggleSection('breakfast')"
@@ -119,7 +119,7 @@
         </div>
 
         <!-- 午餐 -->
-        <div v-if="getMealsByType('lunch').length > 0" class="meal-section">
+        <div v-if="getMealsByType('lunch').length > 0" class="meal-section stagger-item">
           <div
             class="meal-section-header lunch"
             @click="toggleSection('lunch')"
@@ -148,7 +148,7 @@
         </div>
 
         <!-- 晚餐 -->
-        <div v-if="getMealsByType('dinner').length > 0" class="meal-section">
+        <div v-if="getMealsByType('dinner').length > 0" class="meal-section stagger-item">
           <div
             class="meal-section-header dinner"
             @click="toggleSection('dinner')"
@@ -177,7 +177,7 @@
         </div>
 
         <!-- 加餐 -->
-        <div v-if="getMealsByType('snack').length > 0" class="meal-section">
+        <div v-if="getMealsByType('snack').length > 0" class="meal-section stagger-item">
           <div
             class="meal-section-header snack"
             @click="toggleSection('snack')"

@@ -856,7 +856,7 @@ const getTagType = (type) => {
 
 <template>
   <div class="my-recipe-container">
-    <div class="recipe-header">
+    <div class="recipe-header fade-in-up">
       <div>
         <h2>我的食谱</h2>
         <div v-if="filteredRecipes.length > 0" class="search-result-count">
@@ -864,7 +864,7 @@ const getTagType = (type) => {
         </div>
       </div>
 
-      <div class="filter-section">
+      <div class="filter-section fade-in-up">
         <el-input
           v-model="searchKeyword"
           placeholder="搜索食谱、菜品或食材"
@@ -941,7 +941,7 @@ const getTagType = (type) => {
         <el-card
           v-for="recipe in filteredRecipes"
           :key="recipe.id"
-          class="recipe-card"
+          class="recipe-card stagger-item card-hover-effect"
           :class="[
             recipe.type,
             {

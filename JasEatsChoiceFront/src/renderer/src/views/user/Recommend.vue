@@ -170,10 +170,10 @@ onMounted(async () => {
       @weather-updated="handleWeatherUpdated"
     />
 
-    <h2>我的推荐</h2>
+    <h2 class="fade-in-up">我的推荐</h2>
 
     <!-- 筛选和排序工具栏 -->
-    <div class="toolbar">
+    <div class="toolbar fade-in-up delay-100">
       <div class="toolbar-left">
         <el-input
           v-model="searchKeyword"
@@ -203,7 +203,7 @@ onMounted(async () => {
 
     <!-- 筛选面板 -->
     <transition name="filter-slide">
-      <div class="filter-panel" v-show="showFilters">
+      <div class="filter-panel slide-in-left" v-show="showFilters">
         <div class="filter-section">
           <div class="filter-title">卡路里范围</div>
           <el-radio-group v-model="selectedCalorieRange">
@@ -259,13 +259,13 @@ onMounted(async () => {
     </transition>
 
     <!-- 筛选结果提示 -->
-    <div class="filter-info" v-if="hasActiveFilters">
+    <div class="filter-info fade-in-up delay-200" v-if="hasActiveFilters">
       <span>找到 {{ filteredAndSortedRecommendations.length }} 个推荐结果</span>
       <el-button type="text" size="small" @click="resetFilters">清除筛选</el-button>
     </div>
 
     <!-- 刷新按钮 -->
-    <div class="refresh-bar">
+    <div class="refresh-bar fade-in-up delay-200">
       <el-button
         :icon="refreshing ? 'Loading' : 'Refresh'"
         :loading="refreshing"
@@ -289,7 +289,7 @@ onMounted(async () => {
       <el-card
         v-for="item in filteredAndSortedRecommendations"
         :key="item.id"
-        class="recommend-card"
+        class="recommend-card stagger-item"
         :class="{ featured: item.rating >= 4.9 }"
       >
         <!-- 推荐来源标签 -->

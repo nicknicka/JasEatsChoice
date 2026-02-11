@@ -3,6 +3,7 @@ import App from './App.vue'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 import './assets/css/styles.less'
+import './assets/css/component-animations.css'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import router from './router'
 import pinia from './store' // 引入 Pinia 实例

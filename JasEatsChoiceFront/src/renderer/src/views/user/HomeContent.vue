@@ -703,7 +703,7 @@ onMounted(async () => {
     </div>
 
     <!-- 天气信息区域 - 新设计 -->
-    <div class="weather-section-new" role="region" aria-label="天气信息">
+    <div class="weather-section-new fade-in-up" role="region" aria-label="天气信息">
       <!-- 天气骨架屏 -->
       <div v-if="showWeatherSkeleton" class="weather-skeleton-wrapper">
         <div class="weather-card-new skeleton-weather">
@@ -722,7 +722,7 @@ onMounted(async () => {
       </div>
 
       <!-- 天气卡片 - 新设计 -->
-      <div v-else class="weather-card-new" :style="{ background: weatherGradient }">
+      <div v-else class="weather-card-new scale-in" :style="{ background: weatherGradient }">
         <div class="weather-content-new">
           <!-- 温度显示 -->
           <div class="weather-temp-line">
@@ -819,7 +819,7 @@ onMounted(async () => {
       </div>
     </el-dialog>
 
-    <div class="recommendation-section" role="region" aria-label="今日推荐菜品">
+    <div class="recommendation-section fade-in-up delay-100" role="region" aria-label="今日推荐菜品">
       <h3 id="recommendations-heading">今日推荐</h3>
       <!-- 骨架屏加载中 -->
       <div v-if="recommendedDishesLoading" class="skeleton-wrapper">
@@ -932,7 +932,7 @@ onMounted(async () => {
     </div>
 
     <!-- 今日热点 - 只有当有数据时显示 -->
-    <div class="hot-section" v-if="hotTopic.content" @click="handleHotTopicClick">
+    <div class="hot-section fade-in-up delay-200" v-if="hotTopic.content" @click="handleHotTopicClick">
       <el-card shadow="hover" class="hot-card" :class="{ 'is-clickable': hotTopic.clickable }">
         <div class="hot-content">
           <div class="hot-icon-wrapper">
@@ -948,7 +948,7 @@ onMounted(async () => {
       </el-card>
     </div>
 
-    <div class="nearby-section">
+    <div class="nearby-section fade-in-up delay-300">
       <el-button
         type="primary"
         size="large"
@@ -962,7 +962,7 @@ onMounted(async () => {
       </el-button>
     </div>
 
-    <div class="tutorial-section" role="region" aria-label="制作教程与指南">
+    <div class="tutorial-section fade-in-up delay-400" role="region" aria-label="制作教程与指南">
       <div class="section-header">
         <h3 id="tutorials-heading">制作教程与指南</h3>
         <el-button
@@ -1009,7 +1009,7 @@ onMounted(async () => {
         <div class="tutorial-grid" role="list" aria-label="教程列表">
           <el-card
             shadow="hover"
-            class="tutorial-card enhanced"
+            class="tutorial-card enhanced stagger-item"
             v-for="(tutorial, index) in featuredTutorials.slice(0, 4)"
             :key="index"
             @click="handleTutorialClick(tutorial)"

@@ -1,9 +1,9 @@
 <template>
   <div class="settings-container">
-    <h2>设置</h2>
+    <h2 class="fade-in-up">设置</h2>
 
     <el-card class="settings-card">
-      <div class="settings-section">
+      <div class="settings-section stagger-item">
         <h3>🧑 用户设置</h3>
         <div class="form-row">
           <div class="form-label">头像</div>
@@ -63,7 +63,7 @@
 
       <el-divider />
 
-      <div class="settings-section">
+      <div class="settings-section stagger-item">
         <h3>🔍 显示设置</h3>
 
         <div class="form-row">
@@ -88,7 +88,7 @@
 
       <el-divider />
 
-      <div class="settings-section">
+      <div class="settings-section stagger-item">
         <h3>🔔 通知设置</h3>
 
         <div class="form-row">
@@ -122,7 +122,7 @@
 
       <el-divider />
 
-      <div class="settings-section">
+      <div class="settings-section stagger-item">
         <h3>🕶️ 隐私设置</h3>
 
         <div class="form-row">
@@ -168,7 +168,7 @@
 
       <el-divider />
 
-      <div class="settings-section">
+      <div class="settings-section stagger-item">
         <h3>📱 版本信息</h3>
 
         <div class="form-row">

@@ -20,7 +20,7 @@
       <!-- 左侧主要内容区 -->
       <div class="content-left">
         <!-- 商家信息卡片 -->
-        <el-card class="info-card merchant-card" shadow="hover">
+        <el-card class="info-card merchant-card scale-in" shadow="hover">
           <div class="merchant-info">
             <div class="merchant-avatar">
               <el-icon :size="40"><Shop /></el-icon>
@@ -54,7 +54,7 @@
         </el-card>
 
         <!-- 订单商品卡片 -->
-        <el-card class="info-card" shadow="hover">
+        <el-card class="info-card fade-in-up delay-100" shadow="hover">
           <template #header>
             <div class="card-header">
               <span class="card-title">订单商品</span>
@@ -76,7 +76,7 @@
           </div>
 
           <!-- 未支付订单 -->
-          <div class="order-section" :class="{ 'mt-20': orderInfo.paidItems.length > 0 }">
+          <div class="order-section stagger-item" :class="{ 'mt-20': orderInfo.paidItems.length > 0 }">
             <div class="section-header">
               <el-icon color="#e6a23c"><Clock /></el-icon>
               <span class="section-title">待支付商品</span>
@@ -87,7 +87,7 @@
         </el-card>
 
         <!-- 支付明细卡片 -->
-        <el-card class="info-card payment-summary-card" shadow="hover">
+        <el-card class="info-card payment-summary-card fade-in-up delay-200" shadow="hover">
           <template #header>
             <div class="card-header">
               <span class="card-title">支付明细</span>
@@ -223,7 +223,7 @@
     </div>
 
     <!-- 底部提交栏 -->
-    <div class="bottom-submit-bar">
+    <div class="bottom-submit-bar scale-in delay-300">
       <div class="submit-bar-content">
         <div class="submit-bar-left">
           <div class="payment-tips">
