@@ -120,40 +120,48 @@
       v-model:visible="showAddDialog"
       @success="loadSources"
     />
-
-    <!-- 提取详情对话框 -->
-    <extraction-detail-dialog
-      v-model:visible="showDetailDialog"
-      :extraction-id="selectedExtractionId"
-      @published="loadSources"
-    />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, VideoCamera, Document, Loading } from '@element-plus/icons-vue'
 import ContentExtractionDialog from './ContentExtractionDialog.vue'
-import ExtractionDetailDialog from './ExtractionDetailDialog.vue'
 import contentExtractionApi from '@/api/contentExtraction'
 
-const loading = ref(false)
+// 定义 props
+const props = defineProps({
+  sources: {
+    type: Array,
+    default: () => []
+  },
+  loading: {
+    type: Boolean,
+    default: false
+  }
+})
+
+// 定义 emit
+const emit = defineEmits(['refresh', 'view-detail', 're-extract', 'delete'])
+
 const showAddDialog = ref(false)
-const showDetailDialog = ref(false)
-const selectedExtractionId = ref('')
-const sources = ref([])
+
+// 自动刷新定时器
+let refreshTimer = null
+// 轮询间隔（毫秒）
+const POLL_INTERVAL = 3000
 
 // 进行中的提取
 const processingSources = computed(() => {
-  return sources.value.filter(s =>
+  return props.sources.filter(s =>
     s.extractionStatus === 'PENDING' || s.extractionStatus === 'PROCESSING'
   )
 })
 
 // 已完成的提取
 const completedSources = computed(() => {
-  return sources.value.filter(s =>
+  return props.sources.filter(s =>
     s.extractionStatus === 'SUCCESS' || s.extractionStatus === 'FAILED'
   )
 })
@@ -195,41 +203,46 @@ const formatTime = (time) => {
   return date.toLocaleDateString()
 }
 
-// 加载内容源列表
-const loadSources = async () => {
-  loading.value = true
-  try {
-    const response = await contentExtractionApi.getSources()
-    if (response.code === 200) {
-      sources.value = response.data || []
-    }
-  } catch (error) {
-    console.error('加载失败:', error)
-    ElMessage.error('加载失败，请稍后重试')
-  } finally {
-    loading.value = false
-  }
+// 加载内容源列表（触发父组件刷新）
+const loadSources = () => {
+  emit('refresh')
 }
 
 // 查看提取详情
 const viewExtraction = (source) => {
-  // 需要先获取extractionId
-  // 这里简化处理，实际应该从source中获取或通过API查询
-  ElMessage.info('查看详情功能开发中')
+  if (source.extractionId) {
+    emit('view-detail', source)
+  } else if (source.extractionStatus === 'PENDING' || source.extractionStatus === 'PROCESSING') {
+    ElMessage.info('内容正在提取中，请稍后查看')
+  } else {
+    ElMessage.warning('无法查看详情，提取可能失败或未完成')
+  }
 }
 
 // 发布为食谱
 const publishAsRecipe = async (source) => {
+  if (!source.extractionId) {
+    ElMessage.warning('无法发布，请等待提取完成')
+    return
+  }
+
   try {
     await ElMessageBox.confirm('确认发布为食谱？', '提示', {
       type: 'warning'
     })
 
-    // TODO: 调用发布API
-    ElMessage.success('发布成功')
-    loadSources()
+    const response = await contentExtractionApi.publishAsRecipe(source.extractionId, {})
+    if (response.code === '200' || response.code === 200) {
+      ElMessage.success('发布成功')
+      emit('refresh')
+    } else {
+      ElMessage.error(response.message || '发布失败')
+    }
   } catch (error) {
-    // 用户取消
+    if (error !== 'cancel') {
+      console.error('发布失败:', error)
+      ElMessage.error('发布失败')
+    }
   }
 }
 
@@ -239,22 +252,65 @@ const deleteSource = async (source) => {
     await ElMessageBox.confirm('确认删除该提取记录？', '提示', {
       type: 'warning'
     })
-
-    const response = await contentExtractionApi.deleteSource(source.id)
-    if (response.code === 200) {
-      ElMessage.success('删除成功')
-      loadSources()
-    }
+    emit('delete', source)
   } catch (error) {
-    if (error !== 'cancel') {
-      console.error('删除失败:', error)
-      ElMessage.error('删除失败')
-    }
+    // 用户取消
   }
 }
 
+// 启动自动轮询
+const startPolling = () => {
+  // 清除已存在的定时器
+  if (refreshTimer) {
+    clearInterval(refreshTimer)
+  }
+
+  // 每3秒刷新一次列表
+  refreshTimer = setInterval(() => {
+    // 检查是否有处理中的任务
+    const hasProcessing = props.sources.some(s =>
+      s.extractionStatus === 'PENDING' || s.extractionStatus === 'PROCESSING'
+    )
+
+    if (hasProcessing) {
+      console.log('自动刷新：有处理中的任务')
+      emit('refresh')
+    } else {
+      console.log('自动刷新：没有处理中的任务，停止轮询')
+      stopPolling()
+    }
+  }, POLL_INTERVAL)
+}
+
+// 停止轮询
+const stopPolling = () => {
+  if (refreshTimer) {
+    clearInterval(refreshTimer)
+    refreshTimer = null
+  }
+}
+
+// 监听 sources 变化，自动启动/停止轮询
+watch(() => props.sources, (newSources) => {
+  const hasProcessing = newSources.some(s =>
+    s.extractionStatus === 'PENDING' || s.extractionStatus === 'PROCESSING'
+  )
+
+  if (hasProcessing && !refreshTimer) {
+    startPolling()
+  } else if (!hasProcessing && refreshTimer) {
+    stopPolling()
+  }
+}, { deep: true })
+
 onMounted(() => {
-  loadSources()
+  // 启动自动轮询
+  startPolling()
+})
+
+// 组件卸载时清除定时器
+onUnmounted(() => {
+  stopPolling()
 })
 </script>
 

@@ -70,6 +70,11 @@ public class ContentExtractionDetailVO {
     private List<StepItem> steps;
 
     /**
+     * 步骤整体描述
+     */
+    private String stepsDescription;
+
+    /**
      * 制作时长（分钟）
      */
     private Integer cookingTime;
@@ -156,7 +161,12 @@ public class ContentExtractionDetailVO {
         private Integer stepNumber;
 
         /**
-         * 步骤描述
+         * 步骤标题
+         */
+        private String title;
+
+        /**
+         * 步骤详细描述
          */
         private String description;
 

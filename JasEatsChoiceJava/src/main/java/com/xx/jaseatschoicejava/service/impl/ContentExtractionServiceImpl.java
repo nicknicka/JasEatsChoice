@@ -423,6 +423,7 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
         // 查询提取的菜品信息
         ContentExtraction extraction = contentExtractionMapper.selectBySourceId(source.getId());
         if (extraction != null) {
+            vo.setExtractionId(extraction.getId());
             vo.setExtractedDishName(extraction.getDishName());
             vo.setExtractedDishImage(extraction.getDishImage());
             vo.setIsPublished(extraction.getIsPublished());

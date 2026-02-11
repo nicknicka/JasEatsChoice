@@ -79,6 +79,11 @@ public class ContentSourceVO {
     private Boolean isExtracted;
 
     /**
+     * 提取ID（用于查看详情）
+     */
+    private String extractionId;
+
+    /**
      * 提取状态
      */
     private String extractionStatus;

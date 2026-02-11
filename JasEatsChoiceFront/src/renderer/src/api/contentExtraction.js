@@ -22,14 +22,14 @@ export default {
    * 获取提取详情
    */
   getExtractionDetail(extractionId) {
-    return api.get(`/v1/content-extraction/${extractionId}`)
+    return api.get(`/v1/content-extraction/extraction/${extractionId}`)
   },
 
   /**
    * 更新提取内容
    */
   updateExtraction(extractionId, data) {
-    return api.put(`/v1/content-extraction/${extractionId}`, data)
+    return api.put(`/v1/content-extraction/extraction`, data)
   },
 
   /**
@@ -50,6 +50,6 @@ export default {
    * 发布为食谱
    */
   publishAsRecipe(extractionId, data) {
-    return api.post(`/v1/content-extraction/${extractionId}/publish`, data)
+    return api.post(`/v1/content-extraction/extraction/${extractionId}/publish`, data)
   }
 }

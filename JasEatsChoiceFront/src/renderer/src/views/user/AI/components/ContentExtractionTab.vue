@@ -31,8 +31,7 @@
     <extraction-detail-dialog
       v-model:visible="detailDialogVisible"
       :extraction-id="selectedExtractionId"
-      @publish="handlePublish"
-      @verify="handleVerify"
+      @published="handlePublished"
     />
 
     <!-- 提取历史弹窗 -->
@@ -60,7 +59,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, List } from '@element-plus/icons-vue'
 import ContentSourceList from '@/components/ContentSourceList.vue'
@@ -75,13 +74,28 @@ const detailDialogVisible = ref(false)
 const historyDialogVisible = ref(false)
 const selectedExtractionId = ref(null)
 
+// 自动刷新定时器
+let refreshTimer = null
+// 轮询间隔（毫秒）
+const POLL_INTERVAL = 3000
+
+// 检查是否有处理中的任务
+const hasProcessingTasks = computed(() => {
+  return sources.value.some(s =>
+    s.extractionStatus === 'PENDING' || s.extractionStatus === 'PROCESSING'
+  )
+})
+
 // 加载内容源列表
 const loadSources = async () => {
   loading.value = true
   try {
     const response = await contentExtractionApi.getSources()
-    if (response.code === 200) {
+    // 修复：兼容字符串和数字格式的 code
+    if (response.code === '200' || response.code === 200) {
       sources.value = response.data || []
+    } else {
+      ElMessage.error(response.message || '加载失败')
     }
   } catch (error) {
     console.error('加载内容源失败:', error)
@@ -127,9 +141,12 @@ const handleReExtract = async (source) => {
     )
 
     const response = await contentExtractionApi.reExtract(source.id)
-    if (response.code === 200) {
+    // 修复：兼容字符串和数字格式的 code
+    if (response.code === '200' || response.code === 200) {
       ElMessage.success('重新提取任务已创建')
       loadSources()
+    } else {
+      ElMessage.error(response.message || '操作失败')
     }
   } catch (error) {
     if (error !== 'cancel') {
@@ -149,9 +166,12 @@ const handleDelete = async (source) => {
     )
 
     const response = await contentExtractionApi.deleteSource(source.id)
-    if (response.code === 200) {
+    // 修复：兼容字符串和数字格式的 code
+    if (response.code === '200' || response.code === 200) {
       ElMessage.success('删除成功')
       loadSources()
+    } else {
+      ElMessage.error(response.message || '删除失败')
     }
   } catch (error) {
     if (error !== 'cancel') {
@@ -161,15 +181,9 @@ const handleDelete = async (source) => {
   }
 }
 
-// 发布为食谱
-const handlePublish = () => {
-  ElMessage.success('发布成功！')
-  loadSources()
-}
-
-// 验证提取
-const handleVerify = () => {
-  ElMessage.success('验证成功！')
+// 发布成功回调
+const handlePublished = () => {
+  // ExtractionDetailDialog 内部已处理 API 调用和消息提示
   loadSources()
 }
 
@@ -184,8 +198,43 @@ const getStatusType = (status) => {
   return statusMap[status] || 'info'
 }
 
+// 启动自动轮询
+const startPolling = () => {
+  // 清除已存在的定时器
+  if (refreshTimer) {
+    clearInterval(refreshTimer)
+  }
+
+  // 每3秒刷新一次列表
+  refreshTimer = setInterval(() => {
+    if (hasProcessingTasks.value) {
+      console.log('自动刷新：有处理中的任务')
+      loadSources()
+    } else {
+      console.log('自动刷新：没有处理中的任务，停止轮询')
+      stopPolling()
+    }
+  }, POLL_INTERVAL)
+}
+
+// 停止轮询
+const stopPolling = () => {
+  if (refreshTimer) {
+    clearInterval(refreshTimer)
+    refreshTimer = null
+  }
+}
+
 onMounted(() => {
   loadSources()
+
+  // 启动自动轮询
+  startPolling()
+})
+
+// 组件卸载时清除定时器
+onUnmounted(() => {
+  stopPolling()
 })
 </script>
 

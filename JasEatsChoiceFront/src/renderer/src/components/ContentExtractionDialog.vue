@@ -105,10 +105,13 @@ const handleSubmit = async () => {
       contentUrl: form.contentUrl
     })
 
-    if (response.data.code === 200) {
+    // 修复：API 响应拦截器已经返回 response.data，所以直接检查 response.code
+    if (response.code === '200' || response.code === 200) {
       ElMessage.success('添加成功，系统正在后台提取中...')
-      emit('success', response.data.data)
+      emit('success', response.data)
       handleClose()
+    } else {
+      ElMessage.error(response.message || '添加失败，请稍后重试')
     }
   } catch (error) {
     console.error('添加失败:', error)

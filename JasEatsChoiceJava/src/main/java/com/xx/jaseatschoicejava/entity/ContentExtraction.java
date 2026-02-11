@@ -54,6 +54,11 @@ public class ContentExtraction {
     private String steps;
 
     /**
+     * 步骤整体描述
+     */
+    private String stepsDescription;
+
+    /**
      * 制作时长（分钟）
      */
     private Integer cookingTime;
