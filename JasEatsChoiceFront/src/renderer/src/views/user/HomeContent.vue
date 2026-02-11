@@ -719,7 +719,7 @@ onMounted(async () => {
             <button
               class="location-select-btn"
               @click="mapLocationPickerVisible = true"
-              :title="weather.address || weather.city || '点击选择位置'"
+              :title="weather.city || '点击选择位置'"
             >
               点击选择位置 ↗
             </button>

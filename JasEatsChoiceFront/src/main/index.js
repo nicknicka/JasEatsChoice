@@ -43,6 +43,37 @@ function createWindow() {
     return { action: 'deny' }
   })
 
+  // 处理权限请求（地理位置等）
+  mainWindow.webContents.session.setPermissionRequestHandler(
+    (webContents, permission, callback, details) => {
+      console.log('[权限请求] 权限类型:', permission)
+      // 允许地理位置权限
+      if (permission === 'geolocation') {
+        console.log('[权限请求] 允许地理位置访问')
+        callback(true)
+        return
+      }
+      // 其他权限默认拒绝，用户可以根据需要添加更多权限
+      console.log('[权限请求] 拒绝权限:', permission)
+      callback(false)
+    }
+  )
+
+  // 处理权限检查（用于查询权限状态）
+  mainWindow.webContents.session.setPermissionCheckHandler(
+    (webContents, permission, requestingOrigin, details) => {
+      console.log('[权限检查] 权限类型:', permission, '来源:', requestingOrigin)
+      // 允许地理位置权限检查
+      if (permission === 'geolocation') {
+        console.log('[权限检查] 允许地理位置检查')
+        return true
+      }
+      // 其他权限默认拒绝
+      console.log('[权限检查] 拒绝权限检查:', permission)
+      return false
+    }
+  )
+
   // HMR for renderer base on electron-vite cli.
   if (isDev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
@@ -67,6 +98,28 @@ app.whenReady().then(() => {
     }
     clearCache()
   }
+
+  // 设置全局权限处理器（地理位置等）
+  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+    console.log('[全局权限请求] 权限类型:', permission)
+    if (permission === 'geolocation') {
+      console.log('[全局权限请求] 允许地理位置访问')
+      callback(true)
+    } else {
+      console.log('[全局权限请求] 拒绝权限:', permission)
+      callback(false)
+    }
+  })
+
+  session.defaultSession.setPermissionCheckHandler((webContents, permission) => {
+    console.log('[全局权限检查] 权限类型:', permission)
+    if (permission === 'geolocation') {
+      console.log('[全局权限检查] 允许地理位置检查')
+      return true
+    }
+    console.log('[全局权限检查] 拒绝权限检查:', permission)
+    return false
+  })
 
   // 设置内容安全策略 (CSP) - 根据环境动态配置
   const scriptSrcPolicy = isDev

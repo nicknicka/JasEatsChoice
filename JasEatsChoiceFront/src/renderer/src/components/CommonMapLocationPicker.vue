@@ -151,6 +151,7 @@ const initMap = () => {
     return
   }
 
+  console.log('开始初始化地图...')
   mapLoading.value = true
 
   try {
@@ -161,18 +162,29 @@ const initMap = () => {
       viewMode: '2D'
     })
 
+    console.log('地图实例创建成功')
+
     // 添加工具栏
-    map.value.addControl(new AMap.ToolBar())
-    map.value.addControl(new AMap.Scale())
+    if (typeof AMap.ToolBar !== 'undefined') {
+      map.value.addControl(new AMap.ToolBar())
+      console.log('工具栏已添加')
+    }
+
+    if (typeof AMap.Scale !== 'undefined') {
+      map.value.addControl(new AMap.Scale())
+      console.log('比例尺已添加')
+    }
 
     // 添加标记
     if (props.defaultPosition) {
       addMarker(props.defaultPosition.lng, props.defaultPosition.lat)
+      console.log('默认标记已添加')
     }
 
     // 点击地图事件
     map.value.on('click', (e) => {
       const { lng, lat } = e.lnglat
+      console.log('地图点击位置:', lng, lat)
       updateMarkerPosition(lng, lat)
       getAddressByLocation(lng, lat)
     })
@@ -182,6 +194,14 @@ const initMap = () => {
       mapLoading.value = false
       console.log('地图加载完成')
     })
+
+    // 设置超时，防止一直loading
+    setTimeout(() => {
+      if (mapLoading.value) {
+        mapLoading.value = false
+        console.log('地图初始化超时，但已继续')
+      }
+    }, 5000)
   } catch (error) {
     console.error('地图初始化失败:', error)
     mapLoading.value = false
@@ -224,26 +244,40 @@ const updateMarkerPosition = (lng, lat) => {
   }
 }
 
-// 根据经纬度获取地址
+// 根据经纬度获取地址（使用后端代理）
 const getAddressByLocation = async (lng, lat) => {
   try {
-    if (typeof AMap === 'undefined') return
+    // 动态导入 api 模块
+    const amapApi = (await import('../api/amap.js')).default
 
-    const geocoder = new AMap.Geocoder()
+    const response = await amapApi.regeocode(lng.toString(), lat.toString())
 
-    geocoder.getAddress([lng, lat], (status, result) => {
-      if (status === 'complete' && result.info === 'OK') {
-        selectedAddress.value = result.regeocode.formattedAddress
-      } else {
-        selectedAddress.value = '未知地址'
-      }
-    })
+    // 修复：api 响应拦截器已经返回 response.data，所以直接检查 response.code
+    if (response && response.code === '200' && response.data) {
+      selectedAddress.value = response.data.formattedAddress || '未知地址'
+    } else {
+      selectedAddress.value = '未知地址'
+    }
   } catch (error) {
     console.error('获取地址失败:', error)
+    // 降级到前端 API
+    if (typeof AMap !== 'undefined' && AMap.Geocoder) {
+      try {
+        const geocoder = new AMap.Geocoder()
+        geocoder.getAddress([lng, lat], (status, result) => {
+          if (status === 'complete' && result.info === 'OK') {
+            selectedAddress.value = result.regeocode.formattedAddress
+          }
+        })
+      } catch (e) {
+        console.error('前端地址获取也失败:', e)
+        selectedAddress.value = '未知地址'
+      }
+    }
   }
 }
 
-// 搜索地址
+// 搜索地址（使用后端代理）
 const handleSearch = async () => {
   if (!searchKeyword.value.trim()) {
     ElMessage.warning('请输入搜索关键词')
@@ -251,28 +285,77 @@ const handleSearch = async () => {
   }
 
   try {
-    if (typeof AMap === 'undefined') return
+    console.log('开始搜索:', searchKeyword.value)
 
-    const placeSearch = new AMap.PlaceSearch({
-      city: '全国', // 城市设为全国，自动在全国范围内搜索
-      pageSize: 5 // 每页显示结果数
-    })
+    // 动态导入 api 模块
+    const amapApi = (await import('../api/amap.js')).default
 
-    placeSearch.search(searchKeyword.value, (status, result) => {
-      if (status === 'complete' && result.info === 'OK' && result.poiList.pois.length > 0) {
-        searchResults.value = result.poiList.pois.map((poi) => ({
-          name: poi.name,
-          address: poi.address,
-          location: poi.location
+    const response = await amapApi.searchAddress(searchKeyword.value, '全国')
+
+    console.log('后端搜索响应:', response)
+
+    // 修复：response 直接包含 code, message, data（不是 response.data.code）
+    if (response && response.code === '200') {
+      const results = response.data || []
+      console.log('搜索成功，找到', results.length, '个结果')
+
+      if (results.length > 0) {
+        searchResults.value = results.map((item) => ({
+          name: item.name,
+          address: item.address || '暂无详细地址',
+          location: item.location
         }))
+        ElMessage.success('找到 ' + results.length + ' 个结果，请点击选择')
       } else {
         searchResults.value = []
-        ElMessage.warning('未找到相关地址')
+        ElMessage.warning('未找到相关地址，请尝试其他关键词')
       }
-    })
+    } else {
+      searchResults.value = []
+      ElMessage.warning(response?.message || '搜索失败，请直接在地图上点击选择位置')
+    }
   } catch (error) {
-    console.error('搜索失败:', error)
-    ElMessage.error('搜索失败，请重试')
+    console.error('搜索异常:', error)
+    // 降级到前端 Autocomplete API
+    console.log('降级使用前端 API 搜索')
+    try {
+      if (typeof AMap !== 'undefined') {
+        AMap.plugin('AMap.Autocomplete', function () {
+          const autocomplete = new AMap.Autocomplete({
+            city: '全国',
+            input: searchKeyword.value
+          })
+
+          autocomplete.search(searchKeyword.value, function (status, result) {
+            if (status === 'complete' && result.info === 'OK') {
+              if (result.tips && result.tips.length > 0) {
+                searchResults.value = result.tips
+                  .filter(tip => tip.location && tip.name)
+                  .map(tip => ({
+                    name: tip.name,
+                    address: tip.district || tip.address || '暂无详细地址',
+                    location: {
+                      lng: tip.location.lng,
+                      lat: tip.location.lat
+                    }
+                  }))
+                  .slice(0, 10)
+                ElMessage.success('找到 ' + searchResults.value.length + ' 个结果')
+              } else {
+                ElMessage.warning('未找到相关地址')
+              }
+            } else {
+              ElMessage.warning('搜索失败，请直接在地图上选择位置')
+            }
+          })
+        })
+      } else {
+        ElMessage.error('地图功能不可用，请刷新页面')
+      }
+    } catch (fallbackError) {
+      console.error('前端 API 降级也失败:', fallbackError)
+      ElMessage.error('搜索功能不可用，请直接在地图上点击选择位置')
+    }
   }
 }
 
@@ -298,8 +381,12 @@ const handleGetCurrentLocation = () => {
   locating.value = true
 
   if ('geolocation' in navigator) {
+    console.log('开始获取当前位置...')
+
+    // 先尝试使用 cached 位置（如果有）
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        console.log('定位成功:', position)
         const { latitude, longitude } = position.coords
         updateMarkerPosition(longitude, latitude)
         getAddressByLocation(longitude, latitude)
@@ -310,19 +397,48 @@ const handleGetCurrentLocation = () => {
         console.error('定位失败:', error)
         locating.value = false
         let errorMsg = '定位失败'
-        if (error.code === 1) {
-          errorMsg = '您拒绝了定位请求'
-        } else if (error.code === 2) {
-          errorMsg = '无法获取位置信息'
-        } else if (error.code === 3) {
-          errorMsg = '定位请求超时'
+        let suggestAction = ''
+
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMsg = '您拒绝了定位请求'
+            suggestAction = '请在系统设置中允许定位权限'
+            break
+          case error.POSITION_UNAVAILABLE:
+            errorMsg = '无法获取位置信息'
+            suggestAction = '请检查网络连接或系统定位服务'
+            break
+          case error.TIMEOUT:
+            errorMsg = '定位请求超时'
+            suggestAction = '桌面应用定位功能受限，建议直接在地图上选择位置'
+            break
+          default:
+            errorMsg = '定位失败(错误码: ' + error.code + ')'
+            suggestAction = '建议直接在地图上选择位置'
+            break
         }
-        ElMessage.error(errorMsg)
+
+        // 定位失败时的友好提示
+        ElMessage.warning({
+          message: suggestAction ? `${errorMsg}，${suggestAction}` : errorMsg,
+          duration: 6000,
+          showClose: true
+        })
+
+        // 定位失败后，自动使用默认位置（如北京）
+        if (props.defaultPosition && error.code === error.TIMEOUT) {
+          console.log('定位超时，使用默认位置')
+          updateMarkerPosition(
+            props.defaultPosition.lng,
+            props.defaultPosition.lat
+          )
+          ElMessage.info('已定位到默认位置，请在地图上选择您的实际位置')
+        }
       },
       {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 300000
+        enableHighAccuracy: false, // 改为 false 以提高响应速度
+        timeout: 30000, // 超时时间到 30 秒
+        maximumAge: 600000 // 允许使用 10 分钟内的缓存位置
       }
     )
   } else {

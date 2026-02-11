@@ -1,12 +1,15 @@
 package com.xx.jaseatschoicejava.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.xx.jaseatschoicejava.entity.Order;
+import com.xx.jaseatschoicejava.entity.User;
+import com.xx.jaseatschoicejava.entity.Merchant;
 import com.xx.jaseatschoicejava.mapper.OrderMapper;
 import com.xx.jaseatschoicejava.mapper.UserMapper;
 import com.xx.jaseatschoicejava.mapper.MerchantMapper;
 import com.xx.jaseatschoicejava.service.AdminStatisticsService;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -18,22 +21,25 @@ import java.util.stream.Collectors;
 /**
  * 管理员统计Service实现
  */
-@Slf4j
 @Service
-@RequiredArgsConstructor
 public class AdminStatisticsServiceImpl implements AdminStatisticsService {
+
+    private static final Logger log = LoggerFactory.getLogger(AdminStatisticsServiceImpl.class);
 
     // 注入必要的Mapper
     private final UserMapper userMapper;
     private final MerchantMapper merchantMapper;
     private final OrderMapper orderMapper;
 
+    // 手动创建构造函数（替代 Lombok @RequiredArgsConstructor）
+    public AdminStatisticsServiceImpl(UserMapper userMapper, MerchantMapper merchantMapper, OrderMapper orderMapper) {
+        this.userMapper = userMapper;
+        this.merchantMapper = merchantMapper;
+        this.orderMapper = orderMapper;
+    }
+
     @Override
     public Map<String, Object> getDashboardStatistics(int days) {
-        // 计算日期范围
-        LocalDateTime endTime = LocalDateTime.now();
-        LocalDateTime startTime = endTime.minusDays(days);
-
         // 获取核心指标
         Map<String, Object> summary = getSummaryStatistics();
 
@@ -63,28 +69,25 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
 
         // 今日新增用户
         LocalDateTime todayStart = LocalDate.now().atStartOfDay();
-        Long newUsers = userMapper.selectCount(
-                new LambdaQueryWrapper<>()
-                        .ge(com.xx.jaseatschoicejava.entity.User::getCreateTime, todayStart)
-        );
+        QueryWrapper<User> userWrapper = new QueryWrapper<>();
+        userWrapper.ge("create_time", todayStart);
+        Long newUsers = userMapper.selectCount(userWrapper);
 
         // 总商家数
         Long totalMerchants = merchantMapper.selectCount(null);
 
         // 今日新增商家
-        Long newMerchants = merchantMapper.selectCount(
-                new LambdaQueryWrapper<>()
-                        .ge(com.xx.jaseatschoicejava.entity.Merchant::getCreateTime, todayStart)
-        );
+        QueryWrapper<Merchant> merchantWrapper = new QueryWrapper<>();
+        merchantWrapper.ge("create_time", todayStart);
+        Long newMerchants = merchantMapper.selectCount(merchantWrapper);
 
         // 总订单数
         Long totalOrders = orderMapper.selectCount(null);
 
         // 今日新订单
-        Long newOrders = orderMapper.selectCount(
-                new LambdaQueryWrapper<>()
-                        .ge(com.xx.jaseatschoicejava.entity.Order::getCreateTime, todayStart)
-        );
+        QueryWrapper<Order> orderWrapper = new QueryWrapper<>();
+        orderWrapper.ge("create_time", todayStart);
+        Long newOrders = orderMapper.selectCount(orderWrapper);
 
         // 总收入（已完成订单）
         BigDecimal totalRevenue = calculateTotalRevenue(null);
@@ -117,43 +120,38 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
             LocalDateTime dayEnd = date.plusDays(1).atStartOfDay();
 
             // 当天新增用户
-            Long newUsers = userMapper.selectCount(
-                    new LambdaQueryWrapper<>()
-                            .ge(com.xx.jaseatschoicejava.entity.User::getCreateTime, dayStart)
-                            .lt(com.xx.jaseatschoicejava.entity.User::getCreateTime, dayEnd)
-            );
+            QueryWrapper<User> userWrapper = new QueryWrapper<>();
+            userWrapper.ge("create_time", dayStart);
+            userWrapper.lt("create_time", dayEnd);
+            Long newUsers = userMapper.selectCount(userWrapper);
 
             // 当天新增商家
-            Long newMerchants = merchantMapper.selectCount(
-                    new LambdaQueryWrapper<>()
-                            .ge(com.xx.jaseatschoicejava.entity.Merchant::getCreateTime, dayStart)
-                            .lt(com.xx.jaseatschoicejava.entity.Merchant::getCreateTime, dayEnd)
-            );
+            QueryWrapper<Merchant> merchantWrapper = new QueryWrapper<>();
+            merchantWrapper.ge("create_time", dayStart);
+            merchantWrapper.lt("create_time", dayEnd);
+            Long newMerchants = merchantMapper.selectCount(merchantWrapper);
 
             // 当天订单数
-            Long totalOrders = orderMapper.selectCount(
-                    new LambdaQueryWrapper<>()
-                            .ge(com.xx.jaseatschoicejava.entity.Order::getCreateTime, dayStart)
-                            .lt(com.xx.jaseatschoicejava.entity.Order::getCreateTime, dayEnd)
-            );
+            QueryWrapper<Order> orderWrapper = new QueryWrapper<>();
+            orderWrapper.ge("create_time", dayStart);
+            orderWrapper.lt("create_time", dayEnd);
+            Long totalOrders = orderMapper.selectCount(orderWrapper);
 
             // 当天已完成订单（状态7=已完成）
-            Long completedOrders = orderMapper.selectCount(
-                    new LambdaQueryWrapper<>()
-                            .ge(com.xx.jaseatschoicejava.entity.Order::getCreateTime, dayStart)
-                            .lt(com.xx.jaseatschoicejava.entity.Order::getCreateTime, dayEnd)
-                            .eq(com.xx.jaseatschoicejava.entity.Order::getStatus, 7)
-            );
+            QueryWrapper<Order> completedOrderWrapper = new QueryWrapper<>();
+            completedOrderWrapper.ge("create_time", dayStart);
+            completedOrderWrapper.lt("create_time", dayEnd);
+            completedOrderWrapper.eq("status", 7);
+            Long completedOrders = orderMapper.selectCount(completedOrderWrapper);
 
             // 当天收入
             BigDecimal revenue = calculateTotalRevenue(dayStart);
 
             // 活跃用户（有订单的用户数）
-            Long activeUsers = orderMapper.selectCount(
-                    new LambdaQueryWrapper<>()
-                            .ge(com.xx.jaseatschoicejava.entity.Order::getCreateTime, dayStart)
-                            .lt(com.xx.jaseatschoicejava.entity.Order::getCreateTime, dayEnd)
-            );
+            QueryWrapper<Order> activeUserWrapper = new QueryWrapper<>();
+            activeUserWrapper.ge("create_time", dayStart);
+            activeUserWrapper.lt("create_time", dayEnd);
+            Long activeUsers = orderMapper.selectCount(activeUserWrapper);
 
             // 平均订单金额
             BigDecimal averageOrderAmount = completedOrders > 0

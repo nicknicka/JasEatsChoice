@@ -122,6 +122,12 @@ netty:
   initialBytesToStrip: 4
 
 # 高德地图API配置
+amap:
+  # API Key（用于前端 JavaScript API 和后端 Web 服务 API）
+  api-key: 140e4ebfe143855a4cc7440533ff27b3
+  # 是否启用后端代理模式
+  proxy-enabled: true
+
 gaode:
   map:
     api:

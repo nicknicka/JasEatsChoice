@@ -107,10 +107,17 @@ public class SecurityConfig {
         @Bean
         public CorsFilter corsFilter() {
             CorsConfiguration corsConfiguration = new CorsConfiguration();
-            corsConfiguration.addAllowedOrigin("http://localhost:5173");
-        corsConfiguration.addAllowedOrigin("http://localhost:5174");
+            // 使用 addAllowedOriginPattern 支持本地开发的所有端口
+            corsConfiguration.addAllowedOriginPattern("http://localhost:*");
+            corsConfiguration.addAllowedOriginPattern("http://127.0.0.1:*");
+            // 支持 Electron devtools 协议（如果需要）
+            corsConfiguration.addAllowedOriginPattern("devtools://*");
+            corsConfiguration.addAllowedOriginPattern("chrome-devtools://*");
+            // 允许所有请求头
             corsConfiguration.addAllowedHeader("*");
+            // 允许所有HTTP方法
             corsConfiguration.addAllowedMethod("*");
+            // 允许携带凭证（cookies、authorization headers等）
             corsConfiguration.setAllowCredentials(true);
 
             UrlBasedCorsConfigurationSource urlBasedCorsConfigurationSource = new UrlBasedCorsConfigurationSource();
