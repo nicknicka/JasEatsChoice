@@ -155,25 +155,13 @@ const initMap = () => {
   mapLoading.value = true
 
   try {
-    // 创建地图实例 - 使用1.4.15兼容配置
+    // 创建地图实例 - 高德地图 2.0 使用标准配置
     map.value = new AMap.Map('mapContainer', {
       zoom: 15,
-      center: [props.defaultPosition.lng, props.defaultPosition.lat],
-      viewMode: '2D'
+      center: [props.defaultPosition.lng, props.defaultPosition.lat]
     })
 
     console.log('地图实例创建成功')
-
-    // 添加工具栏
-    if (typeof AMap.ToolBar !== 'undefined') {
-      map.value.addControl(new AMap.ToolBar())
-      console.log('工具栏已添加')
-    }
-
-    if (typeof AMap.Scale !== 'undefined') {
-      map.value.addControl(new AMap.Scale())
-      console.log('比例尺已添加')
-    }
 
     // 添加标记
     if (props.defaultPosition) {
@@ -193,6 +181,16 @@ const initMap = () => {
     map.value.on('complete', () => {
       mapLoading.value = false
       console.log('地图加载完成')
+
+      // 地图加载完成后自动定位
+      console.log('开始自动定位...')
+      autoLocate()
+    })
+
+    // 捕获地图错误
+    map.value.on('error', (error) => {
+      console.error('地图运行时错误:', error)
+      mapLoading.value = false
     })
 
     // 设置超时，防止一直loading
@@ -218,11 +216,12 @@ const addMarker = (lng, lat) => {
     map.value.remove(marker.value)
   }
 
-  // 创建新标记
+  // 创建新标记（2.0 API 简化）
   marker.value = new AMap.Marker({
     position: [lng, lat],
-    animation: 'AMAP_ANIMATION_DROP',
-    title: '选中的位置'
+    title: '选中的位置',
+    // 2.0 版本动画参数不同
+    animation: 'AMAP_ANIMATION_DROP' // 1.4.15 的写法，2.0 应该兼容
   })
 
   map.value.add(marker.value)
@@ -376,75 +375,134 @@ const selectSearchResult = (item) => {
   }
 }
 
-// 获取当前位置
-const handleGetCurrentLocation = () => {
+// 获取当前位置（直接使用 IP 定位）
+const handleGetCurrentLocation = async () => {
   locating.value = true
 
-  if ('geolocation' in navigator) {
-    console.log('开始获取当前位置...')
+  console.log('开始获取当前位置...')
 
-    // 先尝试使用 cached 位置（如果有）
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        console.log('定位成功:', position)
-        const { latitude, longitude } = position.coords
-        updateMarkerPosition(longitude, latitude)
-        getAddressByLocation(longitude, latitude)
+  // ========== 第一级：IP 定位（快速且稳定） ==========
+  try {
+    const amapApi = (await import('../api/amap.js')).default
+    const response = await amapApi.ipLocation()
+
+    if (response && response.code === '200' && response.data) {
+      const { lng, lat, province, city } = response.data
+
+      if (lng && lat) {
+        console.log('IP定位成功:', province, city, lng, lat)
+        updateMarkerPosition(lng, lat)
+        getAddressByLocation(lng, lat)
+
+        // 保存到本地存储
+        saveLastLocation(lng, lat)
+
         locating.value = false
-        ElMessage.success('定位成功')
-      },
-      (error) => {
-        console.error('定位失败:', error)
-        locating.value = false
-        let errorMsg = '定位失败'
-        let suggestAction = ''
-
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            errorMsg = '您拒绝了定位请求'
-            suggestAction = '请在系统设置中允许定位权限'
-            break
-          case error.POSITION_UNAVAILABLE:
-            errorMsg = '无法获取位置信息'
-            suggestAction = '请检查网络连接或系统定位服务'
-            break
-          case error.TIMEOUT:
-            errorMsg = '定位请求超时'
-            suggestAction = '桌面应用定位功能受限，建议直接在地图上选择位置'
-            break
-          default:
-            errorMsg = '定位失败(错误码: ' + error.code + ')'
-            suggestAction = '建议直接在地图上选择位置'
-            break
-        }
-
-        // 定位失败时的友好提示
-        ElMessage.warning({
-          message: suggestAction ? `${errorMsg}，${suggestAction}` : errorMsg,
-          duration: 6000,
-          showClose: true
-        })
-
-        // 定位失败后，自动使用默认位置（如北京）
-        if (props.defaultPosition && error.code === error.TIMEOUT) {
-          console.log('定位超时，使用默认位置')
-          updateMarkerPosition(
-            props.defaultPosition.lng,
-            props.defaultPosition.lat
-          )
-          ElMessage.info('已定位到默认位置，请在地图上选择您的实际位置')
-        }
-      },
-      {
-        enableHighAccuracy: false, // 改为 false 以提高响应速度
-        timeout: 30000, // 超时时间到 30 秒
-        maximumAge: 600000 // 允许使用 10 分钟内的缓存位置
+        ElMessage.success(`IP定位成功：${province || ''}${city || ''}`)
+        return
       }
-    )
-  } else {
-    locating.value = false
-    ElMessage.error('您的浏览器不支持定位功能')
+    }
+  } catch (error) {
+    console.error('IP定位失败:', error)
   }
+
+  // ========== 第二级：使用本地存储的上次位置 ==========
+  const lastLocation = getLastLocation()
+  if (lastLocation) {
+    console.log('使用上次保存的位置:', lastLocation)
+    updateMarkerPosition(lastLocation.lng, lastLocation.lat)
+    getAddressByLocation(lastLocation.lng, lastLocation.lat)
+    locating.value = false
+    ElMessage.info('使用上次选择的位置')
+    return
+  }
+
+  // ========== 第三级：尝试浏览器 GPS 定位（可选，用于移动端） ==========
+  if ('geolocation' in navigator) {
+    try {
+      await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            console.log('GPS定位成功:', position)
+            const { latitude, longitude } = position.coords
+            updateMarkerPosition(longitude, latitude)
+            getAddressByLocation(longitude, latitude)
+
+            // 保存到本地存储
+            saveLastLocation(longitude, latitude)
+
+            locating.value = false
+            ElMessage.success('GPS定位成功')
+            resolve()
+          },
+          (error) => {
+            console.log('GPS定位失败，已降级到其他方式')
+            reject(error)
+          },
+          {
+            enableHighAccuracy: false,
+            timeout: 5000, // 缩短到 5 秒，快速失败
+            maximumAge: 600000
+          }
+        )
+      })
+    } catch (error) {
+      console.log('GPS定位异常，继续其他方式')
+    }
+  }
+
+  // ========== 第四级：使用默认位置 ==========
+  console.log('使用默认位置')
+  if (props.defaultPosition) {
+    updateMarkerPosition(props.defaultPosition.lng, props.defaultPosition.lat)
+    getAddressByLocation(props.defaultPosition.lng, props.defaultPosition.lat)
+  }
+  locating.value = false
+  ElMessage.warning({
+    message: '无法自动定位，已显示默认位置。请在地图上点击选择您的实际位置。',
+    duration: 5000,
+    showClose: true
+  })
+}
+
+// 保存位置到本地存储
+const saveLastLocation = (lng, lat) => {
+  try {
+    const locationData = {
+      lng,
+      lat,
+      timestamp: Date.now()
+    }
+    localStorage.setItem('user_last_location', JSON.stringify(locationData))
+    console.log('位置已保存到本地存储')
+  } catch (error) {
+    console.warn('保存位置失败:', error)
+  }
+}
+
+// 从本地存储获取上次位置
+const getLastLocation = () => {
+  try {
+    const stored = localStorage.getItem('user_last_location')
+    if (stored) {
+      const locationData = JSON.parse(stored)
+
+      // 检查是否过期（7天内有效）
+      const sevenDays = 7 * 24 * 60 * 60 * 1000
+      if (Date.now() - locationData.timestamp < sevenDays) {
+        return {
+          lng: locationData.lng,
+          lat: locationData.lat
+        }
+      } else {
+        // 过期则删除
+        localStorage.removeItem('user_last_location')
+      }
+    }
+  } catch (error) {
+    console.warn('读取本地位置失败:', error)
+  }
+  return null
 }
 
 // 确认选择
@@ -473,6 +531,60 @@ const handleDialogOpen = () => {
   setTimeout(() => {
     initMap()
   }, 300)
+}
+
+// 自动定位（静默模式，不显示加载状态和提示）
+const autoLocate = async () => {
+  console.log('开始自动定位...')
+
+  // ========== 第一级：优先使用本地存储的上次位置（最快） ==========
+  const lastLocation = getLastLocation()
+  if (lastLocation) {
+    console.log('使用上次保存的位置:', lastLocation)
+    updateMarkerPosition(lastLocation.lng, lastLocation.lat)
+    getAddressByLocation(lastLocation.lng, lastLocation.lat)
+    return
+  }
+
+  // ========== 第二级：尝试浏览器地理位置定位（需要用户授权） ==========
+  if ('geolocation' in navigator) {
+    try {
+      await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            console.log('浏览器定位成功:', position)
+            const { latitude, longitude } = position.coords
+            updateMarkerPosition(longitude, latitude)
+            getAddressByLocation(longitude, latitude)
+
+            // 保存到本地存储
+            saveLastLocation(longitude, latitude)
+
+            resolve()
+          },
+          (error) => {
+            console.log('浏览器定位失败:', error.message)
+            reject(error)
+          },
+          {
+            enableHighAccuracy: false,
+            timeout: 5000,
+            maximumAge: 600000
+          }
+        )
+      })
+      return
+    } catch (error) {
+      console.log('浏览器定位异常或被拒绝:', error)
+    }
+  }
+
+  // ========== 第三级：使用默认位置（北京） ==========
+  console.log('使用默认位置（北京）')
+  if (props.defaultPosition) {
+    updateMarkerPosition(props.defaultPosition.lng, props.defaultPosition.lat)
+    getAddressByLocation(props.defaultPosition.lng, props.defaultPosition.lat)
+  }
 }
 
 // 对话框关闭

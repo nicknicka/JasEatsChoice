@@ -43,5 +43,13 @@ export default {
     return api.get('/v1/amap/regeocode', {
       params: { lng, lat }
     })
+  },
+
+  /**
+   * IP 定位（通过 IP 地址获取大概位置）
+   * @returns {Promise} 位置信息（城市级别精度）
+   */
+  ipLocation() {
+    return api.get('/v1/amap/ip/location')
   }
 }

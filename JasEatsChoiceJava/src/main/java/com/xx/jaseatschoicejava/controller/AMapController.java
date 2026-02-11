@@ -70,4 +70,18 @@ public class AMapController {
             return ResponseResult.fail(result.get("code").toString(), result.get("message").toString());
         }
     }
+
+    /**
+     * IP 定位（通过 IP 地址获取大概位置）
+     */
+    @ApiOperation("IP定位")
+    @GetMapping("/ip/location")
+    public ResponseResult<?> ipLocation() {
+        Map<String, Object> result = aMapService.ipLocation();
+        if ("200".equals(result.get("code"))) {
+            return ResponseResult.success(result.get("data"), result.get("message").toString());
+        } else {
+            return ResponseResult.fail(result.get("code").toString(), result.get("message").toString());
+        }
+    }
 }

@@ -233,4 +233,88 @@ public class AMapService {
             );
         }
     }
+
+    /**
+     * IP 定位（通过 IP 地址获取大概位置）
+     * 文档：https://lbs.amap.com/api/webservice/guide/api/ipconfig
+     * 精度：城市级别（比 GPS 精确度低，但不需要用户授权）
+     */
+    public Map<String, Object> ipLocation() {
+        try {
+            String url = "https://restapi.amap.com/v3/ip";
+
+            ResponseEntity<String> response = restTemplate.getForEntity(
+                url + "?key={key}",
+                String.class,
+                aMapConfig.getApiKey()
+            );
+
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode jsonNode = mapper.readTree(response.getBody());
+
+            if ("1".equals(jsonNode.path("status").asText())) {
+                JsonNode locationNode = jsonNode.path("rectangle");
+                String province = jsonNode.path("province").asText("");
+                String city = jsonNode.path("city").asText("");
+
+                // 高德 IP 定位返回的是一个矩形范围，取中心点
+                if (locationNode != null && !locationNode.isMissingNode()) {
+                    String rectangle = locationNode.asText();
+                    String[] points = rectangle.split(";");
+                    if (points.length >= 2) {
+                        String[] southwest = points[0].split(",");
+                        String[] northeast = points[1].split(",");
+
+                        if (southwest.length == 2 && northeast.length == 2) {
+                            // 计算中心点
+                            double lng = (Double.parseDouble(southwest[0]) + Double.parseDouble(northeast[0])) / 2;
+                            double lat = (Double.parseDouble(southwest[1]) + Double.parseDouble(northeast[1])) / 2;
+
+                            Map<String, Object> locationData = new HashMap<>();
+                            locationData.put("lng", lng);
+                            locationData.put("lat", lat);
+                            locationData.put("province", province);
+                            locationData.put("city", city);
+                            locationData.put("accuracy", "city"); // 标识精度级别
+
+                            log.info("IP定位成功: {} {}, 精度: 城市级", province, city);
+
+                            return Map.of(
+                                "code", "200",
+                                "message", "IP定位成功",
+                                "data", locationData
+                            );
+                        }
+                    }
+                }
+
+                // 如果没有矩形数据，至少返回城市信息
+                if (!province.isEmpty() || !city.isEmpty()) {
+                    Map<String, Object> locationData = new HashMap<>();
+                    locationData.put("province", province);
+                    locationData.put("city", city);
+                    locationData.put("accuracy", "province"); // 省级精度
+
+                    return Map.of(
+                        "code", "200",
+                        "message", "IP定位成功（仅省市）",
+                        "data", locationData
+                    );
+                }
+            }
+
+            return Map.of(
+                "code", "404",
+                "message", "IP定位失败",
+                "data", null
+            );
+        } catch (Exception e) {
+            log.error("高德地图IP定位异常", e);
+            return Map.of(
+                "code", "500",
+                "message", "IP定位异常: " + e.getMessage(),
+                "data", null
+            );
+        }
+    }
 }

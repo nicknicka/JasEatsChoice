@@ -23,12 +23,14 @@ import api from '../../utils/api.js'
 import { API_CONFIG } from '../../config/index.js'
 // 导入 WebSocket 常量
 import { WS_CONFIG } from '../../constants/wsConstants.js'
-// 导入 authStore
+// 导入 authStore 和 userStore
 import pinia from '../../store'
 import { useAuthStore } from '../../store/authStore'
+import { useUserStore } from '../../store/userStore'
 
 const router = useRouter()
 const authStore = useAuthStore(pinia)
+const userStore = useUserStore(pinia)
 
 // 使用天气组合式函数
 const {
@@ -191,7 +193,7 @@ const handleHotTopicClick = () => {
 }
 
 // 处理位置选择
-const handleLocationSelected = (locationData) => {
+const handleLocationSelected = async (locationData) => {
   const { address } = locationData
 
   // 更新天气位置信息
@@ -200,6 +202,27 @@ const handleLocationSelected = (locationData) => {
 
   // 获取详细天气信息
   fetchWeather(weather.value.city)
+
+  // 保存位置到后端
+  try {
+    const userId = authStore.userId
+    if (userId) {
+      await api.put(
+        API_CONFIG.user.update.replace('{userId}', userId),
+        { location: address }
+      )
+
+      // 更新本地用户信息
+      if (userStore.userInfo) {
+        userStore.userInfo.location = address
+      }
+
+      console.log('位置已保存到后端:', address)
+    }
+  } catch (error) {
+    console.error('保存位置失败:', error)
+    // 不影响主流程，只记录错误
+  }
 
   ElMessage.success(`已选择位置：${address}`)
 }
@@ -715,7 +738,7 @@ onMounted(async () => {
           <!-- 位置信息 -->
           <div class="location-line">
             <span class="location-icon-new">📍</span>
-            <span class="location-text-new">当前位置</span>
+            <span class="location-text-new">{{ weather.address || weather.city || '当前位置' }}</span>
             <button
               class="location-select-btn"
               @click="mapLocationPickerVisible = true"
