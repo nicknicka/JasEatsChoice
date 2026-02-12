@@ -61,7 +61,9 @@ export default defineConfig({
       dir: undefined
     },
     optimizeDeps: {
-      force: true
+      force: true,
+      include: ['dayjs', 'dayjs/plugin/relativeTime'],
+      exclude: []
     }
   }
 })

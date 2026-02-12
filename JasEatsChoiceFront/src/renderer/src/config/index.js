@@ -66,7 +66,8 @@ export const API_CONFIG = {
     list: '/v1/dishes', // 菜品列表接口
     detail: '/v1/dishes/', // 菜品详情接口
     status: '/v1/dishes', // 菜品状态更新接口（使用时拼接 /{dishId}/status）
-    batchStatus: '/v1/dishes/batch/status' // 批量更新菜品状态接口
+    batchStatus: '/v1/dishes/batch/status', // 批量更新菜品状态接口
+    batchDelete: '/v1/dishes/batch' // 批量删除菜品接口
   },
 
   // 消息API端点

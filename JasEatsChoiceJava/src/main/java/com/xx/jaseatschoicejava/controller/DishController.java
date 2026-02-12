@@ -260,6 +260,28 @@ public class DishController {
     }
 
     /**
+     * 批量删除菜品
+     */
+    @PutMapping("/batch")
+    public ResponseResult<?> batchDeleteDishes(@RequestBody java.util.Map<String, Object> request) {
+        List<Long> dishIds = (List<Long>) request.get("dishIds");
+
+        if (dishIds == null || dishIds.isEmpty()) {
+            return ResponseResult.fail("400", "请选择要删除的菜品");
+        }
+
+        log.info("批量删除菜品, dishIds: {}", dishIds);
+
+        // 批量删除菜品
+        boolean deleted = dishService.removeByIds(dishIds);
+
+        if (deleted) {
+            return ResponseResult.success("批量删除菜品成功");
+        }
+        return ResponseResult.fail("500", "批量删除菜品失败");
+    }
+
+    /**
      * 批量更新菜品状态（上架/下架）
      */
     @PutMapping("/batch/status")

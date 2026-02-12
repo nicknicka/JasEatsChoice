@@ -170,6 +170,8 @@ onMounted(() => {
     })
     .finally(() => {
       loading.value = false
+      // 滚动到页面顶部
+      window.scrollTo({ top: 0, behavior: 'smooth' })
     })
 })
 
@@ -283,15 +285,19 @@ const saveEditedDish = () => {
         }
 
         // 更新本地菜品列表
+        console.log('updatedDish.id:', updatedDish.id, '类型:', typeof updatedDish.id)
+        console.log('dishesList中的菜品ID:', dishesList.value.map(item => ({ id: item.id, type: typeof item.id })))
         const index = dishesList.value.findIndex((item) => item.id === updatedDish.id)
+        console.log('找到的索引:', index)
         if (index !== -1) {
           console.log('更新前菜品数据:', dishesList.value[index])
           console.log('更新后菜品数据:', updatedDish)
           dishesList.value[index] = updatedDish
           updateFilter()
-          editDishDialogVisible.value = false
-          ElMessage.success('菜品已更新')
         }
+        // 关闭对话框并显示成功消息
+        editDishDialogVisible.value = false
+        ElMessage.success('菜品已更新')
       } else {
         ElMessage.error(response.data?.message || '菜品更新失败')
       }
@@ -485,12 +491,25 @@ const deleteDish = (dish) => {
     type: 'warning'
   })
     .then(() => {
-      const index = dishesList.value.findIndex((item) => item.id === dish.id)
-      if (index !== -1) {
-        dishesList.value.splice(index, 1)
-        updateFilter()
-        ElMessage.success('菜品已删除')
-      }
+      // 调用后端API删除菜品
+      axios
+        .delete(`${API_CONFIG.baseURL}${API_CONFIG.dish.detail}${dish.id}`)
+        .then((response) => {
+          if (response.data && response.data.code === '200') {
+            const index = dishesList.value.findIndex((item) => item.id === dish.id)
+            if (index !== -1) {
+              dishesList.value.splice(index, 1)
+              updateFilter()
+              ElMessage.success('菜品已删除')
+            }
+          } else {
+            ElMessage.error(response.data?.message || '删除菜品失败')
+          }
+        })
+        .catch((error) => {
+          console.error('删除菜品失败:', error)
+          ElMessage.error('网络错误，删除菜品失败')
+        })
     })
     .catch(() => {
       ElMessage.info('已取消删除')
@@ -569,10 +588,28 @@ const batchOperation = (operation) => {
           })
       } else if (operation === 'delete') {
         // 批量删除操作
-        dishesList.value = dishesList.value.filter((dish) => !selectedDishes.value.includes(dish))
-        updateFilter()
-        selectedDishes.value = []
-        ElMessage.success(getSuccessMessage())
+        const dishIds = selectedDishes.value.map((dish) => dish.id)
+
+        // 调用后端API批量删除菜品（后端不支持DELETE，使用PUT方法）
+        axios
+          .put(`${API_CONFIG.baseURL}${API_CONFIG.dish.batchDelete}`, {
+            dishIds: dishIds
+          })
+          .then((response) => {
+            if (response.data && response.data.code === '200') {
+              // 从前端列表中删除已删除的菜品
+              dishesList.value = dishesList.value.filter((dish) => !selectedDishes.value.includes(dish))
+              updateFilter()
+              selectedDishes.value = []
+              ElMessage.success(getSuccessMessage())
+            } else {
+              ElMessage.error(response.data?.message || '批量删除失败')
+            }
+          })
+          .catch((error) => {
+            console.error('批量删除菜品失败:', error)
+            ElMessage.error('网络错误，批量删除失败')
+          })
       }
     })
     .catch(() => {
@@ -603,7 +640,10 @@ const newDish = ref({
     mandatory: [], // 必选食材改为字符串数组
     optional: [] // 可选食材改为字符串数组
   },
-  totalCalories: 0 // 总卡路里
+  totalCalories: 0, // 总卡路里
+  protein: 0, // 蛋白质
+  fat: 0, // 脂肪
+  carbs: 0 // 碳水化合物
 })
 
 // 添加必选食材
@@ -664,7 +704,10 @@ const editDishForm = ref({
     mandatory: [], // 必选食材改为字符串数组
     optional: [] // 可选食材改为字符串数组
   },
-  totalCalories: 0
+  totalCalories: 0,
+  protein: 0, // 蛋白质
+  fat: 0, // 脂肪
+  carbs: 0 // 碳水化合物
 })
 
 // 新必选食材输入（编辑时使用）
@@ -947,6 +990,60 @@ const getDishCheckedState = (dish) => {
       </div>
     </div>
 
+    <!-- 批量操作区域 -->
+    <div v-if="filteredDishes.length > 0" class="batch-actions-section">
+      <div class="batch-actions-bar">
+        <div class="selection-info">
+          <el-checkbox
+            :indeterminate="getSelectAllState() === 1"
+            :model-value="getSelectAllState() === 2"
+            @change="toggleSelectAll"
+            class="select-all-checkbox"
+          >
+            <span class="select-all-text">全选</span>
+          </el-checkbox>
+          <span v-if="selectedDishes.length > 0" class="selected-count">
+            已选择 <strong>{{ selectedDishes.length }}</strong> / {{ filteredDishes.length }} 项
+          </span>
+        </div>
+
+        <div class="batch-buttons">
+          <el-button
+            type="success"
+            size="default"
+            :disabled="selectedDishes.length === 0"
+            class="batch-btn-success"
+            @click="batchOperation('online')"
+          >
+            <el-icon><CircleCheck /></el-icon>
+            批量上架
+          </el-button>
+
+          <el-button
+            type="warning"
+            size="default"
+            :disabled="selectedDishes.length === 0"
+            class="batch-btn-warning"
+            @click="batchOperation('offline')"
+          >
+            <el-icon><CircleClose /></el-icon>
+            批量下架
+          </el-button>
+
+          <el-button
+            type="danger"
+            size="default"
+            :disabled="selectedDishes.length === 0"
+            class="batch-btn-danger"
+            @click="batchOperation('delete')"
+          >
+            <el-icon><Delete /></el-icon>
+            批量删除
+          </el-button>
+        </div>
+      </div>
+    </div>
+
     <div class="dish-list">
       <div class="dish-list-container">
         <div v-for="dish in paginatedDishes" :key="dish.id" class="dish-item">
@@ -1043,6 +1140,28 @@ const getDishCheckedState = (dish) => {
                   </div>
                 </div>
               </div>
+
+              <!-- 营养成分信息 -->
+              <div v-if="dish.totalCalories || dish.protein || dish.fat || dish.carbs" class="dish-nutrition">
+                <div class="nutrition-title">
+                  <el-icon :size="14" color="#52c41a"><FlameIcon /></el-icon>
+                  <span>营养成分</span>
+                </div>
+                <div class="nutrition-tags">
+                  <el-tag v-if="dish.totalCalories" type="warning" effect="plain" size="small" class="nutrition-tag">
+                    🔥 {{ dish.totalCalories || 0 }} kcal
+                  </el-tag>
+                  <!-- <el-tag v-if="dish.protein" type="success" effect="plain" size="small" class="nutrition-tag">
+                    🥩 蛋白质: {{ dish.protein }}g
+                  </el-tag> -->
+                  <!-- <el-tag v-if="dish.fat" type="danger" effect="plain" size="small" class="nutrition-tag">
+                    💧 脂肪: {{ dish.fat }}g
+                  </el-tag> -->
+                  <!-- <el-tag v-if="dish.carbs" type="primary" effect="plain" size="small" class="nutrition-tag">
+                    🌾 碳水: {{ dish.carbs }}g
+                  </el-tag> -->
+                </div>
+              </div>
             </div>
 
             <div class="dish-actions">
@@ -1051,7 +1170,7 @@ const getDishCheckedState = (dish) => {
                 :class="{ 'btn-active': true }"
                 @click="toggleDishStatus(dish)"
               >
-                {{ dish.status ? '下架' : '上架' }}
+                {{ dish.statusBoolean ? '下架' : '上架' }}
               </el-button>
 
               <el-button
@@ -1084,50 +1203,6 @@ const getDishCheckedState = (dish) => {
           </div>
         </div>
       </div>
-    </div>
-
-    <div v-if="filteredDishes.length > 0" class="batch-actions">
-      <span class="select-all">
-        <el-checkbox
-          :indeterminate="getSelectAllState() === 1"
-          :model-value="getSelectAllState() === 2"
-          @change="toggleSelectAll"
-        />
-        全选
-      </span>
-
-      <el-button
-        type="success"
-        size="small"
-        :disabled="selectedDishes.length === 0"
-        class="batch-btn"
-        @click="batchOperation('online')"
-      >
-        <el-icon><CircleCheck /></el-icon>
-        批量上架
-      </el-button>
-
-      <el-button
-        type="warning"
-        size="small"
-        :disabled="selectedDishes.length === 0"
-        class="batch-btn"
-        @click="batchOperation('offline')"
-      >
-        <el-icon><CircleClose /></el-icon>
-        批量下架
-      </el-button>
-
-      <el-button
-        type="danger"
-        size="small"
-        :disabled="selectedDishes.length === 0"
-        class="batch-btn"
-        @click="batchOperation('delete')"
-      >
-        <el-icon><Delete /></el-icon>
-        批量删除
-      </el-button>
     </div>
 
     <!-- 分页组件 -->
@@ -1328,6 +1403,61 @@ const getDishCheckedState = (dish) => {
               <template #suffix>kcal</template>
             </el-input>
           </el-form-item>
+
+          <!-- 营养成分 -->
+          <el-form-item label="蛋白质">
+            <template #label>
+              <div class="form-item-label">
+                <el-icon class="label-icon"><StarIcon /></el-icon>
+                <span>蛋白质</span>
+              </div>
+            </template>
+            <el-input
+              v-model.number="newDish.protein"
+              placeholder="请输入蛋白质含量"
+              type="number"
+              min="0"
+              style="width: 200px"
+            >
+              <template #suffix>g</template>
+            </el-input>
+          </el-form-item>
+
+          <el-form-item label="脂肪">
+            <template #label>
+              <div class="form-item-label">
+                <el-icon class="label-icon"><StarIcon /></el-icon>
+                <span>脂肪</span>
+              </div>
+            </template>
+            <el-input
+              v-model.number="newDish.fat"
+              placeholder="请输入脂肪含量"
+              type="number"
+              min="0"
+              style="width: 200px"
+            >
+              <template #suffix>g</template>
+            </el-input>
+          </el-form-item>
+
+          <el-form-item label="碳水">
+            <template #label>
+              <div class="form-item-label">
+                <el-icon class="label-icon"><StarIcon /></el-icon>
+                <span>碳水</span>
+              </div>
+            </template>
+            <el-input
+              v-model.number="newDish.carbs"
+              placeholder="请输入碳水含量"
+              type="number"
+              min="0"
+              style="width: 200px"
+            >
+              <template #suffix>g</template>
+            </el-input>
+          </el-form-item>
         </el-form>
       </div>
       <template #footer>
@@ -1517,6 +1647,61 @@ const getDishCheckedState = (dish) => {
               <el-icon size="12"><Warning /></el-icon>
               <span>自定义食材请手动输入卡路里值</span>
             </div>
+          </el-form-item>
+
+          <!-- 营养成分 -->
+          <el-form-item label="蛋白质">
+            <template #label>
+              <div class="form-item-label">
+                <el-icon class="label-icon"><StarIcon /></el-icon>
+                <span>蛋白质</span>
+              </div>
+            </template>
+            <el-input
+              v-model.number="editDishForm.protein"
+              placeholder="请输入蛋白质含量"
+              type="number"
+              min="0"
+              style="width: 200px"
+            >
+              <template #suffix>g</template>
+            </el-input>
+          </el-form-item>
+
+          <el-form-item label="脂肪">
+            <template #label>
+              <div class="form-item-label">
+                <el-icon class="label-icon"><StarIcon /></el-icon>
+                <span>脂肪</span>
+              </div>
+            </template>
+            <el-input
+              v-model.number="editDishForm.fat"
+              placeholder="请输入脂肪含量"
+              type="number"
+              min="0"
+              style="width: 200px"
+            >
+              <template #suffix>g</template>
+            </el-input>
+          </el-form-item>
+
+          <el-form-item label="碳水">
+            <template #label>
+              <div class="form-item-label">
+                <el-icon class="label-icon"><StarIcon /></el-icon>
+                <span>碳水</span>
+              </div>
+            </template>
+            <el-input
+              v-model.number="editDishForm.carbs"
+              placeholder="请输入碳水含量"
+              type="number"
+              min="0"
+              style="width: 200px"
+            >
+              <template #suffix>g</template>
+            </el-input>
           </el-form-item>
         </el-form>
       </div>
@@ -2186,6 +2371,40 @@ const getDishCheckedState = (dish) => {
           }
         }
 
+        // 营养成分信息样式
+        .dish-nutrition {
+          margin-top: 16px;
+          padding-top: 16px;
+          padding-bottom: 8px;
+          border-top: 1px solid #f0f0f0;
+
+          .nutrition-title {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #4a5568;
+          }
+
+          .nutrition-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+
+            .nutrition-tag {
+              border-radius: 6px;
+              font-size: 12px;
+              padding: 4px 10px;
+              height: 26px;
+              line-height: 18px;
+              font-weight: 500;
+            }
+          }
+        }
+
         .dish-actions {
           display: flex;
           flex-direction: row;
@@ -2224,6 +2443,130 @@ const getDishCheckedState = (dish) => {
     }
   }
 
+  // 批量操作区域样式
+  .batch-actions-section {
+    margin-bottom: 20px;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e9ecef;
+    overflow: hidden;
+
+    .batch-actions-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 24px;
+      gap: 20px;
+
+      .selection-info {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        flex: 1;
+
+        .select-all-checkbox {
+          :deep(.el-checkbox__label) {
+            .select-all-text {
+              font-weight: 600;
+              color: #4a5568;
+              font-size: 14px;
+            }
+          }
+        }
+
+        .selected-count {
+          display: inline-flex;
+          align-items: center;
+          padding: 6px 14px;
+          background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
+          border-radius: 20px;
+          font-size: 13px;
+          color: #0050b3;
+          font-weight: 500;
+          box-shadow: 0 2px 6px rgba(64, 169, 255, 0.15);
+
+          strong {
+            margin: 0 4px;
+            font-size: 15px;
+            color: #1890ff;
+          }
+        }
+      }
+
+      .batch-buttons {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+    }
+  }
+
+  // 批量操作按钮样式
+  .batch-btn-success,
+  .batch-btn-warning,
+  .batch-btn-danger {
+    border-radius: 10px;
+    font-weight: 600;
+    padding: 10px 20px;
+    transition: all 0.3s ease;
+    border: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+
+    &:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    &:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    .el-icon {
+      font-size: 16px;
+    }
+  }
+
+  .batch-btn-success {
+    background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
+    color: #ffffff;
+
+    &:hover:not(:disabled) {
+      background: linear-gradient(135deg, #73d13d 0%, #95de64 100%);
+      box-shadow: 0 4px 12px rgba(82, 196, 26, 0.3);
+    }
+  }
+
+  .batch-btn-warning {
+    background: linear-gradient(135deg, #faad14 0%, #ffc53d 100%);
+    color: #ffffff;
+
+    &:hover:not(:disabled) {
+      background: linear-gradient(135deg, #ffc53d 0%, #ffd666 100%);
+      box-shadow: 0 4px 12px rgba(250, 173, 20, 0.3);
+    }
+  }
+
+  .batch-btn-danger {
+    background: linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%);
+    color: #ffffff;
+
+    &:hover:not(:disabled) {
+      background: linear-gradient(135deg, #ff7875 0%, #ffa39e 100%);
+      box-shadow: 0 4px 12px rgba(255, 77, 79, 0.3);
+    }
+  }
+
+  // 旧的批量操作样式（保留兼容性）
   .batch-actions {
     display: flex;
     align-items: center;
@@ -2297,6 +2640,32 @@ const getDishCheckedState = (dish) => {
     &:disabled {
       opacity: 0.5;
       cursor: not-allowed;
+    }
+  }
+
+  // 响应式布局
+  @media (max-width: 768px) {
+    .batch-actions-section {
+      .batch-actions-bar {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 16px;
+
+        .selection-info {
+          justify-content: space-between;
+          margin-bottom: 12px;
+        }
+
+        .batch-buttons {
+          flex-direction: column;
+          width: 100%;
+
+          .el-button {
+            width: 100%;
+            justify-content: center;
+          }
+        }
+      }
     }
   }
 }

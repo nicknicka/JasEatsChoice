@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElTimePicker, ElSelect, ElOption, ElInput, ElMessageBox } from 'element-plus'
 import {
@@ -37,9 +37,6 @@ const loading = ref(false)
 // 菜品列表
 const dishesList = ref([])
 
-// 搜索关键词
-const searchKeyword = ref('')
-
 // 菜品状态映射（与DishManagement.vue保持一致）
 const dishStatusMap = {
   online: { text: '🟢 在售', type: 'success' },
@@ -51,10 +48,8 @@ const dishStatusMap = {
 const originalMenuInfo = ref({})
 const originalDishesList = ref([])
 
-// 页面加载
-onMounted(async () => {
-  // 从路由参数获取菜单ID
-  const menuId = route.query.menuId
+// 加载菜单数据的函数
+const loadMenuData = async (menuId) => {
   loading.value = true
   if (!menuId) {
     ElMessage.error('无效的菜单ID')
@@ -126,7 +121,26 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+}
+
+// 页面加载
+onMounted(async () => {
+  const menuId = route.query.menuId
+  await loadMenuData(menuId)
+
+  // 滚动到页面顶部
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 })
+
+// 监听路由变化，当menuId变化时重新加载数据
+watch(
+  () => route.query.menuId,
+  (newMenuId) => {
+    if (newMenuId) {
+      loadMenuData(newMenuId)
+    }
+  }
+)
 
 // 检查是否有未保存的更改
 const hasUnsavedChanges = () => {
@@ -292,46 +306,74 @@ const toggleDishStatus = (dish) => {
 // 可用菜品数据
 const availableDishes = ref([])
 
-// 过滤后的可用菜品（用于搜索）
+// 过滤后的可用菜品（过滤掉已在菜单中的菜品）
 const filteredAvailableDishes = computed(() => {
-  if (!searchKeyword.value) {
-    return availableDishes.value
-  }
-  const keyword = searchKeyword.value.toLowerCase()
-  return availableDishes.value.filter((dish) => {
-    return (
-      dish.name.toLowerCase().includes(keyword) ||
-      dish.description?.toLowerCase().includes(keyword) ||
-      dish.category?.toLowerCase().includes(keyword)
-    )
-  })
+  // 获取已在菜单中的菜品ID列表
+  const existingDishIds = dishesList.value.map(dish => dish.id)
+  return availableDishes.value.filter(dish => !existingDishIds.includes(dish.id))
 })
 
 // 添加菜品对话框
 const showAddDishDialog = ref(false)
-const selectedDishId = ref('')
+const selectedDishIds = ref([])
 
 // 批量关联菜品对话框
 const showBatchAssociateDialog = ref(false)
 const selectedDishIdsBatch = ref([])
 
 // 添加菜品
-const addDish = () => {
-  if (selectedDishId.value) {
-    const dish = availableDishes.value.find((d) => d.id === selectedDishId.value)
-    if (dish) {
-      // 检查菜品是否已在菜单中
-      const isExist = dishesList.value.some((item) => item.id === dish.id)
-      if (!isExist) {
+const addDish = async () => {
+  if (selectedDishIds.value.length > 0) {
+    let addedCount = 0
+    selectedDishIds.value.forEach((dishId) => {
+      const dish = availableDishes.value.find((d) => d.id === dishId)
+      if (dish) {
         dishesList.value.push({ ...dish })
-        ElMessage.success('菜品已添加')
-      } else {
-        ElMessage.warning('该菜品已在菜单中')
+        addedCount++
       }
+    })
+
+    // 保存到后端
+    try {
+      const authStore = useAuthStore()
+      const merchantId = authStore.merchantId
+      const menuId = route.query.menuId
+
+      const saveData = {
+        ...menuInfo.value,
+        dishes: dishesList.value.map((dish) => ({
+          id: dish.id,
+          status: dish.status === 'online' ? 1 : 0
+        }))
+      }
+
+      await axios.put(
+        `${API_CONFIG.baseURL}${API_CONFIG.merchant.menu.replace('{merchantId}', merchantId)}/${menuId}`,
+        saveData
+      )
+
+      ElMessage.success(`成功添加 ${addedCount} 个菜品`)
+    } catch (error) {
+      console.error('保存菜品失败:', error)
+      ElMessage.error('保存菜品失败，请重试')
+      // 恢复原始列表
+      const menuId = route.query.menuId
+      const menuDishesResponse = await axios.get(
+        `${API_CONFIG.baseURL}${API_CONFIG.merchant.menu.replace('{merchantId}', authStore.merchantId)}/${menuId}/dishes`
+      )
+      if (menuDishesResponse.data && menuDishesResponse.data.success) {
+        dishesList.value = menuDishesResponse.data.data.map((dish) => ({
+          ...dish,
+          statusText: dishStatusMap[dish.status] ? dishStatusMap[dish.status].text : '🔴 下架',
+          globalStatus: dish.globalStatus
+        }))
+      }
+      return
     }
+
     // 重置状态
     showAddDishDialog.value = false
-    selectedDishId.value = ''
+    selectedDishIds.value = []
   }
 }
 
@@ -369,7 +411,7 @@ const handleCancelEdit = () => {
 }
 
 // 批量关联菜品
-const batchAssociateDishes = () => {
+const batchAssociateDishes = async () => {
   if (selectedDishIdsBatch.value.length > 0) {
     let addedCount = 0
     let existingCount = 0
@@ -387,13 +429,49 @@ const batchAssociateDishes = () => {
       }
     })
 
-    // 显示结果信息
-    const messages = []
-    if (addedCount > 0) messages.push(`${addedCount} 个菜品已成功关联`)
-    if (existingCount > 0) messages.push(`${existingCount} 个菜品已在菜单中`)
+    // 保存到后端
+    try {
+      const authStore = useAuthStore()
+      const merchantId = authStore.merchantId
+      const menuId = route.query.menuId
 
-    if (messages.length > 0) {
-      ElMessage.success(messages.join('；'))
+      const saveData = {
+        ...menuInfo.value,
+        dishes: dishesList.value.map((dish) => ({
+          id: dish.id,
+          status: dish.status === 'online' ? 1 : 0
+        }))
+      }
+
+      await axios.put(
+        `${API_CONFIG.baseURL}${API_CONFIG.merchant.menu.replace('{merchantId}', merchantId)}/${menuId}`,
+        saveData
+      )
+
+      // 显示结果信息
+      const messages = []
+      if (addedCount > 0) messages.push(`${addedCount} 个菜品已成功关联`)
+      if (existingCount > 0) messages.push(`${existingCount} 个菜品已在菜单中`)
+
+      if (messages.length > 0) {
+        ElMessage.success(messages.join('；'))
+      }
+    } catch (error) {
+      console.error('保存菜品失败:', error)
+      ElMessage.error('保存菜品失败，请重试')
+      // 恢复原始列表
+      const menuId = route.query.menuId
+      const menuDishesResponse = await axios.get(
+        `${API_CONFIG.baseURL}${API_CONFIG.merchant.menu.replace('{merchantId}', authStore.merchantId)}/${menuId}/dishes`
+      )
+      if (menuDishesResponse.data && menuDishesResponse.data.success) {
+        dishesList.value = menuDishesResponse.data.data.map((dish) => ({
+          ...dish,
+          statusText: dishStatusMap[dish.status] ? dishStatusMap[dish.status].text : '🔴 下架',
+          globalStatus: dish.globalStatus
+        }))
+      }
+      return
     }
 
     // 重置状态
@@ -506,13 +584,6 @@ const batchAssociateDishes = () => {
       <div class="dishes-section">
         <h4 class="section-title">🍴 菜品管理</h4>
         <div class="dishes-header">
-          <el-input
-            v-model="searchKeyword"
-            placeholder="输入菜品名称..."
-            style="width: 250px"
-            class="dishes-search"
-            clearable
-          />
           <el-button type="primary" size="small" @click="showAddDishDialog = true">
             添加菜品
           </el-button>
@@ -560,17 +631,20 @@ const batchAssociateDishes = () => {
       <el-dialog
         v-model="showAddDishDialog"
         title="添加菜品"
-        width="600px"
-        top="10%"
+        width="450px"
+        center
         transition="dialog-fade"
       >
         <div class="dialog-content">
           <el-select
-            v-model="selectedDishId"
+            v-model="selectedDishIds"
+            multiple
             placeholder="请选择要添加的菜品"
             style="width: 100%"
             filterable
             clearable
+            collapse-tags
+            collapse-tags-tooltip
           >
             <el-option
               v-for="dish in filteredAvailableDishes"
@@ -592,8 +666,8 @@ const batchAssociateDishes = () => {
       <el-dialog
         v-model="showBatchAssociateDialog"
         title="批量关联菜品"
-        width="600px"
-        top="10%"
+        width="450px"
+        center
         transition="dialog-fade"
       >
         <div class="dialog-content">

@@ -54,16 +54,20 @@ const pageSize = ref(10)
 const paginatedMenus = ref([])
 
 // 排序相关
-const sortField = ref('updateTime')
+const sortField = ref('updateTime') // 默认按更新时间排序
 const sortOrder = ref('desc') // 'asc' 或 'desc'
 
 // 更新排序
 const updateSorting = () => {
   filteredMenus.value.sort((a, b) => {
-    if (a[sortField.value] < b[sortField.value]) {
+    // 获取排序字段的值，兼容 name 和 menuName 两种字段名
+    const aValue = sortField.value === 'menuName' ? (a.menuName || a.name || '') : a[sortField.value]
+    const bValue = sortField.value === 'menuName' ? (b.menuName || b.name || '') : b[sortField.value]
+
+    if (aValue < bValue) {
       return sortOrder.value === 'asc' ? -1 : 1
     }
-    if (a[sortField.value] > b[sortField.value]) {
+    if (aValue > bValue) {
       return sortOrder.value === 'asc' ? 1 : -1
     }
     return 0
@@ -91,8 +95,17 @@ onMounted(() => {
   axios
     .get(`${API_CONFIG.baseURL}${API_CONFIG.merchant.menu.replace('{merchantId}', merchantId)}`)
     .then((response) => {
+      console.log('菜单数据响应:', response.data)
       if (response.data && response.data.success) {
-        menuList.value = response.data.data
+        // 预处理菜单数据，统一字段名
+        menuList.value = response.data.data.map((menu) => ({
+          ...menu,
+          // 如果没有 name 字段，使用 menuName 作为 name
+          name: menu.name || menu.menuName || '',
+          menuName: menu.menuName || menu.name || ''
+        }))
+        console.log('解析后的菜单列表:', menuList.value)
+        console.log('第一个菜单数据:', menuList.value[0])
         filteredMenus.value = [...menuList.value] // 更新筛选后的菜单
         updatePagination() // 更新分页
       }
@@ -117,7 +130,7 @@ const updateFilter = () => {
     // 搜索筛选
     if (searchKeyword.value) {
       const lowerCaseKeyword = searchKeyword.value.toLowerCase()
-      const lowerCaseMenuName = menu.name.toLowerCase()
+      const lowerCaseMenuName = (menu.name || menu.menuName || '').toLowerCase()
       if (!lowerCaseMenuName.includes(lowerCaseKeyword)) {
         return false
       }
@@ -463,7 +476,7 @@ const toggleSelectAll = () => {
             @change="updateFilter"
           >
             <el-option label="更新时间" value="updateTime" />
-            <el-option label="菜单名称" value="name" />
+            <el-option label="菜单名称" value="menuName" />
           </el-select>
 
           <el-select v-model="sortOrder" style="width: 100px" @change="updateFilter">
@@ -556,7 +569,7 @@ const toggleSelectAll = () => {
           <div class="menu-content">
             <div class="menu-info">
               <div class="menu-name">
-                <span class="name">{{ menu.name }}</span>
+                <span class="name">{{ menu.name || menu.menuName || '未命名菜单' }}</span>
                 <!-- 菜单类型标签，不同类型不同样式 -->
                 <el-tag
                   :type="
