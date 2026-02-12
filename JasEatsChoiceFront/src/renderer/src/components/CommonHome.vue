@@ -1,5 +1,5 @@
 <script setup>
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { ref, onMounted, computed, watch, provide, nextTick } from 'vue'
 import {
   Search,
@@ -28,6 +28,33 @@ import api from '../utils/api.js'
 import CommonAvatar from './CommonAvatar.vue'
 
 const router = useRouter()
+const route = useRoute()
+
+// 内容区域引用
+const contentAreaRef = ref(null)
+
+// 路由监听：路由切换时自动滚动到页面顶部
+watch(
+  () => route.path,
+  () => {
+    // 路由变化时，使用 nextTick 确保 DOM 更新后再滚动
+    nextTick(() => {
+      setTimeout(() => {
+        if (contentAreaRef.value) {
+          // Element Plus 组件需要访问 $el 属性获取实际 DOM 元素
+          const domElement = contentAreaRef.value.$el || contentAreaRef.value
+          if (domElement && typeof domElement.scrollTo === 'function') {
+            domElement.scrollTo({ top: 0, behavior: 'smooth' })
+          } else if (domElement) {
+            // 如果 scrollTo 不可用，直接设置 scrollTop
+            domElement.scrollTop = 0
+          }
+        }
+      }, 50)
+    })
+  },
+  { immediate: false } // 不在首次加载时触发
+)
 
 // 导航到指定路径
 const navigateTo = (path, fromSidebar = false) => {
@@ -843,7 +870,7 @@ const handleSearch = (value) => {
       </el-aside>
 
       <!-- 右侧内容区域，使用router-view实现子组件内容访问 -->
-      <el-main class="content-area">
+      <el-main ref="contentAreaRef" class="content-area">
         <router-view v-slot="{ Component, route }">
           <transition :name="route.meta.transition || 'fade-slide'" :duration="{ enter: 250, leave: 200 }" mode="default">
             <keep-alive>

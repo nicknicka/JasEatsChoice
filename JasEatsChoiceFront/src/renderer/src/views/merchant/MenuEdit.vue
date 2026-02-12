@@ -127,9 +127,6 @@ const loadMenuData = async (menuId) => {
 onMounted(async () => {
   const menuId = route.query.menuId
   await loadMenuData(menuId)
-
-  // 滚动到页面顶部
-  window.scrollTo({ top: 0, behavior: 'smooth' })
 })
 
 // 监听路由变化，当menuId变化时重新加载数据

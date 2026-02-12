@@ -2191,6 +2191,8 @@ onMounted(async () => {
     console.error('❌ [Chat] 加载数据失败:', error)
     ElMessage.error('加载数据失败，请稍后重试')
   }
+  // 滚动到页面顶部
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 })
 
 onBeforeUnmount(() => {

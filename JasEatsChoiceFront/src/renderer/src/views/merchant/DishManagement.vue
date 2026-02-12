@@ -170,8 +170,6 @@ onMounted(() => {
     })
     .finally(() => {
       loading.value = false
-      // 滚动到页面顶部
-      window.scrollTo({ top: 0, behavior: 'smooth' })
     })
 })
 
