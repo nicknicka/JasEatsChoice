@@ -576,9 +576,10 @@ onMounted(() => {
     <!-- 订单列表 -->
     <div v-loading="loading" class="orders-list-section">
       <div
-        v-for="order in filteredOrders"
+        v-for="(order, index) in filteredOrders"
         :key="order.id"
         :class="['order-item', `status-${order.status}`]"
+        :style="{ animationDelay: `${index * 0.05}s` }"
       >
         <div class="order-main">
           <div class="order-content">
@@ -1227,6 +1228,9 @@ onMounted(() => {
       position: relative;
       overflow: visible;
       border-radius: 12px;
+      /* 卡片入场动画 */
+      animation: card-slide-in 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      opacity: 0;
 
       .order-main {
         display: flex;
@@ -1272,12 +1276,13 @@ onMounted(() => {
         }
 
         &:hover {
-          box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
-          border-color: #cbd5e1;
+          transform: translateY(-4px) scale(1.01);
+          box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+          border-color: #94a3b8;
         }
 
         &:active {
-          transform: scale(0.998);
+          transform: translateY(-2px) scale(0.998);
         }
       }
 
@@ -1773,5 +1778,34 @@ onMounted(() => {
       }
     }
   }
+}
+
+// 卡片进入动画
+@keyframes card-slide-in {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+// 概览卡片淡入动画
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+// 为概览卡片添加动画
+.overview-section {
+  animation: fadeIn 0.5s ease-out;
 }
 </style>

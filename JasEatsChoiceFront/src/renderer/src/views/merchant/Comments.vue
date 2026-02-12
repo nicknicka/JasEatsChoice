@@ -299,7 +299,12 @@ onMounted(() => {
         </template>
 
         <div class="comments-list" v-loading="loading">
-          <div v-for="comment in filteredComments" :key="comment.id" class="comment-item">
+          <div
+            v-for="(comment, index) in filteredComments"
+            :key="comment.id"
+            class="comment-item"
+            :style="{ animationDelay: `${index * 0.05}s` }"
+          >
             <div class="comment-header">
               <div class="user-info">
                 <div class="user-avatar">
@@ -650,6 +655,8 @@ onMounted(() => {
           margin-bottom: 15px;
           background-color: #fff;
           transition: all 0.3s ease;
+          animation: slideInUp 0.4s ease-out forwards;
+          opacity: 0;
 
           &:hover {
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
@@ -796,6 +803,37 @@ onMounted(() => {
         text-align: center;
       }
     }
+  }
+}
+
+// 卡片进入动画
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// 概览卡片淡入动画
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+// 为概览卡片添加动画
+.overview-section {
+  .overview-card {
+    animation: fadeIn 0.5s ease-out;
   }
 }
 </style>
