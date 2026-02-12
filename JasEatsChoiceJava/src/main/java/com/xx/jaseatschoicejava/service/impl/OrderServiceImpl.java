@@ -1,6 +1,7 @@
 package com.xx.jaseatschoicejava.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.xx.jaseatschoicejava.dto.OrderDishVO;
 import com.xx.jaseatschoicejava.dto.ReorderItemDTO;
@@ -21,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -196,7 +198,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         // 获取当前菜品信息
         Dish currentDish = dishService.getById(orderDish.getDishId());
 
-        if (currentDish == null || !currentDish.getStatus()) {
+        if (currentDish == null || !currentDish.getIsOnline()) {
             // 菜品已下架
             item.setDishStatus(1);
             item.setStatusDescription("sold_out");
@@ -270,7 +272,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
 
         LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Dish::getMerchantId, originalDish.getMerchantId());
-        queryWrapper.eq(Dish::getStatus, true);
+        queryWrapper.eq(Dish::getIsOnline, true);
         queryWrapper.ne(Dish::getId, originalDishId);
 
         // 优先查找同分类的菜品
@@ -288,12 +290,107 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         // 如果同分类没有找到，查找同一商家评分最高的菜品
         queryWrapper.clear();
         queryWrapper.eq(Dish::getMerchantId, originalDish.getMerchantId());
-        queryWrapper.eq(Dish::getStatus, true);
+        queryWrapper.eq(Dish::getIsOnline, true);
         queryWrapper.ne(Dish::getId, originalDishId);
         queryWrapper.orderByDesc(Dish::getAvgRating);
         queryWrapper.last("LIMIT 1");
 
         List<Dish> similarDishes = dishService.list(queryWrapper);
         return similarDishes.isEmpty() ? null : similarDishes.get(0);
+    }
+
+    /**
+     * 订单状态回退实现
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean rollbackStatus(String orderId, Integer targetStatus, String reason, String operatorId) {
+        log.info("订单状态回退请求 - orderId: {}, targetStatus: {}, reason: {}, operatorId: {}",
+                orderId, targetStatus, reason, operatorId);
+
+        // 1. 查询订单信息
+        Order order = this.getById(orderId);
+        if (order == null) {
+            throw new RuntimeException("订单不存在");
+        }
+
+        Integer currentStatus = order.getStatus();
+
+        // 2. 检查状态流转是否合法
+        if (!isValidRollback(currentStatus, targetStatus)) {
+            throw new RuntimeException("不允许从状态" + currentStatus + "回退到状态" + targetStatus);
+        }
+
+        // 3. 检查目标状态是否为终态
+        if (isFinalStatus(targetStatus)) {
+            throw new RuntimeException("不能回退到终态：" + targetStatus);
+        }
+
+        // 4. 更新订单状态
+        LambdaUpdateWrapper<Order> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(Order::getId, orderId)
+                .set(Order::getStatus, targetStatus)
+                .set(Order::getUpdateTime, LocalDateTime.now());
+
+        int updated = this.getBaseMapper().update(null, updateWrapper);
+
+        if (updated > 0) {
+            log.info("订单状态回退成功 - orderId: {}, {} -> {}, reason: {}",
+                    orderId, currentStatus, targetStatus);
+
+            // TODO: 这里可以添加操作日志记录
+            // TODO: 根据状态变化发送通知（如需要）
+        }
+
+        return updated > 0;
+    }
+
+    @Override
+    public List<Integer> getRollbackOptions(Integer currentStatus) {
+        // 根据当前状态返回可以回退到的状态列表
+        // 规则：只能回退到之前的普通流转状态，不能跳过中间状态
+        switch (currentStatus) {
+            case 0: // 待支付 - 不能回退
+                return new ArrayList<>();
+            case 1: // 待接单 - 可回退到待支付
+                return List.of(0);
+            case 2: // 备菜中 - 可回退到待接单
+                return List.of(1);
+            case 3: // 烹饪中 - 可回退到备菜中
+                return List.of(2);
+            case 4: // 待上菜 - 可回退到烹饪中
+                return List.of(3);
+            case 5: // 已完成 - 可回退到待上菜
+                return List.of(4);
+            case 6: // 已取消 - 不能回退
+            return new ArrayList<>();
+            default:
+                return new ArrayList<>();
+        }
+    }
+
+    /**
+     * 检查状态回退是否合法
+     */
+    private boolean isValidRollback(Integer fromStatus, Integer toStatus) {
+        // 规则：
+        // 1. 不能从已取消回退
+        // 2. 不能跳过状态（例如不能从烹饪中直接回退到待支付）
+        // 3. 只能回退到相邻的前一状态
+
+        if (fromStatus == 6) { // 已取消
+            return false; // 已取消不能回退
+        }
+
+        // 只能回退到前一状态
+        return toStatus == fromStatus - 1;
+    }
+
+    /**
+     * 判断是否为终态（终态不能回退）
+     */
+    private boolean isFinalStatus(Integer status) {
+        // 终态：已完成、已取消
+        return status == 5 || status == 6;
     }
 }

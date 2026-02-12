@@ -26,4 +26,21 @@ public interface OrderService extends IService<Order> {
      * @return 再来一单响应数据
      */
     ReorderResponseDTO reorder(String orderId);
+
+    /**
+     * 订单状态回退
+     * @param orderId 订单ID
+     * @param targetStatus 目标状态
+     * @param reason 回退原因
+     * @param operatorId 操作人ID
+     * @return 是否成功
+     */
+    boolean rollbackStatus(String orderId, Integer targetStatus, String reason, String operatorId);
+
+    /**
+     * 获取订单可回退到的状态列表
+     * @param currentStatus 当前状态
+     * @return 可回退的状态列表
+     */
+    List<Integer> getRollbackOptions(Integer currentStatus);
 }

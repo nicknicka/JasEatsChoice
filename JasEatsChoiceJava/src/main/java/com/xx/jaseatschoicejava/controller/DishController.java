@@ -186,10 +186,13 @@ public class DishController {
     }
 
     /**
-     * 获取菜品详情
+     * 获取菜品详情（包含详细信息、分类、推荐等）
      */
     @GetMapping("/{dishId}")
     public ResponseResult<?> getDishDetail(@PathVariable String dishId) {
+        log.info("获取菜品详情 - dishId: {}", dishId);
+
+        // 获取菜品基本信息
         Dish dish = dishService.getById(dishId);
         if (dish == null) {
             throw new BusinessException("404", "菜品不存在");
@@ -197,7 +200,43 @@ public class DishController {
         if (!dish.getStatus()) {
             throw new BusinessException("400", "菜品已下架");
         }
-        return ResponseResult.success(dish);
+
+        // 构建返回数据Map
+        Map<String, Object> dishData = new HashMap<>();
+        dishData.put("id", dish.getId());
+        dishData.put("dishId", dish.getId());
+        dishData.put("name", dish.getName());
+        dishData.put("price", dish.getPrice());
+        dishData.put("category", dish.getCategory());
+        dishData.put("description", dish.getDescription());
+        dishData.put("image", dish.getImage());
+        dishData.put("status", dish.getStatus());
+        dishData.put("merchantId", dish.getMerchantId());
+        dishData.put("merchantName", ""); // 需要查询商家表填充
+
+        // 处理食材数据
+        Map<String, Object> ingredientsData = parseIngredients(dish.getIngredients());
+        dishData.put("requiredIngredients", ingredientsData.get("requiredIngredients"));
+        dishData.put("optionalIngredients", ingredientsData.get("optionalIngredients"));
+        dishData.put("hasAllergens", detectAllergens(dish.getIngredients()));
+
+        // 处理烹饪步骤
+        List<Map<String, Object>> cookingSteps = parseCookingSteps(dish.getCookingSteps());
+        dishData.put("cookingSteps", cookingSteps);
+
+        // 处理营养信息
+        Map<String, Object> nutritionData = parseNutrition(dish.getNutrition());
+        dishData.put("nutrition", nutritionData);
+
+        // 检查购物车状态
+        dishData.put("inCart", false); // 默认false，需要查询
+
+        // 获取相关菜品推荐
+        List<Map<String, Object>> relatedDishes = getRelatedDishes(dish.getId(), dish.getCategory(), 5);
+        dishData.put("relatedDishes", relatedDishes);
+
+        log.info("返回菜品详情成功 - dishId: {}, 包含字段: {}", dishId, dishData.keySet());
+        return ResponseResult.success(dishData);
     }
 
     /**
@@ -303,5 +342,87 @@ public class DishController {
             return ResponseResult.success("批量更新菜品状态成功");
         }
         return ResponseResult.fail("500", "批量更新菜品状态失败");
+    }
+
+    /**
+     * 检测食材中的过敏原
+     */
+    private boolean detectAllergens(String ingredientsJson) {
+        if (ingredientsJson == null || ingredientsJson.isEmpty()) {
+            return false;
+        }
+        // 简化实现：检查是否包含常见过敏原关键词
+        String[] commonAllergens = {"花生", "坚果", "牛奶", "鸡蛋", "大豆", "小麦", "鱼", "贝类"};
+        for (String allergen : commonAllergens) {
+            if (ingredientsJson.contains(allergen)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 解析烹饪步骤
+     */
+    private List<Map<String, Object>> parseCookingSteps(String cookingStepsJson) {
+        List<Map<String, Object>> steps = new ArrayList<>();
+        if (cookingStepsJson == null || cookingStepsJson.isEmpty()) {
+            return steps;
+        }
+        try {
+            // 简化实现：返回空列表，实际应该解析JSON
+            return steps;
+        } catch (Exception e) {
+            log.error("解析烹饪步骤失败", e);
+            return steps;
+        }
+    }
+
+    /**
+     * 解析营养信息
+     */
+    private Map<String, Object> parseNutrition(String nutritionJson) {
+        Map<String, Object> nutrition = new HashMap<>();
+        if (nutritionJson == null || nutritionJson.isEmpty()) {
+            return nutrition;
+        }
+        try {
+            // 简化实现：返回空Map，实际应该解析JSON
+            return nutrition;
+        } catch (Exception e) {
+            log.error("解析营养信息失败", e);
+            return nutrition;
+        }
+    }
+
+    /**
+     * 获取相关菜品推荐
+     */
+    private List<Map<String, Object>> getRelatedDishes(String dishId, String category, int limit) {
+        List<Map<String, Object>> relatedDishes = new ArrayList<>();
+        try {
+            // 查找同分类的其他菜品
+            LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();
+            queryWrapper.eq(Dish::getIsOnline, true);
+            if (category != null && !category.isEmpty()) {
+                queryWrapper.eq(Dish::getCategory, category);
+            }
+            queryWrapper.ne(Dish::getId, dishId);
+            queryWrapper.last("LIMIT " + limit);
+
+            List<Dish> dishes = dishService.list(queryWrapper);
+            for (Dish d : dishes) {
+                Map<String, Object> dishInfo = new HashMap<>();
+                dishInfo.put("id", d.getId());
+                dishInfo.put("dishId", d.getId());
+                dishInfo.put("name", d.getName());
+                dishInfo.put("image", d.getImage());
+                dishInfo.put("price", d.getPrice());
+                relatedDishes.add(dishInfo);
+            }
+        } catch (Exception e) {
+            log.error("获取相关菜品失败", e);
+        }
+        return relatedDishes;
     }
 }

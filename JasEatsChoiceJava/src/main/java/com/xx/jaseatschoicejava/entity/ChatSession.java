@@ -78,6 +78,10 @@ public class ChatSession {
     @ApiModelProperty(value = "目标用户ID（仅单聊会话有效，表示对方的userId）")
     private String targetId; // 目标用户ID（仅单聊会话有值）
 
+    @TableField("related_order_id")
+    @ApiModelProperty(value = "关联的群订单ID（群订单专属会话有效）")
+    private String relatedOrderId; // 关联的群订单ID
+
     @TableField("create_time")
     @ApiModelProperty(value = "创建时间")
     private LocalDateTime createTime; // 创建时间

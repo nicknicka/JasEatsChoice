@@ -75,6 +75,14 @@ public class Dish {
     @ApiModelProperty(value = "菜品描述")
     private String description; // 菜品描述
 
+    @TableField("cooking_steps")
+    @ApiModelProperty(value = "烹饪步骤（JSON格式）")
+    private String cookingSteps; // 烹饪步骤
+
+    @TableField("nutrition")
+    @ApiModelProperty(value = "营养信息（JSON格式）")
+    private String nutrition; // 营养信息
+
     @TableField("image")
     @ApiModelProperty(value = "菜品图片URL")
     private String image; // 菜品图片URL

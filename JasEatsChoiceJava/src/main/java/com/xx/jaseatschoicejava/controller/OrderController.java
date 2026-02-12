@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 订单控制器
@@ -353,6 +354,66 @@ public class OrderController {
         } catch (Exception e) {
             log.error("获取用户订单统计失败，用户ID：{}", userId, e);
             return ResponseResult.fail("500", "获取订单统计失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取订单可回退的状态选项
+     */
+    @GetMapping("/{orderId}/rollback-options")
+    @ApiOperation(value = "获取订单可回退的状态选项")
+    public ResponseResult<?> getRollbackOptions(@PathVariable String orderId) {
+        try {
+            Order order = orderService.getById(orderId);
+            if (order == null) {
+                return ResponseResult.fail("404", "订单不存在");
+            }
+
+            List<Integer> options = orderService.getRollbackOptions(order.getStatus());
+            return ResponseResult.success(Map.of(
+                    "orderId", orderId,
+                    "currentStatus", order.getStatus(),
+                    "rollbackOptions", options
+            ));
+        } catch (Exception e) {
+            log.error("获取订单回退选项失败，订单ID：{}", orderId, e);
+            return ResponseResult.fail("500", "获取回退选项失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 订单状态回退
+     */
+    @PutMapping("/{orderId}/rollback")
+    @ApiOperation(value = "订单状态回退")
+    public ResponseResult<?> rollbackStatus(
+            @PathVariable String orderId,
+            @RequestBody java.util.Map<String, Object> request) {
+
+        try {
+            Integer targetStatus = (Integer) request.get("targetStatus");
+            String reason = (String) request.get("reason");
+            String operatorId = (String) request.get("operatorId");
+
+            if (targetStatus == null) {
+                return ResponseResult.fail("400", "缺少目标状态参数");
+            }
+
+            if (reason == null || reason.trim().isEmpty()) {
+                return ResponseResult.fail("400", "请提供回退原因");
+            }
+
+            boolean success = orderService.rollbackStatus(orderId, targetStatus, reason, operatorId);
+
+            if (success) {
+                return ResponseResult.success("订单状态回退成功");
+            } else {
+                return ResponseResult.fail("500", "订单状态回退失败");
+            }
+
+        } catch (Exception e) {
+            log.error("订单状态回退失败，订单ID：{}", orderId, e);
+            return ResponseResult.fail("500", "订单状态回退失败：" + e.getMessage());
         }
     }
 }
