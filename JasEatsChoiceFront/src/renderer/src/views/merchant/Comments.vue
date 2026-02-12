@@ -1,7 +1,14 @@
 <script setup>
-import { ref, computed } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ref, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
 import { ArrowUp, ArrowDown } from '@element-plus/icons-vue'
+import { useAuthStore } from '../../store/authStore'
+import reviewApi from '../../api/review'
+
+const authStore = useAuthStore()
+
+// 获取商家ID
+const merchantId = authStore.merchantId || localStorage.getItem('auth_merchantId')
 
 // 评价评分对应文本
 const ratingTextMap = {
@@ -21,65 +28,9 @@ const ratingTagTypeMap = {
   1: 'danger'
 }
 
-// 模拟评价数据
-const comments = ref([
-  {
-    id: 1,
-    orderNo: 'JD20241121001',
-    user: '小明',
-    rating: 5,
-    comment: '这家店的食物真的太好吃了！味道很正宗，配送也非常快，下次还会再来的！',
-    reply: '',
-    status: 'unreplied', // unreplied, replied
-    time: '2024-11-21 12:30',
-    dishes: ['宫保鸡丁', '鱼香肉丝', '米饭'],
-    replies: []
-  },
-  {
-    id: 2,
-    orderNo: 'JD20241121002',
-    user: '小红',
-    rating: 4,
-    comment: '味道还不错，就是有点辣，希望下次可以少放一点辣椒。',
-    reply: '非常抱歉给您带来不便，下次您可以在订单备注中说明辣度要求哦！',
-    status: 'replied',
-    time: '2024-11-21 13:15',
-    dishes: ['麻婆豆腐', '青菜', '米饭']
-  },
-  {
-    id: 3,
-    orderNo: 'JD20241120058',
-    user: '小刚',
-    rating: 3,
-    comment: '食物味道一般，配送有点慢，希望改进。',
-    reply: '感谢您的反馈，我们会改进配送速度和菜品质量！',
-    status: 'replied',
-    time: '2024-11-20 18:45',
-    dishes: ['红烧肉', '西红柿炒蛋', '米饭']
-  },
-  {
-    id: 4,
-    orderNo: 'JD20241119032',
-    user: '小李',
-    rating: 5,
-    comment: '服务态度很好，食物分量足，味道也很棒，强烈推荐！',
-    reply: '',
-    status: 'unreplied',
-    time: '2024-11-19 20:00',
-    dishes: ['水煮鱼', '回锅肉', '米饭']
-  },
-  {
-    id: 5,
-    orderNo: 'JD20241118012',
-    user: '小王',
-    rating: 2,
-    comment: '食物凉了，而且分量很少，价格也不便宜，非常不满意！',
-    reply: '非常抱歉给您带来不好的体验，我们会加强质量检查！',
-    status: 'replied',
-    time: '2024-11-18 19:30',
-    dishes: ['牛肉面', '拍黄瓜', '可乐']
-  }
-])
+// 评价数据
+const comments = ref([])
+const loading = ref(false)
 
 // 筛选条件
 const activeStatusFilter = ref('all') // all, unreplied, replied
@@ -88,106 +39,125 @@ const searchKeyword = ref('')
 
 // 筛选后的评价
 const filteredComments = ref([])
-filteredComments.value = [...comments.value]
 
 // 单个评论的回复/追评展开状态管理 (key: comment.id, value: boolean)
 const isReplyExpanded = ref({})
 
 // 评价统计
-const commentsStats = computed(() => {
-  const total = filteredComments.value.length
-  const ratingCounts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }
-  filteredComments.value.forEach((comment) => {
-    ratingCounts[comment.rating]++
-  })
-
-  // 计算平均评分
-  const avgRating =
-    total > 0 ? filteredComments.value.reduce((sum, comment) => sum + comment.rating, 0) / total : 0
-
-  const repliedCount = filteredComments.value.filter(
-    (comment) => comment.status === 'replied'
-  ).length
-  const unrepliedCount = total - repliedCount
-
-  return {
-    total,
-    avgRating,
-    ratingCounts,
-    repliedCount,
-    unrepliedCount
-  }
+const commentsStats = ref({
+  total: 0,
+  avgRating: 0,
+  ratingCounts: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+  repliedCount: 0,
+  unrepliedCount: 0
 })
+
+// 加载评价列表
+const loadComments = async () => {
+  if (!merchantId) {
+    ElMessage.warning('请先登录商家账号')
+    return
+  }
+
+  loading.value = true
+  try {
+    const params = {}
+    if (activeStatusFilter.value !== 'all') {
+      params.status = activeStatusFilter.value
+    }
+    if (activeRatingFilter.value !== 'all') {
+      params.rating = parseInt(activeRatingFilter.value)
+    }
+    if (searchKeyword.value) {
+      params.keyword = searchKeyword.value
+    }
+
+    const response = await reviewApi.getMerchantReviews(merchantId, params)
+    if (response.success) {
+      comments.value = response.data
+      filteredComments.value = response.data
+    }
+  } catch (error) {
+    console.error('加载评价列表失败:', error)
+    ElMessage.error('加载评价列表失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 加载评价统计
+const loadStatistics = async () => {
+  if (!merchantId) return
+
+  try {
+    const response = await reviewApi.getReviewStatistics(merchantId)
+    if (response.success) {
+      commentsStats.value = response.data
+    }
+  } catch (error) {
+    console.error('加载评价统计失败:', error)
+  }
+}
 
 // 更新筛选
 const updateFilter = () => {
-  filteredComments.value = comments.value.filter((comment) => {
-    // 状态筛选
-    const statusMatch =
-      activeStatusFilter.value === 'all' || comment.status === activeStatusFilter.value
-
-    // 评分筛选
-    const ratingMatch =
-      activeRatingFilter.value === 'all' || comment.rating === parseInt(activeRatingFilter.value)
-
-    // 搜索筛选
-    const searchMatch =
-      !searchKeyword.value ||
-      comment.orderNo.includes(searchKeyword.value) ||
-      comment.user.includes(searchKeyword.value) ||
-      comment.dishes.some((dish) => dish.includes(searchKeyword.value))
-
-    return statusMatch && ratingMatch && searchMatch
-  })
+  loadComments()
 }
 
 // 回复评价
 const replyComment = ref('')
 const currentComment = ref(null)
 const showReplyDialog = ref(false)
+const submitLoading = ref(false)
 
 const openReplyDialog = (comment) => {
   currentComment.value = comment
-  replyComment.value = '' // 追评时清空输入框，准备输入新内容
+  replyComment.value = ''
   showReplyDialog.value = true
 }
 
-const submitReply = () => {
+const submitReply = async () => {
   if (!replyComment.value.trim() || !currentComment.value) {
     ElMessage.warning('请输入回复内容')
     return
   }
 
-  // 更新回复内容：如果已经有回复则追加到追评列表，否则直接设置
-  if (currentComment.value.status === 'replied' && currentComment.value.reply) {
-    // 追加追评，使用数组存储追评
-    const now = new Date().toLocaleString('zh-CN')
-    // 初始化追评数组
-    if (!currentComment.value.replies) {
-      currentComment.value.replies = []
-    }
-    // 添加新追评
-    currentComment.value.replies.push({
-      content: replyComment.value,
-      time: now
-    })
-  } else {
-    // 首次回复
-    currentComment.value.reply = replyComment.value
-    currentComment.value.status = 'replied'
-    // 初始化追评数组
-    currentComment.value.replies = []
+  if (!merchantId) {
+    ElMessage.warning('请先登录商家账号')
+    return
   }
 
-  updateFilter()
-  replyComment.value = ''
-  currentComment.value = null
-  showReplyDialog.value = false
-  ElMessage.success('回复成功')
+  submitLoading.value = true
+  try {
+    const response = await reviewApi.replyReview(currentComment.value.id, {
+      content: replyComment.value,
+      merchantId: merchantId
+    })
+
+    if (response.success) {
+      ElMessage.success('回复成功')
+      showReplyDialog.value = false
+      replyComment.value = ''
+      currentComment.value = null
+      // 重新加载数据
+      await loadComments()
+      await loadStatistics()
+    } else {
+      ElMessage.error(response.message || '回复失败')
+    }
+  } catch (error) {
+    console.error('回复评价失败:', error)
+    ElMessage.error('回复失败')
+  } finally {
+    submitLoading.value = false
+  }
 }
 
-// 页面加载时初始化筛选
-updateFilter()
+// 页面加载时获取数据
+onMounted(() => {
+  loadComments()
+  loadStatistics()
+})
 </script>
 
 <template>
@@ -328,15 +298,15 @@ updateFilter()
           </div>
         </template>
 
-        <div class="comments-list">
+        <div class="comments-list" v-loading="loading">
           <div v-for="comment in filteredComments" :key="comment.id" class="comment-item">
             <div class="comment-header">
               <div class="user-info">
                 <div class="user-avatar">
-                  <el-avatar>{{ comment.user.charAt(0) }}</el-avatar>
+                  <el-avatar>{{ comment.userName.charAt(0) }}</el-avatar>
                 </div>
                 <div class="user-details">
-                  <div class="user-name">{{ comment.user }}</div>
+                  <div class="user-name">{{ comment.userName }}</div>
                   <div class="order-info">
                     <span class="order-no">订单号：{{ comment.orderNo }}</span>
                     <span class="time">⏰ {{ comment.time }}</span>
@@ -373,7 +343,7 @@ updateFilter()
 
               <div class="comment-text">
                 <div class="comment-label">💬 用户评价：</div>
-                <div class="comment-value">{{ comment.comment }}</div>
+                <div class="comment-value">{{ comment.content }}</div>
               </div>
 
               <!-- 所有回复（包括原回复和追评） -->
@@ -464,7 +434,7 @@ updateFilter()
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="showReplyDialog = false">取消</el-button>
-          <el-button type="primary" @click="submitReply">提交回复</el-button>
+          <el-button type="primary" :loading="submitLoading" @click="submitReply">提交回复</el-button>
         </div>
       </template>
     </el-dialog>
