@@ -441,7 +441,7 @@ const handleGetCurrentLocation = async () => {
           },
           {
             enableHighAccuracy: false,
-            timeout: 5000, // 缩短到 5 秒，快速失败
+            timeout: 15000, // 增加到 15 秒，给用户主动点击的定位更多时间
             maximumAge: 600000
           }
         )
@@ -546,13 +546,35 @@ const autoLocate = async () => {
     return
   }
 
-  // ========== 第二级：尝试浏览器地理位置定位（需要用户授权） ==========
+  // ========== 第二级：优先使用 IP 定位（快速稳定，无需授权） ==========
+  try {
+    const amapApi = (await import('../api/amap.js')).default
+    const response = await amapApi.ipLocation()
+
+    if (response && response.code === '200' && response.data) {
+      const { lng, lat } = response.data
+
+      if (lng && lat) {
+        console.log('IP定位成功:', lng, lat)
+        updateMarkerPosition(lng, lat)
+        getAddressByLocation(lng, lat)
+
+        // 保存到本地存储
+        saveLastLocation(lng, lat)
+        return
+      }
+    }
+  } catch (error) {
+    console.log('IP定位失败，尝试其他方式:', error.message)
+  }
+
+  // ========== 第三级：尝试浏览器 GPS 定位（需要用户授权，超时限制较短） ==========
   if ('geolocation' in navigator) {
     try {
       await new Promise((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(
           (position) => {
-            console.log('浏览器定位成功:', position)
+            console.log('GPS定位成功:', position)
             const { latitude, longitude } = position.coords
             updateMarkerPosition(longitude, latitude)
             getAddressByLocation(longitude, latitude)
@@ -563,23 +585,23 @@ const autoLocate = async () => {
             resolve()
           },
           (error) => {
-            console.log('浏览器定位失败:', error.message)
+            console.log('GPS定位失败:', error.message)
             reject(error)
           },
           {
             enableHighAccuracy: false,
-            timeout: 5000,
+            timeout: 8000, // 增加到 8 秒
             maximumAge: 600000
           }
         )
       })
       return
     } catch (error) {
-      console.log('浏览器定位异常或被拒绝:', error)
+      console.log('GPS定位异常或被拒绝:', error)
     }
   }
 
-  // ========== 第三级：使用默认位置（北京） ==========
+  // ========== 第四级：使用默认位置（北京） ==========
   console.log('使用默认位置（北京）')
   if (props.defaultPosition) {
     updateMarkerPosition(props.defaultPosition.lng, props.defaultPosition.lat)

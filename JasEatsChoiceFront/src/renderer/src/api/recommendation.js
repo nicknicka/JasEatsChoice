@@ -29,7 +29,7 @@ export const recommendationAPI = {
       ...(options.weather && { weather: options.weather })
     }
 
-    return axios.get(`${BASE_URL}/v1/recommend/recommend/${userId}`, { params })
+    return axios.get(`${BASE_URL}/v1/recommendations/${userId}`, { params })
   },
 
   /**
@@ -37,7 +37,7 @@ export const recommendationAPI = {
    * @param {string|number} userId - 用户ID
    */
   refreshRecommendations(userId) {
-    return axios.post(`${BASE_URL}/v1/recommend/recommend/${userId}/refresh`)
+    return axios.post(`${BASE_URL}/v1/recommendations/${userId}/refresh`)
   },
 
   /**
@@ -50,7 +50,7 @@ export const recommendationAPI = {
    * @param {boolean} feedbackData.isOrdered - 是否下单
    */
   recordFeedback(feedbackData) {
-    return axios.post(`${BASE_URL}/v1/recommend/feedback`, feedbackData)
+    return axios.post(`${BASE_URL}/v1/recommendations/feedback`, feedbackData)
   },
 
   /**
@@ -61,7 +61,7 @@ export const recommendationAPI = {
    * @param {string} data.reason - 拒绝原因
    */
   rejectRecommendation(userId, data) {
-    return axios.post(`${BASE_URL}/v1/recommend/recommend/${userId}/reject`, data)
+    return axios.post(`${BASE_URL}/v1/recommendations/${userId}/reject`, data)
   },
 
   /**
@@ -70,7 +70,7 @@ export const recommendationAPI = {
    * @param {string[]} replaceDishIds - 要替换的菜品ID列表
    */
   replaceRecommendations(userId, replaceDishIds) {
-    return axios.post(`${BASE_URL}/v1/recommend/recommend/${userId}/replace`, {
+    return axios.post(`${BASE_URL}/v1/recommendations/${userId}/replace`, {
       replaceDishIds
     })
   },
@@ -86,7 +86,7 @@ export const recommendationAPI = {
    * @param {number} filters.maxPrice - 最大价格
    */
   filterRecommendations(userId, filters = {}) {
-    return axios.post(`${BASE_URL}/v1/recommend/recommend/${userId}/filter`, filters)
+    return axios.post(`${BASE_URL}/v1/recommendations/${userId}/filter`, filters)
   },
 
   /**
@@ -95,7 +95,7 @@ export const recommendationAPI = {
    * @param {string} dishId - 菜品ID
    */
   getRecommendationReason(userId, dishId) {
-    return axios.get(`${BASE_URL}/v1/recommend/recommend/${userId}/reason/${dishId}`)
+    return axios.get(`${BASE_URL}/v1/recommendations/${userId}/reason/${dishId}`)
   },
 
   /**
@@ -103,7 +103,7 @@ export const recommendationAPI = {
    * @param {string|number} userId - 用户ID
    */
   getUserProfile(userId) {
-    return axios.get(`${BASE_URL}/v1/recommend/profile/${userId}`)
+    return axios.get(`${BASE_URL}/v1/recommendations/profile/${userId}`)
   },
 
   /**
@@ -113,7 +113,7 @@ export const recommendationAPI = {
    * @param {string} preferences.dietGoal - 饮食目标: low_calorie/high_protein/balanced
    */
   setUserPreference(userId, preferences) {
-    return axios.put(`${BASE_URL}/v1/recommend/users/${userId}/prefer`, preferences)
+    return axios.put(`${BASE_URL}/v1/recommendations/users/${userId}/prefer`, preferences)
   },
 
   /**
@@ -122,7 +122,7 @@ export const recommendationAPI = {
    * @param {number} limit - 返回数量
    */
   getUserBehaviors(userId, limit = 50) {
-    return axios.get(`${BASE_URL}/v1/recommend/behavior/${userId}`, {
+    return axios.get(`${BASE_URL}/v1/recommendations/behavior/${userId}`, {
       params: { limit }
     })
   },
@@ -137,7 +137,7 @@ export const recommendationAPI = {
    * @param {Object} behaviorData.context - 上下文信息
    */
   recordBehavior(behaviorData) {
-    return axios.post(`${BASE_URL}/v1/recommend/behavior`, behaviorData)
+    return axios.post(`${BASE_URL}/v1/recommendations/behavior`, behaviorData)
   },
 
   /**
@@ -147,7 +147,7 @@ export const recommendationAPI = {
    */
   generateShoppingList(userId, date) {
     const params = date ? { date } : {}
-    return axios.get(`${BASE_URL}/v1/recommend/recipe/${userId}/shopping-list`, {
+    return axios.get(`${BASE_URL}/v1/recommendations/recipe/${userId}/shopping-list`, {
       params
     })
   }

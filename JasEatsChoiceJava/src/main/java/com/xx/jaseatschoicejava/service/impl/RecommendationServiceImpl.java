@@ -411,7 +411,7 @@ public class RecommendationServiceImpl implements RecommendationService {
                     if (feature == null) return false;
 
                     // 时间匹配
-                    if (timePeriod != null && !feature.getTimePeriodTags().contains(timePeriod)) {
+                    if (timePeriod != null && feature.getTimePeriodTags() != null && !feature.getTimePeriodTags().contains(timePeriod)) {
                         return false;
                     }
 
@@ -464,7 +464,7 @@ public class RecommendationServiceImpl implements RecommendationService {
 
         // 3. 时间上下文得分（权重15%）
         String timePeriod = (String) context.get("timePeriod");
-        if (timePeriod != null && feature != null &&
+        if (timePeriod != null && feature != null && feature.getTimePeriodTags() != null &&
             feature.getTimePeriodTags().contains(timePeriod)) {
             score += 0.15;
         }
@@ -592,7 +592,7 @@ public class RecommendationServiceImpl implements RecommendationService {
 
         // 上下文匹配
         String timePeriod = (String) context.get("timePeriod");
-        if (timePeriod != null && feature != null &&
+        if (timePeriod != null && feature != null && feature.getTimePeriodTags() != null &&
             feature.getTimePeriodTags().contains(timePeriod)) {
             reasons.add("适合" + timePeriod);
         }
@@ -637,7 +637,7 @@ public class RecommendationServiceImpl implements RecommendationService {
 
         // 上下文因素
         String timePeriod = (String) context.get("timePeriod");
-        if (timePeriod != null && feature != null &&
+        if (timePeriod != null && feature != null && feature.getTimePeriodTags() != null &&
             feature.getTimePeriodTags().contains(timePeriod)) {
             RecommendationResultDTO.ReasonFactor factor = new RecommendationResultDTO.ReasonFactor();
             factor.setType("context");

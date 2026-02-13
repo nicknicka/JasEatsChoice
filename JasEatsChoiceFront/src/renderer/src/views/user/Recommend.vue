@@ -1,7 +1,8 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import CommonLocationPicker from '../../components/CommonLocationPicker.vue'
 import CommonWeatherWidget from '../../components/CommonWeatherWidget.vue'
+import CommonRecommendStatsWidget from '../../components/CommonRecommendStatsWidget.vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useDebounceFn } from '@vueuse/core'
@@ -19,7 +20,11 @@ const {
   refreshing,
   loadAllRecommendations,
   rejectRecommendation,
-  onRefresh
+  onRefresh,
+  recordClickFeedback,
+  recordOrderFeedback,
+  recordFavoriteBehavior,
+  getRecommendationStats
 } = useRecommendations()
 
 const { favorites, favoritesCount, initFavorites, toggleFavorite, isFavoritedItem } = useFavorites()
@@ -50,6 +55,20 @@ const weatherWidget = ref(null)
 // UI状态
 const showFilters = ref(false)
 const showNutritionDetail = ref(null)
+const showStatsPanel = ref(false)
+
+// 统计相关
+const currentStats = computed(() => {
+  const stats = getRecommendationStats()
+  return {
+    totalViews: stats.totalViews || 0,
+    totalClicks: stats.totalClicks || 0,
+    totalOrders: stats.totalOrders || 0,
+    totalRejects: stats.totalRejects || 0,
+    cacheHitRate: stats.cacheHitRate || 0,
+    lastUpdateTime: stats.lastUpdateTime || null
+  }
+})
 
 // 定位变化处理（防抖优化）
 const handleLocationChanged = useDebounceFn((locationData) => {
@@ -136,16 +155,85 @@ const updateRecommendationsByLocation = (location) => {
   // 这里可以添加根据经纬度获取附近商家和推荐菜品的逻辑
 }
 
-// 处理收藏点击
+// 处理收藏点击（增强版 - 记录行为）
 const handleFavoriteClick = async (item) => {
+  const isFavorited = isFavoritedItem(item)
+
+  // 记录收藏/取消收藏行为
+  await recordFavoriteBehavior(item, !isFavorited)
+
+  // 切换收藏状态
   await toggleFavorite(item)
+
   // 更新收藏状态
   initFavorites()
 }
 
+// 处理点击菜品（记录点击反馈）
+const handleDishClick = async (item) => {
+  // 记录点击行为
+  await recordClickFeedback(item)
+}
+
+// 处理下单（记录下单反馈）
+const handleOrder = async (item) => {
+  // 记录下单行为
+  await recordOrderFeedback(item)
+
+  // 跳转到商家页面
+  router.push({
+    path: '/user/home/merchants',
+    query: {
+      search: item.name.replace(/(.*推荐:|.*特色:)/, '').trim()
+    }
+  })
+}
+
+// 获取推荐因素标签类型
+const getFactorTagType = (factorType) => {
+  const typeMap = {
+    'user_preference': 'success',
+    'popularity': 'warning',
+    'context': 'info',
+    'time': 'primary',
+    'weather': 'cyan'
+  }
+  return typeMap[factorType] || 'info'
+}
+
+// 获取推荐来源标签类型
+const getSourceTagType = (source) => {
+  return RECOMMENDATION_TYPE_TAGS[source]?.type || 'info'
+}
+
+// 获取推荐来源标签文本
+const getSourceLabel = (source) => {
+  const labelMap = {
+    '个性化推荐': '个性化',
+    '时间推荐': '时间',
+    '节日推荐': '节日',
+    '系统推荐': '系统'
+  }
+  return labelMap[source] || source
+}
+
 // 显示营养详情
-const showNutritionDialog = (item) => {
+const openNutritionDetail = (item) => {
   showNutritionDetail.value = item
+}
+
+// 切换统计面板
+const toggleStatsPanel = () => {
+  showStatsPanel.value = !showStatsPanel.value
+}
+
+// 刷新推荐（含统计）
+const handleRefreshWithStats = async () => {
+  await onRefresh()
+  // 刷新后更新统计显示
+  if (showStatsPanel.value) {
+    console.log('统计面板已更新')
+  }
 }
 
 // 页面加载时获取定位和推荐数据
@@ -170,6 +258,13 @@ onMounted(async () => {
       @weather-updated="handleWeatherUpdated"
     />
 
+    <!-- 推荐统计面板 -->
+    <CommonRecommendStatsWidget
+      v-if="!isLoading && recommendations.length > 0"
+      :stats="getRecommendationStats()"
+      @refresh="onRefresh"
+    />
+
     <h2 class="fade-in-up">我的推荐</h2>
 
     <!-- 筛选和排序工具栏 -->
@@ -184,6 +279,13 @@ onMounted(async () => {
         />
       </div>
       <div class="toolbar-right">
+        <el-button
+          :type="showStatsPanel ? 'primary' : 'default'"
+          :icon="showStatsPanel ? 'DataAnalysis' : 'DataLine'"
+          @click="toggleStatsPanel"
+        >
+          {{ showStatsPanel ? '隐藏统计' : '推荐统计' }}
+        </el-button>
         <el-button
           :type="showFilters ? 'primary' : 'default'"
           :icon="showFilters ? 'FilterFilled' : 'Filter'"
@@ -321,7 +423,7 @@ onMounted(async () => {
           <el-button
             type="text"
             size="small"
-            @click="showNutritionDialog(item)"
+            @click="openNutritionDetail(item)"
             v-if="item.nutrition"
             style="margin-left: auto"
           >
@@ -340,11 +442,40 @@ onMounted(async () => {
           </el-tag>
         </div>
 
-        <!-- 推荐理由 -->
+        <!-- 推荐理由（优化版 - 支持多因素显示）-->
         <div class="reason-section">
-          <div class="reason-title">推荐理由</div>
+          <div class="reason-title">
+            <span>推荐理由</span>
+            <el-tag v-if="item.score" size="small" type="success" effect="plain" class="score-tag">
+              匹配度 {{ Math.round(item.score * 100) }}%
+            </el-tag>
+          </div>
+
+          <!-- 主要推荐理由 -->
           <div class="reason-text" :class="{ 'empty-reason': !item.reason }">
             {{ item.reason || '暂无推荐理由' }}
+          </div>
+
+          <!-- 推荐因素列表（如果有的话）-->
+          <div v-if="item.reason?.factors && item.reason.factors.length > 0" class="reason-factors">
+            <div
+              v-for="(factor, index) in item.reason.factors"
+              :key="index"
+              class="reason-factor-item"
+            >
+              <el-tag size="small" :type="getFactorTagType(factor.type)" effect="plain">
+                {{ factor.name }}
+              </el-tag>
+              <span class="factor-score">{{ Math.round(factor.score * 100) }}%</span>
+            </div>
+          </div>
+
+          <!-- 推荐来源标签（增强版）-->
+          <div v-if="item.recommendSource" class="recommend-source-info">
+            <el-tag size="small" :type="getSourceTagType(item.recommendSource)" effect="plain">
+              {{ getSourceLabel(item.recommendSource) }}
+            </el-tag>
+            <span v-if="item.rank" class="rank-info">排名 #{{ item.rank }}</span>
           </div>
         </div>
 
@@ -358,14 +489,7 @@ onMounted(async () => {
           <el-button
             type="primary"
             size="small"
-            @click="
-              router.push({
-                path: '/user/home/merchants',
-                query: {
-                  search: item.name.replace(/(.*推荐:|.*特色:)/, '').trim()
-                }
-              })
-            "
+            @click="handleOrder(item)"
           >
             立即下单
           </el-button>
@@ -633,6 +757,14 @@ onMounted(async () => {
         margin-bottom: 8px;
         color: #333;
         font-size: 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+
+        .score-tag {
+          font-size: 12px;
+        }
       }
 
       .reason-text {
@@ -644,6 +776,40 @@ onMounted(async () => {
       .reason-text.empty-reason {
         color: #c0c4cc;
         font-style: italic;
+      }
+
+      // 推荐因素列表
+      .reason-factors {
+        margin-top: 12px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .reason-factor-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+
+        .factor-score {
+          font-size: 12px;
+          color: #909399;
+          font-weight: 600;
+        }
+      }
+
+      // 推荐来源信息
+      .recommend-source-info {
+        margin-top: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        .rank-info {
+          font-size: 12px;
+          color: #67c23a;
+          font-weight: 600;
+        }
       }
     }
 

@@ -77,8 +77,8 @@ const featuredTutorials = ref([])
 
 // 今日推荐菜品 - 来自后端
 const recommendedDishes = ref([])
-// 推荐菜品空状态消息
-const recommendEmptyMessage = ref('暂无推荐菜品')
+// 推荐加载失败标志
+const recommendLoadFailed = ref(false)
 // 今日热点 - 从后端获取（包含详细信息）
 const hotTopic = ref({
   content: '',
@@ -98,6 +98,7 @@ const mapLocationPickerVisible = ref(false)
 // 从后端获取推荐菜品 - 使用智能推荐算法
 const fetchRecommendedDishes = async () => {
   recommendedDishesLoading.value = true
+  recommendLoadFailed.value = false
   try {
     // 使用智能推荐系统（个性化推荐 + 天气推荐 + 节日推荐）
     const allRecommendations = await loadAllRecommendations()
@@ -132,16 +133,13 @@ const fetchRecommendedDishes = async () => {
 
       // 预加载图片（如果有真实图片URL）
       preloadImages(recommendedDishes.value)
-
-      recommendEmptyMessage.value = '暂无推荐菜品'
     } else {
       recommendedDishes.value = []
-      recommendEmptyMessage.value = '暂无推荐菜品'
     }
   } catch (error) {
     console.error('加载推荐菜品失败:', error)
     recommendedDishes.value = []
-    recommendEmptyMessage.value = '加载失败,请重试'
+    recommendLoadFailed.value = true
     showError('加载推荐菜品失败,请检查网络连接')
   } finally {
     recommendedDishesLoading.value = false
@@ -249,6 +247,39 @@ const extractCityFromAddress = (address) => {
   return '北京'
 }
 
+// 从 localStorage 读取上次保存的位置
+const loadLastLocation = async () => {
+  try {
+    const stored = localStorage.getItem('user_last_location')
+    if (stored) {
+      const locationData = JSON.parse(stored)
+
+      // 检查是否过期（7天内有效）
+      const sevenDays = 7 * 24 * 60 * 60 * 1000
+      if (Date.now() - locationData.timestamp < sevenDays) {
+        const { lng, lat } = locationData
+
+        // 调用逆地理编码获取地址
+        try {
+          const amapApi = (await import('../../api/amap.js')).default
+          const response = await amapApi.regeocode(lng.toString(), lat.toString())
+
+          if (response && response.code === '200' && response.data) {
+            const address = response.data.formattedAddress
+            weather.value.address = address
+            weather.value.city = extractCityFromAddress(address)
+            console.log('已加载上次保存的位置:', address)
+          }
+        } catch (error) {
+          console.warn('获取上次位置地址失败:', error)
+        }
+      }
+    }
+  } catch (error) {
+    console.warn('读取上次位置失败:', error)
+  }
+}
+
 // 从后端获取位置和天气数据
 const fetchWeather = async (selectedCity = null) => {
   try {
@@ -308,6 +339,17 @@ const filteredDishes = computed(() => {
       dish.reason?.toLowerCase().includes(keyword)
     )
   })
+})
+
+// 推荐空状态消息（根据搜索状态动态变化）
+const recommendEmptyMessage = computed(() => {
+  if (recommendLoadFailed.value) {
+    return '加载失败,请重试'
+  }
+  if (searchKeyword.value) {
+    return `没有找到包含"${searchKeyword.value}"的菜品`
+  }
+  return '暂无推荐菜品'
 })
 
 // 处理搜索
@@ -667,6 +709,7 @@ const shareDish = async (dish, event) => {
 
 // 在挂载时初始化WebSocket
 onMounted(async () => {
+  loadLastLocation() // 加载上次保存的位置
   loadFavorites() // 加载收藏列表
   fetchFeaturedTutorials()
   fetchRecommendedDishes()
@@ -819,7 +862,7 @@ onMounted(async () => {
       </div>
     </el-dialog>
 
-    <div class="recommendation-section fade-in-up delay-100" role="region" aria-label="今日推荐菜品">
+    <div class="recommendation-section fade-in-up-delay-100" role="region" aria-label="今日推荐菜品">
       <h3 id="recommendations-heading">今日推荐</h3>
       <!-- 骨架屏加载中 -->
       <div v-if="recommendedDishesLoading" class="skeleton-wrapper">
@@ -832,8 +875,8 @@ onMounted(async () => {
           </template>
         </el-skeleton>
       </div>
-      <!-- When there are no recommended dishes -->
-      <div v-else-if="recommendedDishes.length === 0" class="empty-recommendations">
+      <!-- When there are no recommended dishes or filtered results -->
+      <div v-else-if="filteredDishes.length === 0" class="empty-recommendations">
         <el-empty :description="recommendEmptyMessage">
           <template #image>
             <div class="empty-icon">

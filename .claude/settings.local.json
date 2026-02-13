@@ -355,7 +355,8 @@
       "Bash(md5:*)",
       "Bash(tr:*)",
       "Bash(npx lessc:*)",
-      "Bash(du:*)"
+      "Bash(du:*)",
+      "Bash(git -C \"/Users/nickxiao/JasEatsChoice\" diff HEAD JasEatsChoiceJava/src/main/java/com/xx/jaseatschoicejava/service/impl/RecommendationServiceImpl.java)"
     ],
     "deny": [],
     "ask": [],
