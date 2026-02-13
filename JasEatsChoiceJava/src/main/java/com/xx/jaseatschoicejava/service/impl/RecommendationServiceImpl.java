@@ -435,7 +435,9 @@ public class RecommendationServiceImpl implements RecommendationService {
         // 为每道菜计算最终得分
         for (Dish dish : dishes) {
             double finalScore = calculateFinalScore(dish, profile, context);
-            dish.setScore(BigDecimal.valueOf(finalScore).setScale(4, RoundingMode.HALF_UP));
+            // 转换为百分比值（0-1范围）
+            double percentageScore = finalScore;
+            dish.setScore(BigDecimal.valueOf(percentageScore).setScale(4, RoundingMode.HALF_UP));
         }
 
         // 按分数降序排序

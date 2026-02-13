@@ -1,10 +1,8 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import CommonLocationPicker from '../../components/CommonLocationPicker.vue'
 import CommonWeatherWidget from '../../components/CommonWeatherWidget.vue'
-import CommonRecommendStatsWidget from '../../components/CommonRecommendStatsWidget.vue'
 import { useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
 import { useDebounceFn } from '@vueuse/core'
 import { useRecommendations } from '../../composables/useRecommendations.js'
 import { useFavorites } from '../../composables/useFavorites.js'
@@ -23,8 +21,7 @@ const {
   onRefresh,
   recordClickFeedback,
   recordOrderFeedback,
-  recordFavoriteBehavior,
-  getRecommendationStats
+  recordFavoriteBehavior
 } = useRecommendations()
 
 const { favorites, favoritesCount, initFavorites, toggleFavorite, isFavoritedItem } = useFavorites()
@@ -49,26 +46,18 @@ const currentLocation = ref(null)
 const locationError = ref(false)
 const currentCity = ref('')
 
+// 处理来自 CommonLocationPicker 的定位错误
+const handleLocationErrorFromPicker = (error) => {
+  locationError.value = true
+  console.error('定位组件错误:', error)
+}
+
 // 天气相关
 const weatherWidget = ref(null)
 
 // UI状态
 const showFilters = ref(false)
 const showNutritionDetail = ref(null)
-const showStatsPanel = ref(false)
-
-// 统计相关
-const currentStats = computed(() => {
-  const stats = getRecommendationStats()
-  return {
-    totalViews: stats.totalViews || 0,
-    totalClicks: stats.totalClicks || 0,
-    totalOrders: stats.totalOrders || 0,
-    totalRejects: stats.totalRejects || 0,
-    cacheHitRate: stats.cacheHitRate || 0,
-    lastUpdateTime: stats.lastUpdateTime || null
-  }
-})
 
 // 定位变化处理（防抖优化）
 const handleLocationChanged = useDebounceFn((locationData) => {
@@ -85,69 +74,6 @@ const handleWeatherUpdated = useDebounceFn((weatherData) => {
   // 重新加载推荐
   loadAllRecommendations()
 }, 2000)
-
-// 定位成功后的处理
-const handleLocationSuccess = (position) => {
-  const { latitude, longitude } = position.coords
-  const accuracy = position.coords.accuracy
-
-  currentLocation.value = { latitude, longitude }
-
-  // 检查定位误差是否超过500米
-  if (accuracy > 500) {
-    locationError.value = true
-    ElMessageBox.warning({
-      title: '定位误差提示',
-      message: `当前定位误差为${Math.round(accuracy)}米，可能影响推荐准确性。是否重新定位？`,
-      confirmButtonText: '重新定位',
-      cancelButtonText: '取消',
-      callback: (action) => {
-        if (action === 'confirm') {
-          getCurrentLocation()
-        }
-      }
-    })
-  } else {
-    locationError.value = false
-    ElMessage.success(`定位成功，误差${Math.round(accuracy)}米`)
-    updateRecommendationsByLocation({ latitude, longitude })
-  }
-}
-
-// 定位失败后的处理
-const handleLocationError = (error) => {
-  let errorMessage = '定位失败'
-  switch (error.code) {
-    case error.PERMISSION_DENIED:
-      locationError.value = true
-      return
-    case error.POSITION_UNAVAILABLE:
-      errorMessage = '定位信息不可用'
-      break
-    case error.TIMEOUT:
-      errorMessage = '定位请求超时'
-      break
-    case error.UNKNOWN_ERROR:
-      errorMessage = '未知定位错误'
-      break
-  }
-  locationError.value = true
-  ElMessage.error(errorMessage)
-}
-
-// 获取当前位置
-const getCurrentLocation = () => {
-  if ('geolocation' in navigator) {
-    navigator.geolocation.getCurrentPosition(handleLocationSuccess, handleLocationError, {
-      enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 300000
-    })
-  } else {
-    locationError.value = true
-    ElMessage.error('您的浏览器不支持GPS定位功能')
-  }
-}
 
 // 根据位置更新推荐
 const updateRecommendationsByLocation = (location) => {
@@ -189,18 +115,6 @@ const handleOrder = async (item) => {
   })
 }
 
-// 获取推荐因素标签类型
-const getFactorTagType = (factorType) => {
-  const typeMap = {
-    'user_preference': 'success',
-    'popularity': 'warning',
-    'context': 'info',
-    'time': 'primary',
-    'weather': 'cyan'
-  }
-  return typeMap[factorType] || 'info'
-}
-
 // 获取推荐来源标签类型
 const getSourceTagType = (source) => {
   return RECOMMENDATION_TYPE_TAGS[source]?.type || 'info'
@@ -222,23 +136,27 @@ const openNutritionDetail = (item) => {
   showNutritionDetail.value = item
 }
 
-// 切换统计面板
-const toggleStatsPanel = () => {
-  showStatsPanel.value = !showStatsPanel.value
-}
-
-// 刷新推荐（含统计）
-const handleRefreshWithStats = async () => {
-  await onRefresh()
-  // 刷新后更新统计显示
-  if (showStatsPanel.value) {
-    console.log('统计面板已更新')
+// 格式化分数显示（直接使用后端返回的百分比值）
+const formatScore = (score) => {
+  // 如果 score 已经是百分比格式（大于 1），直接使用
+  // 如果 score 是小数格式（0-1），转换为百分比
+  if (score > 1) {
+    return Math.round(score)
   }
+  return Math.round(score * 100)
 }
 
-// 页面加载时获取定位和推荐数据
+// 获取分数等级（用于样式）
+const getScoreLevel = (score) => {
+  const percentage = score > 1 ? score : score * 100
+  if (percentage >= 90) return 'excellent'
+  if (percentage >= 80) return 'good'
+  if (percentage >= 70) return 'medium'
+  return 'low'
+}
+
+// 页面加载时获取推荐数据（定位由 CommonLocationPicker 组件自动处理）
 onMounted(async () => {
-  getCurrentLocation()
   await loadAllRecommendations()
   initFavorites()
 })
@@ -251,6 +169,7 @@ onMounted(async () => {
       ref="locationPicker"
       auto-locate
       @location-changed="handleLocationChanged"
+      @location-error="handleLocationErrorFromPicker"
     />
     <CommonWeatherWidget
       ref="weatherWidget"
@@ -258,14 +177,18 @@ onMounted(async () => {
       @weather-updated="handleWeatherUpdated"
     />
 
-    <!-- 推荐统计面板 -->
-    <CommonRecommendStatsWidget
-      v-if="!isLoading && recommendations.length > 0"
-      :stats="getRecommendationStats()"
-      @refresh="onRefresh"
-    />
-
     <h2 class="fade-in-up">我的推荐</h2>
+
+    <!-- 定位警告提示 -->
+    <el-alert
+      v-if="locationError"
+      type="warning"
+      :closable="false"
+      show-icon
+      class="location-warning"
+    >
+      定位服务不可用，推荐准确性可能受影响
+    </el-alert>
 
     <!-- 筛选和排序工具栏 -->
     <div class="toolbar fade-in-up delay-100">
@@ -279,13 +202,6 @@ onMounted(async () => {
         />
       </div>
       <div class="toolbar-right">
-        <el-button
-          :type="showStatsPanel ? 'primary' : 'default'"
-          :icon="showStatsPanel ? 'DataAnalysis' : 'DataLine'"
-          @click="toggleStatsPanel"
-        >
-          {{ showStatsPanel ? '隐藏统计' : '推荐统计' }}
-        </el-button>
         <el-button
           :type="showFilters ? 'primary' : 'default'"
           :icon="showFilters ? 'FilterFilled' : 'Filter'"
@@ -354,8 +270,7 @@ onMounted(async () => {
         </div>
 
         <div class="filter-actions">
-          <el-button type="primary" @click="showFilters = false">应用筛选</el-button>
-          <el-button @click="resetFilters">重置</el-button>
+          <el-button @click="resetFilters">重置筛选</el-button>
         </div>
       </div>
     </transition>
@@ -406,7 +321,25 @@ onMounted(async () => {
         </div>
 
         <div class="card-header">
-          <div class="dish-image">{{ item.image }}</div>
+          <div class="dish-image">
+            <el-image
+              :src="item.image"
+              fit="cover"
+              lazy
+              class="recommend-image"
+            >
+              <template #error>
+                <div class="image-placeholder">
+                  {{ item.name?.charAt(0) || '🍽️' }}
+                </div>
+              </template>
+              <template #placeholder>
+                <div class="image-loading">
+                  <el-icon class="is-loading"><Loading /></el-icon>
+                </div>
+              </template>
+            </el-image>
+          </div>
           <div class="dish-info">
             <div class="dish-name">{{ item.name }}</div>
             <div class="dish-type">
@@ -442,13 +375,21 @@ onMounted(async () => {
           </el-tag>
         </div>
 
+        <!-- 匹配度（简约设计） -->
+        <div class="match-score-section" v-if="item.score !== undefined && item.score !== null">
+          <div class="score-compact" :class="getScoreLevel(item.score)">
+            <span class="score-label">匹配度</span>
+            <div class="score-bar-bg">
+              <div class="score-bar-fill" :style="{ width: formatScore(item.score) + '%' }"></div>
+            </div>
+            <span class="score-value">{{ formatScore(item.score) }}%</span>
+          </div>
+        </div>
+
         <!-- 推荐理由（优化版 - 支持多因素显示）-->
         <div class="reason-section">
           <div class="reason-title">
             <span>推荐理由</span>
-            <el-tag v-if="item.score" size="small" type="success" effect="plain" class="score-tag">
-              匹配度 {{ Math.round(item.score * 100) }}%
-            </el-tag>
           </div>
 
           <!-- 主要推荐理由 -->
@@ -456,26 +397,11 @@ onMounted(async () => {
             {{ item.reason || '暂无推荐理由' }}
           </div>
 
-          <!-- 推荐因素列表（如果有的话）-->
-          <div v-if="item.reason?.factors && item.reason.factors.length > 0" class="reason-factors">
-            <div
-              v-for="(factor, index) in item.reason.factors"
-              :key="index"
-              class="reason-factor-item"
-            >
-              <el-tag size="small" :type="getFactorTagType(factor.type)" effect="plain">
-                {{ factor.name }}
-              </el-tag>
-              <span class="factor-score">{{ Math.round(factor.score * 100) }}%</span>
-            </div>
-          </div>
-
           <!-- 推荐来源标签（增强版）-->
           <div v-if="item.recommendSource" class="recommend-source-info">
             <el-tag size="small" :type="getSourceTagType(item.recommendSource)" effect="plain">
               {{ getSourceLabel(item.recommendSource) }}
             </el-tag>
-            <span v-if="item.rank" class="rank-info">排名 #{{ item.rank }}</span>
           </div>
         </div>
 
@@ -567,6 +493,11 @@ onMounted(async () => {
       border-radius: 2px;
       margin-top: 12px;
     }
+  }
+
+  // 定位警告
+  .location-warning {
+    margin: 0 20px 20px 20px;
   }
 
   // 工具栏
@@ -700,8 +631,38 @@ onMounted(async () => {
       padding: 0;
 
       .dish-image {
-        font-size: 70px;
-        line-height: 1;
+        width: 80px;
+        height: 80px;
+        border-radius: 12px;
+        overflow: hidden;
+        flex-shrink: 0;
+
+        .recommend-image {
+          width: 100%;
+          height: 100%;
+        }
+
+        .image-placeholder {
+          width: 80px;
+          height: 80px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+          font-size: 36px;
+          font-weight: bold;
+          color: #666;
+        }
+
+        .image-loading {
+          width: 80px;
+          height: 80px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #f5f5f5;
+          color: #999;
+        }
       }
 
       .dish-info {
@@ -746,6 +707,91 @@ onMounted(async () => {
 
       :deep(.el-tag) {
         border-radius: 20px;
+      }
+    }
+
+    // 匹配度简约进度条
+    .match-score-section {
+      margin-bottom: 16px;
+      padding: 0;
+
+      .score-compact {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 14px;
+        background: #f9fafb;
+        border-radius: 8px;
+
+        .score-label {
+          font-size: 13px;
+          color: #606266;
+          font-weight: 500;
+          white-space: nowrap;
+        }
+
+        .score-bar-bg {
+          flex: 1;
+          height: 8px;
+          background: #e4e7ed;
+          border-radius: 4px;
+          overflow: hidden;
+          min-width: 80px;
+        }
+
+        .score-bar-fill {
+          height: 100%;
+          border-radius: 4px;
+          transition: width 0.6s ease;
+        }
+
+        .score-value {
+          font-size: 14px;
+          font-weight: 600;
+          white-space: nowrap;
+          min-width: 45px;
+          text-align: right;
+        }
+
+        // 优秀等级 (90%+)
+        &.excellent {
+          .score-bar-fill {
+            background: linear-gradient(90deg, #67c23a 0%, #85ce61 100%);
+          }
+          .score-value {
+            color: #67c23a;
+          }
+        }
+
+        // 良好等级 (80-89%)
+        &.good {
+          .score-bar-fill {
+            background: linear-gradient(90deg, #409eff 0%, #66b1ff 100%);
+          }
+          .score-value {
+            color: #409eff;
+          }
+        }
+
+        // 中等等级 (70-79%)
+        &.medium {
+          .score-bar-fill {
+            background: linear-gradient(90deg, #e6a23c 0%, #ebb563 100%);
+          }
+          .score-value {
+            color: #e6a23c;
+          }
+        }
+
+        // 较低等级 (<70%)
+        &.low {
+          .score-bar-fill {
+            background: linear-gradient(90deg, #f56c6c 0%, #f78989 100%);
+          }
+          .score-value {
+            color: #f56c6c;
+          }
+        }
       }
     }
 
@@ -804,12 +850,6 @@ onMounted(async () => {
         display: flex;
         align-items: center;
         gap: 8px;
-
-        .rank-info {
-          font-size: 12px;
-          color: #67c23a;
-          font-weight: 600;
-        }
       }
     }
 

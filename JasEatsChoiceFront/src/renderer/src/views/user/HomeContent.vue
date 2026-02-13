@@ -2768,7 +2768,34 @@ onMounted(async () => {
 
   // 淡入动画
   .fade-in {
-    animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    opacity: 0;
+  }
+
+  // 淡入上移动画（带延迟）
+  .fade-in-up {
+    animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    opacity: 0;
+  }
+
+  .fade-in-up-delay-100 {
+    animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.1s forwards;
+    opacity: 0;
+  }
+
+  .fade-in-up-delay-200 {
+    animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.2s forwards;
+    opacity: 0;
+  }
+
+  .fade-in-up-delay-300 {
+    animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.3s forwards;
+    opacity: 0;
+  }
+
+  .fade-in-up-delay-400 {
+    animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.4s forwards;
+    opacity: 0;
   }
 
   @keyframes fadeInUp {

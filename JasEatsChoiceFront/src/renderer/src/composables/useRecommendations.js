@@ -433,6 +433,18 @@ export function useRecommendations() {
       const rawRecommendations = data?.recommendations || data?.dishes || []
 
       if (rawRecommendations.length > 0) {
+        // 调试日志：检查后端返回的 score
+        console.log('=== 推荐得分调试 ===')
+        rawRecommendations.forEach((dish, index) => {
+          const dishId = dish.dishId || dish.id || dish.dish_id
+          const score = dish.score || dish.rating || dish.avgRating || dish.avg_rating
+          console.log(`#${index + 1} ${dish.dishName || dish.name}: score=${score}`)
+          if (score > 1) {
+            console.warn(`⚠️ 警告: ${dish.dishName || dish.name} 的 score=${score} 超过 1.0`)
+          }
+        })
+        console.log('==================')
+
         const personalizedRecs = rawRecommendations
           .filter(dish => {
             // 过滤掉被拒绝的菜品
