@@ -28,14 +28,12 @@ const { favorites, favoritesCount, initFavorites, toggleFavorite, isFavoritedIte
 
 const {
   selectedCalorieRange,
-  selectedTypes,
   selectedSources,
   searchKeyword,
   sortBy,
   CALORIE_RANGES,
   RECOMMENDATION_TYPES,
   filteredAndSortedRecommendations,
-  availableTypes,
   hasActiveFilters,
   resetFilters
 } = useRecommendationFilters(recommendations)
@@ -230,25 +228,6 @@ onMounted(async () => {
               range.label
             }}</el-radio>
           </el-radio-group>
-        </div>
-
-        <div class="filter-section">
-          <div class="filter-title">餐食类型</div>
-          <el-checkbox-group v-model="selectedTypes">
-            <el-checkbox
-              label="全部"
-              :indeterminate="
-                selectedTypes.length > 0 && selectedTypes.length < availableTypes.length
-              "
-              @change="
-                (checked) =>
-                  checked ? (selectedTypes = [...availableTypes]) : (selectedTypes = [])
-              "
-            />
-            <el-checkbox v-for="type in availableTypes.slice(0, 10)" :key="type" :label="type">{{
-              type
-            }}</el-checkbox>
-          </el-checkbox-group>
         </div>
 
         <div class="filter-section">

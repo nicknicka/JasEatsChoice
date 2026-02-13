@@ -212,6 +212,12 @@ public class RecommendationServiceImpl implements RecommendationService {
             Map<String, Object> context = new HashMap<>();
             context.put("timePeriod", getCurrentTimePeriod());
 
+            // TODO: 检查智谱AI是否对接成功，验证推荐理由生成的质量和准确性
+            // 建议：
+            // 1. 添加AI服务健康检查接口
+            // 2. 记录AI生成成功率日志
+            // 3. 添加推荐理由质量评估机制
+            // 4. 定期review AI生成理由的效果
             // 调用AI生成推荐理由
             return zhipuAIService.generateRecommendationReason(
                     dish.getName() != null ? dish.getName() : "该菜品",
