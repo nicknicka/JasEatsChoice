@@ -14,9 +14,6 @@
         class="scale-in"
       />
 
-      <!-- 使用子组件：商家基本信息 -->
-      <merchant-basic-info :merchant="merchant" class="scale-in" />
-
       <!-- 菜单类型切换 -->
       <div class="menu-tabs">
         <el-tabs
@@ -73,7 +70,7 @@
           </div>
 
           <!-- 使用子组件：评价区域 -->
-          <comments-section :comments="comments" />
+          <comments-section :comments="comments" :merchant-rating="merchant.rating || 4.5" />
         </div>
       </div>
 
@@ -121,7 +118,6 @@ import { useUserStore } from '../../store/userStore'
 
 // 引入子组件
 import MerchantHeader from './components/MerchantHeader.vue'
-import MerchantBasicInfo from './components/MerchantBasicInfo.vue'
 import DishCard from './components/DishCard.vue'
 import CommentsSection from './components/CommentsSection.vue'
 import ShoppingCartDialog from './components/ShoppingCart.vue'
@@ -502,7 +498,7 @@ const toggleFavorite = async () => {
         params: {
           userId: userId,
           type: 'merchant',
-          id: merchant.value.id
+          id: String(merchant.value.id)
         }
       })
 
@@ -518,7 +514,7 @@ const toggleFavorite = async () => {
       const collectionData = {
         userId: userId,
         collectableType: 'merchant',
-        collectableId: merchant.value.id
+        collectableId: String(merchant.value.id)
       }
 
       const response = await axios.post(

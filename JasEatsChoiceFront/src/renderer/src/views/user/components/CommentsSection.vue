@@ -3,10 +3,10 @@
     <div class="comments-header">
       <h3 class="comments-title">用户评价</h3>
       <div class="comments-stats">
-        <div class="average-rating">
-          <div class="rating-number">4.7</div>
+        <div class="average-rating" v-if="merchantRating">
+          <div class="rating-number">{{ merchantRating }}</div>
           <div class="rating-stars">
-            <el-rate :model-value="4.7" :disabled="true" size="small" show-score />
+            <el-rate :model-value="merchantRating" disabled size="small" />
           </div>
         </div>
         <div class="total-comments">共 {{ comments.length }} 条评价</div>
@@ -99,6 +99,10 @@ defineProps({
   comments: {
     type: Array,
     default: () => []
+  },
+  merchantRating: {
+    type: Number,
+    default: 4.5
   }
 })
 </script>
