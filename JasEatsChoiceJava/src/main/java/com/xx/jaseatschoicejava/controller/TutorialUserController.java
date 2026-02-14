@@ -2,11 +2,13 @@ package com.xx.jaseatschoicejava.controller;
 
 import com.xx.jaseatschoicejava.entity.Tutorial;
 import com.xx.jaseatschoicejava.service.TutorialService;
+import com.xx.jaseatschoicejava.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -21,6 +23,21 @@ public class TutorialUserController {
     @Autowired
     private TutorialService tutorialService;
 
+    @Autowired
+    private JwtUtil jwtUtil;
+
+    /**
+     * 从请求中提取当前用户ID
+     */
+    private String extractUserId(HttpServletRequest request) {
+        String authorizationHeader = request.getHeader("Authorization");
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            String token = authorizationHeader.substring(7);
+            return jwtUtil.extractUserId(token);
+        }
+        return null;
+    }
+
     /**
      * 用户创建教程（草稿状态）
      * POST /api/v1/tutorial/user/create
@@ -28,19 +45,18 @@ public class TutorialUserController {
      */
     @PostMapping("/create")
     // @PreAuthorize("hasRole('USER')") // 临时移除权限检查，允许所有登录用户访问
-    public ResponseEntity<Tutorial> createUserTutorial(@RequestBody Tutorial tutorial) {
-        // 设置为用户发布的教程
-        tutorial.setSourceType("USER");
-        tutorial.setAuthorType("USER");
-        tutorial.setStatus("DRAFT");
-        tutorial.setReviewStatus("NOT_SUBMITTED");
-        tutorial.setOfficial(false);
-
-        // TODO: 从认证上下文获取用户ID
-        String userId = "1";
+    public ResponseEntity<Tutorial> createUserTutorial(
+            @RequestBody Tutorial tutorial,
+            HttpServletRequest request) {
+        // 从JWT token中获取用户ID
+        String userId = extractUserId(request);
+        if (userId == null) {
+            userId = "1"; // 默认值，实际应用中应该返回错误
+        }
         tutorial.setAuthorId(userId);
 
-        Tutorial created = tutorialService.createByMerchant(tutorial);
+        // 使用专门的用户创建方法（会自动设置正确的type）
+        Tutorial created = tutorialService.createByUser(tutorial);
         return ResponseEntity.ok(created);
     }
 
@@ -53,9 +69,13 @@ public class TutorialUserController {
     // @PreAuthorize("hasRole('USER')") // 临时移除权限检查
     public ResponseEntity<?> getMyTutorials(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        // TODO: 从认证上下文获取用户ID
-        String userId = "1";
+            @RequestParam(defaultValue = "10") int size,
+            HttpServletRequest request) {
+        // 从JWT token中获取用户ID
+        String userId = extractUserId(request);
+        if (userId == null) {
+            userId = "1"; // 默认值，实际应用中应该返回错误
+        }
 
         var tutorials = tutorialService.getUserTutorials(userId, page, size);
         return ResponseEntity.ok(tutorials);

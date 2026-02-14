@@ -90,6 +90,11 @@ public interface TutorialService extends IService<Tutorial> {
     // ========== 用户操作 ==========
 
     /**
+     * 用户创建教程（草稿状态）
+     */
+    Tutorial createByUser(Tutorial tutorial);
+
+    /**
      * 获取用户的教程列表
      */
     Page<Tutorial> getUserTutorials(String userId, int page, int size);

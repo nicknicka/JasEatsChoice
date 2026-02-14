@@ -237,10 +237,35 @@ public class TutorialServiceImpl extends ServiceImpl<TutorialMapper, Tutorial> i
     public Page<Tutorial> getUserTutorials(String userId, int page, int size) {
         Page<Tutorial> pageInfo = new Page<>(page, size);
         QueryWrapper<Tutorial> wrapper = new QueryWrapper<>();
+        // 查询该用户ID的所有教程，不限制author_type
+        // 这样可以查询到用户类型和商家类型的教程（如果用户同时也是商家）
         wrapper.eq("author_id", userId)
-               .eq("author_type", Tutorial.AuthorType.USER.getCode())
                .orderByDesc("create_time");
         return page(pageInfo, wrapper);
+    }
+
+    @Override
+    @Transactional
+    public Tutorial createByUser(Tutorial tutorial) {
+        tutorial.setSourceType(Tutorial.SourceType.USER.getCode());
+        tutorial.setAuthorType(Tutorial.AuthorType.USER.getCode());
+        tutorial.setStatus(Tutorial.Status.DRAFT.getCode());
+        tutorial.setReviewStatus(Tutorial.ReviewStatus.NOT_SUBMITTED.getCode());
+        tutorial.setOfficial(false);
+        tutorial.setCreateTime(new Date());
+        tutorial.setUpdateTime(new Date());
+
+        boolean saved = save(tutorial);
+        if (!saved) {
+            throw new RuntimeException("保存教程失败");
+        }
+
+        // 确保ID已生成
+        if (tutorial.getId() == null) {
+            throw new RuntimeException("教程ID生成失败");
+        }
+
+        return tutorial;
     }
 
     // ========== AI生成 ==========

@@ -130,6 +130,14 @@ const formatContent = (content) => {
   return renderMarkdown(content)
 }
 
+// 处理图片加载失败
+const handleImageError = (event) => {
+  // 当图片加载失败时，隐藏图片元素，让CSS背景显示
+  event.target.style.display = 'none'
+  // 添加has-no-cover类到父元素
+  event.target.parentElement?.classList.add('has-no-cover')
+}
+
 // 页面加载时获取教程数据
 onMounted(() => {
   fetchTutorialDetail()
@@ -163,9 +171,26 @@ onMounted(() => {
     <!-- 教程详情 -->
     <el-card v-else-if="currentTutorial" class="tutorial-detail-card scale-in" shadow="hover">
       <!-- 封面图 -->
-      <div class="tutorial-cover">
-        <img :src="currentTutorial.cover_image || currentTutorial.coverImage" :alt="currentTutorial.title" />
-        <div class="tutorial-type-overlay">
+      <div class="tutorial-cover" :class="{ 'has-no-cover': !currentTutorial.cover_image && !currentTutorial.coverImage }">
+        <img
+          v-if="currentTutorial.cover_image || currentTutorial.coverImage"
+          :src="currentTutorial.cover_image || currentTutorial.coverImage"
+          :alt="currentTutorial.title"
+          @error="handleImageError"
+        />
+
+        <!-- 没有封面图时的默认内容 -->
+        <div v-if="!currentTutorial.cover_image && !currentTutorial.coverImage" class="default-cover-content">
+          <el-icon :size="64" color="white">
+            <component :is="currentTutorial.type === 'video' ? VideoCamera : Document" />
+          </el-icon>
+          <div class="default-cover-text">
+            <div class="cover-type-badge">{{ currentTutorial.type === 'video' ? '视频' : '图文' }}</div>
+            <div class="cover-label">{{ currentTutorial.type === 'video' ? '视频教程' : '图文指南' }}</div>
+          </div>
+        </div>
+
+        <div class="tutorial-type-overlay" v-if="currentTutorial.cover_image || currentTutorial.coverImage">
           <el-icon :class="currentTutorial.type === 'video' ? 'video-icon' : 'article-icon'">
             <component :is="currentTutorial.type === 'video' ? VideoCamera : Document" />
           </el-icon>
@@ -270,10 +295,51 @@ onMounted(() => {
     height: 400px;
     overflow: hidden;
 
-    img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
+    // 有封面图时
+    &:not(.has-no-cover) {
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+    }
+
+    // 没有封面图时的渐变背景
+    &.has-no-cover {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      .default-cover-content {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        color: white;
+        z-index: 1;
+      }
+
+      .default-cover-text {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        align-items: center;
+
+        .cover-type-badge {
+          background: rgba(255, 255, 255, 0.3);
+          padding: 6px 16px;
+          border-radius: 20px;
+          font-size: 13px;
+          font-weight: 600;
+          backdrop-filter: blur(10px);
+        }
+
+        .cover-label {
+          font-size: 16px;
+          font-weight: 500;
+          text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+      }
     }
 
     .tutorial-type-overlay {
