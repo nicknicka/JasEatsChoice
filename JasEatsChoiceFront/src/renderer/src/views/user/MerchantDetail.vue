@@ -34,44 +34,100 @@
 
       <!-- 菜单展示区 -->
       <div class="menu-display-area fade-in-up delay-100">
-        <!-- 当前菜单名称 (仅在非用户评价标签时显示) -->
-        <div v-if="activeMenuTab !== 'comments'" class="current-menu-name">
-          <h2 class="menu-name-title">{{ currentMenuName }}</h2>
+        <!-- 加载状态 -->
+        <div v-if="isLoading" class="loading-container">
+          <el-skeleton :rows="3" animated />
+          <el-skeleton :rows="3" animated style="margin-top: 20px;" />
         </div>
 
-        <!-- 动态渲染所有菜品分类 -->
-        <div
-          v-for="category in currentMenuCategories"
-          :key="category"
-          class="dish-category-section"
-        >
-          <h3 class="category-title">{{ getCategoryEmoji(category) }} {{ category }}</h3>
-          <div class="dish-grid">
-            <dish-card
-              v-for="item in menuItems.filter(
-                (item) => item.menuId === activeMenuTab && item.category === category
-              )"
-              :key="item.id"
-              :dish="item"
-              :category-emoji="getCategoryEmoji(category)"
-              :view-mode="viewMode"
-              @add-to-cart="addMenuItem"
-              class="stagger-item"
-            />
+        <!-- 空状态：商家没有菜单 -->
+        <div v-else-if="!hasMenus && activeMenuTab !== 'comments'" class="empty-state-notice">
+          <div class="empty-state-icon">🍽️</div>
+          <h3 class="empty-state-title">该商家暂未上架菜单</h3>
+          <p class="empty-state-desc">商家正在努力准备中，敬请期待</p>
+          <el-button type="primary" @click="router.push('/user/home/merchants')">
+            查看其他商家
+          </el-button>
+        </div>
+
+        <!-- 菜单内容 -->
+        <template v-else>
+          <!-- 当前菜单名称 (仅在非用户评价标签时显示) -->
+          <div v-if="activeMenuTab !== 'comments'" class="current-menu-name">
+            <h2 class="menu-name-title">{{ currentMenuName }}</h2>
+
+            <!-- 菜品搜索和筛选 -->
+            <div class="dish-search-filter">
+              <el-input
+                v-model="searchKeyword"
+                placeholder="搜索菜品名称"
+                :prefix-icon="Search"
+                clearable
+                class="search-input"
+                size="default"
+              />
+              <el-select
+                v-model="sortBy"
+                placeholder="排序方式"
+                size="default"
+                class="sort-select"
+              >
+                <el-option label="默认排序" value="default" />
+                <el-option label="价格从低到高" value="priceAsc" />
+                <el-option label="价格从高到低" value="priceDesc" />
+              </el-select>
+            </div>
+
+            <!-- 分类快速导航 -->
+            <div v-if="currentMenuCategories.length > 0" class="category-nav">
+              <el-tag
+                v-for="category in currentMenuCategories"
+                :key="category"
+                class="category-nav-tag"
+                @click="scrollToCategory(category)"
+              >
+                {{ getCategoryEmoji(category) }} {{ category }}
+              </el-tag>
+            </div>
           </div>
-        </div>
 
-        <!-- 用户评价 -->
-        <div v-if="activeMenuTab === 'comments'">
-          <!-- 商家没有菜单的提示 -->
-          <div v-if="!hasMenus" class="no-menus-notice">
-            <div class="notice-icon">📋</div>
-            <p class="notice-text">当前商家还没有上架菜单</p>
+          <!-- 动态渲染所有菜品分类 -->
+          <div
+            v-for="category in currentMenuCategories"
+            :key="category"
+            :id="`category-${category}`"
+            class="dish-category-section"
+          >
+            <h3 class="category-title">{{ getCategoryEmoji(category) }} {{ category }}</h3>
+            <div class="dish-grid">
+              <dish-card
+                v-for="item in filteredAndSortedDishes(category)"
+                :key="item.id"
+                :dish="item"
+                :category-emoji="getCategoryEmoji(category)"
+                :view-mode="viewMode"
+                @add-to-cart="addMenuItem"
+                class="stagger-item"
+              />
+            </div>
+            <!-- 空状态：该分类下没有搜索结果 -->
+            <div v-if="filteredAndSortedDishes(category).length === 0" class="category-empty">
+              <p>该分类下暂无匹配的菜品</p>
+            </div>
           </div>
 
-          <!-- 使用子组件：评价区域 -->
-          <comments-section :comments="comments" :merchant-rating="merchant.rating" />
-        </div>
+          <!-- 用户评价 -->
+          <div v-if="activeMenuTab === 'comments'">
+            <!-- 商家没有菜单的提示 -->
+            <div v-if="!hasMenus" class="no-menus-notice">
+              <div class="notice-icon">📋</div>
+              <p class="notice-text">当前商家还没有上架菜单</p>
+            </div>
+
+            <!-- 使用子组件：评价区域 -->
+            <comments-section :comments="comments" :merchant-rating="merchant.rating" />
+          </div>
+        </template>
       </div>
 
       <!-- 立即下单快捷操作区（仅在order模式下显示） -->
@@ -94,6 +150,13 @@
         </div>
         <div class="cart-amount">¥{{ cartTotalAmount.toFixed(2) }}</div>
       </div>
+
+      <!-- 返回顶部按钮 -->
+      <transition name="fade">
+        <div v-show="showBackToTop" class="back-to-top" @click="scrollToTop">
+          <el-icon :size="20"><CaretTop /></el-icon>
+        </div>
+      </transition>
     </el-card>
 
     <!-- 使用子组件：购物车弹窗 -->
@@ -110,7 +173,7 @@
 import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { ShoppingCart } from '@element-plus/icons-vue'
+import { ShoppingCart, Search, CaretTop } from '@element-plus/icons-vue'
 import axios from 'axios'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
 import { useAuthStore } from '../../store/authStore'
@@ -180,6 +243,18 @@ const menuTabs = ref([{ value: 'comments', label: '用户评价' }])
 // 标记商家是否有菜单
 const hasMenus = ref(false)
 
+// 加载状态
+const isLoading = ref(false)
+
+// 菜品搜索关键词
+const searchKeyword = ref('')
+
+// 菜品排序方式
+const sortBy = ref('default')
+
+// 返回顶部按钮显示状态
+const showBackToTop = ref(false)
+
 // 计算当前选中的菜单名称
 const currentMenuName = computed(() => {
   const activeTab = menuTabs.value.find((tab) => tab.value === activeMenuTab.value)
@@ -202,6 +277,36 @@ const currentMenuCategories = computed(() => {
 
   return categories
 })
+
+// 过滤和排序指定分类的菜品
+const filteredAndSortedDishes = (category) => {
+  // 第一步：筛选出当前分类和当前菜单的菜品
+  let dishes = menuItems.value.filter(
+    (item) => item.menuId === activeMenuTab.value && item.category === category
+  )
+
+  // 第二步：根据搜索关键词过滤
+  if (searchKeyword.value && searchKeyword.value.trim() !== '') {
+    const keyword = searchKeyword.value.toLowerCase().trim()
+    dishes = dishes.filter((item) =>
+      item.name && item.name.toLowerCase().includes(keyword)
+    )
+  }
+
+  // 第三步：根据选择的方式排序
+  if (sortBy.value !== 'default') {
+    dishes = [...dishes].sort((a, b) => {
+      if (sortBy.value === 'priceAsc') {
+        return (a.price || 0) - (b.price || 0)
+      } else if (sortBy.value === 'priceDesc') {
+        return (b.price || 0) - (a.price || 0)
+      }
+      return 0
+    })
+  }
+
+  return dishes
+}
 
 // 评价数据
 const comments = ref([])
@@ -327,8 +432,29 @@ onMounted(() => {
   }
 })
 
+// 滚动监听
+const handleScroll = () => {
+  showBackToTop.value = window.scrollY > 300
+}
+
+// 滚动到顶部
+const scrollToTop = () => {
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+// 组件挂载后添加滚动监听
+onMounted(() => {
+  window.addEventListener('scroll', handleScroll)
+})
+
+// 组件卸载前移除滚动监听
+onBeforeUnmount(() => {
+  window.removeEventListener('scroll', handleScroll)
+})
+
 // 从后端加载完整的商家详情和菜品信息
 const loadMerchantDetails = async (merchantId) => {
+  isLoading.value = true
   try {
     // 1. 先获取商家详情
     const merchantResponse = await axios.get(
@@ -485,6 +611,7 @@ const loadMerchantDetails = async (merchantId) => {
       activeMenuTab.value = 'comments'
       hasMenus.value = false
     }
+    isLoading.value = false
   } catch (error) {
     console.error('❌ 加载商家详情和菜单失败')
     console.error('  ❌ 错误对象:', error)
@@ -494,6 +621,7 @@ const loadMerchantDetails = async (merchantId) => {
     console.error('  ❌ 错误堆栈:', error.stack)
     ElMessage.error('加载商家详情失败，请稍后重试')
     hasMenus.value = false
+    isLoading.value = false
   }
 }
 
@@ -771,6 +899,14 @@ const getCategoryEmoji = (category) => {
   return emojiMap[category] || '🍽️'
 }
 
+// 滚动到指定分类
+const scrollToCategory = (category) => {
+  const element = document.getElementById(`category-${category}`)
+  if (element) {
+    element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+}
+
 // 添加菜单项到购物车
 const addMenuItem = (item) => {
   // 计算选中的可选食材
@@ -972,6 +1108,42 @@ watch(activeMenuTab, (newTab, oldTab) => {
     .menu-display-area {
       padding: 24px;
       background-color: #ffffff;
+      min-height: 400px;
+
+      // 加载状态
+      .loading-container {
+        padding: 40px 24px;
+      }
+
+      // 空状态
+      .empty-state-notice {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 60px 24px;
+        text-align: center;
+        min-height: 400px;
+
+        .empty-state-icon {
+          font-size: 64px;
+          margin-bottom: 16px;
+          opacity: 0.8;
+        }
+
+        .empty-state-title {
+          font-size: 20px;
+          font-weight: 600;
+          color: #333;
+          margin: 0 0 8px 0;
+        }
+
+        .empty-state-desc {
+          font-size: 14px;
+          color: #666;
+          margin: 0 0 24px 0;
+        }
+      }
 
       // 当前菜单名称
       .current-menu-name {
@@ -983,7 +1155,65 @@ watch(activeMenuTab, (newTab, oldTab) => {
           color: #333;
           padding-bottom: 12px;
           border-bottom: 2px solid #e8e8e8;
+          margin-bottom: 16px;
         }
+
+        // 菜品搜索和筛选
+        .dish-search-filter {
+          display: flex;
+          gap: 12px;
+          margin-bottom: 16px;
+          flex-wrap: wrap;
+
+          .search-input {
+            flex: 1;
+            min-width: 200px;
+          }
+
+          .sort-select {
+            width: 140px;
+          }
+        }
+
+        // 分类导航
+        .category-nav {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-top: 16px;
+          position: sticky;
+          top: 0;
+          z-index: 10;
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(10px);
+          padding: 12px 0;
+          border-radius: 8px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+          margin-top: 16px;
+
+          .category-nav-tag {
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            padding: 6px 12px;
+
+            &:hover {
+              transform: translateY(-2px);
+              box-shadow: 0 4px 12px rgba(64, 158, 255, 0.2);
+            }
+          }
+        }
+      }
+
+      // 分类空状态
+      .category-empty {
+        padding: 32px;
+        text-align: center;
+        color: #999;
+        font-size: 14px;
+        background-color: #f9f9f9;
+        border-radius: 8px;
+        margin-top: 16px;
       }
 
       // 没有菜单的提示
@@ -1167,5 +1397,45 @@ watch(activeMenuTab, (newTab, oldTab) => {
   .cart-amount.long {
     font-size: 10px;
   }
+}
+
+// 返回顶部按钮
+.back-to-top {
+  position: fixed;
+  right: 24px;
+  bottom: 200px;
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
+  z-index: 9998;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.3s ease;
+  color: white;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 24px rgba(16, 185, 129, 0.5);
+  }
+
+  &:active {
+    transform: translateY(-2px);
+  }
+}
+
+// 淡入淡出动画
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>

@@ -30,27 +30,24 @@
               <div class="merchant-meta">
                 <span class="rating">{{ merchantInfo.rating }} 分</span>
                 <span class="separator">|</span>
-                <span class="delivery-time">{{ merchantInfo.deliveryTime }}</span>
-                <span class="separator">|</span>
-                <span class="delivery-fee">配送 ¥{{ merchantInfo.deliveryFee }}</span>
+                <span class="pickup-type">仅支持到店自取</span>
               </div>
             </div>
           </div>
         </el-card>
 
-        <!-- 配送地址卡片 -->
-        <el-card class="info-card" shadow="hover">
-          <template #header>
-            <div class="card-header">
-              <span class="card-title">配送地址</span>
-              <el-tag type="info" size="small">必填</el-tag>
+        <!-- 自取提示卡片 -->
+        <el-card class="info-card pickup-card" shadow="hover">
+          <div class="pickup-info">
+            <div class="pickup-icon">
+              <el-icon :size="32" color="#67c23a"><Shop /></el-icon>
             </div>
-          </template>
-
-          <address-selector
-            v-model="selectedAddress"
-            @change="handleAddressChange"
-          />
+            <div class="pickup-details">
+              <div class="pickup-title">到店自取</div>
+              <div class="pickup-desc">请到店取餐，商家地址：{{ merchantInfo.address || '商家地址' }}</div>
+              <div class="pickup-time">预计等待时间：约15-20分钟</div>
+            </div>
+          </div>
         </el-card>
 
         <!-- 订单商品卡片 -->
@@ -100,10 +97,6 @@
               <span class="detail-value"
                 >¥{{ (orderInfo.originalTotal || orderInfo.totalUnpaid).toFixed(2) }}</span
               >
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">配送费</span>
-              <span class="detail-value">¥{{ merchantInfo.deliveryFee.toFixed(2) }}</span>
             </div>
             <div class="detail-row" v-if="discountApplied">
               <span class="detail-label">优惠减免</span>
@@ -173,7 +166,7 @@
               v-model="orderRemark"
               type="textarea"
               :rows="3"
-              placeholder="填写订单备注，如：配送时间、联系方式等要求"
+              placeholder="填写订单备注，如：口味偏好、 preparation时间等要求"
               maxlength="200"
               show-word-limit
               resize="none"
@@ -386,12 +379,10 @@ import { useRouter } from 'vue-router'
 import { Shop, Edit, CircleCheck, Clock, Ticket, InfoFilled } from '@element-plus/icons-vue'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
 import OrderItemList from './components/OrderItemList.vue'
-import AddressSelector from '../../components/common/AddressSelector.vue'
 import walletApi from '../../api/wallet'
 import paymentApi from '../../api/payment'
 import orderApi from '../../api/order'
 import couponApi from '../../api/coupon'
-import addressApi from '../../api/address'
 import { useAuthStore } from '../../store/authStore'
 import api from '../../utils/api'
 
@@ -410,7 +401,7 @@ console.log('商家ID:', merchantId.value)
 
 // 订单信息
 const orderInfo = ref({
-  orderId: `JD${new Date().getTime()}`,
+  orderId: `O${new Date().getTime()}`,  // 修改为 O 前缀
   groupName: pendingOrder.groupName || '默认订单群',
   userName: pendingOrder.userName || '',
   creator: pendingOrder.creator || '',
@@ -448,7 +439,7 @@ const cartVisible = ref(false)
 const orderRemark = ref('')
 
 // 快速备注选项
-const quickRemarks = ref(['尽快配送', '准时配送', '请提前联系', '配送时电话联系', '不要按门铃'])
+const quickRemarks = ref(['尽快准备好', '准时到店取', '请提前准备', '到店电话联系', '趁热食用'])
 
 // 添加快速备注
 const addQuickRemark = (remark) => {
@@ -503,16 +494,7 @@ const submitting = ref(false)
 // 平台币余额 - 从后端获取
 const platformBalance = ref(0.0)
 
-// 选中的地址
-const selectedAddress = ref(null)
-
-// 地址变化处理
-const handleAddressChange = (address) => {
-  selectedAddress.value = address
-  console.log('地址已选择:', address?.fullAddress)
-}
-
-// 初始化余额、优惠券和地址
+// 初始化余额、优惠券
 onMounted(async () => {
   try {
     const userId = parseInt(authStore.userId || '0', 10)
@@ -544,17 +526,6 @@ onMounted(async () => {
         // 保持使用默认优惠券数据
       }
 
-      // 获取用户默认地址
-      try {
-        const addressResponse = await addressApi.getDefaultAddress(userId)
-        console.log('默认地址获取响应:', addressResponse)
-        if (addressResponse.code === '200' && addressResponse.data) {
-          selectedAddress.value = addressResponse.data
-          console.log('已加载默认地址:', addressResponse.data.fullAddress)
-        }
-      } catch (addressError) {
-        console.error('获取默认地址失败:', addressError)
-      }
     }
   } catch (error) {
     console.error('初始化失败:', error)
@@ -609,7 +580,7 @@ const discountAmount = computed(() => {
 
 // 最终金额（注意：orderInfo.totalUnpaid 已经在 useDiscount 中被修改过了）
 const finalAmount = computed(() => {
-  return orderInfo.value.totalUnpaid + merchantInfo.value.deliveryFee
+  return orderInfo.value.totalUnpaid
 })
 
 // 计算AA支付每人金额
@@ -686,7 +657,7 @@ const useDiscount = async () => {
 
   // 检查最低消费限制（如果有）
   const minAmount = discount.minAmount || 0
-  const currentAmount = orderInfo.value.totalUnpaid + merchantInfo.value.deliveryFee
+  const currentAmount = orderInfo.value.totalUnpaid
 
   if (currentAmount < minAmount) {
     ElMessage.warning(`此优惠券需满${minAmount}元可用，当前订单金额为¥${currentAmount.toFixed(2)}`)
@@ -839,12 +810,6 @@ const confirmOrder = async () => {
     return
   }
 
-  // 检查是否选择了配送地址
-  if (!selectedAddress.value) {
-    ElMessage.warning('请选择配送地址')
-    return
-  }
-
   // 检查余额
   const userId = parseInt(authStore.userId || '0', 10)
   if (userId <= 0) {
@@ -908,7 +873,7 @@ const confirmOrder = async () => {
             merchantId: String(merchantId.value),
             totalAmount: finalAmount.value,
             status: 0, // 0-待支付
-            address: selectedAddress.value?.fullAddress || pendingOrder.address || '商家地址',
+            address: '到店自取',
             remark: orderRemarkText || null
           },
           dishes: dishes
@@ -1094,6 +1059,66 @@ const confirmOrder = async () => {
 
           .separator {
             color: #dcdfe6;
+          }
+
+          .pickup-type {
+            color: #67c23a;
+            font-weight: 500;
+          }
+        }
+      }
+    }
+  }
+
+  // 自取提示卡片
+  .pickup-card {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border: 1px solid #bae6fd;
+
+    .pickup-info {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+
+      .pickup-icon {
+        width: 56px;
+        height: 56px;
+        background: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        flex-shrink: 0;
+      }
+
+      .pickup-details {
+        flex: 1;
+
+        .pickup-title {
+          font-size: 16px;
+          font-weight: 600;
+          color: #2c3e50;
+          margin-bottom: 8px;
+        }
+
+        .pickup-desc {
+          font-size: 14px;
+          color: #5a6c7d;
+          margin-bottom: 6px;
+          line-height: 1.5;
+        }
+
+        .pickup-time {
+          font-size: 13px;
+          color: #7f8c8d;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+
+          &::before {
+            content: '⏱';
+            font-size: 14px;
           }
         }
       }

@@ -49,6 +49,15 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     @Transactional(rollbackFor = Exception.class)
     public boolean createOrderWithDishes(Order order, List<OrderDish> orderDishes) {
         try {
+            // 如果订单ID为空，自动生成
+            if (order.getId() == null || order.getId().isEmpty()) {
+                // 使用 IdGenerator 生成订单ID
+                Long generatedId = com.xx.jaseatschoicejava.util.IdGenerator.generateId();
+                String orderId = com.xx.jaseatschoicejava.util.IdGenerator.toOrderIdString(generatedId);
+                order.setId(orderId);
+                log.info("自动生成订单ID: {}", orderId);
+            }
+
             log.info("开始创建订单,订单ID: {}, 菜品数量: {}", order.getId(),
                     orderDishes != null ? orderDishes.size() : 0);
 
