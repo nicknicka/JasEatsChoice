@@ -44,6 +44,12 @@ const videoPreviewUrl = ref('')
 const videoFileInfo = ref(null) // 保存视频文件信息
 const videoPlayerRef = ref(null) // 视频播放器引用
 
+// 内容图片上传相关
+const uploadingContentImage = ref(false)
+const contentImageUploadProgress = ref(0)
+const contentImageDialogVisible = ref(false)
+const uploadedContentImageUrl = ref('')
+
 // Markdown 预览模式：'edit' | 'preview' | 'split'
 const previewMode = ref('edit')
 
@@ -129,6 +135,8 @@ const renderMarkdown = (content) => {
   if (!content) return ''
 
   let html = content
+    // 图片（需要在标题、粗体等之前处理）
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/gim, '<img src="$2" alt="$1" class="markdown-image" />')
     // 标题
     .replace(/^### (.*$)/gim, '<h3>$1</h3>')
     .replace(/^## (.*$)/gim, '<h2>$1</h2>')
@@ -493,6 +501,107 @@ const removeVideo = () => {
   tutorialForm.value.video_url = ''
   videoFileInfo.value = null
   ElMessage.success('已删除视频')
+}
+
+// 打开内容图片上传对话框
+const openContentImageUpload = () => {
+  // 清空之前的上传记录
+  uploadedContentImageUrl.value = ''
+  contentImageUploadProgress.value = 0
+  contentImageDialogVisible.value = true
+}
+
+// 内容图片上传处理
+const handleContentImageUpload = async (file) => {
+  // 验证文件类型
+  const isImage = file.type.startsWith('image/')
+  if (!isImage) {
+    ElMessage.error('只能上传图片文件！')
+    return false
+  }
+
+  // 验证文件大小（5MB）
+  const isLt5M = file.size / 1024 / 1024 < 5
+  if (!isLt5M) {
+    ElMessage.error('图片大小不能超过 5MB！')
+    return false
+  }
+
+  uploadingContentImage.value = true
+  contentImageUploadProgress.value = 0
+
+  try {
+    // 创建 FormData
+    const formData = new FormData()
+    formData.append('file', file)
+
+    // 使用原生 axios 进行上传，以便监听进度
+    const response = await api.post(API_CONFIG.upload.image, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      onUploadProgress: (progressEvent) => {
+        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+        contentImageUploadProgress.value = percentCompleted
+      }
+    })
+
+    if (response.data && response.data.fullUrl) {
+      uploadedContentImageUrl.value = response.data.fullUrl
+      ElMessage.success('图片上传成功！请点击"插入到内容"按钮')
+      // 不再自动插入，让用户手动点击按钮插入
+    } else {
+      throw new Error('上传响应格式错误')
+    }
+  } catch (error) {
+    console.error('内容图片上传失败:', error)
+    ElMessage.error('图片上传失败，请稍后重试')
+  } finally {
+    uploadingContentImage.value = false
+    contentImageUploadProgress.value = 0
+  }
+
+  return false // 阻止 el-upload 的默认上传行为
+}
+
+// 在光标位置插入图片语法
+const insertImageToContent = (imageUrl) => {
+  const textarea = contentTextarea.value
+  if (!textarea) return
+
+  const start = textarea.selectionStart
+  const end = textarea.selectionEnd
+  const text = tutorialForm.value.content
+
+  // 在光标位置插入 Markdown 图片语法
+  const imageMarkdown = `\n
+![图片描述](${imageUrl})\n`
+
+  const before = text.substring(0, start)
+  const after = text.substring(end)
+
+  tutorialForm.value.content = before + imageMarkdown + after
+
+  // 设置光标位置到插入的图片后面
+  setTimeout(() => {
+    const newPosition = start + imageMarkdown.length
+    textarea.setSelectionRange(newPosition, newPosition)
+    textarea.focus()
+  }, 10)
+}
+
+// 手动插入图片URL（用于对话框中手动输入URL）
+const insertContentImageUrl = () => {
+  if (!uploadedContentImageUrl.value) {
+    ElMessage.warning('请先上传图片')
+    return
+  }
+
+  insertImageToContent(uploadedContentImageUrl.value)
+
+  // 关闭对话框
+  contentImageDialogVisible.value = false
+  uploadedContentImageUrl.value = ''
 }
 
 // 预览视频
@@ -1020,6 +1129,22 @@ watch(() => tutorialForm.value.content, () => {
           <div :class="['content-editor-wrapper', `mode-${previewMode}`]">
             <!-- 编辑区域 -->
             <div v-show="previewMode === 'edit' || previewMode === 'split'" class="editor-pane">
+              <!-- 工具栏 -->
+              <div class="editor-toolbar">
+                <el-button
+                  type="primary"
+                  size="small"
+                  @click="openContentImageUpload"
+                  :disabled="uploadingContentImage"
+                >
+                  <el-icon><Upload /></el-icon>
+                  插入图片
+                </el-button>
+                <span class="toolbar-tip">
+                  💡 支持Markdown语法，上传的图片会自动插入到光标位置
+                </span>
+              </div>
+
               <textarea
                 ref="contentTextarea"
                 v-model="tutorialForm.content"
@@ -1034,6 +1159,7 @@ watch(() => tutorialForm.value.content, () => {
 - 要点2
 
 **粗体文字**
+![图片](url)
 [链接](url)"
               ></textarea>
             </div>
@@ -1192,6 +1318,59 @@ watch(() => tutorialForm.value.content, () => {
           class="video-preview-dialog-player"
         ></video>
       </div>
+    </el-dialog>
+
+    <!-- 内容图片上传对话框 -->
+    <el-dialog
+      v-model="contentImageDialogVisible"
+      title="插入图片到内容"
+      width="500px"
+      :close-on-click-modal="false"
+    >
+      <div class="content-image-upload-dialog">
+        <el-upload
+          class="content-image-uploader"
+          :show-file-list="false"
+          :before-upload="handleContentImageUpload"
+          :disabled="uploadingContentImage"
+          accept="image/*"
+          drag
+        >
+          <div v-if="uploadingContentImage" class="uploading-state">
+            <el-progress
+              type="circle"
+              :percentage="contentImageUploadProgress"
+              :width="80"
+            />
+            <p>正在上传... {{ contentImageUploadProgress }}%</p>
+          </div>
+          <div v-else class="upload-placeholder">
+            <el-icon class="upload-icon"><Upload /></el-icon>
+            <div class="upload-text">
+              <p>点击或拖拽上传图片</p>
+              <p class="upload-hint">支持 jpg、png、gif，最大 5MB</p>
+            </div>
+          </div>
+        </el-upload>
+
+        <div v-if="uploadedContentImageUrl" class="uploaded-preview">
+          <p class="preview-title">图片预览：</p>
+          <img :src="uploadedContentImageUrl" alt="上传的图片" class="preview-image" />
+        </div>
+      </div>
+
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="contentImageDialogVisible = false">取消</el-button>
+          <el-button
+            type="primary"
+            @click="insertContentImageUrl"
+            :disabled="!uploadedContentImageUrl"
+          >
+            插入到内容
+          </el-button>
+        </span>
+      </template>
     </el-dialog>
 
     <!-- 智能悬浮球 -->
@@ -1491,11 +1670,31 @@ watch(() => tutorialForm.value.content, () => {
           }
 
           .editor-pane {
+            .editor-toolbar {
+              display: flex;
+              align-items: center;
+              gap: 12px;
+              padding: 12px 16px;
+              background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+              border: 1px solid #dcdfe6;
+              border-bottom: none;
+              border-radius: 8px 8px 0 0;
+
+              .toolbar-tip {
+                flex: 1;
+                font-size: 12px;
+                color: #909399;
+              }
+            }
+          }
+
+          .editor-pane {
             .native-textarea {
               width: 100%;
               min-height: 72px; /* 3行高度 (24px * 3) */
               border: 1px solid #dcdfe6;
-              border-radius: 8px;
+              border-radius: 0 0 8px 8px;
+              border-top: none;
               padding: 12px 16px;
               font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
               font-size: 14px;
@@ -1603,6 +1802,15 @@ watch(() => tutorialForm.value.content, () => {
                 background: #f4f4f5;
                 border-left: 4px solid #667eea;
                 color: #606266;
+              }
+
+              .markdown-image {
+                max-width: 100%;
+                height: auto;
+                border-radius: 8px;
+                margin: 12px 0;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                display: block;
               }
             }
 
@@ -2223,6 +2431,97 @@ watch(() => tutorialForm.value.content, () => {
     object-fit: contain;
     border-radius: 8px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  }
+}
+
+// 内容图片上传对话框
+.content-image-upload-dialog {
+  .content-image-uploader {
+    width: 100%;
+    margin-bottom: 20px;
+
+    :deep(.el-upload) {
+      width: 100%;
+    }
+
+    :deep(.el-upload-dragger) {
+      width: 100%;
+      padding: 30px;
+      border: 2px dashed #dcdfe6;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #fafbfc 0%, #f5f7fa 100%);
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      &:hover {
+        border-color: #667eea;
+        background: linear-gradient(135deg, #f0f3ff 0%, #fafbfc 100%);
+      }
+    }
+
+    .uploading-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+
+      p {
+        margin: 0;
+        font-size: 13px;
+        color: #606266;
+      }
+    }
+
+    .upload-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+
+      .upload-icon {
+        font-size: 40px;
+        color: #667eea;
+      }
+
+      .upload-text {
+        text-align: center;
+
+        p {
+          margin: 0;
+          font-size: 14px;
+          color: #303133;
+
+          &.upload-hint {
+            margin-top: 4px;
+            font-size: 12px;
+            color: #909399;
+          }
+        }
+      }
+    }
+  }
+
+  .uploaded-preview {
+    padding: 16px;
+    background: #f5f7fa;
+    border-radius: 8px;
+
+    .preview-title {
+      margin: 0 0 12px 0;
+      font-size: 14px;
+      font-weight: 500;
+      color: #303133;
+    }
+
+    .preview-image {
+      width: 100%;
+      max-height: 300px;
+      object-fit: contain;
+      border-radius: 8px;
+      border: 1px solid #e4e7ed;
+    }
   }
 }
 
