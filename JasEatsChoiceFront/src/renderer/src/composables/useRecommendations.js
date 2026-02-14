@@ -433,18 +433,6 @@ export function useRecommendations() {
       const rawRecommendations = data?.recommendations || data?.dishes || []
 
       if (rawRecommendations.length > 0) {
-        // 调试日志：检查后端返回的 score
-        console.log('=== 推荐得分调试 ===')
-        rawRecommendations.forEach((dish, index) => {
-          const dishId = dish.dishId || dish.id || dish.dish_id
-          const score = dish.score || dish.rating || dish.avgRating || dish.avg_rating
-          console.log(`#${index + 1} ${dish.dishName || dish.name}: score=${score}`)
-          if (score > 1) {
-            console.warn(`⚠️ 警告: ${dish.dishName || dish.name} 的 score=${score} 超过 1.0`)
-          }
-        })
-        console.log('==================')
-
         const personalizedRecs = rawRecommendations
           .filter(dish => {
             // 过滤掉被拒绝的菜品
@@ -650,25 +638,14 @@ export function useRecommendations() {
         allRecommendations = [...allRecommendations, ...festivalRecs]
       }
 
-      // 降级3: 如果所有推荐都为空，使用Mock数据
+      // 如果所有推荐都为空，直接返回空数组显示暂无推荐
       if (allRecommendations.length === 0) {
-        console.warn('⚠ 所有推荐源均失败，使用Mock数据')
-        allRecommendations = MOCK_DISHES.slice(0, 10).map((dish, index) => ({
-          id: Date.now() + index,
-          dishId: String(dish.id || Date.now() + index),
-          name: dish.name,
-          type: dish.type,
-          calories: dish.calories,
-          tags: dish.tags,
-          nutrition: dish.nutrition,
-          reason: '系统推荐',
-          rating: 4.5,
-          image: '🍱',
-          recommendSource: 'system'
-        }))
+        console.log('暂无推荐数据')
+        recommendations.value = []
+        return []
       }
 
-      // 步骤4: 去重和多样性保证
+      // 步骤3: 去重和多样性保证
       allRecommendations = deduplicateRecommendations(allRecommendations)
       allRecommendations = ensureDiversity(allRecommendations)
 

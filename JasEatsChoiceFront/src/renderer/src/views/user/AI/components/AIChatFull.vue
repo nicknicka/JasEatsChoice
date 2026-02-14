@@ -445,9 +445,12 @@ const streamResponse = async (messageIndex, reader) => {
 
       for (const line of lines) {
         const trimmedLine = line.trim()
+        // console.log('🔍 收到原始行:', trimmedLine)  // 【调试日志】原始行内容
+
         if (!trimmedLine.startsWith('data:')) continue
 
         const data = trimmedLine.substring(5).trim()
+        // console.log('📦 提取的data内容:', data)  // 【调试日志】提取的data
         if (!data) continue
 
         try {
@@ -455,23 +458,39 @@ const streamResponse = async (messageIndex, reader) => {
           let parsedData
 
           if (data.startsWith('[')) {
+            // console.log('🔧 检测到数组格式，尝试解析数组')  // 【调试日志】
             // Spring Boot的SseEmitter数组格式：[{...}, {...}, {...}]
             const dataArray = JSON.parse(data)
+            // console.log('📊 解析后的数组:', dataArray)  // 【调试日志】
 
-            // 查找mediaType为null的元素（包含实际数据）
+            // 查找data字段是对象类型（包含done或content）的元素
             const actualDataItem = dataArray.find(
-              (item) => item.mediaType === null
+              (item) => {
+                // 检查data字段是否存在且是对象类型
+                const itemData = item.data
+                return itemData &&
+                       typeof itemData === 'object' &&
+                       (itemData.hasOwnProperty('done') || itemData.hasOwnProperty('content'))
+              }
             )
+            // console.log('🎯 找到的目标元素:', actualDataItem)  // 【调试日志】
 
             if (actualDataItem && actualDataItem.data) {
               parsedData = actualDataItem.data
             }
           } else {
+            // console.log('🔧 检测到对象格式，直接解析')  // 【调试日志】
             // 直接的对象格式：{ content: string, done: boolean }
             parsedData = JSON.parse(data)
+            // console.log('📊 解析后的对象:', parsedData)  // 【调试日志】
           }
 
-          if (!parsedData) continue
+          // console.log('✅ 最终解析结果:', parsedData)  // 【调试日志】
+
+          if (!parsedData) {
+            // console.log('⚠️ 解析结果为空，跳过此数据')
+            continue
+          }
 
           // 接收 done 字段：检查是否结束
           if (parsedData.done === true) {
@@ -488,12 +507,16 @@ const streamResponse = async (messageIndex, reader) => {
 
           // 接收 content 字段：追加文本
           if (parsedData.content) {
+            // console.log('📝 收到内容片段:', parsedData.content)  // 【调试日志】
             messages.value[messageIndex].content += parsedData.content
+            // console.log('📊 当前消息总长度:', messages.value[messageIndex].content.length)  // 【调试日志】
             await nextTick()
             scrollToBottom()
+          } else {
+            // console.log('⚠️ 没有content字段，parsedData:', parsedData)  // 【调试日志】
           }
         } catch (error) {
-          console.log('⚠️ 跳过无效数据:', data)
+          console.log('⚠️ 跳过无效数据:', data, '错误:', error.message)  // 【调试日志】
         }
       }
     }
