@@ -70,7 +70,7 @@
           </div>
 
           <!-- 使用子组件：评价区域 -->
-          <comments-section :comments="comments" :merchant-rating="merchant.rating || 4.5" />
+          <comments-section :comments="comments" :merchant-rating="merchant.rating" />
         </div>
       </div>
 

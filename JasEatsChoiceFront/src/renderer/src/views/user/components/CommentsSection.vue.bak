@@ -3,15 +3,11 @@
     <div class="comments-header">
       <h3 class="comments-title">用户评价</h3>
       <div class="comments-stats">
-        <!-- 参照顶部评分的数据来源和设计 -->
-        <div v-if="merchantRating !== undefined && merchantRating !== 0" class="average-rating">
+        <div class="average-rating" v-if="calculatedRating">
+          <div class="rating-number">{{ calculatedRating }}</div>
           <div class="rating-stars">
-            <el-rate :model-value="merchantRating" disabled size="small" />
+            <el-rate :model-value="calculatedRating" disabled size="small" />
           </div>
-          <div class="rating-score-text">{{ merchantRating }}分</div>
-        </div>
-        <div v-else class="rating-placeholder">
-          <span class="rating-number">暂无评分</span>
         </div>
         <div class="total-comments">共 {{ totalComments }} 条评价</div>
       </div>
@@ -106,8 +102,30 @@ const props = defineProps({
     default: () => []
   },
   merchantRating: {
-    type: Number
+    type: Number,
+    default: 4.5
   }
+})
+
+// 根据实际评论数据计算平均评分
+const calculatedRating = computed(() => {
+  if (!props.comments || props.comments.length === 0) {
+    return props.merchantRating
+  }
+
+  // 过滤出有评分的评论
+  const commentsWithRating = props.comments.filter(comment => comment.rating !== undefined && comment.rating !== null)
+
+  if (commentsWithRating.length === 0) {
+    return props.merchantRating
+  }
+
+  // 计算平均分
+  const totalRating = commentsWithRating.reduce((sum, comment) => sum + comment.rating, 0)
+  const average = totalRating / commentsWithRating.length
+
+  // 保留一位小数
+  return Math.round(average * 10) / 10
 })
 
 // 评价总数
@@ -145,33 +163,19 @@ const totalComments = computed(() => {
       .average-rating {
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 12px;
+
+        .rating-number {
+          font-size: 32px;
+          font-weight: 700;
+          color: #f59e0b;
+          line-height: 1;
+        }
 
         .rating-stars {
           display: flex;
-          align-items: center;
-
-          :deep(.el-rate) {
-            .el-rate__icon {
-              font-size: 16px;
-              margin-right: 2px;
-            }
-          }
-        }
-
-        .rating-score-text {
-          font-size: 14px;
-          font-weight: 700;
-          color: #f59e0b;
-          margin-left: 8px;
-        }
-      }
-
-      .rating-placeholder {
-        .rating-number {
-          font-size: 14px;
-          font-weight: 500;
-          color: #94a3b8;
+          flex-direction: column;
+          align-items: flex-start;
         }
       }
 

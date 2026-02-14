@@ -77,23 +77,6 @@
       </div>
     </div>
 
-    <!-- 配送信息行 -->
-    <div class="delivery-row" v-if="merchant.deliveryFee !== undefined || merchant.minOrderAmount !== undefined">
-      <div class="delivery-item" v-if="merchant.deliveryFee !== undefined">
-        <span class="delivery-label">配送费</span>
-        <span class="delivery-value">¥{{ merchant.deliveryFee.toFixed(2) }}</span>
-      </div>
-      <div class="delivery-item" v-if="merchant.minOrderAmount !== undefined">
-        <span class="delivery-label">起送价</span>
-        <span class="delivery-value">¥{{ merchant.minOrderAmount.toFixed(2) }}</span>
-      </div>
-    </div>
-
-    {{  merchant }}
-    <!-- 商家简介 -->
-    <div class="description-section" v-if="merchant.description">
-      <div class="description-text">{{ merchant.description }}</div>
-    </div>
   </div>
 </template>
 
@@ -418,44 +401,6 @@ const handleToggleFavorite = () => {
     }
   }
 
-  .delivery-row {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 12px;
-
-    .delivery-item {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 12px;
-      background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-      border-radius: 8px;
-      font-size: 12px;
-
-      .delivery-label {
-        color: #1d4ed8;
-        font-weight: 600;
-      }
-
-      .delivery-value {
-        color: #1d4ed8;
-        font-weight: 800;
-        font-size: 14px;
-      }
-    }
-  }
-
-  .description-section {
-    padding-top: 12px;
-    border-top: 1px solid rgba(59, 130, 246, 0.1);
-
-    .description-text {
-      font-size: 13px;
-      color: #64748b;
-      line-height: 1.6;
-      text-align: justify;
-    }
-  }
 }
 
 @keyframes pulse {
