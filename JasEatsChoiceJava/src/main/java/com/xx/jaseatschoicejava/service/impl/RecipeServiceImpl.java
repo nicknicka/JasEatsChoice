@@ -158,6 +158,7 @@ public class RecipeServiceImpl extends ServiceImpl<RecipeMapper, Recipe> impleme
         existingRecipe.setName(recipe.getName());
         existingRecipe.setType(recipe.getType());
         existingRecipe.setItems(recipe.getItems());
+        existingRecipe.setDetail(recipe.getDetail());
         existingRecipe.setCalories(recipe.getCalories());
         existingRecipe.setProtein(recipe.getProtein());
         existingRecipe.setCarbs(recipe.getCarbs());
