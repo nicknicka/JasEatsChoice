@@ -16,12 +16,13 @@ import { API_CONFIG } from '../config'
  */
 export function adminLogin(username, password) {
   console.log('[管理员API] 尝试登录:', username)
-  return api.post(API_CONFIG.admin.login, { username, password })
-    .then(response => {
+  return api
+    .post(API_CONFIG.admin.login, { username, password })
+    .then((response) => {
       console.log('[管理员API] 登录成功:', response)
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 登录失败:', error)
       throw error
     })
@@ -33,12 +34,13 @@ export function adminLogin(username, password) {
  */
 export function getCurrentAdmin() {
   console.log('[管理员API] 获取当前管理员信息')
-  return api.get(API_CONFIG.admin.current)
-    .then(response => {
+  return api
+    .get(API_CONFIG.admin.current)
+    .then((response) => {
       console.log('[管理员API] 获取管理员信息成功:', response)
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取管理员信息失败:', error)
       throw error
     })
@@ -51,12 +53,13 @@ export function getCurrentAdmin() {
  */
 export function getAdminList(params = {}) {
   console.log('[管理员API] 获取管理员列表:', params)
-  return api.get(API_CONFIG.admin.list, { params })
-    .then(response => {
+  return api
+    .get(API_CONFIG.admin.list, { params })
+    .then((response) => {
       console.log('[管理员API] 获取管理员列表成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取管理员列表失败:', error)
       throw error
     })
@@ -69,12 +72,13 @@ export function getAdminList(params = {}) {
  */
 export function createAdmin(adminData) {
   console.log('[管理员API] 创建管理员:', adminData.username)
-  return api.post(API_CONFIG.admin.create, adminData)
-    .then(response => {
+  return api
+    .post(API_CONFIG.admin.create, adminData)
+    .then((response) => {
       console.log('[管理员API] 创建管理员成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 创建管理员失败:', error)
       throw error
     })
@@ -88,12 +92,13 @@ export function createAdmin(adminData) {
  */
 export function updateAdminStatus(adminId, status) {
   console.log('[管理员API] 修改管理员状态:', adminId, status)
-  return api.put(API_CONFIG.admin.updateStatus.replace('{adminId}', adminId), { status })
-    .then(response => {
+  return api
+    .put(API_CONFIG.admin.updateStatus.replace('{adminId}', adminId), { status })
+    .then((response) => {
       console.log('[管理员API] 修改管理员状态成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 修改管理员状态失败:', error)
       throw error
     })
@@ -107,12 +112,13 @@ export function updateAdminStatus(adminId, status) {
  */
 export function resetAdminPassword(adminId, password) {
   console.log('[管理员API] 重置管理员密码:', adminId)
-  return api.put(API_CONFIG.admin.resetPassword.replace('{adminId}', adminId), { password })
-    .then(response => {
+  return api
+    .put(API_CONFIG.admin.resetPassword.replace('{adminId}', adminId), { password })
+    .then((response) => {
       console.log('[管理员API] 重置管理员密码成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 重置管理员密码失败:', error)
       throw error
     })
@@ -125,12 +131,13 @@ export function resetAdminPassword(adminId, password) {
  */
 export function updateAdminProfile(profileData) {
   console.log('[管理员API] 更新个人信息:', profileData)
-  return api.put('/admin/profile', profileData)
-    .then(response => {
+  return api
+    .put('/admin/profile', profileData)
+    .then((response) => {
       console.log('[管理员API] 更新个人信息成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 更新个人信息失败:', error)
       throw error
     })
@@ -143,12 +150,13 @@ export function updateAdminProfile(profileData) {
  */
 export function changeAdminPassword(passwordData) {
   console.log('[管理员API] 修改密码')
-  return api.put('/admin/password', passwordData)
-    .then(response => {
+  return api
+    .put('/admin/password', passwordData)
+    .then((response) => {
       console.log('[管理员API] 修改密码成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 修改密码失败:', error)
       throw error
     })
@@ -162,12 +170,13 @@ export function changeAdminPassword(passwordData) {
  */
 export function getDashboardStats() {
   console.log('[管理员API] 获取控制台统计数据')
-  return api.get(API_CONFIG.admin.dashboard)
-    .then(response => {
+  return api
+    .get(API_CONFIG.admin.dashboard)
+    .then((response) => {
       console.log('[管理员API] 获取控制台统计数据成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取控制台统计数据失败:', error)
       throw error
     })
@@ -180,12 +189,13 @@ export function getDashboardStats() {
  */
 export function getUserStats(days = 7) {
   console.log('[管理员API] 获取用户统计数据, 天数:', days)
-  return api.get(API_CONFIG.admin.userStats, { params: { days } })
-    .then(response => {
+  return api
+    .get(API_CONFIG.admin.userStats, { params: { days } })
+    .then((response) => {
       console.log('[管理员API] 获取用户统计数据成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取用户统计数据失败:', error)
       throw error
     })
@@ -198,12 +208,13 @@ export function getUserStats(days = 7) {
  */
 export function getOrderStats(days = 7) {
   console.log('[管理员API] 获取订单统计数据, 天数:', days)
-  return api.get(API_CONFIG.admin.orderStats, { params: { days } })
-    .then(response => {
+  return api
+    .get(API_CONFIG.admin.orderStats, { params: { days } })
+    .then((response) => {
       console.log('[管理员API] 获取订单统计数据成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取订单统计数据失败:', error)
       throw error
     })
@@ -216,12 +227,13 @@ export function getOrderStats(days = 7) {
  */
 export function getRevenueStats(days = 7) {
   console.log('[管理员API] 获取收入统计数据, 天数:', days)
-  return api.get(API_CONFIG.admin.revenueStats, { params: { days } })
-    .then(response => {
+  return api
+    .get(API_CONFIG.admin.revenueStats, { params: { days } })
+    .then((response) => {
       console.log('[管理员API] 获取收入统计数据成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取收入统计数据失败:', error)
       throw error
     })
@@ -236,12 +248,13 @@ export function getRevenueStats(days = 7) {
  */
 export function getUserList(params = {}) {
   console.log('[管理员API] 获取用户列表:', params)
-  return api.get(API_CONFIG.admin.userList, { params })
-    .then(response => {
+  return api
+    .get(API_CONFIG.admin.userList, { params })
+    .then((response) => {
       console.log('[管理员API] 获取用户列表成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取用户列表失败:', error)
       throw error
     })
@@ -254,12 +267,13 @@ export function getUserList(params = {}) {
  */
 export function getUserDetail(userId) {
   console.log('[管理员API] 获取用户详情:', userId)
-  return api.get(API_CONFIG.admin.userDetail.replace('{userId}', userId))
-    .then(response => {
+  return api
+    .get(API_CONFIG.admin.userDetail.replace('{userId}', userId))
+    .then((response) => {
       console.log('[管理员API] 获取用户详情成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取用户详情失败:', error)
       throw error
     })
@@ -273,12 +287,13 @@ export function getUserDetail(userId) {
  */
 export function updateUserStatus(userId, status) {
   console.log('[管理员API] 修改用户状态:', userId, status)
-  return api.put(API_CONFIG.admin.updateUserStatus.replace('{userId}', userId), { status })
-    .then(response => {
+  return api
+    .put(API_CONFIG.admin.updateUserStatus.replace('{userId}', userId), { status })
+    .then((response) => {
       console.log('[管理员API] 修改用户状态成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 修改用户状态失败:', error)
       throw error
     })
@@ -291,12 +306,13 @@ export function updateUserStatus(userId, status) {
  */
 export function deleteUser(userId) {
   console.log('[管理员API] 删除用户:', userId)
-  return api.delete(API_CONFIG.admin.deleteUser.replace('{userId}', userId))
-    .then(response => {
+  return api
+    .delete(API_CONFIG.admin.deleteUser.replace('{userId}', userId))
+    .then((response) => {
       console.log('[管理员API] 删除用户成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 删除用户失败:', error)
       throw error
     })
@@ -311,12 +327,13 @@ export function deleteUser(userId) {
  */
 export function getMerchantList(params = {}) {
   console.log('[管理员API] 获取商家列表:', params)
-  return api.get(API_CONFIG.admin.merchantList, { params })
-    .then(response => {
+  return api
+    .get(API_CONFIG.admin.merchantList, { params })
+    .then((response) => {
       console.log('[管理员API] 获取商家列表成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取商家列表失败:', error)
       throw error
     })
@@ -329,12 +346,13 @@ export function getMerchantList(params = {}) {
  */
 export function getMerchantDetail(merchantId) {
   console.log('[管理员API] 获取商家详情:', merchantId)
-  return api.get(API_CONFIG.admin.merchantDetail.replace('{merchantId}', merchantId))
-    .then(response => {
+  return api
+    .get(API_CONFIG.admin.merchantDetail.replace('{merchantId}', merchantId))
+    .then((response) => {
       console.log('[管理员API] 获取商家详情成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取商家详情失败:', error)
       throw error
     })
@@ -348,12 +366,13 @@ export function getMerchantDetail(merchantId) {
  */
 export function auditMerchant(merchantId, auditData) {
   console.log('[管理员API] 审核商家:', merchantId, auditData)
-  return api.post(API_CONFIG.admin.auditMerchant.replace('{merchantId}', merchantId), auditData)
-    .then(response => {
+  return api
+    .post(API_CONFIG.admin.auditMerchant.replace('{merchantId}', merchantId), auditData)
+    .then((response) => {
       console.log('[管理员API] 审核商家成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 审核商家失败:', error)
       throw error
     })
@@ -367,12 +386,13 @@ export function auditMerchant(merchantId, auditData) {
  */
 export function updateMerchantStatus(merchantId, status) {
   console.log('[管理员API] 修改商家状态:', merchantId, status)
-  return api.put(API_CONFIG.admin.updateMerchantStatus.replace('{merchantId}', merchantId), { status })
-    .then(response => {
+  return api
+    .put(API_CONFIG.admin.updateMerchantStatus.replace('{merchantId}', merchantId), { status })
+    .then((response) => {
       console.log('[管理员API] 修改商家状态成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 修改商家状态失败:', error)
       throw error
     })
@@ -387,12 +407,13 @@ export function updateMerchantStatus(merchantId, status) {
  */
 export function getOrderList(params = {}) {
   console.log('[管理员API] 获取订单列表:', params)
-  return api.get(API_CONFIG.admin.orderList, { params })
-    .then(response => {
+  return api
+    .get(API_CONFIG.admin.orderList, { params })
+    .then((response) => {
       console.log('[管理员API] 获取订单列表成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取订单列表失败:', error)
       throw error
     })
@@ -405,12 +426,13 @@ export function getOrderList(params = {}) {
  */
 export function getOrderDetail(orderId) {
   console.log('[管理员API] 获取订单详情:', orderId)
-  return api.get(API_CONFIG.admin.orderDetail.replace('{orderId}', orderId))
-    .then(response => {
+  return api
+    .get(API_CONFIG.admin.orderDetail.replace('{orderId}', orderId))
+    .then((response) => {
       console.log('[管理员API] 获取订单详情成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取订单详情失败:', error)
       throw error
     })
@@ -425,12 +447,13 @@ export function getOrderDetail(orderId) {
  */
 export function getDishList(params = {}) {
   console.log('[管理员API] 获取菜品列表:', params)
-  return api.get(API_CONFIG.admin.dishList, { params })
-    .then(response => {
+  return api
+    .get(API_CONFIG.admin.dishList, { params })
+    .then((response) => {
       console.log('[管理员API] 获取菜品列表成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取菜品列表失败:', error)
       throw error
     })
@@ -443,12 +466,13 @@ export function getDishList(params = {}) {
  */
 export function getDishDetail(dishId) {
   console.log('[管理员API] 获取菜品详情:', dishId)
-  return api.get(API_CONFIG.admin.dishDetail.replace('{dishId}', dishId))
-    .then(response => {
+  return api
+    .get(API_CONFIG.admin.dishDetail.replace('{dishId}', dishId))
+    .then((response) => {
       console.log('[管理员API] 获取菜品详情成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取菜品详情失败:', error)
       throw error
     })
@@ -462,12 +486,13 @@ export function getDishDetail(dishId) {
  */
 export function auditDish(dishId, auditData) {
   console.log('[管理员API] 审核菜品:', dishId, auditData)
-  return api.post(API_CONFIG.admin.auditDish.replace('{dishId}', dishId), auditData)
-    .then(response => {
+  return api
+    .post(API_CONFIG.admin.auditDish.replace('{dishId}', dishId), auditData)
+    .then((response) => {
       console.log('[管理员API] 审核菜品成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 审核菜品失败:', error)
       throw error
     })
@@ -481,12 +506,13 @@ export function auditDish(dishId, auditData) {
  */
 export function updateDishStatus(dishId, status) {
   console.log('[管理员API] 修改菜品状态:', dishId, status)
-  return api.put(API_CONFIG.admin.updateDishStatus.replace('{dishId}', dishId), { status })
-    .then(response => {
+  return api
+    .put(API_CONFIG.admin.updateDishStatus.replace('{dishId}', dishId), { status })
+    .then((response) => {
       console.log('[管理员API] 修改菜品状态成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 修改菜品状态失败:', error)
       throw error
     })
@@ -503,12 +529,13 @@ export function updateDishStatus(dishId, status) {
  */
 export function getRechargeList(params = {}) {
   console.log('[管理员API] 获取充值记录列表:', params)
-  return api.get(API_CONFIG.admin.rechargeList, { params })
-    .then(response => {
+  return api
+    .get(API_CONFIG.admin.rechargeList, { params })
+    .then((response) => {
       console.log('[管理员API] 获取充值记录列表成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取充值记录列表失败:', error)
       throw error
     })
@@ -521,12 +548,13 @@ export function getRechargeList(params = {}) {
  */
 export function getRefundList(params = {}) {
   console.log('[管理员API] 获取退款记录列表:', params)
-  return api.get(API_CONFIG.admin.refundList, { params })
-    .then(response => {
+  return api
+    .get(API_CONFIG.admin.refundList, { params })
+    .then((response) => {
       console.log('[管理员API] 获取退款记录列表成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取退款记录列表失败:', error)
       throw error
     })
@@ -541,12 +569,13 @@ export function getRefundList(params = {}) {
  */
 export function getOperationLogs(params = {}) {
   console.log('[管理员API] 获取操作日志:', params)
-  return api.get(API_CONFIG.admin.operationLogs, { params })
-    .then(response => {
+  return api
+    .get(API_CONFIG.admin.operationLogs, { params })
+    .then((response) => {
       console.log('[管理员API] 获取操作日志成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取操作日志失败:', error)
       throw error
     })
@@ -559,12 +588,13 @@ export function getOperationLogs(params = {}) {
  */
 export function getSystemLogs(params = {}) {
   console.log('[管理员API] 获取系统日志:', params)
-  return api.get(API_CONFIG.admin.systemLogs, { params })
-    .then(response => {
+  return api
+    .get(API_CONFIG.admin.systemLogs, { params })
+    .then((response) => {
       console.log('[管理员API] 获取系统日志成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取系统日志失败:', error)
       throw error
     })
@@ -577,12 +607,13 @@ export function getSystemLogs(params = {}) {
  */
 export function getLoginLogs(params = {}) {
   console.log('[管理员API] 获取登录日志:', params)
-  return api.get(API_CONFIG.admin.loginLogs, { params })
-    .then(response => {
+  return api
+    .get(API_CONFIG.admin.loginLogs, { params })
+    .then((response) => {
       console.log('[管理员API] 获取登录日志成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取登录日志失败:', error)
       throw error
     })
@@ -598,12 +629,13 @@ export function getLoginLogs(params = {}) {
  */
 export function updateUser(userId, userData) {
   console.log('[管理员API] 编辑用户:', userId, userData)
-  return api.put(`/admin/users/${userId}`, userData)
-    .then(response => {
+  return api
+    .put(`/admin/users/${userId}`, userData)
+    .then((response) => {
       console.log('[管理员API] 编辑用户成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 编辑用户失败:', error)
       throw error
     })
@@ -619,12 +651,13 @@ export function updateUser(userId, userData) {
  */
 export function updateOrderStatus(orderId, statusData) {
   console.log('[管理员API] 修改订单状态:', orderId, statusData)
-  return api.put(`/admin/orders/${orderId}/status`, statusData)
-    .then(response => {
+  return api
+    .put(`/admin/orders/${orderId}/status`, statusData)
+    .then((response) => {
       console.log('[管理员API] 修改订单状态成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 修改订单状态失败:', error)
       throw error
     })
@@ -637,12 +670,13 @@ export function updateOrderStatus(orderId, statusData) {
  */
 export function batchUpdateOrderStatus(batchData) {
   console.log('[管理员API] 批量修改订单状态:', batchData)
-  return api.put('/admin/orders/batch/status', batchData)
-    .then(response => {
+  return api
+    .put('/admin/orders/batch/status', batchData)
+    .then((response) => {
       console.log('[管理员API] 批量修改订单状态成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 批量修改订单状态失败:', error)
       throw error
     })
@@ -654,12 +688,13 @@ export function batchUpdateOrderStatus(batchData) {
  */
 export function getOrderStatistics() {
   console.log('[管理员API] 获取订单统计')
-  return api.get('/admin/orders/statistics')
-    .then(response => {
+  return api
+    .get('/admin/orders/statistics')
+    .then((response) => {
       console.log('[管理员API] 获取订单统计成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取订单统计失败:', error)
       throw error
     })
@@ -674,12 +709,13 @@ export function getOrderStatistics() {
  */
 export function getLogList(params = {}) {
   console.log('[管理员API] 获取系统日志列表:', params)
-  return api.get('/admin/system/logs', { params })
-    .then(response => {
+  return api
+    .get('/admin/system/logs', { params })
+    .then((response) => {
       console.log('[管理员API] 获取系统日志列表成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取系统日志列表失败:', error)
       throw error
     })
@@ -691,12 +727,13 @@ export function getLogList(params = {}) {
  */
 export function getLogStatistics() {
   console.log('[管理员API] 获取日志统计')
-  return api.get('/admin/system/logs/statistics')
-    .then(response => {
+  return api
+    .get('/admin/system/logs/statistics')
+    .then((response) => {
       console.log('[管理员API] 获取日志统计成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取日志统计失败:', error)
       throw error
     })
@@ -709,12 +746,13 @@ export function getLogStatistics() {
  */
 export function cleanExpiredLogs(days = 90) {
   console.log('[管理员API] 清理过期日志, 天数:', days)
-  return api.delete('/admin/system/logs/clean', { params: { days } })
-    .then(response => {
+  return api
+    .delete('/admin/system/logs/clean', { params: { days } })
+    .then((response) => {
       console.log('[管理员API] 清理过期日志成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 清理过期日志失败:', error)
       throw error
     })
@@ -729,12 +767,13 @@ export function cleanExpiredLogs(days = 90) {
  */
 export function getRoleList(params = {}) {
   console.log('[管理员API] 获取角色列表:', params)
-  return api.get('/admin/roles', { params })
-    .then(response => {
+  return api
+    .get('/admin/roles', { params })
+    .then((response) => {
       console.log('[管理员API] 获取角色列表成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取角色列表失败:', error)
       throw error
     })
@@ -746,12 +785,13 @@ export function getRoleList(params = {}) {
  */
 export function getAllRoles() {
   console.log('[管理员API] 获取所有角色')
-  return api.get('/admin/roles/all')
-    .then(response => {
+  return api
+    .get('/admin/roles/all')
+    .then((response) => {
       console.log('[管理员API] 获取所有角色成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取所有角色失败:', error)
       throw error
     })
@@ -764,12 +804,13 @@ export function getAllRoles() {
  */
 export function getRoleDetail(roleId) {
   console.log('[管理员API] 获取角色详情:', roleId)
-  return api.get(`/admin/roles/${roleId}`)
-    .then(response => {
+  return api
+    .get(`/admin/roles/${roleId}`)
+    .then((response) => {
       console.log('[管理员API] 获取角色详情成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取角色详情失败:', error)
       throw error
     })
@@ -782,12 +823,13 @@ export function getRoleDetail(roleId) {
  */
 export function createRole(roleData) {
   console.log('[管理员API] 创建角色:', roleData)
-  return api.post('/admin/roles', roleData)
-    .then(response => {
+  return api
+    .post('/admin/roles', roleData)
+    .then((response) => {
       console.log('[管理员API] 创建角色成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 创建角色失败:', error)
       throw error
     })
@@ -801,12 +843,13 @@ export function createRole(roleData) {
  */
 export function updateRole(roleId, roleData) {
   console.log('[管理员API] 更新角色:', roleId, roleData)
-  return api.put(`/admin/roles/${roleId}`, roleData)
-    .then(response => {
+  return api
+    .put(`/admin/roles/${roleId}`, roleData)
+    .then((response) => {
       console.log('[管理员API] 更新角色成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 更新角色失败:', error)
       throw error
     })
@@ -819,12 +862,13 @@ export function updateRole(roleId, roleData) {
  */
 export function deleteRole(roleId) {
   console.log('[管理员API] 删除角色:', roleId)
-  return api.delete(`/admin/roles/${roleId}`)
-    .then(response => {
+  return api
+    .delete(`/admin/roles/${roleId}`)
+    .then((response) => {
       console.log('[管理员API] 删除角色成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 删除角色失败:', error)
       throw error
     })
@@ -838,12 +882,13 @@ export function deleteRole(roleId) {
  */
 export function assignRolePermissions(roleId, permissionData) {
   console.log('[管理员API] 为角色分配权限:', roleId, permissionData)
-  return api.post(`/admin/roles/${roleId}/permissions`, permissionData)
-    .then(response => {
+  return api
+    .post(`/admin/roles/${roleId}/permissions`, permissionData)
+    .then((response) => {
       console.log('[管理员API] 为角色分配权限成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 为角色分配权限失败:', error)
       throw error
     })
@@ -856,12 +901,13 @@ export function assignRolePermissions(roleId, permissionData) {
  */
 export function getRolePermissions(roleId) {
   console.log('[管理员API] 获取角色权限:', roleId)
-  return api.get(`/admin/roles/${roleId}/permissions`)
-    .then(response => {
+  return api
+    .get(`/admin/roles/${roleId}/permissions`)
+    .then((response) => {
       console.log('[管理员API] 获取角色权限成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取角色权限失败:', error)
       throw error
     })
@@ -876,12 +922,13 @@ export function getRolePermissions(roleId) {
  */
 export function getPermissionList(params = {}) {
   console.log('[管理员API] 获取权限列表:', params)
-  return api.get('/admin/permissions', { params })
-    .then(response => {
+  return api
+    .get('/admin/permissions', { params })
+    .then((response) => {
       console.log('[管理员API] 获取权限列表成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取权限列表失败:', error)
       throw error
     })
@@ -893,12 +940,13 @@ export function getPermissionList(params = {}) {
  */
 export function getPermissionTree() {
   console.log('[管理员API] 获取权限树')
-  return api.get('/admin/permissions/tree')
-    .then(response => {
+  return api
+    .get('/admin/permissions/tree')
+    .then((response) => {
       console.log('[管理员API] 获取权限树成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取权限树失败:', error)
       throw error
     })
@@ -910,12 +958,13 @@ export function getPermissionTree() {
  */
 export function getTopLevelPermissions() {
   console.log('[管理员API] 获取顶级权限')
-  return api.get('/admin/permissions/top')
-    .then(response => {
+  return api
+    .get('/admin/permissions/top')
+    .then((response) => {
       console.log('[管理员API] 获取顶级权限成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取顶级权限失败:', error)
       throw error
     })
@@ -928,12 +977,13 @@ export function getTopLevelPermissions() {
  */
 export function getChildPermissions(parentId) {
   console.log('[管理员API] 获取子权限:', parentId)
-  return api.get(`/admin/permissions/children/${parentId}`)
-    .then(response => {
+  return api
+    .get(`/admin/permissions/children/${parentId}`)
+    .then((response) => {
       console.log('[管理员API] 获取子权限成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取子权限失败:', error)
       throw error
     })
@@ -946,12 +996,13 @@ export function getChildPermissions(parentId) {
  */
 export function getPermissionDetail(permissionId) {
   console.log('[管理员API] 获取权限详情:', permissionId)
-  return api.get(`/admin/permissions/${permissionId}`)
-    .then(response => {
+  return api
+    .get(`/admin/permissions/${permissionId}`)
+    .then((response) => {
       console.log('[管理员API] 获取权限详情成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取权限详情失败:', error)
       throw error
     })
@@ -964,12 +1015,13 @@ export function getPermissionDetail(permissionId) {
  */
 export function createPermission(permissionData) {
   console.log('[管理员API] 创建权限:', permissionData)
-  return api.post('/admin/permissions', permissionData)
-    .then(response => {
+  return api
+    .post('/admin/permissions', permissionData)
+    .then((response) => {
       console.log('[管理员API] 创建权限成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 创建权限失败:', error)
       throw error
     })
@@ -983,12 +1035,13 @@ export function createPermission(permissionData) {
  */
 export function updatePermission(permissionId, permissionData) {
   console.log('[管理员API] 更新权限:', permissionId, permissionData)
-  return api.put(`/admin/permissions/${permissionId}`, permissionData)
-    .then(response => {
+  return api
+    .put(`/admin/permissions/${permissionId}`, permissionData)
+    .then((response) => {
       console.log('[管理员API] 更新权限成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 更新权限失败:', error)
       throw error
     })
@@ -1001,12 +1054,13 @@ export function updatePermission(permissionId, permissionData) {
  */
 export function deletePermission(permissionId) {
   console.log('[管理员API] 删除权限:', permissionId)
-  return api.delete(`/admin/permissions/${permissionId}`)
-    .then(response => {
+  return api
+    .delete(`/admin/permissions/${permissionId}`)
+    .then((response) => {
       console.log('[管理员API] 删除权限成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 删除权限失败:', error)
       throw error
     })
@@ -1022,12 +1076,13 @@ export function deletePermission(permissionId) {
  */
 export function processRefund(refundId, processData) {
   console.log('[管理员API] 处理退款申请:', refundId, processData)
-  return api.post(`/admin/finance/refunds/${refundId}/process`, processData)
-    .then(response => {
+  return api
+    .post(`/admin/finance/refunds/${refundId}/process`, processData)
+    .then((response) => {
       console.log('[管理员API] 处理退款申请成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 处理退款申请失败:', error)
       throw error
     })
@@ -1039,12 +1094,13 @@ export function processRefund(refundId, processData) {
  */
 export function getRefundStatistics() {
   console.log('[管理员API] 获取退款统计')
-  return api.get('/admin/finance/refunds/statistics')
-    .then(response => {
+  return api
+    .get('/admin/finance/refunds/statistics')
+    .then((response) => {
       console.log('[管理员API] 获取退款统计成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取退款统计失败:', error)
       throw error
     })
@@ -1059,12 +1115,13 @@ export function getRefundStatistics() {
  */
 export function getPendingMerchants(params = {}) {
   console.log('[管理员API] 获取待审核商家列表:', params)
-  return api.get('/admin/merchants/pending', { params })
-    .then(response => {
+  return api
+    .get('/admin/merchants/pending', { params })
+    .then((response) => {
       console.log('[管理员API] 获取待审核商家列表成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取待审核商家列表失败:', error)
       throw error
     })
@@ -1079,12 +1136,13 @@ export function getPendingMerchants(params = {}) {
  */
 export function getWithdrawList(params = {}) {
   console.log('[管理员API] 获取提现记录列表:', params)
-  return api.get(API_CONFIG.admin.withdrawalList, { params })
-    .then(response => {
+  return api
+    .get(API_CONFIG.admin.withdrawalList, { params })
+    .then((response) => {
       console.log('[管理员API] 获取提现记录列表成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取提现记录列表失败:', error)
       throw error
     })
@@ -1097,12 +1155,13 @@ export function getWithdrawList(params = {}) {
  */
 export function getWithdrawDetail(withdrawId) {
   console.log('[管理员API] 获取提现详情:', withdrawId)
-  return api.get(API_CONFIG.admin.withdrawalDetail.replace('{id}', withdrawId))
-    .then(response => {
+  return api
+    .get(API_CONFIG.admin.withdrawalDetail.replace('{id}', withdrawId))
+    .then((response) => {
       console.log('[管理员API] 获取提现详情成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取提现详情失败:', error)
       throw error
     })
@@ -1116,12 +1175,13 @@ export function getWithdrawDetail(withdrawId) {
  */
 export function processWithdraw(withdrawId, auditData) {
   console.log('[管理员API] 审核提现申请:', withdrawId, auditData)
-  return api.post(API_CONFIG.admin.auditWithdrawal.replace('{id}', withdrawId), auditData)
-    .then(response => {
+  return api
+    .post(API_CONFIG.admin.auditWithdrawal.replace('{id}', withdrawId), auditData)
+    .then((response) => {
       console.log('[管理员API] 审核提现申请成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 审核提现申请失败:', error)
       throw error
     })
@@ -1134,12 +1194,13 @@ export function processWithdraw(withdrawId, auditData) {
  */
 export function batchProcessWithdraw(batchData) {
   console.log('[管理员API] 批量审核提现:', batchData)
-  return api.post(API_CONFIG.admin.batchProcessWithdrawal, batchData)
-    .then(response => {
+  return api
+    .post(API_CONFIG.admin.batchProcessWithdrawal, batchData)
+    .then((response) => {
       console.log('[管理员API] 批量审核提现成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 批量审核提现失败:', error)
       throw error
     })
@@ -1153,12 +1214,13 @@ export function batchProcessWithdraw(batchData) {
  */
 export function completeWithdraw(withdrawId, data = {}) {
   console.log('[管理员API] 完成提现:', withdrawId)
-  return api.put(API_CONFIG.admin.completeWithdrawal.replace('{id}', withdrawId), data)
-    .then(response => {
+  return api
+    .put(API_CONFIG.admin.completeWithdrawal.replace('{id}', withdrawId), data)
+    .then((response) => {
       console.log('[管理员API] 完成提现成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 完成提现失败:', error)
       throw error
     })
@@ -1172,12 +1234,13 @@ export function completeWithdraw(withdrawId, data = {}) {
  */
 export function failWithdraw(withdrawId, data) {
   console.log('[管理员API] 标记提现失败:', withdrawId)
-  return api.put(API_CONFIG.admin.failWithdrawal.replace('{id}', withdrawId), data)
-    .then(response => {
+  return api
+    .put(API_CONFIG.admin.failWithdrawal.replace('{id}', withdrawId), data)
+    .then((response) => {
       console.log('[管理员API] 标记提现失败成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 标记提现失败失败:', error)
       throw error
     })
@@ -1189,12 +1252,13 @@ export function failWithdraw(withdrawId, data) {
  */
 export function getWithdrawStatistics() {
   console.log('[管理员API] 获取提现统计')
-  return api.get(API_CONFIG.admin.withdrawalStatistics)
-    .then(response => {
+  return api
+    .get(API_CONFIG.admin.withdrawalStatistics)
+    .then((response) => {
       console.log('[管理员API] 获取提现统计成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取提现统计失败:', error)
       throw error
     })
@@ -1207,12 +1271,13 @@ export function getWithdrawStatistics() {
  */
 export function getWithdrawTrend(days = 7) {
   console.log('[管理员API] 获取提现趋势, 天数:', days)
-  return api.get('/admin/finance/withdrawals/trend', { params: { days } })
-    .then(response => {
+  return api
+    .get('/admin/finance/withdrawals/trend', { params: { days } })
+    .then((response) => {
       console.log('[管理员API] 获取提现趋势成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取提现趋势失败:', error)
       throw error
     })
@@ -1227,12 +1292,13 @@ export function getWithdrawTrend(days = 7) {
  */
 export function getSystemConfigList(params = {}) {
   console.log('[管理员API] 获取配置列表:', params)
-  return api.get('/admin/settings/config', { params })
-    .then(response => {
+  return api
+    .get('/admin/settings/config', { params })
+    .then((response) => {
       console.log('[管理员API] 获取配置列表成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取配置列表失败:', error)
       throw error
     })
@@ -1244,12 +1310,13 @@ export function getSystemConfigList(params = {}) {
  */
 export function getSystemConfigGroups() {
   console.log('[管理员API] 获取配置分组')
-  return api.get('/admin/settings/config/groups')
-    .then(response => {
+  return api
+    .get('/admin/settings/config/groups')
+    .then((response) => {
       console.log('[管理员API] 获取配置分组成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取配置分组失败:', error)
       throw error
     })
@@ -1262,12 +1329,13 @@ export function getSystemConfigGroups() {
  */
 export function getSystemConfigsByGroup(configGroup) {
   console.log('[管理员API] 获取分组配置:', configGroup)
-  return api.get(`/admin/settings/config/group/${configGroup}`)
-    .then(response => {
+  return api
+    .get(`/admin/settings/config/group/${configGroup}`)
+    .then((response) => {
       console.log('[管理员API] 获取分组配置成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取分组配置失败:', error)
       throw error
     })
@@ -1280,12 +1348,13 @@ export function getSystemConfigsByGroup(configGroup) {
  */
 export function getSystemConfigDetail(configId) {
   console.log('[管理员API] 获取配置详情:', configId)
-  return api.get(`/admin/settings/config/${configId}`)
-    .then(response => {
+  return api
+    .get(`/admin/settings/config/${configId}`)
+    .then((response) => {
       console.log('[管理员API] 获取配置详情成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 获取配置详情失败:', error)
       throw error
     })
@@ -1298,12 +1367,13 @@ export function getSystemConfigDetail(configId) {
  */
 export function createSystemConfig(configData) {
   console.log('[管理员API] 创建配置:', configData)
-  return api.post('/admin/settings/config', configData)
-    .then(response => {
+  return api
+    .post('/admin/settings/config', configData)
+    .then((response) => {
       console.log('[管理员API] 创建配置成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 创建配置失败:', error)
       throw error
     })
@@ -1317,12 +1387,13 @@ export function createSystemConfig(configData) {
  */
 export function updateSystemConfig(configId, configData) {
   console.log('[管理员API] 更新配置:', configId, configData)
-  return api.put(`/admin/settings/config/${configId}`, configData)
-    .then(response => {
+  return api
+    .put(`/admin/settings/config/${configId}`, configData)
+    .then((response) => {
       console.log('[管理员API] 更新配置成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 更新配置失败:', error)
       throw error
     })
@@ -1336,12 +1407,13 @@ export function updateSystemConfig(configId, configData) {
  */
 export function batchUpdateSystemConfigs(configGroup, configs) {
   console.log('[管理员API] 批量更新配置:', configGroup, configs)
-  return api.post('/admin/settings/config/batch', { configGroup, configs })
-    .then(response => {
+  return api
+    .post('/admin/settings/config/batch', { configGroup, configs })
+    .then((response) => {
       console.log('[管理员API] 批量更新配置成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 批量更新配置失败:', error)
       throw error
     })
@@ -1354,12 +1426,13 @@ export function batchUpdateSystemConfigs(configGroup, configs) {
  */
 export function deleteSystemConfig(configId) {
   console.log('[管理员API] 删除配置:', configId)
-  return api.delete(`/admin/settings/config/${configId}`)
-    .then(response => {
+  return api
+    .delete(`/admin/settings/config/${configId}`)
+    .then((response) => {
       console.log('[管理员API] 删除配置成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 删除配置失败:', error)
       throw error
     })
@@ -1371,12 +1444,13 @@ export function deleteSystemConfig(configId) {
  */
 export function refreshSystemConfigCache() {
   console.log('[管理员API] 刷新配置缓存')
-  return api.post('/admin/settings/config/refresh')
-    .then(response => {
+  return api
+    .post('/admin/settings/config/refresh')
+    .then((response) => {
       console.log('[管理员API] 刷新配置缓存成功')
       return response
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('[管理员API] 刷新配置缓存失败:', error)
       throw error
     })

@@ -298,9 +298,12 @@ export function useGroupOrder({ selectedConversation, chatMessages }) {
       const userId = decodedToken.userId
 
       // 调用后端API获取或创建草稿订单
-      const response = await api.get(`/v1/group-orders/groups/${selectedConversation.value.id}/draft-order`, {
-        params: { initiatorId: userId }
-      })
+      const response = await api.get(
+        `/v1/group-orders/groups/${selectedConversation.value.id}/draft-order`,
+        {
+          params: { initiatorId: userId }
+        }
+      )
 
       if (response && response.success) {
         const draftOrder = response.data

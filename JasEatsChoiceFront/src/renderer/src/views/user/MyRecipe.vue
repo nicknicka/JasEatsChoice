@@ -52,10 +52,6 @@ const importMerchantDishVisible = ref(false)
 // 当前选中的菜品
 const selectedDish = ref(null)
 
-// 商家列表和选中商家 - 传递给ImportMerchantDish组件
-const merchants = ref([
-])
-
 // 替换菜品列表 mock数据
 const replacementDishes = ref([])
 
@@ -1260,7 +1256,6 @@ const getTagType = (type) => {
   <ImportMerchantDish
     v-model:visible="importMerchantDishVisible"
     :recipe="selectedRecipe"
-    :merchants="merchants"
     @import="handleImportMerchantDishes"
     @close="selectedRecipe = null"
   ></ImportMerchantDish>

@@ -89,7 +89,10 @@ function initTokenCleanup() {
     if (currentPath.includes('/admin') && tokenStatus.admin.expired) {
       console.log('[TokenCleanup] 管理员 token 已过期，跳转到登录页')
       window.location.href = '/admin/login'
-    } else if (tokenStatus.user.expired && (currentPath.includes('/user') || currentPath.includes('/merchant'))) {
+    } else if (
+      tokenStatus.user.expired &&
+      (currentPath.includes('/user') || currentPath.includes('/merchant'))
+    ) {
       console.log('[TokenCleanup] 用户 token 已过期，跳转到登录页')
       window.location.href = '/login'
     }
@@ -98,10 +101,13 @@ function initTokenCleanup() {
   }
 
   // 定期检查 token 状态（每 5 分钟检查一次）
-  setInterval(() => {
-    const result = cleanExpiredTokens()
-    if (result.cleaned) {
-      console.log('[TokenCleanup] 定期清理发现并清理了过期 token:', result.tokens)
-    }
-  }, 5 * 60 * 1000)
+  setInterval(
+    () => {
+      const result = cleanExpiredTokens()
+      if (result.cleaned) {
+        console.log('[TokenCleanup] 定期清理发现并清理了过期 token:', result.tokens)
+      }
+    },
+    5 * 60 * 1000
+  )
 }

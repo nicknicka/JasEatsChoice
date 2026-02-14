@@ -92,9 +92,7 @@ export const getChatSessions = async (userId) => {
           groupId: session.groupId, // 仅群聊有值
           targetId: session.targetId, // 仅单聊有值（对方的userId）
           // ⚠️ 兼容旧字段
-          userId: isGroupChat
-            ? undefined
-            : session.targetId // 单聊时，userId就是对方的targetId
+          userId: isGroupChat ? undefined : session.targetId // 单聊时，userId就是对方的targetId
         }
       })
 

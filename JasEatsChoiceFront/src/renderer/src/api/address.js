@@ -33,8 +33,8 @@ export default {
    */
   getAddressDetail(addressId) {
     // 后端暂不支持单独获取地址详情，前端可以从列表中获取
-    return api.get(`/v1/addresses/user`).then(response => {
-      const address = response.data.find(addr => addr.id === addressId)
+    return api.get(`/v1/addresses/user`).then((response) => {
+      const address = response.data.find((addr) => addr.id === addressId)
       return {
         code: address ? '200' : '404',
         message: address ? '获取成功' : '地址不存在',

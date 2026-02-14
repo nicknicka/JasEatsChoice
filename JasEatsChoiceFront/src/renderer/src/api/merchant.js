@@ -153,5 +153,13 @@ export default {
    */
   deleteAnnouncement(merchantId, announcementId) {
     return api.delete(`/v1/merchant/${merchantId}/announcements/${announcementId}`)
+  },
+
+  /**
+   * 获取商家菜品列表
+   * @param {string} merchantId - 商家ID
+   */
+  getMerchantDishes(merchantId) {
+    return api.get(`/v1/dishes/merchant/${merchantId}`)
   }
 }

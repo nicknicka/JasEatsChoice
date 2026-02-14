@@ -58,18 +58,18 @@ const RETRY_DELAY = 1000
 
 // 不需要token的接口白名单
 const AUTH_WHITELIST = [
-  '/admin/login',      // 管理员登录
-  '/user/login',       // 用户登录
-  '/merchant/login',   // 商家登录
+  '/admin/login', // 管理员登录
+  '/user/login', // 用户登录
+  '/merchant/login', // 商家登录
   '/v1/user/send-code', // 发送验证码
-  '/v1/user/login',     // 用户验证码登录
-  '/v1/user/register',  // 用户注册
-  '/v1/captcha'        // 验证码接口
+  '/v1/user/login', // 用户验证码登录
+  '/v1/user/register', // 用户注册
+  '/v1/captcha' // 验证码接口
 ]
 
 // 检查请求是否在白名单中
 const isWhitelisted = (url) => {
-  return AUTH_WHITELIST.some(path => url.includes(path))
+  return AUTH_WHITELIST.some((path) => url.includes(path))
 }
 
 // 请求拦截器

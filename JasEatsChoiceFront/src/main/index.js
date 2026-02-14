@@ -92,7 +92,17 @@ app.whenReady().then(() => {
       console.log('[Main] 清除应用缓存...')
       await session.defaultSession.clearCache()
       await session.defaultSession.clearStorageData({
-        storages: ['appcache', 'cookies', 'filesystem', 'indexdb', 'localstorage', 'shadercache', 'websql', 'serviceworkers', 'cachestorage']
+        storages: [
+          'appcache',
+          'cookies',
+          'filesystem',
+          'indexdb',
+          'localstorage',
+          'shadercache',
+          'websql',
+          'serviceworkers',
+          'cachestorage'
+        ]
       })
       console.log('[Main] 缓存已清除')
     }

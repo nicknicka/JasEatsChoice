@@ -134,7 +134,9 @@ export function useOrderFilter(orders) {
       result = result.filter((order) => {
         const match = order.status === activeStatus.value
         if (!match && orders.value.length > 0) {
-          console.log(`订单 ${order.id} 状态不匹配: order.status=${order.status}, activeStatus=${activeStatus.value}`)
+          console.log(
+            `订单 ${order.id} 状态不匹配: order.status=${order.status}, activeStatus=${activeStatus.value}`
+          )
         }
         return match
       })

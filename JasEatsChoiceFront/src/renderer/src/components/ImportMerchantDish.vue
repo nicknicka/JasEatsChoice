@@ -1,6 +1,8 @@
 <script setup>
-import { ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ref, watch } from 'vue'
+import { ElMessage } from 'element-plus'
+import { Loading } from '@element-plus/icons-vue'
+import merchantApi from '../api/merchant'
 
 // 接收从父组件传递的 props
 const props = defineProps({
@@ -11,27 +13,6 @@ const props = defineProps({
   recipe: {
     type: Object,
     default: null
-  },
-  merchants: {
-    type: Array,
-    default: () => [
-      {
-        id: 1,
-        name: '健康餐厅',
-        dishes: [
-          { id: 1, name: '有机蔬菜沙拉', nutrition: '120kcal/份' },
-          { id: 2, name: '烤三文鱼', nutrition: '280kcal/份' }
-        ]
-      },
-      {
-        id: 2,
-        name: '健身餐吧',
-        dishes: [
-          { id: 3, name: '鸡胸肉盖饭', nutrition: '450kcal/份' },
-          { id: 4, name: '糙米粥', nutrition: '180kcal/份' }
-        ]
-      }
-    ]
   }
 })
 
@@ -39,22 +20,62 @@ const props = defineProps({
 const emit = defineEmits(['close', 'import', 'update:visible'])
 
 // 商家列表和选中商家
+const merchants = ref([]) // 商家列表
 const selectedMerchant = ref(null)
 const merchantDishes = ref([]) // 选中商家的菜品
 const selectedMerchantDishes = ref([]) // 选中的导入菜品
+const loadingMerchants = ref(false) // 加载商家列表状态
+const loadingDishes = ref(false) // 加载菜品列表状态
+
+// 加载商家列表
+const loadMerchants = async () => {
+  loadingMerchants.value = true
+  try {
+    const response = await merchantApi.getMerchants({})
+    if (response.data && response.data.code === 200) {
+      merchants.value = response.data.data || []
+    } else {
+      ElMessage.error('获取商家列表失败')
+    }
+  } catch (error) {
+    console.error('获取商家列表失败:', error)
+    ElMessage.error('获取商家列表失败')
+  } finally {
+    loadingMerchants.value = false
+  }
+}
 
 // 加载商家菜品
-const loadMerchantDishes = () => {
-  if (selectedMerchant.value) {
-    merchantDishes.value = selectedMerchant.value.dishes
-    selectedMerchantDishes.value = [] // 重置选中菜品
+const loadMerchantDishes = async () => {
+  if (!selectedMerchant.value) {
+    merchantDishes.value = []
+    return
   }
+
+  loadingDishes.value = true
+  try {
+    const response = await merchantApi.getMerchantDishes(selectedMerchant.value.id)
+    if (response.data && response.data.code === 200) {
+      merchantDishes.value = response.data.data || []
+    } else {
+      ElMessage.error('获取菜品列表失败')
+      merchantDishes.value = []
+    }
+  } catch (error) {
+    console.error('获取菜品列表失败:', error)
+    ElMessage.error('获取菜品列表失败')
+    merchantDishes.value = []
+  } finally {
+    loadingDishes.value = false
+  }
+
+  // 重置选中的菜品
+  selectedMerchantDishes.value = []
 }
 
 // 确认导入商家菜品
 const confirmImportMerchantDishes = () => {
   if (selectedMerchantDishes.value.length > 0) {
-    // 这里需要知道要导入到哪个食谱，需要先设置 selectedRecipe
     if (props.recipe) {
       // 发送导入事件
       emit('import', props.recipe, selectedMerchantDishes.value)
@@ -84,6 +105,13 @@ const resetState = () => {
   merchantDishes.value = []
   selectedMerchantDishes.value = []
 }
+
+// 监听对话框显示状态，打开时加载商家列表
+watch(() => props.visible, (newVal) => {
+  if (newVal) {
+    loadMerchants()
+  }
+})
 </script>
 
 <template>
@@ -102,26 +130,34 @@ const resetState = () => {
           v-model="selectedMerchant"
           placeholder="请选择商家"
           style="width: 100%"
+          :loading="loadingMerchants"
           @change="loadMerchantDishes"
         >
           <el-option
-            v-for="merchant in props.merchants"
+            v-for="merchant in merchants"
             :key="merchant.id"
-            :label="merchant.nickname"
+            :label="merchant.name || merchant.nickname"
             :value="merchant"
           />
         </el-select>
       </el-form-item>
 
       <!-- 菜品列表 -->
-      <div v-if="merchantDishes.length > 0" class="merchant-dishes-list">
-        <h4>{{ selectedMerchant?.name }} 的菜品</h4>
+      <div v-if="loadingDishes" class="loading-container">
+        <el-icon class="is-loading"><Loading /></el-icon>
+        <span>加载菜品中...</span>
+      </div>
+      <div v-else-if="merchantDishes.length > 0" class="merchant-dishes-list">
+        <h4>{{ selectedMerchant?.name || selectedMerchant?.nickname }} 的菜品</h4>
         <el-checkbox-group v-model="selectedMerchantDishes">
           <div v-for="dish in merchantDishes" :key="dish.id" class="dish-item">
             <el-checkbox :label="dish">{{ dish.name }}</el-checkbox>
-            <span class="dish-nutrition">{{ dish.nutrition }}</span>
+            <span class="dish-nutrition">{{ dish.calorie }}kcal/份</span>
           </div>
         </el-checkbox-group>
+      </div>
+      <div v-else-if="selectedMerchant && merchantDishes.length === 0" class="empty-container">
+        <el-empty description="该商家暂无菜品" />
       </div>
     </div>
 
@@ -141,14 +177,14 @@ const resetState = () => {
   border: 1px solid #e3f2fd;
 
   /* 表单标签 */
-  .el-form-item__label {
+  :deep(.el-form-item__label) {
     font-weight: 700 !important;
     font-size: 14px !important;
     color: #2c3e50 !important;
   }
 
   /* 下拉选择框 */
-  .el-select__wrapper {
+  :deep(.el-select__wrapper) {
     border-radius: 8px !important;
     border: 1px solid #d9d9d9 !important;
     transition: all 0.3s ease !important;
@@ -157,6 +193,27 @@ const resetState = () => {
       border-color: #667eea !important;
       box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1) !important;
     }
+  }
+
+  /* 加载容器 */
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 0;
+    color: #667eea;
+    font-size: 14px;
+
+    .el-icon {
+      font-size: 32px;
+      margin-bottom: 12px;
+    }
+  }
+
+  /* 空状态容器 */
+  .empty-container {
+    padding: 20px 0;
   }
 
   /* 菜品列表 */

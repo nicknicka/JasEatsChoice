@@ -207,26 +207,6 @@ const selectedDish = ref(null)
 const showCustomDishInput = ref(false)
 const customDishName = ref('')
 
-// 商家列表和选中商家 - 传递给ImportMerchantDish组件
-const merchants = ref([
-  {
-    id: 1,
-    name: '健康餐厅',
-    dishes: [
-      { id: 1, name: '有机蔬菜沙拉', nutrition: '120kcal/份' },
-      { id: 2, name: '烤三文鱼', nutrition: '280kcal/份' }
-    ]
-  },
-  {
-    id: 2,
-    name: '健身餐吧',
-    dishes: [
-      { id: 3, name: '鸡胸肉盖饭', nutrition: '450kcal/份' },
-      { id: 4, name: '糙米粥', nutrition: '180kcal/份' }
-    ]
-  }
-])
-
 // 导入商家菜品对话框
 const importMerchantDishVisible = ref(false)
 
@@ -1200,7 +1180,6 @@ const filteredRecipes = computed(() => {
   <ImportMerchantDish
     v-model:visible="importMerchantDishVisible"
     :recipe="selectedRecipe"
-    :merchants="merchants"
     @import="handleImportMerchantDishes"
     @close="selectedRecipe = null"
   ></ImportMerchantDish>

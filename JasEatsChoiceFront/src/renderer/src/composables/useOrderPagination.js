@@ -24,7 +24,9 @@ export function useOrderPagination(sortedOrders, onReset) {
     const start = (currentPage.value - 1) * pageSize.value
     const end = start + pageSize.value
     const result = sortedOrders.value.slice(start, end)
-    console.log(`分页: 第${currentPage.value}页, 每页${pageSize.value}条, 范围[${start},${end}), 返回${result.length}条`)
+    console.log(
+      `分页: 第${currentPage.value}页, 每页${pageSize.value}条, 范围[${start},${end}), 返回${result.length}条`
+    )
     return result
   })
 

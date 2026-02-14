@@ -258,10 +258,10 @@ export const WS_CONFIG = {
 
 // 角色名称映射配置（用于修复数据库中的乱码问题）
 export const ROLE_NAME_MAP = {
-  'SUPER_ADMIN': '超级管理员',
-  'ADMIN': '管理员',
-  'USER_MANAGER': '用户管理员',
-  'MERCHANT_MANAGER': '商家管理员',
-  'CONTENT_MANAGER': '内容管理员',
-  'FINANCE_MANAGER': '财务管理员'
+  SUPER_ADMIN: '超级管理员',
+  ADMIN: '管理员',
+  USER_MANAGER: '用户管理员',
+  MERCHANT_MANAGER: '商家管理员',
+  CONTENT_MANAGER: '内容管理员',
+  FINANCE_MANAGER: '财务管理员'
 }

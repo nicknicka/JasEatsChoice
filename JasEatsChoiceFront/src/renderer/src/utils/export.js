@@ -13,18 +13,14 @@ import * as XLSX from 'xlsx'
  * @param {string} options.sheetName - 工作表名称
  */
 export function exportToExcel(data, options = {}) {
-  const {
-    filename = '导出数据',
-    headers = [],
-    sheetName = 'Sheet1'
-  } = options
+  const { filename = '导出数据', headers = [], sheetName = 'Sheet1' } = options
 
   try {
     // 如果没有提供表头配置，自动从第一条数据提取
     let finalHeaders = headers
     if (!headers || headers.length === 0) {
       if (data.length > 0) {
-        finalHeaders = Object.keys(data[0]).map(key => ({
+        finalHeaders = Object.keys(data[0]).map((key) => ({
           key,
           label: key,
           width: 15
@@ -39,11 +35,11 @@ export function exportToExcel(data, options = {}) {
     const wsData = []
 
     // 添加表头
-    wsData.push(finalHeaders.map(h => h.label))
+    wsData.push(finalHeaders.map((h) => h.label))
 
     // 添加数据行
-    data.forEach(row => {
-      const rowData = finalHeaders.map(header => {
+    data.forEach((row) => {
+      const rowData = finalHeaders.map((header) => {
         const value = row[header.key]
         // 格式化数据
         if (value === null || value === undefined) {
@@ -61,7 +57,7 @@ export function exportToExcel(data, options = {}) {
     const ws = XLSX.utils.aoa_to_sheet(wsData)
 
     // 设置列宽
-    const colWidths = finalHeaders.map(h => ({ wch: h.width || 15 }))
+    const colWidths = finalHeaders.map((h) => ({ wch: h.width || 15 }))
     ws['!cols'] = colWidths
 
     // 创建工作簿
@@ -87,17 +83,14 @@ export function exportToExcel(data, options = {}) {
  * @param {Array} options.headers - 表头配置
  */
 export function exportToCSV(data, options = {}) {
-  const {
-    filename = '导出数据',
-    headers = []
-  } = options
+  const { filename = '导出数据', headers = [] } = options
 
   try {
     // 如果没有提供表头配置，自动从第一条数据提取
     let finalHeaders = headers
     if (!headers || headers.length === 0) {
       if (data.length > 0) {
-        finalHeaders = Object.keys(data[0]).map(key => ({
+        finalHeaders = Object.keys(data[0]).map((key) => ({
           key,
           label: key
         }))
@@ -111,11 +104,11 @@ export function exportToCSV(data, options = {}) {
     let csvContent = ''
 
     // 添加表头
-    csvContent += finalHeaders.map(h => h.label).join(',') + '\n'
+    csvContent += finalHeaders.map((h) => h.label).join(',') + '\n'
 
     // 添加数据行
-    data.forEach(row => {
-      const rowData = finalHeaders.map(header => {
+    data.forEach((row) => {
+      const rowData = finalHeaders.map((header) => {
         const value = row[header.key]
         if (value === null || value === undefined) {
           return ''
@@ -185,16 +178,13 @@ export function exportToJSON(data, filename = '导出数据') {
  * @param {Array} options.headers - 表头配置
  */
 export function printData(data, options = {}) {
-  const {
-    title = '打印数据',
-    headers = []
-  } = options
+  const { title = '打印数据', headers = [] } = options
 
   // 如果没有提供表头配置，自动从第一条数据提取
   let finalHeaders = headers
   if (!headers || headers.length === 0) {
     if (data.length > 0) {
-      finalHeaders = Object.keys(data[0]).map(key => ({
+      finalHeaders = Object.keys(data[0]).map((key) => ({
         key,
         label: key
       }))
@@ -218,15 +208,19 @@ export function printData(data, options = {}) {
       <table>
         <thead>
           <tr>
-            ${finalHeaders.map(h => `<th>${h.label}</th>`).join('')}
+            ${finalHeaders.map((h) => `<th>${h.label}</th>`).join('')}
           </tr>
         </thead>
         <tbody>
-          ${data.map(row => `
+          ${data
+            .map(
+              (row) => `
             <tr>
-              ${finalHeaders.map(h => `<td>${row[h.key] || ''}</td>`).join('')}
+              ${finalHeaders.map((h) => `<td>${row[h.key] || ''}</td>`).join('')}
             </tr>
-          `).join('')}
+          `
+            )
+            .join('')}
         </tbody>
       </table>
     </body>

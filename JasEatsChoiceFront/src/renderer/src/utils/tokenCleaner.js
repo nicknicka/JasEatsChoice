@@ -40,7 +40,7 @@ export const isTokenExpired = (token) => {
   const now = Date.now()
 
   // 添加 5 秒的缓冲时间，避免临界情况
-  return now >= (expirationTime - 5000)
+  return now >= expirationTime - 5000
 }
 
 /**

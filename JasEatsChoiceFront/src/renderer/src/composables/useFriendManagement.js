@@ -48,7 +48,10 @@ const processAvatar = (avatar) => {
   }
 
   // 如果不是以上任何一种有效格式，使用默认头像
-  console.warn('头像格式未知，已使用默认头像。原始数据:', typeof avatar === 'string' ? avatar.substring(0, 50) : avatar)
+  console.warn(
+    '头像格式未知，已使用默认头像。原始数据:',
+    typeof avatar === 'string' ? avatar.substring(0, 50) : avatar
+  )
   return '👤'
 }
 
@@ -183,7 +186,7 @@ export function useFriendManagement({ userId, conversations, chatHistory }) {
         try {
           const friendsResponse = await api.get(`/v1/contacts/friends?userId=${userId.value}`)
           if (friendsResponse.code === '200') {
-            friendIdSet = new Set(friendsResponse.data.map(contact => String(contact.targetId)))
+            friendIdSet = new Set(friendsResponse.data.map((contact) => String(contact.targetId)))
           }
         } catch (error) {
           console.error('获取好友列表失败:', error)
@@ -230,8 +233,9 @@ export function useFriendManagement({ userId, conversations, chatHistory }) {
         // 使用字符串比较，确保类型一致
         const targetIdStr = String(targetId)
         const userIdStr = String(userId.value)
-        return response.data.some(request =>
-          String(request.userId) === targetIdStr || String(request.targetId) === userIdStr
+        return response.data.some(
+          (request) =>
+            String(request.userId) === targetIdStr || String(request.targetId) === userIdStr
         )
       }
       return false

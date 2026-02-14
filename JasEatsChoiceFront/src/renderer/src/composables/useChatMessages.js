@@ -133,8 +133,8 @@ export function useChatMessages({ userId, selectedConversation }) {
 
         const processedMsg = {
           ...msg,
-          msgId: messageMsgId,  // ⭐ 标准化 msgId 字段
-          id: messageMsgId,     // 同时保留 id 字段用于兼容
+          msgId: messageMsgId, // ⭐ 标准化 msgId 字段
+          id: messageMsgId, // 同时保留 id 字段用于兼容
           msgType,
           formattedTime: formatMessageTime(msg.createTime || msg.time),
           fromId,
@@ -339,7 +339,7 @@ export function useChatMessages({ userId, selectedConversation }) {
 
       const processedMsg = {
         ...message,
-        msgId: messageMsgId,  // ⭐ 确保 msgId 字段存在
+        msgId: messageMsgId, // ⭐ 确保 msgId 字段存在
         msgType,
         formattedTime: formatMessageTime(message.createTime || message.time),
         fromId,

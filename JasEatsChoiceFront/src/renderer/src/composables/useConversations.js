@@ -27,7 +27,11 @@ export function useConversations(userId = ref(null)) {
 
       if (response.data && response.data.success) {
         conversations.value = response.data.data
-        console.log('✅ [loadConversations] 会话列表加载成功，共', conversations.value.length, '个会话')
+        console.log(
+          '✅ [loadConversations] 会话列表加载成功，共',
+          conversations.value.length,
+          '个会话'
+        )
       }
     } catch (error) {
       console.error('❌ [loadConversations] 加载会话列表失败:', error)

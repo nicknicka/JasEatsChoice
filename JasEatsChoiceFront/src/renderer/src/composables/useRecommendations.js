@@ -88,9 +88,7 @@ export function useRecommendations() {
       if (saved) {
         history = JSON.parse(saved)
       }
-      const existingIndex = history.findIndex(
-        (entry) => entry.dishId === dishId
-      )
+      const existingIndex = history.findIndex((entry) => entry.dishId === dishId)
       if (existingIndex > -1) {
         history[existingIndex].count += 1
       } else {
@@ -111,7 +109,7 @@ export function useRecommendations() {
     if (!rejectedDishIds || rejectedDishIds.length === 0) return false
     // 支持两种格式：字符串ID和数字ID
     const normalizedDishId = String(dishId)
-    return rejectedDishIds.some(id => String(id) === normalizedDishId)
+    return rejectedDishIds.some((id) => String(id) === normalizedDishId)
   }
 
   /**
@@ -301,11 +299,13 @@ export function useRecommendations() {
         dish.type.includes(timeType) || weatherTags.some((tag) => dish.tags.includes(tag))
 
       // 检查是否被拒绝过（基于菜品名称匹配）
-      const isRejectedDish = rejectedDishIds && rejectedDishIds.some(id => {
-        // 这里使用名称匹配作为临时方案，因为 MOCK_DISHES 没有 dishId
-        const rejectedDish = MOCK_DISHES.find(d => String(d.id || '') === String(id))
-        return rejectedDish && rejectedDish.name === dish.name
-      })
+      const isRejectedDish =
+        rejectedDishIds &&
+        rejectedDishIds.some((id) => {
+          // 这里使用名称匹配作为临时方案，因为 MOCK_DISHES 没有 dishId
+          const rejectedDish = MOCK_DISHES.find((d) => String(d.id || '') === String(id))
+          return rejectedDish && rejectedDish.name === dish.name
+        })
 
       return matchesCriteria && !isRejectedDish
     })
@@ -342,15 +342,18 @@ export function useRecommendations() {
     const festivalRecommendations = festivalDishList
       .filter((dishName) => {
         // 过滤非食品项目
-        if (nonFoodItems.some(nonFood => dishName.includes(nonFood))) {
+        if (nonFoodItems.some((nonFood) => dishName.includes(nonFood))) {
           return false
         }
 
         // 检查是否被拒绝过
-        return !rejectedDishIds || !rejectedDishIds.some(id => {
-          // 这里使用名称匹配作为临时方案
-          return String(id).includes(dishName) || dishName.includes(String(id))
-        })
+        return (
+          !rejectedDishIds ||
+          !rejectedDishIds.some((id) => {
+            // 这里使用名称匹配作为临时方案
+            return String(id).includes(dishName) || dishName.includes(String(id))
+          })
+        )
       })
       .map((dishName, index) => {
         return {
@@ -434,7 +437,7 @@ export function useRecommendations() {
 
       if (rawRecommendations.length > 0) {
         const personalizedRecs = rawRecommendations
-          .filter(dish => {
+          .filter((dish) => {
             // 过滤掉被拒绝的菜品
             if (!rejectedDishIds || rejectedDishIds.length === 0) return true
             const dishId = dish.dishId || dish.id || dish.dish_id
@@ -471,7 +474,7 @@ export function useRecommendations() {
 
         // 记录推荐展示行为（异步，不阻塞）
         if (personalizedRecs.length > 0) {
-          recordRecommendationView(userId, personalizedRecs).catch(err => {
+          recordRecommendationView(userId, personalizedRecs).catch((err) => {
             console.warn('记录推荐展示失败:', err)
           })
         }
@@ -504,7 +507,7 @@ export function useRecommendations() {
         context: {
           timePeriod,
           count: recommendations.length,
-          dishIds: recommendations.map(r => r.dishId).slice(0, 10) // 只记录前10个
+          dishIds: recommendations.map((r) => r.dishId).slice(0, 10) // 只记录前10个
         }
       }
 
@@ -714,7 +717,7 @@ export function useRecommendations() {
   const smartRefreshAfterOrder = async (orderedItem) => {
     try {
       // 延迟1秒后更新，避免影响用户操作
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      await new Promise((resolve) => setTimeout(resolve, 1000))
 
       // 获取当前推荐数量
       const currentCount = recommendations.value.length
@@ -727,7 +730,9 @@ export function useRecommendations() {
         const keptRecs = recommendations.value.slice(0, Math.floor(currentCount * 0.7))
         recommendations.value = [...keptRecs, ...newRecs.slice(0, 5)]
 
-        console.log(`✓ 智能更新完成: 保留${keptRecs.length}个，新增${Math.min(5, newRecs.length)}个`)
+        console.log(
+          `✓ 智能更新完成: 保留${keptRecs.length}个，新增${Math.min(5, newRecs.length)}个`
+        )
       }
     } catch (error) {
       console.warn('智能刷新失败:', error)

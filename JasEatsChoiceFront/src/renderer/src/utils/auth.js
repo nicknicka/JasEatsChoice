@@ -73,7 +73,7 @@ export function hasPermission(permissionCode) {
  */
 export function hasAnyPermission(permissionCodes) {
   if (!permissionCodes || permissionCodes.length === 0) return true
-  return permissionCodes.some(code => hasPermission(code))
+  return permissionCodes.some((code) => hasPermission(code))
 }
 
 /**

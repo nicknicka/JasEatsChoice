@@ -70,7 +70,9 @@ export function useOrderData() {
    */
   async function fetchDishDetail(orderDish) {
     try {
-      const dishResponse = await axios.get(`${API_CONFIG.baseURL}${API_CONFIG.dish.detail}${orderDish.dishId}`)
+      const dishResponse = await axios.get(
+        `${API_CONFIG.baseURL}${API_CONFIG.dish.detail}${orderDish.dishId}`
+      )
       const dish = dishResponse.data?.data
 
       return {
@@ -149,9 +151,7 @@ export function useOrderData() {
       const orderList = response.data?.data
       if (orderList && Array.isArray(orderList)) {
         // 并行获取所有订单的菜品信息
-        const ordersWithItems = await Promise.all(
-          orderList.map((order) => fetchOrderDishes(order))
-        )
+        const ordersWithItems = await Promise.all(orderList.map((order) => fetchOrderDishes(order)))
         orders.value = ordersWithItems
         console.log('订单加载成功，共', ordersWithItems.length, '条订单')
       } else {
@@ -233,9 +233,7 @@ export function useOrderData() {
     const order = orders.value.find((o) => o.id === orderId)
     if (order) {
       // 如果是数字，转换为前端状态文本
-      const statusText = typeof newStatus === 'number'
-        ? orderStatusToText(newStatus)
-        : newStatus
+      const statusText = typeof newStatus === 'number' ? orderStatusToText(newStatus) : newStatus
       order.status = statusText
       console.log(`订单 ${orderId} 状态已更新为:`, statusText)
     } else {
