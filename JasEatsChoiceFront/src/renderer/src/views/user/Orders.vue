@@ -150,7 +150,7 @@ function handleReorder(order) {
 function handleReorderConfirm(data) {
   // 保存商家信息到sessionStorage
   const merchantInfo = {
-    id: data.merchantId,
+    merchantId: data.merchantId,
     name: data.merchantName
   }
   sessionStorage.setItem('selectedMerchant', JSON.stringify(merchantInfo))

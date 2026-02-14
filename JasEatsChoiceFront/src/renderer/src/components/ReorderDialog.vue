@@ -272,7 +272,7 @@ function handleReplaceWithSuggested(index) {
 
     // 保存商家信息到sessionStorage
     const merchantInfo = {
-      id: reorderData.value.merchantId,
+      merchantId: reorderData.value.merchantId,
       name: reorderData.value.merchantName
     }
     sessionStorage.setItem('selectedMerchant', JSON.stringify(merchantInfo))

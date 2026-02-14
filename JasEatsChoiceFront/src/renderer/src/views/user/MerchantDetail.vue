@@ -212,19 +212,26 @@ const menuItems = ref([])
 // 组件挂载时加载商家信息和恢复购物车
 onMounted(() => {
   const savedMerchant = sessionStorage.getItem('selectedMerchant')
+  console.log('🔍 onMounted - 从 sessionStorage 读取的原始数据:', savedMerchant)
+
   if (savedMerchant) {
     // 从会话存储获取商家基本信息
     const baseMerchantInfo = JSON.parse(savedMerchant)
+    console.log('🔍 onMounted - 解析后的商家对象:', baseMerchantInfo)
+    console.log('🔍 onMounted - 商家对象的所有字段:', Object.keys(baseMerchantInfo))
+    console.log('🔍 onMounted - 商家ID:', baseMerchantInfo.id, '| userId:', baseMerchantInfo.userId, '| merchantId:', baseMerchantInfo.merchantId)
+
     merchant.value = { ...baseMerchantInfo }
 
     // 从后端获取完整的商家详情和菜品信息
-    loadMerchantDetails(baseMerchantInfo.id)
+    // 注意：商家对象使用 merchantId 字段，不是 id
+    loadMerchantDetails(baseMerchantInfo.merchantId)
 
     // 加载当前商家的独立购物车
-    if (!cartItemsByMerchant.value[merchant.value.id]) {
-      cartItemsByMerchant.value[merchant.value.id] = []
+    if (!cartItemsByMerchant.value[merchant.value.merchantId]) {
+      cartItemsByMerchant.value[merchant.value.merchantId] = []
     }
-    cartItems.value = cartItemsByMerchant.value[merchant.value.id]
+    cartItems.value = cartItemsByMerchant.value[merchant.value.merchantId]
 
     // 检查商家是否已被收藏
     checkFavoriteStatus()
@@ -241,10 +248,10 @@ onMounted(() => {
     if (
       parsedOrder.cartItems &&
       parsedOrder.cartItems.length > 0 &&
-      parsedOrder.merchant.id === merchant.value.id
+      parsedOrder.merchant.merchantId === merchant.value.merchantId
     ) {
       // 清空当前购物车
-      cartItemsByMerchant.value[merchant.value.id] = []
+      cartItemsByMerchant.value[merchant.value.merchantId] = []
       // 恢复购物车项目
       parsedOrder.cartItems.forEach((item) => {
         // 确保购物车项目有必要的属性
@@ -254,10 +261,10 @@ onMounted(() => {
           tempNote: item.tempNote || '',
           isEditingNote: item.isEditingNote || false
         }
-        cartItemsByMerchant.value[merchant.value.id].push(cartItem)
+        cartItemsByMerchant.value[merchant.value.merchantId].push(cartItem)
       })
       // 更新当前购物车引用
-      cartItems.value = cartItemsByMerchant.value[merchant.value.id]
+      cartItems.value = cartItemsByMerchant.value[merchant.value.merchantId]
       // 更新购物车统计信息
       updateCartStats()
     }
@@ -295,7 +302,7 @@ onMounted(() => {
       const itemsToAdd = JSON.parse(reorderItems)
 
       // 清空当前购物车
-      cartItemsByMerchant.value[merchant.value.id] = []
+      cartItemsByMerchant.value[merchant.value.merchantId] = []
 
       // 添加所有选中的菜品
       itemsToAdd.forEach(item => {
@@ -328,6 +335,11 @@ const loadMerchantDetails = async (merchantId) => {
       API_CONFIG.baseURL + API_CONFIG.merchant.detail + merchantId
     )
     console.log('获取商家详情 response:', merchantResponse.data)
+    console.log('获取商家详情 data 字段:', merchantResponse.data?.data)
+    if (merchantResponse.data?.data) {
+      console.log('商家详情对象的字段:', Object.keys(merchantResponse.data.data))
+      console.log('merchantId:', merchantResponse.data.data.merchantId)
+    }
 
     if (merchantResponse.data?.code === '200' && merchantResponse.data?.data) {
       // 更新商家信息
@@ -335,13 +347,25 @@ const loadMerchantDetails = async (merchantId) => {
         ...merchant.value,
         ...merchantResponse.data.data
       }
+      console.log('更新后的 merchant.value 有 merchantId:', merchant.value.merchantId)
     }
 
     // 2. 再获取商家的菜单数据
-    const menuResponse = await axios.get(
-      `${API_CONFIG.baseURL}/v1/menus/merchants/${merchantId}/menu`
-    )
-    console.log('获取商家菜单 response:', menuResponse.data)
+    const menuUrl = `${API_CONFIG.baseURL}/v1/menus/merchants/${merchantId}/menu`
+    console.log('🔍 准备获取商家菜单，URL:', menuUrl)
+    console.log('🔍 商家ID:', merchantId, '类型:', typeof merchantId)
+    console.log('🔍 完整的API配置:', API_CONFIG)
+
+    const menuResponse = await axios.get(menuUrl)
+    console.log('📥 获取商家菜单 response status:', menuResponse.status)
+    console.log('📥 获取商家菜单 response data:', menuResponse.data)
+    console.log('📥 response.data 结构:', {
+      code: menuResponse.data?.code,
+      data: menuResponse.data?.data,
+      dataType: typeof menuResponse.data?.data,
+      dataLength: menuResponse.data?.data?.length,
+      isArray: Array.isArray(menuResponse.data?.data)
+    })
 
     if (
       menuResponse.data?.code === '200' &&
@@ -349,23 +373,31 @@ const loadMerchantDetails = async (merchantId) => {
       menuResponse.data.data.length > 0
     ) {
       console.log('✅ 菜单数据存在，菜单数量:', menuResponse.data.data.length)
+      console.log('✅ 第一个菜单的完整数据:', JSON.stringify(menuResponse.data.data[0], null, 2))
 
       // 为菜单项目添加必要的属性
       const allMenuItems = []
 
       // 遍历所有菜单
-      menuResponse.data.data.forEach((menu) => {
-        console.log(
-          '📋 处理菜单:',
-          menu.menuName,
-          '菜单ID:',
-          menu.id,
-          '菜品数量:',
-          menu.dishes?.length || 0
-        )
+      menuResponse.data.data.forEach((menu, index) => {
+        console.log(`📋 [${index}] 处理菜单:`, {
+          menuName: menu.menuName,
+          id: menu.id,
+          dishesCount: menu.dishes?.length || 0,
+          dishes: menu.dishes
+        })
         if (menu.dishes && menu.dishes.length > 0) {
-          menu.dishes.forEach((dish) => {
-            console.log('  🍲 菜品:', dish.name, 'category:', dish.category, 'id:', dish.id)
+          menu.dishes.forEach((dish, dishIndex) => {
+            console.log(`  🍲 [${dishIndex}] 菜品:`, {
+              name: dish.name,
+              category: dish.category,
+              id: dish.id,
+              price: dish.price,
+              description: dish.description,
+              image: dish.image,
+              requiredIngredients: dish.requiredIngredients,
+              optionalIngredients: dish.optionalIngredients
+            })
             allMenuItems.push({
               ...dish,
               menuId: menu.id, // 保存菜单ID (后端使用id字段)
@@ -378,6 +410,8 @@ const loadMerchantDetails = async (merchantId) => {
               isEditingNote: false // 添加编辑状态字段
             })
           })
+        } else {
+          console.log(`  ⚠️ 菜单 [${index}] "${menu.menuName}" 没有菜品`)
         }
       })
 
@@ -441,13 +475,23 @@ const loadMerchantDetails = async (merchantId) => {
       hasMenus.value = true
     } else {
       // 商家没有菜单
+      console.log('⚠️ 商家没有菜单数据')
+      console.log('  ⚠️ menuResponse.data?.code:', menuResponse.data?.code)
+      console.log('  ⚠️ menuResponse.data?.data:', menuResponse.data?.data)
+      console.log('  ⚠️ menuResponse.data.data?.length:', menuResponse.data?.data?.length)
+
       menuItems.value = []
       menuTabs.value = [{ value: 'comments', label: '用户评价' }]
       activeMenuTab.value = 'comments'
       hasMenus.value = false
     }
   } catch (error) {
-    console.error('加载商家详情和菜单失败:', error)
+    console.error('❌ 加载商家详情和菜单失败')
+    console.error('  ❌ 错误对象:', error)
+    console.error('  ❌ 错误消息:', error.message)
+    console.error('  ❌ 错误响应:', error.response)
+    console.error('  ❌ 错误请求:', error.request)
+    console.error('  ❌ 错误堆栈:', error.stack)
     ElMessage.error('加载商家详情失败，请稍后重试')
     hasMenus.value = false
   }
@@ -468,7 +512,7 @@ const checkFavoriteStatus = async () => {
       params: {
         userId: userId,
         type: 'merchant', // 商家类型
-        id: merchant.value.id
+        id: merchant.value.merchantId
       }
     })
 
@@ -498,7 +542,7 @@ const toggleFavorite = async () => {
         params: {
           userId: userId,
           type: 'merchant',
-          id: String(merchant.value.id)
+          id: String(merchant.value.merchantId)
         }
       })
 
@@ -514,7 +558,7 @@ const toggleFavorite = async () => {
       const collectionData = {
         userId: userId,
         collectableType: 'merchant',
-        collectableId: String(merchant.value.id)
+        collectableId: String(merchant.value.merchantId)
       }
 
       const response = await axios.post(
@@ -659,10 +703,10 @@ const stopDrag = () => {
 
 // 更新购物车统计信息 - 使用当前商家的购物车
 const updateCartStats = () => {
-  if (!merchant.value || !merchant.value.id) return
+  if (!merchant.value || !merchant.value.merchantId) return
 
   // 确保当前购物车引用正确
-  cartItems.value = cartItemsByMerchant.value[merchant.value.id]
+  cartItems.value = cartItemsByMerchant.value[merchant.value.merchantId]
 
   cartTotalQuantity.value = cartItems.value.reduce((total, item) => total + item.quantity, 0)
   cartTotalAmount.value = cartItems.value.reduce((total, item) => total + item.totalPrice, 0)
@@ -670,10 +714,10 @@ const updateCartStats = () => {
 
 // 更新购物车 - 使用当前商家的购物车
 const updateCart = (item) => {
-  if (!merchant.value || !merchant.value.id) return
+  if (!merchant.value || !merchant.value.merchantId) return
 
   // 获取当前商家的购物车
-  const currentMerchantCart = cartItemsByMerchant.value[merchant.value.id]
+  const currentMerchantCart = cartItemsByMerchant.value[merchant.value.merchantId]
 
   // 检查是否有相同的商品和相同的可选食材组合
   const existingItem = currentMerchantCart.find(
