@@ -54,33 +54,10 @@ const selectedDish = ref(null)
 
 // 商家列表和选中商家 - 传递给ImportMerchantDish组件
 const merchants = ref([
-  {
-    id: 1,
-    name: '健康餐厅',
-    dishes: [
-      { id: 1, name: '有机蔬菜沙拉', nutrition: '120kcal/份' },
-      { id: 2, name: '烤三文鱼', nutrition: '280kcal/份' }
-    ]
-  },
-  {
-    id: 2,
-    name: '健身餐吧',
-    dishes: [
-      { id: 3, name: '鸡胸肉盖饭', nutrition: '450kcal/份' },
-      { id: 4, name: '糙米粥', nutrition: '180kcal/份' }
-    ]
-  }
 ])
 
 // 替换菜品列表 mock数据
-const replacementDishes = ref([
-  { id: 1, name: '全麦面包', type: '早餐', nutrition: '247kcal/片' },
-  { id: 2, name: '蒸南瓜', type: '早餐', nutrition: '26kcal/100g' },
-  { id: 3, name: '烤鸡胸肉', type: '午餐', nutrition: '165kcal/100g' },
-  { id: 4, name: '西兰花', type: '午餐', nutrition: '34kcal/100g' },
-  { id: 5, name: '清蒸鱼', type: '晚餐', nutrition: '105kcal/100g' },
-  { id: 6, name: '炒青菜', type: '晚餐', nutrition: '15kcal/100g' }
-])
+const replacementDishes = ref([])
 
 // 加载我的食谱数据
 const loadMyRecipes = () => {
@@ -131,8 +108,11 @@ const loadMyRecipes = () => {
               ? JSON.parse(recipe.ingredients)
               : recipe.ingredients
             : [],
-          time: recipe.time || '30分钟' // 默认值
+          // 处理 detail 字段：后端返回的是 detail，但为了兼容性同时处理 detail 和 details
+          detail: recipe.detail,
+          time: recipe.time 
         }))
+      console.log('处理后的食谱列表数据:', myRecipes.value)
       } else {
         myRecipes.value = []
       }
@@ -251,46 +231,93 @@ const viewRecipeDetails = (recipe) => {
 }
 
 // 更新收藏状态
-const updateRecipe = (updatedRecipe) => {
+const updateRecipe = async (updatedRecipe) => {
+  console.log('=== MyRecipe updateRecipe 开始 ===')
+  console.log('接收到的更新食谱数据:', updatedRecipe)
+  console.log('食谱ID:', updatedRecipe.id)
+  console.log('食谱名称:', updatedRecipe.name)
+
   // 在myRecipes数组中找到对应的食谱并更新
   const index = myRecipes.value.findIndex((recipe) => recipe.id === updatedRecipe.id)
-  if (index === -1) return
+  console.log('找到的食谱索引:', index)
+
+  if (index === -1) {
+    console.warn('未找到对应的食谱')
+    return
+  }
 
   // 保存原始状态
   const originalRecipe = { ...myRecipes.value[index] }
+  console.log('原始食谱数据:', originalRecipe)
 
-  // 更新本地状态
-  myRecipes.value[index] = updatedRecipe
-  selectedRecipe.value = updatedRecipe
+  try {
+    // 准备请求数据：将 items 和 ingredients 序列化为 JSON 字符串
+    const requestData = {
+      ...updatedRecipe,
+      items: updatedRecipe.items
+        ? (typeof updatedRecipe.items === 'string'
+            ? updatedRecipe.items
+            : JSON.stringify(updatedRecipe.items))
+        : null,
+      ingredients: updatedRecipe.ingredients
+        ? (typeof updatedRecipe.ingredients === 'string'
+            ? updatedRecipe.ingredients
+            : JSON.stringify(updatedRecipe.ingredients))
+        : null
+    }
 
-  // 立即同步到后端
-  axios
-    .put(`${API_CONFIG.baseURL}${API_CONFIG.recipe.toggleFavorite}${updatedRecipe.id}`, {
-      favorite: updatedRecipe.favorite
-    })
-    .then((response) => {
-      console.log('更新收藏状态成功:', response)
-      if (response.data?.code !== '200') {
-        // 如果后端返回失败，恢复本地状态
-        myRecipes.value[index] = originalRecipe
-        selectedRecipe.value = originalRecipe
-        ElMessage.error('更新收藏状态失败')
-      } else {
-        // 显示成功消息
-        if (updatedRecipe.favorite) {
-          ElMessage.success('已收藏到我的食谱')
-        } else {
-          ElMessage.success('已取消收藏')
-        }
+    console.log('准备调用后端API更新食谱')
+    console.log('API URL:', API_CONFIG.baseURL + API_CONFIG.recipe.update + updatedRecipe.id)
+    console.log('原始请求数据:', updatedRecipe)
+    console.log('转换后的请求数据:', requestData)
+
+    // 调用后端API更新食谱
+    const response = await axios.put(
+      API_CONFIG.baseURL + API_CONFIG.recipe.update + updatedRecipe.id,
+      requestData
+    )
+
+    console.log('后端完整响应:', response)
+    console.log('响应状态码:', response.status)
+    console.log('响应数据 code:', response.data?.code)
+    console.log('响应数据 message:', response.data?.message)
+    console.log('响应数据 data:', response.data?.data)
+
+    if (response.data?.code === '200') {
+      console.log('✅ 更新成功，开始更新本地数据')
+      console.log('后端返回的食谱数据:', response.data.data)
+
+      // 更新本地数据
+      myRecipes.value[index] = {
+        ...response.data.data,
+        items:
+          typeof response.data.data.items === 'string'
+            ? JSON.parse(response.data.data.items)
+            : response.data.data.items || [],
+        ingredients:
+          typeof response.data.data.ingredients === 'string'
+            ? JSON.parse(response.data.data.ingredients)
+            : response.data.data.ingredients || []
       }
-    })
-    .catch((error) => {
-      console.error('更新收藏状态失败:', error)
-      // 请求失败时恢复本地状态
+      selectedRecipe.value = myRecipes.value[index]
+      console.log('本地数据已更新:', myRecipes.value[index])
+      ElMessage.success('食谱更新成功')
+    } else {
+      console.warn('后端返回错误:', response.data)
+      // 如果后端返回失败，恢复本地状态
       myRecipes.value[index] = originalRecipe
       selectedRecipe.value = originalRecipe
-      ElMessage.error('更新收藏状态失败，请检查网络')
-    })
+      ElMessage.error('食谱更新失败')
+    }
+  } catch (error) {
+    console.error('更新食谱失败:', error)
+    // 请求失败时恢复本地状态
+    myRecipes.value[index] = originalRecipe
+    selectedRecipe.value = originalRecipe
+    ElMessage.error('更新食谱失败，请稍后重试')
+  }
+
+  console.log('=== MyRecipe updateRecipe 结束 ===')
 }
 
 // 更新烹饪时间
@@ -624,6 +651,7 @@ const batchFavoriteRecipes = () => {
 
 // 添加食谱组件相关
 const addDialogVisible = ref(false)
+const editingRecipe = ref(null) // 当前正在编辑的食谱
 
 // 添加新食谱
 const handleAddRecipe = (newRecipe) => {
@@ -657,7 +685,99 @@ const handleAddRecipe = (newRecipe) => {
 
 // 打开添加食谱对话框
 const openAddDialog = () => {
+  editingRecipe.value = null
   addDialogVisible.value = true
+}
+
+// 编辑食谱
+const editRecipe = (recipe) => {
+  console.log('收到编辑食谱请求:', recipe)
+  if (!recipe) {
+    console.warn('编辑食谱失败：食谱数据为空')
+    return
+  }
+  editingRecipe.value = recipe
+  addDialogVisible.value = true
+  console.log('打开编辑对话框，食谱数据:', editingRecipe.value)
+}
+
+// 快捷编辑：从详情对话框直接进入编辑模式
+const startEdit = (recipe) => {
+  console.log('收到快捷编辑请求:', recipe)
+  if (!recipe) {
+    console.warn('编辑食谱失败：食谱数据为空')
+    return
+  }
+  editingRecipe.value = recipe
+  addDialogVisible.value = true
+  console.log('打开编辑对话框，食谱数据:', editingRecipe.value)
+}
+
+// 保存食谱编辑
+const saveRecipeEdit = async (updatedRecipe) => {
+  console.log('=== MyRecipe saveRecipeEdit 开始 ===')
+  console.log('接收到的更新食谱数据:', updatedRecipe)
+
+  try {
+    // 准备请求数据：将 items 和 ingredients 序列化为 JSON 字符串
+    const requestData = {
+      ...updatedRecipe,
+      items: updatedRecipe.items
+        ? (typeof updatedRecipe.items === 'string'
+            ? updatedRecipe.items
+            : JSON.stringify(updatedRecipe.items))
+        : null,
+      ingredients: updatedRecipe.ingredients
+        ? (typeof updatedRecipe.ingredients === 'string'
+            ? updatedRecipe.ingredients
+            : JSON.stringify(updatedRecipe.ingredients))
+        : null
+    }
+
+    console.log('转换后的请求数据:', requestData)
+
+    const response = await axios.put(
+      API_CONFIG.baseURL + API_CONFIG.recipe.update + updatedRecipe.id,
+      requestData
+    )
+
+    console.log('后端完整响应:', response)
+    console.log('响应状态码:', response.status)
+    console.log('响应数据 code:', response.data?.code)
+    console.log('响应数据 message:', response.data?.message)
+    console.log('响应数据 data:', response.data?.data)
+
+    if (response.data?.code === '200') {
+      console.log('✅ 更新成功，开始更新本地数据')
+      console.log('后端返回的食谱数据:', response.data.data)
+
+      // 更新本地数据
+      const index = myRecipes.value.findIndex((r) => r.id === updatedRecipe.id)
+      if (index !== -1) {
+        myRecipes.value[index] = {
+          ...response.data.data,
+          items:
+            typeof response.data.data.items === 'string'
+              ? JSON.parse(response.data.data.items)
+              : response.data.data.items || [],
+          ingredients:
+            typeof response.data.data.ingredients === 'string'
+              ? JSON.parse(response.data.data.ingredients)
+              : response.data.data.ingredients || []
+        }
+        console.log('本地数据已更新:', myRecipes.value[index])
+      }
+      ElMessage.success('食谱更新成功')
+    } else {
+      console.warn('后端返回错误:', response.data)
+      ElMessage.error('食谱更新失败')
+    }
+  } catch (error) {
+    console.error('更新食谱失败:', error)
+    ElMessage.error('更新食谱失败，请稍后重试')
+  }
+
+  console.log('=== MyRecipe saveRecipeEdit 结束 ===')
 }
 
 // 订单导入相关
@@ -1092,6 +1212,7 @@ const getTagType = (type) => {
     v-model:recipe="selectedRecipe"
     @update:recipe="updateRecipe"
     @update:cook-time="handleUpdateCookTime"
+    @start-edit="editRecipe"
   />
 
   <!-- 替换菜品对话框 -->
@@ -1145,7 +1266,13 @@ const getTagType = (type) => {
   ></ImportMerchantDish>
 
   <!-- 添加食谱组件 -->
-  <AddRecipe v-model:visible="addDialogVisible" @add-recipe="handleAddRecipe" />
+  <AddRecipe
+    v-model:visible="addDialogVisible"
+    :recipe="editingRecipe"
+    @add-recipe="handleAddRecipe"
+    @update-recipe="saveRecipeEdit"
+    @start-edit="startEdit"
+  />
 
   <!-- 从订单导入对话框 -->
   <el-dialog

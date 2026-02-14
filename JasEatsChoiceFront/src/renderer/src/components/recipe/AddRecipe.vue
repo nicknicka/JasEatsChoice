@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
   ForkSpoon as ForkSpoonIcon,
@@ -10,17 +10,18 @@ import {
 
 // 接收props
 const props = defineProps({
-  visible: Boolean
+  visible: Boolean,
+  recipe: {
+    type: Object,
+    default: null
+  }
 })
 
 // 定义事件
-const emit = defineEmits(['update:visible', 'add-recipe'])
+const emit = defineEmits(['update:visible', 'add-recipe', 'update-recipe', 'start-edit'])
 
-// 关闭对话框
-const closeDialog = () => {
-  emit('update:visible', false)
-  resetForm()
-}
+// 判断是否为编辑模式
+const isEditMode = ref(false)
 
 // 新食谱表单数据
 const newRecipe = ref({
@@ -47,10 +48,44 @@ const resetForm = () => {
     time: '',
     details: ''
   }
+  isEditMode.value = false
 }
 
-// 保存新食谱
+// 关闭对话框
+const closeDialog = () => {
+  emit('update:visible', false)
+  setTimeout(() => {
+    resetForm()
+  }, 300)
+}
+
+// 监听 props.recipe 变化，当有食谱数据时填充表单
+watch(
+  () => props.recipe,
+  (newRecipeData) => {
+    console.log('AddRecipe watch 触发，recipe 数据:', newRecipeData)
+    if (newRecipeData && Object.keys(newRecipeData).length > 0) {
+      console.log('进入编辑模式，填充表单')
+      isEditMode.value = true
+      newRecipe.value = {
+        name: newRecipeData.name || '',
+        type: newRecipeData.type || '早餐',
+        time: newRecipeData.cookTime || newRecipeData.time || '',
+        details: newRecipeData.details || ''
+      }
+    } else {
+      console.log('进入新增模式，重置表单')
+      isEditMode.value = false
+      resetForm()
+    }
+  },
+  { immediate: true }
+)
+
+// 保存食谱
 const saveNewRecipe = () => {
+  console.log('保存食谱，编辑模式:', isEditMode.value, '表单数据:', newRecipe.value)
+
   // 简单的表单验证
   if (!newRecipe.value.name.trim()) {
     ElMessage.warning('请填写食谱名称')
@@ -63,17 +98,30 @@ const saveNewRecipe = () => {
     return
   }
 
-  // 创建新食谱对象
-  const recipe = {
-    id: Date.now(), // 使用时间戳作为唯一ID
-    name: newRecipe.value.name,
-    type: newRecipe.value.type,
-    time: newRecipe.value.time,
-    details: newRecipe.value.details
+  if (isEditMode.value && props.recipe) {
+    // 编辑模式：更新食谱
+    const updatedRecipe = {
+      ...props.recipe,
+      name: newRecipe.value.name,
+      type: newRecipe.value.type,
+      cookTime: newRecipe.value.time,
+      time: newRecipe.value.time,
+      details: newRecipe.value.details
+    }
+    console.log('触发 update-recipe 事件:', updatedRecipe)
+    emit('update-recipe', updatedRecipe)
+  } else {
+    // 新增模式：创建新食谱
+    const recipe = {
+      id: Date.now(), // 使用时间戳作为唯一ID
+      name: newRecipe.value.name,
+      type: newRecipe.value.type,
+      time: newRecipe.value.time,
+      details: newRecipe.value.details
+    }
+    console.log('触发 add-recipe 事件:', recipe)
+    emit('add-recipe', recipe)
   }
-
-  // 发送添加事件
-  emit('add-recipe', recipe)
   closeDialog()
   // 移除默认的成功提示，由后端响应后统一处理
 }
@@ -83,10 +131,11 @@ const saveNewRecipe = () => {
   <el-dialog
     :model-value="visible"
     @update:model-value="(val) => emit('update:visible', val)"
-    title="添加新食谱"
+    :title="isEditMode ? '编辑食谱' : '添加新食谱'"
     width="500px"
     top="10%"
     transition="dialog-fade"
+    custom-class="add-recipe-dialog"
   >
     <div class="add-recipe-form">
       <el-form
@@ -164,22 +213,15 @@ const saveNewRecipe = () => {
   </el-dialog>
 </template>
 
-<style scoped>
-/* 表单容器 */
-.add-recipe-form {
-  padding: 30px 0;
-  max-width: 440px;
-  margin: 0 auto;
-}
-
-/* 自定义Dialog样式 */
-:deep(.el-dialog__header) {
+<style>
+/* 只针对添加食谱对话框的样式，不影响其他组件 */
+.add-recipe-dialog .el-dialog__header {
   border-bottom: 2px solid rgba(102, 126, 234, 0.3);
   background: linear-gradient(135deg, rgba(230, 247, 255, 0.8) 0%, rgba(186, 231, 255, 0.8) 100%);
   padding: 24px 28px;
 }
 
-:deep(.el-dialog__title) {
+.add-recipe-dialog .el-dialog__title {
   font-size: 20px;
   font-weight: 600;
   color: #1890ff;
@@ -189,13 +231,31 @@ const saveNewRecipe = () => {
   background-clip: text;
 }
 
-:deep(.el-dialog__body) {
+.add-recipe-dialog .el-dialog__body {
   padding: 32px 28px;
 }
 
-/* 表单字段样式 */
-:deep(.el-form-item) {
-  margin-bottom: 32px; /* 增加字段间距 */
+/* 表单容器 */
+.add-recipe-form {
+  padding: 30px 0;
+  max-width: 440px;
+  margin: 0 auto;
+}
+
+/* 表单字段样式 - 只影响对话框内的表单项 */
+.add-recipe-dialog .el-form-item {
+  margin-bottom: 32px;
+}
+
+.add-recipe-dialog .el-form-item__label {
+  font-weight: 500;
+  color: #555;
+  font-size: 14px;
+}
+
+.add-recipe-dialog .el-form-item__label::before {
+  content: '';
+  display: none;
 }
 
 /* 带图标的标签样式 */
@@ -214,44 +274,74 @@ const saveNewRecipe = () => {
   vertical-align: middle;
 }
 
-:deep(.el-form-item__label) {
-  font-weight: 500;
-  color: #555;
-  font-size: 14px;
-}
-
-:deep(.el-form-item__label::before) {
-  content: '';
-  display: none; /* 隐藏原来的指示线 */
-}
-
-/* 输入框样式 */
-:deep(.el-input__wrapper),
-:deep(.el-select__wrapper),
-:deep(.el-textarea__inner) {
+/* 输入框样式 - 只影响对话框内的输入框 */
+.add-recipe-dialog .el-input__wrapper,
+.add-recipe-dialog .el-select__wrapper,
+.add-recipe-dialog .el-textarea__inner {
   border-radius: 8px;
   border: 2px solid #e5e7eb;
   transition: all 0.3s ease;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
-:deep(.el-input__wrapper:hover),
-:deep(.el-select__wrapper:hover),
-:deep(.el-textarea__inner:hover) {
+.add-recipe-dialog .el-input__wrapper:hover,
+.add-recipe-dialog .el-select__wrapper:hover,
+.add-recipe-dialog .el-textarea__inner:hover {
   border-color: #91d5ff;
   box-shadow: 0 0 0 3px rgba(145, 213, 255, 0.1);
 }
 
-:deep(.el-input__wrapper.is-focus),
-:deep(.el-select__wrapper.is-focus),
-:deep(.el-textarea__inner.is-focus) {
+.add-recipe-dialog .el-input__wrapper.is-focus,
+.add-recipe-dialog .el-select__wrapper.is-focus,
+.add-recipe-dialog .el-textarea__inner.is-focus {
   border-color: #40a9ff;
   box-shadow: 0 0 0 3px rgba(64, 169, 255, 0.15);
 }
 
-/* 时间选择器样式 */
-:deep(.el-time-picker__input) {
+/* 时间选择器样式 - 只影响对话框内 */
+.add-recipe-dialog .el-time-picker__input {
   font-size: 14px;
+}
+
+/* 按钮样式 - 只影响对话框内的按钮 */
+.add-recipe-dialog .dialog-footer {
+  text-align: center;
+  padding: 0 28px 24px;
+}
+
+.add-recipe-dialog .dialog-footer .el-button {
+  padding: 10px 28px;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.add-recipe-dialog .dialog-footer .el-button--primary {
+  background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
+  border: 1px solid #91d5ff;
+  color: #0050b3;
+}
+
+.add-recipe-dialog .dialog-footer .el-button--primary:hover {
+  background: linear-gradient(135deg, #bae7ff 0%, #91d5ff 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(64, 169, 255, 0.3);
+}
+
+.add-recipe-dialog .dialog-footer .el-button--default {
+  border-color: #e5e7eb;
+  background-color: #fafafa;
+  color: #666;
+}
+
+.add-recipe-dialog .dialog-footer .el-button--default:hover {
+  border-color: #d9d9d9;
+  background-color: #f0f0f0;
+  color: #333;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 /* 弹窗动画 */
@@ -268,46 +358,5 @@ const saveNewRecipe = () => {
 .dialog-fade-leave-to {
   opacity: 0;
   transform: translateY(20px) scale(0.95);
-}
-
-/* 按钮样式 */
-:deep(.dialog-footer) {
-  text-align: center;
-  padding: 0 28px 24px;
-}
-
-:deep(.dialog-footer .el-button) {
-  padding: 10px 28px;
-  border-radius: 8px;
-  font-weight: 500;
-  font-size: 14px;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-:deep(.dialog-footer .el-button--primary) {
-  background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
-  border: 1px solid #91d5ff;
-  color: #0050b3;
-}
-
-:deep(.dialog-footer .el-button--primary:hover) {
-  background: linear-gradient(135deg, #bae7ff 0%, #91d5ff 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(64, 169, 255, 0.3);
-}
-
-:deep(.dialog-footer .el-button--default) {
-  border-color: #e5e7eb;
-  background-color: #fafafa;
-  color: #666;
-}
-
-:deep(.dialog-footer .el-button--default:hover) {
-  border-color: #d9d9d9;
-  background-color: #f0f0f0;
-  color: #333;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 </style>

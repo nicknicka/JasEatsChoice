@@ -15,7 +15,7 @@ const props = defineProps({
 })
 
 // 定义事件
-const emit = defineEmits(['close', 'update:visible', 'update:cookTime', 'update:details'])
+const emit = defineEmits(['close', 'update:visible', 'update:cookTime', 'update:detail', 'update:recipe'])
 
 // 处理关闭事件
 const handleClose = () => {
@@ -23,13 +23,97 @@ const handleClose = () => {
   emit('update:visible', false)
 }
 
+// 编辑状态
+const isEditing = ref(false)
+
+// 可编辑的食谱数据
+const editableRecipe = ref({
+  name: '',
+  type: '早餐',
+  cookTime: '',
+  detail: ''  // 注意：后端字段名是 detail（单数），不是 details
+})
+
+// 监听 props.recipe 变化，初始化可编辑数据
+watch(
+  () => props.recipe,
+  (newRecipe) => {
+    console.log('=== RecipeDetail watch 触发 ===')
+    console.log('新的食谱数据:', newRecipe)
+
+    if (newRecipe) {
+      editableRecipe.value = {
+        name: newRecipe.name || '',
+        type: newRecipe.type || '早餐',
+        cookTime: newRecipe.cookTime || newRecipe.time || '',
+        detail: newRecipe.detail || ''  // 使用 detail（后端字段名）
+      }
+      console.log('初始化 editableRecipe:', editableRecipe.value)
+    }
+  },
+  { immediate: true }
+)
+
+// 保存编辑
+const saveEdit = async () => {
+  console.log('=== RecipeDetail 保存编辑开始 ===')
+  console.log('原始食谱数据:', props.recipe)
+  console.log('编辑后的食谱数据:', editableRecipe.value)
+  console.log('食谱ID:', props.recipe?.id)
+
+  if (!props.recipe) {
+    console.warn('食谱数据为空')
+    ElMessage.warning('食谱数据为空')
+    return
+  }
+
+  if (!editableRecipe.value.name.trim()) {
+    console.warn('食谱名称为空')
+    ElMessage.warning('请填写食谱名称')
+    return
+  }
+
+  const updatedRecipe = {
+    ...props.recipe,
+    name: editableRecipe.value.name,
+    type: editableRecipe.value.type,
+    cookTime: editableRecipe.value.cookTime,
+    time: editableRecipe.value.cookTime,
+    detail: editableRecipe.value.detail,  // 使用 detail（后端字段名）
+    // 确保 items 和 ingredients 正确处理
+    items: props.recipe.items || null,
+    ingredients: props.recipe.ingredients || null
+  }
+
+  console.log('准备提交的更新数据:', updatedRecipe)
+  console.log('更新后的食谱名称:', updatedRecipe.name)
+  console.log('更新后的食谱类型:', updatedRecipe.type)
+  console.log('更新后的烹饪时间:', updatedRecipe.cookTime)
+  console.log('更新后的食谱详情:', updatedRecipe.detail)  // 修改日志
+  console.log('items 字段类型:', typeof updatedRecipe.items)
+  console.log('ingredients 字段类型:', typeof updatedRecipe.ingredients)
+
+  emit('update:recipe', updatedRecipe)
+  isEditing.value = false
+  console.log('=== RecipeDetail 保存编辑完成，已触发 update:recipe 事件 ===')
+}
+
+// 开始编辑
+const startEdit = () => {
+  console.log('=== RecipeDetail 开始编辑模式 ===')
+  console.log('当前食谱数据:', props.recipe)
+  console.log('初始化 editableRecipe:', {
+    name: props.recipe?.name || '',
+    type: props.recipe?.type || '早餐',
+    cookTime: props.recipe?.cookTime || props.recipe?.time || '',
+    detail: props.recipe?.detail || ''  // 使用 detail（后端字段名）
+  })
+  isEditing.value = true
+}
+
 // 烹饪时间编辑相关变量
 const isEditingCookTime = ref(false)
 const cookTimeValue = ref(null)
-
-// 食谱详情编辑相关变量
-const isEditingDetails = ref(false)
-const detailsValue = ref('')
 
 // 监听recipe变化，初始化烹饪时间
 watch(
@@ -40,15 +124,6 @@ watch(
     } else {
       cookTimeValue.value = '00:00'
     }
-  },
-  { immediate: true }
-)
-
-// 监听recipe变化，初始化食谱详情
-watch(
-  () => props.recipe?.details,
-  (newVal) => {
-    detailsValue.value = newVal || ''
   },
   { immediate: true }
 )
@@ -77,28 +152,18 @@ const cancelEditCookTime = () => {
   isEditingCookTime.value = false
 }
 
-// 开始编辑食谱详情
-const startEditDetails = () => {
-  isEditingDetails.value = true
-}
-
-// 保存食谱详情
-const saveDetails = () => {
-  if (!detailsValue.value) {
-    ElMessage.warning('请输入食谱详情')
-    return
+// 取消编辑
+const cancelEdit = () => {
+  isEditing.value = false
+  // 恢复原始数据
+  if (props.recipe) {
+    editableRecipe.value = {
+      name: props.recipe.name || '',
+      type: props.recipe.type || '早餐',
+      cookTime: props.recipe.cookTime || props.recipe.time || '',
+      detail: props.recipe.detail || ''
+    }
   }
-
-  // 通知父组件更新食谱详情
-  emit('update:details', detailsValue.value)
-  isEditingDetails.value = false
-}
-
-// 取消编辑食谱详情
-const cancelEditDetails = () => {
-  // 恢复原始值
-  detailsValue.value = props.recipe?.details || ''
-  isEditingDetails.value = false
 }
 
 // 根据食谱类型获取颜色主题
@@ -235,24 +300,49 @@ const formatCookTime = (time) => {
       <!-- 食谱封面与标题区域 -->
       <div class="recipe-header-section">
         <div class="recipe-title-block">
-          <h2 class="recipe-main-title">{{ recipe.name }}</h2>
+          <!-- 食谱名称：可编辑 -->
+          <div v-if="!isEditing" class="recipe-main-title">{{ recipe.name }}</div>
+          <el-input
+            v-else
+            v-model="editableRecipe.name"
+            placeholder="食谱名称"
+            size="large"
+            style="margin-bottom: 16px"
+          />
+
           <div class="recipe-basic-info">
+            <!-- 餐型：可编辑 -->
             <div class="info-item">
               <span class="info-label">餐型:</span>
-              <span class="info-value type-tag">{{ getMealTypeName(recipe.type) }}</span>
+              <span v-if="!isEditing" class="info-value type-tag">{{ getMealTypeName(recipe.type) }}</span>
+              <el-select
+                v-else
+                v-model="editableRecipe.type"
+                placeholder="选择餐型"
+                size="small"
+                style="width: 120px"
+              >
+                <el-option label="早餐" value="早餐" />
+                <el-option label="午餐" value="午餐" />
+                <el-option label="晚餐" value="晚餐" />
+                <el-option label="加餐" value="加餐" />
+              </el-select>
             </div>
+
+            <!-- 烹饪时间：只在编辑模式下可编辑 -->
             <div class="info-item">
               <span class="info-label">烹饪时间:</span>
               <div class="cook-time-control">
-                <div v-if="!isEditingCookTime" class="cook-time-display">
+                <div v-if="!isEditing || !isEditingCookTime" class="cook-time-display">
                   <span class="time-text">{{ formatCookTime(recipe.cookTime) }}</span>
                   <el-button
+                    v-if="isEditing"
                     type="primary"
                     size="small"
                     class="edit-cook-time-btn"
                     @click="startEditCookTime"
                   >
-                    编辑
+                    编辑时间
                   </el-button>
                 </div>
 
@@ -374,38 +464,24 @@ const formatCookTime = (time) => {
           </div>
         </div>
 
-        <!-- 食谱详情信息 -->
+        <!-- 食谱详情信息：可编辑 -->
         <div class="details-section">
           <div class="section-title">食谱详情</div>
           <div class="details-content">
-            <div v-if="!isEditingDetails" class="details-display">
-              <span class="details-text">{{ detailsValue || '暂无详情' }}</span>
-              <span class="edit-details-text" @click="startEditDetails">编辑</span>
+            <div v-if="!isEditing" class="details-display">
+              <span class="details-text">{{ editableRecipe.detail || '暂无详情' }}</span>
+              <span class="edit-details-text" @click="startEdit">编辑</span>
             </div>
 
             <div v-else class="details-editor">
               <el-input
-                v-model="detailsValue"
+                v-model="editableRecipe.detail"
                 type="textarea"
                 :rows="3"
                 placeholder="请输入食谱详情"
                 size="default"
                 style="width: 100%"
               />
-
-              <div class="editor-action-buttons">
-                <el-button type="primary" size="small" class="save-btn" @click="saveDetails">
-                  保存
-                </el-button>
-                <el-button
-                  type="default"
-                  size="small"
-                  class="cancel-btn"
-                  @click="cancelEditDetails"
-                >
-                  取消
-                </el-button>
-              </div>
             </div>
           </div>
         </div>
@@ -414,7 +490,10 @@ const formatCookTime = (time) => {
 
     <template #footer>
       <div class="dialog-footer">
-        <el-button type="primary" size="default" @click="handleClose">关闭</el-button>
+        <el-button v-if="!isEditing" type="primary" size="default" @click="handleClose">关闭</el-button>
+        <el-button v-else type="default" size="default" @click="cancelEdit">取消</el-button>
+        <el-button v-if="!isEditing" type="success" size="default" @click="startEdit">编辑</el-button>
+        <el-button v-else type="primary" size="default" @click="saveEdit">保存</el-button>
       </div>
     </template>
   </el-dialog>
@@ -800,6 +879,9 @@ const formatCookTime = (time) => {
 .dialog-footer {
   text-align: center;
   padding: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 16px;
 }
 
 .dialog-footer .el-button {
@@ -807,17 +889,32 @@ const formatCookTime = (time) => {
   padding: 12px 36px;
   font-weight: 600;
   font-size: 16px;
-  background: linear-gradient(135deg, #e3f2fd 0%, #f8f9ff 100%);
-  border: none;
-  color: #333333;
   box-shadow: 0 4px 15px rgba(102, 126, 234, 0.1);
   transition: all 0.3s ease;
 }
 
-.dialog-footer .el-button:hover {
+.dialog-footer .el-button--primary {
+  background: linear-gradient(135deg, #e3f2fd 0%, #f8f9ff 100%);
+  border: none;
+  color: #333333;
+}
+
+.dialog-footer .el-button--primary:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2);
   background: linear-gradient(135deg, #d1ecf1 0%, #e6f7ff 100%);
+}
+
+.dialog-footer .el-button--success {
+  background: linear-gradient(135deg, #e8f5e9 0%, #f1f8ff 100%);
+  border: none;
+  color: #333333;
+}
+
+.dialog-footer .el-button--success:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(76, 175, 80, 0.2);
+  background: linear-gradient(135deg, #c8e6c9 0%, #e6f7ff 100%);
 }
 
 /* 不同主题颜色适配 */

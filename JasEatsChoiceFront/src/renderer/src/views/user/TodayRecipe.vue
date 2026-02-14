@@ -117,7 +117,7 @@ const loadTodayRecipes = () => {
       }
     })
     .then((response) => {
-      // console.log(response) ;
+      console.log(response) ;
       if (
         response.data.data &&
         response.data.data.recipes &&
@@ -319,22 +319,22 @@ const handleUpdateCookTime = (newCookTime) => {
 const handleUpdateDetails = (newDetails) => {
   if (selectedRecipe.value) {
     // 保存原始值，用于失败时恢复
-    const originalDetails = selectedRecipe.value.details
+    const originalDetails = selectedRecipe.value.detail || selectedRecipe.value.details
 
     // 更新本地数据
-    selectedRecipe.value.details = newDetails
+    selectedRecipe.value.detail = newDetails
 
     // 在todayRecipes数组中找到对应的食谱并更新
     const index = todayRecipes.value.findIndex((recipe) => recipe.id === selectedRecipe.value.id)
     if (index !== -1) {
-      todayRecipes.value[index].details = newDetails
+      todayRecipes.value[index].detail = newDetails
     }
 
     // 调用后端API更新食谱
     axios
       .put(API_CONFIG.baseURL + API_CONFIG.recipe.update + selectedRecipe.value.id, {
         ...selectedRecipe.value,
-        details: newDetails
+        detail: newDetails
       })
       .then((response) => {
         console.log('更新食谱详情成功:', response)
@@ -353,7 +353,7 @@ const handleUpdateDetails = (newDetails) => {
           (recipe) => recipe.id === selectedRecipe.value.id
         )
         if (index !== -1) {
-          todayRecipes.value[index].details = originalDetails
+          todayRecipes.value[index].detail = originalDetails
         }
       })
   }
