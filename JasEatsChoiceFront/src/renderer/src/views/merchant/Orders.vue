@@ -339,7 +339,7 @@ const fetchOrders = async () => {
 
   loading.value = true
   try {
-    const apiUrl = `/v1/orders/merchant/${merchantId}`
+    const apiUrl = `/v1/orders/merchant/${merchantId}?today=false`
     console.log('[Orders] 请求API:', apiUrl)
 
     const response = await api.get(apiUrl)

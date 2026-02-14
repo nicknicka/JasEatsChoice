@@ -100,26 +100,36 @@ public class OrderController {
     }
 
     /**
-     * 根据商家ID获取今日订单列表
+     * 根据商家ID获取订单列表
+     * @param merchantId 商家ID
+     * @param today 是否只查询今日订单，默认为true
      */
     @GetMapping("/merchant/{merchantId}")
-    public ResponseResult<?> getOrdersByMerchantId(@PathVariable String merchantId) {
+    public ResponseResult<?> getOrdersByMerchantId(
+            @PathVariable String merchantId,
+            @RequestParam(defaultValue = "true") boolean today) {
         LambdaQueryWrapper<Order> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Order::getMerchantId, merchantId);
 
-        // 筛选今日订单（根据创建时间）
-        // 获取今天的开始时间（00:00:00）和结束时间（23:59:59）
-        java.time.LocalDateTime todayStart = java.time.LocalDateTime.now().toLocalDate().atStartOfDay();
-        java.time.LocalDateTime todayEnd = todayStart.plusDays(1).minusNanos(1);
+        // 根据参数决定是否筛选今日订单
+        if (today) {
+            // 筛选今日订单（根据创建时间）
+            // 获取今天的开始时间（00:00:00）和结束时间（23:59:59）
+            java.time.LocalDateTime todayStart = java.time.LocalDateTime.now().toLocalDate().atStartOfDay();
+            java.time.LocalDateTime todayEnd = todayStart.plusDays(1).minusNanos(1);
 
-        queryWrapper.ge(Order::getCreateTime, todayStart);
-        queryWrapper.le(Order::getCreateTime, todayEnd);
+            queryWrapper.ge(Order::getCreateTime, todayStart);
+            queryWrapper.le(Order::getCreateTime, todayEnd);
+            log.info("商家{}查询今日订单", merchantId);
+        } else {
+            log.info("商家{}查询全部订单", merchantId);
+        }
 
         // 按创建时间倒序排序
         queryWrapper.orderByDesc(Order::getCreateTime);
 
         List<Order> orders = orderService.list(queryWrapper);
-        log.info("商家{}今日订单数量：{}", merchantId, orders.size());
+        log.info("商家{}订单数量：{}", merchantId, orders.size());
         return ResponseResult.success(orders);
     }
 

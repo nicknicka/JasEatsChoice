@@ -396,7 +396,7 @@ const pendingOrder = JSON.parse(sessionStorage.getItem('pendingOrder')) || {}
 const isEmptyOrder = !pendingOrder.cartItems || pendingOrder.cartItems.length === 0
 
 // 从pendingOrder中提取商家ID
-const merchantId = ref(pendingOrder.merchant?.id || '1')
+const merchantId = ref(pendingOrder.merchant?.id)
 console.log('商家ID:', merchantId.value)
 
 // 订单信息
