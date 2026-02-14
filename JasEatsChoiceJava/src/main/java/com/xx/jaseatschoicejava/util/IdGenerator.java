@@ -43,6 +43,7 @@ public class IdGenerator {
     public static final String ORDER_DISH_ID_PREFIX = "OD";
     public static final String REVIEW_REPLY_ID_PREFIX = "RRP";
     public static final String MENU_DISH_ID_PREFIX = "MND";
+    public static final String ADD_DISH_REQUEST_ID_PREFIX = "ADR";
 
     // ID长度
     public static final int ID_LENGTH = 16;
@@ -421,6 +422,18 @@ public class IdGenerator {
     }
 
     /**
+     * 将加菜请求ID转换为带ADR前缀的字符串
+     * @param addDishRequestId 加菜请求ID
+     * @return 带ADR前缀的加菜请求ID字符串
+     */
+    public static String toAddDishRequestIdString(Long addDishRequestId) {
+        if (addDishRequestId == null) {
+            return null;
+        }
+        return ADD_DISH_REQUEST_ID_PREFIX + addDishRequestId;
+    }
+
+    /**
      * 从带前缀的ID字符串中提取原始Long类型ID
      * @param prefixedId 带前缀的ID字符串
      * @return 原始Long类型ID
@@ -507,6 +520,8 @@ public class IdGenerator {
             return "REVIEW_REPLY";
         } else if (prefixedId.startsWith(MENU_DISH_ID_PREFIX)) {
             return "MENU_DISH";
+        } else if (prefixedId.startsWith(ADD_DISH_REQUEST_ID_PREFIX)) {
+            return "ADD_DISH_REQUEST";
         } else {
             throw new IllegalArgumentException("未知的ID前缀: " + prefixedId);
         }
@@ -533,7 +548,7 @@ public class IdGenerator {
             CONSUME_HISTORY_ID_PREFIX, RECHARGE_RECORD_ID_PREFIX, WITHDRAW_RECORD_ID_PREFIX,
             USER_PREFERENCE_ID_PREFIX, CALORIE_RECORD_ID_PREFIX, GROUP_ORDER_ID_PREFIX,
             GROUP_ORDER_DISH_ID_PREFIX, ORDER_DISH_ID_PREFIX, REVIEW_REPLY_ID_PREFIX,
-            MENU_DISH_ID_PREFIX
+            MENU_DISH_ID_PREFIX, ADD_DISH_REQUEST_ID_PREFIX
         };
 
         boolean hasValidPrefix = false;

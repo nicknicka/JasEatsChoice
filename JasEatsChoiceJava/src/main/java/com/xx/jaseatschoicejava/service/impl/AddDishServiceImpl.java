@@ -11,6 +11,7 @@ import com.xx.jaseatschoicejava.enums.AddDishPermission;
 import com.xx.jaseatschoicejava.mapper.AddDishRequestMapper;
 import com.xx.jaseatschoicejava.mapper.AddDishSettingMapper;
 import com.xx.jaseatschoicejava.service.AddDishService;
+import com.xx.jaseatschoicejava.util.IdGenerator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -20,7 +21,6 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -66,7 +66,9 @@ public class AddDishServiceImpl extends ServiceImpl<AddDishRequestMapper, AddDis
 
         // 4. 创建加菜请求
         AddDishRequest request = new AddDishRequest();
-        request.setId(UUID.randomUUID().toString().replace("-", ""));
+        // 使用IdGenerator生成ID
+        String requestId = IdGenerator.toAddDishRequestIdString(IdGenerator.generateId());
+        request.setId(requestId);
         request.setGroupOrderId(dto.getGroupOrderId());
         request.setOriginalOrderId(dto.getOriginalOrderId());
         request.setRequestUserId(requestUserId);
