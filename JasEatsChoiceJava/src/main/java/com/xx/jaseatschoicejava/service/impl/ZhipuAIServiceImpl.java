@@ -187,67 +187,179 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
 
     @Override
     public List<Map<String, Object>> recommendRecipe(String foodName) {
+        long startTime = System.currentTimeMillis();
+
+        log.info("=== 食谱推荐AI服务调用开始 ===");
+        log.info("输入参数 - foodName: \"{}\"", foodName);
+        log.info("输入参数 - foodName长度: {} 字符", foodName != null ? foodName.length() : 0);
+        log.info("请求模型: {}", zhipuAIConfig.getModel());
+
         try {
-            // 构建请求体
+            // ========== 1. 构建请求体 ==========
+            log.info("步骤1/5: 构建AI请求体");
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("model", zhipuAIConfig.getModel());
+            log.info("✓ 模型设置: {}", zhipuAIConfig.getModel());
 
+            // ========== 2. 构建消息列表 ==========
+            log.info("步骤2/5: 构建系统提示词和用户消息");
             List<Map<String, String>> messages = new ArrayList<>();
 
+            // 系统提示词
             Map<String, String> systemMessage = new HashMap<>();
             systemMessage.put("role", "system");
             systemMessage.put("content", RECIPE_PROMPT);
             messages.add(systemMessage);
+            log.info("✓ 系统提示词已添加 (长度: {} 字符)", RECIPE_PROMPT.length());
 
+            // 用户消息
             Map<String, String> userMessage = new HashMap<>();
             userMessage.put("role", "user");
-            userMessage.put("content", "请推荐与\"" + foodName + "\"相关的食谱，返回2-3个食谱");
+            String userContent = "请推荐与\"" + foodName + "\"相关的食谱，返回2-3个食谱";
+            userMessage.put("content", userContent);
             messages.add(userMessage);
+            log.info("✓ 用户消息已添加: \"{}\"", userContent);
 
             requestBody.put("messages", messages);
             requestBody.put("temperature", 0.8);
+            log.info("✓ 温度参数: 0.8");
+            log.info("✓ 总消息数: {}", messages.size());
 
+            // ========== 3. 发送HTTP请求 ==========
+            log.info("步骤3/5: 发送HTTP请求到智谱AI");
+            log.info("请求URL: {}", zhipuAIConfig.getBaseUrl());
             String response = sendRequest(requestBody);
 
-            // 解析响应
-            JsonNode jsonResponse = objectMapper.readTree(response);
-            JsonNode choices = jsonResponse.get("choices");
-            if (choices != null && choices.isArray() && choices.size() > 0) {
-                String content = choices.get(0).get("message").get("content").asText();
+            long apiTime = System.currentTimeMillis() - startTime;
+            log.info("✓ 智谱AI API响应成功，耗时: {} ms", apiTime);
+            log.info("响应长度: {} 字符", response.length());
 
-                // 尝试解析JSON数组
-                try {
-                    JsonNode recipesArray = objectMapper.readTree(content);
-                    if (recipesArray.isArray()) {
-                        List<Map<String, Object>> recipes = new ArrayList<>();
-                        for (JsonNode recipeNode : recipesArray) {
-                            Map<String, Object> recipe = new HashMap<>();
-                            recipe.put("name", recipeNode.get("name").asText());
-                            recipe.put("calorie", recipeNode.get("calorie").asDouble());
-                            recipe.put("difficulty", recipeNode.get("difficulty").asText());
-                            recipe.put("ingredients", recipeNode.get("ingredients").asText());
-                            recipe.put("steps", recipeNode.get("steps").asText());
-                            recipes.add(recipe);
-                        }
-                        return recipes;
-                    }
-                } catch (Exception e) {
-                    // 如果AI返回的不是标准JSON，返回模拟数据
-                    log.warn("AI返回的不是标准JSON格式，使用模拟数据: {}", content);
-                    return getMockRecipes();
-                }
+            // ========== 4. 解析AI响应 ==========
+            log.info("步骤4/5: 解析AI响应");
+            JsonNode jsonResponse = objectMapper.readTree(response);
+            log.info("✓ JSON解析成功");
+
+            JsonNode choices = jsonResponse.get("choices");
+            if (choices == null || !choices.isArray() || choices.size() == 0) {
+                log.error("❌ AI响应格式错误: choices字段为空或不是数组");
+                log.error("完整响应: {}", response);
+                throw new RuntimeException("AI响应格式错误: choices字段为空或不是数组");
             }
 
-            return getMockRecipes();
+            log.info("✓ choices数组长度: {}", choices.size());
+
+            String content = choices.get(0).get("message").get("content").asText();
+            log.info("✓ 提取AI生成内容成功");
+            log.info("AI返回内容预览: {}...",
+                content.length() > 100 ? content.substring(0, 100) + "..." : content);
+            log.info("AI返回内容长度: {} 字符", content.length());
+
+            // ========== 5. 清洗并解析食谱JSON数组 ==========
+            log.info("步骤5/5: 清洗并解析食谱JSON数组");
+
+            // 清洗AI响应：去除Markdown标记
+            String cleanedContent = cleanAIResponse(content);
+            if (!cleanedContent.equals(content)) {
+                log.info("✓ 内容已清洗（去除Markdown标记）");
+                log.info("清洗后长度: {} 字符", cleanedContent.length());
+            } else {
+                log.info("✓ 内容无需清洗");
+            }
+
+            JsonNode recipesArray;
+            try {
+                recipesArray = objectMapper.readTree(cleanedContent);
+                log.info("✓ JSON数组解析成功");
+            } catch (Exception e) {
+                log.error("❌ AI返回的内容不是有效的JSON格式");
+                log.error("原始内容: {}", content);
+                log.error("解析错误: {}", e.getMessage());
+                throw new RuntimeException("AI返回的内容不是有效的JSON格式: " + e.getMessage(), e);
+            }
+
+            if (!recipesArray.isArray()) {
+                log.error("❌ AI返回的内容不是JSON数组类型");
+                log.error("实际类型: {}", recipesArray.getNodeType());
+                log.error("完整内容: {}", content);
+                throw new RuntimeException("AI返回的内容不是JSON数组类型，实际类型: " + recipesArray.getNodeType());
+            }
+
+            log.info("✓ 食谱数组类型验证通过");
+            log.info("食谱数量: {}", recipesArray.size());
+
+            // ========== 解析每个食谱 ==========
+            List<Map<String, Object>> recipes = new ArrayList<>();
+            for (int i = 0; i < recipesArray.size(); i++) {
+                JsonNode recipeNode = recipesArray.get(i);
+                log.info("解析食谱 {}/{}:", i + 1, recipesArray.size());
+
+                // 验证必填字段
+                String[] requiredFields = {"name", "calorie", "difficulty", "ingredients", "steps"};
+                for (String field : requiredFields) {
+                    if (!recipeNode.has(field)) {
+                        log.error("❌ 食谱{}缺少必填字段: {}", i + 1, field);
+                        log.error("食谱数据: {}", recipeNode.toString());
+                        throw new RuntimeException("食谱" + (i + 1) + "缺少必填字段: " + field);
+                    }
+                    log.info("  ✓ {}: {}", field, recipeNode.get(field).asText());
+                }
+
+                Map<String, Object> recipe = new HashMap<>();
+                recipe.put("name", recipeNode.get("name").asText());
+                recipe.put("calorie", recipeNode.get("calorie").asDouble());
+                recipe.put("difficulty", recipeNode.get("difficulty").asText());
+                recipe.put("ingredients", recipeNode.get("ingredients").asText());
+                recipe.put("steps", recipeNode.get("steps").asText());
+                recipes.add(recipe);
+
+                log.info("  ✓ 食谱\"{}\"解析成功", recipe.get("name"));
+            }
+
+            long totalTime = System.currentTimeMillis() - startTime;
+            log.info("=== ✅ 食谱推荐AI服务调用成功 ===");
+            log.info("总耗时: {} ms", totalTime);
+            log.info("返回食谱数量: {}", recipes.size());
+
+            return recipes;
 
         } catch (Exception e) {
-            log.error("食谱推荐失败", e);
-            return getMockRecipes();
+            long totalTime = System.currentTimeMillis() - startTime;
+            log.error("=== ❌ 食谱推荐AI服务调用失败 ===");
+            log.error("总耗时: {} ms", totalTime);
+            log.error("错误类型: {}", e.getClass().getSimpleName());
+            log.error("错误信息: {}", e.getMessage());
+            log.error("输入参数 - foodName: \"{}\"", foodName);
+
+            // 构建详细的错误信息
+            String errorDetails = String.format(
+                "食谱推荐失败\n" +
+                "错误类型: %s\n" +
+                "错误信息: %s\n" +
+                "可能原因:\n" +
+                "1. 后端服务未启动（检查8080端口）\n" +
+                "2. API Key无效（检查智谱AI配置）\n" +
+                "3. 网络连接问题\n" +
+                "4. AI模型名称错误（当前使用: %s）\n" +
+                "5. AI返回的数据格式不符合要求",
+                e.getClass().getSimpleName(),
+                e.getMessage(),
+                zhipuAIConfig.getModel()
+            );
+
+            log.error("详细错误信息:\n{}", errorDetails, e);
+
+            // 直接抛出异常，不使用Mock数据
+            throw new RuntimeException("食谱推荐失败: " + e.getMessage(), e);
         }
     }
 
     @Override
     public Map<String, Object> analyzeNutrition(String foodName) {
+        long startTime = System.currentTimeMillis();
+
+        log.info("=== 营养分析AI服务调用开始 ===");
+        log.info("输入参数 - foodName: \"{}\"", foodName);
+
         try {
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("model", zhipuAIConfig.getModel());
@@ -275,29 +387,44 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
                 String content = choices.get(0).get("message").get("content").asText();
 
                 try {
-                    JsonNode nutritionData = objectMapper.readTree(content);
+                    // 清洗AI响应：去除Markdown标记
+                    String cleanedContent = cleanAIResponse(content);
+                    if (!cleanedContent.equals(content)) {
+                        log.info("✓ 营养数据内容已清洗（去除Markdown标记）");
+                    }
+
+                    JsonNode nutritionData = objectMapper.readTree(cleanedContent);
                     Map<String, Object> result = new HashMap<>();
                     result.put("foodName", foodName);
                     result.put("calorie", nutritionData.get("calorie").asDouble());
                     result.put("protein", nutritionData.get("protein").asDouble());
                     result.put("fat", nutritionData.get("fat").asDouble());
                     result.put("carbohydrate", nutritionData.get("carbohydrate").asDouble());
+
+                    long totalTime = System.currentTimeMillis() - startTime;
+                    log.info("=== ✅ 营养分析AI服务调用成功，耗时: {} ms ===", totalTime);
                     return result;
                 } catch (Exception e) {
-                    log.warn("营养数据解析失败，使用模拟数据");
+                    log.error("❌ 营养数据解析失败，原始内容: {}", content);
+                    throw new RuntimeException("营养数据解析失败: " + e.getMessage(), e);
                 }
             }
 
-            return getMockNutrition(foodName);
+            throw new RuntimeException("AI响应格式错误：choices为空");
 
         } catch (Exception e) {
-            log.error("营养分析失败", e);
-            return getMockNutrition(foodName);
+            long totalTime = System.currentTimeMillis() - startTime;
+            log.error("=== ❌ 营养分析AI服务调用失败，耗时: {} ms ===", totalTime, e);
+            throw new RuntimeException("营养分析失败: " + e.getMessage(), e);
         }
     }
 
     /**
      * 清洗AI响应内容（方案C：正则提取 + 清洗）
+     * 去除markdown标记、额外文字，提取纯JSON
+     */
+    /**
+     * 清洗AI响应内容
      * 去除markdown标记、额外文字，提取纯JSON
      */
     private String cleanAIResponse(String response) {
@@ -312,13 +439,23 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
                 .replaceAll("```", "")
                 .trim();
 
-        // 如果有多余文字，尝试提取JSON部分
-        // 查找第一个 { 和最后一个 }
-        int firstBrace = cleaned.indexOf("{");
-        int lastBrace = cleaned.lastIndexOf("}");
+        // 智能提取JSON部分（保留数组结构）
+        String trimmed = cleaned.trim();
+        char firstChar = trimmed.charAt(0);
 
-        if (firstBrace >= 0 && lastBrace > firstBrace) {
-            cleaned = cleaned.substring(firstBrace, lastBrace + 1);
+        // 如果以 [ 开头，提取整个数组
+        if (firstChar == '[') {
+            int lastBracket = trimmed.lastIndexOf("]");
+            if (lastBracket > 0) {
+                return trimmed.substring(0, lastBracket + 1);
+            }
+        }
+        // 如果以 { 开头，提取整个对象
+        else if (firstChar == '{') {
+            int lastBrace = trimmed.lastIndexOf("}");
+            if (lastBrace > 0) {
+                return trimmed.substring(0, lastBrace + 1);
+            }
         }
 
         return cleaned;
@@ -544,27 +681,6 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
 
 
     /**
-     * 创建模拟菜品数据
-     */
-    private Map<String, Object> createMockDish(String name, int calories, int protein, int fat,
-                                                int carbs, String difficulty, String prepTime,
-                                                List<String> ingredients, List<String> tags, double confidence) {
-        Map<String, Object> dish = new HashMap<>();
-        dish.put("name", name);
-        dish.put("calories", calories);
-        dish.put("protein", protein);
-        dish.put("fat", fat);
-        dish.put("carbs", carbs);
-        dish.put("difficulty", difficulty);
-        dish.put("preparationTime", prepTime);
-        dish.put("ingredients", ingredients);
-        dish.put("tags", tags);
-        dish.put("confidence", confidence);
-        dish.put("nutritionScore", calculateNutritionScore(calories, protein, fat, carbs));
-        return dish;
-    }
-
-    /**
      * 计算营养评分（简单算法）
      */
     private int calculateNutritionScore(int calories, int protein, int fat, int carbs) {
@@ -586,6 +702,11 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
 
     @Override
     public Map<String, Object> optimizeRecipe(String originalRecipe) {
+        long startTime = System.currentTimeMillis();
+
+        log.info("=== 食谱优化AI服务调用开始 ===");
+        log.info("原始食谱长度: {} 字符", originalRecipe != null ? originalRecipe.length() : 0);
+
         try {
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("model", zhipuAIConfig.getModel());
@@ -613,7 +734,13 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
                 String content = choices.get(0).get("message").get("content").asText();
 
                 try {
-                    JsonNode recipeData = objectMapper.readTree(content);
+                    // 清洗AI响应：去除Markdown标记
+                    String cleanedContent = cleanAIResponse(content);
+                    if (!cleanedContent.equals(content)) {
+                        log.info("✓ 食谱优化内容已清洗（去除Markdown标记）");
+                    }
+
+                    JsonNode recipeData = objectMapper.readTree(cleanedContent);
                     Map<String, Object> result = new HashMap<>();
                     result.put("name", recipeData.get("name").asText());
                     result.put("original", recipeData.get("original").asText());
@@ -628,17 +755,22 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
                         }
                     }
                     result.put("improvements", improvements);
+
+                    long totalTime = System.currentTimeMillis() - startTime;
+                    log.info("=== ✅ 食谱优化AI服务调用成功，耗时: {} ms ===", totalTime);
                     return result;
                 } catch (Exception e) {
-                    log.warn("食谱优化解析失败，使用模拟数据");
+                    log.error("❌ 食谱优化数据解析失败，原始内容: {}", content);
+                    throw new RuntimeException("食谱优化数据解析失败: " + e.getMessage(), e);
                 }
             }
 
-            return getMockOptimizedRecipe(originalRecipe);
+            throw new RuntimeException("AI响应格式错误：choices为空");
 
         } catch (Exception e) {
-            log.error("食谱优化失败", e);
-            return getMockOptimizedRecipe(originalRecipe);
+            long totalTime = System.currentTimeMillis() - startTime;
+            log.error("=== ❌ 食谱优化AI服务调用失败，耗时: {} ms ===", totalTime, e);
+            throw new RuntimeException("食谱优化失败: " + e.getMessage(), e);
         }
     }
 
@@ -674,50 +806,6 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
         }
 
         return response.body();
-    }
-
-    // ========== 模拟数据方法 ==========
-
-    private List<Map<String, Object>> getMockRecipes() {
-        List<Map<String, Object>> recipes = new ArrayList<>();
-
-        Map<String, Object> recipe1 = new HashMap<>();
-        recipe1.put("name", "清蒸鲈鱼");
-        recipe1.put("calorie", 280.0);
-        recipe1.put("difficulty", "简单");
-        recipe1.put("ingredients", "鲈鱼, 姜, 葱, 料酒, 蒸鱼豉油");
-        recipe1.put("steps", "1. 鲈鱼处理干净; 2. 姜葱切好铺在盘子上; 3. 鲈鱼放姜葱上; 4. 蒸8分钟; 5. 倒蒸鱼豉油, 热油浇上");
-        recipes.add(recipe1);
-
-        Map<String, Object> recipe2 = new HashMap<>();
-        recipe2.put("name", "清炒时蔬");
-        recipe2.put("calorie", 120.3);
-        recipe2.put("difficulty", "简单");
-        recipe2.put("ingredients", "西兰花, 胡萝卜, 蒜, 盐, 鸡精");
-        recipe2.put("steps", "1. 时蔬洗净切好; 2. 蒜切末; 3. 热油炒蒜末; 4. 加入时蔬翻炒; 5. 加盐和鸡精调味");
-        recipes.add(recipe2);
-
-        return recipes;
-    }
-
-    private Map<String, Object> getMockNutrition(String foodName) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("foodName", foodName);
-        response.put("calorie", 350.5);
-        response.put("protein", 20.3);
-        response.put("fat", 15.7);
-        response.put("carbohydrate", 40.2);
-        return response;
-    }
-
-    private Map<String, Object> getMockOptimizedRecipe(String originalRecipe) {
-        Map<String, Object> result = new HashMap<>();
-        result.put("name", "优化食谱");
-        result.put("original", originalRecipe);
-        result.put("optimized", originalRecipe + "\n\nAI优化建议：减少油盐用量，增加蔬菜比例，采用更健康的烹饪方式。");
-        result.put("calorie", 250.0);
-        result.put("improvements", Arrays.asList("减少油盐", "增加蔬菜", "营养均衡"));
-        return result;
     }
 
     @Override
