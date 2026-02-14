@@ -32,6 +32,14 @@ import java.util.stream.Collectors;
 /**
  * 内容提取服务实现类
  *
+ * TODO: 集成PaddleOCR服务实现真实的内容提取功能
+ * 需要实现的功能：
+ * 1. 图文内容OCR识别（调用PaddleOCR服务）
+ * 2. 视频关键帧提取和识别
+ * 3. 菜谱结构化信息提取
+ *
+ * 参考文档：docs/PaddleOCR部署指南.md
+ *
  * @author Claude
  * @since 2025-01-31
  */
@@ -295,7 +303,18 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
 
         for (ExtractionTask task : tasks) {
             try {
-                // 模拟提取过程
+                // TODO[PaddleOCR]: 调用真实的PaddleOCR服务替换模拟提取
+                // 当前实现：simulateExtraction(task) - 使用mock数据
+                // 目标实现：
+                //   1. 根据ContentSource的platform和url类型选择提取策略
+                //   2. 图文内容：调用PaddleOCR识别图片和文字
+                //   3. 视频内容：提取关键帧后调用OCR
+                //   4. 结构化提取菜谱信息（菜名、食材、步骤）
+                //
+                // 参考文档：docs/PaddleOCR部署指南.md
+                // API示例：
+                //   - POST http://localhost:8001/api/v1/ocr/file
+                //   - POST http://localhost:8001/api/v1/ocr/recipe
                 simulateExtraction(task);
 
                 processedCount++;
@@ -315,7 +334,32 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
     }
 
     /**
-     * 模拟提取过程（实际应调用真实的OCR/NLP服务）
+     * TODO[PaddleOCR]: 模拟提取过程（实际应调用真实的PaddleOCR服务）
+     *
+     * 当前实现：使用硬编码的mock数据
+     *
+     * 目标实现方案：
+     * 1. 图文内容（小红书/微博/文章）：
+     *    - 下载图片
+     *    - 调用 PaddleOCR API: POST /api/v1/ocr/recipe
+     *    - 解析返回的结构化菜谱数据
+     *
+     * 2. 视频内容（抖音/快手/B站）：
+     *    - 下载视频
+     *    - 提取关键帧（每秒1帧）
+     *    - 对关键帧调用OCR识别
+     *    - 提取音频转文字（使用Whisper等）
+     *    - 综合分析提取菜谱信息
+     *
+     * 3. 数据处理：
+     *    - 清洗OCR识别结果
+     *    - 智能推断菜品名称、食材、步骤
+     *    - 估算卡路里、烹饪时间、难度
+     *
+     * 参考文档：docs/PaddleOCR部署指南.md
+     * API端点：
+     *    - POST http://localhost:8001/api/v1/ocr/file (通用识别)
+     *    - POST http://localhost:8001/api/v1/ocr/recipe (菜谱识别)
      */
     private void simulateExtraction(ExtractionTask task) {
         log.info("开始处理提取任务: taskId={}, sourceId={}", task.getId(), task.getSourceId());
