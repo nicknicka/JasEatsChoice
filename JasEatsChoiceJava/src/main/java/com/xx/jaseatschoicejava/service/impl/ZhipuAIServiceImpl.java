@@ -62,6 +62,44 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
             5. 避免空洞的套话
             """;
 
+    // 菜品识别系统提示词（方案B：严格格式要求）
+    private static final String DISH_RECOGNITION_PROMPT = """
+            你是专业的菜品识别专家。请分析图片中的菜品并识别。
+
+            【重要】必须严格按以下JSON格式返回，不允许任何额外文字、markdown标记或解释：
+            {
+              "name": "菜品名称",
+              "calories": 数字,
+              "protein": 数字,
+              "fat": 数字,
+              "carbs": 数字,
+              "difficulty": "简单/中等/困难",
+              "preparationTime": "XX分钟",
+              "ingredients": ["食材1", "食材2"],
+              "tags": ["标签1", "标签2"],
+              "confidence": 0.95
+            }
+
+            字段说明：
+            - name: 菜品名称（字符串）
+            - calories: 每100克的热量（数字，0-2000之间）
+            - protein: 每100克的蛋白质含量（数字，0-100克）
+            - fat: 每100克的脂肪含量（数字，0-100克）
+            - carbs: 每100克的碳水化合物含量（数字，0-200克）
+            - difficulty: 烹饪难度，必须是"简单"、"中等"或"困难"之一
+            - preparationTime: 估算烹饪时间（字符串，格式："XX分钟"）
+            - ingredients: 主要食材列表（数组，3-8个字符串）
+            - tags: 菜系、口味、特色标签（数组，2-5个字符串）
+            - confidence: 识别置信度（数字，0-1之间）
+
+            【严格要求】
+            1. 只返回纯JSON对象，不要添加```json标记
+            2. 不要在JSON前后添加任何解释文字
+            3. 确保JSON格式正确，可以被直接解析
+            4. 所有必填字段都必须存在
+            5. 数值必须在合理范围内
+            """;
+
     @Override
     public String chat(String message, List<Map<String, String>> conversationHistory) {
         long startTime = System.currentTimeMillis();
@@ -258,35 +296,252 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
         }
     }
 
+    /**
+     * 清洗AI响应内容（方案C：正则提取 + 清洗）
+     * 去除markdown标记、额外文字，提取纯JSON
+     */
+    private String cleanAIResponse(String response) {
+        if (response == null || response.trim().isEmpty()) {
+            return response;
+        }
+
+        String cleaned = response.trim();
+
+        // 去除markdown代码块标记
+        cleaned = cleaned.replaceAll("```json\\n?", "")
+                .replaceAll("```", "")
+                .trim();
+
+        // 如果有多余文字，尝试提取JSON部分
+        // 查找第一个 { 和最后一个 }
+        int firstBrace = cleaned.indexOf("{");
+        int lastBrace = cleaned.lastIndexOf("}");
+
+        if (firstBrace >= 0 && lastBrace > firstBrace) {
+            cleaned = cleaned.substring(firstBrace, lastBrace + 1);
+        }
+
+        return cleaned;
+    }
+
+    /**
+     * 校验菜品数据的完整性和合理性（方案A：严格校验）
+     */
+    private void validateDishData(JsonNode dishData) throws Exception {
+        // 校验必填字段
+        String[] requiredFields = {"name", "calories", "protein", "fat", "carbs",
+                                "difficulty", "preparationTime", "ingredients", "tags", "confidence"};
+
+        for (String field : requiredFields) {
+            if (!dishData.has(field) || dishData.get(field).isNull()) {
+                throw new Exception("缺少必填字段：" + field);
+            }
+        }
+
+        // 校验数值范围
+        int calories = dishData.get("calories").asInt();
+        if (calories < 0 || calories > 2000) {
+            throw new Exception("卡路里数值异常： " + calories + "（范围：0-2000）");
+        }
+
+        int protein = dishData.get("protein").asInt();
+        if (protein < 0 || protein > 100) {
+            throw new Exception("蛋白质数值异常： " + protein + "（范围：0-100克）");
+        }
+
+        int fat = dishData.get("fat").asInt();
+        if (fat < 0 || fat > 100) {
+            throw new Exception("脂肪数值异常： " + fat + "（范围：0-100克）");
+        }
+
+        int carbs = dishData.get("carbs").asInt();
+        if (carbs < 0 || carbs > 200) {
+            throw new Exception("碳水数值异常： " + carbs + "（范围：0-200克）");
+        }
+
+        double confidence = dishData.get("confidence").asDouble();
+        if (confidence < 0 || confidence > 1) {
+            throw new Exception("置信度异常： " + confidence + "（范围：0-1）");
+        }
+
+        // 校验difficulty枚举值
+        String difficulty = dishData.get("difficulty").asText();
+        if (!difficulty.matches("简单|中等|困难")) {
+            throw new Exception("难度值异常： " + difficulty + "（必须是：简单/中等/困难）");
+        }
+
+        // 校验数组长度
+        if (!dishData.get("ingredients").isArray() ||
+            dishData.get("ingredients").size() < 3 ||
+            dishData.get("ingredients").size() > 8) {
+            throw new Exception("食材数组长度异常（要求：3-8个）");
+        }
+
+        if (!dishData.get("tags").isArray() ||
+            dishData.get("tags").size() < 2 ||
+            dishData.get("tags").size() > 5) {
+            throw new Exception("标签数组长度异常（要求：2-5个）");
+        }
+    }
+
+    /**
+     * 解析菜品数据JsonNode为Map
+     */
+    private Map<String, Object> parseDishData(JsonNode dishData) {
+        Map<String, Object> result = new HashMap<>();
+        result.put("name", dishData.get("name").asText());
+        result.put("calories", dishData.get("calories").asInt());
+        result.put("protein", dishData.get("protein").asInt());
+        result.put("fat", dishData.get("fat").asInt());
+        result.put("carbs", dishData.get("carbs").asInt());
+        result.put("difficulty", dishData.get("difficulty").asText());
+        result.put("preparationTime", dishData.get("preparationTime").asText());
+
+        // 解析数组字段
+        List<String> ingredients = new ArrayList<>();
+        JsonNode ingredientsNode = dishData.get("ingredients");
+        if (ingredientsNode.isArray()) {
+            for (JsonNode item : ingredientsNode) {
+                ingredients.add(item.asText());
+            }
+        }
+        result.put("ingredients", ingredients);
+
+        List<String> tags = new ArrayList<>();
+        JsonNode tagsNode = dishData.get("tags");
+        if (tagsNode.isArray()) {
+            for (JsonNode item : tagsNode) {
+                tags.add(item.asText());
+            }
+        }
+        result.put("tags", tags);
+
+        result.put("confidence", dishData.get("confidence").asDouble());
+        result.put("nutritionScore", calculateNutritionScore(
+            dishData.get("calories").asInt(),
+            dishData.get("protein").asInt(),
+            dishData.get("fat").asInt(),
+            dishData.get("carbs").asInt()
+        ));
+
+        return result;
+    }
+
     @Override
     public Map<String, Object> recognizeDish(String imageUrl) {
-        // 注意：GLM-4.7-Flash不支持图片识别，需要使用GLM-4V
-        // 这里暂时返回模拟数据
-        log.warn("GLM-4.7-Flash不支持图片识别，返回模拟数据");
+        try {
+            log.info("开始调用视觉模型识别菜品，图片URL：{}", imageUrl);
 
-        // 模拟多种菜品识别结果
-        List<Map<String, Object>> mockDishes = Arrays.asList(
-            createMockDish("宫保鸡丁", 450, 28, 18, 15, "中等", "25分钟",
-                Arrays.asList("鸡肉", "花生米", "辣椒", "黄瓜", "胡萝卜"),
-                Arrays.asList("川菜", "经典", "蛋白质丰富"), 0.95),
-            createMockDish("红烧肉", 580, 22, 35, 20, "中等", "45分钟",
-                Arrays.asList("五花肉", "冰糖", "生抽", "老抽", "姜", "葱"),
-                Arrays.asList("家常菜", "下饭菜", "经典"), 0.92),
-            createMockDish("清蒸鲈鱼", 280, 30, 8, 12, "简单", "20分钟",
-                Arrays.asList("鲈鱼", "姜", "葱", "料酒", "蒸鱼豉油"),
-                Arrays.asList("粤菜", "清淡", "高蛋白", "低脂"), 0.98),
-            createMockDish("麻婆豆腐", 320, 18, 22, 18, "简单", "15分钟",
-                Arrays.asList("豆腐", "牛肉末", "豆瓣酱", "花椒", "蒜苗"),
-                Arrays.asList("川菜", "素食", "下饭"), 0.90),
-            createMockDish("糖醋排骨", 520, 25, 28, 25, "中等", "40分钟",
-                Arrays.asList("排骨", "冰糖", "醋", "生抽", "姜"),
-                Arrays.asList("家常菜", "酸甜口", "经典"), 0.88)
-        );
+            // 构建请求体（使用视觉模型）
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("model", zhipuAIConfig.getVisionModel());
 
-        // 随机返回一个菜品（实际AI会根据图片内容识别）
-        int randomIndex = (int) (Math.random() * mockDishes.size());
-        return mockDishes.get(randomIndex);
+            // 构建多模态消息（文本 + 图片）
+            List<Map<String, Object>> messages = new ArrayList<>();
+
+            // 系统提示词
+            Map<String, Object> systemMessage = new HashMap<>();
+            systemMessage.put("role", "system");
+            systemMessage.put("content", DISH_RECOGNITION_PROMPT);
+            messages.add(systemMessage);
+
+            // 用户消息（包含图片和文本）
+            Map<String, Object> userMessage = new HashMap<>();
+            userMessage.put("role", "user");
+
+            // 多模态内容：图片 + 文本
+            List<Map<String, Object>> content = new ArrayList<>();
+
+            // 添加图片
+            Map<String, Object> imageContent = new HashMap<>();
+            imageContent.put("type", "image_url");
+            imageContent.put("image_url", Map.of("url", imageUrl));
+            content.add(imageContent);
+
+            // 添加文本指令
+            Map<String, Object> textContent = new HashMap<>();
+            textContent.put("type", "text");
+            textContent.put("text", "请识别这张图片中的菜品，并按照要求的JSON格式返回详细信息。");
+            content.add(textContent);
+
+            userMessage.put("content", content);
+            messages.add(userMessage);
+
+            requestBody.put("messages", messages);
+            requestBody.put("temperature", 0.3); // 降低温度以提高识别准确性
+
+            // 发送请求
+            String response = sendRequest(requestBody);
+
+            // 解析响应
+            JsonNode jsonResponse = objectMapper.readTree(response);
+            JsonNode choices = jsonResponse.get("choices");
+
+            if (choices != null && choices.isArray() && choices.size() > 0) {
+                String aiResponse = choices.get(0).get("message").get("content").asText();
+                log.info("AI识别响应原始内容：{}", aiResponse);
+
+                // ============ 第一层降级：尝试直接解析（方案B：严格提示词）============
+                try {
+                    JsonNode dishData = objectMapper.readTree(aiResponse);
+                    validateDishData(dishData);  // 严格校验
+
+                    Map<String, Object> result = parseDishData(dishData);
+                    log.info("✅ 菜品识别成功（方案B）：{}", result.get("name"));
+                    return result;
+
+                } catch (Exception e) {
+                    log.warn("⚠️ 方案B失败：{}", e.getMessage());
+                }
+
+                // ============ 第二层降级：清洗后解析+校验（方案A+C：客户端校验）============
+                try {
+                    String cleanedResponse = cleanAIResponse(aiResponse);
+                    log.info("清洗后的响应：{}", cleanedResponse);
+
+                    JsonNode dishData = objectMapper.readTree(cleanedResponse);
+                    validateDishData(dishData);  // 严格校验
+
+                    Map<String, Object> result = parseDishData(dishData);
+                    log.info("✅ 菜品识别成功（方案A）：{}", result.get("name"));
+                    return result;
+
+                } catch (Exception e) {
+                    log.warn("⚠️ 方案A失败：{}", e.getMessage());
+                }
+
+                // ============ 第三层：所有方案都失败，抛出详细错误============
+                String errorMsg = "菜品识别失败：AI返回的数据格式不符合要求。\n" +
+                        "原始响应：" + aiResponse + "\n" +
+                        "建议：检查AI模型是否支持视觉识别（glm-4.6v-flash）";
+                log.error("❌ {}", errorMsg);
+                throw new Exception(errorMsg);
+            }
+
+        } catch (Exception e) {
+            // ============ 最外层异常处理：直接抛出，不使用模拟数据============
+            String errorDetails = "菜品识别请求失败\n" +
+                    "错误类型：" + e.getClass().getSimpleName() + "\n" +
+                    "错误信息：" + e.getMessage() + "\n" +
+                    "可能原因：\n" +
+                    "1. 后端服务未启动（检查8080端口）\n" +
+                    "2. API Key无效（检查智谱AI配置）\n" +
+                    "3. 网络连接问题\n" +
+                    "4. AI模型名称错误（当前使用：" + zhipuAIConfig.getVisionModel() + "）";
+
+            log.error("❌ 菜品识别失败：{}", errorDetails, e);
+
+            // ============ 返回错误信息而不是抛出异常 ============
+            Map<String, Object> errorResult = new HashMap<>();
+            errorResult.put("error", true);
+            errorResult.put("message", "菜品识别失败：" + e.getMessage());
+            errorResult.put("details", errorDetails);
+
+            return errorResult;
+        }
+        return null;
     }
+
 
     /**
      * 创建模拟菜品数据
@@ -569,5 +824,127 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
         }
 
         return String.join("，", reasons);
+    }
+
+    @Override
+    public Map<String, Object> recognizeDishWithBase64(String imageBase64) {
+        try {
+            log.info("开始调用视觉模型识别菜品（Base64编码），图片大小：{} 字符",
+                    imageBase64 != null ? imageBase64.length() : 0);
+
+            // 构建请求体（使用视觉模型）
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("model", zhipuAIConfig.getVisionModel());
+
+            // 构建多模态消息（文本 + 图片）
+            List<Map<String, Object>> messages = new ArrayList<>();
+
+            // 系统提示词
+            Map<String, Object> systemMessage = new HashMap<>();
+            systemMessage.put("role", "system");
+            systemMessage.put("content", DISH_RECOGNITION_PROMPT);
+            messages.add(systemMessage);
+
+            // 用户消息（包含图片和文本）
+            Map<String, Object> userMessage = new HashMap<>();
+            userMessage.put("role", "user");
+
+            // 多模态内容：图片（Base64） + 文本
+            List<Map<String, Object>> content = new ArrayList<>();
+
+            // 添加图片（Base64格式）
+            Map<String, Object> imageContent = new HashMap<>();
+            imageContent.put("type", "image_url");
+            // Base64格式需要添加data URI前缀
+            String base64DataUrl = "data:image/jpeg;base64," + imageBase64;
+            imageContent.put("image_url", Map.of("url", base64DataUrl));
+            content.add(imageContent);
+
+            // 添加文本指令
+            Map<String, Object> textContent = new HashMap<>();
+            textContent.put("type", "text");
+            textContent.put("text", "请识别这张图片中的菜品，并按照要求的JSON格式返回详细信息。");
+            content.add(textContent);
+
+            userMessage.put("content", content);
+            messages.add(userMessage);
+
+            requestBody.put("messages", messages);
+            requestBody.put("temperature", 0.3); // 降低温度以提高识别准确性
+
+            // 发送请求
+            String response = sendRequest(requestBody);
+
+            // 解析响应
+            JsonNode jsonResponse = objectMapper.readTree(response);
+            JsonNode choices = jsonResponse.get("choices");
+
+            if (choices != null && choices.isArray() && choices.size() > 0) {
+                String aiResponse = choices.get(0).get("message").get("content").asText();
+                log.info("AI识别响应原始内容：{}", aiResponse);
+
+                // ============ 第一层降级：尝试直接解析（方案B：严格提示词）============
+                try {
+                    JsonNode dishData = objectMapper.readTree(aiResponse);
+                    validateDishData(dishData);  // 严格校验
+
+                    Map<String, Object> result = parseDishData(dishData);
+                    log.info("✅ 菜品识别成功（Base64方案）：{}", result.get("name"));
+                    return result;
+
+                } catch (Exception e) {
+                    log.warn("⚠️ Base64方案B失败：{}", e.getMessage());
+                }
+
+                // ============ 第二层降级：清洗后解析+校验（方案A+C：客户端校验）============
+                try {
+                    String cleanedResponse = cleanAIResponse(aiResponse);
+                    log.info("清洗后的响应：{}", cleanedResponse);
+
+                    JsonNode dishData = objectMapper.readTree(cleanedResponse);
+                    validateDishData(dishData);  // 严格校验
+
+                    Map<String, Object> result = parseDishData(dishData);
+                    log.info("✅ 菜品识别成功（Base64方案A）：{}", result.get("name"));
+                    return result;
+
+                } catch (Exception e) {
+                    log.warn("⚠️ Base64方案A失败：{}", e.getMessage());
+                }
+
+                // ============ 第三层：所有方案都失败，抛出详细错误============
+                String errorMsg = "菜品识别失败：AI返回的数据格式不符合要求。\n" +
+                        "原始响应：" + aiResponse + "\n" +
+                        "建议：检查AI模型是否支持视觉识别（glm-4.6v-flash）";
+                log.error("❌ {}", errorMsg);
+                throw new Exception(errorMsg);
+            }
+
+            // 如果AI响应异常，返回错误信息
+            Map<String, Object> errorResult = new HashMap<>();
+            errorResult.put("error", true);
+            errorResult.put("message", "菜品识别失败：AI响应异常");
+
+            return errorResult;
+
+        } catch (Exception e) {
+            // ============ 最外层异常处理：返回错误信息而不是抛出异常 ============
+            String errorDetails = "菜品识别失败\n" +
+                    "错误类型：" + e.getClass().getSimpleName() + "\n" +
+                    "错误信息：" + e.getMessage() + "\n" +
+                    "可能原因：\n" +
+                    "1. Base64编码格式错误\n" +
+                    "2. 网络连接问题\n" +
+                    "3. AI模型名称错误（当前使用：" + zhipuAIConfig.getVisionModel() + "）";
+
+            log.error("❌ 菜品识别失败（Base64）：{}", errorDetails, e);
+
+            Map<String, Object> errorResult = new HashMap<>();
+            errorResult.put("error", true);
+            errorResult.put("message", "菜品识别失败：" + e.getMessage());
+            errorResult.put("details", errorDetails);
+
+            return errorResult;
+        }
     }
 }

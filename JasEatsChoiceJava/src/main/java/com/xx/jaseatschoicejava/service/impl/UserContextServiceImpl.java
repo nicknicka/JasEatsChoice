@@ -8,6 +8,7 @@ import com.xx.jaseatschoicejava.service.UserContextService;
 import com.xx.jaseatschoicejava.service.UserService;
 import com.xx.jaseatschoicejava.service.WeatherService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -27,6 +28,7 @@ public class UserContextServiceImpl implements UserContextService {
     private UserService userService;
 
     @Resource
+    @Lazy
     private CalorieRecordService calorieRecordService;
 
     @Resource

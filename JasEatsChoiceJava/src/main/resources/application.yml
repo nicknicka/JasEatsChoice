@@ -10,6 +10,10 @@ server:
       force-request: true
       force-response: true
 
+# ============ Lombok配置 ============
+lombok:
+  enabled: false  # 禁用Lombok注解处理器，解决编译问题
+
 spring:
   # 文件上传配置
   servlet:
@@ -159,12 +163,15 @@ id:
 zhipuai:
   # API密钥（从 https://open.bigmodel.cn/usercenter/apikeys 获取）
   api-key: 03221a26791e408c8b90fc60153b21c8.cQtSYhnFrFEoT27u
-  # 模型选择（正确的模型名称）
+  # 文本模型选择（用于聊天、推荐等文本交互）
   # glm-4-flash: 标准Flash版本，免费，速度快，并发限制中等（推荐）
   # glm-4-air: 轻量级版本，免费，更低的并发限制
   # glm-4: 标准版，需要付费，能力强
   # glm-4-plus: 增强版，需要付费，能力最强
   model: ${ZHIPU_MODEL:glm-4-flash}
+  # 视觉模型选择（用于菜品识别、图像理解）
+  # glm-4.6v-flash: 支持视觉识别的免费模型（推荐用于菜品识别）
+  vision-model: glm-4.6v-flash
   # API地址
   base-url: https://open.bigmodel.cn/api/paas/v4/chat/completions
   # 超时时间（毫秒）

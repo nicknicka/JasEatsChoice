@@ -3,7 +3,6 @@ package com.xx.jaseatschoicejava.controller;
 import com.xx.jaseatschoicejava.common.ResponseResult;
 import com.xx.jaseatschoicejava.config.FileUploadConfig;
 import com.xx.jaseatschoicejava.service.ZhipuAIService;
-import com.xx.jaseatschoicejava.util.FileUploadUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
@@ -40,17 +39,59 @@ public class AIController {
         try {
             log.info("接收到菜品识别请求，文件名：{}, 大小：{}", image.getOriginalFilename(), image.getSize());
 
-            // 1. 上传图片到服务器
-            String uploadDir = fileUploadConfig.getUploadPath() + "dish-recognition/";
-            String fileName = FileUploadUtil.uploadImage(image, uploadDir, userId);
-            String imageUrl = fileUploadConfig.getUrlPrefix() + "dish-recognition/" + fileName;
+            // 1. 读取图片字节数据（必须在transferTo之前读取，因为它会消耗InputStream）
+            byte[] imageBytes;
+            try (java.io.InputStream is = image.getInputStream()) {
+                imageBytes = is.readAllBytes();
+            }
 
+            // 2. 将图片转为Base64编码（用于AI识别）
+            String base64Data = java.util.Base64.getEncoder().encodeToString(imageBytes);
+            log.info("图片Base64编码长度：{} 字符", base64Data.length());
+
+            // 3. 手动保存图片文件（使用已读取的字节数组，避免重复读取InputStream）
+            String uploadDir = fileUploadConfig.getUploadPath() + "dish-recognition/";
+            java.io.File directory = new java.io.File(uploadDir);
+            if (!directory.exists()) {
+                directory.mkdirs();
+            }
+
+            // 生成文件名
+            String originalFilename = image.getOriginalFilename();
+            String suffix = ".jpg"; // 默认后缀
+            if (originalFilename != null && originalFilename.contains(".")) {
+                suffix = originalFilename.substring(originalFilename.lastIndexOf("."));
+            }
+            String fileName = java.util.UUID.randomUUID().toString() + suffix;
+
+            // 保存文件（使用已读取的字节数组）
+            java.nio.file.Path filePath = java.nio.file.Paths.get(uploadDir + fileName);
+            java.nio.file.Files.write(filePath, imageBytes);
+
+            // 4. 构建图片URL
+            String imageUrl = fileUploadConfig.getServerUrl() + "/" + fileUploadConfig.getUrlPrefix() + "dish-recognition/" + fileName;
             log.info("图片上传成功，URL：{}", imageUrl);
 
-            // 2. 调用AI识别服务
-            Map<String, Object> result = zhipuAIService.recognizeDish(imageUrl);
+            log.info("图片Base64编码长度：{} 字符", base64Data != null ? base64Data.length() : 0);
 
-            // 3. 添加图片URL到结果中
+            // 3. 调用AI识别服务（使用Base64编码）
+            Map<String, Object> result = zhipuAIService.recognizeDishWithBase64(base64Data);
+
+            // 4. 检查识别结果是否有效
+            if (result == null) {
+                log.error("AI识别返回null结果");
+                return ResponseResult.fail("500", "菜品识别失败：服务返回空结果");
+            }
+
+            // 5. 检查识别结果是否包含错误
+            if (Boolean.TRUE.equals(result.get("error"))) {
+                // AI识别失败，返回错误信息
+                String errorMessage = (String) result.get("message");
+                log.error("AI识别失败：{}", errorMessage);
+                return ResponseResult.fail("500", errorMessage != null ? errorMessage : "菜品识别失败");
+            }
+
+            // 6. 添加图片URL到结果中
             result.put("imageUrl", imageUrl);
 
             return ResponseResult.success(result);

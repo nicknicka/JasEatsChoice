@@ -32,6 +32,12 @@ public class ZhipuAIConfig {
     private String model = "glm-4-flash";
 
     /**
+     * 视觉识别模型（用于菜品识别、图像理解）
+     * glm-4.6v-flash: 支持视觉识别的免费模型（推荐用于菜品识别）
+     */
+    private String visionModel = "glm-4.6v-flash";
+
+    /**
      * API基础URL
      */
     private String baseUrl = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
@@ -50,6 +56,10 @@ public class ZhipuAIConfig {
         return model;
     }
 
+    public String getVisionModel() {
+        return visionModel;
+    }
+
     public String getBaseUrl() {
         return baseUrl;
     }
@@ -65,6 +75,10 @@ public class ZhipuAIConfig {
 
     public void setModel(String model) {
         this.model = model;
+    }
+
+    public void setVisionModel(String visionModel) {
+        this.visionModel = visionModel;
     }
 
     public void setBaseUrl(String baseUrl) {

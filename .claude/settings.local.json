@@ -356,7 +356,9 @@
       "Bash(tr:*)",
       "Bash(npx lessc:*)",
       "Bash(du:*)",
-      "Bash(git -C \"/Users/nickxiao/JasEatsChoice\" diff HEAD JasEatsChoiceJava/src/main/java/com/xx/jaseatschoicejava/service/impl/RecommendationServiceImpl.java)"
+      "Bash(git -C \"/Users/nickxiao/JasEatsChoice\" diff HEAD JasEatsChoiceJava/src/main/java/com/xx/jaseatschoicejava/service/impl/RecommendationServiceImpl.java)",
+      "Bash(xxd:*)",
+      "Bash(/Users/nickxiao/Library/Java/JavaVirtualMachines/ms-21.0.7/Contents/Home/bin/javac:*)"
     ],
     "deny": [],
     "ask": [],

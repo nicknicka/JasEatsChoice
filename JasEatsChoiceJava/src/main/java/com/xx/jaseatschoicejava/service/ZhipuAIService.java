@@ -38,6 +38,13 @@ public interface ZhipuAIService {
     Map<String, Object> recognizeDish(String imageUrl);
 
     /**
+     * AI菜品识别（Base64编码）
+     * @param imageBase64 Base64编码的图片数据
+     * @return 识别结果
+     */
+    Map<String, Object> recognizeDishWithBase64(String imageBase64);
+
+    /**
      * AI食谱优化
      * @param originalRecipe 原始食谱
      * @return 优化后的食谱

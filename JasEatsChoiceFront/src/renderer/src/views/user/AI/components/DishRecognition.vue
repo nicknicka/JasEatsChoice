@@ -288,10 +288,22 @@ const recognizeDish = async () => {
     // formData.append('userId', 'xxx')
 
     // 调用后端API
-    const response = await fetch('http://localhost:8080/api/v1/ai/dish-recognize', {
+    const apiUrl = 'http://localhost:8080/api/v1/ai/dish-recognize'
+    console.log('🔍 开始识别菜品，API URL:', apiUrl)
+    console.log('📤 发送图片:', selectedFile.value.name, selectedFile.value.size, 'bytes')
+
+    const response = await fetch(apiUrl, {
       method: 'POST',
       body: formData
     })
+
+    console.log('📡 后端响应状态:', response.status, response.statusText)
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('❌ 请求失败:', response.status, errorText)
+      throw new Error(`请求失败 (${response.status}): ${errorText}`)
+    }
 
     const result = await response.json()
 
