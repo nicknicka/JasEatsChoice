@@ -389,15 +389,21 @@ const confirmReplaceDish = (newDish) => {
           // 更新本地数据 - 确保items字段已解析
           const recipeIndex = myRecipes.value.findIndex((r) => r.id === selectedRecipe.value.id)
           if (recipeIndex !== -1) {
-            // 确保返回的食谱有items数组并已解析
-            const updatedRecipe = {
-              ...response.data.data,
-              items:
-                typeof response.data.data.items === 'string'
-                  ? JSON.parse(response.data.data.items)
-                  : response.data.data.items || []
+            const updatedRecipe = response.data.data
+            // 确保items和ingredients字段被正确解析为数组
+            myRecipes.value[recipeIndex] = {
+              ...updatedRecipe,
+              items: updatedRecipe.items
+                ? typeof updatedRecipe.items === 'string'
+                  ? JSON.parse(updatedRecipe.items)
+                  : updatedRecipe.items
+                : [],
+              ingredients: updatedRecipe.ingredients
+                ? typeof updatedRecipe.ingredients === 'string'
+                  ? JSON.parse(updatedRecipe.ingredients)
+                  : updatedRecipe.ingredients
+                : []
             }
-            myRecipes.value[recipeIndex] = updatedRecipe
           }
 
           ElMessage.success('菜品已替换')
@@ -456,15 +462,21 @@ const handleImportMerchantDishes = (recipe, dishesToImport) => {
           // 更新本地数据 - 确保items字段已解析
           const recipeIndex = myRecipes.value.findIndex((r) => r.id === recipe.id)
           if (recipeIndex !== -1) {
-            // 确保返回的食谱有items数组并已解析
-            const updatedRecipe = {
-              ...response.data.data,
-              items:
-                typeof response.data.data.items === 'string'
-                  ? JSON.parse(response.data.data.items)
-                  : response.data.data.items || []
+            const updatedRecipe = response.data.data
+            // 确保items和ingredients字段被正确解析为数组
+            myRecipes.value[recipeIndex] = {
+              ...updatedRecipe,
+              items: updatedRecipe.items
+                ? typeof updatedRecipe.items === 'string'
+                  ? JSON.parse(updatedRecipe.items)
+                  : updatedRecipe.items
+                : [],
+              ingredients: updatedRecipe.ingredients
+                ? typeof updatedRecipe.ingredients === 'string'
+                  ? JSON.parse(updatedRecipe.ingredients)
+                  : updatedRecipe.ingredients
+                : []
             }
-            myRecipes.value[recipeIndex] = updatedRecipe
           }
 
           ElMessage.success(`成功导入 ${dishesToImport.length} 道菜品`)
@@ -501,15 +513,21 @@ const handleAddDish = (recipe, newDish) => {
         // 更新本地数据 - 确保items字段已解析
         const recipeIndex = myRecipes.value.findIndex((r) => r.id === recipe.id)
         if (recipeIndex !== -1) {
-          // 确保返回的食谱有items数组并已解析
-          const updatedRecipe = {
-            ...response.data.data,
-            items:
-              typeof response.data.data.items === 'string'
-                ? JSON.parse(response.data.data.items)
-                : response.data.data.items || []
+          const updatedRecipe = response.data.data
+          // 确保items和ingredients字段被正确解析为数组
+          myRecipes.value[recipeIndex] = {
+            ...updatedRecipe,
+            items: updatedRecipe.items
+              ? typeof updatedRecipe.items === 'string'
+                ? JSON.parse(updatedRecipe.items)
+                : updatedRecipe.items
+              : [],
+            ingredients: updatedRecipe.ingredients
+              ? typeof updatedRecipe.ingredients === 'string'
+                ? JSON.parse(updatedRecipe.ingredients)
+                : updatedRecipe.ingredients
+              : []
           }
-          myRecipes.value[recipeIndex] = updatedRecipe
         }
 
         ElMessage.success('菜品已添加')
@@ -543,7 +561,21 @@ const deleteDish = (recipe, dish) => {
           // 更新本地数据
           const recipeIndex = myRecipes.value.findIndex((r) => r.id === recipe.id)
           if (recipeIndex !== -1) {
-            myRecipes.value[recipeIndex] = response.data.data
+            const updatedRecipe = response.data.data
+            // 确保items字段被正确解析为数组
+            myRecipes.value[recipeIndex] = {
+              ...updatedRecipe,
+              items: updatedRecipe.items
+                ? typeof updatedRecipe.items === 'string'
+                  ? JSON.parse(updatedRecipe.items)
+                  : updatedRecipe.items
+                : [],
+              ingredients: updatedRecipe.ingredients
+                ? typeof updatedRecipe.ingredients === 'string'
+                  ? JSON.parse(updatedRecipe.ingredients)
+                  : updatedRecipe.ingredients
+                : []
+            }
           }
 
           ElMessage.success('菜品已删除')
@@ -1153,8 +1185,8 @@ const getTagType = (type) => {
               <template #dropdown>
                 <el-dropdown-menu>
                   <el-dropdown-item
-                    v-for="dish in recipe.items || recipe.ingredients || []"
-                    :key="dish.id || dish"
+                    v-for="(dish, index) in recipe.items || recipe.ingredients || []"
+                    :key="`replace-${recipe.id}-${dish.id || dish.name || index}`"
                     @click="replaceDish(recipe, dish)"
                   >
                     {{ typeof dish === 'object' ? dish.name : dish }}
@@ -1176,8 +1208,8 @@ const getTagType = (type) => {
               <template #dropdown>
                 <el-dropdown-menu>
                   <el-dropdown-item
-                    v-for="dish in recipe.items || recipe.ingredients || []"
-                    :key="dish.id || dish"
+                    v-for="(dish, index) in recipe.items || recipe.ingredients || []"
+                    :key="`delete-${recipe.id}-${dish.id || dish.name || index}`"
                     @click="deleteDish(recipe, dish)"
                   >
                     {{ typeof dish === 'object' ? dish.name : dish }}

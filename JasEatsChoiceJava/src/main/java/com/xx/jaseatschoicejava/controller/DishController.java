@@ -84,7 +84,7 @@ public class DishController {
         log.info("根据商家ID获取菜品列表, merchantId: {}", merchantId);
         LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Dish::getMerchantId, merchantId);
-        queryWrapper.eq(Dish::getStatus, true); // 只返回上架的菜品
+        queryWrapper.eq(Dish::getIsOnline, true); // 只返回上架的菜品（使用isOnline而不是status）
         List<Dish> dishes = dishService.list(queryWrapper);
 
         // 转换为包含食材数据的Map列表
