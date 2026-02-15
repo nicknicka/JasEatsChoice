@@ -172,9 +172,10 @@ const getMealTagColor = (type) => {
             :key="dishItem.id"
             :class="['dish-card', dishItem.type]"
             shadow="hover"
-            @click="confirmReplaceDish(dishItem)"
           >
-            <div class="dish-name">{{ dishItem.name }}</div>
+            <div class="dish-name dish-name-clickable" @click="confirmReplaceDish(dishItem)">
+              {{ dishItem.name }}
+            </div>
             <div class="dish-nutrition">
               {{ dishItem.calories || dishItem.calorie || 0 }}kcal
               <span v-if="dishItem.protein || dishItem.carbs || dishItem.fat">
@@ -272,29 +273,34 @@ const getMealTagColor = (type) => {
     }
 
     .dish-card {
-      cursor: pointer;
-      border-left: 3px solid #ccc !important;
-      transition: all 0.3s ease;
+      border-left: 4px solid #ccc !important;
       position: relative;
-      pointer-events: auto;
-      background: linear-gradient(135deg, #ffffff 0%, #f5f9ff 100%) !important;
-
-      &:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 6px 16px rgba(102, 126, 234, 0.2) !important;
-        border-left-width: 5px !important;
-      }
-
-      &:active {
-        transform: translateY(-1px);
-        box-shadow: 0 3px 8px rgba(102, 126, 234, 0.3) !important;
-      }
+      background: #ffffff !important;
+      border-radius: 12px !important;
+      border: 1px solid #e0e0e0 !important;
 
       .dish-name {
         font-size: 15px;
         font-weight: bold;
         margin-bottom: 6px;
         color: #2c3e50;
+      }
+
+      .dish-name-clickable {
+        cursor: pointer;
+        padding: 4px;
+        margin: -4px;
+        border-radius: 6px;
+        transition: all 0.2s ease;
+
+        &:hover {
+          background: #f5f7ff;
+          color: #667eea;
+        }
+
+        &:active {
+          background: #eef2f7;
+        }
       }
 
       .dish-nutrition {
@@ -332,12 +338,10 @@ const getMealTagColor = (type) => {
   border-left-color: v-bind('getMealTagColor(dishItem?.type)') !important;
 }
 
-// 确保卡片可以点击
+// 确保卡片整体不需要点击手势
 :deep(.el-card) {
-  cursor: pointer;
-
   .el-card__body {
-    cursor: pointer;
+    cursor: default;
   }
 }
 
@@ -357,7 +361,6 @@ const getMealTagColor = (type) => {
     padding: 8px 20px;
     border-radius: 8px;
     font-weight: 600;
-    transition: all 0.3s ease;
   }
 
   .el-button--primary {
@@ -366,8 +369,7 @@ const getMealTagColor = (type) => {
 
     &:hover {
       background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-      transform: translateY(-2px);
+      box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
     }
   }
 }

@@ -1,6 +1,5 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { ArrowDown } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { API_CONFIG } from '../../config'
 import axios from 'axios'
@@ -12,34 +11,7 @@ import AddDish from '../../components/AddDish.vue'
 import ImportMerchantDish from '../../components/ImportMerchantDish.vue'
 import AddRecipe from '../../components/recipe/AddRecipe.vue'
 import ReplaceDish from '../../components/ReplaceDish.vue'
-
-// 餐型图标映射
-const getMealIcon = (type) => {
-  const mealTypeIcons = {
-    breakfast: '🥣',
-    lunch: '🍚',
-    dinner: '🍱',
-    afternoon_tea: '🍵',
-    tea: '🍵',
-    night_snack: '🍪',
-    snack: '🍪',
-    morning_snack: '🥐',
-    brunch: '🥐',
-    supper: '🌙',
-    midnight_snack: '🌙',
-    health_snack: '💪',
-    fitness_meal: '💪',
-    dessert: '🍰',
-    sweet: '🍰',
-    soup: '🍲',
-    porridge: '🍲',
-    salad: '🥗',
-    vegetable: '🥗',
-    meat: '🥩',
-    protein: '🥩'
-  }
-  return mealTypeIcons[type] || '🍴'
-}
+import RecipeCard from '../../components/RecipeCard.vue'
 
 // 获取认证信息
 const authStore = useAuthStore()
@@ -154,47 +126,6 @@ onMounted(() => {
 // 默认使用一列布局
 const layoutType = ref('one-column')
 
-// 获取标签类型
-const getTagType = (type) => {
-  switch (type) {
-    case 'breakfast':
-      return 'warning'
-    case 'lunch':
-      return 'success'
-    case 'dinner':
-      return 'primary'
-    case 'afternoon_tea':
-    case 'tea':
-      return 'purple'
-    case 'night_snack':
-    case 'snack':
-      return 'blue'
-    case 'morning_snack':
-    case 'brunch':
-      return 'orange'
-    case 'supper':
-    case 'midnight_snack':
-      return 'cyan'
-    case 'health_snack':
-    case 'fitness_meal':
-      return 'green'
-    case 'dessert':
-    case 'sweet':
-      return 'pink'
-    case 'soup':
-    case 'porridge':
-      return 'teal'
-    case 'salad':
-    case 'vegetable':
-      return 'success'
-    case 'meat':
-    case 'protein':
-      return 'brown'
-    default:
-      return 'info'
-  }
-}
-
 // 模态框状态
 const detailDialogVisible = ref(false)
 const replaceDishVisible = ref(false)
@@ -281,6 +212,16 @@ const replaceDish = (recipe, dish) => {
   selectedRecipe.value = recipe
   selectedDish.value = dish
   replaceDishVisible.value = true
+}
+
+// 处理替换菜品点击（从 RecipeCard 组件）
+const handleReplaceDishClick = ({ recipe, dish }) => {
+  replaceDish(recipe, dish)
+}
+
+// 处理删除菜品点击（从 RecipeCard 组件）
+const handleDeleteDishClick = ({ recipe, dish }) => {
+  deleteDish(recipe, dish)
 }
 
 // 处理菜品替换
@@ -824,6 +765,16 @@ const openImportMerchantDish = (recipe) => {
   importMerchantDishVisible.value = true
 }
 
+// 切换卡片选中状态
+const toggleCardSelection = (recipeId) => {
+  const index = selectedRecipes.value.indexOf(recipeId)
+  if (index > -1) {
+    selectedRecipes.value.splice(index, 1)
+  } else {
+    selectedRecipes.value.push(recipeId)
+  }
+}
+
 // 筛选后的食谱列表
 const filteredRecipes = computed(() => {
   let filtered = [...todayRecipes.value]
@@ -875,12 +826,12 @@ const filteredRecipes = computed(() => {
   <!-- 单一根节点包裹器，用于 Transition 动画 -->
   <div class="today-recipe-wrapper">
     <div class="today-recipe-container">
-    <div class="recipe-header fade-in-up">
+    <div class="recipe-header">
       <h2>今日食谱</h2>
     </div>
 
     <!-- 营养摄入统计 -->
-    <el-card class="nutrition-card scale-in">
+    <el-card class="nutrition-card">
       <template #header>
         <div class="card-header">营养摄入统计</div>
       </template>
@@ -985,94 +936,22 @@ const filteredRecipes = computed(() => {
       <div v-if="filteredRecipes.length === 0" class="no-recipes-message">
         <el-empty description="今日没有食谱数据"></el-empty>
       </div>
-      <el-checkbox-group v-else v-model="selectedRecipes">
-        <el-card
+      <div v-else>
+        <RecipeCard
           v-for="recipe in filteredRecipes"
           :key="recipe.id"
-          class="recipe-card stagger-item"
-          :class="[recipe.type, { 'recipe-card-favorited': recipe.isFavorite }]"
-        >
-          <template #header>
-            <div class="card-header">
-              <!-- 批量选择复选框 -->
-              <div class="checkbox-wrapper">
-                <el-checkbox :label="recipe.id"></el-checkbox>
-              </div>
-              <span class="meal-icon">
-                {{ getMealIcon(recipe?.type) }}
-              </span>
-              {{ recipe.name }}
-              <!-- 右上角收藏按钮 -->
-              <div class="card-favorite">
-                <el-button
-                  type="text"
-                  size="small"
-                  :class="{ 'favorite-btn': recipe.isFavorite }"
-                  style="padding: 0; margin: 0; font-size: 18px"
-                  @click="toggleRecipeFavorite(recipe)"
-                >
-                  {{ recipe.isFavorite ? '⭐' : '☆' }}
-                </el-button>
-              </div>
-            </div>
-          </template>
-          <div class="recipe-items">
-            <el-tag
-              v-for="(item, index) in recipe.items && recipe.items.length > 0
-                ? recipe.items
-                : ['待添加菜品']"
-              :key="index"
-              :type="getTagType(recipe.type)"
-            >
-              {{ typeof item === 'object' ? item.name : item }}
-            </el-tag>
-          </div>
-          <div class="recipe-actions">
-            <el-button type="text" size="small" @click="viewRecipeDetails(recipe)"
-              >查看详情</el-button
-            >
-            <el-button type="text" size="small" @click="addDish(recipe)">添加菜品</el-button>
-            <el-button type="text" size="small" @click="openImportMerchantDish(recipe)"
-              >导入商家菜品</el-button
-            >
-            <!-- 替换菜品按钮：仅在有菜品时显示 -->
-            <el-dropdown v-if="recipe.items && recipe.items.length > 0" trigger="click">
-              <el-button type="text" size="small">
-                替换菜品
-                <el-icon class="el-icon--right"><ArrowDown /></el-icon>
-              </el-button>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item
-                    v-for="dish in recipe.items || []"
-                    :key="dish.id || dish"
-                    @click="replaceDish(recipe, dish)"
-                  >
-                    {{ typeof dish === 'object' ? dish.name : dish }}
-                  </el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
-            <el-dropdown v-if="recipe.items && recipe.items.length > 0" trigger="click">
-              <el-button type="text" size="small">
-                删除菜品
-                <el-icon class="el-icon--right"><ArrowDown /></el-icon>
-              </el-button>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item
-                    v-for="dish in recipe.items || []"
-                    :key="dish.id || dish"
-                    @click="deleteDish(recipe, dish)"
-                  >
-                    {{ typeof dish === 'object' ? dish.name : dish }}
-                  </el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
-          </div>
-        </el-card>
-      </el-checkbox-group>
+          :recipe="recipe"
+          :selectable="true"
+          :selected-ids="selectedRecipes"
+          @toggle-select="toggleCardSelection"
+          @toggle-favorite="toggleRecipeFavorite"
+          @view-details="viewRecipeDetails"
+          @add-dish="addDish"
+          @import-merchant-dish="openImportMerchantDish"
+          @replace-dish="handleReplaceDishClick"
+          @delete-dish="handleDeleteDishClick"
+        />
+      </div>
     </div>
   </div>
 
@@ -1227,132 +1106,32 @@ const filteredRecipes = computed(() => {
 
   .recipe-card {
     margin-bottom: 16px !important;
-    background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%) !important;
-    border-radius: 20px !important;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.8) !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: #ffffff !important;
+    border-radius: 12px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e0e0e0 !important;
     overflow: hidden;
     position: relative;
 
-    &::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 4px;
-      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-    }
-
     &.recipe-card-favorited {
       border: 2px solid #ffd700 !important;
-      box-shadow:
-        0 8px 30px rgba(255, 215, 0, 0.15),
-        0 0 0 3px rgba(255, 215, 0, 0.05);
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 2px 8px rgba(255, 215, 0, 0.2);
+    }
 
-      &::before {
-        background: linear-gradient(90deg, #ffd700 0%, #ffed4e 100%);
-      }
+    // 选中状态的卡片
+    &.recipe-card-selected {
+      border: 2px solid #667eea !important;
+      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
     }
 
     // 为收藏状态的卡片添加与餐型匹配的hover阴影效果
     &.recipe-card-favorited:hover {
-      transform: translateY(-8px); // 增强悬浮提升效果
-
-      // 早餐
-      &.breakfast {
-        box-shadow: 0 15px 40px rgba(255, 193, 7, 0.25) !important;
-        // border-color: #ffc107 !important;
-      }
-
-      // 午餐
-      &.lunch {
-        box-shadow: 0 15px 40px rgba(76, 175, 80, 0.25) !important;
-        border-color: #4caf50 !important;
-      }
-
-      // 晚餐
-      &.dinner {
-        box-shadow: 0 15px 40px rgba(33, 150, 243, 0.25) !important;
-        border-color: #2196f3 !important;
-      }
-
-      // 下午茶/茶点
-      &.afternoon_tea,
-      &.tea {
-        box-shadow: 0 15px 40px rgba(156, 39, 176, 0.25) !important;
-        border-color: #9c27b0 !important;
-      }
-
-      // 夜宵/零食
-      &.night_snack,
-      &.snack {
-        box-shadow: 0 15px 40px rgba(30, 136, 229, 0.25) !important;
-        border-color: #1e88e5 !important;
-      }
-
-      // 上午加餐/早午餐
-      &.morning_snack,
-      &.brunch {
-        box-shadow: 0 15px 40px rgba(255, 152, 0, 0.25) !important;
-        border-color: #ff9800 !important;
-      }
-
-      // 宵夜/深夜零食
-      &.supper,
-      &.midnight_snack {
-        box-shadow: 0 15px 40px rgba(0, 188, 212, 0.25) !important;
-        border-color: #00bcd4 !important;
-      }
-
-      // 健康零食/健身餐
-      &.health_snack,
-      &.fitness_meal {
-        box-shadow: 0 15px 40px rgba(76, 175, 80, 0.25) !important;
-        border-color: #4caf50 !important;
-      }
-
-      // 甜点/甜食
-      &.dessert,
-      &.sweet {
-        box-shadow: 0 15px 40px rgba(233, 30, 99, 0.25) !important;
-        border-color: #e91e63 !important;
-      }
-
-      // 汤/粥
-      &.soup,
-      &.porridge {
-        box-shadow: 0 15px 40px rgba(0, 150, 136, 0.25) !important;
-        border-color: #009688 !important;
-      }
-
-      // 沙拉/蔬菜
-      &.salad,
-      &.vegetable {
-        box-shadow: 0 15px 40px rgba(139, 195, 74, 0.25) !important;
-        border-color: #8bc34a !important;
-      }
-
-      // 肉类/蛋白质
-      &.meat,
-      &.protein {
-        box-shadow: 0 15px 40px rgba(121, 85, 72, 0.25) !important;
-        border-color: #795548 !important;
-      }
-
-      // 默认样式
-      &.info {
-        box-shadow: 0 15px 40px rgba(0, 188, 212, 0.25) !important;
-        border-color: #00bcd4 !important;
-      }
+      background: #fffbf0 !important;
     }
 
     &:hover {
-      transform: translateY(-6px);
-      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
-      border-color: rgba(255, 255, 255, 1) !important;
+      background: #f5f7ff !important;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
     }
 
     .card-header {
@@ -1364,6 +1143,8 @@ const filteredRecipes = computed(() => {
       font-weight: 700;
       color: #2c3e50;
       padding: 20px 24px !important;
+      cursor: pointer;
+      user-select: none;
       // border-bottom: 1px solid #eef2f7 !important;
 
       .meal-icon {
@@ -1386,6 +1167,7 @@ const filteredRecipes = computed(() => {
       display: flex;
       flex-wrap: wrap;
       gap: 12px;
+      cursor: default;
 
       .el-tag {
         padding: 8px 16px;
@@ -1398,18 +1180,19 @@ const filteredRecipes = computed(() => {
     .recipe-actions {
       text-align: right;
       margin: 0 24px 20px;
-      padding-top: 20px;
+      padding-top: 16px;
       border-top: 1px solid #eef2f7;
+      cursor: default;
 
       /* 让所有按钮和下拉触发元素在一行显示 */
       display: flex;
       justify-content: flex-end;
-      gap: 8px; /* 统一间距 */
+      gap: 4px; /* 缩小统一间距 */
 
       .el-button {
-        font-size: 14px;
-        padding: 6px 16px;
-        border-radius: 8px;
+        font-size: 13px;
+        padding: 4px 12px;
+        border-radius: 6px;
         margin: 0;
       }
     }
@@ -1655,12 +1438,10 @@ const filteredRecipes = computed(() => {
 
 // 自定义标签颜色和交互
 :deep(.el-tag) {
-  transition: all 0.3s ease;
   cursor: pointer;
 
   &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
   }
 }
 
@@ -1766,11 +1547,9 @@ const filteredRecipes = computed(() => {
       border-radius: 8px;
       text-align: center;
       border: 1px solid #ffcdd2;
-      transition: all 0.3s ease;
 
       &:hover {
-        box-shadow: 0 4px 12px rgba(255, 107, 107, 0.1);
-        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(255, 107, 107, 0.08);
       }
 
       .nutrition-label {
@@ -1807,24 +1586,21 @@ const filteredRecipes = computed(() => {
       border-left: 5px solid #2196f3;
       border: 1px solid #e3f2fd;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
       &:hover {
-        box-shadow: 0 8px 24px rgba(33, 150, 243, 0.15);
-        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(33, 150, 243, 0.12);
         border-color: #1976d2;
       }
 
       // 待添加菜品样式
       &.empty-dish {
-        background: linear-gradient(135deg, #fafafa 0%, #f0f0f0 100%) !important;
+        background: #fafafa !important;
         border: 1px dashed #ccc !important;
         border-left: 5px solid #9e9e9e !important;
         opacity: 0.7;
         box-shadow: none !important;
 
         &:hover {
-          transform: none !important;
           cursor: default;
         }
 
@@ -1863,12 +1639,10 @@ const filteredRecipes = computed(() => {
       color: white;
       font-weight: 500;
       opacity: 0.9;
-      transition: all 0.2s ease;
 
       &:hover {
         opacity: 1;
-        transform: translateY(-1px);
-        box-shadow: 0 3px 8px rgba(102, 126, 234, 0.4);
+        box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
       }
     }
 
@@ -1922,7 +1696,6 @@ const filteredRecipes = computed(() => {
   .el-input__wrapper {
     border-radius: 8px !important;
     border: 1px solid #d9d9d9 !important;
-    transition: all 0.3s ease !important;
 
     &:focus-within {
       border-color: #667eea !important;
@@ -1943,12 +1716,10 @@ const filteredRecipes = computed(() => {
     border: none;
     color: white;
     border-radius: 8px;
-    transition: all 0.3s ease;
 
     &:hover {
       background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-      transform: translateY(-2px);
+      box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
     }
   }
 
@@ -1959,12 +1730,10 @@ const filteredRecipes = computed(() => {
       border: none;
       color: white;
       opacity: 0.9;
-      transition: all 0.2s ease;
 
       &:hover {
         opacity: 1;
-        transform: translateY(-1px);
-        box-shadow: 0 3px 8px rgba(102, 126, 234, 0.4);
+        box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
       }
     }
   }
@@ -1981,7 +1750,6 @@ const filteredRecipes = computed(() => {
     padding: 8px 20px;
     border-radius: 8px;
     font-weight: 600;
-    transition: all 0.3s ease;
   }
 
   // 取消按钮
@@ -2002,8 +1770,7 @@ const filteredRecipes = computed(() => {
 
     &:hover {
       background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-      transform: translateY(-2px);
+      box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
     }
   }
 }
@@ -2062,7 +1829,6 @@ const filteredRecipes = computed(() => {
   .el-select__wrapper {
     border-radius: 8px !important;
     border: 1px solid #d9d9d9 !important;
-    transition: all 0.3s ease !important;
 
     &:focus-within {
       border-color: #667eea !important;

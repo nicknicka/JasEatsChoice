@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 
-import { ArrowDown, Search } from '@element-plus/icons-vue'
+import { Search } from '@element-plus/icons-vue'
 import axios from 'axios'
 import { API_CONFIG } from '../../config'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -13,6 +13,7 @@ import AddDish from '../../components/AddDish.vue'
 import ImportMerchantDish from '../../components/ImportMerchantDish.vue'
 import AddRecipe from '../../components/recipe/AddRecipe.vue'
 import ReplaceDish from '../../components/ReplaceDish.vue'
+import RecipeCard from '../../components/RecipeCard.vue'
 import { useUserStore } from '../../store/userStore'
 
 // 初始化 Pinia store
@@ -346,6 +347,16 @@ const replaceDish = (recipe, dish) => {
   selectedRecipe.value = recipe
   selectedDish.value = dish
   replaceDishVisible.value = true
+}
+
+// 处理替换菜品点击（从 RecipeCard 组件）
+const handleReplaceDishClick = ({ recipe, dish }) => {
+  replaceDish(recipe, dish)
+}
+
+// 处理删除菜品点击（从 RecipeCard 组件）
+const handleDeleteDishClick = ({ recipe, dish }) => {
+  deleteDish(recipe, dish)
 }
 
 // 处理菜品替换
@@ -959,48 +970,6 @@ const exportToDietRecord = () => {
       ElMessage.info('已取消导出')
     })
 }
-
-// 计算食谱菜品
-const calculateRecipeItems = (recipe) => {
-  // 检查recipe是否存在
-  if (!recipe) return []
-
-  // 检查items数组
-  const hasItems = recipe.items && Array.isArray(recipe.items) && recipe.items.length > 0
-
-  // 检查ingredients数组
-  const hasIngredients =
-    recipe.ingredients && Array.isArray(recipe.ingredients) && recipe.ingredients.length > 0
-
-  if (hasItems) {
-    return recipe.items.slice(0, 3) // 最多显示3个菜品
-  } else if (hasIngredients) {
-    return recipe.ingredients.slice(0, 3) // 最多显示3个食材
-  } else {
-    return []
-  }
-}
-
-// 获取标签类型
-const getTagType = (type) => {
-  switch (type) {
-    case '早餐':
-      return 'warning'
-    case '午餐':
-      return 'success'
-    case '晚餐':
-      return 'primary'
-    case '加餐':
-    case 'afternoon_tea':
-    case 'tea':
-      return 'info'
-    case 'night_snack':
-    case 'snack':
-      return 'primary'
-    default:
-      return 'info'
-  }
-}
 </script>
 
 <template>
@@ -1087,140 +1056,22 @@ const getTagType = (type) => {
 
     <!-- 食谱列表 -->
     <div class="recipe-list">
-      <el-checkbox-group v-model="selectedRecipes">
-        <!-- 食谱卡片 -->
-        <el-card
-          v-for="recipe in filteredRecipes"
-          :key="recipe.id"
-          class="recipe-card stagger-item card-hover-effect"
-          :class="[
-            recipe.type,
-            {
-              'recipe-card-favorited': recipe.favorite,
-              'recipe-card-selected': selectedRecipes.includes(recipe.id)
-            }
-          ]"
-          @click="toggleRecipeSelection(recipe)"
-        >
-          <template #header>
-            <div class="card-header">
-              <!-- 批量选择复选框 -->
-              <div class="checkbox-wrapper">
-                <el-checkbox :value="recipe.id" @click.stop> </el-checkbox>
-              </div>
-              <span :class="`meal-icon ${recipe.type}`">
-                {{
-                  recipe.type === '早餐'
-                    ? '🥣'
-                    : recipe.type === '午餐'
-                      ? '🍚'
-                      : recipe.type === '晚餐'
-                        ? '🍱'
-                        : recipe.type === '加餐'
-                          ? '🍪'
-                          : '🍴'
-                }}
-              </span>
-              {{ recipe.name }}
-              <!-- 右上角收藏按钮 -->
-              <div class="card-favorite">
-                <el-button
-                  type="text"
-                  size="small"
-                  :class="{ 'favorite-btn': recipe.favorite }"
-                  style="padding: 0; margin: 0; font-size: 18px"
-                  @click="toggleFavorite(recipe)"
-                >
-                  {{ recipe.favorite ? '⭐' : '☆' }}
-                </el-button>
-              </div>
-            </div>
-          </template>
-          <div class="recipe-items">
-            <el-tag
-              v-for="(item, index) in calculateRecipeItems(recipe)"
-              :key="index"
-              :type="getTagType(recipe.type)"
-            >
-              {{ typeof item === 'string' ? item : item.name }}
-            </el-tag>
-            <!-- 显示更多菜品提示 -->
-            <el-tag v-if="recipe.items?.length > 3 || recipe.ingredients?.length > 3" type="info">
-              +{{ (recipe.items?.length || 0) + (recipe.ingredients?.length || 0) - 3 }} 更多
-            </el-tag>
-            <!-- 空菜品提示 -->
-            <el-tag v-if="calculateRecipeItems(recipe).length === 0" type="warning">
-              暂无菜品
-            </el-tag>
-          </div>
-          <div class="recipe-stats">
-            <div class="stat-item">
-              <span>🔥</span>
-              <span>{{ recipe.calories }} kcal</span>
-            </div>
-            <div class="stat-item">
-              <span>⏰</span>
-              <span>{{ recipe.time }}</span>
-            </div>
-          </div>
-          <div class="recipe-actions">
-            <el-button type="text" size="small" @click="viewRecipeDetails(recipe)"
-              >查看详情</el-button
-            >
-            <el-button type="text" size="small" @click="addDish(recipe)">添加菜品</el-button>
-            <el-button type="text" size="small" @click="openImportMerchantDish(recipe)"
-              >导入商家菜品</el-button
-            >
-            <!-- 替换菜品按钮：仅在有菜品时显示 -->
-            <el-dropdown
-              v-if="
-                (recipe.items && recipe.items.length > 0) ||
-                (recipe.ingredients && recipe.ingredients.length > 0)
-              "
-              trigger="click"
-            >
-              <el-button type="text" size="small">
-                替换菜品
-                <el-icon class="el-icon--right"><ArrowDown /></el-icon>
-              </el-button>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item
-                    v-for="(dish, index) in recipe.items || recipe.ingredients || []"
-                    :key="`replace-${recipe.id}-${dish.id || dish.name || index}`"
-                    @click="replaceDish(recipe, dish)"
-                  >
-                    {{ typeof dish === 'object' ? dish.name : dish }}
-                  </el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
-            <el-dropdown
-              v-if="
-                (recipe.items && recipe.items.length > 0) ||
-                (recipe.ingredients && recipe.ingredients.length > 0)
-              "
-              trigger="click"
-            >
-              <el-button type="text" size="small">
-                删除菜品
-                <el-icon class="el-icon--right"><ArrowDown /></el-icon>
-              </el-button>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item
-                    v-for="(dish, index) in recipe.items || recipe.ingredients || []"
-                    :key="`delete-${recipe.id}-${dish.id || dish.name || index}`"
-                    @click="deleteDish(recipe, dish)"
-                  >
-                    {{ typeof dish === 'object' ? dish.name : dish }}
-                  </el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
-          </div>
-        </el-card>
-      </el-checkbox-group>
+      <RecipeCard
+        v-for="recipe in filteredRecipes"
+        :key="recipe.id"
+        :recipe="recipe"
+        :selectable="true"
+        :selected-ids="selectedRecipes"
+        :show-nutrition="true"
+        :show-time="true"
+        @toggle-select="toggleRecipeSelection"
+        @toggle-favorite="toggleFavorite"
+        @view-details="viewRecipeDetails"
+        @add-dish="addDish"
+        @import-merchant-dish="openImportMerchantDish"
+        @replace-dish="handleReplaceDishClick"
+        @delete-dish="handleDeleteDishClick"
+      />
     </div>
 
     <!-- 空数据提示 -->
