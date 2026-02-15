@@ -162,15 +162,17 @@ const loadOrderDetail = async () => {
             }
           } catch (error) {
             console.error(`获取菜品${orderDish.dishId}详情失败:`, error)
+            // 降级处理：使用订单中存储的信息
             return {
               id: orderDish.dishId,
-              name: `菜品${orderDish.dishId}`,
+              name: orderDish.dishName || `菜品${orderDish.dishId}`,  // 优先使用订单中的菜品名称
               quantity: orderDish.quantity,
               price: orderDish.price,
-              image: '',
-              optionalIngredients: [],
-              requiredIngredients: [],
-              note: ''
+              image: orderDish.dishImage || '',                     // 优先使用订单中的图片
+              optionalIngredients: orderDish.optionalIngredients || [],
+              requiredIngredients: orderDish.requiredIngredients || [],
+              note: orderDish.note || '',
+              unavailable: true                                     // 标记为不可用
             }
           }
         })
@@ -384,8 +386,13 @@ const getActiveStep = () => {
               </div>
 
               <!-- 商品信息 -->
-              <div class="item-info">
-                <div class="item-name">{{ item.name }}</div>
+              <div class="item-info" :class="{ 'item-unavailable': item.unavailable }">
+                <div class="item-name">
+                  {{ item.name }}
+                  <el-tag v-if="item.unavailable" type="danger" size="small" style="margin-left: 8px">
+                    该菜品已下架
+                  </el-tag>
+                </div>
 
                 <!-- 必选食材 -->
                 <div
@@ -933,6 +940,17 @@ const getActiveStep = () => {
           text-overflow: ellipsis;
           white-space: nowrap;
           flex-shrink: 0;
+          display: flex;
+          align-items: center;
+        }
+
+        // 不可用菜品样式
+        &.item-unavailable {
+          opacity: 0.6;
+
+          .item-name {
+            color: #909399;
+          }
         }
 
         .item-ingredients {

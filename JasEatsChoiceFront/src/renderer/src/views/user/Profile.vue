@@ -315,6 +315,35 @@
             <el-option label="保持健康" value="保持健康" />
           </el-select>
         </el-form-item>
+
+        <el-form-item label="饮食偏好标签" prop="preferTags">
+          <el-select
+            v-model="editForm.preferTags"
+            multiple
+            filterable
+            allow-create
+            placeholder="请选择您的饮食偏好（可多选）"
+            style="width: 100%"
+          >
+            <el-option label="🥬 蔬菜" value="蒸菜" />
+            <el-option label="🥗 清淡" value="清淡" />
+            <el-option label="🌶️ 重辣" value="重辣" />
+            <el-option label="🥗 油腻" value="油腻" />
+            <el-option label="🥬 素食" value="素食" />
+            <el-option label="🍤 甜食" value="甜食" />
+            <el-option label="🥦 健康" value="健康" />
+          </el-select>
+        </el-form-item>
+
+        <el-form-item label="过敏信息" prop="allergies">
+          <el-input
+            v-model="editForm.allergies"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入您的过敏信息（如：花生、海鲜等）"
+            clearable
+          />
+        </el-form-item>
       </el-form>
 
       <template #footer>
@@ -323,6 +352,124 @@
           <el-button type="primary" @click="saveEditProfile" :loading="saving">保存</el-button>
         </div>
       </template>
+    </el-dialog>
+
+    <!-- 反馈建议对话框 -->
+    <el-dialog
+      v-model="feedbackDialogVisible"
+      title="反馈建议"
+      width="600px"
+      :close-on-click-modal="false"
+      center
+    >
+      <el-form
+        ref="feedbackFormRef"
+        :model="feedbackForm"
+        :rules="feedbackFormRules"
+        label-width="100px"
+        style="margin-top: 20px"
+      >
+        <el-form-item label="反馈类型" prop="type">
+          <el-select
+            v-model="feedbackForm.type"
+            placeholder="请选择反馈类型"
+            style="width: 100%"
+            @change="handleFeedbackTypeChange"
+          >
+            <el-option label="功能建议" value="suggestion">
+              <span>功能建议</span>
+              <span style="float: right; color: #8492a6; font-size: 12px">
+                <el-icon><InfoFilled /></el-icon>
+              </span>
+            </el-option>
+            <el-option label="问题反馈" value="bug">
+              <span>问题反馈</span>
+              <span style="float: right; color: #8492a6; font-size: 12px">
+                <el-icon><WarningFilled /></el-icon>
+              </span>
+            </el-option>
+            <el-option label="使用咨询" value="inquiry">
+              <span>使用咨询</span>
+              <span style="float: right; color: #8492a6; font-size: 12px">
+                <el-icon><QuestionFilled /></el-icon>
+              </span>
+            </el-option>
+            <el-option label="其他" value="other">
+              <span>其他</span>
+              <span style="float: right; color: #8492a6; font-size: 12px">
+                <el-icon><MoreFilled /></el-icon>
+              </span>
+            </el-option>
+          </el-select>
+        </el-form-item>
+
+        <el-form-item label="反馈标题" prop="title">
+          <el-input
+            v-model="feedbackForm.title"
+            placeholder="请简要描述您的反馈（最多50字）"
+            maxlength="50"
+            show-word-limit
+            clearable
+          />
+        </el-form-item>
+
+        <el-form-item label="详细描述" prop="content">
+          <el-input
+            v-model="feedbackForm.content"
+            type="textarea"
+            :rows="6"
+            placeholder="请详细描述您的反馈内容，包括具体的场景、操作步骤、期望效果等..."
+            maxlength="500"
+            show-word-limit
+            clearable
+          />
+        </el-form-item>
+
+        <el-form-item label="联系方式" prop="contact">
+          <el-input
+            v-model="feedbackForm.contact"
+            placeholder="请留下您的联系方式（手机/邮箱），方便我们回复"
+            clearable
+          />
+        </el-form-item>
+
+        <el-form-item label="上传图片" prop="images">
+          <el-upload
+            v-model:file-list="feedbackImageList"
+            :action="uploadAction"
+            :headers="uploadHeaders"
+            list-type="picture-card"
+            :limit="3"
+            :on-preview="handleImagePreview"
+            :on-remove="handleImageRemove"
+            :on-success="handleImageUploadSuccess"
+            :before-upload="beforeImageUpload"
+            accept="image/*"
+          >
+            <el-icon><Plus /></el-icon>
+            <template #tip>
+              <div style="font-size: 12px; color: #909399; margin-top: 5px">
+                最多上传3张图片，支持 jpg/png 格式，单张图片不超过 2MB
+              </div>
+            </template>
+          </el-upload>
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="feedbackDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="submitFeedbackForm" :loading="submittingFeedback">
+            <el-icon><Promotion /></el-icon>
+            <span style="margin-left: 5px">提交反馈</span>
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
+
+    <!-- 图片预览对话框 -->
+    <el-dialog v-model="imagePreviewVisible" title="图片预览" width="600px" center>
+      <img :src="previewImageUrl" alt="预览图片" style="width: 100%; display: block" />
     </el-dialog>
   </div>
 </template>
@@ -344,7 +491,13 @@ import {
   Service,
   ChatDotSquare,
   SwitchButton,
-  DocumentCopy
+  DocumentCopy,
+  QuestionFilled,
+  WarningFilled,
+  InfoFilled,
+  MoreFilled,
+  Plus,
+  Promotion
 } from '@element-plus/icons-vue'
 import CommonAvatar from '../../components/CommonAvatar.vue'
 import api from '../../utils/api'
@@ -365,11 +518,25 @@ const userStore = useUserStore()
 const loading = ref(true)
 const saving = ref(false)
 
-// 用户信息
+// 用户信息 - 必须与 userStore.UserInfo 接口的字段完全匹配
 const userInfo = ref({
+  // 基本信息
+  userId: '',
+  nickname: '',
   name: '',
   phone: '',
+  email: '',
   location: '',
+  avatar: '',
+
+  // 身体数据
+  height: null,
+  weight: null,
+  dietGoal: null,
+  allergies: null,      // 过敏信息
+  preferTags: null,     // 饮食偏好标签
+
+  // 统计数据
   todayCalorie: 0,
   weekBalance: 0,
   orders: {
@@ -385,10 +552,13 @@ const userInfo = ref({
   collections: 0,
   addresses: 0,
   defaultAddress: '',
-  avatar: '',
-  height: 0,
-  weight: 0,
-  dietGoal: ''
+
+  // 商家相关（用户可能注册为商家）
+  merchantId: null,
+
+  // 时间戳
+  createTime: '',
+  updateTime: null
 })
 
 // 组件引用
@@ -426,7 +596,9 @@ const editForm = reactive({
   location: '',
   height: 0,
   weight: 0,
-  dietGoal: ''
+  dietGoal: '',
+  preferTags: [],      // 饮食偏好标签
+  allergies: ''           // 过敏信息
 })
 
 // 地址选择功能变量
@@ -471,6 +643,51 @@ const editFormRules = ref({
 // 编辑表单引用
 const editFormRef = ref(null)
 
+// 反馈功能变量
+const feedbackDialogVisible = ref(false)
+const feedbackFormRef = ref(null)
+const submittingFeedback = ref(false)
+const feedbackForm = reactive({
+  type: '',
+  title: '',
+  content: '',
+  contact: '',
+  images: []
+})
+const feedbackImageList = ref([])
+const imagePreviewVisible = ref(false)
+const previewImageUrl = ref('')
+
+// 反馈表单验证规则
+const feedbackFormRules = {
+  type: [{ required: true, message: '请选择反馈类型', trigger: 'change' }],
+  title: [
+    { required: true, message: '请输入反馈标题', trigger: 'blur' },
+    { min: 5, max: 50, message: '标题长度在 5 到 50 个字符', trigger: 'blur' }
+  ],
+  content: [
+    { required: true, message: '请输入详细描述', trigger: 'blur' },
+    { min: 10, max: 500, message: '描述长度在 10 到 500 个字符', trigger: 'blur' }
+  ],
+  contact: [
+    {
+      pattern: /^1[3-9]\d{9}$|^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+      message: '请输入正确的手机号或邮箱',
+      trigger: ['blur', 'change']
+    }
+  ]
+}
+
+// 上传配置
+const uploadAction = computed(() => {
+  return `${API_CONFIG.baseURL}${API_CONFIG.upload.image}`
+})
+const uploadHeaders = computed(() => {
+  return {
+    Authorization: `Bearer ${authStore.token || localStorage.getItem('admin_token')}`
+  }
+})
+
 // 生命周期钩子 - 统一的初始化入口
 onMounted(async () => {
   await initPage()
@@ -487,7 +704,8 @@ const initPage = async () => {
       fetchWalletInfo(),
       fetchAddressData(),
       fetchHealthData(),
-      fetchOrderStats()
+      fetchOrderStats(),
+      fetchCollectionCount()
     ])
   } catch (error) {
     console.error('初始化页面失败:', error)
@@ -635,6 +853,27 @@ const fetchOrderStats = async () => {
   }
 }
 
+// 获取收藏数量
+const fetchCollectionCount = async () => {
+  try {
+    const userId = authStore.userId || '0'
+    const response = await api.get('/v1/collections', {
+      params: { userId }
+    })
+
+    if (response.code === '200' && response.data) {
+      userInfo.value.collections = response.data.length || 0
+    } else {
+      userInfo.value.collections = 0
+    }
+
+    console.log('收藏数量:', userInfo.value.collections)
+  } catch (error) {
+    console.error('获取收藏数量失败:', error)
+    userInfo.value.collections = 0
+  }
+}
+
 // 刷新页面数据
 const refreshData = async () => {
   await initPage()
@@ -719,9 +958,130 @@ const goToContact = () => {
 }
 
 // 设置功能
-// 提交反馈建议
+// 打开反馈建议对话框
 const submitFeedback = () => {
-  ElMessage.success('反馈已提交，我们会尽快处理')
+  // 重置表单
+  Object.assign(feedbackForm, {
+    type: '',
+    title: '',
+    content: '',
+    contact: '',
+    images: []
+  })
+  feedbackImageList.value = []
+
+  // 打开反馈对话框
+  feedbackDialogVisible.value = true
+}
+
+// 提交反馈表单
+const submitFeedbackForm = async () => {
+  if (feedbackFormRef.value) {
+    console.log('feedbackForm:', feedbackForm)
+    feedbackFormRef.value.validate(async (valid) => {
+      if (valid) {
+        try {
+          submittingFeedback.value = true
+
+          const userId = parseInt(String(authStore.userId || 1), 10)
+
+          // 准备提交数据
+          const submitData = {
+            userId,
+            type: feedbackForm.type,
+            title: feedbackForm.title,
+            content: feedbackForm.content,
+            contact: feedbackForm.contact,
+            images: feedbackForm.images.map(img => img.url || img.response?.data?.url || img.url)
+          }
+
+          console.log('提交反馈数据:', submitData)
+
+          // 发送POST请求提交反馈
+          const response = await api.post(API_CONFIG.user.feedback, submitData)
+
+          console.log('反馈提交响应:', response)
+          if (response.code === '200') {
+            // 关闭对话框
+            feedbackDialogVisible.value = false
+            ElMessage.success('反馈已提交，感谢您的宝贵建议！')
+          } else {
+            ElMessage.error('反馈提交失败: ' + (response.message || '未知错误'))
+          }
+        } catch (error) {
+          console.error('提交反馈失败:', error)
+          ElMessage.error('网络请求失败，请稍后重试')
+        } finally {
+          submittingFeedback.value = false
+        }
+      } else {
+        ElMessage.error('请检查表单填写是否完整')
+      }
+    })
+  }
+}
+
+// 反馈类型变化处理
+const handleFeedbackTypeChange = (value) => {
+  console.log('反馈类型变化:', value)
+  // 可以根据类型动态调整表单提示等
+}
+
+// 图片上传前校验
+const beforeImageUpload = (file) => {
+  const isImage = file.type.startsWith('image/')
+  const isJpgOrPng = file.type === 'image/jpeg' || file.type === 'image/png'
+  const isLt2M = file.size / 1024 / 1024 < 2
+
+  if (!isImage) {
+    ElMessage.error('只能上传图片文件!')
+    return false
+  }
+  if (!isJpgOrPng) {
+    ElMessage.error('只能上传 JPG/PNG 格式的图片!')
+    return false
+  }
+  if (!isLt2M) {
+    ElMessage.error('图片大小不能超过 2MB!')
+    return false
+  }
+  return true
+}
+
+// 图片上传成功回调
+const handleImageUploadSuccess = (response, file, fileList) => {
+  console.log('图片上传成功:', response)
+  if (response.code === '200') {
+    // 将上传成功的图片URL添加到表单中
+    feedbackForm.images.push({
+      url: response.data.url,
+      name: file.name
+    })
+    ElMessage.success('图片上传成功')
+  } else {
+    ElMessage.error('图片上传失败: ' + response.message)
+    // 上传失败，从文件列表中移除
+    const index = feedbackImageList.value.indexOf(file)
+    if (index > -1) {
+      feedbackImageList.value.splice(index, 1)
+    }
+  }
+}
+
+// 图片预览
+const handleImagePreview = (file) => {
+  previewImageUrl.value = file.url || file.response?.data?.url
+  imagePreviewVisible.value = true
+}
+
+// 图片移除
+const handleImageRemove = (file, fileList) => {
+  console.log('移除图片:', file)
+  // 从表单中移除对应的图片
+  const index = feedbackForm.images.findIndex(img => img.name === file.name)
+  if (index > -1) {
+    feedbackForm.images.splice(index, 1)
+  }
 }
 
 // 资料编辑功能
@@ -737,7 +1097,9 @@ const editProfile = () => {
     location: userInfo.value.location || '',
     height: Number(userInfo.value.height) || 0,
     weight: Number(userInfo.value.weight) || 0,
-    dietGoal: userInfo.value.dietGoal || ''
+    dietGoal: userInfo.value.dietGoal || '',
+    preferTags: userInfo.value.preferTags || [],        // ✅ 映射饮食偏好标签
+    allergies: userInfo.value.allergies || ''          // ✅ 映射过敏信息
   })
 
   // 初始化地址选择器
