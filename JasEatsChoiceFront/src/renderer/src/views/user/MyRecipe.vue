@@ -12,6 +12,7 @@ import RecipeDetail from '../../components/RecipeDetail.vue'
 import AddDish from '../../components/AddDish.vue'
 import ImportMerchantDish from '../../components/ImportMerchantDish.vue'
 import AddRecipe from '../../components/recipe/AddRecipe.vue'
+import ReplaceDish from '../../components/ReplaceDish.vue'
 import { useUserStore } from '../../store/userStore'
 
 // 初始化 Pinia store
@@ -45,15 +46,12 @@ const toggleRecipeSelection = (recipe) => {
 }
 
 // 模态框状态
-const replaceDialogVisible = ref(false)
+const replaceDishVisible = ref(false)
 const addDishVisible = ref(false)
 const importMerchantDishVisible = ref(false)
 
 // 当前选中的菜品
 const selectedDish = ref(null)
-
-// 替换菜品列表 mock数据
-const replacementDishes = ref([])
 
 // 加载我的食谱数据
 const loadMyRecipes = () => {
@@ -347,7 +345,75 @@ const handleUpdateCookTime = (newCookTime) => {
 const replaceDish = (recipe, dish) => {
   selectedRecipe.value = recipe
   selectedDish.value = dish
-  replaceDialogVisible.value = true
+  replaceDishVisible.value = true
+}
+
+// 处理菜品替换
+const handleReplaceDish = async ({ recipe, oldDish, newDish }) => {
+  if (!recipe || !oldDish || !recipe.items) {
+    console.error('替换菜品失败：无效的参数')
+    return
+  }
+
+  // 先保存原菜品，以便失败时恢复
+  const originalItems = [...recipe.items]
+
+  try {
+    // 找到并替换菜品
+    const index = recipe.items.indexOf(oldDish)
+    if (index !== -1) {
+      // 替换菜品，保留营养数据
+      recipe.items[index] = {
+        name: newDish.name,
+        ingredients: newDish.ingredients || [],
+        calories: newDish.calories || newDish.calorie || 0,
+        protein: newDish.protein || 0,
+        carbs: newDish.carbs || 0,
+        fat: newDish.fat || 0
+      }
+
+      // 调用后端API更新食谱 - 将items转换为JSON字符串
+      const updateData = {
+        ...recipe,
+        items: JSON.stringify(recipe.items)
+      }
+
+      const response = await axios.put(
+        API_CONFIG.baseURL + API_CONFIG.recipe.update + recipe.id,
+        updateData
+      )
+
+      // 更新本地数据 - 确保items字段已解析
+      const recipeIndex = myRecipes.value.findIndex((r) => r.id === recipe.id)
+      if (recipeIndex !== -1) {
+        const updatedRecipe = response.data.data
+        // 确保items和ingredients字段被正确解析为数组
+        myRecipes.value[recipeIndex] = {
+          ...updatedRecipe,
+          items: updatedRecipe.items
+            ? typeof updatedRecipe.items === 'string'
+              ? JSON.parse(updatedRecipe.items)
+              : updatedRecipe.items
+            : [],
+          ingredients: updatedRecipe.ingredients
+            ? typeof updatedRecipe.ingredients === 'string'
+              ? JSON.parse(updatedRecipe.ingredients)
+              : updatedRecipe.ingredients
+            : []
+        }
+      }
+
+      // 关闭对话框并重置状态
+      replaceDishVisible.value = false
+      selectedRecipe.value = null
+      selectedDish.value = null
+    }
+  } catch (error) {
+    console.error('替换菜品失败:', error)
+    // 失败时恢复本地数据
+    recipe.items = originalItems
+    throw error // 让组件处理错误提示
+  }
 }
 
 // 添加菜品
@@ -356,71 +422,6 @@ const addDish = (recipe) => {
   recipe.items = recipe.items || []
   selectedRecipe.value = recipe
   addDishVisible.value = true
-}
-
-// 确认替换菜品
-const confirmReplaceDish = (newDish) => {
-  if (selectedRecipe.value && selectedDish.value && selectedRecipe.value.items) {
-    // 先保存原菜品，以便失败时恢复
-    const oldDish = selectedDish.value
-
-    // 找到并替换菜品
-    const index = selectedRecipe.value.items.indexOf(selectedDish.value)
-    if (index !== -1) {
-      // 替换菜品
-      selectedRecipe.value.items[index] = {
-        name: newDish.name,
-        ingredients: [],
-        calories: 0,
-        protein: 0,
-        carbs: 0,
-        fat: 0
-      }
-
-      // 调用后端API更新食谱 - 将items转换为JSON字符串
-      const updateData = {
-        ...selectedRecipe.value,
-        items: JSON.stringify(selectedRecipe.value.items)
-      }
-
-      axios
-        .put(API_CONFIG.baseURL + API_CONFIG.recipe.update + selectedRecipe.value.id, updateData)
-        .then((response) => {
-          // 更新本地数据 - 确保items字段已解析
-          const recipeIndex = myRecipes.value.findIndex((r) => r.id === selectedRecipe.value.id)
-          if (recipeIndex !== -1) {
-            const updatedRecipe = response.data.data
-            // 确保items和ingredients字段被正确解析为数组
-            myRecipes.value[recipeIndex] = {
-              ...updatedRecipe,
-              items: updatedRecipe.items
-                ? typeof updatedRecipe.items === 'string'
-                  ? JSON.parse(updatedRecipe.items)
-                  : updatedRecipe.items
-                : [],
-              ingredients: updatedRecipe.ingredients
-                ? typeof updatedRecipe.ingredients === 'string'
-                  ? JSON.parse(updatedRecipe.ingredients)
-                  : updatedRecipe.ingredients
-                : []
-            }
-          }
-
-          ElMessage.success('菜品已替换')
-          replaceDialogVisible.value = false
-
-          // 重置选中状态
-          selectedRecipe.value = null
-          selectedDish.value = null
-        })
-        .catch((error) => {
-          console.error('替换菜品失败:', error)
-          // 失败时恢复本地数据
-          selectedRecipe.value.items[index] = oldDish
-          ElMessage.error('替换菜品失败')
-        })
-    }
-  }
 }
 
 // 打开导入商家菜品对话框
@@ -1243,38 +1244,14 @@ const getTagType = (type) => {
     @start-edit="editRecipe"
   />
 
-  <!-- 替换菜品对话框 -->
-  <el-dialog
-    v-model="replaceDialogVisible"
-    :title="selectedDish ? `替换 ${selectedDish.name}` : '替换菜品'"
-    width="600px"
-    top="10%"
-  >
-    <div v-if="selectedDish" class="replace-dish-container">
-      <div class="current-dish">
-        <span class="detail-label">当前菜品:</span>
-        <span class="detail-value">{{ selectedDish.name }}</span>
-      </div>
-
-      <div class="available-dishes">
-        <span class="detail-label">可选菜品:</span>
-        <div class="dish-list">
-          <el-card
-            v-for="dish in replacementDishes"
-            :key="dish.id"
-            :class="dish.type"
-            class="dish-card"
-            @click="confirmReplaceDish(dish)"
-          >
-            <div class="dish-name">{{ dish.name }}</div>
-            <div class="dish-nutrition">{{ dish.nutrition }}</div>
-          </el-card>
-        </div>
-      </div>
-
-      <el-divider />
-    </div>
-  </el-dialog>
+  <!-- 替换菜品组件 -->
+  <ReplaceDish
+    v-model:visible="replaceDishVisible"
+    :recipe="selectedRecipe"
+    :dish="selectedDish"
+    @replace="handleReplaceDish"
+    @close="selectedRecipe = null; selectedDish = null"
+  ></ReplaceDish>
 
   <!-- 添加菜品组件 -->
   <AddDish

@@ -425,4 +425,73 @@ public class DishController {
         }
         return relatedDishes;
     }
+
+    /**
+     * 获取可替换的菜品推荐
+     * @param type 餐型（breakfast/lunch/dinner等）
+     * @param exclude 排除的菜品名称
+     * @param limit 返回数量限制
+     * @return 推荐菜品列表
+     */
+    @GetMapping("/replacement")
+    public ResponseResult<?> getReplacementDishes(@RequestParam String type,
+                                                  @RequestParam(required = false) String exclude,
+                                                  @RequestParam(defaultValue = "10") Integer limit) {
+        log.info("获取可替换菜品推荐, type: {}, exclude: {}, limit: {}", type, exclude, limit);
+
+        LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Dish::getCategory, type);
+        queryWrapper.eq(Dish::getIsOnline, true);
+
+        // 排除当前菜品
+        if (com.baomidou.mybatisplus.core.toolkit.StringUtils.isNotBlank(exclude)) {
+            queryWrapper.ne(Dish::getName, exclude);
+        }
+
+        // 按推荐得分和评分排序
+        queryWrapper.orderByDesc(Dish::getScore)
+                  .orderByDesc(Dish::getAvgRating)
+                  .last("LIMIT " + limit);
+
+        List<Dish> dishes = dishService.list(queryWrapper);
+
+        // 转换为前端需要的格式
+        List<Map<String, Object>> resultDishes = new ArrayList<>();
+        for (Dish dish : dishes) {
+            Map<String, Object> dishMap = new HashMap<>();
+            dishMap.put("id", dish.getId());
+            dishMap.put("name", dish.getName());
+            dishMap.put("type", dish.getCategory());
+            dishMap.put("calorie", dish.getCalorie());
+            dishMap.put("calories", dish.getCalorie()); // 兼容字段
+            dishMap.put("price", dish.getPrice());
+            dishMap.put("image", dish.getImage());
+            dishMap.put("description", dish.getDescription());
+            dishMap.put("merchantId", dish.getMerchantId());
+
+            // 解析营养信息
+            Map<String, Object> nutritionData = parseNutrition(dish.getNutrition());
+            dishMap.put("nutrition", nutritionData);
+
+            // 解析食材数据
+            Map<String, Object> ingredientsData = parseIngredients(dish.getIngredients());
+            dishMap.put("ingredients", ingredientsData.get("requiredIngredients"));
+
+            // 如果营养数据中有详细值，使用实际值，否则使用卡路里
+            if (nutritionData != null && !nutritionData.isEmpty()) {
+                dishMap.put("protein", nutritionData.get("protein") != null ? nutritionData.get("protein") : 0);
+                dishMap.put("carbs", nutritionData.get("carbs") != null ? nutritionData.get("carbs") : 0);
+                dishMap.put("fat", nutritionData.get("fat") != null ? nutritionData.get("fat") : 0);
+            } else {
+                dishMap.put("protein", 0);
+                dishMap.put("carbs", 0);
+                dishMap.put("fat", 0);
+            }
+
+            resultDishes.add(dishMap);
+        }
+
+        log.info("返回可替换菜品列表, 数量: {}", resultDishes.size());
+        return ResponseResult.success(resultDishes);
+    }
 }

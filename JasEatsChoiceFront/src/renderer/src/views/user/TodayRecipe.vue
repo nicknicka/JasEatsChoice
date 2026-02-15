@@ -11,6 +11,7 @@ import RecipeDetail from '../../components/RecipeDetail.vue'
 import AddDish from '../../components/AddDish.vue'
 import ImportMerchantDish from '../../components/ImportMerchantDish.vue'
 import AddRecipe from '../../components/recipe/AddRecipe.vue'
+import ReplaceDish from '../../components/ReplaceDish.vue'
 
 // 餐型图标映射
 const getMealIcon = (type) => {
@@ -196,16 +197,12 @@ const getTagType = (type) => {
 
 // 模态框状态
 const detailDialogVisible = ref(false)
-const replaceDialogVisible = ref(false)
+const replaceDishVisible = ref(false)
 const addDishVisible = ref(false)
 
 // 当前选中的食谱和菜品
 const selectedRecipe = ref(null)
 const selectedDish = ref(null)
-
-// 自定义菜品
-const showCustomDishInput = ref(false)
-const customDishName = ref('')
 
 // 导入商家菜品对话框
 const importMerchantDishVisible = ref(false)
@@ -236,16 +233,6 @@ const orders = ref([
 // 导入订单对话框
 const importOrderVisible = ref(false)
 const selectedOrder = ref(null)
-
-// 替换菜品列表 mock数据
-const replacementDishes = ref([
-  { id: 1, name: '全麦面包', type: 'breakfast', nutrition: '247kcal/片' },
-  { id: 2, name: '蒸南瓜', type: 'breakfast', nutrition: '26kcal/100g' },
-  { id: 3, name: '烤鸡胸肉', type: 'lunch', nutrition: '165kcal/100g' },
-  { id: 4, name: '西兰花', type: 'lunch', nutrition: '34kcal/100g' },
-  { id: 5, name: '清蒸鱼', type: 'dinner', nutrition: '105kcal/100g' },
-  { id: 6, name: '炒青菜', type: 'dinner', nutrition: '15kcal/100g' }
-])
 
 // 添加食谱对话框
 const addRecipeVisible = ref(false)
@@ -293,65 +280,67 @@ const handleUpdateRecipe = (updatedRecipe) => {
 const replaceDish = (recipe, dish) => {
   selectedRecipe.value = recipe
   selectedDish.value = dish
-  replaceDialogVisible.value = true
+  replaceDishVisible.value = true
 }
 
-// 确认替换菜品
-const confirmReplaceDish = (newDish) => {
-  if (selectedRecipe.value && selectedDish.value && selectedRecipe.value.items) {
-    // 先保存原菜品，以便失败时恢复
-    const oldDish = selectedDish.value
+// 处理菜品替换
+const handleReplaceDish = async ({ recipe, oldDish, newDish }) => {
+  if (!recipe || !oldDish || !recipe.items) {
+    console.error('替换菜品失败：无效的参数')
+    return
+  }
 
+  // 先保存原菜品，以便失败时恢复
+  const originalItems = [...recipe.items]
+
+  try {
     // 找到并替换菜品
-    const index = selectedRecipe.value.items.indexOf(selectedDish.value)
+    const index = recipe.items.indexOf(oldDish)
     if (index !== -1) {
-      // 替换菜品
-      selectedRecipe.value.items[index] = {
+      // 替换菜品，保留营养数据
+      recipe.items[index] = {
         name: newDish.name,
-        ingredients: [],
-        calories: 0,
-        protein: 0,
-        carbs: 0,
-        fat: 0
+        ingredients: newDish.ingredients || [],
+        calories: newDish.calories || newDish.calorie || 0,
+        protein: newDish.protein || 0,
+        carbs: newDish.carbs || 0,
+        fat: newDish.fat || 0
       }
 
       // 调用后端API更新食谱 - 将items转换为JSON字符串
       const updateData = {
-        ...selectedRecipe.value,
-        items: JSON.stringify(selectedRecipe.value.items)
+        ...recipe,
+        items: JSON.stringify(recipe.items)
       }
 
-      axios
-        .put(API_CONFIG.baseURL + API_CONFIG.recipe.update + selectedRecipe.value.id, updateData)
-        .then((response) => {
-          // 更新本地数据 - 确保items字段已解析
-          const recipeIndex = todayRecipes.value.findIndex((r) => r.id === selectedRecipe.value.id)
-          if (recipeIndex !== -1) {
-            // 确保返回的食谱有items数组并已解析
-            const updatedRecipe = {
-              ...response.data.data,
-              items:
-                typeof response.data.data.items === 'string'
-                  ? JSON.parse(response.data.data.items)
-                  : response.data.data.items || []
-            }
-            todayRecipes.value[recipeIndex] = updatedRecipe
-          }
+      const response = await axios.put(
+        API_CONFIG.baseURL + API_CONFIG.recipe.update + recipe.id,
+        updateData
+      )
 
-          ElMessage.success('菜品已替换')
-          replaceDialogVisible.value = false
+      // 更新本地数据 - 确保items字段已解析
+      const recipeIndex = todayRecipes.value.findIndex((r) => r.id === recipe.id)
+      if (recipeIndex !== -1) {
+        const updatedRecipe = {
+          ...response.data.data,
+          items:
+            typeof response.data.data.items === 'string'
+              ? JSON.parse(response.data.data.items)
+              : response.data.data.items || []
+        }
+        todayRecipes.value[recipeIndex] = updatedRecipe
+      }
 
-          // 重置选中状态
-          selectedRecipe.value = null
-          selectedDish.value = null
-        })
-        .catch((error) => {
-          console.error('替换菜品失败:', error)
-          // 失败时恢复本地数据
-          selectedRecipe.value.items[index] = oldDish
-          ElMessage.error('替换菜品失败')
-        })
+      // 关闭对话框并重置状态
+      replaceDishVisible.value = false
+      selectedRecipe.value = null
+      selectedDish.value = null
     }
+  } catch (error) {
+    console.error('替换菜品失败:', error)
+    // 失败时恢复本地数据
+    recipe.items = originalItems
+    throw error // 让组件处理错误提示
   }
 }
 
@@ -771,23 +760,6 @@ const handleAddRecipe = (newRecipeData) => {
     })
 }
 
-// 处理自定义菜品替换
-const handleCustomDishReplacement = () => {
-  if (customDishName.value.trim()) {
-    // 验证菜品名称格式
-    if (!isValidDishName(customDishName.value)) {
-      ElMessage.error('菜品名称只能包含中文、英文、数字和常见符号')
-      return
-    }
-
-    confirmReplaceDish({
-      name: customDishName.value.trim(),
-      type: selectedRecipe.value.type
-    })
-    customDishName.value = ''
-  }
-}
-
 // 单个食谱收藏/取消收藏
 const toggleRecipeFavorite = (recipe) => {
   // 发送API请求切换收藏状态
@@ -1112,61 +1084,14 @@ const filteredRecipes = computed(() => {
     @update:recipe="handleUpdateRecipe"
   ></RecipeDetail>
 
-  <!-- 替换菜品对话框 -->
-  <el-dialog
-    v-model="replaceDialogVisible"
-    :title="selectedDish ? `替换 ${selectedDish.name}` : '替换菜品'"
-    width="600px"
-    top="10%"
-  >
-    <div v-if="selectedDish" class="replace-dish-container">
-      <div class="current-dish">
-        <span class="detail-label">当前菜品:</span>
-        <span class="detail-value">{{ selectedDish.name }}</span>
-      </div>
-
-      <div class="available-dishes">
-        <span class="detail-label">可选菜品:</span>
-        <div class="dish-list">
-          <el-card
-            v-for="dish in replacementDishes"
-            :key="dish.id"
-            :class="dish.type"
-            class="dish-card"
-            @click="confirmReplaceDish(dish)"
-          >
-            <div class="dish-name">{{ dish.name }}</div>
-            <div class="dish-nutrition">{{ dish.nutrition }}</div>
-          </el-card>
-        </div>
-      </div>
-
-      <el-divider />
-
-      <div class="custom-dish-section">
-        <el-button type="text" @click="showCustomDishInput = !showCustomDishInput">
-          {{ showCustomDishInput ? '使用预设菜品' : '自定义菜品' }}
-        </el-button>
-
-        <div v-if="showCustomDishInput" class="custom-dish-input">
-          <el-input
-            v-model="customDishName"
-            placeholder="请输入自定义菜品名称"
-            clearable
-            style="margin-bottom: 10px"
-          />
-          <el-button
-            type="primary"
-            size="small"
-            :disabled="!customDishName.trim()"
-            @click="handleCustomDishReplacement"
-          >
-            确认替换为自定义菜品
-          </el-button>
-        </div>
-      </div>
-    </div>
-  </el-dialog>
+  <!-- 替换菜品组件 -->
+  <ReplaceDish
+    v-model:visible="replaceDishVisible"
+    :recipe="selectedRecipe"
+    :dish="selectedDish"
+    @replace="handleReplaceDish"
+    @close="selectedRecipe = null; selectedDish = null"
+  ></ReplaceDish>
 
   <!-- 添加菜品组件 -->
   <AddDish
@@ -2183,71 +2108,6 @@ const filteredRecipes = computed(() => {
     .dish-nutrition {
       font-size: 14px;
       color: #999;
-    }
-  }
-}
-
-// 替换菜品对话框样式
-.replace-dish-container {
-  .current-dish {
-    margin-bottom: 20px;
-
-    .detail-label {
-      font-weight: bold;
-    }
-
-    .detail-value {
-      color: #ff6b6b;
-      font-weight: bold;
-      margin-left: 10px;
-    }
-  }
-
-  .available-dishes {
-    .detail-label {
-      font-weight: bold;
-      display: block;
-      margin-bottom: 15px;
-    }
-
-    .dish-list {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-      gap: 15px;
-    }
-
-    .dish-card {
-      cursor: pointer;
-      border-left: 4px solid #ccc;
-      transition: all 0.3s ease;
-
-      &:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-      }
-
-      .dish-name {
-        font-size: 16px;
-        font-weight: bold;
-        margin-bottom: 5px;
-      }
-
-      .dish-nutrition {
-        font-size: 14px;
-        color: #999;
-      }
-
-      &.breakfast {
-        border-left-color: #ffc107;
-      }
-
-      &.lunch {
-        border-left-color: #4caf50;
-      }
-
-      &.dinner {
-        border-left-color: #2196f3;
-      }
     }
   }
 }
