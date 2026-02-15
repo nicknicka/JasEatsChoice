@@ -62,7 +62,16 @@ const emit = defineEmits([
 ])
 
 // 计算属性：是否选中
-const isSelected = computed(() => props.selectedIds.includes(props.recipe.id))
+const isSelected = computed(() => {
+  const result = props.selectedIds.includes(props.recipe.id)
+  console.log('=== RecipeCard isSelected 计算 ===')
+  console.log('食谱ID:', props.recipe.id)
+  console.log('食谱名称:', props.recipe.name)
+  console.log('selectedIds:', props.selectedIds)
+  console.log('是否选中:', result)
+  console.log('========================')
+  return result
+})
 
 // 计算属性：是否收藏
 const isFavorite = computed(() => props.recipe.isFavorite || props.recipe.favorite || false)
@@ -163,8 +172,25 @@ const getTagTypeFn = props.getTagType || getDefaultTagType
 // 事件处理
 const handleCardClick = () => {
   if (props.selectable) {
+    console.log('=== 卡片点击事件 ===')
+    console.log('食谱ID:', props.recipe.id)
+    console.log('食谱名称:', props.recipe.name)
     emit('toggle-select', props.recipe.id)
+    console.log('已发送 toggle-select 事件，ID:', props.recipe.id)
+    console.log('==================')
   }
+}
+
+// 处理复选框变化
+const handleCheckboxChange = (value) => {
+  console.log('=== 复选框变化事件 ===')
+  console.log('食谱ID:', props.recipe.id)
+  console.log('食谱名称:', props.recipe.name)
+  console.log('复选框新值:', value)
+  console.log('当前 isSelected:', isSelected.value)
+  emit('toggle-select', props.recipe.id)
+  console.log('已发送 toggle-select 事件，ID:', props.recipe.id)
+  console.log('===================')
 }
 
 const handleFavoriteClick = (e) => {
@@ -215,7 +241,10 @@ const handleDeleteDish = (e, dish) => {
       <div class="card-header">
         <!-- 批量选择复选框 -->
         <div v-if="selectable" class="checkbox-wrapper" @click.stop>
-          <el-checkbox :model-value="isSelected" @click.stop @change="$emit('toggle-select', recipe.id)" />
+          <el-checkbox
+            :model-value="isSelected"
+            @change="handleCheckboxChange"
+          />
         </div>
 
         <!-- 餐型图标 -->
@@ -412,13 +441,16 @@ const handleDeleteDish = (e, dish) => {
     cursor: default;
     display: flex;
     justify-content: flex-end;
-    gap: 4px;
+    gap: 6px;
+    flex-wrap: wrap; /* 允许按钮换行 */
+    align-items: center; /* 垂直对齐 */
 
     .el-button {
-      font-size: 13px;
-      padding: 4px 12px;
+      font-size: 12px;
+      padding: 4px 10px;
       border-radius: 6px;
       margin: 0;
+      white-space: nowrap; /* 防止按钮文字换行 */
     }
   }
 
@@ -600,13 +632,20 @@ const handleDeleteDish = (e, dish) => {
       font-size: 24px;
     }
   }
-}
 
-/* 复选框样式 */
+// 复选框样式
 .checkbox-wrapper {
+  :deep(.el-checkbox) {
+    .el-checkbox__input.is-checked .el-checkbox__inner {
+      background-color: #667eea !important;
+      border-color: #667eea !important;
+    }
+  }
+
   :deep(.el-checkbox__label) {
     display: none !important;
   }
+
   margin-right: 10px;
 }
 
@@ -622,5 +661,6 @@ const handleDeleteDish = (e, dish) => {
   right: 10px;
   top: 50%;
   transform: translateY(-50%);
+}
 }
 </style>

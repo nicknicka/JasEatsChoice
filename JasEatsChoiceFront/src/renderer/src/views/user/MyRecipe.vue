@@ -37,13 +37,28 @@ const toggleAllRecipes = () => {
 }
 
 // 切换单个食谱的选择状态
-const toggleRecipeSelection = (recipe) => {
-  const index = selectedRecipes.value.indexOf(recipe.id)
+const toggleRecipeSelection = (recipeId) => {
+  console.log('=== toggleRecipeSelection 调用 ===')
+  console.log('接收到的参数:', recipeId)
+  console.log('参数类型:', typeof recipeId)
+  console.log('当前选中列表:', selectedRecipes.value)
+
+  // 兼容处理：如果传入的是对象则取id，如果是数字则直接使用
+  const id = typeof recipeId === 'object' ? recipeId?.id : recipeId
+  console.log('处理后的ID:', id)
+
+  const index = selectedRecipes.value.indexOf(id)
+  console.log('在数组中的索引:', index)
+
   if (index === -1) {
-    selectedRecipes.value.push(recipe.id)
+    selectedRecipes.value.push(id)
+    console.log('添加ID到选中列表')
   } else {
     selectedRecipes.value.splice(index, 1)
+    console.log('从选中列表移除ID')
   }
+  console.log('更新后的选中列表:', selectedRecipes.value)
+  console.log('=== toggleRecipeSelection 结束 ===')
 }
 
 // 模态框状态
