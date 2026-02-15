@@ -51,6 +51,10 @@ public class Recipe {
     @ApiModelProperty(value = "脂肪")
     private Integer fat;
 
+    @ApiModelProperty(value = "自定义营养信息（JSON格式）")
+    @TableField("custom_nutrition")
+    private String customNutrition;
+
     @ApiModelProperty(value = "食谱详情")
     private String detail;
 

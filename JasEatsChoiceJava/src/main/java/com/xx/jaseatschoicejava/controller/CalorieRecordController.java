@@ -179,4 +179,28 @@ public class CalorieRecordController {
         return ResponseResult.success("数据未变化");
 
     }
+
+    /**
+     * 删除卡路里记录
+     */
+    @DeleteMapping("/{recordId}")
+    public ResponseResult<?> deleteCalorieRecord(@PathVariable String recordId) {
+        log.info("删除记录，ID: {}", recordId);
+
+        // 检查记录是否存在
+        CalorieRecord record = calorieRecordService.getById(recordId);
+        if (record == null) {
+            log.error("删除失败，记录不存在，ID: {}", recordId);
+            return ResponseResult.fail("404", "记录不存在");
+        }
+
+        boolean success = calorieRecordService.removeById(recordId);
+        if (success) {
+            log.info("删除记录成功，ID: {}", recordId);
+            return ResponseResult.success("删除成功");
+        }
+
+        log.error("删除记录失败，ID: {}", recordId);
+        return ResponseResult.fail("500", "删除失败");
+    }
 }

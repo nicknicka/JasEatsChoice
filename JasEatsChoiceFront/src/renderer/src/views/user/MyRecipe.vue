@@ -150,12 +150,29 @@ const searchKeyword = ref('')
 // 防抖搜索函数
 const debouncedSearch = ref(null)
 
+// 滚动容器引用
+const scrollContainer = ref(null)
+
 // 滚动到顶部功能
 const scrollToTop = () => {
-  window.scrollTo({
-    top: 0,
-    behavior: 'smooth'
-  })
+  // 尝试多个滚动目标，确保在不同环境下都能工作
+  const scrollTargets = [
+    scrollContainer.value,
+    document.querySelector('.main-content'),
+    document.querySelector('.el-main'),
+    document.documentElement,
+    document.body
+  ]
+
+  for (const target of scrollTargets) {
+    if (target && target.scrollHeight > target.clientHeight) {
+      target.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      })
+      break // 找到第一个可滚动的元素后停止
+    }
+  }
 }
 
 // 计算属性：过滤后的食谱列表，收藏的食谱排在前面
@@ -261,7 +278,15 @@ const updateRecipe = async (updatedRecipe) => {
   console.log('原始食谱数据:', originalRecipe)
 
   try {
-    // 准备请求数据：将 items 和 ingredients 序列化为 JSON 字符串
+    // 准备请求数据：将 items、ingredients 序列化为 JSON 字符串
+    // customNutrition 也要序列化，但只在非 null 时才需要
+    let customNutritionToSave = null
+    if (updatedRecipe.customNutrition) {
+      customNutritionToSave = typeof updatedRecipe.customNutrition === 'string'
+        ? updatedRecipe.customNutrition
+        : JSON.stringify(updatedRecipe.customNutrition)
+    }
+
     const requestData = {
       ...updatedRecipe,
       items: updatedRecipe.items
@@ -273,7 +298,9 @@ const updateRecipe = async (updatedRecipe) => {
         ? (typeof updatedRecipe.ingredients === 'string'
             ? updatedRecipe.ingredients
             : JSON.stringify(updatedRecipe.ingredients))
-        : null
+        : null,
+      // 包含自定义营养信息（已序列化的）
+      customNutrition: customNutritionToSave
     }
 
     console.log('准备调用后端API更新食谱')
@@ -774,7 +801,15 @@ const saveRecipeEdit = async (updatedRecipe) => {
   console.log('接收到的更新食谱数据:', updatedRecipe)
 
   try {
-    // 准备请求数据：将 items 和 ingredients 序列化为 JSON 字符串
+    // 准备请求数据：将 items、ingredients 序列化为 JSON 字符串
+    // customNutrition 也要序列化，但只在非 null 时才需要
+    let customNutritionToSave = null
+    if (updatedRecipe.customNutrition) {
+      customNutritionToSave = typeof updatedRecipe.customNutrition === 'string'
+        ? updatedRecipe.customNutrition
+        : JSON.stringify(updatedRecipe.customNutrition)
+    }
+
     const requestData = {
       ...updatedRecipe,
       items: updatedRecipe.items
@@ -786,7 +821,9 @@ const saveRecipeEdit = async (updatedRecipe) => {
         ? (typeof updatedRecipe.ingredients === 'string'
             ? updatedRecipe.ingredients
             : JSON.stringify(updatedRecipe.ingredients))
-        : null
+        : null,
+      // 包含自定义营养信息（已序列化的）
+      customNutrition: customNutritionToSave
     }
 
     console.log('转换后的请求数据:', requestData)
@@ -955,25 +992,91 @@ const exportToDietRecord = () => {
         const recipe = myRecipes.value.find((r) => r.id === recipeId)
         if (!recipe) return Promise.resolve()
 
-        // 构造饮食记录数据
-        const dietRecord = {
-          userId,
-          recipeId,
-          recordDate: new Date().toISOString().split('T')[0], // 今天的日期
-          calories: recipe.calories,
-          name: recipe.name
+        // 计算食谱的总营养成分
+        let totalCalories = 0
+        let totalProtein = 0
+        let totalFat = 0
+        let totalCarbs = 0
+
+        // 优先使用自定义营养信息（如果存在）
+        let customNutrition = null
+        if (recipe.customNutrition) {
+          if (typeof recipe.customNutrition === 'string') {
+            try {
+              customNutrition = JSON.parse(recipe.customNutrition)
+            } catch (e) {
+              console.error('解析 customNutrition 失败:', e)
+            }
+          } else {
+            customNutrition = recipe.customNutrition
+          }
         }
+
+        if (customNutrition) {
+          // 使用自定义营养信息
+          console.log('使用自定义营养信息:', customNutrition)
+          totalCalories = customNutrition.calories || 0
+          totalProtein = customNutrition.protein || 0
+          totalFat = customNutrition.fat || 0
+          totalCarbs = customNutrition.carbs || 0
+        } else {
+          // 否则遍历食谱的菜品 items，累加营养信息
+          if (recipe.items && Array.isArray(recipe.items)) {
+            recipe.items.forEach((item) => {
+              console.log('处理菜品item:', item)
+              totalCalories += item.calories || 0
+              totalProtein += item.protein || 0
+              totalFat += item.fat || 0
+              totalCarbs += item.carbs || 0
+            })
+          }
+        }
+
+        console.log('食谱总营养:', { totalCalories, totalProtein, totalFat, totalCarbs })
+
+        // 检查营养值是否全部为 0
+        if (totalCalories === 0 && totalProtein === 0 && totalFat === 0 && totalCarbs === 0) {
+          console.warn('食谱营养信息为空，跳过导出')
+          ElMessage.warning(`食谱"${recipe.name}"没有营养信息，请先添加菜品营养或设置自定义营养信息`)
+          return Promise.reject(new Error('营养信息为空'))
+        }
+
+        // 构造饮食记录数据 - 字段名必须与后端 CalorieRecord 实体类匹配
+        const dietRecord = {
+          userId: userId,
+          dishId: recipeId, // 使用 recipeId 作为 dishId
+          calorie: Math.round(totalCalories), // 注意字段名是 calorie 不是 calories
+          protein: Number(totalProtein.toFixed(2)),
+          fat: Number(totalFat.toFixed(2)),
+          carbohydrate: Number(totalCarbs.toFixed(2)),
+          mealTime: recipe.type || '未分类', // 使用食谱的餐型（早餐、午餐等）
+          recordTime: new Date().toISOString(), // 记录时间使用 ISO 格式
+          foodName: recipe.name, // 注意字段名是 foodName 不是 name
+          description: `从食谱"${recipe.name}"导出` // 添加描述信息
+        }
+
+        console.log('导出饮食记录数据:', JSON.stringify(dietRecord, null, 2))
 
         // 调用添加饮食记录API
         return axios.post(`${API_CONFIG.baseURL}${API_CONFIG.diet.add}`, dietRecord)
       })
 
       // 处理所有请求
-      Promise.all(exportPromises)
-        .then((responses) => {
-          const successCount = responses.filter((res) => res?.data?.code === '200').length
-          ElMessage.success(`成功导出 ${successCount} 个食谱到饮食记录`)
-          selectedRecipes.value = [] // 清空选择
+      Promise.allSettled(exportPromises)
+        .then((results) => {
+          const successCount = results.filter(
+            (result) => result.status === 'fulfilled' && result.value?.data?.code === '200'
+          ).length
+          const skippedCount = results.filter(
+            (result) => result.status === 'rejected' && result.reason?.message === '营养信息为空'
+          ).length
+
+          if (successCount > 0) {
+            ElMessage.success(`成功导出 ${successCount} 个食谱到饮食记录${skippedCount > 0 ? `，跳过 ${skippedCount} 个无营养信息的食谱` : ''}`)
+            selectedRecipes.value = [] // 清空选择
+          } else if (skippedCount > 0) {
+            ElMessage.warning(`所有食谱都没有营养信息，请先添加菜品营养或设置自定义营养信息`)
+          }
         })
         .catch((error) => {
           console.error('导出失败:', error)
@@ -990,7 +1093,7 @@ const exportToDietRecord = () => {
 <template>
   <!-- 单一根节点包裹器，用于 Transition 动画 -->
   <div class="my-recipe-wrapper">
-    <div class="my-recipe-container">
+    <div ref="scrollContainer" class="my-recipe-container">
       <div class="recipe-header fade-in-up">
         <div>
           <h2>我的食谱</h2>
@@ -1199,6 +1302,8 @@ const exportToDietRecord = () => {
 
 .my-recipe-container {
   padding: 24px;
+  max-height: 100%;
+  overflow-y: auto;
 
   .recipe-header {
     display: flex;

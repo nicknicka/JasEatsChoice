@@ -165,6 +165,7 @@ public class RecipeServiceImpl extends ServiceImpl<RecipeMapper, Recipe> impleme
         existingRecipe.setFat(recipe.getFat());
         existingRecipe.setCookTime(recipe.getCookTime());
         existingRecipe.setFavorite(recipe.getFavorite());
+        existingRecipe.setCustomNutrition(recipe.getCustomNutrition());
         existingRecipe.setUpdateTime(LocalDateTime.now());
         updateById(existingRecipe);
         return existingRecipe;

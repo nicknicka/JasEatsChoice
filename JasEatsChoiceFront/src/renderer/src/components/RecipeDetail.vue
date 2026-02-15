@@ -56,7 +56,9 @@ const editableRecipe = ref({
   name: '',
   type: 'breakfast',
   cookTime: createBaseTime(0, 0, 0), // 使用基准时间作为默认值
-  detail: ''
+  detail: '',
+  // 自定义营养信息（如果为null则使用计算值）
+  customNutrition: null
 })
 
 // 监听 props.recipe 变化，初始化可编辑数据
@@ -64,16 +66,40 @@ watch(
   () => props.recipe,
   (newRecipe) => {
     if (newRecipe) {
+      // 处理 customNutrition：如果是 JSON 字符串则解析为对象
+      let customNutritionObj = null
+      if (newRecipe.customNutrition) {
+        if (typeof newRecipe.customNutrition === 'string') {
+          try {
+            customNutritionObj = JSON.parse(newRecipe.customNutrition)
+          } catch (e) {
+            console.error('解析 customNutrition 失败:', e)
+            customNutritionObj = null
+          }
+        } else {
+          customNutritionObj = newRecipe.customNutrition
+        }
+      }
+
       editableRecipe.value = {
         name: newRecipe.name || '',
         type: newRecipe.type || 'breakfast',
         cookTime: parseTimeStringToDate(newRecipe.cookTime),
-        detail: newRecipe.detail || ''
+        detail: newRecipe.detail || '',
+        customNutrition: customNutritionObj
       }
     }
   },
   { immediate: true }
 )
+
+// 监听编辑状态变化，进入编辑模式时自动启用自定义营养
+watch(isEditing, (newVal) => {
+  if (newVal && !editableRecipe.value.customNutrition) {
+    // 进入编辑模式且没有自定义营养时，自动初始化为当前计算值
+    editableRecipe.value.customNutrition = { ...nutritionData.value }
+  }
+})
 
 // 保存编辑
 const saveEdit = async () => {
@@ -107,20 +133,44 @@ const saveEdit = async () => {
       itemsToSave = JSON.stringify(props.recipe.items)
     }
 
+    // 处理 customNutrition：如果是对象则序列化为 JSON 字符串
+    let customNutritionToSave = null
+    if (editableRecipe.value.customNutrition) {
+      const customNutritionType = typeof editableRecipe.value.customNutrition
+      console.log('customNutrition 类型:', customNutritionType)
+      customNutritionToSave = customNutritionType === 'string'
+        ? editableRecipe.value.customNutrition
+        : JSON.stringify(editableRecipe.value.customNutrition)
+      console.log('序列化后的 customNutrition:', customNutritionToSave)
+      console.log('序列化后是否为字符串:', typeof customNutritionToSave === 'string')
+    }
+
     const updateData = {
       ...props.recipe,
       name: editableRecipe.value.name,
       type: editableRecipe.value.type,
       cookTime: cookTimeToSave,
       detail: editableRecipe.value.detail,
-      items: itemsToSave
+      items: itemsToSave,
+      // 保存自定义营养信息（已序列化为JSON字符串）
+      customNutrition: customNutritionToSave
     }
+
+    console.log('=== RecipeDetail 保存数据 ===')
+    console.log('editableRecipe.customNutrition:', editableRecipe.value.customNutrition)
+    console.log('准备保存的 customNutrition:', customNutritionToSave)
+    console.log('updateData.customNutrition 类型:', typeof updateData.customNutrition)
+    console.log('完整 updateData:', updateData)
 
     // 调用后端API更新食谱
     const response = await axios.put(
       API_CONFIG.baseURL + API_CONFIG.recipe.update + props.recipe.id,
       updateData
     )
+
+    console.log('=== RecipeDetail 后端响应 ===')
+    console.log('后端返回的完整数据:', response.data?.data)
+    console.log('后端返回的 customNutrition:', response.data?.data?.customNutrition)
 
     if (response.data && response.data.data) {
       // 触发update:recipe事件，传递更新后的食谱数据给父组件
@@ -142,11 +192,27 @@ const saveEdit = async () => {
 const cancelEdit = () => {
   // 恢复原始数据
   if (props.recipe) {
+    // 处理 customNutrition：如果是 JSON 字符串则解析为对象
+    let customNutritionObj = null
+    if (props.recipe.customNutrition) {
+      if (typeof props.recipe.customNutrition === 'string') {
+        try {
+          customNutritionObj = JSON.parse(props.recipe.customNutrition)
+        } catch (e) {
+          console.error('解析 customNutrition 失败:', e)
+          customNutritionObj = null
+        }
+      } else {
+        customNutritionObj = props.recipe.customNutrition
+      }
+    }
+
     editableRecipe.value = {
       name: props.recipe.name || '',
       type: props.recipe.type || 'breakfast',
       cookTime: parseTimeStringToDate(props.recipe.cookTime),
-      detail: props.recipe.detail || ''
+      detail: props.recipe.detail || '',
+      customNutrition: customNutritionObj
     }
   }
   isEditing.value = false
@@ -183,6 +249,26 @@ const nutritionData = computed(() => {
       protein: 0,
       carbs: 0,
       fat: 0
+    }
+  }
+
+  // 如果有自定义营养信息且在编辑模式，优先使用自定义值
+  if (isEditing.value && editableRecipe.value.customNutrition) {
+    return editableRecipe.value.customNutrition
+  }
+
+  // 如果有自定义营养信息（存储在recipe中），使用自定义值
+  if (props.recipe.customNutrition) {
+    // 如果是 JSON 字符串则解析为对象
+    if (typeof props.recipe.customNutrition === 'string') {
+      try {
+        return JSON.parse(props.recipe.customNutrition)
+      } catch (e) {
+        console.error('解析 customNutrition 失败:', e)
+        // 解析失败则继续使用计算值
+      }
+    } else {
+      return props.recipe.customNutrition
     }
   }
 
@@ -274,6 +360,19 @@ const mealTypeOptions = [
   { label: '下午茶', value: 'afternoon_tea' },
   { label: '夜宵', value: 'night_snack' }
 ]
+
+// 更新自定义营养信息
+const updateCustomNutrition = (field, value) => {
+  if (!editableRecipe.value.customNutrition) {
+    editableRecipe.value.customNutrition = {
+      calories: 0,
+      protein: 0,
+      carbs: 0,
+      fat: 0
+    }
+  }
+  editableRecipe.value.customNutrition[field] = Number(value) || 0
+}
 </script>
 
 <template>
@@ -345,17 +444,32 @@ const mealTypeOptions = [
           <div class="nutrition-card-container">
             <div
               v-for="(nutrient, index) in [
-                { label: '卡路里', value: nutritionData.calories + ' kcal', icon: '🔥' },
-                { label: '蛋白质', value: nutritionData.protein + ' g', icon: '💪' },
-                { label: '碳水化合物', value: nutritionData.carbs + ' g', icon: '🍚' },
-                { label: '脂肪', value: nutritionData.fat + ' g', icon: '🥑' }
+                { label: '卡路里', value: nutritionData.calories, unit: 'kcal', icon: '🔥', field: 'calories' },
+                { label: '蛋白质', value: nutritionData.protein, unit: 'g', icon: '💪', field: 'protein' },
+                { label: '碳水化合物', value: nutritionData.carbs, unit: 'g', icon: '🍚', field: 'carbs' },
+                { label: '脂肪', value: nutritionData.fat, unit: 'g', icon: '🥑', field: 'fat' }
               ]"
               :key="index"
               class="nutrition-card"
             >
               <div class="nutrition-icon">{{ nutrient.icon }}</div>
               <div class="nutrition-label">{{ nutrient.label }}</div>
-              <div class="nutrition-value">{{ nutrient.value }}</div>
+              <div v-if="!isEditing" class="nutrition-value">
+                {{ nutrient.value }} {{ nutrient.unit }}
+              </div>
+              <el-input-number
+                v-else
+                :model-value="editableRecipe.customNutrition[nutrient.field]"
+                @update:model-value="updateCustomNutrition(nutrient.field, $event)"
+                :min="0"
+                :precision="1"
+                size="small"
+                style="width: 120px;"
+              >
+                <template #suffix>
+                  <span style="font-size: 12px; color: #909399;">{{ nutrient.unit }}</span>
+                </template>
+              </el-input-number>
             </div>
           </div>
         </div>
@@ -521,6 +635,8 @@ const mealTypeOptions = [
   margin-bottom: 12px;
   padding-left: 8px;
   border-left: 4px solid #667eea;
+  display: flex;
+  align-items: center;
 }
 
 /* 营养信息 */
@@ -546,6 +662,12 @@ const mealTypeOptions = [
   border: 2px solid #e2e8f0;
   transition: all 0.3s ease;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 110px;
 }
 
 .nutrition-card:hover {
@@ -570,6 +692,31 @@ const mealTypeOptions = [
   font-size: 20px;
   font-weight: 700;
   color: #667eea;
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 营养信息编辑模式样式 */
+.nutrition-card :deep(.el-input-number) {
+  .el-input__inner {
+    text-align: center;
+    font-weight: 700;
+    color: #667eea;
+  }
+
+  .el-input-number__decrease,
+  .el-input-number__increase {
+    background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+    border-color: #667eea40;
+
+    &:hover {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-color: #667eea;
+      color: white;
+    }
+  }
 }
 
 /* 菜品列表 */
