@@ -7,6 +7,16 @@
         <h2>我的收藏</h2>
         <div class="collection-stats">
           <el-tag type="info" size="large"> 共 {{ filteredCollections.length }} 个收藏 </el-tag>
+          <el-button
+            type="primary"
+            circle
+            size="small"
+            :icon="Refresh"
+            :loading="loading"
+            @click="refreshCollections"
+            class="refresh-btn"
+            title="刷新"
+          />
         </div>
       </div>
     </div>
@@ -14,6 +24,16 @@
     <!-- 筛选工具栏 -->
     <div class="filter-bar fade-in-up delay-100">
       <div class="filter-left">
+        <!-- 搜索框 -->
+        <el-input
+          v-model="searchKeyword"
+          placeholder="搜索收藏名称..."
+          class="search-input"
+          clearable
+          :prefix-icon="Search"
+        />
+
+        <!-- 类型筛选 -->
         <el-select
           v-model="filterType"
           placeholder="筛选类型"
@@ -46,32 +66,48 @@
           </el-option>
         </el-select>
 
+        <!-- 排序选择 -->
+        <el-select v-model="sortBy" placeholder="排序方式" class="sort-select" @change="handleSortChange">
+          <el-option label="按时间" value="date" />
+          <el-option label="按类型" value="type" />
+          <el-option label="按名称" value="name" />
+        </el-select>
+
+        <el-button
+          circle
+          size="small"
+          @click="toggleSortOrder"
+          title="切换排序顺序"
+        >
+          <el-icon>
+            <ArrowDown v-if="sortOrder === 'desc'" />
+            <ArrowUp v-else />
+          </el-icon>
+        </el-button>
+
         <div class="filter-summary">
-          <span v-if="filterType !== 'all'" class="filter-active">
+          <span v-if="filterType !== 'all' || searchKeyword" class="filter-active">
             已筛选:
-            <el-tag size="small" closable @close="resetFilter">
+            <el-tag v-if="filterType !== 'all'" size="small" closable @close="resetFilter">
               {{ getFilterTypeName(filterType) }}
+            </el-tag>
+            <el-tag v-if="searchKeyword" size="small" closable @click="searchKeyword = ''">
+              搜索: {{ searchKeyword }}
             </el-tag>
           </span>
         </div>
       </div>
 
       <div class="filter-right">
-        <el-button-group>
-          <el-button type="default" size="small" @click="applyFilter">
-            <el-icon><Search /></el-icon>
-            查询
-          </el-button>
-          <el-button
-            type="default"
-            size="small"
-            @click="resetFilter"
-            :disabled="filterType === 'all'"
-          >
-            <el-icon><Refresh /></el-icon>
-            重置
-          </el-button>
-        </el-button-group>
+        <el-button
+          type="default"
+          size="small"
+          @click="resetFilter"
+          :disabled="filterType === 'all' && !searchKeyword"
+        >
+          <el-icon><Refresh /></el-icon>
+          重置筛选
+        </el-button>
 
         <el-divider direction="vertical" />
 
@@ -118,18 +154,20 @@
             <!-- 卡片内容 -->
             <div class="card-body">
               <!-- 图片区域 -->
-              <div class="image-wrapper">
-                <!-- 文章类型显示首字母 -->
-                <div
-                  v-if="item.type === 'article' && !item.image && item.firstChar"
-                  class="article-first-char"
-                >
-                  {{ item.firstChar }}
+              <div class="image-wrapper" :class="`gradient-${item.type}`">
+                <!-- 无图片时显示图标+首字组合 -->
+                <div v-if="!item.image || imageLoadErrors[item.id]" class="fallback-content">
+                  <div class="type-icon-bg">
+                    <el-icon class="type-fallback-icon">
+                      <component :is="getTypeIcon(item.type)" />
+                    </el-icon>
+                  </div>
+                  <div class="title-first-char">{{ item.title?.charAt(0) || '?' }}</div>
                 </div>
-                <!-- 其他类型显示图片 -->
+                <!-- 有图片时显示图片 -->
                 <img
-                  v-else
-                  :src="item.image || defaultImage"
+                  v-if="item.image && !imageLoadErrors[item.id]"
+                  :src="item.image"
                   :alt="item.title"
                   class="collection-image"
                   @error="handleImageError($event, item)"
@@ -217,40 +255,47 @@ const authStore = useAuthStore(pinia)
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import {
-  Search,
   Refresh,
   Delete,
   Calendar,
   View,
   Star,
   House,
-  InfoFilled,
   Grid,
   Shop,
   Food,
   Document,
-  RefreshLeft
+  RefreshLeft,
+  Search,
+  ArrowDown,
+  ArrowUp
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
 import DishDetailDialog from '../../components/dish/DishDetailDialog.vue'
-import axios from 'axios'
-import { API_CONFIG } from '../../config/index.js'
+import api from '../../utils/api'
 
 const router = useRouter()
 
 // 加载状态
 const loading = ref(true)
 
-// 默认图片
+// 默认图片 - 使用更美观的设计
 const defaultImage =
-  'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3QgeD0iMCIgeT0iMCIgd2lkdGg9IjIwMCIgaGVpZ2h0PSIxNTAiIGZpbGw9IiNGRkYiIGNsaXAtcnVsZT0iZXZlbm9kZCIvPgo8cGF0aCBkPSJNMTAwIDc1QzEzMS4zIDc1IDE1OCA1MS4zIDE1OCAyMEMxNTggNC4zIDE0My43IDAgMTIwIDBDOTYuMyAwIDgyLjMgNy41IDY5LjMgMjMuN0w1MCA0M1YxMUM1MCA1LjUgNDUuNSAwIDQwIDBDMzQuNSAwIDMwIDUuNSAzMCAxMXYzMkwxNS43IDIzLjdDNC4zIDcuNSAwIDIzLjMgMCAyMEMwIDUxLjMgMjYuNyA3NSA1OCA3NUg1MEw4NSAxMDBMMTAwIDc1WiIgZmlsbD0iIzY3QzIzQSIvPgo8L3N2Zz4='
+  'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iI0Y1RjVGNSIvPjxjaXJjbGUgY3g9IjEwMCIgY3k9Ijc1IiByPSIzMCIgZmlsbD0iI0U1RUFFNSIvPjxwYXRoIGQ9Ik0xMDAgNDVMMTMwIDc1SDEwMEw3MCA3NVoiIGZpbGw9IiNDQ0MiIvPjxwYXRoIGQ9Ik04NSA2NUwxMTUgMzVMMTAwIDMwTDg1IDM1WiIgZmlsbD0iIzk2QTIyMiIvPjx0ZXh0IHg9IjEwMCIgeT0iMTMwIiBmb250LXNpemU9IjE0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOTk5Ij7lpKnnvaHmmL7lvIM8L3RleHQ+PC9zdmc+'
 
-// 模拟收藏数据
+// 收藏数据
 const collections = ref([])
 
 // 筛选条件
 const filterType = ref('all')
+
+// 搜索关键词
+const searchKeyword = ref('')
+
+// 排序方式
+const sortBy = ref('date') // date: 时间, type: 类型, name: 名称
+const sortOrder = ref('desc') // desc: 降序, asc: 升序
 
 // 分页
 const currentPage = ref(1)
@@ -260,7 +305,20 @@ const pageSize = ref(9)
 const dishDialogVisible = ref(false)
 const selectedDish = ref(null)
 
-// 计算过滤后的收藏
+// 图片加载错误状态
+const imageLoadErrors = ref({})
+
+// 类型配置映射
+const TYPE_CONFIG = {
+  merchant: { name: '商家', icon: Shop, color: 'green', value: 1 },
+  dish: { name: '菜品', icon: Food, color: 'orange', value: 2 },
+  article: { name: '文章', icon: Document, color: 'blue', value: 3 }
+}
+
+// 获取类型配置
+const getTypeConfig = (type) => TYPE_CONFIG[type] || TYPE_CONFIG.merchant
+
+// 计算过滤和排序后的收藏
 const filteredCollections = computed(() => {
   let filtered = [...collections.value]
 
@@ -268,6 +326,43 @@ const filteredCollections = computed(() => {
   if (filterType.value !== 'all') {
     filtered = filtered.filter((item) => item.type === filterType.value)
   }
+
+  // 搜索过滤
+  if (searchKeyword.value.trim()) {
+    const keyword = searchKeyword.value.toLowerCase().trim()
+    filtered = filtered.filter((item) =>
+      item.title.toLowerCase().includes(keyword) ||
+      item.description.toLowerCase().includes(keyword)
+    )
+  }
+
+  // 排序
+  filtered.sort((a, b) => {
+    let compareA, compareB
+
+    switch (sortBy.value) {
+      case 'date':
+        compareA = new Date(a.date).getTime()
+        compareB = new Date(b.date).getTime()
+        break
+      case 'type':
+        compareA = getTypeConfig(a.type).value
+        compareB = getTypeConfig(b.type).value
+        break
+      case 'name':
+        compareA = a.title.toLowerCase()
+        compareB = b.title.toLowerCase()
+        break
+      default:
+        return 0
+    }
+
+    if (sortOrder.value === 'asc') {
+      return compareA > compareB ? 1 : -1
+    } else {
+      return compareA < compareB ? 1 : -1
+    }
+  })
 
   return filtered
 })
@@ -279,30 +374,14 @@ const paginatedCollections = computed(() => {
   return filteredCollections.value.slice(start, end)
 })
 
-// 获取类型图标
-const getTypeIcon = (type) => {
-  const iconMap = {
-    merchant: Shop,
-    dish: Food,
-    article: Document
-  }
-  return iconMap[type] || Star
-}
+// 获取类型图标（保持兼容性）
+const getTypeIcon = (type) => getTypeConfig(type).icon
 
-// 获取类型名称
-const getTypeName = (type) => {
-  const nameMap = {
-    merchant: '商家',
-    dish: '菜品',
-    article: '文章'
-  }
-  return nameMap[type] || '未知'
-}
+// 获取类型名称（保持兼容性）
+const getTypeName = (type) => getTypeConfig(type).name
 
 // 获取筛选类型名称
-const getFilterTypeName = (type) => {
-  return getTypeName(type)
-}
+const getFilterTypeName = (type) => getTypeName(type)
 
 // 获取空状态标题
 const getEmptyTitle = () => {
@@ -321,26 +400,32 @@ const getEmptyDescription = () => {
 }
 
 // 处理图片加载错误
-const handleImageError = (event, item) => {
-  event.target.src = defaultImage
-  event.target.onerror = null
+const handleImageError = (_event, item) => {
+  imageLoadErrors.value[item.id] = true
 }
 
 // 筛选变化处理
 const handleFilterChange = () => {
   currentPage.value = 1
-  ElMessage.success(`已切换到${getFilterTypeName(filterType.value)}收藏`)
 }
 
-// 应用筛选
-const applyFilter = () => {
-  ElMessage.success('筛选条件已应用')
+// 排序变化处理
+const handleSortChange = () => {
+  currentPage.value = 1
+}
+
+// 切换排序顺序
+const toggleSortOrder = () => {
+  sortOrder.value = sortOrder.value === 'desc' ? 'asc' : 'desc'
   currentPage.value = 1
 }
 
 // 重置筛选
 const resetFilter = () => {
   filterType.value = 'all'
+  searchKeyword.value = ''
+  sortBy.value = 'date'
+  sortOrder.value = 'desc'
   currentPage.value = 1
   ElMessage.info('筛选条件已重置')
 }
@@ -353,7 +438,6 @@ const removeCollection = (id) => {
     ElMessage.error('未找到该收藏项')
     return
   }
-  const collection = collections.value[collectionIndex]
 
   ElMessageBox.confirm('确定要删除该收藏吗？', '提示', {
     confirmButtonText: '确定',
@@ -362,23 +446,15 @@ const removeCollection = (id) => {
   })
     .then(async () => {
       try {
-        // 获取当前用户ID
-        const userId = String(authStore.userId || 1) || 1
-        // 发送删除请求到后端
-        const response = await axios.delete(`${API_CONFIG.baseURL}/v1/collections`, {
-          params: {
-            userId,
-            type: collection.type,
-            id: collection.id
-          }
-        })
+        // 使用 RESTful 风格的 API 调用
+        const response = await api.delete(`/v1/collections/${id}`)
 
-        if (response.data && response.data.code === '200') {
+        if (response.code === '200') {
           // 从本地数组中删除该收藏项
           collections.value.splice(collectionIndex, 1)
           ElMessage.success('收藏已删除')
         } else {
-          ElMessage.error('删除失败：' + (response.data?.message || '未知错误'))
+          ElMessage.error('删除失败：' + (response.message || '未知错误'))
         }
       } catch (error) {
         console.error('删除收藏失败:', error)
@@ -429,18 +505,17 @@ const clearAll = () => {
   })
     .then(async () => {
       try {
-        // 获取当前用户ID
-        const userId = String(authStore.userId || 1) || '1'
+        const userId = String(authStore.userId || 1)
 
         // 调用后端API清空所有收藏
-        const response = await axios.delete(`${API_CONFIG.baseURL}/v1/collections/user/${userId}`)
+        const response = await api.delete(`/v1/collections/user/${userId}`)
 
-        if (response.data && response.data.code === '200') {
+        if (response.code === '200') {
           // 清空本地数据
           collections.value = []
           ElMessage.success('所有收藏已清空')
         } else {
-          ElMessage.error('清空收藏失败：' + (response.data?.message || '未知错误'))
+          ElMessage.error('清空收藏失败：' + (response.message || '未知错误'))
         }
       } catch (error) {
         console.error('清空收藏失败:', error)
@@ -450,6 +525,66 @@ const clearAll = () => {
     .catch(() => {
       ElMessage.info('已取消清空')
     })
+}
+
+// 刷新收藏列表
+const refreshCollections = async () => {
+  if (loading.value) return
+
+  loading.value = true
+  try {
+    const userId = String(authStore.userId || '1')
+    const response = await api.get('/v1/collections', { params: { userId } })
+
+    console.log('刷新收藏API响应:', response)
+
+    if (response.code === '200') {
+      // 兼容不同的数据结构：response.data.data 或 response.data
+      const rawCollections = Array.isArray(response.data?.data)
+        ? response.data.data
+        : Array.isArray(response.data)
+        ? response.data
+        : []
+
+      if (rawCollections.length === 0) {
+        collections.value = []
+        ElMessage.success('刷新成功，暂无收藏')
+        return
+      }
+
+      const detailPromises = rawCollections.map(item => fetchCollectionItemDetails(item))
+      const results = await Promise.allSettled(detailPromises)
+
+      const processedCollections = results.map((result, index) => {
+        if (result.status === 'fulfilled') {
+          return result.value
+        } else {
+          const item = rawCollections[index]
+          const typeName = item.collectableType === 'merchant' ? '商家' : item.collectableType === 'dish' ? '菜品' : '文章'
+          return {
+            id: item.id,
+            collectableId: item.collectableId,
+            type: item.collectableType,
+            date: formatDate(item.createTime),
+            title: `${typeName} ${item.collectableId}`,
+            description: '信息加载失败',
+            image: item.collectableType === 'article' ? null : defaultImage,
+            firstChar: item.collectableType === 'article' ? typeName.charAt(0) : undefined
+          }
+        }
+      })
+
+      collections.value = processedCollections
+      ElMessage.success('刷新成功')
+    } else {
+      ElMessage.error('刷新失败：' + (response.message || '未知错误'))
+    }
+  } catch (error) {
+    console.error('刷新收藏失败:', error)
+    ElMessage.error('刷新失败，请稍后重试')
+  } finally {
+    loading.value = false
+  }
 }
 
 // 去首页
@@ -468,99 +603,139 @@ const handleCurrentChange = (val) => {
   currentPage.value = val
 }
 
-// 从后端加载收藏数据
+// 辅助函数：格式化日期
+const formatDate = (dateString) => {
+  if (!dateString) return new Date().toISOString().split('T')[0]
+  const date = new Date(dateString)
+  if (isNaN(date.getTime())) return new Date().toISOString().split('T')[0]
+  return date.toISOString().split('T')[0]
+}
+
+// 辅助函数：获取收藏项详情（优化版）
+const fetchCollectionItemDetails = async (item) => {
+  const baseCollection = {
+    id: item.id,
+    collectableId: item.collectableId,
+    type: item.collectableType,
+    date: formatDate(item.createTime)
+  }
+
+  try {
+    if (item.collectableType === 'merchant') {
+      const merchantRes = await api.get(`/v1/merchant/${item.collectableId}`)
+      if (merchantRes.code === '200' && merchantRes.data) {
+        const merchant = merchantRes.data
+        return {
+          ...baseCollection,
+          title: merchant.name || '未知商家',
+          description: merchant.description || `这是${merchant.name || '商家'}的简介`,
+          image: merchant.image || defaultImage
+        }
+      }
+    } else if (item.collectableType === 'dish') {
+      const dishRes = await api.get(`/v1/dishes/${item.collectableId}`)
+      if (dishRes.code === '200' && dishRes.data) {
+        const dish = dishRes.data
+        return {
+          ...baseCollection,
+          title: dish.name || '未知菜品',
+          description: dish.description || `这是${dish.name || '菜品'}的简介`,
+          image: dish.image || defaultImage,
+          dishData: {
+            id: dish.id,
+            name: dish.name,
+            price: dish.price || 0,
+            description: dish.description,
+            category: dish.category,
+            image: dish.image
+          }
+        }
+      }
+    } else if (item.collectableType === 'article') {
+      const articleTitle = `文章 ${item.collectableId}`
+      return {
+        ...baseCollection,
+        title: articleTitle,
+        description: '文章收藏功能正在开发中',
+        image: null,
+        firstChar: articleTitle.charAt(0)
+      }
+    }
+  } catch (error) {
+    console.warn(`加载${item.collectableType}详情失败 (ID: ${item.collectableId}):`, error.message)
+  }
+
+  // 返回默认值（即使失败也显示基本信息）
+  const typeName = item.collectableType === 'merchant' ? '商家' : item.collectableType === 'dish' ? '菜品' : '文章'
+  const defaultTitle = `${typeName} ${item.collectableId}`
+  const isArticle = item.collectableType === 'article'
+
+  return {
+    ...baseCollection,
+    title: defaultTitle,
+    description: `这是${typeName}的描述`,
+    image: isArticle ? null : defaultImage,
+    firstChar: isArticle ? defaultTitle.charAt(0) : undefined
+  }
+}
+
+// 从后端加载收藏数据（优化版：减少 N+1 查询影响）
 onMounted(async () => {
   loading.value = true
   try {
-    // 获取当前用户ID（从localStorage中获取）
-    const userId = String(authStore.userId || 1) || '1'
-    // 从后端获取收藏数据
-    const response = await axios.get(`${API_CONFIG.baseURL}/v1/collections`, {
+    const userId = String(authStore.userId || '1')
+
+    // 获取收藏列表
+    const response = await api.get('/v1/collections', {
       params: { userId }
     })
-    if (response.data && response.data.code === '200') {
-      const rawCollections = response.data.data
 
-      // 处理收藏数据,根据类型获取详细信息
-      const processedCollections = await Promise.all(
-        rawCollections.map(async (item) => {
-          const baseCollection = {
+    console.log('收藏API响应:', response)
+
+    if (response.code === '200') {
+      // 兼容不同的数据结构：response.data.data 或 response.data
+      const rawCollections = Array.isArray(response.data?.data)
+        ? response.data.data
+        : Array.isArray(response.data)
+        ? response.data
+        : []
+
+      if (rawCollections.length === 0) {
+        collections.value = []
+        console.log('暂无收藏数据')
+        return
+      }
+
+      // 使用 Promise.allSettled 确保部分失败不影响整体
+      // 这样即使某些详情加载失败，也能显示基本信息
+      const detailPromises = rawCollections.map(item => fetchCollectionItemDetails(item))
+      const results = await Promise.allSettled(detailPromises)
+
+      // 处理结果：只保留成功的，或者失败的也用默认值
+      const processedCollections = results.map((result, index) => {
+        if (result.status === 'fulfilled') {
+          return result.value
+        } else {
+          // 即使 Promise 失败，也返回基本信息
+          const item = rawCollections[index]
+          const typeName = item.collectableType === 'merchant' ? '商家' : item.collectableType === 'dish' ? '菜品' : '文章'
+          return {
             id: item.id,
             collectableId: item.collectableId,
             type: item.collectableType,
-            date: new Date(item.createTime).toISOString().split('T')[0]
+            date: formatDate(item.createTime),
+            title: `${typeName} ${item.collectableId}`,
+            description: '信息加载失败',
+            image: item.collectableType === 'article' ? null : defaultImage,
+            firstChar: item.collectableType === 'article' ? typeName.charAt(0) : undefined
           }
-
-          try {
-            if (item.collectableType === 'merchant') {
-              // 获取商家详情
-              const merchantRes = await axios.get(
-                `${API_CONFIG.baseURL}/v1/merchant/${item.collectableId}`
-              )
-              if (merchantRes.data?.code === '200' && merchantRes.data?.data) {
-                const merchant = merchantRes.data.data
-                return {
-                  ...baseCollection,
-                  title: merchant.name || '未知商家',
-                  description: merchant.description || `这是${merchant.name || '商家'}的简介`,
-                  image: merchant.image || defaultImage
-                }
-              }
-            } else if (item.collectableType === 'dish') {
-              // 获取菜品详情
-              const dishRes = await axios.get(
-                `${API_CONFIG.baseURL}/v1/dishes/${item.collectableId}`
-              )
-              if (dishRes.data?.code === '200' && dishRes.data?.data) {
-                const dish = dishRes.data.data
-                return {
-                  ...baseCollection,
-                  title: dish.name || '未知菜品',
-                  description: dish.description || `这是${dish.name || '菜品'}的简介`,
-                  image: dish.image || defaultImage,
-                  dishData: {
-                    id: dish.id,
-                    name: dish.name,
-                    price: dish.price || 0,
-                    description: dish.description,
-                    category: dish.category,
-                    image: dish.image
-                  }
-                }
-              }
-            } else if (item.collectableType === 'article') {
-              // 文章收藏 - 使用标题首字母作为图片
-              const articleTitle = `文章 ${item.collectableId}`
-              const firstChar = articleTitle.charAt(0)
-              return {
-                ...baseCollection,
-                title: articleTitle,
-                description: '文章收藏功能正在开发中',
-                image: null, // 使用null来触发首字母显示
-                firstChar: firstChar // 添加首字母字段
-              }
-            }
-          } catch (error) {
-            console.error(`加载${item.collectableType}详情失败:`, error)
-          }
-
-          // 默认返回值
-          const defaultTitle = `${item.collectableType === 'merchant' ? '商家' : item.collectableType === 'dish' ? '菜品' : '文章'} ${item.collectableId}`
-          const isArticle = item.collectableType === 'article'
-
-          return {
-            ...baseCollection,
-            title: defaultTitle,
-            description: `这是${item.collectableType === 'merchant' ? '商家' : item.collectableType === 'dish' ? '菜品' : '文章'}的描述`,
-            image: isArticle ? null : defaultImage, // 文章使用null触发首字母显示
-            firstChar: isArticle ? defaultTitle.charAt(0) : undefined // 文章添加首字母
-          }
-        })
-      )
+        }
+      })
 
       collections.value = processedCollections
+      console.log(`成功加载 ${processedCollections.length} 个收藏项`)
     } else {
-      ElMessage.error('加载收藏数据失败：' + (response.data?.message || '未知错误'))
+      ElMessage.error('加载收藏数据失败：' + (response.message || '未知错误'))
     }
   } catch (error) {
     console.error('加载收藏数据失败:', error)
@@ -604,10 +779,22 @@ onMounted(async () => {
       }
 
       .collection-stats {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+
         :deep(.el-tag) {
           font-size: 14px;
           padding: 8px 16px;
           font-weight: 500;
+        }
+
+        .refresh-btn {
+          transition: all 0.3s ease;
+
+          &:hover {
+            transform: rotate(180deg);
+          }
         }
       }
     }
@@ -628,12 +815,22 @@ onMounted(async () => {
     .filter-left {
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 12px;
       flex: 1;
       min-width: 300px;
+      flex-wrap: wrap;
+
+      .search-input {
+        width: 240px;
+        min-width: 200px;
+
+        :deep(.el-input__wrapper) {
+          border-radius: 8px;
+        }
+      }
 
       .filter-select {
-        width: 200px;
+        width: 160px;
 
         :deep(.el-input__wrapper) {
           border-radius: 8px;
@@ -650,6 +847,14 @@ onMounted(async () => {
         }
       }
 
+      .sort-select {
+        width: 140px;
+
+        :deep(.el-input__wrapper) {
+          border-radius: 8px;
+        }
+      }
+
       .filter-summary {
         .filter-active {
           display: flex;
@@ -657,6 +862,7 @@ onMounted(async () => {
           gap: 8px;
           font-size: 14px;
           color: #606266;
+          flex-wrap: wrap;
         }
       }
     }
@@ -775,6 +981,13 @@ onMounted(async () => {
           opacity: 1;
         }
 
+        // 移动端优化：始终显示删除按钮
+        @media (max-width: 768px) {
+          .delete-btn {
+            opacity: 1;
+          }
+        }
+
         .card-body {
           flex: 1;
           padding: 16px;
@@ -788,26 +1001,62 @@ onMounted(async () => {
             border-radius: 12px;
             overflow: hidden;
             margin-bottom: 16px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+            // 类型渐变背景
+            &.gradient-merchant {
+              background: linear-gradient(135deg, #4caf50 0%, #81c784 100%);
+            }
+
+            &.gradient-dish {
+              background: linear-gradient(135deg, #ff9800 0%, #ffb74d 100%);
+            }
+
+            &.gradient-article {
+              background: linear-gradient(135deg, #2196f3 0%, #64b5f6 100%);
+            }
+
+            // 备用内容（图标+首字）
+            .fallback-content {
+              width: 100%;
+              height: 100%;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              gap: 16px;
+              color: white;
+              position: relative;
+
+              .type-icon-bg {
+                width: 80px;
+                height: 80px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.2);
+                backdrop-filter: blur(10px);
+                display: flex;
+              align-items: center;
+              justify-content: center;
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+                transition: transform 0.3s ease;
+
+                .type-fallback-icon {
+                  font-size: 40px;
+                }
+              }
+
+              .title-first-char {
+                font-size: 72px;
+                font-weight: 700;
+                text-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+                line-height: 1;
+                margin: 0;
+              }
+            }
 
             .collection-image {
               width: 100%;
               height: 100%;
               object-fit: cover;
-              transition: transform 0.3s ease;
-            }
-
-            .article-first-char {
-              width: 100%;
-              height: 100%;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              font-size: 96px;
-              font-weight: 700;
-              color: white;
-              background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
-              text-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
               transition: transform 0.3s ease;
             }
 
@@ -843,8 +1092,14 @@ onMounted(async () => {
               transform: scale(1.1);
             }
 
-            .article-first-char {
-              transform: scale(1.05);
+            .fallback-content {
+              .type-icon-bg {
+                transform: scale(1.1) rotate(5deg);
+              }
+
+              .title-first-char {
+                transform: scale(1.05);
+              }
             }
 
             .image-overlay {
@@ -1017,21 +1272,22 @@ onMounted(async () => {
         align-items: stretch;
         min-width: auto;
 
-        .filter-select {
+        .search-input {
+          width: 100%;
+        }
+
+        .filter-select,
+        .sort-select {
           width: 100%;
         }
       }
 
       .filter-right {
-        justify-content: space-between;
+        flex-direction: column;
+        gap: 8px;
 
-        .el-button-group {
-          display: flex;
-          flex: 1;
-
-          .el-button {
-            flex: 1;
-          }
+        .el-button {
+          width: 100%;
         }
       }
     }

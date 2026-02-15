@@ -253,15 +253,17 @@ const clearFieldError = (fieldName) => {
 const showLoading = ref(false)
 
 // 页面加载时生成验证码并读取保存的账号信息
-onMounted(() => {
+onMounted(async () => {
   generateCaptcha() // 生成验证码
-  loadSavedAccounts()
+  await loadSavedAccounts()
+  // 自动填充最后登录的账号
+  autofillLastAccount()
 })
 
 // 监听路由变化，确保每次进入页面都刷新验证码、重置表单和清除加载状态
 watch(
   () => router.currentRoute.value.path,
-  (newPath) => {
+  async (newPath) => {
     if (newPath === '/login') {
       generateCaptcha()
       // 清除加载状态
@@ -270,30 +272,60 @@ watch(
       if (loginFormRef.value) {
         loginFormRef.value.resetFields()
       }
+      // 重新加载保存的账号并自动填充（必须在重置表单之后）
+      await loadSavedAccounts()
+      // 使用 setTimeout 确保在 resetFields 完成后再填充
+      setTimeout(() => {
+        autofillLastAccount()
+      }, 0)
     }
   }
 )
 
 // 读取保存的账号信息
-const loadSavedAccounts = () => {
-  const accounts = localStorage.getItem('savedAccounts')
-  if (accounts) {
-    // 解析并清理旧格式的数据
-    const parsedAccounts = JSON.parse(accounts)
-    // 过滤掉没有phone字段的旧数据，并将旧的username字段转换为phone字段
-    savedAccounts.value = parsedAccounts
-      .map((account) => {
-        // 如果账号有username字段但没有phone字段，将username转换为phone
-        if (account.username && !account.phone) {
-          return {
-            phone: account.username,
-            password: account.password || ''
+const loadSavedAccounts = async () => {
+  try {
+    // 从 electron-store 读取账号信息
+    const accounts = await window.api.store.get('savedAccounts')
+    if (accounts && Array.isArray(accounts)) {
+      // 解析并清理旧格式的数据
+      const parsedAccounts = accounts
+      // 过滤掉没有phone字段的旧数据，并将旧的username字段转换为phone字段
+      savedAccounts.value = parsedAccounts
+        .map((account) => {
+          // 如果账号有username字段但没有phone字段，将username转换为phone
+          if (account.username && !account.phone) {
+            return {
+              phone: account.username,
+              password: account.password || ''
+            }
           }
-        }
-        // 只保留有phone字段的账号
-        return account
-      })
-      .filter((account) => account.phone)
+          // 只保留有phone字段的账号
+          return account
+        })
+        .filter((account) => account.phone)
+    } else {
+      savedAccounts.value = []
+    }
+  } catch (error) {
+    console.error('读取保存的账号失败:', error)
+    savedAccounts.value = []
+  }
+}
+
+// 自动填充最后登录的账号
+const autofillLastAccount = () => {
+  if (savedAccounts.value.length > 0) {
+    // 获取最后一个保存的账号（通常是最后登录的）
+    const lastAccount = savedAccounts.value[savedAccounts.value.length - 1]
+    if (lastAccount && lastAccount.phone) {
+      loginForm.phone = lastAccount.phone
+      // 如果有保存的密码，则自动填充密码并勾选记住密码
+      if (lastAccount.password) {
+        loginForm.password = lastAccount.password
+        rememberPassword.value = true
+      }
+    }
   }
 }
 
@@ -331,19 +363,21 @@ const handlePhoneChange = (value) => {
 }
 
 // 删除保存的账号
-const deleteSavedAccount = (phone) => {
+const deleteSavedAccount = async (phone) => {
   // 过滤掉要删除的账号
   savedAccounts.value = savedAccounts.value.filter((account) => account.phone !== phone)
-  // 更新localStorage
-  localStorage.setItem('savedAccounts', JSON.stringify(savedAccounts.value))
-  // 如果当前输入的手机号就是被删除的账号，清空密码
+  // 更新 electron-store（将 Vue 响应式对象转换为普通对象）
+  await window.api.store.set('savedAccounts', JSON.parse(JSON.stringify(savedAccounts.value)))
+
+  // 清空密码输入框和记住密码选项
+  loginForm.password = ''
+  rememberPassword.value = false
+
+  // 如果当前输入的手机号就是被删除的账号，清空手机号输入框
   if (loginForm.phone === phone) {
-    loginForm.password = ''
-    rememberPassword.value = false
-    // 清空输入框，触发自动完成组件更新
     loginForm.phone = ''
   } else {
-    // 如果输入框不是被删除的账号，强制刷新
+    // 如果输入框不是被删除的账号，强制刷新下拉列表
     const currentPhone = loginForm.phone
     if (currentPhone === '') {
       // 输入框为空时，设置一个临时值再清空，强制触发组件更新
@@ -436,8 +470,9 @@ const submitForm = async () => {
             })
           }
 
-          // 保存到localStorage
-          localStorage.setItem('savedAccounts', JSON.stringify(savedAccounts.value))
+          // 保存到 electron-store（持久化存储，不会因清除缓存而丢失）
+          // 将 Vue 响应式对象转换为普通对象，避免 IPC 克隆错误
+          await window.api.store.set('savedAccounts', JSON.parse(JSON.stringify(savedAccounts.value)))
           ElMessage.success('登录成功！')
 
           // 登录成功后显示加载动画

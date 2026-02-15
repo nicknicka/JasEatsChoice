@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require('electron')
+const { contextBridge, ipcRenderer, clipboard } = require('electron')
 const { electronAPI } = require('@electron-toolkit/preload')
 
 // Custom APIs for renderer
@@ -9,6 +9,11 @@ const api = {
     get: (key) => ipcRenderer.invoke('store:get', key),
     delete: (key) => ipcRenderer.invoke('store:delete', key),
     clear: () => ipcRenderer.invoke('store:clear')
+  },
+  // clipboard methods
+  clipboard: {
+    writeText: (text) => clipboard.writeText(text),
+    readText: () => clipboard.readText()
   },
   // WebSocket event listeners
   onWebSocketMessage: (callback) => {

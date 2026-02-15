@@ -206,10 +206,6 @@
       <el-divider />
 
       <div class="bottom-actions fade-in-up delay-400">
-        <el-button type="text" size="small" @click="goToContact">
-          <el-icon><Service /></el-icon>
-          <span style="margin-left: 5px">联系客服</span>
-        </el-button>
         <el-button type="text" size="small" @click="submitFeedback">
           <el-icon><ChatDotSquare /></el-icon>
           <span style="margin-left: 5px">反馈建议</span>
@@ -488,7 +484,6 @@ import {
   Wallet,
   StarFilled,
   Location,
-  Service,
   ChatDotSquare,
   SwitchButton,
   DocumentCopy,
@@ -861,8 +856,15 @@ const fetchCollectionCount = async () => {
       params: { userId }
     })
 
-    if (response.code === '200' && response.data) {
-      userInfo.value.collections = response.data.length || 0
+    if (response.code === '200') {
+      // 兼容不同的数据结构：response.data.data 或 response.data
+      const collectionsData = Array.isArray(response.data?.data)
+        ? response.data.data
+        : Array.isArray(response.data)
+        ? response.data
+        : []
+
+      userInfo.value.collections = collectionsData.length || 0
     } else {
       userInfo.value.collections = 0
     }
@@ -950,11 +952,6 @@ const goToMyCollection = () => {
 // 跳转到地址管理页面
 const goToAddress = () => {
   router.push('/user/home/address')
-}
-
-// 跳转到联系客服页面
-const goToContact = () => {
-  router.push('/user/home/contact')
 }
 
 // 设置功能
@@ -1225,8 +1222,35 @@ const shareProfile = () => {
 // 复制分享链接
 const copyShareLink = async () => {
   try {
-    await navigator.clipboard.writeText(shareLink.value)
-    ElMessage.success('分享链接已复制到剪贴板')
+    // 优先使用 Electron 的 clipboard API（更可靠）
+    if (window.api && window.api.clipboard) {
+      window.api.clipboard.writeText(shareLink.value)
+      ElMessage.success('分享链接已复制到剪贴板')
+      return
+    }
+
+    // 降级方案：使用 navigator.clipboard（浏览器环境）
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(shareLink.value)
+      ElMessage.success('分享链接已复制到剪贴板')
+      return
+    }
+
+    // 最后的降级方案：使用传统的 document.execCommand
+    const textArea = document.createElement('textarea')
+    textArea.value = shareLink.value
+    textArea.style.position = 'fixed'
+    textArea.style.left = '-999999px'
+    document.body.appendChild(textArea)
+    textArea.select()
+    try {
+      document.execCommand('copy')
+      ElMessage.success('分享链接已复制到剪贴板')
+    } catch (err) {
+      throw err
+    } finally {
+      document.body.removeChild(textArea)
+    }
   } catch (err) {
     console.error('复制失败:', err)
     ElMessage.error('复制失败，请手动复制')
