@@ -98,6 +98,14 @@ async function cancelOrder(order) {
  * 确认收货
  */
 async function confirmReceipt(order) {
+  console.log('📦 Orders.vue - 开始确认收货流程', {
+    orderId: order.id,
+    orderNo: order.orderNo,
+    currentStatus: order.status,
+    statusText: getOrderStatusText(order.status),
+    timestamp: new Date().toISOString()
+  })
+
   try {
     await ElMessageBox.confirm('确认已收到餐品并完成订单吗？', '确认收货', {
       confirmButtonText: '确认收货',
@@ -105,17 +113,48 @@ async function confirmReceipt(order) {
       type: 'info'
     })
 
+    console.log('📦 Orders.vue - 用户确认，开始调用API', {
+      orderId: order.id,
+      apiEndpoint: `/v1/orders/${order.id}/status`,
+      targetStatus: 7,
+      timestamp: new Date().toISOString()
+    })
+
     const response = await orderApi.confirmReceipt(order.id)
 
+    console.log('📦 Orders.vue - API响应', {
+      orderId: order.id,
+      response: response.data,
+      success: response.data?.success,
+      timestamp: new Date().toISOString()
+    })
+
     if (response.data.success) {
-      order.status = 'completed'
-      ElMessage.success('已确认收货，订单完成')
+      order.status = 'pendingComment'
+      console.log('✅ Orders.vue - 确认收货成功', {
+        orderId: order.id,
+        newStatus: order.status,
+        statusText: getOrderStatusText(order.status),
+        timestamp: new Date().toISOString()
+      })
+      ElMessage.success('已确认收货，请对订单进行评价')
     } else {
+      console.error('❌ Orders.vue - 确认收货失败（业务错误）', {
+        orderId: order.id,
+        message: response.data.message,
+        timestamp: new Date().toISOString()
+      })
       ElMessage.error(response.data.message || '确认收货失败')
     }
   } catch (error) {
     if (error !== 'cancel') {
-      console.error('确认收货失败:', error)
+      console.error('❌ Orders.vue - 确认收货异常', {
+        orderId: order.id,
+        error: error,
+        errorMessage: error.message,
+        errorStack: error.stack,
+        timestamp: new Date().toISOString()
+      })
       ElMessage.error('确认收货失败，请稍后重试')
     }
   }
@@ -129,6 +168,18 @@ function goToEvaluate(order) {
     path: `/user/home/evaluate-order/${order.id}`,
     name: 'user-evaluate-order',
     params: { id: order.id }
+  })
+}
+
+/**
+ * 跳转到追加评价页面
+ */
+function goToAdditionalReview(order) {
+  router.push({
+    path: `/user/home/evaluate-order/${order.id}`,
+    name: 'user-evaluate-order',
+    params: { id: order.id },
+    query: { type: 'additional' }
   })
 }
 
@@ -213,6 +264,24 @@ onMounted(() => {
   // 滚动到页面顶部
   window.scrollTo({ top: 0, behavior: 'smooth' })
 })
+
+/**
+ * 监听路由query参数变化，当从评价页面返回时刷新订单列表
+ */
+watch(
+  () => route.query.refresh,
+  (newRefresh, oldRefresh) => {
+    // 如果refresh参数发生变化，说明是从评价页面返回，刷新订单列表
+    if (newRefresh && newRefresh !== oldRefresh) {
+      console.log('🔄 检测到刷新参数，重新加载订单列表', {
+        newRefresh,
+        oldRefresh,
+        timestamp: new Date().toISOString()
+      })
+      loadOrders()
+    }
+  }
+)
 </script>
 
 <template>
@@ -274,6 +343,7 @@ onMounted(() => {
         @cancel="cancelOrder"
         @confirm-receipt="confirmReceipt"
         @evaluate="goToEvaluate"
+        @additional-review="goToAdditionalReview"
         @reorder="handleReorder"
         @image-error="handleImageError"
       />

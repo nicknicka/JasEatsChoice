@@ -103,6 +103,22 @@ const handleTokenExpired = () => {
 
 api.interceptors.request.use(
   (config) => {
+    // 订单相关请求的详细日志
+    if (config.url?.includes('/orders')) {
+      console.log('🔍 API请求 - 订单相关', {
+        method: config.method?.toUpperCase(),
+        url: config.url,
+        fullUrl: `${config.baseURL}${config.url}`,
+        params: config.params,
+        data: config.data,
+        headers: {
+          hasAuth: !!config.headers.Authorization,
+          authPrefix: config.headers.Authorization?.substring(0, 20) + '...'
+        },
+        timestamp: new Date().toISOString()
+      })
+    }
+
     // 检查请求是否在白名单中（不需要token的接口）
     if (isWhitelisted(config.url || '')) {
       // 白名单接口不添加token
@@ -133,6 +149,19 @@ api.interceptors.request.use(
 // 响应拦截器 - 重试逻辑
 api.interceptors.response.use(
   (response) => {
+    // 订单相关响应的详细日志
+    if (response.config?.url?.includes('/orders')) {
+      console.log('✅ API响应 - 订单相关', {
+        method: response.config.method?.toUpperCase(),
+        url: response.config.url,
+        status: response.status,
+        statusText: response.statusText,
+        hasData: !!response.data,
+        success: response.data?.success,
+        message: response.data?.message,
+        timestamp: new Date().toISOString()
+      })
+    }
     // 只返回数据部分
     return response.data
   },
@@ -210,6 +239,22 @@ api.interceptors.response.use(
     } else {
       // 请求配置错误
       formattedError.message = error.message
+    }
+
+    // 订单相关错误的详细日志
+    if (error.config?.url?.includes('/orders')) {
+      console.error('❌ API错误 - 订单相关', {
+        method: error.config?.method?.toUpperCase(),
+        url: error.config?.url,
+        params: error.config?.params,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        responseData: error.response?.data,
+        request: error.request ? '已发送但无响应' : '配置错误',
+        code: error.code,
+        message: error.message,
+        timestamp: new Date().toISOString()
+      })
     }
 
     console.error('API请求失败:', formattedError)

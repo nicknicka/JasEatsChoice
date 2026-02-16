@@ -57,6 +57,14 @@
         去评价
       </el-button>
       <el-button
+        v-if="canAdditionalReview"
+        type="warning"
+        size="small"
+        @click="handleAdditionalReview"
+      >
+        追加评价
+      </el-button>
+      <el-button
         v-if="canReorder"
         type="warning"
         size="small"
@@ -69,7 +77,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import OrderItemsList from './OrderItemsList.vue'
 import {
   getOrderStatusText,
@@ -94,7 +102,23 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['view-details', 'cancel', 'confirm-receipt', 'evaluate', 'reorder', 'image-error'])
+const emit = defineEmits(['view-details', 'cancel', 'confirm-receipt', 'evaluate', 'additional-review', 'reorder', 'image-error'])
+
+// 组件挂载时打印订单状态
+onMounted(() => {
+  console.log('📦 OrderCard组件挂载 - 订单状态详情', {
+    orderId: props.order.id,
+    orderNo: props.order.orderNo,
+    status: props.order.status,
+    statusText: getStatusText(props.order.status),
+    backendStatus: props.order._raw?.status,
+    canCancel: canCancel.value,
+    canConfirmReceiptOrder: canConfirmReceiptOrder.value,
+    canEvaluate: canEvaluate.value,
+    canReorder: canReorder.value,
+    timestamp: new Date().toISOString()
+  })
+})
 
 /**
  * 获取状态文本
@@ -118,7 +142,18 @@ const canCancel = computed(() => canCancelOrder(props.order.status))
 /**
  * 是否可以确认收货
  */
-const canConfirmReceiptOrder = computed(() => canConfirmReceipt(props.order.status))
+const canConfirmReceiptOrder = computed(() => {
+  const canConfirm = canConfirmReceipt(props.order.status)
+  console.log('📦 OrderCard - 订单确认收货状态检查', {
+    orderId: props.order.id,
+    orderNo: props.order.orderNo,
+    currentStatus: props.order.status,
+    statusText: getStatusText(props.order.status),
+    canConfirmReceipt: canConfirm,
+    timestamp: new Date().toISOString()
+  })
+  return canConfirm
+})
 
 /**
  * 是否可以评价
@@ -126,11 +161,21 @@ const canConfirmReceiptOrder = computed(() => canConfirmReceipt(props.order.stat
 const canEvaluate = computed(() => canEvaluateOrder(props.order.status))
 
 /**
+ * 是否可以追加评价（已完成订单可以追加评价）
+ */
+const canAdditionalReview = computed(() => {
+  // 只有已完成的订单可以追加评价
+  return props.order.status === 'completed'
+})
+
+/**
  * 是否可以再来一单
  */
 const canReorder = computed(() => {
-  // 已完成(7)或已取消(6)的订单可以再来一单
-  return props.order.status === 'completed' || props.order.status === 'cancelled'
+  // 待评价(completed/pendingComment)或已取消(cancelled)的订单可以再来一单
+  return props.order.status === 'completed' ||
+         props.order.status === 'pendingComment' ||
+         props.order.status === 'cancelled'
 })
 
 /**
@@ -151,6 +196,14 @@ function handleCancel() {
  * 确认收货
  */
 function handleConfirmReceipt() {
+  console.log('📦 OrderCard - 点击确认收货按钮', {
+    orderId: props.order.id,
+    orderNo: props.order.orderNo,
+    currentStatus: props.order.status,
+    statusText: getStatusText(props.order.status),
+    canConfirmReceipt: canConfirmReceipt.value,
+    timestamp: new Date().toISOString()
+  })
   emit('confirm-receipt', props.order)
 }
 
@@ -159,6 +212,13 @@ function handleConfirmReceipt() {
  */
 function handleEvaluate() {
   emit('evaluate', props.order)
+}
+
+/**
+ * 追加评价
+ */
+function handleAdditionalReview() {
+  emit('additional-review', props.order)
 }
 
 /**

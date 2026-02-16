@@ -42,9 +42,17 @@ export default {
   },
 
   /**
-   * 确认收货（将订单从已送达状态更新为已完成状态）
+   * 确认收货（将订单从已上菜状态更新为已完成状态）
    */
   confirmReceipt(orderId) {
+    console.log('📦 orderApi - 调用确认收货API', {
+      orderId,
+      endpoint: `/v1/orders/${orderId}/status`,
+      method: 'PUT',
+      params: { status: 7 },
+      timestamp: new Date().toISOString()
+    })
+
     return api.put(`/v1/orders/${orderId}/status`, null, {
       params: { status: 7 } // 7表示已完成
     })

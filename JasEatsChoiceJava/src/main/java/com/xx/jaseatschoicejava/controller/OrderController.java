@@ -346,7 +346,7 @@ public class OrderController {
                     pending++;
                 }
 
-                // 统计待评价订单（已完成的订单）
+                // 统计待评价订单（已确认收货但未评价的订单）
                 if (status == 7) {
                     pendingComment++;
                 }

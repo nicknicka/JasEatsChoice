@@ -17,6 +17,7 @@ const UserMyRecipe = () => import('../views/user/MyRecipe.vue') // 我的食谱
 const UserDietRecord = () => import('../views/user/DietRecord.vue') // 饮食记录
 const UserOrders = () => import('../views/user/Orders.vue') // 我的订单
 const UserOrderDetail = () => import('../views/user/OrderDetail.vue') // 订单详情
+const UserEvaluateOrder = () => import('../views/user/EvaluateOrder.vue') // 评价订单
 const UserConsumeHistory = () => import('../views/user/ConsumeHistory.vue') // 消费记录
 const UserMessageCenter = () => import('../views/user/MessageCenter.vue') // 消息中心
 const UserSystemNotification = () => import('../views/user/SystemNotification.vue') // 系统通知
@@ -169,6 +170,12 @@ const router = createRouter({
           name: 'user-order-detail',
           component: UserOrderDetail,
           meta: { title: '订单详情', transition: 'zoom-fade' }
+        },
+        {
+          path: 'evaluate-order/:id',
+          name: 'user-evaluate-order',
+          component: UserEvaluateOrder,
+          meta: { title: '评价订单' }
         },
         {
           path: 'consume-history',

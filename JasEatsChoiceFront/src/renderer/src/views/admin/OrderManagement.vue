@@ -260,7 +260,7 @@ const getStatusType = (status) => {
       2: 'PREPARING',  // 备菜中
       3: 'PREPARING',  // 烹饪中
       4: 'DELIVERING', // 待上菜
-      5: 'COMPLETED',  // 已送达
+      5: 'COMPLETED',  // 已上菜
       6: 'CANCELLED',  // 已取消
       7: 'COMPLETED'   // 已完成
     }
@@ -288,7 +288,7 @@ const getStatusText = (status) => {
       2: '备菜中',
       3: '烹饪中',
       4: '待上菜',
-      5: '已送达',
+      5: '已上菜',
       6: '已取消',
       7: '已完成'
     }

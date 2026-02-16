@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import { API_CONFIG } from '../../config'
@@ -7,10 +7,7 @@ import { ElMessage } from 'element-plus'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
 import {
   Shop,
-  Clock,
-  Location,
   Money,
-  Van,
   CircleCheck,
   EditPen,
   Phone
@@ -29,7 +26,8 @@ const orderStatusMap = {
   pendingAccept: '待接单',
   processing: '进行中',
   pendingComment: '待评价',
-  delivered: '已送达',
+  delivered: '已上菜',
+  reviewed: '已评价',
   completed: '已完成',
   cancelled: '已取消'
 }
@@ -41,47 +39,10 @@ const statusTagTypeMap = {
   processing: 'primary',
   pendingComment: 'info',
   delivered: 'success',
+  reviewed: 'success',
   completed: 'success',
   cancelled: 'danger'
 }
-
-// 订单进度步骤配置
-const orderProgressSteps = computed(() => {
-  if (!order.value) return []
-
-  const steps = [
-    { title: '待支付', icon: Clock, status: 'wait' },
-    { title: '待接单', icon: Clock, status: 'wait' },
-    { title: '进行中', icon: Clock, status: 'process' },
-    { title: '已送达', icon: Van, status: 'wait' },
-    { title: '已完成', icon: CircleCheck, status: 'wait' }
-  ]
-
-  // 根据订单状态调整进度
-  const statusIndexMap = {
-    pending: 0,
-    pendingAccept: 1,
-    processing: 2,
-    delivered: 3,
-    completed: 4,
-    cancelled: 2,
-    pendingComment: 4
-  }
-
-  const currentIndex = statusIndexMap[order.value.status] || 0
-
-  steps.forEach((step, index) => {
-    if (index < currentIndex) {
-      step.status = 'success'
-    } else if (index === currentIndex) {
-      step.status = order.value.status === 'cancelled' ? 'error' : 'process'
-    } else {
-      step.status = 'wait'
-    }
-  })
-
-  return steps
-})
 
 // 将后端状态码转换为前端状态文本
 const orderStatusToText = (statusCode) => {
@@ -91,8 +52,10 @@ const orderStatusToText = (statusCode) => {
     2: 'processing', // 备菜中
     3: 'processing', // 烹饪中
     4: 'processing', // 待上菜
-    5: 'delivered', // 已送达
-    6: 'cancelled' // 已取消
+    5: 'delivered', // 已上菜
+    6: 'cancelled', // 已取消
+    7: 'pendingComment', // 待评价
+    8: 'reviewed' // 已评价
   }
   return statusMap[statusCode] || 'pending'
 }
@@ -137,7 +100,20 @@ const loadOrderDetail = async () => {
 
     const orderData = orderResponse.data.data
 
-    // 2. 获取订单菜品信息
+    // 2. 获取商家名称
+    let merchantName = ''
+    try {
+      const merchantResponse = await axios.get(
+        `${API_CONFIG.baseURL}${API_CONFIG.merchant.detail}${orderData.merchantId}`
+      )
+      if (merchantResponse.data?.data?.name) {
+        merchantName = merchantResponse.data.data.name
+      }
+    } catch (error) {
+      console.error('获取商家名称失败:', error)
+    }
+
+    // 3. 获取订单菜品信息
     const dishesResponse = await axios.get(`${API_CONFIG.baseURL}/v1/orders/${orderData.id}/dishes`)
 
     // 3. 获取菜品详情
@@ -146,11 +122,11 @@ const loadOrderDetail = async () => {
       items = await Promise.all(
         dishesResponse.data.data.map(async (orderDish) => {
           try {
-            const dishResponse = await axios.get(`${API_CONFIG.baseURL}/dishes/${orderDish.dishId}`)
+            const dishResponse = await axios.get(`${API_CONFIG.baseURL}${API_CONFIG.dish.detail}${orderDish.dishId}`)
             const dish = dishResponse.data?.data
             return {
               id: dish?.id || orderDish.dishId,
-              name: dish?.name || `菜品${orderDish.dishId}`,
+              name: dish?.name || orderDish.dishName || '菜品',
               quantity: orderDish.quantity,
               price: orderDish.price,
               customization: orderDish.customization,
@@ -165,14 +141,14 @@ const loadOrderDetail = async () => {
             // 降级处理：使用订单中存储的信息
             return {
               id: orderDish.dishId,
-              name: orderDish.dishName || `菜品${orderDish.dishId}`,  // 优先使用订单中的菜品名称
+              name: orderDish.dishName || '菜品',
               quantity: orderDish.quantity,
               price: orderDish.price,
-              image: orderDish.dishImage || '',                     // 优先使用订单中的图片
+              image: orderDish.dishImage || '',
               optionalIngredients: orderDish.optionalIngredients || [],
               requiredIngredients: orderDish.requiredIngredients || [],
               note: orderDish.note || '',
-              unavailable: true                                     // 标记为不可用
+              unavailable: true
             }
           }
         })
@@ -184,16 +160,12 @@ const loadOrderDetail = async () => {
       id: orderData.id,
       orderNo: orderData.id,
       status: orderStatusToText(orderData.status),
-      merchant: `商家${orderData.merchantId}`,
+      merchant: merchantName,
       merchantId: orderData.merchantId,
       total: orderData.totalAmount,
       time: formatTime(orderData.createTime),
       items: items,
       itemCount: items.reduce((sum, item) => sum + item.quantity, 0),
-      // 添加配送信息
-      address: orderData.address || '商家地址',
-      deliveryFee: 5.0,
-      // 添加支付信息
       paymentMethod: '平台币余额',
       paymentTime: orderData.updateTime ? formatTime(orderData.updateTime) : null,
       remark: orderData.remark || '',
@@ -233,8 +205,15 @@ const cancelOrder = (order) => {
 }
 
 // 跳转到评价页面
-const goToEvaluate = (orderId) => {
-  router.push(`/user/home/evaluate-order/${orderId}`)
+const goToEvaluate = (orderId, isAdditional = false) => {
+  if (isAdditional) {
+    router.push({
+      path: `/user/home/evaluate-order/${orderId}`,
+      query: { type: 'additional' }
+    })
+  } else {
+    router.push(`/user/home/evaluate-order/${orderId}`)
+  }
 }
 
 // 联系商家
@@ -264,9 +243,10 @@ const getActiveStep = () => {
     pendingAccept: 1,
     processing: 2,
     delivered: 3,
+    pendingComment: 4,
+    reviewed: 4,
     completed: 4,
-    cancelled: 2,
-    pendingComment: 4
+    cancelled: 2
   }
 
   return statusStepMap[order.value.status] || 0
@@ -302,7 +282,7 @@ const getActiveStep = () => {
               <el-step title="待支付" />
               <el-step title="待接单" />
               <el-step title="进行中" />
-              <el-step title="已送达" />
+              <el-step title="已上菜" />
               <el-step title="已完成" />
             </el-steps>
           </div>
@@ -324,34 +304,6 @@ const getActiveStep = () => {
             <div class="merchant-name">{{ order.merchant }}</div>
             <div class="merchant-meta">
               <span class="rating">4.8分</span>
-              <span class="delivery-time">约30分钟</span>
-            </div>
-          </div>
-        </el-card>
-
-        <!-- 配送信息卡片 -->
-        <el-card class="delivery-card" shadow="hover">
-          <template #header>
-            <div class="card-header">
-              <el-icon :size="20" color="#67c23a"><Location /></el-icon>
-              <span class="card-title">配送信息</span>
-            </div>
-          </template>
-          <div class="delivery-details">
-            <div class="delivery-item">
-              <span class="label">配送地址:</span>
-              <span class="value">{{ order.address }}</span>
-            </div>
-            <div class="delivery-item">
-              <span class="label">配送费:</span>
-              <span class="value">¥{{ order.deliveryFee.toFixed(2) }}</span>
-            </div>
-            <div
-              class="delivery-item"
-              v-if="order.status === 'processing' || order.status === 'delivered'"
-            >
-              <span class="label">预计送达:</span>
-              <span class="value highlight">约30分钟</span>
             </div>
           </div>
         </el-card>
@@ -473,17 +425,8 @@ const getActiveStep = () => {
           </template>
 
           <div class="amount-details">
-            <div class="amount-row">
-              <span class="amount-label">商品总额</span>
-              <span class="amount-value">¥{{ (order.total - order.deliveryFee).toFixed(2) }}</span>
-            </div>
-            <div class="amount-row">
-              <span class="amount-label">配送费</span>
-              <span class="amount-value">¥{{ order.deliveryFee.toFixed(2) }}</span>
-            </div>
-            <el-divider />
             <div class="amount-row total-row">
-              <span class="total-label">实付金额</span>
+              <span class="total-label">订单总额</span>
               <span class="total-value number-scroll">¥{{ order.total.toFixed(2) }}</span>
             </div>
           </div>
@@ -545,6 +488,16 @@ const getActiveStep = () => {
           >
             <el-icon><CircleCheck /></el-icon>
             去评价
+          </el-button>
+          <el-button
+            v-if="order.status === 'reviewed'"
+            type="warning"
+            size="large"
+            @click="goToEvaluate(order.id, true)"
+            class="action-btn additional-review-btn"
+          >
+            <el-icon><EditPen /></el-icon>
+            追加评价
           </el-button>
           <el-button
             v-if="order.status === 'pendingAccept' || order.status === 'processing'"
@@ -748,48 +701,6 @@ const getActiveStep = () => {
         .rating {
           color: #e6a23c;
           font-weight: 500;
-        }
-
-        .delivery-time {
-          color: #67c23a;
-        }
-      }
-    }
-  }
-
-  // 配送信息卡片
-  .delivery-card {
-    .delivery-details {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-
-      .delivery-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 10px 0;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-
-        &:last-child {
-          border-bottom: none;
-        }
-
-        .label {
-          font-size: 14px;
-          color: #7f8c8d;
-          font-weight: 500;
-        }
-
-        .value {
-          font-size: 14px;
-          color: #2c3e50;
-          font-weight: 500;
-
-          &.highlight {
-            color: #67c23a;
-            font-weight: 600;
-          }
         }
       }
     }

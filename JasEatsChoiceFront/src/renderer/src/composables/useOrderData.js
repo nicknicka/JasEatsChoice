@@ -45,7 +45,11 @@ export function useOrderData() {
    */
   async function fetchOrderDishes(order) {
     try {
-      const dishesResponse = await axios.get(`${API_CONFIG.baseURL}/v1/orders/${order.id}/dishes`)
+      // 并行获取订单菜品和商家名称
+      const [dishesResponse, merchantResponse] = await Promise.all([
+        axios.get(`${API_CONFIG.baseURL}/v1/orders/${order.id}/dishes`),
+        axios.get(`${API_CONFIG.baseURL}${API_CONFIG.merchant.detail}${order.merchantId}`).catch(() => ({ data: { data: { name: '' } } }))
+      ])
 
       let items = []
       if (dishesResponse.data?.data && dishesResponse.data.data.length > 0) {
@@ -56,10 +60,13 @@ export function useOrderData() {
         )
       }
 
-      return buildOrderObject(order, items)
+      // 获取商家名称
+      const merchantName = merchantResponse.data?.data?.name || ''
+
+      return buildOrderObject(order, items, merchantName)
     } catch (error) {
       console.error(`加载订单${order.id}的菜品失败:`, error)
-      return buildOrderObject(order, [])
+      return buildOrderObject(order, [], '')
     }
   }
 
@@ -76,7 +83,7 @@ export function useOrderData() {
       const dish = dishResponse.data?.data
 
       return {
-        name: dish?.name || `菜品${orderDish.dishId}`,
+        name: dish?.name || orderDish.dishName || '菜品',
         quantity: orderDish.quantity,
         price: orderDish.price,
         customization: orderDish.customization,
@@ -89,10 +96,10 @@ export function useOrderData() {
     } catch (error) {
       console.error(`获取菜品${orderDish.dishId}详情失败:`, error)
       return {
-        name: `菜品${orderDish.dishId}`,
+        name: orderDish.dishName || '菜品',
         quantity: orderDish.quantity,
         price: orderDish.price,
-        image: '',
+        image: orderDish.dishImage || '',
         imageLoadError: true,
         optionalIngredients: [],
         requiredIngredients: [],
@@ -105,14 +112,15 @@ export function useOrderData() {
    * 构建订单对象
    * @param {Object} order - 原始订单对象
    * @param {Array} items - 菜品数组
+   * @param {String} merchantName - 商家名称
    * @returns {Object} 格式化后的订单对象
    */
-  function buildOrderObject(order, items) {
+  function buildOrderObject(order, items, merchantName = '') {
     return {
       id: order.id,
       orderNo: order.id,
       status: orderStatusToText(order.status),
-      merchant: `商家${order.merchantId}`,
+      merchant: merchantName,
       merchantId: order.merchantId,
       total: order.totalAmount,
       time: formatTime(order.createTime),
