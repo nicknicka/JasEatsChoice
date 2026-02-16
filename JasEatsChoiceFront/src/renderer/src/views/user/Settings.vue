@@ -78,15 +78,21 @@
               <el-radio label="large">大</el-radio>
               <el-radio label="extra-large">超大</el-radio>
             </el-radio-group>
-            <span style="margin-left: 10px; color: #909399; font-size: 0.857rem">
+            <!-- <span style="margin-left: 10px; color: #909399; font-size: 0.857rem">
               调整主要内容区域的字体大小
-            </span>
+            </span> -->
           </div>
         </div>
 
         <!-- TODO: 主题切换功能 -->
         <!-- ✅ 已实现：深色/浅色主题切换，支持 Element Plus 组件适配 -->
         <!-- ⚠️  待测试：请在不同页面测试主题切换效果 -->
+        <!--
+        ⚠️  临时注释：主题设置功能暂时禁用
+        原因：尚未完成整个项目的主题整体适配搭配
+        待办：需要完善所有页面和组件的主题样式适配后再启用
+        -->
+        <!--
         <div class="form-row">
           <div class="form-label">主题切换</div>
           <div class="form-content">
@@ -96,6 +102,7 @@
             </span>
           </div>
         </div>
+        -->
       </div>
 
       <el-divider />
@@ -415,7 +422,9 @@ const tempSettings = ref({ ...officialSettings.value })
 
 // 辅助变量，方便模板中直接使用
 const fontSize = ref(tempSettings.value.fontSize)
-const theme = ref(tempSettings.value.theme)
+// TODO: 主题设置暂时禁用 - 待完成整个项目的主题整体适配
+// const theme = ref(tempSettings.value.theme)
+const theme = ref(false) // 默认浅色主题
 const notifications = ref({ ...tempSettings.value.notifications })
 const privacy = ref({ ...tempSettings.value.privacy })
 
@@ -494,12 +503,15 @@ onMounted(() => {
 
     // 更新临时设置变量
     fontSize.value = officialSettings.value.fontSize
-    theme.value = officialSettings.value.theme
+    // TODO: 主题设置暂时禁用 - 待完成整个项目的主题整体适配
+    // theme.value = officialSettings.value.theme
+    theme.value = false // 强制使用浅色主题
     notifications.value = { ...officialSettings.value.notifications }
     privacy.value = { ...officialSettings.value.privacy }
 
     // Update theme and font size
-    updateTheme()
+    // TODO: 主题设置暂时禁用 - 待完成整个项目的主题整体适配
+    // updateTheme()
     updateFontSize()
   }
 })
@@ -509,7 +521,9 @@ const saveSettings = async () => {
   // 将临时修改的设置同步到正式设置数据中
   const updatedSettings = {
     fontSize: fontSize.value,
-    theme: theme.value,
+    // TODO: 主题设置暂时禁用 - 待完成整个项目的主题整体适配
+    // theme: theme.value,
+    theme: false, // 强制保存为浅色主题
     notifications: { ...notifications.value },
     privacy: { ...privacy.value }
   }
@@ -540,7 +554,8 @@ const saveSettings = async () => {
   console.log('Saved settings:', officialSettings.value)
 
   // 更新主题和字体大小
-  updateTheme()
+  // TODO: 主题设置暂时禁用 - 待完成整个项目的主题整体适配
+  // updateTheme()
   updateFontSize()
 }
 
@@ -565,7 +580,9 @@ const resetSettings = () => {
 
   // 更新临时设置变量
   fontSize.value = defaultSettings.fontSize
-  theme.value = defaultSettings.theme
+  // TODO: 主题设置暂时禁用 - 待完成整个项目的主题整体适配
+  // theme.value = defaultSettings.theme
+  theme.value = false // 强制使用浅色主题
   notifications.value = { ...defaultSettings.notifications }
   privacy.value = { ...defaultSettings.privacy }
 
@@ -576,10 +593,12 @@ const resetSettings = () => {
 }
 
 // Update theme
-// TODO: 主题切换功能
+// TODO: 主题切换功能 - 暂时禁用，待完成整个项目的主题整体适配
 // ✅ 已实现：通过在 body 上添加/移除 dark-theme 和 light-theme 类来实现主题切换
 // ✅ 已实现：Element Plus 组件深色模式适配（按钮、卡片、表单等）
 // ⚠️  待测试：请在不同页面测试主题效果，确保所有组件颜色正确
+// ⚠️  临时注释：尚未完成整个项目的主题整体适配搭配
+/*
 const updateTheme = () => {
   if (theme.value) {
     document.body.classList.add('dark-theme')
@@ -589,6 +608,7 @@ const updateTheme = () => {
     document.body.classList.remove('dark-theme')
   }
 }
+*/
 
 // Update font size
 // TODO: 字体大小切换功能
