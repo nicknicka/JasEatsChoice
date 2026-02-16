@@ -1,16 +1,19 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import { API_CONFIG } from '../../config'
 import { ElMessage } from 'element-plus'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
+import { reviewAPI } from '../../api/review.js'
 import {
   Shop,
   Money,
   CircleCheck,
   EditPen,
-  Phone
+  Phone,
+  Star,
+  Picture
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -19,7 +22,11 @@ const orderId = ref(route.params.id)
 const order = ref(null)
 const loading = ref(true)
 
-// 订单状态映射
+// 评价相关
+const review = ref(null)
+const reviewLoading = ref(false)
+
+// 订单状态映射（与 orderStatus.js 保持一致）
 const orderStatusMap = {
   all: '全部订单',
   pending: '待支付',
@@ -28,11 +35,10 @@ const orderStatusMap = {
   pendingComment: '待评价',
   delivered: '已上菜',
   reviewed: '已评价',
-  completed: '已完成',
   cancelled: '已取消'
 }
 
-// 订单状态标签样式映射
+// 订单状态标签样式映射（与 orderStatus.js 保持一致）
 const statusTagTypeMap = {
   pending: 'info',
   pendingAccept: 'warning',
@@ -40,7 +46,6 @@ const statusTagTypeMap = {
   pendingComment: 'info',
   delivered: 'success',
   reviewed: 'success',
-  completed: 'success',
   cancelled: 'danger'
 }
 
@@ -177,13 +182,136 @@ const loadOrderDetail = async () => {
     order.value = null
   } finally {
     loading.value = false
+    // 订单详情加载完成后，如果订单已评价，则加载评价数据
+    console.log('📋 订单详情加载完成，检查是否需要加载评价', {
+      hasOrder: !!order.value,
+      orderStatus: order.value?.status,
+      rawStatus: order.value?._raw?.status,
+      shouldLoadReview: order.value && order.value.status === 'reviewed'
+    })
+
+    if (order.value && order.value.status === 'reviewed') {
+      await loadReview()
+    }
+  }
+}
+
+// 加载评价数据
+const loadReview = async () => {
+  console.log('🔍 loadReview 函数被调用', {
+    hasOrder: !!order.value,
+    orderStatus: order.value?.status
+  })
+
+  if (!order.value) {
+    console.error('❌ 订单数据不存在，无法加载评价')
+    return
+  }
+
+  if (order.value.status !== 'reviewed') {
+    console.error('❌ 订单状态不是"已评价"，无需加载评价数据', {
+      currentStatus: order.value.status,
+      expectedStatus: 'reviewed'
+    })
+    return
+  }
+
+  reviewLoading.value = true
+  try {
+    console.log('📋 开始加载订单评价', {
+      orderId: orderId.value,
+      timestamp: new Date().toISOString()
+    })
+
+    const response = await reviewAPI.getReviewByOrderId(orderId.value)
+
+    console.log('📡 API响应数据', {
+      status: response.status,
+      success: response.data?.success,
+      hasData: !!response.data?.data,
+      data: response.data?.data
+    })
+
+    // 检查响应是否成功且包含数据
+    if (response.data?.success && response.data?.data) {
+      review.value = response.data.data
+      console.log('✅ 评价数据加载成功', {
+        reviewId: review.value.id,
+        rating: review.value.rating,
+        content: review.value.content,
+        hasImages: review.value.images?.length || 0,
+        hasReplies: review.value.replies?.length || 0
+      })
+    } else {
+      // 评价数据不存在，可能是数据不一致问题
+      console.warn('⚠️ 评价数据不存在，订单状态与评价记录不一致', {
+        orderId: orderId.value,
+        responseMessage: response.data?.message,
+        orderStatus: order.value?.status
+      })
+
+      // 如果订单状态是已评价但没有评价记录，提示用户
+      if (order.value?.status === 'reviewed') {
+        console.warn('⚠️ 检测到数据不一致：订单状态为已评价，但没有找到评价记录')
+        // 可以选择将订单状态回滚到待评价，或者只是不显示评价卡片
+      }
+    }
+  } catch (error) {
+    console.error('❌ 加载评价数据出错', {
+      orderId: orderId.value,
+      errorMessage: error.message,
+      errorStatus: error.response?.status,
+      errorData: error.response?.data
+    })
+    // 不显示错误给用户，只是没有评价而已
+  } finally {
+    reviewLoading.value = false
+    console.log('✅ 评价加载流程结束', {
+      hasReview: !!review.value
+    })
   }
 }
 
 // 组件挂载时加载订单详情
 onMounted(() => {
+  console.log('🚀 OrderDetail组件挂载', {
+    orderId: orderId.value
+  })
   loadOrderDetail()
+
+  // 延迟检查，确保订单状态更新后再尝试加载评价
+  setTimeout(() => {
+    console.log('⏰ 延迟检查订单状态', {
+      hasOrder: !!order.value,
+      orderStatus: order.value?.status,
+      orderStatusText: orderStatusToText(order.value?.status)
+    })
+
+    if (order.value && order.value.status === 'reviewed' && !review.value) {
+      console.log('📝 延迟加载评价数据')
+      loadReview()
+    }
+  }, 500)
 })
+
+// 监听路由变化，当从评价页面返回时重新加载数据
+watch(
+  () => route.query.refresh,
+  (newRefresh) => {
+    if (newRefresh) {
+      console.log('🔄 检测到刷新参数，重新加载数据', {
+        refresh: newRefresh,
+        timestamp: new Date().toISOString()
+      })
+      // 重新加载订单详情
+      loadOrderDetail()
+      // 如果订单已评价，重新加载评价数据
+      if (order.value?.status === 'reviewed') {
+        loadReview()
+      }
+    }
+  }
+)
 
 // 取消订单
 const cancelOrder = (order) => {
@@ -245,7 +373,6 @@ const getActiveStep = () => {
     delivered: 3,
     pendingComment: 4,
     reviewed: 4,
-    completed: 4,
     cancelled: 2
   }
 
@@ -466,6 +593,91 @@ const getActiveStep = () => {
             </div>
           </template>
           <div class="remark-content">{{ order.remark }}</div>
+        </el-card>
+
+        <!-- 评价卡片 -->
+        <el-card v-if="review" class="review-card" shadow="hover">
+          <!-- 调试信息 -->
+          <div style="display: none;">
+            <pre>{{ JSON.stringify({
+              hasReview: !!review,
+              reviewId: review?.id,
+              rating: review?.rating,
+              hasContent: !!review?.content,
+              hasImages: review?.images?.length > 0,
+              hasReplies: review?.replies?.length > 0,
+              repliesCount: review?.replies?.length
+            }, null, 2) }}</pre>
+          </div>
+          <!-- 调试信息结束 -->
+          <template #header>
+            <div class="card-header">
+              <el-icon :size="20" color="#f7ba2a"><Star /></el-icon>
+              <span class="card-title">我的评价</span>
+            </div>
+          </template>
+
+          <div v-loading="reviewLoading" class="review-content">
+            <!-- 评分 -->
+            <div class="review-rating">
+              <span class="rating-label">评分：</span>
+              <el-rate
+                v-model="review.rating"
+                disabled
+                :colors="['#F7BA2A', '#F7BA2A', '#F7BA2A']"
+                size="large"
+              />
+              <span class="rating-score">{{ review.rating }}分</span>
+            </div>
+
+            <!-- 评价内容 -->
+            <div v-if="review.content" class="review-text">
+              {{ review.content }}
+            </div>
+
+            <!-- 评价图片 -->
+            <div v-if="review.images && review.images.length > 0" class="review-images">
+              <el-image
+                v-for="(img, index) in review.images"
+                :key="index"
+                :src="img"
+                :preview-src-list="review.images"
+                :initial-index="index"
+                fit="cover"
+                class="review-image"
+                lazy
+              >
+                <template #error>
+                  <div class="image-error">
+                    <el-icon><Picture /></el-icon>
+                  </div>
+                </template>
+              </el-image>
+            </div>
+
+            <!-- 追评和商家回复 -->
+            <div v-if="review.replies && review.replies.length > 0" class="review-replies">
+              <div
+                v-for="reply in review.replies"
+                :key="reply.id"
+                class="reply-item"
+                :class="{ 'merchant-reply': reply.isAdditional === 0, 'user-reply': reply.isAdditional === 1 }"
+              >
+                <div class="reply-header">
+                  <div class="reply-type">
+                    <el-tag v-if="reply.isAdditional === 0" type="success" size="small">
+                      商家回复
+                    </el-tag>
+                    <el-tag v-else-if="reply.isAdditional === 1" type="warning" size="small">
+                      追加评价
+                    </el-tag>
+                  </div>
+                  <span class="reply-time">{{ formatTime(reply.createTime) }}</span>
+                </div>
+                <div class="reply-content">{{ reply.content }}</div>
+              </div>
+            </div>
+          </div>
         </el-card>
 
         <!-- 操作按钮 -->
@@ -1053,6 +1265,142 @@ const getActiveStep = () => {
       padding: 12px;
       background: #f8f9fa;
       border-radius: 8px;
+    }
+  }
+
+  // 评价卡片
+  .review-card {
+    .review-content {
+      .review-rating {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 16px 0;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+        margin-bottom: 16px;
+
+        .rating-label {
+          font-size: 15px;
+          font-weight: 600;
+          color: #606266;
+        }
+
+        .rating-score {
+          font-size: 18px;
+          font-weight: 700;
+          color: #f7ba2a;
+          margin-left: 8px;
+        }
+
+        :deep(.el-rate) {
+          .el-rate__icon {
+            font-size: 24px;
+            margin-right: 4px;
+          }
+        }
+      }
+
+      .review-text {
+        font-size: 15px;
+        color: #303133;
+        line-height: 1.8;
+        padding: 12px 16px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        margin-bottom: 16px;
+      }
+
+      .review-images {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 20px;
+
+        .review-image {
+          width: 100px;
+          height: 100px;
+          border-radius: 8px;
+          overflow: hidden;
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          cursor: pointer;
+          transition: all 0.3s ease;
+
+          &:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          }
+
+          :deep(.el-image__inner) {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+          }
+
+          .image-error {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f5f7fa;
+            color: #c0c4cc;
+            font-size: 32px;
+          }
+        }
+      }
+
+      .review-replies {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px dashed rgba(0, 0, 0, 0.1);
+
+        .reply-item {
+          padding: 12px 16px;
+          border-radius: 8px;
+          transition: all 0.3s ease;
+
+          &.merchant-reply {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border-left: 3px solid #10b981;
+          }
+
+          &.user-reply {
+            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+            border-left: 3px solid #f59e0b;
+          }
+
+          &:hover {
+            transform: translateX(4px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+          }
+
+          .reply-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+
+            .reply-type {
+              display: flex;
+              gap: 8px;
+            }
+
+            .reply-time {
+              font-size: 12px;
+              color: #909399;
+            }
+          }
+
+          .reply-content {
+            font-size: 14px;
+            color: #606266;
+            line-height: 1.6;
+          }
+        }
+      }
     }
   }
 

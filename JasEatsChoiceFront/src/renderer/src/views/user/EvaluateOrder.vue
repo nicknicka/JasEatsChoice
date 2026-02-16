@@ -229,27 +229,24 @@ const submitReview = async () => {
       })
 
       // 调用追评接口
-      // 注意：后端暂无此接口，需要后端实现 POST /v1/reviews/{reviewId}/additional
       const additionalReviewData = {
         content: content.value.trim(),
         images: [] // 暂不支持图片上传
       }
 
-      // 暂时跳过实际API调用，等待后端实现
-      // await reviewAPI.addAdditionalReview(existingReview.value.id, additionalReviewData)
-
-      // 模拟API调用成功
-      await new Promise(resolve => setTimeout(resolve, 500))
+      // 调用后端API提交追评
+      const reviewResponse = await reviewAPI.addAdditionalReview(existingReview.value.id, additionalReviewData)
 
       console.log('✅ 追评提交成功', {
         reviewId: existingReview.value?.id,
+        responseData: reviewResponse.data,
         timestamp: new Date().toISOString()
       })
 
       ElMessage.success('追评提交成功')
-      // 返回订单列表并刷新
+      // 返回订单详情页，方便用户立即看到新追评
       setTimeout(() => {
-        router.push('/user/home/orders?refresh=' + Date.now())
+        router.push(`/user/home/order-detail/${orderId.value}?refresh=${Date.now()}`)
       }, 1500)
     } catch (error) {
       console.error('❌ 提交追评失败:', {
@@ -284,7 +281,6 @@ const submitReview = async () => {
     })
 
     // 调用评价提交接口
-    // 注意：后端暂无此接口，需要后端实现 POST /v1/reviews
     const reviewData = {
       orderId: order.value.id,
       merchantId: order.value.merchantId,
@@ -294,40 +290,37 @@ const submitReview = async () => {
       images: [] // 暂不支持图片上传
     }
 
-    // 暂时跳过实际API调用，等待后端实现
-    // const reviewResponse = await reviewAPI.submitReview(reviewData)
+    console.log('📡 提交评价数据', reviewData)
 
-    // 模拟API调用成功
-    await new Promise(resolve => setTimeout(resolve, 500))
+    const reviewResponse = await reviewAPI.submitReview(reviewData)
 
-    // 更新订单状态为已评价
-    // 后端订单状态：0-待支付、1-待接单、2-备菜中、3-烹饪中、4-待上菜、5-已送达、6-已取消、7-待评价、8-已评价
-    try {
-      const statusResponse = await reviewAPI.updateOrderStatus(order.value.id, 8)
-      console.log('✅ 订单状态更新成功', {
-        orderId: order.value.id,
-        newStatus: 8,
-        statusText: '已评价',
-        timestamp: new Date().toISOString()
-      })
-    } catch (statusError) {
-      console.error('⚠️ 订单状态更新失败（评价已提交）', {
-        error: statusError.message,
+    console.log('📡 评价提交响应', {
+      status: reviewResponse.status,
+      success: reviewResponse.data?.success,
+      data: reviewResponse.data?.data
+    })
+
+    if (reviewResponse.data?.success) {
+      console.log('✅ 评价提交成功', {
+        reviewId: reviewResponse.data?.data?.id,
         orderId: order.value.id,
         timestamp: new Date().toISOString()
       })
-      // 即使状态更新失败，评价已提交，继续执行
+
+      ElMessage.success('评价提交成功')
+
+      // 返回订单列表并刷新
+      setTimeout(() => {
+        router.push('/user/home/orders?refresh=' + Date.now())
+      }, 1500)
+    } else {
+      throw new Error(reviewResponse.data?.message || '评价提交失败')
     }
-
-    ElMessage.success('评价提交成功')
-    // 返回订单列表并刷新
-    setTimeout(() => {
-      router.push('/user/home/orders?refresh=' + Date.now())
-    }, 1500)
   } catch (error) {
     console.error('❌ 提交评价失败:', {
       error: error.message,
       orderId: order.value?.id,
+      errorResponse: error.response?.data,
       timestamp: new Date().toISOString()
     })
     ElMessage.error(error.response?.data?.message || '提交评价失败，请稍后重试')

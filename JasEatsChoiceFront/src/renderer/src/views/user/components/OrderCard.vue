@@ -161,19 +161,19 @@ const canConfirmReceiptOrder = computed(() => {
 const canEvaluate = computed(() => canEvaluateOrder(props.order.status))
 
 /**
- * 是否可以追加评价（已完成订单可以追加评价）
+ * 是否可以追加评价（已评价订单可以追加评价）
  */
 const canAdditionalReview = computed(() => {
-  // 只有已完成的订单可以追加评价
-  return props.order.status === 'completed'
+  // 只有已评价的订单可以追加评价（状态码8对应reviewed）
+  return props.order.status === 'reviewed'
 })
 
 /**
  * 是否可以再来一单
  */
 const canReorder = computed(() => {
-  // 待评价(completed/pendingComment)或已取消(cancelled)的订单可以再来一单
-  return props.order.status === 'completed' ||
+  // 已评价/待评价/已取消的订单可以再来一单
+  return props.order.status === 'reviewed' ||
          props.order.status === 'pendingComment' ||
          props.order.status === 'cancelled'
 })

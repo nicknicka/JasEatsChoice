@@ -47,4 +47,9 @@ public class ReviewReply {
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private LocalDateTime updateTime;
+
+    /**
+     * 是否为追加评价（0-商家回复，1-用户追评）
+     */
+    private Integer isAdditional;
 }

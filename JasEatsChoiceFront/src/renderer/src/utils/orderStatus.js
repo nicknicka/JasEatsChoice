@@ -10,7 +10,7 @@ export const STATUS_PRIORITY = {
   pendingAccept: 2, // 待接单
   processing: 3, // 进行中
   delivered: 4, // 已上菜
-  completed: 5, // 已完成
+  reviewed: 5, // 已评价
   cancelled: 6 // 已取消 - 最低优先级
 }
 
@@ -24,7 +24,7 @@ export const ORDER_STATUS_MAP = {
   pending: '待确认',
   pendingComment: '待评价',
   delivered: '已上菜',
-  completed: '已评价',
+  reviewed: '已评价',
   cancelled: '已取消'
 }
 
@@ -37,7 +37,7 @@ export const STATUS_TAG_TYPE_MAP = {
   pending: 'info',
   pendingComment: 'info',
   delivered: 'success',
-  completed: 'success', // 已评价
+  reviewed: 'success', // 已评价
   cancelled: 'danger'
 }
 
@@ -51,7 +51,7 @@ export const STATUS_LIST = [
   { value: 'pending', label: '待支付' },
   { value: 'pendingComment', label: '待评价' },
   { value: 'delivered', label: '已上菜' },
-  { value: 'completed', label: '已评价' },
+  { value: 'reviewed', label: '已评价' },
   { value: 'cancelled', label: '已取消' }
 ]
 
@@ -67,7 +67,7 @@ const BACKEND_STATUS_MAP = {
   5: 'delivered', // 已上菜
   6: 'cancelled', // 已取消
   7: 'pendingComment', // 待评价（已完成但未评价）
-  8: 'completed' // 已评价（已完成并已评价）
+  8: 'reviewed' // 已评价（已完成并已评价）
 }
 
 /**
