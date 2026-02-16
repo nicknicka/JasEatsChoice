@@ -143,19 +143,41 @@ watch(dialogVisible, (val) => {
   emit('update:visible', val)
 })
 
-// 初始化高德地图
-const initMap = () => {
-  if (typeof AMap === 'undefined') {
-    console.error('高德地图 SDK 未加载')
-    ElMessage.error('地图 SDK 加载失败，请刷新页面重试')
-    return
-  }
+// 等待高德地图 SDK 完全加载
+const waitForAMap = () => {
+  return new Promise((resolve, reject) => {
+    if (typeof AMap !== 'undefined' && AMap.Map) {
+      console.log('高德地图 SDK 已就绪')
+      resolve()
+      return
+    }
 
-  console.log('开始初始化地图...')
+    const timeout = setTimeout(() => {
+      reject(new Error('高德地图 SDK 加载超时'))
+    }, 10000)
+
+    const checkInterval = setInterval(() => {
+      if (typeof AMap !== 'undefined' && AMap.Map) {
+        clearTimeout(timeout)
+        clearInterval(checkInterval)
+        console.log('高德地图 SDK 加载完成')
+        resolve()
+      }
+    }, 100)
+  })
+}
+
+// 初始化高德地图
+const initMap = async () => {
   mapLoading.value = true
 
   try {
-    // 创建地图实例 - 高德地图 2.0 使用标准配置
+    // 等待 AMap SDK 加载完成
+    await waitForAMap()
+
+    console.log('开始初始化地图...')
+
+    // 创建地图实例 - 高德地图 1.4.15 使用标准配置
     map.value = new AMap.Map('mapContainer', {
       zoom: 15,
       center: [props.defaultPosition.lng, props.defaultPosition.lat]
@@ -203,7 +225,7 @@ const initMap = () => {
   } catch (error) {
     console.error('地图初始化失败:', error)
     mapLoading.value = false
-    ElMessage.error('地图初始化失败')
+    ElMessage.error('地图 SDK 加载失败，请刷新页面重试')
   }
 }
 

@@ -256,6 +256,13 @@ export const WS_CONFIG = {
   chatUrl: 'ws://localhost:11277/ws/chat' // 聁天专用端点
 }
 
+// 高德地图API配置
+export const AMAP_CONFIG = {
+  key: 'YOUR_AMAP_KEY', // 高德地图API Key，需要在高德开放平台申请: https://console.amap.com/dev/key/app
+  baseURL: 'https://restapi.amap.com/v3',
+  district: '/config/district' // 行政区域查询接口
+}
+
 // 角色名称映射配置（用于修复数据库中的乱码问题）
 export const ROLE_NAME_MAP = {
   SUPER_ADMIN: '超级管理员',

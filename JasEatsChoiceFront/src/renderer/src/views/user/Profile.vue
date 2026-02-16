@@ -268,12 +268,17 @@
             v-model="selectedLocation"
             :options="cascaderData"
             :props="cascaderProps"
+            :loading="locationDataLoading"
+            :disabled="cascaderData.length === 0 && !locationDataLoading"
             placeholder="请选择所在地"
             clearable
             filterable
             style="width: 100%"
             @change="handleLocationChange"
           />
+          <div v-if="cascaderData.length === 0 && !locationDataLoading" style="color: #f56c6c; font-size: 12px; margin-top: 4px;">
+            地址数据加载失败，请刷新页面重试
+          </div>
         </el-form-item>
 
         <el-form-item label="身高" prop="height">
@@ -497,7 +502,9 @@ import {
 import CommonAvatar from '../../components/CommonAvatar.vue'
 import api from '../../utils/api'
 import { API_CONFIG } from '../../config'
+import { AMAP_CONFIG } from '../../config'
 import QRCode from 'qrcode'
+import amapApi from '../../api/amap'
 
 // 导入状态管理
 import { useAuthStore } from '../../store/authStore'
@@ -599,6 +606,7 @@ const editForm = reactive({
 // 地址选择功能变量
 const selectedLocation = ref([])
 const cascaderData = ref([])
+const locationDataLoading = ref(false) // 地址数据加载状态
 const cascaderProps = {
   value: 'value',
   label: 'label',
@@ -757,18 +765,62 @@ const fetchWalletInfo = async () => {
   }
 }
 
-// 获取地址数据
+// 获取地址数据（使用高德地图API）
 const fetchAddressData = async () => {
   try {
-    const response = await api.get('/v1/location/cascader')
-    console.log('获取地址数据成功:', response)
+    locationDataLoading.value = true
 
-    if (response.code === '200' && response.data) {
-      cascaderData.value = response.data
+    // 检查是否配置了高德地图API Key
+    const hasApiKey = AMAP_CONFIG.key && AMAP_CONFIG.key !== 'YOUR_AMAP_KEY'
+
+    if (hasApiKey) {
+      // 方案1: 前端直接调用高德地图API（需要配置API Key）
+      console.log('使用高德地图API获取地址数据...')
+      const response = await amapApi.getDistrictDataDirect('中国', 3)
+      console.log('高德地图API返回:', response)
+
+      if (response.status === '1' && response.districts) {
+        // 将高德地图数据转换为级联选择器格式
+        cascaderData.value = amapApi.convertToCascaderFormat(response.districts)
+        console.log('地址数据已加载，共', cascaderData.value.length, '个省/直辖市/自治区')
+      } else {
+        throw new Error(response.info || '获取地址数据失败')
+      }
+    } else {
+      // 方案2: 使用后端代理API（后备方案）
+      console.log('使用后端代理API获取地址数据...')
+      const response = await api.get('/v1/location/cascader')
+      console.log('后端API返回:', response)
+
+      if (response.code === '200' && response.data) {
+        cascaderData.value = response.data
+        console.log('地址数据已加载，共', response.data.length, '个省/市/区')
+      } else {
+        throw new Error(response.message || '获取地址数据失败')
+      }
     }
   } catch (error) {
     console.error('获取地址数据失败:', error)
+
+    // 尝试使用后备方案
+    if (AMAP_CONFIG.key && AMAP_CONFIG.key !== 'YOUR_AMAP_KEY') {
+      console.log('高德API失败，尝试使用后端API...')
+      try {
+        const response = await api.get('/v1/location/cascader')
+        if (response.code === '200' && response.data) {
+          cascaderData.value = response.data
+          console.log('后备方案成功：地址数据已加载')
+          return
+        }
+      } catch (fallbackError) {
+        console.error('后备方案也失败了:', fallbackError)
+      }
+    }
+
+    ElMessage.error('地址数据加载失败，所在地选择功能可能不可用')
     // 地址数据获取失败不影响其他功能
+  } finally {
+    locationDataLoading.value = false
   }
 }
 
@@ -1108,22 +1160,79 @@ const editProfile = () => {
 
 // 地址选择变化处理
 const handleLocationChange = (value) => {
-  if (value && value.length > 0) {
-    editForm.location = value.join(' ')
+  console.log('地址选择变化:', value)
+
+  if (value && Array.isArray(value) && value.length > 0) {
+    // 将选中的adcode转换为对应的地区名称
+    const locationNames = getLabelsByValues(value, cascaderData.value)
+    editForm.location = locationNames.join(' ')
+    console.log('设置的location:', editForm.location)
   } else {
     editForm.location = ''
+    console.log('清空location')
   }
 }
 
 // 初始化地址选择器
 const initLocationSelect = (location) => {
-  if (!location) {
+  console.log('初始化地址选择器，原始location:', location)
+
+  // 处理空值或null/undefined
+  if (!location || location.trim() === '') {
     selectedLocation.value = []
+    console.log('location为空，设置selectedLocation为空数组')
     return
   }
 
-  const parts = location.split(' ').filter(Boolean)
-  selectedLocation.value = parts
+  // 拆分location字符串，并过滤掉空字符串
+  const parts = location.split(' ').filter(part => part && part.trim() !== '')
+
+  // 将地区名称转换为对应的adcode
+  const adcodes = getValuesByLabels(parts, cascaderData.value)
+  selectedLocation.value = adcodes
+  console.log('初始化后的selectedLocation (adcodes):', selectedLocation.value)
+}
+
+// 辅助函数：根据value（adcode）获取label（地区名称）
+const getLabelsByValues = (values, data, level = 0, result = []) => {
+  if (!values || values.length === 0 || !data || data.length === 0) {
+    return result
+  }
+
+  const currentValue = values[level]
+  const found = data.find(item => item.value === currentValue)
+
+  if (found) {
+    result.push(found.label)
+
+    // 如果还有下一级，递归查找
+    if (level + 1 < values.length && found.children) {
+      return getLabelsByValues(values, found.children, level + 1, result)
+    }
+  }
+
+  return result
+}
+
+// 辅助函数：根据label（地区名称）获取value（adcode）
+const getValuesByLabels = (labels, data, level = 0, result = []) => {
+  if (!labels || labels.length === 0 || !data || data.length === 0) {
+    return result
+  }
+
+  const currentLabel = labels[level]
+  const found = data.find(item => item.label === currentLabel)
+
+  if (found) {
+    result.push(found.value)
+
+    // 如果还有下一级，递归查找
+    if (level + 1 < labels.length && found.children) {
+      return getValuesByLabels(labels, found.children, level + 1, result)
+    }
+  }
+
+  return result
 }
 
 // 更新保存编辑的资料方法

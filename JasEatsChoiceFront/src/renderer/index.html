@@ -13,7 +13,9 @@
   <body>
     <div id="app"></div>
     <!-- 高德地图 SDK (使用1.4.15版本，2.0需要额外配置安全密钥) -->
+    <!-- 添加 defer 属性确保脚本在 DOM 准备好后再执行 -->
     <script
+      defer
       src="https://webapi.amap.com/maps?v=1.4.15&key=140e4ebfe143855a4cc7440533ff27b3&plugin=AMap.Scale,AMap.ToolBar,AMap.Geocoder,AMap.PlaceSearch"
     ></script>
     <script type="module" src="/src/main.js"></script>
