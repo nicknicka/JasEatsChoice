@@ -175,6 +175,21 @@ export const API_CONFIG = {
     file: '/v1/chat/upload-file' // 上传文件接口
   },
 
+  // 群组API端点
+  group: {
+    list: '/v1/groups/my', // 获取我的群组列表
+    detail: '/v1/groups/{groupId}', // 获取群组详情
+    create: '/v1/groups', // 创建群组
+    update: '/v1/groups/{groupId}', // 更新群组信息
+    delete: '/v1/groups/{groupId}', // 删除群组（解散）
+    leave: '/v1/groups/{groupId}/leave', // 退出群聊
+    members: '/v1/groups/{groupId}/members', // 获取群成员列表
+    addMember: '/v1/groups/{groupId}/members', // 添加成员
+    removeMember: '/v1/groups/{groupId}/members/{userId}', // 移除成员
+    checkMember: '/v1/groups/{groupId}/members/{userId}/check', // 检查是否是群成员
+    userRole: '/v1/groups/{groupId}/members/{userId}/role' // 获取用户在群中的角色
+  },
+
   // 管理员API端点
   admin: {
     // 认证

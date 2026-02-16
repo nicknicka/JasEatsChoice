@@ -12,7 +12,7 @@ server:
 
 # ============ Lombok配置 ============
 lombok:
-  enabled: false  # 禁用Lombok注解处理器，解决编译问题
+  enabled: true  # 启用Lombok注解处理器
 
 spring:
   # 文件上传配置

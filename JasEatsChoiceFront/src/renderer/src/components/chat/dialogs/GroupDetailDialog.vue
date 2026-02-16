@@ -14,7 +14,7 @@
         <div class="group-avatar-wrapper">
           <div class="group-avatar">{{ groupInfo.avatar }}</div>
           <div class="avatar-badge">
-            <el-icon><User /></el-icon>
+            <el-icon><component :is="icons.User" /></el-icon>
             {{ groupInfo.memberCount }}
           </div>
         </div>
@@ -52,7 +52,7 @@
       <div class="group-members-section">
         <div class="section-header">
           <div class="section-title">
-            <el-icon><Avatar /></el-icon>
+            <el-icon><component :is="icons.Avatar" /></el-icon>
             群成员列表 ({{ groupInfo.memberCount }})
           </div>
         </div>
@@ -77,7 +77,7 @@
               <div class="member-id">ID: {{ member.id }}</div>
             </div>
             <div class="member-role-icon">
-              <el-icon v-if="member.role === 'admin'" class="crown-icon"><Trophy /></el-icon>
+              <el-icon v-if="member.role === 'admin'" class="crown-icon"><component :is="icons.Trophy" /></el-icon>
             </div>
           </div>
         </div>
@@ -86,8 +86,32 @@
 
     <template #footer>
       <div class="dialog-footer">
+        <!-- 已退出状态 -->
+        <el-button
+          v-if="!isGroupMember && !isGroupOwner"
+          type="info"
+          plain
+          disabled
+          class="left-btn"
+        >
+          <el-icon><component :is="icons.Warning" /></el-icon>
+          已退出群聊
+        </el-button>
+
+        <!-- 退出群聊按钮（仅在用户在群里且不是群主时显示） -->
+        <el-button
+          v-if="isGroupMember && !isGroupOwner"
+          type="danger"
+          plain
+          @click="handleLeaveGroup"
+          class="leave-btn"
+        >
+          <el-icon><component :is="icons.CircleClose" /></el-icon>
+          退出群聊
+        </el-button>
+
         <el-button type="primary" @click="handleClose">
-          <el-icon><Check /></el-icon>
+          <el-icon><component :is="icons.Check" /></el-icon>
           确定
         </el-button>
       </div>
@@ -96,8 +120,21 @@
 </template>
 
 <script setup>
-import { ref, watch, computed } from 'vue'
-import { User, Avatar, Check, Trophy } from '@element-plus/icons-vue'
+import { ref, watch, computed, inject, markRaw } from 'vue'
+import { User, Avatar, Check, Trophy, CircleClose, Warning } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import api from '../../../utils/api.js'
+import { API_CONFIG } from '../../../config/index.js'
+
+// 使用 markRaw 避免图标组件被设置为响应式
+const icons = markRaw({
+  User,
+  Avatar,
+  Check,
+  Trophy,
+  CircleClose,
+  Warning
+})
 
 const props = defineProps({
   modelValue: {
@@ -110,16 +147,50 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(['update:modelValue', 'leave-group'])
+
+// 注入authStore获取当前用户信息
+const authStore = inject('authStore')
+const currentUserId = computed(() => authStore?.userId?.toString())
+
+// ⭐ 新增：用户是否在群里
+const isGroupMember = ref(true)
+const isCheckingMember = ref(false)
 
 const visible = ref(props.modelValue)
 
-watch(() => props.modelValue, (val) => {
-  visible.value = val
+watch(visible, async (val) => {
+  emit('update:modelValue', val)
+  // ⭐ 对话框打开时检查用户是否在群里
+  if (val && props.groupInfo?.id && currentUserId.value) {
+    await checkGroupMemberStatus()
+  }
 })
 
-watch(visible, (val) => {
-  emit('update:modelValue', val)
+// ⭐ 检查用户是否在群中
+const checkGroupMemberStatus = async () => {
+  if (!props.groupInfo?.id || !currentUserId.value) return
+
+  try {
+    isCheckingMember.value = true
+    const response = await api.get(`/v1/groups/${props.groupInfo.id}/members/${currentUserId.value}/check`)
+    console.log('✅ [检查群成员状态] response:', response)
+
+    if (response.code === '200' || response.success) {
+      isGroupMember.value = response.data?.isMember ?? false
+      console.log('📊 [群成员状态] isMember:', isGroupMember.value)
+    }
+  } catch (error) {
+    console.error('❌ [检查群成员状态] 失败:', error)
+    // 检查失败时假设在群里（保留原有行为）
+    isGroupMember.value = true
+  } finally {
+    isCheckingMember.value = false
+  }
+}
+
+watch(() => props.modelValue, (val) => {
+  visible.value = val
 })
 
 // 对成员进行排序：群主在前，管理员其次，普通成员最后
@@ -191,6 +262,64 @@ const formatDate = (dateStr) => {
 
 const handleClose = () => {
   visible.value = false
+}
+
+// 判断当前用户是否是群主
+const isGroupOwner = computed(() => {
+  return props.groupInfo?.creatorId === currentUserId.value
+})
+
+// 退出群聊
+const handleLeaveGroup = async () => {
+  if (!props.groupInfo?.id) {
+    ElMessage.error('群信息不完整')
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      '退出群聊后，您将不再接收此群的消息。确定要退出吗？',
+      '退出群聊',
+      {
+        confirmButtonText: '确定退出',
+        cancelButtonText: '取消',
+        type: 'warning',
+        distinguishCancelAndClose: true
+      }
+    )
+
+    const url = `${API_CONFIG.group.leave.replace('{groupId}', props.groupInfo.id)}?userId=${currentUserId.value}`
+    console.log('🚪 [退出群聊] 发送请求:', {
+      groupId: props.groupInfo.id,
+      userId: currentUserId.value,
+      url,
+      fullUrl: api.defaults.baseURL + url
+    })
+
+    const response = await api.delete(url)
+
+    console.log('🚪 [退出群聊] 响应结果:', response)
+
+    if (response.code === '200' || response.success) {
+      ElMessage.success('退出群聊成功')
+      visible.value = false
+      // 通知父组件刷新群列表或移除该群
+      emit('leave-group', { groupId: props.groupInfo.id })
+    } else {
+      console.error('🚪 [退出群聊] 响应失败:', response)
+      ElMessage.error(response.message || '退出群聊失败')
+    }
+  } catch (error) {
+    if (error !== 'cancel' && error !== 'close') {
+      console.error('🚪 [退出群聊] 请求异常:', {
+        message: error.message,
+        status: error.status,
+        response: error.response,
+        data: error.data
+      })
+      ElMessage.error(error.response?.data?.message || error.message || '退出群聊失败，请稍后重试')
+    }
+  }
 }
 </script>
 
@@ -699,42 +828,103 @@ const handleClose = () => {
 .dialog-footer {
   display: flex;
   justify-content: flex-end;
+  gap: 12px;
 
   :deep(.el-button) {
     border-radius: 12px;
     padding: 12px 32px;
     font-weight: 600;
     font-size: 15px;
-    background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
     border: none;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 4px 16px rgba(139, 92, 246, 0.3);
     position: relative;
     overflow: hidden;
 
-    &::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-      transition: left 0.5s ease;
-    }
-
-    &:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 8px 28px rgba(139, 92, 246, 0.5);
-      background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+    &.leave-btn {
+      background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+      border: 2px solid #fecaca;
+      color: #dc2626;
+      box-shadow: 0 4px 16px rgba(220, 38, 38, 0.2);
 
       &::before {
-        left: 100%;
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        transition: left 0.5s ease;
+      }
+
+      &:hover {
+        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        border-color: #fca5a5;
+        box-shadow: 0 6px 24px rgba(220, 38, 38, 0.35);
+        transform: translateY(-2px);
+
+        &::before {
+          left: 100%;
+        }
+      }
+
+      &:active {
+        transform: translateY(0);
       }
     }
 
-    &:active {
-      transform: translateY(-1px);
+    &.left-btn {
+      background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+      border: 2px solid #d1d5db;
+      color: #6b7280;
+      box-shadow: 0 4px 16px rgba(107, 114, 128, 0.2);
+      cursor: not-allowed;
+
+      &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        transition: left 0.5s ease;
+      }
+
+      &:hover {
+        transform: none;
+        box-shadow: 0 4px 16px rgba(107, 114, 128, 0.2);
+      }
+    }
+
+    &:not(.leave-btn) {
+      background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+      box-shadow: 0 4px 16px rgba(139, 92, 246, 0.3);
+
+      &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        transition: left 0.5s ease;
+      }
+
+      &:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 28px rgba(139, 92, 246, 0.5);
+        background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+
+        &::before {
+          left: 100%;
+        }
+      }
+
+      &:active {
+        transform: translateY(-1px);
+      }
     }
   }
 }

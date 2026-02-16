@@ -40,6 +40,9 @@ public class WebSocketMessageService {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private com.xx.jaseatschoicejava.service.GroupMemberService groupMemberService;
+
     /**
      * 构造函数，配置ObjectMapper支持Java 8日期时间类型
      */
@@ -144,6 +147,57 @@ public class WebSocketMessageService {
         }
 
         return dto;
+    }
+
+    /**
+     * 向群成员广播系统消息
+     * @param groupId 群ID
+     * @param messageType 消息类型（member_left, member_kicked, member_joined等）
+     * @param data 消息数据
+     */
+    public void broadcastToGroup(String groupId, String messageType, Map<String, Object> data) {
+        logger.info("📢 [WebSocket] 准备向群成员广播消息: groupId={}, messageType={}", groupId, messageType);
+
+        try {
+            // 获取群成员列表
+            java.util.List<com.xx.jaseatschoicejava.entity.GroupMember> members =
+                groupMemberService.getGroupMembers(groupId);
+
+            logger.info("📢 [WebSocket] 群 {} 当前有 {} 个成员", groupId, members.size());
+
+            int successCount = 0;
+            for (com.xx.jaseatschoicejava.entity.GroupMember member : members) {
+                String userId = member.getUserId();
+                Channel channel = USER_CHANNELS.get(userId);
+
+                if (channel != null && channel.isActive()) {
+                    try {
+                        // 构造消息
+                        Map<String, Object> messageData = new HashMap<>();
+                        messageData.put("type", "group_event");
+                        messageData.put("eventType", messageType);
+                        messageData.put("groupId", groupId);
+                        messageData.put("data", data);
+                        messageData.put("timestamp", System.currentTimeMillis());
+
+                        String messageJson = objectMapper.writeValueAsString(messageData);
+                        channel.writeAndFlush(new TextWebSocketFrame(messageJson));
+
+                        successCount++;
+                        logger.info("✅ [WebSocket] 成功推送群事件消息给用户: userId={}, eventType={}", userId, messageType);
+                    } catch (Exception e) {
+                        logger.error("❌ [WebSocket] 推送消息失败给用户 {}: {}", userId, e.getMessage());
+                    }
+                } else {
+                    logger.debug("⚠️ [WebSocket] 用户 {} 不在线，跳过推送", userId);
+                }
+            }
+
+            logger.info("📊 [WebSocket] 群事件消息推送完成: groupId={}, 总成员数={}, 在线成员数={}, 成功推送数={}",
+                groupId, members.size(), successCount, successCount);
+        } catch (Exception e) {
+            logger.error("❌ [WebSocket] 广播群消息失败: groupId={}, error={}", groupId, e.getMessage(), e);
+        }
     }
 
     /**

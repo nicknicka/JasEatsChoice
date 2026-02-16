@@ -4,7 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xx.jaseatschoicejava.constants.Constant;
 import com.xx.jaseatschoicejava.enums.MsgType;
 import com.xx.jaseatschoicejava.entity.ChatMsg;
+import com.xx.jaseatschoicejava.entity.User;
 import com.xx.jaseatschoicejava.service.ChatMsgService;
+import com.xx.jaseatschoicejava.service.UserService;
 import com.xx.jaseatschoicejava.websocket.WebSocketMessageService;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
@@ -46,9 +48,13 @@ public class NettyChatHandler extends SimpleChannelInboundHandler<TextWebSocketF
     // 聊天消息服务（用于存储离线消息）
     private final ChatMsgService chatMsgService;
 
+    // 用户服务（用于查询用户信息）
+    private final UserService userService;
+
     // 构造函数注入
-    public NettyChatHandler(ChatMsgService chatMsgService) {
+    public NettyChatHandler(ChatMsgService chatMsgService, UserService userService) {
         this.chatMsgService = chatMsgService;
+        this.userService = userService;
     }
 
     @Override
@@ -116,10 +122,24 @@ public class NettyChatHandler extends SimpleChannelInboundHandler<TextWebSocketF
             // 获取消息内容
             String content = msgNode.has("content") ? msgNode.get("content").asText() : "";
 
+            // 查询发送者名称
+            String fromName = fromId;
+            try {
+                if (fromId != null && !fromId.isEmpty()) {
+                    User sender = userService.getById(fromId);
+                    if (sender != null && sender.getNickname() != null) {
+                        fromName = sender.getNickname();
+                    }
+                }
+            } catch (Exception e) {
+                logger.warn("查询发送者名称失败: fromId={}, error={}", fromId, e.getMessage());
+            }
+
             // 构造响应消息
             com.fasterxml.jackson.databind.node.ObjectNode responseMsg = objectMapper.createObjectNode();
             responseMsg.put("msgType", msgType);
             responseMsg.put("fromId", fromId);
+            responseMsg.put("fromName", fromName);  // 添加发送者名称
             responseMsg.put("toId", toId);
             responseMsg.put("content", content);
             responseMsg.put("timestamp", Instant.now().toEpochMilli());

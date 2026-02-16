@@ -9,6 +9,7 @@ import com.xx.jaseatschoicejava.service.ChatMsgService;
 import com.xx.jaseatschoicejava.service.ChatSessionService;
 import com.xx.jaseatschoicejava.service.UserService;
 import com.xx.jaseatschoicejava.service.GroupService;
+import com.xx.jaseatschoicejava.service.GroupMemberService;
 import com.xx.jaseatschoicejava.entity.User;
 import com.xx.jaseatschoicejava.entity.Group;
 import com.xx.jaseatschoicejava.util.ChatSessionIdGenerator;
@@ -45,6 +46,9 @@ public class ChatController {
 
     @Autowired
     private GroupService groupService;
+
+    @Autowired
+    private GroupMemberService groupMemberService;
 
     @Autowired
     private WebSocketMessageService webSocketMessageService;
@@ -146,26 +150,75 @@ public class ChatController {
      * @param sessionId 会话ID，可以是：
      *                  1. 单聊：两个用户ID用"_"拼接，如"user1_user2"
      *                  2. 群聊：群组ID，如"group123"
+     * @param userId 用户ID（群聊时必填，用于过滤不在群期间的消息）
      */
     @ApiOperation("获取聊天记录")
     @GetMapping("/{sessionId}/messages")
     public ResponseResult<?> getChatMessages(
             @PathVariable String sessionId,
+            @RequestParam(required = false) String userId,
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "20") Integer size) {
 
         // ========== 日志：开始加载聊天消息 ==========
         System.out.println("📡 [Chat] 开始加载聊天消息");
         System.out.println("  - sessionId: " + sessionId);
+        System.out.println("  - userId: " + userId);
         System.out.println("  - page: " + page);
         System.out.println("  - size: " + size);
-        System.out.println("  - 会话类型: " + (sessionId.contains("_") ? "单聊" : "群聊"));
+
+        // 判断是单聊还是群聊
+        boolean isGroupChat = sessionId.startsWith("S"); // S开头的是群聊sessionId
+        System.out.println("  - 会话类型: " + (isGroupChat ? "群聊" : "单聊"));
 
         Page<ChatMsg> chatMsgPage = new Page<>(page, size);
         LambdaQueryWrapper<ChatMsg> queryWrapper = new LambdaQueryWrapper<>();
 
         // 判断是单聊还是群聊
         queryWrapper.eq(ChatMsg::getSessionId, sessionId);
+
+        // ⭐ 群聊消息过滤：只显示用户在群期间的消息
+        if (isGroupChat && userId != null && !userId.isEmpty()) {
+            try {
+                // 从sessionId中提取groupId（S开头的是sessionId，需要转换为groupId）
+                // 实际上，chat_msg表的toId字段存储的是groupId
+                // 先查询一条消息，获取toId（即groupId）
+                ChatMsg sampleMsg = chatMsgService.getOne(
+                    new LambdaQueryWrapper<ChatMsg>()
+                        .eq(ChatMsg::getSessionId, sessionId)
+                        .last("LIMIT 1")
+                );
+
+                if (sampleMsg != null) {
+                    String groupId = sampleMsg.getToId();
+                    System.out.println("  - 群聊过滤: groupId=" + groupId);
+
+                    // 获取用户在群的加入时间段
+                    List<LocalDateTime> joinTimes = groupMemberService.getUserJoinTimes(groupId, userId);
+                    System.out.println("  - 用户加入时间段: " + joinTimes);
+
+                    if (!joinTimes.isEmpty()) {
+                        // 只查询用户最后一次加入之后的消息
+                        LocalDateTime lastJoinTime = joinTimes.get(joinTimes.size() - 1);
+                        queryWrapper.ge(ChatMsg::getCreateTime, lastJoinTime);
+                        System.out.println("  - 过滤条件: 只显示 " + lastJoinTime + " 之后的消息");
+                    } else {
+                        // 用户从未加入过该群，返回空结果
+                        System.out.println("  - 用户未加入过该群，返回空结果");
+                        Map<String, Object> emptyResponse = new HashMap<>();
+                        emptyResponse.put("records", new java.util.ArrayList<>());
+                        emptyResponse.put("total", 0);
+                        emptyResponse.put("current", page);
+                        emptyResponse.put("pages", 0);
+                        emptyResponse.put("size", size);
+                        return ResponseResult.success(emptyResponse);
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("⚠️ 群聊消息过滤失败，返回所有消息: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
 
         // 按时间倒序排序(最新的在前)
         queryWrapper.orderByDesc(ChatMsg::getCreateTime);
@@ -179,27 +232,10 @@ public class ChatController {
         java.util.Collections.reverse(result.getRecords());
 
         // ========== 日志：查询结果 ==========
-//        System.out.println("✅ [Chat] 查询完成");
-//        System.out.println("  - 查询耗时: " + queryTime + "ms");
-//        System.out.println("  - 总消息数: " + result.getTotal());
-//        System.out.println("  - 当前页消息数: " + result.getRecords().size());
-//        System.out.println("  - 总页数: " + result.getPages());
-//        System.out.println("  - 当前页: " + result.getCurrent());
-
-//        // 打印前3条消息的摘要
-//        if (result.getRecords() != null && !result.getRecords().isEmpty()) {
-//            System.out.println("  - 消息摘要(前3条):");
-//            int printCount = Math.min(3, result.getRecords().size());
-//            for (int i = 0; i < printCount; i++) {
-//                ChatMsg msg = result.getRecords().get(i);
-//                System.out.println("    [" + (i + 1) + "] msgId=" + msg.getMsgId() +
-//                        ", fromId=" + msg.getFromId() +
-//                        ", toId=" + msg.getToId() +
-//                        ", type=" + msg.getMsgType() +
-//                        ", content=" + (msg.getContent() != null && msg.getContent().length() > 20
-//                                ? msg.getContent().substring(0, 20) + "..." : msg.getContent()));
-//            }
-//        }
+        System.out.println("✅ [Chat] 查询完成");
+        System.out.println("  - 查询耗时: " + queryTime + "ms");
+        System.out.println("  - 总消息数: " + result.getTotal());
+        System.out.println("  - 当前页消息数: " + result.getRecords().size());
 
         // 返回符合前端期望的格式
         Map<String, Object> responseData = new java.util.HashMap<>();

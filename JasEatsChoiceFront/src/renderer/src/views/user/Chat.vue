@@ -61,7 +61,7 @@
 
         <!-- 悬浮订单按钮 -->
         <GroupOrderFloatingButton
-          v-if="selectedConversation.type === 'group' && hasGroupOrder"
+          v-if="selectedConversation.type === 'group' && hasGroupOrder && isCurrentUserInGroup"
           :item-count="groupOrderItemsCount"
           @click="orderDrawerVisible = true"
         />
@@ -109,16 +109,26 @@
           <el-empty description="暂无聊天记录"></el-empty>
         </div>
 
-        <!-- 消息输入框 -->
-        <MessageInput
-          class="slide-in-left delay-200"
-          :replying-to="replyingTo"
-          :disabled="!selectedConversation"
-          @send="sendMessage"
-          @cancel-reply="cancelReply"
-          @send-image="sendImageMessage"
-          @send-file="sendFileMessage"
-        />
+        <!-- 消息输入框区域 -->
+        <div class="message-input-wrapper slide-in-left delay-200">
+          <MessageInput
+            :replying-to="replyingTo"
+            :disabled="!selectedConversation || !isCurrentUserInGroup"
+            @send="sendMessage"
+            @cancel-reply="cancelReply"
+            @send-image="sendImageMessage"
+            @send-file="sendFileMessage"
+          />
+
+          <!-- 不在群内的遮罩层提示 -->
+          <div
+            v-if="selectedConversation && selectedConversation.type === 'group' && !isCurrentUserInGroup"
+            class="input-overlay-notice"
+          >
+            <el-icon class="notice-icon"><Warning /></el-icon>
+            <span>当前不在群里，无法发送消息</span>
+          </div>
+        </div>
       </div>
 
       <!-- 空选择提示 -->
@@ -148,7 +158,11 @@
       @confirm="handleForwardConfirm"
     />
 
-    <GroupDetailDialog v-model="groupDetailDialogVisible" :group-info="currentGroupInfo" />
+    <GroupDetailDialog
+      v-model="groupDetailDialogVisible"
+      :group-info="currentGroupInfo"
+      @leave-group="handleLeaveGroup"
+    />
 
     <MerchantSelectDialog
       v-model="merchantSelectDialogVisible"
@@ -202,10 +216,10 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount, provide } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Loading } from '@element-plus/icons-vue'
+import { Loading, Warning } from '@element-plus/icons-vue'
 
 // ========== 面板宽度控制 ==========
 const leftPanelWidth = ref(280) // 左侧面板默认宽度
@@ -310,6 +324,10 @@ import pinia from '../../store'
 import { useAuthStore } from '../../store/authStore'
 
 const authStore = useAuthStore(pinia)
+
+// 提供 authStore 给子组件
+provide('authStore', authStore)
+
 const userId = ref(authStore.userId || 1)
 const token = ref(authStore.token || '')
 const msgPageSize = MESSAGE_CONFIG.DEFAULT_PAGE_SIZE
@@ -379,6 +397,37 @@ const {
   chatMessages,
   userId,
   formatMessageTime
+})
+
+// ========== 群成员状态管理 ==========
+// 存储用户在各群的成员状态
+const groupMemberStatus = ref(new Map())
+
+// 检查用户是否在指定群中
+const checkUserInGroup = async (groupId) => {
+  if (!groupId || groupMemberStatus.value.has(groupId)) {
+    return groupMemberStatus.value.get(groupId) ?? true // 默认假设在群里
+  }
+
+  try {
+    const response = await api.get(`/v1/groups/${groupId}/members/${userId.value}/check`)
+    const isMember = response.data?.isMember ?? true
+    groupMemberStatus.value.set(groupId, isMember)
+    console.log(`✅ [检查群成员状态] groupId=${groupId}, isMember=${isMember}`)
+    return isMember
+  } catch (error) {
+    console.error(`❌ [检查群成员状态] 失败:`, error)
+    return true // 检查失败时默认在群里
+  }
+}
+
+// 当前用户是否在选中的群中
+const isCurrentUserInGroup = computed(() => {
+  if (!selectedConversation.value || selectedConversation.value.type !== 'group') {
+    return true // 非群聊默认可以发送
+  }
+  const groupId = selectedConversation.value.groupId
+  return groupMemberStatus.value.get(groupId) ?? true
 })
 
 // ========== WebSocket 消息处理 ==========
@@ -714,6 +763,11 @@ const selectConversation = async (conversation) => {
   console.log('🟢🟢🟢 [selectConversation] 函数被调用！conversation:', conversation.name, 'type:', conversation.type, 'groupId:', conversation.groupId)
   selectedConversation.value = conversation
 
+  // ⭐ 检查群成员状态（仅群聊）
+  if (conversation.type === 'group' && conversation.groupId) {
+    await checkUserInGroup(conversation.groupId)
+  }
+
   // 清空未读消息
   if (conversation.unreadCount > 0) {
     try {
@@ -927,6 +981,15 @@ const handleForwardConfirm = async (data) => {
 const sendMessage = async (content) => {
   if (!content.trim() || !selectedConversation.value) {
     return
+  }
+
+  // ⭐ 检查用户是否在群里（仅群聊）
+  if (selectedConversation.value.type === 'group' && selectedConversation.value.groupId) {
+    const isInGroup = await checkUserInGroup(selectedConversation.value.groupId)
+    if (!isInGroup) {
+      ElMessage.warning('当前不在群里，无法发送消息')
+      return
+    }
   }
 
   console.log('📤 [sendMessage] 准备发送消息')
@@ -1649,6 +1712,42 @@ const openGroupDetail = async () => {
   } catch (error) {
     console.error('获取群详情失败:', error)
     ElMessage.error('获取群详情失败，请稍后重试')
+  }
+}
+
+// 处理退出群聊事件
+const handleLeaveGroup = async ({ groupId }) => {
+  console.log('🚪 [Chat] 用户退出群聊: groupId=', groupId)
+
+  try {
+    // 1. 从会话列表中移除该群会话（直接使用 groupId 过滤）
+    const currentSessionId = selectedConversation.value?.id
+    conversations.value = conversations.value.filter(c => c.groupId !== groupId)
+
+    // 2. 清空聊天历史（遍历删除所有相关的 sessionId）
+    Object.keys(chatHistory.value).forEach(sessionId => {
+      const conversation = conversations.value.find(c => c.id === sessionId)
+      if (!conversation) {
+        delete chatHistory.value[sessionId]
+      }
+    })
+
+    // 3. 如果当前会话是该群，切换到其他会话
+    if (selectedConversation.value && selectedConversation.value.groupId === groupId) {
+      if (conversations.value.length > 0) {
+        await selectConversation(conversations.value[0])
+      } else {
+        selectedConversation.value = null
+        chatMessages.value = []
+      }
+    }
+
+    // 4. 刷新会话列表
+    await loadConversations()
+
+    ElMessage.success('已退出群聊')
+  } catch (error) {
+    console.error('🚪 [Chat] 处理退出群聊事件失败:', error)
   }
 }
 
@@ -2841,6 +2940,66 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
         }
       }
     }
+
+    // 消息输入框包裹容器
+    .message-input-wrapper {
+      position: relative;
+    }
+
+    // 输入框遮罩层提示
+    .input-overlay-notice {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(4px);
+      border-radius: 8px;
+      color: #c2410c;
+      font-size: 15px;
+      font-weight: 500;
+      animation: fadeIn 0.3s ease-out;
+      z-index: 10;
+
+      .notice-icon {
+        font-size: 20px;
+        animation: pulse 2s ease-in-out infinite;
+      }
+    }
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 </style>
