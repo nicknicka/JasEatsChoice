@@ -416,13 +416,13 @@ watch(
       }
 
       .logo-text {
-        font-size: 18px;
+        font-size: 1.125rem; /* 使用相对单位，会继承 body 的字体大小 */
         font-weight: bold;
         color: #fff;
       }
 
       .logo-icon {
-        font-size: 24px;
+        font-size: 1.5rem; /* 使用相对单位，会继承 body 的字体大小 */
         color: #fff;
         margin: 0 auto;
       }
@@ -465,7 +465,7 @@ watch(
       align-items: center;
 
       .collapse-icon {
-        font-size: 20px;
+        font-size: 1.25rem; /* 使用相对单位，会继承 body 的字体大小 */
         cursor: pointer;
         margin-right: 20px;
         color: #5a5e66;
@@ -482,7 +482,7 @@ watch(
       gap: 20px;
 
       .header-icon {
-        font-size: 18px;
+        font-size: 1.125rem; /* 使用相对单位，会继承 body 的字体大小 */
         cursor: pointer;
         color: #5a5e66;
 
@@ -507,7 +507,7 @@ watch(
           }
 
           .username {
-            font-size: 14px;
+            font-size: 0.875rem; /* 使用相对单位，会继承 body 的字体大小 */
             color: #303133;
           }
         }

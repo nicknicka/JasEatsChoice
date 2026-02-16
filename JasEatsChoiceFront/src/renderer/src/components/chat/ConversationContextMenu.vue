@@ -47,7 +47,7 @@ defineEmits(['toggle-pin', 'delete'])
   .menu-item {
     padding: 10px 20px;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 1rem /* 原值: 14px */;
     color: #303133;
     white-space: nowrap;
     transition: background-color 0.3s ease;

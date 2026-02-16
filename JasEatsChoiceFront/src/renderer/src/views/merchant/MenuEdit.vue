@@ -712,7 +712,7 @@ const batchAssociateDishes = async () => {
 // 菜品状态标签样式
 .status-tag {
   margin-left: 8px;
-  font-size: 12px;
+  font-size: 0.857rem /* 原值: 12px */;
   border-radius: 6px;
   padding: 2px 8px;
 }
@@ -726,13 +726,13 @@ const batchAssociateDishes = async () => {
   .dish-name {
     font-weight: 600;
     color: #2d3748;
-    font-size: 14px;
+    font-size: 1rem /* 原值: 14px */;
   }
 
   .dish-price {
     color: #e6a23c;
     font-weight: 600;
-    font-size: 14px;
+    font-size: 1rem /* 原值: 14px */;
   }
 }
 
@@ -747,7 +747,7 @@ const batchAssociateDishes = async () => {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 
     .page-title {
-      font-size: 24px;
+      font-size: 1.714rem /* 原值: 24px */;
       font-weight: 700;
       margin: 0;
       margin-left: 17px;
@@ -766,7 +766,7 @@ const batchAssociateDishes = async () => {
     }
 
     .section-title {
-      font-size: 18px;
+      font-size: 1.286rem /* 原值: 18px */;
       font-weight: 600;
       margin-bottom: 20px;
       color: #333;
@@ -784,7 +784,7 @@ const batchAssociateDishes = async () => {
         color: #555;
         width: 130px;
         font-weight: 500;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
       }
 
       /* 输入框悬浮效果优化 */

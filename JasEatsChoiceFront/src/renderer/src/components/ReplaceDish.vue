@@ -235,7 +235,7 @@ const getMealTagColor = (type) => {
 
     .detail-label {
       font-weight: 700;
-      font-size: 13px;
+      font-size: 0.929rem /* 原值: 13px */;
       color: #666;
       margin-right: 10px;
     }
@@ -243,14 +243,14 @@ const getMealTagColor = (type) => {
     .detail-value {
       color: #ff6b6b;
       font-weight: 700;
-      font-size: 16px;
+      font-size: 1.143rem /* 原值: 16px */;
     }
   }
 
   .available-dishes {
     .detail-label {
       font-weight: 700;
-      font-size: 15px;
+      font-size: 1.071rem /* 原值: 15px */;
       color: #2c3e50;
       display: block;
       margin-bottom: 6px;
@@ -258,7 +258,7 @@ const getMealTagColor = (type) => {
 
     .dish-hint {
       color: #999;
-      font-size: 11px;
+      font-size: 0.75rem /* 原值: 11px */;
       margin-bottom: 10px;
     }
 
@@ -280,7 +280,7 @@ const getMealTagColor = (type) => {
       border: 1px solid #e0e0e0 !important;
 
       .dish-name {
-        font-size: 15px;
+        font-size: 1.071rem /* 原值: 15px */;
         font-weight: bold;
         margin-bottom: 6px;
         color: #2c3e50;
@@ -304,7 +304,7 @@ const getMealTagColor = (type) => {
       }
 
       .dish-nutrition {
-        font-size: 13px;
+        font-size: 0.929rem /* 原值: 13px */;
         color: #666;
         line-height: 1.4;
       }
@@ -347,7 +347,7 @@ const getMealTagColor = (type) => {
 
 // 对话框标题样式
 :deep(.el-dialog__title) {
-  font-size: 20px !important;
+  font-size: 1.429rem /* 原值: 20px */ !important;
   font-weight: 700 !important;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
   background-clip: text !important;

@@ -364,18 +364,18 @@ onMounted(() => {
         display: flex;
         align-items: center;
         gap: 10px;
-        font-size: 24px;
+        font-size: 1.714rem /* 原值: 24px */;
         font-weight: 700;
         color: #ffffff;
         margin: 0;
 
         .title-icon {
-          font-size: 28px;
+          font-size: 2rem /* 原值: 28px */;
         }
       }
 
       .order-no {
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         color: rgba(255, 255, 255, 0.9);
         font-family: 'Consolas', 'Monaco', monospace;
         font-weight: 500;
@@ -390,7 +390,7 @@ onMounted(() => {
       :deep(.el-button) {
         height: 32px;
         padding: 6px 14px;
-        font-size: 13px;
+        font-size: 0.929rem /* 原值: 13px */;
         font-weight: 500;
         white-space: nowrap;
         backdrop-filter: blur(10px);
@@ -466,11 +466,11 @@ onMounted(() => {
           gap: 12px;
 
           .status-icon {
-            font-size: 32px;
+            font-size: 2.286rem /* 原值: 32px */;
           }
 
           .status-text {
-            font-size: 20px;
+            font-size: 1.429rem /* 原值: 20px */;
             font-weight: 600;
             color: #303133;
           }
@@ -484,7 +484,7 @@ onMounted(() => {
           :deep(.el-button) {
             height: 32px;
             padding: 6px 14px;
-            font-size: 13px;
+            font-size: 0.929rem /* 原值: 13px */;
             font-weight: 500;
             white-space: nowrap;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -559,12 +559,12 @@ onMounted(() => {
             justify-content: center;
             background: #f5f5f5;
             border-radius: 50%;
-            font-size: 20px;
+            font-size: 1.429rem /* 原值: 20px */;
             transition: all 0.3s ease;
           }
 
           .step-text {
-            font-size: 12px;
+            font-size: 0.857rem /* 原值: 12px */;
             color: #606266;
             font-weight: 500;
           }
@@ -598,7 +598,7 @@ onMounted(() => {
         display: flex;
         align-items: center;
         gap: 8px;
-        font-size: 16px;
+        font-size: 1.143rem /* 原值: 16px */;
         font-weight: 600;
         color: #303133;
         margin-bottom: 20px;
@@ -606,7 +606,7 @@ onMounted(() => {
         border-bottom: 2px solid #f0f0f0;
 
         .el-icon {
-          font-size: 18px;
+          font-size: 1.286rem /* 原值: 18px */;
           color: #667eea;
         }
       }
@@ -653,17 +653,17 @@ onMounted(() => {
             display: flex;
             align-items: center;
             gap: 6px;
-            font-size: 13px;
+            font-size: 0.929rem /* 原值: 13px */;
             color: #909399;
             font-weight: 500;
 
             .el-icon {
-              font-size: 14px;
+              font-size: 1rem /* 原值: 14px */;
             }
           }
 
           .info-value {
-            font-size: 15px;
+            font-size: 1.071rem /* 原值: 15px */;
             color: #303133;
             font-weight: 500;
           }
@@ -682,7 +682,7 @@ onMounted(() => {
         display: flex;
         align-items: center;
         gap: 8px;
-        font-size: 16px;
+        font-size: 1.143rem /* 原值: 16px */;
         font-weight: 600;
         color: #303133;
         margin-bottom: 20px;
@@ -717,14 +717,14 @@ onMounted(() => {
             flex: 1;
 
             .item-name {
-              font-size: 15px;
+              font-size: 1.071rem /* 原值: 15px */;
               font-weight: 600;
               color: #303133;
               margin-bottom: 4px;
             }
 
             .item-customization {
-              font-size: 12px;
+              font-size: 0.857rem /* 原值: 12px */;
               color: #e6a23c;
               font-style: italic;
             }
@@ -736,21 +736,21 @@ onMounted(() => {
             gap: 16px;
 
             .item-price {
-              font-size: 14px;
+              font-size: 1rem /* 原值: 14px */;
               color: #606266;
               min-width: 60px;
               text-align: right;
             }
 
             .item-quantity {
-              font-size: 14px;
+              font-size: 1rem /* 原值: 14px */;
               color: #606266;
               min-width: 50px;
               text-align: center;
             }
 
             .item-subtotal {
-              font-size: 16px;
+              font-size: 1.143rem /* 原值: 16px */;
               font-weight: 600;
               color: #f56c6c;
               min-width: 80px;
@@ -770,14 +770,14 @@ onMounted(() => {
         border: 2px solid #e2e8f0;
 
         .total-label {
-          font-size: 16px;
+          font-size: 1.143rem /* 原值: 16px */;
           color: #606266;
           margin-right: 16px;
           font-weight: 500;
         }
 
         .total-value {
-          font-size: 28px;
+          font-size: 2rem /* 原值: 28px */;
           font-weight: 700;
           color: #f56c6c;
           font-family: 'Consolas', 'Monaco', monospace;
@@ -823,7 +823,7 @@ onMounted(() => {
             .step-icon {
               width: 32px;
               height: 32px;
-              font-size: 16px;
+              font-size: 1.143rem /* 原值: 16px */;
             }
           }
         }
@@ -859,7 +859,7 @@ onMounted(() => {
           text-align: center;
 
           .total-value {
-            font-size: 24px;
+            font-size: 1.714rem /* 原值: 24px */;
           }
         }
       }

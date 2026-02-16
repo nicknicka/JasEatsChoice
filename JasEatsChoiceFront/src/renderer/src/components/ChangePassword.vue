@@ -194,7 +194,7 @@ const handleClose = () => {
 <style scoped lang="less">
 .password-strength {
   margin-top: 8px;
-  font-size: 12px;
+  font-size: 0.857rem /* 原值: 12px */;
 
   .strength-bar {
     display: inline-block;
@@ -208,7 +208,7 @@ const handleClose = () => {
 
 .password-errors {
   margin-top: 8px;
-  font-size: 12px;
+  font-size: 0.857rem /* 原值: 12px */;
   color: #f56c6c;
 
   .error-item {
@@ -224,7 +224,7 @@ const handleClose = () => {
 
 .password-success {
   margin-top: 8px;
-  font-size: 12px;
+  font-size: 0.857rem /* 原值: 12px */;
   color: #67c23a;
   display: flex;
   align-items: center;

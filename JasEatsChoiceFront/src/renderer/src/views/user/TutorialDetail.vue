@@ -329,13 +329,13 @@ onMounted(() => {
           background: rgba(255, 255, 255, 0.3);
           padding: 6px 16px;
           border-radius: 20px;
-          font-size: 13px;
+          font-size: 0.929rem /* 原值: 13px */;
           font-weight: 600;
           backdrop-filter: blur(10px);
         }
 
         .cover-label {
-          font-size: 16px;
+          font-size: 1.143rem /* 原值: 16px */;
           font-weight: 500;
           text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
         }
@@ -356,18 +356,18 @@ onMounted(() => {
 
       .video-icon {
         color: #ff6b6b;
-        font-size: 20px;
+        font-size: 1.429rem /* 原值: 20px */;
       }
 
       .article-icon {
         color: #f7b267;
-        font-size: 20px;
+        font-size: 1.429rem /* 原值: 20px */;
       }
 
       span {
         font-weight: 600;
         color: #303133;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
       }
     }
   }
@@ -387,23 +387,23 @@ onMounted(() => {
         gap: 6px;
         padding: 6px 12px;
         border-radius: 12px;
-        font-size: 13px;
+        font-size: 0.929rem /* 原值: 13px */;
 
         .el-icon {
-          font-size: 16px;
+          font-size: 1.143rem /* 原值: 16px */;
         }
 
         .reviewed-badge {
           margin-left: 4px;
           padding-left: 6px;
           border-left: 1px solid currentColor;
-          font-size: 12px;
+          font-size: 0.857rem /* 原值: 12px */;
         }
       }
     }
 
     .tutorial-title {
-      font-size: 32px;
+      font-size: 2.286rem /* 原值: 32px */;
       font-weight: bold;
       color: #303133;
       margin-bottom: 20px;
@@ -412,7 +412,7 @@ onMounted(() => {
 
     .tutorial-meta {
       color: #606266;
-      font-size: 15px;
+      font-size: 1.071rem /* 原值: 15px */;
       margin-bottom: 35px;
       display: flex;
       flex-wrap: wrap;
@@ -425,20 +425,20 @@ onMounted(() => {
         gap: 6px;
 
         .el-icon {
-          font-size: 18px;
+          font-size: 1.286rem /* 原值: 18px */;
         }
       }
 
       .rating-count {
         color: #909399;
-        font-size: 13px;
+        font-size: 0.929rem /* 原值: 13px */;
         margin-left: 4px;
       }
     }
 
     .tutorial-content {
       h3 {
-        font-size: 24px;
+        font-size: 1.714rem /* 原值: 24px */;
         font-weight: bold;
         color: #303133;
         margin-bottom: 20px;
@@ -447,7 +447,7 @@ onMounted(() => {
       }
 
       .content-text {
-        font-size: 16px;
+        font-size: 1.143rem /* 原值: 16px */;
         line-height: 2;
         color: #606266;
 
@@ -495,7 +495,7 @@ onMounted(() => {
     h2 {
       color: #606266;
       margin-bottom: 25px;
-      font-size: 24px;
+      font-size: 1.714rem /* 原值: 24px */;
     }
   }
 }
@@ -513,16 +513,16 @@ onMounted(() => {
       padding: 20px;
 
       .tutorial-title {
-        font-size: 24px;
+        font-size: 1.714rem /* 原值: 24px */;
       }
 
       .tutorial-meta {
-        font-size: 13px;
+        font-size: 0.929rem /* 原值: 13px */;
         gap: 15px;
       }
 
       .tutorial-content h3 {
-        font-size: 20px;
+        font-size: 1.429rem /* 原值: 20px */;
       }
     }
   }

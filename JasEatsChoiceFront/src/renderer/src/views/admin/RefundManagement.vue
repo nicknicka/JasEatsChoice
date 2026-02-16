@@ -123,7 +123,7 @@
           <el-descriptions-item label="订单ID">{{ currentRefund.orderId }}</el-descriptions-item>
           <el-descriptions-item label="用户名">{{ currentRefund.username }}</el-descriptions-item>
           <el-descriptions-item label="退款金额">
-            <span style="color: #f56c6c; font-weight: bold; font-size: 18px">¥{{ currentRefund.refundAmount }}</span>
+            <span style="color: #f56c6c; font-weight: bold; font-size: 1.286rem /* 原值: 18px */">¥{{ currentRefund.refundAmount }}</span>
           </el-descriptions-item>
           <el-descriptions-item label="退款原因" :span="2">{{ currentRefund.reason }}</el-descriptions-item>
           <el-descriptions-item label="申请说明" :span="2">{{ currentRefund.description || '-' }}</el-descriptions-item>
@@ -379,7 +379,7 @@ onMounted(() => {
     margin-bottom: 20px;
 
     h1 {
-      font-size: 24px;
+      font-size: 1.714rem /* 原值: 24px */;
       color: #303133;
       margin: 0 0 8px 0;
     }
@@ -387,7 +387,7 @@ onMounted(() => {
     .subtitle {
       color: #909399;
       margin: 0;
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
     }
   }
 

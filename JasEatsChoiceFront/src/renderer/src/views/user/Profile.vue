@@ -276,7 +276,7 @@
             style="width: 100%"
             @change="handleLocationChange"
           />
-          <div v-if="cascaderData.length === 0 && !locationDataLoading" style="color: #f56c6c; font-size: 12px; margin-top: 4px;">
+          <div v-if="cascaderData.length === 0 && !locationDataLoading" style="color: #f56c6c; font-size: 0.857rem /* 原值: 12px */; margin-top: 4px;">
             地址数据加载失败，请刷新页面重试
           </div>
         </el-form-item>
@@ -379,25 +379,25 @@
           >
             <el-option label="功能建议" value="suggestion">
               <span>功能建议</span>
-              <span style="float: right; color: #8492a6; font-size: 12px">
+              <span style="float: right; color: #8492a6; font-size: 0.857rem /* 原值: 12px */">
                 <el-icon><InfoFilled /></el-icon>
               </span>
             </el-option>
             <el-option label="问题反馈" value="bug">
               <span>问题反馈</span>
-              <span style="float: right; color: #8492a6; font-size: 12px">
+              <span style="float: right; color: #8492a6; font-size: 0.857rem /* 原值: 12px */">
                 <el-icon><WarningFilled /></el-icon>
               </span>
             </el-option>
             <el-option label="使用咨询" value="inquiry">
               <span>使用咨询</span>
-              <span style="float: right; color: #8492a6; font-size: 12px">
+              <span style="float: right; color: #8492a6; font-size: 0.857rem /* 原值: 12px */">
                 <el-icon><QuestionFilled /></el-icon>
               </span>
             </el-option>
             <el-option label="其他" value="other">
               <span>其他</span>
-              <span style="float: right; color: #8492a6; font-size: 12px">
+              <span style="float: right; color: #8492a6; font-size: 0.857rem /* 原值: 12px */">
                 <el-icon><MoreFilled /></el-icon>
               </span>
             </el-option>
@@ -449,7 +449,7 @@
           >
             <el-icon><Plus /></el-icon>
             <template #tip>
-              <div style="font-size: 12px; color: #909399; margin-top: 5px">
+              <div style="font-size: 0.857rem /* 原值: 12px */; color: #909399; margin-top: 5px">
                 最多上传3张图片，支持 jpg/png 格式，单张图片不超过 2MB
               </div>
             </template>
@@ -1395,14 +1395,14 @@ defineExpose({
 
 /* 标题样式 */
 .profile-container h2 {
-  font-size: 28px;
+  font-size: 2rem /* 原值: 28px */;
   margin: 0 0 25px 0;
   color: #333;
   font-weight: 700;
 }
 
 .module-title {
-  font-size: 18px;
+  font-size: 1.286rem /* 原值: 18px */;
   margin: 0 0 20px 0;
   font-weight: 700;
   color: #2d3748;
@@ -1428,7 +1428,7 @@ defineExpose({
 }
 
 .user-name {
-  font-size: 32px;
+  font-size: 2.286rem /* 原值: 32px */;
   font-weight: 800;
   margin: 10px 0 20px 0;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -1471,7 +1471,7 @@ defineExpose({
 
 /* 用户统计信息 */
 .user-stats {
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   margin-bottom: 20px;
 }
 
@@ -1491,7 +1491,7 @@ defineExpose({
 }
 
 .stat-label {
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   font-weight: 500;
   color: #718096;
 }
@@ -1502,7 +1502,7 @@ defineExpose({
 }
 
 .stat-value {
-  font-size: 18px;
+  font-size: 1.286rem /* 原值: 18px */;
   font-weight: 600;
   color: #2d3748;
 }
@@ -1565,13 +1565,13 @@ defineExpose({
 }
 
 .order-stat-card .stat-value {
-  font-size: 32px;
+  font-size: 2.286rem /* 原值: 32px */;
   color: #2d3748;
   margin-bottom: 6px;
 }
 
 .order-stat-card .stat-label {
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   color: #718096;
   margin-bottom: 2px;
 }
@@ -1611,13 +1611,13 @@ defineExpose({
 }
 
 .wallet-label {
-  font-size: 16px;
+  font-size: 1.143rem /* 原值: 16px */;
   color: #718096;
   font-weight: 500;
 }
 
 .wallet-hint {
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   color: #d69e2e;
   font-weight: 500;
 }
@@ -1630,14 +1630,14 @@ defineExpose({
 }
 
 .balance-number {
-  font-size: 48px;
+  font-size: 3.429rem /* 原值: 48px */;
   font-weight: 700;
   color: #d69e2e;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .balance-unit {
-  font-size: 18px;
+  font-size: 1.286rem /* 原值: 18px */;
   color: #d69e2e;
   font-weight: 500;
 }
@@ -1656,12 +1656,12 @@ defineExpose({
 }
 
 .summary-label {
-  font-size: 13px;
+  font-size: 0.929rem /* 原值: 13px */;
   color: #718096;
 }
 
 .summary-value {
-  font-size: 16px;
+  font-size: 1.143rem /* 原值: 16px */;
   font-weight: 600;
   color: #2d3748;
 }
@@ -1718,13 +1718,13 @@ defineExpose({
 }
 
 .module-item-title {
-  font-size: 16px;
+  font-size: 1.143rem /* 原值: 16px */;
   font-weight: 600;
   color: #2b6cb0;
 }
 
 .module-item-desc {
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   color: #718096;
 }
 
@@ -1785,7 +1785,7 @@ defineExpose({
 }
 
 .section-title {
-  font-size: 16px;
+  font-size: 1.143rem /* 原值: 16px */;
   font-weight: 600;
   color: #333;
   margin-bottom: 15px;
@@ -1816,7 +1816,7 @@ defineExpose({
 .unit-hint {
   margin-left: 10px;
   color: #909399;
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
 }
 
 /* 响应式优化 */

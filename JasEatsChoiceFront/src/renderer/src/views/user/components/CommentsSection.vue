@@ -131,7 +131,7 @@ const totalComments = computed(() => {
     border: 1px solid rgba(59, 130, 246, 0.1);
 
     .comments-title {
-      font-size: 20px;
+      font-size: 1.429rem /* 原值: 20px */;
       font-weight: 700;
       color: #1e40af;
       margin: 0;
@@ -153,14 +153,14 @@ const totalComments = computed(() => {
 
           :deep(.el-rate) {
             .el-rate__icon {
-              font-size: 16px;
+              font-size: 1.143rem /* 原值: 16px */;
               margin-right: 2px;
             }
           }
         }
 
         .rating-score-text {
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           font-weight: 700;
           color: #f59e0b;
           margin-left: 8px;
@@ -169,14 +169,14 @@ const totalComments = computed(() => {
 
       .rating-placeholder {
         .rating-number {
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           font-weight: 500;
           color: #94a3b8;
         }
       }
 
       .total-comments {
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         color: #64748b;
         font-weight: 500;
         padding-left: 24px;
@@ -238,7 +238,7 @@ const totalComments = computed(() => {
             gap: 8px;
 
             .user-name {
-              font-size: 15px;
+              font-size: 1.071rem /* 原值: 15px */;
               font-weight: 600;
               color: #1e293b;
             }
@@ -247,7 +247,7 @@ const totalComments = computed(() => {
               background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
               border: none;
               color: white;
-              font-size: 11px;
+              font-size: 0.75rem /* 原值: 11px */;
               padding: 2px 8px;
               height: auto;
               font-weight: 500;
@@ -255,7 +255,7 @@ const totalComments = computed(() => {
           }
 
           .comment-date {
-            font-size: 12px;
+            font-size: 0.857rem /* 原值: 12px */;
             color: #94a3b8;
             font-weight: 500;
           }
@@ -266,13 +266,13 @@ const totalComments = computed(() => {
 
           :deep(.el-rate) {
             .el-rate__icon {
-              font-size: 16px;
+              font-size: 1.143rem /* 原值: 16px */;
             }
           }
         }
 
         .comment-content {
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           color: #475569;
           line-height: 1.7;
           margin-bottom: 12px;
@@ -288,7 +288,7 @@ const totalComments = computed(() => {
             color: #3b82f6;
             font-weight: 500;
             padding: 0;
-            font-size: 13px;
+            font-size: 0.929rem /* 原值: 13px */;
 
             &:hover {
               color: #2563eb;
@@ -297,7 +297,7 @@ const totalComments = computed(() => {
 
             .toggle-icon {
               margin-right: 4px;
-              font-size: 14px;
+              font-size: 1rem /* 原值: 14px */;
             }
           }
         }
@@ -360,7 +360,7 @@ const totalComments = computed(() => {
                 gap: 8px;
 
                 .reply-username {
-                  font-size: 14px;
+                  font-size: 1rem /* 原值: 14px */;
                   font-weight: 600;
                   color: #334155;
                 }
@@ -369,7 +369,7 @@ const totalComments = computed(() => {
                   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
                   border: none;
                   color: white;
-                  font-size: 11px;
+                  font-size: 0.75rem /* 原值: 11px */;
                   padding: 2px 8px;
                   height: auto;
                   font-weight: 500;
@@ -377,14 +377,14 @@ const totalComments = computed(() => {
               }
 
               .reply-date {
-                font-size: 11px;
+                font-size: 0.75rem /* 原值: 11px */;
                 color: #94a3b8;
                 font-weight: 500;
               }
             }
 
             .reply-content {
-              font-size: 13px;
+              font-size: 0.929rem /* 原值: 13px */;
               color: #475569;
               line-height: 1.6;
             }

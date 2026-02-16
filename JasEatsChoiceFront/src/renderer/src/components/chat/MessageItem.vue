@@ -436,7 +436,7 @@ const handleDownloadFile = async () => {
 
   .message-header {
     margin-bottom: 4px;
-    font-size: 12px;
+    font-size: 0.857rem /* 原值: 12px */;
     color: #999;
     display: flex;
     align-items: center;
@@ -447,7 +447,7 @@ const handleDownloadFile = async () => {
     }
 
     .message-status {
-      font-size: 11px;
+      font-size: 0.75rem /* 原值: 11px */;
 
       &.failed {
         color: #f56c6c;
@@ -474,7 +474,7 @@ const handleDownloadFile = async () => {
         gap: 8px;
 
         .loading-text {
-          font-size: 12px;
+          font-size: 0.857rem /* 原值: 12px */;
           color: #909399;
         }
 
@@ -568,7 +568,7 @@ const handleDownloadFile = async () => {
           color: #909399;
 
           .el-icon {
-            font-size: 32px;
+            font-size: 2.286rem /* 原值: 32px */;
             animation: spin 1s linear infinite;
           }
         }
@@ -592,7 +592,7 @@ const handleDownloadFile = async () => {
             flex-direction: column;
             gap: 4px;
             color: #fff;
-            font-size: 12px;
+            font-size: 0.857rem /* 原值: 12px */;
 
             .image-dimensions {
               font-weight: 500;
@@ -600,7 +600,7 @@ const handleDownloadFile = async () => {
 
             .file-size {
               opacity: 0.8;
-              font-size: 11px;
+              font-size: 0.75rem /* 原值: 11px */;
             }
           }
 
@@ -662,7 +662,7 @@ const handleDownloadFile = async () => {
         box-shadow: 0 2px 8px rgba(245, 108, 108, 0.1);
 
         .el-icon {
-          font-size: 32px;
+          font-size: 2.286rem /* 原值: 32px */;
         }
       }
     }
@@ -692,7 +692,7 @@ const handleDownloadFile = async () => {
           min-width: 0;
 
           .file-name {
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
             font-weight: 500;
             color: #303133;
             overflow: hidden;
@@ -701,7 +701,7 @@ const handleDownloadFile = async () => {
           }
 
           .file-size {
-            font-size: 12px;
+            font-size: 0.857rem /* 原值: 12px */;
             color: #909399;
             margin-top: 4px;
           }
@@ -727,14 +727,14 @@ const handleDownloadFile = async () => {
         flex: 1;
 
         .quote-author {
-          font-size: 12px;
+          font-size: 0.857rem /* 原值: 12px */;
           font-weight: 500;
           color: #409eff;
           margin-bottom: 4px;
         }
 
         .quote-text {
-          font-size: 13px;
+          font-size: 0.929rem /* 原值: 13px */;
           color: #606266;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -754,7 +754,7 @@ const handleDownloadFile = async () => {
       flex-wrap: wrap;
 
       .message-time {
-        font-size: 11px;
+        font-size: 0.75rem /* 原值: 11px */;
         color: #999;
         display: block;
         line-height: 1.4;
@@ -766,7 +766,7 @@ const handleDownloadFile = async () => {
       .msg-action-btn {
         opacity: 0;
         transition: opacity 0.2s;
-        font-size: 16px;
+        font-size: 1.143rem /* 原值: 16px */;
         padding: 0;
         width: 20px;
         height: 20px;
@@ -774,7 +774,7 @@ const handleDownloadFile = async () => {
       }
 
       .resend-btn {
-        font-size: 12px;
+        font-size: 0.857rem /* 原值: 12px */;
         flex-shrink: 0;
       }
     }

@@ -274,7 +274,7 @@ const activeDishName = ref('')
 
 /* 统一统计信息标题大小 */
 .stat-label {
-  font-size: 18px;
+  font-size: 1.286rem /* 原值: 18px */;
   font-weight: 600;
   color: #333;
 }
@@ -287,7 +287,7 @@ const activeDishName = ref('')
 
 /* 统一标题样式 */
 .section-title {
-  font-size: 18px;
+  font-size: 1.286rem /* 原值: 18px */;
   font-weight: 600;
   color: #333;
   margin-bottom: 16px;
@@ -297,7 +297,7 @@ const activeDishName = ref('')
 }
 
 .section-icon {
-  font-size: 20px;
+  font-size: 1.429rem /* 原值: 20px */;
 }
 
 /* 食材标签间隙 */
@@ -320,7 +320,7 @@ const activeDishName = ref('')
 }
 
 .favorite-icon {
-  font-size: 24px;
+  font-size: 1.714rem /* 原值: 24px */;
   cursor: pointer;
   transition: all 0.3s ease;
   color: #c0c4cc;

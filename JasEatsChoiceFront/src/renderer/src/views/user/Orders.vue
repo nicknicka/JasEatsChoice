@@ -396,7 +396,7 @@ watch(
   }
 
   h2 {
-    font-size: 24px;
+    font-size: 1.714rem /* 原值: 24px */;
     margin: 0;
     color: #2c5282;
     font-weight: 600;
@@ -612,7 +612,7 @@ watch(
     }
 
     h2 {
-      font-size: 20px;
+      font-size: 1.429rem /* 原值: 20px */;
     }
 
     .order-list {

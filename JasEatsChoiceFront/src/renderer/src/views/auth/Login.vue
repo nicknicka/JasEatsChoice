@@ -83,7 +83,7 @@ const handleLogin = () => {
     h1 {
       margin: 12px 0 0 0;
       color: #ff6b6b;
-      font-size: 28px;
+      font-size: 2rem /* 原值: 28px */;
     }
   }
 

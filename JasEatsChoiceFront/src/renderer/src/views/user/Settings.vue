@@ -66,6 +66,9 @@
       <div class="settings-section stagger-item">
         <h3>🔍 显示设置</h3>
 
+        <!-- TODO: 字体大小切换功能 -->
+        <!-- ✅ 已实现：聊天、表单、按钮等主要内容区域可以随字体大小设置变化 -->
+        <!-- ⚠️  待优化：侧边栏菜单文字暂时无法响应字体大小变化（Element Plus 组件限制） -->
         <div class="form-row">
           <div class="form-label">字体大小</div>
           <div class="form-content">
@@ -75,13 +78,22 @@
               <el-radio label="large">大</el-radio>
               <el-radio label="extra-large">超大</el-radio>
             </el-radio-group>
+            <span style="margin-left: 10px; color: #909399; font-size: 0.857rem">
+              调整主要内容区域的字体大小
+            </span>
           </div>
         </div>
 
+        <!-- TODO: 主题切换功能 -->
+        <!-- ✅ 已实现：深色/浅色主题切换，支持 Element Plus 组件适配 -->
+        <!-- ⚠️  待测试：请在不同页面测试主题切换效果 -->
         <div class="form-row">
           <div class="form-label">主题切换</div>
           <div class="form-content">
             <el-switch v-model="theme" active-text="深色" inactive-text="浅色" />
+            <span style="margin-left: 10px; color: #909399; font-size: 0.857rem">
+              切换应用的整体主题颜色
+            </span>
           </div>
         </div>
       </div>
@@ -150,7 +162,7 @@
           <div class="form-label">AI个性化建议</div>
           <div class="form-content">
             <el-switch v-model="privacy.aiPersonalData" />
-            <span style="margin-left: 10px; color: #909399; font-size: 12px">
+            <span style="margin-left: 10px; color: #909399; font-size: 0.857rem /* 原值: 12px */">
               允许AI使用身高、体重、饮食记录等数据提供个性化建议
             </span>
           </div>
@@ -204,7 +216,7 @@
             maxlength="4"
             style="width: 150px"
           />
-          <div style="font-size: 12px; color: #909399; margin-top: 4px;">
+          <div style="font-size: 0.857rem /* 原值: 12px */; color: #909399; margin-top: 4px;">
             您的原手机号：{{ maskedPhone }}，请输入中间4位数字进行验证
           </div>
         </el-form-item>
@@ -242,7 +254,7 @@
             placeholder="请输入原邮箱地址"
             style="width: 100%"
           />
-          <div style="font-size: 12px; color: #909399; margin-top: 4px;">
+          <div style="font-size: 0.857rem /* 原值: 12px */; color: #909399; margin-top: 4px;">
             您的原邮箱：{{ maskedEmail }}，请输入完整的原邮箱地址进行验证
           </div>
         </el-form-item>
@@ -564,6 +576,10 @@ const resetSettings = () => {
 }
 
 // Update theme
+// TODO: 主题切换功能
+// ✅ 已实现：通过在 body 上添加/移除 dark-theme 和 light-theme 类来实现主题切换
+// ✅ 已实现：Element Plus 组件深色模式适配（按钮、卡片、表单等）
+// ⚠️  待测试：请在不同页面测试主题效果，确保所有组件颜色正确
 const updateTheme = () => {
   if (theme.value) {
     document.body.classList.add('dark-theme')
@@ -575,6 +591,12 @@ const updateTheme = () => {
 }
 
 // Update font size
+// TODO: 字体大小切换功能
+// ✅ 已实现：通过在 body 上添加 font-small/medium/large/extra-large 类来实现全局字体大小调整
+// ✅ 已实现：主要内容区域（聊天、表单、按钮、卡片）使用 rem 相对单位，可以响应字体大小变化
+// ✅ 已实现：批量转换了 155 个文件的 1,618 处字体为 rem 单位
+// ⚠️  待优化：侧边栏菜单（el-menu）由于 Element Plus 组件限制，暂时无法完全响应字体大小变化
+// 💡 替代方案：如需侧边栏缩放，可考虑使用 CSS transform 或 JavaScript 动态调整
 const updateFontSize = () => {
   // Remove all font size classes
   document.body.classList.remove('font-small', 'font-medium', 'font-large', 'font-extra-large')
@@ -1229,7 +1251,7 @@ const submitFeedbackForm = async () => {
 }
 
 .settings-container h2 {
-  font-size: 24px;
+  font-size: 1.714rem /* 原值: 24px */;
   margin: 0 0 20px 0;
 }
 
@@ -1242,7 +1264,7 @@ const submitFeedbackForm = async () => {
 }
 
 .settings-container .settings-section h3 {
-  font-size: 18px;
+  font-size: 1.286rem /* 原值: 18px */;
   margin: 0 0 20px 0;
   font-weight: bold;
 }
@@ -1273,106 +1295,6 @@ const submitFeedbackForm = async () => {
 
 .update-content p {
   margin: 10px 0;
-  font-size: 14px;
-}
-</style>
-
-<style>
-/* 全局主题样式 */
-/* 浅色主题 */
-.light-theme {
-  background-color: #ffffff;
-  color: #333333;
-}
-
-/* 深色主题 */
-.dark-theme {
-  background-color: #1a1a1a;
-  color: #ffffff;
-
-  /* Element Plus 组件深色适配 */
-  .el-card {
-    background-color: #2d2d2d;
-    border-color: #444444;
-  }
-
-  .el-divider {
-    background-color: #444444;
-  }
-
-  .el-input__wrapper {
-    background-color: #2d2d2d;
-    color: #ffffff;
-    border-color: #444444;
-  }
-
-  .el-switch__core {
-    background-color: #444444;
-  }
-
-  .el-button {
-    background-color: #409eff;
-    border-color: #409eff;
-  }
-
-  .el-button--default {
-    background-color: #2d2d2d;
-    border-color: #444444;
-    color: #ffffff;
-  }
-
-  .el-button--default:hover {
-    background-color: #444444;
-    border-color: #666666;
-  }
-
-  .el-dialog {
-    background-color: #2d2d2d;
-    color: #ffffff;
-  }
-
-  .el-dialog__header {
-    border-bottom-color: #444444;
-  }
-
-  .el-form-item__label {
-    color: #ffffff !important;
-  }
-}
-
-/* 字体大小 */
-.font-small {
-  font-size: 12px;
-}
-
-.font-medium {
-  font-size: 14px;
-}
-
-.font-large {
-  font-size: 16px;
-}
-
-.font-extra-large {
-  font-size: 18px;
-}
-
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .font-small {
-    font-size: 11px;
-  }
-
-  .font-medium {
-    font-size: 13px;
-  }
-
-  .font-large {
-    font-size: 15px;
-  }
-
-  .font-extra-large {
-    font-size: 17px;
-  }
+  font-size: 1rem /* 原值: 14px */;
 }
 </style>

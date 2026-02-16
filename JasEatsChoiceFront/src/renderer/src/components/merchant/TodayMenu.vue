@@ -352,7 +352,7 @@ onMounted(() => {
       }
 
       .stat-icon {
-        font-size: 36px;
+        font-size: 2.571rem /* 原值: 36px */;
         width: 60px;
         height: 60px;
         display: flex;
@@ -371,7 +371,7 @@ onMounted(() => {
         flex: 1;
 
         .stat-value {
-          font-size: 28px;
+          font-size: 2rem /* 原值: 28px */;
           font-weight: 700;
           color: #303133;
           line-height: 1;
@@ -379,7 +379,7 @@ onMounted(() => {
         }
 
         .stat-value-small {
-          font-size: 13px;
+          font-size: 0.929rem /* 原值: 13px */;
           font-weight: 500;
           color: #606266;
           line-height: 1.4;
@@ -387,7 +387,7 @@ onMounted(() => {
         }
 
         .stat-label {
-          font-size: 13px;
+          font-size: 0.929rem /* 原值: 13px */;
           color: #909399;
           font-weight: 500;
         }
@@ -436,7 +436,7 @@ onMounted(() => {
         }
 
         .card-title {
-          font-size: 20px;
+          font-size: 1.429rem /* 原值: 20px */;
           font-weight: 700;
           margin: 0;
           color: #303133;
@@ -454,7 +454,7 @@ onMounted(() => {
           font-weight: 600;
           margin-right: 12px;
           color: #606266;
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
         }
 
         .filter-section {
@@ -469,7 +469,7 @@ onMounted(() => {
             transition: all 0.3s ease;
             border-radius: 20px;
             padding: 6px 16px;
-            font-size: 13px;
+            font-size: 0.929rem /* 原值: 13px */;
             font-weight: 500;
             border: 1.5px solid #e0e0e0;
             background: #fafafa;
@@ -590,7 +590,7 @@ onMounted(() => {
             margin-bottom: 12px;
 
             .menu-icon {
-              font-size: 32px;
+              font-size: 2.286rem /* 原值: 32px */;
               width: 50px;
               height: 50px;
               display: flex;
@@ -609,7 +609,7 @@ onMounted(() => {
               display: flex;
               align-items: center;
               gap: 4px;
-              font-size: 12px;
+              font-size: 0.857rem /* 原值: 12px */;
               font-weight: 500;
               padding: 4px 10px;
               border-radius: 12px;
@@ -649,7 +649,7 @@ onMounted(() => {
           }
 
           .menu-name {
-            font-size: 16px;
+            font-size: 1.143rem /* 原值: 16px */;
             font-weight: 600;
             color: #303133;
             margin-bottom: 12px;
@@ -660,7 +660,7 @@ onMounted(() => {
             display: flex;
             flex-wrap: wrap;
             gap: 12px;
-            font-size: 13px;
+            font-size: 0.929rem /* 原值: 13px */;
             color: #909399;
             margin-bottom: 8px;
 
@@ -690,7 +690,7 @@ onMounted(() => {
           .menu-auto-time {
             display: flex;
             gap: 12px;
-            font-size: 12px;
+            font-size: 0.857rem /* 原值: 12px */;
             color: #909399;
             padding-top: 8px;
             border-top: 1px dashed #e8e8e8;
@@ -725,7 +725,7 @@ onMounted(() => {
         }
 
         .empty-text {
-          font-size: 16px;
+          font-size: 1.143rem /* 原值: 16px */;
           margin: 0;
           font-weight: 500;
         }
@@ -774,7 +774,7 @@ onMounted(() => {
           }
 
           .card-title {
-            font-size: 20px;
+            font-size: 1.429rem /* 原值: 20px */;
             font-weight: 700;
             margin: 0;
             color: #303133;
@@ -792,7 +792,7 @@ onMounted(() => {
             font-weight: 600;
             margin-right: 12px;
             color: #606266;
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
           }
 
           .filter-section {
@@ -807,7 +807,7 @@ onMounted(() => {
               transition: all 0.3s ease;
               border-radius: 20px;
               padding: 6px 16px;
-              font-size: 13px;
+              font-size: 0.929rem /* 原值: 13px */;
               font-weight: 500;
               border: 1.5px solid #e0e0e0;
               background: #fafafa;
@@ -928,7 +928,7 @@ onMounted(() => {
               margin-bottom: 12px;
 
               .menu-icon {
-                font-size: 32px;
+                font-size: 2.286rem /* 原值: 32px */;
                 width: 50px;
                 height: 50px;
                 display: flex;
@@ -947,7 +947,7 @@ onMounted(() => {
                 display: flex;
                 align-items: center;
                 gap: 4px;
-                font-size: 12px;
+                font-size: 0.857rem /* 原值: 12px */;
                 font-weight: 500;
                 padding: 4px 10px;
                 border-radius: 12px;
@@ -987,7 +987,7 @@ onMounted(() => {
             }
 
             .menu-name {
-              font-size: 16px;
+              font-size: 1.143rem /* 原值: 16px */;
               font-weight: 600;
               color: #303133;
               margin-bottom: 12px;
@@ -998,7 +998,7 @@ onMounted(() => {
               display: flex;
               flex-wrap: wrap;
               gap: 12px;
-              font-size: 13px;
+              font-size: 0.929rem /* 原值: 13px */;
               color: #909399;
               margin-bottom: 8px;
 
@@ -1028,7 +1028,7 @@ onMounted(() => {
             .menu-auto-time {
               display: flex;
               gap: 12px;
-              font-size: 12px;
+              font-size: 0.857rem /* 原值: 12px */;
               color: #909399;
               padding-top: 8px;
               border-top: 1px dashed #e8e8e8;
@@ -1063,7 +1063,7 @@ onMounted(() => {
           }
 
           .empty-text {
-            font-size: 16px;
+            font-size: 1.143rem /* 原值: 16px */;
             margin: 0;
             font-weight: 500;
           }
@@ -1146,7 +1146,7 @@ onMounted(() => {
         padding: 16px;
 
         .stat-icon {
-          font-size: 28px;
+          font-size: 2rem /* 原值: 28px */;
           width: 48px;
           height: 48px;
         }
@@ -1157,11 +1157,11 @@ onMounted(() => {
           }
 
           .stat-value-small {
-            font-size: 11px;
+            font-size: 0.75rem /* 原值: 11px */;
           }
 
           .stat-label {
-            font-size: 12px;
+            font-size: 0.857rem /* 原值: 12px */;
           }
         }
       }

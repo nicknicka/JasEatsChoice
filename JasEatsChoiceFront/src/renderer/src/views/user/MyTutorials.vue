@@ -270,13 +270,13 @@ onMounted(() => {
           <el-breadcrumb separator=">">
             <el-breadcrumb-item
               @click="() => router.push('/user/home/tutorials')"
-              style="color: #e8eaf5; font-weight: 500; font-size: 13px; cursor: pointer; transition: all 0.3s;"
+              style="color: #e8eaf5; font-weight: 500; font-size: 0.929rem /* 原值: 13px */; cursor: pointer; transition: all 0.3s;"
               onmouseover="this.style.color='#ffffff'"
               onmouseout="this.style.color='#e8eaf5'"
             >
               教程广场
             </el-breadcrumb-item>
-            <el-breadcrumb-item style="color: #ffffff; font-weight: 600; font-size: 13px;">
+            <el-breadcrumb-item style="color: #ffffff; font-weight: 600; font-size: 0.929rem /* 原值: 13px */;">
               我的教程
             </el-breadcrumb-item>
           </el-breadcrumb>
@@ -566,7 +566,7 @@ onMounted(() => {
           .el-breadcrumb__inner {
             color: #e8eaf5 !important;
             font-weight: 500 !important;
-            font-size: 13px !important;
+            font-size: 0.929rem /* 原值: 13px */ !important;
             transition: all 0.3s ease;
           }
 
@@ -597,7 +597,7 @@ onMounted(() => {
 
           .subtitle {
             margin: 0;
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
             font-weight: 400;
             color: rgba(255, 255, 255, 0.75);
             letter-spacing: 0.3px;
@@ -710,13 +710,13 @@ onMounted(() => {
         }
 
         .icon-emoji {
-          font-size: 28px;
+          font-size: 2rem /* 原值: 28px */;
         }
       }
 
       .stat-info {
         .stat-value {
-          font-size: 28px;
+          font-size: 2rem /* 原值: 28px */;
           font-weight: bold;
           color: #303133;
           margin-bottom: 4px;
@@ -724,7 +724,7 @@ onMounted(() => {
         }
 
         .stat-label {
-          font-size: 13px;
+          font-size: 0.929rem /* 原值: 13px */;
           color: #909399;
         }
       }
@@ -751,7 +751,7 @@ onMounted(() => {
 
       :deep(.el-tabs__item) {
         padding: 20px 24px;
-        font-size: 15px;
+        font-size: 1.071rem /* 原值: 15px */;
         font-weight: 500;
         color: #606266;
 
@@ -765,7 +765,7 @@ onMounted(() => {
           gap: 8px;
 
           .tab-icon {
-            font-size: 18px;
+            font-size: 1.286rem /* 原值: 18px */;
           }
 
           .tab-badge {
@@ -877,13 +877,13 @@ onMounted(() => {
                   gap: 4px;
 
                   .placeholder-type {
-                    font-size: 16px;
+                    font-size: 1.143rem /* 原值: 16px */;
                     font-weight: 600;
                     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
                   }
 
                   .placeholder-hint {
-                    font-size: 12px;
+                    font-size: 0.857rem /* 原值: 12px */;
                     opacity: 0.85;
                     font-weight: 400;
                   }
@@ -936,7 +936,7 @@ onMounted(() => {
             }
 
             .tutorial-title {
-              font-size: 18px;
+              font-size: 1.286rem /* 原值: 18px */;
               font-weight: 700;
               color: #303133;
               margin: 0 0 12px 0;
@@ -959,11 +959,11 @@ onMounted(() => {
                 display: flex;
                 align-items: center;
                 gap: 4px;
-                font-size: 13px;
+                font-size: 0.929rem /* 原值: 13px */;
                 color: #909399;
 
                 .el-icon {
-                  font-size: 14px;
+                  font-size: 1rem /* 原值: 14px */;
                 }
               }
             }
@@ -976,7 +976,7 @@ onMounted(() => {
               border-top: 1px solid #f5f5f5;
 
               .create-time {
-                font-size: 12px;
+                font-size: 0.857rem /* 原值: 12px */;
                 color: #909399;
               }
 
@@ -1067,11 +1067,11 @@ onMounted(() => {
           gap: 8px;
 
           :deep(.el-breadcrumb) {
-            font-size: 13px;
+            font-size: 0.929rem /* 原值: 13px */;
 
             .breadcrumb-item,
             .breadcrumb-current {
-              font-size: 13px;
+              font-size: 0.929rem /* 原值: 13px */;
             }
           }
 
@@ -1081,7 +1081,7 @@ onMounted(() => {
             }
 
             .subtitle {
-              font-size: 13px;
+              font-size: 0.929rem /* 原值: 13px */;
             }
           }
         }
@@ -1106,11 +1106,11 @@ onMounted(() => {
 
         .stat-info {
           .stat-value {
-            font-size: 24px;
+            font-size: 1.714rem /* 原值: 24px */;
           }
 
           .stat-label {
-            font-size: 12px;
+            font-size: 0.857rem /* 原值: 12px */;
           }
         }
       }
@@ -1122,13 +1122,13 @@ onMounted(() => {
 
         :deep(.el-tabs__item) {
           padding: 16px 12px;
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
 
           .tab-label {
             gap: 4px;
 
             .tab-icon {
-              font-size: 16px;
+              font-size: 1.143rem /* 原值: 16px */;
             }
           }
         }

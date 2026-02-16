@@ -269,7 +269,7 @@ const handleCloseDialog = () => {
   background-clip: text;
   color: transparent;
   /* 动态字体大小 */
-  font-size: 48px;
+  font-size: 3.429rem /* 原值: 48px */;
   /* 确保文字居中 */
   display: flex;
   align-items: center;

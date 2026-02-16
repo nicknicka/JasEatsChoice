@@ -146,7 +146,7 @@ defineExpose({
     text-align: center;
     padding: 10px;
     margin-bottom: 10px;
-    font-size: 12px;
+    font-size: 0.857rem /* 原值: 12px */;
     color: #909399;
     cursor: pointer;
     user-select: none;
@@ -176,12 +176,12 @@ defineExpose({
     .message-header {
       margin-bottom: 4px;
       .sender-name {
-        font-size: 12px;
+        font-size: 0.857rem /* 原值: 12px */;
         color: #666;
       }
 
       .message-status {
-        font-size: 11px;
+        font-size: 0.75rem /* 原值: 11px */;
         margin-left: 8px;
         color: #909399;
 
@@ -194,7 +194,7 @@ defineExpose({
     .message-content {
       border-radius: 10px;
       padding: 7px;
-      font-size: 12px;
+      font-size: 0.857rem /* 原值: 12px */;
       position: relative;
 
       .message-reply-quote {
@@ -217,14 +217,14 @@ defineExpose({
           min-width: 0;
 
           .quote-author {
-            font-size: 11px;
+            font-size: 0.75rem /* 原值: 11px */;
             font-weight: 500;
             color: #606266;
             margin-bottom: 4px;
           }
 
           .quote-text {
-            font-size: 11px;
+            font-size: 0.75rem /* 原值: 11px */;
             color: #909399;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -247,13 +247,13 @@ defineExpose({
         opacity: 0;
         transition: opacity 0.2s;
         padding: 2px 8px;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
       }
 
       .resend-btn {
         margin-top: 4px;
         padding: 2px 8px;
-        font-size: 11px;
+        font-size: 0.75rem /* 原值: 11px */;
       }
 
       &:hover .msg-action-btn {

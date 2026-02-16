@@ -369,7 +369,7 @@ onMounted(() => {
 
       .card-title {
         margin: 0 0 12px 0;
-        font-size: 20px;
+        font-size: 1.429rem /* 原值: 20px */;
         font-weight: 700;
         color: #e6a23c;
       }
@@ -377,7 +377,7 @@ onMounted(() => {
       .album-stats {
         display: flex;
         gap: 24px;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         color: #606266;
 
         .stat-item {
@@ -414,7 +414,7 @@ onMounted(() => {
       margin-bottom: 16px;
 
       .section-title {
-        font-size: 16px;
+        font-size: 1.143rem /* 原值: 16px */;
         font-weight: 600;
         color: #303133;
         margin: 0;
@@ -425,7 +425,7 @@ onMounted(() => {
         border-bottom: 2px solid #e6a23c;
 
         .title-icon {
-          font-size: 20px;
+          font-size: 1.429rem /* 原值: 20px */;
         }
       }
     }
@@ -466,7 +466,7 @@ onMounted(() => {
         justify-content: center;
         background: rgba(0, 0, 0, 0.5);
         color: #fff;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         font-weight: 500;
         opacity: 0;
         transition: opacity 0.3s ease;
@@ -539,7 +539,7 @@ onMounted(() => {
           height: 100%;
           background: linear-gradient(135deg, #f5f7fa 0%, #e4e7ed 100%);
           color: #909399;
-          font-size: 32px;
+          font-size: 2.286rem /* 原值: 32px */;
         }
 
         :deep(img) {
@@ -560,13 +560,13 @@ onMounted(() => {
     color: #909399;
 
     .empty-icon {
-      font-size: 48px;
+      font-size: 3.429rem /* 原值: 48px */;
       margin-bottom: 12px;
       color: #e6a23c;
     }
 
     .empty-text {
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
       margin-bottom: 16px;
     }
   }
@@ -583,7 +583,7 @@ onMounted(() => {
       margin-bottom: 20px;
 
       .upload-title {
-        font-size: 16px;
+        font-size: 1.143rem /* 原值: 16px */;
         font-weight: 600;
         color: #e6a23c;
         margin: 0;
@@ -609,7 +609,7 @@ onMounted(() => {
         .upload-label {
           font-weight: 600;
           color: #303133;
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
         }
 
         :deep(.el-select) {
@@ -621,7 +621,7 @@ onMounted(() => {
         display: flex;
         align-items: center;
         gap: 6px;
-        font-size: 13px;
+        font-size: 0.929rem /* 原值: 13px */;
         color: #909399;
         padding: 6px 12px;
         background-color: #f5f7fa;
@@ -629,7 +629,7 @@ onMounted(() => {
 
         .el-icon {
           color: #409eff;
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
         }
       }
     }
@@ -657,21 +657,21 @@ onMounted(() => {
         }
 
         .el-icon-plus {
-          font-size: 48px;
+          font-size: 3.429rem /* 原值: 48px */;
           color: #e6a23c;
           margin-bottom: 16px;
         }
 
         .el-upload__text {
           .upload-text {
-            font-size: 16px;
+            font-size: 1.143rem /* 原值: 16px */;
             color: #303133;
             font-weight: 500;
             margin-bottom: 8px;
           }
 
           .upload-hint {
-            font-size: 13px;
+            font-size: 0.929rem /* 原值: 13px */;
             color: #909399;
           }
         }
@@ -717,7 +717,7 @@ onMounted(() => {
 
         .upload-confirm-btn {
           min-width: 200px;
-          font-size: 16px;
+          font-size: 1.143rem /* 原值: 16px */;
           font-weight: 600;
           border: none;
           box-shadow: 0 4px 12px rgba(103, 194, 58, 0.3);

@@ -102,7 +102,7 @@ function handleClear() {
     }
 
     :deep(.el-input__inner) {
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
       color: #2c5282;
       font-weight: 400;
 
@@ -114,7 +114,7 @@ function handleClear() {
 
     .search-icon {
       color: #5c8eff;
-      font-size: 16px;
+      font-size: 1.143rem /* 原值: 16px */;
       animation: search-glow 2s ease-in-out infinite;
     }
 
@@ -132,7 +132,7 @@ function handleClear() {
 
     .clear-icon {
       color: #94a3b8;
-      font-size: 16px;
+      font-size: 1.143rem /* 原值: 16px */;
       cursor: pointer;
       transition: all 0.3s ease;
 
@@ -151,20 +151,20 @@ function handleClear() {
     padding: 8px 12px;
     background: linear-gradient(135deg, #e7f5ff 0%, #f0f9ff 100%);
     border-radius: 8px;
-    font-size: 13px;
+    font-size: 0.929rem /* 原值: 13px */;
     color: #1971c2;
     border: 1px solid rgba(92, 142, 255, 0.2);
 
     .result-count {
       font-weight: 700;
-      font-size: 16px;
+      font-size: 1.143rem /* 原值: 16px */;
       color: #5c8eff;
       padding: 0 4px;
     }
 
     .clear-search-btn {
       margin-left: auto;
-      font-size: 13px;
+      font-size: 0.929rem /* 原值: 13px */;
       font-weight: 500;
       color: #5c8eff;
       transition: all 0.3s ease;

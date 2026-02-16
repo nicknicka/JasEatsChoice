@@ -51,7 +51,7 @@ const RecipeOptimization = defineAsyncComponent({
   loader: () => import('./AI/components/RecipeOptimization.vue'),
   errorComponent: () => h('div', { style: 'padding: 20px; text-align: center; color: #909399;' }, [
     h('p', '食谱优化组件加载失败'),
-    h('p', { style: 'font-size: 14px; margin-top: 8px;' }, '请刷新页面重试')
+    h('p', { style: 'font-size: 1rem /* 原值: 14px */; margin-top: 8px;' }, '请刷新页面重试')
   ]),
   delay: 200,
   timeout: 3000
@@ -62,7 +62,7 @@ const ContentExtractionTab = defineAsyncComponent({
   loader: () => import('./AI/components/ContentExtractionTab.vue'),
   errorComponent: () => h('div', { style: 'padding: 20px; text-align: center; color: #909399;' }, [
     h('p', '内容提取组件加载失败'),
-    h('p', { style: 'font-size: 14px; margin-top: 8px;' }, '请刷新页面重试')
+    h('p', { style: 'font-size: 1rem /* 原值: 14px */; margin-top: 8px;' }, '请刷新页面重试')
   ]),
   delay: 200,
   timeout: 3000
@@ -149,7 +149,7 @@ const activeTab = ref('chat')
     }
 
     :deep(.el-tabs__item) {
-      font-size: 15px;
+      font-size: 1.071rem /* 原值: 15px */;
       font-weight: 600;
       color: #606266;
       transition: all 0.3s ease;
@@ -191,11 +191,11 @@ const activeTab = ref('chat')
 
   p {
     margin: 12px 0 0 0;
-    font-size: 16px;
+    font-size: 1.143rem /* 原值: 16px */;
   }
 
   .hint {
-    font-size: 14px;
+    font-size: 1rem /* 原值: 14px */;
     color: #c0c4cc;
   }
 }

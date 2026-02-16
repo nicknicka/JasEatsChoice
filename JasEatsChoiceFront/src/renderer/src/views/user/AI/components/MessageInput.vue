@@ -330,7 +330,7 @@ defineExpose({
         border: 2px solid #e8ecef;
         background: #ffffff;
         padding: 8px 12px;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         line-height: 1.6;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         resize: none;
@@ -352,7 +352,7 @@ defineExpose({
       background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%);
       border: none;
       padding: 8px 24px;
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
       font-weight: 600;
       border-radius: 10px;
       box-shadow: 0 2px 8px rgba(255, 107, 107, 0.25);
@@ -412,7 +412,7 @@ defineExpose({
     gap: 4px;
 
     .emoji-item {
-      font-size: 20px;
+      font-size: 1.429rem /* 原值: 20px */;
       text-align: center;
       padding: 6px 4px;
       border-radius: 6px;

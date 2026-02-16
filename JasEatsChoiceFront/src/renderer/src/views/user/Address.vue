@@ -550,7 +550,7 @@ const setDefault = async (address) => {
     /* 移除自定义返回按钮样式，使用组件默认样式 */
 
     h2 {
-      font-size: 28px;
+      font-size: 2rem /* 原值: 28px */;
       font-weight: 600;
       color: #2c3e50;
       margin: 0;
@@ -593,7 +593,7 @@ const setDefault = async (address) => {
         top: 24px;
         right: 24px;
         color: #67c23a;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         font-weight: 500;
         padding: 2px 12px;
         background-color: rgba(103, 194, 58, 0.1);
@@ -608,14 +608,14 @@ const setDefault = async (address) => {
       margin-bottom: 14px;
 
       .address-name {
-        font-size: 18px;
+        font-size: 1.286rem /* 原值: 18px */;
         font-weight: 600;
         color: #2c3e50;
       }
 
       .address-phone {
         color: #333;
-        font-size: 15px;
+        font-size: 1.071rem /* 原值: 15px */;
         font-weight: 500;
       }
     }
@@ -625,7 +625,7 @@ const setDefault = async (address) => {
       line-height: 1.6;
 
       .address-full {
-        font-size: 15px;
+        font-size: 1.071rem /* 原值: 15px */;
         color: #555;
         margin-bottom: 8px;
         white-space: pre-line;
@@ -637,7 +637,7 @@ const setDefault = async (address) => {
         background-color: rgba(64, 158, 255, 0.1);
         padding: 4px 12px;
         border-radius: 4px;
-        font-size: 13px;
+        font-size: 0.929rem /* 原值: 13px */;
         font-weight: 500;
       }
     }

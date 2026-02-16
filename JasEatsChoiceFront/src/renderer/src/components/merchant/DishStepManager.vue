@@ -608,7 +608,7 @@ watch(() => props.orderId, () => {
 }
 
 .dish-name {
-  font-size: 16px;
+  font-size: 1.143rem /* 原值: 16px */;
   font-weight: 600;
   color: #303133;
 }
@@ -617,7 +617,7 @@ watch(() => props.orderId, () => {
   display: inline-block;
   padding: 4px 12px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: 0.857rem /* 原值: 12px */;
   color: #fff;
   font-weight: 500;
 }
@@ -631,7 +631,7 @@ watch(() => props.orderId, () => {
   display: flex;
   justify-content: space-between;
   margin-top: 8px;
-  font-size: 12px;
+  font-size: 0.857rem /* 原值: 12px */;
   color: #909399;
 }
 
@@ -673,17 +673,17 @@ watch(() => props.orderId, () => {
 .history-info {
   display: flex;
   gap: 16px;
-  font-size: 12px;
+  font-size: 0.857rem /* 原值: 12px */;
   color: #909399;
 }
 
 .history-reason {
   color: #F56C6C;
-  font-size: 12px;
+  font-size: 0.857rem /* 原值: 12px */;
 }
 
 .history-remark {
   color: #606266;
-  font-size: 12px;
+  font-size: 0.857rem /* 原值: 12px */;
 }
 </style>

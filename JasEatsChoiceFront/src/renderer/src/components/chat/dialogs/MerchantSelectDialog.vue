@@ -385,12 +385,12 @@ watch(searchKeyword, (newVal) => {
       }
 
       :deep(.el-input__inner) {
-        font-size: 16px;
+        font-size: 1.143rem /* 原值: 16px */;
         font-weight: 500;
       }
 
       :deep(.el-input__prefix) {
-        font-size: 18px;
+        font-size: 1.286rem /* 原值: 18px */;
         color: #909399;
       }
     }
@@ -406,7 +406,7 @@ watch(searchKeyword, (newVal) => {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 16px;
+    font-size: 1.143rem /* 原值: 16px */;
     font-weight: 600;
     color: #303133;
     margin-bottom: 12px;
@@ -414,7 +414,7 @@ watch(searchKeyword, (newVal) => {
 
     .el-icon {
       color: #f5a623;
-      font-size: 20px;
+      font-size: 1.429rem /* 原值: 20px */;
     }
   }
 }
@@ -425,7 +425,7 @@ watch(searchKeyword, (newVal) => {
   padding: 0 20px 16px;
 
   .result-count {
-    font-size: 13px;
+    font-size: 0.929rem /* 原值: 13px */;
     color: #909399;
     margin-bottom: 12px;
     padding: 0 8px;
@@ -492,7 +492,7 @@ watch(searchKeyword, (newVal) => {
         }
 
         .avatar-placeholder {
-          font-size: 24px;
+          font-size: 1.714rem /* 原值: 24px */;
         }
       }
 
@@ -500,7 +500,7 @@ watch(searchKeyword, (newVal) => {
         flex: 1;
 
         .merchant-name {
-          font-size: 15px;
+          font-size: 1.071rem /* 原值: 15px */;
           font-weight: 600;
           margin: 0 0 6px 0;
           color: #303133;
@@ -516,18 +516,18 @@ watch(searchKeyword, (newVal) => {
             display: flex;
             align-items: center;
             gap: 4px;
-            font-size: 13px;
+            font-size: 0.929rem /* 原值: 13px */;
             color: #67c23a;
             font-weight: 500;
 
             .el-icon {
-              font-size: 14px;
+              font-size: 1rem /* 原值: 14px */;
             }
           }
         }
 
         .merchant-description {
-          font-size: 13px;
+          font-size: 0.929rem /* 原值: 13px */;
           color: #909399;
           margin: 4px 0 0 0;
           line-height: 1.5;
@@ -568,7 +568,7 @@ watch(searchKeyword, (newVal) => {
 
   p {
     margin: 0;
-    font-size: 14px;
+    font-size: 1rem /* 原值: 14px */;
   }
 }
 
@@ -623,7 +623,7 @@ watch(searchKeyword, (newVal) => {
 
         .merchant-info {
           .merchant-name {
-            font-size: 16px;
+            font-size: 1.143rem /* 原值: 16px */;
           }
         }
       }

@@ -202,7 +202,7 @@ const formatTime = (timeStr) => {
       display: flex;
       align-items: center;
       gap: 8px;
-      font-size: 15px;
+      font-size: 1.071rem /* 原值: 15px */;
       font-weight: 600;
       color: #1f2937;
 
@@ -262,7 +262,7 @@ const formatTime = (timeStr) => {
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 24px;
+          font-size: 1.714rem /* 原值: 24px */;
           background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
           border-radius: 50%;
           transition: transform 0.2s ease;
@@ -276,7 +276,7 @@ const formatTime = (timeStr) => {
           color: #ffffff;
           border-radius: 12px;
           padding: 2px 7px;
-          font-size: 11px;
+          font-size: 0.75rem /* 原值: 11px */;
           font-weight: 600;
           box-shadow: 0 2px 8px rgba(245, 108, 108, 0.4);
           border: 2px solid #fff;
@@ -314,7 +314,7 @@ const formatTime = (timeStr) => {
 
           .name {
             font-weight: 600;
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
             color: #1f2937;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -324,7 +324,7 @@ const formatTime = (timeStr) => {
           }
 
           .time {
-            font-size: 11px;
+            font-size: 0.75rem /* 原值: 11px */;
             color: #9ca3af;
             font-weight: 500;
             flex-shrink: 0;
@@ -336,7 +336,7 @@ const formatTime = (timeStr) => {
         }
 
         .last-message {
-          font-size: 13px;
+          font-size: 0.929rem /* 原值: 13px */;
           color: #6b7280;
           white-space: nowrap;
           overflow: hidden;
@@ -345,7 +345,7 @@ const formatTime = (timeStr) => {
         }
 
         .member-count {
-          font-size: 11px;
+          font-size: 0.75rem /* 原值: 11px */;
           color: #909399;
           margin-top: 2px;
         }

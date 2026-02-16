@@ -381,7 +381,7 @@ const handleLeaveGroup = async () => {
       .group-avatar {
         width: 80px;
         height: 80px;
-        font-size: 48px;
+        font-size: 3.429rem /* 原值: 48px */;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -403,7 +403,7 @@ const handleLeaveGroup = async () => {
         padding: 4px 10px;
         background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
         color: #fff;
-        font-size: 12px;
+        font-size: 0.857rem /* 原值: 12px */;
         font-weight: 600;
         border-radius: 20px;
         box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
@@ -415,14 +415,14 @@ const handleLeaveGroup = async () => {
       color: #fff;
 
       .group-name {
-        font-size: 24px;
+        font-size: 1.714rem /* 原值: 24px */;
         font-weight: 700;
         margin-bottom: 8px;
         text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
       }
 
       .group-id {
-        font-size: 13px;
+        font-size: 0.929rem /* 原值: 13px */;
         opacity: 0.9;
         font-family: 'Courier New', monospace;
         background: rgba(255, 255, 255, 0.2);
@@ -504,7 +504,7 @@ const handleLeaveGroup = async () => {
         transition: all 0.3s ease;
 
         .stat-value {
-          font-size: 20px;
+          font-size: 1.429rem /* 原值: 20px */;
           font-weight: 700;
           background: linear-gradient(135deg, #1a1a1a 0%, #4a5568 100%);
           -webkit-background-clip: text;
@@ -514,12 +514,12 @@ const handleLeaveGroup = async () => {
           transition: all 0.3s ease;
 
           &.text-sm {
-            font-size: 13px;
+            font-size: 0.929rem /* 原值: 13px */;
           }
         }
 
         .stat-label {
-          font-size: 12px;
+          font-size: 0.857rem /* 原值: 12px */;
           color: #6b7280;
           font-weight: 500;
           transition: all 0.3s ease;
@@ -579,7 +579,7 @@ const handleLeaveGroup = async () => {
         display: flex;
         align-items: center;
         gap: 10px;
-        font-size: 18px;
+        font-size: 1.286rem /* 原值: 18px */;
         font-weight: 700;
         background: linear-gradient(135deg, #1a1a1a 0%, #4a5568 100%);
         -webkit-background-clip: text;
@@ -587,7 +587,7 @@ const handleLeaveGroup = async () => {
         background-clip: text;
 
         .el-icon {
-          font-size: 24px;
+          font-size: 1.714rem /* 原值: 24px */;
           background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
@@ -736,7 +736,7 @@ const handleLeaveGroup = async () => {
           min-width: 0;
 
           .member-name {
-            font-size: 16px;
+            font-size: 1.143rem /* 原值: 16px */;
             font-weight: 700;
             background: linear-gradient(135deg, #1a1a1a 0%, #4a5568 100%);
             -webkit-background-clip: text;
@@ -753,7 +753,7 @@ const handleLeaveGroup = async () => {
             }
 
             .current-user-tag {
-              font-size: 12px;
+              font-size: 0.857rem /* 原值: 12px */;
               padding: 4px 10px;
               height: auto;
               border-radius: 10px;
@@ -773,7 +773,7 @@ const handleLeaveGroup = async () => {
             }
 
             .creator-tag {
-              font-size: 12px;
+              font-size: 0.857rem /* 原值: 12px */;
               padding: 4px 10px;
               height: auto;
               border-radius: 10px;
@@ -794,7 +794,7 @@ const handleLeaveGroup = async () => {
           }
 
           .member-id {
-            font-size: 12px;
+            font-size: 0.857rem /* 原值: 12px */;
             color: #9ca3af;
             font-family: 'Courier New', monospace;
             background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
@@ -808,7 +808,7 @@ const handleLeaveGroup = async () => {
 
         .member-role-icon {
           flex-shrink: 0;
-          font-size: 18px;
+          font-size: 1.286rem /* 原值: 18px */;
           opacity: 0.7;
 
           .crown-icon {
@@ -834,7 +834,7 @@ const handleLeaveGroup = async () => {
     border-radius: 12px;
     padding: 12px 32px;
     font-weight: 600;
-    font-size: 15px;
+    font-size: 1.071rem /* 原值: 15px */;
     border: none;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;

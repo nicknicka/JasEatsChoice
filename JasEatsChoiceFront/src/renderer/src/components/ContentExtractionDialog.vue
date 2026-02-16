@@ -25,7 +25,7 @@
             <el-option label="文章" value="ARTICLE" />
             <el-option label="图片" value="IMAGE" />
           </el-select>
-          <span style="margin-left: 8px; color: #909399; font-size: 13px">
+          <span style="margin-left: 8px; color: #909399; font-size: 0.929rem /* 原值: 13px */">
             系统会自动识别
           </span>
         </el-form-item>
@@ -134,7 +134,7 @@ const handleClose = () => {
 <style scoped>
 .url-tips {
   margin-top: 8px;
-  font-size: 12px;
+  font-size: 0.857rem /* 原值: 12px */;
   color: #909399;
 }
 
@@ -146,6 +146,6 @@ const handleClose = () => {
   background: #f5f7fa;
   border-radius: 4px;
   color: #606266;
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
 }
 </style>

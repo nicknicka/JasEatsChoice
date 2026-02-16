@@ -346,7 +346,7 @@ function handleClose() {
 
     .change-summary {
       margin-top: 8px;
-      font-size: 13px;
+      font-size: 0.929rem /* 原值: 13px */;
     }
   }
 
@@ -359,10 +359,10 @@ function handleClose() {
     border-radius: 8px;
     margin-bottom: 16px;
     color: #0284c7;
-    font-size: 13px;
+    font-size: 0.929rem /* 原值: 13px */;
 
     .info-icon {
-      font-size: 16px;
+      font-size: 1.143rem /* 原值: 16px */;
     }
   }
 
@@ -426,7 +426,7 @@ function handleClose() {
             height: 100%;
             background: #f3f4f6;
             color: #9ca3af;
-            font-size: 24px;
+            font-size: 1.714rem /* 原值: 24px */;
           }
         }
 
@@ -437,13 +437,13 @@ function handleClose() {
             font-weight: 500;
             color: #1f2937;
             margin-bottom: 4px;
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
           }
 
           .item-specs {
             display: flex;
             gap: 8px;
-            font-size: 12px;
+            font-size: 0.857rem /* 原值: 12px */;
             color: #6b7280;
 
             .customization {
@@ -459,14 +459,14 @@ function handleClose() {
 
         .price-info {
           .current-price {
-            font-size: 16px;
+            font-size: 1.143rem /* 原值: 16px */;
             font-weight: 600;
             color: #ef4444;
             margin-bottom: 4px;
           }
 
           .price-change {
-            font-size: 12px;
+            font-size: 0.857rem /* 原值: 12px */;
 
             &.increased {
               color: #ef4444;
@@ -477,7 +477,7 @@ function handleClose() {
         .status-text {
           padding: 4px 8px;
           border-radius: 4px;
-          font-size: 12px;
+          font-size: 0.857rem /* 原值: 12px */;
           font-weight: 500;
 
           &.sold-out-text {
@@ -508,20 +508,20 @@ function handleClose() {
 
           .suggestion-name {
             flex: 1;
-            font-size: 13px;
+            font-size: 0.929rem /* 原值: 13px */;
             font-weight: 500;
             color: #1e40af;
           }
 
           .suggestion-price {
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
             font-weight: 600;
             color: #ef4444;
           }
         }
 
         .suggestion-reason {
-          font-size: 12px;
+          font-size: 0.857rem /* 原值: 12px */;
           color: #64748b;
           margin-top: 8px;
         }
@@ -539,7 +539,7 @@ function handleClose() {
       justify-content: space-between;
       align-items: center;
       margin-bottom: 12px;
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
 
       &:last-child {
         margin-bottom: 0;
@@ -549,7 +549,7 @@ function handleClose() {
         padding-top: 12px;
         border-top: 1px solid #e5e7eb;
         font-weight: 600;
-        font-size: 15px;
+        font-size: 1.071rem /* 原值: 15px */;
 
         .increase {
           color: #ef4444;
@@ -566,7 +566,7 @@ function handleClose() {
       }
 
       .current-price {
-        font-size: 18px;
+        font-size: 1.286rem /* 原值: 18px */;
         font-weight: 700;
         color: #ef4444;
       }

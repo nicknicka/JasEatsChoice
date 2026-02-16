@@ -364,7 +364,7 @@ defineExpose({
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 16px;
+  font-size: 1.143rem /* 原值: 16px */;
   font-weight: 600;
   color: #303133;
   margin-bottom: 12px;
@@ -383,7 +383,7 @@ defineExpose({
 }
 
 .category-name {
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   font-weight: 500;
   color: #606266;
   margin-bottom: 8px;
@@ -433,13 +433,13 @@ defineExpose({
 }
 
 .conflict-description {
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   font-weight: 500;
   color: #303133;
 }
 
 .conflict-item-detail {
-  font-size: 12px;
+  font-size: 0.857rem /* 原值: 12px */;
   color: #606266;
 }
 
@@ -477,7 +477,7 @@ defineExpose({
 }
 
 .preview-content {
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   color: #303133;
   line-height: 1.6;
   white-space: pre-wrap;

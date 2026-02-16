@@ -185,7 +185,7 @@
             <el-tag v-if="row.requireReview" :type="getReviewStatusTag(row.reviewStatus)" size="small">
               {{ getReviewStatusName(row.reviewStatus) }}
             </el-tag>
-            <span v-else style="color: #909399; font-size: 12px;">无需审核</span>
+            <span v-else style="color: #909399; font-size: 0.857rem /* 原值: 12px */;">无需审核</span>
           </template>
         </el-table-column>
         <el-table-column label="点击/分享" width="100" align="center">
@@ -271,7 +271,7 @@
         </el-form-item>
         <el-form-item label="优先级" prop="priority">
           <el-input-number v-model="form.priority" :min="0" :max="999" />
-          <span style="margin-left: 10px; color: #909399; font-size: 12px;">数值越大优先级越高</span>
+          <span style="margin-left: 10px; color: #909399; font-size: 0.857rem /* 原值: 12px */;">数值越大优先级越高</span>
         </el-form-item>
         <el-form-item label="来源类型" prop="sourceType">
           <el-select v-model="form.sourceType">
@@ -305,7 +305,7 @@
         </el-form-item>
         <el-form-item label="需要审核" prop="requireReview">
           <el-switch v-model="form.requireReview" />
-          <span style="margin-left: 10px; color: #909399; font-size: 12px;">
+          <span style="margin-left: 10px; color: #909399; font-size: 0.857rem /* 原值: 12px */;">
             开启后需要管理员审核才能生效
           </span>
         </el-form-item>
@@ -934,13 +934,13 @@ onMounted(() => {
         gap: 8px;
 
         .stat-label {
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           color: #909399;
           font-weight: 500;
         }
 
         .stat-value {
-          font-size: 32px;
+          font-size: 2.286rem /* 原值: 32px */;
           font-weight: 700;
           color: #303133;
           line-height: 1;
@@ -969,7 +969,7 @@ onMounted(() => {
 
       h3 {
         margin: 0;
-        font-size: 18px;
+        font-size: 1.286rem /* 原值: 18px */;
         font-weight: 600;
         color: #303133;
       }
@@ -1044,7 +1044,7 @@ onMounted(() => {
       }
 
       .date-range {
-        font-size: 11px;
+        font-size: 0.75rem /* 原值: 11px */;
         line-height: 1.3;
         word-break: break-all;
 
@@ -1100,7 +1100,7 @@ onMounted(() => {
 
   :deep(.el-dropdown) {
     .el-button {
-      font-size: 13px;
+      font-size: 0.929rem /* 原值: 13px */;
     }
   }
 

@@ -182,7 +182,7 @@ defineExpose({
         margin-bottom: 6px;
 
         .sender-name {
-          font-size: 12px;
+          font-size: 0.857rem /* 原值: 12px */;
           color: #666;
           font-weight: 500;
         }
@@ -199,7 +199,7 @@ defineExpose({
         }
 
         .message-text {
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           line-height: 1.6;
           word-wrap: break-word;
           white-space: pre-wrap;
@@ -207,7 +207,7 @@ defineExpose({
 
         .message-time {
           text-align: right;
-          font-size: 11px;
+          font-size: 0.75rem /* 原值: 11px */;
           margin-top: 6px;
           font-weight: 500;
           color: #9ca3af;

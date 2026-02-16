@@ -1,4 +1,230 @@
-// Global loading styles
+// ==========================================
+// 全局主题样式（应用到所有页面）
+// ==========================================
+//
+// TODO: 显示设置功能 - 主题和字体大小
+//
+// ✅ 已实现功能：
+//   1. 字体大小设置：通过 body.class (font-small/medium/large/extra-large)
+//   2. Element Plus 字体变量：--el-font-size-base 等变量
+//   3. 主题切换：通过 body.class (light-theme/dark-theme)
+//   4. Element Plus 组件适配：按钮、表单、菜单等
+//
+// ⚠️ 待测试：
+//   - 请在不同页面测试深色/浅色主题切换效果
+//   - 请验证 Element Plus 组件在深色主题下的显示
+//
+// 💡 已知限制：
+//   - 侧边栏菜单字体无法响应 body 字体大小变化
+//   - 原因：Element Plus 菜单组件有内联样式优先级
+//   - 解决方案：如需优化，考虑使用 CSS transform
+//
+// ==========================================
+
+/* 字体大小设置 - 同时设置 body 和 Element Plus 变量 */
+body.font-small {
+  font-size: 12px;
+  --el-font-size-base: 12px;
+  --el-font-size-extra-small: 10px;
+  --el-font-size-small: 11px;
+  --el-font-size-medium: 12px;
+  --el-font-size-large: 14px;
+  --el-font-size-extra-large: 16px;
+}
+
+body.font-medium {
+  font-size: 14px;
+  --el-font-size-base: 14px;
+  --el-font-size-extra-small: 12px;
+  --el-font-size-small: 13px;
+  --el-font-size-medium: 14px;
+  --el-font-size-large: 16px;
+  --el-font-size-extra-large: 18px;
+}
+
+body.font-large {
+  font-size: 16px;
+  --el-font-size-base: 16px;
+  --el-font-size-extra-small: 13px;
+  --el-font-size-small: 14px;
+  --el-font-size-medium: 16px;
+  --el-font-size-large: 18px;
+  --el-font-size-extra-large: 20px;
+}
+
+body.font-extra-large {
+  font-size: 18px;
+  --el-font-size-base: 18px;
+  --el-font-size-extra-small: 14px;
+  --el-font-size-small: 15px;
+  --el-font-size-medium: 18px;
+  --el-font-size-large: 20px;
+  --el-font-size-extra-large: 22px;
+}
+
+/* 浅色主题（默认） */
+body.light-theme {
+  background-color: #ffffff;
+  color: #333333;
+
+  /* Element Plus 字体大小变量覆盖 */
+  --el-font-size-extra-large: 20px;
+  --el-font-size-large: 18px;
+  --el-font-size-medium: 16px;
+  --el-font-size-base: 14px;
+  --el-font-size-small: 13px;
+  --el-font-size-extra-small: 12px;
+
+  /* Element Plus 组件浅色适配 */
+  .el-card {
+    background-color: #ffffff;
+    border-color: #dcdfe6;
+  }
+
+  .el-divider {
+    background-color: #dcdfe6;
+  }
+
+  .el-input__wrapper {
+    background-color: #ffffff;
+    color: #333333;
+  }
+
+  .el-dialog {
+    background-color: #ffffff;
+    color: #333333;
+  }
+}
+
+/* 深色主题 */
+body.dark-theme {
+  background-color: #1a1a1a;
+  color: #ffffff;
+
+  /* Element Plus 字体大小变量覆盖 */
+  --el-font-size-extra-large: 20px;
+  --el-font-size-large: 18px;
+  --el-font-size-medium: 16px;
+  --el-font-size-base: 14px;
+  --el-font-size-small: 13px;
+  --el-font-size-extra-small: 12px;
+
+  /* Element Plus 组件深色适配 */
+  .el-card {
+    background-color: #2d2d2d;
+    border-color: #444444;
+    color: #ffffff;
+  }
+
+  .el-divider {
+    background-color: #444444;
+  }
+
+  .el-input__wrapper {
+    background-color: #2d2d2d;
+    color: #ffffff;
+    border-color: #444444;
+  }
+
+  .el-switch__core {
+    background-color: #444444;
+  }
+
+  .el-button {
+    background-color: #409eff;
+    border-color: #409eff;
+  }
+
+  .el-button--default {
+    background-color: #2d2d2d;
+    border-color: #444444;
+    color: #ffffff;
+  }
+
+  .el-button--default:hover {
+    background-color: #444444;
+    border-color: #666666;
+  }
+
+  .el-dialog {
+    background-color: #2d2d2d;
+    color: #ffffff;
+  }
+
+  .el-dialog__header {
+    border-bottom-color: #444444;
+  }
+
+  .el-form-item__label {
+    color: #ffffff !important;
+  }
+
+  .el-menu {
+    background-color: #1a1a1a;
+    border-color: #444444;
+  }
+
+  .el-menu-item {
+    color: #ffffff;
+  }
+
+  .el-menu-item:hover {
+    background-color: #2d2d2d;
+  }
+
+  .el-menu-item.is-active {
+    background-color: #409eff;
+    color: #ffffff;
+  }
+
+  .el-textarea__inner {
+    background-color: #2d2d2d;
+    color: #ffffff;
+    border-color: #444444;
+  }
+
+  .el-select-dropdown {
+    background-color: #2d2d2d;
+    border-color: #444444;
+  }
+
+  .el-select-dropdown__item {
+    color: #ffffff;
+  }
+
+  .el-select-dropdown__item:hover {
+    background-color: #444444;
+  }
+
+  .el-popper {
+    background-color: #2d2d2d;
+    color: #ffffff;
+    border-color: #444444;
+  }
+}
+
+/* 响应式字体大小 */
+@media (max-width: 768px) {
+  body.font-small {
+    font-size: 11px;
+  }
+
+  body.font-medium {
+    font-size: 13px;
+  }
+
+  body.font-large {
+    font-size: 15px;
+  }
+
+  body.font-extra-large {
+    font-size: 17px;
+  }
+}
+
+// ==========================================
+// 原有的全局加载样式
+// ==========================================
 .loading-text {
   animation: global-loading 1.5s infinite linear;
 }
@@ -13,4 +239,124 @@
   100% {
     opacity: 0.3;
   }
+}
+
+/* ==========================================
+   强制覆盖 Element Plus 组件字体大小
+   ========================================== */
+
+/* 按钮 */
+.el-button {
+  font-size: var(--el-font-size-base) !important;
+}
+
+/* 输入框 */
+.el-input,
+.el-input__inner,
+.el-textarea__inner {
+  font-size: var(--el-font-size-base) !important;
+}
+
+/* 表单标签 */
+.el-form-item__label {
+  font-size: var(--el-font-size-base) !important;
+}
+
+/* 菜单项 */
+.el-menu-item,
+.el-sub-menu__title {
+  font-size: var(--el-font-size-base) !important;
+}
+
+/* 侧边栏菜单特别处理 */
+.menu-list .el-menu-item,
+.menu-list .el-sub-menu__title,
+.setting-menu-list .el-menu-item {
+  font-size: var(--el-font-size-base) !important;
+}
+
+/* 菜单项内的文字和图标 */
+.el-menu-item span,
+.el-sub-menu__title span {
+  font-size: var(--el-font-size-base) !important;
+}
+
+/* 对话框 */
+.el-dialog__title,
+.el-dialog__body {
+  font-size: var(--el-font-size-base) !important;
+}
+
+/* 卡片 */
+.el-card__header,
+.el-card__body {
+  font-size: var(--el-font-size-base) !important;
+}
+
+/* 表格 */
+.el-table {
+  font-size: var(--el-font-size-base) !important;
+}
+
+/* 分页 */
+.el-pagination {
+  font-size: var(--el-font-size-base) !important;
+}
+
+/* 标签页 */
+.el-tabs__item {
+  font-size: var(--el-font-size-base) !important;
+}
+
+/* 下拉菜单 */
+.el-select-dropdown__item,
+.el-dropdown-menu__item {
+  font-size: var(--el-font-size-base) !important;
+}
+
+/* 消息提示 */
+.el-message,
+.el-notification {
+  font-size: var(--el-font-size-base) !important;
+}
+
+/* 单选和复选框 */
+.el-radio,
+.el-checkbox {
+  font-size: var(--el-font-size-base) !important;
+}
+
+/* 开关 */
+.el-switch {
+  font-size: var(--el-font-size-base) !important;
+}
+
+/* ==========================================
+   侧边栏菜单字体强制覆盖
+   ========================================== */
+
+/* 侧边栏菜单容器 */
+.sidebar-menu .el-menu,
+.sidebar-menu .menu-list,
+.sidebar-menu .setting-menu-list {
+  font-size: var(--el-font-size-base) !important;
+}
+
+/* 菜单项文字 */
+.sidebar-menu .el-menu-item,
+.sidebar-menu .el-sub-menu__title {
+  font-size: var(--el-font-size-base) !important;
+}
+
+/* 菜单项内的 span 和文本（不包括图标） */
+.sidebar-menu .el-menu-item span:not(.el-icon),
+.sidebar-menu .el-sub-menu__title span:not(.el-icon),
+.sidebar-menu .el-menu-item .menu-text {
+  font-size: var(--el-font-size-base) !important;
+}
+
+/* 顶部导航栏 */
+.top-nav-bar .logo,
+.top-nav-bar .user-info {
+  font-size: var(--el-font-size-base) !important;
 }

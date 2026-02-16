@@ -316,7 +316,7 @@ onMounted(async () => {
   .header {
     h3 {
       margin: 0;
-      font-size: 20px;
+      font-size: 1.429rem /* 原值: 20px */;
       color: #303133;
       display: flex;
       align-items: center;
@@ -325,7 +325,7 @@ onMounted(async () => {
   }
 
   h4 {
-    font-size: 16px;
+    font-size: 1.143rem /* 原值: 16px */;
       color: #303133;
       margin: 20px 0 15px 0;
       padding-bottom: 8px;
@@ -335,7 +335,7 @@ onMounted(async () => {
   .form-tip {
     margin-left: 10px;
     color: #909399;
-    font-size: 12px;
+    font-size: 0.857rem /* 原值: 12px */;
   }
 }
 </style>

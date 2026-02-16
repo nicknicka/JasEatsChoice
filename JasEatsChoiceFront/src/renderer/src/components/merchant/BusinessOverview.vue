@@ -132,7 +132,7 @@ onMounted(() => {
   box-shadow: 0 4px 20px rgba(103, 194, 58, 0.12);
 
   .card-title {
-    font-size: 20px;
+    font-size: 1.429rem /* 原值: 20px */;
     font-weight: 700;
     margin-bottom: 20px;
     color: #e6a23c;
@@ -188,7 +188,7 @@ onMounted(() => {
       }
 
       .item-icon {
-        font-size: 32px;
+        font-size: 2.286rem /* 原值: 32px */;
         width: 60px;
         height: 60px;
         display: flex;
@@ -202,20 +202,20 @@ onMounted(() => {
         flex: 1;
 
         .overview-label {
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           color: #909399;
           margin-bottom: 4px;
           font-weight: 500;
         }
 
         .overview-value {
-          font-size: 24px;
+          font-size: 1.714rem /* 原值: 24px */;
           font-weight: 700;
           margin-bottom: 4px;
         }
 
         .item-trend {
-          font-size: 12px;
+          font-size: 0.857rem /* 原值: 12px */;
           font-weight: 600;
 
           &.trend-up {

@@ -298,7 +298,7 @@ onBeforeUnmount(() => {
       width: 20px;
       height: 20px;
       padding: 0;
-      font-size: 11px;
+      font-size: 0.75rem /* 原值: 11px */;
       font-weight: 700;
       line-height: 20px;
       display: flex;
@@ -355,7 +355,7 @@ onBeforeUnmount(() => {
 
       .tooltip-text {
         display: block;
-        font-size: 13px;
+        font-size: 0.929rem /* 原值: 13px */;
         font-weight: 500;
         color: #303133;
         margin-bottom: 2px;
@@ -363,7 +363,7 @@ onBeforeUnmount(() => {
 
       .tooltip-count {
         display: block;
-        font-size: 12px;
+        font-size: 0.857rem /* 原值: 12px */;
         color: #909399;
       }
     }

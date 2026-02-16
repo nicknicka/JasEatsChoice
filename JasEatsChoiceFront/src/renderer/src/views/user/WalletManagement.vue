@@ -585,7 +585,7 @@ const confirmWithdraw = async () => {
         dangerouslyUseHTMLString: true,
         message: `
           <div>提现申请已提交！</div>
-          <div style="margin-top: 8px; font-size: 12px;">
+          <div style="margin-top: 8px; font-size: 0.857rem /* 原值: 12px */;">
             提现金额：${withdrawForm.value.amount}平台币<br>
             手续费：${fee}平台币<br>
             预计到账：${actualAmount}平台币<br>
@@ -650,7 +650,7 @@ onMounted(() => {
 }
 
 .page-title {
-  font-size: 28px;
+  font-size: 2rem /* 原值: 28px */;
   margin: 0 0 25px 0;
   color: #333;
   font-weight: 700;
@@ -679,7 +679,7 @@ onMounted(() => {
 }
 
 .balance-label {
-  font-size: 16px;
+  font-size: 1.143rem /* 原值: 16px */;
   color: #718096;
   font-weight: 500;
   margin-bottom: 10px;
@@ -704,7 +704,7 @@ onMounted(() => {
 }
 
 .balance-unit {
-  font-size: 20px;
+  font-size: 1.429rem /* 原值: 20px */;
   color: #d69e2e;
   font-weight: 500;
 }
@@ -715,7 +715,7 @@ onMounted(() => {
   justify-content: center;
   gap: 5px;
   margin-top: 10px;
-  font-size: 13px;
+  font-size: 0.929rem /* 原值: 13px */;
   color: #a0aec0;
 }
 
@@ -735,7 +735,7 @@ onMounted(() => {
 }
 
 .stat-icon {
-  font-size: 36px;
+  font-size: 2.571rem /* 原值: 36px */;
   line-height: 1;
 }
 
@@ -744,13 +744,13 @@ onMounted(() => {
 }
 
 .stat-label {
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   color: #718096;
   margin-bottom: 5px;
 }
 
 .stat-value {
-  font-size: 20px;
+  font-size: 1.429rem /* 原值: 20px */;
   font-weight: 600;
 }
 
@@ -775,7 +775,7 @@ onMounted(() => {
 
 .wallet-actions .el-button {
   min-width: 120px;
-  font-size: 16px;
+  font-size: 1.143rem /* 原值: 16px */;
   padding: 12px 24px;
   border-radius: 8px;
   font-weight: 500;
@@ -783,7 +783,7 @@ onMounted(() => {
 
 .wallet-actions .btn-icon {
   margin-right: 5px;
-  font-size: 18px;
+  font-size: 1.286rem /* 原值: 18px */;
 }
 
 .quick-actions-card {
@@ -794,7 +794,7 @@ onMounted(() => {
 }
 
 .card-title {
-  font-size: 18px;
+  font-size: 1.286rem /* 原值: 18px */;
   margin: 0 0 20px 0;
   font-weight: 700;
   color: #2d3748;
@@ -832,19 +832,19 @@ onMounted(() => {
 }
 
 .action-icon {
-  font-size: 32px;
+  font-size: 2.286rem /* 原值: 32px */;
   margin-bottom: 10px;
 }
 
 .action-text {
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   font-weight: 600;
   color: #2b6cb0;
   margin-bottom: 4px;
 }
 
 .action-desc {
-  font-size: 12px;
+  font-size: 0.857rem /* 原值: 12px */;
   color: #718096;
   text-align: center;
   line-height: 1.4;
@@ -884,7 +884,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
+  font-size: 1.714rem /* 原值: 24px */;
   background: white;
 }
 
@@ -905,19 +905,19 @@ onMounted(() => {
 }
 
 .transaction-type {
-  font-size: 15px;
+  font-size: 1.071rem /* 原值: 15px */;
   font-weight: 600;
   color: #2d3748;
   margin-bottom: 4px;
 }
 
 .transaction-time {
-  font-size: 13px;
+  font-size: 0.929rem /* 原值: 13px */;
   color: #a0aec0;
 }
 
 .transaction-amount {
-  font-size: 18px;
+  font-size: 1.286rem /* 原值: 18px */;
   font-weight: 600;
 }
 
@@ -938,18 +938,18 @@ onMounted(() => {
 .balance-highlight {
   color: #d69e2e;
   font-weight: 600;
-  font-size: 16px;
+  font-size: 1.143rem /* 原值: 16px */;
 }
 
 .fee-text {
   color: #f56565;
   font-weight: 500;
-  font-size: 15px;
+  font-size: 1.071rem /* 原值: 15px */;
 }
 
 .actual-amount {
   color: #48bb78;
   font-weight: 600;
-  font-size: 16px;
+  font-size: 1.143rem /* 原值: 16px */;
 }
 </style>

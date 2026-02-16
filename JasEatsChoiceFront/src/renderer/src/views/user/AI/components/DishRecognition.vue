@@ -573,7 +573,7 @@ const reRecognize = () => {
         }
 
         .upload-hint {
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           color: #909399;
         }
       }
@@ -649,7 +649,7 @@ const reRecognize = () => {
 
     .progress-text {
       text-align: center;
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
       color: #409eff;
       font-weight: 500;
       display: flex;
@@ -787,12 +787,12 @@ const reRecognize = () => {
 
           .card-label {
             color: rgba(255, 255, 255, 0.95);
-            font-size: 15px;
+            font-size: 1.071rem /* 原值: 15px */;
           }
 
           .card-value {
             color: #fff;
-            font-size: 28px;
+            font-size: 2rem /* 原值: 28px */;
             font-weight: 700;
             text-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
           }
@@ -801,7 +801,7 @@ const reRecognize = () => {
         &.calories-card {
           .card-value.highlight {
             color: #ff6b6b;
-            font-size: 32px;
+            font-size: 2.286rem /* 原值: 32px */;
             font-weight: 700;
             background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%);
             -webkit-background-clip: text;
@@ -815,7 +815,7 @@ const reRecognize = () => {
         }
 
         .card-label {
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           font-weight: 600;
           color: #909399;
           margin-bottom: 10px;
@@ -858,12 +858,12 @@ const reRecognize = () => {
             display: flex;
             align-items: center;
             gap: 5px;
-            font-size: 13px;
+            font-size: 0.929rem /* 原值: 13px */;
             font-weight: 500;
             color: #606266;
 
             .nutrition-icon {
-              font-size: 18px;
+              font-size: 1.286rem /* 原值: 18px */;
               transition: transform 0.3s ease;
             }
           }
@@ -914,7 +914,7 @@ const reRecognize = () => {
           .nutrition-value {
             flex: 0 0 50px;
             text-align: right;
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
             font-weight: bold;
             color: #303133;
           }

@@ -152,7 +152,7 @@ const onRefresh = () => {
     border-bottom: 1px solid #f0f0f0;
 
     .stats-title {
-      font-size: 18px;
+      font-size: 1.286rem /* 原值: 18px */;
       font-weight: bold;
       margin: 0;
       color: #333;
@@ -183,7 +183,7 @@ const onRefresh = () => {
   }
 
   .stat-icon {
-    font-size: 32px;
+    font-size: 2.286rem /* 原值: 32px */;
     line-height: 1;
   }
 
@@ -192,14 +192,14 @@ const onRefresh = () => {
   }
 
   .stat-value {
-    font-size: 24px;
+    font-size: 1.714rem /* 原值: 24px */;
     font-weight: 800;
     color: #333;
     line-height: 1.2;
   }
 
   .stat-label {
-    font-size: 13px;
+    font-size: 0.929rem /* 原值: 13px */;
     color: #666;
     margin-top: 4px;
   }
@@ -238,13 +238,13 @@ const onRefresh = () => {
   }
 
   .metric-label {
-    font-size: 14px;
+    font-size: 1rem /* 原值: 14px */;
     color: #666;
     min-width: 60px;
   }
 
   .metric-value {
-    font-size: 16px;
+    font-size: 1.143rem /* 原值: 16px */;
     font-weight: bold;
     color: #333;
   }
@@ -261,7 +261,7 @@ const onRefresh = () => {
   .cache-item {
     display: flex;
     justify-content: space-between;
-    font-size: 13px;
+    font-size: 0.929rem /* 原值: 13px */;
     padding: 8px 0;
   }
 

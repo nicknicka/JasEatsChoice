@@ -40,24 +40,24 @@
 
       <el-form-item label="每年重复">
         <el-switch v-model="isRecurring" />
-        <span style="margin-left: 8px; color: #909399; font-size: 13px">
+        <span style="margin-left: 8px; color: #909399; font-size: 0.929rem /* 原值: 13px */">
           开启后每年都会提醒
         </span>
       </el-form-item>
 
       <el-form-item label="提前提醒天数">
         <el-input-number v-model="form.reminderDays" :min="1" :max="30" />
-        <span style="margin-left: 8px; color: #909399; font-size: 13px">天</span>
+        <span style="margin-left: 8px; color: #909399; font-size: 0.929rem /* 原值: 13px */">天</span>
       </el-form-item>
 
       <el-form-item label="预计用餐人数">
         <el-input-number v-model="form.guestCount" :min="1" :max="100" />
-        <span style="margin-left: 8px; color: #909399; font-size: 13px">人</span>
+        <span style="margin-left: 8px; color: #909399; font-size: 0.929rem /* 原值: 13px */">人</span>
       </el-form-item>
 
       <el-form-item label="人均预算">
         <el-input-number v-model="form.budgetPerPerson" :min="0" :precision="2" />
-        <span style="margin-left: 8px; color: #909399; font-size: 13px">元</span>
+        <span style="margin-left: 8px; color: #909399; font-size: 0.929rem /* 原值: 13px */">元</span>
       </el-form-item>
 
       <el-form-item label="事件描述">

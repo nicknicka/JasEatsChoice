@@ -209,7 +209,7 @@ defineExpose({
 
 .remark-header h4 {
   margin: 0;
-  font-size: 16px;
+  font-size: 1.143rem /* 原值: 16px */;
   font-weight: 600;
   color: #303133;
 }
@@ -269,7 +269,7 @@ defineExpose({
 }
 
 .priority-icon {
-  font-size: 18px;
+  font-size: 1.286rem /* 原值: 18px */;
 }
 
 .priority-high .priority-icon {
@@ -290,7 +290,7 @@ defineExpose({
 
 .priority-label {
   font-weight: 600;
-  font-size: 13px;
+  font-size: 0.929rem /* 原值: 13px */;
   padding: 2px 8px;
   border-radius: 4px;
   background: rgba(255, 255, 255, 0.8);
@@ -313,13 +313,13 @@ defineExpose({
 }
 
 .dish-name {
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   color: #606266;
   font-weight: 500;
 }
 
 .remark-content {
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   color: #303133;
   line-height: 1.6;
   margin-bottom: 8px;
@@ -329,7 +329,7 @@ defineExpose({
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 12px;
+  font-size: 0.857rem /* 原值: 12px */;
   color: #909399;
 }
 

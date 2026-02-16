@@ -261,7 +261,7 @@ const resetForm = () => {
 }
 
 :deep(.el-dialog__title) {
-  font-size: 20px;
+  font-size: 1.429rem /* 原值: 20px */;
   font-weight: 600;
   color: #333;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -277,7 +277,7 @@ const resetForm = () => {
 /* 表单标签样式 */
 :deep(.el-form-item__label) {
   font-weight: 500 !important;
-  font-size: 14px !important;
+  font-size: 1rem /* 原值: 14px */ !important;
   color: #555 !important;
 }
 
@@ -289,7 +289,7 @@ const resetForm = () => {
 }
 
 .label-icon {
-  font-size: 18px;
+  font-size: 1.286rem /* 原值: 18px */;
   color: #667eea;
   display: inline-flex;
   align-items: center;
@@ -399,7 +399,7 @@ const resetForm = () => {
 
   /* 营养数据标签 */
   .nutrition-label {
-    font-size: 12px;
+    font-size: 0.857rem /* 原值: 12px */;
     font-weight: 500;
     color: #666;
     margin-bottom: 8px;
@@ -432,7 +432,7 @@ const resetForm = () => {
   padding: 10px 28px;
   border-radius: 8px;
   font-weight: 500;
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   transition: all 0.3s ease;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }

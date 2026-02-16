@@ -627,7 +627,7 @@ const stopResize = () => {
     margin-bottom: 16px;
 
     .page-title {
-      font-size: 18px;
+      font-size: 1.286rem /* 原值: 18px */;
       font-weight: 600;
       margin: 0;
       color: #1f2937;
@@ -734,13 +734,13 @@ const stopResize = () => {
 
           .name-info {
             .name {
-              font-size: 16px;
+              font-size: 1.143rem /* 原值: 16px */;
               font-weight: 600;
               color: #1f2937;
             }
 
             .member-count {
-              font-size: 12px;
+              font-size: 0.857rem /* 原值: 12px */;
               color: #909399;
               margin-left: 8px;
             }

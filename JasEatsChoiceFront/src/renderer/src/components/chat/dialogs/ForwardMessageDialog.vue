@@ -92,7 +92,7 @@ const handleCancel = () => {
     background-color: #f5f7fa;
     border-radius: 6px;
     margin-bottom: 16px;
-    font-size: 14px;
+    font-size: 1rem /* 原值: 14px */;
     color: #606266;
     word-break: break-word;
   }
@@ -100,7 +100,7 @@ const handleCancel = () => {
   .forward-target-select {
     .select-label {
       margin-bottom: 8px;
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
       font-weight: 500;
       color: #303133;
     }
@@ -111,7 +111,7 @@ const handleCancel = () => {
       align-items: center;
 
       .conversation-type-badge {
-        font-size: 12px;
+        font-size: 0.857rem /* 原值: 12px */;
         padding: 2px 6px;
         border-radius: 4px;
         background-color: #ecf5ff;

@@ -769,7 +769,7 @@ onMounted(async () => {
       margin-left: 20px;
 
       h2 {
-        font-size: 28px;
+        font-size: 2rem /* 原值: 28px */;
         margin: 0;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         -webkit-background-clip: text;
@@ -784,7 +784,7 @@ onMounted(async () => {
         gap: 12px;
 
         :deep(.el-tag) {
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           padding: 8px 16px;
           font-weight: 500;
         }
@@ -842,7 +842,7 @@ onMounted(async () => {
           gap: 8px;
 
           .el-icon {
-            font-size: 16px;
+            font-size: 1.143rem /* 原值: 16px */;
           }
         }
       }
@@ -860,7 +860,7 @@ onMounted(async () => {
           display: flex;
           align-items: center;
           gap: 8px;
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           color: #606266;
           flex-wrap: wrap;
         }
@@ -945,13 +945,13 @@ onMounted(async () => {
             gap: 6px;
             padding: 6px 12px;
             border-radius: 20px;
-            font-size: 13px;
+            font-size: 0.929rem /* 原值: 13px */;
             font-weight: 600;
             color: white;
             transition: all 0.3s ease;
 
             .type-icon {
-              font-size: 16px;
+              font-size: 1.143rem /* 原值: 16px */;
             }
 
             &.type-merchant {
@@ -1040,7 +1040,7 @@ onMounted(async () => {
                 transition: transform 0.3s ease;
 
                 .type-fallback-icon {
-                  font-size: 40px;
+                  font-size: 2.857rem /* 原值: 40px */;
                 }
               }
 
@@ -1077,11 +1077,11 @@ onMounted(async () => {
               transition: opacity 0.3s ease;
 
               .view-icon {
-                font-size: 32px;
+                font-size: 2.286rem /* 原值: 32px */;
               }
 
               span {
-                font-size: 14px;
+                font-size: 1rem /* 原值: 14px */;
                 font-weight: 500;
               }
             }
@@ -1108,7 +1108,7 @@ onMounted(async () => {
           }
 
           .collection-title {
-            font-size: 18px;
+            font-size: 1.286rem /* 原值: 18px */;
             font-weight: 700;
             margin: 0 0 12px 0;
             color: #2c3e50;
@@ -1118,7 +1118,7 @@ onMounted(async () => {
           }
 
           .collection-description {
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
             color: #666;
             margin: 0 0 16px 0;
             line-height: 1.6;
@@ -1137,14 +1137,14 @@ onMounted(async () => {
               display: flex;
               align-items: center;
               gap: 6px;
-              font-size: 13px;
+              font-size: 0.929rem /* 原值: 13px */;
               color: #999;
               padding: 8px 12px;
               background: #f8f9fa;
               border-radius: 8px;
 
               .el-icon {
-                font-size: 14px;
+                font-size: 1rem /* 原值: 14px */;
               }
             }
           }
@@ -1187,14 +1187,14 @@ onMounted(async () => {
       }
 
       .empty-title {
-        font-size: 24px;
+        font-size: 1.714rem /* 原值: 24px */;
         font-weight: 600;
         color: #2c3e50;
         margin: 0 0 12px 0;
       }
 
       .empty-description {
-        font-size: 16px;
+        font-size: 1.143rem /* 原值: 16px */;
         color: #999;
         margin: 0 0 32px 0;
       }
@@ -1306,11 +1306,11 @@ onMounted(async () => {
         }
 
         .empty-title {
-          font-size: 20px;
+          font-size: 1.429rem /* 原值: 20px */;
         }
 
         .empty-description {
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
         }
 
         .empty-actions {

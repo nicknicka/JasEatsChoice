@@ -489,7 +489,7 @@ const optimizeRecipe = async () => {
 		:deep(.el-textarea__inner) {
 			border-radius: 14px;
 			transition: all 0.3s ease;
-			font-size: 15px;
+			font-size: 1.071rem /* 原值: 15px */;
 			padding: 14px 16px;
 
 			&:focus {
@@ -588,12 +588,12 @@ const optimizeRecipe = async () => {
 				}
 
 				.step-icon {
-					font-size: 32px;
+					font-size: 2.286rem /* 原值: 32px */;
 					transition: all 0.3s ease;
 				}
 
 				.step-text {
-					font-size: 14px;
+					font-size: 1rem /* 原值: 14px */;
 					font-weight: 600;
 					color: #606266;
 				}
@@ -670,7 +670,7 @@ const optimizeRecipe = async () => {
 							font-family: inherit;
 							line-height: 1.9;
 							color: #606266;
-							font-size: 15px;
+							font-size: 1.071rem /* 原值: 15px */;
 						}
 					}
 
@@ -692,7 +692,7 @@ const optimizeRecipe = async () => {
 						justify-content: center;
 
 						.el-icon {
-							font-size: 18px;
+							font-size: 1.286rem /* 原值: 18px */;
 							margin: 0;
 						}
 
@@ -717,7 +717,7 @@ const optimizeRecipe = async () => {
 					.save-btn {
 						border-radius: 8px;
 						padding: 8px 20px;
-						font-size: 14px;
+						font-size: 1rem /* 原值: 14px */;
 						font-weight: 600;
 						transition: all 0.4s ease;
 						background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -725,7 +725,7 @@ const optimizeRecipe = async () => {
 
 						.el-icon {
 							margin-right: 4px;
-							font-size: 14px;
+							font-size: 1rem /* 原值: 14px */;
 						}
 
 						&:hover {
@@ -751,7 +751,7 @@ const optimizeRecipe = async () => {
 			.recipe-arrow {
 				display: flex;
 				align-items: center;
-				font-size: 40px;
+				font-size: 2.857rem /* 原值: 40px */;
 				color: #ff6b6b;
 				font-weight: 700;
 				flex-shrink: 0;

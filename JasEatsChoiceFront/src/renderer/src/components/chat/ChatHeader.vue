@@ -26,7 +26,7 @@ defineEmits(['open-action-panel'])
 
   .page-title {
     margin: 0;
-    font-size: 20px;
+    font-size: 1.429rem /* 原值: 20px */;
     font-weight: 600;
     color: #303133;
   }
@@ -39,7 +39,7 @@ defineEmits(['open-action-panel'])
     .unified-action-btn {
       font-weight: 600;
       padding: 12px 32px;
-      font-size: 16px;
+      font-size: 1.143rem /* 原值: 16px */;
       border-radius: 12px;
       background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
       border: none;
@@ -58,7 +58,7 @@ defineEmits(['open-action-panel'])
       }
 
       .btn-icon {
-        font-size: 18px;
+        font-size: 1.286rem /* 原值: 18px */;
         margin-right: 6px;
       }
 

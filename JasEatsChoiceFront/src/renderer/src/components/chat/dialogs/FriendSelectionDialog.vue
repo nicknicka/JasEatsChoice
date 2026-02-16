@@ -93,12 +93,12 @@ const handleCancel = () => {
   }
 
   .friend-avatar {
-    font-size: 40px;
+    font-size: 2.857rem /* 原值: 40px */;
     margin-bottom: 10px;
   }
 
   .friend-name {
-    font-size: 14px;
+    font-size: 1rem /* 原值: 14px */;
     font-weight: 500;
   }
 }

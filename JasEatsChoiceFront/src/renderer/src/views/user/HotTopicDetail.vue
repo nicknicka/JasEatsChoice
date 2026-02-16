@@ -238,7 +238,7 @@ onMounted(() => {
 
   .page-title {
     margin: 0;
-    font-size: 20px;
+    font-size: 1.429rem /* 原值: 20px */;
     font-weight: 700;
     color: #333;
     text-align: center;
@@ -267,7 +267,7 @@ onMounted(() => {
   flex-wrap: wrap;
 
   .publish-time {
-    font-size: 14px;
+    font-size: 1rem /* 原值: 14px */;
     color: #999;
     padding: 6px 12px;
     background: rgba(0, 0, 0, 0.05);
@@ -280,7 +280,7 @@ onMounted(() => {
   margin-bottom: 32px;
 
   .topic-title {
-    font-size: 28px;
+    font-size: 2rem /* 原值: 28px */;
     font-weight: 700;
     color: #333;
     line-height: 1.6;
@@ -311,14 +311,14 @@ onMounted(() => {
     }
 
     .info-label {
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
       color: #666;
       font-weight: 600;
       min-width: 80px;
     }
 
     .info-value {
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
       color: #333;
     }
   }
@@ -327,7 +327,7 @@ onMounted(() => {
 // 响应式适配
 @media (max-width: 768px) {
   .topic-content .topic-title {
-    font-size: 24px;
+    font-size: 1.714rem /* 原值: 24px */;
     padding: 20px;
   }
 
@@ -336,7 +336,7 @@ onMounted(() => {
   }
 
   .meta-info .publish-time {
-    font-size: 12px;
+    font-size: 0.857rem /* 原值: 12px */;
   }
 }
 </style>

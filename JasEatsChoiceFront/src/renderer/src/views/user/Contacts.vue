@@ -1061,13 +1061,13 @@ onMounted(async () => {
       display: flex;
       align-items: center;
       margin: 0;
-      font-size: 16px;
+      font-size: 1.143rem /* 原值: 16px */;
       font-weight: 600;
       color: #fff;
 
       .title-icon {
         margin-right: 8px;
-        font-size: 20px;
+        font-size: 1.429rem /* 原值: 20px */;
       }
     }
 
@@ -1142,7 +1142,7 @@ onMounted(async () => {
             }
 
             .avatar-emoji {
-              font-size: 32px;
+              font-size: 2.286rem /* 原值: 32px */;
             }
           }
 
@@ -1150,20 +1150,20 @@ onMounted(async () => {
             flex: 1;
 
             .requester-name {
-              font-size: 15px;
+              font-size: 1.071rem /* 原值: 15px */;
               font-weight: 600;
               color: #303133;
               margin: 0 0 6px 0;
             }
 
             .requester-id {
-              font-size: 12px;
+              font-size: 0.857rem /* 原值: 12px */;
               color: #909399;
               margin: 0 0 4px 0;
             }
 
             .request-time {
-              font-size: 12px;
+              font-size: 0.857rem /* 原值: 12px */;
               color: #c0c4cc;
               margin: 0;
             }
@@ -1225,13 +1225,13 @@ onMounted(async () => {
     align-items: center;
     margin: 0;
     color: #fff;
-    font-size: 24px;
+    font-size: 1.714rem /* 原值: 24px */;
     font-weight: 700;
     letter-spacing: 0.5px;
 
     .title-icon {
       margin-right: 12px;
-      font-size: 28px;
+      font-size: 2rem /* 原值: 28px */;
       animation: icon-pulse 2s ease-in-out infinite;
     }
   }
@@ -1251,13 +1251,13 @@ onMounted(async () => {
       gap: 8px;
 
       .stat-label {
-        font-size: 13px;
+        font-size: 0.929rem /* 原值: 13px */;
         color: rgba(255, 255, 255, 0.9);
         font-weight: 500;
       }
 
       .stat-value {
-        font-size: 18px;
+        font-size: 1.286rem /* 原值: 18px */;
         font-weight: 700;
         color: #fff;
       }
@@ -1277,7 +1277,7 @@ onMounted(async () => {
       color: #fff;
       font-weight: 600;
       padding: 12px 24px;
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
       backdrop-filter: blur(10px);
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
@@ -1423,7 +1423,7 @@ onMounted(async () => {
           padding: 12px 20px;
           background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
           color: #3b82f6;
-          font-size: 15px;
+          font-size: 1.071rem /* 原值: 15px */;
           font-weight: 700;
           position: sticky;
           top: 0;
@@ -1483,7 +1483,7 @@ onMounted(async () => {
               display: flex;
               align-items: center;
               justify-content: center;
-              font-size: 24px;
+              font-size: 1.714rem /* 原值: 24px */;
               box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
             }
           }
@@ -1498,7 +1498,7 @@ onMounted(async () => {
               margin-bottom: 6px;
 
               .friend-name {
-                font-size: 15px;
+                font-size: 1.071rem /* 原值: 15px */;
                 font-weight: 600;
                 color: #303133;
                 white-space: nowrap;
@@ -1509,7 +1509,7 @@ onMounted(async () => {
             }
 
             .friend-id {
-              font-size: 13px;
+              font-size: 0.929rem /* 原值: 13px */;
               color: #909399;
               font-weight: 500;
               letter-spacing: 0.3px;
@@ -1582,7 +1582,7 @@ onMounted(async () => {
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 13px;
+      font-size: 0.929rem /* 原值: 13px */;
       font-weight: 600;
       color: #606266;
       border-radius: 8px;
@@ -1672,7 +1672,7 @@ onMounted(async () => {
   }
 
   .empty-title {
-    font-size: 20px;
+    font-size: 1.429rem /* 原值: 20px */;
     font-weight: 600;
     color: #1a1a1a;
     margin: 0 0 12px 0;
@@ -1681,7 +1681,7 @@ onMounted(async () => {
   }
 
   .empty-tip {
-    font-size: 15px;
+    font-size: 1.071rem /* 原值: 15px */;
     color: #666;
     margin: 0 0 24px 0;
     transition: color 0.3s ease;
@@ -1707,7 +1707,7 @@ onMounted(async () => {
     align-items: center;
     gap: 12px;
     padding: 12px 18px;
-    font-size: 14px;
+    font-size: 1rem /* 原值: 14px */;
     color: #303133;
     cursor: pointer;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1724,7 +1724,7 @@ onMounted(async () => {
     }
 
     .el-icon {
-      font-size: 18px;
+      font-size: 1.286rem /* 原值: 18px */;
       transition: transform 0.2s ease;
     }
 
@@ -1801,7 +1801,7 @@ onMounted(async () => {
       }
 
       .el-input__inner {
-        font-size: 15px;
+        font-size: 1.071rem /* 原值: 15px */;
       }
 
       .el-input-group__append {
@@ -1887,7 +1887,7 @@ onMounted(async () => {
         }
 
         span {
-          font-size: 24px;
+          font-size: 1.714rem /* 原值: 24px */;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -1899,14 +1899,14 @@ onMounted(async () => {
         min-width: 0;
 
         .user-name {
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           font-weight: 600;
           color: #2d3748;
           margin-bottom: 6px;
         }
 
         .user-detail {
-          font-size: 12px;
+          font-size: 0.857rem /* 原值: 12px */;
           color: #718096;
         }
       }
@@ -1978,7 +1978,7 @@ onMounted(async () => {
 
     .info-item {
       margin-bottom: 16px;
-      font-size: 15px;
+      font-size: 1.071rem /* 原值: 15px */;
 
       .label {
         font-weight: 600;
@@ -2017,7 +2017,7 @@ onMounted(async () => {
 
     .el-dialog__close {
       color: #fff;
-      font-size: 20px;
+      font-size: 1.429rem /* 原值: 20px */;
 
       &:hover {
         color: #f0f0f0;

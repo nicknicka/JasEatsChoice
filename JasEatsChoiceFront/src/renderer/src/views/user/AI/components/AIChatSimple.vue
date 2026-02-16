@@ -203,11 +203,11 @@ loadMessages()
 
     p {
       margin: 12px 0 0 0;
-      font-size: 16px;
+      font-size: 1.143rem /* 原值: 16px */;
     }
 
     .hint {
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
       color: #c0c4cc;
     }
   }
@@ -270,7 +270,7 @@ loadMessages()
         border-radius: 20px;
         line-height: 1.7;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        font-size: 15px;
+        font-size: 1.071rem /* 原值: 15px */;
         white-space: pre-wrap;
         word-break: break-word;
 
@@ -280,7 +280,7 @@ loadMessages()
       }
 
       .message-time {
-        font-size: 12px;
+        font-size: 0.857rem /* 原值: 12px */;
         color: #a8abb2;
         margin-top: 2px;
       }
@@ -318,7 +318,7 @@ loadMessages()
       border: 2px solid #e8ecef;
       background: #ffffff;
       padding: 8px 12px;
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
       line-height: 1.6;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       resize: none;
@@ -340,7 +340,7 @@ loadMessages()
     background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%);
     border: none;
     padding: 10px 28px;
-    font-size: 15px;
+    font-size: 1.071rem /* 原值: 15px */;
     font-weight: 600;
     border-radius: 10px;
     box-shadow: 0 2px 8px rgba(255, 107, 107, 0.25);

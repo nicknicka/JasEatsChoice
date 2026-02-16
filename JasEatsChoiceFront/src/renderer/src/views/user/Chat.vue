@@ -2795,7 +2795,7 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
         color: #fff;
         padding: 6px 14px;
         border-radius: 6px;
-        font-size: 13px;
+        font-size: 0.929rem /* 原值: 13px */;
         font-weight: 500;
         white-space: nowrap;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
@@ -2911,7 +2911,7 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
       }
 
       .empty-title {
-        font-size: 18px;
+        font-size: 1.286rem /* 原值: 18px */;
         font-weight: 500;
         color: #1a1a1a;
         margin: 0 0 8px 0;
@@ -2921,7 +2921,7 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
       }
 
       .empty-tip {
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         color: #666;
         margin: 0;
         line-height: 1.6;
@@ -2961,13 +2961,13 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
       backdrop-filter: blur(4px);
       border-radius: 8px;
       color: #c2410c;
-      font-size: 15px;
+      font-size: 1.071rem /* 原值: 15px */;
       font-weight: 500;
       animation: fadeIn 0.3s ease-out;
       z-index: 10;
 
       .notice-icon {
-        font-size: 20px;
+        font-size: 1.429rem /* 原值: 20px */;
         animation: pulse 2s ease-in-out infinite;
       }
     }

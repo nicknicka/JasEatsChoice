@@ -141,14 +141,14 @@ onErrorCaptured((error, instance, info) => {
   }
 
   .error-title {
-    font-size: 24px;
+    font-size: 1.714rem /* 原值: 24px */;
     font-weight: 600;
     color: #303133;
     margin: 0 0 12px 0;
   }
 
   .error-message {
-    font-size: 14px;
+    font-size: 1rem /* 原值: 14px */;
     color: #606266;
     margin: 0 0 32px 0;
     max-width: 500px;
@@ -168,7 +168,7 @@ onErrorCaptured((error, instance, info) => {
       background: #f5f7fa;
       border-radius: 8px;
       padding: 16px;
-      font-size: 12px;
+      font-size: 0.857rem /* 原值: 12px */;
       color: #606266;
       text-align: left;
       overflow-x: auto;

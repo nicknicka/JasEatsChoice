@@ -38,14 +38,14 @@ defineEmits(['cancel'])
       margin-bottom: 6px;
 
       .reply-label {
-        font-size: 13px;
+        font-size: 0.929rem /* 原值: 13px */;
         font-weight: 500;
         color: #409eff;
       }
     }
 
     .reply-text {
-      font-size: 12px;
+      font-size: 0.857rem /* 原值: 12px */;
       color: #606266;
       overflow: hidden;
       text-overflow: ellipsis;

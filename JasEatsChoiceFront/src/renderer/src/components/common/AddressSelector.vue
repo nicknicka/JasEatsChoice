@@ -571,7 +571,7 @@ defineExpose({
 
         .el-icon {
           color: #67c23a;
-          font-size: 18px;
+          font-size: 1.286rem /* 原值: 18px */;
         }
 
         .address-tag {
@@ -579,24 +579,24 @@ defineExpose({
           background: #67c23a;
           color: #fff;
           border-radius: 4px;
-          font-size: 12px;
+          font-size: 0.857rem /* 原值: 12px */;
         }
 
         .contact-name {
           font-weight: 600;
           color: #2c3e50;
-          font-size: 15px;
+          font-size: 1.071rem /* 原值: 15px */;
         }
 
         .contact-phone {
           color: #7f8c8d;
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
         }
       }
 
       .address-detail {
         color: #5a6c7d;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         line-height: 1.5;
         padding-left: 26px;
       }
@@ -621,14 +621,14 @@ defineExpose({
     }
 
     .el-icon {
-      font-size: 20px;
+      font-size: 1.429rem /* 原值: 20px */;
       color: #ffa000;
     }
 
     .hint-text {
       flex: 1;
       color: #f57c00;
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
     }
   }
 }
@@ -676,18 +676,18 @@ defineExpose({
           .contact-name {
             font-weight: 600;
             color: #2c3e50;
-            font-size: 15px;
+            font-size: 1.071rem /* 原值: 15px */;
           }
 
           .contact-phone {
             color: #7f8c8d;
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
           }
         }
 
         .address-item-detail {
           color: #5a6c7d;
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           line-height: 1.5;
           padding-left: 24px;
         }
@@ -725,6 +725,6 @@ defineExpose({
 .form-tip {
   margin-left: 12px;
   color: #909399;
-  font-size: 13px;
+  font-size: 0.929rem /* 原值: 13px */;
 }
 </style>

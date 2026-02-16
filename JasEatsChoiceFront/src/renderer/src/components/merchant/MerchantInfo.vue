@@ -784,7 +784,7 @@ const handleSaveAvatar = async () => {
               alt="商家头像"
             />
             <div v-else class="avatar-placeholder">
-              <ShoppingBag style="font-size: 32px; color: #409eff" />
+              <ShoppingBag style="font-size: 2.286rem /* 原值: 32px */; color: #409eff" />
             </div>
             <ElButton
               type="primary"
@@ -1250,7 +1250,7 @@ const handleSaveAvatar = async () => {
       color: #555;
       width: 100px;
       font-weight: 500;
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
       padding-top: 5px; /* 调整标签顶部对齐 */
     }
 
@@ -1291,7 +1291,7 @@ const handleSaveAvatar = async () => {
 }
 
 :deep(.el-dialog__title) {
-  font-size: 20px;
+  font-size: 1.429rem /* 原值: 20px */;
   font-weight: 600;
   color: #1890ff;
   background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
@@ -1344,7 +1344,7 @@ const handleSaveAvatar = async () => {
 :deep(.category-selector) {
   .el-select-dropdown__item {
     padding: 8px 12px;
-    font-size: 13px;
+    font-size: 0.929rem /* 原值: 13px */;
     transition: all 0.2s ease;
 
     &:hover {
@@ -1407,13 +1407,13 @@ const handleSaveAvatar = async () => {
   }
 
   .quick-label {
-    font-size: 13px;
+    font-size: 0.929rem /* 原值: 13px */;
     font-weight: 500;
     color: #606266;
   }
 
   .el-icon {
-    font-size: 14px;
+    font-size: 1rem /* 原值: 14px */;
     color: #909399;
     transition: transform 0.2s ease;
   }
@@ -1500,7 +1500,7 @@ const handleSaveAvatar = async () => {
   border-bottom: 1px solid #f0f0f0;
   background-color: #fafafa;
   border-radius: 8px 8px 0 0;
-  font-size: 12px;
+  font-size: 0.857rem /* 原值: 12px */;
   color: #606266;
 }
 
@@ -1533,20 +1533,20 @@ const handleSaveAvatar = async () => {
 
 .result-name {
   font-weight: 500;
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   color: #303133;
   margin-bottom: 4px;
 }
 
 .result-address {
-  font-size: 12px;
+  font-size: 0.857rem /* 原值: 12px */;
   color: #606266;
   margin-bottom: 4px;
   line-height: 1.4;
 }
 
 .result-location {
-  font-size: 11px;
+  font-size: 0.75rem /* 原值: 11px */;
   color: #909399;
   display: flex;
   align-items: center;
@@ -1566,7 +1566,7 @@ const handleSaveAvatar = async () => {
   padding: 8px 16px;
   border-radius: 8px;
   font-weight: 500;
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
@@ -1652,11 +1652,11 @@ const handleSaveAvatar = async () => {
     justify-content: center;
     padding: 40px;
     color: #606266;
-    font-size: 14px;
+    font-size: 1rem /* 原值: 14px */;
 
     .el-icon {
       margin-right: 8px;
-      font-size: 20px;
+      font-size: 1.429rem /* 原值: 20px */;
     }
   }
 
@@ -1724,7 +1724,7 @@ const handleSaveAvatar = async () => {
           margin-bottom: 12px;
 
           .merchant-name {
-            font-size: 24px;
+            font-size: 1.714rem /* 原值: 24px */;
             font-weight: 700;
             color: #303133;
             display: flex;
@@ -1777,7 +1777,7 @@ const handleSaveAvatar = async () => {
           .contact-item {
             display: flex;
             align-items: center;
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
             color: #606266;
 
             .icon {
@@ -1804,7 +1804,7 @@ const handleSaveAvatar = async () => {
           align-items: center;
           min-width: 100px;
           color: #606266;
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           font-weight: 500;
 
           .el-icon {
@@ -1815,7 +1815,7 @@ const handleSaveAvatar = async () => {
 
         .detail-value {
           color: #303133;
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           font-weight: 400;
         }
       }
@@ -1880,7 +1880,7 @@ const handleSaveAvatar = async () => {
           gap: 8px;
 
           .merchant-name {
-            font-size: 20px;
+            font-size: 1.429rem /* 原值: 20px */;
           }
 
           .merchant-actions {
@@ -1940,7 +1940,7 @@ const handleSaveAvatar = async () => {
 
     p {
       margin: 8px 0 0 0;
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
       color: #909399;
     }
   }
@@ -1959,7 +1959,7 @@ const handleSaveAvatar = async () => {
   }
 
   .el-upload__tip {
-    font-size: 12px;
+    font-size: 0.857rem /* 原值: 12px */;
     color: #909399;
     line-height: 1.5;
     text-align: center;

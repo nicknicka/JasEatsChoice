@@ -351,13 +351,13 @@ const submitForm = () => {
   text-align: center;
   margin-bottom: 30px;
   color: #333;
-  font-size: 24px;
+  font-size: 1.714rem /* 原值: 24px */;
 }
 
 .login-link {
   text-align: center;
   margin-top: 15px;
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   color: #666;
 
   span {
@@ -368,7 +368,7 @@ const submitForm = () => {
 .captcha-refresh-link {
   height: 36px;
   line-height: 36px;
-  font-size: 12px;
+  font-size: 0.857rem /* 原值: 12px */;
   opacity: 0.8;
   transition: opacity 0.2s;
   text-decoration: none !important; /* 始终去除下划线 */

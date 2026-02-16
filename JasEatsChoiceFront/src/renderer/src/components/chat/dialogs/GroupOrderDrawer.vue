@@ -559,7 +559,7 @@ const handleCancelGroupOrder = async () => {
         border-bottom: 2px solid #f0f0f0;
 
         .overview-title {
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           font-weight: 600;
           color: #303133;
         }
@@ -585,7 +585,7 @@ const handleCancelGroupOrder = async () => {
           }
 
           .item-icon {
-            font-size: 24px;
+            font-size: 1.714rem /* 原值: 24px */;
             width: 40px;
             height: 40px;
             display: flex;
@@ -599,18 +599,18 @@ const handleCancelGroupOrder = async () => {
             flex: 1;
 
             .item-label {
-              font-size: 11px;
+              font-size: 0.75rem /* 原值: 11px */;
               color: #909399;
               margin-bottom: 3px;
             }
 
             .item-value {
-              font-size: 13px;
+              font-size: 0.929rem /* 原值: 13px */;
               font-weight: 500;
               color: #303133;
 
               &.price {
-                font-size: 16px;
+                font-size: 1.143rem /* 原值: 16px */;
                 color: #f56c6c;
                 font-weight: 600;
               }
@@ -643,13 +643,13 @@ const handleCancelGroupOrder = async () => {
           flex: 1;
 
           .quick-order-title {
-            font-size: 15px;
+            font-size: 1.071rem /* 原值: 15px */;
             font-weight: 600;
             margin-bottom: 3px;
           }
 
           .quick-order-desc {
-            font-size: 12px;
+            font-size: 0.857rem /* 原值: 12px */;
             opacity: 0.9;
           }
         }
@@ -688,7 +688,7 @@ const handleCancelGroupOrder = async () => {
         display: flex;
         align-items: center;
         gap: 8px;
-        font-size: 15px;
+        font-size: 1.071rem /* 原值: 15px */;
         font-weight: 600;
         color: #303133;
       }
@@ -743,7 +743,7 @@ const handleCancelGroupOrder = async () => {
           min-width: 0;
 
           .item-name {
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
             font-weight: 600;
             color: #303133;
             margin-bottom: 6px;
@@ -751,7 +751,7 @@ const handleCancelGroupOrder = async () => {
           }
 
           .item-price {
-            font-size: 13px;
+            font-size: 0.929rem /* 原值: 13px */;
             color: #f56c6c;
             font-weight: 500;
             margin-bottom: 8px;
@@ -765,7 +765,7 @@ const handleCancelGroupOrder = async () => {
           }
 
           .item-remark {
-            font-size: 12px;
+            font-size: 0.857rem /* 原值: 12px */;
             color: #909399;
             display: flex;
             align-items: center;
@@ -785,13 +785,13 @@ const handleCancelGroupOrder = async () => {
           gap: 6px;
 
           .item-quantity {
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
             font-weight: 600;
             color: #409eff;
           }
 
           .item-subtotal {
-            font-size: 16px;
+            font-size: 1.143rem /* 原值: 16px */;
             font-weight: 700;
             color: #f56c6c;
           }
@@ -824,7 +824,7 @@ const handleCancelGroupOrder = async () => {
         display: flex;
         align-items: center;
         gap: 8px;
-        font-size: 15px;
+        font-size: 1.071rem /* 原值: 15px */;
         font-weight: 600;
         color: #303133;
       }
@@ -870,7 +870,7 @@ const handleCancelGroupOrder = async () => {
             gap: 8px;
 
             .paid-order-time {
-              font-size: 12px;
+              font-size: 0.857rem /* 原值: 12px */;
               color: #909399;
             }
           }
@@ -881,14 +881,14 @@ const handleCancelGroupOrder = async () => {
             gap: 8px;
 
             .paid-order-amount {
-              font-size: 16px;
+              font-size: 1.143rem /* 原值: 16px */;
               font-weight: 600;
               color: #67c23a;
             }
 
             .click-icon {
               color: #409eff;
-              font-size: 16px;
+              font-size: 1.143rem /* 原值: 16px */;
               transition: transform 0.3s;
             }
           }
@@ -910,7 +910,7 @@ const handleCancelGroupOrder = async () => {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 13px;
+            font-size: 0.929rem /* 原值: 13px */;
             padding: 4px 8px;
             background: white;
             border-radius: 4px;
@@ -922,12 +922,12 @@ const handleCancelGroupOrder = async () => {
 
             .item-quantity {
               color: #909399;
-              font-size: 12px;
+              font-size: 0.857rem /* 原值: 12px */;
             }
           }
 
           .more-items {
-            font-size: 12px;
+            font-size: 0.857rem /* 原值: 12px */;
             color: #409eff;
             text-align: center;
             padding: 4px;
@@ -937,7 +937,7 @@ const handleCancelGroupOrder = async () => {
         }
 
         .paid-order-remark {
-          font-size: 12px;
+          font-size: 0.857rem /* 原值: 12px */;
           color: #909399;
           display: flex;
           align-items: center;
@@ -964,7 +964,7 @@ const handleCancelGroupOrder = async () => {
         display: flex;
         align-items: center;
         gap: 8px;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         font-weight: 600;
         color: #e6a23c;
       }
@@ -994,7 +994,7 @@ const handleCancelGroupOrder = async () => {
         }
 
         :deep(.el-icon) {
-          font-size: 16px;
+          font-size: 1.143rem /* 原值: 16px */;
           display: inline-flex;
           align-items: center;
           justify-content: center;

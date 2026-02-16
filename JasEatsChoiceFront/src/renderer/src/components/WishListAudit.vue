@@ -444,14 +444,14 @@ onMounted(() => {
 }
 
 .stat-number {
-  font-size: 28px;
+  font-size: 2rem /* 原值: 28px */;
   font-weight: bold;
   color: #303133;
   margin-bottom: 8px;
 }
 
 .stat-label {
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   color: #909399;
 }
 
@@ -522,14 +522,14 @@ onMounted(() => {
 
 .dish-name {
   margin: 0 0 8px 0;
-  font-size: 16px;
+  font-size: 1.143rem /* 原值: 16px */;
   font-weight: 600;
   color: #303133;
 }
 
 .wish-meta {
   margin: 0;
-  font-size: 13px;
+  font-size: 0.929rem /* 原值: 13px */;
   color: #909399;
   display: flex;
   align-items: center;
@@ -545,7 +545,7 @@ onMounted(() => {
 
 .wish-description p {
   margin: 0;
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   color: #606266;
   line-height: 1.5;
 }
@@ -563,7 +563,7 @@ onMounted(() => {
 }
 
 .deadline {
-  font-size: 12px;
+  font-size: 0.857rem /* 原值: 12px */;
   color: #e6a23c;
 }
 

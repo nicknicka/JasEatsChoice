@@ -566,7 +566,7 @@ onMounted(() => {
   }
 
   .page-title {
-    font-size: 24px;
+    font-size: 1.714rem /* 原值: 24px */;
     margin: 0;
     margin-left: 15px;
     color: #2c5282;
@@ -614,13 +614,13 @@ onMounted(() => {
     justify-content: space-between;
 
     .card-title {
-      font-size: 16px;
+      font-size: 1.143rem /* 原值: 16px */;
       font-weight: 600;
       color: #2c3e50;
     }
 
     .order-no {
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
       color: #64748b;
     }
   }
@@ -629,7 +629,7 @@ onMounted(() => {
   .order-info-card {
     .merchant-info {
       .merchant-name {
-        font-size: 18px;
+        font-size: 1.286rem /* 原值: 18px */;
         font-weight: 600;
         color: #2c3e50;
         margin-bottom: 16px;
@@ -666,7 +666,7 @@ onMounted(() => {
           justify-content: center;
 
           span {
-            font-size: 24px;
+            font-size: 1.714rem /* 原值: 24px */;
             font-weight: 600;
             color: #1890ff;
           }
@@ -680,18 +680,18 @@ onMounted(() => {
 
           .item-name {
             flex: 1;
-            font-size: 15px;
+            font-size: 1.071rem /* 原值: 15px */;
             font-weight: 500;
             color: #2c5282;
           }
 
           .item-quantity {
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
             color: #64748b;
           }
 
           .item-price {
-            font-size: 16px;
+            font-size: 1.143rem /* 原值: 16px */;
             font-weight: 600;
             color: #ff6b6b;
           }
@@ -705,7 +705,7 @@ onMounted(() => {
         gap: 12px;
 
         .total-label {
-          font-size: 15px;
+          font-size: 1.071rem /* 原值: 15px */;
           color: #64748b;
         }
 
@@ -724,7 +724,7 @@ onMounted(() => {
       text-align: center;
 
       .rating-label {
-        font-size: 16px;
+        font-size: 1.143rem /* 原值: 16px */;
         color: #2c3e50;
         margin-bottom: 20px;
       }
@@ -749,7 +749,7 @@ onMounted(() => {
             }
 
             .el-rate__icon {
-              font-size: 40px;
+              font-size: 2.857rem /* 原值: 40px */;
               display: inline-block;
               vertical-align: middle;
               line-height: 1;
@@ -773,7 +773,7 @@ onMounted(() => {
         }
 
         .rating-text {
-          font-size: 18px;
+          font-size: 1.286rem /* 原值: 18px */;
           font-weight: 600;
           color: #F7BA2A;
           min-width: 80px;
@@ -865,7 +865,7 @@ onMounted(() => {
         border: 1px solid rgba(255, 193, 7, 0.3);
 
         .selected-tags-label {
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           color: #856404;
           font-weight: 500;
           margin-bottom: 8px;
@@ -908,7 +908,7 @@ onMounted(() => {
       }
 
       .review-content {
-        font-size: 15px;
+        font-size: 1.071rem /* 原值: 15px */;
         line-height: 1.6;
         color: #606266;
         padding: 12px;
@@ -924,7 +924,7 @@ onMounted(() => {
       :deep(.el-textarea__inner) {
         border-radius: 8px;
         border: 1px solid rgba(0, 0, 0, 0.1);
-        font-size: 15px;
+        font-size: 1.071rem /* 原值: 15px */;
         line-height: 1.6;
 
         &:focus {
@@ -944,7 +944,7 @@ onMounted(() => {
     .submit-btn {
       min-width: 200px;
       height: 50px;
-      font-size: 16px;
+      font-size: 1.143rem /* 原值: 16px */;
       font-weight: 600;
       border-radius: 25px;
       background: linear-gradient(135deg, #6ba4ff 0%, #5c8eff 100%);
@@ -975,7 +975,7 @@ onMounted(() => {
     }
 
     .page-title {
-      font-size: 20px;
+      font-size: 1.429rem /* 原值: 20px */;
     }
 
     .evaluate-content {
@@ -1006,11 +1006,11 @@ onMounted(() => {
 
             .item-details {
               .item-name {
-                font-size: 14px;
+                font-size: 1rem /* 原值: 14px */;
               }
 
               .item-price {
-                font-size: 15px;
+                font-size: 1.071rem /* 原值: 15px */;
               }
             }
           }
@@ -1018,11 +1018,11 @@ onMounted(() => {
 
         .order-total {
           .total-label {
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
           }
 
           .total-amount {
-            font-size: 20px;
+            font-size: 1.429rem /* 原值: 20px */;
           }
         }
       }
@@ -1034,13 +1034,13 @@ onMounted(() => {
           .rating-stars {
             :deep(.el-rate) {
               .el-rate__icon {
-                font-size: 36px;
+                font-size: 2.571rem /* 原值: 36px */;
               }
             }
           }
 
           .rating-text {
-            font-size: 16px;
+            font-size: 1.143rem /* 原值: 16px */;
             min-width: 70px;
           }
         }
@@ -1067,14 +1067,14 @@ onMounted(() => {
           padding: 10px;
 
           .selected-tags-label {
-            font-size: 13px;
+            font-size: 0.929rem /* 原值: 13px */;
           }
 
           .selected-tags-list {
             gap: 6px;
 
             .selected-tag-item {
-              font-size: 12px;
+              font-size: 0.857rem /* 原值: 12px */;
             }
           }
         }
@@ -1087,7 +1087,7 @@ onMounted(() => {
       .submit-btn {
         min-width: 100%;
         height: 48px;
-        font-size: 15px;
+        font-size: 1.071rem /* 原值: 15px */;
       }
     }
   }

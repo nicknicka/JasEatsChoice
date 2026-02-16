@@ -292,7 +292,7 @@ watch(
     margin-bottom: 20px;
 
     .page-title {
-      font-size: 18px;
+      font-size: 1.286rem /* 原值: 18px */;
       font-weight: 600;
       margin: 0;
     }
@@ -329,18 +329,18 @@ watch(
         flex: 1;
 
         .stat-icon {
-          font-size: 32px;
+          font-size: 2.286rem /* 原值: 32px */;
         }
 
         .stat-info {
           .stat-label {
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
             color: #606266;
             margin-bottom: 4px;
           }
 
           .stat-value {
-            font-size: 20px;
+            font-size: 1.429rem /* 原值: 20px */;
             font-weight: 600;
             color: #303133;
           }
@@ -356,7 +356,7 @@ watch(
       box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
 
       .section-title {
-        font-size: 16px;
+        font-size: 1.143rem /* 原值: 16px */;
         font-weight: 600;
         margin-bottom: 20px;
       }
@@ -370,7 +370,7 @@ watch(
 
         .chart-placeholder {
           color: #909399;
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
         }
       }
     }
@@ -382,14 +382,14 @@ watch(
       box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
 
       .section-title {
-        font-size: 16px;
+        font-size: 1.143rem /* 原值: 16px */;
         font-weight: 600;
         margin-bottom: 20px;
       }
 
       .no-data-placeholder {
         color: #909399;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         padding: 40px 0;
         text-align: center;
       }
@@ -407,7 +407,7 @@ watch(
           }
 
           .rank-number {
-            font-size: 18px;
+            font-size: 1.286rem /* 原值: 18px */;
             font-weight: 600;
             width: 30px;
             text-align: center;
@@ -417,19 +417,19 @@ watch(
             flex: 1;
 
             .dish-name {
-              font-size: 14px;
+              font-size: 1rem /* 原值: 14px */;
               font-weight: 500;
               margin-bottom: 4px;
             }
 
             .dish-sales {
-              font-size: 12px;
+              font-size: 0.857rem /* 原值: 12px */;
               color: #606266;
             }
           }
 
           .dish-revenue {
-            font-size: 16px;
+            font-size: 1.143rem /* 原值: 16px */;
             font-weight: 600;
             color: #67c23a;
           }

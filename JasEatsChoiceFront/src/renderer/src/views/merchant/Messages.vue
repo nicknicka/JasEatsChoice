@@ -470,7 +470,7 @@ const markAllAsRead = () => {
       }
 
       .page-subtitle {
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         color: rgba(255, 255, 255, 0.95);
         margin: 0;
         font-weight: 400;
@@ -582,7 +582,7 @@ const markAllAsRead = () => {
         flex: 1;
 
         .stat-value {
-          font-size: 28px;
+          font-size: 2rem /* 原值: 28px */;
           font-weight: 700;
           color: #1f2937;
           line-height: 1.1;
@@ -590,7 +590,7 @@ const markAllAsRead = () => {
         }
 
         .stat-label {
-          font-size: 13px;
+          font-size: 0.929rem /* 原值: 13px */;
           color: #6b7280;
           font-weight: 500;
           letter-spacing: 0.3px;
@@ -711,12 +711,12 @@ const markAllAsRead = () => {
           gap: 6px;
 
           .filter-icon {
-            font-size: 16px;
+            font-size: 1.143rem /* 原值: 16px */;
             color: #3b82f6;
           }
 
           .filter-label {
-            font-size: 13px;
+            font-size: 0.929rem /* 原值: 13px */;
             font-weight: 600;
             color: #303133;
           }
@@ -731,7 +731,7 @@ const markAllAsRead = () => {
             cursor: pointer;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             padding: 6px 12px;
-            font-size: 13px;
+            font-size: 0.929rem /* 原值: 13px */;
             font-weight: 500;
             border-radius: 8px;
             display: inline-flex;
@@ -741,11 +741,11 @@ const markAllAsRead = () => {
             position: relative;
 
             .tag-icon {
-              font-size: 14px;
+              font-size: 1rem /* 原值: 14px */;
             }
 
             .tag-text {
-              font-size: 13px;
+              font-size: 0.929rem /* 原值: 13px */;
             }
 
             .tag-badge {
@@ -928,7 +928,7 @@ const markAllAsRead = () => {
             flex: 1;
 
             .message-title {
-              font-size: 15px;
+              font-size: 1.071rem /* 原值: 15px */;
               font-weight: 600;
               margin-bottom: 7px;
               color: #1f2937;
@@ -936,7 +936,7 @@ const markAllAsRead = () => {
             }
 
             .message-preview {
-              font-size: 13px;
+              font-size: 0.929rem /* 原值: 13px */;
               color: #6b7280;
               margin-bottom: 10px;
               line-height: 1.6;
@@ -946,7 +946,7 @@ const markAllAsRead = () => {
               display: flex;
               justify-content: space-between;
               align-items: center;
-              font-size: 12px;
+              font-size: 0.857rem /* 原值: 12px */;
               color: #9ca3af;
             }
           }
@@ -1012,7 +1012,7 @@ const markAllAsRead = () => {
           }
 
           h3 {
-            font-size: 20px;
+            font-size: 1.429rem /* 原值: 20px */;
             margin: 0;
             flex: 1;
           }
@@ -1022,7 +1022,7 @@ const markAllAsRead = () => {
           display: flex;
           flex-direction: column;
           gap: 8px;
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
 
           .meta-item {
             display: flex;
@@ -1043,7 +1043,7 @@ const markAllAsRead = () => {
       }
 
       .detail-content {
-        font-size: 16px;
+        font-size: 1.143rem /* 原值: 16px */;
         line-height: 1.8;
         margin-bottom: 30px;
         padding: 24px;
@@ -1096,7 +1096,7 @@ const markAllAsRead = () => {
         padding: 16px;
 
         .stat-value {
-          font-size: 20px !important;
+          font-size: 1.429rem /* 原值: 20px */ !important;
         }
       }
     }
@@ -1109,7 +1109,7 @@ const markAllAsRead = () => {
           .category-tags {
             .category-tag {
               padding: 4px 10px;
-              font-size: 12px;
+              font-size: 0.857rem /* 原值: 12px */;
             }
           }
         }
@@ -1127,11 +1127,11 @@ const markAllAsRead = () => {
 
             .message-content {
               .message-title {
-                font-size: 14px;
+                font-size: 1rem /* 原值: 14px */;
               }
 
               .message-preview {
-                font-size: 12px;
+                font-size: 0.857rem /* 原值: 12px */;
               }
             }
           }

@@ -337,7 +337,7 @@ const goToMerchantDetail = (merchant) => {
   padding: 0 20px 20px 20px;
 
   h2 {
-    font-size: 32px;
+    font-size: 2.286rem /* 原值: 32px */;
     margin: 0 0 20px 20px;
     color: #1a202c;
     font-weight: 800;
@@ -396,18 +396,18 @@ const goToMerchantDetail = (merchant) => {
       }
 
       :deep(.el-input__inner) {
-        font-size: 15px;
+        font-size: 1.071rem /* 原值: 15px */;
         color: #1e293b;
       }
 
       :deep(.el-input__prefix) {
         color: #3b82f6;
-        font-size: 18px;
+        font-size: 1.286rem /* 原值: 18px */;
       }
 
       :deep(.el-input__suffix) {
         .el-icon {
-          font-size: 16px;
+          font-size: 1.143rem /* 原值: 16px */;
           color: #cbd5e1;
 
           &:hover {
@@ -423,7 +423,7 @@ const goToMerchantDetail = (merchant) => {
       border-radius: 14px;
       height: 48px;
       padding: 0 24px;
-      font-size: 15px;
+      font-size: 1.071rem /* 原值: 15px */;
       transition: all 0.3s ease;
       background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
       border: 1px solid #cbd5e1;
@@ -446,7 +446,7 @@ const goToMerchantDetail = (merchant) => {
       .filter-tag {
         padding: 8px 18px;
         border-radius: 20px;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         color: #64748b;
         background: #ffffff;
         border: 1px solid rgba(59, 130, 246, 0.1);
@@ -494,7 +494,7 @@ const goToMerchantDetail = (merchant) => {
       border-top: 1px dashed rgba(59, 130, 246, 0.15);
 
       .sort-label {
-        font-size: 13px;
+        font-size: 0.929rem /* 原值: 13px */;
         color: #64748b;
         font-weight: 500;
         margin-right: 4px;
@@ -503,7 +503,7 @@ const goToMerchantDetail = (merchant) => {
       .sort-tag {
         padding: 6px 16px;
         border-radius: 18px;
-        font-size: 13px;
+        font-size: 0.929rem /* 原值: 13px */;
         color: #64748b;
         background: #ffffff;
         border: 1px solid rgba(59, 130, 246, 0.1);
@@ -662,7 +662,7 @@ const goToMerchantDetail = (merchant) => {
         min-width: 0; /* 防止文本溢出 */
 
         .merchant-name {
-          font-size: 20px;
+          font-size: 1.429rem /* 原值: 20px */;
           font-weight: 700;
           margin-bottom: 2px;
           background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
@@ -695,12 +695,12 @@ const goToMerchantDetail = (merchant) => {
 
             :deep(.el-rate) {
               .el-rate__icon {
-                font-size: 16px;
+                font-size: 1.143rem /* 原值: 16px */;
               }
             }
 
             .rating-number {
-              font-size: 15px;
+              font-size: 1.071rem /* 原值: 15px */;
               font-weight: 600;
               color: #f59e0b;
               background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
@@ -711,7 +711,7 @@ const goToMerchantDetail = (merchant) => {
           }
 
           .distance {
-            font-size: 13px;
+            font-size: 0.929rem /* 原值: 13px */;
             color: #64748b;
             display: flex;
             align-items: center;
@@ -719,7 +719,7 @@ const goToMerchantDetail = (merchant) => {
             font-weight: 500;
 
             .distance-icon {
-              font-size: 14px;
+              font-size: 1rem /* 原值: 14px */;
               color: #94a3b8;
             }
           }
@@ -796,7 +796,7 @@ const goToMerchantDetail = (merchant) => {
         border-radius: 12px;
         font-weight: 600;
         height: 46px;
-        font-size: 15px;
+        font-size: 1.071rem /* 原值: 15px */;
         background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
         border: none;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -806,7 +806,7 @@ const goToMerchantDetail = (merchant) => {
         gap: 8px;
 
         .btn-icon {
-          font-size: 18px;
+          font-size: 1.286rem /* 原值: 18px */;
         }
 
         &:hover {
@@ -848,14 +848,14 @@ const goToMerchantDetail = (merchant) => {
       color: #475569;
 
       h3 {
-        font-size: 20px;
+        font-size: 1.429rem /* 原值: 20px */;
         margin: 0 0 10px 0;
         color: #1e40af;
         font-weight: 600;
       }
 
       p {
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         margin: 0;
         color: #64748b;
       }
@@ -866,7 +866,7 @@ const goToMerchantDetail = (merchant) => {
 
       .el-button {
         padding: 10px 28px;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         border-radius: 10px;
         background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
         border: none;

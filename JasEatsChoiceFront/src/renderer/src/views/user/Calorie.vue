@@ -474,7 +474,7 @@ const healthAdvice = computed(() => {
   background: #f5f7fa;
 
   h2 {
-    font-size: 28px;
+    font-size: 2rem /* 原值: 28px */;
     margin: 0 0 32px 0;
     text-align: center;
     color: #333;
@@ -505,7 +505,7 @@ const healthAdvice = computed(() => {
         text-align: center;
 
         .overview-label {
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           color: #666;
           margin-bottom: 12px;
           text-transform: uppercase;
@@ -513,7 +513,7 @@ const healthAdvice = computed(() => {
         }
 
         .overview-value {
-          font-size: 32px;
+          font-size: 2.286rem /* 原值: 32px */;
           font-weight: 700;
           background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
           -webkit-background-clip: text;
@@ -552,7 +552,7 @@ const healthAdvice = computed(() => {
     }
 
     .card-header {
-      font-size: 18px;
+      font-size: 1.286rem /* 原值: 18px */;
       font-weight: 700;
       color: #333;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -576,7 +576,7 @@ const healthAdvice = computed(() => {
         display: flex;
         justify-content: space-between;
         margin-bottom: 12px;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         font-weight: 600;
       }
 
@@ -590,7 +590,7 @@ const healthAdvice = computed(() => {
 
       // 推荐目标值样式
       .recommended-goal {
-        font-size: 12px; // 小号字体
+        font-size: 0.857rem /* 原值: 12px */; // 小号字体
         color: #999; // 灰色文字
         margin-left: 6px; // 与实际值保持间距
       }
@@ -600,7 +600,7 @@ const healthAdvice = computed(() => {
         .el-progress__text {
           color: #ff6b6b !important; // 红色文本
           font-weight: 700 !important; // 加粗
-          font-size: 16px !important; // 增大字号
+          font-size: 1.143rem /* 原值: 16px */ !important; // 增大字号
         }
 
         // 进度条光晕效果
@@ -650,7 +650,7 @@ const healthAdvice = computed(() => {
         text-align: center;
 
         .overview-label {
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           color: #666;
           margin-bottom: 12px;
           text-transform: uppercase;
@@ -658,7 +658,7 @@ const healthAdvice = computed(() => {
         }
 
         .overview-value {
-          font-size: 32px;
+          font-size: 2.286rem /* 原值: 32px */;
           font-weight: 700;
           background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
           -webkit-background-clip: text;
@@ -696,7 +696,7 @@ const healthAdvice = computed(() => {
     }
 
     .card-header {
-      font-size: 18px;
+      font-size: 1.286rem /* 原值: 18px */;
       font-weight: 700;
       color: #333;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -722,7 +722,7 @@ const healthAdvice = computed(() => {
         display: flex;
         justify-content: space-between;
         margin-bottom: 12px;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         font-weight: 600;
 
         .bar-label {
@@ -733,7 +733,7 @@ const healthAdvice = computed(() => {
 
         .bar-text {
           font-weight: 700;
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           color: #333;
         }
       }
@@ -852,7 +852,7 @@ const healthAdvice = computed(() => {
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 1.143rem /* 原值: 16px */;
   font-weight: 600;
   color: #333;
   transition: all 0.3s ease;
@@ -904,7 +904,7 @@ const healthAdvice = computed(() => {
   align-items: flex-start;
   gap: 10px;
   margin-bottom: 14px;
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   color: #666;
   line-height: 22px;
 
@@ -923,7 +923,7 @@ const healthAdvice = computed(() => {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   color: #4caf50;
   padding: 16px;
   background-color: #f6fff6;
@@ -932,7 +932,7 @@ const healthAdvice = computed(() => {
 }
 
 .advice-empty .empty-icon {
-  font-size: 18px;
+  font-size: 1.286rem /* 原值: 18px */;
   flex-shrink: 0;
 }
 </style>

@@ -261,7 +261,7 @@ const handleDeleteDish = (e, dish) => {
             type="text"
             size="small"
             :class="{ 'favorite-btn': isFavorite }"
-            style="padding: 0; margin: 0; font-size: 18px"
+            style="padding: 0; margin: 0; font-size: 1.286rem /* 原值: 18px */"
             @click="handleFavoriteClick"
           >
             {{ isFavorite ? '⭐' : '☆' }}
@@ -378,7 +378,7 @@ const handleDeleteDish = (e, dish) => {
     display: flex;
     align-items: center;
     gap: 16px;
-    font-size: 20px;
+    font-size: 1.429rem /* 原值: 20px */;
     font-weight: 700;
     color: #2c3e50;
     padding: 20px 24px !important;
@@ -390,7 +390,7 @@ const handleDeleteDish = (e, dish) => {
     }
 
     .meal-icon {
-      font-size: 32px;
+      font-size: 2.286rem /* 原值: 32px */;
       padding: 10px;
       border-radius: 50%;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -414,7 +414,7 @@ const handleDeleteDish = (e, dish) => {
     .el-tag {
       padding: 8px 16px;
       border-radius: 20px;
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
       font-weight: 500;
     }
   }
@@ -429,7 +429,7 @@ const handleDeleteDish = (e, dish) => {
       align-items: center;
       gap: 5px;
       color: #666;
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
     }
   }
 
@@ -446,7 +446,7 @@ const handleDeleteDish = (e, dish) => {
     align-items: center; /* 垂直对齐 */
 
     .el-button {
-      font-size: 12px;
+      font-size: 0.857rem /* 原值: 12px */;
       padding: 4px 10px;
       border-radius: 6px;
       margin: 0;
@@ -629,7 +629,7 @@ const handleDeleteDish = (e, dish) => {
 
     .meal-icon {
       color: #00bcd4;
-      font-size: 24px;
+      font-size: 1.714rem /* 原值: 24px */;
     }
   }
 

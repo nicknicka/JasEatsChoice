@@ -835,7 +835,7 @@ const toggleSelectAll = () => {
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 
     .page-title {
-      font-size: 20px;
+      font-size: 1.429rem /* 原值: 20px */;
       font-weight: 700;
       margin: 0;
       color: #4a5568;
@@ -998,7 +998,7 @@ const toggleSelectAll = () => {
             margin-bottom: 16px;
 
             .name {
-              font-size: 18px;
+              font-size: 1.286rem /* 原值: 18px */;
               font-weight: 700;
               color: #2d3748;
             }
@@ -1009,7 +1009,7 @@ const toggleSelectAll = () => {
             grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
             gap: 16px;
             margin-bottom: 20px;
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
 
             .stat-item {
               display: flex;
@@ -1018,13 +1018,13 @@ const toggleSelectAll = () => {
 
               .stat-label {
                 color: #718096;
-                font-size: 12px;
+                font-size: 0.857rem /* 原值: 12px */;
                 font-weight: 500;
               }
 
               .stat-value {
                 color: #4a5568;
-                font-size: 14px;
+                font-size: 1rem /* 原值: 14px */;
                 font-weight: 600;
               }
             }
@@ -1074,14 +1074,14 @@ const toggleSelectAll = () => {
                 bottom: 8px;
                 background: #ffffff;
                 padding-left: 5px;
-                font-size: 14px;
+                font-size: 1rem /* 原值: 14px */;
                 color: #adb5bd;
               }
             }
           }
 
           .auto-times {
-            font-size: 13px;
+            font-size: 0.929rem /* 原值: 13px */;
             color: #adb5bd;
             margin-bottom: 12px;
           }
@@ -1147,7 +1147,7 @@ const toggleSelectAll = () => {
       min-width: 100px; /* 设置固定最小宽度，让批量操作按钮位置稳定 */
 
       .selected-count {
-        font-size: 13px;
+        font-size: 0.929rem /* 原值: 13px */;
         font-weight: 400;
         color: #909399;
       }
@@ -1260,7 +1260,7 @@ const toggleSelectAll = () => {
     padding: 10px 28px;
     border-radius: 8px;
     font-weight: 500;
-    font-size: 14px;
+    font-size: 1rem /* 原值: 14px */;
     transition: all 0.3s ease;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
@@ -1305,7 +1305,7 @@ const toggleSelectAll = () => {
   }
 
   :deep(.el-dialog__title) {
-    font-size: 20px;
+    font-size: 1.429rem /* 原值: 20px */;
     font-weight: 600;
     color: #1890ff;
     background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
@@ -1338,7 +1338,7 @@ const toggleSelectAll = () => {
         color: #555;
         width: 130px;
         font-weight: 500;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
       }
 
       /* 输入框、选择框、时间选择器悬浮效果优化 - 与添加菜品保持一致 */

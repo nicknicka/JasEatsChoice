@@ -174,7 +174,7 @@ const props = defineProps<Props>()
       color: white;
       padding: 8px 16px;
       border-radius: 20px;
-      font-size: 13px;
+      font-size: 0.929rem /* 原值: 13px */;
       font-weight: 700;
       backdrop-filter: blur(8px);
       box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
@@ -209,7 +209,7 @@ const props = defineProps<Props>()
 
       .dish-name {
         flex: 1;
-        font-size: 24px;
+        font-size: 1.714rem /* 原值: 24px */;
         font-weight: 700;
         color: #fff;
         overflow: hidden;
@@ -266,7 +266,7 @@ const props = defineProps<Props>()
       align-items: center;
       gap: 12px;
       margin-bottom: 12px;
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
 
       .dish-kcal {
         display: inline-flex;
@@ -280,19 +280,19 @@ const props = defineProps<Props>()
         backdrop-filter: blur(8px);
         text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         box-shadow: 0 3px 10px rgba(255, 107, 107, 0.4);
-        font-size: 15px;
+        font-size: 1.071rem /* 原值: 15px */;
         border: 1px solid rgba(255, 255, 255, 0.2);
 
         &::before {
           content: '🔥';
-          font-size: 16px;
+          font-size: 1.143rem /* 原值: 16px */;
           animation: flame-flicker 0.5s ease-in-out infinite alternate;
         }
       }
 
       .dish-tags {
         color: rgba(255, 255, 255, 0.95);
-        font-size: 13px;
+        font-size: 0.929rem /* 原值: 13px */;
         font-weight: 600;
         padding: 6px 14px;
         background: rgba(255, 255, 255, 0.15);
@@ -314,7 +314,7 @@ const props = defineProps<Props>()
 
       :deep(.el-rate__text) {
         color: #fff !important;
-        font-size: 16px;
+        font-size: 1.143rem /* 原值: 16px */;
         font-weight: 700;
         text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
       }
@@ -324,11 +324,11 @@ const props = defineProps<Props>()
         align-items: center;
         gap: 6px;
         color: rgba(255, 255, 255, 0.8);
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         font-weight: 500;
 
         .el-icon {
-          font-size: 18px;
+          font-size: 1.286rem /* 原值: 18px */;
           opacity: 0.6;
         }
       }

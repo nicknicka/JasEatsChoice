@@ -812,7 +812,7 @@ onMounted(() => {
       gap: 16px;
 
       .page-title {
-        font-size: 24px;
+        font-size: 1.714rem /* 原值: 24px */;
         font-weight: 700;
         margin: 0;
         color: #ffffff;
@@ -821,7 +821,7 @@ onMounted(() => {
       }
 
       .current-date {
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         color: #ffffff;
         background: rgba(255, 255, 255, 0.25);
         padding: 6px 16px;
@@ -952,7 +952,7 @@ onMounted(() => {
         }
 
         .stat-label {
-          font-size: 13px;
+          font-size: 0.929rem /* 原值: 13px */;
           color: #64b5f6;
           margin-top: 6px;
           font-weight: 500;
@@ -998,7 +998,7 @@ onMounted(() => {
           border-width: 2px;
 
           .stat-value {
-            font-size: 28px;
+            font-size: 2rem /* 原值: 28px */;
           }
         }
       }
@@ -1084,12 +1084,12 @@ onMounted(() => {
         gap: 6px;
 
         .filter-icon {
-          font-size: 16px;
+          font-size: 1.143rem /* 原值: 16px */;
           color: #409eff;
         }
 
         .filter-label {
-          font-size: 13px;
+          font-size: 0.929rem /* 原值: 13px */;
           font-weight: 600;
           color: #303133;
         }
@@ -1105,7 +1105,7 @@ onMounted(() => {
           cursor: pointer;
           transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
           padding: 4px 10px;
-          font-size: 12px;
+          font-size: 0.857rem /* 原值: 12px */;
           font-weight: 500;
           border-radius: 6px;
           display: inline-flex;
@@ -1115,11 +1115,11 @@ onMounted(() => {
           user-select: none;
 
           .tag-icon {
-            font-size: 12px;
+            font-size: 0.857rem /* 原值: 12px */;
           }
 
           .tag-text {
-            font-size: 12px;
+            font-size: 0.857rem /* 原值: 12px */;
           }
 
           .close-icon {
@@ -1371,7 +1371,7 @@ onMounted(() => {
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 
         .el-icon {
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
         }
 
         &:hover {
@@ -1387,7 +1387,7 @@ onMounted(() => {
 
     .quick-actions-right {
       .order-count-info {
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         color: #606266;
         padding: 8px 16px;
         background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
@@ -1396,7 +1396,7 @@ onMounted(() => {
 
         strong {
           color: #0284c7;
-          font-size: 16px;
+          font-size: 1.143rem /* 原值: 16px */;
           font-weight: 700;
         }
       }
@@ -1513,7 +1513,7 @@ onMounted(() => {
           left: 20px;
           background: linear-gradient(135deg, #f56c6c 0%, #ff7875 100%);
           color: white;
-          font-size: 11px;
+          font-size: 0.75rem /* 原值: 11px */;
           padding: 4px 12px;
           border-radius: 12px;
           font-weight: 600;
@@ -1549,7 +1549,7 @@ onMounted(() => {
           grid-template-columns: auto auto 1fr;
           gap: 12px 20px;
           margin-bottom: 12px;
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           align-items: center;
 
           .order-no {
@@ -1557,12 +1557,12 @@ onMounted(() => {
             align-items: center;
             gap: 8px;
             font-weight: 600;
-            font-size: 15px;
+            font-size: 1.071rem /* 原值: 15px */;
             white-space: nowrap;
 
             .no-label {
               color: #909399;
-              font-size: 12px;
+              font-size: 0.857rem /* 原值: 12px */;
               font-weight: 500;
               margin-right: 4px;
             }
@@ -1591,7 +1591,7 @@ onMounted(() => {
             white-space: nowrap;
 
             .amount-label {
-              font-size: 12px;
+              font-size: 0.857rem /* 原值: 12px */;
               color: #909399;
               font-weight: 500;
             }
@@ -1606,13 +1606,13 @@ onMounted(() => {
             align-items: center;
             gap: 6px;
             color: #606266;
-            font-size: 13px;
+            font-size: 0.929rem /* 原值: 13px */;
             justify-self: end;
             white-space: nowrap;
 
             .time-label {
               color: #909399;
-              font-size: 12px;
+              font-size: 0.857rem /* 原值: 12px */;
               font-weight: 500;
             }
 
@@ -1626,7 +1626,7 @@ onMounted(() => {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
           gap: 10px 20px;
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           color: #606266;
           margin-bottom: 8px;
 
@@ -1637,7 +1637,7 @@ onMounted(() => {
             min-width: 0;
 
             .info-label {
-              font-size: 12px;
+              font-size: 0.857rem /* 原值: 12px */;
               color: #909399;
               font-weight: 500;
               flex-shrink: 0;
@@ -1682,7 +1682,7 @@ onMounted(() => {
           box-shadow: 0 1px 4px rgba(252, 211, 77, 0.2);
 
           .remark-icon {
-            font-size: 16px;
+            font-size: 1.143rem /* 原值: 16px */;
             flex-shrink: 0;
             animation: noteBounce 2s ease-in-out infinite;
           }
@@ -1692,7 +1692,7 @@ onMounted(() => {
             display: flex;
             align-items: center;
             gap: 6px;
-            font-size: 13px;
+            font-size: 0.929rem /* 原值: 13px */;
 
             .remark-label {
               font-weight: 600;
@@ -1726,13 +1726,13 @@ onMounted(() => {
             border-bottom: 1px dashed #e2e8f0;
 
             .dishes-title {
-              font-size: 13px;
+              font-size: 0.929rem /* 原值: 13px */;
               font-weight: 600;
               color: #303133;
             }
 
             .dishes-count {
-              font-size: 12px;
+              font-size: 0.857rem /* 原值: 12px */;
               color: #909399;
               background: #f0f2f5;
               padding: 2px 8px;
@@ -1769,7 +1769,7 @@ onMounted(() => {
                 min-width: 0;
 
                 .dish-name {
-                  font-size: 14px;
+                  font-size: 1rem /* 原值: 14px */;
                   font-weight: 500;
                   color: #303133;
                   overflow: hidden;
@@ -1778,7 +1778,7 @@ onMounted(() => {
                 }
 
                 .dish-quantity {
-                  font-size: 13px;
+                  font-size: 0.929rem /* 原值: 13px */;
                   color: #2196f3;
                   font-weight: 600;
                   flex-shrink: 0;
@@ -1792,7 +1792,7 @@ onMounted(() => {
                 }
 
                 .dish-customization {
-                  font-size: 12px;
+                  font-size: 0.857rem /* 原值: 12px */;
                   color: #e6a23c;
                   font-weight: 500;
                   font-style: italic;
@@ -1800,7 +1800,7 @@ onMounted(() => {
               }
 
               .dish-price {
-                font-size: 14px;
+                font-size: 1rem /* 原值: 14px */;
                 font-weight: 600;
                 color: #f56c6c;
                 font-family: 'Consolas', 'Monaco', monospace;
@@ -1851,7 +1851,7 @@ onMounted(() => {
           gap: 4px;
           height: 32px;
           padding: 6px 14px;
-          font-size: 13px;
+          font-size: 0.929rem /* 原值: 13px */;
           font-weight: 500;
           white-space: nowrap;
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1859,7 +1859,7 @@ onMounted(() => {
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 
           .el-icon {
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
           }
 
           &:hover {
@@ -1934,7 +1934,7 @@ onMounted(() => {
             padding: 8px 16px;
 
             .el-icon {
-              font-size: 16px;
+              font-size: 1.143rem /* 原值: 16px */;
             }
 
             &:hover {
@@ -2106,7 +2106,7 @@ onMounted(() => {
         padding: 16px;
 
         .stat-value {
-          font-size: 20px !important;
+          font-size: 1.429rem /* 原值: 20px */ !important;
         }
 
         .stat-icon {
@@ -2131,7 +2131,7 @@ onMounted(() => {
 
         .filter-header {
           .filter-label {
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
           }
         }
 
@@ -2140,14 +2140,14 @@ onMounted(() => {
 
           .custom-status-tag {
             padding: 3px 8px;
-            font-size: 11px;
+            font-size: 0.75rem /* 原值: 11px */;
 
             .tag-icon {
-              font-size: 11px;
+              font-size: 0.75rem /* 原值: 11px */;
             }
 
             .tag-text {
-              font-size: 11px;
+              font-size: 0.75rem /* 原值: 11px */;
             }
 
             .close-icon {
@@ -2206,11 +2206,11 @@ onMounted(() => {
               gap: 8px;
 
               .order-no {
-                font-size: 14px;
+                font-size: 1rem /* 原值: 14px */;
               }
 
               .order-amount {
-                font-size: 15px;
+                font-size: 1.071rem /* 原值: 15px */;
               }
 
               .order-time {
@@ -2223,7 +2223,7 @@ onMounted(() => {
               gap: 8px;
 
               > div {
-                font-size: 13px;
+                font-size: 0.929rem /* 原值: 13px */;
               }
             }
 
@@ -2232,7 +2232,7 @@ onMounted(() => {
               gap: 8px;
 
               .items-label {
-                font-size: 12px;
+                font-size: 0.857rem /* 原值: 12px */;
               }
             }
 
@@ -2241,14 +2241,14 @@ onMounted(() => {
               padding: 8px 12px;
 
               .remark-icon {
-                font-size: 14px;
+                font-size: 1rem /* 原值: 14px */;
               }
 
               .remark-content {
-                font-size: 12px;
+                font-size: 0.857rem /* 原值: 12px */;
 
                 .remark-label {
-                  font-size: 12px;
+                  font-size: 0.857rem /* 原值: 12px */;
                 }
               }
             }
@@ -2273,10 +2273,10 @@ onMounted(() => {
               width: 100%;
               justify-content: center;
               padding: 8px 12px;
-              font-size: 13px;
+              font-size: 0.929rem /* 原值: 13px */;
 
               .el-icon {
-                font-size: 16px;
+                font-size: 1.143rem /* 原值: 16px */;
               }
             }
 

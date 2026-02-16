@@ -200,7 +200,7 @@ const handleCreateGroupOrder = () => {
       }
 
       span {
-        font-size: 18px;
+        font-size: 1.286rem /* 原值: 18px */;
       }
 
       &:hover {
@@ -222,7 +222,7 @@ const handleCreateGroupOrder = () => {
         gap: 6px;
 
         .name {
-          font-size: 15px;
+          font-size: 1.071rem /* 原值: 15px */;
           font-weight: 600;
           color: #1a1a1a;
           letter-spacing: 0.2px;
@@ -233,7 +233,7 @@ const handleCreateGroupOrder = () => {
         }
 
         .member-count {
-          font-size: 12px;
+          font-size: 0.857rem /* 原值: 12px */;
           color: #8b949e;
           font-weight: 500;
           flex-shrink: 0;
@@ -255,7 +255,7 @@ const handleCreateGroupOrder = () => {
     }
 
     .pinned-tag {
-      font-size: 12px;
+      font-size: 0.857rem /* 原值: 12px */;
       padding: 2px 8px;
       height: 22px;
       line-height: 18px;

@@ -148,13 +148,13 @@ const goToMerchantLogin = () => {
       margin-bottom: 40px;
 
       h1 {
-        font-size: 28px;
+        font-size: 2rem /* 原值: 28px */;
         color: #303133;
         margin: 16px 0 10px 0;
       }
 
       p {
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         color: #909399;
         margin: 0;
       }
@@ -168,7 +168,7 @@ const goToMerchantLogin = () => {
       text-align: center;
 
       p {
-        font-size: 12px;
+        font-size: 0.857rem /* 原值: 12px */;
         color: #909399;
         margin-bottom: 10px;
       }

@@ -112,13 +112,13 @@ const formatOptionalIngredients = (ingredients) => {
         margin-bottom: 10px;
 
         .item-name {
-          font-size: 15px;
+          font-size: 1.071rem /* 原值: 15px */;
           font-weight: 600;
           color: #2c3e50;
         }
 
         .item-price {
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           color: #7f8c8d;
         }
       }
@@ -130,7 +130,7 @@ const formatOptionalIngredients = (ingredients) => {
         margin-bottom: 8px;
 
         .ingredient-tag {
-          font-size: 12px;
+          font-size: 0.857rem /* 原值: 12px */;
         }
       }
 
@@ -141,7 +141,7 @@ const formatOptionalIngredients = (ingredients) => {
         padding: 8px 12px;
         background: #fff9e6;
         border-radius: 4px;
-        font-size: 13px;
+        font-size: 0.929rem /* 原值: 13px */;
         color: #856404;
       }
     }
@@ -154,12 +154,12 @@ const formatOptionalIngredients = (ingredients) => {
       border-top: 1px dashed #e4e7ed;
 
       .item-quantity {
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         color: #7f8c8d;
       }
 
       .item-total {
-        font-size: 18px;
+        font-size: 1.286rem /* 原值: 18px */;
         font-weight: 700;
         color: #e6a23c;
       }
@@ -177,7 +177,7 @@ const formatOptionalIngredients = (ingredients) => {
         display: flex;
         align-items: center;
         gap: 6px;
-        font-size: 13px;
+        font-size: 0.929rem /* 原值: 13px */;
         color: #67c23a;
         font-weight: 500;
       }

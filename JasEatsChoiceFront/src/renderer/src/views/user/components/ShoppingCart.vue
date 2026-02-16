@@ -215,7 +215,7 @@ const handleSubmitOrder = () => {
     }
 
     .empty-cart-text {
-      font-size: 16px;
+      font-size: 1.143rem /* 原值: 16px */;
       color: #64748b;
       font-weight: 500;
     }
@@ -248,7 +248,7 @@ const handleSubmitOrder = () => {
         margin-right: 16px;
 
         .cart-item-name {
-          font-size: 16px;
+          font-size: 1.143rem /* 原值: 16px */;
           font-weight: 600;
           color: #1a1a1a;
           margin-bottom: 8px;
@@ -256,7 +256,7 @@ const handleSubmitOrder = () => {
         }
 
         .cart-item-price {
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           color: #1890ff;
           font-weight: 500;
           margin-bottom: 12px;
@@ -280,7 +280,7 @@ const handleSubmitOrder = () => {
               min-width: 0;
 
               .note-text {
-                font-size: 13px;
+                font-size: 0.929rem /* 原值: 13px */;
                 color: #333333;
                 word-wrap: break-word;
                 word-break: break-all;
@@ -288,7 +288,7 @@ const handleSubmitOrder = () => {
               }
 
               .note-empty {
-                font-size: 13px;
+                font-size: 0.929rem /* 原值: 13px */;
                 color: #999999;
               }
             }
@@ -300,7 +300,7 @@ const handleSubmitOrder = () => {
               transition: all 0.3s ease;
 
               .edit-icon {
-                font-size: 16px;
+                font-size: 1.143rem /* 原值: 16px */;
               }
 
               &:hover {
@@ -315,7 +315,7 @@ const handleSubmitOrder = () => {
               margin-bottom: 8px;
 
               :deep(.el-textarea__inner) {
-                font-size: 13px;
+                font-size: 0.929rem /* 原值: 13px */;
                 padding: 8px;
                 border-radius: 6px;
               }
@@ -365,7 +365,7 @@ const handleSubmitOrder = () => {
 
           .ingredient-tag {
             display: inline-block;
-            font-size: 12px;
+            font-size: 0.857rem /* 原值: 12px */;
             color: #1890ff;
             background: #e6f7ff;
             border: 1px solid #91d5ff;
@@ -428,14 +428,14 @@ const handleSubmitOrder = () => {
           .quantity-number {
             min-width: 24px;
             text-align: center;
-            font-size: 16px;
+            font-size: 1.143rem /* 原值: 16px */;
             font-weight: 600;
             color: #1a1a1a;
           }
         }
 
         .cart-item-total {
-          font-size: 16px;
+          font-size: 1.143rem /* 原值: 16px */;
           font-weight: 700;
           color: #1890ff;
           text-align: center;
@@ -455,14 +455,14 @@ const handleSubmitOrder = () => {
       border: 1px solid #adc6ff;
 
       .total-label {
-        font-size: 16px;
+        font-size: 1.143rem /* 原值: 16px */;
         font-weight: 600;
         color: #333333;
         margin-right: 12px;
       }
 
       .total-amount {
-        font-size: 20px;
+        font-size: 1.429rem /* 原值: 20px */;
         font-weight: 700;
         color: #1890ff;
       }

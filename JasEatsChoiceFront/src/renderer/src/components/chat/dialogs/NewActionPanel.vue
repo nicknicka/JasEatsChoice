@@ -693,7 +693,7 @@ const handleClose = () => {
 
     .el-dialog__close {
       color: #fff;
-      font-size: 20px;
+      font-size: 1.429rem /* 原值: 20px */;
 
       &:hover {
         color: #f0f0f0;
@@ -791,7 +791,7 @@ const handleClose = () => {
     }
 
     .tab-icon {
-      font-size: 32px;
+      font-size: 2.286rem /* 原值: 32px */;
       margin-bottom: 6px;
       transition: transform 0.3s ease;
       position: relative;
@@ -799,7 +799,7 @@ const handleClose = () => {
     }
 
     .tab-label {
-      font-size: 12px;
+      font-size: 0.857rem /* 原值: 12px */;
       font-weight: 500;
       color: #4a5568;
       transition: all 0.3s ease;
@@ -829,7 +829,7 @@ const handleClose = () => {
     }
 
     .el-input__inner {
-      font-size: 15px;
+      font-size: 1.071rem /* 原值: 15px */;
 
       &::placeholder {
         color: #a0aec0;
@@ -901,7 +901,7 @@ const handleClose = () => {
       }
 
       .el-input__inner {
-        font-size: 15px;
+        font-size: 1.071rem /* 原值: 15px */;
 
         &::placeholder {
           color: #a0aec0;
@@ -995,7 +995,7 @@ const handleClose = () => {
       justify-content: space-between;
       align-items: center;
       margin-bottom: 8px;
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
       font-weight: 600;
       color: #2d3748;
       padding: 0 4px;
@@ -1081,14 +1081,14 @@ const handleClose = () => {
             flex: 1;
 
             .user-name {
-              font-size: 13px;
+              font-size: 0.929rem /* 原值: 13px */;
               font-weight: 600;
               color: #2d3748;
               margin-bottom: 5px;
             }
 
             .user-detail {
-              font-size: 11px;
+              font-size: 0.75rem /* 原值: 11px */;
               color: #718096;
             }
           }
@@ -1154,7 +1154,7 @@ const handleClose = () => {
         .user-avatar {
           width: 48px;
           height: 48px;
-          font-size: 24px;
+          font-size: 1.714rem /* 原值: 24px */;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -1175,14 +1175,14 @@ const handleClose = () => {
           flex: 1;
 
           .user-name {
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
             font-weight: 600;
             color: #2d3748;
             margin-bottom: 6px;
           }
 
           .user-detail {
-            font-size: 12px;
+            font-size: 0.857rem /* 原值: 12px */;
             color: #718096;
           }
         }
@@ -1219,7 +1219,7 @@ const handleClose = () => {
       padding: 0 4px;
 
       .section-title {
-        font-size: 13px;
+        font-size: 0.929rem /* 原值: 13px */;
         font-weight: 600;
         color: #2d3748;
       }
@@ -1301,7 +1301,7 @@ const handleClose = () => {
       border: 2px dashed #cbd5e0;
 
       .member-tag {
-        font-size: 12px;
+        font-size: 0.857rem /* 原值: 12px */;
         padding: 6px 12px;
         background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
         border: none;
@@ -1328,7 +1328,7 @@ const handleClose = () => {
         }
 
         .member-tag-emoji {
-          font-size: 16px;
+          font-size: 1.143rem /* 原值: 16px */;
         }
       }
     }
@@ -1375,7 +1375,7 @@ const handleClose = () => {
           .friend-avatar {
             width: 38px;
             height: 38px;
-            font-size: 20px;
+            font-size: 1.429rem /* 原值: 20px */;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1396,7 +1396,7 @@ const handleClose = () => {
             flex: 1;
 
             .friend-name {
-              font-size: 13px;
+              font-size: 0.929rem /* 原值: 13px */;
               font-weight: 600;
               color: #2d3748;
             }
@@ -1460,7 +1460,7 @@ const handleClose = () => {
         }
 
         .el-input__inner {
-          font-size: 15px;
+          font-size: 1.071rem /* 原值: 15px */;
         }
 
         .el-input-group__append {
@@ -1681,13 +1681,13 @@ const handleClose = () => {
       padding: 10px 16px;
 
       .tab-icon {
-        font-size: 24px;
+        font-size: 1.714rem /* 原值: 24px */;
         margin-bottom: 0;
         margin-right: 8px;
       }
 
       .tab-label {
-        font-size: 13px;
+        font-size: 0.929rem /* 原值: 13px */;
       }
     }
   }

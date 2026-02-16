@@ -833,7 +833,7 @@ onMounted(() => {
       }
 
       .active-discounts {
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         color: #909399;
         margin-top: 6px;
         font-weight: 500;
@@ -912,7 +912,7 @@ onMounted(() => {
     box-sizing: border-box;
 
     :deep(.el-table) {
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
       table-layout: auto;
       border-radius: 8px;
       overflow: hidden;
@@ -935,7 +935,7 @@ onMounted(() => {
           background: linear-gradient(135deg, #e8f4ff 0%, #d4e7ff 100%);
           color: #303133;
           font-weight: 700;
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           padding: 14px 12px;
           white-space: nowrap;
           border-bottom: 2px solid #b3d8ff;
@@ -993,7 +993,7 @@ onMounted(() => {
       align-items: center;
       justify-content: center;
       gap: 4px;
-      font-size: 12px;
+      font-size: 0.857rem /* 原值: 12px */;
       color: #606266;
       font-weight: 500;
       padding: 4px 6px;
@@ -1001,7 +1001,7 @@ onMounted(() => {
       border-radius: 6px;
 
       .el-icon {
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         color: #409eff;
       }
     }
@@ -1011,7 +1011,7 @@ onMounted(() => {
     display: flex;
     align-items: center;
     gap: 4px;
-    font-size: 13px;
+    font-size: 0.929rem /* 原值: 13px */;
     font-weight: 500;
     padding: 4px 6px;
     background: linear-gradient(135deg, #fff5f5 0%, #ffffff 100%);
@@ -1027,13 +1027,13 @@ onMounted(() => {
       color: #909399;
       margin: 0 2px;
       font-weight: 400;
-      font-size: 12px;
+      font-size: 0.857rem /* 原值: 12px */;
     }
 
     .rule-value {
       color: #f56c6c;
       font-weight: 700;
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
       text-shadow: 0 1px 2px rgba(245, 108, 108, 0.2);
     }
 
@@ -1051,13 +1051,13 @@ onMounted(() => {
     .empty-tips {
       margin-top: 12px;
       color: #909399;
-      font-size: 15px;
+      font-size: 1.071rem /* 原值: 15px */;
       font-weight: 500;
     }
 
     :deep(.el-result) {
       .el-result__title {
-        font-size: 18px;
+        font-size: 1.286rem /* 原值: 18px */;
         font-weight: 600;
         color: #606266;
       }
@@ -1087,7 +1087,7 @@ onMounted(() => {
   }
 
   :deep(.time-column) {
-    font-size: 13px;
+    font-size: 0.929rem /* 原值: 13px */;
     color: #909399;
     font-weight: 500;
 
@@ -1120,7 +1120,7 @@ onMounted(() => {
         font-weight: 600;
         border-radius: 6px;
         padding: 0 10px;
-        font-size: 13px;
+        font-size: 0.929rem /* 原值: 13px */;
         transition: all 0.3s ease;
 
         &:hover {
@@ -1144,7 +1144,7 @@ onMounted(() => {
         .el-form-item__label {
           font-weight: 600;
           color: #606266;
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
         }
 
         .el-input__inner,
@@ -1152,7 +1152,7 @@ onMounted(() => {
           border-radius: 8px;
           border: 2px solid #dcdfe6;
           transition: all 0.3s ease;
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
 
           &:focus {
             border-color: #409eff;
@@ -1195,7 +1195,7 @@ onMounted(() => {
     .unit-text {
       margin-left: 12px;
       color: #909399;
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
       font-weight: 500;
     }
 
@@ -1204,7 +1204,7 @@ onMounted(() => {
       flex-shrink: 0;
 
       .preview-label {
-        font-size: 16px;
+        font-size: 1.143rem /* 原值: 16px */;
         font-weight: 700;
         color: #303133;
         margin-bottom: 16px;
@@ -1292,14 +1292,14 @@ onMounted(() => {
             background: rgba(255, 255, 255, 0.3);
             padding: 6px 14px;
             border-radius: 16px;
-            font-size: 12px;
+            font-size: 0.857rem /* 原值: 12px */;
             font-weight: 600;
             backdrop-filter: blur(10px);
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
           }
 
           .preview-name {
-            font-size: 16px;
+            font-size: 1.143rem /* 原值: 16px */;
             font-weight: 600;
             flex: 1;
             text-align: right;
@@ -1308,7 +1308,7 @@ onMounted(() => {
         }
 
         .preview-value {
-          font-size: 36px;
+          font-size: 2.571rem /* 原值: 36px */;
           font-weight: 800;
           margin-bottom: 16px;
           text-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
@@ -1318,7 +1318,7 @@ onMounted(() => {
         }
 
         .preview-desc {
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           opacity: 0.95;
           margin-bottom: 16px;
           line-height: 1.6;
@@ -1330,7 +1330,7 @@ onMounted(() => {
           display: flex;
           align-items: center;
           gap: 8px;
-          font-size: 12px;
+          font-size: 0.857rem /* 原值: 12px */;
           opacity: 0.9;
           padding-top: 16px;
           border-top: 1px solid rgba(255, 255, 255, 0.25);
@@ -1338,7 +1338,7 @@ onMounted(() => {
           z-index: 1;
 
           .el-icon {
-            font-size: 15px;
+            font-size: 1.071rem /* 原值: 15px */;
           }
         }
       }
@@ -1356,7 +1356,7 @@ onMounted(() => {
       background: linear-gradient(135deg, #f0f7ff 0%, #ffffff 100%);
 
       .el-dialog__title {
-        font-size: 20px;
+        font-size: 1.429rem /* 原值: 20px */;
         font-weight: 700;
         color: #409eff;
       }
@@ -1374,7 +1374,7 @@ onMounted(() => {
         }
 
         .el-dialog__close {
-          font-size: 18px;
+          font-size: 1.286rem /* 原值: 18px */;
           color: #909399;
         }
       }
@@ -1398,7 +1398,7 @@ onMounted(() => {
           border-radius: 8px;
           padding: 12px 28px;
           font-weight: 600;
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           transition: all 0.3s ease;
           border: 2px solid transparent;
 

@@ -120,7 +120,7 @@ const handleClose = () => {
   }
 
   .friend-avatar {
-    font-size: 28px;
+    font-size: 2rem /* 原值: 28px */;
     margin-right: 12px;
   }
 
@@ -129,7 +129,7 @@ const handleClose = () => {
 
     .friend-name {
       font-weight: 500;
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
     }
   }
 }

@@ -841,7 +841,7 @@ onMounted(() => {
 
 		h3 {
 			margin: 0;
-			font-size: 20px;
+			font-size: 1.429rem /* 原值: 20px */;
 			color: #303133;
 		}
 	}
@@ -874,20 +874,20 @@ onMounted(() => {
 			}
 
 			.stat-value {
-				font-size: 32px;
+				font-size: 2.286rem /* 原值: 32px */;
 				font-weight: bold;
 				margin-bottom: 8px;
 			}
 
 			.stat-label {
-				font-size: 14px;
+				font-size: 1rem /* 原值: 14px */;
 				opacity: 0.9;
 			}
 		}
 	}
 
 	.type-icon {
-		font-size: 18px;
+		font-size: 1.286rem /* 原值: 18px */;
 
 		&.video {
 			color: #ff6b6b;
@@ -924,7 +924,7 @@ onMounted(() => {
 		}
 
 		:deep(.el-tabs__item) {
-			font-size: 14px;
+			font-size: 1rem /* 原值: 14px */;
 			padding: 0 20px;
 			transition: all 0.3s;
 
@@ -952,7 +952,7 @@ onMounted(() => {
 
 			.tab-badge {
 				:deep(.el-badge__content) {
-					font-size: 11px;
+					font-size: 0.75rem /* 原值: 11px */;
 					height: 16px;
 					line-height: 16px;
 					padding: 0 5px;
@@ -999,7 +999,7 @@ onMounted(() => {
 				padding: 5px 8px;
 
 				.el-icon {
-					font-size: 14px;
+					font-size: 1rem /* 原值: 14px */;
 				}
 			}
 		}

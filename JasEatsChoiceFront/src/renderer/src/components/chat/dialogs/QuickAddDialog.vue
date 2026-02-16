@@ -164,7 +164,7 @@ const handleConfirm = () => {
     display: flex;
     align-items: center;
     gap: 12px;
-    font-size: 18px;
+    font-size: 1.286rem /* 原值: 18px */;
     font-weight: 600;
     color: #303133;
   }
@@ -199,7 +199,7 @@ const handleConfirm = () => {
       justify-content: space-between;
 
       .product-name {
-        font-size: 18px;
+        font-size: 1.286rem /* 原值: 18px */;
         font-weight: 600;
         color: #303133;
         margin: 0 0 8px 0;
@@ -207,7 +207,7 @@ const handleConfirm = () => {
       }
 
       .product-description {
-        font-size: 13px;
+        font-size: 0.929rem /* 原值: 13px */;
         color: #909399;
         margin: 0 0 8px 0;
         line-height: 1.5;
@@ -219,17 +219,17 @@ const handleConfirm = () => {
 
       .product-price {
         margin: 0;
-        font-size: 24px;
+        font-size: 1.714rem /* 原值: 24px */;
         font-weight: 700;
         color: #f56c6c;
 
         .price-symbol {
-          font-size: 16px;
+          font-size: 1.143rem /* 原值: 16px */;
           margin-right: 2px;
         }
 
         .price-value {
-          font-size: 24px;
+          font-size: 1.714rem /* 原值: 24px */;
         }
       }
     }
@@ -242,7 +242,7 @@ const handleConfirm = () => {
       display: flex;
       align-items: center;
       gap: 8px;
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
       font-weight: 600;
       color: #606266;
       margin-bottom: 10px;
@@ -266,28 +266,28 @@ const handleConfirm = () => {
       margin-bottom: 8px;
 
       .total-label {
-        font-size: 16px;
+        font-size: 1.143rem /* 原值: 16px */;
         font-weight: 600;
         color: #606266;
       }
 
       .total-price {
-        font-size: 24px;
+        font-size: 1.714rem /* 原值: 24px */;
         font-weight: 700;
         color: #f56c6c;
 
         .price-symbol {
-          font-size: 18px;
+          font-size: 1.286rem /* 原值: 18px */;
         }
 
         .price-value {
-          font-size: 24px;
+          font-size: 1.714rem /* 原值: 24px */;
         }
       }
     }
 
     .total-detail {
-      font-size: 13px;
+      font-size: 0.929rem /* 原值: 13px */;
       color: #909399;
       text-align: right;
     }

@@ -405,7 +405,7 @@ onMounted(() => {
 }
 
 .page-title {
-  font-size: 28px;
+  font-size: 2rem /* 原值: 28px */;
   margin: 0 0 25px 0;
   color: #333;
   font-weight: 700;
@@ -447,7 +447,7 @@ onMounted(() => {
 
 .forgot-text {
   color: #606266;
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
 }
 
 .verification-code-wrapper {

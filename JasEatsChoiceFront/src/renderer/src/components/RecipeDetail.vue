@@ -467,7 +467,7 @@ const updateCustomNutrition = (field, value) => {
                 style="width: 120px;"
               >
                 <template #suffix>
-                  <span style="font-size: 12px; color: #909399;">{{ nutrient.unit }}</span>
+                  <span style="font-size: 0.857rem /* 原值: 12px */; color: #909399;">{{ nutrient.unit }}</span>
                 </template>
               </el-input-number>
             </div>
@@ -575,7 +575,7 @@ const updateCustomNutrition = (field, value) => {
 }
 
 .recipe-main-title {
-  font-size: 24px;
+  font-size: 1.714rem /* 原值: 24px */;
   font-weight: 700;
   color: #2c3e50;
   margin-bottom: 16px;
@@ -598,11 +598,11 @@ const updateCustomNutrition = (field, value) => {
 .info-label {
   font-weight: 600;
   color: #667eea;
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
 }
 
 .info-value {
-  font-size: 16px;
+  font-size: 1.143rem /* 原值: 16px */;
   font-weight: 500;
   color: #4a5568;
 }
@@ -616,7 +616,7 @@ const updateCustomNutrition = (field, value) => {
 }
 
 .time-text {
-  font-size: 16px;
+  font-size: 1.143rem /* 原值: 16px */;
   font-weight: 600;
   color: #f57c00;
 }
@@ -629,7 +629,7 @@ const updateCustomNutrition = (field, value) => {
 }
 
 .section-title {
-  font-size: 18px;
+  font-size: 1.286rem /* 原值: 18px */;
   font-weight: 700;
   color: #2c3e50;
   margin-bottom: 12px;
@@ -677,19 +677,19 @@ const updateCustomNutrition = (field, value) => {
 }
 
 .nutrition-icon {
-  font-size: 48px;
+  font-size: 3.429rem /* 原值: 48px */;
   margin-bottom: 12px;
 }
 
 .nutrition-label {
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   font-weight: 600;
   color: #718096;
   margin-bottom: 8px;
 }
 
 .nutrition-value {
-  font-size: 20px;
+  font-size: 1.429rem /* 原值: 20px */;
   font-weight: 700;
   color: #667eea;
   min-height: 28px;
@@ -773,7 +773,7 @@ const updateCustomNutrition = (field, value) => {
 }
 
 .dish-name-text {
-  font-size: 18px;
+  font-size: 1.286rem /* 原值: 18px */;
   font-weight: 700;
   color: #2d3748;
   margin: 0;
@@ -790,7 +790,7 @@ const updateCustomNutrition = (field, value) => {
   border: 1px solid #667eea40;
   color: #667eea;
   font-weight: 500;
-  font-size: 13px;
+  font-size: 0.929rem /* 原值: 13px */;
   border-radius: 20px;
   padding: 6px 14px;
   transition: all 0.3s ease;
@@ -849,7 +849,7 @@ const updateCustomNutrition = (field, value) => {
 }
 
 .details-text {
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   line-height: 1.6;
   color: #4a5568;
   white-space: pre-wrap;
@@ -873,7 +873,7 @@ const updateCustomNutrition = (field, value) => {
   border-radius: 24px;
   padding: 12px 36px;
   font-weight: 600;
-  font-size: 16px;
+  font-size: 1.143rem /* 原值: 16px */;
   box-shadow: 0 4px 15px rgba(102, 126, 234, 0.1);
   transition: all 0.3s ease;
 }

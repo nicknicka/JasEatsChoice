@@ -305,7 +305,7 @@ const handleUpload = (file) => {
     margin-bottom: 20px;
 
     .page-title {
-      font-size: 18px;
+      font-size: 1.286rem /* 原值: 18px */;
       font-weight: 600;
       margin: 0;
     }
@@ -322,7 +322,7 @@ const handleUpload = (file) => {
     }
 
     .section-title {
-      font-size: 16px;
+      font-size: 1.143rem /* 原值: 16px */;
       font-weight: 600;
       margin-bottom: 16px;
     }
@@ -351,7 +351,7 @@ const handleUpload = (file) => {
   }
 }
 .calorie-display {
-  font-size: 16px;
+  font-size: 1.143rem /* 原值: 16px */;
   font-weight: 600;
   color: #f56c6c;
 }

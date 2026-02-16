@@ -145,7 +145,7 @@ defineEmits(['select', 'contextmenu', 'toggle-pin', 'create-new'])
         position: absolute;
         top: 6px;
         right: 6px;
-        font-size: 12px;
+        font-size: 0.857rem /* 原值: 12px */;
         cursor: pointer;
         opacity: 0;
         transition: all 0.2s;
@@ -182,7 +182,7 @@ defineEmits(['select', 'contextmenu', 'toggle-pin', 'create-new'])
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 20px;
+          font-size: 1.429rem /* 原值: 20px */;
           text-align: center;
           box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
         }
@@ -229,7 +229,7 @@ defineEmits(['select', 'contextmenu', 'toggle-pin', 'create-new'])
           justify-content: space-between;
           align-items: center;
           margin-bottom: 4px;
-          font-size: 13px;
+          font-size: 0.929rem /* 原值: 13px */;
 
           .name {
             font-weight: 600;
@@ -256,7 +256,7 @@ defineEmits(['select', 'contextmenu', 'toggle-pin', 'create-new'])
         }
 
         .last-message {
-          font-size: 11px;
+          font-size: 0.75rem /* 原值: 11px */;
           color: #606266;
           white-space: nowrap;
           overflow: hidden;
@@ -312,7 +312,7 @@ defineEmits(['select', 'contextmenu', 'toggle-pin', 'create-new'])
     }
 
     .empty-title {
-      font-size: 18px;
+      font-size: 1.286rem /* 原值: 18px */;
       font-weight: 500;
       color: #1a1a1a;
       margin: 0 0 8px 0;
@@ -323,7 +323,7 @@ defineEmits(['select', 'contextmenu', 'toggle-pin', 'create-new'])
     }
 
     .empty-tip {
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
       color: #666;
       margin: 0;
       line-height: 1.6;

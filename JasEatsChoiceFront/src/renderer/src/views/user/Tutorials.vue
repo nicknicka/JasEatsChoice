@@ -516,14 +516,14 @@ onMounted(() => {
       .title-section {
         h2 {
           margin: 0 0 4px 0;
-          font-size: 28px;
+          font-size: 2rem /* 原值: 28px */;
           font-weight: bold;
           color: white;
         }
 
         .subtitle {
           margin: 0;
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           opacity: 0.9;
           color: rgba(255, 255, 255, 0.85);
         }
@@ -543,7 +543,7 @@ onMounted(() => {
         backdrop-filter: blur(10px);
         transition: all 0.3s;
         padding: 8px 20px;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
 
         &:hover {
           background: rgba(255, 255, 255, 0.25);
@@ -672,7 +672,7 @@ onMounted(() => {
 
       .stat-info {
         .stat-value {
-          font-size: 28px;
+          font-size: 2rem /* 原值: 28px */;
           font-weight: bold;
           color: #303133;
           margin-bottom: 4px;
@@ -680,7 +680,7 @@ onMounted(() => {
         }
 
         .stat-label {
-          font-size: 13px;
+          font-size: 0.929rem /* 原值: 13px */;
           color: #909399;
         }
       }
@@ -739,7 +739,7 @@ onMounted(() => {
           gap: 8px;
 
           .difficulty-icon {
-            font-size: 16px;
+            font-size: 1.143rem /* 原值: 16px */;
           }
         }
       }
@@ -770,7 +770,7 @@ onMounted(() => {
       align-items: center;
       gap: 8px;
       flex-wrap: wrap;
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
       color: #333;
 
       .filter-tag {
@@ -836,7 +836,7 @@ onMounted(() => {
           gap: 6px;
           padding: 8px 16px;
           border-radius: 20px;
-          font-size: 13px;
+          font-size: 0.929rem /* 原值: 13px */;
           font-weight: 600;
 
           &.video {
@@ -857,12 +857,12 @@ onMounted(() => {
           padding: 6px 12px;
           background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
           border-radius: 20px;
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           font-weight: 600;
           color: #ff6b6b;
 
           .star {
-            font-size: 16px;
+            font-size: 1.143rem /* 原值: 16px */;
           }
         }
       }
@@ -891,7 +891,7 @@ onMounted(() => {
         }
 
         .tutorial-title {
-          font-size: 18px;
+          font-size: 1.286rem /* 原值: 18px */;
           font-weight: 700;
           color: #303133;
           margin: 0 0 16px 0;
@@ -909,7 +909,7 @@ onMounted(() => {
           .meta-left {
             display: flex;
             gap: 16px;
-            font-size: 13px;
+            font-size: 0.929rem /* 原值: 13px */;
             color: #909399;
 
             .duration,
@@ -1036,7 +1036,7 @@ onMounted(() => {
           }
 
           .subtitle {
-            font-size: 13px;
+            font-size: 0.929rem /* 原值: 13px */;
           }
         }
       }
@@ -1070,11 +1070,11 @@ onMounted(() => {
 
         .stat-info {
           .stat-value {
-            font-size: 24px;
+            font-size: 1.714rem /* 原值: 24px */;
           }
 
           .stat-label {
-            font-size: 12px;
+            font-size: 0.857rem /* 原值: 12px */;
           }
         }
       }

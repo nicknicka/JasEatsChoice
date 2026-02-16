@@ -448,7 +448,7 @@ onMounted(() => {
 
     h3 {
       margin: 0;
-      font-size: 20px;
+      font-size: 1.429rem /* 原值: 20px */;
       color: #303133;
     }
   }
@@ -486,20 +486,20 @@ onMounted(() => {
       }
 
       .stat-value {
-        font-size: 36px;
+        font-size: 2.571rem /* 原值: 36px */;
         font-weight: bold;
         margin-bottom: 8px;
       }
 
       .stat-label {
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         opacity: 0.9;
       }
     }
   }
 
   .type-icon {
-    font-size: 18px;
+    font-size: 1.286rem /* 原值: 18px */;
 
     &.video {
       color: #ff6b6b;

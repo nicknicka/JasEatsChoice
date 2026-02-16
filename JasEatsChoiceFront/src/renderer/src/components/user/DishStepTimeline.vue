@@ -364,7 +364,7 @@ defineExpose({
 
 .timeline-header h3 {
   margin: 0;
-  font-size: 18px;
+  font-size: 1.286rem /* 原值: 18px */;
   font-weight: 600;
   color: #303133;
 }
@@ -406,13 +406,13 @@ defineExpose({
 }
 
 .dish-name {
-  font-size: 18px;
+  font-size: 1.286rem /* 原值: 18px */;
   font-weight: 600;
   color: #303133;
 }
 
 .dish-status-text {
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   font-weight: 500;
 }
 
@@ -431,13 +431,13 @@ defineExpose({
 }
 
 .step-name {
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   font-weight: 500;
   color: #303133;
 }
 
 .step-time-remaining {
-  font-size: 12px;
+  font-size: 0.857rem /* 原值: 12px */;
   color: #909399;
 }
 
@@ -445,7 +445,7 @@ defineExpose({
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
+  font-size: 0.857rem /* 原值: 12px */;
   color: #67C23A;
   font-weight: 500;
 }
@@ -460,7 +460,7 @@ defineExpose({
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   color: #606266;
 }
 
@@ -477,7 +477,7 @@ defineExpose({
 }
 
 .record-time {
-  font-size: 12px;
+  font-size: 0.857rem /* 原值: 12px */;
   color: #909399;
   margin-bottom: 8px;
 }
@@ -490,13 +490,13 @@ defineExpose({
 }
 
 .record-operator {
-  font-size: 12px;
+  font-size: 0.857rem /* 原值: 12px */;
   color: #606266;
 }
 
 .record-reason {
   margin-top: 8px;
-  font-size: 12px;
+  font-size: 0.857rem /* 原值: 12px */;
   color: #F56C6C;
 }
 

@@ -222,7 +222,7 @@ const saveNewRecipe = () => {
 }
 
 .add-recipe-dialog .el-dialog__title {
-  font-size: 20px;
+  font-size: 1.429rem /* 原值: 20px */;
   font-weight: 600;
   color: #1890ff;
   background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
@@ -250,7 +250,7 @@ const saveNewRecipe = () => {
 .add-recipe-dialog .el-form-item__label {
   font-weight: 500;
   color: #555;
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
 }
 
 .add-recipe-dialog .el-form-item__label::before {
@@ -266,7 +266,7 @@ const saveNewRecipe = () => {
 }
 
 .label-icon {
-  font-size: 18px;
+  font-size: 1.286rem /* 原值: 18px */;
   color: #1890ff;
   display: inline-flex;
   align-items: center;
@@ -300,7 +300,7 @@ const saveNewRecipe = () => {
 
 /* 时间选择器样式 - 只影响对话框内 */
 .add-recipe-dialog .el-time-picker__input {
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
 }
 
 /* 按钮样式 - 只影响对话框内的按钮 */
@@ -313,7 +313,7 @@ const saveNewRecipe = () => {
   padding: 10px 28px;
   border-radius: 8px;
   font-weight: 500;
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   transition: all 0.3s ease;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }

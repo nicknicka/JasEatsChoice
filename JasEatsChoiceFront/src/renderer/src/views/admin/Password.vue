@@ -193,7 +193,7 @@ const handleReset = () => {
     margin-bottom: 20px;
 
     h1 {
-      font-size: 24px;
+      font-size: 1.714rem /* 原值: 24px */;
       color: #303133;
       margin: 0 0 8px 0;
     }
@@ -201,7 +201,7 @@ const handleReset = () => {
     .subtitle {
       color: #909399;
       margin: 0;
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
     }
   }
 

@@ -1166,7 +1166,7 @@ onUnmounted(() => {
 
     h2 {
       margin: 0;
-      font-size: 18px;
+      font-size: 1.286rem /* 原值: 18px */;
       color: #303133;
     }
 
@@ -1221,20 +1221,20 @@ onUnmounted(() => {
           gap: 8px;
 
           .stat-label {
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
             color: #909399;
             font-weight: 500;
           }
 
           .stat-value {
-            font-size: 32px;
+            font-size: 2.286rem /* 原值: 32px */;
             font-weight: 700;
             color: #303133;
             line-height: 1;
           }
 
           .stat-trend {
-            font-size: 12px;
+            font-size: 0.857rem /* 原值: 12px */;
             display: flex;
             align-items: center;
             gap: 2px;
@@ -1265,7 +1265,7 @@ onUnmounted(() => {
       margin-bottom: 16px;
 
       .chart-title {
-        font-size: 16px;
+        font-size: 1.143rem /* 原值: 16px */;
         font-weight: bold;
         color: #303133;
       }
@@ -1314,7 +1314,7 @@ onUnmounted(() => {
       gap: 8px;
 
       .filter-label {
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         color: #606266;
         white-space: nowrap;
       }
@@ -1359,12 +1359,12 @@ onUnmounted(() => {
 
       .user-info {
         .user-nickname {
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           color: #303133;
         }
 
         .user-id {
-          font-size: 12px;
+          font-size: 0.857rem /* 原值: 12px */;
           color: #909399;
         }
       }
@@ -1375,12 +1375,12 @@ onUnmounted(() => {
       font-weight: bold;
 
       &.highlight {
-        font-size: 16px;
+        font-size: 1.143rem /* 原值: 16px */;
       }
 
       &.high-amount {
         color: #ff4d4f;
-        font-size: 15px;
+        font-size: 1.071rem /* 原值: 15px */;
       }
     }
 
@@ -1430,13 +1430,13 @@ onUnmounted(() => {
 
       .user-detail-info {
         .user-nickname {
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           color: #303133;
           font-weight: 500;
         }
 
         .user-id {
-          font-size: 12px;
+          font-size: 0.857rem /* 原值: 12px */;
           color: #909399;
         }
       }
@@ -1448,7 +1448,7 @@ onUnmounted(() => {
       border-top: 1px solid #ebeef5;
 
       .logs-title {
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         font-weight: bold;
         color: #303133;
         margin-bottom: 12px;

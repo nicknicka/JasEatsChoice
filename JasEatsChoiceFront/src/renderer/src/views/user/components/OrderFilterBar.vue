@@ -193,16 +193,16 @@ function handleSortChange(value) {
       }
 
       .sort-icon {
-        font-size: 16px;
+        font-size: 1.143rem /* 原值: 16px */;
         color: #5c8eff;
       }
 
       .sort-label {
-        font-size: 13px;
+        font-size: 0.929rem /* 原值: 13px */;
       }
 
       .el-icon {
-        font-size: 12px;
+        font-size: 0.857rem /* 原值: 12px */;
         transition: transform 0.3s ease;
       }
     }
@@ -232,19 +232,19 @@ function handleSortChange(value) {
       }
 
       .sort-option-icon {
-        font-size: 16px;
+        font-size: 1.143rem /* 原值: 16px */;
         color: #5c8eff;
         transition: transform 0.3s ease;
       }
 
       .sort-option-label {
         flex: 1;
-        font-size: 13px;
+        font-size: 0.929rem /* 原值: 13px */;
       }
 
       .check-icon {
         color: #1971c2;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         font-weight: bold;
       }
     }
@@ -261,7 +261,7 @@ function handleSortChange(value) {
       gap: 6px;
 
       :deep(.el-button) {
-        font-size: 12px;
+        font-size: 0.857rem /* 原值: 12px */;
         padding: 6px 12px;
       }
     }
@@ -271,7 +271,7 @@ function handleSortChange(value) {
         padding: 6px 12px;
 
         .sort-label {
-          font-size: 12px;
+          font-size: 0.857rem /* 原值: 12px */;
         }
       }
     }

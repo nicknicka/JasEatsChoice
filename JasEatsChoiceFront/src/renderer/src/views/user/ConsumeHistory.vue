@@ -405,7 +405,7 @@ onMounted(() => {
 }
 
 h2 {
-  font-size: 28px;
+  font-size: 2rem /* 原值: 28px */;
   margin: 0 0 20px 0;
   color: #333;
   font-weight: 700;
@@ -436,7 +436,7 @@ h2 {
 }
 
 .stat-icon {
-  font-size: 40px;
+  font-size: 2.857rem /* 原值: 40px */;
   width: 60px;
   height: 60px;
   display: flex;
@@ -463,13 +463,13 @@ h2 {
 }
 
 .stat-label {
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   color: #718096;
   margin-bottom: 5px;
 }
 
 .stat-value {
-  font-size: 24px;
+  font-size: 1.714rem /* 原值: 24px */;
   font-weight: 700;
   color: #2d3748;
 }
@@ -538,7 +538,7 @@ h2 {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
+  font-size: 1.714rem /* 原值: 24px */;
   background: white;
   flex-shrink: 0;
 }
@@ -568,13 +568,13 @@ h2 {
 }
 
 .transaction-type {
-  font-size: 15px;
+  font-size: 1.071rem /* 原值: 15px */;
   font-weight: 600;
   color: #2d3748;
 }
 
 .transaction-desc {
-  font-size: 13px;
+  font-size: 0.929rem /* 原值: 13px */;
   color: #718096;
   margin-bottom: 5px;
   overflow: hidden;
@@ -583,12 +583,12 @@ h2 {
 }
 
 .transaction-time {
-  font-size: 12px;
+  font-size: 0.857rem /* 原值: 12px */;
   color: #a0aec0;
 }
 
 .transaction-amount {
-  font-size: 18px;
+  font-size: 1.286rem /* 原值: 18px */;
   font-weight: 600;
   flex-shrink: 0;
 }
@@ -626,19 +626,19 @@ h2 {
 }
 
 .detail-label {
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   color: #718096;
   width: 100px;
   flex-shrink: 0;
 }
 
 .detail-value {
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   color: #2d3748;
 }
 
 .detail-amount {
-  font-size: 18px;
+  font-size: 1.286rem /* 原值: 18px */;
   font-weight: 600;
 }
 

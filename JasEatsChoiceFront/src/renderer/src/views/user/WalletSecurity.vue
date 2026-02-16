@@ -390,7 +390,7 @@ onMounted(async () => {
 }
 
 .page-title {
-  font-size: 28px;
+  font-size: 2rem /* 原值: 28px */;
   margin: 0 0 25px 0;
   color: #333;
   font-weight: 700;
@@ -418,7 +418,7 @@ onMounted(async () => {
 }
 
 .level-title {
-  font-size: 16px;
+  font-size: 1.143rem /* 原值: 16px */;
   margin-bottom: 10px;
   opacity: 0.9;
 }
@@ -428,7 +428,7 @@ onMounted(async () => {
 }
 
 .level-desc {
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   opacity: 0.8;
 }
 
@@ -438,7 +438,7 @@ onMounted(async () => {
 
 .security-tips h4 {
   margin: 0 0 10px 0;
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   opacity: 0.9;
 }
 
@@ -448,7 +448,7 @@ onMounted(async () => {
 }
 
 .security-tips li {
-  font-size: 13px;
+  font-size: 0.929rem /* 原值: 13px */;
   line-height: 1.8;
   opacity: 0.85;
 }
@@ -460,7 +460,7 @@ onMounted(async () => {
 }
 
 .section-title {
-  font-size: 18px;
+  font-size: 1.286rem /* 原值: 18px */;
   margin: 0 0 20px 0;
   font-weight: 700;
   color: #2d3748;
@@ -501,7 +501,7 @@ onMounted(async () => {
 }
 
 .item-icon {
-  font-size: 32px;
+  font-size: 2.286rem /* 原值: 32px */;
   width: 50px;
   height: 50px;
   display: flex;
@@ -516,14 +516,14 @@ onMounted(async () => {
 }
 
 .item-name {
-  font-size: 15px;
+  font-size: 1.071rem /* 原值: 15px */;
   font-weight: 600;
   color: #2d3748;
   margin-bottom: 5px;
 }
 
 .item-status {
-  font-size: 13px;
+  font-size: 0.929rem /* 原值: 13px */;
   display: inline-block;
   padding: 2px 8px;
   border-radius: 4px;
@@ -540,7 +540,7 @@ onMounted(async () => {
 }
 
 .item-desc {
-  font-size: 13px;
+  font-size: 0.929rem /* 原值: 13px */;
   color: #718096;
 }
 
@@ -566,7 +566,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 1.429rem /* 原值: 20px */;
   background: white;
 }
 
@@ -591,19 +591,19 @@ onMounted(async () => {
 }
 
 .log-action {
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   font-weight: 500;
   color: #2d3748;
   margin-bottom: 4px;
 }
 
 .log-time {
-  font-size: 12px;
+  font-size: 0.857rem /* 原值: 12px */;
   color: #a0aec0;
 }
 
 .log-result {
-  font-size: 13px;
+  font-size: 0.929rem /* 原值: 13px */;
   padding: 4px 10px;
   border-radius: 4px;
   font-weight: 500;

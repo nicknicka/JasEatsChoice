@@ -612,7 +612,7 @@ watch(() => props.visible, (val) => {
 
 .dish-name {
   margin: 0;
-  font-size: 20px;
+  font-size: 1.429rem /* 原值: 20px */;
   font-weight: bold;
   color: var(--text-color);
 }
@@ -628,7 +628,7 @@ watch(() => props.visible, (val) => {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 13px;
+  font-size: 0.929rem /* 原值: 13px */;
   color: #606266;
 }
 
@@ -645,7 +645,7 @@ watch(() => props.visible, (val) => {
 
 .description-text {
   margin: 0;
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   line-height: 1.7;
   color: #606266;
 }
@@ -662,7 +662,7 @@ watch(() => props.visible, (val) => {
 
 .section-title {
   margin: 0 0 12px 0;
-  font-size: 16px;
+  font-size: 1.143rem /* 原值: 16px */;
   font-weight: 600;
   color: var(--text-color);
   display: flex;
@@ -709,14 +709,14 @@ watch(() => props.visible, (val) => {
 }
 
 .ingredient-name {
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   color: var(--text-color);
   font-weight: 500;
   flex: 1;
 }
 
 .ingredient-amount {
-  font-size: 12px;
+  font-size: 0.857rem /* 原值: 12px */;
   color: #606266;
   background: #fff;
   padding: 2px 8px;
@@ -834,7 +834,7 @@ watch(() => props.visible, (val) => {
 :deep(.step-title-input .el-input__wrapper) {
   background: #f9fafb;
   font-weight: 600;
-  font-size: 16px;
+  font-size: 1.143rem /* 原值: 16px */;
   padding: 11px 15px;
   border-radius: 8px;
   border: 1px solid #e4e7ed;
@@ -857,7 +857,7 @@ watch(() => props.visible, (val) => {
 }
 
 :deep(.step-desc-textarea .el-textarea__inner) {
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   line-height: 1.8;
   color: #606266;
   padding: 16px 18px;
@@ -896,7 +896,7 @@ watch(() => props.visible, (val) => {
   display: block;
   width: 100%;
   padding: 8px 0;
-  font-size: 16px;
+  font-size: 1.143rem /* 原值: 16px */;
   font-weight: 600;
   color: #606266;
   line-height: 1.5;
@@ -920,7 +920,7 @@ watch(() => props.visible, (val) => {
 }
 
 .edit-item label {
-  font-size: 13px;
+  font-size: 0.929rem /* 原值: 13px */;
   font-weight: 600;
   color: var(--text-color);
 }
@@ -950,7 +950,7 @@ watch(() => props.visible, (val) => {
 }
 
 .source-info-item label {
-  font-size: 13px;
+  font-size: 0.929rem /* 原值: 13px */;
   color: #909399;
   font-weight: 500;
   min-width: 70px;
@@ -958,19 +958,19 @@ watch(() => props.visible, (val) => {
 }
 
 .platform-name {
-  font-size: 15px;
+  font-size: 1.071rem /* 原值: 15px */;
   color: var(--text-color);
   font-weight: 500;
 }
 
 .original-title {
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   color: #606266;
 }
 
 .link-icon {
   margin-left: 4px;
-  font-size: 12px;
+  font-size: 0.857rem /* 原值: 12px */;
 }
 
 /* 底部按钮 */

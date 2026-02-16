@@ -25,7 +25,7 @@
         <div class="contact-item">
           <div class="contact-label">反馈说明</div>
           <div class="contact-value">
-            <span style="color: #606266; font-size: 14px">
+            <span style="color: #606266; font-size: 1rem /* 原值: 14px */">
               如有任何问题或建议，请发送邮件至客服邮箱，或使用下方反馈表单提交。我们会在24小时内回复您。
             </span>
           </div>
@@ -116,7 +116,7 @@ const resetForm = () => {
   padding: 0 20px 20px 20px;
 
   h2 {
-    font-size: 24px;
+    font-size: 1.714rem /* 原值: 24px */;
     margin: 0 0 20px 0;
     font-weight: 600;
     color: #303133;
@@ -142,7 +142,7 @@ const resetForm = () => {
 
         .contact-value {
           flex: 1;
-          font-size: 15px;
+          font-size: 1.071rem /* 原值: 15px */;
           color: #303133;
         }
       }
@@ -150,7 +150,7 @@ const resetForm = () => {
 
     .feedback-section {
       h3 {
-        font-size: 18px;
+        font-size: 1.286rem /* 原值: 18px */;
         margin: 0 0 15px 0;
         font-weight: 600;
         color: #303133;

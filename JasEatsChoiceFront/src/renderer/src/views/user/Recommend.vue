@@ -457,7 +457,7 @@ onMounted(async () => {
   padding: 0 20px 20px 20px;
 
   h2 {
-    font-size: 32px;
+    font-size: 2.286rem /* 原值: 32px */;
     margin: 0 0 32px 20px;
     color: #1a202c;
     font-weight: 800;
@@ -517,7 +517,7 @@ onMounted(async () => {
         font-weight: 600;
         color: #333;
         margin-bottom: 12px;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
       }
     }
 
@@ -554,7 +554,7 @@ onMounted(async () => {
     background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
     border-radius: 8px;
     color: #333;
-    font-size: 14px;
+    font-size: 1rem /* 原值: 14px */;
   }
 
   // 刷新按钮
@@ -628,7 +628,7 @@ onMounted(async () => {
           align-items: center;
           justify-content: center;
           background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
-          font-size: 36px;
+          font-size: 2.571rem /* 原值: 36px */;
           font-weight: bold;
           color: #666;
         }
@@ -648,7 +648,7 @@ onMounted(async () => {
         flex: 1;
 
         .dish-name {
-          font-size: 20px;
+          font-size: 1.429rem /* 原值: 20px */;
           font-weight: bold;
           margin-bottom: 8px;
           color: #333;
@@ -662,7 +662,7 @@ onMounted(async () => {
       color: #ff6b6b;
       font-weight: 800;
       margin-bottom: 18px;
-      font-size: 20px;
+      font-size: 1.429rem /* 原值: 20px */;
       align-items: center;
       padding: 8px 16px;
       background: linear-gradient(135deg, #fff5f5 0%, #ffe4e4 100%);
@@ -674,7 +674,7 @@ onMounted(async () => {
       gap: 8px;
       color: #c0c4cc;
       margin-bottom: 18px;
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
       align-items: center;
     }
 
@@ -703,7 +703,7 @@ onMounted(async () => {
         border-radius: 8px;
 
         .score-label {
-          font-size: 13px;
+          font-size: 0.929rem /* 原值: 13px */;
           color: #606266;
           font-weight: 500;
           white-space: nowrap;
@@ -725,7 +725,7 @@ onMounted(async () => {
         }
 
         .score-value {
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           font-weight: 600;
           white-space: nowrap;
           min-width: 45px;
@@ -781,20 +781,20 @@ onMounted(async () => {
         font-weight: bold;
         margin-bottom: 8px;
         color: #333;
-        font-size: 15px;
+        font-size: 1.071rem /* 原值: 15px */;
         display: flex;
         justify-content: space-between;
         align-items: center;
         gap: 8px;
 
         .score-tag {
-          font-size: 12px;
+          font-size: 0.857rem /* 原值: 12px */;
         }
       }
 
       .reason-text {
         color: #666;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         line-height: 1.6;
       }
 
@@ -817,7 +817,7 @@ onMounted(async () => {
         gap: 6px;
 
         .factor-score {
-          font-size: 12px;
+          font-size: 0.857rem /* 原值: 12px */;
           color: #909399;
           font-weight: 600;
         }
@@ -836,12 +836,12 @@ onMounted(async () => {
       margin-bottom: 24px;
 
       :deep(.el-rate__text) {
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         color: #e6a23c;
       }
 
       :deep(.el-rate__icon) {
-        font-size: 16px;
+        font-size: 1.143rem /* 原值: 16px */;
       }
     }
 
@@ -912,7 +912,7 @@ onMounted(async () => {
   }
 
   .empty-subtext {
-    font-size: 14px;
+    font-size: 1rem /* 原值: 14px */;
     color: #909399;
     margin-bottom: 36px;
     line-height: 1.6;
@@ -941,12 +941,12 @@ onMounted(async () => {
     }
 
     .nutrition-label {
-      font-size: 15px;
+      font-size: 1.071rem /* 原值: 15px */;
       color: #666;
     }
 
     .nutrition-value {
-      font-size: 18px;
+      font-size: 1.286rem /* 原值: 18px */;
       font-weight: bold;
       color: #333;
     }
@@ -965,7 +965,7 @@ onMounted(async () => {
     padding: 0 10px 20px 10px;
 
     h2 {
-      font-size: 24px;
+      font-size: 1.714rem /* 原值: 24px */;
       margin: 0 0 20px 10px;
     }
 

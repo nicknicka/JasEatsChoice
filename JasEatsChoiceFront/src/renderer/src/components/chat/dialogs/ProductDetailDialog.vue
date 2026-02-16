@@ -279,7 +279,7 @@ watch(visible, (newVal) => {
       display: flex;
       align-items: center;
       gap: 8px;
-      font-size: 16px;
+      font-size: 1.143rem /* 原值: 16px */;
       font-weight: 600;
       color: #303133;
       margin-bottom: 16px;
@@ -318,7 +318,7 @@ watch(visible, (newVal) => {
       flex: 1;
 
       .product-name {
-        font-size: 20px;
+        font-size: 1.429rem /* 原值: 20px */;
         font-weight: 700;
         margin: 0 0 12px 0;
         color: #303133;
@@ -330,13 +330,13 @@ watch(visible, (newVal) => {
         margin-bottom: 12px;
 
         .price-symbol {
-          font-size: 18px;
+          font-size: 1.286rem /* 原值: 18px */;
           color: #f56c6c;
           font-weight: 600;
         }
 
         .price-value {
-          font-size: 32px;
+          font-size: 2.286rem /* 原值: 32px */;
           color: #f56c6c;
           font-weight: 700;
           line-height: 1;
@@ -344,7 +344,7 @@ watch(visible, (newVal) => {
       }
 
       .product-description {
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         color: #606266;
         line-height: 1.6;
         margin: 0 0 16px 0;
@@ -366,7 +366,7 @@ watch(visible, (newVal) => {
 
     .ingredient-tag {
       padding: 8px 16px;
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
       min-height: 32px;
       display: inline-flex;
       align-items: center;
@@ -389,14 +389,14 @@ watch(visible, (newVal) => {
     margin-bottom: 8px;
 
     .no-ingredients-text {
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
       color: #909399;
       font-weight: 400;
     }
   }
 
   .section-tip {
-    font-size: 13px;
+    font-size: 0.929rem /* 原值: 13px */;
     color: #909399;
     margin: 8px 0 0 0;
     line-height: 1.5;
@@ -410,7 +410,7 @@ watch(visible, (newVal) => {
 
     .ingredient-tag {
       padding: 8px 16px;
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
       min-height: 32px;
       display: inline-flex;
       align-items: center;
@@ -444,13 +444,13 @@ watch(visible, (newVal) => {
       border-radius: 8px;
 
       .nutrition-label {
-        font-size: 12px;
+        font-size: 0.857rem /* 原值: 12px */;
         color: #909399;
         margin-bottom: 8px;
       }
 
       .nutrition-value {
-        font-size: 16px;
+        font-size: 1.143rem /* 原值: 16px */;
         font-weight: 600;
         color: #303133;
       }
@@ -466,7 +466,7 @@ watch(visible, (newVal) => {
       padding: 8px 0;
       padding-left: 24px;
       position: relative;
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
       color: #606266;
       line-height: 1.6;
 
@@ -475,14 +475,14 @@ watch(visible, (newVal) => {
         position: absolute;
         left: 8px;
         color: #e6a23c;
-        font-size: 20px;
+        font-size: 1.429rem /* 原值: 20px */;
         line-height: 1;
       }
     }
   }
 
   .tips-text {
-    font-size: 13px;
+    font-size: 0.929rem /* 原值: 13px */;
     color: #909399;
     margin: 0;
     line-height: 1.6;

@@ -558,7 +558,7 @@ const thirdPartyLogin = (type) => {
   text-align: center;
   margin-bottom: 30px;
   color: #333;
-  font-size: 24px;
+  font-size: 1.714rem /* 原值: 24px */;
 }
 
 /* 确保表单标签和输入框垂直居中对齐 */
@@ -576,7 +576,7 @@ const thirdPartyLogin = (type) => {
 .register-link {
   text-align: center;
   margin-top: 15px;
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   color: #666;
 
   span {
@@ -587,7 +587,7 @@ const thirdPartyLogin = (type) => {
 .admin-link {
   text-align: center;
   margin-top: 10px;
-  font-size: 13px;
+  font-size: 0.929rem /* 原值: 13px */;
 }
 
 // 加载动画样式
@@ -646,19 +646,19 @@ const thirdPartyLogin = (type) => {
 
 .loading-text {
   margin-top: 20px;
-  font-size: 18px;
+  font-size: 1.286rem /* 原值: 18px */;
   color: #fff;
 }
 
 .captcha-refresh-link {
   margin-left: 10px;
-  font-size: 12px;
+  font-size: 0.857rem /* 原值: 12px */;
   opacity: 0.8;
   transition: opacity 0.2s;
 }
 
 .captcha-refresh-link:hover {
-  font-size: 13px;
+  font-size: 0.929rem /* 原值: 13px */;
   opacity: 1;
 }
 </style>

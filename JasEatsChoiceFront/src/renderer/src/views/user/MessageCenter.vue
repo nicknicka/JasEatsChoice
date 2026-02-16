@@ -628,7 +628,7 @@ const handleDeleteFromDetail = async (messageId) => {
   }
 
   h2 {
-    font-size: 24px;
+    font-size: 1.714rem /* 原值: 24px */;
     margin: 0 0 20px 0;
   }
 
@@ -647,7 +647,7 @@ const handleDeleteFromDetail = async (messageId) => {
       gap: 16px;
 
       .summary-icon {
-        font-size: 36px;
+        font-size: 2.571rem /* 原值: 36px */;
         animation: ring 2s ease-in-out infinite;
       }
 
@@ -656,13 +656,13 @@ const handleDeleteFromDetail = async (messageId) => {
         color: #ffffff;
 
         .summary-title {
-          font-size: 16px;
+          font-size: 1.143rem /* 原值: 16px */;
           font-weight: 600;
           margin-bottom: 6px;
         }
 
         .summary-details {
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           opacity: 0.95;
           display: flex;
           align-items: center;
@@ -718,7 +718,7 @@ const handleDeleteFromDetail = async (messageId) => {
 
       p {
         margin-top: 16px;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
       }
     }
 
@@ -796,7 +796,7 @@ const handleDeleteFromDetail = async (messageId) => {
               }
 
               .avatar-emoji {
-                font-size: 36px;
+                font-size: 2.571rem /* 原值: 36px */;
               }
             }
 
@@ -804,20 +804,20 @@ const handleDeleteFromDetail = async (messageId) => {
               flex: 1;
 
               .requester-name {
-                font-size: 16px;
+                font-size: 1.143rem /* 原值: 16px */;
                 font-weight: 600;
                 color: #303133;
                 margin: 0 0 6px 0;
               }
 
               .requester-id {
-                font-size: 13px;
+                font-size: 0.929rem /* 原值: 13px */;
                 color: #909399;
                 margin: 0 0 4px 0;
               }
 
               .request-time {
-                font-size: 12px;
+                font-size: 0.857rem /* 原值: 12px */;
                 color: #c0c4cc;
                 margin: 0;
               }
@@ -936,7 +936,7 @@ const handleDeleteFromDetail = async (messageId) => {
 
         p {
           margin: 0;
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           color: #666;
           text-align: center;
         }
@@ -998,7 +998,7 @@ const handleDeleteFromDetail = async (messageId) => {
       margin-bottom: 10px;
 
       .message-time {
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         color: #909399;
       }
     }
@@ -1007,7 +1007,7 @@ const handleDeleteFromDetail = async (messageId) => {
       margin-bottom: 15px;
 
       .message-title {
-        font-size: 16px;
+        font-size: 1.143rem /* 原值: 16px */;
         font-weight: bold;
         margin-bottom: 5px;
         margin: 0;
@@ -1015,7 +1015,7 @@ const handleDeleteFromDetail = async (messageId) => {
 
       .message-text {
         color: #606266;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         margin: 0;
       }
     }
@@ -1068,7 +1068,7 @@ const handleDeleteFromDetail = async (messageId) => {
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 
         .detail-icon {
-          font-size: 32px;
+          font-size: 2.286rem /* 原值: 32px */;
           filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
         }
       }
@@ -1079,7 +1079,7 @@ const handleDeleteFromDetail = async (messageId) => {
 
         .detail-modal-title {
           margin: 0 0 8px 0;
-          font-size: 20px;
+          font-size: 1.429rem /* 原值: 20px */;
           font-weight: 600;
           color: #ffffff;
           line-height: 1.3;
@@ -1091,7 +1091,7 @@ const handleDeleteFromDetail = async (messageId) => {
           gap: 12px;
 
           .detail-time {
-            font-size: 13px;
+            font-size: 0.929rem /* 原值: 13px */;
             opacity: 0.95;
             color: #ffffff;
           }
@@ -1105,7 +1105,7 @@ const handleDeleteFromDetail = async (messageId) => {
       padding: 24px 0;
 
       .detail-text {
-        font-size: 15px;
+        font-size: 1.071rem /* 原值: 15px */;
         line-height: 1.8;
         color: #303133;
         text-align: justify;

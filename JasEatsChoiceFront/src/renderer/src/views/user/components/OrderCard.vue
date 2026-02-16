@@ -310,11 +310,11 @@ function handleImageError(item) {
         font-weight: 600;
         margin-bottom: 6px;
         color: #2c5282;
-        font-size: 15px;
+        font-size: 1.071rem /* 原值: 15px */;
       }
       .order-merchant,
       .order-time {
-        font-size: 13px;
+        font-size: 0.929rem /* 原值: 13px */;
         color: #64748b;
         margin-bottom: 4px;
       }
@@ -342,12 +342,12 @@ function handleImageError(item) {
     .total-text {
       margin-right: 12px;
       color: #64748b;
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
       font-weight: 500;
     }
 
     .total-amount {
-      font-size: 20px;
+      font-size: 1.429rem /* 原值: 20px */;
       font-weight: 700;
       color: #ff6b6b;
       text-shadow: 0 1px 2px rgba(255, 107, 107, 0.1);
@@ -464,11 +464,11 @@ function handleImageError(item) {
       margin-bottom: 12px;
 
       .total-text {
-        font-size: 13px;
+        font-size: 0.929rem /* 原值: 13px */;
       }
 
       .total-amount {
-        font-size: 18px;
+        font-size: 1.286rem /* 原值: 18px */;
       }
     }
 

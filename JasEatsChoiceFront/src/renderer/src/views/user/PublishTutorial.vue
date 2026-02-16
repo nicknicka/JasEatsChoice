@@ -1447,7 +1447,7 @@ watch(() => tutorialForm.value.content, () => {
 
           h1 {
             margin: 0 0 8px 0;
-            font-size: 32px;
+            font-size: 2.286rem /* 原值: 32px */;
             font-weight: bold;
             color: white;
             line-height: 1.2;
@@ -1455,7 +1455,7 @@ watch(() => tutorialForm.value.content, () => {
 
           .subtitle {
             margin: 0;
-            font-size: 15px;
+            font-size: 1.071rem /* 原值: 15px */;
             color: rgba(255, 255, 255, 0.85);
           }
         }
@@ -1525,12 +1525,12 @@ watch(() => tutorialForm.value.content, () => {
       display: flex;
       align-items: center;
       gap: 8px;
-      font-size: 16px;
+      font-size: 1.143rem /* 原值: 16px */;
       font-weight: 600;
       color: #303133;
 
       .el-icon {
-        font-size: 18px;
+        font-size: 1.286rem /* 原值: 18px */;
         color: #667eea;
       }
     }
@@ -1577,7 +1577,7 @@ watch(() => tutorialForm.value.content, () => {
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
-            font-size: 24px;
+            font-size: 1.714rem /* 原值: 24px */;
 
             &.video {
               background: linear-gradient(135deg, #ff6b6b 0%, #ff8e8e 100%);
@@ -1590,7 +1590,7 @@ watch(() => tutorialForm.value.content, () => {
             }
 
             .el-icon {
-              font-size: 28px;
+              font-size: 2rem /* 原值: 28px */;
             }
           }
 
@@ -1598,7 +1598,7 @@ watch(() => tutorialForm.value.content, () => {
             flex: 1;
 
             .template-title {
-              font-size: 15px;
+              font-size: 1.071rem /* 原值: 15px */;
               font-weight: 600;
               color: #303133;
               margin-bottom: 8px;
@@ -1682,7 +1682,7 @@ watch(() => tutorialForm.value.content, () => {
 
               .toolbar-tip {
                 flex: 1;
-                font-size: 12px;
+                font-size: 0.857rem /* 原值: 12px */;
                 color: #909399;
               }
             }
@@ -1697,7 +1697,7 @@ watch(() => tutorialForm.value.content, () => {
               border-top: none;
               padding: 12px 16px;
               font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-              font-size: 14px;
+              font-size: 1rem /* 原值: 14px */;
               line-height: 1.6;
               color: #606266;
               background-color: #ffffff;
@@ -1743,12 +1743,12 @@ watch(() => tutorialForm.value.content, () => {
                 color: #303133;
               }
 
-              h1 { font-size: 28px; border-bottom: 2px solid #e4e7ed; padding-bottom: 10px; }
-              h2 { font-size: 24px; border-bottom: 1px solid #e4e7ed; padding-bottom: 8px; }
-              h3 { font-size: 20px; }
-              h4 { font-size: 18px; }
-              h5 { font-size: 16px; }
-              h6 { font-size: 14px; }
+              h1 { font-size: 2rem /* 原值: 28px */; border-bottom: 2px solid #e4e7ed; padding-bottom: 10px; }
+              h2 { font-size: 1.714rem /* 原值: 24px */; border-bottom: 1px solid #e4e7ed; padding-bottom: 8px; }
+              h3 { font-size: 1.429rem /* 原值: 20px */; }
+              h4 { font-size: 1.286rem /* 原值: 18px */; }
+              h5 { font-size: 1.143rem /* 原值: 16px */; }
+              h6 { font-size: 1rem /* 原值: 14px */; }
 
               p {
                 margin-bottom: 16px;
@@ -1792,7 +1792,7 @@ watch(() => tutorialForm.value.content, () => {
                 padding: 2px 6px;
                 border-radius: 4px;
                 font-family: 'Monaco', 'Menlo', monospace;
-                font-size: 13px;
+                font-size: 0.929rem /* 原值: 13px */;
                 color: #e83e8c;
               }
 
@@ -1829,7 +1829,7 @@ watch(() => tutorialForm.value.content, () => {
 
               p {
                 margin: 0;
-                font-size: 14px;
+                font-size: 1rem /* 原值: 14px */;
               }
             }
           }
@@ -1853,7 +1853,7 @@ watch(() => tutorialForm.value.content, () => {
         .form-tip {
           margin-left: 12px;
           color: #909399;
-          font-size: 13px;
+          font-size: 0.929rem /* 原值: 13px */;
         }
 
         // 封面图上传容器
@@ -1904,7 +1904,7 @@ watch(() => tutorialForm.value.content, () => {
 
                 .el-button {
                   padding: 6px 10px;
-                  font-size: 13px;
+                  font-size: 0.929rem /* 原值: 13px */;
                   backdrop-filter: blur(10px);
                 }
               }
@@ -1970,7 +1970,7 @@ watch(() => tutorialForm.value.content, () => {
 
                 .el-icon {
                   color: #303133;
-                  font-size: 16px;
+                  font-size: 1.143rem /* 原值: 16px */;
                   font-weight: bold;
                 }
               }
@@ -1993,7 +1993,7 @@ watch(() => tutorialForm.value.content, () => {
                 padding: 8px 12px;
                 background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
                 border-radius: 0 0 10px 10px;
-                font-size: 12px;
+                font-size: 0.857rem /* 原值: 12px */;
                 color: white;
                 pointer-events: none;
 
@@ -2008,7 +2008,7 @@ watch(() => tutorialForm.value.content, () => {
                 .file-size {
                   margin-left: 8px;
                   opacity: 0.85;
-                  font-size: 11px;
+                  font-size: 0.75rem /* 原值: 11px */;
                   white-space: nowrap;
                 }
               }
@@ -2050,7 +2050,7 @@ watch(() => tutorialForm.value.content, () => {
 
               p {
                 margin: 0;
-                font-size: 12px;
+                font-size: 0.857rem /* 原值: 12px */;
                 color: #606266;
               }
             }
@@ -2062,7 +2062,7 @@ watch(() => tutorialForm.value.content, () => {
               gap: 8px;
 
               .upload-icon {
-                font-size: 32px;
+                font-size: 2.286rem /* 原值: 32px */;
                 color: #667eea;
               }
 
@@ -2071,7 +2071,7 @@ watch(() => tutorialForm.value.content, () => {
 
                 p {
                   margin: 0;
-                  font-size: 12px;
+                  font-size: 0.857rem /* 原值: 12px */;
                   color: #303133;
 
                   &.upload-hint {
@@ -2094,7 +2094,7 @@ watch(() => tutorialForm.value.content, () => {
 
           p {
             margin: 0 0 8px 0;
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
             color: #303133;
 
             &:first-child {
@@ -2108,7 +2108,7 @@ watch(() => tutorialForm.value.content, () => {
 
             li {
               margin: 6px 0;
-              font-size: 13px;
+              font-size: 0.929rem /* 原值: 13px */;
               color: #606266;
               line-height: 1.6;
             }
@@ -2131,14 +2131,14 @@ watch(() => tutorialForm.value.content, () => {
           }
 
           h5 {
-            font-size: 15px;
+            font-size: 1.071rem /* 原值: 15px */;
             color: #303133;
             margin: 0 0 12px 0;
             font-weight: 600;
           }
 
           p {
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
             color: #606266;
             line-height: 1.8;
             margin: 8px 0;
@@ -2154,7 +2154,7 @@ watch(() => tutorialForm.value.content, () => {
             padding-left: 20px;
 
             li {
-              font-size: 14px;
+              font-size: 1rem /* 原值: 14px */;
               color: #606266;
               margin: 8px 0;
               line-height: 1.6;
@@ -2214,7 +2214,7 @@ watch(() => tutorialForm.value.content, () => {
             display: flex;
             align-items: center;
             gap: 6px;
-            font-size: 13px;
+            font-size: 0.929rem /* 原值: 13px */;
             font-weight: 600;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
             backdrop-filter: blur(10px);
@@ -2223,7 +2223,7 @@ watch(() => tutorialForm.value.content, () => {
 
         .preview-info {
           h3 {
-            font-size: 20px;
+            font-size: 1.429rem /* 原值: 20px */;
             font-weight: 700;
             color: #303133;
             margin: 0 0 16px 0;
@@ -2240,7 +2240,7 @@ watch(() => tutorialForm.value.content, () => {
             span {
               padding: 6px 14px;
               border-radius: 16px;
-              font-size: 13px;
+              font-size: 0.929rem /* 原值: 13px */;
               font-weight: 500;
               display: flex;
               align-items: center;
@@ -2265,7 +2265,7 @@ watch(() => tutorialForm.value.content, () => {
 
           .preview-body {
             .content-preview {
-              font-size: 14px;
+              font-size: 1rem /* 原值: 14px */;
               color: #606266;
               line-height: 1.8;
               max-height: 500px;
@@ -2352,11 +2352,11 @@ watch(() => tutorialForm.value.content, () => {
 
           .title-section {
             h1 {
-              font-size: 24px;
+              font-size: 1.714rem /* 原值: 24px */;
             }
 
             .subtitle {
-              font-size: 13px;
+              font-size: 0.929rem /* 原值: 13px */;
             }
           }
         }
@@ -2469,7 +2469,7 @@ watch(() => tutorialForm.value.content, () => {
 
       p {
         margin: 0;
-        font-size: 13px;
+        font-size: 0.929rem /* 原值: 13px */;
         color: #606266;
       }
     }
@@ -2481,7 +2481,7 @@ watch(() => tutorialForm.value.content, () => {
       gap: 10px;
 
       .upload-icon {
-        font-size: 40px;
+        font-size: 2.857rem /* 原值: 40px */;
         color: #667eea;
       }
 
@@ -2490,12 +2490,12 @@ watch(() => tutorialForm.value.content, () => {
 
         p {
           margin: 0;
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           color: #303133;
 
           &.upload-hint {
             margin-top: 4px;
-            font-size: 12px;
+            font-size: 0.857rem /* 原值: 12px */;
             color: #909399;
           }
         }
@@ -2510,7 +2510,7 @@ watch(() => tutorialForm.value.content, () => {
 
     .preview-title {
       margin: 0 0 12px 0;
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
       font-weight: 500;
       color: #303133;
     }
@@ -2620,7 +2620,7 @@ watch(() => tutorialForm.value.content, () => {
       color: white;
       padding: 5px 10px;
       border-radius: 6px;
-      font-size: 11px;
+      font-size: 0.75rem /* 原值: 11px */;
       white-space: nowrap;
       opacity: 0;
       transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);

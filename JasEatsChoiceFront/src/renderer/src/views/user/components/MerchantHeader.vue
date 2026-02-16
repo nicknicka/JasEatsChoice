@@ -201,7 +201,7 @@ const handleToggleFavorite = () => {
         min-width: 0;
 
         .merchant-name {
-          font-size: 18px;
+          font-size: 1.286rem /* 原值: 18px */;
           font-weight: 800;
           color: #0f172a;
           line-height: 1.3;
@@ -229,14 +229,14 @@ const handleToggleFavorite = () => {
 
             :deep(.el-rate) {
               .el-rate__icon {
-                font-size: 16px;
+                font-size: 1.143rem /* 原值: 16px */;
                 margin-right: 2px;
               }
             }
           }
 
           .rating-score-text {
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
             font-weight: 700;
             color: #f59e0b;
             margin-left: 8px;
@@ -251,7 +251,7 @@ const handleToggleFavorite = () => {
       padding: 0 16px;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       border-radius: 10px;
-      font-size: 13px;
+      font-size: 0.929rem /* 原值: 13px */;
       font-weight: 600;
 
       &:hover {
@@ -291,7 +291,7 @@ const handleToggleFavorite = () => {
         background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
         border: none;
         color: #ffffff;
-        font-size: 12px;
+        font-size: 0.857rem /* 原值: 12px */;
         padding: 4px 12px;
         font-weight: 600;
         border-radius: 6px;
@@ -305,7 +305,7 @@ const handleToggleFavorite = () => {
         gap: 5px;
         padding: 4px 10px;
         border-radius: 6px;
-        font-size: 12px;
+        font-size: 0.857rem /* 原值: 12px */;
         font-weight: 600;
         flex-shrink: 0;
 
@@ -341,7 +341,7 @@ const handleToggleFavorite = () => {
         background: rgba(59, 130, 246, 0.08);
         border: 1px solid rgba(59, 130, 246, 0.15);
         color: #3b82f6;
-        font-size: 11px;
+        font-size: 0.75rem /* 原值: 11px */;
         padding: 3px 10px;
         border-radius: 6px;
         font-weight: 500;
@@ -355,12 +355,12 @@ const handleToggleFavorite = () => {
         background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
         color: #1d4ed8;
         border-radius: 6px;
-        font-size: 12px;
+        font-size: 0.857rem /* 原值: 12px */;
         font-weight: 600;
         flex-shrink: 0;
 
         .el-icon {
-          font-size: 13px;
+          font-size: 0.929rem /* 原值: 13px */;
         }
       }
     }
@@ -377,7 +377,7 @@ const handleToggleFavorite = () => {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      font-size: 13px;
+      font-size: 0.929rem /* 原值: 13px */;
       color: #475569;
       font-weight: 500;
       padding: 6px 12px;

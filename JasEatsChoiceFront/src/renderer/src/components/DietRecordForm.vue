@@ -394,7 +394,7 @@ defineExpose({
 /* 输入框前缀图标 */
 .input-prefix-icon {
   color: #667eea;
-  font-size: 18px;
+  font-size: 1.286rem /* 原值: 18px */;
 }
 
 /* 带图标的标签样式 */
@@ -405,7 +405,7 @@ defineExpose({
 }
 
 .label-icon {
-  font-size: 18px;
+  font-size: 1.286rem /* 原值: 18px */;
   color: #667eea;
   display: inline-flex;
   align-items: center;
@@ -421,7 +421,7 @@ defineExpose({
 }
 
 :deep(.el-dialog__title) {
-  font-size: 20px;
+  font-size: 1.429rem /* 原值: 20px */;
   font-weight: 600;
   color: #333;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -443,7 +443,7 @@ defineExpose({
 :deep(.el-form-item__label) {
   font-weight: 500;
   color: #555;
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
 }
 
 /* 输入框样式 */
@@ -502,7 +502,7 @@ defineExpose({
   padding: 10px 28px;
   border-radius: 8px;
   font-weight: 500;
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   transition: all 0.3s ease;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }

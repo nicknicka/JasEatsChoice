@@ -351,13 +351,13 @@ watch(() => props.modelValue, (newVal) => {
   }
 
   .nickname {
-    font-size: 14px;
+    font-size: 1rem /* 原值: 14px */;
     font-weight: 500;
     margin-bottom: 4px;
   }
 
   .submit-time {
-    font-size: 12px;
+    font-size: 0.857rem /* 原值: 12px */;
     color: #909399;
   }
 
@@ -367,7 +367,7 @@ watch(() => props.modelValue, (newVal) => {
 
   .dish-item {
     padding: 8px 0;
-    font-size: 14px;
+    font-size: 1rem /* 原值: 14px */;
   }
 
   .add-dish-prefix {
@@ -389,7 +389,7 @@ watch(() => props.modelValue, (newVal) => {
     display: flex;
     align-items: center;
     gap: 4px;
-    font-size: 12px;
+    font-size: 0.857rem /* 原值: 12px */;
     color: #e6a23c;
     margin-bottom: 8px;
   }
@@ -402,7 +402,7 @@ watch(() => props.modelValue, (newVal) => {
   }
 
   .total-amount {
-    font-size: 16px;
+    font-size: 1.143rem /* 原值: 16px */;
     font-weight: 500;
     color: #f56c6c;
   }

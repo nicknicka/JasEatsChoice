@@ -167,7 +167,7 @@ const toggleOptionalIngredient = (ingredient) => {
     }
 
     .dish-emoji {
-      font-size: 48px;
+      font-size: 3.429rem /* 原值: 48px */;
       filter: drop-shadow(0 2px 4px rgba(59, 130, 246, 0.1));
     }
   }
@@ -188,7 +188,7 @@ const toggleOptionalIngredient = (ingredient) => {
   }
 
   .dish-name {
-    font-size: 16px;
+    font-size: 1.143rem /* 原值: 16px */;
     font-weight: 700;
     color: #1e293b;
     line-height: 1.3;
@@ -209,7 +209,7 @@ const toggleOptionalIngredient = (ingredient) => {
   }
 
   .dish-price {
-    font-size: 20px;
+    font-size: 1.429rem /* 原值: 20px */;
     color: #f59e0b;
     font-weight: 700;
     background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
@@ -236,7 +236,7 @@ const toggleOptionalIngredient = (ingredient) => {
   }
 
   .dish-desc {
-    font-size: 12px;
+    font-size: 0.857rem /* 原值: 12px */;
     color: #64748b;
     margin-bottom: 12px;
     line-height: 1.5;
@@ -257,11 +257,11 @@ const toggleOptionalIngredient = (ingredient) => {
         display: flex;
         align-items: center;
         margin-bottom: 6px;
-        font-size: 12px;
+        font-size: 0.857rem /* 原值: 12px */;
         color: #64748b;
 
         .label-icon {
-          font-size: 12px;
+          font-size: 0.857rem /* 原值: 12px */;
           margin-right: 4px;
         }
 
@@ -286,11 +286,11 @@ const toggleOptionalIngredient = (ingredient) => {
         display: flex;
         align-items: center;
         margin-bottom: 6px;
-        font-size: 12px;
+        font-size: 0.857rem /* 原值: 12px */;
         color: #64748b;
 
         .label-icon {
-          font-size: 12px;
+          font-size: 0.857rem /* 原值: 12px */;
           margin-right: 4px;
         }
 
@@ -323,7 +323,7 @@ const toggleOptionalIngredient = (ingredient) => {
       }
 
       .ingredient-price {
-        font-size: 11px;
+        font-size: 0.75rem /* 原值: 11px */;
         margin-left: 2px;
       }
     }
@@ -335,7 +335,7 @@ const toggleOptionalIngredient = (ingredient) => {
     border: none;
     border-radius: 8px;
     height: 40px;
-    font-size: 14px;
+    font-size: 1rem /* 原值: 14px */;
     font-weight: 600;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);

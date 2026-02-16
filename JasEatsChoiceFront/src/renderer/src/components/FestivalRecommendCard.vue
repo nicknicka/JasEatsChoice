@@ -111,7 +111,7 @@ const handleAddToCart = (dish) => {
 }
 
 .festival-icon {
-  font-size: 48px;
+  font-size: 3.429rem /* 原值: 48px */;
   margin-right: 16px;
 }
 
@@ -121,13 +121,13 @@ const handleAddToCart = (dish) => {
 
 .festival-name {
   margin: 0 0 8px 0;
-  font-size: 24px;
+  font-size: 1.714rem /* 原值: 24px */;
   font-weight: bold;
 }
 
 .festival-desc {
   margin: 0 0 12px 0;
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   opacity: 0.9;
 }
 
@@ -178,7 +178,7 @@ const handleAddToCart = (dish) => {
   left: 8px;
   padding: 4px 8px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: 0.857rem /* 原值: 12px */;
   font-weight: bold;
   color: #fff;
 }
@@ -212,14 +212,14 @@ const handleAddToCart = (dish) => {
 
 .dish-name {
   margin: 0 0 8px 0;
-  font-size: 16px;
+  font-size: 1.143rem /* 原值: 16px */;
   font-weight: 600;
   color: #303133;
 }
 
 .dish-reason {
   margin: 0 0 8px 0;
-  font-size: 13px;
+  font-size: 0.929rem /* 原值: 13px */;
   color: #606266;
   line-height: 1.5;
 }
@@ -231,7 +231,7 @@ const handleAddToCart = (dish) => {
 }
 
 .dish-price {
-  font-size: 18px;
+  font-size: 1.286rem /* 原值: 18px */;
   font-weight: bold;
   color: #f56c6c;
 }

@@ -121,7 +121,7 @@
         <el-descriptions-item label="记录ID">{{ currentRecord.rechargeId }}</el-descriptions-item>
         <el-descriptions-item label="用户名">{{ currentRecord.username }}</el-descriptions-item>
         <el-descriptions-item label="充值金额">
-          <span style="color: #67c23a; font-weight: bold; font-size: 18px">¥{{ currentRecord.amount }}</span>
+          <span style="color: #67c23a; font-weight: bold; font-size: 1.286rem /* 原值: 18px */">¥{{ currentRecord.amount }}</span>
         </el-descriptions-item>
         <el-descriptions-item label="充值方式">
           {{ getPaymentMethodText(currentRecord.paymentMethod) }}
@@ -289,7 +289,7 @@ onMounted(() => {
     margin-bottom: 20px;
 
     h1 {
-      font-size: 24px;
+      font-size: 1.714rem /* 原值: 24px */;
       color: #303133;
       margin: 0 0 8px 0;
     }
@@ -297,7 +297,7 @@ onMounted(() => {
     .subtitle {
       color: #909399;
       margin: 0;
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
     }
   }
 

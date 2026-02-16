@@ -748,7 +748,7 @@ const getActiveStep = () => {
   }
 
   .page-title {
-    font-size: 24px;
+    font-size: 1.714rem /* 原值: 24px */;
     margin: 0;
     margin-left: 15px;
     color: #2c5282;
@@ -797,7 +797,7 @@ const getActiveStep = () => {
     gap: 10px;
 
     .card-title {
-      font-size: 16px;
+      font-size: 1.143rem /* 原值: 16px */;
       font-weight: 600;
       color: #2c3e50;
       flex: 1;
@@ -825,7 +825,7 @@ const getActiveStep = () => {
       gap: 12px;
 
       .order-no {
-        font-size: 16px;
+        font-size: 1.143rem /* 原值: 16px */;
         font-weight: 600;
         color: #ffffff;
       }
@@ -897,7 +897,7 @@ const getActiveStep = () => {
   .merchant-card {
     .merchant-details {
       .merchant-name {
-        font-size: 18px;
+        font-size: 1.286rem /* 原值: 18px */;
         font-weight: 600;
         color: #2c3e50;
         margin-bottom: 8px;
@@ -907,7 +907,7 @@ const getActiveStep = () => {
         display: flex;
         align-items: center;
         gap: 16px;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         color: #7f8c8d;
 
         .rating {
@@ -987,7 +987,7 @@ const getActiveStep = () => {
           justify-content: center;
 
           span {
-            font-size: 28px;
+            font-size: 2rem /* 原值: 28px */;
             font-weight: 600;
             color: #1890ff;
           }
@@ -999,7 +999,7 @@ const getActiveStep = () => {
           right: -4px;
           background: linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%);
           color: white;
-          font-size: 11px;
+          font-size: 0.75rem /* 原值: 11px */;
           font-weight: 700;
           min-width: 18px;
           height: 18px;
@@ -1055,7 +1055,7 @@ const getActiveStep = () => {
         justify-content: space-between;
 
         .item-name {
-          font-size: 15px;
+          font-size: 1.071rem /* 原值: 15px */;
           font-weight: 600;
           color: #2c5282;
           margin-bottom: 8px;
@@ -1081,7 +1081,7 @@ const getActiveStep = () => {
           align-items: flex-start;
           gap: 6px;
           margin-bottom: 8px;
-          font-size: 12px;
+          font-size: 0.857rem /* 原值: 12px */;
 
           .ingredients-label {
             flex-shrink: 0;
@@ -1104,7 +1104,7 @@ const getActiveStep = () => {
               gap: 3px;
               padding: 3px 8px;
               border-radius: 6px;
-              font-size: 11px;
+              font-size: 0.75rem /* 原值: 11px */;
               line-height: 1.4;
               transition: all 0.2s ease;
 
@@ -1139,7 +1139,7 @@ const getActiveStep = () => {
           align-items: flex-start;
           gap: 5px;
           margin-bottom: 8px;
-          font-size: 12px;
+          font-size: 0.857rem /* 原值: 12px */;
           color: #c4873a;
           padding: 6px 10px;
           background: rgba(253, 246, 236, 0.8);
@@ -1149,7 +1149,7 @@ const getActiveStep = () => {
           box-shadow: 0 1px 4px rgba(230, 162, 60, 0.08);
 
           .el-icon {
-            font-size: 13px;
+            font-size: 0.929rem /* 原值: 13px */;
             color: #c4873a;
             flex-shrink: 0;
             margin-top: 1px;
@@ -1169,12 +1169,12 @@ const getActiveStep = () => {
           flex-shrink: 0;
 
           .unit-price {
-            font-size: 12px;
+            font-size: 0.857rem /* 原值: 12px */;
             color: #94a3b8;
           }
 
           .total-price {
-            font-size: 16px;
+            font-size: 1.143rem /* 原值: 16px */;
             font-weight: 700;
             color: #ff6b6b;
           }
@@ -1186,7 +1186,7 @@ const getActiveStep = () => {
       text-align: center;
       padding: 24px;
       color: #94a3b8;
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
     }
   }
 
@@ -1200,12 +1200,12 @@ const getActiveStep = () => {
         padding: 10px 0;
 
         .amount-label {
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           color: #7f8c8d;
         }
 
         .amount-value {
-          font-size: 15px;
+          font-size: 1.071rem /* 原值: 15px */;
           color: #2c3e50;
           font-weight: 500;
         }
@@ -1214,13 +1214,13 @@ const getActiveStep = () => {
           padding-top: 16px;
 
           .total-label {
-            font-size: 16px;
+            font-size: 1.143rem /* 原值: 16px */;
             font-weight: 600;
             color: #2c3e50;
           }
 
           .total-value {
-            font-size: 24px;
+            font-size: 1.714rem /* 原值: 24px */;
             font-weight: 700;
             color: #e6a23c;
           }
@@ -1243,12 +1243,12 @@ const getActiveStep = () => {
         padding: 8px 0;
 
         .payment-label {
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           color: #7f8c8d;
         }
 
         .payment-value {
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           color: #2c3e50;
           font-weight: 500;
         }
@@ -1259,7 +1259,7 @@ const getActiveStep = () => {
   // 备注卡片
   .remark-card {
     .remark-content {
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
       color: #606266;
       line-height: 1.6;
       padding: 12px;
@@ -1280,13 +1280,13 @@ const getActiveStep = () => {
         margin-bottom: 16px;
 
         .rating-label {
-          font-size: 15px;
+          font-size: 1.071rem /* 原值: 15px */;
           font-weight: 600;
           color: #606266;
         }
 
         .rating-score {
-          font-size: 18px;
+          font-size: 1.286rem /* 原值: 18px */;
           font-weight: 700;
           color: #f7ba2a;
           margin-left: 8px;
@@ -1294,14 +1294,14 @@ const getActiveStep = () => {
 
         :deep(.el-rate) {
           .el-rate__icon {
-            font-size: 24px;
+            font-size: 1.714rem /* 原值: 24px */;
             margin-right: 4px;
           }
         }
       }
 
       .review-text {
-        font-size: 15px;
+        font-size: 1.071rem /* 原值: 15px */;
         color: #303133;
         line-height: 1.8;
         padding: 12px 16px;
@@ -1344,7 +1344,7 @@ const getActiveStep = () => {
             justify-content: center;
             background: #f5f7fa;
             color: #c0c4cc;
-            font-size: 32px;
+            font-size: 2.286rem /* 原值: 32px */;
           }
         }
       }
@@ -1389,13 +1389,13 @@ const getActiveStep = () => {
             }
 
             .reply-time {
-              font-size: 12px;
+              font-size: 0.857rem /* 原值: 12px */;
               color: #909399;
             }
           }
 
           .reply-content {
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
             color: #606266;
             line-height: 1.6;
           }
@@ -1414,7 +1414,7 @@ const getActiveStep = () => {
     .action-btn {
       min-width: 160px;
       height: 48px;
-      font-size: 16px;
+      font-size: 1.143rem /* 原值: 16px */;
       font-weight: 600;
       border-radius: 24px;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1469,7 +1469,7 @@ const getActiveStep = () => {
     }
 
     .page-title {
-      font-size: 20px;
+      font-size: 1.429rem /* 原值: 20px */;
     }
 
     .order-detail-content {
@@ -1502,7 +1502,7 @@ const getActiveStep = () => {
       .order-progress {
         :deep(.el-steps) {
           .el-step__title {
-            font-size: 12px !important;
+            font-size: 0.857rem /* 原值: 12px */ !important;
           }
 
           .el-step__icon {
@@ -1553,12 +1553,12 @@ const getActiveStep = () => {
 
         .item-info {
           .item-name {
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
             margin-bottom: 6px;
           }
 
           .item-ingredients {
-            font-size: 11px;
+            font-size: 0.75rem /* 原值: 11px */;
             margin-bottom: 6px;
             gap: 5px;
 
@@ -1574,13 +1574,13 @@ const getActiveStep = () => {
           }
 
           .item-note {
-            font-size: 11px;
+            font-size: 0.75rem /* 原值: 11px */;
             padding: 5px 8px;
             margin-bottom: 6px;
             border-radius: 6px;
 
             .el-icon {
-              font-size: 12px;
+              font-size: 0.857rem /* 原值: 12px */;
             }
           }
 
@@ -1590,11 +1590,11 @@ const getActiveStep = () => {
             gap: 4px;
 
             .unit-price {
-              font-size: 11px;
+              font-size: 0.75rem /* 原值: 11px */;
             }
 
             .total-price {
-              font-size: 15px;
+              font-size: 1.071rem /* 原值: 15px */;
             }
           }
         }
@@ -1610,7 +1610,7 @@ const getActiveStep = () => {
         width: 100%;
         min-width: auto;
         height: 44px;
-        font-size: 15px;
+        font-size: 1.071rem /* 原值: 15px */;
       }
     }
   }

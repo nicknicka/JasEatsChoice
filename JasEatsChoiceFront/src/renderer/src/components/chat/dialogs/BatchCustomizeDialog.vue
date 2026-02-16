@@ -560,7 +560,7 @@ watch(visible, (newVal) => {
       margin-bottom: 16px;
 
       .section-title {
-        font-size: 15px;
+        font-size: 1.071rem /* 原值: 15px */;
         font-weight: 600;
         color: #303133;
       }
@@ -580,12 +580,12 @@ watch(visible, (newVal) => {
           display: flex;
           align-items: center;
           gap: 6px;
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           font-weight: 500;
           color: #606266;
 
           .label-icon {
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
             color: #909399;
             cursor: help;
           }
@@ -595,7 +595,7 @@ watch(visible, (newVal) => {
   }
 
   :deep(.el-divider__text) {
-    font-size: 13px;
+    font-size: 0.929rem /* 原值: 13px */;
     color: #909399;
   }
 
@@ -645,14 +645,14 @@ watch(visible, (newVal) => {
 
           .product-details {
             .product-name {
-              font-size: 15px;
+              font-size: 1.071rem /* 原值: 15px */;
               font-weight: 600;
               margin: 0 0 4px 0;
               color: #303133;
             }
 
             .product-price {
-              font-size: 14px;
+              font-size: 1rem /* 原值: 14px */;
               color: #f56c6c;
               font-weight: 600;
             }
@@ -687,7 +687,7 @@ watch(visible, (newVal) => {
             align-items: center;
             gap: 6px;
             min-width: 80px;
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
             font-weight: 500;
             color: #606266;
           }
@@ -702,7 +702,7 @@ watch(visible, (newVal) => {
             .ingredient-tag {
               .ingredient-price {
                 margin-left: 4px;
-                font-size: 12px;
+                font-size: 0.857rem /* 原值: 12px */;
                 color: #f56c6c;
               }
             }
@@ -714,12 +714,12 @@ watch(visible, (newVal) => {
             border-top: 1px dashed #e4e7ed;
 
             .subtotal-label {
-              font-size: 14px;
+              font-size: 1rem /* 原值: 14px */;
               color: #606266;
             }
 
             .subtotal-price {
-              font-size: 20px;
+              font-size: 1.429rem /* 原值: 20px */;
               font-weight: 700;
               color: #f56c6c;
             }
@@ -747,17 +747,17 @@ watch(visible, (newVal) => {
         gap: 6px;
 
         .summary-label {
-          font-size: 13px;
+          font-size: 0.929rem /* 原值: 13px */;
           color: #909399;
         }
 
         .summary-value {
-          font-size: 18px;
+          font-size: 1.286rem /* 原值: 18px */;
           font-weight: 600;
           color: #303133;
 
           &.total-price {
-            font-size: 24px;
+            font-size: 1.714rem /* 原值: 24px */;
             font-weight: 700;
             color: #f56c6c;
           }
@@ -809,20 +809,20 @@ watch(visible, (newVal) => {
           margin-bottom: 4px;
 
           .ingredient-name {
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
             font-weight: 500;
             color: #303133;
           }
 
           .ingredient-price {
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
             font-weight: 600;
             color: #f56c6c;
           }
         }
 
         .ingredient-description {
-          font-size: 12px;
+          font-size: 0.857rem /* 原值: 12px */;
           color: #909399;
           margin: 0;
           line-height: 1.4;

@@ -597,13 +597,13 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 28px;
+  font-size: 2rem /* 原值: 28px */;
   font-weight: 700;
   color: white;
 }
 
 .title-icon {
-  font-size: 32px;
+  font-size: 2.286rem /* 原值: 32px */;
 }
 
 .calendar-control {
@@ -659,7 +659,7 @@ onMounted(() => {
 }
 
 .stat-number {
-  font-size: 32px;
+  font-size: 2.286rem /* 原值: 32px */;
   font-weight: 700;
   color: #333;
   margin-bottom: 4px;
@@ -670,13 +670,13 @@ onMounted(() => {
 }
 
 .stat-unit {
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   color: #999;
   font-weight: 500;
 }
 
 .stat-label {
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   color: #999;
   font-weight: 500;
 }
@@ -687,7 +687,7 @@ onMounted(() => {
 }
 
 .stat-detail {
-  font-size: 12px;
+  font-size: 0.857rem /* 原值: 12px */;
   color: #999;
   margin-top: 4px;
 }
@@ -698,7 +698,7 @@ onMounted(() => {
 }
 
 .nutrient-value {
-  font-size: 20px;
+  font-size: 1.429rem /* 原值: 20px */;
   font-weight: 600;
   color: #667eea;
   display: flex;
@@ -708,12 +708,12 @@ onMounted(() => {
 }
 
 .nutrient-unit {
-  font-size: 12px;
+  font-size: 0.857rem /* 原值: 12px */;
   color: #999;
 }
 
 .nutrient-label {
-  font-size: 12px;
+  font-size: 0.857rem /* 原值: 12px */;
   color: #999;
   margin-top: 2px;
 }
@@ -759,7 +759,7 @@ onMounted(() => {
   gap: 12px;
   padding: 12px 16px;
   border-radius: 8px;
-  font-size: 18px;
+  font-size: 1.286rem /* 原值: 18px */;
   font-weight: 600;
   color: white;
   user-select: none;
@@ -782,7 +782,7 @@ onMounted(() => {
 }
 
 .meal-icon {
-  font-size: 24px;
+  font-size: 1.714rem /* 原值: 24px */;
 }
 
 .meal-count {
@@ -792,7 +792,7 @@ onMounted(() => {
 /* 箭头图标样式 */
 .arrow-icon {
   transition: transform 0.3s ease;
-  font-size: 16px;
+  font-size: 1.143rem /* 原值: 16px */;
   margin-left: 8px;
 }
 
@@ -829,13 +829,13 @@ onMounted(() => {
 }
 
 .delete-icon {
-  font-size: 48px;
+  font-size: 3.429rem /* 原值: 48px */;
   color: #f56c6c;
   margin-bottom: 16px;
 }
 
 .delete-record-info {
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   color: #666;
   margin-top: 8px;
 }
@@ -854,7 +854,7 @@ onMounted(() => {
 
 .empty-tips {
   margin-top: 16px;
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   color: #999;
   padding: 12px 20px;
   background-color: #f5f7fa;
@@ -874,7 +874,7 @@ onMounted(() => {
   }
 
   .section-title {
-    font-size: 24px;
+    font-size: 1.714rem /* 原值: 24px */;
   }
 
   .stats-card {
@@ -883,11 +883,11 @@ onMounted(() => {
   }
 
   .stat-number {
-    font-size: 24px;
+    font-size: 1.714rem /* 原值: 24px */;
   }
 
   .nutrient-value {
-    font-size: 18px;
+    font-size: 1.286rem /* 原值: 18px */;
   }
 }
 

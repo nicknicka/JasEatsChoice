@@ -210,7 +210,7 @@ const sendReminder = () => {
         display: flex;
         align-items: center;
         gap: 8px;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         font-weight: 600;
         color: #0369a1;
       }
@@ -231,13 +231,13 @@ const sendReminder = () => {
         gap: 4px;
 
         .label {
-          font-size: 12px;
+          font-size: 0.857rem /* 原值: 12px */;
           color: #64748b;
           font-weight: 500;
         }
 
         .value {
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           color: #0c4a6e;
           font-weight: 600;
 
@@ -268,7 +268,7 @@ const sendReminder = () => {
         display: flex;
         align-items: center;
         gap: 8px;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         font-weight: 600;
         color: #1f2937;
       }
@@ -288,7 +288,7 @@ const sendReminder = () => {
           display: flex;
           justify-content: space-between;
           padding: 6px 0;
-          font-size: 13px;
+          font-size: 0.929rem /* 原值: 13px */;
 
           .label {
             color: #6b7280;
@@ -310,7 +310,7 @@ const sendReminder = () => {
         border: 1px solid #e8eef5;
 
         .items-title {
-          font-size: 13px;
+          font-size: 0.929rem /* 原值: 13px */;
           font-weight: 600;
           color: #1f2937;
           margin-bottom: 10px;
@@ -323,7 +323,7 @@ const sendReminder = () => {
           justify-content: space-between;
           align-items: center;
           padding: 8px 0;
-          font-size: 13px;
+          font-size: 0.929rem /* 原值: 13px */;
           border-bottom: 1px dashed #e8eef5;
 
           &:last-child {
@@ -361,13 +361,13 @@ const sendReminder = () => {
           align-items: center;
 
           .label {
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
             color: #78350f;
             font-weight: 600;
           }
 
           .value {
-            font-size: 18px;
+            font-size: 1.286rem /* 原值: 18px */;
             color: #b45309;
             font-weight: 700;
           }
@@ -377,7 +377,7 @@ const sendReminder = () => {
 
     .detail-actions {
       .actions-title {
-        font-size: 13px;
+        font-size: 0.929rem /* 原值: 13px */;
         font-weight: 600;
         color: #6b7280;
         margin-bottom: 10px;

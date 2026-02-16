@@ -376,7 +376,7 @@ onMounted(() => {
       padding: 80px 20px;
       text-align: center;
       color: #909399;
-      font-size: 15px;
+      font-size: 1.071rem /* 原值: 15px */;
       background: linear-gradient(135deg, #f9f9f9 0%, #ffffff 100%);
       border-radius: 8px;
       border: 2px dashed #dcdfe6;
@@ -407,7 +407,7 @@ onMounted(() => {
       background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);
 
       .el-dialog__title {
-        font-size: 20px;
+        font-size: 1.429rem /* 原值: 20px */;
         font-weight: 700;
         color: #303133;
       }
@@ -425,7 +425,7 @@ onMounted(() => {
         }
 
         .el-dialog__close {
-          font-size: 18px;
+          font-size: 1.286rem /* 原值: 18px */;
           color: #909399;
         }
       }
@@ -441,7 +441,7 @@ onMounted(() => {
           .el-form-item__label {
             font-weight: 600;
             color: #606266;
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
           }
 
           .el-input__inner,
@@ -449,7 +449,7 @@ onMounted(() => {
             border-radius: 8px;
             border: 2px solid #dcdfe6;
             transition: all 0.3s ease;
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
 
             &:focus {
               border-color: #909399;
@@ -495,7 +495,7 @@ onMounted(() => {
           border-radius: 8px;
           padding: 12px 24px;
           font-weight: 600;
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           transition: all 0.3s ease;
           border: 2px solid transparent;
 

@@ -455,7 +455,7 @@ onMounted(() => {
     margin-bottom: 20px;
 
     .page-title {
-      font-size: 24px;
+      font-size: 1.714rem /* 原值: 24px */;
       font-weight: 600;
       margin: 0;
       color: #303133;
@@ -478,7 +478,7 @@ onMounted(() => {
 
         .overview-title {
           margin: 0;
-          font-size: 18px;
+          font-size: 1.286rem /* 原值: 18px */;
           font-weight: 600;
           color: #303133;
         }
@@ -500,14 +500,14 @@ onMounted(() => {
           }
 
           .stat-value {
-            font-size: 28px;
+            font-size: 2rem /* 原值: 28px */;
             font-weight: 700;
             color: #409eff;
             margin-bottom: 5px;
           }
 
           .stat-label {
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
             color: #606266;
           }
         }
@@ -516,7 +516,7 @@ onMounted(() => {
           margin-top: 30px;
 
           .distribution-title {
-            font-size: 16px;
+            font-size: 1.143rem /* 原值: 16px */;
             font-weight: 600;
             margin-bottom: 15px;
             color: #303133;
@@ -530,7 +530,7 @@ onMounted(() => {
 
               .rating-label {
                 width: 120px;
-                font-size: 14px;
+                font-size: 1rem /* 原值: 14px */;
                 color: #606266;
               }
 
@@ -549,7 +549,7 @@ onMounted(() => {
 
               .rating-count {
                 width: 30px;
-                font-size: 14px;
+                font-size: 1rem /* 原值: 14px */;
                 font-weight: 600;
                 color: #303133;
               }
@@ -641,7 +641,7 @@ onMounted(() => {
           align-items: center;
 
           .comments-count {
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
             color: #606266;
           }
         }
@@ -682,7 +682,7 @@ onMounted(() => {
               .user-details {
                 .user-name {
                   font-weight: 600;
-                  font-size: 16px;
+                  font-size: 1.143rem /* 原值: 16px */;
                   margin-bottom: 5px;
                   color: #303133;
                 }
@@ -690,12 +690,12 @@ onMounted(() => {
                 .order-info {
                   display: flex;
                   gap: 15px;
-                  font-size: 13px;
+                  font-size: 0.929rem /* 原值: 13px */;
                   color: #606266;
 
                   .order-no,
                   .time {
-                    font-size: 12px;
+                    font-size: 0.857rem /* 原值: 12px */;
                   }
                 }
               }
@@ -719,7 +719,7 @@ onMounted(() => {
 
               .dish-label {
                 font-weight: 500;
-                font-size: 14px;
+                font-size: 1rem /* 原值: 14px */;
                 color: #303133;
               }
 
@@ -735,14 +735,14 @@ onMounted(() => {
               .comment-label,
               .reply-label {
                 font-weight: 600;
-                font-size: 14px;
+                font-size: 1rem /* 原值: 14px */;
                 margin-bottom: 5px;
                 color: #303133;
               }
 
               .comment-value,
               .reply-value {
-                font-size: 14px;
+                font-size: 1rem /* 原值: 14px */;
                 color: #303133;
                 line-height: 1.6;
                 padding: 10px;
@@ -784,7 +784,7 @@ onMounted(() => {
               margin-top: 10px;
               cursor: pointer;
               color: #409eff;
-              font-size: 14px;
+              font-size: 1rem /* 原值: 14px */;
 
               .btn-text {
                 margin-right: 5px;

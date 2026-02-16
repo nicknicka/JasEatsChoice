@@ -1009,7 +1009,7 @@ onMounted(() => {
           min-width: 0;
 
           .stat-value {
-            font-size: 28px;
+            font-size: 2rem /* 原值: 28px */;
             font-weight: 700;
             color: #303133;
             line-height: 1;
@@ -1017,7 +1017,7 @@ onMounted(() => {
           }
 
           .stat-label {
-            font-size: 13px;
+            font-size: 0.929rem /* 原值: 13px */;
             color: #909399;
           }
         }
@@ -1035,7 +1035,7 @@ onMounted(() => {
 
       h3 {
         margin: 0;
-        font-size: 18px;
+        font-size: 1.286rem /* 原值: 18px */;
         font-weight: 600;
         color: #303133;
       }
@@ -1090,13 +1090,13 @@ onMounted(() => {
           display: inline-flex;
           align-items: center;
           gap: 4px;
-          font-size: 13px;
+          font-size: 0.929rem /* 原值: 13px */;
           color: #606266;
         }
       }
 
       .time-range {
-        font-size: 12px;
+        font-size: 0.857rem /* 原值: 12px */;
         line-height: 1.4;
         color: #606266;
 
@@ -1132,7 +1132,7 @@ onMounted(() => {
   .announcement-detail {
     .detail-title {
       margin: 0 0 16px 0;
-      font-size: 20px;
+      font-size: 1.429rem /* 原值: 20px */;
       font-weight: 600;
       color: #303133;
       line-height: 1.5;
@@ -1147,7 +1147,7 @@ onMounted(() => {
         display: flex;
         align-items: center;
         margin-bottom: 12px;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
 
         &:last-child {
           margin-bottom: 0;
@@ -1166,7 +1166,7 @@ onMounted(() => {
         font-weight: 600;
         margin-bottom: 12px;
         color: #303133;
-        font-size: 15px;
+        font-size: 1.071rem /* 原值: 15px */;
       }
 
       .content-text {
@@ -1177,7 +1177,7 @@ onMounted(() => {
         white-space: pre-wrap;
         word-break: break-word;
         color: #606266;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
       }
     }
   }
@@ -1197,14 +1197,14 @@ onMounted(() => {
       border-bottom: 1px solid #ebeef5;
 
       .preview-date {
-        font-size: 13px;
+        font-size: 0.929rem /* 原值: 13px */;
         color: #909399;
       }
     }
 
     .preview-title {
       margin: 0 0 16px 0;
-      font-size: 20px;
+      font-size: 1.429rem /* 原值: 20px */;
       font-weight: 600;
       color: #303133;
       line-height: 1.5;
@@ -1221,7 +1221,7 @@ onMounted(() => {
     .preview-footer {
       padding-top: 12px;
       border-top: 1px solid #ebeef5;
-      font-size: 13px;
+      font-size: 0.929rem /* 原值: 13px */;
       color: #909399;
       text-align: center;
     }

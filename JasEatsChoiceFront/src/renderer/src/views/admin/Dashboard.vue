@@ -335,7 +335,7 @@ onMounted(() => {
     margin-bottom: 32px;
 
     h1 {
-      font-size: 28px;
+      font-size: 2rem /* 原值: 28px */;
       color: #303133;
       margin: 0 0 8px 0;
     }
@@ -343,7 +343,7 @@ onMounted(() => {
     .subtitle {
       color: #909399;
       margin: 0;
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
     }
   }
 
@@ -406,14 +406,14 @@ onMounted(() => {
         flex: 1;
 
         .stat-value {
-          font-size: 32px;
+          font-size: 2.286rem /* 原值: 32px */;
           font-weight: bold;
           color: #303133;
           margin-bottom: 4px;
         }
 
         .stat-label {
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           color: #909399;
         }
       }
@@ -428,7 +428,7 @@ onMounted(() => {
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
 
     h2 {
-      font-size: 20px;
+      font-size: 1.429rem /* 原值: 20px */;
       color: #303133;
       margin: 0 0 20px 0;
     }
@@ -479,13 +479,13 @@ onMounted(() => {
         flex: 1;
 
         h3 {
-          font-size: 18px;
+          font-size: 1.286rem /* 原值: 18px */;
           color: #303133;
           margin: 0 0 6px 0;
         }
 
         p {
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           color: #909399;
           margin: 0;
         }

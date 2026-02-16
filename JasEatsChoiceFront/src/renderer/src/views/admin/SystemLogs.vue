@@ -647,7 +647,7 @@ onMounted(() => {
         .subtitle {
           color: #6b7280;
           margin: 0;
-          font-size: 13px;
+          font-size: 0.929rem /* 原值: 13px */;
         }
       }
     }
@@ -770,7 +770,7 @@ onMounted(() => {
         }
 
         .stat-label {
-          font-size: 12px;
+          font-size: 0.857rem /* 原值: 12px */;
           color: #6b7280;
         }
       }
@@ -867,7 +867,7 @@ onMounted(() => {
 
       .card-extra {
         .record-count {
-          font-size: 13px;
+          font-size: 0.929rem /* 原值: 13px */;
           color: #6b7280;
         }
       }
@@ -942,7 +942,7 @@ onMounted(() => {
           display: flex;
           align-items: center;
           gap: 6px;
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           font-weight: 500;
           color: #374151;
           margin-bottom: 10px;
@@ -971,12 +971,12 @@ onMounted(() => {
 
         .ip-address {
           font-family: 'Courier New', monospace;
-          font-size: 13px;
+          font-size: 0.929rem /* 原值: 13px */;
         }
 
         .method-code {
           font-family: 'Courier New', monospace;
-          font-size: 12px;
+          font-size: 0.857rem /* 原值: 12px */;
           background: #f3f4f6;
           padding: 4px 8px;
           border-radius: 4px;
@@ -984,7 +984,7 @@ onMounted(() => {
 
         .env-info {
           color: #6b7280;
-          font-size: 13px;
+          font-size: 0.929rem /* 原值: 13px */;
         }
 
         .code-box {
@@ -1001,7 +1001,7 @@ onMounted(() => {
             margin: 0;
             padding: 12px;
             background: #f9fafb;
-            font-size: 12px;
+            font-size: 0.857rem /* 原值: 12px */;
             line-height: 1.6;
             max-height: 250px;
             overflow: auto;

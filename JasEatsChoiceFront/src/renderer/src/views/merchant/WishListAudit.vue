@@ -46,7 +46,7 @@ onMounted(() => {
 
   h2 {
     margin: 0;
-    font-size: 24px;
+    font-size: 1.714rem /* 原值: 24px */;
     font-weight: 600;
   }
 }

@@ -1065,7 +1065,7 @@ watch(activeMenuTab, (newTab, oldTab) => {
       background-color: #ffffff;
 
       .back-button {
-        font-size: 18px;
+        font-size: 1.286rem /* 原值: 18px */;
         color: #409eff;
         padding: 8px 16px;
         border-radius: 6px;
@@ -1090,7 +1090,7 @@ watch(activeMenuTab, (newTab, oldTab) => {
         }
 
         .el-tabs__item {
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           color: #666666;
           padding: 12px 0;
           transition: all 0.3s ease;
@@ -1132,14 +1132,14 @@ watch(activeMenuTab, (newTab, oldTab) => {
         }
 
         .empty-state-title {
-          font-size: 20px;
+          font-size: 1.429rem /* 原值: 20px */;
           font-weight: 600;
           color: #333;
           margin: 0 0 8px 0;
         }
 
         .empty-state-desc {
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           color: #666;
           margin: 0 0 24px 0;
         }
@@ -1150,7 +1150,7 @@ watch(activeMenuTab, (newTab, oldTab) => {
         margin-bottom: 24px;
 
         .menu-name-title {
-          font-size: 24px;
+          font-size: 1.714rem /* 原值: 24px */;
           font-weight: bold;
           color: #333;
           padding-bottom: 12px;
@@ -1194,7 +1194,7 @@ watch(activeMenuTab, (newTab, oldTab) => {
           .category-nav-tag {
             cursor: pointer;
             transition: all 0.3s ease;
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
             padding: 6px 12px;
 
             &:hover {
@@ -1210,7 +1210,7 @@ watch(activeMenuTab, (newTab, oldTab) => {
         padding: 32px;
         text-align: center;
         color: #999;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         background-color: #f9f9f9;
         border-radius: 8px;
         margin-top: 16px;
@@ -1226,7 +1226,7 @@ watch(activeMenuTab, (newTab, oldTab) => {
 
         .notice-text {
           color: #999;
-          font-size: 16px;
+          font-size: 1.143rem /* 原值: 16px */;
         }
       }
 
@@ -1235,7 +1235,7 @@ watch(activeMenuTab, (newTab, oldTab) => {
         margin-bottom: 32px;
 
         .category-title {
-          font-size: 18px;
+          font-size: 1.286rem /* 原值: 18px */;
           font-weight: bold;
           color: #333333;
           margin-bottom: 16px;
@@ -1259,13 +1259,13 @@ watch(activeMenuTab, (newTab, oldTab) => {
         border: 1px solid rgba(251, 191, 36, 0.3);
 
         .notice-icon {
-          font-size: 48px;
+          font-size: 3.429rem /* 原值: 48px */;
           margin-bottom: 12px;
         }
 
         .notice-text {
           color: #92400e;
-          font-size: 16px;
+          font-size: 1.143rem /* 原值: 16px */;
           font-weight: 500;
           margin: 0;
         }
@@ -1281,7 +1281,7 @@ watch(activeMenuTab, (newTab, oldTab) => {
       .quick-order-button {
         width: 100%;
         height: 52px;
-        font-size: 16px;
+        font-size: 1.143rem /* 原值: 16px */;
         background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
         border: none;
         border-radius: 12px;
@@ -1353,7 +1353,7 @@ watch(activeMenuTab, (newTab, oldTab) => {
 
     .cart-icon {
       color: #ffffff;
-      font-size: 28px;
+      font-size: 2rem /* 原值: 28px */;
     }
   }
 
@@ -1370,7 +1370,7 @@ watch(activeMenuTab, (newTab, oldTab) => {
       background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
       border: 2px solid #ffffff;
       font-weight: 700;
-      font-size: 11px;
+      font-size: 0.75rem /* 原值: 11px */;
       min-width: 18px;
       height: 18px;
       line-height: 18px;
@@ -1381,7 +1381,7 @@ watch(activeMenuTab, (newTab, oldTab) => {
 
   // 金额显示
   .cart-amount {
-    font-size: 11px;
+    font-size: 0.75rem /* 原值: 11px */;
     font-weight: 700;
     color: #ffffff;
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);

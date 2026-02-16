@@ -437,7 +437,7 @@ defineExpose({
           background: #ffffff;
           padding: 8px 12px;
           padding-right: 80px; // 为字符计数留空间
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           line-height: 1.6;
           min-height: 32px;
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -456,7 +456,7 @@ defineExpose({
 
           &::placeholder {
             color: #adb5bd;
-            font-size: 13px;
+            font-size: 0.929rem /* 原值: 13px */;
           }
         }
       }
@@ -465,7 +465,7 @@ defineExpose({
         position: absolute;
         right: 12px;
         bottom: 8px;
-        font-size: 12px;
+        font-size: 0.857rem /* 原值: 12px */;
         color: #adb5bd;
         background: #ffffff;
         padding: 2px 6px;
@@ -520,7 +520,7 @@ defineExpose({
         gap: 4px;
 
         .emoji-item {
-          font-size: 20px;
+          font-size: 1.429rem /* 原值: 20px */;
           text-align: center;
           padding: 6px 4px;
           border-radius: 6px;
@@ -548,7 +548,7 @@ defineExpose({
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         border: none;
         padding: 6px 20px;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         font-weight: 500;
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(102, 126, 234, 0.25);
@@ -579,7 +579,7 @@ defineExpose({
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         border: none;
         padding: 6px 20px;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         font-weight: 500;
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(102, 126, 234, 0.25);

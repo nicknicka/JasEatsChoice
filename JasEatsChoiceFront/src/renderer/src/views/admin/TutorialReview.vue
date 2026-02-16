@@ -392,7 +392,7 @@ onMounted(() => {
 
     h3 {
       margin: 0;
-      font-size: 20px;
+      font-size: 1.429rem /* 原值: 20px */;
       color: #303133;
     }
 
@@ -428,7 +428,7 @@ onMounted(() => {
         padding: 5px 10px;
 
         .el-icon {
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
         }
       }
 
@@ -439,7 +439,7 @@ onMounted(() => {
   }
 
   .type-icon {
-    font-size: 18px;
+    font-size: 1.286rem /* 原值: 18px */;
 
     &.video {
       color: #ff6b6b;
@@ -452,13 +452,13 @@ onMounted(() => {
 
   .ai-info {
     color: #909399;
-    font-size: 12px;
+    font-size: 0.857rem /* 原值: 12px */;
     font-style: italic;
   }
 
   .info-text {
     color: #606266;
-    font-size: 13px;
+    font-size: 0.929rem /* 原值: 13px */;
   }
 
   .pagination-container {
@@ -513,7 +513,7 @@ onMounted(() => {
 
         .label {
           color: #909399;
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
         }
 
         span {
@@ -527,7 +527,7 @@ onMounted(() => {
       margin-bottom: 20px;
 
       h4 {
-        font-size: 16px;
+        font-size: 1.143rem /* 原值: 16px */;
         color: #303133;
         margin-bottom: 12px;
         padding-bottom: 8px;
@@ -535,7 +535,7 @@ onMounted(() => {
       }
 
       .content-text {
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         line-height: 1.8;
         color: #606266;
         max-height: 400px;
@@ -548,7 +548,7 @@ onMounted(() => {
         // Markdown 样式
         :deep(.markdown-body) {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           line-height: 1.8;
           color: #303133;
 
@@ -715,7 +715,7 @@ onMounted(() => {
 
       p {
         color: #606266;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         line-height: 1.8;
       }
     }

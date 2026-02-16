@@ -1042,7 +1042,7 @@ const filteredRecipes = computed(() => {
     margin-bottom: 24px;
 
     h2 {
-      font-size: 32px;
+      font-size: 2.286rem /* 原值: 32px */;
       margin: 0;
       color: #333;
     }
@@ -1059,7 +1059,7 @@ const filteredRecipes = computed(() => {
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 
     .card-header {
-      font-size: 18px;
+      font-size: 1.286rem /* 原值: 18px */;
       font-weight: 700;
     }
 
@@ -1074,13 +1074,13 @@ const filteredRecipes = computed(() => {
         flex: 1;
 
         .stat-label {
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           color: #666;
           margin-bottom: 8px;
         }
 
         .stat-value {
-          font-size: 28px;
+          font-size: 2rem /* 原值: 28px */;
           font-weight: 700;
           color: #ff6b6b;
           margin-bottom: 12px;
@@ -1139,7 +1139,7 @@ const filteredRecipes = computed(() => {
       display: flex;
       align-items: center;
       gap: 16px;
-      font-size: 20px;
+      font-size: 1.429rem /* 原值: 20px */;
       font-weight: 700;
       color: #2c3e50;
       padding: 20px 24px !important;
@@ -1148,7 +1148,7 @@ const filteredRecipes = computed(() => {
       // border-bottom: 1px solid #eef2f7 !important;
 
       .meal-icon {
-        font-size: 32px;
+        font-size: 2.286rem /* 原值: 32px */;
         padding: 10px;
         border-radius: 50%;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -1172,7 +1172,7 @@ const filteredRecipes = computed(() => {
       .el-tag {
         padding: 8px 16px;
         border-radius: 20px;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         font-weight: 500;
       }
     }
@@ -1190,7 +1190,7 @@ const filteredRecipes = computed(() => {
       gap: 4px; /* 缩小统一间距 */
 
       .el-button {
-        font-size: 13px;
+        font-size: 0.929rem /* 原值: 13px */;
         padding: 4px 12px;
         border-radius: 6px;
         margin: 0;
@@ -1404,7 +1404,7 @@ const filteredRecipes = computed(() => {
 
       .meal-icon.info {
         color: #00bcd4;
-        font-size: 24px;
+        font-size: 1.714rem /* 原值: 24px */;
       }
     }
   }
@@ -1482,7 +1482,7 @@ const filteredRecipes = computed(() => {
 // 所有对话框标题样式
 .el-dialog__header {
   .el-dialog__title {
-    font-size: 24px !important;
+    font-size: 1.714rem /* 原值: 24px */ !important;
     font-weight: 700 !important;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
     background-clip: text !important;
@@ -1502,7 +1502,7 @@ const filteredRecipes = computed(() => {
 
     .detail-label {
       font-weight: 700;
-      font-size: 16px;
+      font-size: 1.143rem /* 原值: 16px */;
       color: #2c3e50;
       margin-right: 12px;
       padding: 8px 16px;
@@ -1516,13 +1516,13 @@ const filteredRecipes = computed(() => {
     }
 
     .detail-value {
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
       color: #666;
     }
 
     // 餐型值样式
     .detail-item:first-child .detail-value {
-      font-size: 20px;
+      font-size: 1.429rem /* 原值: 20px */;
       font-weight: 700;
       color: #2196f3;
       margin-left: 8px;
@@ -1554,7 +1554,7 @@ const filteredRecipes = computed(() => {
 
       .nutrition-label {
         font-weight: 600;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         color: #757575;
         display: block;
         margin-bottom: 4px;
@@ -1563,7 +1563,7 @@ const filteredRecipes = computed(() => {
       .nutrition-value {
         color: #ff5252;
         font-weight: 700;
-        font-size: 20px;
+        font-size: 1.429rem /* 原值: 20px */;
         margin-left: 0;
       }
     }
@@ -1612,7 +1612,7 @@ const filteredRecipes = computed(() => {
     }
 
     .dish-name {
-      font-size: 18px;
+      font-size: 1.286rem /* 原值: 18px */;
       font-weight: 700;
       margin: 0 0 14px 0;
       color: #2c3e50;
@@ -1682,7 +1682,7 @@ const filteredRecipes = computed(() => {
   // 表单标签样式
   .el-form-item__label {
     font-weight: 700 !important;
-    font-size: 14px !important;
+    font-size: 1rem /* 原值: 14px */ !important;
     color: #2c3e50 !important;
   }
 
@@ -1821,7 +1821,7 @@ const filteredRecipes = computed(() => {
   // 表单标签
   .el-form-item__label {
     font-weight: 700 !important;
-    font-size: 14px !important;
+    font-size: 1rem /* 原值: 14px */ !important;
     color: #2c3e50 !important;
   }
 
@@ -1847,7 +1847,7 @@ const filteredRecipes = computed(() => {
     h4 {
       color: #2c3e50;
       margin-bottom: 16px;
-      font-size: 16px;
+      font-size: 1.143rem /* 原值: 16px */;
       font-weight: 700;
     }
   }
@@ -1872,7 +1872,7 @@ const filteredRecipes = computed(() => {
 
     // 营养信息
     .dish-nutrition {
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
       color: #999;
     }
   }

@@ -322,13 +322,13 @@ const thirdPartyLogin = (type) => {
   text-align: center;
   margin-bottom: 30px;
   color: #333;
-  font-size: 24px;
+  font-size: 1.714rem /* 原值: 24px */;
 }
 
 .login-link {
   text-align: center;
   margin-top: 15px;
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   color: #666;
 
   span {

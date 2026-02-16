@@ -919,7 +919,7 @@ const handleSearch = (value) => {
 }
 
 .logo {
-  font-size: 24px;
+  font-size: 1.5rem; /* 使用相对单位，会继承 body 的字体大小 */
   font-weight: bold;
   color: #ff6b6b;
   cursor: pointer;
@@ -937,7 +937,7 @@ const handleSearch = (value) => {
   margin-right: 10px;
 
   .identity-switch {
-    font-size: 18px;
+    font-size: 1.125rem; /* 使用相对单位，会继承 body 的字体大小 */
     padding: 0;
 
     .user-icon,
@@ -945,7 +945,7 @@ const handleSearch = (value) => {
       transition:
         transform 0.3s ease,
         color 0.3s ease;
-      font-size: 18px;
+      font-size: 1.125rem; /* 使用相对单位，会继承 body 的字体大小 */
     }
 
     .icon-enlarged {
@@ -975,7 +975,7 @@ const handleSearch = (value) => {
 
     .username {
       margin-top: 8px;
-      font-size: 14px;
+      font-size: 1rem; /* 使用相对单位，会继承 body 的字体大小 */
       font-weight: 500;
       color: #333;
       white-space: nowrap; /* 不换行 */
@@ -1000,6 +1000,18 @@ const handleSearch = (value) => {
   /* 确保即使在 scoped 样式下，激活状态也能正确应用 */
   .menu-list,
   .setting-menu-list {
+    /* 设置菜单项字体大小为相对单位 */
+    :deep(.el-menu-item),
+    :deep(.el-sub-menu__title) {
+      font-size: 1rem !important; /* 使用相对单位 */
+    }
+
+    /* 菜单项内的文字 */
+    :deep(.el-menu-item span),
+    :deep(.el-sub-menu__title span) {
+      font-size: 1rem !important; /* 使用相对单位 */
+    }
+
     :deep(.el-menu-item.is-active),
     :deep(.el-sub-menu__title.is-active) {
       background-color: var(--el-menu-item-hover-bg-color) !important;
@@ -1025,13 +1037,13 @@ const handleSearch = (value) => {
       justify-content: center;
       background-color: #f56c6c;
       color: #ffffff;
-      font-size: 11px;
+      font-size: 0.75rem; /* 使用相对单位，会继承 body 的字体大小 */
       font-weight: 500;
-      height: 18px;
-      line-height: 18px;
-      padding: 0 6px;
-      min-width: 18px;
-      border-radius: 9px;
+      height: 1.2rem;
+      line-height: 1.2rem;
+      padding: 0 0.4rem;
+      min-width: 1.2rem;
+      border-radius: 0.6rem;
       white-space: nowrap;
       flex-shrink: 0;
     }

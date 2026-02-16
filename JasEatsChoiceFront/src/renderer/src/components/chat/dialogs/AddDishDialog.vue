@@ -357,7 +357,7 @@ const handleSubmit = async () => {
     align-items: center;
     gap: 8px;
     margin-bottom: 12px;
-    font-size: 14px;
+    font-size: 1rem /* 原值: 14px */;
     font-weight: 600;
     color: #409eff;
   }
@@ -376,7 +376,7 @@ const handleSubmit = async () => {
     align-items: center;
     gap: 8px;
     margin-bottom: 12px;
-    font-size: 14px;
+    font-size: 1rem /* 原值: 14px */;
     font-weight: 600;
     color: #67c23a;
   }
@@ -409,7 +409,7 @@ const handleSubmit = async () => {
     align-items: center;
     gap: 8px;
     margin-bottom: 12px;
-    font-size: 14px;
+    font-size: 1rem /* 原值: 14px */;
     font-weight: 600;
     color: #e6a23c;
   }
@@ -503,7 +503,7 @@ const handleSubmit = async () => {
     gap: 12px;
 
     .dish-name {
-      font-size: 15px;
+      font-size: 1.071rem /* 原值: 15px */;
       font-weight: 600;
       color: #303133;
       flex: 1;
@@ -514,7 +514,7 @@ const handleSubmit = async () => {
     }
 
     .dish-price {
-      font-size: 18px;
+      font-size: 1.286rem /* 原值: 18px */;
       color: #f56c6c;
       font-weight: 700;
       flex-shrink: 0;
@@ -525,7 +525,7 @@ const handleSubmit = async () => {
     padding: 10px 12px;
     background: #f5f7fa;
     border-radius: 6px;
-    font-size: 12px;
+    font-size: 0.857rem /* 原值: 12px */;
 
     .ingredient-section {
       margin-bottom: 10px;
@@ -543,7 +543,7 @@ const handleSubmit = async () => {
         .ingredient-label {
           font-weight: 600;
           color: #303133;
-          font-size: 12px;
+          font-size: 0.857rem /* 原值: 12px */;
         }
 
         .ingredient-count {
@@ -551,7 +551,7 @@ const handleSubmit = async () => {
           padding: 2px 8px;
           background: #e4e7ed;
           border-radius: 10px;
-          font-size: 11px;
+          font-size: 0.75rem /* 原值: 11px */;
           color: #606266;
           font-weight: 600;
         }
@@ -596,7 +596,7 @@ const handleSubmit = async () => {
           }
 
           :deep(.el-checkbox__label) {
-            font-size: 12px;
+            font-size: 0.857rem /* 原值: 12px */;
             padding-left: 6px;
           }
 
@@ -612,7 +612,7 @@ const handleSubmit = async () => {
             .ingredient-price {
               color: #f56c6c;
               font-weight: 700;
-              font-size: 11px;
+              font-size: 0.75rem /* 原值: 11px */;
             }
           }
         }
@@ -640,7 +640,7 @@ const handleSubmit = async () => {
       border: 1px solid #e4e7ed;
 
       .total-price {
-        font-size: 16px;
+        font-size: 1.143rem /* 原值: 16px */;
         color: #f56c6c;
         font-weight: 700;
       }
@@ -681,17 +681,17 @@ const handleSubmit = async () => {
       display: flex;
       align-items: center;
       gap: 6px;
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
       color: #606266;
 
       strong {
         color: #303133;
-        font-size: 16px;
+        font-size: 1.143rem /* 原值: 16px */;
       }
 
       &.amount strong {
         color: #f56c6c;
-        font-size: 18px;
+        font-size: 1.286rem /* 原值: 18px */;
       }
     }
   }
@@ -699,7 +699,7 @@ const handleSubmit = async () => {
   .el-button {
     height: 38px;
     padding: 0 24px;
-    font-size: 14px;
+    font-size: 1rem /* 原值: 14px */;
     font-weight: 600;
     flex-shrink: 0;
   }

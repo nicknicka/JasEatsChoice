@@ -108,21 +108,21 @@ const onDelete = () => {
 }
 
 .record-time {
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   color: #6b7280;
   font-weight: 500;
   margin-bottom: 4px;
 }
 
 .food-name {
-  font-size: 18px;
+  font-size: 1.286rem /* 原值: 18px */;
   font-weight: 600;
   color: #111827;
   margin-bottom: 2px;
 }
 
 .food-description {
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   color: #6b7280;
   overflow: hidden;
   text-overflow: ellipsis;

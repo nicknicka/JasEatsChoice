@@ -1333,7 +1333,7 @@ onMounted(async () => {
 }
 
 .logo {
-  font-size: 24px;
+  font-size: 1.714rem /* 原值: 24px */;
   font-weight: bold;
   color: #ff6b6b;
 }
@@ -1346,7 +1346,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 16px;
+  font-size: 1.143rem /* 原值: 16px */;
 }
 
 .main-content {
@@ -1548,13 +1548,13 @@ onMounted(async () => {
             }
 
             .weather-emoji {
-              font-size: 40px;
+              font-size: 2.857rem /* 原值: 40px */;
               filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.25));
               animation: emoji-bounce 2s ease-in-out infinite;
             }
 
             .weather-icon {
-              font-size: 48px;
+              font-size: 3.429rem /* 原值: 48px */;
               color: #fff;
               filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.25));
             }
@@ -1582,7 +1582,7 @@ onMounted(async () => {
             }
 
             .temp-unit {
-              font-size: 24px;
+              font-size: 1.714rem /* 原值: 24px */;
               font-weight: 600;
               opacity: 0.9;
               text-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
@@ -1591,7 +1591,7 @@ onMounted(async () => {
           }
 
           .temp-range {
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
             font-weight: 600;
             opacity: 0.85;
             text-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
@@ -1614,14 +1614,14 @@ onMounted(async () => {
               align-items: center;
               gap: 6px;
               margin-bottom: 8px;
-              font-size: 11px;
+              font-size: 0.75rem /* 原值: 11px */;
               font-weight: 600;
               letter-spacing: 1px;
               text-transform: uppercase;
               opacity: 0.85;
 
               .location-icon {
-                font-size: 14px;
+                font-size: 1rem /* 原值: 14px */;
                 animation: location-pulse 2s ease-in-out infinite;
               }
 
@@ -1645,7 +1645,7 @@ onMounted(async () => {
               border-radius: 20px;
               transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
               border: 1px solid rgba(255, 255, 255, 0.2);
-              font-size: 14px;
+              font-size: 1rem /* 原值: 14px */;
               box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1);
               min-width: 0;
               max-width: 100%;
@@ -1669,7 +1669,7 @@ onMounted(async () => {
               }
 
               .location-text {
-                font-size: 14px;
+                font-size: 1rem /* 原值: 14px */;
                 font-weight: 600;
                 flex: 1;
                 min-width: 0;
@@ -1683,7 +1683,7 @@ onMounted(async () => {
               }
 
               .edit-icon {
-                font-size: 16px;
+                font-size: 1.143rem /* 原值: 16px */;
                 opacity: 0.85;
                 transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                 flex-shrink: 0;
@@ -1723,13 +1723,13 @@ onMounted(async () => {
               }
 
               .condition-icon {
-                font-size: 20px;
+                font-size: 1.429rem /* 原值: 20px */;
                 filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.15));
                 line-height: 1;
               }
 
               .condition-text {
-                font-size: 14px;
+                font-size: 1rem /* 原值: 14px */;
                 font-weight: 600;
                 letter-spacing: 0.5px;
                 text-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
@@ -1778,7 +1778,7 @@ onMounted(async () => {
                 opacity: 0.9;
 
                 .sparkle-icon {
-                  font-size: 14px;
+                  font-size: 1rem /* 原值: 14px */;
                   animation: sparkle 2s ease-in-out infinite;
                   filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.5));
                   line-height: 1;
@@ -1790,7 +1790,7 @@ onMounted(async () => {
               }
 
               .recommendation-content {
-                font-size: 15px;
+                font-size: 1.071rem /* 原值: 15px */;
                 font-weight: 700;
                 line-height: 1.4;
                 letter-spacing: 0.4px;
@@ -1877,13 +1877,13 @@ onMounted(async () => {
           gap: 12px;
 
           .weather-icon-new {
-            font-size: 32px;
+            font-size: 2.286rem /* 原值: 32px */;
             filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.2));
             animation: icon-float 3s ease-in-out infinite;
           }
 
           .temp-value-new {
-            font-size: 48px;
+            font-size: 3.429rem /* 原值: 48px */;
             font-weight: 700;
             line-height: 1;
             text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
@@ -1897,7 +1897,7 @@ onMounted(async () => {
 
         // 温度范围
         .temp-range-new {
-          font-size: 18px;
+          font-size: 1.286rem /* 原值: 18px */;
           font-weight: 500;
           opacity: 0.95;
           text-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
@@ -1913,13 +1913,13 @@ onMounted(async () => {
           flex-wrap: wrap;
 
           .location-icon-new {
-            font-size: 18px;
+            font-size: 1.286rem /* 原值: 18px */;
             filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.15));
             animation: location-pulse 2s ease-in-out infinite;
           }
 
           .location-text-new {
-            font-size: 16px;
+            font-size: 1.143rem /* 原值: 16px */;
             font-weight: 500;
             opacity: 0.95;
             text-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
@@ -1931,7 +1931,7 @@ onMounted(async () => {
             color: #64b5f6;
             padding: 6px 14px;
             border-radius: 16px;
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1968,7 +1968,7 @@ onMounted(async () => {
           }
 
           .weather-condition-text {
-            font-size: 16px;
+            font-size: 1.143rem /* 原值: 16px */;
             font-weight: 600;
             text-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
           }
@@ -1994,13 +1994,13 @@ onMounted(async () => {
           }
 
           .sparkle-icon-new {
-            font-size: 20px;
+            font-size: 1.429rem /* 原值: 20px */;
             animation: sparkle 2s ease-in-out infinite;
             filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.4));
           }
 
           .recommendation-label-new {
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
             font-weight: 700;
             letter-spacing: 1px;
             text-transform: uppercase;
@@ -2009,7 +2009,7 @@ onMounted(async () => {
           }
 
           .recommendation-text-new {
-            font-size: 15px;
+            font-size: 1.071rem /* 原值: 15px */;
             font-weight: 600;
             text-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
             overflow: hidden;
@@ -2075,7 +2075,7 @@ onMounted(async () => {
 
     h3 {
       margin-bottom: 12px;
-      font-size: 20px;
+      font-size: 1.429rem /* 原值: 20px */;
       font-weight: bold;
     }
 
@@ -2137,7 +2137,7 @@ onMounted(async () => {
           color: white;
           padding: 8px 16px;
           border-radius: 20px;
-          font-size: 13px;
+          font-size: 0.929rem /* 原值: 13px */;
           font-weight: 700;
           backdrop-filter: blur(8px);
           box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
@@ -2172,7 +2172,7 @@ onMounted(async () => {
 
           .dish-name {
             flex: 1;
-            font-size: 24px;
+            font-size: 1.714rem /* 原值: 24px */;
             font-weight: 700;
             color: #fff;
             overflow: hidden;
@@ -2231,7 +2231,7 @@ onMounted(async () => {
           align-items: center;
           gap: 12px;
           margin-bottom: 12px;
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
 
           .dish-kcal {
             display: inline-flex;
@@ -2245,19 +2245,19 @@ onMounted(async () => {
             backdrop-filter: blur(8px);
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
             box-shadow: 0 3px 10px rgba(255, 107, 107, 0.4);
-            font-size: 15px;
+            font-size: 1.071rem /* 原值: 15px */;
             border: 1px solid rgba(255, 255, 255, 0.2);
 
             &::before {
               content: '🔥';
-              font-size: 16px;
+              font-size: 1.143rem /* 原值: 16px */;
               animation: flame-flicker 0.5s ease-in-out infinite alternate;
             }
           }
 
           .dish-tags {
             color: rgba(255, 255, 255, 0.95);
-            font-size: 13px;
+            font-size: 0.929rem /* 原值: 13px */;
             font-weight: 600;
             padding: 6px 14px;
             background: rgba(255, 255, 255, 0.15);
@@ -2281,7 +2281,7 @@ onMounted(async () => {
 
           :deep(.el-rate__text) {
             color: #fff !important;
-            font-size: 16px;
+            font-size: 1.143rem /* 原值: 16px */;
             font-weight: 700;
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
           }
@@ -2291,11 +2291,11 @@ onMounted(async () => {
             align-items: center;
             gap: 6px;
             color: rgba(255, 255, 255, 0.8);
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
             font-weight: 500;
 
             .el-icon {
-              font-size: 18px;
+              font-size: 1.286rem /* 原值: 18px */;
               opacity: 0.6;
             }
           }
@@ -2344,7 +2344,7 @@ onMounted(async () => {
       /* 美化空状态的文本 */
       :deep(.el-empty__description) {
         color: #666;
-        font-size: 15px;
+        font-size: 1.071rem /* 原值: 15px */;
         margin-top: 16px;
         font-weight: 500;
       }
@@ -2354,7 +2354,7 @@ onMounted(async () => {
         margin-top: 24px;
         border-radius: 24px;
         padding: 10px 32px;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         font-weight: 600;
         background: linear-gradient(135deg, #ff6b6b 0%, #ff8787 100%);
         border: none;
@@ -2439,7 +2439,7 @@ onMounted(async () => {
         flex-shrink: 0;
 
         .fire-icon {
-          font-size: 36px;
+          font-size: 2.571rem /* 原值: 36px */;
           animation: fire-pulse 2s ease-in-out infinite;
           display: inline-block;
           filter: drop-shadow(0 2px 4px rgba(255, 107, 107, 0.3));
@@ -2450,7 +2450,7 @@ onMounted(async () => {
           color: white;
           padding: 6px 14px;
           border-radius: 16px;
-          font-size: 12px;
+          font-size: 0.857rem /* 原值: 12px */;
           font-weight: 700;
           letter-spacing: 1px;
           box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
@@ -2465,7 +2465,7 @@ onMounted(async () => {
         gap: 6px;
 
         .hot-label {
-          font-size: 13px;
+          font-size: 0.929rem /* 原值: 13px */;
           color: #999;
           font-weight: 600;
           text-transform: uppercase;
@@ -2485,7 +2485,7 @@ onMounted(async () => {
 
       .hot-arrow {
         color: #ff6b6b;
-        font-size: 20px;
+        font-size: 1.429rem /* 原值: 20px */;
         flex-shrink: 0;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         background: rgba(255, 107, 107, 0.1);
@@ -2526,7 +2526,7 @@ onMounted(async () => {
       border: none;
       width: 100%;
       height: 48px;
-      font-size: 16px;
+      font-size: 1.143rem /* 原值: 16px */;
       font-weight: 500;
 
       &:hover {
@@ -2552,7 +2552,7 @@ onMounted(async () => {
 
       h3 {
         margin: 0;
-        font-size: 20px;
+        font-size: 1.429rem /* 原值: 20px */;
         font-weight: bold;
         color: #333;
       }
@@ -2569,7 +2569,7 @@ onMounted(async () => {
         gap: 6px;
         border-radius: 20px;
         padding: 8px 16px;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         font-weight: 500;
         transition: all 0.3s;
 
@@ -2579,12 +2579,12 @@ onMounted(async () => {
         }
 
         .el-icon {
-          font-size: 16px;
+          font-size: 1.143rem /* 原值: 16px */;
         }
       }
 
       .view-all-btn {
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         display: flex;
         align-items: center;
         gap: 4px;
@@ -2651,10 +2651,10 @@ onMounted(async () => {
           align-items: center;
           justify-content: center;
           color: white;
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
 
           .el-icon {
-            font-size: 16px;
+            font-size: 1.143rem /* 原值: 16px */;
           }
         }
       }
@@ -2667,7 +2667,7 @@ onMounted(async () => {
 
         .tutorial-title {
           margin: 0 0 8px 0;
-          font-size: 15px;
+          font-size: 1.071rem /* 原值: 15px */;
           font-weight: 600;
           color: #333;
           overflow: hidden;
@@ -2685,14 +2685,14 @@ onMounted(async () => {
             display: flex;
             align-items: center;
             gap: 4px;
-            font-size: 11px;
+            font-size: 0.75rem /* 原值: 11px */;
             padding: 2px 8px;
             border-radius: 10px;
             height: 20px;
             line-height: 1;
 
             .el-icon {
-              font-size: 12px;
+              font-size: 0.857rem /* 原值: 12px */;
             }
 
             .reviewed-badge {
@@ -2708,7 +2708,7 @@ onMounted(async () => {
           justify-content: space-between;
           align-items: center;
           margin-top: auto;
-          font-size: 13px;
+          font-size: 0.929rem /* 原值: 13px */;
 
           .tutorial-duration {
             color: #999;
@@ -2716,7 +2716,7 @@ onMounted(async () => {
 
           .el-rate {
             :deep(.el-rate__text) {
-              font-size: 12px;
+              font-size: 0.857rem /* 原值: 12px */;
             }
           }
         }
@@ -2740,7 +2740,7 @@ onMounted(async () => {
     /* 美化空状态的文本 */
     :deep(.el-empty__description) {
       color: #909399;
-      font-size: 16px;
+      font-size: 1.143rem /* 原值: 16px */;
       margin-top: 20px;
     }
 
@@ -2749,7 +2749,7 @@ onMounted(async () => {
       margin-top: 30px;
       border-radius: 25px;
       padding: 8px 32px;
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
     }
   }
 
@@ -2923,13 +2923,13 @@ onMounted(async () => {
         }
 
         .detail-label {
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           color: #666;
           font-weight: 600;
         }
 
         .detail-value {
-          font-size: 15px;
+          font-size: 1.071rem /* 原值: 15px */;
           color: #333;
           font-weight: 700;
         }
@@ -2953,7 +2953,7 @@ onMounted(async () => {
           border-left: 3px solid #ff9800;
 
           .advice-label {
-            font-size: 13px;
+            font-size: 0.929rem /* 原值: 13px */;
             color: #ff9800;
             font-weight: 700;
             text-transform: uppercase;
@@ -2961,7 +2961,7 @@ onMounted(async () => {
           }
 
           .advice-text {
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
             color: #555;
             line-height: 1.5;
           }
@@ -2994,7 +2994,7 @@ onMounted(async () => {
             height: 64px;
 
             .weather-icon {
-              font-size: 36px;
+              font-size: 2.571rem /* 原值: 36px */;
             }
           }
 
@@ -3005,7 +3005,7 @@ onMounted(async () => {
             }
 
             .temp-unit {
-              font-size: 18px;
+              font-size: 1.286rem /* 原值: 18px */;
             }
           }
         }
@@ -3021,23 +3021,23 @@ onMounted(async () => {
               margin-bottom: 6px;
 
               .location-icon {
-                font-size: 12px;
+                font-size: 0.857rem /* 原值: 12px */;
               }
             }
 
             .location-button {
               padding: 8px 14px;
-              font-size: 13px;
+              font-size: 0.929rem /* 原值: 13px */;
               width: 100%;
               justify-content: center;
 
               .location-text {
-                font-size: 13px;
+                font-size: 0.929rem /* 原值: 13px */;
                 max-width: 200px;
               }
 
               .edit-icon {
-                font-size: 14px;
+                font-size: 1rem /* 原值: 14px */;
               }
             }
           }
@@ -3051,11 +3051,11 @@ onMounted(async () => {
               justify-content: center;
 
               .condition-icon {
-                font-size: 16px;
+                font-size: 1.143rem /* 原值: 16px */;
               }
 
               .condition-text {
-                font-size: 13px;
+                font-size: 0.929rem /* 原值: 13px */;
               }
             }
 
@@ -3068,7 +3068,7 @@ onMounted(async () => {
                 margin-bottom: 4px;
 
                 .sparkle-icon {
-                  font-size: 12px;
+                  font-size: 0.857rem /* 原值: 12px */;
                 }
 
                 .recommendation-label {
@@ -3077,7 +3077,7 @@ onMounted(async () => {
               }
 
               .recommendation-content {
-                font-size: 13px;
+                font-size: 0.929rem /* 原值: 13px */;
                 text-align: center;
               }
             }
@@ -3088,7 +3088,7 @@ onMounted(async () => {
 
     .recommendation-section {
       h3 {
-        font-size: 18px;
+        font-size: 1.286rem /* 原值: 18px */;
       }
 
       .dish-card {
@@ -3098,17 +3098,17 @@ onMounted(async () => {
           padding: 12px;
 
           .dish-name {
-            font-size: 16px;
+            font-size: 1.143rem /* 原值: 16px */;
           }
 
           .dish-meta {
-            font-size: 12px;
+            font-size: 0.857rem /* 原值: 12px */;
             gap: 8px;
           }
 
           .dish-rating {
             :deep(.el-rate) {
-              font-size: 12px;
+              font-size: 0.857rem /* 原值: 12px */;
             }
           }
         }
@@ -3118,7 +3118,7 @@ onMounted(async () => {
     .tutorial-section {
       .section-header {
         h3 {
-          font-size: 18px;
+          font-size: 1.286rem /* 原值: 18px */;
         }
 
         .header-actions {
@@ -3127,15 +3127,15 @@ onMounted(async () => {
 
         .publish-btn {
           padding: 6px 12px;
-          font-size: 12px;
+          font-size: 0.857rem /* 原值: 12px */;
 
           .el-icon {
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
           }
         }
 
         .view-all-btn {
-          font-size: 12px;
+          font-size: 0.857rem /* 原值: 12px */;
         }
       }
 
@@ -3155,11 +3155,11 @@ onMounted(async () => {
           padding: 8px;
 
           .tutorial-title {
-            font-size: 13px;
+            font-size: 0.929rem /* 原值: 13px */;
           }
 
           .tutorial-meta {
-            font-size: 11px;
+            font-size: 0.75rem /* 原值: 11px */;
           }
         }
       }
@@ -3168,7 +3168,7 @@ onMounted(async () => {
     .nearby-section {
       .nearby-btn {
         height: 44px;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
       }
     }
   }

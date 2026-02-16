@@ -713,12 +713,12 @@ onBeforeUnmount(() => {
       z-index: 10;
 
       .el-icon {
-        font-size: 32px;
+        font-size: 2.286rem /* 原值: 32px */;
         color: #409eff;
       }
 
       span {
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         color: #666;
       }
     }
@@ -765,7 +765,7 @@ onBeforeUnmount(() => {
         align-items: center;
         justify-content: center;
         color: white;
-        font-size: 20px;
+        font-size: 1.429rem /* 原值: 20px */;
       }
 
       .location-details {
@@ -773,7 +773,7 @@ onBeforeUnmount(() => {
         min-width: 0;
 
         .location-address {
-          font-size: 15px;
+          font-size: 1.071rem /* 原值: 15px */;
           font-weight: 600;
           color: #333;
           margin-bottom: 4px;
@@ -783,7 +783,7 @@ onBeforeUnmount(() => {
         }
 
         .location-coords {
-          font-size: 12px;
+          font-size: 0.857rem /* 原值: 12px */;
           color: #999;
         }
       }
@@ -830,7 +830,7 @@ onBeforeUnmount(() => {
         min-width: 0;
 
         .result-name {
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           font-weight: 600;
           color: #333;
           margin-bottom: 4px;
@@ -840,7 +840,7 @@ onBeforeUnmount(() => {
         }
 
         .result-address {
-          font-size: 12px;
+          font-size: 0.857rem /* 原值: 12px */;
           color: #999;
           overflow: hidden;
           text-overflow: ellipsis;

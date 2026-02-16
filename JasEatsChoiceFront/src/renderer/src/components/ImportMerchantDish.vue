@@ -264,7 +264,7 @@ watch(() => props.visible, (newVal) => {
   /* 表单标签 */
   :deep(.el-form-item__label) {
     font-weight: 700 !important;
-    font-size: 14px !important;
+    font-size: 1rem /* 原值: 14px */ !important;
     color: #2c3e50 !important;
   }
 
@@ -288,10 +288,10 @@ watch(() => props.visible, (newVal) => {
     justify-content: center;
     padding: 40px 0;
     color: #667eea;
-    font-size: 14px;
+    font-size: 1rem /* 原值: 14px */;
 
     .el-icon {
-      font-size: 32px;
+      font-size: 2.286rem /* 原值: 32px */;
       margin-bottom: 12px;
     }
   }
@@ -312,7 +312,7 @@ watch(() => props.visible, (newVal) => {
     h4 {
       color: #2c3e50;
       margin-bottom: 16px;
-      font-size: 16px;
+      font-size: 1.143rem /* 原值: 16px */;
       font-weight: 700;
     }
   }
@@ -337,7 +337,7 @@ watch(() => props.visible, (newVal) => {
 
     /* 营养信息 */
     .dish-nutrition {
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
       color: #999;
     }
   }

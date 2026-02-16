@@ -304,7 +304,7 @@ const orderDish = () => {
       gap: 12px;
 
       .dish-name {
-        font-size: 24px;
+        font-size: 1.714rem /* 原值: 24px */;
         font-weight: 700;
         color: #2c3e50;
         margin: 0;
@@ -315,7 +315,7 @@ const orderDish = () => {
       }
 
       .dish-price {
-        font-size: 32px;
+        font-size: 2.286rem /* 原值: 32px */;
         font-weight: 700;
         color: #ff6b6b;
       }
@@ -326,7 +326,7 @@ const orderDish = () => {
     margin-bottom: 24px;
 
     .section-title {
-      font-size: 18px;
+      font-size: 1.286rem /* 原值: 18px */;
       font-weight: 600;
       color: #2c3e50;
       margin-bottom: 12px;
@@ -336,7 +336,7 @@ const orderDish = () => {
     }
 
     .dish-description {
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
       color: #666;
       line-height: 1.8;
       margin: 0;
@@ -348,7 +348,7 @@ const orderDish = () => {
       gap: 8px;
 
       .ingredient-tag {
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
       }
     }
 
@@ -369,12 +369,12 @@ const orderDish = () => {
           gap: 4px;
 
           .nutrition-label {
-            font-size: 12px;
+            font-size: 0.857rem /* 原值: 12px */;
             color: #666;
           }
 
           .nutrition-value {
-            font-size: 16px;
+            font-size: 1.143rem /* 原值: 16px */;
             font-weight: 600;
             color: #2c3e50;
           }
@@ -391,7 +391,7 @@ const orderDish = () => {
       border-radius: 8px;
 
       .merchant-name {
-        font-size: 16px;
+        font-size: 1.143rem /* 原值: 16px */;
         font-weight: 500;
         color: #2c3e50;
       }
@@ -405,13 +405,13 @@ const orderDish = () => {
   color: #999;
 
   .el-icon {
-    font-size: 48px;
+    font-size: 3.429rem /* 原值: 48px */;
     margin-bottom: 16px;
   }
 
   p {
     margin: 0;
-    font-size: 14px;
+    font-size: 1rem /* 原值: 14px */;
   }
 }
 

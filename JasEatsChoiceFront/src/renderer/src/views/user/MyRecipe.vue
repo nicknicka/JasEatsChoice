@@ -1314,7 +1314,7 @@ const exportToDietRecord = () => {
     margin-bottom: 24px;
 
     h2 {
-      font-size: 32px;
+      font-size: 2.286rem /* 原值: 32px */;
       margin: 0;
       color: #333;
     }
@@ -1386,13 +1386,13 @@ const exportToDietRecord = () => {
       display: flex;
       align-items: center;
       gap: 16px;
-      font-size: 20px;
+      font-size: 1.429rem /* 原值: 20px */;
       font-weight: 700;
       color: #2c3e50;
       padding: 20px 24px !important;
 
       .meal-icon {
-        font-size: 32px;
+        font-size: 2.286rem /* 原值: 32px */;
         padding: 10px;
         border-radius: 50%;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -1415,7 +1415,7 @@ const exportToDietRecord = () => {
       .el-tag {
         padding: 8px 16px;
         border-radius: 20px;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         font-weight: 500;
       }
     }
@@ -1440,7 +1440,7 @@ const exportToDietRecord = () => {
       gap: 8px; /* 统一间距 */
 
       .el-button {
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         padding: 6px 16px;
         border-radius: 8px;
         margin: 0;
@@ -1611,14 +1611,14 @@ const exportToDietRecord = () => {
       background-color: #ffffff;
       border: none;
       color: #333;
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
       padding: 10px 14px;
       border-radius: 8px;
     }
 
     &__prefix {
       color: #999;
-      font-size: 16px;
+      font-size: 1.143rem /* 原值: 16px */;
     }
 
     &__suffix {
@@ -1641,7 +1641,7 @@ const exportToDietRecord = () => {
       background-color: #ffffff;
       border: none;
       color: #333;
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
       padding: 10px 14px;
       border-radius: 8px;
     }
@@ -1705,7 +1705,7 @@ const exportToDietRecord = () => {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 20px;
+    font-size: 1.429rem /* 原值: 20px */;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     transition: opacity 0.3s;
     opacity: 0.8;

@@ -480,11 +480,11 @@ watch(visible, (newVal) => {
         height: 20px;
         line-height: 20px;
         padding: 0 6px;
-        font-size: 11px;
+        font-size: 0.75rem /* 原值: 11px */;
       }
 
       .section-title {
-        font-size: 15px;
+        font-size: 1.071rem /* 原值: 15px */;
         font-weight: 600;
         color: #303133;
       }
@@ -530,7 +530,7 @@ watch(visible, (newVal) => {
               flex-shrink: 0;
 
               .ingredient-emoji {
-                font-size: 18px;
+                font-size: 1.286rem /* 原值: 18px */;
                 line-height: 1;
               }
 
@@ -559,7 +559,7 @@ watch(visible, (newVal) => {
               min-width: 0;
 
               .ingredient-name {
-                font-size: 13px;
+                font-size: 0.929rem /* 原值: 13px */;
                 font-weight: 500;
                 color: #303133;
                 white-space: nowrap;
@@ -568,7 +568,7 @@ watch(visible, (newVal) => {
               }
 
               .ingredient-price {
-                font-size: 13px;
+                font-size: 0.929rem /* 原值: 13px */;
                 font-weight: 600;
                 color: #f56c6c;
               }
@@ -576,7 +576,7 @@ watch(visible, (newVal) => {
           }
 
           .ingredient-description {
-            font-size: 12px;
+            font-size: 0.857rem /* 原值: 12px */;
             color: #909399;
             margin: 0;
             line-height: 1.4;
@@ -613,7 +613,7 @@ watch(visible, (newVal) => {
         opacity: 0.9;
 
         .ingredient-icon {
-          font-size: 20px;
+          font-size: 1.429rem /* 原值: 20px */;
           flex-shrink: 0;
         }
 
@@ -625,7 +625,7 @@ watch(visible, (newVal) => {
           min-width: 0;
 
           .ingredient-name {
-            font-size: 13px;
+            font-size: 0.929rem /* 原值: 13px */;
             font-weight: 500;
             color: #303133;
             white-space: nowrap;
@@ -658,7 +658,7 @@ watch(visible, (newVal) => {
         height: 24px;
         line-height: 24px;
         padding: 0 8px;
-        font-size: 12px;
+        font-size: 0.857rem /* 原值: 12px */;
 
         &:hover {
           transform: translateY(-1px);
@@ -683,7 +683,7 @@ watch(visible, (newVal) => {
       background: #fff7e6;
       border-left: 3px solid #e6a23c;
       border-radius: 4px;
-      font-size: 12px;
+      font-size: 0.857rem /* 原值: 12px */;
       color: #909399;
     }
   }
@@ -701,12 +701,12 @@ watch(visible, (newVal) => {
       padding: 8px 0;
 
       .summary-label {
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         color: #606266;
       }
 
       .summary-value {
-        font-size: 16px;
+        font-size: 1.143rem /* 原值: 16px */;
         font-weight: 600;
         color: #303133;
 
@@ -721,12 +721,12 @@ watch(visible, (newVal) => {
         margin-top: 4px;
 
         .summary-label {
-          font-size: 16px;
+          font-size: 1.143rem /* 原值: 16px */;
           font-weight: 600;
         }
 
         .total-price {
-          font-size: 24px;
+          font-size: 1.714rem /* 原值: 24px */;
           font-weight: 700;
           color: #f56c6c;
         }
@@ -735,7 +735,7 @@ watch(visible, (newVal) => {
 
     .price-tip {
       text-align: right;
-      font-size: 13px;
+      font-size: 0.929rem /* 原值: 13px */;
       color: #909399;
       margin: 12px 0 0 0;
     }

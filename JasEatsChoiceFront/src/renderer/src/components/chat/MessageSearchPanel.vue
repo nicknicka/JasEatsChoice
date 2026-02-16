@@ -70,7 +70,7 @@ defineEmits(['clear', 'jump'])
     background-color: #fafafa;
 
     span {
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
       font-weight: 500;
       color: #303133;
     }
@@ -101,13 +101,13 @@ defineEmits(['clear', 'jump'])
       }
 
       .result-time {
-        font-size: 12px;
+        font-size: 0.857rem /* 原值: 12px */;
         color: #909399;
         margin-bottom: 4px;
       }
 
       .result-content {
-        font-size: 13px;
+        font-size: 0.929rem /* 原值: 13px */;
         color: #606266;
         line-height: 1.5;
         word-break: break-word;

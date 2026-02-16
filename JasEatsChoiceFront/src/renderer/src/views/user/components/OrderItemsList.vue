@@ -179,7 +179,7 @@ export default {
         background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
         border-radius: 8px;
         color: #69c0ff;
-        font-size: 32px;
+        font-size: 2.286rem /* 原值: 32px */;
       }
 
       .quantity-badge {
@@ -191,7 +191,7 @@ export default {
         padding: 0 6px;
         background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%);
         color: white;
-        font-size: 12px;
+        font-size: 0.857rem /* 原值: 12px */;
         font-weight: 600;
         border-radius: 12px;
         display: flex;
@@ -209,7 +209,7 @@ export default {
       gap: 6px;
 
       .item-name {
-        font-size: 15px;
+        font-size: 1.071rem /* 原值: 15px */;
         font-weight: 600;
         color: #2c5282;
         line-height: 1.4;
@@ -219,7 +219,7 @@ export default {
         display: flex;
         flex-direction: column;
         gap: 4px;
-        font-size: 12px;
+        font-size: 0.857rem /* 原值: 12px */;
 
         .item-customization {
           color: #5c8eff;
@@ -235,7 +235,7 @@ export default {
       }
 
       .item-price {
-        font-size: 16px;
+        font-size: 1.143rem /* 原值: 16px */;
         font-weight: 700;
         color: #e53e3e;
       }

@@ -128,7 +128,7 @@ defineExpose({
     border: 1px solid #bae6fd;
 
     .sync-label {
-      font-size: 12px;
+      font-size: 0.857rem /* 原值: 12px */;
       color: #0369a1;
       font-weight: 500;
     }
@@ -151,7 +151,7 @@ defineExpose({
         border: 1px solid #e5e7eb;
         background: #ffffff;
         padding: 12px 14px;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         line-height: 1.6;
         transition: all 0.3s ease;
         resize: none;
@@ -200,7 +200,7 @@ defineExpose({
     text-align: right;
 
     .hint-text {
-      font-size: 11px;
+      font-size: 0.75rem /* 原值: 11px */;
       color: #9ca3af;
       font-weight: 500;
     }

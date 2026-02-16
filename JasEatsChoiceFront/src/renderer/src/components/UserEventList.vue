@@ -154,7 +154,7 @@ onMounted(() => {
 
 .list-title {
   margin: 0;
-  font-size: 20px;
+  font-size: 1.429rem /* 原值: 20px */;
   font-weight: bold;
   color: #303133;
 }
@@ -169,7 +169,7 @@ onMounted(() => {
 
 .section-title {
   margin: 0 0 12px 0;
-  font-size: 16px;
+  font-size: 1.143rem /* 原值: 16px */;
   font-weight: 600;
   color: #606266;
 }
@@ -199,7 +199,7 @@ onMounted(() => {
 }
 
 .event-icon {
-  font-size: 36px;
+  font-size: 2.571rem /* 原值: 36px */;
   margin-right: 16px;
   flex-shrink: 0;
 }
@@ -210,14 +210,14 @@ onMounted(() => {
 
 .event-name {
   margin: 0 0 8px 0;
-  font-size: 16px;
+  font-size: 1.143rem /* 原值: 16px */;
   font-weight: 600;
   color: #303133;
 }
 
 .event-date {
   margin: 0 0 8px 0;
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   color: #606266;
   display: flex;
   align-items: center;
@@ -226,7 +226,7 @@ onMounted(() => {
 
 .event-desc {
   margin: 0 0 8px 0;
-  font-size: 13px;
+  font-size: 0.929rem /* 原值: 13px */;
   color: #909399;
   line-height: 1.5;
 }
@@ -234,7 +234,7 @@ onMounted(() => {
 .event-meta {
   display: flex;
   gap: 16px;
-  font-size: 13px;
+  font-size: 0.929rem /* 原值: 13px */;
   color: #606266;
 }
 </style>

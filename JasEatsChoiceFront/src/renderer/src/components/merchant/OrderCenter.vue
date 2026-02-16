@@ -267,7 +267,7 @@ onMounted(() => {
     margin-bottom: 20px;
 
     .card-title {
-      font-size: 18px;
+      font-size: 1.286rem /* 原值: 18px */;
       font-weight: 600;
       margin: 0;
     }
@@ -301,7 +301,7 @@ onMounted(() => {
       text-align: center;
       padding: 80px 0;
       color: #909399;
-      font-size: 16px;
+      font-size: 1.143rem /* 原值: 16px */;
     }
 
     .order-item {
@@ -323,7 +323,7 @@ onMounted(() => {
           display: flex;
           flex-wrap: wrap;
           gap: 16px;
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
 
           .amount {
             font-weight: 600;
@@ -341,7 +341,7 @@ onMounted(() => {
         :deep(.el-button) {
           height: 32px;
           padding: 6px 14px;
-          font-size: 13px;
+          font-size: 0.929rem /* 原值: 13px */;
           font-weight: 500;
           white-space: nowrap;
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);

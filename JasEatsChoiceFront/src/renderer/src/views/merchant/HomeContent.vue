@@ -414,7 +414,7 @@ onMounted(() => {
         flex: 1;
 
         .merchant-name {
-          font-size: 20px;
+          font-size: 1.429rem /* 原值: 20px */;
           font-weight: 600;
           margin-bottom: 8px;
         }
@@ -427,7 +427,7 @@ onMounted(() => {
           display: flex;
           flex-wrap: wrap;
           gap: 20px;
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           color: #606266;
         }
       }
@@ -443,7 +443,7 @@ onMounted(() => {
     box-shadow: 0 4px 20px rgba(103, 194, 58, 0.12);
 
     .card-title {
-      font-size: 20px;
+      font-size: 1.429rem /* 原值: 20px */;
       font-weight: 700;
       margin-bottom: 20px;
       color: #e6a23c;
@@ -515,7 +515,7 @@ onMounted(() => {
         }
 
         .item-icon {
-          font-size: 32px;
+          font-size: 2.286rem /* 原值: 32px */;
           width: 60px;
           height: 60px;
           display: flex;
@@ -529,20 +529,20 @@ onMounted(() => {
           flex: 1;
 
           .overview-label {
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
             color: #909399;
             margin-bottom: 4px;
             font-weight: 500;
           }
 
           .overview-value {
-            font-size: 24px;
+            font-size: 1.714rem /* 原值: 24px */;
             font-weight: 700;
             margin-bottom: 4px;
           }
 
           .item-trend {
-            font-size: 12px;
+            font-size: 0.857rem /* 原值: 12px */;
             font-weight: 600;
 
             &.trend-up {
@@ -577,7 +577,7 @@ onMounted(() => {
       margin-bottom: 20px;
 
       .card-title {
-        font-size: 18px;
+        font-size: 1.286rem /* 原值: 18px */;
         font-weight: 600;
         margin: 0;
       }
@@ -611,7 +611,7 @@ onMounted(() => {
         text-align: center;
         padding: 80px 0;
         color: #909399;
-        font-size: 16px;
+        font-size: 1.143rem /* 原值: 16px */;
       }
 
       .order-item {
@@ -633,7 +633,7 @@ onMounted(() => {
             display: flex;
             flex-wrap: wrap;
             gap: 16px;
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
 
             .amount {
               font-weight: 600;
@@ -664,7 +664,7 @@ onMounted(() => {
     box-shadow: 0 4px 20px rgba(230, 162, 60, 0.12);
 
     .card-title {
-      font-size: 20px;
+      font-size: 1.429rem /* 原值: 20px */;
       font-weight: 700;
       margin-bottom: 24px;
       color: #e6a23c;
@@ -729,7 +729,7 @@ onMounted(() => {
         }
 
         .action-label {
-          font-size: 15px;
+          font-size: 1.071rem /* 原值: 15px */;
           font-weight: 600;
           color: #303133;
           position: relative;
@@ -764,7 +764,7 @@ onMounted(() => {
       }
 
       .card-title {
-        font-size: 20px;
+        font-size: 1.429rem /* 原值: 20px */;
         font-weight: 700;
         margin: 0;
         color: #67c23a; /* 绿色主题标题 */
@@ -774,7 +774,7 @@ onMounted(() => {
         font-weight: 600; /* 加粗标签 */
         margin-right: 12px; /* 增加标签右侧间距 */
         color: #606266;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
       }
 
       .filter-section {
@@ -837,7 +837,7 @@ onMounted(() => {
             margin-bottom: 16px;
 
             .name {
-              font-size: 18px;
+              font-size: 1.286rem /* 原值: 18px */;
               font-weight: 600;
               color: #303133;
             }
@@ -849,7 +849,7 @@ onMounted(() => {
             flex-wrap: wrap;
             gap: 24px;
             margin-bottom: 8px;
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
 
             .dishes-count {
               color: #67c23a;
@@ -858,7 +858,7 @@ onMounted(() => {
           }
 
           .auto-times {
-            font-size: 13px;
+            font-size: 0.929rem /* 原值: 13px */;
             color: #909399;
           }
         }
@@ -868,7 +868,7 @@ onMounted(() => {
         text-align: center;
         padding: 80px 20px; /* 增加上下内边距 */
         color: #909399;
-        font-size: 18px;
+        font-size: 1.286rem /* 原值: 18px */;
         background-color: #f7fff9; /* 淡绿色背景 */
         border: 2px dashed #67c23a; /* 绿色虚线边框 */
         border-radius: 12px;
@@ -944,7 +944,7 @@ onMounted(() => {
       }
 
       .dish-cover {
-        font-size: 48px;
+        font-size: 3.429rem /* 原值: 48px */;
         width: 90px;
         height: 90px;
         display: flex;
@@ -972,14 +972,14 @@ onMounted(() => {
           margin-bottom: 10px;
 
           .name {
-            font-size: 18px;
+            font-size: 1.286rem /* 原值: 18px */;
             font-weight: 600;
             color: #303133;
           }
         }
 
         .dish-desc {
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           color: #606266;
           margin-bottom: 14px;
           line-height: 1.6;
@@ -989,7 +989,7 @@ onMounted(() => {
           display: flex;
           flex-wrap: wrap;
           gap: 20px;
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           color: #606266;
 
           .dish-category {
@@ -997,18 +997,18 @@ onMounted(() => {
             color: #67c23a;
             padding: 4px 12px;
             border-radius: 6px;
-            font-size: 12px;
+            font-size: 0.857rem /* 原值: 12px */;
             font-weight: 500;
           }
 
           .dish-price {
             color: #e6a23c;
             font-weight: 600;
-            font-size: 16px;
+            font-size: 1.143rem /* 原值: 16px */;
           }
 
           .dish-stock {
-            font-size: 13px;
+            font-size: 0.929rem /* 原值: 13px */;
             font-weight: 500;
 
             &.stock-almost {

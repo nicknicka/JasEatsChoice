@@ -328,7 +328,7 @@ onUnmounted(() => {
 
 .list-title {
   margin: 0;
-  font-size: 20px;
+  font-size: 1.429rem /* 原值: 20px */;
   font-weight: bold;
   color: #303133;
 }
@@ -347,7 +347,7 @@ onUnmounted(() => {
 
 .section-title {
   margin: 0 0 12px 0;
-  font-size: 16px;
+  font-size: 1.143rem /* 原值: 16px */;
   font-weight: 600;
   color: #606266;
 }
@@ -400,7 +400,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   background: #f5f7fa;
-  font-size: 32px;
+  font-size: 2.286rem /* 原值: 32px */;
   color: #c0c4cc;
 }
 
@@ -413,7 +413,7 @@ onUnmounted(() => {
 
 .source-title {
   margin: 0 0 8px 0;
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   font-weight: 600;
   color: #303133;
   overflow: hidden;
@@ -423,7 +423,7 @@ onUnmounted(() => {
 
 .source-meta {
   margin: 0 0 8px 0;
-  font-size: 12px;
+  font-size: 0.857rem /* 原值: 12px */;
   color: #909399;
   display: flex;
   align-items: center;
@@ -438,7 +438,7 @@ onUnmounted(() => {
 
 .source-time {
   margin: 0;
-  font-size: 12px;
+  font-size: 0.857rem /* 原值: 12px */;
   color: #c0c4cc;
 }
 
@@ -446,7 +446,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: 0.929rem /* 原值: 13px */;
   color: #409eff;
 }
 

@@ -969,7 +969,7 @@ const confirmOrder = async () => {
       gap: 16px;
 
       .page-title {
-        font-size: 20px;
+        font-size: 1.429rem /* 原值: 20px */;
         font-weight: 600;
         margin: 0;
         color: #2c3e50;
@@ -978,7 +978,7 @@ const confirmOrder = async () => {
         gap: 12px;
 
         .chat-tag {
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
         }
       }
     }
@@ -1015,7 +1015,7 @@ const confirmOrder = async () => {
       align-items: center;
 
       .card-title {
-        font-size: 16px;
+        font-size: 1.143rem /* 原值: 16px */;
         font-weight: 600;
         color: #2c3e50;
       }
@@ -1044,7 +1044,7 @@ const confirmOrder = async () => {
         flex: 1;
 
         .merchant-name {
-          font-size: 18px;
+          font-size: 1.286rem /* 原值: 18px */;
           font-weight: 600;
           color: #2c3e50;
           margin-bottom: 8px;
@@ -1054,7 +1054,7 @@ const confirmOrder = async () => {
           display: flex;
           align-items: center;
           gap: 8px;
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           color: #7f8c8d;
 
           .separator {
@@ -1096,21 +1096,21 @@ const confirmOrder = async () => {
         flex: 1;
 
         .pickup-title {
-          font-size: 16px;
+          font-size: 1.143rem /* 原值: 16px */;
           font-weight: 600;
           color: #2c3e50;
           margin-bottom: 8px;
         }
 
         .pickup-desc {
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           color: #5a6c7d;
           margin-bottom: 6px;
           line-height: 1.5;
         }
 
         .pickup-time {
-          font-size: 13px;
+          font-size: 0.929rem /* 原值: 13px */;
           color: #7f8c8d;
           display: flex;
           align-items: center;
@@ -1118,7 +1118,7 @@ const confirmOrder = async () => {
 
           &::before {
             content: '⏱';
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
           }
         }
       }
@@ -1140,7 +1140,7 @@ const confirmOrder = async () => {
 
       .label {
         color: #7f8c8d;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
       }
 
       .value {
@@ -1161,13 +1161,13 @@ const confirmOrder = async () => {
           flex: 1;
 
           .amount-label {
-            font-size: 13px;
+            font-size: 0.929rem /* 原值: 13px */;
             color: #7f8c8d;
             margin-bottom: 8px;
           }
 
           .amount-value {
-            font-size: 24px;
+            font-size: 1.714rem /* 原值: 24px */;
             font-weight: 700;
 
             &.paid {
@@ -1201,7 +1201,7 @@ const confirmOrder = async () => {
       margin-bottom: 16px;
 
       .section-title {
-        font-size: 15px;
+        font-size: 1.071rem /* 原值: 15px */;
         font-weight: 600;
         color: #2c3e50;
         flex: 1;
@@ -1236,20 +1236,20 @@ const confirmOrder = async () => {
       }
 
       .method-icon {
-        font-size: 28px;
+        font-size: 2rem /* 原值: 28px */;
       }
 
       .method-info {
         flex: 1;
 
         .method-name {
-          font-size: 15px;
+          font-size: 1.071rem /* 原值: 15px */;
           font-weight: 500;
           color: #2c3e50;
         }
 
         .method-desc {
-          font-size: 13px;
+          font-size: 0.929rem /* 原值: 13px */;
           color: #7f8c8d;
           margin-top: 4px;
         }
@@ -1264,7 +1264,7 @@ const confirmOrder = async () => {
 
       :deep(.el-textarea__inner) {
         border-radius: 8px;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         padding: 12px;
         background: #fafafa;
         transition: all 0.3s;
@@ -1277,12 +1277,12 @@ const confirmOrder = async () => {
 
         &::placeholder {
           color: #bbb;
-          font-size: 13px;
+          font-size: 0.929rem /* 原值: 13px */;
         }
       }
 
       :deep(.el-input__count) {
-        font-size: 12px;
+        font-size: 0.857rem /* 原值: 12px */;
         color: #999;
         background: transparent;
       }
@@ -1297,7 +1297,7 @@ const confirmOrder = async () => {
       border-top: 1px solid #f0f0f0;
 
       .quick-remark-label {
-        font-size: 13px;
+        font-size: 0.929rem /* 原值: 13px */;
         color: #7f8c8d;
         font-weight: 500;
       }
@@ -1332,7 +1332,7 @@ const confirmOrder = async () => {
 
         .detail-label {
           color: #7f8c8d;
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
         }
 
         .detail-value {
@@ -1348,13 +1348,13 @@ const confirmOrder = async () => {
           padding-top: 12px;
 
           .total-label {
-            font-size: 16px;
+            font-size: 1.143rem /* 原值: 16px */;
             font-weight: 600;
             color: #2c3e50;
           }
 
           .total-value {
-            font-size: 28px;
+            font-size: 2rem /* 原值: 28px */;
             font-weight: 700;
             color: #e6a23c;
           }
@@ -1398,7 +1398,7 @@ const confirmOrder = async () => {
             gap: 10px;
 
             .el-icon {
-              font-size: 24px;
+              font-size: 1.714rem /* 原值: 24px */;
             }
 
             .coupon-details {
@@ -1407,20 +1407,20 @@ const confirmOrder = async () => {
               gap: 4px;
 
               .coupon-name {
-                font-size: 15px;
+                font-size: 1.071rem /* 原值: 15px */;
                 font-weight: 600;
                 color: #856404;
               }
 
               .coupon-desc {
-                font-size: 12px;
+                font-size: 0.857rem /* 原值: 12px */;
                 color: #a67c00;
               }
             }
           }
 
           .coupon-amount {
-            font-size: 20px;
+            font-size: 1.429rem /* 原值: 20px */;
             font-weight: 700;
             color: #e6a23c;
             text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
@@ -1439,12 +1439,12 @@ const confirmOrder = async () => {
         border-radius: 6px;
 
         .balance-label {
-          font-size: 13px;
+          font-size: 0.929rem /* 原值: 13px */;
           color: #7f8c8d;
         }
 
         .balance-value {
-          font-size: 15px;
+          font-size: 1.071rem /* 原值: 15px */;
           font-weight: 600;
           color: #67c23a;
         }
@@ -1460,7 +1460,7 @@ const confirmOrder = async () => {
     padding: 12px;
     background: #f8f9fa;
     border-radius: 6px;
-    font-size: 13px;
+    font-size: 0.929rem /* 原值: 13px */;
     color: #7f8c8d;
     text-align: center;
     justify-content: center;
@@ -1499,7 +1499,7 @@ const confirmOrder = async () => {
         display: flex;
         align-items: center;
         gap: 8px;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         color: #7f8c8d;
         text-align: left;
         justify-content: flex-start;
@@ -1527,13 +1527,13 @@ const confirmOrder = async () => {
         }
 
         .total-label {
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           color: #7f8c8d;
           margin-right: 8px;
         }
 
         .total-amount {
-          font-size: 28px;
+          font-size: 2rem /* 原值: 28px */;
           font-weight: 700;
           color: #e6a23c;
         }
@@ -1542,7 +1542,7 @@ const confirmOrder = async () => {
       .submit-button-fixed {
         min-width: 180px;
         height: 48px;
-        font-size: 16px;
+        font-size: 1.143rem /* 原值: 16px */;
         font-weight: 600;
         border-radius: 24px;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -1562,7 +1562,7 @@ const confirmOrder = async () => {
         @media (max-width: 768px) {
           min-width: 140px;
           height: 44px;
-          font-size: 15px;
+          font-size: 1.071rem /* 原值: 15px */;
         }
       }
     }
@@ -1592,14 +1592,14 @@ const confirmOrder = async () => {
       padding-right: 12px;
 
       .item-name {
-        font-size: 15px;
+        font-size: 1.071rem /* 原值: 15px */;
         font-weight: 500;
         color: #2c3e50;
         margin-bottom: 6px;
       }
 
       .item-price {
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
         color: #7f8c8d;
         margin-bottom: 8px;
       }
@@ -1611,7 +1611,7 @@ const confirmOrder = async () => {
         margin-bottom: 8px;
 
         .ingredient-tag {
-          font-size: 12px;
+          font-size: 0.857rem /* 原值: 12px */;
         }
       }
 
@@ -1620,7 +1620,7 @@ const confirmOrder = async () => {
 
         :deep(.el-textarea__inner) {
           border-radius: 6px;
-          font-size: 13px;
+          font-size: 0.929rem /* 原值: 13px */;
           padding: 8px 12px;
           background: #fafafa;
           transition: all 0.3s;
@@ -1632,12 +1632,12 @@ const confirmOrder = async () => {
 
           &::placeholder {
             color: #bbb;
-            font-size: 12px;
+            font-size: 0.857rem /* 原值: 12px */;
           }
         }
 
         :deep(.el-input__count) {
-          font-size: 11px;
+          font-size: 0.75rem /* 原值: 11px */;
           color: #999;
           background: transparent;
         }
@@ -1650,7 +1650,7 @@ const confirmOrder = async () => {
       gap: 12px;
 
       .item-total {
-        font-size: 16px;
+        font-size: 1.143rem /* 原值: 16px */;
         font-weight: 600;
         color: #e6a23c;
         min-width: 80px;
@@ -1687,14 +1687,14 @@ const confirmOrder = async () => {
       }
 
       .info-value {
-        font-size: 16px;
+        font-size: 1.143rem /* 原值: 16px */;
         color: #2c3e50;
         font-weight: 500;
 
         &.highlight {
           color: #e6a23c;
           font-weight: 600;
-          font-size: 20px;
+          font-size: 1.429rem /* 原值: 20px */;
         }
       }
     }
@@ -1721,7 +1721,7 @@ const confirmOrder = async () => {
       }
 
       .info-value {
-        font-size: 16px;
+        font-size: 1.143rem /* 原值: 16px */;
         color: #2c3e50;
         font-weight: 500;
       }

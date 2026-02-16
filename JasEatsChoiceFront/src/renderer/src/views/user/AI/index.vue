@@ -129,7 +129,7 @@ onMounted(() => {
     }
 
     :deep(.el-tabs__item) {
-      font-size: 15px;
+      font-size: 1.071rem /* 原值: 15px */;
       font-weight: 600;
       color: #606266;
       transition: all 0.3s ease;

@@ -1059,7 +1059,7 @@ const getDishCheckedState = (dish) => {
                 <el-tag
                   :type="dish.statusBoolean ? 'success' : 'danger'"
                   size="small"
-                  style="margin-left: 8px; font-size: 12px"
+                  style="margin-left: 8px; font-size: 0.857rem /* 原值: 12px */"
                 >
                   {{ dish.statusBoolean ? '上架' : '下架' }}
                 </el-tag>
@@ -1813,14 +1813,14 @@ const getDishCheckedState = (dish) => {
 
     h4 {
       margin: 0 0 5px 0;
-      font-size: 16px;
+      font-size: 1.143rem /* 原值: 16px */;
       font-weight: 600;
       color: #303133;
     }
 
     .dialog-description {
       margin: 0;
-      font-size: 14px;
+      font-size: 1rem /* 原值: 14px */;
       color: #909399;
     }
   }
@@ -1871,7 +1871,7 @@ const getDishCheckedState = (dish) => {
     .el-table__empty-block {
       .el-table__empty-text {
         color: #909399;
-        font-size: 14px;
+        font-size: 1rem /* 原值: 14px */;
       }
     }
   }
@@ -1893,7 +1893,7 @@ const getDishCheckedState = (dish) => {
 }
 
 .calorie-display {
-  font-size: 16px;
+  font-size: 1.143rem /* 原值: 16px */;
   font-weight: 600;
   color: #e6a23c;
 }
@@ -1903,7 +1903,7 @@ const getDishCheckedState = (dish) => {
   align-items: center;
   gap: 4px;
   margin-top: 8px;
-  font-size: 12px;
+  font-size: 0.857rem /* 原值: 12px */;
   color: #909399;
   background-color: #f5f7fa;
   padding: 6px 12px;
@@ -1945,7 +1945,7 @@ const getDishCheckedState = (dish) => {
 }
 
 :deep(.el-dialog__title) {
-  font-size: 20px;
+  font-size: 1.429rem /* 原值: 20px */;
   font-weight: 600;
   color: #1890ff;
   background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
@@ -1971,7 +1971,7 @@ const getDishCheckedState = (dish) => {
 }
 
 .label-icon {
-  font-size: 18px;
+  font-size: 1.286rem /* 原值: 18px */;
   color: #667eea;
   display: inline-flex;
   align-items: center;
@@ -1982,7 +1982,7 @@ const getDishCheckedState = (dish) => {
 :deep(.el-form-item__label) {
   font-weight: 500;
   color: #555;
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
 }
 
 :deep(.el-form-item__label::before) {
@@ -2040,7 +2040,7 @@ const getDishCheckedState = (dish) => {
   padding: 10px 28px;
   border-radius: 8px;
   font-weight: 500;
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   transition: all 0.3s ease;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
@@ -2093,7 +2093,7 @@ const getDishCheckedState = (dish) => {
 .ingredient-tag {
   border-radius: 8px;
   padding: 4px 12px;
-  font-size: 12px;
+  font-size: 0.857rem /* 原值: 12px */;
   font-weight: 500;
 
   &:hover {
@@ -2118,7 +2118,7 @@ const getDishCheckedState = (dish) => {
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 
     .page-title {
-      font-size: 20px;
+      font-size: 1.429rem /* 原值: 20px */;
       font-weight: 700;
       margin: 0;
       color: #4a5568;
@@ -2273,7 +2273,7 @@ const getDishCheckedState = (dish) => {
             margin-bottom: 16px;
 
             .name {
-              font-size: 18px;
+              font-size: 1.286rem /* 原值: 18px */;
               font-weight: 700;
               color: #2d3748;
             }
@@ -2284,7 +2284,7 @@ const getDishCheckedState = (dish) => {
             grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
             gap: 16px;
             margin-bottom: 20px;
-            font-size: 14px;
+            font-size: 1rem /* 原值: 14px */;
 
             .stat-item {
               display: flex;
@@ -2293,13 +2293,13 @@ const getDishCheckedState = (dish) => {
 
               .stat-label {
                 color: #718096;
-                font-size: 12px;
+                font-size: 0.857rem /* 原值: 12px */;
                 font-weight: 500;
               }
 
               .stat-value {
                 color: #4a5568;
-                font-size: 14px;
+                font-size: 1rem /* 原值: 14px */;
                 font-weight: 600;
               }
             }
@@ -2324,7 +2324,7 @@ const getDishCheckedState = (dish) => {
                 align-items: center;
                 gap: 6px;
                 margin-bottom: 8px;
-                font-size: 13px;
+                font-size: 0.929rem /* 原值: 13px */;
                 font-weight: 600;
                 color: #4a5568;
               }
@@ -2337,14 +2337,14 @@ const getDishCheckedState = (dish) => {
 
                 .ingredient-tag {
                   border-radius: 6px;
-                  font-size: 12px;
+                  font-size: 0.857rem /* 原值: 12px */;
                   padding: 2px 8px;
                   height: 24px;
                   line-height: 20px;
                 }
 
                 .more-ingredients {
-                  font-size: 12px;
+                  font-size: 0.857rem /* 原值: 12px */;
                   color: #909399;
                   font-weight: 500;
                   padding: 2px 6px;
@@ -2360,7 +2360,7 @@ const getDishCheckedState = (dish) => {
                 border: 1px dashed #e4e7ed;
 
                 .no-ingredients-text {
-                  font-size: 12px;
+                  font-size: 0.857rem /* 原值: 12px */;
                   color: #909399;
                   font-weight: 400;
                 }
@@ -2381,7 +2381,7 @@ const getDishCheckedState = (dish) => {
             align-items: center;
             gap: 6px;
             margin-bottom: 12px;
-            font-size: 13px;
+            font-size: 0.929rem /* 原值: 13px */;
             font-weight: 600;
             color: #4a5568;
           }
@@ -2394,7 +2394,7 @@ const getDishCheckedState = (dish) => {
 
             .nutrition-tag {
               border-radius: 6px;
-              font-size: 12px;
+              font-size: 0.857rem /* 原值: 12px */;
               padding: 4px 10px;
               height: 26px;
               line-height: 18px;
@@ -2468,7 +2468,7 @@ const getDishCheckedState = (dish) => {
             .select-all-text {
               font-weight: 600;
               color: #4a5568;
-              font-size: 14px;
+              font-size: 1rem /* 原值: 14px */;
             }
           }
         }
@@ -2479,14 +2479,14 @@ const getDishCheckedState = (dish) => {
           padding: 6px 14px;
           background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
           border-radius: 20px;
-          font-size: 13px;
+          font-size: 0.929rem /* 原值: 13px */;
           color: #0050b3;
           font-weight: 500;
           box-shadow: 0 2px 6px rgba(64, 169, 255, 0.15);
 
           strong {
             margin: 0 4px;
-            font-size: 15px;
+            font-size: 1.071rem /* 原值: 15px */;
             color: #1890ff;
           }
         }
@@ -2530,7 +2530,7 @@ const getDishCheckedState = (dish) => {
     }
 
     .el-icon {
-      font-size: 16px;
+      font-size: 1.143rem /* 原值: 16px */;
     }
   }
 

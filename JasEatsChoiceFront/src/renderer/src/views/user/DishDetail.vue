@@ -559,7 +559,7 @@ onMounted(() => {
 }
 
 .page-title {
-  font-size: 24px;
+  font-size: 1.714rem /* 原值: 24px */;
   margin: 0;
   color: #2c3e50;
   font-weight: 600;
@@ -597,11 +597,11 @@ onMounted(() => {
   justify-content: center;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  font-size: 48px;
+  font-size: 3.429rem /* 原值: 48px */;
 }
 
 .no-image-placeholder span {
-  font-size: 48px;
+  font-size: 3.429rem /* 原值: 48px */;
 }
 
 .dish-info-card {
@@ -620,7 +620,7 @@ onMounted(() => {
 }
 
 .dish-name {
-  font-size: 24px;
+  font-size: 1.714rem /* 原值: 24px */;
   font-weight: 600;
   color: #2c3e50;
   flex: 1;
@@ -634,13 +634,13 @@ onMounted(() => {
 }
 
 .current-price {
-  font-size: 32px;
+  font-size: 2.286rem /* 原值: 32px */;
   font-weight: 700;
   color: #ff6b6b;
 }
 
 .unit-price {
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   color: #7f8c8d;
 }
 
@@ -659,7 +659,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
 }
 
 .meta-item .label {
@@ -672,7 +672,7 @@ onMounted(() => {
 }
 
 .section-title {
-  font-size: 16px;
+  font-size: 1.143rem /* 原值: 16px */;
   font-weight: 600;
   color: #2c3e50;
   margin-bottom: 16px;
@@ -699,7 +699,7 @@ onMounted(() => {
 }
 
 .ingredient-group-title {
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   font-weight: 600;
   color: #333;
   margin-bottom: 12px;
@@ -738,13 +738,13 @@ onMounted(() => {
 }
 
 .ingredient-name {
-  font-size: 14px;
+  font-size: 1rem /* 原值: 14px */;
   color: #333;
   flex: 1;
 }
 
 .ingredient-price {
-  font-size: 12px;
+  font-size: 0.857rem /* 原值: 12px */;
   color: #ff6b6b;
 }
 
@@ -774,13 +774,13 @@ onMounted(() => {
 }
 
 .nutrition-label {
-  font-size: 12px;
+  font-size: 0.857rem /* 原值: 12px */;
   color: #7f8c8d;
   margin-bottom: 8px;
 }
 
 .nutrition-value {
-  font-size: 16px;
+  font-size: 1.143rem /* 原值: 16px */;
   font-weight: 600;
   color: #2c3e50;
 }
@@ -793,13 +793,13 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 16px;
+  font-size: 1.143rem /* 原值: 16px */;
   font-weight: 600;
   color: #e6a23c;
 }
 
 .alert-icon {
-  font-size: 20px;
+  font-size: 1.429rem /* 原值: 20px */;
 }
 
 .alert-content {
@@ -809,7 +809,7 @@ onMounted(() => {
 
 .tip {
   margin-top: 8px;
-  font-size: 12px;
+  font-size: 0.857rem /* 原值: 12px */;
   color: #909399;
 }
 

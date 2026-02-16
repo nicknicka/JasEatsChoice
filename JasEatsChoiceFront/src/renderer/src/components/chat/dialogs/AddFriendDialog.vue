@@ -331,7 +331,7 @@ defineExpose({
       .user-avatar {
         width: 50px;
         height: 50px;
-        font-size: 28px;
+        font-size: 2rem /* 原值: 28px */;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -344,14 +344,14 @@ defineExpose({
         flex: 1;
 
         .user-name {
-          font-size: 14px;
+          font-size: 1rem /* 原值: 14px */;
           font-weight: 600;
           color: #303133;
           margin-bottom: 4px;
         }
 
         .user-detail {
-          font-size: 12px;
+          font-size: 0.857rem /* 原值: 12px */;
           color: #909399;
 
           .detail-label {
@@ -381,7 +381,7 @@ defineExpose({
       .detail-avatar {
         width: 80px;
         height: 80px;
-        font-size: 48px;
+        font-size: 3.429rem /* 原值: 48px */;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -391,7 +391,7 @@ defineExpose({
       }
 
       .detail-name {
-        font-size: 18px;
+        font-size: 1.286rem /* 原值: 18px */;
         font-weight: 600;
         margin-bottom: 12px;
       }
