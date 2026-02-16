@@ -1,6 +1,7 @@
 package com.xx.jaseatschoicejava.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.xx.jaseatschoicejava.common.ResponseResult;
 import com.xx.jaseatschoicejava.entity.Dish;
 import com.xx.jaseatschoicejava.entity.Order;
@@ -341,7 +342,7 @@ public class ReviewController {
             if (!reviewIds.isEmpty()) {
                 LambdaQueryWrapper<ReviewReply> replyWrapper = new LambdaQueryWrapper<>();
                 replyWrapper.in(ReviewReply::getReviewId, reviewIds)
-                           .orderByAsc(ReviewReply::getCreateTime);
+                           .orderByDesc(ReviewReply::getCreateTime); // 改为倒序，最新的在前
                 List<ReviewReply> replies = reviewReplyService.list(replyWrapper);
 
                 replyMap = replies.stream()
@@ -438,33 +439,45 @@ public class ReviewController {
                     item.put("dishes", new ArrayList<>());
                 }
 
-                // 回复信息
+                // 回复信息 - 统一返回所有回复（商家+用户），按时间倒序
                 List<ReviewReply> replies = replyMap.get(review.getId());
-                if (replies != null && !replies.isEmpty()) {
-                    item.put("status", "replied");
-                    // 第一条回复作为主回复
-                    ReviewReply firstReply = replies.get(0);
-                    item.put("reply", firstReply.getContent());
+                List<Map<String, Object>> allReplies = new ArrayList<>();
+                boolean hasMerchantReply = false; // 是否有商家回复
 
-                    // 后续回复作为追评
-                    if (replies.size() > 1) {
-                        List<Map<String, Object>> additionalReplies = new ArrayList<>();
-                        for (int i = 1; i < replies.size(); i++) {
-                            ReviewReply reply = replies.get(i);
-                            Map<String, Object> replyItem = new HashMap<>();
-                            replyItem.put("content", reply.getContent());
-                            replyItem.put("time", reply.getCreateTime());
-                            additionalReplies.add(replyItem);
+                if (replies != null && !replies.isEmpty()) {
+                    for (ReviewReply reply : replies) {
+                        Map<String, Object> replyItem = new HashMap<>();
+                        Integer isAdditional = reply.getIsAdditional();
+
+                        replyItem.put("id", reply.getId());
+                        replyItem.put("content", reply.getContent());
+                        replyItem.put("time", reply.getCreateTime().toString().replace("T", " ").substring(0, 16));
+                        replyItem.put("createTime", reply.getCreateTime()); // 添加原始时间用于排序
+                        // isAdditional: 0/null=商家回复, 1=用户追评
+                        replyItem.put("isAdditional", isAdditional == null ? 0 : isAdditional);
+                        replyItem.put("isMerchant", isAdditional == null || isAdditional == 0);
+
+                        // 检查是否有商家回复
+                        if (isAdditional == null || isAdditional == 0) {
+                            hasMerchantReply = true;
                         }
-                        item.put("replies", additionalReplies);
-                    } else {
-                        item.put("replies", new ArrayList<>());
+
+                        allReplies.add(replyItem);
                     }
-                } else {
-                    item.put("status", "unreplied");
-                    item.put("reply", "");
-                    item.put("replies", new ArrayList<>());
+
+                    // 确保按时间倒序排序（最新的在前）
+                    allReplies.sort((a, b) -> {
+                        LocalDateTime timeA = (LocalDateTime) a.get("createTime");
+                        LocalDateTime timeB = (LocalDateTime) b.get("createTime");
+                        return timeB.compareTo(timeA); // 降序：最新的在前
+                    });
                 }
+
+                // 设置回复状态：只有商家回复才算"已回复"
+                item.put("status", hasMerchantReply ? "replied" : "unreplied");
+
+                // 设置所有回复列表（已按时间倒序）
+                item.put("replies", allReplies);
 
                 // 格式化时间
                 item.put("time", review.getCreateTime().toString().replace("T", " ").substring(0, 16));
@@ -602,7 +615,7 @@ public class ReviewController {
                 avgRating = totalRating / reviews.size();
             }
 
-            // 查询已回复和未回复数量
+            // 查询已回复和未回复数量（只统计商家回复，不包括用户追评）
             List<String> reviewIds = reviews.stream()
                     .map(Review::getId)
                     .collect(Collectors.toList());
@@ -611,11 +624,20 @@ public class ReviewController {
             long unrepliedCount = reviews.size();
 
             if (!reviewIds.isEmpty()) {
-                LambdaQueryWrapper<ReviewReply> replyWrapper = new LambdaQueryWrapper<>();
-                replyWrapper.in(ReviewReply::getReviewId, reviewIds)
-                           .select(ReviewReply::getReviewId)
-                           .groupBy(ReviewReply::getReviewId);
-                repliedCount = reviewReplyService.count(replyWrapper);
+                // 使用原生SQL统计商家回复数（is_additional = 0 或 null）
+                String reviewIdsStr = reviewIds.stream()
+                        .map(id -> "'" + id + "'")
+                        .collect(Collectors.joining(","));
+
+                String sql = "SELECT DISTINCT review_id FROM t_review_reply " +
+                            "WHERE review_id IN (" + reviewIdsStr + ") " +
+                            "AND (is_additional = 0 OR is_additional IS NULL)";
+
+                List<Map<String, Object>> merchantReplies = reviewReplyService.listMaps(
+                        new QueryWrapper<ReviewReply>().apply(sql)
+                );
+
+                repliedCount = merchantReplies.size();
                 unrepliedCount = reviews.size() - repliedCount;
             }
 

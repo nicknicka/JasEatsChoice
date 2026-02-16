@@ -23,8 +23,16 @@ import reviewApi from '../../api/review'
 
 const authStore = useAuthStore()
 
-// 获取商家ID
-const merchantId = authStore.merchantId || localStorage.getItem('auth_merchantId')
+// 获取商家ID - 确保是字符串类型
+const merchantId = authStore.merchantId
+  ? String(authStore.merchantId)
+  : localStorage.getItem('auth_merchantId')
+
+// 页面加载时调试信息
+console.log('📋 Comments页面加载')
+console.log('- authStore.merchantId:', authStore.merchantId, '(类型:', typeof authStore.merchantId, ')')
+console.log('- localStorage.auth_merchantId:', localStorage.getItem('auth_merchantId'))
+console.log('- 最终使用的merchantId:', merchantId, '(类型:', typeof merchantId, ')')
 
 // 快捷回复模板
 const quickReplies = ref([
@@ -135,17 +143,46 @@ const loadComments = async () => {
     if (activeStatusFilter.value !== 'all') {
       params.status = activeStatusFilter.value
     }
-    if (activeRatingFilter.value !== 'all') {
-      params.rating = parseInt(activeRatingFilter.value)
-    }
+    // 注意：后端不支持评分范围查询，需要在前端进行过滤
     if (searchKeyword.value) {
       params.keyword = searchKeyword.value
     }
 
+    // 调试信息
+    console.log('🔍 调试信息:')
+    console.log('- merchantId类型:', typeof merchantId)
+    console.log('- merchantId值:', merchantId)
+    console.log('- merchantId === 7638432224340229:', merchantId === 7638432224340229)
+    console.log('- merchantId === "7638432224340229":', merchantId === '7638432224340229')
+    console.log('- String(merchantId):', String(merchantId))
+    console.log('- 请求参数:', params)
+
     const response = await reviewApi.getMerchantReviews(merchantId, params)
-    if (response.success) {
-      comments.value = response.data
-      filteredComments.value = response.data
+    console.log('- API返回完整响应:', response)
+    console.log('- response.data:', response.data)
+    console.log('- response.status:', response.status)
+
+    // 后端返回的数据在 response.data 中
+    if (response.data) {
+      console.log('- response.data.success:', response.data.success)
+      console.log('- response.data.data:', response.data.data)
+      console.log('- 评价列表长度:', response.data.data?.length || 0)
+
+      if (response.data.success) {
+        comments.value = response.data.data || []
+        // 对每个评论的回复按时间升序排序（早的在上，新的在下）
+        comments.value.forEach(comment => {
+          if (comment.replies && comment.replies.length > 0) {
+            comment.replies.sort((a, b) => {
+              return new Date(a.time) - new Date(b.time)
+            })
+          }
+        })
+        // 在前端进行所有筛选
+        applyFilters()
+      } else {
+        console.warn('- API返回失败:', response.data.message)
+      }
     }
   } catch (error) {
     console.error('加载评价列表失败:', error)
@@ -155,14 +192,36 @@ const loadComments = async () => {
   }
 }
 
+// 应用所有筛选条件
+const applyFilters = () => {
+  let result = [...comments.value]
+
+  // 评分筛选（支持半星）
+  if (activeRatingFilter.value !== 'all') {
+    const { min, max } = getRatingRange(activeRatingFilter.value)
+    result = result.filter(comment => {
+      const rating = comment.rating
+      return rating >= min && rating < max
+    })
+  }
+
+  // 状态筛选（如果后端没有处理）
+  if (activeStatusFilter.value !== 'all') {
+    result = result.filter(comment => comment.status === activeStatusFilter.value)
+  }
+
+  filteredComments.value = result
+}
+
 // 加载评价统计
 const loadStatistics = async () => {
   if (!merchantId) return
 
   try {
     const response = await reviewApi.getMerchantStatistics(merchantId)
-    if (response.success) {
-      commentsStats.value = response.data
+    if (response.data && response.data.success) {
+      commentsStats.value = response.data.data
+      console.log('评价统计数据:', response.data.data)
     }
   } catch (error) {
     console.error('加载评价统计失败:', error)
@@ -171,7 +230,14 @@ const loadStatistics = async () => {
 
 // 更新筛选
 const updateFilter = () => {
-  loadComments()
+  // 如果有搜索关键词或状态筛选，需要重新从后端获取数据
+  // 如果只是评分筛选，可以在前端过滤
+  if (searchKeyword.value || activeStatusFilter.value !== 'all') {
+    loadComments()
+  } else {
+    // 仅评分筛选，直接在前端过滤
+    applyFilters()
+  }
 }
 
 // 获取评分范围
@@ -214,7 +280,7 @@ const submitReply = async () => {
       merchantId: merchantId
     })
 
-    if (response.success) {
+    if (response.data && response.data.success) {
       ElMessage.success('回复成功')
       showReplyDialog.value = false
       replyComment.value = ''
@@ -223,7 +289,7 @@ const submitReply = async () => {
       await loadComments()
       await loadStatistics()
     } else {
-      ElMessage.error(response.message || '回复失败')
+      ElMessage.error(response.data?.message || '回复失败')
     }
   } catch (error) {
     console.error('回复评价失败:', error)
@@ -526,38 +592,33 @@ onMounted(() => {
                 <div class="comment-value">{{ comment.content }}</div>
               </div>
 
-              <!-- 商家回复 -->
-              <div v-if="comment.reply || (comment.replies && comment.replies.length > 0)">
+              <!-- 所有回复（商家回复 + 用户追评混合，按时间排序） -->
+              <div v-if="comment.replies && comment.replies.length > 0">
                 <div class="all-replies">
-                  <div v-if="comment.reply" class="comment-reply">
-                    <div class="reply-label">
-                      <el-icon><ChatDotRound /></el-icon>
-                      商家回复
-                    </div>
-                    <div class="reply-value">{{ comment.reply }}</div>
-                  </div>
                   <div
                     v-for="(reply, index) in isReplyExpanded[comment.id]
-                      ? comment.replies || []
-                      : (comment.replies || []).slice(0, 2 - (comment.reply ? 1 : 0))"
-                    :key="index"
-                    class="comment-reply comment-reply-followup"
+                      ? comment.replies
+                      : comment.replies.slice(0, 3)"
+                    :key="reply.id || index"
+                    class="comment-reply"
+                    :class="reply.isMerchant ? '' : 'comment-reply-followup'"
                   >
                     <div class="reply-label">
                       <el-icon><ChatDotRound /></el-icon>
-                      追评 ({{ reply.time }})
+                      <span>{{ reply.isMerchant ? '商家回复' : '追评' }}</span>
+                      <span class="reply-time">({{ reply.time }})</span>
                     </div>
                     <div class="reply-value">{{ reply.content }}</div>
                   </div>
                   <div
-                    v-if="1 + (comment.reply ? 1 : 0) + (comment.replies?.length || 0) > 3"
+                    v-if="comment.replies.length > 3"
                     class="reply-expand-btn"
                     @click="isReplyExpanded[comment.id] = !isReplyExpanded[comment.id]"
                   >
                     <span class="btn-text">{{
                       isReplyExpanded[comment.id]
                         ? '收起'
-                        : `查看所有 ${1 + (comment.reply ? 1 : 0) + (comment.replies?.length || 0)} 条回复`
+                        : `查看所有 ${comment.replies.length} 条回复`
                     }}</span>
                     <el-icon class="arrow-icon">
                       <ArrowDown v-if="!isReplyExpanded[comment.id]" />
@@ -1215,11 +1276,37 @@ onMounted(() => {
               }
             }
 
+            // 商家回复样式（蓝色系 - 专业商务）
+            .comment-reply {
+              .reply-label {
+                .el-icon {
+                  color: #409eff;
+                }
+              }
+
+              .reply-value {
+                background: linear-gradient(135deg, #e8f4ff 0%, #d6e9ff 100%);
+                color: #0052cc;
+                border-left: 4px solid #409eff;
+              }
+            }
+
+            // 用户追评样式（橙色系 - 醒目突出）
             .comment-reply-followup {
               margin-top: 16px;
+              margin-bottom: 16px;
 
               .reply-label {
-                color: #409eff;
+                .el-icon {
+                  color: #e6a23c;
+                }
+                color: #e6a23c;
+              }
+
+              .reply-value {
+                background: linear-gradient(135deg, #fff7e6 0%, #ffe8cc 100%);
+                color: #d46b08;
+                border-left: 4px solid #e6a23c;
               }
             }
 
