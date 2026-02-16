@@ -378,9 +378,8 @@ const handleDeleteFromDetail = async (messageId) => {
       </el-tab-pane>
     </el-tabs>
 
-    <!-- 消息列表 -->
-    <transition name="tab-fade-slide" mode="out-in">
-      <div key="messages" class="message-list-container">
+    <!-- 消息列表 - 移除外层transition避免与transition-group冲突 -->
+    <div class="message-list-container">
       <!-- 操作工具栏 - 只在有选中消息或全部标记已读可用时显示 -->
       <transition name="toolbar-slide">
         <div v-if="selectedMessages.length > 0 || unreadCount > 0" class="message-toolbar">
@@ -403,11 +402,11 @@ const handleDeleteFromDetail = async (messageId) => {
 
       <!-- 消息列表 -->
       <div class="message-list">
-        <transition-group name="list">
+        <transition-group name="list" tag="div">
           <el-card
             v-for="message in filteredMessages"
             :key="message.id"
-            class="message-card stagger-item"
+            class="message-card"
             :class="{ unread: !message.read, selected: isMessageSelected(message.id) }"
           >
           <div class="message-card-content">
@@ -472,7 +471,6 @@ const handleDeleteFromDetail = async (messageId) => {
         </transition>
       </div>
     </div>
-    </transition>
 
     <!-- 消息详情模态框 -->
     <el-dialog
@@ -541,77 +539,69 @@ const handleDeleteFromDetail = async (messageId) => {
 </template>
 
 <style scoped lang="less">
-// Tabs切换动画
-.tab-fade-slide-enter-active {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+// 优化列表项动画性能 - 使用GPU加速
+.list-enter-active {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: opacity, transform;
 }
 
-.tab-fade-slide-leave-active {
-  transition: all 0.25s cubic-bezier(0.4, 0, 1, 1);
-}
-
-.tab-fade-slide-enter-from {
-  opacity: 0;
-  transform: translateY(20px) scale(0.98);
-}
-
-.tab-fade-slide-leave-to {
-  opacity: 0;
-  transform: translateY(-15px) scale(0.98);
-}
-
-// 列表项动画
-.list-enter-active,
 .list-leave-active {
-  transition: all 0.3s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 1, 1);
+  will-change: opacity, transform;
+  position: absolute; /* 优化：移除的元素不占用空间 */
+  width: 100%;
 }
 
 .list-enter-from {
   opacity: 0;
-  transform: translateX(-30px);
+  transform: translateY(10px) scale(0.98);
 }
 
 .list-leave-to {
   opacity: 0;
-  transform: translateX(30px);
+  transform: translateX(20px);
 }
 
-// 工具栏滑动动画
+.list-move {
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+// 工具栏滑动动画 - 优化
 .toolbar-slide-enter-active {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .toolbar-slide-leave-active {
-  transition: all 0.25s cubic-bezier(0.4, 0, 1, 1);
+  transition: all 0.2s cubic-bezier(0.4, 0, 1, 1);
 }
 
 .toolbar-slide-enter-from {
   opacity: 0;
-  transform: translateY(-10px);
+  transform: translateY(-8px);
 }
 
 .toolbar-slide-leave-to {
   opacity: 0;
-  transform: translateY(-10px);
+  transform: translateY(-8px);
 }
 
-// 空状态动画
+// 空状态动画 - 优化性能
 .empty-fade-enter-active {
-  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .empty-fade-leave-active {
-  transition: all 0.4s cubic-bezier(0.4, 0, 1, 1);
+  transition: all 0.25s cubic-bezier(0.4, 0, 1, 1);
 }
 
 .empty-fade-enter-from {
   opacity: 0;
-  transform: scale(0.8) translateY(20px);
+  transform: scale(0.9) translateY(15px);
 }
 
 .empty-fade-leave-to {
   opacity: 0;
-  transform: scale(0.9) translateY(-10px);
+  transform: scale(0.95) translateY(-5px);
 }
 
 .message-center-container {
@@ -857,6 +847,10 @@ const handleDeleteFromDetail = async (messageId) => {
 
   // 消息列表样式
   .message-list-container {
+    // 性能优化：启用GPU加速
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+
     .message-toolbar {
       display: flex;
       justify-content: space-between;
@@ -900,7 +894,11 @@ const handleDeleteFromDetail = async (messageId) => {
     .message-list {
       display: flex;
       flex-direction: column;
-      gap: 15px;
+      gap: 20px;
+
+      // 性能优化
+      transform: translateZ(0);
+      -webkit-transform: translateZ(0);
     }
 
     // 空状态包装器
@@ -948,8 +946,9 @@ const handleDeleteFromDetail = async (messageId) => {
 
   .message-card {
     cursor: pointer;
-    transition: all 0.3s;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     border-radius: 16px;
+    will-change: transform; // 性能优化
 
     &:hover {
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);

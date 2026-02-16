@@ -8,12 +8,14 @@ import com.xx.jaseatschoicejava.entity.OrderDish;
 import com.xx.jaseatschoicejava.entity.Review;
 import com.xx.jaseatschoicejava.entity.ReviewReply;
 import com.xx.jaseatschoicejava.entity.User;
+import com.xx.jaseatschoicejava.enums.NotificationTypeEnum;
 import com.xx.jaseatschoicejava.service.DishService;
 import com.xx.jaseatschoicejava.service.OrderDishService;
 import com.xx.jaseatschoicejava.service.OrderService;
 import com.xx.jaseatschoicejava.service.ReviewReplyService;
 import com.xx.jaseatschoicejava.service.ReviewService;
 import com.xx.jaseatschoicejava.service.UserService;
+import com.xx.jaseatschoicejava.util.NotificationUtil;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.annotations.Api;
@@ -128,6 +130,22 @@ public class ReviewController {
                 // 更新订单状态为已评价（8）
                 order.setStatus(8);
                 orderService.updateById(order);
+
+                // 通知用户评价提交成功
+                NotificationUtil.createReviewNotification(
+                    order.getUserId(),
+                    NotificationTypeEnum.REVIEW_SUBMITTED,
+                    order.getMerchantId(),
+                    orderId
+                );
+
+                // 通知商家有新评价
+                NotificationUtil.createReviewNotification(
+                    order.getMerchantId(),
+                    NotificationTypeEnum.REVIEW_SUBMITTED,
+                    order.getMerchantId(),
+                    orderId
+                );
 
                 log.info("用户提交评价成功，reviewId={}, 订单状态已更新为已评价", review.getId());
                 return ResponseResult.success(review);
@@ -250,6 +268,14 @@ public class ReviewController {
             boolean success = reviewReplyService.save(reply);
 
             if (success) {
+                // 通知用户追加评价成功
+                NotificationUtil.createReviewNotification(
+                    review.getUserId(),
+                    NotificationTypeEnum.REVIEW_ADDITIONAL,
+                    review.getMerchantId(),
+                    review.getOrderId()
+                );
+
                 log.info("用户追加评价成功，replyId={}", reply.getId());
                 return ResponseResult.success(reply);
             } else {
@@ -511,6 +537,7 @@ public class ReviewController {
 
             // 创建回复
             ReviewReply reply = new ReviewReply();
+            reply.setId(generateReplyId());
             reply.setReviewId(reviewId);
             reply.setMerchantId(merchantId);
             reply.setContent(content);
@@ -520,6 +547,14 @@ public class ReviewController {
             boolean success = reviewReplyService.save(reply);
 
             if (success) {
+                // 通知用户商家已回复评价
+                NotificationUtil.createReviewNotification(
+                    review.getUserId(),
+                    NotificationTypeEnum.REVIEW_REPLY,
+                    merchantId,
+                    review.getOrderId()
+                );
+
                 log.info("回复评价成功，replyId={}", reply.getId());
                 return ResponseResult.success("回复成功");
             } else {

@@ -4,11 +4,13 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.xx.jaseatschoicejava.entity.User;
 import com.xx.jaseatschoicejava.entity.WithdrawRecord;
+import com.xx.jaseatschoicejava.enums.NotificationTypeEnum;
 import com.xx.jaseatschoicejava.util.SystemLogHelper;
 import com.xx.jaseatschoicejava.service.UserService;
 import com.xx.jaseatschoicejava.service.WalletService;
 import com.xx.jaseatschoicejava.service.WithdrawRecordService;
 import com.xx.jaseatschoicejava.util.AdminContext;
+import com.xx.jaseatschoicejava.util.NotificationUtil;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.slf4j.Logger;
@@ -267,6 +269,14 @@ public class AdminWithdrawController {
         boolean success = withdrawRecordService.updateById(record);
 
         if (success) {
+            // 通知用户提现已完成
+            NotificationUtil.createWithdrawNotification(
+                record.getUserId(),
+                NotificationTypeEnum.WITHDRAW_SUCCESS,
+                record.getAmount().toString(),
+                null
+            );
+
             // 记录操作日志
             SystemLogHelper.logUpdate(
                 "提现管理",
@@ -334,6 +344,14 @@ public class AdminWithdrawController {
         boolean success = withdrawRecordService.updateById(record);
 
         if (success) {
+            // 通知用户提现失败
+            NotificationUtil.createWithdrawNotification(
+                record.getUserId(),
+                NotificationTypeEnum.WITHDRAW_FAILED,
+                record.getAmount().toString(),
+                reason != null ? reason : "提现失败"
+            );
+
             // 记录操作日志
             SystemLogHelper.logUpdate(
                 "提现管理",

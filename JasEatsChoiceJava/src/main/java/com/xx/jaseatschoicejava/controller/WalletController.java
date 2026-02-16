@@ -2,7 +2,9 @@ package com.xx.jaseatschoicejava.controller;
 
 import com.xx.jaseatschoicejava.common.ResponseResult;
 import com.xx.jaseatschoicejava.entity.Wallet;
+import com.xx.jaseatschoicejava.enums.NotificationTypeEnum;
 import com.xx.jaseatschoicejava.service.WalletService;
+import com.xx.jaseatschoicejava.util.NotificationUtil;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
@@ -104,6 +106,14 @@ public class WalletController {
         try {
             boolean success = walletService.withdraw(userId, amount, withdrawNo);
             if (success) {
+                // 通知用户提现申请已提交
+                NotificationUtil.createWithdrawNotification(
+                    userId,
+                    NotificationTypeEnum.WITHDRAW_REQUEST,
+                    amount.toString(),
+                    null
+                );
+
                 Wallet wallet = walletService.getWalletByUserId(userId);
                 return ResponseResult.success(wallet);
             }

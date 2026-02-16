@@ -5,11 +5,13 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.xx.jaseatschoicejava.dto.OrderDishVO;
 import com.xx.jaseatschoicejava.entity.Merchant;
 import com.xx.jaseatschoicejava.entity.Order;
+import com.xx.jaseatschoicejava.enums.NotificationTypeEnum;
 import com.xx.jaseatschoicejava.service.MerchantService;
 import com.xx.jaseatschoicejava.service.OrderDishService;
 import com.xx.jaseatschoicejava.service.OrderService;
-import com.xx.jaseatschoicejava.util.SystemLogHelper;
 import com.xx.jaseatschoicejava.util.AdminContext;
+import com.xx.jaseatschoicejava.util.NotificationUtil;
+import com.xx.jaseatschoicejava.util.SystemLogHelper;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -178,6 +180,52 @@ public class AdminOrderController {
 
         boolean success = orderService.updateById(order);
 
+        // 根据新状态发送通知
+        if (success) {
+            switch (newStatus) {
+                case 2: // 备菜中
+                    NotificationUtil.createOrderNotification(
+                        order.getUserId(),
+                        NotificationTypeEnum.ORDER_PREPARING_COMPLETE,
+                        orderId,
+                        "备菜中"
+                    );
+                    break;
+                case 3: // 烹饪中
+                    NotificationUtil.createOrderNotification(
+                        order.getUserId(),
+                        NotificationTypeEnum.ORDER_COOKING_COMPLETE,
+                        orderId,
+                        "烹饪中"
+                    );
+                    break;
+                case 4: // 待上菜
+                    NotificationUtil.createOrderNotification(
+                        order.getUserId(),
+                        NotificationTypeEnum.ORDER_WAITING_SERVING,
+                        orderId,
+                        "待上菜"
+                    );
+                    break;
+                case 5: // 已送达
+                    NotificationUtil.createOrderNotification(
+                        order.getUserId(),
+                        NotificationTypeEnum.ORDER_DELIVERED,
+                        orderId,
+                        "已送达"
+                    );
+                    break;
+                case 7: // 待评价
+                    NotificationUtil.createOrderNotification(
+                        order.getUserId(),
+                        NotificationTypeEnum.ORDER_COMPLETE,
+                        orderId,
+                        "待评价"
+                    );
+                    break;
+            }
+        }
+
         // 记录操作日志
         if (success) {
             SystemLogHelper.logUpdate(
@@ -246,6 +294,55 @@ public class AdminOrderController {
             } catch (Exception e) {
                 failCount++;
                 failedOrders.add(orderId + "(" + e.getMessage() + ")");
+            }
+        }
+
+        // 批量通知用户
+        for (String orderId : orderIds) {
+            Order updatedOrder = orderService.getById(orderId);
+            if (updatedOrder != null) {
+                switch (newStatus) {
+                    case 2:
+                        NotificationUtil.createOrderNotification(
+                            updatedOrder.getUserId(),
+                            NotificationTypeEnum.ORDER_PREPARING_COMPLETE,
+                            orderId,
+                            "备菜中"
+                        );
+                        break;
+                    case 3:
+                        NotificationUtil.createOrderNotification(
+                            updatedOrder.getUserId(),
+                            NotificationTypeEnum.ORDER_COOKING_COMPLETE,
+                            orderId,
+                            "烹饪中"
+                        );
+                        break;
+                    case 4:
+                        NotificationUtil.createOrderNotification(
+                            updatedOrder.getUserId(),
+                            NotificationTypeEnum.ORDER_WAITING_SERVING,
+                            orderId,
+                            "待上菜"
+                        );
+                        break;
+                    case 5:
+                        NotificationUtil.createOrderNotification(
+                            updatedOrder.getUserId(),
+                            NotificationTypeEnum.ORDER_DELIVERED,
+                            orderId,
+                            "已送达"
+                        );
+                        break;
+                    case 7:
+                        NotificationUtil.createOrderNotification(
+                            updatedOrder.getUserId(),
+                            NotificationTypeEnum.ORDER_COMPLETE,
+                            orderId,
+                            "待评价"
+                        );
+                        break;
+                }
             }
         }
 

@@ -5,8 +5,10 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.xx.jaseatschoicejava.entity.Dish;
 import com.xx.jaseatschoicejava.entity.Merchant;
+import com.xx.jaseatschoicejava.enums.NotificationTypeEnum;
 import com.xx.jaseatschoicejava.service.DishService;
 import com.xx.jaseatschoicejava.service.MerchantService;
+import com.xx.jaseatschoicejava.util.NotificationUtil;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -246,6 +248,18 @@ public class AdminDishController {
             // auditAdminId 可以从 SecurityContext 获取，这里暂时设置为null
 
             dishService.updateById(dish);
+
+            // 通知商家菜品审核结果
+            NotificationTypeEnum notificationType = "approve".equals(decision)
+                ? NotificationTypeEnum.DISH_APPROVED
+                : NotificationTypeEnum.DISH_REJECTED;
+
+            NotificationUtil.createDishAuditNotification(
+                dish.getMerchantId(),
+                notificationType,
+                dish.getName(),
+                comment != null ? comment : "审核未通过"
+            );
 
             response.put("success", true);
             response.put("message", "审核提交成功");

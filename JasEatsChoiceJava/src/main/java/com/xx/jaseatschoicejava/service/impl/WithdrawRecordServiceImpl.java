@@ -6,10 +6,12 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.xx.jaseatschoicejava.entity.User;
 import com.xx.jaseatschoicejava.entity.WithdrawRecord;
+import com.xx.jaseatschoicejava.enums.NotificationTypeEnum;
 import com.xx.jaseatschoicejava.mapper.WithdrawRecordMapper;
 import com.xx.jaseatschoicejava.service.UserService;
 import com.xx.jaseatschoicejava.service.WithdrawRecordService;
 import com.xx.jaseatschoicejava.service.WalletService;
+import com.xx.jaseatschoicejava.util.NotificationUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -101,6 +103,14 @@ public class WithdrawRecordServiceImpl extends ServiceImpl<WithdrawRecordMapper,
             // 审核通过
             record.setWithdrawStatus("processing"); // 进入处理中状态
 
+            // 通知用户提现审核通过
+            NotificationUtil.createWithdrawNotification(
+                record.getUserId(),
+                NotificationTypeEnum.WITHDRAW_APPROVED,
+                record.getAmount().toString(),
+                null
+            );
+
             // TODO: 这里可以调用第三方支付平台的转账接口
             // 实际转账成功后再将状态改为 success
 
@@ -110,6 +120,14 @@ public class WithdrawRecordServiceImpl extends ServiceImpl<WithdrawRecordMapper,
             // 审核拒绝，需要退款到钱包
             record.setWithdrawStatus("rejected");
             record.setRejectReason(comment);
+
+            // 通知用户提现被驳回
+            NotificationUtil.createWithdrawNotification(
+                record.getUserId(),
+                NotificationTypeEnum.WITHDRAW_REJECTED,
+                record.getAmount().toString(),
+                comment != null ? comment : "审核未通过"
+            );
 
             // 退款到钱包（如果walletService可用）
             if (walletService != null) {

@@ -436,6 +436,90 @@ onMounted(() => {
   </div>
 </template>
 
+<script setup>
+import { ref } from 'vue'
+
+const activeTab = ref('all')
+
+// 教程列表子组件
+const TutorialList = {
+  name: 'TutorialList',
+  props: {
+    tutorials: Array,
+    loading: Boolean
+  },
+  emits: ['edit', 'submit', 'delete'],
+  setup(props, { emit }) {
+    const { isEditable, canSubmit, canDelete, getStatusTag, getReviewStatusTag } = this
+
+    return {
+      isEditable,
+      canSubmit,
+      canDelete,
+      getStatusTag,
+      getReviewStatusTag
+    }
+  },
+  template: `
+    <div v-loading="loading" style="min-height: 200px">
+      <el-empty v-if="!loading && tutorials.length === 0" description="暂无教程" />
+      <el-table v-else :data="tutorials" stripe>
+        <el-table-column prop="id" label="ID" width="80" />
+        <el-table-column prop="title" label="教程标题" min-width="200" />
+        <el-table-column label="类型" width="100">
+          <template #default="{ row }">
+            <el-icon v-if="row.type === 'video'" class="type-icon video"><VideoCamera /></el-icon>
+            <el-icon v-else class="type-icon article"><Document /></el-icon>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="120">
+          <template #default="{ row }">
+            <el-tag :type="getStatusTag(row.status).type" size="small">
+              {{ getStatusTag(row.status).text }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="审核状态" width="120">
+          <template #default="{ row }">
+            <el-tag :type="getReviewStatusTag(row.reviewStatus).type" size="small">
+              {{ getReviewStatusTag(row.reviewStatus).text }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="create_time" label="创建时间" width="180" />
+        <el-table-column label="操作" width="280" fixed="right">
+          <template #default="{ row }">
+            <el-button
+              v-if="isEditable(row)"
+              type="primary"
+              size="small"
+              @click="$emit('edit', row)"
+            >
+              <el-icon><Edit /></el-icon> 编辑
+            </el-button>
+            <el-button
+              v-if="canSubmit(row)"
+              type="success"
+              size="small"
+              @click="$emit('submit', row)"
+            >
+              <el-icon><Send /></el-icon> 提交审核
+            </el-button>
+            <el-button
+              v-if="canDelete(row)"
+              type="danger"
+              size="small"
+              @click="$emit('delete', row)"
+            >
+              <el-icon><Delete /></el-icon> 删除
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
+  `
+}
+</script>
 
 <style scoped lang="less">
 .merchant-tutorial-manage-container {

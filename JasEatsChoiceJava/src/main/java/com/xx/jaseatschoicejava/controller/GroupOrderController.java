@@ -5,9 +5,11 @@ import com.xx.jaseatschoicejava.common.ResponseResult;
 import com.xx.jaseatschoicejava.entity.GroupOrder;
 import com.xx.jaseatschoicejava.entity.GroupOrderDish;
 import com.xx.jaseatschoicejava.entity.PaymentRecord;
+import com.xx.jaseatschoicejava.enums.NotificationTypeEnum;
 import com.xx.jaseatschoicejava.service.GroupChatService;
 import com.xx.jaseatschoicejava.service.GroupOrderService;
 import com.xx.jaseatschoicejava.service.PaymentService;
+import com.xx.jaseatschoicejava.util.NotificationUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -251,6 +253,23 @@ public class GroupOrderController {
             if (updated) {
                 logger.info("取消群订单成功 - orderId: {}, groupId: {}, 原状态: {}",
                     groupOrderId, groupOrder.getGroupId(), status);
+
+                // 通知发起者订单已取消
+                NotificationUtil.createGroupOrderNotification(
+                    groupOrder.getInitiatorId(),
+                    NotificationTypeEnum.GROUP_ORDER_CANCELLED,
+                    groupOrderId,
+                    "已取消"
+                );
+
+                // 通知商家订单已取消
+                NotificationUtil.createGroupOrderNotification(
+                    groupOrder.getMerchantId(),
+                    NotificationTypeEnum.GROUP_ORDER_CANCELLED,
+                    groupOrderId,
+                    "已取消"
+                );
+
                 return ResponseResult.success(status >= 0 ? "订单已取消并退款" : "订单已取消");
             } else {
                 return ResponseResult.fail("500", "取消订单失败");
@@ -301,6 +320,56 @@ public class GroupOrderController {
             if (updated) {
                 logger.info("更新群订单状态成功 - orderId: {}, status: {} -> {}",
                         groupOrderId, oldStatus, newStatus);
+
+                // 根据新状态发送通知
+                switch (newStatus) {
+                    case 1: // 待接单（已支付）
+                        NotificationUtil.createGroupOrderNotification(
+                            groupOrder.getInitiatorId(),
+                            NotificationTypeEnum.GROUP_ORDER_PAYMENT_SUCCESS,
+                            groupOrderId,
+                            "待接单"
+                        );
+                        NotificationUtil.createMerchantNewOrderNotification(
+                            groupOrder.getMerchantId(),
+                            groupOrderId,
+                            "群订单"
+                        );
+                        break;
+                    case 2: // 备菜中
+                        NotificationUtil.createGroupOrderNotification(
+                            groupOrder.getInitiatorId(),
+                            NotificationTypeEnum.GROUP_ORDER_PREPARING_COMPLETE,
+                            groupOrderId,
+                            "备菜中"
+                        );
+                        break;
+                    case 3: // 烹饪中
+                        NotificationUtil.createGroupOrderNotification(
+                            groupOrder.getInitiatorId(),
+                            NotificationTypeEnum.GROUP_ORDER_COOKING_COMPLETE,
+                            groupOrderId,
+                            "烹饪中"
+                        );
+                        break;
+                    case 4: // 待上菜
+                        NotificationUtil.createGroupOrderNotification(
+                            groupOrder.getInitiatorId(),
+                            NotificationTypeEnum.GROUP_ORDER_WAITING_SERVING,
+                            groupOrderId,
+                            "待上菜"
+                        );
+                        break;
+                    case 5: // 已完成
+                        NotificationUtil.createGroupOrderNotification(
+                            groupOrder.getInitiatorId(),
+                            NotificationTypeEnum.GROUP_ORDER_COMPLETE,
+                            groupOrderId,
+                            "已完成"
+                        );
+                        break;
+                }
+
                 return ResponseResult.success(Map.of(
                         "groupOrderId", groupOrderId,
                         "status", newStatus,

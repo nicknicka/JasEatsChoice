@@ -5,11 +5,13 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.xx.jaseatschoicejava.entity.Order;
 import com.xx.jaseatschoicejava.entity.PaymentRecord;
 import com.xx.jaseatschoicejava.entity.Wallet;
+import com.xx.jaseatschoicejava.enums.NotificationTypeEnum;
 import com.xx.jaseatschoicejava.mapper.PaymentRecordMapper;
 import com.xx.jaseatschoicejava.service.OrderService;
 import com.xx.jaseatschoicejava.service.PaymentService;
 import com.xx.jaseatschoicejava.service.PaymentPasswordService;
 import com.xx.jaseatschoicejava.service.WalletService;
+import com.xx.jaseatschoicejava.util.NotificationUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -116,6 +118,14 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentRecordMapper, Payment
                 order.setPaymentTime(LocalDateTime.now());
                 order.setUpdateTime(LocalDateTime.now());
                 orderService.updateById(order);
+
+                // 通知用户支付成功
+                NotificationUtil.createOrderNotification(
+                    paymentRecord.getUserId(),
+                    NotificationTypeEnum.ORDER_PAYMENT_SUCCESS,
+                    order.getId(),
+                    "待接单"
+                );
             }
 
             log.info("钱包支付成功，流水号：{}，金额：{}", paymentNo, paymentRecord.getAmount());
@@ -175,6 +185,14 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentRecordMapper, Payment
                 order.setPaymentTime(LocalDateTime.now());
                 order.setUpdateTime(LocalDateTime.now());
                 orderService.updateById(order);
+
+                // 通知用户支付成功
+                NotificationUtil.createOrderNotification(
+                    paymentRecord.getUserId(),
+                    NotificationTypeEnum.ORDER_PAYMENT_SUCCESS,
+                    order.getId(),
+                    "待接单"
+                );
             }
 
             log.info("钱包支付成功（含密码验证），流水号：{}，金额：{}", paymentNo, paymentRecord.getAmount());

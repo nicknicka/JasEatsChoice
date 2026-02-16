@@ -8,10 +8,12 @@ import com.xx.jaseatschoicejava.dto.ReorderResponseDTO;
 import com.xx.jaseatschoicejava.entity.Order;
 import com.xx.jaseatschoicejava.entity.OrderDish;
 import com.xx.jaseatschoicejava.entity.PaymentRecord;
+import com.xx.jaseatschoicejava.enums.NotificationTypeEnum;
 import com.xx.jaseatschoicejava.service.OrderDishService;
 import com.xx.jaseatschoicejava.service.OrderService;
 import com.xx.jaseatschoicejava.service.PaymentService;
 import com.xx.jaseatschoicejava.service.WalletService;
+import com.xx.jaseatschoicejava.util.NotificationUtil;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
@@ -149,6 +151,25 @@ public class OrderController {
             order.setStatus(status);
             boolean success = orderService.updateById(order);
             if (success) {
+                // 根据状态发送通知
+                switch (status) {
+                    case 5: // 确认送达
+                        NotificationUtil.createOrderNotification(
+                            order.getUserId(),
+                            NotificationTypeEnum.ORDER_DELIVERED,
+                            orderId,
+                            "已送达"
+                        );
+                        break;
+                    case 7: // 订单完成，待评价
+                        NotificationUtil.createOrderNotification(
+                            order.getUserId(),
+                            NotificationTypeEnum.ORDER_COMPLETE,
+                            orderId,
+                            "待评价"
+                        );
+                        break;
+                }
                 return ResponseResult.success("更新成功");
             }
             return ResponseResult.fail("500", "更新失败");
@@ -207,6 +228,15 @@ public class OrderController {
             boolean success = orderService.updateById(order);
             if (success) {
                 log.info("订单取消成功，订单ID：{}", orderId);
+
+                // 通知用户订单已取消
+                NotificationUtil.createOrderNotification(
+                    order.getUserId(),
+                    NotificationTypeEnum.ORDER_CANCELLED,
+                    orderId,
+                    "已取消"
+                );
+
                 return ResponseResult.success("订单已取消");
             }
             return ResponseResult.fail("500", "取消订单失败");

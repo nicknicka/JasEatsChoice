@@ -3,9 +3,11 @@ package com.xx.jaseatschoicejava.controller;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.xx.jaseatschoicejava.entity.Merchant;
+import com.xx.jaseatschoicejava.enums.NotificationTypeEnum;
 import com.xx.jaseatschoicejava.service.MerchantService;
 import com.xx.jaseatschoicejava.util.SystemLogHelper;
 import com.xx.jaseatschoicejava.util.AdminContext;
+import com.xx.jaseatschoicejava.util.NotificationUtil;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -128,7 +130,7 @@ public class AdminMerchantController {
 
         boolean success = merchantService.updateById(merchant);
 
-        // 记录操作日志
+        // 记录操作日志并发送通知
         if (success) {
             String operation = "APPROVED".equals(status) ? "审核通过" : "审核拒绝";
             SystemLogHelper.logUpdate(
@@ -137,6 +139,17 @@ public class AdminMerchantController {
                 AdminContext.getAdminId(),
                 AdminContext.getAdminUsername(),
                 Map.of("merchantId", merchantId, "status", status)
+            );
+
+            // 通知商家审核结果
+            NotificationTypeEnum notificationType = "APPROVED".equals(status)
+                ? NotificationTypeEnum.MERCHANT_APPROVED
+                : NotificationTypeEnum.MERCHANT_REJECTED;
+
+            NotificationUtil.createMerchantAuditNotification(
+                merchantId.toString(),
+                notificationType,
+                reason != null ? reason : "审核未通过"
             );
         }
 
