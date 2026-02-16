@@ -949,6 +949,11 @@ const handleDeleteFromDetail = async (messageId) => {
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     border-radius: 16px;
     will-change: transform; // 性能优化
+    margin-bottom: 17px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
 
     &:hover {
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
