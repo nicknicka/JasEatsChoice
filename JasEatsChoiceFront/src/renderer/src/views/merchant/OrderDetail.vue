@@ -5,6 +5,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   CircleCheck,
   CircleCheckFilled,
+  CircleClose,
   Goods,
   Dish,
   Phone,
@@ -14,7 +15,8 @@ import {
   Document,
   ArrowLeft,
   Refresh,
-  Printer
+  Printer,
+  Star
 } from '@element-plus/icons-vue'
 import axios from 'axios'
 import { API_CONFIG } from '../../config/index.js'
@@ -25,14 +27,17 @@ const router = useRouter()
 const loading = ref(false)
 
 // 订单状态映射（对应后端状态码）
+// 0-待支付、1-待接单、2-备菜中、3-烹饪中、4-待上菜、5-已送达、6-已取消、7-待评价、8-已评价
 const orderStatusMap = {
   0: { text: '待支付', type: 'info', color: '#909399', icon: '💳' },
   1: { text: '待接单', type: 'danger', color: '#f56c6c', icon: '⏰' },
   2: { text: '备菜中', type: 'warning', color: '#e6a23c', icon: '🔪' },
   3: { text: '烹饪中', type: 'warning', color: '#ff9800', icon: '🍳' },
   4: { text: '待上菜', type: 'primary', color: '#409eff', icon: '🔔' },
-  5: { text: '已完成', type: 'success', color: '#67c23a', icon: '✅' },
-  6: { text: '已取消', type: 'info', color: '#c0c4cc', icon: '❌' }
+  5: { text: '已送达', type: 'success', color: '#67c23a', icon: '✅' },
+  6: { text: '已取消', type: 'info', color: '#c0c4cc', icon: '❌' },
+  7: { text: '待评价', type: 'success', color: '#95d475', icon: '⭐' },
+  8: { text: '已评价', type: 'success', color: '#85ce61', icon: '🌟' }
 }
 
 // 订单详情数据
@@ -51,40 +56,91 @@ const orderDetail = ref({
   remark: ''
 })
 
+// 格式化日期时间
+const formatDateTime = (dateTime) => {
+  if (!dateTime) return '--'
+  const date = new Date(dateTime)
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+}
+
 // 加载订单详情
 const loadOrderDetail = async () => {
   loading.value = true
   try {
     const orderId = route.params.id
-    const response = await axios.get(`${API_CONFIG.baseURL}/api/v1/orders/${orderId}`)
+    console.log('🔍 [订单详情] 开始加载订单，ID:', orderId)
+    console.log('🔗 [订单详情] 请求URL:', `${API_CONFIG.baseURL}/v1/orders/${orderId}`)
 
-    if (response.data && response.data.success) {
-      orderDetail.value = response.data.data
-    } else {
-      // 使用模拟数据
-      orderDetail.value = {
-        id: orderId,
-        orderNo: `JD${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}001`,
-        status: 2,
-        userId: 'u001',
-        user: '小明',
-        phone: '138****8888',
-        address: '科技园A栋12楼',
-        totalAmount: 78.0,
-        createTime: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')} 10:30`,
-        updateTime: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')} 10:40`,
-        orderDishes: [
-          { dishName: '宫保鸡丁', price: 38.0, quantity: 1, customization: '' },
-          { dishName: '米饭', price: 2.0, quantity: 2, customization: '' }
-        ],
-        remark: '少辣'
+    // 第一步：获取订单基本信息
+    const orderResponse = await axios.get(`${API_CONFIG.baseURL}/v1/orders/${orderId}`)
+    console.log('📦 [订单详情] 订单基本信息响应:', orderResponse.data)
+
+    if (!orderResponse.data?.success || !orderResponse.data?.data) {
+      throw new Error(orderResponse.data?.message || '获取订单基本信息失败')
+    }
+
+    // 第二步：获取订单菜品列表
+    console.log('🍽️ [订单详情] 开始获取菜品列表...')
+    const dishesResponse = await axios.get(`${API_CONFIG.baseURL}/v1/orders/${orderId}/dishes`)
+    console.log('🍽️ [订单详情] 菜品列表响应:', dishesResponse.data)
+
+    // 第三步：获取用户信息（如果有userId）
+    const orderData = orderResponse.data.data
+    let userInfo = null
+    if (orderData.userId) {
+      console.log('👤 [订单详情] 开始获取用户信息，userId:', orderData.userId)
+      try {
+        const userResponse = await axios.get(`${API_CONFIG.baseURL}/v1/users/${orderData.userId}`)
+        console.log('👤 [订单详情] 用户信息响应:', userResponse.data)
+        if (userResponse.data?.success && userResponse.data?.data) {
+          userInfo = userResponse.data.data
+        }
+      } catch (userError) {
+        console.warn('⚠️ [订单详情] 获取用户信息失败，将继续显示订单:', userError.message)
       }
     }
+
+    // 组装完整的订单数据
+    const dishesData = dishesResponse.data?.success ? dishesResponse.data.data : []
+
+    orderDetail.value = {
+      ...orderData,
+      orderDishes: dishesData,
+      // 补充订单号（使用 ID）
+      orderNo: orderData.id,
+      // 补充用户信息
+      user: userInfo?.nickname || userInfo?.phone || orderData.userId,
+      phone: userInfo?.phone || '--',
+      // 格式化时间
+      createTime: formatDateTime(orderData.createTime),
+      updateTime: formatDateTime(orderData.updateTime)
+    }
+
+    console.log('✨ [订单详情] 订单详情已完整组装:', orderDetail.value)
+    console.log('✅ [订单详情] 菜品数量:', orderDetail.value?.orderDishes?.length || 0)
+    console.log('👤 [订单详情] 用户信息:', { user: orderDetail.value.user, phone: orderDetail.value.phone })
+    console.log('📝 [订单详情] 订单备注:', orderDetail.value.remark)
   } catch (error) {
-    console.error('加载订单详情失败:', error)
-    ElMessage.error('加载订单详情失败')
+    console.error('❌ [订单详情] 加载失败:', error)
+    console.error('❌ [订单详情] 错误详情:', {
+      message: error.message,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data
+    })
+
+    ElMessage.error(`加载订单详情失败: ${error.message}`)
+
+    // 加载失败时，保留当前页面，但不显示数据
+    orderDetail.value = {
+      id: route.params.id,
+      orderNo: '加载失败',
+      status: 0,
+      orderDishes: []
+    }
   } finally {
     loading.value = false
+    console.log('✅ [订单详情] 加载完成，loading:', loading.value)
   }
 }
 
@@ -92,7 +148,7 @@ const loadOrderDetail = async () => {
 const updateOrderStatus = async (newStatus) => {
   try {
     const response = await axios.put(
-      `${API_CONFIG.baseURL}/api/v1/orders/${orderDetail.value.id}/status`,
+      `${API_CONFIG.baseURL}/v1/orders/${orderDetail.value.id}/status`,
       null,
       {
         params: { status: newStatus }
@@ -134,8 +190,10 @@ const getStatusProgress = () => {
   if (status === 2) return 2
   if (status === 3) return 3
   if (status === 4) return 4
-  if (status === 5) return 5
-  if (status === 6) return -1
+  if (status === 5) return 5  // 已送达
+  if (status === 7) return 6  // 待评价
+  if (status === 8) return 7  // 已评价
+  if (status === 6) return -1  // 已取消
   return 0
 }
 
@@ -174,7 +232,18 @@ onMounted(() => {
       <div class="status-card" :class="'status-' + orderDetail.status">
         <div class="status-header">
           <div class="status-info">
-            <span class="status-icon">{{ orderStatusMap[orderDetail.status]?.icon }}</span>
+            <span class="status-icon">
+              <el-icon v-if="orderDetail.status === 0"><Document /></el-icon>
+              <el-icon v-else-if="orderDetail.status === 1"><Clock /></el-icon>
+              <el-icon v-else-if="orderDetail.status === 2"><Goods /></el-icon>
+              <el-icon v-else-if="orderDetail.status === 3"><Dish /></el-icon>
+              <el-icon v-else-if="orderDetail.status === 4"><Document /></el-icon>
+              <el-icon v-else-if="orderDetail.status === 5"><CircleCheck /></el-icon>
+              <el-icon v-else-if="orderDetail.status === 6"><CircleClose /></el-icon>
+              <el-icon v-else-if="orderDetail.status === 7"><Star /></el-icon>
+              <el-icon v-else-if="orderDetail.status === 8"><CircleCheckFilled /></el-icon>
+              <el-icon v-else><Document /></el-icon>
+            </span>
             <span class="status-text">{{ orderStatusMap[orderDetail.status]?.text }}</span>
           </div>
           <div class="status-actions">
@@ -212,39 +281,74 @@ onMounted(() => {
               @click="updateOrderStatus(5)"
             >
               <el-icon><CircleCheckFilled /></el-icon>
-              完成
+              确认送达
+            </el-button>
+            <el-button
+              v-if="orderDetail.status === 5"
+              type="success"
+              size="small"
+              @click="updateOrderStatus(7)"
+            >
+              <el-icon><CircleCheckFilled /></el-icon>
+              完成订单
             </el-button>
           </div>
         </div>
         <div class="status-progress">
           <div class="progress-step" :class="{ active: getStatusProgress() >= 0 }">
-            <div class="step-icon">📝</div>
+            <div class="step-icon">
+              <el-icon><Document /></el-icon>
+            </div>
             <div class="step-text">待支付</div>
           </div>
           <div class="progress-line" :class="{ active: getStatusProgress() >= 1 }"></div>
           <div class="progress-step" :class="{ active: getStatusProgress() >= 1 }">
-            <div class="step-icon">⏰</div>
+            <div class="step-icon">
+              <el-icon><Clock /></el-icon>
+            </div>
             <div class="step-text">待接单</div>
           </div>
           <div class="progress-line" :class="{ active: getStatusProgress() >= 2 }"></div>
           <div class="progress-step" :class="{ active: getStatusProgress() >= 2 }">
-            <div class="step-icon">🔪</div>
+            <div class="step-icon">
+              <el-icon><Goods /></el-icon>
+            </div>
             <div class="step-text">备菜中</div>
           </div>
           <div class="progress-line" :class="{ active: getStatusProgress() >= 3 }"></div>
           <div class="progress-step" :class="{ active: getStatusProgress() >= 3 }">
-            <div class="step-icon">🍳</div>
+            <div class="step-icon">
+              <el-icon><Dish /></el-icon>
+            </div>
             <div class="step-text">烹饪中</div>
           </div>
           <div class="progress-line" :class="{ active: getStatusProgress() >= 4 }"></div>
           <div class="progress-step" :class="{ active: getStatusProgress() >= 4 }">
-            <div class="step-icon">🔔</div>
+            <div class="step-icon">
+              <el-icon><Document /></el-icon>
+            </div>
             <div class="step-text">待上菜</div>
           </div>
           <div class="progress-line" :class="{ active: getStatusProgress() >= 5 }"></div>
           <div class="progress-step" :class="{ active: getStatusProgress() >= 5 }">
-            <div class="step-icon">✅</div>
-            <div class="step-text">已完成</div>
+            <div class="step-icon">
+              <el-icon><CircleCheck /></el-icon>
+            </div>
+            <div class="step-text">已送达</div>
+          </div>
+          <div class="progress-line" :class="{ active: getStatusProgress() >= 6 }"></div>
+          <div class="progress-step" :class="{ active: getStatusProgress() >= 6 }">
+            <div class="step-icon">
+              <el-icon><Star /></el-icon>
+            </div>
+            <div class="step-text">待评价</div>
+          </div>
+          <div class="progress-line" :class="{ active: getStatusProgress() >= 7 }"></div>
+          <div class="progress-step" :class="{ active: getStatusProgress() >= 7 }">
+            <div class="step-icon">
+              <el-icon><CircleCheckFilled /></el-icon>
+            </div>
+            <div class="step-text">已评价</div>
           </div>
         </div>
       </div>
@@ -259,7 +363,7 @@ onMounted(() => {
           <div class="info-card">
             <div class="info-label">
               <el-icon><User /></el-icon>
-              <span>顾客姓名</span>
+              <span>用户昵称</span>
             </div>
             <div class="info-value">{{ orderDetail.user || '--' }}</div>
           </div>
@@ -301,12 +405,46 @@ onMounted(() => {
             </div>
             <div class="info-value">{{ orderDetail.updateTime || '--' }}</div>
           </div>
-          <div v-if="orderDetail.remark" class="info-card full-width remark-card">
+          <div class="info-card full-width remark-card">
             <div class="info-label">
               <span>📝</span>
               <span>订单备注</span>
             </div>
-            <div class="info-value">{{ orderDetail.remark }}</div>
+            <div class="info-value">{{ orderDetail.remark || '无' }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 支付信息 -->
+      <div v-if="orderDetail.paidAmount || orderDetail.paymentTime" class="info-section">
+        <div class="section-title">
+          <el-icon><Document /></el-icon>
+          <span>支付信息</span>
+        </div>
+        <div class="info-grid">
+          <div v-if="orderDetail.paidAmount" class="info-card">
+            <div class="info-label">
+              <span>💰</span>
+              <span>已支付金额</span>
+            </div>
+            <div class="info-value payment-amount">¥{{ orderDetail.paidAmount?.toFixed(2) || '0.00' }}</div>
+          </div>
+          <div v-if="orderDetail.paymentTime" class="info-card">
+            <div class="info-label">
+              <el-icon><Clock /></el-icon>
+              <span>支付时间</span>
+            </div>
+            <div class="info-value">{{ orderDetail.paymentTime || '--' }}</div>
+          </div>
+          <div v-if="orderDetail.totalAmount && orderDetail.paidAmount && orderDetail.totalAmount !== orderDetail.paidAmount" class="info-card full-width">
+            <div class="info-label">
+              <span>📊</span>
+              <span>金额差异</span>
+            </div>
+            <div class="info-value amount-diff">
+              {{ (orderDetail.totalAmount - orderDetail.paidAmount).toFixed(2) }} 元
+              <span class="diff-hint">(订单总额 - 已支付金额)</span>
+            </div>
           </div>
         </div>
       </div>
@@ -451,6 +589,12 @@ onMounted(() => {
       &.status-6::before {
         background: linear-gradient(180deg, #c0c4cc 0%, #d3d4d6 100%);
       }
+      &.status-7::before {
+        background: linear-gradient(180deg, #95d475 0%, #a4da8e 100%);
+      }
+      &.status-8::before {
+        background: linear-gradient(180deg, #85ce61 0%, #95d475 100%);
+      }
 
       .status-header {
         display: flex;
@@ -466,11 +610,12 @@ onMounted(() => {
           gap: 12px;
 
           .status-icon {
-            font-size: 2.286rem /* 原值: 32px */;
+            font-size: 28px;
+            color: #409eff;
           }
 
           .status-text {
-            font-size: 1.429rem /* 原值: 20px */;
+            font-size: 1.286rem /* 原值: 18px */;
             font-weight: 600;
             color: #303133;
           }
@@ -532,55 +677,59 @@ onMounted(() => {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 0 20px;
+        padding: 0 16px;
+        gap: 4px;
 
         .progress-step {
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 8px;
+          gap: 6px;
           flex: 1;
           opacity: 0.4;
           transition: all 0.3s ease;
+          min-width: 0;
 
           &.active {
             opacity: 1;
 
             .step-icon {
-              transform: scale(1.1);
+              color: #409eff;
+              background: #ecf5ff;
             }
           }
 
           .step-icon {
-            width: 40px;
-            height: 40px;
+            width: 32px;
+            height: 32px;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: #f5f5f5;
+            background: transparent;
             border-radius: 50%;
-            font-size: 1.429rem /* 原值: 20px */;
+            font-size: 18px;
+            color: #c0c4cc;
             transition: all 0.3s ease;
           }
 
           .step-text {
-            font-size: 0.857rem /* 原值: 12px */;
-            color: #606266;
+            font-size: 0.786rem /* 原值: 11px */;
+            color: #909399;
             font-weight: 500;
           }
         }
 
         .progress-line {
           flex: 1;
-          height: 2px;
+          height: 1px;
           background: #e0e0e0;
-          margin: 0 8px;
+          margin: 0 4px;
           position: relative;
-          top: -20px;
+          top: -16px;
           transition: all 0.3s ease;
 
           &.active {
-            background: linear-gradient(90deg, #409eff 0%, #67c23a 100%);
+            background: #409eff;
           }
         }
       }
@@ -666,6 +815,24 @@ onMounted(() => {
             font-size: 1.071rem /* 原值: 15px */;
             color: #303133;
             font-weight: 500;
+
+            &.payment-amount {
+              color: #67c23a;
+              font-size: 1.286rem /* 原值: 18px */;
+              font-weight: 700;
+            }
+
+            &.amount-diff {
+              color: #e6a23c;
+              font-weight: 600;
+
+              .diff-hint {
+                font-size: 0.857rem /* 原值: 12px */;
+                color: #909399;
+                font-weight: 400;
+                margin-left: 8px;
+              }
+            }
           }
         }
       }
@@ -813,18 +980,27 @@ onMounted(() => {
         }
 
         .status-progress {
-          padding: 0 8px;
+          padding: 0 4px;
+          gap: 2px;
 
           .progress-step {
+            gap: 4px;
+
             .step-text {
               font-size: 10px;
             }
 
             .step-icon {
-              width: 32px;
-              height: 32px;
-              font-size: 1.143rem /* 原值: 16px */;
+              width: 24px;
+              height: 24px;
+              font-size: 14px;
             }
+          }
+
+          .progress-line {
+            height: 1px;
+            margin: 0 2px;
+            top: -14px;
           }
         }
       }

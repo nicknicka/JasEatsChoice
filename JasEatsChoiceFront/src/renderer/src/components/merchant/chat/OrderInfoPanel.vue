@@ -17,13 +17,18 @@ const emit = defineEmits(['status-update', 'send-reminder'])
 const router = useRouter()
 const showDetail = ref(false)
 
-// 订单状态映射
+// 订单状态映射（对应后端状态码）
+// 0-待支付、1-待接单、2-备菜中、3-烹饪中、4-待上菜、5-已送达、6-已取消、7-待评价、8-已评价
 const orderStatusMap = {
+  0: { text: '待支付', type: 'info', color: '#909399' },
   1: { text: '待接单', type: 'danger', color: '#f56c6c' },
   2: { text: '备菜中', type: 'warning', color: '#e6a23c' },
   3: { text: '烹饪中', type: 'warning', color: '#ff9800' },
   4: { text: '待上菜', type: 'primary', color: '#409eff' },
-  5: { text: '已完成', type: 'success', color: '#67c23a' }
+  5: { text: '已送达', type: 'success', color: '#67c23a' },
+  6: { text: '已取消', type: 'info', color: '#c0c4cc' },
+  7: { text: '待评价', type: 'success', color: '#95d475' },
+  8: { text: '已评价', type: 'success', color: '#85ce61' }
 }
 
 // 订单状态

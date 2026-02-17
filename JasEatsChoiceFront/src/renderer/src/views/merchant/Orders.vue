@@ -17,7 +17,9 @@ import {
   Reading,
   Filter,
   List,
-  Calendar
+  Calendar,
+  Timer,
+  Coin
 } from '@element-plus/icons-vue'
 import api from '../../utils/api.js'
 import { useRouter, useRoute } from 'vue-router'
@@ -33,15 +35,17 @@ const loading = ref(false)
 const merchantId = authStore.merchantId || localStorage.getItem('auth_merchantId')
 
 // 订单状态映射（对应后端状态码）
-// 0-待支付、1-待接单、2-备菜中、3-烹饪中、4-待上菜、5-已完成、6-已取消
+// 0-待支付、1-待接单、2-备菜中、3-烹饪中、4-待上菜、5-已送达、6-已取消、7-待评价、8-已评价
 const orderStatusMap = {
   0: { text: '待支付', type: 'info', color: '#909399' },
   1: { text: '待接单', type: 'danger', color: '#f56c6c' },
   2: { text: '备菜中', type: 'warning', color: '#e6a23c' },
   3: { text: '烹饪中', type: 'warning', color: '#ff9800' },
   4: { text: '待上菜', type: 'primary', color: '#409eff' },
-  5: { text: '已完成', type: 'success', color: '#67c23a' },
-  6: { text: '已取消', type: 'info', color: '#c0c4cc' }
+  5: { text: '已送达', type: 'success', color: '#67c23a' },
+  6: { text: '已取消', type: 'info', color: '#c0c4cc' },
+  7: { text: '待评价', type: 'success', color: '#95d475' },
+  8: { text: '已评价', type: 'success', color: '#85ce61' }
 }
 
 // 状态筛选映射
@@ -52,8 +56,10 @@ const statusFilterMap = {
   2: { text: '备菜中', value: 2 },
   3: { text: '烹饪中', value: 3 },
   4: { text: '待上菜', value: 4 },
-  5: { text: '已完成', value: 5 },
-  6: { text: '已取消', value: 6 }
+  5: { text: '已送达', value: 5 },
+  6: { text: '已取消', value: 6 },
+  7: { text: '待评价', value: 7 },
+  8: { text: '已评价', value: 8 }
 }
 
 // 订单数据
@@ -64,6 +70,17 @@ const activeStatusFilter = ref('all')
 
 // 搜索关键词
 const searchKeyword = ref('')
+
+// 排序方式
+const sortOrder = ref('time-desc')
+
+// 排序选项
+const sortOptions = [
+  { label: '时间降序', value: 'time-desc', icon: 'Timer' },
+  { label: '时间升序', value: 'time-asc', icon: 'Timer' },
+  { label: '金额降序', value: 'amount-desc', icon: 'Coin' },
+  { label: '金额升序', value: 'amount-asc', icon: 'Coin' }
+]
 
 // 数字动画
 const animatedValues = ref({
@@ -96,12 +113,12 @@ const animateValue = (key, endValue, duration = 1000) => {
   requestAnimationFrame(animate)
 }
 
-// 获取筛选状态列表（支持多状态筛选，如"2-3"表示状态2和3）
+// 获取筛选状态列表（支持多状态筛选，如"2-4"表示状态2、3、4）
 const getStatusFilters = (statusFilter) => {
   if (statusFilter === 'all' || statusFilter === '') return []
 
-  // 处理特殊状态 "2-3"（进行中 = 备菜+烹饪+待上菜）
-  if (statusFilter === '2-3') {
+  // 处理特殊状态 "2-4"（进行中 = 备菜+烹饪+待上菜）
+  if (statusFilter === '2-4' || statusFilter === '2-3') {
     return [2, 3, 4] // 备菜中、烹饪中、待上菜
   }
 
@@ -128,7 +145,21 @@ const filteredOrders = computed(() => {
 
       return statusMatch && searchMatch
     })
-    .sort((a, b) => new Date(b.createTime) - new Date(a.createTime))
+    .sort((a, b) => {
+      // 根据选择的排序方式排序
+      switch (sortOrder.value) {
+        case 'time-desc':
+          return new Date(b.createTime) - new Date(a.createTime)
+        case 'time-asc':
+          return new Date(a.createTime) - new Date(b.createTime)
+        case 'amount-desc':
+          return (b.totalAmount || 0) - (a.totalAmount || 0)
+        case 'amount-asc':
+          return (a.totalAmount || 0) - (b.totalAmount || 0)
+        default:
+          return new Date(b.createTime) - new Date(a.createTime)
+      }
+    })
 })
 
 // 订单概览统计
@@ -271,13 +302,16 @@ const getTagType = (status) => {
 // 获取状态的订单数量
 const getStatusCount = (status) => {
   if (status === 'all') return orders.value.length
+  if (status === '2-4' || status === '2-3') {
+    return orders.value.filter((o) => o.status === 2 || o.status === 3 || o.status === 4).length
+  }
   return orders.value.filter((o) => o.status === status).length
 }
 
 // 获取状态标签文本
 const getStatusLabel = (status) => {
   if (status === 'all') return '全部'
-  if (status === '2-3') return '进行中'
+  if (status === '2-4' || status === '2-3') return '进行中'
   return statusFilterMap[status]?.text || '未知'
 }
 
@@ -294,7 +328,7 @@ const getEmptyDescription = () => {
   if (searchKeyword.value) {
     return '未找到匹配的订单'
   }
-  if (activeStatusFilter.value === '2-3') {
+  if (activeStatusFilter.value === '2-4' || activeStatusFilter.value === '2-3') {
     return '暂无进行中订单'
   }
   if (activeStatusFilter.value === 0) {
@@ -506,40 +540,30 @@ onMounted(() => {
         </div>
         <div class="status-filter-group">
           <div
-            v-for="status in ['all', '2-3', 0, 1, 2, 3, 4, 5, 6]"
+            v-for="status in ['all', 0, 1, '2-4', 5, 6]"
             :key="status"
             :class="[
               'custom-status-tag',
               `status-tag-${status}`,
-              { active: activeStatusFilter === status, 'zero-count': getStatusCount(status) === 0 }
+              { active: activeStatusFilter === status }
             ]"
             @click="activeStatusFilter = status"
           >
-            <template v-if="status === 'all'">
-              <el-icon class="tag-icon"><List /></el-icon>
-            </template>
-            <template v-else-if="status === '2-3'">
-              <el-icon class="tag-icon"><Goods /></el-icon>
-            </template>
-            <template v-else-if="status === 0">
-              <el-icon class="tag-icon"><CircleClose /></el-icon>
-            </template>
-            <template v-else-if="status === 1">
-              <el-icon class="tag-icon"><CircleClose /></el-icon>
-            </template>
-            <template v-else-if="status === 2 || status === 3">
-              <el-icon class="tag-icon"><Goods /></el-icon>
-            </template>
-            <template v-else-if="status === 4">
-              <el-icon class="tag-icon"><Dish /></el-icon>
-            </template>
-            <template v-else-if="status === 5">
-              <el-icon class="tag-icon"><CircleCheckFilled /></el-icon>
-            </template>
-            <template v-else-if="status === 6">
-              <el-icon class="tag-icon"><CircleClose /></el-icon>
-            </template>
-            <span class="tag-text">{{ getStatusLabel(status) }}</span>
+            <el-icon v-if="status === 'all'" class="tag-icon"><List /></el-icon>
+            <el-icon v-else-if="status === 0" class="tag-icon"><CircleClose /></el-icon>
+            <el-icon v-else-if="status === 1" class="tag-icon"><CircleClose /></el-icon>
+            <el-icon v-else-if="status === '2-4'" class="tag-icon"><Goods /></el-icon>
+            <el-icon v-else-if="status === 5" class="tag-icon"><CircleCheckFilled /></el-icon>
+            <el-icon v-else-if="status === 6" class="tag-icon"><CircleClose /></el-icon>
+
+            <span class="tag-text">
+              {{ status === 'all' ? '全部'
+                : status === '2-4' ? '进行中'
+                : status === 0 ? '待支付'
+                : orderStatusMap[status].text }}
+              <template v-if="status !== 'all' && status !== '2-4'">({{ getStatusCount(status) }})</template>
+              <template v-else-if="status === '2-4'">({{ getStatusCount(status) }})</template>
+            </span>
           </div>
         </div>
       </div>
@@ -555,6 +579,24 @@ onMounted(() => {
             <el-icon><Search /></el-icon>
           </template>
         </el-input>
+        <el-select
+          v-model="sortOrder"
+          placeholder="排序方式"
+          class="sort-select"
+          popper-class="sort-select-popper"
+        >
+          <el-option
+            v-for="option in sortOptions"
+            :key="option.value"
+            :label="option.label"
+            :value="option.value"
+          >
+            <div class="sort-option">
+              <el-icon><component :is="option.icon" /></el-icon>
+              <span>{{ option.label }}</span>
+            </div>
+          </el-option>
+        </el-select>
       </div>
     </div>
 
@@ -1005,126 +1047,154 @@ onMounted(() => {
       .status-filter-group {
         display: flex;
         flex-wrap: wrap;
-        gap: 6px;
+        gap: 8px;
         align-items: center;
 
         .custom-status-tag {
+          // 默认未选中状态：透明/灰色
+          background: transparent;
+          color: #909399;
+          border: 1px solid #dcdfe6;
+
           cursor: pointer;
           transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-          padding: 5px 10px;
-          font-size: 0.857rem /* 原值: 12px */;
+          padding: 6px 12px;
+          font-size: 0.857rem;
           font-weight: 500;
-          border-radius: 6px;
+          border-radius: 8px;
           display: inline-flex;
           align-items: center;
           gap: 4px;
           user-select: none;
-          height: 26px;
+          white-space: nowrap;
 
           .tag-icon {
             font-size: 0.857rem /* 原值: 12px */;
+            opacity: 0.6;
           }
 
           .tag-text {
-            font-size: 0.857rem /* 原值: 12px */;
+            font-size: 0.857rem;
           }
 
+          // hover 状态：轻微提示可点击
           &:hover {
+            background: #f5f7fa;
+            border-color: #409eff;
+            color: #409eff;
+
+            .tag-icon {
+              opacity: 0.8;
+            }
+
             transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
           }
 
-          &.status-tag-all {
-            background: #f0f2f5;
-            color: #606266;
-            border: 1px solid #dcdfe6;
-            &.active {
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-              color: #ffffff;
-              border-color: #667eea;
-              box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
+          &:active {
+            transform: translateY(0);
+          }
+
+          // ==================== 选中状态样式 ====================
+
+          // 全部标签选中
+          &.status-tag-all.active {
+            background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+            color: #ffffff;
+            border-color: #1890ff;
+            box-shadow: 0 2px 8px rgba(24, 144, 255, 0.4);
+
+            .tag-icon {
+              opacity: 1;
+            }
+
+            &:hover {
+              background: linear-gradient(135deg, #40a9ff 0%, #69c0ff 100%);
             }
           }
 
-          &.status-tag-0 {
-            background: #f5f5f5;
-            color: #909399;
-            border: 1px solid #d9d9d9;
-            &.active {
-              background: linear-gradient(135deg, #909399 0%, #a6a9ad 100%);
-              color: #ffffff;
+          // 待支付选中 - 灰色
+          &.status-tag-0.active {
+            background: linear-gradient(135deg, #909399 0%, #a6a9ad 100%);
+            color: #ffffff;
+            border-color: #909399;
+            box-shadow: 0 2px 8px rgba(144, 147, 153, 0.3);
+
+            .tag-icon {
+              opacity: 1;
             }
           }
 
-          &.status-tag-1 {
-            background: #fff1f0;
-            color: #f56c6c;
-            border: 1px solid #ffccc7;
-            &.active {
-              background: linear-gradient(135deg, #f56c6c 0%, #ff7875 100%);
-              color: #ffffff;
+          // 待接单选中 - 红色
+          &.status-tag-1.active {
+            background: linear-gradient(135deg, #f56c6c 0%, #ff7875 100%);
+            color: #ffffff;
+            border-color: #f56c6c;
+            box-shadow: 0 2px 8px rgba(245, 108, 108, 0.4);
+
+            .tag-icon {
+              opacity: 1;
             }
           }
 
-          &.status-tag-2 {
-            background: #fff7e6;
-            color: #e6a23c;
-            border: 1px solid #ffd591;
-            &.active {
-              background: linear-gradient(135deg, #e6a23c 0%, #f0a858 100%);
-              color: #ffffff;
+          // 备菜中选中
+          &.status-tag-2.active {
+            background: linear-gradient(135deg, #e6a23c 0%, #f0a858 100%);
+            color: #ffffff;
+            border-color: #e6a23c;
+            box-shadow: 0 2px 8px rgba(230, 162, 60, 0.4);
+
+            .tag-icon {
+              opacity: 1;
             }
           }
 
-          &.status-tag-2-3 {
-            background: linear-gradient(135deg, #fff7e6 0%, #e6f7ff 100%);
-            color: #409eff;
-            border: 1px solid #91d5ff;
-            &.active {
-              background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
-              color: #ffffff;
-              border-color: #409eff;
-              box-shadow: 0 2px 6px rgba(64, 158, 255, 0.4);
+          // 进行中选中（合并状态）
+          &.status-tag-2-4.active,
+          &.status-tag-2-3.active {
+            background: linear-gradient(135deg, #e6a23c 0%, #f0a858 100%);
+            color: #ffffff;
+            border-color: #e6a23c;
+            box-shadow: 0 2px 8px rgba(230, 162, 60, 0.4);
+
+            .tag-icon {
+              opacity: 1;
             }
           }
 
-          &.status-tag-3 {
-            background: #fff2e8;
-            color: #ff9800;
-            border: 1px solid #ffd8bf;
-            &.active {
-              background: linear-gradient(135deg, #ff9800 0%, #ffa726 100%);
-              color: #ffffff;
+          // 烹饪中选中
+          &.status-tag-3.active {
+            background: linear-gradient(135deg, #ff9800 0%, #ffa726 100%);
+            color: #ffffff;
+            border-color: #ff9800;
+            box-shadow: 0 2px 8px rgba(255, 152, 0, 0.4);
+
+            .tag-icon {
+              opacity: 1;
             }
           }
 
-          &.status-tag-4 {
-            background: #e6f7ff;
-            color: #409eff;
-            border: 1px solid #91d5ff;
-            &.active {
-              background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
-              color: #ffffff;
+          // 待上菜选中
+          &.status-tag-4.active {
+            background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
+            color: #ffffff;
+            border-color: #409eff;
+            box-shadow: 0 2px 8px rgba(64, 158, 255, 0.4);
+
+            .tag-icon {
+              opacity: 1;
             }
           }
 
-          &.status-tag-5 {
-            background: #f6ffed;
-            color: #67c23a;
-            border: 1px solid #b7eb8f;
-            &.active {
-              background: linear-gradient(135deg, #67c23a 0%, #7bcf58 100%);
-              color: #ffffff;
-            }
-          }
+          // 已完成选中 - 绿色
+          &.status-tag-5.active {
+            background: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);
+            color: #ffffff;
+            border-color: #67c23a;
+            box-shadow: 0 2px 8px rgba(103, 194, 58, 0.4);
 
-          &.status-tag-6 {
-            background: #f5f5f5;
-            color: #c0c4cc;
-            border: 1px solid #d9d9d9;
-            &.active {
-              background: linear-gradient(135deg, #c0c4cc 0%, #d3d4d6 100%);
-              color: #ffffff;
+            .tag-icon {
+              opacity: 1;
             }
           }
         }
@@ -1133,8 +1203,32 @@ onMounted(() => {
 
     .filter-right {
       flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: stretch;
 
       :deep(.search-input) {
+        width: 320px;
+
+        .el-input__wrapper {
+          border-radius: 10px;
+          padding: 8px 12px;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+
+          &:hover {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+          }
+
+          &.is-focus {
+            box-shadow:
+              0 0 0 2px rgba(102, 126, 234, 0.2),
+              0 2px 8px rgba(102, 126, 234, 0.3);
+          }
+        }
+      }
+
+      :deep(.sort-select) {
         width: 320px;
 
         .el-input__wrapper {
@@ -1161,15 +1255,15 @@ onMounted(() => {
     justify-content: space-between;
     align-items: center;
     padding: 12px 20px;
-    background: #ffffff;
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
     border-radius: 10px;
     margin-bottom: 16px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    border: 1px solid #f0f0f0;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e8eef5;
 
     .quick-actions-left {
       display: flex;
-      gap: 8px;
+      gap: 12px;
 
       .quick-action-btn {
         display: inline-flex;
@@ -1248,7 +1342,7 @@ onMounted(() => {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          gap: 20px;
+          gap: 24px;
         }
 
         .order-divider {
@@ -1332,7 +1426,7 @@ onMounted(() => {
 
         .order-basic-info {
           display: grid;
-          grid-template-columns: auto auto 1fr;
+          grid-template-columns: 1fr auto auto;
           gap: 12px 20px;
           margin-bottom: 12px;
           font-size: 1rem /* 原值: 14px */;
@@ -1345,18 +1439,23 @@ onMounted(() => {
             font-weight: 600;
             font-size: 1.071rem /* 原值: 15px */;
             white-space: nowrap;
+            min-width: 0;
+            overflow: hidden;
 
             .no-label {
               color: #909399;
               font-size: 0.857rem /* 原值: 12px */;
               font-weight: 500;
               margin-right: 4px;
+              flex-shrink: 0;
             }
 
             .no-value {
               color: #303133;
               font-family: 'Consolas', 'Monaco', monospace;
               font-weight: 600;
+              overflow: hidden;
+              text-overflow: ellipsis;
             }
           }
 
@@ -1368,6 +1467,7 @@ onMounted(() => {
             font-size: 17px;
             color: #f56c6c;
             white-space: nowrap;
+            flex-shrink: 0;
 
             .amount-label {
               font-size: 0.857rem /* 原值: 12px */;
@@ -1386,8 +1486,9 @@ onMounted(() => {
             gap: 6px;
             color: #606266;
             font-size: 0.929rem /* 原值: 13px */;
-            justify-self: end;
             white-space: nowrap;
+            flex-shrink: 0;
+            justify-self: end;
 
             .time-label {
               color: #909399;
@@ -1499,6 +1600,7 @@ onMounted(() => {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
           gap: 10px 20px;
+          margin-top: 16px;
           font-size: 1rem /* 原值: 14px */;
           color: #606266;
 
@@ -1533,6 +1635,7 @@ onMounted(() => {
         gap: 12px;
         flex-shrink: 0;
         align-self: flex-start;
+        padding-left: 8px;
 
         .order-status {
           position: relative;
@@ -1702,7 +1805,10 @@ onMounted(() => {
 
       .filter-right {
         width: 100%;
+        flex-direction: column;
+        align-items: stretch;
 
+        :deep(.sort-select),
         :deep(.search-input) {
           width: 100% !important;
         }
@@ -1807,5 +1913,38 @@ onMounted(() => {
 // 为概览卡片添加动画
 .overview-section {
   animation: fadeIn 0.5s ease-out;
+}
+
+// 排序选项样式
+.sort-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  .el-icon {
+    font-size: 1rem;
+    color: #667eea;
+  }
+
+  span {
+    font-size: 0.929rem;
+  }
+}
+
+// 排序下拉选择器弹窗样式
+:deep(.sort-select-popper) {
+  .el-select-dropdown__item {
+    padding: 8px 12px;
+
+    &.selected {
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 131, 248, 0.1) 100%);
+      color: #667eea;
+      font-weight: 500;
+    }
+
+    &:hover {
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 131, 248, 0.08) 100%);
+    }
+  }
 }
 </style>

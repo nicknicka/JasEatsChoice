@@ -95,15 +95,17 @@ const getOrderCardClass = (order) => {
 }
 
 // 订单状态映射（对应后端状态码）
-// 0-待支付、1-待接单、2-备菜中、3-烹饪中、4-待上菜、5-已完成、6-已取消
+// 0-待支付、1-待接单、2-备菜中、3-烹饪中、4-待上菜、5-已送达、6-已取消、7-待评价、8-已评价
 const orderStatusMap = {
   0: { text: '待支付', type: 'info', color: '#909399' },
   1: { text: '待接单', type: 'danger', color: '#f56c6c' },
   2: { text: '备菜中', type: 'warning', color: '#e6a23c' },
   3: { text: '烹饪中', type: 'warning', color: '#ff9800' },
   4: { text: '待上菜', type: 'primary', color: '#409eff' },
-  5: { text: '已完成', type: 'success', color: '#67c23a' },
-  6: { text: '已取消', type: 'info', color: '#c0c4cc' }
+  5: { text: '已送达', type: 'success', color: '#67c23a' },
+  6: { text: '已取消', type: 'info', color: '#c0c4cc' },
+  7: { text: '待评价', type: 'success', color: '#95d475' },
+  8: { text: '已评价', type: 'success', color: '#85ce61' }
 }
 
 // 全部订单数据
@@ -120,9 +122,16 @@ const filteredOrders = computed(() => {
   return (
     orders.value
       .filter((order) => {
-        // 状态筛选（支持数字状态码）
-        const statusMatch =
-          activeStatusFilter.value === 'all' || order.status === activeStatusFilter.value
+        // 状态筛选（支持数字状态码和组合状态）
+        let statusMatch = false
+        if (activeStatusFilter.value === 'all') {
+          statusMatch = true
+        } else if (activeStatusFilter.value === '2-4') {
+          // 进行中：备菜中、烹饪中、待上菜
+          statusMatch = order.status === 2 || order.status === 3 || order.status === 4
+        } else {
+          statusMatch = order.status === activeStatusFilter.value
+        }
 
         // 搜索筛选（按订单ID或地址搜索）
         const searchMatch =
@@ -353,6 +362,10 @@ const deleteOrder = (order) => {
 // 获取状态标签文本（显示全部订单的数量，不受搜索影响）
 const getStatusLabel = (status) => {
   if (status === 'all') return `全部 (${orders.value.length})`
+  if (status === '2-4') {
+    const count = orders.value.filter((o) => o.status === 2 || o.status === 3 || o.status === 4).length
+    return `进行中 (${count})`
+  }
   const count = orders.value.filter((o) => o.status === status).length
   return `${orderStatusMap[status].text} (${count})`
 }
@@ -360,6 +373,9 @@ const getStatusLabel = (status) => {
 // 获取状态的订单数量
 const getStatusCount = (status) => {
   if (status === 'all') return orders.value.length
+  if (status === '2-4') {
+    return orders.value.filter((o) => o.status === 2 || o.status === 3 || o.status === 4).length
+  }
   return orders.value.filter((o) => o.status === status).length
 }
 
@@ -493,38 +509,30 @@ onMounted(() => {
         </div>
         <div class="status-filter-group">
           <div
-            v-for="status in ['all', 1, 2, 3, 4, 5]"
+            v-for="status in ['all', 0, 1, '2-4', 5, 6]"
             :key="status"
             :class="[
               'custom-status-tag',
               `status-tag-${status}`,
-              { active: activeStatusFilter === status, 'zero-count': getStatusCount(status) === 0 }
+              { active: activeStatusFilter === status }
             ]"
             @click="activeStatusFilter = status"
           >
-            <template v-if="status === 'all'">
-              <el-icon class="tag-icon"><List /></el-icon>
-            </template>
-            <template v-else-if="status === 1">
-              <el-icon class="tag-icon"><CircleClose /></el-icon>
-            </template>
-            <template v-else-if="status === 2 || status === 3">
-              <el-icon class="tag-icon"><Goods /></el-icon>
-            </template>
-            <template v-else-if="status === 4">
-              <el-icon class="tag-icon"><Dish /></el-icon>
-            </template>
-            <template v-else-if="status === 5">
-              <el-icon class="tag-icon"><CircleCheckFilled /></el-icon>
-            </template>
-            <span class="tag-text">{{ getStatusLabel(status) }}</span>
-            <el-icon
-              v-if="activeStatusFilter === status && status !== 'all'"
-              class="close-icon"
-              @click.stop="activeStatusFilter = 'all'"
-            >
-              <CircleClose />
-            </el-icon>
+            <el-icon v-if="status === 'all'" class="tag-icon"><List /></el-icon>
+            <el-icon v-else-if="status === 0" class="tag-icon"><CircleClose /></el-icon>
+            <el-icon v-else-if="status === 1" class="tag-icon"><CircleClose /></el-icon>
+            <el-icon v-else-if="status === '2-4'" class="tag-icon"><Goods /></el-icon>
+            <el-icon v-else-if="status === 5" class="tag-icon"><CircleCheckFilled /></el-icon>
+            <el-icon v-else-if="status === 6" class="tag-icon"><CircleClose /></el-icon>
+
+            <span class="tag-text">
+              {{ status === 'all' ? '全部'
+                : status === '2-4' ? '进行中'
+                : status === 0 ? '待支付'
+                : orderStatusMap[status].text }}
+              <template v-if="status !== 'all' && status !== '2-4'">({{ getStatusCount(status) }})</template>
+              <template v-else-if="status === '2-4'">({{ getStatusCount(status) }})</template>
+            </span>
           </div>
         </div>
       </div>
@@ -1098,28 +1106,35 @@ onMounted(() => {
       .status-filter-group {
         display: flex;
         flex-wrap: wrap;
-        gap: 6px;
+        gap: 8px;
         align-items: center;
 
         .custom-status-tag {
           cursor: pointer;
           transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-          padding: 4px 10px;
-          font-size: 0.857rem /* 原值: 12px */;
+          padding: 6px 12px;
+          font-size: 0.857rem;
           font-weight: 500;
-          border-radius: 6px;
+          border-radius: 8px;
           display: inline-flex;
           align-items: center;
           gap: 4px;
-          position: relative;
           user-select: none;
+          white-space: nowrap;
+          position: relative;
+
+          // 默认未选中状态：透明/灰色
+          background: transparent;
+          color: #909399;
+          border: 1px solid #dcdfe6;
 
           .tag-icon {
-            font-size: 0.857rem /* 原值: 12px */;
+            font-size: 0.857rem;
+            opacity: 0.6;
           }
 
           .tag-text {
-            font-size: 0.857rem /* 原值: 12px */;
+            font-size: 0.857rem;
           }
 
           .close-icon {
@@ -1134,181 +1149,157 @@ onMounted(() => {
             }
           }
 
+          // hover 状态：轻微提示可点击
           &:hover {
+            background: #f5f7fa;
+            border-color: #409eff;
+            color: #409eff;
+
+            .tag-icon {
+              opacity: 0.8;
+            }
+
             transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
           }
 
           &:active {
             transform: translateY(0);
           }
 
-          // 全部标签样式
-          &.status-tag-all {
-            background: #f0f2f5;
-            color: #606266;
-            border: 1px solid #dcdfe6;
+          // ==================== 选中状态样式 ====================
 
-            &:hover {
-              background: #e9ecef;
-              border-color: #c0c4cc;
+          // 全部标签选中
+          &.status-tag-all.active {
+            background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+            color: #ffffff;
+            border-color: #1890ff;
+            box-shadow: 0 2px 8px rgba(24, 144, 255, 0.4);
+
+            .tag-icon {
+              opacity: 1;
             }
 
-            &.active {
-              background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
-              color: #ffffff;
-              border-color: #1890ff;
-              box-shadow: 0 2px 6px rgba(24, 144, 255, 0.3);
+            &:hover {
+              background: linear-gradient(135deg, #40a9ff 0%, #69c0ff 100%);
+              transform: translateY(-1px);
+              box-shadow: 0 4px 12px rgba(24, 144, 255, 0.5);
             }
           }
 
-          // 待接单样式 - 红色
-          &.status-tag-1 {
-            background: #fff1f0;
-            color: #f56c6c;
-            border: 1px solid #ffccc7;
+          // 待支付选中 - 灰色
+          &.status-tag-0.active {
+            background: linear-gradient(135deg, #909399 0%, #a6a9ad 100%);
+            color: #ffffff;
+            border-color: #909399;
+            box-shadow: 0 2px 8px rgba(144, 147, 153, 0.3);
+
+            .tag-icon {
+              opacity: 1;
+            }
 
             &:hover {
-              background: #ffccc7;
-              border-color: #ffa39e;
-            }
-
-            &.active {
-              background: linear-gradient(135deg, #f56c6c 0%, #ff7875 100%);
-              color: #ffffff;
-              border-color: #f56c6c;
-              box-shadow: 0 2px 6px rgba(245, 108, 108, 0.4);
-            }
-
-            &.zero-count {
-              background: #f5f5f5;
-              color: #bfbfbf;
-              border-color: #d9d9d9;
-
-              &:hover {
-                background: #f0f0f0;
-                border-color: #d0d0d0;
-              }
+              background: linear-gradient(135deg, #a6a9ad 0%, #b3b6b9 100%);
             }
           }
 
-          // 备菜中样式 - 橙色
-          &.status-tag-2 {
-            background: #fff7e6;
-            color: #e6a23c;
-            border: 1px solid #ffd591;
+          // 待接单选中 - 红色
+          &.status-tag-1.active {
+            background: linear-gradient(135deg, #f56c6c 0%, #ff7875 100%);
+            color: #ffffff;
+            border-color: #f56c6c;
+            box-shadow: 0 2px 8px rgba(245, 108, 108, 0.4);
+
+            .tag-icon {
+              opacity: 1;
+            }
 
             &:hover {
-              background: #ffe7ba;
-              border-color: #ffc069;
-            }
-
-            &.active {
-              background: linear-gradient(135deg, #e6a23c 0%, #f0a858 100%);
-              color: #ffffff;
-              border-color: #e6a23c;
-              box-shadow: 0 2px 6px rgba(230, 162, 60, 0.4);
-            }
-
-            &.zero-count {
-              background: #f5f5f5;
-              color: #bfbfbf;
-              border-color: #d9d9d9;
-
-              &:hover {
-                background: #f0f0f0;
-                border-color: #d0d0d0;
-              }
+              background: linear-gradient(135deg, #ff7875 0%, #ff8c8f 100%);
             }
           }
 
-          // 烹饪中样式 - 深橙色
-          &.status-tag-3 {
-            background: #fff2e8;
-            color: #ff9800;
-            border: 1px solid #ffd8bf;
+          // 进行中选中 - 橙色
+          &.status-tag-2-4.active {
+            background: linear-gradient(135deg, #e6a23c 0%, #f0a858 100%);
+            color: #ffffff;
+            border-color: #e6a23c;
+            box-shadow: 0 2px 8px rgba(230, 162, 60, 0.4);
+
+            .tag-icon {
+              opacity: 1;
+            }
 
             &:hover {
-              background: #ffdcc8;
-              border-color: #ffb380;
-            }
-
-            &.active {
-              background: linear-gradient(135deg, #ff9800 0%, #ffa726 100%);
-              color: #ffffff;
-              border-color: #ff9800;
-              box-shadow: 0 2px 6px rgba(255, 152, 0, 0.4);
-            }
-
-            &.zero-count {
-              background: #f5f5f5;
-              color: #bfbfbf;
-              border-color: #d9d9d9;
-
-              &:hover {
-                background: #f0f0f0;
-                border-color: #d0d0d0;
-              }
+              background: linear-gradient(135deg, #f0a858 0%, #f5b86a 100%);
             }
           }
 
-          // 待上菜样式 - 蓝色
-          &.status-tag-4 {
-            background: #e6f7ff;
-            color: #409eff;
-            border: 1px solid #91d5ff;
+          // 备菜中选中
+          &.status-tag-2.active {
+            background: linear-gradient(135deg, #e6a23c 0%, #f0a858 100%);
+            color: #ffffff;
+            border-color: #e6a23c;
+            box-shadow: 0 2px 8px rgba(230, 162, 60, 0.4);
 
-            &:hover {
-              background: #bae7ff;
-              border-color: #69c0ff;
-            }
-
-            &.active {
-              background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
-              color: #ffffff;
-              border-color: #409eff;
-              box-shadow: 0 2px 6px rgba(64, 158, 255, 0.4);
-            }
-
-            &.zero-count {
-              background: #f5f5f5;
-              color: #bfbfbf;
-              border-color: #d9d9d9;
-
-              &:hover {
-                background: #f0f0f0;
-                border-color: #d0d0d0;
-              }
+            .tag-icon {
+              opacity: 1;
             }
           }
 
-          // 已完成样式 - 绿色
-          &.status-tag-5 {
-            background: #f6ffed;
-            color: #67c23a;
-            border: 1px solid #b7eb8f;
+          // 烹饪中选中
+          &.status-tag-3.active {
+            background: linear-gradient(135deg, #ff9800 0%, #ffa726 100%);
+            color: #ffffff;
+            border-color: #ff9800;
+            box-shadow: 0 2px 8px rgba(255, 152, 0, 0.4);
+
+            .tag-icon {
+              opacity: 1;
+            }
+          }
+
+          // 待上菜选中
+          &.status-tag-4.active {
+            background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
+            color: #ffffff;
+            border-color: #409eff;
+            box-shadow: 0 2px 8px rgba(64, 158, 255, 0.4);
+
+            .tag-icon {
+              opacity: 1;
+            }
+          }
+
+          // 已完成选中 - 绿色
+          &.status-tag-5.active {
+            background: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);
+            color: #ffffff;
+            border-color: #67c23a;
+            box-shadow: 0 2px 8px rgba(103, 194, 58, 0.4);
+
+            .tag-icon {
+              opacity: 1;
+            }
 
             &:hover {
-              background: #d9f7be;
-              border-color: #95de64;
+              background: linear-gradient(135deg, #85ce61 0%, #95d475 100%);
+            }
+          }
+
+          // 已取消选中
+          &.status-tag-6.active {
+            background: linear-gradient(135deg, #c0c4cc 0%, #d3d4d6 100%);
+            color: #ffffff;
+            border-color: #c0c4cc;
+            box-shadow: 0 2px 8px rgba(192, 196, 204, 0.3);
+
+            .tag-icon {
+              opacity: 1;
             }
 
-            &.active {
-              background: linear-gradient(135deg, #67c23a 0%, #7bcf58 100%);
-              color: #ffffff;
-              border-color: #67c23a;
-              box-shadow: 0 2px 6px rgba(103, 194, 58, 0.4);
-            }
-
-            &.zero-count {
-              background: #f5f5f5;
-              color: #bfbfbf;
-              border-color: #d9d9d9;
-
-              &:hover {
-                background: #f0f0f0;
-                border-color: #d0d0d0;
-              }
+            &:hover {
+              background: linear-gradient(135deg, #d3d4d6 0%, #e0e0e0 100%);
             }
           }
         }
