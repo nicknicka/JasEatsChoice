@@ -120,7 +120,7 @@
                   <div class="coupon-details">
                     <span class="coupon-name">{{ discount.name }}</span>
                     <span class="coupon-desc" v-if="discount.minAmount > 0">
-                      满{{ discount.minAmount }}元可用
+                      满 {{ discount.minAmount }} 元可用
                     </span>
                   </div>
                 </div>

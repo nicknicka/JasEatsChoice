@@ -557,9 +557,9 @@ onMounted(() => {
           <template #default="scope">
             <div class="discount-rule">
               <template v-if="scope.row.type === '满减' && scope.row.discountValue">
-                <span class="rule-highlight">满{{ scope.row.minAmount || 0 }}</span>
+                <span class="rule-highlight">满 {{ scope.row.minAmount || 0 }} </span>
                 <span class="rule-divider">减</span>
-                <span class="rule-value">{{ scope.row.discountValue }}元</span>
+                <span class="rule-value"> {{ scope.row.discountValue }} 元</span>
               </template>
               <template v-else-if="scope.row.type === '折扣' && scope.row.discountValue">
                 <span class="rule-value">{{ scope.row.discountValue }}折</span>
@@ -779,7 +779,7 @@ onMounted(() => {
             </div>
             <div class="preview-value" v-if="currentDiscountForm.discountValue">
               <template v-if="currentDiscountForm.type === '满减'">
-                满{{ currentDiscountForm.minAmount }}减{{ currentDiscountForm.discountValue }}元
+                满 {{ currentDiscountForm.minAmount }} 减 {{ currentDiscountForm.discountValue }} 元
               </template>
               <template v-else-if="currentDiscountForm.type === '折扣'">
                 {{ currentDiscountForm.discountValue }}折
