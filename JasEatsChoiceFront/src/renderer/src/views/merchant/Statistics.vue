@@ -1,6 +1,6 @@
 <script setup>
 import api from '../../utils/api'
-import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { useAuthStore } from '../../store/authStore'
 import { ElMessage } from 'element-plus'
 import {
@@ -14,8 +14,8 @@ import {
 import * as echarts from 'echarts'
 
 // 统计时间范围选项
-const timeRangeOptions = ['today', 'yesterday', 'week', 'month']
-const activeTimeRange = ref('today')
+const timeRangeOptions = ['all', 'today', 'yesterday', 'week', 'month']
+const activeTimeRange = ref('all')
 
 // 数据加载状态
 const isLoading = ref(false)
@@ -92,6 +92,7 @@ const formatFullCurrency = (amount) => {
 
 // 时间范围显示映射
 const timeRangeLabels = computed(() => ({
+  all: '全部',
   today: '今日',
   yesterday: '昨日',
   week: '本周',
@@ -109,6 +110,26 @@ onMounted(() => {
   // 初始化图表
   nextTick(() => {
     initOrderChart()
+    // 设置 ResizeObserver 监听容器尺寸变化
+    if (orderChartRef.value) {
+      resizeObserver = new ResizeObserver((entries) => {
+        for (let entry of entries) {
+          const { width, height } = entry.contentRect
+          // 当容器有有效尺寸且图表实例不存在时，初始化图表
+          if (width > 0 && height > 0 && !orderChartInstance && currentOrderTrend.value.length > 0) {
+            nextTick(() => {
+              initOrderChart()
+              updateChartData()
+            })
+          }
+          // 当图表实例存在时，调整尺寸
+          if (orderChartInstance && width > 0 && height > 0) {
+            orderChartInstance.resize()
+          }
+        }
+      })
+      resizeObserver.observe(orderChartRef.value)
+    }
   })
   // 监听窗口大小变化
   window.addEventListener('resize', handleChartResize)
@@ -125,6 +146,11 @@ const handleChartResize = () => {
 onBeforeUnmount(() => {
   if (orderChartInstance) {
     orderChartInstance.dispose()
+    orderChartInstance = null
+  }
+  if (resizeObserver) {
+    resizeObserver.disconnect()
+    resizeObserver = null
   }
   window.removeEventListener('resize', handleChartResize)
 })
@@ -141,6 +167,9 @@ const orderChartRef = ref(null)
 // 图表实例
 let orderChartInstance = null
 
+// ResizeObserver 实例
+let resizeObserver = null
+
 // 菜品销量排行数据
 const dishSalesRank = ref([])
 
@@ -154,7 +183,13 @@ const orderChartOptions = ref({
   },
   tooltip: {
     trigger: 'axis',
-    formatter: '{b}: {c} 单'
+    formatter: (params) => {
+      if (params && params.length > 0) {
+        const item = params[0]
+        return `${item.axisValue}: ${Math.round(item.value)} 单`
+      }
+      return ''
+    }
   },
   xAxis: {
     type: 'category',
@@ -162,8 +197,12 @@ const orderChartOptions = ref({
   },
   yAxis: {
     type: 'value',
+    minInterval: 1,
     axisLabel: {
-      formatter: '{value} 单'
+      formatter: (value) => {
+        // 确保显示为整数
+        return Math.round(value) + ' 单'
+      }
     }
   },
   series: [
@@ -182,23 +221,56 @@ const orderChartOptions = ref({
   ]
 })
 
+// 检查容器是否有有效尺寸
+const hasValidSize = (dom) => {
+  return dom && dom.clientWidth > 0 && dom.clientHeight > 0
+}
+
 // 初始化图表
 const initOrderChart = () => {
-  if (orderChartRef.value) {
+  if (orderChartRef.value && hasValidSize(orderChartRef.value)) {
     orderChartInstance = echarts.init(orderChartRef.value)
     orderChartInstance.setOption(orderChartOptions.value)
+    // 延迟调用 resize 确保容器尺寸已确定
+    setTimeout(() => {
+      if (orderChartInstance) {
+        orderChartInstance.resize()
+      }
+    }, 100)
   }
 }
 
 // 更新图表数据
 const updateChartData = () => {
+  if (currentOrderTrend.value.length === 0) {
+    return
+  }
+
   orderChartOptions.value.xAxis.data = currentOrderTrend.value.map((item) => item.time)
   orderChartOptions.value.series[0].data = currentOrderTrend.value.map((item) => item.orders)
+
   // 更新图表
-  if (orderChartInstance) {
-    orderChartInstance.setOption(orderChartOptions.value)
-  }
+  nextTick(() => {
+    if (!orderChartInstance && orderChartRef.value && hasValidSize(orderChartRef.value)) {
+      // 如果图表实例不存在但 DOM 已渲染且有尺寸,先初始化
+      orderChartInstance = echarts.init(orderChartRef.value)
+    }
+    if (orderChartInstance) {
+      orderChartInstance.setOption(orderChartOptions.value)
+      // 确保图表正确填充容器
+      setTimeout(() => {
+        if (orderChartInstance) {
+          orderChartInstance.resize()
+        }
+      }, 100)
+    }
+  })
 }
+
+// 监听数据变化,自动更新图表
+watch(currentOrderTrend, () => {
+  updateChartData()
+}, { deep: true })
 </script>
 
 <template>
@@ -289,8 +361,8 @@ const updateChartData = () => {
               </div>
             </template>
             <div class="chart-container">
-              <div v-if="currentOrderTrend.length > 0" ref="orderChartRef" class="chart"></div>
-              <div v-else class="chart-placeholder">
+              <div v-show="currentOrderTrend.length > 0" ref="orderChartRef" class="chart"></div>
+              <div v-show="currentOrderTrend.length === 0" class="chart-placeholder">
                 <el-empty description="暂时没有数据提供" :image-size="100" />
               </div>
             </div>
@@ -537,19 +609,21 @@ const updateChartData = () => {
         }
 
         .chart-container {
-          min-height: 300px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
           width: 100%;
+          height: 350px;
+          position: relative;
 
           .chart {
             width: 100%;
-            height: 300px;
+            height: 100%;
           }
 
           .chart-placeholder {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
+            height: 100%;
             display: flex;
             align-items: center;
             justify-content: center;

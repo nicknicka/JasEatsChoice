@@ -836,9 +836,14 @@ public class MerchantController {
             LocalDate today = LocalDate.now();
             LocalDateTime startTime = null;
             LocalDateTime endTime = LocalDate.now().atStartOfDay().plusDays(1).minusSeconds(1);
+            boolean isAllTime = false;
 
             // 根据时间范围确定查询时间
             switch (timeRange) {
+                case "all":
+                    // 全部时间：不限制开始时间
+                    isAllTime = true;
+                    break;
                 case "today":
                     startTime = today.atStartOfDay();
                     break;
@@ -857,9 +862,13 @@ public class MerchantController {
             // 查询订单数据
             LambdaQueryWrapper<Order> orderQuery = new LambdaQueryWrapper<>();
             orderQuery.eq(Order::getMerchantId, merchantId)
-                      .ge(Order::getCreateTime, startTime)
-                      .le(Order::getCreateTime, endTime)
                       .ne(Order::getStatus, 6); // 排除已取消订单
+
+            // 只有非全部时间才添加时间范围条件
+            if (!isAllTime && startTime != null) {
+                orderQuery.ge(Order::getCreateTime, startTime);
+            }
+            orderQuery.le(Order::getCreateTime, endTime);
 
             List<Order> orders = orderService.list(orderQuery);
 
@@ -889,7 +898,27 @@ public class MerchantController {
             List<Map<String, Object>> orderTrend = new ArrayList<>();
 
             // 根据时间范围计算不同的时间间隔
-            if ("today".equals(timeRange) || "yesterday".equals(timeRange)) {
+            if ("all".equals(timeRange)) {
+                // 全部时间：按月统计最近12个月
+                for (int i = 11; i >= 0; i--) {
+                    LocalDate monthDate = today.minusMonths(i);
+                    String monthLabel = monthDate.getMonthValue() + "月";
+                    LocalDateTime monthStart = monthDate.withDayOfMonth(1).atStartOfDay();
+                    LocalDateTime monthEnd = monthDate.withDayOfMonth(monthDate.lengthOfMonth()).atTime(23, 59, 59);
+
+                    long count = orders.stream()
+                                      .filter(order -> {
+                                          LocalDateTime createTime = order.getCreateTime();
+                                          return !createTime.isBefore(monthStart) && !createTime.isAfter(monthEnd);
+                                      })
+                                      .count();
+
+                    Map<String, Object> trendItem = new HashMap<>();
+                    trendItem.put("time", monthLabel);
+                    trendItem.put("orders", count);
+                    orderTrend.add(trendItem);
+                }
+            } else if ("today".equals(timeRange) || "yesterday".equals(timeRange)) {
                 // 按小时统计
                 for (int i = 0; i < 24; i++) {
                     String time = String.format("%02d:00", i);
