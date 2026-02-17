@@ -11,7 +11,7 @@ import {
   Location,
   User,
   Clock,
-  Receipt,
+  Document,
   ArrowLeft,
   Refresh,
   Printer
@@ -151,7 +151,7 @@ onMounted(() => {
     <div class="detail-header">
       <div class="header-left">
         <div class="page-title">
-          <el-icon class="title-icon"><Receipt /></el-icon>
+          <el-icon class="title-icon"><Document /></el-icon>
           <span>订单详情</span>
         </div>
         <div class="order-no">{{ orderDetail.orderNo || '--' }}</div>

@@ -1,10 +1,10 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../store/authStore'
 import api, { decodeJwt } from '../../utils/api.js'
-import { API_CONFIG } from '../../config/index.js'
+import { API_CONFIG, WS_CONFIG } from '../../config/index.js'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
 import {
   Bell,
@@ -13,7 +13,12 @@ import {
   ChatLineSquare,
   Refresh,
   Check,
-  Filter
+  Filter,
+  Search,
+  Delete,
+  Download,
+  CircleCheck,
+  Select
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -42,6 +47,21 @@ const unreadCounts = ref({
   comment: 0,
   total: 0
 })
+
+// 搜索关键词
+const searchKeyword = ref('')
+
+// WebSocket 连接
+let websocket = null
+const reconnectAttempts = ref(0)
+const maxReconnectAttempts = 5
+
+// 批量选择
+const selectedMessages = ref([])
+const selectMode = ref(false)
+
+// 用户ID
+const userId = ref('')
 
 // 数字动画
 const animatedValues = ref({
@@ -72,13 +92,384 @@ const animateValue = (key, endValue, duration = 1000) => {
   requestAnimationFrame(animate)
 }
 
-// 计算未读消息数量
-const calculateUnreadCounts = () => {
-  unreadCounts.value = {
-    total: messages.value.filter((msg) => !msg.isRead).length,
-    system: messages.value.filter((msg) => msg.type === 'system' && !msg.isRead).length,
-    order: messages.value.filter((msg) => msg.type === 'order' && !msg.isRead).length,
-    comment: messages.value.filter((msg) => msg.type === 'comment' && !msg.isRead).length
+// ==================== WebSocket 实时推送 ====================
+
+// 初始化 WebSocket 连接
+const initWebSocket = () => {
+  if (!userId.value) return
+
+  try {
+    // 获取认证 token
+    const authStore = useAuthStore()
+    const token = authStore.token
+
+    if (!token) {
+      console.warn('⚠️ 无法获取 token，跳过 WebSocket 连接')
+      return
+    }
+
+    // 构建 WebSocket URL（需要传递 userId 和 token 两个参数）
+    const wsUrl = `${WS_CONFIG.chatUrl}?userId=${userId.value}&token=${token}`
+    websocket = new WebSocket(wsUrl)
+
+    websocket.onopen = () => {
+      console.log('✅ WebSocket 连接成功')
+      reconnectAttempts.value = 0
+    }
+
+    websocket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data)
+        console.log('📨 收到新消息:', data)
+
+        // 添加到消息列表
+        if (data.type || data.content) {
+          const newMessage = {
+            id: data.id || data.msgId || Date.now(),
+            title: data.content || data.title,
+            content: data.content || '',
+            sender: data.senderName || data.fromId || '系统',
+            time: data.createTime || data.time || new Date().toISOString().slice(0, 19).replace('T', ' '),
+            isRead: data.readStatus || false,
+            type: data.type || 'system'
+          }
+
+          messages.value.unshift(newMessage)
+          updateFilter()
+
+          // 显示通知
+          ElMessage.success({
+            message: `收到新消息: ${newMessage.title}`,
+            duration: 3000,
+            showClose: true
+          })
+        }
+      } catch (error) {
+        console.error('处理 WebSocket 消息失败:', error)
+      }
+    }
+
+    websocket.onerror = (error) => {
+      console.error('❌ WebSocket 错误:', error)
+    }
+
+    websocket.onclose = () => {
+      console.log('🔌 WebSocket 连接关闭')
+      // 尝试重连
+      if (reconnectAttempts.value < maxReconnectAttempts) {
+        reconnectAttempts.value++
+        console.log(`🔄 尝试重连 (${reconnectAttempts.value}/${maxReconnectAttempts})...`)
+        setTimeout(() => {
+          initWebSocket()
+        }, 3000)
+      }
+    }
+  } catch (error) {
+    console.error('WebSocket 初始化失败:', error)
+  }
+}
+
+// 关闭 WebSocket 连接
+const closeWebSocket = () => {
+  if (websocket) {
+    websocket.close()
+    websocket = null
+  }
+}
+
+// ==================== 消息加载和刷新 ====================
+
+// 加载消息列表
+const loadMessages = async () => {
+  loading.value = true
+  try {
+    const response = await api.get(API_CONFIG.message.list, {
+      params: { userId: userId.value }
+    })
+
+    if (response.data && response.data.success) {
+      // 转换后端返回的数据格式
+      const formattedMessages = response.data.data.map((message) => ({
+        id: message.id,
+        title: message.content,
+        content: message.content,
+        sender: message.senderName,
+        time: message.createTime,
+        isRead: message.readStatus,
+        // ⭐ 根据后端返回的类型或内容判断消息类型
+        type: determineMessageType(message)
+      }))
+
+      messages.value = formattedMessages
+      updateFilter()
+    }
+  } catch (error) {
+    console.error('加载消息失败:', error)
+    ElMessage.error('加载消息失败，请稍后重试')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 判断消息类型
+const determineMessageType = (message) => {
+  // 如果后端已经返回了类型，直接使用
+  if (message.type && ['system', 'order', 'comment'].includes(message.type)) {
+    return message.type
+  }
+
+  // 否则根据内容关键词判断
+  const content = (message.content || '').toLowerCase()
+  if (content.includes('订单') || content.includes('order')) {
+    return 'order'
+  } else if (content.includes('评价') || content.includes('评论') || content.includes('review')) {
+    return 'comment'
+  }
+  return 'system'
+}
+
+// ==================== 搜索和筛选 ====================
+
+// 搜索消息
+const searchMessages = computed(() => {
+  if (!searchKeyword.value) {
+    return filteredMessages.value
+  }
+
+  const keyword = searchKeyword.value.toLowerCase()
+  return filteredMessages.value.filter(
+    (msg) =>
+      msg.title.toLowerCase().includes(keyword) ||
+      msg.content.toLowerCase().includes(keyword) ||
+      (msg.sender && msg.sender.toLowerCase().includes(keyword))
+  )
+})
+
+// ==================== 消息操作 ====================
+
+// 标记单条消息为已读（同步到后端）
+const markAsRead = async (message) => {
+  try {
+    // ⭐ 调用后端 API 标记已读
+    await api.put(`${API_CONFIG.message.send}/${message.id}/read`)
+
+    // 更新本地状态
+    message.isRead = true
+    ElMessage.success('消息已标记为已读')
+    updateFilter()
+  } catch (error) {
+    console.error('标记已读失败:', error)
+    ElMessage.error('标记已读失败，请稍后重试')
+  }
+}
+
+// 标记所有消息为已读（同步到后端）
+const markAllAsRead = async () => {
+  try {
+    const unreadMessages = filteredMessages.value.filter((msg) => !msg.isRead)
+
+    if (unreadMessages.length === 0) {
+      ElMessage.info('没有未读消息')
+      return
+    }
+
+    // 批量标记已读
+    const promises = unreadMessages.map((msg) =>
+      api.put(`${API_CONFIG.message.send}/${msg.id}/read`)
+    )
+
+    await Promise.all(promises)
+
+    // 更新本地状态
+    filteredMessages.value.forEach((message) => {
+      message.isRead = true
+    })
+
+    ElMessage.success('所有消息已标记为已读')
+    updateFilter()
+  } catch (error) {
+    console.error('批量标记已读失败:', error)
+    ElMessage.error('批量标记已读失败，请稍后重试')
+  }
+}
+
+// 删除单条消息
+const deleteMessage = async (message) => {
+  try {
+    await ElMessageBox.confirm('确定要删除这条消息吗？', '删除确认', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+
+    // ⭐ 调用后端 API 删除消息
+    await api.delete(`${API_CONFIG.message.send}/${message.id}`)
+
+    // 从本地列表中移除
+    const index = messages.value.findIndex((m) => m.id === message.id)
+    if (index > -1) {
+      messages.value.splice(index, 1)
+    }
+
+    ElMessage.success('消息已删除')
+    updateFilter()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除消息失败:', error)
+      ElMessage.error('删除失败，请稍后重试')
+    }
+  }
+}
+
+// 批量删除消息
+const batchDeleteMessages = async () => {
+  if (selectedMessages.value.length === 0) {
+    ElMessage.warning('请先选择要删除的消息')
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除选中的 ${selectedMessages.value.length} 条消息吗？`,
+      '批量删除确认',
+      {
+        confirmButtonText: '删除',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    // 批量删除
+    const promises = selectedMessages.value.map((msg) =>
+      api.delete(`${API_CONFIG.message.send}/${msg.id}`)
+    )
+
+    await Promise.all(promises)
+
+    // 从本地列表中移除
+    const deletedIds = selectedMessages.value.map((msg) => msg.id)
+    messages.value = messages.value.filter((msg) => !deletedIds.includes(msg.id))
+
+    ElMessage.success(`成功删除 ${selectedMessages.value.length} 条消息`)
+
+    // 退出选择模式并清空选择
+    selectMode.value = false
+    selectedMessages.value = []
+
+    updateFilter()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('批量删除失败:', error)
+      ElMessage.error('批量删除失败，请稍后重试')
+    }
+  }
+}
+
+// 批量标记已读
+const batchMarkAsRead = async () => {
+  if (selectedMessages.value.length === 0) {
+    ElMessage.warning('请先选择要操作的消息')
+    return
+  }
+
+  try {
+    const unreadSelected = selectedMessages.value.filter((msg) => !msg.isRead)
+
+    if (unreadSelected.length === 0) {
+      ElMessage.info('选中的消息都已标记为已读')
+      return
+    }
+
+    // 批量标记已读
+    const promises = unreadSelected.map((msg) =>
+      api.put(`${API_CONFIG.message.send}/${msg.id}/read`)
+    )
+
+    await Promise.all(promises)
+
+    // 更新本地状态
+    selectedMessages.value.forEach((msg) => {
+      msg.isRead = true
+    })
+
+    ElMessage.success(`成功标记 ${unreadSelected.length} 条消息为已读`)
+
+    // 退出选择模式并清空选择
+    selectMode.value = false
+    selectedMessages.value = []
+
+    updateFilter()
+  } catch (error) {
+    console.error('批量标记已读失败:', error)
+    ElMessage.error('批量标记已读失败，请稍后重试')
+  }
+}
+
+// 切换选择模式
+const toggleSelectMode = () => {
+  selectMode.value = !selectMode.value
+  if (!selectMode.value) {
+    selectedMessages.value = []
+  }
+}
+
+// 切换消息选择状态
+const toggleMessageSelection = (message) => {
+  const index = selectedMessages.value.findIndex((m) => m.id === message.id)
+  if (index > -1) {
+    selectedMessages.value.splice(index, 1)
+  } else {
+    selectedMessages.value.push(message)
+  }
+}
+
+// 全选/取消全选
+const toggleSelectAll = () => {
+  if (selectedMessages.value.length === searchMessages.value.length) {
+    // 取消全选
+    selectedMessages.value = []
+  } else {
+    // 全选
+    selectedMessages.value = [...searchMessages.value]
+  }
+}
+
+// 导出消息
+const exportMessages = async () => {
+  try {
+    const dataToExport = searchMessages.value.map((msg) => ({
+      标题: msg.title,
+      内容: msg.content,
+      发送者: msg.sender,
+      时间: msg.time,
+      状态: msg.isRead ? '已读' : '未读',
+      类型: msg.type
+    }))
+
+    // 转换为 JSON 字符串
+    const jsonStr = JSON.stringify(dataToExport, null, 2)
+
+    // 创建 Blob 对象
+    const blob = new Blob([jsonStr], { type: 'application/json' })
+
+    // 创建下载链接
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `消息导出_${new Date().toISOString().slice(0, 10)}.json`
+
+    // 触发下载
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    // 释放 URL 对象
+    URL.revokeObjectURL(url)
+
+    ElMessage.success('消息导出成功')
+  } catch (error) {
+    console.error('导出失败:', error)
+    ElMessage.error('导出失败，请稍后重试')
   }
 }
 
@@ -95,7 +486,6 @@ const totalStats = computed(() => {
 })
 
 // 监听未读消息变化，触发动画
-import { watch } from 'vue'
 watch(
   unreadCounts,
   (newVal) => {
@@ -115,27 +505,17 @@ const updateFilter = () => {
   calculateUnreadCounts() // 更新未读消息统计
 }
 
-// 刷新消息
-const refreshMessages = () => {
-  loading.value = true
-  setTimeout(() => {
-    loading.value = false
-    ElMessage.success('刷新成功')
-  }, 500)
-}
-
 // 页面加载时初始化
-onMounted(() => {
+onMounted(async () => {
   // 从后端API加载实际消息数据
   // 从JWT令牌中获取用户ID
   const authStore = useAuthStore()
   const token = authStore.token
-  let userId = 1 // 默认值
 
   if (token) {
     const decodedToken = decodeJwt(token)
     if (decodedToken && decodedToken.userId) {
-      userId = decodedToken.userId
+      userId.value = decodedToken.userId
     }
   } else {
     // 无法获取用户ID，弹出提示框要求重新登录
@@ -157,39 +537,19 @@ onMounted(() => {
         authStore.clearAuth()
         router.push('/login')
       })
+    return
   }
 
-  api
-    .get(API_CONFIG.message.list, {
-      params: { userId }
-    })
-    .then((response) => {
-      if (response.data && response.data.success) {
-        // 转换后端返回的数据格式以匹配前端期望的字段
-        const formattedMessages = response.data.data.map((message) => ({
-          id: message.id,
-          // 后端返回的content作为前端的title
-          title: message.content,
-          content: message.content,
-          // 后端返回的senderName作为前端的sender
-          sender: message.senderName,
-          // 后端返回的createTime作为前端的time
-          time: message.createTime,
-          // 后端返回的readStatus作为前端的isRead
-          isRead: message.readStatus,
-          // 暂时默认所有消息类型为system
-          type: 'system'
-        }))
+  // 加载消息列表
+  await loadMessages()
 
-        messages.value = formattedMessages
-        filteredMessages.value = [...messages.value]
-        calculateUnreadCounts() // 初始化未读消息统计
-      }
-    })
-    .catch((error) => {
-      console.error('加载消息失败:', error)
-      ElMessage.error('加载消息失败，请稍后重试')
-    })
+  // 初始化 WebSocket 连接
+  initWebSocket()
+})
+
+// 组件卸载时关闭 WebSocket
+onUnmounted(() => {
+  closeWebSocket()
 })
 
 // 查看消息详情
@@ -219,20 +579,12 @@ const backToList = () => {
   selectedMessage.value = null
 }
 
-// 标记为已读
-const markAsRead = (message) => {
-  message.isRead = true
-  ElMessage.success('消息已标记为已读')
-  updateFilter()
-}
+// ==================== 刷新消息 ====================
 
-// 全部标记为已读
-const markAllAsRead = () => {
-  filteredMessages.value.forEach((message) => {
-    message.isRead = true
-  })
-  ElMessage.success('所有消息已标记为已读')
-  updateFilter()
+// 刷新消息列表（真实刷新）
+const refreshMessages = async () => {
+  await loadMessages()
+  ElMessage.success('刷新成功')
 }
 </script>
 
@@ -245,10 +597,14 @@ const markAllAsRead = () => {
         <p class="page-subtitle">管理您的所有通知和消息</p>
       </div>
       <div class="header-right" v-if="!selectedMessage">
-        <el-button type="success" @click="markAllAsRead" :icon="Check"> 全部标记为已读 </el-button>
-        <el-button type="default" @click="refreshMessages" :loading="loading" :icon="Refresh">
-          刷新
-        </el-button>
+        <!-- 搜索框 -->
+        <el-input
+          v-model="searchKeyword"
+          placeholder="搜索消息内容..."
+          :prefix-icon="Search"
+          clearable
+          class="search-input"
+        />
         <CommonBackButton />
       </div>
     </div>
@@ -343,16 +699,91 @@ const markAllAsRead = () => {
               />
             </div>
           </div>
+
+          <!-- 操作按钮组 -->
+          <div class="action-buttons">
+            <!-- 批量操作按钮 -->
+            <el-button
+              v-if="!selectMode"
+              type="primary"
+              @click="toggleSelectMode"
+              :icon="Select"
+              size="default"
+            >
+              批量管理
+            </el-button>
+            <template v-else>
+              <el-button @click="toggleSelectAll" size="default">
+                {{ selectedMessages.length === searchMessages.length ? '取消全选' : '全选' }}
+              </el-button>
+              <el-button
+                type="success"
+                @click="batchMarkAsRead"
+                :icon="CircleCheck"
+                :disabled="selectedMessages.length === 0"
+                size="default"
+              >
+                批量已读
+              </el-button>
+              <el-button
+                type="danger"
+                @click="batchDeleteMessages"
+                :icon="Delete"
+                :disabled="selectedMessages.length === 0"
+                size="default"
+              >
+                批量删除
+              </el-button>
+              <el-button @click="toggleSelectMode" size="default">退出</el-button>
+            </template>
+
+            <el-button
+              type="success"
+              @click="markAllAsRead"
+              :icon="Check"
+              :disabled="selectMode"
+              size="default"
+            >
+              全部标记为已读
+            </el-button>
+            <el-button
+              type="default"
+              @click="refreshMessages"
+              :loading="loading"
+              :icon="Refresh"
+              size="default"
+            >
+              刷新
+            </el-button>
+            <el-button
+              type="default"
+              @click="exportMessages"
+              :icon="Download"
+              :disabled="selectMode"
+              size="default"
+            >
+              导出
+            </el-button>
+          </div>
         </div>
 
         <!-- 消息列表 -->
         <div class="messages-list" v-loading="loading">
           <div
-            v-for="message in filteredMessages"
+            v-for="message in searchMessages"
             :key="message.id"
-            :class="['message-item', { 'unread-message': !message.isRead }]"
-            @click="viewMessageDetail(message)"
+            :class="['message-item', { 'unread-message': !message.isRead, 'selected': selectMode && selectedMessages.includes(message) }]"
+            @click="selectMode ? toggleMessageSelection(message) : viewMessageDetail(message)"
           >
+            <!-- 批量选择复选框 -->
+            <div class="message-checkbox" v-if="selectMode">
+              <el-checkbox
+                :model-value="selectedMessages.includes(message)"
+                @update:model-value="toggleMessageSelection(message)"
+                @click.stop
+              />
+            </div>
+
             <div class="message-left">
               <div class="message-icon" :class="`icon-${message.type}`">
                 <el-icon :size="20">
@@ -365,13 +796,23 @@ const markAllAsRead = () => {
             <div class="message-content">
               <div class="message-title">{{ message.title }}</div>
               <div class="message-preview" v-if="message.content">
-                {{ message.content.substring(0, 50) }}...
+                {{ message.content.substring(0, 50) }}{{ message.content.length > 50 ? '...' : '' }}
               </div>
               <div class="message-meta">
                 <span class="message-time">{{ message.time }}</span>
                 <el-tag :type="message.isRead ? 'success' : 'warning'" size="small">
                   {{ message.isRead ? '已读' : '未读' }}
                 </el-tag>
+                <!-- 删除按钮（仅在非选择模式时显示） -->
+                <el-button
+                  v-if="!selectMode"
+                  type="danger"
+                  size="small"
+                  :icon="Delete"
+                  circle
+                  class="delete-btn"
+                  @click.stop="deleteMessage(message)"
+                />
               </div>
             </div>
           </div>
@@ -483,6 +924,17 @@ const markAllAsRead = () => {
       align-items: center;
       position: relative;
       z-index: 1;
+      flex-wrap: wrap;
+
+      .search-input {
+        width: 260px;
+
+        :deep(.el-input__wrapper) {
+          background: rgba(255, 255, 255, 0.9);
+          border-radius: 8px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+      }
 
       :deep(.el-button) {
         backdrop-filter: blur(12px);
@@ -501,6 +953,11 @@ const markAllAsRead = () => {
 
         &:active {
           transform: translateY(0);
+        }
+
+        &:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
         }
       }
     }
@@ -800,6 +1257,35 @@ const markAllAsRead = () => {
             }
           }
         }
+
+        .action-buttons {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          align-items: center;
+          margin-top: 12px;
+          padding-top: 12px;
+          border-top: 1px solid #e8eef5;
+
+          :deep(.el-button) {
+            height: 32px;
+            padding: 0 16px;
+            font-size: 0.929rem;
+
+            &:hover {
+              transform: translateY(-1px);
+            }
+
+            &:active {
+              transform: translateY(0);
+            }
+
+            &:disabled {
+              opacity: 0.5;
+              cursor: not-allowed;
+            }
+          }
+        }
       }
 
       .messages-list {
@@ -863,6 +1349,21 @@ const markAllAsRead = () => {
 
             .message-preview {
               color: #4b5563;
+            }
+          }
+
+          &.selected {
+            background: linear-gradient(to right, #e6f7ff 0%, #ffffff 35%);
+            border-color: #91d5ff;
+          }
+
+          .message-checkbox {
+            margin-right: 12px;
+            display: flex;
+            align-items: center;
+
+            :deep(.el-checkbox__inner) {
+              border-radius: 6px;
             }
           }
 
@@ -948,6 +1449,20 @@ const markAllAsRead = () => {
               align-items: center;
               font-size: 0.857rem /* 原值: 12px */;
               color: #9ca3af;
+              gap: 8px;
+
+              .delete-btn {
+                opacity: 0;
+                transition: opacity 0.2s ease;
+
+                &:hover {
+                  transform: scale(1.1);
+                }
+              }
+            }
+
+            &:hover .delete-btn {
+              opacity: 1;
             }
           }
         }
