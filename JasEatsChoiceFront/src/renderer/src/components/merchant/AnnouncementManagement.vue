@@ -14,6 +14,8 @@ const props = defineProps({
 // 公告栏配置
 const announcements = ref([])
 const announcementDialogVisible = ref(false)
+const announcementFormRef = ref(null)
+const savingAnnouncement = ref(false)
 const currentAnnouncement = ref({
   title: '',
   content: '',
@@ -22,6 +24,74 @@ const currentAnnouncement = ref({
   endTime: null
 })
 const isEditingAnnouncement = ref(false)
+
+// 表单验证规则
+const announcementRules = {
+  title: [
+    { required: true, message: '请输入公告标题', trigger: 'blur' },
+    { min: 2, max: 50, message: '标题长度应在2-50个字符之间', trigger: 'blur' }
+  ],
+  content: [
+    { required: true, message: '请输入公告内容', trigger: 'blur' },
+    { min: 5, max: 500, message: '内容长度应在5-500个字符之间', trigger: 'blur' }
+  ],
+  status: [
+    { required: true, message: '请选择公告状态', trigger: 'change' }
+  ],
+  startTime: [
+    {
+      validator: (rule, value, callback) => {
+        if (currentAnnouncement.value.endTime && value) {
+          if (new Date(value) > new Date(currentAnnouncement.value.endTime)) {
+            callback(new Error('开始时间不能晚于结束时间'))
+          } else {
+            callback()
+          }
+        } else {
+          callback()
+        }
+      },
+      trigger: 'change'
+    }
+  ],
+  endTime: [
+    {
+      validator: (rule, value, callback) => {
+        if (currentAnnouncement.value.startTime && value) {
+          if (new Date(value) < new Date(currentAnnouncement.value.startTime)) {
+            callback(new Error('结束时间不能早于开始时间'))
+          } else {
+            callback()
+          }
+        } else {
+          callback()
+        }
+      },
+      trigger: 'change'
+    }
+  ]
+}
+
+// 开始时间禁用选项
+const startTimeDisabled = (date) => {
+  if (currentAnnouncement.value.endTime) {
+    return date > new Date(currentAnnouncement.value.endTime)
+  }
+  return false
+}
+
+// 结束时间禁用选项
+const endTimeDisabled = (date) => {
+  if (currentAnnouncement.value.startTime) {
+    return date < new Date(currentAnnouncement.value.startTime)
+  }
+  return false
+}
+
+// 获取公告ID（兼容多种字段名）
+const getAnnouncementId = (announcement) => {
+  return announcement?.id || announcement?.announcementId || announcement?.announcement_id || null
+}
 
 // 获取公告列表
 const getAnnouncements = () => {
@@ -32,11 +102,20 @@ const getAnnouncements = () => {
     .then(function (response) {
       console.log('获取公告列表响应:', response)
       // 兼容不同的响应格式
+      let dataList = []
       if (response && (response.success || response.code === '200')) {
-        announcements.value = response.data || []
+        dataList = response.data || []
       } else if (response.data && (response.data.success || response.data.code === '200')) {
-        announcements.value = response.data.data || []
+        dataList = response.data.data || []
       }
+
+      // 打印第一条数据用于调试
+      if (dataList.length > 0) {
+        console.log('第一条公告数据:', dataList[0])
+        console.log('公告ID字段:', dataList[0].id, dataList[0].announcementId, dataList[0].announcement_id)
+      }
+
+      announcements.value = dataList
     })
     .catch(function (error) {
       console.error('获取公告列表失败:', error)
@@ -46,9 +125,23 @@ const getAnnouncements = () => {
 // 打开公告编辑对话框
 const openAnnouncementDialog = function (announcement = null) {
   announcementDialogVisible.value = true
+
+  // 重置表单验证
+  if (announcementFormRef.value) {
+    announcementFormRef.value.clearValidate()
+  }
+
   if (announcement) {
     isEditingAnnouncement.value = true
+    // 深拷贝公告数据
     currentAnnouncement.value = JSON.parse(JSON.stringify(announcement))
+    // 确保ID字段存在
+    if (!currentAnnouncement.value.id) {
+      const id = getAnnouncementId(announcement)
+      if (id) {
+        currentAnnouncement.value.id = id
+      }
+    }
   } else {
     isEditingAnnouncement.value = false
     currentAnnouncement.value = {
@@ -62,46 +155,72 @@ const openAnnouncementDialog = function (announcement = null) {
 }
 
 // 保存公告
-const saveAnnouncement = function () {
-  // 简单验证
-  if (!currentAnnouncement.value.title || !currentAnnouncement.value.content) {
-    ElMessage.error('请填写完整的公告信息')
-    return
-  }
+const saveAnnouncement = async function () {
+  if (!announcementFormRef.value) return
 
-  let apiMethod = isEditingAnnouncement.value ? api.put : api.post
-  let apiUrl = API_CONFIG.merchant.announcements.replace('{merchantId}', props.merchantId)
-  if (isEditingAnnouncement.value) {
-    apiUrl = apiUrl + '/' + currentAnnouncement.value.id
-  }
+  try {
+    // 验证表单
+    await announcementFormRef.value.validate()
 
-  console.log('保存公告，URL:', apiUrl, '数据:', currentAnnouncement.value)
+    savingAnnouncement.value = true
 
-  apiMethod(apiUrl, currentAnnouncement.value)
-    .then(function (response) {
-      console.log('保存公告响应:', response)
-      // 兼容不同的响应格式
-      const isSuccess = response && (response.success || response.code === '200')
-      const isSuccessData = response.data && (response.data.success || response.data.code === '200')
+    // 格式化时间数据
+    const announcementData = {
+      ...currentAnnouncement.value,
+      startTime: currentAnnouncement.value.startTime ? new Date(currentAnnouncement.value.startTime).toISOString() : null,
+      endTime: currentAnnouncement.value.endTime ? new Date(currentAnnouncement.value.endTime).toISOString() : null
+    }
 
-      if (isSuccess || isSuccessData) {
-        let message = isEditingAnnouncement.value ? '公告已更新' : '公告已添加'
-        ElMessage.success(message)
-        getAnnouncements() // 刷新公告列表
-        announcementDialogVisible.value = false
-      } else {
-        console.error('保存公告失败，响应格式:', response)
-        ElMessage.error('保存公告失败：' + (response?.message || '未知错误'))
+    let apiMethod = isEditingAnnouncement.value ? api.put : api.post
+    let apiUrl = API_CONFIG.merchant.announcements.replace('{merchantId}', props.merchantId)
+    if (isEditingAnnouncement.value) {
+      const announcementId = getAnnouncementId(currentAnnouncement.value)
+      if (!announcementId) {
+        ElMessage.error('保存失败：公告ID不存在')
+        return
       }
-    })
-    .catch(function (error) {
-      console.error('保存公告失败:', error)
-      ElMessage.error('保存公告失败：' + (error.message || '网络错误'))
-    })
+      apiUrl = apiUrl + '/' + announcementId
+    }
+
+    console.log('保存公告，URL:', apiUrl, '数据:', announcementData)
+
+    const response = await apiMethod(apiUrl, announcementData)
+    console.log('保存公告响应:', response)
+
+    // 兼容不同的响应格式
+    const isSuccess = response && (response.success || response.code === '200')
+    const isSuccessData = response.data && (response.data.success || response.data.code === '200')
+
+    if (isSuccess || isSuccessData) {
+      let message = isEditingAnnouncement.value ? '公告已更新' : '公告已添加'
+      ElMessage.success(message)
+      getAnnouncements() // 刷新公告列表
+      announcementDialogVisible.value = false
+    } else {
+      console.error('保存公告失败，响应格式:', response)
+      ElMessage.error('保存公告失败：' + (response?.message || '未知错误'))
+    }
+  } catch (error) {
+    if (error === 'cancel') {
+      // 表单验证失败，不处理
+      return
+    }
+    console.error('保存公告失败:', error)
+    ElMessage.error('保存公告失败：' + (error.message || '网络错误'))
+  } finally {
+    savingAnnouncement.value = false
+  }
 }
 
 // 删除公告
 const deleteAnnouncement = function (announcement) {
+  const announcementId = getAnnouncementId(announcement)
+  if (!announcementId) {
+    console.error('公告ID不存在:', announcement)
+    ElMessage.error('删除失败：公告ID不存在')
+    return
+  }
+
   ElMessageBox.confirm(`确定要删除公告 '${announcement.title}' 吗？`, '删除公告', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
@@ -109,7 +228,10 @@ const deleteAnnouncement = function (announcement) {
   })
     .then(function () {
       let url = API_CONFIG.merchant.announcements.replace('{merchantId}', props.merchantId)
-      url = url + '/' + announcement.id
+      url = url + '/' + announcementId
+
+      console.log('删除公告，URL:', url, '公告ID:', announcementId)
+
       api
         .delete(url)
         .then(function (response) {
@@ -138,11 +260,23 @@ const deleteAnnouncement = function (announcement) {
 
 // 切换公告状态
 const toggleAnnouncementStatus = function (announcement) {
+  const announcementId = getAnnouncementId(announcement)
+
+  // 检查公告ID是否存在
+  if (!announcementId) {
+    console.error('公告ID不存在:', announcement)
+    ElMessage.error('切换失败：公告ID不存在，请刷新页面重试')
+    return
+  }
+
   let newStatus = announcement.status === 'active' ? 'inactive' : 'active'
   let statusText = newStatus === 'active' ? '已启用' : '已禁用'
 
   let url = API_CONFIG.merchant.announcements.replace('{merchantId}', props.merchantId)
-  url = url + '/' + announcement.id + '/status'
+  url = url + '/' + announcementId + '/status'
+
+  console.log('切换公告状态，URL:', url, '公告ID:', announcementId, '新状态:', newStatus)
+  console.log('完整公告对象:', announcement)
 
   api
     .put(url, { status: newStatus })
@@ -156,12 +290,15 @@ const toggleAnnouncementStatus = function (announcement) {
         announcement.status = newStatus
         ElMessage.success('公告已' + statusText)
       } else {
-        ElMessage.error('切换公告状态失败：' + (response?.message || '未知错误'))
+        console.error('切换公告状态失败，响应格式:', response)
+        let errorMsg = response?.message || response?.data?.message || '未知错误'
+        ElMessage.error('切换公告状态失败：' + errorMsg)
       }
     })
     .catch(function (error) {
       console.error('切换公告状态失败:', error)
-      ElMessage.error('切换公告状态失败：' + (error.message || '网络错误'))
+      let errorMsg = error.response?.data?.message || error.message || '网络错误'
+      ElMessage.error('切换公告状态失败：' + errorMsg)
     })
 }
 
@@ -180,7 +317,14 @@ onMounted(() => {
     </div>
     <div class="announcement-table-container">
       <el-table :data="announcements" :default-sort="{ prop: 'createdTime', order: 'descending' }">
-        <el-table-column prop="title" label="公告标题" min-width="200" />
+        <el-table-column prop="title" label="公告标题" min-width="200">
+          <template #default="scope">
+            <span>{{ scope.row.title }}</span>
+            <el-tag v-if="scope.row.type === 'system' && !scope.row.merchantId" type="info" size="small" style="margin-left: 8px">
+              系统公告
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
           <template #default="scope">
             <el-tag :type="scope.row.status === 'active' ? 'success' : 'warning'">
@@ -192,19 +336,40 @@ onMounted(() => {
         <el-table-column prop="endTime" label="结束时间" width="180" />
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="scope">
-            <el-button type="primary" size="small" @click="openAnnouncementDialog(scope.row)">
-              编辑
-            </el-button>
-            <el-button
-              :type="scope.row.status === 'active' ? 'warning' : 'success'"
-              size="small"
-              @click="toggleAnnouncementStatus(scope.row)"
-            >
-              {{ scope.row.status === 'active' ? '禁用' : '启用' }}
-            </el-button>
-            <el-button type="danger" size="small" @click="() => deleteAnnouncement(scope.row)">
-              删除
-            </el-button>
+            <!-- 判断是否为系统公告：type为system且merchantId为空 -->
+            <template v-if="scope.row.type === 'system' && !scope.row.merchantId">
+              <el-tooltip content="系统公告不允许编辑" placement="top">
+                <el-button type="primary" size="small" disabled>
+                  编辑
+                </el-button>
+              </el-tooltip>
+              <el-tooltip content="系统公告不允许修改状态" placement="top">
+                <el-button :type="scope.row.status === 'active' ? 'warning' : 'success'" size="small" disabled>
+                  {{ scope.row.status === 'active' ? '禁用' : '启用' }}
+                </el-button>
+              </el-tooltip>
+              <el-tooltip content="系统公告不允许删除" placement="top">
+                <el-button type="danger" size="small" disabled>
+                  删除
+                </el-button>
+              </el-tooltip>
+            </template>
+            <!-- 商家公告允许操作 -->
+            <template v-else>
+              <el-button type="primary" size="small" @click="openAnnouncementDialog(scope.row)">
+                编辑
+              </el-button>
+              <el-button
+                :type="scope.row.status === 'active' ? 'warning' : 'success'"
+                size="small"
+                @click="toggleAnnouncementStatus(scope.row)"
+              >
+                {{ scope.row.status === 'active' ? '禁用' : '启用' }}
+              </el-button>
+              <el-button type="danger" size="small" @click="() => deleteAnnouncement(scope.row)">
+                删除
+              </el-button>
+            </template>
           </template>
         </el-table-column>
         <template #empty>
@@ -222,23 +387,48 @@ onMounted(() => {
       :title="isEditingAnnouncement ? '编辑公告' : '添加公告'"
       width="600px"
       top="10%"
+      :close-on-click-modal="false"
     >
-      <el-form :model="currentAnnouncement" label-width="100px" status-icon>
+      <el-form
+        ref="announcementFormRef"
+        :model="currentAnnouncement"
+        :rules="announcementRules"
+        label-width="100px"
+        status-icon
+      >
         <el-form-item label="公告标题" prop="title" required>
-          <el-input v-model="currentAnnouncement.title" placeholder="请输入公告标题" />
+          <el-input
+            v-model="currentAnnouncement.title"
+            placeholder="请输入公告标题（2-50个字符）"
+            maxlength="50"
+            show-word-limit
+            clearable
+          />
         </el-form-item>
         <el-form-item label="公告内容" prop="content" required>
           <el-input
             v-model="currentAnnouncement.content"
-            placeholder="请输入公告内容"
+            placeholder="请输入公告内容（5-500个字符）"
             type="textarea"
-            :rows="4"
+            :rows="5"
+            maxlength="500"
+            show-word-limit
           />
         </el-form-item>
         <el-form-item label="状态" prop="status" required>
-          <el-select v-model="currentAnnouncement.status" placeholder="请选择公告状态">
-            <el-option label="已启用" value="active" />
-            <el-option label="已禁用" value="inactive" />
+          <el-select
+            v-model="currentAnnouncement.status"
+            placeholder="请选择公告状态"
+            style="width: 100%"
+          >
+            <el-option label="已启用" value="active">
+              <span>已启用</span>
+              <span style="color: #8492a6; font-size: 13px; margin-left: 8px">公告会立即展示</span>
+            </el-option>
+            <el-option label="已禁用" value="inactive">
+              <span>已禁用</span>
+              <span style="color: #8492a6; font-size: 13px; margin-left: 8px">公告不会展示</span>
+            </el-option>
           </el-select>
         </el-form-item>
         <el-form-item label="开始时间" prop="startTime">
@@ -247,6 +437,10 @@ onMounted(() => {
             type="datetime"
             placeholder="选择开始时间"
             style="width: 100%"
+            :disabled-date="startTimeDisabled"
+            clearable
+            format="YYYY-MM-DD HH:mm"
+            value-format="YYYY-MM-DDTHH:mm:ss"
           />
         </el-form-item>
         <el-form-item label="结束时间" prop="endTime">
@@ -255,13 +449,19 @@ onMounted(() => {
             type="datetime"
             placeholder="选择结束时间"
             style="width: 100%"
+            :disabled-date="endTimeDisabled"
+            clearable
+            format="YYYY-MM-DD HH:mm"
+            value-format="YYYY-MM-DDTHH:mm:ss"
           />
         </el-form-item>
       </el-form>
       <template #footer>
         <span class="dialog-footer">
           <el-button @click="announcementDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="saveAnnouncement">确定</el-button>
+          <el-button type="primary" :loading="savingAnnouncement" @click="saveAnnouncement">
+            {{ savingAnnouncement ? '保存中...' : '确定' }}
+          </el-button>
         </span>
       </template>
     </el-dialog>
@@ -447,17 +647,16 @@ onMounted(() => {
           .el-input__inner,
           .el-textarea__inner {
             border-radius: 8px;
-            border: 2px solid #dcdfe6;
             transition: all 0.3s ease;
             font-size: 1rem /* 原值: 14px */;
 
-            &:focus {
-              border-color: #909399;
-              box-shadow: 0 0 0 3px rgba(144, 147, 153, 0.1);
-            }
-
             &:hover {
               border-color: #c0c4cc;
+            }
+
+            &:focus {
+              border-color: #409eff;
+              box-shadow: 0 0 0 3px rgba(64, 158, 255, 0.1);
             }
           }
 

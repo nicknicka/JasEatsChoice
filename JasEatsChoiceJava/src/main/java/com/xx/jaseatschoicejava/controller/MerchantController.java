@@ -1119,7 +1119,7 @@ public class MerchantController {
 
             // 验证公告属于该商家
             Announcement announcement = announcementService.getById(announcementId);
-            if (announcement == null || !announcement.getMerchantId().equals(Long.valueOf(merchantId))) {
+            if (announcement == null || !announcement.getMerchantId().equals(merchantId)) {
                 return ResponseResult.fail("404", "公告不存在");
             }
 
@@ -1146,7 +1146,7 @@ public class MerchantController {
         try {
             // 验证公告属于该商家
             Announcement announcement = announcementService.getById(announcementId);
-            if (announcement == null || !announcement.getMerchantId().equals(Long.valueOf(merchantId))) {
+            if (announcement == null || !announcement.getMerchantId().equals(merchantId)) {
                 return ResponseResult.fail("404", "公告不存在");
             }
 

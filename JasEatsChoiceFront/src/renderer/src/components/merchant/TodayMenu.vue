@@ -10,8 +10,7 @@ import {
   Moon,
   Coffee,
   ArrowRight,
-  CircleClose,
-  CircleCheckFilled
+  CircleClose
 } from '@element-plus/icons-vue'
 import api from '../../utils/api.js'
 import { useAuthStore } from '../../store/authStore'
@@ -256,7 +255,6 @@ onMounted(() => {
       </div>
 
       <!-- 菜单卡片网格 -->
-      <!-- 🔧 移除transition，避免高度跳动 -->
       <div class="menu-grid">
           <div
             v-for="menu in filteredMenus"

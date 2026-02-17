@@ -84,6 +84,8 @@ const batchDeleteDiscounts = () => {
               (discount) => !discountIds.includes(discount.id)
             )
             selectedDiscounts.value = []
+            // 清除表格选中状态
+            tableRef.value?.clearSelection()
             ElMessage.success('优惠活动批量删除成功')
           } else {
             ElMessage.error(response?.message || '批量删除优惠活动失败')
@@ -96,6 +98,8 @@ const batchDeleteDiscounts = () => {
     })
     .catch(() => {
       ElMessage.info('已取消删除')
+      // 清除表格选中状态
+      tableRef.value?.clearSelection()
     })
 }
 
@@ -134,6 +138,8 @@ const batchUpdateStatus = (status) => {
               }
             })
             selectedDiscounts.value = []
+            // 清除表格选中状态
+            tableRef.value?.clearSelection()
             ElMessage.success(`优惠活动批量${statusText}成功`)
           } else {
             ElMessage.error(response?.message || `批量${statusText}优惠活动失败`)
@@ -146,6 +152,8 @@ const batchUpdateStatus = (status) => {
     })
     .catch(() => {
       ElMessage.info('已取消操作')
+      // 清除表格选中状态
+      tableRef.value?.clearSelection()
     })
 }
 

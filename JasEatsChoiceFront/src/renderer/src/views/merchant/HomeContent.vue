@@ -360,11 +360,11 @@ onMounted(() => {
       <!-- 优惠管理 -->
       <DiscountManagement :merchant-id="String(merchantId)" />
 
-      <!-- 店铺相册 -->
-      <ShopAlbum :merchant-id="String(merchantId)" />
-
       <!-- 公告栏配置 -->
       <AnnouncementManagement :merchant-id="String(merchantId)" />
+
+      <!-- 店铺相册 -->
+      <ShopAlbum :merchant-id="String(merchantId)" />
 
       <!-- 快捷操作 -->
       <div class="quick-actions-card">
