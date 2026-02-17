@@ -256,8 +256,8 @@ onMounted(() => {
       </div>
 
       <!-- 菜单卡片网格 -->
-      <transition name="fade" mode="out-in">
-        <div class="menu-grid" :key="activeMenuFilter + activeMenuTypeFilter">
+      <!-- 🔧 移除transition，避免高度跳动 -->
+      <div class="menu-grid">
           <div
             v-for="menu in filteredMenus"
             :key="menu.id"
@@ -305,8 +305,7 @@ onMounted(() => {
               >
             </div>
           </div>
-        </div>
-      </transition>
+      </div>
 
       <!-- 空状态 -->
       <div v-if="filteredMenus.length === 0" class="empty-state">
@@ -343,12 +342,13 @@ onMounted(() => {
       gap: 16px;
       box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
       border: 1px solid #f0f0f0;
-      transition: all 0.3s ease;
+      // 🔧 修复：只过渡阴影效果
+      transition: box-shadow 0.2s ease;
       cursor: default;
 
       &:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+        // 🔧 移除translateY，避免高度变化
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
       }
 
       .stat-icon {
@@ -466,7 +466,8 @@ onMounted(() => {
           .menu-filter-tag,
           .menu-status-tag {
             cursor: pointer;
-            transition: all 0.3s ease;
+            // 🔧 修复：只过渡需要的属性
+            transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
             border-radius: 20px;
             padding: 6px 16px;
             font-size: 0.929rem /* 原值: 13px */;
@@ -476,8 +477,8 @@ onMounted(() => {
             color: #606266;
 
             &:hover {
-              transform: translateY(-2px);
-              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+              // 🔧 移除translateY，避免高度变化
+              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
               background: #f0f0f0;
             }
 
@@ -530,7 +531,8 @@ onMounted(() => {
           border-radius: 12px;
           padding: 18px;
           border: 2px solid #f0f0f0;
-          transition: all 0.3s ease;
+          // 🔧 修复：只过渡需要的属性，移除all
+          transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
           cursor: pointer;
           position: relative;
           overflow: hidden;
@@ -544,12 +546,12 @@ onMounted(() => {
             height: 4px;
             background: linear-gradient(90deg, #409eff 0%, #66b1ff 100%);
             opacity: 0;
-            transition: opacity 0.3s ease;
+            transition: opacity 0.2s ease;
           }
 
           &:hover {
-            transform: translateY(-6px);
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+            // 🔧 移除translateY，避免高度变化
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
             border-color: #409eff;
 
             &::before {
@@ -740,11 +742,11 @@ onMounted(() => {
         .el-button {
           color: #409eff;
           font-weight: 600;
-          transition: all 0.3s ease;
+          // 🔧 修复：只过渡颜色属性
+          transition: color 0.2s ease;
 
           &:hover {
             color: #66b1ff;
-            transform: translateX(4px);
           }
         }
       }
@@ -1089,50 +1091,6 @@ onMounted(() => {
       }
     }
   }
-}
-
-// 动画效果
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-
-.slide-up-enter-active {
-  transition: all 0.4s ease;
-}
-
-.slide-up-leave-active {
-  transition: all 0.3s ease;
-}
-
-.slide-up-enter-from {
-  opacity: 0;
-  transform: translateY(20px);
-}
-
-.slide-up-leave-to {
-  opacity: 0;
-  transform: translateY(-10px);
-}
-
-.list-enter-active,
-.list-leave-active {
-  transition: all 0.3s ease;
-}
-
-.list-enter-from {
-  opacity: 0;
-  transform: translateX(-20px);
-}
-
-.list-leave-to {
-  opacity: 0;
-  transform: translateX(20px);
 }
 
 // 响应式设计
