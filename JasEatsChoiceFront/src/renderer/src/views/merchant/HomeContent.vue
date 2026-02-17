@@ -607,9 +607,9 @@ onMounted(() => {
     }
 
     .orders-list {
-      max-height: 400px;
+      // 高度配置已移至 OrderCenter.vue 组件内部，使用CSS变量动态计算
+      // 保留基本样式作为后备
       overflow-y: auto;
-      padding-right: 8px;
 
       .no-orders {
         text-align: center;
