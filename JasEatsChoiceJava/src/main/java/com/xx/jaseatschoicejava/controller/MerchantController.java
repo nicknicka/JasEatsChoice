@@ -9,7 +9,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.xx.jaseatschoicejava.service.MerchantService;
 import com.xx.jaseatschoicejava.service.OrderService;
+import com.xx.jaseatschoicejava.service.GroupOrderService;
 import com.xx.jaseatschoicejava.entity.Order;
+import com.xx.jaseatschoicejava.entity.GroupOrder;
 import com.xx.jaseatschoicejava.service.UserService;
 import com.xx.jaseatschoicejava.entity.User;
 import com.xx.jaseatschoicejava.service.AnnouncementService;
@@ -68,6 +70,9 @@ public class MerchantController {
 
     @Autowired
     private OrderService orderService;
+
+    @Autowired
+    private GroupOrderService groupOrderService;
 
     @Autowired
     private OrderDishService orderDishService;
@@ -1166,6 +1171,7 @@ public class MerchantController {
     /**
      * 商家接单
      * 将订单状态从待接单(1)更新为备菜中(2)
+     * 支持普通订单和群订单
      */
     @PutMapping("/{merchantId}/orders/{orderId}/accept")
     public ResponseResult<?> acceptOrder(
@@ -1174,42 +1180,75 @@ public class MerchantController {
         try {
             logger.info("商家接单请求，merchantId={}, orderId={}", merchantId, orderId);
 
-            // 查询订单
+            // 先尝试查询普通订单
             Order order = orderService.getById(orderId);
-            if (order == null) {
-                return ResponseResult.fail("404", "订单不存在");
+            if (order != null) {
+                // 验证订单属于该商家
+                if (!order.getMerchantId().equals(merchantId)) {
+                    return ResponseResult.fail("403", "无权操作此订单");
+                }
+
+                // 检查订单状态，只有待接单(1)的订单可以接单
+                if (order.getStatus() != 1) {
+                    return ResponseResult.fail("400", "订单状态异常，无法接单");
+                }
+
+                // 更新订单状态为备菜中(2)
+                order.setStatus(2);
+                order.setUpdateTime(LocalDateTime.now());
+                boolean success = orderService.updateById(order);
+
+                if (success) {
+                    logger.info("商家接单成功（普通订单），merchantId={}, orderId={}", merchantId, orderId);
+
+                    // 通知用户商家已接单
+                    NotificationUtil.createOrderNotification(
+                        order.getUserId(),
+                        NotificationTypeEnum.ORDER_MERCHANT_ACCEPT,
+                        orderId,
+                        "备菜中"
+                    );
+
+                    return ResponseResult.success("接单成功");
+                }
+                return ResponseResult.fail("500", "接单失败");
             }
 
-            // 验证订单属于该商家
-            if (!order.getMerchantId().equals(merchantId)) {
-                return ResponseResult.fail("403", "无权操作此订单");
+            // 如果不是普通订单，尝试查询群订单
+            GroupOrder groupOrder = groupOrderService.getById(orderId);
+            if (groupOrder != null) {
+                // 验证订单属于该商家
+                if (!groupOrder.getMerchantId().equals(merchantId)) {
+                    return ResponseResult.fail("403", "无权操作此订单");
+                }
+
+                // 检查订单状态，只有待接单(1)的订单可以接单
+                if (groupOrder.getStatus() != 1) {
+                    return ResponseResult.fail("400", "订单状态异常，无法接单");
+                }
+
+                // 更新群订单状态为备菜中(2)
+                groupOrder.setStatus(2);
+                groupOrder.setUpdateTime(LocalDateTime.now());
+                boolean success = groupOrderService.updateById(groupOrder);
+
+                if (success) {
+                    logger.info("商家接单成功（群订单），merchantId={}, orderId={}", merchantId, orderId);
+
+                    // 通知发起人商家已接单
+                    NotificationUtil.createGroupOrderNotification(
+                        groupOrder.getInitiatorId(),
+                        NotificationTypeEnum.GROUP_ORDER_MERCHANT_ACCEPT,
+                        orderId,
+                        "备菜中"
+                    );
+
+                    return ResponseResult.success("接单成功");
+                }
+                return ResponseResult.fail("500", "接单失败");
             }
 
-            // 检查订单状态，只有待接单(1)的订单可以接单
-            if (order.getStatus() != 1) {
-                return ResponseResult.fail("400", "订单状态异常，无法接单");
-            }
-
-            // 更新订单状态为备菜中(2)
-            order.setStatus(2);
-            order.setUpdateTime(LocalDateTime.now());
-            boolean success = orderService.updateById(order);
-
-            if (success) {
-                logger.info("商家接单成功，merchantId={}, orderId={}", merchantId, orderId);
-
-                // 通知用户商家已接单
-                NotificationUtil.createOrderNotification(
-                    order.getUserId(),
-                    NotificationTypeEnum.ORDER_MERCHANT_ACCEPT,
-                    orderId,
-                    "备菜中"
-                );
-
-                return ResponseResult.success("接单成功");
-            }
-
-            return ResponseResult.fail("500", "接单失败");
+            return ResponseResult.fail("404", "订单不存在");
         } catch (Exception e) {
             logger.error("商家接单失败，merchantId={}, orderId={}", merchantId, orderId, e);
             return ResponseResult.fail("500", "接单失败：" + e.getMessage());

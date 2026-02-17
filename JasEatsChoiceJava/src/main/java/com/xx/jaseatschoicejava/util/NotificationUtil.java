@@ -258,6 +258,7 @@ public class NotificationUtil {
     public static void createMerchantNewOrderNotification(String merchantId, String orderId, String orderType) {
         String title = "新订单提醒";
         String content = String.format("您有新的%s %s，请及时处理", orderType, orderId);
-        createNotification(merchantId, NotificationTypeEnum.ORDER_MERCHANT_ACCEPT, title, content);
+        // 使用系统通知类型，避免与"商家接单"混淆
+        createNotification(merchantId, NotificationTypeEnum.SYSTEM, title, content);
     }
 }
