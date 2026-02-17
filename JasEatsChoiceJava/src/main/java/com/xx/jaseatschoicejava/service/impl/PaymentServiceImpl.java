@@ -11,6 +11,7 @@ import com.xx.jaseatschoicejava.service.OrderService;
 import com.xx.jaseatschoicejava.service.PaymentService;
 import com.xx.jaseatschoicejava.service.PaymentPasswordService;
 import com.xx.jaseatschoicejava.service.WalletService;
+import com.xx.jaseatschoicejava.service.GroupOrderService;
 import com.xx.jaseatschoicejava.util.NotificationUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +33,7 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentRecordMapper, Payment
     private final WalletService walletService;
     private final OrderService orderService;
     private final PaymentPasswordService paymentPasswordService;
+    private final GroupOrderService groupOrderService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -109,9 +111,10 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentRecordMapper, Payment
             paymentRecord.setUpdateTime(LocalDateTime.now());
             updateById(paymentRecord);
 
-            // 更新订单状态
+            // 更新订单状态 - 支持普通订单和群订单
             Order order = orderService.getById(paymentRecord.getOrderId());
             if (order != null) {
+                // 处理普通订单
                 order.setStatus(1); // 待接单
                 order.setPaymentId(paymentRecord.getId());
                 order.setPaidAmount(paymentRecord.getAmount());
@@ -126,6 +129,43 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentRecordMapper, Payment
                     order.getId(),
                     "待接单"
                 );
+
+                // 通知商家有新订单
+                NotificationUtil.createMerchantNewOrderNotification(
+                    order.getMerchantId(),
+                    order.getId(),
+                    "普通订单"
+                );
+            } else {
+                // 尝试处理群订单
+                try {
+                    com.xx.jaseatschoicejava.entity.GroupOrder groupOrder =
+                        groupOrderService.getById(paymentRecord.getOrderId());
+                    if (groupOrder != null) {
+                        // 更新群订单状态为待接单
+                        groupOrder.setStatus(1); // 待接单
+                        groupOrder.setUpdateTime(LocalDateTime.now());
+                        groupOrderService.updateById(groupOrder);
+
+                        // 通知用户群订单支付成功
+                        NotificationUtil.createGroupOrderNotification(
+                            groupOrder.getInitiatorId(),
+                            NotificationTypeEnum.GROUP_ORDER_PAYMENT_SUCCESS,
+                            groupOrder.getId(),
+                            "待接单"
+                        );
+
+                        // 通知商家有新群订单
+                        NotificationUtil.createMerchantNewOrderNotification(
+                            groupOrder.getMerchantId(),
+                            groupOrder.getId(),
+                            "群订单"
+                        );
+                    }
+                } catch (Exception e) {
+                    log.warn("处理群订单状态更新失败，订单ID：{}",
+                        paymentRecord.getOrderId(), e);
+                }
             }
 
             log.info("钱包支付成功，流水号：{}，金额：{}", paymentNo, paymentRecord.getAmount());
@@ -176,9 +216,10 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentRecordMapper, Payment
             paymentRecord.setUpdateTime(LocalDateTime.now());
             updateById(paymentRecord);
 
-            // 更新订单状态
+            // 更新订单状态 - 支持普通订单和群订单
             Order order = orderService.getById(paymentRecord.getOrderId());
             if (order != null) {
+                // 处理普通订单
                 order.setStatus(1); // 待接单
                 order.setPaymentId(paymentRecord.getId());
                 order.setPaidAmount(paymentRecord.getAmount());
@@ -193,6 +234,43 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentRecordMapper, Payment
                     order.getId(),
                     "待接单"
                 );
+
+                // 通知商家有新订单
+                NotificationUtil.createMerchantNewOrderNotification(
+                    order.getMerchantId(),
+                    order.getId(),
+                    "普通订单"
+                );
+            } else {
+                // 尝试处理群订单
+                try {
+                    com.xx.jaseatschoicejava.entity.GroupOrder groupOrder =
+                        groupOrderService.getById(paymentRecord.getOrderId());
+                    if (groupOrder != null) {
+                        // 更新群订单状态为待接单
+                        groupOrder.setStatus(1); // 待接单
+                        groupOrder.setUpdateTime(LocalDateTime.now());
+                        groupOrderService.updateById(groupOrder);
+
+                        // 通知用户群订单支付成功
+                        NotificationUtil.createGroupOrderNotification(
+                            groupOrder.getInitiatorId(),
+                            NotificationTypeEnum.GROUP_ORDER_PAYMENT_SUCCESS,
+                            groupOrder.getId(),
+                            "待接单"
+                        );
+
+                        // 通知商家有新群订单
+                        NotificationUtil.createMerchantNewOrderNotification(
+                            groupOrder.getMerchantId(),
+                            groupOrder.getId(),
+                            "群订单"
+                        );
+                    }
+                } catch (Exception e) {
+                    log.warn("处理群订单状态更新失败，订单ID：{}",
+                        paymentRecord.getOrderId(), e);
+                }
             }
 
             log.info("钱包支付成功（含密码验证），流水号：{}，金额：{}", paymentNo, paymentRecord.getAmount());

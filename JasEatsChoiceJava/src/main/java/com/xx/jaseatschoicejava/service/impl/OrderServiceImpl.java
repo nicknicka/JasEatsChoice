@@ -15,6 +15,8 @@ import com.xx.jaseatschoicejava.service.DishService;
 import com.xx.jaseatschoicejava.service.MerchantService;
 import com.xx.jaseatschoicejava.service.OrderDishService;
 import com.xx.jaseatschoicejava.service.OrderService;
+import com.xx.jaseatschoicejava.enums.NotificationTypeEnum;
+import com.xx.jaseatschoicejava.util.NotificationUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -347,8 +349,14 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             log.info("订单状态回退成功 - orderId: {}, {} -> {}, reason: {}",
                     orderId, currentStatus, targetStatus);
 
-            // TODO: 这里可以添加操作日志记录
-            // TODO: 根据状态变化发送通知（如需要）
+            // 根据回退后的状态发送通知
+            String statusText = getStatusText(targetStatus);
+            NotificationUtil.createOrderNotification(
+                order.getUserId(),
+                NotificationTypeEnum.ORDER_CANCELLED,
+                orderId,
+                "状态回退至：" + statusText
+            );
         }
 
         return updated > 0;
@@ -401,5 +409,26 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     private boolean isFinalStatus(Integer status) {
         // 终态：已完成、已取消
         return status == 5 || status == 6;
+    }
+
+    /**
+     * 获取订单状态文本
+     */
+    private String getStatusText(Integer status) {
+        if (status == null) {
+            return "未知";
+        }
+        switch (status) {
+            case 0: return "待支付";
+            case 1: return "待接单";
+            case 2: return "备菜中";
+            case 3: return "烹饪中";
+            case 4: return "待上菜";
+            case 5: return "已送达";
+            case 6: return "已取消";
+            case 7: return "待评价";
+            case 8: return "已评价";
+            default: return "未知";
+        }
     }
 }

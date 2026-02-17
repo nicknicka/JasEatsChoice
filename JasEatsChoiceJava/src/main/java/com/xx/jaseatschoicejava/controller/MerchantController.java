@@ -24,6 +24,8 @@ import com.xx.jaseatschoicejava.entity.MessageRecord;
 import com.xx.jaseatschoicejava.service.DishService;
 import com.xx.jaseatschoicejava.service.ReviewService;
 import com.xx.jaseatschoicejava.service.MessageRecordService;
+import com.xx.jaseatschoicejava.enums.NotificationTypeEnum;
+import com.xx.jaseatschoicejava.util.NotificationUtil;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.math.BigDecimal;
@@ -1158,6 +1160,59 @@ public class MerchantController {
         } catch (Exception e) {
             logger.error("删除公告失败: {}", e.getMessage(), e);
             return ResponseResult.fail("500", "公告删除失败");
+        }
+    }
+
+    /**
+     * 商家接单
+     * 将订单状态从待接单(1)更新为备菜中(2)
+     */
+    @PutMapping("/{merchantId}/orders/{orderId}/accept")
+    public ResponseResult<?> acceptOrder(
+            @PathVariable String merchantId,
+            @PathVariable String orderId) {
+        try {
+            logger.info("商家接单请求，merchantId={}, orderId={}", merchantId, orderId);
+
+            // 查询订单
+            Order order = orderService.getById(orderId);
+            if (order == null) {
+                return ResponseResult.fail("404", "订单不存在");
+            }
+
+            // 验证订单属于该商家
+            if (!order.getMerchantId().equals(merchantId)) {
+                return ResponseResult.fail("403", "无权操作此订单");
+            }
+
+            // 检查订单状态，只有待接单(1)的订单可以接单
+            if (order.getStatus() != 1) {
+                return ResponseResult.fail("400", "订单状态异常，无法接单");
+            }
+
+            // 更新订单状态为备菜中(2)
+            order.setStatus(2);
+            order.setUpdateTime(LocalDateTime.now());
+            boolean success = orderService.updateById(order);
+
+            if (success) {
+                logger.info("商家接单成功，merchantId={}, orderId={}", merchantId, orderId);
+
+                // 通知用户商家已接单
+                NotificationUtil.createOrderNotification(
+                    order.getUserId(),
+                    NotificationTypeEnum.ORDER_MERCHANT_ACCEPT,
+                    orderId,
+                    "备菜中"
+                );
+
+                return ResponseResult.success("接单成功");
+            }
+
+            return ResponseResult.fail("500", "接单失败");
+        } catch (Exception e) {
+            logger.error("商家接单失败，merchantId={}, orderId={}", merchantId, orderId, e);
+            return ResponseResult.fail("500", "接单失败：" + e.getMessage());
         }
     }
 }
