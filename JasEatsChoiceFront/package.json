@@ -33,6 +33,7 @@
     "pinia": "^3.0.4",
     "qrcode": "^1.5.4",
     "utf-8-validate": "^6.0.5",
+    "vue-echarts": "^8.0.1",
     "vue-router": "^4.6.3",
     "ws": "^8.18.3",
     "xlsx": "^0.18.5"

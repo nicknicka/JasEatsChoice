@@ -1,45 +1,24 @@
 <script setup>
 import api from '../../utils/api'
-import { ref, onMounted, watch, nextTick, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useAuthStore } from '../../store/authStore'
-import { use } from 'echarts/core'
-import { LineChart } from 'echarts/charts'
+import { ElMessage } from 'element-plus'
 import {
-  TitleComponent,
-  TooltipComponent,
-  GridComponent,
-  DataZoomComponent,
-  LegendComponent
-} from 'echarts/components'
-import { CanvasRenderer } from 'echarts/renderers'
-import VChart from 'vue-echarts'
-
-// 注册所需组件
-use([
-  TitleComponent,
-  TooltipComponent,
-  GridComponent,
-  DataZoomComponent,
-  LegendComponent,
-  LineChart,
-  CanvasRenderer
-])
+  TrendCharts,
+  ShoppingCart,
+  Coin,
+  User,
+  Trophy,
+  Food
+} from '@element-plus/icons-vue'
+import * as echarts from 'echarts'
 
 // 统计时间范围选项
 const timeRangeOptions = ['today', 'yesterday', 'week', 'month']
 const activeTimeRange = ref('today')
 
-// 图表容器宽度
-const chartContainerWidth = ref(0)
-
-// 图表引用
-const chartRef = ref(null)
-
-// 销售额数据
-
-// 菜品销售数据
-
-// 更新当前显示的销售额数据
+// 数据加载状态
+const isLoading = ref(false)
 
 // 从后端获取统计数据
 const fetchStatisticsData = () => {
@@ -48,8 +27,12 @@ const fetchStatisticsData = () => {
 
   if (!merchantId) {
     console.error('获取统计数据失败: 商家ID不存在')
+    ElMessage.error('商家ID不存在，请重新登录')
     return
   }
+
+  isLoading.value = true
+
   api
     .get(`/v1/merchant/${merchantId}/statistics`, { params: { timeRange: activeTimeRange.value } })
     .then((response) => {
@@ -72,11 +55,15 @@ const fetchStatisticsData = () => {
     })
     .catch((error) => {
       console.error('获取统计数据失败:', error)
+      ElMessage.error('获取统计数据失败，请稍后重试')
       // 如果获取失败，清空数据
       currentBasicStats.value = { orders: 0, totalAmount: 0.0, avgAmount: 0.0, newCustomers: 0 }
       currentOrderTrend.value = []
       dishSalesRank.value = []
       updateChartData()
+    })
+    .finally(() => {
+      isLoading.value = false
     })
 }
 
@@ -86,47 +73,73 @@ const changeTimeRange = (range) => {
   fetchStatisticsData()
 }
 
-// 监听时间范围变化更新数据
-watch(() => activeTimeRange.value, fetchStatisticsData)
+// 格式化金额显示
+const formatCurrency = (amount) => {
+  const num = Number(amount)
+  // 如果金额大于 10000，使用万单位
+  if (num >= 10000) {
+    const wan = (num / 10000).toFixed(1)
+    return `¥${wan}万`
+  }
+  // 否则显示原始金额，保留两位小数
+  return `¥${num.toFixed(2)}`
+}
+
+// 格式化完整金额（用于详情显示，不使用万单位）
+const formatFullCurrency = (amount) => {
+  return `¥${Number(amount).toFixed(2)}`
+}
+
+// 时间范围显示映射
+const timeRangeLabels = computed(() => ({
+  today: '今日',
+  yesterday: '昨日',
+  week: '本周',
+  month: '本月'
+}))
+
+// 获取时间范围显示文本
+const getTimeRangeLabel = (range) => {
+  return timeRangeLabels.value[range] || range
+}
 
 // 页面加载时初始化数据
 onMounted(() => {
   fetchStatisticsData()
-  // 初始化图表容器宽度
+  // 初始化图表
   nextTick(() => {
-    updateChartContainerWidth()
+    initOrderChart()
   })
-
   // 监听窗口大小变化
-  window.addEventListener('resize', updateChartContainerWidth)
+  window.addEventListener('resize', handleChartResize)
 })
 
-// 在组件卸载时移除事件监听器
-onUnmounted(() => {
-  window.removeEventListener('resize', updateChartContainerWidth)
-})
-
-// 更新图表容器宽度
-const updateChartContainerWidth = () => {
-  nextTick(() => {
-    if (chartRef.value && chartRef.value.$el) {
-      chartContainerWidth.value = chartRef.value.$el.clientWidth
-    } else if (chartRef.value && chartRef.value.$el === undefined) {
-      // 如果 $el 不存在，尝试使用元素本身
-      chartContainerWidth.value = chartRef.value.clientWidth || 0
-    }
-  })
+// 处理图表窗口大小变化
+const handleChartResize = () => {
+  if (orderChartInstance) {
+    orderChartInstance.resize()
+  }
 }
 
-// 基础统计数据 - 按时间范围
+// 组件卸载时清理
+onBeforeUnmount(() => {
+  if (orderChartInstance) {
+    orderChartInstance.dispose()
+  }
+  window.removeEventListener('resize', handleChartResize)
+})
 
 // 当前显示的基础统计数据
 const currentBasicStats = ref({ orders: 0, totalAmount: 0.0, avgAmount: 0.0, newCustomers: 0 })
 
-// 订单趋势数据 - 按时间范围
-
 // 当前显示的订单趋势数据
 const currentOrderTrend = ref([])
+
+// 订单趋势图表 ref
+const orderChartRef = ref(null)
+
+// 图表实例
+let orderChartInstance = null
 
 // 菜品销量排行数据
 const dishSalesRank = ref([])
@@ -169,270 +182,585 @@ const orderChartOptions = ref({
   ]
 })
 
+// 初始化图表
+const initOrderChart = () => {
+  if (orderChartRef.value) {
+    orderChartInstance = echarts.init(orderChartRef.value)
+    orderChartInstance.setOption(orderChartOptions.value)
+  }
+}
+
 // 更新图表数据
 const updateChartData = () => {
   orderChartOptions.value.xAxis.data = currentOrderTrend.value.map((item) => item.time)
   orderChartOptions.value.series[0].data = currentOrderTrend.value.map((item) => item.orders)
+  // 更新图表
+  if (orderChartInstance) {
+    orderChartInstance.setOption(orderChartOptions.value)
+  }
 }
-
-// 只监听currentOrderTrend变化，因为updateChartData会修改orderChartOptions
-watch(
-  currentOrderTrend,
-  () => {
-    updateChartData()
-  },
-  { deep: true }
-)
 </script>
 
 <template>
   <div class="statistics-container">
+    <!-- 页面头部 -->
     <div class="stats-header">
-      <h3 class="page-title">【经营统计】</h3>
-      <div class="time-range-selector">
-        <el-tag
-          v-for="range in timeRangeOptions"
-          :key="range"
-          :type="activeTimeRange === range ? 'primary' : 'info'"
-          effect="plain"
-          class="time-range-tag"
-          @click="changeTimeRange(range)"
-        >
-          {{
-            range === 'today'
-              ? '今日'
-              : range === 'yesterday'
-                ? '昨日'
-                : range === 'week'
-                  ? '本周'
-                  : '本月'
-          }}
-        </el-tag>
+      <div class="header-left">
+        <h3 class="page-title">
+          <el-icon class="title-icon"><TrendCharts /></el-icon>
+          经营统计
+        </h3>
+      </div>
+      <div class="header-right">
+        <div class="time-range-selector">
+          <el-tag
+            v-for="range in timeRangeOptions"
+            :key="range"
+            :type="activeTimeRange === range ? 'primary' : 'info'"
+            effect="plain"
+            class="time-range-tag"
+            @click="changeTimeRange(range)"
+          >
+            {{ getTimeRangeLabel(range) }}
+          </el-tag>
+        </div>
       </div>
     </div>
 
-    <div class="stats-content">
+    <div v-loading="isLoading" class="stats-content">
       <!-- 基本统计卡片 -->
-      <div class="basic-stats-section">
-        <div class="stat-card">
-          <div class="stat-icon orders-icon">🍽️</div>
-          <div class="stat-info">
+      <el-row :gutter="20" class="basic-stats-section">
+        <el-col :span="12">
+          <div class="stat-card stat-card-primary">
+            <div class="stat-row-first">
+              <div class="stat-icon">
+                <el-icon><ShoppingCart /></el-icon>
+              </div>
+              <div class="stat-value">{{ currentBasicStats.orders }}</div>
+            </div>
             <div class="stat-label">总订单数</div>
-            <div class="stat-value">{{ currentBasicStats.orders }}</div>
           </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon revenue-icon">💰</div>
-          <div class="stat-info">
+        </el-col>
+        <el-col :span="12">
+          <div class="stat-card stat-card-success">
+            <div class="stat-row-first">
+              <div class="stat-icon">
+                <el-icon><Coin /></el-icon>
+              </div>
+              <div class="stat-value">{{ formatCurrency(currentBasicStats.totalAmount) }}</div>
+            </div>
             <div class="stat-label">总销售额</div>
-            <div class="stat-value">¥{{ currentBasicStats.totalAmount.toFixed(2) }}</div>
           </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon avg-icon">📊</div>
-          <div class="stat-info">
+        </el-col>
+        <el-col :span="12">
+          <div class="stat-card stat-card-info">
+            <div class="stat-row-first">
+              <div class="stat-icon">
+                <el-icon><TrendCharts /></el-icon>
+              </div>
+              <div class="stat-value">{{ formatCurrency(currentBasicStats.avgAmount) }}</div>
+            </div>
             <div class="stat-label">客单价</div>
-            <div class="stat-value">¥{{ currentBasicStats.avgAmount.toFixed(2) }}</div>
           </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon new-customers-icon">👤</div>
-          <div class="stat-info">
+        </el-col>
+        <el-col :span="12">
+          <div class="stat-card stat-card-warning">
+            <div class="stat-row-first">
+              <div class="stat-icon">
+                <el-icon><User /></el-icon>
+              </div>
+              <div class="stat-value">{{ currentBasicStats.newCustomers }}</div>
+            </div>
             <div class="stat-label">新客户数</div>
-            <div class="stat-value">{{ currentBasicStats.newCustomers }}</div>
           </div>
-        </div>
-      </div>
+        </el-col>
+      </el-row>
 
       <!-- 订单趋势图表 -->
-      <div class="order-trend-section">
-        <h4 class="section-title">📈 订单趋势</h4>
-        <div v-show="true" class="chart-container">
-          <v-chart
-            v-if="chartContainerWidth > 0 && currentOrderTrend.length > 0"
-            ref="chartRef"
-            :options="orderChartOptions"
-            style="height: 250px; width: 100%"
-            :autoresize="true"
-          />
-          <div v-else-if="chartContainerWidth > 0" class="chart-placeholder">暂时没有数据提供</div>
-          <div v-else class="chart-placeholder chart-loading">
-            <span class="loading-text">图表加载中...</span>
-          </div>
-        </div>
-      </div>
+      <el-row :gutter="20" class="order-trend-section">
+        <el-col :span="24">
+          <el-card class="chart-card">
+            <template #header>
+              <div class="card-header">
+                <h4 class="section-title">
+                  <el-icon class="title-icon"><TrendCharts /></el-icon>
+                  订单趋势
+                </h4>
+              </div>
+            </template>
+            <div class="chart-container">
+              <div v-if="currentOrderTrend.length > 0" ref="orderChartRef" class="chart"></div>
+              <div v-else class="chart-placeholder">
+                <el-empty description="暂时没有数据提供" :image-size="100" />
+              </div>
+            </div>
+          </el-card>
+        </el-col>
+      </el-row>
 
       <!-- 菜品销量排行 -->
-      <div class="dish-sales-section">
-        <h4 class="section-title">🏆 菜品销量排行</h4>
-        <div v-if="dishSalesRank.length > 0" class="sales-rank-list">
-          <div v-for="(dish, index) in dishSalesRank" :key="dish.name" class="sales-rank-item">
-            <div class="rank-number">{{ index + 1 }}</div>
-            <div class="dish-info">
-              <div class="dish-name">{{ dish.name }}</div>
-              <div class="dish-sales">销量: {{ dish.sales }} 份</div>
+      <el-row :gutter="20" class="dish-sales-section">
+        <el-col :span="24">
+          <el-card class="rank-card">
+            <template #header>
+              <div class="card-header">
+                <h4 class="section-title">
+                  <el-icon class="title-icon"><Trophy /></el-icon>
+                  菜品销量排行
+                </h4>
+              </div>
+            </template>
+            <div v-if="dishSalesRank.length > 0" class="sales-rank-list">
+              <div v-for="(dish, index) in dishSalesRank" :key="dish.name" class="sales-rank-item">
+                <div class="rank-badge" :class="`rank-${index + 1}`">
+                  <span class="rank-number">{{ index + 1 }}</span>
+                </div>
+                <div class="dish-info">
+                  <div class="dish-name">
+                    <el-icon class="dish-icon"><Food /></el-icon>
+                    {{ dish.name }}
+                  </div>
+                  <div class="dish-sales">销量: {{ dish.sales }} 份</div>
+                </div>
+                <div class="dish-revenue">
+                  <span class="revenue-label">销售额</span>
+                  <span class="revenue-value">{{ formatFullCurrency(dish.revenue) }}</span>
+                </div>
+              </div>
             </div>
-            <div class="dish-revenue">¥{{ dish.revenue }}</div>
-          </div>
-        </div>
-        <div v-else class="no-data-placeholder">暂时没有数据提供</div>
-      </div>
+            <div v-else class="no-data-placeholder">
+              <el-empty description="暂时没有数据提供" :image-size="100" />
+            </div>
+          </el-card>
+        </el-col>
+      </el-row>
     </div>
   </div>
 </template>
 
 <style scoped lang="less">
 .statistics-container {
-  padding: 0 20px 20px 20px;
+  padding: 20px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+  min-height: calc(100vh - 40px);
 
+  // 页面头部
   .stats-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
+    padding: 20px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
 
-    .page-title {
-      font-size: 1.286rem /* 原值: 18px */;
-      font-weight: 600;
-      margin: 0;
+    .header-left {
+      .page-title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 1.714rem;
+        font-weight: 600;
+        margin: 0;
+        color: #303133;
+
+        .title-icon {
+          font-size: 2rem;
+          color: #409eff;
+        }
+      }
     }
 
-    .time-range-selector {
-      display: flex;
-      gap: 8px;
+    .header-right {
+      .time-range-selector {
+        display: flex;
+        gap: 8px;
 
-      .time-range-tag {
-        cursor: pointer;
-        &:hover {
-          opacity: 0.8;
+        .time-range-tag {
+          cursor: pointer;
+          transition: all 0.3s ease;
+          padding: 8px 16px;
+          font-size: 0.929rem;
+          border-radius: 8px;
+
+          &:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(64, 158, 255, 0.2);
+          }
         }
       }
     }
   }
 
   .stats-content {
+    // 统计卡片样式
     .basic-stats-section {
-      display: flex;
-      gap: 20px;
-      margin-bottom: 24px;
-      flex-wrap: wrap;
+      margin-bottom: 20px;
 
       .stat-card {
         display: flex;
-        align-items: center;
+        flex-direction: column;
         gap: 16px;
-        background-color: #fff;
         padding: 20px;
-        border-radius: 8px;
-        box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
-        min-width: 200px;
-        flex: 1;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s ease;
+        cursor: default;
+        min-height: 120px;
 
-        .stat-icon {
-          font-size: 2.286rem /* 原值: 32px */;
+        &:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
         }
 
-        .stat-info {
-          .stat-label {
-            font-size: 1rem /* 原值: 14px */;
-            color: #606266;
-            margin-bottom: 4px;
+        // 第一行：图标 + 数值
+        .stat-row-first {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          flex: 1;
+
+          .stat-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            font-size: 1.5rem;
+            color: white;
+            flex-shrink: 0;
           }
 
           .stat-value {
-            font-size: 1.429rem /* 原值: 20px */;
-            font-weight: 600;
+            font-size: clamp(1.286rem, 3vw, 2.286rem);
+            font-weight: 700;
             color: #303133;
-          }
-        }
-      }
-    }
-
-    .order-trend-section {
-      background-color: #fff;
-      border-radius: 8px;
-      padding: 16px;
-      margin-bottom: 20px;
-      box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
-
-      .section-title {
-        font-size: 1.143rem /* 原值: 16px */;
-        font-weight: 600;
-        margin-bottom: 20px;
-      }
-
-      .chart-container {
-        min-height: 250px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 100%;
-
-        .chart-placeholder {
-          color: #909399;
-          font-size: 1rem /* 原值: 14px */;
-        }
-      }
-    }
-
-    .dish-sales-section {
-      background-color: #fff;
-      border-radius: 8px;
-      padding: 16px;
-      box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
-
-      .section-title {
-        font-size: 1.143rem /* 原值: 16px */;
-        font-weight: 600;
-        margin-bottom: 20px;
-      }
-
-      .no-data-placeholder {
-        color: #909399;
-        font-size: 1rem /* 原值: 14px */;
-        padding: 40px 0;
-        text-align: center;
-      }
-
-      .sales-rank-list {
-        .sales-rank-item {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          padding: 12px 0;
-          border-bottom: 1px solid #eee;
-
-          &:last-child {
-            border-bottom: none;
-          }
-
-          .rank-number {
-            font-size: 1.286rem /* 原值: 18px */;
-            font-weight: 600;
-            width: 30px;
-            text-align: center;
-          }
-
-          .dish-info {
+            line-height: 1.2;
             flex: 1;
-
-            .dish-name {
-              font-size: 1rem /* 原值: 14px */;
-              font-weight: 500;
-              margin-bottom: 4px;
-            }
-
-            .dish-sales {
-              font-size: 0.857rem /* 原值: 12px */;
-              color: #606266;
-            }
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
           }
+        }
 
-          .dish-revenue {
-            font-size: 1.143rem /* 原值: 16px */;
-            font-weight: 600;
+        // 第二行：描述
+        .stat-label {
+          font-size: 0.929rem;
+          color: #909399;
+          text-align: center;
+        }
+
+        // 不同颜色主题
+        &.stat-card-primary {
+          .stat-icon {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          }
+          .stat-value {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+          }
+        }
+
+        &.stat-card-success {
+          .stat-icon {
+            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+          }
+          .stat-value {
             color: #67c23a;
           }
+        }
+
+        &.stat-card-info {
+          .stat-icon {
+            background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
+          }
+          .stat-value {
+            color: #409eff;
+          }
+        }
+
+        &.stat-card-warning {
+          .stat-icon {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+          }
+          .stat-value {
+            color: #e6a23c;
+          }
+        }
+      }
+    }
+
+    // 图表卡片样式
+    .order-trend-section {
+      margin-bottom: 20px;
+
+      .chart-card {
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s ease;
+
+        &:hover {
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+        }
+
+        :deep(.el-card__header) {
+          background: linear-gradient(135deg, #fafbfc 0%, #f5f7fa 100%);
+          border-bottom: 1px solid #f0f0f0;
+          padding: 16px 24px;
+
+          .card-header {
+            .section-title {
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              margin: 0;
+              font-size: 1.143rem;
+              font-weight: 600;
+              color: #303133;
+
+              .title-icon {
+                font-size: 1.286rem;
+                color: #409eff;
+              }
+            }
+          }
+        }
+
+        :deep(.el-card__body) {
+          padding: 24px;
+        }
+
+        .chart-container {
+          min-height: 300px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+
+          .chart {
+            width: 100%;
+            height: 300px;
+          }
+
+          .chart-placeholder {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+        }
+      }
+    }
+
+    // 销量排行卡片样式
+    .dish-sales-section {
+      margin-bottom: 20px;
+
+      .rank-card {
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s ease;
+
+        &:hover {
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+        }
+
+        :deep(.el-card__header) {
+          background: linear-gradient(135deg, #fafbfc 0%, #f5f7fa 100%);
+          border-bottom: 1px solid #f0f0f0;
+          padding: 16px 24px;
+
+          .card-header {
+            .section-title {
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              margin: 0;
+              font-size: 1.143rem;
+              font-weight: 600;
+              color: #303133;
+
+              .title-icon {
+                font-size: 1.286rem;
+                color: #e6a23c;
+              }
+            }
+          }
+        }
+
+        :deep(.el-card__body) {
+          padding: 24px;
+        }
+
+        .no-data-placeholder {
+          text-align: center;
+          padding: 40px 0;
+        }
+
+        .sales-rank-list {
+          .sales-rank-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px;
+            border: 1px solid #ebeef5;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            background: white;
+            transition: all 0.3s ease;
+            animation: slideInUp 0.5s ease-out forwards;
+
+            &:last-child {
+              margin-bottom: 0;
+            }
+
+            &:hover {
+              box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+              transform: translateY(-3px);
+              border-color: #e6a23c;
+            }
+
+            .rank-badge {
+              width: 48px;
+              height: 48px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              border-radius: 12px;
+              flex-shrink: 0;
+              background: #f0f2f5;
+
+              .rank-number {
+                font-size: 1.286rem;
+                font-weight: 700;
+                color: #606266;
+              }
+
+              // 前三名特殊样式
+              &.rank-1 {
+                background: linear-gradient(135deg, #ffd700, #ffed4e);
+                box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
+
+                .rank-number {
+                  color: #fff;
+                  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+                }
+              }
+
+              &.rank-2 {
+                background: linear-gradient(135deg, #c0c0c0, #e8e8e8);
+                box-shadow: 0 4px 12px rgba(192, 192, 192, 0.3);
+
+                .rank-number {
+                  color: #fff;
+                  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+                }
+              }
+
+              &.rank-3 {
+                background: linear-gradient(135deg, #cd7f32, #e3a869);
+                box-shadow: 0 4px 12px rgba(205, 127, 50, 0.3);
+
+                .rank-number {
+                  color: #fff;
+                  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+                }
+              }
+            }
+
+            .dish-info {
+              flex: 1;
+
+              .dish-name {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-size: 1rem;
+                font-weight: 600;
+                margin-bottom: 6px;
+                color: #303133;
+
+                .dish-icon {
+                  color: #e6a23c;
+                  font-size: 1.143rem;
+                }
+              }
+
+              .dish-sales {
+                font-size: 0.857rem;
+                color: #909399;
+              }
+            }
+
+            .dish-revenue {
+              display: flex;
+              flex-direction: column;
+              align-items: flex-end;
+              gap: 4px;
+
+              .revenue-label {
+                font-size: 0.857rem;
+                color: #909399;
+              }
+
+              .revenue-value {
+                font-size: 1.286rem;
+                font-weight: 700;
+                color: #67c23a;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// 动画定义
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// 响应式布局
+@media (max-width: 1200px) {
+  .statistics-container {
+    .stats-content {
+      .basic-stats-section {
+        .el-col {
+          margin-bottom: 16px;
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .statistics-container {
+    padding: 12px;
+
+    .stats-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .stats-content {
+      .basic-stats-section {
+        .el-col {
+          margin-bottom: 12px;
         }
       }
     }
