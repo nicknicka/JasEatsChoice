@@ -560,7 +560,8 @@ const toggleSelectAll = () => {
 
     <div class="menu-list">
       <div class="menu-list-container">
-        <div class="menu-item" v-for="menu in paginatedMenus" :key="menu.id">
+        <transition-group name="list">
+          <div class="menu-item" v-for="menu in paginatedMenus" :key="menu.id">
           <div class="menu-selection">
             <el-checkbox
               :model-value="selectedMenus.includes(menu)"
@@ -699,7 +700,8 @@ const toggleSelectAll = () => {
               </el-button>
             </div>
           </div>
-        </div>
+          </div>
+        </transition-group>
       </div>
     </div>
 
@@ -879,6 +881,12 @@ const toggleSelectAll = () => {
     margin-bottom: 24px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
     border: 1px solid #e9ecef;
+    transition: all 0.3s ease;
+
+    &:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      transform: translateY(-2px);
+    }
   }
 
   .menu-filters {
@@ -904,14 +912,39 @@ const toggleSelectAll = () => {
         cursor: pointer;
         line-height: 28px; /* 增加行高确保图标和文字居中对齐 */
         white-space: nowrap !important; /* 强制标签内所有内容在同一行显示 */
-        &:hover {
-          opacity: 0.8;
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+
+        /* 激活状态 */
+        &[type="primary"] {
+          transform: scale(1.05);
+          box-shadow: 0 4px 12px rgba(64, 169, 255, 0.25);
         }
+
+        &:hover {
+          opacity: 0.85;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        &:active {
+          transform: translateY(0) scale(0.98);
+        }
+
         // 确保标签内部元素也不换行
         :deep(.el-tag__content) {
           white-space: nowrap;
           display: inline-flex;
           align-items: center;
+          transition: transform 0.3s ease;
+        }
+
+        /* 图标旋转动画 */
+        :deep(.el-icon) {
+          transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+          &:hover {
+            transform: rotate(360deg) scale(1.2);
+          }
         }
       }
     }
@@ -923,13 +956,24 @@ const toggleSelectAll = () => {
     /* List transition animations */
     .list-enter-active,
     .list-leave-active {
-      transition: all 0.3s ease;
+      transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
     }
 
-    .list-enter-from,
+    .list-enter-from {
+      opacity: 0;
+      transform: translateY(20px) scale(0.95);
+    }
+
     .list-leave-to {
       opacity: 0;
-      transform: translateY(10px);
+      transform: translateX(-30px);
+      position: absolute;
+      width: 100%;
+    }
+
+    /* 列表移动时的动画 */
+    .list-move {
+      transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
     }
 
     .menu-item {
@@ -944,6 +988,20 @@ const toggleSelectAll = () => {
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
       position: relative;
       overflow: hidden;
+
+      /* 加载动画 */
+      animation: slideIn 0.4s ease-out;
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(20px) scale(0.95);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
 
       &::before {
         content: '';
