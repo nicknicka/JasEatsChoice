@@ -68,6 +68,12 @@ public class RecommendationServiceImpl implements RecommendationService {
         UserProfile profile = userProfileService.getUserProfile(userId);
 
         // 2. 获取用户拒绝的菜品列表（拒绝次数>=2的菜品）
+        // TODO: 将硬编码的阈值2改为从application.yml配置读取
+        // 配置项示例：recommendation.reject.threshold=2
+        // 实现步骤：
+        //   1. 在application.yml中添加配置项
+        //   2. 创建RecommendationConfig配置类（@ConfigurationProperties）
+        //   3. 注入RecommendationConfig并使用config.getReject().getThreshold()
         List<String> frequentlyRejectedDishIds = rejectRecommendationService.getFrequentlyRejectedDishIds(userId, 2);
         log.debug("用户拒绝的菜品：{}", frequentlyRejectedDishIds);
 
