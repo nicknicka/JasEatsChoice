@@ -66,9 +66,14 @@ export function parseMarkdown(text) {
   // 图片 (![alt](url))
   html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" />')
 
-  // 换行（两个空格+换行 或 单个换行）
-  html = html.replace(/ {2}\n/g, '<br>')
+  // 换行处理（连续的换行视为段落分隔）
+  // 先将连续的两个或更多换行符替换为段落分隔
+  html = html.replace(/\n{2,}/g, '</p><p>')
+  // 然后将单个换行符替换为br
   html = html.replace(/\n/g, '<br>')
+
+  // 包裹在段落标签中
+  html = '<p>' + html + '</p>'
 
   return html
 }

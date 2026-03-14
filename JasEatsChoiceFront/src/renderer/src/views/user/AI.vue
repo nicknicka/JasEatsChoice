@@ -1,41 +1,30 @@
 <template>
-  <div class="app-container">
-    <div class="main-content">
-      <el-main class="content-area">
-        <div class="ai-chat-container">
-          <div class="chat-header fade-in-up">
-            <h2>AI饮食助手</h2>
-            <div class="chat-info">
-              <el-tag type="success">在线</el-tag>
-            </div>
-          </div>
+  <el-main class="ai-page-content">
+    <div class="ai-chat-container">
+      <!-- 功能标签页 -->
+      <el-tabs v-model="activeTab" type="border-card" class="ai-tabs fade-in-up">
+        <!-- AI聊天 - 使用简化版组件 -->
+        <el-tab-pane label="AI聊天" name="chat">
+          <AIChatSimple />
+        </el-tab-pane>
 
-          <!-- 功能标签页 -->
-          <el-tabs v-model="activeTab" type="border-card" class="ai-tabs fade-in-up">
-            <!-- AI聊天 - 使用简化版组件 -->
-            <el-tab-pane label="AI聊天" name="chat">
-              <AIChatSimple />
-            </el-tab-pane>
+        <!-- 菜品识别 -->
+        <el-tab-pane label="菜品识别" name="recognition">
+          <DishRecognition />
+        </el-tab-pane>
 
-            <!-- 菜品识别 -->
-            <el-tab-pane label="菜品识别" name="recognition">
-              <DishRecognition />
-            </el-tab-pane>
+        <!-- 食谱优化 -->
+        <el-tab-pane label="食谱优化" name="recipe">
+          <RecipeOptimization />
+        </el-tab-pane>
 
-            <!-- 食谱优化 -->
-            <el-tab-pane label="食谱优化" name="recipe">
-              <RecipeOptimization />
-            </el-tab-pane>
-
-            <!-- 内容提取 - 新增 -->
-            <el-tab-pane label="内容提取" name="extraction">
-              <ContentExtractionTab />
-            </el-tab-pane>
-          </el-tabs>
-        </div>
-      </el-main>
+        <!-- 内容提取 - 新增 -->
+        <el-tab-pane label="内容提取" name="extraction">
+          <ContentExtractionTab />
+        </el-tab-pane>
+      </el-tabs>
     </div>
-  </div>
+  </el-main>
 </template>
 
 <script setup>
@@ -72,26 +61,12 @@ const activeTab = ref('chat')
 </script>
 
 <style scoped lang="less">
-.app-container {
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.main-content {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-}
-
-.content-area {
+/* AI页面内容区域 */
+.ai-page-content {
   padding: 20px 20px 0 20px;
   background-color: #fafafa;
-  overflow-y: auto;
   height: 100%;
   box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
 }
 
 .ai-chat-container {

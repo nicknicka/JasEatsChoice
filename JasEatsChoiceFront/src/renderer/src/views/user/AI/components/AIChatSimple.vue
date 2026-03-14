@@ -270,7 +270,7 @@ loadMessages()
         border-radius: 20px;
         line-height: 1.7;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        font-size: 1.071rem /* 原值: 15px */;
+        font-size: 0.929rem /* 原值: 15px，调整为13px */;
         white-space: pre-wrap;
         word-break: break-word;
 

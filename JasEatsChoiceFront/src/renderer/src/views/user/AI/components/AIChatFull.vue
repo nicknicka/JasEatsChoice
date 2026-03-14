@@ -58,45 +58,20 @@
 
     <!-- 底部容器 -->
     <div class="bottom-container" ref="bottomContainerRef">
-      <!-- 快捷提问面板 -->
-      <transition name="slide-down">
+      <!-- 快捷提问悬浮面板 -->
+      <transition name="slide-up">
         <div v-if="showQuickQuestions" class="quick-questions-panel">
-          <div class="quick-questions-header">
-            <span class="quick-questions-title">💡 快捷提问</span>
-            <el-button
-              :icon="Close"
-              circle
-              size="small"
-              text
-              @click="showQuickQuestions = false"
-            />
-          </div>
+          <div class="quick-questions-title">💡 快捷提问</div>
           <div class="quick-questions-list">
-            <el-tag
+            <div
               v-for="question in quickQuestions"
               :key="question"
               @click="handleQuickQuestion(question)"
-              class="question-tag"
-              type="info"
-              effect="plain"
+              class="question-item"
             >
               {{ question }}
-            </el-tag>
+            </div>
           </div>
-        </div>
-      </transition>
-
-      <!-- 重新显示快捷提问按钮 -->
-      <transition name="fade">
-        <div v-if="!showQuickQuestions && messages.length > 1" class="show-questions-btn">
-          <el-button
-            link
-            type="primary"
-            @click="showQuickQuestions = true"
-            size="small"
-          >
-            💡 显示快捷提问
-          </el-button>
         </div>
       </transition>
 
@@ -146,7 +121,7 @@
               <!-- 表情按钮 -->
               <el-tooltip content="表情" placement="top">
                 <el-button
-                  :icon="ChatDotRound"
+                  :icon="Operation"
                   circle
                   size="small"
                   @click="toggleEmoji"
@@ -171,29 +146,16 @@
                 />
               </el-tooltip>
 
-              <div class="toolbar-divider"></div>
-
-              <!-- 清空按钮 -->
-              <el-tooltip content="清空输入" placement="top">
-                <el-button
-                  :icon="Delete"
-                  circle
-                  size="small"
-                  @click="clearInput"
-                />
-              </el-tooltip>
-
               <!-- 清空对话按钮 -->
               <el-tooltip content="清空对话" placement="top">
                 <el-button
-                  :icon="ChatLineRound"
+                  :icon="Delete"
                   circle
                   size="small"
                   @click="clearChat"
                 />
               </el-tooltip>
-            </div>
-            <div class="toolbar-right">
+
               <!-- AI个性化数据开关 -->
               <el-tooltip content="开启后AI将使用您的个人数据提供个性化建议" placement="bottom">
                 <div style="display: flex; align-items: center; gap: 8px;">
@@ -203,6 +165,19 @@
                     size="small"
                   />
                 </div>
+              </el-tooltip>
+            </div>
+
+            <div class="toolbar-right">
+              <!-- 快捷提问按钮 -->
+              <el-tooltip content="快捷提问" placement="top">
+                <el-button
+                  :icon="QuestionFilled"
+                  circle
+                  size="small"
+                  @click="toggleQuickQuestions"
+                  :class="{ 'is-active': showQuickQuestions }"
+                />
               </el-tooltip>
             </div>
           </div>
@@ -259,7 +234,9 @@ import {
   Picture,
   ChatLineRound,
   DocumentCopy,
-  More
+  More,
+  Operation,
+  QuestionFilled
 } from '@element-plus/icons-vue'
 import { parseMarkdown } from '../../../../utils/markdownParser'
 import axios from 'axios'
@@ -732,6 +709,19 @@ const handleQuickQuestion = (question) => {
 // 切换表情面板
 const toggleEmoji = () => {
   showEmojiPicker.value = !showEmojiPicker.value
+  // 关闭快捷提问面板
+  if (showEmojiPicker.value) {
+    showQuickQuestions.value = false
+  }
+}
+
+// 切换快捷提问面板
+const toggleQuickQuestions = () => {
+  showQuickQuestions.value = !showQuickQuestions.value
+  // 关闭表情面板
+  if (showQuickQuestions.value) {
+    showEmojiPicker.value = false
+  }
 }
 
 // 选择表情
@@ -797,12 +787,6 @@ const removeUploadedImage = (imageId) => {
 }
 
 // 清空输入
-const clearInput = () => {
-  inputMessage.value = ''
-  uploadedImages.value = []
-  ElMessage.success('已清空')
-}
-
 // 清空对话
 const clearChat = () => {
   ElMessageBox.confirm('确定要清空所有聊天记录吗？', '提示', {
@@ -876,10 +860,11 @@ const clearChat = () => {
     })
 }
 
-// 点击外部关闭表情面板
+// 点击外部关闭表情面板和快捷提问面板
 const handleClickOutside = (event) => {
   if (bottomContainerRef.value && !bottomContainerRef.value.contains(event.target)) {
     showEmojiPicker.value = false
+    showQuickQuestions.value = false
   }
 }
 
@@ -1093,7 +1078,7 @@ onUnmounted(() => {
         border-radius: 20px;
         line-height: 1.7;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        font-size: 1.071rem /* 原值: 15px */;
+        font-size: 0.929rem /* 原值: 15px，调整为13px */;
         white-space: pre-wrap;
         word-break: break-word;
         display: inline;
@@ -1152,17 +1137,22 @@ onUnmounted(() => {
         &.markdown-content {
           // 标题
           :deep(h1), :deep(h2), :deep(h3) {
-            margin: 12px 0 8px 0;
+            margin: 8px 0 6px 0; /* 减小标题间距 */
             font-weight: 600;
             line-height: 1.4;
           }
 
-          :deep(h1) { font-size: 1.429rem /* 原值: 20px */; }
-          :deep(h2) { font-size: 1.286rem /* 原值: 18px */; }
-          :deep(h3) { font-size: 1.143rem /* 原值: 16px */; }
+          :deep(h1) { font-size: 1.286rem /* 原值: 20px，改为18px */; }
+          :deep(h2) { font-size: 1.143rem /* 原值: 18px，改为16px */; }
+          :deep(h3) { font-size: 1rem /* 原值: 16px，改为14px */; }
 
           &:first-child {
             margin-top: 0;
+          }
+
+          // 段落
+          :deep(p) {
+            margin: 4px 0; /* 减小段落间距 */
           }
         }
 
@@ -1170,14 +1160,14 @@ onUnmounted(() => {
         :deep(pre) {
           background: rgba(0, 0, 0, 0.05);
           border-radius: 8px;
-          padding: 10px;
-          margin: 8px 0;
+          padding: 8px; /* 减小内边距 */
+          margin: 6px 0; /* 减小外边距 */
           overflow-x: auto;
 
           code {
             font-family: 'Courier New', monospace;
-            font-size: 0.929rem /* 原值: 13px */;
-            line-height: 1.5;
+            font-size: 0.857rem /* 原值: 13px，改为12px */;
+            line-height: 1.4; /* 减小行高 */
             color: #333;
           }
         }
@@ -1185,10 +1175,10 @@ onUnmounted(() => {
         // 行内代码
         :deep(code:not(pre code)) {
           background: rgba(0, 0, 0, 0.05);
-          padding: 2px 6px;
+          padding: 2px 5px; /* 稍微减小内边距 */
           border-radius: 4px;
           font-family: 'Courier New', monospace;
-          font-size: 0.9em;
+          font-size: 0.85em; /* 稍微减小行内代码 */
         }
 
         // 粗体和斜体
@@ -1213,17 +1203,17 @@ onUnmounted(() => {
 
         // 列表
         :deep(ul), :deep(ol) {
-          margin: 8px 0;
-          padding-left: 20px;
+          margin: 6px 0; /* 减小列表间距 */
+          padding-left: 18px; /* 稍微减小缩进 */
         }
 
         :deep(li) {
-          margin: 4px 0;
+          margin: 3px 0; /* 减小列表项间距 */
         }
 
         // 换行
         :deep(br) {
-          line-height: 1.5;
+          line-height: 1.2; /* 减小空行高度 */
         }
       }
 
@@ -1252,60 +1242,59 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  position: relative; /* 为绝对定位的 emoji panel 提供定位上下文 */
 }
 
-// 快捷提问面板
+// 快捷提问悬浮面板
 .quick-questions-panel {
-  background: linear-gradient(135deg, #f0f9ff 0%, #e8f4fd 100%);
-  border: 1px solid #d1e9ff;
-  border-radius: 12px;
-  padding: 12px 16px;
-  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.08);
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  margin-bottom: 8px;
+  background: #ffffff;
+  border: 1px solid #e8ecef;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  max-width: 280px;
+  z-index: 1000; /* 与 emoji panel 相同层级 */
 
-  .quick-questions-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+  .quick-questions-title {
+    font-size: 0.929rem /* 原值: 13px */;
+    font-weight: 600;
+    color: #606266;
     margin-bottom: 10px;
-
-    .quick-questions-title {
-      font-size: 1rem /* 原值: 14px */;
-      font-weight: 600;
-      color: #2c7be5;
-    }
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e8ecef;
   }
 
   .quick-questions-list {
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
+    flex-direction: column;
+    gap: 4px;
 
-    .question-tag {
-      margin: 0;
-      padding: 6px 14px;
+    .question-item {
+      padding: 8px 12px;
+      font-size: 0.857rem /* 原值: 12px */;
+      color: #606266;
+      background: #f5f7fa;
+      border-radius: 6px;
       cursor: pointer;
-      transition: all 0.3s ease;
-      font-size: 0.929rem /* 原值: 13px */;
-      font-weight: 500;
-      border-radius: 20px;
-      background-color: #fff;
-      border-color: #b3e0ff;
-      color: #409eff;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      text-align: left;
+      line-height: 1.4;
 
       &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(64, 158, 255, 0.25);
         background: linear-gradient(135deg, #409eff 0%, #5dade2 100%);
-        color: #fff;
-        border-color: transparent;
+        color: #ffffff;
+        transform: translateX(4px);
+      }
+
+      &:active {
+        transform: translateX(2px);
       }
     }
   }
-}
-
-.show-questions-btn {
-  text-align: center;
-  padding: 4px 0;
 }
 
 // 已上传图片预览
@@ -1358,16 +1347,18 @@ onUnmounted(() => {
 
 // 表情面板
 .emoji-panel {
-  position: relative;
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 8px;
   background: #ffffff;
   border: 1px solid #e8ecef;
   border-radius: 8px;
   padding: 10px;
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
-  margin-bottom: 0;
   max-height: 180px;
   overflow-y: auto;
-  z-index: 100;
+  z-index: 1000; /* 提高 z-index 确保浮在最上层 */
 
   &::-webkit-scrollbar {
     width: 6px;
