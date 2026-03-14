@@ -907,8 +907,33 @@ const handlePersonalDataToggle = async (value) => {
 // 复制消息
 const copyMessage = async (content) => {
   try {
-    await navigator.clipboard.writeText(content)
-    ElMessage.success('复制成功')
+    // 优先尝试使用现代剪贴板API
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(content)
+      ElMessage.success('复制成功')
+      return
+    }
+
+    // Fallback: 使用传统方法创建临时文本区域
+    const textArea = document.createElement('textarea')
+    textArea.value = content
+    textArea.style.position = 'fixed'
+    textArea.style.left = '-999999px'
+    textArea.style.top = '-999999px'
+    document.body.appendChild(textArea)
+    textArea.focus()
+    textArea.select()
+
+    try {
+      const successful = document.execCommand('copy')
+      if (successful) {
+        ElMessage.success('复制成功')
+      } else {
+        throw new Error('execCommand failed')
+      }
+    } finally {
+      document.body.removeChild(textArea)
+    }
   } catch (error) {
     console.error('复制失败:', error)
     ElMessage.error('复制失败,请手动复制')

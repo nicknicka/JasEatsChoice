@@ -8,10 +8,9 @@
 export const STATUS_PRIORITY = {
   pending: 1, // 待支付 - 最高优先级
   pendingAccept: 2, // 待接单
-  processing: 3, // 进行中
-  delivered: 4, // 已上菜
-  reviewed: 5, // 已评价
-  cancelled: 6 // 已取消 - 最低优先级
+  preparing: 3, // 制作中
+  completed: 4, // 已完成
+  cancelled: 5 // 已取消 - 最低优先级
 }
 
 /**
@@ -19,12 +18,10 @@ export const STATUS_PRIORITY = {
  */
 export const ORDER_STATUS_MAP = {
   all: '全部订单',
+  pending: '待支付',
   pendingAccept: '待接单',
-  processing: '进行中',
-  pending: '待确认',
-  pendingComment: '待评价',
-  delivered: '已上菜',
-  reviewed: '已评价',
+  preparing: '制作中',
+  completed: '已完成',
   cancelled: '已取消'
 }
 
@@ -32,13 +29,11 @@ export const ORDER_STATUS_MAP = {
  * 订单状态标签样式映射
  */
 export const STATUS_TAG_TYPE_MAP = {
-  pendingAccept: 'warning',
-  processing: 'primary',
-  pending: 'info',
-  pendingComment: 'info',
-  delivered: 'success',
-  reviewed: 'success', // 已评价
-  cancelled: 'danger'
+  pending: 'warning', // 待支付
+  pendingAccept: 'warning', // 待接单
+  preparing: 'primary', // 制作中
+  completed: 'success', // 已完成
+  cancelled: 'danger' // 已取消
 }
 
 /**
@@ -46,28 +41,28 @@ export const STATUS_TAG_TYPE_MAP = {
  */
 export const STATUS_LIST = [
   { value: 'all', label: '全部订单' },
-  { value: 'pendingAccept', label: '待接单' },
-  { value: 'processing', label: '进行中' },
   { value: 'pending', label: '待支付' },
-  { value: 'pendingComment', label: '待评价' },
-  { value: 'delivered', label: '已上菜' },
-  { value: 'reviewed', label: '已评价' },
+  { value: 'pendingAccept', label: '待接单' },
+  { value: 'preparing', label: '制作中' },
+  { value: 'completed', label: '已完成' },
   { value: 'cancelled', label: '已取消' }
 ]
 
 /**
  * 后端状态码到前端状态的映射
+ * 旧状态兼容：0-待支付、1-待接单、2-备菜中、3-烹饪中、4-待上菜、5-已送达、6-已取消、7-待评价、8-已评价
+ * 新状态：0-待支付、1-待接单、2-制作中、3-已完成、4-已取消
  */
 const BACKEND_STATUS_MAP = {
   0: 'pending', // 待支付
   1: 'pendingAccept', // 待接单
-  2: 'processing', // 备菜中
-  3: 'processing', // 烹饪中
-  4: 'processing', // 待上菜
-  5: 'delivered', // 已上菜
+  2: 'preparing', // 制作中（包含备菜、烹饪、待上菜）
+  3: 'preparing', // 兼容旧状态：烹饪中 → 制作中
+  4: 'preparing', // 兼容旧状态：待上菜 → 制作中
+  5: 'completed', // 兼容旧状态：已送达 → 已完成
   6: 'cancelled', // 已取消
-  7: 'pendingComment', // 待评价（已完成但未评价）
-  8: 'reviewed' // 已评价（已完成并已评价）
+  7: 'completed', // 兼容旧状态：待评价 → 已完成
+  8: 'completed' // 兼容旧状态：已评价 → 已完成
 }
 
 /**
@@ -112,7 +107,7 @@ export function getStatusPriority(status) {
  * @returns {boolean}
  */
 export function canCancelOrder(status) {
-  return status === 'pendingAccept'
+  return status === 'pending' || status === 'pendingAccept'
 }
 
 /**
@@ -121,16 +116,7 @@ export function canCancelOrder(status) {
  * @returns {boolean}
  */
 export function canConfirmReceipt(status) {
-  const canConfirm = status === 'delivered'
-  console.log('📦 orderStatus.canConfirmReceipt', {
-    inputStatus: status,
-    statusText: ORDER_STATUS_MAP[status],
-    canConfirm,
-    requiredStatus: 'delivered',
-    requiredStatusText: '已上菜',
-    timestamp: new Date().toISOString()
-  })
-  return canConfirm
+  return status === 'preparing'
 }
 
 /**
@@ -139,5 +125,5 @@ export function canConfirmReceipt(status) {
  * @returns {boolean}
  */
 export function canEvaluateOrder(status) {
-  return status === 'pendingComment'
+  return status === 'completed'
 }

@@ -385,6 +385,15 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
             Object contentObj = response.getData().getChoices().get(0).getMessage().getContent();
             String content = contentObj != null ? contentObj.toString() : "";
 
+            // 清理AI返回内容中的markdown代码块标记
+            if (content.contains("```")) {
+                // 移除 ```json 或 ``` 标记
+                content = content.replaceAll("```json\\s*", "")
+                                .replaceAll("```\\s*", "");
+                // 移除结尾的 ```标记
+                content = content.replaceAll("\\s*```$", "");
+            }
+
             // 解析JSON返回
             JsonNode jsonNode = objectMapper.readTree(content);
             List<Map<String, Object>> recipes = new ArrayList<>();
@@ -476,6 +485,13 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
             Object contentObj = response.getData().getChoices().get(0).getMessage().getContent();
             String content = contentObj != null ? contentObj.toString() : "";
 
+            // 清理AI返回内容中的markdown代码块标记
+            if (content.contains("```")) {
+                content = content.replaceAll("```json\\s*", "")
+                                .replaceAll("```\\s*", "");
+                content = content.replaceAll("\\s*```$", "");
+            }
+
             JsonNode jsonNode = objectMapper.readTree(content);
             Map<String, Object> result = new HashMap<>();
             result.put("name", jsonNode.get("name").asText());
@@ -523,6 +539,13 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
             var response = zhipuClient.chat().createChatCompletion(request);
             Object contentObj = response.getData().getChoices().get(0).getMessage().getContent();
             String content = contentObj != null ? contentObj.toString() : "";
+
+            // 清理AI返回内容中的markdown代码块标记
+            if (content.contains("```")) {
+                content = content.replaceAll("```json\\s*", "")
+                                .replaceAll("```\\s*", "");
+                content = content.replaceAll("\\s*```$", "");
+            }
 
             JsonNode jsonNode = objectMapper.readTree(content);
             Map<String, Object> result = new HashMap<>();

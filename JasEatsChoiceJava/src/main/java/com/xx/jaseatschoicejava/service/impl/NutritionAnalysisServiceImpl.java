@@ -3,13 +3,16 @@ package com.xx.jaseatschoicejava.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.xx.jaseatschoicejava.dto.NutritionInfo;
 import com.xx.jaseatschoicejava.entity.Dish;
+import com.xx.jaseatschoicejava.entity.JFoodNutrition;
 import com.xx.jaseatschoicejava.service.DishService;
+import com.xx.jaseatschoicejava.service.JFoodNutritionService;
 import com.xx.jaseatschoicejava.service.NutritionAnalysisService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -30,6 +33,9 @@ public class NutritionAnalysisServiceImpl implements NutritionAnalysisService {
     @Resource
     private com.xx.jaseatschoicejava.service.NutritionService nutritionService;
 
+    @Resource
+    private com.xx.jaseatschoicejava.service.JFoodNutritionService jFoodNutritionService;
+
     /**
      * 默认份量（克）
      */
@@ -45,21 +51,35 @@ public class NutritionAnalysisServiceImpl implements NutritionAnalysisService {
         log.info("分析食物营养：{}，份量：{}克", foodName, portion);
 
         try {
-            // 1. 优先查询中国食物成分表（最准确）
+            // 1. 优先查询j_food_nutrition表（1346条食物数据）✅ 最全面
+            JFoodNutrition jFoodNutrition = jFoodNutritionService.getByFoodName(foodName);
+            if (jFoodNutrition != null) {
+                log.info("从j_food_nutrition表找到食物：{}", foodName);
+                return buildNutritionInfoFromJFoodDatabase(jFoodNutrition, portion);
+            }
+
+            // 2. 模糊匹配j_food_nutrition表
+            List<JFoodNutrition> jFoodList = jFoodNutritionService.searchByFoodName(foodName);
+            if (!jFoodList.isEmpty()) {
+                log.info("通过模糊匹配从j_food_nutrition找到食物：{}，匹配结果：{}", foodName, jFoodList.get(0).getFoodName());
+                return buildNutritionInfoFromJFoodDatabase(jFoodList.get(0), portion);
+            }
+
+            // 3. 查询t_nutrition表（中国食物成分表）
             com.xx.jaseatschoicejava.entity.Nutrition nutritionData = nutritionService.getByFoodName(foodName);
             if (nutritionData != null) {
-                log.info("从中国食物成分表找到食物：{}", foodName);
+                log.info("从t_nutrition表找到食物：{}", foodName);
                 return buildNutritionInfoFromDatabase(nutritionData, portion);
             }
 
-            // 2. 尝试模糊匹配
+            // 4. 模糊匹配t_nutrition表
             List<com.xx.jaseatschoicejava.entity.Nutrition> nutritionList = nutritionService.searchByFoodName(foodName);
             if (!nutritionList.isEmpty()) {
-                log.info("通过模糊匹配找到食物：{}，匹配结果：{}", foodName, nutritionList.get(0).getFoodName());
+                log.info("通过模糊匹配从t_nutrition找到食物：{}", foodName);
                 return buildNutritionInfoFromDatabase(nutritionList.get(0), portion);
             }
 
-            // 3. 从t_dish表查询菜品信息（次优）
+            // 5. 从t_dish表查询菜品信息（校内菜品）
             QueryWrapper<Dish> queryWrapper = new QueryWrapper<>();
             queryWrapper.like("name", foodName)
                     .eq("is_online", true)
@@ -71,7 +91,7 @@ public class NutritionAnalysisServiceImpl implements NutritionAnalysisService {
                 return buildNutritionInfoFromDish(dish, portion);
             }
 
-            // 4. 如果数据库中没有，使用默认估算
+            // 6. 如果数据库中没有，使用默认估算
             log.warn("数据库中未找到食物：{}，使用默认估算", foodName);
             return createDefaultNutritionInfo(foodName, portion);
 
@@ -82,13 +102,100 @@ public class NutritionAnalysisServiceImpl implements NutritionAnalysisService {
     }
 
     /**
+     * 从j_food_nutrition表数据构建营养信息（优先数据源）
+     */
+    private NutritionInfo buildNutritionInfoFromJFoodDatabase(JFoodNutrition food, int portion) {
+        log.info("使用j_food_nutrition表数据：{}, 份量：{}克", food.getFoodName(), portion);
+
+        // 按份量比例计算营养值
+        BigDecimal ratio = new BigDecimal(portion).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+
+        // 解析能量（可能是"1497kJ"或"357kcal"格式）
+        BigDecimal calories = parseCalories(food.getEnergy()).multiply(ratio);
+
+        return NutritionInfo.builder()
+                .foodName(food.getFoodName())
+                .portion(new BigDecimal(portion))
+                .calories(calories)
+                .protein(parseNutrientValue(food.getProtein()).multiply(ratio))
+                .fat(parseNutrientValue(food.getFat()).multiply(ratio))
+                .carbohydrates(parseNutrientValue(food.getCarbohydrate()).multiply(ratio))
+                .dietaryFiber(parseNutrientValue(food.getDietaryFiber()).multiply(ratio))
+                .sodium(parseNutrientValue(food.getSodium()).multiply(ratio))
+                .dataSource("中国食物成分表（1346条）")
+                .nutritionGrade(calculateNutritionGradeFromKcal(calories))
+                .healthAdvice(generateHealthAdviceFromKcal(calories))
+                .build();
+    }
+
+    /**
+     * 解析卡路里值（支持kJ和kcal格式）
+     */
+    private BigDecimal parseCalories(String energyStr) {
+        if (energyStr == null || energyStr.isEmpty()) {
+            return new BigDecimal("250");
+        }
+
+        try {
+            // 移除空格
+            energyStr = energyStr.trim();
+
+            // 如果包含kJ，转换为kcal（1kJ ≈ 0.239kcal）
+            if (energyStr.toLowerCase().contains("kj")) {
+                String numStr = energyStr.toLowerCase().replace("kj", "").trim();
+                BigDecimal kj = new BigDecimal(numStr);
+                return kj.multiply(new BigDecimal("0.239")).setScale(1, BigDecimal.ROUND_HALF_UP);
+            }
+
+            // 如果包含kcal或cal
+            if (energyStr.toLowerCase().contains("kcal") || energyStr.toLowerCase().contains("cal")) {
+                String numStr = energyStr.toLowerCase()
+                    .replace("kcal", "").replace("cal", "").trim();
+                return new BigDecimal(numStr);
+            }
+
+            // 纯数字
+            return new BigDecimal(energyStr);
+
+        } catch (Exception e) {
+            log.warn("解析能量值失败：{}，使用默认值", energyStr);
+            return new BigDecimal("250");
+        }
+    }
+
+    /**
+     * 解析营养素值（如"11.2g" -> 11.2）
+     */
+    private BigDecimal parseNutrientValue(String nutrientStr) {
+        if (nutrientStr == null || nutrientStr.isEmpty() || nutrientStr.equals("—")) {
+            return BigDecimal.ZERO;
+        }
+
+        try {
+            // 移除单位（g、mg等）
+            String numStr = nutrientStr.toLowerCase()
+                .replace("g", "").replace("mg", "").replace("μg", "").trim();
+
+            if (numStr.isEmpty() || numStr.equals("—") || numStr.equals("tr")) {
+                return BigDecimal.ZERO;
+            }
+
+            return new BigDecimal(numStr);
+
+        } catch (Exception e) {
+            log.warn("解析营养素值失败：{}，使用0", nutrientStr);
+            return BigDecimal.ZERO;
+        }
+    }
+
+    /**
      * 从中国食物成分表数据构建营养信息
      */
     private NutritionInfo buildNutritionInfoFromDatabase(com.xx.jaseatschoicejava.entity.Nutrition nutrition, int portion) {
         log.info("使用中国食物成分表数据：{}, 份量：{}克", nutrition.getFoodName(), portion);
 
         // 按份量比例计算营养值
-        BigDecimal ratio = new BigDecimal(portion).divide(new BigDecimal("100"), 2, BigDecimal.ROUND_HALF_UP);
+        BigDecimal ratio = new BigDecimal(portion).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
 
         return NutritionInfo.builder()
                 .foodName(nutrition.getFoodName())
@@ -112,7 +219,7 @@ public class NutritionAnalysisServiceImpl implements NutritionAnalysisService {
         log.info("使用t_dish表数据：{}, 份量：{}克", dish.getName(), portion);
 
         // 按份量比例计算
-        BigDecimal ratio = new BigDecimal(portion).divide(new BigDecimal("100"), 2, BigDecimal.ROUND_HALF_UP);
+        BigDecimal ratio = new BigDecimal(portion).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
         BigDecimal calories = dish.getCalorie() != null
             ? new BigDecimal(dish.getCalorie()).multiply(ratio)
             : new BigDecimal("250");

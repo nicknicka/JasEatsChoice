@@ -153,44 +153,20 @@ public class OrderController {
             if (success) {
                 // 根据状态发送通知
                 switch (status) {
-                    case 2: // 备菜中
+                    case 2: // 制作中
                         NotificationUtil.createOrderNotification(
                             order.getUserId(),
                             NotificationTypeEnum.ORDER_PREPARING_COMPLETE,
                             orderId,
-                            "备菜中"
+                            "制作中"
                         );
                         break;
-                    case 3: // 烹饪中
-                        NotificationUtil.createOrderNotification(
-                            order.getUserId(),
-                            NotificationTypeEnum.ORDER_COOKING_COMPLETE,
-                            orderId,
-                            "烹饪中"
-                        );
-                        break;
-                    case 4: // 待上菜
-                        NotificationUtil.createOrderNotification(
-                            order.getUserId(),
-                            NotificationTypeEnum.ORDER_WAITING_SERVING,
-                            orderId,
-                            "待上菜"
-                        );
-                        break;
-                    case 5: // 确认送达
+                    case 3: // 已完成
                         NotificationUtil.createOrderNotification(
                             order.getUserId(),
                             NotificationTypeEnum.ORDER_DELIVERED,
                             orderId,
-                            "已送达"
-                        );
-                        break;
-                    case 7: // 订单完成，待评价
-                        NotificationUtil.createOrderNotification(
-                            order.getUserId(),
-                            NotificationTypeEnum.ORDER_COMPLETE,
-                            orderId,
-                            "待评价"
+                            "已完成"
                         );
                         break;
                 }

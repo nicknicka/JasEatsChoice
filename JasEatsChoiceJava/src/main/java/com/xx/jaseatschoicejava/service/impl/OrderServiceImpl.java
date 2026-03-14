@@ -408,7 +408,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
      */
     private boolean isFinalStatus(Integer status) {
         // 终态：已完成、已取消
-        return status == 5 || status == 6;
+        return status == 3 || status == 4;
     }
 
     /**
@@ -421,13 +421,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         switch (status) {
             case 0: return "待支付";
             case 1: return "待接单";
-            case 2: return "备菜中";
-            case 3: return "烹饪中";
-            case 4: return "待上菜";
-            case 5: return "已送达";
-            case 6: return "已取消";
-            case 7: return "待评价";
-            case 8: return "已评价";
+            case 2: return "制作中";
+            case 3: return "已完成";
+            case 4: return "已取消";
             default: return "未知";
         }
     }
