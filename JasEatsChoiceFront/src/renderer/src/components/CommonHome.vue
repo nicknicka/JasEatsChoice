@@ -789,7 +789,7 @@ const handleSearch = (value) => {
         <div class="menu-content">
           <el-menu
             v-model:default-active="activeMenuIndex"
-            class="menu-list"
+            class="custom-menu menu-list"
             @select="handleMenuSelect"
             @open="handleMenuOpen"
             @close="handleMenuClose"
@@ -851,7 +851,11 @@ const handleSearch = (value) => {
 
         <!-- 设置菜单 - 固定在底部 -->
         <div class="setting-menu-container">
-          <el-menu class="setting-menu-list" @select="handleMenuSelect">
+          <el-menu
+            v-model:default-active="activeMenuIndex"
+            class="custom-menu setting-menu-list"
+            @select="handleMenuSelect"
+          >
             <template v-for="menuItem in currentMenu" :key="menuItem.index">
               <!-- 只渲染设置菜单 -->
               <el-menu-item
@@ -998,20 +1002,33 @@ const handleSearch = (value) => {
 
   /* 当一级菜单组包含激活的子菜单时，保持高亮 */
   /* 确保即使在 scoped 样式下，激活状态也能正确应用 */
-  .menu-list,
-  .setting-menu-list {
-    /* 设置菜单项字体大小为相对单位 */
+
+  /* ========== 自定义菜单字体响应式设置 ========== */
+  /* 使用 custom-menu 类名 + :deep() 穿透，配合相对单位 */
+  .custom-menu {
+    /* 菜单项和子菜单标题 - 使用相对单位响应全局字体设置 */
     :deep(.el-menu-item),
     :deep(.el-sub-menu__title) {
-      font-size: 1rem !important; /* 使用相对单位 */
+      font-size: 1em !important; /* 相对于父元素 */
     }
 
-    /* 菜单项内的文字 */
-    :deep(.el-menu-item span),
-    :deep(.el-sub-menu__title span) {
-      font-size: 1rem !important; /* 使用相对单位 */
+    /* 菜单项内的所有子元素（图标、文本等） */
+    :deep(.el-menu-item *),
+    :deep(.el-sub-menu__title *) {
+      font-size: 1em !important;
     }
 
+    /* 菜单项激活状态 */
+    :deep(.el-menu-item.is-active),
+    :deep(.el-sub-menu__title.is-active) {
+      background-color: var(--el-menu-item-hover-bg-color) !important;
+      color: var(--el-menu-active-color) !important;
+    }
+  }
+
+  .menu-list,
+  .setting-menu-list {
+    /* 保留原有的激活状态样式 */
     :deep(.el-menu-item.is-active),
     :deep(.el-sub-menu__title.is-active) {
       background-color: var(--el-menu-item-hover-bg-color) !important;

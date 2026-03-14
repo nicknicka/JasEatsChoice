@@ -32,9 +32,11 @@ onMounted(() => {
   </div>
 </template>
 
-<style scoped lang="less">
+<style lang="less">
+/* 移除 scoped，这是根容器样式 */
 .app-container {
   height: 100vh;
   width: 100%;
+  overflow: hidden; /* 防止出现双滚动条 */
 }
 </style>

@@ -615,24 +615,28 @@ const updateTheme = () => {
 // ✅ 已实现：通过在 body 上添加 font-small/medium/large/extra-large 类来实现全局字体大小调整
 // ✅ 已实现：主要内容区域（聊天、表单、按钮、卡片）使用 rem 相对单位，可以响应字体大小变化
 // ✅ 已实现：批量转换了 155 个文件的 1,618 处字体为 rem 单位
-// ⚠️  待优化：侧边栏菜单（el-menu）由于 Element Plus 组件限制，暂时无法完全响应字体大小变化
-// 💡 替代方案：如需侧边栏缩放，可考虑使用 CSS transform 或 JavaScript 动态调整
+// ✅ 已解决：侧边栏菜单字体现在通过全局样式中的 !important 规则响应字体大小变化
 const updateFontSize = () => {
-  // Remove all font size classes
+  // Remove all font size classes from both html and body
+  document.documentElement.classList.remove('font-small', 'font-medium', 'font-large', 'font-extra-large')
   document.body.classList.remove('font-small', 'font-medium', 'font-large', 'font-extra-large')
 
-  // Add the selected font size class
+  // Add the selected font size class to both html and body
   switch (fontSize.value) {
     case 'small':
+      document.documentElement.classList.add('font-small')
       document.body.classList.add('font-small')
       break
     case 'medium':
+      document.documentElement.classList.add('font-medium')
       document.body.classList.add('font-medium')
       break
     case 'large':
+      document.documentElement.classList.add('font-large')
       document.body.classList.add('font-large')
       break
     case 'extra-large':
+      document.documentElement.classList.add('font-extra-large')
       document.body.classList.add('font-extra-large')
       break
   }

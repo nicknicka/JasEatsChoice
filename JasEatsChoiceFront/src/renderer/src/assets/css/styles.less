@@ -9,19 +9,33 @@
 //   2. Element Plus 字体变量：--el-font-size-base 等变量
 //   3. 主题切换：通过 body.class (light-theme/dark-theme)
 //   4. Element Plus 组件适配：按钮、表单、菜单等
+//   5. 侧边栏菜单字体响应：通过 !important 覆盖 Element Plus 内联样式
 //
 // ⚠️ 待测试：
 //   - 请在不同页面测试深色/浅色主题切换效果
 //   - 请验证 Element Plus 组件在深色主题下的显示
 //
-// 💡 已知限制：
-//   - 侧边栏菜单字体无法响应 body 字体大小变化
-//   - 原因：Element Plus 菜单组件有内联样式优先级
-//   - 解决方案：如需优化，考虑使用 CSS transform
-//
 // ==========================================
 
-/* 字体大小设置 - 同时设置 body 和 Element Plus 变量 */
+/* ========== HTML 和 Body 基础重置 ========== */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden; /* 防止出现双滚动条 */
+}
+
+#app {
+  height: 100%;
+  width: 100%;
+}
+
+
+/* 字体大小设置 - 同时设置 html、body 和 Element Plus 变量 */
+/* html 根元素设置，使 rem 单位能正确响应 */
+html.font-small,
 body.font-small {
   font-size: 12px;
   --el-font-size-base: 12px;
@@ -32,6 +46,7 @@ body.font-small {
   --el-font-size-extra-large: 16px;
 }
 
+html.font-medium,
 body.font-medium {
   font-size: 14px;
   --el-font-size-base: 14px;
@@ -42,6 +57,7 @@ body.font-medium {
   --el-font-size-extra-large: 18px;
 }
 
+html.font-large,
 body.font-large {
   font-size: 16px;
   --el-font-size-base: 16px;
@@ -52,6 +68,7 @@ body.font-large {
   --el-font-size-extra-large: 20px;
 }
 
+html.font-extra-large,
 body.font-extra-large {
   font-size: 18px;
   --el-font-size-base: 18px;
@@ -61,6 +78,16 @@ body.font-extra-large {
   --el-font-size-large: 20px;
   --el-font-size-extra-large: 22px;
 }
+
+/* ========== 侧边栏菜单字体响应式说明 ==========
+ * 菜单字体响应式已移至 CommonHome.vue 组件内样式
+ * 使用 custom-menu 类名 + :deep() 样式穿透
+ * 采用相对单位 (1em) 自动继承全局字体设置
+ * 这样做的好处：
+ * 1. 不影响其他页面的 Element Plus 菜单组件
+ * 2. 使用相对单位自动响应 body 字体大小变化
+ * 3. 样式作用域更清晰，便于维护
+ * ========================================== */
 
 /* 浅色主题（默认） */
 body.light-theme {
@@ -332,28 +359,11 @@ body.dark-theme {
 }
 
 /* ==========================================
-   侧边栏菜单字体强制覆盖
-   ========================================== */
-
-/* 侧边栏菜单容器 */
-.sidebar-menu .el-menu,
-.sidebar-menu .menu-list,
-.sidebar-menu .setting-menu-list {
-  font-size: var(--el-font-size-base) !important;
-}
-
-/* 菜单项文字 */
-.sidebar-menu .el-menu-item,
-.sidebar-menu .el-sub-menu__title {
-  font-size: var(--el-font-size-base) !important;
-}
-
-/* 菜单项内的 span 和文本（不包括图标） */
-.sidebar-menu .el-menu-item span:not(.el-icon),
-.sidebar-menu .el-sub-menu__title span:not(.el-icon),
-.sidebar-menu .el-menu-item .menu-text {
-  font-size: var(--el-font-size-base) !important;
-}
+   侧边栏菜单字体响应式
+   ==========================================
+ * 已移至 CommonHome.vue 组件内样式
+ * 使用 custom-menu 类名进行样式隔离
+ * ========================================== */
 
 /* 顶部导航栏 */
 .top-nav-bar .logo,
