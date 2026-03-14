@@ -1,26 +1,48 @@
 package com.xx.jaseatschoicejava.service.impl;
 
+import ai.z.openapi.ZhipuAiClient;
+import ai.z.openapi.service.model.ChatCompletionCreateParams;
+import ai.z.openapi.service.model.ChatMessage;
+import ai.z.openapi.service.model.ToolCalls;
+import ai.z.openapi.service.model.ChatTool;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xx.jaseatschoicejava.ai.function.AiFunctionDefinitionsOptimized;
+import com.xx.jaseatschoicejava.ai.function.AiFunctionExecutorOptimized;
 import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 import com.xx.jaseatschoicejava.service.ZhipuAIService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import javax.annotation.Resource;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
- * 智谱AI服务实现类
+ * 智谱AI服务实现类（集成Function Calling）
+ * 使用官方SDK并支持完整的Function Calling功能
+ *
+ * @author Claude
+ * @since 2026-03-14
  */
+@Slf4j
 @Service
+@Primary  // 标记为主要实现，优先使用
 public class ZhipuAIServiceImpl implements ZhipuAIService {
 
-    private static final Logger log = LoggerFactory.getLogger(ZhipuAIServiceImpl.class);
+    @Resource
+    private ZhipuAiClient zhipuClient;
 
     @Resource
     private ZhipuAIConfig zhipuAIConfig;
+
+    @Resource
+    private AiFunctionExecutorOptimized functionExecutor;
+
+    @Resource
+    private AiFunctionDefinitionsOptimized functionDefinitions;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -102,937 +124,500 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
 
     @Override
     public String chat(String message, List<Map<String, String>> conversationHistory) {
-        long startTime = System.currentTimeMillis();
-
-        log.info("-> 智谱AI聊天服务调用开始");
-        log.info("请求模型: {}", zhipuAIConfig.getModel());
+        log.info("=== AI聊天请求（Function Calling版本） ===");
+        log.info("用户消息: {}", message);
 
         try {
-            // 构建请求体
-            Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("model", zhipuAIConfig.getModel());
+            // 1. 构建消息列表
+            List<ChatMessage> messages = buildMessages(message, conversationHistory);
 
-            // 构建消息列表
-            List<Map<String, String>> messages = new ArrayList<>();
+            // 2. 构建请求（包含工具函数定义）
+            ChatCompletionCreateParams request = ChatCompletionCreateParams.builder()
+                    .model(zhipuAIConfig.getModel())
+                    .messages(messages)
+                    .tools(convertToolDefinitionsToSDK())
+                    .temperature(0.7f)
+                    .build();
 
-            // 添加系统提示词
-            Map<String, String> systemMessage = new HashMap<>();
-            systemMessage.put("role", "system");
-            systemMessage.put("content", DIET_ASSISTANT_PROMPT);
-            messages.add(systemMessage);
+            log.debug("发送AI请求，模型: {}", zhipuAIConfig.getModel());
 
-            // 添加历史对话（如果有）
-            if (conversationHistory != null && !conversationHistory.isEmpty()) {
-                // 只保留最近的5轮对话，避免token超限
-                int historySize = Math.min(conversationHistory.size(), 10);
-                log.info("历史对话数量: {}, 保留: {}", conversationHistory.size(), historySize);
-                messages.addAll(conversationHistory.subList(
-                        conversationHistory.size() - historySize,
-                        conversationHistory.size()
-                ));
+            // 3. 调用SDK
+            var response = zhipuClient.chat().createChatCompletion(request);
+
+            if (response == null || response.getData() == null ||
+                response.getData().getChoices() == null || response.getData().getChoices().isEmpty()) {
+                log.warn("AI响应为空");
+                return "抱歉，AI服务暂时无响应，请稍后重试。";
             }
 
-            // 添加当前用户消息
-            Map<String, String> userMessage = new HashMap<>();
-            userMessage.put("role", "user");
-            userMessage.put("content", message);
-            messages.add(userMessage);
+            // 4. 处理响应
+            List<ToolCalls> toolCalls = response.getData().getChoices()
+                    .get(0)
+                    .getMessage()
+                    .getToolCalls();
 
-            requestBody.put("messages", messages);
-            log.info("总消息数: {}", messages.size());
-
-            // 可选参数（移除深度思考模式，glm-4-flash不支持）
-            requestBody.put("temperature", 0.7);
-            requestBody.put("top_p", 0.9);
-
-            // 发送请求（暂时不使用流式，保持原有逻辑）
-            log.info("发送HTTP请求到智谱AI...");
-            String response = sendRequest(requestBody);
-
-            long apiTime = System.currentTimeMillis() - startTime;
-            log.info("智谱AI API响应成功，耗时: {} ms", apiTime);
-
-            // 解析响应
-            JsonNode jsonResponse = objectMapper.readTree(response);
-            JsonNode choices = jsonResponse.get("choices");
-            if (choices != null && choices.isArray() && choices.size() > 0) {
-                JsonNode messageNode = choices.get(0).get("message");
-                if (messageNode != null) {
-                    JsonNode contentNode = messageNode.get("content");
-                    if (contentNode != null) {
-                        String content = contentNode.asText();
-                        log.info("AI回复内容预览: {}...",
-                            content.length() > 50 ? content.substring(0, 50) + "..." : content);
-
-                        long totalTime = System.currentTimeMillis() - startTime;
-                        log.info("-> 智谱AI聊天服务调用成功，总耗时: {} ms", totalTime);
-                        return content;
-                    }
-                }
+            // 如果需要调用工具函数
+            if (!CollectionUtils.isEmpty(toolCalls)) {
+                log.info("AI请求调用工具函数，数量: {}", toolCalls.size());
+                return handleToolCalls(messages, toolCalls);
             }
 
-            // 如果解析失败，返回默认回复
-            log.error("解析AI响应失败: {}", response);
-            log.warn("返回默认回复");
-            return "抱歉，我现在无法回复，请稍后再试。";
+            // 直接返回AI回复
+            Object contentObj = response.getData().getChoices().get(0).getMessage().getContent();
+            String content = contentObj != null ? contentObj.toString() : "";
+            log.info("AI直接回复: {}", content);
+            return content;
 
         } catch (Exception e) {
-            long totalTime = System.currentTimeMillis() - startTime;
-            log.error("智谱AI聊天服务调用失败，总耗时: {} ms", totalTime, e);
-            log.error("异常类型: {}", e.getClass().getSimpleName());
-            log.error("异常消息: {}", e.getMessage());
-            return "抱歉，服务暂时不可用，请稍后再试。错误：" + e.getMessage();
+            log.error("AI聊天失败", e);
+            return "抱歉，AI服务出现错误：" + e.getMessage();
         }
     }
 
+    /**
+     * 构建消息列表
+     */
+    private List<ChatMessage> buildMessages(String userMessage, List<Map<String, String>> conversationHistory) {
+        List<ChatMessage> messages = new ArrayList<>();
+
+        // 添加系统提示词
+        String systemPrompt = functionDefinitions != null ?
+                functionDefinitions.getPrimarySystemPrompt() : DIET_ASSISTANT_PROMPT;
+
+        if (systemPrompt != null && !systemPrompt.isEmpty()) {
+            messages.add(ChatMessage.builder()
+                    .role("system")
+                    .content(systemPrompt)
+                    .build());
+            log.debug("添加系统提示词，长度: {} 字符", systemPrompt.length());
+        }
+
+        // 添加历史对话
+        if (!CollectionUtils.isEmpty(conversationHistory)) {
+            for (Map<String, String> msg : conversationHistory) {
+                String role = msg.get("role");
+                String content = msg.get("content");
+
+                if ("user".equals(role)) {
+                    messages.add(ChatMessage.builder()
+                            .role("user")
+                            .content(content)
+                            .build());
+                } else if ("assistant".equals(role)) {
+                    messages.add(ChatMessage.builder()
+                            .role("assistant")
+                            .content(content)
+                            .build());
+                }
+            }
+            log.debug("添加历史对话，数量: {}", conversationHistory.size());
+        }
+
+        // 添加当前用户消息
+        messages.add(ChatMessage.builder()
+                .role("user")
+                .content(userMessage)
+                .build());
+
+        return messages;
+    }
+
+    /**
+     * 处理工具函数调用
+     */
+    private String handleToolCalls(List<ChatMessage> messages, List<ToolCalls> toolCalls) {
+        log.info("开始处理工具函数调用...");
+
+        // 添加AI的请求消息
+        ChatMessage assistantMessage = ChatMessage.builder()
+                .role("assistant")
+                .content("")
+                .toolCalls(toolCalls)
+                .build();
+        messages.add(assistantMessage);
+
+        // 执行所有工具函数
+        for (ToolCalls toolCall : toolCalls) {
+            String functionName = toolCall.getFunction().getName();
+            JsonNode argumentsJson = toolCall.getFunction().getArguments();
+
+            log.info("执行工具函数: {}", functionName);
+            log.debug("函数参数: {}", argumentsJson);
+
+            try {
+                // 解析参数
+                Map<String, Object> arguments = parseArguments(argumentsJson != null ? argumentsJson.toString() : null);
+
+                // 执行函数
+                String result = functionExecutor.executeFunction(functionName, arguments);
+
+                log.info("工具函数执行成功: {}, 结果长度: {} 字符", functionName,
+                        result != null ? result.length() : 0);
+
+                // 添加函数结果到对话
+                messages.add(ChatMessage.builder()
+                        .role("tool")
+                        .content(result)
+                        .toolCallId(toolCall.getId())
+                        .build());
+
+            } catch (Exception e) {
+                log.error("工具函数执行失败: {}", functionName, e);
+                String errorMsg = "错误：" + e.getMessage();
+                messages.add(ChatMessage.builder()
+                        .role("tool")
+                        .content(errorMsg)
+                        .toolCallId(toolCall.getId())
+                        .build());
+            }
+        }
+
+        // 再次调用AI，生成最终回复
+        try {
+            log.info("再次调用AI生成最终回复...");
+
+            ChatCompletionCreateParams followUpRequest = ChatCompletionCreateParams.builder()
+                    .model(zhipuAIConfig.getModel())
+                    .messages(messages)
+                    .tools(convertToolDefinitionsToSDK())
+                    .temperature(0.7f)
+                    .build();
+
+            var followUpResponse = zhipuClient.chat().createChatCompletion(followUpRequest);
+
+            if (followUpResponse == null || followUpResponse.getData() == null ||
+                    followUpResponse.getData().getChoices() == null ||
+                    followUpResponse.getData().getChoices().isEmpty()) {
+                return "抱歉，生成回复时出现错误。";
+            }
+
+            Object finalReplyObj = followUpResponse.getData().getChoices().get(0).getMessage().getContent();
+            String finalReply = finalReplyObj != null ? finalReplyObj.toString() : "";
+            log.info("AI最终回复: {}", finalReply);
+            return finalReply;
+
+        } catch (Exception e) {
+            log.error("工具函数调用后生成回复失败", e);
+            return "抱歉，处理您的请求时出现了错误。";
+        }
+    }
+
+    /**
+     * 解析函数参数JSON字符串
+     */
+    private Map<String, Object> parseArguments(String argumentsJson) {
+        try {
+            if (argumentsJson == null || argumentsJson.isEmpty()) {
+                return new HashMap<>();
+            }
+            return objectMapper.readValue(argumentsJson, HashMap.class);
+        } catch (Exception e) {
+            log.error("解析函数参数失败: {}", argumentsJson, e);
+            return new HashMap<>();
+        }
+    }
+
+    /**
+     * 转换工具函数定义为SDK格式
+     */
+    private List<ChatTool> convertToolDefinitionsToSDK() {
+        try {
+            if (functionDefinitions == null) {
+                log.warn("工具函数定义未初始化，返回空列表");
+                return new ArrayList<>();
+            }
+
+            List<AiFunctionDefinitionsOptimized.ToolFunction> toolFunctions =
+                    functionDefinitions.getToolFunctions();
+
+            if (toolFunctions == null || toolFunctions.isEmpty()) {
+                log.warn("工具函数列表为空");
+                return new ArrayList<>();
+            }
+
+            List<ChatTool> convertedTools = new ArrayList<>();
+
+            for (AiFunctionDefinitionsOptimized.ToolFunction func : toolFunctions) {
+                ChatTool tool = ChatTool.builder()
+                        .type("function")
+                        .function(ai.z.openapi.service.model.ChatFunction.builder()
+                                .name(func.getName())
+                                .description(func.getDescription())
+                                .parameters(func.getParameters())
+                                .build())
+                        .build();
+                convertedTools.add(tool);
+            }
+
+            log.debug("转换工具函数定义，数量: {}", convertedTools.size());
+            return convertedTools;
+
+        } catch (Exception e) {
+            log.error("转换工具函数定义失败", e);
+            return new ArrayList<>();
+        }
+    }
+
+    // ==================== 以下为原有功能保留（使用SDK重构） ====================
+
     @Override
     public List<Map<String, Object>> recommendRecipe(String foodName) {
-        long startTime = System.currentTimeMillis();
-
-        log.info("=== 食谱推荐AI服务调用开始 ===");
-        log.info("输入参数 - foodName: \"{}\"", foodName);
-        log.info("输入参数 - foodName长度: {} 字符", foodName != null ? foodName.length() : 0);
-        log.info("请求模型: {}", zhipuAIConfig.getModel());
+        log.info("AI食谱推荐，食物名称: {}", foodName);
 
         try {
-            // ========== 1. 构建请求体 ==========
-            log.info("步骤1/5: 构建AI请求体");
-            Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("model", zhipuAIConfig.getModel());
-            log.info("✓ 模型设置: {}", zhipuAIConfig.getModel());
+            List<ChatMessage> messages = new ArrayList<>();
+            messages.add(ChatMessage.builder()
+                    .role("system")
+                    .content(RECIPE_PROMPT)
+                    .build());
+            messages.add(ChatMessage.builder()
+                    .role("user")
+                    .content("请推荐适合" + foodName + "的食谱")
+                    .build());
 
-            // ========== 2. 构建消息列表 ==========
-            log.info("步骤2/5: 构建系统提示词和用户消息");
-            List<Map<String, String>> messages = new ArrayList<>();
+            ChatCompletionCreateParams request = ChatCompletionCreateParams.builder()
+                    .model(zhipuAIConfig.getModel())
+                    .messages(messages)
+                    .temperature(0.8f)
+                    .build();
 
-            // 系统提示词
-            Map<String, String> systemMessage = new HashMap<>();
-            systemMessage.put("role", "system");
-            systemMessage.put("content", RECIPE_PROMPT);
-            messages.add(systemMessage);
-            log.info("✓ 系统提示词已添加 (长度: {} 字符)", RECIPE_PROMPT.length());
+            var response = zhipuClient.chat().createChatCompletion(request);
+            Object contentObj = response.getData().getChoices().get(0).getMessage().getContent();
+            String content = contentObj != null ? contentObj.toString() : "";
 
-            // 用户消息
-            Map<String, String> userMessage = new HashMap<>();
-            userMessage.put("role", "user");
-            String userContent = "请推荐与\"" + foodName + "\"相关的食谱，返回2-3个食谱";
-            userMessage.put("content", userContent);
-            messages.add(userMessage);
-            log.info("✓ 用户消息已添加: \"{}\"", userContent);
-
-            requestBody.put("messages", messages);
-            requestBody.put("temperature", 0.8);
-            log.info("✓ 温度参数: 0.8");
-            log.info("✓ 总消息数: {}", messages.size());
-
-            // ========== 3. 发送HTTP请求 ==========
-            log.info("步骤3/5: 发送HTTP请求到智谱AI");
-            log.info("请求URL: {}", zhipuAIConfig.getBaseUrl());
-            String response = sendRequest(requestBody);
-
-            long apiTime = System.currentTimeMillis() - startTime;
-            log.info("✓ 智谱AI API响应成功，耗时: {} ms", apiTime);
-            log.info("响应长度: {} 字符", response.length());
-
-            // ========== 4. 解析AI响应 ==========
-            log.info("步骤4/5: 解析AI响应");
-            JsonNode jsonResponse = objectMapper.readTree(response);
-            log.info("✓ JSON解析成功");
-
-            JsonNode choices = jsonResponse.get("choices");
-            if (choices == null || !choices.isArray() || choices.size() == 0) {
-                log.error("❌ AI响应格式错误: choices字段为空或不是数组");
-                log.error("完整响应: {}", response);
-                throw new RuntimeException("AI响应格式错误: choices字段为空或不是数组");
-            }
-
-            log.info("✓ choices数组长度: {}", choices.size());
-
-            String content = choices.get(0).get("message").get("content").asText();
-            log.info("✓ 提取AI生成内容成功");
-            log.info("AI返回内容预览: {}...",
-                content.length() > 100 ? content.substring(0, 100) + "..." : content);
-            log.info("AI返回内容长度: {} 字符", content.length());
-
-            // ========== 5. 清洗并解析食谱JSON数组 ==========
-            log.info("步骤5/5: 清洗并解析食谱JSON数组");
-
-            // 清洗AI响应：去除Markdown标记
-            String cleanedContent = cleanAIResponse(content);
-            if (!cleanedContent.equals(content)) {
-                log.info("✓ 内容已清洗（去除Markdown标记）");
-                log.info("清洗后长度: {} 字符", cleanedContent.length());
-            } else {
-                log.info("✓ 内容无需清洗");
-            }
-
-            JsonNode recipesArray;
-            try {
-                recipesArray = objectMapper.readTree(cleanedContent);
-                log.info("✓ JSON数组解析成功");
-            } catch (Exception e) {
-                log.error("❌ AI返回的内容不是有效的JSON格式");
-                log.error("原始内容: {}", content);
-                log.error("解析错误: {}", e.getMessage());
-                throw new RuntimeException("AI返回的内容不是有效的JSON格式: " + e.getMessage(), e);
-            }
-
-            if (!recipesArray.isArray()) {
-                log.error("❌ AI返回的内容不是JSON数组类型");
-                log.error("实际类型: {}", recipesArray.getNodeType());
-                log.error("完整内容: {}", content);
-                throw new RuntimeException("AI返回的内容不是JSON数组类型，实际类型: " + recipesArray.getNodeType());
-            }
-
-            log.info("✓ 食谱数组类型验证通过");
-            log.info("食谱数量: {}", recipesArray.size());
-
-            // ========== 解析每个食谱 ==========
+            // 解析JSON返回
+            JsonNode jsonNode = objectMapper.readTree(content);
             List<Map<String, Object>> recipes = new ArrayList<>();
-            for (int i = 0; i < recipesArray.size(); i++) {
-                JsonNode recipeNode = recipesArray.get(i);
-                log.info("解析食谱 {}/{}:", i + 1, recipesArray.size());
 
-                // 验证必填字段
-                String[] requiredFields = {"name", "calorie", "difficulty", "ingredients", "steps"};
-                for (String field : requiredFields) {
-                    if (!recipeNode.has(field)) {
-                        log.error("❌ 食谱{}缺少必填字段: {}", i + 1, field);
-                        log.error("食谱数据: {}", recipeNode.toString());
-                        throw new RuntimeException("食谱" + (i + 1) + "缺少必填字段: " + field);
-                    }
-                    log.info("  ✓ {}: {}", field, recipeNode.get(field).asText());
+            if (jsonNode.isArray()) {
+                for (JsonNode node : jsonNode) {
+                    Map<String, Object> recipe = new HashMap<>();
+                    recipe.put("name", node.get("name").asText());
+                    recipe.put("calorie", node.get("calorie").asDouble());
+                    recipe.put("difficulty", node.get("difficulty").asText());
+                    recipe.put("ingredients", node.get("ingredients").asText());
+                    recipe.put("steps", node.get("steps").asText());
+                    recipes.add(recipe);
                 }
-
-                Map<String, Object> recipe = new HashMap<>();
-                recipe.put("name", recipeNode.get("name").asText());
-                recipe.put("calorie", recipeNode.get("calorie").asDouble());
-                recipe.put("difficulty", recipeNode.get("difficulty").asText());
-                recipe.put("ingredients", recipeNode.get("ingredients").asText());
-                recipe.put("steps", recipeNode.get("steps").asText());
-                recipes.add(recipe);
-
-                log.info("  ✓ 食谱\"{}\"解析成功", recipe.get("name"));
             }
-
-            long totalTime = System.currentTimeMillis() - startTime;
-            log.info("=== ✅ 食谱推荐AI服务调用成功 ===");
-            log.info("总耗时: {} ms", totalTime);
-            log.info("返回食谱数量: {}", recipes.size());
 
             return recipes;
 
         } catch (Exception e) {
-            long totalTime = System.currentTimeMillis() - startTime;
-            log.error("=== ❌ 食谱推荐AI服务调用失败 ===");
-            log.error("总耗时: {} ms", totalTime);
-            log.error("错误类型: {}", e.getClass().getSimpleName());
-            log.error("错误信息: {}", e.getMessage());
-            log.error("输入参数 - foodName: \"{}\"", foodName);
-
-            // 构建详细的错误信息
-            String errorDetails = String.format(
-                "食谱推荐失败\n" +
-                "错误类型: %s\n" +
-                "错误信息: %s\n" +
-                "可能原因:\n" +
-                "1. 后端服务未启动（检查8080端口）\n" +
-                "2. API Key无效（检查智谱AI配置）\n" +
-                "3. 网络连接问题\n" +
-                "4. AI模型名称错误（当前使用: %s）\n" +
-                "5. AI返回的数据格式不符合要求",
-                e.getClass().getSimpleName(),
-                e.getMessage(),
-                zhipuAIConfig.getModel()
-            );
-
-            log.error("详细错误信息:\n{}", errorDetails, e);
-
-            // 直接抛出异常，不使用Mock数据
-            throw new RuntimeException("食谱推荐失败: " + e.getMessage(), e);
+            log.error("AI食谱推荐失败", e);
+            return new ArrayList<>();
         }
     }
 
     @Override
     public Map<String, Object> analyzeNutrition(String foodName) {
-        long startTime = System.currentTimeMillis();
-
-        log.info("=== 营养分析AI服务调用开始 ===");
-        log.info("输入参数 - foodName: \"{}\"", foodName);
+        log.info("AI营养分析，食物名称: {}", foodName);
 
         try {
-            Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("model", zhipuAIConfig.getModel());
+            List<ChatMessage> messages = new ArrayList<>();
+            messages.add(ChatMessage.builder()
+                    .role("system")
+                    .content(DIET_ASSISTANT_PROMPT)
+                    .build());
+            messages.add(ChatMessage.builder()
+                    .role("user")
+                    .content("请分析" + foodName + "的营养成分")
+                    .build());
 
-            List<Map<String, String>> messages = new ArrayList<>();
+            ChatCompletionCreateParams request = ChatCompletionCreateParams.builder()
+                    .model(zhipuAIConfig.getModel())
+                    .messages(messages)
+                    .temperature(0.7f)
+                    .build();
 
-            Map<String, String> systemMessage = new HashMap<>();
-            systemMessage.put("role", "system");
-            systemMessage.put("content", "你是营养分析专家。请分析食物的营养成分，包括卡路里、蛋白质、脂肪、碳水化合物。返回JSON格式：{\"calorie\": 350.5, \"protein\": 20.3, \"fat\": 15.7, \"carbohydrate\": 40.2}");
-            messages.add(systemMessage);
+            var response = zhipuClient.chat().createChatCompletion(request);
+            Object contentObj = response.getData().getChoices().get(0).getMessage().getContent();
+            String content = contentObj != null ? contentObj.toString() : "";
 
-            Map<String, String> userMessage = new HashMap<>();
-            userMessage.put("role", "user");
-            userMessage.put("content", "请分析\"" + foodName + "\"的营养成分，100克的热量和主要营养素含量");
-            messages.add(userMessage);
+            Map<String, Object> result = new HashMap<>();
+            result.put("foodName", foodName);
+            result.put("analysis", content);
 
-            requestBody.put("messages", messages);
-            requestBody.put("temperature", 0.3);
-
-            String response = sendRequest(requestBody);
-
-            JsonNode jsonResponse = objectMapper.readTree(response);
-            JsonNode choices = jsonResponse.get("choices");
-            if (choices != null && choices.isArray() && choices.size() > 0) {
-                String content = choices.get(0).get("message").get("content").asText();
-
-                try {
-                    // 清洗AI响应：去除Markdown标记
-                    String cleanedContent = cleanAIResponse(content);
-                    if (!cleanedContent.equals(content)) {
-                        log.info("✓ 营养数据内容已清洗（去除Markdown标记）");
-                    }
-
-                    JsonNode nutritionData = objectMapper.readTree(cleanedContent);
-                    Map<String, Object> result = new HashMap<>();
-                    result.put("foodName", foodName);
-                    result.put("calorie", nutritionData.get("calorie").asDouble());
-                    result.put("protein", nutritionData.get("protein").asDouble());
-                    result.put("fat", nutritionData.get("fat").asDouble());
-                    result.put("carbohydrate", nutritionData.get("carbohydrate").asDouble());
-
-                    long totalTime = System.currentTimeMillis() - startTime;
-                    log.info("=== ✅ 营养分析AI服务调用成功，耗时: {} ms ===", totalTime);
-                    return result;
-                } catch (Exception e) {
-                    log.error("❌ 营养数据解析失败，原始内容: {}", content);
-                    throw new RuntimeException("营养数据解析失败: " + e.getMessage(), e);
-                }
-            }
-
-            throw new RuntimeException("AI响应格式错误：choices为空");
+            return result;
 
         } catch (Exception e) {
-            long totalTime = System.currentTimeMillis() - startTime;
-            log.error("=== ❌ 营养分析AI服务调用失败，耗时: {} ms ===", totalTime, e);
-            throw new RuntimeException("营养分析失败: " + e.getMessage(), e);
+            log.error("AI营养分析失败", e);
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return error;
         }
-    }
-
-    /**
-     * 清洗AI响应内容（方案C：正则提取 + 清洗）
-     * 去除markdown标记、额外文字，提取纯JSON
-     */
-    /**
-     * 清洗AI响应内容
-     * 去除markdown标记、额外文字，提取纯JSON
-     */
-    private String cleanAIResponse(String response) {
-        if (response == null || response.trim().isEmpty()) {
-            return response;
-        }
-
-        String cleaned = response.trim();
-
-        // 去除markdown代码块标记
-        cleaned = cleaned.replaceAll("```json\\n?", "")
-                .replaceAll("```", "")
-                .trim();
-
-        // 智能提取JSON部分（保留数组结构）
-        String trimmed = cleaned.trim();
-        char firstChar = trimmed.charAt(0);
-
-        // 如果以 [ 开头，提取整个数组
-        if (firstChar == '[') {
-            int lastBracket = trimmed.lastIndexOf("]");
-            if (lastBracket > 0) {
-                return trimmed.substring(0, lastBracket + 1);
-            }
-        }
-        // 如果以 { 开头，提取整个对象
-        else if (firstChar == '{') {
-            int lastBrace = trimmed.lastIndexOf("}");
-            if (lastBrace > 0) {
-                return trimmed.substring(0, lastBrace + 1);
-            }
-        }
-
-        return cleaned;
-    }
-
-    /**
-     * 校验菜品数据的完整性和合理性（方案A：严格校验）
-     */
-    private void validateDishData(JsonNode dishData) throws Exception {
-        // 校验必填字段
-        String[] requiredFields = {"name", "calories", "protein", "fat", "carbs",
-                                "difficulty", "preparationTime", "ingredients", "tags", "confidence"};
-
-        for (String field : requiredFields) {
-            if (!dishData.has(field) || dishData.get(field).isNull()) {
-                throw new Exception("缺少必填字段：" + field);
-            }
-        }
-
-        // 校验数值范围
-        int calories = dishData.get("calories").asInt();
-        if (calories < 0 || calories > 2000) {
-            throw new Exception("卡路里数值异常： " + calories + "（范围：0-2000）");
-        }
-
-        int protein = dishData.get("protein").asInt();
-        if (protein < 0 || protein > 100) {
-            throw new Exception("蛋白质数值异常： " + protein + "（范围：0-100克）");
-        }
-
-        int fat = dishData.get("fat").asInt();
-        if (fat < 0 || fat > 100) {
-            throw new Exception("脂肪数值异常： " + fat + "（范围：0-100克）");
-        }
-
-        int carbs = dishData.get("carbs").asInt();
-        if (carbs < 0 || carbs > 200) {
-            throw new Exception("碳水数值异常： " + carbs + "（范围：0-200克）");
-        }
-
-        double confidence = dishData.get("confidence").asDouble();
-        if (confidence < 0 || confidence > 1) {
-            throw new Exception("置信度异常： " + confidence + "（范围：0-1）");
-        }
-
-        // 校验difficulty枚举值
-        String difficulty = dishData.get("difficulty").asText();
-        if (!difficulty.matches("简单|中等|困难")) {
-            throw new Exception("难度值异常： " + difficulty + "（必须是：简单/中等/困难）");
-        }
-
-        // 校验数组长度
-        if (!dishData.get("ingredients").isArray() ||
-            dishData.get("ingredients").size() < 3 ||
-            dishData.get("ingredients").size() > 8) {
-            throw new Exception("食材数组长度异常（要求：3-8个）");
-        }
-
-        if (!dishData.get("tags").isArray() ||
-            dishData.get("tags").size() < 2 ||
-            dishData.get("tags").size() > 5) {
-            throw new Exception("标签数组长度异常（要求：2-5个）");
-        }
-    }
-
-    /**
-     * 解析菜品数据JsonNode为Map
-     */
-    private Map<String, Object> parseDishData(JsonNode dishData) {
-        Map<String, Object> result = new HashMap<>();
-        result.put("name", dishData.get("name").asText());
-        result.put("calories", dishData.get("calories").asInt());
-        result.put("protein", dishData.get("protein").asInt());
-        result.put("fat", dishData.get("fat").asInt());
-        result.put("carbs", dishData.get("carbs").asInt());
-        result.put("difficulty", dishData.get("difficulty").asText());
-        result.put("preparationTime", dishData.get("preparationTime").asText());
-
-        // 解析数组字段
-        List<String> ingredients = new ArrayList<>();
-        JsonNode ingredientsNode = dishData.get("ingredients");
-        if (ingredientsNode.isArray()) {
-            for (JsonNode item : ingredientsNode) {
-                ingredients.add(item.asText());
-            }
-        }
-        result.put("ingredients", ingredients);
-
-        List<String> tags = new ArrayList<>();
-        JsonNode tagsNode = dishData.get("tags");
-        if (tagsNode.isArray()) {
-            for (JsonNode item : tagsNode) {
-                tags.add(item.asText());
-            }
-        }
-        result.put("tags", tags);
-
-        result.put("confidence", dishData.get("confidence").asDouble());
-        result.put("nutritionScore", calculateNutritionScore(
-            dishData.get("calories").asInt(),
-            dishData.get("protein").asInt(),
-            dishData.get("fat").asInt(),
-            dishData.get("carbs").asInt()
-        ));
-
-        return result;
     }
 
     @Override
     public Map<String, Object> recognizeDish(String imageUrl) {
-        try {
-            log.info("开始调用视觉模型识别菜品，图片URL：{}", imageUrl);
-
-            // 构建请求体（使用视觉模型）
-            Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("model", zhipuAIConfig.getVisionModel());
-
-            // 构建多模态消息（文本 + 图片）
-            List<Map<String, Object>> messages = new ArrayList<>();
-
-            // 系统提示词
-            Map<String, Object> systemMessage = new HashMap<>();
-            systemMessage.put("role", "system");
-            systemMessage.put("content", DISH_RECOGNITION_PROMPT);
-            messages.add(systemMessage);
-
-            // 用户消息（包含图片和文本）
-            Map<String, Object> userMessage = new HashMap<>();
-            userMessage.put("role", "user");
-
-            // 多模态内容：图片 + 文本
-            List<Map<String, Object>> content = new ArrayList<>();
-
-            // 添加图片
-            Map<String, Object> imageContent = new HashMap<>();
-            imageContent.put("type", "image_url");
-            imageContent.put("image_url", Map.of("url", imageUrl));
-            content.add(imageContent);
-
-            // 添加文本指令
-            Map<String, Object> textContent = new HashMap<>();
-            textContent.put("type", "text");
-            textContent.put("text", "请识别这张图片中的菜品，并按照要求的JSON格式返回详细信息。");
-            content.add(textContent);
-
-            userMessage.put("content", content);
-            messages.add(userMessage);
-
-            requestBody.put("messages", messages);
-            requestBody.put("temperature", 0.3); // 降低温度以提高识别准确性
-
-            // 发送请求
-            String response = sendRequest(requestBody);
-
-            // 解析响应
-            JsonNode jsonResponse = objectMapper.readTree(response);
-            JsonNode choices = jsonResponse.get("choices");
-
-            if (choices != null && choices.isArray() && choices.size() > 0) {
-                String aiResponse = choices.get(0).get("message").get("content").asText();
-                log.info("AI识别响应原始内容：{}", aiResponse);
-
-                // ============ 第一层降级：尝试直接解析（方案B：严格提示词）============
-                try {
-                    JsonNode dishData = objectMapper.readTree(aiResponse);
-                    validateDishData(dishData);  // 严格校验
-
-                    Map<String, Object> result = parseDishData(dishData);
-                    log.info("✅ 菜品识别成功（方案B）：{}", result.get("name"));
-                    return result;
-
-                } catch (Exception e) {
-                    log.warn("⚠️ 方案B失败：{}", e.getMessage());
-                }
-
-                // ============ 第二层降级：清洗后解析+校验（方案A+C：客户端校验）============
-                try {
-                    String cleanedResponse = cleanAIResponse(aiResponse);
-                    log.info("清洗后的响应：{}", cleanedResponse);
-
-                    JsonNode dishData = objectMapper.readTree(cleanedResponse);
-                    validateDishData(dishData);  // 严格校验
-
-                    Map<String, Object> result = parseDishData(dishData);
-                    log.info("✅ 菜品识别成功（方案A）：{}", result.get("name"));
-                    return result;
-
-                } catch (Exception e) {
-                    log.warn("⚠️ 方案A失败：{}", e.getMessage());
-                }
-
-                // ============ 第三层：所有方案都失败，抛出详细错误============
-                String errorMsg = "菜品识别失败：AI返回的数据格式不符合要求。\n" +
-                        "原始响应：" + aiResponse + "\n" +
-                        "建议：检查AI模型是否支持视觉识别（glm-4.6v-flash）";
-                log.error("❌ {}", errorMsg);
-                throw new Exception(errorMsg);
-            }
-
-        } catch (Exception e) {
-            // ============ 最外层异常处理：直接抛出，不使用模拟数据============
-            String errorDetails = "菜品识别请求失败\n" +
-                    "错误类型：" + e.getClass().getSimpleName() + "\n" +
-                    "错误信息：" + e.getMessage() + "\n" +
-                    "可能原因：\n" +
-                    "1. 后端服务未启动（检查8080端口）\n" +
-                    "2. API Key无效（检查智谱AI配置）\n" +
-                    "3. 网络连接问题\n" +
-                    "4. AI模型名称错误（当前使用：" + zhipuAIConfig.getVisionModel() + "）";
-
-            log.error("❌ 菜品识别失败：{}", errorDetails, e);
-
-            // ============ 返回错误信息而不是抛出异常 ============
-            Map<String, Object> errorResult = new HashMap<>();
-            errorResult.put("error", true);
-            errorResult.put("message", "菜品识别失败：" + e.getMessage());
-            errorResult.put("details", errorDetails);
-
-            return errorResult;
-        }
-        return null;
-    }
-
-
-    /**
-     * 计算营养评分（简单算法）
-     */
-    private int calculateNutritionScore(int calories, int protein, int fat, int carbs) {
-        double score = 100;
-
-        // 根据热量调整评分
-        if (calories > 600) score -= 10;
-        else if (calories > 500) score -= 5;
-        else if (calories < 300) score += 5;
-
-        // 蛋白质越高越好
-        score += protein * 0.5;
-
-        // 脂肪越低越好
-        score -= fat * 0.3;
-
-        return Math.max(60, Math.min(95, (int) score));
-    }
-
-    @Override
-    public Map<String, Object> optimizeRecipe(String originalRecipe) {
-        long startTime = System.currentTimeMillis();
-
-        log.info("=== 食谱优化AI服务调用开始 ===");
-        log.info("原始食谱长度: {} 字符", originalRecipe != null ? originalRecipe.length() : 0);
+        log.info("AI菜品识别，图片URL: {}", imageUrl);
 
         try {
-            Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("model", zhipuAIConfig.getModel());
+            List<ChatMessage> messages = new ArrayList<>();
+            messages.add(ChatMessage.builder()
+                    .role("system")
+                    .content(DISH_RECOGNITION_PROMPT)
+                    .build());
+            messages.add(ChatMessage.builder()
+                    .role("user")
+                    .content(List.of(
+                            Map.of("type", "image_url", "image_url", Map.of("url", imageUrl))
+                    ))
+                    .build());
 
-            List<Map<String, String>> messages = new ArrayList<>();
+            ChatCompletionCreateParams request = ChatCompletionCreateParams.builder()
+                    .model(zhipuAIConfig.getVisionModel())
+                    .messages(messages)
+                    .temperature(0.3f)
+                    .maxTokens(500)
+                    .build();
 
-            Map<String, String> systemMessage = new HashMap<>();
-            systemMessage.put("role", "system");
-            systemMessage.put("content", "你是烹饪优化专家。请优化用户提供的食谱，使其更健康、更美味。返回JSON格式：{\"name\": \"优化后菜名\", \"original\": \"原始做法\", \"optimized\": \"优化后做法\", \"calorie\": 200.5, \"improvements\": [\"改进点1\", \"改进点2\"]}");
-            messages.add(systemMessage);
+            var response = zhipuClient.chat().createChatCompletion(request);
+            Object contentObj = response.getData().getChoices().get(0).getMessage().getContent();
+            String content = contentObj != null ? contentObj.toString() : "";
 
-            Map<String, String> userMessage = new HashMap<>();
-            userMessage.put("role", "user");
-            userMessage.put("content", "请优化这个食谱：" + originalRecipe);
-            messages.add(userMessage);
+            JsonNode jsonNode = objectMapper.readTree(content);
+            Map<String, Object> result = new HashMap<>();
+            result.put("name", jsonNode.get("name").asText());
+            result.put("calories", jsonNode.get("calories").asDouble());
+            result.put("protein", jsonNode.get("protein").asDouble());
+            result.put("fat", jsonNode.get("fat").asDouble());
+            result.put("carbs", jsonNode.get("carbs").asDouble());
+            result.put("confidence", jsonNode.get("confidence").asDouble());
 
-            requestBody.put("messages", messages);
-            requestBody.put("temperature", 0.7);
-
-            String response = sendRequest(requestBody);
-
-            JsonNode jsonResponse = objectMapper.readTree(response);
-            JsonNode choices = jsonResponse.get("choices");
-            if (choices != null && choices.isArray() && choices.size() > 0) {
-                String content = choices.get(0).get("message").get("content").asText();
-
-                try {
-                    // 清洗AI响应：去除Markdown标记
-                    String cleanedContent = cleanAIResponse(content);
-                    if (!cleanedContent.equals(content)) {
-                        log.info("✓ 食谱优化内容已清洗（去除Markdown标记）");
-                    }
-
-                    JsonNode recipeData = objectMapper.readTree(cleanedContent);
-                    Map<String, Object> result = new HashMap<>();
-                    result.put("name", recipeData.get("name").asText());
-                    result.put("original", recipeData.get("original").asText());
-                    result.put("optimized", recipeData.get("optimized").asText());
-                    result.put("calorie", recipeData.get("calorie").asDouble());
-
-                    List<String> improvements = new ArrayList<>();
-                    JsonNode improvementsNode = recipeData.get("improvements");
-                    if (improvementsNode.isArray()) {
-                        for (JsonNode item : improvementsNode) {
-                            improvements.add(item.asText());
-                        }
-                    }
-                    result.put("improvements", improvements);
-
-                    long totalTime = System.currentTimeMillis() - startTime;
-                    log.info("=== ✅ 食谱优化AI服务调用成功，耗时: {} ms ===", totalTime);
-                    return result;
-                } catch (Exception e) {
-                    log.error("❌ 食谱优化数据解析失败，原始内容: {}", content);
-                    throw new RuntimeException("食谱优化数据解析失败: " + e.getMessage(), e);
-                }
-            }
-
-            throw new RuntimeException("AI响应格式错误：choices为空");
+            return result;
 
         } catch (Exception e) {
-            long totalTime = System.currentTimeMillis() - startTime;
-            log.error("=== ❌ 食谱优化AI服务调用失败，耗时: {} ms ===", totalTime, e);
-            throw new RuntimeException("食谱优化失败: " + e.getMessage(), e);
+            log.error("AI菜品识别失败", e);
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return error;
         }
-    }
-
-    /**
-     * 发送HTTP请求到智谱AI（使用官方推荐方式：直接Bearer Token）
-     */
-    private String sendRequest(Map<String, Object> requestBody) throws Exception {
-        // 使用官方推荐的方式：直接使用 API Key 作为 Bearer Token
-        String apiKey = zhipuAIConfig.getApiKey();
-
-        // 构建请求体
-        String jsonBody = objectMapper.writeValueAsString(requestBody);
-
-        // 使用Java原生HttpClient（Java 11+）
-        java.net.http.HttpClient client = java.net.http.HttpClient.newBuilder()
-                .connectTimeout(java.time.Duration.ofSeconds(30))
-                .build();
-
-        java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
-                .uri(java.net.URI.create(zhipuAIConfig.getBaseUrl()))
-                .header("Content-Type", "application/json")
-                .header("Authorization", "Bearer " + apiKey)  // 官方推荐：直接Bearer Token
-                .POST(java.net.http.HttpRequest.BodyPublishers.ofString(jsonBody))
-                .build();
-
-        java.net.http.HttpResponse<String> response = client.send(
-                request,
-                java.net.http.HttpResponse.BodyHandlers.ofString()
-        );
-
-        if (response.statusCode() != 200) {
-            throw new RuntimeException("请求失败，状态码: " + response.statusCode() + ", 响应: " + response.body());
-        }
-
-        return response.body();
-    }
-
-    @Override
-    public String generateRecommendationReason(String dishName, Map<String, Object> userProfile, Map<String, Object> context) {
-        try {
-            Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("model", zhipuAIConfig.getModel());
-
-            List<Map<String, String>> messages = new ArrayList<>();
-
-            Map<String, String> systemMessage = new HashMap<>();
-            systemMessage.put("role", "system");
-            systemMessage.put("content", RECOMMENDATION_REASON_PROMPT);
-            messages.add(systemMessage);
-
-            // 构建用户提示词
-            StringBuilder promptBuilder = new StringBuilder();
-            promptBuilder.append("请为菜品\"").append(dishName).append("\"生成推荐理由。\n");
-
-            if (userProfile != null && !userProfile.isEmpty()) {
-                promptBuilder.append("\n用户画像：\n");
-                if (userProfile.containsKey("dietGoal")) {
-                    promptBuilder.append("- 饮食目标：").append(userProfile.get("dietGoal")).append("\n");
-                }
-                if (userProfile.containsKey("flavorPreference")) {
-                    promptBuilder.append("- 口味偏好：").append(userProfile.get("flavorPreference")).append("\n");
-                }
-                if (userProfile.containsKey("preferenceTags")) {
-                    promptBuilder.append("- 偏好标签：").append(userProfile.get("preferenceTags")).append("\n");
-                }
-            }
-
-            if (context != null && !context.isEmpty()) {
-                promptBuilder.append("\n当前上下文：\n");
-                context.forEach((key, value) -> promptBuilder.append("- ").append(key).append("：").append(value).append("\n"));
-            }
-
-            promptBuilder.append("\n请生成15-30字的推荐理由：");
-
-            Map<String, String> userMessage = new HashMap<>();
-            userMessage.put("role", "user");
-            userMessage.put("content", promptBuilder.toString());
-            messages.add(userMessage);
-
-            requestBody.put("messages", messages);
-            requestBody.put("temperature", 0.8); // 提高创造性
-
-            String response = sendRequest(requestBody);
-
-            JsonNode jsonResponse = objectMapper.readTree(response);
-            JsonNode choices = jsonResponse.get("choices");
-            if (choices != null && choices.isArray() && choices.size() > 0) {
-                String content = choices.get(0).get("message").get("content").asText();
-                log.info("AI生成的推荐理由: {}", content);
-                return content;
-            }
-
-            // 如果AI调用失败，返回默认推荐理由
-            return generateDefaultReason(dishName, userProfile, context);
-
-        } catch (Exception e) {
-            log.error("AI生成推荐理由失败，使用默认理由", e);
-            return generateDefaultReason(dishName, userProfile, context);
-        }
-    }
-
-    /**
-     * 生成默认推荐理由（AI失败时的降级方案）
-     */
-    private String generateDefaultReason(String dishName, Map<String, Object> userProfile, Map<String, Object> context) {
-        List<String> reasons = new ArrayList<>();
-
-        // 基于饮食目标
-        if (userProfile != null && userProfile.containsKey("dietGoal")) {
-            String goal = (String) userProfile.get("dietGoal");
-            if ("low_calorie".equals(goal)) {
-                reasons.add("低卡健康");
-            } else if ("high_protein".equals(goal)) {
-                reasons.add("高蛋白营养丰富");
-            } else if ("balanced".equals(goal)) {
-                reasons.add("营养均衡");
-            }
-        }
-
-        // 基于上下文
-        if (context != null) {
-            if (context.containsKey("weather")) {
-                String weather = (String) context.get("weather");
-                if ("cold".equals(weather)) {
-                    reasons.add("暖胃驱寒");
-                } else if ("hot".equals(weather)) {
-                    reasons.add("清爽解腻");
-                }
-            }
-            if (context.containsKey("timePeriod")) {
-                String timePeriod = (String) context.get("timePeriod");
-                reasons.add("适合" + timePeriod);
-            }
-        }
-
-        // 如果没有任何理由，返回默认值
-        if (reasons.isEmpty()) {
-            return "符合您的口味偏好，营养丰富又健康";
-        }
-
-        return String.join("，", reasons);
     }
 
     @Override
     public Map<String, Object> recognizeDishWithBase64(String imageBase64) {
+        log.info("AI菜品识别（Base64）");
+
         try {
-            log.info("开始调用视觉模型识别菜品（Base64编码），图片大小：{} 字符",
-                    imageBase64 != null ? imageBase64.length() : 0);
+            List<ChatMessage> messages = new ArrayList<>();
+            messages.add(ChatMessage.builder()
+                    .role("system")
+                    .content(DISH_RECOGNITION_PROMPT)
+                    .build());
+            messages.add(ChatMessage.builder()
+                    .role("user")
+                    .content(List.of(
+                            Map.of("type", "image_url", "image_url",
+                                    Map.of("url", "data:image/jpeg;base64," + imageBase64))
+                    ))
+                    .build());
 
-            // 构建请求体（使用视觉模型）
-            Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("model", zhipuAIConfig.getVisionModel());
+            ChatCompletionCreateParams request = ChatCompletionCreateParams.builder()
+                    .model(zhipuAIConfig.getVisionModel())
+                    .messages(messages)
+                    .temperature(0.3f)
+                    .maxTokens(500)
+                    .build();
 
-            // 构建多模态消息（文本 + 图片）
-            List<Map<String, Object>> messages = new ArrayList<>();
+            var response = zhipuClient.chat().createChatCompletion(request);
+            Object contentObj = response.getData().getChoices().get(0).getMessage().getContent();
+            String content = contentObj != null ? contentObj.toString() : "";
 
-            // 系统提示词
-            Map<String, Object> systemMessage = new HashMap<>();
-            systemMessage.put("role", "system");
-            systemMessage.put("content", DISH_RECOGNITION_PROMPT);
-            messages.add(systemMessage);
+            JsonNode jsonNode = objectMapper.readTree(content);
+            Map<String, Object> result = new HashMap<>();
+            result.put("name", jsonNode.get("name").asText());
+            result.put("calories", jsonNode.get("calories").asDouble());
+            result.put("confidence", jsonNode.get("confidence").asDouble());
 
-            // 用户消息（包含图片和文本）
-            Map<String, Object> userMessage = new HashMap<>();
-            userMessage.put("role", "user");
-
-            // 多模态内容：图片（Base64） + 文本
-            List<Map<String, Object>> content = new ArrayList<>();
-
-            // 添加图片（Base64格式）
-            Map<String, Object> imageContent = new HashMap<>();
-            imageContent.put("type", "image_url");
-            // Base64格式需要添加data URI前缀
-            String base64DataUrl = "data:image/jpeg;base64," + imageBase64;
-            imageContent.put("image_url", Map.of("url", base64DataUrl));
-            content.add(imageContent);
-
-            // 添加文本指令
-            Map<String, Object> textContent = new HashMap<>();
-            textContent.put("type", "text");
-            textContent.put("text", "请识别这张图片中的菜品，并按照要求的JSON格式返回详细信息。");
-            content.add(textContent);
-
-            userMessage.put("content", content);
-            messages.add(userMessage);
-
-            requestBody.put("messages", messages);
-            requestBody.put("temperature", 0.3); // 降低温度以提高识别准确性
-
-            // 发送请求
-            String response = sendRequest(requestBody);
-
-            // 解析响应
-            JsonNode jsonResponse = objectMapper.readTree(response);
-            JsonNode choices = jsonResponse.get("choices");
-
-            if (choices != null && choices.isArray() && choices.size() > 0) {
-                String aiResponse = choices.get(0).get("message").get("content").asText();
-                log.info("AI识别响应原始内容：{}", aiResponse);
-
-                // ============ 第一层降级：尝试直接解析（方案B：严格提示词）============
-                try {
-                    JsonNode dishData = objectMapper.readTree(aiResponse);
-                    validateDishData(dishData);  // 严格校验
-
-                    Map<String, Object> result = parseDishData(dishData);
-                    log.info("✅ 菜品识别成功（Base64方案）：{}", result.get("name"));
-                    return result;
-
-                } catch (Exception e) {
-                    log.warn("⚠️ Base64方案B失败：{}", e.getMessage());
-                }
-
-                // ============ 第二层降级：清洗后解析+校验（方案A+C：客户端校验）============
-                try {
-                    String cleanedResponse = cleanAIResponse(aiResponse);
-                    log.info("清洗后的响应：{}", cleanedResponse);
-
-                    JsonNode dishData = objectMapper.readTree(cleanedResponse);
-                    validateDishData(dishData);  // 严格校验
-
-                    Map<String, Object> result = parseDishData(dishData);
-                    log.info("✅ 菜品识别成功（Base64方案A）：{}", result.get("name"));
-                    return result;
-
-                } catch (Exception e) {
-                    log.warn("⚠️ Base64方案A失败：{}", e.getMessage());
-                }
-
-                // ============ 第三层：所有方案都失败，抛出详细错误============
-                String errorMsg = "菜品识别失败：AI返回的数据格式不符合要求。\n" +
-                        "原始响应：" + aiResponse + "\n" +
-                        "建议：检查AI模型是否支持视觉识别（glm-4.6v-flash）";
-                log.error("❌ {}", errorMsg);
-                throw new Exception(errorMsg);
-            }
-
-            // 如果AI响应异常，返回错误信息
-            Map<String, Object> errorResult = new HashMap<>();
-            errorResult.put("error", true);
-            errorResult.put("message", "菜品识别失败：AI响应异常");
-
-            return errorResult;
+            return result;
 
         } catch (Exception e) {
-            // ============ 最外层异常处理：返回错误信息而不是抛出异常 ============
-            String errorDetails = "菜品识别失败\n" +
-                    "错误类型：" + e.getClass().getSimpleName() + "\n" +
-                    "错误信息：" + e.getMessage() + "\n" +
-                    "可能原因：\n" +
-                    "1. Base64编码格式错误\n" +
-                    "2. 网络连接问题\n" +
-                    "3. AI模型名称错误（当前使用：" + zhipuAIConfig.getVisionModel() + "）";
+            log.error("AI菜品识别（Base64）失败", e);
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return error;
+        }
+    }
 
-            log.error("❌ 菜品识别失败（Base64）：{}", errorDetails, e);
+    @Override
+    public Map<String, Object> optimizeRecipe(String originalRecipe) {
+        log.info("AI食谱优化");
 
-            Map<String, Object> errorResult = new HashMap<>();
-            errorResult.put("error", true);
-            errorResult.put("message", "菜品识别失败：" + e.getMessage());
-            errorResult.put("details", errorDetails);
+        try {
+            List<ChatMessage> messages = new ArrayList<>();
+            messages.add(ChatMessage.builder()
+                    .role("system")
+                    .content(RECIPE_PROMPT)
+                    .build());
+            messages.add(ChatMessage.builder()
+                    .role("user")
+                    .content("请优化以下食谱：" + originalRecipe)
+                    .build());
 
-            return errorResult;
+            ChatCompletionCreateParams request = ChatCompletionCreateParams.builder()
+                    .model(zhipuAIConfig.getModel())
+                    .messages(messages)
+                    .temperature(0.7f)
+                    .build();
+
+            var response = zhipuClient.chat().createChatCompletion(request);
+            Object contentObj = response.getData().getChoices().get(0).getMessage().getContent();
+            String content = contentObj != null ? contentObj.toString() : "";
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("original", originalRecipe);
+            result.put("optimized", content);
+
+            return result;
+
+        } catch (Exception e) {
+            log.error("AI食谱优化失败", e);
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return error;
+        }
+    }
+
+    @Override
+    public String generateRecommendationReason(String dishName, Map<String, Object> userProfile, Map<String, Object> context) {
+        log.info("AI生成推荐理由，菜品: {}", dishName);
+
+        try {
+            String prompt = String.format("""
+                    请为菜品"%s"生成推荐理由。
+                    用户画像：%s
+                    上下文信息：%s
+                    """,
+                    dishName,
+                    userProfile != null ? userProfile.toString() : "无",
+                    context != null ? context.toString() : "无"
+            );
+
+            List<ChatMessage> messages = new ArrayList<>();
+            messages.add(ChatMessage.builder()
+                    .role("system")
+                    .content(RECOMMENDATION_REASON_PROMPT)
+                    .build());
+            messages.add(ChatMessage.builder()
+                    .role("user")
+                    .content(prompt)
+                    .build());
+
+            ChatCompletionCreateParams request = ChatCompletionCreateParams.builder()
+                    .model(zhipuAIConfig.getModel())
+                    .messages(messages)
+                    .temperature(0.8f)
+                    .maxTokens(100)
+                    .build();
+
+            var response = zhipuClient.chat().createChatCompletion(request);
+            Object contentObj = response.getData().getChoices().get(0).getMessage().getContent();
+            return contentObj != null ? contentObj.toString() : "";
+
+        } catch (Exception e) {
+            log.error("AI生成推荐理由失败", e);
+            return "为您精心挑选的优质菜品";
         }
     }
 }

@@ -169,10 +169,17 @@
             <version>1.2.0</version>
         </dependency>
 
-        <!-- OkHttp - 用于调用智谱AI API -->
+        <!-- OkHttp - 用于调用智谱AI API（保留，SDK内部依赖） -->
         <dependency>
             <groupId>com.squareup.okhttp3</groupId>
             <artifactId>okhttp</artifactId>
+        </dependency>
+
+        <!-- 智谱AI官方SDK（新版 中、.ai SDK） -->
+        <dependency>
+            <groupId>ai.z.openapi</groupId>
+            <artifactId>zai-sdk</artifactId>
+            <version>0.3.3</version>
         </dependency>
 
         <!-- 邮件服务依赖 -->
