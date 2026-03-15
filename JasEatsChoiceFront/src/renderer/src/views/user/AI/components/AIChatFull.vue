@@ -80,13 +80,6 @@
 
     <!-- 底部容器 -->
     <div class="bottom-container" ref="bottomContainerRef">
-      <!-- 快速操作面板（结构化查询） -->
-      <transition name="slide-up">
-        <div v-if="showQuickActions" class="quick-actions-container">
-          <QuickActions @action="handleQuickAction" />
-        </div>
-      </transition>
-
       <!-- 已上传图片预览 -->
       <transition name="slide-up">
         <div v-if="uploadedImages.length > 0" class="uploaded-images-preview">
@@ -168,32 +161,20 @@
                 />
               </el-tooltip>
 
-              <!-- 快速操作按钮 -->
-              <el-tooltip content="快速操作" placement="top">
-                <el-button
-                  :icon="Operation"
-                  circle
-                  size="small"
-                  @click="toggleQuickActions"
-                  :class="{ 'is-active': showQuickActions }"
-                />
-              </el-tooltip>
-
               <!-- 快捷提问按钮 -->
-              <div class="quick-questions-button-wrapper">
-                <el-tooltip content="快捷提问" placement="top">
-                  <el-button
-                    ref="quickQuestionsButtonRef"
-                    :icon="QuestionFilled"
-                    circle
-                    size="small"
-                    @click="toggleQuickQuestions"
-                    :class="{ 'is-active': showQuickQuestions }"
-                  />
-                </el-tooltip>
-                <transition name="slide-right">
-                  <div v-if="showQuickQuestions" class="quick-questions-panel">
-                    <div class="quick-questions-title">快速提问</div>
+              <div class="quick-question-button-wrapper">
+                <!-- 快捷提问面板 -->
+                <transition name="fade-slide">
+                  <div
+                    v-if="showQuickQuestions"
+                    class="quick-questions-panel-fixed"
+                  >
+                    <div class="quick-questions-title">
+                      <span>快速提问</span>
+                      <el-icon :size="14" class="close-panel-icon" @click="showQuickQuestions = false">
+                        <Close />
+                      </el-icon>
+                    </div>
                     <div class="quick-questions-categories">
                       <div
                         v-for="(category, categoryIndex) in quickQuestionCategories"
@@ -203,14 +184,15 @@
                         <div
                           class="category-header"
                           @click="toggleCategory(categoryIndex)"
+                          :class="{ 'is-active': expandedCategory === categoryIndex }"
                         >
-                          <span>{{ category.name }}</span>
-                          <el-icon :size="12" class="category-arrow" :class="{ 'is-expanded': expandedCategories.includes(categoryIndex) }">
+                          <span>{{ category.title }}</span>
+                          <el-icon :size="12" class="category-arrow" :class="{ 'is-expanded': expandedCategory === categoryIndex }">
                             <ArrowRight />
                           </el-icon>
                         </div>
-                        <transition name="slide-down">
-                          <div v-show="expandedCategories.includes(categoryIndex)" class="category-questions">
+                        <transition name="slide-right-sub">
+                          <div v-show="expandedCategory === categoryIndex" class="category-questions">
                             <div
                               v-for="(question, qIndex) in category.questions"
                               :key="qIndex"
@@ -225,6 +207,16 @@
                     </div>
                   </div>
                 </transition>
+
+                <el-tooltip content="快捷提问" placement="top">
+                  <el-button
+                    :icon="QuestionFilled"
+                    circle
+                    size="small"
+                    @click="toggleQuickQuestions"
+                    :class="{ 'is-active': showQuickQuestions }"
+                  />
+                </el-tooltip>
               </div>
 
               <!-- AI个性化数据开关 -->
@@ -304,7 +296,6 @@ import { API_CONFIG } from '../../../../config/index'
 import { useAuthStore } from '../../../../store/authStore'
 import { useUserStore } from '../../../../store/userStore'
 import CommonAvatar from '@/components/CommonAvatar.vue'
-import QuickActions from './QuickActions.vue'
 import { isCardMessage, renderCard } from '../utils/cardMapper'
 import cardActionService from '../utils/cardActionService'
 import { useRouter } from 'vue-router'
@@ -330,13 +321,17 @@ const abortController = ref(null)
 const chatContainerRef = ref(null)
 const bottomContainerRef = ref(null)
 const showQuickQuestions = ref(false)
-const showQuickActions = ref(false)
 const showEmojiPicker = ref(false)
 const uploadedImages = ref([])
+
+// 展开的分类索引（只能有一个分类展开）
+const expandedCategory = ref(null) // 默认不展开任何分类
 
 // 用户手动滚动标记
 const userHasScrolled = ref(false)
 let isAutoScrolling = false // 防止滚动时触发滚动事件
+let isUserScrollingUp = false // 标记用户是否主动向上滚动
+let lastScrollTop = 0 // 记录上一次的滚动位置，用于判断滚动方向
 
 // 导入卡片组件
 const cardComponents = {
@@ -409,11 +404,14 @@ const quickQuestionCategories = ref([
   }
 ])
 
-// 切换分类展开/折叠状态
-const toggleCategory = (categoryId) => {
-  const category = quickQuestionCategories.value.find(c => c.id === categoryId)
-  if (category) {
-    category.expanded = !category.expanded
+// 切换分类展开/折叠状态（同时只能展开一个分类）
+const toggleCategory = (categoryIndex) => {
+  if (expandedCategory.value === categoryIndex) {
+    // 已展开，则折叠
+    expandedCategory.value = null
+  } else {
+    // 未展开或展开了其他分类，则展开当前分类
+    expandedCategory.value = categoryIndex
   }
 }
 
@@ -630,7 +628,8 @@ const streamResponse = async (messageIndex, reader) => {
             messages.value[messageIndex].content += parsedData.content
             // console.log('📊 当前消息总长度:', messages.value[messageIndex].content.length)  // 【调试日志】
             await nextTick()
-            // 流式传输时不自动滚动,让用户控制查看位置
+            // 流式传输时自动滚动，除非用户主动向上滚动
+            scrollToBottom()
           } else {
             // console.log('⚠️ 没有content字段，parsedData:', parsedData)  // 【调试日志】
           }
@@ -698,6 +697,7 @@ const sendMessage = async () => {
 
   // 用户发送新消息时,重置滚动标志并强制滚动到底部
   userHasScrolled.value = false
+  isUserScrollingUp = false // 重置向上滚动标记
   scrollToBottom(true)
 
   // Call backend AI API
@@ -821,22 +821,44 @@ const handleScroll = () => {
     return
   }
 
-  // 检查是否接近底部(阈值100px)
-  const isNearBottom =
-    container.scrollHeight - container.scrollTop - container.clientHeight < 100
+  const currentScrollTop = container.scrollTop
 
-  // 如果不在底部100px范围内,标记用户已手动滚动
+  // 检测滚动方向
+  if (currentScrollTop < lastScrollTop) {
+    // 用户向上滚动
+    isUserScrollingUp = true
+  } else if (currentScrollTop > lastScrollTop) {
+    // 用户向下滚动，检查是否接近底部
+    const threshold = container.scrollHeight * 0.17
+    const isNearBottom =
+      container.scrollHeight - currentScrollTop - container.clientHeight < threshold
+
+    if (isNearBottom) {
+      // 如果用户在底部17%范围内，重置向上滚动标记
+      isUserScrollingUp = false
+    }
+  }
+
+  // 更新上一次的滚动位置
+  lastScrollTop = currentScrollTop
+
+  // 检查是否接近底部(阈值为底部17%)
+  const threshold = container.scrollHeight * 0.17
+  const isNearBottom =
+    container.scrollHeight - container.scrollTop - container.clientHeight < threshold
+
+  // 如果不在底部17%范围内,标记用户已手动滚动
   if (!isNearBottom) {
     userHasScrolled.value = true
   } else {
-    // 如果用户在底部100px范围内,重置标志(允许自动滚动)
+    // 如果用户在底部17%范围内,重置标志(允许自动滚动)
     userHasScrolled.value = false
   }
 }
 
 const scrollToBottom = (force = false) => {
-  // 只有在强制滚动或用户未手动滚动时才自动滚动
-  if (force || !userHasScrolled.value) {
+  // 只有在强制滚动、用户未手动滚动或用户未主动向上滚动时才自动滚动
+  if (force || !userHasScrolled.value || !isUserScrollingUp) {
     isAutoScrolling = true
     nextTick(() => {
       if (chatContainerRef.value) {
@@ -880,114 +902,8 @@ const stopStreaming = () => {
 const handleQuickQuestion = (question) => {
   inputMessage.value = question
   sendMessage()
-  // 不关闭面板，让用户可以继续选择其他问题
-  // showQuickQuestions.value = false
-}
-
-// 切换快速操作面板
-const toggleQuickActions = () => {
-  showQuickActions.value = !showQuickActions.value
-  // 关闭其他面板
-  if (showQuickActions.value) {
-    showQuickQuestions.value = false
-    showEmojiPicker.value = false
-  }
-}
-
-// 处理快速操作（发送结构化查询）
-const handleQuickAction = async (action) => {
-  console.log('🚀 快速操作:', action)
-  await sendStructuredQuery(action.queryType, action.label)
-}
-
-// 发送结构化查询
-const sendStructuredQuery = async (queryType, label) => {
-  const userId = getUserId()
-
-  // 添加用户消息（显示操作）
-  const userMessage = {
-    id: messages.value.length + 1,
-    sender: 'user',
-    content: `查看${label}`,
-    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    avatar: userStore.userInfo?.avatar || ''
-  }
-  messages.value.push(userMessage)
-
-  // 保存用户消息到后端
-  await saveMessageToBackend('user', userMessage.content)
-
-  // 重置滚动标志并强制滚动到底部
-  userHasScrolled.value = false
-  scrollToBottom(true)
-
-  // 创建AI消息占位
-  isLoading.value = true
-  const aiMessageIndex = messages.value.length
-  messages.value.push({
-    id: aiMessageIndex,
-    sender: 'ai',
-    content: '',
-    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    avatar: '🤖',
-    messageType: null, // 等待响应后设置
-    cardData: null
-  })
-
-  try {
-    // 调用结构化查询接口
-    const apiUrl = `${API_CONFIG.baseURL}/v1/ai/assistant/chat`
-    console.log('📡 发送结构化查询:', { queryType, userId })
-
-    const response = await axios.post(apiUrl, {
-      messageType: 'structured_query',
-      queryType: queryType,
-      userId: userId,
-      params: {}
-    }, {
-      headers: {
-        'Authorization': `Bearer ${authStore.token}`
-      }
-    })
-
-    console.log('✅ 结构化查询响应:', response.data)
-
-    if (response.data.code === 200 && response.data.data) {
-      const cardData = response.data.data
-
-      // 更新AI消息为卡片类型
-      messages.value[aiMessageIndex].messageType = cardData.messageType
-      messages.value[aiMessageIndex].cardData = cardData.data
-      messages.value[aiMessageIndex].content = cardData.summary || '查询成功'
-
-      // 保存AI响应到后端（保存摘要）
-      await saveMessageToBackend('ai', cardData.summary)
-
-      // 记录查询信息用于刷新
-      lastQueryType.value = queryType
-      lastQueryMessageIndex.value = aiMessageIndex
-    } else {
-      throw new Error(response.data.message || '查询失败')
-    }
-  } catch (error) {
-    console.error('❌ 结构化查询失败:', error)
-
-    // 显示错误消息
-    messages.value[aiMessageIndex].messageType = 'error_card'
-    messages.value[aiMessageIndex].cardData = {
-      summary: '查询失败',
-      data: {
-        error: error.message || '未知错误',
-        queryType: queryType
-      }
-    }
-    messages.value[aiMessageIndex].content = '查询失败'
-
-    await saveMessageToBackend('ai', '查询失败')
-  } finally {
-    isLoading.value = false
-    scrollToBottom(true)
-  }
+  // 发送后自动关闭面板
+  showQuickQuestions.value = false
 }
 
 // 刷新卡片数据
@@ -1365,7 +1281,7 @@ const clearChat = () => {
 // 点击外部关闭表情面板和快捷提问面板
 const handleClickOutside = (event) => {
   // 获取快捷提问面板元素
-  const quickQuestionsPanel = document.querySelector('.quick-questions-panel')
+  const quickQuestionsPanel = document.querySelector('.quick-questions-panel-fixed')
 
   if (bottomContainerRef.value && !bottomContainerRef.value.contains(event.target)) {
     // 如果快捷提问面板显示中，并且点击的不是面板内部，才关闭
@@ -1403,6 +1319,16 @@ const handlePersonalDataToggle = async (value) => {
 // 复制消息
 const copyMessage = async (content) => {
   try {
+    // 在Electron环境中，优先使用clipboard模块
+    if (window.require && window.electron) {
+      const { clipboard } = window.electron
+      if (clipboard) {
+        clipboard.writeText(content)
+        ElMessage.success('复制成功')
+        return
+      }
+    }
+
     // 优先尝试使用现代剪贴板API
     if (navigator.clipboard && navigator.clipboard.writeText) {
       await navigator.clipboard.writeText(content)
@@ -1416,7 +1342,10 @@ const copyMessage = async (content) => {
     textArea.style.position = 'fixed'
     textArea.style.left = '-999999px'
     textArea.style.top = '-999999px'
+    textArea.setAttribute('readonly', '') // 防止移动端弹出键盘
     document.body.appendChild(textArea)
+
+    // 使用select()而非setSelectionRange()以获得更好的兼容性
     textArea.focus()
     textArea.select()
 
@@ -1453,6 +1382,8 @@ onMounted(async () => {
   // 添加滚动事件监听器
   if (chatContainerRef.value) {
     chatContainerRef.value.addEventListener('scroll', handleScroll)
+    // 初始化滚动位置
+    lastScrollTop = chatContainerRef.value.scrollTop || 0
   }
 
   // 加载聊天历史记录
@@ -1473,6 +1404,7 @@ onUnmounted(() => {
 
 <style scoped lang="less">
 .chat-content-wrapper {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -1823,85 +1755,53 @@ onUnmounted(() => {
   position: relative; /* 为绝对定位的 emoji panel 提供定位上下文 */
 }
 
-// 快速操作面板
-.quick-actions-container {
-  position: absolute;
-  bottom: 100%;
-  left: 0;
-  right: 0;
-  margin-bottom: 8px;
-  background: #ffffff;
-  border: 1px solid #e8ecef;
-  border-radius: 12px;
-  padding: 16px;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
-  z-index: 1000;
-  animation: slideUp 0.3s ease-out;
-}
-
 // 卡片消息包装器
 .card-message-wrapper {
   width: 100%;
   max-width: 600px;
 }
 
-// 快捷提问悬浮面板（固定在容器右上角）
-// 快捷提问按钮包装器
-.quick-questions-button-wrapper {
+// 快捷提问按钮包装器（提供相对定位参考）
+.quick-question-button-wrapper {
   position: relative;
   display: inline-block;
 }
 
-.quick-questions-panel {
+// 快捷提问面板（定位到快捷提问按钮的右上角）
+.quick-questions-panel-fixed {
   position: absolute;
-  left: calc(100% + 8px); /* 按钮右侧 8px */
-  top: 0; /* 与按钮顶部对齐 */
+  bottom: calc(100% + 4px); // 在按钮上方，保持4px间距
+  left: calc(100% + 4px); // 在按钮右侧，保持4px间距
+  width: 200px; // 固定宽度，只显示分类标题
+  max-height: 400px; // 限制最大高度
   background: #ffffff;
   border: 1px solid #e8ecef;
-  border-radius: 8px;
-  padding: 12px;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
-  width: 320px; /* 固定宽度 */
-  max-height: 500px;
-  overflow-y: auto;
-  z-index: 1000;
-  transform-origin: left center; /* 从左侧（按钮侧）展开 */
-  animation: slideInRight 0.25s ease-out;
-
-  // 左侧箭头指示器（指向按钮）
-  &::before {
-    content: '';
-    position: absolute;
-    left: -6px; /* 在面板左侧 */
-    top: 16px; /* 距离顶部 16px */
-    width: 12px;
-    height: 12px;
-    background: #ffffff;
-    border-left: 1px solid #e8ecef;
-    border-bottom: 1px solid #e8ecef;
-    transform: rotate(45deg); /* 旋转形成向左的箭头 */
-  }
-
-  &::-webkit-scrollbar {
-    width: 4px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: #dee2e6;
-    border-radius: 2px;
-
-    &:hover {
-      background: #adb5bd;
-    }
-  }
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  z-index: 100;
 
   .quick-questions-title {
-    font-size: 0.929rem /* 原值: 13px */;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 1rem;
     font-weight: 600;
-    color: #606266;
-    margin-bottom: 10px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid #e8ecef;
+    color: #303133;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #ff6b6b;
+
+    .close-panel-icon {
+      cursor: pointer;
+      color: #909399;
+      transition: all 0.2s ease;
+
+      &:hover {
+        color: #ff6b6b;
+        transform: rotate(90deg);
+      }
+    }
   }
 
   .quick-questions-categories {
@@ -1910,37 +1810,46 @@ onUnmounted(() => {
     gap: 8px;
 
     .question-category {
-      border: 1px solid #e8ecef;
-      border-radius: 6px;
-      overflow: hidden;
-      transition: all 0.2s ease;
-
-      &:hover {
-        border-color: #ff6b6b;
-      }
+      position: relative;
+      display: flex;
+      align-items: flex-start;
 
       .category-header {
+        flex-shrink: 0;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 8px 12px;
+        padding: 10px 14px;
         background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+        border: 1px solid #e8ecef;
+        border-radius: 8px;
         cursor: pointer;
         user-select: none;
         transition: all 0.2s ease;
+        width: 160px; // 固定宽度
+        flex-shrink: 0;
 
         &:hover {
           background: linear-gradient(135deg, #fff5f5 0%, #fff 100%);
+          border-color: #ff6b6b;
         }
 
-        .category-title {
-          font-size: 0.857rem /* 原值: 12px */;
+        &.is-active {
+          background: linear-gradient(135deg, #ff6b6b 0%, #ff8787 100%);
+          border-color: #ff6b6b;
+          color: #ffffff;
+
+          .category-arrow {
+            color: #ffffff;
+          }
+        }
+
+        span {
+          font-size: 0.857rem;
           font-weight: 600;
-          color: #606266;
         }
 
         .category-arrow {
-          font-size: 0.857rem /* 原值: 12px */;
           color: #909399;
           transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
@@ -1951,18 +1860,26 @@ onUnmounted(() => {
       }
 
       .category-questions {
-        padding: 6px;
-        background: #ffffff;
+        position: absolute;
+        left: 100%;
+        top: 0;
+        margin-left: 8px;
         display: flex;
         flex-direction: column;
-        gap: 4px;
+        gap: 6px;
+        width: 280px; // 固定宽度
+        background: #ffffff;
+        border: 1px solid #e8ecef;
+        border-radius: 8px;
+        padding: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 
         .question-item {
-          padding: 8px 10px;
-          font-size: 0.786rem /* 原值: 11px */;
+          padding: 10px 12px;
+          font-size: 0.786rem;
           color: #606266;
           background: #f5f7fa;
-          border-radius: 4px;
+          border-radius: 6px;
           cursor: pointer;
           transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
           text-align: left;
@@ -1971,11 +1888,11 @@ onUnmounted(() => {
           &:hover {
             background: linear-gradient(135deg, #409eff 0%, #5dade2 100%);
             color: #ffffff;
-            transform: translateX(2px);
+            transform: translateX(4px);
           }
 
           &:active {
-            transform: translateX(1px);
+            transform: translateX(2px);
           }
         }
       }
@@ -1983,23 +1900,39 @@ onUnmounted(() => {
   }
 }
 
-// 分类展开/折叠动画
-.category-slide-enter-active,
-.category-slide-leave-active {
+// 快捷提问面板淡入淡出动画
+.fade-slide-enter-active,
+.fade-slide-leave-active {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow: hidden;
 }
 
-.category-slide-enter-from,
-.category-slide-leave-to {
-  max-height: 0;
+.fade-slide-enter-from {
   opacity: 0;
+  transform: translateY(-10px);
 }
 
-.category-slide-enter-to,
-.category-slide-leave-from {
-  max-height: 300px;
-  opacity: 1;
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+// 二级问题向右展开动画
+.slide-right-sub-enter-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slide-right-sub-leave-active {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slide-right-sub-enter-from {
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+.slide-right-sub-leave-to {
+  opacity: 0;
+  transform: translateX(-10px);
 }
 
 // 已上传图片预览
@@ -2118,40 +2051,6 @@ onUnmounted(() => {
 .slide-up-leave-to {
   opacity: 0;
   transform: translateY(6px);
-}
-
-// slide-right 过渡动画（向右展开）
-.slide-right-enter-active,
-.slide-right-leave-active {
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.slide-right-enter-from {
-  opacity: 0;
-  transform: scaleX(0) translateX(-10px);
-  transform-origin: left center;
-}
-
-.slide-right-leave-to {
-  opacity: 0;
-  transform: scaleX(0) translateX(-10px);
-  transform-origin: left center;
-}
-
-// 快捷提问面板动画
-.slide-down-enter-active,
-.slide-down-leave-active {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.slide-down-enter-from {
-  opacity: 0;
-  transform: translateY(-12px);
-}
-
-.slide-down-leave-to {
-  opacity: 0;
-  transform: translateY(-12px);
 }
 
 .fade-enter-active,

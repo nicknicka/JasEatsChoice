@@ -193,7 +193,12 @@ public class AiFunctionExecutorOptimized {
      */
     private boolean needsUserId(String functionName) {
         return "create_order".equals(functionName) ||
-               "get_user_preferences".equals(functionName);
+               "get_user_preferences".equals(functionName) ||
+               "get_user_info".equals(functionName) ||
+               "get_favorites".equals(functionName) ||
+               "add_favorite".equals(functionName) ||
+               "get_user_reviews".equals(functionName) ||
+               "get_user_coupons".equals(functionName);
     }
 
     // ==================== 以下是各个函数的处理方法 ====================
@@ -1481,12 +1486,14 @@ public class AiFunctionExecutorOptimized {
     /**
      * 查看收藏列表
      *
-     * @param arguments 参数（无需参数）
-     * @param userId 用户ID
+     * @param arguments 参数（无需参数，系统自动注入user_id）
      * @return 收藏列表
      */
     @AiFunctionHandler(value = "get_favorites", description = "查看用户的收藏列表")
-    public String getFavorites(Map<String, Object> arguments, String userId) {
+    private String getFavorites(Map<String, Object> arguments) {
+        // 从arguments中获取user_id（系统自动注入）
+        String userId = getStringArgument(arguments, "user_id");
+
         try {
             log.info("查看收藏列表，用户ID: {}", userId);
 
@@ -1536,16 +1543,17 @@ public class AiFunctionExecutorOptimized {
     /**
      * 添加收藏
      *
-     * @param arguments 参数 {dish_id: 菜品ID, dish_name: 菜品名称（可选）}
-     * @param userId 用户ID
+     * @param arguments 参数 {dish_id: 菜品ID, dish_name: 菜品名称（可选），系统自动注入user_id}
      * @return 添加结果
      */
     @AiFunctionHandler(value = "add_favorite", description = "添加菜品到收藏")
-    public String addFavorite(Map<String, Object> arguments, String userId) {
-        try {
-            String dishId = (String) arguments.get("dish_id");
-            String dishName = (String) arguments.get("dish_name");
+    private String addFavorite(Map<String, Object> arguments) {
+        // 从arguments中获取user_id（系统自动注入）
+        String userId = getStringArgument(arguments, "user_id");
+        String dishId = (String) arguments.get("dish_id");
+        String dishName = (String) arguments.get("dish_name");
 
+        try {
             log.info("添加收藏，用户ID: {}, 菜品ID: {}, 菜品名称: {}",
                      userId, dishId, dishName);
 
@@ -1601,7 +1609,10 @@ public class AiFunctionExecutorOptimized {
      * @return 评价列表
      */
     @AiFunctionHandler(value = "get_user_reviews", description = "获取用户的评价列表")
-    public String getUserReviews(Map<String, Object> arguments, String userId) {
+    private String getUserReviews(Map<String, Object> arguments) {
+        // 从arguments中获取user_id（系统自动注入）
+        String userId = getStringArgument(arguments, "user_id");
+
         try {
             // 获取限制参数，默认20
             int limit = 20;
@@ -1685,7 +1696,10 @@ public class AiFunctionExecutorOptimized {
      * @return 优惠券列表
      */
     @AiFunctionHandler(value = "get_user_coupons", description = "获取用户的可用优惠券")
-    public String getUserCoupons(Map<String, Object> arguments, String userId) {
+    private String getUserCoupons(Map<String, Object> arguments) {
+        // 从arguments中获取user_id（系统自动注入）
+        String userId = getStringArgument(arguments, "user_id");
+
         try {
             log.info("获取用户优惠券列表，用户ID: {}", userId);
 
@@ -1780,12 +1794,14 @@ public class AiFunctionExecutorOptimized {
     /**
      * 获取用户信息
      *
-     * @param arguments 参数（无需参数）
-     * @param userId 用户ID
+     * @param arguments 参数（无需参数，系统自动注入user_id）
      * @return 用户信息
      */
     @AiFunctionHandler(value = "get_user_info", description = "获取用户的详细信息和档案")
-    public String getUserInfo(Map<String, Object> arguments, String userId) {
+    private String getUserInfo(Map<String, Object> arguments) {
+        // 从arguments中获取user_id（系统自动注入）
+        String userId = getStringArgument(arguments, "user_id");
+
         try {
             log.info("获取用户信息，用户ID: {}", userId);
 
