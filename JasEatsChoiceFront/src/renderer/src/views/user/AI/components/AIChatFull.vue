@@ -24,6 +24,18 @@
           <!-- AI头像：使用emoji -->
           <div v-else class="message-avatar">{{ message.avatar }}</div>
           <div class="message-content">
+            <!-- 工具执行状态提示 -->
+            <div v-if="message.isToolExecuting" class="tool-executing-status">
+              <el-icon class="is-loading"><Loading /></el-icon>
+              <span>正在执行工具函数...</span>
+            </div>
+
+            <!-- 工具执行完成通知 -->
+            <div v-if="message.toolCompleted" class="tool-completed-notice">
+              <el-icon><CircleCheck /></el-icon>
+              <span>工具执行完成</span>
+            </div>
+
             <!-- 图片附件 -->
             <div v-if="message.images && message.images.length > 0" class="message-images">
               <div
@@ -36,7 +48,7 @@
             </div>
 
             <!-- 消息文本（支持Markdown或纯文本） -->
-            <div class="message-text">
+            <div class="message-text" v-show="shouldShowMessage(message)">
               <!-- 卡片消息渲染 -->
               <div
                 v-if="message.messageType && isCardMessage(message.messageType)"
@@ -53,10 +65,10 @@
                 v-else
                 class="message-text-content"
                 :class="{ 'markdown-content': message.enableMarkdown }"
-                v-html="renderContent(message.content, message.enableMarkdown)"
+                v-html="renderContent(getDisplayContent(message), message.enableMarkdown)"
               ></div>
               <!-- 更多操作按钮（仅文本消息显示） -->
-              <el-dropdown trigger="click" @command="(cmd) => handleMessageAction(cmd, message.content)" v-if="!message.messageType || !isCardMessage(message.messageType)">
+              <el-dropdown trigger="click" @command="(cmd) => handleMessageAction(cmd, getDisplayContent(message))" v-if="!message.messageType || !isCardMessage(message.messageType)">
                 <span class="more-btn">
                   <el-icon :size="12">
                     <More />
@@ -288,7 +300,9 @@ import {
   More,
   Operation,
   QuestionFilled,
-  ArrowRight
+  ArrowRight,
+  Loading,
+  CircleCheck
 } from '@element-plus/icons-vue'
 import { parseMarkdown } from '../../../../utils/markdownParser'
 import axios from 'axios'
@@ -624,9 +638,42 @@ const streamResponse = async (messageIndex, reader) => {
 
           // 接收 content 字段：追加文本
           if (parsedData.content) {
-            // console.log('📝 收到内容片段:', parsedData.content)  // 【调试日志】
-            messages.value[messageIndex].content += parsedData.content
-            // console.log('📊 当前消息总长度:', messages.value[messageIndex].content.length)  // 【调试日志】
+            const newContent = parsedData.content
+            const currentMessage = messages.value[messageIndex]
+
+            // 检测工具执行提示
+            const toolPromptRegex = /🔧\s*正在执行工具函数[.。]{0,3}/
+            const hasToolPrompt = toolPromptRegex.test(newContent)
+
+            if (hasToolPrompt && !currentMessage.isToolExecuting) {
+              // 检测到工具执行开始
+              currentMessage.isToolExecuting = true
+              currentMessage.toolCompleted = false
+              currentMessage.hasToolPrompt = true
+              console.log('🔧 工具开始执行')
+            }
+
+            // 过滤掉工具提示文本，不显示在普通内容中
+            const filteredContent = newContent.replace(toolPromptRegex, '')
+
+            // 更新完整内容和显示内容
+            currentMessage.content += newContent
+            currentMessage.displayContent += filteredContent
+
+            // 检测工具执行完成（收到非工具提示的正常内容）
+            if (currentMessage.isToolExecuting && filteredContent.trim() && !hasToolPrompt) {
+              currentMessage.isToolExecuting = false
+              currentMessage.toolCompleted = true
+              console.log('✅ 工具执行完成')
+
+              // 3秒后隐藏完成通知
+              setTimeout(() => {
+                if (messages.value[messageIndex]) {
+                  messages.value[messageIndex].toolCompleted = false
+                }
+              }, 3000)
+            }
+
             await nextTick()
             // 流式传输时自动滚动，除非用户主动向上滚动
             scrollToBottom()
@@ -709,9 +756,13 @@ const sendMessage = async () => {
     id: aiMessageIndex,
     sender: 'ai',
     content: '',
+    displayContent: '', // 过滤后的显示内容（不含工具提示）
     time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     avatar: '🤖',
-    enableMarkdown: true
+    enableMarkdown: true,
+    isToolExecuting: false, // 是否正在执行工具
+    toolCompleted: false, // 工具是否执行完成
+    hasToolPrompt: false // 是否包含工具提示
   })
 
   // 不自动滚动,让用户控制查看位置
@@ -874,7 +925,7 @@ const scrollToBottom = (force = false) => {
 
 // 键盘事件
 const handleKeydown = (event) => {
-  if (event.key === 'Enter' && !event.shiftKey) {
+  if (event.key === 'Enter' && event.shiftKey) {
     event.preventDefault()
     sendMessage()
   }
@@ -1316,17 +1367,35 @@ const handlePersonalDataToggle = async (value) => {
   }
 }
 
+// 判断消息是否应该显示
+const shouldShowMessage = (message) => {
+  // 如果有 displayContent 字段，使用它
+  if (message.displayContent !== undefined) {
+    return message.displayContent.length > 0 ||
+           (message.messageType && isCardMessage(message.messageType))
+  }
+  // 否则使用 content 字段
+  return message.content && message.content.length > 0
+}
+
+// 获取消息的显示内容
+const getDisplayContent = (message) => {
+  // 优先使用 displayContent（过滤后的内容）
+  if (message.displayContent !== undefined) {
+    return message.displayContent
+  }
+  // 否则使用原始 content
+  return message.content || ''
+}
+
 // 复制消息
 const copyMessage = async (content) => {
   try {
     // 在Electron环境中，优先使用clipboard模块
-    if (window.require && window.electron) {
-      const { clipboard } = window.electron
-      if (clipboard) {
-        clipboard.writeText(content)
-        ElMessage.success('复制成功')
-        return
-      }
+    if (window.api && window.api.clipboard) {
+      window.api.clipboard.writeText(content)
+      ElMessage.success('复制成功')
+      return
     }
 
     // 优先尝试使用现代剪贴板API
@@ -1688,6 +1757,42 @@ onUnmounted(() => {
           margin: 1px 0; /* 进一步减小列表项间距 */
         }
 
+        // 表格样式
+        :deep(table) {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 12px 0;
+          font-size: 0.929rem;
+          background: #ffffff;
+          border-radius: 8px;
+          overflow: hidden;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+
+          th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff;
+            font-weight: 600;
+            padding: 10px 12px;
+            text-align: left;
+            font-size: 0.929rem;
+          }
+
+          td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #f0f0f0;
+            color: #333;
+            line-height: 1.5;
+          }
+
+          tr:last-child td {
+            border-bottom: none;
+          }
+
+          tr:hover {
+            background-color: #f8f9fa;
+          }
+        }
+
         // 换行
         :deep(br) {
           line-height: 1.2; /* 减小空行高度 */
@@ -1700,6 +1805,73 @@ onUnmounted(() => {
         margin-top: 2px;
       }
     }
+  }
+}
+
+// 工具执行状态样式
+.tool-executing-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #ffffff;
+  border-radius: 20px;
+  font-size: 0.929rem;
+  margin-bottom: 12px;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  animation: toolStatusFadeIn 0.3s ease-out;
+
+  .el-icon {
+    font-size: 1.143rem;
+    animation: rotate 1.5s linear infinite;
+  }
+
+  span {
+    font-weight: 500;
+  }
+}
+
+// 工具执行完成通知
+.tool-completed-notice {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #43a047 0%, #66bb6a 100%);
+  color: #ffffff;
+  border-radius: 20px;
+  font-size: 0.929rem;
+  margin-bottom: 12px;
+  box-shadow: 0 4px 12px rgba(67, 160, 71, 0.3);
+  animation: toolStatusFadeIn 0.3s ease-out;
+
+  .el-icon {
+    font-size: 1.143rem;
+  }
+
+  span {
+    font-weight: 500;
+  }
+}
+
+@keyframes toolStatusFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
   }
 }
 

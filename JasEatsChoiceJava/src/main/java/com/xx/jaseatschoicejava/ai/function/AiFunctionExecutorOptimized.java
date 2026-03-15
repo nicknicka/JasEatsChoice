@@ -176,8 +176,13 @@ public class AiFunctionExecutorOptimized {
             return (String) result;
 
         } catch (Exception e) {
-            log.error("执行工具函数失败: {}", functionName, e);
-            return buildErrorResponse("执行失败: " + e.getMessage());
+            log.error("执行工具函数失败: {}, 异常类型: {}, 错误信息: {}",
+                functionName, e.getClass().getName(), e.getMessage(), e);
+            // 输出详细的异常堆栈
+            if (e.getCause() != null) {
+                log.error("根本原因: {}", e.getCause().getMessage(), e.getCause());
+            }
+            return buildErrorResponse("执行失败: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName()));
         }
     }
 
@@ -198,7 +203,13 @@ public class AiFunctionExecutorOptimized {
                "get_favorites".equals(functionName) ||
                "add_favorite".equals(functionName) ||
                "get_user_reviews".equals(functionName) ||
-               "get_user_coupons".equals(functionName);
+               "get_user_coupons".equals(functionName) ||
+               "list_orders".equals(functionName) ||
+               "get_order_status".equals(functionName) ||
+               "cancel_order".equals(functionName) ||
+               "urge_order".equals(functionName) ||
+               "get_today_calories".equals(functionName) ||
+               "analyze_nutrition_intake".equals(functionName);
     }
 
     // ==================== 以下是各个函数的处理方法 ====================
@@ -413,8 +424,9 @@ public class AiFunctionExecutorOptimized {
     @AiFunctionHandler(value = "get_order_status", description = "查询订单的当前状态")
     private String getOrderStatus(Map<String, Object> arguments) {
         String orderId = getStringArgument(arguments, "order_id");
+        String userId = getStringArgument(arguments, "user_id");
 
-        log.info("查询订单状态 - ID: {}", orderId);
+        log.info("查询订单状态 - ID: {}, userId: {}", orderId, userId);
 
         try {
             // 尝试从订单ID获取订单
@@ -422,6 +434,12 @@ public class AiFunctionExecutorOptimized {
 
             if (order == null) {
                 return "未找到该订单，请确认订单号是否正确。";
+            }
+
+            // 权限验证：只能查询自己的订单
+            if (userId != null && !userId.isEmpty() && !userId.equals(order.getUserId())) {
+                log.warn("用户 {} 尝试查询他人订单 {}", userId, orderId);
+                return buildErrorResponse("无权查询该订单");
             }
 
             StringBuilder result = new StringBuilder();
@@ -666,8 +684,9 @@ public class AiFunctionExecutorOptimized {
     @AiFunctionHandler(value = "cancel_order", description = "取消用户指定的订单")
     private String cancelOrder(Map<String, Object> arguments) {
         String orderId = getStringArgument(arguments, "order_id");
+        String userId = getStringArgument(arguments, "user_id");
 
-        log.info("取消订单 - orderId: {}", orderId);
+        log.info("取消订单 - orderId: {}, userId: {}", orderId, userId);
 
         if (orderId == null || orderId.isEmpty()) {
             return buildErrorResponse("请提供要取消的订单号");
@@ -679,6 +698,12 @@ public class AiFunctionExecutorOptimized {
 
             if (order == null) {
                 return buildErrorResponse("订单不存在，请检查订单号是否正确");
+            }
+
+            // 权限验证：只能取消自己的订单
+            if (userId != null && !userId.isEmpty() && !userId.equals(order.getUserId())) {
+                log.warn("用户 {} 尝试取消他人订单 {}", userId, orderId);
+                return buildErrorResponse("无权取消该订单");
             }
 
             // 验证订单状态
@@ -732,8 +757,9 @@ public class AiFunctionExecutorOptimized {
     @AiFunctionHandler(value = "urge_order", description = "催促商家加快订单处理进度")
     private String urgeOrder(Map<String, Object> arguments) {
         String orderId = getStringArgument(arguments, "order_id");
+        String userId = getStringArgument(arguments, "user_id");
 
-        log.info("催单 - orderId: {}", orderId);
+        log.info("催单 - orderId: {}, userId: {}", orderId, userId);
 
         if (orderId == null || orderId.isEmpty()) {
             return buildErrorResponse("请提供要催促的订单号");
@@ -745,6 +771,12 @@ public class AiFunctionExecutorOptimized {
 
             if (order == null) {
                 return buildErrorResponse("订单不存在，请检查订单号是否正确");
+            }
+
+            // 权限验证：只能催促自己的订单
+            if (userId != null && !userId.isEmpty() && !userId.equals(order.getUserId())) {
+                log.warn("用户 {} 尝试催促他人订单 {}", userId, orderId);
+                return buildErrorResponse("无权催促该订单");
             }
 
             // 验证订单状态
@@ -1507,7 +1539,9 @@ public class AiFunctionExecutorOptimized {
             }
 
             StringBuilder result = new StringBuilder();
-            result.append("💝 您的收藏列表（共").append(collections.size()).append("个菜品）\n\n");
+            result.append("## 💝 您的收藏列表\n\n");
+            result.append("共 **").append(collections.size()).append("** 个菜品\n\n");
+            result.append("---\n\n");
 
             int count = 0;
             for (com.xx.jaseatschoicejava.entity.UserCollection collection : collections) {
@@ -1516,12 +1550,12 @@ public class AiFunctionExecutorOptimized {
 
                 if (dish != null) {
                     count++;
-                    result.append(count).append(". **").append(dish.getName())
-                          .append("**\n")
-                          .append("   💰 价格：￥").append(dish.getPrice())
-                          .append("  |  📂 ").append(dish.getCategory()).append("\n")
-                          .append("   ⭐ 评分：").append(dish.getAvgRating()).append("分\n")
-                          .append("   🕒 收藏时间：").append(collection.getCreateTime()).append("\n\n");
+                    result.append("### ").append(count).append(". ").append(dish.getName()).append("\n\n");
+                    result.append("- 💰 **价格**：￥").append(dish.getPrice()).append("\n");
+                    result.append("- 📂 **分类**：").append(dish.getCategory()).append("\n");
+                    result.append("- ⭐ **评分**：").append(dish.getAvgRating()).append(" 分\n");
+                    result.append("- 🕒 **收藏时间**：").append(collection.getCreateTime()).append("\n");
+                    result.append("\n---\n\n");
                 }
             }
 
@@ -1530,7 +1564,7 @@ public class AiFunctionExecutorOptimized {
                        "可能已被商家下架，去看看其他菜品吧！";
             }
 
-            result.append("💡 需要详细介绍某道菜，或者直接下单吗？");
+            result.append("💡 **提示**：需要详细介绍某道菜，或者直接下单吗？");
 
             return result.toString();
 
@@ -1645,9 +1679,12 @@ public class AiFunctionExecutorOptimized {
                     .collect(java.util.stream.Collectors.toList());
 
             StringBuilder result = new StringBuilder();
-            result.append("📝 您的评价列表（共").append(reviews.size()).append("条评价")
-                  .append(limit < reviews.size() ? "，显示最近" + limit + "条" : "")
-                  .append("）\n\n");
+            result.append("## 📝 您的评价列表\n\n");
+            result.append("共 **").append(reviews.size()).append("**")
+                  .append(" 条评价")
+                  .append(limit < reviews.size() ? "，显示最近 **" + limit + "** 条" : "")
+                  .append("\n\n");
+            result.append("---\n\n");
 
             int count = 0;
             for (Review review : limitedReviews) {
@@ -1668,17 +1705,18 @@ public class AiFunctionExecutorOptimized {
                     stars.append(i < review.getRating() ? "⭐" : "☆");
                 }
 
-                result.append(count).append(". ").append(targetName)
-                      .append(" - ").append(stars).append("\n");
+                result.append("### ").append(count).append(". ").append(targetName).append("\n\n");
+                result.append("- **评分**：").append(stars).append("\n");
 
                 if (review.getContent() != null && !review.getContent().isEmpty()) {
-                    result.append("   ").append(review.getContent()).append("\n");
+                    result.append("- **评价**：").append(review.getContent()).append("\n");
                 }
 
-                result.append("   🕒 ").append(review.getCreateTime()).append("\n\n");
+                result.append("- **时间**：").append(review.getCreateTime()).append("\n");
+                result.append("\n---\n\n");
             }
 
-            result.append("💡 您可以在订单详情中查看和修改评价。");
+            result.append("💡 **提示**：您可以在订单详情中查看和修改评价。");
 
             return result.toString();
 
@@ -1728,11 +1766,17 @@ public class AiFunctionExecutorOptimized {
                     .count();
 
             StringBuilder result = new StringBuilder();
-            result.append("🎫 您的优惠券（共").append(coupons.size()).append("张）\n\n");
-            result.append("📊 统计：\n");
-            result.append("   ✅ 可用：").append(availableCount).append("张\n");
-            result.append("   📝 已使用：").append(usedCount).append("张\n");
-            result.append("   ⏰ 已过期：").append(expiredCount).append("张\n\n");
+
+            // 标题和总数
+            result.append("## 🎫 您的优惠券\n\n");
+            result.append("共 **").append(coupons.size()).append("** 张优惠券\n\n");
+
+            // 统计信息
+            result.append("### 📊 统计\n\n");
+            result.append("- ✅ **可用**：").append(availableCount).append(" 张\n");
+            result.append("- 📝 **已使用**：").append(usedCount).append(" 张\n");
+            result.append("- ⏰ **已过期**：").append(expiredCount).append(" 张\n");
+            result.append("\n---\n\n");
 
             // 显示可用优惠券
             List<UserCoupon> availableCoupons = coupons.stream()
@@ -1740,28 +1784,31 @@ public class AiFunctionExecutorOptimized {
                     .collect(java.util.stream.Collectors.toList());
 
             if (!availableCoupons.isEmpty()) {
-                result.append("✅ **可用优惠券**（").append(availableCoupons.size()).append("张）\n\n");
+                result.append("## ✅ 可用优惠券\n\n");
+                result.append("共 **").append(availableCoupons.size()).append("** 张\n\n");
+                result.append("---\n\n");
 
                 int count = 0;
                 for (UserCoupon coupon : availableCoupons) {
                     count++;
-                    result.append(count).append(". **").append(coupon.getName()).append("**\n")
-                          .append("   💰 优惠金额：￥").append(coupon.getAmount()).append("\n");
+                    result.append("### ").append(count).append(". ").append(coupon.getName()).append("\n\n");
+                    result.append("- 💰 **优惠金额**：￥").append(coupon.getAmount()).append("\n");
 
                     if (coupon.getMinAmount() != null && coupon.getMinAmount().compareTo(java.math.BigDecimal.ZERO) > 0) {
-                        result.append("   📌 满减条件：订单满￥").append(coupon.getMinAmount()).append("可用\n");
+                        result.append("- 📌 **满减条件**：订单满 ￥").append(coupon.getMinAmount()).append(" 可用\n");
                     }
 
                     if (coupon.getExpireTime() != null) {
-                        result.append("   ⏰ 有效期至：").append(coupon.getExpireTime()).append("\n");
+                        result.append("- ⏰ **有效期至**：").append(coupon.getExpireTime()).append("\n");
                     }
 
-                    result.append("\n");
+                    result.append("\n---\n\n");
                 }
 
-                result.append("💡 下单时系统会自动使用最优优惠券哦！\n\n");
+                result.append("💡 **提示**：下单时系统会自动使用最优优惠券哦！\n");
             } else {
-                result.append("😔 暂时没有可用的优惠券\n\n");
+                result.append("## 😔 暂无可用优惠券\n\n");
+                result.append("💡 多关注平台活动，有机会获得优惠券哦！\n");
             }
 
             // 显示即将过期的优惠券
@@ -1775,12 +1822,15 @@ public class AiFunctionExecutorOptimized {
                     .collect(java.util.stream.Collectors.toList());
 
             if (!expiringSoon.isEmpty()) {
-                result.append("⚠️ **即将过期提醒**\n\n");
+                result.append("\n---\n\n");
+                result.append("## ⚠️ 即将过期提醒\n\n");
+
                 for (UserCoupon coupon : expiringSoon) {
-                    result.append("• 「").append(coupon.getName()).append("」")
-                          .append("将于").append(coupon.getExpireTime()).append("过期\n");
+                    result.append("- 「").append(coupon.getName()).append("」")
+                          .append(" 将于 **").append(coupon.getExpireTime()).append("** 过期\n");
                 }
-                result.append("\n💡 赶紧使用吧，不要浪费了！\n\n");
+
+                result.append("\n💡 **温馨提示**：赶紧使用吧，不要浪费了！\n");
             }
 
             return result.toString();

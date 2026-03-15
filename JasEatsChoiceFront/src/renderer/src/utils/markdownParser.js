@@ -57,6 +57,38 @@ export function parseMarkdown(text) {
   // 水平线 (--- 或 ***)
   html = html.replace(/^(\-{3,}|\*{3,})$/gm, '<hr>')
 
+  // 表格 (| col1 | col2 | ...)
+  // 匹配表格头部和分隔行
+  html = html.replace(
+    /^(\|.+?\|)\s*\n(\|[-:\s|]+\|)\s*\n((?:\|.+?\|\s*\n?)+)/gm,
+    (match, header, separator, body) => {
+      // 解析表头
+      const headers = header.split('|').filter(cell => cell.trim() !== '').map(cell => cell.trim())
+      // 解析表格内容
+      const rows = body.trim().split('\n').map(row => {
+        return row.split('|').filter(cell => cell.trim() !== '').map(cell => cell.trim())
+      })
+
+      // 构建HTML表格
+      let tableHtml = '<table><thead><tr>'
+      headers.forEach(h => {
+        tableHtml += `<th>${h}</th>`
+      })
+      tableHtml += '</tr></thead><tbody>'
+
+      rows.forEach(row => {
+        tableHtml += '<tr>'
+        row.forEach(cell => {
+          tableHtml += `<td>${cell}</td>`
+        })
+        tableHtml += '</tr>'
+      })
+
+      tableHtml += '</tbody></table>'
+      return tableHtml
+    }
+  )
+
   // 链接 ([text](url))
   html = html.replace(
     /\[([^\]]+)\]\(([^)]+)\)/g,

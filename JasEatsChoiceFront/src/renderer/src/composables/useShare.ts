@@ -27,8 +27,15 @@ export function useShare() {
       } else {
         // 降级处理:复制到剪贴板
         const shareText = `${shareData.title}\n${shareData.text}\n${shareData.url}`
-        await navigator.clipboard.writeText(shareText)
-        showSuccess('已复制到剪贴板')
+
+        // 在Electron环境中，优先使用clipboard模块
+        if (window.api && window.api.clipboard) {
+          window.api.clipboard.writeText(shareText)
+          showSuccess('已复制到剪贴板')
+        } else {
+          await navigator.clipboard.writeText(shareText)
+          showSuccess('已复制到剪贴板')
+        }
       }
     } catch (error) {
       if ((error as Error).name !== 'AbortError') {

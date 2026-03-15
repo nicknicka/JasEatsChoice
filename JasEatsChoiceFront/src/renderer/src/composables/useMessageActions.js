@@ -212,12 +212,23 @@ export function useMessageActions({ chatHistory, chatMessages, userId, formatMes
    */
   const copyMessageContent = async (content) => {
     try {
+      // 在Electron环境中，优先使用clipboard模块
+      if (window.api && window.api.clipboard) {
+        window.api.clipboard.writeText(content)
+        ElMessage.success('已复制到剪贴板')
+        return
+      }
+
+      // 降级方案：使用现代剪贴板API
       await navigator.clipboard.writeText(content)
       ElMessage.success('已复制到剪贴板')
     } catch (error) {
-      // 降级方案
+      // 最终降级方案：使用传统方法
       const textarea = document.createElement('textarea')
       textarea.value = content
+      textarea.style.position = 'fixed'
+      textarea.style.left = '-999999px'
+      textarea.style.top = '-999999px'
       document.body.appendChild(textarea)
       textarea.select()
       try {
