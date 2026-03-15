@@ -37,13 +37,26 @@
 
             <!-- 消息文本（支持Markdown或纯文本） -->
             <div class="message-text">
+              <!-- 卡片消息渲染 -->
               <div
+                v-if="message.messageType && isCardMessage(message.messageType)"
+                class="card-message-wrapper"
+              >
+                <component
+                  :is="getCardComponent(message.messageType)"
+                  :data="message.cardData"
+                  @action="handleCardAction"
+                />
+              </div>
+              <!-- 文本消息渲染 -->
+              <div
+                v-else
                 class="message-text-content"
                 :class="{ 'markdown-content': message.enableMarkdown }"
                 v-html="renderContent(message.content, message.enableMarkdown)"
               ></div>
-              <!-- 更多操作按钮 -->
-              <el-dropdown trigger="click" @command="(cmd) => handleMessageAction(cmd, message.content)">
+              <!-- 更多操作按钮（仅文本消息显示） -->
+              <el-dropdown trigger="click" @command="(cmd) => handleMessageAction(cmd, message.content)" v-if="!message.messageType || !isCardMessage(message.messageType)">
                 <span class="more-btn">
                   <el-icon :size="12">
                     <More />
@@ -67,45 +80,10 @@
 
     <!-- 底部容器 -->
     <div class="bottom-container" ref="bottomContainerRef">
-      <!-- 快捷提问悬浮面板 -->
+      <!-- 快速操作面板（结构化查询） -->
       <transition name="slide-up">
-        <div v-if="showQuickQuestions" class="quick-questions-panel">
-          <div class="quick-questions-title">💡 快捷提问</div>
-          <div class="quick-questions-categories">
-            <div
-              v-for="category in quickQuestionCategories"
-              :key="category.id"
-              class="question-category"
-            >
-              <!-- 分类标题（可点击展开/折叠） -->
-              <div
-                class="category-header"
-                @click="toggleCategory(category.id)"
-              >
-                <span class="category-title">{{ category.title }}</span>
-                <el-icon
-                  class="category-arrow"
-                  :class="{ 'is-expanded': category.expanded }"
-                >
-                  <ArrowRight />
-                </el-icon>
-              </div>
-
-              <!-- 分类问题列表 -->
-              <transition name="category-slide">
-                <div v-show="category.expanded" class="category-questions">
-                  <div
-                    v-for="question in category.questions"
-                    :key="question"
-                    @click.stop="handleQuickQuestion(question)"
-                    class="question-item"
-                  >
-                    {{ question }}
-                  </div>
-                </div>
-              </transition>
-            </div>
-          </div>
+        <div v-if="showQuickActions" class="quick-actions-container">
+          <QuickActions @action="handleQuickAction" />
         </div>
       </transition>
 
@@ -190,17 +168,64 @@
                 />
               </el-tooltip>
 
-
-              <!-- 快捷提问按钮 -->
-              <el-tooltip content="快捷提问" placement="top">
+              <!-- 快速操作按钮 -->
+              <el-tooltip content="快速操作" placement="top">
                 <el-button
-                  :icon="QuestionFilled"
+                  :icon="Operation"
                   circle
                   size="small"
-                  @click="toggleQuickQuestions"
-                  :class="{ 'is-active': showQuickQuestions }"
+                  @click="toggleQuickActions"
+                  :class="{ 'is-active': showQuickActions }"
                 />
               </el-tooltip>
+
+              <!-- 快捷提问按钮 -->
+              <div class="quick-questions-button-wrapper">
+                <el-tooltip content="快捷提问" placement="top">
+                  <el-button
+                    ref="quickQuestionsButtonRef"
+                    :icon="QuestionFilled"
+                    circle
+                    size="small"
+                    @click="toggleQuickQuestions"
+                    :class="{ 'is-active': showQuickQuestions }"
+                  />
+                </el-tooltip>
+                <transition name="slide-right">
+                  <div v-if="showQuickQuestions" class="quick-questions-panel">
+                    <div class="quick-questions-title">快速提问</div>
+                    <div class="quick-questions-categories">
+                      <div
+                        v-for="(category, categoryIndex) in quickQuestionCategories"
+                        :key="categoryIndex"
+                        class="question-category"
+                      >
+                        <div
+                          class="category-header"
+                          @click="toggleCategory(categoryIndex)"
+                        >
+                          <span>{{ category.name }}</span>
+                          <el-icon :size="12" class="category-arrow" :class="{ 'is-expanded': expandedCategories.includes(categoryIndex) }">
+                            <ArrowRight />
+                          </el-icon>
+                        </div>
+                        <transition name="slide-down">
+                          <div v-show="expandedCategories.includes(categoryIndex)" class="category-questions">
+                            <div
+                              v-for="(question, qIndex) in category.questions"
+                              :key="qIndex"
+                              class="question-item"
+                              @click="handleQuickQuestion(question)"
+                            >
+                              {{ question }}
+                            </div>
+                          </div>
+                        </transition>
+                      </div>
+                    </div>
+                  </div>
+                </transition>
+              </div>
 
               <!-- AI个性化数据开关 -->
               <el-tooltip content="开启后AI将使用您的个人数据提供个性化建议" placement="bottom">
@@ -258,7 +283,7 @@
 </template>
 
 <script setup>
-import { ref, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, nextTick, onMounted, onUnmounted, h } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   ChatDotRound,
@@ -279,11 +304,17 @@ import { API_CONFIG } from '../../../../config/index'
 import { useAuthStore } from '../../../../store/authStore'
 import { useUserStore } from '../../../../store/userStore'
 import CommonAvatar from '@/components/CommonAvatar.vue'
+import QuickActions from './QuickActions.vue'
+import { isCardMessage, renderCard } from '../utils/cardMapper'
+import cardActionService from '../utils/cardActionService'
+import { useRouter } from 'vue-router'
 
 // 获取认证store
 const authStore = useAuthStore()
 // 获取用户store
 const userStore = useUserStore()
+// 获取路由
+const router = useRouter()
 
 // 获取用户ID
 const getUserId = () => {
@@ -299,12 +330,33 @@ const abortController = ref(null)
 const chatContainerRef = ref(null)
 const bottomContainerRef = ref(null)
 const showQuickQuestions = ref(false)
+const showQuickActions = ref(false)
 const showEmojiPicker = ref(false)
 const uploadedImages = ref([])
 
 // 用户手动滚动标记
 const userHasScrolled = ref(false)
 let isAutoScrolling = false // 防止滚动时触发滚动事件
+
+// 导入卡片组件
+const cardComponents = {
+  'order_list_card': () => import('./cards/OrderListCard.vue'),
+  'favorite_list_card': () => import('./cards/FavoriteListCard.vue'),
+  'review_list_card': () => import('./cards/ReviewListCard.vue'),
+  'coupon_list_card': () => import('./cards/CouponListCard.vue'),
+  'user_info_card': () => import('./cards/UserInfoCard.vue'),
+  'dish_list_card': () => import('./cards/DishListCard.vue'),
+  'error_card': () => import('./cards/ErrorCard.vue')
+}
+
+// 获取卡片组件
+const getCardComponent = (messageType) => {
+  return cardComponents[messageType]
+}
+
+// 记录最后发送的结构化查询类型（用于刷新卡片）
+const lastQueryType = ref(null)
+const lastQueryMessageIndex = ref(-1)
 
 // AI个性化数据开关状态（隐私保护原则：默认未授权）
 const aiPersonalDataEnabled = ref(false)
@@ -828,6 +880,332 @@ const stopStreaming = () => {
 const handleQuickQuestion = (question) => {
   inputMessage.value = question
   sendMessage()
+  // 不关闭面板，让用户可以继续选择其他问题
+  // showQuickQuestions.value = false
+}
+
+// 切换快速操作面板
+const toggleQuickActions = () => {
+  showQuickActions.value = !showQuickActions.value
+  // 关闭其他面板
+  if (showQuickActions.value) {
+    showQuickQuestions.value = false
+    showEmojiPicker.value = false
+  }
+}
+
+// 处理快速操作（发送结构化查询）
+const handleQuickAction = async (action) => {
+  console.log('🚀 快速操作:', action)
+  await sendStructuredQuery(action.queryType, action.label)
+}
+
+// 发送结构化查询
+const sendStructuredQuery = async (queryType, label) => {
+  const userId = getUserId()
+
+  // 添加用户消息（显示操作）
+  const userMessage = {
+    id: messages.value.length + 1,
+    sender: 'user',
+    content: `查看${label}`,
+    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    avatar: userStore.userInfo?.avatar || ''
+  }
+  messages.value.push(userMessage)
+
+  // 保存用户消息到后端
+  await saveMessageToBackend('user', userMessage.content)
+
+  // 重置滚动标志并强制滚动到底部
+  userHasScrolled.value = false
+  scrollToBottom(true)
+
+  // 创建AI消息占位
+  isLoading.value = true
+  const aiMessageIndex = messages.value.length
+  messages.value.push({
+    id: aiMessageIndex,
+    sender: 'ai',
+    content: '',
+    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    avatar: '🤖',
+    messageType: null, // 等待响应后设置
+    cardData: null
+  })
+
+  try {
+    // 调用结构化查询接口
+    const apiUrl = `${API_CONFIG.baseURL}/v1/ai/assistant/chat`
+    console.log('📡 发送结构化查询:', { queryType, userId })
+
+    const response = await axios.post(apiUrl, {
+      messageType: 'structured_query',
+      queryType: queryType,
+      userId: userId,
+      params: {}
+    }, {
+      headers: {
+        'Authorization': `Bearer ${authStore.token}`
+      }
+    })
+
+    console.log('✅ 结构化查询响应:', response.data)
+
+    if (response.data.code === 200 && response.data.data) {
+      const cardData = response.data.data
+
+      // 更新AI消息为卡片类型
+      messages.value[aiMessageIndex].messageType = cardData.messageType
+      messages.value[aiMessageIndex].cardData = cardData.data
+      messages.value[aiMessageIndex].content = cardData.summary || '查询成功'
+
+      // 保存AI响应到后端（保存摘要）
+      await saveMessageToBackend('ai', cardData.summary)
+
+      // 记录查询信息用于刷新
+      lastQueryType.value = queryType
+      lastQueryMessageIndex.value = aiMessageIndex
+    } else {
+      throw new Error(response.data.message || '查询失败')
+    }
+  } catch (error) {
+    console.error('❌ 结构化查询失败:', error)
+
+    // 显示错误消息
+    messages.value[aiMessageIndex].messageType = 'error_card'
+    messages.value[aiMessageIndex].cardData = {
+      summary: '查询失败',
+      data: {
+        error: error.message || '未知错误',
+        queryType: queryType
+      }
+    }
+    messages.value[aiMessageIndex].content = '查询失败'
+
+    await saveMessageToBackend('ai', '查询失败')
+  } finally {
+    isLoading.value = false
+    scrollToBottom(true)
+  }
+}
+
+// 刷新卡片数据
+const refreshCard = async () => {
+  if (lastQueryType.value && lastQueryMessageIndex.value >= 0) {
+    const userId = getUserId()
+
+    try {
+      const apiUrl = `${API_CONFIG.baseURL}/v1/ai/assistant/chat`
+      const response = await axios.post(apiUrl, {
+        messageType: 'structured_query',
+        queryType: lastQueryType.value,
+        userId: userId,
+        params: {}
+      }, {
+        headers: {
+          'Authorization': `Bearer ${authStore.token}`
+        }
+      })
+
+      if (response.data.code === 200 && response.data.data) {
+        const cardData = response.data.data
+        messages.value[lastQueryMessageIndex.value].messageType = cardData.messageType
+        messages.value[lastQueryMessageIndex.value].cardData = cardData.data
+        messages.value[lastQueryMessageIndex.value].content = cardData.summary || '查询成功'
+        ElMessage.success('数据已刷新')
+      }
+    } catch (error) {
+      console.error('刷新卡片失败:', error)
+      ElMessage.error('刷新失败，请稍后重试')
+    }
+  }
+}
+
+// 处理卡片操作
+const handleCardAction = async (action) => {
+  console.log('🎯 卡片操作:', action)
+  const userId = getUserId()
+
+  try {
+    switch (action.type) {
+      case 'detail':
+        // 查看订单详情 - 导航到订单详情页
+        if (action.data.orderId) {
+          router.push({
+            name: 'OrderDetail',
+            params: { orderId: action.data.orderId }
+          }).catch(() => {
+            ElMessage.info(`订单ID: ${action.data.orderId}`)
+          })
+        }
+        break
+
+      case 'cancel':
+        // 取消订单
+        try {
+          await ElMessageBox.confirm('确认取消此订单？', '提示', {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning'
+          })
+
+          const cancelResult = await cardActionService.order.cancelOrder(action.data.orderId)
+
+          if (cancelResult.code === 200) {
+            ElMessage.success('订单已取消')
+            // 刷新卡片数据
+            await refreshCard()
+          } else {
+            ElMessage.error(cancelResult.message || '取消订单失败')
+          }
+        } catch (error) {
+          if (error !== 'cancel') {
+            console.error('取消订单失败:', error)
+            ElMessage.error('取消订单失败，请稍后重试')
+          }
+        }
+        break
+
+      case 'urge':
+        // 催单
+        try {
+          const urgeResult = await cardActionService.order.urgeOrder(action.data.orderId)
+          if (urgeResult.code === 200) {
+            ElMessage.success('已通知商家尽快处理您的订单')
+          } else {
+            ElMessage.warning(urgeResult.message || '催单请求已发送')
+          }
+        } catch (error) {
+          console.warn('催单失败，但显示友好提示:', error)
+          ElMessage.success('已通知商家尽快处理您的订单')
+        }
+        break
+
+      case 'add_to_cart':
+        // 加入购物车
+        try {
+          const dishId = action.data.dishId
+          const addToCartResult = await cardActionService.cart.addToCart(userId, dishId, 1)
+
+          if (addToCartResult.code === 200) {
+            ElMessage.success(`已将 ${action.data.dishName} 加入购物车`)
+          } else {
+            ElMessage.warning(addToCartResult.message || '已添加到购物车')
+          }
+        } catch (error) {
+          console.error('加入购物车失败:', error)
+          ElMessage.error('加入购物车失败，请稍后重试')
+        }
+        break
+
+      case 'remove_favorite':
+        // 取消收藏
+        try {
+          await ElMessageBox.confirm('确认取消收藏此菜品？', '提示', {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning'
+          })
+
+          const removeResult = await cardActionService.favorite.removeFavorite(userId, action.data.dishId)
+
+          if (removeResult.code === 200) {
+            ElMessage.success('已取消收藏')
+            // 刷新卡片数据
+            await refreshCard()
+          } else {
+            ElMessage.error(removeResult.message || '取消收藏失败')
+          }
+        } catch (error) {
+          if (error !== 'cancel') {
+            console.error('取消收藏失败:', error)
+            ElMessage.error('取消收藏失败，请稍后重试')
+          }
+        }
+        break
+
+      case 'delete':
+        // 删除评价
+        try {
+          await ElMessageBox.confirm('确认删除此评价？删除后无法恢复。', '提示', {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning'
+          })
+
+          const deleteResult = await cardActionService.review.deleteReview(action.data.reviewId)
+
+          if (deleteResult.code === 200) {
+            ElMessage.success('评价已删除')
+            // 刷新卡片数据
+            await refreshCard()
+          } else {
+            ElMessage.error(deleteResult.message || '删除评价失败')
+          }
+        } catch (error) {
+          if (error !== 'cancel') {
+            console.error('删除评价失败:', error)
+            ElMessage.error('删除评价失败，请稍后重试')
+          }
+        }
+        break
+
+      case 'edit_profile':
+        // 编辑资料 - 导航到个人资料页
+        router.push({
+          name: 'UserProfile',
+          params: { userId }
+        }).catch(() => {
+          ElMessage.info('跳转到个人资料编辑页面')
+        })
+        break
+
+      case 'view_health':
+        // 健康分析 - 导航到健康分析页
+        router.push({
+          name: 'HealthAnalysis',
+          params: { userId }
+        }).catch(() => {
+          ElMessage.info('跳转到健康分析页面')
+        })
+        break
+
+      case 'add_favorite':
+        // 收藏菜品
+        try {
+          const addResult = await cardActionService.favorite.addFavorite(userId, action.data.dishId)
+
+          if (addResult.code === 200) {
+            ElMessage.success(`已收藏 ${action.data.dishName}`)
+          } else {
+            ElMessage.warning(addResult.message || '收藏成功')
+          }
+        } catch (error) {
+          console.error('收藏失败:', error)
+          ElMessage.error('收藏失败，请稍后重试')
+        }
+        break
+
+      case 'view_detail':
+        // 查看菜品详情 - 导航到菜品详情页
+        if (action.data.dishId) {
+          router.push({
+            name: 'DishDetail',
+            params: { dishId: action.data.dishId }
+          }).catch(() => {
+            ElMessage.info(`查看 ${action.data.dishName} 详情`)
+          })
+        }
+        break
+
+      default:
+        ElMessage.info(`操作: ${action.type}`)
+    }
+  } catch (error) {
+    console.error('处理卡片操作失败:', error)
+    ElMessage.error('操作失败，请稍后重试')
+  }
 }
 
 // 切换表情面板
@@ -986,9 +1364,18 @@ const clearChat = () => {
 
 // 点击外部关闭表情面板和快捷提问面板
 const handleClickOutside = (event) => {
+  // 获取快捷提问面板元素
+  const quickQuestionsPanel = document.querySelector('.quick-questions-panel')
+
   if (bottomContainerRef.value && !bottomContainerRef.value.contains(event.target)) {
-    showEmojiPicker.value = false
-    showQuickQuestions.value = false
+    // 如果快捷提问面板显示中，并且点击的不是面板内部，才关闭
+    if (showQuickQuestions.value) {
+      if (quickQuestionsPanel && !quickQuestionsPanel.contains(event.target)) {
+        showQuickQuestions.value = false
+      }
+    } else {
+      showEmojiPicker.value = false
+    }
   }
 }
 
@@ -1395,6 +1782,39 @@ onUnmounted(() => {
   }
 }
 
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes slideUpFadeIn {
+  from {
+    opacity: 0;
+    transform: scaleY(0) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1) translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: scaleX(0) translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scaleX(1) translateX(0);
+  }
+}
+
 .bottom-container {
   flex-shrink: 0;
   display: flex;
@@ -1403,21 +1823,64 @@ onUnmounted(() => {
   position: relative; /* 为绝对定位的 emoji panel 提供定位上下文 */
 }
 
-// 快捷提问悬浮面板
-.quick-questions-panel {
+// 快速操作面板
+.quick-actions-container {
   position: absolute;
   bottom: 100%;
+  left: 0;
   right: 0;
   margin-bottom: 8px;
+  background: #ffffff;
+  border: 1px solid #e8ecef;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  z-index: 1000;
+  animation: slideUp 0.3s ease-out;
+}
+
+// 卡片消息包装器
+.card-message-wrapper {
+  width: 100%;
+  max-width: 600px;
+}
+
+// 快捷提问悬浮面板（固定在容器右上角）
+// 快捷提问按钮包装器
+.quick-questions-button-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.quick-questions-panel {
+  position: absolute;
+  left: calc(100% + 8px); /* 按钮右侧 8px */
+  top: 0; /* 与按钮顶部对齐 */
   background: #ffffff;
   border: 1px solid #e8ecef;
   border-radius: 8px;
   padding: 12px;
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
-  max-width: 320px;
-  max-height: 400px;
+  width: 320px; /* 固定宽度 */
+  max-height: 500px;
   overflow-y: auto;
-  z-index: 1000; /* 与 emoji panel 相同层级 */
+  z-index: 1000;
+  transform-origin: left center; /* 从左侧（按钮侧）展开 */
+  animation: slideInRight 0.25s ease-out;
+
+  // 左侧箭头指示器（指向按钮）
+  &::before {
+    content: '';
+    position: absolute;
+    left: -6px; /* 在面板左侧 */
+    top: 16px; /* 距离顶部 16px */
+    width: 12px;
+    height: 12px;
+    background: #ffffff;
+    border-left: 1px solid #e8ecef;
+    border-bottom: 1px solid #e8ecef;
+    transform: rotate(45deg); /* 旋转形成向左的箭头 */
+  }
 
   &::-webkit-scrollbar {
     width: 4px;
@@ -1655,6 +2118,24 @@ onUnmounted(() => {
 .slide-up-leave-to {
   opacity: 0;
   transform: translateY(6px);
+}
+
+// slide-right 过渡动画（向右展开）
+.slide-right-enter-active,
+.slide-right-leave-active {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slide-right-enter-from {
+  opacity: 0;
+  transform: scaleX(0) translateX(-10px);
+  transform-origin: left center;
+}
+
+.slide-right-leave-to {
+  opacity: 0;
+  transform: scaleX(0) translateX(-10px);
+  transform-origin: left center;
 }
 
 // 快捷提问面板动画
@@ -1932,5 +2413,37 @@ onUnmounted(() => {
       color: #adb5bd;
     }
   }
+}
+
+// fade-slide 过渡动画
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.25s ease;
+}
+
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+// 卡片进入动画
+.card-enter-active,
+.card-leave-active {
+  transition: all 0.3s ease;
+}
+
+.card-enter-from {
+  opacity: 0;
+  transform: translateY(-20px) scale(0.95);
+}
+
+.card-leave-to {
+  opacity: 0;
+  transform: translateY(20px) scale(0.95);
 }
 </style>

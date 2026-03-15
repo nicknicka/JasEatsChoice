@@ -2,6 +2,7 @@ package com.xx.jaseatschoicejava.controller;
 
 import com.xx.jaseatschoicejava.ai.function.AiFunctionDefinitionsOptimized;
 import com.xx.jaseatschoicejava.common.ResponseResult;
+import com.xx.jaseatschoicejava.service.StructuredQueryService;
 import com.xx.jaseatschoicejava.service.ZhipuAIService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -16,7 +17,7 @@ import java.util.Map;
 
 /**
  * AI Function Calling 控制器
- * 提供AI助手对话接口，支持Function Calling功能
+ * 提供AI助手对话接口，支持Function Calling功能和结构化查询
  *
  * @author Claude
  * @since 2026-03-14
@@ -33,18 +34,66 @@ public class AIFunctionCallingController {
     @Resource
     private AiFunctionDefinitionsOptimized functionDefinitions;
 
+    @Resource
+    private StructuredQueryService structuredQueryService;
+
     /**
-     * AI助手对话接口（支持Function Calling）
+     * AI助手对话接口（支持Function Calling和结构化查询）
      *
      * @param params 请求参数
-     * @return AI回复
+     * @return AI回复或卡片数据
      */
-    @ApiOperation(value = "AI助手对话", notes = "支持智能搜索菜品、营养分析、订单管理等功能")
+    @ApiOperation(value = "AI助手对话", notes = "支持智能搜索菜品、营养分析、订单管理等功能，也支持结构化查询返回卡片数据")
     @PostMapping("/chat")
     public ResponseResult<?> chat(
             @ApiParam(value = "请求参数", required = true)
             @RequestBody Map<String, Object> params) {
 
+        try {
+            // 1. 判断是否为结构化查询
+            String messageType = (String) params.get("messageType");
+            if ("structured_query".equals(messageType)) {
+                return handleStructuredQuery(params);
+            }
+
+            // 2. 普通文本消息（原有逻辑）
+            return handleTextMessage(params);
+
+        } catch (Exception e) {
+            log.error("AI助手对话失败", e);
+            return ResponseResult.fail("500", "对话失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 处理结构化查询
+     */
+    private ResponseResult<?> handleStructuredQuery(Map<String, Object> params) {
+        try {
+            // 1. 提取参数
+            String queryType = (String) params.get("queryType");
+            String userId = (String) params.get("userId");
+            @SuppressWarnings("unchecked")
+            Map<String, Object> queryParams = (Map<String, Object>) params.get("params");
+
+            log.info("接收结构化查询：type={}, userId={}", queryType, userId);
+
+            // 2. 调用结构化查询服务
+            Map<String, Object> result = structuredQueryService.handleQuery(queryType, queryParams, userId);
+
+            // 3. 返回卡片数据
+            return ResponseResult.success(result);
+
+        } catch (Exception e) {
+            log.error("结构化查询失败", e);
+            return ResponseResult.fail("500", "查询失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 处理普通文本消息
+     */
+    private ResponseResult<?> handleTextMessage(Map<String, Object> params) {
         try {
             // 1. 提取参数
             String message = (String) params.get("message");

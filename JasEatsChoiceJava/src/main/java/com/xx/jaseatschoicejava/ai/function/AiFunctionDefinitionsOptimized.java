@@ -56,27 +56,66 @@ public class AiFunctionDefinitionsOptimized {
     private void initializeDefaultPrompts() {
         this.systemPrompts = new HashMap<>();
         systemPrompts.put("primary",
-                "你是佳食宜选的智能饮食助手，可以帮助用户搜索菜品、查看订单、获取营养分析等。\n\n" +
+                "你是佳食宜选的智能饮食助手，可以帮助用户搜索菜品、查看订单、获取营养分析、智能推荐等。\n\n" +
+                "【重要：工具函数返回数据分析】\n" +
+                "当工具函数返回数据后，你必须：\n" +
+                "1. 分析数据中的关键信息（价格、热量、评分、销量等）\n" +
+                "2. 给出结论性建议（如'性价比最高的是...'、'推荐低热量菜品...'）\n" +
+                "3. 提供个性化推荐（基于用户偏好和数据对比）\n" +
+                "4. 不要简单罗列数据，要分析总结\n" +
+                "5. 使用表格、列表等结构化方式展示复杂数据\n\n" +
+                "工具函数会返回JSON格式的结构化数据，例如：\n" +
+                "{\n" +
+                "  \"success\": true,\n" +
+                "  \"data\": {\n" +
+                "    \"dishes\": [...],\n" +
+                "    \"total\": 10\n" +
+                "  },\n" +
+                "  \"timestamp\": 1234567890\n" +
+                "}\n\n" +
+                "你需要分析这些数据，给出有价值的结论。\n\n" +
                 "【重要：下单流程】\n" +
                 "当用户说'下单'、'购买'、'点菜'、'要XX菜'等表达购买意图时：\n" +
                 "1. 先使用search_dishes搜索菜品，获取菜品信息和价格\n" +
-                "2. 向用户确认订单：列出菜品名称、价格，询问数量\n" +
-                "3. 询问用餐方式（必需）：\n" +
+                "2. 分析搜索结果，推荐性价比高或符合用户需求的菜品\n" +
+                "3. 向用户确认订单：列出菜品名称、价格，询问数量\n" +
+                "4. 询问用餐方式（必需）：\n" +
                 "   - 堂食：需要询问桌号\n" +
                 "   - 自提：需要询问取餐时间和联系电话\n" +
-                "4. 使用create_order创建订单（需要dish_items和address参数）\n" +
-                "5. 告知用户订单创建成功，显示订单号、用餐方式、总金额\n\n" +
+                "5. 使用create_order创建订单（需要dish_items和address参数）\n" +
+                "6. 告知用户订单创建成功，显示订单号、用餐方式、总金额\n\n" +
+                "【订单取消流程】\n" +
+                "当用户说'取消订单'、'不要了'、'退单'等表达取消意图时：\n" +
+                "1. 确认要取消的订单号（如果用户未提供，使用list_orders查询）\n" +
+                "2. 说明取消规则：只有待接单(状态1)的订单可以取消\n" +
+                "3. 调用cancel_order函数\n" +
+                "4. 告知用户取消结果\n\n" +
+                "【催单流程】\n" +
+                "当用户说'快点'、'怎么还没好'、'催一下'等表达催促意图时：\n" +
+                "1. 确认订单号（如果用户未提供，使用list_orders查询最近订单）\n" +
+                "2. 调用urge_order函数\n" +
+                "3. 告知用户已通知商家加急处理\n\n" +
+                "【智能推荐流程】\n" +
+                "当用户说'推荐'、'有什么好的'、'热门菜'、'今天吃什么'、'早餐/午餐/晚餐吃什么'等表达推荐需求时：\n" +
+                "- '推荐'、'热门菜'：使用get_hot_dishes获取热门菜品\n" +
+                "- '今天吃什么'：使用get_today_recommendations获取今日推荐\n" +
+                "- '早餐/午餐/晚餐/夜宵吃什么'：使用get_time_recommendations获取场景推荐\n" +
+                "- 分析推荐数据，说明推荐理由（如评分高、销量好、热量适中）\n\n" +
                 "注意事项：\n" +
                 "- 如果用户提到菜名但没有数量，默认为1份\n" +
                 "- 必须询问用餐方式（堂食/自提）才能创建订单\n" +
                 "- 堂食订单需要桌号，自提订单需要取餐时间\n" +
                 "- 创建订单前要向用户确认订单详情和总金额\n" +
+                "- 取消订单前需确认订单状态，已接单的订单不能取消\n" +
+                "- 推荐菜品时提供评分、销量、热量等信息帮助用户决策\n" +
                 "- 不要推荐其他菜品，除非用户主动询问\n\n" +
                 "你的职责：\n" +
-                "1. 根据用户需求推荐合适的菜品\n" +
-                "2. 提供准确的营养信息和健康建议\n" +
-                "3. 引导用户完成下单流程\n" +
-                "4. 保持友好、专业的服务态度"
+                "1. 根据用户需求推荐合适的菜品（热门/今日/时间场景）\n" +
+                "2. 分析工具函数返回的数据，给出有价值的结论\n" +
+                "3. 提供准确的营养信息和健康建议\n" +
+                "4. 引导用户完成下单流程\n" +
+                "5. 协助用户管理订单（取消、催单、查询）\n" +
+                "6. 保持友好、专业的服务态度"
         );
         systemPrompts.put("recommendation",
                 "你是专业的菜品推荐顾问。根据用户的口味偏好、健康需求和预算，" +
@@ -113,6 +152,48 @@ public class AiFunctionDefinitionsOptimized {
 
         // 7. 分析营养信息
         toolFunctions.add(createAnalyzeNutritionFunction());
+
+        // 8. 取消订单
+        toolFunctions.add(createCancelOrderFunction());
+
+        // 9. 催单
+        toolFunctions.add(createUrgeOrderFunction());
+
+        // 10. 获取热门菜品
+        toolFunctions.add(createGetHotDishesFunction());
+
+        // 11. 获取今日推荐
+        toolFunctions.add(createGetTodayRecommendationsFunction());
+
+        // 12. 获取时间场景推荐
+        toolFunctions.add(createGetTimeRecommendationsFunction());
+
+        // 13. 获取今日热量统计
+        toolFunctions.add(createGetTodayCaloriesFunction());
+
+        // 14. 分析营养摄入
+        toolFunctions.add(createAnalyzeNutritionIntakeFunction());
+
+        // 15. 计算BMI
+        toolFunctions.add(createCalculateBMIFunction());
+
+        // 16. 获取健康建议
+        toolFunctions.add(createGetHealthAdviceFunction());
+
+        // 17. 查看收藏列表
+        toolFunctions.add(createGetFavoritesFunction());
+
+        // 18. 添加收藏
+        toolFunctions.add(createAddFavoriteFunction());
+
+        // 19. 获取用户评价
+        toolFunctions.add(createGetUserReviewsFunction());
+
+        // 20. 获取用户优惠券
+        toolFunctions.add(createGetUserCouponsFunction());
+
+        // 21. 获取用户信息
+        toolFunctions.add(createGetUserInfoFunction());
 
         log.info("AI工具函数初始化完成，共{}个工具", toolFunctions.size());
     }
@@ -239,6 +320,234 @@ public class AiFunctionDefinitionsOptimized {
                 .name(type.getFunctionName())
                 .description(type.getDescription())
                 .parameters(createParameterSchema(properties, Collections.singletonList("food_name")))
+                .build();
+    }
+
+    /**
+     * 创建取消订单工具函数
+     */
+    private ToolFunction createCancelOrderFunction() {
+        AiFunctionType type = AiFunctionType.CANCEL_ORDER;
+
+        Map<String, Object> properties = new HashMap<>();
+        properties.put("order_id", createStringProperty("订单ID"));
+
+        return ToolFunction.builder()
+                .name(type.getFunctionName())
+                .description(type.getDescription())
+                .parameters(createParameterSchema(properties, Collections.singletonList("order_id")))
+                .build();
+    }
+
+    /**
+     * 创建催单工具函数
+     */
+    private ToolFunction createUrgeOrderFunction() {
+        AiFunctionType type = AiFunctionType.URGE_ORDER;
+
+        Map<String, Object> properties = new HashMap<>();
+        properties.put("order_id", createStringProperty("订单ID"));
+
+        return ToolFunction.builder()
+                .name(type.getFunctionName())
+                .description(type.getDescription())
+                .parameters(createParameterSchema(properties, Collections.singletonList("order_id")))
+                .build();
+    }
+
+    /**
+     * 创建获取热门菜品工具函数
+     */
+    private ToolFunction createGetHotDishesFunction() {
+        AiFunctionType type = AiFunctionType.GET_HOT_DISHES;
+
+        Map<String, Object> properties = new HashMap<>();
+        properties.put("category", createStringPropertyWithEnum("菜品分类（可选）", dishCategories));
+        properties.put("limit", createIntegerProperty("返回数量限制（可选，默认10）"));
+
+        return ToolFunction.builder()
+                .name(type.getFunctionName())
+                .description(type.getDescription())
+                .parameters(createParameterSchema(properties, Collections.emptyList())) // 无必需参数
+                .build();
+    }
+
+    /**
+     * 创建获取今日推荐工具函数
+     */
+    private ToolFunction createGetTodayRecommendationsFunction() {
+        AiFunctionType type = AiFunctionType.GET_TODAY_RECOMMENDATIONS;
+
+        Map<String, Object> properties = new HashMap<>();
+        // 无需参数，系统自动根据时间、季节、用户偏好推荐
+
+        return ToolFunction.builder()
+                .name(type.getFunctionName())
+                .description(type.getDescription())
+                .parameters(createParameterSchema(properties, Collections.emptyList()))
+                .build();
+    }
+
+    /**
+     * 创建获取时间场景推荐工具函数
+     */
+    private ToolFunction createGetTimeRecommendationsFunction() {
+        AiFunctionType type = AiFunctionType.GET_TIME_RECOMMENDATIONS;
+
+        Map<String, Object> properties = new HashMap<>();
+        properties.put("meal_type", createStringPropertyWithEnum("用餐时间类型",
+                Arrays.asList("breakfast", "lunch", "dinner", "late_night")));
+
+        return ToolFunction.builder()
+                .name(type.getFunctionName())
+                .description(type.getDescription())
+                .parameters(createParameterSchema(properties, Collections.emptyList())) // meal_type可选，系统会自动判断
+                .build();
+    }
+
+    /**
+     * 创建获取今日热量统计工具函数
+     */
+    private ToolFunction createGetTodayCaloriesFunction() {
+        AiFunctionType type = AiFunctionType.GET_TODAY_CALORIES;
+
+        Map<String, Object> properties = new HashMap<>();
+        properties.put("date", createStringProperty("统计日期（可选，格式：YYYY-MM-DD，默认今天）"));
+
+        return ToolFunction.builder()
+                .name(type.getFunctionName())
+                .description(type.getDescription())
+                .parameters(createParameterSchema(properties, Collections.emptyList()))
+                .build();
+    }
+
+    /**
+     * 创建分析营养摄入工具函数
+     */
+    private ToolFunction createAnalyzeNutritionIntakeFunction() {
+        AiFunctionType type = AiFunctionType.ANALYZE_NUTRITION_INTAKE;
+
+        Map<String, Object> properties = new HashMap<>();
+        properties.put("date", createStringProperty("分析日期（可选，格式：YYYY-MM-DD，默认今天）"));
+
+        return ToolFunction.builder()
+                .name(type.getFunctionName())
+                .description(type.getDescription())
+                .parameters(createParameterSchema(properties, Collections.emptyList()))
+                .build();
+    }
+
+    /**
+     * 创建计算BMI工具函数
+     */
+    private ToolFunction createCalculateBMIFunction() {
+        AiFunctionType type = AiFunctionType.CALCULATE_BMI;
+
+        Map<String, Object> properties = new HashMap<>();
+        properties.put("height", createIntegerProperty("身高（厘米）"));
+        properties.put("weight", createIntegerProperty("体重（公斤）"));
+
+        return ToolFunction.builder()
+                .name(type.getFunctionName())
+                .description(type.getDescription())
+                .parameters(createParameterSchema(properties, Arrays.asList("height", "weight")))
+                .build();
+    }
+
+    /**
+     * 创建获取健康建议工具函数
+     */
+    private ToolFunction createGetHealthAdviceFunction() {
+        AiFunctionType type = AiFunctionType.GET_HEALTH_ADVICE;
+
+        Map<String, Object> properties = new HashMap<>();
+        // 无需参数，系统根据用户情况提供建议
+
+        return ToolFunction.builder()
+                .name(type.getFunctionName())
+                .description(type.getDescription())
+                .parameters(createParameterSchema(properties, Collections.emptyList()))
+                .build();
+    }
+
+    /**
+     * 创建查看收藏列表工具函数
+     */
+    private ToolFunction createGetFavoritesFunction() {
+        AiFunctionType type = AiFunctionType.GET_FAVORITES;
+
+        Map<String, Object> properties = new HashMap<>();
+        // 无需参数，系统自动使用当前登录用户的ID
+
+        return ToolFunction.builder()
+                .name(type.getFunctionName())
+                .description(type.getDescription())
+                .parameters(createParameterSchema(properties, Collections.emptyList()))
+                .build();
+    }
+
+    /**
+     * 创建添加收藏工具函数
+     */
+    private ToolFunction createAddFavoriteFunction() {
+        AiFunctionType type = AiFunctionType.ADD_FAVORITE;
+
+        Map<String, Object> properties = new HashMap<>();
+        properties.put("dish_id", createStringProperty("菜品ID"));
+        properties.put("dish_name", createStringProperty("菜品名称（可选，用于确认）"));
+
+        return ToolFunction.builder()
+                .name(type.getFunctionName())
+                .description(type.getDescription())
+                .parameters(createParameterSchema(properties, Collections.singletonList("dish_id")))
+                .build();
+    }
+
+    /**
+     * 创建获取用户评价工具函数
+     */
+    private ToolFunction createGetUserReviewsFunction() {
+        AiFunctionType type = AiFunctionType.GET_USER_REVIEWS;
+
+        Map<String, Object> properties = new HashMap<>();
+        properties.put("limit", createIntegerProperty("返回数量限制（可选，默认20）"));
+
+        return ToolFunction.builder()
+                .name(type.getFunctionName())
+                .description(type.getDescription())
+                .parameters(createParameterSchema(properties, Collections.emptyList()))
+                .build();
+    }
+
+    /**
+     * 创建获取用户优惠券工具函数
+     */
+    private ToolFunction createGetUserCouponsFunction() {
+        AiFunctionType type = AiFunctionType.GET_USER_COUPONS;
+
+        Map<String, Object> properties = new HashMap<>();
+        // 无需参数，系统自动查询当前用户的可用优惠券
+
+        return ToolFunction.builder()
+                .name(type.getFunctionName())
+                .description(type.getDescription())
+                .parameters(createParameterSchema(properties, Collections.emptyList()))
+                .build();
+    }
+
+    /**
+     * 创建获取用户信息工具函数
+     */
+    private ToolFunction createGetUserInfoFunction() {
+        AiFunctionType type = AiFunctionType.GET_USER_INFO;
+
+        Map<String, Object> properties = new HashMap<>();
+        // 无需参数，系统自动查询当前登录用户的信息
+
+        return ToolFunction.builder()
+                .name(type.getFunctionName())
+                .description(type.getDescription())
+                .parameters(createParameterSchema(properties, Collections.emptyList()))
                 .build();
     }
 
