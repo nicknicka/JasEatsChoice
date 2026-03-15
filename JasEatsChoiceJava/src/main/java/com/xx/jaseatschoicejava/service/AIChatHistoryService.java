@@ -27,15 +27,29 @@ public class AIChatHistoryService {
      * @param content 消息内容
      */
     public void saveMessage(String userId, String sender, String content) {
+        saveMessage(userId, sender, content, null, null);
+    }
+
+    /**
+     * 保存聊天消息（支持卡片数据）
+     * @param userId 用户ID
+     * @param sender 发送者（user/ai）
+     * @param content 消息内容
+     * @param messageType 消息类型（用于卡片显示）
+     * @param cardData 卡片数据（JSON格式）
+     */
+    public void saveMessage(String userId, String sender, String content, String messageType, String cardData) {
         try {
             AIChatHistory chatHistory = new AIChatHistory();
             chatHistory.setUserId(userId);
             chatHistory.setSender(sender);
             chatHistory.setContent(content);
             chatHistory.setCreateTime(LocalDateTime.now());
+            chatHistory.setMessageType(messageType);
+            chatHistory.setCardData(cardData);
 
             aiChatHistoryMapper.insert(chatHistory);
-            log.debug("保存AI聊天消息成功: userId={}, sender={}", userId, sender);
+            log.debug("保存AI聊天消息成功: userId={}, sender={}, messageType={}", userId, sender, messageType);
         } catch (Exception e) {
             log.error("保存AI聊天消息失败: userId={}, sender={}", userId, sender, e);
         }

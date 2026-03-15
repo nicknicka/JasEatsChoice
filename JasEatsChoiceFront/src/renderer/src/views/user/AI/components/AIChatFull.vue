@@ -60,10 +60,19 @@
                   @action="handleCardAction"
                 />
               </div>
-              <!-- 文本消息渲染 -->
+
+              <!-- 文本消息渲染（AI总结，卡片和文本可同时显示） -->
               <div
-                v-else
+                v-if="getDisplayContent(message) && !(message.messageType && isCardMessage(message.messageType))"
                 class="message-text-content"
+                :class="{ 'markdown-content': message.enableMarkdown }"
+                v-html="renderContent(getDisplayContent(message), message.enableMarkdown)"
+              ></div>
+
+              <!-- 卡片总结文本（有卡片时显示AI的总结） -->
+              <div
+                v-if="getDisplayContent(message) && (message.messageType && isCardMessage(message.messageType))"
+                class="card-summary-text"
                 :class="{ 'markdown-content': message.enableMarkdown }"
                 v-html="renderContent(getDisplayContent(message), message.enableMarkdown)"
               ></div>
@@ -348,14 +357,24 @@ let isUserScrollingUp = false // 标记用户是否主动向上滚动
 let lastScrollTop = 0 // 记录上一次的滚动位置，用于判断滚动方向
 
 // 导入卡片组件
+import OrderListCard from './cards/OrderListCard.vue'
+import FavoriteListCard from './cards/FavoriteListCard.vue'
+import ReviewListCard from './cards/ReviewListCard.vue'
+import CouponListCard from './cards/CouponListCard.vue'
+import UserInfoCard from './cards/UserInfoCard.vue'
+import DishListCard from './cards/DishListCard.vue'
+import NotificationListCard from './cards/NotificationListCard.vue'
+import ErrorCard from './cards/ErrorCard.vue'
+
 const cardComponents = {
-  'order_list_card': () => import('./cards/OrderListCard.vue'),
-  'favorite_list_card': () => import('./cards/FavoriteListCard.vue'),
-  'review_list_card': () => import('./cards/ReviewListCard.vue'),
-  'coupon_list_card': () => import('./cards/CouponListCard.vue'),
-  'user_info_card': () => import('./cards/UserInfoCard.vue'),
-  'dish_list_card': () => import('./cards/DishListCard.vue'),
-  'error_card': () => import('./cards/ErrorCard.vue')
+  'order_list_card': OrderListCard,
+  'favorite_list_card': FavoriteListCard,
+  'review_list_card': ReviewListCard,
+  'coupon_list_card': CouponListCard,
+  'user_info_card': UserInfoCard,
+  'dish_list_card': DishListCard,
+  'notification_list_card': NotificationListCard,
+  'error_card': ErrorCard
 }
 
 // 获取卡片组件
@@ -481,13 +500,23 @@ const loadMessages = async () => {
         id: index + 1,
         sender: item.sender, // 'user' 或 'ai'
         content: item.content,
+        displayContent: item.content || '', // 显示内容
         time: new Date(item.createTime).toLocaleTimeString([], {
           hour: '2-digit',
           minute: '2-digit'
         }),
         avatar: item.sender === 'ai' ? '🤖' : (userStore.userInfo?.avatar || ''),
-        enableMarkdown: true
+        enableMarkdown: true,
+        messageType: item.messageType || null, // 恢复消息类型
+        cardData: item.cardData || null, // 恢复卡片数据
+        isToolExecuting: false,
+        toolCompleted: false,
+        hasToolPrompt: false
       }))
+
+      // 检查是否需要重新加载卡片数据（向后兼容旧消息）
+      await restoreCardDataForMessages()
+
       console.log('✅ 成功加载聊天历史:', messages.value.length, '条消息')
     } else {
       // 没有历史记录，显示欢迎消息并保存到后端
@@ -535,15 +564,24 @@ const loadMessages = async () => {
 }
 
 // 保存消息到后端
-const saveMessageToBackend = async (sender, content) => {
+const saveMessageToBackend = async (sender, content, messageType = null, cardData = null) => {
   try {
     const userId = getUserId()
-    await axios.post(API_CONFIG.baseURL + API_CONFIG.ai.save, {
+
+    const payload = {
       userId,
       sender, // 'user' 或 'ai'
       content
-    })
-    console.log('✅ 消息已保存到后端:', sender)
+    }
+
+    // 如果有卡片数据，也保存
+    if (messageType && cardData) {
+      payload.messageType = messageType
+      payload.cardData = cardData
+    }
+
+    await axios.post(API_CONFIG.baseURL + API_CONFIG.ai.save, payload)
+    console.log('✅ 消息已保存到后端:', sender, messageType ? `(卡片: ${messageType})` : '')
   } catch (error) {
     console.error('❌ 保存消息到后端失败:', error)
   }
@@ -594,14 +632,16 @@ const streamResponse = async (messageIndex, reader) => {
             const dataArray = JSON.parse(data)
             // console.log('📊 解析后的数组:', dataArray)  // 【调试日志】
 
-            // 查找data字段是对象类型（包含done或content）的元素
+            // 查找data字段是对象类型（包含done、content或card_data）的元素
             const actualDataItem = dataArray.find(
               (item) => {
                 // 检查data字段是否存在且是对象类型
                 const itemData = item.data
                 return itemData &&
                        typeof itemData === 'object' &&
-                       (itemData.hasOwnProperty('done') || itemData.hasOwnProperty('content'))
+                       (itemData.hasOwnProperty('done') ||
+                        itemData.hasOwnProperty('content') ||
+                        itemData.hasOwnProperty('card_data'))
               }
             )
             // console.log('🎯 找到的目标元素:', actualDataItem)  // 【调试日志】
@@ -623,17 +663,53 @@ const streamResponse = async (messageIndex, reader) => {
             continue
           }
 
+          // 【调试】打印所有解析出的数据（已禁用）
+          // if (parsedData.card_data) {
+          //   console.log('🎯 解析到card_data:', JSON.stringify(parsedData.card_data, null, 2))
+          // }
+          // if (parsedData.content) {
+          //   console.log('📝 解析到content:', parsedData.content.substring(0, 50))
+          // }
+
           // 接收 done 字段：检查是否结束
           if (parsedData.done === true) {
             console.log('✅ 接收完成')
 
-            // 保存AI的完整回复到后端
-            const aiContent = messages.value[messageIndex].content
-            if (aiContent) {
-              await saveMessageToBackend('ai', aiContent)
+            // 保存AI的完整回复到后端（包含卡片数据）
+            const currentMessage = messages.value[messageIndex]
+            if (currentMessage.content) {
+              await saveMessageToBackend(
+                'ai',
+                currentMessage.content,
+                currentMessage.messageType,
+                currentMessage.cardData
+              )
             }
 
             return
+          }
+
+          // 接收 card_data 字段：设置卡片数据和类型
+          if (parsedData.card_data) {
+            console.log('📊 收到卡片数据:', parsedData.card_data)
+            const currentMessage = messages.value[messageIndex]
+            const cardMessageType = parsedData.card_data.messageType
+            const cardDataPayload = parsedData.card_data.data
+
+            // 验证数据有效性
+            if (cardMessageType && cardDataPayload) {
+              currentMessage.messageType = cardMessageType
+              currentMessage.cardData = cardDataPayload
+              console.log('✅ 卡片数据已设置:', {
+                messageType: currentMessage.messageType,
+                hasCardData: !!currentMessage.cardData,
+                cardDataKeys: currentMessage.cardData ? Object.keys(currentMessage.cardData) : []
+              })
+              await nextTick()
+              scrollToBottom()
+            } else {
+              console.warn('⚠️ 卡片数据无效:', { cardMessageType, cardDataPayload })
+            }
           }
 
           // 接收 content 字段：追加文本
@@ -762,7 +838,9 @@ const sendMessage = async () => {
     enableMarkdown: true,
     isToolExecuting: false, // 是否正在执行工具
     toolCompleted: false, // 工具是否执行完成
-    hasToolPrompt: false // 是否包含工具提示
+    hasToolPrompt: false, // 是否包含工具提示
+    messageType: null, // 消息类型（用于卡片渲染）
+    cardData: null // 卡片数据
   })
 
   // 不自动滚动,让用户控制查看位置
@@ -1252,6 +1330,67 @@ const removeUploadedImage = (imageId) => {
   const index = uploadedImages.value.findIndex(img => img.id === imageId)
   if (index > -1) {
     uploadedImages.value.splice(index, 1)
+  }
+}
+
+// 恢复历史消息的卡片数据（向后兼容）
+const restoreCardDataForMessages = async () => {
+  const userId = getUserId()
+
+  for (let i = 0; i < messages.value.length; i++) {
+    const message = messages.value[i]
+
+    // 只处理AI消息，且没有卡片数据的情况
+    if (message.sender === 'ai' && !message.messageType && message.content) {
+      let queryType = null
+      const content = message.content
+
+      // 检测消息类型并重新查询卡片数据
+      if (content.includes('找到') && content.includes('条订单')) {
+        queryType = 'list_orders'
+      } else if (content.includes('共收到') && content.includes('条通知')) {
+        queryType = 'list_notifications'
+      } else if (content.includes('收藏列表') || content.includes('我的收藏')) {
+        queryType = 'get_favorites'
+      } else if (content.includes('评价列表') || content.includes('我的评价')) {
+        queryType = 'get_user_reviews'
+      } else if (content.includes('优惠券') || content.includes('我的优惠券')) {
+        queryType = 'get_user_coupons'
+      } else if (content.includes('用户档案') || content.includes('用户信息')) {
+        queryType = 'get_user_info'
+      }
+
+      // 如果检测到需要卡片数据，重新查询
+      if (queryType) {
+        try {
+          console.log('🔄 恢复卡片数据: queryType=', queryType)
+
+          const response = await axios.post(
+            API_CONFIG.baseURL + '/v1/ai/assistant/chat',
+            {
+              messageType: 'structured_query',
+              queryType: queryType,
+              userId: userId,
+              params: {}
+            },
+            {
+              headers: {
+                'Authorization': `Bearer ${authStore.token}`
+              }
+            }
+          )
+
+          if (response.data.code === 200 && response.data.data) {
+            const cardData = response.data.data
+            messages.value[i].messageType = cardData.messageType
+            messages.value[i].cardData = cardData.data
+            console.log('✅ 卡片数据已恢复:', cardData.messageType)
+          }
+        } catch (error) {
+          console.warn('⚠️ 恢复卡片数据失败:', queryType, error)
+        }
+      }
+    }
   }
 }
 
@@ -1931,6 +2070,19 @@ onUnmounted(() => {
 .card-message-wrapper {
   width: 100%;
   max-width: 600px;
+  margin-bottom: 12px;
+}
+
+// 卡片总结文本样式
+.card-summary-text {
+  margin-top: 12px;
+  padding: 12px 16px;
+  background: #f8f9fa;
+  border-left: 3px solid #667eea;
+  border-radius: 4px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #666;
 }
 
 // 快捷提问按钮包装器（提供相对定位参考）

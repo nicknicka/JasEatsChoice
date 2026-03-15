@@ -24,12 +24,15 @@
       <!-- 订单列表 -->
       <div class="order-list">
         <div
-          v-for="order in data.orders"
+          v-for="(order, index) in data.orders"
           :key="order.orderId"
           class="order-item"
         >
           <div class="order-header">
-            <div class="order-id">订单 #{{ order.orderId }}</div>
+            <div class="order-id">
+              <span class="order-number">第{{ index + 1 }}单</span>
+              <span class="order-id-text">#{{ order.orderId }}</span>
+            </div>
             <el-tag
               :type="getStatusColor(order.status)"
               size="small"
@@ -216,6 +219,24 @@ const handleAction = (actionType, order) => {
 .order-id {
   font-weight: 600;
   color: #333;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.order-number {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.order-id-text {
+  color: #666;
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .order-info {

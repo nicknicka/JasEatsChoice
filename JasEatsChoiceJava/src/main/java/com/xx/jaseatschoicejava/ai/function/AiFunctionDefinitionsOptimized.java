@@ -195,6 +195,9 @@ public class AiFunctionDefinitionsOptimized {
         // 21. 获取用户信息
         toolFunctions.add(createGetUserInfoFunction());
 
+        // 22. 查询通知列表
+        toolFunctions.add(createListNotificationsFunction());
+
         log.info("AI工具函数初始化完成，共{}个工具", toolFunctions.size());
     }
 
@@ -543,6 +546,23 @@ public class AiFunctionDefinitionsOptimized {
 
         Map<String, Object> properties = new HashMap<>();
         // 无需参数，系统自动查询当前登录用户的信息
+
+        return ToolFunction.builder()
+                .name(type.getFunctionName())
+                .description(type.getDescription())
+                .parameters(createParameterSchema(properties, Collections.emptyList()))
+                .build();
+    }
+
+    /**
+     * 创建查询通知列表工具函数
+     * 注意：user_id参数已移除，系统会自动使用当前登录用户的ID
+     */
+    private ToolFunction createListNotificationsFunction() {
+        AiFunctionType type = AiFunctionType.LIST_NOTIFICATIONS;
+
+        Map<String, Object> properties = new HashMap<>();
+        // 无需参数，系统会自动使用当前登录用户的ID
 
         return ToolFunction.builder()
                 .name(type.getFunctionName())

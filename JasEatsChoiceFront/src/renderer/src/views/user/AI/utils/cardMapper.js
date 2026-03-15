@@ -10,6 +10,7 @@ import FavoriteListCard from '../components/cards/FavoriteListCard.vue'
 import ReviewListCard from '../components/cards/ReviewListCard.vue'
 import CouponListCard from '../components/cards/CouponListCard.vue'
 import DishListCard from '../components/cards/DishListCard.vue'
+import NotificationListCard from '../components/cards/NotificationListCard.vue'
 import ErrorCard from '../components/cards/ErrorCard.vue'
 
 // 组件映射表
@@ -20,6 +21,7 @@ const CARD_COMPONENT_MAP = {
   'coupon_list_card': CouponListCard,
   'user_info_card': UserInfoCard,
   'dish_list_card': DishListCard,
+  'notification_list_card': NotificationListCard,
   'error_card': ErrorCard
 }
 

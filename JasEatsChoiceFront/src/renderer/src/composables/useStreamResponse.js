@@ -30,14 +30,21 @@ export function useStreamResponse() {
       // Spring Boot的SseEmitter数组格式：[{...}, {...}, {...}]
       if (data.startsWith('[')) {
         const dataArray = JSON.parse(data)
-        // 查找mediaType为null的元素（包含实际数据）
-        const actualDataItem = dataArray.find((item) => item.mediaType === null)
+        // 查找包含实际数据的元素（done、content或card_data）
+        const actualDataItem = dataArray.find((item) => {
+          const itemData = item.data
+          return itemData &&
+                 typeof itemData === 'object' &&
+                 (itemData.hasOwnProperty('done') ||
+                  itemData.hasOwnProperty('content') ||
+                  itemData.hasOwnProperty('card_data'))
+        })
 
         if (actualDataItem && actualDataItem.data) {
           parsedData = actualDataItem.data
         }
       } else {
-        // 直接的对象格式：{ content: string, done: boolean }
+        // 直接的对象格式：{ content: string, done: boolean, card_data: object }
         parsedData = JSON.parse(data)
       }
 

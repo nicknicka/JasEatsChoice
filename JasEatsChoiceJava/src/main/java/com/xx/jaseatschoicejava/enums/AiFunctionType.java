@@ -117,7 +117,12 @@ public enum AiFunctionType {
     /**
      * 获取用户信息
      */
-    GET_USER_INFO("get_user_info", "获取用户的详细信息和档案", 5000);
+    GET_USER_INFO("get_user_info", "获取用户的详细信息和档案", 5000),
+
+    /**
+     * 查询通知列表
+     */
+    LIST_NOTIFICATIONS("list_notifications", "查询用户的通知消息列表", 5000);
 
     /**
      * 函数名称（用于API调用）

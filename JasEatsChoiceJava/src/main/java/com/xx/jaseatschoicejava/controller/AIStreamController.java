@@ -5,10 +5,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xx.jaseatschoicejava.ai.function.AiFunctionDefinitionsOptimized;
 import com.xx.jaseatschoicejava.ai.function.AiFunctionExecutorOptimized;
 import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
+import com.xx.jaseatschoicejava.entity.Notification;
+import com.xx.jaseatschoicejava.entity.Order;
+import com.xx.jaseatschoicejava.entity.User;
 import com.xx.jaseatschoicejava.entity.UserPreference;
+import com.xx.jaseatschoicejava.service.NotificationService;
+import com.xx.jaseatschoicejava.service.OrderService;
 import com.xx.jaseatschoicejava.service.UserContextService;
+import com.xx.jaseatschoicejava.service.UserService;
 import com.xx.jaseatschoicejava.service.UserPreferenceService;
 import com.xx.jaseatschoicejava.util.JwtUtil;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
@@ -45,6 +52,15 @@ public class AIStreamController {
 
     @Resource
     private UserPreferenceService userPreferenceService;
+
+    @Resource
+    private UserService userService;
+
+    @Resource
+    private OrderService orderService;
+
+    @Resource
+    private NotificationService notificationService;
 
     @Resource
     private JwtUtil jwtUtil;
@@ -424,11 +440,80 @@ public class AIStreamController {
                     // 发送工具调用执行提示
                     sendContentData(emitter, "\n\n🔧 正在执行工具函数...\n\n", false);
 
+                    // 检查是否需要发送卡片数据
+                    for (Map<String, Object> toolCall : toolCalls) {
+                        Map<String, Object> function = (Map<String, Object>) toolCall.get("function");
+                        if (function != null) {
+                            String functionName = (String) function.get("name");
+                            // 解析参数
+                            Object argumentsObj = function.get("arguments");
+                            Map<String, Object> arguments = new HashMap<>();
+                            if (argumentsObj instanceof String) {
+                                try {
+                                    arguments = objectMapper.readValue((String) argumentsObj, Map.class);
+                                } catch (Exception e) {
+                                    log.warn("解析function参数失败: {}", argumentsObj);
+                                }
+                            } else if (argumentsObj instanceof Map) {
+                                arguments = (Map<String, Object>) argumentsObj;
+                            }
+
+                            // 构建并发送卡片数据
+                            log.info("准备构建卡片数据: functionName={}, userId={}", functionName, userId);
+                            Map<String, Object> cardData = buildCardDataForFunction(functionName, arguments, userId);
+                            log.info("卡片数据构建结果: cardData={}", cardData != null ? "成功" : "null");
+                            if (cardData != null) {
+                                String messageType = (String) cardData.get("messageType");
+                                Map<String, Object> data = (Map<String, Object>) cardData.get("data");
+                                log.info("提取卡片字段: messageType={}, data={}", messageType, data != null ? "存在" : "null");
+                                if (messageType != null && data != null) {
+                                    sendCardData(emitter, messageType, data);
+                                } else {
+                                    log.warn("卡片数据不完整: messageType={}, data={}", messageType, data);
+                                }
+                            } else {
+                                log.warn("buildCardDataForFunction返回null， functionName={}", functionName);
+                            }
+                        }
+                    }
+
                     // 第二轮：使用工具函数结果再次请求AI
                     // 注意：updatedHistory已经包含完整的对话历史（system → user → assistant → tool）
+
+                    // 检查是否发送了卡片数据，如果是，添加总结提示
+                    boolean hasCardData = false;
+                    for (Map<String, Object> toolCall : toolCalls) {
+                        Map<String, Object> function = (Map<String, Object>) toolCall.get("function");
+                        if (function != null) {
+                            String functionName = (String) function.get("name");
+                            Map<String, Object> cardData = buildCardDataForFunction(functionName, new HashMap<>(), userId);
+                            if (cardData != null) {
+                                hasCardData = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    // 如果发送了卡片数据，添加系统提示要求AI生成总结
+                    List<Map<String, Object>> finalHistory = updatedHistory;
+                    if (hasCardData) {
+                        finalHistory = new ArrayList<>(updatedHistory);
+
+                        // 在tool消息之后添加一个assistant消息作为总结提示
+                        Map<String, Object> summaryHint = new HashMap<>();
+                        summaryHint.put("role", "system");
+                        summaryHint.put("content",
+                            "【重要提示】前端已经以卡片形式展示了详细数据。你的任务是基于工具函数返回的数据，" +
+                            "给出简洁的总结性结论（如数据概览、关键发现、建议等），不要重复列举卡片中已有的详细信息。" +
+                            "请用1-3句话总结核心信息。"
+                        );
+                        finalHistory.add(summaryHint);
+                        log.info("已添加卡片数据总结提示");
+                    }
+
                     // 直接构建请求，不需要再添加用户消息
-                    Map<String, Object> followUpRequest = buildFollowUpRequest(updatedHistory);
-                    processStreamResponse(emitter, followUpRequest, updatedHistory, userId);
+                    Map<String, Object> followUpRequest = buildFollowUpRequest(finalHistory);
+                    processStreamResponse(emitter, followUpRequest, finalHistory, userId);
                     return;
                 }
 
@@ -655,6 +740,28 @@ public class AIStreamController {
     }
 
     /**
+     * 发送卡片数据到前端
+     * 格式: { "card_data": { "messageType": "order_list_card", "data": {...} } }
+     */
+    private void sendCardData(SseEmitter emitter, String messageType, Map<String, Object> data) {
+        try {
+            Map<String, Object> response = new HashMap<>();
+            Map<String, Object> cardData = new HashMap<>();
+            cardData.put("messageType", messageType);
+            cardData.put("data", data);
+            response.put("card_data", cardData);
+
+            emitter.send(SseEmitter.event()
+                    .data(response)
+                    .build());
+
+            log.info("发送卡片数据: messageType={}, data={}", messageType, data.keySet());
+        } catch (Exception e) {
+            log.error("发送卡片数据到前端失败", e);
+        }
+    }
+
+    /**
      * 发送错误响应（对应官方API的错误处理: error -> {}）
      */
     private void sendErrorResponse(SseEmitter emitter, String errorMessage) {
@@ -672,5 +779,255 @@ public class AIStreamController {
             log.error("发送错误消息失败", ex);
             emitter.completeWithError(ex);
         }
+    }
+
+    /**
+     * 根据function名称和参数构建卡片数据
+     * @return 包含messageType和data的Map，如果不需要卡片则返回null
+     */
+    private Map<String, Object> buildCardDataForFunction(String functionName, Map<String, Object> arguments, String userId) {
+        try {
+            switch (functionName) {
+                case "list_orders":
+                    return buildOrderListCardData(userId);
+                case "list_notifications":
+                    return buildNotificationListCardData(userId);
+                case "get_user_preferences":
+                    return buildUserInfoCardData(userId);
+                // 其他function可以继续添加
+                default:
+                    return null;
+            }
+        } catch (Exception e) {
+            log.error("构建卡片数据失败: function=" + functionName, e);
+            return null;
+        }
+    }
+
+    /**
+     * 构建订单列表卡片数据
+     * @return 包含messageType和data的Map，如果查询失败则返回null
+     */
+    private Map<String, Object> buildOrderListCardData(String userId) {
+        try {
+            log.info("构建订单列表卡片数据: userId={}", userId);
+
+            // 查询订单列表
+            QueryWrapper<Order> queryWrapper = new QueryWrapper<>();
+            queryWrapper.eq("user_id", userId)
+                    .orderByDesc("create_time")
+                    .last("LIMIT 20");
+
+            List<Order> orders = orderService.list(queryWrapper);
+
+            if (orders == null || orders.isEmpty()) {
+                log.info("用户暂无订单记录: userId={}", userId);
+                return null;
+            }
+
+            // 构建前端OrderListCard组件需要的数据结构
+            Map<String, Object> cardData = new HashMap<>();
+            cardData.put("total", orders.size());
+            cardData.put("pendingCount", orders.stream()
+                    .filter(o -> o.getStatus() != null && o.getStatus() < 5)
+                    .count());
+            cardData.put("summary", String.format("找到 %d 条订单记录", orders.size()));
+
+            // 构建订单列表
+            List<Map<String, Object>> orderList = new ArrayList<>();
+            for (Order order : orders) {
+                Map<String, Object> orderItem = new HashMap<>();
+                orderItem.put("orderId", order.getId());
+                orderItem.put("status", order.getStatus());
+                orderItem.put("statusText", getOrderStatusText(order.getStatus()));
+                orderItem.put("totalAmount", order.getTotalAmount() != null ?
+                        String.format("%.2f", order.getTotalAmount()) : "0.00");
+                orderItem.put("dishCount", 0); // TODO: 从订单详情表获取菜品数量
+                orderItem.put("createTime", order.getCreateTime() != null ?
+                        order.getCreateTime().toString() : "");
+
+                // 添加可操作按钮
+                List<Map<String, String>> actions = new ArrayList<>();
+                if (order.getStatus() != null && order.getStatus() < 5) {
+                    actions.add(Map.of("type", "detail", "text", "查看详情", "icon", "View"));
+                    if (order.getStatus() == 0 || order.getStatus() == 1) {
+                        actions.add(Map.of("type", "cancel", "text", "取消订单", "icon", "Delete"));
+                    }
+                    actions.add(Map.of("type", "urge", "text", "催单", "icon", "Bell"));
+                }
+                orderItem.put("actions", actions);
+
+                orderList.add(orderItem);
+            }
+            cardData.put("orders", orderList);
+
+            // 返回完整结构
+            Map<String, Object> result = new HashMap<>();
+            result.put("messageType", "order_list_card");
+            result.put("data", cardData);
+            return result;
+
+        } catch (Exception e) {
+            log.error("构建订单列表卡片数据失败", e);
+            return null;
+        }
+    }
+
+    /**
+     * 构建用户信息卡片数据
+     * @return 包含messageType和data的Map，如果查询失败则返回null
+     */
+    private Map<String, Object> buildUserInfoCardData(String userId) {
+        try {
+            log.info("构建用户信息卡片数据: userId={}", userId);
+
+            User user = userService.getById(userId);
+            if (user == null) {
+                log.info("未找到用户信息: userId={}", userId);
+                return null;
+            }
+
+            // 构建前端UserInfoCard组件需要的数据结构
+            Map<String, Object> cardData = new HashMap<>();
+            cardData.put("nickname", user.getNickname() != null ? user.getNickname() : "用户");
+            cardData.put("phone", user.getPhone() != null ?
+                    user.getPhone().replaceAll("(\\d{3})\\d{4}(\\d{4})", "$1****$2") : "");
+            cardData.put("email", user.getEmail() != null ? user.getEmail() : "");
+
+            // BMI相关信息（如果有）
+            if (user.getHeight() != null && user.getWeight() != null) {
+                double height = user.getHeight() / 100.0; // 转换为米
+                double bmi = user.getWeight() / (height * height);
+                cardData.put("bmi", String.format("%.1f", bmi));
+                cardData.put("height", user.getHeight());
+                cardData.put("weight", user.getWeight());
+            }
+
+            cardData.put("summary", "用户基本信息");
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("messageType", "user_info_card");
+            result.put("data", cardData);
+            return result;
+
+        } catch (Exception e) {
+            log.error("构建用户信息卡片数据失败", e);
+            return null;
+        }
+    }
+
+    /**
+     * 构建通知列表卡片数据
+     * @return 包含messageType和data的Map，如果查询失败则返回null
+     */
+    private Map<String, Object> buildNotificationListCardData(String userId) {
+        try {
+            log.info("构建通知列表卡片数据: userId={}", userId);
+
+            // 查询通知列表（按发送时间倒序，最多20条）
+            QueryWrapper<Notification> queryWrapper = new QueryWrapper<>();
+            queryWrapper.eq("user_id", userId)
+                    .orderByDesc("send_time")
+                    .last("LIMIT 20");
+
+            List<Notification> notifications = notificationService.list(queryWrapper);
+
+            if (notifications == null || notifications.isEmpty()) {
+                log.info("用户暂无通知记录: userId={}", userId);
+                return null;
+            }
+
+            // 统计未读数量
+            long unreadCount = notifications.stream()
+                    .filter(n -> n.getReadStatus() != null && !n.getReadStatus())
+                    .count();
+
+            // 构建前端NotificationListCard组件需要的数据结构
+            Map<String, Object> cardData = new HashMap<>();
+            cardData.put("total", notifications.size());
+            cardData.put("unreadCount", (int) unreadCount);
+            cardData.put("summary", String.format("共收到 %d 条通知，其中 %d 条未读",
+                    notifications.size(), unreadCount));
+
+            // 按类型分组统计
+            Map<String, Long> typeCount = notifications.stream()
+                    .collect(java.util.stream.Collectors.groupingBy(
+                            n -> n.getType() != null ? n.getType() : "system",
+                            java.util.stream.Collectors.counting()
+                    ));
+            cardData.put("typeStats", typeCount);
+
+            // 构建通知列表
+            List<Map<String, Object>> notificationList = new ArrayList<>();
+            for (Notification notification : notifications) {
+                Map<String, Object> notifItem = new HashMap<>();
+                notifItem.put("notificationId", notification.getId());
+                notifItem.put("title", notification.getTitle());
+                notifItem.put("content", notification.getContent());
+                notifItem.put("type", notification.getType());
+                notifItem.put("isRead", notification.getReadStatus() != null && notification.getReadStatus());
+
+                // 格式化时间显示
+                String timeText = formatNotificationTime(notification.getSendTime());
+                notifItem.put("time", timeText);
+                notifItem.put("sendTime", notification.getSendTime() != null ?
+                        notification.getSendTime().toString() : "");
+
+                notificationList.add(notifItem);
+            }
+            cardData.put("notifications", notificationList);
+
+            // 返回完整结构
+            Map<String, Object> result = new HashMap<>();
+            result.put("messageType", "notification_list_card");
+            result.put("data", cardData);
+            return result;
+
+        } catch (Exception e) {
+            log.error("构建通知列表卡片数据失败", e);
+            return null;
+        }
+    }
+
+    /**
+     * 格式化通知时间显示
+     */
+    private String formatNotificationTime(java.time.LocalDateTime sendTime) {
+        if (sendTime == null) return "";
+
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        long hours = java.time.Duration.between(sendTime, now).toHours();
+
+        if (hours < 1) {
+            long minutes = java.time.Duration.between(sendTime, now).toMinutes();
+            return minutes + "分钟前";
+        } else if (hours < 24) {
+            return hours + "小时前";
+        } else if (hours < 24 * 7) {
+            long days = hours / 24;
+            return days + "天前";
+        } else {
+            return sendTime.toLocalDate().toString();
+        }
+    }
+
+    /**
+     * 获取订单状态文本
+     */
+    private String getOrderStatusText(Integer status) {
+        if (status == null) return "未知";
+
+        return switch (status) {
+            case 0 -> "待支付";
+            case 1 -> "待接单";
+            case 2 -> "备菜中";
+            case 3 -> "烹饪中";
+            case 4 -> "待上菜";
+            case 5 -> "已送达";
+            case 6 -> "已取消";
+            case 7 -> "待评价";
+            case 8 -> "已评价";
+            default -> "未知";
+        };
     }
 }

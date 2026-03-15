@@ -36,4 +36,10 @@ public class AIChatHistory {
 
     @ApiModelProperty(value = "创建时间")
     private LocalDateTime createTime;
+
+    @ApiModelProperty(value = "消息类型（用于卡片显示）")
+    private String messageType;
+
+    @ApiModelProperty(value = "卡片数据（JSON格式）")
+    private String cardData;
 }

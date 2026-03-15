@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xx.jaseatschoicejava.dto.NutritionInfo;
 import com.xx.jaseatschoicejava.entity.Dish;
+import com.xx.jaseatschoicejava.entity.Notification;
 import com.xx.jaseatschoicejava.entity.Order;
 import com.xx.jaseatschoicejava.entity.Review;
 import com.xx.jaseatschoicejava.entity.User;
@@ -11,6 +12,7 @@ import com.xx.jaseatschoicejava.entity.UserCoupon;
 import com.xx.jaseatschoicejava.enums.AiFunctionType;
 import com.xx.jaseatschoicejava.service.CollectionService;
 import com.xx.jaseatschoicejava.service.DishService;
+import com.xx.jaseatschoicejava.service.NotificationService;
 import com.xx.jaseatschoicejava.service.NutritionAnalysisService;
 import com.xx.jaseatschoicejava.service.OrderService;
 import com.xx.jaseatschoicejava.service.ReviewService;
@@ -50,6 +52,9 @@ public class AiFunctionExecutorOptimized {
 
     @Resource
     private UserService userService;
+
+    @Resource
+    private NotificationService notificationService;
 
     @Resource
     private NutritionAnalysisService nutritionAnalysisService;
@@ -2022,6 +2027,133 @@ public class AiFunctionExecutorOptimized {
         } catch (Exception e) {
             log.error("获取用户信息失败", e);
             return buildErrorResponse("获取用户信息时出现错误: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 查询通知列表
+     */
+    @AiFunctionHandler(value = "list_notifications", description = "查询用户的通知消息列表")
+    private String listNotifications(Map<String, Object> arguments) {
+        // 从arguments中获取user_id（系统自动注入）
+        String userId = getStringArgument(arguments, "user_id");
+
+        try {
+            log.info("查询通知列表，用户ID: {}", userId);
+
+            // 查询通知列表（按发送时间倒序，最多20条）
+            com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Notification> queryWrapper =
+                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>();
+            queryWrapper.eq("user_id", userId)
+                    .orderByDesc("send_time")
+                    .last("LIMIT 20");
+
+            java.util.List<Notification> notifications = notificationService.list(queryWrapper);
+
+            if (notifications == null || notifications.isEmpty()) {
+                return "📭 **暂无通知**\n\n您目前没有收到任何通知消息。";
+            }
+
+            // 统计未读数量
+            long unreadCount = notifications.stream()
+                    .filter(n -> n.getReadStatus() != null && !n.getReadStatus())
+                    .count();
+
+            StringBuilder result = new StringBuilder();
+            result.append("📬 **通知消息**\n\n");
+            result.append(String.format("共收到 %d 条通知", notifications.size()));
+            if (unreadCount > 0) {
+                result.append(String.format("，其中 %d 条未读 🔴", unreadCount));
+            }
+            result.append("\n\n");
+
+            // 按类型分组统计
+            Map<String, Long> typeCount = notifications.stream()
+                    .collect(java.util.stream.Collectors.groupingBy(
+                            n -> n.getType() != null ? n.getType() : "system",
+                            java.util.stream.Collectors.counting()
+                    ));
+
+            result.append("**通知类型统计：**\n");
+            if (typeCount.containsKey("order")) {
+                result.append("  • 订单消息：").append(typeCount.get("order")).append(" 条\n");
+            }
+            if (typeCount.containsKey("system")) {
+                result.append("  • 系统通知：").append(typeCount.get("system")).append(" 条\n");
+            }
+            if (typeCount.containsKey("promotion")) {
+                result.append("  • 优惠活动：").append(typeCount.get("promotion")).append(" 条\n");
+            }
+
+            result.append("\n**最近通知：**\n");
+
+            // 显示前5条通知详情
+            int displayCount = Math.min(5, notifications.size());
+            for (int i = 0; i < displayCount; i++) {
+                Notification notification = notifications.get(i);
+
+                // 未读标记
+                String readFlag = (notification.getReadStatus() != null && !notification.getReadStatus()) ? "🔴 " : "";
+
+                // 类型图标
+                String typeIcon = "📢";
+                if ("order".equals(notification.getType())) {
+                    typeIcon = "📦";
+                } else if ("promotion".equals(notification.getType())) {
+                    typeIcon = "🎁";
+                }
+
+                result.append(String.format("\n%d. %s%s **%s**\n",
+                        i + 1, readFlag, typeIcon, notification.getTitle()));
+
+                // 内容摘要（最多100字）
+                String content = notification.getContent();
+                if (content != null && content.length() > 100) {
+                    content = content.substring(0, 100) + "...";
+                }
+                if (content != null && !content.isEmpty()) {
+                    result.append("   ").append(content).append("\n");
+                }
+
+                // 时间
+                if (notification.getSendTime() != null) {
+                    result.append("   ").append(formatNotificationTime(notification.getSendTime())).append("\n");
+                }
+            }
+
+            if (notifications.size() > 5) {
+                result.append(String.format("\n... 还有 %d 条更早的通知\n", notifications.size() - 5));
+            }
+
+            result.append("\n💡 **温馨提示：**\n");
+            result.append("   • 及时查看未读通知，避免错过重要信息\n");
+            result.append("   • 订单状态变化会通过通知提醒您\n");
+
+            return result.toString();
+
+        } catch (Exception e) {
+            log.error("查询通知列表失败", e);
+            return buildErrorResponse("查询通知时出现错误: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 格式化通知时间显示
+     */
+    private String formatNotificationTime(java.time.LocalDateTime sendTime) {
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        long hours = java.time.Duration.between(sendTime, now).toHours();
+
+        if (hours < 1) {
+            long minutes = java.time.Duration.between(sendTime, now).toMinutes();
+            return minutes + "分钟前";
+        } else if (hours < 24) {
+            return hours + "小时前";
+        } else if (hours < 24 * 7) {
+            long days = hours / 24;
+            return days + "天前";
+        } else {
+            return sendTime.toLocalDate().toString();
         }
     }
 }

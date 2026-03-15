@@ -64,15 +64,17 @@ public class AIChatHistoryController {
      */
     @ApiOperation("保存聊天消息")
     @PostMapping("/save")
-    public Map<String, Object> saveMessage(@RequestBody Map<String, String> params) {
+    public Map<String, Object> saveMessage(@RequestBody Map<String, Object> params) {
         try {
-            String userId = params.get("userId");
-            String sender = params.get("sender");
-            String content = params.get("content");
+            String userId = (String) params.get("userId");
+            String sender = (String) params.get("sender");
+            String content = (String) params.get("content");
+            String messageType = (String) params.get("messageType");
+            String cardData = (String) params.get("cardData");
 
-            log.info("保存AI聊天消息: userId={}, sender={}", userId, sender);
+            log.info("保存AI聊天消息: userId={}, sender={}, messageType={}", userId, sender, messageType);
 
-            aiChatHistoryService.saveMessage(userId, sender, content);
+            aiChatHistoryService.saveMessage(userId, sender, content, messageType, cardData);
 
             Map<String, Object> result = new HashMap<>();
             result.put("code", 200);
