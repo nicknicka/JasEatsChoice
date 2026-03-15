@@ -56,13 +56,27 @@ public class AiFunctionDefinitionsOptimized {
     private void initializeDefaultPrompts() {
         this.systemPrompts = new HashMap<>();
         systemPrompts.put("primary",
-                "你是佳食宜选的智能饮食助手，可以帮助用户搜索菜品、查看订单、获取营养分析等。" +
+                "你是佳食宜选的智能饮食助手，可以帮助用户搜索菜品、查看订单、获取营养分析等。\n\n" +
+                "【重要：下单流程】\n" +
+                "当用户说'下单'、'购买'、'点菜'、'要XX菜'等表达购买意图时：\n" +
+                "1. 先使用search_dishes搜索菜品，获取菜品信息和价格\n" +
+                "2. 向用户确认订单：列出菜品名称、价格，询问数量\n" +
+                "3. 询问用餐方式（必需）：\n" +
+                "   - 堂食：需要询问桌号\n" +
+                "   - 自提：需要询问取餐时间和联系电话\n" +
+                "4. 使用create_order创建订单（需要dish_items和address参数）\n" +
+                "5. 告知用户订单创建成功，显示订单号、用餐方式、总金额\n\n" +
+                "注意事项：\n" +
+                "- 如果用户提到菜名但没有数量，默认为1份\n" +
+                "- 必须询问用餐方式（堂食/自提）才能创建订单\n" +
+                "- 堂食订单需要桌号，自提订单需要取餐时间\n" +
+                "- 创建订单前要向用户确认订单详情和总金额\n" +
+                "- 不要推荐其他菜品，除非用户主动询问\n\n" +
                 "你的职责：\n" +
                 "1. 根据用户需求推荐合适的菜品\n" +
                 "2. 提供准确的营养信息和健康建议\n" +
-                "3. 协助用户完成下单和订单查询\n" +
-                "4. 保持友好、专业的服务态度\n" +
-                "请用简洁、自然的语言与用户交流。"
+                "3. 引导用户完成下单流程\n" +
+                "4. 保持友好、专业的服务态度"
         );
         systemPrompts.put("recommendation",
                 "你是专业的菜品推荐顾问。根据用户的口味偏好、健康需求和预算，" +
@@ -91,10 +105,13 @@ public class AiFunctionDefinitionsOptimized {
         // 4. 查询订单状态
         toolFunctions.add(createGetOrderStatusFunction());
 
-        // 5. 获取用户偏好
+        // 5. 查询订单列表
+        toolFunctions.add(createListOrdersFunction());
+
+        // 6. 获取用户偏好
         toolFunctions.add(createGetUserPreferencesFunction());
 
-        // 6. 分析营养信息
+        // 7. 分析营养信息
         toolFunctions.add(createAnalyzeNutritionFunction());
 
         log.info("AI工具函数初始化完成，共{}个工具", toolFunctions.size());
@@ -135,6 +152,7 @@ public class AiFunctionDefinitionsOptimized {
 
     /**
      * 创建订单工具函数
+     * 注意：user_id参数已移除，系统会自动使用当前登录用户的ID
      */
     private ToolFunction createCreateOrderFunction() {
         AiFunctionType type = AiFunctionType.CREATE_ORDER;
@@ -150,6 +168,7 @@ public class AiFunctionDefinitionsOptimized {
         Map<String, Object> properties = new HashMap<>();
         properties.put("dish_items", createArrayProperty("菜品列表", itemsSchema));
         properties.put("address", createStringProperty("配送地址"));
+        // 不再需要user_id参数，系统会自动注入
 
         return ToolFunction.builder()
                 .name(type.getFunctionName())
@@ -175,18 +194,35 @@ public class AiFunctionDefinitionsOptimized {
     }
 
     /**
+     * 创建查询订单列表工具函数
+     */
+    private ToolFunction createListOrdersFunction() {
+        AiFunctionType type = AiFunctionType.LIST_ORDERS;
+
+        // 无需参数，系统会自动使用当前登录用户的ID
+        Map<String, Object> properties = new HashMap<>();
+
+        return ToolFunction.builder()
+                .name(type.getFunctionName())
+                .description(type.getDescription())
+                .parameters(createParameterSchema(properties, Collections.emptyList()))
+                .build();
+    }
+
+    /**
      * 创建获取用户偏好工具函数
+     * 注意：user_id参数已移除，系统会自动使用当前登录用户的ID
      */
     private ToolFunction createGetUserPreferencesFunction() {
         AiFunctionType type = AiFunctionType.GET_USER_PREFERENCES;
 
         Map<String, Object> properties = new HashMap<>();
-        properties.put("user_id", createStringProperty("用户ID"));
+        // 不再需要user_id参数，系统会自动注入
 
         return ToolFunction.builder()
                 .name(type.getFunctionName())
                 .description(type.getDescription())
-                .parameters(createParameterSchema(properties, Collections.singletonList("user_id")))
+                .parameters(createParameterSchema(properties, Collections.emptyList())) // 无必需参数
                 .build();
     }
 

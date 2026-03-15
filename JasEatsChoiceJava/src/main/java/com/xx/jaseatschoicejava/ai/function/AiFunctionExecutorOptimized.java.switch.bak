@@ -13,24 +13,17 @@ import com.xx.jaseatschoicejava.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
-import java.lang.reflect.Method;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 /**
- * AI工具函数执行器（反射优化版）
- * 使用反射机制动态调用函数处理方法，实现开闭原则
- *
- * 优势：
- * 1. 添加新函数时无需修改核心调度逻辑
- * 2. 自动扫描和注册函数处理方法
- * 3. 支持热插拔（理论上）
- * 4. 代码更简洁、更易维护
+ * AI工具函数执行器（优化版）
+ * 使用枚举替代硬编码字符串，使用真实数据服务
  *
  * @author Claude
- * @since 2026-03-14
+ * @since 2026-03-13
  */
 @Slf4j
 @Component
@@ -49,111 +42,32 @@ public class AiFunctionExecutorOptimized {
     private NutritionAnalysisService nutritionAnalysisService;
 
     /**
-     * 函数名称 -> 处理方法的映射缓存
-     */
-    private final Map<String, Method> functionHandlers = new ConcurrentHashMap<>();
-
-    /**
-     * 初始化函数处理器映射
-     * 在Spring容器初始化后自动扫描所有带 @AiFunctionHandler 注解的方法
-     */
-    @PostConstruct
-    public void initFunctionHandlers() {
-        log.info("开始扫描AI工具函数处理方法...");
-
-        // 获取当前类的所有方法
-        Method[] methods = this.getClass().getDeclaredMethods();
-
-        for (Method method : methods) {
-            // 检查是否有 @AiFunctionHandler 注解
-            AiFunctionHandler annotation = method.getAnnotation(AiFunctionHandler.class);
-
-            if (annotation != null) {
-                String functionName = annotation.value();
-
-                // 验证方法签名
-                if (!isValidHandlerMethod(method)) {
-                    log.warn("方法 {} 签名不符合要求，跳过注册", method.getName());
-                    continue;
-                }
-
-                // 验证函数名称是否在枚举中定义
-                if (!AiFunctionType.isValidFunction(functionName)) {
-                    log.warn("函数名称 {} 未在 AiFunctionType 枚举中定义，跳过注册", functionName);
-                    continue;
-                }
-
-                // 注册函数处理器
-                method.setAccessible(true); // 允许访问私有方法
-                functionHandlers.put(functionName, method);
-
-                log.info("注册AI工具函数: {} -> {}(), 描述: {}",
-                    functionName, method.getName(), annotation.description());
-            }
-        }
-
-        log.info("AI工具函数扫描完成，共注册 {} 个函数", functionHandlers.size());
-    }
-
-    /**
-     * 验证处理方法签名是否符合要求
-     * 要求：
-     * 1. 返回类型必须是 String
-     * 2. 必须有一个参数，类型为 Map<String, Object>
-     */
-    private boolean isValidHandlerMethod(Method method) {
-        // 检查返回类型
-        if (!String.class.equals(method.getReturnType())) {
-            return false;
-        }
-
-        // 检查参数
-        Class<?>[] parameterTypes = method.getParameterTypes();
-        if (parameterTypes.length != 1) {
-            return false;
-        }
-
-        if (!Map.class.equals(parameterTypes[0])) {
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
      * 执行工具函数
      *
      * @param functionName 函数名称
      * @param arguments    函数参数
-     * @param userId       当前登录用户的ID（可选，用于自动注入）
      * @return 执行结果
      */
-    public String executeFunction(String functionName, Map<String, Object> arguments, String userId) {
-        log.info("执行AI工具函数: {}, 参数: {}, 用户ID: {}", functionName, arguments, userId);
+    public String executeFunction(String functionName, Map<String, Object> arguments) {
+        log.info("执行AI工具函数: {}, 参数: {}", functionName, arguments);
 
         // 1. 验证函数名称
-        Method handler = functionHandlers.get(functionName);
-        if (handler == null) {
-            log.warn("未找到工具函数处理器: {}", functionName);
+        AiFunctionType functionType = AiFunctionType.fromFunctionName(functionName);
+        if (functionType == null) {
+            log.warn("未知的工具函数: {}", functionName);
             return buildErrorResponse("未知的工具函数: " + functionName);
         }
 
-        // 2. 自动注入userId到参数中（如果函数需要且当前用户已登录）
-        Map<String, Object> enhancedArguments = new HashMap<>(arguments);
-        if (userId != null && !userId.isEmpty()) {
-            // 对于需要userId的函数，如果参数中没有提供，自动注入
-            if (needsUserId(functionName) && !enhancedArguments.containsKey("user_id")) {
-                enhancedArguments.put("user_id", userId);
-                log.info("自动注入用户ID到函数参数: {} -> {}", functionName, userId);
-            }
-        }
-
-        // 3. 使用反射调用处理方法
+        // 2. 根据枚举类型执行相应函数
         try {
-            Object result = handler.invoke(this, enhancedArguments);
-            log.info("工具函数执行成功: {}, 结果长度: {} 字符",
-                functionName, result != null ? result.toString().length() : 0);
-            return (String) result;
+            return switch (functionType) {
+                case SEARCH_DISHES -> searchDishes(arguments);
+                case GET_DISH_DETAILS -> getDishDetails(arguments);
+                case CREATE_ORDER -> createOrder(arguments);
+                case GET_ORDER_STATUS -> getOrderStatus(arguments);
+                case GET_USER_PREFERENCES -> getUserPreferences(arguments);
+                case ANALYZE_NUTRITION -> analyzeNutrition(arguments);
+            };
 
         } catch (Exception e) {
             log.error("执行工具函数失败: {}", functionName, e);
@@ -162,26 +76,8 @@ public class AiFunctionExecutorOptimized {
     }
 
     /**
-     * 执行工具函数（兼容旧版本，不传入userId）
-     */
-    public String executeFunction(String functionName, Map<String, Object> arguments) {
-        return executeFunction(functionName, arguments, null);
-    }
-
-    /**
-     * 判断函数是否需要userId参数
-     */
-    private boolean needsUserId(String functionName) {
-        return "create_order".equals(functionName) ||
-               "get_user_preferences".equals(functionName);
-    }
-
-    // ==================== 以下是各个函数的处理方法 ====================
-
-    /**
      * 搜索菜品
      */
-    @AiFunctionHandler(value = "search_dishes", description = "根据关键词或分类搜索菜品")
     private String searchDishes(Map<String, Object> arguments) {
         String keyword = getStringArgument(arguments, "keyword");
         String category = getStringArgument(arguments, "category");
@@ -240,7 +136,6 @@ public class AiFunctionExecutorOptimized {
     /**
      * 获取菜品详情
      */
-    @AiFunctionHandler(value = "get_dish_details", description = "获取指定菜品的详细信息")
     private String getDishDetails(Map<String, Object> arguments) {
         String dishId = getStringArgument(arguments, "dish_id");
 
@@ -285,7 +180,6 @@ public class AiFunctionExecutorOptimized {
     /**
      * 创建订单
      */
-    @AiFunctionHandler(value = "create_order", description = "创建一个新的订单")
     private String createOrder(Map<String, Object> arguments) {
         log.info("创建订单 - 参数: {}", arguments);
 
@@ -385,7 +279,6 @@ public class AiFunctionExecutorOptimized {
     /**
      * 查询订单状态
      */
-    @AiFunctionHandler(value = "get_order_status", description = "查询订单的当前状态")
     private String getOrderStatus(Map<String, Object> arguments) {
         String orderId = getStringArgument(arguments, "order_id");
 
@@ -418,58 +311,30 @@ public class AiFunctionExecutorOptimized {
     }
 
     /**
-     * 查询订单列表
+     * 获取订单状态文本
      */
-    @AiFunctionHandler(value = "list_orders", description = "查询用户的所有订单列表")
-    private String listOrders(Map<String, Object> arguments) {
-        // 从arguments中获取user_id（系统自动注入）
-        String userId = getStringArgument(arguments, "user_id");
-
-        log.info("查询订单列表 - userId: {}", userId);
-
-        try {
-            // 构建查询条件
-            QueryWrapper<Order> queryWrapper = new QueryWrapper<>();
-            queryWrapper.eq("user_id", userId)
-                    .orderByDesc("create_time")
-                    .last("LIMIT 20");  // 最多返回最近20条订单
-
-            List<Order> orders = orderService.list(queryWrapper);
-
-            if (orders.isEmpty()) {
-                return "您目前还没有订单记录。";
-            }
-
-            // 格式化返回结果
-            StringBuilder result = new StringBuilder();
-            result.append(String.format("找到您的 %d 条订单记录：\n\n", orders.size()));
-
-            for (int i = 0; i < orders.size(); i++) {
-                Order order = orders.get(i);
-                result.append(String.format("%d. 订单号：%s\n", i + 1, order.getId()));
-                result.append(String.format("   状态：%s\n", getOrderStatusText(order.getStatus())));
-                result.append(String.format("   金额：￥%.2f\n", order.getTotalAmount()));
-
-                if (order.getCreateTime() != null) {
-                    result.append(String.format("   时间：%s\n", order.getCreateTime()));
-                }
-
-                result.append("\n");
-            }
-
-            result.append("需要查看某个订单的详情吗？可以告诉我订单号。");
-            return result.toString();
-
-        } catch (Exception e) {
-            log.error("查询订单列表失败", e);
-            return buildErrorResponse("查询订单列表时出现错误");
+    private String getOrderStatusText(Integer status) {
+        if (status == null) {
+            return "未知";
         }
+
+        return switch (status) {
+            case 0 -> "待支付";
+            case 1 -> "待接单";
+            case 2 -> "备菜中";
+            case 3 -> "烹饪中";
+            case 4 -> "待上菜";
+            case 5 -> "已送达";
+            case 6 -> "已取消";
+            case 7 -> "待评价";
+            case 8 -> "已评价";
+            default -> "未知状态";
+        };
     }
 
     /**
      * 获取用户偏好
      */
-    @AiFunctionHandler(value = "get_user_preferences", description = "获取用户的饮食偏好和历史记录")
     private String getUserPreferences(Map<String, Object> arguments) {
         String userId = getStringArgument(arguments, "user_id");
 
@@ -502,8 +367,8 @@ public class AiFunctionExecutorOptimized {
 
     /**
      * 分析营养信息
+     * 使用真实的营养分析服务，替代硬编码数据
      */
-    @AiFunctionHandler(value = "analyze_nutrition", description = "分析食物的营养成分和热量")
     private String analyzeNutrition(Map<String, Object> arguments) {
         String foodName = getStringArgument(arguments, "food_name");
 
@@ -577,27 +442,5 @@ public class AiFunctionExecutorOptimized {
      */
     private String buildErrorResponse(String message) {
         return "❌ " + message;
-    }
-
-    /**
-     * 获取订单状态文本
-     */
-    private String getOrderStatusText(Integer status) {
-        if (status == null) {
-            return "未知";
-        }
-
-        return switch (status) {
-            case 0 -> "待支付";
-            case 1 -> "待接单";
-            case 2 -> "备菜中";
-            case 3 -> "烹饪中";
-            case 4 -> "待上菜";
-            case 5 -> "已送达";
-            case 6 -> "已取消";
-            case 7 -> "待评价";
-            case 8 -> "已评价";
-            default -> "未知状态";
-        };
     }
 }

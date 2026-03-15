@@ -5,7 +5,7 @@
       <el-tabs v-model="activeTab" type="border-card" class="ai-tabs fade-in-up">
         <!-- AI聊天 - 使用简化版组件 -->
         <el-tab-pane label="AI聊天" name="chat">
-          <AIChatSimple />
+          <AiChatFull />
         </el-tab-pane>
 
         <!-- 菜品识别 -->
@@ -29,7 +29,7 @@
 
 <script setup>
 import { ref, defineAsyncComponent, h } from 'vue'
-import AIChatSimple from './AI/components/AIChatFull.vue'
+import AiChatFull from './AI/components/AIChatFull.vue'
 
 // 使用异步加载组件，避免编译错误
 const DishRecognition = defineAsyncComponent(() =>

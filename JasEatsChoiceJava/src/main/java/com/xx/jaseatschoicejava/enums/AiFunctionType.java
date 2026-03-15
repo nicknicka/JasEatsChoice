@@ -35,6 +35,11 @@ public enum AiFunctionType {
     GET_ORDER_STATUS("get_order_status", "查询订单的当前状态", 3000),
 
     /**
+     * 查询订单列表
+     */
+    LIST_ORDERS("list_orders", "查询用户的所有订单列表", 5000),
+
+    /**
      * 获取用户偏好
      */
     GET_USER_PREFERENCES("get_user_preferences", "获取用户的饮食偏好和历史记录", 3000),

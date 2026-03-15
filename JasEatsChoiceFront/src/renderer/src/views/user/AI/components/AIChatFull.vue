@@ -13,7 +13,16 @@
             'ai-message': message.sender === 'ai'
           }"
         >
-          <div class="message-avatar">{{ message.avatar }}</div>
+          <!-- 用户头像：使用真实头像 -->
+          <CommonAvatar
+            v-if="message.sender === 'user'"
+            :avatar-url="message.avatar"
+            :size="42"
+            :fallback-text="userStore.userInfo?.nickname || '用'"
+            class="message-avatar-custom"
+          />
+          <!-- AI头像：使用emoji -->
+          <div v-else class="message-avatar">{{ message.avatar }}</div>
           <div class="message-content">
             <!-- 图片附件 -->
             <div v-if="message.images && message.images.length > 0" class="message-images">
@@ -62,14 +71,39 @@
       <transition name="slide-up">
         <div v-if="showQuickQuestions" class="quick-questions-panel">
           <div class="quick-questions-title">💡 快捷提问</div>
-          <div class="quick-questions-list">
+          <div class="quick-questions-categories">
             <div
-              v-for="question in quickQuestions"
-              :key="question"
-              @click="handleQuickQuestion(question)"
-              class="question-item"
+              v-for="category in quickQuestionCategories"
+              :key="category.id"
+              class="question-category"
             >
-              {{ question }}
+              <!-- 分类标题（可点击展开/折叠） -->
+              <div
+                class="category-header"
+                @click="toggleCategory(category.id)"
+              >
+                <span class="category-title">{{ category.title }}</span>
+                <el-icon
+                  class="category-arrow"
+                  :class="{ 'is-expanded': category.expanded }"
+                >
+                  <ArrowRight />
+                </el-icon>
+              </div>
+
+              <!-- 分类问题列表 -->
+              <transition name="category-slide">
+                <div v-show="category.expanded" class="category-questions">
+                  <div
+                    v-for="question in category.questions"
+                    :key="question"
+                    @click.stop="handleQuickQuestion(question)"
+                    class="question-item"
+                  >
+                    {{ question }}
+                  </div>
+                </div>
+              </transition>
             </div>
           </div>
         </div>
@@ -156,19 +190,7 @@
                 />
               </el-tooltip>
 
-              <!-- AI个性化数据开关 -->
-              <el-tooltip content="开启后AI将使用您的个人数据提供个性化建议" placement="bottom">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <el-switch
-                    v-model="aiPersonalDataEnabled"
-                    @change="handlePersonalDataToggle"
-                    size="small"
-                  />
-                </div>
-              </el-tooltip>
-            </div>
 
-            <div class="toolbar-right">
               <!-- 快捷提问按钮 -->
               <el-tooltip content="快捷提问" placement="top">
                 <el-button
@@ -179,6 +201,18 @@
                   :class="{ 'is-active': showQuickQuestions }"
                 />
               </el-tooltip>
+
+              <!-- AI个性化数据开关 -->
+              <el-tooltip content="开启后AI将使用您的个人数据提供个性化建议" placement="bottom">
+                <el-switch
+                  v-model="aiPersonalDataEnabled"
+                  @change="handlePersonalDataToggle"
+                  size="small"
+                />
+              </el-tooltip>
+            </div>
+
+            <div class="toolbar-right">
             </div>
           </div>
 
@@ -214,7 +248,7 @@
           class="send-btn"
           @click="handleSendClick"
           :disabled="isLoading && !isStreaming"
-          :loading="isLoading"
+          :loading="isLoading && !isStreaming"
         >
           {{ isStreaming ? '停止' : '发送' }}
         </el-button>
@@ -236,15 +270,20 @@ import {
   DocumentCopy,
   More,
   Operation,
-  QuestionFilled
+  QuestionFilled,
+  ArrowRight
 } from '@element-plus/icons-vue'
 import { parseMarkdown } from '../../../../utils/markdownParser'
 import axios from 'axios'
 import { API_CONFIG } from '../../../../config/index'
 import { useAuthStore } from '../../../../store/authStore'
+import { useUserStore } from '../../../../store/userStore'
+import CommonAvatar from '@/components/CommonAvatar.vue'
 
 // 获取认证store
 const authStore = useAuthStore()
+// 获取用户store
+const userStore = useUserStore()
 
 // 获取用户ID
 const getUserId = () => {
@@ -259,21 +298,72 @@ const isStreaming = ref(false)
 const abortController = ref(null)
 const chatContainerRef = ref(null)
 const bottomContainerRef = ref(null)
-const showQuickQuestions = ref(true)
+const showQuickQuestions = ref(false)
 const showEmojiPicker = ref(false)
 const uploadedImages = ref([])
+
+// 用户手动滚动标记
+const userHasScrolled = ref(false)
+let isAutoScrolling = false // 防止滚动时触发滚动事件
 
 // AI个性化数据开关状态（隐私保护原则：默认未授权）
 const aiPersonalDataEnabled = ref(false)
 
-// 快捷问题列表
-const quickQuestions = ref([
-  "推荐适合减肥的食谱",
-  "今日卡路里摄入建议",
-  "如何搭配营养均衡的饮食",
-  "推荐低卡路里零食",
-  "适合运动后的食物"
+// 快捷问题分类列表（与后端Function Calling功能对应）
+const quickQuestionCategories = ref([
+  {
+    id: 'dish-exploration',
+    title: '🍽️ 菜品探索',
+    expanded: true,
+    questions: [
+      "帮我搜索一些主食菜品",
+      "有什么推荐的甜点吗",
+      "搜索包含鸡肉的菜肴",
+      "查看汤品分类的菜品"
+    ]
+  },
+  {
+    id: 'nutrition-analysis',
+    title: '📊 营养分析',
+    expanded: false,
+    questions: [
+      "分析西红柿炒鸡蛋的营养成分",
+      "宫保鸡丁的热量是多少",
+      "这份菜的蛋白质含量高吗",
+      "分析这碗米饭的营养价值"
+    ]
+  },
+  {
+    id: 'order-management',
+    title: '🛒 订单管理',
+    expanded: false,
+    questions: [
+      "我要下单宫保鸡丁和红烧肉",
+      "查询我的订单状态",
+      "创建一个新订单",
+      "我的订单配送到了吗"
+    ]
+  },
+  {
+    id: 'personalized-recommendation',
+    title: '👤 个性化推荐',
+    expanded: false,
+    questions: [
+      "根据我的喜好推荐菜品",
+      "查看我的饮食偏好",
+      "我最近都点了什么菜",
+      "有什么适合我的健康菜品推荐"
+    ]
+  }
 ])
+
+// 切换分类展开/折叠状态
+const toggleCategory = (categoryId) => {
+  const category = quickQuestionCategories.value.find(c => c.id === categoryId)
+  if (category) {
+    category.expanded = !category.expanded
+  }
+}
 
 // 常用表情列表
 const commonEmojis = ref([
@@ -331,14 +421,14 @@ const loadMessages = async () => {
           hour: '2-digit',
           minute: '2-digit'
         }),
-        avatar: item.sender === 'ai' ? '🤖' : '👤',
+        avatar: item.sender === 'ai' ? '🤖' : (userStore.userInfo?.avatar || ''),
         enableMarkdown: true
       }))
       console.log('✅ 成功加载聊天历史:', messages.value.length, '条消息')
     } else {
       // 没有历史记录，显示欢迎消息并保存到后端
       console.log('📭 没有历史记录，显示欢迎消息')
-      const welcomeMessage = '您好！我是您的AI饮食助手。😊\n\n我可以帮助您：\n- 推荐健康食谱\n- 分析营养成分\n- 提供饮食建议\n\n有什么可以帮您的吗？'
+      const welcomeMessage = '您好！我是您的AI饮食助手。😊\n我可以帮助您：\n- 推荐健康食谱\n- 分析营养成分\n- 提供饮食建议\n有什么可以帮您的吗？'
       messages.value = [
         {
           id: 1,
@@ -366,7 +456,7 @@ const loadMessages = async () => {
       {
         id: 1,
         sender: 'ai',
-        content: '您好！我是您的AI饮食助手。😊\n\n我可以帮助您：\n- 推荐健康食谱\n- 分析营养成分\n- 提供饮食建议\n\n有什么可以帮您的吗？',
+        content: '您好！我是您的AI饮食助手。😊\n\n我可以帮助您：\n\n- 推荐健康食谱\n- 分析营养成分\n- 提供饮食建议\n\n有什么可以帮您的吗？',
         time: new Date().toLocaleTimeString([], {
           hour: '2-digit',
           minute: '2-digit'
@@ -488,7 +578,7 @@ const streamResponse = async (messageIndex, reader) => {
             messages.value[messageIndex].content += parsedData.content
             // console.log('📊 当前消息总长度:', messages.value[messageIndex].content.length)  // 【调试日志】
             await nextTick()
-            scrollToBottom()
+            // 流式传输时不自动滚动,让用户控制查看位置
           } else {
             // console.log('⚠️ 没有content字段，parsedData:', parsedData)  // 【调试日志】
           }
@@ -540,7 +630,7 @@ const sendMessage = async () => {
     sender: 'user',
     content: message,
     time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    avatar: '👤',
+    avatar: userStore.userInfo?.avatar || '', // 使用用户真实头像
     images: hasImages ? [...uploadedImages.value] : undefined
   }
 
@@ -554,8 +644,9 @@ const sendMessage = async () => {
   // 保存用户消息到后端
   await saveMessageToBackend('user', message)
 
-  // 滚动到底部（用户消息发送后）
-  scrollToBottom()
+  // 用户发送新消息时,重置滚动标志并强制滚动到底部
+  userHasScrolled.value = false
+  scrollToBottom(true)
 
   // Call backend AI API
   isLoading.value = true
@@ -571,8 +662,7 @@ const sendMessage = async () => {
     enableMarkdown: true
   })
 
-  // 再次滚动到底部，确保AI消息气泡可见
-  scrollToBottom()
+  // 不自动滚动,让用户控制查看位置
 
   // ========== 日志记录：API调用 ==========
   const apiUrl = API_CONFIG.baseURL + API_CONFIG.ai.chat
@@ -588,7 +678,8 @@ const sendMessage = async () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Accept: 'text/event-stream'
+        Accept: 'text/event-stream',
+        'Authorization': `Bearer ${authStore.token}` // 添加JWT token
       },
       body: JSON.stringify({ message: userInput }),
       signal: abortController.value.signal
@@ -666,12 +757,45 @@ const sendMessage = async () => {
 }
 
 // 滚动到底部
-const scrollToBottom = () => {
-  nextTick(() => {
-    if (chatContainerRef.value) {
-      chatContainerRef.value.scrollTop = chatContainerRef.value.scrollHeight
-    }
-  })
+// 处理滚动事件,检测用户是否手动滚动
+const handleScroll = () => {
+  // 如果是自动滚动,不处理
+  if (isAutoScrolling) {
+    return
+  }
+
+  const container = chatContainerRef.value
+  if (!container) {
+    return
+  }
+
+  // 检查是否接近底部(阈值100px)
+  const isNearBottom =
+    container.scrollHeight - container.scrollTop - container.clientHeight < 100
+
+  // 如果不在底部100px范围内,标记用户已手动滚动
+  if (!isNearBottom) {
+    userHasScrolled.value = true
+  } else {
+    // 如果用户在底部100px范围内,重置标志(允许自动滚动)
+    userHasScrolled.value = false
+  }
+}
+
+const scrollToBottom = (force = false) => {
+  // 只有在强制滚动或用户未手动滚动时才自动滚动
+  if (force || !userHasScrolled.value) {
+    isAutoScrolling = true
+    nextTick(() => {
+      if (chatContainerRef.value) {
+        chatContainerRef.value.scrollTop = chatContainerRef.value.scrollHeight
+      }
+      // 延迟重置标志,确保滚动事件不会误触发
+      setTimeout(() => {
+        isAutoScrolling = false
+      }, 100)
+    })
+  }
 }
 
 // 键盘事件
@@ -938,6 +1062,12 @@ const handleMessageAction = async (command, content) => {
 // 生命周期
 onMounted(async () => {
   document.addEventListener('click', handleClickOutside)
+
+  // 添加滚动事件监听器
+  if (chatContainerRef.value) {
+    chatContainerRef.value.addEventListener('scroll', handleScroll)
+  }
+
   // 加载聊天历史记录
   await loadMessages()
   // 加载用户偏好设置
@@ -946,6 +1076,11 @@ onMounted(async () => {
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
+
+  // 移除滚动事件监听器
+  if (chatContainerRef.value) {
+    chatContainerRef.value.removeEventListener('scroll', handleScroll)
+  }
 })
 </script>
 
@@ -1048,6 +1183,20 @@ onUnmounted(() => {
       line-height: 1;
     }
 
+    // 自定义头像组件样式
+    .message-avatar-custom {
+      flex-shrink: 0;
+      filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.15));
+
+      :deep(.avatar-container) {
+        padding: 4px; /* 减小padding以匹配42px尺寸 */
+      }
+
+      :deep(.user-avatar) {
+        border-width: 2px; /* 减小边框宽度 */
+      }
+    }
+
     .message-content {
       display: flex;
       flex-direction: column;
@@ -1076,7 +1225,7 @@ onUnmounted(() => {
       .message-text {
         padding: 14px 18px;
         border-radius: 20px;
-        line-height: 1.7;
+        line-height: 1.37; /* 进一步减小行高，让换行更紧凑 */
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         font-size: 0.929rem /* 原值: 15px，调整为13px */;
         white-space: pre-wrap;
@@ -1135,16 +1284,23 @@ onUnmounted(() => {
 
         // Markdown样式
         &.markdown-content {
+          // 极简换行符间距
+          :deep(br) {
+            display: block;
+            content: '';
+            margin: 0; /* 完全去除<br>的额外间距 */
+          }
+
           // 标题
           :deep(h1), :deep(h2), :deep(h3) {
             margin: 8px 0 6px 0; /* 减小标题间距 */
             font-weight: 600;
-            line-height: 1.4;
+            line-height: 1.5;
           }
 
-          :deep(h1) { font-size: 1.286rem /* 原值: 20px，改为18px */; }
-          :deep(h2) { font-size: 1.143rem /* 原值: 18px，改为16px */; }
-          :deep(h3) { font-size: 1rem /* 原值: 16px，改为14px */; }
+          :deep(h1) { font-size: 1.286rem ; }
+          :deep(h2) { font-size: 1.143rem ; }
+          :deep(h3) { font-size: 1rem ; }
 
           &:first-child {
             margin-top: 0;
@@ -1152,7 +1308,8 @@ onUnmounted(() => {
 
           // 段落
           :deep(p) {
-            margin: 4px 0; /* 减小段落间距 */
+            margin: 2px 0; /* 进一步减小段落间距 */
+            line-height: 1.3; /* 与基础行高保持一致 */
           }
         }
 
@@ -1203,12 +1360,13 @@ onUnmounted(() => {
 
         // 列表
         :deep(ul), :deep(ol) {
-          margin: 6px 0; /* 减小列表间距 */
+          margin: 2px 0; /* 进一步减小列表间距 */
           padding-left: 18px; /* 稍微减小缩进 */
+          line-height: 1.25; /* 与基础行高保持一致 */
         }
 
         :deep(li) {
-          margin: 3px 0; /* 减小列表项间距 */
+          margin: 1px 0; /* 进一步减小列表项间距 */
         }
 
         // 换行
@@ -1256,8 +1414,23 @@ onUnmounted(() => {
   border-radius: 8px;
   padding: 12px;
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
-  max-width: 280px;
+  max-width: 320px;
+  max-height: 400px;
+  overflow-y: auto;
   z-index: 1000; /* 与 emoji panel 相同层级 */
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #dee2e6;
+    border-radius: 2px;
+
+    &:hover {
+      background: #adb5bd;
+    }
+  }
 
   .quick-questions-title {
     font-size: 0.929rem /* 原值: 13px */;
@@ -1268,33 +1441,102 @@ onUnmounted(() => {
     border-bottom: 1px solid #e8ecef;
   }
 
-  .quick-questions-list {
+  .quick-questions-categories {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 8px;
 
-    .question-item {
-      padding: 8px 12px;
-      font-size: 0.857rem /* 原值: 12px */;
-      color: #606266;
-      background: #f5f7fa;
+    .question-category {
+      border: 1px solid #e8ecef;
       border-radius: 6px;
-      cursor: pointer;
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      text-align: left;
-      line-height: 1.4;
+      overflow: hidden;
+      transition: all 0.2s ease;
 
       &:hover {
-        background: linear-gradient(135deg, #409eff 0%, #5dade2 100%);
-        color: #ffffff;
-        transform: translateX(4px);
+        border-color: #ff6b6b;
       }
 
-      &:active {
-        transform: translateX(2px);
+      .category-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 12px;
+        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+        cursor: pointer;
+        user-select: none;
+        transition: all 0.2s ease;
+
+        &:hover {
+          background: linear-gradient(135deg, #fff5f5 0%, #fff 100%);
+        }
+
+        .category-title {
+          font-size: 0.857rem /* 原值: 12px */;
+          font-weight: 600;
+          color: #606266;
+        }
+
+        .category-arrow {
+          font-size: 0.857rem /* 原值: 12px */;
+          color: #909399;
+          transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+          &.is-expanded {
+            transform: rotate(90deg);
+          }
+        }
+      }
+
+      .category-questions {
+        padding: 6px;
+        background: #ffffff;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+
+        .question-item {
+          padding: 8px 10px;
+          font-size: 0.786rem /* 原值: 11px */;
+          color: #606266;
+          background: #f5f7fa;
+          border-radius: 4px;
+          cursor: pointer;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          text-align: left;
+          line-height: 1.4;
+
+          &:hover {
+            background: linear-gradient(135deg, #409eff 0%, #5dade2 100%);
+            color: #ffffff;
+            transform: translateX(2px);
+          }
+
+          &:active {
+            transform: translateX(1px);
+          }
+        }
       }
     }
   }
+}
+
+// 分类展开/折叠动画
+.category-slide-enter-active,
+.category-slide-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.category-slide-enter-from,
+.category-slide-leave-to {
+  max-height: 0;
+  opacity: 0;
+}
+
+.category-slide-enter-to,
+.category-slide-leave-from {
+  max-height: 300px;
+  opacity: 1;
 }
 
 // 已上传图片预览
@@ -1475,12 +1717,6 @@ onUnmounted(() => {
     .toolbar-left {
       display: flex;
       gap: 8px;
-      align-items: center;
-    }
-
-    .toolbar-right {
-      display: flex;
-      gap: 16px;
       align-items: center;
     }
 
