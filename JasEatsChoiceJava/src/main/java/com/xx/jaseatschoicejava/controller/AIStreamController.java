@@ -887,23 +887,47 @@ public class AIStreamController {
                 return null;
             }
 
-            // 构建前端UserInfoCard组件需要的数据结构
-            Map<String, Object> cardData = new HashMap<>();
-            cardData.put("nickname", user.getNickname() != null ? user.getNickname() : "用户");
-            cardData.put("phone", user.getPhone() != null ?
-                    user.getPhone().replaceAll("(\\d{3})\\d{4}(\\d{4})", "$1****$2") : "");
-            cardData.put("email", user.getEmail() != null ? user.getEmail() : "");
+            // 构建基本信息
+            Map<String, Object> basicInfo = new HashMap<>();
+            basicInfo.put("nickname", user.getNickname() != null ? user.getNickname() : "未设置");
+            basicInfo.put("phone", user.getPhone() != null ?
+                    user.getPhone().replaceAll("(\\d{3})\\d{4}(\\d{4})", "$1****$2") : "未设置");
+            basicInfo.put("email", user.getEmail() != null ? user.getEmail() : "未设置");
+            basicInfo.put("location", user.getLocation() != null ? user.getLocation() : "未设置");
+            basicInfo.put("gender", user.getGender() != null ? user.getGender() : "未设置");
+            basicInfo.put("registerTime", user.getCreateTime() != null ?
+                    user.getCreateTime().toLocalDate().toString() : "未设置");
 
-            // BMI相关信息（如果有）
-            if (user.getHeight() != null && user.getWeight() != null) {
+            // 构建身体数据
+            Map<String, Object> bodyData = new HashMap<>();
+            bodyData.put("height", user.getHeight() != null ? user.getHeight() : "-");
+            bodyData.put("weight", user.getWeight() != null ? user.getWeight() : "-");
+
+            if (user.getHeight() != null && user.getHeight() > 0
+                    && user.getWeight() != null && user.getWeight() > 0) {
                 double height = user.getHeight() / 100.0; // 转换为米
                 double bmi = user.getWeight() / (height * height);
-                cardData.put("bmi", String.format("%.1f", bmi));
-                cardData.put("height", user.getHeight());
-                cardData.put("weight", user.getWeight());
+                bodyData.put("bmi", String.format("%.1f", bmi));
+                bodyData.put("bmiStatus", getBMIStatus(bmi));
+                bodyData.put("bmiText", getBMIStatusText(bmi));
             }
 
-            cardData.put("summary", "用户基本信息");
+            // 构建饮食偏好
+            Map<String, Object> preferences = new HashMap<>();
+            preferences.put("dietGoal", user.getDietGoal() != null ? user.getDietGoal() : "未设置");
+
+            // 操作按钮
+            List<Map<String, String>> actions = new ArrayList<>();
+            actions.add(Map.of("type", "edit_profile", "text", "编辑资料", "icon", "Edit"));
+            actions.add(Map.of("type", "view_health", "text", "健康分析", "icon", "TrendCharts"));
+
+            // 按照前端UserInfoCard组件期望的数据结构组装
+            Map<String, Object> cardData = new HashMap<>();
+            cardData.put("summary", "用户基本信息档案");
+            cardData.put("basicInfo", basicInfo);
+            cardData.put("bodyData", bodyData);
+            cardData.put("preferences", preferences);
+            cardData.put("actions", actions);
 
             Map<String, Object> result = new HashMap<>();
             result.put("messageType", "user_info_card");
@@ -914,6 +938,26 @@ public class AIStreamController {
             log.error("构建用户信息卡片数据失败", e);
             return null;
         }
+    }
+
+    /**
+     * 计算BMI状态
+     */
+    private String getBMIStatus(double bmi) {
+        if (bmi < 18.5) return "underweight";
+        if (bmi < 24) return "normal";
+        if (bmi < 28) return "overweight";
+        return "obese";
+    }
+
+    /**
+     * 获取BMI状态文本
+     */
+    private String getBMIStatusText(double bmi) {
+        if (bmi < 18.5) return "偏瘦";
+        if (bmi < 24) return "正常";
+        if (bmi < 28) return "偏胖";
+        return "肥胖";
     }
 
     /**

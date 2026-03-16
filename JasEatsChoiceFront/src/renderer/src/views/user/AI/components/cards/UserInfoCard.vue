@@ -13,29 +13,29 @@
       <div class="section">
         <div class="section-title">📋 基本信息</div>
         <div class="info-grid">
-          <div class="info-item">
+          <div class="info-item" v-if="data.basicInfo">
             <span class="label">昵称</span>
-            <span class="value">{{ data.basicInfo.nickname }}</span>
+            <span class="value">{{ data.basicInfo.nickname || '未设置' }}</span>
           </div>
-          <div class="info-item">
+          <div class="info-item" v-if="data.basicInfo">
             <span class="label">手机号</span>
-            <span class="value">{{ data.basicInfo.phone }}</span>
+            <span class="value">{{ data.basicInfo.phone || '未设置' }}</span>
           </div>
-          <div class="info-item">
+          <div class="info-item" v-if="data.basicInfo">
             <span class="label">邮箱</span>
             <span class="value">{{ data.basicInfo.email || '未设置' }}</span>
           </div>
-          <div class="info-item">
+          <div class="info-item" v-if="data.basicInfo">
             <span class="label">地区</span>
             <span class="value">{{ data.basicInfo.location || '未设置' }}</span>
           </div>
-          <div class="info-item">
+          <div class="info-item" v-if="data.basicInfo">
             <span class="label">性别</span>
             <span class="value">{{ getGenderText(data.basicInfo.gender) }}</span>
           </div>
-          <div class="info-item">
+          <div class="info-item" v-if="data.basicInfo">
             <span class="label">注册时间</span>
-            <span class="value">{{ data.basicInfo.registerTime }}</span>
+            <span class="value">{{ data.basicInfo.registerTime || '未设置' }}</span>
           </div>
         </div>
       </div>
@@ -43,15 +43,15 @@
       <!-- 身体数据 -->
       <div class="section">
         <div class="section-title">💪 身体数据</div>
-        <div class="body-data">
+        <div class="body-data" v-if="data.bodyData">
           <div class="data-row">
             <div class="data-item">
               <span class="data-label">身高</span>
-              <span class="data-value">{{ data.bodyData.height }} cm</span>
+              <span class="data-value">{{ data.bodyData.height || '-' }} cm</span>
             </div>
             <div class="data-item">
               <span class="data-label">体重</span>
-              <span class="data-value">{{ data.bodyData.weight }} kg</span>
+              <span class="data-value">{{ data.bodyData.weight || '-' }} kg</span>
             </div>
             <div class="data-item" v-if="data.bodyData.bmi">
               <span class="data-label">BMI</span>
@@ -74,7 +74,7 @@
       <!-- 饮食偏好 -->
       <div class="section" v-if="hasPreferences">
         <div class="section-title">🍽️ 饮食偏好</div>
-        <div class="preferences">
+        <div class="preferences" v-if="data.preferences">
           <div class="preference-item" v-if="data.preferences.dietGoal">
             <span class="label">饮食目标：</span>
             <span class="value">{{ data.preferences.dietGoal }}</span>
@@ -137,11 +137,13 @@ const emit = defineEmits(['action'])
 
 // 是否有饮食偏好
 const hasPreferences = computed(() => {
+  if (!props.data || !props.data.preferences) {
+    return false
+  }
   const pref = props.data.preferences
-  return pref &&
-    (pref.dietGoal ||
-     (pref.allergies && pref.allergies.length > 0) ||
-     (pref.tags && pref.tags.length > 0))
+  return pref.dietGoal ||
+    (pref.allergies && pref.allergies.length > 0) ||
+    (pref.tags && pref.tags.length > 0)
 })
 
 // 获取性别文本

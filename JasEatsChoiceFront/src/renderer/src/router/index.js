@@ -31,6 +31,7 @@ const UserPaymentPasswordSetup = () => import('../views/user/PaymentPasswordSetu
 const UserWalletSecurity = () => import('../views/user/WalletSecurity.vue') // 钱包安全设置
 const UserAddress = () => import('../views/user/Address.vue') // 地址管理
 const UserContact = () => import('../views/user/Contact.vue') // 联系客服
+const UserDishDetail = () => import('../views/user/DishDetail.vue') // 菜品详情
 
 // Import merchant views
 const MerchantHome = () => import('../views/merchant/Home.vue') // 商家首页
@@ -260,6 +261,12 @@ const router = createRouter({
           name: 'user-contact',
           component: UserContact,
           meta: { title: '联系客服' }
+        },
+        {
+          path: 'dish-detail/:dishId',
+          name: 'dish-detail',
+          component: UserDishDetail,
+          meta: { title: '菜品详情', transition: 'slide-left' }
         },
         {
           path: 'my-collection',

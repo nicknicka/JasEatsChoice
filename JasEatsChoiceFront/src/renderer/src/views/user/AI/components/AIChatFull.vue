@@ -56,7 +56,7 @@
               >
                 <component
                   :is="getCardComponent(message.messageType)"
-                  :data="message.cardData"
+                  :data="parseCardData(message.cardData)"
                   @action="handleCardAction"
                 />
               </div>
@@ -296,7 +296,7 @@
 </template>
 
 <script setup>
-import { ref, nextTick, onMounted, onUnmounted, h } from 'vue'
+import { ref, nextTick, onMounted, onUnmounted, watch, h } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   ChatDotRound,
@@ -337,6 +337,7 @@ const getUserId = () => {
 
 // 状态
 const messages = ref([])
+const isMounted = ref(false) // 添加组件挂载状态标记，初始为 false
 const inputMessage = ref('')
 const isLoading = ref(false)
 const isStreaming = ref(false)
@@ -380,6 +381,28 @@ const cardComponents = {
 // 获取卡片组件
 const getCardComponent = (messageType) => {
   return cardComponents[messageType]
+}
+
+// 解析卡片数据（处理JSON字符串）
+const parseCardData = (cardData) => {
+  if (!cardData) return null
+
+  // 如果已经是对象，直接返回
+  if (typeof cardData === 'object') {
+    return cardData
+  }
+
+  // 如果是字符串，解析JSON
+  if (typeof cardData === 'string') {
+    try {
+      return JSON.parse(cardData)
+    } catch (error) {
+      console.error('解析卡片数据失败:', error)
+      return null
+    }
+  }
+
+  return null
 }
 
 // 记录最后发送的结构化查询类型（用于刷新卡片）
@@ -518,6 +541,13 @@ const loadMessages = async () => {
       await restoreCardDataForMessages()
 
       console.log('✅ 成功加载聊天历史:', messages.value.length, '条消息')
+
+      // 卡片数据恢复后，延时滚动确保DOM完全渲染
+      setTimeout(() => {
+        if (isMounted.value && chatContainerRef.value) {
+          scrollToBottom(true)
+        }
+      }, 500) // 延时 500ms
     } else {
       // 没有历史记录，显示欢迎消息并保存到后端
       console.log('📭 没有历史记录，显示欢迎消息')
@@ -540,7 +570,6 @@ const loadMessages = async () => {
       await saveMessageToBackend('ai', welcomeMessage)
     }
     isLoading.value = false
-    scrollToBottom()
   } catch (error) {
     console.error('❌ 加载聊天记录失败:', error)
     console.error('❌ 错误详情:', error.response?.data || error.message)
@@ -559,7 +588,10 @@ const loadMessages = async () => {
       }
     ]
     isLoading.value = false
-    scrollToBottom()
+    // 延时滚动，确保 DOM 完全渲染
+    setTimeout(() => {
+      scrollToBottom(true)
+    }, 300)
   }
 }
 
@@ -598,13 +630,33 @@ const renderContent = (content, useMarkdown) => {
 // 流式传输：逐块读取AI回复
 const streamResponse = async (messageIndex, reader) => {
   isStreaming.value = true
-  messages.value[messageIndex].content = ''
+
+  // 验证 messageIndex 和消息对象
+  if (!messages.value[messageIndex]) {
+    console.error('❌ 消息索引无效:', messageIndex)
+    isStreaming.value = false
+    return
+  }
+
+  // 确保消息对象有必要的属性
+  if (messages.value[messageIndex].content === undefined || messages.value[messageIndex].content === null) {
+    messages.value[messageIndex].content = ''
+  }
+  if (messages.value[messageIndex].displayContent === undefined || messages.value[messageIndex].displayContent === null) {
+    messages.value[messageIndex].displayContent = ''
+  }
 
   const decoder = new TextDecoder()
   let buffer = ''
 
   try {
     while (true) {
+      // 组件挂载状态检查：如果组件已卸载，立即停止处理
+      if (!isMounted.value) {
+        console.log('ℹ️ 组件已卸载，停止流式处理')
+        break
+      }
+
       const { done, value } = await reader.read()
       if (done) break
       const chunk = decoder.decode(value, { stream: true })
@@ -620,7 +672,9 @@ const streamResponse = async (messageIndex, reader) => {
 
         const data = trimmedLine.substring(5).trim()
         // console.log('📦 提取的data内容:', data)  // 【调试日志】提取的data
-        if (!data) continue
+        if (!data || data === '' || data === 'data:') {
+          continue
+        }
 
         try {
           // 解析SSE数据（可能是数组格式或直接的对象）
@@ -637,8 +691,10 @@ const streamResponse = async (messageIndex, reader) => {
               (item) => {
                 // 检查data字段是否存在且是对象类型
                 const itemData = item.data
+                // 排除包含 mediaType 的无效数据
                 return itemData &&
                        typeof itemData === 'object' &&
+                       !itemData.mediaType && // 排除媒体类型数据
                        (itemData.hasOwnProperty('done') ||
                         itemData.hasOwnProperty('content') ||
                         itemData.hasOwnProperty('card_data'))
@@ -654,6 +710,12 @@ const streamResponse = async (messageIndex, reader) => {
             // 直接的对象格式：{ content: string, done: boolean }
             parsedData = JSON.parse(data)
             // console.log('📊 解析后的对象:', parsedData)  // 【调试日志】
+          }
+
+          // 验证解析结果是否有效
+          if (parsedData && typeof parsedData !== 'object') {
+            console.warn('⚠️ 解析结果类型错误:', typeof parsedData)
+            continue
           }
 
           // console.log('✅ 最终解析结果:', parsedData)  // 【调试日志】
@@ -675,15 +737,31 @@ const streamResponse = async (messageIndex, reader) => {
           if (parsedData.done === true) {
             console.log('✅ 接收完成')
 
-            // 保存AI的完整回复到后端（包含卡片数据）
-            const currentMessage = messages.value[messageIndex]
-            if (currentMessage.content) {
-              await saveMessageToBackend(
-                'ai',
-                currentMessage.content,
-                currentMessage.messageType,
-                currentMessage.cardData
-              )
+            // 组件挂载状态检查
+            if (!isMounted.value) {
+              console.log('ℹ️ 组件已卸载，跳过保存消息')
+              return
+            }
+
+            // 确保 messageIndex 有效且消息对象存在
+            if (messages.value[messageIndex]) {
+              const currentMessage = messages.value[messageIndex]
+
+              // 安全检查：确保消息对象存在
+              if (currentMessage && currentMessage.content) {
+                try {
+                  await saveMessageToBackend(
+                    'ai',
+                    currentMessage.content,
+                    currentMessage.messageType,
+                    currentMessage.cardData
+                  )
+                } catch (error) {
+                  console.warn('⚠️ 保存消息到后端失败:', error.message)
+                }
+              }
+            } else {
+              console.warn('⚠️ 消息索引无效，无法保存到后端:', messageIndex)
             }
 
             return
@@ -691,73 +769,161 @@ const streamResponse = async (messageIndex, reader) => {
 
           // 接收 card_data 字段：设置卡片数据和类型
           if (parsedData.card_data) {
+            // 组件挂载状态检查
+            if (!isMounted.value) {
+              console.warn('⚠️ 组件已卸载，停止处理卡片数据')
+              break
+            }
+
+            // 确保 messageIndex 有效且消息对象存在
+            if (!messages.value[messageIndex]) {
+              console.warn('⚠️ 消息索引无效，跳过卡片数据更新:', messageIndex)
+              continue
+            }
+
             console.log('📊 收到卡片数据:', parsedData.card_data)
             const currentMessage = messages.value[messageIndex]
-            const cardMessageType = parsedData.card_data.messageType
-            const cardDataPayload = parsedData.card_data.data
 
-            // 验证数据有效性
-            if (cardMessageType && cardDataPayload) {
-              currentMessage.messageType = cardMessageType
-              currentMessage.cardData = cardDataPayload
-              console.log('✅ 卡片数据已设置:', {
-                messageType: currentMessage.messageType,
-                hasCardData: !!currentMessage.cardData,
-                cardDataKeys: currentMessage.cardData ? Object.keys(currentMessage.cardData) : []
-              })
-              await nextTick()
-              scrollToBottom()
-            } else {
-              console.warn('⚠️ 卡片数据无效:', { cardMessageType, cardDataPayload })
+            // 安全检查：确保消息对象存在
+            if (!currentMessage) {
+              console.warn('⚠️ 消息对象不存在，跳过卡片数据更新')
+              continue
+            }
+
+            try {
+              const cardMessageType = parsedData.card_data.messageType
+              const cardDataPayload = parsedData.card_data.data
+
+              // 验证数据有效性
+              if (cardMessageType && cardDataPayload) {
+                currentMessage.messageType = cardMessageType
+                currentMessage.cardData = cardDataPayload
+                console.log('✅ 卡片数据已设置:', {
+                  messageType: currentMessage.messageType,
+                  hasCardData: !!currentMessage.cardData,
+                  cardDataKeys: currentMessage.cardData ? Object.keys(currentMessage.cardData) : []
+                })
+
+                // 安全地执行 DOM 更新
+                if (isMounted.value) {
+                  await nextTick()
+                  scrollToBottom()
+                }
+              } else {
+                console.warn('⚠️ 卡片数据无效:', { cardMessageType, cardDataPayload })
+              }
+            } catch (error) {
+              console.warn('⚠️ 更新卡片数据失败:', error.message)
+              // 继续处理，不中断流
             }
           }
 
           // 接收 content 字段：追加文本
           if (parsedData.content) {
+            // 组件挂载状态检查
+            if (!isMounted.value) {
+              console.warn('⚠️ 组件已卸载，停止处理内容')
+              break
+            }
+
             const newContent = parsedData.content
+
+            // 确保 messageIndex 有效且消息对象存在
+            if (!messages.value[messageIndex]) {
+              console.warn('⚠️ 消息索引无效，跳过更新:', messageIndex)
+              continue
+            }
+
             const currentMessage = messages.value[messageIndex]
 
-            // 检测工具执行提示
+            // 安全检查：确保消息对象存在
+            if (!currentMessage) {
+              console.warn('⚠️ 消息对象不存在，跳过此更新')
+              continue
+            }
+
+            // 检测工具执行提示（移到外层作用域）
             const toolPromptRegex = /🔧\s*正在执行工具函数[.。]{0,3}/
             const hasToolPrompt = toolPromptRegex.test(newContent)
 
-            if (hasToolPrompt && !currentMessage.isToolExecuting) {
-              // 检测到工具执行开始
-              currentMessage.isToolExecuting = true
-              currentMessage.toolCompleted = false
-              currentMessage.hasToolPrompt = true
-              console.log('🔧 工具开始执行')
+            try {
+              // 确保 currentMessage 有必要的属性
+              if (!currentMessage.content) {
+                currentMessage.content = ''
+              }
+              if (!currentMessage.displayContent) {
+                currentMessage.displayContent = ''
+              }
+
+              if (hasToolPrompt && !currentMessage.isToolExecuting) {
+                // 检测到工具执行开始
+                currentMessage.isToolExecuting = true
+                currentMessage.toolCompleted = false
+                currentMessage.hasToolPrompt = true
+                console.log('🔧 工具开始执行')
+              }
+
+              // 过滤掉工具提示文本，不显示在普通内容中
+              const filteredContent = newContent.replace(toolPromptRegex, '')
+
+              // 更新完整内容和显示内容
+              currentMessage.content += newContent
+              currentMessage.displayContent += filteredContent
+
+              // 检测工具执行完成（收到非工具提示的正常内容）
+              if (currentMessage.isToolExecuting && filteredContent.trim() && !hasToolPrompt) {
+                currentMessage.isToolExecuting = false
+                currentMessage.toolCompleted = true
+                console.log('✅ 工具执行完成')
+
+                // 3秒后隐藏完成通知（使用更安全的方式）
+                const currentIndex = messageIndex
+                setTimeout(() => {
+                  // 组件卸载检查
+                  if (!isMounted.value) {
+                    return
+                  }
+
+                  // 使用双重检查确保对象和属性都存在
+                  try {
+                    if (messages.value &&
+                        messages.value[currentIndex] &&
+                        Object.prototype.hasOwnProperty.call(messages.value[currentIndex], 'toolCompleted')) {
+                      messages.value[currentIndex].toolCompleted = false
+                    }
+                  } catch (error) {
+                    // 静默处理，避免级联错误
+                    console.warn('⚠️ 更新toolCompleted失败:', error.message)
+                  }
+                }, 3000)
+              }
+            } catch (error) {
+              console.warn('⚠️ 更新消息内容失败:', error.message)
+              // 继续处理，不中断流
             }
 
-            // 过滤掉工具提示文本，不显示在普通内容中
-            const filteredContent = newContent.replace(toolPromptRegex, '')
-
-            // 更新完整内容和显示内容
-            currentMessage.content += newContent
-            currentMessage.displayContent += filteredContent
-
-            // 检测工具执行完成（收到非工具提示的正常内容）
-            if (currentMessage.isToolExecuting && filteredContent.trim() && !hasToolPrompt) {
-              currentMessage.isToolExecuting = false
-              currentMessage.toolCompleted = true
-              console.log('✅ 工具执行完成')
-
-              // 3秒后隐藏完成通知
-              setTimeout(() => {
-                if (messages.value[messageIndex]) {
-                  messages.value[messageIndex].toolCompleted = false
-                }
-              }, 3000)
+            // 安全地执行 DOM 更新
+            try {
+              if (isMounted.value) {
+                await nextTick()
+                // 流式传输时自动滚动，除非用户主动向上滚动
+                scrollToBottom()
+              }
+            } catch (error) {
+              // DOM 更新失败时的处理（组件可能已卸载）
+              console.warn('⚠️ DOM更新失败:', error.message)
             }
-
-            await nextTick()
-            // 流式传输时自动滚动，除非用户主动向上滚动
-            scrollToBottom()
           } else {
             // console.log('⚠️ 没有content字段，parsedData:', parsedData)  // 【调试日志】
           }
         } catch (error) {
-          console.log('⚠️ 跳过无效数据:', data, '错误:', error.message)  // 【调试日志】
+          // 改进错误处理：提供更详细的错误信息
+          if (error.name === 'SyntaxError') {
+            console.warn('⚠️ JSON解析失败，数据格式不正确:', data.substring(0, 100))
+          } else {
+            console.warn('⚠️ 数据处理错误:', error.message)
+          }
+          // 继续处理下一条数据，不中断流
         }
       }
     }
@@ -958,12 +1124,12 @@ const handleScroll = () => {
     isUserScrollingUp = true
   } else if (currentScrollTop > lastScrollTop) {
     // 用户向下滚动，检查是否接近底部
-    const threshold = container.scrollHeight * 0.17
+    const threshold = container.scrollHeight * 0.11
     const isNearBottom =
       container.scrollHeight - currentScrollTop - container.clientHeight < threshold
 
     if (isNearBottom) {
-      // 如果用户在底部17%范围内，重置向上滚动标记
+      // 如果用户在底部11%范围内，重置向上滚动标记
       isUserScrollingUp = false
     }
   }
@@ -971,33 +1137,66 @@ const handleScroll = () => {
   // 更新上一次的滚动位置
   lastScrollTop = currentScrollTop
 
-  // 检查是否接近底部(阈值为底部17%)
-  const threshold = container.scrollHeight * 0.17
+  // 检查是否接近底部(阈值为底部11%)
+  const threshold = container.scrollHeight * 0.11
   const isNearBottom =
     container.scrollHeight - container.scrollTop - container.clientHeight < threshold
 
-  // 如果不在底部17%范围内,标记用户已手动滚动
+  // 如果不在底部11%范围内,标记用户已手动滚动
   if (!isNearBottom) {
     userHasScrolled.value = true
   } else {
-    // 如果用户在底部17%范围内,重置标志(允许自动滚动)
+    // 如果用户在底部11%范围内,重置标志(允许自动滚动)
     userHasScrolled.value = false
   }
 }
 
 const scrollToBottom = (force = false) => {
+  // 组件挂载状态检查
+  if (!isMounted.value) {
+    console.log('🚫 组件未挂载，跳过滚动')
+    return
+  }
+
   // 只有在强制滚动、用户未手动滚动或用户未主动向上滚动时才自动滚动
   if (force || !userHasScrolled.value || !isUserScrollingUp) {
     isAutoScrolling = true
+
+    // 使用双重 nextTick 确保 DOM 完全渲染
     nextTick(() => {
-      if (chatContainerRef.value) {
-        chatContainerRef.value.scrollTop = chatContainerRef.value.scrollHeight
-      }
-      // 延迟重置标志,确保滚动事件不会误触发
-      setTimeout(() => {
-        isAutoScrolling = false
-      }, 100)
+      nextTick(() => {
+        // 双重检查：组件可能在此期间卸载
+        if (!isMounted.value || !chatContainerRef.value) {
+          console.log('🚫 组件已卸载或容器不存在，跳过滚动')
+          return
+        }
+
+        try {
+          const scrollHeight = chatContainerRef.value.scrollHeight
+          const currentScrollTop = chatContainerRef.value.scrollTop
+          console.log(`📜 滚动信息: 当前=${currentScrollTop}, 最大=${scrollHeight}`)
+
+          chatContainerRef.value.scrollTop = scrollHeight
+
+          // 验证滚动是否成功
+          setTimeout(() => {
+            if (chatContainerRef.value) {
+              const afterScroll = chatContainerRef.value.scrollTop
+              console.log(`✅ 滚动完成: ${afterScroll}/${scrollHeight}`)
+            }
+          }, 50)
+        } catch (error) {
+          console.warn('⚠️ 滚动到底部失败:', error.message)
+        }
+
+        // 延迟重置标志,确保滚动事件不会误触发
+        setTimeout(() => {
+          isAutoScrolling = false
+        }, 100)
+      })
     })
+  } else {
+    console.log('🚫 跳过自动滚动: force=', force, ', userHasScrolled=', userHasScrolled.value)
   }
 }
 
@@ -1199,18 +1398,16 @@ const handleCardAction = async (action) => {
       case 'edit_profile':
         // 编辑资料 - 导航到个人资料页
         router.push({
-          name: 'UserProfile',
-          params: { userId }
+          name: 'user-profile'
         }).catch(() => {
           ElMessage.info('跳转到个人资料编辑页面')
         })
         break
 
       case 'view_health':
-        // 健康分析 - 导航到健康分析页
+        // 健康分析 - 导航到卡路里统计页面
         router.push({
-          name: 'HealthAnalysis',
-          params: { userId }
+          name: 'user-calorie'
         }).catch(() => {
           ElMessage.info('跳转到健康分析页面')
         })
@@ -1236,7 +1433,7 @@ const handleCardAction = async (action) => {
         // 查看菜品详情 - 导航到菜品详情页
         if (action.data.dishId) {
           router.push({
-            name: 'DishDetail',
+            name: 'dish-detail',
             params: { dishId: action.data.dishId }
           }).catch(() => {
             ElMessage.info(`查看 ${action.data.dishName} 详情`)
@@ -1264,7 +1461,14 @@ const toggleEmoji = () => {
 
 // 切换快捷提问面板
 const toggleQuickQuestions = () => {
+  const isOpening = !showQuickQuestions.value
   showQuickQuestions.value = !showQuickQuestions.value
+
+  // 打开面板时重置展开状态，关闭时保持当前状态（用户体验更好）
+  if (isOpening) {
+    expandedCategory.value = null
+  }
+
   // 关闭表情面板
   if (showQuickQuestions.value) {
     showEmojiPicker.value = false
@@ -1583,8 +1787,31 @@ const handleMessageAction = async (command, content) => {
   }
 }
 
+// 监听消息变化，延时自动滚动到底部
+watch(
+  messages,
+  async (newMessages) => {
+    // 只有在组件已挂载且有消息时才滚动
+    if (isMounted.value && newMessages.length > 0) {
+      // 延时滚动，避免频繁触发
+      setTimeout(async () => {
+        if (!isMounted.value) return
+        await nextTick()
+        await nextTick()
+        scrollToBottom(true)
+      }, 300) // 延时 300ms
+    }
+  },
+  { flush: 'post', immediate: false } // 确保在DOM更新后执行，不立即执行
+)
+
 // 生命周期
 onMounted(async () => {
+  console.log('🚀 组件已挂载')
+
+  // 标记组件已挂载
+  isMounted.value = true
+
   document.addEventListener('click', handleClickOutside)
 
   // 添加滚动事件监听器
@@ -1592,15 +1819,61 @@ onMounted(async () => {
     chatContainerRef.value.addEventListener('scroll', handleScroll)
     // 初始化滚动位置
     lastScrollTop = chatContainerRef.value.scrollTop || 0
+    console.log('📜 聊天容器滚动事件已绑定')
+  } else {
+    console.warn('⚠️ 聊天容器引用不存在')
   }
 
   // 加载聊天历史记录
   await loadMessages()
   // 加载用户偏好设置
   await loadUserPreference()
+
+  console.log('✅ AI聊天组件初始化完成')
+})
+
+// 暴露给父组件调用的方法 - 当tab激活时滚动到底部
+const scrollToBottomOnActivate = async () => {
+  if (!chatContainerRef.value) return
+
+  console.log('🔄 Tab激活，开始滚动到底部')
+
+  // 重置滚动标志
+  userHasScrolled.value = false
+  isUserScrollingUp = false
+
+  // 延时确保内容渲染完成
+  await nextTick()
+  await nextTick()
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      if (chatContainerRef.value) {
+        const scrollHeight = chatContainerRef.value.scrollHeight
+        chatContainerRef.value.scrollTop = scrollHeight
+        console.log('✅ Tab激活滚动完成:', scrollHeight)
+
+        // 二次验证
+        setTimeout(() => {
+          if (chatContainerRef.value) {
+            const finalScrollHeight = chatContainerRef.value.scrollHeight
+            chatContainerRef.value.scrollTop = finalScrollHeight
+          }
+        }, 100)
+      }
+    })
+  })
+}
+
+// 暴露方法给父组件
+defineExpose({
+  scrollToBottomOnActivate
 })
 
 onUnmounted(() => {
+  // 标记组件已卸载
+  isMounted.value = false
+
   document.removeEventListener('click', handleClickOutside)
 
   // 移除滚动事件监听器
