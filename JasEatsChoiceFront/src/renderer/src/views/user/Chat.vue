@@ -871,7 +871,7 @@ const selectConversation = async (conversation) => {
         groupOrders.value[conversation.id].paidOrders = paidOrders.map(order => ({
           orderId: order.id,
           totalAmount: order.totalAmount || 0,
-          status: order.status === 5 ? 'completed' : 'paid', // 5=已完成, 1=已支付
+          status: order.status === 3 ? 'completed' : 'paid', // 3-已完成, 1-已支付
           paymentTime: order.updateTime || order.createTime,
           createTime: order.createTime,
           remark: order.remark,

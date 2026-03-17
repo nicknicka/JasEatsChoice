@@ -166,7 +166,7 @@ const orderOverview = computed(() => {
   ).length
   const cookingCount = filteredOrders.value.filter((order) => order.status === 3).length
   const readyCount = filteredOrders.value.filter((order) => order.status === 4).length
-  const completedCount = filteredOrders.value.filter((order) => order.status === 5).length
+  const completedCount = filteredOrders.value.filter((order) => order.status === 3).length
 
   return {
     total,
@@ -300,9 +300,9 @@ const rejectOrder = async (order) => {
       const reason = value || '商家拒绝接单'
       try {
         // 使用状态更新接口将订单状态改为已取消(6)
-        const response = await api.put(`/v1/orders/${order.id}/status?status=6`)
+        const response = await api.put(`/v1/orders/${order.id}/status?status=4`)
         if (response.success) {
-          order.status = 6
+          order.status = 4
           order.rejectReason = reason
           ElMessage.warning(`已拒绝接单: ${reason}`)
         } else {
@@ -328,7 +328,7 @@ const cancelOrder = async (order) => {
       try {
         const response = await api.put(`/v1/orders/${order.id}/cancel`)
         if (response.success) {
-          order.status = 6
+          order.status = 4
           ElMessage.warning('订单已取消')
         } else {
           ElMessage.error(response.message || '取消订单失败')
@@ -509,7 +509,7 @@ onMounted(() => {
         </div>
         <div class="status-filter-group">
           <div
-            v-for="status in ['all', 0, 1, '2-4', 5, 6]"
+            v-for="status in ['all', 0, 1, 2, 3, 4]"
             :key="status"
             :class="[
               'custom-status-tag',
@@ -522,8 +522,8 @@ onMounted(() => {
             <el-icon v-else-if="status === 0" class="tag-icon"><CircleClose /></el-icon>
             <el-icon v-else-if="status === 1" class="tag-icon"><CircleClose /></el-icon>
             <el-icon v-else-if="status === '2-4'" class="tag-icon"><Goods /></el-icon>
-            <el-icon v-else-if="status === 5" class="tag-icon"><CircleCheckFilled /></el-icon>
-            <el-icon v-else-if="status === 6" class="tag-icon"><CircleClose /></el-icon>
+            <el-icon v-else-if="status === 3" class="tag-icon"><CircleCheckFilled /></el-icon>
+            <el-icon v-else-if="status === 4" class="tag-icon"><CircleClose /></el-icon>
 
             <span class="tag-text">
               {{ status === 'all' ? '全部'
@@ -754,7 +754,7 @@ onMounted(() => {
                 </el-button>
 
                 <el-button
-                  v-if="order.status === 5"
+                  v-if="order.status === 3"
                   type="info"
                   size="small"
                   disabled
@@ -776,7 +776,7 @@ onMounted(() => {
                       <el-icon><User /></el-icon>
                       <span>{{ expandedUserInfo.has(order.id) ? '隐藏' : '显示' }}用户信息</span>
                     </el-dropdown-item>
-                    <el-dropdown-item v-if="order.status < 5" divided @click="cancelOrder(order)">
+                    <el-dropdown-item v-if="order.status < 3" divided @click="cancelOrder(order)">
                       <el-icon><CircleClose /></el-icon>
                       <span style="color: #e6a23c">取消订单</span>
                     </el-dropdown-item>
@@ -1272,7 +1272,7 @@ onMounted(() => {
           }
 
           // 已完成选中 - 绿色
-          &.status-tag-5.active {
+          &.status-tag-3.active {
             background: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);
             color: #ffffff;
             border-color: #67c23a;
@@ -1288,7 +1288,7 @@ onMounted(() => {
           }
 
           // 已取消选中
-          &.status-tag-6.active {
+          &.status-tag-4.active {
             background: linear-gradient(135deg, #c0c4cc 0%, #d3d4d6 100%);
             color: #ffffff;
             border-color: #c0c4cc;
@@ -1483,12 +1483,12 @@ onMounted(() => {
         box-shadow: 0 0 8px rgba(64, 158, 255, 0.3);
       }
 
-      &.status-5 .order-main::before {
+      &.status-3 .order-main::before {
         background: linear-gradient(180deg, #67c23a 0%, #7bcf58 100%);
         box-shadow: 0 0 8px rgba(103, 194, 58, 0.3);
       }
 
-      &.status-6 .order-main::before {
+      &.status-4 .order-main::before {
         background: linear-gradient(180deg, #c0c4cc 0%, #d3d4d6 100%);
       }
 

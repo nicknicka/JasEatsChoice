@@ -848,7 +848,7 @@ public class AIStreamController {
 
                 // 添加可操作按钮
                 List<Map<String, String>> actions = new ArrayList<>();
-                if (order.getStatus() != null && order.getStatus() < 5) {
+                if (order.getStatus() != null && order.getStatus() < 3) {
                     actions.add(Map.of("type", "detail", "text", "查看详情", "icon", "View"));
                     if (order.getStatus() == 0 || order.getStatus() == 1) {
                         actions.add(Map.of("type", "cancel", "text", "取消订单", "icon", "Delete"));

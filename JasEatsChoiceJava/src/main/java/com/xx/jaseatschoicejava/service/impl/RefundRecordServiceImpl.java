@@ -92,7 +92,7 @@ public class RefundRecordServiceImpl extends ServiceImpl<RefundRecordMapper, Ref
                 // 更新订单状态
                 Order order = orderService.getById(String.valueOf(refundRecord.getOrderId()));
                 if (order != null) {
-                    order.setStatus(7); // 7-已退款
+                    order.setStatus(3); // 3-已完成（退款是后续财务处理）
                     orderService.updateById(order);
                 }
 

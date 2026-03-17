@@ -382,10 +382,9 @@ public class AdminOrderController {
         Map<String, Long> statusCount = new HashMap<>();
         statusCount.put("pending", orderService.count(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Order>().eq("status", 0)));
         statusCount.put("confirmed", orderService.count(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Order>().eq("status", 1)));
-        statusCount.put("preparing", orderService.count(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Order>().in("status", java.util.Arrays.asList(2, 3))));
-        statusCount.put("delivering", orderService.count(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Order>().eq("status", 4)));
-        statusCount.put("completed", orderService.count(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Order>().in("status", java.util.Arrays.asList(5, 7))));
-        statusCount.put("cancelled", orderService.count(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Order>().eq("status", 6)));
+        statusCount.put("preparing", orderService.count(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Order>().eq("status", 2)));
+        statusCount.put("completed", orderService.count(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Order>().eq("status", 3)));
+        statusCount.put("cancelled", orderService.count(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Order>().eq("status", 4)));
 
         stats.put("totalOrders", totalOrders);
         stats.put("statusCount", statusCount);

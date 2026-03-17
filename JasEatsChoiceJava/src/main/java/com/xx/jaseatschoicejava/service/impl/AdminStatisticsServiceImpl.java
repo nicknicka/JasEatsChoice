@@ -141,7 +141,7 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
             QueryWrapper<Order> completedOrderWrapper = new QueryWrapper<>();
             completedOrderWrapper.ge("create_time", dayStart);
             completedOrderWrapper.lt("create_time", dayEnd);
-            completedOrderWrapper.eq("status", 7);
+            completedOrderWrapper.eq("status", 3);
             Long completedOrders = orderMapper.selectCount(completedOrderWrapper);
 
             // 当天收入

@@ -88,8 +88,8 @@ public class ReviewController {
                 return ResponseResult.fail("404", "订单不存在");
             }
 
-            // 检查订单状态是否为待评价（7）
-            if (order.getStatus() != 7) {
+            // 检查订单状态是否为已完成（3）
+            if (order.getStatus() != 3) {
                 return ResponseResult.fail("400", "订单状态不正确，无法评价");
             }
 
@@ -128,8 +128,8 @@ public class ReviewController {
             boolean success = reviewService.save(review);
 
             if (success) {
-                // 更新订单状态为已评价（8）
-                order.setStatus(8);
+                // 更新订单状态为已完成(3)
+                order.setStatus(3);
                 orderService.updateById(order);
 
                 // 通知用户评价提交成功

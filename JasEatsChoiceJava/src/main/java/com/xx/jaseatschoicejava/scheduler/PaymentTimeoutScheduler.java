@@ -79,7 +79,7 @@ public class PaymentTimeoutScheduler {
                             if (payment.getOrderId() != null) {
                                 Order order = orderService.getById(payment.getOrderId());
                                 if (order != null && order.getStatus() == 0) { // 只有待支付订单才能自动取消
-                                    order.setStatus(6); // 6-已取消
+                                    order.setStatus(4); // 4-已取消
                                     order.setUpdateTime(LocalDateTime.now());
                                     boolean orderUpdated = orderService.updateById(order);
 
@@ -123,7 +123,7 @@ public class PaymentTimeoutScheduler {
 
                 for (Order order : expiredOrdersWithoutPayment) {
                     try {
-                        order.setStatus(6); // 6-已取消
+                        order.setStatus(4); // 4-已取消
                         order.setUpdateTime(LocalDateTime.now());
                         boolean orderUpdated = orderService.updateById(order);
 

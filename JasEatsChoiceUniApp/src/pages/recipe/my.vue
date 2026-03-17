@@ -1,279 +1,751 @@
 <template>
   <view class="my-recipe-container">
+    <!-- 顶部筛选栏 -->
     <view class="filter-bar">
-      <button class="filter-btn" :class="{ active: selectedFilter === 'all' }" @click="selectedFilter = 'all'">全部</button>
-      <button class="filter-btn" :class="{ active: selectedFilter === 'breakfast' }" @click="selectedFilter = 'breakfast'">早餐</button>
-      <button class="filter-btn" :class="{ active: selectedFilter === 'lunch' }" @click="selectedFilter = 'lunch'">午餐</button>
-      <button class="filter-btn" :class="{ active: selectedFilter === 'dinner' }" @click="selectedFilter = 'dinner'">晚餐</button>
+      <scroll-view class="filter-scroll" scroll-x>
+        <view
+          class="filter-item"
+          :class="{ active: selectedFilter === filter.value }"
+          v-for="filter in filters"
+          :key="filter.value"
+          @click="changeFilter(filter.value)"
+        >
+          <text class="filter-text">{{ filter.label }}</text>
+        </view>
+      </scroll-view>
     </view>
 
-    <view class="recipe-list">
-      <view class="recipe-item" v-for="recipe in filteredRecipes" :key="recipe.id">
-        <view class="recipe-header">
-          <view class="recipe-date">{{ recipe.date }}</view>
-          <view class="meal-tag" :class="recipe.mealType">{{ recipe.mealTypeText }}</view>
-        </view>
-        <view class="recipe-main">
-          <view class="recipe-image" :class="recipe.mealType"></view>
-          <view class="recipe-info">
-            <view class="recipe-title">{{ recipe.title }}</view>
-            <view class="recipe-meta">
-              <view class="meta-item">
-                <text class="meta-icon">🔥</text>
-                <text class="meta-text">{{ recipe.calories }} kcal</text>
-              </view>
-              <view class="meta-item">
-                <text class="meta-icon">⏱️</text>
-                <text class="meta-text">{{ recipe.time }}</text>
+    <!-- 食谱列表 -->
+    <scroll-view
+      class="scroll-container"
+      scroll-y
+      refresher-enabled
+      :refresher-triggered="refreshing"
+      @refresherrefresh="onRefresh"
+      @scrolltolower="onLoadMore"
+    >
+      <!-- 空状态 -->
+      <view class="empty-state" v-if="recipes.length === 0 && !loading">
+        <text class="empty-icon">📖</text>
+        <text class="empty-text">还没有收藏的食谱</text>
+        <text class="empty-tips">去今日食谱看看推荐的美食吧</text>
+        <button class="go-today-btn" @click="goToToday">去看看</button>
+      </view>
+
+      <!-- 食谱列表 -->
+      <view class="recipe-list" v-else>
+        <view
+          class="recipe-item"
+          v-for="recipe in recipes"
+          :key="recipe.id"
+        >
+          <!-- 日期和标签 -->
+          <view class="recipe-header">
+            <view class="date-info">
+              <text class="recipe-date">{{ recipe.date }}</text>
+              <view class="meal-tag" :class="recipe.mealType">
+                {{ recipe.mealTypeText }}
               </view>
             </view>
-            <view class="recipe-ingredients">{{ recipe.ingredients }}</view>
+            <view class="recipe-actions">
+              <text class="action-btn edit" @click="editRecipe(recipe)">✏️ 编辑</text>
+              <text class="action-btn delete" @click="deleteRecipe(recipe.id)">🗑️ 删除</text>
+            </view>
+          </view>
+
+          <!-- 食谱内容 -->
+          <view class="recipe-content" @click="viewRecipeDetail(recipe)">
+            <image class="recipe-image" :src="recipe.image" mode="aspectFill" />
+
+            <view class="recipe-info">
+              <text class="recipe-title">{{ recipe.title }}</text>
+
+              <view class="recipe-tags" v-if="recipe.tags && recipe.tags.length">
+                <text class="tag-item" v-for="tag in recipe.tags" :key="tag">{{ tag }}</text>
+              </view>
+
+              <view class="recipe-meta">
+                <view class="meta-item">
+                  <text class="meta-icon">🔥</text>
+                  <text class="meta-text">{{ recipe.calories }} kcal</text>
+                </view>
+                <view class="meta-item">
+                  <text class="meta-icon">⏱️</text>
+                  <text class="meta-text">{{ recipe.time }}</text>
+                </view>
+                <view class="meta-item">
+                  <text class="meta-icon">👥</text>
+                  <text class="meta-text">{{ recipe.servings }}人份</text>
+                </view>
+              </view>
+
+              <view class="recipe-ingredients">
+                <text class="ingredients-label">食材：</text>
+                <text class="ingredients-text">{{ recipe.ingredients }}</text>
+              </view>
+
+              <!-- 营养成分 -->
+              <view class="nutrition-summary" v-if="recipe.nutrition">
+                <view class="nutrition-item" v-for="(value, key) in recipe.nutrition" :key="key">
+                  <text class="nutrition-label">{{ key }}</text>
+                  <text class="nutrition-value">{{ value }}</text>
+                </view>
+              </view>
+            </view>
+          </view>
+
+          <!-- 底部操作 -->
+          <view class="recipe-footer">
+            <button class="footer-btn outline" @click="shareRecipe(recipe)">
+              <text class="btn-icon">📤</text>
+              <text>分享</text>
+            </button>
+            <button class="footer-btn primary" @click="cookRecipe(recipe)">
+              <text class="btn-icon">🍳</text>
+              <text>开始烹饪</text>
+            </button>
           </view>
         </view>
-        <view class="recipe-actions">
-          <button class="action-btn edit">编辑</button>
-          <button class="action-btn delete">删除</button>
-        </view>
       </view>
-    </view>
 
-    <button class="add-recipe-btn" type="primary" @click="addRecipe">
-      + 添加新食谱
-    </button>
+      <!-- 加载状态 -->
+      <view class="load-more" v-if="recipes.length > 0">
+        <view class="load-text" v-if="loading">加载中...</view>
+        <view class="load-text" v-else-if="!hasMore">没有更多了</view>
+        <view class="load-text" v-else>上拉加载更多</view>
+      </view>
+    </scroll-view>
+
+    <!-- 底部添加按钮 -->
+    <view class="bottom-bar">
+      <button class="add-btn" @click="addRecipe">
+        <text class="add-icon">➕</text>
+        <text>添加自定义食谱</text>
+      </button>
+    </view>
   </view>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 
-const selectedFilter = ref('all')
-
-const recipes = ref([
-  {
-    id: 1,
-    date: '2025-11-23',
-    mealType: 'breakfast',
-    mealTypeText: '早餐',
-    title: '营养早餐',
-    calories: 450,
-    time: '15分钟',
-    ingredients: '牛奶、鸡蛋、面包'
-  },
-  {
-    id: 2,
-    date: '2025-11-23',
-    mealType: 'lunch',
-    mealTypeText: '午餐',
-    title: '健康午餐',
-    calories: 800,
-    time: '30分钟',
-    ingredients: '米饭、蔬菜、瘦肉'
-  },
-  {
-    id: 3,
-    date: '2025-11-22',
-    mealType: 'dinner',
-    mealTypeText: '晚餐',
-    title: '轻食晚餐',
-    calories: 550,
-    time: '20分钟',
-    ingredients: '蔬菜沙拉、鸡肉'
-  }
+// 筛选选项
+const filters = ref([
+  { label: '全部', value: 'all' },
+  { label: '早餐', value: 'breakfast' },
+  { label: '午餐', value: 'lunch' },
+  { label: '晚餐', value: 'dinner' },
+  { label: '收藏', value: 'favorite' }
 ])
 
-const filteredRecipes = computed(() => {
-  if (selectedFilter.value === 'all') {
-    return recipes.value
-  }
-  return recipes.value.filter(recipe => recipe.mealType === selectedFilter.value)
-})
+// 当前筛选
+const selectedFilter = ref('all')
 
-const addRecipe = () => {
+// 食谱列表
+const recipes = ref([])
+
+// 加载状态
+const loading = ref(false)
+const refreshing = ref(false)
+const hasMore = ref(true)
+
+// 分页参数
+const page = ref(1)
+const pageSize = ref(10)
+
+/**
+ * 切换筛选
+ */
+const changeFilter = (value) => {
+  selectedFilter.value = value
+  page.value = 1
+  recipes.value = []
+  loadRecipes()
+}
+
+/**
+ * 加载食谱列表
+ */
+const loadRecipes = async (showLoading = true) => {
+  if (showLoading) {
+    loading.value = true
+  }
+
+  try {
+    // TODO: 调用后端API
+    // const res = await recipeApi.myList({
+    //   filter: selectedFilter.value,
+    //   page: page.value,
+    //   pageSize: pageSize.value
+    // })
+
+    // 模拟数据
+    const mockRecipes = [
+      {
+        id: 1,
+        date: '2026-03-17',
+        mealType: 'breakfast',
+        mealTypeText: '早餐',
+        title: '燕麦牛奶粥配鸡蛋',
+        image: 'https://via.placeholder.com/300x300/FFE0B2/FF6B35?text=燕麦粥',
+        tags: ['高纤维', '低脂'],
+        calories: 420,
+        time: '15分钟',
+        servings: 1,
+        ingredients: '燕麦50g、牛奶250ml、鸡蛋1个、蜂蜜适量',
+        nutrition: {
+          '蛋白质': '18g',
+          '碳水': '55g',
+          '脂肪': '12g'
+        }
+      },
+      {
+        id: 2,
+        date: '2026-03-17',
+        mealType: 'lunch',
+        mealTypeText: '午餐',
+        title: '清蒸鲈鱼配时蔬',
+        image: 'https://via.placeholder.com/300x300/FFCCBC/FF6B35?text=清蒸鱼',
+        tags: ['高蛋白', '清淡'],
+        calories: 580,
+        time: '25分钟',
+        servings: 2,
+        ingredients: '鲈鱼1条、西兰花、胡萝卜、姜蒜',
+        nutrition: {
+          '蛋白质': '45g',
+          '碳水': '20g',
+          '脂肪': '18g'
+        }
+      },
+      {
+        id: 3,
+        date: '2026-03-16',
+        mealType: 'dinner',
+        mealTypeText: '晚餐',
+        title: '鸡胸肉蔬菜沙拉',
+        image: 'https://via.placeholder.com/300x300/C8E6C9/FF6B35?text=沙拉',
+        tags: ['低卡', '减脂'],
+        calories: 380,
+        time: '20分钟',
+        servings: 1,
+        ingredients: '鸡胸肉150g、生菜、番茄、黄瓜、橄榄油',
+        nutrition: {
+          '蛋白质': '38g',
+          '碳水': '15g',
+          '脂肪': '12g'
+        }
+      },
+      {
+        id: 4,
+        date: '2026-03-16',
+        mealType: 'breakfast',
+        mealTypeText: '早餐',
+        title: '全麦三明治',
+        image: 'https://via.placeholder.com/300x300/B2DFDB/FF6B35?text=三明治',
+        tags: ['快手', '营养'],
+        calories: 450,
+        time: '10分钟',
+        servings: 1,
+        ingredients: '全麦面包2片、鸡蛋、生菜、番茄、芝士片',
+        nutrition: {
+          '蛋白质': '22g',
+          '碳水': '48g',
+          '脂肪': '15g'
+        }
+      }
+    ]
+
+    if (page.value === 1) {
+      recipes.value = mockRecipes
+    } else {
+      recipes.value.push(...mockRecipes)
+    }
+
+    // 判断是否还有更多数据
+    hasMore.value = recipes.value.length >= pageSize.value
+  } catch (error) {
+    console.error('加载食谱列表失败:', error)
+    uni.showToast({
+      title: '加载失败，请重试',
+      icon: 'none'
+    })
+  } finally {
+    loading.value = false
+  }
+}
+
+/**
+ * 下拉刷新
+ */
+const onRefresh = async () => {
+  refreshing.value = true
+  page.value = 1
+  await loadRecipes(false)
+  refreshing.value = false
+}
+
+/**
+ * 上拉加载更多
+ */
+const onLoadMore = () => {
+  if (loading.value || !hasMore.value) return
+  page.value++
+  loadRecipes()
+}
+
+/**
+ * 查看食谱详情
+ */
+const viewRecipeDetail = (recipe) => {
+  uni.navigateTo({
+    url: `/pages/recipe/detail/index?id=${recipe.id}`
+  })
+}
+
+/**
+ * 编辑食谱
+ */
+const editRecipe = (recipe) => {
+  const params = encodeURIComponent(JSON.stringify(recipe))
+  uni.navigateTo({
+    url: `/pages/recipe/edit/index?data=${params}`
+  })
+}
+
+/**
+ * 删除食谱
+ */
+const deleteRecipe = (id) => {
+  uni.showModal({
+    title: '删除食谱',
+    content: '确定要删除这个食谱吗？',
+    confirmColor: '#FF6B35',
+    success: async (res) => {
+      if (res.confirm) {
+        try {
+          // TODO: 调用后端API
+          // await recipeApi.delete(id)
+
+          // 从列表中移除
+          const index = recipes.value.findIndex(item => item.id === id)
+          if (index > -1) {
+            recipes.value.splice(index, 1)
+          }
+
+          uni.showToast({
+            title: '删除成功',
+            icon: 'success'
+          })
+        } catch (error) {
+          console.error('删除食谱失败:', error)
+          uni.showToast({
+            title: '删除失败，请重试',
+            icon: 'none'
+          })
+        }
+      }
+    }
+  })
+}
+
+/**
+ * 分享食谱
+ */
+const shareRecipe = (recipe) => {
+  uni.showShareMenu({
+    withShareTicket: true
+  })
+
   uni.showToast({
-    title: '添加功能开发中...',
+    title: '点击右上角分享',
     icon: 'none'
   })
 }
+
+/**
+ * 开始烹饪
+ */
+const cookRecipe = (recipe) => {
+  uni.navigateTo({
+    url: `/pages/recipe/cook/index?id=${recipe.id}`
+  })
+}
+
+/**
+ * 添加自定义食谱
+ */
+const addRecipe = () => {
+  uni.navigateTo({
+    url: '/pages/recipe/edit/index'
+  })
+}
+
+/**
+ * 去今日食谱
+ */
+const goToToday = () => {
+  uni.switchTab({
+    url: '/pages/recipe/today'
+  })
+}
+
+// 组件挂载
+onMounted(() => {
+  loadRecipes()
+})
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
+@import '@/styles/variables.scss';
+@import '@/styles/mixins.scss';
+
 .my-recipe-container {
-  background-color: #f5f5f5;
   min-height: 100vh;
-  padding: 15px;
-}
-
-.filter-bar {
-  background-color: #fff;
-  border-radius: 8px;
-  padding: 10px;
-  margin-bottom: 20px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  display: flex;
-  gap: 10px;
-}
-
-.filter-btn {
-  padding: 8px 15px;
-  border: 1px solid #ddd;
-  border-radius: 20px;
-  background-color: #fff;
-  color: #666;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.filter-btn.active {
-  border-color: #FF6B35;
-  background-color: #FF6B35;
-  color: #fff;
-}
-
-.recipe-list {
+  background-color: $bg-color-base;
   display: flex;
   flex-direction: column;
-  gap: 15px;
+}
+
+/* 筛选栏 */
+.filter-bar {
+  background-color: $bg-color-white;
+  box-shadow: $box-shadow-sm;
+}
+
+.filter-scroll {
+  @include flex-center;
+  white-space: nowrap;
+  padding: $spacing-md $spacing-md;
+}
+
+.filter-item {
+  padding: $spacing-sm $spacing-md;
+  margin-right: $spacing-sm;
+  background-color: $bg-color-base;
+  border-radius: $border-radius-round;
+  @include flex-center;
+  flex-shrink: 0;
+  transition: all 0.3s;
+
+  &.active {
+    background: linear-gradient(135deg, $primary-color, #FF8F61);
+    color: #fff;
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+.filter-text {
+  font-size: $font-size-sm;
+  color: $text-color-regular;
+
+  .active & {
+    color: #fff;
+    font-weight: $font-weight-medium;
+  }
+}
+
+/* 滚动容器 */
+.scroll-container {
+  flex: 1;
+  height: calc(100vh - 200rpx);
+}
+
+/* 空状态 */
+.empty-state {
+  @include flex-center-column;
+  padding: 200rpx $spacing-lg;
+
+  .empty-icon {
+    font-size: 120rpx;
+    margin-bottom: $spacing-lg;
+    opacity: 0.5;
+  }
+
+  .empty-text {
+    font-size: $font-size-lg;
+    color: $text-color-primary;
+    margin-bottom: $spacing-sm;
+  }
+
+  .empty-tips {
+    font-size: $font-size-sm;
+    color: $text-color-secondary;
+    margin-bottom: $spacing-xl;
+  }
+}
+
+.go-today-btn {
+  width: 240rpx;
+  height: 72rpx;
+  @include flex-center;
+  background: linear-gradient(135deg, $primary-color, #FF8F61);
+  color: #fff;
+  font-size: $font-size-base;
+  border-radius: $border-radius-round;
+  border: none;
+}
+
+/* 食谱列表 */
+.recipe-list {
+  padding: $spacing-md;
 }
 
 .recipe-item {
-  background-color: #fff;
-  border-radius: 8px;
-  padding: 15px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  background-color: $bg-color-white;
+  border-radius: $border-radius-lg;
+  padding: $spacing-md;
+  margin-bottom: $spacing-md;
+  box-shadow: $box-shadow-sm;
 }
 
+/* 食谱头部 */
 .recipe-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
+  @include flex-between;
+  align-items: flex-start;
+  margin-bottom: $spacing-md;
+  padding-bottom: $spacing-md;
+  border-bottom: 1rpx solid $border-color-lighter;
+}
+
+.date-info {
+  @include flex-center;
+  gap: $spacing-sm;
 }
 
 .recipe-date {
-  font-size: 14px;
-  font-weight: 500;
-  color: #333;
+  font-size: $font-size-sm;
+  color: $text-color-secondary;
 }
 
 .meal-tag {
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
+  padding: 4rpx 12rpx;
+  border-radius: $border-radius-round;
+  font-size: $font-size-xs;
   color: #fff;
+  font-weight: $font-weight-medium;
+
+  &.breakfast {
+    background-color: #FFB74D;
+  }
+
+  &.lunch {
+    background-color: #FF7043;
+  }
+
+  &.dinner {
+    background-color: #81C784;
+  }
 }
 
-.meal-tag.breakfast {
-  background-color: #FFB74D;
+.recipe-actions {
+  @include flex-center;
+  gap: $spacing-md;
 }
 
-.meal-tag.lunch {
-  background-color: #FF7043;
+.action-btn {
+  font-size: $font-size-sm;
+  padding: $spacing-xs $spacing-sm;
+
+  &.edit {
+    color: $info-color;
+  }
+
+  &.delete {
+    color: $danger-color;
+  }
 }
 
-.meal-tag.dinner {
-  background-color: #81C784;
-}
-
-.recipe-main {
-  display: flex;
-  gap: 15px;
-  margin-bottom: 15px;
+/* 食谱内容 */
+.recipe-content {
+  @include flex-center;
+  gap: $spacing-md;
+  margin-bottom: $spacing-md;
 }
 
 .recipe-image {
-  width: 100px;
-  height: 100px;
-  border-radius: 6px;
-}
-
-.recipe-image.breakfast {
-  background-color: #FFE0B2;
-}
-
-.recipe-image.lunch {
-  background-color: #FFCCBC;
-}
-
-.recipe-image.dinner {
-  background-color: #C8E6C9;
+  width: 240rpx;
+  height: 240rpx;
+  border-radius: $border-radius-lg;
+  flex-shrink: 0;
 }
 
 .recipe-info {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  @include flex-center-column;
+  gap: $spacing-sm;
+  align-items: flex-start;
 }
 
 .recipe-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #333;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  color: $text-color-primary;
+  @include text-ellipsis-multi(2);
+}
+
+.recipe-tags {
+  @include flex-center;
+  gap: $spacing-xs;
+  flex-wrap: wrap;
+}
+
+.tag-item {
+  padding: 4rpx 12rpx;
+  background-color: rgba(255, 107, 53, 0.1);
+  color: $primary-color;
+  font-size: $font-size-xs;
+  border-radius: $border-radius-round;
 }
 
 .recipe-meta {
-  display: flex;
-  gap: 20px;
+  @include flex-center;
+  gap: $spacing-md;
+  flex-wrap: wrap;
 }
 
 .meta-item {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 14px;
-  color: #666;
+  @include flex-center;
+  gap: $spacing-xs;
+  font-size: $font-size-sm;
+  color: $text-color-secondary;
+}
+
+.meta-icon {
+  font-size: $font-size-base;
 }
 
 .recipe-ingredients {
-  font-size: 13px;
-  color: #999;
-  line-height: 1.4;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  @include flex-center;
+  gap: $spacing-xs;
+  font-size: $font-size-sm;
+  color: $text-color-regular;
+  width: 100%;
 }
 
-.recipe-actions {
-  display: flex;
-  gap: 10px;
-  justify-content: flex-end;
+.ingredients-label {
+  flex-shrink: 0;
+  font-weight: $font-weight-medium;
 }
 
-.action-btn {
-  padding: 8px 16px;
+.ingredients-text {
+  flex: 1;
+  @include text-ellipsis-multi(2);
+}
+
+.nutrition-summary {
+  @include flex-center;
+  gap: $spacing-md;
+  flex-wrap: wrap;
+  padding: $spacing-sm;
+  background-color: rgba(255, 107, 53, 0.05);
+  border-radius: $border-radius-base;
+  width: 100%;
+}
+
+.nutrition-item {
+  @include flex-center-column;
+  gap: $spacing-xs;
+  padding: $spacing-xs;
+}
+
+.nutrition-label {
+  font-size: $font-size-xs;
+  color: $text-color-secondary;
+}
+
+.nutrition-value {
+  font-size: $font-size-sm;
+  color: $primary-color;
+  font-weight: $font-weight-medium;
+}
+
+/* 食谱底部操作 */
+.recipe-footer {
+  @include flex-center;
+  gap: $spacing-md;
+  padding-top: $spacing-md;
+  border-top: 1rpx solid $border-color-lighter;
+}
+
+.footer-btn {
+  flex: 1;
+  height: 72rpx;
+  @include flex-center;
+  gap: $spacing-xs;
+  border-radius: $border-radius-round;
+  font-size: $font-size-base;
   border: none;
-  border-radius: 4px;
-  font-size: 14px;
-  cursor: pointer;
+
+  &.outline {
+    background-color: $bg-color-white;
+    color: $text-color-regular;
+    border: 1rpx solid $border-color-base;
+
+    &:active {
+      background-color: $bg-color-base;
+    }
+  }
+
+  &.primary {
+    background: linear-gradient(135deg, $primary-color, #FF8F61);
+    color: #fff;
+
+    &:active {
+      opacity: 0.8;
+    }
+  }
 }
 
-.action-btn.edit {
-  background-color: #E3F2FD;
-  color: #1E88E5;
+.btn-icon {
+  font-size: $font-size-lg;
 }
 
-.action-btn.delete {
-  background-color: #FFEBEE;
-  color: #E53935;
-}
-
-.add-recipe-btn {
+/* 底部添加按钮 */
+.bottom-bar {
   position: fixed;
-  bottom: 20px;
-  right: 20px;
-  width: calc(100% - 40px);
-  height: 50px;
-  background-color: #FF6B35;
-  border: none;
-  border-radius: 25px;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: $bg-color-white;
+  padding: $spacing-md;
+  box-shadow: 0 -2rpx 10rpx rgba(0, 0, 0, 0.1);
+  z-index: $z-index-fixed;
+  @include safe-area-bottom;
+}
+
+.add-btn {
+  width: 100%;
+  height: 88rpx;
+  @include flex-center;
+  gap: $spacing-sm;
+  background: linear-gradient(135deg, $primary-color, #FF8F61);
   color: #fff;
-  font-size: 16px;
-  font-weight: 500;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+  font-size: $font-size-base;
+  font-weight: $font-weight-medium;
+  border-radius: $border-radius-round;
+  border: none;
+  box-shadow: 0 4rpx 12rpx rgba(255, 107, 53, 0.3);
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  .add-icon {
+    font-size: $font-size-xl;
+  }
+}
+
+/* 加载状态 */
+.load-more {
+  @include flex-center;
+  padding: $spacing-lg 0;
+}
+
+.load-text {
+  font-size: $font-size-sm;
+  color: $text-color-secondary;
 }
 </style>

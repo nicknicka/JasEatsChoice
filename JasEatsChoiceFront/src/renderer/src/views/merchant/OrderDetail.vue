@@ -190,10 +190,8 @@ const getStatusProgress = () => {
   if (status === 2) return 2
   if (status === 3) return 3
   if (status === 4) return 4
-  if (status === 5) return 5  // 已送达
-  if (status === 7) return 6  // 待评价
-  if (status === 8) return 7  // 已评价
-  if (status === 6) return -1  // 已取消
+  if (status === 3) return 3  // 已完成
+  if (status === 4) return -1  // 已取消
   return 0
 }
 
@@ -238,10 +236,8 @@ onMounted(() => {
               <el-icon v-else-if="orderDetail.status === 2"><Goods /></el-icon>
               <el-icon v-else-if="orderDetail.status === 3"><Dish /></el-icon>
               <el-icon v-else-if="orderDetail.status === 4"><Document /></el-icon>
-              <el-icon v-else-if="orderDetail.status === 5"><CircleCheck /></el-icon>
-              <el-icon v-else-if="orderDetail.status === 6"><CircleClose /></el-icon>
-              <el-icon v-else-if="orderDetail.status === 7"><Star /></el-icon>
-              <el-icon v-else-if="orderDetail.status === 8"><CircleCheckFilled /></el-icon>
+              <el-icon v-else-if="orderDetail.status === 3"><CircleCheckFilled /></el-icon>
+              <el-icon v-else-if="orderDetail.status === 4"><CircleClose /></el-icon>
               <el-icon v-else><Document /></el-icon>
             </span>
             <span class="status-text">{{ orderStatusMap[orderDetail.status]?.text }}</span>
@@ -284,7 +280,7 @@ onMounted(() => {
               确认送达
             </el-button>
             <el-button
-              v-if="orderDetail.status === 5"
+              v-if="orderDetail.status === 3"
               type="success"
               size="small"
               @click="updateOrderStatus(7)"
@@ -583,17 +579,17 @@ onMounted(() => {
       &.status-4::before {
         background: linear-gradient(180deg, #409eff 0%, #66b1ff 100%);
       }
-      &.status-5::before {
+      &.status-3::before {
         background: linear-gradient(180deg, #67c23a 0%, #7bcf58 100%);
       }
       &.status-6::before {
         background: linear-gradient(180deg, #c0c4cc 0%, #d3d4d6 100%);
       }
-      &.status-7::before {
-        background: linear-gradient(180deg, #95d475 0%, #a4da8e 100%);
-      }
-      &.status-8::before {
+      &.status-3::before {
         background: linear-gradient(180deg, #85ce61 0%, #95d475 100%);
+      }
+      &.status-4::before {
+        background: linear-gradient(180deg, #c0c4cc 0%, #d3d4d6 100%);
       }
 
       .status-header {

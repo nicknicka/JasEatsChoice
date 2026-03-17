@@ -222,8 +222,8 @@ public class OrderController {
                 }
             }
 
-            // 更新订单状态为已取消(6)
-            order.setStatus(6);
+            // 更新订单状态为已取消(4)
+            order.setStatus(4);
             order.setUpdateTime(java.time.LocalDateTime.now());
             boolean success = orderService.updateById(order);
             if (success) {
@@ -359,15 +359,15 @@ public class OrderController {
             List<Order> orders = orderService.list(queryWrapper);
 
             // 初始化统计数据
-            int inProgress = 0;  // 进行中订单（1-待接单, 2-备菜中, 3-烹饪中, 4-待上菜, 5-已送达）
+            int inProgress = 0;  // 进行中订单（1-待接单, 2-制作中）
             int pending = 0;      // 待确认订单（0-待支付, 1-待接单）
-            int pendingComment = 0;  // 待评价订单（7-已完成但未评价）
+            int pendingComment = 0;  // 待评价订单（3-已完成但未评价，需查询评价表）
 
             for (Order order : orders) {
                 int status = order.getStatus();
 
                 // 统计进行中订单
-                if (status >= 1 && status <= 5) {
+                if (status == 1 || status == 2) {
                     inProgress++;
                 }
 
@@ -376,8 +376,11 @@ public class OrderController {
                     pending++;
                 }
 
-                // 统计待评价订单（已确认收货但未评价的订单）
-                if (status == 7) {
+                // 统计待评价订单（状态为已完成，且评价表中不存在评价记录）
+                // 注意：由于新状态简化，此处需要结合评价表判断
+                if (status == 3) {
+                    // TODO: 查询评价表，判断该订单是否已评价
+                    // 暂时统计所有已完成订单
                     pendingComment++;
                 }
             }

@@ -290,7 +290,7 @@ onMounted(() => {
       <div class="order-items-wrapper">
         <div
           class="order-item"
-          :class="{ 'order-reviewed': order.status === 8 }"
+          :class="{ 'order-reviewed': order.status === 3 }"
           v-for="order in filteredOrders"
           :key="order.id"
         >

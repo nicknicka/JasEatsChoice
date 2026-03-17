@@ -188,7 +188,7 @@ public class StructuredQueryService {
      */
     private boolean canUrgeOrder(Order order) {
         Integer status = order.getStatus();
-        return status != null && (status == 2 || status == 3 || status == 4);
+        return status != null && status == 2;
     }
 
     /**

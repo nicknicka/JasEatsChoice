@@ -716,13 +716,13 @@ public class MerchantController {
 
             // 计算今日营业额（排除已取消的订单）
             BigDecimal totalSales = orders.stream()
-                    .filter(order -> order.getStatus() != 6) // status 6 是已取消
+                    .filter(order -> order.getStatus() != 4) // status 4 是已取消
                     .map(Order::getTotalAmount)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             // 计算今日订单数（排除已取消的订单）
             long totalOrders = orders.stream()
-                    .filter(order -> order.getStatus() != 6) // status 6 是已取消
+                    .filter(order -> order.getStatus() != 4) // status 4 是已取消
                     .count();
 
             // 查询昨日订单
@@ -869,7 +869,7 @@ public class MerchantController {
             // 查询订单数据
             LambdaQueryWrapper<Order> orderQuery = new LambdaQueryWrapper<>();
             orderQuery.eq(Order::getMerchantId, merchantId)
-                      .ne(Order::getStatus, 6); // 排除已取消订单
+                      .ne(Order::getStatus, 4); // 排除已取消订单
 
             // 只有非全部时间才添加时间范围条件
             if (!isAllTime && startTime != null) {

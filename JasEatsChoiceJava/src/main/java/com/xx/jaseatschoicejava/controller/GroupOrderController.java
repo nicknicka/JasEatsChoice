@@ -245,8 +245,8 @@ public class GroupOrderController {
                 }
             }
 
-            // 更新订单状态为已取消(6)
-            groupOrder.setStatus(6);
+            // 更新订单状态为已取消(4)
+            groupOrder.setStatus(4);
             groupOrder.setUpdateTime(LocalDateTime.now());
             boolean updated = groupOrderService.updateById(groupOrder);
 

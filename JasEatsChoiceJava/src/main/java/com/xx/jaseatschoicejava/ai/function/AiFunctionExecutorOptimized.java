@@ -726,7 +726,7 @@ public class AiFunctionExecutorOptimized {
             }
 
             // 更新订单状态为已取消
-            order.setStatus(6); // 6-已取消
+            order.setStatus(4); // 4-已取消
             boolean success = orderService.updateById(order);
 
             if (!success) {
@@ -785,7 +785,7 @@ public class AiFunctionExecutorOptimized {
             }
 
             // 验证订单状态
-            if (order.getStatus() == null || order.getStatus() == 6) {
+            if (order.getStatus() == null || order.getStatus() == 4) {
                 return String.format(
                     "❌ 订单 %s 无法催单\n\n" +
                     "当前状态：%s\n\n" +
@@ -795,7 +795,7 @@ public class AiFunctionExecutorOptimized {
                 );
             }
 
-            if (order.getStatus() == 5 || order.getStatus() == 7 || order.getStatus() == 8) {
+            if (order.getStatus() == 3) {
                 return String.format(
                     "✅ 订单 %s\n\n" +
                     "当前状态：%s\n\n" +
