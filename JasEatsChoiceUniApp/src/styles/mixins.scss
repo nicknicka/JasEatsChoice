@@ -1,0 +1,351 @@
+/**
+ * 全局样式混入（Mixins）
+ */
+
+@import './variables.scss';
+
+/* ==================== 文本省略 ==================== */
+
+// 单行省略
+@mixin text-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// 多行省略
+@mixin text-ellipsis-multiline($lines: 2) {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: $lines;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ==================== Flex布局 ==================== */
+
+// Flex居中
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+// Flex水平居中
+@mixin flex-center-horizontal {
+  display: flex;
+  justify-content: center;
+}
+
+// Flex垂直居中
+@mixin flex-center-vertical {
+  display: flex;
+  align-items: center;
+}
+
+// Flex两端对齐
+@mixin flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+// Flex环绕
+@mixin flex-around {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+}
+
+/* ==================== 定位 ==================== */
+
+// 绝对定位居中
+@mixin absolute-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+// 绝对定位全屏
+@mixin absolute-full {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+// 固定定位全屏
+@mixin fixed-full {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+/* ==================== 滚动 ==================== */
+
+// 隐藏滚动条
+@mixin hide-scrollbar {
+  &::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+    color: transparent;
+  }
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+// 自定义滚动条
+@mixin custom-scrollbar($width: 6rpx, $thumb-color: $primary-color, $track-color: $bg-color-base) {
+  &::-webkit-scrollbar {
+    width: $width;
+    height: $width;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: $thumb-color;
+    border-radius: $width;
+
+    &:hover {
+      background-color: darken($thumb-color, 10%);
+    }
+  }
+
+  &::-webkit-scrollbar-track {
+    background-color: $track-color;
+  }
+}
+
+/* ==================== 清除浮动 ==================== */
+
+@mixin clearfix {
+  &::after {
+    content: '';
+    display: table;
+    clear: both;
+  }
+}
+
+/* ==================== 按钮 ==================== */
+
+// 按钮基础样式
+@mixin button-base {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20rpx 40rpx;
+  font-size: $font-size-base;
+  font-weight: $font-weight-medium;
+  border-radius: $border-radius-base;
+  border: none;
+  outline: none;
+  transition: $transition-base;
+  cursor: pointer;
+
+  &::after {
+    border: none;
+  }
+}
+
+// 按钮颜色变体
+@mixin button-variant($color, $background, $border: null) {
+  color: $color;
+  background-color: $background;
+
+  @if $border {
+    border-color: $border;
+  }
+
+  &:active {
+    opacity: 0.8;
+  }
+}
+
+/* ==================== 卡片 ==================== */
+
+@mixin card {
+  background-color: $bg-color-white;
+  border-radius: $border-radius-base;
+  padding: $spacing-lg;
+  box-shadow: $box-shadow-light;
+}
+
+/* ==================== 遮罩层 ==================== */
+
+@mixin overlay($bg-color: rgba(0, 0, 0, 0.5)) {
+  @include fixed-full;
+  background-color: $bg-color;
+  z-index: $z-index-modal;
+}
+
+/* ==================== 安全区域 ==================== */
+
+// 顶部安全区域
+@mixin safe-area-top {
+  padding-top: $safe-area-inset-top;
+}
+
+// 底部安全区域
+@mixin safe-area-bottom {
+  padding-bottom: $safe-area-inset-bottom;
+}
+
+// 左侧安全区域
+@mixin safe-area-left {
+  padding-left: $safe-area-inset-left;
+}
+
+// 右侧安全区域
+@mixin safe-area-right {
+  padding-right: $safe-area-inset-right;
+}
+
+// 全部安全区域
+@mixin safe-area-all {
+  padding-top: $safe-area-inset-top;
+  padding-right: $safe-area-inset-right;
+  padding-bottom: $safe-area-inset-bottom;
+  padding-left: $safe-area-inset-left;
+}
+
+/* ==================== 响应式 ==================== */
+
+// 媒体查询 - 最小宽度
+@mixin min-width($width) {
+  @media (min-width: $width) {
+    @content;
+  }
+}
+
+// 媒体查询 - 最大宽度
+@mixin max-width($width) {
+  @media (max-width: $width) {
+    @content;
+  }
+}
+
+/* ==================== 动画 ==================== */
+
+// 淡入
+@mixin animation-fade-in($duration: 0.3s) {
+  animation: fadeIn $duration ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+// 淡出
+@mixin animation-fade-out($duration: 0.3s) {
+  animation: fadeOut $duration ease-in-out;
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+// 滑入
+@mixin animation-slide-in($direction: up, $duration: 0.3s) {
+  animation: slideIn#{capitalize($direction)} $duration ease-in-out;
+}
+
+@keyframes slideInUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInDown {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+// 缩放
+@mixin animation-scale($duration: 0.3s) {
+  animation: scale $duration ease-in-out;
+}
+
+@keyframes scale {
+  from {
+    transform: scale(0);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+/* ==================== 工具类 ==================== */
+
+// 清除默认样式
+@mixin reset-base {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+// 宽高比
+@mixin aspect-ratio($width, $height) {
+  aspect-ratio: $width / $height;
+
+  @supports not (aspect-ratio: 1) {
+    &::before {
+      content: '';
+      float: left;
+      padding-top: calc($height / $width * 100%);
+    }
+
+    &::after {
+      content: '';
+      display: block;
+      clear: both;
+    }
+  }
+}
+
+// 居中容器
+@mixin container($max-width: 750rpx) {
+  max-width: $max-width;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: $spacing-lg;
+  padding-right: $spacing-lg;
+}

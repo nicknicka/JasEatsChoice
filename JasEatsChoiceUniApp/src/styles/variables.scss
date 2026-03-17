@@ -1,0 +1,112 @@
+/**
+ * 全局样式变量
+ */
+
+/* ==================== 主题颜色 ==================== */
+
+// 主色调
+$primary-color: #FF6B35;
+$primary-color-light: #FF8A5C;
+$primary-color-dark: #E55A2B;
+
+// 辅助色
+$secondary-color: #667eea;
+$success-color: #52c41a;
+$warning-color: #faad14;
+$danger-color: #f5222d;
+$info-color: #1890ff;
+
+/* ==================== 中性色 ==================== */
+
+// 文字颜色
+$text-color-primary: #333333;
+$text-color-regular: #666666;
+$text-color-secondary: #999999;
+$text-color-placeholder: #cccccc;
+$text-color-disabled: #dddddd;
+
+// 背景颜色
+$bg-color-base: #f5f5f5;
+$bg-color-white: #ffffff;
+$bg-color-light: #fafafa;
+$bg-color-dark: #f0f0f0;
+
+// 边框颜色
+$border-color-base: #e8e8e8;
+$border-color-light: #f0f0f0;
+$border-color-dark: #d9d9d9;
+
+/* ==================== 字体大小 ==================== */
+
+$font-size-xs: 20rpx;
+$font-size-sm: 24rpx;
+$font-size-base: 28rpx;
+$font-size-md: 32rpx;
+$font-size-lg: 36rpx;
+$font-size-xl: 40rpx;
+$font-size-xxl: 48rpx;
+
+/* ==================== 字体粗细 ==================== */
+
+$font-weight-normal: 400;
+$font-weight-medium: 500;
+$font-weight-bold: 700;
+
+/* ==================== 行高 ==================== */
+
+$line-height-base: 1.6;
+$line-height-sm: 1.4;
+$line-height-lg: 1.8;
+
+/* ==================== 间距 ==================== */
+
+$spacing-xs: 8rpx;
+$spacing-sm: 16rpx;
+$spacing-md: 24rpx;
+$spacing-lg: 32rpx;
+$spacing-xl: 40rpx;
+$spacing-xxl: 60rpx;
+
+/* ==================== 圆角 ==================== */
+
+$border-radius-sm: 8rpx;
+$border-radius-base: 16rpx;
+$border-radius-lg: 24rpx;
+$border-radius-xl: 32rpx;
+$border-radius-round: 999rpx;
+
+/* ==================== 阴影 ==================== */
+
+$box-shadow-light: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
+$box-shadow-base: 0 4rpx 20rpx rgba(0, 0, 0, 0.1);
+$box-shadow-dark: 0 8rpx 30rpx rgba(0, 0, 0, 0.15);
+
+/* ==================== 过渡动画 ==================== */
+
+$transition-base: all 0.3s ease;
+$transition-fast: all 0.15s ease;
+$transition-slow: all 0.5s ease;
+
+/* ==================== 层级 ==================== */
+
+$z-index-normal: 1;
+$z-index-tooltip: 100;
+$z-index-fixed: 1000;
+$z-index-modal: 2000;
+$z-index-popup: 3000;
+$z-index-toast: 4000;
+
+/* ==================== 屏幕尺寸 ==================== */
+
+$screen-xs: 480rpx;
+$screen-sm: 640rpx;
+$screen-md: 768rpx;
+$screen-lg: 1024rpx;
+$screen-xl: 1280rpx;
+
+/* ==================== 安全区域 ==================== */
+
+$safe-area-inset-top: env(safe-area-inset-top);
+$safe-area-inset-right: env(safe-area-inset-right);
+$safe-area-inset-bottom: env(safe-area-inset-bottom);
+$safe-area-inset-left: env(safe-area-inset-left);
