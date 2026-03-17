@@ -27,6 +27,54 @@
 			}
 		},
 		{
+			"path": "pages/dish/detail/index",
+			"style": {
+				"navigationBarTitleText": "菜品详情"
+			}
+		},
+		{
+			"path": "pages/merchant/detail/index",
+			"style": {
+				"navigationBarTitleText": "商家详情"
+			}
+		},
+		{
+			"path": "pages/cart/index",
+			"style": {
+				"navigationBarTitleText": "购物车"
+			}
+		},
+		{
+			"path": "pages/order/confirm/index",
+			"style": {
+				"navigationBarTitleText": "确认订单"
+			}
+		},
+		{
+			"path": "pages/order/detail/index",
+			"style": {
+				"navigationBarTitleText": "订单详情"
+			}
+		},
+		{
+			"path": "pages/review/list/index",
+			"style": {
+				"navigationBarTitleText": "全部评价"
+			}
+		},
+		{
+			"path": "pages/review/submit/index",
+			"style": {
+				"navigationBarTitleText": "发表评价"
+			}
+		},
+		{
+			"path": "pages/search/index",
+			"style": {
+				"navigationBarTitleText": "搜索"
+			}
+		},
+		{
 			"path": "pages/recipe/today",
 			"style": {
 				"navigationBarTitleText": "今日食谱"
@@ -60,6 +108,12 @@
 			"path": "pages/address/index",
 			"style": {
 				"navigationBarTitleText": "管理地址"
+			}
+		},
+		{
+			"path": "pages/address/edit/index",
+			"style": {
+				"navigationBarTitleText": "编辑地址"
 			}
 		},
 		{

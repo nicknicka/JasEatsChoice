@@ -1,192 +1,758 @@
 <template>
   <view class="index-container">
-    <view class="search-bar">
-      <input type="text" placeholder="搜索菜品、商家或食谱..." class="search-input" />
-      <view class="search-icon">🔍</view>
-    </view>
+    <!-- 下拉刷新容器 -->
+    <scroll-view
+      class="scroll-container"
+      scroll-y
+      refresher-enabled
+      :refresher-triggered="refreshing"
+      @refresherrefresh="onRefresh"
+      @scrolltolower="onLoadMore"
+      :lower-threshold="100"
+    >
+      <!-- 顶部区域：定位和天气 -->
+      <view class="top-section">
+        <WeatherLocation ref="weatherRef" />
 
-    <view class="banner">
-      <swiper autoplay interval="3000" circular indicator-dots indicator-color="rgba(255,255,255,0.5)" indicator-active-color="#fff">
-        <swiper-item>
-          <view class="banner-item">
-            <text class="banner-text">今日推荐</text>
-          </view>
-        </swiper-item>
-        <swiper-item>
-          <view class="banner-item">
-            <text class="banner-text">美食特惠</text>
-          </view>
-        </swiper-item>
-        <swiper-item>
-          <view class="banner-item">
-            <text class="banner-text">新品上市</text>
-          </view>
-        </swiper-item>
-      </swiper>
-    </view>
+        <!-- 搜索栏 -->
+        <view class="search-bar" @click="toSearch">
+          <view class="search-icon">🔍</view>
+          <view class="search-input">搜索菜品、商家或食谱...</view>
+        </view>
+      </view>
 
-    <view class="recommendation-section">
-      <view class="section-title">个性化推荐</view>
-      <view class="recommend-grid">
-        <view class="recommend-item" v-for="item in recommendations" :key="item.id">
-          <view class="food-image"></view>
-          <view class="food-info">
-            <view class="food-name">{{ item.name }}</view>
-            <view class="food-price">¥{{ item.price.toFixed(2) }}</view>
+      <!-- 轮播图 -->
+      <view class="banner-section" v-if="banners.length > 0">
+        <swiper
+          class="banner-swiper"
+          autoplay
+          interval="3000"
+          circular
+          indicator-dots
+          indicator-color="rgba(255,255,255,0.5)"
+          indicator-active-color="#fff"
+        >
+          <swiper-item v-for="banner in banners" :key="banner.id" @click="handleBannerClick(banner)">
+            <image class="banner-image" :src="banner.image" mode="aspectFill" />
+          </swiper-item>
+        </swiper>
+      </view>
+
+      <!-- 分类导航 -->
+      <view class="category-section">
+        <view class="section-header">
+          <text class="section-title">美食分类</text>
+          <text class="section-more" @click="toMoreCategories">更多 ›</text>
+        </view>
+        <scroll-view class="category-scroll" scroll-x show-scrollbar="false">
+          <view class="category-list">
+            <view
+              class="category-item"
+              v-for="category in categories"
+              :key="category.id"
+              @click="handleCategoryClick(category)"
+            >
+              <view class="category-icon">{{ category.icon }}</view>
+              <view class="category-name">{{ category.name }}</view>
+            </view>
+          </view>
+        </scroll-view>
+      </view>
+
+      <!-- 推荐商家 -->
+      <view class="merchant-section" v-if="recommendMerchants.length > 0">
+        <view class="section-header">
+          <text class="section-title">推荐商家</text>
+          <text class="section-more" @click="toMoreMerchants">更多 ›</text>
+        </view>
+        <scroll-view class="merchant-scroll" scroll-x show-scrollbar="false">
+          <view class="merchant-list">
+            <view
+              class="merchant-card"
+              v-for="merchant in recommendMerchants"
+              :key="merchant.id"
+              @click="toMerchantDetail(merchant.id)"
+            >
+              <image class="merchant-logo" :src="merchant.logo" mode="aspectFill" />
+              <view class="merchant-info">
+                <view class="merchant-name">{{ merchant.name }}</view>
+                <view class="merchant-rating">
+                  <text class="star">⭐</text>
+                  <text>{{ merchant.rating }}</text>
+                  <text class="sales">月售{{ merchant.monthlySales }}</text>
+                </view>
+                <view class="merchant-tags">
+                  <text class="tag" v-for="tag in merchant.tags" :key="tag">{{ tag }}</text>
+                </view>
+              </view>
+            </view>
+          </view>
+        </scroll-view>
+      </view>
+
+      <!-- 推荐菜品 -->
+      <view class="dish-section">
+        <view class="section-header">
+          <text class="section-title">为你推荐</text>
+          <text class="section-refresh" @click="refreshRecommend">
+            <text class="refresh-icon">🔄</text> 换一换
+          </text>
+        </view>
+        <view class="dish-grid">
+          <view
+            class="dish-card"
+            v-for="dish in recommendDishes"
+            :key="dish.id"
+            @click="toDishDetail(dish.id)"
+          >
+            <image class="dish-image" :src="dish.image" mode="aspectFill" />
+            <view class="dish-info">
+              <view class="dish-name">{{ dish.name }}</view>
+              <view class="dish-desc">{{ dish.description }}</view>
+              <view class="dish-bottom">
+                <view class="dish-price">
+                  <text class="price-symbol">¥</text>
+                  <text class="price-value">{{ dish.price }}</text>
+                </view>
+                <view class="dish-sales">已售{{ dish.sales }}</view>
+              </view>
+            </view>
           </view>
         </view>
       </view>
-    </view>
 
-    <view class="quick-menu">
-      <view class="menu-item" v-for="menu in quickMenus" :key="menu.id">
-        <view class="menu-icon">{{ menu.icon }}</view>
-        <view class="menu-text">{{ menu.text }}</view>
+      <!-- 加载更多 -->
+      <view class="load-more" v-if="!noMore">
+        <uni-load-more :status="loadMoreStatus" />
       </view>
-    </view>
+
+      <!-- 没有更多 -->
+      <view class="no-more" v-if="noMore">
+        <text>~ 没有更多了 ~</text>
+      </view>
+    </scroll-view>
   </view>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from '@/utils'
+import { useLocationStore } from '@/store'
+import WeatherLocation from '@/components/common/WeatherLocation.vue'
 
-const recommendations = ref([
-  { id: 1, name: '宫保鸡丁', price: 28.00 },
-  { id: 2, name: '鱼香肉丝', price: 26.00 },
-  { id: 3, name: '回锅肉', price: 32.00 },
-  { id: 4, name: '麻婆豆腐', price: 18.00 }
+// Router
+const router = useRouter()
+
+// Store
+const locationStore = useLocationStore()
+
+// 组件引用
+const weatherRef = ref(null)
+
+// 状态
+const refreshing = ref(false)
+const loadingMore = ref(false)
+const noMore = ref(false)
+
+// 分页参数
+const currentPage = ref(1)
+const pageSize = 10
+
+// 轮播图数据
+const banners = ref([
+  {
+    id: 1,
+    image: 'https://via.placeholder.com/750x300/FF6B35/FFFFFF?text=今日推荐',
+    link: '',
+    title: '今日推荐'
+  },
+  {
+    id: 2,
+    image: 'https://via.placeholder.com/750x300/667eea/FFFFFF?text=美食特惠',
+    link: '',
+    title: '美食特惠'
+  },
+  {
+    id: 3,
+    image: 'https://via.placeholder.com/750x300/52c41a/FFFFFF?text=新品上市',
+    link: '',
+    title: '新品上市'
+  }
 ])
 
-const quickMenus = ref([
-  { id: 1, icon: '🍳', text: '今日食谱' },
-  { id: 2, icon: '📊', text: '卡路里' },
-  { id: 3, icon: '📝', text: '我的食谱' },
-  { id: 4, icon: '💬', text: 'AI助手' }
+// 分类数据
+const categories = ref([
+  { id: 1, name: '中餐', icon: '🍚', code: 'chinese' },
+  { id: 2, name: '西餐', icon: '🍔', code: 'western' },
+  { id: 3, name: '日料', icon: '🍣', code: 'japanese' },
+  { id: 4, name: '韩料', icon: '🍜', code: 'korean' },
+  { id: 5, name: '快餐', icon: '🍟', code: 'fast_food' },
+  { id: 6, name: '甜点', icon: '🍰', code: 'dessert' },
+  { id: 7, name: '饮品', icon: '🥤', code: 'drink' },
+  { id: 8, name: '小吃', icon: '🍢', code: 'snack' }
 ])
+
+// 推荐商家数据
+const recommendMerchants = ref([
+  {
+    id: 1,
+    name: '老王家常菜',
+    logo: 'https://via.placeholder.com/200x200/FF6B35/FFFFFF?text=老王',
+    rating: 4.8,
+    monthlySales: 999,
+    tags: ['家常菜', '配送快', '好评多']
+  },
+  {
+    id: 2,
+    name: '李记川菜馆',
+    logo: 'https://via.placeholder.com/200x200/667eea/FFFFFF?text=李记',
+    rating: 4.6,
+    monthlySales: 666,
+    tags: ['川菜', '麻辣', '分量足']
+  },
+  {
+    id: 3,
+    name: '张胖子烧烤',
+    logo: 'https://via.placeholder.com/200x200/52c41a/FFFFFF?text=张胖',
+    rating: 4.7,
+    monthlySales: 888,
+    tags: ['烧烤', '夜宵', '啤酒']
+  }
+])
+
+// 推荐菜品数据
+const recommendDishes = ref([])
+
+// 计算属性：加载更多状态
+const loadMoreStatus = computed(() => {
+  if (refreshing.value) return 'loading'
+  if (noMore.value) return 'noMore'
+  if (loadingMore.value) return 'loading'
+  return 'more'
+})
+
+/**
+ * 下拉刷新
+ */
+const onRefresh = async () => {
+  refreshing.value = true
+  currentPage.value = 1
+  noMore.value = false
+
+  try {
+    // 重新获取数据
+    await Promise.all([
+      loadBanners(),
+      loadMerchants(),
+      loadDishes(true)
+    ])
+
+    // 刷新位置和天气
+    if (weatherRef.value) {
+      weatherRef.value.getLocationAndWeather()
+    }
+
+    uni.showToast({
+      title: '刷新成功',
+      icon: 'success'
+    })
+  } catch (error) {
+    console.error('刷新失败:', error)
+    uni.showToast({
+      title: '刷新失败',
+      icon: 'none'
+    })
+  } finally {
+    refreshing.value = false
+  }
+}
+
+/**
+ * 上拉加载更多
+ */
+const onLoadMore = async () => {
+  if (loadingMore.value || noMore.value) return
+
+  loadingMore.value = true
+  currentPage.value++
+
+  try {
+    await loadDishes(false)
+  } catch (error) {
+    console.error('加载更多失败:', error)
+    currentPage.value--
+  } finally {
+    loadingMore.value = false
+  }
+}
+
+/**
+ * 加载轮播图
+ */
+const loadBanners = async () => {
+  try {
+    // TODO: 调用后端API
+    // const res = await bannerApi.getList({ position: 'home' })
+    // banners.value = res.data
+
+    // 模拟数据
+    await new Promise(resolve => setTimeout(resolve, 500))
+  } catch (error) {
+    console.error('加载轮播图失败:', error)
+  }
+}
+
+/**
+ * 加载推荐商家
+ */
+const loadMerchants = async () => {
+  try {
+    // TODO: 调用后端API
+    // const res = await merchantApi.getRecommend({
+    //   location: locationStore.currentLocation,
+    //   limit: 10
+    // })
+    // recommendMerchants.value = res.data
+
+    // 模拟数据
+    await new Promise(resolve => setTimeout(resolve, 500))
+  } catch (error) {
+    console.error('加载商家失败:', error)
+  }
+}
+
+/**
+ * 加载推荐菜品
+ */
+const loadDishes = async (refresh = false) => {
+  try {
+    // TODO: 调用后端API
+    // const res = await dishApi.getRecommend({
+    //   page: currentPage.value,
+    //   size: pageSize,
+    //   location: locationStore.currentLocation
+    // })
+    //
+    // if (refresh) {
+    //   recommendDishes.value = res.data.list
+    // } else {
+    //   recommendDishes.value.push(...res.data.list)
+    // }
+    //
+    // if (res.data.list.length < pageSize) {
+    //   noMore.value = true
+    // }
+
+    // 模拟数据
+    await new Promise(resolve => setTimeout(resolve, 500))
+
+    const mockDishes = [
+      {
+        id: Date.now() + 1,
+        name: '宫保鸡丁',
+        description: '经典川菜，酸甜可口',
+        price: '28',
+        sales: 999,
+        image: 'https://via.placeholder.com/300x300/FF6B35/FFFFFF?text=宫保鸡丁'
+      },
+      {
+        id: Date.now() + 2,
+        name: '鱼香肉丝',
+        description: '传统川菜，下饭神器',
+        price: '26',
+        sales: 888,
+        image: 'https://via.placeholder.com/300x300/667eea/FFFFFF?text=鱼香肉丝'
+      },
+      {
+        id: Date.now() + 3,
+        name: '回锅肉',
+        description: '四川名菜，肥而不腻',
+        price: '32',
+        sales: 777,
+        image: 'https://via.placeholder.com/300x300/52c41a/FFFFFF?text=回锅肉'
+      },
+      {
+        id: Date.now() + 4,
+        name: '麻婆豆腐',
+        description: '麻辣鲜香，嫩滑爽口',
+        price: '18',
+        sales: 666,
+        image: 'https://via.placeholder.com/300x300/faad14/FFFFFF?text=麻婆豆腐'
+      }
+    ]
+
+    if (refresh) {
+      recommendDishes.value = mockDishes
+    } else {
+      recommendDishes.value.push(...mockDishes)
+    }
+
+    // 模拟没有更多数据
+    if (currentPage.value >= 3) {
+      noMore.value = true
+    }
+  } catch (error) {
+    console.error('加载菜品失败:', error)
+  }
+}
+
+/**
+ * 刷新推荐
+ */
+const refreshRecommend = () => {
+  currentPage.value = 1
+  noMore.value = false
+  loadDishes(true)
+}
+
+/**
+ * 点击轮播图
+ */
+const handleBannerClick = (banner) => {
+  console.log('点击banner:', banner)
+  // TODO: 根据banner类型跳转
+}
+
+/**
+ * 点击分类
+ */
+const handleCategoryClick = (category) => {
+  uni.showToast({
+    title: `选择分类：${category.name}`,
+    icon: 'none'
+  })
+  // TODO: 跳转到分类列表页
+  // router.toDishList({ category: category.code })
+}
+
+/**
+ * 跳转到搜索页
+ */
+const toSearch = () => {
+  uni.showToast({
+    title: '搜索功能开发中',
+    icon: 'none'
+  })
+  // TODO: 跳转到搜索页
+  // uni.navigateTo({
+  //   url: '/pages-user/search/index'
+  // })
+}
+
+/**
+ * 查看更多分类
+ */
+const toMoreCategories = () => {
+  uni.showToast({
+    title: '全部分类功能开发中',
+    icon: 'none'
+  })
+  // TODO: 跳转到分类页面
+}
+
+/**
+ * 查看更多商家
+ */
+const toMoreMerchants = () => {
+  uni.showToast({
+    title: '商家列表功能开发中',
+    icon: 'none'
+  })
+  // TODO: 跳转到商家列表页
+  // uni.navigateTo({
+  //   url: '/pages-user/merchant-list/index'
+  // })
+}
+
+/**
+ * 跳转到商家详情
+ */
+const toMerchantDetail = (merchantId) => {
+  uni.navigateTo({
+    url: `/pages/merchant/detail/index?id=${merchantId}`
+  })
+}
+
+/**
+ * 跳转到菜品详情
+ */
+const toDishDetail = (dishId) => {
+  uni.navigateTo({
+    url: `/pages/dish/detail/index?id=${dishId}`
+  })
+}
+
+// 组件挂载时加载数据
+onMounted(() => {
+  loadBanners()
+  loadMerchants()
+  loadDishes(true)
+})
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
+@import '@/styles/variables.scss';
+@import '@/styles/mixins.scss';
+
 .index-container {
-  background-color: #f5f5f5;
   min-height: 100vh;
+  background-color: $bg-color-base;
 }
 
+.scroll-container {
+  height: 100vh;
+}
+
+/* 顶部区域 */
+.top-section {
+  padding: $spacing-md;
+  background-color: $bg-color-white;
+}
+
+/* 搜索栏 */
 .search-bar {
-  display: flex;
-  align-items: center;
-  background-color: #fff;
-  padding: 10px 15px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  position: relative;
+  @include flex-center;
+  gap: $spacing-sm;
+  background-color: $bg-color-base;
+  border-radius: $border-radius-round;
+  padding: $spacing-sm $spacing-md;
+  margin-top: $spacing-sm;
+
+  .search-icon {
+    font-size: $font-size-lg;
+  }
+
+  .search-input {
+    flex: 1;
+    font-size: $font-size-base;
+    color: $text-color-secondary;
+  }
 }
 
-.search-input {
-  flex: 1;
-  height: 40px;
-  padding: 0 15px;
-  border: 1px solid #eee;
-  border-radius: 20px;
-  font-size: 14px;
+/* 轮播图 */
+.banner-section {
+  padding: $spacing-md 0;
+  background-color: $bg-color-white;
+  margin-bottom: $spacing-md;
 }
 
-.search-icon {
-  position: absolute;
-  right: 30px;
-  font-size: 18px;
-  color: #999;
+.banner-swiper {
+  width: 100%;
+  height: 300rpx;
+  border-radius: $border-radius-lg;
+  overflow: hidden;
 }
 
-.banner {
-  height: 200px;
-  margin: 15px 0;
-}
-
-.banner-item {
+.banner-image {
+  width: 100%;
   height: 100%;
-  background-color: #FF6B35;
-  display: flex;
-  justify-content: center;
-  align-items: center;
 }
 
-.banner-text {
-  color: #fff;
-  font-size: 24px;
-  font-weight: bold;
+/* 分类导航 */
+.category-section {
+  background-color: $bg-color-white;
+  padding: $spacing-md;
+  margin-bottom: $spacing-md;
 }
 
-.recommendation-section {
-  background-color: #fff;
-  padding: 15px;
-  margin-bottom: 15px;
+.section-header {
+  @include flex-between;
+  margin-bottom: $spacing-md;
 }
 
 .section-title {
-  font-size: 18px;
-  font-weight: bold;
-  margin-bottom: 15px;
-  color: #333;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  color: $text-color-primary;
 }
 
-.recommend-grid {
+.section-more,
+.section-refresh {
+  font-size: $font-size-sm;
+  color: $text-color-secondary;
+
+  .refresh-icon {
+    margin-right: $spacing-xs;
+  }
+}
+
+.category-scroll {
+  white-space: nowrap;
+}
+
+.category-list {
+  @include flex-center;
+  gap: $spacing-lg;
+}
+
+.category-item {
+  @include flex-center-column;
+  gap: $spacing-xs;
+  padding: $spacing-md;
+  flex-shrink: 0;
+
+  .category-icon {
+    width: 100rpx;
+    height: 100rpx;
+    @include flex-center;
+    background-color: $bg-color-base;
+    border-radius: $border-radius-lg;
+    font-size: 48rpx;
+  }
+
+  .category-name {
+    font-size: $font-size-sm;
+    color: $text-color-regular;
+  }
+}
+
+/* 推荐商家 */
+.merchant-section {
+  background-color: $bg-color-white;
+  padding: $spacing-md;
+  margin-bottom: $spacing-md;
+}
+
+.merchant-scroll {
+  white-space: nowrap;
+}
+
+.merchant-list {
+  @include flex-center;
+  gap: $spacing-md;
+}
+
+.merchant-card {
+  width: 240rpx;
+  flex-shrink: 0;
+  background-color: $bg-color-base;
+  border-radius: $border-radius-base;
+  overflow: hidden;
+}
+
+.merchant-logo {
+  width: 100%;
+  height: 160rpx;
+}
+
+.merchant-info {
+  padding: $spacing-sm;
+}
+
+.merchant-name {
+  font-size: $font-size-base;
+  font-weight: $font-weight-medium;
+  color: $text-color-primary;
+  @include text-ellipsis;
+}
+
+.merchant-rating {
+  @include flex-center;
+  gap: $spacing-xs;
+  font-size: $font-size-sm;
+  margin-top: $spacing-xs;
+
+  .star {
+    color: #f5a623;
+  }
+
+  .sales {
+    color: $text-color-secondary;
+  }
+}
+
+.merchant-tags {
+  margin-top: $spacing-xs;
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-xs;
+
+  .tag {
+    font-size: $font-size-xs;
+    color: $primary-color;
+    background-color: rgba(255, 107, 53, 0.1);
+    padding: 4rpx 8rpx;
+    border-radius: 4rpx;
+  }
+}
+
+/* 推荐菜品 */
+.dish-section {
+  background-color: $bg-color-white;
+  padding: $spacing-md;
+  margin-bottom: $spacing-md;
+}
+
+.dish-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 15px;
+  gap: $spacing-md;
 }
 
-.recommend-item {
-  background-color: #fafafa;
-  border-radius: 8px;
-  padding: 10px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+.dish-card {
+  background-color: $bg-color-white;
+  border-radius: $border-radius-base;
+  overflow: hidden;
+  box-shadow: $box-shadow-light;
 }
 
-.food-image {
-  height: 120px;
-  background-color: #e9ecef;
-  border-radius: 6px;
-  margin-bottom: 10px;
+.dish-image {
+  width: 100%;
+  height: 200rpx;
 }
 
-.food-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.dish-info {
+  padding: $spacing-sm;
 }
 
-.food-name {
-  font-size: 14px;
-  font-weight: 500;
-  color: #333;
+.dish-name {
+  font-size: $font-size-base;
+  font-weight: $font-weight-medium;
+  color: $text-color-primary;
+  @include text-ellipsis;
 }
 
-.food-price {
-  font-size: 14px;
-  font-weight: bold;
-  color: #FF6B35;
+.dish-desc {
+  font-size: $font-size-sm;
+  color: $text-color-secondary;
+  margin-top: $spacing-xs;
+  @include text-ellipsis;
 }
 
-.quick-menu {
-  background-color: #fff;
-  padding: 15px;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
+.dish-bottom {
+  @include flex-between;
+  margin-top: $spacing-sm;
 }
 
-.menu-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
+.dish-price {
+  @include flex-center;
+  gap: 2rpx;
+  color: $danger-color;
+  font-weight: $font-weight-bold;
+
+  .price-symbol {
+    font-size: $font-size-sm;
+  }
+
+  .price-value {
+    font-size: $font-size-lg;
+  }
 }
 
-.menu-icon {
-  font-size: 28px;
+.dish-sales {
+  font-size: $font-size-sm;
+  color: $text-color-secondary;
 }
 
-.menu-text {
-  font-size: 12px;
-  color: #666;
+/* 加载更多 */
+.load-more {
+  padding: $spacing-lg 0;
+}
+
+.no-more {
+  padding: $spacing-lg 0;
+  text-align: center;
+  color: $text-color-secondary;
+  font-size: $font-size-sm;
 }
 </style>

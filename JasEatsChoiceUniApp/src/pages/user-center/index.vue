@@ -1,208 +1,700 @@
 <template>
   <view class="user-center-container">
-    <view class="user-info-card">
-      <view class="avatar">👤</view>
-      <view class="user-info">
-        <view class="user-name">佳食宜选用户</view>
-        <view class="user-level">普通会员</view>
-      </view>
-      <view class="membership-btn" @click="goToMembership">
-        <text>会员中心</text>
-        <text class="arrow">→</text>
-      </view>
-    </view>
+    <scroll-view class="scroll-container" scroll-y>
+      <!-- 用户信息卡片 -->
+      <view class="user-info-card">
+        <view class="user-avatar">
+          <image class="avatar-image" :src="userInfo.avatar" mode="aspectFill" />
+          <view class="avatar-badge" v-if="userInfo.vipLevel">
+            <text class="badge-text">VIP</text>
+          </view>
+        </view>
 
-    <view class="info-section">
-      <view class="section-title">个人信息</view>
-      <view class="info-item" @click="goToProfile">
-        <view class="item-label">基本信息</view>
-        <view class="item-value">完善个人资料</view>
-        <view class="item-arrow">→</view>
-      </view>
-      <view class="info-item" @click="goToSafety">
-        <view class="item-label">账号安全</view>
-        <view class="item-value">修改密码</view>
-        <view class="item-arrow">→</view>
-      </view>
-    </view>
+        <view class="user-detail">
+          <view class="user-name-row">
+            <text class="user-name">{{ userInfo.name }}</text>
+            <view class="gender-icon">{{ userInfo.gender === 'male' ? '👨' : '👩' }}</view>
+          </view>
+          <view class="user-id">ID: {{ userInfo.id }}</view>
+          <view class="user-tags">
+            <text class="tag-item" v-for="tag in userInfo.tags" :key="tag">{{ tag }}</text>
+          </view>
+        </view>
 
-    <view class="order-section">
-      <view class="section-title">我的订单</view>
-      <view class="order-status">
-        <view class="status-item" @click="goToOrders('all')">
-          <view class="status-icon">📝</view>
-          <view class="status-text">全部</view>
-        </view>
-        <view class="status-item" @click="goToOrders('pending')">
-          <view class="status-icon">⏳</view>
-          <view class="status-text">待支付</view>
-        </view>
-        <view class="status-item" @click="goToOrders('processing')">
-          <view class="status-icon">👨🍳</view>
-          <view class="status-text">处理中</view>
-        </view>
-        <view class="status-item" @click="goToOrders('completed')">
-          <view class="status-icon">✅</view>
-          <view class="status-text">已完成</view>
+        <view class="edit-btn" @click="editProfile">
+          <text>编辑</text>
         </view>
       </view>
-    </view>
 
-    <view class="service-section">
-      <view class="section-title">服务与帮助</view>
-      <view class="info-item" @click="goToFeedback">
-        <view class="item-label">意见反馈</view>
-        <view class="item-arrow">→</view>
+      <!-- 数据统计 -->
+      <view class="stats-card">
+        <view class="stat-item" @click="navigateTo('orders')">
+          <text class="stat-value">{{ stats.orders }}</text>
+          <text class="stat-label">订单</text>
+        </view>
+        <view class="stat-item" @click="navigateTo('favorites')">
+          <text class="stat-value">{{ stats.favorites }}</text>
+          <text class="stat-label">收藏</text>
+        </view>
+        <view class="stat-item" @click="navigateTo('history')">
+          <text class="stat-value">{{ stats.history }}</text>
+          <text class="stat-label">浏览</text>
+        </view>
+        <view class="stat-item" @click="navigateTo('coupons')">
+          <text class="stat-value">{{ stats.coupons }}</text>
+          <text class="stat-label">优惠券</text>
+        </view>
       </view>
-      <view class="info-item" @click="goToAbout">
-        <view class="item-label">关于我们</view>
-        <view class="item-arrow">→</view>
+
+      <!-- 订单管理 -->
+      <view class="section-card">
+        <view class="section-header" @click="navigateTo('orders')">
+          <view class="section-title">我的订单</view>
+          <view class="section-more">
+            <text>查看全部</text>
+            <text class="more-arrow">→</text>
+          </view>
+        </view>
+
+        <view class="order-status-grid">
+          <view class="status-item" @click="navigateTo('orders', 'pending')">
+            <view class="status-icon-wrapper">
+              <text class="status-icon">⏰</text>
+              <view class="status-badge" v-if="orderCounts.pending > 0">
+                {{ orderCounts.pending }}
+              </view>
+            </view>
+            <text class="status-text">待支付</text>
+          </view>
+
+          <view class="status-item" @click="navigateTo('orders', 'processing')">
+            <view class="status-icon-wrapper">
+              <text class="status-icon">👨🍳</text>
+              <view class="status-badge" v-if="orderCounts.processing > 0">
+                {{ orderCounts.processing }}
+              </view>
+            </view>
+            <text class="status-text">处理中</text>
+          </view>
+
+          <view class="status-item" @click="navigateTo('orders', 'delivering')">
+            <view class="status-icon-wrapper">
+              <text class="status-icon">🚴</text>
+              <view class="status-badge" v-if="orderCounts.delivering > 0">
+                {{ orderCounts.delivering }}
+              </view>
+            </view>
+            <text class="status-text">配送中</text>
+          </view>
+
+          <view class="status-item" @click="navigateTo('orders', 'completed')">
+            <view class="status-icon-wrapper">
+              <text class="status-icon">⭐</text>
+            </view>
+            <text class="status-text">待评价</text>
+          </view>
+        </view>
       </view>
-    </view>
+
+      <!-- 我的资产 -->
+      <view class="section-card">
+        <view class="section-header" @click="navigateTo('wallet')">
+          <view class="section-title">我的资产</view>
+          <view class="section-more">
+            <text>查看全部</text>
+            <text class="more-arrow">→</text>
+          </view>
+        </view>
+
+        <view class="assets-list">
+          <view class="asset-item">
+            <text class="asset-value">¥{{ wallet.balance }}</text>
+            <text class="asset-label">余额</text>
+          </view>
+          <view class="asset-item">
+            <text class="asset-value">{{ wallet.points }}</text>
+            <text class="asset-label">积分</text>
+          </view>
+          <view class="asset-item">
+            <text class="asset-value">{{ wallet.redEnvelopes }}</text>
+            <text class="asset-label">红包</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 功能列表 -->
+      <view class="section-card">
+        <view class="section-title">常用功能</view>
+
+        <view class="menu-list">
+          <view class="menu-item" @click="navigateTo('address')">
+            <view class="menu-icon-wrapper">
+              <text class="menu-icon">📍</text>
+            </view>
+            <text class="menu-label">收货地址</text>
+            <text class="menu-arrow">→</text>
+          </view>
+
+          <view class="menu-item" @click="navigateTo('calorie')">
+            <view class="menu-icon-wrapper">
+              <text class="menu-icon">📊</text>
+            </view>
+            <text class="menu-label">卡路里统计</text>
+            <text class="menu-arrow">→</text>
+          </view>
+
+          <view class="menu-item" @click="navigateTo('recipe')">
+            <view class="menu-icon-wrapper">
+              <text class="menu-icon">📖</text>
+            </view>
+            <text class="menu-label">我的食谱</text>
+            <text class="menu-arrow">→</text>
+          </view>
+
+          <view class="menu-item" @click="navigateTo('health-report')">
+            <view class="menu-icon-wrapper">
+              <text class="menu-icon">📋</text>
+            </view>
+            <text class="menu-label">健康报告</text>
+            <text class="menu-arrow">→</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 服务与帮助 -->
+      <view class="section-card">
+        <view class="section-title">服务与帮助</view>
+
+        <view class="menu-list">
+          <view class="menu-item" @click="navigateTo('message')">
+            <view class="menu-icon-wrapper">
+              <text class="menu-icon">💬</text>
+              <view class="menu-badge" v-if="unreadCount > 0">
+                {{ unreadCount > 99 ? '99+' : unreadCount }}
+              </view>
+            </view>
+            <text class="menu-label">消息中心</text>
+            <text class="menu-arrow">→</text>
+          </view>
+
+          <view class="menu-item" @click="navigateTo('customer-service')">
+            <view class="menu-icon-wrapper">
+              <text class="menu-icon">🎧</text>
+            </view>
+            <text class="menu-label">联系客服</text>
+            <text class="menu-arrow">→</text>
+          </view>
+
+          <view class="menu-item" @click="navigateTo('feedback')">
+            <view class="menu-icon-wrapper">
+              <text class="menu-icon">✉️</text>
+            </view>
+            <text class="menu-label">意见反馈</text>
+            <text class="menu-arrow">→</text>
+          </view>
+
+          <view class="menu-item" @click="navigateTo('about')">
+            <view class="menu-icon-wrapper">
+              <text class="menu-icon">ℹ️</text>
+            </view>
+            <text class="menu-label">关于我们</text>
+            <text class="menu-arrow">→</text>
+          </view>
+
+          <view class="menu-item" @click="navigateTo('settings')">
+            <view class="menu-icon-wrapper">
+              <text class="menu-icon">⚙️</text>
+            </view>
+            <text class="menu-label">设置</text>
+            <text class="menu-arrow">→</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 底部空白 -->
+      <view class="bottom-spacer"></view>
+    </scroll-view>
   </view>
 </template>
 
 <script setup>
-const goToMembership = () => {
-  uni.showToast({ title: '会员中心开发中', icon: 'none' })
-}
+import { ref, onMounted } from 'vue'
 
-const goToProfile = () => {
-  uni.showToast({ title: '基本信息开发中', icon: 'none' })
-}
+// 用户信息
+const userInfo = ref({
+  id: '12345678',
+  name: '佳食宜选用户',
+  avatar: 'https://via.placeholder.com/200x200/FF6B35/FFFFFF?text=用户',
+  gender: 'female',
+  tags: ['美食达人', '健康饮食'],
+  vipLevel: 1
+})
 
-const goToSafety = () => {
-  uni.showToast({ title: '账号安全开发中', icon: 'none' })
-}
+// 统计数据
+const stats = ref({
+  orders: 28,
+  favorites: 56,
+  history: 128,
+  coupons: 5
+})
 
-const goToOrders = (status) => {
+// 订单数量
+const orderCounts = ref({
+  pending: 2,
+  processing: 1,
+  delivering: 3,
+  completed: 0
+})
+
+// 钱包信息
+const wallet = ref({
+  balance: '128.50',
+  points: 2580,
+  redEnvelopes: 3
+})
+
+// 未读消息数
+const unreadCount = ref(5)
+
+/**
+ * 编辑个人资料
+ */
+const editProfile = () => {
   uni.navigateTo({
-    url: `/pages/orders/index?status=${status}`
+    url: '/pages/user-center/edit'
   })
 }
 
-const goToFeedback = () => {
-  uni.showToast({ title: '意见反馈开发中', icon: 'none' })
+/**
+ * 页面导航
+ */
+const navigateTo = (page, params = {}) => {
+  const pageMap = {
+    'orders': '/pages/orders/index',
+    'favorites': '/pages/favorites/index',
+    'history': '/pages/history/index',
+    'coupons': '/pages/coupons/index',
+    'wallet': '/pages/wallet/index',
+    'address': '/pages/address/index',
+    'calorie': '/pages/calorie/index',
+    'recipe': '/pages/recipe/my',
+    'health-report': '/pages/health-report/index',
+    'message': '/pages/message/index',
+    'customer-service': '/pages/customer-service/index',
+    'feedback': '/pages/feedback/index',
+    'about': '/pages/about/index',
+    'settings': '/pages/settings/index'
+  }
+
+  const path = pageMap[page]
+
+  if (!path) {
+    uni.showToast({
+      title: '页面开发中...',
+      icon: 'none'
+    })
+    return
+  }
+
+  let url = path
+  if (Object.keys(params).length > 0) {
+    const query = Object.keys(params)
+      .map(key => `${key}=${params[key]}`)
+      .join('&')
+    url = `${path}?${query}`
+  }
+
+  uni.navigateTo({
+    url: url,
+    fail: () => {
+      // 如果页面不存在，提示开发中
+      uni.showToast({
+        title: '页面开发中...',
+        icon: 'none'
+      })
+    }
+  })
 }
 
-const goToAbout = () => {
-  uni.showToast({ title: '关于我们开发中', icon: 'none' })
+/**
+ * 加载用户信息
+ */
+const loadUserInfo = async () => {
+  try {
+    // TODO: 调用后端API
+    // const res = await userApi.info()
+    // userInfo.value = res.data
+
+    // 模拟数据
+    uni.getStorageSync({
+      key: 'userInfo',
+      success: (res) => {
+        if (res.data) {
+          userInfo.value = JSON.parse(res.data)
+        }
+      }
+    })
+  } catch (error) {
+    console.error('加载用户信息失败:', error)
+  }
 }
+
+/**
+ * 加载统计数据
+ */
+const loadStats = async () => {
+  try {
+    // TODO: 调用后端API
+    // const res = await userApi.stats()
+    // stats.value = res.data
+  } catch (error) {
+    console.error('加载统计数据失败:', error)
+  }
+}
+
+/**
+ * 加载订单数量
+ */
+const loadOrderCounts = async () => {
+  try {
+    // TODO: 调用后端API
+    // const res = await orderApi.counts()
+    // orderCounts.value = res.data
+  } catch (error) {
+    console.error('加载订单数量失败:', error)
+  }
+}
+
+/**
+ * 加载未读消息数
+ */
+const loadUnreadCount = async () => {
+  try {
+    // TODO: 调用后端API
+    // const res = await messageApi.unreadCount()
+    // unreadCount.value = res.data
+  } catch (error) {
+    console.error('加载未读消息数失败:', error)
+  }
+}
+
+// 组件挂载
+onMounted(() => {
+  loadUserInfo()
+  loadStats()
+  loadOrderCounts()
+  loadUnreadCount()
+})
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
+@import '@/styles/variables.scss';
+@import '@/styles/mixins.scss';
+
 .user-center-container {
-  background-color: #f5f5f5;
   min-height: 100vh;
-  padding: 15px;
+  background-color: $bg-color-base;
 }
 
+.scroll-container {
+  height: 100vh;
+}
+
+/* 用户信息卡片 */
 .user-info-card {
-  background-color: #fff;
-  border-radius: 8px;
-  padding: 20px;
-  margin-bottom: 20px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  background: linear-gradient(135deg, #FF6B35, #FF8F61);
+  margin: $spacing-md;
+  padding: $spacing-lg;
+  border-radius: $border-radius-lg;
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: $spacing-md;
+  box-shadow: $box-shadow-md;
 }
 
-.avatar {
-  font-size: 60px;
+.user-avatar {
+  position: relative;
+  width: 120rpx;
+  height: 120rpx;
 }
 
-.user-info {
+.avatar-image {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 4rpx solid rgba(255, 255, 255, 0.3);
+}
+
+.avatar-badge {
+  position: absolute;
+  bottom: -4rpx;
+  right: -4rpx;
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  padding: 4rpx 8rpx;
+  border-radius: $border-radius-round;
+  border: 2rpx solid #fff;
+
+  .badge-text {
+    font-size: $font-size-xs;
+    color: #fff;
+    font-weight: $font-weight-bold;
+  }
+}
+
+.user-detail {
   flex: 1;
 }
 
+.user-name-row {
+  @include flex-center;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-xs;
+}
+
 .user-name {
-  font-size: 20px;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 5px;
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  color: #fff;
 }
 
-.user-level {
-  font-size: 14px;
-  color: #999;
+.gender-icon {
+  font-size: $font-size-lg;
 }
 
-.membership-btn {
-  color: #FF6B35;
-  font-size: 14px;
-  display: flex;
+.user-id {
+  font-size: $font-size-sm;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: $spacing-xs;
+}
+
+.user-tags {
+  @include flex-center;
+  gap: $spacing-xs;
+  flex-wrap: wrap;
+}
+
+.tag-item {
+  padding: 4rpx 12rpx;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: $border-radius-round;
+  font-size: $font-size-xs;
+  color: #fff;
+}
+
+.edit-btn {
+  padding: $spacing-sm $spacing-md;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: $border-radius-round;
+  color: #fff;
+  font-size: $font-size-sm;
+}
+
+/* 数据统计卡片 */
+.stats-card {
+  background-color: $bg-color-white;
+  margin: 0 $spacing-md $spacing-md;
+  border-radius: $border-radius-lg;
+  padding: $spacing-lg;
+  @include flex-around;
+  box-shadow: $box-shadow-sm;
+}
+
+.stat-item {
+  @include flex-center-column;
+  gap: $spacing-xs;
+  cursor: pointer;
+
+  &:active {
+    opacity: 0.6;
+  }
+}
+
+.stat-value {
+  font-size: 40rpx;
+  font-weight: $font-weight-bold;
+  color: $primary-color;
+}
+
+.stat-label {
+  font-size: $font-size-sm;
+  color: $text-color-secondary;
+}
+
+/* 通用区块卡片 */
+.section-card {
+  background-color: $bg-color-white;
+  margin: 0 $spacing-md $spacing-md;
+  border-radius: $border-radius-lg;
+  padding: $spacing-md;
+  box-shadow: $box-shadow-sm;
+}
+
+.section-header {
+  @include flex-between;
   align-items: center;
-  gap: 5px;
-}
-
-.arrow {
-  font-size: 12px;
-}
-
-.info-section, .order-section, .service-section {
-  background-color: #fff;
-  border-radius: 8px;
-  padding: 15px;
-  margin-bottom: 15px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-.section-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 15px;
-  padding-left: 5px;
-}
-
-.info-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 15px 0;
-  border-bottom: 1px solid #eee;
-}
-
-.info-item:last-child {
-  border-bottom: none;
-}
-
-.item-label {
-  font-size: 15px;
-  color: #333;
-}
-
-.item-value {
-  font-size: 14px;
-  color: #999;
-}
-
-.item-arrow {
-  font-size: 16px;
-  color: #ccc;
-}
-
-.order-status {
-  display: flex;
-  justify-content: space-around;
-}
-
-.status-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 15px;
+  margin-bottom: $spacing-md;
   cursor: pointer;
 }
 
+.section-title {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  color: $text-color-primary;
+}
+
+.section-more {
+  @include flex-center;
+  gap: $spacing-xs;
+  font-size: $font-size-sm;
+  color: $text-color-secondary;
+}
+
+.more-arrow {
+  font-size: $font-size-base;
+}
+
+/* 订单状态 */
+.order-status-grid {
+  @include flex-around;
+}
+
+.status-item {
+  @include flex-center-column;
+  gap: $spacing-sm;
+  padding: $spacing-md;
+  cursor: pointer;
+
+  &:active {
+    opacity: 0.6;
+  }
+}
+
+.status-icon-wrapper {
+  position: relative;
+  width: 88rpx;
+  height: 88rpx;
+  @include flex-center;
+  background-color: $bg-color-base;
+  border-radius: $border-radius-lg;
+}
+
 .status-icon {
-  font-size: 28px;
+  font-size: 48rpx;
+}
+
+.status-badge {
+  position: absolute;
+  top: -8rpx;
+  right: -8rpx;
+  min-width: 32rpx;
+  height: 32rpx;
+  @include flex-center;
+  padding: 0 8rpx;
+  background-color: $danger-color;
+  border-radius: $border-radius-round;
+  border: 2rpx solid $bg-color-white;
+  font-size: $font-size-xs;
+  color: #fff;
+  font-weight: $font-weight-bold;
 }
 
 .status-text {
-  font-size: 12px;
-  color: #666;
+  font-size: $font-size-sm;
+  color: $text-color-regular;
+}
+
+/* 资产列表 */
+.assets-list {
+  @include flex-around;
+}
+
+.asset-item {
+  @include flex-center-column;
+  gap: $spacing-xs;
+  padding: $spacing-md;
+  flex: 1;
+  cursor: pointer;
+
+  &:active {
+    opacity: 0.6;
+  }
+
+  &:not(:last-child) {
+    border-right: 1rpx solid $border-color-lighter;
+  }
+}
+
+.asset-value {
+  font-size: 36rpx;
+  font-weight: $font-weight-bold;
+  color: $primary-color;
+}
+
+.asset-label {
+  font-size: $font-size-sm;
+  color: $text-color-secondary;
+}
+
+/* 菜单列表 */
+.menu-list {
+  .menu-item {
+    @include flex-center;
+    padding: $spacing-md 0;
+    border-bottom: 1rpx solid $border-color-lighter;
+    cursor: pointer;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &:active {
+      background-color: $bg-color-base;
+    }
+  }
+}
+
+.menu-icon-wrapper {
+  position: relative;
+  width: 64rpx;
+  height: 64rpx;
+  @include flex-center;
+  background-color: $bg-color-base;
+  border-radius: $border-radius-base;
+  margin-right: $spacing-md;
+}
+
+.menu-icon {
+  font-size: 36rpx;
+}
+
+.menu-badge {
+  position: absolute;
+  top: -8rpx;
+  right: -8rpx;
+  min-width: 32rpx;
+  height: 32rpx;
+  @include flex-center;
+  padding: 0 8rpx;
+  background-color: $danger-color;
+  border-radius: $border-radius-round;
+  font-size: $font-size-xs;
+  color: #fff;
+  font-weight: $font-weight-bold;
+}
+
+.menu-label {
+  flex: 1;
+  font-size: $font-size-base;
+  color: $text-color-primary;
+}
+
+.menu-arrow {
+  font-size: $font-size-base;
+  color: $text-color-secondary;
+}
+
+/* 底部空白 */
+.bottom-spacer {
+  height: 40rpx;
 }
 </style>
