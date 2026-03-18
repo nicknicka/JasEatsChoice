@@ -1,84 +1,115 @@
-import { get, post, put, del } from '@/utils/request'
-
 /**
  * 订单相关API
+ * 对接后端 OrderController
+ * 基础路径: /v1/orders
  */
+import { get, post, put, del } from '@/utils/request'
+
 export const orderApi = {
   /**
    * 创建订单
+   * POST /v1/orders
    * @param {Object} data - 订单数据
-   * @param {Array} data.items - 菜品列表
-   * @param {Object} data.address - 收货地址
-   * @param {string} data.remark - 订单备注
-   * @param {number} data.couponId - 优惠券ID
+   * @param {Object} data.order - 订单基本信息
+   * @param {string} data.order.userId - 用户ID
+   * @param {string} data.order.merchantId - 商家ID
+   * @param {number} data.order.totalAmount - 总金额
+   * @param {string} data.order.deliveryAddress - 配送地址
+   * @param {string} data.order.remark - 订单备注
+   * @param {Array} data.dishes - 菜品列表
+   * @param {string} data.dishes[].dishId - 菜品ID
+   * @param {number} data.dishes[].quantity - 数量
+   * @param {number} data.dishes[].price - 单价
    */
-  create: (data) => post('/api/order/create', data),
+  create: (data) => post('/v1/orders', data),
 
   /**
-   * 获取订单列表
-   * @param {Object} params - 查询参数
-   * @param {string} params.status - 订单状态
-   * @param {number} params.page - 页码
-   * @param {number} params.size - 每页数量
+   * 获取用户订单列表
+   * GET /v1/orders/user/{userId}
+   * @param {string} userId - 用户ID
    */
-  getList: (params) => get('/api/order/list', params),
+  getByUser: (userId) => get(`/v1/orders/user/${userId}`),
+
+  /**
+   * 获取商家订单列表
+   * GET /v1/orders/merchant/{merchantId}
+   * @param {string} merchantId - 商家ID
+   */
+  getByMerchant: (merchantId) => get(`/v1/orders/merchant/${merchantId}`),
 
   /**
    * 获取订单详情
-   * @param {number} id - 订单ID
+   * GET /v1/orders/{orderId}
+   * @param {string} orderId - 订单ID
    */
-  getDetail: (id) => get(`/api/order/${id}`),
+  getDetail: (orderId) => get(`/v1/orders/${orderId}`),
 
   /**
-   * 获取订单进度
-   * @param {number} id - 订单ID
+   * 获取订单的菜品列表
+   * GET /v1/orders/{orderId}/dishes
+   * @param {string} orderId - 订单ID
    */
-  getProgress: (id) => get(`/api/order/${id}/progress`),
+  getDishes: (orderId) => get(`/v1/orders/${orderId}/dishes`),
+
+  /**
+   * 更新订单状态
+   * PUT /v1/orders/{orderId}/status
+   * @param {string} orderId - 订单ID
+   * @param {Object} data - 状态数据
+   * @param {string} data.status - 新状态
+   * @param {string} data.remark - 备注信息
+   */
+  updateStatus: (orderId, data) => put(`/v1/orders/${orderId}/status`, data),
 
   /**
    * 取消订单
-   * @param {number} id - 订单ID
-   * @param {string} reason - 取消原因
+   * POST /v1/orders/{orderId}/cancel
+   * @param {string} orderId - 订单ID
+   * @param {Object} data - 取消原因
+   * @param {string} data.reason - 取消原因
    */
-  cancel: (id, reason) => post(`/api/order/${id}/cancel`, { reason }),
+  cancel: (orderId, data) => post(`/v1/orders/${orderId}/cancel`, data),
 
   /**
    * 确认收货
-   * @param {number} id - 订单ID
+   * POST /v1/orders/{orderId}/confirm
+   * @param {string} orderId - 订单ID
    */
-  confirm: (id) => post(`/api/order/${id}/confirm`),
+  confirm: (orderId) => post(`/v1/orders/${orderId}/confirm`),
 
   /**
    * 申请退款
-   * @param {number} id - 订单ID
-   * @param {string} reason - 退款原因
+   * POST /v1/orders/{orderId}/refund
+   * @param {string} orderId - 订单ID
+   * @param {Object} data - 退款数据
+   * @param {string} data.reason - 退款原因
+   * @param {number} data.refAmount - 退款金额
    */
-  refund: (id, reason) => post(`/api/order/${id}/refund`, { reason }),
+  refund: (orderId, data) => post(`/v1/orders/${orderId}/refund`, data),
 
   /**
-   * 评价订单
-   * @param {number} id - 订单ID
-   * @param {Object} data - 评价数据
-   * @param {number} data.rating - 评分
-   * @param {Array} data.tags - 评价标签
-   * @param {string} data.content - 评价内容
+   * 订单统计
+   * GET /v1/orders/stats/{merchantId}
+   * @param {string} merchantId - 商家ID
    */
-  comment: (id, data) => post(`/api/order/${id}/comment`, data),
+  getStats: (merchantId) => get(`/v1/orders/stats/${merchantId}`),
 
   /**
    * 再来一单
-   * @param {number} id - 订单ID
+   * POST /v1/orders/{orderId}/reorder
+   * @param {string} orderId - 订单ID
    */
-  reorder: (id) => post(`/api/order/${id}/reorder`),
+  reorder: (orderId) => post(`/v1/orders/${orderId}/reorder`),
 
   /**
    * 获取订单数量统计
+   * GET /v1/orders/count
+   * @param {Object} params - 查询参数
+   * @param {string} params.userId - 用户ID（可选）
+   * @param {string} params.merchantId - 商家ID（可选）
+   * @param {string} params.status - 订单状态（可选）
    */
-  getOrderStats: () => get('/api/order/stats'),
-
-  /**
-   * 搜索订单
-   * @param {string} keyword - 搜索关键词（订单号、菜品名）
-   */
-  search: (keyword) => get('/api/order/search', { keyword })
+  getCount: (params) => get('/v1/orders/count', params)
 }
+
+export default orderApi

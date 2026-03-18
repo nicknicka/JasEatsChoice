@@ -146,6 +146,20 @@
 					}
 				},
 				{
+					"path": "ai/advanced",
+					"style": {
+						"navigationBarTitleText": "AI智能分析",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "ai/content-extract",
+					"style": {
+						"navigationBarTitleText": "内容提取",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
 					"path": "settings/index",
 					"style": {
 						"navigationBarTitleText": "设置",
@@ -277,6 +291,13 @@
 						"navigationBarTitleText": "关于我们",
 						"enablePullDownRefresh": false
 					}
+				},
+				{
+					"path": "demo/performance",
+					"style": {
+						"navigationBarTitleText": "性能演示",
+						"enablePullDownRefresh": false
+					}
 				}
 			]
 		},
@@ -291,9 +312,44 @@
 					}
 				},
 				{
+					"path": "home/statistics",
+					"style": {
+						"navigationBarTitleText": "数据统计",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "home/analytics",
+					"style": {
+						"navigationBarTitleText": "数据分析",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
 					"path": "order/index",
 					"style": {
 						"navigationBarTitleText": "订单管理",
+						"enablePullDownRefresh": true
+					}
+				},
+				{
+					"path": "order/detail",
+					"style": {
+						"navigationBarTitleText": "订单详情",
+						"enablePullDownRefresh": true
+					}
+				},
+				{
+					"path": "order/process",
+					"style": {
+						"navigationBarTitleText": "订单处理",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "order/today",
+					"style": {
+						"navigationBarTitleText": "今日订单",
 						"enablePullDownRefresh": true
 					}
 				},
@@ -305,9 +361,135 @@
 					}
 				},
 				{
+					"path": "dish/add",
+					"style": {
+						"navigationBarTitleText": "添加菜品",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "dish/edit",
+					"style": {
+						"navigationBarTitleText": "编辑菜品",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "dish/step-config",
+					"style": {
+						"navigationBarTitleText": "步骤配置",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "menu/index",
+					"style": {
+						"navigationBarTitleText": "菜单管理",
+						"enablePullDownRefresh": true
+					}
+				},
+				{
+					"path": "menu/edit",
+					"style": {
+						"navigationBarTitleText": "编辑菜单",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "comment/index",
+					"style": {
+						"navigationBarTitleText": "评价中心",
+						"enablePullDownRefresh": true
+					}
+				},
+				{
+					"path": "comment/detail",
+					"style": {
+						"navigationBarTitleText": "评价详情",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "comment/reply",
+					"style": {
+						"navigationBarTitleText": "回复评价",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "wishlist/index",
+					"style": {
+						"navigationBarTitleText": "心愿单审核",
+						"enablePullDownRefresh": true
+					}
+				},
+				{
+					"path": "wishlist/audit",
+					"style": {
+						"navigationBarTitleText": "审核心愿单",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "chat/index",
+					"style": {
+						"navigationBarTitleText": "消息中心",
+						"enablePullDownRefresh": true
+					}
+				},
+				{
+					"path": "chat/detail",
+					"style": {
+						"navigationBarTitleText": "聊天详情",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
 					"path": "profile/index",
 					"style": {
 						"navigationBarTitleText": "商家中心",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "profile/edit",
+					"style": {
+						"navigationBarTitleText": "编辑资料",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "profile/shop",
+					"style": {
+						"navigationBarTitleText": "店铺信息",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "profile/finance",
+					"style": {
+						"navigationBarTitleText": "财务管理",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "profile/withdraw",
+					"style": {
+						"navigationBarTitleText": "提现",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "profile/settings",
+					"style": {
+						"navigationBarTitleText": "设置",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "profile/tutorials",
+					"style": {
+						"navigationBarTitleText": "新手教程",
 						"enablePullDownRefresh": false
 					}
 				}
