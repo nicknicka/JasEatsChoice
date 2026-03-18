@@ -235,6 +235,48 @@
 						"navigationBarTitleText": "卡路里管理",
 						"enablePullDownRefresh": true
 					}
+				},
+				{
+					"path": "calorie/record",
+					"style": {
+						"navigationBarTitleText": "记录饮食",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "calorie/statistics",
+					"style": {
+						"navigationBarTitleText": "统计分析",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "home/merchant-list",
+					"style": {
+						"navigationBarTitleText": "商家列表",
+						"enablePullDownRefresh": true
+					}
+				},
+				{
+					"path": "dish/customize",
+					"style": {
+						"navigationBarTitleText": "菜品定制",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "profile/integral",
+					"style": {
+						"navigationBarTitleText": "我的积分",
+						"enablePullDownRefresh": true
+					}
+				},
+				{
+					"path": "profile/about",
+					"style": {
+						"navigationBarTitleText": "关于我们",
+						"enablePullDownRefresh": false
+					}
 				}
 			]
 		},

@@ -41,7 +41,13 @@ const USER_PAGES = {
   MESSAGE: '/pages-user/message/index',
   HELP: '/pages-user/help/index',
   FEEDBACK: '/pages-user/feedback/index',
-  CALORIE: '/pages-user/calorie/index'
+  CALORIE: '/pages-user/calorie/index',
+  CALORIE_RECORD: '/pages-user/calorie/record',
+  CALORIE_STATISTICS: '/pages-user/calorie/statistics',
+  MERCHANT_LIST: '/pages-user/home/merchant-list',
+  DISH_CUSTOMIZE: '/pages-user/dish/customize',
+  INTEGRAL: '/pages-user/profile/integral',
+  ABOUT: '/pages-user/profile/about'
 }
 
 /**

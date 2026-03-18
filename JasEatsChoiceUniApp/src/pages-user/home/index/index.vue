@@ -136,12 +136,9 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from '@/utils'
+import { toSearch, toMerchantDetail, toDishDetail } from '@/utils/router'
 import { useLocationStore } from '@/store'
 import WeatherLocation from '@/components/common/WeatherLocation.vue'
-
-// Router
-const router = useRouter()
 
 // Store
 const locationStore = useLocationStore()
@@ -426,20 +423,6 @@ const handleCategoryClick = (category) => {
 }
 
 /**
- * 跳转到搜索页
- */
-const toSearch = () => {
-  uni.showToast({
-    title: '搜索功能开发中',
-    icon: 'none'
-  })
-  // TODO: 跳转到搜索页
-  // uni.navigateTo({
-  //   url: '/pages-user/search/index'
-  // })
-}
-
-/**
  * 查看更多分类
  */
 const toMoreCategories = () => {
@@ -454,31 +437,8 @@ const toMoreCategories = () => {
  * 查看更多商家
  */
 const toMoreMerchants = () => {
-  uni.showToast({
-    title: '商家列表功能开发中',
-    icon: 'none'
-  })
-  // TODO: 跳转到商家列表页
-  // uni.navigateTo({
-  //   url: '/pages-user/merchant-list/index'
-  // })
-}
-
-/**
- * 跳转到商家详情
- */
-const toMerchantDetail = (merchantId) => {
   uni.navigateTo({
-    url: `/pages/merchant/detail/index?id=${merchantId}`
-  })
-}
-
-/**
- * 跳转到菜品详情
- */
-const toDishDetail = (dishId) => {
-  uni.navigateTo({
-    url: `/pages/dish/detail/index?id=${dishId}`
+    url: '/pages-user/home/merchant-list'
   })
 }
 
