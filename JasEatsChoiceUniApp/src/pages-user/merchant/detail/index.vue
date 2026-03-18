@@ -242,10 +242,12 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useCartStore } from '@/store'
+import { useCartStore, useUserStore } from '@/store'
+import { merchantApi, dishApi, couponApi } from '@/api'
 
 // Store
 const cartStore = useCartStore()
+const userStore = useUserStore()
 
 // 状态
 const merchantId = ref('')
@@ -340,16 +342,39 @@ const reviews = ref([])
  */
 const loadMerchantDetail = async () => {
   try {
-    // TODO: 调用后端API
-    // const res = await merchantApi.getDetail(merchantId.value)
-    // merchantDetail.value = res.data
+    uni.showLoading({ title: '加载中...' })
 
-    // 模拟数据
-    await new Promise(resolve => setTimeout(resolve, 500))
+    // 调用后端API获取商家详情
+    const res = await merchantApi.getDetail(merchantId.value)
+
+    // 数据映射
+    merchantDetail.value = {
+      id: res.merchantId || res.id,
+      name: res.merchantName || res.name,
+      logo: res.avatar || res.logo || res.coverImage,
+      rating: res.rating || res.score || 5.0,
+      reviewCount: res.reviewCount || res.commentCount || 0,
+      tags: res.tags || [],
+      monthlySales: res.monthlySales || 0,
+      dishCount: res.dishCount || 0,
+      deliveryTime: res.deliveryTime || 30,
+      notice: res.notice || res.announcement || '',
+      businessHours: res.businessHours || '09:00-22:00',
+      deliveryFee: res.deliveryFee || 0,
+      minOrderAmount: res.minOrderAmount || res.minPrice || 0,
+      address: res.address || '',
+      phone: res.phone || ''
+    }
+
+    // 检查是否收藏
+    await checkFavorite()
+
+    uni.hideLoading()
   } catch (error) {
     console.error('加载商家详情失败:', error)
+    uni.hideLoading()
     uni.showToast({
-      title: '加载失败',
+      title: error.message || '加载失败',
       icon: 'none'
     })
   }
@@ -360,13 +385,22 @@ const loadMerchantDetail = async () => {
  */
 const loadCoupons = async () => {
   try {
-    // TODO: 调用后端API
-    // const res = await couponApi.getList({ merchantId: merchantId.value })
-    // coupons.value = res.data
+    // 调用后端API获取商家优惠券
+    const res = await merchantApi.getCoupons(merchantId.value)
 
-    // 模拟数据已在上面定义
+    // 数据映射
+    if (Array.isArray(res)) {
+      coupons.value = res.map(coupon => ({
+        id: coupon.couponId || coupon.id,
+        amount: coupon.amount || coupon.discount || 0,
+        condition: coupon.condition || coupon.minAmount ? `满${coupon.minAmount}可用` : '',
+        received: coupon.received || false
+      }))
+    }
   } catch (error) {
     console.error('加载优惠券失败:', error)
+    // 优惠券加载失败不影响页面显示
+    coupons.value = []
   }
 }
 
@@ -375,79 +409,51 @@ const loadCoupons = async () => {
  */
 const loadDishes = async () => {
   try {
-    // TODO: 调用后端API
-    // const res = await dishApi.getList({ merchantId: merchantId.value })
-    // dishes.value = res.data
+    // 调用后端API获取商家菜品列表
+    const res = await dishApi.getMerchantDishes(merchantId.value, { available: true })
 
-    // 模拟数据 - 全部菜品
-    const allDishes = [
-      {
-        id: 1,
-        name: '宫保鸡丁',
-        description: '经典川菜，酸甜可口',
-        price: '28',
-        originalPrice: '32',
-        monthlySales: 999,
-        image: 'https://via.placeholder.com/300x300/FF6B35/FFFFFF?text=宫保鸡丁',
-        tags: ['热销', '推荐']
-      },
-      {
-        id: 2,
-        name: '鱼香肉丝',
-        description: '传统川菜，下饭神器',
-        price: '26',
-        monthlySales: 888,
-        image: 'https://via.placeholder.com/300x300/667eea/FFFFFF?text=鱼香肉丝',
-        tags: ['热销']
-      },
-      {
-        id: 3,
-        name: '回锅肉',
-        description: '四川名菜，肥而不腻',
-        price: '32',
-        monthlySales: 777,
-        image: 'https://via.placeholder.com/300x300/52c41a/FFFFFF?text=回锅肉',
-        tags: ['荤菜', '推荐']
-      },
-      {
-        id: 4,
-        name: '麻婆豆腐',
-        description: '麻辣鲜香，嫩滑爽口',
-        price: '18',
-        monthlySales: 666,
-        image: 'https://via.placeholder.com/300x300/faad14/FFFFFF?text=麻婆豆腐',
-        tags: ['素菜', '热销']
-      },
-      {
-        id: 5,
-        name: '番茄鸡蛋汤',
-        description: '酸甜开胃，营养丰富',
-        price: '12',
-        monthlySales: 555,
-        image: 'https://via.placeholder.com/300x300/FF6B35/FFFFFF?text=番茄蛋汤',
-        tags: ['汤类']
-      },
-      {
-        id: 6,
-        name: '米饭',
-        description: '优质大米',
-        price: '2',
-        monthlySales: 1200,
-        image: 'https://via.placeholder.com/300x300/667eea/FFFFFF?text=米饭',
-        tags: ['主食', '热销']
-      }
-    ]
+    // 数据映射
+    let allDishes = []
+    if (Array.isArray(res)) {
+      allDishes = res
+    } else if (res && res.list) {
+      allDishes = res.list
+    }
+
+    // 映射字段
+    const mappedDishes = allDishes.map(dish => ({
+      id: dish.dishId || dish.id,
+      name: dish.dishName || dish.name,
+      description: dish.description || dish.desc || '',
+      price: dish.price ? String(dish.price) : '0',
+      originalPrice: dish.originalPrice ? String(dish.originalPrice) : '',
+      monthlySales: dish.monthlySales || dish.sales || 0,
+      image: dish.image || dish.coverImage || dish.avatar,
+      tags: dish.tags || [],
+      category: dish.category || ''
+    }))
 
     // 按分类分配
-    dishes.value.all = allDishes
-    dishes.value.hot = allDishes.filter(d => d.tags.includes('热销'))
-    dishes.value.recommend = allDishes.filter(d => d.tags.includes('推荐'))
-    dishes.value.meat = allDishes.filter(d => d.tags.includes('荤菜'))
-    dishes.value.vegetable = allDishes.filter(d => d.tags.includes('素菜'))
-    dishes.value.soup = allDishes.filter(d => d.tags.includes('汤类'))
-    dishes.value.staple = allDishes.filter(d => d.tags.includes('主食'))
+    dishes.value.all = mappedDishes
+    dishes.value.hot = mappedDishes.filter(d => d.tags.includes('热销') || d.monthlySales > 100)
+    dishes.value.recommend = mappedDishes.filter(d => d.tags.includes('推荐'))
+    dishes.value.meat = mappedDishes.filter(d => d.category === '荤菜' || d.category === 'meat')
+    dishes.value.vegetable = mappedDishes.filter(d => d.category === '素菜' || d.category === 'vegetable')
+    dishes.value.soup = mappedDishes.filter(d => d.category === '汤类' || d.category === 'soup')
+    dishes.value.staple = mappedDishes.filter(d => d.category === '主食' || d.category === 'staple')
+
   } catch (error) {
     console.error('加载菜品失败:', error)
+    // 菜品加载失败使用空数组
+    dishes.value = {
+      all: [],
+      hot: [],
+      recommend: [],
+      meat: [],
+      vegetable: [],
+      soup: [],
+      staple: []
+    }
   }
 }
 
@@ -456,52 +462,27 @@ const loadDishes = async () => {
  */
 const loadReviews = async () => {
   try {
-    // TODO: 调用后端API
-    // const res = await reviewApi.getList({
-    //   merchantId: merchantId.value,
-    //   page: 1,
-    //   size: 3
-    // })
-    // reviews.value = res.data.list
+    // 调用后端API获取商家评价
+    const res = await merchantApi.getReviews(merchantId.value, { page: 1, size: 3 })
 
-    // 模拟数据
-    reviews.value = [
-      {
-        id: 1,
+    // 数据映射
+    if (res && Array.isArray(res)) {
+      reviews.value = res.map(review => ({
+        id: review.reviewId || review.id,
         user: {
-          avatar: 'https://via.placeholder.com/100x100/FF6B35/FFFFFF?text=U1',
-          name: '用户***8'
+          avatar: review.userAvatar || review.user?.avatar,
+          name: review.userName || review.user?.name || '用户***'
         },
-        rating: 5,
-        date: '2026-03-15',
-        content: '味道很好，分量足，配送也快，好评！',
-        dishes: ['宫保鸡丁', '麻婆豆腐']
-      },
-      {
-        id: 2,
-        user: {
-          avatar: 'https://via.placeholder.com/100x100/667eea/FFFFFF?text=U2',
-          name: '用户***2'
-        },
-        rating: 4,
-        date: '2026-03-14',
-        content: '整体不错，就是有一道菜有点咸。',
-        dishes: ['鱼香肉丝']
-      },
-      {
-        id: 3,
-        user: {
-          avatar: 'https://via.placeholder.com/100x100/52c41a/FFFFFF?text=U3',
-          name: '用户***3'
-        },
-        rating: 5,
-        date: '2026-03-13',
-        content: '老顾客了，一直很喜欢这家店的味道。',
-        dishes: ['回锅肉', '番茄鸡蛋汤']
-      }
-    ]
+        rating: review.rating || review.score || 5,
+        date: review.createTime || review.date || '',
+        content: review.content || review.comment || '',
+        dishes: review.dishes || []
+      }))
+    }
   } catch (error) {
     console.error('加载评价失败:', error)
+    // 评价加载失败不影响页面显示
+    reviews.value = []
   }
 }
 
@@ -513,24 +494,80 @@ const switchCategory = (categoryId) => {
 }
 
 /**
+ * 检查收藏状态
+ */
+const checkFavorite = async () => {
+  try {
+    if (!userStore.isLogin) {
+      isFavorite.value = false
+      return
+    }
+
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+    if (!userId) {
+      isFavorite.value = false
+      return
+    }
+
+    const res = await merchantApi.checkFavorite(userId, merchantId.value)
+    isFavorite.value = res || false
+  } catch (error) {
+    console.error('检查收藏状态失败:', error)
+    isFavorite.value = false
+  }
+}
+
+/**
  * 切换收藏
  */
 const toggleFavorite = async () => {
   try {
-    // TODO: 调用后端API
-    // await favoriteApi.toggle({
-    //   type: 'merchant',
-    //   id: merchantId.value
-    // })
+    if (!userStore.isLogin) {
+      uni.showToast({
+        title: '请先登录',
+        icon: 'none'
+      })
+      setTimeout(() => {
+        uni.navigateTo({
+          url: '/pages/login/index'
+        })
+      }, 1500)
+      return
+    }
 
-    isFavorite.value = !isFavorite.value
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+    if (!userId) {
+      throw new Error('用户ID不存在')
+    }
 
-    uni.showToast({
-      title: isFavorite.value ? '已收藏' : '已取消收藏',
-      icon: 'success'
-    })
+    uni.showLoading({ title: '处理中...' })
+
+    if (isFavorite.value) {
+      // 取消收藏
+      await merchantApi.unfavorite(userId, merchantId.value)
+      isFavorite.value = false
+      uni.showToast({
+        title: '已取消收藏',
+        icon: 'success'
+      })
+    } else {
+      // 添加收藏
+      await merchantApi.favorite(userId, merchantId.value)
+      isFavorite.value = true
+      uni.showToast({
+        title: '已收藏',
+        icon: 'success'
+      })
+    }
+
+    uni.hideLoading()
   } catch (error) {
     console.error('收藏失败:', error)
+    uni.hideLoading()
+    uni.showToast({
+      title: error.message || '操作失败',
+      icon: 'none'
+    })
   }
 }
 
@@ -552,19 +589,36 @@ const receiveCoupon = async (coupon) => {
   if (coupon.received) return
 
   try {
-    // TODO: 调用后端API
-    // await couponApi.receive(coupon.id)
+    if (!userStore.isLogin) {
+      uni.showToast({
+        title: '请先登录',
+        icon: 'none'
+      })
+      setTimeout(() => {
+        uni.navigateTo({
+          url: '/pages/login/index'
+        })
+      }, 1500)
+      return
+    }
+
+    uni.showLoading({ title: '领取中...' })
+
+    // 调用后端API领取优惠券
+    await couponApi.receive(coupon.id)
 
     coupon.received = true
 
+    uni.hideLoading()
     uni.showToast({
       title: '领取成功',
       icon: 'success'
     })
   } catch (error) {
     console.error('领取优惠券失败:', error)
+    uni.hideLoading()
     uni.showToast({
-      title: '领取失败',
+      title: error.message || '领取失败',
       icon: 'none'
     })
   }

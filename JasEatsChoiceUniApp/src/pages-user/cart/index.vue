@@ -368,21 +368,36 @@ const submitOrder = () => {
           merchantId: group.merchantId,
           merchant: group.merchant,
           dish: item.dish,
-          quantity: item.quantity
+          quantity: item.quantity,
+          spec: item.spec
         })
       }
     })
   })
 
-  // TODO: 跳转到订单确认页，传递选中的商品
-  uni.navigateTo({
-    url: '/pages/order/confirm/index'
-  })
+  // 将选中的商品数据存储到临时状态，供订单确认页使用
+  // 可以通过事件总线、Pinia store或URL参数传递
+  // 这里使用uni.setStorageSync临时存储
+  try {
+    uni.setStorageSync('temp_order_items', selectedItems)
+    uni.setStorageSync('temp_order_summary', {
+      total_price: totalPrice.value,
+      delivery_fee: totalDeliveryFee.value,
+      packing_fee: totalPackingFee.value,
+      selected_count: selectedCount.value
+    })
 
-  uni.showToast({
-    title: '进入订单确认页',
-    icon: 'none'
-  })
+    // 跳转到订单确认页
+    uni.navigateTo({
+      url: '/pages-user/order/confirm/index'
+    })
+  } catch (error) {
+    console.error('准备订单数据失败:', error)
+    uni.showToast({
+      title: '订单数据准备失败',
+      icon: 'none'
+    })
+  }
 }
 
 // 组件挂载时加载数据

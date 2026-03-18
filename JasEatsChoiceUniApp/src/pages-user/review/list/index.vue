@@ -177,6 +177,11 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useUserStore } from '@/store'
+import { reviewApi } from '@/api'
+
+// Store
+const userStore = useUserStore()
 
 // 状态
 const targetType = ref('dish') // dish 或 merchant
@@ -247,113 +252,80 @@ const loadReviews = async (refresh = false) => {
   loading.value = true
 
   try {
-    // TODO: 调用后端API
-    // const res = await reviewApi.getList({
-    //   targetType: targetType.value,
-    //   targetId: targetId.value,
-    //   filter: activeFilter.value,
-    //   tag: activeTag.value,
-    //   page: currentPage.value,
-    //   size: pageSize
-    // })
-    //
-    // if (refresh) {
-    //   reviews.value = res.data.list
-    // } else {
-    //   reviews.value.push(...res.data.list)
-    // }
-    //
-    // if (res.data.list.length < pageSize) {
-    //   noMore.value = true
-    // }
-
-    // 模拟数据
-    await new Promise(resolve => setTimeout(resolve, 500))
-
-    const mockReviews = [
-      {
-        id: 1,
-        user: {
-          avatar: 'https://via.placeholder.com/100x100/FF6B35/FFFFFF?text=U1',
-          name: '用户***8'
-        },
-        rating: 5,
-        date: '2026-03-15',
-        content: '味道很好，鸡肉嫩滑，花生香脆，非常下饭！分量也很足，下次还会再点。',
-        images: [
-          'https://via.placeholder.com/400x400/FF6B35/FFFFFF?text=评价1',
-          'https://via.placeholder.com/400x400/667eea/FFFFFF?text=评价2'
-        ],
-        dishes: [
-          {
-            id: '1',
-            name: '宫保鸡丁',
-            image: 'https://via.placeholder.com/200x200/FF6B35/FFFFFF?text=宫保鸡丁'
-          }
-        ],
-        merchantReply: '感谢您的好评，我们会继续努力提供美味的菜品！',
-        replyTime: '2026-03-15 14:00',
-        liked: false,
-        likeCount: 12,
-        commentCount: 2,
-        comments: [
-          {
-            id: 1,
-            userName: '用户***2',
-            content: '确实好吃，我也经常点这家'
-          }
-        ]
-      },
-      {
-        id: 2,
-        user: {
-          avatar: 'https://via.placeholder.com/100x100/667eea/FFFFFF?text=U2',
-          name: '用户***2'
-        },
-        rating: 4,
-        date: '2026-03-14',
-        content: '味道不错，就是稍微有点辣，不过还在可接受范围内。',
-        images: [],
-        dishes: [],
-        merchantReply: '',
-        liked: false,
-        likeCount: 5,
-        commentCount: 0,
-        comments: []
-      },
-      {
-        id: 3,
-        user: {
-          avatar: 'https://via.placeholder.com/100x100/52c41a/FFFFFF?text=U3',
-          name: '用户***3'
-        },
-        rating: 5,
-        date: '2026-03-13',
-        content: '配送很快，包装也很好，菜品的味道和分量都对得起这个价格。',
-        images: [],
-        dishes: [],
-        merchantReply: '',
-        liked: true,
-        likeCount: 8,
-        commentCount: 1,
-        comments: [
-          {
-            id: 2,
-            userName: '用户***8',
-            content: '同感！'
-          }
-        ]
-      }
-    ]
-
-    if (refresh) {
-      reviews.value = mockReviews
-    } else {
-      reviews.value.push(...mockReviews)
+    // 构建请求参数
+    const params = {
+      page: currentPage.value,
+      size: pageSize
     }
 
-    // 模拟没有更多数据
-    if (currentPage.value >= 2) {
+    // 根据筛选条件添加参数
+    if (activeFilter.value !== 'all') {
+      if (activeFilter.value === 'good') {
+        params.minRating = 4
+        params.maxRating = 5
+      } else if (activeFilter.value === 'medium') {
+        params.minRating = 3
+        params.maxRating = 3
+      } else if (activeFilter.value === 'bad') {
+        params.minRating = 1
+        params.maxRating = 2
+      } else if (activeFilter.value === 'withImage') {
+        params.hasImage = true
+      }
+    }
+
+    // 根据标签筛选
+    if (activeTag.value !== 'all') {
+      params.tag = activeTag.value
+    }
+
+    // 根据目标类型调用不同的API
+    let res
+    if (targetType.value === 'dish') {
+      res = await reviewApi.getDishReviews(targetId.value, params)
+    } else if (targetType.value === 'merchant') {
+      res = await reviewApi.getMerchantReviews(targetId.value, params)
+    } else {
+      throw new Error('不支持的目标类型')
+    }
+
+    // 数据映射：将后端返回的数据转换为前端需要的格式
+    const mappedReviews = (res.data.list || []).map(review => ({
+      id: review.reviewId || review.id,
+      user: {
+        avatar: review.userAvatar || review.user?.avatar || '',
+        name: review.isAnonymous ? '匿名用户' : (review.userName || review.user?.name || '用户***')
+      },
+      rating: review.rating || 5,
+      date: review.createTime || review.createdAt || '',
+      content: review.content || '',
+      images: review.images || [],
+      dishes: (review.dishes || []).map(dish => ({
+        id: dish.dishId || dish.id,
+        name: dish.dishName || dish.name,
+        image: dish.image || dish.coverImage || ''
+      })),
+      merchantReply: review.merchantReply || '',
+      replyTime: review.replyTime || '',
+      liked: review.liked || false,
+      likeCount: review.likeCount || 0,
+      commentCount: review.commentCount || 0,
+      comments: (review.comments || []).map(comment => ({
+        id: comment.commentId || comment.id,
+        userName: comment.userName || comment.user?.name || '用户***',
+        content: comment.content || ''
+      }))
+    }))
+
+    // 更新列表数据
+    if (refresh) {
+      reviews.value = mappedReviews
+    } else {
+      reviews.value.push(...mappedReviews)
+    }
+
+    // 判断是否还有更多数据
+    if (mappedReviews.length < pageSize) {
       noMore.value = true
     }
   } catch (error) {

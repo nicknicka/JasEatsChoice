@@ -115,8 +115,12 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useUserStore } from '@/store'
+import { couponApi } from '@/api'
 import Empty from '@/components/common/Empty.vue'
-import api from '@/api'
+
+// Store
+const userStore = useUserStore()
 
 // 当前激活的Tab
 const activeTab = ref('available')
@@ -167,19 +171,52 @@ const loadCoupons = async () => {
   loading.value = true
 
   try {
-    const params = {
-      status: activeTab.value
+    if (!userStore.isLogin) {
+      uni.showToast({
+        title: '请先登录',
+        icon: 'none'
+      })
+      setTimeout(() => {
+        uni.navigateTo({
+          url: '/pages/login/index'
+        })
+      }, 1500)
+      loading.value = false
+      return
     }
 
-    const res = await api.coupon.getUserCoupons(params)
-    couponList.value = res.data.list
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+
+    // 调用后端API获取用户优惠券列表
+    const res = await couponApi.getUserCoupons({
+      userId,
+      status: activeTab.value === 'available' ? 'unused' : activeTab.value
+    })
+
+    // 数据映射
+    if (Array.isArray(res)) {
+      couponList.value = res.map(coupon => ({
+        id: coupon.userCouponId || coupon.id,
+        name: coupon.name,
+        description: coupon.description || '',
+        amount: coupon.amount,
+        condition: coupon.condition || coupon.minAmount ? `满${coupon.minAmount}元可用` : '',
+        type: coupon.type || 'discount',
+        validPeriod: `${coupon.startTime} - ${coupon.endTime}`,
+        status: activeTab.value,
+        statusText: getStatusText(activeTab.value),
+        canUse: coupon.status === 'available' || coupon.status === 'unused'
+      }))
+    } else {
+      couponList.value = []
+    }
 
     // 更新数量
-    updateCounts()
+    await updateCounts()
   } catch (error) {
     console.error('加载优惠券失败:', error)
     uni.showToast({
-      title: '加载失败，请重试',
+      title: error.message || '加载失败，请重试',
       icon: 'none'
     })
   } finally {
@@ -188,26 +225,54 @@ const loadCoupons = async () => {
 }
 
 /**
+ * 获取状态文本
+ */
+const getStatusText = (status) => {
+  const statusMap = {
+    'available': '可用',
+    'unused': '可用',
+    'used': '已使用',
+    'expired': '已过期'
+  }
+  return statusMap[status] || status
+}
+
+/**
  * 更新数量
  */
 const updateCounts = async () => {
+  if (!userStore.isLogin) {
+    return
+  }
+
+  const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+
   try {
-    const res = await api.coupon.getUserCoupons({ status: 'available' })
-    availableCount.value = res.data.total
+    const res = await couponApi.getUserCoupons({
+      userId,
+      status: 'unused'
+    })
+    availableCount.value = Array.isArray(res) ? res.length : 0
   } catch (error) {
     console.error('获取可用数量失败:', error)
   }
 
   try {
-    const res = await api.coupon.getUserCoupons({ status: 'used' })
-    usedCount.value = res.data.total
+    const res = await couponApi.getUserCoupons({
+      userId,
+      status: 'used'
+    })
+    usedCount.value = Array.isArray(res) ? res.length : 0
   } catch (error) {
     console.error('获取已用数量失败:', error)
   }
 
   try {
-    const res = await api.coupon.getUserCoupons({ status: 'expired' })
-    expiredCount.value = res.data.total
+    const res = await couponApi.getUserCoupons({
+      userId,
+      status: 'expired'
+    })
+    expiredCount.value = Array.isArray(res) ? res.length : 0
   } catch (error) {
     console.error('获取过期数量失败:', error)
   }

@@ -112,6 +112,11 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useUserStore } from '@/store'
+import { reviewApi } from '@/api'
+
+// Store
+const userStore = useUserStore()
 
 // 状态
 const orderId = ref('')
@@ -181,27 +186,58 @@ const toggleTag = (tagId) => {
 /**
  * 选择图片
  */
-const chooseImage = () => {
+const chooseImage = async () => {
   const remainCount = 9 - uploadImages.value.length
 
   uni.chooseImage({
     count: remainCount,
     sizeType: ['compressed'],
     sourceType: ['album', 'camera'],
-    success: (res) => {
+    success: async (res) => {
       const tempFilePaths = res.tempFilePaths
 
-      // TODO: 上传图片到服务器
-      // const uploadPromises = tempFilePaths.map(filePath => {
-      //   return uni.uploadFile({
-      //     url: 'https://example.com/upload',
-      //     filePath: filePath,
-      //     name: 'file'
-      //   })
-      // })
+      try {
+        uni.showLoading({ title: '上传中...' })
 
-      // 模拟上传成功，直接使用本地路径
-      uploadImages.value.push(...tempFilePaths)
+        // 上传图片到服务器
+        const uploadPromises = tempFilePaths.map(filePath => {
+          return new Promise((resolve, reject) => {
+            uni.uploadFile({
+              url: `${getApp().globalData.baseUrl}/v1/reviews/images`,
+              filePath: filePath,
+              name: 'file',
+              header: {
+                'Authorization': `Bearer ${uni.getStorageSync('token')}`
+              },
+              success: (uploadRes) => {
+                const data = JSON.parse(uploadRes.data)
+                if (data.success) {
+                  resolve(data.data)
+                } else {
+                  reject(new Error(data.message))
+                }
+              },
+              fail: reject
+            })
+          })
+        })
+
+        const uploadedUrls = await Promise.all(uploadPromises)
+        uploadImages.value.push(...uploadedUrls)
+
+        uni.hideLoading()
+        uni.showToast({
+          title: '上传成功',
+          icon: 'success'
+        })
+      } catch (error) {
+        console.error('上传图片失败:', error)
+        uni.hideLoading()
+        uni.showToast({
+          title: '上传失败',
+          icon: 'none'
+        })
+      }
     }
   })
 }
@@ -240,21 +276,43 @@ const submitReview = async () => {
     return
   }
 
-  try {
-    // TODO: 调用后端API提交评价
-    // await reviewApi.submit({
-    //   targetType: targetType.value,
-    //   targetId: targetId.value,
-    //   orderId: orderId.value,
-    //   rating: rating.value,
-    //   tags: selectedTags.value,
-    //   content: reviewContent.value,
-    //   images: uploadImages.value,
-    //   anonymous: isAnonymous.value
-    // })
+  if (!userStore.isLogin) {
+    uni.showToast({
+      title: '请先登录',
+      icon: 'none'
+    })
+    setTimeout(() => {
+      uni.navigateTo({
+        url: '/pages/login/index'
+      })
+    }, 1500)
+    return
+  }
 
-    // 模拟提交成功
-    await new Promise(resolve => setTimeout(resolve, 1000))
+  try {
+    uni.showLoading({
+      title: '提交中...'
+    })
+
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+
+    // 准备评价数据
+    const reviewData = {
+      userId,
+      targetType: targetType.value,
+      targetId: targetId.value,
+      orderId: orderId.value || null,
+      rating: rating.value,
+      content: reviewContent.value,
+      tags: selectedTags.value,
+      images: uploadImages.value,
+      isAnonymous: isAnonymous.value
+    }
+
+    // 调用后端API提交评价
+    await reviewApi.create(reviewData)
+
+    uni.hideLoading()
 
     uni.showToast({
       title: '评价成功',
@@ -267,8 +325,9 @@ const submitReview = async () => {
     }, 1500)
   } catch (error) {
     console.error('提交评价失败:', error)
+    uni.hideLoading()
     uni.showToast({
-      title: '提交失败，请重试',
+      title: error.message || '提交失败，请重试',
       icon: 'none'
     })
   }

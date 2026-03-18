@@ -283,6 +283,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useUserStore } from '@/store'
+import { userApi } from '@/api'
 
 // Pinia store
 const userStore = useUserStore()
@@ -375,9 +376,19 @@ const sendCode = async () => {
     return
   }
 
+  // 验证手机号格式
+  const phoneReg = /^1[3-9]\d{9}$/
+  if (!phoneReg.test(form.value.phone)) {
+    uni.showToast({
+      title: '请输入正确的手机号',
+      icon: 'none'
+    })
+    return
+  }
+
   try {
-    // TODO: 调用后端接口
-    await new Promise(resolve => setTimeout(resolve, 500))
+    // 调用后端发送验证码接口
+    await userApi.sendCode(form.value.phone)
 
     uni.showToast({
       title: '验证码已发送',
@@ -395,7 +406,7 @@ const sendCode = async () => {
   } catch (error) {
     console.error('发送验证码失败:', error)
     uni.showToast({
-      title: '发送失败，请重试',
+      title: error.message || '发送失败，请重试',
       icon: 'none'
     })
   }
@@ -476,13 +487,39 @@ const handleSubmit = async () => {
   loading.value = true
 
   try {
-    // TODO: 调用后端注册接口
-    // await userStore.register({
-    //   ...form.value
-    // })
+    // 1. 先调用注册接口
+    const registerData = {
+      phone: form.value.phone,
+      code: form.value.code,
+      password: form.value.password,
+      nickname: form.value.phone.substring(7) // 使用手机号后4位作为默认昵称
+    }
 
-    // 模拟注册成功
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    const registerRes = await userStore.register(registerData)
+
+    // 2. 注册成功后，完善身体数据
+    if (form.value.height && form.value.weight) {
+      try {
+        const profileData = {
+          userId: registerRes.userId || registerRes.data?.userId,
+          height: Number(form.value.height),
+          weight: Number(form.value.weight),
+          gender: form.value.gender,
+          birthday: form.value.birthday,
+          goal: form.value.goal,
+          preferences: {
+            tastes: form.value.tastes,
+            allergies: form.value.allergies,
+            spiciness: spicinessLevel.value
+          }
+        }
+
+        await userApi.completeProfile(profileData)
+      } catch (profileError) {
+        console.error('完善身体数据失败:', profileError)
+        // 身体数据失败不影响注册流程
+      }
+    }
 
     uni.showToast({
       title: '注册成功',
@@ -492,7 +529,7 @@ const handleSubmit = async () => {
     // 跳转到首页
     setTimeout(() => {
       uni.switchTab({
-        url: '/pages/index/index'
+        url: '/pages-user/home/index'
       })
     }, 1500)
 

@@ -172,8 +172,12 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useUserStore } from '@/stores/user'
 import Empty from '@/components/common/Empty.vue'
-import api from '@/api'
+import { feedbackApi } from '@/api'
+
+// 用户信息store
+const userStore = useUserStore()
 
 // 搜索关键词
 const searchKeyword = ref('')
@@ -228,8 +232,52 @@ const categoryQuestions = computed(() => {
  */
 const loadFaqList = async () => {
   try {
-    const res = await api.help.getFaqList()
-    faqList.value = res.data.list || []
+    // 调用feedbackApi获取FAQ
+    const res = await feedbackApi.getFAQ()
+
+    if (res && res.data) {
+      faqList.value = res.data || []
+    } else {
+      // 使用模拟数据
+      faqList.value = [
+        {
+          id: 1,
+          category: 'order',
+          question: '如何查看订单状态？',
+          answer: '您可以在"我的"页面点击"我的订单"，查看所有订单的状态。点击具体订单可以查看详细的配送进度和骑手信息。'
+        },
+        {
+          id: 2,
+          category: 'order',
+          question: '如何取消订单？',
+          answer: '订单在商家接单前可以取消。进入订单详情页，点击"取消订单"按钮即可。如果商家已接单，需要联系商家协商处理。'
+        },
+        {
+          id: 3,
+          category: 'payment',
+          question: '支持哪些支付方式？',
+          answer: '目前支持微信支付、支付宝、余额支付等多种支付方式。您可以在结算时选择您偏好的支付方式。'
+        },
+        {
+          id: 4,
+          category: 'delivery',
+          question: '配送时间一般是多久？',
+          answer: '一般情况下，配送时间为30-45分钟。具体时间会根据距离、天气、餐品制作时间等因素有所变化，请以APP显示的预计送达时间为准。'
+        },
+        {
+          id: 5,
+          category: 'account',
+          question: '如何修改个人资料？',
+          answer: '进入"我的"页面，点击头像进入个人中心，即可编辑昵称、头像、性别、生日等个人信息。'
+        },
+        {
+          id: 6,
+          category: 'other',
+          question: '如何联系客服？',
+          answer: '您可以通过以下方式联系我们：1. 客服热线：400-123-4567；2. 在线客服：在"我的"页面点击"联系客服"；3. 邮箱：support@example.com'
+        }
+      ]
+    }
   } catch (error) {
     console.error('加载FAQ失败:', error)
 

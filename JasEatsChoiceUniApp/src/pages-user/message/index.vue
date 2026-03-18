@@ -110,14 +110,19 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useUserStore } from '@/store/modules/user'
+import { notificationApi, chatApi } from '@/api'
+
+// 用户store
+const userStore = useUserStore()
 
 // 消息类型筛选
 const filters = ref([
   { label: '全部', value: 'all', count: 0 },
-  { label: '系统', value: 'system', count: 3 },
-  { label: '订单', value: 'order', count: 5 },
-  { label: '聊天', value: 'chat', count: 2 },
-  { label: '活动', value: 'activity', count: 1 }
+  { label: '系统', value: 'system', count: 0 },
+  { label: '订单', value: 'order', count: 0 },
+  { label: '聊天', value: 'chat', count: 0 },
+  { label: '活动', value: 'activity', count: 0 }
 ])
 
 // 当前筛选
@@ -167,104 +172,64 @@ const changeFilter = (value) => {
  * 加载消息列表
  */
 const loadMessages = async (showLoading = true) => {
+  // 登录检查
+  if (!userStore.checkLogin()) {
+    return
+  }
+
   if (showLoading) {
     loading.value = true
   }
 
   try {
-    // TODO: 调用后端API
-    // const res = await messageApi.list({
-    //   type: selectedFilter.value === 'all' ? '' : selectedFilter.value,
-    //   page: page.value,
-    //   pageSize: pageSize.value
-    // })
-
-    // 模拟数据
-    const mockMessages = [
-      {
-        id: 1,
-        type: 'system',
-        title: '系统通知',
-        content: '为了给您提供更好的服务，系统将于今晚00:00-02:00进行升级维护，届时部分功能可能无法使用，敬请谅解。',
-        time: '10分钟前',
-        unread: true,
-        avatar: '',
-        tag: '重要'
-      },
-      {
-        id: 2,
-        type: 'order',
-        title: '订单状态更新',
-        orderStatus: '配送中',
-        content: '您的订单 JSCY202603170001 正在配送中，预计12:30送达，请保持电话畅通。',
-        time: '30分钟前',
-        unread: true,
-        avatar: '',
-        tag: ''
-      },
-      {
-        id: 3,
-        type: 'order',
-        title: '订单状态更新',
-        orderStatus: '已完成',
-        content: '您的订单 JSCY202603160002 已完成，记得给个好评哦~',
-        time: '1小时前',
-        unread: true,
-        avatar: '',
-        tag: ''
-      },
-      {
-        id: 4,
-        type: 'chat',
-        title: '老王家常菜',
-        content: '商家消息',
-        lastMessage: '好的，我们马上为您准备',
-        time: '2小时前',
-        unread: true,
-        avatar: 'https://via.placeholder.com/200x200/FF6B35/FFFFFF?text=老王',
-        tag: ''
-      },
-      {
-        id: 5,
-        type: 'activity',
-        title: '限时活动',
-        content: '新用户专享优惠！首单立减20元，快来下单吧~',
-        time: '昨天',
-        unread: false,
-        avatar: '',
-        tag: '热门'
-      },
-      {
-        id: 6,
-        type: 'chat',
-        title: '川味馆',
-        content: '商家消息',
-        lastMessage: '感谢您的评价，期待您的下次光临',
-        time: '昨天',
-        unread: false,
-        avatar: 'https://via.placeholder.com/200x200/FF6B35/FFFFFF?text=川味',
-        tag: ''
-      },
-      {
-        id: 7,
-        type: 'system',
-        title: '会员权益',
-        content: '恭喜您成功升级为黄金会员，现在可以享受更多专属权益啦！',
-        time: '3天前',
-        unread: false,
-        avatar: '',
-        tag: ''
-      }
-    ]
-
-    if (page.value === 1) {
-      messages.value = mockMessages
-    } else {
-      messages.value.push(...mockMessages)
+    const params = {
+      userId: userStore.userInfo?.userId,
+      page: page.value,
+      size: pageSize.value
     }
 
-    // 更新筛选数量
-    updateFilterCounts()
+    // 根据筛选条件添加类型参数
+    if (selectedFilter.value !== 'all') {
+      params.type = selectedFilter.value
+    }
+
+    const res = await notificationApi.getList(params)
+
+    if (res.code === 200 && res.data) {
+      const notificationList = res.data.records || res.data.list || []
+
+      // 映射数据格式
+      const mappedMessages = notificationList.map(notif => ({
+        id: notif.notificationId || notif.id,
+        type: notif.type || 'system',
+        unread: notif.status === 'unread',
+        title: notif.title,
+        content: notif.content,
+        avatar: notif.avatar || '',
+        time: formatTime(notif.createTime || notif.createdAt),
+        tag: notif.tag || '',
+        // 订单相关字段
+        orderStatus: notif.orderStatus || '',
+        orderId: notif.targetId || notif.orderId,
+        // 聊天相关字段
+        merchantId: notif.merchantId || notif.senderId,
+        lastMessage: notif.lastMessage || '',
+        // 目标类型
+        targetType: notif.targetType
+      }))
+
+      if (page.value === 1) {
+        messages.value = mappedMessages
+      } else {
+        messages.value.push(...mappedMessages)
+      }
+
+      // 判断是否还有更多数据
+      hasMore.value = notificationList.length >= pageSize.value
+
+      // 更新筛选数量
+      await updateCounts()
+    }
   } catch (error) {
     console.error('加载消息列表失败:', error)
     uni.showToast({
@@ -277,15 +242,87 @@ const loadMessages = async (showLoading = true) => {
 }
 
 /**
- * 更新筛选数量
+ * 格式化时间
  */
-const updateFilterCounts = () => {
-  // TODO: 从后端API获取各类型消息数量
-  filters.value[0].count = messages.value.length
-  filters.value[1].count = messages.value.filter(m => m.type === 'system').length
-  filters.value[2].count = messages.value.filter(m => m.type === 'order').length
-  filters.value[3].count = messages.value.filter(m => m.type === 'chat').length
-  filters.value[4].count = messages.value.filter(m => m.type === 'activity').length
+const formatTime = (time) => {
+  if (!time) return ''
+
+  const now = new Date()
+  const target = new Date(time)
+  const diff = now - target
+
+  // 小于1分钟
+  if (diff < 60000) {
+    return '刚刚'
+  }
+  // 小于1小时
+  if (diff < 3600000) {
+    return `${Math.floor(diff / 60000)}分钟前`
+  }
+  // 小于24小时
+  if (diff < 86400000) {
+    return `${Math.floor(diff / 3600000)}小时前`
+  }
+  // 小于7天
+  if (diff < 604800000) {
+    return `${Math.floor(diff / 86400000)}天前`
+  }
+
+  // 超过7天显示日期
+  const month = target.getMonth() + 1
+  const date = target.getDate()
+  return `${month}月${date}日`
+}
+
+/**
+ * 获取通知图标
+ */
+const getNotificationIcon = (type) => {
+  const icons = {
+    system: '📢',
+    order: '📦',
+    chat: '💬',
+    activity: '🎉'
+  }
+  return icons[type] || '📄'
+}
+
+/**
+ * 更新各类型消息数量
+ */
+const updateCounts = async () => {
+  try {
+    // 获取未读总数
+    const unreadRes = await notificationApi.getUnreadCount({
+      userId: userStore.userInfo?.userId
+    })
+
+    if (unreadRes.code === 200) {
+      const totalUnread = unreadRes.data || 0
+      filters.value[0].count = totalUnread
+    }
+
+    // 统计当前列表中各类型的未读数
+    const typeCounts = {
+      system: 0,
+      order: 0,
+      chat: 0,
+      activity: 0
+    }
+
+    messages.value.forEach(msg => {
+      if (msg.unread && typeCounts[msg.type] !== undefined) {
+        typeCounts[msg.type]++
+      }
+    })
+
+    filters.value[1].count = typeCounts.system
+    filters.value[2].count = typeCounts.order
+    filters.value[3].count = typeCounts.chat
+    filters.value[4].count = typeCounts.activity
+  } catch (error) {
+    console.error('更新消息数量失败:', error)
+  }
 }
 
 /**
@@ -310,29 +347,50 @@ const onLoadMore = () => {
 /**
  * 查看消息详情
  */
-const viewMessage = (msg) => {
-  // 标记为已读
-  if (msg.unread) {
-    msg.unread = false
-    updateFilterCounts()
-  }
+const viewMessage = async (msg) => {
+  try {
+    // 标记为已读
+    if (msg.unread) {
+      await notificationApi.markAsRead(msg.id, {
+        userId: userStore.userInfo?.userId
+      })
+      msg.unread = false
+      await updateCounts()
+    }
 
-  // 跳转到详情页
-  if (msg.type === 'chat') {
-    // 跳转到聊天页面
-    uni.navigateTo({
-      url: `/pages/chat/index?merchantId=${msg.merchantId}`
-    })
-  } else if (msg.type === 'order') {
-    // 跳转到订单详情
-    uni.navigateTo({
-      url: `/pages/order/detail/index?id=${msg.orderId}`
-    })
-  } else {
-    // 跳转到消息详情页
-    uni.navigateTo({
-      url: `/pages/message/detail/index?id=${msg.id}`
-    })
+    // 跳转到详情页
+    if (msg.type === 'chat') {
+      // 跳转到聊天页面
+      uni.navigateTo({
+        url: `/pages-common/chat/index?merchantId=${msg.merchantId}`
+      })
+    } else if (msg.type === 'order') {
+      // 跳转到订单详情
+      uni.navigateTo({
+        url: `/pages-user/order/detail/index?id=${msg.orderId}`
+      })
+    } else {
+      // 跳转到消息详情页
+      uni.navigateTo({
+        url: `/pages-user/message/detail/index?id=${msg.id}`
+      })
+    }
+  } catch (error) {
+    console.error('查看消息失败:', error)
+    // 即使API调用失败，也继续跳转
+    if (msg.type === 'chat') {
+      uni.navigateTo({
+        url: `/pages-common/chat/index?merchantId=${msg.merchantId}`
+      })
+    } else if (msg.type === 'order') {
+      uni.navigateTo({
+        url: `/pages-user/order/detail/index?id=${msg.orderId}`
+      })
+    } else {
+      uni.navigateTo({
+        url: `/pages-user/message/detail/index?id=${msg.id}`
+      })
+    }
   }
 }
 
@@ -341,14 +399,15 @@ const viewMessage = (msg) => {
  */
 const markAllRead = async () => {
   try {
-    // TODO: 调用后端API
-    // await messageApi.markAllRead()
+    await notificationApi.markAllAsRead({
+      userId: userStore.userInfo?.userId
+    })
 
     // 更新本地状态
     messages.value.forEach(msg => {
       msg.unread = false
     })
-    updateFilterCounts()
+    await updateCounts()
 
     uni.showToast({
       title: '已全部标记为已读',
@@ -368,14 +427,15 @@ const markAllRead = async () => {
  */
 const deleteMessage = async (msg) => {
   try {
-    // TODO: 调用后端API
-    // await messageApi.delete(msg.id)
+    await notificationApi.delete(msg.id, {
+      userId: userStore.userInfo?.userId
+    })
 
     // 从列表中移除
     const index = messages.value.findIndex(item => item.id === msg.id)
     if (index > -1) {
       messages.value.splice(index, 1)
-      updateFilterCounts()
+      await updateCounts()
     }
 
     uni.showToast({
@@ -412,12 +472,17 @@ const deleteRead = async () => {
     success: async (res) => {
       if (res.confirm) {
         try {
-          // TODO: 调用后端API
-          // await messageApi.deleteRead()
+          // 获取已读消息的ID列表
+          const readIds = readMessages.map(msg => msg.id)
+
+          await notificationApi.batchDelete({
+            userId: userStore.userInfo?.userId,
+            ids: readIds
+          })
 
           // 更新本地状态
           messages.value = messages.value.filter(msg => msg.unread)
-          updateFilterCounts()
+          await updateCounts()
 
           uni.showToast({
             title: '删除成功',

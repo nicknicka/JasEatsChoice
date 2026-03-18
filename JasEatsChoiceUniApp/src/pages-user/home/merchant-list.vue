@@ -94,6 +94,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { toSearch } from '@/utils/router'
+import { merchantApi } from '@/api'
 
 const merchantList = ref([])
 const loading = ref(false)
@@ -132,7 +133,7 @@ onMounted(() => {
 
 const loadMerchants = async (isRefresh = false) => {
   if (loading.value) return
-  
+
   loading.value = true
   if (isRefresh) {
     page.value = 1
@@ -140,32 +141,65 @@ const loadMerchants = async (isRefresh = false) => {
   }
 
   try {
-    // TODO: 调用实际的API
-    // const res = await merchantApi.getList({
-    //   page: page.value,
-    //   size: pageSize,
-    //   sort: sortType.value,
-    //   category: category.value
-    // })
-    
-    // 模拟数据
-    setTimeout(() => {
-      const mockData = generateMockData()
-      if (isRefresh) {
-        merchantList.value = mockData
-      } else {
-        merchantList.value = [...merchantList.value, ...mockData]
-      }
-      
-      if (mockData.length < pageSize) {
-        noMore.value = true
-      }
-      
-      loading.value = false
-      refreshing.value = false
-    }, 500)
+    // 调用后端API获取商家列表
+    const params = {
+      page: page.value,
+      size: pageSize,
+      sort: sortType.value
+    }
+
+    // 如果有分类筛选，添加分类参数
+    if (category.value && category.value !== 'all') {
+      params.category = category.value
+    }
+
+    const res = await merchantApi.getList(params)
+
+    // 处理返回的数据
+    let merchants = []
+    if (Array.isArray(res)) {
+      merchants = res
+    } else if (res && res.list) {
+      merchants = res.list
+    } else if (res && res.records) {
+      merchants = res.records
+    }
+
+    // 数据映射：将后端返回的字段映射到前端需要的字段
+    const mappedMerchants = merchants.map(merchant => ({
+      id: merchant.merchantId || merchant.id,
+      name: merchant.merchantName || merchant.name,
+      image: merchant.avatar || merchant.image || merchant.coverImage,
+      rating: merchant.rating || merchant.score || 5.0,
+      monthlySales: merchant.monthlySales || merchant.sales || 0,
+      deliveryTime: merchant.deliveryTime ? `${merchant.deliveryTime}分钟` : '30分钟',
+      distance: merchant.distance ? `${merchant.distance}km` : '1.0km',
+      minPrice: merchant.minPrice || merchant.minOrderAmount || 0,
+      tags: merchant.tags || [],
+      coupons: merchant.coupons || []
+    }))
+
+    if (isRefresh) {
+      merchantList.value = mappedMerchants
+    } else {
+      merchantList.value = [...merchantList.value, ...mappedMerchants]
+    }
+
+    if (mappedMerchants.length < pageSize) {
+      noMore.value = true
+    }
+
+    loading.value = false
+    refreshing.value = false
   } catch (error) {
     console.error('加载商家列表失败:', error)
+
+    // 如果API调用失败，显示错误提示
+    uni.showToast({
+      title: error.message || '加载失败，请重试',
+      icon: 'none'
+    })
+
     loading.value = false
     refreshing.value = false
   }

@@ -150,6 +150,11 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useUserStore } from '@/store'
+import { orderApi } from '@/api'
+
+// Store
+const userStore = useUserStore()
 
 // 筛选选项
 const filters = ref([
@@ -195,76 +200,93 @@ const loadOrders = async (showLoading = true) => {
   }
 
   try {
-    // TODO: 调用后端API
-    // const res = await orderApi.list({
-    //   status: selectedFilter.value === 'all' ? '' : selectedFilter.value,
-    //   page: page.value,
-    //   pageSize: pageSize.value
-    // })
+    if (!userStore.isLogin) {
+      uni.showToast({
+        title: '请先登录',
+        icon: 'none'
+      })
+      loading.value = false
+      return
+    }
 
-    // 模拟数据
-    const mockOrders = [
-      {
-        id: 1,
-        orderNo: 'JSCY202603170001',
-        merchantId: 1,
-        merchantName: '老王家常菜',
-        status: 'pending',
-        statusText: '待支付',
-        items: [
-          {
-            id: 1,
-            dishId: 1,
-            name: '宫保鸡丁',
-            spec: '微辣',
-            price: '28.00',
-            quantity: 1,
-            image: 'https://via.placeholder.com/200x200/FF6B35/FFFFFF?text=宫保鸡丁'
-          },
-          {
-            id: 2,
-            dishId: 2,
-            name: '米饭',
-            spec: '大份',
-            price: '2.00',
-            quantity: 2,
-            image: 'https://via.placeholder.com/200x200/FFCCBC/FFFFFF?text=米饭'
-          }
-        ],
-        totalQuantity: 3,
-        totalAmount: '32.00',
-        createTime: '2026-03-17 12:34:56'
-      },
-      {
-        id: 2,
-        orderNo: 'JSCY202603160002',
-        merchantId: 2,
-        merchantName: '川味馆',
-        status: 'processing',
-        statusText: '准备中',
-        items: [
-          {
-            id: 3,
-            dishId: 3,
-            name: '鱼香肉丝',
-            spec: '中辣',
-            price: '26.00',
-            quantity: 1,
-            image: 'https://via.placeholder.com/200x200/FF6B35/FFFFFF?text=鱼香肉丝'
-          }
-        ],
-        totalQuantity: 1,
-        totalAmount: '26.00',
-        createTime: '2026-03-16 18:23:45'
-      },
-      {
-        id: 3,
-        orderNo: 'JSCY202603150003',
-        merchantId: 1,
-        merchantName: '老王家常菜',
-        status: 'delivering',
-        statusText: '配送中',
-        items: [
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+
+    // 调用后端API获取订单列表
+    const res = await orderApi.getList({
+      userId,
+      status: selectedFilter.value === 'all' ? '' : selectedFilter.value,
+      page: page.value,
+      size: pageSize.value
+    })
+
+    // 数据映射
+    if (Array.isArray(res)) {
+      const mappedOrders = res.map(order => ({
+        id: order.orderId || order.id,
+        orderNo: order.orderNo || order.orderNumber,
+        merchantId: order.merchantId || order.merchant?.id,
+        merchantName: order.merchantName || order.merchant?.name,
+        status: order.status || order.orderStatus,
+        statusText: mapOrderStatusText(order.status || order.orderStatus),
+        items: (order.items || []).map(item => ({
+          id: item.orderItemId || item.id,
+          dishId: item.dishId || item.dish?.id,
+          name: item.dishName || item.dish?.name,
+          spec: item.spec || '',
+          price: parseFloat(item.price).toFixed(2),
+          quantity: item.quantity,
+          image: item.dish?.image || item.dish?.coverImage || ''
+        })),
+        totalQuantity: (order.items || []).reduce((sum, item) => sum + item.quantity, 0),
+        totalAmount: parseFloat(order.amount?.total || order.totalAmount || 0).toFixed(2),
+        createTime: order.createTime || order.createdAt
+      }))
+
+      if (page.value === 1) {
+        orders.value = mappedOrders
+      } else {
+        orders.value.push(...mappedOrders)
+      }
+
+      // 判断是否还有更多数据
+      hasMore.value = mappedOrders.length >= pageSize.value
+    } else {
+      if (page.value === 1) {
+        orders.value = []
+      }
+      hasMore.value = false
+    }
+
+    loading.value = false
+    refreshing.value = false
+  } catch (error) {
+    console.error('加载订单列表失败:', error)
+    loading.value = false
+    refreshing.value = false
+    uni.showToast({
+      title: error.message || '加载失败',
+      icon: 'none'
+    })
+  }
+}
+
+/**
+ * 映射订单状态文本
+ */
+const mapOrderStatusText = (status) => {
+  const statusMap = {
+    'pending': '待支付',
+    'paid': '已支付',
+    'confirmed': '已确认',
+    'preparing': '准备中',
+    'ready': '待配送',
+    'delivering': '配送中',
+    'completed': '已完成',
+    'cancelled': '已取消',
+    'refunded': '已退款'
+  }
+  return statusMap[status] || status
+}
           {
             id: 4,
             dishId: 4,

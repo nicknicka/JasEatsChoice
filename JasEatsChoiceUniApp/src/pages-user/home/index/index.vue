@@ -137,11 +137,13 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { toSearch, toMerchantDetail, toDishDetail } from '@/utils/router'
-import { useLocationStore } from '@/store'
+import { useLocationStore, useUserStore } from '@/store'
+import { dishApi, merchantApi } from '@/api'
 import WeatherLocation from '@/components/common/WeatherLocation.vue'
 
 // Store
 const locationStore = useLocationStore()
+const userStore = useUserStore()
 
 // 组件引用
 const weatherRef = ref(null)
@@ -304,17 +306,35 @@ const loadBanners = async () => {
  */
 const loadMerchants = async () => {
   try {
-    // TODO: 调用后端API
-    // const res = await merchantApi.getRecommend({
-    //   location: locationStore.currentLocation,
-    //   limit: 10
-    // })
-    // recommendMerchants.value = res.data
+    // 调用后端API获取附近商家
+    const params = {
+      limit: 10
+    }
 
-    // 模拟数据
-    await new Promise(resolve => setTimeout(resolve, 500))
+    // 如果有位置信息，添加位置参数
+    if (locationStore.currentLocation) {
+      params.latitude = locationStore.currentLocation.latitude
+      params.longitude = locationStore.currentLocation.longitude
+      params.radius = 5000 // 5公里范围
+    }
+
+    const res = await merchantApi.getNearby(params)
+
+    // 数据映射
+    if (Array.isArray(res)) {
+      recommendMerchants.value = res.map(merchant => ({
+        id: merchant.merchantId || merchant.id,
+        name: merchant.merchantName || merchant.name,
+        logo: merchant.avatar || merchant.logo || merchant.coverImage,
+        rating: merchant.rating || merchant.score || 0,
+        monthlySales: merchant.monthlySales || 0,
+        tags: merchant.tags || []
+      }))
+    }
   } catch (error) {
     console.error('加载商家失败:', error)
+    // 商家加载失败不影响页面显示
+    recommendMerchants.value = []
   }
 }
 
@@ -323,30 +343,55 @@ const loadMerchants = async () => {
  */
 const loadDishes = async (refresh = false) => {
   try {
-    // TODO: 调用后端API
-    // const res = await dishApi.getRecommend({
-    //   page: currentPage.value,
-    //   size: pageSize,
-    //   location: locationStore.currentLocation
-    // })
-    //
-    // if (refresh) {
-    //   recommendDishes.value = res.data.list
-    // } else {
-    //   recommendDishes.value.push(...res.data.list)
-    // }
-    //
-    // if (res.data.list.length < pageSize) {
-    //   noMore.value = true
-    // }
+    // 调用后端API获取推荐菜品
+    const params = {
+      page: currentPage.value,
+      size: pageSize
+    }
 
-    // 模拟数据
-    await new Promise(resolve => setTimeout(resolve, 500))
+    // 如果有用户ID，用于个性化推荐
+    if (userStore.isLogin) {
+      params.userId = userStore.userInfo?.userId || userStore.userInfo?.id
+    }
 
-    const mockDishes = [
-      {
-        id: Date.now() + 1,
-        name: '宫保鸡丁',
+    const res = await dishApi.getRecommend(params)
+
+    // 数据映射
+    let dishes = []
+    if (Array.isArray(res)) {
+      dishes = res
+    } else if (res && res.list) {
+      dishes = res.list
+    } else if (res && res.records) {
+      dishes = res.records
+    }
+
+    const mappedDishes = dishes.map(dish => ({
+      id: dish.dishId || dish.id,
+      name: dish.dishName || dish.name,
+      description: dish.description || dish.desc || '',
+      price: dish.price ? String(dish.price) : '0',
+      sales: dish.monthlySales || dish.sales || 0,
+      image: dish.image || dish.coverImage
+    }))
+
+    if (refresh) {
+      recommendDishes.value = mappedDishes
+    } else {
+      recommendDishes.value.push(...mappedDishes)
+    }
+
+    if (mappedDishes.length < pageSize) {
+      noMore.value = true
+    }
+  } catch (error) {
+    console.error('加载推荐菜品失败:', error)
+    // 使用空数组，不影响页面显示
+    if (refresh) {
+      recommendDishes.value = []
+    }
+  }
+}
         description: '经典川菜，酸甜可口',
         price: '28',
         sales: 999,

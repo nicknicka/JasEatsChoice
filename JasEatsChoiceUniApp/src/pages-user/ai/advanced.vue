@@ -346,6 +346,14 @@
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useDebounce } from '@/utils/performance'
+import { useUserStore } from '@/stores/user'
+import { aiApi } from '@/api'
+
+// 用户信息store
+const userStore = useUserStore()
+
+// 加载状态
+const loading = ref(false)
 
 // 选项卡
 const activeTab = ref('nutrition')
@@ -635,6 +643,61 @@ const shareReport = () => {
   })
 }
 
+// 加载营养分析数据
+const loadNutritionData = async () => {
+  if (!userStore.isLogin) {
+    uni.showToast({
+      title: '请先登录',
+      icon: 'none'
+    })
+    return
+  }
+
+  try {
+    loading.value = true
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+
+    // 调用营养分析API
+    const res = await aiApi.analyzeNutrition({
+      userId,
+      date: new Date().toISOString().split('T')[0] // 今日日期
+    })
+
+    if (res.data) {
+      // 更新今日热量
+      todayCalories.value = res.data.calories || todayCalories.value
+
+      // 更新营养素数据
+      if (res.data.nutrition) {
+        nutrition.value = {
+          ...nutrition.value,
+          ...res.data.nutrition
+        }
+      }
+
+      // 更新微量元素
+      if (res.data.micronutrients) {
+        micronutrients.value = res.data.micronutrients
+      }
+
+      // 更新AI建议
+      if (res.data.suggestions) {
+        suggestions.value = res.data.suggestions
+      }
+
+      // 更新推荐菜品
+      if (res.data.recommendDishes) {
+        recommendDishes.value = res.data.recommendDishes
+      }
+    }
+  } catch (error) {
+    console.error('加载营养分析数据失败:', error)
+    // 使用默认数据，不影响用户体验
+  } finally {
+    loading.value = false
+  }
+}
+
 // 咨询AI
 const consultAI = () => {
   uni.navigateTo({ url: '/pages-user/ai/index' })
@@ -644,6 +707,9 @@ onMounted(() => {
   nextTick(() => {
     drawNutritionChart()
   })
+
+  // 加载营养分析数据
+  loadNutritionData()
 })
 </script>
 

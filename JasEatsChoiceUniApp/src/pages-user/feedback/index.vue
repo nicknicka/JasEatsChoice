@@ -132,8 +132,12 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useUserStore } from '@/stores/user'
 import Empty from '@/components/common/Empty.vue'
-import api from '@/api'
+import { feedbackApi } from '@/api'
+
+// 用户信息store
+const userStore = useUserStore()
 
 // 反馈类型
 const feedbackType = ref('')
@@ -200,6 +204,14 @@ const deleteImage = (index) => {
  * 提交反馈
  */
 const submitFeedback = async () => {
+  if (!userStore.isLogin) {
+    uni.showToast({
+      title: '请先登录',
+      icon: 'none'
+    })
+    return
+  }
+
   if (!feedbackType.value) {
     uni.showToast({
       title: '请选择反馈类型',
@@ -216,17 +228,39 @@ const submitFeedback = async () => {
     return
   }
 
+  uni.showLoading({
+    title: '提交中...'
+  })
+
   try {
-    // TODO: 上传图片到服务器
+    // 上传图片到服务器
     const uploadedImages = []
+    for (const imagePath of imageList.value) {
+      try {
+        // TODO: 实现图片上传API
+        // const uploadRes = await feedbackApi.uploadImage(formData)
+        // uploadedImages.push(uploadRes.url)
+      } catch (error) {
+        console.error('图片上传失败:', error)
+      }
+    }
+
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
 
     // 提交反馈
-    await api.user.submitFeedback({
+    await feedbackApi.submit({
+      userId,
       type: feedbackType.value,
       content: feedbackContent.value,
       images: uploadedImages,
-      contact: contactInfo.value
+      contact: contactInfo.value,
+      deviceInfo: {
+        platform: uni.getSystemInfoSync().platform,
+        system: uni.getSystemInfoSync().system
+      }
     })
+
+    uni.hideLoading()
 
     uni.showToast({
       title: '提交成功',
@@ -245,6 +279,7 @@ const submitFeedback = async () => {
     }, 1500)
   } catch (error) {
     console.error('提交反馈失败:', error)
+    uni.hideLoading()
     uni.showToast({
       title: '提交失败，请重试',
       icon: 'none'
@@ -256,25 +291,64 @@ const submitFeedback = async () => {
  * 加载历史反馈
  */
 const loadHistoryFeedback = async () => {
+  if (!userStore.isLogin) {
+    return
+  }
+
   try {
-    const res = await api.user.getFeedbackList({
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+    const res = await feedbackApi.getList({
+      userId,
       page: 1,
-      pageSize: 10
+      size: 10
     })
 
-    historyList.value = (res.data.list || []).map(item => {
+    const list = res.list || res.data?.list || []
+    historyList.value = list.map(item => {
       const typeConfig = typeList.find(t => t.value === item.type)
       return {
-        ...item,
+        id: item.feedbackId || item.id,
+        type: item.type,
         typeText: typeConfig ? typeConfig.label : '其他',
-        statusText: getStatusText(item.status)
+        content: item.content,
+        status: item.status,
+        statusText: getStatusText(item.status),
+        time: formatTime(item.createTime || item.createdAt),
+        reply: item.reply || null
       }
     })
   } catch (error) {
     console.error('加载历史反馈失败:', error)
 
-    // 使用模拟数据
+    // 使用空列表
     historyList.value = []
+  }
+}
+
+/**
+ * 格式化时间
+ */
+const formatTime = (time) => {
+  if (!time) return ''
+
+  const date = new Date(time)
+  const now = new Date()
+  const diff = now.getTime() - date.getTime()
+
+  const minutes = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+  const days = Math.floor(diff / 86400000)
+
+  if (minutes < 1) {
+    return '刚刚'
+  } else if (minutes < 60) {
+    return `${minutes}分钟前`
+  } else if (hours < 24) {
+    return `${hours}小时前`
+  } else if (days < 7) {
+    return `${days}天前`
+  } else {
+    return `${date.getMonth() + 1}-${date.getDate()}`
   }
 }
 

@@ -202,6 +202,8 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
+import { orderApi } from '@/api'
 
 // 订单ID
 const orderId = ref('')
@@ -394,19 +396,33 @@ const callMerchant = () => {
 /**
  * 取消订单
  */
-const cancelOrder = () => {
+const cancelOrder = async () => {
   uni.showModal({
     title: '取消订单',
     content: '确定要取消这个订单吗？',
-    success: (res) => {
+    success: async (res) => {
       if (res.confirm) {
-        // TODO: 调用后端API取消订单
-        uni.showToast({
-          title: '订单已取消',
-          icon: 'success'
-        })
+        try {
+          uni.showLoading({ title: '处理中...' })
 
-        orderStatus.value = 'cancelled'
+          await orderApi.cancel(orderId.value)
+
+          uni.hideLoading()
+          uni.showToast({
+            title: '订单已取消',
+            icon: 'success'
+          })
+
+          // 重新加载订单详情
+          await loadOrderDetail()
+        } catch (error) {
+          console.error('取消订单失败:', error)
+          uni.hideLoading()
+          uni.showToast({
+            title: error.message || '取消失败',
+            icon: 'none'
+          })
+        }
       }
     }
   })
@@ -415,24 +431,33 @@ const cancelOrder = () => {
 /**
  * 确认收货
  */
-const confirmReceipt = () => {
+const confirmReceipt = async () => {
   uni.showModal({
     title: '确认收货',
     content: '确认已收到商品吗？',
-    success: (res) => {
+    success: async (res) => {
       if (res.confirm) {
-        // TODO: 调用后端API确认收货
-        uni.showToast({
-          title: '确认收货成功',
-          icon: 'success'
-        })
+        try {
+          uni.showLoading({ title: '处理中...' })
 
-        orderStatus.value = 'completed'
-        currentProgressIndex.value = 4
-        orderProgress.value[3].completed = true
-        orderProgress.value[3].time = '2026-03-17 12:30'
-        orderProgress.value[4].completed = true
-        orderProgress.value[4].time = '2026-03-17 12:35'
+          await orderApi.confirm(orderId.value)
+
+          uni.hideLoading()
+          uni.showToast({
+            title: '确认收货成功',
+            icon: 'success'
+          })
+
+          // 重新加载订单详情
+          await loadOrderDetail()
+        } catch (error) {
+          console.error('确认收货失败:', error)
+          uni.hideLoading()
+          uni.showToast({
+            title: error.message || '确认失败',
+            icon: 'none'
+          })
+        }
       }
     }
   })
@@ -486,7 +511,7 @@ const orderAgain = () => {
 }
 
 // 组件挂载时加载数据
-onMounted(() => {
+onMounted(async () => {
   // 获取页面参数
   const pages = getCurrentPages()
   const currentPage = pages[pages.length - 1]
@@ -494,17 +519,125 @@ onMounted(() => {
 
   if (options.id) {
     orderId.value = options.id
+    await loadOrderDetail()
   }
-
-  // TODO: 加载订单详情
-  // const res = await orderApi.getDetail(orderId.value)
-  // orderStatus.value = res.data.status
-  // orderItems.value = res.data.items
-  // orderInfo.value = res.data.info
-  // orderAddress.value = res.data.address
-  // orderAmount.value = res.data.amount
-  // orderProgress.value = res.data.progress
 })
+
+/**
+ * 加载订单详情
+ */
+const loadOrderDetail = async () => {
+  try {
+    uni.showLoading({ title: '加载中...' })
+
+    const res = await orderApi.getDetail(orderId.value)
+
+    // 数据映射
+    orderStatus.value = mapOrderStatus(res.status || res.orderStatus)
+
+    // 映射订单商品
+    if (res.items && Array.isArray(res.items)) {
+      orderItems.value = [{
+        merchantId: res.merchantId || res.merchant?.id,
+        merchant: {
+          id: res.merchantId || res.merchant?.id,
+          name: res.merchantName || res.merchant?.name,
+          logo: res.merchant?.logo || res.merchant?.avatar || ''
+        },
+        items: res.items.map(item => ({
+          dish: {
+            id: item.dishId || item.dish?.id,
+            name: item.dishName || item.dish?.name,
+            price: item.price,
+            image: item.dish?.image || item.dish?.coverImage || ''
+          },
+          quantity: item.quantity,
+          spec: item.spec || ''
+        }))
+      }]
+    }
+
+    // 订单基本信息
+    orderInfo.value = {
+      orderNo: res.orderNo || res.orderNumber,
+      createTime: res.createTime || res.createdAt,
+      paymentMethod: mapPaymentMethod(res.paymentMethod),
+      deliveryTime: res.deliveryTime || res.expectedDeliveryTime || '尽快送达'
+    }
+
+    // 收货地址
+    if (res.address) {
+      orderAddress.value = {
+        name: res.address.receiverName || res.address.name,
+        phone: res.address.receiverPhone || res.address.phone,
+        address: `${res.address.province || ''}${res.address.city || ''}${res.address.district || ''}${res.address.detailAddress || res.address.address || ''}`
+      }
+    }
+
+    // 订单金额
+    if (res.amount) {
+      orderAmount.value = {
+        subtotal: parseFloat(res.amount.subtotal || res.amount.goodsAmount || 0),
+        deliveryFee: parseFloat(res.amount.deliveryFee || 0),
+        packingFee: parseFloat(res.amount.packingFee || 0),
+        discount: parseFloat(res.amount.discount || res.amount.couponDiscount || 0),
+        total: parseFloat(res.amount.total || res.amount.finalAmount || 0)
+      }
+    }
+
+    // 订单进度
+    if (res.progress && Array.isArray(res.progress)) {
+      orderProgress.value = res.progress.map((step, index) => ({
+        title: step.title || step.status,
+        time: step.time || step.createTime || '',
+        completed: step.completed || step.status === 'completed'
+      }))
+
+      // 找到当前进度
+      const currentIndex = orderProgress.value.findIndex(step => !step.completed)
+      currentProgressIndex.value = currentIndex === -1 ? orderProgress.value.length - 1 : currentIndex
+    }
+
+    uni.hideLoading()
+  } catch (error) {
+    console.error('加载订单详情失败:', error)
+    uni.hideLoading()
+    uni.showToast({
+      title: error.message || '加载失败',
+      icon: 'none'
+    })
+  }
+}
+
+/**
+ * 映射订单状态
+ */
+const mapOrderStatus = (status) => {
+  const statusMap = {
+    'pending': { value: 'pending', icon: '⏳', text: '等待支付', tips: '请尽快完成支付' },
+    'paid': { value: 'paid', icon: '✅', text: '支付成功', tips: '商家将尽快接单' },
+    'confirmed': { value: 'confirmed', icon: '👨‍🍳', text: '商家已接单', tips: '正在准备您的餐品' },
+    'preparing': { value: 'preparing', icon: '🍳', text: '正在准备', tips: '预计还需20分钟' },
+    'ready': { value: 'ready', icon: '📦', text: '已出餐', tips: '等待骑手取餐' },
+    'delivering': { value: 'delivering', icon: '🚴', text: '配送中', tips: '骑手正在配送中' },
+    'completed': { value: 'completed', icon: '✅', text: '已送达', tips: '感谢您的订购' },
+    'cancelled': { value: 'cancelled', icon: '❌', text: '已取消', tips: '订单已取消' },
+    'refunded': { value: 'refunded', icon: '💰', text: '已退款', tips: '退款将在3-5个工作日到账' }
+  }
+  return statusMap[status] || { value: status, icon: '📋', text: '未知状态', tips: '' }
+}
+
+/**
+ * 映射支付方式
+ */
+const mapPaymentMethod = (method) => {
+  const methodMap = {
+    'wechat': '微信支付',
+    'alipay': '支付宝',
+    'balance': '余额支付'
+  }
+  return methodMap[method] || method || '在线支付'
+}
 </script>
 
 <style lang="scss" scoped>

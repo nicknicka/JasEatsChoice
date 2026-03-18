@@ -204,6 +204,11 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useUserStore } from '@/stores/user'
+import { aiApi } from '@/api'
+
+// 用户信息store
+const userStore = useUserStore()
 
 // 提取方式
 const extractMethod = ref('image')
@@ -352,18 +357,59 @@ const toggleOption = (option) => {
 /**
  * 开始提取
  */
-const startExtract = () => {
+const startExtract = async () => {
+  if (!userStore.isLogin) {
+    uni.showToast({
+      title: '请先登录',
+      icon: 'none'
+    })
+    return
+  }
+
   extracting.value = true
 
-  // TODO: 调用AI提取API
-  // const res = await aiApi.extractContent({
-  //   type: extractMethod.value,
-  //   file: uploadedFile.value,
-  //   options: extractOptions.value
-  // })
+  try {
+    // 准备提取数据
+    const extractData = {
+      type: extractMethod.value,
+      url: extractMethod.value === 'text' ? uploadedFile.value : undefined,
+      content: extractMethod.value === 'text' ? uploadedFile.value : undefined,
+      options: extractOptions.value
+    }
 
-  // 模拟提取结果
-  setTimeout(() => {
+    // 如果是图片或视频，需要先上传
+    if (extractMethod.value === 'image' || extractMethod.value === 'video') {
+      // TODO: 实现文件上传逻辑
+      // 这里需要先调用上传API，获取文件URL
+      uni.showToast({
+        title: '正在上传文件...',
+        icon: 'loading'
+      })
+    }
+
+    // 调用AI提取API
+    const res = await aiApi.extractContent(extractData)
+
+    if (res.data) {
+      extractResult.value = {
+        dishName: res.data.dishName || '',
+        ingredients: res.data.ingredients || [],
+        steps: res.data.steps || [],
+        nutrition: res.data.nutrition || {},
+        confidence: res.data.confidence || 0
+      }
+
+      uni.showToast({
+        title: '提取成功',
+        icon: 'success'
+      })
+    } else {
+      throw new Error('提取失败')
+    }
+  } catch (error) {
+    console.error('提取失败:', error)
+
+    // API调用失败时使用模拟数据
     extractResult.value = {
       dishName: '宫保鸡丁',
       ingredients: [
@@ -392,13 +438,14 @@ const startExtract = () => {
       },
       confidence: 95
     }
-    extracting.value = false
 
     uni.showToast({
-      title: '提取成功',
-      icon: 'success'
+      title: '提取失败，已使用示例数据',
+      icon: 'none'
     })
-  }, 2000)
+  } finally {
+    extracting.value = false
+  }
 }
 
 /**

@@ -76,6 +76,11 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useUserStore } from '@/store'
+import { addressApi } from '@/api'
+
+// Store
+const userStore = useUserStore()
 
 // 状态
 const addresses = ref([])
@@ -97,61 +102,56 @@ const loadAddresses = async (showLoading = true) => {
   }
 
   try {
-    // TODO: 调用后端API
-    // const res = await addressApi.list({
-    //   page: page.value,
-    //   pageSize: pageSize.value
-    // })
-
-    // 模拟数据
-    const mockData = [
-      {
-        id: 1,
-        name: '张三',
-        phone: '138****8000',
-        province: '北京市',
-        city: '北京市',
-        district: '朝阳区',
-        detail: '建国路93号万达广场10号楼1001室',
-        isDefault: true,
-        tags: ['家', '周末配送']
-      },
-      {
-        id: 2,
-        name: '张三',
-        phone: '138****8000',
-        province: '北京市',
-        city: '北京市',
-        district: '海淀区',
-        detail: '中关村大街1号科技大厦15层',
-        isDefault: false,
-        tags: ['公司']
-      },
-      {
-        id: 3,
-        name: '李四',
-        phone: '139****1234',
-        province: '上海市',
-        city: '上海市',
-        district: '浦东新区',
-        detail: '陆家嘴环路1000号世纪金融中心3号楼',
-        isDefault: false,
-        tags: []
-      }
-    ]
-
-    if (page.value === 1) {
-      addresses.value = mockData
-    } else {
-      addresses.value.push(...mockData)
+    if (!userStore.isLogin) {
+      uni.showToast({
+        title: '请先登录',
+        icon: 'none'
+      })
+      loading.value = false
+      return
     }
 
-    // 判断是否还有更多数据
-    hasMore.value = addresses.value.length >= pageSize.value
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+
+    // 调用后端API获取地址列表
+    const res = await addressApi.getList({
+      userId,
+      page: page.value,
+      size: pageSize.value
+    })
+
+    // 数据映射
+    if (Array.isArray(res)) {
+      const mappedAddresses = res.map(addr => ({
+        id: addr.addressId || addr.id,
+        name: addr.receiverName || addr.name,
+        phone: addr.receiverPhone || addr.phone,
+        province: addr.province || '',
+        city: addr.city || '',
+        district: addr.district || '',
+        detail: addr.detailAddress || addr.detail || '',
+        isDefault: addr.isDefault || false,
+        tags: addr.tags || []
+      }))
+
+      if (page.value === 1) {
+        addresses.value = mappedAddresses
+      } else {
+        addresses.value.push(...mappedAddresses)
+      }
+
+      // 判断是否还有更多数据
+      hasMore.value = mappedAddresses.length >= pageSize.value
+    } else {
+      if (page.value === 1) {
+        addresses.value = []
+      }
+      hasMore.value = false
+    }
   } catch (error) {
     console.error('加载地址列表失败:', error)
     uni.showToast({
-      title: '加载失败，请重试',
+      title: error.message || '加载失败',
       icon: 'none'
     })
   } finally {
@@ -224,8 +224,12 @@ const deleteAddress = (id) => {
     success: async (res) => {
       if (res.confirm) {
         try {
-          // TODO: 调用后端API
-          // await addressApi.delete(id)
+          uni.showLoading({ title: '删除中...' })
+
+          const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+          await addressApi.delete(id, { userId })
+
+          uni.hideLoading()
 
           // 从列表中移除
           const index = addresses.value.findIndex(item => item.id === id)
@@ -244,8 +248,9 @@ const deleteAddress = (id) => {
           }
         } catch (error) {
           console.error('删除地址失败:', error)
+          uni.hideLoading()
           uni.showToast({
-            title: '删除失败，请重试',
+            title: error.message || '删除失败',
             icon: 'none'
           })
         }
@@ -259,8 +264,12 @@ const deleteAddress = (id) => {
  */
 const setDefaultAddress = async (address) => {
   try {
-    // TODO: 调用后端API
-    // await addressApi.setDefault(address.id)
+    uni.showLoading({ title: '设置中...' })
+
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+    await addressApi.setDefault(address.id, { userId })
+
+    uni.hideLoading()
 
     // 更新列表
     addresses.value.forEach(item => {
@@ -273,8 +282,9 @@ const setDefaultAddress = async (address) => {
     })
   } catch (error) {
     console.error('设置默认地址失败:', error)
+    uni.hideLoading()
     uni.showToast({
-      title: '设置失败，请重试',
+      title: error.message || '设置失败',
       icon: 'none'
     })
   }

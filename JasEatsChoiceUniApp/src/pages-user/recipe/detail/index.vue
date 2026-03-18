@@ -190,9 +190,13 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
+import { useUserStore } from '@/store'
+import { recipeApi, favoriteApi } from '@/api'
 import Loading from '@/components/common/Loading.vue'
 import Empty from '@/components/common/Empty.vue'
-import api from '@/api'
+
+// Store
+const userStore = useUserStore()
 
 // 食谱ID
 const recipeId = ref('')
@@ -273,18 +277,47 @@ const loadRecipeDetail = async () => {
   loading.value = true
 
   try {
-    const res = await api.recipe.getRecipeDetail(recipeId.value)
-    recipe.value = res.data
+    const res = await recipeApi.getDetail(recipeId.value)
+
+    // 数据映射
+    recipe.value = {
+      id: res.recipeId || res.id,
+      name: res.recipeName || res.name,
+      image: res.image || res.coverImage || '',
+      description: res.description || '',
+      tags: res.tags || [],
+      cookTime: res.cookTime || 30,
+      servings: res.servings || 2,
+      difficulty: res.difficulty || '简单',
+      calories: res.calories || 0,
+      protein: res.protein || 0,
+      carbs: res.carbs || 0,
+      fat: res.fat || 0,
+      isFavorite: false
+    }
 
     // 设置食材和步骤
-    ingredients.value = recipe.value.ingredients || []
-    steps.value = recipe.value.steps || []
+    ingredients.value = (res.ingredients || []).map(ing => ({
+      ...ing,
+      checked: false
+    }))
+    steps.value = res.steps || []
+
+    // 检查收藏状态
+    await checkFavorite()
 
     // 加载相关食谱
     loadRelatedRecipes()
   } catch (error) {
     console.error('加载食谱详情失败:', error)
     uni.showToast({
+      title: error.message || '加载失败',
+      icon: 'none'
+    })
+  } finally {
+    loading.value = false
+  }
+}
       title: '加载失败',
       icon: 'none'
     })
@@ -298,13 +331,43 @@ const loadRecipeDetail = async () => {
  */
 const loadRelatedRecipes = async () => {
   try {
-    const res = await api.recipe.getRelatedRecipes({
-      recipeId: recipeId.value,
-      limit: 6
+    const res = await recipeApi.getRecommend({
+      limit: 6,
+      excludeId: recipeId.value
     })
-    relatedRecipes.value = res.data.list || []
+
+    // 数据映射
+    if (Array.isArray(res)) {
+      relatedRecipes.value = res.map(r => ({
+        id: r.recipeId || r.id,
+        name: r.recipeName || r.name,
+        image: r.image || r.coverImage || '',
+        cookTime: r.cookTime || 30,
+        difficulty: r.difficulty || '简单'
+      }))
+    } else {
+      relatedRecipes.value = []
+    }
   } catch (error) {
     console.error('加载相关食谱失败:', error)
+    relatedRecipes.value = []
+  }
+}
+
+/**
+ * 检查收藏状态
+ */
+const checkFavorite = async () => {
+  try {
+    if (!userStore.isLogin || !recipeId.value) {
+      return
+    }
+
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+    const res = await favoriteApi.checkRecipe(recipeId.value, { userId })
+    recipe.value.isFavorite = res || false
+  } catch (error) {
+    console.error('检查收藏状态失败:', error)
   }
 }
 
@@ -312,16 +375,36 @@ const loadRelatedRecipes = async () => {
  * 切换收藏
  */
 const toggleFavorite = async () => {
+  if (!userStore.isLogin) {
+    uni.showToast({
+      title: '请先登录',
+      icon: 'none'
+    })
+    setTimeout(() => {
+      uni.navigateTo({
+        url: '/pages/login/index'
+      })
+    }, 1500)
+    return
+  }
+
   try {
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+
     if (recipe.value.isFavorite) {
-      await api.recipe.unfavoriteRecipe(recipeId.value)
+      await favoriteApi.removeRecipe(recipeId.value, { userId })
       recipe.value.isFavorite = false
       uni.showToast({
         title: '已取消收藏',
         icon: 'success'
       })
     } else {
-      await api.recipe.favoriteRecipe(recipeId.value)
+      await favoriteApi.addRecipe({
+        userId,
+        recipeId: recipeId.value,
+        recipeName: recipe.value.name,
+        recipeImage: recipe.value.image
+      })
       recipe.value.isFavorite = true
       uni.showToast({
         title: '收藏成功',
@@ -331,7 +414,7 @@ const toggleFavorite = async () => {
   } catch (error) {
     console.error('操作失败:', error)
     uni.showToast({
-      title: '操作失败',
+      title: error.message || '操作失败',
       icon: 'none'
     })
   }
@@ -367,11 +450,20 @@ const previewImage = (url) => {
  * 加入菜单
  */
 const addToMenu = async () => {
-  try {
-    await api.recipe.addToMenu(recipeId.value)
+  if (!userStore.isLogin) {
     uni.showToast({
-      title: '已加入菜单',
-      icon: 'success'
+      title: '请先登录',
+      icon: 'none'
+    })
+    return
+  }
+
+  try {
+    // TODO: 创建 addToMenu API
+    // await recipeApi.addToMenu(recipeId.value)
+    uni.showToast({
+      title: '功能开发中',
+      icon: 'none'
     })
   } catch (error) {
     console.error('加入菜单失败:', error)

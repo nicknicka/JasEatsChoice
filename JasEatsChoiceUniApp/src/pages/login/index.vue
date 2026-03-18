@@ -106,6 +106,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useUserStore } from '@/store'
+import { userApi } from '@/api'
 
 // Pinia store
 const userStore = useUserStore()
@@ -174,13 +175,18 @@ const handleWechatLogin = async (e) => {
   loading.value = true
 
   try {
-    // TODO: 调用后端微信登录接口
-    // const res = await userStore.wechatLogin({
-    //   userInfo: e.detail.userInfo
-    // })
+    // 调用后端微信登录接口
+    const loginData = {
+      nickName: userInfo.nickName,
+      avatarUrl: userInfo.avatarUrl,
+      gender: userInfo.gender,
+      country: userInfo.country,
+      province: userInfo.province,
+      city: userInfo.city,
+      language: userInfo.language
+    }
 
-    // 模拟登录成功
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    const res = await userStore.wechatLogin(loginData)
 
     uni.showToast({
       title: '登录成功',
@@ -190,7 +196,7 @@ const handleWechatLogin = async (e) => {
     // 跳转到首页
     setTimeout(() => {
       uni.switchTab({
-        url: '/pages/index/index'
+        url: '/pages-user/home/index'
       })
     }, 1500)
 
@@ -238,11 +244,8 @@ const sendCode = async () => {
   }
 
   try {
-    // TODO: 调用后端发送验证码接口
-    // await userApi.sendCode(phoneForm.value.phone)
-
-    // 模拟发送成功
-    await new Promise(resolve => setTimeout(resolve, 500))
+    // 调用后端发送验证码接口
+    await userApi.sendCode(phoneForm.value.phone)
 
     uni.showToast({
       title: '验证码已发送',
@@ -278,14 +281,11 @@ const handlePhoneLogin = async () => {
   loading.value = true
 
   try {
-    // TODO: 调用后端登录接口
-    // await userStore.login({
-    //   phone: phoneForm.value.phone,
-    //   code: phoneForm.value.code
-    // })
-
-    // 模拟登录成功
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // 调用后端登录接口
+    await userStore.login({
+      phone: phoneForm.value.phone,
+      code: phoneForm.value.code
+    })
 
     uni.showToast({
       title: '登录成功',
@@ -295,7 +295,7 @@ const handlePhoneLogin = async () => {
     // 跳转到首页
     setTimeout(() => {
       uni.switchTab({
-        url: '/pages/index/index'
+        url: '/pages-user/home/index'
       })
     }, 1500)
 

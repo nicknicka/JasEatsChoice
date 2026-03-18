@@ -199,6 +199,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { dishApi, merchantApi, recipeApi } from '@/api'
 
 // 状态
 const searchKeyword = ref('')
@@ -283,65 +284,59 @@ const onSearch = async () => {
     if (searchHistory.value.length > 10) {
       searchHistory.value.pop()
     }
+    // 保存到本地存储
+    uni.setStorageSync('searchHistory', JSON.stringify(searchHistory.value))
   }
 
   loading.value = true
 
   try {
-    // TODO: 调用后端搜索API
-    // const res = await searchApi.search({
-    //   keyword,
-    //   tab: activeTab.value
-    // })
-    //
-    // merchantResults.value = res.data.merchants || []
-    // dishResults.value = res.data.dishes || []
-    // recipeResults.value = res.data.recipes || []
+    // 根据当前Tab搜索
+    if (activeTab.value === 'all' || activeTab.value === 'dish') {
+      const dishRes = await dishApi.search({ keyword, page: 1, size: 20 })
+      const dishes = dishRes.list || dishRes.data?.list || []
+      dishResults.value = dishes.map(dish => ({
+        id: dish.dishId || dish.id,
+        name: dish.dishName || dish.name,
+        description: dish.description || dish.desc || '',
+        price: dish.price || '0',
+        sales: dish.sales || dish.monthlySales || 0,
+        image: dish.image || dish.cover || ''
+      }))
+    }
 
-    // 模拟搜索结果
-    await new Promise(resolve => setTimeout(resolve, 800))
+    if (activeTab.value === 'all' || activeTab.value === 'merchant') {
+      // 商家搜索 - 使用getList的keyword参数
+      const merchantRes = await merchantApi.getList({ keyword, page: 1, size: 20 })
+      const merchants = merchantRes.list || merchantRes.data?.list || []
+      merchantResults.value = merchants.map(merchant => ({
+        id: merchant.merchantId || merchant.id,
+        name: merchant.merchantName || merchant.name,
+        logo: merchant.logo || merchant.avatar || '',
+        rating: merchant.rating || 0,
+        monthlySales: merchant.monthlySales || 0,
+        tags: merchant.tags || []
+      }))
+    }
 
-    // 模拟商家结果
-    merchantResults.value = [
-      {
-        id: 1,
-        name: '老王家常菜',
-        logo: 'https://via.placeholder.com/200x200/FF6B35/FFFFFF?text=老王',
-        rating: 4.8,
-        monthlySales: 999,
-        tags: ['川菜', '配送快']
-      }
-    ]
-
-    // 模拟菜品结果
-    dishResults.value = [
-      {
-        id: 1,
-        name: '宫保鸡丁',
-        description: '经典川菜，酸甜可口',
-        price: '28',
-        sales: 999,
-        image: 'https://via.placeholder.com/300x300/FF6B35/FFFFFF?text=宫保鸡丁'
-      },
-      {
-        id: 4,
-        name: '麻婆豆腐',
-        description: '麻辣鲜香，嫩滑爽口',
-        price: '18',
-        sales: 666,
-        image: 'https://via.placeholder.com/300x300/faad14/FFFFFF?text=麻婆豆腐'
-      }
-    ]
-
-    // 模拟食谱结果
-    recipeResults.value = []
+    if (activeTab.value === 'all' || activeTab.value === 'recipe') {
+      const recipeRes = await recipeApi.search({ keyword, page: 1, size: 20 })
+      const recipes = recipeRes.list || recipeRes.data?.list || []
+      recipeResults.value = recipes.map(recipe => ({
+        id: recipe.recipeId || recipe.id,
+        name: recipe.recipeName || recipe.name,
+        description: recipe.description || '',
+        image: recipe.image || recipe.cover || '',
+        difficulty: recipe.difficulty || '简单'
+      }))
+    }
 
     // 清空建议
     searchSuggestions.value = []
   } catch (error) {
     console.error('搜索失败:', error)
     uni.showToast({
-      title: '搜索失败',
+      title: '搜索失败，请重试',
       icon: 'none'
     })
   } finally {
@@ -444,12 +439,29 @@ const toDishDetail = (dishId) => {
  * 跳转到食谱详情
  */
 const toRecipeDetail = (recipeId) => {
-  uni.showToast({
-    title: '食谱详情页开发中',
-    icon: 'none'
+  uni.navigateTo({
+    url: `/pages-user/recipe/detail?id=${recipeId}`
   })
-  // TODO: 跳转到食谱详情页
 }
+
+/**
+ * 加载搜索历史
+ */
+const loadSearchHistory = () => {
+  try {
+    const history = uni.getStorageSync('searchHistory')
+    if (history) {
+      searchHistory.value = JSON.parse(history)
+    }
+  } catch (error) {
+    console.error('加载搜索历史失败:', error)
+  }
+}
+
+// 组件挂载时加载搜索历史
+onMounted(() => {
+  loadSearchHistory()
+})
 </script>
 
 <style lang="scss" scoped>

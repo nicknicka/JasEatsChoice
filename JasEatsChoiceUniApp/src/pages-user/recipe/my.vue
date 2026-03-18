@@ -127,7 +127,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
+import { useUserStore } from '@/store/modules/user'
+import { favoriteApi } from '@/api/modules/favorite'
+
+// 获取用户store
+const userStore = useUserStore()
 
 // 筛选选项
 const filters = ref([
@@ -154,6 +159,43 @@ const page = ref(1)
 const pageSize = ref(10)
 
 /**
+ * 获取餐次文本
+ */
+const getMealTypeText = (mealType) => {
+  const mealTypeMap = {
+    breakfast: '早餐',
+    lunch: '午餐',
+    dinner: '晚餐',
+    snack: '加餐'
+  }
+  return mealTypeMap[mealType] || '午餐'
+}
+
+/**
+ * 格式化食谱数据
+ */
+const formatRecipeData = (recipe) => {
+  return {
+    id: recipe.recipeId || recipe.id,
+    date: recipe.createTime || recipe.createdAt || '',
+    mealType: recipe.mealType || 'lunch',
+    mealTypeText: getMealTypeText(recipe.mealType),
+    title: recipe.recipeName || recipe.name,
+    image: recipe.image || recipe.coverImage || '',
+    tags: recipe.tags || [],
+    calories: recipe.calories || 0,
+    time: `${recipe.cookTime || 30}分钟`,
+    servings: recipe.servings || 2,
+    ingredients: recipe.ingredients?.map(i => i.name).join('、') || '',
+    nutrition: {
+      '蛋白质': `${recipe.protein || 0}g`,
+      '碳水': `${recipe.carbs || 0}g`,
+      '脂肪': `${recipe.fat || 0}g`
+    }
+  }
+}
+
+/**
  * 切换筛选
  */
 const changeFilter = (value) => {
@@ -167,106 +209,46 @@ const changeFilter = (value) => {
  * 加载食谱列表
  */
 const loadRecipes = async (showLoading = true) => {
+  // 检查登录状态
+  if (!userStore.checkLogin()) {
+    return
+  }
+
   if (showLoading) {
     loading.value = true
   }
 
   try {
-    // TODO: 调用后端API
-    // const res = await recipeApi.myList({
-    //   filter: selectedFilter.value,
-    //   page: page.value,
-    //   pageSize: pageSize.value
-    // })
+    // 调用后端API获取收藏的食谱列表
+    const res = await favoriteApi.getRecipeList({
+      userId: userStore.userInfo.userId,
+      page: page.value,
+      size: pageSize.value
+    })
 
-    // 模拟数据
-    const mockRecipes = [
-      {
-        id: 1,
-        date: '2026-03-17',
-        mealType: 'breakfast',
-        mealTypeText: '早餐',
-        title: '燕麦牛奶粥配鸡蛋',
-        image: 'https://via.placeholder.com/300x300/FFE0B2/FF6B35?text=燕麦粥',
-        tags: ['高纤维', '低脂'],
-        calories: 420,
-        time: '15分钟',
-        servings: 1,
-        ingredients: '燕麦50g、牛奶250ml、鸡蛋1个、蜂蜜适量',
-        nutrition: {
-          '蛋白质': '18g',
-          '碳水': '55g',
-          '脂肪': '12g'
-        }
-      },
-      {
-        id: 2,
-        date: '2026-03-17',
-        mealType: 'lunch',
-        mealTypeText: '午餐',
-        title: '清蒸鲈鱼配时蔬',
-        image: 'https://via.placeholder.com/300x300/FFCCBC/FF6B35?text=清蒸鱼',
-        tags: ['高蛋白', '清淡'],
-        calories: 580,
-        time: '25分钟',
-        servings: 2,
-        ingredients: '鲈鱼1条、西兰花、胡萝卜、姜蒜',
-        nutrition: {
-          '蛋白质': '45g',
-          '碳水': '20g',
-          '脂肪': '18g'
-        }
-      },
-      {
-        id: 3,
-        date: '2026-03-16',
-        mealType: 'dinner',
-        mealTypeText: '晚餐',
-        title: '鸡胸肉蔬菜沙拉',
-        image: 'https://via.placeholder.com/300x300/C8E6C9/FF6B35?text=沙拉',
-        tags: ['低卡', '减脂'],
-        calories: 380,
-        time: '20分钟',
-        servings: 1,
-        ingredients: '鸡胸肉150g、生菜、番茄、黄瓜、橄榄油',
-        nutrition: {
-          '蛋白质': '38g',
-          '碳水': '15g',
-          '脂肪': '12g'
-        }
-      },
-      {
-        id: 4,
-        date: '2026-03-16',
-        mealType: 'breakfast',
-        mealTypeText: '早餐',
-        title: '全麦三明治',
-        image: 'https://via.placeholder.com/300x300/B2DFDB/FF6B35?text=三明治',
-        tags: ['快手', '营养'],
-        calories: 450,
-        time: '10分钟',
-        servings: 1,
-        ingredients: '全麦面包2片、鸡蛋、生菜、番茄、芝士片',
-        nutrition: {
-          '蛋白质': '22g',
-          '碳水': '48g',
-          '脂肪': '15g'
-        }
-      }
-    ]
+    // 格式化数据
+    const formattedRecipes = (res.data?.list || res.data || []).map(formatRecipeData)
 
+    // 根据筛选条件过滤数据
+    let filteredRecipes = formattedRecipes
+    if (selectedFilter.value !== 'all' && selectedFilter.value !== 'favorite') {
+      filteredRecipes = formattedRecipes.filter(recipe => recipe.mealType === selectedFilter.value)
+    }
+
+    // 分页处理
     if (page.value === 1) {
-      recipes.value = mockRecipes
+      recipes.value = filteredRecipes
     } else {
-      recipes.value.push(...mockRecipes)
+      recipes.value.push(...filteredRecipes)
     }
 
     // 判断是否还有更多数据
-    hasMore.value = recipes.value.length >= pageSize.value
+    const totalCount = res.data?.total || 0
+    hasMore.value = recipes.value.length < totalCount
   } catch (error) {
     console.error('加载食谱列表失败:', error)
     uni.showToast({
-      title: '加载失败，请重试',
+      title: error.message || '加载失败，请重试',
       icon: 'none'
     })
   } finally {
@@ -313,9 +295,14 @@ const editRecipe = (recipe) => {
 }
 
 /**
- * 删除食谱
+ * 删除食谱（取消收藏）
  */
 const deleteRecipe = (id) => {
+  // 检查登录状态
+  if (!userStore.checkLogin()) {
+    return
+  }
+
   uni.showModal({
     title: '删除食谱',
     content: '确定要删除这个食谱吗？',
@@ -323,8 +310,8 @@ const deleteRecipe = (id) => {
     success: async (res) => {
       if (res.confirm) {
         try {
-          // TODO: 调用后端API
-          // await recipeApi.delete(id)
+          // 调用后端API取消收藏
+          await favoriteApi.removeRecipe(id, userStore.userInfo.userId)
 
           // 从列表中移除
           const index = recipes.value.findIndex(item => item.id === id)
@@ -339,7 +326,7 @@ const deleteRecipe = (id) => {
         } catch (error) {
           console.error('删除食谱失败:', error)
           uni.showToast({
-            title: '删除失败，请重试',
+            title: error.message || '删除失败，请重试',
             icon: 'none'
           })
         }
@@ -391,7 +378,10 @@ const goToToday = () => {
 
 // 组件挂载
 onMounted(() => {
-  loadRecipes()
+  // 检查登录状态后再加载数据
+  if (userStore.isLogin) {
+    loadRecipes()
+  }
 })
 </script>
 

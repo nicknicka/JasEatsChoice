@@ -124,6 +124,11 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useUserStore } from '@/store'
+import { addressApi } from '@/api'
+
+// Store
+const userStore = useUserStore()
 
 // 表单数据
 const formData = ref({
@@ -311,15 +316,28 @@ const saveAddress = async () => {
       title: '保存中...'
     })
 
-    // TODO: 调用后端API
-    // if (isEdit.value) {
-    //   await addressApi.update(addressId.value, formData.value)
-    // } else {
-    //   await addressApi.create(formData.value)
-    // }
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
 
-    // 模拟保存
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // 准备地址数据
+    const addressData = {
+      userId,
+      receiverName: formData.value.name,
+      receiverPhone: formData.value.phone,
+      province: formData.value.province,
+      city: formData.value.city,
+      district: formData.value.district,
+      detailAddress: formData.value.detail,
+      isDefault: formData.value.isDefault,
+      tags: formData.value.tags
+    }
+
+    if (isEdit.value) {
+      // 更新地址
+      await addressApi.update(addressId.value, addressData)
+    } else {
+      // 创建地址
+      await addressApi.create(addressData)
+    }
 
     uni.hideLoading()
 
@@ -335,7 +353,7 @@ const saveAddress = async () => {
     console.error('保存地址失败:', error)
     uni.hideLoading()
     uni.showToast({
-      title: '保存失败，请重试',
+      title: error.message || '保存失败，请重试',
       icon: 'none'
     })
   }
@@ -350,19 +368,32 @@ const loadAddressDetail = async (id) => {
       title: '加载中...'
     })
 
-    // TODO: 调用后端API
-    // const res = await addressApi.detail(id)
-    // formData.value = res.data
+    const res = await addressApi.getDetail(id)
 
-    // 模拟数据
-    await new Promise(resolve => setTimeout(resolve, 500))
+    // 数据映射
+    formData.value = {
+      name: res.receiverName || res.name,
+      phone: res.receiverPhone || res.phone,
+      province: res.province || '',
+      city: res.city || '',
+      district: res.district || '',
+      regionText: `${res.province || ''} ${res.city || ''} ${res.district || ''}`.trim(),
+      detail: res.detailAddress || res.detail || '',
+      tags: res.tags || [],
+      isDefault: res.isDefault || false
+    }
+
+    // 更新地区选择器的值
+    if (res.province && res.city && res.district) {
+      regionValue.value = [res.province, res.city, res.district]
+    }
 
     uni.hideLoading()
   } catch (error) {
     console.error('加载地址详情失败:', error)
     uni.hideLoading()
     uni.showToast({
-      title: '加载失败，请重试',
+      title: error.message || '加载失败，请重试',
       icon: 'none'
     })
   }

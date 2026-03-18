@@ -216,9 +216,13 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
+import { useUserStore } from '@/stores/user'
 import Loading from '@/components/common/Loading.vue'
 import Empty from '@/components/common/Empty.vue'
-import api from '@/api'
+import { orderApi } from '@/api'
+
+// 用户信息store
+const userStore = useUserStore()
 
 // 订单ID
 const orderId = ref('')
@@ -429,11 +433,74 @@ const showContactButton = computed(() => {
  * 加载订单进度
  */
 const loadOrderProgress = async () => {
+  if (!userStore.isLogin) {
+    uni.showToast({
+      title: '请先登录',
+      icon: 'none'
+    })
+    return
+  }
+
   loading.value = true
 
   try {
-    const res = await api.order.getOrderProgress(orderId.value)
-    order.value = res.data
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+    const res = await orderApi.getDetail(orderId.value)
+
+    // 处理订单数据
+    const orderData = res || res.data || {}
+
+    // 映射字段名
+    order.value = {
+      id: orderData.orderId || orderData.id,
+      orderNo: orderData.orderNo || orderData.order_number || '',
+      status: mapOrderStatus(orderData.status || orderData.orderStatus),
+      statusDesc: orderData.statusDesc || '',
+      estimatedTime: orderData.estimatedTime || orderData.estimated_time || '',
+      createdAt: formatTime(orderData.createdAt || orderData.create_time || orderData.created_at),
+      confirmedAt: formatTime(orderData.confirmedAt),
+      preparingAt: formatTime(orderData.preparingAt),
+      readyAt: formatTime(orderData.readyAt),
+      deliveringAt: formatTime(orderData.deliveringAt),
+      completedAt: formatTime(orderData.completedAt),
+      merchant: {
+        id: orderData.merchantId || orderData.merchant?.id,
+        name: orderData.merchantName || orderData.merchant?.name || '',
+        image: orderData.merchantImage || orderData.merchant?.image || orderData.merchant?.logo || '',
+        address: orderData.merchantAddress || orderData.merchant?.address || '',
+        phone: orderData.merchantPhone || orderData.merchant?.phone || '',
+        latitude: orderData.merchantLatitude || orderData.merchant?.latitude,
+        longitude: orderData.merchantLongitude || orderData.merchant?.longitude
+      },
+      delivery: orderData.deliveryType === 'delivery' || orderData.delivery_type === 'delivery' ? {
+        address: orderData.deliveryAddress || orderData.address || '',
+        contact: orderData.receiverName || orderData.receiver_name || '',
+        phone: orderData.receiverPhone || orderData.receiver_phone || '',
+        latitude: orderData.deliveryLatitude || orderData.latitude,
+        longitude: orderData.deliveryLongitude || orderData.longitude,
+        showMap: !!(orderData.deliveryLatitude || orderData.latitude),
+        rider: orderData.rider ? {
+          name: orderData.rider.name || '',
+          phone: orderData.rider.phone || '',
+          avatar: orderData.rider.avatar || '',
+          latitude: orderData.rider.latitude,
+          longitude: orderData.rider.longitude
+        } : null
+      } : null,
+      items: (orderData.items || orderData.orderItems || []).map(item => ({
+        id: item.orderItemId || item.id,
+        name: item.dishName || item.name,
+        spec: item.spec || '',
+        price: parseFloat(item.price || 0).toFixed(2),
+        quantity: item.quantity || item.count,
+        image: item.dishImage || item.image || ''
+      })),
+      subtotal: parseFloat(orderData.subtotal || orderData.sub_total || 0).toFixed(2),
+      deliveryFee: parseFloat(orderData.deliveryFee || orderData.delivery_fee || 0).toFixed(2),
+      packingFee: parseFloat(orderData.packingFee || orderData.packing_fee || 0).toFixed(2),
+      discount: parseFloat(orderData.discount || 0).toFixed(2),
+      totalAmount: parseFloat(orderData.totalAmount || orderData.total_amount || 0).toFixed(2)
+    }
   } catch (error) {
     console.error('加载订单进度失败:', error)
     uni.showToast({
@@ -442,6 +509,53 @@ const loadOrderProgress = async () => {
     })
   } finally {
     loading.value = false
+  }
+}
+
+/**
+ * 映射订单状态
+ */
+const mapOrderStatus = (status) => {
+  const statusMap = {
+    'pending': 'pending',
+    '待接单': 'pending',
+    'confirmed': 'confirmed',
+    '已接单': 'confirmed',
+    'preparing': 'preparing',
+    '准备中': 'preparing',
+    'ready': 'ready',
+    '已完成': 'ready',
+    'delivering': 'delivering',
+    '配送中': 'delivering',
+    'completed': 'completed',
+    '已送达': 'completed',
+    'cancelled': 'cancelled',
+    '已取消': 'cancelled'
+  }
+  return statusMap[status] || status || 'pending'
+}
+
+/**
+ * 格式化时间
+ */
+const formatTime = (time) => {
+  if (!time) return ''
+
+  const date = new Date(time)
+  const now = new Date()
+  const diff = now.getTime() - date.getTime()
+
+  const minutes = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+
+  if (minutes < 1) {
+    return '刚刚'
+  } else if (minutes < 60) {
+    return `${minutes}分钟前`
+  } else if (hours < 24) {
+    return `${hours}小时前`
+  } else {
+    return `${date.getMonth() + 1}-${date.getDate()} ${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`
   }
 }
 
@@ -483,6 +597,14 @@ const contactRider = () => {
  * 取消订单
  */
 const cancelOrder = () => {
+  if (!userStore.isLogin) {
+    uni.showToast({
+      title: '请先登录',
+      icon: 'none'
+    })
+    return
+  }
+
   uni.showModal({
     title: '取消订单',
     content: '确定要取消此订单吗？',
@@ -490,11 +612,17 @@ const cancelOrder = () => {
     success: async (res) => {
       if (res.confirm) {
         try {
-          await api.order.cancelOrder(orderId.value)
+          const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+          await orderApi.cancel(orderId.value, {
+            userId,
+            reason: '用户主动取消'
+          })
+
           uni.showToast({
             title: '订单已取消',
             icon: 'success'
           })
+
           setTimeout(() => {
             loadOrderProgress()
           }, 1500)
@@ -514,6 +642,14 @@ const cancelOrder = () => {
  * 确认收货
  */
 const confirmReceipt = () => {
+  if (!userStore.isLogin) {
+    uni.showToast({
+      title: '请先登录',
+      icon: 'none'
+    })
+    return
+  }
+
   uni.showModal({
     title: '确认收货',
     content: '确认已收到餐品吗？',
@@ -521,11 +657,14 @@ const confirmReceipt = () => {
     success: async (res) => {
       if (res.confirm) {
         try {
-          await api.order.confirmReceipt(orderId.value)
+          const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+          await orderApi.confirm(orderId.value, { userId })
+
           uni.showToast({
             title: '已确认收货',
             icon: 'success'
           })
+
           setTimeout(() => {
             loadOrderProgress()
           }, 1500)

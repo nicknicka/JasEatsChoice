@@ -170,6 +170,11 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useUserStore } from '@/store'
+import { orderApi, addressApi } from '@/api'
+
+// Store
+const userStore = useUserStore()
 
 // 状态
 const selectedAddress = ref(null)
@@ -377,7 +382,20 @@ const selectPayment = (method) => {
 /**
  * 提交订单
  */
-const submitOrder = () => {
+const submitOrder = async () => {
+  if (!userStore.isLogin) {
+    uni.showToast({
+      title: '请先登录',
+      icon: 'none'
+    })
+    setTimeout(() => {
+      uni.navigateTo({
+        url: '/pages/login/index'
+      })
+    }, 1500)
+    return
+  }
+
   if (!selectedAddress.value) {
     uni.showToast({
       title: '请选择收货地址',
@@ -386,49 +404,156 @@ const submitOrder = () => {
     return
   }
 
+  if (orderItems.value.length === 0) {
+    uni.showToast({
+      title: '请选择商品',
+      icon: 'none'
+    })
+    return
+  }
+
   uni.showModal({
     title: '确认支付',
     content: `支付金额：¥${finalPrice.value}`,
-    success: (res) => {
+    success: async (res) => {
       if (res.confirm) {
-        // TODO: 调用后端API创建订单
-        // const res = await orderApi.create({
-        //   addressId: selectedAddress.value.id,
-        //   deliveryTime: deliveryTime.value,
-        //   items: orderItems.value,
-        //   couponId: selectedCoupon.value?.id,
-        //   remark: remark.value,
-        //   paymentMethod: paymentMethod.value
-        // })
+        try {
+          uni.showLoading({ title: '提交订单中...' })
 
-        // 模拟订单创建成功
-        uni.showToast({
-          title: '订单创建成功',
-          icon: 'success'
-        })
+          const userId = userStore.userInfo?.userId || userStore.userInfo?.id
 
-        setTimeout(() => {
-          // 跳转到订单详情页
-          uni.redirectTo({
-            url: '/pages/order/detail/index?id=1'
+          // 准备订单数据
+          // 如果只有一个商家，创建单个订单
+          // 如果有多个商家，需要创建多个订单
+          if (orderItems.value.length === 1) {
+            const group = orderItems.value[0]
+
+            const orderData = {
+              userId,
+              merchantId: group.merchantId,
+              addressId: selectedAddress.value.id,
+              deliveryTime: deliveryTime.value || 'immediate',
+              remark: remark.value,
+              paymentMethod: paymentMethod.value,
+              items: group.items.map(item => ({
+                dishId: item.dish.id,
+                dishName: item.dish.name,
+                price: parseFloat(item.dish.price),
+                quantity: item.quantity,
+                spec: item.spec
+              })),
+              couponId: selectedCoupon.value?.id,
+              deliveryFee: 5,
+              packingFee: group.packingFee
+            }
+
+            // 调用后端API创建订单
+            const result = await orderApi.create(orderData)
+
+            uni.hideLoading()
+
+            // 从购物车中移除已下单的商品
+            const cartStore = (await import('@/store')).useCartStore()
+            group.items.forEach(item => {
+              cartStore.removeItem(group.merchantId, item.dish.id)
+            })
+
+            uni.showToast({
+              title: '订单创建成功',
+              icon: 'success'
+            })
+
+            setTimeout(() => {
+              // 跳转到订单详情页
+              const orderId = result.orderId || result.id
+              uni.redirectTo({
+                url: `/pages-user/order/detail/index?id=${orderId}`
+              })
+            }, 1500)
+          } else {
+            // 多个商家的情况
+            uni.hideLoading()
+            uni.showToast({
+              title: '多商家订单暂不支持',
+              icon: 'none'
+            })
+          }
+        } catch (error) {
+          console.error('创建订单失败:', error)
+          uni.hideLoading()
+          uni.showToast({
+            title: error.message || '订单创建失败',
+            icon: 'none'
           })
-        }, 1500)
+        }
       }
     }
   })
 }
 
 // 组件挂载时初始化
-onMounted(() => {
-  // 模拟默认地址
-  selectedAddress.value = {
-    id: '1',
-    name: '张三',
-    phone: '138****8888',
-    address: '北京市朝阳区XX街道XX小区XX号楼XX单元XX室',
-    isDefault: true
+onMounted(async () => {
+  // 从临时存储中读取购物车传递的数据
+  try {
+    const tempItems = uni.getStorageSync('temp_order_items')
+    const tempSummary = uni.getStorageSync('temp_order_summary')
+
+    if (tempItems && tempItems.length > 0) {
+      // 将商品按商家分组
+      const grouped = {}
+      tempItems.forEach(item => {
+        if (!grouped[item.merchantId]) {
+          grouped[item.merchantId] = {
+            merchantId: item.merchantId,
+            merchant: item.merchant,
+            items: [],
+            packingFee: 0
+          }
+        }
+        grouped[item.merchantId].items.push(item)
+        // 计算包装费（每份1元）
+        grouped[item.merchantId].packingFee += item.quantity * 1
+      })
+
+      orderItems.value = Object.values(grouped)
+    }
+
+    // 清除临时存储
+    uni.removeStorageSync('temp_order_items')
+    uni.removeStorageSync('temp_order_summary')
+  } catch (error) {
+    console.error('读取订单数据失败:', error)
   }
+
+  // 加载默认地址
+  await loadDefaultAddress()
 })
+
+/**
+ * 加载默认地址
+ */
+const loadDefaultAddress = async () => {
+  try {
+    if (!userStore.isLogin) {
+      return
+    }
+
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+    const res = await addressApi.getDefault({ userId })
+
+    if (res) {
+      selectedAddress.value = {
+        id: res.addressId || res.id,
+        name: res.receiverName || res.name,
+        phone: res.receiverPhone || res.phone,
+        address: `${res.province || ''}${res.city || ''}${res.district || ''}${res.detailAddress || res.address || ''}`,
+        isDefault: res.isDefault || false
+      }
+    }
+  } catch (error) {
+    console.error('加载默认地址失败:', error)
+  }
+}
 </script>
 
 <style lang="scss" scoped>

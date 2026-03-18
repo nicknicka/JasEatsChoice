@@ -153,10 +153,15 @@
 
 <script setup>
 import { ref, computed, nextTick, onMounted } from 'vue'
+import { useUserStore } from '@/stores/user'
+import { aiApi } from '@/api'
+
+// 用户信息store
+const userStore = useUserStore()
 
 // 用户信息
 const userInfo = ref({
-  avatar: 'https://via.placeholder.com/200x200/FF6B35/FFFFFF?text=用户'
+  avatar: userStore.userInfo?.avatar || 'https://via.placeholder.com/200x200/FF6B35/FFFFFF?text=用户'
 })
 
 // 消息列表
@@ -248,24 +253,29 @@ const sendMessage = async () => {
   isTyping.value = true
 
   try {
-    // TODO: 调用后端API
-    // const res = await aiApi.chat({ message: text })
+    // 调用AI对话API
+    const res = await aiApi.chat({
+      message: text,
+      conversationId: '', // 可以从本地存储获取或生成新的
+      history: messages.value.map(msg => ({
+        role: msg.isUser ? 'user' : 'assistant',
+        content: msg.content
+      }))
+    })
 
-    // 模拟AI回复
-    await new Promise(resolve => setTimeout(resolve, 1500))
-
+    // 处理AI响应
     const aiMsg = {
       id: Date.now() + 1,
       type: 'text',
-      content: generateAIResponse(text),
+      content: res.data?.message || res.message || '抱歉，我现在无法回答这个问题。',
       isUser: false,
       time: formatTime(new Date())
     }
 
-    // 如果包含建议，添加建议卡片
-    if (shouldShowSuggestion(text)) {
+    // 如果响应中包含建议，添加建议卡片
+    if (res.data?.suggestions && res.data.suggestions.length > 0) {
       aiMsg.type = 'suggestion'
-      aiMsg.suggestions = generateSuggestions(text)
+      aiMsg.suggestions = res.data.suggestions
     }
 
     messages.value.push(aiMsg)
@@ -278,8 +288,27 @@ const sendMessage = async () => {
   } catch (error) {
     console.error('发送消息失败:', error)
     isTyping.value = false
+
+    // 如果API调用失败，使用本地模拟回复
+    const aiMsg = {
+      id: Date.now() + 1,
+      type: 'text',
+      content: generateAIResponse(text),
+      isUser: false,
+      time: formatTime(new Date())
+    }
+
+    if (shouldShowSuggestion(text)) {
+      aiMsg.type = 'suggestion'
+      aiMsg.suggestions = generateSuggestions(text)
+    }
+
+    messages.value.push(aiMsg)
+    await scrollToBottom()
+    saveChatHistory()
+
     uni.showToast({
-      title: '发送失败，请重试',
+      title: '网络连接失败，已切换到离线模式',
       icon: 'none'
     })
   }

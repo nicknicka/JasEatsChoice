@@ -219,15 +219,20 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useUserStore } from '@/store'
+import { userApi, orderApi, chatApi } from '@/api'
+
+// Pinia store
+const userStore = useUserStore()
 
 // 用户信息
 const userInfo = ref({
-  id: '12345678',
+  id: '',
   name: '佳食宜选用户',
   avatar: 'https://via.placeholder.com/200x200/FF6B35/FFFFFF?text=用户',
   gender: 'female',
-  tags: ['美食达人', '健康饮食'],
-  vipLevel: 1
+  tags: [],
+  vipLevel: 0
 })
 
 // 统计数据
@@ -321,21 +326,61 @@ const navigateTo = (page, params = {}) => {
  */
 const loadUserInfo = async () => {
   try {
-    // TODO: 调用后端API
-    // const res = await userApi.info()
-    // userInfo.value = res.data
+    // 检查登录状态
+    if (!userStore.isLogin) {
+      uni.showToast({
+        title: '请先登录',
+        icon: 'none'
+      })
+      setTimeout(() => {
+        uni.navigateTo({
+          url: '/pages/login/index'
+        })
+      }, 1500)
+      return
+    }
 
-    // 模拟数据
-    uni.getStorageSync({
-      key: 'userInfo',
-      success: (res) => {
-        if (res.data) {
-          userInfo.value = JSON.parse(res.data)
-        }
+    // 从store获取用户信息
+    if (userStore.userInfo) {
+      userInfo.value = {
+        id: userStore.userInfo.userId || userStore.userInfo.id || '',
+        name: userStore.userInfo.nickname || userStore.userInfo.name || '佳食宜选用户',
+        avatar: userStore.userInfo.avatar || 'https://via.placeholder.com/200x200/FF6B35/FFFFFF?text=用户',
+        gender: userStore.userInfo.gender || 'female',
+        tags: userStore.userInfo.tags || [],
+        vipLevel: userStore.userInfo.vipLevel || userStore.userInfo.memberLevel || 0
       }
-    })
+    }
+
+    // 调用后端API获取最新用户信息
+    const res = await userApi.getUserInfo(userStore.userInfo.userId || userStore.userInfo.id)
+    if (res) {
+      userInfo.value = {
+        id: res.userId || res.id || '',
+        name: res.nickname || res.name || '佳食宜选用户',
+        avatar: res.avatar || 'https://via.placeholder.com/200x200/FF6B35/FFFFFF?text=用户',
+        gender: res.gender || 'female',
+        tags: res.tags || [],
+        vipLevel: res.vipLevel || res.memberLevel || 0
+      }
+
+      // 更新store中的用户信息
+      userStore.setUserInfo(res)
+    }
   } catch (error) {
     console.error('加载用户信息失败:', error)
+    // 如果API调用失败，尝试从本地存储获取
+    const localUserInfo = uni.getStorageSync('userInfo')
+    if (localUserInfo) {
+      userInfo.value = {
+        id: localUserInfo.userId || localUserInfo.id || '',
+        name: localUserInfo.nickname || localUserInfo.name || '佳食宜选用户',
+        avatar: localUserInfo.avatar || 'https://via.placeholder.com/200x200/FF6B35/FFFFFF?text=用户',
+        gender: localUserInfo.gender || 'female',
+        tags: localUserInfo.tags || [],
+        vipLevel: localUserInfo.vipLevel || localUserInfo.memberLevel || 0
+      }
+    }
   }
 }
 
@@ -344,11 +389,31 @@ const loadUserInfo = async () => {
  */
 const loadStats = async () => {
   try {
-    // TODO: 调用后端API
-    // const res = await userApi.stats()
-    // stats.value = res.data
+    // 调用后端API获取用户统计数据
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+    if (!userId) {
+      console.warn('用户ID不存在，跳过加载统计数据')
+      return
+    }
+
+    const res = await userApi.getUserStats(userId)
+    if (res) {
+      stats.value = {
+        orders: res.totalOrders || res.orders || 0,
+        favorites: res.totalFavorites || res.favorites || 0,
+        history: res.totalHistory || res.history || 0,
+        coupons: res.availableCoupons || res.coupons || 0
+      }
+    }
   } catch (error) {
     console.error('加载统计数据失败:', error)
+    // 使用默认值
+    stats.value = {
+      orders: 0,
+      favorites: 0,
+      history: 0,
+      coupons: 0
+    }
   }
 }
 
@@ -357,11 +422,31 @@ const loadStats = async () => {
  */
 const loadOrderCounts = async () => {
   try {
-    // TODO: 调用后端API
-    // const res = await orderApi.counts()
-    // orderCounts.value = res.data
+    // 调用后端API获取订单数量统计
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+    if (!userId) {
+      console.warn('用户ID不存在，跳过加载订单数量')
+      return
+    }
+
+    const res = await orderApi.getCount({ userId })
+    if (res) {
+      orderCounts.value = {
+        pending: res.pending || 0,
+        processing: res.processing || 0,
+        delivering: res.delivering || 0,
+        completed: res.completed || 0
+      }
+    }
   } catch (error) {
     console.error('加载订单数量失败:', error)
+    // 使用默认值
+    orderCounts.value = {
+      pending: 0,
+      processing: 0,
+      delivering: 0,
+      completed: 0
+    }
   }
 }
 
@@ -370,11 +455,15 @@ const loadOrderCounts = async () => {
  */
 const loadUnreadCount = async () => {
   try {
-    // TODO: 调用后端API
-    // const res = await messageApi.unreadCount()
-    // unreadCount.value = res.data
+    // 调用后端API获取未读消息数
+    const res = await chatApi.getUnreadCount()
+    if (res !== undefined && res !== null) {
+      unreadCount.value = res.count || res.total || res || 0
+    }
   } catch (error) {
     console.error('加载未读消息数失败:', error)
+    // 使用默认值
+    unreadCount.value = 0
   }
 }
 

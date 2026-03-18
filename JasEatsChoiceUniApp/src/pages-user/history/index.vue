@@ -78,8 +78,12 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useUserStore } from '@/stores/user'
 import Empty from '@/components/common/Empty.vue'
-import api from '@/api'
+import { historyApi } from '@/api'
+
+// 用户信息store
+const userStore = useUserStore()
 
 // 历史列表
 const historyList = ref([])
@@ -138,17 +142,24 @@ const formatHistoryData = (list) => {
  * 加载浏览历史
  */
 const loadHistory = async (showLoading = true) => {
+  if (!userStore.isLogin) {
+    return
+  }
+
   if (showLoading) {
     loading.value = true
   }
 
   try {
-    const res = await api.dish.getViewHistory({
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+    const res = await historyApi.getDishHistory({
+      userId,
       page: 1,
-      pageSize: 100
+      size: 100
     })
 
-    historyList.value = formatHistoryData(res.data.list)
+    const list = res.list || res.data?.list || []
+    historyList.value = formatHistoryData(list)
   } catch (error) {
     console.error('加载浏览历史失败:', error)
     uni.showToast({
@@ -174,7 +185,14 @@ const onRefresh = async () => {
  */
 const viewDishDetail = (item) => {
   // 记录浏览
-  api.dish.recordView(item.id).catch(() => {})
+  if (userStore.isLogin) {
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+    historyApi.add({
+      userId,
+      targetType: 'dish',
+      targetId: item.id
+    }).catch(() => {})
+  }
 
   uni.navigateTo({
     url: `/pages/dish/detail/index?id=${item.id}`
@@ -194,6 +212,10 @@ const toMerchant = (merchantId) => {
  * 删除单条历史
  */
 const deleteHistory = async (item) => {
+  if (!userStore.isLogin) {
+    return
+  }
+
   uni.showModal({
     title: '删除记录',
     content: '确定要删除这条浏览记录吗？',
@@ -201,8 +223,8 @@ const deleteHistory = async (item) => {
     success: async (res) => {
       if (res.confirm) {
         try {
-          // TODO: 调用删除API
-          // await api.dish.deleteViewHistory(item.id)
+          const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+          await historyApi.delete(item.id, { userId })
 
           // 从列表中移除
           for (const group of historyList.value) {
@@ -236,6 +258,10 @@ const deleteHistory = async (item) => {
  * 清空历史
  */
 const clearHistory = () => {
+  if (!userStore.isLogin) {
+    return
+  }
+
   uni.showModal({
     title: '清空历史',
     content: '确定要清空所有浏览记录吗？',
@@ -243,8 +269,8 @@ const clearHistory = () => {
     success: async (res) => {
       if (res.confirm) {
         try {
-          // TODO: 调用清空API
-          // await api.dish.clearViewHistory()
+          const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+          await historyApi.clear({ userId, type: 'dish' })
 
           historyList.value = []
 

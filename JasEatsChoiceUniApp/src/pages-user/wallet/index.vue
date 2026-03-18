@@ -197,8 +197,12 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useUserStore } from '@/stores/user'
 import Empty from '@/components/common/Empty.vue'
-import api from '@/api'
+import { walletApi } from '@/api'
+
+// 用户信息store
+const userStore = useUserStore()
 
 // 账户余额
 const balance = ref('0')
@@ -299,9 +303,14 @@ function formatDateText(date) {
  * 加载钱包数据
  */
 const loadWalletData = async () => {
+  if (!userStore.isLogin) {
+    return
+  }
+
   try {
-    const res = await api.user.getWalletInfo()
-    const amount = parseFloat(res.data.balance).toFixed(2)
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+    const res = await walletApi.getInfo({ userId })
+    const amount = parseFloat(res.balance || res.data?.balance || 0).toFixed(2)
     const parts = amount.split('.')
     balance.value = parts[0]
     balanceDecimal.value = parts[1] || '00'
@@ -314,29 +323,36 @@ const loadWalletData = async () => {
  * 加载交易记录
  */
 const loadTransactions = async (showLoading = true) => {
+  if (!userStore.isLogin) {
+    return
+  }
+
   if (showLoading) {
     loading.value = true
   }
 
   try {
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
     const params = {
+      userId,
       page: page.value,
-      pageSize: pageSize.value
+      size: pageSize.value
     }
 
     if (activeTab.value !== 'all') {
-      params.type = activeTab.value
+      params.type = activeTab.value === 'income' ? 'recharge' : 'consume'
     }
 
-    const res = await api.user.getTransactionList(params)
+    const res = await walletApi.getTransactions(params)
 
+    const list = res.list || res.data?.list || []
     if (page.value === 1) {
-      transactions.value = res.data.list
+      transactions.value = list
     } else {
-      transactions.value.push(...res.data.list)
+      transactions.value.push(...list)
     }
 
-    hasMore.value = res.data.list.length >= pageSize.value
+    hasMore.value = list.length >= pageSize.value
   } catch (error) {
     console.error('加载交易记录失败:', error)
     uni.showToast({

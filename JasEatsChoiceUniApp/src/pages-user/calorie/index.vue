@@ -116,7 +116,11 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import api from '@/api'
+import { useUserStore } from '@/stores/user'
+import { aiApi } from '@/api'
+
+// 用户信息store
+const userStore = useUserStore()
 
 // 选中的日期
 const selectedDate = ref(new Date())
@@ -229,38 +233,129 @@ const changeDate = (days) => {
  * 加载数据
  */
 const loadData = async () => {
-  try {
-    // TODO: 调用API加载数据
-    // const res = await api.calorie.getDailyData({
-    //   date: formatDate(selectedDate.value)
-    // })
-
-    // 模拟数据
-    todayCalorie.value = 1450
-
-    records.value = [
-      {
-        id: 1,
-        name: '营养早餐',
-        mealType: 'breakfast',
-        mealIcon: '🌅',
-        calorie: 420,
-        time: '08:30',
-        foods: ['牛奶250ml', '鸡蛋1个', '全麦面包2片', '苹果1个']
-      },
-      {
-        id: 2,
-        name: '健康午餐',
-        mealType: 'lunch',
-        mealIcon: '☀️',
-        calorie: 680,
-        time: '12:15',
-        foods: ['糙米饭150g', '清蒸鲈鱼200g', '炒时蔬200g', '紫菜蛋花汤']
-      }
-    ]
-  } catch (error) {
-    console.error('加载数据失败:', error)
+  if (!userStore.isLogin) {
+    // 未登录时使用默认数据
+    todayCalorie.value = 0
+    records.value = []
+    return
   }
+
+  try {
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+    const dateStr = formatApiDate(selectedDate.value)
+
+    // 调用AI营养分析API
+    const res = await aiApi.analyzeNutrition({
+      userId,
+      date: dateStr
+    })
+
+    if (res && res.data) {
+      // 更新今日卡路里
+      todayCalorie.value = res.data.calories || 0
+
+      // 更新营养成分
+      if (res.data.nutrition) {
+        const nutrition = res.data.nutrition
+        nutritionList.value = [
+          {
+            name: '蛋白质',
+            icon: '🥩',
+            current: nutrition.protein || 0,
+            target: nutrition.proteinTarget || 80,
+            unit: 'g',
+            percent: nutrition.proteinPercent || 0,
+            color: '#FF6B35'
+          },
+          {
+            name: '碳水化合物',
+            icon: '🍚',
+            current: nutrition.carbs || 0,
+            target: nutrition.carbsTarget || 300,
+            unit: 'g',
+            percent: nutrition.carbsPercent || 0,
+            color: '#FFB74D'
+          },
+          {
+            name: '脂肪',
+            icon: '🥑',
+            current: nutrition.fat || 0,
+            target: nutrition.fatTarget || 60,
+            unit: 'g',
+            percent: nutrition.fatPercent || 0,
+            color: '#81C784'
+          },
+          {
+            name: '膳食纤维',
+            icon: '🥦',
+            current: nutrition.fiber || 0,
+            target: nutrition.fiberTarget || 25,
+            unit: 'g',
+            percent: nutrition.fiberPercent || 0,
+            color: '#64B5F6'
+          }
+        ]
+      }
+
+      // 更新饮食记录
+      if (res.data.records && res.data.records.length > 0) {
+        records.value = res.data.records.map(record => ({
+          id: record.id,
+          name: record.name,
+          mealType: record.mealType,
+          mealIcon: getMealIcon(record.mealType),
+          calorie: record.calories,
+          time: formatRecordTime(record.time),
+          foods: record.foods || []
+        }))
+      } else {
+        records.value = []
+      }
+    } else {
+      // API返回空数据时使用默认值
+      todayCalorie.value = 0
+      records.value = []
+    }
+  } catch (error) {
+    console.error('加载营养数据失败:', error)
+    // 使用默认数据
+    todayCalorie.value = 0
+    records.value = []
+  }
+}
+
+/**
+ * 格式化API日期格式
+ */
+const formatApiDate = (date) => {
+  const year = date.getFullYear()
+  const month = (date.getMonth() + 1).toString().padStart(2, '0')
+  const day = date.getDate().toString().padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+/**
+ * 获取餐型图标
+ */
+const getMealIcon = (mealType) => {
+  const icons = {
+    'breakfast': '🌅',
+    'lunch': '☀️',
+    'dinner': '🌙',
+    'snack': '🍎'
+  }
+  return icons[mealType] || '🍽️'
+}
+
+/**
+ * 格式化记录时间
+ */
+const formatRecordTime = (time) => {
+  if (!time) return ''
+  const date = new Date(time)
+  const hours = date.getHours().toString().padStart(2, '0')
+  const minutes = date.getMinutes().toString().padStart(2, '0')
+  return `${hours}:${minutes}`
 }
 
 /**

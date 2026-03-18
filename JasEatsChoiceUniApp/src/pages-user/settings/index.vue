@@ -243,6 +243,11 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useUserStore } from '@/stores/user'
+import { userApi, notificationApi } from '@/api'
+
+// 用户信息store
+const userStore = useUserStore()
 
 // 用户信息
 const userInfo = ref({
@@ -316,11 +321,39 @@ const navigateTo = (page) => {
  * 切换设置
  */
 const toggleSetting = async (key) => {
+  if (!userStore.isLogin) {
+    uni.showToast({
+      title: '请先登录',
+      icon: 'none'
+    })
+    return
+  }
+
+  const oldValue = settings.value[key]
   settings.value[key] = !settings.value[key]
 
   try {
-    // TODO: 调用后端API保存设置
-    // await settingsApi.update({ [key]: settings.value[key] })
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+
+    // 根据设置类型调用不同的API
+    if (key.includes('Notification')) {
+      // 更新通知偏好设置
+      await notificationApi.setPreferences({
+        userId,
+        orderNotify: settings.value.messageNotification,
+        activityNotify: settings.value.marketingNotification,
+        systemNotify: true,
+        chatNotify: true
+      })
+    } else {
+      // 更新用户设置
+      await userApi.updateSettings(userId, {
+        [key]: settings.value[key]
+      })
+    }
+
+    // 保存到本地存储
+    uni.setStorageSync('settings', JSON.stringify(settings.value))
 
     uni.showToast({
       title: '设置已更新',
@@ -330,7 +363,7 @@ const toggleSetting = async (key) => {
   } catch (error) {
     console.error('更新设置失败:', error)
     // 回滚状态
-    settings.value[key] = !settings.value[key]
+    settings.value[key] = oldValue
     uni.showToast({
       title: '更新失败，请重试',
       icon: 'none'
@@ -403,11 +436,21 @@ const logout = () => {
     title: '退出登录',
     content: '确定要退出登录吗？',
     confirmColor: '#FF6B35',
-    success: (res) => {
+    success: async (res) => {
       if (res.confirm) {
+        try {
+          // 调用退出登录API
+          await userApi.logout()
+        } catch (error) {
+          console.error('退出登录API调用失败:', error)
+        }
+
         // 清除登录信息
         uni.removeStorageSync('token')
         uni.removeStorageSync('userInfo')
+
+        // 清空用户store
+        userStore.$reset()
 
         // 跳转到登录页
         uni.reLaunch({
@@ -423,15 +466,32 @@ const logout = () => {
  */
 const loadUserInfo = async () => {
   try {
-    // TODO: 调用后端API
-    // const res = await userApi.info()
-    // userInfo.value = res.data
-
-    // 从本地存储读取
-    const localInfo = uni.getStorageSync('userInfo')
-    if (localInfo) {
-      userInfo.value = JSON.parse(localInfo)
+    if (userStore.isLogin && userStore.userInfo) {
+      // 从store获取用户信息
+      const info = userStore.userInfo
+      userInfo.value = {
+        id: info.userId || info.id || '',
+        name: info.nickname || info.name || '佳食宜选用户',
+        avatar: info.avatar || 'https://via.placeholder.com/200x200/FF6B35/FFFFFF?text=用户',
+        profileCompleted: !!(info.realName || info.phone) // 是否完善了个人信息
+      }
+    } else {
+      // 从本地存储读取
+      const localInfo = uni.getStorageSync('userInfo')
+      if (localInfo) {
+        const info = JSON.parse(localInfo)
+        userInfo.value = {
+          id: info.userId || info.id || '',
+          name: info.nickname || info.name || '佳食宜选用户',
+          avatar: info.avatar || 'https://via.placeholder.com/200x200/FF6B35/FFFFFF?text=用户',
+          profileCompleted: !!(info.realName || info.phone)
+        }
+      }
     }
+  } catch (error) {
+    console.error('加载用户信息失败:', error)
+  }
+}
   } catch (error) {
     console.error('加载用户信息失败:', error)
   }
@@ -441,18 +501,41 @@ const loadUserInfo = async () => {
  * 加载设置
  */
 const loadSettings = async () => {
-  try {
-    // TODO: 调用后端API
-    // const res = await settingsApi.get()
-    // settings.value = res.data
+  if (!userStore.isLogin) {
+    return
+  }
 
+  try {
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+
+    // 加载通知偏好设置
+    const res = await notificationApi.getPreferences({ userId })
+
+    if (res && res.data) {
+      settings.value = {
+        messageNotification: res.data.orderNotify !== false,
+        marketingNotification: res.data.activityNotify || false,
+        profileVisible: true,
+        locationEnabled: true,
+        darkMode: false
+      }
+
+      // 保存到本地存储
+      uni.setStorageSync('settings', JSON.stringify(settings.value))
+    } else {
+      // 从本地存储读取
+      const localSettings = uni.getStorageSync('settings')
+      if (localSettings) {
+        settings.value = JSON.parse(localSettings)
+      }
+    }
+  } catch (error) {
+    console.error('加载设置失败:', error)
     // 从本地存储读取
     const localSettings = uni.getStorageSync('settings')
     if (localSettings) {
       settings.value = JSON.parse(localSettings)
     }
-  } catch (error) {
-    console.error('加载设置失败:', error)
   }
 }
 

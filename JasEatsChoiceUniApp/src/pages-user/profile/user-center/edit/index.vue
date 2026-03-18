@@ -147,7 +147,11 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import api from '@/api'
+import { useUserStore } from '@/store'
+import { userApi } from '@/api'
+
+// Pinia store
+const userStore = useUserStore()
 
 // 用户信息
 const userInfo = ref({
@@ -244,18 +248,57 @@ const goalText = computed(() => {
  */
 const loadUserInfo = async () => {
   try {
-    const res = await api.user.getUserInfo()
-    userInfo.value = {
-      ...userInfo.value,
-      ...res.data
+    // 从store获取用户信息
+    if (userStore.userInfo) {
+      userInfo.value = {
+        ...userInfo.value,
+        avatar: userStore.userInfo.avatar || '',
+        nickname: userStore.userInfo.nickname || userStore.userInfo.name || '',
+        gender: userStore.userInfo.gender || 0,
+        birthday: userStore.userInfo.birthday || '',
+        bio: userStore.userInfo.bio || '',
+        phone: userStore.userInfo.phone || '',
+        email: userStore.userInfo.email || '',
+        taste: userStore.userInfo.taste || [],
+        allergies: userStore.userInfo.allergies || [],
+        goal: userStore.userInfo.goal || ''
+      }
+
+      // 设置性别索引
+      genderIndex.value = userInfo.value.gender || 0
+
+      // 设置选择的口味和过敏原
+      selectedTastes.value = userInfo.value.taste || []
+      selectedAllergies.value = userInfo.value.allergies || []
     }
 
-    // 设置性别索引
-    genderIndex.value = userInfo.value.gender || 0
+    // 调用后端API获取最新用户信息
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+    if (userId) {
+      const res = await userApi.getUserInfo(userId)
+      if (res) {
+        userInfo.value = {
+          ...userInfo.value,
+          avatar: res.avatar || '',
+          nickname: res.nickname || res.name || '',
+          gender: res.gender || 0,
+          birthday: res.birthday || '',
+          bio: res.bio || '',
+          phone: res.phone || '',
+          email: res.email || '',
+          taste: res.taste || [],
+          allergies: res.allergies || [],
+          goal: res.goal || ''
+        }
 
-    // 设置选择的口味和过敏原
-    selectedTastes.value = userInfo.value.taste || []
-    selectedAllergies.value = userInfo.value.allergies || []
+        // 设置性别索引
+        genderIndex.value = userInfo.value.gender || 0
+
+        // 设置选择的口味和过敏原
+        selectedTastes.value = userInfo.value.taste || []
+        selectedAllergies.value = userInfo.value.allergies || []
+      }
+    }
   } catch (error) {
     console.error('加载用户信息失败:', error)
     uni.showToast({
@@ -277,21 +320,26 @@ const chooseAvatar = () => {
       const tempFilePath = res.tempFilePaths[0]
 
       try {
-        // TODO: 上传头像到服务器
-        // const uploadRes = await api.user.uploadAvatar(tempFilePath)
-        // userInfo.value.avatar = uploadRes.data.url
+        uni.showLoading({ title: '上传中...' })
 
-        // 临时预览
-        userInfo.value.avatar = tempFilePath
+        // 上传头像到服务器
+        const uploadRes = await userApi.uploadAvatar({
+          file: tempFilePath
+        })
 
+        // 更新头像URL
+        userInfo.value.avatar = uploadRes.url || uploadRes.avatarUrl || tempFilePath
+
+        uni.hideLoading()
         uni.showToast({
-          title: '头像上传功能开发中',
-          icon: 'none'
+          title: '上传成功',
+          icon: 'success'
         })
       } catch (error) {
         console.error('上传头像失败:', error)
+        uni.hideLoading()
         uni.showToast({
-          title: '上传失败',
+          title: error.message || '上传失败',
           icon: 'none'
         })
       }
@@ -402,8 +450,36 @@ const saveUserInfo = async () => {
   }
 
   try {
-    await api.user.updateUserInfo(userInfo.value)
+    uni.showLoading({ title: '保存中...' })
 
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+    if (!userId) {
+      throw new Error('用户ID不存在')
+    }
+
+    // 调用后端API更新用户信息
+    const updateData = {
+      nickname: userInfo.value.nickname,
+      gender: userInfo.value.gender,
+      birthday: userInfo.value.birthday,
+      bio: userInfo.value.bio,
+      email: userInfo.value.email,
+      taste: userInfo.value.taste,
+      allergies: userInfo.value.allergies,
+      goal: userInfo.value.goal
+    }
+
+    // 如果头像有变化，也更新头像
+    if (userInfo.value.avatar && userInfo.value.avatar !== userStore.userInfo.avatar) {
+      updateData.avatar = userInfo.value.avatar
+    }
+
+    await userApi.updateUserInfo(userId, updateData)
+
+    // 更新store中的用户信息
+    await userStore.fetchUserInfo()
+
+    uni.hideLoading()
     uni.showToast({
       title: '保存成功',
       icon: 'success'
@@ -414,8 +490,9 @@ const saveUserInfo = async () => {
     }, 1500)
   } catch (error) {
     console.error('保存失败:', error)
+    uni.hideLoading()
     uni.showToast({
-      title: '保存失败，请重试',
+      title: error.message || '保存失败，请重试',
       icon: 'none'
     })
   }

@@ -143,8 +143,12 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useUserStore } from '@/stores/user'
 import Empty from '@/components/common/Empty.vue'
-import api from '@/api'
+import { favoriteApi } from '@/api'
+
+// 用户信息store
+const userStore = useUserStore()
 
 // 当前激活的Tab
 const activeTab = ref('dish')
@@ -181,41 +185,55 @@ const changeTab = (tab) => {
  * 加载数据
  */
 const loadData = async (showLoading = true) => {
+  if (!userStore.isLogin) {
+    uni.showToast({
+      title: '请先登录',
+      icon: 'none'
+    })
+    return
+  }
+
   if (showLoading) {
     loading.value = true
   }
 
   try {
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+
     if (activeTab.value === 'dish') {
       // 加载菜品收藏
-      const res = await api.dish.getFavoriteList({
+      const res = await favoriteApi.getDishList({
+        userId,
         page: page.value,
-        pageSize: pageSize.value
+        size: pageSize.value
       })
 
+      const list = res.list || res.data?.list || []
       if (page.value === 1) {
-        dishList.value = res.data.list
-        dishCount.value = res.data.total
+        dishList.value = list
+        dishCount.value = res.total || res.data?.total || 0
       } else {
-        dishList.value.push(...res.data.list)
+        dishList.value.push(...list)
       }
 
-      hasMore.value = res.data.list.length >= pageSize.value
+      hasMore.value = list.length >= pageSize.value
     } else {
       // 加载商家收藏
-      const res = await api.merchant.getFavoriteMerchants({
+      const res = await favoriteApi.getMerchantList({
+        userId,
         page: page.value,
-        pageSize: pageSize.value
+        size: pageSize.value
       })
 
+      const list = res.list || res.data?.list || []
       if (page.value === 1) {
-        merchantList.value = res.data.list
-        merchantCount.value = res.data.total
+        merchantList.value = list
+        merchantCount.value = res.total || res.data?.total || 0
       } else {
-        merchantList.value.push(...res.data.list)
+        merchantList.value.push(...list)
       }
 
-      hasMore.value = res.data.list.length >= pageSize.value
+      hasMore.value = list.length >= pageSize.value
     }
   } catch (error) {
     console.error('加载收藏数据失败:', error)
@@ -278,9 +296,19 @@ const toMerchant = (merchantId) => {
  * 切换菜品收藏
  */
 const toggleDishFavorite = async (dish) => {
+  if (!userStore.isLogin) {
+    uni.showToast({
+      title: '请先登录',
+      icon: 'none'
+    })
+    return
+  }
+
   try {
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+
     if (dish.isFavorite) {
-      await api.dish.unfavoriteDish(dish.id)
+      await favoriteApi.removeDish(dish.id, { userId })
       // 从列表中移除
       const index = dishList.value.findIndex(item => item.id === dish.id)
       if (index > -1) {
@@ -292,7 +320,10 @@ const toggleDishFavorite = async (dish) => {
         icon: 'success'
       })
     } else {
-      await api.dish.favoriteDish(dish.id)
+      await favoriteApi.addDish({
+        userId,
+        dishId: dish.id
+      })
       dish.isFavorite = true
       uni.showToast({
         title: '收藏成功',
@@ -312,9 +343,19 @@ const toggleDishFavorite = async (dish) => {
  * 切换商家收藏
  */
 const toggleMerchantFavorite = async (merchant) => {
+  if (!userStore.isLogin) {
+    uni.showToast({
+      title: '请先登录',
+      icon: 'none'
+    })
+    return
+  }
+
   try {
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+
     if (merchant.isFavorite) {
-      await api.merchant.unfavoriteMerchant(merchant.id)
+      await favoriteApi.removeMerchant(merchant.id, { userId })
       merchant.isFavorite = false
       merchantCount.value--
       uni.showToast({
@@ -322,7 +363,10 @@ const toggleMerchantFavorite = async (merchant) => {
         icon: 'success'
       })
     } else {
-      await api.merchant.favoriteMerchant(merchant.id)
+      await favoriteApi.addMerchant({
+        userId,
+        merchantId: merchant.id
+      })
       merchant.isFavorite = true
       uni.showToast({
         title: '收藏成功',

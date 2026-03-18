@@ -13,6 +13,14 @@ export { addressApi } from './modules/address'
 export { aiApi } from './modules/ai'
 export { chatApi } from './modules/chat'
 export { couponApi } from './modules/coupon'
+export { favoriteApi } from './modules/favorite'
+export { reviewApi } from './modules/review'
+export { walletApi } from './modules/wallet'
+export { historyApi } from './modules/history'
+export { notificationApi } from './modules/notification'
+export { feedbackApi } from './modules/feedback'
+export { wishlistApi } from './modules/wishlist'
+export { groupOrderApi } from './modules/groupOrder'
 
 // 默认导出所有API的集合（向后兼容）
 import { userApi } from './modules/user'
@@ -24,6 +32,14 @@ import { addressApi } from './modules/address'
 import { aiApi } from './modules/ai'
 import { chatApi } from './modules/chat'
 import { couponApi } from './modules/coupon'
+import { favoriteApi } from './modules/favorite'
+import { reviewApi } from './modules/review'
+import { walletApi } from './modules/wallet'
+import { historyApi } from './modules/history'
+import { notificationApi } from './modules/notification'
+import { feedbackApi } from './modules/feedback'
+import { wishlistApi } from './modules/wishlist'
+import { groupOrderApi } from './modules/groupOrder'
 
 export default {
   user: userApi,
@@ -34,5 +50,13 @@ export default {
   address: addressApi,
   ai: aiApi,
   chat: chatApi,
-  coupon: couponApi
+  coupon: couponApi,
+  favorite: favoriteApi,
+  review: reviewApi,
+  wallet: walletApi,
+  history: historyApi,
+  notification: notificationApi,
+  feedback: feedbackApi,
+  wishlist: wishlistApi,
+  groupOrder: groupOrderApi
 }
