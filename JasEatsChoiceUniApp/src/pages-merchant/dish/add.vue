@@ -284,6 +284,7 @@
 
 <script setup>
 import { ref } from 'vue'
+import { dishApi } from '@/api/modules/dish.js'
 
 // 表单数据
 const formData = ref({
@@ -439,18 +440,63 @@ const onActiveChange = (e) => {
 }
 
 /**
- * 保存草稿
+ * 保存草稿 - DISH-006: 调用API保存草稿
  */
-const saveDraft = () => {
-  // TODO: 调用API保存草稿
-  uni.showToast({
-    title: '草稿保存成功',
-    icon: 'success'
-  })
+const saveDraft = async () => {
+  try {
+    uni.showLoading({
+      title: '保存中...',
+      mask: true
+    })
+
+    // 构建草稿数据（status=false表示草稿）
+    const draftData = {
+      merchantId: uni.getStorageSync('merchantId') || '',
+      name: formData.value.name || '未命名菜品',
+      category: formData.value.category || 'hot',
+      description: formData.value.description || '',
+      price: formData.value.specType === 'single'
+        ? parseFloat(formData.value.price) || 0
+        : parseFloat(formData.value.specs[0]?.price) || 0,
+      image: formData.value.images[0] || '',
+      status: false, // 草稿状态
+      calorie: parseInt(formData.value.calories) || 0,
+      cookingSteps: JSON.stringify(formData.value.steps || []),
+      tags: JSON.stringify(formData.value.tags || []),
+      cookTime: parseInt(formData.value.cookTime) || 0
+    }
+
+    console.log('保存草稿数据:', draftData)
+
+    // 调用API创建菜品草稿
+    const res = await dishApi.create(draftData)
+
+    if (res.code === 200) {
+      uni.showToast({
+        title: '草稿保存成功',
+        icon: 'success'
+      })
+
+      setTimeout(() => {
+        uni.navigateBack()
+      }, 1500)
+    } else {
+      throw new Error(res.message || '保存草稿失败')
+    }
+  } catch (error) {
+    console.error('保存草稿失败:', error)
+
+    uni.showToast({
+      title: error.message || '保存草稿失败',
+      icon: 'none'
+    })
+  } finally {
+    uni.hideLoading()
+  }
 }
 
 /**
- * 发布菜品
+ * 发布菜品 - DISH-007: 调用API发布菜品
  */
 const submitDish = () => {
   // 表单验证
@@ -478,15 +524,57 @@ const submitDish = () => {
     return
   }
 
-  // TODO: 调用API发布菜品
-  uni.showToast({
-    title: '发布成功',
-    icon: 'success'
-  })
+  try {
+    uni.showLoading({
+      title: '发布中...',
+      mask: true
+    })
 
-  setTimeout(() => {
-    uni.navigateBack()
-  }, 1500)
+    // 构建发布数据（status=true表示上架）
+    const publishData = {
+      merchantId: uni.getStorageSync('merchantId') || '',
+      name: formData.value.name,
+      category: formData.value.category,
+      description: formData.value.description || '',
+      price: formData.value.specType === 'single'
+        ? parseFloat(formData.value.price)
+        : parseFloat(formData.value.specs[0]?.price),
+      image: formData.value.images[0] || '',
+      status: true, // 上架状态
+      calorie: parseInt(formData.value.calories) || 0,
+      cookingSteps: JSON.stringify(formData.value.steps || []),
+      tags: JSON.stringify(formData.value.tags || []),
+      cookTime: parseInt(formData.value.cookTime) || 0,
+      originalPrice: formData.value.originalPrice || 0
+    }
+
+    console.log('发布菜品数据:', publishData)
+
+    // 调用API创建菜品
+    const res = await dishApi.create(publishData)
+
+    if (res.code === 200) {
+      uni.showToast({
+        title: '发布成功',
+        icon: 'success'
+      })
+
+      setTimeout(() => {
+        uni.navigateBack()
+      }, 1500)
+    } else {
+      throw new Error(res.message || '发布失败')
+    }
+  } catch (error) {
+    console.error('发布菜品失败:', error)
+
+    uni.showToast({
+      title: error.message || '发布失败',
+      icon: 'none'
+    })
+  } finally {
+    uni.hideLoading()
+  }
 }
 </script>
 

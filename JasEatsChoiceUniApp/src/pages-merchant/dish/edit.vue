@@ -312,6 +312,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { showConfirm } from '@/utils/helper'
+import { dishApi } from '@/api/modules/dish.js'
 
 const loading = ref(true)
 const dishId = ref('')
@@ -372,58 +373,99 @@ onMounted(() => {
 })
 
 /**
- * 加载菜品详情
+ * 加载菜品详情 - DISH-003: 调用API获取菜品详情
  */
 const loadDishDetail = async () => {
   loading.value = true
 
   try {
-    // TODO: 调用API获取菜品详情
-    // const res = await merchantApi.getDishDetail({ id: dishId.value })
-    // formData.value = res.data
+    // 调用API获取菜品详情
+    const res = await dishApi.getDetail(dishId.value)
 
-    // 模拟数据
-    setTimeout(() => {
+    if (res.code === 200 && res.data) {
+      const data = res.data
+
+      // 映射后端数据到前端表单
       formData.value = {
-        images: [
-          'https://via.placeholder.com/200x200/FF6B35/FFFFFF?text=1',
-          'https://via.placeholder.com/200x200/FF6B35/FFFFFF?text=2'
-        ],
-        name: '宫保鸡丁',
-        category: '热菜',
-        description: '经典川菜，麻辣鲜香，鸡肉嫩滑，花生香脆',
-        specType: 'single',
-        price: '28',
-        originalPrice: '32',
-        specs: [{ name: '', price: '' }],
-        tags: ['中辣', '微甜'],
-        cookTime: '15',
-        calories: '280',
-        steps: [
-          { content: '将鸡胸肉切丁，用料酒、淀粉腌制10分钟' },
-          { content: '热锅下油，下花生米炸至金黄捞起' },
-          { content: '下干辣椒、花椒爆香' },
-          { content: '下鸡丁炒至变色' },
-          { content: '调入糖醋汁，翻炒均匀即可' }
-        ],
-        isActive: true,
-        limitCount: ''
+        images: data.image ? [data.image] : [],
+        name: data.name || '',
+        category: data.category || '',
+        description: data.description || '',
+        specType: 'single', // 后端可能没有这个字段，默认单规格
+        price: data.price ? parseFloat(data.price).toFixed(2) : '',
+        originalPrice: data.originalPrice || '',
+        specs: [{ name: '', price: '' }], // 默认单规格
+        tags: data.tags || [],
+        cookTime: data.cookTime || '15',
+        calories: data.calories || data.calorie || '',
+        steps: parseSteps(data.cookingSteps),
+        isActive: data.status === true || data.status === 1,
+        limitCount: data.limitCount || ''
       }
 
+      // 设置分类索引
+      const categoryIdx = categories.value.findIndex(
+        cat => cat.label === data.category
+      )
+      categoryIndex.value = categoryIdx >= 0 ? categoryIdx : -1
+
+      // 设置统计数据
       dishStats.value = {
-        sales: 156,
-        rating: 4.8,
-        reviews: 89
+        sales: data.sales || 0,
+        rating: data.rating || data.avgRating || 0,
+        reviews: data.reviews || 0
       }
 
-      categoryIndex.value = 0
-
-      loading.value = false
-    }, 500)
+      console.log('加载菜品详情成功:', formData.value)
+    } else {
+      throw new Error(res.message || '获取菜品详情失败')
+    }
   } catch (error) {
     console.error('加载菜品详情失败:', error)
+
+    uni.showToast({
+      title: error.message || '加载菜品详情失败',
+      icon: 'none'
+    })
+
+    // 加载失败，返回上一页
+    setTimeout(() => {
+      uni.navigateBack()
+    }, 1500)
+  } finally {
     loading.value = false
   }
+}
+
+/**
+ * 解析烹饪步骤
+ */
+const parseSteps = (stepsData) => {
+  if (!stepsData) {
+    return [{ content: '' }]
+  }
+
+  if (Array.isArray(stepsData)) {
+    return stepsData.map(step => ({
+      content: step.content || step.description || ''
+    }))
+  }
+
+  // 如果是字符串JSON，尝试解析
+  if (typeof stepsData === 'string') {
+    try {
+      const parsed = JSON.parse(stepsData)
+      if (Array.isArray(parsed)) {
+        return parsed.map(step => ({
+          content: step.content || step.description || ''
+        }))
+      }
+    } catch (e) {
+      console.error('解析步骤失败:', e)
+    }
+  }
+
+  return [{ content: '' }]
 }
 
 /**
@@ -545,26 +587,54 @@ const onActiveChange = (e) => {
 /**
  * 删除菜品
  */
+/**
+ * 删除菜品 - DISH-004: 调用API删除菜品
+ */
 const deleteDish = async () => {
   const confirmed = await showConfirm('确认删除此菜品吗？删除后不可恢复。')
 
   if (confirmed) {
-    // TODO: 调用API删除菜品
-    uni.showToast({
-      title: '删除成功',
-      icon: 'success'
-    })
+    try {
+      uni.showLoading({
+        title: '删除中...',
+        mask: true
+      })
 
-    setTimeout(() => {
-      uni.navigateBack()
-    }, 1500)
+      // 调用API删除菜品
+      const res = await dishApi.delete(dishId.value)
+
+      if (res.code === 200) {
+        uni.showToast({
+          title: '删除成功',
+          icon: 'success'
+        })
+
+        setTimeout(() => {
+          uni.navigateBack()
+        }, 1500)
+      } else {
+        throw new Error(res.message || '删除失败')
+      }
+    } catch (error) {
+      console.error('删除菜品失败:', error)
+
+      uni.showToast({
+        title: error.message || '删除失败',
+        icon: 'none'
+      })
+    } finally {
+      uni.hideLoading()
+    }
   }
 }
 
 /**
  * 保存修改
  */
-const submitDish = () => {
+/**
+ * 提交菜品 - DISH-005: 调用API保存修改
+ */
+const submitDish = async () => {
   // 表单验证
   if (!formData.value.name) {
     uni.showToast({
@@ -590,15 +660,59 @@ const submitDish = () => {
     return
   }
 
-  // TODO: 调用API保存修改
-  uni.showToast({
-    title: '保存成功',
-    icon: 'success'
-  })
+  try {
+    uni.showLoading({
+      title: '保存中...',
+      mask: true
+    })
 
-  setTimeout(() => {
-    uni.navigateBack()
-  }, 1500)
+    // 构建提交数据（符合后端Dish实体）
+    const submitData = {
+      id: dishId.value,
+      merchantId: uni.getStorageSync('merchantId') || '',
+      name: formData.value.name,
+      category: formData.value.category,
+      description: formData.value.description,
+      price: formData.value.specType === 'single'
+        ? parseFloat(formData.value.price)
+        : parseFloat(formData.value.specs[0].price),
+      image: formData.value.images[0] || '',
+      status: formData.value.isActive,
+      calorie: parseInt(formData.value.calories) || 0,
+      cookingSteps: JSON.stringify(formData.value.steps),
+      // 其他字段根据需要添加
+      originalPrice: formData.value.originalPrice || 0,
+      tags: JSON.stringify(formData.value.tags),
+      cookTime: parseInt(formData.value.cookTime) || 0
+    }
+
+    console.log('提交数据:', submitData)
+
+    // 调用API更新菜品
+    const res = await dishApi.update(dishId.value, submitData)
+
+    if (res.code === 200) {
+      uni.showToast({
+        title: '保存成功',
+        icon: 'success'
+      })
+
+      setTimeout(() => {
+        uni.navigateBack()
+      }, 1500)
+    } else {
+      throw new Error(res.message || '保存失败')
+    }
+  } catch (error) {
+    console.error('保存菜品失败:', error)
+
+    uni.showToast({
+      title: error.message || '保存失败',
+      icon: 'none'
+    })
+  } finally {
+    uni.hideLoading()
+  }
 }
 </script>
 

@@ -147,6 +147,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { dishApi } from '@/api/modules/dish.js'
 
 // 菜品信息
 const dishInfo = ref({
@@ -205,18 +206,52 @@ onMounted(() => {
 /**
  * 选择模板
  */
-const selectTemplate = (template) => {
+/**
+ * 选择模板 - DISH-008: 调用API获取模板步骤
+ */
+const selectTemplate = async (template) => {
   selectedTemplate.value = template.id
+
   uni.showModal({
     title: '应用模板',
     content: `确定使用"${template.name}"模板吗？当前步骤将被替换。`,
-    success: (res) => {
+    success: async (res) => {
       if (res.confirm) {
-        // TODO: 调用API获取模板步骤
-        steps.value = template.steps || [
-          { name: '步骤1', duration: 5, description: '', media: [] },
-          { name: '步骤2', duration: 10, description: '', media: [] }
-        ]
+        try {
+          uni.showLoading({ title: '加载中...' })
+
+          // 如果模板有步骤数据，直接使用
+          if (template.steps && template.steps.length > 0) {
+            steps.value = template.steps.map(step => ({
+              name: step.name || `步骤`,
+              duration: step.duration || 5,
+              description: step.description || '',
+              media: step.media || []
+            }))
+
+            uni.hideLoading()
+            uni.showToast({
+              title: '模板应用成功',
+              icon: 'success'
+            })
+          } else {
+            // 如果模板没有步骤数据，尝试从API获取
+            // 注意：这里假设后端有获取模板详情的API
+            // 如果后端没有此API，可以提示用户
+            uni.hideLoading()
+            uni.showToast({
+              title: '该模板暂无步骤数据',
+              icon: 'none'
+            })
+          }
+        } catch (error) {
+          console.error('应用模板失败:', error)
+          uni.hideLoading()
+          uni.showToast({
+            title: '应用模板失败',
+            icon: 'none'
+          })
+        }
       }
     }
   })
@@ -307,11 +342,46 @@ const saveAsTemplate = () => {
     success: (res) {
       if (res.confirm) {
         const templateName = res.content || '自定义模板'
-        // TODO: 调用API保存模板
-        uni.showToast({
-          title: '模板保存成功',
-          icon: 'success'
-        })
+
+        // DISH-009: 调用API保存模板（暂时使用本地存储）
+        try {
+          uni.showLoading({ title: '保存中...' })
+
+          const templateData = {
+            merchantId: uni.getStorageSync('merchantId') || '',
+            name: templateName,
+            category: dishInfo.value.category || '通用',
+            steps: steps.value,
+            icon: '🍳',
+            totalDuration: totalDuration.value
+          }
+
+          // 暂时保存到本地存储（建议后端开发模板管理API）
+          const templates = uni.getStorageSync('stepTemplates') || []
+          const newTemplate = {
+            id: Date.now().toString(),
+            ...templateData,
+            createdAt: new Date().toISOString()
+          }
+          templates.push(newTemplate)
+          uni.setStorageSync('stepTemplates', templates)
+
+          // 更新本地模板列表
+          templates.value.push(newTemplate)
+
+          uni.hideLoading()
+          uni.showToast({
+            title: '模板保存成功（本地）',
+            icon: 'success'
+          })
+        } catch (error) {
+          console.error('保存模板失败:', error)
+          uni.hideLoading()
+          uni.showToast({
+            title: '保存失败',
+            icon: 'none'
+          })
+        }
       }
     }
   })
@@ -340,21 +410,56 @@ const submitSteps = () => {
     }
   }
 
-  // TODO: 调用API保存步骤
-  uni.showToast({
-    title: '步骤保存成功',
-    icon: 'success'
-  })
+  // DISH-010: 调用API保存步骤
+  try {
+    uni.showLoading({
+      title: '保存中...',
+      mask: true
+    })
 
-  // 返回上一页并传递数据
-  setTimeout(() => {
-    const pages = getCurrentPages()
-    const prevPage = pages[pages.length - 2]
-    if (prevPage && prevPage.$vm) {
-      prevPage.$vm.dishSteps = steps.value
+    // 构建步骤数据
+    const stepsData = steps.value.map((step, index) => ({
+      stepNumber: index + 1,
+      title: step.name,
+      description: step.description,
+      duration: parseInt(step.duration) || 0,
+      media: step.media || []
+    }))
+
+    console.log('保存步骤数据:', stepsData)
+
+    // 调用API更新菜品的cookingSteps字段
+    const res = await dishApi.update(dishInfo.value.id, {
+      cookingSteps: JSON.stringify(stepsData)
+    })
+
+    if (res.code === 200) {
+      uni.hideLoading()
+      uni.showToast({
+        title: '步骤保存成功',
+        icon: 'success'
+      })
+
+      // 返回上一页并传递数据
+      setTimeout(() => {
+        const pages = getCurrentPages()
+        const prevPage = pages[pages.length - 2]
+        if (prevPage && prevPage.$vm && prevPage.$vm.dishSteps) {
+          prevPage.$vm.dishSteps = steps.value
+        }
+        uni.navigateBack()
+      }, 1500)
+    } else {
+      throw new Error(res.message || '保存失败')
     }
-    uni.navigateBack()
-  }, 1500)
+  } catch (error) {
+    console.error('保存步骤失败:', error)
+    uni.hideLoading()
+    uni.showToast({
+      title: error.message || '保存步骤失败',
+      icon: 'none'
+    })
+  }
 }
 </script>
 

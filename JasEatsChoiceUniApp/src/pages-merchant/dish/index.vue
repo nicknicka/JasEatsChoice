@@ -93,6 +93,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { dishApi } from '@/api/modules/dish.js'
 
 // 分类数据
 const categories = ref([
@@ -113,7 +114,19 @@ const noMore = ref(false)
 const page = ref(1)
 const pageSize = 10
 
+// 商家ID
+const merchantId = ref('')
+
 onMounted(() => {
+  // 获取商家ID
+  merchantId.value = uni.getStorageSync('merchantId') || ''
+  if (!merchantId.value) {
+    uni.showToast({
+      title: '未登录或商家信息缺失',
+      icon: 'none'
+    })
+    return
+  }
   loadDishes()
 })
 
@@ -128,7 +141,7 @@ const changeCategory = (category) => {
 }
 
 /**
- * 加载菜品列表
+ * 加载菜品列表 - DISH-001: 调用API获取菜品列表
  */
 const loadDishes = async (isRefresh = false) => {
   if (loading.value) return
@@ -140,34 +153,86 @@ const loadDishes = async (isRefresh = false) => {
   }
 
   try {
-    // TODO: 调用API获取菜品列表
-    // const res = await merchantApi.getDishes({
-    //   category: activeCategory.value,
-    //   page: page.value,
-    //   size: pageSize
-    // })
+    // 调用API获取菜品列表
+    const params = {
+      merchantId: merchantId.value,
+      page: page.value,
+      size: pageSize
+    }
 
-    // 模拟数据
-    setTimeout(() => {
-      const mockData = generateMockDishes()
+    // 如果不是"全部"分类，添加分类参数
+    if (activeCategory.value !== 'all') {
+      params.category = activeCategory.value
+    }
+
+    const res = await dishApi.getList(params)
+
+    if (res.code === 200 && res.data) {
+      // 转换后端数据格式为前端所需格式
+      const transformedDishes = res.data.map(dish => ({
+        id: dish.id,
+        name: dish.name,
+        description: dish.description || '暂无描述',
+        image: dish.image || '/static/default-dish.png',
+        price: parseFloat(dish.price || 0).toFixed(2),
+        // 后端status字段映射为isActive
+        isActive: dish.status === true || dish.status === 1,
+        tags: generateDishTags(dish),
+        sales: dish.sales || 0,
+        rating: dish.rating || dish.avgRating || '5.0',
+        category: dish.category || 'hot'
+      }))
+
       if (isRefresh) {
-        dishList.value = mockData
+        dishList.value = transformedDishes
       } else {
-        dishList.value = [...dishList.value, ...mockData]
+        dishList.value = [...dishList.value, ...transformedDishes]
       }
 
-      if (mockData.length < pageSize) {
+      // 判断是否还有更多数据
+      if (transformedDishes.length < pageSize) {
         noMore.value = true
       }
 
-      loading.value = false
-      refreshing.value = false
-    }, 500)
+      console.log('加载菜品成功，数量:', transformedDishes.length)
+    } else {
+      throw new Error(res.message || '获取菜品列表失败')
+    }
   } catch (error) {
     console.error('加载菜品失败:', error)
+    uni.showToast({
+      title: error.message || '加载菜品失败',
+      icon: 'none'
+    })
+    // 失败时保持当前数据
+  } finally {
     loading.value = false
     refreshing.value = false
   }
+}
+
+/**
+ * 生成菜品标签
+ */
+const generateDishTags = (dish) => {
+  const tags = []
+
+  // 根据分类添加标签
+  if (dish.category === 'hot') {
+    tags.push('热菜')
+  }
+
+  // 可以根据其他条件添加标签
+  if (dish.calorie && dish.calorie < 300) {
+    tags.push('低卡')
+  }
+
+  // 如果没有标签，至少添加"推荐"
+  if (tags.length === 0) {
+    tags.push('推荐')
+  }
+
+  return tags
 }
 
 /**
@@ -219,22 +284,51 @@ const onRefresh = () => {
 }
 
 /**
- * 切换菜品状态
+ * 切换菜品状态 - DISH-002: 调用API更新状态（上架/下架）
  */
-const toggleStatus = (dish) => {
+const toggleStatus = async (dish) => {
   const action = dish.isActive ? '下架' : '上架'
+  const newStatus = !dish.isActive
 
   uni.showModal({
     title: '提示',
     content: `确认${action}菜品"${dish.name}"吗？`,
-    success: (res) => {
+    success: async (res) => {
       if (res.confirm) {
-        // TODO: 调用API更新状态
-        dish.isActive = !dish.isActive
-        uni.showToast({
-          title: `${action}成功`,
-          icon: 'success'
-        })
+        try {
+          uni.showLoading({
+            title: '提交中...',
+            mask: true
+          })
+
+          // 调用API更新菜品状态
+          // 注意：后端使用status字段，前端使用isActive
+          const apiRes = await dishApi.setAvailability(dish.id, newStatus)
+
+          if (apiRes.code === 200) {
+            // 更新本地数据
+            dish.isActive = newStatus
+
+            uni.showToast({
+              title: `${action}成功`,
+              icon: 'success'
+            })
+          } else {
+            throw new Error(apiRes.message || '操作失败')
+          }
+        } catch (error) {
+          console.error('更新菜品状态失败:', error)
+
+          // 恢复原状态
+          dish.isActive = !newStatus
+
+          uni.showToast({
+            title: error.message || '操作失败',
+            icon: 'none'
+          })
+        } finally {
+          uni.hideLoading()
+        }
       }
     }
   })

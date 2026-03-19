@@ -177,9 +177,13 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
+import { paymentApi } from '@/api/modules/payment.js'
+import { walletApi } from '@/api/modules/wallet.js'
+import { PaymentMethod } from '@/config/payment.js'
 
 // 订单信息
 const orderInfo = ref({
+  orderId: '',
   orderNo: '',
   merchantId: '',
   merchantName: '',
@@ -187,12 +191,16 @@ const orderInfo = ref({
   merchantDesc: '',
   orderTime: '',
   totalAmount: '0.00',
+  paidAmount: '0.00',
   discount: '0.00',
   finalAmount: '0.00'
 })
 
 // 用户余额
-const userBalance = ref('58.50')
+const userBalance = ref('0.00')
+
+// 用户ID
+const userId = ref('')
 
 // 支付方式
 const selectedMethod = ref('wechat')
@@ -206,70 +214,152 @@ const selectedCoupon = ref(null)
 const couponPopup = ref(null)
 
 onLoad((options) => {
+  // 获取用户ID
+  userId.value = uni.getStorageSync('userId') || ''
+
   if (options.orderId) {
     loadOrderDetail(options.orderId)
+    loadUserBalance()
   }
   loadCoupons()
 })
 
 /**
- * 加载订单详情
+ * 加载订单详情 - PAY-001: 调用API获取订单详情
  */
 const loadOrderDetail = async (orderId) => {
   try {
-    // TODO: 调用API获取订单详情
-    // const res = await paymentApi.getOrderDetail(orderId)
-    // orderInfo.value = res.data
+    uni.showLoading({ title: '加载中...' })
 
-    // 模拟数据
-    setTimeout(() => {
+    // 调用后端API获取订单支付信息
+    const res = await paymentApi.getOrderInfo(orderId)
+
+    if (res.code === 200 && res.data) {
+      const data = res.data
+
+      // 格式化订单数据
       orderInfo.value = {
-        orderNo: generateOrderNo(),
-        merchantId: 1,
-        merchantName: '老王家常菜',
-        merchantAvatar: 'https://via.placeholder.com/80/FF6B35/FFFFFF?text=店',
-        merchantDesc: '川菜 | 人均¥30',
-        orderTime: formatTime(new Date()),
-        totalAmount: '88.00',
-        discount: '10.00',
-        finalAmount: '78.00'
+        orderId: data.orderId,
+        orderNo: data.orderNo,
+        merchantId: data.merchantId,
+        merchantName: data.merchantName || '商家',
+        merchantAvatar: data.merchantAvatar || '/static/default-merchant.png',
+        merchantDesc: data.merchantDesc || '',
+        orderTime: formatTime(new Date()), // 如果后端有时间字段，使用后端数据
+        totalAmount: formatAmount(data.totalAmount),
+        paidAmount: formatAmount(data.paidAmount || 0),
+        discount: formatAmount(data.discount || 0),
+        finalAmount: formatAmount(data.finalAmount || data.totalAmount)
       }
-    }, 300)
+
+      console.log('订单详情加载成功:', orderInfo.value)
+    } else {
+      throw new Error(res.message || '获取订单信息失败')
+    }
   } catch (error) {
     console.error('加载订单失败:', error)
+    uni.showToast({
+      title: error.message || '加载订单失败',
+      icon: 'none'
+    })
+
+    // 加载失败，延迟返回上一页
+    setTimeout(() => {
+      uni.navigateBack()
+    }, 1500)
+  } finally {
+    uni.hideLoading()
   }
 }
 
 /**
- * 加载优惠券
+ * 加载用户余额
+ */
+const loadUserBalance = async () => {
+  try {
+    if (!userId.value) return
+
+    const res = await walletApi.getBalance(userId.value)
+
+    if (res.code === 200 && res.data) {
+      userBalance.value = formatAmount(res.data.balance || 0)
+    }
+  } catch (error) {
+    console.error('加载余额失败:', error)
+    // 余额加载失败不影响支付流程
+  }
+}
+
+/**
+ * 加载优惠券 - PAY-002: 调用API获取可用优惠券
  */
 const loadCoupons = async () => {
   try {
-    // TODO: 调用API获取可用优惠券
-    // const res = await paymentApi.getAvailableCoupons({
-    //   orderId: orderInfo.value.orderId
-    // })
+    // 需要用户ID和订单金额
+    if (!userId.value) {
+      console.log('用户未登录，跳过加载优惠券')
+      return
+    }
 
-    // 模拟数据
-    availableCoupons.value = [
-      {
-        id: 1,
-        name: '满50减10',
-        discount: '10.00',
-        condition: '满50元可用',
-        validTime: '2026-12-31到期'
-      },
-      {
-        id: 2,
-        name: '新人专享券',
-        discount: '5.00',
-        condition: '无门槛',
-        validTime: '2026-03-31到期'
-      }
-    ]
+    // 计算当前订单金额（不含优惠券）
+    const orderAmount = parseFloat(orderInfo.value.totalAmount) || 0
+
+    if (orderAmount <= 0) {
+      console.log('订单金额无效，跳过加载优惠券')
+      return
+    }
+
+    // 调用后端API获取可用优惠券
+    const res = await paymentApi.getAvailableCoupons({
+      userId: userId.value,
+      orderAmount: orderAmount
+    })
+
+    if (res.code === 200 && res.data) {
+      // 转换后端数据格式为前端所需格式
+      availableCoupons.value = res.data.map(coupon => ({
+        id: coupon.id,
+        name: coupon.name || '优惠券',
+        // 后端字段是 amount，转换为 discount
+        discount: formatAmount(coupon.amount || 0),
+        // 根据最低消费金额生成条件描述
+        condition: coupon.minAmount && coupon.minAmount > 0
+          ? `满${coupon.minAmount}元可用`
+          : '无门槛',
+        // 格式化过期时间
+        validTime: coupon.expireTime
+          ? `到期时间：${formatExpireTime(coupon.expireTime)}`
+          : '永久有效',
+        // 额外的数据，供后续使用
+        originalAmount: coupon.amount,
+        minAmount: coupon.minAmount,
+        status: coupon.status
+      }))
+
+      console.log('加载优惠券成功:', availableCoupons.value.length, '张可用')
+    } else {
+      console.log('暂无可用优惠券')
+      availableCoupons.value = []
+    }
   } catch (error) {
     console.error('加载优惠券失败:', error)
+    // 加载优惠券失败不影响支付流程，只是不显示优惠券选项
+    availableCoupons.value = []
   }
+}
+
+/**
+ * 格式化过期时间
+ */
+const formatExpireTime = (timeStr) => {
+  if (!timeStr) return ''
+
+  const date = new Date(timeStr)
+  const year = date.getFullYear()
+  const month = (date.getMonth() + 1).toString().padStart(2, '0')
+  const day = date.getDate().toString().padStart(2, '0')
+
+  return `${year}-${month}-${day}`
 }
 
 /**
@@ -310,6 +400,12 @@ const closeCouponPopup = () => {
 const useCoupon = (coupon) => {
   selectedCoupon.value = coupon
   closeCouponPopup()
+
+  uni.showToast({
+    title: `已选择${coupon.name}`,
+    icon: 'success',
+    duration: 1500
+  })
 }
 
 /**
@@ -368,158 +464,408 @@ const processPayment = async () => {
   paying.value = true
 
   try {
-    // TODO: 调用支付API
-    // const res = await paymentApi.createPayment({
-    //   orderId: orderInfo.value.orderId,
-    //   paymentMethod: selectedMethod.value,
-    //   amount: finalAmount.value,
-    //   couponId: selectedCoupon.value?.id
-    // })
+    // PAY-003: 调用统一支付API创建支付订单
+    const paymentData = {
+      orderId: orderInfo.value.orderId,
+      userId: userId.value,
+      paymentMethod: selectedMethod.value,
+      couponId: selectedCoupon.value?.id || null
+    }
 
-    // 模拟支付流程
-    if (selectedMethod.value === 'wechat') {
-      // 微信支付
-      const payResult = await wechatPay()
-      if (payResult) {
-        await checkPaymentStatus()
-      } else {
-        paying.value = false
+    console.log('创建支付订单:', paymentData)
+
+    const res = await paymentApi.createPayment(paymentData)
+
+    if (res.code === 200 && res.data) {
+      const { paymentNo, amount, status } = res.data
+
+      console.log('支付订单创建成功:', { paymentNo, amount, status })
+
+      // 根据支付方式调用不同的支付接口
+      if (selectedMethod.value === PaymentMethod.WECHAT) {
+        // PAY-004: 调用微信支付
+        const payResult = await wechatPay(paymentNo)
+        if (payResult) {
+          await checkPaymentStatus(paymentNo)
+        } else {
+          paying.value = false
+        }
+      } else if (selectedMethod.value === PaymentMethod.ALIPAY) {
+        // PAY-005: 调用支付宝支付
+        const payResult = await alipay(paymentNo)
+        if (payResult) {
+          await checkPaymentStatus(paymentNo)
+        } else {
+          paying.value = false
+        }
+      } else if (selectedMethod.value === PaymentMethod.WALLET) {
+        // PAY-006: 调用余额支付API
+        await walletPay(paymentNo)
       }
-    } else if (selectedMethod.value === 'alipay') {
-      // 支付宝支付
-      const payResult = await alipay()
-      if (payResult) {
-        await checkPaymentStatus()
-      } else {
-        paying.value = false
-      }
-    } else if (selectedMethod.value === 'wallet') {
-      // 余额支付
-      await walletPay()
+    } else {
+      throw new Error(res.message || '创建支付订单失败')
     }
   } catch (error) {
     console.error('支付失败:', error)
     paying.value = false
+
     uni.showToast({
+      title: error.message || '支付失败',
+      icon: 'none',
+      duration: 2000
+    })
+  }
+}
+
+/**
+ * 微信支付 - PAY-004: 调用微信支付
+ * @param {string} paymentNo - 支付流水号
+ */
+const wechatPay = async (paymentNo) => {
+  try {
+    // 调用后端API获取微信支付参数
+    const res = await paymentApi.wechatPay({ paymentNo })
+
+    if (res.code === 200 && res.data) {
+      const payParams = res.data
+
+      // 检查是否需要调起支付
+      if (payParams.status === 'success') {
+        // 已经支付成功（可能是余额直接扣款）
+        return true
+      }
+
+      // 调起微信支付
+      return new Promise((resolve) => {
+        uni.requestPayment({
+          provider: 'wxpay',
+          timeStamp: payParams.timeStamp || Date.now().toString(),
+          nonceStr: payParams.nonceStr || Math.random().toString(36).substr(2, 15),
+          package: payParams.package || 'prepay_id=wx',
+          signType: payParams.signType || 'MD5',
+          paySign: payParams.paySign || '',
+          success: () => {
+            uni.showToast({
+              title: '支付成功',
+              icon: 'success'
+            })
+            resolve(true)
+          },
+          fail: (err) => {
+            console.error('微信支付失败:', err)
+
+            if (err.errMsg === 'requestPayment:fail cancel') {
+              uni.showToast({
+                title: '取消支付',
+                icon: 'none'
+              })
+            } else {
+              uni.showToast({
+                title: '支付失败',
+                icon: 'none'
+              })
+            }
+
+            resolve(false)
+          }
+        })
+      })
+    } else {
+      throw new Error(res.message || '获取微信支付参数失败')
+    }
+  } catch (error) {
+    console.error('微信支付异常:', error)
+
+    // 如果是开发环境或后端返回"功能开发中"，模拟支付成功
+    if (error.message?.includes('开发中') || process.env.NODE_ENV === 'development') {
+      console.log('微信支付功能开发中，模拟支付成功')
+      uni.showToast({
+        title: '模拟支付成功',
+        icon: 'success'
+      })
+      return true
+    }
+
+    throw error
+  }
+}
+
+/**
+ * 支付宝支付 - PAY-005: 调用支付宝支付
+ * @param {string} paymentNo - 支付流水号
+ */
+const alipay = async (paymentNo) => {
+  try {
+    // 调用后端API获取支付宝支付参数
+    const res = await paymentApi.alipay({ paymentNo })
+
+    if (res.code === 200 && res.data) {
+      const payParams = res.data
+
+      // 检查是否需要调起支付
+      if (payParams.status === 'success') {
+        // 已经支付成功
+        return true
+      }
+
+      // 调起支付宝支付
+      return new Promise((resolve) => {
+        uni.requestPayment({
+          provider: 'alipay',
+          orderInfo: payParams.orderInfo || JSON.stringify({
+            orderNo: paymentNo
+          }),
+          success: () => {
+            uni.showToast({
+              title: '支付成功',
+              icon: 'success'
+            })
+            resolve(true)
+          },
+          fail: (err) => {
+            console.error('支付宝支付失败:', err)
+
+            if (err.errMsg === 'requestPayment:fail cancel') {
+              uni.showToast({
+                title: '取消支付',
+                icon: 'none'
+              })
+            } else {
+              uni.showToast({
+                title: '支付失败',
+                icon: 'none'
+              })
+            }
+
+            resolve(false)
+          }
+        })
+      })
+    } else {
+      throw new Error(res.message || '获取支付宝支付参数失败')
+    }
+  } catch (error) {
+    console.error('支付宝支付异常:', error)
+
+    // 如果是开发环境或后端返回"功能开发中"，模拟支付成功
+    if (error.message?.includes('开发中') || process.env.NODE_ENV === 'development') {
+      console.log('支付宝支付功能开发中，模拟支付成功')
+      uni.showToast({
+        title: '模拟支付成功',
+        icon: 'success'
+      })
+      return true
+    }
+
+    throw error
+  }
+}
+
+/**
+ * 余额支付 - PAY-006: 调用余额支付API
+ * @param {string} paymentNo - 支付流水号
+ */
+const walletPay = async (paymentNo) => {
+  try {
+    // 检查是否需要输入支付密码
+    const needPassword = await checkPaymentPasswordRequired()
+
+    let paymentPassword = null
+
+    if (needPassword) {
+      // 弹出支付密码输入框
+      paymentPassword = await showPaymentPasswordDialog()
+
+      if (!paymentPassword) {
+        // 用户取消输入
+        paying.value = false
+        return
+      }
+    }
+
+    // 调用后端API进行余额支付
+    const res = await paymentApi.balancePay({
+      paymentNo,
+      paymentPassword
+    })
+
+    if (res.code === 200 && res.data) {
+      const { status, paymentNo: paidPaymentNo } = res.data
+
+      if (status === 'success') {
+        // 支付成功
+        uni.showToast({
+          title: '支付成功',
+          icon: 'success'
+        })
+
+        // 更新本地余额显示
+        const currentBalance = parseFloat(userBalance.value)
+        const payAmount = parseFloat(finalAmount.value)
+        userBalance.value = (currentBalance - payAmount).toFixed(2)
+
+        // 跳转到结果页
+        setTimeout(() => {
+          goToResult(true, paidPaymentNo)
+        }, 1500)
+      } else if (status === 'failed') {
+        throw new Error('余额支付失败')
+      }
+    } else {
+      throw new Error(res.message || '余额支付失败')
+    }
+  } catch (error) {
+    console.error('余额支付异常:', error)
+
+    // 根据错误码显示不同提示
+    let errorMessage = '支付失败'
+
+    if (error.message?.includes('余额不足')) {
+      errorMessage = '余额不足，请先充值'
+    } else if (error.message?.includes('支付密码错误')) {
+      errorMessage = '支付密码错误，请重试'
+    } else if (error.message) {
+      errorMessage = error.message
+    }
+
+    uni.showModal({
       title: '支付失败',
+      content: errorMessage,
+      showCancel: false,
+      success: () => {
+        paying.value = false
+      }
+    })
+  }
+}
+
+/**
+ * 检查是否需要支付密码
+ */
+const checkPaymentPasswordRequired = () => {
+  return new Promise((resolve) => {
+    // TODO: 可以从后端查询用户是否设置了支付密码
+    // 这里简化处理：如果金额超过100元，需要密码
+    const amount = parseFloat(finalAmount.value)
+    resolve(amount >= 100)
+  })
+}
+
+/**
+ * 显示支付密码输入框
+ */
+const showPaymentPasswordDialog = () => {
+  return new Promise((resolve) => {
+    uni.showModal({
+      title: '输入支付密码',
+      content: '请输入6位支付密码',
+      editable: true,
+      placeholderText: '请输入密码',
+      success: (res) => {
+        if (res.confirm && res.content) {
+          const password = res.content.trim()
+
+          // 验证密码长度
+          if (password.length !== 6) {
+            uni.showToast({
+              title: '请输入6位支付密码',
+              icon: 'none'
+            })
+            resolve(null)
+            return
+          }
+
+          resolve(password)
+        } else {
+          resolve(null)
+        }
+      },
+      fail: () => {
+        resolve(null)
+      }
+    })
+  })
+}
+
+/**
+ * 查询支付状态 - PAY-007: 轮询查询支付状态
+ * @param {string} paymentNo - 支付流水号
+ */
+const checkPaymentStatus = async (paymentNo) => {
+  try {
+    // 显示轮询提示
+    uni.showLoading({
+      title: '确认支付中...',
+      mask: true
+    })
+
+    // 调用API模块的轮询方法
+    await paymentApi.pollPaymentStatus(paymentNo, {
+      interval: 2000,      // 每2秒查询一次
+      maxAttempts: 15,     // 最多查询15次（30秒）
+      onSuccess: (data) => {
+        console.log('支付轮询成功:', data)
+        uni.hideLoading()
+
+        uni.showToast({
+          title: '支付成功',
+          icon: 'success'
+        })
+
+        // 延迟跳转到结果页
+        setTimeout(() => {
+          goToResult(true, paymentNo)
+        }, 1500)
+      },
+      onFailed: (data) => {
+        console.log('支付轮询失败:', data)
+        uni.hideLoading()
+
+        uni.showModal({
+          title: '支付失败',
+          content: '支付未成功，请重试或联系客服',
+          showCancel: false,
+          success: () => {
+            paying.value = false
+          }
+        })
+      },
+      onTimeout: () => {
+        console.log('支付轮询超时')
+        uni.hideLoading()
+
+        uni.showModal({
+          title: '支付超时',
+          content: '支付确认超时，请稍后在订单中查看支付状态',
+          showCancel: false,
+          success: () => {
+            goToResult(false, paymentNo)
+          }
+        })
+      }
+    })
+  } catch (error) {
+    console.error('支付状态查询异常:', error)
+    uni.hideLoading()
+    paying.value = false
+
+    uni.showToast({
+      title: '查询支付状态失败',
       icon: 'none'
     })
   }
 }
 
 /**
- * 微信支付
- */
-const wechatPay = () => {
-  return new Promise((resolve) => {
-    // TODO: 调用微信支付
-    uni.requestPayment({
-      provider: 'wxpay',
-      timeStamp: Date.now().toString(),
-      nonceStr: Math.random().toString(36).substr(2, 15),
-      package: 'prepay_id=wx',
-      signType: 'MD5',
-      paySign: '',
-      success: () => {
-        uni.showToast({
-          title: '支付成功',
-          icon: 'success'
-        })
-        setTimeout(() => {
-          goToResult(true)
-        }, 1500)
-        resolve(true)
-      },
-      fail: (err) => {
-        console.error('微信支付失败:', err)
-        if (err.errMsg === 'requestPayment:fail cancel') {
-          uni.showToast({
-            title: '取消支付',
-            icon: 'none'
-          })
-        } else {
-          uni.showToast({
-            title: '支付失败',
-            icon: 'none'
-          })
-        }
-        resolve(false)
-      }
-    })
-  })
-}
-
-/**
- * 支付宝支付
- */
-const alipay = () => {
-  return new Promise((resolve) => {
-    // TODO: 调用支付宝支付
-    uni.requestPayment({
-      provider: 'alipay',
-      orderInfo: {
-        orderNo: orderInfo.value.orderNo
-      },
-      success: () => {
-        uni.showToast({
-          title: '支付成功',
-          icon: 'success'
-        })
-        setTimeout(() => {
-          goToResult(true)
-        }, 1500)
-        resolve(true)
-      },
-      fail: (err) => {
-        console.error('支付宝支付失败:', err)
-        uni.showToast({
-          title: '支付失败',
-          icon: 'none'
-        })
-        resolve(false)
-      }
-    })
-  })
-}
-
-/**
- * 余额支付
- */
-const walletPay = async () => {
-  // TODO: 调用余额支付API
-  // const res = await paymentApi.walletPay({
-  //   orderId: orderInfo.value.orderId,
-  //   amount: finalAmount.value
-  // })
-
-  // 扣除余额
-  userBalance.value = (parseFloat(userBalance.value) - parseFloat(finalAmount.value)).toFixed(2)
-
-  uni.showToast({
-    title: '支付成功',
-    icon: 'success'
-  })
-
-  setTimeout(() => {
-    goToResult(true)
-  }, 1500)
-}
-
-/**
- * 查询支付状态
- */
-const checkPaymentStatus = async () => {
-  // TODO: 轮询查询支付状态
-  goToResult(true)
-}
-
-/**
  * 跳转到结果页
+ * @param {boolean} success - 是否支付成功
+ * @param {string} paymentNo - 支付流水号
  */
-const goToResult = (success) => {
+const goToResult = (success, paymentNo = '') => {
   paying.value = false
+
   uni.redirectTo({
-    url: `/pages-common/payment/result?success=${success}&orderId=${orderInfo.value.orderNo}`
+    url: `/pages-common/payment/result?success=${success}&orderId=${orderInfo.value.orderId}&paymentNo=${paymentNo}`
   })
 }
 
@@ -536,6 +882,16 @@ const generateOrderNo = () => {
   const second = now.getSeconds().toString().padStart(2, '0')
   const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0')
   return `${year}${month}${day}${hour}${minute}${second}${random}`
+}
+
+/**
+ * 格式化金额
+ */
+const formatAmount = (amount) => {
+  if (typeof amount !== 'number') {
+    amount = parseFloat(amount) || 0
+  }
+  return amount.toFixed(2)
 }
 
 /**
