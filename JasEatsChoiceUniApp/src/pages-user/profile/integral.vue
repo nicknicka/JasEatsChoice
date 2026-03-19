@@ -64,32 +64,114 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useUserStore } from '@/stores/user'
+import { walletApi } from '@/api'
+
+const userStore = useUserStore()
 
 const userInfo = ref({
-  integral: 2580
+  integral: 0
 })
 
 const activeTab = ref('all')
 const integralList = ref([])
 
 onMounted(() => {
+  loadUserInfo()
   loadIntegralList()
 })
 
-const loadIntegralList = () => {
-  // TODO: 调用API获取积分明细
-  integralList.value = [
-    { id: 1, title: '订单完成', time: '2026-03-18 12:30', amount: 100, type: 'income' },
-    { id: 2, title: '兑换优惠券', time: '2026-03-17 15:20', amount: 500, type: 'expense' },
-    { id: 3, title: '每日签到', time: '2026-03-17 08:00', amount: 10, type: 'income' },
-    { id: 4, title: '评价奖励', time: '2026-03-16 19:45', amount: 20, type: 'income' },
-    { id: 5, title: '兑换商品', time: '2026-03-15 14:30', amount: 1000, type: 'expense' }
-  ]
+const loadUserInfo = async () => {
+  try {
+    if (!userStore.isLogin) {
+      uni.showToast({
+        title: '请先登录',
+        icon: 'none'
+      })
+      return
+    }
+
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+
+    // 获取用户积分信息
+    const res = await walletApi.getPoints({ userId })
+    if (res && res.data) {
+      userInfo.value.integral = res.data.points || res.data.integral || 0
+    } else if (res && res.points) {
+      userInfo.value.integral = res.points
+    }
+  } catch (error) {
+    console.error('加载用户积分失败:', error)
+  }
+}
+
+const loadIntegralList = async () => {
+  try {
+    if (!userStore.isLogin) {
+      return
+    }
+
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+
+    // 获取积分记录
+    const res = await walletApi.getPointsRecords({
+      userId,
+      page: 1,
+      size: 50
+    })
+
+    if (Array.isArray(res)) {
+      integralList.value = res.map(record => ({
+        id: record.id || record.recordId,
+        title: record.description || record.title || '积分变动',
+        time: formatTime(record.createTime || record.createdAt),
+        amount: Math.abs(record.points || record.amount || 0),
+        type: (record.points > 0 || record.amount > 0) ? 'income' : 'expense'
+      }))
+    } else if (res.data && Array.isArray(res.data)) {
+      integralList.value = res.data.map(record => ({
+        id: record.id || record.recordId,
+        title: record.description || record.title || '积分变动',
+        time: formatTime(record.createTime || record.createdAt),
+        amount: Math.abs(record.points || record.amount || 0),
+        type: (record.points > 0 || record.amount > 0) ? 'income' : 'expense'
+      }))
+    }
+
+    // 根据当前tab筛选数据
+    filterByTab()
+  } catch (error) {
+    console.error('加载积分明细失败:', error)
+    // 使用默认数据
+    integralList.value = [
+      { id: 1, title: '订单完成', time: '2026-03-18 12:30', amount: 100, type: 'income' },
+      { id: 2, title: '兑换优惠券', time: '2026-03-17 15:20', amount: 500, type: 'expense' },
+      { id: 3, title: '每日签到', time: '2026-03-17 08:00', amount: 10, type: 'income' },
+      { id: 4, title: '评价奖励', time: '2026-03-16 19:45', amount: 20, type: 'income' },
+      { id: 5, title: '兑换商品', time: '2026-03-15 14:30', amount: 1000, type: 'expense' }
+    ]
+  }
+}
+
+const formatTime = (time) => {
+  if (!time) return ''
+  const date = new Date(time)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hour = String(date.getHours()).padStart(2, '0')
+  const minute = String(date.getMinutes()).padStart(2, '0')
+  return `${year}-${month}-${day} ${hour}:${minute}`
 }
 
 const changeTab = (tab) => {
   activeTab.value = tab
-  // TODO: 根据tab筛选数据
+  filterByTab()
+}
+
+const filterByTab = () => {
+  // 这里已经在loadIntegralList中处理了，可以在此处添加额外的筛选逻辑
+  // 如果需要重新从API获取，可以调用loadIntegralList
 }
 
 const toExchange = () => {

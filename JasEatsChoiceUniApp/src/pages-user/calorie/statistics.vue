@@ -99,13 +99,17 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useUserStore } from '@/stores/user'
+import { aiApi } from '@/api'
+
+const userStore = useUserStore()
 
 const period = ref('week')
 const targetCalories = ref(2000)
 
-const averageCalories = ref(1850)
-const targetAchieved = ref(92)
-const totalDays = ref(7)
+const averageCalories = ref(0)
+const targetAchieved = ref(0)
+const totalDays = ref(0)
 
 const chartData = ref({})
 const chartOpts = ref({
@@ -139,11 +143,11 @@ const pieOpts = ref({
 })
 
 const nutritionLegend = ref([
-  { name: '碳水化合物', value: 45, color: '#FF6B35' },
-  { name: '蛋白质', value: 20, color: '#52C41A' },
-  { name: '脂肪', value: 25, color: '#1890FF' },
-  { name: '膳食纤维', value: 8, color: '#FAAD14' },
-  { name: '其他', value: 2, color: '#F5222D' }
+  { name: '碳水化合物', value: 0, color: '#FF6B35' },
+  { name: '蛋白质', value: 0, color: '#52C41A' },
+  { name: '脂肪', value: 0, color: '#1890FF' },
+  { name: '膳食纤维', value: 0, color: '#FAAD14' },
+  { name: '其他', value: 0, color: '#F5222D' }
 ])
 
 const detailList = ref([])
@@ -158,8 +162,128 @@ const changePeriod = (newPeriod) => {
   loadStatistics()
 }
 
-const loadStatistics = () => {
-  // TODO: 调用API获取统计数据
+const loadStatistics = async () => {
+  try {
+    if (!userStore.isLogin) {
+      uni.showToast({
+        title: '请先登录',
+        icon: 'none'
+      })
+      return
+    }
+
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+
+    // 计算日期范围
+    const today = new Date()
+    let startDate = new Date()
+    let days = 7
+
+    if (period.value === 'week') {
+      startDate.setDate(today.getDate() - 6) // 最近7天
+      days = 7
+    } else {
+      startDate.setDate(today.getDate() - 29) // 最近30天
+      days = 30
+    }
+
+    const startDateStr = formatDate(startDate)
+    const endDateStr = formatDate(today)
+
+    // 调用API获取营养统计数据
+    // 注意：这里需要后端支持日期范围查询
+    const res = await aiApi.analyzeNutrition({
+      userId,
+      date: endDateStr,
+      startDate: startDateStr,
+      endDate: endDateStr,
+      period: period.value
+    })
+
+    if (res && res.data) {
+      const nutrition = res.data
+
+      // 更新概览数据
+      const totalCals = nutrition.totalCalories || nutrition.calories || 0
+      averageCalories.value = Math.round(totalCals / days)
+      targetAchieved.value = Math.round((averageCalories.value / targetCalories.value) * 100)
+      totalDays.value = nutrition.totalDays || days
+
+      // 更新营养成分饼图
+      if (nutrition.nutrition || nutrition.macronutrients) {
+        const macros = nutrition.nutrition || nutrition.macronutrients
+
+        // 计算各营养成分占比
+        const carbs = macros.carbs || macros.carbohydrates || 0
+        const protein = macros.protein || 0
+        const fat = macros.fat || 0
+        const fiber = macros.fiber || macros.dietaryFiber || 0
+        const total = carbs + protein + fat + fiber
+
+        if (total > 0) {
+          nutritionLegend.value[0].value = Math.round((carbs / total) * 100)
+          nutritionLegend.value[1].value = Math.round((protein / total) * 100)
+          nutritionLegend.value[2].value = Math.round((fat / total) * 100)
+          nutritionLegend.value[3].value = Math.round((fiber / total) * 100)
+          nutritionLegend.value[4].value = Math.max(0, 100 - nutritionLegend.value[0].value - nutritionLegend.value[1].value - nutritionLegend.value[2].value - nutritionLegend.value[3].value)
+
+          pieData.value = {
+            series: [{
+              data: [
+                { name: '碳水化合物', value: nutritionLegend.value[0].value },
+                { name: '蛋白质', value: nutritionLegend.value[1].value },
+                { name: '脂肪', value: nutritionLegend.value[2].value },
+                { name: '膳食纤维', value: nutritionLegend.value[3].value },
+                { name: '其他', value: nutritionLegend.value[4].value }
+              ]
+            }]
+          }
+        }
+      }
+
+      // 更新详细数据列表
+      if (Array.isArray(nutrition.dailyRecords)) {
+        detailList.value = nutrition.dailyRecords.map(record => ({
+          date: formatShortDate(record.date),
+          weekday: getWeekday(record.date),
+          calories: record.calories || record.totalCalories || 0
+        }))
+      } else if (nutrition.records) {
+        detailList.value = nutrition.records.map(record => ({
+          date: formatShortDate(record.date),
+          weekday: getWeekday(record.date),
+          calories: record.calories || 0
+        }))
+      }
+
+      // 更新图表数据
+      if (Array.isArray(nutrition.dailyRecords) || Array.isArray(nutrition.records)) {
+        const records = nutrition.dailyRecords || nutrition.records
+        const categories = records.map(r => formatShortDate(r.date))
+        const data = records.map(r => r.calories || 0)
+
+        chartData.value = {
+          categories,
+          series: [{
+            name: '卡路里',
+            data
+          }]
+        }
+      }
+
+      // 更新建议
+      suggestion.value = nutrition.suggestion || generateSuggestion()
+    } else {
+      // 如果没有数据，使用默认值
+      loadDefaultData()
+    }
+  } catch (error) {
+    console.error('加载统计数据失败:', error)
+    loadDefaultData()
+  }
+}
+
+const loadDefaultData = () => {
   if (period.value === 'week') {
     loadWeekData()
   } else {
@@ -168,7 +292,6 @@ const loadStatistics = () => {
 }
 
 const loadWeekData = () => {
-  // 模拟周数据
   chartData.value = {
     categories: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
     series: [{
@@ -188,6 +311,14 @@ const loadWeekData = () => {
       ]
     }]
   }
+
+  nutritionLegend.value = [
+    { name: '碳水化合物', value: 45, color: '#FF6B35' },
+    { name: '蛋白质', value: 20, color: '#52C41A' },
+    { name: '脂肪', value: 25, color: '#1890FF' },
+    { name: '膳食纤维', value: 8, color: '#FAAD14' },
+    { name: '其他', value: 2, color: '#F5222D' }
+  ]
 
   totalDays.value = 7
   averageCalories.value = 1890
@@ -213,7 +344,6 @@ const loadWeekData = () => {
 }
 
 const loadMonthData = () => {
-  // 模拟月数据
   const categories = []
   const data = []
 
@@ -242,11 +372,49 @@ const loadMonthData = () => {
     }]
   }
 
+  nutritionLegend.value = [
+    { name: '碳水化合物', value: 48, color: '#FF6B35' },
+    { name: '蛋白质', value: 18, color: '#52C41A' },
+    { name: '脂肪', value: 22, color: '#1890FF' },
+    { name: '膳食纤维', value: 10, color: '#FAAD14' },
+    { name: '其他', value: 2, color: '#F5222D' }
+  ]
+
   totalDays.value = 28
   averageCalories.value = 1820
   targetAchieved.value = Math.round((1820 / 2000) * 100)
 
   suggestion.value = '本月平均摄入1820kcal，低于目标2000kcal。营养结构较为均衡，建议继续保持当前饮食习惯，注意周末不要暴饮暴食。'
+}
+
+const formatDate = (date) => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+const formatShortDate = (dateStr) => {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  return `${date.getMonth() + 1}/${date.getDate()}`
+}
+
+const getWeekday = (dateStr) => {
+  if (!dateStr) return ''
+  const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+  const date = new Date(dateStr)
+  return weekdays[date.getDay()]
+}
+
+const generateSuggestion = () => {
+  if (averageCalories.value < targetCalories.value * 0.8) {
+    return `您的平均摄入${averageCalories.value}kcal，低于目标${targetCalories.value}kcal。建议适当增加优质蛋白质和碳水化合物的摄入。`
+  } else if (averageCalories.value > targetCalories.value * 1.1) {
+    return `您的平均摄入${averageCalories.value}kcal，高于目标${targetCalories.value}kcal。建议适当控制饮食，减少高热量食物的摄入。`
+  } else {
+    return `您的平均摄入${averageCalories.value}kcal，接近目标${targetCalories.value}kcal。营养结构较为均衡，建议继续保持当前饮食习惯。`
+  }
 }
 </script>
 

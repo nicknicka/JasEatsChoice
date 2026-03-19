@@ -287,62 +287,6 @@ const mapOrderStatusText = (status) => {
   }
   return statusMap[status] || status
 }
-          {
-            id: 4,
-            dishId: 4,
-            name: '回锅肉',
-            spec: '',
-            price: '32.00',
-            quantity: 1,
-            image: 'https://via.placeholder.com/200x200/FF6B35/FFFFFF?text=回锅肉'
-          }
-        ],
-        totalQuantity: 1,
-        totalAmount: '32.00',
-        createTime: '2026-03-15 19:56:12'
-      },
-      {
-        id: 4,
-        orderNo: 'JSCY202603140004',
-        merchantId: 3,
-        merchantName: '健康轻食',
-        status: 'completed',
-        statusText: '已完成',
-        items: [
-          {
-            id: 5,
-            dishId: 5,
-            name: '蔬菜沙拉',
-            spec: '低卡',
-            price: '22.00',
-            quantity: 1,
-            image: 'https://via.placeholder.com/200x200/C8E6C9/FFFFFF?text=沙拉'
-          }
-        ],
-        totalQuantity: 1,
-        totalAmount: '22.00',
-        createTime: '2026-03-14 12:15:30'
-      }
-    ]
-
-    if (page.value === 1) {
-      orders.value = mockOrders
-    } else {
-      orders.value.push(...mockOrders)
-    }
-
-    // 判断是否还有更多数据
-    hasMore.value = orders.value.length >= pageSize.value
-  } catch (error) {
-    console.error('加载订单列表失败:', error)
-    uni.showToast({
-      title: '加载失败，请重试',
-      icon: 'none'
-    })
-  } finally {
-    loading.value = false
-  }
-}
 
 /**
  * 下拉刷新
@@ -408,7 +352,7 @@ const toDish = (dishId) => {
 /**
  * 取消订单
  */
-const cancelOrder = (order) => {
+const cancelOrder = async (order) => {
   uni.showModal({
     title: '取消订单',
     content: '确定要取消此订单吗？',
@@ -416,13 +360,14 @@ const cancelOrder = (order) => {
     success: async (res) => {
       if (res.confirm) {
         try {
-          // TODO: 调用后端API
-          // await orderApi.cancel(order.id)
+          // 调用后端API取消订单
+          await orderApi.cancel(order.id)
 
-          // 从列表中移除
+          // 从列表中移除或更新状态
           const index = orders.value.findIndex(item => item.id === order.id)
           if (index > -1) {
-            orders.value.splice(index, 1)
+            orders.value[index].status = 'cancelled'
+            orders.value[index].statusText = '已取消'
           }
 
           uni.showToast({
@@ -473,7 +418,7 @@ const viewLogistics = (order) => {
 /**
  * 确认收货
  */
-const confirmReceipt = (order) => {
+const confirmReceipt = async (order) => {
   uni.showModal({
     title: '确认收货',
     content: '确认已收到餐品吗？',
@@ -481,12 +426,17 @@ const confirmReceipt = (order) => {
     success: async (res) => {
       if (res.confirm) {
         try {
-          // TODO: 调用后端API
-          // await orderApi.confirmReceipt(order.id)
+          // 调用后端API确认收货
+          await orderApi.confirm(order.id, {
+            userId: userStore.userInfo?.userId || userStore.userInfo?.id
+          })
 
           // 更新订单状态
-          order.status = 'completed'
-          order.statusText = '已完成'
+          const index = orders.value.findIndex(item => item.id === order.id)
+          if (index > -1) {
+            orders.value[index].status = 'completed'
+            orders.value[index].statusText = '已完成'
+          }
 
           uni.showToast({
             title: '确认收货成功',

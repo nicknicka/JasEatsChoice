@@ -98,6 +98,10 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useUserStore } from '@/stores/user'
+import { dishApi, cartApi } from '@/api'
+
+const userStore = useUserStore()
 
 const dish = ref({
   id: 1,
@@ -106,7 +110,8 @@ const dish = ref({
   image: 'https://picsum.photos/400/300?random=1',
   price: 38,
   originalPrice: 48,
-  calories: 280
+  calories: 280,
+  merchantId: null
 })
 
 const ingredientOptions = ref([
@@ -143,17 +148,17 @@ const quantity = ref(1)
 
 const totalPrice = computed(() => {
   let price = dish.value.price
-  
+
   // 加上食材选项价格
   if (selectedOptions.value.ingredient) {
     const option = ingredientOptions.value.find(o => o.id === selectedOptions.value.ingredient)
     if (option) price += option.price
   }
-  
+
   // 加上规格价格
   const sizeOption = sizeOptions.value.find(o => o.id === selectedOptions.value.size)
   if (sizeOption) price += sizeOption.priceExtra
-  
+
   return (price * quantity.value).toFixed(2)
 })
 
@@ -185,26 +190,147 @@ const changeQuantity = (delta) => {
   }
 }
 
-const addToCart = () => {
-  const cartItem = {
-    dish: dish.value,
-    options: selectedOptions.value,
-    tags: selectedTags.value,
-    remark: remark.value,
-    quantity: quantity.value,
-    totalPrice: totalPrice.value
+const addToCart = async () => {
+  try {
+    if (!userStore.isLogin) {
+      uni.showToast({
+        title: '请先登录',
+        icon: 'none'
+      })
+      return
+    }
+
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+
+    // 构建可选食材数组
+    const optionalIngredients = []
+    if (selectedOptions.value.ingredient) {
+      const ingredient = ingredientOptions.value.find(o => o.id === selectedOptions.value.ingredient)
+      if (ingredient && ingredient.price > 0) {
+        optionalIngredients.push({
+          id: ingredient.id,
+          name: ingredient.name,
+          price: ingredient.price,
+          quantity: 1
+        })
+      }
+    }
+
+    // 构建规格字符串
+    const specParts = []
+    const sizeOption = sizeOptions.value.find(o => o.id === selectedOptions.value.size)
+    if (sizeOption) {
+      specParts.push(sizeOption.name)
+    }
+    if (selectedTags.value.length > 0) {
+      const tasteNames = selectedTags.value.map(id => tasteTags.value.find(t => t.id === id)?.name).filter(Boolean)
+      specParts.push(tasteNames.join('+'))
+    }
+    const spec = specParts.length > 0 ? specParts.join(' / ') : ''
+
+    // 调用购物车API
+    const res = await cartApi.add({
+      dishId: dish.value.id,
+      merchantId: dish.value.merchantId,
+      quantity: quantity.value,
+      optionalIngredients,
+      spec,
+      remark: remark.value
+    })
+
+    if (res && (res.code === 200 || res.success || res.data)) {
+      uni.showToast({
+        title: '已加入购物车',
+        icon: 'success'
+      })
+
+      setTimeout(() => {
+        uni.navigateBack()
+      }, 1000)
+    } else {
+      // 如果后端API调用失败，使用本地存储作为后备方案
+      console.warn('购物车API调用失败，使用本地存储')
+
+      let cart = uni.getStorageSync('cart') || []
+      const cartItem = {
+        userId,
+        dishId: dish.value.id,
+        dishName: dish.value.name,
+        image: dish.value.image,
+        price: parseFloat(totalPrice.value),
+        quantity: quantity.value,
+        spec,
+        optionalIngredients,
+        remark: remark.value
+      }
+      cart.push(cartItem)
+      uni.setStorageSync('cart', cart)
+
+      uni.showToast({
+        title: '已加入购物车（本地）',
+        icon: 'success'
+      })
+
+      setTimeout(() => {
+        uni.navigateBack()
+      }, 1000)
+    }
+  } catch (error) {
+    console.error('加入购物车失败:', error)
+
+    // 错误时使用本地存储
+    try {
+      let cart = uni.getStorageSync('cart') || []
+      const cartItem = {
+        dishId: dish.value.id,
+        dishName: dish.value.name,
+        price: parseFloat(totalPrice.value),
+        quantity: quantity.value,
+        spec: sizeOptions.value.find(o => o.id === selectedOptions.value.size)?.name,
+        remark: remark.value
+      }
+      cart.push(cartItem)
+      uni.setStorageSync('cart', cart)
+
+      uni.showToast({
+        title: '已加入购物车（离线）',
+        icon: 'success'
+      })
+    } catch (e) {
+      uni.showToast({
+        title: '操作失败，请重试',
+        icon: 'none'
+      })
+    }
   }
-  
-  // TODO: 调用添加到购物车API
-  uni.showToast({
-    title: '已加入购物车',
-    icon: 'success'
-  })
-  
-  setTimeout(() => {
-    uni.navigateBack()
-  }, 1000)
 }
+
+onMounted(async () => {
+  // 从页面参数获取菜品ID
+  const pages = getCurrentPages()
+  const currentPage = pages[pages.length - 1]
+  const options = currentPage.options
+
+  if (options.dishId) {
+    try {
+      const res = await dishApi.getDetail(options.dishId)
+      if (res && res.data) {
+        dish.value = {
+          id: res.data.dishId || res.data.id,
+          name: res.data.name,
+          description: res.data.description,
+          image: res.data.image || res.data.coverImage,
+          price: parseFloat(res.data.price || 0),
+          originalPrice: res.data.originalPrice ? parseFloat(res.data.originalPrice) : null,
+          calories: res.data.calories || 0,
+          merchantId: res.data.merchantId || res.data.merchant?.id
+        }
+      }
+    } catch (error) {
+      console.error('加载菜品详情失败:', error)
+    }
+  }
+})
 </script>
 
 <style lang="scss" scoped>

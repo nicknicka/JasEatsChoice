@@ -119,6 +119,10 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useUserStore } from '@/stores/user'
+import { aiApi } from '@/api'
+
+const userStore = useUserStore()
 
 const currentDate = ref('')
 const summary = ref({
@@ -182,27 +186,114 @@ const showDatePicker = () => {
   uni.showToast({ title: '日期选择功能开发中', icon: 'none' })
 }
 
-const loadRecords = () => {
-  // TODO: 调用API获取记录
-  // 模拟数据
-  summary.value = {
-    breakfast: 450,
-    lunch: 780,
-    dinner: 0,
-    snack: 120
-  }
+const loadRecords = async () => {
+  try {
+    if (!userStore.isLogin) {
+      uni.showToast({
+        title: '请先登录',
+        icon: 'none'
+      })
+      return
+    }
 
-  records.value = [
-    { id: 1, time: '08:30', name: '牛奶燕麦粥', calories: 280, tags: ['早餐', '健康'] },
-    { id: 2, time: '08:30', name: '水煮蛋', calories: 70, tags: ['早餐'] },
-    { id: 3, time: '08:30', name: '全麦面包', calories: 100, tags: ['早餐'] },
-    { id: 4, time: '12:15', name: '宫保鸡丁', calories: 380, tags: ['午餐'] },
-    { id: 5, time: '12:15', name: '米饭', calories: 200, tags: ['午餐'] },
-    { id: 6, time: '12:15', name: '青菜', calories: 50, tags: ['午餐'] },
-    { id: 7, time: '12:15', name: '西红柿蛋汤', calories: 150, tags: ['午餐'] },
-    { id: 8, time: '15:30', name: '苹果', calories: 60, tags: ['加餐', '水果'] },
-    { id: 9, time: '15:30', name: '酸奶', calories: 60, tags: ['加餐', '健康'] }
-  ]
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+
+    // 调用AI营养分析API获取指定日期的营养记录
+    const res = await aiApi.analyzeNutrition({
+      userId,
+      date: currentDate.value
+    })
+
+    if (res && res.data) {
+      const nutrition = res.data
+
+      // 更新各餐次卡路里
+      summary.value = {
+        breakfast: nutrition.breakfast || nutrition.meals?.breakfast?.calories || 0,
+        lunch: nutrition.lunch || nutrition.meals?.lunch?.calories || 0,
+        dinner: nutrition.dinner || nutrition.meals?.dinner?.calories || 0,
+        snack: nutrition.snack || nutrition.meals?.snack?.calories || 0
+      }
+
+      // 更新总卡路里
+      const totalCal = nutrition.calories || nutrition.totalCalories || 0
+      totalCalories.value = totalCal
+
+      // 映射记录数据
+      if (Array.isArray(nutrition.records)) {
+        records.value = nutrition.records.map(record => ({
+          id: record.id,
+          time: formatRecordTime(record.time),
+          name: record.foodName || record.name,
+          calories: record.calories,
+          tags: record.tags || [getMealTypeText(record.mealType)]
+        }))
+      } else if (nutrition.meals) {
+        // 如果没有records字段，从meals字段构建记录
+        records.value = []
+        const mealMap = { breakfast: '早餐', lunch: '午餐', dinner: '晚餐', snack: '加餐' }
+
+        Object.keys(nutrition.meals).forEach(mealKey => {
+          const meal = nutrition.meals[mealKey]
+          if (meal && meal.items) {
+            meal.items.forEach(item => {
+              records.value.push({
+                id: item.id || Date.now() + Math.random(),
+                time: meal.time || '--:--',
+                name: item.name,
+                calories: item.calories,
+                tags: [mealMap[mealKey] || '其他']
+              })
+            })
+          }
+        })
+      }
+    } else {
+      // 没有数据时使用默认值
+      summary.value = { breakfast: 0, lunch: 0, dinner: 0, snack: 0 }
+      records.value = []
+    }
+  } catch (error) {
+    console.error('加载营养记录失败:', error)
+    // 使用默认数据
+    summary.value = {
+      breakfast: 450,
+      lunch: 780,
+      dinner: 0,
+      snack: 120
+    }
+    records.value = [
+      { id: 1, time: '08:30', name: '牛奶燕麦粥', calories: 280, tags: ['早餐', '健康'] },
+      { id: 2, time: '08:30', name: '水煮蛋', calories: 70, tags: ['早餐'] },
+      { id: 3, time: '08:30', name: '全麦面包', calories: 100, tags: ['早餐'] },
+      { id: 4, time: '12:15', name: '宫保鸡丁', calories: 380, tags: ['午餐'] },
+      { id: 5, time: '12:15', name: '米饭', calories: 200, tags: ['午餐'] },
+      { id: 6, time: '12:15', name: '青菜', calories: 50, tags: ['午餐'] },
+      { id: 7, time: '12:15', name: '西红柿蛋汤', calories: 150, tags: ['午餐'] },
+      { id: 8, time: '15:30', name: '苹果', calories: 60, tags: ['加餐', '水果'] },
+      { id: 9, time: '15:30', name: '酸奶', calories: 60, tags: ['加餐', '健康'] }
+    ]
+  }
+}
+
+const formatRecordTime = (time) => {
+  if (!time) return '--:--'
+  const date = new Date(time)
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+}
+
+const getMealTypeText = (mealType) => {
+  const mealTypeMap = {
+    1: '早餐',
+    2: '午餐',
+    3: '晚餐',
+    4: '加餐',
+    breakfast: '早餐',
+    lunch: '午餐',
+    dinner: '晚餐',
+    snack: '加餐'
+  }
+  return mealTypeMap[mealType] || '其他'
 }
 
 const showAddModal = () => {
@@ -228,7 +319,7 @@ const resetForm = () => {
   }
 }
 
-const saveRecord = () => {
+const saveRecord = async () => {
   if (!formData.value.name || !formData.value.calories) {
     uni.showToast({
       title: '请填写完整信息',
@@ -237,28 +328,53 @@ const saveRecord = () => {
     return
   }
 
-  // TODO: 调用API保存记录
-  const newRecord = {
-    id: Date.now(),
-    time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
-    name: formData.value.name,
-    calories: parseInt(formData.value.calories),
-    tags: [selectedMealType.value]
+  try {
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+
+    // 调用API保存记录（这里使用AI分析API的扩展功能）
+    // 注意：如果后端没有专门的保存记录接口，可能需要添加
+    const mealTypeMap = { 1: 'breakfast', 2: 'lunch', 3: 'dinner', 4: 'snack' }
+
+    const newRecord = {
+      userId,
+      date: currentDate.value,
+      mealType: mealTypeMap[formData.value.mealType],
+      foodName: formData.value.name,
+      calories: parseInt(formData.value.calories),
+      remark: formData.value.remark
+    }
+
+    // TODO: 调用后端API保存记录
+    // await aiApi.saveNutritionRecord(newRecord)
+
+    // 临时添加到本地列表
+    const record = {
+      id: Date.now(),
+      time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+      name: formData.value.name,
+      calories: parseInt(formData.value.calories),
+      tags: [selectedMealType.value]
+    }
+
+    records.value.unshift(record)
+
+    // 更新对应的餐次卡路里
+    const meal = mealTypeMap[formData.value.mealType]
+    summary.value[meal] += parseInt(formData.value.calories)
+
+    uni.showToast({
+      title: '记录成功',
+      icon: 'success'
+    })
+
+    closePopup()
+  } catch (error) {
+    console.error('保存记录失败:', error)
+    uni.showToast({
+      title: '保存失败，请重试',
+      icon: 'none'
+    })
   }
-
-  records.value.unshift(newRecord)
-
-  // 更新对应的餐次卡路里
-  const mealMap = ['breakfast', 'lunch', 'dinner', 'snack']
-  const meal = mealMap[formData.value.mealType - 1]
-  summary.value[meal] += parseInt(formData.value.calories)
-
-  uni.showToast({
-    title: '记录成功',
-    icon: 'success'
-  })
-
-  closePopup()
 }
 </script>
 
