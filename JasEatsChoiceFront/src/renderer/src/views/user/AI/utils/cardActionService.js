@@ -27,17 +27,17 @@ const getAuthHeaders = () => {
  */
 export const orderActions = {
   /**
-   * 取消订单
+   * 取消订单（5状态系统）
    * @param {string} orderId - 订单ID
    * @returns {Promise}
    */
   async cancelOrder(orderId) {
     try {
       const response = await axios.put(
-        `${baseURL}/v1/orders/${orderId}/status`,
+        `${baseURL}/v1/orders/${orderId}/cancel`,
         null,
         {
-          params: { status: 6 }, // 6-已取消
+          params: { reason: '用户取消' }, // 使用/cancel端点
           headers: getAuthHeaders()
         }
       )

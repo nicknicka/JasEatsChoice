@@ -1248,10 +1248,10 @@ public class AiFunctionExecutorOptimized {
         log.info("获取今日热量统计 - userId: {}, date: {}", userId, date);
 
         try {
-            // 查询用户当天的订单
+            // 查询用户当天的订单（5状态系统：3-已完成）
             QueryWrapper<Order> orderQuery = new QueryWrapper<>();
             orderQuery.eq("user_id", userId)
-                    .eq("status", 5) // 已送达的订单
+                    .eq("status", 3) // 已完成的订单
                     .like("create_time", date)
                     .orderByDesc("create_time");
 
@@ -1319,10 +1319,10 @@ public class AiFunctionExecutorOptimized {
         log.info("分析营养摄入 - userId: {}, date: {}", userId, date);
 
         try {
-            // 查询用户当天的订单
+            // 查询用户当天的订单（5状态系统：3-已完成）
             QueryWrapper<Order> orderQuery = new QueryWrapper<>();
             orderQuery.eq("user_id", userId)
-                    .eq("status", 5)
+                    .eq("status", 3)
                     .like("create_time", date);
 
             List<Order> orders = orderService.list(orderQuery);

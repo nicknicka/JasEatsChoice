@@ -124,7 +124,69 @@ export const merchantApi = {
    * @param {string} userId - 用户ID
    * @param {string} merchantId - 商家ID
    */
-  checkFavorite: (userId, merchantId) => get(`/v1/users/${userId}/favorites/merchants/${merchantId}/check`)
+  checkFavorite: (userId, merchantId) => get(`/v1/users/${userId}/favorites/merchants/${merchantId}/check`),
+
+  // ============= 订单管理相关API =============
+
+  /**
+   * 获取商家订单列表
+   * GET /v1/orders/merchant/{merchantId}
+   * @param {string} merchantId - 商家ID
+   * @param {Object} params - 查询参数
+   * @param {boolean} params.today - 是否只查询今日订单，默认true
+   */
+  getOrders: (merchantId, params) => get(`/v1/orders/merchant/${merchantId}`, params),
+
+  /**
+   * 获取今日订单
+   * GET /v1/orders/merchant/{merchantId}?today=true
+   * @param {string} merchantId - 商家ID
+   */
+  getTodayOrders: (merchantId) => get(`/v1/orders/merchant/${merchantId}`, { today: true }),
+
+  /**
+   * 获取订单详情
+   * GET /v1/orders/{orderId}
+   * @param {string} orderId - 订单ID
+   */
+  getOrderDetail: (orderId) => get(`/v1/orders/${orderId}`),
+
+  /**
+   * 获取订单菜品列表
+   * GET /v1/orders/{orderId}/dishes
+   * @param {string} orderId - 订单ID
+   */
+  getOrderDishes: (orderId) => get(`/v1/orders/${orderId}/dishes`),
+
+  /**
+   * 更新订单状态
+   * PUT /v1/orders/{orderId}/status?status={status}
+   * @param {string} orderId - 订单ID
+   * @param {number} status - 订单状态(0-待支付,1-待接单,2-制作中,3-已完成,4-已取消)
+   */
+  updateOrderStatus: (orderId, status) => put(`/v1/orders/${orderId}/status`, null, { params: { status } }),
+
+  /**
+   * 接单 - 将状态更新为2(制作中)
+   * PUT /v1/orders/{orderId}/status?status=2
+   * @param {string} orderId - 订单ID
+   */
+  acceptOrder: (orderId) => put(`/v1/orders/${orderId}/status`, null, { params: { status: 2 } }),
+
+  /**
+   * 拒单 - 将状态更新为4(已取消)
+   * PUT /v1/orders/{orderId}/cancel?reason={reason}
+   * @param {string} orderId - 订单ID
+   * @param {string} reason - 拒单原因
+   */
+  rejectOrder: (orderId, reason) => put(`/v1/orders/${orderId}/cancel`, null, { params: { reason } }),
+
+  /**
+   * 完成订单 - 将状态更新为3(已完成)
+   * PUT /v1/orders/{orderId}/status?status=3
+   * @param {string} orderId - 订单ID
+   */
+  completeOrder: (orderId) => put(`/v1/orders/${orderId}/status`, null, { params: { status: 3 } })
 }
 
 export default merchantApi

@@ -151,14 +151,14 @@ public class OrderController {
             order.setStatus(status);
             boolean success = orderService.updateById(order);
             if (success) {
-                // 根据状态发送通知
+                // 根据状态发送通知（5状态系统：0-待支付、1-待接单、2-制作中、3-已完成、4-已取消）
                 switch (status) {
                     case 2: // 制作中
                         NotificationUtil.createOrderNotification(
                             order.getUserId(),
                             NotificationTypeEnum.ORDER_PREPARING_COMPLETE,
                             orderId,
-                            "制作中"
+                            "商家已接单，正在制作中"
                         );
                         break;
                     case 3: // 已完成
@@ -166,7 +166,7 @@ public class OrderController {
                             order.getUserId(),
                             NotificationTypeEnum.ORDER_DELIVERED,
                             orderId,
-                            "已完成"
+                            "订单已完成"
                         );
                         break;
                 }
@@ -358,40 +358,34 @@ public class OrderController {
             queryWrapper.eq(Order::getUserId, userId);
             List<Order> orders = orderService.list(queryWrapper);
 
-            // 初始化统计数据
-            int inProgress = 0;  // 进行中订单（1-待接单, 2-制作中）
-            int pending = 0;      // 待确认订单（0-待支付, 1-待接单）
-            int pendingComment = 0;  // 待评价订单（3-已完成但未评价，需查询评价表）
+            // 初始化统计数据（5状态系统：0-待支付、1-待接单、2-制作中、3-已完成、4-已取消）
+            int inProgress = 0;  // 进行中订单（1-待接单、2-制作中）
+            int pending = 0;      // 待确认订单（0-待支付、1-待接单）
+            int pendingComment = 0;  // 待评价订单（5状态系统中已无此概念，保留为0）
 
             for (Order order : orders) {
                 int status = order.getStatus();
 
-                // 统计进行中订单
+                // 统计进行中订单（待接单、制作中）
                 if (status == 1 || status == 2) {
                     inProgress++;
                 }
 
-                // 统计待确认订单
+                // 统计待确认订单（待支付、待接单）
                 if (status == 0 || status == 1) {
                     pending++;
                 }
 
-                // 统计待评价订单（状态为已完成，且评价表中不存在评价记录）
-                // 注意：由于新状态简化，此处需要结合评价表判断
-                if (status == 3) {
-                    // TODO: 查询评价表，判断该订单是否已评价
-                    // 暂时统计所有已完成订单
-                    pendingComment++;
-                }
+                // 5状态系统无待评价概念，已完成即评价
             }
 
             // 构建返回结果
             java.util.Map<String, Object> statistics = new java.util.HashMap<>();
             statistics.put("inProgress", inProgress);
             statistics.put("pending", pending);
-            statistics.put("pendingComment", pendingComment);
+            statistics.put("pendingComment", 0);  // 5状态系统无待评价，固定为0
 
-            log.info("用户{}订单统计：进行中={}, 待确认={}, 待评价={}", userId, inProgress, pending, pendingComment);
+            log.info("用户{}订单统计：进行中={}, 待确认={}", userId, inProgress, pending);
 
             return ResponseResult.success(statistics);
         } catch (Exception e) {

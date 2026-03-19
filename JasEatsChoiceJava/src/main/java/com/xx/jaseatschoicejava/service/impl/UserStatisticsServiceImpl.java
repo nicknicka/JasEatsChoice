@@ -157,8 +157,7 @@ public class UserStatisticsServiceImpl implements UserStatisticsService {
         result.put("waiting", statusCount.getOrDefault(1, 0L)); // 待接单
         result.put("preparing", statusCount.getOrDefault(2, 0L)); // 制作中
         result.put("completed", statusCount.getOrDefault(3, 0L)); // 已完成
-        result.put("reviewed", statusCount.getOrDefault(4, 0L)); // 已评价
-        result.put("cancelled", statusCount.getOrDefault(5, 0L)); // 已取消
+        result.put("cancelled", statusCount.getOrDefault(4, 0L)); // 已取消
 
         return result;
     }

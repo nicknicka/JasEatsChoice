@@ -80,21 +80,14 @@
         <view class="action-buttons">
           <button
             class="action-btn primary"
-            v-if="order.status === 'pending'"
+            v-if="order.status === 1"
             @tap.stop="acceptOrder(order)"
           >
             接单
           </button>
           <button
-            class="action-btn primary"
-            v-if="order.status === 'cooking'"
-            @tap.stop="updateProgress(order)"
-          >
-            更新进度
-          </button>
-          <button
             class="action-btn success"
-            v-if="order.status === 'ready'"
+            v-if="order.status === 2"
             @tap.stop="completeOrder(order)"
           >
             完成
@@ -126,15 +119,28 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { toOrderDetail } from '@/utils/router'
+import { merchantApi } from '@/api'
+import { useMerchantStore } from '@/stores/merchant'
+
+const merchantStore = useMerchantStore()
+
+// 订单状态映射（5状态系统）
+// 0-待支付、1-待接单、2-制作中、3-已完成、4-已取消
+const orderStatusMap = {
+  0: { text: '待支付', value: 'unpaid' },
+  1: { text: '待接单', value: 'pending' },
+  2: { text: '制作中', value: 'preparing' },
+  3: { text: '已完成', value: 'completed' },
+  4: { text: '已取消', value: 'cancelled' }
+}
 
 // 状态Tab
 const statusTabs = ref([
   { label: '全部', value: 'all', count: 0 },
-  { label: '待接单', value: 'pending', count: 3 },
-  { label: '制作中', value: 'cooking', count: 5 },
-  { label: '待取餐', value: 'ready', count: 2 },
-  { label: '已完成', value: 'completed', count: 28 },
-  { label: '已取消', value: 'cancelled', count: 1 }
+  { label: '待接单', value: 1, count: 0 },
+  { label: '制作中', value: 2, count: 0 },
+  { label: '已完成', value: 3, count: 0 },
+  { label: '已取消', value: 4, count: 0 }
 ])
 
 const activeStatus = ref('all')
@@ -142,8 +148,6 @@ const orderList = ref([])
 const loading = ref(false)
 const refreshing = ref(false)
 const noMore = ref(false)
-const page = ref(1)
-const pageSize = 10
 
 onMounted(() => {
   loadOrders()
@@ -154,8 +158,6 @@ onMounted(() => {
  */
 const changeStatus = (status) => {
   activeStatus.value = status
-  page.value = 1
-  noMore.value = false
   loadOrders()
 }
 
@@ -167,96 +169,174 @@ const loadOrders = async (isRefresh = false) => {
 
   loading.value = true
   if (isRefresh) {
-    page.value = 1
-    noMore.value = false
+    refreshing.value = true
   }
 
   try {
-    // TODO: 调用API获取订单列表
-    // const res = await merchantApi.getOrders({
-    //   status: activeStatus.value,
-    //   page: page.value,
-    //   size: pageSize
-    // })
+    const merchantId = merchantStore.merchantInfo?.merchantId || merchantStore.merchantInfo?.id
 
-    // 模拟数据
-    setTimeout(() => {
-      const mockData = generateMockOrders()
-      if (isRefresh) {
-        orderList.value = mockData
-      } else {
-        orderList.value = [...orderList.value, ...mockData]
-      }
-
-      if (mockData.length < pageSize) {
-        noMore.value = true
-      }
-
+    if (!merchantId) {
+      uni.showToast({
+        title: '未找到商家信息',
+        icon: 'none'
+      })
       loading.value = false
       refreshing.value = false
-    }, 500)
+      return
+    }
+
+    // 调用API获取商家订单列表
+    const res = await merchantApi.getOrders(merchantId, { today: false })
+
+    if (res && res.success && res.data) {
+      const orders = Array.isArray(res.data) ? res.data : []
+
+      // 为每个订单获取菜品列表
+      const orderListWithData = await Promise.all(
+        orders.map(async (order) => {
+          try {
+            const dishesRes = await merchantApi.getOrderDishes(order.id)
+            const dishes = dishesRes && dishesRes.success ? dishesRes.data || [] : []
+
+            return {
+              id: order.id,
+              orderNo: `OD${String(order.id).padStart(6, '0')}`,
+              status: order.status,
+              statusText: getStatusText(order.status),
+              dishes: dishes.map(dish => ({
+                id: dish.dishId || dish.id,
+                name: dish.dishName || dish.name,
+                spec: dish.spec || '',
+                quantity: dish.quantity || 1
+              })),
+              remark: order.remark || '',
+              orderTime: formatFullTime(order.createTime),
+              expectTime: formatFullTime(order.updateTime) || '未设置',
+              takeType: '到店自取',
+              amount: formatAmount(order.totalAmount || 0),
+              customerId: order.userId
+            }
+          } catch (error) {
+            console.error('获取订单菜品失败:', order.id, error)
+            return {
+              id: order.id,
+              orderNo: `OD${String(order.id).padStart(6, '0')}`,
+              status: order.status,
+              statusText: getStatusText(order.status),
+              dishes: [],
+              remark: order.remark || '',
+              orderTime: formatFullTime(order.createTime),
+              expectTime: '未设置',
+              takeType: '到店自取',
+              amount: formatAmount(order.totalAmount || 0),
+              customerId: order.userId
+            }
+          }
+        })
+      )
+
+      // 根据activeStatus筛选订单（5状态系统）
+      let filteredOrders = orderListWithData
+      if (activeStatus.value !== 'all') {
+        filteredOrders = orderListWithData.filter(order => order.status === activeStatus.value)
+      }
+
+      orderList.value = filteredOrders
+
+      // 更新状态计数
+      updateStatusCounts(orderListWithData)
+    } else {
+      throw new Error(res?.message || '获取订单失败')
+    }
+
+    loading.value = false
+    refreshing.value = false
   } catch (error) {
     console.error('加载订单失败:', error)
+    uni.showToast({
+      title: error.message || '加载失败',
+      icon: 'none'
+    })
     loading.value = false
     refreshing.value = false
   }
 }
 
 /**
- * 生成模拟订单数据
+ * 更新状态计数（5状态系统）
  */
-const generateMockOrders = () => {
-  const orders = []
-  const count = Math.floor(Math.random() * 5) + 3
-
-  for (let i = 0; i < count; i++) {
-    const statusList = ['pending', 'cooking', 'ready', 'completed']
-    const status = activeStatus.value === 'all'
-      ? statusList[Math.floor(Math.random() * statusList.length)]
-      : activeStatus.value
-
-    orders.push({
-      id: page.value * 10 + i,
-      orderNo: `OD20260318${String(page.value * 10 + i).padStart(4, '0')}`,
-      status: status,
-      statusText: getStatusText(status),
-      dishes: [
-        { id: 1, name: '宫保鸡丁', spec: '中辣', quantity: 1 },
-        { id: 2, name: '鱼香肉丝', spec: '', quantity: 2 }
-      ],
-      remark: i % 3 === 0 ? '少放辣，多放葱花' : '',
-      orderTime: '12:30',
-      expectTime: '13:00',
-      takeType: i % 2 === 0 ? '到店自取' : '外卖配送',
-      amount: '54.00'
-    })
+const updateStatusCounts = (orders) => {
+  const counts = {
+    1: 0, // 待接单
+    2: 0, // 制作中
+    3: 0, // 已完成
+    4: 0  // 已取消
   }
 
-  return orders
+  orders.forEach(order => {
+    if (counts[order.status] !== undefined) {
+      counts[order.status]++
+    }
+  })
+
+  statusTabs.value[1].count = counts[1] // 待接单
+  statusTabs.value[2].count = counts[2] // 制作中
+  statusTabs.value[3].count = counts[3] // 已完成
+  statusTabs.value[4].count = counts[4] // 已取消
+  statusTabs.value[0].count = orders.length // 全部
 }
 
 /**
- * 获取状态文本
+ * 格式化完整时间
+ */
+const formatFullTime = (time) => {
+  if (!time) return ''
+  if (typeof time === 'string' && time.includes('-')) return time
+  const date = new Date(time)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  return `${year}-${month}-${day} ${hours}:${minutes}`
+}
+
+/**
+ * 格式化时间
+ */
+const formatTime = (time) => {
+  if (!time) return ''
+  if (typeof time === 'string' && time.includes(':')) {
+    return time.split(':').slice(0, 2).join(':')
+  }
+  const date = new Date(time)
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  return `${hours}:${minutes}`
+}
+
+/**
+ * 格式化金额
+ */
+const formatAmount = (amount) => {
+  if (typeof amount === 'number') {
+    return amount.toFixed(2)
+  }
+  return String(amount)
+}
+
+/**
+ * 获取状态文本（5状态系统）
  */
 const getStatusText = (status) => {
   const statusMap = {
-    pending: '待接单',
-    cooking: '制作中',
-    ready: '待取餐',
-    completed: '已完成',
-    cancelled: '已取消'
+    0: '待支付',
+    1: '待接单',
+    2: '制作中',
+    3: '已完成',
+    4: '已取消'
   }
-  return statusMap[status] || status
-}
-
-/**
- * 加载更多
- */
-const loadMore = () => {
-  if (!loading.value && !noMore.value) {
-    page.value++
-    loadOrders()
-  }
+  return statusMap[status] || '未知状态'
 }
 
 /**
@@ -264,53 +344,68 @@ const loadMore = () => {
  */
 const onRefresh = () => {
   refreshing.value = true
-  loadOrders(true)
+  loadOrders()
 }
 
 /**
  * 接单
  */
-const acceptOrder = (order) => {
+const acceptOrder = async (order) => {
   uni.showModal({
     title: '确认接单',
     content: `确认接单 ${order.orderNo} 吗？`,
-    success: (res) => {
+    success: async (res) => {
       if (res.confirm) {
-        // TODO: 调用API接单
-        uni.showToast({
-          title: '接单成功',
-          icon: 'success'
-        })
-        loadOrders(true)
+        try {
+          // 调用API接单（状态改为2-制作中）
+          await merchantApi.acceptOrder(order.id)
+
+          uni.showToast({
+            title: '接单成功',
+            icon: 'success'
+          })
+
+          // 刷新订单列表
+          loadOrders()
+        } catch (error) {
+          console.error('接单失败:', error)
+          uni.showToast({
+            title: '接单失败，请重试',
+            icon: 'none'
+          })
+        }
       }
     }
   })
 }
 
 /**
- * 更新进度
- */
-const updateProgress = (order) => {
-  uni.navigateTo({
-    url: `/pages-merchant/order/process?id=${order.id}`
-  })
-}
-
-/**
  * 完成订单
  */
-const completeOrder = (order) => {
+const completeOrder = async (order) => {
   uni.showModal({
     title: '确认完成',
     content: `确认订单 ${order.orderNo} 已完成吗？`,
-    success: (res) => {
+    success: async (res) => {
       if (res.confirm) {
-        // TODO: 调用API完成订单
-        uni.showToast({
-          title: '订单已完成',
-          icon: 'success'
-        })
-        loadOrders(true)
+        try {
+          // 调用API完成订单（状态改为3-已完成）
+          await merchantApi.completeOrder(order.id)
+
+          uni.showToast({
+            title: '订单已完成',
+            icon: 'success'
+          })
+
+          // 刷新订单列表
+          loadOrders()
+        } catch (error) {
+          console.error('完成订单失败:', error)
+          uni.showToast({
+            title: '操作失败，请重试',
+            icon: 'none'
+          })
+        }
       }
     }
   })

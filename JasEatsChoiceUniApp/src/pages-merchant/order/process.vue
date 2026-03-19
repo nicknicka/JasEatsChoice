@@ -103,6 +103,13 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { merchantApi } from '@/api'
+import { useMerchantStore } from '@/stores/merchant'
+
+const merchantStore = useMerchantStore()
+
+// 订单ID
+const orderId = ref('')
 
 // 订单信息
 const orderInfo = ref({
@@ -143,18 +150,102 @@ const progressHistory = ref([
 ])
 
 onMounted(() => {
-  loadOrderProcess()
+  // 从页面参数获取订单ID
+  const pages = getCurrentPages()
+  const currentPage = pages[pages.length - 1]
+  const options = currentPage.options
+
+  if (options.id) {
+    orderId.value = options.id
+    loadOrderProcess()
+  }
 })
 
 /**
  * 加载订单进度
  */
-const loadOrderProcess = () => {
-  // TODO: 调用API获取订单进度
-  // const res = await merchantApi.getOrderProcess({ id: orderId })
-  // orderInfo.value = res.data.order
-  // currentStep.value = res.data.currentStep
-  // progressHistory.value = res.data.history
+const loadOrderProcess = async () => {
+  try {
+    // 调用API获取订单进度
+    const res = await merchantApi.getOrderProgress(orderId.value)
+
+    if (res && res.data) {
+      const data = res.data
+
+      // 更新订单信息
+      if (data.order) {
+        orderInfo.value = {
+          id: data.order.orderId || data.order.id,
+          orderNo: data.order.orderNo || data.order.order_no,
+          statusText: getStatusText(data.order.status),
+          dishes: Array.isArray(data.order.dishes) ? data.order.dishes.map(dish => ({
+            id: dish.dishId || dish.id,
+            name: dish.dishName || dish.name,
+            quantity: dish.quantity || 1
+          })) : []
+        }
+      }
+
+      // 更新当前步骤
+      currentStep.value = data.currentStep || 0
+
+      // 更新预计完成时间
+      if (data.expectTime) {
+        expectTime.value = formatTime(data.expectTime)
+      }
+
+      // 更新进度历史
+      if (Array.isArray(data.history)) {
+        progressHistory.value = data.history.map(item => ({
+          step: item.step || item.stepName,
+          time: formatTime(item.time || item.created_at),
+          remark: item.remark || ''
+        }))
+      }
+
+      // 更新制作步骤
+      if (Array.isArray(data.steps)) {
+        processSteps.value = data.steps.map(step => ({
+          name: step.name || step.stepName,
+          time: step.time ? formatTime(step.time) : ''
+        }))
+      }
+    }
+  } catch (error) {
+    console.error('加载订单进度失败:', error)
+    uni.showToast({
+      title: '加载失败',
+      icon: 'none'
+    })
+  }
+}
+
+/**
+ * 格式化时间
+ */
+const formatTime = (time) => {
+  if (!time) return ''
+  if (typeof time === 'string' && time.includes(':')) {
+    return time.split(':').slice(0, 2).join(':')
+  }
+  const date = new Date(time)
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  return `${hours}:${minutes}`
+}
+
+/**
+ * 获取状态文本
+ */
+const getStatusText = (status) => {
+  const statusMap = {
+    pending: '待接单',
+    cooking: '制作中',
+    ready: '待取餐',
+    completed: '已完成',
+    cancelled: '已取消'
+  }
+  return statusMap[status] || status
 }
 
 /**
@@ -176,31 +267,49 @@ const onTimeChange = (e) => {
 /**
  * 提交进度
  */
-const submitProgress = () => {
+const submitProgress = async () => {
   const stepName = processSteps.value[currentStep.value].name
 
   uni.showModal({
     title: '确认更新',
     content: `确认更新进度为"${stepName}"吗？`,
-    success: (res) => {
+    success: async (res) => {
       if (res.confirm) {
-        // TODO: 调用API更新进度
-        uni.showToast({
-          title: '更新成功',
-          icon: 'success'
-        })
+        try {
+          const merchantId = merchantStore.merchantInfo?.merchantId || merchantStore.merchantInfo?.id
 
-        // 添加到历史记录
-        progressHistory.value.unshift({
-          step: stepName,
-          time: getCurrentTime(),
-          remark: processRemark.value
-        })
+          // 调用API更新进度
+          await merchantApi.updateOrderProgress(orderId.value, {
+            merchantId,
+            step: currentStep.value,
+            stepName: stepName,
+            expectTime: expectTime.value,
+            remark: processRemark.value
+          })
 
-        // 延迟返回
-        setTimeout(() => {
-          uni.navigateBack()
-        }, 1500)
+          uni.showToast({
+            title: '更新成功',
+            icon: 'success'
+          })
+
+          // 添加到历史记录
+          progressHistory.value.unshift({
+            step: stepName,
+            time: getCurrentTime(),
+            remark: processRemark.value
+          })
+
+          // 延迟返回
+          setTimeout(() => {
+            uni.navigateBack()
+          }, 1500)
+        } catch (error) {
+          console.error('更新进度失败:', error)
+          uni.showToast({
+            title: '更新失败，请重试',
+            icon: 'none'
+          })
+        }
       }
     }
   })
