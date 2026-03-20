@@ -13,9 +13,21 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * ⚠️  警告：这是模拟实现（MOCK IMPLEMENTATION）
+ * ═══════════════════════════════════════════════════════════════════════════════
+ *
+ * 本类中的所有方法都是模拟实现，仅用于开发和测试目的。
+ *
+ * 实际生产环境需要：
+ * 1. 添加支付宝SDK依赖（com.alipay.sdk:alipay-sdk-java）
+ * 2. 替换本实现或修改方法内部逻辑
+ * 3. 配置真实的应用ID、私钥和公钥
+ * 4. 参考官方文档：https://opendocs.alipay.com/open/02ivbs
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
  * 支付宝支付服务实现
- * 注意：这是模拟实现，实际生产环境需要集成支付宝SDK
- * 参考文档：https://opendocs.alipay.com/open/02ivbs
+ * ═══════════════════════════════════════════════════════════════════════════════
  */
 @Service
 public class AlipayPayServiceImpl implements AlipayPayService {
@@ -31,15 +43,45 @@ public class AlipayPayServiceImpl implements AlipayPayService {
         this.paymentConfig = paymentConfig;
     }
 
+    /**
+     * ⚠️ 【模拟实现】创建支付宝WAP支付订单
+     *
+     * 实际生产环境需要：
+     * - 使用支付宝SDK调用"手机网站支付"接口
+     * - 示例代码：
+     *   ```
+     *   try {
+     *     AlipayClient alipayClient = new DefaultAlipayClient(
+     *         "https://openapi.alipay.com/gateway.do",
+     *         appId,
+     *         appPrivateKey,
+     *         "json",
+     *         "UTF-8",
+     *         alipayPublicKey
+     *     );
+     *
+     *     AlipayTradeWapPayRequest request = new AlipayTradeWapPayRequest();
+     *     request.setBizContent("{" +
+     *         "\"out_trade_no\":\"" + paymentNo + "\"," +
+     *         "\"total_amount\":\"" + amount + "\"," +
+     *         "\"subject\":\"" + subject + "\"," +
+     *         "\"product_code\":\"QUICK_WAP_WAY\"" +
+     *     "}");
+     *
+     *     AlipayTradeWapPayResponse response = alipayClient.pageExecute(request);
+     *     String orderInfo = response.getBody();
+     *   } catch (Exception e) {
+     *     // 处理异常
+     *   }
+     *   ```
+     */
     @Override
     public Map<String, Object> createWapPayOrder(String paymentNo, BigDecimal amount, String subject) {
         log.info("创建支付宝WAP支付订单，流水号：{}，金额：{}，标题：{}", paymentNo, amount, subject);
 
         try {
-            // 实际生产环境需要调用支付宝手机网站支付API
-            // 这里返回模拟数据，前端可以正常调起支付（但会失败，因为没有真实的订单信息）
-
-            String orderInfo = generateOrderInfo(paymentNo, amount, subject);
+            // 🔴【模拟实现】以下代码生成假数据，实际需要调用支付宝SDK
+            String orderInfo = generateOrderInfo(paymentNo, amount, subject); // ⚠️ 模拟orderInfo
 
             Map<String, Object> result = new HashMap<>();
             result.put("paymentNo", paymentNo);
@@ -179,8 +221,15 @@ public class AlipayPayServiceImpl implements AlipayPayService {
     }
 
     /**
-     * 生成订单信息字符串
-     * 注意：实际生产环境需要按照支付宝官方文档的格式生成
+     * ⚠️ 【模拟实现】生成订单信息字符串
+     *
+     * 🔴 警告：这不是真实的支付宝订单格式！
+     *
+     * 实际生产环境必须：
+     * 1. 使用支付宝SDK的签名工具
+     * 2. 或者按照官方文档实现RSA2签名
+     * 3. 订单字符串构造规则参考：
+     *    https://opendocs.alipay.com/open/02ivbs
      */
     private String generateOrderInfo(String paymentNo, BigDecimal amount, String subject) {
         try {
@@ -236,8 +285,15 @@ public class AlipayPayServiceImpl implements AlipayPayService {
     }
 
     /**
-     * 生成支付宝签名
-     * 注意：实际生产环境需要使用RSA2签名算法
+     * ⚠️ 【模拟实现】生成支付宝签名
+     *
+     * 🔴 警告：这不是真实的支付宝RSA2签名算法！
+     *
+     * 实际生产环境必须：
+     * 1. 使用支付宝SDK的签名工具
+     * 2. 或者按照官方文档实现RSA2签名
+     * 3. 签名规则参考：
+     *    https://opendocs.alipay.com/open/02ivbs
      */
     private String generateAlipaySignature(Map<String, String> params, PaymentConfig.AlipayConfig config) {
         try {

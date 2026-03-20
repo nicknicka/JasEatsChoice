@@ -13,9 +13,21 @@ import java.time.Instant;
 import java.util.*;
 
 /**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * ⚠️  警告：这是模拟实现（MOCK IMPLEMENTATION）
+ * ═══════════════════════════════════════════════════════════════════════════════
+ *
+ * 本类中的所有方法都是模拟实现，仅用于开发和测试目的。
+ *
+ * 实际生产环境需要：
+ * 1. 添加微信支付SDK依赖（com.github.wechatpay:wechatpay-java）
+ * 2. 替换本实现或修改方法内部逻辑
+ * 3. 配置真实的商户号、密钥和证书
+ * 4. 参考官方文档：https://pay.weixin.qq.com/wiki/doc/apiv3/index.shtml
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
  * 微信支付服务实现
- * 注意：这是模拟实现，实际生产环境需要集成微信支付SDK
- * 参考文档：https://pay.weixin.qq.com/wiki/doc/apiv3/index.shtml
+ * ═══════════════════════════════════════════════════════════════════════════════
  */
 @Service
 public class WechatPayServiceImpl implements WechatPayService {
@@ -31,19 +43,38 @@ public class WechatPayServiceImpl implements WechatPayService {
         this.paymentConfig = paymentConfig;
     }
 
+    /**
+     * ⚠️ 【模拟实现】创建微信小程序支付订单
+     *
+     * 实际生产环境需要：
+     * - 使用微信支付SDK调用"统一下单"接口
+     * - 示例代码：
+     *   ```
+     *   try {
+     *     WxPayUnifiedOrderV3Request request = new WxPayUnifiedOrderV3Request();
+     *     request.setOutTradeNo(paymentNo);
+     *     request.setTotalAmount(amount.multiply(new BigDecimal("100")).intValue());
+     *     request.setDescription(description);
+     *     request.setPayer(new Payer().setOpenid(openid));
+     *
+     *     WxPayUnifiedOrderV3Result result = wxPayService.createOrderV3(request);
+     *     // 从result中获取prepayId等参数
+     *   } catch (Exception e) {
+     *     // 处理异常
+     *   }
+     *   ```
+     */
     @Override
     public Map<String, Object> createMiniPayOrder(String paymentNo, BigDecimal amount, String description, String openid) {
         log.info("创建微信小程序支付订单，流水号：{}，金额：{}，描述：{}", paymentNo, amount, description);
 
         try {
-            // 实际生产环境需要调用微信支付统一下单API
-            // 这里返回模拟数据，前端可以正常调起支付（但会失败，因为没有真实的prepay_id）
-
+            // 🔴【模拟实现】以下代码生成假数据，实际需要调用微信支付SDK
             String timeStamp = String.valueOf(Instant.now().getEpochSecond());
             String nonceStr = generateNonceStr();
-            String packageStr = "prepay_id=wx" + paymentNo.substring(3); // 模拟prepay_id
+            String packageStr = "prepay_id=wx" + paymentNo.substring(3); // ⚠️ 模拟prepay_id
             String signType = "MD5";
-            String paySign = generateSignature(timeStamp, nonceStr, packageStr, signType);
+            String paySign = generateSignature(timeStamp, nonceStr, packageStr, signType); // ⚠️ 模拟签名
 
             Map<String, Object> result = new HashMap<>();
             result.put("paymentNo", paymentNo);
@@ -80,11 +111,14 @@ public class WechatPayServiceImpl implements WechatPayService {
         return h5PayUrl;
     }
 
+    /**
+     * ⚠️ 【模拟实现】查询微信支付订单
+     */
     @Override
     public Map<String, Object> queryOrder(String outTradeNo) {
         log.info("查询微信支付订单，商户订单号：{}", outTradeNo);
 
-        // 实际生产环境需要调用微信支付查询订单API
+        // 🔴【模拟实现】实际生产环境需要调用微信支付查询订单API
         Map<String, Object> result = new HashMap<>();
         result.put("outTradeNo", outTradeNo);
         result.put("tradeState", "NOTPAY"); // 模拟状态：NOTPAY-未支付, SUCCESS-支付成功, CLOSED-已关闭, REVOKED-已撤销
@@ -185,8 +219,15 @@ public class WechatPayServiceImpl implements WechatPayService {
     }
 
     /**
-     * 生成签名
-     * 注意：实际生产环境需要按照微信支付官方文档的签名算法实现
+     * ⚠️ 【模拟实现】生成签名
+     *
+     * 🔴 警告：这不是真实的微信支付签名算法！
+     *
+     * 实际生产环境必须：
+     * 1. 使用微信支付SDK的签名工具
+     * 2. 或者按照官方文档实现HMAC-SHA256签名
+     * 3. 签名字符串构造规则参考：
+     *    https://pay.weixin.qq.com/wiki/doc/apiv3/terms/wechatpay-signature_algorithm.html
      */
     private String generateSignature(String timeStamp, String nonceStr, String packageStr, String signType) {
         try {
