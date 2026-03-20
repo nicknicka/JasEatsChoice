@@ -121,16 +121,20 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { showConfirm } from '@/utils/helper'
+import { menuApi } from '@/api/modules/menu.js'
+
+// 商家ID
+const merchantId = ref('')
 
 // 分类列表
 const categories = ref([
-  { label: '全部', value: 'all', count: 45 },
-  { label: '热菜', value: 'hot', count: 18 },
-  { label: '凉菜', value: 'cold', count: 8 },
-  { label: '汤羹', value: 'soup', count: 6 },
-  { label: '主食', value: 'staple', count: 7 },
-  { label: '饮料', value: 'drink', count: 4 },
-  { label: '小吃', value: 'snack', count: 2 }
+  { label: '全部', value: 'all', count: 0 },
+  { label: '热菜', value: 'hot', count: 0 },
+  { label: '凉菜', value: 'cold', count: 0 },
+  { label: '汤羹', value: 'soup', count: 0 },
+  { label: '主食', value: 'staple', count: 0 },
+  { label: '饮料', value: 'drink', count: 0 },
+  { label: '小吃', value: 'snack', count: 0 }
 ])
 
 const activeCategory = ref('all')
@@ -138,12 +142,24 @@ const activeCategory = ref('all')
 // 菜品分组
 const dishSections = ref([])
 
+// 菜单列表（用于管理）
+const menuList = ref([])
+
 const loading = ref(false)
 const refreshing = ref(false)
 const batchMode = ref(false)
 const selectedDishes = ref([])
 
 onMounted(() => {
+  // 获取商家ID
+  merchantId.value = uni.getStorageSync('merchantId') || ''
+  if (!merchantId.value) {
+    uni.showToast({
+      title: '未登录或商家信息缺失',
+      icon: 'none'
+    })
+    return
+  }
   loadMenuList()
 })
 
@@ -156,132 +172,120 @@ const changeCategory = (category) => {
 }
 
 /**
- * 加载菜单列表
+ * 加载菜单列表 - MENU-001: 调用API获取菜单列表
  */
 const loadMenuList = async () => {
+  if (loading.value) return
+
   loading.value = true
 
   try {
-    // TODO: 调用API获取菜单列表
-    // const res = await merchantApi.getMenuList({ category: activeCategory.value })
-    // dishSections.value = res.data
+    // MENU-001: 调用API获取菜单列表
+    const res = await menuApi.getList(merchantId.value)
 
-    // 模拟数据
-    setTimeout(() => {
-      if (activeCategory.value === 'all') {
-        dishSections.value = [
-          {
-            id: 'hot',
-            name: '热菜',
-            dishes: [
-              {
-                id: 1,
-                name: '宫保鸡丁',
-                image: 'https://via.placeholder.com/100/FF6B35/FFFFFF?text=1',
-                price: 28,
-                tags: ['中辣', '微甜'],
-                isActive: true,
-                y: 0
-              },
-              {
-                id: 2,
-                name: '鱼香肉丝',
-                image: 'https://via.placeholder.com/100/FF6B35/FFFFFF?text=2',
-                price: 26,
-                tags: ['不辣'],
-                isActive: true,
-                y: 0
-              },
-              {
-                id: 3,
-                name: '回锅肉',
-                image: 'https://via.placeholder.com/100/FF6B35/FFFFFF?text=3',
-                price: 32,
-                tags: ['中辣'],
-                isActive: false,
-                y: 0
-              }
-            ]
-          },
-          {
-            id: 'cold',
-            name: '凉菜',
-            dishes: [
-              {
-                id: 4,
-                name: '凉拌黄瓜',
-                image: 'https://via.placeholder.com/100/FF6B35/FFFFFF?text=4',
-                price: 12,
-                tags: ['清爽'],
-                isActive: true,
-                y: 0
-              },
-              {
-                id: 5,
-                name: '口水鸡',
-                image: 'https://via.placeholder.com/100/FF6B35/FFFFFF?text=5',
-                price: 22,
-                tags: ['中辣'],
-                isActive: true,
-                y: 0
-              }
-            ]
-          },
-          {
-            id: 'soup',
-            name: '汤羹',
-            dishes: [
-              {
-                id: 6,
-                name: '紫菜蛋花汤',
-                image: 'https://via.placeholder.com/100/FF6B35/FFFFFF?text=6',
-                price: 8,
-                tags: [],
-                isActive: true,
-                y: 0
-              }
-            ]
-          }
-        ]
-      } else if (activeCategory.value === 'hot') {
-        dishSections.value = [
-          {
-            id: 'hot',
-            name: '热菜',
-            dishes: [
-              {
-                id: 1,
-                name: '宫保鸡丁',
-                image: 'https://via.placeholder.com/100/FF6B35/FFFFFF?text=1',
-                price: 28,
-                tags: ['中辣', '微甜'],
-                isActive: true,
-                y: 0
-              },
-              {
-                id: 2,
-                name: '鱼香肉丝',
-                image: 'https://via.placeholder.com/100/FF6B35/FFFFFF?text=2',
-                price: 26,
-                tags: ['不辣'],
-                isActive: true,
-                y: 0
-              }
-            ]
-          }
-        ]
-      } else {
-        dishSections.value = []
-      }
+    if (res.code === 200 && res.data) {
+      // 保存菜单列表
+      menuList.value = res.data
 
-      loading.value = false
-      refreshing.value = false
-    }, 500)
+      // 根据选中的分类过滤菜单
+      const filteredMenus = activeCategory.value === 'all'
+        ? res.data
+        : res.data.filter(menu => menu.category === activeCategory.value)
+
+      // 将菜单数据转换为菜品分组格式
+      dishSections.value = filteredMenus.map(menu => ({
+        id: menu.id,
+        name: menu.menuName || menu.name,
+        dishes: (menu.dishes || []).map(dish => ({
+          id: dish.id,
+          name: dish.name,
+          image: dish.image || '/static/default-dish.png',
+          price: dish.price || 0,
+          tags: generateDishTags(dish),
+          // status字段映射：online→true, offline→false
+          isActive: dish.status === 'online',
+          y: 0,
+          // 保留原始状态
+          _originalStatus: dish.status,
+          _globalStatus: dish.globalStatus
+        }))
+      }))
+
+      // 更新分类计数
+      updateCategoryCount(res.data)
+
+      console.log('加载菜单成功，数量:', filteredMenus.length)
+    } else {
+      throw new Error(res.message || '获取菜单列表失败')
+    }
   } catch (error) {
     console.error('加载菜单失败:', error)
+    uni.showToast({
+      title: error.message || '加载菜单失败',
+      icon: 'none'
+    })
+  } finally {
     loading.value = false
     refreshing.value = false
   }
+}
+
+/**
+ * 更新分类计数
+ */
+const updateCategoryCount = (menus) => {
+  // 重置计数
+  categories.value.forEach(cat => {
+    if (cat.value !== 'all') {
+      cat.count = 0
+    }
+  })
+
+  // 统计每个分类的菜品数
+  let totalCount = 0
+  menus.forEach(menu => {
+    const category = categories.value.find(cat => cat.value === menu.category)
+    if (category) {
+      category.count += (menu.dishes || []).length
+    }
+    totalCount += (menu.dishes || []).length
+  })
+
+  // 更新全部分类的计数
+  const allCategory = categories.value.find(cat => cat.value === 'all')
+  if (allCategory) {
+    allCategory.count = totalCount
+  }
+}
+
+/**
+ * 生成菜品标签
+ */
+const generateDishTags = (dish) => {
+  const tags = []
+
+  // 根据分类添加标签
+  if (dish.category) {
+    const categoryMap = {
+      'hot': '热菜',
+      'cold': '凉菜',
+      'soup': '汤羹',
+      'staple': '主食',
+      'drink': '饮料',
+      'snack': '小吃'
+    }
+    const categoryName = categoryMap[dish.category]
+    if (categoryName) {
+      tags.push(categoryName)
+    }
+  }
+
+  // 如果没有标签，至少添加"推荐"
+  if (tags.length === 0) {
+    tags.push('推荐')
+  }
+
+  return tags
 }
 
 /**
@@ -300,44 +304,154 @@ const onDragChange = (e, dish, index, dishes) => {
 }
 
 /**
- * 拖拽结束
+ * 拖拽结束 - MENU-002: 调用API更新排序
  */
-const onDragEnd = (dish, dishes) => {
-  // 简化的拖拽排序逻辑
-  // 实际项目中需要根据位置计算新的排序
-  dish.y = 0
+const onDragEnd = async (dish, dishes) => {
+  // 获取当前菜品的新位置
+  const newIndex = dishes.findIndex(d => d.id === dish.id)
 
-  // TODO: 调用API更新排序
-  // merchantApi.updateDishSort({
-  //   dishId: dish.id,
-  //   newPosition: newIndex
-  // })
+  if (newIndex === -1) {
+    dish.y = 0
+    return
+  }
+
+  // 如果位置没有变化，直接返回
+  if (dish._originalIndex === newIndex) {
+    dish.y = 0
+    return
+  }
+
+  try {
+    uni.showLoading({ title: '更新中...', mask: true })
+
+    // 获取当前菜单ID
+    const currentMenuId = getCurrentMenuId()
+    if (!currentMenuId) {
+      throw new Error('未找到菜单信息')
+    }
+
+    // MENU-002: 调用API更新菜品排序
+    const apiRes = await menuApi.updateDishSort(currentMenuId, dish.id, newIndex)
+
+    if (apiRes.code === 200) {
+      // 更新本地数据
+      dish._originalIndex = newIndex
+
+      // 重新排序整个列表
+      const sortedDishes = [...dishes].sort((a, b) => {
+        const indexA = dishes.findIndex(d => d.id === a.id)
+        const indexB = dishes.findIndex(d => d.id === b.id)
+        return indexA - indexB
+      })
+
+      // 更新所有菜品的排序索引
+      sortedDishes.forEach((d, i) => {
+        const originalDish = dishes.find(item => item.id === d.id)
+        if (originalDish) {
+          originalDish._originalIndex = i
+        }
+      })
+
+      uni.hideLoading()
+      uni.showToast({
+        title: '排序更新成功',
+        icon: 'success'
+      })
+    } else {
+      throw new Error(apiRes.message || '更新失败')
+    }
+  } catch (error) {
+    console.error('更新排序失败:', error)
+
+    // 失败时恢复原位置
+    const oldIndex = dish._originalIndex || 0
+    if (oldIndex !== newIndex) {
+      // 简单的恢复逻辑
+      dishes.splice(newIndex, 1)
+      dishes.splice(oldIndex, 0, dish)
+    }
+
+    uni.hideLoading()
+    uni.showToast({
+      title: error.message || '排序更新失败',
+      icon: 'none'
+    })
+  } finally {
+    dish.y = 0
+  }
 }
 
 /**
- * 切换菜品状态
+ * 切换菜品状态 - MENU-004: 调用API更新菜品在菜单中的状态
  */
-const toggleDishStatus = (dish, e) => {
+const toggleDishStatus = async (dish, e) => {
   const isActive = e.detail.value
   const action = isActive ? '上架' : '下架'
 
   uni.showModal({
     title: '提示',
     content: `确认${action}菜品"${dish.name}"吗？`,
-    success: (res) => {
+    success: async (res) => {
       if (res.confirm) {
-        dish.isActive = isActive
-        // TODO: 调用API更新状态
-        uni.showToast({
-          title: `${action}成功`,
-          icon: 'success'
-        })
+        try {
+          uni.showLoading({
+            title: '提交中...',
+            mask: true
+          })
+
+          // 获取当前菜单ID（从dishSections中获取）
+          const currentMenuId = getCurrentMenuId()
+          if (!currentMenuId) {
+            throw new Error('未找到菜单信息')
+          }
+
+          // MENU-004: 调用API更新菜品在菜单中的状态
+          // 注意：后端API使用数字状态：1=上架，0=下架
+          const status = isActive ? 1 : 0
+          const apiRes = await menuApi.updateDishStatus(currentMenuId, dish.id, status)
+
+          if (apiRes.code === 200) {
+            // 更新本地数据
+            dish.isActive = isActive
+            dish._originalStatus = isActive ? 'online' : 'offline'
+
+            uni.hideLoading()
+            uni.showToast({
+              title: `${action}成功`,
+              icon: 'success'
+            })
+          } else {
+            throw new Error(apiRes.message || '操作失败')
+          }
+        } catch (error) {
+          console.error('更新菜品状态失败:', error)
+
+          // 恢复原状态
+          dish.isActive = !isActive
+
+          uni.hideLoading()
+          uni.showToast({
+            title: error.message || '操作失败',
+            icon: 'none'
+          })
+        }
       } else {
         // 取消操作，恢复原状态
         dish.isActive = !isActive
       }
     }
   })
+}
+
+/**
+ * 获取当前菜单ID
+ */
+const getCurrentMenuId = () => {
+  // 从dishSections中获取第一个菜单的ID（简化逻辑，实际可能需要更复杂的处理）
+  if (dishSections.value.length > 0) {
+    return dishSections.value[0].id
+  }
+  return null
 }
 
 /**
@@ -401,9 +515,9 @@ const toggleBatchMode = () => {
 }
 
 /**
- * 批量下架
+ * 批量下架 - MENU-005: 调用API批量更新菜品状态
  */
-const batchOffShelf = () => {
+const batchOffShelf = async () => {
   if (selectedDishes.value.length === 0) {
     uni.showToast({
       title: '请先选择菜品',
@@ -415,16 +529,40 @@ const batchOffShelf = () => {
   uni.showModal({
     title: '确认下架',
     content: `确认下架选中的 ${selectedDishes.value.length} 个菜品吗？`,
-    success: (res) => {
+    success: async (res) => {
       if (res.confirm) {
-        // TODO: 调用API批量下架
-        uni.showToast({
-          title: '下架成功',
-          icon: 'success'
-        })
-        batchMode.value = false
-        selectedDishes.value = []
-        loadMenuList()
+        try {
+          uni.showLoading({
+            title: '提交中...',
+            mask: true
+          })
+
+          // MENU-005: 调用API批量更新菜品状态
+          // 这里我们对每个菜品调用更新接口
+          const currentMenuId = getCurrentMenuId()
+          const promises = selectedDishes.value.map(dish =>
+            menuApi.updateDishStatus(currentMenuId, dish.id, 0) // 0表示下架
+          )
+
+          await Promise.all(promises)
+
+          uni.hideLoading()
+          uni.showToast({
+            title: '下架成功',
+            icon: 'success'
+          })
+
+          batchMode.value = false
+          selectedDishes.value = []
+          loadMenuList()
+        } catch (error) {
+          console.error('批量下架失败:', error)
+          uni.hideLoading()
+          uni.showToast({
+            title: error.message || '批量下架失败',
+            icon: 'none'
+          })
+        }
       }
     }
   })
@@ -434,60 +572,80 @@ const batchOffShelf = () => {
  * 批量删除
  */
 const batchDelete = () => {
-  if (selectedDishes.value.length === 0) {
-    uni.showToast({
-      title: '请先选择菜品',
-      icon: 'none'
-    })
-    return
-  }
+  // 注意：这里应该是从菜单中移除菜品，而不是删除菜品本身
+  // 但是后端API可能没有提供从菜单中移除菜品的接口
+  // 暂时使用下架功能代替
+  batchOffShelf()
+}
 
-  uni.showModal({
-    title: '确认删除',
-    content: `确认删除选中的 ${selectedDishes.value.length} 个菜品吗？删除后不可恢复。`,
-    success: (res) => {
-      if (res.confirm) {
-        // TODO: 调用API批量删除
-        uni.showToast({
-          title: '删除成功',
-          icon: 'success'
+/**
+ * 显示菜单操作 - MENU-008: 调用API批量操作菜单
+ */
+const showMenuActions = () => {
+  uni.showActionSheet({
+    itemList: ['添加菜单', '批量上线菜单', '批量下线菜单'],
+    success: async (res) => {
+      if (res.tapIndex === 0) {
+        // 添加菜单
+        uni.navigateTo({
+          url: '/pages-merchant/menu/edit'
         })
-        batchMode.value = false
-        selectedDishes.value = []
-        loadMenuList()
+      } else if (res.tapIndex === 1) {
+        // 批量上线菜单
+        await batchOperateMenus('online')
+      } else if (res.tapIndex === 2) {
+        // 批量下线菜单
+        await batchOperateMenus('offline')
       }
     }
   })
 }
 
 /**
- * 显示菜单操作
+ * 批量操作菜单 - MENU-008
  */
-const showMenuActions = () => {
-  uni.showActionSheet({
-    itemList: ['添加分类', '分类排序', '导出菜单'],
-    success: (res) => {
-      if (res.tapIndex === 0) {
-        // 添加分类
-        uni.showToast({
-          title: '添加分类功能开发中',
-          icon: 'none'
-        })
-      } else if (res.tapIndex === 1) {
-        // 分类排序
-        uni.showToast({
-          title: '分类排序功能开发中',
-          icon: 'none'
-        })
-      } else if (res.tapIndex === 2) {
-        // 导出菜单
-        uni.showToast({
-          title: '导出菜单功能开发中',
-          icon: 'none'
-        })
-      }
+const batchOperateMenus = async (action) => {
+  if (menuList.value.length === 0) {
+    uni.showToast({
+      title: '暂无菜单可操作',
+      icon: 'none'
+    })
+    return
+  }
+
+  // 获取所有菜单ID
+  const menuIds = menuList.value.map(menu => menu.id)
+
+  try {
+    uni.showLoading({
+      title: '提交中...',
+      mask: true
+    })
+
+    // MENU-008: 调用API批量操作菜单
+    const res = await menuApi.batchOperate(menuIds, action)
+
+    uni.hideLoading()
+
+    if (res.code === 200) {
+      uni.showToast({
+        title: '操作成功',
+        icon: 'success'
+      })
+
+      // 刷新列表
+      loadMenuList()
+    } else {
+      throw new Error(res.message || '操作失败')
     }
-  })
+  } catch (error) {
+    console.error('批量操作菜单失败:', error)
+    uni.hideLoading()
+    uni.showToast({
+      title: error.message || '操作失败',
+      icon: 'none'
+    })
+  }
 }
 </script>
 

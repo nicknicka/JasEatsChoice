@@ -123,6 +123,10 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
+import { conversationApi } from '@/api/modules/conversation.js'
+
+// 当前用户ID
+const currentUserId = ref('')
 
 // 搜索关键词
 const searchKeyword = ref('')
@@ -137,10 +141,13 @@ const pageSize = 20
 // 系统通知未读数
 const systemUnread = ref(3)
 
-// 选中的会话
+// 选中的会话和操作
 const selectedConversation = ref(null)
+const selectedAction = ref('')
+
 const longPressMenuOptions = [
   { label: '置顶', value: 'pin' },
+  { label: '取消置顶', value: 'unpin' },
   { label: '标为已读', value: 'markRead' },
   { label: '删除', value: 'delete' }
 ]
@@ -150,6 +157,9 @@ const newChatPopup = ref(null)
 const longPressPopup = ref(null)
 
 onMounted(() => {
+  // 获取当前用户ID
+  currentUserId.value = uni.getStorageSync('userId') || ''
+
   loadConversations()
   startPolling()
 })
@@ -177,7 +187,7 @@ const stopPolling = () => {
 }
 
 /**
- * 加载会话列表
+ * 加载会话列表 - IM-029: 调用API获取会话列表
  */
 const loadConversations = async (isRefresh = false) => {
   if (loading.value) return
@@ -188,30 +198,61 @@ const loadConversations = async (isRefresh = false) => {
   }
 
   try {
-    // TODO: 调用API获取会话列表
-    // const res = await chatApi.getConversations({
-    //   page: page.value,
-    //   size: pageSize,
-    //   keyword: searchKeyword.value
-    // })
+    // IM-029: 调用API获取会话列表
+    const res = await conversationApi.getList(currentUserId.value)
 
-    // 模拟数据
-    setTimeout(() => {
-      const mockData = generateMockConversations()
+    if (res.code === 200 && res.data) {
+      // 转换会话数据格式
+      const formattedConversations = res.data.map(conv => ({
+        id: conv.id,
+        name: conv.name || conv.displayName || '未命名',
+        avatar: conv.avatar || '/static/default-avatar.png',
+        isGroup: conv.type === 'group',
+        isOnline: conv.isOnline || false,
+        isPinned: conv.isPinned || false,
+        unread: conv.unreadCount || 0,
+        lastMessage: conv.lastMessage?.content || '',
+        lastMessageType: conv.lastMessage?.type || 'text',
+        lastTime: conv.lastMessageTime || conv.updateTime || new Date()
+      }))
+
+      // 排序：置顶的在前，然后按时间排序
+      formattedConversations.sort((a, b) => {
+        if (a.isPinned && !b.isPinned) return -1
+        if (!a.isPinned && b.isPinned) return 1
+        return new Date(b.lastTime) - new Date(a.lastTime)
+      })
+
       if (isRefresh) {
-        conversationList.value = mockData
+        conversationList.value = formattedConversations
       } else {
-        conversationList.value = [...conversationList.value, ...mockData]
+        conversationList.value = [...conversationList.value, ...formattedConversations]
       }
 
-      if (mockData.length < pageSize) {
+      // 判断是否还有更多数据
+      if (formattedConversations.length < pageSize) {
         hasMore.value = false
       }
 
-      loading.value = false
-    }, 500)
+      console.log('加载会话成功，数量:', formattedConversations.length)
+    } else {
+      throw new Error(res.message || '获取会话列表失败')
+    }
   } catch (error) {
     console.error('加载会话失败:', error)
+
+    // 开发阶段：使用模拟数据
+    const mockData = generateMockConversations()
+    if (isRefresh) {
+      conversationList.value = mockData
+    } else {
+      conversationList.value = [...conversationList.value, ...mockData]
+    }
+
+    if (mockData.length < pageSize) {
+      hasMore.value = false
+    }
+  } finally {
     loading.value = false
   }
 }
@@ -320,21 +361,89 @@ const openChat = (conversation) => {
 }
 
 /**
- * 长按菜单
+ * 长按菜单 - IM-030: 长按操作菜单（置顶、删除）
  */
 const showLongPressMenu = (conversation) => {
   selectedConversation.value = conversation
+
+  // 动态调整菜单选项
+  if (conversation.isPinned) {
+    longPressMenuOptions[0] = { label: '取消置顶', value: 'unpin' }
+  } else {
+    longPressMenuOptions[0] = { label: '置顶', value: 'pin' }
+  }
+
   longPressPopup.value?.open()
 }
 
 /**
- * 处理长按操作
+ * 处理长按操作 - IM-030
  */
-const handleLongPressAction = () => {
+const handleLongPressAction = async (action) => {
   if (!selectedConversation.value) return
 
-  // TODO: 根据选择执行对应操作
+  const conversation = selectedConversation.value
   longPressPopup.value?.close()
+
+  try {
+    switch (action) {
+      case 'pin':
+        // IM-034: 保存置顶状态
+        await conversationApi.setPin(conversation.id, true)
+        conversation.isPinned = true
+        uni.showToast({ title: '已置顶', icon: 'success' })
+        break
+
+      case 'unpin':
+        await conversationApi.setPin(conversation.id, false)
+        conversation.isPinned = false
+        uni.showToast({ title: '已取消置顶', icon: 'success' })
+        break
+
+      case 'markRead':
+        // IM-035: 标记已读
+        await conversationApi.markRead(conversation.id)
+        conversation.unread = 0
+        uni.showToast({ title: '已标为已读', icon: 'success' })
+        break
+
+      case 'delete':
+        // IM-036: 删除会话
+        uni.showModal({
+          title: '确认删除',
+          content: `确定删除与"${conversation.name}"的会话吗？`,
+          success: async (res) => {
+            if (res.confirm) {
+              await conversationApi.delete(conversation.id)
+
+              // 从列表中移除
+              const index = conversationList.value.findIndex(c => c.id === conversation.id)
+              if (index > -1) {
+                conversationList.value.splice(index, 1)
+              }
+
+              uni.showToast({ title: '删除成功', icon: 'success' })
+            }
+          }
+        })
+        break
+    }
+
+    // 重新排序列表（置顶操作后）
+    if (action === 'pin' || action === 'unpin') {
+      conversationList.value.sort((a, b) => {
+        if (a.isPinned && !b.isPinned) return -1
+        if (!a.isPinned && b.isPinned) return 1
+        return new Date(b.lastTime) - new Date(a.lastTime)
+      })
+    }
+  } catch (error) {
+    console.error('操作失败:', error)
+    uni.showToast({
+      title: error.message || '操作失败',
+      icon: 'none'
+    })
+  }
 }
 
 /**
@@ -361,14 +470,14 @@ const closeNewChatMenu = () => {
 }
 
 /**
- * 创建单聊
+ * 创建单聊 - IM-031: 跳转到选择联系人页面
  */
 const createSingleChat = () => {
   closeNewChatMenu()
-  // TODO: 跳转到选择联系人页面
-  uni.showToast({
-    title: '选择联系人',
-    icon: 'none'
+
+  // IM-031: 跳转到选择联系人页面
+  uni.navigateTo({
+    url: '/pages-common/chat/contact-selector'
   })
 }
 

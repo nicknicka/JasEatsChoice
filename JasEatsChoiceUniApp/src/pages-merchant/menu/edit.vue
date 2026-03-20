@@ -160,6 +160,35 @@
           </view>
         </picker>
       </view>
+
+      <!-- MENU-007: 菜单自动上下架时间设置 -->
+      <view class="setting-item">
+        <text class="setting-name">自动上线时间</text>
+        <picker
+          mode="time"
+          :value="menuInfo.autoOnline"
+          @change="onAutoOnlineChange"
+        >
+          <view class="picker">
+            <text class="picker-value">{{ menuInfo.autoOnline || '未设置' }}</text>
+            <uni-icons type="arrowright" size="16" color="#999"></uni-icons>
+          </view>
+        </picker>
+      </view>
+
+      <view class="setting-item">
+        <text class="setting-name">自动下线时间</text>
+        <picker
+          mode="time"
+          :value="menuInfo.autoOffline"
+          @change="onAutoOfflineChange"
+        >
+          <view class="picker">
+            <text class="picker-value">{{ menuInfo.autoOffline || '未设置' }}</text>
+            <uni-icons type="arrowright" size="16" color="#999"></uni-icons>
+          </view>
+        </picker>
+      </view>
     </view>
 
     <!-- 操作按钮 -->
@@ -173,44 +202,30 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { showConfirm } from '@/utils/helper'
+import { menuApi } from '@/api/modules/menu.js'
+
+// 商家ID
+const merchantId = ref('')
+
+// 菜单ID（编辑模式）
+const menuId = ref('')
 
 // 菜单信息
 const menuInfo = ref({
-  id: 1,
-  name: '午餐菜单',
-  description: '工作日午餐精选',
-  isDefault: true,
+  id: '',
+  name: '',
+  description: '',
+  isDefault: false,
   showSoldOut: false,
-  sortOrder: 'custom'
+  sortOrder: 'custom',
+  status: 'offline',
+  category: 'lunch',
+  autoOnline: '',
+  autoOffline: ''
 })
 
-// 分类列表
-const categories = ref([
-  {
-    id: 1,
-    name: '热菜',
-    dishes: [
-      { id: 1, name: '宫保鸡丁' },
-      { id: 2, name: '鱼香肉丝' },
-      { id: 3, name: '回锅肉' }
-    ]
-  },
-  {
-    id: 2,
-    name: '凉菜',
-    dishes: [
-      { id: 4, name: '凉拌黄瓜' },
-      { id: 5, name: '口水鸡' }
-    ]
-  },
-  {
-    id: 3,
-    name: '汤羹',
-    dishes: [
-      { id: 6, name: '紫菜蛋花汤' }
-    ]
-  }
-])
+// 分类列表（这里实际是菜品分类，不是菜单分类）
+const categories = ref([])
 
 // 排序选项
 const sortOptions = ref([
@@ -224,17 +239,136 @@ const sortOptions = ref([
 const sortIndex = ref(0)
 
 onMounted(() => {
-  loadMenuDetail()
+  // 获取商家ID
+  merchantId.value = uni.getStorageSync('merchantId') || ''
+  if (!merchantId.value) {
+    uni.showToast({
+      title: '未登录或商家信息缺失',
+      icon: 'none'
+    })
+    return
+  }
+
+  // 获取页面参数
+  const pages = getCurrentPages()
+  const currentPage = pages[pages.length - 1]
+  const options = currentPage.options
+
+  if (options && options.id) {
+    // 编辑模式
+    menuId.value = options.id
+    loadMenuDetail()
+  } else {
+    // 新建模式
+    initNewMenu()
+  }
 })
 
 /**
- * 加载菜单详情
+ * 初始化新菜单
  */
-const loadMenuDetail = () => {
-  // TODO: 调用API获取菜单详情
-  // const res = await merchantApi.getMenuDetail({ id: menuId })
-  // menuInfo.value = res.data.menu
-  // categories.value = res.data.categories
+const initNewMenu = () => {
+  menuInfo.value = {
+    id: '',
+    name: '',
+    description: '',
+    isDefault: false,
+    showSoldOut: false,
+    sortOrder: 'custom',
+    status: 'offline',
+    category: 'lunch',
+    autoOnline: '',
+    autoOffline: ''
+  }
+  categories.value = []
+}
+
+/**
+ * 加载菜单详情 - MENU-002: 调用API获取菜单详情
+ */
+const loadMenuDetail = async () => {
+  try {
+    uni.showLoading({ title: '加载中...' })
+
+    // MENU-002: 调用API获取菜单详情
+    const res = await menuApi.getDetail(menuId.value)
+
+    if (res.code === 200 && res.data) {
+      const data = res.data
+
+      // 更新菜单基本信息
+      menuInfo.value = {
+        id: data.id,
+        name: data.menuName || data.name || '',
+        description: data.description || '',
+        isDefault: data.isDefault || false,
+        showSoldOut: data.showSoldOut !== undefined ? data.showSoldOut : false,
+        sortOrder: data.sortOrder || 'custom',
+        status: data.status || 'offline',
+        category: data.category || 'lunch',
+        autoOnline: data.autoOnline || '',
+        autoOffline: data.autoOffline || ''
+      }
+
+      // 更新排序选项索引
+      const sortOptionIndex = sortOptions.value.findIndex(opt => opt.value === menuInfo.value.sortOrder)
+      if (sortOptionIndex > -1) {
+        sortIndex.value = sortOptionIndex
+      }
+
+      // MENU-003: 调用API获取菜单下的菜品列表
+      const dishesRes = await menuApi.getMenuDishes(merchantId.value, menuId.value)
+
+      if (dishesRes.code === 200 && dishesRes.data) {
+        // 将菜品按分类分组
+        const dishMap = new Map()
+        dishesRes.data.forEach(dish => {
+          const category = dish.category || 'other'
+          if (!dishMap.has(category)) {
+            dishMap.set(category, {
+              id: category,
+              name: getCategoryName(category),
+              dishes: []
+            })
+          }
+          dishMap.get(category).dishes.push({
+            id: dish.id,
+            name: dish.name
+          })
+        })
+
+        // 转换为数组
+        categories.value = Array.from(dishMap.values())
+      }
+
+      uni.hideLoading()
+    } else {
+      throw new Error(res.message || '获取菜单详情失败')
+    }
+  } catch (error) {
+    console.error('加载菜单详情失败:', error)
+    uni.hideLoading()
+    uni.showToast({
+      title: error.message || '加载菜单详情失败',
+      icon: 'none'
+    })
+  }
+}
+
+/**
+ * 获取分类名称
+ */
+const getCategoryName = (category) => {
+  const categoryMap = {
+    'hot': '热菜',
+    'cold': '凉菜',
+    'soup': '汤羹',
+    'staple': '主食',
+    'drink': '饮料',
+    'snack': '小吃',
+    'other': '其他'
+  }
+  return categoryMap[category] || category
 }
 
 /**
@@ -320,6 +454,20 @@ const onSortChange = (e) => {
 }
 
 /**
+ * 自动上线时间变更 - MENU-007
+ */
+const onAutoOnlineChange = (e) => {
+  menuInfo.value.autoOnline = e.detail.value
+}
+
+/**
+ * 自动下线时间变更 - MENU-007
+ */
+const onAutoOfflineChange = (e) => {
+  menuInfo.value.autoOffline = e.detail.value
+}
+
+/**
  * 预览菜单
  */
 const previewMenu = () => {
@@ -331,9 +479,9 @@ const previewMenu = () => {
 }
 
 /**
- * 保存菜单
+ * 保存菜单 - MENU-009/MENU-010: 调用API创建/更新菜单
  */
-const saveMenu = () => {
+const saveMenu = async () => {
   // 表单验证
   if (!menuInfo.value.name) {
     uni.showToast({
@@ -354,15 +502,67 @@ const saveMenu = () => {
     }
   }
 
-  // TODO: 调用API保存菜单
-  uni.showToast({
-    title: '保存成功',
-    icon: 'success'
-  })
+  try {
+    uni.showLoading({
+      title: '保存中...',
+      mask: true
+    })
 
-  setTimeout(() => {
-    uni.navigateBack()
-  }, 1500)
+    // 收集所有菜品
+    const allDishes = []
+    categories.value.forEach(category => {
+      category.dishes.forEach(dish => {
+        allDishes.push({
+          id: dish.id,
+          status: 1 // 默认上架
+        })
+      })
+    })
+
+    // 构建菜单数据
+    const menuData = {
+      name: menuInfo.value.name,
+      description: menuInfo.value.description,
+      category: menuInfo.value.category,
+      status: menuInfo.value.status,
+      isDefault: menuInfo.value.isDefault,
+      showSoldOut: menuInfo.value.showSoldOut,
+      sortOrder: menuInfo.value.sortOrder,
+      autoOnline: menuInfo.value.autoOnline,
+      autoOffline: menuInfo.value.autoOffline,
+      dishes: allDishes
+    }
+
+    let res
+    if (menuId.value) {
+      // MENU-010: 更新菜单
+      res = await menuApi.update(merchantId.value, menuId.value, menuData)
+    } else {
+      // MENU-009: 创建新菜单
+      res = await menuApi.create(merchantId.value, menuData)
+    }
+
+    if (res.code === 200) {
+      uni.hideLoading()
+      uni.showToast({
+        title: '保存成功',
+        icon: 'success'
+      })
+
+      setTimeout(() => {
+        uni.navigateBack()
+      }, 1500)
+    } else {
+      throw new Error(res.message || '保存失败')
+    }
+  } catch (error) {
+    console.error('保存菜单失败:', error)
+    uni.hideLoading()
+    uni.showToast({
+      title: error.message || '保存失败',
+      icon: 'none'
+    })
+  }
 }
 </script>
 

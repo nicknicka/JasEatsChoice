@@ -169,6 +169,9 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { reviewApi } from '@/api/modules/review.js'
+
+const merchantId = ref('')
 
 // 评分统计
 const ratingStats = ref({
@@ -217,6 +220,7 @@ const page = ref(1)
 const pageSize = 20
 
 onMounted(() => {
+  merchantId.value = uni.getStorageSync('merchantId') || ''
   loadComments()
 })
 
@@ -241,7 +245,7 @@ const changeTag = (tag) => {
 }
 
 /**
- * 加载评价列表
+ * REVIEW-005: 加载评价列表
  */
 const loadComments = async (isRefresh = false) => {
   if (loading.value) return
@@ -253,15 +257,89 @@ const loadComments = async (isRefresh = false) => {
   }
 
   try {
-    // TODO: 调用API获取评价列表
-    // const res = await merchantApi.getComments({
-    //   filter: activeFilter.value,
-    //   tag: activeTag.value,
-    //   page: page.value,
-    //   size: pageSize
-    // })
+    // REVIEW-005: 调用API获取商家评价列表
+    const params = {
+      page: page.value,
+      size: pageSize
+    }
 
-    // 模拟数据
+    // 根据筛选条件添加参数
+    if (activeFilter.value === 'pending') {
+      params.hasReply = false
+    } else if (activeFilter.value === 'replied') {
+      params.hasReply = true
+    } else if (activeFilter.value === 'bad') {
+      params.maxRating = 2
+    } else if (activeFilter.value === 'hasImage') {
+      params.hasImage = true
+    }
+
+    if (activeTag.value !== 'all') {
+      params.tag = activeTag.value
+    }
+
+    const res = await reviewApi.getMerchantReviews(merchantId.value, params)
+
+    if (res.code === 200 && res.data) {
+      const reviews = res.data.list || res.data || []
+
+      // 转换数据格式
+      const formattedReviews = reviews.map(review => ({
+        id: review.id,
+        user: {
+          name: review.isAnonymous ? '匿名用户' : (review.userName || '用户***'),
+          avatar: review.userAvatar || 'https://via.placeholder.com/60'
+        },
+        rating: review.rating || 5,
+        time: formatTime(review.createdAt),
+        content: review.content || '',
+        images: review.images || [],
+        dish: review.dish ? {
+          id: review.dish.id,
+          name: review.dish.name,
+          image: review.dish.image
+        } : null,
+        tags: review.tags || [],
+        reply: review.reply ? {
+          content: review.reply.content,
+          time: formatTime(review.reply.createdAt)
+        } : null
+      }))
+
+      if (isRefresh) {
+        commentList.value = formattedReviews
+      } else {
+        commentList.value = [...commentList.value, ...formattedReviews]
+      }
+
+      // 更新统计
+      if (res.data.statistics && isRefresh) {
+        ratingStats.value = {
+          avgRating: res.data.statistics.averageRating || 0,
+          totalReviews: res.data.statistics.totalCount || 0,
+          positiveRate: Math.round((res.data.statistics.positiveCount || 0) / (res.data.statistics.totalCount || 1) * 100),
+          replyCount: res.data.statistics.replyCount || 0,
+          pendingReply: (res.data.statistics.totalCount || 0) - (res.data.statistics.replyCount || 0),
+          distribution: (res.data.statistics.ratingDistribution || []).map(item => ({
+            star: item.star,
+            count: item.count,
+            percent: Math.round(item.count / (res.data.statistics.totalCount || 1) * 100)
+          }))
+        }
+      }
+
+      if (reviews.length < pageSize) {
+        noMore.value = true
+      }
+    }
+
+    loading.value = false
+    refreshing.value = false
+  } catch (error) {
+    console.error('加载评价失败:', error)
+
+    // API失败时使用模拟数据
+    // TODO: 生产环境应移除此模拟数据逻辑
     setTimeout(() => {
       const mockData = generateMockComments()
       if (isRefresh) {
@@ -269,7 +347,6 @@ const loadComments = async (isRefresh = false) => {
       } else {
         commentList.value = [...commentList.value, ...mockData]
       }
-
       if (mockData.length < pageSize) {
         noMore.value = true
       }
@@ -277,11 +354,23 @@ const loadComments = async (isRefresh = false) => {
       loading.value = false
       refreshing.value = false
     }, 500)
-  } catch (error) {
-    console.error('加载评价失败:', error)
-    loading.value = false
-    refreshing.value = false
   }
+}
+
+/**
+ * 格式化时间
+ */
+const formatTime = (time) => {
+  if (!time) return ''
+  const date = new Date(time)
+  const now = new Date()
+  const diff = now - date
+
+  if (diff < 86400000) return '今天'
+  if (diff < 172800000) return '昨天'
+  if (diff < 604800000) return `${Math.floor(diff / 86400000)}天前`
+
+  return `${date.getMonth() + 1}-${date.getDate()}`
 }
 
 /**

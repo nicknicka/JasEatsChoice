@@ -59,6 +59,12 @@
       </scroll-view>
     </view>
 
+    <!-- 写评价按钮 -->
+    <view class="write-review-fab" @click="goToWriteReview">
+      <uni-icons type="compose" size="20" color="#fff"></uni-icons>
+      <text class="fab-text">写评价</text>
+    </view>
+
     <!-- 评价列表 -->
     <scroll-view class="review-scroll" scroll-y @scrolltolower="loadMore">
       <view class="review-list">
@@ -244,7 +250,7 @@ const loadMoreStatus = computed(() => {
 })
 
 /**
- * 加载评价列表
+ * REVIEW-001: 加载评价列表
  */
 const loadReviews = async (refresh = false) => {
   if (loading.value) return
@@ -279,14 +285,21 @@ const loadReviews = async (refresh = false) => {
       params.tag = activeTag.value
     }
 
-    // 根据目标类型调用不同的API
+    // REVIEW-001: 根据目标类型调用不同的API
     let res
     if (targetType.value === 'dish') {
+      // REVIEW-001: 获取菜品评价
       res = await reviewApi.getDishReviews(targetId.value, params)
     } else if (targetType.value === 'merchant') {
+      // REVIEW-001: 获取商家评价
       res = await reviewApi.getMerchantReviews(targetId.value, params)
     } else {
       throw new Error('不支持的目标类型')
+    }
+
+    // 检查响应状态
+    if (res.code !== 200) {
+      throw new Error(res.message || '加载失败')
     }
 
     // 数据映射：将后端返回的数据转换为前端需要的格式
@@ -380,12 +393,16 @@ const previewImage = (images, index) => {
 }
 
 /**
- * 点赞评价
+ * REVIEW-002: 点赞评价
  */
 const toggleLike = async (review) => {
   try {
-    // TODO: 调用后端API
-    // await reviewApi.like(review.id)
+    // REVIEW-002: 调用API点赞/取消点赞
+    if (review.liked) {
+      await reviewApi.unlike(review.id, { userId: userStore.userId })
+    } else {
+      await reviewApi.like(review.id, { userId: userStore.userId })
+    }
 
     review.liked = !review.liked
     review.likeCount = review.liked ? (review.likeCount || 0) + 1 : Math.max((review.likeCount || 0) - 1, 0)
@@ -397,6 +414,10 @@ const toggleLike = async (review) => {
     })
   } catch (error) {
     console.error('点赞失败:', error)
+    uni.showToast({
+      title: '操作失败',
+      icon: 'none'
+    })
   }
 }
 
@@ -462,6 +483,15 @@ const submitComment = async () => {
       icon: 'none'
     })
   }
+}
+
+/**
+ * REVIEW-002: 跳转到写评价页面
+ */
+const goToWriteReview = () => {
+  uni.navigateTo({
+    url: `/pages-user/review/submit?type=${targetType.value}&id=${targetId.value}`
+  })
 }
 
 // 组件挂载时加载数据
@@ -885,5 +915,26 @@ onMounted(() => {
 .submit-btn {
   background-color: $primary-color;
   color: #fff;
+}
+
+/* 写评价浮动按钮 */
+.write-review-fab {
+  position: fixed;
+  right: $spacing-lg;
+  bottom: 120rpx;
+  @include flex-center-column;
+  gap: $spacing-xs;
+  width: 120rpx;
+  height: 120rpx;
+  background: linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%);
+  border-radius: 50%;
+  box-shadow: 0 8rpx 16rpx rgba(255, 107, 53, 0.3);
+  z-index: $z-index-float;
+}
+
+.fab-text {
+  font-size: $font-size-sm;
+  color: #fff;
+  font-weight: $font-weight-medium;
 }
 </style>

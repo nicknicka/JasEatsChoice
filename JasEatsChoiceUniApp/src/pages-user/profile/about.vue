@@ -120,6 +120,9 @@ const openWebsite = () => {
   })
 }
 
+/**
+ * 查看协议 - U-035: 跳转到用户协议页, U-036: 跳转到隐私政策页
+ */
 const viewAgreement = (type) => {
   const titleMap = {
     user: '用户协议',
@@ -127,9 +130,42 @@ const viewAgreement = (type) => {
     permission: '权限说明'
   }
 
-  uni.showToast({
-    title: `${titleMap[type]}功能开发中`,
-    icon: 'none'
+  const urlMap = {
+    user: '/pages-common/agreement/user',
+    privacy: '/pages-common/agreement/privacy',
+    permission: '/pages-common/agreement/permission'
+  }
+
+  // U-035 & U-036: 跳转到对应的协议页面
+  uni.navigateTo({
+    url: urlMap[type],
+    success: () => {
+      console.log(`跳转到${titleMap[type]}成功`)
+    },
+    fail: () => {
+      // 如果页面不存在，使用webview显示在线文档
+      const onlineUrlMap = {
+        user: 'https://yourdomain.com/agreement/user',
+        privacy: 'https://yourdomain.com/agreement/privacy',
+        permission: 'https://yourdomain.com/agreement/permission'
+      }
+
+      uni.navigateTo({
+        url: `/pages-common/webview/index?url=${encodeURIComponent(onlineUrlMap[type])}&title=${encodeURIComponent(titleMap[type])}`,
+        fail: () => {
+          // 如果webview也不存在，直接打开浏览器（H5环境）
+          // #ifdef H5
+          window.open(onlineUrlMap[type], '_blank')
+          // #endif
+
+          // 最后的降级方案：显示提示
+          uni.showToast({
+            title: `${titleMap[type]}功能开发中`,
+            icon: 'none'
+          })
+        }
+      })
+    }
   })
 }
 </script>

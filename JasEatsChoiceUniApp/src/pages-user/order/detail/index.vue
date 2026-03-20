@@ -374,14 +374,49 @@ const copyOrderNo = () => {
 }
 
 /**
- * 联系商家
+ * 联系商家 - U-007: 跳转到聊天页
  */
-const contactMerchant = () => {
-  uni.showToast({
-    title: '聊天功能开发中',
-    icon: 'none'
-  })
-  // TODO: 跳转到聊天页
+const contactMerchant = async () => {
+  try {
+    // 获取商家ID（从第一个订单商品组中获取）
+    const merchantId = orderItems.value[0]?.merchantId
+    if (!merchantId) {
+      uni.showToast({
+        title: '商家信息不存在',
+        icon: 'none'
+      })
+      return
+    }
+
+    // 调用API创建或获取与商家的会话
+    const { chatApi } = await import('@/api')
+    const res = await chatApi.createConversation({
+      targetUserId: merchantId,
+      orderId: orderId.value
+    })
+
+    if (res.code === 200 || res.conversationId) {
+      const conversationId = res.conversationId || res.data?.conversationId || res.id
+      // 跳转到聊天页面
+      uni.navigateTo({
+        url: `/pages-common/chat/chat-room?conversationId=${conversationId}&merchantId=${merchantId}`,
+        fail: () => {
+          // 如果页面路径不存在，尝试其他可能的路径
+          uni.navigateTo({
+            url: `/pages-user/chat/chat-room?conversationId=${conversationId}&merchantId=${merchantId}`
+          })
+        }
+      })
+    } else {
+      throw new Error(res.message || '创建会话失败')
+    }
+  } catch (error) {
+    console.error('跳转聊天页面失败:', error)
+    uni.showToast({
+      title: error.message || '打开聊天失败',
+      icon: 'none'
+    })
+  }
 }
 
 /**
@@ -464,50 +499,220 @@ const confirmReceipt = async () => {
 }
 
 /**
- * 评价订单
+ * 评价订单 - U-008: 跳转到评价页
  */
 const reviewOrder = () => {
-  uni.showToast({
-    title: '评价功能开发中',
-    icon: 'none'
+  if (!orderId.value) {
+    uni.showToast({
+      title: '订单信息不存在',
+      icon: 'none'
+    })
+    return
+  }
+
+  // 跳转到评价提交页面，携带订单ID
+  uni.navigateTo({
+    url: `/pages-user/review/submit/index?orderId=${orderId.value}`,
+    success: () => {
+      console.log('跳转到评价页面成功')
+    },
+    fail: (err) => {
+      console.error('跳转评价页面失败:', err)
+      uni.showToast({
+        title: '打开评价页面失败',
+        icon: 'none'
+      })
+    }
   })
-  // TODO: 跳转到评价页
 }
 
 /**
- * 立即支付
+ * 立即支付 - U-009: 调用支付API
  */
-const payOrder = () => {
+const payOrder = async () => {
+  if (!orderId.value) {
+    uni.showToast({
+      title: '订单信息不存在',
+      icon: 'none'
+    })
+    return
+  }
+
+  // 确认支付对话框
   uni.showModal({
     title: '确认支付',
     content: `支付金额：¥${orderAmount.value.totalPrice}`,
-    success: (res) => {
+    confirmColor: '#FF6B35',
+    success: async (res) => {
       if (res.confirm) {
-        // TODO: 调用支付API
-        uni.showToast({
-          title: '支付成功',
-          icon: 'success'
-        })
+        try {
+          uni.showLoading({ title: '正在支付...' })
 
-        orderStatus.value = 'paid'
-        currentProgressIndex.value = 0
+          // 导入支付API
+          const { paymentApi } = await import('@/api')
+
+          // 步骤1：创建支付订单
+          const createPaymentRes = await paymentApi.createPayment({
+            orderId: orderId.value,
+            userId: uni.getStorageSync('userId') || uni.getStorageSync('userInfo')?.id,
+            paymentMethod: 'wechat' // 默认微信支付，可以根据实际需求调整
+          })
+
+          uni.hideLoading()
+
+          if (createPaymentRes.code !== 200) {
+            throw new Error(createPaymentRes.message || '创建支付订单失败')
+          }
+
+          const paymentNo = createPaymentRes.data?.paymentNo
+          if (!paymentNo) {
+            throw new Error('支付流水号获取失败')
+          }
+
+          // 步骤2：调用微信支付
+          uni.showLoading({ title: '调起支付...' })
+          const wechatPayRes = await paymentApi.wechatPay({ paymentNo })
+          uni.hideLoading()
+
+          if (wechatPayRes.code !== 200) {
+            throw new Error(wechatPayRes.message || '获取支付参数失败')
+          }
+
+          // 步骤3：调起微信支付
+          const payParams = wechatPayRes.data
+          uni.requestPayment({
+            provider: 'wxpay',
+            timeStamp: payParams.timeStamp,
+            nonceStr: payParams.nonceStr,
+            package: payParams.package,
+            signType: payParams.signType || 'MD5',
+            paySign: payParams.paySign,
+            success: async () => {
+              // 支付成功
+              uni.showToast({
+                title: '支付成功',
+                icon: 'success',
+                duration: 2000
+              })
+
+              // 更新订单状态
+              orderStatus.value = {
+                value: 'paid',
+                icon: '✅',
+                text: '支付成功',
+                tips: '商家将尽快接单'
+              }
+              currentProgressIndex.value = 1
+
+              // 重新加载订单详情
+              setTimeout(async () => {
+                await loadOrderDetail()
+              }, 1000)
+            },
+            fail: (err) => {
+              // 支付失败或取消
+              console.error('支付失败:', err)
+              if (err.errMsg.includes('cancel')) {
+                uni.showToast({
+                  title: '已取消支付',
+                  icon: 'none'
+                })
+              } else {
+                uni.showToast({
+                  title: '支付失败，请重试',
+                  icon: 'none'
+                })
+              }
+            }
+          })
+        } catch (error) {
+          console.error('支付失败:', error)
+          uni.hideLoading()
+          uni.showToast({
+            title: error.message || '支付失败，请重试',
+            icon: 'none',
+            duration: 2000
+          })
+        }
       }
     }
   })
 }
 
 /**
- * 再来一单
+ * 再来一单 - U-010: 将商品添加到购物车
  */
-const orderAgain = () => {
-  uni.showToast({
-    title: '已加入购物车',
-    icon: 'success'
-  })
-  // TODO: 将商品添加到购物车
-  // uni.switchTab({
-  //   url: '/pages/cart/index'
-  // })
+const orderAgain = async () => {
+  try {
+    uni.showLoading({ title: '加入购物车...' })
+
+    // 导入购物车API
+    const { cartApi } = await import('@/api')
+
+    // 遍历所有订单商品，添加到购物车
+    const addPromises = []
+    const merchantMap = new Map()
+
+    // 按商家分组商品
+    orderItems.value.forEach(group => {
+      const merchantId = group.merchantId
+      if (!merchantMap.has(merchantId)) {
+        merchantMap.set(merchantId, {
+          merchantId,
+          merchant: group.merchant,
+          items: []
+        })
+      }
+
+      group.items.forEach(item => {
+        merchantMap.get(merchantId).items.push(item)
+      })
+    })
+
+    // 为每个商品创建添加到购物车的Promise
+    for (const [merchantId, group] of merchantMap) {
+      group.items.forEach(item => {
+        const promise = cartApi.add({
+          dishId: item.dish.id,
+          merchantId: merchantId,
+          quantity: item.quantity,
+          spec: item.spec || '',
+          remark: ''
+        })
+        addPromises.push(promise)
+      })
+    }
+
+    // 等待所有添加操作完成
+    await Promise.all(addPromises)
+
+    uni.hideLoading()
+    uni.showToast({
+      title: '已加入购物车',
+      icon: 'success',
+      duration: 2000
+    })
+
+    // 跳转到购物车页面
+    setTimeout(() => {
+      uni.switchTab({
+        url: '/pages-user/cart/index',
+        fail: () => {
+          // 如果switchTab失败（可能不是tabBar页面），使用navigateTo
+          uni.navigateTo({
+            url: '/pages-user/cart/index'
+          })
+        }
+      })
+    }, 1500)
+  } catch (error) {
+    console.error('加入购物车失败:', error)
+    uni.hideLoading()
+    uni.showToast({
+      title: error.message || '加入购物车失败',
+      icon: 'none'
+    })
+  }
 }
 
 // 组件挂载时加载数据

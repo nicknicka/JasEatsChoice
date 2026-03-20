@@ -365,49 +365,75 @@ const onBirthdayChange = (e) => {
 }
 
 /**
- * 口味偏好选择
+ * U-001: 口味偏好选择（多选）
  */
 const onTasteChange = () => {
-  // TODO: 实现多选口味偏好
+  // 显示多选对话框
+  const items = tasteOptions.map(opt => opt.label)
+  const selected = userInfo.value.taste || []
+
   uni.showActionSheet({
-    itemList: tasteOptions.map(opt => opt.label),
+    itemList: [...items, '确认选择'],
     success: (res) => {
-      const selected = tasteOptions[res.tapIndex]
-      if (!userInfo.value.taste) {
-        userInfo.value.taste = []
+      const index = res.tapIndex
+
+      // 如果点击的是"确认选择"
+      if (index === items.length) {
+        showTastePicker.value = false
+        // 更新用户信息
+        userInfo.value.taste = selected
+        return
       }
-      const index = userInfo.value.taste.indexOf(selected.value)
-      if (index > -1) {
-        userInfo.value.taste.splice(index, 1)
+
+      // 切换选中状态
+      const value = tasteOptions[index].value
+      const idx = selected.indexOf(value)
+      if (idx > -1) {
+        selected.splice(idx, 1)
       } else {
-        userInfo.value.taste.push(selected.value)
+        selected.push(value)
       }
+
+      // 更新显示
+      userInfo.value.taste = selected
     }
   })
-  showTastePicker.value = false
 }
 
 /**
- * 过敏原选择
+ * U-002: 过敏原选择（多选）
  */
 const onAllergyChange = () => {
-  // TODO: 实现多选过敏原
+  // 显示多选对话框
+  const items = allergyOptions.map(opt => opt.label)
+  const selected = userInfo.value.allergies || []
+
   uni.showActionSheet({
-    itemList: allergyOptions.map(opt => opt.label),
+    itemList: [...items, '确认选择'],
     success: (res) => {
-      const selected = allergyOptions[res.tapIndex]
-      if (!userInfo.value.allergies) {
-        userInfo.value.allergies = []
+      const index = res.tapIndex
+
+      // 如果点击的是"确认选择"
+      if (index === items.length) {
+        showAllergyPicker.value = false
+        // 更新用户信息
+        userInfo.value.allergies = selected
+        return
       }
-      const index = userInfo.value.allergies.indexOf(selected.value)
-      if (index > -1) {
-        userInfo.value.allergies.splice(index, 1)
+
+      // 切换选中状态
+      const value = allergyOptions[index].value
+      const idx = selected.indexOf(value)
+      if (idx > -1) {
+        selected.splice(idx, 1)
       } else {
-        userInfo.value.allergies.push(selected.value)
+        selected.push(value)
       }
+
+      // 更新显示
+      userInfo.value.allergies = selected
     }
   })
-  showAllergyPicker.value = false
 }
 
 /**

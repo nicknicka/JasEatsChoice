@@ -344,8 +344,14 @@ const saveRecord = async () => {
       remark: formData.value.remark
     }
 
-    // TODO: 调用后端API保存记录
-    // await aiApi.saveNutritionRecord(newRecord)
+    // U-026: 调用后端API保存记录
+    try {
+      const { aiApi } = await import('@/api')
+      await aiApi.saveNutritionRecord(newRecord)
+    } catch (error) {
+      console.error('保存记录到服务器失败，仅保存到本地:', error)
+      // 如果API调用失败，仅保存到本地，不中断流程
+    }
 
     // 临时添加到本地列表
     const record = {

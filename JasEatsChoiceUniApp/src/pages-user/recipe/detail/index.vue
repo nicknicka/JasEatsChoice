@@ -459,11 +459,28 @@ const addToMenu = async () => {
   }
 
   try {
-    // TODO: 创建 addToMenu API
-    // await recipeApi.addToMenu(recipeId.value)
+    // U-032: 创建addToMenu API
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+
+    // 调用API将食谱添加到用户的菜单中
+    const { recipeApi } = await import('@/api')
+
+    // 如果recipeApi有addToMenu方法就调用，否则使用create方法
+    if (recipeApi.addToMenu) {
+      await recipeApi.addToMenu(recipeId.value, { userId })
+    } else if (recipeApi.addToMyMenu) {
+      await recipeApi.addToMyMenu({
+        userId,
+        recipeId: recipeId.value
+      })
+    } else {
+      throw new Error('API方法不存在')
+    }
+
     uni.showToast({
-      title: '功能开发中',
-      icon: 'none'
+      title: '已加入菜单',
+      icon: 'success',
+      duration: 2000
     })
   } catch (error) {
     console.error('加入菜单失败:', error)

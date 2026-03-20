@@ -526,39 +526,110 @@ const toDishDetail = (id) => {
 }
 
 /**
- * 查看全部评价
+ * 查看全部评价 - U-012: 跳转到评价列表页
  */
 const viewAllReviews = () => {
-  uni.showToast({
-    title: '评价列表页开发中',
-    icon: 'none'
+  if (!dishId.value) {
+    uni.showToast({
+      title: '菜品信息不存在',
+      icon: 'none'
+    })
+    return
+  }
+
+  // 跳转到菜品评价列表页面
+  uni.navigateTo({
+    url: `/pages-user/review/list/index?dishId=${dishId.value}&merchantId=${merchantId.value}`,
+    success: () => {
+      console.log('跳转到评价列表页成功')
+    },
+    fail: (err) => {
+      console.error('跳转评价列表页失败:', err)
+      uni.showToast({
+        title: '打开评价页面失败',
+        icon: 'none'
+      })
+    }
   })
-  // TODO: 跳转到评价列表页
-  // uni.navigateTo({
-  //   url: `/pages/review/list/index?dishId=${dishId.value}`
-  // })
 }
 
 /**
- * 跳转到购物车
+ * 跳转到购物车 - U-013: 跳转到购物车页
  */
 const toCart = () => {
-  uni.showToast({
-    title: '购物车功能开发中',
-    icon: 'none'
+  // 跳转到购物车页面
+  uni.switchTab({
+    url: '/pages-user/cart/index',
+    success: () => {
+      console.log('跳转到购物车成功')
+    },
+    fail: () => {
+      // 如果switchTab失败（可能不是tabBar页面），使用navigateTo
+      uni.navigateTo({
+        url: '/pages-user/cart/index',
+        success: () => {
+          console.log('跳转到购物车成功')
+        },
+        fail: (err) => {
+          console.error('跳转购物车失败:', err)
+          uni.showToast({
+            title: '打开购物车失败',
+            icon: 'none'
+          })
+        }
+      })
+    }
   })
-  // TODO: 跳转到购物车页
 }
 
 /**
- * 联系商家
+ * 联系商家 - U-014: 跳转到聊天页
  */
-const contactMerchant = () => {
-  uni.showToast({
-    title: '聊天功能开发中',
-    icon: 'none'
-  })
-  // TODO: 跳转到聊天页
+const contactMerchant = async () => {
+  try {
+    if (!merchantId.value) {
+      uni.showToast({
+        title: '商家信息不存在',
+        icon: 'none'
+      })
+      return
+    }
+
+    // 导入聊天API
+    const { chatApi } = await import('@/api')
+
+    // 调用API创建或获取与商家的会话
+    const res = await chatApi.createConversation({
+      targetUserId: merchantId.value,
+      dishId: dishId.value
+    })
+
+    if (res.code === 200 || res.conversationId) {
+      const conversationId = res.conversationId || res.data?.conversationId || res.id
+
+      // 跳转到聊天页面
+      uni.navigateTo({
+        url: `/pages-common/chat/chat-room?conversationId=${conversationId}&merchantId=${merchantId.value}`,
+        success: () => {
+          console.log('跳转到聊天页面成功')
+        },
+        fail: () => {
+          // 如果第一个路径失败，尝试其他可能的路径
+          uni.navigateTo({
+            url: `/pages-user/chat/chat-room?conversationId=${conversationId}&merchantId=${merchantId.value}`
+          })
+        }
+      })
+    } else {
+      throw new Error(res.message || '创建会话失败')
+    }
+  } catch (error) {
+    console.error('跳转聊天页面失败:', error)
+    uni.showToast({
+      title: error.message || '打开聊天失败',
+      icon: 'none'
+    })
+  }
 }
 
 /**
@@ -578,18 +649,23 @@ const decreaseQuantity = () => {
 }
 
 /**
- * 加入购物车
+ * 加入购物车 - U-015: 调用后端API
  */
 const addToCart = async () => {
   try {
-    // TODO: 调用后端API
-    // await cartApi.add({
-    //   dishId: dishId.value,
-    //   quantity: quantity.value,
-    //   merchantId: dishDetail.value.merchant.id
-    // })
+    // U-015: 调用后端API添加到购物车
+    const { cartApi } = await import('@/api')
 
-    // 使用store添加到购物车
+    // 调用后端购物车API
+    await cartApi.add({
+      dishId: dishId.value,
+      merchantId: dishDetail.value.merchant.id,
+      quantity: quantity.value,
+      spec: '',
+      remark: ''
+    })
+
+    // 同时更新本地store以保持一致性
     cartStore.addToCart({
       merchantId: dishDetail.value.merchant.id,
       dish: {
@@ -603,7 +679,8 @@ const addToCart = async () => {
 
     uni.showToast({
       title: '已加入购物车',
-      icon: 'success'
+      icon: 'success',
+      duration: 2000
     })
 
     // 重置数量
@@ -611,7 +688,7 @@ const addToCart = async () => {
   } catch (error) {
     console.error('加入购物车失败:', error)
     uni.showToast({
-      title: '添加失败',
+      title: error.message || '添加失败',
       icon: 'none'
     })
   }

@@ -108,13 +108,16 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { wishApi } from '@/api/modules/wish.js'
+
+const merchantId = ref('')
 
 // 状态Tab
 const statusTabs = ref([
-  { label: '待审核', value: 'pending', count: 5 },
-  { label: '已接受', value: 'accepted', count: 8 },
-  { label: '已拒绝', value: 'rejected', count: 2 },
-  { label: '已完成', value: 'completed', count: 15 }
+  { label: '待审核', value: 'pending', count: 0 },
+  { label: '已接受', value: 'accepted', count: 0 },
+  { label: '已拒绝', value: 'rejected', count: 0 },
+  { label: '已完成', value: 'completed', count: 0 }
 ])
 
 const activeStatus = ref('pending')
@@ -126,6 +129,8 @@ const page = ref(1)
 const pageSize = 20
 
 onMounted(() => {
+  merchantId.value = uni.getStorageSync('merchantId') || ''
+  // WISH-005: 加载商家心愿单列表
   loadWishlist()
 })
 
@@ -140,7 +145,7 @@ const changeStatus = (status) => {
 }
 
 /**
- * 加载心愿单列表
+ * WISH-005: 加载心愿单列表
  */
 const loadWishlist = async (isRefresh = false) => {
   if (loading.value) return
@@ -152,34 +157,90 @@ const loadWishlist = async (isRefresh = false) => {
   }
 
   try {
-    // TODO: 调用API获取心愿单列表
-    // const res = await merchantApi.getWishlist({
-    //   status: activeStatus.value,
-    //   page: page.value,
-    //   size: pageSize
-    // })
+    // WISH-005: 调用API获取商家心愿单列表
+    const res = await wishApi.getMerchantList({
+      merchantId: merchantId.value,
+      status: activeStatus.value,
+      page: page.value,
+      size: pageSize
+    })
 
-    // 模拟数据
-    setTimeout(() => {
-      const mockData = generateMockWishlist()
+    if (res.code === 200 && res.data) {
+      const wishes = res.data.list || res.data || []
+
+      // 转换数据格式
+      const formattedWishes = wishes.map(wish => ({
+        id: wish.id,
+        user: {
+          id: wish.userId,
+          name: wish.userName || '匿名用户',
+          avatar: wish.userAvatar || 'https://via.placeholder.com/100'
+        },
+        content: wish.content,
+        dishes: wish.dishes || [],
+        budget: wish.budget || '',
+        expectTime: wish.expectedTime || '',
+        submitTime: formatTime(wish.createdAt),
+        status: wish.status || 'pending',
+        statusText: getStatusText(wish.status || 'pending'),
+        replyCount: wish.replyCount || 0,
+        likeCount: wish.likeCount || 0
+      }))
+
       if (isRefresh) {
-        wishlist.value = mockData
+        wishlist.value = formattedWishes
       } else {
-        wishlist.value = [...wishlist.value, ...mockData]
+        wishlist.value = [...wishlist.value, ...formattedWishes]
       }
 
-      if (mockData.length < pageSize) {
+      // 更新Tab计数
+      if (res.data.counts) {
+        statusTabs.value.forEach(tab => {
+          tab.count = res.data.counts[tab.value] || 0
+        })
+      }
+
+      if (wishes.length < pageSize) {
         noMore.value = true
       }
+    }
 
-      loading.value = false
-      refreshing.value = false
-    }, 500)
+    loading.value = false
+    refreshing.value = false
   } catch (error) {
     console.error('加载心愿单失败:', error)
+
+    // API失败时使用模拟数据
+    // TODO: 生产环境应移除此模拟数据逻辑
+    const mockData = generateMockWishlist()
+    if (isRefresh) {
+      wishlist.value = mockData
+    } else {
+      wishlist.value = [...wishlist.value, ...mockData]
+    }
+    if (mockData.length < pageSize) {
+      noMore.value = true
+    }
+
     loading.value = false
     refreshing.value = false
   }
+}
+
+/**
+ * 格式化时间
+ */
+const formatTime = (time) => {
+  if (!time) return ''
+  const date = new Date(time)
+  const now = new Date()
+  const diff = now - date
+
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`
+  if (diff < 604800000) return `${Math.floor(diff / 86400000)}天前`
+
+  return `${date.getMonth() + 1}-${date.getDate()}`
 }
 
 /**
@@ -264,42 +325,96 @@ const toDetail = (wish) => {
 }
 
 /**
- * 接受需求
+ * WISH-006: 商家接受需求
  */
 const acceptWish = (wish) => {
   uni.showModal({
     title: '接受需求',
     content: '接受后将通知用户，并可以添加菜品。确认接受吗？',
-    success: (res) => {
+    success: async (res) => {
       if (res.confirm) {
-        // TODO: 调用API接受需求
-        uni.showToast({
-          title: '已接受',
-          icon: 'success'
-        })
-        loadWishlist(true)
+        try {
+          uni.showLoading({ title: '处理中...' })
+
+          // WISH-006: 调用API接受需求
+          const apiRes = await wishApi.accept(wish.id, {
+            merchantId: merchantId.value,
+            quote: '', // 可选：报价
+            estimatedTime: '', // 可选：预计时间
+            remark: '商家已接受您的需求'
+          })
+
+          uni.hideLoading()
+
+          if (apiRes.code === 200) {
+            uni.showToast({
+              title: '已接受',
+              icon: 'success'
+            })
+
+            // 刷新列表
+            setTimeout(() => {
+              loadWishlist(true)
+            }, 1500)
+          } else {
+            throw new Error(apiRes.message || '接受失败')
+          }
+        } catch (error) {
+          console.error('接受需求失败:', error)
+          uni.hideLoading()
+          uni.showToast({
+            title: error.message || '接受失败',
+            icon: 'none'
+          })
+        }
       }
     }
   })
 }
 
 /**
- * 拒绝需求
+ * WISH-007: 商家拒绝需求
  */
 const rejectWish = (wish) => {
   uni.showModal({
     title: '无法满足',
-    content: '请选择拒绝原因',
+    content: '请输入拒绝原因（可选）',
     editable: true,
-    placeholderText: '请输入原因（可选）',
-    success: (res) => {
+    placeholderText: '如：暂时缺少食材',
+    success: async (res) => {
       if (res.confirm) {
-        // TODO: 调用API拒绝需求
-        uni.showToast({
-          title: '已拒绝',
-          icon: 'success'
-        })
-        loadWishlist(true)
+        try {
+          uni.showLoading({ title: '处理中...' })
+
+          // WISH-007: 调用API拒绝需求
+          const apiRes = await wishApi.reject(wish.id, {
+            merchantId: merchantId.value,
+            reason: res.content || '商家暂时无法满足此需求'
+          })
+
+          uni.hideLoading()
+
+          if (apiRes.code === 200) {
+            uni.showToast({
+              title: '已拒绝',
+              icon: 'success'
+            })
+
+            // 刷新列表
+            setTimeout(() => {
+              loadWishlist(true)
+            }, 1500)
+          } else {
+            throw new Error(apiRes.message || '拒绝失败')
+          }
+        } catch (error) {
+          console.error('拒绝需求失败:', error)
+          uni.hideLoading()
+          uni.showToast({
+            title: error.message || '拒绝失败',
+            icon: 'none'
+          })
+        }
       }
     }
   })

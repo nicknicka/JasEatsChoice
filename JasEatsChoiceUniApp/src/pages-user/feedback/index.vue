@@ -233,15 +233,24 @@ const submitFeedback = async () => {
   })
 
   try {
-    // 上传图片到服务器
+    // U-027: 实现图片上传API
     const uploadedImages = []
     for (const imagePath of imageList.value) {
       try {
-        // TODO: 实现图片上传API
-        // const uploadRes = await feedbackApi.uploadImage(formData)
-        // uploadedImages.push(uploadRes.url)
+        // 导入上传工具
+        const { upload } = await import('@/utils/request')
+
+        // 上传图片到服务器
+        const uploadRes = await upload('/api/upload/image', imagePath, {
+          type: 'feedback'
+        })
+
+        if (uploadRes && uploadRes.url) {
+          uploadedImages.push(uploadRes.url)
+        }
       } catch (error) {
         console.error('图片上传失败:', error)
+        // 继续上传其他图片，不中断流程
       }
     }
 

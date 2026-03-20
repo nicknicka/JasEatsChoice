@@ -129,7 +129,24 @@ export const walletApi = {
    * @param {Object} data - 数据
    * @param {string} data.userId - 用户ID
    */
-  cancelWithdraw: (id, data) => put(`/v1/wallet/withdraw/${id}/cancel`, data)
+  cancelWithdraw: (id, data) => put(`/v1/wallet/withdraw/${id}/cancel`, data),
+
+  /**
+   * 微信支付
+   * POST /v1/payment/wechat
+   * @param {Object} data - 支付数据
+   * @param {string} data.orderId - 订单ID
+   * @param {string} data.prepayId - 预支付ID
+   */
+  wechatPay: (data) => post('/v1/payment/wechat', data),
+
+  /**
+   * 支付宝支付
+   * POST /v1/payment/alipay
+   * @param {Object} data - 支付数据
+   * @param {string} data.orderId - 订单ID
+   */
+  alipayPay: (data) => post('/v1/payment/alipay', data)
 }
 
 export default walletApi

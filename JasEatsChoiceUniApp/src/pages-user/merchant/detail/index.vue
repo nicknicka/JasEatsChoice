@@ -574,12 +574,63 @@ const toggleFavorite = async () => {
 /**
  * 分享商家
  */
+/**
+ * 分享商家 - U-016: 实现分享功能
+ */
 const shareMerchant = () => {
-  uni.showToast({
-    title: '分享功能开发中',
-    icon: 'none'
+  // 检查是否支持分享
+  if (!uni.shareProvider) {
+    // 如果不支持原生分享，使用截图分享或复制链接
+    uni.showActionSheet({
+      itemList: ['复制链接', '保存图片'],
+      success: (res) => {
+        if (res.tapIndex === 0) {
+          // 复制链接
+          const shareUrl = `https://yourdomain.com/merchant/${merchantId.value}`
+          uni.setClipboardData({
+            data: shareUrl,
+            success: () => {
+              uni.showToast({
+                title: '链接已复制',
+                icon: 'success'
+              })
+            }
+          })
+        } else if (res.tapIndex === 1) {
+          // 保存图片（生成二维码或截图）
+          uni.showToast({
+            title: '功能开发中',
+            icon: 'none'
+          })
+        }
+      }
+    })
+    return
+  }
+
+  // 使用原生分享功能
+  uni.share({
+    provider: 'weixin',
+    scene: 'WXSceneSession',
+    type: 0,
+    title: merchantInfo.value.name || '佳食宜选商家',
+    summary: merchantInfo.value.description || '欢迎光临',
+    href: `https://yourdomain.com/merchant/${merchantId.value}`,
+    imageUrl: merchantInfo.value.logo || merchantInfo.value.avatar || '',
+    success: () => {
+      uni.showToast({
+        title: '分享成功',
+        icon: 'success'
+      })
+    },
+    fail: (err) => {
+      console.error('分享失败:', err)
+      uni.showToast({
+        title: '分享失败',
+        icon: 'none'
+      })
+    }
   })
-  // TODO: 实现分享功能
 }
 
 /**
@@ -661,14 +712,31 @@ const quickAdd = async (dish) => {
 }
 
 /**
- * 查看全部评价
+ * 查看全部评价 - U-017: 跳转到评价列表页
  */
 const viewAllReviews = () => {
-  uni.showToast({
-    title: '评价列表页开发中',
-    icon: 'none'
+  if (!merchantId.value) {
+    uni.showToast({
+      title: '商家信息不存在',
+      icon: 'none'
+    })
+    return
+  }
+
+  // 跳转到商家评价列表页面
+  uni.navigateTo({
+    url: `/pages-user/review/list/index?merchantId=${merchantId.value}`,
+    success: () => {
+      console.log('跳转到评价列表页成功')
+    },
+    fail: (err) => {
+      console.error('跳转评价列表页失败:', err)
+      uni.showToast({
+        title: '打开评价页面失败',
+        icon: 'none'
+      })
+    }
   })
-  // TODO: 跳转到评价列表页
 }
 
 /**
@@ -681,18 +749,36 @@ const callMerchant = () => {
 }
 
 /**
- * 跳转到购物车
+ * 跳转到购物车 - U-018: 跳转到购物车页
  */
 const toCart = () => {
-  uni.showToast({
-    title: '购物车功能开发中',
-    icon: 'none'
+  // 跳转到购物车页面
+  uni.switchTab({
+    url: '/pages-user/cart/index',
+    success: () => {
+      console.log('跳转到购物车成功')
+    },
+    fail: () => {
+      // 如果switchTab失败（可能不是tabBar页面），使用navigateTo
+      uni.navigateTo({
+        url: '/pages-user/cart/index',
+        success: () => {
+          console.log('跳转到购物车成功')
+        },
+        fail: (err) => {
+          console.error('跳转购物车失败:', err)
+          uni.showToast({
+            title: '打开购物车失败',
+            icon: 'none'
+          })
+        }
+      })
+    }
   })
-  // TODO: 跳转到购物车页
 }
 
 /**
- * 去结算
+ * 去结算 - U-019: 跳转到订单确认页
  */
 const startOrder = () => {
   if (cartCount.value === 0) {
@@ -703,14 +789,71 @@ const startOrder = () => {
     return
   }
 
-  uni.showToast({
-    title: '订单确认页开发中',
-    icon: 'none'
-  })
-  // TODO: 跳转到订单确认页
-  // uni.navigateTo({
-  //   url: '/pages/order/confirm/index'
-  // })
+  if (!userStore.isLogin) {
+    uni.showToast({
+      title: '请先登录',
+      icon: 'none'
+    })
+    setTimeout(() => {
+      uni.navigateTo({
+        url: '/pages/login/index'
+      })
+    }, 1500)
+    return
+  }
+
+  // 将购物车数据存储到临时存储，用于订单确认页面
+  try {
+    const cartItems = cartStore.items
+    const merchantItems = cartItems.filter(item => item.merchantId === merchantId.value)
+
+    if (merchantItems.length === 0) {
+      uni.showToast({
+        title: '当前商家购物车为空',
+        icon: 'none'
+      })
+      return
+    }
+
+    // 准备订单数据
+    const tempItems = merchantItems.map(item => ({
+      dishId: item.dish.id,
+      dish: item.dish,
+      merchantId: item.merchantId,
+      merchant: merchantInfo.value,
+      quantity: item.quantity,
+      spec: item.spec || '',
+      price: item.dish.price
+    }))
+
+    // 存储到临时存储
+    uni.setStorageSync('temp_order_items', tempItems)
+    uni.setStorageSync('temp_order_summary', {
+      totalCount: tempItems.reduce((sum, item) => sum + item.quantity, 0),
+      totalPrice: tempItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
+    })
+
+    // 跳转到订单确认页面
+    uni.navigateTo({
+      url: '/pages-user/order/confirm/index',
+      success: () => {
+        console.log('跳转到订单确认页成功')
+      },
+      fail: (err) => {
+        console.error('跳转订单确认页失败:', err)
+        uni.showToast({
+          title: '打开订单确认页失败',
+          icon: 'none'
+        })
+      }
+    })
+  } catch (error) {
+    console.error('准备订单数据失败:', error)
+    uni.showToast({
+      title: '订单准备失败',
+      icon: 'none'
+    })
+  }
 }
 
 // 组件挂载时加载数据

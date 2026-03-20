@@ -4,9 +4,11 @@ import com.xx.jaseatschoicejava.common.ResponseResult;
 import com.xx.jaseatschoicejava.entity.Order;
 import com.xx.jaseatschoicejava.entity.PaymentRecord;
 import com.xx.jaseatschoicejava.entity.UserCoupon;
+import com.xx.jaseatschoicejava.service.AlipayPayService;
 import com.xx.jaseatschoicejava.service.OrderService;
 import com.xx.jaseatschoicejava.service.PaymentService;
 import com.xx.jaseatschoicejava.service.UserCouponService;
+import com.xx.jaseatschoicejava.service.WechatPayService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
@@ -32,6 +34,8 @@ public class PaymentController {
     private final OrderService orderService;
     private final PaymentService paymentService;
     private final UserCouponService userCouponService;
+    private final WechatPayService wechatPayService;
+    private final AlipayPayService alipayPayService;
 
     /**
      * 获取订单支付信息
@@ -181,17 +185,32 @@ public class PaymentController {
         try {
             String paymentNo = (String) request.get("paymentNo");
 
-            // TODO: 集成微信支付SDK
-            // 这里需要调用微信支付API，生成支付参数
-            // 返回支付参数给前端，前端调起微信支付
+            // 查询支付记录
+            PaymentRecord paymentRecord = paymentService.getPaymentByPaymentNo(paymentNo);
+            if (paymentRecord == null) {
+                return ResponseResult.fail("404", "支付记录不存在");
+            }
 
-            Map<String, Object> result = new HashMap<>();
-            result.put("paymentNo", paymentNo);
-            result.put("status", "pending");
-            result.put("message", "微信支付功能开发中");
+            // 查询订单信息
+            Order order = orderService.getById(paymentRecord.getOrderId());
+            if (order == null) {
+                return ResponseResult.fail("404", "订单不存在");
+            }
 
-            log.warn("微信支付功能尚未实现，支付流水号：{}", paymentNo);
-            return ResponseResult.success(result);
+            // 调用微信支付服务
+            Map<String, Object> payResult = wechatPayService.createMiniPayOrder(
+                paymentNo,
+                paymentRecord.getAmount(),
+                "订单支付-" + order.getId(),
+                "" // openid需要从用户信息中获取，这里简化处理
+            );
+
+            if ("pending".equals(payResult.get("status"))) {
+                return ResponseResult.success(payResult, "微信支付订单创建成功");
+            } else {
+                return ResponseResult.fail("500", (String) payResult.get("message"));
+            }
+
         } catch (Exception e) {
             log.error("微信支付失败", e);
             return ResponseResult.fail("500", "微信支付失败：" + e.getMessage());
@@ -208,17 +227,31 @@ public class PaymentController {
         try {
             String paymentNo = (String) request.get("paymentNo");
 
-            // TODO: 集成支付宝支付SDK
-            // 这里需要调用支付宝支付API，生成支付参数
-            // 返回支付参数给前端，前端调起支付宝支付
+            // 查询支付记录
+            PaymentRecord paymentRecord = paymentService.getPaymentByPaymentNo(paymentNo);
+            if (paymentRecord == null) {
+                return ResponseResult.fail("404", "支付记录不存在");
+            }
 
-            Map<String, Object> result = new HashMap<>();
-            result.put("paymentNo", paymentNo);
-            result.put("status", "pending");
-            result.put("message", "支付宝支付功能开发中");
+            // 查询订单信息
+            Order order = orderService.getById(paymentRecord.getOrderId());
+            if (order == null) {
+                return ResponseResult.fail("404", "订单不存在");
+            }
 
-            log.warn("支付宝支付功能尚未实现，支付流水号：{}", paymentNo);
-            return ResponseResult.success(result);
+            // 调用支付宝支付服务
+            Map<String, Object> payResult = alipayPayService.createWapPayOrder(
+                paymentNo,
+                paymentRecord.getAmount(),
+                "订单支付-" + order.getId()
+            );
+
+            if ("pending".equals(payResult.get("status"))) {
+                return ResponseResult.success(payResult, "支付宝支付订单创建成功");
+            } else {
+                return ResponseResult.fail("500", (String) payResult.get("message"));
+            }
+
         } catch (Exception e) {
             log.error("支付宝支付失败", e);
             return ResponseResult.fail("500", "支付宝支付失败：" + e.getMessage());

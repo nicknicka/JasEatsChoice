@@ -85,9 +85,10 @@ export const request = (options) => {
           // 后端统一返回格式：{ success: boolean, code: string, message: string, data: any }
           if (response && typeof response === 'object') {
             // 检查业务状态
-            if (response.success === true || response.code === '200') {
-              // 成功，返回data部分
-              resolve(response.data !== undefined ? response.data : response)
+            if (response.success === true || response.code === '200' || response.code === 200) {
+              // ✅ 修复：返回完整response对象，保留code、message、data等字段
+              // 这样页面代码可以正确检查 res.code 和访问 res.data
+              resolve(response)
             } else if (response.success === false) {
               // 业务失败
               const errorMsg = response.message || '请求失败'

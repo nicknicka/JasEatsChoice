@@ -170,6 +170,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { onLoad, onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '@/store'
 import { orderApi, addressApi } from '@/api'
 
@@ -297,17 +298,23 @@ const finalPrice = computed(() => {
 })
 
 /**
- * 选择地址
+ * 选择地址 - U-011: 跳转到地址选择页
  */
 const selectAddress = () => {
-  uni.showToast({
-    title: '地址选择功能开发中',
-    icon: 'none'
+  // 跳转到地址管理页面，使用 redirectTo 或 navigateTo
+  uni.navigateTo({
+    url: '/pages-user/address/index?mode=select',
+    success: () => {
+      console.log('跳转到地址页面成功')
+    },
+    fail: (err) => {
+      console.error('跳转地址页面失败:', err)
+      uni.showToast({
+        title: '打开地址页面失败',
+        icon: 'none'
+      })
+    }
   })
-  // TODO: 跳转到地址选择页
-  // uni.navigateTo({
-  //   url: '/pages/address/select/index'
-  // })
 }
 
 /**
@@ -527,6 +534,20 @@ onMounted(async () => {
 
   // 加载默认地址
   await loadDefaultAddress()
+})
+
+// 页面显示时检查是否有从地址页返回的选中地址
+onShow(() => {
+  try {
+    const selectedAddressTemp = uni.getStorageSync('selected_address_temp')
+    if (selectedAddressTemp) {
+      selectedAddress.value = JSON.parse(selectedAddressTemp)
+      // 清除临时存储
+      uni.removeStorageSync('selected_address_temp')
+    }
+  } catch (error) {
+    console.error('读取选中地址失败:', error)
+  }
 })
 
 /**

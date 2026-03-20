@@ -1,0 +1,95 @@
+# 支付配置示例
+# 将此配置复制到 application.yml 或 application.properties 中使用
+
+payment:
+  # 微信支付配置
+  wechat:
+    # 应用ID（小程序AppID或公众号AppID）
+    app-id: wx8888888888888888
+    # 商户号
+    mch-id: 1234567890
+    # API密钥（商户平台设置）
+    api-key: your_wechat_api_key_here
+    # API证书序列号
+    cert-serial-no: your_cert_serial_no_here
+    # API证书路径（apiclient_cert.p12）
+    cert-path: /path/to/cert/apiclient_cert.p12
+    # API密钥路径（apiclient_key.pem）
+    key-path: /path/to/key/apiclient_key.pem
+    # 支付结果通知URL
+    notify-url: https://yourdomain.com/api/payment/notify/wechat
+    # 是否启用沙箱环境（开发时设为true，生产环境设为false）
+    sandbox: false
+
+  # 支付宝配置
+  alipay:
+    # 应用ID
+    app-id: 2021000000000000
+    # 应用私钥（从支付宝开放平台获取）
+    app-private-key: |
+      -----BEGIN RSA PRIVATE KEY-----
+      MIIEpAIBAAKCAQEAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      xxxxxxxxxxxxxxxx
+      -----END RSA PRIVATE KEY-----
+    # 支付宝公钥（从支付宝开放平台获取）
+    alipay-public-key: |
+      -----BEGIN PUBLIC KEY-----
+      MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxxxxxxxxxxxxxxxxxxxx
+      xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      xxxxxxxxxxxxxxxwIDAQAB
+      -----END PUBLIC KEY-----
+    # 服务器异步通知URL
+    notify-url: https://yourdomain.com/api/payment/notify/alipay
+    # 是否启用沙箱环境（开发时设为true，生产环境设为false）
+    sandbox: false
+    # 签名类型（RSA2）
+    sign-type: RSA2
+    # 字符编码
+    charset: UTF-8
+    # 格式类型
+    format: json
+
+# ============================================
+# 配置说明
+# ============================================
+#
+# 1. 微信支付配置步骤：
+#    a) 登录微信商户平台：https://pay.weixin.qq.com/
+#    b) 获取商户号(mch-id)
+#    c) 设置API密钥(api-key)：账户中心 > API安全 > API密钥
+#    d) 下载商户证书：账户中心 > API安全 > API证书
+#    e) 将证书文件放到项目resources目录下
+#    f) 配置支付结果通知URL(notify-url)
+#
+# 2. 支付宝配置步骤：
+#    a) 登录支付宝开放平台：https://open.alipay.com/
+#    b) 创建应用并获取应用ID(app-id)
+#    c) 生成并上传应用公钥，下载支付宝公钥
+#    d) 配置应用私钥(app-private-key)和支付宝公钥(alipay-public-key)
+#    e) 配置支付结果通知URL(notify-url)
+#
+# 3. 开发与生产环境：
+#    - 开发测试时，可以将sandbox设为true使用沙箱环境
+#    - 生产环境必须将sandbox设为false
+#    - 注意保护私钥和密钥，不要提交到代码仓库
+#
+# 4. 安全建议：
+#    - 使用环境变量存储敏感信息
+#    - 不要将真实密钥提交到Git仓库
+#    - 定期更换密钥和证书
+#    - 使用HTTPS协议传输数据
+#
+# ============================================

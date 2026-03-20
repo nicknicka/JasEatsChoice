@@ -186,7 +186,143 @@ export const merchantApi = {
    * PUT /v1/orders/{orderId}/status?status=3
    * @param {string} orderId - 订单ID
    */
-  completeOrder: (orderId) => put(`/v1/orders/${orderId}/status`, null, { params: { status: 3 } })
+  completeOrder: (orderId) => put(`/v1/orders/${orderId}/status`, null, { params: { status: 3 } }),
+
+  // ============= 商家个人中心相关API =============
+
+  /**
+   * M-001: 获取商家资料
+   * GET /v1/merchant/profile
+   */
+  getProfile: () => get('/v1/merchant/profile'),
+
+  /**
+   * M-002: 保存商家资料
+   * PUT /v1/merchant/profile
+   * @param {Object} data - 商家资料
+   * @param {string} data.avatar - 头像
+   * @param {string} data.contactName - 联系人姓名
+   * @param {string} data.phone - 联系电话
+   * @param {string} data.wechat - 微信号
+   * @param {string} data.merchantType - 商户类型
+   * @param {string} data.licenseNo - 营业执照号
+   * @param {string} data.shopName - 店铺名称
+   * @param {string} data.licenseImage - 营业执照图片
+   * @param {string} data.bankName - 开户银行
+   * @param {string} data.bankAccount - 银行卡号
+   * @param {string} data.accountName - 开户人姓名
+   */
+  updateProfile: (data) => put('/v1/merchant/profile', data),
+
+  /**
+   * M-003: 获取店铺信息
+   * GET /v1/merchant/shop
+   */
+  getShopInfo: () => get('/v1/merchant/shop'),
+
+  /**
+   * M-004: 保存店铺信息
+   * PUT /v1/merchant/shop
+   * @param {Object} data - 店铺信息
+   * @param {string} data.avatar - 店铺头像
+   * @param {string} data.name - 店铺名称
+   * @param {boolean} data.isOpen - 营业状态
+   * @param {Array} data.businessHours - 营业时间
+   * @param {string} data.phone - 联系电话
+   * @param {string} data.address - 店铺地址
+   * @param {number} data.latitude - 纬度
+   * @param {number} data.longitude - 经度
+   * @param {string} data.deliveryRange - 配送范围
+   * @param {string} data.deliveryFee - 配送费
+   * @param {string} data.minOrderAmount - 起送金额
+   * @param {string} data.description - 店铺简介
+   * @param {Array} data.images - 店铺图片
+   */
+  updateShopInfo: (data) => put('/v1/merchant/shop', data),
+
+  /**
+   * M-005: 获取商家设置
+   * GET /v1/merchant/settings
+   */
+  getSettings: () => get('/v1/merchant/settings'),
+
+  /**
+   * M-006/M-007/M-008: 保存商家设置
+   * PUT /v1/merchant/settings
+   * @param {Object} data - 设置数据
+   * @param {Object} data.notificationSettings - 通知设置
+   * @param {Object} data.generalSettings - 通用设置
+   * @param {boolean} data.autoAccept - 自动接单
+   * @param {Array} data.businessHours - 营业时间
+   * @param {Object} data.autoReply - 自动回复
+   */
+  updateSettings: (data) => put('/v1/merchant/settings', data),
+
+  /**
+   * M-009: 保存语言设置
+   * PUT /v1/merchant/settings/language
+   * @param {string} language - 语言代码(zh-CN/en-US/ja-JP)
+   */
+  updateLanguage: (language) => put('/v1/merchant/settings/language', { language }),
+
+  /**
+   * M-022: 商家退出登录
+   * POST /v1/merchant/logout
+   */
+  logout: () => post('/v1/merchant/logout'),
+
+  /**
+   * M-012: 获取商家财务数据
+   * GET /v1/merchant/finance
+   * @param {Object} params - 查询参数
+   * @param {string} params.timeRange - 时间范围(week/month/year)
+   */
+  getFinanceData: (params) => get('/v1/merchant/finance', params),
+
+  /**
+   * M-013: 获取交易记录
+   * GET /v1/merchant/finance/transactions
+   * @param {Object} params - 查询参数
+   * @param {number} params.page - 页码
+   * @param {number} params.size - 每页数量
+   * @param {string} params.type - 类型(income/withdraw)
+   */
+  getTransactions: (params) => get('/v1/merchant/finance/transactions', params),
+
+  /**
+   * M-015: 获取提现数据
+   * GET /v1/merchant/withdraw
+   */
+  getWithdrawData: () => get('/v1/merchant/withdraw'),
+
+  /**
+   * M-016: 提交提现申请
+   * POST /v1/merchant/withdraw
+   * @param {Object} data - 提现数据
+   * @param {number} data.amount - 提现金额
+   * @param {string} data.bankName - 银行名称
+   * @param {string} data.bankAccount - 银行卡号
+   * @param {string} data.accountName - 开户人姓名
+   */
+  submitWithdraw: (data) => post('/v1/merchant/withdraw', data),
+
+  /**
+   * M-017: 获取教程数据
+   * GET /v1/merchant/tutorials
+   * @param {Object} params - 查询参数
+   * @param {string} params.category - 分类
+   */
+  getTutorials: (params) => get('/v1/merchant/tutorials', params),
+
+  /**
+   * M-019: 记录反馈
+   * POST /v1/merchant/tutorials/{tutorialId}/feedback
+   * @param {string} tutorialId - 教程ID
+   * @param {Object} data - 反馈数据
+   * @param {boolean} data.helpful - 是否有帮助
+   * @param {string} data.comment - 评论内容
+   */
+  submitTutorialFeedback: (tutorialId, data) => post(`/v1/merchant/tutorials/${tutorialId}/feedback`, data)
 }
 
 export default merchantApi

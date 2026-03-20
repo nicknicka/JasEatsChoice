@@ -145,6 +145,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { merchantApi } from '@/api'
 
 // 快速入门教程
 const quickStartTutorials = ref([
@@ -238,30 +239,35 @@ const featureTutorials = ref([
 // 常见问题
 const faqList = ref([
   {
+    id: 1,
     question: '如何修改店铺营业时间？',
     answer: '进入"我的" → "店铺设置" → "营业时间"，点击编辑按钮即可修改营业时间。您可以设置不同日期的营业时间，也可以设置休息日。',
     expanded: false,
     helpful: undefined
   },
   {
+    id: 2,
     question: '订单可以拒绝吗？拒绝后有什么影响？',
     answer: '可以拒绝订单，但建议合理使用。频繁拒单会影响店铺评分和曝光率。拒单后用户会收到通知，您可以填写拒单原因说明情况。',
     expanded: false,
     helpful: undefined
   },
   {
+    id: 3,
     question: '提现多久能到账？',
     answer: '银行卡提现通常1-3个工作日到账；微信零钱和支付宝提现实时到账。提现手续费为提现金额的0.2%，最低0.01元。',
     expanded: false,
     helpful: undefined
   },
   {
+    id: 4,
     question: '如何处理用户差评？',
     answer: '遇到差评时，建议先联系用户了解具体情况，积极解决问题。在评价中心可以回复用户评价，真诚的回复可以挽回其他用户的信任。',
     expanded: false,
     helpful: undefined
   },
   {
+    id: 5,
     question: '菜品库存如何管理？',
     answer: '在菜品编辑页面可以设置库存数量。订单成交后库存会自动扣减。当库存为0时，菜品会自动显示为"已售罄"。您也可以手动设置菜品状态为"售罄"或"下架"。',
     expanded: false,
@@ -269,19 +275,33 @@ const faqList = ref([
   }
 ])
 
-onMounted(() => {
-  loadTutorials()
+onMounted(async () => {
+  await loadTutorials()
 })
 
 /**
- * 加载教程数据
+ * M-017: 加载教程数据
  */
-const loadTutorials = () => {
-  // TODO: 调用API获取教程数据
-  // const res = await merchantApi.getTutorials()
-  // quickStartTutorials.value = res.data.quickStart
-  // featureTutorials.value = res.data.features
-  // faqList.value = res.data.faq
+const loadTutorials = async () => {
+  try {
+    const res = await merchantApi.getTutorials({})
+    if (res.code === 200 && res.data) {
+      if (res.data.quickStart) {
+        quickStartTutorials.value = res.data.quickStart
+      }
+
+      if (res.data.features) {
+        featureTutorials.value = res.data.features
+      }
+
+      if (res.data.faq) {
+        faqList.value = res.data.faq
+      }
+    }
+  } catch (error) {
+    console.error('加载教程数据失败:', error)
+    // 保持默认数据
+  }
 }
 
 /**
@@ -302,11 +322,22 @@ const viewTutorial = (tutorial) => {
 }
 
 /**
- * 切换分类
+ * M-018: 切换分类
  */
-const changeCategory = (category) => {
+const changeCategory = async (category) => {
   activeCategory.value = category
-  // TODO: 根据分类筛选教程
+
+  // M-018: 根据分类筛选教程
+  try {
+    const params = category === 'all' ? {} : { category }
+    const res = await merchantApi.getTutorials(params)
+
+    if (res.code === 200 && res.data && res.data.features) {
+      featureTutorials.value = res.data.features
+    }
+  } catch (error) {
+    console.error('筛选教程失败:', error)
+  }
 }
 
 /**
@@ -331,15 +362,32 @@ const toggleFaq = (index) => {
 }
 
 /**
- * 标记是否有帮助
+ * M-019: 标记是否有帮助
  */
-const markHelpful = (index, helpful) => {
-  faqList.value[index].helpful = helpful
-  uni.showToast({
-    title: '感谢您的反馈',
-    icon: 'success'
-  })
-  // TODO: 调用API记录反馈
+const markHelpful = async (index, helpful) => {
+  const faqItem = faqList.value[index]
+  faqItem.helpful = helpful
+
+  try {
+    // M-019: 调用API记录反馈
+    if (faqItem.id) {
+      await merchantApi.submitTutorialFeedback(faqItem.id, {
+        helpful: helpful,
+        comment: ''
+      })
+    }
+
+    uni.showToast({
+      title: '感谢您的反馈',
+      icon: 'success'
+    })
+  } catch (error) {
+    console.error('记录反馈失败:', error)
+    uni.showToast({
+      title: '感谢您的反馈',
+      icon: 'success'
+    })
+  }
 }
 
 /**

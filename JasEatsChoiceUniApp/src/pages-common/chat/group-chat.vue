@@ -236,10 +236,16 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { groupApi } from '@/api/modules/group.js'
+import WebSocketClient from '@/utils/websocket.js'
+
+// 当前用户ID
+const currentUserId = ref('')
+const token = ref('')
 
 // 群信息
 const groupInfo = ref({
-  id: 1,
+  id: '',
   name: '美食爱好者群',
   avatar: 'https://via.placeholder.com/80/FF6B35/FFFFFF?text=群',
   memberCount: 25,
@@ -251,6 +257,8 @@ const messageList = ref([])
 const loadingHistory = ref(false)
 const hasMoreHistory = ref(true)
 const scrollIntoView = ref('')
+const currentPage = ref(1)
+const pageSize = 20
 
 // 输入
 const inputContent = ref('')
@@ -259,9 +267,29 @@ const replyMessage = ref(null)
 // 弹窗
 const morePopup = ref(null)
 
+// WebSocket客户端
+let wsClient = null
+
 onMounted(() => {
+  // 获取用户信息
+  currentUserId.value = uni.getStorageSync('userId') || ''
+  token.value = uni.getStorageSync('token') || ''
+
+  // 获取页面参数
+  const pages = getCurrentPages()
+  const currentPage = pages[pages.length - 1]
+  const options = currentPage.options
+
+  if (options && options.id) {
+    groupInfo.value.id = options.id
+    // 可以从参数中获取群名称、头像等
+    if (options.name) {
+      groupInfo.value.name = decodeURIComponent(options.name)
+    }
+  }
+
+  // 加载消息和连接WebSocket
   loadMessages()
-  scrollToBottom()
   connectWebSocket()
 })
 
@@ -269,36 +297,154 @@ onUnmounted(() => {
   disconnectWebSocket()
 })
 
-let ws = null
-
 /**
- * 连接WebSocket
+ * 连接WebSocket - IM-010: 连接WebSocket（群聊）
  */
-const connectWebSocket = () => {
-  // TODO: 连接WebSocket
-}
+const connectWebSocket = async () => {
+  try {
+    // 构建WebSocket URL（群聊）
+    const wsUrl = `wss://api.example.com/ws/group/${groupInfo.value.id}`
 
-/**
- * 断开WebSocket
- */
-const disconnectWebSocket = () => {
-  if (ws) {
-    ws.close()
-    ws = null
+    // 创建WebSocket客户端
+    wsClient = new WebSocketClient(wsUrl)
+
+    // 监听连接成功
+    wsClient.on('_connected', () => {
+      console.log('[GroupChat] WebSocket已连接')
+    })
+
+    // 监听消息
+    wsClient.on('message', (data) => {
+      console.log('[GroupChat] 收到消息', data)
+      handleMessage(data)
+    })
+
+    // 连接
+    await wsClient.connect(token.value)
+  } catch (error) {
+    console.error('[GroupChat] WebSocket连接失败', error)
+    uni.showToast({
+      title: '连接失败',
+      icon: 'none'
+    })
   }
 }
 
 /**
- * 加载消息
+ * 断开WebSocket - IM-010
+ */
+const disconnectWebSocket = () => {
+  if (wsClient) {
+    wsClient.close()
+    wsClient = null
+  }
+}
+
+/**
+ * 处理收到的消息
+ */
+const handleMessage = (message) => {
+  // 转换消息格式
+  const formattedMessage = {
+    id: message.id || Date.now(),
+    isSelf: message.senderId === currentUserId.value,
+    userId: message.senderId,
+    nickname: message.senderNickname || '群成员',
+    avatar: message.senderAvatar || '/static/default-avatar.png',
+    isGroup: true,
+    type: message.type || 'text',
+    content: message.content,
+    time: new Date(message.timestamp || Date.now()),
+    showTime: shouldShowTime(message),
+    status: 'success'
+  }
+
+  messageList.value.push(formattedMessage)
+
+  // 滚动到底部
+  nextTick(() => {
+    scrollToBottom()
+  })
+}
+
+/**
+ * 判断是否显示时间
+ */
+const shouldShowTime = (message) => {
+  if (messageList.value.length === 0) {
+    return true
+  }
+
+  const lastMessage = messageList.value[messageList.value.length - 1]
+  const timeDiff = new Date(message.timestamp || Date.now()) - new Date(lastMessage.time)
+
+  // 如果距离上一条消息超过5分钟，显示时间
+  return timeDiff > 5 * 60 * 1000
+}
+
+/**
+ * 加载消息 - IM-011: 调用API获取群消息列表
  */
 const loadMessages = async () => {
-  // TODO: 调用API获取群消息列表
-  setTimeout(() => {
+  try {
+    uni.showLoading({ title: '加载中...' })
+
+    // IM-011: 调用API获取群消息列表
+    const res = await groupApi.getMessages(groupInfo.value.id, {
+      page: currentPage.value,
+      size: pageSize
+    })
+
+    uni.hideLoading()
+
+    if (res.code === 200 && res.data) {
+      // 转换消息格式
+      const formattedMessages = res.data.map(msg => ({
+        id: msg.id,
+        isSelf: msg.senderId === currentUserId.value,
+        userId: msg.senderId,
+        nickname: msg.senderNickname || '群成员',
+        avatar: msg.senderAvatar || '/static/default-avatar.png',
+        isGroup: true,
+        type: msg.messageType || 'text',
+        content: msg.content,
+        time: new Date(msg.createTime || Date.now()),
+        showTime: false,
+        status: 'success'
+      }))
+
+      // 计算是否显示时间
+      formattedMessages.forEach((msg, index) => {
+        if (index === 0) {
+          msg.showTime = true
+        } else {
+          const prevMsg = formattedMessages[index - 1]
+          const timeDiff = msg.time - prevMsg.time
+          msg.showTime = timeDiff > 5 * 60 * 1000
+        }
+      })
+
+      messageList.value = formattedMessages
+
+      // 滚动到底部
+      nextTick(() => {
+        scrollToBottom()
+      })
+
+      console.log('加载群消息成功，数量:', formattedMessages.length)
+    } else {
+      throw new Error(res.message || '获取消息失败')
+    }
+  } catch (error) {
+    console.error('加载群消息失败:', error)
+    uni.hideLoading()
+
+    // 如果API调用失败，使用模拟数据（开发阶段）
     messageList.value = generateMockMessages()
     nextTick(() => {
       scrollToBottom()
     })
-  }, 300)
+  }
 }
 
 /**
@@ -338,14 +484,57 @@ const generateMockMessages = () => {
 /**
  * 加载历史消息
  */
-const loadMoreMessages = () => {
+const loadMoreMessages = async () => {
   if (!hasMoreHistory.value || loadingHistory.value) return
 
   loadingHistory.value = true
-  setTimeout(() => {
-    loadingHistory.value = false
+
+  try {
+    currentPage.value++
+
+    // IM-011: 调用API获取历史消息
+    const res = await groupApi.getMessages(groupInfo.value.id, {
+      page: currentPage.value,
+      size: pageSize
+    })
+
+    if (res.code === 200 && res.data) {
+      if (res.data.length === 0) {
+        hasMoreHistory.value = false
+      } else {
+        // 转换消息格式并插入到列表顶部
+        const formattedMessages = res.data.map(msg => ({
+          id: msg.id,
+          isSelf: msg.senderId === currentUserId.value,
+          userId: msg.senderId,
+          nickname: msg.senderNickname || '群成员',
+          avatar: msg.senderAvatar || '/static/default-avatar.png',
+          isGroup: true,
+          type: msg.messageType || 'text',
+          content: msg.content,
+          time: new Date(msg.createTime || Date.now()),
+          showTime: false,
+          status: 'success'
+        }))
+
+        messageList.value = [...formattedMessages, ...messageList.value]
+
+        // 滚动到第一条新消息的位置
+        if (formattedMessages.length > 0) {
+          scrollIntoView.value = 'message-' + formattedMessages[0].id
+        }
+      }
+    } else {
+      currentPage.value--
+      hasMoreHistory.value = false
+    }
+  } catch (error) {
+    console.error('加载历史消息失败:', error)
+    currentPage.value--
     hasMoreHistory.value = false
-  }, 1000)
+  } finally {
+    loadingHistory.value = false
+  }
 }
 
 /**
@@ -385,7 +574,7 @@ const canSend = computed(() => {
 })
 
 /**
- * 发送消息
+ * 发送消息 - IM-012: 发送群消息到服务器
  */
 const sendMessage = async () => {
   if (!canSend.value) return
@@ -393,9 +582,9 @@ const sendMessage = async () => {
   const newMessage = {
     id: Date.now(),
     isSelf: true,
-    userId: 0,
+    userId: currentUserId.value,
     nickname: '我',
-    avatar: 'https://via.placeholder.com/80/FAAD14/FFFFFF?text=我',
+    avatar: uni.getStorageSync('avatar') || 'https://via.placeholder.com/80/FAAD14/FFFFFF?text=我',
     isGroup: true,
     type: 'text',
     content: inputContent.value,
@@ -409,15 +598,50 @@ const sendMessage = async () => {
   }
 
   messageList.value.push(newMessage)
+  const contentToSend = inputContent.value
   inputContent.value = ''
   replyMessage.value = null
 
   scrollToBottom()
 
-  // TODO: 发送群消息到服务器
-  setTimeout(() => {
-    newMessage.status = 'success'
-  }, 1000)
+  try {
+    // IM-012: 调用API发送群消息
+    const res = await groupApi.sendMessage({
+      groupId: groupInfo.value.id,
+      senderId: currentUserId.value,
+      type: 'text',
+      content: contentToSend,
+      quote: newMessage.quote
+    })
+
+    if (res.code === 200) {
+      newMessage.status = 'success'
+
+      // 同时通过WebSocket发送（实时通信）
+      if (wsClient && wsClient.isConnected()) {
+        wsClient.send({
+          type: 'group_message',
+          groupId: groupInfo.value.id,
+          senderId: currentUserId.value,
+          dataType: 'text',
+          content: contentToSend,
+          quote: newMessage.quote,
+          timestamp: Date.now()
+        }).catch(err => {
+          console.error('[GroupChat] WebSocket发送消息失败', err)
+        })
+      }
+    } else {
+      throw new Error(res.message || '发送失败')
+    }
+  } catch (error) {
+    console.error('[GroupChat] 发送消息失败', error)
+    newMessage.status = 'fail'
+    uni.showToast({
+      title: error.message || '发送失败',
+      icon: 'none'
+    })
+  }
 }
 
 /**
@@ -549,17 +773,98 @@ const viewNotice = () => {
 }
 
 /**
- * 显示成员信息
+ * 显示成员信息 - IM-013: 显示成员信息卡片
  */
 const showMemberInfo = (userId) => {
-  // TODO: 显示成员信息卡片
+  // 跳转到成员详情页面
+  uni.navigateTo({
+    url: `/pages-common/chat/member-card?userId=${userId}&groupId=${groupInfo.value.id}`
+  })
 }
 
 /**
- * 显示消息菜单
+ * 显示消息菜单 - IM-014: 消息操作菜单（复制、引用、撤回）
  */
 const showMessageMenu = (message) => {
-  // TODO: 显示消息操作菜单（复制、引用、撤回等）
+  // 判断是否可以撤回（2分钟内且是自己发送的消息）
+  const canRecall = message.isSelf &&
+    (new Date() - new Date(message.time)) < 2 * 60 * 1000
+
+  const menuOptions = [
+    { label: '复制', value: 'copy' },
+    { label: '引用', value: 'quote' }
+  ]
+
+  if (canRecall) {
+    menuOptions.push({ label: '撤回', value: 'recall' })
+  }
+
+  uni.showActionSheet({
+    itemList: menuOptions.map(opt => opt.label),
+    success: (res) => {
+      const action = menuOptions[res.tapIndex].value
+
+      switch (action) {
+        case 'copy':
+          // 复制消息内容
+          uni.setClipboardData({
+            data: message.content,
+            success: () => {
+              uni.showToast({ title: '已复制', icon: 'success' })
+            }
+          })
+          break
+
+        case 'quote':
+          // 引用消息
+          replyMessage.value = {
+            author: message.nickname,
+            content: message.content
+          }
+          break
+
+        case 'recall':
+          // 撤回消息
+          recallMessage(message)
+          break
+      }
+    }
+  })
+}
+
+/**
+ * 撤回消息 - IM-014
+ */
+const recallMessage = async (message) => {
+  try {
+    // 调用撤回消息API（假设后端有这个接口）
+    // const res = await messageApi.recallMessage(message.id)
+
+    // 从列表中移除消息
+    const index = messageList.value.findIndex(m => m.id === message.id)
+    if (index > -1) {
+      messageList.value.splice(index, 1)
+    }
+
+    // 添加系统提示
+    messageList.value.push({
+      id: Date.now(),
+      isSelf: false,
+      isGroup: true,
+      type: 'system',
+      content: '你撤回了一条消息',
+      time: new Date(),
+      showTime: true
+    })
+
+    uni.showToast({ title: '消息已撤回', icon: 'success' })
+  } catch (error) {
+    console.error('撤回消息失败:', error)
+    uni.showToast({
+      title: error.message || '撤回失败',
+      icon: 'none'
+    })
+  }
 }
 
 /**
@@ -570,11 +875,15 @@ const showMoreMenu = () => {
 }
 
 /**
- * 搜索记录
+ * 搜索记录 - IM-015: 跳转到搜索页面
  */
 const searchHistory = () => {
   morePopup.value?.close()
-  // TODO: 跳转到搜索页面
+
+  // IM-015: 跳转到搜索页面
+  uni.navigateTo({
+    url: `/pages-common/chat/search?groupId=${groupInfo.value.id}&type=group`
+  })
 }
 
 /**
@@ -594,24 +903,44 @@ const clearHistory = () => {
 }
 
 /**
- * 退出群聊
+ * 退出群聊 - IM-016: 调用退出群聊API
  */
-const quitGroup = () => {
+const quitGroup = async () => {
   morePopup.value?.close()
+
   uni.showModal({
     title: '退出群聊',
     content: '确定退出该群聊吗？',
     confirmColor: '#F5222D',
-    success: (res) => {
+    success: async (res) => {
       if (res.confirm) {
-        // TODO: 调用退出群聊API
-        uni.showToast({
-          title: '已退出群聊',
-          icon: 'success'
-        })
-        setTimeout(() => {
-          uni.navigateBack()
-        }, 1500)
+        try {
+          uni.showLoading({ title: '退出中...' })
+
+          // IM-016: 调用退出群聊API
+          const apiRes = await groupApi.leaveGroup(groupInfo.value.id)
+
+          uni.hideLoading()
+
+          if (apiRes.code === 200) {
+            uni.showToast({
+              title: '已退出群聊',
+              icon: 'success'
+            })
+            setTimeout(() => {
+              uni.navigateBack()
+            }, 1500)
+          } else {
+            throw new Error(apiRes.message || '退出失败')
+          }
+        } catch (error) {
+          console.error('退出群聊失败:', error)
+          uni.hideLoading()
+          uni.showToast({
+            title: error.message || '退出失败',
+            icon: 'none'
+          })
+        }
       }
     }
   })

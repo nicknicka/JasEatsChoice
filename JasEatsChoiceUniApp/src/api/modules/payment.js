@@ -109,17 +109,22 @@ export const paymentApi = {
         try {
           const response = await paymentApi.getPaymentStatus(paymentNo)
 
-          if (response.code === 200) {
-            const status = response.data.status
+          // ✅ 修复：适配修复后的响应格式
+          // response现在是完整对象 { code: "200", data: { status: "..." } }
+          const code = response.code || response.statusCode
+          const data = response.data || response
+
+          if (code === 200 || code === '200') {
+            const status = data.status
 
             if (status === 'success') {
               // 支付成功
-              if (onSuccess) onSuccess(response.data)
-              resolve(response.data)
+              if (onSuccess) onSuccess(data)
+              resolve(data)
               return
             } else if (status === 'failed') {
               // 支付失败
-              if (onFailed) onFailed(response.data)
+              if (onFailed) onFailed(data)
               reject(new Error('支付失败'))
               return
             } else if (status === 'pending') {

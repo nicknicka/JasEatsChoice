@@ -173,25 +173,30 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
+import { groupOrderApi } from '@/api/modules/group-order.js'
+import { paymentApi } from '@/api/modules/payment.js'
+
+// 当前用户ID
+const currentUserId = ref('')
 
 // 订单ID
 const orderId = ref('')
 
 // 订单信息
 const orderInfo = ref({
-  id: 1,
+  id: '',
   status: 'pending', // pending, in_progress, completed
-  totalAmount: '256.00',
-  discount: '10.00',
-  finalAmount: '246.00'
+  totalAmount: '0.00',
+  discount: '0.00',
+  finalAmount: '0.00'
 })
 
 // 商家信息
 const merchantInfo = ref({
-  id: 1,
-  name: '老王家常菜',
-  avatar: 'https://via.placeholder.com/80/FF6B35/FFFFFF?text=店',
-  category: '川菜'
+  id: '',
+  name: '',
+  avatar: '',
+  category: ''
 })
 
 // 参与人员列表
@@ -209,6 +214,9 @@ const countdownSeconds = ref(1800) // 30分钟
 const countdownText = ref('')
 
 onLoad((options) => {
+  // 获取当前用户ID
+  currentUserId.value = uni.getStorageSync('userId') || ''
+
   if (options.id) {
     orderId.value = options.id
   }
@@ -221,19 +229,93 @@ onUnmounted(() => {
 })
 
 /**
- * 加载订单详情
+ * 加载订单详情 - IM-037: 调用API获取群订单详情
  */
 const loadOrderDetail = async () => {
   try {
-    // TODO: 调用API获取群订单详情
-    // const res = await groupOrderApi.getDetail(orderId.value)
+    uni.showLoading({ title: '加载中...' })
 
-    // 模拟数据
-    setTimeout(() => {
-      generateMockData()
-    }, 300)
+    // IM-037: 调用API获取群订单详情
+    const res = await groupOrderApi.getDetail(orderId.value)
+
+    uni.hideLoading()
+
+    if (res.code === 200 && res.data) {
+      const data = res.data
+
+      // 更新订单信息
+      orderInfo.value = {
+        id: data.id,
+        status: data.status || 'pending',
+        totalAmount: parseFloat(data.totalAmount || 0).toFixed(2),
+        discount: parseFloat(data.discount || 0).toFixed(2),
+        finalAmount: parseFloat(data.finalAmount || data.totalAmount || 0).toFixed(2),
+        createTime: data.createTime,
+        expireTime: data.expireTime
+      }
+
+      // 更新商家信息
+      merchantInfo.value = {
+        id: data.merchantId,
+        name: data.merchantName || '未知商家',
+        avatar: data.merchantAvatar || '/static/default-merchant.png',
+        category: data.merchantCategory || ''
+      }
+
+      // 更新参与人员列表
+      participantList.value = (data.participants || []).map(p => ({
+        id: p.userId,
+        name: p.nickname || p.userName || '未知',
+        avatar: p.avatar || '/static/default-avatar.png',
+        dishCount: p.dishCount || 0,
+        amount: parseFloat(p.amount || 0).toFixed(2),
+        orderStatus: p.paid ? 'paid' : 'unpaid'
+      }))
+
+      // 更新菜品汇总
+      dishSummary.value = (data.dishSummary || []).map(d => ({
+        id: d.dishId,
+        name: d.dishName,
+        image: d.dishImage || '/static/default-dish.png',
+        count: d.count || 0,
+        participantCount: d.participantCount || 0,
+        amount: parseFloat(d.amount || 0).toFixed(2)
+      }))
+
+      // 查找我的订单
+      myOrder.value = (data.participants || []).find(p => p.userId === currentUserId.value)
+
+      if (myOrder.value) {
+        myOrder.value = {
+          dishes: (myOrder.value.dishes || []).map(d => ({
+            id: d.dishId,
+            name: d.dishName,
+            spec: d.spec || '',
+            count: d.count || 0,
+            price: parseFloat(d.price || 0).toFixed(2)
+          })),
+          totalAmount: parseFloat(myOrder.value.amount || 0).toFixed(2),
+          paid: myOrder.value.paid || false
+        }
+      }
+
+      // 设置倒计时
+      if (orderInfo.value.expireTime) {
+        const expireTime = new Date(orderInfo.value.expireTime).getTime()
+        const now = Date.now()
+        countdownSeconds.value = Math.max(0, Math.floor((expireTime - now) / 1000))
+      }
+
+      console.log('加载群订单详情成功')
+    } else {
+      throw new Error(res.message || '获取订单详情失败')
+    }
   } catch (error) {
     console.error('加载订单详情失败:', error)
+    uni.hideLoading()
+
+    // 开发阶段：使用模拟数据
+    generateMockData()
   }
 }
 
@@ -419,58 +501,133 @@ const addDishes = () => {
 }
 
 /**
- * 支付我的订单
+ * 支付我的订单 - IM-038: 调用支付API
  */
-const payMyOrder = () => {
+const payMyOrder = async () => {
   if (!myOrder.value) return
 
   uni.showModal({
     title: '确认支付',
     content: `确认支付 ¥${myOrder.value.totalAmount}？`,
-    success: (res) => {
+    success: async (res) => {
       if (res.confirm) {
-        processPayment()
+        await processPayment('single')
       }
     }
   })
 }
 
 /**
- * 统一支付
+ * 统一支付 - IM-038: 调用支付API
  */
-const payAllOrder = () => {
+const payAllOrder = async () => {
   uni.showModal({
     title: '统一支付',
     content: `确认支付所有人的订单，共计 ¥${orderInfo.value.finalAmount}？`,
-    success: (res) => {
+    success: async (res) => {
       if (res.confirm) {
-        processPayment()
+        await processPayment('all')
       }
     }
   })
 }
 
 /**
- * 处理支付
+ * 处理支付 - IM-038: 调用支付API
  */
-const processPayment = () => {
-  uni.showLoading({
-    title: '支付中...'
-  })
-
-  // TODO: 调用支付API
-  setTimeout(() => {
-    uni.hideLoading()
-    uni.showToast({
-      title: '支付成功',
-      icon: 'success'
+const processPayment = async (paymentType = 'single') => {
+  try {
+    uni.showLoading({
+      title: '处理中...',
+      mask: true
     })
 
-    // 更新订单状态
-    if (myOrder.value) {
-      myOrder.value.paid = true
+    // IM-038: 调用支付API
+    const paymentData = {
+      orderId: orderId.value,
+      paymentType: paymentType, // single 或 all
+      paymentMethod: 'wechat', // 默认使用微信支付
+      userId: currentUserId.value,
+      amount: paymentType === 'single' ? myOrder.value.totalAmount : orderInfo.value.finalAmount
     }
-  }, 2000)
+
+    // 调用支付API
+    const res = await groupOrderApi.payOrder(orderId.value, paymentData)
+
+    uni.hideLoading()
+
+    if (res.code === 200) {
+      // 调起支付
+      const paymentResult = await invokePayment(res.data.paymentParams)
+
+      if (paymentResult.success) {
+        uni.showToast({
+          title: '支付成功',
+          icon: 'success'
+        })
+
+        // 更新订单状态
+        if (paymentType === 'single' && myOrder.value) {
+          myOrder.value.paid = true
+        } else {
+          orderInfo.value.status = 'in_progress'
+        }
+
+        // 刷新订单详情
+        setTimeout(() => {
+          loadOrderDetail()
+        }, 1500)
+      } else {
+        throw new Error(paymentResult.error || '支付失败')
+      }
+    } else {
+      throw new Error(res.message || '支付失败')
+    }
+  } catch (error) {
+    console.error('支付失败:', error)
+    uni.hideLoading()
+    uni.showToast({
+      title: error.message || '支付失败',
+      icon: 'none'
+    })
+  }
+}
+
+/**
+ * 调起支付
+ */
+const invokePayment = (paymentParams) => {
+  return new Promise((resolve) => {
+    // 根据支付方式调起不同的支付
+    if (paymentParams.type === 'wechat') {
+      // 微信支付
+      uni.requestPayment({
+        provider: 'wxpay',
+        ...paymentParams,
+        success: () => {
+          resolve({ success: true })
+        },
+        fail: (err) => {
+          resolve({ success: false, error: err.errMsg })
+        }
+      })
+    } else if (paymentParams.type === 'alipay') {
+      // 支付宝支付
+      uni.requestPayment({
+        provider: 'alipay',
+        ...paymentParams,
+        success: () => {
+          resolve({ success: true })
+        },
+        fail: (err) => {
+          resolve({ success: false, error: err.errMsg })
+        }
+      })
+    } else {
+      // 其他支付方式
+      resolve({ success: false, error: '不支持的支付方式' })
+    }
+  })
 }
 
 /**

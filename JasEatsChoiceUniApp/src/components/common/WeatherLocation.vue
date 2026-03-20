@@ -56,8 +56,38 @@ const getLocationAndWeather = async () => {
 
     // 如果有位置信息，获取天气
     if (locationStore.currentLocation) {
-      // TODO: 调用天气API
-      // await locationStore.getWeather()
+      // U-033: 调用天气API
+      try {
+        const { weatherApi } = await import('@/api')
+        const { latitude, longitude } = locationStore.currentLocation
+
+        // 调用天气API获取当前天气
+        const res = await weatherApi.getByLocation({
+          latitude,
+          longitude
+        })
+
+        if (res && res.data) {
+          // 更新天气信息
+          weatherInfo.value = {
+            temperature: res.data.temperature || res.data.temp || '--',
+            condition: res.data.condition || res.data.weather || '晴',
+            icon: res.data.icon || '',
+            humidity: res.data.humidity || 0,
+            windSpeed: res.data.windSpeed || 0
+          }
+        }
+      } catch (error) {
+        console.error('获取天气信息失败，使用默认值:', error)
+        // 如果API调用失败，使用默认天气信息
+        weatherInfo.value = {
+          temperature: '--',
+          condition: '未知',
+          icon: '',
+          humidity: 0,
+          windSpeed: 0
+        }
+      }
     }
   } catch (error) {
     console.error('获取位置信息失败:', error)
@@ -89,18 +119,48 @@ const handleLocationClick = () => {
 }
 
 /**
- * 选择城市
+ * 选择城市 - U-034: 实现城市选择页面
  */
 const chooseCity = () => {
-  uni.showToast({
-    title: '城市选择功能开发中',
-    icon: 'none'
+  // U-034: 跳转到城市选择页面
+  uni.navigateTo({
+    url: '/pages-common/city-selector/index',
+    success: () => {
+      console.log('跳转到城市选择页面成功')
+    },
+    fail: () => {
+      // 如果城市选择页面不存在，显示城市选择器
+      showCityPicker()
+    }
   })
+}
 
-  // TODO: 实现城市选择页面
-  // uni.navigateTo({
-  //   url: '/pages-common/city-selector/index'
-  // })
+/**
+ * 显示城市选择器（备用方案）
+ */
+const showCityPicker = () => {
+  const cities = [
+    { name: '北京市', code: 'beijing' },
+    { name: '上海市', code: 'shanghai' },
+    { name: '广州市', code: 'guangzhou' },
+    { name: '深圳市', code: 'shenzhen' },
+    { name: '杭州市', code: 'hangzhou' },
+    { name: '成都市', code: 'chengdu' }
+  ]
+
+  uni.showActionSheet({
+    itemList: cities.map(c => c.name),
+    success: (res) => {
+      if (res.tapIndex >= 0) {
+        const selectedCity = cities[res.tapIndex]
+        // 更新位置信息
+        locationStore.setCurrentCity(selectedCity)
+
+        // 重新获取天气信息
+        getLocationAndWeather()
+      }
+    }
+  })
 }
 
 // 组件挂载时获取位置

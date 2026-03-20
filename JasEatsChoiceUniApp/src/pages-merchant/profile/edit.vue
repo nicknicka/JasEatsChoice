@@ -180,6 +180,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { merchantApi } from '@/api'
 
 // 商户类型
 const merchantTypes = [
@@ -221,22 +222,50 @@ const profile = ref({
   authTime: ''
 })
 
-onMounted(() => {
-  loadProfile()
+onMounted(async () => {
+  await loadProfile()
 })
 
 /**
- * 加载商家资料
+ * M-001: 加载商家资料
  */
-const loadProfile = () => {
-  // TODO: 调用API获取商家资料
-  // const res = await merchantApi.getProfile()
-  // profile.value = res.data
+const loadProfile = async () => {
+  try {
+    const res = await merchantApi.getProfile()
+    if (res.code === 200 && res.data) {
+      profile.value = {
+        avatar: res.data.avatar || '',
+        contactName: res.data.contactName || '',
+        phone: res.data.phone || '',
+        wechat: res.data.wechat || '',
+        merchantType: res.data.merchantType || 'individual',
+        licenseNo: res.data.licenseNo || '',
+        shopName: res.data.shopName || '',
+        licenseImage: res.data.licenseImage || '',
+        bankName: res.data.bankName || '',
+        bankAccount: res.data.bankAccount || '',
+        accountName: res.data.accountName || '',
+        authStatus: res.data.authStatus || 'pending',
+        authTime: res.data.authTime || ''
+      }
 
-  // 查找类型索引
-  const typeIndex = merchantTypes.findIndex(t => t.value === profile.value.merchantType)
-  if (typeIndex !== -1) {
-    merchantTypeIndex.value = typeIndex
+      // 查找类型索引
+      const typeIndex = merchantTypes.findIndex(t => t.value === profile.value.merchantType)
+      if (typeIndex !== -1) {
+        merchantTypeIndex.value = typeIndex
+      }
+
+      // 查找银行索引
+      if (profile.value.bankName) {
+        const bankIdx = banks.findIndex(b => b.name === profile.value.bankName)
+        if (bankIdx !== -1) {
+          bankIndex.value = bankIdx
+        }
+      }
+    }
+  } catch (error) {
+    console.error('加载商家资料失败:', error)
+    // 保持默认数据
   }
 }
 
@@ -342,9 +371,9 @@ const getAuthStatusDesc = (status) => {
 }
 
 /**
- * 保存资料
+ * M-002: 保存资料
  */
-const saveProfile = () => {
+const saveProfile = async () => {
   // 验证必填项
   if (!profile.value.contactName) {
     uni.showToast({
@@ -426,22 +455,50 @@ const saveProfile = () => {
     return
   }
 
-  // TODO: 调用API保存商家资料
-  uni.showLoading({
-    title: '提交中...'
-  })
-
-  setTimeout(() => {
-    uni.hideLoading()
-    uni.showToast({
-      title: '提交成功',
-      icon: 'success'
+  try {
+    uni.showLoading({
+      title: '提交中...'
     })
 
-    setTimeout(() => {
-      uni.navigateBack()
-    }, 1500)
-  }, 1500)
+    // M-002: 调用API保存商家资料
+    const data = {
+      avatar: profile.value.avatar,
+      contactName: profile.value.contactName,
+      phone: profile.value.phone,
+      wechat: profile.value.wechat,
+      merchantType: profile.value.merchantType,
+      licenseNo: profile.value.licenseNo,
+      shopName: profile.value.shopName,
+      licenseImage: profile.value.licenseImage,
+      bankName: profile.value.bankName,
+      bankAccount: profile.value.bankAccount,
+      accountName: profile.value.accountName
+    }
+
+    const res = await merchantApi.updateProfile(data)
+
+    uni.hideLoading()
+
+    if (res.code === 200) {
+      uni.showToast({
+        title: '提交成功',
+        icon: 'success'
+      })
+
+      setTimeout(() => {
+        uni.navigateBack()
+      }, 1500)
+    } else {
+      throw new Error(res.message || '提交失败')
+    }
+  } catch (error) {
+    console.error('保存商家资料失败:', error)
+    uni.hideLoading()
+    uni.showToast({
+      title: error.message || '提交失败，请重试',
+      icon: 'none'
+    })
+  }
 }
 </script>
 

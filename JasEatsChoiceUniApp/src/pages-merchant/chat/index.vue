@@ -118,7 +118,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
+import { conversationApi } from '@/api/modules/conversation.js'
+
+// 商家ID
+const merchantId = ref('')
 
 // 筛选标签
 const filterTabs = ref([
@@ -143,13 +147,38 @@ const noMore = ref(false)
 const page = ref(1)
 const pageSize = 20
 
+let pollingTimer = null
+
 onMounted(() => {
+  // 获取商家ID
+  merchantId.value = uni.getStorageSync('merchantId') || ''
+
   loadConversations()
   startPolling()
 })
 
+onUnmounted(() => {
+  stopPolling()
+})
+
 /**
- * 加载会话列表
+ * 轮询更新
+ */
+const startPolling = () => {
+  pollingTimer = setInterval(() => {
+    loadConversations(true)
+  }, 30000)
+}
+
+const stopPolling = () => {
+  if (pollingTimer) {
+    clearInterval(pollingTimer)
+    pollingTimer = null
+  }
+}
+
+/**
+ * 加载会话列表 - IM-032: 调用API获取会话列表
  */
 const loadConversations = async (isRefresh = false) => {
   if (loading.value) return
@@ -161,36 +190,104 @@ const loadConversations = async (isRefresh = false) => {
   }
 
   try {
-    // TODO: 调用API获取会话列表
-    // const res = await merchantApi.getConversations({
-    //   type: activeTab.value,
-    //   page: page.value,
-    //   size: pageSize
-    // })
+    // IM-032: 调用API获取会话列表（商家端）
+    const res = await conversationApi.getList(merchantId.value)
 
-    // 模拟数据
-    setTimeout(() => {
-      const mockData = generateMockConversations()
+    if (res.code === 200 && res.data) {
+      // 转换会话数据格式
+      const formattedConversations = res.data.map(conv => ({
+        id: conv.id,
+        type: conv.type || 'user', // user, merchant, group
+        name: conv.name || conv.displayName || '未命名',
+        avatar: conv.avatar || '/static/default-avatar.png',
+        online: conv.isOnline || false,
+        pinned: conv.isPinned || false,
+        lastMessage: conv.lastMessage?.content || '',
+        lastMessageType: conv.lastMessage?.type || 'text',
+        time: formatTime(conv.lastMessageTime || conv.updateTime || new Date()),
+        unread: conv.unreadCount || 0
+      }))
+
+      // 根据activeTab筛选
+      let filteredConversations = formattedConversations
+      if (activeTab.value !== 'all') {
+        filteredConversations = formattedConversations.filter(conv => conv.type === activeTab.value)
+      }
+
+      // 排序：置顶的在前，然后按时间排序
+      filteredConversations.sort((a, b) => {
+        if (a.pinned && !b.pinned) return -1
+        if (!a.pinned && b.pinned) return 1
+        return new Date(b.time) - new Date(a.time)
+      })
+
       if (isRefresh) {
-        conversationList.value = mockData
+        conversationList.value = filteredConversations
       } else {
-        conversationList.value = [...conversationList.value, ...mockData]
+        conversationList.value = [...conversationList.value, ...filteredConversations]
       }
 
       // 更新未读数
       updateUnreadCounts()
 
-      if (mockData.length < pageSize) {
+      if (filteredConversations.length < pageSize) {
         noMore.value = true
       }
 
-      loading.value = false
-      refreshing.value = false
-    }, 500)
+      console.log('加载会话成功，数量:', filteredConversations.length)
+    } else {
+      throw new Error(res.message || '获取会话列表失败')
+    }
   } catch (error) {
     console.error('加载会话失败:', error)
+
+    // 开发阶段：使用模拟数据
+    const mockData = generateMockConversations()
+
+    // 根据activeTab筛选
+    let filteredData = mockData
+    if (activeTab.value !== 'all') {
+      filteredData = mockData.filter(conv => conv.type === activeTab.value)
+    }
+
+    if (isRefresh) {
+      conversationList.value = filteredData
+    } else {
+      conversationList.value = [...conversationList.value, ...filteredData]
+    }
+
+    updateUnreadCounts()
+
+    if (filteredData.length < pageSize) {
+      noMore.value = true
+    }
+  } finally {
     loading.value = false
     refreshing.value = false
+  }
+}
+
+/**
+ * 格式化时间
+ */
+const formatTime = (time) => {
+  const now = new Date()
+  const date = new Date(time)
+  const diff = now - date
+  const minutes = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+  const days = Math.floor(diff / 86400000)
+
+  if (minutes < 1) {
+    return '刚刚'
+  } else if (minutes < 60) {
+    return `${minutes}分钟前`
+  } else if (hours < 24) {
+    return `${hours}小时前`
+  } else if (days < 7) {
+    return `${days}天前`
+  } else {
+    return date.toLocaleDateString()
   }
 }
 
@@ -289,15 +386,53 @@ const changeTab = (tab) => {
 }
 
 /**
- * 搜索
+ * 搜索会话 - IM-033: 调用API搜索会话
  */
-const onSearch = (e) => {
+const onSearch = async (e) => {
   const keyword = e.value
-  // TODO: 调用API搜索会话
-  uni.showToast({
-    title: '搜索功能开发中',
-    icon: 'none'
-  })
+
+  if (!keyword || keyword.trim() === '') {
+    // 如果搜索关键词为空，重新加载全部会话
+    loadConversations(true)
+    return
+  }
+
+  try {
+    loading.value = true
+
+    // IM-033: 调用API搜索会话
+    const res = await conversationApi.search(merchantId.value, keyword)
+
+    if (res.code === 200 && res.data) {
+      // 转换搜索结果
+      const searchResults = res.data.map(conv => ({
+        id: conv.id,
+        type: conv.type || 'user',
+        name: conv.name || conv.displayName || '未命名',
+        avatar: conv.avatar || '/static/default-avatar.png',
+        online: conv.isOnline || false,
+        pinned: conv.isPinned || false,
+        lastMessage: conv.lastMessage?.content || '',
+        lastMessageType: conv.lastMessage?.type || 'text',
+        time: formatTime(conv.lastMessageTime || conv.updateTime || new Date()),
+        unread: conv.unreadCount || 0
+      }))
+
+      conversationList.value = searchResults
+
+      console.log('搜索会话成功，结果数量:', searchResults.length)
+    } else {
+      throw new Error(res.message || '搜索失败')
+    }
+  } catch (error) {
+    console.error('搜索会话失败:', error)
+    uni.showToast({
+      title: error.message || '搜索失败',
+      icon: 'none'
+    })
+  } finally {
+    loading.value = false
+  }
 }
 
 /**

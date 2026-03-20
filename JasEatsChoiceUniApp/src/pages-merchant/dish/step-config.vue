@@ -148,13 +148,19 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { dishApi } from '@/api/modules/dish.js'
+import { dishStepTemplateApi } from '@/api/modules/dish-step-template.js'
+
+// 获取商家ID
+const merchantId = ref('')
+const dishId = ref('')
 
 // 菜品信息
 const dishInfo = ref({
-  id: 1,
-  name: '宫保鸡丁',
-  image: 'https://via.placeholder.com/100/FF6B35/FFFFFF?text=1',
-  description: '经典川菜，麻辣鲜香'
+  id: '',
+  name: '',
+  image: '',
+  description: '',
+  category: ''
 })
 
 // 步骤模板
@@ -194,18 +200,100 @@ const totalDuration = computed(() => {
   return steps.value.reduce((sum, step) => sum + (Number(step.duration) || 0), 0)
 })
 
-onMounted(() => {
+onMounted(async () => {
+  // 获取商家ID
+  merchantId.value = uni.getStorageSync('merchantId') || ''
+
+  // 获取页面参数
+  const pages = getCurrentPages()
+  const currentPage = pages[pages.length - 1]
+  const options = currentPage.options || {}
+
+  dishId.value = options.dishId || ''
+  dishInfo.value.id = options.dishId || ''
+
+  // 如果有dishId，加载菜品信息
+  if (dishId.value) {
+    await loadDishInfo()
+  }
+
+  // 加载模板列表
+  await loadTemplates()
+
   // 如果从编辑页面跳转过来，可以获取已有步骤
-  // const pages = getCurrentPages()
-  // const prevPage = pages[pages.length - 2]
-  // if (prevPage && prevPage.$vm.dishSteps) {
-  //   steps.value = prevPage.$vm.dishSteps
-  // }
+  const prevPage = pages[pages.length - 2]
+  if (prevPage && prevPage.$vm && prevPage.$vm.dishSteps) {
+    steps.value = prevPage.$vm.dishSteps
+  }
 })
 
 /**
- * 选择模板
+ * 加载菜品信息
  */
+const loadDishInfo = async () => {
+  try {
+    const res = await dishApi.getDetail(dishId.value)
+    if (res.code === 200 && res.data) {
+      dishInfo.value = {
+        id: res.data.id,
+        name: res.data.name,
+        image: res.data.image || '',
+        description: res.data.description || '',
+        category: res.data.category || ''
+      }
+
+      // 如果有cookingSteps，解析并加载
+      if (res.data.cookingSteps) {
+        try {
+          const cookingSteps = typeof res.data.cookingSteps === 'string'
+            ? JSON.parse(res.data.cookingSteps)
+            : res.data.cookingSteps
+
+          if (Array.isArray(cookingSteps) && cookingSteps.length > 0) {
+            steps.value = cookingSteps.map(step => ({
+              name: step.title || step.name || '',
+              duration: step.duration || 0,
+              description: step.description || '',
+              media: step.media || []
+            }))
+          }
+        } catch (e) {
+          console.error('解析cookingSteps失败:', e)
+        }
+      }
+    }
+  } catch (error) {
+    console.error('加载菜品信息失败:', error)
+  }
+}
+
+/**
+ * 加载模板列表 - DISH-008
+ */
+const loadTemplates = async () => {
+  try {
+    const res = await dishStepTemplateApi.getList({
+      merchantId: merchantId.value
+    })
+
+    if (res.code === 200 && res.data && Array.isArray(res.data)) {
+      templates.value = res.data.map(template => ({
+        id: template.id,
+        name: template.name,
+        icon: template.icon || '🍳',
+        category: template.category,
+        totalDuration: template.totalDuration || 0,
+        steps: template.steps || []
+      }))
+    }
+  } catch (error) {
+    console.error('加载模板列表失败:', error)
+    // 失败时使用本地存储的模板
+    const localTemplates = uni.getStorageSync('stepTemplates') || []
+    templates.value = localTemplates
+  }
+}
+
 /**
  * 选择模板 - DISH-008: 调用API获取模板步骤
  */
@@ -220,10 +308,10 @@ const selectTemplate = async (template) => {
         try {
           uni.showLoading({ title: '加载中...' })
 
-          // 如果模板有步骤数据，直接使用
+          // 如果模板已有步骤数据，直接使用
           if (template.steps && template.steps.length > 0) {
             steps.value = template.steps.map(step => ({
-              name: step.name || `步骤`,
+              name: step.title || step.name || '步骤',
               duration: step.duration || 5,
               description: step.description || '',
               media: step.media || []
@@ -235,14 +323,31 @@ const selectTemplate = async (template) => {
               icon: 'success'
             })
           } else {
-            // 如果模板没有步骤数据，尝试从API获取
-            // 注意：这里假设后端有获取模板详情的API
-            // 如果后端没有此API，可以提示用户
-            uni.hideLoading()
-            uni.showToast({
-              title: '该模板暂无步骤数据',
-              icon: 'none'
-            })
+            // 如果模板没有步骤数据，从API获取模板详情
+            const templateRes = await dishStepTemplateApi.getDetail(template.id)
+
+            if (templateRes.code === 200 && templateRes.data) {
+              const templateData = templateRes.data
+
+              steps.value = (templateData.steps || []).map(step => ({
+                name: step.title || step.name || '步骤',
+                duration: step.duration || 5,
+                description: step.description || '',
+                media: step.media || []
+              }))
+
+              uni.hideLoading()
+              uni.showToast({
+                title: '模板应用成功',
+                icon: 'success'
+              })
+            } else {
+              uni.hideLoading()
+              uni.showToast({
+                title: '该模板暂无步骤数据',
+                icon: 'none'
+              })
+            }
           }
         } catch (error) {
           console.error('应用模板失败:', error)
@@ -331,7 +436,7 @@ const deleteMedia = (stepIndex, mediaIndex) => {
 }
 
 /**
- * 保存为模板
+ * 保存为模板 - DISH-009: 调用API保存模板
  */
 const saveAsTemplate = () => {
   uni.showModal({
@@ -339,48 +444,85 @@ const saveAsTemplate = () => {
     content: '请输入模板名称',
     editable: true,
     placeholderText: '如：经典炒菜模板',
-    success: (res) {
+    success: async (res) => {
       if (res.confirm) {
         const templateName = res.content || '自定义模板'
 
-        // DISH-009: 调用API保存模板（暂时使用本地存储）
         try {
           uni.showLoading({ title: '保存中...' })
 
+          // 构建模板数据
           const templateData = {
-            merchantId: uni.getStorageSync('merchantId') || '',
+            merchantId: merchantId.value,
             name: templateName,
             category: dishInfo.value.category || '通用',
-            steps: steps.value,
             icon: '🍳',
-            totalDuration: totalDuration.value
+            totalDuration: totalDuration.value,
+            steps: steps.value.map((step, index) => ({
+              stepNumber: index + 1,
+              title: step.name,
+              description: step.description,
+              duration: parseInt(step.duration) || 0,
+              media: step.media || []
+            }))
           }
 
-          // 暂时保存到本地存储（建议后端开发模板管理API）
-          const templates = uni.getStorageSync('stepTemplates') || []
-          const newTemplate = {
-            id: Date.now().toString(),
-            ...templateData,
-            createdAt: new Date().toISOString()
+          // 调用API保存模板
+          const apiRes = await dishStepTemplateApi.create(templateData)
+
+          if (apiRes.code === 200) {
+            // 更新本地模板列表
+            templates.value.push({
+              id: apiRes.data.id || apiRes.data,
+              name: templateName,
+              category: templateData.category,
+              icon: '🍳',
+              totalDuration: totalDuration.value,
+              steps: steps.value
+            })
+
+            uni.hideLoading()
+            uni.showToast({
+              title: '模板保存成功',
+              icon: 'success'
+            })
+          } else {
+            throw new Error(apiRes.message || '保存失败')
           }
-          templates.push(newTemplate)
-          uni.setStorageSync('stepTemplates', templates)
-
-          // 更新本地模板列表
-          templates.value.push(newTemplate)
-
-          uni.hideLoading()
-          uni.showToast({
-            title: '模板保存成功（本地）',
-            icon: 'success'
-          })
         } catch (error) {
           console.error('保存模板失败:', error)
-          uni.hideLoading()
-          uni.showToast({
-            title: '保存失败',
-            icon: 'none'
-          })
+
+          // API失败时，回退到本地存储
+          try {
+            const localTemplates = uni.getStorageSync('stepTemplates') || []
+            const newTemplate = {
+              id: Date.now().toString(),
+              merchantId: merchantId.value,
+              name: templateName,
+              category: dishInfo.value.category || '通用',
+              icon: '🍳',
+              totalDuration: totalDuration.value,
+              steps: steps.value,
+              createdAt: new Date().toISOString()
+            }
+            localTemplates.push(newTemplate)
+            uni.setStorageSync('stepTemplates', localTemplates)
+
+            templates.value.push(newTemplate)
+
+            uni.hideLoading()
+            uni.showToast({
+              title: '模板保存成功（本地）',
+              icon: 'success'
+            })
+          } catch (localError) {
+            console.error('本地保存也失败:', localError)
+            uni.hideLoading()
+            uni.showToast({
+              title: '保存失败',
+              icon: 'none'
+            })
+          }
         }
       }
     }

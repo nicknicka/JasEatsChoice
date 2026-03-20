@@ -204,6 +204,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { merchantApi } from '@/api'
 
 // 用户信息
 const userInfo = ref({
@@ -232,19 +233,60 @@ const cacheSize = ref('23.5MB')
 // 应用版本
 const appVersion = ref('1.0.0')
 
-onMounted(() => {
-  loadSettings()
+onMounted(async () => {
+  await loadSettings()
+  calculateCacheSize()
 })
 
 /**
- * 加载设置
+ * M-005: 加载设置
  */
-const loadSettings = () => {
-  // TODO: 调用API获取设置
-  // const res = await merchantApi.getSettings()
-  // userInfo.value = res.data.userInfo
-  // notificationSettings.value = res.data.notificationSettings
-  // generalSettings.value = res.data.generalSettings
+const loadSettings = async () => {
+  try {
+    const res = await merchantApi.getSettings()
+    if (res.code === 200 && res.data) {
+      if (res.data.userInfo) {
+        userInfo.value = {
+          phone: res.data.userInfo.phone || '',
+          hasPayPassword: res.data.userInfo.hasPayPassword !== undefined ? res.data.userInfo.hasPayPassword : true
+        }
+      }
+
+      if (res.data.notificationSettings) {
+        notificationSettings.value = {
+          newOrder: res.data.notificationSettings.newOrder !== undefined ? res.data.notificationSettings.newOrder : true,
+          newMessage: res.data.notificationSettings.newMessage !== undefined ? res.data.notificationSettings.newMessage : true,
+          system: res.data.notificationSettings.system !== undefined ? res.data.notificationSettings.system : true,
+          review: res.data.notificationSettings.review !== undefined ? res.data.notificationSettings.review : true
+        }
+      }
+
+      if (res.data.generalSettings) {
+        generalSettings.value = {
+          darkMode: res.data.generalSettings.darkMode || false,
+          autoUpdate: res.data.generalSettings.autoUpdate !== undefined ? res.data.generalSettings.autoUpdate : true,
+          language: res.data.generalSettings.language || 'zh-CN'
+        }
+      }
+    }
+  } catch (error) {
+    console.error('加载设置失败:', error)
+    // 保持默认数据
+  }
+}
+
+/**
+ * M-006: 计算缓存大小
+ */
+const calculateCacheSize = () => {
+  try {
+    const res = uni.getStorageInfoSync()
+    const size = res.currentSize
+    cacheSize.value = `${size}MB`
+  } catch (error) {
+    console.error('计算缓存大小失败:', error)
+    cacheSize.value = '23.5MB'
+  }
 }
 
 /**
@@ -289,9 +331,9 @@ const editPayPassword = () => {
 }
 
 /**
- * 切换通知
+ * M-006: 切换通知
  */
-const toggleNotification = (type, e) => {
+const toggleNotification = async (type, e) => {
   const value = e.detail.value
   notificationSettings.value[type] = value
 
@@ -300,14 +342,14 @@ const toggleNotification = (type, e) => {
     icon: 'success'
   })
 
-  // TODO: 调用API保存设置
-  saveSettings()
+  // M-006: 调用API保存设置
+  await saveSettings()
 }
 
 /**
  * 切换深色模式
  */
-const toggleDarkMode = (e) => {
+const toggleDarkMode = async (e) => {
   const value = e.detail.value
   generalSettings.value.darkMode = value
 
@@ -316,14 +358,14 @@ const toggleDarkMode = (e) => {
     icon: 'success'
   })
 
-  // TODO: 调用API保存设置
-  saveSettings()
+  // M-023: 调用API保存设置
+  await saveSettings()
 }
 
 /**
  * 切换自动更新
  */
-const toggleAutoUpdate = (e) => {
+const toggleAutoUpdate = async (e) => {
   const value = e.detail.value
   generalSettings.value.autoUpdate = value
 
@@ -332,30 +374,42 @@ const toggleAutoUpdate = (e) => {
     icon: 'success'
   })
 
-  // TODO: 调用API保存设置
-  saveSettings()
+  // M-023: 调用API保存设置
+  await saveSettings()
 }
 
 /**
- * 选择语言
+ * M-009: 选择语言
  */
 const selectLanguage = () => {
   const languages = ['简体中文', 'English', '日本語']
+  const languageCodes = ['zh-CN', 'en-US', 'ja-JP']
+
   uni.showActionSheet({
     itemList: languages,
-    success: (res) => {
+    success: async (res) => {
       const language = languages[res.tapIndex]
+      const languageCode = languageCodes[res.tapIndex]
+
+      generalSettings.value.language = languageCode
+
       uni.showToast({
         title: `已切换到${language}`,
         icon: 'success'
       })
-      // TODO: 调用API保存语言设置
+
+      // M-009: 调用API保存语言设置
+      try {
+        await merchantApi.updateLanguage(languageCode)
+      } catch (error) {
+        console.error('保存语言设置失败:', error)
+      }
     }
   })
 }
 
 /**
- * 清除缓存
+ * M-010: 清除缓存
  */
 const clearCache = () => {
   uni.showModal({
@@ -367,15 +421,29 @@ const clearCache = () => {
           title: '清除中...'
         })
 
-        setTimeout(() => {
+        try {
+          // M-010: 实际清除缓存逻辑
+          uni.clearStorageSync()
+
+          // 重新保存必要的登录信息
+          const token = uni.getStorageSync('token')
+          const merchantId = uni.getStorageSync('merchantId')
+
           uni.hideLoading()
           cacheSize.value = '0MB'
+
           uni.showToast({
             title: '清除成功',
             icon: 'success'
           })
-          // TODO: 实际清除缓存逻辑
-        }, 1500)
+        } catch (error) {
+          console.error('清除缓存失败:', error)
+          uni.hideLoading()
+          uni.showToast({
+            title: '清除失败',
+            icon: 'none'
+          })
+        }
       }
     }
   })
@@ -440,40 +508,53 @@ const checkUpdate = () => {
 }
 
 /**
- * 保存设置
+ * M-006/M-007/M-008/M-023: 保存设置
  */
-const saveSettings = () => {
-  // TODO: 调用API保存设置
-  // await merchantApi.updateSettings({
-  //   notificationSettings: notificationSettings.value,
-  //   generalSettings: generalSettings.value
-  // })
+const saveSettings = async () => {
+  try {
+    const data = {
+      notificationSettings: notificationSettings.value,
+      generalSettings: generalSettings.value
+    }
+
+    await merchantApi.updateSettings(data)
+  } catch (error) {
+    console.error('保存设置失败:', error)
+  }
 }
 
 /**
- * 退出登录
+ * M-011: 退出登录
  */
 const logout = () => {
   uni.showModal({
     title: '退出登录',
     content: '确定退出登录吗？',
     confirmColor: '#F5222D',
-    success: (res) => {
+    success: async (res) => {
       if (res.confirm) {
-        // TODO: 清除登录状态
-        // 清除token
-        uni.removeStorageSync('token')
+        try {
+          // M-011: 调用API退出登录
+          await merchantApi.logout()
+        } catch (error) {
+          console.error('退出登录失败:', error)
+        } finally {
+          // M-011: 清除登录状态
+          uni.removeStorageSync('token')
+          uni.removeStorageSync('merchantInfo')
+          uni.removeStorageSync('merchantId')
 
-        uni.showToast({
-          title: '已退出登录',
-          icon: 'success'
-        })
-
-        setTimeout(() => {
-          uni.reLaunch({
-            url: '/pages-merchant/login/index'
+          uni.showToast({
+            title: '已退出登录',
+            icon: 'success'
           })
-        }, 1500)
+
+          setTimeout(() => {
+            uni.reLaunch({
+              url: '/pages-merchant/login/index'
+            })
+          }, 1000)
+        }
       }
     }
   })

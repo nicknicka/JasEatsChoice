@@ -434,7 +434,7 @@ const selectPaymentMethod = (method) => {
 }
 
 /**
- * 确认充值
+ * U-004: 确认充值
  */
 const confirmRecharge = async () => {
   if (!rechargeAmount.value) {
@@ -455,15 +455,91 @@ const confirmRecharge = async () => {
   }
 
   try {
-    // TODO: 调用充值API
-    uni.showToast({
-      title: '充值功能开发中',
-      icon: 'none'
+    uni.showLoading({
+      title: '提交中...'
     })
+
+    // U-004: 调用充值API
+    const res = await walletApi.recharge({
+      amount: amount,
+      paymentMethod: paymentMethod.value
+    })
+
+    uni.hideLoading()
+
+    if (res.code === 200) {
+      // 如果需要支付，跳转到支付页面
+      if (res.data && res.data.needPay) {
+        // 调起支付
+        await handlePayment(res.data)
+      } else {
+        // 充值成功
+        uni.showToast({
+          title: '充值成功',
+          icon: 'success'
+        })
+
+        // 重新加载钱包数据
+        await loadWalletData()
+
+        // 关闭弹窗
+        closeRechargePopup()
+      }
+    } else {
+      throw new Error(res.message || '充值失败')
+    }
   } catch (error) {
     console.error('充值失败:', error)
+    uni.hideLoading()
     uni.showToast({
-      title: '充值失败，请重试',
+      title: error.message || '充值失败，请重试',
+      icon: 'none'
+    })
+  }
+}
+
+/**
+ * 处理支付
+ */
+const handlePayment = async (paymentData) => {
+  try {
+    // 根据支付方式调用不同的支付接口
+    if (paymentMethod.value === 'wechat') {
+      // 微信支付
+      const payRes = await walletApi.wechatPay(paymentData)
+      if (payRes.code === 200 && payRes.data) {
+        // 调起微信支付
+        uni.requestPayment({
+          provider: 'wxpay',
+          ...payRes.data,
+          success: () => {
+            uni.showToast({
+              title: '充值成功',
+              icon: 'success'
+            })
+            loadWalletData()
+            closeRechargePopup()
+          },
+          fail: (err) => {
+            uni.showToast({
+              title: '支付失败',
+              icon: 'none'
+            })
+          }
+        })
+      }
+    } else if (paymentMethod.value === 'alipay') {
+      // 支付宝支付
+      const payRes = await walletApi.alipayPay(paymentData)
+      if (payRes.code === 200 && payRes.data) {
+        // H5支付跳转
+        window.location.href = payRes.data.payUrl
+      }
+    }
+  } catch (error) {
+    console.error('支付失败:', error)
+    uni.showToast({
+      title: '支付失败',
       icon: 'none'
     })
   }

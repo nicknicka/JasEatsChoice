@@ -165,6 +165,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { merchantApi } from '@/api'
 
 // 店铺信息
 const shopInfo = ref({
@@ -194,17 +195,37 @@ const shopInfo = ref({
   ]
 })
 
-onMounted(() => {
-  loadShopInfo()
+onMounted(async () => {
+  await loadShopInfo()
 })
 
 /**
- * 加载店铺信息
+ * M-003: 加载店铺信息
  */
-const loadShopInfo = () => {
-  // TODO: 调用API获取店铺信息
-  // const res = await merchantApi.getShopInfo()
-  // shopInfo.value = res.data
+const loadShopInfo = async () => {
+  try {
+    const res = await merchantApi.getShopInfo()
+    if (res.code === 200 && res.data) {
+      shopInfo.value = {
+        avatar: res.data.avatar || '',
+        name: res.data.name || '',
+        isOpen: res.data.isOpen !== undefined ? res.data.isOpen : true,
+        businessHours: res.data.businessHours || shopInfo.value.businessHours,
+        phone: res.data.phone || '',
+        address: res.data.address || '',
+        latitude: res.data.latitude || 0,
+        longitude: res.data.longitude || 0,
+        deliveryRange: res.data.deliveryRange || '',
+        deliveryFee: res.data.deliveryFee || '',
+        minOrderAmount: res.data.minOrderAmount || '',
+        description: res.data.description || '',
+        images: res.data.images || []
+      }
+    }
+  } catch (error) {
+    console.error('加载店铺信息失败:', error)
+    // 保持默认数据
+  }
 }
 
 /**
@@ -318,9 +339,9 @@ const deleteImage = (index) => {
 }
 
 /**
- * 保存设置
+ * M-004: 保存设置
  */
-const saveSettings = () => {
+const saveSettings = async () => {
   // 验证
   if (!shopInfo.value.phone) {
     uni.showToast({
@@ -346,17 +367,52 @@ const saveSettings = () => {
     return
   }
 
-  // TODO: 调用API保存店铺信息
-  // await merchantApi.updateShopInfo(shopInfo.value)
+  try {
+    uni.showLoading({
+      title: '保存中...'
+    })
 
-  uni.showToast({
-    title: '保存成功',
-    icon: 'success'
-  })
+    // M-004: 调用API保存店铺信息
+    const data = {
+      avatar: shopInfo.value.avatar,
+      name: shopInfo.value.name,
+      isOpen: shopInfo.value.isOpen,
+      businessHours: shopInfo.value.businessHours,
+      phone: shopInfo.value.phone,
+      address: shopInfo.value.address,
+      latitude: shopInfo.value.latitude,
+      longitude: shopInfo.value.longitude,
+      deliveryRange: shopInfo.value.deliveryRange,
+      deliveryFee: shopInfo.value.deliveryFee,
+      minOrderAmount: shopInfo.value.minOrderAmount,
+      description: shopInfo.value.description,
+      images: shopInfo.value.images
+    }
 
-  setTimeout(() => {
-    uni.navigateBack()
-  }, 1500)
+    const res = await merchantApi.updateShopInfo(data)
+
+    uni.hideLoading()
+
+    if (res.code === 200) {
+      uni.showToast({
+        title: '保存成功',
+        icon: 'success'
+      })
+
+      setTimeout(() => {
+        uni.navigateBack()
+      }, 1500)
+    } else {
+      throw new Error(res.message || '保存失败')
+    }
+  } catch (error) {
+    console.error('保存店铺信息失败:', error)
+    uni.hideLoading()
+    uni.showToast({
+      title: error.message || '保存失败，请重试',
+      icon: 'none'
+    })
+  }
 }
 </script>
 

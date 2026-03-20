@@ -126,6 +126,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { showConfirm } from '@/utils/helper'
+import { merchantApi } from '@/api'
 
 // 商家信息
 const merchantInfo = ref({
@@ -144,27 +145,61 @@ const statistics = ref({
   pendingReviews: 5
 })
 
-onMounted(() => {
-  loadMerchantInfo()
-  loadStatistics()
+onMounted(async () => {
+  await loadMerchantInfo()
+  await loadStatistics()
 })
 
 /**
- * 加载商家信息
+ * M-020: 加载商家信息
  */
-const loadMerchantInfo = () => {
-  // TODO: 调用API获取商家信息
-  // const res = await merchantApi.getInfo()
-  // merchantInfo.value = res.data
+const loadMerchantInfo = async () => {
+  try {
+    const res = await merchantApi.getInfo()
+    if (res.code === 200 && res.data) {
+      merchantInfo.value = {
+        id: res.data.id,
+        name: res.data.name,
+        logo: res.data.logo || res.data.avatar,
+        rating: res.data.rating || 4.8,
+        reviewCount: res.data.reviewCount || 0,
+        description: res.data.description || ''
+      }
+    }
+  } catch (error) {
+    console.error('加载商家信息失败:', error)
+    // 保持默认数据
+  }
 }
 
 /**
- * 加载统计数据
+ * M-021: 加载统计数据
  */
-const loadStatistics = () => {
-  // TODO: 调用API获取统计数据
-  // const res = await merchantApi.getStatistics()
-  // statistics.value = res.data
+const loadStatistics = async () => {
+  try {
+    const merchantId = uni.getStorageSync('merchantId') || merchantInfo.value.id
+    const res = await merchantApi.getStatistics(merchantId, { timeRange: 'today' })
+    if (res.code === 200 && res.data) {
+      statistics.value = {
+        balance: formatMoney(res.data.balance || 0),
+        todayRevenue: formatMoney(res.data.todayRevenue || 0),
+        pendingReviews: res.data.pendingReviews || 0
+      }
+    }
+  } catch (error) {
+    console.error('加载统计数据失败:', error)
+    // 保持默认数据
+  }
+}
+
+/**
+ * 格式化金额
+ */
+const formatMoney = (amount) => {
+  if (typeof amount === 'number') {
+    return amount.toFixed(2)
+  }
+  return amount
 }
 
 /**
@@ -269,19 +304,34 @@ const toAbout = () => {
 }
 
 /**
- * 退出登录
+ * M-022: 退出登录
  */
 const handleLogout = async () => {
   const confirmed = await showConfirm('确定要退出登录吗？')
 
   if (confirmed) {
-    // TODO: 调用API退出登录
-    uni.removeStorageSync('token')
-    uni.removeStorageSync('merchantInfo')
+    try {
+      // 调用API退出登录
+      await merchantApi.logout()
+    } catch (error) {
+      console.error('退出登录失败:', error)
+    } finally {
+      // 无论API调用是否成功，都清除本地登录状态
+      uni.removeStorageSync('token')
+      uni.removeStorageSync('merchantInfo')
+      uni.removeStorageSync('merchantId')
 
-    uni.reLaunch({
-      url: '/pages/login/index'
-    })
+      uni.showToast({
+        title: '已退出登录',
+        icon: 'success'
+      })
+
+      setTimeout(() => {
+        uni.reLaunch({
+          url: '/pages/login/index'
+        })
+      }, 1000)
+    }
   }
 }
 </script>

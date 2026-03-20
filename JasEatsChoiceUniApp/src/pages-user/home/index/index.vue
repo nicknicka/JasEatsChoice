@@ -286,18 +286,29 @@ const onLoadMore = async () => {
 }
 
 /**
- * 加载轮播图
+ * 加载轮播图 - U-022: 调用后端API
  */
 const loadBanners = async () => {
   try {
-    // TODO: 调用后端API
-    // const res = await bannerApi.getList({ position: 'home' })
-    // banners.value = res.data
+    // U-022: 调用后端API获取轮播图
+    const { bannerApi } = await import('@/api')
+    const res = await bannerApi.getList({ position: 'home' })
 
-    // 模拟数据
-    await new Promise(resolve => setTimeout(resolve, 500))
+    if (res && res.data && Array.isArray(res.data)) {
+      banners.value = res.data.map(banner => ({
+        id: banner.bannerId || banner.id,
+        image: banner.imageUrl || banner.image,
+        title: banner.title || '',
+        type: banner.type || 'link', // link, dish, merchant, activity
+        targetType: banner.targetType || '', // 跳转目标类型
+        targetId: banner.targetId || '', // 跳转目标ID
+        link: banner.link || '' // 外部链接
+      }))
+    }
   } catch (error) {
     console.error('加载轮播图失败:', error)
+    // 使用空数组，不显示模拟数据
+    banners.value = []
   }
 }
 
@@ -448,34 +459,114 @@ const refreshRecommend = () => {
 }
 
 /**
- * 点击轮播图
+ * 点击轮播图 - U-023: 根据banner类型跳转
  */
 const handleBannerClick = (banner) => {
   console.log('点击banner:', banner)
-  // TODO: 根据banner类型跳转
+
+  // U-023: 根据banner类型进行不同的跳转
+  if (!banner) return
+
+  try {
+    switch (banner.type) {
+      case 'dish':
+        // 跳转到菜品详情
+        if (banner.targetId) {
+          uni.navigateTo({
+            url: `/pages-user/dish/detail/index?id=${banner.targetId}`
+          })
+        }
+        break
+
+      case 'merchant':
+        // 跳转到商家详情
+        if (banner.targetId) {
+          uni.navigateTo({
+            url: `/pages-user/merchant/detail/index?id=${banner.targetId}`
+          })
+        }
+        break
+
+      case 'activity':
+        // 跳转到活动页面（如果有）
+        if (banner.targetId) {
+          uni.navigateTo({
+            url: `/pages-user/activity/detail/index?id=${banner.targetId}`
+          })
+        }
+        break
+
+      case 'link':
+        // 外部链接，使用webview打开
+        if (banner.link) {
+          uni.navigateTo({
+            url: `/pages/common/webview/index?url=${encodeURIComponent(banner.link)}`
+          })
+        }
+        break
+
+      case 'recipe':
+        // 跳转到食谱详情
+        if (banner.targetId) {
+          uni.navigateTo({
+            url: `/pages-user/recipe/detail/index?id=${banner.targetId}`
+          })
+        }
+        break
+
+      default:
+        // 默认不做任何操作或提示
+        console.log('未知的banner类型:', banner.type)
+    }
+  } catch (error) {
+    console.error('Banner跳转失败:', error)
+    uni.showToast({
+      title: '页面跳转失败',
+      icon: 'none'
+    })
+  }
 }
 
 /**
- * 点击分类
+ * 点击分类 - U-024: 跳转到分类列表页
  */
 const handleCategoryClick = (category) => {
-  uni.showToast({
-    title: `选择分类：${category.name}`,
-    icon: 'none'
+  if (!category) return
+
+  // U-024: 跳转到分类菜品列表页
+  uni.navigateTo({
+    url: `/pages-user/dish/list/index?category=${encodeURIComponent(category.code || category.name)}&name=${encodeURIComponent(category.name)}`,
+    success: () => {
+      console.log('跳转到分类列表成功:', category.name)
+    },
+    fail: (err) => {
+      console.error('跳转分类列表失败:', err)
+      uni.showToast({
+        title: '打开分类页面失败',
+        icon: 'none'
+      })
+    }
   })
-  // TODO: 跳转到分类列表页
-  // router.toDishList({ category: category.code })
 }
 
 /**
- * 查看更多分类
+ * 查看更多分类 - U-025: 跳转到分类页面
  */
 const toMoreCategories = () => {
-  uni.showToast({
-    title: '全部分类功能开发中',
-    icon: 'none'
+  // U-025: 跳转到全部分类页面
+  uni.navigateTo({
+    url: '/pages-user/category/index',
+    success: () => {
+      console.log('跳转到分类页面成功')
+    },
+    fail: (err) => {
+      console.error('跳转分类页面失败:', err)
+      uni.showToast({
+        title: '打开分类页面失败',
+        icon: 'none'
+      })
+    }
   })
-  // TODO: 跳转到分类页面
 }
 
 /**

@@ -200,20 +200,31 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { messageApi } from '@/api/modules/message.js'
+import WebSocketClient from '@/utils/websocket.js'
 
-// 用户信息
+// 当前用户ID
+const currentUserId = ref('')
+const token = ref('')
+
+// 对方用户信息
 const userInfo = ref({
-  id: 1,
+  id: '',
   name: '老王家常菜',
   avatar: 'https://via.placeholder.com/80/FF6B35/FFFFFF?text=店',
   isOnline: true
 })
+
+// 会话ID
+const conversationId = ref('')
 
 // 消息列表
 const messageList = ref([])
 const loadingHistory = ref(false)
 const hasMoreHistory = ref(true)
 const scrollIntoView = ref('')
+const currentPage = ref(1)
+const pageSize = 20
 
 // 输入
 const inputContent = ref('')
@@ -222,9 +233,37 @@ const replyMessage = ref(null)
 // 弹窗
 const morePopup = ref(null)
 
+// WebSocket客户端
+let wsClient = null
+
 onMounted(() => {
+  // 获取用户信息
+  currentUserId.value = uni.getStorageSync('userId') || ''
+  token.value = uni.getStorageSync('token') || ''
+
+  // 获取页面参数
+  const pages = getCurrentPages()
+  const currentPage = pages[pages.length - 1]
+  const options = currentPage.options
+
+  if (options) {
+    // 解析用户信息
+    if (options.userId) {
+      userInfo.value.id = options.userId
+    }
+    if (options.userName) {
+      userInfo.value.name = decodeURIComponent(options.userName)
+    }
+    if (options.userAvatar) {
+      userInfo.value.avatar = decodeURIComponent(options.userAvatar)
+    }
+    if (options.conversationId) {
+      conversationId.value = options.conversationId
+    }
+  }
+
+  // 加载消息和连接WebSocket
   loadMessages()
-  scrollToBottom()
   connectWebSocket()
 })
 
@@ -232,51 +271,162 @@ onUnmounted(() => {
   disconnectWebSocket()
 })
 
-let ws = null
-
 /**
- * 连接WebSocket
+ * 连接WebSocket - IM-001
  */
-const connectWebSocket = () => {
-  // TODO: 连接WebSocket
-  // ws = uni.connectSocket({
-  //   url: `ws://api.example.com/ws/chat/${userInfo.value.id}`
-  // })
-  //
-  // ws.onMessage((res) => {
-  //   const message = JSON.parse(res.data)
-  //   handleMessage(message)
-  // })
-}
+const connectWebSocket = async () => {
+  try {
+    // 构建WebSocket URL
+    const wsUrl = `wss://api.example.com/ws/chat/${currentUserId.value}/${userInfo.value.id}`
 
-/**
- * 断开WebSocket
- */
-const disconnectWebSocket = () => {
-  if (ws) {
-    ws.close()
-    ws = null
+    // 创建WebSocket客户端
+    wsClient = new WebSocketClient(wsUrl)
+
+    // 监听连接成功
+    wsClient.on('_connected', () => {
+      console.log('[ChatRoom] WebSocket已连接')
+    })
+
+    // 监听消息
+    wsClient.on('message', (data) => {
+      console.log('[ChatRoom] 收到消息', data)
+      handleMessage(data)
+    })
+
+    // 连接
+    await wsClient.connect(token.value)
+  } catch (error) {
+    console.error('[ChatRoom] WebSocket连接失败', error)
+    uni.showToast({
+      title: '连接失败',
+      icon: 'none'
+    })
   }
 }
 
 /**
- * 加载消息
+ * 断开WebSocket - IM-001
+ */
+const disconnectWebSocket = () => {
+  if (wsClient) {
+    wsClient.close()
+    wsClient = null
+  }
+}
+
+/**
+ * 处理收到的消息
+ */
+const handleMessage = (message) => {
+  // 转换消息格式
+  const formattedMessage = {
+    id: message.id || Date.now(),
+    isSelf: message.senderId === currentUserId.value,
+    avatar: message.senderId === currentUserId.value
+      ? uni.getStorageSync('avatar') || ''
+      : userInfo.value.avatar,
+    type: message.type || 'text',
+    content: message.content,
+    time: new Date(message.timestamp || Date.now()),
+    showTime: shouldShowTime(message),
+    status: 'success'
+  }
+
+  messageList.value.push(formattedMessage)
+
+  // 滚动到底部
+  nextTick(() => {
+    scrollToBottom()
+  })
+}
+
+/**
+ * 判断是否显示时间
+ */
+const shouldShowTime = (message) => {
+  if (messageList.value.length === 0) {
+    return true
+  }
+
+  const lastMessage = messageList.value[messageList.value.length - 1]
+  const timeDiff = new Date(message.timestamp || Date.now()) - new Date(lastMessage.time)
+
+  // 如果距离上一条消息超过5分钟，显示时间
+  return timeDiff > 5 * 60 * 1000
+}
+
+/**
+ * 加载消息 - IM-002: 调用API获取消息列表
  */
 const loadMessages = async () => {
-  // TODO: 调用API获取消息列表
-  // const res = await chatApi.getMessages(userInfo.value.id)
+  try {
+    uni.showLoading({ title: '加载中...' })
 
-  // 模拟数据
-  setTimeout(() => {
+    // IM-002: 调用API获取消息列表
+    const res = await messageApi.getMessages({
+      userId: currentUserId.value,
+      pageSize: pageSize,
+      pageNum: currentPage.value
+    })
+
+    uni.hideLoading()
+
+    if (res.code === 200 && res.data) {
+      // 转换消息格式
+      const formattedMessages = res.data.map(msg => ({
+        id: msg.id,
+        isSelf: msg.senderId === currentUserId.value,
+        avatar: msg.senderId === currentUserId.value
+          ? uni.getStorageSync('avatar') || ''
+          : userInfo.value.avatar,
+        type: msg.messageType || 'text',
+        content: msg.content,
+        time: new Date(msg.createTime || Date.now()),
+        showTime: false, // 稍后计算
+        status: 'success'
+      }))
+
+      // 计算是否显示时间
+      formattedMessages.forEach((msg, index) => {
+        if (index === 0) {
+          msg.showTime = true
+        } else {
+          const prevMsg = formattedMessages[index - 1]
+          const timeDiff = msg.time - prevMsg.time
+          msg.showTime = timeDiff > 5 * 60 * 1000
+        }
+      })
+
+      messageList.value = formattedMessages
+
+      // 滚动到底部
+      nextTick(() => {
+        scrollToBottom()
+      })
+
+      console.log('加载消息成功，数量:', formattedMessages.length)
+    } else {
+      throw new Error(res.message || '获取消息失败')
+    }
+  } catch (error) {
+    console.error('加载消息失败:', error)
+    uni.hideLoading()
+
+    // 如果API调用失败，使用模拟数据（开发阶段）
     messageList.value = generateMockMessages()
     nextTick(() => {
       scrollToBottom()
     })
-  }, 300)
+
+    // uni.showToast({
+    //   title: error.message || '加载消息失败',
+    //   icon: 'none'
+    // })
+  }
 }
 
 /**
- * 生成模拟消息
+ * 生成模拟消息（开发阶段使用）
  */
 const generateMockMessages = () => {
   const messages = []
@@ -301,17 +451,59 @@ const generateMockMessages = () => {
 }
 
 /**
- * 加载历史消息
+ * 加载历史消息 - IM-003: 加载历史消息（分页）
  */
-const loadMoreMessages = () => {
+const loadMoreMessages = async () => {
   if (!hasMoreHistory.value || loadingHistory.value) return
 
   loadingHistory.value = true
-  // TODO: 加载历史消息
-  setTimeout(() => {
-    loadingHistory.value = false
+
+  try {
+    currentPage.value++
+
+    // IM-003: 调用API获取历史消息
+    const res = await messageApi.getMessages({
+      userId: currentUserId.value,
+      pageSize: pageSize,
+      pageNum: currentPage.value
+    })
+
+    if (res.code === 200 && res.data) {
+      if (res.data.length === 0) {
+        hasMoreHistory.value = false
+      } else {
+        // 转换消息格式并插入到列表顶部
+        const formattedMessages = res.data.map(msg => ({
+          id: msg.id,
+          isSelf: msg.senderId === currentUserId.value,
+          avatar: msg.senderId === currentUserId.value
+            ? uni.getStorageSync('avatar') || ''
+            : userInfo.value.avatar,
+          type: msg.messageType || 'text',
+          content: msg.content,
+          time: new Date(msg.createTime || Date.now()),
+          showTime: false,
+          status: 'success'
+        }))
+
+        messageList.value = [...formattedMessages, ...messageList.value]
+
+        // 滚动到第一条新消息的位置
+        if (formattedMessages.length > 0) {
+          scrollIntoView.value = 'message-' + formattedMessages[0].id
+        }
+      }
+    } else {
+      currentPage.value--
+      hasMoreHistory.value = false
+    }
+  } catch (error) {
+    console.error('加载历史消息失败:', error)
+    currentPage.value--
     hasMoreHistory.value = false
-  }, 1000)
+  } finally {
+    loadingHistory.value = false
+  }
 }
 
 /**
@@ -351,7 +543,7 @@ const canSend = computed(() => {
 })
 
 /**
- * 发送消息
+ * 发送消息 - IM-004: 发送文本消息到服务器
  */
 const sendMessage = async () => {
   if (!canSend.value) return
@@ -359,7 +551,7 @@ const sendMessage = async () => {
   const newMessage = {
     id: Date.now(),
     isSelf: true,
-    avatar: 'https://via.placeholder.com/80/52C41A/FFFFFF?text=我',
+    avatar: uni.getStorageSync('avatar') || 'https://via.placeholder.com/80/52C41A/FFFFFF?text=我',
     type: 'text',
     content: inputContent.value,
     time: new Date(),
@@ -372,22 +564,47 @@ const sendMessage = async () => {
   }
 
   messageList.value.push(newMessage)
+  const contentToSend = inputContent.value
   inputContent.value = ''
   replyMessage.value = null
 
   scrollToBottom()
 
-  // TODO: 发送消息到服务器
-  // await chatApi.sendMessage({
-  //   toUserId: userInfo.value.id,
-  //   content: newMessage.content,
-  //   quote: newMessage.quote
-  // })
+  try {
+    // IM-004: 调用API发送文本消息
+    const res = await messageApi.sendTextMessage({
+      senderId: currentUserId.value,
+      receiverId: userInfo.value.id,
+      content: contentToSend
+    })
 
-  // 模拟发送成功
-  setTimeout(() => {
-    newMessage.status = 'success'
-  }, 1000)
+    if (res.code === 200) {
+      newMessage.status = 'success'
+
+      // 同时通过WebSocket发送（实时通信）
+      if (wsClient && wsClient.isConnected()) {
+        wsClient.send({
+          type: 'message',
+          dataType: 'text',
+          senderId: currentUserId.value,
+          receiverId: userInfo.value.id,
+          content: contentToSend,
+          timestamp: Date.now()
+        }).catch(err => {
+          console.error('[ChatRoom] WebSocket发送消息失败', err)
+        })
+      }
+    } else {
+      throw new Error(res.message || '发送失败')
+    }
+  } catch (error) {
+    console.error('[ChatRoom] 发送消息失败', error)
+    newMessage.status = 'failed'
+    uni.showToast({
+      title: error.message || '发送失败',
+      icon: 'none'
+    })
+  }
 }
 
 /**
@@ -405,13 +622,13 @@ const chooseImage = () => {
 }
 
 /**
- * 发送图片消息
+ * 发送图片消息 - IM-005: 上传图片并发送
  */
-const sendImageMessage = (imagePath) => {
+const sendImageMessage = async (imagePath) => {
   const newMessage = {
     id: Date.now(),
     isSelf: true,
-    avatar: 'https://via.placeholder.com/80/52C41A/FFFFFF?text=我',
+    avatar: uni.getStorageSync('avatar') || 'https://via.placeholder.com/80/52C41A/FFFFFF?text=我',
     type: 'image',
     content: imagePath,
     time: new Date(),
@@ -422,29 +639,94 @@ const sendImageMessage = (imagePath) => {
   messageList.value.push(newMessage)
   scrollToBottom()
 
-  // TODO: 上传图片并发送
+  try {
+    // IM-005: 上传图片
+    uni.showLoading({ title: '上传中...' })
+
+    const uploadRes = await new Promise((resolve, reject) => {
+      uni.uploadFile({
+        url: 'https://api.example.com/v1/upload/image',
+        filePath: imagePath,
+        name: 'file',
+        header: {
+          'Authorization': token.value
+        },
+        success: (res) => {
+          try {
+            const data = JSON.parse(res.data)
+            resolve(data)
+          } catch (error) {
+            reject(error)
+          }
+        },
+        fail: (err) => {
+          reject(err)
+        }
+      })
+    })
+
+    uni.hideLoading()
+
+    if (uploadRes.code === 200) {
+      const imageUrl = uploadRes.data.url
+
+      // 发送图片消息
+      const res = await messageApi.sendImageMessage({
+        senderId: currentUserId.value,
+        receiverId: userInfo.value.id,
+        imageUrl: imageUrl
+      })
+
+      if (res.code === 200) {
+        newMessage.status = 'success'
+        newMessage.content = imageUrl
+
+        // 同时通过WebSocket发送（实时通信）
+        if (wsClient && wsClient.isConnected()) {
+          wsClient.send({
+            type: 'message',
+            dataType: 'image',
+            senderId: currentUserId.value,
+            receiverId: userInfo.value.id,
+            content: imageUrl,
+            timestamp: Date.now()
+          }).catch(err => {
+            console.error('[ChatRoom] WebSocket发送图片失败', err)
+          })
+        }
+      } else {
+        throw new Error(res.message || '发送失败')
+      }
+    } else {
+      throw new Error(uploadRes.message || '上传失败')
+    }
+  } catch (error) {
+    console.error('[ChatRoom] 发送图片失败', error)
+    uni.hideLoading()
+    newMessage.status = 'failed'
+    uni.showToast({
+      title: error.message || '发送失败',
+      icon: 'none'
+    })
+  }
 }
 
 /**
- * 选择菜品
+ * 选择菜品 - IM-006: 跳转到选择菜品页面
  */
 const chooseDish = () => {
-  uni.showToast({
-    title: '选择菜品',
-    icon: 'none'
+  uni.navigateTo({
+    url: '/pages-common/chat/dish-selector?userId=' + userInfo.value.id
   })
-  // TODO: 跳转到选择菜品页面
 }
 
 /**
- * 选择订单
+ * 选择订单 - IM-007: 跳转到选择订单页面
  */
 const chooseOrder = () => {
-  uni.showToast({
-    title: '选择订单',
-    icon: 'none'
+  uni.navigateTo({
+    url: '/pages-common/chat/order-selector?userId=' + userInfo.value.id
   })
-  // TODO: 跳转到选择订单页面
 }
 
 /**
@@ -531,19 +813,27 @@ const clearHistory = () => {
 }
 
 /**
- * 搜索记录
+ * 搜索记录 - IM-008: 跳转到搜索页面
  */
 const searchMessage = () => {
   morePopup.value?.close()
-  // TODO: 跳转到搜索页面
+
+  // 跳转到消息搜索页面
+  uni.navigateTo({
+    url: `/pages-common/chat/search?conversationId=${conversationId.value}&userId=${userInfo.value.id}`
+  })
 }
 
 /**
- * 举报用户
+ * 举报用户 - IM-009: 跳转到举报页面
  */
 const reportUser = () => {
   morePopup.value?.close()
-  // TODO: 跳转到举报页面
+
+  // 跳转到举报页面
+  uni.navigateTo({
+    url: `/pages-common/report?type=user&targetId=${userInfo.value.id}&targetName=${encodeURIComponent(userInfo.value.name)}`
+  })
 }
 
 /**

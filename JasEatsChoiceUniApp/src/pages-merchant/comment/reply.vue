@@ -91,6 +91,10 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { reviewApi } from '@/api/modules/review.js'
+
+const reviewId = ref('')
+const merchantId = ref('')
 
 // 是否是编辑模式
 const isEdit = ref(false)
@@ -123,29 +127,86 @@ const quickReplies = ref([
   '感谢您的反馈，我们会持续改进，为您提供更好的体验。'
 ])
 
-onMounted(() => {
+onMounted(async () => {
+  merchantId.value = uni.getStorageSync('merchantId') || ''
+
   const pages = getCurrentPages()
   const currentPage = pages[pages.length - 1]
   const options = currentPage.options
 
+  reviewId.value = options.id || ''
   isEdit.value = options.edit === 'true'
 
-  // 如果是编辑模式，加载已有回复
+  // REVIEW-005: 加载评价详情
+  if (reviewId.value) {
+    await loadReviewDetail()
+  }
+
+  // REVIEW-006: 如果是编辑模式，加载已有回复
   if (isEdit.value) {
-    loadReply()
+    await loadReply()
   }
 })
 
 /**
- * 加载已有回复
+ * REVIEW-005: 加载评价详情
  */
-const loadReply = () => {
-  const commentId = comment.value.id
+const loadReviewDetail = async () => {
+  try {
+    const res = await reviewApi.getDetail(reviewId.value)
 
-  // TODO: 调用API获取已有回复
-  // const res = await merchantApi.getCommentReply({ id: commentId })
-  // replyContent.value = res.data.content
-  // replyImages.value = res.data.images || []
+    if (res.code === 200 && res.data) {
+      const data = res.data
+      comment.value = {
+        id: data.id,
+        user: {
+          id: data.userId,
+          name: data.isAnonymous ? '匿名用户' : (data.userName || '用户***'),
+          avatar: data.userAvatar || 'https://via.placeholder.com/60'
+        },
+        rating: data.rating || 5,
+        time: formatTime(data.createdAt),
+        content: data.content || ''
+      }
+    }
+  } catch (error) {
+    console.error('加载评价详情失败:', error)
+  }
+}
+
+/**
+ * REVIEW-006: 加载已有回复
+ */
+const loadReply = async () => {
+  if (!reviewId.value) return
+
+  try {
+    // REVIEW-006: 调用API获取评价详情（包含回复信息）
+    const res = await reviewApi.getDetail(reviewId.value)
+
+    if (res.code === 200 && res.data && res.data.reply) {
+      replyContent.value = res.data.reply.content || ''
+      replyImages.value = res.data.reply.images || []
+    }
+  } catch (error) {
+    console.error('加载回复失败:', error)
+  }
+}
+
+/**
+ * 格式化时间
+ */
+const formatTime = (time) => {
+  if (!time) return ''
+  const date = new Date(time)
+  const now = new Date()
+  const diff = now - date
+
+  if (diff < 86400000) return '今天'
+  if (diff < 172800000) return '昨天'
+  if (diff < 604800000) return `${Math.floor(diff / 86400000)}天前`
+
+  return `${date.getMonth() + 1}-${date.getDate()}`
 }
 
 /**
@@ -228,34 +289,44 @@ const submitReply = () => {
 }
 
 /**
- * 保存回复
+ * REVIEW-007: 保存回复
  */
-const saveReply = () => {
-  // TODO: 调用API保存回复
-  const data = {
-    commentId: comment.value.id,
-    content: replyContent.value,
-    images: replyImages.value
+const saveReply = async () => {
+  try {
+    uni.showLoading({ title: '提交中...' })
+
+    // REVIEW-007: 准备回复数据
+    const data = {
+      merchantId: merchantId.value,
+      content: replyContent.value,
+      images: replyImages.value
+    }
+
+    // REVIEW-007: 调用API保存回复
+    const res = await reviewApi.reply(reviewId.value, data)
+
+    uni.hideLoading()
+
+    if (res.code === 200) {
+      uni.showToast({
+        title: isEdit.value ? '修改成功' : '回复成功',
+        icon: 'success'
+      })
+
+      setTimeout(() => {
+        uni.navigateBack()
+      }, 1500)
+    } else {
+      throw new Error(res.message || '提交失败')
+    }
+  } catch (error) {
+    console.error('保存回复失败:', error)
+    uni.hideLoading()
+    uni.showToast({
+      title: error.message || '提交失败',
+      icon: 'none'
+    })
   }
-
-  // merchantApi.replyComment(data).then(() => {
-  //   uni.showToast({
-  //     title: '回复成功',
-  //     icon: 'success'
-  //   })
-  //   setTimeout(() => {
-  //     uni.navigateBack()
-  //   }, 1500)
-  // })
-
-  uni.showToast({
-    title: isEdit.value ? '修改成功' : '回复成功',
-    icon: 'success'
-  })
-
-  setTimeout(() => {
-    uni.navigateBack()
-  }, 1500)
 }
 </script>
 

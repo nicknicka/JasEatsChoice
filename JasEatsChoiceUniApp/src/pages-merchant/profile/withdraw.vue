@@ -130,6 +130,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { merchantApi } from '@/api'
 
 // 提现方式
 const withdrawMethods = [
@@ -189,17 +190,36 @@ const withdrawHistory = ref([
   }
 ])
 
-onMounted(() => {
-  loadWithdrawData()
+onMounted(async () => {
+  await loadWithdrawData()
 })
 
 /**
- * 加载提现数据
+ * M-015: 加载提现数据
  */
-const loadWithdrawData = () => {
-  // TODO: 调用API获取提现数据
-  // const res = await merchantApi.getWithdrawData()
-  // withdrawData.value = res.data
+const loadWithdrawData = async () => {
+  try {
+    const res = await merchantApi.getWithdrawData()
+    if (res.code === 200 && res.data) {
+      withdrawData.value = {
+        availableBalance: res.data.availableBalance || '0',
+        frozenBalance: res.data.frozenBalance || '0',
+        feeRate: res.data.feeRate || 0.2,
+        todayWithdrawCount: res.data.todayWithdrawCount || 0,
+        maxWithdrawCount: res.data.maxWithdrawCount || 3,
+        bankName: res.data.bankName || '',
+        bankAccount: res.data.bankAccount || ''
+      }
+
+      // 加载提现记录
+      if (res.data.history) {
+        withdrawHistory.value = res.data.history
+      }
+    }
+  } catch (error) {
+    console.error('加载提现数据失败:', error)
+    // 保持默认数据
+  }
 }
 
 /**
@@ -308,31 +328,46 @@ const confirmWithdraw = () => {
 }
 
 /**
- * 提交提现
+ * M-016: 提交提现
  */
-const submitWithdraw = () => {
-  uni.showLoading({
-    title: '提交中...'
-  })
-
-  // TODO: 调用API提交提现
-  const data = {
-    amount: withdrawAmount.value,
-    method: withdrawMethod.value,
-    fee: estimatedFee.value
-  }
-
-  setTimeout(() => {
-    uni.hideLoading()
-    uni.showToast({
-      title: '提现申请已提交',
-      icon: 'success'
+const submitWithdraw = async () => {
+  try {
+    uni.showLoading({
+      title: '提交中...'
     })
 
-    setTimeout(() => {
-      uni.navigateBack()
-    }, 1500)
-  }, 1500)
+    // M-016: 调用API提交提现
+    const data = {
+      amount: parseFloat(withdrawAmount.value),
+      bankName: withdrawData.value.bankName,
+      bankAccount: withdrawData.value.bankAccount,
+      accountName: '商户账户' // 这里应该从实际数据中获取
+    }
+
+    const res = await merchantApi.submitWithdraw(data)
+
+    uni.hideLoading()
+
+    if (res.code === 200) {
+      uni.showToast({
+        title: '提现申请已提交',
+        icon: 'success'
+      })
+
+      setTimeout(() => {
+        uni.navigateBack()
+      }, 1500)
+    } else {
+      throw new Error(res.message || '提交失败')
+    }
+  } catch (error) {
+    console.error('提交提现失败:', error)
+    uni.hideLoading()
+    uni.showToast({
+      title: error.message || '提交失败，请重试',
+      icon: 'none'
+    })
+  }
 }
 
 /**

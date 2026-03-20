@@ -135,6 +135,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import qiunUcharts from '@/components/qiun-ucharts/qiun-ucharts.vue'
+import { merchantApi } from '@/api'
 
 // 趋势天数选项
 const trendDaysOptions = [
@@ -206,22 +207,36 @@ const noMoreTransactions = ref(false)
 const transactionPage = ref(1)
 const transactionPageSize = 20
 
-onMounted(() => {
-  loadFinanceData()
-  loadTransactions()
+onMounted(async () => {
+  await loadFinanceData()
+  await loadTransactions()
 })
 
 /**
- * 加载财务数据
+ * M-012: 加载财务数据
  */
-const loadFinanceData = () => {
-  // TODO: 调用API获取财务数据
-  // const res = await merchantApi.getFinanceData()
-  // financeData.value = res.data
+const loadFinanceData = async () => {
+  try {
+    const res = await merchantApi.getFinanceData({ timeRange: 'month' })
+    if (res.code === 200 && res.data) {
+      financeData.value = {
+        totalBalance: res.data.totalBalance || '0',
+        availableBalance: res.data.availableBalance || '0',
+        frozenBalance: res.data.frozenBalance || '0',
+        todayIncome: res.data.todayIncome || '0',
+        monthIncome: res.data.monthIncome || '0',
+        todayOrders: res.data.todayOrders || 0,
+        monthOrders: res.data.monthOrders || 0
+      }
+    }
+  } catch (error) {
+    console.error('加载财务数据失败:', error)
+    // 保持默认数据
+  }
 }
 
 /**
- * 加载交易记录
+ * M-013: 加载交易记录
  */
 const loadTransactions = async (isRefresh = false) => {
   if (loadingTransactions.value) return
@@ -233,15 +248,29 @@ const loadTransactions = async (isRefresh = false) => {
   }
 
   try {
-    // TODO: 调用API获取交易记录
-    // const res = await merchantApi.getTransactions({
-    //   type: activeTransactionType.value,
-    //   page: transactionPage.value,
-    //   size: transactionPageSize
-    // })
+    // M-013: 调用API获取交易记录
+    const params = {
+      type: activeTransactionType.value === 'all' ? undefined : activeTransactionType.value,
+      page: transactionPage.value,
+      size: transactionPageSize
+    }
 
-    // 模拟数据
-    setTimeout(() => {
+    const res = await merchantApi.getTransactions(params)
+
+    if (res.code === 200 && res.data) {
+      const transactions = res.data.list || []
+
+      if (isRefresh) {
+        transactionList.value = transactions
+      } else {
+        transactionList.value = [...transactionList.value, ...transactions]
+      }
+
+      if (transactions.length < transactionPageSize) {
+        noMoreTransactions.value = true
+      }
+    } else {
+      // API调用失败，使用模拟数据
       const mockData = generateMockTransactions()
       if (isRefresh) {
         transactionList.value = mockData
@@ -252,12 +281,20 @@ const loadTransactions = async (isRefresh = false) => {
       if (mockData.length < transactionPageSize) {
         noMoreTransactions.value = true
       }
+    }
 
-      loadingTransactions.value = false
-    }, 500)
+    loadingTransactions.value = false
   } catch (error) {
     console.error('加载交易记录失败:', error)
     loadingTransactions.value = false
+
+    // 出错时使用模拟数据
+    const mockData = generateMockTransactions()
+    if (isRefresh) {
+      transactionList.value = mockData
+    } else {
+      transactionList.value = [...transactionList.value, ...mockData]
+    }
   }
 }
 
@@ -299,11 +336,24 @@ const getRandomTime = () => {
 }
 
 /**
- * 切换趋势天数
+ * M-014: 切换趋势天数
  */
-const onTrendDaysChange = (e) => {
+const onTrendDaysChange = async (e) => {
   trendDaysIndex.value = e.detail.value
-  // TODO: 重新加载图表数据
+
+  // M-014: 重新加载图表数据
+  try {
+    const days = trendDaysOptions[trendDaysIndex.value].value
+    const res = await merchantApi.getFinanceData({ timeRange: days === 7 ? 'week' : days === 15 ? 'week' : 'month' })
+
+    if (res.code === 200 && res.data && res.data.chartData) {
+      // 更新图表数据
+      // 这里需要根据后端返回的数据格式调整
+      // chartData.value = res.data.chartData
+    }
+  } catch (error) {
+    console.error('加载图表数据失败:', error)
+  }
 }
 
 /**

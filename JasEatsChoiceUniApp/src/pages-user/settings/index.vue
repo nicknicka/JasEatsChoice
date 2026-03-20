@@ -386,12 +386,23 @@ const clearCache = () => {
             title: '清除中...'
           })
 
-          // TODO: 实际清除缓存逻辑
-          // await utils.clearCache()
+          // U-005: 实际清除缓存逻辑
+          try {
+            const res = uni.getStorageInfoSync()
+            const keys = res.keys || []
+            // 排除必要的存储数据
+            const excludeKeys = ['token', 'userInfo', 'settings', 'user_id']
+            keys.forEach(key => {
+              if (!excludeKeys.includes(key)) {
+                uni.removeStorageSync(key)
+              }
+            })
+          } catch (error) {
+            console.error('清除存储失败:', error)
+          }
 
-          await new Promise(resolve => setTimeout(resolve, 1000))
-
-          cacheSize.value = '0KB'
+          // 重新计算缓存大小
+          await calculateCacheSize()
 
           uni.hideLoading()
           uni.showToast({
@@ -540,15 +551,24 @@ const loadSettings = async () => {
 }
 
 /**
- * 计算缓存大小
+ * U-006: 计算缓存大小
  */
 const calculateCacheSize = () => {
   try {
-    // TODO: 实际计算缓存大小
-    // const size = await utils.getCacheSize()
-    // cacheSize.value = utils.formatSize(size)
+    // U-006: 实际计算缓存大小
+    const res = uni.getStorageInfoSync()
+    const size = res.currentSize || 0 // 当前占用的空间大小（单位：KB）
+
+    // 格式化显示
+    if (size < 1024) {
+      cacheSize.value = `${size}KB`
+    } else {
+      const mb = (size / 1024).toFixed(1)
+      cacheSize.value = `${mb}MB`
+    }
   } catch (error) {
     console.error('计算缓存大小失败:', error)
+    cacheSize.value = '0KB'
   }
 }
 

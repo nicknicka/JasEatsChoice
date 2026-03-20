@@ -379,12 +379,38 @@ const startExtract = async () => {
 
     // 如果是图片或视频，需要先上传
     if (extractMethod.value === 'image' || extractMethod.value === 'video') {
-      // TODO: 实现文件上传逻辑
-      // 这里需要先调用上传API，获取文件URL
-      uni.showToast({
-        title: '正在上传文件...',
-        icon: 'loading'
-      })
+      // U-020: 实现文件上传逻辑
+      try {
+        uni.showLoading({ title: '正在上传文件...' })
+
+        // 导入上传工具
+        const { upload } = await import('@/utils/request')
+
+        // 上传文件到服务器
+        const uploadRes = await upload('/api/upload/file', uploadedFile.value, {
+          type: extractMethod.value
+        })
+
+        uni.hideLoading()
+
+        // 获取文件URL
+        if (uploadRes && uploadRes.url) {
+          extractData.fileUrl = uploadRes.url
+          extractData.url = uploadRes.url
+        } else {
+          throw new Error('上传失败，未返回文件URL')
+        }
+
+        uni.showToast({
+          title: '上传成功',
+          icon: 'success',
+          duration: 1000
+        })
+      } catch (error) {
+        console.error('文件上传失败:', error)
+        uni.hideLoading()
+        throw new Error('文件上传失败：' + error.message)
+      }
     }
 
     // 调用AI提取API
@@ -484,28 +510,79 @@ const copyResult = () => {
 /**
  * 保存为食谱
  */
-const saveAsRecipe = () => {
+/**
+ * 保存为食谱 - U-021: 调用保存食谱API
+ */
+const saveAsRecipe = async () => {
   uni.showModal({
     title: '保存为食谱',
     content: '确认将提取结果保存为食谱吗？',
-    success: (res) => {
+    success: async (res) => {
       if (res.confirm) {
-        // TODO: 调用保存食谱API
-        uni.showLoading({
-          title: '保存中...'
-        })
-
-        setTimeout(() => {
-          uni.hideLoading()
-          uni.showToast({
-            title: '保存成功',
-            icon: 'success'
+        try {
+          // U-021: 调用保存食谱API
+          uni.showLoading({
+            title: '保存中...'
           })
 
-          setTimeout(() => {
-            uni.navigateBack()
-          }, 1500)
-        }, 1000)
+          // 导入recipe API
+          const { recipeApi } = await import('@/api')
+
+          // 准备食谱数据
+          const recipeData = {
+            recipeName: extractResult.value.dishName,
+            ingredients: extractResult.value.ingredients.map(ing => ({
+              ingredientName: ing.name,
+              amount: ing.amount
+            })),
+            steps: extractResult.value.steps.map((step, index) => ({
+              stepOrder: index + 1,
+              description: step.description || step,
+              duration: step.duration || 0,
+              temperature: step.temperature || null
+            })),
+            nutritionInfo: extractResult.value.nutrition,
+            tags: ['AI提取', extractResult.value.dishName],
+            description: `通过AI提取的${extractResult.value.dishName}食谱`,
+            servings: 2,
+            difficulty: 'medium'
+          }
+
+          // 调用保存食谱API
+          const saveRes = await recipeApi.createRecipe(recipeData)
+
+          uni.hideLoading()
+
+          if (saveRes && (saveRes.code === 200 || saveRes.recipeId || saveRes.id)) {
+            const recipeId = saveRes.recipeId || saveRes.id || saveRes.data?.recipeId
+
+            uni.showToast({
+              title: '保存成功',
+              icon: 'success',
+              duration: 2000
+            })
+
+            setTimeout(() => {
+              // 跳转到食谱详情页
+              if (recipeId) {
+                uni.redirectTo({
+                  url: `/pages-user/recipe/detail/index?id=${recipeId}`
+                })
+              } else {
+                uni.navigateBack()
+              }
+            }, 1500)
+          } else {
+            throw new Error(saveRes.message || '保存失败')
+          }
+        } catch (error) {
+          console.error('保存食谱失败:', error)
+          uni.hideLoading()
+          uni.showToast({
+            title: error.message || '保存失败',
+            icon: 'none'
+          })
+        }
       }
     }
   })
