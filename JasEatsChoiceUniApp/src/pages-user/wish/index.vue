@@ -148,6 +148,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { wishApi } from '@/api/modules/wish.js'
+import { formatRelativeTime } from '@/utils/helper'
 
 const userId = ref('')
 
@@ -225,7 +226,7 @@ const loadWishList = async (isRefresh = false) => {
         expectedTime: wish.expectedTime || '',
         likeCount: wish.likeCount || 0,
         liked: wish.liked || false,
-        submitTime: formatTime(wish.createdAt),
+        submitTime: formatRelativeTime(wish.createdAt),
         user: {
           id: wish.userId,
           name: wish.userName || '匿名用户',
@@ -368,23 +369,6 @@ const getStatusText = (status) => {
     completed: '已完成'
   }
   return texts[status] || '未知'
-}
-
-/**
- * 格式化时间
- */
-const formatTime = (time) => {
-  if (!time) return ''
-  const date = new Date(time)
-  const now = new Date()
-  const diff = now - date
-
-  if (diff < 60000) return '刚刚'
-  if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`
-  if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`
-  if (diff < 604800000) return `${Math.floor(diff / 86400000)}天前`
-
-  return `${date.getMonth() + 1}-${date.getDate()}`
 }
 
 /**

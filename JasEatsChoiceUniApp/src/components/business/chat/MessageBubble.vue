@@ -12,7 +12,7 @@
   >
     <!-- 时间戳 -->
     <view class="message-time" v-if="message.showTime">
-      {{ formatTime(message.time) }}
+      {{ formatRelativeTime(message.time) }}
     </view>
 
     <!-- 消息内容 -->
@@ -133,6 +133,7 @@
 
 <script setup>
 import { defineProps, defineEmits } from 'vue'
+import { formatRelativeTime } from '@/utils/helper'
 
 const props = defineProps({
   message: {
@@ -161,23 +162,6 @@ const emit = defineEmits([
   'group-order-tap',
   'longpress'
 ])
-
-/**
- * 格式化消息时间
- */
-const formatTime = (time) => {
-  const date = new Date(time)
-  const now = new Date()
-  const diff = now - date
-
-  if (diff < 60000) {
-    return '刚刚'
-  } else if (diff < 3600000) {
-    return `${Math.floor(diff / 60000)}分钟前`
-  } else {
-    return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
-  }
-}
 
 /**
  * 点击头像

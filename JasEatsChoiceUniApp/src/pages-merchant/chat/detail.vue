@@ -137,6 +137,7 @@
 
 <script setup>
 import { ref, onMounted, nextTick } from 'vue'
+import { formatTime } from '@/utils/helper'
 
 const userInfo = ref({
   id: 1,
@@ -325,12 +326,6 @@ const viewOrder = () => {
   uni.navigateTo({
     url: `/pages-merchant/order/list?userId=${userInfo.value.id}`
   })
-}
-
-const formatTime = (date) => {
-  const hour = date.getHours().toString().padStart(2, '0')
-  const minute = date.getMinutes().toString().padStart(2, '0')
-  return `${hour}:${minute}`
 }
 </script>
 

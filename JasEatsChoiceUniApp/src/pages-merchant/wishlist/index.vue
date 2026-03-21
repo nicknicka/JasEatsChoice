@@ -109,6 +109,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { wishApi } from '@/api/modules/wish.js'
+import { formatRelativeTime } from '@/utils/helper'
 
 const merchantId = ref('')
 
@@ -180,7 +181,7 @@ const loadWishlist = async (isRefresh = false) => {
         dishes: wish.dishes || [],
         budget: wish.budget || '',
         expectTime: wish.expectedTime || '',
-        submitTime: formatTime(wish.createdAt),
+        submitTime: formatRelativeTime(wish.createdAt),
         status: wish.status || 'pending',
         statusText: getStatusText(wish.status || 'pending'),
         replyCount: wish.replyCount || 0,
@@ -225,22 +226,6 @@ const loadWishlist = async (isRefresh = false) => {
     loading.value = false
     refreshing.value = false
   }
-}
-
-/**
- * 格式化时间
- */
-const formatTime = (time) => {
-  if (!time) return ''
-  const date = new Date(time)
-  const now = new Date()
-  const diff = now - date
-
-  if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`
-  if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`
-  if (diff < 604800000) return `${Math.floor(diff / 86400000)}天前`
-
-  return `${date.getMonth() + 1}-${date.getDate()}`
 }
 
 /**

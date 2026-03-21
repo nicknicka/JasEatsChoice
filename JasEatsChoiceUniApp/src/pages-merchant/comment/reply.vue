@@ -92,6 +92,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { reviewApi } from '@/api/modules/review.js'
+import { formatRelativeTime } from '@/utils/helper'
 
 const reviewId = ref('')
 const merchantId = ref('')
@@ -191,22 +192,6 @@ const loadReply = async () => {
   } catch (error) {
     console.error('加载回复失败:', error)
   }
-}
-
-/**
- * 格式化时间
- */
-const formatTime = (time) => {
-  if (!time) return ''
-  const date = new Date(time)
-  const now = new Date()
-  const diff = now - date
-
-  if (diff < 86400000) return '今天'
-  if (diff < 172800000) return '昨天'
-  if (diff < 604800000) return `${Math.floor(diff / 86400000)}天前`
-
-  return `${date.getMonth() + 1}-${date.getDate()}`
 }
 
 /**

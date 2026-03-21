@@ -100,6 +100,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useUserStore } from '@/stores/user'
+import { formatDate } from '@/utils/helper'
 import { aiApi } from '@/api'
 
 const userStore = useUserStore()
@@ -385,13 +386,6 @@ const loadMonthData = () => {
   targetAchieved.value = Math.round((1820 / 2000) * 100)
 
   suggestion.value = '本月平均摄入1820kcal，低于目标2000kcal。营养结构较为均衡，建议继续保持当前饮食习惯，注意周末不要暴饮暴食。'
-}
-
-const formatDate = (date) => {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
 }
 
 const formatShortDate = (dateStr) => {

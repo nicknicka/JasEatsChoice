@@ -102,6 +102,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { notificationApi } from '@/api/modules/notification.js'
+import { formatShortDateTime } from '@/utils/helper'
 
 const notificationId = ref('')
 const userId = ref('')
@@ -158,7 +159,7 @@ const loadNotificationDetail = async () => {
         title: data.title || '通知',
         content: data.content || '',
         isRead: data.isRead || false,
-        time: formatTime(data.createdAt),
+        time: formatShortDateTime(data.createdAt),
         extra: extra,
         action: data.action || null,
         relatedList: data.relatedList || []
@@ -343,15 +344,6 @@ const getIconType = (type) => {
     chat: 'chatbubble'
   }
   return iconMap[type] || 'notification'
-}
-
-/**
- * 格式化时间
- */
-const formatTime = (time) => {
-  if (!time) return ''
-  const date = new Date(time)
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
 }
 </script>
 

@@ -177,6 +177,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
+import { formatShortDateTime } from '@/utils/helper'
 import { paymentApi } from '@/api/modules/payment.js'
 import { walletApi } from '@/api/modules/wallet.js'
 import { PaymentMethod } from '@/config/payment.js'
@@ -245,7 +246,7 @@ const loadOrderDetail = async (orderId) => {
         merchantName: data.merchantName || '商家',
         merchantAvatar: data.merchantAvatar || '/static/default-merchant.png',
         merchantDesc: data.merchantDesc || '',
-        orderTime: formatTime(new Date()), // 如果后端有时间字段，使用后端数据
+        orderTime: formatShortDateTime(new Date()), // 如果后端有时间字段，使用后端数据
         totalAmount: formatAmount(data.totalAmount),
         paidAmount: formatAmount(data.paidAmount || 0),
         discount: formatAmount(data.discount || 0),
@@ -892,18 +893,6 @@ const formatAmount = (amount) => {
     amount = parseFloat(amount) || 0
   }
   return amount.toFixed(2)
-}
-
-/**
- * 格式化时间
- */
-const formatTime = (date) => {
-  const d = new Date(date)
-  const month = (d.getMonth() + 1).toString().padStart(2, '0')
-  const day = d.getDate().toString().padStart(2, '0')
-  const hour = d.getHours().toString().padStart(2, '0')
-  const minute = d.getMinutes().toString().padStart(2, '0')
-  return `${month}-${day} ${hour}:${minute}`
 }
 </script>
 

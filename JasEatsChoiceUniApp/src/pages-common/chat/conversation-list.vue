@@ -124,6 +124,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { conversationApi } from '@/api/modules/conversation.js'
+import { formatRelativeTime } from '@/utils/helper'
 
 // 当前用户ID
 const currentUserId = ref('')
@@ -307,29 +308,6 @@ const loadMore = () => {
   if (!loading.value && hasMore.value) {
     page.value++
     loadConversations()
-  }
-}
-
-/**
- * 格式化时间
- */
-const formatTime = (time) => {
-  const now = new Date()
-  const diff = now - new Date(time)
-  const minutes = Math.floor(diff / 60000)
-  const hours = Math.floor(diff / 3600000)
-  const days = Math.floor(diff / 86400000)
-
-  if (minutes < 1) {
-    return '刚刚'
-  } else if (minutes < 60) {
-    return `${minutes}分钟前`
-  } else if (hours < 24) {
-    return `${hours}小时前`
-  } else if (days < 7) {
-    return `${days}天前`
-  } else {
-    return new Date(time).toLocaleDateString()
   }
 }
 

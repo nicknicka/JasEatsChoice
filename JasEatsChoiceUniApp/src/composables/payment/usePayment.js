@@ -7,6 +7,7 @@ import { ref, computed, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { paymentApi } from '@/api/modules/payment.js'
 import { walletApi } from '@/api/modules/wallet.js'
+import { formatDateTime } from '@/utils/helper'
 
 export function usePayment() {
   // 订单信息
@@ -70,7 +71,7 @@ export function usePayment() {
         merchantName: '老王家常菜',
         merchantAvatar: 'https://via.placeholder.com/80/FF6B35/FFFFFF?text=店',
         merchantDesc: '快餐 · 人均¥25',
-        orderTime: formatTime(new Date()),
+        orderTime: formatDateTime(new Date(), 'YYYY-MM-DD HH:mm'),
         totalAmount: '58.00',
         paidAmount: '0.00',
         discount: '0.00',
@@ -202,18 +203,6 @@ export function usePayment() {
     uni.navigateTo({
       url: `/pages/merchant/detail?id=${orderInfo.value.merchantId}`
     })
-  }
-
-  /**
-   * 格式化时间
-   */
-  const formatTime = (date) => {
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-    const hour = String(date.getHours()).padStart(2, '0')
-    const minute = String(date.getMinutes()).padStart(2, '0')
-    return `${year}-${month}-${day} ${hour}:${minute}`
   }
 
   // 生命周期

@@ -133,6 +133,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { merchantApi } from '@/api'
+import { formatTime } from '@/utils/helper'
 import { useMerchantStore } from '@/stores/merchant'
 
 const merchantStore = useMerchantStore()
@@ -353,20 +354,6 @@ const calculateWaitTime = (orderTime) => {
   const hours = Math.floor(diffMinutes / 60)
   const minutes = diffMinutes % 60
   return minutes > 0 ? `等待${hours}小时${minutes}分钟` : `等待${hours}小时`
-}
-
-/**
- * 格式化时间
- */
-const formatTime = (time) => {
-  if (!time) return ''
-  if (typeof time === 'string' && time.includes(':')) {
-    return time.split(':').slice(0, 2).join(':')
-  }
-  const date = new Date(time)
-  const hours = String(date.getHours()).padStart(2, '0')
-  const minutes = String(date.getMinutes()).padStart(2, '0')
-  return `${hours}:${minutes}`
 }
 
 /**

@@ -65,6 +65,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useUserStore } from '@/stores/user'
+import { formatDateTime } from '@/utils/helper'
 import { walletApi } from '@/api'
 
 const userStore = useUserStore()
@@ -151,17 +152,6 @@ const loadIntegralList = async () => {
       { id: 5, title: '兑换商品', time: '2026-03-15 14:30', amount: 1000, type: 'expense' }
     ]
   }
-}
-
-const formatTime = (time) => {
-  if (!time) return ''
-  const date = new Date(time)
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  const hour = String(date.getHours()).padStart(2, '0')
-  const minute = String(date.getMinutes()).padStart(2, '0')
-  return `${year}-${month}-${day} ${hour}:${minute}`
 }
 
 const changeTab = (tab) => {

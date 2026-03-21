@@ -156,6 +156,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { wishApi } from '@/api/modules/wish.js'
+import { formatDate } from '@/utils/helper'
 
 const wishId = ref('')
 const userId = ref('')
@@ -230,7 +231,7 @@ const loadWishDetail = async () => {
         viewCount: data.viewCount || 0,
         liked: data.liked || false,
         followed: data.followed || false,
-        submitTime: formatTime(data.createdAt),
+        submitTime: formatDate(data.createdAt),
         selectedMerchantId: data.selectedMerchantId || '',
         user: {
           id: data.userId,
@@ -444,15 +445,6 @@ const getStatusDesc = (status) => {
     completed: '心愿已完成'
   }
   return descs[status] || ''
-}
-
-/**
- * 格式化时间
- */
-const formatTime = (time) => {
-  if (!time) return ''
-  const date = new Date(time)
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 </script>
 

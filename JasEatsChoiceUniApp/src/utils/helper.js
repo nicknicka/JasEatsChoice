@@ -184,6 +184,67 @@ export const formatDateTime = (date, format = 'YYYY-MM-DD HH:mm:ss') => {
 }
 
 /**
+ * 格式化相对时间（刚刚/分钟前/小时前/天前）
+ * @param {string|Date} time - 时间
+ * @returns {string} 格式化后的相对时间字符串
+ */
+export const formatRelativeTime = (time) => {
+  if (!time) return ''
+  const date = new Date(time)
+  const now = new Date()
+  const diff = now - date
+
+  if (diff < 60000) return '刚刚'
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`
+  if (diff < 604800000) return `${Math.floor(diff / 86400000)}天前`
+
+  return `${date.getMonth() + 1}-${date.getDate()}`
+}
+
+/**
+ * 格式化日期（YYYY-MM-DD）
+ * @param {string|Date} date - 日期
+ * @returns {string} 格式化后的日期字符串
+ */
+export const formatDate = (date) => {
+  if (!date) return ''
+  const d = new Date(date)
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+/**
+ * 格式化时间（HH:mm）
+ * @param {string|Date} time - 时间
+ * @returns {string} 格式化后的时间字符串
+ */
+export const formatTime = (time) => {
+  if (!time) return ''
+  const d = new Date(time)
+  const hour = String(d.getHours()).padStart(2, '0')
+  const minute = String(d.getMinutes()).padStart(2, '0')
+  return `${hour}:${minute}`
+}
+
+/**
+ * 格式化日期时间（MM-DD HH:mm）
+ * @param {string|Date} date - 日期时间
+ * @returns {string} 格式化后的日期时间字符串
+ */
+export const formatShortDateTime = (date) => {
+  if (!date) return ''
+  const d = new Date(date)
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  const hour = String(d.getHours()).padStart(2, '0')
+  const minute = String(d.getMinutes()).padStart(2, '0')
+  return `${month}-${day} ${hour}:${minute}`
+}
+
+/**
  * 节流函数
  * @param {Function} fn - 要节流的函数
  * @param {number} delay - 延迟时间(ms)
@@ -301,6 +362,10 @@ export default {
   requireLogin,
   formatPrice,
   formatDateTime,
+  formatRelativeTime,
+  formatDate,
+  formatTime,
+  formatShortDateTime,
   throttle,
   debounce,
   copyToClipboard,

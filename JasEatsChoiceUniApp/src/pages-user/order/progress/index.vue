@@ -216,6 +216,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
+import { formatRelativeTime } from '@/utils/helper'
 import { useUserStore } from '@/stores/user'
 import Loading from '@/components/common/Loading.vue'
 import Empty from '@/components/common/Empty.vue'
@@ -533,30 +534,6 @@ const mapOrderStatus = (status) => {
     '已取消': 'cancelled'
   }
   return statusMap[status] || status || 'pending'
-}
-
-/**
- * 格式化时间
- */
-const formatTime = (time) => {
-  if (!time) return ''
-
-  const date = new Date(time)
-  const now = new Date()
-  const diff = now.getTime() - date.getTime()
-
-  const minutes = Math.floor(diff / 60000)
-  const hours = Math.floor(diff / 3600000)
-
-  if (minutes < 1) {
-    return '刚刚'
-  } else if (minutes < 60) {
-    return `${minutes}分钟前`
-  } else if (hours < 24) {
-    return `${hours}小时前`
-  } else {
-    return `${date.getMonth() + 1}-${date.getDate()} ${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`
-  }
 }
 
 /**

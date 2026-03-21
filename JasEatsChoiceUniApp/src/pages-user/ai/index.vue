@@ -154,6 +154,7 @@
 <script setup>
 import { ref, computed, nextTick, onMounted } from 'vue'
 import { useUserStore } from '@/stores/user'
+import { formatTime } from '@/utils/helper'
 import { aiApi } from '@/api'
 
 // 用户信息store
@@ -206,15 +207,6 @@ const inputFeatures = ref([
 const displayMessages = computed(() => {
   return messages.value.slice(1)
 })
-
-/**
- * 格式化时间
- */
-function formatTime(date) {
-  const hours = date.getHours().toString().padStart(2, '0')
-  const minutes = date.getMinutes().toString().padStart(2, '0')
-  return `${hours}:${minutes}`
-}
 
 /**
  * 滚动到底部

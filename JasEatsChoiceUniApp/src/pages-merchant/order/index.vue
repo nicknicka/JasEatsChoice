@@ -302,20 +302,6 @@ const formatFullTime = (time) => {
 }
 
 /**
- * 格式化时间
- */
-const formatTime = (time) => {
-  if (!time) return ''
-  if (typeof time === 'string' && time.includes(':')) {
-    return time.split(':').slice(0, 2).join(':')
-  }
-  const date = new Date(time)
-  const hours = String(date.getHours()).padStart(2, '0')
-  const minutes = String(date.getMinutes()).padStart(2, '0')
-  return `${hours}:${minutes}`
-}
-
-/**
  * 格式化金额
  */
 const formatAmount = (amount) => {
