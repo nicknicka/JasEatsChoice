@@ -241,9 +241,9 @@ public class AgentController {
      *
      * @param userId 用户ID
      * @param agent Agent类型
-     * @return 操作结果
+     * @return 操作结果（包含欢迎消息）
      */
-    @ApiOperation(value = "清除对话上下文", notes = "清除指定Agent的对话记忆")
+    @ApiOperation(value = "清除对话上下文", notes = "清除指定Agent的对话记忆并返回欢迎消息")
     @DeleteMapping("/context/{userId}")
     public ResponseResult<?> clearContext(
             @PathVariable String userId,
@@ -269,7 +269,14 @@ public class AgentController {
                     break;
             }
 
-            return ResponseResult.success("对话上下文已清除");
+            // 获取欢迎消息
+            String welcomeMessage = intelligentAdvisorAgent.getWelcomeMessage();
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("message", "对话上下文已清除");
+            result.put("welcomeMessage", welcomeMessage);
+
+            return ResponseResult.success(result);
 
         } catch (Exception e) {
             log.error("清除对话上下文失败", e);

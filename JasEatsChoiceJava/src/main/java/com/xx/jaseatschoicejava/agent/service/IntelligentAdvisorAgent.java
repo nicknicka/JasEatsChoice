@@ -114,9 +114,9 @@ public class IntelligentAdvisorAgent {
     }
 
     /**
-     * 获取欢迎消息
+     * 获取欢迎消息（公开方法，供Controller调用）
      */
-    private String getWelcomeMessage() {
+    public String getWelcomeMessage() {
         return """
                 👋 您好！我是"佳食宜选"的智能助手，很高兴为您服务！
 

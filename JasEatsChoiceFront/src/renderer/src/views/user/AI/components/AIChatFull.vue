@@ -1643,12 +1643,9 @@ const clearChat = () => {
         const userId = getUserId()
         console.log('🗑️ 开始清空聊天记录，userId:', userId)
 
-        // 调用后端API清空聊天记录
+        // 调用Agent清除接口（返回欢迎消息）
         const clearResponse = await axios.delete(
-          API_CONFIG.baseURL + API_CONFIG.ai.clear,
-          {
-            params: { userId }
-          }
+          `${API_CONFIG.baseURL}/v1/agent/context/${userId}`
         )
         console.log('📡 后端清空响应:', clearResponse.data)
 
@@ -1659,10 +1656,13 @@ const clearChat = () => {
           // 清空前端显示
           messages.value = []
 
-          // 重新加载消息（会显示欢迎消息并保存到后端）
-          await loadMessages()
+          // 获取后端返回的欢迎消息
+          const welcomeMessage = clearResponse.data.data?.welcomeMessage || WELCOME_MESSAGE
 
-          console.log('✅ 前端已重新加载消息')
+          // 添加欢迎消息
+          await addMessage('ai', welcomeMessage, false)
+
+          console.log('✅ 已显示Agent欢迎消息')
           ElMessage.success('聊天记录已清空')
 
           // 清空后滚动到顶部
