@@ -3,8 +3,10 @@ package com.xx.jaseatschoicejava.agent.tools;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.xx.jaseatschoicejava.entity.Dish;
 import com.xx.jaseatschoicejava.entity.Order;
+import com.xx.jaseatschoicejava.entity.UserCoupon;
 import com.xx.jaseatschoicejava.service.DishService;
 import com.xx.jaseatschoicejava.service.OrderService;
+import com.xx.jaseatschoicejava.service.UserCouponService;
 import dev.langchain4j.agent.tool.Tool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,8 +14,11 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 订单管理工具集
@@ -32,6 +37,9 @@ public class OrderTools {
 
     @Resource
     private DishService dishService;
+
+    @Resource
+    private UserCouponService userCouponService;
 
     /**
      * 创建订单
@@ -313,5 +321,132 @@ public class OrderTools {
             case 4 -> "已取消";
             default -> "未知";
         };
+    }
+
+    /**
+     * 推荐最优优惠券
+     * 根据订单金额选择最优惠的优惠券
+     *
+     * @param userId 用户ID
+     * @param orderAmount 订单金额
+     * @return 推荐的优惠券信息
+     */
+    @Tool("根据订单金额推荐用户可用的最优优惠券，自动选择省得最多的")
+    public String recommendBestCoupon(String userId, BigDecimal orderAmount) {
+        log.info("执行工具：recommendBestCoupon，用户：{}，金额：{}", userId, orderAmount);
+
+        try {
+            // 1. 获取用户所有可用优惠券
+            List<UserCoupon> availableCoupons = userCouponService.getAvailableCoupons(userId);
+
+            if (availableCoupons == null || availableCoupons.isEmpty()) {
+                return "💳 **优惠券查询**\n\n您暂时没有可用的优惠券。";
+            }
+
+            // 2. 筛选满足最低消费金额的优惠券
+            LocalDateTime now = LocalDateTime.now();
+            List<UserCoupon> validCoupons = availableCoupons.stream()
+                    .filter(coupon -> coupon.getMinAmount() == null ||
+                                    orderAmount.compareTo(coupon.getMinAmount()) >= 0)
+                    .filter(coupon -> coupon.getExpireTime() == null ||
+                                    coupon.getExpireTime().isAfter(now))
+                    .collect(Collectors.toList());
+
+            if (validCoupons.isEmpty()) {
+                StringBuilder result = new StringBuilder();
+                result.append("💳 **优惠券查询**\n\n");
+                result.append(String.format("您的优惠券暂不满足使用条件（订单金额：¥%.2f）。\n\n", orderAmount));
+                result.append("可用优惠券：\n");
+
+                for (UserCoupon coupon : availableCoupons) {
+                    result.append(String.format("- %s：减免¥%s（满¥%s可用）\n",
+                            coupon.getName(),
+                            coupon.getAmount(),
+                            coupon.getMinAmount()));
+                }
+
+                return result.toString();
+            }
+
+            // 3. 选择最优优惠券（优惠金额最大，如果相同则选择即将过期的）
+            UserCoupon bestCoupon = validCoupons.stream()
+                    .max(Comparator.comparing(UserCoupon::getAmount)
+                            .thenComparing(UserCoupon::getExpireTime))
+                    .orElse(null);
+
+            if (bestCoupon == null) {
+                return "优惠券推荐失败，请稍后再试。";
+            }
+
+            // 4. 构建推荐结果
+            BigDecimal finalAmount = orderAmount.subtract(bestCoupon.getAmount());
+            if (finalAmount.compareTo(BigDecimal.ZERO) < 0) {
+                finalAmount = BigDecimal.ZERO;
+            }
+
+            StringBuilder result = new StringBuilder();
+            result.append("🎟️ **最优优惠券推荐**\n\n");
+            result.append(String.format("**优惠券名称：** %s\n", bestCoupon.getName()));
+            result.append(String.format("**优惠金额：** ¥%s\n", bestCoupon.getAmount()));
+            result.append(String.format("**原订单金额：** ¥%.2f\n", orderAmount));
+            result.append(String.format("**优惠后金额：** ¥%.2f\n", finalAmount));
+            result.append(String.format("**节省：** ¥%.2f\n", orderAmount.subtract(finalAmount)));
+
+            if (bestCoupon.getExpireTime() != null) {
+                result.append(String.format("**有效期至：** %s\n", bestCoupon.getExpireTime()));
+            }
+
+            result.append("\n✅ 已为您自动选择最优优惠券！");
+
+            return result.toString();
+
+        } catch (Exception e) {
+            log.error("推荐优惠券失败", e);
+            return "推荐优惠券失败：" + e.getMessage();
+        }
+    }
+
+    /**
+     * 查询可用优惠券列表
+     *
+     * @param userId 用户ID
+     * @return 可用优惠券列表
+     */
+    @Tool("查询用户所有可用的优惠券列表")
+    public String getAvailableCoupons(String userId) {
+        log.info("执行工具：getAvailableCoupons，用户：{}", userId);
+
+        try {
+            List<UserCoupon> availableCoupons = userCouponService.getAvailableCoupons(userId);
+
+            if (availableCoupons == null || availableCoupons.isEmpty()) {
+                return "💳 **我的优惠券**\n\n您暂时没有可用的优惠券。";
+            }
+
+            StringBuilder result = new StringBuilder();
+            result.append(String.format("💳 **我的优惠券**（共%d张）\n\n", availableCoupons.size()));
+
+            for (int i = 0; i < availableCoupons.size(); i++) {
+                UserCoupon coupon = availableCoupons.get(i);
+                result.append(String.format("%d. %s\n", i + 1, coupon.getName()));
+                result.append(String.format("   优惠：¥%s", coupon.getAmount()));
+
+                if (coupon.getMinAmount() != null && coupon.getMinAmount().compareTo(BigDecimal.ZERO) > 0) {
+                    result.append(String.format("（满¥%s可用）", coupon.getMinAmount()));
+                }
+
+                if (coupon.getExpireTime() != null) {
+                    result.append(String.format("\n   有效期至：%s", coupon.getExpireTime()));
+                }
+
+                result.append("\n\n");
+            }
+
+            return result.toString();
+
+        } catch (Exception e) {
+            log.error("查询优惠券失败", e);
+            return "查询优惠券失败：" + e.getMessage();
+        }
     }
 }

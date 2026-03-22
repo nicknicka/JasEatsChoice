@@ -90,6 +90,10 @@ public class SecurityConfig {
             .and()
             // Disable CSRF protection for API endpoints
             .csrf().disable()
+            // 禁用 Session 创建（解决流式响应警告）
+            .sessionManagement()
+                .sessionCreationPolicy(org.springframework.security.config.http.SessionCreationPolicy.STATELESS)
+            .and()
             // Add JWT authentication filter
             .addFilterBefore(jwtAuthenticationFilter, org.springframework.security.web.access.intercept.FilterSecurityInterceptor.class)
             // Configure authorization

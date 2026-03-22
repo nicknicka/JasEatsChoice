@@ -1,9 +1,12 @@
 package com.xx.jaseatschoicejava.agent.config;
 
+import com.xx.jaseatschoicejava.agent.MerchantAssistantAgent;
 import com.xx.jaseatschoicejava.agent.NutritionAiAgent;
 import com.xx.jaseatschoicejava.agent.OrderAiAgent;
 import com.xx.jaseatschoicejava.agent.RecommendationAiAgent;
 import com.xx.jaseatschoicejava.agent.tools.CollectionTools;
+import com.xx.jaseatschoicejava.agent.tools.LocationTools;
+import com.xx.jaseatschoicejava.agent.tools.MerchantTools;
 import com.xx.jaseatschoicejava.agent.tools.NutritionRecordTools;
 import com.xx.jaseatschoicejava.agent.tools.NutritionTools;
 import com.xx.jaseatschoicejava.agent.tools.OrderTools;
@@ -60,6 +63,12 @@ public class LangChain4jConfig {
 
     @Resource
     private UserTools userTools;
+
+    @Resource
+    private LocationTools locationTools;
+
+    @Resource
+    private MerchantTools merchantTools;
 
     /**
      * 配置ChatLanguageModel（智谱AI）
@@ -121,7 +130,8 @@ public class LangChain4jConfig {
                     recommendationTools,
                     recipeTools,
                     collectionTools,
-                    nutritionTools
+                    nutritionTools,
+                    locationTools
                 )
                 .build();
     }
@@ -141,6 +151,22 @@ public class LangChain4jConfig {
                     recommendationTools,
                     collectionTools,
                     userTools
+                )
+                .build();
+    }
+
+    /**
+     * 构建商家经营助手AI Agent
+     */
+    @Bean
+    public MerchantAssistantAgent merchantAssistantAgent(ChatLanguageModel chatLanguageModel, ChatMemory chatMemory) {
+        log.info("构建MerchantAssistantAgent...");
+
+        return AiServices.builder(MerchantAssistantAgent.class)
+                .chatLanguageModel(chatLanguageModel)
+                .chatMemory(chatMemory)
+                .tools(
+                    merchantTools
                 )
                 .build();
     }

@@ -8,6 +8,7 @@ import com.xx.jaseatschoicejava.service.RecommendationService;
 import dev.langchain4j.agent.tool.Tool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -28,6 +29,7 @@ public class RecommendationTools {
     private static final Logger log = LoggerFactory.getLogger(RecommendationTools.class);
 
     @Resource
+    @Lazy  // 使用@Lazy打破循环依赖
     private RecommendationService recommendationService;
 
     @Resource

@@ -1,34 +1,21 @@
 package com.xx.jaseatschoicejava.service;
 
-import java.util.List;
 import java.util.Map;
 
 /**
  * 智谱AI服务接口
+ *
+ * 注意：部分功能已迁移到 Agent 系统
+ * - chat() → NutritionAiAgent
+ * - analyzeNutrition() → NutritionAiAgent
+ * - recommendRecipe() → RecommendationAiAgent
+ *
+ * 本接口保留视觉识别和特殊功能
+ *
+ * @author Claude
+ * @since 2026-03-22
  */
 public interface ZhipuAIService {
-
-    /**
-     * AI聊天对话
-     * @param message 用户消息
-     * @param conversationHistory 对话历史（可选，用于上下文理解）
-     * @return AI回复内容
-     */
-    String chat(String message, List<Map<String, String>> conversationHistory);
-
-    /**
-     * AI食谱推荐
-     * @param foodName 食物名称或需求描述
-     * @return 推荐的食谱列表
-     */
-    List<Map<String, Object>> recommendRecipe(String foodName);
-
-    /**
-     * AI营养分析
-     * @param foodName 食物名称
-     * @return 营养成分信息
-     */
-    Map<String, Object> analyzeNutrition(String foodName);
 
     /**
      * AI菜品识别

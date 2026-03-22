@@ -1,5 +1,7 @@
 package com.xx.jaseatschoicejava.controller;
 
+import com.xx.jaseatschoicejava.agent.NutritionAiAgent;
+import com.xx.jaseatschoicejava.agent.RecommendationAiAgent;
 import com.xx.jaseatschoicejava.common.ResponseResult;
 import com.xx.jaseatschoicejava.config.FileUploadConfig;
 import com.xx.jaseatschoicejava.service.ZhipuAIService;
@@ -9,12 +11,18 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
  * AI能力控制器
+ *
+ * 注意：部分功能已迁移到 Agent 系统
+ * - 营养分析 → NutritionAgent
+ * - 智能推荐 → RecommendationAgent
+ * - 对话聊天 → NutritionAgent
+ *
+ * @author Claude
+ * @since 2026-03-22
  */
 @RestController
 @RequestMapping("/v1/ai")
@@ -24,6 +32,12 @@ public class AIController {
 
     @Resource
     private ZhipuAIService zhipuAIService;
+
+    @Resource
+    private NutritionAiAgent nutritionAiAgent;
+
+    @Resource
+    private RecommendationAiAgent recommendationAiAgent;
 
     @Resource
     private FileUploadConfig fileUploadConfig;
@@ -134,7 +148,9 @@ public class AIController {
     }
 
     /**
-     * AI聊天接口（对接智谱AI）
+     * AI聊天接口（使用 NutritionAgent）
+     *
+     * 已迁移到 Agent 系统，具备自动 Tool 调用能力
      */
     @PostMapping("/chat")
     public ResponseResult<?> chat(@RequestBody Map<String, Object> params) {
@@ -146,19 +162,14 @@ public class AIController {
         log.info("消息长度: {} 字符", message != null ? message.length() : 0);
 
         try {
-            // 获取对话历史（可选）
-            List<Map<String, String>> history = (List<Map<String, String>>) params.get("history");
-            int historyCount = history != null ? history.size() : 0;
-            log.info("对话历史轮数: {}", historyCount);
-
-            // 调用智谱AI服务
-            log.info("开始调用智谱AI服务...");
-            String response = zhipuAIService.chat(message, history);
+            // 调用 NutritionAgent（具备 Tool 调用能力）
+            log.info("开始调用 NutritionAgent...");
+            String response = nutritionAiAgent.chat(message);
 
             long endTime = System.currentTimeMillis();
             long duration = endTime - startTime;
 
-            log.info("智谱AI响应成功");
+            log.info("Agent响应成功");
             log.info("响应长度: {} 字符", response.length());
             log.info("请求耗时: {} ms", duration);
             log.info("=== AI聊天请求完成 ===");
@@ -176,14 +187,23 @@ public class AIController {
     }
 
     /**
-     * AI营养分析接口（对接智谱AI）
+     * AI营养分析接口（使用 NutritionAgent）
+     *
+     * 已迁移到 Agent 系统，LLM 自动调用营养分析工具
      */
     @PostMapping("/nutrient")
     public ResponseResult<?> nutrient(@RequestBody Map<String, Object> params) {
         try {
             String foodName = (String) params.get("foodName");
 
-            Map<String, Object> result = zhipuAIService.analyzeNutrition(foodName);
+            // 调用 NutritionAgent，让 LLM 自动调用营养分析工具
+            String prompt = String.format("请分析【%s】的营养成分", foodName);
+            String response = nutritionAiAgent.chat(prompt);
+
+            Map<String, Object> result = Map.of(
+                "foodName", foodName,
+                "analysis", response
+            );
             return ResponseResult.success(result);
 
         } catch (Exception e) {
@@ -193,15 +213,24 @@ public class AIController {
     }
 
     /**
-     * AI食谱推荐接口（对接智谱AI）
+     * AI食谱推荐接口（使用 RecommendationAgent）
+     *
+     * 已迁移到 Agent 系统，LLM 自动调用食谱推荐工具
      */
     @PostMapping("/recipe")
     public ResponseResult<?> recipe(@RequestBody Map<String, Object> params) {
         try {
             String foodName = (String) params.get("foodName");
 
-            List<Map<String, Object>> recipes = zhipuAIService.recommendRecipe(foodName);
-            return ResponseResult.success(recipes);
+            // 调用 RecommendationAgent，让 LLM 自动调用食谱推荐工具
+            String prompt = String.format("请推荐【%s】的食谱做法", foodName);
+            String response = recommendationAiAgent.chat(prompt);
+
+            Map<String, Object> result = Map.of(
+                "foodName", foodName,
+                "recommendation", response
+            );
+            return ResponseResult.success(result);
 
         } catch (Exception e) {
             log.error("食谱推荐失败", e);
