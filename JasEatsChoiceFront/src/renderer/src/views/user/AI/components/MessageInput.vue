@@ -132,11 +132,17 @@
         <el-button
           :type="isStreaming ? 'danger' : 'primary'"
           class="send-btn"
+          :class="{ 'is-loading': isLoading && !isStreaming }"
           @click="handleSendClick"
           :disabled="isLoading && !isStreaming"
-          :icon="isStreaming ? Close : ChatRound"
+          :icon="getSendButtonIcon"
         >
-          {{ isStreaming ? '停止' : '发送' }}
+          <template v-if="isLoading && !isStreaming">
+            <span class="loading-text">思考中</span>
+          </template>
+          <template v-else>
+            {{ isStreaming ? '停止' : '发送' }}
+          </template>
         </el-button>
       </div>
     </div>
@@ -144,16 +150,17 @@
 </template>
 
 <script setup>
-import { ref, nextTick } from 'vue'
+import { ref, nextTick, computed } from 'vue'
 import {
   ChatDotRound,
   Picture,
   Delete,
   ChatRound,
-  Close
+  Close,
+  Loading
 } from '@element-plus/icons-vue'
 
-defineProps({
+const props = defineProps({
   modelValue: {
     type: String,
     default: ''
@@ -198,6 +205,7 @@ const emit = defineEmits([
   'remove-image',
   'send',
   'stop-streaming',
+  'stop-streaming',
   'toggle-personal-data',
   'upload-image'
 ])
@@ -235,6 +243,14 @@ const handleSendClick = () => {
     emit('stop-streaming')
   }
 }
+
+// 获取发送按钮图标
+const getSendButtonIcon = computed(() => {
+  if (props.isLoading && !props.isStreaming) {
+    return Loading
+  }
+  return props.isStreaming ? Close : ChatRound
+})
 
 defineExpose({
   inputContainerRef
@@ -358,6 +374,8 @@ defineExpose({
       box-shadow: 0 2px 8px rgba(255, 107, 107, 0.25);
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       height: 60px;
+      position: relative;
+      overflow: hidden;
 
       &:hover:not(:disabled) {
         transform: translateY(-2px);
@@ -373,7 +391,43 @@ defineExpose({
         box-shadow: none;
         color: #adb5bd;
       }
+
+      &.is-loading {
+        animation: pulse 1.5s ease-in-out infinite;
+
+        :deep(.el-icon) {
+          animation: rotate 1s linear infinite;
+        }
+
+        .loading-text {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+        }
+      }
+
+      :deep(.el-icon) {
+        font-size: 18px;
+      }
     }
+  }
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 2px 8px rgba(255, 107, 107, 0.25);
+  }
+  50% {
+    box-shadow: 0 4px 16px rgba(255, 107, 107, 0.5);
   }
 }
 

@@ -3,8 +3,8 @@
     <!-- 聊天消息区域 -->
     <div class="chat-messages" ref="chatContainerRef">
       <ChatMessage
-        v-for="message in messages"
-        :key="message.id"
+        v-for="message in visibleMessages"
+        :key="message.id || message.key"
         v-bind="message"
       />
     </div>
@@ -45,7 +45,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import ChatMessage from './ChatMessage.vue'
 import QuickQuestions from './QuickQuestions.vue'
@@ -66,6 +66,63 @@ const {
   clearChat,
   stopStreaming
 } = useAIChat()
+
+// 计算是否显示loading指示器
+const showLoadingIndicator = computed(() => {
+  // 简化逻辑：只要在加载中就显示
+  const result = isLoading.value
+  logger.log('📊 showLoadingIndicator计算:', {
+    isLoading: isLoading.value,
+    result: result
+  })
+  return result
+})
+
+// 监控loading状态变化（用于调试）
+watch([isLoading, messages], () => {
+  if (isLoading.value) {
+    const lastMessage = messages.value[messages.value.length - 1]
+    logger.log('🔄 Loading状态:', {
+      isLoading: isLoading.value,
+      messageCount: messages.value.length,
+      lastSender: lastMessage?.sender,
+      lastContentLength: lastMessage?.content?.length || 0,
+      lastContent: lastMessage?.content,
+      showLoading: showLoadingIndicator.value
+    })
+  }
+}, { deep: true })
+
+// 计算可见的消息列表
+const visibleMessages = computed(() => {
+  const result = []
+
+  // 添加普通消息
+  for (const message of messages.value) {
+    // 如果是AI消息且内容为空且正在加载，跳过（会显示loading）
+    if (message.sender === 'ai' && (!message.content || message.content.trim() === '') && isLoading.value) {
+      logger.log('⏭️ 跳过空AI消息，显示loading')
+      continue
+    }
+    result.push(message)
+  }
+
+  // 如果正在加载，添加loading消息
+  if (isLoading.value) {
+    logger.log('➕ 添加loading消息到列表')
+    result.push({
+      key: 'loading-indicator',
+      sender: 'ai',
+      content: '',
+      time: '',
+      avatar: '🤖',
+      isLoading: true
+    })
+  }
+
+  logger.log('📋 可见消息列表:', result.length, '条')
+  return result
+})
 
 // 用户偏好
 const { aiPersonalDataEnabled, loadUserPreference, handlePersonalDataToggle } = useUserPreference()

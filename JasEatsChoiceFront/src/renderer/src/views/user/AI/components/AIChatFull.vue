@@ -39,6 +39,19 @@
           <!-- AI头像：使用emoji -->
           <div v-else class="message-avatar">{{ message.avatar }}</div>
           <div class="message-content">
+            <!-- AI思考中的loading状态（在AI消息框内显示） -->
+            <div
+              v-if="message.sender === 'ai' && shouldShowInlineLoading(message)"
+              class="ai-thinking-indicator"
+            >
+              <div class="typing-animation">
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+              </div>
+              <div class="thinking-text">AI正在思考中...</div>
+            </div>
+
             <!-- 工具执行状态提示 -->
             <div v-if="message.isToolExecuting" class="tool-executing-status">
               <el-icon class="is-loading"><Loading /></el-icon>
@@ -311,7 +324,7 @@
 </template>
 
 <script setup>
-import { ref, nextTick, onMounted, onUnmounted, watch, h } from 'vue'
+import { ref, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   ChatDotRound,
@@ -363,6 +376,20 @@ const bottomContainerRef = ref(null)
 const showQuickQuestions = ref(false)
 const showEmojiPicker = ref(false)
 const uploadedImages = ref([])
+
+// 判断是否在AI消息中显示内联loading
+const shouldShowInlineLoading = (message) => {
+  // 只对AI消息
+  if (message.sender !== 'ai') return false
+
+  // 如果消息有内容，不显示loading
+  if (message.content && message.content.trim().length > 0) {
+    return false
+  }
+
+  // 如果正在加载且消息为空，显示loading
+  return isLoading.value && (!message.content || message.content.trim().length === 0)
+}
 
 // 展开的分类索引（只能有一个分类展开）
 const expandedCategory = ref(null) // 默认不展开任何分类
@@ -563,7 +590,7 @@ const loadMessages = async () => {
         if (isMounted.value && chatContainerRef.value) {
           scrollToBottom(true)
         }
-      }, 500) // 延时 500ms
+      }, 200) // 延时 200ms
     } else {
       // 没有历史记录，调用后端获取欢迎消息
       console.log('📭 没有历史记录，从后端获取欢迎消息')
@@ -652,7 +679,7 @@ const loadMessages = async () => {
     // 延时滚动，确保 DOM 完全渲染
     setTimeout(() => {
       scrollToBottom(true)
-    }, 300)
+    }, 100)
   }
 }
 
@@ -2164,6 +2191,46 @@ onUnmounted(() => {
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
           border: 1px solid #ffe0e3;
         }
+
+        // AI思考指示器样式
+        .ai-thinking-indicator {
+          padding: 16px 20px;
+          background: linear-gradient(135deg, #fff9fa 0%, #fff3f4 100%);
+          border-radius: 20px 20px 20px 4px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+          border: 1px solid #ffe0e3;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+
+          .typing-animation {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+
+            .dot {
+              width: 10px;
+              height: 10px;
+              background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%);
+              border-radius: 50%;
+              animation: typingBounce 1.4s infinite ease-in-out both;
+
+              &:nth-child(1) {
+                animation-delay: -0.32s;
+              }
+
+              &:nth-child(2) {
+                animation-delay: -0.16s;
+              }
+            }
+          }
+
+          .thinking-text {
+            font-size: 0.929rem;
+            color: #909399;
+            font-weight: 500;
+          }
+        }
       }
     }
 
@@ -2519,7 +2586,7 @@ onUnmounted(() => {
 
 // 淡入动画
 .fade-in-enter-active {
-  animation: fadeIn 0.5s ease-out;
+  animation: fadeIn 0.3s ease-out;
 }
 
 .fade-in-leave-active {
@@ -3117,6 +3184,33 @@ onUnmounted(() => {
     50% {
       opacity: 0.7;
     }
+  }
+
+  // AI思考时的跳动动画
+  @keyframes typingBounce {
+    0%, 80%, 100% {
+      transform: scale(0.6);
+      opacity: 0.5;
+    }
+    40% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  // fade-in过渡动画
+  .fade-in-enter-active {
+    transition: all 0.3s ease-out;
+  }
+
+  .fade-in-enter-from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  .fade-in-enter-to {
+    opacity: 1;
+    transform: translateY(0);
   }
 
   .send-btn {
