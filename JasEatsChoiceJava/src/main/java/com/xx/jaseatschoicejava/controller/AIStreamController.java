@@ -1,6 +1,6 @@
 package com.xx.jaseatschoicejava.controller;
 
-import com.xx.jaseatschoicejava.agent.service.NutritionAgent;
+import com.xx.jaseatschoicejava.agent.service.IntelligentAdvisorAgent;
 import com.xx.jaseatschoicejava.common.ResponseResult;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -28,7 +28,7 @@ public class AIStreamController {
     private static final Logger log = LoggerFactory.getLogger(AIStreamController.class);
 
     @Resource
-    private NutritionAgent nutritionAgent;
+    private IntelligentAdvisorAgent intelligentAdvisorAgent;
 
     /**
      * SSE流式聊天接口（简化版）
@@ -56,7 +56,10 @@ public class AIStreamController {
                 return emitter;
             }
 
-            log.info("用户 {} 发起流式聊天：{}", userId, message);
+            log.info("📥 收到流式聊天请求");
+            log.info("   - 用户ID: {}", userId);
+            log.info("   - 消息内容: {}", message);
+            log.info("   - 参数详情: {}", params);
 
             // 3. 在新线程中处理（避免阻塞）
             new Thread(() -> {
@@ -66,8 +69,8 @@ public class AIStreamController {
                         .name("start")
                         .data(Map.of("message", "开始处理...")));
 
-                    // 调用Agent获取完整回复
-                    String response = nutritionAgent.chat(message, userId);
+                    // 调用智能顾问Agent（总协调器，会自动路由到合适的专家Agent）
+                    String response = intelligentAdvisorAgent.chat(message, userId);
 
                     log.info("开始发送SSE流式响应，总长度: {} 字符", response.length());
 

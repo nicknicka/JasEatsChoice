@@ -3,6 +3,7 @@ package com.xx.jaseatschoicejava.agent.tools;
 import com.xx.jaseatschoicejava.dto.NutritionInfo;
 import com.xx.jaseatschoicejava.service.NutritionAnalysisService;
 import dev.langchain4j.agent.tool.Tool;
+import dev.langchain4j.agent.tool.P;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -31,7 +32,7 @@ public class NutritionTools {
      * @return 营养信息，包括卡路里、蛋白质、脂肪等
      */
     @Tool("分析食物的营养成分，包括卡路里、蛋白质、脂肪、碳水化合物等")
-    public NutritionInfo analyzeNutrition(String foodName) {
+    public NutritionInfo analyzeNutrition(@P("食物名称") String foodName) {
         log.info("执行工具：analyzeNutrition，参数：{}", foodName);
 
         try {
@@ -56,7 +57,7 @@ public class NutritionTools {
      * @return 营养信息列表
      */
     @Tool("批量分析多个食物的营养成分")
-    public String analyzeMultipleFoods(java.util.List<String> foodNames) {
+    public String analyzeMultipleFoods(@P("食物名称列表") java.util.List<String> foodNames) {
         log.info("执行工具：analyzeMultipleFoods，参数：{}", foodNames);
 
         try {
@@ -94,11 +95,11 @@ public class NutritionTools {
      */
     @Tool("计算每日建议卡路里摄入量")
     public String calculateDailyCalories(
-            Double weight,
-            Double height,
-            Integer age,
-            String gender,
-            String activityLevel
+            @P("体重（公斤）") Double weight,
+            @P("身高（厘米）") Double height,
+            @P("年龄") Integer age,
+            @P("性别") String gender,
+            @P("活动水平") String activityLevel
     ) {
         log.info("执行工具：calculateDailyCalories，参数：weight={}, height={}, age={}, gender={}, activityLevel={}",
                 weight, height, age, gender, activityLevel);

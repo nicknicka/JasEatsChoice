@@ -6,6 +6,7 @@ import com.xx.jaseatschoicejava.entity.UserCollection;
 import com.xx.jaseatschoicejava.service.CollectionService;
 import com.xx.jaseatschoicejava.service.DishService;
 import dev.langchain4j.agent.tool.Tool;
+import dev.langchain4j.agent.tool.P;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -39,7 +40,7 @@ public class CollectionTools {
      * @return 操作结果
      */
     @Tool("添加菜品到收藏夹，支持收藏喜欢的菜品")
-    public String addFavorite(String userId, String dishId) {
+    public String addFavorite(@P("用户ID") String userId, @P("菜品ID") String dishId) {
         log.info("执行工具：addFavorite，用户：{}，菜品：{}", userId, dishId);
 
         try {
@@ -82,7 +83,7 @@ public class CollectionTools {
      * @return 收藏列表
      */
     @Tool("获取用户的收藏列表，包括菜名、价格、热量、评分等")
-    public String getFavorites(String userId) {
+    public String getFavorites(@P("用户ID") String userId) {
         log.info("执行工具：getFavorites，用户：{}", userId);
 
         try {
@@ -139,7 +140,7 @@ public class CollectionTools {
      * @return 操作结果
      */
     @Tool("从收藏夹移除菜品，支持按菜品ID或菜品名称删除")
-    public String removeFavorite(String userId, String dishId) {
+    public String removeFavorite(@P("用户ID") String userId, @P("菜品ID或名称") String dishId) {
         log.info("执行工具：removeFavorite，用户：{}，菜品：{}", userId, dishId);
 
         try {
@@ -193,7 +194,7 @@ public class CollectionTools {
      * @return 是否已收藏
      */
     @Tool("检查菜品是否已在收藏夹中")
-    public String isFavorited(String userId, String dishId) {
+    public String isFavorited(@P("用户ID") String userId, @P("菜品ID") String dishId) {
         log.info("执行工具：isFavorited，用户：{}，菜品：{}", userId, dishId);
 
         try {

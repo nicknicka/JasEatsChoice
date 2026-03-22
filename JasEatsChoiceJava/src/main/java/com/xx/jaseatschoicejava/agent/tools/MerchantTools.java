@@ -6,6 +6,7 @@ import com.xx.jaseatschoicejava.entity.Order;
 import com.xx.jaseatschoicejava.service.DishService;
 import com.xx.jaseatschoicejava.service.OrderService;
 import dev.langchain4j.agent.tool.Tool;
+import dev.langchain4j.agent.tool.P;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -43,7 +44,7 @@ public class MerchantTools {
      * @return 销售分析报告
      */
     @Tool("分析商家销售数据，包括营业额、订单数、客单价等")
-    public String analyzeSalesData(String merchantId, Integer days) {
+    public String analyzeSalesData(@P("商家ID") String merchantId, @P("统计天数（默认7天）") Integer days) {
         log.info("执行工具：analyzeSalesData，商家：{}，天数：{}", merchantId, days);
 
         if (days == null || days <= 0) {
@@ -122,7 +123,7 @@ public class MerchantTools {
      * @return 菜品分析报告
      */
     @Tool("分析菜品销量、评分、利润等表现，识别爆款和滞销菜品")
-    public String analyzeDishPerformance(String merchantId) {
+    public String analyzeDishPerformance(@P("商家ID") String merchantId) {
         log.info("执行工具：analyzeDishPerformance，商家：{}", merchantId);
 
         try {
@@ -242,7 +243,7 @@ public class MerchantTools {
      * @return 评价分析报告
      */
     @Tool("分析顾客评价，提取关键词和问题，提供改进建议")
-    public String analyzeCustomerReviews(String merchantId) {
+    public String analyzeCustomerReviews(@P("商家ID") String merchantId) {
         log.info("执行工具：analyzeCustomerReviews，商家：{}", merchantId);
 
         try {
@@ -297,7 +298,7 @@ public class MerchantTools {
      * @return 定价建议
      */
     @Tool("为菜品提供定价建议，基于成本和竞品分析")
-    public String suggestPricing(String merchantId, String dishId) {
+    public String suggestPricing(@P("商家ID") String merchantId, @P("菜品ID") String dishId) {
         log.info("执行工具：suggestPricing，商家：{}，菜品：{}", merchantId, dishId);
 
         try {
@@ -391,7 +392,7 @@ public class MerchantTools {
      * @return 营销策略建议
      */
     @Tool("为商家提供营销策略建议，包括促销活动、优惠券等")
-    public String suggestMarketingStrategy(String merchantId) {
+    public String suggestMarketingStrategy(@P("商家ID") String merchantId) {
         log.info("执行工具：suggestMarketingStrategy，商家：{}", merchantId);
 
         try {

@@ -5,6 +5,7 @@ import com.xx.jaseatschoicejava.entity.Recipe;
 import com.xx.jaseatschoicejava.service.DishService;
 import com.xx.jaseatschoicejava.service.RecipeService;
 import dev.langchain4j.agent.tool.Tool;
+import dev.langchain4j.agent.tool.P;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -38,7 +39,7 @@ public class RecipeTools {
      * @return 今日食谱
      */
     @Tool("获取用户今日的食谱推荐和营养信息")
-    public String getTodayRecipes(String userId) {
+    public String getTodayRecipes(@P("用户ID") String userId) {
         log.info("执行工具：getTodayRecipes，用户：{}", userId);
 
         try {
@@ -119,7 +120,7 @@ public class RecipeTools {
      * @return 收藏的食谱列表
      */
     @Tool("获取用户收藏的食谱列表")
-    public String getFavoriteRecipes(String userId) {
+    public String getFavoriteRecipes(@P("用户ID") String userId) {
         log.info("执行工具：getFavoriteRecipes，用户：{}", userId);
 
         try {
@@ -168,7 +169,7 @@ public class RecipeTools {
      * @return 所有食谱列表
      */
     @Tool("获取用户创建的所有食谱")
-    public String getAllRecipes(String userId) {
+    public String getAllRecipes(@P("用户ID") String userId) {
         log.info("执行工具：getAllRecipes，用户：{}", userId);
 
         try {
@@ -272,7 +273,7 @@ public class RecipeTools {
      * @return 搜索结果
      */
     @Tool("搜索菜品，支持按菜名或关键词搜索")
-    public String searchDishes(String keyword) {
+    public String searchDishes(@P("搜索关键词") String keyword) {
         log.info("执行工具：searchDishes，关键词：{}", keyword);
 
         try {
@@ -326,7 +327,7 @@ public class RecipeTools {
      * @return 创建结果
      */
     @Tool("创建新的食谱，需要提供食谱名称和类型（早餐/午餐/晚餐/加餐）")
-    public String createRecipe(String userId, String name, String type) {
+    public String createRecipe(@P("用户ID") String userId, @P("食谱名称") String name, @P("食谱类型") String type) {
         log.info("执行工具：createRecipe，用户：{}，名称：{}，类型：{}", userId, name, type);
 
         try {
@@ -363,7 +364,7 @@ public class RecipeTools {
      * @return 操作结果
      */
     @Tool("切换食谱的收藏状态（收藏/取消收藏）")
-    public String toggleRecipeFavorite(String recipeId) {
+    public String toggleRecipeFavorite(@P("食谱ID") String recipeId) {
         log.info("执行工具：toggleRecipeFavorite，食谱：{}", recipeId);
 
         try {

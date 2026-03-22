@@ -186,14 +186,14 @@
         <dependency>
             <groupId>dev.langchain4j</groupId>
             <artifactId>langchain4j</artifactId>
-            <version>0.29.1</version>
+            <version>0.36.2</version>
         </dependency>
 
         <!-- LangChain4j智谱AI集成 -->
         <dependency>
             <groupId>dev.langchain4j</groupId>
             <artifactId>langchain4j-zhipu-ai</artifactId>
-            <version>0.29.1</version>
+            <version>0.36.2</version>
         </dependency>
 
         <!-- 邮件服务依赖 -->

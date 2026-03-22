@@ -6,6 +6,7 @@ import com.xx.jaseatschoicejava.entity.Dish;
 import com.xx.jaseatschoicejava.service.CalorieRecordService;
 import com.xx.jaseatschoicejava.service.DishService;
 import dev.langchain4j.agent.tool.Tool;
+import dev.langchain4j.agent.tool.P;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -45,7 +46,7 @@ public class NutritionRecordTools {
      * @return 记录结果
      */
     @Tool("记录用户的用餐信息和营养摄入，支持早餐、午餐、晚餐、加餐等类型")
-    public String recordMeal(String userId, String dishIds, String mealType) {
+    public String recordMeal(@P("用户ID") String userId, @P("菜品ID列表（逗号分隔）") String dishIds, @P("用餐类型（早餐/午餐/晚餐/加餐）") String mealType) {
         log.info("执行工具：recordMeal，用户：{}，菜品：{}，类型：{}", userId, dishIds, mealType);
 
         try {
@@ -119,7 +120,7 @@ public class NutritionRecordTools {
      * @return 今日营养摄入
      */
     @Tool("获取用户今日的营养摄入统计，包括热量、蛋白质、脂肪、碳水化合物等")
-    public String getDailyNutrition(String userId) {
+    public String getDailyNutrition(@P("用户ID") String userId) {
         log.info("执行工具：getDailyNutrition，用户：{}", userId);
 
         try {
@@ -192,7 +193,7 @@ public class NutritionRecordTools {
      * @return 目标进度
      */
     @Tool("获取用户营养目标的完成进度，对比实际摄入与目标值")
-    public String getNutritionGoalProgress(String userId) {
+    public String getNutritionGoalProgress(@P("用户ID") String userId) {
         log.info("执行工具：getNutritionGoalProgress，用户：{}", userId);
 
         try {
@@ -283,7 +284,7 @@ public class NutritionRecordTools {
      * @return 历史记录
      */
     @Tool("获取用户最近7天的营养摄入历史，包括每日总热量和趋势")
-    public String getNutritionHistory(String userId) {
+    public String getNutritionHistory(@P("用户ID") String userId) {
         log.info("执行工具：getNutritionHistory，用户：{}", userId);
 
         try {

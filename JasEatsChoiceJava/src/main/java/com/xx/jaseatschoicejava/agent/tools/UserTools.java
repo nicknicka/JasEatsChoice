@@ -8,6 +8,7 @@ import com.xx.jaseatschoicejava.service.AddressService;
 import com.xx.jaseatschoicejava.service.UserPreferenceService;
 import com.xx.jaseatschoicejava.service.UserService;
 import dev.langchain4j.agent.tool.Tool;
+import dev.langchain4j.agent.tool.P;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -32,7 +33,7 @@ public class UserTools {
     private AddressService addressService;
 
     @Tool("Get user basic information including nickname phone registration time etc")
-    public String getUserProfile(String userId) {
+    public String getUserProfile(@P("User ID") String userId) {
         log.info("Executing tool: getUserProfile, user: {}", userId);
 
         try {
@@ -68,7 +69,7 @@ public class UserTools {
     }
 
     @Tool("Get user dietary preferences including diet goals allergies preference tags etc")
-    public String getUserPreferences(String userId) {
+    public String getUserPreferences(@P("User ID") String userId) {
         log.info("Executing tool: getUserPreferences, user: {}", userId);
 
         try {
@@ -108,7 +109,7 @@ public class UserTools {
     }
 
     @Tool("获取用户的配送地址列表，包括收货人姓名、电话、详细地址等")
-    public String getUserAddresses(String userId) {
+    public String getUserAddresses(@P("用户ID") String userId) {
         log.info("执行工具：getUserAddresses，用户：{}", userId);
 
         try {
@@ -176,7 +177,7 @@ public class UserTools {
      * @return 推荐的地址信息
      */
     @Tool("智能推荐用户最常用的配送地址，优先使用默认地址或最近使用的地址")
-    public String getRecommendedAddress(String userId) {
+    public String getRecommendedAddress(@P("用户ID") String userId) {
         log.info("执行工具：getRecommendedAddress，用户：{}", userId);
 
         try {

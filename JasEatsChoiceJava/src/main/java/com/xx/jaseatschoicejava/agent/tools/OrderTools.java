@@ -8,6 +8,7 @@ import com.xx.jaseatschoicejava.service.DishService;
 import com.xx.jaseatschoicejava.service.OrderService;
 import com.xx.jaseatschoicejava.service.UserCouponService;
 import dev.langchain4j.agent.tool.Tool;
+import dev.langchain4j.agent.tool.P;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -50,7 +51,7 @@ public class OrderTools {
      * @return 订单信息
      */
     @Tool("创建订单，支持多菜品下单")
-    public String createOrder(String userId, String dishIds, String addressId) {
+    public String createOrder(@P("用户ID") String userId, @P("菜品ID列表（逗号分隔）") String dishIds, @P("地址ID") String addressId) {
         log.info("执行工具：createOrder，用户：{}，菜品：{}", userId, dishIds);
 
         try {
@@ -109,7 +110,7 @@ public class OrderTools {
      * @return 订单详情
      */
     @Tool("查询订单详情，包括状态、配送信息等")
-    public String getOrderDetail(String orderId) {
+    public String getOrderDetail(@P("订单ID") String orderId) {
         log.info("执行工具：getOrderDetail，订单：{}", orderId);
 
         try {
@@ -151,7 +152,7 @@ public class OrderTools {
      * @return 订单列表
      */
     @Tool("获取用户的历史订单列表")
-    public String getUserOrders(String userId) {
+    public String getUserOrders(@P("用户ID") String userId) {
         log.info("执行工具：getUserOrders，用户：{}", userId);
 
         try {
@@ -201,7 +202,7 @@ public class OrderTools {
      * @return 操作结果
      */
     @Tool("取消未开始的订单")
-    public String cancelOrder(String orderId) {
+    public String cancelOrder(@P("订单ID") String orderId) {
         log.info("执行工具：cancelOrder，订单：{}", orderId);
 
         try {
@@ -236,7 +237,7 @@ public class OrderTools {
      * @return 下单结果
      */
     @Tool("根据用户描述智能下单，例如：'我想吃两个菜，预算50元'")
-    public String smartOrder(String userId, String requirement) {
+    public String smartOrder(@P("用户ID") String userId, @P("用户需求描述") String requirement) {
         log.info("执行工具：smartOrder，用户：{}，需求：{}", userId, requirement);
 
         try {
@@ -265,7 +266,7 @@ public class OrderTools {
      * @return 预估时间
      */
     @Tool("计算订单预计完成时间")
-    public String estimateOrderTime(String dishIds) {
+    public String estimateOrderTime(@P("菜品ID列表（逗号分隔）") String dishIds) {
         log.info("执行工具：estimateOrderTime，菜品：{}", dishIds);
 
         try {
@@ -332,7 +333,7 @@ public class OrderTools {
      * @return 推荐的优惠券信息
      */
     @Tool("根据订单金额推荐用户可用的最优优惠券，自动选择省得最多的")
-    public String recommendBestCoupon(String userId, BigDecimal orderAmount) {
+    public String recommendBestCoupon(@P("用户ID") String userId, @P("订单金额") BigDecimal orderAmount) {
         log.info("执行工具：recommendBestCoupon，用户：{}，金额：{}", userId, orderAmount);
 
         try {
@@ -413,7 +414,7 @@ public class OrderTools {
      * @return 可用优惠券列表
      */
     @Tool("查询用户所有可用的优惠券列表")
-    public String getAvailableCoupons(String userId) {
+    public String getAvailableCoupons(@P("用户ID") String userId) {
         log.info("执行工具：getAvailableCoupons，用户：{}", userId);
 
         try {

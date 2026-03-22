@@ -6,6 +6,7 @@ import com.xx.jaseatschoicejava.entity.Dish;
 import com.xx.jaseatschoicejava.service.DishService;
 import com.xx.jaseatschoicejava.service.RecommendationService;
 import dev.langchain4j.agent.tool.Tool;
+import dev.langchain4j.agent.tool.P;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
@@ -42,7 +43,7 @@ public class RecommendationTools {
      * @return 推荐菜品列表
      */
     @Tool("获取今日个性化推荐菜品，基于用户历史偏好和行为数据")
-    public String getTodayRecommendations(String userId) {
+    public String getTodayRecommendations(@P("用户ID") String userId) {
         log.info("执行工具：getTodayRecommendations，用户：{}", userId);
 
         try {
@@ -92,7 +93,7 @@ public class RecommendationTools {
      * @return 推荐菜品列表
      */
     @Tool("根据卡路里限制推荐菜品，帮助用户控制热量摄入")
-    public String recommendByCalories(Integer maxCalories, String userId) {
+    public String recommendByCalories(@P("最大卡路里数") Integer maxCalories, @P("用户ID") String userId) {
         log.info("执行工具：recommendByCalories，最大卡路里：{}，用户：{}", maxCalories, userId);
 
         try {
@@ -136,7 +137,7 @@ public class RecommendationTools {
      * @return 搜索结果
      */
     @Tool("搜索菜品，支持按菜名、分类等关键词搜索")
-    public String searchDishes(String keyword) {
+    public String searchDishes(@P("搜索关键词") String keyword) {
         log.info("执行工具：searchDishes，关键词：{}", keyword);
 
         try {
@@ -228,7 +229,7 @@ public class RecommendationTools {
      * @return 新的推荐列表
      */
     @Tool("刷新推荐列表，获取新的推荐菜品")
-    public String refreshRecommendations(String userId) {
+    public String refreshRecommendations(@P("用户ID") String userId) {
         log.info("执行工具：refreshRecommendations，用户：{}", userId);
 
         try {
@@ -255,7 +256,7 @@ public class RecommendationTools {
      * @return 推荐的菜品组合
      */
     @Tool("为多人推荐合理的菜品组合，平衡营养和口味")
-    public String recommendCombination(Double budget, Integer peopleCount, String userId) {
+    public String recommendCombination(@P("预算金额") Double budget, @P("用餐人数") Integer peopleCount, @P("用户ID") String userId) {
         log.info("执行工具：recommendCombination，预算：{}，人数：{}，用户：{}", budget, peopleCount, userId);
 
         try {

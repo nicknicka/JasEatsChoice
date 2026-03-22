@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import javax.annotation.PreDestroy;
 import javax.annotation.Resource;
 
 /**
@@ -21,12 +22,14 @@ public class ZhipuClientConfig {
     @Resource
     private ZhipuAIConfig zhipuAIConfig;
 
+    private ZhipuAiClient zhipuClient;
+
     /**
      * 创建智谱AI客户端Bean
      *
      * @return ZhipuAiClient实例
      */
-    @Bean
+    @Bean(destroyMethod = "") // 禁用Spring的默认destroy方法，避免异常
     public ZhipuAiClient zhipuClient() {
         log.info("开始初始化智谱AI客户端...");
 
@@ -36,7 +39,7 @@ public class ZhipuClientConfig {
         }
 
         // 创建客户端（使用Builder模式）
-        ZhipuAiClient client = ZhipuAiClient.builder()
+        this.zhipuClient = ZhipuAiClient.builder()
                 .apiKey(zhipuAIConfig.getApiKey())
                 .build();
 
@@ -47,7 +50,54 @@ public class ZhipuClientConfig {
                 zhipuAIConfig.getModel(),
                 zhipuAIConfig.getTimeout());
 
-        return client;
+        return this.zhipuClient;
+    }
+
+    /**
+     * 应用关闭时清理资源
+     */
+    @PreDestroy
+    public void cleanup() {
+        log.info("ZhipuAiClient资源清理开始...");
+
+        try {
+            if (zhipuClient != null) {
+                // 尝试通过反射关闭底层的OkHttpClient
+                try {
+                    java.lang.reflect.Field clientField = zhipuClient.getClass().getDeclaredField("okHttpClient");
+                    clientField.setAccessible(true);
+                    Object client = clientField.get(zhipuClient);
+
+                    if (client != null && client.getClass().getName().contains("okhttp3.OkHttpClient")) {
+                        // 调用OkHttpClient的shutdown方法
+                        try {
+                            java.lang.reflect.Method shutdownMethod = client.getClass().getMethod("shutdown");
+                            shutdownMethod.invoke(client);
+                            log.info("ZhipuAiClient - OkHttpClient已成功关闭");
+                        } catch (NoSuchMethodException e) {
+                            // 如果没有shutdown方法，尝试使用dispatcher().executorService().shutdown()
+                            try {
+                                java.lang.reflect.Method dispatcherMethod = client.getClass().getMethod("dispatcher");
+                                Object dispatcher = dispatcherMethod.invoke(client);
+                                java.lang.reflect.Method executorServiceMethod = dispatcher.getClass().getMethod("executorService");
+                                java.util.concurrent.ExecutorService executorService =
+                                    (java.util.concurrent.ExecutorService) executorServiceMethod.invoke(dispatcher);
+                                executorService.shutdown();
+                                log.info("ZhipuAiClient - OkHttp ExecutorService已成功关闭");
+                            } catch (Exception ex) {
+                                log.warn("ZhipuAiClient - 无法关闭OkHttp ExecutorService: {}", ex.getMessage());
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    log.warn("ZhipuAiClient - 反射关闭OkHttpClient失败: {}", e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            log.error("ZhipuAiClient资源清理失败", e);
+        }
+
+        log.info("ZhipuAiClient资源清理完成");
     }
 
     /**

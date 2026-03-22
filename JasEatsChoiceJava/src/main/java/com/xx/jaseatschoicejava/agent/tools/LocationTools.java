@@ -5,6 +5,7 @@ import com.xx.jaseatschoicejava.entity.Merchant;
 import com.xx.jaseatschoicejava.service.DishService;
 import com.xx.jaseatschoicejava.service.MerchantService;
 import dev.langchain4j.agent.tool.Tool;
+import dev.langchain4j.agent.tool.P;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -43,7 +44,7 @@ public class LocationTools {
      * @return 附近美食推荐
      */
     @Tool("推荐附近美食，综合口味、营养、价格、距离、评分多个维度")
-    public String recommendNearbyFood(String userId, Double maxDistance, String preference) {
+    public String recommendNearbyFood(@P("用户ID") String userId, @P("最大距离（公里）") Double maxDistance, @P("偏好标签") String preference) {
         log.info("执行工具：recommendNearbyFood，用户：{}，距离：{}km，偏好：{}",
                 userId, maxDistance, preference);
 
@@ -261,7 +262,7 @@ public class LocationTools {
      * @return 附近商家列表
      */
     @Tool("查询指定距离内的附近商家")
-    public String getNearbyMerchants(String userId, Double maxDistance) {
+    public String getNearbyMerchants(@P("用户ID") String userId, @P("最大距离（公里）") Double maxDistance) {
         log.info("执行工具：getNearbyMerchants，用户：{}，距离：{}km", userId, maxDistance);
 
         try {

@@ -165,7 +165,8 @@ public class IntentClassifierService {
         if (lowerMessage.contains("下单") || lowerMessage.contains("订餐") ||
             lowerMessage.matches(".*(我要|我想|我要买|我要点).*") ||
             lowerMessage.contains("配送") || lowerMessage.contains("送餐") ||
-            lowerMessage.matches(".*(查询|查看|取消).*订单")) {
+            lowerMessage.matches(".*(查询|查看|显示|获取|我的|所有|订单列表).*订单") ||
+            lowerMessage.matches(".*订单.*如何") || lowerMessage.matches(".*订单.*状态")) {
             return "ORDER";
         }
 

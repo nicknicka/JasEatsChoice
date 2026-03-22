@@ -1144,9 +1144,13 @@ const sendMessage = async () => {
   // 不自动滚动,让用户控制查看位置
 
   // ========== 日志记录：API调用 ==========
+  const userId = getUserId()
   const apiUrl = API_CONFIG.baseURL + API_CONFIG.ai.chat
   console.log('🌐 发送流式API请求到:', apiUrl)
-  console.log('📦 请求体:', { message: userInput })
+  console.log('👤 authStore.userId:', authStore.userId)
+  console.log('👤 实际使用的userId:', userId)
+  console.log('📦 请求体:', { message: userInput, userId })
+  console.log('🔑 Token存在:', !!authStore.token)
 
   // 创建新的AbortController用于取消请求
   abortController.value = new AbortController()
@@ -1160,7 +1164,7 @@ const sendMessage = async () => {
         Accept: 'text/event-stream',
         'Authorization': `Bearer ${authStore.token}` // 添加JWT token
       },
-      body: JSON.stringify({ message: userInput }),
+      body: JSON.stringify({ message: userInput, userId }), // 添加userId
       signal: abortController.value.signal
     })
 
