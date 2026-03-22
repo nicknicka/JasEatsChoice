@@ -182,6 +182,20 @@
             <version>0.3.3</version>
         </dependency>
 
+        <!-- LangChain4j核心依赖 -->
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j</artifactId>
+            <version>0.29.1</version>
+        </dependency>
+
+        <!-- LangChain4j智谱AI集成 -->
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-zhipu-ai</artifactId>
+            <version>0.29.1</version>
+        </dependency>
+
         <!-- 邮件服务依赖 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

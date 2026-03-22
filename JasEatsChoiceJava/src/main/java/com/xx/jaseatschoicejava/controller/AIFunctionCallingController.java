@@ -1,105 +1,47 @@
 package com.xx.jaseatschoicejava.controller;
 
-import com.xx.jaseatschoicejava.ai.function.AiFunctionDefinitionsOptimized;
+import com.xx.jaseatschoicejava.agent.service.NutritionAgent;
 import com.xx.jaseatschoicejava.common.ResponseResult;
-import com.xx.jaseatschoicejava.service.StructuredQueryService;
-import com.xx.jaseatschoicejava.service.ZhipuAIService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiParam;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
- * AI Function Calling 控制器
- * 提供AI助手对话接口，支持Function Calling功能和结构化查询
+ * AI Function Calling 控制器（使用LangChain4j）
+ * 提供AI助手对话接口，支持Agent功能
  *
  * @author Claude
- * @since 2026-03-14
+ * @since 2026-03-22
  */
 @Slf4j
-@Api(tags = "AI助手")
+@Api(tags = "AI助手（LangChain4j）")
 @RestController
 @RequestMapping("/v1/ai/assistant")
 public class AIFunctionCallingController {
 
     @Resource
-    private ZhipuAIService zhipuAIService;
-
-    @Resource
-    private AiFunctionDefinitionsOptimized functionDefinitions;
-
-    @Resource
-    private StructuredQueryService structuredQueryService;
+    private NutritionAgent nutritionAgent;
 
     /**
-     * AI助手对话接口（支持Function Calling和结构化查询）
+     * AI助手对话接口（使用LangChain4j Agent）
      *
      * @param params 请求参数
-     * @return AI回复或卡片数据
+     * @return AI回复
      */
-    @ApiOperation(value = "AI助手对话", notes = "支持智能搜索菜品、营养分析、订单管理等功能，也支持结构化查询返回卡片数据")
+    @ApiOperation(value = "AI助手对话", notes = "使用LangChain4j Agent，支持营养分析、卡路里计算等功能")
     @PostMapping("/chat")
     public ResponseResult<?> chat(
-            @ApiParam(value = "请求参数", required = true)
             @RequestBody Map<String, Object> params) {
 
-        try {
-            // 1. 判断是否为结构化查询
-            String messageType = (String) params.get("messageType");
-            if ("structured_query".equals(messageType)) {
-                return handleStructuredQuery(params);
-            }
-
-            // 2. 普通文本消息（原有逻辑）
-            return handleTextMessage(params);
-
-        } catch (Exception e) {
-            log.error("AI助手对话失败", e);
-            return ResponseResult.fail("500", "对话失败：" + e.getMessage());
-        }
-    }
-
-    /**
-     * 处理结构化查询
-     */
-    private ResponseResult<?> handleStructuredQuery(Map<String, Object> params) {
-        try {
-            // 1. 提取参数
-            String queryType = (String) params.get("queryType");
-            String userId = (String) params.get("userId");
-            @SuppressWarnings("unchecked")
-            Map<String, Object> queryParams = (Map<String, Object>) params.get("params");
-
-            log.info("接收结构化查询：type={}, userId={}", queryType, userId);
-
-            // 2. 调用结构化查询服务
-            Map<String, Object> result = structuredQueryService.handleQuery(queryType, queryParams, userId);
-
-            // 3. 返回卡片数据
-            return ResponseResult.success(result);
-
-        } catch (Exception e) {
-            log.error("结构化查询失败", e);
-            return ResponseResult.fail("500", "查询失败：" + e.getMessage());
-        }
-    }
-
-    /**
-     * 处理普通文本消息
-     */
-    private ResponseResult<?> handleTextMessage(Map<String, Object> params) {
         try {
             // 1. 提取参数
             String message = (String) params.get("message");
             String userId = (String) params.getOrDefault("userId", "anonymous");
-            @SuppressWarnings("unchecked")
-            List<Map<String, String>> history = (List<Map<String, String>>) params.get("history");
 
             // 2. 参数验证
             if (message == null || message.trim().isEmpty()) {
@@ -108,8 +50,8 @@ public class AIFunctionCallingController {
 
             log.info("用户 {} 发送消息：{}", userId, message);
 
-            // 3. 调用AI服务
-            String response = zhipuAIService.chat(message, history);
+            // 3. 调用LangChain4j Agent
+            String response = nutritionAgent.chat(message, userId);
 
             // 4. 构建响应
             Map<String, Object> result = new HashMap<>();
@@ -126,68 +68,27 @@ public class AIFunctionCallingController {
     }
 
     /**
-     * 获取可用的工具函数列表
+     * 获取Agent信息
      *
-     * @return 工具函数列表
+     * @return Agent信息
      */
-    @ApiOperation(value = "获取工具函数列表", notes = "返回所有可用的AI工具函数定义")
-    @GetMapping("/tools")
-    public ResponseResult<?> listTools() {
+    @ApiOperation(value = "获取Agent信息", notes = "返回当前可用的Agent列表和信息")
+    @GetMapping("/agents")
+    public ResponseResult<?> listAgents() {
         try {
             Map<String, Object> result = new HashMap<>();
-            result.put("tools", functionDefinitions.getToolFunctions());
-            result.put("count", functionDefinitions.getToolFunctions().size());
+            result.put("agents", Map.of(
+                "nutrition", "营养分析Agent（可用）",
+                "recommendation", "智能推荐Agent（开发中）",
+                "order", "订单助手Agent（开发中）",
+                "advisor", "智能顾问Agent（开发中）"
+            ));
             result.put("timestamp", System.currentTimeMillis());
 
             return ResponseResult.success(result);
 
         } catch (Exception e) {
-            log.error("获取工具函数列表失败", e);
-            return ResponseResult.fail("500", "获取失败：" + e.getMessage());
-        }
-    }
-
-    /**
-     * 获取系统提示词
-     *
-     * @return 系统提示词
-     */
-    @ApiOperation(value = "获取系统提示词", notes = "返回AI助手的系统提示词配置")
-    @GetMapping("/prompt")
-    public ResponseResult<?> getSystemPrompt() {
-        try {
-            Map<String, Object> result = new HashMap<>();
-            result.put("primary", functionDefinitions.getPrimarySystemPrompt());
-            result.put("recommendation", functionDefinitions.getRecommendationPrompt());
-            result.put("nutrition", functionDefinitions.getNutritionPrompt());
-            result.put("timestamp", System.currentTimeMillis());
-
-            return ResponseResult.success(result);
-
-        } catch (Exception e) {
-            log.error("获取系统提示词失败", e);
-            return ResponseResult.fail("500", "获取失败：" + e.getMessage());
-        }
-    }
-
-    /**
-     * 获取菜品分类列表
-     *
-     * @return 菜品分类列表
-     */
-    @ApiOperation(value = "获取菜品分类", notes = "返回所有可用的菜品分类")
-    @GetMapping("/categories")
-    public ResponseResult<?> listCategories() {
-        try {
-            Map<String, Object> result = new HashMap<>();
-            result.put("categories", functionDefinitions.getDishCategories());
-            result.put("count", functionDefinitions.getDishCategories().size());
-            result.put("timestamp", System.currentTimeMillis());
-
-            return ResponseResult.success(result);
-
-        } catch (Exception e) {
-            log.error("获取菜品分类失败", e);
+            log.error("获取Agent信息失败", e);
             return ResponseResult.fail("500", "获取失败：" + e.getMessage());
         }
     }
@@ -202,8 +103,9 @@ public class AIFunctionCallingController {
     public ResponseResult<?> health() {
         Map<String, Object> result = new HashMap<>();
         result.put("status", "UP");
-        result.put("service", "AI Assistant");
-        result.put("version", "1.0.0");
+        result.put("service", "AI Assistant (LangChain4j)");
+        result.put("version", "2.0.0");
+        result.put("framework", "LangChain4j 0.29.1");
         result.put("timestamp", System.currentTimeMillis());
 
         return ResponseResult.success(result);

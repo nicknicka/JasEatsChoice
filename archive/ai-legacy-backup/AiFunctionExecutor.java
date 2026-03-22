@@ -28,7 +28,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * AI工具函数执行器（反射优化版）
+ * AI工具函数执行器
  * 使用反射机制动态调用函数处理方法，实现开闭原则
  *
  * 优势：
@@ -42,7 +42,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Slf4j
 @Component
-public class AiFunctionExecutorOptimized {
+public class AiFunctionExecutor {
 
     @Resource
     private DishService dishService;
