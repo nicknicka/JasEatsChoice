@@ -3,7 +3,8 @@ package com.xx.jaseatschoicejava.agent.tools;
 import com.xx.jaseatschoicejava.dto.NutritionInfo;
 import com.xx.jaseatschoicejava.service.NutritionAnalysisService;
 import dev.langchain4j.agent.tool.Tool;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -15,9 +16,10 @@ import javax.annotation.Resource;
  * @author Claude
  * @since 2026-03-22
  */
-@Slf4j
 @Service
 public class NutritionTools {
+
+    private static final Logger log = LoggerFactory.getLogger(NutritionTools.class);
 
     @Resource
     private NutritionAnalysisService nutritionAnalysisService;

@@ -664,64 +664,96 @@ const streamResponse = async (messageIndex, reader) => {
       const lines = buffer.split('\n')
       buffer = lines.pop() || ''
 
+      let currentEvent = 'message' // 默认事件类型
+
       for (const line of lines) {
         const trimmedLine = line.trim()
-        // console.log('🔍 收到原始行:', trimmedLine)  // 【调试日志】原始行内容
+
+        // 处理事件名称
+        if (trimmedLine.startsWith('event:')) {
+          currentEvent = trimmedLine.substring(6).trim()
+          continue
+        }
+
+        // 处理 end 事件：完成流式传输
+        if (currentEvent === 'end' || currentEvent === 'error') {
+          console.log('✅ 接收完成事件:', currentEvent)
+
+          if (!isMounted.value) {
+            console.log('ℹ️ 组件已卸载，跳过保存消息')
+            return
+          }
+
+          // 保存消息到后端
+          if (messages.value[messageIndex]) {
+            const currentMessage = messages.value[messageIndex]
+            if (currentMessage && currentMessage.content) {
+              try {
+                await saveMessageToBackend(
+                  'ai',
+                  currentMessage.content,
+                  currentMessage.messageType,
+                  currentMessage.cardData
+                )
+              } catch (error) {
+                console.warn('⚠️ 保存消息到后端失败:', error.message)
+              }
+            }
+          }
+          return
+        }
+
+        // 只处理 message 事件
+        if (currentEvent !== 'message') continue
 
         if (!trimmedLine.startsWith('data:')) continue
 
         const data = trimmedLine.substring(5).trim()
-        // console.log('📦 提取的data内容:', data)  // 【调试日志】提取的data
         if (!data || data === '' || data === 'data:') {
           continue
         }
 
         try {
-          // 解析SSE数据（可能是数组格式或直接的对象）
+          // 解析SSE数据（支持多种格式：纯文本、JSON对象、JSON数组）
           let parsedData
+          let isPlainText = false
 
           if (data.startsWith('[')) {
-            // console.log('🔧 检测到数组格式，尝试解析数组')  // 【调试日志】
             // Spring Boot的SseEmitter数组格式：[{...}, {...}, {...}]
             const dataArray = JSON.parse(data)
-            // console.log('📊 解析后的数组:', dataArray)  // 【调试日志】
 
             // 查找data字段是对象类型（包含done、content或card_data）的元素
             const actualDataItem = dataArray.find(
               (item) => {
-                // 检查data字段是否存在且是对象类型
                 const itemData = item.data
-                // 排除包含 mediaType 的无效数据
                 return itemData &&
                        typeof itemData === 'object' &&
-                       !itemData.mediaType && // 排除媒体类型数据
+                       !itemData.mediaType &&
                        (itemData.hasOwnProperty('done') ||
                         itemData.hasOwnProperty('content') ||
                         itemData.hasOwnProperty('card_data'))
               }
             )
-            // console.log('🎯 找到的目标元素:', actualDataItem)  // 【调试日志】
 
             if (actualDataItem && actualDataItem.data) {
               parsedData = actualDataItem.data
             }
-          } else {
-            // console.log('🔧 检测到对象格式，直接解析')  // 【调试日志】
+          } else if (data.startsWith('{')) {
             // 直接的对象格式：{ content: string, done: boolean }
             parsedData = JSON.parse(data)
-            // console.log('📊 解析后的对象:', parsedData)  // 【调试日志】
+          } else {
+            // 纯文本格式：直接作为content处理
+            isPlainText = true
+            parsedData = { content: data, done: false }
           }
 
           // 验证解析结果是否有效
-          if (parsedData && typeof parsedData !== 'object') {
+          if (!isPlainText && parsedData && typeof parsedData !== 'object') {
             console.warn('⚠️ 解析结果类型错误:', typeof parsedData)
             continue
           }
 
-          // console.log('✅ 最终解析结果:', parsedData)  // 【调试日志】
-
           if (!parsedData) {
-            // console.log('⚠️ 解析结果为空，跳过此数据')
             continue
           }
 

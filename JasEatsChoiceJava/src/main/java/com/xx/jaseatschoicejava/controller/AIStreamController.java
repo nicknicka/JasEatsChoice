@@ -4,7 +4,8 @@ import com.xx.jaseatschoicejava.agent.service.NutritionAgent;
 import com.xx.jaseatschoicejava.common.ResponseResult;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -19,11 +20,12 @@ import java.util.Map;
  * @author Claude
  * @since 2026-03-22
  */
-@Slf4j
 @Api(tags = "AI流式对话（LangChain4j）")
 @RestController
 @RequestMapping("/v1/ai/stream")
 public class AIStreamController {
+
+    private static final Logger log = LoggerFactory.getLogger(AIStreamController.class);
 
     @Resource
     private NutritionAgent nutritionAgent;

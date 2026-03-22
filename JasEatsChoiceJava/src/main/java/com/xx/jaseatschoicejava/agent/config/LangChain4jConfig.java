@@ -1,17 +1,32 @@
 package com.xx.jaseatschoicejava.agent.config;
 
+import com.xx.jaseatschoicejava.agent.NutritionAiAgent;
+import com.xx.jaseatschoicejava.agent.OrderAiAgent;
+import com.xx.jaseatschoicejava.agent.RecommendationAiAgent;
+import com.xx.jaseatschoicejava.agent.tools.CollectionTools;
+import com.xx.jaseatschoicejava.agent.tools.NutritionRecordTools;
+import com.xx.jaseatschoicejava.agent.tools.NutritionTools;
+import com.xx.jaseatschoicejava.agent.tools.OrderTools;
+import com.xx.jaseatschoicejava.agent.tools.RecipeTools;
+import com.xx.jaseatschoicejava.agent.tools.RecommendationTools;
+import com.xx.jaseatschoicejava.agent.tools.UserTools;
 import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
+import dev.langchain4j.service.AiServices;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.zhipu.ZhipuAiChatModel;
 import dev.langchain4j.memory.ChatMemory;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import javax.annotation.Resource;
+
 /**
  * LangChain4j配置类
- * 配置ChatLanguageModel和ChatMemory等核心组件
+ * 使用AiServices构建真正的AI Agent
  *
  * @author Claude
  * @since 2026-03-22
@@ -20,47 +35,114 @@ import org.springframework.context.annotation.Configuration;
 @EnableConfigurationProperties(ZhipuAIConfig.class)
 public class LangChain4jConfig {
 
+    private static final Logger log = LoggerFactory.getLogger(LangChain4jConfig.class);
+
+    @Resource
+    private ZhipuAIConfig zhipuAIConfig;
+
+    @Resource
+    private NutritionTools nutritionTools;
+
+    @Resource
+    private NutritionRecordTools nutritionRecordTools;
+
+    @Resource
+    private RecommendationTools recommendationTools;
+
+    @Resource
+    private RecipeTools recipeTools;
+
+    @Resource
+    private OrderTools orderTools;
+
+    @Resource
+    private CollectionTools collectionTools;
+
+    @Resource
+    private UserTools userTools;
+
     /**
      * 配置ChatLanguageModel（智谱AI）
-     *
-     * @param config 智谱AI配置
-     * @return ChatLanguageModel实例
      */
     @Bean
-    public ChatLanguageModel chatLanguageModel(ZhipuAIConfig config) {
-        System.out.println("初始化ChatLanguageModel，模型：" + config.getModel());
+    public ChatLanguageModel chatLanguageModel() {
+        log.info("初始化ChatLanguageModel，模型：{}", zhipuAIConfig.getModel());
 
         return ZhipuAiChatModel.builder()
-                .apiKey(config.getApiKey())
-                .model(config.getModel())
+                .apiKey(zhipuAIConfig.getApiKey())
+                .model(zhipuAIConfig.getModel())
                 .temperature(0.7)
-                .maxRetries(3)
+                .maxRetries(2)
                 .build();
     }
 
     /**
      * 配置ChatMemory（对话记忆）
-     * 使用MessageWindowChatMemory保留最近20条消息
-     *
-     * @return ChatMemory实例
      */
     @Bean
     public ChatMemory chatMemory() {
-        System.out.println("初始化ChatMemory，消息窗口大小：20");
+        log.info("初始化ChatMemory，消息窗口大小：20");
 
         return MessageWindowChatMemory.withMaxMessages(20);
     }
 
     /**
-     * 配置用于Agent的ChatMemory（更大的窗口）
-     * Agent需要更长的上下文，保留最近50条消息
+     * 构建营养分析AI Agent
      *
-     * @return ChatMemory实例
+     * 使用LangChain4j的AiServices构建真正的Agent
+     * LLM会自动决定何时调用哪个Tool
      */
     @Bean
-    public ChatMemory agentChatMemory() {
-        System.out.println("初始化Agent ChatMemory，消息窗口大小：50");
+    public NutritionAiAgent nutritionAiAgent(ChatLanguageModel chatLanguageModel, ChatMemory chatMemory) {
+        log.info("构建NutritionAiAgent...");
 
-        return MessageWindowChatMemory.withMaxMessages(50);
+        return AiServices.builder(NutritionAiAgent.class)
+                .chatLanguageModel(chatLanguageModel)
+                .chatMemory(chatMemory)
+                .tools(
+                    nutritionTools,
+                    nutritionRecordTools,
+                    userTools
+                )
+                .build();
+    }
+
+    /**
+     * 构建智能推荐AI Agent
+     */
+    @Bean
+    public RecommendationAiAgent recommendationAiAgent(ChatLanguageModel chatLanguageModel, ChatMemory chatMemory) {
+        log.info("构建RecommendationAiAgent...");
+
+        return AiServices.builder(RecommendationAiAgent.class)
+                .chatLanguageModel(chatLanguageModel)
+                .chatMemory(chatMemory)
+                .tools(
+                    recommendationTools,
+                    recipeTools,
+                    collectionTools,
+                    nutritionTools
+                )
+                .build();
+    }
+
+    /**
+     * 构建订单助手AI Agent
+     */
+    @Bean
+    public OrderAiAgent orderAiAgent(ChatLanguageModel chatLanguageModel, ChatMemory chatMemory) {
+        log.info("构建OrderAiAgent...");
+
+        return AiServices.builder(OrderAiAgent.class)
+                .chatLanguageModel(chatLanguageModel)
+                .chatMemory(chatMemory)
+                .tools(
+                    orderTools,
+                    recommendationTools,
+                    collectionTools,
+                    userTools
+                )
+                .build();
     }
 }
+
