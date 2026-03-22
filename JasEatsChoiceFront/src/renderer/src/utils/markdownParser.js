@@ -43,6 +43,11 @@ export function parseMarkdown(text) {
   html = html.replace(/^##\s+(.+)$/gm, '<h2>$1</h2>')
   html = html.replace(/^#\s+(.+)$/gm, '<h1>$1</h1>')
 
+  // 预处理：修复粘连的有序列表
+  // 在非换行符后的数字序号前添加换行
+  // 例如："推荐：1. xxx2. xxx" → "推荐：1. xxx\n2. xxx"
+  html = html.replace(/([^\n])(\d+\.\s+)/g, '$1\n$2')
+
   // 无序列表 (- item 或 * item)
   html = html.replace(/^[\-\*]\s+(.+)$/gm, '<li>$1</li>')
   html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')

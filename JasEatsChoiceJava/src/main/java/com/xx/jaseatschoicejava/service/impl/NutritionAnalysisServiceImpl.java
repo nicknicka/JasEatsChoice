@@ -172,9 +172,9 @@ public class NutritionAnalysisServiceImpl implements NutritionAnalysisService {
         }
 
         try {
-            // 移除单位（g、mg等）
+            // 移除单位（先替换长单位，再替换单位，避免冲突）
             String numStr = nutrientStr.toLowerCase()
-                .replace("g", "").replace("mg", "").replace("μg", "").trim();
+                .replace("μg", "").replace("mg", "").replace("g", "").trim();
 
             if (numStr.isEmpty() || numStr.equals("—") || numStr.equals("tr")) {
                 return BigDecimal.ZERO;

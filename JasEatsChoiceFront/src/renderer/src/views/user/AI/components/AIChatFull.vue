@@ -2,6 +2,21 @@
   <div class="chat-content-wrapper">
     <!-- 聊天消息区域 -->
     <div class="chat-messages" ref="chatContainerRef">
+      <!-- 初始加载时的打字机等待效果 -->
+      <transition name="fade-in">
+        <div v-if="isInitialLoading" class="initial-loading-container">
+          <div class="ai-avatar-loading">
+            <div class="avatar-emoji">🤖</div>
+            <div class="typing-indicator">
+              <span class="typing-dot"></span>
+              <span class="typing-dot"></span>
+              <span class="typing-dot"></span>
+            </div>
+          </div>
+          <div class="loading-text">AI正在准备中...</div>
+        </div>
+      </transition>
+
       <!-- 消息列表 -->
       <template v-if="messages.length > 0">
         <div
@@ -341,6 +356,7 @@ const isMounted = ref(false) // 添加组件挂载状态标记，初始为 false
 const inputMessage = ref('')
 const isLoading = ref(false)
 const isStreaming = ref(false)
+const isInitialLoading = ref(true) // 初始加载状态，显示等待效果
 const abortController = ref(null)
 const chatContainerRef = ref(null)
 const bottomContainerRef = ref(null)
@@ -549,27 +565,71 @@ const loadMessages = async () => {
         }
       }, 500) // 延时 500ms
     } else {
-      // 没有历史记录，显示欢迎消息并保存到后端
-      console.log('📭 没有历史记录，显示欢迎消息')
-      const welcomeMessage = '您好！我是您的AI饮食助手。😊\n我可以帮助您：\n- 推荐健康食谱\n- 分析营养成分\n- 提供饮食建议\n有什么可以帮您的吗？'
-      messages.value = [
-        {
-          id: 1,
-          sender: 'ai',
-          content: welcomeMessage,
-          time: new Date().toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit'
-          }),
-          avatar: '🤖',
-          enableMarkdown: true
+      // 没有历史记录，调用后端获取欢迎消息
+      console.log('📭 没有历史记录，从后端获取欢迎消息')
+
+      try {
+        const userId = getUserId()
+        const clearResponse = await axios.delete(
+          `${API_CONFIG.baseURL}/v1/agent/context/${userId}`
+        )
+
+        console.log('📡 后端欢迎消息响应:', clearResponse.data)
+
+        if (clearResponse.data.success === true) {
+          const welcomeMessage = clearResponse.data.data?.welcomeMessage || WELCOME_MESSAGE
+
+          messages.value = [
+            {
+              id: 1,
+              sender: 'ai',
+              content: welcomeMessage,
+              time: new Date().toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit'
+              }),
+              avatar: '🤖',
+              enableMarkdown: true
+            }
+          ]
+
+          console.log('✅ 已显示Agent欢迎消息')
+        } else {
+          // 降级：使用硬编码欢迎消息
+          console.warn('⚠️ 后端返回失败，使用硬编码欢迎消息')
+          messages.value = [
+            {
+              id: 1,
+              sender: 'ai',
+              content: WELCOME_MESSAGE,
+              time: new Date().toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit'
+              }),
+              avatar: '🤖',
+              enableMarkdown: true
+            }
+          ]
         }
-      ]
-      console.log('💾 保存欢迎消息到后端')
-      // 保存欢迎消息到后端
-      await saveMessageToBackend('ai', welcomeMessage)
+      } catch (error) {
+        console.error('❌ 获取欢迎消息失败，使用硬编码欢迎消息:', error)
+        messages.value = [
+          {
+            id: 1,
+            sender: 'ai',
+            content: WELCOME_MESSAGE,
+            time: new Date().toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit'
+            }),
+            avatar: '🤖',
+            enableMarkdown: true
+          }
+        ]
+      }
     }
     isLoading.value = false
+    isInitialLoading.value = false // 隐藏初始加载效果
   } catch (error) {
     console.error('❌ 加载聊天记录失败:', error)
     console.error('❌ 错误详情:', error.response?.data || error.message)
@@ -588,6 +648,7 @@ const loadMessages = async () => {
       }
     ]
     isLoading.value = false
+    isInitialLoading.value = false // 隐藏初始加载效果
     // 延时滚动，确保 DOM 完全渲染
     setTimeout(() => {
       scrollToBottom(true)
@@ -612,7 +673,11 @@ const saveMessageToBackend = async (sender, content, messageType = null, cardDat
       payload.cardData = cardData
     }
 
-    await axios.post(API_CONFIG.baseURL + API_CONFIG.ai.save, payload)
+    await axios.post(API_CONFIG.baseURL + API_CONFIG.ai.save, payload, {
+      headers: {
+        'Authorization': `Bearer ${authStore.token}`
+      }
+    })
     console.log('✅ 消息已保存到后端:', sender, messageType ? `(卡片: ${messageType})` : '')
   } catch (error) {
     console.error('❌ 保存消息到后端失败:', error)
@@ -677,10 +742,23 @@ const streamResponse = async (messageIndex, reader) => {
 
         // 处理 end 事件：完成流式传输
         if (currentEvent === 'end' || currentEvent === 'error') {
-          console.log('✅ 接收完成事件:', currentEvent)
+          // 统计完整消息信息
+          if (messages.value[messageIndex]) {
+            const currentMessage = messages.value[messageIndex]
+            console.log('✅ AI消息接收完成')
+            console.log('📊 消息统计:')
+            console.log(`   - 总字符数: ${currentMessage.content?.length || 0}`)
+            console.log(`   - 消息类型: ${currentMessage.messageType || '纯文本'}`)
+            console.log(`   - 包含卡片: ${currentMessage.cardData ? '是' : '否'}`)
+            console.log(`   - 换行符数量: ${(currentMessage.content?.match(/\n/g) || []).length}`)
+            console.log(`   - 完整内容（原始）:`)
+            console.log('─'.repeat(60))
+            // 将换行符显示为可见符号
+            console.log(currentMessage.content.replace(/\n/g, '↵\n'))
+            console.log('─'.repeat(60))
+          }
 
           if (!isMounted.value) {
-            console.log('ℹ️ 组件已卸载，跳过保存消息')
             return
           }
 
@@ -739,8 +817,19 @@ const streamResponse = async (messageIndex, reader) => {
               parsedData = actualDataItem.data
             }
           } else if (data.startsWith('{')) {
-            // 直接的对象格式：{ content: string, done: boolean }
+            // 直接的对象格式
             parsedData = JSON.parse(data)
+
+            // 处理新的字符包装格式 {char: "字符"}
+            if (parsedData.hasOwnProperty('char')) {
+              const char = parsedData.char
+              // 调试：记录接收到的字符
+              if (char === '\n') {
+                console.log('📥 收到换行符')
+              }
+              isPlainText = true
+              parsedData = { content: char, done: false }
+            }
           } else {
             // 纯文本格式：直接作为content处理
             isPlainText = true
@@ -767,11 +856,24 @@ const streamResponse = async (messageIndex, reader) => {
 
           // 接收 done 字段：检查是否结束
           if (parsedData.done === true) {
-            console.log('✅ 接收完成')
+            // 统计完整消息信息
+            if (messages.value[messageIndex]) {
+              const currentMessage = messages.value[messageIndex]
+              console.log('✅ AI消息接收完成')
+              console.log('📊 消息统计:')
+              console.log(`   - 总字符数: ${currentMessage.content?.length || 0}`)
+              console.log(`   - 消息类型: ${currentMessage.messageType || '纯文本'}`)
+              console.log(`   - 包含卡片: ${currentMessage.cardData ? '是' : '否'}`)
+              console.log(`   - 换行符数量: ${(currentMessage.content?.match(/\n/g) || []).length}`)
+              console.log(`   - 完整内容（原始）:`)
+              console.log('─'.repeat(60))
+              // 将换行符显示为可见符号
+              console.log(currentMessage.content.replace(/\n/g, '↵\n'))
+              console.log('─'.repeat(60))
+            }
 
             // 组件挂载状态检查
             if (!isMounted.value) {
-              console.log('ℹ️ 组件已卸载，跳过保存消息')
               return
             }
 
@@ -792,8 +894,6 @@ const streamResponse = async (messageIndex, reader) => {
                   console.warn('⚠️ 保存消息到后端失败:', error.message)
                 }
               }
-            } else {
-              console.warn('⚠️ 消息索引无效，无法保存到后端:', messageIndex)
             }
 
             return
@@ -1199,24 +1299,11 @@ const scrollToBottom = (force = false) => {
       nextTick(() => {
         // 双重检查：组件可能在此期间卸载
         if (!isMounted.value || !chatContainerRef.value) {
-          console.log('🚫 组件已卸载或容器不存在，跳过滚动')
           return
         }
 
         try {
-          const scrollHeight = chatContainerRef.value.scrollHeight
-          const currentScrollTop = chatContainerRef.value.scrollTop
-          console.log(`📜 滚动信息: 当前=${currentScrollTop}, 最大=${scrollHeight}`)
-
-          chatContainerRef.value.scrollTop = scrollHeight
-
-          // 验证滚动是否成功
-          setTimeout(() => {
-            if (chatContainerRef.value) {
-              const afterScroll = chatContainerRef.value.scrollTop
-              console.log(`✅ 滚动完成: ${afterScroll}/${scrollHeight}`)
-            }
-          }, 50)
+          chatContainerRef.value.scrollTop = chatContainerRef.value.scrollHeight
         } catch (error) {
           console.warn('⚠️ 滚动到底部失败:', error.message)
         }
@@ -1650,7 +1737,7 @@ const clearChat = () => {
         console.log('📡 后端清空响应:', clearResponse.data)
 
         // 检查后端是否成功清空
-        if (clearResponse.data.code === 200) {
+        if (clearResponse.data.success === true) {
           console.log('✅ 后端清空成功')
 
           // 清空前端显示
@@ -1659,8 +1746,16 @@ const clearChat = () => {
           // 获取后端返回的欢迎消息
           const welcomeMessage = clearResponse.data.data?.welcomeMessage || WELCOME_MESSAGE
 
-          // 添加欢迎消息
-          await addMessage('ai', welcomeMessage, false)
+          // 创建并添加欢迎消息（启用markdown渲染）
+          const aiMessage = {
+            id: Date.now(),
+            sender: 'ai',
+            content: welcomeMessage,
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            avatar: '🤖',
+            enableMarkdown: true  // 启用markdown渲染
+          }
+          messages.value.push(aiMessage)
 
           console.log('✅ 已显示Agent欢迎消息')
           ElMessage.success('聊天记录已清空')
@@ -1672,8 +1767,8 @@ const clearChat = () => {
             }
           })
         } else {
-          // 后端返回错误码
-          console.error('❌ 后端清空失败，响应码:', clearResponse.data.code)
+          // 后端返回错误
+          console.error('❌ 后端清空失败')
           console.error('❌ 错误信息:', clearResponse.data.message)
           ElMessage.error(clearResponse.data.message || '清空失败，请稍后重试')
         }
@@ -1965,6 +2060,66 @@ onUnmounted(() => {
     .hint {
       font-size: 1rem /* 原值: 14px */;
       color: #c0c4cc;
+    }
+  }
+
+  // 初始加载容器
+  .initial-loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 24px;
+
+    .ai-avatar-loading {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+
+      .avatar-emoji {
+        font-size: 48px;
+        filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15));
+        animation: avatarFloat 2s ease-in-out infinite;
+      }
+
+      .typing-indicator {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 12px 18px;
+        background: linear-gradient(135deg, #fff9fa 0%, #fff3f4 100%);
+        border-radius: 20px;
+        border: 1px solid #ffe0e3;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+
+        .typing-dot {
+          width: 8px;
+          height: 8px;
+          background: #ff6b6b;
+          border-radius: 50%;
+          animation: typingBounce 1.4s ease-in-out infinite;
+
+          &:nth-child(1) {
+            animation-delay: 0s;
+          }
+
+          &:nth-child(2) {
+            animation-delay: 0.2s;
+          }
+
+          &:nth-child(3) {
+            animation-delay: 0.4s;
+          }
+        }
+      }
+    }
+
+    .loading-text {
+      font-size: 1rem;
+      color: #909399;
+      animation: textPulse 2s ease-in-out infinite;
     }
   }
 
@@ -2327,6 +2482,52 @@ onUnmounted(() => {
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+// 初始加载动画
+@keyframes avatarFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes typingBounce {
+  0%, 60%, 100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-12px);
+  }
+}
+
+@keyframes textPulse {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+// 淡入动画
+.fade-in-enter-active {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.fade-in-leave-active {
+  animation: fadeIn 0.3s ease-in reverse;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 

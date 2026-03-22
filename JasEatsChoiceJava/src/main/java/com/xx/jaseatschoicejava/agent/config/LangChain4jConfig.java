@@ -25,6 +25,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import javax.annotation.PreDestroy;
 import javax.annotation.Resource;
 
 /**
@@ -73,7 +74,7 @@ public class LangChain4jConfig {
     /**
      * 配置ChatLanguageModel（智谱AI）
      */
-    @Bean
+    @Bean(destroyMethod = "") // 禁用Spring的默认destroy方法，避免异常
     public ChatLanguageModel chatLanguageModel() {
         log.info("初始化ChatLanguageModel，模型：{}", zhipuAIConfig.getModel());
 
@@ -83,6 +84,15 @@ public class LangChain4jConfig {
                 .temperature(0.7)
                 .maxRetries(2)
                 .build();
+    }
+
+    /**
+     * 应用关闭时清理资源
+     * 注意：OkHttp的守护线程会在JVM退出时自动清理，这个警告可以忽略
+     */
+    @PreDestroy
+    public void cleanup() {
+        log.info("LangChain4j资源清理：OkHttp守护线程将在JVM退出时自动清理");
     }
 
     /**

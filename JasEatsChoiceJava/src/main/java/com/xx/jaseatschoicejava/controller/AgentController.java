@@ -5,6 +5,7 @@ import com.xx.jaseatschoicejava.agent.service.NutritionAgent;
 import com.xx.jaseatschoicejava.agent.service.OrderAssistantAgent;
 import com.xx.jaseatschoicejava.agent.service.RecommendationAgent;
 import com.xx.jaseatschoicejava.common.ResponseResult;
+import com.xx.jaseatschoicejava.service.AIChatHistoryService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.slf4j.Logger;
@@ -41,6 +42,9 @@ public class AgentController {
 
     @Resource
     private OrderAssistantAgent orderAssistantAgent;
+
+    @Resource
+    private AIChatHistoryService aiChatHistoryService;
 
     /**
      * 测试营养分析Agent
@@ -268,6 +272,10 @@ public class AgentController {
                     intelligentAdvisorAgent.clearMemory(userId);
                     break;
             }
+
+            // 清除数据库中的聊天历史记录
+            aiChatHistoryService.deleteUserChatHistory(userId);
+            log.info("已清除用户 {} 的聊天历史记录", userId);
 
             // 获取欢迎消息
             String welcomeMessage = intelligentAdvisorAgent.getWelcomeMessage();

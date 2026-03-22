@@ -69,13 +69,27 @@ public class AIStreamController {
                     // 调用Agent获取完整回复
                     String response = nutritionAgent.chat(message, userId);
 
+                    log.info("开始发送SSE流式响应，总长度: {} 字符", response.length());
+
                     // 模拟流式输出（逐字发送）
+                    // 注意：SSE的data()方法会对特殊字符进行处理，需要将换行符转义
                     for (int i = 0; i < response.length(); i++) {
+                        char ch = response.charAt(i);
+
+                        // 记录换行符
+                        if (ch == '\n') {
+                            log.debug("发送换行符，位置: {}", i);
+                        }
+
+                        // 将字符包装为JSON对象，确保换行符等特殊字符被正确传输
+                        Map<String, String> charData = Map.of("char", String.valueOf(ch));
                         emitter.send(SseEmitter.event()
                             .name("message")
-                            .data(String.valueOf(response.charAt(i))));
+                            .data(charData));
                         Thread.sleep(20); // 模拟打字效果
                     }
+
+                    log.info("SSE流式响应发送完成");
 
                     // 发送完成事件
                     emitter.send(SseEmitter.event()
