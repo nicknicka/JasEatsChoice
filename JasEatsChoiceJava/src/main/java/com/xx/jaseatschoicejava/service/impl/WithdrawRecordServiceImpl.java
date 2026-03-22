@@ -174,4 +174,95 @@ public class WithdrawRecordServiceImpl extends ServiceImpl<WithdrawRecordMapper,
 
         return total;
     }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public WithdrawRecord createWithdrawRequest(String userId, BigDecimal amount, String withdrawNo, String withdrawMethod, String accountInfo) {
+        // 创建提现记录
+        WithdrawRecord record = new WithdrawRecord();
+        record.setWithdrawNo(withdrawNo);
+        record.setUserId(userId);
+        record.setAmount(amount);
+        record.setWithdrawMethod(withdrawMethod);
+        record.setAccountInfo(accountInfo);
+        record.setWithdrawStatus("pending"); // 待审核状态
+        record.setFee(BigDecimal.ZERO); // 手续费，可以根据需要计算
+        record.setActualAmount(amount); // 实际到账金额
+        record.setCreateTime(LocalDateTime.now());
+        record.setUpdateTime(LocalDateTime.now());
+
+        boolean success = this.save(record);
+        if (success) {
+            log.info("创建提现申请成功: 用户ID={}, 金额={}, 流水号={}", userId, amount, withdrawNo);
+            return record;
+        } else {
+            log.error("创建提现申请失败: 用户ID={}, 金额={}, 流水号={}", userId, amount, withdrawNo);
+            throw new RuntimeException("创建提现申请失败");
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean executeWithdrawDeduction(String withdrawId) {
+        WithdrawRecord record = this.getById(withdrawId);
+        if (record == null) {
+            log.error("提现记录不存在: {}", withdrawId);
+            return false;
+        }
+
+        // 只有审核通过（approved）状态才能执行扣款
+        if (!"approved".equals(record.getWithdrawStatus())) {
+            log.warn("提现记录状态不是审核通过，无法执行扣款: {}, 当前状态: {}", withdrawId, record.getWithdrawStatus());
+            return false;
+        }
+
+        if (walletService == null) {
+            log.error("WalletService 不可用");
+            return false;
+        }
+
+        try {
+            // 检查余额是否足够
+            if (!walletService.checkBalance(record.getUserId(), record.getAmount())) {
+                log.error("用户余额不足，无法提现: 用户ID={}, 金额={}", record.getUserId(), record.getAmount());
+                // 更新提现记录状态为失败
+                record.setWithdrawStatus("failed");
+                record.setRemark("余额不足");
+                record.setUpdateTime(LocalDateTime.now());
+                this.updateById(record);
+                return false;
+            }
+
+            // 执行扣款（这里需要一个新的方法来真正扣款）
+            // 临时使用 deductBalance 方法，但这会记录到 consume_history
+            // TODO: 应该在 WalletService 中添加专门的方法来处理提现扣款
+            boolean success = walletService.deductBalance(
+                record.getUserId(),
+                record.getAmount(),
+                "提现 - " + record.getWithdrawNo()
+            );
+
+            if (success) {
+                // 更新提现记录状态为处理中
+                record.setWithdrawStatus("processing");
+                record.setCompleteTime(LocalDateTime.now());
+                record.setUpdateTime(LocalDateTime.now());
+                this.updateById(record);
+
+                log.info("提现扣款成功: {}", withdrawId);
+                return true;
+            } else {
+                log.error("提现扣款失败: {}", withdrawId);
+                return false;
+            }
+        } catch (Exception e) {
+            log.error("执行提现扣款异常: {}", withdrawId, e);
+            // 更新提现记录状态为失败
+            record.setWithdrawStatus("failed");
+            record.setRemark("扣款异常: " + e.getMessage());
+            record.setUpdateTime(LocalDateTime.now());
+            this.updateById(record);
+            return false;
+        }
+    }
 }

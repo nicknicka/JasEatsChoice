@@ -148,28 +148,9 @@ public class WalletServiceImpl implements WalletService {
             throw new RuntimeException("余额不足");
         }
 
-        // 扣减余额
-        wallet.setBalance(wallet.getBalance().subtract(amount));
-        wallet.setTotalWithdraw(wallet.getTotalWithdraw().add(amount));
-        wallet.setUpdateTime(LocalDateTime.now());
-
-        // 更新数据库（使用乐观锁）
-        int rows = walletMapper.updateById(wallet);
-        if (rows == 0) {
-            throw new RuntimeException("提现失败，请重试");
-        }
-
-        // 记录消费历史
-        ConsumeHistory history = new ConsumeHistory();
-        history.setUserId(userId);
-        history.setType("withdraw");
-        history.setAmount(amount);
-        history.setDescription("钱包提现 - " + withdrawNo);
-        history.setStatus("success");
-        history.setCreateTime(LocalDateTime.now());
-        consumeHistoryService.save(history);
-
-        log.info("用户{}提现成功，金额：{}，流水号：{}", userId, amount, withdrawNo);
+        // 🔧 修改：不再直接扣款，而是创建提现记录等待审核
+        // 前端或调用方需要通过 WithdrawRecordService 创建提现记录
+        log.info("用户{}申请提现，金额：{}，流水号：{}，等待审核", userId, amount, withdrawNo);
         return true;
     }
 

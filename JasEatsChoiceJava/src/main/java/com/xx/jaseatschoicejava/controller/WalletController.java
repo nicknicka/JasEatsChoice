@@ -2,8 +2,10 @@ package com.xx.jaseatschoicejava.controller;
 
 import com.xx.jaseatschoicejava.common.ResponseResult;
 import com.xx.jaseatschoicejava.entity.Wallet;
+import com.xx.jaseatschoicejava.entity.WithdrawRecord;
 import com.xx.jaseatschoicejava.enums.NotificationTypeEnum;
 import com.xx.jaseatschoicejava.service.WalletService;
+import com.xx.jaseatschoicejava.service.WithdrawRecordService;
 import com.xx.jaseatschoicejava.util.NotificationUtil;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -25,6 +27,7 @@ import java.math.BigDecimal;
 public class WalletController {
 
     private final WalletService walletService;
+    private final WithdrawRecordService withdrawRecordService;
 
     /**
      * 获取用户钱包信息
@@ -94,33 +97,44 @@ public class WalletController {
     }
 
     /**
-     * 提现
+     * 提现申请（创建提现记录，等待审核）
      */
-    @ApiOperation("钱包提现")
+    @ApiOperation("钱包提现申请")
     @PostMapping("/withdraw")
     public ResponseResult<?> withdraw(
         @ApiParam("用户ID") @RequestParam String userId,
         @ApiParam("提现金额") @RequestParam BigDecimal amount,
-        @ApiParam("提现流水号") @RequestParam String withdrawNo
+        @ApiParam("提现流水号") @RequestParam String withdrawNo,
+        @ApiParam("提现方式") @RequestParam(defaultValue = "wechat") String withdrawMethod,
+        @ApiParam("提现账号信息") @RequestParam(required = false) String accountInfo
     ) {
         try {
-            boolean success = walletService.withdraw(userId, amount, withdrawNo);
-            if (success) {
-                // 通知用户提现申请已提交
-                NotificationUtil.createWithdrawNotification(
-                    userId,
-                    NotificationTypeEnum.WITHDRAW_REQUEST,
-                    amount.toString(),
-                    null
-                );
-
-                Wallet wallet = walletService.getWalletByUserId(userId);
-                return ResponseResult.success(wallet);
+            // 检查余额是否足够
+            if (!walletService.checkBalance(userId, amount)) {
+                return ResponseResult.fail("400", "余额不足");
             }
-            return ResponseResult.fail("500", "提现失败");
+
+            // 创建提现记录（待审核状态）
+            WithdrawRecord record = withdrawRecordService.createWithdrawRequest(
+                userId,
+                amount,
+                withdrawNo,
+                withdrawMethod,
+                accountInfo != null ? accountInfo : "微信钱包"
+            );
+
+            // 通知用户提现申请已提交
+            NotificationUtil.createWithdrawNotification(
+                userId,
+                NotificationTypeEnum.WITHDRAW_REQUEST,
+                amount.toString(),
+                null
+            );
+
+            return ResponseResult.success(record, "提现申请已提交，等待审核");
         } catch (Exception e) {
-            log.error("提现失败，用户ID：{}，金额：{}", userId, amount, e);
-            return ResponseResult.fail("500", "提现失败：" + e.getMessage());
+            log.error("提现申请失败，用户ID：{}，金额：{}", userId, amount, e);
+            return ResponseResult.fail("500", "提现申请失败：" + e.getMessage());
         }
     }
 }

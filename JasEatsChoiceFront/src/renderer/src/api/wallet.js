@@ -37,11 +37,11 @@ export default {
   },
 
   /**
-   * 提现
+   * 提现申请（创建提现记录，等待审核）
    */
-  withdraw(userId, amount, withdrawNo) {
+  withdraw(userId, amount, withdrawNo, withdrawMethod = 'wechat', accountInfo = '微信钱包') {
     return api.post('/v1/wallet/withdraw', null, {
-      params: { userId, amount, withdrawNo }
+      params: { userId, amount, withdrawNo, withdrawMethod, accountInfo }
     })
   },
 

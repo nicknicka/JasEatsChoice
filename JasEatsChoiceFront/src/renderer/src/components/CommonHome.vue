@@ -401,18 +401,23 @@ const showLargeAvatar = ref(false)
 
 const sidebarWidth = ref('170px')
 
-// 监听菜单展开事件 - 展开时增宽，给二级菜单足够空间
-const handleMenuOpen = () => {
-  sidebarWidth.value = '220px' // 展开时增宽
+// 跟踪所有展开的子菜单索引
+const openedMenus = ref(new Set())
 
-  // 菜单展开时，移除所有父菜单标题的激活类，避免视觉冲突
-  // const menuTitles = document.querySelectorAll('.menu-list .el-sub-menu__title')
-  // menuTitles.forEach(title => title.classList.remove('is-active'))
+// 监听菜单展开事件 - 展开时增宽，给二级菜单足够空间
+const handleMenuOpen = (index) => {
+  openedMenus.value.add(index)
+  sidebarWidth.value = '220px' // 有菜单展开时保持较宽
 }
 
-// 监听菜单关闭事件 - 关闭时恢复默认较短宽度
-const handleMenuClose = () => {
-  sidebarWidth.value = '170px' // 关闭时恢复默认宽度
+// 监听菜单关闭事件 - 只有当所有菜单都关闭时才恢复较窄宽度
+const handleMenuClose = (index) => {
+  openedMenus.value.delete(index)
+
+  // 只有当所有子菜单都关闭时，才恢复较窄宽度
+  if (openedMenus.value.size === 0) {
+    sidebarWidth.value = '170px'
+  }
 
   // 确保菜单关闭后，包含激活子菜单的一级菜单组仍然保持激活状态
   const activeMenuItem = document.querySelector('.menu-list .el-menu-item.is-active')
@@ -442,6 +447,10 @@ const toggleRole = () => {
     // 切换角色
     userRole.value = userRole.value === 'user' ? 'merchant' : 'user'
 
+    // 重置展开的菜单状态
+    openedMenus.value.clear()
+    sidebarWidth.value = '170px'
+
     // 跳转对应页面
     if (userRole.value === 'user') {
       navigateTo('/user/home')
@@ -460,6 +469,10 @@ const toggleRole = () => {
 // 页面加载时从当前路由恢复角色，默认进入用户角色
 onMounted(() => {
   try {
+    // 初始化时重置展开菜单状态
+    openedMenus.value.clear()
+    sidebarWidth.value = '170px'
+
     if (!userStore.userInfo || userStore.userInfo.avatar === '') {
       userStore.fetchUserInfo()
     }
@@ -547,6 +560,10 @@ watch(
     // Only update if role changed
     if (userRole.value !== newRole) {
       userRole.value = newRole
+
+      // 重置展开的菜单状态
+      openedMenus.value.clear()
+      sidebarWidth.value = '170px'
 
       // Update user info based on role (using Pinia store)
       if (userRole.value === 'merchant') {
@@ -820,14 +837,14 @@ const handleSearch = (value) => {
                         <span class="menu-text">{{ childItem.name }}</span>
                         <!-- 消息中心：只显示系统通知未读数 -->
                         <span
-                          v-if="childItem.index === '10' && unreadNotificationCount > 0"
+                          v-if="childItem.index === '11' && unreadNotificationCount > 0"
                           class="unread-badge"
                         >
                           {{ unreadNotificationCount > 99 ? '99+' : unreadNotificationCount }}
                         </span>
                         <!-- 通讯录：显示好友请求未读数 -->
                         <span
-                          v-if="childItem.index === '12' && unreadFriendRequestCount > 0"
+                          v-if="childItem.index === '13' && unreadFriendRequestCount > 0"
                           class="unread-badge"
                         >
                           {{ unreadFriendRequestCount > 99 ? '99+' : unreadFriendRequestCount }}

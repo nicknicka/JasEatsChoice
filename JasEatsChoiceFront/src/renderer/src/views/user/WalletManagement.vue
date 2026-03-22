@@ -573,9 +573,14 @@ const confirmWithdraw = async () => {
   try {
     const withdrawNo = 'WTH' + new Date().getTime() + Math.floor(Math.random() * 1000)
 
-    // 这里应该验证支付密码是否正确
-    // 目前简化处理，直接调用提现接口
-    const response = await walletApi.withdraw(userId, withdrawForm.value.amount, withdrawNo)
+    // 调用提现接口（现在会创建提现记录，等待审核）
+    const response = await walletApi.withdraw(
+      userId,
+      withdrawForm.value.amount,
+      withdrawNo,
+      'wechat', // 默认微信提现
+      '微信钱包' // 账号信息
+    )
 
     if (response.code === '200') {
       const fee = calculateWithdrawFee(withdrawForm.value.amount)
@@ -583,28 +588,33 @@ const confirmWithdraw = async () => {
 
       ElMessage.success({
         dangerouslyUseHTMLString: true,
+        duration: 5000,
         message: `
-          <div>提现申请已提交！</div>
-          <div style="margin-top: 8px; font-size: 0.857rem /* 原值: 12px */;">
+          <div style="font-weight: 600; margin-bottom: 8px;">✅ 提现申请已提交！</div>
+          <div style="font-size: 0.929rem; color: #666; line-height: 1.8;">
             提现金额：${withdrawForm.value.amount}平台币<br>
             手续费：${fee}平台币<br>
             预计到账：${actualAmount}平台币<br>
-            到账时间：1-3个工作日
+            <div style="color: #ff6b6b; margin-top: 8px; padding: 8px; background: #fff5f5; border-radius: 6px;">
+              ⏳ 提现申请已提交，等待管理员审核<br>
+              📅 审核通过后1-3个工作日到账
+            </div>
           </div>
         `
       })
       withdrawDialogVisible.value = false
-      await fetchWalletInfo()
+      // 注意：提现只是申请，余额还未扣除，所以不需要刷新钱包信息
+      // await fetchWalletInfo()
     } else {
       if (response.message && response.message.includes('密码')) {
         ElMessage.error('支付密码错误，请重新输入')
       } else {
-        ElMessage.error(response.message || '提现失败，请重试')
+        ElMessage.error(response.message || '提现申请失败，请重试')
       }
     }
   } catch (error) {
-    console.error('提现失败:', error)
-    ElMessage.error(error.message || '提现失败，请重试')
+    console.error('提现申请失败:', error)
+    ElMessage.error(error.message || '提现申请失败，请重试')
   } finally {
     withdrawing.value = false
   }

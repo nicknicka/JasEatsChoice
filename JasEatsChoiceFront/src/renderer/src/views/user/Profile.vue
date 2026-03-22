@@ -142,17 +142,21 @@
             <div class="wallet-hint">点击查看详情 →</div>
           </div>
           <div class="wallet-balance">
-            <span class="balance-number number-scroll">{{ userInfo.wallet?.balance || 0 }}</span>
+            <span class="balance-number number-scroll">{{ formatNumber(userInfo.wallet?.balance || 0) }}</span>
             <span class="balance-unit">个</span>
           </div>
           <div class="wallet-summary">
             <div class="summary-item">
               <span class="summary-label">累计充值</span>
-              <span class="summary-value">{{ userInfo.wallet?.totalRecharge || 0 }}</span>
+              <span class="summary-value">{{ formatNumber(userInfo.wallet?.totalRecharge || 0) }}</span>
             </div>
             <div class="summary-item">
               <span class="summary-label">累计消费</span>
-              <span class="summary-value">{{ userInfo.wallet?.totalConsume || 0 }}</span>
+              <span class="summary-value">{{ formatNumber(userInfo.wallet?.totalConsume || 0) }}</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">累计提现</span>
+              <span class="summary-value">{{ formatNumber(userInfo.wallet?.totalWithdraw || 0) }}</span>
             </div>
           </div>
         </div>
@@ -549,7 +553,8 @@ const userInfo = ref({
   wallet: {
     balance: 0,
     totalRecharge: 0,
-    totalConsume: 0
+    totalConsume: 0,
+    totalWithdraw: 0
   },
   collections: 0,
   addresses: 0,
@@ -583,6 +588,16 @@ const weekBalanceDisplay = computed(() => {
   const balance = userInfo.value.weekBalance || 0
   return `${balance}%`
 })
+
+// 格式化数字显示（保留两位小数）
+const formatNumber = (num) => {
+  if (typeof num === 'number') {
+    return num.toFixed(2)
+  }
+  // 处理字符串或BigDecimal情况
+  const number = parseFloat(String(num || '0'))
+  return isNaN(number) ? '0.00' : number.toFixed(2)
+}
 
 // 分享功能变量
 const shareDialogVisible = ref(false)
@@ -1647,6 +1662,7 @@ defineExpose({
   gap: 30px;
   padding-top: 15px;
   border-top: 1px solid rgba(214, 158, 46, 0.2);
+  flex-wrap: wrap;
 }
 
 .summary-item {
