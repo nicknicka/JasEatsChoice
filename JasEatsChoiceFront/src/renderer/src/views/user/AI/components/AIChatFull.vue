@@ -409,6 +409,7 @@ import UserInfoCard from './cards/UserInfoCard.vue'
 import DishListCard from './cards/DishListCard.vue'
 import NotificationListCard from './cards/NotificationListCard.vue'
 import ErrorCard from './cards/ErrorCard.vue'
+import OrderGuideCard from './cards/OrderGuideCard.vue'
 
 const cardComponents = {
   'order_list_card': OrderListCard,
@@ -418,7 +419,8 @@ const cardComponents = {
   'user_info_card': UserInfoCard,
   'dish_list_card': DishListCard,
   'notification_list_card': NotificationListCard,
-  'error_card': ErrorCard
+  'error_card': ErrorCard,
+  'order_guide_card': OrderGuideCard
 }
 
 // 获取卡片组件

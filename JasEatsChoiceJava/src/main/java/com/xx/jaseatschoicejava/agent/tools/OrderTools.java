@@ -9,6 +9,7 @@ import com.xx.jaseatschoicejava.service.DishService;
 import com.xx.jaseatschoicejava.service.OrderService;
 import com.xx.jaseatschoicejava.service.UserCouponService;
 import dev.langchain4j.agent.tool.Tool;
+import dev.langchain4j.agent.tool.P;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -151,65 +152,80 @@ public class OrderTools {
      * @param userId 用户ID
      * @return 订单列表（JSON格式的结构化数据）
      */
-    @Tool("获取用户的历史订单列表，返回结构化的订单数据")
-    @CardType(value = "order_list_card", priority = 10)
-    public String getUserOrders(String userId) {
-        log.info("执行工具：getUserOrders，用户：{}", userId);
+    @Tool("""
+        获取用户的历史订单列表
+
+        **何时使用：**
+        - 用户询问"我的订单"、"查看订单"、"订单记录"、"订单列表"
+        - 用户想查询订单状态、历史订单、消费记录
+        - 用户询问"我买过什么"、"我的消费记录"、"最近订单"
+
+        **参数：**
+        - userIdentifier - 用户唯一标识ID
+
+        **返回：** 订单列表，包括订单号、状态、金额、时间
+        """)
+    public String getUserOrders(
+        @P("用户唯一标识ID") String userIdentifier
+    ) {
+        log.info("执行工具：getUserOrders，用户：{}", userIdentifier);
 
         try {
             QueryWrapper<Order> queryWrapper = new QueryWrapper<>();
-            queryWrapper.eq("user_id", userId)
+            queryWrapper.eq("user_id", userIdentifier)
                     .orderByDesc("create_time");
 
             List<Order> orders = orderService.list(queryWrapper);
 
             if (orders == null || orders.isEmpty()) {
-                return "{\"type\":\"text\",\"content\":\"您还没有订单记录，快去下单体验美食吧~\"}";
+                return "您还没有订单记录，快去下单体验美食吧~";
             }
 
-            // 构建JSON格式的订单数据
-            StringBuilder json = new StringBuilder();
-            json.append("{");
-            json.append("\"type\":\"order_list_card\",");
-            json.append("\"data\":{");
-            json.append("\"summary\":\"为您查询到订单列表\",");
-            json.append("\"total\":").append(orders.size()).append(",");
-            json.append("\"pendingCount\":").append(orders.stream().filter(o -> o.getStatus() != null && o.getStatus() < 3).count()).append(",");
-            json.append("\"orders\":[");
+            // 返回人类可读的文本（给AI看的）
+            // 卡片数据会通过AOP在后台自动生成
+            StringBuilder result = new StringBuilder();
+            result.append("为您查询到 ").append(orders.size()).append(" 条订单记录：\n\n");
 
-            // 显示最近5条订单
-            for (int i = 0; i < Math.min(5, orders.size()); i++) {
+            // 显示最近5条订单 - 使用更清晰的格式
+            int displayCount = Math.min(5, orders.size());
+            for (int i = 0; i < displayCount; i++) {
                 Order order = orders.get(i);
 
-                if (i > 0) json.append(",");
-
-                json.append("{");
-                json.append("\"orderId\":\"").append(order.getId()).append("\",");
-                json.append("\"status\":").append(order.getStatus() != null ? order.getStatus() : 0).append(",");
-                json.append("\"statusText\":\"").append(getStatusText(order.getStatus())).append("\",");
-                json.append("\"dishCount\":1,"); // TODO: 实际应该从订单详情表获取
-                json.append("\"totalAmount\":\"").append(order.getTotalAmount() != null ? order.getTotalAmount() : "0.00").append("\",");
-                json.append("\"createTime\":\"").append(order.getCreateTime() != null ? order.getCreateTime() : "").append("\",");
-                json.append("\"actions\":[");
-
-                // 根据订单状态添加操作按钮
-                if (order.getStatus() != null && order.getStatus() < 3) {
-                    json.append("{\"type\":\"detail\",\"text\":\"查看详情\",\"icon\":\"View\"}");
+                // 使用分隔线区分每个订单
+                if (i > 0) {
+                    result.append("\n---\n\n");
                 }
 
-                json.append("]");
-                json.append("}");
+                // 订单头部
+                result.append("**订单").append(i + 1).append("** | ");
+                result.append("订单号：`").append(order.getId()).append("`\n\n");
+
+                // 订单详情（使用列表格式）
+                result.append("- 状态：").append(getStatusText(order.getStatus())).append("\n");
+
+                if (order.getTotalAmount() != null) {
+                    result.append("- 金额：¥").append(String.format("%.2f", order.getTotalAmount())).append("\n");
+                }
+
+                if (order.getCreateTime() != null) {
+                    // 格式化时间显示
+                    String timeStr = order.getCreateTime().toString();
+                    if (timeStr.contains("T")) {
+                        timeStr = timeStr.substring(0, timeStr.indexOf("T"));
+                    }
+                    result.append("- 时间：").append(timeStr).append("\n");
+                }
             }
 
-            json.append("]");
-            json.append("}");
-            json.append("}");
+            if (orders.size() > 5) {
+                result.append("\n\n... 还有 ").append(orders.size() - 5).append(" 条订单，您可以继续查询更多详情");
+            }
 
-            return json.toString();
+            return result.toString();
 
         } catch (Exception e) {
             log.error("获取订单列表失败", e);
-            return "{\"type\":\"text\",\"content\":\"获取订单列表失败：" + e.getMessage() + "\"}";
+            return "获取订单列表失败：" + e.getMessage();
         }
     }
 
@@ -248,33 +264,198 @@ public class OrderTools {
     }
 
     /**
-     * 智能下单（简化版）
+     * 智能下单辅助工具
+     * 根据用户描述搜索菜品，并引导用户前往下单页面
      *
      * @param userId 用户ID
      * @param requirement 用户需求描述
-     * @return 下单结果
+     * @return 下单引导信息
      */
-    @Tool("根据用户描述智能下单，例如：'我想吃两个菜，预算50元'")
-    public String smartOrder(String userId, String requirement) {
-        log.info("执行工具：smartOrder，用户：{}，需求：{}", userId, requirement);
+    @Tool("""
+        根据用户描述智能搜索菜品，并引导用户前往下单页面
+
+        **何时使用：**
+        - 用户说"我要点菜"、"下单"、"1个皮蛋瘦肉粥"、"我要宫保鸡丁"
+        - 用户表达购买意图，提到菜品名称
+
+        **参数：**
+        - userIdentifier - 用户唯一标识ID
+        - requirement - 用户需求描述，例如："1个皮蛋瘦肉粥"、"我要宫保鸡丁和鱼香肉丝"
+
+        **返回：** 找到的菜品信息，引导用户前往下单页面确认并支付
+        """)
+    @com.xx.jaseatschoicejava.agent.annotation.CardType(value = "order_guide_card", priority = 10)
+    public String smartOrder(
+        @P("用户唯一标识ID") String userIdentifier,
+        @P("用户需求描述，如：1个皮蛋瘦肉粥") String requirement
+    ) {
+        log.info("执行工具：smartOrder，用户：{}，需求：{}", userIdentifier, requirement);
 
         try {
-            // 简化版：返回引导信息
+            // 1. 解析用户需求，提取菜品名称和数量
+            List<String> dishNames = extractDishNames(requirement);
+            List<Integer> quantities = extractQuantities(requirement, dishNames.size());
+
+            if (dishNames.isEmpty()) {
+                return "🤖 **智能下单助手**\n\n"
+                    + "我理解您想下单，但没听清楚您要什么菜品。\n\n"
+                    + "请告诉我您想点的菜名，例如：\n"
+                    + "- \"1个皮蛋瘦肉粥\"\n"
+                    + "- \"我要宫保鸡丁和鱼香肉丝\"\n"
+                    + "- \"来一份西红柿鸡蛋汤\"";
+            }
+
+            // 2. 搜索菜品数据库
+            List<Dish> foundDishes = new ArrayList<>();
+            List<Integer> finalQuantities = new ArrayList<>();
+            StringBuilder notFoundDishes = new StringBuilder();
+
+            for (int i = 0; i < dishNames.size(); i++) {
+                String dishName = dishNames.get(i);
+
+                // 模糊搜索菜品
+                QueryWrapper<Dish> queryWrapper = new QueryWrapper<>();
+                queryWrapper.like("name", dishName)
+                        .eq("is_online", true);  // 只搜索上架的菜品
+
+                List<Dish> dishes = dishService.list(queryWrapper);
+
+                if (dishes.isEmpty()) {
+                    notFoundDishes.append(String.format("- %s\n", dishName));
+                } else {
+                    // 取第一个匹配的菜品
+                    Dish dish = dishes.get(0);
+                    foundDishes.add(dish);
+                    finalQuantities.add(quantities.get(i));
+                }
+            }
+
+            // 检查是否有未找到的菜品
+            if (notFoundDishes.length() > 0 && foundDishes.isEmpty()) {
+                return String.format("❌ **菜品未找到**\n\n"
+                    + "抱歉，以下菜品没有找到：\n\n"
+                    + "%s"
+                    + "\n可能原因：\n"
+                    + "- 菜品名称不正确\n"
+                    + "- 菜品已下架\n"
+                    + "- 该商家暂未营业\n\n"
+                    + "您可以换个菜名试试，或者使用「推荐美食」功能查看可用菜品。", notFoundDishes);
+            }
+
+            // 3. 构建菜品清单，引导用户下单
             StringBuilder result = new StringBuilder();
-            result.append("🤖 **智能下单助手**\n\n");
-            result.append("我理解您的需求：\"").append(requirement).append("\"\n\n");
-            result.append("为了更好地为您服务，我需要以下信息：\n\n");
-            result.append("1. 您想点哪些菜品？（可以告诉我想吃的菜名）\n");
-            result.append("2. 配送地址是哪里？\n");
-            result.append("3. 有什么特殊要求吗？（忌口、备注等）\n\n");
-            result.append("您可以直接告诉我，例如：\"我要宫保鸡丁和鱼香肉丝，送到宿舍\"");
+            result.append("✅ **已为您找到以下菜品**\n\n");
+
+            // 构建菜品信息
+            BigDecimal totalAmount = BigDecimal.ZERO;
+            int totalCalories = 0;
+
+            for (int i = 0; i < foundDishes.size(); i++) {
+                Dish dish = foundDishes.get(i);
+                Integer quantity = finalQuantities.get(i);
+
+                BigDecimal subtotal = dish.getPrice().multiply(new BigDecimal(quantity));
+                totalAmount = totalAmount.add(subtotal);
+
+                if (dish.getCalorie() != null) {
+                    totalCalories += dish.getCalorie() * quantity;
+                }
+
+                result.append(String.format("**%d. %s**\n", i + 1, dish.getName()));
+                result.append(String.format("   - 价格：¥%.2f × %d = ¥%.2f\n",
+                    dish.getPrice(), quantity, subtotal));
+                if (dish.getCalorie() != null) {
+                    result.append(String.format("   - 热量：%d kcal\n", dish.getCalorie() * quantity));
+                }
+                if (dish.getMerchantId() != null) {
+                    result.append(String.format("   - 商家ID：%s\n", dish.getMerchantId()));
+                }
+                result.append(String.format("   - 菜品ID：%s\n", dish.getId()));
+                result.append("\n");
+            }
+
+            if (notFoundDishes.length() > 0) {
+                result.append("**⚠️ 以下菜品未找到：**\n");
+                result.append(notFoundDishes);
+                result.append("\n");
+            }
+
+            result.append(String.format("**💰 预计总价：¥%.2f**\n", totalAmount));
+            result.append(String.format("**🔥 总热量：%d kcal**\n\n", totalCalories));
+
+            // 4. 引导用户前往下单页面
+            result.append("**📱 下一步操作：**\n\n");
+            result.append("请前往「下单页面」完成订单：\n");
+            result.append("1. 确认配送地址\n");
+            result.append("2. 选择支付方式\n");
+            result.append("3. 确认并支付订单\n\n");
+
+            result.append("💡 **提示：**\n");
+            result.append("- 您可以在下单页面调整菜品数量\n");
+            result.append("- 如需添加备注，请在下单页面填写\n");
+            result.append("- 支持使用钱包余额或优惠券支付");
 
             return result.toString();
 
         } catch (Exception e) {
             log.error("智能下单失败", e);
-            return "智能下单失败：" + e.getMessage();
+            return "❌ 智能下单失败：" + e.getMessage();
         }
+    }
+
+    /**
+     * 从用户需求中提取菜品名称
+     * 例如："1个皮蛋瘦肉粥和2份宫保鸡丁" -> ["皮蛋瘦肉粥", "宫保鸡丁"]
+     */
+    private List<String> extractDishNames(String requirement) {
+        List<String> dishNames = new ArrayList<>();
+
+        // 常见的量词
+        String[] quantityPatterns = {"\\d+个", "\\d+份", "\\d+碗", "\\d+盘",
+                                     "\\d+\\s*个", "\\d+\\s*份", "\\d+\\s*碗", "\\d+\\s*盘"};
+
+        // 先移除数量词，提取菜品名
+        String cleaned = requirement;
+        for (String pattern : quantityPatterns) {
+            cleaned = cleaned.replaceAll(pattern, "");
+        }
+
+        // 移除常见词汇
+        cleaned = cleaned.replaceAll("[我要想吃来份个碗盘]+", "");
+        cleaned = cleaned.replaceAll("[和，,、]+", " ");
+
+        // 分割菜品名
+        String[] parts = cleaned.trim().split("\\s+");
+        for (String part : parts) {
+            if (!part.isEmpty() && part.length() >= 2) {  // 菜名至少2个字
+                dishNames.add(part);
+            }
+        }
+
+        return dishNames;
+    }
+
+    /**
+     * 从用户需求中提取数量
+     * 例如："1个皮蛋瘦肉粥和2份宫保鸡丁" -> [1, 2]
+     */
+    private List<Integer> extractQuantities(String requirement, int dishCount) {
+        List<Integer> quantities = new ArrayList<>();
+
+        // 提取所有数字
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("(\\d+)[个份碗盘]");
+        java.util.regex.Matcher matcher = pattern.matcher(requirement);
+
+        while (matcher.find()) {
+            quantities.add(Integer.parseInt(matcher.group(1)));
+        }
+
+        // 如果没有明确数量，默认为1
+        while (quantities.size() < dishCount) {
+            quantities.add(1);
+        }
+
+        return quantities;
     }
 
     /**

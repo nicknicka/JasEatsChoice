@@ -43,6 +43,9 @@ public class AIStreamController {
     @Resource
     private ApplicationContext applicationContext;
 
+    @Resource
+    private com.xx.jaseatschoicejava.agent.tools.OrderTools orderTools;
+
     /**
      * SSE流式聊天接口（真正的流式输出）
      *
@@ -52,8 +55,8 @@ public class AIStreamController {
     @ApiOperation(value = "SSE流式聊天", notes = "使用LangChain4j的StreamingChatLanguageModel实现真正的流式响应")
     @PostMapping("/chat")
     public SseEmitter streamChat(@RequestBody Map<String, Object> params) {
-        // 创建SseEmitter（30秒超时）
-        SseEmitter emitter = new SseEmitter(30000L);
+        // 创建SseEmitter（5分钟超时，适配工具调用和AI生成）
+        SseEmitter emitter = new SseEmitter(300000L);
 
         try {
             // 1. 提取参数
@@ -73,14 +76,7 @@ public class AIStreamController {
             log.info("   - 用户ID: {}", userId);
             log.info("   - 消息内容: {}", message);
 
-            // 保存用户消息到聊天历史
-            try {
-                com.xx.jaseatschoicejava.service.AIChatHistoryService chatHistoryService =
-                    applicationContext.getBean(com.xx.jaseatschoicejava.service.AIChatHistoryService.class);
-                chatHistoryService.saveMessage(userId, "user", message, null, null);
-            } catch (Exception e) {
-                log.warn("保存用户消息失败: {}", e.getMessage());
-            }
+            // 注意：用户消息由前端保存，这里不重复保存
 
             // 3. 调用真正的流式Agent（传递userId）
             streamingIntelligentAssistantAgent.chat(message, userId)
@@ -88,12 +84,15 @@ public class AIStreamController {
                     // 处理每个token（从LLM流式接收）
                     try {
                         if (token != null && !token.isEmpty()) {
-                            // 将token包装为JSON对象，确保换行符等特殊字符被正确传输
-                            Map<String, String> charData = Map.of("char", token);
-                            emitter.send(SseEmitter.event()
+                            // 检查 emitter 是否已完成
+                            SseEmitter.SseEventBuilder event = SseEmitter.event()
                                 .name("message")
-                                .data(charData));
+                                .data(Map.of("char", token));
+                            emitter.send(event);
                         }
+                    } catch (IllegalStateException e) {
+                        // Emitter 已完成，忽略此错误
+                        log.debug("Emitter 已完成，停止发送");
                     } catch (IOException e) {
                         log.error("发送token失败", e);
                     }
@@ -104,9 +103,23 @@ public class AIStreamController {
                         log.info("✅ 流式响应完成");
 
                         AiMessage aiMessage = response.content();
-                        log.info("📊 响应内容: {}", aiMessage.text());
+                        String responseText = aiMessage.text();
+                        log.info("📊 响应内容: {}", responseText);
 
-                        // 从ToolExecutionContext获取工具执行信息
+                        // 🔍 检查是否有工具执行请求
+                        log.info("🔍 检查是否有工具执行请求...");
+                        log.info("🔍 aiMessage.hasToolExecutionRequests(): {}", aiMessage.hasToolExecutionRequests());
+
+                        if (aiMessage.hasToolExecutionRequests()) {
+                            log.info("✅ 发现工具执行请求！");
+                            aiMessage.toolExecutionRequests().forEach(request -> {
+                                log.info("🔧 工具调用: {} | 参数: {}", request.id(), request.arguments());
+                            });
+                        } else {
+                            log.info("⚠️ 没有检测到工具执行请求");
+                        }
+
+                        // 从ToolExecutionContext获取工具执行信息（AOP方式）
                         Map<String, ToolExecutionContext.ToolExecutionInfo> cardExecutions =
                             ToolExecutionContext.getCardExecutions();
 
@@ -124,7 +137,7 @@ public class AIStreamController {
                                 String cardType = executionInfo.getCardType();
                                 log.info("📊 生成卡片数据: cardType={}", cardType);
 
-                                Map<String, Object> cardData = buildCardData(cardType, userId);
+                                Map<String, Object> cardData = buildCardData(cardType, userId, executionInfo);
 
                                 if (cardData != null) {
                                     emitter.send(SseEmitter.event()
@@ -177,9 +190,11 @@ public class AIStreamController {
      * 根据卡片类型构建卡片数据
      * @param cardType 卡片类型
      * @param userId 用户ID
+     * @param executionInfo 工具执行信息
      * @return 卡片数据，如果不需要卡片则返回null
      */
-    private Map<String, Object> buildCardData(String cardType, String userId) {
+    private Map<String, Object> buildCardData(String cardType, String userId,
+                                               ToolExecutionContext.ToolExecutionInfo executionInfo) {
         try {
             log.info("📊 开始构建卡片数据: cardType={}, userId={}", cardType, userId);
 
@@ -188,6 +203,8 @@ public class AIStreamController {
                     return buildOrderListCardData(userId);
                 case "user_info_card":
                     return buildUserInfoCardData(userId);
+                case "order_guide_card":
+                    return buildOrderGuideCardData(executionInfo);
                 default:
                     log.warn("⚠️ 未知的卡片类型: {}", cardType);
                     return null;
@@ -412,6 +429,161 @@ public class AIStreamController {
         if (bmi < 24) return "正常";
         if (bmi < 28) return "偏胖";
         return "肥胖";
+    }
+
+    /**
+     * 构建下单引导卡片数据
+     * 根据工具执行信息中保存的参数和结果，构建前端需要的卡片数据
+     *
+     * @param executionInfo 工具执行信息
+     * @return 卡片数据
+     */
+    private Map<String, Object> buildOrderGuideCardData(ToolExecutionContext.ToolExecutionInfo executionInfo) {
+        try {
+            log.info("📊 构建下单引导卡片，工具：{}", executionInfo.getToolName());
+
+            // 从工具执行信息中获取参数和结果
+            Map<String, Object> parameters = executionInfo.getParameters();
+            Object result = executionInfo.getResult();
+
+            if (parameters == null || result == null) {
+                log.warn("⚠️ 工具执行信息不完整");
+                return null;
+            }
+
+            // 获取用户需求和用户ID
+            String requirement = (String) parameters.get("requirement");
+            String userId = (String) parameters.get("userIdentifier");
+
+            log.info("📊 用户需求：{}，用户ID：{}", requirement, userId);
+
+            // 解析用户需求，提取菜品名称
+            List<String> dishNames = extractDishNames(requirement);
+            List<Integer> quantities = extractQuantities(requirement, dishNames.size());
+
+            if (dishNames.isEmpty()) {
+                log.warn("⚠️ 未找到菜品名称");
+                return null;
+            }
+
+            // 搜索菜品
+            com.xx.jaseatschoicejava.service.DishService dishService =
+                applicationContext.getBean(com.xx.jaseatschoicejava.service.DishService.class);
+
+            List<Map<String, Object>> foundDishes = new java.util.ArrayList<>();
+            List<String> notFoundDishes = new java.util.ArrayList<>();
+            java.math.BigDecimal totalAmount = java.math.BigDecimal.ZERO;
+            int totalCalories = 0;
+
+            for (int i = 0; i < dishNames.size(); i++) {
+                String dishName = dishNames.get(i);
+
+                // 模糊搜索菜品
+                com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<com.xx.jaseatschoicejava.entity.Dish> queryWrapper =
+                    new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>();
+                queryWrapper.like("name", dishName)
+                        .eq("is_online", true);
+
+                List<com.xx.jaseatschoicejava.entity.Dish> dishes = dishService.list(queryWrapper);
+
+                if (dishes.isEmpty()) {
+                    notFoundDishes.add(dishName);
+                } else {
+                    // 取第一个匹配的菜品
+                    com.xx.jaseatschoicejava.entity.Dish dish = dishes.get(0);
+                    Integer quantity = quantities.get(i);
+
+                    java.math.BigDecimal subtotal = dish.getPrice().multiply(new java.math.BigDecimal(quantity));
+                    totalAmount = totalAmount.add(subtotal);
+
+                    if (dish.getCalorie() != null) {
+                        totalCalories += dish.getCalorie() * quantity;
+                    }
+
+                    // 构建菜品信息
+                    Map<String, Object> dishInfo = new HashMap<>();
+                    dishInfo.put("name", dish.getName());
+                    dishInfo.put("dishId", dish.getId());
+                    dishInfo.put("price", dish.getPrice());
+                    dishInfo.put("quantity", quantity);
+                    dishInfo.put("subtotal", subtotal);
+                    dishInfo.put("calories", dish.getCalorie() != null ? dish.getCalorie() * quantity : 0);
+                    dishInfo.put("merchantId", dish.getMerchantId());
+
+                    foundDishes.add(dishInfo);
+                }
+            }
+
+            // 构建卡片数据
+            Map<String, Object> data = new HashMap<>();
+            data.put("messageType", "order_guide_card");
+            data.put("summary", String.format("已为您找到 %d 个菜品", foundDishes.size()));
+            data.put("dishes", foundDishes);
+            data.put("notFoundDishes", notFoundDishes);
+            data.put("totalAmount", totalAmount);
+            data.put("totalCalories", totalCalories);
+
+            log.info("✅ 下单引导卡片构建成功，找到 {} 个菜品", foundDishes.size());
+
+            return data;
+
+        } catch (Exception e) {
+            log.error("构建下单引导卡片失败", e);
+            return null;
+        }
+    }
+
+    /**
+     * 从用户需求中提取菜品名称
+     */
+    private List<String> extractDishNames(String requirement) {
+        List<String> dishNames = new java.util.ArrayList<>();
+
+        // 常见的量词
+        String[] quantityPatterns = {"\\d+个", "\\d+份", "\\d+碗", "\\d+盘",
+                                     "\\d+\\s*个", "\\d+\\s*份", "\\d+\\s*碗", "\\d+\\s*盘"};
+
+        // 先移除数量词，提取菜品名
+        String cleaned = requirement;
+        for (String pattern : quantityPatterns) {
+            cleaned = cleaned.replaceAll(pattern, "");
+        }
+
+        // 移除常见词汇
+        cleaned = cleaned.replaceAll("[我要想吃来份个碗盘]+", "");
+        cleaned = cleaned.replaceAll("[和，,、]+", " ");
+
+        // 分割菜品名
+        String[] parts = cleaned.trim().split("\\s+");
+        for (String part : parts) {
+            if (!part.isEmpty() && part.length() >= 2) {
+                dishNames.add(part);
+            }
+        }
+
+        return dishNames;
+    }
+
+    /**
+     * 从用户需求中提取数量
+     */
+    private List<Integer> extractQuantities(String requirement, int dishCount) {
+        List<Integer> quantities = new java.util.ArrayList<>();
+
+        // 提取所有数字
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("(\\d+)[个份碗盘]");
+        java.util.regex.Matcher matcher = pattern.matcher(requirement);
+
+        while (matcher.find()) {
+            quantities.add(Integer.parseInt(matcher.group(1)));
+        }
+
+        // 如果没有明确数量，默认为1
+        while (quantities.size() < dishCount) {
+            quantities.add(1);
+        }
+
+        return quantities;
     }
 
     /**
