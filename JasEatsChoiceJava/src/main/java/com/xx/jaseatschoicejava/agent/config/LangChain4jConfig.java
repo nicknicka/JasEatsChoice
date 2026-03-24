@@ -4,8 +4,20 @@ import com.xx.jaseatschoicejava.agent.MerchantAssistantAgent;
 import com.xx.jaseatschoicejava.agent.NutritionAiAgent;
 import com.xx.jaseatschoicejava.agent.OrderAiAgent;
 import com.xx.jaseatschoicejava.agent.RecommendationAiAgent;
+import com.xx.jaseatschoicejava.agent.agents.*;
+import com.xx.jaseatschoicejava.agent.tools.merchant.MerchantQueryTools;
+import com.xx.jaseatschoicejava.agent.tools.merchant.MerchantStatsTools;
+import com.xx.jaseatschoicejava.agent.tools.nutrition.NutritionAnalysisTools;
+import com.xx.jaseatschoicejava.agent.tools.nutrition.CalorieCalculatorTools;
+import com.xx.jaseatschoicejava.agent.tools.order.OrderCreateTools;
+import com.xx.jaseatschoicejava.agent.tools.order.OrderQueryTools;
+import com.xx.jaseatschoicejava.agent.tools.recommendation.RecommendationFilterTools;
+import com.xx.jaseatschoicejava.agent.tools.recommendation.RecommendationQueryTools;
+import com.xx.jaseatschoicejava.agent.tools.recommendation.RecommendationRankTools;
+import com.xx.jaseatschoicejava.agent.tools.system.LocationTools;
+import com.xx.jaseatschoicejava.agent.tools.system.TimeTools;
+import com.xx.jaseatschoicejava.agent.tools.user.UserProfileTools;
 import com.xx.jaseatschoicejava.agent.tools.CollectionTools;
-import com.xx.jaseatschoicejava.agent.tools.LocationTools;
 import com.xx.jaseatschoicejava.agent.tools.MerchantTools;
 import com.xx.jaseatschoicejava.agent.tools.NutritionRecordTools;
 import com.xx.jaseatschoicejava.agent.tools.NutritionTools;
@@ -72,6 +84,40 @@ public class LangChain4jConfig {
 
     @Resource
     private MerchantTools merchantTools;
+
+    // Week 3 新增工具类
+    @Resource
+    private UserProfileTools userProfileTools;
+
+    @Resource
+    private MerchantQueryTools merchantQueryTools;
+
+    @Resource
+    private MerchantStatsTools merchantStatsTools;
+
+    @Resource
+    private TimeTools timeTools;
+
+    @Resource
+    private NutritionAnalysisTools nutritionAnalysisTools;
+
+    @Resource
+    private CalorieCalculatorTools calorieCalculatorTools;
+
+    @Resource
+    private RecommendationQueryTools recommendationQueryTools;
+
+    @Resource
+    private RecommendationFilterTools recommendationFilterTools;
+
+    @Resource
+    private RecommendationRankTools recommendationRankTools;
+
+    @Resource
+    private OrderQueryTools orderQueryTools;
+
+    @Resource
+    private OrderCreateTools orderCreateTools;
 
     /**
      * 配置ChatLanguageModel（智谱AI）
@@ -226,6 +272,298 @@ public class LangChain4jConfig {
                 .chatMemory(chatMemory)
                 .tools(
                     merchantTools
+                )
+                .build();
+    }
+
+    // ==================== Week 4: L1 基础智能体 ====================
+
+    /**
+     * 构建L1用户偏好Agent
+     */
+    @Bean
+    public UserPreferenceAgent userPreferenceAgent(ChatLanguageModel chatLanguageModel, ChatMemory chatMemory) {
+        log.info("构建UserPreferenceAgent...");
+
+        return AiServices.builder(UserPreferenceAgent.class)
+                .chatLanguageModel(chatLanguageModel)
+                .chatMemory(chatMemory)
+                .tools(
+                    userProfileTools
+                )
+                .build();
+    }
+
+    /**
+     * 构建L1营养指导Agent
+     */
+    @Bean
+    public NutritionGuideAgent nutritionGuideAgent(ChatLanguageModel chatLanguageModel, ChatMemory chatMemory) {
+        log.info("构建NutritionGuideAgent...");
+
+        return AiServices.builder(NutritionGuideAgent.class)
+                .chatLanguageModel(chatLanguageModel)
+                .chatMemory(chatMemory)
+                .tools(
+                    nutritionAnalysisTools,
+                    calorieCalculatorTools
+                )
+                .build();
+    }
+
+    /**
+     * 构建L1菜品推荐Agent
+     */
+    @Bean
+    public DishRecommendationAgent dishRecommendationAgent(ChatLanguageModel chatLanguageModel, ChatMemory chatMemory) {
+        log.info("构建DishRecommendationAgent...");
+
+        return AiServices.builder(DishRecommendationAgent.class)
+                .chatLanguageModel(chatLanguageModel)
+                .chatMemory(chatMemory)
+                .tools(
+                    recommendationQueryTools,
+                    recommendationFilterTools,
+                    recommendationRankTools
+                )
+                .build();
+    }
+
+    /**
+     * 构建L1商家信息Agent
+     */
+    @Bean
+    public MerchantInfoAgent merchantInfoAgent(ChatLanguageModel chatLanguageModel, ChatMemory chatMemory) {
+        log.info("构建MerchantInfoAgent...");
+
+        return AiServices.builder(MerchantInfoAgent.class)
+                .chatLanguageModel(chatLanguageModel)
+                .chatMemory(chatMemory)
+                .tools(
+                    merchantQueryTools,
+                    merchantStatsTools
+                )
+                .build();
+    }
+
+    /**
+     * 构建L1时间感知Agent
+     */
+    @Bean
+    public TimeAwareAgent timeAwareAgent(ChatLanguageModel chatLanguageModel, ChatMemory chatMemory) {
+        log.info("构建TimeAwareAgent...");
+
+        return AiServices.builder(TimeAwareAgent.class)
+                .chatLanguageModel(chatLanguageModel)
+                .chatMemory(chatMemory)
+                .tools(
+                    timeTools
+                )
+                .build();
+    }
+
+    /**
+     * 构建L1位置服务Agent
+     */
+    @Bean
+    public LocationServiceAgent locationServiceAgent(ChatLanguageModel chatLanguageModel, ChatMemory chatMemory) {
+        log.info("构建LocationServiceAgent...");
+
+        return AiServices.builder(LocationServiceAgent.class)
+                .chatLanguageModel(chatLanguageModel)
+                .chatMemory(chatMemory)
+                .tools(
+                    locationTools
+                )
+                .build();
+    }
+
+    /**
+     * 构建L1订单辅助Agent
+     */
+    @Bean
+    public OrderHelperAgent orderHelperAgent(ChatLanguageModel chatLanguageModel, ChatMemory chatMemory) {
+        log.info("构建OrderHelperAgent...");
+
+        return AiServices.builder(OrderHelperAgent.class)
+                .chatLanguageModel(chatLanguageModel)
+                .chatMemory(chatMemory)
+                .tools(
+                    orderQueryTools,
+                    orderCreateTools
+                )
+                .build();
+    }
+
+    // ==================== Week 5: L2 领域智能体 ====================
+
+    /**
+     * 构建L2智能推荐Agent
+     * 综合多个维度的信息提供个性化推荐服务
+     */
+    @Bean
+    public SmartRecommendationAgent smartRecommendationAgent(ChatLanguageModel chatLanguageModel, ChatMemory chatMemory) {
+        log.info("构建SmartRecommendationAgent...");
+
+        return AiServices.builder(SmartRecommendationAgent.class)
+                .chatLanguageModel(chatLanguageModel)
+                .chatMemory(chatMemory)
+                .tools(
+                    userProfileTools,
+                    recommendationQueryTools,
+                    recommendationFilterTools,
+                    recommendationRankTools,
+                    merchantQueryTools,
+                    merchantStatsTools,
+                    nutritionAnalysisTools,
+                    timeTools,
+                    locationTools
+                )
+                .build();
+    }
+
+    /**
+     * 构建L2健康管理Agent
+     * 综合营养分析、健康目标和饮食记录提供全面的健康管理服务
+     */
+    @Bean
+    public HealthManagementAgent healthManagementAgent(ChatLanguageModel chatLanguageModel, ChatMemory chatMemory) {
+        log.info("构建HealthManagementAgent...");
+
+        return AiServices.builder(HealthManagementAgent.class)
+                .chatLanguageModel(chatLanguageModel)
+                .chatMemory(chatMemory)
+                .tools(
+                    userProfileTools,
+                    nutritionAnalysisTools,
+                    calorieCalculatorTools
+                )
+                .build();
+    }
+
+    /**
+     * 构建L2全流程订单Agent
+     * 处理从商家选择、菜品选择到订单提交的完整流程
+     */
+    @Bean
+    public FullOrderAgent fullOrderAgent(ChatLanguageModel chatLanguageModel, ChatMemory chatMemory) {
+        log.info("构建FullOrderAgent...");
+
+        return AiServices.builder(FullOrderAgent.class)
+                .chatLanguageModel(chatLanguageModel)
+                .chatMemory(chatMemory)
+                .tools(
+                    userProfileTools,
+                    merchantQueryTools,
+                    recommendationQueryTools,
+                    orderQueryTools,
+                    orderCreateTools,
+                    timeTools,
+                    locationTools
+                )
+                .build();
+    }
+
+    /**
+     * 构建L2智能助手Agent
+     * 综合性智能助手，能够处理各类用户问题并智能路由到相应的L1 Agent
+     */
+    @Bean
+    public IntelligentAssistantAgent intelligentAssistantAgent(ChatLanguageModel chatLanguageModel, ChatMemory chatMemory) {
+        log.info("构建IntelligentAssistantAgent...");
+
+        return AiServices.builder(IntelligentAssistantAgent.class)
+                .chatLanguageModel(chatLanguageModel)
+                .chatMemory(chatMemory)
+                .tools(
+                    userProfileTools,
+                    nutritionAnalysisTools,
+                    calorieCalculatorTools,
+                    recommendationQueryTools,
+                    recommendationFilterTools,
+                    recommendationRankTools,
+                    merchantQueryTools,
+                    merchantStatsTools,
+                    timeTools,
+                    locationTools,
+                    orderQueryTools,
+                    orderCreateTools
+                )
+                .build();
+    }
+
+    // ==================== Week 6: L3 编排智能体 ====================
+
+    /**
+     * 构建L3生活服务编排Agent
+     * 协调整个订餐、健康、推荐等多个服务流程，为用户提供一站式的生活服务
+     */
+    @Bean
+    public LifeServiceAgent lifeServiceAgent(ChatLanguageModel chatLanguageModel, ChatMemory chatMemory) {
+        log.info("构建LifeServiceAgent...");
+
+        return AiServices.builder(LifeServiceAgent.class)
+                .chatLanguageModel(chatLanguageModel)
+                .chatMemory(chatMemory)
+                .tools(
+                    userProfileTools,
+                    recommendationQueryTools,
+                    recommendationFilterTools,
+                    recommendationRankTools,
+                    merchantQueryTools,
+                    merchantStatsTools,
+                    nutritionAnalysisTools,
+                    calorieCalculatorTools,
+                    timeTools,
+                    locationTools,
+                    orderQueryTools,
+                    orderCreateTools
+                )
+                .build();
+    }
+
+    /**
+     * 构建L3每日规划Agent
+     * 为用户制定每日饮食和生活规划，整合推荐、营养、时间等多方面信息
+     */
+    @Bean
+    public DailyPlanningAgent dailyPlanningAgent(ChatLanguageModel chatLanguageModel, ChatMemory chatMemory) {
+        log.info("构建DailyPlanningAgent...");
+
+        return AiServices.builder(DailyPlanningAgent.class)
+                .chatLanguageModel(chatLanguageModel)
+                .chatMemory(chatMemory)
+                .tools(
+                    userProfileTools,
+                    recommendationQueryTools,
+                    recommendationFilterTools,
+                    recommendationRankTools,
+                    nutritionAnalysisTools,
+                    calorieCalculatorTools,
+                    timeTools
+                )
+                .build();
+    }
+
+    /**
+     * 构建L3目标达成Agent
+     * 帮助用户达成长期健康目标，提供目标管理、进度跟踪、持续激励等服务
+     */
+    @Bean
+    public GoalAchievementAgent goalAchievementAgent(ChatLanguageModel chatLanguageModel, ChatMemory chatMemory) {
+        log.info("构建GoalAchievementAgent...");
+
+        return AiServices.builder(GoalAchievementAgent.class)
+                .chatLanguageModel(chatLanguageModel)
+                .chatMemory(chatMemory)
+                .tools(
+                    userProfileTools,
+                    nutritionAnalysisTools,
+                    calorieCalculatorTools,
+                    recommendationQueryTools,
+                    recommendationFilterTools,
+                    recommendationRankTools,
+                    timeTools
                 )
                 .build();
     }
