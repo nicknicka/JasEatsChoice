@@ -1,6 +1,6 @@
 package com.xx.jaseatschoicejava.controller;
 
-import com.xx.jaseatschoicejava.agent.service.IntelligentAdvisorAgent;
+import com.xx.jaseatschoicejava.agent.agents.stream.StreamingIntelligentAssistantAgent;
 import com.xx.jaseatschoicejava.common.ResponseResult;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -10,12 +10,13 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import javax.annotation.Resource;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
  * AI流式响应控制器（使用LangChain4j）
- * 提供SSE流式聊天接口
+ * 提供SSE流式聊天接口 - 流式输出
  *
  * @author Claude
  * @since 2026-03-22
@@ -28,15 +29,15 @@ public class AIStreamController {
     private static final Logger log = LoggerFactory.getLogger(AIStreamController.class);
 
     @Resource
-    private IntelligentAdvisorAgent intelligentAdvisorAgent;
+    private StreamingIntelligentAssistantAgent streamingIntelligentAssistantAgent;
 
     /**
-     * SSE流式聊天接口（简化版）
+     * SSE流式聊天接口（真正的流式输出）
      *
      * @param params 请求参数
      * @return SseEmitter
      */
-    @ApiOperation(value = "SSE流式聊天", notes = "使用Server-Sent Events实现流式响应（目前为简化版，待升级到真正的流式）")
+    @ApiOperation(value = "SSE流式聊天", notes = "使用LangChain4j的StreamingChatLanguageModel实现真正的流式响应")
     @PostMapping("/chat")
     public SseEmitter streamChat(@RequestBody Map<String, Object> params) {
         // 创建SseEmitter（30秒超时）
@@ -59,60 +60,49 @@ public class AIStreamController {
             log.info("📥 收到流式聊天请求");
             log.info("   - 用户ID: {}", userId);
             log.info("   - 消息内容: {}", message);
-            log.info("   - 参数详情: {}", params);
 
-            // 3. 在新线程中处理（避免阻塞）
-            new Thread(() -> {
-                try {
-                    // 发送开始事件
-                    emitter.send(SseEmitter.event()
-                        .name("start")
-                        .data(Map.of("message", "开始处理...")));
-
-                    // 调用智能顾问Agent（总协调器，会自动路由到合适的专家Agent）
-                    String response = intelligentAdvisorAgent.chat(message, userId);
-
-                    log.info("开始发送SSE流式响应，总长度: {} 字符", response.length());
-
-                    // 模拟流式输出（逐字发送）
-                    // 注意：SSE的data()方法会对特殊字符进行处理，需要将换行符转义
-                    for (int i = 0; i < response.length(); i++) {
-                        char ch = response.charAt(i);
-
-                        // 记录换行符
-                        if (ch == '\n') {
-                            log.debug("发送换行符，位置: {}", i);
+            // 3. 调用真正的流式Agent（传递userId）
+            streamingIntelligentAssistantAgent.chat(message, userId)
+                .onNext(token -> {
+                    // 处理每个token（从LLM流式接收）
+                    try {
+                        if (token != null && !token.isEmpty()) {
+                            // 将token包装为JSON对象，确保换行符等特殊字符被正确传输
+                            Map<String, String> charData = Map.of("char", token);
+                            emitter.send(SseEmitter.event()
+                                .name("message")
+                                .data(charData));
                         }
-
-                        // 将字符包装为JSON对象，确保换行符等特殊字符被正确传输
-                        Map<String, String> charData = Map.of("char", String.valueOf(ch));
-                        emitter.send(SseEmitter.event()
-                            .name("message")
-                            .data(charData));
-                        Thread.sleep(20); // 模拟打字效果
+                    } catch (IOException e) {
+                        log.error("发送token失败", e);
                     }
-
-                    log.info("SSE流式响应发送完成");
-
-                    // 发送完成事件
-                    emitter.send(SseEmitter.event()
-                        .name("end")
-                        .data(Map.of("done", true)));
-
-                    emitter.complete();
-
-                } catch (Exception e) {
-                    log.error("流式聊天处理失败", e);
+                })
+                .onComplete(response -> {
+                    // 流完成时调用
+                    try {
+                        log.info("✅ 流式响应完成");
+                        emitter.send(SseEmitter.event()
+                            .name("end")
+                            .data(Map.of("done", true)));
+                        emitter.complete();
+                    } catch (IOException e) {
+                        log.error("发送完成事件失败", e);
+                        emitter.completeWithError(e);
+                    }
+                })
+                .onError(error -> {
+                    // 发生错误时调用
+                    log.error("❌ 流式响应出错", error);
                     try {
                         emitter.send(SseEmitter.event()
                             .name("error")
-                            .data("处理失败：" + e.getMessage()));
-                        emitter.completeWithError(e);
-                    } catch (Exception ex) {
-                        log.error("发送错误失败", ex);
+                            .data("处理失败：" + error.getMessage()));
+                        emitter.completeWithError(error);
+                    } catch (IOException e) {
+                        log.error("发送错误事件失败", e);
                     }
-                }
-            }).start();
+                })
+                .start(); // 启动流式处理
 
         } catch (Exception e) {
             log.error("创建SseEmitter失败", e);
@@ -133,9 +123,10 @@ public class AIStreamController {
         Map<String, Object> result = new HashMap<>();
         result.put("status", "UP");
         result.put("service", "AI Stream (LangChain4j)");
-        result.put("version", "2.0.0");
-        result.put("framework", "LangChain4j 0.29.1");
-        result.put("note", "目前为简化版，待升级到真正的流式Agent");
+        result.put("version", "3.0.0");
+        result.put("framework", "LangChain4j 0.34.0");
+        result.put("streaming", "true");
+        result.put("note", "已升级到真正的流式Agent，使用ZhipuAiStreamingChatModel");
         result.put("timestamp", System.currentTimeMillis());
 
         return ResponseResult.success(result);

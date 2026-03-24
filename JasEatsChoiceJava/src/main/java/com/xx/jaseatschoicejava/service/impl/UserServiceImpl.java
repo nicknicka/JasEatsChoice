@@ -6,7 +6,10 @@ import com.xx.jaseatschoicejava.mapper.UserMapper;
 import com.xx.jaseatschoicejava.service.UserService;
 import com.xx.jaseatschoicejava.util.JwtUtil;
 import com.xx.jaseatschoicejava.util.IdGenerator;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -14,9 +17,18 @@ import java.util.List;
 
 /**
  * 用户服务实现
+ *
+ * 缓存策略：
+ * - 用户基本信息：缓存30分钟
+ * - 不缓存密码等敏感信息
+ * - 更新用户信息时清除缓存
  */
+@Slf4j
 @Service
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
+
+    private static final String CACHE_NAME_USER_INFO = "user:info";
+    private static final String CACHE_NAME_USER_PHONE = "user:info:phone";
 
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
@@ -154,5 +166,81 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         user.setPassword(encryptedNewPassword);
 
         return updateById(user);
+    }
+
+    /**
+     * 获取用户基本信息（带缓存）
+     *
+     * 注意：不包含密码等敏感信息
+     *
+     * @param userId 用户ID
+     * @return 用户基本信息
+     */
+    @Cacheable(value = CACHE_NAME_USER_INFO, key = "#userId", unless = "#result == null")
+    public User getUserInfoById(String userId) {
+        log.debug("从数据库查询用户基本信息: userId={}", userId);
+        User user = lambdaQuery()
+                .eq(User::getUserId, userId)
+                .one();
+
+        // 清除密码字段
+        if (user != null) {
+            user.setPassword(null);
+        }
+
+        return user;
+    }
+
+    /**
+     * 通过手机号获取用户基本信息（带缓存）
+     *
+     * @param phone 手机号
+     * @return 用户基本信息
+     */
+    @Cacheable(value = CACHE_NAME_USER_PHONE, key = "#phone", unless = "#result == null")
+    public User getUserInfoByPhone(String phone) {
+        log.debug("从数据库查询用户基本信息: phone={}", phone);
+        User user = lambdaQuery()
+                .eq(User::getPhone, phone)
+                .one();
+
+        // 清除密码字段
+        if (user != null) {
+            user.setPassword(null);
+        }
+
+        return user;
+    }
+
+    /**
+     * 更新用户信息并清除缓存
+     *
+     * @param user 用户信息
+     * @return 是否成功
+     */
+    @CacheEvict(value = CACHE_NAME_USER_INFO, key = "#user.userId")
+    public boolean updateUserInfo(User user) {
+        log.debug("更新用户信息并清除缓存: userId={}", user.getUserId());
+        return updateById(user);
+    }
+
+    /**
+     * 清除用户缓存
+     *
+     * @param userId 用户ID
+     */
+    @CacheEvict(value = CACHE_NAME_USER_INFO, key = "#userId")
+    public void evictUserCache(String userId) {
+        log.debug("清除用户缓存: userId={}", userId);
+    }
+
+    /**
+     * 清除手机号缓存
+     *
+     * @param phone 手机号
+     */
+    @CacheEvict(value = CACHE_NAME_USER_PHONE, key = "#phone")
+    public void evictUserCacheByPhone(String phone) {
+        log.debug("清除用户缓存: phone={}", phone);
     }
 }

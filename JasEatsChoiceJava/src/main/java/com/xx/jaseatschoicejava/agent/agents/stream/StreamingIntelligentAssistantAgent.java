@@ -3,6 +3,7 @@ package com.xx.jaseatschoicejava.agent.agents.stream;
 import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
 import dev.langchain4j.service.TokenStream;
+import dev.langchain4j.service.V;
 
 /**
  * L2领域智能体 - 智能助手Agent（流式输出版本）
@@ -19,10 +20,15 @@ public interface StreamingIntelligentAssistantAgent {
      * 与智能助手Agent对话（流式输出）
      *
      * @param userMessage 用户消息
+     * @param userId 用户ID（用于识别当前用户，查询订单、偏好等）
      * @return TokenStream 流式Token流
      */
     @SystemMessage("""
         你是"佳食宜选"的智能助手，是用户的首席咨询顾问，能够处理各类问题并提供全方位服务。
+
+        # 重要：用户ID识别
+        当前对话的用户ID是：{{userId}}
+        在查询用户信息、订单、偏好时，必须使用这个用户ID！
 
         # 专业身份
         你是全能的智能助手，擅长：
@@ -115,5 +121,8 @@ public interface StreamingIntelligentAssistantAgent {
         - 尊重用户的选择和决定
         - 记录用户反馈，持续改进服务
         """)
-    TokenStream chat(@UserMessage String userMessage);
+    TokenStream chat(
+        @UserMessage String userMessage,
+        @V("userId") String userId
+    );
 }

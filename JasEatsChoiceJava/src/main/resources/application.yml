@@ -51,10 +51,10 @@ spring:
       # Redis连接配置（使用lettuce）
       lettuce:
         pool:
-          max-active: 8
-          max-idle: 8
-          min-idle: 0
-          max-wait: -1ms
+          max-active: 16      # 最大连接数（优化后）
+          max-idle: 8         # 最大空闲连接数
+          min-idle: 2         # 最小空闲连接数（优化后）
+          max-wait: 3000ms    # 最大等待时间（优化后）
 
   # Jackson配置 - JSON序列化编码
   jackson:
@@ -208,3 +208,23 @@ hot-topic:
     key: ""
     # 请求超时时间（毫秒）
     timeout: 5000
+
+# ==================== Actuator监控配置 ====================
+management:
+  endpoints:
+    web:
+      exposure:
+        # 暴露的端点：health, info, metrics, cachestats（自定义）
+        include: health,info,metrics,cachestats
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+    # 启用cachestats端点
+    cachestats:
+      enabled: true
+  # 启用Prometheus指标导出（可选）
+  metrics:
+    export:
+      prometheus:
+        enabled: false  # 如果需要Prometheus监控，设为true

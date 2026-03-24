@@ -31,12 +31,13 @@ public class StreamingAgentService {
      * 流式对话 - 使用回调处理每个token
      *
      * @param userMessage 用户消息
+     * @param userId 用户ID
      * @param tokenHandler token处理器，接收每个生成的token
      */
-    public void chatStream(String userMessage, TokenHandler tokenHandler) {
-        log.info("收到流式对话请求: {}", userMessage);
+    public void chatStream(String userMessage, String userId, TokenHandler tokenHandler) {
+        log.info("收到流式对话请求, 用户: {}, 消息: {}", userId, userMessage);
 
-        TokenStream tokenStream = streamingIntelligentAssistantAgent.chat(userMessage);
+        TokenStream tokenStream = streamingIntelligentAssistantAgent.chat(userMessage, userId);
 
         tokenStream.onNext(token -> {
             // 处理每个token（token是String类型）

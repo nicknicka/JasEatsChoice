@@ -427,4 +427,53 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             default: return "未知";
         }
     }
+
+    // ==================== 缓存相关方法 ====================
+
+    private static final String CACHE_NAME = "order:detail";
+
+    /**
+     * 获取订单详情（带缓存）
+     *
+     * 注意：只读场景使用缓存，订单状态变化快
+     *
+     * @param orderId 订单ID
+     * @return 订单详情
+     */
+    @org.springframework.cache.annotation.Cacheable(
+        value = CACHE_NAME,
+        key = "#orderId",
+        unless = "#result == null"
+    )
+    public Order getOrderById(String orderId) {
+        log.debug("从数据库查询订单详情: orderId={}", orderId);
+        return getById(orderId);
+    }
+
+    /**
+     * 更新订单状态并清除缓存
+     *
+     * @param orderId 订单ID
+     * @param status 新状态
+     * @return 是否成功
+     */
+    @org.springframework.cache.annotation.CacheEvict(value = CACHE_NAME, key = "#orderId")
+    public boolean updateOrderStatus(String orderId, Integer status) {
+        log.debug("更新订单状态并清除缓存: orderId={}, status={}", orderId, status);
+        LambdaUpdateWrapper<Order> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(Order::getId, orderId)
+                .set(Order::getStatus, status)
+                .set(Order::getUpdateTime, LocalDateTime.now());
+        return update(updateWrapper);
+    }
+
+    /**
+     * 清除订单缓存
+     *
+     * @param orderId 订单ID
+     */
+    @org.springframework.cache.annotation.CacheEvict(value = CACHE_NAME, key = "#orderId")
+    public void evictOrderCache(String orderId) {
+        log.debug("清除订单缓存: orderId={}", orderId);
+    }
 }

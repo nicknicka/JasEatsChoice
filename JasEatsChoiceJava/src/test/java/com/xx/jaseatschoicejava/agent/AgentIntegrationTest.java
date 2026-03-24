@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * @author Claude
  * @since 2026-03-24
  */
-@SpringBootTest(classes = JaseatschoicejavaApplication.class)
+@SpringBootTest(classes = JasEatsChoiceJavaApplication.class)
 @DisplayName("Agent集成测试")
 public class AgentIntegrationTest {
 

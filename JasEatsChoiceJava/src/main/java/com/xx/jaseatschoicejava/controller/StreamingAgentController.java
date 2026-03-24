@@ -9,6 +9,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import javax.annotation.Resource;
 import java.io.IOException;
+import java.util.Map;
 
 /**
  * 流式Agent控制器
@@ -30,18 +31,21 @@ public class StreamingAgentController {
     /**
      * 流式对话接口（SSE）
      *
-     * @param message 用户消息
+     * @param params 请求参数，包含message和userId
      * @return SseEmitter 流式输出
      */
     @PostMapping(value = "/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter chatStream(@RequestBody String message) {
-        log.info("收到流式对话请求: {}", message);
+    public SseEmitter chatStream(@RequestBody Map<String, Object> params) {
+        String message = (String) params.get("message");
+        String userId = (String) params.getOrDefault("userId", "anonymous");
+
+        log.info("收到流式对话请求, 用户: {}, 消息: {}", userId, message);
 
         // 创建SSE发射器（30秒超时）
         SseEmitter emitter = new SseEmitter(30000L);
 
         // 调用流式服务
-        streamingAgentService.chatStream(message, new StreamingAgentService.TokenHandler() {
+        streamingAgentService.chatStream(message, userId, new StreamingAgentService.TokenHandler() {
             @Override
             public void onToken(String token) throws IOException {
                 // 发送每个token
@@ -78,15 +82,18 @@ public class StreamingAgentController {
      * 简单的流式对话测试接口
      *
      * @param message 用户消息
+     * @param userId 用户ID（可选）
      * @return 流式输出
      */
     @GetMapping(value = "/test", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter testStream(@RequestParam(defaultValue = "你好") String message) {
-        log.info("收到流式测试请求: {}", message);
+    public SseEmitter testStream(
+            @RequestParam(defaultValue = "你好") String message,
+            @RequestParam(defaultValue = "test_user") String userId) {
+        log.info("收到流式测试请求, 用户: {}, 消息: {}", userId, message);
 
         SseEmitter emitter = new SseEmitter(30000L);
 
-        streamingAgentService.chatStream(message, new StreamingAgentService.TokenHandler() {
+        streamingAgentService.chatStream(message, userId, new StreamingAgentService.TokenHandler() {
             @Override
             public void onToken(String token) throws IOException {
                 emitter.send(SseEmitter.event()

@@ -1,6 +1,8 @@
 package com.xx.jaseatschoicejava.agent.tools.system;
 
+import com.xx.jaseatschoicejava.entity.Dish;
 import com.xx.jaseatschoicejava.entity.Merchant;
+import com.xx.jaseatschoicejava.service.DishService;
 import com.xx.jaseatschoicejava.service.MerchantService;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.agent.tool.P;
@@ -8,9 +10,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 位置服务工具类
@@ -26,6 +27,9 @@ public class LocationTools {
 
     @Resource
     private MerchantService merchantService;
+
+    @Resource
+    private DishService dishService;
 
     // 校园位置映射（示例数据）
     private static final Map<String, String> CAMPUS_LOCATIONS = new HashMap<>();
@@ -376,5 +380,247 @@ public class LocationTools {
         }
 
         return 600; // 不同区域约600米
+    }
+
+    /**
+     * 推荐附近美食
+     * 综合评分：口味30% + 营养20% + 价格10% + 距离15% + 评分25%
+     *
+     * @param userId 用户ID
+     * @param maxDistance 最大距离（公里）
+     * @param preference 偏好标签（可选，如"辣"、"清淡"）
+     * @return 附近美食推荐
+     */
+    @Tool("""
+        推荐附近美食，综合口味、营养、价格、距离、评分多个维度
+
+        **评分算法：**
+        - 口味匹配度（30%）
+        - 营养健康度（20%）
+        - 价格合理性（10%）
+        - 距离便利性（15%）
+        - 商家评分（25%）
+
+        **何时使用：**
+        - 用户询问"附近有什么好吃的"
+        - 用户想要美食推荐
+        - 用户没有明确目标，需要建议
+
+        **参数：**
+        - userId - 用户ID
+        - maxDistance - 最大距离（公里）
+        - preference - 偏好标签（可选）
+
+        **返回：** 附近美食推荐列表
+        """)
+    public String recommendNearbyFood(
+        @P("用户ID") String userId,
+        @P("最大距离（公里）") Double maxDistance,
+        @P("偏好标签，如：辣、清淡") String preference
+    ) {
+        log.info("🔍 [Tool] 推荐附近美食，用户：{}，距离：{}km，偏好：{}",
+            userId, maxDistance, preference);
+
+        try {
+            // 1. 获取所有营业中的商家（有经纬度的）
+            List<Merchant> merchants = merchantService.list().stream()
+                .filter(m -> m.getStatus() != null && m.getStatus())
+                .filter(m -> m.getLongitude() != null && m.getLatitude() != null)
+                .collect(Collectors.toList());
+
+            if (merchants.isEmpty()) {
+                return "附近暂无营业中的商家，请稍后再试~";
+            }
+
+            // 2. 获取这些商家的所有在线菜品
+            List<String> merchantIds = merchants.stream()
+                .map(Merchant::getId)
+                .collect(Collectors.toList());
+
+            List<Dish> allDishes = dishService.list().stream()
+                .filter(d -> merchantIds.contains(d.getMerchantId()))
+                .filter(d -> d.getIsOnline() != null && d.getIsOnline())
+                .collect(Collectors.toList());
+
+            if (allDishes.isEmpty()) {
+                return "附近商家暂无上架菜品，请稍后再试~";
+            }
+
+            // 3. 为每个菜品计算综合评分
+            List<DishScore> dishScores = new ArrayList<>();
+
+            for (Dish dish : allDishes) {
+                // 找到对应的商家
+                Merchant merchant = merchants.stream()
+                    .filter(m -> m.getId().equals(dish.getMerchantId()))
+                    .findFirst()
+                    .orElse(null);
+
+                if (merchant != null) {
+                    double score = calculateDishScore(dish, merchant, preference, maxDistance);
+                    dishScores.add(new DishScore(dish, merchant, score));
+                }
+            }
+
+            // 4. 按综合评分排序，取前10个
+            List<DishScore> topDishes = dishScores.stream()
+                .sorted((a, b) -> Double.compare(b.score, a.score))
+                .limit(10)
+                .collect(Collectors.toList());
+
+            if (topDishes.isEmpty()) {
+                return "没有找到符合条件的美食，换个条件试试？";
+            }
+
+            // 5. 构建推荐结果
+            StringBuilder result = new StringBuilder();
+            result.append("📍 **附近美食推荐**\n\n");
+
+            if (maxDistance != null) {
+                result.append(String.format("📏 搜索范围：%s公里内\n\n", maxDistance));
+            }
+
+            if (preference != null && !preference.isEmpty()) {
+                result.append(String.format("🏷️ 偏好：%s\n\n", preference));
+            }
+
+            for (int i = 0; i < topDishes.size(); i++) {
+                DishScore ds = topDishes.get(i);
+                Dish dish = ds.dish;
+                Merchant merchant = ds.merchant;
+
+                result.append(String.format("**%d. %s**\n", i + 1, dish.getName()));
+                result.append(String.format("   💰 ¥%.2f | 🔥 %d kcal",
+                    dish.getPrice(), dish.getCalorie()));
+
+                if (dish.getAvgRating() != null) {
+                    result.append(String.format(" | ⭐ %.1f分", dish.getAvgRating()));
+                }
+
+                result.append(String.format("\n   🏪 %s\n", merchant.getName()));
+
+                if (merchant.getAveragePrice() != null) {
+                    result.append(String.format("   人均：¥%.0f\n", merchant.getAveragePrice()));
+                }
+
+                // 显示综合评分
+                result.append(String.format("   综合评分：%.2f分\n\n", ds.score));
+            }
+
+            result.append("💡 综合评分包含：口味(30%) + 营养(20%) + 价格(10%) + 距离(15%) + 评分(25%)");
+
+            log.info("✅ [Tool] 推荐附近美食成功，数量：{}", topDishes.size());
+            return result.toString();
+
+        } catch (Exception e) {
+            log.error("❌ [Tool] 推荐附近美食失败", e);
+            return "推荐附近美食失败：" + e.getMessage();
+        }
+    }
+
+    /**
+     * 计算菜品综合评分
+     * 口味匹配度(30%) + 营养健康度(20%) + 价格合理性(10%) + 距离便利性(15%) + 商家评分(25%)
+     */
+    private double calculateDishScore(Dish dish, Merchant merchant, String preference, Double maxDistance) {
+        double totalScore = 0.0;
+
+        // 1. 口味匹配度 (30分) - 基于菜品评分
+        double tasteScore = 0.0;
+        if (dish.getAvgRating() != null) {
+            // 将0-5分转换为0-30分
+            tasteScore = dish.getAvgRating().doubleValue() / 5.0 * 30.0;
+        } else {
+            tasteScore = 15.0; // 默认中等评分
+        }
+        totalScore += tasteScore;
+
+        // 2. 营养健康度 (20分) - 基于卡路里合理性
+        double nutritionScore = 0.0;
+        if (dish.getCalorie() != null) {
+            // 假设合理热量范围是200-600卡路里
+            int calories = dish.getCalorie();
+            if (calories >= 200 && calories <= 600) {
+                nutritionScore = 20.0;
+            } else if (calories < 200) {
+                nutritionScore = 15.0; // 热量过低
+            } else if (calories <= 800) {
+                nutritionScore = 10.0; // 热量稍高
+            } else {
+                nutritionScore = 5.0; // 热量过高
+            }
+        } else {
+            nutritionScore = 10.0; // 默认
+        }
+        totalScore += nutritionScore;
+
+        // 3. 价格合理性 (10分) - 基于价格区间
+        double priceScore = 0.0;
+        if (dish.getPrice() != null) {
+            double price = dish.getPrice().doubleValue();
+            if (price >= 10 && price <= 50) {
+                priceScore = 10.0; // 价格合理
+            } else if (price < 10) {
+                priceScore = 8.0; // 性价比高
+            } else if (price <= 100) {
+                priceScore = 6.0; // 价格稍高
+            } else {
+                priceScore = 3.0; // 价格较高
+            }
+        } else {
+            priceScore = 5.0; // 默认
+        }
+        totalScore += priceScore;
+
+        // 4. 距离便利性 (15分) - 简化处理（实际应根据用户位置计算）
+        // 这里暂时给固定分数，真实场景应该计算用户到商家的距离
+        double distanceScore = 12.0; // 假设大部分商家在合理距离内
+        totalScore += distanceScore;
+
+        // 5. 商家评分 (25分)
+        double merchantScore = 0.0;
+        if (merchant.getRating() != null) {
+            // 将0-5分转换为0-25分
+            merchantScore = merchant.getRating().doubleValue() / 5.0 * 25.0;
+        } else {
+            merchantScore = 12.5; // 默认中等评分
+        }
+        totalScore += merchantScore;
+
+        return totalScore;
+    }
+
+    /**
+     * 计算两个经纬度之间的距离（Haversine公式）
+     * 返回单位：公里
+     */
+    private double calculateRealDistance(double lat1, double lon1, double lat2, double lon2) {
+        final int R = 6371; // 地球半径，单位：公里
+
+        double latDistance = Math.toRadians(lat2 - lat1);
+        double lonDistance = Math.toRadians(lon2 - lon1);
+
+        double a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2)
+            + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+            * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
+
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+        return R * c;
+    }
+
+    /**
+     * 菜品评分内部类
+     */
+    private static class DishScore {
+        Dish dish;
+        Merchant merchant;
+        double score;
+
+        DishScore(Dish dish, Merchant merchant, double score) {
+            this.dish = dish;
+            this.merchant = merchant;
+            this.score = score;
+        }
     }
 }

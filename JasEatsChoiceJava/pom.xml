@@ -78,6 +78,18 @@
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
 
+        <!-- Caffeine本地缓存 -->
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+        </dependency>
+
+        <!-- Spring Cache抽象 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-cache</artifactId>
+        </dependency>
+
         <!-- kaptcha dependency removed: replaced by Hutool captcha usage in code -->
 
         <!-- Hutool工具库 - 完整包，包含验证码功能 -->
@@ -132,7 +144,6 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>1.18.34</version> <!-- Compatible with Java 22 -->
             <optional>true</optional>
         </dependency>
 
