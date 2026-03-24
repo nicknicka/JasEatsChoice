@@ -2061,6 +2061,7 @@ onUnmounted(() => {
   border-radius: 16px;
   padding: 24px;
   box-shadow: 0 2px 16px 0 rgba(0, 0, 0, 0.06);
+  scroll-behavior: smooth; // 添加平滑滚动效果
 
   &::-webkit-scrollbar {
     width: 6px;

@@ -4,11 +4,11 @@
     "type": "split",
     "children": [
       {
-        "id": "d48c03fa02549a05",
+        "id": "177493a2f52da178",
         "type": "tabs",
         "children": [
           {
-            "id": "25380c94f56f550b",
+            "id": "d26c770446d0bc7b",
             "type": "leaf",
             "state": {
               "type": "empty",
@@ -165,7 +165,7 @@
       "command-palette:打开命令面板": false
     }
   },
-  "active": "25380c94f56f550b",
+  "active": "d26c770446d0bc7b",
   "lastOpenFiles": [
     "JasEatsChoiceFront/out/preload/index.js",
     "JasEatsChoiceFront/out/main/index.js",
