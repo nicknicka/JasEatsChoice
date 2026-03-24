@@ -1,6 +1,7 @@
 package com.xx.jaseatschoicejava.agent.tools;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.xx.jaseatschoicejava.agent.annotation.CardType;
 import com.xx.jaseatschoicejava.entity.Dish;
 import com.xx.jaseatschoicejava.entity.Order;
 import com.xx.jaseatschoicejava.entity.UserCoupon;
@@ -151,6 +152,7 @@ public class OrderTools {
      * @return 订单列表（JSON格式的结构化数据）
      */
     @Tool("获取用户的历史订单列表，返回结构化的订单数据")
+    @CardType(value = "order_list_card", priority = 10)
     public String getUserOrders(String userId) {
         log.info("执行工具：getUserOrders，用户：{}", userId);
 

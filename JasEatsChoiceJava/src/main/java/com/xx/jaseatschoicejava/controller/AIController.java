@@ -164,7 +164,7 @@ public class AIController {
         try {
             // 调用 NutritionAgent（具备 Tool 调用能力）
             log.info("开始调用 NutritionAgent...");
-            String response = nutritionAiAgent.chat(message);
+            String response = nutritionAiAgent.chat(message, "anonymous");
 
             long endTime = System.currentTimeMillis();
             long duration = endTime - startTime;
@@ -198,7 +198,7 @@ public class AIController {
 
             // 调用 NutritionAgent，让 LLM 自动调用营养分析工具
             String prompt = String.format("请分析【%s】的营养成分", foodName);
-            String response = nutritionAiAgent.chat(prompt);
+            String response = nutritionAiAgent.chat(prompt, "anonymous");
 
             Map<String, Object> result = Map.of(
                 "foodName", foodName,
@@ -224,7 +224,7 @@ public class AIController {
 
             // 调用 RecommendationAgent，让 LLM 自动调用食谱推荐工具
             String prompt = String.format("请推荐【%s】的食谱做法", foodName);
-            String response = recommendationAiAgent.chat(prompt);
+            String response = recommendationAiAgent.chat(prompt, "anonymous");
 
             Map<String, Object> result = Map.of(
                 "foodName", foodName,

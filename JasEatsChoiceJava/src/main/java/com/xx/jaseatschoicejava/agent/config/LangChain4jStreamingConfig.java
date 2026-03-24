@@ -9,6 +9,7 @@ import com.xx.jaseatschoicejava.agent.tools.OrderTools;
 import com.xx.jaseatschoicejava.agent.tools.RecipeTools;
 import com.xx.jaseatschoicejava.agent.tools.RecommendationTools;
 import com.xx.jaseatschoicejava.agent.tools.UserTools;
+import com.xx.jaseatschoicejava.agent.tools.system.LocationTools;
 import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 import dev.langchain4j.model.chat.StreamingChatLanguageModel;
 import dev.langchain4j.model.zhipu.ZhipuAiStreamingChatModel;
@@ -62,6 +63,9 @@ public class LangChain4jStreamingConfig {
     @Resource
     private UserTools userTools;
 
+    @Resource
+    private LocationTools locationTools;
+
     private StreamingChatLanguageModel streamingChatLanguageModel;
 
     /**
@@ -113,7 +117,8 @@ public class LangChain4jStreamingConfig {
                     recipeTools,
                     orderTools,
                     collectionTools,
-                    userTools
+                    userTools,
+                    locationTools
                 )
                 .build();
     }

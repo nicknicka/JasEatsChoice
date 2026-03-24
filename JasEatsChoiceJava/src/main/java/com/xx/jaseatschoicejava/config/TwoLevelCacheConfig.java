@@ -1,6 +1,7 @@
 package com.xx.jaseatschoicejava.config;
 
-import com.github.benmanes.caffeine.Caffeine;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
@@ -46,12 +47,12 @@ import java.util.Map;
 public class TwoLevelCacheConfig {
 
     /**
-     * Caffeine本地缓存配置
+     * Caffeine构建器配置（用于CacheManager）
      *
      * 用途：缓存热点数据，减少Redis访问
      */
     @Bean
-    public Caffeine<Object, Object> caffeineCache() {
+    public Caffeine<Object, Object> caffeineBuilder() {
         return Caffeine.newBuilder()
             // 最大缓存条目数
             .maximumSize(1000)
@@ -64,8 +65,15 @@ public class TwoLevelCacheConfig {
             // 移除监听器
             .removalListener((key, value, cause) -> {
                 log.debug("Caffeine缓存移除: key={}, cause={}", key, cause);
-            })
-            .build();
+            });
+    }
+
+    /**
+     * Caffeine Cache实例（用于直接访问）
+     */
+    @Bean
+    public Cache<Object, Object> caffeineCache() {
+        return caffeineBuilder().build();
     }
 
     /**
@@ -76,7 +84,7 @@ public class TwoLevelCacheConfig {
     @Bean
     public CacheManager caffeineCacheManager() {
         CaffeineCacheManager caffeineCacheManager = new CaffeineCacheManager();
-        caffeineCacheManager.setCaffeine(caffeineCache());
+        caffeineCacheManager.setCaffeine(caffeineBuilder());
         return caffeineCacheManager;
     }
 
@@ -88,7 +96,7 @@ public class TwoLevelCacheConfig {
     @Bean
     public CacheManager redisCacheManager(RedisConnectionFactory factory) {
         // 序列化配置
-        GenericJackson2JsonRedisSerializer<Object> serializer = new GenericJackson2JsonRedisSerializer<>(Object.class);
+        GenericJackson2JsonRedisSerializer serializer = new GenericJackson2JsonRedisSerializer();
 
         RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
             .entryTtl(Duration.ofMinutes(30))
@@ -133,49 +141,33 @@ public class TwoLevelCacheConfig {
      * 为不同的缓存区域设置不同的策略
      */
     @Bean
-    public Map<String, Caffeine<Object, Object>> caffeineCacheConfigs() {
-        Map<String, Caffeine<Object, Object>> configs = new HashMap<>();
+    public Map<String, Cache<Object, Object>> caffeineCacheConfigs() {
+        Map<String, Cache<Object, Object>> configs = new HashMap<>();
 
         // 用户偏好缓存（高频访问）
-        configs.put("user:preference", Caffeine.newBuilder()
+        Cache<Object, Object> userPrefCache = Caffeine.newBuilder()
             .maximumSize(500)
             .expireAfterWrite(10, java.util.concurrent.TimeUnit.MINUTES)
             .recordStats()
-            .build());
+            .build();
+        configs.put("user:preference", userPrefCache);
 
         // 菜品详情缓存（中频访问）
-        configs.put("dish:detail", Caffeine.newBuilder()
+        Cache<Object, Object> dishCache = Caffeine.newBuilder()
             .maximumSize(1000)
             .expireAfterWrite(5, java.util.concurrent.TimeUnit.MINUTES)
             .recordStats()
-            .build());
+            .build();
+        configs.put("dish:detail", dishCache);
 
         // 用户信息缓存（高频访问）
-        configs.put("user:info", Caffeine.newBuilder()
+        Cache<Object, Object> userInfoCache = Caffeine.newBuilder()
             .maximumSize(500)
             .expireAfterWrite(10, java.util.concurrent.TimeUnit.MINUTES)
             .recordStats()
-            .build());
+            .build();
+        configs.put("user:info", userInfoCache);
 
         return configs;
-    }
-
-    /**
-     * 获取Caffeine统计信息
-     *
-     * @return 统计信息字符串
-     */
-    public String getCaffeineStats() {
-        Caffeine<Object, Object> caffeine = caffeineCache();
-        com.github.benmanes.caffeine.stats.CacheStats stats = caffeine.stats();
-
-        return String.format(
-            "Caffeine Stats: hitRate=%.2f%%, hitCount=%d, missCount=%d, totalLoadCount=%d, evictionCount=%d",
-            stats.hitRate() * 100,
-            stats.hitCount(),
-            stats.missCount(),
-            stats.totalLoadCount(),
-            stats.evictionCount()
-        );
     }
 }

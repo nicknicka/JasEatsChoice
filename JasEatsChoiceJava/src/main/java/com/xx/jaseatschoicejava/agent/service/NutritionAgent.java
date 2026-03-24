@@ -45,16 +45,8 @@ public class NutritionAgent {
         log.info("NutritionAgent收到消息 [用户:{}]：{}", userId, userMessage);
 
         try {
-            // ✅ 将userId信息附加到消息中，让AI知道当前用户
-            String messageWithUserId = String.format(
-                "[当前用户ID: %s]\n\n%s",
-                userId,
-                userMessage
-            );
-
-            // ✅ 直接调用LangChain4j Agent
-            // LLM会自动决定调用哪个Tool
-            String response = nutritionAiAgent.chat(messageWithUserId);
+            // ✅ 直接传递userId参数，LangChain4j会自动通过@V注解注入
+            String response = nutritionAiAgent.chat(userMessage, userId);
 
             log.info("NutritionAgent回复 [用户:{}]：{}", userId, response);
             return response;

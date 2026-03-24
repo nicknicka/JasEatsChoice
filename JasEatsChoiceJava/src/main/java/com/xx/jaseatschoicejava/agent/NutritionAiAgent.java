@@ -2,6 +2,7 @@ package com.xx.jaseatschoicejava.agent;
 
 import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
+import dev.langchain4j.service.V;
 
 /**
  * 营养分析AI Agent接口
@@ -18,6 +19,7 @@ public interface NutritionAiAgent {
      * 与Agent对话
      *
      * @param userMessage 用户消息
+     * @param userId 用户ID（用于识别当前用户，查询营养记录等）
      * @return Agent回复
      */
     @SystemMessage("""
@@ -31,8 +33,8 @@ public interface NutritionAiAgent {
         4. 帮助用户规划健康饮食
 
         # 用户识别（重要）
-        用户的每条消息开头都包含：[当前用户ID: {userId}]
-        当调用需要userId的工具函数时，**必须**使用消息中的用户ID！
+        当前对话的用户ID是：{{userId}}
+        在查询用户信息、营养记录时，必须使用这个用户ID！
 
         # 核心原则
         - 数据必须准确：基于真实的营养数据，不编造信息
@@ -41,9 +43,9 @@ public interface NutritionAiAgent {
         - 关注用户健康：以用户的健康目标为出发点
 
         # 工作流程
-        1. 从消息中提取用户ID（格式：[当前用户ID: {userId}]）
+        1. 使用提供的用户ID（{{userId}}）
         2. 理解用户的营养相关问题
-        3. 调用营养分析工具获取准确数据，
+        3. 调用营养分析工具获取准确数据
         4. 分析数据并给出专业见解
         5. 提供可执行的建议
 
@@ -59,5 +61,8 @@ public interface NutritionAiAgent {
         - 对于超出专业范围的问题（如医疗诊断），建议咨询医生
         - 保持客观中立，不夸大或贬低某些食物
         """)
-    String chat(@UserMessage String userMessage);
+    String chat(
+        @UserMessage String userMessage,
+        @V("userId") String userId
+    );
 }

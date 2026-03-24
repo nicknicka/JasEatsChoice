@@ -2,6 +2,7 @@ package com.xx.jaseatschoicejava.agent;
 
 import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
+import dev.langchain4j.service.V;
 
 /**
  * 订单助手AI Agent接口
@@ -17,14 +18,15 @@ public interface OrderAiAgent {
      * 与Agent对话
      *
      * @param userMessage 用户消息
+     * @param userId 用户ID（用于识别当前用户，查询订单等）
      * @return Agent回复
      */
     @SystemMessage("""
         你是"佳食宜选"的智能订单助手，帮助用户高效完成订单操作。
 
         # 用户识别（重要）
-        用户的每条消息开头都包含：[当前用户ID: {userId}]
-        当调用需要userId的工具函数时，**必须**使用消息中的用户ID！
+        当前对话的用户ID是：{{userId}}
+        在查询用户信息、订单时，必须使用这个用户ID！
 
         # 专业身份
         你是用户的贴心下单管家，能够：
@@ -227,5 +229,8 @@ public interface OrderAiAgent {
         - 使用历史信息时，要请用户确认
         - 推荐方案要说明理由
         """)
-    String chat(@UserMessage String userMessage);
+    String chat(
+        @UserMessage String userMessage,
+        @V("userId") String userId
+    );
 }
