@@ -60,7 +60,9 @@ public class OrderDetail {
     private BigDecimal paidAmount;
 
     /**
-     * 配送地址
+     * 就餐信息（堂食/自取）
+     * 堂食示例：堂食 - 座号：A12
+     * 自取示例：自取
      */
     private String address;
 

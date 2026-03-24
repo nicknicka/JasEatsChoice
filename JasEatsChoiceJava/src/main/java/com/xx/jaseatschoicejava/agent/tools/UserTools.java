@@ -108,7 +108,7 @@ public class UserTools {
         }
     }
 
-    @Tool("获取用户的配送地址列表，包括收货人姓名、电话、详细地址等")
+    @Tool("获取用户的历史地址列表（用于查询历史订单中的地址信息）。注意：当前仅支持堂食和自取，不再使用配送地址。")
     public String getUserAddresses(@P("用户ID") String userId) {
         log.info("执行工具：getUserAddresses，用户：{}", userId);
 
@@ -121,11 +121,11 @@ public class UserTools {
             List<Address> addresses = addressService.list(queryWrapper);
 
             if (addresses == null || addresses.isEmpty()) {
-                return "配送地址列表\n\n您还没有添加配送地址。";
+                return "历史地址列表\n\n您还没有历史地址记录。";
             }
 
             StringBuilder result = new StringBuilder();
-            result.append(String.format("您的配送地址（共%d个）\n\n", addresses.size()));
+            result.append(String.format("您的历史地址（共%d个）\n\n", addresses.size()));
 
             for (int i = 0; i < addresses.size(); i++) {
                 Address address = addresses.get(i);
@@ -170,13 +170,13 @@ public class UserTools {
     }
 
     /**
-     * 智能推荐最合适的配送地址
+     * 获取用户历史常用地址
      * 优先级：默认地址 > 最近使用的地址
      *
      * @param userId 用户ID
-     * @return 推荐的地址信息
+     * @return 历史地址信息
      */
-    @Tool("智能推荐用户最常用的配送地址，优先使用默认地址或最近使用的地址")
+    @Tool("获取用户历史常用地址，优先使用默认地址或最近使用的地址。注意：当前仅支持堂食和自取，此地址仅用于历史记录查询。")
     public String getRecommendedAddress(@P("用户ID") String userId) {
         log.info("执行工具：getRecommendedAddress，用户：{}", userId);
 
@@ -200,12 +200,12 @@ public class UserTools {
 
             // 3. 如果没有任何地址，返回提示
             if (recommendedAddress == null) {
-                return "您还没有添加配送地址，请先添加地址再下单。";
+                return "您还没有历史地址记录。";
             }
 
             // 4. 构建推荐结果
             StringBuilder result = new StringBuilder();
-            result.append("📍 **推荐配送地址**\n\n");
+            result.append("📍 **历史常用地址**\n\n");
 
             // 完整地址
             StringBuilder fullAddress = new StringBuilder();

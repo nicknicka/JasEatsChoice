@@ -40,7 +40,7 @@ public class OrderQueryTools {
         - 订单状态
         - 商家信息
         - 价格明细
-        - 配送信息
+        - 就餐信息（堂食/自取）
         - 下单时间
 
         **何时使用：**
@@ -72,7 +72,7 @@ public class OrderQueryTools {
                 "🏪 商家ID：%s\n" +
                 "💰 订单金额：%.2f元\n" +
                 "💵 已支付：%.2f元\n" +
-                "📍 配送地址：%s\n" +
+                "🍽️ 就餐信息：%s\n" +
                 "📝 备注：%s\n" +
                 "📅 下单时间：%s",
                 order.getId(),

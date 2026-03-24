@@ -44,9 +44,10 @@ public class OrderCreateTools {
 
         **价格包含：**
         - 菜品总价
-        - 配送费（固定5元）
-        - 包装费（每项2元）
+        - 包装费（自取时每项2元，堂食无包装费）
         - 最终总计
+
+        **注意：** 堂食和自取模式均无配送费
 
         **何时使用：**
         - 下单前确认价格
@@ -56,14 +57,16 @@ public class OrderCreateTools {
         - dishItemsJson - 菜品列表（JSON格式）
           例如：[{"dishId":"xxx","quantity":2,"price":15.5}]
         - userId - 用户ID
+        - diningMode - 就餐方式（堂食/dine_in 或 自取/takeout）
 
         **返回：** 价格明细（文本格式）
         """)
     public String calculateOrderPrice(
         @P("菜品列表（JSON格式）") String dishItemsJson,
-        @P("用户ID") String userId
+        @P("用户ID") String userId,
+        @P("就餐方式（堂食/dine_in 或 自取/takeout）") String diningMode
     ) {
-        log.info("🔍 [Tool] 计算订单价格，userId: {}", userId);
+        log.info("🔍 [Tool] 计算订单价格，userId: {}, diningMode: {}", userId, diningMode);
 
         try {
             List<Map<String, Object>> dishItems = objectMapper.readValue(
@@ -98,23 +101,26 @@ public class OrderCreateTools {
             }
 
             // 计算其他费用
-            double deliveryFee = 5.0;  // 固定配送费
-            double packagingFee = itemCount * 2.0;  // 每项2元包装费
+            boolean isTakeout = "takeout".equalsIgnoreCase(diningMode) || "自取".equals(diningMode);
+            double deliveryFee = 0.0;  // 堂食和自取均无配送费
+            double packagingFee = isTakeout ? itemCount * 2.0 : 0.0;  // 仅自取收取包装费
             double total = dishTotal + deliveryFee + packagingFee;
+
+            String modeText = isTakeout ? "🥡 自取" : "🍽️ 堂食";
 
             String result = String.format(
                 "💰 订单价格明细\n\n" +
                 "%s" +
-                "\n🍱 菜品小计：%.2f元\n" +
-                "📦 配送费：%.2f元\n" +
-                "🎁 包装费：%.2f元\n" +
+                "🍽️ 就餐方式：%s\n" +
+                "🍱 菜品小计：%.2f元\n" +
+                "📦 包装费：%.2f元\n" +
                 "\n" +
                 "─".repeat(30) + "\n" +
                 "💵 **总计：%.2f元**\n\n" +
                 "💡 下单时如有优惠券，系统会自动抵扣",
                 itemsDetail.toString(),
+                modeText,
                 dishTotal,
-                deliveryFee,
                 packagingFee,
                 total
             );
@@ -135,35 +141,49 @@ public class OrderCreateTools {
      * @return 订单创建结果
      */
     @Tool("""
-        创建一个新的订单
+        创建一个新的订单（堂食/自取模式）
 
         **必需参数：**
         - userId: 用户ID
         - merchantId: 商家ID
-        - dishItems: 菜品列表（JSON格式）
-        - deliveryAddress: 配送地址
-        - phoneNumber: 联系电话
+        - dishItems: 菜品列表（JSON数组格式）
+        - diningMode: 就餐方式（"dine_in"=堂食 或 "takeout"=自取）
 
         **可选参数：**
+        - tableNumber: 座号（堂食时填写）
         - note: 备注信息
 
-        **输入示例：**
+        **输入示例（堂食）：**
         {
           "userId": "U1234567890123456",
           "merchantId": "M9876543210987654",
           "dishItems": [
             {"dishId": "D001", "quantity": 2, "price": 15.5}
           ],
-          "deliveryAddress": "XX大学XX宿舍",
-          "phoneNumber": "13800138000",
+          "diningMode": "dine_in",
+          "tableNumber": "A12",
           "note": "少辣"
+        }
+
+        **输入示例（自取）：**
+        {
+          "userId": "U1234567890123456",
+          "merchantId": "M9876543210987654",
+          "dishItems": [
+            {"dishId": "D001", "quantity": 1, "price": 15.5}
+          ],
+          "diningMode": "takeout",
+          "note": "尽快准备好"
         }
 
         **何时使用：**
         - 用户明确要下单
         - 确认订单信息后创建
 
-        **参数：** orderRequestJson - 订单信息（JSON格式）
+        **重要提醒：**
+        - dishItems 必须是数组格式
+        - 每个菜品必须包含 dishId, quantity, price
+        - 堂食和自取均无配送费
 
         **返回：** 订单创建结果
         """)
@@ -181,11 +201,15 @@ public class OrderCreateTools {
             // 验证必需参数
             String userId = (String) request.get("userId");
             String merchantId = (String) request.get("merchantId");
-            String deliveryAddress = (String) request.get("deliveryAddress");
-            String phoneNumber = (String) request.get("phoneNumber");
+            String diningMode = (String) request.get("diningMode");
 
-            if (userId == null || merchantId == null || deliveryAddress == null || phoneNumber == null) {
-                return "❌ 缺少必需参数，需要：userId、merchantId、deliveryAddress、phoneNumber";
+            if (userId == null || merchantId == null || diningMode == null) {
+                return "❌ 缺少必需参数，需要：userId、merchantId、diningMode（就餐方式：dine_in/takeout）";
+            }
+
+            // 验证就餐方式
+            if (!diningMode.matches("^(dine_in|takeout|堂食|自取)$")) {
+                return "❌ 就餐方式错误，diningMode 必须是：dine_in（堂食）或 takeout（自取）";
             }
 
             // 计算订单金额
@@ -204,19 +228,44 @@ public class OrderCreateTools {
                 itemCount += quantity;
             }
 
-            double deliveryFee = 5.0;
-            double packagingFee = itemCount * 2.0;
+            // 计算费用（堂食/自取模式）
+            boolean isTakeout = "takeout".equalsIgnoreCase(diningMode) || "自取".equals(diningMode);
+            double deliveryFee = 0.0;  // 无配送费
+            double packagingFee = isTakeout ? itemCount * 2.0 : 0.0;  // 仅自取收取包装费
             double totalAmount = dishTotal + deliveryFee + packagingFee;
+
+            // 获取可选参数
+            String tableNumber = (String) request.get("tableNumber");
+            String note = (String) request.get("note");
 
             // 创建订单
             Order order = new Order();
             order.setUserId(userId);
             order.setMerchantId(merchantId);
-            order.setAddress(deliveryAddress);
+
+            // 设置地址信息（堂食显示座号，自取显示自取标识）
+            String addressInfo;
+            if (isTakeout) {
+                addressInfo = "自取";
+            } else {
+                addressInfo = "堂食" + (tableNumber != null ? " - 座号：" + tableNumber : "");
+            }
+            order.setAddress(addressInfo);
+
             order.setTotalAmount(BigDecimal.valueOf(totalAmount));
             order.setPaidAmount(BigDecimal.ZERO);
             order.setStatus(0);  // 待支付
-            order.setRemark((String) request.get("note"));
+
+            // 备注中包含就餐方式和座号信息
+            StringBuilder remarkBuilder = new StringBuilder();
+            remarkBuilder.append("就餐方式：").append(isTakeout ? "自取" : "堂食");
+            if (!isTakeout && tableNumber != null) {
+                remarkBuilder.append("，座号：").append(tableNumber);
+            }
+            if (note != null && !note.isEmpty()) {
+                remarkBuilder.append("，备注：").append(note);
+            }
+            order.setRemark(remarkBuilder.toString());
 
             boolean success = orderService.save(order);
 
@@ -225,17 +274,19 @@ public class OrderCreateTools {
                     "✅ 订单创建成功！\n\n" +
                     "📋 订单号：%s\n" +
                     "🏪 商家ID：%s\n" +
+                    "🍽️ 就餐方式：%s\n" +
                     "💰 订单金额：%.2f元\n" +
-                    "📍 配送地址：%s\n" +
-                    "📞 联系电话：%s\n" +
+                    "%s" +
                     "📝 备注：%s\n\n" +
-                    "💡 请及时支付订单，超时将自动取消",
+                    "💡 请及时支付订单，超时将自动取消\n" +
+                    "⏰ 预计%s后可取餐",
                     order.getId(),
                     merchantId,
+                    isTakeout ? "🥡 自取" : "🍽️ 堂食",
                     totalAmount,
-                    deliveryAddress,
-                    phoneNumber,
-                    order.getRemark() != null ? order.getRemark() : "无"
+                    !isTakeout && tableNumber != null ? "🪑 座号：" + tableNumber + "\n" : "",
+                    order.getRemark(),
+                    isTakeout ? "15-20分钟" : "10-15分钟"
                 );
 
                 log.info("✅ [Tool] 创建订单成功: {}", order.getId());

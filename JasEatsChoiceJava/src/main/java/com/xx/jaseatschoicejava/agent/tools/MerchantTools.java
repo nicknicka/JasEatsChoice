@@ -272,14 +272,14 @@ public class MerchantTools {
 
             // 关键词分析（示例）
             result.append("🔑 **高频关键词**\n");
-            result.append("正面：好吃(45)、分量足(32)、配送快(28)、服务好(25)\n");
-            result.append("负面：配送慢(15)、味道淡(12)、包装简陋(8)\n\n");
+            result.append("正面：好吃(45)、分量足(32)、出餐快(28)、服务好(25)\n");
+            result.append("负面：出餐慢(15)、味道淡(12)、等待时间长(8)\n\n");
 
             // 改进建议
             result.append("💡 **改进建议**\n");
-            result.append("1. 优化配送流程，缩短配送时间\n");
+            result.append("1. 优化备餐流程，缩短出餐时间\n");
             result.append("2. 调整菜品口味，增加调味选择\n");
-            result.append("3. 升级包装，提升用户体验\n");
+            result.append("3. 提升堂食环境和服务质量\n");
             result.append("4. 对于低分评价，主动联系顾客了解详情\n");
 
             return result.toString();

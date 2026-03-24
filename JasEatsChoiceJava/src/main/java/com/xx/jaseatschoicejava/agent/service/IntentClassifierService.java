@@ -53,7 +53,7 @@ public class IntentClassifierService {
                - 创建订单
                - 查询订单状态
                - 取消订单
-               - 配送相关
+               - 堂食/自取相关
                - 示例："我要下单"、"查询我的订单"、"取消订单123"
 
             4. **GREETING** - 问候语
@@ -164,7 +164,7 @@ public class IntentClassifierService {
         // 订单相关关键词（优先级高，避免误判）
         if (lowerMessage.contains("下单") || lowerMessage.contains("订餐") ||
             lowerMessage.matches(".*(我要|我想|我要买|我要点).*") ||
-            lowerMessage.contains("配送") || lowerMessage.contains("送餐") ||
+            lowerMessage.contains("堂食") || lowerMessage.contains("自取") ||
             lowerMessage.matches(".*(查询|查看|显示|获取|我的|所有|订单列表).*订单") ||
             lowerMessage.matches(".*订单.*如何") || lowerMessage.matches(".*订单.*状态")) {
             return "ORDER";
