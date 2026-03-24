@@ -44,15 +44,16 @@ public class OrderTools {
     private UserCouponService userCouponService;
 
     /**
-     * 创建订单
+     * 创建订单（已废弃，请使用 OrderCreateTools.createOrder）
      *
+     * @deprecated 此方法已废弃，请使用 OrderCreateTools.createOrder
      * @param userId 用户ID
      * @param dishIds 菜品ID列表（逗号分隔）
      * @param addressId 地址ID
      * @return 订单信息
      */
-    @Tool("创建订单，支持多菜品下单")
-    public String createOrder(String userId, String dishIds, String addressId) {
+    @Tool("⚠️ 此工具已废弃，请使用 createOrder（OrderCreateTools）- 支持堂食/自取模式")
+    public String createOrderDeprecated(String userId, String dishIds, String addressId) {
         log.info("执行工具：createOrder，用户：{}，菜品：{}", userId, dishIds);
 
         try {

@@ -94,7 +94,8 @@ public interface StreamingIntelligentAssistantAgent {
         - **菜品推荐** → getDishRecommendations(), getPersonalizedRecommendations()
         - **商家信息** → getMerchantInfo(), searchMerchants()
         - **订单查询** → getUserOrders(), getOrderDetail()
-        - **订单创建** → createOrder()
+        - **订单创建** → createOrder() - 创建新订单（堂食/自取模式）
+        - **订单价格计算** → calculateOrderPrice() - 计算订单费用
         - **位置服务** → getNearbyMerchants(), recommendNearbyFood(), calculateDistance()
         - **收藏管理** → addFavorite(), removeFavorite(), getUserFavorites()
         - **食谱查询** → getRecipes(), getRecipeById()
@@ -199,6 +200,57 @@ public interface StreamingIntelligentAssistantAgent {
         用户："这个菜有多少卡路里"
         → 调用：analyzeNutrition(dishId)
         → 基于返回的营养数据，给出清晰的解答
+
+        ## 创建订单（堂食/自取模式）
+
+        **重要：当用户说"下单"、"购买"、"点菜"等明确要创建订单的意图时，必须调用 createOrder 工具！**
+
+        ### 订单创建的必需参数：
+        - **userId**：用户ID（使用 {{userId}}）
+        - **merchantId**：商家ID
+        - **dishItems**：菜品列表（数组格式，每个元素包含 dishId, quantity, price）
+        - **diningMode**：就餐方式（"dine_in"=堂食 或 "takeout"=自取）
+        - **tableNumber**：座号（堂食时必需）
+        - **note**：备注（可选）
+
+        ### 订单创建示例：
+
+        **场景1：用户明确说要下单**
+        用户："帮我下单宫保鸡丁"
+        → 你需要先询问缺失的必需信息：
+        "好的，我来帮您下单宫保鸡丁。请问您是堂食还是自取？"
+        → 如果用户说"堂食，座号A12"
+        → 调用：createOrder({"userId":"{{userId}}","merchantId":"...","dishItems":[...],"diningMode":"dine_in","tableNumber":"A12"})
+
+        **场景2：用户说要直接下单**
+        用户："我要下单，直接下单就好"
+        → 不要只回复"好的"，而是要收集必需信息：
+        "好的，我来帮您创建订单。请问您需要：
+        1. 堂食还是自取？
+        2. 哪家商家？（如果上下文中没有商家ID，需要先查询）
+        3. 堂食的话请提供座号"
+
+        **场景3：用户提供了部分信息**
+        用户："堂食，A12座，来一份宫保鸡丁"
+        → 如果上下文中已有商家ID，直接调用工具
+        → 如果没有商家ID，先调用 getMerchantInfo() 或 searchMerchants() 获取商家ID
+        → 然后调用：createOrder(...)
+
+        ### ⚠️ 常见错误：
+        - ❌ 只说"好的，正在为您下单"，但不调用工具
+        - ❌ 不询问就餐方式（堂食/自取）
+        - ❌ 堂食时不询问座号
+        - ❌ 使用旧的参数格式（dishIds 字符串 → 应该用 dishItems 数组）
+
+        ### ✅ 正确做法：
+        1. **识别下单意图**：用户说"下单"、"点菜"、"购买"、"要一份"等
+        2. **收集必需信息**：
+           - 就餐方式（堂食/自取）
+           - 商家ID（从上下文获取或查询）
+           - 菜品ID和数量
+           - 座号（堂食时）
+        3. **调用 createOrder 工具**：必须调用，不能只回复不调用
+        4. **告知用户结果**：基于工具返回结果回复用户
         """)
     TokenStream chat(
         @UserMessage String userMessage,

@@ -6,6 +6,8 @@ import com.xx.jaseatschoicejava.agent.tools.MerchantTools;
 import com.xx.jaseatschoicejava.agent.tools.NutritionRecordTools;
 import com.xx.jaseatschoicejava.agent.tools.NutritionTools;
 import com.xx.jaseatschoicejava.agent.tools.OrderTools;
+import com.xx.jaseatschoicejava.agent.tools.order.OrderCreateTools;
+import com.xx.jaseatschoicejava.agent.tools.order.OrderQueryTools;
 import com.xx.jaseatschoicejava.agent.tools.RecipeTools;
 import com.xx.jaseatschoicejava.agent.tools.RecommendationTools;
 import com.xx.jaseatschoicejava.agent.tools.UserTools;
@@ -56,6 +58,12 @@ public class LangChain4jStreamingConfig {
 
     @Resource
     private OrderTools orderTools;
+
+    @Resource
+    private OrderCreateTools orderCreateTools;
+
+    @Resource
+    private OrderQueryTools orderQueryTools;
 
     @Resource
     private CollectionTools collectionTools;
@@ -116,6 +124,8 @@ public class LangChain4jStreamingConfig {
                     recommendationTools,
                     recipeTools,
                     orderTools,
+                    orderCreateTools,
+                    orderQueryTools,
                     collectionTools,
                     userTools,
                     locationTools

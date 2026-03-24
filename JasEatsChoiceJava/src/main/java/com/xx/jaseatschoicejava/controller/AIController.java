@@ -233,7 +233,7 @@ public class AIController {
             return ResponseResult.success(result);
 
         } catch (Exception e) {
-            log.error("食谱推荐失败", e);
+            log.error("食谱推荐失败",     e);
             return ResponseResult.fail("500", "食谱推荐失败：" + e.getMessage());
         }
     }
