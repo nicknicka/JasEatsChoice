@@ -196,6 +196,13 @@
             <version>0.36.2</version>
         </dependency>
 
+        <!-- LangChain4j Agentic系统（Supervisor和工作流支持） -->
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-agentic</artifactId>
+            <version>1.12.2-beta22</version>
+        </dependency>
+
         <!-- 邮件服务依赖 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
