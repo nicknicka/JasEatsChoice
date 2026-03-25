@@ -203,21 +203,29 @@
         <dependency>
             <groupId>dev.langchain4j</groupId>
             <artifactId>langchain4j</artifactId>
-            <version>0.36.2</version>
+            <version>1.12.1</version>
         </dependency>
 
-        <!-- LangChain4j智谱AI集成 -->
+        <!-- LangChain4j Agentic模块 (监督代理支持) -->
         <dependency>
             <groupId>dev.langchain4j</groupId>
-            <artifactId>langchain4j-zhipu-ai</artifactId>
-            <version>0.36.2</version>
+            <artifactId>langchain4j-agentic</artifactId>
+            <version>1.12.1-beta21</version>
+        </dependency>
+
+        <!-- LangChain4j智谱AI集成 (Community版本) -->
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-community-zhipu-ai</artifactId>
+            <version>1.12.1-beta21</version>
         </dependency>
 
         <dependency>
             <groupId>dev.langchain4j</groupId>
             <artifactId>langchain4j-spring-boot-starter</artifactId>
-            <version>0.36.2</version>
+            <version>1.12.1-beta21</version>
         </dependency>
+
 
         <!-- 邮件服务依赖 -->
         <dependency>

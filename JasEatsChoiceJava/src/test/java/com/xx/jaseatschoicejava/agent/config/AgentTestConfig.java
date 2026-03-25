@@ -1,8 +1,8 @@
 package com.xx.jaseatschoicejava.agent.config;
 
 import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
-import dev.langchain4j.model.chat.ChatLanguageModel;
-import dev.langchain4j.model.zhipu.ZhipuAiChatModel;
+import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.community.model.zhipu.ZhipuAiChatModel;
 import dev.langchain4j.memory.ChatMemory;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -21,10 +21,10 @@ import org.springframework.context.annotation.Configuration;
 public class AgentTestConfig {
 
     /**
-     * 测试用ChatLanguageModel
+     * 测试用ChatModel
      */
     @Bean
-    public ChatLanguageModel testChatLanguageModel(ZhipuAIConfig zhipuAIConfig) {
+    public ChatModel testChatModel(ZhipuAIConfig zhipuAIConfig) {
         return ZhipuAiChatModel.builder()
                 .apiKey(zhipuAIConfig.getApiKey())
                 .model(zhipuAIConfig.getModel())

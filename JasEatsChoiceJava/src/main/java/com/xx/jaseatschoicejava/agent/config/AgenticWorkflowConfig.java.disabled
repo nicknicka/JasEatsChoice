@@ -16,7 +16,7 @@ import com.xx.jaseatschoicejava.agent.tools.system.TimeTools;
 import com.xx.jaseatschoicejava.agent.tools.user.UserProfileTools;
 import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 import dev.langchain4j.service.AiServices;
-import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.memory.ChatMemory;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import org.slf4j.Logger;
@@ -92,13 +92,13 @@ public class AgenticWorkflowConfig {
     // ==================== 模型和内存配置 ====================
 
     /**
-     * 配置ChatLanguageModel
+     * 配置ChatModel
      */
     @Bean(destroyMethod = "")
-    public ChatLanguageModel workflowChatModel() {
+    public ChatModel workflowChatModel() {
         log.info("初始化Agentic工作流ChatModel，模型：{}", zhipuAIConfig.getModel());
 
-        return dev.langchain4j.model.zhipu.ZhipuAiChatModel.builder()
+        return dev.langchain4j.community.model.zhipu.ZhipuAiChatModel.builder()
                 .apiKey(zhipuAIConfig.getApiKey())
                 .model(zhipuAIConfig.getModel())
                 .temperature(0.7)
@@ -126,11 +126,11 @@ public class AgenticWorkflowConfig {
      * 专门处理用户偏好相关查询
      */
     @Bean
-    public UserPreferenceAgent workflowUserPreferenceAgent(ChatLanguageModel workflowChatModel) {
+    public UserPreferenceAgent workflowUserPreferenceAgent(ChatModel workflowChatModel) {
         log.info("构建L1: UserPreferenceAgent (Agent层级架构)");
 
         return AiServices.builder(UserPreferenceAgent.class)
-                .chatLanguageModel(workflowChatModel)
+                .chatModel(workflowChatModel)
                 .tools(userProfileTools)
                 .build();
     }
@@ -139,11 +139,11 @@ public class AgenticWorkflowConfig {
      * L1 营养指导Agent
      */
     @Bean
-    public NutritionGuideAgent workflowNutritionGuideAgent(ChatLanguageModel workflowChatModel) {
+    public NutritionGuideAgent workflowNutritionGuideAgent(ChatModel workflowChatModel) {
         log.info("构建L1: NutritionGuideAgent (Agentic)");
 
         return AiServices.builder(NutritionGuideAgent.class)
-                .chatLanguageModel(workflowChatModel)
+                .chatModel(workflowChatModel)
                 .tools(nutritionAnalysisTools, calorieCalculatorTools)
                 .build();
     }
@@ -152,11 +152,11 @@ public class AgenticWorkflowConfig {
      * L1 菜品推荐Agent
      */
     @Bean
-    public DishRecommendationAgent workflowDishRecommendationAgent(ChatLanguageModel workflowChatModel) {
+    public DishRecommendationAgent workflowDishRecommendationAgent(ChatModel workflowChatModel) {
         log.info("构建L1: DishRecommendationAgent (Agentic)");
 
         return AiServices.builder(DishRecommendationAgent.class)
-                .chatLanguageModel(workflowChatModel)
+                .chatModel(workflowChatModel)
                 .tools(recommendationQueryTools, recommendationFilterTools, recommendationRankTools)
                 .build();
     }
@@ -165,11 +165,11 @@ public class AgenticWorkflowConfig {
      * L1 商家信息Agent
      */
     @Bean
-    public MerchantInfoAgent workflowMerchantInfoAgent(ChatLanguageModel workflowChatModel) {
+    public MerchantInfoAgent workflowMerchantInfoAgent(ChatModel workflowChatModel) {
         log.info("构建L1: MerchantInfoAgent (Agentic)");
 
         return AiServices.builder(MerchantInfoAgent.class)
-                .chatLanguageModel(workflowChatModel)
+                .chatModel(workflowChatModel)
                 .tools(merchantQueryTools, merchantStatsTools)
                 .build();
     }
@@ -178,11 +178,11 @@ public class AgenticWorkflowConfig {
      * L1 时间感知Agent
      */
     @Bean
-    public TimeAwareAgent workflowTimeAwareAgent(ChatLanguageModel workflowChatModel) {
+    public TimeAwareAgent workflowTimeAwareAgent(ChatModel workflowChatModel) {
         log.info("构建L1: TimeAwareAgent (Agentic)");
 
         return AiServices.builder(TimeAwareAgent.class)
-                .chatLanguageModel(workflowChatModel)
+                .chatModel(workflowChatModel)
                 .tools(timeTools)
                 .build();
     }
@@ -191,11 +191,11 @@ public class AgenticWorkflowConfig {
      * L1 位置服务Agent
      */
     @Bean
-    public LocationServiceAgent workflowLocationServiceAgent(ChatLanguageModel workflowChatModel) {
+    public LocationServiceAgent workflowLocationServiceAgent(ChatModel workflowChatModel) {
         log.info("构建L1: LocationServiceAgent (Agentic)");
 
         return AiServices.builder(LocationServiceAgent.class)
-                .chatLanguageModel(workflowChatModel)
+                .chatModel(workflowChatModel)
                 .tools(locationTools)
                 .build();
     }
@@ -204,11 +204,11 @@ public class AgenticWorkflowConfig {
      * L1 订单辅助Agent
      */
     @Bean
-    public OrderHelperAgent workflowOrderHelperAgent(ChatLanguageModel workflowChatModel) {
+    public OrderHelperAgent workflowOrderHelperAgent(ChatModel workflowChatModel) {
         log.info("构建L1: OrderHelperAgent (Agentic)");
 
         return AiServices.builder(OrderHelperAgent.class)
-                .chatLanguageModel(workflowChatModel)
+                .chatModel(workflowChatModel)
                 .tools(orderQueryTools, orderCreateTools)
                 .build();
     }
@@ -221,7 +221,7 @@ public class AgenticWorkflowConfig {
      */
     @Bean
     public SmartRecommendationAgent workflowSmartRecommendationAgent(
-            ChatLanguageModel workflowChatModel,
+            ChatModel workflowChatModel,
             UserPreferenceAgent workflowUserPreferenceAgent,
             DishRecommendationAgent workflowDishRecommendationAgent,
             LocationServiceAgent workflowLocationServiceAgent,
@@ -231,7 +231,7 @@ public class AgenticWorkflowConfig {
 
         // 将L1 Agent作为工具注入，实现Agent调用Agent
         return AiServices.builder(SmartRecommendationAgent.class)
-                .chatLanguageModel(workflowChatModel)
+                .chatModel(workflowChatModel)
                 .tools(
                     // L1 Agents（作为工具注入）
                     workflowUserPreferenceAgent,
@@ -252,14 +252,14 @@ public class AgenticWorkflowConfig {
      */
     @Bean
     public HealthManagementAgent workflowHealthManagementAgent(
-            ChatLanguageModel workflowChatModel,
+            ChatModel workflowChatModel,
             NutritionGuideAgent workflowNutritionGuideAgent,
             UserPreferenceAgent workflowUserPreferenceAgent) {
 
         log.info("构建L2: HealthManagementAgent (调用L1 Agents)");
 
         return AiServices.builder(HealthManagementAgent.class)
-                .chatLanguageModel(workflowChatModel)
+                .chatModel(workflowChatModel)
                 .tools(
                     // L1 Agents（作为工具注入）
                     workflowNutritionGuideAgent,
@@ -277,7 +277,7 @@ public class AgenticWorkflowConfig {
      */
     @Bean
     public FullOrderAgent workflowFullOrderAgent(
-            ChatLanguageModel workflowChatModel,
+            ChatModel workflowChatModel,
             OrderHelperAgent workflowOrderHelperAgent,
             MerchantInfoAgent workflowMerchantInfoAgent,
             DishRecommendationAgent workflowDishRecommendationAgent,
@@ -286,7 +286,7 @@ public class AgenticWorkflowConfig {
         log.info("构建L2: FullOrderAgent (调用L1 Agents)");
 
         return AiServices.builder(FullOrderAgent.class)
-                .chatLanguageModel(workflowChatModel)
+                .chatModel(workflowChatModel)
                 .tools(
                     // L1 Agents（作为工具注入）
                     workflowOrderHelperAgent,
@@ -309,7 +309,7 @@ public class AgenticWorkflowConfig {
      */
     @Bean
     public IntelligentAssistantAgent workflowIntelligentAssistantAgent(
-            ChatLanguageModel workflowChatModel,
+            ChatModel workflowChatModel,
             ChatMemory workflowChatMemory,
             SmartRecommendationAgent workflowSmartRecommendationAgent,
             HealthManagementAgent workflowHealthManagementAgent,
@@ -327,7 +327,7 @@ public class AgenticWorkflowConfig {
 
         // L3 Agent可以调用所有L2和L1 Agent（作为工具注入）
         return AiServices.builder(IntelligentAssistantAgent.class)
-                .chatLanguageModel(workflowChatModel)
+                .chatModel(workflowChatModel)
                 .chatMemory(workflowChatMemory)
                 .tools(
                     // L2 Agents

@@ -1,7 +1,9 @@
 package com.xx.jaseatschoicejava.agent.agents;
 
+import dev.langchain4j.agentic.Agent;
 import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
+import dev.langchain4j.service.V;
 
 /**
  * L2领域智能体 - 全流程订单Agent
@@ -240,5 +242,23 @@ public interface FullOrderAgent {
         9. 提供订单跟踪信息
         10. 感谢订餐，祝用餐愉快
         """)
-    String chat(@UserMessage String userMessage);
+    @Agent("""
+        订单处理专家，负责：
+
+        **核心能力：**
+        1. 创建订单（智能填充信息）
+        2. 查询订单状态和历史
+        3. 取消/修改订单
+        4. 推荐最优优惠
+        5. 处理售后问题
+
+        **输入：**
+        - 用户订单需求
+        - 用户ID
+
+        **输出：**
+        - 订单操作结果
+        - 订单详情
+        """)
+    String chat(@V("userMessage") String userMessage);
 }

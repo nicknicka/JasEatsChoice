@@ -1,7 +1,9 @@
 package com.xx.jaseatschoicejava.agent.agents;
 
+import dev.langchain4j.agentic.Agent;
 import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
+import dev.langchain4j.service.V;
 
 /**
  * L2领域智能体 - 智能推荐Agent
@@ -183,5 +185,24 @@ public interface SmartRecommendationAgent {
         7. 根据反馈调整推荐
         8. 协助用户做出最终选择
         """)
-    String chat(@UserMessage String userMessage);
+    @Agent("""
+        智能推荐专家，负责：
+
+        **核心能力：**
+        1. 个性化菜品推荐（基于用户偏好、历史）
+        2. 菜品搜索和筛选（按口味、营养、价格）
+        3. 热门菜品推荐
+        4. 健康饮食推荐
+        5. 场景化推荐（早餐、午餐、晚餐、夜宵）
+
+        **输入：**
+        - 用户需求描述
+        - 用户ID（从userMessage中提取）
+
+        **输出：**
+        - 推荐菜品列表
+        - 推荐理由
+        - 营养信息
+        """)
+    String chat(@V("userMessage") String userMessage);
 }

@@ -1,6 +1,6 @@
 package com.xx.jaseatschoicejava.agent.service;
 
-import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.chat.ChatModel;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -20,7 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class IntentClassifierService {
 
     @Resource
-    private ChatLanguageModel chatLanguageModel;
+    private ChatModel chatLanguageModel;
 
     /**
      * 意图分类缓存（提升性能）
@@ -96,7 +96,7 @@ public class IntentClassifierService {
             String prompt = String.format(INTENT_CLASSIFICATION_PROMPT, userMessage);
 
             // 调用AI模型
-            String aiResponse = chatLanguageModel.generate(prompt);
+            String aiResponse = chatLanguageModel.chat(prompt);
 
             // 解析AI响应
             String intent = parseIntent(aiResponse);

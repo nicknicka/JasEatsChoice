@@ -267,58 +267,6 @@ public class RecipeTools {
     }
 
     /**
-     * 搜索菜品
-     *
-     * @param keyword 搜索关键词
-     * @return 搜索结果
-     */
-    @Tool("搜索菜品，支持按菜名或关键词搜索")
-    public String searchDishes(@P("搜索关键词") String keyword) {
-        log.info("执行工具：searchDishes，关键词：{}", keyword);
-
-        try {
-            List<Dish> dishes = dishService.list();
-
-            // 简单的内存过滤
-            List<Dish> filtered = dishes.stream()
-                    .filter(d -> d.getName() != null && d.getName().contains(keyword))
-                    .limit(8)
-                    .collect(java.util.stream.Collectors.toList());
-
-            if (filtered.isEmpty()) {
-                return String.format("🔍 **搜索结果：\"%s\"**\n\n" +
-                       "未找到相关菜品。\n\n" +
-                       "💡 换个关键词试试？", keyword);
-            }
-
-            StringBuilder result = new StringBuilder();
-            result.append(String.format("🔍 **搜索结果：\"%s\"**\n\n", keyword));
-
-            for (int i = 0; i < filtered.size(); i++) {
-                Dish dish = filtered.get(i);
-                result.append(String.format("**%d. %s**\n", i + 1, dish.getName()));
-                result.append(String.format("   💰 ¥%.2f | 🔥 %d kcal\n",
-                        dish.getPrice(), dish.getCalorie()));
-
-                if (dish.getDescription() != null && !dish.getDescription().isEmpty()) {
-                    result.append(String.format("   📝 %s\n",
-                        dish.getDescription().length() > 30 ?
-                            dish.getDescription().substring(0, 30) + "..." :
-                            dish.getDescription()));
-                }
-
-                result.append("\n");
-            }
-
-            return result.toString();
-
-        } catch (Exception e) {
-            log.error("搜索菜品失败", e);
-            return "搜索菜品失败：" + e.getMessage();
-        }
-    }
-
-    /**
      * 创建食谱
      *
      * @param userId 用户ID

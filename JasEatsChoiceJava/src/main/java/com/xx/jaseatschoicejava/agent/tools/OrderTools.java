@@ -26,10 +26,11 @@ import java.util.stream.Collectors;
  * 订单管理工具集
  * 使用LangChain4j的@Tool注解声明工具函数
  *
+ * 注意：不使用 @Component/@Service 注解，通过 @Bean 方法手动创建，避免Spring AOP代理导致LangChain4j无法扫描@Tool注解
+ *
  * @author Claude
  * @since 2026-03-22
  */
-@Service
 public class OrderTools {
 
     private static final Logger log = LoggerFactory.getLogger(OrderTools.class);

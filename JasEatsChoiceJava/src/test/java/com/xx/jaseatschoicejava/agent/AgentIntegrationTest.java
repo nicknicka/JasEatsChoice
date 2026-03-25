@@ -151,6 +151,10 @@ public class AgentIntegrationTest {
     }
 
     @Test
+    public void test() {
+    }
+
+    @Test
     @DisplayName("测试IntelligentAssistantAgent基础对话")
     public void testIntelligentAssistantAgentChat() {
         assertNotNull(intelligentAssistantAgent, "IntelligentAssistantAgent should be created");

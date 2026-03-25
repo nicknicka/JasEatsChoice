@@ -43,9 +43,6 @@ public class AIStreamController {
     @Resource
     private ApplicationContext applicationContext;
 
-    @Resource
-    private com.xx.jaseatschoicejava.agent.tools.OrderTools orderTools;
-
     /**
      * SSE流式聊天接口（真正的流式输出）
      *
@@ -80,7 +77,7 @@ public class AIStreamController {
 
             // 3. 调用真正的流式Agent（传递userId）
             streamingIntelligentAssistantAgent.chat(message, userId)
-                .onNext(token -> {
+                .onPartialResponse(token -> {
                     // 处理每个token（从LLM流式接收）
                     try {
                         if (token != null && !token.isEmpty()) {
@@ -97,12 +94,12 @@ public class AIStreamController {
                         log.error("发送token失败", e);
                     }
                 })
-                .onComplete(response -> {
+                .onCompleteResponse(response -> {
                     // 流完成时调用
                     try {
                         log.info("✅ 流式响应完成");
 
-                        AiMessage aiMessage = response.content();
+                        AiMessage aiMessage = response.aiMessage();
                         String responseText = aiMessage.text();
                         log.info("📊 响应内容: {}", responseText);
 

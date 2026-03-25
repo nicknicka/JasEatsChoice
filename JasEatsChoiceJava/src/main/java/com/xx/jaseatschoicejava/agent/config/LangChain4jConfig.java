@@ -27,13 +27,15 @@ import com.xx.jaseatschoicejava.agent.tools.RecommendationTools;
 import com.xx.jaseatschoicejava.agent.tools.UserTools;
 import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 import dev.langchain4j.service.AiServices;
-import dev.langchain4j.model.chat.ChatLanguageModel;
-import dev.langchain4j.model.zhipu.ZhipuAiChatModel;
+import dev.langchain4j.agentic.AgenticServices;
+import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.community.model.zhipu.ZhipuAiChatModel;
 import dev.langchain4j.memory.ChatMemory;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -41,11 +43,13 @@ import jakarta.annotation.PreDestroy;
 import jakarta.annotation.Resource;
 
 /**
- * LangChain4j配置类
- * 使用AiServices构建真正的AI Agent
+ * 统一Agent配置类
+ * 使用AgenticServices构建AI Agent，支持监督代理模式
+ *
+ * 整合了原LangChain4jConfig和AgenticWorkflowConfig的功能
  *
  * @author Claude
- * @since 2026-03-22
+ * @since 2026-03-25
  */
 @Configuration
 @EnableConfigurationProperties(ZhipuAIConfig.class)
@@ -56,7 +60,7 @@ public class LangChain4jConfig {
     @Resource
     private ZhipuAIConfig zhipuAIConfig;
 
-    private ChatLanguageModel chatLanguageModel;
+    private ChatModel chatLanguageModel;
 
     @Resource
     private NutritionTools nutritionTools;
@@ -70,8 +74,7 @@ public class LangChain4jConfig {
     @Resource
     private RecipeTools recipeTools;
 
-    @Resource
-    private OrderTools orderTools;
+    // 注意：orderTools 通过私有辅助方法创建，避免Spring AOP代理导致LangChain4j无法扫描@Tool注解
 
     @Resource
     private CollectionTools collectionTools;
@@ -79,8 +82,8 @@ public class LangChain4jConfig {
     @Resource
     private UserTools userTools;
 
-    @Resource
-    private LocationTools locationTools;
+    // 注意：locationTools 通过 @Bean 方法创建，避免Spring AOP代理导致LangChain4j无法扫描@Tool注解
+    // 所有使用 locationTools 的 Bean 方法都通过方法参数注入
 
     @Resource
     private MerchantTools merchantTools;
@@ -119,12 +122,68 @@ public class LangChain4jConfig {
     @Resource
     private OrderCreateTools orderCreateTools;
 
+    @Resource
+    private com.xx.jaseatschoicejava.service.MerchantService merchantService;
+
+    @Resource
+    private com.xx.jaseatschoicejava.service.DishService dishService;
+
+    @Resource
+    private com.xx.jaseatschoicejava.service.OrderService orderService;
+
+    @Resource
+    private com.xx.jaseatschoicejava.service.UserCouponService userCouponService;
+
     /**
-     * 配置ChatLanguageModel（智谱AI）
+     * 配置Supervisor专用模型（更强推理能力）
+     * 使用glm-4-plus提供更好的规划和决策能力
+     */
+    @Bean("supervisorModel")
+    @SuppressWarnings("unused")
+    public ChatModel supervisorModel() {
+        log.info("初始化Supervisor专用模型，模型：glm-4-plus");
+
+        return ZhipuAiChatModel.builder()
+                .apiKey(zhipuAIConfig.getApiKey())
+                .model("glm-4-plus")  // 使用更强的模型
+                .temperature(0.3)     // 降低温度，更确定的规划
+                .maxRetries(2)
+                .callTimeout(java.time.Duration.ofSeconds(60))
+                .connectTimeout(java.time.Duration.ofSeconds(60))
+                .writeTimeout(java.time.Duration.ofSeconds(60))
+                .readTimeout(java.time.Duration.ofSeconds(60))
+                .build();
+    }
+
+    /**
+     * 配置子Agent通用模型（快速响应）
+     * 使用glm-4-flash提供快速响应
+     */
+    @Bean("agentModel")
+    @SuppressWarnings("unused")
+    public ChatModel agentModel() {
+        log.info("初始化子Agent通用模型，模型：glm-4-flash");
+
+        return ZhipuAiChatModel.builder()
+                .apiKey(zhipuAIConfig.getApiKey())
+                .model("glm-4-flash")  // 使用快速模型
+                .temperature(0.7)
+                .maxRetries(2)
+                .callTimeout(java.time.Duration.ofSeconds(60))
+                .connectTimeout(java.time.Duration.ofSeconds(60))
+                .writeTimeout(java.time.Duration.ofSeconds(60))
+                .readTimeout(java.time.Duration.ofSeconds(60))
+                .build();
+    }
+
+    /**
+     * 配置ChatModel（智谱AI）
+     * @deprecated 优先使用 supervisorModel 或 agentModel，保留此方法仅为兼容性
      */
     @Bean(destroyMethod = "") // 禁用Spring的默认destroy方法，避免异常
-    public ChatLanguageModel chatLanguageModel() {
-        log.info("初始化ChatLanguageModel，模型：{}", zhipuAIConfig.getModel());
+    @Deprecated
+    public ChatModel chatLanguageModel() {
+        log.info("初始化ChatModel，模型：{}", zhipuAIConfig.getModel());
 
         this.chatLanguageModel = ZhipuAiChatModel.builder()
                 .apiKey(zhipuAIConfig.getApiKey())
@@ -201,17 +260,63 @@ public class LangChain4jConfig {
     }
 
     /**
+     * 创建非代理的LocationTools实例
+     *
+     * 重要：必须手动创建LocationTools实例并注入依赖，避免Spring AOP代理
+     * LangChain4j需要扫描原始类的@Tool注解，如果被代理则无法扫描
+     *
+     * 注意：这不是 @Bean 方法，避免 Spring 代理！
+     */
+    private LocationTools createLocationTools() {
+        LocationTools tools = new LocationTools();
+        // 手动注入依赖（通过反射设置字段）
+        setField(tools, "merchantService", merchantService);
+        setField(tools, "dishService", dishService);
+        return tools;
+    }
+
+    /**
+     * 创建非代理的OrderTools实例
+     *
+     * 重要：必须手动创建OrderTools实例并注入依赖，避免Spring AOP代理
+     * LangChain4j需要扫描原始类的@Tool注解，如果被代理则无法扫描
+     *
+     * 注意：这不是 @Bean 方法，避免 Spring 代理！
+     */
+    private OrderTools createOrderTools() {
+        OrderTools tools = new OrderTools();
+        // 手动注入依赖（通过反射设置字段）
+        setField(tools, "orderService", orderService);
+        setField(tools, "dishService", dishService);
+        setField(tools, "userCouponService", userCouponService);
+        return tools;
+    }
+
+    /**
+     * 反射设置字段值的辅助方法
+     */
+    private void setField(Object target, String fieldName, Object value) {
+        try {
+            java.lang.reflect.Field field = target.getClass().getDeclaredField(fieldName);
+            field.setAccessible(true);
+            field.set(target, value);
+        } catch (Exception e) {
+            log.error("设置字段失败: {} = {}", fieldName, value, e);
+        }
+    }
+
+    /**
      * 构建营养分析AI Agent
      *
      * 使用LangChain4j的AiServices构建真正的Agent
      * LLM会自动决定何时调用哪个Tool
      */
     @Bean
-    public NutritionAiAgent nutritionAiAgent(ChatLanguageModel chatLanguageModel, ChatMemory chatMemory) {
+    public NutritionAiAgent nutritionAiAgent(ChatModel chatLanguageModel, ChatMemory chatMemory) {
         log.info("构建NutritionAiAgent...");
 
         return AiServices.builder(NutritionAiAgent.class)
-                .chatLanguageModel(chatLanguageModel)
+                .chatModel(chatLanguageModel)
                 .chatMemory(chatMemory)
                 .tools(
                     nutritionTools,
@@ -225,18 +330,20 @@ public class LangChain4jConfig {
      * 构建智能推荐AI Agent
      */
     @Bean
-    public RecommendationAiAgent recommendationAiAgent(ChatLanguageModel chatLanguageModel, ChatMemory chatMemory) {
+    public RecommendationAiAgent recommendationAiAgent(
+            ChatModel chatLanguageModel,
+            ChatMemory chatMemory) {
         log.info("构建RecommendationAiAgent...");
 
         return AiServices.builder(RecommendationAiAgent.class)
-                .chatLanguageModel(chatLanguageModel)
+                .chatModel(chatLanguageModel)
                 .chatMemory(chatMemory)
                 .tools(
                     recommendationTools,
                     recipeTools,
                     collectionTools,
                     nutritionTools,
-                    locationTools
+                    createLocationTools()
                 )
                 .build();
     }
@@ -245,14 +352,14 @@ public class LangChain4jConfig {
      * 构建订单助手AI Agent
      */
     @Bean
-    public OrderAiAgent orderAiAgent(ChatLanguageModel chatLanguageModel, ChatMemory chatMemory) {
+    public OrderAiAgent orderAiAgent(ChatModel chatLanguageModel, ChatMemory chatMemory) {
         log.info("构建OrderAiAgent...");
 
         return AiServices.builder(OrderAiAgent.class)
-                .chatLanguageModel(chatLanguageModel)
+                .chatModel(chatLanguageModel)
                 .chatMemory(chatMemory)
                 .tools(
-                    orderTools,
+                    createOrderTools(),
                     recommendationTools,
                     collectionTools,
                     userTools
@@ -264,11 +371,11 @@ public class LangChain4jConfig {
      * 构建商家经营助手AI Agent
      */
     @Bean
-    public MerchantAssistantAgent merchantAssistantAgent(ChatLanguageModel chatLanguageModel, ChatMemory chatMemory) {
+    public MerchantAssistantAgent merchantAssistantAgent(ChatModel chatLanguageModel, ChatMemory chatMemory) {
         log.info("构建MerchantAssistantAgent...");
 
         return AiServices.builder(MerchantAssistantAgent.class)
-                .chatLanguageModel(chatLanguageModel)
+                .chatModel(chatLanguageModel)
                 .chatMemory(chatMemory)
                 .tools(
                     merchantTools
@@ -280,13 +387,14 @@ public class LangChain4jConfig {
 
     /**
      * 构建L1用户偏好Agent
+     * 配置输出键名为 "userPreferences"，用于Agent间状态共享
      */
     @Bean
-    public UserPreferenceAgent userPreferenceAgent(ChatLanguageModel chatLanguageModel, ChatMemory chatMemory) {
+    public UserPreferenceAgent userPreferenceAgent(ChatModel chatLanguageModel, ChatMemory chatMemory) {
         log.info("构建UserPreferenceAgent...");
 
         return AiServices.builder(UserPreferenceAgent.class)
-                .chatLanguageModel(chatLanguageModel)
+                .chatModel(chatLanguageModel)
                 .chatMemory(chatMemory)
                 .tools(
                     userProfileTools
@@ -296,13 +404,14 @@ public class LangChain4jConfig {
 
     /**
      * 构建L1营养指导Agent
+     * 配置输出键名为 "nutritionInfo"，用于Agent间状态共享
      */
     @Bean
-    public NutritionGuideAgent nutritionGuideAgent(ChatLanguageModel chatLanguageModel, ChatMemory chatMemory) {
+    public NutritionGuideAgent nutritionGuideAgent(ChatModel chatLanguageModel, ChatMemory chatMemory) {
         log.info("构建NutritionGuideAgent...");
 
         return AiServices.builder(NutritionGuideAgent.class)
-                .chatLanguageModel(chatLanguageModel)
+                .chatModel(chatLanguageModel)
                 .chatMemory(chatMemory)
                 .tools(
                     nutritionAnalysisTools,
@@ -313,13 +422,14 @@ public class LangChain4jConfig {
 
     /**
      * 构建L1菜品推荐Agent
+     * 配置输出键名为 "recommendations"，用于Agent间状态共享
      */
     @Bean
-    public DishRecommendationAgent dishRecommendationAgent(ChatLanguageModel chatLanguageModel, ChatMemory chatMemory) {
+    public DishRecommendationAgent dishRecommendationAgent(ChatModel chatLanguageModel, ChatMemory chatMemory) {
         log.info("构建DishRecommendationAgent...");
 
         return AiServices.builder(DishRecommendationAgent.class)
-                .chatLanguageModel(chatLanguageModel)
+                .chatModel(chatLanguageModel)
                 .chatMemory(chatMemory)
                 .tools(
                     recommendationQueryTools,
@@ -331,13 +441,14 @@ public class LangChain4jConfig {
 
     /**
      * 构建L1商家信息Agent
+     * 配置输出键名为 "merchantInfo"，用于Agent间状态共享
      */
     @Bean
-    public MerchantInfoAgent merchantInfoAgent(ChatLanguageModel chatLanguageModel, ChatMemory chatMemory) {
+    public MerchantInfoAgent merchantInfoAgent(ChatModel chatLanguageModel, ChatMemory chatMemory) {
         log.info("构建MerchantInfoAgent...");
 
         return AiServices.builder(MerchantInfoAgent.class)
-                .chatLanguageModel(chatLanguageModel)
+                .chatModel(chatLanguageModel)
                 .chatMemory(chatMemory)
                 .tools(
                     merchantQueryTools,
@@ -350,11 +461,11 @@ public class LangChain4jConfig {
      * 构建L1时间感知Agent
      */
     @Bean
-    public TimeAwareAgent timeAwareAgent(ChatLanguageModel chatLanguageModel, ChatMemory chatMemory) {
+    public TimeAwareAgent timeAwareAgent(ChatModel chatLanguageModel, ChatMemory chatMemory) {
         log.info("构建TimeAwareAgent...");
 
         return AiServices.builder(TimeAwareAgent.class)
-                .chatLanguageModel(chatLanguageModel)
+                .chatModel(chatLanguageModel)
                 .chatMemory(chatMemory)
                 .tools(
                     timeTools
@@ -366,27 +477,30 @@ public class LangChain4jConfig {
      * 构建L1位置服务Agent
      */
     @Bean
-    public LocationServiceAgent locationServiceAgent(ChatLanguageModel chatLanguageModel, ChatMemory chatMemory) {
+    public LocationServiceAgent locationServiceAgent(
+            ChatModel chatLanguageModel,
+            ChatMemory chatMemory) {
         log.info("构建LocationServiceAgent...");
 
         return AiServices.builder(LocationServiceAgent.class)
-                .chatLanguageModel(chatLanguageModel)
+                .chatModel(chatLanguageModel)
                 .chatMemory(chatMemory)
                 .tools(
-                    locationTools
+                    createLocationTools()
                 )
                 .build();
     }
 
     /**
      * 构建L1订单辅助Agent
+     * 配置输出键名为 "orderInfo"，用于Agent间状态共享
      */
     @Bean
-    public OrderHelperAgent orderHelperAgent(ChatLanguageModel chatLanguageModel, ChatMemory chatMemory) {
+    public OrderHelperAgent orderHelperAgent(ChatModel chatLanguageModel, ChatMemory chatMemory) {
         log.info("构建OrderHelperAgent...");
 
         return AiServices.builder(OrderHelperAgent.class)
-                .chatLanguageModel(chatLanguageModel)
+                .chatModel(chatLanguageModel)
                 .chatMemory(chatMemory)
                 .tools(
                     orderQueryTools,
@@ -402,11 +516,13 @@ public class LangChain4jConfig {
      * 综合多个维度的信息提供个性化推荐服务
      */
     @Bean
-    public SmartRecommendationAgent smartRecommendationAgent(ChatLanguageModel chatLanguageModel, ChatMemory chatMemory) {
+    public SmartRecommendationAgent smartRecommendationAgent(
+            @Qualifier("agentModel") ChatModel agentModel,
+            ChatMemory chatMemory) {
         log.info("构建SmartRecommendationAgent...");
 
-        return AiServices.builder(SmartRecommendationAgent.class)
-                .chatLanguageModel(chatLanguageModel)
+        return AgenticServices.agentBuilder(SmartRecommendationAgent.class)
+                .chatModel(agentModel)
                 .chatMemory(chatMemory)
                 .tools(
                     userProfileTools,
@@ -417,7 +533,7 @@ public class LangChain4jConfig {
                     merchantStatsTools,
                     nutritionAnalysisTools,
                     timeTools,
-                    locationTools
+                    createLocationTools()
                 )
                 .build();
     }
@@ -427,11 +543,13 @@ public class LangChain4jConfig {
      * 综合营养分析、健康目标和饮食记录提供全面的健康管理服务
      */
     @Bean
-    public HealthManagementAgent healthManagementAgent(ChatLanguageModel chatLanguageModel, ChatMemory chatMemory) {
+    public HealthManagementAgent healthManagementAgent(
+            @Qualifier("agentModel") ChatModel agentModel,
+            ChatMemory chatMemory) {
         log.info("构建HealthManagementAgent...");
 
-        return AiServices.builder(HealthManagementAgent.class)
-                .chatLanguageModel(chatLanguageModel)
+        return AgenticServices.agentBuilder(HealthManagementAgent.class)
+                .chatModel(agentModel)
                 .chatMemory(chatMemory)
                 .tools(
                     userProfileTools,
@@ -446,11 +564,13 @@ public class LangChain4jConfig {
      * 处理从商家选择、菜品选择到订单提交的完整流程
      */
     @Bean
-    public FullOrderAgent fullOrderAgent(ChatLanguageModel chatLanguageModel, ChatMemory chatMemory) {
+    public FullOrderAgent fullOrderAgent(
+            @Qualifier("agentModel") ChatModel agentModel,
+            ChatMemory chatMemory) {
         log.info("构建FullOrderAgent...");
 
-        return AiServices.builder(FullOrderAgent.class)
-                .chatLanguageModel(chatLanguageModel)
+        return AgenticServices.agentBuilder(FullOrderAgent.class)
+                .chatModel(agentModel)
                 .chatMemory(chatMemory)
                 .tools(
                     userProfileTools,
@@ -459,7 +579,7 @@ public class LangChain4jConfig {
                     orderQueryTools,
                     orderCreateTools,
                     timeTools,
-                    locationTools
+                    createLocationTools()
                 )
                 .build();
     }
@@ -469,11 +589,13 @@ public class LangChain4jConfig {
      * 综合性智能助手，能够处理各类用户问题并智能路由到相应的L1 Agent
      */
     @Bean
-    public IntelligentAssistantAgent intelligentAssistantAgent(ChatLanguageModel chatLanguageModel, ChatMemory chatMemory) {
+    public IntelligentAssistantAgent intelligentAssistantAgent(
+            @Qualifier("agentModel") ChatModel agentModel,
+            ChatMemory chatMemory) {
         log.info("构建IntelligentAssistantAgent...");
 
-        return AiServices.builder(IntelligentAssistantAgent.class)
-                .chatLanguageModel(chatLanguageModel)
+        return AgenticServices.agentBuilder(IntelligentAssistantAgent.class)
+                .chatModel(agentModel)
                 .chatMemory(chatMemory)
                 .tools(
                     userProfileTools,
@@ -485,7 +607,7 @@ public class LangChain4jConfig {
                     merchantQueryTools,
                     merchantStatsTools,
                     timeTools,
-                    locationTools,
+                    createLocationTools(),
                     orderQueryTools,
                     orderCreateTools
                 )
@@ -499,11 +621,13 @@ public class LangChain4jConfig {
      * 协调整个订餐、健康、推荐等多个服务流程，为用户提供一站式的生活服务
      */
     @Bean
-    public LifeServiceAgent lifeServiceAgent(ChatLanguageModel chatLanguageModel, ChatMemory chatMemory) {
+    public LifeServiceAgent lifeServiceAgent(
+            @Qualifier("agentModel") ChatModel agentModel,
+            ChatMemory chatMemory) {
         log.info("构建LifeServiceAgent...");
 
         return AiServices.builder(LifeServiceAgent.class)
-                .chatLanguageModel(chatLanguageModel)
+                .chatModel(agentModel)
                 .chatMemory(chatMemory)
                 .tools(
                     userProfileTools,
@@ -515,7 +639,7 @@ public class LangChain4jConfig {
                     nutritionAnalysisTools,
                     calorieCalculatorTools,
                     timeTools,
-                    locationTools,
+                    createLocationTools(),
                     orderQueryTools,
                     orderCreateTools
                 )
@@ -527,11 +651,13 @@ public class LangChain4jConfig {
      * 为用户制定每日饮食和生活规划，整合推荐、营养、时间等多方面信息
      */
     @Bean
-    public DailyPlanningAgent dailyPlanningAgent(ChatLanguageModel chatLanguageModel, ChatMemory chatMemory) {
+    public DailyPlanningAgent dailyPlanningAgent(
+            @Qualifier("agentModel") ChatModel agentModel,
+            ChatMemory chatMemory) {
         log.info("构建DailyPlanningAgent...");
 
         return AiServices.builder(DailyPlanningAgent.class)
-                .chatLanguageModel(chatLanguageModel)
+                .chatModel(agentModel)
                 .chatMemory(chatMemory)
                 .tools(
                     userProfileTools,
@@ -550,11 +676,13 @@ public class LangChain4jConfig {
      * 帮助用户达成长期健康目标，提供目标管理、进度跟踪、持续激励等服务
      */
     @Bean
-    public GoalAchievementAgent goalAchievementAgent(ChatLanguageModel chatLanguageModel, ChatMemory chatMemory) {
+    public GoalAchievementAgent goalAchievementAgent(
+            @Qualifier("agentModel") ChatModel agentModel,
+            ChatMemory chatMemory) {
         log.info("构建GoalAchievementAgent...");
 
         return AiServices.builder(GoalAchievementAgent.class)
-                .chatLanguageModel(chatLanguageModel)
+                .chatModel(agentModel)
                 .chatMemory(chatMemory)
                 .tools(
                     userProfileTools,
@@ -565,6 +693,77 @@ public class LangChain4jConfig {
                     recommendationRankTools,
                     timeTools
                 )
+                .build();
+    }
+
+    // ==================== Week 7: L3 监督代理 ====================
+
+    /**
+     * 构建L3监督代理 (SupervisorAgent)
+     * 智能调度L2领域Agent，协调多个Agent完成复杂任务
+     *
+     * 使用AgenticServices.supervisorBuilder()构建
+     * 配置所有L2领域Agent作为子Agent
+     */
+    @Bean
+    public SupervisorAgent supervisorAgent(
+            @Qualifier("supervisorModel") ChatModel supervisorModel,
+            ChatMemory chatMemory,
+            // 注入L2 Agent作为子Agent
+            SmartRecommendationAgent smartRecommendationAgent,
+            HealthManagementAgent healthManagementAgent,
+            FullOrderAgent fullOrderAgent,
+            IntelligentAssistantAgent intelligentAssistantAgent) {
+        log.info("构建SupervisorAgent（监督代理）...");
+
+        return dev.langchain4j.agentic.AgenticServices
+                .supervisorBuilder(SupervisorAgent.class)
+                .chatModel(supervisorModel)  // 使用强模型
+                .chatMemoryProvider(memoryId -> chatMemory)
+                .name("SupervisorAgent")
+                .description("智能调度Agent，协调多个L2领域Agent完成复杂任务")
+                .subAgents(  // ✅ 关键：注册子Agent
+                    smartRecommendationAgent,
+                    healthManagementAgent,
+                    fullOrderAgent,
+                    intelligentAssistantAgent
+                )
+                .outputKey("supervisorResult")
+                .supervisorContext("""
+                    # 角色定义
+                    你是一个智能监督代理（SupervisorAgent），负责协调各个领域专家Agent为用户提供服务。
+
+                    # 可用的领域专家Agent
+                    1. SmartRecommendationAgent - 智能推荐专家（菜品推荐、个性化推荐）
+                    2. HealthManagementAgent - 健康管理专家（营养分析、饮食建议）
+                    3. FullOrderAgent - 订单处理专家（从商家选择到订单提交）
+                    4. IntelligentAssistantAgent - 综合智能助手（处理各类用户问题）
+
+                    # 工作流程
+                    1. 理解用户的完整需求和上下文
+                    2. 分析问题涉及哪些领域（推荐、健康、订单等）
+                    3. 选择最合适的领域Agent或协调多个Agent协作
+                    4. 综合各Agent的结果，生成清晰、友好的最终回复
+
+                    # 约束条件
+                    - 优先使用用户ID进行个性化查询
+                    - 数据不足时主动询问用户
+                    - 提供准确的操作结果和状态反馈
+                    - 多Agent协作时，明确说明每个Agent的职责
+                    - 确保最终回复对用户友好、易于理解
+
+                    # 响应策略
+                    - 如果单一Agent可以解决，直接使用其结果
+                    - 如果需要多个Agent协作，综合所有结果
+                    - 如果涉及用户数据，先确认用户身份
+                    """)
+                .contextGenerationStrategy(
+                    dev.langchain4j.agentic.supervisor.SupervisorContextStrategy.CHAT_MEMORY_AND_SUMMARIZATION
+                )
+                .responseStrategy(
+                    dev.langchain4j.agentic.supervisor.SupervisorResponseStrategy.SCORED
+                )
+                .maxAgentsInvocations(10)  // 最多调用10个子Agent
                 .build();
     }
 }

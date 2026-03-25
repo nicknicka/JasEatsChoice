@@ -1,7 +1,9 @@
 package com.xx.jaseatschoicejava.agent.agents;
 
+import dev.langchain4j.agentic.Agent;
 import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
+import dev.langchain4j.service.V;
 
 /**
  * L2领域智能体 - 智能助手Agent
@@ -271,5 +273,22 @@ public interface IntelligentAssistantAgent {
         - 学习新的营养学和餐饮知识
         - 关注用户需求变化
         """)
-    String chat(@UserMessage String userMessage);
+    @Agent("""
+        综合智能助手，负责：
+
+        **核心能力：**
+        1. 处理各类用户问题
+        2. 智能路由到合适的工具
+        3. 综合多个维度的信息
+        4. 提供友好的交互体验
+
+        **输入：**
+        - 用户任意问题
+        - 用户ID
+
+        **输出：**
+        - 问题答案
+        - 操作结果
+        """)
+    String chat(@V("userMessage") String userMessage);
 }

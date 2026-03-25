@@ -91,7 +91,7 @@ public class MerchantAIController {
 
             // 3. 调用商家流式Agent（传递merchantId）
             streamingMerchantAssistantAgent.chat(message, merchantId)
-                .onNext(token -> {
+                .onPartialResponse(token -> {
                     // 处理每个token（从LLM流式接收）
                     try {
                         if (token != null && !token.isEmpty()) {
@@ -108,7 +108,7 @@ public class MerchantAIController {
                         log.error("发送token失败", e);
                     }
                 })
-                .onComplete(response -> {
+                .onCompleteResponse(response -> {
                     // AI完成响应后调用
                     try {
                         log.info("✅ 商家AI响应完成");
@@ -179,12 +179,12 @@ public class MerchantAIController {
             StringBuilder fullResponse = new StringBuilder();
 
             streamingMerchantAssistantAgent.chat(message, merchantId)
-                .onNext(token -> {
+                .onPartialResponse(token -> {
                     if (token != null) {
                         fullResponse.append(token);
                     }
                 })
-                .onComplete(response -> {
+                .onCompleteResponse(response -> {
                     // 完成
                 })
                 .onError(error -> {

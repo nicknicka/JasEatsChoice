@@ -5,9 +5,18 @@ import com.xx.jaseatschoicejava.agent.agents.stream.StreamingIntelligentAssistan
 import com.xx.jaseatschoicejava.agent.agents.stream.StreamingMerchantAssistantAgent;
 import com.xx.jaseatschoicejava.agent.tools.merchant.MerchantQueryTools;
 import com.xx.jaseatschoicejava.agent.tools.merchant.MerchantStatsTools;
+import com.xx.jaseatschoicejava.agent.tools.nutrition.CalorieCalculatorTools;
+import com.xx.jaseatschoicejava.agent.tools.nutrition.NutritionAnalysisTools;
+import com.xx.jaseatschoicejava.agent.tools.order.OrderCreateTools;
+import com.xx.jaseatschoicejava.agent.tools.order.OrderQueryTools;
+import com.xx.jaseatschoicejava.agent.tools.recommendation.RecommendationFilterTools;
+import com.xx.jaseatschoicejava.agent.tools.recommendation.RecommendationQueryTools;
+import com.xx.jaseatschoicejava.agent.tools.recommendation.RecommendationRankTools;
+import com.xx.jaseatschoicejava.agent.tools.system.TimeTools;
+import com.xx.jaseatschoicejava.agent.tools.user.UserProfileTools;
 import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
-import dev.langchain4j.model.chat.StreamingChatLanguageModel;
-import dev.langchain4j.model.zhipu.ZhipuAiStreamingChatModel;
+import dev.langchain4j.model.chat.StreamingChatModel;
+import dev.langchain4j.community.model.zhipu.ZhipuAiStreamingChatModel;
 import dev.langchain4j.service.AiServices;
 import dev.langchain4j.memory.ChatMemory;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
@@ -46,7 +55,36 @@ public class LangChain4jStreamingConfig {
     @Resource
     private ZhipuAIConfig zhipuAIConfig;
 
-    // ==================== L2 Agent 注入 ====================
+    // ==================== 工具类注入 ====================
+
+    @Resource
+    private UserProfileTools userProfileTools;
+
+    @Resource
+    private RecommendationQueryTools recommendationQueryTools;
+
+    @Resource
+    private RecommendationFilterTools recommendationFilterTools;
+
+    @Resource
+    private RecommendationRankTools recommendationRankTools;
+
+    @Resource
+    private NutritionAnalysisTools nutritionAnalysisTools;
+
+    @Resource
+    private CalorieCalculatorTools calorieCalculatorTools;
+
+    @Resource
+    private OrderQueryTools orderQueryTools;
+
+    @Resource
+    private OrderCreateTools orderCreateTools;
+
+    @Resource
+    private TimeTools timeTools;
+
+    // ==================== L2 Agent 注入（已弃用，不使用Agent作为工具） ====================
 
     @Resource
     private SmartRecommendationAgent workflowSmartRecommendationAgent;
@@ -57,30 +95,7 @@ public class LangChain4jStreamingConfig {
     @Resource
     private FullOrderAgent workflowFullOrderAgent;
 
-    // ==================== L1 Agent 注入（可选，直接调用） ====================
-
-    @Resource
-    private UserPreferenceAgent workflowUserPreferenceAgent;
-
-    @Resource
-    private NutritionGuideAgent workflowNutritionGuideAgent;
-
-    @Resource
-    private DishRecommendationAgent workflowDishRecommendationAgent;
-
-    @Resource
-    private MerchantInfoAgent workflowMerchantInfoAgent;
-
-    @Resource
-    private TimeAwareAgent workflowTimeAwareAgent;
-
-    @Resource
-    private LocationServiceAgent workflowLocationServiceAgent;
-
-    @Resource
-    private OrderHelperAgent workflowOrderHelperAgent;
-
-    // ==================== 商家工具类注入 ====================
+    // L1 Agent 不再使用，改为直接使用工具类
 
     @Resource
     private MerchantQueryTools merchantQueryTools;
@@ -88,14 +103,14 @@ public class LangChain4jStreamingConfig {
     @Resource
     private MerchantStatsTools merchantStatsTools;
 
-    private StreamingChatLanguageModel streamingChatLanguageModel;
+    private StreamingChatModel streamingChatLanguageModel;
 
     /**
-     * 配置StreamingChatLanguageModel（智谱AI流式版本）
+     * 配置StreamingChatModel（智谱AI流式版本）
      */
     @Bean(destroyMethod = "")
-    public StreamingChatLanguageModel streamingChatLanguageModel() {
-        log.info("初始化StreamingChatLanguageModel，模型：{}", zhipuAIConfig.getModel());
+    public StreamingChatModel streamingChatLanguageModel() {
+        log.info("初始化StreamingChatModel，模型：{}", zhipuAIConfig.getModel());
 
         this.streamingChatLanguageModel = ZhipuAiStreamingChatModel.builder()
                 .apiKey(zhipuAIConfig.getApiKey())
@@ -127,27 +142,26 @@ public class LangChain4jStreamingConfig {
      */
     @Bean
     public StreamingIntelligentAssistantAgent streamingIntelligentAssistantAgent(
-            StreamingChatLanguageModel streamingChatLanguageModel,
+            StreamingChatModel streamingChatLanguageModel,
             ChatMemory streamingChatMemory) {
-        log.info("构建L3: StreamingIntelligentAssistantAgent (调用L2 Agents)...");
+        log.info("构建L3: StreamingIntelligentAssistantAgent (直接使用工具类)...");
 
         return AiServices.builder(StreamingIntelligentAssistantAgent.class)
-                .streamingChatLanguageModel(streamingChatLanguageModel)
+                .streamingChatModel(streamingChatLanguageModel)
                 .chatMemory(streamingChatMemory)
                 .tools(
-                    // L2 Agents（主要调用的目标）
-                    workflowSmartRecommendationAgent,
-                    workflowHealthManagementAgent,
-                    workflowFullOrderAgent,
-
-                    // L1 Agents（也可以直接调用，进行更细粒度的控制）
-                    workflowUserPreferenceAgent,
-                    workflowNutritionGuideAgent,
-                    workflowDishRecommendationAgent,
-                    workflowMerchantInfoAgent,
-                    workflowTimeAwareAgent,
-                    workflowLocationServiceAgent,
-                    workflowOrderHelperAgent
+                    // 直接使用工具类，而不是Agent（Agent不能作为工具传递）
+                    userProfileTools,
+                    recommendationQueryTools,
+                    recommendationFilterTools,
+                    recommendationRankTools,
+                    nutritionAnalysisTools,
+                    calorieCalculatorTools,
+                    orderQueryTools,
+                    orderCreateTools,
+                    merchantQueryTools,
+                    merchantStatsTools,
+                    timeTools
                 )
                 .build();
     }
@@ -159,19 +173,18 @@ public class LangChain4jStreamingConfig {
      */
     @Bean
     public StreamingMerchantAssistantAgent streamingMerchantAssistantAgent(
-            StreamingChatLanguageModel streamingChatLanguageModel,
+            StreamingChatModel streamingChatLanguageModel,
             ChatMemory streamingChatMemory) {
         log.info("构建商家L3: StreamingMerchantAssistantAgent (调用商家工具)...");
 
         return AiServices.builder(StreamingMerchantAssistantAgent.class)
-                .streamingChatLanguageModel(streamingChatLanguageModel)
+                .streamingChatModel(streamingChatLanguageModel)
                 .chatMemory(streamingChatMemory)
                 .tools(
                     // 商家查询工具
                     merchantQueryTools,
-                    merchantStatsTools,
-                    // 订单工具（商家需要查看订单）
-                    workflowOrderHelperAgent
+                    merchantStatsTools
+                    // 订单工具已移除，商家Agent不应直接访问订单工具
                 )
                 .build();
     }
@@ -186,7 +199,7 @@ public class LangChain4jStreamingConfig {
         try {
             if (streamingChatLanguageModel != null) {
                 // 流式模型的清理
-                log.info("StreamingChatLanguageModel已清理");
+                log.info("StreamingChatModel已清理");
             }
         } catch (Exception e) {
             log.error("LangChain4j流式资源清理失败", e);

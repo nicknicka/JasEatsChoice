@@ -360,7 +360,9 @@
       "Bash(xxd:*)",
       "Bash(/Users/nickxiao/Library/Java/JavaVirtualMachines/ms-21.0.7/Contents/Home/bin/javac:*)",
       "Bash(javap:*)",
-      "Bash(textutil:*)"
+      "Bash(textutil:*)",
+      "Bash(jar tf:*)",
+      "Bash(jar -xf ~/.m2/repository/dev/langchain4j/langchain4j-agentic/1.12.1-beta21/langchain4j-agentic-1.12.1-beta21.jar)"
     ],
     "deny": [],
     "ask": [],

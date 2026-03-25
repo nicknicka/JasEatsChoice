@@ -8,7 +8,6 @@ import com.xx.jaseatschoicejava.service.MerchantService;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.agent.tool.P;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
 
 import jakarta.annotation.Resource;
 import java.util.*;
@@ -19,11 +18,12 @@ import java.util.stream.Collectors;
  *
  * 为Agent提供位置相关功能
  *
+ * 注意：不使用 @Component/@Service 注解，通过 @Bean 方法手动创建，避免Spring AOP代理导致LangChain4j无法扫描@Tool注解
+ *
  * @author Claude
  * @since 2026-03-24
  */
 @Slf4j
-@Service
 public class LocationTools {
 
     @Resource

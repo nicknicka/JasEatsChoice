@@ -1,7 +1,9 @@
 package com.xx.jaseatschoicejava.agent.agents;
 
+import dev.langchain4j.agentic.Agent;
 import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
+import dev.langchain4j.service.V;
 
 /**
  * L2领域智能体 - 健康管理Agent
@@ -214,5 +216,24 @@ public interface HealthManagementAgent {
         6. 跟踪进度并调整计划
         7. 持续支持和鼓励
         """)
-    String chat(@UserMessage String userMessage);
+    @Agent("""
+        健康管理专家，负责：
+
+        **核心能力：**
+        1. 分析食物营养成分（卡路里、蛋白质、脂肪、碳水）
+        2. 计算每日热量需求（基于BMR公式）
+        3. 评估饮食健康度和营养均衡性
+        4. 提供个性化营养建议
+
+        **输入：**
+        - 食物名称或营养数据
+        - 用户身体参数（体重、身高、年龄、性别）
+        - 健康目标（减肥/增肌/保持）
+
+        **输出：**
+        - 营养成分分析
+        - 热量需求计算
+        - 饮食建议
+        """)
+    String chat(@V("userMessage") String userMessage);
 }

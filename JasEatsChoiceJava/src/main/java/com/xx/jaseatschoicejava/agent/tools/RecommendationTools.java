@@ -131,53 +131,6 @@ public class RecommendationTools {
     }
 
     /**
-     * 搜索菜品
-     *
-     * @param keyword 搜索关键词
-     * @return 搜索结果
-     */
-    @Tool("搜索菜品，支持按菜名、分类等关键词搜索")
-    public String searchDishes(@P("搜索关键词") String keyword) {
-        log.info("执行工具：searchDishes，关键词：{}", keyword);
-
-        try {
-            List<Dish> dishes = dishService.list(); // 获取所有菜品，然后在内存中过滤
-
-            // 简单的内存过滤
-            List<Dish> filtered = dishes.stream()
-                    .filter(d -> d.getName() != null && d.getName().contains(keyword))
-                    .limit(8)
-                    .collect(Collectors.toList());
-
-            if (filtered.isEmpty()) {
-                return String.format("没有找到与\"%s\"相关的菜品，换个关键词试试？", keyword);
-            }
-
-            StringBuilder result = new StringBuilder();
-            result.append(String.format("🔍 **搜索结果：\"%s\"**\n\n", keyword));
-
-            for (int i = 0; i < filtered.size(); i++) {
-                Dish dish = filtered.get(i);
-                result.append(String.format("**%d. %s**\n", i + 1, dish.getName()));
-                result.append(String.format("   💰 ¥%.2f | 🔥 %d kcal\n",
-                        dish.getPrice(), dish.getCalorie()));
-
-                if (dish.getMerchantName() != null) {
-                    result.append(String.format("   🏪 %s\n\n", dish.getMerchantName()));
-                } else {
-                    result.append("\n");
-                }
-            }
-
-            return result.toString();
-
-        } catch (Exception e) {
-            log.error("搜索菜品失败", e);
-            return "搜索失败：" + e.getMessage();
-        }
-    }
-
-    /**
      * 获取热门菜品
      *
      * @return 热门菜品列表

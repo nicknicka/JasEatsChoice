@@ -39,7 +39,7 @@ public class StreamingAgentService {
 
         TokenStream tokenStream = streamingIntelligentAssistantAgent.chat(userMessage, userId);
 
-        tokenStream.onNext(token -> {
+        tokenStream.onPartialResponse(token -> {
             // 处理每个token（token是String类型）
             if (token != null && !token.isEmpty()) {
                 try {
@@ -49,7 +49,7 @@ public class StreamingAgentService {
                 }
             }
         })
-        .onComplete(response -> {
+        .onCompleteResponse(response -> {
             // 流结束时调用（response包含完整的AiMessage）
             log.info("流式对话完成");
             try {
