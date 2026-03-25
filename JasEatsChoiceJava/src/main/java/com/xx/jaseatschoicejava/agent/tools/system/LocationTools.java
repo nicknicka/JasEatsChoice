@@ -1,5 +1,6 @@
 package com.xx.jaseatschoicejava.agent.tools.system;
 
+import com.xx.jaseatschoicejava.agent.annotation.CardType;
 import com.xx.jaseatschoicejava.entity.Dish;
 import com.xx.jaseatschoicejava.entity.Merchant;
 import com.xx.jaseatschoicejava.service.DishService;
@@ -9,7 +10,7 @@ import dev.langchain4j.agent.tool.P;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -219,13 +220,16 @@ public class LocationTools {
             for (int i = 0; i < count; i++) {
                 Merchant merchant = merchants.get(i);
                 int distance = 300 + (i * 100); // 模拟距离
-                int deliveryTime = 15 + (distance / 100); // 预估配送时间
+                int deliveryTime = 15 + (distance / 100); // 预估时间
 
+                // 重要：必须显示商家ID，方便后续下单时使用
                 sb.append(String.format(
-                    "%d. **%s**\n" +
+                    "%d. **商家ID：%s**\n" +
+                    "   🏪 %s\n" +
                     "   📍 距离约%d米 | ⏰ 预计%d分钟\n" +
                     "   ⭐ %.1f分 | 📍 %s\n\n",
                     i + 1,
+                    merchant.getId(),  // ← 新增：显示商家ID
                     merchant.getName(),
                     distance,
                     deliveryTime,
@@ -413,6 +417,7 @@ public class LocationTools {
 
         **返回：** 附近美食推荐列表
         """)
+    @CardType("food_recommendation_card")
     public String recommendNearbyFood(
         @P("用户ID") String userId,
         @P("最大距离（公里）") Double maxDistance,
@@ -489,7 +494,9 @@ public class LocationTools {
                 Dish dish = ds.dish;
                 Merchant merchant = ds.merchant;
 
-                result.append(String.format("**%d. %s**\n", i + 1, dish.getName()));
+                // 重要：必须显示菜品ID和商家ID，方便后续下单时使用
+                result.append(String.format("**%d. 菜品ID：%s**\n", i + 1, dish.getId()));
+                result.append(String.format("   🍲 %s\n", dish.getName()));
                 result.append(String.format("   💰 ¥%.2f | 🔥 %d kcal",
                     dish.getPrice(), dish.getCalorie()));
 
@@ -497,7 +504,8 @@ public class LocationTools {
                     result.append(String.format(" | ⭐ %.1f分", dish.getAvgRating()));
                 }
 
-                result.append(String.format("\n   🏪 %s\n", merchant.getName()));
+                result.append(String.format("\n   🏪 商家ID：%s - %s\n",
+                    merchant.getId(), merchant.getName()));
 
                 if (merchant.getAveragePrice() != null) {
                     result.append(String.format("   人均：¥%.0f\n", merchant.getAveragePrice()));

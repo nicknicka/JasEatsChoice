@@ -5,7 +5,7 @@ import com.xx.jaseatschoicejava.service.VerificationService;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 

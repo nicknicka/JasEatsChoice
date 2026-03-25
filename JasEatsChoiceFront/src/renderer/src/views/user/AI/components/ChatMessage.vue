@@ -20,9 +20,19 @@
 
       <!-- 渲染卡片或文本 -->
       <template v-else-if="content">
-        <div v-if="messageType === 'order_list_card' && cardData" class="message-card">
+        <!-- 商家下单卡片 -->
+        <CardMessage
+          v-if="parsedMessage.hasCard"
+          :message="parsedMessage"
+          @card-click="handleCardClick"
+          @view-menu="handleViewMenu"
+          @order-now="handleOrderNow"
+        />
+        <!-- 订单列表卡片 -->
+        <div v-else-if="messageType === 'order_list_card' && cardData" class="message-card">
           <OrderListCard :data="cardData" @action="handleCardAction" />
         </div>
+        <!-- 普通文本消息 -->
         <div v-else class="message-text markdown-content" v-html="formattedContent"></div>
         <div class="message-time">{{ time }}</div>
       </template>
@@ -34,6 +44,8 @@
 import { computed, ref, watch } from 'vue'
 import { marked } from 'marked'
 import OrderListCard from './cards/OrderListCard.vue'
+import CardMessage from '../../../components/chat/CardMessage.vue'
+import { parseCardData } from '../../../utils/cardMessageParser'
 
 const props = defineProps({
   sender: {
@@ -58,7 +70,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['action'])
+const emit = defineEmits(['action', 'card-click', 'view-menu', 'order-now'])
 
 // 调试：监听props变化
 watch(() => props.isLoading, (newVal) => {
@@ -68,6 +80,11 @@ watch(() => props.isLoading, (newVal) => {
 // 消息类型
 const messageType = ref('text')
 const cardData = ref(null)
+const parsedMessage = ref({
+  hasCard: false,
+  text: '',
+  cardData: null
+})
 
 // 格式化内容（Markdown渲染）
 const formattedContent = computed(() => {
@@ -101,20 +118,65 @@ const parseMessageContent = (content) => {
   if (!content || props.sender === 'user') {
     messageType.value = 'text'
     cardData.value = null
+    parsedMessage.value = {
+      hasCard: false,
+      text: content,
+      cardData: null
+    }
     return
   }
 
-  // 尝试解析订单列表
+  // 优先解析新的卡片数据格式（[CARD_DATA_START]...[CARD_DATA_END]）
+  const parsed = parseCardData(content)
+  if (parsed.hasCard) {
+    parsedMessage.value = parsed
+    messageType.value = parsed.cardData.cardType || 'card'
+    cardData.value = parsed.cardData
+    return
+  }
+
+  // 尝试解析订单列表（兼容旧的文本格式）
   const orderData = parseOrderList(content)
   if (orderData) {
     messageType.value = 'order_list_card'
     cardData.value = orderData
+    parsedMessage.value = {
+      hasCard: false,
+      text: content,
+      cardData: null
+    }
     return
   }
 
   // 默认为文本消息
   messageType.value = 'text'
   cardData.value = null
+  parsedMessage.value = {
+    hasCard: false,
+    text: content,
+    cardData: null
+  }
+}
+
+/**
+ * 处理卡片点击
+ */
+const handleCardClick = (merchant) => {
+  emit('card-click', merchant)
+}
+
+/**
+ * 处理查看菜单
+ */
+const handleViewMenu = (merchant) => {
+  emit('view-menu', merchant)
+}
+
+/**
+ * 处理立即下单
+ */
+const handleOrderNow = (orderData) => {
+  emit('order-now', orderData)
 }
 
 /**

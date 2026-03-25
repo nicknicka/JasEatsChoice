@@ -18,8 +18,8 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import javax.servlet.*;
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.*;
+import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -96,10 +96,10 @@ public class SecurityConfig {
             .and()
             // Add JWT authentication filter
             .addFilterBefore(jwtAuthenticationFilter, org.springframework.security.web.access.intercept.FilterSecurityInterceptor.class)
-            // Configure authorization
-            .authorizeRequests()
-            .antMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Allow all OPTIONS requests
-            .antMatchers("/**").permitAll()
+            // Configure authorization (Spring Security 6: authorizeHttpRequests + requestMatchers)
+            .authorizeHttpRequests()
+            .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Allow all OPTIONS requests
+            .requestMatchers("/**").permitAll()
             .anyRequest().permitAll();
 
         return http.build();

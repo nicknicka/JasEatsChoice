@@ -3,7 +3,7 @@ package com.xx.jaseatschoicejava.config;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 
 /**
  * 邮件服务配置

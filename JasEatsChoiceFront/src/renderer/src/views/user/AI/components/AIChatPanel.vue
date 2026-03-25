@@ -6,6 +6,9 @@
         v-for="message in visibleMessages"
         :key="message.id || message.key"
         v-bind="message"
+        @card-click="handleCardClick"
+        @view-menu="handleViewMenu"
+        @order-now="handleOrderNow"
       />
     </div>
 
@@ -41,15 +44,38 @@
         @upload-image="handleImageUpload"
       />
     </div>
+
+    <!-- 菜品选择弹窗 -->
+    <DishSelectorDialog
+      v-model="showDishSelectorDialog"
+      :card-data="selectedCardData"
+      @confirm="handleConfirmOrder"
+      @close="handleDishSelectorClose"
+      @add-dish="handleAddDish"
+      @ai-order="handleAIOrder"
+    />
+
+    <!-- 支付方式选择弹窗 -->
+    <PaymentDialog
+      v-model="showPaymentDialog"
+      :order-id="paymentOrderId"
+      :merchant-name="paymentMerchantName"
+      :total-amount="paymentTotalAmount"
+      @success="handlePaymentSuccess"
+      @close="handlePaymentClose"
+      @insufficient-balance="handleInsufficientBalance"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted, nextTick, computed, watch } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import ChatMessage from './ChatMessage.vue'
 import QuickQuestions from './QuickQuestions.vue'
 import MessageInput from './MessageInput.vue'
+import DishSelectorDialog from '../../../components/merchant/DishSelectorDialog.vue'
+import PaymentDialog from '../../../components/merchant/PaymentDialog.vue'
 import { useAIChat } from '../../../composables/useAIChat'
 import { useUserPreference } from '../../../composables/useUserPreference'
 import { useImageUpload } from '../../../composables/useImageUpload'
@@ -142,6 +168,16 @@ const inputContainerRef = ref(null)
 const quickQuestions = ref(QUICK_QUESTIONS)
 const commonEmojis = ref(COMMON_EMOJIS)
 
+// 菜品选择弹窗状态
+const showDishSelectorDialog = ref(false)
+const selectedCardData = ref(null)
+
+// 支付弹窗状态
+const showPaymentDialog = ref(false)
+const paymentOrderId = ref('')
+const paymentMerchantName = ref('')
+const paymentTotalAmount = ref(0)
+
 /**
  * 切换表情面板
  */
@@ -221,6 +257,154 @@ const sendMessage = async () => {
 
   // 发送消息
   await sendChatMessage(message)
+}
+
+/**
+ * 处理卡片点击
+ */
+const handleCardClick = (merchant) => {
+  logger.log('卡片点击:', merchant)
+  // 可以显示商家详情或其他操作
+}
+
+/**
+ * 处理查看菜单
+ */
+const handleViewMenu = (merchant) => {
+  logger.log('查看菜单:', merchant)
+  // 可以打开菜单详情页或弹窗
+  ElMessage.info('正在加载菜单...')
+  // TODO: 实现查看菜单功能
+}
+
+/**
+ * 处理立即下单
+ */
+const handleOrderNow = (orderData) => {
+  logger.log('立即下单:', orderData)
+  selectedCardData.value = orderData
+  showDishSelectorDialog.value = true
+}
+
+/**
+ * 确认订单
+ */
+const handleConfirmOrder = async (orderData) => {
+  logger.log('确认订单:', orderData)
+
+  try {
+    // 调用AI创建订单
+    const message = `请帮我创建订单，商家ID：${orderData.merchant.merchantId}，就餐方式：${orderData.diningMode}`
+    await sendChatMessage(message)
+
+    // TODO: 实际应该调用后端API创建订单
+    // const response = await axios.post('/api/order/create', {
+    //   merchantId: orderData.merchant.merchantId,
+    //   dishItems: orderData.selectedDishes,
+    //   diningMode: orderData.diningMode
+    // })
+
+    // 显示支付弹窗
+    showPaymentDialog.value = true
+    paymentOrderId.value = 'ORD' + Date.now() // 临时订单ID
+    paymentMerchantName.value = orderData.merchant.name
+    paymentTotalAmount.value = orderData.totalAmount
+  } catch (error) {
+    logger.error('创建订单失败:', error)
+    ElMessage.error('创建订单失败，请重试')
+  }
+}
+
+/**
+ * 菜品选择弹窗关闭
+ */
+const handleDishSelectorClose = () => {
+  showDishSelectorDialog.value = false
+  selectedCardData.value = null
+}
+
+/**
+ * 添加其他菜品
+ */
+const handleAddDish = (merchantId) => {
+  logger.log('添加其他菜品:', merchantId)
+  ElMessage.info('正在加载菜单...')
+  // TODO: 实现添加菜品功能
+}
+
+/**
+ * AI下单
+ */
+const handleAIOrder = async (orderData) => {
+  logger.log('AI下单:', orderData)
+
+  try {
+    const message = `请帮我下单，商家：${orderData.merchant.name}，已选择菜品：${orderData.selectedDishes.map(d => d.dishName).join('、')}`
+    await sendChatMessage(message)
+
+    // 关闭菜品选择弹窗
+    handleDishSelectorClose()
+
+    // 显示支付弹窗
+    showPaymentDialog.value = true
+    paymentOrderId.value = 'ORD' + Date.now()
+    paymentMerchantName.value = orderData.merchant.name
+    paymentTotalAmount.value = calculateOrderTotal(orderData.selectedDishes, orderData.diningMode)
+  } catch (error) {
+    logger.error('AI下单失败:', error)
+    ElMessage.error('下单失败，请重试')
+  }
+}
+
+/**
+ * 计算订单总价
+ */
+const calculateOrderTotal = (dishes, diningMode) => {
+  let dishTotal = 0
+  let totalItems = 0
+
+  dishes.forEach(dish => {
+    dishTotal += (dish.price || 0) * (dish.quantity || 0)
+    totalItems += dish.quantity || 0
+  })
+
+  const packagingFee = diningMode === 'takeout' ? totalItems * 2 : 0
+  return dishTotal + packagingFee
+}
+
+/**
+ * 支付成功
+ */
+const handlePaymentSuccess = (paymentData) => {
+  logger.log('支付成功:', paymentData)
+  ElMessage.success('支付成功！订单已提交')
+
+  // 关闭支付弹窗
+  showPaymentDialog.value = false
+
+  // TODO: 跳转到订单详情页
+  // router.push(`/orders/${paymentData.orderId}`)
+}
+
+/**
+ * 支付弹窗关闭
+ */
+const handlePaymentClose = () => {
+  showPaymentDialog.value = false
+}
+
+/**
+ * 余额不足
+ */
+const handleInsufficientBalance = (data) => {
+  logger.log('余额不足:', data)
+  ElMessageBox.alert(
+    `账户余额：¥${data.balance.toFixed(2)}，需要：¥${data.required.toFixed(2)}。请充值或选择其他支付方式。`,
+    '余额不足',
+    {
+      type: 'warning'
+    }
+  )
 }
 
 // 生命周期

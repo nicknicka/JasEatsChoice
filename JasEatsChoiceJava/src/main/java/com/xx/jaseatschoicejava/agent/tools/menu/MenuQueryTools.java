@@ -1,6 +1,7 @@
 package com.xx.jaseatschoicejava.agent.tools.menu;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.xx.jaseatschoicejava.agent.annotation.CardType;
 import com.xx.jaseatschoicejava.entity.Dish;
 import com.xx.jaseatschoicejava.service.DishService;
 import dev.langchain4j.agent.tool.Tool;
@@ -8,7 +9,7 @@ import dev.langchain4j.agent.tool.P;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 import java.util.List;
 
 /**
@@ -49,6 +50,7 @@ public class MenuQueryTools {
 
         **返回：** 商家菜单（文本格式）
         """)
+    @CardType("menu_card")
     public String getMerchantMenu(
         @P("商家ID") String merchantId
     ) {

@@ -3,8 +3,8 @@ package com.xx.jaseatschoicejava.config;
 import com.xx.jaseatschoicejava.netty.NettyServer;
 import org.springframework.context.annotation.Configuration;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 
 /**
  * Netty与Spring集成配置

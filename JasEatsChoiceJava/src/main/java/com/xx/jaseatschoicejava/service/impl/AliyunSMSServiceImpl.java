@@ -7,7 +7,7 @@ import com.xx.jaseatschoicejava.service.AliyunSMSService;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 import java.util.regex.Pattern;
 
 /**

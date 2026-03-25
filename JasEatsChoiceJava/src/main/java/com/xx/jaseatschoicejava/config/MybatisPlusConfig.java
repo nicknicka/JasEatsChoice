@@ -1,19 +1,11 @@
 package com.xx.jaseatschoicejava.config;
 
-import com.baomidou.mybatisplus.annotation.DbType;
-import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
-import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
-import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
-import com.baomidou.mybatisplus.extension.spring.MybatisSqlSessionFactoryBean;
-import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
-import com.baomidou.mybatisplus.core.config.GlobalConfig;
 import org.apache.ibatis.reflection.MetaObject;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import javax.sql.DataSource;
 import java.time.LocalDateTime;
 
 /**
@@ -24,43 +16,15 @@ public class MyBatisPlusConfig {
 
     /**
      * MyBatis-Plus拦截器配置
-     * 包含分页插件和乐观锁插件
+     * 在 3.5.11+ 版本中，分页功能已自动配置
+     * 这里只配置乐观锁插件
      */
     @Bean
     public MybatisPlusInterceptor mybatisPlusInterceptor() {
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
         // 添加乐观锁插件
-        interceptor.addInnerInterceptor(new OptimisticLockerInnerInterceptor());
-        // 添加分页插件
-        interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.MYSQL));
+        interceptor.addInnerInterceptor(new com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor());
         return interceptor;
-    }
-
-    /**
-     * 配置SqlSessionFactory，全局注册JacksonTypeHandler
-     */
-    @Bean
-    public MybatisSqlSessionFactoryBean sqlSessionFactory(DataSource dataSource, MetaObjectHandler metaObjectHandler) throws Exception {
-        MybatisSqlSessionFactoryBean sqlSessionFactory = new MybatisSqlSessionFactoryBean();
-        sqlSessionFactory.setDataSource(dataSource);
-
-        // 全局配置JacksonTypeHandler
-        MybatisConfiguration configuration = new MybatisConfiguration();
-        configuration.getTypeHandlerRegistry().register(JacksonTypeHandler.class);
-
-        // 设置全局配置，包括MetaObjectHandler
-        GlobalConfig globalConfig = new GlobalConfig();
-        GlobalConfig.DbConfig dbConfig = new GlobalConfig.DbConfig();
-        globalConfig.setDbConfig(dbConfig);
-        globalConfig.setMetaObjectHandler(metaObjectHandler);
-
-        sqlSessionFactory.setConfiguration(configuration);
-        sqlSessionFactory.setGlobalConfig(globalConfig);
-
-        // 添加MybatisPlusInterceptor插件（包含乐观锁和分页插件）
-        sqlSessionFactory.setPlugins(mybatisPlusInterceptor());
-
-        return sqlSessionFactory;
     }
 
     /**

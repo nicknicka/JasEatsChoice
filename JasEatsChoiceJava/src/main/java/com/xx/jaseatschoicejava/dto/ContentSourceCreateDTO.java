@@ -2,7 +2,7 @@ package com.xx.jaseatschoicejava.dto;
 
 import lombok.Data;
 
-import javax.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotBlank;
 
 /**
  * 内容源创建DTO

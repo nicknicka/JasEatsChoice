@@ -1,17 +1,10 @@
 package com.xx.jaseatschoicejava.agent.config;
 
+import com.xx.jaseatschoicejava.agent.agents.*;
 import com.xx.jaseatschoicejava.agent.agents.stream.StreamingIntelligentAssistantAgent;
-import com.xx.jaseatschoicejava.agent.tools.CollectionTools;
-import com.xx.jaseatschoicejava.agent.tools.MerchantTools;
-import com.xx.jaseatschoicejava.agent.tools.NutritionRecordTools;
-import com.xx.jaseatschoicejava.agent.tools.NutritionTools;
-import com.xx.jaseatschoicejava.agent.tools.OrderTools;
-import com.xx.jaseatschoicejava.agent.tools.order.OrderCreateTools;
-import com.xx.jaseatschoicejava.agent.tools.order.OrderQueryTools;
-import com.xx.jaseatschoicejava.agent.tools.RecipeTools;
-import com.xx.jaseatschoicejava.agent.tools.RecommendationTools;
-import com.xx.jaseatschoicejava.agent.tools.UserTools;
-import com.xx.jaseatschoicejava.agent.tools.system.LocationTools;
+import com.xx.jaseatschoicejava.agent.agents.stream.StreamingMerchantAssistantAgent;
+import com.xx.jaseatschoicejava.agent.tools.merchant.MerchantQueryTools;
+import com.xx.jaseatschoicejava.agent.tools.merchant.MerchantStatsTools;
 import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 import dev.langchain4j.model.chat.StreamingChatLanguageModel;
 import dev.langchain4j.model.zhipu.ZhipuAiStreamingChatModel;
@@ -24,13 +17,22 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import javax.annotation.PreDestroy;
-import javax.annotation.Resource;
+import jakarta.annotation.PreDestroy;
+import jakarta.annotation.Resource;
 import java.time.Duration;
 
 /**
  * LangChain4j流式输出配置类
- * 配置支持流式输出的AI Agent
+ *
+ * **架构设计：L3 Agent 调用 L2 Agent**
+ *
+ * L3: StreamingIntelligentAssistantAgent (智能调度)
+ *   ↓ 调用
+ * L2: SmartRecommendationAgent (推荐), HealthManagementAgent (健康), FullOrderAgent (订单)
+ *   ↓ 调用
+ * L1: UserPreferenceAgent, NutritionGuideAgent, DishRecommendationAgent 等
+ *   ↓ 调用
+ * 工具类: LocationTools, OrderTools 等
  *
  * @author Claude
  * @since 2026-03-24
@@ -44,35 +46,47 @@ public class LangChain4jStreamingConfig {
     @Resource
     private ZhipuAIConfig zhipuAIConfig;
 
-    @Resource
-    private NutritionTools nutritionTools;
+    // ==================== L2 Agent 注入 ====================
 
     @Resource
-    private NutritionRecordTools nutritionRecordTools;
+    private SmartRecommendationAgent workflowSmartRecommendationAgent;
 
     @Resource
-    private RecommendationTools recommendationTools;
+    private HealthManagementAgent workflowHealthManagementAgent;
 
     @Resource
-    private RecipeTools recipeTools;
+    private FullOrderAgent workflowFullOrderAgent;
+
+    // ==================== L1 Agent 注入（可选，直接调用） ====================
 
     @Resource
-    private OrderTools orderTools;
+    private UserPreferenceAgent workflowUserPreferenceAgent;
 
     @Resource
-    private OrderCreateTools orderCreateTools;
+    private NutritionGuideAgent workflowNutritionGuideAgent;
 
     @Resource
-    private OrderQueryTools orderQueryTools;
+    private DishRecommendationAgent workflowDishRecommendationAgent;
 
     @Resource
-    private CollectionTools collectionTools;
+    private MerchantInfoAgent workflowMerchantInfoAgent;
 
     @Resource
-    private UserTools userTools;
+    private TimeAwareAgent workflowTimeAwareAgent;
 
     @Resource
-    private LocationTools locationTools;
+    private LocationServiceAgent workflowLocationServiceAgent;
+
+    @Resource
+    private OrderHelperAgent workflowOrderHelperAgent;
+
+    // ==================== 商家工具类注入 ====================
+
+    @Resource
+    private MerchantQueryTools merchantQueryTools;
+
+    @Resource
+    private MerchantStatsTools merchantStatsTools;
 
     private StreamingChatLanguageModel streamingChatLanguageModel;
 
@@ -107,28 +121,57 @@ public class LangChain4jStreamingConfig {
     }
 
     /**
-     * 构建流式智能助手AI Agent
+     * 构建L3流式智能助手AI Agent
+     *
+     * **重要**：这个Agent调用L2 Agent，而不是直接调用工具类
      */
     @Bean
     public StreamingIntelligentAssistantAgent streamingIntelligentAssistantAgent(
             StreamingChatLanguageModel streamingChatLanguageModel,
             ChatMemory streamingChatMemory) {
-        log.info("构建StreamingIntelligentAssistantAgent...");
+        log.info("构建L3: StreamingIntelligentAssistantAgent (调用L2 Agents)...");
 
         return AiServices.builder(StreamingIntelligentAssistantAgent.class)
                 .streamingChatLanguageModel(streamingChatLanguageModel)
                 .chatMemory(streamingChatMemory)
                 .tools(
-                    nutritionTools,
-                    nutritionRecordTools,
-                    recommendationTools,
-                    recipeTools,
-                    orderTools,
-                    orderCreateTools,
-                    orderQueryTools,
-                    collectionTools,
-                    userTools,
-                    locationTools
+                    // L2 Agents（主要调用的目标）
+                    workflowSmartRecommendationAgent,
+                    workflowHealthManagementAgent,
+                    workflowFullOrderAgent,
+
+                    // L1 Agents（也可以直接调用，进行更细粒度的控制）
+                    workflowUserPreferenceAgent,
+                    workflowNutritionGuideAgent,
+                    workflowDishRecommendationAgent,
+                    workflowMerchantInfoAgent,
+                    workflowTimeAwareAgent,
+                    workflowLocationServiceAgent,
+                    workflowOrderHelperAgent
+                )
+                .build();
+    }
+
+    /**
+     * 构建商家流式经营助手AI Agent
+     *
+     * **重要**：这是商家端的Agent，提供数据分析、经营优化建议等功能
+     */
+    @Bean
+    public StreamingMerchantAssistantAgent streamingMerchantAssistantAgent(
+            StreamingChatLanguageModel streamingChatLanguageModel,
+            ChatMemory streamingChatMemory) {
+        log.info("构建商家L3: StreamingMerchantAssistantAgent (调用商家工具)...");
+
+        return AiServices.builder(StreamingMerchantAssistantAgent.class)
+                .streamingChatLanguageModel(streamingChatLanguageModel)
+                .chatMemory(streamingChatMemory)
+                .tools(
+                    // 商家查询工具
+                    merchantQueryTools,
+                    merchantStatsTools,
+                    // 订单工具（商家需要查看订单）
+                    workflowOrderHelperAgent
                 )
                 .build();
     }

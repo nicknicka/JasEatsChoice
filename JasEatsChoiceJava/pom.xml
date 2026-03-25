@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>2.7.18</version>
+        <version>3.2.5</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.xx</groupId>
@@ -71,11 +71,11 @@
             <artifactId>netty-all</artifactId>
         </dependency>
 
-        <!-- MyBatis-Plus for Spring Boot 3 -->
+        <!-- MyBatis-Plus for Spring Boot 3（专用版本） -->
         <dependency>
             <groupId>com.baomidou</groupId>
-            <artifactId>mybatis-plus-boot-starter</artifactId>
-            <version>3.5.5</version>
+            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+            <version>3.5.11</version>
         </dependency>
 
         <!-- Redis -->
@@ -153,18 +153,18 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- 使用SpringDoc OpenAPI 替代 Swagger -->
+        <!-- 使用SpringDoc OpenAPI 替代 Swagger (Spring Boot 3 版本) -->
         <dependency>
             <groupId>org.springdoc</groupId>
-            <artifactId>springdoc-openapi-ui</artifactId>
-            <version>1.6.14</version>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>2.3.0</version>
         </dependency>
 
-        <!-- 添加 Swagger 注解依赖 -->
+        <!-- Swagger 2.x 注解（向后兼容） -->
         <dependency>
             <groupId>io.swagger</groupId>
             <artifactId>swagger-annotations</artifactId>
-            <version>1.6.8</version>
+            <version>1.6.14</version>
         </dependency>
 
         <!-- 阿里云号码认证服务（短信认证核心） -->
@@ -213,11 +213,10 @@
             <version>0.36.2</version>
         </dependency>
 
-        <!-- LangChain4j Agentic系统（Supervisor和工作流支持） -->
         <dependency>
             <groupId>dev.langchain4j</groupId>
-            <artifactId>langchain4j-agentic</artifactId>
-            <version>1.12.2-beta22</version>
+            <artifactId>langchain4j-spring-boot-starter</artifactId>
+            <version>0.36.2</version>
         </dependency>
 
         <!-- 邮件服务依赖 -->
