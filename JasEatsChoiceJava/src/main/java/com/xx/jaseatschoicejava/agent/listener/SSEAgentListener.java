@@ -172,10 +172,8 @@ public class SSEAgentListener implements AgentListener {
             String str = (String) output;
             return str.length() > 200 ? str.substring(0, 200) + "..." : str;
         }
-        try {
-            return objectMapper.writeValueAsString(output);
-        } catch (Exception e) {
-            return output.toString();
-        }
+        // ✅ 避免序列化Agent对象或其他复杂对象
+        String outputStr = output.toString();
+        return outputStr.length() > 200 ? outputStr.substring(0, 200) + "..." : outputStr;
     }
 }

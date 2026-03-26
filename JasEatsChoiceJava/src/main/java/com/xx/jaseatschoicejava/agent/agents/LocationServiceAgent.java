@@ -3,7 +3,6 @@ package com.xx.jaseatschoicejava.agent.agents;
 import dev.langchain4j.agentic.Agent;
 import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
-import dev.langchain4j.service.V;
 
 /**
  * L1基础智能体 - 位置服务Agent
@@ -116,5 +115,5 @@ public interface LocationServiceAgent {
         6. 协助用户做出最优选择
         """)
     @Agent("位置服务专家，负责位置和配送服务")
-    String chat(@V("userMessage") String userMessage);
+    String chat(@UserMessage String userMessage);
 }

@@ -26,16 +26,21 @@ public interface CardRendererAgent {
         {{originalResult}}
 
         格式化规则：
-        1. 识别文本中的JSON代码块（```json ... ```）
-        2. 将JSON数据转换为对应的卡片格式
-        3. 保留JSON前后的自然语言文本
-        4. 多个卡片用 <!-- CARD_LIST_START --> 和 <!-- CARD_LIST_END --> 包围
+        1. 优先识别文本中的JSON代码块（```json ... ```）
+        2. 如果没有JSON，尝试从Markdown文本中提取结构化数据
+        3. 将提取的数据转换为对应的卡片格式
+        4. 卡片数据用 [CARD_DATA_START] 和 [CARD_DATA_END] 包围
+
+        Markdown文本识别规则：
+        - 菜品列表：识别 "1. **菜名**" 或 "- **菜名**" 格式
+        - 提取菜名、价格、热量、评分等信息
+        - 将提取的信息转换为JSON卡片格式
 
         JSON类型识别：
-        - 菜品数据：包含 items 数组，每个item有name/price/merchant → dish卡片
-        - 商家数据：包含 items 数组，每个item有name/rating/distance → merchant卡片
-        - 订单数据：包含orderId/items/status/total → order卡片
-        - 健康数据：包含calories/protein/carbs/stats → health卡片
+        - 菜品数据：包含 items 数组，每个item有name/price/merchant → food_recommendation_card卡片
+        - 商家数据：包含 items 数组，每个item有name/rating/distance → merchant_card卡片
+        - 订单数据：包含orderId/items/status/total → order_card卡片
+        - 健康数据：包含calories/protein/carbs/stats → health_card卡片
 
         卡片格式定义：
         1. 菜品卡片：
@@ -99,12 +104,12 @@ public interface CardRendererAgent {
              "actions": [{"text": "查看详情", "type": "primary"}]
            }
 
-        示例转换：
+        示例转换1：JSON代码块（菜品推荐）
         原始：
         "我为你推荐以下菜品：
 
         ```json
-        {"items": [{"name": "宫保鸡丁", "price": 28, "merchant": "川味轩", "rating": 4.8}]}
+        {"items": [{"name": "宫保鸡丁", "price": 28, "merchant": "川味轩", "rating": 4.8, "calories": 450}]}
         ```
 
         这些菜品都很适合你的口味。"
@@ -112,13 +117,43 @@ public interface CardRendererAgent {
         转换后：
         "我为你推荐以下菜品：
 
-        <!-- CARD_LIST_START -->
-        <!-- CARD_START:dish -->
-        {"type":"dish","title":"宫保鸡丁","subtitle":"川味轩 ⭐ 4.8","tags":["推荐"],"price":28,"rating":4.8,"actions":[{"text":"加订单","type":"primary"}]}
-        <!-- CARD_END -->
-        <!-- CARD_LIST_END -->
+        [CARD_DATA_START]
+        {"cardType":"food_recommendation_card","recommendations":[{"dishId":"temp1","name":"宫保鸡丁","merchantName":"川味轩","price":28,"score":4.8,"calories":450}]}
+        [CARD_DATA_END]
 
         这些菜品都很适合你的口味。"
+
+        示例转换2：Markdown文本（菜品推荐）
+        原始：
+        "**1. 菜品ID：dish123**
+        🍲 宫保鸡丁
+        💰 ¥38.00 | 🔥 450 kcal | ⭐ 4.8分
+        🏪 商家ID：merchant123 - 川味轩
+        综合评分：85.50分
+
+        **2. 菜品ID：dish456**
+        🍲 皮蛋瘦肉粥
+        💰 ¥12.00 | 🔥 180 kcal | ⭐ 4.5分
+        🏪 商家ID：merchant456 - 粤香阁
+        综合评分：82.30分
+
+        💡 综合评分包含：口味(30%) + 营养(20%) + 价格(10%) + 距离(15%) + 评分(25%)"
+
+        转换后：
+        "[CARD_DATA_START]
+        {"cardType":"food_recommendation_card","recommendations":[
+          {"dishId":"dish123","name":"宫保鸡丁","merchantName":"川味轩","price":38,"score":4.8,"calories":450},
+          {"dishId":"dish456","name":"皮蛋瘦肉粥","merchantName":"粤香阁","price":12,"score":4.5,"calories":180}
+        ]}
+        [CARD_DATA_END]"
+
+        字段提取规则：
+        - dishId：从"菜品ID：xxx"提取
+        - name：从"🍲 菜名"提取
+        - price：从"¥xxx"提取数字
+        - calories：从"xxx kcal"提取数字
+        - score：从"⭐ x.x分"提取数字
+        - merchantName：从"商家：xxx"或"商家ID：xxx - xxx"提取
 
         只返回格式化后的结果，不要添加额外的解释。
         """)

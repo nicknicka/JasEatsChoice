@@ -1,14 +1,13 @@
 package com.xx.jaseatschoicejava.controller;
 
 import com.xx.jaseatschoicejava.agent.agents.CustomerServiceAgent;
-import com.xx.jaseatschoicejava.agent.listener.SSEAgentListener;
-import com.xx.jaseatschoicejava.agent.service.SupervisorAgentFactory;
 import dev.langchain4j.agentic.supervisor.SupervisorAgent;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -28,19 +27,19 @@ import java.util.concurrent.Executors;
  */
 @Tag(name = "Supervisor监督代理（SSE流式）", description = "SupervisorAgent流式输出接口")
 @RestController
-@RequestMapping("/api/agent/supervisor-sse")
-@CrossOrigin(origins = "*")
+@RequestMapping("/agent/supervisor-sse")
 public class SupervisorSSEController {
 
     private static final Logger log = LoggerFactory.getLogger(SupervisorSSEController.class);
 
-    private final SupervisorAgentFactory supervisorAgentFactory;
+    private final SupervisorAgent supervisorAgent;
     private final CustomerServiceAgent customerServiceAgent;
     private final ExecutorService executorService = Executors.newCachedThreadPool();
 
-    public SupervisorSSEController(SupervisorAgentFactory supervisorAgentFactory,
-                                     CustomerServiceAgent customerServiceAgent) {
-        this.supervisorAgentFactory = supervisorAgentFactory;
+    public SupervisorSSEController(
+            @Qualifier("supervisorAgent") SupervisorAgent supervisorAgent,
+            CustomerServiceAgent customerServiceAgent) {
+        this.supervisorAgent = supervisorAgent;
         this.customerServiceAgent = customerServiceAgent;
     }
 
@@ -131,36 +130,33 @@ public class SupervisorSSEController {
 
     /**
      * 处理SupervisorAgent对话（个性化服务）
+     *
+     * 注意：使用单例SupervisorAgent
+     * 多用户隔离暂时简化处理（后续可优化为Redis存储）
      */
     private SseEmitter handleSupervisorChat(String message, String userId) {
         // 创建SSE发射器（60秒超时）
         SseEmitter emitter = new SseEmitter(60000L);
 
-        // 创建监听器
-        SSEAgentListener listener = new SSEAgentListener(emitter);
-
-        // 创建带监听器的SupervisorAgent（使用userId作为memoryId）
-        SupervisorAgent agent = supervisorAgentFactory.createWithListener(listener, userId);
-
         // 异步执行（不阻塞请求）
-        final String finalUserId = userId;
         CompletableFuture.runAsync(() -> {
             try {
-                // 1. 获取原始结果
-                String originalResponse = agent.invoke(message);
+                log.info("SupervisorAgent开始处理: userId={}, message={}", userId, message);
 
-                // 2. 渲染为卡片格式
-                String renderedResponse = supervisorAgentFactory.renderCards(originalResponse);
+                // TODO: 后续优化 - 将userId注入到message中，让Agent可以识别用户
+                // 现在先简化为直接调用
+                String enhancedMessage = String.format("[用户ID: %s] %s", userId, message);
+                String response = supervisorAgent.invoke(enhancedMessage);
 
-                // 3. 发送最终结果
-                listener.getEmitter().send(SseEmitter.event()
+                // 发送最终结果
+                emitter.send(SseEmitter.event()
                         .name("FINAL_RESULT")
-                        .data(renderedResponse));
+                        .data(response));
 
-                log.info("SupervisorAgent聊天完成: message={}, userId={}", message, finalUserId);
+                log.info("SupervisorAgent处理完成: userId={}", userId);
 
             } catch (Exception e) {
-                log.error("SupervisorAgent聊天失败: userId={}", finalUserId, e);
+                log.error("SupervisorAgent处理失败: userId={}", userId, e);
                 try {
                     emitter.send(SseEmitter.event()
                             .name("ERROR")
@@ -170,17 +166,19 @@ public class SupervisorSSEController {
                 } finally {
                     emitter.completeWithError(e);
                 }
+            } finally {
+                emitter.complete();
             }
         }, executorService);
 
         // 设置超时和错误回调
         emitter.onTimeout(() -> {
-            log.warn("SupervisorAgent SSE连接超时: userId={}", finalUserId);
+            log.warn("SupervisorAgent SSE连接超时: userId={}", userId);
             emitter.complete();
         });
 
         emitter.onError((e) -> {
-            log.error("SupervisorAgent SSE连接错误: userId={}", finalUserId, e);
+            log.error("SupervisorAgent SSE连接错误: userId={}", userId, e);
             emitter.completeWithError(e);
         });
 

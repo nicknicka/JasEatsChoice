@@ -97,7 +97,7 @@ public class SupervisorAgentFactory {
                     """)
                 .contextGenerationStrategy(dev.langchain4j.agentic.supervisor.SupervisorContextStrategy.CHAT_MEMORY_AND_SUMMARIZATION)
                 .responseStrategy(dev.langchain4j.agentic.supervisor.SupervisorResponseStrategy.SCORED)
-                .maxAgentsInvocations(10)
+                .maxAgentsInvocations(5)  // ✅ 减少最大调用次数，防止无限循环
                 .build();
     }
 

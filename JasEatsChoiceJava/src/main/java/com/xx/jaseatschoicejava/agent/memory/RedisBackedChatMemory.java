@@ -172,8 +172,8 @@ public class RedisBackedChatMemory implements ChatMemory {
     private List<ChatMessage> loadFromMySQL() {
         try {
             QueryWrapper<AIChatHistory> wrapper = new QueryWrapper<>();
-            wrapper.eq("userId", userId.toString())
-                   .orderByDesc("createTime")
+            wrapper.eq("user_id", userId.toString())
+                   .orderByDesc("create_time")
                    .last("LIMIT " + maxMessages);
 
             List<AIChatHistory> histories = chatHistoryMapper.selectList(wrapper);

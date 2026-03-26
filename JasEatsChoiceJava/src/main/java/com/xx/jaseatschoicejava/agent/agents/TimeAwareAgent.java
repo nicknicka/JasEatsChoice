@@ -3,7 +3,6 @@ package com.xx.jaseatschoicejava.agent.agents;
 import dev.langchain4j.agentic.Agent;
 import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
-import dev.langchain4j.service.V;
 
 /**
  * L1基础智能体 - 时间感知Agent
@@ -143,5 +142,5 @@ public interface TimeAwareAgent {
         6. 给出最佳下单时间建议
         """)
     @Agent("时间感知专家，负责时间相关信息")
-    String chat(@V("userMessage") String userMessage);
+    String chat(@UserMessage String userMessage);
 }

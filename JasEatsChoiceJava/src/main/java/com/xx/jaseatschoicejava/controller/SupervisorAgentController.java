@@ -21,7 +21,8 @@ import jakarta.annotation.Resource;
  */
 @Api(tags = "L3监督代理接口")
 @RestController
-@RequestMapping("/api/agent/supervisor")
+@RequestMapping("/agent/supervisor")
+@CrossOrigin(originPatterns = "*", allowCredentials = "false")
 public class SupervisorAgentController {
 
     private static final Logger log = LoggerFactory.getLogger(SupervisorAgentController.class);

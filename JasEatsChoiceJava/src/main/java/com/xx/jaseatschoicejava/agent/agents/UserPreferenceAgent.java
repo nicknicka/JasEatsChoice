@@ -3,7 +3,6 @@ package com.xx.jaseatschoicejava.agent.agents;
 import dev.langchain4j.agentic.Agent;
 import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
-import dev.langchain4j.service.V;
 
 /**
  * L1基础智能体 - 用户偏好管理Agent
@@ -106,5 +105,5 @@ public interface UserPreferenceAgent {
         6. 确认用户是否满意或需要进一步帮助
         """)
     @Agent("用户偏好专家，负责用户偏好和健康目标管理")
-    String chat(@V("userMessage") String userMessage);
+    String chat(@UserMessage String userMessage);
 }

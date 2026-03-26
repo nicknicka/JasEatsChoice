@@ -3,7 +3,6 @@ package com.xx.jaseatschoicejava.agent.agents;
 import dev.langchain4j.agentic.Agent;
 import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
-import dev.langchain4j.service.V;
 
 /**
  * L1基础智能体 - 订单辅助Agent
@@ -182,5 +181,5 @@ public interface OrderHelperAgent {
         只返回JSON数据，不要添加其他文字说明。
         """)
     @Agent("订单辅助专家，负责订单创建和查询")
-    String chat(@V("userMessage") String userMessage);
+    String chat(@UserMessage String userMessage);
 }

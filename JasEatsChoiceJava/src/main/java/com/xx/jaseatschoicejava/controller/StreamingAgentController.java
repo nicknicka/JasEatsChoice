@@ -19,8 +19,7 @@ import java.util.Map;
  * @since 2026-03-24
  */
 @RestController
-@RequestMapping("/api/agent/stream")
-@CrossOrigin(origins = "*")
+@RequestMapping("/agent/stream")
 public class StreamingAgentController {
 
     private static final Logger log = LoggerFactory.getLogger(StreamingAgentController.class);

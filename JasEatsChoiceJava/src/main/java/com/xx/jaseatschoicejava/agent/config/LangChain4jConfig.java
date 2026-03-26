@@ -405,11 +405,11 @@ public class LangChain4jConfig {
      * 构建L1用户偏好Agent
      */
     @Bean
-    public UserPreferenceAgent userPreferenceAgent(ChatModel chatLanguageModel, ChatMemory chatMemory) {
+    public UserPreferenceAgent userPreferenceAgent(@Qualifier("agentModel") ChatModel agentModel, ChatMemory chatMemory) {
         log.info("构建UserPreferenceAgent...");
 
         return AgenticServices.agentBuilder(UserPreferenceAgent.class)
-                .chatModel(chatLanguageModel)
+                .chatModel(agentModel)
                 .chatMemory(chatMemory)
                 .name("UserPreferenceAgent")
                 .tools(
@@ -422,11 +422,11 @@ public class LangChain4jConfig {
      * 构建L1营养指导Agent
      */
     @Bean
-    public NutritionGuideAgent nutritionGuideAgent(ChatModel chatLanguageModel, ChatMemory chatMemory) {
+    public NutritionGuideAgent nutritionGuideAgent(@Qualifier("agentModel") ChatModel agentModel, ChatMemory chatMemory) {
         log.info("构建NutritionGuideAgent...");
 
         return AgenticServices.agentBuilder(NutritionGuideAgent.class)
-                .chatModel(chatLanguageModel)
+                .chatModel(agentModel)
                 .chatMemory(chatMemory)
                 .name("NutritionGuideAgent")
                 .tools(
@@ -440,11 +440,13 @@ public class LangChain4jConfig {
      * 构建L1菜品推荐Agent
      */
     @Bean
-    public DishRecommendationAgent dishRecommendationAgent(ChatModel chatLanguageModel, ChatMemory chatMemory) {
+    public DishRecommendationAgent dishRecommendationAgent(
+            @Qualifier("agentModel") ChatModel agentModel,
+            ChatMemory chatMemory) {
         log.info("构建DishRecommendationAgent...");
 
         return AgenticServices.agentBuilder(DishRecommendationAgent.class)
-                .chatModel(chatLanguageModel)
+                .chatModel(agentModel)  // ✅ 使用agentModel而不是chatLanguageModel
                 .chatMemory(chatMemory)
                 .name("DishRecommendationAgent")
                 .tools(
@@ -459,11 +461,11 @@ public class LangChain4jConfig {
      * 构建L1商家信息Agent
      */
     @Bean
-    public MerchantInfoAgent merchantInfoAgent(ChatModel chatLanguageModel, ChatMemory chatMemory) {
+    public MerchantInfoAgent merchantInfoAgent(@Qualifier("agentModel") ChatModel agentModel, ChatMemory chatMemory) {
         log.info("构建MerchantInfoAgent...");
 
         return AgenticServices.agentBuilder(MerchantInfoAgent.class)
-                .chatModel(chatLanguageModel)
+                .chatModel(agentModel)
                 .chatMemory(chatMemory)
                 .name("MerchantInfoAgent")
                 .tools(
@@ -477,11 +479,11 @@ public class LangChain4jConfig {
      * 构建L1时间感知Agent
      */
     @Bean
-    public TimeAwareAgent timeAwareAgent(ChatModel chatLanguageModel, ChatMemory chatMemory) {
+    public TimeAwareAgent timeAwareAgent(@Qualifier("agentModel") ChatModel agentModel, ChatMemory chatMemory) {
         log.info("构建TimeAwareAgent...");
 
         return AgenticServices.agentBuilder(TimeAwareAgent.class)
-                .chatModel(chatLanguageModel)
+                .chatModel(agentModel)
                 .chatMemory(chatMemory)
                 .name("TimeAwareAgent")
                 .tools(
@@ -513,11 +515,11 @@ public class LangChain4jConfig {
      * 构建L1订单辅助Agent
      */
     @Bean
-    public OrderHelperAgent orderHelperAgent(ChatModel chatLanguageModel, ChatMemory chatMemory) {
+    public OrderHelperAgent orderHelperAgent(@Qualifier("agentModel") ChatModel agentModel, ChatMemory chatMemory) {
         log.info("构建OrderHelperAgent...");
 
         return AgenticServices.agentBuilder(OrderHelperAgent.class)
-                .chatModel(chatLanguageModel)
+                .chatModel(agentModel)
                 .chatMemory(chatMemory)
                 .name("OrderHelperAgent")
                 .tools(
@@ -584,12 +586,17 @@ public class LangChain4jConfig {
                     根据用户需求灵活组合多个Agent的能力，提供贴心的推荐服务。
                     注意结合用户的个人偏好，给出有针对性的建议。
 
+                    ⚠️ 终止条件：
+                    - 获得推荐结果后，立即停止调用子Agent
+                    - 最多调用3个子Agent后必须返回结果
+                    - 不要重复调用同一个Agent
+
                     ⚠️ 输出格式要求：
-                    - 如果子Agent返回了JSON数据，保持原样嵌入你的回复中
-                    - 使用markdown代码块包裹JSON：```json ... ```
-                    - 在JSON前后可以添加自然语言的说明
-                    - 不要修改JSON的结构和内容
+                    - 如果子Agent返回了推荐数据，整理成友好的格式返回给用户
+                    - 在推荐结果前添加简短的引导语
+                    - 在推荐结果后添加温馨提示（可选）
                     """)
+                .maxAgentsInvocations(3)  // ✅ 最多调用3次子Agent
                 .build();
     }
 
@@ -627,12 +634,16 @@ public class LangChain4jConfig {
                     关注用户的健康状况，提供科学的饮食建议，帮助用户达成健康目标。
                     灵活运用多个Agent的能力，给出全面的健康分析。
 
+                    ⚠️ 终止条件：
+                    - 获得健康分析结果后，立即停止调用子Agent
+                    - 最多调用3个子Agent后必须返回结果
+                    - 不要重复调用同一个Agent
+
                     ⚠️ 输出格式要求：
-                    - 如果子Agent返回了JSON数据，保持原样嵌入你的回复中
-                    - 使用markdown代码块包裹JSON：```json ... ```
-                    - 在JSON前后可以添加自然语言的说明
-                    - 不要修改JSON的结构和内容
+                    - 整理子Agent的分析结果，用友好的方式呈现给用户
+                    - 添加个性化的健康建议
                     """)
+                .maxAgentsInvocations(3)  // ✅ 最多调用3次子Agent
                 .build();
     }
 
@@ -673,12 +684,16 @@ public class LangChain4jConfig {
                     引导用户完成订餐流程，逐步确认关键信息（商家、菜品、地址、数量）。
                     保持对话流畅，提供清晰的订单状态反馈。
 
+                    ⚠️ 终止条件：
+                    - 完成订单操作后，立即停止调用子Agent
+                    - 最多调用4个子Agent后必须返回结果
+                    - 不要重复调用同一个Agent
+
                     ⚠️ 输出格式要求：
-                    - 如果子Agent返回了JSON数据，保持原样嵌入你的回复中
-                    - 使用markdown代码块包裹JSON：```json ... ```
-                    - 在JSON前后可以添加自然语言的说明
-                    - 不要修改JSON的结构和内容
+                    - 整理订单信息和状态，用清晰的方式呈现给用户
+                    - 提供下一步操作的指引
                     """)
+                .maxAgentsInvocations(4)  // ✅ 订单流程可能需要更多步骤
                 .build();
     }
 
@@ -731,12 +746,16 @@ public class LangChain4jConfig {
                     根据用户的问题智能选择合适的Agent，灵活协调多个Agent共同完成复杂任务。
                     保持对话自然友好，以解决用户问题为核心目标。
 
+                    ⚠️ 终止条件：
+                    - 问题得到解答后，立即停止调用子Agent
+                    - 最多调用3个子Agent后必须返回结果
+                    - 不要重复调用同一个Agent
+
                     ⚠️ 输出格式要求：
-                    - 如果子Agent返回了JSON数据，保持原样嵌入你的回复中
-                    - 使用markdown代码块包裹JSON：```json ... ```
-                    - 在JSON前后可以添加自然语言的说明
-                    - 不要修改JSON的结构和内容
+                    - 整理子Agent的回复，用友好的方式呈现给用户
+                    - 确保直接回答用户的问题
                     """)
+                .maxAgentsInvocations(3)  // ✅ 最多调用3次子Agent
                 .build();
     }
 
