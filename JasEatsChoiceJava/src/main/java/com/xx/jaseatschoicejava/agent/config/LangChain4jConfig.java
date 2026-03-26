@@ -378,6 +378,22 @@ public class LangChain4jConfig {
     // ==================== Week 4: L1 基础智能体 ====================
 
     /**
+     * 构建客服助手Agent（无个性化服务）
+     *
+     * 用于未开启个性化服务时的基础对话和引导
+     * 不需要ChatMemory，每次对话都是独立的
+     */
+    @Bean
+    public CustomerServiceAgent customerServiceAgent(ChatModel chatLanguageModel) {
+        log.info("构建CustomerServiceAgent（客服助手）...");
+
+        return AiServices.builder(CustomerServiceAgent.class)
+                .chatModel(chatLanguageModel)
+                // 不使用ChatMemory，每次对话都是独立的
+                .build();
+    }
+
+    /**
      * 构建L1用户偏好Agent
      */
     @Bean

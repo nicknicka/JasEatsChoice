@@ -1,5 +1,6 @@
 package com.xx.jaseatschoicejava.controller;
 
+import com.xx.jaseatschoicejava.agent.agents.CustomerServiceAgent;
 import com.xx.jaseatschoicejava.agent.listener.SSEAgentListener;
 import com.xx.jaseatschoicejava.agent.service.SupervisorAgentFactory;
 import dev.langchain4j.agentic.supervisor.SupervisorAgent;
@@ -12,7 +13,6 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -35,10 +35,13 @@ public class SupervisorSSEController {
     private static final Logger log = LoggerFactory.getLogger(SupervisorSSEController.class);
 
     private final SupervisorAgentFactory supervisorAgentFactory;
+    private final CustomerServiceAgent customerServiceAgent;
     private final ExecutorService executorService = Executors.newCachedThreadPool();
 
-    public SupervisorSSEController(SupervisorAgentFactory supervisorAgentFactory) {
+    public SupervisorSSEController(SupervisorAgentFactory supervisorAgentFactory,
+                                     CustomerServiceAgent customerServiceAgent) {
         this.supervisorAgentFactory = supervisorAgentFactory;
+        this.customerServiceAgent = customerServiceAgent;
     }
 
     /**
@@ -60,17 +63,76 @@ public class SupervisorSSEController {
             @Parameter(description = "用户消息", required = true)
             @RequestParam String message,
 
-            @Parameter(description = "用户ID（推荐传入，以保持对话历史）", required = false)
+            @Parameter(description = "用户ID（开启个性化服务后传入）", required = false)
             @RequestParam(required = false) String userId) {
 
         log.info("收到SSE聊天请求: message={}, userId={}", message, userId);
 
-        // 如果没有userId，生成临时ID（不保存历史）
+        // 路由逻辑：无userId使用客服助手，有userId使用SupervisorAgent
         if (userId == null || userId.isEmpty()) {
-            userId = UUID.randomUUID().toString();
-            log.info("未提供userId，生成临时ID: {}", userId);
+            log.info("未提供userId，使用客服助手Agent（无个性化服务）");
+            return handleCustomerServiceChat(message);
+        } else {
+            log.info("提供userId={}，使用SupervisorAgent（个性化服务）", userId);
+            return handleSupervisorChat(message, userId);
         }
+    }
 
+    /**
+     * 处理客服助手对话（无个性化服务）
+     */
+    private SseEmitter handleCustomerServiceChat(String message) {
+        // 创建SSE发射器（30秒超时，客服对话相对简单）
+        SseEmitter emitter = new SseEmitter(30000L);
+
+        CompletableFuture.runAsync(() -> {
+            try {
+                log.info("客服助手处理消息: {}", message);
+
+                // 调用客服助手
+                String response = customerServiceAgent.chat(message);
+
+                // 发送结果
+                emitter.send(SseEmitter.event()
+                        .name("FINAL_RESULT")
+                        .data(response));
+
+                log.info("客服助手响应完成");
+
+            } catch (Exception e) {
+                log.error("客服助手处理失败", e);
+                try {
+                    emitter.send(SseEmitter.event()
+                            .name("ERROR")
+                            .data("处理失败: " + e.getMessage()));
+                } catch (Exception ioException) {
+                    log.error("发送错误消息失败", ioException);
+                } finally {
+                    emitter.completeWithError(e);
+                }
+            } finally {
+                emitter.complete();
+            }
+        }, executorService);
+
+        // 设置超时和错误回调
+        emitter.onTimeout(() -> {
+            log.warn("客服助手SSE连接超时");
+            emitter.complete();
+        });
+
+        emitter.onError((e) -> {
+            log.error("客服助手SSE连接错误", e);
+            emitter.completeWithError(e);
+        });
+
+        return emitter;
+    }
+
+    /**
+     * 处理SupervisorAgent对话（个性化服务）
+     */
+    private SseEmitter handleSupervisorChat(String message, String userId) {
         // 创建SSE发射器（60秒超时）
         SseEmitter emitter = new SseEmitter(60000L);
 
@@ -95,10 +157,10 @@ public class SupervisorSSEController {
                         .name("FINAL_RESULT")
                         .data(renderedResponse));
 
-                log.info("SSE聊天完成: message={}, userId={}", message, finalUserId);
+                log.info("SupervisorAgent聊天完成: message={}, userId={}", message, finalUserId);
 
             } catch (Exception e) {
-                log.error("SSE聊天失败: userId={}", finalUserId, e);
+                log.error("SupervisorAgent聊天失败: userId={}", finalUserId, e);
                 try {
                     emitter.send(SseEmitter.event()
                             .name("ERROR")
@@ -113,12 +175,12 @@ public class SupervisorSSEController {
 
         // 设置超时和错误回调
         emitter.onTimeout(() -> {
-            log.warn("SSE连接超时: userId={}", finalUserId);
+            log.warn("SupervisorAgent SSE连接超时: userId={}", finalUserId);
             emitter.complete();
         });
 
         emitter.onError((e) -> {
-            log.error("SSE连接错误: userId={}", finalUserId, e);
+            log.error("SupervisorAgent SSE连接错误: userId={}", finalUserId, e);
             emitter.completeWithError(e);
         });
 
