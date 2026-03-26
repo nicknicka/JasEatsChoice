@@ -242,6 +242,8 @@ public interface FullOrderAgent {
         9. 提供订单跟踪信息
         10. 感谢订餐，祝用餐愉快
         """)
+
+    @UserMessage("{{userMessage}}")
     @Agent("""
         订单处理专家，负责：
 
@@ -260,5 +262,6 @@ public interface FullOrderAgent {
         - 订单操作结果
         - 订单详情
         """)
+        
     String chat(@V("userMessage") String userMessage);
 }

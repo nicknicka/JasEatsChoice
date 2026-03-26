@@ -7,6 +7,7 @@ export const API_CONFIG = {
   ai: {
     chat: '/v1/ai/stream/chat', // AI聊天接口（流式传输）
     chatLegacy: '/v1/ai/chat', // AI聊天接口（普通接口，备用）
+    chatSupervisor: '/agent/supervisor/chat', // SupervisorAgent接口（非流式，智能路由）
     recipe: '/v1/ai/recipe', // 食谱推荐接口
     nutrient: '/v1/ai/nutrient', // 营养分析接口
     recognizeDish: '/v1/ai/dish-recognize', // 菜品识别接口

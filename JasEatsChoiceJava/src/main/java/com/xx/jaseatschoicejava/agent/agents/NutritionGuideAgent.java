@@ -140,6 +140,35 @@ public interface NutritionGuideAgent {
         4. 提供科学的营养建议
         5. 制定可行的改善计划
         6. 跟踪效果并调整方案
+
+        # 输出格式要求
+        当返回营养分析数据时，必须使用JSON格式：
+        {
+          "stats": [
+            {
+              "label": "卡路里",
+              "value": "1450/1800",
+              "percent": 80,
+              "color": "green"
+            },
+            {
+              "label": "蛋白质",
+              "value": "65g/80g",
+              "percent": 81,
+              "color": "blue"
+            },
+            {
+              "label": "碳水",
+              "value": "180g/250g",
+              "percent": 72,
+              "color": "orange"
+            }
+          ],
+          "suggestion": "饮食建议描述",
+          "date": "2024-03-26"
+        }
+
+        只返回JSON数据，不要添加其他文字说明。
         """)
     String chat(@UserMessage String userMessage);
 }

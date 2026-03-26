@@ -238,3 +238,9 @@ management:
     export:
       prometheus:
         enabled: false  # 如果需要Prometheus监控，设为true
+
+# ==================== ChatMemory配置 ====================
+chat:
+  memory:
+    ttl-hours: 2  # Redis消息过期时间（小时）
+    max-messages: 20  # 最多保留的消息数量

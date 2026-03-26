@@ -155,6 +155,29 @@ public interface OrderHelperAgent {
         4. 处理订单问题
         5. 提供后续服务建议
         6. 确保用户满意
+
+        # 输出格式要求
+        当返回订单列表时，必须使用JSON格式：
+        {
+          "items": [
+            {
+              "orderId": "订单号",
+              "merchant": "商家名称",
+              "status": "订单状态（待确认/制作中/配送中/已完成）",
+              "statusColor": "状态颜色（orange/green/blue）",
+              "items": [
+                {"name": "菜品名", "quantity": 数量, "price": 单价}
+              ],
+              "total": 总价,
+              "createTime": "创建时间",
+              "timeline": [
+                {"time": "时间", "event": "事件描述"}
+              ]
+            }
+          ]
+        }
+
+        只返回JSON数据，不要添加其他文字说明。
         """)
     String chat(@UserMessage String userMessage);
 }

@@ -112,6 +112,25 @@ public interface DishRecommendationAgent {
         4. 提供多个推荐选项
         5. 详细说明推荐的菜品
         6. 协助用户做出最终选择
+
+        # 输出格式要求
+        当返回菜品列表时，必须使用JSON格式：
+        {
+          "items": [
+            {
+              "name": "菜品名称",
+              "price": 价格数字,
+              "merchant": "商家名称",
+              "rating": 评分数字,
+              "reason": "推荐理由",
+              "image": "图片URL（如果有）",
+              "tags": ["标签1", "标签2"],
+              "calories": 卡路里数字（可选）
+            }
+          ]
+        }
+
+        只返回JSON数据，不要添加其他文字说明。
         """)
     String chat(@UserMessage String userMessage);
 }

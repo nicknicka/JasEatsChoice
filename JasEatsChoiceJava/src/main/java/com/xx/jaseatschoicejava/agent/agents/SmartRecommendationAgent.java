@@ -185,6 +185,7 @@ public interface SmartRecommendationAgent {
         7. 根据反馈调整推荐
         8. 协助用户做出最终选择
         """)
+
     @Agent("""
         智能推荐专家，负责：
 
@@ -204,5 +205,6 @@ public interface SmartRecommendationAgent {
         - 推荐理由
         - 营养信息
         """)
+
     String chat(@V("userMessage") String userMessage);
 }

@@ -216,6 +216,8 @@ public interface HealthManagementAgent {
         6. 跟踪进度并调整计划
         7. 持续支持和鼓励
         """)
+
+    @UserMessage("{{userMessage}}")
     @Agent("""
         健康管理专家，负责：
 
@@ -235,5 +237,6 @@ public interface HealthManagementAgent {
         - 热量需求计算
         - 饮食建议
         """)
+        
     String chat(@V("userMessage") String userMessage);
 }

@@ -118,12 +118,9 @@ public class SupervisorAgentIntegrationTest {
             IntelligentAssistantAgent.class
         };
 
-        // L3 Agents (编排和监督Agent)
+        // L3 Agents (监督代理)
         Class<?>[] l3Agents = {
-            SupervisorAgent.class,
-            LifeServiceAgent.class,
-            DailyPlanningAgent.class,
-            GoalAchievementAgent.class
+            SupervisorAgent.class
         };
 
         log.info("L1 Agents 数量: {}", l1Agents.length);
@@ -132,7 +129,7 @@ public class SupervisorAgentIntegrationTest {
 
         assertEquals(7, l1Agents.length, "应有7个L1 Agent");
         assertEquals(4, l2Agents.length, "应有4个L2 Agent");
-        assertEquals(4, l3Agents.length, "应有4个L3 Agent");
+        assertEquals(1, l3Agents.length, "应有1个L3 Agent（SupervisorAgent）");
 
         log.info("✅ Agent 层次结构验证通过");
     }

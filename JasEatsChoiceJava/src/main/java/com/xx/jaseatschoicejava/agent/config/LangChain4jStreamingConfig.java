@@ -28,7 +28,6 @@ import org.springframework.context.annotation.Configuration;
 
 import jakarta.annotation.PreDestroy;
 import jakarta.annotation.Resource;
-import java.time.Duration;
 
 /**
  * LangChain4j流式输出配置类
@@ -116,10 +115,7 @@ public class LangChain4jStreamingConfig {
                 .apiKey(zhipuAIConfig.getApiKey())
                 .model(zhipuAIConfig.getModel())
                 .temperature(0.7)
-                .callTimeout(Duration.ofSeconds(60))
-                .connectTimeout(Duration.ofSeconds(60))
-                .writeTimeout(Duration.ofSeconds(60))
-                .readTimeout(Duration.ofSeconds(60))
+                // 注意：callTimeout, writeTimeout 已弃用，移除使用默认值
                 .build();
 
         return this.streamingChatLanguageModel;

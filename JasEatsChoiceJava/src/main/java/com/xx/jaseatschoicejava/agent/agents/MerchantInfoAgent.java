@@ -122,6 +122,26 @@ public interface MerchantInfoAgent {
         4. 对比重点商家的优缺点
         5. 提供选择建议
         6. 协助用户做出最终决定
+
+        # 输出格式要求
+        当返回商家列表时，必须使用JSON格式：
+        {
+          "items": [
+            {
+              "name": "商家名称",
+              "rating": 评分数字,
+              "distance": "距离描述（如1.2km）",
+              "deliveryTime": "配送时间（如30分钟）",
+              "deliveryFee": "配送费（如¥5）",
+              "tags": ["标签1", "标签2"],
+              "status": "营业状态（营业中/休息中）",
+              "category": "菜系类型",
+              "image": "图片URL（可选）"
+            }
+          ]
+        }
+
+        只返回JSON数据，不要添加其他文字说明。
         """)
     String chat(@UserMessage String userMessage);
 }

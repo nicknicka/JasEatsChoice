@@ -1,7 +1,7 @@
 package com.xx.jaseatschoicejava.controller;
 
-import com.xx.jaseatschoicejava.agent.agents.SupervisorAgent;
 import com.xx.jaseatschoicejava.common.ResponseResult;
+import dev.langchain4j.agentic.supervisor.SupervisorAgent;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
@@ -29,6 +29,9 @@ public class SupervisorAgentController {
     @Resource
     private SupervisorAgent supervisorAgent;
 
+    @Resource
+    private com.xx.jaseatschoicejava.agent.service.SupervisorAgentFactory supervisorAgentFactory;
+
     /**
      * 统一聊天接口
      *
@@ -44,9 +47,13 @@ public class SupervisorAgentController {
                 request.getUserId(), truncate(request.getMessage(), 100));
 
         try {
-            String response = supervisorAgent.chat(request.getMessage());
-            log.info("SupervisorAgent响应成功, 长度: {}", response.length());
-            return ResponseResult.success(response);
+            String response = supervisorAgent.invoke(request.getMessage());
+
+            // 渲染为卡片格式
+            String renderedResponse = supervisorAgentFactory.renderCards(response);
+
+            log.info("SupervisorAgent响应成功, 长度: {}", renderedResponse.length());
+            return ResponseResult.success(renderedResponse);
         } catch (Exception e) {
             log.error("SupervisorAgent处理失败", e);
             return ResponseResult.fail("500", "处理失败: " + e.getMessage());
@@ -68,12 +75,16 @@ public class SupervisorAgentController {
                 request.getUserId(), truncate(request.getMessage(), 100));
 
         try {
-            String response = supervisorAgent.chatWithContext(
-                    request.getMessage(),
-                    request.getUserId()
-            );
-            log.info("SupervisorAgent响应成功, 长度: {}", response.length());
-            return ResponseResult.success(response);
+            // 将用户ID拼接到消息中，方便Supervisor处理
+            String messageWithUser = String.format("[用户ID: %s] %s",
+                    request.getUserId(), request.getMessage());
+            String response = supervisorAgent.invoke(messageWithUser);
+
+            // 渲染为卡片格式
+            String renderedResponse = supervisorAgentFactory.renderCards(response);
+
+            log.info("SupervisorAgent响应成功, 长度: {}", renderedResponse.length());
+            return ResponseResult.success(renderedResponse);
         } catch (Exception e) {
             log.error("SupervisorAgent处理失败", e);
             return ResponseResult.fail("500", "处理失败: " + e.getMessage());
@@ -96,14 +107,17 @@ public class SupervisorAgentController {
                 userId, truncate(message, 100));
 
         try {
-            String response;
-            if (userId != null && !userId.isEmpty()) {
-                response = supervisorAgent.chatWithContext(message, userId);
-            } else {
-                response = supervisorAgent.chat(message);
-            }
-            log.info("SupervisorAgent响应成功, 长度: {}", response.length());
-            return ResponseResult.success(response);
+            // 将用户ID拼接到消息中（如果有）
+            String messageWithUser = (userId != null && !userId.isEmpty())
+                    ? String.format("[用户ID: %s] %s", userId, message)
+                    : message;
+            String response = supervisorAgent.invoke(messageWithUser);
+
+            // 渲染为卡片格式
+            String renderedResponse = supervisorAgentFactory.renderCards(response);
+
+            log.info("SupervisorAgent响应成功, 长度: {}", renderedResponse.length());
+            return ResponseResult.success(renderedResponse);
         } catch (Exception e) {
             log.error("SupervisorAgent处理失败", e);
             return ResponseResult.fail("500", "处理失败: " + e.getMessage());

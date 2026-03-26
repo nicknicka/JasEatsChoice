@@ -11,10 +11,16 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Agent集成测试
- * 测试所有14个Agent的基本功能
+ * 测试所有12个Agent的基本功能
+ *
+ * 架构简化后：
+ * - L1基础Agent: 7个
+ * - L2领域Agent: 4个
+ * - L3监督代理: 1个（SupervisorAgent）
  *
  * @author Claude
  * @since 2026-03-24
+ * @updated 2026-03-26 - 简化架构，删除3个编排智能体
  */
 @SpringBootTest(classes = JasEatsChoiceJavaApplication.class)
 @DisplayName("Agent集成测试")
@@ -57,16 +63,10 @@ public class AgentIntegrationTest {
     @Autowired(required = false)
     private IntelligentAssistantAgent intelligentAssistantAgent;
 
-    // ==================== L3 编排智能体 ====================
+    // ==================== L3 监督代理 ====================
 
     @Autowired(required = false)
-    private LifeServiceAgent lifeServiceAgent;
-
-    @Autowired(required = false)
-    private DailyPlanningAgent dailyPlanningAgent;
-
-    @Autowired(required = false)
-    private GoalAchievementAgent goalAchievementAgent;
+    private SupervisorAgent supervisorAgent;
 
     // ==================== 测试方法 ====================
 
@@ -98,18 +98,16 @@ public class AgentIntegrationTest {
     }
 
     @Test
-    @DisplayName("验证所有L3编排智能体Bean是否成功创建")
-    public void testL3AgentsCreation() {
-        // L3 Agents should be created
-        assertNotNull(lifeServiceAgent, "LifeServiceAgent should be created");
-        assertNotNull(dailyPlanningAgent, "DailyPlanningAgent should be created");
-        assertNotNull(goalAchievementAgent, "GoalAchievementAgent should be created");
+    @DisplayName("验证L3监督代理Bean是否成功创建")
+    public void testL3SupervisorAgentCreation() {
+        // L3 SupervisorAgent should be created
+        assertNotNull(supervisorAgent, "SupervisorAgent should be created");
 
-        System.out.println("✅ 所有3个L3编排智能体Bean创建成功");
+        System.out.println("✅ L3监督代理SupervisorAgent Bean创建成功");
     }
 
     @Test
-    @DisplayName("验证所有14个Agent总数是否正确")
+    @DisplayName("验证所有12个Agent总数是否正确")
     public void testTotalAgentCount() {
         int agentCount = 0;
 
@@ -126,12 +124,10 @@ public class AgentIntegrationTest {
         if (fullOrderAgent != null) agentCount++;
         if (intelligentAssistantAgent != null) agentCount++;
 
-        if (lifeServiceAgent != null) agentCount++;
-        if (dailyPlanningAgent != null) agentCount++;
-        if (goalAchievementAgent != null) agentCount++;
+        if (supervisorAgent != null) agentCount++;
 
-        assertEquals(14, agentCount, "应该有14个Agent");
-        System.out.println("✅ Agent总数验证通过: " + agentCount + "/14");
+        assertEquals(12, agentCount, "应该有12个Agent（7个L1 + 4个L2 + 1个L3）");
+        System.out.println("✅ Agent总数验证通过: " + agentCount + "/12");
     }
 
     @Test
