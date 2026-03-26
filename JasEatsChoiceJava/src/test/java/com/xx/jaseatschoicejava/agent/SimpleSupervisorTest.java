@@ -1,7 +1,7 @@
 package com.xx.jaseatschoicejava.agent;
 
 import com.xx.jaseatschoicejava.JasEatsChoiceJavaApplication;
-import com.xx.jaseatschoicejava.agent.agents.SupervisorAgent;
+import dev.langchain4j.agentic.supervisor.SupervisorAgent;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -57,7 +57,7 @@ public class SimpleSupervisorTest {
             System.out.println("\n等待SupervisorAgent响应...\n");
 
             long startTime = System.currentTimeMillis();
-            String response = supervisorAgent.chat(userMessage);
+            String response = supervisorAgent.invoke(userMessage);
             long totalTime = System.currentTimeMillis() - startTime;
 
             System.out.println("\n✅ 响应成功:");

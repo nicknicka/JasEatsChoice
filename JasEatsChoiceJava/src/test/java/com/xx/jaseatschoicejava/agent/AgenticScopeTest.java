@@ -1,11 +1,12 @@
 package com.xx.jaseatschoicejava.agent;
 
+import dev.langchain4j.agentic.supervisor.SupervisorAgent;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
-import com.xx.jaseatschoicejava.agent.agents.SmartRecommendationAgent;
 import com.xx.jaseatschoicejava.agent.agents.UserPreferenceAgent;
 import com.xx.jaseatschoicejava.agent.agents.NutritionGuideAgent;
 import com.xx.jaseatschoicejava.agent.agents.DishRecommendationAgent;
@@ -23,7 +24,8 @@ import com.xx.jaseatschoicejava.agent.agents.DishRecommendationAgent;
 public class AgenticScopeTest {
 
     @Autowired(required = false)
-    private SmartRecommendationAgent smartRecommendationAgent;
+    @Qualifier("smartRecommendationAgent")
+    private SupervisorAgent smartRecommendationAgent;
 
     @Autowired(required = false)
     private UserPreferenceAgent userPreferenceAgent;
@@ -101,7 +103,7 @@ public class AgenticScopeTest {
         System.out.println("      2. NutritionGuideAgent - 分析营养信息");
         System.out.println("      3. DishRecommendationAgent - 获取推荐菜品");
 
-        String response = smartRecommendationAgent.chat(userQuestion);
+        String response = smartRecommendationAgent.invoke(userQuestion);
 
         System.out.println("\n✅ SmartRecommendationAgent 最终响应:");
         System.out.println(response);
@@ -126,19 +128,19 @@ public class AgenticScopeTest {
 
         // 第一轮
         String q1 = "我是用户user123，帮我推荐一些菜";
-        String r1 = smartRecommendationAgent.chat(q1);
+        String r1 = smartRecommendationAgent.invoke(q1);
         System.out.println("\n[用户] " + q1);
         System.out.println("[助手] " + r1);
 
         // 第二轮
         String q2 = "这些菜里哪个热量最低？";
-        String r2 = smartRecommendationAgent.chat(q2);
+        String r2 = smartRecommendationAgent.invoke(q2);
         System.out.println("\n[用户] " + q2);
         System.out.println("[助手] " + r2);
 
         // 第三轮
         String q3 = "第一道菜的营养成分是什么？";
-        String r3 = smartRecommendationAgent.chat(q3);
+        String r3 = smartRecommendationAgent.invoke(q3);
         System.out.println("\n[用户] " + q3);
         System.out.println("[助手] " + r3);
 

@@ -2,7 +2,6 @@ package com.xx.jaseatschoicejava.agent.agents;
 
 import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
-import dev.langchain4j.service.spring.AiService;
 
 /**
  * 客服助手Agent
@@ -16,10 +15,11 @@ import dev.langchain4j.service.spring.AiService;
  * - 引导用户开启个性化服务
  * - 提供一般性咨询
  *
+ * 注意：不使用@AiService注解，通过LangChain4jConfig手动配置Bean
+ *
  * @author Claude
  * @since 2026-03-26
  */
-@AiService
 public interface CustomerServiceAgent {
 
     /**

@@ -4,7 +4,15 @@ import com.xx.jaseatschoicejava.agent.MerchantAssistantAgent;
 import com.xx.jaseatschoicejava.agent.NutritionAiAgent;
 import com.xx.jaseatschoicejava.agent.OrderAiAgent;
 import com.xx.jaseatschoicejava.agent.RecommendationAiAgent;
-import com.xx.jaseatschoicejava.agent.agents.*;
+import com.xx.jaseatschoicejava.agent.agents.CardRendererAgent;
+import com.xx.jaseatschoicejava.agent.agents.CustomerServiceAgent;
+import com.xx.jaseatschoicejava.agent.agents.DishRecommendationAgent;
+import com.xx.jaseatschoicejava.agent.agents.LocationServiceAgent;
+import com.xx.jaseatschoicejava.agent.agents.MerchantInfoAgent;
+import com.xx.jaseatschoicejava.agent.agents.NutritionGuideAgent;
+import com.xx.jaseatschoicejava.agent.agents.OrderHelperAgent;
+import com.xx.jaseatschoicejava.agent.agents.TimeAwareAgent;
+import com.xx.jaseatschoicejava.agent.agents.UserPreferenceAgent;
 import com.xx.jaseatschoicejava.agent.tools.merchant.MerchantQueryTools;
 import com.xx.jaseatschoicejava.agent.tools.merchant.MerchantStatsTools;
 import com.xx.jaseatschoicejava.agent.tools.nutrition.NutritionAnalysisTools;
@@ -549,7 +557,8 @@ public class LangChain4jConfig {
             // 注入L1 Agent作为子Agent
             DishRecommendationAgent dishRecommendationAgent,
             MerchantInfoAgent merchantInfoAgent,
-            UserPreferenceAgent userPreferenceAgent) {
+            UserPreferenceAgent userPreferenceAgent,
+            LocationServiceAgent locationServiceAgent) {
         log.info("构建SmartRecommendationAgent（L2 Supervisor）...");
 
         return AgenticServices.supervisorBuilder()
@@ -560,7 +569,8 @@ public class LangChain4jConfig {
                 .subAgents(
                     dishRecommendationAgent,
                     merchantInfoAgent,
-                    userPreferenceAgent
+                    userPreferenceAgent,
+                    locationServiceAgent
                 )
                 .supervisorContext("""
                     你是"佳食宜选"的智能推荐专家，为用户提供个性化的菜品和商家推荐。
@@ -569,6 +579,7 @@ public class LangChain4jConfig {
                     - **DishRecommendationAgent** - 菜品搜索和推荐
                     - **MerchantInfoAgent** - 商家信息和统计数据
                     - **UserPreferenceAgent** - 用户偏好和饮食忌口
+                    - **LocationServiceAgent** - 位置服务和附近美食推荐
 
                     根据用户需求灵活组合多个Agent的能力，提供贴心的推荐服务。
                     注意结合用户的个人偏好，给出有针对性的建议。
@@ -744,11 +755,11 @@ public class LangChain4jConfig {
     public SupervisorAgent supervisorAgent(
             @Qualifier("supervisorModel") ChatModel supervisorModel,
             ChatMemory chatMemory,
-            // 注入L2 Agent作为子Agent
-            SmartRecommendationAgent smartRecommendationAgent,
-            HealthManagementAgent healthManagementAgent,
-            FullOrderAgent fullOrderAgent,
-            IntelligentAssistantAgent intelligentAssistantAgent) {
+            // 注入L2 Agent作为子Agent（使用SupervisorAgent类型+@Qualifier）
+            @Qualifier("smartRecommendationAgent") SupervisorAgent smartRecommendationAgent,
+            @Qualifier("healthManagementAgent") SupervisorAgent healthManagementAgent,
+            @Qualifier("fullOrderAgent") SupervisorAgent fullOrderAgent,
+            @Qualifier("intelligentAssistantAgent") SupervisorAgent intelligentAssistantAgent) {
         log.info("构建SupervisorAgent（监督代理）...");
 
         return dev.langchain4j.agentic.AgenticServices

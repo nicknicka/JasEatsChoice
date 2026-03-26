@@ -1,6 +1,8 @@
 package com.xx.jaseatschoicejava.agent.agents;
 
+import dev.langchain4j.agentic.Agent;
 import dev.langchain4j.service.UserMessage;
+import dev.langchain4j.service.V;
 
 /**
  * 卡片渲染Agent
@@ -120,5 +122,6 @@ public interface CardRendererAgent {
 
         只返回格式化后的结果，不要添加额外的解释。
         """)
-    String renderCards(String originalResult);
+    @Agent("卡片格式化专家，负责将AI回复转换为统一的卡片格式")
+    String renderCards(@V("originalResult") String originalResult);
 }

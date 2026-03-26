@@ -84,15 +84,19 @@ public class LangChain4jStreamingConfig {
     private TimeTools timeTools;
 
     // ==================== L2 Agent 注入（已弃用，不使用Agent作为工具） ====================
+    // 注意：这些Agent返回的是SupervisorAgent类型，需要使用@Qualifier注入
 
     @Resource
-    private SmartRecommendationAgent workflowSmartRecommendationAgent;
+    @org.springframework.beans.factory.annotation.Qualifier("smartRecommendationAgent")
+    private dev.langchain4j.agentic.supervisor.SupervisorAgent workflowSmartRecommendationAgent;
 
     @Resource
-    private HealthManagementAgent workflowHealthManagementAgent;
+    @org.springframework.beans.factory.annotation.Qualifier("healthManagementAgent")
+    private dev.langchain4j.agentic.supervisor.SupervisorAgent workflowHealthManagementAgent;
 
     @Resource
-    private FullOrderAgent workflowFullOrderAgent;
+    @org.springframework.beans.factory.annotation.Qualifier("fullOrderAgent")
+    private dev.langchain4j.agentic.supervisor.SupervisorAgent workflowFullOrderAgent;
 
     // L1 Agent 不再使用，改为直接使用工具类
 

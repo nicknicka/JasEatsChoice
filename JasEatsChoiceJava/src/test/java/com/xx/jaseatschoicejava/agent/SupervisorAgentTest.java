@@ -1,6 +1,6 @@
 package com.xx.jaseatschoicejava.agent;
 
-import com.xx.jaseatschoicejava.agent.agents.SupervisorAgent;
+import dev.langchain4j.agentic.supervisor.SupervisorAgent;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -50,7 +50,7 @@ public class SupervisorAgentTest {
         System.out.println("🤖 预期: 路由到 SmartRecommendationAgent");
 
         try {
-            String response = supervisorAgent.chat(userQuestion);
+            String response = supervisorAgent.invoke(userQuestion);
             System.out.println("✅ SupervisorAgent 响应: " + response);
         } catch (Exception e) {
             System.out.println("❌ 测试失败（可能需要API密钥）: " + e.getMessage());
@@ -73,7 +73,7 @@ public class SupervisorAgentTest {
         System.out.println("🤖 预期: 路由到 HealthManagementAgent");
 
         try {
-            String response = supervisorAgent.chat(userQuestion);
+            String response = supervisorAgent.invoke(userQuestion);
             System.out.println("✅ SupervisorAgent 响应: " + response);
         } catch (Exception e) {
             System.out.println("❌ 测试失败（可能需要API密钥）: " + e.getMessage());
@@ -96,7 +96,7 @@ public class SupervisorAgentTest {
         System.out.println("🤖 预期: 路由到 FullOrderAgent");
 
         try {
-            String response = supervisorAgent.chat(userQuestion);
+            String response = supervisorAgent.invoke(userQuestion);
             System.out.println("✅ SupervisorAgent 响应: " + response);
         } catch (Exception e) {
             System.out.println("❌ 测试失败（可能需要API密钥）: " + e.getMessage());
@@ -120,7 +120,7 @@ public class SupervisorAgentTest {
         System.out.println("🤖 预期: 路由到合适的Agent并使用用户上下文");
 
         try {
-            String response = supervisorAgent.chatWithContext(userQuestion, userId);
+            String response = supervisorAgent.invoke("[用户ID: " + userId + "] " + userQuestion);
             System.out.println("✅ SupervisorAgent 响应: " + response);
         } catch (Exception e) {
             System.out.println("❌ 测试失败（可能需要API密钥）: " + e.getMessage());
@@ -142,7 +142,7 @@ public class SupervisorAgentTest {
         System.out.println("🤖 预期: 协调 SmartRecommendationAgent 和 HealthManagementAgent");
 
         try {
-            String response = supervisorAgent.chat(userQuestion);
+            String response = supervisorAgent.invoke(userQuestion);
             System.out.println("✅ SupervisorAgent 响应: " + response);
         } catch (Exception e) {
             System.out.println("❌ 测试失败（可能需要API密钥）: " + e.getMessage());

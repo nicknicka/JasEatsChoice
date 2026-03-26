@@ -1,7 +1,9 @@
 package com.xx.jaseatschoicejava.agent.agents;
 
+import dev.langchain4j.agentic.Agent;
 import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
+import dev.langchain4j.service.V;
 
 /**
  * L1基础智能体 - 商家信息Agent
@@ -143,5 +145,6 @@ public interface MerchantInfoAgent {
 
         只返回JSON数据，不要添加其他文字说明。
         """)
-    String chat(@UserMessage String userMessage);
+    @Agent("商家信息专家，负责商家信息和统计数据")
+    String chat(@V("userMessage") String userMessage);
 }

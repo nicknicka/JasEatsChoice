@@ -1,7 +1,9 @@
 package com.xx.jaseatschoicejava.agent.agents;
 
+import dev.langchain4j.agentic.Agent;
 import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
+import dev.langchain4j.service.V;
 
 /**
  * L1基础智能体 - 菜品推荐Agent
@@ -132,5 +134,11 @@ public interface DishRecommendationAgent {
 
         只返回JSON数据，不要添加其他文字说明。
         """)
-    String chat(@UserMessage String userMessage);
+    @Agent("""
+        菜品推荐专家，负责：
+        - 智能菜品推荐
+        - 菜品搜索和筛选
+        - 菜品对比和详情
+        """)
+    String chat(@V("userMessage") String userMessage);
 }
