@@ -118,12 +118,8 @@ public class SSEAgentListener implements AgentListener {
 
         sendEvent(ExecutionEventType.COMPLETE, event);
 
-        // 完成SSE流
-        try {
-            emitter.complete();
-        } catch (Exception e) {
-            log.warn("完成SSE流失败", e);
-        }
+        // ⚠️ 不在这里关闭SSE连接，由Controller控制关闭时机
+        // 如果在这里complete()，会导致后续的FINAL_RESULT无法发送
     }
 
     @Override
@@ -134,15 +130,26 @@ public class SSEAgentListener implements AgentListener {
 
     /**
      * 发送SSE事件
+     *
+     * ⚠️ 重要：事件名必须使用 "message"，因为前端只监听 message 事件
      */
     private void sendEvent(ExecutionEventType type, ExecutionEvent event) {
         try {
             String eventData = objectMapper.writeValueAsString(event);
+            log.info("📤 [SSE] 发送事件: type={}, data={}", type.name(),
+                eventData.length() > 200 ? eventData.substring(0, 200) + "..." : eventData);
+
+            // ✅ 统一使用 "message" 事件名，前端才能接收
             emitter.send(SseEmitter.event()
-                    .name(type.name())
+                    .name("message")  // 固定使用message事件名
                     .data(eventData));
+
+            log.info("✅ [SSE] 事件发送成功: type={}", type.name());
         } catch (IOException e) {
-            log.error("发送SSE事件失败: {}", e.getMessage());
+            log.error("❌ [SSE] 发送SSE事件失败: type={}, error={}", type.name(), e.getMessage());
+            emitter.completeWithError(e);
+        } catch (Exception e) {
+            log.error("❌ [SSE] 发送SSE事件异常: type={}, error={}", type.name(), e.getMessage(), e);
             emitter.completeWithError(e);
         }
     }

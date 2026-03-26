@@ -875,13 +875,22 @@ const streamResponse = async (messageIndex, reader) => {
             continue
           }
 
-          // 【调试】打印所有解析出的数据（已禁用）
-          // if (parsedData.card_data) {
-          //   console.log('🎯 解析到card_data:', JSON.stringify(parsedData.card_data, null, 2))
-          // }
-          // if (parsedData.content) {
-          //   console.log('📝 解析到content:', parsedData.content.substring(0, 50))
-          // }
+          // ========== 【调试】打印所有接收到的SSE数据 ==========
+          console.log('📥 [SSE接收] 接收到message事件')
+          console.log('📦 原始数据:', data.substring(0, 100) + (data.length > 100 ? '...' : ''))
+          console.log('🔍 解析类型:', isPlainText ? '纯文本' : 'JSON对象')
+          console.log('📋 解析结果:', parsedData)
+
+          if (parsedData.message) {
+            console.log('💬 消息内容:', parsedData.message.substring(0, 100) + '...')
+          }
+          if (parsedData.agentName) {
+            console.log('🤖 Agent名称:', parsedData.agentName)
+          }
+          if (parsedData.output) {
+            console.log('📤 Agent输出:', parsedData.output.substring(0, 100) + '...')
+          }
+          // ====================================================
 
           // 接收 done 字段：检查是否结束
           if (parsedData.done === true) {
@@ -926,6 +935,91 @@ const streamResponse = async (messageIndex, reader) => {
             }
 
             return
+          }
+
+          // ========== 【消息筛选】只显示最终结果，过滤中间过程 ==========
+          // 规则1：只处理 SupervisorAgent 的 output（最终结果）
+          // 规则2：忽略其他 Agent 的中间过程
+          // 规则3：忽略只有 message 字段的状态消息
+
+          const isFinalResult =
+            parsedData.agentName === 'SupervisorAgent' &&
+            parsedData.output &&
+            parsedData.output.trim().length > 0
+
+          const isIntermediateMessage =
+            parsedData.agentName && parsedData.agentName !== 'SupervisorAgent'
+
+          // 过滤中间消息，只打印日志
+          if (isIntermediateMessage) {
+            console.log('🔄 [过滤中间消息] Agent:', parsedData.agentName, '- 不显示')
+            continue
+          }
+
+          // 只处理最终结果
+          if (isFinalResult) {
+            console.log('✅ [最终结果] 收到SupervisorAgent的最终结果，准备显示')
+            console.log('📄 最终结果内容:', parsedData.output.substring(0, 100) + '...')
+
+            // ========== 【过滤调试信息】移除LangChain4j内部信息 ==========
+            let filteredOutput = parsedData.output
+
+            // 过滤规则1：移除 "You must answer strictly in the following JSON format" 及后续内容直到空行
+            filteredOutput = filteredOutput.replace(
+              /You must answer strictly in the following JSON format[^\n]*\n(?:[^\n]*\n)*?\n\n/g,
+              ''
+            )
+
+            // 过滤规则2：移除 "The user request is:" 行
+            filteredOutput = filteredOutput.replace(
+              /The user request is:\s*'[']*[^']*'[^\n]*\n/g,
+              ''
+            )
+
+            // 过滤规则3：移除 "The last received response is:" 行
+            filteredOutput = filteredOutput.replace(
+              /The last received response is:\s*'[']*[^']*'[^\n]*\n/g,
+              ''
+            )
+
+            // 过滤规则4：移除 SystemMessage { text = ... } 大段文本（跨多行）
+            filteredOutput = filteredOutput.replace(
+              /SystemMessage \{ text = "[\s\S]*?Use the following supervisor context[\s\S]*?\. '\n\n/g,
+              ''
+            )
+
+            // 过滤规则5：移除 JSON agent 调用块（包含 agentName 和 arguments）
+            filteredOutput = filteredOutput.replace(
+              /\n?\{\s*"agentName":\s*"[^"]*",\s*"arguments":\s*\{[^}]*\}\s*\}\n\n?/g,
+              ''
+            )
+
+            // 过滤规则6：移除时间戳和🤖 emoji行（如 "01:52\n🤖\n\n"）
+            filteredOutput = filteredOutput.replace(
+              /\d{2}:\d{2}\s*\n🤖\s*\n\n?/g,
+              ''
+            )
+
+            // 过滤规则7：移除单独的🤖 emoji行
+            filteredOutput = filteredOutput.replace(
+              /🤖\s*\n\n?/g,
+              ''
+            )
+
+            // 清理多余的空行（超过2个连续换行符）
+            filteredOutput = filteredOutput.replace(/\n{3,}/g, '\n\n').trim()
+
+            if (filteredOutput !== parsedData.output) {
+              console.log('🧹 [过滤调试信息] 已移除LangChain4j内部信息')
+              console.log('📊 过滤后长度:', filteredOutput.length, '原长度:', parsedData.output.length)
+              console.log('📝 过滤后内容预览:', filteredOutput.substring(0, 200) + '...')
+            }
+
+            // 将过滤后的内容作为 content 处理
+            parsedData.content = filteredOutput
+
+            // 标记为最终结果，用于后续处理
+            parsedData._isFinalResult = true
           }
 
           // 接收 card_data 字段：设置卡片数据和类型
@@ -1069,6 +1163,36 @@ const streamResponse = async (messageIndex, reader) => {
                 await nextTick()
                 // 流式传输时自动滚动，除非用户主动向上滚动
                 scrollToBottom()
+              }
+
+              // ========== 【最终结果处理】收到最终结果后自动完成 ==========
+              if (parsedData._isFinalResult) {
+                console.log('🏁 [最终结果] 处理完成，准备保存到后端')
+
+                // 延迟一小段时间确保UI更新完成
+                await new Promise(resolve => setTimeout(resolve, 500))
+
+                // 触发完成逻辑（保存到后端）
+                if (messages.value[messageIndex]) {
+                  const currentMessage = messages.value[messageIndex]
+                  console.log('✅ AI消息接收完成（最终结果）')
+                  console.log('📊 消息统计:')
+                  console.log(`   - 总字符数: ${currentMessage.content?.length || 0}`)
+                  console.log(`   - 消息类型: ${currentMessage.messageType || '纯文本'}`)
+                  console.log(`   - 包含卡片: ${currentMessage.cardData ? '是' : '否'}`)
+
+                  try {
+                    await saveMessageToBackend(
+                      'ai',
+                      currentMessage.content,
+                      currentMessage.messageType,
+                      currentMessage.cardData
+                    )
+                    console.log('✅ 最终结果已保存到后端')
+                  } catch (error) {
+                    console.warn('⚠️ 保存消息到后端失败:', error.message)
+                  }
+                }
               }
             } catch (error) {
               // DOM 更新失败时的处理（组件可能已卸载）

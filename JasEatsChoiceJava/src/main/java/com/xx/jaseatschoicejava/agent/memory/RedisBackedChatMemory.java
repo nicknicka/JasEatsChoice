@@ -60,26 +60,36 @@ public class RedisBackedChatMemory implements ChatMemory {
 
     @Override
     public void add(ChatMessage message) {
-        // 1. 添加到本地缓存
+        // 1. 添加到本地缓存（关键操作，必须成功）
         localMessages.add(message);
 
-        // 2. 序列化并写入Redis
-        String messageData = serializeMessage(message);
-        redisTemplate.opsForList().rightPush(redisKey, messageData);
+        // 2. 序列化并写入Redis（添加异常处理）
+        try {
+            String messageData = serializeMessage(message);
+            redisTemplate.opsForList().rightPush(redisKey, messageData);
 
-        // 3. 保留最近N条消息
-        if (localMessages.size() > maxMessages) {
-            localMessages = localMessages.subList(
-                localMessages.size() - maxMessages,
-                localMessages.size()
-            );
+            // 3. 保留最近N条消息
+            if (localMessages.size() > maxMessages) {
+                localMessages = localMessages.subList(
+                    localMessages.size() - maxMessages,
+                    localMessages.size()
+                );
+            }
+            redisTemplate.opsForList().trim(redisKey, -maxMessages, -1);
+
+            // 4. 设置TTL（如果key不存在）
+            redisTemplate.expire(redisKey, ttl);
+
+            log.debug("✅ Redis写入成功: userId={}, messageCount={}",
+                userId, localMessages.size());
+        } catch (Exception e) {
+            // Redis连接失败时优雅降级，只使用本地缓存
+            log.warn("⚠️ Redis写入失败，降级到本地缓存: userId={}, error={}",
+                userId, e.getMessage());
+            // 不抛出异常，继续执行
         }
-        redisTemplate.opsForList().trim(redisKey, -maxMessages, -1);
 
-        // 4. 设置TTL（如果key不存在）
-        redisTemplate.expire(redisKey, ttl);
-
-        // 5. 异步写入MySQL
+        // 5. 异步写入MySQL（独立于Redis状态）
         asyncSaveToMySQL(message);
 
         log.debug("用户 {} 添加消息到ChatMemory, 当前消息数: {}",

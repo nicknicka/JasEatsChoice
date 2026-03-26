@@ -32,15 +32,16 @@ import jakarta.annotation.Resource;
 /**
  * LangChain4j流式输出配置类
  *
- * **架构设计：L3 Agent 调用 L2 Agent**
+ * **架构设计：L3 Agent 直接调用工具类**
  *
- * L3: StreamingIntelligentAssistantAgent (智能调度)
- *   ↓ 调用
- * L2: SmartRecommendationAgent (推荐), HealthManagementAgent (健康), FullOrderAgent (订单)
- *   ↓ 调用
- * L1: UserPreferenceAgent, NutritionGuideAgent, DishRecommendationAgent 等
- *   ↓ 调用
- * 工具类: LocationTools, OrderTools 等
+ * 架构重构（2026-03-27）：
+ * - 移除L2层，L3直接对接L1专家Agent和工具类
+ * - L3 SupervisorAgent负责智能任务规划和Agent路由
+ * - 流式Agent使用工具类提供实时响应
+ *
+ * 流式Agent定位：
+ * - StreamingIntelligentAssistantAgent: 用户端智能助手（流式响应）
+ * - StreamingMerchantAssistantAgent: 商家端经营助手（流式响应）
  *
  * @author Claude
  * @since 2026-03-24
@@ -83,22 +84,9 @@ public class LangChain4jStreamingConfig {
     @Resource
     private TimeTools timeTools;
 
-    // ==================== L2 Agent 注入（已弃用，不使用Agent作为工具） ====================
-    // 注意：这些Agent返回的是SupervisorAgent类型，需要使用@Qualifier注入
-
-    @Resource
-    @org.springframework.beans.factory.annotation.Qualifier("smartRecommendationAgent")
-    private dev.langchain4j.agentic.supervisor.SupervisorAgent workflowSmartRecommendationAgent;
-
-    @Resource
-    @org.springframework.beans.factory.annotation.Qualifier("healthManagementAgent")
-    private dev.langchain4j.agentic.supervisor.SupervisorAgent workflowHealthManagementAgent;
-
-    @Resource
-    @org.springframework.beans.factory.annotation.Qualifier("fullOrderAgent")
-    private dev.langchain4j.agentic.supervisor.SupervisorAgent workflowFullOrderAgent;
-
-    // L1 Agent 不再使用，改为直接使用工具类
+    // ==================== 架构重构说明 ====================
+    // 2026-03-27: 移除L2层，L3 SupervisorAgent直接对接L1专家Agent
+    // 流式Agent使用工具类提供实时响应，不使用Agent作为工具
 
     @Resource
     private MerchantQueryTools merchantQueryTools;
@@ -136,15 +124,18 @@ public class LangChain4jStreamingConfig {
     }
 
     /**
-     * 构建L3流式智能助手AI Agent
+     * 构建流式智能助手AI Agent
      *
-     * **重要**：这个Agent调用L2 Agent，而不是直接调用工具类
+     * **架构说明**：直接使用工具类提供流式响应
+     * - 用于用户端的实时对话场景
+     * - 不使用Agent作为工具（Agent不能作为工具传递）
+     * - 工具类提供数据查询和业务逻辑
      */
     @Bean
     public StreamingIntelligentAssistantAgent streamingIntelligentAssistantAgent(
             StreamingChatModel streamingChatLanguageModel,
             ChatMemory streamingChatMemory) {
-        log.info("构建L3: StreamingIntelligentAssistantAgent (直接使用工具类)...");
+        log.info("构建流式: StreamingIntelligentAssistantAgent (直接使用工具类)...");
 
         return AiServices.builder(StreamingIntelligentAssistantAgent.class)
                 .streamingChatModel(streamingChatLanguageModel)
@@ -169,13 +160,15 @@ public class LangChain4jStreamingConfig {
     /**
      * 构建商家流式经营助手AI Agent
      *
-     * **重要**：这是商家端的Agent，提供数据分析、经营优化建议等功能
+     * **架构说明**：商家端专用Agent，提供数据分析和经营优化建议
+     * - 商家查询：商家信息、统计数据
+     * - 经营建议：菜品优化、营销策略
      */
     @Bean
     public StreamingMerchantAssistantAgent streamingMerchantAssistantAgent(
             StreamingChatModel streamingChatLanguageModel,
             ChatMemory streamingChatMemory) {
-        log.info("构建商家L3: StreamingMerchantAssistantAgent (调用商家工具)...");
+        log.info("构建商家流式: StreamingMerchantAssistantAgent (调用商家工具)...");
 
         return AiServices.builder(StreamingMerchantAssistantAgent.class)
                 .streamingChatModel(streamingChatLanguageModel)

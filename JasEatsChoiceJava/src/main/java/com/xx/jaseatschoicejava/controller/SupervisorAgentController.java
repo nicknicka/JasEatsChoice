@@ -1,7 +1,6 @@
 package com.xx.jaseatschoicejava.controller;
 
 import com.xx.jaseatschoicejava.common.ResponseResult;
-import dev.langchain4j.agentic.supervisor.SupervisorAgent;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
@@ -14,7 +13,12 @@ import jakarta.annotation.Resource;
 /**
  * SupervisorAgent 控制器
  *
- * 提供L3监督代理的统一接口，智能调度L2领域Agent
+ * 提供L3监督代理的统一接口，智能调度L1专家Agent
+ *
+ * 架构重构（2026-03-27）：
+ * - 移除L2层，L3直接对接L1专家Agent
+ * - 使用工厂模式动态创建SupervisorAgent
+ * - 支持用户独立的ChatMemory
  *
  * @author Claude
  * @since 2026-03-25
@@ -28,15 +32,12 @@ public class SupervisorAgentController {
     private static final Logger log = LoggerFactory.getLogger(SupervisorAgentController.class);
 
     @Resource
-    private SupervisorAgent supervisorAgent;
-
-    @Resource
     private com.xx.jaseatschoicejava.agent.service.SupervisorAgentFactory supervisorAgentFactory;
 
     /**
      * 统一聊天接口
      *
-     * SupervisorAgent会自动分析用户问题，智能路由到合适的L2 Agent
+     * SupervisorAgent会自动分析用户问题，智能路由到合适的L1 Agent
      *
      * @param request 聊天请求
      * @return Agent响应
@@ -48,6 +49,11 @@ public class SupervisorAgentController {
                 request.getUserId(), truncate(request.getMessage(), 100));
 
         try {
+            // 使用工厂创建SupervisorAgent（L3→L1架构）
+            String userId = request.getUserId() != null ? request.getUserId() : "anonymous";
+            dev.langchain4j.agentic.supervisor.SupervisorAgent supervisorAgent =
+                supervisorAgentFactory.createWithListener(null, userId);
+
             String response = supervisorAgent.invoke(request.getMessage());
 
             // 渲染为卡片格式
@@ -76,6 +82,12 @@ public class SupervisorAgentController {
                 request.getUserId(), truncate(request.getMessage(), 100));
 
         try {
+            String userId = request.getUserId() != null ? request.getUserId() : "anonymous";
+
+            // 使用工厂创建SupervisorAgent（L3→L1架构）
+            dev.langchain4j.agentic.supervisor.SupervisorAgent supervisorAgent =
+                supervisorAgentFactory.createWithListener(null, userId);
+
             // 将用户ID拼接到消息中，方便Supervisor处理
             String messageWithUser = String.format("[用户ID: %s] %s",
                     request.getUserId(), request.getMessage());
@@ -108,6 +120,12 @@ public class SupervisorAgentController {
                 userId, truncate(message, 100));
 
         try {
+            String effectiveUserId = (userId != null && !userId.isEmpty()) ? userId : "anonymous";
+
+            // 使用工厂创建SupervisorAgent（L3→L1架构）
+            dev.langchain4j.agentic.supervisor.SupervisorAgent supervisorAgent =
+                supervisorAgentFactory.createWithListener(null, effectiveUserId);
+
             // 将用户ID拼接到消息中（如果有）
             String messageWithUser = (userId != null && !userId.isEmpty())
                     ? String.format("[用户ID: %s] %s", userId, message)
