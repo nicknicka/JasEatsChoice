@@ -64,7 +64,9 @@ export const request = (options) => {
       data: requestData,
       header: {
         'Content-Type': 'application/json',
-        ...(needAuth && token ? { 'Authorization': `Bearer ${token}` } : {})
+        ...(needAuth && token ? { 'Authorization': `Bearer ${token}` } : {}),
+        // 添加用户ID请求头用于行为追踪
+        ...(needAuth && token ? { 'X-User-Id': uni.getStorageSync('userInfo')?.id || '' } : {})
       },
       success: (res) => {
         // 响应日志

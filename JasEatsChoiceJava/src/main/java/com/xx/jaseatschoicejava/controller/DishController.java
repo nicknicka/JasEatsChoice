@@ -9,9 +9,13 @@ import com.xx.jaseatschoicejava.entity.Dish;
 import com.xx.jaseatschoicejava.exception.BusinessException;
 import com.xx.jaseatschoicejava.service.DishService;
 import com.xx.jaseatschoicejava.service.MenuService;
+import com.xx.jaseatschoicejava.service.UserBehaviorService;
+import com.xx.jaseatschoicejava.util.BehaviorTrackingUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -32,13 +36,17 @@ public class DishController {
     @Autowired
     private MenuService menuService;
 
+    @Autowired
+    private UserBehaviorService userBehaviorService;
+
     /**
      * 获取菜品列表
      */
     @GetMapping
     public ResponseResult<?> getDishes(@RequestParam(required = false) String category,
                                       @RequestParam(required = false) String keyword,
-                                      @RequestParam(required = false) String merchantId) {
+                                      @RequestParam(required = false) String merchantId,
+                                      HttpServletRequest request) {
         log.info("获取菜品列表, merchantId: {}", merchantId);
         LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();
         if (category != null) {
@@ -73,6 +81,17 @@ public class DishController {
             return dishMap;
         }).collect(java.util.stream.Collectors.toList());
 
+        // 异步记录列表浏览行为
+        try {
+            Map<String, Object> context = new HashMap<>();
+            context.put("category", category);
+            context.put("keyword", keyword);
+            context.put("merchantId", merchantId);
+            BehaviorTrackingUtil.trackDishListView(request, userBehaviorService, "search_list", dishes.size(), context);
+        } catch (Exception e) {
+            log.error("记录列表浏览失败", e);
+        }
+
         return ResponseResult.success(resultDishes);
     }
 
@@ -80,7 +99,8 @@ public class DishController {
      * 根据商家ID获取菜品列表
      */
     @GetMapping("/merchant/{merchantId}")
-    public ResponseResult<?> getDishesByMerchant(@PathVariable String merchantId) {
+    public ResponseResult<?> getDishesByMerchant(@PathVariable String merchantId,
+                                           HttpServletRequest request) {
         log.info("根据商家ID获取菜品列表, merchantId: {}", merchantId);
         LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Dish::getMerchantId, merchantId);
@@ -107,6 +127,15 @@ public class DishController {
 
             return dishMap;
         }).collect(java.util.stream.Collectors.toList());
+
+        // 异步记录商家菜品列表浏览行为
+        try {
+            Map<String, Object> context = new HashMap<>();
+            context.put("merchantId", merchantId);
+            BehaviorTrackingUtil.trackDishListView(request, userBehaviorService, "merchant_dish_list", dishes.size(), context);
+        } catch (Exception e) {
+            log.error("记录商家列表浏览失败", e);
+        }
 
         return ResponseResult.success(resultDishes);
     }
@@ -189,7 +218,8 @@ public class DishController {
      * 获取菜品详情（包含详细信息、分类、推荐等）
      */
     @GetMapping("/{dishId}")
-    public ResponseResult<?> getDishDetail(@PathVariable String dishId) {
+    public ResponseResult<?> getDishDetail(@PathVariable String dishId,
+                                          HttpServletRequest request) {
         log.info("获取菜品详情 - dishId: {}", dishId);
 
         // 获取菜品基本信息
@@ -234,6 +264,18 @@ public class DishController {
         // 获取相关菜品推荐
         List<Map<String, Object>> relatedDishes = getRelatedDishes(dish.getId(), dish.getCategory(), 5);
         dishData.put("relatedDishes", relatedDishes);
+
+        // 异步记录菜品详情浏览行为
+        try {
+            Map<String, Object> context = new HashMap<>();
+            context.put("source", "dish_detail");
+            context.put("category", dish.getCategory());
+            context.put("price", dish.getPrice());
+            context.put("calorie", dish.getCalorie());
+            BehaviorTrackingUtil.trackDishBehavior(request, userBehaviorService, dishId, "view", context);
+        } catch (Exception e) {
+            log.error("记录菜品详情浏览失败", e);
+        }
 
         log.info("返回菜品详情成功 - dishId: {}, 包含字段: {}", dishId, dishData.keySet());
         return ResponseResult.success(dishData);

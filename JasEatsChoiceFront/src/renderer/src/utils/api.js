@@ -137,6 +137,12 @@ api.interceptors.request.use(
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
+
+      // 从JWT token解析用户ID，添加到请求头用于行为追踪
+      const decoded = decodeJwt(token)
+      if (decoded && decoded.userId) {
+        config.headers['X-User-Id'] = decoded.userId
+      }
     }
     return config
   },
