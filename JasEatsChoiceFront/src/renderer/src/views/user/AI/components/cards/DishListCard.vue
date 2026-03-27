@@ -39,7 +39,7 @@
           <div class="dish-info">
             <div class="dish-header">
               <div class="dish-name">{{ dish.dishName || '未命名菜品' }}</div>
-              <div class="dish-rating" v-if="dish.rating">
+              <div class="dish-rating" v-if="hasValue(dish.rating)">
                 <el-rate
                   v-model="dish.rating"
                   disabled
@@ -50,16 +50,18 @@
               </div>
             </div>
 
-            <div class="dish-description">
-              {{ dish.description || '暂无描述' }}
+            <!-- 描述（可选） -->
+            <div v-if="hasValue(dish.description)" class="dish-description">
+              {{ dish.description }}
             </div>
 
-            <div class="dish-meta">
-              <span class="price">
-                {{ dish.price !== undefined ? `¥${dish.price}` : '价格未知' }}
+            <!-- 价格和分类（都可选） -->
+            <div class="dish-meta" v-if="hasValue(dish.price) || hasValue(dish.category)">
+              <span v-if="hasValue(dish.price)" class="price">
+                ¥{{ dish.price }}
               </span>
               <el-tag
-                v-if="dish.category"
+                v-if="hasValue(dish.category)"
                 size="small"
                 type="success"
               >
@@ -67,7 +69,8 @@
               </el-tag>
             </div>
 
-            <div class="dish-tags" v-if="dish.tags && dish.tags.length > 0">
+            <!-- 标签（可选） -->
+            <div class="dish-tags" v-if="hasValue(dish.tags)">
               <el-tag
                 v-for="(tag, index) in dish.tags"
                 :key="index"
@@ -78,8 +81,8 @@
               </el-tag>
             </div>
 
-            <!-- 操作按钮 -->
-            <div class="dish-actions" v-if="dish.actions && dish.actions.length > 0">
+            <!-- 操作按钮（可选） -->
+            <div class="dish-actions" v-if="hasValue(dish.actions)">
               <el-button
                 v-for="action in dish.actions"
                 :key="action.type"
@@ -117,6 +120,26 @@ const props = defineProps({
 
 const emit = defineEmits(['action'])
 
+// ========== 公共工具方法 ==========
+
+/**
+ * 检查值是否有意义（非 null、非 undefined、非空字符串、非空数组）
+ * @param {any} value - 要检查的值
+ * @returns {boolean} - 是否有意义
+ */
+const hasValue = (value) => {
+  // null 或 undefined
+  if (value == null) return false
+
+  // 空字符串
+  if (typeof value === 'string' && value.trim() === '') return false
+
+  // 空数组
+  if (Array.isArray(value) && value.length === 0) return false
+
+  return true
+}
+
 // ========== 数据标准化 ==========
 // 注意：必须定义在 validateAndLogData 之前，因为函数中会使用
 
@@ -136,13 +159,13 @@ const normalizedDishes = computed(() => {
     return props.data.recommendations.map(rec => ({
       dishId: rec.dishId || rec.id,
       dishName: rec.dishName || rec.name || '未命名菜品',
-      imageUrl: rec.imageUrl || rec.image || '',
-      description: rec.description || rec.recommendReason || rec.highlight || '暂无描述',
-      price: rec.price,
-      rating: rec.rating,
-      category: rec.category,
+      imageUrl: rec.imageUrl || rec.image || null,
+      description: rec.description || rec.recommendReason || rec.highlight || null,
+      price: rec.price !== undefined ? rec.price : null,
+      rating: rec.rating || null,
+      category: rec.category || null,
       tags: rec.tags || [],
-      actions: rec.actions || [], // 不自动添加默认按钮
+      actions: rec.actions || [],
       // 保留原始字段
       _original: rec
     }))

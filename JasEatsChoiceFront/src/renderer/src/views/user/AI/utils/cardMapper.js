@@ -14,6 +14,7 @@ import NotificationListCard from '../components/cards/NotificationListCard.vue'
 import ErrorCard from '../components/cards/ErrorCard.vue'
 
 // 组件映射表
+// 注意：notification_list_card 不在此表中，会以纯文本形式显示
 const CARD_COMPONENT_MAP = {
   order_list_card: OrderListCard,
   favorite_list_card: FavoriteListCard,
@@ -21,7 +22,6 @@ const CARD_COMPONENT_MAP = {
   coupon_list_card: CouponListCard,
   user_info_card: UserInfoCard,
   dish_list_card: DishListCard,
-  notification_list_card: NotificationListCard,
   error_card: ErrorCard
 }
 

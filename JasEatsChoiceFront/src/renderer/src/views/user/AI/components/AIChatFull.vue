@@ -566,7 +566,7 @@ import ReviewListCard from "./cards/ReviewListCard.vue";
 import CouponListCard from "./cards/CouponListCard.vue";
 import UserInfoCard from "./cards/UserInfoCard.vue";
 import DishListCard from "./cards/DishListCard.vue";
-import NotificationListCard from "./cards/NotificationListCard.vue";
+// NotificationListCard 已移除 - 通知类型以纯文本形式显示
 import ErrorCard from "./cards/ErrorCard.vue";
 import OrderGuideCard from "./cards/OrderGuideCard.vue";
 
@@ -577,7 +577,7 @@ const cardComponents = {
 	coupon_list_card: CouponListCard,
 	user_info_card: UserInfoCard,
 	dish_list_card: DishListCard,
-	notification_list_card: NotificationListCard,
+	// notification_list_card 已移除 - 通知类型以纯文本形式显示
 	error_card: ErrorCard,
 	order_guide_card: OrderGuideCard,
 };
@@ -1072,8 +1072,14 @@ const parseCardDataFromContent = (content) => {
 
 	try {
 		// 解析卡片数据
-		const cardDataArray = JSON.parse(cardDataString);
-		if (Array.isArray(cardDataArray) && cardDataArray.length > 0) {
+		let parsedData = JSON.parse(cardDataString);
+
+		// 兼容两种格式：
+		// 1. 数组格式：[{ type: "...", recommendations: [...] }]
+		// 2. 对象格式：{ type: "...", recommendations: [...] }
+		let cardDataArray = Array.isArray(parsedData) ? parsedData : [parsedData];
+
+		if (cardDataArray.length > 0) {
 			const firstCard = cardDataArray[0];
 
 			// 提取卡片类型（支持两种字段名：type 和 cardType）

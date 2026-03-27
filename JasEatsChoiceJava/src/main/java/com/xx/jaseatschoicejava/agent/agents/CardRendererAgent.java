@@ -25,20 +25,28 @@ public interface CardRendererAgent {
         原始结果：
         {{originalResult}}
 
+        ⚠️ 重要：什么情况下不生成卡片
+        - **搜索无结果**：不要生成卡片，直接返回原始文本
+        - **错误提示**：如"很抱歉""没有找到""无法查询"等，不要生成卡片
+        - **询问信息**：如"请问您需要""您是否想要"等，不要生成卡片
+        - **纯文本回复**：没有结构化数据（菜品列表、订单等）时，不要生成卡片
+        - **空数据**：items数组为空或null时，不要生成卡片
+
         格式化规则：
         1. 优先识别文本中的JSON代码块（```json ... ```）
         2. 如果没有JSON，尝试从Markdown文本中提取结构化数据
         3. 将提取的数据转换为对应的卡片格式
         4. 卡片数据用 [CARD_DATA_START] 和 [CARD_DATA_END] 包围
+        5. **只有包含实际数据时才生成卡片，否则返回原始文本**
 
         Markdown文本识别规则：
-        - 菜品列表：识别 "1. **菜名**" 或 "- **菜名**" 格式
+        - 菜品列表：识别 "1. **菜名**" 或 "- **菜名**" 格式，必须包含至少一个菜品
         - 提取菜名、价格、热量、评分等信息
         - 将提取的信息转换为JSON卡片格式
 
         JSON类型识别：
-        - 菜品数据：包含 items 数组，每个item有name/price/merchant → food_recommendation_card卡片
-        - 商家数据：包含 items 数组，每个item有name/rating/distance → merchant_card卡片
+        - 菜品数据：包含 items 数组（数组长度>0），每个item有name/price/merchant → food_recommendation_card卡片
+        - 商家数据：包含 items 数组（数组长度>0），每个item有name/rating/distance → merchant_card卡片
         - 订单数据：包含orderId/items/status/total → order_card卡片
         - 健康数据：包含calories/protein/carbs/stats → health_card卡片
 
@@ -100,6 +108,11 @@ public interface CardRendererAgent {
              "suggestion": "晚餐建议补充蛋白质，可以选清蒸鱼或鸡胸肉"
            }
 
+           💡 **营养数据来源说明**：
+           - 如果数据来自数据库：suggestion 中可以不特别说明
+           - 如果数据是估算值：suggestion 应包含"基于食物组成的估算值"等说明
+           - 即使是估算数据，只要包含完整的 stats 数组，就应该生成卡片
+
         示例转换1：JSON代码块（菜品推荐）
         原始：
         "我为你推荐以下菜品：
@@ -150,6 +163,22 @@ public interface CardRendererAgent {
         - calories：从"xxx kcal"提取数字
         - score：从"⭐ x.x分"提取数字
         - merchantName：从"商家：xxx"或"商家ID：xxx - xxx"提取
+
+        ❌ 不生成卡片的示例：
+        示例1：搜索无结果
+        原始："很抱歉，根据您的要求搜索包含鸡肉的菜肴，但是没有找到符合条件的结果。请问您是否有其他要求或者需要我帮您推荐其他类型的菜肴呢？"
+        转换后："很抱歉，根据您的要求搜索包含鸡肉的菜肴，但是没有找到符合条件的结果。请问您是否有其他要求或者需要我帮您推荐其他类型的菜肴呢？"
+        （不生成卡片，直接返回原始文本）
+
+        示例2：空数组
+        原始："```json {"items": []} ```"
+        转换后："```json {"items": []} ```"
+        （不生成卡片，直接返回原始文本）
+
+        示例3：纯文本提示
+        原始："请问您想要什么口味的菜品？"
+        转换后："请问您想要什么口味的菜品？"
+        （不生成卡片，直接返回原始文本）
 
         只返回格式化后的结果，不要添加额外的解释。
         """)
