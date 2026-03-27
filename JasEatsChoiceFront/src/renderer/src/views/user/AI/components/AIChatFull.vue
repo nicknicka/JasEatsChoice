@@ -93,7 +93,7 @@
               <div
                 v-if="getDisplayContent(message) && !(message.messageType && isCardMessage(message.messageType))"
                 class="message-text-content"
-                :class="{ 'markdown-content': message.enableMarkdown }"
+                :class="{ 'markdown-content': message.enableMarkdown, 'typing': message.isTyping }"
                 v-html="renderContent(getDisplayContent(message), message.enableMarkdown)"
               ></div>
 
@@ -101,7 +101,7 @@
               <div
                 v-if="getDisplayContent(message) && (message.messageType && isCardMessage(message.messageType))"
                 class="card-summary-text"
-                :class="{ 'markdown-content': message.enableMarkdown }"
+                :class="{ 'markdown-content': message.enableMarkdown, 'typing': message.isTyping }"
                 v-html="renderContent(getDisplayContent(message), message.enableMarkdown)"
               ></div>
               <!-- 更多操作按钮（仅文本消息显示） -->
@@ -125,6 +125,27 @@
           </div>
         </div>
       </template>
+
+      <!-- AI进度指示器（显示在消息列表之后，始终在可视区域） -->
+      <transition name="fade-in">
+        <div v-if="currentProgressMessage" class="ai-progress-indicator">
+          <!-- 调试信息 -->
+          <div style="position: absolute; top: -20px; left: 0; font-size: 10px; color: red; z-index: 1000;">
+            [DEBUG: 进度指示器显示中 - {{ currentProgressMessage }}]
+          </div>
+          <div class="progress-avatar">
+            <div class="avatar-emoji">🤖</div>
+          </div>
+          <div class="progress-content">
+            <div class="progress-text">{{ currentProgressMessage }}</div>
+            <div class="progress-dots">
+              <span class="progress-dot"></span>
+              <span class="progress-dot"></span>
+              <span class="progress-dot"></span>
+            </div>
+          </div>
+        </div>
+      </transition>
     </div>
 
     <!-- 底部容器 -->
@@ -344,6 +365,7 @@ import {
 import { parseMarkdown } from '../../../../utils/markdownParser'
 import axios from 'axios'
 import { API_CONFIG } from '../../../../config/index'
+import { initializeQuickQuestions, DEFAULT_EXPANDED_CATEGORY } from '../../../../config/quickQuestions'
 import { useAuthStore } from '../../../../store/authStore'
 import { useUserStore } from '../../../../store/userStore'
 import CommonAvatar from '@/components/CommonAvatar.vue'
@@ -370,6 +392,7 @@ const inputMessage = ref('')
 const isLoading = ref(false)
 const isStreaming = ref(false)
 const isInitialLoading = ref(true) // 初始加载状态，显示等待效果
+const currentProgressMessage = ref('') // 当前进度消息
 const abortController = ref(null)
 const chatContainerRef = ref(null)
 const bottomContainerRef = ref(null)
@@ -458,52 +481,8 @@ const lastQueryMessageIndex = ref(-1)
 const aiPersonalDataEnabled = ref(false)
 
 // 快捷问题分类列表（与后端Function Calling功能对应）
-const quickQuestionCategories = ref([
-  {
-    id: 'dish-exploration',
-    title: '🍽️ 菜品探索',
-    expanded: true,
-    questions: [
-      "帮我搜索一些主食菜品",
-      "有什么推荐的甜点吗",
-      "搜索包含鸡肉的菜肴",
-      "查看汤品分类的菜品"
-    ]
-  },
-  {
-    id: 'nutrition-analysis',
-    title: '📊 营养分析',
-    expanded: false,
-    questions: [
-      "分析西红柿炒鸡蛋的营养成分",
-      "宫保鸡丁的热量是多少",
-      "这份菜的蛋白质含量高吗",
-      "分析这碗米饭的营养价值"
-    ]
-  },
-  {
-    id: 'order-management',
-    title: '🛒 订单管理',
-    expanded: false,
-    questions: [
-      "我要下单宫保鸡丁和红烧肉",
-      "查询我的订单状态",
-      "创建一个新订单",
-      "我的订单准备好了吗"
-    ]
-  },
-  {
-    id: 'personalized-recommendation',
-    title: '👤 个性化推荐',
-    expanded: false,
-    questions: [
-      "根据我的喜好推荐菜品",
-      "查看我的饮食偏好",
-      "我最近都点了什么菜",
-      "有什么适合我的健康菜品推荐"
-    ]
-  }
-])
+// 从配置文件初始化，默认展开第一个分类
+const quickQuestionCategories = ref(initializeQuickQuestions(DEFAULT_EXPANDED_CATEGORY))
 
 // 切换分类展开/折叠状态（同时只能展开一个分类）
 const toggleCategory = (categoryIndex) => {
@@ -721,7 +700,105 @@ const renderContent = (content, useMarkdown) => {
   return content.replace(/\n/g, '<br>')
 }
 
-// 流式传输：逐块读取AI回复
+// ========== 辅助函数：消息统计日志 ==========
+const logMessageStats = (message) => {
+  if (!message) return
+  console.log('✅ AI消息接收完成')
+  console.log('📊 消息统计:')
+  console.log(`   - 总字符数: ${message.content?.length || 0}`)
+  console.log(`   - 消息类型: ${message.messageType || '纯文本'}`)
+  console.log(`   - 包含卡片: ${message.cardData ? '是' : '否'}`)
+  console.log(`   - 换行符数量: ${(message.content?.match(/\n/g) || []).length}`)
+  console.log(`   - 完整内容（原始）:`)
+  console.log('─'.repeat(60))
+  console.log(message.content.replace(/\n/g, '↵\n'))
+  console.log('─'.repeat(60))
+}
+
+// ========== 辅助函数：验证并保存消息 ==========
+const validateAndSaveMessage = async (messageIndex) => {
+  if (!isMounted.value) return false
+
+  const message = messages.value[messageIndex]
+  if (!message || !message.content) {
+    console.warn('⚠️ 消息对象不存在或无内容')
+    return false
+  }
+
+  // 跳过进度消息
+  if (message._isProgressMessage) {
+    console.log('⏭️ 跳过进度消息保存')
+    return true
+  }
+
+  try {
+    await saveMessageToBackend('ai', message.content, message.messageType, message.cardData)
+    return true
+  } catch (error) {
+    console.warn('⚠️ 保存消息到后端失败:', error.message)
+    return false
+  }
+}
+
+// ========== 辅助函数：获取消息对象（带验证）==========
+const getMessage = (messageIndex) => {
+  if (!isMounted.value || !messages.value[messageIndex]) {
+    return null
+  }
+  return messages.value[messageIndex]
+}
+
+// ========== 辅助函数：UI更新 ==========
+const updateUI = async () => {
+  if (isMounted.value) {
+    await nextTick()
+    scrollToBottom()
+  }
+}
+
+// ========== 辅助函数：处理最终结果 ==========
+const handleFinalResult = async (messageIndex, parsedData) => {
+  console.log('🏁 [最终结果] 处理完成，准备启动打字机效果')
+
+  // 清除进度指示器
+  currentProgressMessage.value = ''
+  await new Promise(resolve => setTimeout(resolve, 300))
+
+  const message = getMessage(messageIndex)
+  if (!message) return
+
+  // 跳过进度消息
+  if (message._isProgressMessage) {
+    console.log('⏭️ 跳过进度消息保存')
+    return
+  }
+
+  // 统计信息
+  console.log('✅ AI消息接收完成（最终结果）')
+  console.log('📊 消息统计:')
+  console.log(`   - 总字符数: ${message.content?.length || 0}`)
+  console.log(`   - 消息类型: ${message.messageType || '纯文本'}`)
+  console.log(`   - 包含卡片: ${message.cardData ? '是' : '否'}`)
+
+  // 打字机效果（仅纯文本消息）
+  if (!message.messageType && message.displayContent) {
+    const fullText = message.displayContent
+    console.log('⌨️ 启动打字机效果，字符数:', fullText.length)
+    message.displayContent = ''
+    await startTypewriterEffect(messageIndex, fullText, 20)
+    console.log('✅ 打字机效果完成')
+  }
+
+  // 保存到后端
+  try {
+    await saveMessageToBackend('ai', message.content, message.messageType, message.cardData)
+    console.log('✅ 最终结果已保存到后端')
+  } catch (error) {
+    console.warn('⚠️ 保存消息到后端失败:', error.message)
+  }
+}
+
+// ========== 流式传输：逐块读取AI回复 ==========
 const streamResponse = async (messageIndex, reader) => {
   isStreaming.value = true
 
@@ -733,19 +810,16 @@ const streamResponse = async (messageIndex, reader) => {
   }
 
   // 确保消息对象有必要的属性
-  if (messages.value[messageIndex].content === undefined || messages.value[messageIndex].content === null) {
-    messages.value[messageIndex].content = ''
-  }
-  if (messages.value[messageIndex].displayContent === undefined || messages.value[messageIndex].displayContent === null) {
-    messages.value[messageIndex].displayContent = ''
-  }
+  const msg = messages.value[messageIndex]
+  msg.content ??= ''
+  msg.displayContent ??= ''
 
   const decoder = new TextDecoder()
   let buffer = ''
 
   try {
     while (true) {
-      // 组件挂载状态检查：如果组件已卸载，立即停止处理
+      // 组件挂载状态检查
       if (!isMounted.value) {
         console.log('ℹ️ 组件已卸载，停止流式处理')
         break
@@ -753,12 +827,13 @@ const streamResponse = async (messageIndex, reader) => {
 
       const { done, value } = await reader.read()
       if (done) break
+
       const chunk = decoder.decode(value, { stream: true })
       buffer += chunk
       const lines = buffer.split('\n')
       buffer = lines.pop() || ''
 
-      let currentEvent = 'message' // 默认事件类型
+      let currentEvent = 'message'
 
       for (const line of lines) {
         const trimmedLine = line.trim()
@@ -769,448 +844,232 @@ const streamResponse = async (messageIndex, reader) => {
           continue
         }
 
-        // 处理 end 事件：完成流式传输
+        // 处理 end/error 事件：完成流式传输
         if (currentEvent === 'end' || currentEvent === 'error') {
-          // 统计完整消息信息
-          if (messages.value[messageIndex]) {
-            const currentMessage = messages.value[messageIndex]
-            console.log('✅ AI消息接收完成')
-            console.log('📊 消息统计:')
-            console.log(`   - 总字符数: ${currentMessage.content?.length || 0}`)
-            console.log(`   - 消息类型: ${currentMessage.messageType || '纯文本'}`)
-            console.log(`   - 包含卡片: ${currentMessage.cardData ? '是' : '否'}`)
-            console.log(`   - 换行符数量: ${(currentMessage.content?.match(/\n/g) || []).length}`)
-            console.log(`   - 完整内容（原始）:`)
-            console.log('─'.repeat(60))
-            // 将换行符显示为可见符号
-            console.log(currentMessage.content.replace(/\n/g, '↵\n'))
-            console.log('─'.repeat(60))
-          }
-
-          if (!isMounted.value) {
-            return
-          }
-
-          // 保存消息到后端
-          if (messages.value[messageIndex]) {
-            const currentMessage = messages.value[messageIndex]
-            if (currentMessage && currentMessage.content) {
-              try {
-                await saveMessageToBackend(
-                  'ai',
-                  currentMessage.content,
-                  currentMessage.messageType,
-                  currentMessage.cardData
-                )
-              } catch (error) {
-                console.warn('⚠️ 保存消息到后端失败:', error.message)
-              }
-            }
+          const message = getMessage(messageIndex)
+          if (message) {
+            logMessageStats(message)
+            await validateAndSaveMessage(messageIndex)
           }
           return
         }
 
         // 只处理 message 事件
         if (currentEvent !== 'message') continue
-
         if (!trimmedLine.startsWith('data:')) continue
 
         const data = trimmedLine.substring(5).trim()
-        if (!data || data === '' || data === 'data:') {
-          continue
-        }
+        if (!data || data === '' || data === 'data:') continue
 
         try {
-          // 解析SSE数据（支持多种格式：纯文本、JSON对象、JSON数组）
+          // 解析SSE数据
           let parsedData
           let isPlainText = false
 
           if (data.startsWith('[')) {
-            // Spring Boot的SseEmitter数组格式：[{...}, {...}, {...}]
+            // Spring Boot SseEmitter数组格式
             const dataArray = JSON.parse(data)
-
-            // 查找data字段是对象类型（包含done、content或card_data）的元素
-            const actualDataItem = dataArray.find(
-              (item) => {
-                const itemData = item.data
-                return itemData &&
-                       typeof itemData === 'object' &&
-                       !itemData.mediaType &&
-                       (itemData.hasOwnProperty('done') ||
-                        itemData.hasOwnProperty('content') ||
-                        itemData.hasOwnProperty('card_data'))
-              }
-            )
-
-            if (actualDataItem && actualDataItem.data) {
-              parsedData = actualDataItem.data
-            }
+            const actualDataItem = dataArray.find(item => {
+              const itemData = item.data
+              return itemData &&
+                     typeof itemData === 'object' &&
+                     !itemData.mediaType &&
+                     (itemData.hasOwnProperty('done') ||
+                      itemData.hasOwnProperty('content') ||
+                      itemData.hasOwnProperty('card_data'))
+            })
+            if (actualDataItem?.data) parsedData = actualDataItem.data
           } else if (data.startsWith('{')) {
-            // 直接的对象格式
+            // JSON对象格式
             parsedData = JSON.parse(data)
-
-            // 处理新的字符包装格式 {char: "字符"}
             if (parsedData.hasOwnProperty('char')) {
-              const char = parsedData.char
-              // 调试：记录接收到的字符
-              if (char === '\n') {
-                console.log('📥 收到换行符')
-              }
+              if (parsedData.char === '\n') console.log('📥 收到换行符')
               isPlainText = true
-              parsedData = { content: char, done: false }
+              parsedData = { content: parsedData.char, done: false }
             }
           } else {
-            // 纯文本格式：直接作为content处理
+            // 纯文本格式
             isPlainText = true
             parsedData = { content: data, done: false }
           }
 
-          // 验证解析结果是否有效
+          // 验证解析结果
           if (!isPlainText && parsedData && typeof parsedData !== 'object') {
             console.warn('⚠️ 解析结果类型错误:', typeof parsedData)
             continue
           }
+          if (!parsedData) continue
 
-          if (!parsedData) {
-            continue
-          }
-
-          // ========== 【调试】打印所有接收到的SSE数据 ==========
+          // 调试日志
           console.log('📥 [SSE接收] 接收到message事件')
           console.log('📦 原始数据:', data.substring(0, 100) + (data.length > 100 ? '...' : ''))
           console.log('🔍 解析类型:', isPlainText ? '纯文本' : 'JSON对象')
           console.log('📋 解析结果:', parsedData)
+          if (parsedData.message) console.log('💬 消息内容:', parsedData.message.substring(0, 100) + '...')
+          if (parsedData.agentName) console.log('🤖 Agent名称:', parsedData.agentName)
+          if (parsedData.output) console.log('📤 Agent输出:', parsedData.output.substring(0, 100) + '...')
 
-          if (parsedData.message) {
-            console.log('💬 消息内容:', parsedData.message.substring(0, 100) + '...')
-          }
-          if (parsedData.agentName) {
-            console.log('🤖 Agent名称:', parsedData.agentName)
-          }
-          if (parsedData.output) {
-            console.log('📤 Agent输出:', parsedData.output.substring(0, 100) + '...')
-          }
-          // ====================================================
-
-          // 接收 done 字段：检查是否结束
+          // 处理 done 字段
           if (parsedData.done === true) {
-            // 统计完整消息信息
-            if (messages.value[messageIndex]) {
-              const currentMessage = messages.value[messageIndex]
-              console.log('✅ AI消息接收完成')
-              console.log('📊 消息统计:')
-              console.log(`   - 总字符数: ${currentMessage.content?.length || 0}`)
-              console.log(`   - 消息类型: ${currentMessage.messageType || '纯文本'}`)
-              console.log(`   - 包含卡片: ${currentMessage.cardData ? '是' : '否'}`)
-              console.log(`   - 换行符数量: ${(currentMessage.content?.match(/\n/g) || []).length}`)
-              console.log(`   - 完整内容（原始）:`)
-              console.log('─'.repeat(60))
-              // 将换行符显示为可见符号
-              console.log(currentMessage.content.replace(/\n/g, '↵\n'))
-              console.log('─'.repeat(60))
+            const message = getMessage(messageIndex)
+            if (message) {
+              logMessageStats(message)
+              await validateAndSaveMessage(messageIndex)
             }
-
-            // 组件挂载状态检查
-            if (!isMounted.value) {
-              return
-            }
-
-            // 确保 messageIndex 有效且消息对象存在
-            if (messages.value[messageIndex]) {
-              const currentMessage = messages.value[messageIndex]
-
-              // 安全检查：确保消息对象存在
-              if (currentMessage && currentMessage.content) {
-                try {
-                  await saveMessageToBackend(
-                    'ai',
-                    currentMessage.content,
-                    currentMessage.messageType,
-                    currentMessage.cardData
-                  )
-                } catch (error) {
-                  console.warn('⚠️ 保存消息到后端失败:', error.message)
-                }
-              }
-            }
-
             return
           }
 
-          // ========== 【消息处理】后端已过滤技术细节 ==========
-
-          // 过滤卡片数据标记（纯文本）- 在JSON解析前就过滤
-          if (isPlainText &&
-              (data.trim() === '[CARD_DATA_START]' ||
-               data.trim() === '[CARD_DATA_END]' ||
-               data.trim().startsWith('[CARD_DATA_'))) {
+          // 过滤卡片数据标记
+          if (isPlainText && (data.trim() === '[CARD_DATA_START]' ||
+              data.trim() === '[CARD_DATA_END]' ||
+              data.trim().startsWith('[CARD_DATA_'))) {
             console.log('🔄 [过滤] 卡片数据标记:', data.trim())
             continue
           }
 
-          // ========== 【识别消息类型】 ==========
-
-          // 优先级1：进度消息 - {progress: true, message: '正在...'}
+          // 识别消息类型
+          // 优先级1：进度消息
           if (parsedData.progress === true && parsedData.message) {
             console.log('📢 [进度消息]', parsedData.message)
+            currentProgressMessage.value = parsedData.message
+            await nextTick()
 
-            // 进度消息：替换最后一条AI消息的内容，而不是追加
-            if (messages.value[messageIndex]) {
-              messages.value[messageIndex].content = parsedData.message
-              messages.value[messageIndex]._isProgressMessage = true  // 标记为进度消息，不保存到数据库
+            const message = getMessage(messageIndex)
+            if (message) {
+              message.content = parsedData.message
+              message._isProgressMessage = true
             }
-
-            // 跳过后续处理
             continue
           }
 
-          // 优先级2：卡片数据 - {type: 'dish'/'merchant'/'order'/'health', title: '...', subtitle: '...'}
+          // 优先级2：卡片数据
           if (parsedData.type && ['dish', 'merchant', 'order', 'health'].includes(parsedData.type)) {
             console.log('🎴 [卡片数据] 类型:', parsedData.type, '标题:', parsedData.title)
-
-            // 将卡片数据转换为可显示的文本内容
             let cardContent = `**${parsedData.title}**\n`
-            if (parsedData.subtitle) {
-              cardContent += `${parsedData.subtitle}\n`
-            }
-            if (parsedData.description) {
-              cardContent += `\n${parsedData.description}`
-            }
-
+            if (parsedData.subtitle) cardContent += `${parsedData.subtitle}\n`
+            if (parsedData.description) cardContent += `\n${parsedData.description}`
             parsedData.content = cardContent
             parsedData._isFinalResult = true
-            parsedData._cardData = parsedData  // 保存原始卡片数据
+            parsedData._cardData = parsedData
             parsedData._cardType = parsedData.type
           }
-
-          // 优先级3：info消息 - {type: 'info', title: '...', content: '...'}
+          // 优先级3：info消息
           else if (parsedData.type === 'info' && parsedData.content) {
             console.log('✅ [最终结果] 收到AI回复，长度:', parsedData.content.length)
             console.log('📋 标题:', parsedData.title)
             parsedData._isFinalResult = true
-            // 直接使用 content，不需要额外处理
           }
-
-          // 优先级4：SupervisorAgent的output - {agentName: 'SupervisorAgent', output: '...'}
+          // 优先级4：SupervisorAgent的output
           else if (parsedData.agentName === 'SupervisorAgent' && parsedData.output) {
             console.log('✅ [最终结果] 收到SupervisorAgent输出，长度:', parsedData.output.length)
             parsedData.content = parsedData.output
             parsedData._isFinalResult = true
           }
-
-          // 优先级5：普通内容 - {content: '...'}
+          // 优先级5：普通内容
           else if (parsedData.content) {
             console.log('📝 [内容更新] 长度:', parsedData.content.length)
           }
 
-          // 接收 card_data 字段：设置卡片数据和类型
+          // 处理 card_data 字段
           if (parsedData.card_data) {
-            // 组件挂载状态检查
-            if (!isMounted.value) {
-              console.warn('⚠️ 组件已卸载，停止处理卡片数据')
+            const message = getMessage(messageIndex)
+            if (!message) {
+              console.warn('⚠️ 组件已卸载或消息索引无效')
               break
             }
 
-            // 确保 messageIndex 有效且消息对象存在
-            if (!messages.value[messageIndex]) {
-              console.warn('⚠️ 消息索引无效，跳过卡片数据更新:', messageIndex)
-              continue
-            }
-
             console.log('📊 收到卡片数据:', parsedData.card_data)
-            const currentMessage = messages.value[messageIndex]
-
-            // 安全检查：确保消息对象存在
-            if (!currentMessage) {
-              console.warn('⚠️ 消息对象不存在，跳过卡片数据更新')
-              continue
-            }
-
             try {
-              const cardMessageType = parsedData.card_data.messageType
-              const cardDataPayload = parsedData.card_data.data
-
-              // 验证数据有效性
+              const { messageType: cardMessageType, data: cardDataPayload } = parsedData.card_data
               if (cardMessageType && cardDataPayload) {
-                currentMessage.messageType = cardMessageType
-                currentMessage.cardData = cardDataPayload
+                message.messageType = cardMessageType
+                message.cardData = cardDataPayload
                 console.log('✅ 卡片数据已设置:', {
-                  messageType: currentMessage.messageType,
-                  hasCardData: !!currentMessage.cardData,
-                  cardDataKeys: currentMessage.cardData ? Object.keys(currentMessage.cardData) : []
+                  messageType: message.messageType,
+                  hasCardData: !!message.cardData,
+                  cardDataKeys: message.cardData ? Object.keys(message.cardData) : []
                 })
-
-                // 安全地执行 DOM 更新
-                if (isMounted.value) {
-                  await nextTick()
-                  scrollToBottom()
-                }
+                await updateUI()
               } else {
                 console.warn('⚠️ 卡片数据无效:', { cardMessageType, cardDataPayload })
               }
             } catch (error) {
               console.warn('⚠️ 更新卡片数据失败:', error.message)
-              // 继续处理，不中断流
             }
           }
 
-          // 接收 content 字段：追加文本
+          // 处理 content 字段
           if (parsedData.content) {
-            // 组件挂载状态检查
-            if (!isMounted.value) {
-              console.warn('⚠️ 组件已卸载，停止处理内容')
+            const message = getMessage(messageIndex)
+            if (!message) {
+              console.warn('⚠️ 组件已卸载或消息索引无效')
               break
             }
 
             const newContent = parsedData.content
-
-            // 确保 messageIndex 有效且消息对象存在
-            if (!messages.value[messageIndex]) {
-              console.warn('⚠️ 消息索引无效，跳过更新:', messageIndex)
-              continue
-            }
-
-            const currentMessage = messages.value[messageIndex]
-
-            // 安全检查：确保消息对象存在
-            if (!currentMessage) {
-              console.warn('⚠️ 消息对象不存在，跳过此更新')
-              continue
-            }
-
-            // 检测工具执行提示（移到外层作用域）
             const toolPromptRegex = /🔧\s*正在执行工具函数[.。]{0,3}/
             const hasToolPrompt = toolPromptRegex.test(newContent)
 
             try {
-              // 确保 currentMessage 有必要的属性
-              if (!currentMessage.content) {
-                currentMessage.content = ''
-              }
-              if (!currentMessage.displayContent) {
-                currentMessage.displayContent = ''
-              }
+              message.content ??= ''
+              message.displayContent ??= ''
 
-              if (hasToolPrompt && !currentMessage.isToolExecuting) {
-                // 检测到工具执行开始
-                currentMessage.isToolExecuting = true
-                currentMessage.toolCompleted = false
-                currentMessage.hasToolPrompt = true
+              if (hasToolPrompt && !message.isToolExecuting) {
+                message.isToolExecuting = true
+                message.toolCompleted = false
+                message.hasToolPrompt = true
                 console.log('🔧 工具开始执行')
               }
 
-              // 过滤掉工具提示文本，不显示在普通内容中
               const filteredContent = newContent.replace(toolPromptRegex, '')
+              message.content += newContent
+              message.displayContent += filteredContent
 
-              // 更新完整内容和显示内容
-              currentMessage.content += newContent
-              currentMessage.displayContent += filteredContent
-
-              // 检测工具执行完成（收到非工具提示的正常内容）
-              if (currentMessage.isToolExecuting && filteredContent.trim() && !hasToolPrompt) {
-                currentMessage.isToolExecuting = false
-                currentMessage.toolCompleted = true
+              if (message.isToolExecuting && filteredContent.trim() && !hasToolPrompt) {
+                message.isToolExecuting = false
+                message.toolCompleted = true
                 console.log('✅ 工具执行完成')
 
-                // 3秒后隐藏完成通知（使用更安全的方式）
+                // 3秒后隐藏完成通知
                 const currentIndex = messageIndex
                 setTimeout(() => {
-                  // 组件卸载检查
-                  if (!isMounted.value) {
-                    return
-                  }
-
-                  // 使用双重检查确保对象和属性都存在
-                  try {
-                    if (messages.value &&
-                        messages.value[currentIndex] &&
-                        Object.prototype.hasOwnProperty.call(messages.value[currentIndex], 'toolCompleted')) {
-                      messages.value[currentIndex].toolCompleted = false
-                    }
-                  } catch (error) {
-                    // 静默处理，避免级联错误
-                    console.warn('⚠️ 更新toolCompleted失败:', error.message)
+                  if (isMounted.value &&
+                      messages.value?.[currentIndex] &&
+                      Object.prototype.hasOwnProperty.call(messages.value[currentIndex], 'toolCompleted')) {
+                    messages.value[currentIndex].toolCompleted = false
                   }
                 }, 3000)
               }
             } catch (error) {
               console.warn('⚠️ 更新消息内容失败:', error.message)
-              // 继续处理，不中断流
             }
 
-            // 安全地执行 DOM 更新
-            try {
-              if (isMounted.value) {
-                await nextTick()
-                // 流式传输时自动滚动，除非用户主动向上滚动
-                scrollToBottom()
-              }
+            await updateUI()
 
-              // ========== 【最终结果处理】收到最终结果后自动完成 ==========
-              if (parsedData._isFinalResult) {
-                console.log('🏁 [最终结果] 处理完成，准备保存到后端')
-
-                // 延迟一小段时间确保UI更新完成
-                await new Promise(resolve => setTimeout(resolve, 500))
-
-                // 触发完成逻辑（保存到后端）
-                if (messages.value[messageIndex]) {
-                  const currentMessage = messages.value[messageIndex]
-
-                  // ========== 【跳过进度消息】不保存到数据库 ==========
-                  if (currentMessage._isProgressMessage) {
-                    console.log('⏭️ 跳过进度消息保存，不保存到数据库')
-                    return
-                  }
-
-                  console.log('✅ AI消息接收完成（最终结果）')
-                  console.log('📊 消息统计:')
-                  console.log(`   - 总字符数: ${currentMessage.content?.length || 0}`)
-                  console.log(`   - 消息类型: ${currentMessage.messageType || '纯文本'}`)
-                  console.log(`   - 包含卡片: ${currentMessage.cardData ? '是' : '否'}`)
-
-                  try {
-                    await saveMessageToBackend(
-                      'ai',
-                      currentMessage.content,
-                      currentMessage.messageType,
-                      currentMessage.cardData
-                    )
-                    console.log('✅ 最终结果已保存到后端')
-                  } catch (error) {
-                    console.warn('⚠️ 保存消息到后端失败:', error.message)
-                  }
-                }
-              }
-            } catch (error) {
-              // DOM 更新失败时的处理（组件可能已卸载）
-              console.warn('⚠️ DOM更新失败:', error.message)
+            // 处理最终结果
+            if (parsedData._isFinalResult) {
+              await handleFinalResult(messageIndex, parsedData)
             }
-          } else {
-            // console.log('⚠️ 没有content字段，parsedData:', parsedData)  // 【调试日志】
           }
         } catch (error) {
-          // 改进错误处理：提供更详细的错误信息
           if (error.name === 'SyntaxError') {
             console.warn('⚠️ JSON解析失败，数据格式不正确:', data.substring(0, 100))
           } else {
             console.warn('⚠️ 数据处理错误:', error.message)
           }
-          // 继续处理下一条数据，不中断流
         }
       }
     }
   } catch (error) {
-    // 用户主动取消，不显示错误日志
     if (error.name === 'AbortError') {
       console.log('ℹ️ 用户主动停止流式传输')
       return
     }
-    // 其他错误正常处理
     console.error('❌ 流式传输错误:', error)
     throw error
   } finally {
     isStreaming.value = false
+    currentProgressMessage.value = ''
   }
 }
 
@@ -1228,6 +1087,18 @@ const sendMessage = async () => {
     ElMessage.warning('消息长度不能超过500个字符')
     return
   }
+
+  // ⌨️ 停止所有正在进行的打字机效果
+  messages.value.forEach(msg => {
+    if (msg.isTyping) {
+      msg.isTyping = false
+      msg.showCursor = false
+      // 恢复完整内容
+      if (msg.content) {
+        msg.displayContent = msg.content
+      }
+    }
+  })
 
   // ========== 日志记录：请求开始 ==========
   const requestStartTime = Date.now()
@@ -1279,7 +1150,10 @@ const sendMessage = async () => {
     toolCompleted: false, // 工具是否执行完成
     hasToolPrompt: false, // 是否包含工具提示
     messageType: null, // 消息类型（用于卡片渲染）
-    cardData: null // 卡片数据
+    cardData: null, // 卡片数据
+    isTyping: false, // 是否正在打字机效果
+    typingIndex: 0, // 当前打字位置索引
+    showCursor: false // 是否显示光标
   })
 
   // 不自动滚动,让用户控制查看位置
@@ -1984,6 +1858,10 @@ const handlePersonalDataToggle = async (value) => {
 
 // 判断消息是否应该显示
 const shouldShowMessage = (message) => {
+  // 如果正在打字机效果中，始终显示
+  if (message.isTyping) {
+    return true
+  }
   // 如果有 displayContent 字段，使用它
   if (message.displayContent !== undefined) {
     return message.displayContent.length > 0 ||
@@ -1993,8 +1871,51 @@ const shouldShowMessage = (message) => {
   return message.content && message.content.length > 0
 }
 
+// 打字机效果函数
+const startTypewriterEffect = async (messageIndex, fullText, speed = 30) => {
+  const message = messages.value[messageIndex]
+  if (!message) return
+
+  // 初始化打字状态
+  message.isTyping = true
+  message.typingIndex = 0
+  message.showCursor = true
+
+  // 清空显示内容，准备开始打字
+  message.displayContent = ''
+
+  // 逐字显示
+  const totalLength = fullText.length
+  while (message.typingIndex < totalLength && message.isTyping) {
+    // 每次增加几个字符（加快速度）
+    const charsToAdd = Math.min(3, totalLength - message.typingIndex)
+    message.typingIndex += charsToAdd
+    message.displayContent = fullText.substring(0, message.typingIndex)
+
+    // 等待一段时间
+    await new Promise(resolve => setTimeout(resolve, speed))
+
+    // 自动滚动到底部
+    if (isMounted.value) {
+      await nextTick()
+      scrollToBottom()
+    }
+  }
+
+  // 打字完成
+  message.isTyping = false
+  message.showCursor = false
+  message.displayContent = fullText
+
+  console.log('✅ 打字机效果完成')
+}
+
 // 获取消息的显示内容
 const getDisplayContent = (message) => {
+  // 如果正在打字机效果中，返回打字内容
+  if (message.isTyping && message.displayContent !== undefined) {
+    return message.displayContent
+  }
   // 优先使用 displayContent（过滤后的内容）
   if (message.displayContent !== undefined) {
     return message.displayContent
@@ -2266,6 +2187,106 @@ onUnmounted(() => {
       font-size: 1rem;
       color: #909399;
       animation: textPulse 2s ease-in-out infinite;
+    }
+  }
+
+  // AI进度指示器（独立显示）
+  .ai-progress-indicator {
+    display: flex !important;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border: 1px solid #bae6fd;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(14, 165, 233, 0.15);
+    opacity: 1 !important;
+    position: relative;
+    z-index: 10;
+    width: 100%;
+    box-sizing: border-box;
+
+    .progress-avatar {
+      flex-shrink: 0;
+
+      .avatar-emoji {
+        font-size: 32px;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+        animation: avatarPulse 2s ease-in-out infinite;
+      }
+    }
+
+    .progress-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+
+      .progress-text {
+        font-size: 0.95rem;
+        font-weight: 500;
+        color: #0ea5e9;
+        line-height: 1.5;
+      }
+
+      .progress-dots {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+
+        .progress-dot {
+          width: 6px;
+          height: 6px;
+          background: #0ea5e9;
+          border-radius: 50%;
+          animation: dotBounce 1.4s ease-in-out infinite;
+
+          &:nth-child(1) {
+            animation-delay: 0s;
+          }
+
+          &:nth-child(2) {
+            animation-delay: 0.2s;
+          }
+
+          &:nth-child(3) {
+            animation-delay: 0.4s;
+          }
+        }
+      }
+    }
+  }
+
+  // 动画定义
+  @keyframes progressSlideIn {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes avatarPulse {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.05);
+    }
+  }
+
+  @keyframes dotBounce {
+    0%, 80%, 100% {
+      transform: scale(0.8);
+      opacity: 0.5;
+    }
+    40% {
+      transform: scale(1);
+      opacity: 1;
     }
   }
 
@@ -2700,21 +2721,19 @@ onUnmounted(() => {
 }
 
 // 淡入动画
-.fade-in-enter-active {
-  animation: fadeIn 0.3s ease-out;
-}
-
+.fade-in-enter-active,
 .fade-in-leave-active {
-  animation: fadeIn 0.3s ease-in reverse;
+  transition: opacity 0.3s ease-out;
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+.fade-in-enter-from,
+.fade-in-leave-to {
+  opacity: 0;
+}
+
+.fade-in-enter-to,
+.fade-in-leave-from {
+  opacity: 1;
 }
 
 @keyframes dropdownFadeIn {
@@ -2775,6 +2794,43 @@ onUnmounted(() => {
   font-size: 14px;
   line-height: 1.6;
   color: #666;
+}
+
+// 打字机光标效果
+.typing-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1.2em;
+  background: #667eea;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: cursorBlink 1s step-end infinite;
+}
+
+@keyframes cursorBlink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0;
+  }
+}
+
+// 打字中的消息文本样式
+.message-text-content.typing,
+.card-summary-text.typing {
+  position: relative;
+
+  &::after {
+    content: '';
+    display: inline-block;
+    width: 2px;
+    height: 1.2em;
+    background: #667eea;
+    margin-left: 2px;
+    vertical-align: text-bottom;
+    animation: cursorBlink 1s step-end infinite;
+  }
 }
 
 // 快捷提问按钮包装器（提供相对定位参考）
@@ -3311,21 +3367,6 @@ onUnmounted(() => {
       transform: scale(1);
       opacity: 1;
     }
-  }
-
-  // fade-in过渡动画
-  .fade-in-enter-active {
-    transition: all 0.3s ease-out;
-  }
-
-  .fade-in-enter-from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-
-  .fade-in-enter-to {
-    opacity: 1;
-    transform: translateY(0);
   }
 
   .send-btn {

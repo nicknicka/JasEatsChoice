@@ -12,13 +12,13 @@ export const MessageTypes = {
   STRUCTURED_QUERY: 'structured_query',
 
   // 卡片消息类型
-  ORDER_LIST_CARD: 'order_list_card',          // 订单列表卡片
-  FAVORITE_LIST_CARD: 'favorite_list_card',    // 收藏列表卡片
-  REVIEW_LIST_CARD: 'review_list_card',        // 评价列表卡片
-  COUPON_LIST_CARD: 'coupon_list_card',        // 优惠券列表卡片
-  USER_INFO_CARD: 'user_info_card',            // 用户信息卡片
-  DISH_LIST_CARD: 'dish_list_card',            // 菜品列表卡片
-  ERROR_CARD: 'error_card'                     // 错误卡片
+  ORDER_LIST_CARD: 'order_list_card', // 订单列表卡片
+  FAVORITE_LIST_CARD: 'favorite_list_card', // 收藏列表卡片
+  REVIEW_LIST_CARD: 'review_list_card', // 评价列表卡片
+  COUPON_LIST_CARD: 'coupon_list_card', // 优惠券列表卡片
+  USER_INFO_CARD: 'user_info_card', // 用户信息卡片
+  DISH_LIST_CARD: 'dish_list_card', // 菜品列表卡片
+  ERROR_CARD: 'error_card' // 错误卡片
 }
 
 // 查询类型枚举（用于快速操作按钮）

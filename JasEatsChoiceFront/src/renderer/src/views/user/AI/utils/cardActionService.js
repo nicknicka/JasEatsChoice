@@ -18,7 +18,7 @@ const getAuthHeaders = () => {
     console.warn('未找到认证token')
   }
   return {
-    'Authorization': `Bearer ${token}`
+    Authorization: `Bearer ${token}`
   }
 }
 
@@ -33,14 +33,10 @@ export const orderActions = {
    */
   async cancelOrder(orderId) {
     try {
-      const response = await axios.put(
-        `${baseURL}/v1/orders/${orderId}/cancel`,
-        null,
-        {
-          params: { reason: '用户取消' }, // 使用/cancel端点
-          headers: getAuthHeaders()
-        }
-      )
+      const response = await axios.put(`${baseURL}/v1/orders/${orderId}/cancel`, null, {
+        params: { reason: '用户取消' }, // 使用/cancel端点
+        headers: getAuthHeaders()
+      })
       return response.data
     } catch (error) {
       console.error('取消订单失败:', error)
@@ -78,10 +74,9 @@ export const orderActions = {
    */
   async getOrderDetail(orderId) {
     try {
-      const response = await axios.get(
-        `${baseURL}/v1/orders/${orderId}`,
-        { headers: getAuthHeaders() }
-      )
+      const response = await axios.get(`${baseURL}/v1/orders/${orderId}`, {
+        headers: getAuthHeaders()
+      })
       return response.data
     } catch (error) {
       console.error('获取订单详情失败:', error)
@@ -102,17 +97,14 @@ export const favoriteActions = {
    */
   async removeFavorite(userId, dishId) {
     try {
-      const response = await axios.delete(
-        `${baseURL}/v1/collections`,
-        {
-          params: {
-            userId: userId,
-            type: 'dish',
-            id: dishId
-          },
-          headers: getAuthHeaders()
-        }
-      )
+      const response = await axios.delete(`${baseURL}/v1/collections`, {
+        params: {
+          userId: userId,
+          type: 'dish',
+          id: dishId
+        },
+        headers: getAuthHeaders()
+      })
       return response.data
     } catch (error) {
       console.error('取消收藏失败:', error)
@@ -188,10 +180,9 @@ export const reviewActions = {
    */
   async deleteReview(reviewId) {
     try {
-      const response = await axios.delete(
-        `${baseURL}/v1/reviews/${reviewId}`,
-        { headers: getAuthHeaders() }
-      )
+      const response = await axios.delete(`${baseURL}/v1/reviews/${reviewId}`, {
+        headers: getAuthHeaders()
+      })
       return response.data
     } catch (error) {
       console.error('删除评价失败:', error)
@@ -206,10 +197,9 @@ export const reviewActions = {
    */
   async getReviewDetail(reviewId) {
     try {
-      const response = await axios.get(
-        `${baseURL}/v1/reviews/${reviewId}`,
-        { headers: getAuthHeaders() }
-      )
+      const response = await axios.get(`${baseURL}/v1/reviews/${reviewId}`, {
+        headers: getAuthHeaders()
+      })
       return response.data
     } catch (error) {
       console.error('获取评价详情失败:', error)
@@ -229,10 +219,9 @@ export const dishActions = {
    */
   async getDishDetail(dishId) {
     try {
-      const response = await axios.get(
-        `${baseURL}/v1/dishes/${dishId}`,
-        { headers: getAuthHeaders() }
-      )
+      const response = await axios.get(`${baseURL}/v1/dishes/${dishId}`, {
+        headers: getAuthHeaders()
+      })
       return response.data
     } catch (error) {
       console.error('获取菜品详情失败:', error)

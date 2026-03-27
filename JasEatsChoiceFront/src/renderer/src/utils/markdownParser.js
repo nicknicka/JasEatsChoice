@@ -68,22 +68,31 @@ export function parseMarkdown(text) {
     /^(\|.+?\|)\s*\n(\|[-:\s|]+\|)\s*\n((?:\|.+?\|\s*\n?)+)/gm,
     (match, header, separator, body) => {
       // 解析表头
-      const headers = header.split('|').filter(cell => cell.trim() !== '').map(cell => cell.trim())
+      const headers = header
+        .split('|')
+        .filter((cell) => cell.trim() !== '')
+        .map((cell) => cell.trim())
       // 解析表格内容
-      const rows = body.trim().split('\n').map(row => {
-        return row.split('|').filter(cell => cell.trim() !== '').map(cell => cell.trim())
-      })
+      const rows = body
+        .trim()
+        .split('\n')
+        .map((row) => {
+          return row
+            .split('|')
+            .filter((cell) => cell.trim() !== '')
+            .map((cell) => cell.trim())
+        })
 
       // 构建HTML表格
       let tableHtml = '<table><thead><tr>'
-      headers.forEach(h => {
+      headers.forEach((h) => {
         tableHtml += `<th>${h}</th>`
       })
       tableHtml += '</tr></thead><tbody>'
 
-      rows.forEach(row => {
+      rows.forEach((row) => {
         tableHtml += '<tr>'
-        row.forEach(cell => {
+        row.forEach((cell) => {
           tableHtml += `<td>${cell}</td>`
         })
         tableHtml += '</tr>'

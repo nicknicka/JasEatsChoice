@@ -44,6 +44,9 @@ public class UserController {
     @Autowired
     private com.xx.jaseatschoicejava.service.WalletService walletService;
 
+    @Autowired
+    private com.xx.jaseatschoicejava.service.UserPreferenceCacheService userPreferenceCacheService;
+
     /**
      * 用户注册
      */
@@ -405,6 +408,9 @@ public class UserController {
 
             boolean success = userPreferenceService.updatePreference(preferences);
             if (success) {
+                // 清除用户偏好缓存（因为偏好设置已更新）
+                userPreferenceCacheService.clearCache(userId);
+
                 return ResponseResult.success("用户偏好设置已更新");
             }
             return ResponseResult.fail("500", "用户偏好设置更新失败");
@@ -576,6 +582,9 @@ public class UserController {
 
             boolean success = userService.updateById(user);
             if (success) {
+                // 清除用户偏好缓存（因为基本信息或身体数据已更新）
+                userPreferenceCacheService.clearCache(userId);
+
                 // 返回更新后的用户信息
                 User updatedUser = userService.getById(userId);
                 updatedUser.setPassword(null); // 隐藏密码

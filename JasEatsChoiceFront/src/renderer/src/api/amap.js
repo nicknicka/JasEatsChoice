@@ -112,7 +112,7 @@ export default {
       return []
     }
 
-    return districts.map(district => {
+    return districts.map((district) => {
       const item = {
         value: district.adcode,
         label: district.name,

@@ -48,7 +48,9 @@ export function useOrderData() {
       // 并行获取订单菜品和商家名称
       const [dishesResponse, merchantResponse] = await Promise.all([
         axios.get(`${API_CONFIG.baseURL}/v1/orders/${order.id}/dishes`),
-        axios.get(`${API_CONFIG.baseURL}${API_CONFIG.merchant.detail}${order.merchantId}`).catch(() => ({ data: { data: { name: '' } } }))
+        axios
+          .get(`${API_CONFIG.baseURL}${API_CONFIG.merchant.detail}${order.merchantId}`)
+          .catch(() => ({ data: { data: { name: '' } } }))
       ])
 
       let items = []

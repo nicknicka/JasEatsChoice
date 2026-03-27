@@ -114,7 +114,7 @@ export function calculateOrderTotal(dishes, diningMode = 'takeout') {
   let dishTotal = 0
   let totalItems = 0
 
-  dishes.forEach(dish => {
+  dishes.forEach((dish) => {
     const quantity = dish.quantity || 0
     const price = dish.price || 0
     dishTotal += price * quantity
@@ -138,11 +138,13 @@ export function buildOrderParams(cardData, selectedDishes, userId) {
   return {
     userId: userId,
     merchantId: cardData.merchant?.merchantId,
-    dishItemsJson: JSON.stringify(selectedDishes.map(d => ({
-      dishId: d.dishId,
-      quantity: d.quantity,
-      price: d.price
-    }))),
+    dishItemsJson: JSON.stringify(
+      selectedDishes.map((d) => ({
+        dishId: d.dishId,
+        quantity: d.quantity,
+        price: d.price
+      }))
+    ),
     diningMode: cardData.diningMode || 'takeout',
     tableNumber: cardData.diningMode === 'dine_in' ? '' : null,
     note: ''

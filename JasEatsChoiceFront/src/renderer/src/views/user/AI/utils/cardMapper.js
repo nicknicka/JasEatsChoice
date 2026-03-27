@@ -15,14 +15,14 @@ import ErrorCard from '../components/cards/ErrorCard.vue'
 
 // 组件映射表
 const CARD_COMPONENT_MAP = {
-  'order_list_card': OrderListCard,
-  'favorite_list_card': FavoriteListCard,
-  'review_list_card': ReviewListCard,
-  'coupon_list_card': CouponListCard,
-  'user_info_card': UserInfoCard,
-  'dish_list_card': DishListCard,
-  'notification_list_card': NotificationListCard,
-  'error_card': ErrorCard
+  order_list_card: OrderListCard,
+  favorite_list_card: FavoriteListCard,
+  review_list_card: ReviewListCard,
+  coupon_list_card: CouponListCard,
+  user_info_card: UserInfoCard,
+  dish_list_card: DishListCard,
+  notification_list_card: NotificationListCard,
+  error_card: ErrorCard
 }
 
 /**

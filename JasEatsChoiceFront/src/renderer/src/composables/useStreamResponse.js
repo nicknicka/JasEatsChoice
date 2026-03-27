@@ -33,12 +33,14 @@ export function useStreamResponse() {
         // 查找包含实际数据的元素（done、content或card_data）
         const actualDataItem = dataArray.find((item) => {
           const itemData = item.data
-          return itemData &&
-                 typeof itemData === 'object' &&
-                 (itemData.hasOwnProperty('done') ||
-                  itemData.hasOwnProperty('content') ||
-                  itemData.hasOwnProperty('card_data') ||
-                  itemData.hasOwnProperty('message')) // ✅ 添加message字段支持
+          return (
+            itemData &&
+            typeof itemData === 'object' &&
+            (itemData.hasOwnProperty('done') ||
+              itemData.hasOwnProperty('content') ||
+              itemData.hasOwnProperty('card_data') ||
+              itemData.hasOwnProperty('message'))
+          ) // ✅ 添加message字段支持
         })
 
         if (actualDataItem && actualDataItem.data) {
