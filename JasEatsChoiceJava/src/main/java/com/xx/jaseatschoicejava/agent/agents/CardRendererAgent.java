@@ -52,7 +52,6 @@ public interface CardRendererAgent {
              "price": 28,
              "rating": 4.8,
              "image": "图片URL（可选）",
-             "actions": [{"text": "加订单", "type": "primary"}, {"text": "详情", "type": "default"}],
              "highlight": "符合你的口味偏好"
            }
 
@@ -67,8 +66,7 @@ public interface CardRendererAgent {
                "deliveryTime": "30分钟",
                "deliveryFee": "¥5"
              },
-             "image": "图片URL（可选）",
-             "actions": [{"text": "查看菜单", "type": "primary"}]
+             "image": "图片URL（可选）"
            }
 
         3. 订单卡片：
@@ -83,7 +81,6 @@ public interface CardRendererAgent {
                {"name": "米饭", "quantity": 2, "price": 4}
              ],
              "total": 32,
-             "actions": [{"text": "查看详情", "type": "primary"}],
              "timeline": [
                {"time": "12:30", "event": "订单已创建"},
                {"time": "12:35", "event": "商家已接单"}
@@ -100,8 +97,7 @@ public interface CardRendererAgent {
                {"label": "蛋白质", "value": "65g/80g", "percent": 81, "color": "blue"},
                {"label": "碳水", "value": "180g/250g", "percent": 72, "color": "orange"}
              ],
-             "suggestion": "晚餐建议补充蛋白质，可以选清蒸鱼或鸡胸肉",
-             "actions": [{"text": "查看详情", "type": "primary"}]
+             "suggestion": "晚餐建议补充蛋白质，可以选清蒸鱼或鸡胸肉"
            }
 
         示例转换1：JSON代码块（菜品推荐）

@@ -170,7 +170,7 @@ public class LangChain4jConfig {
                 .apiKey(zhipuAIConfig.getApiKey())
                 .model("glm-4-plus")  // 使用更强的模型
                 .temperature(0.3)     // 降低温度，更确定的规划
-                .maxRetries(2)
+                .maxRetries(1)
                 // 注意：callTimeout, writeTimeout 已弃用，移除使用默认值
                 .build();
     }
@@ -188,7 +188,7 @@ public class LangChain4jConfig {
                 .apiKey(zhipuAIConfig.getApiKey())
                 .model("glm-4-flash")  // 使用快速模型
                 .temperature(0.7)
-                .maxRetries(2)
+                .maxRetries(1)
                 // 注意：callTimeout, writeTimeout 已弃用，移除使用默认值
                 .build();
     }
@@ -206,7 +206,7 @@ public class LangChain4jConfig {
                 .apiKey(zhipuAIConfig.getApiKey())
                 .model(zhipuAIConfig.getModel())
                 .temperature(0.7)
-                .maxRetries(2)
+                .maxRetries(1)
                 // 注意：callTimeout, writeTimeout 已弃用，移除使用默认值
                 .build();
 

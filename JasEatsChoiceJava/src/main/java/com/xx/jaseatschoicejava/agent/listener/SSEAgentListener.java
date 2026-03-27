@@ -92,7 +92,7 @@ public class SSEAgentListener implements AgentListener {
 
         // ========== 【用户友好进度】发送工具执行消息 ==========
         ExecutionEvent event = new ExecutionEvent();
-        event.setMessage("🔧 正在查询数据...");
+        event.setMessage("正在查询数据");
         event.setTimestamp(System.currentTimeMillis());
         event.setProgress(true);  // 标记为进度消息
 
@@ -106,7 +106,7 @@ public class SSEAgentListener implements AgentListener {
 
         // ========== 【用户友好进度】发送工具完成消息 ==========
         ExecutionEvent event = new ExecutionEvent();
-        event.setMessage("✅ 数据查询完成");
+        event.setMessage("数据查询完成");
         event.setTimestamp(System.currentTimeMillis());
         event.setProgress(true);  // 标记为进度消息
 
@@ -132,8 +132,14 @@ public class SSEAgentListener implements AgentListener {
         // ========== 【技术细节】只记录到日志 ==========
         log.info("🏁 [技术细节] AgenticScope销毁: {}", scope.memoryId());
 
-        // ========== 【用户友好消息】不发送完成消息 ==========
-        // 最终结果会由Controller发送，这里不发送
+        // ========== 【用户友好消息】发送完成标记 ==========
+        ExecutionEvent event = new ExecutionEvent();
+        event.setMessage("处理完成");
+        event.setTimestamp(System.currentTimeMillis());
+        event.setProgress(true);   // 标记为进度消息
+        event.setCompleted(true);  // 标记为完成，前端应隐藏进度指示器
+
+        sendEvent(ExecutionEventType.COMPLETE, event);
     }
 
     /**
@@ -150,44 +156,44 @@ public class SSEAgentListener implements AgentListener {
         if (isStart) {
             switch (simpleName) {
                 case "DishRecommendationAgent":
-                    return "🔍 正在为您搜索菜品...";
+                    return "正在为您搜索菜品";
                 case "UserPreferenceAgent":
-                    return "👤 正在分析您的偏好...";
+                    return "正在分析您的偏好";
                 case "NutritionGuideAgent":
-                    return "🥗 正在分析营养成分...";
+                    return "正在分析营养成分";
                 case "OrderHelperAgent":
-                    return "📋 正在处理订单...";
+                    return "正在处理订单";
                 case "MerchantInfoAgent":
-                    return "🏪 正在查询商家信息...";
+                    return "正在查询商家信息";
                 case "TimeAwareAgent":
-                    return "⏰ 正在分析时段推荐...";
+                    return "正在分析时段推荐";
                 case "LocationServiceAgent":
-                    return "📍 正在查询位置服务...";
+                    return "正在查询位置服务";
                 case "SupervisorAgent":
-                    return "🤖 正在为您分析需求...";
+                    return "正在为您分析需求";
                 default:
-                    return "⚙️ 正在处理中...";
+                    return "正在处理中";
             }
         } else {
             switch (simpleName) {
                 case "DishRecommendationAgent":
-                    return "✅ 菜品搜索完成";
+                    return "菜品搜索完成";
                 case "UserPreferenceAgent":
-                    return "✅ 偏好分析完成";
+                    return "偏好分析完成";
                 case "NutritionGuideAgent":
-                    return "✅ 营养分析完成";
+                    return "营养分析完成";
                 case "OrderHelperAgent":
-                    return "✅ 订单处理完成";
+                    return "订单处理完成";
                 case "MerchantInfoAgent":
-                    return "✅ 商家信息查询完成";
+                    return "商家信息查询完成";
                 case "TimeAwareAgent":
-                    return "✅ 时段分析完成";
+                    return "时段分析完成";
                 case "LocationServiceAgent":
-                    return "✅ 位置服务查询完成";
+                    return "位置服务查询完成";
                 case "SupervisorAgent":
-                    return "✅ 需求分析完成";
+                    return "需求分析完成";
                 default:
-                    return "✅ 处理完成";
+                    return "处理完成";
             }
         }
     }
@@ -201,16 +207,16 @@ public class SSEAgentListener implements AgentListener {
      */
     private String getToolExecutionMessage(String toolName, boolean isStart) {
         if (toolName == null) {
-            return isStart ? "⚙️ 正在查询数据..." : "✅ 数据查询完成";
+            return isStart ? "正在查询数据" : "数据查询完成";
         }
 
         // 简化工具名称
         String simpleToolName = toolName.replaceAll("Tools$", "");
 
         if (isStart) {
-            return "🔧 正在查询数据...";
+            return "正在查询数据";
         } else {
-            return "✅ 数据查询完成";
+            return "数据查询完成";
         }
     }
 

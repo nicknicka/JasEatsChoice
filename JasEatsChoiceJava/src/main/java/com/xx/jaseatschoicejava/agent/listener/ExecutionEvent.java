@@ -55,6 +55,11 @@ public class ExecutionEvent {
      */
     private boolean progress = false;
 
+    /**
+     * 是否完成（true=整个任务完成，前端应隐藏进度指示器）
+     */
+    private boolean completed = false;
+
     // Getters and Setters
 
     public String getAgentName() {
@@ -127,5 +132,13 @@ public class ExecutionEvent {
 
     public void setProgress(boolean progress) {
         this.progress = progress;
+    }
+
+    public boolean isCompleted() {
+        return completed;
+    }
+
+    public void setCompleted(boolean completed) {
+        this.completed = completed;
     }
 }
