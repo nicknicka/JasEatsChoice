@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
@@ -64,6 +65,8 @@ public class RedisConfig {
             ObjectMapper.DefaultTyping.NON_FINAL,
             JsonTypeInfo.As.PROPERTY
         );
+        // 注册JavaTimeModule以支持LocalDateTime等Java 8日期时间类型
+        om.registerModule(new JavaTimeModule());
 
         serializer.setObjectMapper(om);
 
@@ -109,6 +112,8 @@ public class RedisConfig {
             ObjectMapper.DefaultTyping.NON_FINAL,
             JsonTypeInfo.As.PROPERTY
         );
+        // 注册JavaTimeModule以支持LocalDateTime等Java 8日期时间类型
+        om.registerModule(new JavaTimeModule());
         serializer.setObjectMapper(om);
 
         // 配置缓存策略

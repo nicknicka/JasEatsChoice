@@ -37,12 +37,15 @@ public class SupervisorSSEController {
     private final SupervisorAgentFactory supervisorAgentFactory;
     private final CustomerServiceAgent customerServiceAgent;
     private final ExecutorService executorService = Executors.newCachedThreadPool();
+    private final com.xx.jaseatschoicejava.service.AIChatHistoryService aiChatHistoryService;
 
     public SupervisorSSEController(
             SupervisorAgentFactory supervisorAgentFactory,
-            CustomerServiceAgent customerServiceAgent) {
+            CustomerServiceAgent customerServiceAgent,
+            com.xx.jaseatschoicejava.service.AIChatHistoryService aiChatHistoryService) {
         this.supervisorAgentFactory = supervisorAgentFactory;
         this.customerServiceAgent = customerServiceAgent;
+        this.aiChatHistoryService = aiChatHistoryService;
     }
 
     /**
@@ -153,14 +156,32 @@ public class SupervisorSSEController {
                 // 1. 获取原始结果
                 String originalResponse = agent.invoke(message);
 
+                log.info("📊 [Controller] SupervisorAgent原始结果长度: {}", originalResponse.length());
+
                 // 2. 渲染为卡片格式
                 String renderedResponse = supervisorAgentFactory.renderCards(originalResponse);
 
+                log.info("📊 [Controller] 渲染后结果长度: {}", renderedResponse.length());
+
                 // 3. 发送最终结果（检查连接是否还活着）
-                log.info("📤 [Controller] 准备发送FINAL_RESULT, userId={}, length={}",
-                    finalUserId, renderedResponse.length());
+                log.info("==================== 最终结果发送开始 ====================");
+                log.info("📤 [Controller] 准备发送FINAL_RESULT");
+                log.info("📤 [Controller] userId: {}", finalUserId);
+                log.info("📤 [Controller] 数据长度: {} 字符", renderedResponse.length());
+                log.info("📤 [Controller] 完整数据内容:");
+                log.info("─ 开始 ({} 字符) ─", renderedResponse.length());
+                log.info(renderedResponse);
+                log.info("─ 结束 ─");
+                log.info("=====================================================");
 
                 try {
+                    // ========== 【在发送前保存到Redis和MySQL】 ==========
+                    // 保存用户消息到Redis和MySQL
+                    aiChatHistoryService.saveMessage(finalUserId, "user", message);
+
+                    // 保存AI回复到Redis和MySQL
+                    aiChatHistoryService.saveMessage(finalUserId, "ai", renderedResponse);
+
                     // ✅ 使用 "message" 事件名，前端才能接收
                     finalEmitter.send(SseEmitter.event()
                             .name("message")  // 改为message事件名

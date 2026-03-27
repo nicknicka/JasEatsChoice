@@ -937,89 +937,70 @@ const streamResponse = async (messageIndex, reader) => {
             return
           }
 
-          // ========== 【消息筛选】只显示最终结果，过滤中间过程 ==========
-          // 规则1：只处理 SupervisorAgent 的 output（最终结果）
-          // 规则2：忽略其他 Agent 的中间过程
-          // 规则3：忽略只有 message 字段的状态消息
+          // ========== 【消息处理】后端已过滤技术细节 ==========
 
-          const isFinalResult =
-            parsedData.agentName === 'SupervisorAgent' &&
-            parsedData.output &&
-            parsedData.output.trim().length > 0
-
-          const isIntermediateMessage =
-            parsedData.agentName && parsedData.agentName !== 'SupervisorAgent'
-
-          // 过滤中间消息，只打印日志
-          if (isIntermediateMessage) {
-            console.log('🔄 [过滤中间消息] Agent:', parsedData.agentName, '- 不显示')
+          // 过滤卡片数据标记（纯文本）- 在JSON解析前就过滤
+          if (isPlainText &&
+              (data.trim() === '[CARD_DATA_START]' ||
+               data.trim() === '[CARD_DATA_END]' ||
+               data.trim().startsWith('[CARD_DATA_'))) {
+            console.log('🔄 [过滤] 卡片数据标记:', data.trim())
             continue
           }
 
-          // 只处理最终结果
-          if (isFinalResult) {
-            console.log('✅ [最终结果] 收到SupervisorAgent的最终结果，准备显示')
-            console.log('📄 最终结果内容:', parsedData.output.substring(0, 100) + '...')
+          // ========== 【识别消息类型】 ==========
 
-            // ========== 【过滤调试信息】移除LangChain4j内部信息 ==========
-            let filteredOutput = parsedData.output
+          // 优先级1：进度消息 - {progress: true, message: '正在...'}
+          if (parsedData.progress === true && parsedData.message) {
+            console.log('📢 [进度消息]', parsedData.message)
 
-            // 过滤规则1：移除 "You must answer strictly in the following JSON format" 及后续内容直到空行
-            filteredOutput = filteredOutput.replace(
-              /You must answer strictly in the following JSON format[^\n]*\n(?:[^\n]*\n)*?\n\n/g,
-              ''
-            )
-
-            // 过滤规则2：移除 "The user request is:" 行
-            filteredOutput = filteredOutput.replace(
-              /The user request is:\s*'[']*[^']*'[^\n]*\n/g,
-              ''
-            )
-
-            // 过滤规则3：移除 "The last received response is:" 行
-            filteredOutput = filteredOutput.replace(
-              /The last received response is:\s*'[']*[^']*'[^\n]*\n/g,
-              ''
-            )
-
-            // 过滤规则4：移除 SystemMessage { text = ... } 大段文本（跨多行）
-            filteredOutput = filteredOutput.replace(
-              /SystemMessage \{ text = "[\s\S]*?Use the following supervisor context[\s\S]*?\. '\n\n/g,
-              ''
-            )
-
-            // 过滤规则5：移除 JSON agent 调用块（包含 agentName 和 arguments）
-            filteredOutput = filteredOutput.replace(
-              /\n?\{\s*"agentName":\s*"[^"]*",\s*"arguments":\s*\{[^}]*\}\s*\}\n\n?/g,
-              ''
-            )
-
-            // 过滤规则6：移除时间戳和🤖 emoji行（如 "01:52\n🤖\n\n"）
-            filteredOutput = filteredOutput.replace(
-              /\d{2}:\d{2}\s*\n🤖\s*\n\n?/g,
-              ''
-            )
-
-            // 过滤规则7：移除单独的🤖 emoji行
-            filteredOutput = filteredOutput.replace(
-              /🤖\s*\n\n?/g,
-              ''
-            )
-
-            // 清理多余的空行（超过2个连续换行符）
-            filteredOutput = filteredOutput.replace(/\n{3,}/g, '\n\n').trim()
-
-            if (filteredOutput !== parsedData.output) {
-              console.log('🧹 [过滤调试信息] 已移除LangChain4j内部信息')
-              console.log('📊 过滤后长度:', filteredOutput.length, '原长度:', parsedData.output.length)
-              console.log('📝 过滤后内容预览:', filteredOutput.substring(0, 200) + '...')
+            // 进度消息：替换最后一条AI消息的内容，而不是追加
+            if (messages.value[messageIndex]) {
+              messages.value[messageIndex].content = parsedData.message
+              messages.value[messageIndex]._isProgressMessage = true  // 标记为进度消息，不保存到数据库
             }
 
-            // 将过滤后的内容作为 content 处理
-            parsedData.content = filteredOutput
+            // 跳过后续处理
+            continue
+          }
 
-            // 标记为最终结果，用于后续处理
+          // 优先级2：卡片数据 - {type: 'dish'/'merchant'/'order'/'health', title: '...', subtitle: '...'}
+          if (parsedData.type && ['dish', 'merchant', 'order', 'health'].includes(parsedData.type)) {
+            console.log('🎴 [卡片数据] 类型:', parsedData.type, '标题:', parsedData.title)
+
+            // 将卡片数据转换为可显示的文本内容
+            let cardContent = `**${parsedData.title}**\n`
+            if (parsedData.subtitle) {
+              cardContent += `${parsedData.subtitle}\n`
+            }
+            if (parsedData.description) {
+              cardContent += `\n${parsedData.description}`
+            }
+
+            parsedData.content = cardContent
             parsedData._isFinalResult = true
+            parsedData._cardData = parsedData  // 保存原始卡片数据
+            parsedData._cardType = parsedData.type
+          }
+
+          // 优先级3：info消息 - {type: 'info', title: '...', content: '...'}
+          else if (parsedData.type === 'info' && parsedData.content) {
+            console.log('✅ [最终结果] 收到AI回复，长度:', parsedData.content.length)
+            console.log('📋 标题:', parsedData.title)
+            parsedData._isFinalResult = true
+            // 直接使用 content，不需要额外处理
+          }
+
+          // 优先级4：SupervisorAgent的output - {agentName: 'SupervisorAgent', output: '...'}
+          else if (parsedData.agentName === 'SupervisorAgent' && parsedData.output) {
+            console.log('✅ [最终结果] 收到SupervisorAgent输出，长度:', parsedData.output.length)
+            parsedData.content = parsedData.output
+            parsedData._isFinalResult = true
+          }
+
+          // 优先级5：普通内容 - {content: '...'}
+          else if (parsedData.content) {
+            console.log('📝 [内容更新] 长度:', parsedData.content.length)
           }
 
           // 接收 card_data 字段：设置卡片数据和类型
@@ -1175,6 +1156,13 @@ const streamResponse = async (messageIndex, reader) => {
                 // 触发完成逻辑（保存到后端）
                 if (messages.value[messageIndex]) {
                   const currentMessage = messages.value[messageIndex]
+
+                  // ========== 【跳过进度消息】不保存到数据库 ==========
+                  if (currentMessage._isProgressMessage) {
+                    console.log('⏭️ 跳过进度消息保存，不保存到数据库')
+                    return
+                  }
+
                   console.log('✅ AI消息接收完成（最终结果）')
                   console.log('📊 消息统计:')
                   console.log(`   - 总字符数: ${currentMessage.content?.length || 0}`)

@@ -49,6 +49,12 @@ public class ExecutionEvent {
      */
     private long timestamp = System.currentTimeMillis();
 
+    /**
+     * 是否为进度消息（true=进度消息，false=最终结果）
+     * 进度消息不保存到数据库，只用于前端显示
+     */
+    private boolean progress = false;
+
     // Getters and Setters
 
     public String getAgentName() {
@@ -113,5 +119,13 @@ public class ExecutionEvent {
 
     public void setTimestamp(long timestamp) {
         this.timestamp = timestamp;
+    }
+
+    public boolean isProgress() {
+        return progress;
+    }
+
+    public void setProgress(boolean progress) {
+        this.progress = progress;
     }
 }

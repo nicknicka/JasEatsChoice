@@ -406,19 +406,33 @@ public class SupervisorAgentFactory {
      */
     public String renderCards(String originalResult) {
         try {
-            log.debug("开始渲染卡片格式，原始结果长度：{}", originalResult.length());
+            log.info("==================== 卡片渲染开始 ====================");
+            log.info("📥 原始结果长度: {} 字符", originalResult.length());
+            log.info("📥 原始结果内容:");
+            log.info("─ 开始 ({} 字符) ─", originalResult.length());
+            log.info(originalResult);
+            log.info("─ 结束 ─");
 
             // ========== 【过滤LangChain4j调试信息】 ==========
             // 移除LLM生成时可能包含的内部调试信息
             String cleanedResult = removeLangChain4jDebugInfo(originalResult);
 
             if (!cleanedResult.equals(originalResult)) {
-                log.info("🧹 已过滤LangChain4j调试信息，原长度: {}, 清理后长度: {}",
-                    originalResult.length(), cleanedResult.length());
+                log.info("🧹 已过滤LangChain4j调试信息");
+                log.info("📊 过滤前长度: {} 字符", originalResult.length());
+                log.info("📊 过滤后长度: {} 字符", cleanedResult.length());
+                log.info("📊 过滤掉字符数: {} 字符", originalResult.length() - cleanedResult.length());
+                log.info("📥 清理后结果内容:");
+                log.info("─ 开始 ({} 字符) ─", cleanedResult.length());
+                log.info(cleanedResult);
+                log.info("─ 结束 ─");
+            } else {
+                log.info("✅ 无需过滤，内容无变化");
             }
 
             String rendered = cardRendererAgent.renderCards(cleanedResult);
-            log.debug("卡片渲染完成，结果长度：{}", rendered.length());
+            log.info("📤 卡片渲染完成，最终结果长度: {} 字符", rendered.length());
+            log.info("=====================================================");
             return rendered;
         } catch (Exception e) {
             log.error("卡片渲染失败，返回原始结果", e);
@@ -427,7 +441,7 @@ public class SupervisorAgentFactory {
     }
 
     /**
-     * 移除LangChain4j内部调试信息
+     * 移除LangChain4j内部调试信息和SystemMessage
      *
      * @param result 原始结果
      * @return 清理后的结果
@@ -439,42 +453,91 @@ public class SupervisorAgentFactory {
 
         String cleaned = result;
 
-        // 1. 移除 "You must answer strictly in the following JSON format" 及后续内容
+        // ========== 【移除 SystemMessage 大段文本】 ==========
+
+        // 1. 移除包含 "性能优化" 的整个段落
+        cleaned = cleaned.replaceAll(
+            "性能优化[\\s\\S]*?及时终止：获得满意结果后立即停止调用\\s*",
+            ""
+        );
+
+        // 2. 移除包含 "💡 示例对话" 的整个段落
+        cleaned = cleaned.replaceAll(
+            "💡 示例对话[\\s\\S]*?⚠️ 及时终止：获得满意结果后立即停止调用\\s*",
+            ""
+        );
+
+        // 3. 移除包含 "示例1：单意图" 到 "示例3：复杂场景" 的大段文本
+        cleaned = cleaned.replaceAll(
+            "示例\\d+：[\\s\\S]*?\\n\\n",
+            ""
+        );
+
+        // 4. 移除 "⚠️ 重要提醒" 及其后的多个要点
+        cleaned = cleaned.replaceAll(
+            "⚠️ 重要提醒[\\s\\S]*?及时终止：获得满意结果后立即停止调用\\s*",
+            ""
+        );
+
+        // 5. 移除包含 "你的思考"、"你的操作" 的行
+        cleaned = cleaned.replaceAll("你的思考：.*\\n", "");
+        cleaned = cleaned.replaceAll("你的操作：[\\s\\S]*?你的回复：", "你的回复：");
+
+        // ========== 【移除 JSON 格式要求】 ==========
+
+        // 6. 移除 "You must answer strictly in the following JSON format" 及后续内容
         cleaned = cleaned.replace(
             "You must answer strictly in the following JSON format:\n" +
             "  {\n" +
             "\"agentName\": (type: string),\n" +
             "\"arguments\": (type: java.util.Map<java.lang.String, java.lang.Object>)\n" +
-            "}",
+            "}\n",
             ""
         );
 
-        // 2. 移除 "The user request is:" 行
-        cleaned = cleaned.replaceAll("The user request is: '.*?'\\.", "");
+        // 7. 移除 "The user request is:" 行
+        cleaned = cleaned.replaceAll("The user request is: '.*?'\\.\n", "");
 
-        // 3. 移除 "The last received response is:" 行
-        cleaned = cleaned.replaceAll("The last received response is: '.*?'\\.", "");
+        // 8. 移除 "The last received response is:" 行
+        cleaned = cleaned.replaceAll("The last received response is: '.*?'\\.\n", "");
 
-        // 4. 移除 SystemMessage { text = ... } 大段文本
+        // 9. 移除 SystemMessage { text = ... } 开头的行
+        cleaned = cleaned.replaceAll("SystemMessage \\{ text = \".*?\\n", "");
+
+        // ========== 【移除 Agent 调用 JSON】 ==========
+
+        // 10. 移除 JSON agent 调用块（如 {"agentName":"DishRecommendationAgent$0",...}）
         cleaned = cleaned.replaceAll(
-            "SystemMessage \\{ text = \".*?Use the following supervisor context.*?\\. '\\n",
+            "\\{\\s*\"agentName\"\\s*:\\s*\"[^\"]+\\$\\d+\"\\s*,\\s*\"arguments\"\\s*:\\s*\\{[^}]*\\}\\s*}\\s*\\n",
             ""
         );
 
-        // 5. 移除 JSON agent 调用块（如 {"agentName":"DishRecommendationAgent$0",...}）
+        // 11. 移除 {"agentName":"done",...}
         cleaned = cleaned.replaceAll(
-            "\\{\\s*\"agentName\"\\s*:\\s*\"[^\"]+\"\\s*,\\s*\"arguments\"\\s*:\\s*\\{[^}]*\\}\\s*}\\s*",
+            "\\{\\s*\"agentName\"\\s*:\\s*\"done\"\\s*,\\s*\"arguments\"\\s*:\\s*\\{[^}]*\\}\\s*}\\s*\\n",
             ""
         );
 
-        // 6. 移除时间戳和🤖 emoji行
+        // ========== 【移除其他技术标记】 ==========
+
+        // 12. 移除时间戳和🤖 emoji行
         cleaned = cleaned.replaceAll("\\d{2}:\\d{2}\\s*\\n🤖\\s*\\n", "");
 
-        // 7. 移除单独的🤖 emoji
+        // 13. 移除单独的🤖 emoji
         cleaned = cleaned.replaceAll("🤖\\s*", "");
 
-        // 8. 清理多余的空行
+        // 14. 清理多余的空行和空格
         cleaned = cleaned.replaceAll("\\n{3,}", "\n\n").trim();
+
+        // 15. 移除开头的单引号（如果有）
+        if (cleaned.startsWith("'")) {
+            cleaned = cleaned.substring(1);
+        }
+
+        // 16. 移除结尾的单引号（如果有）
+        if (cleaned.endsWith("'")) {
+            cleaned = cleaned.substring(0, cleaned.length() - 1);
+        }
 
         return cleaned;
     }

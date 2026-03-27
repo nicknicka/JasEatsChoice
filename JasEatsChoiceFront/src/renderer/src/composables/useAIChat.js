@@ -220,8 +220,8 @@ export function useAIChat() {
     logger.log('⏰ 请求时间:', new Date().toLocaleString())
     logger.log('📝 用户消息:', message)
 
-    // 添加用户消息
-    await addMessage('user', message)
+    // 添加用户消息（不保存到后端，因为后端会保存）
+    await addMessage('user', message, false) // ✅ saveToBackend=false
     scrollToBottom(true)
 
     // 创建AI消息对象（初始为空）
@@ -273,12 +273,11 @@ export function useAIChat() {
           messages.value[aiMessageIndex].content += content
           nextTick(() => scrollToBottom(false))
         },
-        // onComplete - 完成后保存
+        // onComplete - 完成回调（后端已保存，无需重复保存）
         async () => {
           const aiContent = messages.value[aiMessageIndex].content
-          if (aiContent) {
-            await saveMessageToBackend('ai', aiContent)
-          }
+          logger.log('✅ AI消息接收完成，内容长度:', aiContent?.length || 0)
+          // ✅ 后端已经在发送SSE前保存了消息，这里不需要重复保存
         },
         // onError - 错误处理
         (error) => {

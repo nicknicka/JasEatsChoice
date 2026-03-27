@@ -60,6 +60,26 @@ public class RedisBackedChatMemory implements ChatMemory {
 
     @Override
     public void add(ChatMessage message) {
+        // ========== 【智能过滤】只保存最终结果到数据库 ==========
+
+        // 1. 过滤SystemMessage（包含大量prompt）
+        if (isSystemMessage(message)) {
+            log.debug("⏭️ 跳过SystemMessage，不保存到存储: userId={}, 类型={}",
+                userId, message.getClass().getSimpleName());
+            // 仍然添加到本地缓存（用于本次对话的上下文）
+            localMessages.add(message);
+            return;
+        }
+
+        // 2. 过滤中间的Agent调用（JSON格式的Agent调用记录）
+        if (isIntermediateAgentCall(message)) {
+            log.debug("⏭️ 跳过中间Agent调用，不保存到存储: userId={}", userId);
+            // 仍然添加到本地缓存（用于本次对话的上下文）
+            localMessages.add(message);
+            return;
+        }
+
+        // 3. 保存最终结果到存储
         // 1. 添加到本地缓存（关键操作，必须成功）
         localMessages.add(message);
 
@@ -94,6 +114,81 @@ public class RedisBackedChatMemory implements ChatMemory {
 
         log.debug("用户 {} 添加消息到ChatMemory, 当前消息数: {}",
             userId, localMessages.size());
+    }
+
+    /**
+     * 判断是否为SystemMessage
+     * SystemMessage包含系统提示词，不需要持久化到数据库
+     */
+    private boolean isSystemMessage(ChatMessage message) {
+        if (message == null) {
+            return false;
+        }
+
+        // 检查是否为LangChain4j的SystemMessage
+        String className = message.getClass().getSimpleName();
+        if ("SystemMessage".equals(className)) {
+            return true;
+        }
+
+        // 通过toString检查
+        String messageStr = message.toString();
+        if (messageStr != null && messageStr.contains("SystemMessage {")) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * 判断是否为中间的Agent调用
+     * 中间的Agent调用是JSON格式的工具调用记录，不需要持久化到数据库
+     *
+     * 例如：
+     * {
+     *   "agentName": "DishRecommendationAgent$0",
+     *   "arguments": {"userMessage": "..."}
+     * }
+     */
+    private boolean isIntermediateAgentCall(ChatMessage message) {
+        if (message == null || !(message instanceof AiMessage)) {
+            return false;
+        }
+
+        try {
+            String content = ((AiMessage) message).text();
+
+            // 检查是否为JSON格式的Agent调用
+            if (content == null || content.isEmpty()) {
+                return false;
+            }
+
+            // 去除首尾空白
+            content = content.trim();
+
+            // 检查是否以 { 开头且包含 agentName 字段（Agent调用JSON）
+            if (content.startsWith("{") && content.contains("\"agentName\"")) {
+                // 进一步检查：如果包含 "$" 数字后缀，说明是中间调用
+                if (content.contains("$0") || content.contains("$1") ||
+                    content.contains("$2") || content.contains("$3") ||
+                    content.contains("$4") || content.contains("$5") ||
+                    content.contains("$6")) {
+                    return true;
+                }
+            }
+
+            // 检查是否包含 "The user request is:" 或 "You must answer strictly in the following JSON format"
+            // 这些是SupervisorPlanner的中间输出
+            if (content.contains("The user request is:") ||
+                content.contains("You must answer strictly in the following JSON format")) {
+                return true;
+            }
+
+            return false;
+        } catch (Exception e) {
+            log.warn("检查Agent调用失败: userId={}, error={}", userId, e.getMessage());
+            return false;
+        }
     }
 
     @Override
@@ -211,17 +306,39 @@ public class RedisBackedChatMemory implements ChatMemory {
     @Async
     protected void asyncSaveToMySQL(ChatMessage message) {
         try {
+            log.info("==================== 💾 [ChatMemory] 异步数据库写入开始 ====================");
+            log.info("📝 [RedisBackedChatMemory] ChatMemory自动保存到MySQL");
+            log.info("📝 [RedisBackedChatMemory] userId: {}", userId);
+            log.info("📝 [RedisBackedChatMemory] 消息类型: {}", message.getClass().getSimpleName());
+            log.info("📝 [RedisBackedChatMemory] 发送者类型: {}", getSenderType(message));
+
+            String content = extractText(message);
+            log.info("📝 [RedisBackedChatMemory] 内容长度: {} 字符", content != null ? content.length() : 0);
+            log.info("📝 [RedisBackedChatMemory] 完整内容:");
+            log.info("─ 开始 ({} 字符) ─", content != null ? content.length() : 0);
+            log.info(content != null ? content : "null");
+            log.info("─ 结束 ─");
+            log.info("📝 [RedisBackedChatMemory] 当前线程: {}", Thread.currentThread().getName());
+            log.info("📝 [RedisBackedChatMemory] 调用栈:");
+            StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+            for (int i = 1; i < Math.min(6, stackTrace.length); i++) {
+                log.info("   at {}", stackTrace[i]);
+            }
+            log.info("=====================================================");
+
             AIChatHistory history = new AIChatHistory();
             history.setUserId(userId.toString());
-            history.setContent(extractText(message));
+            history.setContent(content);
             history.setSender(getSenderType(message));
             history.setCreateTime(LocalDateTime.now());
 
             chatHistoryMapper.insert(history);
 
-            log.debug("异步保存消息到MySQL成功，userId={}", userId);
+            log.info("✅ [RedisBackedChatMemory] ChatMemory自动保存成功! ID={}", history.getId());
+            log.info("=====================================================");
         } catch (Exception e) {
-            log.error("异步保存消息到MySQL失败，userId={}", userId, e);
+            log.error("❌ [RedisBackedChatMemory] 异步保存消息到MySQL失败: userId={}", userId, e);
+            log.error("❌ [RedisBackedChatMemory] 错误详情:", e);
             // 失败不影响主流程
         }
     }

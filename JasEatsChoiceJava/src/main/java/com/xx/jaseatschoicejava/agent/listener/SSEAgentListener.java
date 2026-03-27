@@ -36,16 +36,17 @@ public class SSEAgentListener implements AgentListener {
     @Override
     public void beforeAgentInvocation(AgentRequest request) {
         String agentName = request.agentName();
-        String inputs = formatInputs(request.inputs());
 
-        log.info("🔧 Agent调用开始: {} | 输入: {}", agentName, inputs);
+        // ========== 【技术细节】只记录到日志 ==========
+        log.debug("🔧 [技术细节] Agent调用开始: {}", agentName);
+
+        // ========== 【用户友好进度】发送可理解的进度消息 ==========
+        String userFriendlyMessage = getUserFriendlyProgressMessage(agentName, true);
 
         ExecutionEvent event = new ExecutionEvent();
-        event.setAgentName(agentName);
-        event.setAgentId(request.agentId());
-        event.setInputs(inputs);
-        event.setMessage("正在调用 " + agentName);
+        event.setMessage(userFriendlyMessage);
         event.setTimestamp(System.currentTimeMillis());
+        event.setProgress(true);  // 标记为进度消息，不保存到数据库
 
         sendEvent(ExecutionEventType.AGENT_START, event);
     }
@@ -53,16 +54,17 @@ public class SSEAgentListener implements AgentListener {
     @Override
     public void afterAgentInvocation(AgentResponse response) {
         String agentName = response.agentName();
-        String output = formatOutput(response.output());
 
-        log.info("✅ Agent调用完成: {} | 输出: {}", agentName, output);
+        // ========== 【技术细节】只记录到日志 ==========
+        log.debug("✅ [技术细节] Agent调用完成: {}", agentName);
+
+        // ========== 【用户友好进度】发送完成消息 ==========
+        String userFriendlyMessage = getUserFriendlyProgressMessage(agentName, false);
 
         ExecutionEvent event = new ExecutionEvent();
-        event.setAgentName(agentName);
-        event.setAgentId(response.agentId());
-        event.setOutput(output);
-        event.setMessage("✅ " + agentName + " 执行完成");
+        event.setMessage(userFriendlyMessage);
         event.setTimestamp(System.currentTimeMillis());
+        event.setProgress(true);  // 标记为进度消息
 
         sendEvent(ExecutionEventType.AGENT_COMPLETE, event);
     }
@@ -70,56 +72,146 @@ public class SSEAgentListener implements AgentListener {
     @Override
     public void onAgentInvocationError(AgentInvocationError error) {
         String agentName = error.agentName();
-        String errorMessage = error.error() != null ? error.error().getMessage() : "Unknown error";
 
-        log.error("❌ Agent调用失败: {} | 错误: {}", agentName, errorMessage);
+        // ========== 【技术细节】只记录到日志 ==========
+        log.error("❌ [技术细节] Agent调用失败: {}", agentName);
 
+        // ========== 【用户友好消息】发送简化的错误提示 ==========
         ExecutionEvent event = new ExecutionEvent();
-        event.setAgentName(agentName);
-        event.setAgentId(error.agentId());
-        event.setError(errorMessage);
-        event.setMessage("❌ " + agentName + " 执行失败: " + errorMessage);
+        event.setMessage("处理过程中遇到问题，请稍后重试...");
         event.setTimestamp(System.currentTimeMillis());
+        event.setProgress(true);  // 标记为进度消息
 
         sendEvent(ExecutionEventType.AGENT_ERROR, event);
     }
 
     @Override
     public void beforeAgentToolExecution(BeforeAgentToolExecution execution) {
-        // 暂时跳过工具执行监听，API较复杂
-        log.debug("工具执行开始: {}", execution);
+        // ========== 【技术细节】只记录到日志 ==========
+        log.debug("🔧 [技术细节] 工具执行开始: {}", execution);
+
+        // ========== 【用户友好进度】发送工具执行消息 ==========
+        ExecutionEvent event = new ExecutionEvent();
+        event.setMessage("🔧 正在查询数据...");
+        event.setTimestamp(System.currentTimeMillis());
+        event.setProgress(true);  // 标记为进度消息
+
+        sendEvent(ExecutionEventType.TOOL_START, event);
     }
 
     @Override
     public void afterAgentToolExecution(AfterAgentToolExecution execution) {
-        // 暂时跳过工具执行监听，API较复杂
-        log.debug("工具执行完成: {}", execution);
+        // ========== 【技术细节】只记录到日志 ==========
+        log.debug("✅ [技术细节] 工具执行完成: {}", execution);
+
+        // ========== 【用户友好进度】发送工具完成消息 ==========
+        ExecutionEvent event = new ExecutionEvent();
+        event.setMessage("✅ 数据查询完成");
+        event.setTimestamp(System.currentTimeMillis());
+        event.setProgress(true);  // 标记为进度消息
+
+        sendEvent(ExecutionEventType.TOOL_COMPLETE, event);
     }
 
     @Override
     public void afterAgenticScopeCreated(AgenticScope scope) {
-        log.info("🎯 AgenticScope创建: {}", scope.memoryId());
+        // ========== 【技术细节】只记录到日志 ==========
+        log.info("🎯 [技术细节] AgenticScope创建: {}", scope.memoryId());
 
+        // ========== 【用户友好消息】发送任务开始提示 ==========
         ExecutionEvent event = new ExecutionEvent();
-        event.setMessage("🎯 开始处理任务");
+        event.setMessage("正在为您处理...");
         event.setTimestamp(System.currentTimeMillis());
+        event.setProgress(true);  // 标记为进度消息
 
         sendEvent(ExecutionEventType.COMPLETE, event);
     }
 
     @Override
     public void beforeAgenticScopeDestroyed(AgenticScope scope) {
-        log.info("🏁 AgenticScope销毁: {}", scope.memoryId());
+        // ========== 【技术细节】只记录到日志 ==========
+        log.info("🏁 [技术细节] AgenticScope销毁: {}", scope.memoryId());
 
-        // 发送完成事件
-        ExecutionEvent event = new ExecutionEvent();
-        event.setMessage("🏁 所有任务已完成");
-        event.setTimestamp(System.currentTimeMillis());
+        // ========== 【用户友好消息】不发送完成消息 ==========
+        // 最终结果会由Controller发送，这里不发送
+    }
 
-        sendEvent(ExecutionEventType.COMPLETE, event);
+    /**
+     * 获取用户友好的进度消息
+     *
+     * @param agentName Agent名称
+     * @param isStart 是否为开始阶段
+     * @return 用户友好的进度描述
+     */
+    private String getUserFriendlyProgressMessage(String agentName, boolean isStart) {
+        // 提取简单的agent名称（去掉$0、$1等后缀）
+        String simpleName = agentName.replaceAll("\\$\\d+", "");
 
-        // ⚠️ 不在这里关闭SSE连接，由Controller控制关闭时机
-        // 如果在这里complete()，会导致后续的FINAL_RESULT无法发送
+        if (isStart) {
+            switch (simpleName) {
+                case "DishRecommendationAgent":
+                    return "🔍 正在为您搜索菜品...";
+                case "UserPreferenceAgent":
+                    return "👤 正在分析您的偏好...";
+                case "NutritionGuideAgent":
+                    return "🥗 正在分析营养成分...";
+                case "OrderHelperAgent":
+                    return "📋 正在处理订单...";
+                case "MerchantInfoAgent":
+                    return "🏪 正在查询商家信息...";
+                case "TimeAwareAgent":
+                    return "⏰ 正在分析时段推荐...";
+                case "LocationServiceAgent":
+                    return "📍 正在查询位置服务...";
+                case "SupervisorAgent":
+                    return "🤖 正在为您分析需求...";
+                default:
+                    return "⚙️ 正在处理中...";
+            }
+        } else {
+            switch (simpleName) {
+                case "DishRecommendationAgent":
+                    return "✅ 菜品搜索完成";
+                case "UserPreferenceAgent":
+                    return "✅ 偏好分析完成";
+                case "NutritionGuideAgent":
+                    return "✅ 营养分析完成";
+                case "OrderHelperAgent":
+                    return "✅ 订单处理完成";
+                case "MerchantInfoAgent":
+                    return "✅ 商家信息查询完成";
+                case "TimeAwareAgent":
+                    return "✅ 时段分析完成";
+                case "LocationServiceAgent":
+                    return "✅ 位置服务查询完成";
+                case "SupervisorAgent":
+                    return "✅ 需求分析完成";
+                default:
+                    return "✅ 处理完成";
+            }
+        }
+    }
+
+    /**
+     * 获取工具执行的用户友好消息
+     *
+     * @param toolName 工具名称
+     * @param isStart 是否为开始阶段
+     * @return 用户友好的工具执行描述
+     */
+    private String getToolExecutionMessage(String toolName, boolean isStart) {
+        if (toolName == null) {
+            return isStart ? "⚙️ 正在查询数据..." : "✅ 数据查询完成";
+        }
+
+        // 简化工具名称
+        String simpleToolName = toolName.replaceAll("Tools$", "");
+
+        if (isStart) {
+            return "🔧 正在查询数据...";
+        } else {
+            return "✅ 数据查询完成";
+        }
     }
 
     @Override
@@ -134,22 +226,44 @@ public class SSEAgentListener implements AgentListener {
      * ⚠️ 重要：事件名必须使用 "message"，因为前端只监听 message 事件
      */
     private void sendEvent(ExecutionEventType type, ExecutionEvent event) {
+        long startTime = System.currentTimeMillis();
         try {
             String eventData = objectMapper.writeValueAsString(event);
-            log.info("📤 [SSE] 发送事件: type={}, data={}", type.name(),
-                eventData.length() > 200 ? eventData.substring(0, 200) + "..." : eventData);
+
+            // ========== 【详细日志】发送前记录完整数据 ==========
+            log.info("==================== SSE事件发送开始 ====================");
+            log.info("📤 [SSE] 事件类型: {}", type.name());
+            log.info("📤 [SSE] 事件时间: {}", new java.util.Date());
+            log.info("📤 [SSE] 数据长度: {} 字符", eventData.length());
+            log.info("📤 [SSE] 完整数据:");
+            log.info("─ 开始 ({} 字符) ─", eventData.length());
+            log.info(eventData);
+            log.info("─ 结束 ─");
+            log.info("📤 [SSE] Event对象详情:");
+            log.info("   - agentName: {}", event.getAgentName());
+            log.info("   - message: {}", event.getMessage());
+            log.info("   - isProgress: {}", event.isProgress());
+            log.info("   - timestamp: {}", event.getTimestamp());
+            log.info("   - toolName: {}", event.getToolName());
+            log.info("   - inputs: {}", event.getInputs() != null ? event.getInputs().substring(0, Math.min(100, event.getInputs().length())) + "..." : "null");
+            log.info("   - output: {}", event.getOutput() != null ? event.getOutput().substring(0, Math.min(100, event.getOutput().length())) + "..." : "null");
+            log.info("=====================================================");
 
             // ✅ 统一使用 "message" 事件名，前端才能接收
             emitter.send(SseEmitter.event()
                     .name("message")  // 固定使用message事件名
                     .data(eventData));
 
-            log.info("✅ [SSE] 事件发送成功: type={}", type.name());
+            long duration = System.currentTimeMillis() - startTime;
+            log.info("✅ [SSE] 事件发送成功: type={}, 耗时={}ms", type.name(), duration);
         } catch (IOException e) {
-            log.error("❌ [SSE] 发送SSE事件失败: type={}, error={}", type.name(), e.getMessage());
+            long duration = System.currentTimeMillis() - startTime;
+            log.error("❌ [SSE] 发送SSE事件失败: type={}, 耗时={}ms, error={}", type.name(), duration, e.getMessage());
+            log.error("❌ [SSE] 失败详情:", e);
             emitter.completeWithError(e);
         } catch (Exception e) {
-            log.error("❌ [SSE] 发送SSE事件异常: type={}, error={}", type.name(), e.getMessage(), e);
+            long duration = System.currentTimeMillis() - startTime;
+            log.error("❌ [SSE] 发送SSE事件异常: type={}, 耗时={}ms, error={}", type.name(), duration, e.getMessage(), e);
             emitter.completeWithError(e);
         }
     }
