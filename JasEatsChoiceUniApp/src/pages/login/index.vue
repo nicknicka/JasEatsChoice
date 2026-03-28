@@ -401,7 +401,7 @@ const handleWechatLogin = async (e) => {
 
     uni.showToast({ title: '登录成功', icon: 'success' })
     setTimeout(() => {
-      uni.switchTab({ url: '/pages-user/home/index' })
+      uni.switchTab({ url: '/src/pages/home/index/index' })
     }, 1500)
   } catch (error) {
     console.error('微信登录失败:', error)
@@ -438,7 +438,7 @@ const handlePhoneLogin = async () => {
 
     uni.showToast({ title: '登录成功', icon: 'success' })
     setTimeout(() => {
-      uni.switchTab({ url: '/pages-user/home/index' })
+      uni.switchTab({ url: '/src/pages/home/index/index' })
     }, 1500)
   } catch (error) {
     console.error('登录失败:', error)
@@ -485,7 +485,7 @@ const handlePasswordLogin = async () => {
 
     uni.showToast({ title: '登录成功', icon: 'success' })
     setTimeout(() => {
-      uni.switchTab({ url: '/pages-user/home/index' })
+      uni.switchTab({ url: '/src/pages/home/index/index' })
     }, 1500)
   } catch (error) {
     console.error('密码登录失败:', error)

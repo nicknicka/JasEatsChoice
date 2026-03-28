@@ -536,4 +536,63 @@ public class DishController {
         log.info("返回可替换菜品列表, 数量: {}", resultDishes.size());
         return ResponseResult.success(resultDishes);
     }
+
+    /**
+     * 获取推荐菜品列表
+     * GET /v1/dishes/recommended
+     * @param userId 用户ID（用于个性化推荐）
+     * @param limit 数量限制
+     * @param page 页码
+     * @param size 每页大小
+     */
+    @GetMapping("/recommended")
+    public ResponseResult<?> getRecommendedDishes(@RequestParam(required = false) String userId,
+                                                  @RequestParam(defaultValue = "10") Integer limit,
+                                                  @RequestParam(defaultValue = "1") Integer page,
+                                                  @RequestParam(defaultValue = "10") Integer size) {
+        log.info("获取推荐菜品列表, userId: {}, limit: {}, page: {}, size: {}", userId, limit, page, size);
+
+        try {
+            LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();
+            queryWrapper.eq(Dish::getIsOnline, true);
+
+            // 按推荐得分、评分和订单次数排序
+            queryWrapper.orderByDesc(Dish::getScore)
+                      .orderByDesc(Dish::getAvgRating)
+                      .orderByDesc(Dish::getOrderCount);
+
+            // 分页
+            int offset = (page - 1) * size;
+            queryWrapper.last("LIMIT " + offset + ", " + size);
+
+            List<Dish> dishes = dishService.list(queryWrapper);
+
+            // 转换为前端需要的格式
+            List<Map<String, Object>> resultDishes = new ArrayList<>();
+            for (Dish dish : dishes) {
+                Map<String, Object> dishMap = new HashMap<>();
+                dishMap.put("dishId", dish.getId());
+                dishMap.put("id", dish.getId());
+                dishMap.put("dishName", dish.getName());
+                dishMap.put("name", dish.getName());
+                dishMap.put("description", dish.getDescription());
+                dishMap.put("desc", dish.getDescription());
+                dishMap.put("price", dish.getPrice());
+                dishMap.put("image", dish.getImage());
+                dishMap.put("coverImage", dish.getImage());
+                dishMap.put("category", dish.getCategory());
+                dishMap.put("merchantId", dish.getMerchantId());
+                dishMap.put("monthlySales", dish.getOrderCount() != null ? dish.getOrderCount() : 0);
+                dishMap.put("sales", dish.getOrderCount() != null ? dish.getOrderCount() : 0);
+
+                resultDishes.add(dishMap);
+            }
+
+            log.info("返回推荐菜品列表, 数量: {}", resultDishes.size());
+            return ResponseResult.success(resultDishes);
+        } catch (Exception e) {
+            log.error("获取推荐菜品列表失败", e);
+            return ResponseResult.fail("500", "获取推荐菜品列表失败: " + e.getMessage());
+        }
+    }
 }

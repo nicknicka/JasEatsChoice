@@ -84,9 +84,9 @@ export const paths = {
 
 // 导出跳转方法
 export const toLogin = () => uni.reLaunch({ url: MAIN_PAGES.LOGIN })
-export const toUserHome = () => uni.switchTab({ url: MAIN_PAGES.HOME })
-export const toMerchantHome = () => uni.switchTab({ url: MERCHANT_PAGES.HOME })
-export const toProfile = () => uni.switchTab({ url: USER_PAGES.PROFILE })
+export const toUserHome = () => uni.switchTab({ url: '/src/pages/home/index/index' })
+export const toMerchantHome = () => uni.switchTab({ url: '/src/pages-merchant/home/index' })
+export const toProfile = () => uni.switchTab({ url: '/src/pages/profile/user-center/index' })
 
 export const toDishDetail = (dishId) => uni.navigateTo({ url: `${USER_PAGES.DISH_DETAIL}?id=${dishId}` })
 export const toMerchantDetail = (merchantId) => uni.navigateTo({ url: `${USER_PAGES.MERCHANT_DETAIL}?id=${merchantId}` })
@@ -109,7 +109,7 @@ export const backOrHome = () => {
   if (pages.length > 1) {
     uni.navigateBack()
   } else {
-    toUserHome()
+    uni.switchTab({ url: '/src/pages/home/index/index' })
   }
 }
 
