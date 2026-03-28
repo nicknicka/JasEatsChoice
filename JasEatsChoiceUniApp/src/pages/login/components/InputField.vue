@@ -1,9 +1,10 @@
 <template>
   <view class="input-field-wrapper">
     <view class="input-item" :class="{ 'captcha-item': !!captcha, 'autocomplete-item': showHistory }">
-      <uni-icons :type="icon" size="20" color="#999"></uni-icons>
+      <text class="input-icon">{{ iconMap[icon] || '📝' }}</text>
       <input
         :type="type"
+        :password="isPassword && !showPassword"
         :value="modelValue"
         @input="handleInput"
         :placeholder="placeholder"
@@ -13,32 +14,24 @@
       />
 
       <!-- 清除按钮 -->
-      <uni-icons
+      <text
         v-if="clearable && modelValue"
-        type="clear"
-        size="18"
-        color="#999"
         class="clear-icon"
         @click.stop="handleClear"
-      />
+      >✕</text>
 
       <!-- 历史记录下拉按钮 -->
-      <uni-icons
+      <text
         v-if="showHistory"
-        type="down"
-        size="16"
-        color="#999"
         class="dropdown-icon"
         @click.stop="toggleHistory"
-      />
+      >▼</text>
 
       <!-- 密码切换按钮 -->
       <view v-if="toggle" class="password-toggle" @click.stop="toggle.onClick">
-        <uni-icons
-          :type="toggle.icon"
-          size="20"
-          :color="toggle.color"
-        ></uni-icons>
+        <text class="eye-icon" :style="{ color: toggle.color }">
+          {{ toggle.icon === 'eye-filled' ? '👁️' : '👁️‍🗨️' }}
+        </text>
       </view>
 
       <!-- 验证码按钮 -->
@@ -59,20 +52,19 @@
           mode="aspectFit"
           @click="captcha.onRefresh"
         />
-        <uni-icons
-          type="refreshempty"
-          size="20"
-          color="#FF6B35"
+        <text
           class="refresh-icon"
           @click="captcha.onRefresh"
-        ></uni-icons>
+        >🔄</text>
       </view>
     </view>
 
     <!-- 错误提示 -->
-    <view v-if="error" class="input-error-tip">
-      {{ error }}
-    </view>
+    <transition name="fade">
+      <view v-if="error" class="input-error-tip">
+        {{ error }}
+      </view>
+    </transition>
 
     <!-- 历史记录下拉列表 -->
     <view v-if="showHistoryList" class="history-list">
@@ -83,13 +75,10 @@
         @click="selectHistory(item)"
       >
         <view class="history-phone">{{ item.phone }}</view>
-        <uni-icons
-          type="clear"
-          size="16"
-          color="#999"
+        <text
           class="delete-icon"
           @click.stop="deleteHistory(item.phone)"
-        ></uni-icons>
+        >✕</text>
       </view>
     </view>
   </view>
@@ -97,6 +86,18 @@
 
 <script setup>
 import { ref, watch } from 'vue'
+
+// Emoji 图标映射表
+const iconMap = {
+  phone: '📱',
+  locked: '🔒',
+  checkmarkempty: '✓',
+  clear: '✕',
+  down: '▼',
+  eye: '👁️',
+  'eye-filled': '👁️',
+  refreshempty: '🔄'
+}
 
 const props = defineProps({
   modelValue: {
@@ -146,15 +147,41 @@ const props = defineProps({
   toggle: {
     type: Object,
     default: null
+  },
+  // 新增：是否为密码输入框
+  isPassword: {
+    type: Boolean,
+    default: false
+  },
+  // 新增：密码是否显示
+  showPassword: {
+    type: Boolean,
+    default: false
+  },
+  // 新增：验证函数
+  validateFn: {
+    type: Function,
+    default: null
+  },
+  // 新增：验证参数
+  validateOptions: {
+    type: Object,
+    default: () => ({})
   }
 })
 
-const emit = defineEmits(['update:modelValue', 'blur', 'focus', 'selectHistory', 'deleteHistory'])
+const emit = defineEmits(['update:modelValue', 'blur', 'focus', 'selectHistory', 'deleteHistory', 'validate'])
 
 const showHistoryList = ref(false)
 
 const handleInput = (e) => {
-  emit('update:modelValue', e.detail.value)
+  const newValue = e.detail.value
+  emit('update:modelValue', newValue)
+
+  // 实时验证：如果输入内容且提供了验证函数，则触发验证
+  if (newValue && props.validateFn) {
+    emit('validate', newValue)
+  }
 }
 
 const handleBlur = (e) => {
@@ -170,6 +197,8 @@ const handleFocus = (e) => {
 
 const handleClear = () => {
   emit('update:modelValue', '')
+  // 清空时也触发验证（清除错误提示）
+  emit('validate', '')
 }
 
 const toggleHistory = () => {
@@ -209,6 +238,13 @@ watch(() => props.modelValue, (newVal) => {
   position: relative;
 }
 
+.input-icon {
+  font-size: 20px;
+  margin-right: 10rpx;
+  display: flex;
+  align-items: center;
+}
+
 .input-item input {
   flex: 1;
   font-size: 28rpx;
@@ -218,6 +254,8 @@ watch(() => props.modelValue, (newVal) => {
 .clear-icon {
   cursor: pointer;
   padding: 8rpx;
+  font-size: 18px;
+  color: #999;
   transition: all 0.2s;
 }
 
@@ -228,11 +266,19 @@ watch(() => props.modelValue, (newVal) => {
 .dropdown-icon {
   cursor: pointer;
   padding: 10rpx;
+  font-size: 16px;
+  color: #999;
 }
 
 .password-toggle {
   cursor: pointer;
   padding: 10rpx;
+  display: flex;
+  align-items: center;
+}
+
+.eye-icon {
+  font-size: 20px;
 }
 
 .code-btn {
@@ -273,6 +319,10 @@ watch(() => props.modelValue, (newVal) => {
 .refresh-icon {
   cursor: pointer;
   padding: 5rpx;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* 错误提示 */
@@ -281,15 +331,27 @@ watch(() => props.modelValue, (newVal) => {
   top: 100%;
   left: 0;
   right: 0;
-  padding: 10rpx 20rpx;
+  padding: 12rpx 20rpx;
   font-size: 22rpx;
   color: #FF6B35;
   background: rgba(255, 255, 255, 0.95);
-  border-radius: 0 0 20rpx 20rpx;
-  margin-top: 5rpx;
+  border-radius: 20rpx;
+  margin-top: 12rpx;
   z-index: 10;
   animation: slideDown 0.2s ease-out;
   box-shadow: 0 2rpx 10rpx rgba(255, 107, 53, 0.1);
+}
+
+/* 淡出动画 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: all 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(-10rpx);
 }
 
 @keyframes slideDown {
@@ -337,5 +399,7 @@ watch(() => props.modelValue, (newVal) => {
 .delete-icon {
   cursor: pointer;
   padding: 10rpx;
+  font-size: 16px;
+  color: #999;
 }
 </style>

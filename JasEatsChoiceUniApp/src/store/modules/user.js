@@ -52,6 +52,10 @@ export const useUserStore = defineStore('user', {
      * @param {Object} userInfo - 用户信息
      */
     setUserInfo(userInfo) {
+      if (!userInfo) {
+        console.warn('setUserInfo: userInfo is null or undefined')
+        return
+      }
       this.userInfo = userInfo
       if (userInfo.role) {
         this.role = userInfo.role
@@ -65,9 +69,22 @@ export const useUserStore = defineStore('user', {
      */
     async fetchUserInfo() {
       try {
-        const res = await userApi.getUserInfo()
-        this.setUserInfo(res.data)
-        return res.data
+        if (!this.userId) {
+          throw new Error('用户ID不存在')
+        }
+
+        const res = await userApi.getUserInfo(this.userId)
+        console.log('获取用户信息响应:', res)
+
+        // 兼容不同的响应格式
+        if (res && res.data) {
+          this.setUserInfo(res.data)
+        } else if (res && typeof res === 'object') {
+          // 直接返回用户对象
+          this.setUserInfo(res)
+        }
+
+        return res
       } catch (error) {
         console.error('获取用户信息失败:', error)
         throw error
@@ -86,9 +103,54 @@ export const useUserStore = defineStore('user', {
     async login(data) {
       try {
         const res = await userApi.login(data)
-        this.setToken(res.data.token)
-        this.setUserInfo(res.data.userInfo)
-        return res.data
+        console.log('登录响应完整数据:', res)
+        console.log('登录响应 data 字段:', res.data)
+
+        // 检查返回的数据结构
+        if (!res) {
+          throw new Error('登录失败：服务器返回数据为空')
+        }
+
+        // 处理 token
+        let token = null
+        if (res.token) {
+          token = res.token
+        } else if (res.data && res.data.token) {
+          token = res.data.token
+        }
+
+        if (token) {
+          this.setToken(token)
+        }
+
+        // 处理用户信息 - 兼容多种数据结构
+        let userInfo = null
+        if (res.user) {
+          userInfo = res.user
+        } else if (res.userInfo) {
+          userInfo = res.userInfo
+        } else if (res.data && res.data.user) {
+          userInfo = res.data.user
+        } else if (res.data && res.data.userInfo) {
+          userInfo = res.data.userInfo
+        } else if (res.data && res.data.userId) {
+          // 如果只有 userId，构建最小用户信息
+          userInfo = { userId: res.data.userId }
+        }
+
+        if (userInfo) {
+          console.log('设置用户信息:', userInfo)
+          this.setUserInfo(userInfo)
+
+          // 如果用户信息包含 userId，也保存到 userInfo
+          if (userInfo.userId || userInfo.id) {
+            this.userId = userInfo.userId || userInfo.id
+          }
+        } else {
+          console.warn('登录响应中没有找到用户信息，响应结构:', res)
+        }
+
+        return res
       } catch (error) {
         console.error('登录失败:', error)
         throw error

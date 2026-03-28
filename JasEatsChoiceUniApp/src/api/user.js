@@ -8,18 +8,18 @@ import request from '@/utils/request'
  */
 export const login = (data) => {
   return request({
-    url: '/api/user/login',
+    url: '/v1/users/login',
     method: 'POST',
     data
   })
 }
 
 /**
- * 手机号登录
+ * 手机号登录（验证码登录）
  */
 export const loginByPhone = (data) => {
   return request({
-    url: '/api/user/login/phone',
+    url: '/v1/users/login',
     method: 'POST',
     data
   })
@@ -30,7 +30,7 @@ export const loginByPhone = (data) => {
  */
 export const loginByWechat = (data) => {
   return request({
-    url: '/api/user/login/wechat',
+    url: '/v1/users/wechat-login',
     method: 'POST',
     data
   })
@@ -41,7 +41,7 @@ export const loginByWechat = (data) => {
  */
 export const register = (data) => {
   return request({
-    url: '/api/user/register',
+    url: '/v1/users/register',
     method: 'POST',
     data
   })
@@ -52,7 +52,7 @@ export const register = (data) => {
  */
 export const sendCode = (data) => {
   return request({
-    url: '/api/user/sms/code',
+    url: '/v1/users/send-sms-code',
     method: 'POST',
     data
   })
@@ -61,9 +61,9 @@ export const sendCode = (data) => {
 /**
  * 获取用户信息
  */
-export const getUserInfo = () => {
+export const getUserInfo = (userId) => {
   return request({
-    url: '/api/user/info',
+    url: `/v1/users/${userId}`,
     method: 'GET'
   })
 }
@@ -71,9 +71,9 @@ export const getUserInfo = () => {
 /**
  * 更新用户信息
  */
-export const updateUserInfo = (data) => {
+export const updateUserInfo = (userId, data) => {
   return request({
-    url: '/api/user/info',
+    url: `/v1/users/${userId}`,
     method: 'PUT',
     data
   })
@@ -82,23 +82,20 @@ export const updateUserInfo = (data) => {
 /**
  * 上传头像
  */
-export const uploadAvatar = (data) => {
+export const uploadAvatar = (userId, data) => {
   return request({
-    url: '/api/user/avatar',
+    url: `/v1/users/${userId}/avatar/base64`,
     method: 'POST',
-    data,
-    header: {
-      'Content-Type': 'multipart/form-data'
-    }
+    data
   })
 }
 
 /**
  * 获取用户统计数据
  */
-export const getUserStats = () => {
+export const getUserStats = (userId) => {
   return request({
-    url: '/api/user/stats',
+    url: `/v1/users/${userId}/stats`,
     method: 'GET'
   })
 }
@@ -106,9 +103,9 @@ export const getUserStats = () => {
 /**
  * 实名认证
  */
-export const realNameAuth = (data) => {
+export const realNameAuth = (userId, data) => {
   return request({
-    url: '/api/user/auth',
+    url: `/v1/users/${userId}/auth`,
     method: 'POST',
     data
   })
@@ -119,8 +116,18 @@ export const realNameAuth = (data) => {
  */
 export const logout = () => {
   return request({
-    url: '/api/user/logout',
+    url: '/v1/users/logout',
     method: 'POST'
+  })
+}
+
+/**
+ * 获取验证码
+ */
+export const getCaptcha = () => {
+  return request({
+    url: '/v1/captcha',
+    method: 'GET'
   })
 }
 
@@ -135,5 +142,6 @@ export default {
   uploadAvatar,
   getUserStats,
   realNameAuth,
-  logout
+  logout,
+  getCaptcha
 }

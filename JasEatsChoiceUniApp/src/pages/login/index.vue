@@ -46,7 +46,8 @@
           :maxlength="11"
           :error="phoneFormErrors.phone"
           clearable
-          @blur="() => validateField('phoneForm.phone', 'phone', phoneFormErrors)"
+          @blur="() => validateField(phoneForm.phone, 'phone', phoneFormErrors)"
+          @validate="(val) => validateField(val, 'phone', phoneFormErrors)"
         />
 
         <InputField
@@ -61,7 +62,8 @@
             disabled: countdown > 0,
             onClick: sendCode
           }"
-          @blur="() => validateField('phoneForm.code', 'code', phoneFormErrors, { minLength: 4 })"
+          @blur="() => validateField(phoneForm.code, 'code', phoneFormErrors)"
+          @validate="(val) => validateField(val, 'code', phoneFormErrors)"
         />
       </view>
 
@@ -100,23 +102,27 @@
           :historyItems="phoneHistory"
           @selectHistory="selectPhone"
           @deleteHistory="deletePhone"
-          @blur="() => validateField('passwordForm.phone', 'phone', passwordFormErrors)"
+          @blur="() => validateField(passwordForm.phone, 'phone', passwordFormErrors)"
+          @validate="(val) => validateField(val, 'phone', passwordFormErrors)"
         />
 
         <InputField
           v-model="passwordForm.password"
           icon="locked"
-          :type="showPassword ? 'text' : 'password'"
+          type="text"
           placeholder="请输入密码（6-20位）"
           :maxlength="20"
           :error="passwordFormErrors.password"
           clearable
+          :isPassword="true"
+          :showPassword="showPassword"
           :toggle="{
             icon: showPassword ? 'eye-filled' : 'eye',
             color: showPassword ? '#FF6B35' : '#999',
             onClick: togglePassword
           }"
-          @blur="() => validateField('passwordForm.password', 'password', passwordFormErrors, { minLength: 6, maxLength: 20 })"
+          @blur="() => validateField(passwordForm.password, 'password', passwordFormErrors, { minLength: 6, maxLength: 20 })"
+          @validate="(val) => validateField(val, 'password', passwordFormErrors, { minLength: 6, maxLength: 20 })"
         />
 
         <InputField
@@ -131,7 +137,8 @@
             onRefresh: refreshCaptcha
           }"
           clearable
-          @blur="() => validateField('passwordForm.captcha', 'captcha', passwordFormErrors, { minLength: 4 })"
+          @blur="() => validateField(passwordForm.captcha, 'captcha', passwordFormErrors)"
+          @validate="(val) => validateField(val, 'captcha', passwordFormErrors)"
         />
       </view>
 
@@ -323,11 +330,10 @@ const validateField = (formValue, fieldType, errorObj, options = {}) => {
     return
   }
 
-  // 验证码验证
+  // 验证码验证 - 只做空值检测
   if (fieldType === 'code' || fieldType === 'captcha') {
-    const { minLength = 4 } = options
-    if (value.length < minLength) {
-      errorObj[fieldType] = '请输入完整的验证码'
+    if (!value || value.length === 0) {
+      errorObj[fieldType] = ''
       return
     }
     errorObj[fieldType] = ''
@@ -343,7 +349,7 @@ const sendCode = async () => {
   if (phoneFormErrors.value.phone) return
 
   try {
-    await userApi.sendCode(phoneForm.value.phone)
+    await userApi.sendCode({ phone: phoneForm.value.phone })
     uni.showToast({ title: '验证码已发送', icon: 'success' })
 
     countdown.value = 60
@@ -411,7 +417,7 @@ const handleWechatLogin = async (e) => {
 const handlePhoneLogin = async () => {
   // 验证所有字段
   validateField(phoneForm.value.phone, 'phone', phoneFormErrors)
-  validateField(phoneForm.value.code, 'code', phoneFormErrors, { minLength: 4 })
+  validateField(phoneForm.value.code, 'code', phoneFormErrors)
 
   if (!isPhoneFormValid.value) {
     const firstError = Object.values(phoneFormErrors.value).find(error => error !== '')
@@ -449,7 +455,7 @@ const handlePasswordLogin = async () => {
   // 验证所有字段
   validateField(passwordForm.value.phone, 'phone', passwordFormErrors)
   validateField(passwordForm.value.password, 'password', passwordFormErrors, { minLength: 6, maxLength: 20 })
-  validateField(passwordForm.value.captcha, 'captcha', passwordFormErrors, { minLength: 4 })
+  validateField(passwordForm.value.captcha, 'captcha', passwordFormErrors)
 
   if (!isPasswordFormValid.value) {
     const firstError = Object.values(passwordFormErrors.value).find(error => error !== '')
@@ -553,9 +559,24 @@ const loadPhoneHistory = () => {
 const getCaptcha = async () => {
   try {
     const response = await userApi.getCaptcha()
-    const result = response.data
-    captchaBase64.value = 'data:image/png;base64,' + result.checkCode
-    passwordForm.value.checkCodeKey = result.checkCodeKey
+    console.log('验证码响应:', response)
+
+    // 兼容不同的响应格式
+    let result = null
+    if (response.data) {
+      result = response.data
+    } else if (response.checkCode) {
+      result = response
+    }
+
+    if (result && result.checkCode) {
+      captchaBase64.value = 'data:image/png;base64,' + result.checkCode
+      if (result.checkCodeKey) {
+        passwordForm.value.checkCodeKey = result.checkCodeKey
+      }
+    } else {
+      console.error('验证码响应格式不正确:', response)
+    }
   } catch (error) {
     console.error('获取验证码失败:', error)
     uni.showToast({ title: '获取验证码失败', icon: 'none' })
@@ -723,7 +744,7 @@ const toForgotPassword = () => {
 .input-group {
   display: flex;
   flex-direction: column;
-  gap: 30rpx;
+  gap: 80rpx;
 }
 
 .extra-options {
