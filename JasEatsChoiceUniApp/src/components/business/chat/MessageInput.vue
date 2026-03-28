@@ -169,7 +169,7 @@ defineExpose({
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
-@import '@/styles/mixins.scss';
+@import '../../styles/mixins.scss';
 
 .message-input-container {
   background: #fff;

@@ -244,6 +244,8 @@ const toComment = () => {
 </script>
 
 <style lang="scss" scoped>
+@import '@/styles/mixins.scss';
+
 .merchant-home-container {
   min-height: 100vh;
   background: #F5F5F5;

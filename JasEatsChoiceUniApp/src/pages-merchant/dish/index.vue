@@ -484,7 +484,7 @@ const toEditDish = (id) => {
   font-size: 24rpx;
   color: #999;
   margin: 10rpx 0;
-  @include text-ellipsis(2);
+  @include text-ellipsis-multiline(2);
 }
 
 .dish-price-row {

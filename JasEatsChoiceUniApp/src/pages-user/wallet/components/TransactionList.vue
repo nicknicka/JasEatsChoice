@@ -224,6 +224,7 @@ const handleItemClick = (item) => {
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
+@import '@/styles/mixins.scss';
 
 .transactions-section {
   background-color: $bg-color-white;

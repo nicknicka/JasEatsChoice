@@ -364,13 +364,19 @@
       "Bash(jar tf:*)",
       "Bash(jar -xf ~/.m2/repository/dev/langchain4j/langchain4j-agentic/1.12.1-beta21/langchain4j-agentic-1.12.1-beta21.jar)",
       "Bash(jar -tf /Users/nickxiao/.m2/repository/dev/langchain4j/langchain4j/1.12.1/langchain4j-1.12.1.jar)",
-      "Bash(jar -tf /Users/nickxiao/.m2/repository/dev/langchain4j/langchain4j-agentic/1.12.1-beta21/langchain4j-agentic-1.12.1-beta21.jar)"
+      "Bash(jar -tf /Users/nickxiao/.m2/repository/dev/langchain4j/langchain4j-agentic/1.12.1-beta21/langchain4j-agentic-1.12.1-beta21.jar)",
+      "Bash(npm run:*)",
+      "Bash(/Applications/HBuilderX.app/Contents/HBuilderX/plugins/npm/npm install:*)",
+      "Bash(/Applications/HBuilderX.app/Contents/HBuilderX/plugins/npm/npm run:*)",
+      "Read(//<input/,/>/**)",
+      "Read(//Users/nickxiao/JasEatsChoice/**)"
     ],
     "deny": [],
     "ask": [],
     "additionalDirectories": [
       "/tmp",
-      "/Users/nickxiao/JasEatsChoice/JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/agent/agents"
+      "/Users/nickxiao/JasEatsChoice/JasEatsChoiceJava/target/classes/com/xx/jaseatschoicejava/agent/agents",
+      "/Users/nickxiao/JasEatsChoice/JasEatsChoiceUniApp/node_modules"
     ]
   }
 }

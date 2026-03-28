@@ -56,6 +56,7 @@ const props = defineProps({
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
+@import '@/styles/mixins.scss';
 
 .order-detail-section {
   background-color: $bg-color-white;

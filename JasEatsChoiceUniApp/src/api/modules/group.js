@@ -1,4 +1,4 @@
-import { get, post, put, del } from '../request'
+import { get, post, put, del } from '@/utils/request'
 
 /**
  * 群聊管理 API

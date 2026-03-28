@@ -64,7 +64,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useUserStore } from '@/stores/user'
+import { useUserStore } from '@/store'
 import { formatDateTime } from '@/utils/helper'
 import { walletApi } from '@/api'
 

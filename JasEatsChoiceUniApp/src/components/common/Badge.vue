@@ -42,6 +42,7 @@ const formatValue = (val) => {
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
+@import '../../styles/mixins.scss';
 
 .badge-wrapper {
   position: relative;

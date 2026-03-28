@@ -162,6 +162,7 @@ defineExpose({
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
+@import '@/styles/mixins.scss';
 
 .recharge-popup {
   background-color: $bg-color-white;

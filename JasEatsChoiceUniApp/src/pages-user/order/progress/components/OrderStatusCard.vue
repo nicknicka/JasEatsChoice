@@ -87,6 +87,7 @@ const statusText = computed(() => {
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
+@import '@/styles/mixins.scss';
 
 .status-card {
   margin: $spacing-md;

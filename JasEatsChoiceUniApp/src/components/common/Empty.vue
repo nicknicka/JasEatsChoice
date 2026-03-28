@@ -48,6 +48,7 @@ const handleButtonClick = () => {
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
+@import '../../styles/mixins.scss';
 
 .empty-container {
   @include flex-center-column;

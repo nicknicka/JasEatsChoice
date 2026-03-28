@@ -87,7 +87,8 @@
 </template>
 
 <script setup>
-import { ref, onLoad } from 'vue'
+import { ref } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
 
 // 地图中心点坐标
 const longitude = ref(113.264385)

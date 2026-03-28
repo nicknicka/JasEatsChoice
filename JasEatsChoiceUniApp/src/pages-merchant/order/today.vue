@@ -134,7 +134,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { merchantApi } from '@/api'
 import { formatTime } from '@/utils/helper'
-import { useMerchantStore } from '@/stores/merchant'
+import { useMerchantStore } from '@/store/modules/merchant'
 
 const merchantStore = useMerchantStore()
 

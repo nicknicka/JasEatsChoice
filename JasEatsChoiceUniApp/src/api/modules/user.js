@@ -1,23 +1,26 @@
 /**
  * 用户相关API
  * 对接后端 UserController
- * 基础路径: /v1/user
+ * 基础路径: /v1/users
  */
 import { get, post, put, del } from '@/utils/request'
 
 export const userApi = {
   /**
-   * 用户登录（验证码）
-   * POST /v1/user/login
+   * 用户登录（支持验证码和密码两种方式）
+   * POST /v1/users/login
    * @param {Object} data - 登录数据
    * @param {string} data.phone - 手机号
-   * @param {string} data.code - 验证码
+   * @param {string} data.code - 验证码（验证码登录时使用）
+   * @param {string} data.password - 密码（密码登录时使用）
+   * @param {string} data.captcha - 图形验证码
+   * @param {string} data.checkCodeKey - 验证码key
    */
-  login: (data) => post('/v1/user/login', data),
+  login: (data) => post('/v1/users/login', data),
 
   /**
    * 用户注册
-   * POST /v1/user/register
+   * POST /v1/users/register
    * @param {Object} data - 注册数据
    * @param {string} data.phone - 手机号
    * @param {string} data.code - 验证码
@@ -25,24 +28,31 @@ export const userApi = {
    * @param {string} data.nickname - 昵称
    * @param {string} data.avatar - 头像URL
    */
-  register: (data) => post('/v1/user/register', data),
+  register: (data) => post('/v1/users/register', data),
 
   /**
    * 发送验证码
-   * POST /v1/user/send-code
+   * POST /v1/users/send-sms-code
    * @param {string} phone - 手机号
    */
-  sendCode: (phone) => post('/v1/user/send-code', { phone }),
+  sendCode: (phone) => post('/v1/users/send-sms-code', { phone }),
+
+  /**
+   * 获取图形验证码
+   * GET /v1/captcha/checkCode
+   * @returns {Promise} 返回验证码数据
+   */
+  getCaptcha: () => get('/v1/captcha/checkCode'),
 
   /**
    * 微信授权登录
-   * POST /v1/user/wechat-login
+   * POST /v1/users/wechat-login
    * @param {Object} data - 微信登录数据
    * @param {string} data.code - 微信code
    * @param {string} data.encryptedData - 加密数据
    * @param {string} data.iv - 加密算法的初始向量
    */
-  wechatLogin: (data) => post('/v1/user/wechat-login', data),
+  wechatLogin: (data) => post('/v1/users/wechat-login', data),
 
   /**
    * 获取用户信息
@@ -61,29 +71,32 @@ export const userApi = {
 
   /**
    * 修改密码
-   * POST /v1/user/change-password
+   * POST /v1/users/{userId}/password
+   * @param {string} userId - 用户ID
    * @param {Object} data - 密码数据
    * @param {string} data.oldPassword - 旧密码
    * @param {string} data.newPassword - 新密码
    */
-  changePassword: (data) => post('/v1/user/change-password', data),
+  changePassword: (userId, data) => post(`/v1/users/${userId}/password`, data),
 
   /**
    * 重置密码
-   * POST /v1/user/reset-password
+   * POST /v1/users/reset-password
    * @param {Object} data - 重置数据
    * @param {string} data.phone - 手机号
    * @param {string} data.code - 验证码
    * @param {string} data.newPassword - 新密码
    */
-  resetPassword: (data) => post('/v1/user/reset-password', data),
+  resetPassword: (data) => post('/v1/users/reset-password', data),
 
   /**
    * 上传头像
-   * POST /v1/user/avatar
-   * @param {FormData} formData - 头像文件
+   * POST /v1/users/{userId}/avatar/base64
+   * @param {string} userId - 用户ID
+   * @param {Object} data - 头像数据
+   * @param {string} data.avatarBase64 - base64编码的头像
    */
-  uploadAvatar: (formData) => post('/v1/user/avatar', formData),
+  uploadAvatar: (userId, data) => post(`/v1/users/${userId}/avatar/base64`, data),
 
   /**
    * 获取用户统计数据

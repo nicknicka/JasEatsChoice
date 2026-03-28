@@ -105,7 +105,7 @@
 import { ref, onMounted } from 'vue'
 import { merchantApi } from '@/api'
 import { formatTime } from '@/utils/helper'
-import { useMerchantStore } from '@/stores/merchant'
+import { useMerchantStore } from '@/store/modules/merchant'
 
 const merchantStore = useMerchantStore()
 

@@ -44,7 +44,7 @@ defineEmits(['merchant-tap'])
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
-@import '@/styles/mixins.scss';
+@import '../../styles/mixins.scss';
 
 .order-info-card {
   background: #fff;

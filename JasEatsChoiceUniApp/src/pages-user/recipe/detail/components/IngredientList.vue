@@ -81,6 +81,7 @@ const toggleIngredientCheck = (item) => {
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
+@import '@/styles/mixins.scss';
 
 .ingredients-list {
   @include flex-center-column;

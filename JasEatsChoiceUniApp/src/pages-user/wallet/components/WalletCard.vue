@@ -73,6 +73,7 @@ const handleWithdraw = () => {
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
+@import '@/styles/mixins.scss';
 
 .wallet-card {
   background: linear-gradient(135deg, #FF6B35, #FF8F61);

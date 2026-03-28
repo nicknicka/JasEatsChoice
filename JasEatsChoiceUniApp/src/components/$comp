@@ -1,0 +1,19 @@
+<template>
+  <view class="${classname}-container">
+    <slot>
+      <text class="placeholder-text">${filename} 组件</text>
+    </slot>
+  </view>
+</template>
+
+<script setup>
+// TODO: 实现 ${filename} 组件
+defineProps({})
+defineEmits([])
+</script>
+
+<style lang="scss" scoped>
+.${classname}-container {
+  width: 100%;
+}
+</style>

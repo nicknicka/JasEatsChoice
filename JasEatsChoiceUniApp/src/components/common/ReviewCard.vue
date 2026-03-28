@@ -52,7 +52,7 @@ defineEmits(['preview-image'])
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
-@import '@/styles/mixins.scss';
+@import '../../styles/mixins.scss';
 
 .review-card {
   padding: $spacing-md 0;

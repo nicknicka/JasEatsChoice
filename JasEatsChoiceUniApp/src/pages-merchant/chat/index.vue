@@ -543,16 +543,6 @@ const loadMore = () => {
     loadConversations()
   }
 }
-
-/**
- * 开始轮询
- */
-const startPolling = () => {
-  // 每30秒轮询一次新消息
-  setInterval(() => {
-    loadConversations(true)
-  }, 30000)
-}
 </script>
 
 <style lang="scss" scoped>

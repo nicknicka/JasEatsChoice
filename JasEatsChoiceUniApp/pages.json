@@ -1,0 +1,576 @@
+{
+	"easycom": {
+		"autoscan": true
+	},
+	"pages": [
+		{
+			"path": "src/pages/splash/index",
+			"style": {
+				"navigationBarTitleText": "启动页",
+				"navigationStyle": "custom",
+				"enablePullDownRefresh": false
+			}
+		},
+		{
+			"path": "src/pages/role-select/index",
+			"style": {
+				"navigationBarTitleText": "选择角色",
+				"enablePullDownRefresh": false
+			}
+		},
+		{
+			"path": "src/pages/login/index",
+			"style": {
+				"navigationBarTitleText": "登录",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "src/pages/register/index",
+			"style": {
+				"navigationBarTitleText": "注册",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "src/pages/home/index/index",
+			"style": {
+				"navigationBarTitleText": "佳食宜选",
+				"enablePullDownRefresh": true
+			}
+		},
+		{
+			"path": "src/pages/recipe/index",
+			"style": {
+				"navigationBarTitleText": "今日食谱",
+				"enablePullDownRefresh": true
+			}
+		},
+		{
+			"path": "src/pages/ai/index",
+			"style": {
+				"navigationBarTitleText": "AI助手",
+				"enablePullDownRefresh": false
+			}
+		},
+		{
+			"path": "src/pages/profile/user-center/index",
+			"style": {
+				"navigationBarTitleText": "用户中心",
+				"enablePullDownRefresh": false
+			}
+		}
+	],
+	"subPackages": [
+		{
+			"root": "src/pages-user",
+			"pages": [
+				{
+					"path": "search/index",
+					"style": {
+						"navigationBarTitleText": "搜索",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "merchant/detail/index",
+					"style": {
+						"navigationBarTitleText": "商家详情",
+						"enablePullDownRefresh": true
+					}
+				},
+				{
+					"path": "dish/detail/index",
+					"style": {
+						"navigationBarTitleText": "菜品详情",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "cart/index",
+					"style": {
+						"navigationBarTitleText": "购物车",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "order/confirm/index",
+					"style": {
+						"navigationBarTitleText": "确认订单",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "order/detail/index",
+					"style": {
+						"navigationBarTitleText": "订单详情",
+						"enablePullDownRefresh": true
+					}
+				},
+				{
+					"path": "order/progress/index",
+					"style": {
+						"navigationBarTitleText": "订单进度",
+						"enablePullDownRefresh": true
+					}
+				},
+				{
+					"path": "orders/index",
+					"style": {
+						"navigationBarTitleText": "我的订单",
+						"enablePullDownRefresh": true
+					}
+				},
+				{
+					"path": "review/list/index",
+					"style": {
+						"navigationBarTitleText": "全部评价",
+						"enablePullDownRefresh": true
+					}
+				},
+				{
+					"path": "review/submit/index",
+					"style": {
+						"navigationBarTitleText": "发表评价",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "recipe/my",
+					"style": {
+						"navigationBarTitleText": "我的食谱",
+						"enablePullDownRefresh": true
+					}
+				},
+				{
+					"path": "recipe/detail/index",
+					"style": {
+						"navigationBarTitleText": "食谱详情",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "ai/advanced",
+					"style": {
+						"navigationBarTitleText": "AI智能分析",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "ai/content-extract",
+					"style": {
+						"navigationBarTitleText": "内容提取",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "settings/index",
+					"style": {
+						"navigationBarTitleText": "设置",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "profile/user-center/edit/index",
+					"style": {
+						"navigationBarTitleText": "编辑资料",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "address/index",
+					"style": {
+						"navigationBarTitleText": "收货地址",
+						"enablePullDownRefresh": true
+					}
+				},
+				{
+					"path": "address/edit/index",
+					"style": {
+						"navigationBarTitleText": "编辑地址",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "collection/index",
+					"style": {
+						"navigationBarTitleText": "我的收藏",
+						"enablePullDownRefresh": true
+					}
+				},
+				{
+					"path": "history/index",
+					"style": {
+						"navigationBarTitleText": "浏览历史",
+						"enablePullDownRefresh": true
+					}
+				},
+				{
+					"path": "coupon/index",
+					"style": {
+						"navigationBarTitleText": "我的优惠券",
+						"enablePullDownRefresh": true
+					}
+				},
+				{
+					"path": "wallet/index",
+					"style": {
+						"navigationBarTitleText": "我的钱包",
+						"enablePullDownRefresh": true
+					}
+				},
+				{
+					"path": "message/index",
+					"style": {
+						"navigationBarTitleText": "消息中心",
+						"enablePullDownRefresh": true
+					}
+				},
+				{
+					"path": "help/index",
+					"style": {
+						"navigationBarTitleText": "帮助中心",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "feedback/index",
+					"style": {
+						"navigationBarTitleText": "意见反馈",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "calorie/index",
+					"style": {
+						"navigationBarTitleText": "卡路里管理",
+						"enablePullDownRefresh": true
+					}
+				},
+				{
+					"path": "calorie/record",
+					"style": {
+						"navigationBarTitleText": "记录饮食",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "calorie/statistics",
+					"style": {
+						"navigationBarTitleText": "统计分析",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "home/merchant-list",
+					"style": {
+						"navigationBarTitleText": "商家列表",
+						"enablePullDownRefresh": true
+					}
+				},
+				{
+					"path": "dish/customize",
+					"style": {
+						"navigationBarTitleText": "菜品定制",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "profile/integral",
+					"style": {
+						"navigationBarTitleText": "我的积分",
+						"enablePullDownRefresh": true
+					}
+				},
+				{
+					"path": "profile/about",
+					"style": {
+						"navigationBarTitleText": "关于我们",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "demo/performance",
+					"style": {
+						"navigationBarTitleText": "性能演示",
+						"enablePullDownRefresh": false
+					}
+				}
+			]
+		},
+		{
+			"root": "src/pages-merchant",
+			"pages": [
+				{
+					"path": "home/index",
+					"style": {
+						"navigationBarTitleText": "商家首页",
+						"enablePullDownRefresh": true
+					}
+				},
+				{
+					"path": "home/statistics",
+					"style": {
+						"navigationBarTitleText": "数据统计",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "home/analytics",
+					"style": {
+						"navigationBarTitleText": "数据分析",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "order/index",
+					"style": {
+						"navigationBarTitleText": "订单管理",
+						"enablePullDownRefresh": true
+					}
+				},
+				{
+					"path": "order/detail",
+					"style": {
+						"navigationBarTitleText": "订单详情",
+						"enablePullDownRefresh": true
+					}
+				},
+				{
+					"path": "order/process",
+					"style": {
+						"navigationBarTitleText": "订单处理",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "order/today",
+					"style": {
+						"navigationBarTitleText": "今日订单",
+						"enablePullDownRefresh": true
+					}
+				},
+				{
+					"path": "dish/index",
+					"style": {
+						"navigationBarTitleText": "菜品管理",
+						"enablePullDownRefresh": true
+					}
+				},
+				{
+					"path": "dish/add",
+					"style": {
+						"navigationBarTitleText": "添加菜品",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "dish/edit",
+					"style": {
+						"navigationBarTitleText": "编辑菜品",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "dish/step-config",
+					"style": {
+						"navigationBarTitleText": "步骤配置",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "menu/index",
+					"style": {
+						"navigationBarTitleText": "菜单管理",
+						"enablePullDownRefresh": true
+					}
+				},
+				{
+					"path": "menu/edit",
+					"style": {
+						"navigationBarTitleText": "编辑菜单",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "comment/index",
+					"style": {
+						"navigationBarTitleText": "评价中心",
+						"enablePullDownRefresh": true
+					}
+				},
+				{
+					"path": "comment/detail",
+					"style": {
+						"navigationBarTitleText": "评价详情",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "comment/reply",
+					"style": {
+						"navigationBarTitleText": "回复评价",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "wishlist/index",
+					"style": {
+						"navigationBarTitleText": "心愿单审核",
+						"enablePullDownRefresh": true
+					}
+				},
+				{
+					"path": "wishlist/audit",
+					"style": {
+						"navigationBarTitleText": "审核心愿单",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "chat/index",
+					"style": {
+						"navigationBarTitleText": "消息中心",
+						"enablePullDownRefresh": true
+					}
+				},
+				{
+					"path": "chat/detail",
+					"style": {
+						"navigationBarTitleText": "聊天详情",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "profile/index",
+					"style": {
+						"navigationBarTitleText": "商家中心",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "profile/edit",
+					"style": {
+						"navigationBarTitleText": "编辑资料",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "profile/shop",
+					"style": {
+						"navigationBarTitleText": "店铺信息",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "profile/finance",
+					"style": {
+						"navigationBarTitleText": "财务管理",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "profile/withdraw",
+					"style": {
+						"navigationBarTitleText": "提现",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "profile/settings",
+					"style": {
+						"navigationBarTitleText": "设置",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "profile/tutorials",
+					"style": {
+						"navigationBarTitleText": "新手教程",
+						"enablePullDownRefresh": false
+					}
+				}
+			]
+		},
+		{
+			"root": "src/pages-common",
+			"pages": [
+				{
+					"path": "chat/conversation-list",
+					"style": {
+						"navigationBarTitleText": "消息列表",
+						"enablePullDownRefresh": true
+					}
+				},
+				{
+					"path": "chat/chat-room",
+					"style": {
+						"navigationBarTitleText": "聊天",
+						"enablePullDownRefresh": false,
+						"navigationStyle": "custom"
+					}
+				},
+				{
+					"path": "payment/index",
+					"style": {
+						"navigationBarTitleText": "收银台",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "payment/result",
+					"style": {
+						"navigationBarTitleText": "支付结果",
+						"enablePullDownRefresh": false
+					}
+				}
+			]
+		}
+	],
+	"globalStyle": {
+		"navigationBarTextStyle": "white",
+		"navigationBarTitleText": "佳食宜选",
+		"navigationBarBackgroundColor": "#FF6B35",
+		"backgroundColor": "#F5F5F5"
+	},
+	"tabBar": {
+		"color": "#999",
+		"selectedColor": "#FF6B35",
+		"backgroundColor": "#fff",
+		"borderStyle": "black",
+		"list": [
+			{
+				"pagePath": "src/pages/home/index/index",
+				"iconPath": "static/home.png",
+				"selectedIconPath": "static/home-active.png",
+				"text": "首页"
+			},
+			{
+				"pagePath": "src/pages/recipe/index",
+				"iconPath": "static/recipe.png",
+				"selectedIconPath": "static/recipe-active.png",
+				"text": "食谱"
+			},
+			{
+				"pagePath": "src/pages/ai/index",
+				"iconPath": "static/ai.png",
+				"selectedIconPath": "static/ai-active.png",
+				"text": "AI"
+			},
+			{
+				"pagePath": "src/pages/profile/user-center/index",
+				"iconPath": "static/profile.png",
+				"selectedIconPath": "static/profile-active.png",
+				"text": "我的"
+			}
+		]
+	},
+	"preloadRule": {
+		"src/pages/home/index/index": {
+			"network": "all",
+			"packages": [
+				"src/pages-common"
+			]
+		}
+	}
+}

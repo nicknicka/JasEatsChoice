@@ -95,10 +95,9 @@
           <view class="label">身高</view>
           <view class="input-wrapper">
             <input
-              type="digit"
+              type="number"
               v-model="form.height"
               placeholder="请输入身高（cm）"
-              type="number"
             />
             <view class="unit">cm</view>
           </view>
@@ -108,10 +107,9 @@
           <view class="label">体重</view>
           <view class="input-wrapper">
             <input
-              type="digit"
+              type="number"
               v-model="form.weight"
               placeholder="请输入体重（kg）"
-              type="number"
             />
             <view class="unit">kg</view>
           </view>

@@ -75,8 +75,13 @@ export const useUserStore = defineStore('user', {
     },
 
     /**
-     * 登录
+     * 登录（支持验证码和密码两种方式）
      * @param {Object} data - 登录数据
+     * @param {string} data.phone - 手机号
+     * @param {string} data.code - 验证码（验证码登录时使用）
+     * @param {string} data.password - 密码（密码登录时使用）
+     * @param {string} data.captcha - 图形验证码
+     * @param {string} data.checkCodeKey - 验证码key
      */
     async login(data) {
       try {

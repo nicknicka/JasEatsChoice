@@ -34,6 +34,7 @@ const props = defineProps({
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
+@import '../../styles/mixins.scss';
 
 .loading-container {
   @include flex-center-column;

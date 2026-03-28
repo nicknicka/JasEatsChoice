@@ -35,7 +35,7 @@ defineEmits(['update:modelValue'])
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
-@import '@/styles/mixins.scss';
+@import '../../styles/mixins.scss';
 
 .tab-switcher {
   display: flex;

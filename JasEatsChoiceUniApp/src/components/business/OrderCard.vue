@@ -104,6 +104,7 @@ const handleAction = (action) => {
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
+@import '../../styles/mixins.scss';
 
 .order-card {
   background-color: $bg-color-white;

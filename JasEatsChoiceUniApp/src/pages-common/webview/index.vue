@@ -101,7 +101,8 @@
 </template>
 
 <script setup>
-import { ref, onLoad, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
 import { useRouter } from 'uni-mini-router'
 
 const router = useRouter()

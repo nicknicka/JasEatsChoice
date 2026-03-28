@@ -573,7 +573,7 @@ onMounted(() => {
   font-size: $font-size-lg;
   font-weight: $font-weight-bold;
   color: $text-color-primary;
-  @include text-ellipsis-multi(2);
+  @include text-ellipsis-multiline(2);
 }
 
 .recipe-tags {
@@ -622,7 +622,7 @@ onMounted(() => {
 
 .ingredients-text {
   flex: 1;
-  @include text-ellipsis-multi(2);
+  @include text-ellipsis-multiline(2);
 }
 
 .nutrition-summary {

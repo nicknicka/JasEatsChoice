@@ -303,6 +303,7 @@ const navigateToShare = (orderId, orderCode) => {
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
+@import '@/styles/mixins.scss';
 
 .create-group-order-container {
   min-height: 100vh;

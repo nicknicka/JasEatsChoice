@@ -132,7 +132,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useUserStore } from '@/stores/user'
+import { useUserStore } from '@/store'
 import { formatRelativeTime } from '@/utils/helper'
 import Empty from '@/components/common/Empty.vue'
 import { feedbackApi } from '@/api'
@@ -667,7 +667,7 @@ onMounted(() => {
   font-size: $font-size-sm;
   color: $text-color-primary;
   line-height: $line-height-lg;
-  @include text-ellipsis-multi(2);
+  @include text-ellipsis-multiline(2);
   margin-bottom: $spacing-sm;
   display: block;
 }

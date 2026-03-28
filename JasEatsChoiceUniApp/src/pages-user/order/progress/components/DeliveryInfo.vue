@@ -149,6 +149,7 @@ const handleContactRider = () => {
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
+@import '@/styles/mixins.scss';
 
 .delivery-section {
   background-color: $bg-color-white;

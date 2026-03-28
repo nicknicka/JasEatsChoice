@@ -502,6 +502,7 @@ const updateUnreadCount = (count) => {
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
+@import '@/styles/mixins.scss';
 
 .notification-list-container {
   min-height: 100vh;

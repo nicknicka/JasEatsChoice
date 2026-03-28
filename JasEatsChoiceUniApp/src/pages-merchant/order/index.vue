@@ -120,7 +120,7 @@
 import { ref, onMounted } from 'vue'
 import { toOrderDetail } from '@/utils/router'
 import { merchantApi } from '@/api'
-import { useMerchantStore } from '@/stores/merchant'
+import { useMerchantStore } from '@/store/modules/merchant'
 
 const merchantStore = useMerchantStore()
 

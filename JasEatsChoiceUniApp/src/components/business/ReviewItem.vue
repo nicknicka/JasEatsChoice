@@ -98,6 +98,7 @@ const previewImage = (index) => {
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
+@import '../../styles/mixins.scss';
 
 .review-item {
   background-color: $bg-color-white;

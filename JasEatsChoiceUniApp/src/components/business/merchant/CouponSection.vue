@@ -41,7 +41,7 @@ defineEmits(['receive'])
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
-@import '@/styles/mixins.scss';
+@import '../../styles/mixins.scss';
 
 .coupon-section {
   background: #fff;

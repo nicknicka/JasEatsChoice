@@ -498,7 +498,7 @@ const saveDraft = async () => {
 /**
  * 发布菜品 - DISH-007: 调用API发布菜品
  */
-const submitDish = () => {
+const submitDish = async () => {
   // 表单验证
   if (!formData.value.name) {
     uni.showToast({

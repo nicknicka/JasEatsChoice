@@ -89,6 +89,7 @@ const handleAdd = () => {
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
+@import '../../styles/mixins.scss';
 
 .dish-card {
   position: relative;

@@ -42,6 +42,7 @@ const handleShare = () => {
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
+@import '@/styles/mixins.scss';
 
 .recipe-header {
   position: relative;

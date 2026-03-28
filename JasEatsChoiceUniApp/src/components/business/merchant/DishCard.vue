@@ -49,7 +49,7 @@ defineEmits(['tap', 'add'])
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
-@import '@/styles/mixins.scss';
+@import '../../styles/mixins.scss';
 
 .dish-card {
   display: flex;
@@ -85,7 +85,7 @@ defineEmits(['tap', 'add'])
   font-size: 22rpx;
   color: #999;
   margin-bottom: 15rpx;
-  @include text-ellipsis(2);
+  @include text-ellipsis-multiline(2);
 }
 
 .dish-bottom {

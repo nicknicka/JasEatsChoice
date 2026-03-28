@@ -854,19 +854,6 @@ const addToBlacklist = () => {
     }
   })
 }
-
-/**
- * 处理收到的消息
- */
-const handleMessage = (message) => {
-  messageList.value.push({
-    ...message,
-    isSelf: false,
-    avatar: userInfo.value.avatar,
-    showTime: true
-  })
-  scrollToBottom()
-}
 </script>
 
 <style lang="scss" scoped>

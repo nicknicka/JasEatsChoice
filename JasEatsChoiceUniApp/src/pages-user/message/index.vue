@@ -732,7 +732,7 @@ onMounted(() => {
   font-size: $font-size-sm;
   color: $text-color-regular;
   line-height: $line-height-base;
-  @include text-ellipsis-multi(2);
+  @include text-ellipsis-multiline(2);
 }
 
 .order-info {

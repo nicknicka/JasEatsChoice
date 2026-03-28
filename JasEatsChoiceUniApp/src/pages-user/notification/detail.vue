@@ -349,6 +349,7 @@ const getIconType = (type) => {
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
+@import '@/styles/mixins.scss';
 
 .notification-detail-container {
   min-height: 100vh;

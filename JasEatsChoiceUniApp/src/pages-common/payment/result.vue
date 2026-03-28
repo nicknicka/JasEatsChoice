@@ -49,10 +49,8 @@
 </template>
 
 <script setup>
-import { ref, onLoad } from 'vue'
-import { useRouter } from 'uni-mini-router'
-
-const router = useRouter()
+import { ref } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
 
 // 支付状态
 const isSuccess = ref(true)

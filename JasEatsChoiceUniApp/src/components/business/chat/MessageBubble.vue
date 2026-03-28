@@ -208,7 +208,7 @@ const onLongPress = () => {
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
-@import '@/styles/mixins.scss';
+@import '../../styles/mixins.scss';
 
 .message-bubble {
   margin-bottom: 30rpx;

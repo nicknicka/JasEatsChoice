@@ -99,6 +99,7 @@ const handleAction = () => {
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
+@import '../../styles/mixins.scss';
 
 .coupon-card {
   @include flex-center;

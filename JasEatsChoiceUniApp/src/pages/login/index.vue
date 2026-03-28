@@ -2,7 +2,9 @@
   <view class="login-container">
     <!-- Logo区域 -->
     <view class="logo-section">
-      <view class="logo">🍽️</view>
+      <view class="logo">
+        <uni-icons type="shop" size="60" color="#fff"></uni-icons>
+      </view>
       <view class="app-name">佳食宜选</view>
       <view class="slogan">智能饮食，健康生活</view>
     </view>
@@ -21,7 +23,14 @@
         :class="{ active: loginType === 'phone' }"
         @click="loginType = 'phone'"
       >
-        手机登录
+        验证码登录
+      </view>
+      <view
+        class="tab-item"
+        :class="{ active: loginType === 'password' }"
+        @click="loginType = 'password'"
+      >
+        密码登录
       </view>
     </view>
 
@@ -33,28 +42,16 @@
         @getuserinfo="handleWechatLogin"
         @click="handleWechatClick"
       >
-        <view class="btn-icon">💬</view>
+        <uni-icons type="weixin" size="20" color="#667eea"></uni-icons>
         <view class="btn-text">微信一键登录</view>
       </button>
-
-      <view class="agreement">
-        <checkbox-group @change="handleAgreementChange">
-          <label class="agreement-label">
-            <checkbox value="1" :checked="agreedToTerms" color="#FF6B35" />
-            <text>我已阅读并同意</text>
-            <text class="link" @click.stop="toTerms">《用户协议》</text>
-            <text>和</text>
-            <text class="link" @click.stop="toPrivacy">《隐私政策》</text>
-          </label>
-        </checkbox-group>
-      </view>
     </view>
 
     <!-- 手机登录 -->
     <view v-if="loginType === 'phone'" class="phone-login">
       <view class="input-group">
         <view class="input-item">
-          <view class="input-icon">📱</view>
+          <uni-icons type="phone" size="20" color="#999"></uni-icons>
           <input
             type="number"
             v-model="phoneForm.phone"
@@ -65,7 +62,7 @@
         </view>
 
         <view class="input-item">
-          <view class="input-icon">🔐</view>
+          <uni-icons type="locked" size="20" color="#999"></uni-icons>
           <input
             type="number"
             v-model="phoneForm.code"
@@ -82,6 +79,17 @@
         </view>
       </view>
 
+      <view class="extra-options">
+        <label class="remember-password">
+          <checkbox-group @change="handlePhoneRememberChange">
+            <label class="checkbox-label">
+              <checkbox value="1" :checked="phoneForm.rememberPassword" color="#FF6B35" />
+              <text>记住密码</text>
+            </label>
+          </checkbox-group>
+        </label>
+      </view>
+
       <button
         class="login-btn"
         :disabled="!isPhoneFormValid"
@@ -89,6 +97,120 @@
       >
         登录
       </button>
+    </view>
+
+    <!-- 密码登录 -->
+    <view v-if="loginType === 'password'" class="password-login">
+      <view class="input-group">
+        <view class="input-item autocomplete-item">
+          <uni-icons type="phone" size="20" color="#999"></uni-icons>
+          <input
+            type="number"
+            v-model="passwordForm.phone"
+            placeholder="请输入手机号"
+            maxlength="11"
+            @input="handlePasswordPhoneInput"
+            @focus="showPhoneHistory"
+          />
+          <uni-icons
+            type="down"
+            size="16"
+            color="#999"
+            class="dropdown-icon"
+            @click="togglePhoneHistory"
+          ></uni-icons>
+        </view>
+
+        <!-- 手机号历史记录下拉列表 -->
+        <view v-if="showHistoryList" class="history-list">
+          <view
+            v-for="item in phoneHistory"
+            :key="item.phone"
+            class="history-item"
+            @click="selectPhone(item)"
+          >
+            <view class="history-phone">{{ item.phone }}</view>
+            <uni-icons
+              type="clear"
+              size="16"
+              color="#999"
+              class="delete-icon"
+              @click.stop="deletePhone(item.phone)"
+            ></uni-icons>
+          </view>
+        </view>
+
+        <view class="input-item">
+          <uni-icons type="locked" size="20" color="#999"></uni-icons>
+          <input
+            type="password"
+            v-model="passwordForm.password"
+            placeholder="请输入密码"
+            maxlength="20"
+          />
+        </view>
+
+        <view class="input-item captcha-item">
+          <uni-icons type="checkmarkempty" size="20" color="#999"></uni-icons>
+          <input
+            type="text"
+            v-model="passwordForm.captcha"
+            placeholder="请输入验证码"
+            maxlength="4"
+          />
+          <view class="captcha-wrapper">
+            <image
+              class="captcha-img"
+              :src="captchaBase64"
+              mode="aspectFit"
+              @click="refreshCaptcha"
+            />
+            <uni-icons
+              type="refreshempty"
+              size="20"
+              color="#FF6B35"
+              class="refresh-icon"
+              @click="refreshCaptcha"
+            ></uni-icons>
+          </view>
+        </view>
+      </view>
+
+      <view class="extra-options">
+        <label class="remember-password">
+          <checkbox-group @change="handlePasswordRememberChange">
+            <label class="checkbox-label">
+              <checkbox value="1" :checked="passwordForm.rememberPassword" color="#FF6B35" />
+              <text>记住密码</text>
+            </label>
+          </checkbox-group>
+        </label>
+      </view>
+
+      <view class="extra-links">
+        <text class="link" @click="toForgotPassword">忘记密码？</text>
+      </view>
+
+      <button
+        class="login-btn"
+        :disabled="!isPasswordFormValid"
+        @click="handlePasswordLogin"
+      >
+        登录
+      </button>
+    </view>
+
+    <!-- 协议复选框 -->
+    <view class="agreement">
+      <checkbox-group @change="handleAgreementChange">
+        <label class="agreement-label">
+          <checkbox value="1" :checked="agreedToTerms" color="#FF6B35" />
+          <text>我已阅读并同意</text>
+          <text class="link" @click.stop="toTerms">《用户协议》</text>
+          <text>和</text>
+          <text class="link" @click.stop="toPrivacy">《隐私政策》</text>
+        </label>
+      </checkbox-group>
     </view>
 
     <!-- 底部链接 -->
@@ -104,15 +226,30 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useUserStore } from '@/store'
 import { userApi } from '@/api'
 
 // Pinia store
 const userStore = useUserStore()
 
-// 登录方式：wechat | phone
+// 登录方式：wechat | phone | password
 const loginType = ref('wechat')
+
+// 监听登录类型变化，当切换到密码登录时获取验证码
+watch(loginType, (newType) => {
+  if (newType === 'password') {
+    refreshCaptcha()
+  }
+})
+
+// 组件挂载时，如果默认是密码登录，则获取验证码
+onMounted(() => {
+  loadPhoneHistory()
+  if (loginType.value === 'password') {
+    refreshCaptcha()
+  }
+})
 
 // 是否同意协议
 const agreedToTerms = ref(false)
@@ -127,13 +264,38 @@ let countdownTimer = null
 // 手机号表单
 const phoneForm = ref({
   phone: '',
-  code: ''
+  code: '',
+  rememberPassword: false
 })
+
+// 密码登录表单
+const passwordForm = ref({
+  phone: '',
+  password: '',
+  captcha: '',
+  checkCodeKey: '',
+  rememberPassword: false
+})
+
+// 验证码base64图片
+const captchaBase64 = ref('')
+
+// 手机号历史记录
+const phoneHistory = ref([])
+const showHistoryList = ref(false)
 
 // 计算属性：手机号表单是否有效
 const isPhoneFormValid = computed(() => {
   return phoneForm.value.phone.length === 11 &&
-         phoneForm.value.code.length === 6 &&
+         phoneForm.value.code.length > 0 &&
+         agreedToTerms.value
+})
+
+// 计算属性：密码表单是否有效
+const isPasswordFormValid = computed(() => {
+  return passwordForm.value.phone.length === 11 &&
+         passwordForm.value.password.length >= 6 &&
+         passwordForm.value.captcha.length > 0 &&
          agreedToTerms.value
 })
 
@@ -186,7 +348,7 @@ const handleWechatLogin = async (e) => {
       language: userInfo.language
     }
 
-    const res = await userStore.wechatLogin(loginData)
+    await userStore.wechatLogin(loginData)
 
     uni.showToast({
       title: '登录成功',
@@ -218,6 +380,16 @@ const handlePhoneInput = (e) => {
   const value = e.detail.value
   if (value.length > 11) {
     phoneForm.value.phone = value.substring(0, 11)
+  }
+}
+
+/**
+ * 处理密码登录的手机号输入
+ */
+const handlePasswordPhoneInput = (e) => {
+  const value = e.detail.value
+  if (value.length > 11) {
+    passwordForm.value.phone = value.substring(0, 11)
   }
 }
 
@@ -311,6 +483,196 @@ const handlePhoneLogin = async () => {
 }
 
 /**
+ * 处理密码登录
+ */
+const handlePasswordLogin = async () => {
+  if (!isPasswordFormValid.value) {
+    return
+  }
+
+  loading.value = true
+
+  try {
+    // 调用后端登录接口（统一接口，支持验证码和密码两种方式）
+    await userStore.login({
+      phone: passwordForm.value.phone,
+      password: passwordForm.value.password,
+      captcha: passwordForm.value.captcha,
+      checkCodeKey: passwordForm.value.checkCodeKey
+    })
+
+    // 保存登录历史（如果勾选了记住密码）
+    if (passwordForm.value.rememberPassword) {
+      savePhoneHistory({
+        phone: passwordForm.value.phone,
+        password: passwordForm.value.password
+      })
+    }
+
+    uni.showToast({
+      title: '登录成功',
+      icon: 'success'
+    })
+
+    // 跳转到首页
+    setTimeout(() => {
+      uni.switchTab({
+        url: '/pages-user/home/index'
+      })
+    }, 1500)
+
+  } catch (error) {
+    console.error('密码登录失败:', error)
+    uni.showToast({
+      title: error.message || '登录失败，请重试',
+      icon: 'none'
+    })
+    // 登录失败后刷新验证码
+    refreshCaptcha()
+  } finally {
+    loading.value = false
+  }
+}
+
+/**
+ * 处理手机号登录记住密码
+ */
+const handlePhoneRememberChange = (e) => {
+  phoneForm.value.rememberPassword = e.detail.value.length > 0
+}
+
+/**
+ * 处理密码登录记住密码
+ */
+const handlePasswordRememberChange = (e) => {
+  passwordForm.value.rememberPassword = e.detail.value.length > 0
+}
+
+/**
+ * 显示手机号历史记录
+ */
+const showPhoneHistory = () => {
+  if (phoneHistory.value.length > 0) {
+    showHistoryList.value = true
+  }
+}
+
+/**
+ * 切换手机号历史记录显示
+ */
+const togglePhoneHistory = () => {
+  showHistoryList.value = !showHistoryList.value
+}
+
+/**
+ * 选择手机号历史记录
+ */
+const selectPhone = (item) => {
+  passwordForm.value.phone = item.phone
+  if (item.password) {
+    passwordForm.value.password = item.password
+    passwordForm.value.rememberPassword = true
+  }
+  showHistoryList.value = false
+}
+
+/**
+ * 删除手机号历史记录
+ */
+const deletePhone = (phone) => {
+  phoneHistory.value = phoneHistory.value.filter(item => item.phone !== phone)
+  savePhoneHistoryToLocal()
+  uni.showToast({
+    title: '已删除',
+    icon: 'success'
+  })
+}
+
+/**
+ * 点击其他区域关闭历史记录
+ */
+const handleClickOutside = () => {
+  showHistoryList.value = false
+}
+
+/**
+ * 保存手机号历史记录到本地存储
+ */
+const savePhoneHistory = (account) => {
+  try {
+    // 检查是否已存在
+    const existingIndex = phoneHistory.value.findIndex(item => item.phone === account.phone)
+
+    if (existingIndex !== -1) {
+      // 更新现有记录
+      phoneHistory.value[existingIndex] = account
+    } else {
+      // 添加新记录，最多保存10条
+      phoneHistory.value.push(account)
+      if (phoneHistory.value.length > 10) {
+        phoneHistory.value.shift() // 删除最早的记录
+      }
+    }
+
+    savePhoneHistoryToLocal()
+  } catch (error) {
+    console.error('保存历史记录失败:', error)
+  }
+}
+
+/**
+ * 保存手机号历史记录到本地存储
+ */
+const savePhoneHistoryToLocal = () => {
+  try {
+    uni.setStorageSync('phoneHistory', JSON.stringify(phoneHistory.value))
+  } catch (error) {
+    console.error('保存到本地存储失败:', error)
+  }
+}
+
+/**
+ * 从本地存储加载手机号历史记录
+ */
+const loadPhoneHistory = () => {
+  try {
+    const history = uni.getStorageSync('phoneHistory')
+    if (history) {
+      phoneHistory.value = JSON.parse(history)
+    }
+  } catch (error) {
+    console.error('加载历史记录失败:', error)
+    phoneHistory.value = []
+  }
+}
+
+/**
+ * 获取验证码
+ */
+const getCaptcha = async () => {
+  try {
+    const response = await userApi.getCaptcha()
+    const result = response.data
+    // 添加base64图片前缀
+    captchaBase64.value = 'data:image/png;base64,' + result.checkCode
+    passwordForm.value.checkCodeKey = result.checkCodeKey
+  } catch (error) {
+    console.error('获取验证码失败:', error)
+    uni.showToast({
+      title: '获取验证码失败',
+      icon: 'none'
+    })
+  }
+}
+
+/**
+ * 刷新验证码
+ */
+const refreshCaptcha = () => {
+  getCaptcha()
+}
+
+/**
  * 处理协议同意
  */
 const handleAgreementChange = (e) => {
@@ -347,6 +709,17 @@ const toPrivacy = () => {
     icon: 'none'
   })
 }
+
+/**
+ * 忘记密码
+ */
+const toForgotPassword = () => {
+  // TODO: 跳转到忘记密码页面
+  uni.showToast({
+    title: '忘记密码功能开发中',
+    icon: 'none'
+  })
+}
 </script>
 
 <style scoped>
@@ -368,8 +741,16 @@ const toPrivacy = () => {
 }
 
 .logo {
-  font-size: 120rpx;
+  width: 120rpx;
+  height: 120rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin-bottom: 20rpx;
+}
+
+.logo-icon {
+  font-size: 120rpx;
 }
 
 .app-name {
@@ -437,7 +818,9 @@ const toPrivacy = () => {
 }
 
 .agreement {
-  margin-top: 20rpx;
+  display: flex;
+  justify-content: center;
+  margin: 40rpx 0;
 }
 
 .agreement-label {
@@ -461,6 +844,89 @@ const toPrivacy = () => {
   display: flex;
   flex-direction: column;
   gap: 30rpx;
+}
+
+/* 密码登录 */
+.password-login {
+  display: flex;
+  flex-direction: column;
+  gap: 30rpx;
+}
+
+.extra-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 10rpx;
+  margin-bottom: 20rpx;
+}
+
+.remember-password {
+  display: flex;
+  align-items: center;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.checkbox-label text {
+  margin-left: 10rpx;
+}
+
+.extra-links {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 0 10rpx;
+}
+
+.extra-links .link {
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* 手机号历史记录 */
+.autocomplete-item {
+  position: relative;
+}
+
+.history-list {
+  position: absolute;
+  top: 100rpx;
+  left: 40rpx;
+  right: 40rpx;
+  background: #fff;
+  border-radius: 20rpx;
+  box-shadow: 0 8rpx 30rpx rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  max-height: 400rpx;
+  overflow-y: auto;
+}
+
+.history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 25rpx 30rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.history-item:last-child {
+  border-bottom: none;
+}
+
+.history-phone {
+  font-size: 28rpx;
+  color: #333;
+}
+
+.delete-icon {
+  cursor: pointer;
+  padding: 10rpx;
 }
 
 .input-group {
@@ -488,6 +954,34 @@ const toPrivacy = () => {
   flex: 1;
   font-size: 28rpx;
   height: 100%;
+}
+
+.dropdown-icon {
+  cursor: pointer;
+  padding: 10rpx;
+}
+
+.captcha-item {
+  position: relative;
+}
+
+.captcha-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.captcha-img {
+  width: 200rpx;
+  height: 70rpx;
+  border-radius: 10rpx;
+  background-color: #f5f7fa;
+}
+
+.refresh-btn {
+  font-size: 32rpx;
+  cursor: pointer;
+  padding: 5rpx;
 }
 
 .code-btn {

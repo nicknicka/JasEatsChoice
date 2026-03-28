@@ -143,24 +143,25 @@
             </view>
           </view>
         </view>
-      </scroll-view>
-
-      <!-- 加载更多 -->
-      <view class="load-more" v-if="!noMore">
-        <uni-load-more :status="loadMoreStatus" />
       </view>
+    </scroll-view>
 
-      <!-- 没有更多 -->
-      <view class="no-more" v-if="noMore">
-        <text>~ 没有更多了 ~</text>
-      </view>
-
-      <!-- 空状态 -->
-      <view class="empty-state" v-if="reviews.length === 0 && !loading">
-        <view class="empty-icon">📝</view>
-        <view class="empty-text">暂无评价</view>
-      </view>
+    <!-- 加载更多 -->
+    <view class="load-more" v-if="!noMore">
+      <uni-load-more :status="loadMoreStatus" />
     </view>
+
+    <!-- 没有更多 -->
+    <view class="no-more" v-if="noMore">
+      <text>~ 没有更多了 ~</text>
+    </view>
+
+    <!-- 空状态 -->
+    <view class="empty-state" v-if="reviews.length === 0 && !loading">
+      <view class="empty-icon">📝</view>
+      <view class="empty-text">暂无评价</view>
+    </view>
+  </view>
 
     <!-- 评论输入框（悬浮） -->
     <view class="comment-input-modal" v-if="showCommentBox" @click.self="closeCommentInput">
@@ -178,7 +179,6 @@
         </view>
       </view>
     </view>
-  </view>
 </template>
 
 <script setup>

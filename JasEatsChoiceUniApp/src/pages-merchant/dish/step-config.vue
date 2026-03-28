@@ -532,7 +532,7 @@ const saveAsTemplate = () => {
 /**
  * 提交步骤
  */
-const submitSteps = () => {
+const submitSteps = async () => {
   // 验证步骤
   for (let i = 0; i < steps.value.length; i++) {
     const step = steps.value[i]
@@ -648,7 +648,7 @@ const submitSteps = () => {
 .dish-desc {
   font-size: 26rpx;
   color: #999;
-  @include text-ellipsis(2);
+  @include text-ellipsis-multiline(2);
 }
 
 /* 模板选择 */

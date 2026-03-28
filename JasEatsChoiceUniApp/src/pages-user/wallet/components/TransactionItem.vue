@@ -40,6 +40,7 @@ const handleClick = () => {
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
+@import '@/styles/mixins.scss';
 
 .transaction-item {
   @include flex-center;

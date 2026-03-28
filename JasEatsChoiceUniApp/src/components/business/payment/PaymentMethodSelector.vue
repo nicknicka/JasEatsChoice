@@ -75,7 +75,7 @@ const selectMethod = (value) => {
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
-@import '@/styles/mixins.scss';
+@import '../../styles/mixins.scss';
 
 .payment-method-selector {
   background: #fff;

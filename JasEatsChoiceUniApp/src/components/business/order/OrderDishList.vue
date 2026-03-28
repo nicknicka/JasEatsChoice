@@ -46,7 +46,7 @@ const props = defineProps({
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
-@import '@/styles/mixins.scss';
+@import '../../styles/mixins.scss';
 
 .order-dish-list {
   background: #fff;

@@ -43,7 +43,7 @@ const displayText = computed(() => {
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
-@import '@/styles/mixins.scss';
+@import '../../styles/mixins.scss';
 
 .coupon-selector {
   background: #FFF7E6;

@@ -75,6 +75,7 @@ const toggleFavorite = () => {
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
+@import '../../styles/mixins.scss';
 
 .merchant-card {
   position: relative;
@@ -144,7 +145,7 @@ const toggleFavorite = () => {
 .merchant-desc {
   font-size: $font-size-sm;
   color: $text-color-secondary;
-  @include text-ellipsis-multi(2);
+  @include text-ellipsis-multiline(2);
   line-height: $line-height-lg;
 }
 

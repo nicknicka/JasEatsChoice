@@ -77,6 +77,7 @@ const toggleTaste = (value) => {
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
+@import '@/styles/mixins.scss';
 
 .taste-selector {
   width: 100%;

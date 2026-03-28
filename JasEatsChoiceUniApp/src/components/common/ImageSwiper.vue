@@ -37,7 +37,7 @@ const previewImage = (index) => {
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
-@import '@/styles/mixins.scss';
+@import '../../styles/mixins.scss';
 
 .image-swiper-wrapper {
   width: 100%;

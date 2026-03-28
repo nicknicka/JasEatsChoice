@@ -318,13 +318,6 @@ const loadRecipeDetail = async () => {
     loading.value = false
   }
 }
-      title: '加载失败',
-      icon: 'none'
-    })
-  } finally {
-    loading.value = false
-  }
-}
 
 /**
  * 加载相关食谱

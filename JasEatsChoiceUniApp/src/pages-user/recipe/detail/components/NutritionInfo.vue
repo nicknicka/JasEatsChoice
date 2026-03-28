@@ -76,6 +76,7 @@ const nutritionList = computed(() => {
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
+@import '@/styles/mixins.scss';
 
 .nutrition-info {
   @include flex-center-column;

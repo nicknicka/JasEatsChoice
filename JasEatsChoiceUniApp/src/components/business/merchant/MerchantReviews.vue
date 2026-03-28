@@ -82,7 +82,7 @@ defineEmits(['view-all'])
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
-@import '@/styles/mixins.scss';
+@import '../../styles/mixins.scss';
 
 .merchant-reviews {
   background: #fff;

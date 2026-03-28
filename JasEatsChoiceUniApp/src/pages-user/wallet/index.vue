@@ -197,7 +197,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useUserStore } from '@/stores/user'
+import { useUserStore } from '@/store'
 import Empty from '@/components/common/Empty.vue'
 import { walletApi } from '@/api'
 

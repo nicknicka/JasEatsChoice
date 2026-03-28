@@ -59,6 +59,7 @@ const handleExtraClick = () => {
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
+@import '../../styles/mixins.scss';
 
 .custom-card {
   background-color: $bg-color-white;

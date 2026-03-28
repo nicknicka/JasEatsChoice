@@ -5,7 +5,7 @@
  * 创建时间：2026-03-20
  */
 import { ref, nextTick } from 'vue'
-import { useUserStore } from '@/stores/user'
+import { useUserStore } from '@/store'
 import { aiApi } from '@/api'
 import { useDebounce } from '@/utils/performance'
 

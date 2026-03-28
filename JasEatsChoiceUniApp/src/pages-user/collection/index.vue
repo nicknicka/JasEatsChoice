@@ -143,7 +143,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useUserStore } from '@/stores/user'
+import { useUserStore } from '@/store'
 import Empty from '@/components/common/Empty.vue'
 import { favoriteApi } from '@/api'
 
@@ -635,7 +635,7 @@ onMounted(() => {
 .merchant-desc {
   font-size: $font-size-sm;
   color: $text-color-secondary;
-  @include text-ellipsis-multi(2);
+  @include text-ellipsis-multiline(2);
 }
 
 .action-btn {

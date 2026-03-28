@@ -22,7 +22,7 @@
         v-for="item in conversationList"
         :key="item.id"
         @tap="openChat(item)"
-        @longpress="showLongPressMenu(item"
+        @longpress="showLongPressMenu(item)"
       >
         <!-- 头像 -->
         <view class="avatar-wrapper">

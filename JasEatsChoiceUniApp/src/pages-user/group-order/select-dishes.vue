@@ -408,6 +408,7 @@ const submitSelections = async () => {
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
+@import '@/styles/mixins.scss';
 
 .select-dishes-container {
   min-height: 100vh;
@@ -508,7 +509,7 @@ const submitSelections = async () => {
   font-size: 24rpx;
   color: #999;
   margin-bottom: 10rpx;
-  @include text-ellipsis(2);
+  @include text-ellipsis-multiline(2);
 }
 
 .dish-specs {

@@ -31,7 +31,7 @@ defineEmits(['update:modelValue', 'increase', 'decrease'])
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
-@import '@/styles/mixins.scss';
+@import '../../styles/mixins.scss';
 
 .quantity-control-wrapper {
   display: inline-block;

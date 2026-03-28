@@ -1,7 +1,9 @@
 <template>
   <view class="splash-container">
     <view class="logo-section">
-      <image class="logo" src="/static/logo.png" mode="aspectFit"></image>
+      <view class="logo-placeholder">
+        <text class="logo-text">佳</text>
+      </view>
       <text class="app-name">佳食宜选</text>
       <text class="app-slogan">智能饮食，健康生活</text>
     </view>
@@ -32,11 +34,14 @@ const initApp = async () => {
   try {
     // 模拟加载进度
     const interval = setInterval(() => {
-      progress.value += 10
+      progress.value += 5
       if (progress.value >= 100) {
         clearInterval(interval)
       }
     }, 100)
+
+    // 等待至少 2 秒，让用户看到启动页
+    await new Promise(resolve => setTimeout(resolve, 2000))
 
     // 检查登录状态
     const token = uni.getStorageSync('token')
@@ -44,7 +49,7 @@ const initApp = async () => {
       loadingText.value = '请先登录'
       setTimeout(() => {
         toLogin()
-      }, 500)
+      }, 1000)
       return
     }
 
@@ -61,13 +66,13 @@ const initApp = async () => {
       } else {
         toUserHome()
       }
-    }, 500)
+    }, 1000)
   } catch (error) {
     console.error('启动失败:', error)
     loadingText.value = '加载失败，请重试'
     setTimeout(() => {
       toLogin()
-    }, 1500)
+    }, 2000)
   }
 }
 </script>
@@ -90,13 +95,22 @@ const initApp = async () => {
   margin-bottom: 100rpx;
 }
 
-.logo {
+.logo-placeholder {
   width: 200rpx;
   height: 200rpx;
   border-radius: 40rpx;
   background: #fff;
   margin-bottom: 40rpx;
   box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-text {
+  font-size: 100rpx;
+  font-weight: bold;
+  color: #FF6B35;
 }
 
 .app-name {

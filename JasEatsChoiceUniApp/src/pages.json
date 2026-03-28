@@ -41,7 +41,7 @@
 			"root": "pages-user",
 			"pages": [
 				{
-					"path": "home/index",
+					"path": "home/index/index",
 					"style": {
 						"navigationBarTitleText": "佳食宜选",
 						"enablePullDownRefresh": true
@@ -167,14 +167,14 @@
 					}
 				},
 				{
-					"path": "profile/index",
+					"path": "profile/user-center/index",
 					"style": {
 						"navigationBarTitleText": "用户中心",
 						"enablePullDownRefresh": false
 					}
 				},
 				{
-					"path": "profile/edit/index",
+					"path": "profile/user-center/edit/index",
 					"style": {
 						"navigationBarTitleText": "编辑资料",
 						"enablePullDownRefresh": false
@@ -543,33 +543,33 @@
 		"borderStyle": "black",
 		"list": [
 			{
-				"pagePath": "pages-user/home/index",
-				"iconPath": "static/home.png",
-				"selectedIconPath": "static/home-active.png",
+				"pagePath": "pages-user/home/index/index",
+				"iconPath": "/static/home.png",
+				"selectedIconPath": "/static/home-active.png",
 				"text": "首页"
 			},
 			{
 				"pagePath": "pages-user/recipe/today",
-				"iconPath": "static/recipe.png",
-				"selectedIconPath": "static/recipe-active.png",
+				"iconPath": "/static/recipe.png",
+				"selectedIconPath": "/static/recipe-active.png",
 				"text": "食谱"
 			},
 			{
 				"pagePath": "pages-user/ai/index",
-				"iconPath": "static/ai.png",
-				"selectedIconPath": "static/ai-active.png",
+				"iconPath": "/static/ai.png",
+				"selectedIconPath": "/static/ai-active.png",
 				"text": "AI"
 			},
 			{
-				"pagePath": "pages-user/profile/index",
-				"iconPath": "static/profile.png",
-				"selectedIconPath": "static/profile-active.png",
+				"pagePath": "pages-user/profile/user-center/index",
+				"iconPath": "/static/profile.png",
+				"selectedIconPath": "/static/profile-active.png",
 				"text": "我的"
 			}
 		]
 	},
 	"preloadRule": {
-		"pages-user/home/index": {
+		"pages-user/home/index/index": {
 			"network": "all",
 			"packages": ["pages-common"]
 		}

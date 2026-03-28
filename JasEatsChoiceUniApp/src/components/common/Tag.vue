@@ -74,6 +74,7 @@ const handleClose = () => {
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
+@import '../../styles/mixins.scss';
 
 .custom-tag {
   @include flex-center;

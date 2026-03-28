@@ -69,6 +69,7 @@ const handleClick = () => {
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
+@import '../../styles/mixins.scss';
 
 .list-item {
   position: relative;

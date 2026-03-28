@@ -114,6 +114,7 @@ const percentClass = computed(() => {
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
+@import '../../styles/mixins.scss';
 
 .nutrition-bar {
   @include flex-center;

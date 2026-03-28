@@ -243,7 +243,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useUserStore } from '@/stores/user'
+import { useUserStore } from '@/store'
 import { userApi, notificationApi } from '@/api'
 
 // 用户信息store
@@ -499,10 +499,6 @@ const loadUserInfo = async () => {
         }
       }
     }
-  } catch (error) {
-    console.error('加载用户信息失败:', error)
-  }
-}
   } catch (error) {
     console.error('加载用户信息失败:', error)
   }

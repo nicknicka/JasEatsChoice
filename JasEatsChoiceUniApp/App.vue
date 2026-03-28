@@ -70,23 +70,58 @@ const checkLoginStatus = () => {
 
 /**
  * 获取系统信息
+ * 注意：微信小程序已废弃 wx.getSystemInfoSync，改用以下新 API：
+ * - wx.getWindowInfo() - 获取窗口信息
+ * - wx.getSystemSetting() - 获取系统设置
+ * - wx.getDeviceInfo() - 获取设备信息
+ * - wx.getAppBaseInfo() - 获取应用基础信息
  */
 const getSystemInfo = () => {
   try {
-    const systemInfo = uni.getSystemInfoSync()
+    let systemInfo
+
+    // #ifdef MP-WEIXIN
+    // 微信小程序使用新 API
+    const windowInfo = uni.getWindowInfo()
+    const deviceInfo = uni.getDeviceInfo()
+    const appBaseInfo = uni.getAppBaseInfo()
+
+    // 合并信息
+    systemInfo = {
+      ...windowInfo,
+      ...deviceInfo,
+      ...appBaseInfo
+    }
+    // #endif
+
+    // #ifndef MP-WEIXIN
+    // 其他平台继续使用旧 API
+    systemInfo = uni.getSystemInfoSync()
+    // #endif
 
     console.log('系统信息:', systemInfo)
 
     // 存储系统信息到本地
     uni.setStorageSync('systemInfo', systemInfo)
 
-    // 存储状态栏高度和导航栏高度供全局使用
+    // 存储状态栏高度和平台信息供全局使用
     const { statusBarHeight, platform } = systemInfo
     uni.setStorageSync('statusBarHeight', statusBarHeight)
     uni.setStorageSync('platform', platform)
 
   } catch (error) {
     console.error('获取系统信息失败:', error)
+
+    // 如果新 API 失败，降级使用旧 API
+    try {
+      const systemInfo = uni.getSystemInfoSync()
+      console.log('使用降级方案获取系统信息:', systemInfo)
+      uni.setStorageSync('systemInfo', systemInfo)
+      uni.setStorageSync('statusBarHeight', systemInfo.statusBarHeight)
+      uni.setStorageSync('platform', systemInfo.platform)
+    } catch (fallbackError) {
+      console.error('降级方案也失败了:', fallbackError)
+    }
   }
 }
 

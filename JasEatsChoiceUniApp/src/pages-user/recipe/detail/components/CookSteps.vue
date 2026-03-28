@@ -45,6 +45,7 @@ const previewImage = (url) => {
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
+@import '@/styles/mixins.scss';
 
 .cook-steps {
   @include flex-center-column;

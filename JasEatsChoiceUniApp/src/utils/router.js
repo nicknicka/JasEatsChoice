@@ -7,18 +7,22 @@
  * 主包页面路径
  */
 const MAIN_PAGES = {
-  LOGIN: '/pages/login/index',
-  REGISTER: '/pages/register/index'
+  LOGIN: '/src/pages/login/index',
+  REGISTER: '/src/pages/register/index',
+  HOME: '/src/pages/home/index/index',
+  RECIPE: '/src/pages/recipe/index',
+  AI: '/src/pages/ai/index',
+  PROFILE: '/src/pages/profile/user-center/index'
 }
 
 /**
- * 用户端页面路径
+ * 用户端页面路径（分包）
  */
 const USER_PAGES = {
-  HOME: '/pages-user/home/index',
-  RECIPE_TODAY: '/pages-user/recipe/today',
-  AI: '/pages-user/ai/index',
-  PROFILE: '/pages-user/profile/index',
+  HOME: '/src/pages-user/home/index',
+  RECIPE_TODAY: '/src/pages-user/recipe/today',
+  AI: '/src/pages-user/ai/index',
+  PROFILE: '/src/pages-user/profile/user-center/index',
   SEARCH: '/pages-user/search/index',
   MERCHANT_DETAIL: '/pages-user/merchant/detail/index',
   DISH_DETAIL: '/pages-user/dish/detail/index',
@@ -54,20 +58,20 @@ const USER_PAGES = {
  * 商家端页面路径
  */
 const MERCHANT_PAGES = {
-  HOME: '/pages-merchant/home/index',
-  ORDER: '/pages-merchant/order/index',
-  DISH: '/pages-merchant/dish/index',
-  PROFILE: '/pages-merchant/profile/index'
+  HOME: '/src/pages-merchant/home/index',
+  ORDER: '/src/pages-merchant/order/index',
+  DISH: '/src/pages-merchant/dish/index',
+  PROFILE: '/src/pages-merchant/profile/index'
 }
 
 /**
  * 公共页面路径
  */
 const COMMON_PAGES = {
-  CONVERSATION_LIST: '/pages-common/chat/conversation-list',
-  CHAT_ROOM: '/pages-common/chat/chat-room',
-  PAYMENT: '/pages-common/payment/index',
-  PAYMENT_RESULT: '/pages-common/payment/result'
+  CONVERSATION_LIST: '/src/pages-common/chat/conversation-list',
+  CHAT_ROOM: '/src/pages-common/chat/chat-room',
+  PAYMENT: '/src/pages-common/payment/index',
+  PAYMENT_RESULT: '/src/pages-common/payment/result'
 }
 
 // 导出路径常量
@@ -80,7 +84,7 @@ export const paths = {
 
 // 导出跳转方法
 export const toLogin = () => uni.reLaunch({ url: MAIN_PAGES.LOGIN })
-export const toUserHome = () => uni.switchTab({ url: USER_PAGES.HOME })
+export const toUserHome = () => uni.switchTab({ url: MAIN_PAGES.HOME })
 export const toMerchantHome = () => uni.switchTab({ url: MERCHANT_PAGES.HOME })
 export const toProfile = () => uni.switchTab({ url: USER_PAGES.PROFILE })
 

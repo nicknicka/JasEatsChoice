@@ -268,6 +268,7 @@ const inviteMembers = () => {
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
+@import '@/styles/mixins.scss';
 
 .share-group-order-container {
   min-height: 100vh;

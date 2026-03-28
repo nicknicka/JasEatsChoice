@@ -55,6 +55,7 @@ const handleChange = (e) => {
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
+@import '@/styles/mixins.scss';
 
 .form-item {
   @include flex-between;

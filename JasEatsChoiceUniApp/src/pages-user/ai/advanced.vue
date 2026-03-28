@@ -346,7 +346,7 @@
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useDebounce } from '@/utils/performance'
-import { useUserStore } from '@/stores/user'
+import { useUserStore } from '@/store'
 import { aiApi } from '@/api'
 
 // 用户信息store

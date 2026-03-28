@@ -6,12 +6,15 @@ import config from '@/config/index.js'
 
 // 不需要token的接口白名单
 const AUTH_WHITELIST = [
-  '/v1/user/login',      // 用户登录
-  '/v1/user/register',   // 用户注册
-  '/v1/user/send-code',  // 发送验证码
-  '/v1/merchant/login',  // 商家登录
-  '/v1/admin/login',     // 管理员登录
-  '/v1/captcha'          // 验证码
+  '/v1/users/login',              // 用户登录
+  '/v1/users/register',           // 用户注册
+  '/v1/users/send-sms-code',      // 发送验证码
+  '/v1/users/wechat-login',       // 微信登录
+  '/v1/merchant/login',           // 商家登录
+  '/v1/merchant/register',        // 商家注册
+  '/v1/admin/login',              // 管理员登录
+  '/v1/captcha',                  // 验证码
+  '/v1/captcha/checkCode'         // 验证码检查
 ]
 
 // 检查请求是否在白名单中

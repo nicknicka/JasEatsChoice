@@ -412,7 +412,7 @@ onMounted(() => {
     font-size: $font-size-base;
     color: $text-color-primary;
     line-height: $line-height-lg;
-    @include text-ellipsis-multi(2);
+    @include text-ellipsis-multiline(2);
   }
 }
 

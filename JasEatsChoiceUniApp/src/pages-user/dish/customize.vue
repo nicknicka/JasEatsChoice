@@ -98,7 +98,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useUserStore } from '@/stores/user'
+import { useUserStore } from '@/store'
 import { dishApi, cartApi } from '@/api'
 
 const userStore = useUserStore()

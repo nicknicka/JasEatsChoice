@@ -173,7 +173,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { merchantApi } from '@/api'
-import { useMerchantStore } from '@/stores/merchant'
+import { useMerchantStore } from '@/store/modules/merchant'
 
 const merchantStore = useMerchantStore()
 

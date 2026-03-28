@@ -1,4 +1,4 @@
-import { get, post } from '../request'
+import { get, post } from '@/utils/request'
 
 /**
  * 消息管理 API

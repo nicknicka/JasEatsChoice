@@ -217,7 +217,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { formatRelativeTime } from '@/utils/helper'
-import { useUserStore } from '@/stores/user'
+import { useUserStore } from '@/store'
 import Loading from '@/components/common/Loading.vue'
 import Empty from '@/components/common/Empty.vue'
 import { orderApi } from '@/api'

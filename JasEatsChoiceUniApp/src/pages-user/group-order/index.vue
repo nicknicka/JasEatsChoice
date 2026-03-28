@@ -428,6 +428,7 @@ const createOrder = () => {
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
+@import '@/styles/mixins.scss';
 
 .group-order-list-container {
   min-height: 100vh;

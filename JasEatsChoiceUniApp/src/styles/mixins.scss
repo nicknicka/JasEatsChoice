@@ -43,6 +43,14 @@
   align-items: center;
 }
 
+// Flex垂直列布局
+@mixin flex-center-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
 // Flex两端对齐
 @mixin flex-between {
   display: flex;
@@ -55,6 +63,13 @@
   display: flex;
   align-items: center;
   justify-content: space-around;
+}
+
+// Flex起始对齐
+@mixin flex-start {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
 }
 
 /* ==================== 定位 ==================== */
