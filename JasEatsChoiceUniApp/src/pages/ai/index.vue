@@ -1,818 +1,1190 @@
 <template>
-  <view class="ai-chat-container">
-    <!-- 聊天头部 -->
-    <view class="chat-header">
-      <view class="header-info">
-        <text class="header-title">AI饮食助手</text>
-        <text class="header-status">在线</text>
-      </view>
-      <view class="header-actions">
-        <text class="action-btn" @click="clearHistory">清空</text>
-      </view>
-    </view>
+	<view class="ai-page">
+		<!-- 统一顶部导航栏（合并标签栏+AI助手头部） -->
+		<view class="unified-nav">
+			<!-- 左侧：4个功能标签 -->
+			<view class="nav-tabs">
+				<view
+					class="tab-item"
+					v-for="tab in tabs"
+					:key="tab.key"
+					:class="{ active: activeTab === tab.key }"
+					@click="switchTab(tab.key)"
+				>
+					<text class="tab-icon">{{ tab.icon }}</text>
+					<text class="tab-label">{{ tab.label }}</text>
+				</view>
+			</view>
+		</view>
 
-    <!-- 快捷提问 -->
-    <view class="quick-questions" v-if="messages.length <= 1">
-      <view class="quick-title">🤔 您想了解什么？</view>
-      <scroll-view class="quick-scroll" scroll-x>
-        <view
-          class="quick-item"
-          v-for="(question, index) in quickQuestions"
-          :key="index"
-          @click="askQuickQuestion(question)"
-        >
-          <text class="quick-icon">{{ question.icon }}</text>
-          <text class="quick-text">{{ question.text }}</text>
-        </view>
-      </scroll-view>
-    </view>
+		<!-- 标签页内容 -->
+		<view class="tabs-content">
+			<!-- AI聊天 -->
+			<view v-if="activeTab === 'chat'" class="tab-pane chat-pane">
+				<!-- 聊天消息 -->
+				<scroll-view
+					class="chat-messages"
+					:class="{ 'with-quick-questions': quickQuestionsExpanded }"
+					scroll-y
+					:scroll-into-view="scrollIntoView"
+					:scroll-with-animations="true"
+				>
 
-    <!-- 聊天消息 -->
-    <scroll-view
-      class="chat-messages"
-      scroll-y
-      :scroll-into-view="scrollIntoView"
-      :scroll-with-animation="true"
-    >
-      <!-- 欢迎消息 -->
-      <view class="message-welcome" v-if="messages.length === 1">
-        <text class="welcome-icon">👋</text>
-        <text class="welcome-text">您好！我是您的AI饮食助手</text>
-        <text class="welcome-tips">我可以帮您：</text>
-        <view class="welcome-features">
-          <text class="feature-item">• 推荐健康食谱</text>
-          <text class="feature-item">• 分析营养成分</text>
-          <text class="feature-item">• 制定饮食计划</text>
-          <text class="feature-item">• 解答饮食疑问</text>
-        </view>
-      </view>
+					<!-- 消息列表 -->
+					<view
+						class="message-wrapper"
+						v-for="(msg, index) in displayMessages"
+						:key="msg.id"
+						:id="'msg-' + index"
+					>
+						<view class="message" :class="{ user: msg.isUser }">
+							<!-- AI消息 -->
+							<view class="message-avatar" v-if="!msg.isUser">
+								<text class="avatar-icon">🤖</text>
+							</view>
 
-      <!-- 消息列表 -->
-      <view
-        class="message-wrapper"
-        v-for="(msg, index) in displayMessages"
-        :key="msg.id"
-        :id="'msg-' + index"
-      >
-        <view class="message" :class="{ user: msg.isUser }">
-          <!-- AI消息 -->
-          <view class="message-avatar" v-if="!msg.isUser">
-            <text class="avatar-icon">🤖</text>
-          </view>
+							<!-- 消息内容 -->
+							<view class="message-content" :class="{ user: msg.isUser }">
+								<!-- 文本消息 -->
+								<text class="content-text">{{ msg.content }}</text>
 
-          <!-- 用户消息 -->
-          <view class="message-content" :class="{ user: msg.isUser }">
-            <!-- 文本消息 -->
-            <text class="content-text" v-if="msg.type === 'text'">{{ msg.content }}</text>
+								<!-- 时间戳 -->
+								<text class="message-time">{{ msg.time }}</text>
+							</view>
 
-            <!-- 建议卡片 -->
-            <view class="content-card" v-if="msg.type === 'suggestion' && msg.suggestions">
-              <view
-                class="suggestion-item"
-                v-for="(suggestion, sIndex) in msg.suggestions"
-                :key="sIndex"
-                @click="applySuggestion(suggestion)"
-              >
-                <text class="suggestion-icon">🍽️</text>
-                <view class="suggestion-info">
-                  <text class="suggestion-title">{{ suggestion.title }}</text>
-                  <text class="suggestion-desc">{{ suggestion.desc }}</text>
-                </view>
-                <text class="suggestion-arrow">→</text>
-              </view>
-            </view>
+							<!-- 用户头像 -->
+							<view class="message-avatar user" v-if="msg.isUser">
+								<image
+									class="avatar-image"
+									:src="userInfo.avatar"
+									mode="aspectFill"
+								/>
+							</view>
+						</view>
+					</view>
 
-            <!-- 时间戳 -->
-            <text class="message-time">{{ msg.time }}</text>
-          </view>
+					<!-- 加载动画 -->
+					<view class="message-wrapper" v-if="isTyping">
+						<view class="message">
+							<view class="message-avatar">
+								<text class="avatar-icon">🤖</text>
+							</view>
+							<view class="message-content typing">
+								<view class="typing-indicator">
+									<view class="typing-dot"></view>
+									<view class="typing-dot"></view>
+									<view class="typing-dot"></view>
+								</view>
+							</view>
+						</view>
+					</view>
+				</scroll-view>
 
-          <!-- 用户头像 -->
-          <view class="message-avatar user" v-if="msg.isUser">
-            <image class="avatar-image" :src="userInfo.avatar" mode="aspectFill" />
-          </view>
-        </view>
-      </view>
+				<!-- 快捷提问悬浮层（提升到 chat-pane 级别，与输入区域平级） -->
+				<view class="quick-questions-floating" v-if="quickQuestionsExpanded">
+					<view class="quick-header">
+						<text class="quick-title">💡 快捷提问</text>
+						<!-- 关闭按钮 -->
+						<text class="quick-close" @click="quickQuestionsExpanded = false"
+							>✕</text
+						>
+					</view>
+					<view class="quick-list">
+						<view
+							class="quick-item"
+							v-for="(question, index) in quickQuestions"
+							:key="index"
+							@click="askQuickQuestion(question)"
+						>
+							<text class="quick-text">{{ question }}</text>
+							<text class="quick-arrow">→</text>
+						</view>
+					</view>
+				</view>
 
-      <!-- 加载动画 -->
-      <view class="message-wrapper" v-if="isTyping">
-        <view class="message">
-          <view class="message-avatar">
-            <text class="avatar-icon">🤖</text>
-          </view>
-          <view class="message-content typing">
-            <view class="typing-indicator">
-              <view class="typing-dot"></view>
-              <view class="typing-dot"></view>
-              <view class="typing-dot"></view>
-            </view>
-          </view>
-        </view>
-      </view>
-    </scroll-view>
+				<!-- 快捷提问折叠按钮（提升到 chat-pane 级别） -->
+				<view
+					class="quick-toggle-btn"
+					v-if="!quickQuestionsExpanded"
+					@click="toggleQuickQuestions"
+				>
+					<text class="toggle-icon">💡</text>
+				</view>
 
-    <!-- 输入区域 -->
-    <view class="chat-input-area">
-      <!-- 快捷功能 -->
-      <view class="input-features">
-        <scroll-view class="features-scroll" scroll-x>
-          <view
-            class="feature-btn"
-            v-for="feature in inputFeatures"
-            :key="feature.key"
-            @click="useFeature(feature)"
-          >
-            <text class="feature-icon">{{ feature.icon }}</text>
-            <text class="feature-label">{{ feature.label }}</text>
-          </view>
-        </scroll-view>
-      </view>
+				<!-- 输入区域（优化高度和布局） -->
+				<view class="chat-input-area">
+					<view class="input-wrapper">
+						<!-- 功能扩展位（预留：语音输入、图片上传） -->
+						<view class="input-extensions">
+							<text class="extension-icon">🎤</text>
+						</view>
 
-      <!-- 输入框 -->
-      <view class="input-wrapper">
-        <input
-          class="chat-input"
-          type="text"
-          v-model="inputText"
-          placeholder="输入您的问题..."
-          :maxlength="500"
-          @confirm="sendMessage"
-          confirm-type="send"
-        />
-        <button
-          class="send-btn"
-          :class="{ disabled: !inputText.trim() }"
-          @click="sendMessage"
-          :disabled="!inputText.trim()"
-        >
-          <text class="send-icon">发送</text>
-        </button>
-      </view>
-    </view>
-  </view>
+						<!-- 右侧：操作按钮 -->
+						<view class="nav-actions">
+							<!-- AI回复时显示停止按钮 -->
+							<text
+								class="action-btn stop-btn"
+								v-if="activeTab === 'chat' && isStreaming"
+								@click="stopStreaming"
+							>
+								⏹️
+							</text>
+							<!-- 清空按钮（垃圾桶图标） -->
+							<text
+								class="action-btn clear-btn"
+								v-if="activeTab === 'chat' && !isStreaming"
+								@click="clearHistory"
+							>
+								🗑️
+							</text>
+						</view>
+
+						<input
+							class="chat-input"
+							type="text"
+							v-model="inputText"
+							placeholder="输入您的问题...（例如：推荐适合减肥的食谱）"
+							:maxlength="500"
+							@confirm="sendMessage"
+							confirm-type="send"
+						/>
+
+						<!-- 圆形发送按钮 -->
+						<view
+							class="send-btn"
+							:class="{ disabled: !inputText.trim() }"
+							@click="sendMessage"
+						>
+							<text class="send-icon">➤</text>
+						</view>
+					</view>
+				</view>
+			</view>
+
+			<!-- 菜品识别 -->
+			<view v-if="activeTab === 'recognition'" class="tab-pane">
+				<DishRecognition />
+			</view>
+
+			<!-- 食谱优化 -->
+			<view v-if="activeTab === 'recipe'" class="tab-pane">
+				<RecipeOptimization />
+			</view>
+
+			<!-- 内容提取 -->
+			<view v-if="activeTab === 'extraction'" class="tab-pane">
+				<ContentExtraction />
+			</view>
+		</view>
+	</view>
 </template>
 
 <script setup>
-import { ref, computed, nextTick, onMounted } from 'vue'
-import { useUserStore } from '@/store'
-import { formatTime } from '@/utils/helper'
-import { aiApi } from '@/api'
+import { ref, computed, nextTick, onMounted, onUnmounted } from "vue";
+import { useUserStore } from "@/store";
+import { formatTime } from "@/utils/helper";
+import { aiApi } from "@/api";
+import DishRecognition from "./components/DishRecognition.vue";
+import RecipeOptimization from "./components/RecipeOptimization.vue";
+import ContentExtraction from "./components/ContentExtraction.vue";
 
 // 用户信息store
-const userStore = useUserStore()
+const userStore = useUserStore();
+
+// 当前激活的标签
+const activeTab = ref("chat");
+
+// 标签页配置
+const tabs = ref([
+	{ key: "chat", label: "AI聊天", icon: "💬" },
+	{ key: "recognition", label: "菜品识别", icon: "📷" },
+	{ key: "recipe", label: "食谱优化", icon: "🍳" },
+	{ key: "extraction", label: "内容提取", icon: "📝" },
+]);
 
 // 用户信息
 const userInfo = ref({
-  avatar: userStore.userInfo?.avatar || 'https://via.placeholder.com/200x200/FF6B35/FFFFFF?text=用户'
-})
+	avatar:
+		userStore.userInfo?.avatar ||
+		"https://via.placeholder.com/200x200/FF6B35/FFFFFF?text=用户",
+});
 
 // 消息列表
-const messages = ref([
-  {
-    id: Date.now(),
-    type: 'text',
-    content: '您好！我是AI饮食助手，有什么可以帮您的吗？',
-    isUser: false,
-    time: formatTime(new Date())
-  }
-])
+const messages = ref([]);
 
 // 输入文本
-const inputText = ref('')
+const inputText = ref("");
 
 // 是否正在输入
-const isTyping = ref(false)
+const isTyping = ref(false);
+
+// 是否正在流式传输
+const isStreaming = ref(false);
 
 // 滚动位置
-const scrollIntoView = ref('')
+const scrollIntoView = ref("");
 
-// 快捷提问
+// 快捷提问展开状态（默认展开）
+const quickQuestionsExpanded = ref(true);
+
+// AbortController用于取消请求
+let abortController = null;
+
+// 是否已加载历史记录
+const hasLoadedHistory = ref(false);
+
+// 是否显示欢迎消息
+const isShowWelcome = computed(() => {
+	return (
+		messages.value.length === 1 &&
+		messages.value[0].sender === "ai" &&
+		!hasLoadedHistory.value
+	);
+});
+
+// 快捷提问 - 参考前端设计优化
 const quickQuestions = ref([
-  { icon: '🥗', text: '推荐健康食谱' },
-  { icon: '📊', text: '分析营养成分' },
-  { icon: '📅', text: '制定饮食计划' },
-  { icon: '💪', text: '增肌食谱推荐' },
-  { icon: '⚖️', text: '减脂饮食建议' },
-  { icon: '🩺', text: '特殊人群饮食' }
-])
-
-// 输入功能
-const inputFeatures = ref([
-  { key: 'calorie', icon: '🔥', label: '卡路里' },
-  { key: 'recipe', icon: '🍳', label: '食谱' },
-  { key: 'plan', icon: '📅', label: '计划' },
-  { key: 'health', icon: '💊', label: '健康' }
-])
+	"推荐适合减肥的食谱",
+	"今日卡路里摄入建议",
+	"如何搭配营养均衡的饮食",
+	"推荐低卡路里零食",
+	"适合运动后的食物",
+]);
 
 // 显示的消息（排除欢迎消息）
 const displayMessages = computed(() => {
-  return messages.value.slice(1)
-})
+	return messages.value;
+});
+
+/**
+ * 获取用户ID
+ */
+const getUserId = () => {
+	return uni.getStorageSync("userId") || userStore.userInfo?.userId || "1";
+};
+
+/**
+ * 切换标签页
+ */
+const switchTab = (tabKey) => {
+	activeTab.value = tabKey;
+
+	// 如果切换到聊天tab，触发滚动
+	if (tabKey === "chat") {
+		setTimeout(() => {
+			scrollToBottom();
+		}, 300);
+	}
+};
 
 /**
  * 滚动到底部
  */
 const scrollToBottom = async () => {
-  await nextTick()
-  if (displayMessages.value.length > 0) {
-    scrollIntoView.value = 'msg-' + (displayMessages.value.length - 1)
-  }
-}
+	await nextTick();
+	if (messages.value.length > 0) {
+		scrollIntoView.value = "msg-" + (messages.value.length - 1);
+	}
+};
 
 /**
- * 发送消息
+ * 加载聊天历史记录
+ */
+const loadChatHistory = async () => {
+	try {
+		const userId = getUserId();
+		console.log("📥 开始加载聊天记录，userId:", userId);
+
+		const historyResponse = await aiApi.getHistory(userId);
+		console.log("📡 后端响应:", historyResponse);
+
+		if (
+			historyResponse.code === 200 &&
+			historyResponse.data &&
+			historyResponse.data.length > 0
+		) {
+			// 转换为前端格式
+			messages.value = historyResponse.data.map((item, index) => ({
+				id: index + 1,
+				sender: item.sender,
+				content: item.content,
+				time: formatTime(new Date(item.createTime)),
+				avatar: item.sender === "ai" ? "🤖" : "👤",
+				isUser: item.sender === "user",
+			}));
+			hasLoadedHistory.value = true;
+			console.log("✅ 成功加载聊天历史:", messages.value.length, "条消息");
+		} else {
+			// 没有历史记录，显示欢迎消息
+			console.log("📭 没有历史记录，显示欢迎消息");
+			addWelcomeMessage();
+			hasLoadedHistory.value = false;
+		}
+
+		// 滚动到底部
+		await scrollToBottom();
+	} catch (error) {
+		console.error("❌ 加载聊天记录失败:", error);
+
+		// 加载失败时显示欢迎消息
+		addWelcomeMessage();
+		hasLoadedHistory.value = false;
+	}
+};
+
+/**
+ * 添加欢迎消息
+ */
+const addWelcomeMessage = () => {
+	hasLoadedHistory.value = false;
+	messages.value = [
+		{
+			id: Date.now(),
+			sender: "ai",
+			content: "您好！我是AI饮食助手，有什么可以帮您的吗？",
+			time: formatTime(new Date()),
+			avatar: "🤖",
+			isUser: false,
+		},
+	];
+};
+
+/**
+ * 保存消息到后端
+ */
+const saveMessageToBackend = async (sender, content) => {
+	try {
+		const userId = getUserId();
+		await aiApi.saveMessage({
+			userId,
+			sender,
+			content,
+		});
+		console.log("✅ 消息已保存到后端:", sender);
+	} catch (error) {
+		console.error("❌ 保存消息到后端失败:", error);
+	}
+};
+
+/**
+ * 发送消息（支持流式响应）
  */
 const sendMessage = async () => {
-  const text = inputText.value.trim()
-  if (!text) return
+	const text = inputText.value.trim();
+	if (!text) return;
 
-  // 添加用户消息
-  const userMsg = {
-    id: Date.now(),
-    type: 'text',
-    content: text,
-    isUser: true,
-    time: formatTime(new Date())
-  }
-  messages.value.push(userMsg)
+	console.log("==================== AI聊天请求开始 ====================");
+	console.log("⏰ 请求时间:", new Date().toLocaleString());
+	console.log("📝 用户消息:", text);
 
-  // 清空输入框
-  inputText.value = ''
+	// 清空输入框
+	inputText.value = "";
 
-  // 滚动到底部
-  await scrollToBottom()
+	// 添加用户消息
+	const userMsg = {
+		id: Date.now(),
+		sender: "user",
+		content: text,
+		time: formatTime(new Date()),
+		avatar: "👤",
+		isUser: true,
+	};
+	messages.value.push(userMsg);
 
-  // 显示输入状态
-  isTyping.value = true
+	// 发送消息后自动收起快捷提问，提升体验
+	if (quickQuestionsExpanded.value) {
+		quickQuestionsExpanded.value = false;
+	}
 
-  try {
-    // 调用AI对话API
-    const res = await aiApi.chat({
-      message: text,
-      conversationId: '', // 可以从本地存储获取或生成新的
-      history: messages.value.map(msg => ({
-        role: msg.isUser ? 'user' : 'assistant',
-        content: msg.content
-      }))
-    })
+	// 滚动到底部
+	await scrollToBottom();
 
-    // 处理AI响应
-    const aiMsg = {
-      id: Date.now() + 1,
-      type: 'text',
-      content: res.data?.message || res.message || '抱歉，我现在无法回答这个问题。',
-      isUser: false,
-      time: formatTime(new Date())
-    }
+	// 创建AI消息对象（初始为空）
+	const aiMessageIndex = messages.value.length;
+	messages.value.push({
+		id: Date.now() + 1,
+		sender: "ai",
+		content: "",
+		time: formatTime(new Date()),
+		avatar: "🤖",
+		isUser: false,
+	});
 
-    // 如果响应中包含建议，添加建议卡片
-    if (res.data?.suggestions && res.data.suggestions.length > 0) {
-      aiMsg.type = 'suggestion'
-      aiMsg.suggestions = res.data.suggestions
-    }
+	await scrollToBottom();
 
-    messages.value.push(aiMsg)
-    isTyping.value = false
+	// 显示输入状态
+	isTyping.value = true;
+	isStreaming.value = true;
 
-    await scrollToBottom()
+	try {
+		// 调用AI流式对话API
+		await aiApi.streamChat(
+			{
+				message: text,
+				conversationId: "",
+				history: messages.value.slice(0, -1).map((msg) => ({
+					role: msg.isUser ? "user" : "assistant",
+					content: msg.content,
+				})),
+			},
+			// onMessage - 接收消息内容
+			(content) => {
+				messages.value[aiMessageIndex].content += content;
+				nextTick(() => scrollToBottom());
+			},
+			// onComplete - 完成回调
+			async () => {
+				console.log("✅ AI消息接收完成");
+				isTyping.value = false;
+				isStreaming.value = false;
 
-    // 保存到历史记录
-    saveChatHistory()
-  } catch (error) {
-    console.error('发送消息失败:', error)
-    isTyping.value = false
+				// 保存AI消息到后端
+				const aiContent = messages.value[aiMessageIndex].content;
+				await saveMessageToBackend("ai", aiContent);
 
-    // 如果API调用失败，使用本地模拟回复
-    const aiMsg = {
-      id: Date.now() + 1,
-      type: 'text',
-      content: generateAIResponse(text),
-      isUser: false,
-      time: formatTime(new Date())
-    }
+				// 保存到本地存储作为备份
+				saveChatHistoryToLocal();
 
-    if (shouldShowSuggestion(text)) {
-      aiMsg.type = 'suggestion'
-      aiMsg.suggestions = generateSuggestions(text)
-    }
+				await scrollToBottom();
+			},
+			// onError - 错误处理
+			(error) => {
+				console.error("❌ AI请求失败:", error);
+				isTyping.value = false;
+				isStreaming.value = false;
 
-    messages.value.push(aiMsg)
-    await scrollToBottom()
-    saveChatHistory()
+				// 如果没有收到任何内容，显示错误消息
+				if (!messages.value[aiMessageIndex].content) {
+					messages.value[aiMessageIndex].content =
+						"抱歉，我现在无法回答这个问题，请稍后再试。";
+				}
+			}
+		);
+	} catch (error) {
+		console.error("❌ 发送消息失败:", error);
+		isTyping.value = false;
+		isStreaming.value = false;
 
-    uni.showToast({
-      title: '网络连接失败，已切换到离线模式',
-      icon: 'none'
-    })
-  }
-}
+		// 如果API调用失败，使用本地模拟回复
+		const aiMsg = {
+			id: Date.now() + 1,
+			sender: "ai",
+			content: generateAIResponse(text),
+			time: formatTime(new Date()),
+			avatar: "🤖",
+			isUser: false,
+		};
+
+		messages.value[aiMessageIndex] = aiMsg;
+		await scrollToBottom();
+		saveChatHistoryToLocal();
+
+		uni.showToast({
+			title: "网络连接失败，已切换到离线模式",
+			icon: "none",
+		});
+	}
+};
 
 /**
  * 生成AI回复（模拟）
  */
 const generateAIResponse = (text) => {
-  const responses = {
-    '推荐健康食谱': '根据您的需求，我为您推荐以下健康食谱：\n\n早餐：燕麦牛奶粥配鸡蛋（约420卡）\n午餐：清蒸鲈鱼配时蔬（约580卡）\n晚餐：鸡胸肉蔬菜沙拉（约380卡）\n\n这些食谱营养均衡，适合日常食用。',
-    '分析营养成分': '请告诉我您想分析哪种食物的营养成分？我可以为您提供详细的分析报告。',
-    '制定饮食计划': '为了制定个性化的饮食计划，我需要了解以下信息：\n\n1. 您的身高体重\n2. 运动习惯\n3. 饮食偏好\n4. 健康目标\n\n请提供这些信息，我会为您制定专属计划。',
-    '增肌': '增肌期间建议：\n\n1. 蛋白质摄入：每公斤体重2-2.2g\n2. 碳水化合物：保证训练能量\n3. 脂肪：适量摄入，促进激素分泌\n4. 多餐少食：每天5-6餐\n\n推荐食物：鸡胸肉、牛肉、鸡蛋、牛奶、燕麦等。',
-    '减脂': '减脂期间建议：\n\n1. 控制总热量：比日常摄入少300-500卡\n2. 高蛋白饮食：防止肌肉流失\n3. 低GI碳水：稳定血糖\n4. 多吃蔬菜：增加饱腹感\n\n注意：不要过度节食，要保证营养均衡。',
-    'default': `收到您的问题："${text}"\n\n我正在为您分析，稍后会给出专业建议。\n\n您可以问我关于：\n• 营养成分分析\n• 食谱推荐\n• 饮食计划\n• 健康建议`
-  }
+	const responses = {
+		推荐健康食谱:
+			"根据您的需求，我为您推荐以下健康食谱：\n\n早餐：燕麦牛奶粥配鸡蛋（约420卡）\n午餐：清蒸鲈鱼配时蔬（约580卡）\n晚餐：鸡胸肉蔬菜沙拉（约380卡）\n\n这些食谱营养均衡，适合日常食用。",
+		分析营养成分:
+			"请告诉我您想分析哪种食物的营养成分？我可以为您提供详细的分析报告。",
+		制定饮食计划:
+			"为了制定个性化的饮食计划，我需要了解以下信息：\n\n1. 您的身高体重\n2. 运动习惯\n3. 饮食偏好\n4. 健康目标\n\n请提供这些信息，我会为您制定专属计划。",
+		default: `收到您的问题："${text}"\n\n我正在为您分析，稍后会给出专业建议。\n\n您可以问我关于：\n• 营养成分分析\n• 食谱推荐\n• 饮食计划\n• 健康建议`,
+	};
 
-  for (const [key, value] of Object.entries(responses)) {
-    if (text.includes(key)) {
-      return value
-    }
-  }
+	for (const [key, value] of Object.entries(responses)) {
+		if (text.includes(key)) {
+			return value;
+		}
+	}
 
-  return responses['default']
-}
-
-/**
- * 判断是否显示建议卡片
- */
-const shouldShowSuggestion = (text) => {
-  const keywords = ['推荐', '食谱', '怎么做', '怎样']
-  return keywords.some(keyword => text.includes(keyword))
-}
-
-/**
- * 生成建议
- */
-const generateSuggestions = (text) => {
-  return [
-    {
-      title: '燕麦牛奶粥',
-      desc: '营养早餐，15分钟即可完成'
-    },
-    {
-      title: '清蒸鲈鱼',
-      desc: '高蛋白低脂，适合减脂期'
-    },
-    {
-      title: '蔬菜沙拉',
-      desc: '低卡健康，富含维生素'
-    }
-  ]
-}
+	return responses["default"];
+};
 
 /**
  * 快捷提问
  */
 const askQuickQuestion = (question) => {
-  inputText.value = question.text
-  sendMessage()
-}
+	inputText.value = question;
+	sendMessage();
+};
 
 /**
- * 使用功能
+ * 切换快捷提问展开/折叠状态
  */
-const useFeature = (feature) => {
-  const featureTexts = {
-    calorie: '帮我分析一下今天的卡路里摄入',
-    recipe: '推荐一些适合晚餐的健康食谱',
-    plan: '帮我制定一个一周饮食计划',
-    health: '增肌期间应该怎么安排饮食？'
-  }
-  inputText.value = featureTexts[feature.key]
-  sendMessage()
-}
-
-/**
- * 应用建议
- */
-const applySuggestion = (suggestion) => {
-  uni.navigateTo({
-    url: '/pages/recipe/today'
-  })
-}
+const toggleQuickQuestions = () => {
+	quickQuestionsExpanded.value = !quickQuestionsExpanded.value;
+};
 
 /**
  * 清空历史
  */
-const clearHistory = () => {
-  uni.showModal({
-    title: '清空聊天记录',
-    content: '确定要清空所有聊天记录吗？',
-    confirmColor: '#FF6B35',
-    success: (res) => {
-      if (res.confirm) {
-        messages.value = [
-          {
-            id: Date.now(),
-            type: 'text',
-            content: '您好！我是AI饮食助手，有什么可以帮您的吗？',
-            isUser: false,
-            time: formatTime(new Date())
-          }
-        ]
+const clearHistory = async () => {
+	uni.showModal({
+		title: "清空聊天记录",
+		content: "确定要清空所有聊天记录吗？",
+		confirmColor: "#FF6B35",
+		success: async (res) => {
+			if (res.confirm) {
+				try {
+					const userId = getUserId();
+					console.log("🗑️ 开始清空聊天记录，userId:", userId);
 
-        // 清空本地存储
-        uni.removeStorageSync('chatHistory')
+					// 调用后端API清空聊天记录
+					const clearResponse = await aiApi.clearHistory(userId);
 
-        uni.showToast({
-          title: '已清空聊天记录',
-          icon: 'success'
-        })
-      }
-    }
-  })
-}
+					if (clearResponse.code === 200) {
+						console.log("✅ 后端清空成功");
+
+						// 清空前端显示
+						messages.value = [];
+
+						// 重新加载消息（会显示欢迎消息）
+						await loadChatHistory();
+
+						// 清空本地存储
+						uni.removeStorageSync("chatHistory");
+
+						uni.showToast({
+							title: "已清空聊天记录",
+							icon: "success",
+						});
+					} else {
+						uni.showToast({
+							title: clearResponse.message || "清空失败，请稍后重试",
+							icon: "none",
+						});
+					}
+				} catch (error) {
+					console.error("❌ 清空聊天记录失败:", error);
+
+					// 即使后端失败，也清空前端显示
+					messages.value = [];
+					addWelcomeMessage();
+					uni.removeStorageSync("chatHistory");
+
+					uni.showToast({
+						title: "已清空本地记录",
+						icon: "success",
+					});
+				}
+			}
+		},
+	});
+};
 
 /**
- * 保存聊天历史
+ * 保存聊天历史到本地
  */
-const saveChatHistory = () => {
-  try {
-    uni.setStorageSync('chatHistory', JSON.stringify(messages.value))
-  } catch (error) {
-    console.error('保存聊天历史失败:', error)
-  }
-}
+const saveChatHistoryToLocal = () => {
+	try {
+		uni.setStorageSync("chatHistory", JSON.stringify(messages.value));
+	} catch (error) {
+		console.error("保存聊天历史失败:", error);
+	}
+};
 
 /**
- * 加载聊天历史
+ * 停止流式传输
  */
-const loadChatHistory = () => {
-  try {
-    const history = uni.getStorageSync('chatHistory')
-    if (history) {
-      messages.value = JSON.parse(history)
-    }
-  } catch (error) {
-    console.error('加载聊天历史失败:', error)
-  }
-}
+const stopStreaming = () => {
+	if (abortController) {
+		console.log("🛑 用户主动停止流式传输");
+		abortController.abort();
+		isStreaming.value = false;
+		isTyping.value = false;
+
+		uni.showToast({
+			title: "已停止AI回复",
+			icon: "none",
+		});
+	}
+};
 
 // 组件挂载
-onMounted(() => {
-  loadChatHistory()
-  scrollToBottom()
-})
+onMounted(async () => {
+	await loadChatHistory();
+});
+
+// 组件卸载
+onUnmounted(() => {
+	// 清理请求
+	if (abortController) {
+		abortController.abort();
+	}
+});
 </script>
 
 <style lang="scss" scoped>
-@import '@/styles/variables.scss';
-@import '@/styles/mixins.scss';
+@import "@/styles/variables.scss";
+@import "@/styles/mixins.scss";
 
-.ai-chat-container {
-  min-height: 100vh;
-  background-color: $bg-color-base;
-  display: flex;
-  flex-direction: column;
+.ai-page {
+	min-height: 100vh;
+	background: $bg-color-white; // 纯白背景，删除渐变
+	display: flex;
+	flex-direction: column;
 }
 
-/* 聊天头部 */
-.chat-header {
-  background: linear-gradient(135deg, #FF6B35, #FF8F61);
-  padding: $spacing-md $spacing-lg;
-  @include flex-between;
-  box-shadow: $box-shadow-md;
+/* ==================== 统一顶部导航栏（合并标签栏+AI助手头部） ==================== */
+.unified-nav {
+	height: $nav-height; // 112rpx，贴合移动端规范
+	background: $bg-color-white;
+	border-bottom: 1rpx solid $border-color-light;
+	box-shadow: $box-shadow-sm;
+	@include flex-between;
+	padding: 0 $spacing-md;
+	position: sticky;
+	top: 0;
+	z-index: $z-index-sticky;
+	flex-shrink: 0;
 }
 
-.header-info {
-  @include flex-center-column;
-  align-items: flex-start;
-  gap: $spacing-xs;
+.nav-tabs {
+	flex: 1;
+	@include flex-center;
+	gap: $spacing-md;
 }
 
-.header-title {
-  font-size: $font-size-xl;
-  font-weight: $font-weight-bold;
-  color: #fff;
+.tab-item {
+	@include flex-center-column;
+	gap: $spacing-xs;
+	padding: $spacing-sm;
+	transition: $transition-base;
+	position: relative;
+
+	&.active {
+		.tab-label {
+			color: $primary-500;
+			font-weight: $font-weight-bold;
+		}
+
+		&::after {
+			content: "";
+			position: absolute;
+			bottom: 0;
+			left: 50%;
+			transform: translateX(-50%);
+			width: 32rpx; // 从60rpx缩小为32rpx
+			height: 4rpx; // 从6rpx缩小为4rpx
+			background: linear-gradient(135deg, $primary-500, $primary-800);
+			border-radius: 2rpx;
+		}
+	}
 }
 
-.header-status {
-  font-size: $font-size-sm;
-  color: rgba(255, 255, 255, 0.8);
+.tab-icon {
+	font-size: 40rpx; // 从44rpx调整为40rpx
+	display: block;
 }
 
-.header-actions {
-  @include flex-center;
+.tab-label {
+	font-size: 26rpx; // 从24rpx调整为26rpx
+	color: $text-color-regular; // 未激活态用#666666
+	transition: $transition-base;
+}
+
+.nav-title {
+	font-size: $font-size-lg;
+	font-weight: $font-weight-bold;
+	color: $text-color-primary;
+	flex: 1;
+	text-align: center;
+}
+
+.nav-actions {
+	@include flex-center;
+	gap: $spacing-sm;
 }
 
 .action-btn {
-  padding: $spacing-sm $spacing-md;
-  background-color: rgba(255, 255, 255, 0.2);
-  border-radius: $border-radius-round;
-  font-size: $font-size-sm;
-  color: #fff;
+	width: $touch-min-size; // 96rpx，符合触屏规范
+	height: $touch-min-size;
+	@include flex-center;
+	background-color: $bg-color-base;
+	border-radius: $border-radius-round;
+	font-size: $font-size-lg;
+	color: $text-color-primary;
+	transition: $transition-fast;
 
-  &:active {
-    opacity: 0.6;
-  }
+	&.stop-btn {
+		background-color: $danger-color;
+		color: $bg-color-white;
+	}
+
+	&:active {
+		opacity: 0.7;
+		transform: scale(0.95);
+	}
 }
 
-/* 快捷提问 */
-.quick-questions {
-  background-color: $bg-color-white;
-  padding: $spacing-md;
-  border-bottom: 1rpx solid $border-color-lighter;
+/* ==================== 标签页内容 ==================== */
+.tabs-content {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+
+.tab-pane {
+	flex: 1;
+	height: 100%;
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+}
+
+/* ==================== 聊天容器 ==================== */
+.chat-pane {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	overflow: hidden;
+}
+
+/* ==================== 快捷提问悬浮区（提升到 chat-pane 级别） ==================== */
+.quick-questions-floating {
+	position: fixed;
+	bottom: 180rpx; // 在输入框上方（输入框区域约168rpx + 间距12rpx）
+	left: $spacing-lg;
+	right: $spacing-lg;
+	background: rgba(255, 255, 255, 0.98);
+	backdrop-filter: blur(20rpx);
+	border-radius: $border-radius-lg;
+	padding: $spacing-lg;
+	box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.12);
+	border: 1rpx solid $border-color-light;
+	z-index: $z-index-float;
+	animation: slideUpFadeIn 0.3s ease-out;
+}
+
+@keyframes slideUpFadeIn {
+	from {
+		opacity: 0;
+		transform: translateY(20rpx);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.quick-header {
+	@include flex-between;
+	margin-bottom: $spacing-md;
 }
 
 .quick-title {
-  font-size: $font-size-base;
-  color: $text-color-primary;
-  font-weight: $font-weight-medium;
-  margin-bottom: $spacing-md;
+	font-size: $font-size-base;
+	color: $text-color-primary;
+	font-weight: $font-weight-bold;
 }
 
-.quick-scroll {
-  white-space: nowrap;
+.quick-close {
+	font-size: $font-size-lg;
+	color: $text-color-secondary;
+	padding: $spacing-xs;
+	margin: -$spacing-xs;
+	transition: $transition-fast;
+
+	&:active {
+		color: $text-color-primary;
+		transform: scale(0.9);
+	}
+}
+
+.quick-list {
+	display: flex;
+	flex-direction: column;
+	gap: $spacing-sm;
+	max-height: 400rpx; // 限制最大高度
+	overflow-y: auto;
 }
 
 .quick-item {
-  display: inline-flex;
-  align-items: center;
-  gap: $spacing-xs;
-  padding: $spacing-sm $spacing-md;
-  margin-right: $spacing-sm;
-  background-color: rgba(255, 107, 53, 0.1);
-  border-radius: $border-radius-round;
-  flex-shrink: 0;
+	@include flex-between;
+	padding: $spacing-md $spacing-lg;
+	background: $bg-color-white;
+	border-radius: $border-radius-base;
+	border: 1rpx solid $primary-300;
+	transition: $transition-base;
+	box-shadow: $box-shadow-sm;
 
-  &:active {
-    transform: scale(0.95);
-  }
-}
-
-.quick-icon {
-  font-size: $font-size-lg;
+	&:active {
+		transform: scale(0.98);
+		border-color: $primary-500;
+		background: $primary-100;
+		box-shadow: $box-shadow-md;
+	}
 }
 
 .quick-text {
-  font-size: $font-size-sm;
-  color: $primary-color;
+	flex: 1;
+	font-size: 30rpx;
+	color: $text-color-primary;
+	line-height: $line-height-lg;
+	font-weight: $font-weight-medium;
 }
 
-/* 聊天消息 */
+.quick-arrow {
+	font-size: $font-size-xl;
+	color: $primary-500;
+	margin-left: $spacing-md;
+}
+
+/* 快捷提问折叠按钮（提升到 chat-pane 级别） */
+.quick-toggle-btn {
+	position: fixed;
+	bottom: 200rpx; // 在快捷提问下方（快捷提问180rpx + 间距20rpx）
+	left: $spacing-lg;
+	width: 80rpx;
+	height: 80rpx;
+	@include flex-center;
+	background: rgba(255, 107, 53, 0.95);
+	backdrop-filter: blur(20rpx);
+	border-radius: 50%;
+	box-shadow: 0 4rpx 16rpx rgba(255, 107, 53, 0.3);
+	z-index: $z-index-float + 1; // 比快捷提问高一层
+	transition: $transition-base;
+	animation: scaleIn 0.3s ease-out;
+
+	&:active {
+		transform: scale(0.95);
+	}
+}
+
+@keyframes scaleIn {
+	from {
+		opacity: 0;
+		transform: scale(0.8);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+.toggle-icon {
+	font-size: $font-size-xl;
+}
+
+/* ==================== 聊天消息区（可滚动区域，100%动态空间） ==================== */
 .chat-messages {
-  flex: 1;
-  padding: $spacing-md;
-  overflow-y: auto;
+	flex: 1;
+	padding: $spacing-lg;
+	padding-bottom: 160rpx; // 默认底部留出空间（输入框约120rpx + 间距）
+	overflow-y: auto;
+	background: $bg-color-light; // 纯色背景，删除渐变
+	scrollbar-width: none;
+	-ms-overflow-style: none;
+	transition: padding-bottom 0.3s ease; // 平滑过渡
+
+	&::-webkit-scrollbar {
+		display: none;
+	}
+
+	// 快捷提问展开时，增加底部间距（快捷提问最大高度400rpx + 间距）
+	&.with-quick-questions {
+		padding-bottom: 480rpx;
+	}
 }
 
+/* 欢迎消息 */
 .message-welcome {
-  @include flex-center-column;
-  align-items: center;
-  padding: 80rpx $spacing-lg;
-  text-align: center;
+	@include flex-center-column;
+	align-items: center;
+	padding: 80rpx $spacing-lg;
+	text-align: center;
+	animation: welcomeFadeIn $duration-slow ease-out; // 0.4s
+}
+
+@keyframes welcomeFadeIn {
+	from {
+		opacity: 0;
+		transform: translateY(30rpx);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
 }
 
 .welcome-icon {
-  font-size: 120rpx;
-  margin-bottom: $spacing-lg;
+	font-size: 120rpx;
+	margin-bottom: $spacing-lg;
+	animation: iconBounce 1s ease-out;
+}
+
+@keyframes iconBounce {
+	0%,
+	100% {
+		transform: scale(1);
+	}
+	50% {
+		transform: scale(1.2);
+	}
 }
 
 .welcome-text {
-  font-size: $font-size-xl;
-  font-weight: $font-weight-bold;
-  color: $text-color-primary;
-  margin-bottom: $spacing-md;
+	font-size: $font-size-xl;
+	font-weight: $font-weight-bold;
+	color: $primary-500; // 主色
+	margin-bottom: $spacing-md;
 }
 
 .welcome-tips {
-  font-size: $font-size-base;
-  color: $text-color-secondary;
-  margin-bottom: $spacing-lg;
+	font-size: $font-size-base;
+	color: $text-color-regular;
+	margin-bottom: $spacing-lg;
+	font-weight: $font-weight-medium;
 }
 
 .welcome-features {
-  @include flex-center-column;
-  gap: $spacing-sm;
-  align-items: flex-start;
+	@include flex-center-column;
+	gap: $spacing-sm;
+	align-items: flex-start;
+	background: $primary-100; // 主色100
+	padding: $spacing-lg;
+	border-radius: $border-radius-base;
+	border: 1rpx solid $primary-300;
+	box-shadow: $box-shadow-sm;
 }
 
 .feature-item {
-  font-size: $font-size-sm;
-  color: $text-color-regular;
-  line-height: $line-height-lg;
+	font-size: $font-size-sm;
+	color: $text-color-primary;
+	line-height: $line-height-lg;
+	padding: 8rpx 0;
+	font-weight: $font-weight-medium;
 }
 
+/* 消息列表 */
 .message-wrapper {
-  margin-bottom: $spacing-lg;
+	margin-bottom: $spacing-lg;
+	animation: messageFadeIn $duration-base ease-out; // 0.3s，从0.4s优化
+}
+
+@keyframes messageFadeIn {
+	from {
+		opacity: 0;
+		transform: translateY(10rpx) scale(0.98); // 从20rpx优化为10rpx
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
 }
 
 .message {
-  @include flex-center;
-  gap: $spacing-sm;
+	@include flex-center;
+	gap: $spacing-sm;
 
-  &.user {
-    flex-direction: row-reverse;
-  }
+	&.user {
+		flex-direction: row-reverse;
+	}
 }
 
+/* 头像（响应式尺寸） */
 .message-avatar {
-  width: 72rpx;
-  height: 72rpx;
-  border-radius: 50%;
-  @include flex-center;
-  background: linear-gradient(135deg, #64B5F6, #2196F3);
-  flex-shrink: 0;
+	width: $avatar-size;
+	max-width: $avatar-max-size; // 76rpx
+	min-width: $avatar-min-size; // 60rpx
+	height: $avatar-size;
+	max-height: $avatar-max-size;
+	min-height: $avatar-min-size;
+	border-radius: 50%;
+	@include flex-center;
+	background: $primary-100; // 主色100，删除蓝色渐变
+	flex-shrink: 0;
+	box-shadow: $box-shadow-sm;
 
-  &.user {
-    background: linear-gradient(135deg, #FF6B35, #FF8F61);
-  }
+	&.user {
+		background: linear-gradient(135deg, $primary-500, $primary-800); // 保留主色渐变
+		box-shadow: $box-shadow-sm;
+	}
 }
 
 .avatar-icon {
-  font-size: 36rpx;
+	font-size: 38rpx;
 }
 
 .avatar-image {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
+	width: 100%;
+	height: 100%;
+	border-radius: 50%;
 }
 
+/* 消息气泡（响应式宽度+对称圆角） */
 .message-content {
-  max-width: 520rpx;
-  padding: $spacing-md;
-  background-color: $bg-color-white;
-  border-radius: $border-radius-lg;
-  box-shadow: $box-shadow-sm;
-  position: relative;
+	max-width: $message-bubble-width; // 75vw
+	max-width: $message-bubble-max-width; // 540rpx
+	min-width: $message-bubble-min-width; // 120rpx
+	padding: 16rpx 24rpx; // 水平24rpx、垂直16rpx
+	background-color: $primary-100; // 主色100纯色，删除渐变
+	border-radius: 24rpx; // 统一24rpx对称圆角
+	box-shadow: $box-shadow-sm;
+	position: relative;
+	transition: $transition-base;
 
-  &.user {
-    background: linear-gradient(135deg, $primary-color, #FF8F61);
-    color: #fff;
-  }
+	&.user {
+		background: $primary-500; // 主色500纯色，删除渐变
+		color: $bg-color-white;
+		box-shadow: $box-shadow-md;
+	}
 
-  &.typing {
-    padding: $spacing-md $spacing-lg;
-  }
+	&:not(.user) {
+		background: $primary-100;
+		color: $text-color-primary;
+		border: 1rpx solid $primary-300;
+	}
+
+	&.typing {
+		padding: $spacing-md $spacing-lg;
+	}
 }
 
 .content-text {
-  font-size: $font-size-base;
-  line-height: $line-height-lg;
-  white-space: pre-wrap;
-  word-break: break-all;
+	font-size: $font-size-base;
+	line-height: 1.8;
+	white-space: pre-wrap;
+	word-break: break-word;
+	font-weight: $font-weight-medium;
 }
 
 .message-time {
-  display: block;
-  font-size: $font-size-xs;
-  color: rgba(0, 0, 0, 0.3);
-  margin-top: $spacing-xs;
+	display: none; // 默认隐藏
+	font-size: $font-size-xs;
+	color: rgba(0, 0, 0, 0.3);
+	margin-top: 6rpx;
 
-  .user & {
-    color: rgba(255, 255, 255, 0.6);
-  }
+	.user & {
+		color: rgba(255, 255, 255, 0.6);
+	}
 }
 
-/* 建议卡片 */
-.content-card {
-  margin-top: $spacing-sm;
+/* 点击气泡显示时间戳 */
+.message-content:active .message-time {
+	display: block;
 }
 
-.suggestion-item {
-  @include flex-center;
-  padding: $spacing-sm;
-  margin-bottom: $spacing-sm;
-  background-color: $bg-color-base;
-  border-radius: $border-radius-base;
-
-  &:last-child {
-    margin-bottom: 0;
-  }
-
-  &:active {
-    background-color: rgba(255, 107, 53, 0.1);
-  }
-}
-
-.suggestion-icon {
-  font-size: $font-size-xl;
-  margin-right: $spacing-sm;
-}
-
-.suggestion-info {
-  flex: 1;
-  @include flex-center-column;
-  align-items: flex-start;
-  gap: $spacing-xs;
-}
-
-.suggestion-title {
-  font-size: $font-size-base;
-  color: $text-color-primary;
-  font-weight: $font-weight-medium;
-}
-
-.suggestion-desc {
-  font-size: $font-size-sm;
-  color: $text-color-secondary;
-}
-
-.suggestion-arrow {
-  font-size: $font-size-lg;
-  color: $text-color-placeholder;
-}
-
-/* 输入动画 */
+/* 打字指示器（优化为2s柔和循环） */
 .typing-indicator {
-  @include flex-center;
-  gap: 8rpx;
+	@include flex-center;
+	gap: 8rpx;
 }
 
 .typing-dot {
-  width: 12rpx;
-  height: 12rpx;
-  background-color: $text-color-secondary;
-  border-radius: 50%;
-  animation: typing 1.4s infinite;
+	width: 12rpx;
+	height: 12rpx;
+	background: $primary-500; // 主色，删除渐变
+	border-radius: 50%;
+	animation: typingBounce $duration-typing infinite ease-in-out; // 2s循环
 
-  &:nth-child(2) {
-    animation-delay: 0.2s;
-  }
+	&:nth-child(1) {
+		animation-delay: -0.32s;
+	}
 
-  &:nth-child(3) {
-    animation-delay: 0.4s;
-  }
+	&:nth-child(2) {
+		animation-delay: -0.16s;
+	}
 }
 
-@keyframes typing {
-  0%, 60%, 100% {
-    transform: translateY(0);
-    opacity: 0.7;
-  }
-  30% {
-    transform: translateY(-10rpx);
-    opacity: 1;
-  }
+@keyframes typingBounce {
+	0%,
+	80%,
+	100% {
+		transform: scale(0.6);
+		opacity: 0.5;
+	}
+	40% {
+		transform: scale(1);
+		opacity: 1;
+	}
 }
 
-/* 输入区域 */
+/* ==================== 底部输入区（优化高度96rpx+触屏规范） ==================== */
 .chat-input-area {
-  background-color: $bg-color-white;
-  padding: $spacing-md;
-  border-top: 1rpx solid $border-color-lighter;
-}
-
-.input-features {
-  margin-bottom: $spacing-md;
-}
-
-.features-scroll {
-  white-space: nowrap;
-}
-
-.feature-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: $spacing-xs;
-  padding: $spacing-sm $spacing-md;
-  margin-right: $spacing-sm;
-  background-color: $bg-color-base;
-  border-radius: $border-radius-round;
-  flex-shrink: 0;
-
-  &:active {
-    background-color: rgba(255, 107, 53, 0.1);
-  }
-}
-
-.feature-icon {
-  font-size: $font-size-lg;
-}
-
-.feature-label {
-  font-size: $font-size-sm;
-  color: $text-color-regular;
+	background-color: $bg-color-white;
+	padding: $spacing-md $spacing-lg;
+	border-top: 1rpx solid $border-color-light;
+	box-shadow: 0 -2rpx 8rpx rgba(0, 0, 0, 0.04);
+	flex-shrink: 0;
 }
 
 .input-wrapper {
-  @include flex-center;
-  gap: $spacing-sm;
+	@include flex-center;
+	gap: $spacing-sm;
 }
 
+/* 功能扩展位（预留：语音输入、图片上传） */
+.input-extensions {
+	@include flex-center;
+	gap: $spacing-sm;
+}
+
+.extension-icon {
+	font-size: $font-size-xl;
+	color: $text-color-regular;
+	padding: $spacing-sm;
+	transition: $transition-base;
+
+	&:active {
+		color: $primary-500;
+		transform: scale(0.95);
+	}
+}
+
+/* 输入框（占据80%宽度） */
 .chat-input {
-  flex: 1;
-  height: 80rpx;
-  padding: 0 $spacing-md;
-  background-color: $bg-color-base;
-  border-radius: $border-radius-round;
-  font-size: $font-size-base;
-  color: $text-color-primary;
+	flex: 1;
+	height: $input-height-current; // 96rpx，从80rpx优化
+	padding: 0 $spacing-md; // 水平24rpx
+	background-color: $bg-color-input; // #f5f5f5
+	border-radius: 40rpx;
+	font-size: $font-size-base;
+	color: $text-color-primary;
+	border: 2rpx solid transparent;
+	transition: $transition-base;
+
+	&:focus {
+		border-color: $primary-500;
+		background-color: $bg-color-white;
+	}
 }
 
+/* 圆形发送按钮（64rpx直径，主色渐变） */
 .send-btn {
-  width: 160rpx;
-  height: 80rpx;
-  @include flex-center;
-  background: linear-gradient(135deg, $primary-color, #FF8F61);
-  color: #fff;
-  font-size: $font-size-base;
-  border-radius: $border-radius-round;
-  border: none;
+	width: 64rpx; // 圆形按钮
+	height: 64rpx;
+	@include flex-center;
+	background: linear-gradient(135deg, $primary-500, $primary-800); // 仅保留2处渐变之一
+	color: $bg-color-white;
+	border-radius: 50%;
+	transition: $transition-base;
+	box-shadow: $box-shadow-md;
 
-  &.disabled {
-    opacity: 0.4;
-  }
+	&.disabled {
+		opacity: 0.4;
+		background: linear-gradient(135deg, #ccc, #999);
+		box-shadow: none;
+	}
 
-  &:active:not(.disabled) {
-    opacity: 0.8;
-  }
+	&:active:not(.disabled) {
+		transform: scale(0.95);
+		box-shadow: $box-shadow-sm;
+	}
+}
+
+.send-icon {
+	font-size: 28rpx;
+	font-weight: $font-weight-bold;
 }
 </style>

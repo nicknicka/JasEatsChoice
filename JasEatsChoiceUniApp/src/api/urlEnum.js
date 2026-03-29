@@ -207,8 +207,13 @@ export const RECIPE_API = {
 
 // ==================== AI 相关 ====================
 export const AI_API = {
+  BASE_URL: 'http://localhost:8080/api', // 基础URL
   CHAT: '/v1/ai/chat',                                   // POST - AI 对话
   STREAM_CHAT: '/v1/ai/chat/stream',                     // POST - AI 流式对话
+  HISTORY: '/v1/ai/chat/history',                       // GET - 获取聊天历史
+  SAVE: '/v1/ai/chat/save',                             // POST - 保存聊天消息
+  CLEAR: '/v1/ai/chat/clear',                           // DELETE - 清空聊天记录
+  HAS_HISTORY: '/v1/ai/chat/has-history',               // GET - 检查是否有历史
   RECOMMEND: '/v1/ai/recommend',                         // POST - AI 推荐
   ANALYZE: '/v1/ai/analyze'                             // POST - AI 分析
 }

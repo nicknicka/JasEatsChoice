@@ -4,13 +4,31 @@
 
 /* ==================== 主题颜色 ==================== */
 
-// 主色调
+// 主色调 - 品牌橙红色
 $primary-color: #FF6B35;
-$primary-color-light: #FF8A5C;
-$primary-color-dark: #E55A2B;
 
-// 辅助色
-$secondary-color: #667eea;
+// 主色色阶系统（10级统一色阶，替代所有零散的辅助色）
+// 色阶100 - 超浅色，用于AI消息气泡、弱填充背景
+$primary-100: #FFF2ED;
+// 色阶200 - 浅色，用于hover态、点击态背景
+$primary-200: #FFE4D9;
+// 色阶300 - 次浅色，用于弱边框、分割线
+$primary-300: #FFD6C5;
+// 色阶400 - 中浅色
+$primary-400: #FFC8B1;
+// 色阶500 - 品牌主色，用于激活态、用户气泡、关键引导
+$primary-500: #FF6B35;
+// 色阶600 - 中深色
+$primary-600: #FF5C2A;
+// 色阶700 - 次深色
+$primary-700: #FF4D1F;
+// 色阶800 - 深色，用于按钮渐变辅助色
+$primary-800: #FF8B5D;
+// 色阶900 - 超深色
+$primary-900: #E55A2B;
+
+// 功能色（保留，仅用于特定场景）
+$secondary-color: #667eea; // 辅助色，用于文本颜色等
 $success-color: #52c41a;
 $warning-color: #faad14;
 $danger-color: #f5222d;
@@ -18,25 +36,26 @@ $info-color: #1890ff;
 
 /* ==================== 中性色 ==================== */
 
-// 文字颜色
-$text-color-primary: #333333;
-$text-color-regular: #666666;
-$text-color-secondary: #999999;
-$text-color-placeholder: #cccccc;
-$text-color-disabled: #dddddd;
+// 文字颜色（无障碍优化，提升对比度）
+$text-color-primary: #333333;     // 主要文字，对比度7:1+
+$text-color-regular: #666666;     // 常规文字（未激活标签等）
+$text-color-secondary: #999999;   // 次要文字
+$text-color-placeholder: #cccccc; // 占位符文字
+$text-color-disabled: #dddddd;    // 禁用文字
 
-// 背景颜色
-$bg-color-base: #f5f5f5;
-$bg-color-white: #ffffff;
-$bg-color-light: #fafafa;
-$bg-color-dark: #f0f0f0;
+// 背景颜色（删除所有渐变背景，统一为纯色）
+$bg-color-base: #f5f5f5;          // 基础背景色
+$bg-color-white: #ffffff;         // 纯白背景（主背景）
+$bg-color-light: #fafafa;         // 浅色背景（聊天区）
+$bg-color-input: #f5f5f5;         // 输入框背景
+$bg-color-dark: #f0f0f0;          // 深色背景（保留，用于common.scss）
 
-// 边框颜色
-$border-color: #e8e8e8;
-$border-color-base: #e8e8e8;
-$border-color-light: #f0f0f0;
-$border-color-lighter: #f5f5f5;
-$border-color-dark: #d9d9d9;
+// 边框颜色（使用主色色阶替代）
+$border-color: $primary-300;      // 主色边框
+$border-color-base: #e8e8e8;      // 基础边框
+$border-color-light: #f0f0f0;     // 浅色边框
+$border-color-lighter: #f5f5f5;   // 超浅边框
+$border-color-dark: #d9d9d9;      // 深色边框
 
 /* ==================== 字体大小 ==================== */
 
@@ -118,3 +137,33 @@ $safe-area-inset-top: env(safe-area-inset-top);
 $safe-area-inset-right: env(safe-area-inset-right);
 $safe-area-inset-bottom: env(safe-area-inset-bottom);
 $safe-area-inset-left: env(safe-area-inset-left);
+
+/* ==================== 响应式适配（双适配逻辑） ==================== */
+
+// 消息气泡宽度：vw + 最大最小值限制
+$message-bubble-width: 75vw;
+$message-bubble-max-width: 540rpx;
+$message-bubble-min-width: 120rpx;
+
+// 头像尺寸：vw + 最大最小值限制
+$avatar-size: 10vw;
+$avatar-max-size: 76rpx;
+$avatar-min-size: 60rpx;
+
+// 输入框高度：响应式范围
+$input-height-min: 80rpx;
+$input-height-max: 120rpx;
+$input-height-current: 96rpx; // 当前默认值
+
+// 导航栏高度（固定，贴合移动端规范）
+$nav-height: 112rpx;
+
+// 触屏最小点击区域（WCAG 48x48px标准）
+$touch-min-size: 96rpx;
+
+/* ==================== 动画时长（精简优化） ==================== */
+
+$duration-fast: 0.1s;   // 点击反馈
+$duration-base: 0.3s;   // 消息淡入
+$duration-slow: 0.4s;   // 欢迎动画
+$duration-typing: 2s;   // 打字动画循环

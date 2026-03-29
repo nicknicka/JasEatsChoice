@@ -8,7 +8,7 @@ import { AI_API, buildUrl } from '../urlEnum'
 
 export const aiApi = {
   /**
-   * AI对话
+   * AI对话（普通）
    * POST /v1/ai/chat
    * @param {Object} data - 对话数据
    * @param {string} data.message - 用户消息
@@ -19,22 +19,96 @@ export const aiApi = {
   chat: (data) => post(AI_API.CHAT, data),
 
   /**
-   * AI对话（别名）
+   * AI流式对话（SSE）
+   * POST /v1/ai/chat
    * @param {Object} data - 对话数据
-   * @returns {Promise} 返回AI回复
-   */
-  chatOld: (data) => post('/api/ai/chat', data),
-
-  /**
-   * AI流式对话
-   * POST /v1/ai/chat/stream
-   * @param {Object} data - 对话数据
-   * @param {string} data.message - 用户消息
-   * @param {string} data.conversationId - 会话ID
-   * @param {Array} data.history - 历史消息
+   * @param {Function} onMessage - 消息回调
+   * @param {Function} onComplete - 完成回调
+   * @param {Function} onError - 错误回调
    * @returns {Promise} 返回流式响应
    */
-  streamChat: (data) => post(AI_API.STREAM_CHAT, data),
+  streamChat: async (data, onMessage, onComplete, onError) => {
+    const userId = uni.getStorageSync('userId') || '1'
+    const token = uni.getStorageSync('token') || ''
+
+    try {
+      // 使用uni.request模拟SSE
+      const response = await new Promise((resolve, reject) => {
+        const requestTask = uni.request({
+          url: `${AI_API.BASE_URL}${AI_API.CHAT}`,
+          method: 'POST',
+          header: {
+            'Content-Type': 'application/json',
+            'Authorization': token ? `Bearer ${token}` : '',
+            'Accept': 'text/event-stream'
+          },
+          data: {
+            ...data,
+            userId
+          },
+          success: (res) => {
+            if (res.statusCode === 200) {
+              resolve(res.data)
+            } else {
+              reject(new Error(`HTTP ${res.statusCode}`))
+            }
+          },
+          fail: (err) => {
+            reject(err)
+          }
+        })
+      })
+
+      // 处理响应
+      if (response && response.data) {
+        // 如果是完整响应，一次性返回
+        if (typeof response.data === 'string') {
+          onMessage(response.data)
+        } else if (response.data.message) {
+          onMessage(response.data.message)
+        }
+        onComplete && onComplete()
+      }
+    } catch (error) {
+      onError && onError(error)
+      throw error
+    }
+  },
+
+  /**
+   * 获取聊天历史记录
+   * GET /v1/ai/chat/history
+   * @param {string} userId - 用户ID
+   * @returns {Promise} 返回历史记录
+   */
+  getHistory: (userId) => get(`${AI_API.HISTORY}?userId=${userId}`),
+
+  /**
+   * 保存聊天消息
+   * POST /v1/ai/chat/save
+   * @param {Object} data - 消息数据
+   * @param {string} data.userId - 用户ID
+   * @param {string} data.sender - 发送者（user/ai）
+   * @param {string} data.content - 消息内容
+   * @returns {Promise} 返回保存结果
+   */
+  saveMessage: (data) => post(AI_API.SAVE, data),
+
+  /**
+   * 清空聊天记录
+   * DELETE /v1/ai/chat/clear
+   * @param {string} userId - 用户ID
+   * @returns {Promise} 返回清除结果
+   */
+  clearHistory: (userId) => del(`${AI_API.CLEAR}?userId=${userId}`),
+
+  /**
+   * 检查是否有聊天历史
+   * GET /v1/ai/chat/has-history
+   * @param {string} userId - 用户ID
+   * @returns {Promise} 返回是否有历史记录
+   */
+  hasHistory: (userId) => get(`${AI_API.HAS_HISTORY}?userId=${userId}`),
 
   /**
    * AI推荐
@@ -56,24 +130,6 @@ export const aiApi = {
    * @returns {Promise} 返回分析结果
    */
   analyze: (data) => post(AI_API.ANALYZE, data),
-
-  /**
-   * 获取对话历史
-   * GET /api/ai/history
-   * @param {Object} params - 查询参数
-   * @param {number} params.page - 页码
-   * @param {number} params.size - 每页数量
-   * @returns {Promise} 返回对话历史
-   */
-  getHistory: (params) => get('/api/ai/history', params),
-
-  /**
-   * 获取对话详情
-   * GET /api/ai/conversation/{conversationId}
-   * @param {string} conversationId - 会话ID
-   * @returns {Promise} 返回对话详情
-   */
-  getConversation: (conversationId) => get(buildUrl('/api/ai/conversation/:conversationId', { conversationId })),
 
   /**
    * 内容提取
@@ -110,15 +166,7 @@ export const aiApi = {
    * GET /api/ai/questions
    * @returns {Promise} 返回快捷提问列表
    */
-  getQuickQuestions: () => get('/api/ai/questions'),
-
-  /**
-   * 清除对话历史
-   * DELETE /api/ai/conversation/{conversationId}
-   * @param {string} conversationId - 会话ID
-   * @returns {Promise} 返回清除结果
-   */
-  clearHistory: (conversationId) => del(buildUrl('/api/ai/conversation/:conversationId', { conversationId }))
+  getQuickQuestions: () => get('/api/ai/questions')
 }
 
 export default aiApi
