@@ -627,7 +627,7 @@ onMounted(async () => {
 .login-btn {
   margin-top: $spacing-lg;
   padding: $spacing-md $spacing-xl;
-  background: linear-gradient(135deg, $primary-color, #FF8F61);
+  background-color: $primary-color;  // 纯色背景
   color: #fff;
   border-radius: $border-radius-round;
   font-size: $font-size-base;
@@ -640,7 +640,7 @@ onMounted(async () => {
 
 /* 用户信息卡片 */
 .user-info-card {
-  background: linear-gradient(135deg, #FF6B35, #FF8F61);
+  background-color: $primary-color;  // 纯色背景，不使用渐变
   margin: $spacing-md;
   padding: $spacing-lg;
   border-radius: $border-radius-lg;

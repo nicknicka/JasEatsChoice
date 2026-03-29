@@ -193,7 +193,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { toSearch, toMerchantDetail, toDishDetail } from '@/utils/router'
 import { useLocationStore, useUserStore } from '@/store'
-import { recommendationApi, merchantApi, bannerApi, categoryApi } from '@/api'
+import { recommendationApi, merchantApi, bannerApi, categoryApi, dishApi } from '@/api'
 import { processImageUrl } from '@/utils/helper'
 import { normalizeCategories } from '@/config/category-icons'
 import WeatherLocation from '@/components/common/WeatherLocation.vue'
@@ -353,19 +353,19 @@ const loadBanners = async () => {
     banners.value = [
       {
         id: 1,
-        image: 'https://via.placeholder.com/750x320/FF6B35/FFFFFF?text=今日推荐',
+        image: '/static/banner1.jpg', // 使用本地图片
         title: '今日推荐',
         type: 'link'
       },
       {
         id: 2,
-        image: 'https://via.placeholder.com/750x320/667eea/FFFFFF?text=美食特惠',
+        image: '/static/banner2.jpg',
         title: '美食特惠',
         type: 'link'
       },
       {
         id: 3,
-        image: 'https://via.placeholder.com/750x320/52c41a/FFFFFF?text=新品上市',
+        image: '/static/banner3.jpg',
         title: '新品上市',
         type: 'link'
       }
@@ -490,8 +490,9 @@ const loadDishes = async (refresh = false) => {
     // 降级方案：使用简单推荐接口
     try {
       console.log('🔄 使用降级方案...')
-      const { dishApi } = await import('@/api')
+      // 直接使用已经导入的 dishApi
       const fallbackRes = await dishApi.getRecommend({
+        userId: userStore.userId || userStore.userInfo?.userId || '1',
         page: currentPage.value,
         size: pageSize
       })

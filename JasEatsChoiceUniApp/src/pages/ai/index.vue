@@ -28,21 +28,6 @@
 						:scroll-into-view="scrollIntoView"
 						:scroll-with-animation="true"
 					>
-						<!-- 欢迎消息 -->
-						<view class="message-welcome" v-if="isShowWelcome">
-							<text class="welcome-icon">👋</text>
-							<text class="welcome-text">您好！我是您的专属AI饮食助手</text>
-							<text class="welcome-desc"
-								>我可以帮您推荐健康食谱、分析营养成分、制定专属饮食计划、解答各类饮食疑问</text
-							>
-						</view>
-
-						<!-- 空状态提示（无历史记录且无欢迎消息时） -->
-						<view class="empty-state" v-if="messages.length === 0">
-							<text class="empty-text"
-								>暂无对话记录，试试上方的快捷提问吧</text
-							>
-						</view>
 
 						<!-- 消息列表 -->
 						<view
@@ -98,40 +83,40 @@
 					</scroll-view>
 
 					<view class="chat-input-area">
-						<view class="input-extensions">
-							<text class="extension-icon">🎤</text>
-							<view class="nav-actions">
-								<text
-									class="action-btn stop-btn"
-									v-if="activeTab === 'chat' && isStreaming"
-									@click="stopStreaming"
-								>
-									⏹️
-								</text>
-								<text
-									class="action-btn clear-btn"
-									v-if="activeTab === 'chat' && !isStreaming"
-									@click="clearHistory"
-								>
-									🗑️
-								</text>
+						<!-- 第一行：语音 + 输入框 + 发送按钮 -->
+						<view class="input-row">
+							<!-- 语音输入按钮 -->
+							<view class="voice-btn" @click="startVoiceInput">
+								<text class="voice-icon">🎤</text>
+								<text class="voice-label">语音</text>
 							</view>
-						</view>
 
-						<view class="input-area">
+							<!-- 输入框 -->
 							<input
 								class="chat-input"
 								type="text"
 								v-model="inputText"
-								placeholder="输入您的饮食问题，例如：减脂一日三餐食谱、家常菜营养分析"
+								placeholder="输入您的饮食问题"
 								:maxlength="500"
 								@confirm="sendMessage"
 								confirm-type="send"
 							/>
 
-							<!-- 圆形发送按钮（有输入时显示，空输入时隐藏） -->
+							<!-- 发送按钮 -->
 							<view class="send-btn" @click="sendMessage">
 								<text class="send-icon">➤</text>
+							</view>
+						</view>
+
+						<!-- 第二行：AI回复状态 + 停止按钮 -->
+						<view class="action-row" v-if="isStreaming">
+							<view class="streaming-status">
+								<text class="status-dot">●</text>
+								<text class="status-text">AI正在输入...</text>
+							</view>
+							<view class="stop-btn" @click="stopStreaming">
+								<text class="stop-icon">⏹️</text>
+								<text class="stop-label">停止</text>
 							</view>
 						</view>
 					</view>
@@ -237,7 +222,21 @@ const displayMessages = computed(() => {
  * 获取用户ID
  */
 const getUserId = () => {
-	return uni.getStorageSync("userId") || userStore.userInfo?.userId || "1";
+	// 优先从 store 中获取 userId
+	if (userStore.userId) {
+		return userStore.userId;
+	}
+	// 其次从 userInfo 中获取
+	if (userStore.userInfo?.userId) {
+		return userStore.userInfo.userId;
+	}
+	// 最后从本地存储获取
+	const localUserId = uni.getStorageSync("userId");
+	if (localUserId) {
+		return localUserId;
+	}
+	// 默认返回 "1"（测试用户）
+	return "1";
 };
 
 /**
@@ -728,6 +727,12 @@ onUnmounted(() => {
 	position: relative; // 为 fixed 定位的快捷提问提供参考
 }
 
+.chat-container {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
 /* ==================== 快捷提问悬浮区（提升到 chat-pane 级别） ==================== */
 .quick-questions-floating {
 	position: fixed;
@@ -1099,14 +1104,22 @@ onUnmounted(() => {
 	height: auto; // ✨ 自动高度，适应内容
 }
 
-/* 功能扩展位（语音输入） */
-.input-extensions {
-  display: flex;
+/* ==================== 输入行（语音 + 输入框 + 发送按钮） ==================== */
+.input-row {
+	display: flex;
+	align-items: center;
+	gap: $spacing-md;
+}
+
+/* 语音输入按钮 */
+.voice-btn {
+	@include flex-center;
 	gap: $spacing-xs;
-	padding: $spacing-sm;
+	padding: $spacing-sm $spacing-md;
 	background: $primary-50;
 	border-radius: $border-radius-base;
 	transition: $transition-base;
+	flex-shrink: 0;
 
 	&:active {
 		transform: scale(0.95);
@@ -1114,31 +1127,23 @@ onUnmounted(() => {
 	}
 }
 
-.extension-icon {
+.voice-icon {
 	font-size: $font-size-xl;
 	color: $primary-500;
 }
 
-.extension-label {
+.voice-label {
 	font-size: $font-size-sm;
 	color: $primary-500;
 	font-weight: $font-weight-medium;
 }
 
-
-.input-area {
-  display: flex;
-  gap: $spacing-md;
-  margin-top: $spacing-md;
-  align-items: center; // ✨ 垂直居中
-  justify-content: center; // 水平居中
-}
-/* 输入框（占据80%宽度） */
+/* 输入框 */
 .chat-input {
 	flex: 1;
-	height: $input-height-current; // 96rpx，从80rpx优化
-	padding: 0 $spacing-md; // 水平24rpx
-	background-color: $bg-color-input; // #f5f5f5
+	height: $input-height-current; // 96rpx
+	padding: 0 $spacing-md;
+	background-color: $bg-color-input;
 	border-radius: 40rpx;
 	font-size: $font-size-base;
 	color: $text-color-primary;
@@ -1149,6 +1154,68 @@ onUnmounted(() => {
 		border-color: $primary-500;
 		background-color: $bg-color-white;
 	}
+}
+
+/* ==================== 操作行（AI回复状态 + 停止按钮） ==================== */
+.action-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-top: $spacing-md;
+	padding: $spacing-sm 0;
+}
+
+/* AI回复状态 */
+.streaming-status {
+	@include flex-center;
+	gap: $spacing-xs;
+}
+
+.status-dot {
+	font-size: $font-size-xs;
+	color: $primary-500;
+	animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.3;
+	}
+}
+
+.status-text {
+	font-size: $font-size-sm;
+	color: $text-color-secondary;
+}
+
+/* 停止按钮 */
+.stop-btn {
+	@include flex-center;
+	gap: $spacing-xs;
+	padding: $spacing-xs $spacing-md;
+	background: rgba(255, 82, 82, 0.1);
+	border-radius: $border-radius-round;
+	transition: $transition-base;
+
+	&:active {
+		transform: scale(0.95);
+		background: rgba(255, 82, 82, 0.2);
+	}
+}
+
+.stop-icon {
+	font-size: $font-size-base;
+	color: #FF5252;
+}
+
+.stop-label {
+	font-size: $font-size-sm;
+	color: #FF5252;
+	font-weight: $font-weight-medium;
 }
 
 /* 圆形发送按钮（64rpx直径，主色渐变） */
