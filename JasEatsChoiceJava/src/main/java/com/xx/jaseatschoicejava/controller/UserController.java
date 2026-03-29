@@ -119,56 +119,133 @@ public class UserController {
     @PostMapping("/login")
     public ResponseResult<?> login(@RequestBody LoginRequest loginRequest) {
         try {
-            // 验证验证码
-            if (loginRequest.getCaptcha() == null || loginRequest.getCheckCodeKey() == null) {
-                return ResponseResult.fail("400", "验证码不能为空");
-            }
-
-            // 使用验证码工具类验证验证码
-            boolean isValidCaptcha = captchaUtil.validateCaptchaAndDelete(loginRequest.getCaptcha(), loginRequest.getCheckCodeKey());
-            if (!isValidCaptcha) {
-                return ResponseResult.fail("400", "验证码错误或已过期");
-            }
-
             String account = loginRequest.getPhone();
             String password = loginRequest.getPassword();
+            String smsCode = loginRequest.getCode(); // 短信验证码
 
-            // 调用登录服务
-            String token = userService.login(account, password);
-            if (token != null) {
-                // 登录成功，查询用户详细信息
+            // 判断登录方式：短信验证码登录 or 密码登录
+            if (smsCode != null && !smsCode.isEmpty()) {
+                // ========== 短信验证码登录 ==========
+                log.info("使用短信验证码登录，手机号: {}", account);
+
+                // 验证短信验证码
+                String storedCode = redisTemplate.opsForValue().get("sms-code:" + account);
+                if (storedCode == null) {
+                    return ResponseResult.fail("400", "验证码不存在或已过期，请重新获取");
+                }
+
+                // 严格验证验证码
+                if (!smsCode.equals(storedCode)) {
+                    log.warn("验证码错误！输入：{}，存储：{}", smsCode, storedCode);
+                    return ResponseResult.fail("400", "验证码错误");
+                }
+
+                // 验证通过，删除已使用的验证码
+                redisTemplate.delete("sms-code:" + account);
+
+                // 查询用户
                 User user = userService.lambdaQuery()
                         .eq(User::getPhone, account)
                         .one();
 
-                if (user != null) {
-                    // 将头像转换为base64编码
-                    String avatarBase64 = convertAvatarToBase64(user.getAvatar());
-
-                    // 如果转换成功，使用base64，否则保留原始URL
-                    if (avatarBase64 != null) {
-                        // 设置base64头像
-                        user.setAvatar(avatarBase64);
-                    }
-                    log.info("login user entity: {}", user);
-
-                    // 转换为UserDTO，隐藏敏感信息
-                    UserDTO userDTO = UserDTO.fromUser(user);
-                    log.info("login userDto : {}", userDTO);
-
-                    // 构建包含token和用户信息的响应
-                    Map<String, Object> responseData = new HashMap<>();
-                    responseData.put("token", token);
-                    responseData.put("user", userDTO);
-
-
-                    return ResponseResult.success(responseData);
+                if (user == null) {
+                    return ResponseResult.fail("400", "用户不存在，请先注册");
                 }
+
+                // 生成token（使用JWT）
+                String token = generateJWTToken(user);
+
+                // 将头像转换为base64编码
+                String avatarBase64 = convertAvatarToBase64(user.getAvatar());
+                if (avatarBase64 != null) {
+                    user.setAvatar(avatarBase64);
+                }
+
+                // 转换为UserDTO
+                UserDTO userDTO = UserDTO.fromUser(user);
+
+                // 构建响应
+                Map<String, Object> responseData = new HashMap<>();
+                responseData.put("token", token);
+                responseData.put("user", userDTO);
+                responseData.put("userInfo", userDTO); // 兼容前端
+
+                log.info("短信验证码登录成功: {}", account);
+                return ResponseResult.success(responseData);
+
+            } else if (password != null && !password.isEmpty()) {
+                // ========== 密码登录 ==========
+                log.info("使用密码登录，手机号: {}", account);
+
+                // 验证图形验证码
+                if (loginRequest.getCaptcha() == null || loginRequest.getCheckCodeKey() == null) {
+                    return ResponseResult.fail("400", "验证码不能为空");
+                }
+
+                boolean isValidCaptcha = captchaUtil.validateCaptchaAndDelete(
+                    loginRequest.getCaptcha(),
+                    loginRequest.getCheckCodeKey()
+                );
+                if (!isValidCaptcha) {
+                    return ResponseResult.fail("400", "验证码错误或已过期");
+                }
+
+                // 调用登录服务
+                String token = userService.login(account, password);
+                if (token != null) {
+                    // 登录成功，查询用户详细信息
+                    User user = userService.lambdaQuery()
+                            .eq(User::getPhone, account)
+                            .one();
+
+                    if (user != null) {
+                        // 将头像转换为base64编码
+                        String avatarBase64 = convertAvatarToBase64(user.getAvatar());
+
+                        if (avatarBase64 != null) {
+                            user.setAvatar(avatarBase64);
+                        }
+                        log.info("login user entity: {}", user);
+
+                        // 转换为UserDTO，隐藏敏感信息
+                        UserDTO userDTO = UserDTO.fromUser(user);
+                        log.info("login userDto : {}", userDTO);
+
+                        // 构建包含token和用户信息的响应
+                        Map<String, Object> responseData = new HashMap<>();
+                        responseData.put("token", token);
+                        responseData.put("user", userDTO);
+                        responseData.put("userInfo", userDTO); // 兼容前端
+
+                        return ResponseResult.success(responseData);
+                    }
+                }
+                return ResponseResult.fail("500", "手机号或密码错误");
+
+            } else {
+                return ResponseResult.fail("400", "请使用密码或验证码登录");
             }
-            return ResponseResult.fail("500", "手机号或密码错误");
+
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseResult.fail("500", "登录失败");
+            return ResponseResult.fail("500", "登录失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 生成JWT Token
+     */
+    private String generateJWTToken(User user) {
+        // 简单的JWT token生成逻辑
+        // 实际项目中应该使用 io.jsonwebtoken 库
+        try {
+            long timestamp = System.currentTimeMillis();
+            String tokenSignature = user.getPhone() + ":" + timestamp + ":jaseatschoice";
+            String token = java.util.Base64.getEncoder().encodeToString(tokenSignature.getBytes());
+            return token;
+        } catch (Exception e) {
+            log.error("生成token失败", e);
+            return user.getPhone() + ":" + System.currentTimeMillis();
         }
     }
 

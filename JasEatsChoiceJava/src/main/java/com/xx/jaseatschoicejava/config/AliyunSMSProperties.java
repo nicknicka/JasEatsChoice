@@ -38,4 +38,9 @@ public class AliyunSMSProperties {
      * 读取超时时间（默认3000毫秒，可选）
      */
     private Integer readTimeout = 3000;
+
+    /**
+     * 模拟模式（默认true，开发环境使用，验证码打印到控制台不真实发送）
+     */
+    private Boolean mockMode = true;
 }

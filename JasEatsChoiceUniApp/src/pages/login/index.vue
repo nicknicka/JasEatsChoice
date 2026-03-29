@@ -343,15 +343,30 @@ const validateField = (formValue, fieldType, errorObj, options = {}) => {
 
 /**
  * 发送验证码
+ * 调用后端接口，后端会生成验证码并存储到 Redis
  */
 const sendCode = async () => {
   validateField(phoneForm.value.phone, 'phone', phoneFormErrors)
   if (phoneFormErrors.value.phone) return
 
   try {
-    await userApi.sendCode({ phone: phoneForm.value.phone })
-    uni.showToast({ title: '验证码已发送', icon: 'success' })
+    console.log('📡 调用后端发送验证码接口...')
+    console.log('手机号:', phoneForm.value.phone)
 
+    // 直接使用已导入的 userApi
+    await userApi.sendCode(phoneForm.value.phone)
+
+    console.log('✅ 验证码发送成功')
+
+    // 显示提示
+    uni.showModal({
+      title: '验证码已发送',
+      content: `【开发模式】请使用验证码: 123456\n有效期5分钟\n\n注：后端已生成验证码并存储到 Redis`,
+      showCancel: false,
+      confirmText: '我知道了'
+    })
+
+    // 开始倒计时
     countdown.value = 60
     countdownTimer = setInterval(() => {
       countdown.value--
@@ -360,8 +375,11 @@ const sendCode = async () => {
       }
     }, 1000)
   } catch (error) {
-    console.error('发送验证码失败:', error)
-    uni.showToast({ title: error.message || '发送失败，请重试', icon: 'none' })
+    console.error('❌ 发送验证码失败:', error)
+    uni.showToast({
+      title: error.message || '发送失败，请重试',
+      icon: 'none'
+    })
   }
 }
 

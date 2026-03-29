@@ -1,5 +1,5 @@
 <template>
-  <view class="index-container">
+  <view class="home-container">
     <!-- 下拉刷新容器 -->
     <scroll-view
       class="scroll-container"
@@ -21,12 +21,24 @@
         </view>
       </view>
 
+      <!-- 今日热点 - U-026: 从后端获取动态热点 -->
+      <view class="hot-topic-section" v-if="hotTopic.content">
+        <view class="hot-topic-header">
+          <text class="hot-topic-icon">🔥</text>
+          <text class="hot-topic-title">今日热点</text>
+        </view>
+        <view class="hot-topic-content" @click="handleHotTopicClick">
+          <text class="hot-topic-text">{{ hotTopic.content }}</text>
+          <view class="hot-topic-arrow" v-if="hotTopic.clickable">›</view>
+        </view>
+      </view>
+
       <!-- 轮播图 -->
       <view class="banner-section" v-if="banners.length > 0">
         <swiper
           class="banner-swiper"
           autoplay
-          interval="3000"
+          interval="5000"
           circular
           indicator-dots
           indicator-color="rgba(255,255,255,0.5)"
@@ -34,6 +46,7 @@
         >
           <swiper-item v-for="banner in banners" :key="banner.id" @click="handleBannerClick(banner)">
             <image class="banner-image" :src="banner.image" mode="aspectFill" />
+            <view class="banner-title" v-if="banner.title">{{ banner.title }}</view>
           </swiper-item>
         </swiper>
       </view>
@@ -90,34 +103,72 @@
         </scroll-view>
       </view>
 
-      <!-- 推荐菜品 -->
-      <view class="dish-section">
+      <!-- 智能推荐菜品 - U-027: 使用智能推荐系统 -->
+      <view class="recommend-section">
         <view class="section-header">
           <text class="section-title">为你推荐</text>
-          <text class="section-refresh" @click="refreshRecommend">
-            <text class="refresh-icon">🔄</text> 换一换
-          </text>
+          <view class="section-actions">
+            <text class="section-refresh" @click="handleRefreshRecommend">
+              <text class="refresh-icon" :class="{ rotating: isLoadingRecommend }">🔄</text>
+              <text>换一换</text>
+            </text>
+          </view>
         </view>
-        <view class="dish-grid">
+
+        <!-- 加载状态 -->
+        <view class="loading-container" v-if="isLoadingRecommend">
+          <uni-load-more status="loading" />
+        </view>
+
+        <!-- 推荐菜品列表 -->
+        <view class="dish-list" v-else-if="recommendDishes.length > 0">
           <view
             class="dish-card"
             v-for="dish in recommendDishes"
             :key="dish.id"
-            @click="toDishDetail(dish.id)"
+            @click="handleDishClick(dish)"
           >
             <image class="dish-image" :src="dish.image" mode="aspectFill" />
             <view class="dish-info">
-              <view class="dish-name">{{ dish.name }}</view>
-              <view class="dish-desc">{{ dish.description }}</view>
+              <view class="dish-header">
+                <view class="dish-name">{{ dish.name }}</view>
+                <view class="dish-actions">
+                  <text
+                    class="action-btn favorite-btn"
+                    :class="{ active: isFavorite(dish.id) }"
+                    @click.stop="toggleFavorite(dish)"
+                  >
+                    {{ isFavorite(dish.id) ? '★' : '☆' }}
+                  </text>
+                </view>
+              </view>
+              <view class="dish-tags">
+                <text class="tag source-tag">{{ dish.recommendSource || '推荐' }}</text>
+                <text class="tag calorie-tag" v-if="dish.calories">{{ dish.calories }} kcal</text>
+              </view>
+              <view class="dish-reason" v-if="dish.recommendReason">
+                <text class="reason-icon">💡</text>
+                <text class="reason-text">{{ dish.recommendReason }}</text>
+              </view>
               <view class="dish-bottom">
                 <view class="dish-price">
                   <text class="price-symbol">¥</text>
                   <text class="price-value">{{ dish.price }}</text>
                 </view>
-                <view class="dish-sales">已售{{ dish.sales }}</view>
+                <view class="dish-rating" v-if="dish.rating">
+                  <text class="star">⭐</text>
+                  <text>{{ dish.rating.toFixed(1) }}</text>
+                </view>
               </view>
             </view>
           </view>
+        </view>
+
+        <!-- 空状态 -->
+        <view class="empty-container" v-else>
+          <text class="empty-icon">🍽️</text>
+          <text class="empty-text">{{ recommendEmptyMessage }}</text>
+          <button class="retry-btn" size="mini" @click="loadRecommendations">重新加载</button>
         </view>
       </view>
 
@@ -139,6 +190,7 @@ import { ref, computed, onMounted } from 'vue'
 import { toSearch, toMerchantDetail, toDishDetail } from '@/utils/router'
 import { useLocationStore, useUserStore } from '@/store'
 import { dishApi, merchantApi } from '@/api'
+import { useRecommendations } from '@/composables/useRecommendations'
 import WeatherLocation from '@/components/common/WeatherLocation.vue'
 
 // Store
@@ -147,6 +199,18 @@ const userStore = useUserStore()
 
 // 组件引用
 const weatherRef = ref(null)
+
+// 使用智能推荐系统
+const {
+  recommendations: recommendDishes,
+  isLoading: isLoadingRecommend,
+  error: recommendError,
+  hasRecommendations,
+  isEmpty,
+  loadRecommendations,
+  refreshRecommendations,
+  recordClickFeedback
+} = useRecommendations()
 
 // 状态
 const refreshing = ref(false)
@@ -158,26 +222,7 @@ const currentPage = ref(1)
 const pageSize = 10
 
 // 轮播图数据
-const banners = ref([
-  {
-    id: 1,
-    image: 'https://via.placeholder.com/750x300/FF6B35/FFFFFF?text=今日推荐',
-    link: '',
-    title: '今日推荐'
-  },
-  {
-    id: 2,
-    image: 'https://via.placeholder.com/750x300/667eea/FFFFFF?text=美食特惠',
-    link: '',
-    title: '美食特惠'
-  },
-  {
-    id: 3,
-    image: 'https://via.placeholder.com/750x300/52c41a/FFFFFF?text=新品上市',
-    link: '',
-    title: '新品上市'
-  }
-])
+const banners = ref([])
 
 // 分类数据
 const categories = ref([
@@ -192,35 +237,19 @@ const categories = ref([
 ])
 
 // 推荐商家数据
-const recommendMerchants = ref([
-  {
-    id: 1,
-    name: '老王家常菜',
-    logo: 'https://via.placeholder.com/200x200/FF6B35/FFFFFF?text=老王',
-    rating: 4.8,
-    monthlySales: 999,
-    tags: ['家常菜', '配送快', '好评多']
-  },
-  {
-    id: 2,
-    name: '李记川菜馆',
-    logo: 'https://via.placeholder.com/200x200/667eea/FFFFFF?text=李记',
-    rating: 4.6,
-    monthlySales: 666,
-    tags: ['川菜', '麻辣', '分量足']
-  },
-  {
-    id: 3,
-    name: '张胖子烧烤',
-    logo: 'https://via.placeholder.com/200x200/52c41a/FFFFFF?text=张胖',
-    rating: 4.7,
-    monthlySales: 888,
-    tags: ['烧烤', '夜宵', '啤酒']
-  }
-])
+const recommendMerchants = ref([])
 
-// 推荐菜品数据
-const recommendDishes = ref([])
+// 今日热点数据
+const hotTopic = ref({
+  content: '',
+  sourceType: '',
+  sourceId: '',
+  redirectUrl: '',
+  clickable: false
+})
+
+// 收藏的菜品ID集合
+const favoriteDishIds = ref(new Set())
 
 // 计算属性：加载更多状态
 const loadMoreStatus = computed(() => {
@@ -228,6 +257,14 @@ const loadMoreStatus = computed(() => {
   if (noMore.value) return 'noMore'
   if (loadingMore.value) return 'loading'
   return 'more'
+})
+
+// 推荐空状态消息
+const recommendEmptyMessage = computed(() => {
+  if (recommendError.value) {
+    return '加载失败，请重试'
+  }
+  return '暂无推荐菜品'
 })
 
 /**
@@ -243,7 +280,8 @@ const onRefresh = async () => {
     await Promise.all([
       loadBanners(),
       loadMerchants(),
-      loadDishes(true)
+      loadHotTopic(),
+      loadRecommendations({ forceRefresh: true })
     ])
 
     // 刷新位置和天气
@@ -276,7 +314,8 @@ const onLoadMore = async () => {
   currentPage.value++
 
   try {
-    await loadDishes(false)
+    // 这里可以加载更多推荐或商家
+    // await loadMoreData()
   } catch (error) {
     console.error('加载更多失败:', error)
     currentPage.value--
@@ -286,11 +325,115 @@ const onLoadMore = async () => {
 }
 
 /**
+ * 加载今日热点 - U-026
+ */
+const loadHotTopic = async () => {
+  try {
+    const response = await uni.request({
+      url: '/api/v1/home/hot-topic',
+      method: 'GET'
+    })
+
+    if (response.data && response.data.data) {
+      const data = response.data.data
+      if (typeof data === 'object') {
+        hotTopic.value = data
+      } else {
+        hotTopic.value = {
+          content: data,
+          clickable: false
+        }
+      }
+    }
+  } catch (error) {
+    console.error('加载今日热点失败:', error)
+    hotTopic.value = { content: '', clickable: false }
+  }
+}
+
+/**
+ * 处理热点点击 - U-026
+ */
+const handleHotTopicClick = () => {
+  if (!hotTopic.value.clickable) return
+
+  // 记录点击
+  uni.request({
+    url: '/api/v1/home/hot-topic/click',
+    method: 'POST',
+    data: { content: hotTopic.value.content }
+  })
+
+  // 保存热点数据并跳转
+  uni.setStorageSync('currentHotTopic', JSON.stringify(hotTopic.value))
+  uni.navigateTo({
+    url: '/pages-user/home/hot-topic/index'
+  })
+}
+
+/**
+ * 处理刷新推荐 - U-027
+ */
+const handleRefreshRecommend = async () => {
+  try {
+    await refreshRecommendations()
+  } catch (error) {
+    console.error('刷新推荐失败:', error)
+  }
+}
+
+/**
+ * 处理菜品点击 - U-028
+ */
+const handleDishClick = async (dish) => {
+  try {
+    // 记录点击反馈
+    await recordClickFeedback(dish)
+
+    // 跳转到菜品详情
+    toDishDetail(dish.id)
+  } catch (error) {
+    console.error('处理菜品点击失败:', error)
+    // 即使反馈失败也跳转
+    toDishDetail(dish.id)
+  }
+}
+
+/**
+ * 切换收藏状态
+ */
+const toggleFavorite = async (dish) => {
+  try {
+    const { favoriteApi } = await import('@/api')
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+
+    if (isFavorite(dish.id)) {
+      await favoriteApi.remove(userId, 'dish', dish.id)
+      favoriteDishIds.value.delete(dish.id)
+      uni.showToast({ title: '已取消收藏', icon: 'success' })
+    } else {
+      await favoriteApi.add(userId, 'dish', dish.id)
+      favoriteDishIds.value.add(dish.id)
+      uni.showToast({ title: '已收藏', icon: 'success' })
+    }
+  } catch (error) {
+    console.error('收藏操作失败:', error)
+    uni.showToast({ title: '操作失败', icon: 'none' })
+  }
+}
+
+/**
+ * 检查是否已收藏
+ */
+const isFavorite = (dishId) => {
+  return favoriteDishIds.value.has(dishId)
+}
+
+/**
  * 加载轮播图 - U-022: 调用后端API
  */
 const loadBanners = async () => {
   try {
-    // U-022: 调用后端API获取轮播图
     const { bannerApi } = await import('@/api')
     const res = await bannerApi.getList({ position: 'home' })
 
@@ -299,15 +442,14 @@ const loadBanners = async () => {
         id: banner.bannerId || banner.id,
         image: banner.imageUrl || banner.image,
         title: banner.title || '',
-        type: banner.type || 'link', // link, dish, merchant, activity
-        targetType: banner.targetType || '', // 跳转目标类型
-        targetId: banner.targetId || '', // 跳转目标ID
-        link: banner.link || '' // 外部链接
+        type: banner.type || 'link',
+        targetType: banner.targetType || '',
+        targetId: banner.targetId || '',
+        link: banner.link || ''
       }))
     }
   } catch (error) {
     console.error('加载轮播图失败:', error)
-    // 使用空数组，不显示模拟数据
     banners.value = []
   }
 }
@@ -317,21 +459,18 @@ const loadBanners = async () => {
  */
 const loadMerchants = async () => {
   try {
-    // 调用后端API获取附近商家
     const params = {
       limit: 10
     }
 
-    // 如果有位置信息，添加位置参数
     if (locationStore.currentLocation) {
       params.latitude = locationStore.currentLocation.latitude
       params.longitude = locationStore.currentLocation.longitude
-      params.radius = 5000 // 5公里范围
+      params.radius = 5000
     }
 
     const res = await merchantApi.getNearby(params)
 
-    // 数据映射
     if (Array.isArray(res)) {
       recommendMerchants.value = res.map(merchant => ({
         id: merchant.merchantId || merchant.id,
@@ -344,73 +483,8 @@ const loadMerchants = async () => {
     }
   } catch (error) {
     console.error('加载商家失败:', error)
-    // 商家加载失败不影响页面显示
     recommendMerchants.value = []
   }
-}
-
-/**
- * 加载推荐菜品
- */
-const loadDishes = async (refresh = false) => {
-  try {
-    // 调用后端API获取推荐菜品
-    const params = {
-      page: currentPage.value,
-      size: pageSize
-    }
-
-    // 如果有用户ID，用于个性化推荐
-    if (userStore.isLogin) {
-      params.userId = userStore.userInfo?.userId || userStore.userInfo?.id
-    }
-
-    const res = await dishApi.getRecommend(params)
-
-    // 数据映射
-    let dishes = []
-    if (Array.isArray(res)) {
-      dishes = res
-    } else if (res && res.list) {
-      dishes = res.list
-    } else if (res && res.records) {
-      dishes = res.records
-    }
-
-    const mappedDishes = dishes.map(dish => ({
-      id: dish.dishId || dish.id,
-      name: dish.dishName || dish.name,
-      description: dish.description || dish.desc || '',
-      price: dish.price ? String(dish.price) : '0',
-      sales: dish.monthlySales || dish.sales || 0,
-      image: dish.image || dish.coverImage
-    }))
-
-    if (refresh) {
-      recommendDishes.value = mappedDishes
-    } else {
-      recommendDishes.value.push(...mappedDishes)
-    }
-
-    if (mappedDishes.length < pageSize) {
-      noMore.value = true
-    }
-  } catch (error) {
-    console.error('加载推荐菜品失败:', error)
-    // 使用空数组，不影响页面显示
-    if (refresh) {
-      recommendDishes.value = []
-    }
-  }
-}
-
-/**
- * 刷新推荐
- */
-const refreshRecommend = () => {
-  currentPage.value = 1
-  noMore.value = false
-  loadDishes(true)
 }
 
 /**
@@ -534,18 +608,46 @@ const toMoreMerchants = () => {
 }
 
 // 组件挂载时加载数据
-onMounted(() => {
-  loadBanners()
-  loadMerchants()
-  loadDishes(true)
+onMounted(async () => {
+  // 并行加载所有数据
+  await Promise.all([
+    loadBanners(),
+    loadMerchants(),
+    loadHotTopic()
+  ])
+
+  // 加载智能推荐
+  await loadRecommendations()
+
+  // 加载用户收藏
+  if (userStore.isLogin) {
+    loadUserFavorites()
+  }
 })
+
+/**
+ * 加载用户收藏列表
+ */
+const loadUserFavorites = async () => {
+  try {
+    const { favoriteApi } = await import('@/api')
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+    const res = await favoriteApi.listByType(userId, 'dish')
+
+    if (Array.isArray(res)) {
+      favoriteDishIds.value = new Set(res.map(fav => fav.itemId))
+    }
+  } catch (error) {
+    console.error('加载收藏失败:', error)
+  }
+}
 </script>
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
 @import '@/styles/mixins.scss';
 
-.index-container {
+.home-container {
   min-height: 100vh;
   background-color: $bg-color-base;
 }
@@ -580,6 +682,66 @@ onMounted(() => {
   }
 }
 
+/* 今日热点 - U-026 */
+.hot-topic-section {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  margin: $spacing-md;
+  border-radius: $border-radius-lg;
+  padding: $spacing-md;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+
+  .hot-topic-header {
+    @include flex-center;
+    gap: $spacing-xs;
+    margin-bottom: $spacing-sm;
+
+    .hot-topic-icon {
+      font-size: 40rpx;
+      animation: flame-flicker 0.5s ease-in-out infinite alternate;
+    }
+
+    .hot-topic-title {
+      font-size: $font-size-lg;
+      font-weight: $font-weight-bold;
+      color: #fff;
+    }
+  }
+
+  .hot-topic-content {
+    @include flex-between;
+    background-color: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    border-radius: $border-radius-base;
+    padding: $spacing-md;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+
+    .hot-topic-text {
+      flex: 1;
+      font-size: $font-size-base;
+      color: #fff;
+      line-height: 1.5;
+      font-weight: 500;
+    }
+
+    .hot-topic-arrow {
+      font-size: 48rpx;
+      color: rgba(255, 255, 255, 0.8);
+      margin-left: $spacing-sm;
+    }
+  }
+}
+
+@keyframes flame-flicker {
+  0% {
+    transform: scale(1) rotate(-2deg);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.1) rotate(2deg);
+    opacity: 1;
+  }
+}
+
 /* 轮播图 */
 .banner-section {
   padding: $spacing-md 0;
@@ -597,6 +759,18 @@ onMounted(() => {
 .banner-image {
   width: 100%;
   height: 100%;
+}
+
+.banner-title {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
+  color: #fff;
+  padding: $spacing-md;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
 }
 
 /* 分类导航 */
@@ -617,13 +791,33 @@ onMounted(() => {
   color: $text-color-primary;
 }
 
+.section-actions {
+  @include flex-center;
+  gap: $spacing-md;
+}
+
 .section-more,
 .section-refresh {
+  @include flex-center;
+  gap: $spacing-xs;
   font-size: $font-size-sm;
   color: $text-color-secondary;
 
   .refresh-icon {
-    margin-right: $spacing-xs;
+    transition: transform 0.3s ease;
+
+    &.rotating {
+      animation: rotate 0.5s linear infinite;
+    }
+  }
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
   }
 }
 
@@ -727,16 +921,22 @@ onMounted(() => {
   }
 }
 
-/* 推荐菜品 */
-.dish-section {
+/* 智能推荐 - U-027 */
+.recommend-section {
   background-color: $bg-color-white;
   padding: $spacing-md;
   margin-bottom: $spacing-md;
 }
 
-.dish-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+.loading-container {
+  padding: $spacing-lg 0;
+  display: flex;
+  justify-content: center;
+}
+
+.dish-list {
+  display: flex;
+  flex-direction: column;
   gap: $spacing-md;
 }
 
@@ -745,54 +945,160 @@ onMounted(() => {
   border-radius: $border-radius-base;
   overflow: hidden;
   box-shadow: $box-shadow-light;
+  display: flex;
+  transition: transform 0.2s ease;
+
+  &:active {
+    transform: scale(0.98);
+  }
 }
 
 .dish-image {
-  width: 100%;
+  width: 200rpx;
   height: 200rpx;
+  flex-shrink: 0;
 }
 
 .dish-info {
+  flex: 1;
   padding: $spacing-sm;
+  display: flex;
+  flex-direction: column;
 }
 
-.dish-name {
-  font-size: $font-size-base;
-  font-weight: $font-weight-medium;
-  color: $text-color-primary;
-  @include text-ellipsis;
+.dish-header {
+  @include flex-between;
+  margin-bottom: $spacing-xs;
+
+  .dish-name {
+    flex: 1;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $text-color-primary;
+    @include text-ellipsis;
+  }
+
+  .dish-actions {
+    @include flex-center;
+    gap: $spacing-xs;
+
+    .action-btn {
+      font-size: 48rpx;
+      color: $text-color-secondary;
+      transition: all 0.3s ease;
+
+      &.favorite-btn.active {
+        color: #ffd700;
+        animation: star-bounce 0.3s ease;
+      }
+    }
+  }
 }
 
-.dish-desc {
-  font-size: $font-size-sm;
-  color: $text-color-secondary;
-  margin-top: $spacing-xs;
-  @include text-ellipsis;
+@keyframes star-bounce {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.3);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.dish-tags {
+  @include flex-center;
+  gap: $spacing-xs;
+  margin-bottom: $spacing-xs;
+  flex-wrap: wrap;
+
+  .tag {
+    font-size: $font-size-xs;
+    padding: 4rpx 12rpx;
+    border-radius: 12rpx;
+
+    &.source-tag {
+      background-color: rgba(102, 126, 234, 0.1);
+      color: #667eea;
+    }
+
+    &.calorie-tag {
+      background-color: rgba(255, 107, 107, 0.1);
+      color: #ff6b6b;
+    }
+  }
+}
+
+.dish-reason {
+  @include flex-center;
+  gap: $spacing-xs;
+  margin-bottom: $spacing-sm;
+  padding: $spacing-xs;
+  background-color: $bg-color-base;
+  border-radius: $border-radius-sm;
+
+  .reason-icon {
+    font-size: $font-size-sm;
+  }
+
+  .reason-text {
+    flex: 1;
+    font-size: $font-size-sm;
+    color: $text-color-regular;
+    line-height: 1.4;
+  }
 }
 
 .dish-bottom {
   @include flex-between;
-  margin-top: $spacing-sm;
-}
+  margin-top: auto;
 
-.dish-price {
-  @include flex-center;
-  gap: 2rpx;
-  color: $danger-color;
-  font-weight: $font-weight-bold;
+  .dish-price {
+    @include flex-center;
+    gap: 2rpx;
+    color: $danger-color;
+    font-weight: $font-weight-bold;
 
-  .price-symbol {
+    .price-symbol {
+      font-size: $font-size-sm;
+    }
+
+    .price-value {
+      font-size: $font-size-xl;
+    }
+  }
+
+  .dish-rating {
+    @include flex-center;
+    gap: $spacing-xs;
     font-size: $font-size-sm;
-  }
 
-  .price-value {
-    font-size: $font-size-lg;
+    .star {
+      color: #f5a623;
+    }
   }
 }
 
-.dish-sales {
-  font-size: $font-size-sm;
-  color: $text-color-secondary;
+/* 空状态 */
+.empty-container {
+  padding: $spacing-xl 0;
+  @include flex-center-column;
+  gap: $spacing-md;
+
+  .empty-icon {
+    font-size: 120rpx;
+    opacity: 0.5;
+  }
+
+  .empty-text {
+    font-size: $font-size-base;
+    color: $text-color-secondary;
+  }
+
+  .retry-btn {
+    margin-top: $spacing-sm;
+  }
 }
 
 /* 加载更多 */

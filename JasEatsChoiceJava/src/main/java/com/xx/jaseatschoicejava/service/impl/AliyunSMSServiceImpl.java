@@ -32,7 +32,20 @@ public class AliyunSMSServiceImpl implements AliyunSMSService {
         // 2. 校验验证码（假设6位数字）
         Assert.isTrue(code.matches("^\\d{6}$"), "验证码必须为6位数字！");
 
-        // 3. 构建短信请求参数（模板参数必须含code和min）
+        // 3. 模拟模式判断
+        if (Boolean.TRUE.equals(smsProperties.getMockMode())) {
+            // 模拟模式：直接打印到控制台，不真实发送
+            System.out.println("========== 短信模拟发送 ==========");
+            System.out.println("手机号：" + phone);
+            System.out.println("验证码：" + code);
+            System.out.println("有效期：" + smsProperties.getCodeExpireMinutes() + " 分钟");
+            System.out.println("签名：" + smsProperties.getSignName());
+            System.out.println("模板CODE：" + smsProperties.getTemplateCode());
+            System.out.println("================================");
+            return;
+        }
+
+        // 4. 真实发送模式：构建短信请求参数（模板参数必须含code和min）
         SendSmsVerifyCodeRequest request = new SendSmsVerifyCodeRequest()
                 .setSignName(smsProperties.getSignName()) // 签名
                 .setTemplateCode(smsProperties.getTemplateCode()) // 模板CODE

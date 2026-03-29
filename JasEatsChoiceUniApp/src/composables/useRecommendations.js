@@ -1,10 +1,16 @@
 /**
- * 推荐系统 Composable
- * 使用后端推荐系统（与桌面端保持一致的接口调用）
+ * 智能推荐系统 Composable
+ * 与后端推荐系统API对接（与桌面端保持一致）
+ * 提供多源推荐：个性化推荐 + 天气推荐 + 节日推荐
  */
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { recommendationApi } from '@/api'
-import { useUserStore } from '@/store'
+import { useUserStore, useLocationStore } from '@/store'
+
+// 推荐数据缓存
+let recommendationsCache = null
+let cacheTimestamp = 0
+const CACHE_DURATION = 5 * 60 * 1000 // 5分钟缓存
 
 /**
  * 获取当前时段
@@ -23,11 +29,33 @@ const getTimePeriod = () => {
  */
 export function useRecommendations() {
   const userStore = useUserStore()
+  const locationStore = useLocationStore()
 
   // 状态
   const recommendations = ref([])
   const isLoading = ref(false)
   const error = ref(null)
+
+  // 计算属性
+  const hasRecommendations = computed(() => recommendations.value.length > 0)
+  const isEmpty = computed(() => !isLoading.value && recommendations.value.length === 0)
+
+  /**
+   * 获取天气类型
+   */
+  const getWeatherType = () => {
+    if (!locationStore.weather) return 'sunny'
+
+    const condition = locationStore.weather.condition || locationStore.weather.text || ''
+    const temp = locationStore.weather.temperature || locationStore.weather.temp || 0
+
+    if (condition.includes('雨')) return 'rainy'
+    if (condition.includes('雪')) return 'cold'
+    if (temp > 30) return 'hot'
+    if (temp < 10) return 'cold'
+
+    return 'sunny'
+  }
 
   /**
    * 加载推荐菜品（使用后端推荐系统）
@@ -36,9 +64,18 @@ export function useRecommendations() {
    * @param {number} options.limit - 返回数量
    * @param {boolean} options.useTime - 是否使用时段推荐
    * @param {boolean} options.useWeather - 是否使用天气推荐
+   * @param {boolean} options.forceRefresh - 是否强制刷新（忽略缓存）
    */
   const loadRecommendations = async (options = {}) => {
     try {
+      // 检查缓存
+      const now = Date.now()
+      if (!options.forceRefresh && recommendationsCache && (now - cacheTimestamp < CACHE_DURATION)) {
+        console.log('✓ 使用缓存的推荐数据')
+        recommendations.value = recommendationsCache
+        return recommendationsCache
+      }
+
       isLoading.value = true
       error.value = null
 
@@ -57,8 +94,8 @@ export function useRecommendations() {
       }
 
       // 添加天气参数（可选）
-      if (options.useWeather && options.weather) {
-        params.weather = options.weather
+      if (options.useWeather !== false && locationStore.weather) {
+        params.weather = getWeatherType()
       }
 
       console.log('📡 调用后端推荐系统:', params)
@@ -83,15 +120,20 @@ export function useRecommendations() {
         name: item.dishName || item.name,
         description: item.description || item.desc || '',
         price: item.price ? String(item.price) : '0',
-        calories: item.calories || 0,
+        calories: item.calories || item.calorie || 0,
         category: item.category,
         image: item.image || item.coverImage,
         rating: item.rating || item.avgRating || 4.5,
         score: item.score,
         recommendReason: item.recommendReason || item.reason,
         recommendSource: item.recommendSource || '系统推荐',
-        tags: item.tags || []
+        tags: item.tags || [],
+        _rawRecommendation: item
       }))
+
+      // 更新缓存
+      recommendationsCache = recommendations.value
+      cacheTimestamp = now
 
       console.log(`✅ 推荐加载成功: ${recommendations.value.length}个菜品`)
 
@@ -136,6 +178,10 @@ export function useRecommendations() {
    * 刷新推荐
    */
   const refreshRecommendations = async () => {
+    // 清除缓存
+    recommendationsCache = null
+    cacheTimestamp = 0
+
     const userId = userStore.userInfo?.userId || userStore.userInfo?.id || '1'
 
     try {
@@ -158,8 +204,13 @@ export function useRecommendations() {
         description: item.description || '',
         price: String(item.price || '0'),
         image: item.image,
-        recommendSource: '刷新推荐'
+        recommendSource: '刷新推荐',
+        _rawRecommendation: item
       }))
+
+      // 更新缓存
+      recommendationsCache = recommendations.value
+      cacheTimestamp = Date.now()
 
       console.log('✅ 推荐刷新成功')
       uni.showToast({ title: '刷新成功', icon: 'success' })
@@ -243,6 +294,10 @@ export function useRecommendations() {
     isLoading,
     error,
 
+    // 计算属性
+    hasRecommendations,
+    isEmpty,
+
     // 方法
     loadRecommendations,
     refreshRecommendations,
@@ -251,6 +306,7 @@ export function useRecommendations() {
     rejectRecommendation,
 
     // 工具函数
-    getTimePeriod
+    getTimePeriod,
+    getWeatherType
   }
 }

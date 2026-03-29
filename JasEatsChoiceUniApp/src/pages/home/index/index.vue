@@ -18,6 +18,7 @@
         <view class="search-bar" @click="toSearch">
           <view class="search-icon">🔍</view>
           <view class="search-input">搜索菜品、商家或食谱...</view>
+          <view class="search-scan">📷</view>
         </view>
       </view>
 
@@ -98,6 +99,24 @@
             <text class="refresh-icon">🔄</text> 换一换
           </text>
         </view>
+
+        <!-- 快速筛选 -->
+        <view class="filter-section">
+          <scroll-view class="filter-scroll" scroll-x show-scrollbar="false">
+            <view class="filter-list">
+              <view
+                v-for="filter in filters"
+                :key="filter.key"
+                class="filter-item"
+                :class="{ active: currentFilter === filter.key }"
+                @click="handleFilterChange(filter.key)"
+              >
+                <text class="filter-icon">{{ filter.icon }}</text>
+                <text class="filter-text">{{ filter.label }}</text>
+              </view>
+            </view>
+          </scroll-view>
+        </view>
         <view class="dish-grid">
           <view
             class="dish-card"
@@ -106,19 +125,52 @@
             @click="handleDishClick(dish)"
           >
             <image class="dish-image" :src="dish.image" mode="aspectFill" />
+
+            <!-- 标签 -->
+            <view class="dish-tags" v-if="dish.tags && dish.tags.length">
+              <text class="tag tag-discount" v-if="dish.discount">{{ dish.discount }}</text>
+              <text class="tag tag-new" v-if="dish.isNew">新品</text>
+              <text class="tag tag-hot" v-if="dish.isHot">热销</text>
+            </view>
+
             <view class="dish-info">
               <view class="dish-name">{{ dish.name }}</view>
-              <view class="dish-desc">{{ dish.description }}</view>
+
+              <!-- 推荐理由 -->
+              <view class="dish-reason" v-if="dish.recommendReason">
+                <text class="reason-icon">✨</text>
+                <text class="reason-text">{{ dish.recommendReason }}</text>
+              </view>
+
+              <view class="dish-desc" v-else>{{ dish.description }}</view>
+
               <view class="dish-bottom">
                 <view class="dish-price">
                   <text class="price-symbol">¥</text>
                   <text class="price-value">{{ dish.price }}</text>
+                  <text class="price-original" v-if="dish.originalPrice">¥{{ dish.originalPrice }}</text>
                 </view>
                 <view class="dish-sales">已售{{ dish.sales }}</view>
               </view>
             </view>
+
+            <!-- 购物车按钮 -->
+            <view class="add-cart-btn" @click.stop="addToCart(dish)">
+              <text>+</text>
+            </view>
           </view>
         </view>
+      </view>
+
+      <!-- 空状态 -->
+      <view class="empty-state" v-if="recommendDishes.length === 0 && !refreshing">
+        <view class="empty-icon">🍽️</view>
+        <text class="empty-title">暂无推荐菜品</text>
+        <text class="empty-desc">试试换个筛选条件或刷新一下吧</text>
+        <button class="empty-btn" @click="refreshRecommend">
+          <text class="btn-icon">🔄</text>
+          <text>重新加载</text>
+        </button>
       </view>
 
       <!-- 加载更多 -->
@@ -130,6 +182,9 @@
       <view class="no-more" v-if="noMore">
         <text>~ 没有更多了 ~</text>
       </view>
+
+      <!-- 底部安全区域 -->
+      <view class="safe-area-bottom"></view>
     </scroll-view>
   </view>
 </template>
@@ -222,6 +277,17 @@ const recommendMerchants = ref([
 
 // 推荐菜品数据
 const recommendDishes = ref([])
+
+// 筛选器配置
+const filters = [
+  { key: 'all', label: '全部', icon: '🍽️' },
+  { key: 'low_calorie', label: '低卡', icon: '🥗' },
+  { key: 'high_rating', label: '高分', icon: '⭐' },
+  { key: 'nearby', label: '附近', icon: '📍' },
+  { key: 'discount', label: '优惠', icon: '🎁' }
+]
+
+const currentFilter = ref('all')
 
 // 计算属性：加载更多状态
 const loadMoreStatus = computed(() => {
@@ -397,11 +463,17 @@ const loadDishes = async (refresh = false) => {
       name: dish.dishName || dish.name,
       description: dish.description || dish.desc || '',
       price: dish.price ? String(dish.price) : '0',
+      originalPrice: dish.originalPrice || '',
       sales: dish.monthlySales || dish.sales || 0,
       image: dish.image || dish.coverImage,
       recommendReason: dish.recommendReason || dish.reason,
       recommendSource: dish.recommendSource || '系统推荐',
-      rating: dish.rating || dish.avgRating || 4.5
+      rating: dish.rating || dish.avgRating || 4.5,
+      // 标签
+      tags: dish.tags || [],
+      discount: dish.discount || '',
+      isNew: dish.isNew || false,
+      isHot: dish.isHot || false
     }))
 
     if (refresh) {
@@ -640,6 +712,42 @@ const handleDishClick = async (dish) => {
   toDishDetail(dish.id)
 }
 
+/**
+ * 添加到购物车
+ */
+const addToCart = (dish) => {
+  if (!dish) return
+
+  // TODO: 实现添加到购物车逻辑
+  uni.showToast({
+    title: '已加入购物车',
+    icon: 'success'
+  })
+
+  console.log('添加到购物车:', dish)
+}
+
+/**
+ * 处理筛选变化
+ */
+const handleFilterChange = (filterKey) => {
+  if (currentFilter.value === filterKey) return
+
+  currentFilter.value = filterKey
+
+  // 显示加载提示
+  uni.showLoading({
+    title: '加载中...'
+  })
+
+  // 重新加载推荐数据
+  loadDishes(true).finally(() => {
+    uni.hideLoading()
+  })
+
+  console.log('筛选条件:', filterKey)
+}
+
 // 组件挂载时加载数据
 onMounted(() => {
   loadBanners()
@@ -669,52 +777,70 @@ onMounted(() => {
 
 /* 搜索栏 */
 .search-bar {
-  @include flex-center;
+  display: flex;
+  align-items: center;
   gap: $spacing-sm;
   background-color: $bg-color-base;
-  border-radius: $border-radius-round;
-  padding: $spacing-sm $spacing-md;
-  margin-top: $spacing-sm;
+  border-radius: $border-radius-lg;
+  padding: $spacing-md;
+  margin-top: $spacing-md;
+  transition: all 0.3s ease;
+
+  &:active {
+    transform: scale(0.98);
+    background-color: #f0f0f0;
+  }
 
   .search-icon {
-    font-size: $font-size-lg;
+    font-size: 36rpx;
+    color: $text-color-secondary;
   }
 
   .search-input {
     flex: 1;
     font-size: $font-size-base;
     color: $text-color-secondary;
+    line-height: 1.5;
+  }
+
+  .search-scan {
+    font-size: 36rpx;
+    padding: $spacing-xs;
+    margin-left: $spacing-xs;
   }
 }
 
 /* 轮播图 */
 .banner-section {
-  padding: $spacing-md 0;
   background-color: $bg-color-white;
-  margin-bottom: $spacing-md;
-}
+  margin-bottom: $spacing-sm;
+  padding: 0;
 
-.banner-swiper {
-  width: 100%;
-  height: 300rpx;
-  border-radius: $border-radius-lg;
-  overflow: hidden;
-}
+  .banner-swiper {
+    width: 100%;
+    height: 320rpx;
+    border-radius: 0;
+    overflow: hidden;
+  }
 
-.banner-image {
-  width: 100%;
-  height: 100%;
+  .banner-image {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+  }
 }
 
 /* 分类导航 */
 .category-section {
   background-color: $bg-color-white;
   padding: $spacing-md;
-  margin-bottom: $spacing-md;
+  margin-bottom: $spacing-sm;
 }
 
 .section-header {
-  @include flex-between;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: $spacing-md;
 }
 
@@ -728,6 +854,9 @@ onMounted(() => {
 .section-refresh {
   font-size: $font-size-sm;
   color: $text-color-secondary;
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
 
   .refresh-icon {
     margin-right: $spacing-xs;
@@ -739,28 +868,40 @@ onMounted(() => {
 }
 
 .category-list {
-  @include flex-center;
+  display: inline-flex;
   gap: $spacing-lg;
+  padding: 0 $spacing-sm;
 }
 
 .category-item {
-  @include flex-center-column;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
   gap: $spacing-xs;
-  padding: $spacing-md;
+  padding: $spacing-sm;
   flex-shrink: 0;
+  transition: all 0.3s ease;
+
+  &:active {
+    transform: scale(0.95);
+  }
 
   .category-icon {
     width: 100rpx;
     height: 100rpx;
-    @include flex-center;
-    background-color: $bg-color-base;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #FFE5D9 0%, #FFD4C4 100%);
     border-radius: $border-radius-lg;
     font-size: 48rpx;
+    box-shadow: 0 4rpx 12rpx rgba(255, 107, 53, 0.1);
   }
 
   .category-name {
     font-size: $font-size-sm;
     color: $text-color-regular;
+    text-align: center;
   }
 }
 
@@ -768,7 +909,7 @@ onMounted(() => {
 .merchant-section {
   background-color: $bg-color-white;
   padding: $spacing-md;
-  margin-bottom: $spacing-md;
+  margin-bottom: $spacing-sm;
 }
 
 .merchant-scroll {
@@ -776,21 +917,30 @@ onMounted(() => {
 }
 
 .merchant-list {
-  @include flex-center;
+  display: inline-flex;
   gap: $spacing-md;
+  padding: 0 $spacing-sm;
 }
 
 .merchant-card {
   width: 240rpx;
   flex-shrink: 0;
-  background-color: $bg-color-base;
+  background-color: $bg-color-white;
   border-radius: $border-radius-base;
   overflow: hidden;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+
+  &:active {
+    transform: translateY(-4rpx);
+    box-shadow: 0 8rpx 16rpx rgba(0, 0, 0, 0.12);
+  }
 }
 
 .merchant-logo {
   width: 100%;
   height: 160rpx;
+  background-color: $bg-color-base;
 }
 
 .merchant-info {
@@ -805,7 +955,8 @@ onMounted(() => {
 }
 
 .merchant-rating {
-  @include flex-center;
+  display: flex;
+  align-items: center;
   gap: $spacing-xs;
   font-size: $font-size-sm;
   margin-top: $spacing-xs;
@@ -827,7 +978,7 @@ onMounted(() => {
 
   .tag {
     font-size: $font-size-xs;
-    color: $primary-color;
+    color: #FF6B35;
     background-color: rgba(255, 107, 53, 0.1);
     padding: 4rpx 8rpx;
     border-radius: 4rpx;
@@ -841,6 +992,51 @@ onMounted(() => {
   margin-bottom: $spacing-md;
 }
 
+/* 快速筛选 */
+.filter-section {
+  margin: $spacing-md (-$spacing-md);
+  padding: 0 $spacing-md $spacing-md;
+  border-bottom: 1rpx solid $border-color-light;
+}
+
+.filter-scroll {
+  white-space: nowrap;
+}
+
+.filter-list {
+  display: inline-flex;
+  gap: $spacing-md;
+}
+
+.filter-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 12rpx 24rpx;
+  background-color: $bg-color-base;
+  border-radius: 40rpx;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+
+  &.active {
+    background: linear-gradient(135deg, #FF6B35 0%, #FF8C61 100%);
+    box-shadow: 0 4rpx 12rpx rgba(255, 107, 53, 0.3);
+
+    .filter-text {
+      color: #fff;
+    }
+  }
+
+  .filter-icon {
+    font-size: 28rpx;
+  }
+
+  .filter-text {
+    font-size: $font-size-sm;
+    color: $text-color-regular;
+  }
+}
+
 .dish-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -848,19 +1044,56 @@ onMounted(() => {
 }
 
 .dish-card {
+  position: relative;
   background-color: $bg-color-white;
   border-radius: $border-radius-base;
-  overflow: hidden;
-  box-shadow: $box-shadow-light;
+  overflow: visible;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+
+  &:active {
+    transform: translateY(-4rpx);
+    box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.12);
+  }
 }
 
 .dish-image {
   width: 100%;
-  height: 200rpx;
+  height: 220rpx;
+  border-radius: $border-radius-base $border-radius-base 0 0;
+}
+
+/* 菜品标签 */
+.dish-tags {
+  position: absolute;
+  top: 12rpx;
+  left: 12rpx;
+  display: flex;
+  gap: 8rpx;
+
+  .tag {
+    padding: 4rpx 12rpx;
+    font-size: $font-size-xs;
+    border-radius: 20rpx;
+    color: #fff;
+
+    &.tag-discount {
+      background: linear-gradient(135deg, #FF6B35 0%, #FF8C61 100%);
+    }
+
+    &.tag-new {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    &.tag-hot {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+  }
 }
 
 .dish-info {
   padding: $spacing-sm;
+  position: relative;
 }
 
 .dish-name {
@@ -868,6 +1101,29 @@ onMounted(() => {
   font-weight: $font-weight-medium;
   color: $text-color-primary;
   @include text-ellipsis;
+  margin-bottom: 6rpx;
+}
+
+/* 推荐理由 */
+.dish-reason {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  padding: 8rpx 12rpx;
+  background: linear-gradient(135deg, #FFF8E1 0%, #FFECB3 100%);
+  border-radius: 8rpx;
+  margin-bottom: $spacing-xs;
+
+  .reason-icon {
+    font-size: $font-size-sm;
+  }
+
+  .reason-text {
+    font-size: $font-size-xs;
+    color: #F57C00;
+    flex: 1;
+    @include text-ellipsis;
+  }
 }
 
 .dish-desc {
@@ -878,13 +1134,16 @@ onMounted(() => {
 }
 
 .dish-bottom {
-  @include flex-between;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-top: $spacing-sm;
 }
 
 .dish-price {
-  @include flex-center;
-  gap: 2rpx;
+  display: flex;
+  align-items: baseline;
+  gap: 4rpx;
   color: $danger-color;
   font-weight: $font-weight-bold;
 
@@ -895,11 +1154,41 @@ onMounted(() => {
   .price-value {
     font-size: $font-size-lg;
   }
+
+  .price-original {
+    font-size: $font-size-xs;
+    color: $text-color-placeholder;
+    text-decoration: line-through;
+    font-weight: normal;
+  }
 }
 
 .dish-sales {
-  font-size: $font-size-sm;
+  font-size: $font-size-xs;
   color: $text-color-secondary;
+}
+
+/* 购物车按钮 */
+.add-cart-btn {
+  position: absolute;
+  bottom: 12rpx;
+  right: 12rpx;
+  width: 56rpx;
+  height: 56rpx;
+  background: linear-gradient(135deg, #FF6B35 0%, #FF8C61 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 32rpx;
+  font-weight: bold;
+  box-shadow: 0 4rpx 12rpx rgba(255, 107, 53, 0.4);
+  z-index: 10;
+
+  &:active {
+    transform: scale(0.9);
+  }
 }
 
 /* 加载更多 */
@@ -912,5 +1201,61 @@ onMounted(() => {
   text-align: center;
   color: $text-color-secondary;
   font-size: $font-size-sm;
+}
+
+/* 空状态 */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120rpx $spacing-lg;
+
+  .empty-icon {
+    font-size: 120rpx;
+    margin-bottom: $spacing-lg;
+    opacity: 0.5;
+  }
+
+  .empty-title {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-medium;
+    color: $text-color-primary;
+    margin-bottom: $spacing-sm;
+  }
+
+  .empty-desc {
+    font-size: $font-size-base;
+    color: $text-color-secondary;
+    margin-bottom: $spacing-xl;
+  }
+
+  .empty-btn {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: 20rpx 48rpx;
+    background: linear-gradient(135deg, #FF6B35 0%, #FF8C61 100%);
+    color: #fff;
+    border-radius: 40rpx;
+    font-size: $font-size-base;
+    border: none;
+    box-shadow: 0 4rpx 12rpx rgba(255, 107, 53, 0.3);
+
+    &::after {
+      border: none;
+    }
+
+    .btn-icon {
+      font-size: $font-size-lg;
+    }
+  }
+}
+
+/* 底部安全区域 */
+.safe-area-bottom {
+  height: constant(safe-area-inset-bottom);
+  height: env(safe-area-inset-bottom);
+  background-color: $bg-color-base;
 }
 </style>

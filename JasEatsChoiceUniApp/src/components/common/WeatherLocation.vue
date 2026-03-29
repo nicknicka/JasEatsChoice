@@ -1,20 +1,26 @@
 <template>
   <view class="weather-location" @click="handleLocationClick">
-    <!-- 定位图标 -->
-    <view class="location-icon">📍</view>
-
-    <!-- 位置信息 -->
-    <view class="location-text">{{ locationText }}</view>
-
-    <!-- 天气信息 -->
-    <view class="weather-info" v-if="weather">
-      <text class="weather-icon">{{ weather.icon }}</text>
-      <text class="weather-temp">{{ weather.temperature }}°</text>
+    <!-- 左侧：定位图标和位置 -->
+    <view class="location-section">
+      <view class="location-icon">📍</view>
+      <view class="location-info">
+        <view class="location-text">{{ locationText }}</view>
+        <view class="location-hint" v-if="!loading">点击切换城市</view>
+      </view>
     </view>
 
-    <!-- 加载中 -->
-    <view class="loading" v-if="loading">
-      <text>定位中...</text>
+    <!-- 右侧：天气信息 -->
+    <view class="weather-section" v-if="weather && !loading">
+      <view class="weather-icon">{{ weather.icon || '☀️' }}</view>
+      <view class="weather-detail">
+        <text class="weather-temp">{{ weather.temperature }}°</text>
+        <text class="weather-condition">{{ weather.condition }}</text>
+      </view>
+    </view>
+
+    <!-- 加载状态 -->
+    <view class="loading-state" v-if="loading">
+      <text class="loading-text">定位中...</text>
     </view>
   </view>
 </template>
@@ -29,20 +35,10 @@ const locationStore = useLocationStore()
 // 状态
 const loading = ref(false)
 
-// 计算属性
-const locationText = computed(() => {
-  if (locationStore.selectedCity) {
-    return locationStore.selectedCity
-  }
-  if (locationStore.currentLocation?.district) {
-    return locationStore.currentLocation.district
-  }
-  return '定位中...'
-})
+// 计算属性 - 直接使用 store 的 getter
+const locationText = computed(() => locationStore.locationText)
 
-const weather = computed(() => {
-  return locationStore.weather
-})
+const weather = computed(() => locationStore.weather)
 
 /**
  * 获取当前位置和天气
@@ -56,37 +52,37 @@ const getLocationAndWeather = async () => {
 
     // 如果有位置信息，获取天气
     if (locationStore.currentLocation) {
-      // U-033: 调用天气API
+      // U-033: 调用天气API（暂时使用模拟数据）
       try {
-        const { weatherApi } = await import('@/api')
-        const { latitude, longitude } = locationStore.currentLocation
+        // TODO: 集成真实天气API（如和风天气、高德天气等）
+        // const { weatherApi } = await import('@/api')
+        // const { latitude, longitude } = locationStore.currentLocation
+        // const res = await weatherApi.getByLocation({ latitude, longitude })
 
-        // 调用天气API获取当前天气
-        const res = await weatherApi.getByLocation({
-          latitude,
-          longitude
-        })
-
-        if (res && res.data) {
-          // 更新天气信息
-          weatherInfo.value = {
-            temperature: res.data.temperature || res.data.temp || '--',
-            condition: res.data.condition || res.data.weather || '晴',
-            icon: res.data.icon || '',
-            humidity: res.data.humidity || 0,
-            windSpeed: res.data.windSpeed || 0
-          }
+        // 暂时使用模拟数据
+        const mockWeatherData = {
+          temperature: 26,
+          condition: '晴',
+          icon: '☀️',
+          humidity: 65,
+          windSpeed: 3
         }
+
+        // 更新天气信息到store
+        locationStore.setWeather(mockWeatherData)
+
+        console.log('天气信息已更新:', mockWeatherData)
       } catch (error) {
         console.error('获取天气信息失败，使用默认值:', error)
+
         // 如果API调用失败，使用默认天气信息
-        weatherInfo.value = {
+        locationStore.setWeather({
           temperature: '--',
           condition: '未知',
-          icon: '',
+          icon: '❓',
           humidity: 0,
           windSpeed: 0
-        }
+        })
       }
     }
   } catch (error) {
@@ -153,8 +149,16 @@ const showCityPicker = () => {
     success: (res) => {
       if (res.tapIndex >= 0) {
         const selectedCity = cities[res.tapIndex]
-        // 更新位置信息
-        locationStore.setCurrentCity(selectedCity)
+        // 更新位置信息 - 使用 setSelectedCity 方法
+        locationStore.setSelectedCity({
+          name: selectedCity.name,
+          adcode: selectedCity.code
+        })
+
+        uni.showToast({
+          title: `已切换到${selectedCity.name}`,
+          icon: 'success'
+        })
 
         // 重新获取天气信息
         getLocationAndWeather()
@@ -178,46 +182,97 @@ defineExpose({
 
 <style lang="scss" scoped>
 @import '@/styles/variables.scss';
-@import '../../styles/mixins.scss';
+@import '@/styles/mixins.scss';
 
 .weather-location {
-  @include flex-center;
-  gap: $spacing-xs;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   padding: $spacing-sm $spacing-md;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #fff;
-  border-radius: $border-radius-lg;
+  background-color: $bg-color-white;
+  border-radius: $border-radius-base;
+  box-shadow: $box-shadow-light;
   margin-bottom: $spacing-md;
+  transition: all 0.3s ease;
+
+  &:active {
+    transform: scale(0.98);
+    background-color: $bg-color-base;
+  }
+}
+
+// 左侧定位区域
+.location-section {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  flex: 1;
+  min-width: 0; // 允许文本溢出
 }
 
 .location-icon {
-  font-size: $font-size-lg;
+  font-size: 32rpx;
+  flex-shrink: 0;
+}
+
+.location-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+  min-width: 0;
 }
 
 .location-text {
   font-size: $font-size-base;
   font-weight: $font-weight-medium;
-  max-width: 200rpx;
+  color: $text-color-primary;
   @include text-ellipsis;
 }
 
-.weather-info {
-  @include flex-center;
-  gap: $spacing-xs;
-  margin-left: $spacing-xs;
-
-  .weather-icon {
-    font-size: $font-size-lg;
-  }
-
-  .weather-temp {
-    font-size: $font-size-base;
-    font-weight: $font-weight-medium;
-  }
+.location-hint {
+  font-size: $font-size-xs;
+  color: $text-color-secondary;
 }
 
-.loading {
+// 右侧天气区域
+.weather-section {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  flex-shrink: 0;
+}
+
+.weather-icon {
+  font-size: 40rpx;
+  line-height: 1;
+}
+
+.weather-detail {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2rpx;
+}
+
+.weather-temp {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  color: $danger-color;
+  line-height: 1;
+}
+
+.weather-condition {
+  font-size: $font-size-xs;
+  color: $text-color-secondary;
+}
+
+// 加载状态
+.loading-state {
+  flex-shrink: 0;
+}
+
+.loading-text {
   font-size: $font-size-sm;
-  opacity: 0.8;
+  color: $text-color-secondary;
 }
 </style>

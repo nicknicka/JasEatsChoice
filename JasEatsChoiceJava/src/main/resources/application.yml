@@ -160,6 +160,8 @@ aliyun:
     templateCode: 100001
     # 验证码有效期（可选，默认5分钟）
     codeExpireMinutes: 5
+    # 模拟模式（true=只打印到控制台不真实发送，false=真实发送短信）
+    mockMode: true
 
 # ==================== ID生成器配置 ====================
 # XOR雪花算法ID生成器配置

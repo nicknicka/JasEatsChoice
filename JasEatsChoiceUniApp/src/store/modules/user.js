@@ -102,55 +102,105 @@ export const useUserStore = defineStore('user', {
      */
     async login(data) {
       try {
-        const res = await userApi.login(data)
-        console.log('登录响应完整数据:', res)
-        console.log('登录响应 data 字段:', res.data)
+        // 如果是验证码登录，先验证模拟验证码
+        let useMockCode = false
+        if (data.code && !data.password) {
+          const mockVerifyCode = uni.getStorageSync('mockVerifyCode')
+          const mockVerifyCodePhone = uni.getStorageSync('mockVerifyCodePhone')
+          const mockVerifyCodeTime = uni.getStorageSync('mockVerifyCodeTime')
 
-        // 检查返回的数据结构
-        if (!res) {
-          throw new Error('登录失败：服务器返回数据为空')
-        }
+          // 检查验证码是否匹配
+          if (mockVerifyCode && mockVerifyCodePhone === data.phone) {
+            // 检查验证码是否过期（5分钟）
+            const now = Date.now()
+            const isValid = mockVerifyCodeTime && (now - mockVerifyCodeTime < 5 * 60 * 1000)
 
-        // 处理 token
-        let token = null
-        if (res.token) {
-          token = res.token
-        } else if (res.data && res.data.token) {
-          token = res.data.token
-        }
-
-        if (token) {
-          this.setToken(token)
-        }
-
-        // 处理用户信息 - 兼容多种数据结构
-        let userInfo = null
-        if (res.user) {
-          userInfo = res.user
-        } else if (res.userInfo) {
-          userInfo = res.userInfo
-        } else if (res.data && res.data.user) {
-          userInfo = res.data.user
-        } else if (res.data && res.data.userInfo) {
-          userInfo = res.data.userInfo
-        } else if (res.data && res.data.userId) {
-          // 如果只有 userId，构建最小用户信息
-          userInfo = { userId: res.data.userId }
-        }
-
-        if (userInfo) {
-          console.log('设置用户信息:', userInfo)
-          this.setUserInfo(userInfo)
-
-          // 如果用户信息包含 userId，也保存到 userInfo
-          if (userInfo.userId || userInfo.id) {
-            this.userId = userInfo.userId || userInfo.id
+            if (isValid && mockVerifyCode === data.code) {
+              console.log('✅ 前端模拟验证码验证通过')
+              useMockCode = true
+              // 清除已使用的验证码
+              uni.removeStorageSync('mockVerifyCode')
+              uni.removeStorageSync('mockVerifyCodePhone')
+              uni.removeStorageSync('mockVerifyCodeTime')
+            } else if (!isValid) {
+              throw new Error('验证码已过期，请重新获取')
+            } else {
+              throw new Error('验证码错误')
+            }
           }
-        } else {
-          console.warn('登录响应中没有找到用户信息，响应结构:', res)
         }
 
-        return res
+        // 调用后端API
+        // 注意：如果后端验证码验证失败，可能需要使用测试验证码或特殊处理
+        let requestData = { ...data }
+
+        // 如果使用模拟验证码，可以尝试使用测试验证码或者移除验证码字段
+        // 方案1：使用固定的测试验证码（如果后端支持）
+        // 方案2：直接传原验证码，让后端处理失败
+
+        try {
+          const res = await userApi.login(requestData)
+          console.log('登录响应完整数据:', res)
+          console.log('登录响应 data 字段:', res.data)
+
+          // 检查返回的数据结构
+          if (!res) {
+            throw new Error('登录失败：服务器返回数据为空')
+          }
+
+          // 处理 token
+          let token = null
+          if (res.token) {
+            token = res.token
+          } else if (res.data && res.data.token) {
+            token = res.data.token
+          }
+
+          if (token) {
+            this.setToken(token)
+          }
+
+          // 处理用户信息 - 兼容多种数据结构
+          let userInfo = null
+          if (res.user) {
+            userInfo = res.user
+          } else if (res.userInfo) {
+            userInfo = res.userInfo
+          } else if (res.data && res.data.user) {
+            userInfo = res.data.user
+          } else if (res.data && res.data.userInfo) {
+            userInfo = res.data.userInfo
+          } else if (res.data && res.data.userId) {
+            // 如果只有 userId，构建最小用户信息
+            userInfo = { userId: res.data.userId }
+          }
+
+          if (userInfo) {
+            console.log('设置用户信息:', userInfo)
+            this.setUserInfo(userInfo)
+
+            // 如果用户信息包含 userId，也保存到 userInfo
+            if (userInfo.userId || userInfo.id) {
+              this.userId = userInfo.userId || userInfo.id
+            }
+          } else {
+            console.warn('登录响应中没有找到用户信息，响应结构:', res)
+          }
+
+          return res
+        } catch (apiError) {
+          // 如果后端返回验证码错误，且我们使用了模拟验证码
+          if (apiError.message && apiError.message.includes('验证码') && useMockCode) {
+            console.warn('⚠️ 后端验证码验证失败，但模拟验证码已通过')
+            console.warn('💡 提示：请确保后端支持测试验证码，或使用密码登录')
+
+            // 可以选择：
+            // 1. 抛出更友好的错误
+            // 2. 尝试使用固定的测试验证码
+            throw new Error('登录失败：后端验证码验证未通过。请使用密码登录或联系管理员配置测试验证码')
+          }
+          throw apiError
+        }
       } catch (error) {
         console.error('登录失败:', error)
         throw error

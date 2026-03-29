@@ -29,6 +29,11 @@ public class LoginRequest {
      */
     private String checkCodeKey;
 
+    /**
+     * 短信验证码（短信验证码登录时使用）
+     */
+    private String code;
+
 
 
 }
