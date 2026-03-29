@@ -26,7 +26,7 @@ export const USER_API = {
   DELETE_USER: '/v1/users/:userId',                      // DELETE - 删除用户
 
   // 用户统计和目标
-  GET_USER_STATS: '/v1/user/stats/:userId',              // GET - 获取用户统计数据
+  GET_USER_STATS: '/v1/user-statistics/:userId/overview', // GET - 获取用户统计数据
   COMPLETE_PROFILE: '/v1/user/profile',                  // POST - 完善身体数据
   GET_USER_GOALS: '/v1/user/goals/:userId',              // GET - 获取用户饮食目标
 

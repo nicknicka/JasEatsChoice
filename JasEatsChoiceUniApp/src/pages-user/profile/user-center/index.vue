@@ -220,7 +220,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useUserStore } from '@/store'
-import { userApi, orderApi, chatApi } from '@/api'
+import { userApi, chatApi, orderApi } from '@/api'
 
 // Pinia store
 const userStore = useUserStore()
@@ -397,12 +397,13 @@ const loadStats = async () => {
     }
 
     const res = await userApi.getUserStats(userId)
-    if (res) {
+    if (res && res.data) {
+      const data = res.data
       stats.value = {
-        orders: res.totalOrders || res.orders || 0,
-        favorites: res.totalFavorites || res.favorites || 0,
-        history: res.totalHistory || res.history || 0,
-        coupons: res.availableCoupons || res.coupons || 0
+        orders: data.dietRecords?.totalOrders || data.dietRecords?.completed || 0,
+        favorites: data.favorites?.totalFavorites || 0,
+        history: 0, // 后端暂未提供浏览历史统计
+        coupons: 0  // 后端暂未提供优惠券统计
       }
     }
   } catch (error) {
@@ -418,24 +419,33 @@ const loadStats = async () => {
 }
 
 /**
- * 加载订单数量
+ * 加载订单各状态数量
+ * 从后端API获取真实的订单统计数据
  */
 const loadOrderCounts = async () => {
   try {
-    // 调用后端API获取订单数量统计
     const userId = userStore.userInfo?.userId || userStore.userInfo?.id
     if (!userId) {
-      console.warn('用户ID不存在，跳过加载订单数量')
+      console.warn('用户ID不存在，无法加载订单数量')
       return
     }
 
     const res = await orderApi.getCount({ userId })
-    if (res) {
+
+    if (res.success && res.data) {
       orderCounts.value = {
-        pending: res.pending || 0,
-        processing: res.processing || 0,
-        delivering: res.delivering || 0,
-        completed: res.completed || 0
+        pending: res.data.pending || 0,
+        processing: res.data.processing || 0,
+        delivering: res.data.delivering || 0,
+        completed: res.data.completed || 0
+      }
+    } else {
+      console.warn('获取订单数量失败，使用默认值')
+      orderCounts.value = {
+        pending: 0,
+        processing: 0,
+        delivering: 0,
+        completed: 0
       }
     }
   } catch (error) {
@@ -456,9 +466,15 @@ const loadOrderCounts = async () => {
 const loadUnreadCount = async () => {
   try {
     // 调用后端API获取未读消息数
-    const res = await chatApi.getUnreadCount()
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+    if (!userId) {
+      console.warn('用户ID不存在，跳过加载未读消息数')
+      return
+    }
+
+    const res = await chatApi.getUnreadCount(userId)
     if (res !== undefined && res !== null) {
-      unreadCount.value = res.count || res.total || res || 0
+      unreadCount.value = res.count || res.total || res.data || res || 0
     }
   } catch (error) {
     console.error('加载未读消息数失败:', error)

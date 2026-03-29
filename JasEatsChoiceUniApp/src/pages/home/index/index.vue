@@ -103,7 +103,7 @@
             class="dish-card"
             v-for="dish in recommendDishes"
             :key="dish.id"
-            @click="toDishDetail(dish.id)"
+            @click="handleDishClick(dish)"
           >
             <image class="dish-image" :src="dish.image" mode="aspectFill" />
             <view class="dish-info">
@@ -138,7 +138,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { toSearch, toMerchantDetail, toDishDetail } from '@/utils/router'
 import { useLocationStore, useUserStore } from '@/store'
-import { dishApi, merchantApi } from '@/api'
+import { recommendationApi, merchantApi, bannerApi } from '@/api'
+import { processImageUrl } from '@/utils/helper'
 import WeatherLocation from '@/components/common/WeatherLocation.vue'
 
 // Store
@@ -291,13 +292,12 @@ const onLoadMore = async () => {
 const loadBanners = async () => {
   try {
     // U-022: 调用后端API获取轮播图
-    const { bannerApi } = await import('@/api')
     const res = await bannerApi.getList({ position: 'home' })
 
     if (res && res.data && Array.isArray(res.data)) {
       banners.value = res.data.map(banner => ({
         id: banner.bannerId || banner.id,
-        image: banner.imageUrl || banner.image,
+        image: processImageUrl(banner.imageUrl || banner.image),
         title: banner.title || '',
         type: banner.type || 'link', // link, dish, merchant, activity
         targetType: banner.targetType || '', // 跳转目标类型
@@ -350,40 +350,58 @@ const loadMerchants = async () => {
 }
 
 /**
- * 加载推荐菜品
+ * 加载推荐菜品（使用后端推荐系统）
  */
 const loadDishes = async (refresh = false) => {
   try {
-    // 调用后端API获取推荐菜品
-    const params = {
-      page: currentPage.value,
-      size: pageSize
+    // 获取用户ID
+    const userId = userStore.isLogin
+      ? (userStore.userInfo?.userId || userStore.userInfo?.id)
+      : '1'
+
+    // 获取当前时段
+    const getTimePeriod = () => {
+      const hour = new Date().getHours()
+      if (hour >= 6 && hour < 10) return '早餐'
+      if (hour >= 10 && hour < 14) return '午餐'
+      if (hour >= 14 && hour < 18) return '下午茶'
+      if (hour >= 18 && hour < 22) return '晚餐'
+      return '夜宵'
     }
 
-    // 如果有用户ID，用于个性化推荐
-    if (userStore.isLogin) {
-      params.userId = userStore.userInfo?.userId || userStore.userInfo?.id
-    }
+    // 调用后端推荐系统API
+    const res = await recommendationApi.getRecommendations(userId, {
+      scene: 'home',
+      limit: pageSize,
+      timePeriod: getTimePeriod()
+    })
 
-    const res = await dishApi.getRecommend(params)
+    console.log('推荐系统返回:', res)
 
-    // 数据映射
+    // 数据映射 - 兼容多种返回格式
     let dishes = []
-    if (Array.isArray(res)) {
+    if (res && res.data) {
+      if (res.data.recommendations) {
+        dishes = res.data.recommendations
+      } else if (Array.isArray(res.data)) {
+        dishes = res.data
+      }
+    } else if (Array.isArray(res)) {
       dishes = res
-    } else if (res && res.list) {
-      dishes = res.list
-    } else if (res && res.records) {
-      dishes = res.records
     }
 
+    // 统一字段映射
     const mappedDishes = dishes.map(dish => ({
       id: dish.dishId || dish.id,
+      dishId: dish.dishId || dish.id,
       name: dish.dishName || dish.name,
       description: dish.description || dish.desc || '',
       price: dish.price ? String(dish.price) : '0',
       sales: dish.monthlySales || dish.sales || 0,
-      image: dish.image || dish.coverImage
+      image: dish.image || dish.coverImage,
+      recommendReason: dish.recommendReason || dish.reason,
+      recommendSource: dish.recommendSource || '系统推荐',
+      rating: dish.rating || dish.avgRating || 4.5
     }))
 
     if (refresh) {
@@ -395,22 +413,80 @@ const loadDishes = async (refresh = false) => {
     if (mappedDishes.length < pageSize) {
       noMore.value = true
     }
+
+    console.log(`✅ 推荐加载成功: ${mappedDishes.length}个菜品`)
   } catch (error) {
-    console.error('加载推荐菜品失败:', error)
-    // 使用空数组，不影响页面显示
-    if (refresh) {
-      recommendDishes.value = []
+    console.error('❌ 加载推荐菜品失败:', error)
+
+    // 降级方案：使用简单推荐接口
+    try {
+      console.log('🔄 使用降级方案...')
+      const { dishApi } = await import('@/api')
+      const fallbackRes = await dishApi.getRecommend({
+        page: currentPage.value,
+        size: pageSize
+      })
+
+      let dishes = []
+      if (Array.isArray(fallbackRes)) {
+        dishes = fallbackRes
+      } else if (fallbackRes && fallbackRes.list) {
+        dishes = fallbackRes.list
+      }
+
+      const mappedDishes = dishes.map(dish => ({
+        id: dish.dishId || dish.id,
+        name: dish.dishName || dish.name,
+        description: dish.description || dish.desc || '',
+        price: dish.price ? String(dish.price) : '0',
+        sales: dish.monthlySales || dish.sales || 0,
+        image: dish.image || dish.coverImage,
+        recommendSource: '基础推荐'
+      }))
+
+      if (refresh) {
+        recommendDishes.value = mappedDishes
+      } else {
+        recommendDishes.value.push(...mappedDishes)
+      }
+
+      console.log(`✅ 降级方案成功: ${mappedDishes.length}个菜品`)
+    } catch (fallbackError) {
+      console.error('❌ 降级方案也失败:', fallbackError)
+      if (refresh) {
+        recommendDishes.value = []
+      }
     }
   }
 }
 
 /**
- * 刷新推荐
+ * 刷新推荐（使用推荐系统刷新接口）
  */
-const refreshRecommend = () => {
-  currentPage.value = 1
-  noMore.value = false
-  loadDishes(true)
+const refreshRecommend = async () => {
+  try {
+    refreshing.value = true
+    currentPage.value = 1
+    noMore.value = false
+
+    // 如果已登录，使用推荐系统的刷新接口
+    if (userStore.isLogin) {
+      const userId = userStore.userInfo?.userId || userStore.userInfo?.id || '1'
+      await recommendationApi.refreshRecommendations(userId)
+      console.log('✅ 推荐刷新成功')
+    }
+
+    // 重新加载推荐
+    await loadDishes(true)
+
+    uni.showToast({ title: '刷新成功', icon: 'success' })
+  } catch (error) {
+    console.error('❌ 刷新推荐失败:', error)
+    // 即使刷新失败，也重新加载
+    await loadDishes(true)
+  } finally {
+    refreshing.value = false
+  }
 }
 
 /**
@@ -531,6 +607,37 @@ const toMoreMerchants = () => {
   uni.navigateTo({
     url: '/pages-user/home/merchant-list'
   })
+}
+
+/**
+ * 处理菜品点击 - 记录推荐反馈并跳转
+ */
+const handleDishClick = async (dish) => {
+  if (!dish) return
+
+  try {
+    // 异步记录点击反馈（不阻塞跳转）
+    if (userStore.isLogin && dish.recommendSource) {
+      const userId = userStore.userInfo?.userId || userStore.userInfo?.id || '1'
+
+      recommendationApi.recordFeedback({
+        userId,
+        dishId: String(dish.dishId || dish.id),
+        recommendationId: String(dish.id),
+        isClicked: true,
+        isOrdered: false
+      }).then(() => {
+        console.log('✓ 点击反馈已记录')
+      }).catch(err => {
+        console.warn('记录点击反馈失败:', err)
+      })
+    }
+  } catch (error) {
+    console.warn('记录点击反馈出错:', error)
+  }
+
+  // 立即跳转到详情页
+  toDishDetail(dish.id)
 }
 
 // 组件挂载时加载数据

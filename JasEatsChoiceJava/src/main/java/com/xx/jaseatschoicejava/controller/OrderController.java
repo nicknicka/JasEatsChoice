@@ -102,6 +102,24 @@ public class OrderController {
     }
 
     /**
+     * 获取用户各状态订单数量统计
+     * @param userId 用户ID
+     * @return 订单数量统计
+     */
+    @GetMapping("/count")
+    @ApiOperation(value = "获取用户订单数量统计", notes = "统计用户各状态订单数量")
+    public ResponseResult<?> getOrderCount(@RequestParam String userId) {
+        log.info("获取用户订单数量统计, userId: {}", userId);
+        try {
+            Map<String, Long> countMap = orderService.getOrderCountByUserId(userId);
+            return ResponseResult.success(countMap);
+        } catch (Exception e) {
+            log.error("获取用户订单数量统计失败：userId={}", userId, e);
+            return ResponseResult.fail("500", "获取订单数量失败：" + e.getMessage());
+        }
+    }
+
+    /**
      * 根据商家ID获取订单列表
      * @param merchantId 商家ID
      * @param today 是否只查询今日订单，默认为true

@@ -26,7 +26,9 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -475,5 +477,45 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     @org.springframework.cache.annotation.CacheEvict(value = CACHE_NAME, key = "#orderId")
     public void evictOrderCache(String orderId) {
         log.debug("清除订单缓存: orderId={}", orderId);
+    }
+
+    /**
+     * 获取用户各状态订单数量统计
+     * @param userId 用户ID
+     * @return Map<状态名称, 数量>
+     */
+    @Override
+    public Map<String, Long> getOrderCountByUserId(String userId) {
+        log.debug("统计用户订单数量: userId={}", userId);
+
+        Map<String, Long> countMap = new HashMap<>();
+
+        try {
+            // 查询所有订单
+            LambdaQueryWrapper<Order> queryWrapper = new LambdaQueryWrapper<>();
+            queryWrapper.eq(Order::getUserId, userId);
+            List<Order> orders = list(queryWrapper);
+
+            // 统计各状态订单数量
+            Map<Integer, Long> statusCounts = orders.stream()
+                .collect(Collectors.groupingBy(Order::getStatus, Collectors.counting()));
+
+            // 映射到前端需要的字段名
+            countMap.put("pending", statusCounts.getOrDefault(0, 0L));           // 待支付
+            countMap.put("processing", statusCounts.getOrDefault(1, 0L));        // 待接单
+            countMap.put("delivering", statusCounts.getOrDefault(2, 0L));         // 制作中
+            countMap.put("completed", statusCounts.getOrDefault(3, 0L));          // 已完成
+
+            log.debug("订单统计结果: {}", countMap);
+        } catch (Exception e) {
+            log.error("统计用户订单数量失败: userId={}", userId, e);
+            // 返回空统计
+            countMap.put("pending", 0L);
+            countMap.put("processing", 0L);
+            countMap.put("delivering", 0L);
+            countMap.put("completed", 0L);
+        }
+
+        return countMap;
     }
 }

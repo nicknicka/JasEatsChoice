@@ -3,6 +3,29 @@
  */
 
 /**
+ * 处理图片URL，将localhost替换为实际IP（用于开发环境）
+ * @param {string} url - 原始图片URL
+ * @returns {string} 处理后的图片URL
+ */
+export const processImageUrl = (url) => {
+  if (!url || typeof url !== 'string') {
+    return url || ''
+  }
+
+  // 如果是相对路径，不需要处理
+  if (!url.startsWith('http')) {
+    return url
+  }
+
+  // 在开发环境中，将localhost替换为实际IP
+  if (url.includes('localhost')) {
+    return url.replace('localhost', '192.168.137.188')
+  }
+
+  return url
+}
+
+/**
  * 显示错误提示
  * @param {string} message - 错误信息
  * @param {number} duration - 持续时间(ms)
@@ -372,5 +395,6 @@ export default {
   previewImage,
   saveImageToPhotosAlbum,
   makePhoneCall,
-  openLocation
+  openLocation,
+  processImageUrl
 }

@@ -6,6 +6,7 @@ import com.xx.jaseatschoicejava.entity.Order;
 import com.xx.jaseatschoicejava.entity.OrderDish;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 订单服务接口
@@ -43,4 +44,11 @@ public interface OrderService extends IService<Order> {
      * @return 可回退的状态列表
      */
     List<Integer> getRollbackOptions(Integer currentStatus);
+
+    /**
+     * 获取用户各状态订单数量统计
+     * @param userId 用户ID
+     * @return Map<状态名称, 数量>
+     */
+    Map<String, Long> getOrderCountByUserId(String userId);
 }

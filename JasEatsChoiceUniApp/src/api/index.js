@@ -23,6 +23,7 @@ export { wishlistApi } from './modules/wishlist'
 export { groupOrderApi } from './modules/groupOrder'
 export { cartApi } from './modules/cart'
 export { bannerApi } from './modules/banner'
+export { recommendationApi } from './modules/recommendation'
 
 // 默认导出所有API的集合（向后兼容）
 import { userApi } from './modules/user'
@@ -44,6 +45,7 @@ import { wishlistApi } from './modules/wishlist'
 import { groupOrderApi } from './modules/groupOrder'
 import { cartApi } from './modules/cart'
 import { bannerApi } from './modules/banner'
+import { recommendationApi } from './modules/recommendation'
 
 export default {
   user: userApi,
@@ -64,5 +66,6 @@ export default {
   wishlist: wishlistApi,
   groupOrder: groupOrderApi,
   cart: cartApi,
-  banner: bannerApi
+  banner: bannerApi,
+  recommendation: recommendationApi
 }

@@ -180,7 +180,7 @@ export const chatApi = {
    * GET /api/chat/unread
    * @returns {Promise} 返回未读数
    */
-  getUnreadCount: () => get('/api/chat/unread'),
+  getUnreadCount: (userId) => get(`/v1/message/unread-count`, { userId }),
 
   /**
    * 获取快捷回复
