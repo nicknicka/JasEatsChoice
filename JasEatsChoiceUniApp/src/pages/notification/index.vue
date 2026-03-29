@@ -403,7 +403,7 @@ const loadMore = () => {
  */
 const goHome = () => {
   uni.switchTab({
-    url: '/pages-user/home/index/index'
+    url: '/home/index/index'
   })
 }
 </script>

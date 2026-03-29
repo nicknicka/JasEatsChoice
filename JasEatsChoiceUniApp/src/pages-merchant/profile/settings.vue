@@ -302,7 +302,7 @@ const maskPhone = (phone) => {
  */
 const editPhone = () => {
   uni.navigateTo({
-    url: '/pages-merchant/profile/edit-phone'
+    url: '/profile/edit-phone'
   })
 }
 
@@ -311,7 +311,7 @@ const editPhone = () => {
  */
 const editPassword = () => {
   uni.navigateTo({
-    url: '/pages-merchant/profile/edit-password?type=login'
+    url: '/profile/edit-password?type=login'
   })
 }
 
@@ -321,11 +321,11 @@ const editPassword = () => {
 const editPayPassword = () => {
   if (userInfo.value.hasPayPassword) {
     uni.navigateTo({
-      url: '/pages-merchant/profile/edit-password?type=pay'
+      url: '/profile/edit-password?type=pay'
     })
   } else {
     uni.navigateTo({
-      url: '/pages-merchant/profile/set-pay-password'
+      url: '/profile/set-pay-password'
     })
   }
 }
@@ -454,7 +454,7 @@ const clearCache = () => {
  */
 const viewTutorials = () => {
   uni.navigateTo({
-    url: '/pages-merchant/profile/tutorials'
+    url: '/profile/tutorials'
   })
 }
 
@@ -468,7 +468,7 @@ const contactSupport = () => {
       if (res.tapIndex === 0) {
         // 打开在线客服
         uni.navigateTo({
-          url: '/pages-merchant/chat/index?type=service'
+          url: '/chat/index?type=service'
         })
       } else {
         // 拨打客服电话
@@ -485,7 +485,7 @@ const contactSupport = () => {
  */
 const viewAbout = () => {
   uni.navigateTo({
-    url: '/pages-merchant/profile/about'
+    url: '/profile/about'
   })
 }
 
@@ -551,7 +551,7 @@ const logout = () => {
 
           setTimeout(() => {
             uni.reLaunch({
-              url: '/pages-merchant/login/index'
+              url: '/login/index'
             })
           }, 1000)
         }

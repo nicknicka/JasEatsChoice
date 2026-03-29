@@ -417,7 +417,7 @@ const onSearch = async (e) => {
  */
 const openSystemNotifications = () => {
   uni.navigateTo({
-    url: '/pages-merchant/notification/index'
+    url: '/notification/index'
   })
 }
 
@@ -522,7 +522,7 @@ const deleteConversation = (conversation) => {
  */
 const startChat = () => {
   uni.navigateTo({
-    url: '/pages-merchant/chat/start'
+    url: '/chat/start'
   })
 }
 

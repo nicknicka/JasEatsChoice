@@ -256,7 +256,7 @@ const selectWithdrawMethod = (method) => {
  */
 const changeAccount = () => {
   uni.navigateTo({
-    url: '/pages-merchant/profile/edit?scene=bank'
+    url: '/profile/edit?scene=bank'
   })
 }
 
@@ -375,7 +375,7 @@ const submitWithdraw = async () => {
  */
 const viewAllHistory = () => {
   uni.navigateTo({
-    url: '/pages-merchant/profile/withdraw-history'
+    url: '/profile/withdraw-history'
   })
 }
 

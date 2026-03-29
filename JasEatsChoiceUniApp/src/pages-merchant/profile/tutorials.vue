@@ -395,7 +395,7 @@ const markHelpful = async (index, helpful) => {
  */
 const contactOnlineService = () => {
   uni.navigateTo({
-    url: '/pages-merchant/chat/index?type=service'
+    url: '/chat/index?type=service'
   })
 }
 

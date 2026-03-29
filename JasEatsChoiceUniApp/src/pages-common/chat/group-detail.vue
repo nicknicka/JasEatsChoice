@@ -209,7 +209,7 @@ const initCreateGroup = () => {
 
   // 自动跳转到选择成员页面
   uni.navigateTo({
-    url: '/pages-common/chat/member-selector?action=create_group'
+    url: '/chat/member-selector?action=create_group'
   })
 }
 

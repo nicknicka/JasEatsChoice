@@ -204,7 +204,7 @@ const onDeadlineChange = (e) => {
  */
 const selectAddress = () => {
   uni.navigateTo({
-    url: '/pages-user/address/select?mode=select'
+    url: '/address/select?mode=select'
   })
 }
 

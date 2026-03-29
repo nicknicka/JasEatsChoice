@@ -534,7 +534,7 @@ const handleWechatLogin = async (e) => {
     // 跳转到首页
     setTimeout(() => {
       uni.switchTab({
-        url: '/pages-user/home/index'
+        url: '/home/index'
       })
     }, 1500)
 
@@ -643,7 +643,7 @@ const handlePhoneLogin = async () => {
     // 跳转到首页
     setTimeout(() => {
       uni.switchTab({
-        url: '/pages-user/home/index'
+        url: '/home/index'
       })
     }, 1500)
 
@@ -725,7 +725,7 @@ const handlePasswordLogin = async () => {
     // 跳转到首页
     setTimeout(() => {
       uni.switchTab({
-        url: '/pages-user/home/index'
+        url: '/home/index'
       })
     }, 1500)
 

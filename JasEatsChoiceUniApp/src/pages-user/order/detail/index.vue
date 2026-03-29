@@ -696,11 +696,11 @@ const orderAgain = async () => {
     // 跳转到购物车页面
     setTimeout(() => {
       uni.switchTab({
-        url: '/pages-user/cart/index',
+        url: '/cart/index',
         fail: () => {
           // 如果switchTab失败（可能不是tabBar页面），使用navigateTo
           uni.navigateTo({
-            url: '/pages-user/cart/index'
+            url: '/cart/index'
           })
         }
       })

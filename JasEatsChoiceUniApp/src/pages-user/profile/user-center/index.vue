@@ -220,7 +220,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useUserStore } from '@/store'
-import { userApi, chatApi, orderApi } from '@/api'
+import { userApi, chatApi, orderApi, walletApi } from '@/api'
 
 // Pinia store
 const userStore = useUserStore()
@@ -266,7 +266,7 @@ const unreadCount = ref(5)
  */
 const editProfile = () => {
   uni.navigateTo({
-    url: '/pages/user-center/edit'
+    url: '/profile/user-center/edit'
   })
 }
 
@@ -275,20 +275,20 @@ const editProfile = () => {
  */
 const navigateTo = (page, params = {}) => {
   const pageMap = {
-    'orders': '/pages/orders/index',
-    'favorites': '/pages/favorites/index',
-    'history': '/pages/history/index',
-    'coupons': '/pages/coupons/index',
-    'wallet': '/pages/wallet/index',
-    'address': '/pages/address/index',
-    'calorie': '/pages/calorie/index',
-    'recipe': '/pages/recipe/my',
-    'health-report': '/pages/health-report/index',
-    'message': '/pages/message/index',
-    'customer-service': '/pages/customer-service/index',
-    'feedback': '/pages/feedback/index',
-    'about': '/pages/about/index',
-    'settings': '/pages/settings/index'
+    'orders': '/pages-user/orders/index',
+    'favorites': '/pages-user/collection/index',
+    'history': '/pages-user/history/index',
+    'coupons': '/pages-user/coupon/index',
+    'wallet': '/pages-user/wallet/index',
+    'address': '/pages-user/address/index',
+    'calorie': '/pages-user/calorie/index',
+    'recipe': '/pages-user/recipe/my',
+    'health-report': '/pages-user/calorie/statistics',
+    'message': '/pages-user/message/index',
+    'customer-service': '/pages-user/help/index',
+    'feedback': '/pages-user/feedback/index',
+    'about': '/pages-user/profile/about',
+    'settings': '/pages-user/settings/index'
   }
 
   const path = pageMap[page]
@@ -400,10 +400,10 @@ const loadStats = async () => {
     if (res && res.data) {
       const data = res.data
       stats.value = {
-        orders: data.dietRecords?.totalOrders || data.dietRecords?.completed || 0,
-        favorites: data.favorites?.totalFavorites || 0,
-        history: 0, // 后端暂未提供浏览历史统计
-        coupons: 0  // 后端暂未提供优惠券统计
+        orders: data.totalOrders || data.ordersCount || data.dietRecords?.totalOrders || 0,
+        favorites: data.totalFavorites || data.favoritesCount || data.favorites?.totalFavorites || 0,
+        history: data.totalHistory || data.historyCount || 0,
+        coupons: data.totalCoupons || data.couponsCount || 0
       }
     }
   } catch (error) {
@@ -461,6 +461,36 @@ const loadOrderCounts = async () => {
 }
 
 /**
+ * 加载钱包信息
+ */
+const loadWallet = async () => {
+  try {
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+    if (!userId) {
+      console.warn('用户ID不存在，跳过加载钱包信息')
+      return
+    }
+
+    const res = await walletApi.getWallet(userId)
+    if (res && res.data) {
+      wallet.value = {
+        balance: res.data.balance || '0.00',
+        points: res.data.points || 0,
+        redEnvelopes: res.data.redEnvelopes || res.data.redPackets || 0
+      }
+    }
+  } catch (error) {
+    console.error('加载钱包信息失败:', error)
+    // 使用默认值
+    wallet.value = {
+      balance: '0.00',
+      points: 0,
+      redEnvelopes: 0
+    }
+  }
+}
+
+/**
  * 加载未读消息数
  */
 const loadUnreadCount = async () => {
@@ -488,6 +518,7 @@ onMounted(() => {
   loadUserInfo()
   loadStats()
   loadOrderCounts()
+  loadWallet()
   loadUnreadCount()
 })
 </script>

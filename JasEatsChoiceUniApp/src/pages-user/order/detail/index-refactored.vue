@@ -234,7 +234,7 @@ const copyOrderNo = () => {
  */
 const contactMerchant = () => {
   uni.navigateTo({
-    url: '/pages-common/chat/chat-room?userId=merchant_id'
+    url: '/chat/chat-room?userId=merchant_id'
   })
 }
 

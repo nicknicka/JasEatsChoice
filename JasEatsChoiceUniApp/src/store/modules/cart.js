@@ -5,11 +5,14 @@ import { defineStore } from 'pinia'
  */
 export const useCartStore = defineStore('cart', {
   state: () => ({
-    // 购物车列表（按商家分组）
-    carts: uni.getStorageSync('carts') || [],
+    // 购物车列表（按商家分组）（延迟初始化）
+    carts: [],
 
     // 当前选中的商家ID
-    currentMerchantId: null
+    currentMerchantId: null,
+
+    // 是否已初始化
+    _initialized: false
   }),
 
   getters: {
@@ -40,6 +43,27 @@ export const useCartStore = defineStore('cart', {
   },
 
   actions: {
+    /**
+     * 初始化 store - 从本地存储恢复数据
+     * 这个方法应该在应用启动时调用
+     */
+    initialize() {
+      if (this._initialized) return
+
+      try {
+        // 从本地存储恢复购物车
+        const savedCarts = uni.getStorageSync('carts')
+        if (savedCarts && Array.isArray(savedCarts)) {
+          this.carts = savedCarts
+        }
+
+        this._initialized = true
+        console.log('✅ Cart store 初始化成功')
+      } catch (error) {
+        console.error('❌ Cart store 初始化失败:', error)
+      }
+    },
+
     /**
      * 设置当前商家
      * @param {number} merchantId - 商家ID

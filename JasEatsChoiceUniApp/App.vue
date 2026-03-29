@@ -1,15 +1,20 @@
 <script setup>
 import { onLaunch, onShow, onHide } from '@dcloudio/uni-app'
-import { useUserStore } from '@/store'
+import { useUserStore, useLocationStore, useCartStore } from '@/store'
 
-// 获取用户store
+// 获取所有 stores
 const userStore = useUserStore()
+const locationStore = useLocationStore()
+const cartStore = useCartStore()
 
 /**
  * 应用启动（只触发一次）
  */
 onLaunch(() => {
   console.log('App Launch')
+
+  // 初始化所有 stores（必须在 uni 对象就绪后调用）
+  initStores()
 
   // 检查登录状态
   checkLoginStatus()
@@ -43,15 +48,35 @@ onHide(() => {
 })
 
 /**
+ * 初始化所有 stores
+ * 必须在 uni 对象就绪后调用
+ */
+const initStores = () => {
+  try {
+    console.log('🔄 初始化所有 stores...')
+
+    // 初始化 user store
+    userStore.initialize()
+
+    // 初始化 location store
+    locationStore.initialize()
+
+    // 初始化 cart store
+    cartStore.initialize()
+
+    console.log('✅ 所有 stores 初始化完成')
+  } catch (error) {
+    console.error('❌ Stores 初始化失败:', error)
+  }
+}
+
+/**
  * 检查登录状态
  */
 const checkLoginStatus = () => {
   try {
-    // 从本地存储读取token
-    const token = uni.getStorageSync('token')
-
-    if (token) {
-      userStore.setToken(token)
+    // token 已经在 userStore.initialize() 中恢复
+    if (userStore.isLogin && userStore.token) {
       console.log('检测到已登录用户')
 
       // 获取用户信息

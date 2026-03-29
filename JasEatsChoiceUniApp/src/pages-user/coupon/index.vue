@@ -294,14 +294,14 @@ const useCoupon = (coupon) => {
   // U-028: 跳转到可以使用优惠券的页面（首页或购物车）
   // 优先跳转到购物车，如果有可用商品的话
   uni.switchTab({
-    url: '/pages-user/cart/index',
+    url: '/cart/index',
     success: () => {
       console.log('跳转到购物车成功')
     },
     fail: () => {
       // 如果购物车跳转失败，跳转到首页
       uni.switchTab({
-        url: '/pages-user/home/index/index',
+        url: '/home/index/index',
         success: () => {
           console.log('跳转到首页成功')
         },

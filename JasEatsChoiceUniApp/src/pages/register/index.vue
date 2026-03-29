@@ -527,7 +527,7 @@ const handleSubmit = async () => {
     // 跳转到首页
     setTimeout(() => {
       uni.switchTab({
-        url: '/pages-user/home/index'
+        url: '/home/index'
       })
     }, 1500)
 

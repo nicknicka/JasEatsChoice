@@ -93,6 +93,18 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addResourceHandler("/api/uploads/**")
                 .addResourceLocations("file:" + absolutePath)
                 .setCachePeriod(0);
+
+        // 配置通配符文件访问映射（用于兼容旧的直接文件名访问方式）
+        // 例如：/api/abc123.png 会映射到 uploads 目录下的 abc123.png
+        // 如果文件不存在，会自动尝试在 chat 子目录下查找
+        registry.addResourceHandler("/*.png", "/*.jpg", "/*.jpeg", "/*.gif", "/*.webp", "/*.pdf", "/*.doc", "/*.docx")
+                .addResourceLocations("file:" + absolutePath)
+                .setCachePeriod(0);
+
+        // 配置 /files/** 路径映射（新的推荐访问方式）
+        registry.addResourceHandler("/files/**")
+                .addResourceLocations("file:" + absolutePath)
+                .setCachePeriod(3600); // 缓存1小时
     }
 
     /**

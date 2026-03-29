@@ -587,7 +587,7 @@ const drawTrendChart = () => {
 
 // 查看更多推荐
 const viewMoreRecommend = () => {
-  uni.navigateTo({ url: '/pages-user/index/index?filter=recommend' })
+  uni.navigateTo({ url: '/index/index?filter=recommend' })
 }
 
 // 查看菜品
@@ -604,7 +604,7 @@ const applyImprovement = useDebounce((item) => {
       if (res.confirm) {
         uni.showToast({ title: '已采纳，正在为您推荐...', icon: 'success' })
         setTimeout(() => {
-          uni.navigateTo({ url: '/pages-user/index/index?filter=' + item.type })
+          uni.navigateTo({ url: '/index/index?filter=' + item.type })
         }, 1500)
       }
     }
@@ -700,7 +700,7 @@ const loadNutritionData = async () => {
 
 // 咨询AI
 const consultAI = () => {
-  uni.navigateTo({ url: '/pages-user/ai/index' })
+  uni.navigateTo({ url: '/ai/index' })
 }
 
 onMounted(() => {

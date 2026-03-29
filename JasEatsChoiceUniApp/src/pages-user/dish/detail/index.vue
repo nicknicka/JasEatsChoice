@@ -559,14 +559,14 @@ const viewAllReviews = () => {
 const toCart = () => {
   // 跳转到购物车页面
   uni.switchTab({
-    url: '/pages-user/cart/index',
+    url: '/cart/index',
     success: () => {
       console.log('跳转到购物车成功')
     },
     fail: () => {
       // 如果switchTab失败（可能不是tabBar页面），使用navigateTo
       uni.navigateTo({
-        url: '/pages-user/cart/index',
+        url: '/cart/index',
         success: () => {
           console.log('跳转到购物车成功')
         },

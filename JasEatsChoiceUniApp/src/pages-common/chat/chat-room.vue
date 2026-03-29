@@ -716,7 +716,7 @@ const sendImageMessage = async (imagePath) => {
  */
 const chooseDish = () => {
   uni.navigateTo({
-    url: '/pages-common/chat/dish-selector?userId=' + userInfo.value.id
+    url: '/chat/dish-selector?userId=' + userInfo.value.id
   })
 }
 
@@ -725,7 +725,7 @@ const chooseDish = () => {
  */
 const chooseOrder = () => {
   uni.navigateTo({
-    url: '/pages-common/chat/order-selector?userId=' + userInfo.value.id
+    url: '/chat/order-selector?userId=' + userInfo.value.id
   })
 }
 
@@ -939,6 +939,8 @@ const addToBlacklist = () => {
 .message-content {
   max-width: 500rpx;
   position: relative;
+  background: #fff;
+  border-radius: 0 20rpx 20rpx 20rpx;
 }
 
 .self .message-wrapper {
@@ -949,11 +951,6 @@ const addToBlacklist = () => {
   background: #FF6B35;
   color: #fff;
   border-radius: 20rpx 0 20rpx 20rpx;
-}
-
-.message-content:not(.self .message-content) {
-  background: #fff;
-  border-radius: 0 20rpx 20rpx 20rpx;
 }
 
 .text-message {

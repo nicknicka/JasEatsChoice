@@ -2,8 +2,11 @@
  * 统一的错误处理工具
  */
 
+// 图片服务器配置
+const IMAGE_SERVER = 'http://192.168.137.188:8080'
+
 /**
- * 处理图片URL，将localhost替换为实际IP（用于开发环境）
+ * 处理图片URL，确保返回完整的URL
  * @param {string} url - 原始图片URL
  * @returns {string} 处理后的图片URL
  */
@@ -12,16 +15,21 @@ export const processImageUrl = (url) => {
     return url || ''
   }
 
-  // 如果是相对路径，不需要处理
-  if (!url.startsWith('http')) {
+  // 如果已经是完整URL（http/https开头）
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    // 开发环境下替换localhost为局域网IP
+    if (url.includes('localhost')) {
+      return url.replace('localhost', '192.168.137.188')
+    }
     return url
   }
 
-  // 在开发环境中，将localhost替换为实际IP
-  if (url.includes('localhost')) {
-    return url.replace('localhost', '192.168.137.188')
+  // 相对路径：添加服务器地址
+  if (url.startsWith('/')) {
+    return IMAGE_SERVER + url
   }
 
+  // 其他情况：直接返回
   return url
 }
 

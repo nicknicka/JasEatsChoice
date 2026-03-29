@@ -754,14 +754,14 @@ const callMerchant = () => {
 const toCart = () => {
   // 跳转到购物车页面
   uni.switchTab({
-    url: '/pages-user/cart/index',
+    url: '/cart/index',
     success: () => {
       console.log('跳转到购物车成功')
     },
     fail: () => {
       // 如果switchTab失败（可能不是tabBar页面），使用navigateTo
       uni.navigateTo({
-        url: '/pages-user/cart/index',
+        url: '/cart/index',
         success: () => {
           console.log('跳转到购物车成功')
         },
@@ -835,7 +835,7 @@ const startOrder = () => {
 
     // 跳转到订单确认页面
     uni.navigateTo({
-      url: '/pages-user/order/confirm/index',
+      url: '/order/confirm/index',
       success: () => {
         console.log('跳转到订单确认页成功')
       },

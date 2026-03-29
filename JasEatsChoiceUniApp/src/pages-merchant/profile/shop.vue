@@ -291,19 +291,48 @@ const toggleBusinessStatus = (e) => {
  */
 const editBusinessHours = () => {
   uni.navigateTo({
-    url: '/pages-merchant/profile/business-hours'
+    url: '/profile/business-hours'
   })
 }
 
 /**
  * 选择地址
+ * 添加超时处理，默认30秒超时
  */
 const selectAddress = () => {
+  uni.showLoading({
+    title: '请选择地址...'
+  })
+
+  // 创建超时定时器
+  const timer = setTimeout(() => {
+    uni.hideLoading()
+    uni.showToast({
+      title: '选择地址超时',
+      icon: 'none'
+    })
+  }, 30000)
+
   uni.chooseLocation({
     success: (res) => {
+      clearTimeout(timer)
+      uni.hideLoading()
       shopInfo.value.address = res.address + res.name
       shopInfo.value.latitude = res.latitude
       shopInfo.value.longitude = res.longitude
+    },
+    fail: (err) => {
+      clearTimeout(timer)
+      uni.hideLoading()
+
+      // 用户取消选择不提示错误
+      if (err.errMsg && !err.errMsg.includes('cancel')) {
+        console.error('选择地址失败:', err)
+        uni.showToast({
+          title: '选择地址失败',
+          icon: 'none'
+        })
+      }
     }
   })
 }

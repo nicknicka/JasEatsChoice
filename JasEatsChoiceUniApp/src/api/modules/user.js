@@ -129,11 +129,11 @@ export const userApi = {
 
   /**
    * 获取用户统计数据
-   * GET /v1/user/stats/{userId}
+   * GET /v1/user-statistics/{userId}/overview
    * @param {string} userId - 用户ID
    * @returns {Promise} 返回统计数据
    */
-  getUserStats: (userId) => get(buildUrl(USER_API.GET_USER_STATS, { userId })),
+  getUserStats: (userId) => get(`/v1/user-statistics/${userId}/overview`),
 
   /**
    * 完善身体数据

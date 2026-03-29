@@ -193,8 +193,9 @@
 import { ref, computed, onMounted } from 'vue'
 import { toSearch, toMerchantDetail, toDishDetail } from '@/utils/router'
 import { useLocationStore, useUserStore } from '@/store'
-import { recommendationApi, merchantApi, bannerApi } from '@/api'
+import { recommendationApi, merchantApi, bannerApi, categoryApi } from '@/api'
 import { processImageUrl } from '@/utils/helper'
+import { normalizeCategories } from '@/config/category-icons'
 import WeatherLocation from '@/components/common/WeatherLocation.vue'
 
 // Store
@@ -236,16 +237,7 @@ const banners = ref([
 ])
 
 // 分类数据
-const categories = ref([
-  { id: 1, name: '中餐', icon: '🍚', code: 'chinese' },
-  { id: 2, name: '西餐', icon: '🍔', code: 'western' },
-  { id: 3, name: '日料', icon: '🍣', code: 'japanese' },
-  { id: 4, name: '韩料', icon: '🍜', code: 'korean' },
-  { id: 5, name: '快餐', icon: '🍟', code: 'fast_food' },
-  { id: 6, name: '甜点', icon: '🍰', code: 'dessert' },
-  { id: 7, name: '饮品', icon: '🥤', code: 'drink' },
-  { id: 8, name: '小吃', icon: '🍢', code: 'snack' }
-])
+const categories = ref([])
 
 // 推荐商家数据
 const recommendMerchants = ref([
@@ -353,6 +345,34 @@ const onLoadMore = async () => {
 }
 
 /**
+ * 加载美食分类 - 从后端获取
+ */
+const loadCategories = async () => {
+  try {
+    // 调用后端API获取常用品类
+    const res = await categoryApi.getCommon()
+
+    if (res && res.data && Array.isArray(res.data)) {
+      // 将分类名称转换为分类对象（包含图标和代码）
+      categories.value = normalizeCategories(res.data)
+    }
+  } catch (error) {
+    console.error('加载分类失败，使用默认数据:', error)
+    // 使用本地默认数据作为fallback
+    categories.value = normalizeCategories([
+      '中式快餐',
+      '火锅',
+      '烧烤',
+      '川菜',
+      '西餐',
+      '日韩料理',
+      '小吃快餐',
+      '饮品甜点'
+    ])
+  }
+}
+
+/**
  * 加载轮播图 - U-022: 调用后端API
  */
 const loadBanners = async () => {
@@ -372,9 +392,28 @@ const loadBanners = async () => {
       }))
     }
   } catch (error) {
-    console.error('加载轮播图失败:', error)
-    // 使用空数组，不显示模拟数据
-    banners.value = []
+    console.error('加载轮播图失败，使用默认数据:', error)
+    // 使用本地默认数据作为fallback
+    banners.value = [
+      {
+        id: 1,
+        image: 'https://via.placeholder.com/750x320/FF6B35/FFFFFF?text=今日推荐',
+        title: '今日推荐',
+        type: 'link'
+      },
+      {
+        id: 2,
+        image: 'https://via.placeholder.com/750x320/667eea/FFFFFF?text=美食特惠',
+        title: '美食特惠',
+        type: 'link'
+      },
+      {
+        id: 3,
+        image: 'https://via.placeholder.com/750x320/52c41a/FFFFFF?text=新品上市',
+        title: '新品上市',
+        type: 'link'
+      }
+    ]
   }
 }
 
@@ -409,9 +448,34 @@ const loadMerchants = async () => {
       }))
     }
   } catch (error) {
-    console.error('加载商家失败:', error)
-    // 商家加载失败不影响页面显示
-    recommendMerchants.value = []
+    console.error('加载商家失败，使用默认数据:', error)
+    // 使用本地默认数据作为fallback
+    recommendMerchants.value = [
+      {
+        id: 1,
+        name: '老王家常菜',
+        logo: 'https://via.placeholder.com/200x200/FF6B35/FFFFFF?text=老王',
+        rating: 4.8,
+        monthlySales: 999,
+        tags: ['家常菜', '配送快', '好评多']
+      },
+      {
+        id: 2,
+        name: '李记川菜馆',
+        logo: 'https://via.placeholder.com/200x200/667eea/FFFFFF?text=李记',
+        rating: 4.6,
+        monthlySales: 666,
+        tags: ['川菜', '麻辣', '分量足']
+      },
+      {
+        id: 3,
+        name: '张胖子烧烤',
+        logo: 'https://via.placeholder.com/200x200/52c41a/FFFFFF?text=张胖',
+        rating: 4.7,
+        monthlySales: 888,
+        tags: ['烧烤', '夜宵', '啤酒']
+      }
+    ]
   }
 }
 
@@ -456,24 +520,24 @@ const loadDishes = async (refresh = false) => {
       dishes = res
     }
 
-    // 统一字段映射
+    // 统一字段映射 - 确保所有字段都是正确的类型
     const mappedDishes = dishes.map(dish => ({
       id: dish.dishId || dish.id,
       dishId: dish.dishId || dish.id,
-      name: dish.dishName || dish.name,
-      description: dish.description || dish.desc || '',
+      name: String(dish.dishName || dish.name || '未知菜品'),
+      description: String(dish.description || dish.desc || ''),
       price: dish.price ? String(dish.price) : '0',
-      originalPrice: dish.originalPrice || '',
-      sales: dish.monthlySales || dish.sales || 0,
-      image: dish.image || dish.coverImage,
-      recommendReason: dish.recommendReason || dish.reason,
-      recommendSource: dish.recommendSource || '系统推荐',
-      rating: dish.rating || dish.avgRating || 4.5,
-      // 标签
-      tags: dish.tags || [],
-      discount: dish.discount || '',
-      isNew: dish.isNew || false,
-      isHot: dish.isHot || false
+      originalPrice: dish.originalPrice ? String(dish.originalPrice) : '',
+      sales: Number(dish.monthlySales || dish.sales || 0),
+      image: processImageUrl(dish.image || dish.coverImage || ''),
+      recommendReason: String(dish.recommendReason || dish.reason || ''),
+      recommendSource: String(dish.recommendSource || '系统推荐'),
+      rating: Number(dish.rating || dish.avgRating || 4.5),
+      // 标签 - 确保是数组
+      tags: Array.isArray(dish.tags) ? dish.tags : [],
+      discount: String(dish.discount || ''),
+      isNew: Boolean(dish.isNew),
+      isHot: Boolean(dish.isHot)
     }))
 
     if (refresh) {
@@ -576,7 +640,7 @@ const handleBannerClick = (banner) => {
         // 跳转到菜品详情
         if (banner.targetId) {
           uni.navigateTo({
-            url: `/pages-user/dish/detail/index?id=${banner.targetId}`
+            url: `/dish/detail/index?id=${banner.targetId}`
           })
         }
         break
@@ -585,7 +649,7 @@ const handleBannerClick = (banner) => {
         // 跳转到商家详情
         if (banner.targetId) {
           uni.navigateTo({
-            url: `/pages-user/merchant/detail/index?id=${banner.targetId}`
+            url: `/merchant/detail/index?id=${banner.targetId}`
           })
         }
         break
@@ -594,7 +658,7 @@ const handleBannerClick = (banner) => {
         // 跳转到活动页面（如果有）
         if (banner.targetId) {
           uni.navigateTo({
-            url: `/pages-user/activity/detail/index?id=${banner.targetId}`
+            url: `/activity/detail/index?id=${banner.targetId}`
           })
         }
         break
@@ -603,7 +667,7 @@ const handleBannerClick = (banner) => {
         // 外部链接，使用webview打开
         if (banner.link) {
           uni.navigateTo({
-            url: `/pages/common/webview/index?url=${encodeURIComponent(banner.link)}`
+            url: `/webview/index?url=${encodeURIComponent(banner.link)}`
           })
         }
         break
@@ -612,7 +676,7 @@ const handleBannerClick = (banner) => {
         // 跳转到食谱详情
         if (banner.targetId) {
           uni.navigateTo({
-            url: `/pages-user/recipe/detail/index?id=${banner.targetId}`
+            url: `/recipe/detail/index?id=${banner.targetId}`
           })
         }
         break
@@ -638,7 +702,7 @@ const handleCategoryClick = (category) => {
 
   // U-024: 跳转到分类菜品列表页
   uni.navigateTo({
-    url: `/pages-user/dish/list/index?category=${encodeURIComponent(category.code || category.name)}&name=${encodeURIComponent(category.name)}`,
+    url: `/dish/list/index?category=${encodeURIComponent(category.code || category.name)}&name=${encodeURIComponent(category.name)}`,
     success: () => {
       console.log('跳转到分类列表成功:', category.name)
     },
@@ -658,7 +722,7 @@ const handleCategoryClick = (category) => {
 const toMoreCategories = () => {
   // U-025: 跳转到全部分类页面
   uni.navigateTo({
-    url: '/pages-user/category/index',
+    url: '/category/index',
     success: () => {
       console.log('跳转到分类页面成功')
     },
@@ -677,7 +741,7 @@ const toMoreCategories = () => {
  */
 const toMoreMerchants = () => {
   uni.navigateTo({
-    url: '/pages-user/home/merchant-list'
+    url: '/home/merchant-list'
   })
 }
 
@@ -750,6 +814,7 @@ const handleFilterChange = (filterKey) => {
 
 // 组件挂载时加载数据
 onMounted(() => {
+  loadCategories()
   loadBanners()
   loadMerchants()
   loadDishes(true)

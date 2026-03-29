@@ -172,7 +172,7 @@ const refreshBalance = () => {
 const goRecharge = () => {
   rechargePopup.value?.close()
   uni.navigateTo({
-    url: '/pages-user/wallet/recharge'
+    url: '/wallet/recharge'
   })
 }
 
@@ -185,7 +185,7 @@ const forgetPassword = () => {
     success: (res) => {
       if (res.confirm) {
         uni.navigateTo({
-          url: '/pages-user/settings/reset-password'
+          url: '/settings/reset-password'
         })
       }
     }

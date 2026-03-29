@@ -261,7 +261,7 @@ export function useAIAnalysis() {
         if (res.confirm) {
           uni.showToast({ title: '已采纳，正在为您推荐...', icon: 'success' })
           setTimeout(() => {
-            uni.navigateTo({ url: '/pages-user/index/index?filter=' + item.type })
+            uni.navigateTo({ url: '/index/index?filter=' + item.type })
           }, 1500)
         }
       }

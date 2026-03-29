@@ -388,7 +388,7 @@ const viewTransactionDetail = (item) => {
  */
 const goToWithdraw = () => {
   uni.navigateTo({
-    url: '/pages-merchant/profile/withdraw'
+    url: '/profile/withdraw'
   })
 }
 

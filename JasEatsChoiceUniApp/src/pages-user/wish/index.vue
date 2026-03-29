@@ -385,7 +385,7 @@ const goToDetail = (wishId) => {
  */
 const goToCreate = () => {
   uni.navigateTo({
-    url: '/pages-user/wish/add'
+    url: '/wish/add'
   })
 }
 </script>

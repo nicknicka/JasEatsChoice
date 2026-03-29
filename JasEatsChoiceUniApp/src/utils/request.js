@@ -30,6 +30,7 @@ const isWhitelisted = (url) => {
  * @param {Object} options.data - 请求数据
  * @param {Object} options.params - URL参数（GET请求使用）
  * @param {boolean} options.needAuth - 是否需要token（默认true，白名单自动判断）
+ * @param {number} options.timeout - 超时时间（毫秒），默认使用配置文件中的值
  */
 export const request = (options) => {
   return new Promise((resolve, reject) => {
@@ -49,6 +50,15 @@ export const request = (options) => {
       token = uni.getStorageSync('token') || ''
     }
 
+    // 设置超时时间
+    // 对于登录、注册、验证码等关键接口，使用较短的超时时间
+    // 对于其他接口，使用配置文件中的超时时间
+    let timeout = options.timeout
+    if (!timeout) {
+      const isAuthApi = url.includes('/login') || url.includes('/register') || url.includes('/send-sms-code') || url.includes('/captcha')
+      timeout = isAuthApi ? 10000 : config.timeout // 登录等接口10秒，其他30秒
+    }
+
     // 请求日志
     if (options.url.includes('/orders') || options.url.includes('/v1/orders')) {
       console.log('🔍 API请求 - 订单相关', {
@@ -57,6 +67,7 @@ export const request = (options) => {
         needAuth,
         hasToken: !!token,
         data: requestData,
+        timeout,
         timestamp: new Date().toISOString()
       })
     }
@@ -65,6 +76,7 @@ export const request = (options) => {
       url,
       method: options.method || 'GET',
       data: requestData,
+      timeout,
       header: {
         'Content-Type': 'application/json',
         ...(needAuth && token ? { 'Authorization': `Bearer ${token}` } : {}),

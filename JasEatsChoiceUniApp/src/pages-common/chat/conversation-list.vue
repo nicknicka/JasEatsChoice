@@ -455,7 +455,7 @@ const createSingleChat = () => {
 
   // IM-031: 跳转到选择联系人页面
   uni.navigateTo({
-    url: '/pages-common/chat/contact-selector'
+    url: '/chat/contact-selector'
   })
 }
 
@@ -465,7 +465,7 @@ const createSingleChat = () => {
 const createGroupChat = () => {
   closeNewChatMenu()
   uni.navigateTo({
-    url: '/pages-common/chat/group-detail?action=create'
+    url: '/chat/group-detail?action=create'
   })
 }
 

@@ -186,7 +186,7 @@
 
     <!-- 加载提示 -->
     <view v-if="loading" class="loading-overlay">
-      <uni-load-more status="loading" contentText="登录中..."></uni-load-more>
+      <uni-load-more status="loading" :contentText="{ contentrefresh: '登录中...' }"></uni-load-more>
     </view>
   </view>
 </template>
@@ -358,12 +358,10 @@ const sendCode = async () => {
 
     console.log('✅ 验证码发送成功')
 
-    // 显示提示
-    uni.showModal({
+    // 显示简单提示
+    uni.showToast({
       title: '验证码已发送',
-      content: `【开发模式】请使用验证码: 123456\n有效期5分钟\n\n注：后端已生成验证码并存储到 Redis`,
-      showCancel: false,
-      confirmText: '我知道了'
+      icon: 'success'
     })
 
     // 开始倒计时

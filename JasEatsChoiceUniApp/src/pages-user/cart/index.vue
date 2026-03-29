@@ -389,7 +389,7 @@ const submitOrder = () => {
 
     // 跳转到订单确认页
     uni.navigateTo({
-      url: '/pages-user/order/confirm/index'
+      url: '/order/confirm/index'
     })
   } catch (error) {
     console.error('准备订单数据失败:', error)

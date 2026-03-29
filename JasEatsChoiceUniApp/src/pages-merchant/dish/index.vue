@@ -349,7 +349,7 @@ const toSearch = () => {
  */
 const toAddDish = () => {
   uni.navigateTo({
-    url: '/pages-merchant/dish/add'
+    url: '/dish/add'
   })
 }
 

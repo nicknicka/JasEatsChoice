@@ -303,7 +303,7 @@ const finalPrice = computed(() => {
 const selectAddress = () => {
   // 跳转到地址管理页面，使用 redirectTo 或 navigateTo
   uni.navigateTo({
-    url: '/pages-user/address/index?mode=select',
+    url: '/address/index?mode=select',
     success: () => {
       console.log('跳转到地址页面成功')
     },

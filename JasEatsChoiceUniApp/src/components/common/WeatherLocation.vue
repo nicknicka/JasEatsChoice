@@ -120,7 +120,7 @@ const handleLocationClick = () => {
 const chooseCity = () => {
   // U-034: 跳转到城市选择页面
   uni.navigateTo({
-    url: '/pages-common/city-selector/index',
+    url: '/city-selector/index',
     success: () => {
       console.log('跳转到城市选择页面成功')
     },

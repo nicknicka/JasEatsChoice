@@ -367,7 +367,7 @@ const handleHotTopicClick = () => {
   // 保存热点数据并跳转
   uni.setStorageSync('currentHotTopic', JSON.stringify(hotTopic.value))
   uni.navigateTo({
-    url: '/pages-user/home/hot-topic/index'
+    url: '/home/hot-topic/index'
   })
 }
 
@@ -584,7 +584,7 @@ const handleCategoryClick = (category) => {
 const toMoreCategories = () => {
   // U-025: 跳转到全部分类页面
   uni.navigateTo({
-    url: '/pages-user/category/index',
+    url: '/category/index',
     success: () => {
       console.log('跳转到分类页面成功')
     },
@@ -603,7 +603,7 @@ const toMoreCategories = () => {
  */
 const toMoreMerchants = () => {
   uni.navigateTo({
-    url: '/pages-user/home/merchant-list'
+    url: '/home/merchant-list'
   })
 }
 

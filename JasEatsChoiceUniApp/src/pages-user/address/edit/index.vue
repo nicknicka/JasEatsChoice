@@ -226,15 +226,48 @@ const addCustomTag = () => {
 
 /**
  * 显示地区选择器
+ * 添加超时处理，默认30秒超时
  */
 const showRegionPicker = () => {
   showPicker.value = true
+
+  uni.showLoading({
+    title: '请选择地址...'
+  })
+
+  // 创建超时定时器
+  const timer = setTimeout(() => {
+    uni.hideLoading()
+    uni.showToast({
+      title: '选择地址超时',
+      icon: 'none'
+    })
+  }, 30000)
+
   uni.chooseLocation({
     success: (res) => {
-      // 这里可以调用地图API
+      clearTimeout(timer)
+      uni.hideLoading()
+
+      // 如果用户通过地图选择了位置，提取地区信息
+      if (res.address) {
+        // 简单的地址解析（实际项目中可能需要使用地图API的逆地理编码）
+        const address = res.address
+        // 这里可以根据实际情况解析省市区信息
+        // 暂时使用原有逻辑，显示picker
+        showPicker.value = true
+      }
     },
-    fail: () => {
-      // 如果取消选择，使用picker
+    fail: (err) => {
+      clearTimeout(timer)
+      uni.hideLoading()
+
+      // 用户取消选择或失败时，使用picker
+      if (!err.errMsg || !err.errMsg.includes('cancel')) {
+        console.error('选择地址失败:', err)
+      }
+      // 无论如何都显示picker作为备选方案
+      showPicker.value = true
     }
   })
 }

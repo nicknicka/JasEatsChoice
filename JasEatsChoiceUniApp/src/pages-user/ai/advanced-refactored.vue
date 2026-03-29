@@ -256,7 +256,7 @@ watch(activeTab, (newTab) => {
 
 // 查看更多推荐
 const viewMoreRecommend = () => {
-  uni.navigateTo({ url: '/pages-user/index/index?filter=recommend' })
+  uni.navigateTo({ url: '/index/index?filter=recommend' })
 }
 
 // 查看菜品
@@ -266,7 +266,7 @@ const viewDish = (id) => {
 
 // 咨询AI
 const consultAI = () => {
-  uni.navigateTo({ url: '/pages-user/ai/index' })
+  uni.navigateTo({ url: '/ai/index' })
 }
 
 onMounted(() => {

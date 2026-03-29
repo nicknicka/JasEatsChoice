@@ -176,7 +176,7 @@ const copyLink = () => {
 // 生成海报
 const generatePoster = () => {
   uni.navigateTo({
-    url: '/pages-common/share/poster'
+    url: '/share/poster'
   })
 }
 </script>

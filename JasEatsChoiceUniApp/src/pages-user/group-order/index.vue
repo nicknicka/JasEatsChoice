@@ -421,7 +421,7 @@ const shareOrder = (order) => {
  */
 const createOrder = () => {
   uni.navigateTo({
-    url: '/pages-user/group-order/create'
+    url: '/group-order/create'
   })
 }
 </script>

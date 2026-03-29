@@ -6,17 +6,23 @@ import { userApi } from '@/api'
  */
 export const useUserStore = defineStore('user', {
   state: () => ({
-    // Token
-    token: uni.getStorageSync('token') || '',
+    // Token（延迟初始化）
+    token: '',
 
-    // 用户信息
-    userInfo: uni.getStorageSync('userInfo') || null,
+    // 用户信息（延迟初始化）
+    userInfo: null,
 
-    // 用户角色：user | merchant | admin
-    role: uni.getStorageSync('role') || 'user',
+    // 用户ID
+    userId: '',
 
-    // 是否登录
-    isLogin: !!uni.getStorageSync('token')
+    // 用户角色：user | merchant | admin（延迟初始化）
+    role: 'user',
+
+    // 是否登录（延迟初始化）
+    isLogin: false,
+
+    // 是否已初始化
+    _initialized: false
   }),
 
   getters: {
@@ -38,6 +44,44 @@ export const useUserStore = defineStore('user', {
 
   actions: {
     /**
+     * 初始化 store - 从本地存储恢复数据
+     * 这个方法应该在应用启动时调用
+     */
+    initialize() {
+      if (this._initialized) return
+
+      try {
+        // 从本地存储恢复 token
+        const savedToken = uni.getStorageSync('token')
+        if (savedToken) {
+          this.token = savedToken
+          this.isLogin = true
+        }
+
+        // 从本地存储恢复用户信息
+        const savedUserInfo = uni.getStorageSync('userInfo')
+        if (savedUserInfo) {
+          this.userInfo = savedUserInfo
+          // 同时恢复 userId（后端返回的是 userId 字段）
+          if (savedUserInfo.userId) {
+            this.userId = savedUserInfo.userId
+          }
+        }
+
+        // 从本地存储恢复角色
+        const savedRole = uni.getStorageSync('role')
+        if (savedRole) {
+          this.role = savedRole
+        }
+
+        this._initialized = true
+        console.log('✅ User store 初始化成功')
+      } catch (error) {
+        console.error('❌ User store 初始化失败:', error)
+      }
+    },
+
+    /**
      * 设置Token
      * @param {string} token - JWT Token
      */
@@ -57,6 +101,12 @@ export const useUserStore = defineStore('user', {
         return
       }
       this.userInfo = userInfo
+
+      // 设置 userId（后端返回的是 userId 字段）
+      if (userInfo.userId) {
+        this.userId = userInfo.userId
+      }
+
       if (userInfo.role) {
         this.role = userInfo.role
         uni.setStorageSync('role', userInfo.role)
@@ -69,11 +119,20 @@ export const useUserStore = defineStore('user', {
      */
     async fetchUserInfo() {
       try {
-        if (!this.userId) {
-          throw new Error('用户ID不存在')
+        // 检查 userId 是否存在，不存在时尝试从 userInfo 中获取
+        let targetUserId = this.userId
+
+        if (!targetUserId && this.userInfo && this.userInfo.userId) {
+          targetUserId = this.userInfo.userId
         }
 
-        const res = await userApi.getUserInfo(this.userId)
+        if (!targetUserId) {
+          console.warn('用户ID不存在，可能未登录或token已过期')
+          // 不抛出错误，而是返回 null
+          return null
+        }
+
+        const res = await userApi.getUserInfo(targetUserId)
         console.log('获取用户信息响应:', res)
 
         // 兼容不同的响应格式
@@ -87,6 +146,10 @@ export const useUserStore = defineStore('user', {
         return res
       } catch (error) {
         console.error('获取用户信息失败:', error)
+        // 如果是 401 或 403 错误，说明 token 已过期
+        if (error.message && (error.message.includes('401') || error.message.includes('403') || error.message.includes('Unauthorized'))) {
+          console.warn('Token可能已过期，需要重新登录')
+        }
         throw error
       }
     },
@@ -178,11 +241,6 @@ export const useUserStore = defineStore('user', {
           if (userInfo) {
             console.log('设置用户信息:', userInfo)
             this.setUserInfo(userInfo)
-
-            // 如果用户信息包含 userId，也保存到 userInfo
-            if (userInfo.userId || userInfo.id) {
-              this.userId = userInfo.userId || userInfo.id
-            }
           } else {
             console.warn('登录响应中没有找到用户信息，响应结构:', res)
           }
@@ -258,6 +316,7 @@ export const useUserStore = defineStore('user', {
     logout() {
       this.token = ''
       this.userInfo = null
+      this.userId = ''
       this.role = 'user'
       this.isLogin = false
 
@@ -266,9 +325,9 @@ export const useUserStore = defineStore('user', {
       uni.removeStorageSync('userInfo')
       uni.removeStorageSync('role')
 
-      // 跳转到登录页
+      // 跳转到登录页（注意：路径要与 pages.json 中配置的一致）
       uni.reLaunch({
-        url: '/pages/login/index'
+        url: '/src/pages/login/index'
       })
     },
 
@@ -282,7 +341,7 @@ export const useUserStore = defineStore('user', {
           icon: 'none'
         })
         uni.navigateTo({
-          url: '/pages/login/index'
+          url: '/src/pages/login/index'
         })
         return false
       }

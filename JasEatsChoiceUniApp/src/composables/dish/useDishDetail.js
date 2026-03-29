@@ -366,9 +366,9 @@ export function useDishDetail() {
    */
   const toCart = () => {
     uni.switchTab({
-      url: '/pages-user/cart/index',
+      url: '/cart/index',
       fail: () => {
-        uni.navigateTo({ url: '/pages-user/cart/index' })
+        uni.navigateTo({ url: '/cart/index' })
       }
     })
   }

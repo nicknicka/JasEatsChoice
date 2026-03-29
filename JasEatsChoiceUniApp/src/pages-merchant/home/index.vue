@@ -211,7 +211,7 @@ const toggleBusinessStatus = () => {
  */
 const toOrderList = () => {
   uni.switchTab({
-    url: '/pages-merchant/order/index'
+    url: '/order/index'
   })
 }
 
@@ -220,7 +220,7 @@ const toOrderList = () => {
  */
 const toDishManage = () => {
   uni.switchTab({
-    url: '/pages-merchant/dish/index'
+    url: '/dish/index'
   })
 }
 
@@ -229,7 +229,7 @@ const toDishManage = () => {
  */
 const toStatistics = () => {
   uni.navigateTo({
-    url: '/pages-merchant/home/statistics'
+    url: '/home/statistics'
   })
 }
 
@@ -238,7 +238,7 @@ const toStatistics = () => {
  */
 const toComment = () => {
   uni.navigateTo({
-    url: '/pages-merchant/comment/index'
+    url: '/comment/index'
   })
 }
 </script>
