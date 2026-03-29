@@ -3,6 +3,7 @@
     <view class="input-item" :class="{ 'captcha-item': !!captcha, 'autocomplete-item': showHistory }">
       <text class="input-icon">{{ iconMap[icon] || '📝' }}</text>
       <input
+        class="input-field"
         :type="type"
         :password="isPassword && !showPassword"
         :value="modelValue"
@@ -245,7 +246,7 @@ watch(() => props.modelValue, (newVal) => {
   align-items: center;
 }
 
-.input-item input {
+.input-item .input-field {
   flex: 1;
   font-size: 28rpx;
   height: 100%;

@@ -4,6 +4,7 @@
  * 基础路径: /v1/orders
  */
 import { get, post, put, del } from '@/utils/request'
+import { ORDER_API, buildUrl } from '../urlEnum'
 
 export const orderApi = {
   /**
@@ -20,46 +21,61 @@ export const orderApi = {
    * @param {string} data.dishes[].dishId - 菜品ID
    * @param {number} data.dishes[].quantity - 数量
    * @param {number} data.dishes[].price - 单价
+   * @returns {Promise} 返回创建结果
    */
-  create: (data) => post('/v1/orders', data),
+  create: (data) => post(ORDER_API.CREATE_ORDER, data),
 
   /**
    * 获取用户订单列表
    * GET /v1/orders/user/{userId}
    * @param {string} userId - 用户ID
+   * @param {Object} params - 查询参数
+   * @param {string} params.status - 订单状态（可选）
+   * @param {number} params.page - 页码
+   * @param {number} params.size - 每页数量
+   * @returns {Promise} 返回订单列表
    */
-  getByUser: (userId) => get(`/v1/orders/user/${userId}`),
+  getByUser: (userId, params) => get(buildUrl(ORDER_API.GET_USER_ORDERS, { userId }), params),
 
   /**
    * 获取商家订单列表
    * GET /v1/orders/merchant/{merchantId}
    * @param {string} merchantId - 商家ID
+   * @param {Object} params - 查询参数
+   * @param {string} params.status - 订单状态（可选）
+   * @param {boolean} params.today - 是否只查询今日订单
+   * @param {number} params.page - 页码
+   * @param {number} params.size - 每页数量
+   * @returns {Promise} 返回订单列表
    */
-  getByMerchant: (merchantId) => get(`/v1/orders/merchant/${merchantId}`),
+  getByMerchant: (merchantId, params) => get(buildUrl(ORDER_API.GET_MERCHANT_ORDERS, { merchantId }), params),
 
   /**
    * 获取订单详情
    * GET /v1/orders/{orderId}
    * @param {string} orderId - 订单ID
+   * @returns {Promise} 返回订单详情
    */
-  getDetail: (orderId) => get(`/v1/orders/${orderId}`),
+  getDetail: (orderId) => get(buildUrl(ORDER_API.GET_ORDER_DETAIL, { orderId })),
 
   /**
    * 获取订单的菜品列表
    * GET /v1/orders/{orderId}/dishes
    * @param {string} orderId - 订单ID
+   * @returns {Promise} 返回菜品列表
    */
-  getDishes: (orderId) => get(`/v1/orders/${orderId}/dishes`),
+  getDishes: (orderId) => get(buildUrl(ORDER_API.GET_ORDER_DISHES, { orderId })),
 
   /**
    * 更新订单状态
    * PUT /v1/orders/{orderId}/status
    * @param {string} orderId - 订单ID
    * @param {Object} data - 状态数据
-   * @param {string} data.status - 新状态
+   * @param {string} data.status - 新状态(0-待支付,1-待接单,2-制作中,3-已完成,4-已取消)
    * @param {string} data.remark - 备注信息
+   * @returns {Promise} 返回更新结果
    */
-  updateStatus: (orderId, data) => put(`/v1/orders/${orderId}/status`, data),
+  updateStatus: (orderId, data) => put(buildUrl(ORDER_API.UPDATE_ORDER_STATUS, { orderId }), data),
 
   /**
    * 取消订单
@@ -67,15 +83,17 @@ export const orderApi = {
    * @param {string} orderId - 订单ID
    * @param {Object} data - 取消原因
    * @param {string} data.reason - 取消原因
+   * @returns {Promise} 返回取消结果
    */
-  cancel: (orderId, data) => post(`/v1/orders/${orderId}/cancel`, data),
+  cancel: (orderId, data) => post(buildUrl(ORDER_API.CANCEL_ORDER, { orderId }), data),
 
   /**
    * 确认收货
    * POST /v1/orders/{orderId}/confirm
    * @param {string} orderId - 订单ID
+   * @returns {Promise} 返回确认结果
    */
-  confirm: (orderId) => post(`/v1/orders/${orderId}/confirm`),
+  confirm: (orderId) => post(buildUrl('/v1/orders/:orderId/confirm', { orderId })),
 
   /**
    * 申请退款
@@ -84,22 +102,25 @@ export const orderApi = {
    * @param {Object} data - 退款数据
    * @param {string} data.reason - 退款原因
    * @param {number} data.refAmount - 退款金额
+   * @returns {Promise} 返回退款结果
    */
-  refund: (orderId, data) => post(`/v1/orders/${orderId}/refund`, data),
+  refund: (orderId, data) => post(buildUrl('/v1/orders/:orderId/refund', { orderId }), data),
 
   /**
    * 订单统计
    * GET /v1/orders/stats/{merchantId}
    * @param {string} merchantId - 商家ID
+   * @returns {Promise} 返回统计数据
    */
-  getStats: (merchantId) => get(`/v1/orders/stats/${merchantId}`),
+  getStats: (merchantId) => get(buildUrl('/v1/orders/stats/:merchantId', { merchantId })),
 
   /**
    * 再来一单
    * POST /v1/orders/{orderId}/reorder
    * @param {string} orderId - 订单ID
+   * @returns {Promise} 返回新订单
    */
-  reorder: (orderId) => post(`/v1/orders/${orderId}/reorder`),
+  reorder: (orderId) => post(buildUrl('/v1/orders/:orderId/reorder', { orderId })),
 
   /**
    * 获取订单数量统计
@@ -108,6 +129,7 @@ export const orderApi = {
    * @param {string} params.userId - 用户ID（可选）
    * @param {string} params.merchantId - 商家ID（可选）
    * @param {string} params.status - 订单状态（可选）
+   * @returns {Promise} 返回统计数据
    */
   getCount: (params) => get('/v1/orders/count', params)
 }

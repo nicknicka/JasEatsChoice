@@ -617,7 +617,7 @@ const toPrivacy = () => {
  * 跳转
  */
 const toRegister = () => {
-  uni.navigateTo({ url: '/pages/register/index' })
+  uni.navigateTo({ url: '/src/pages/register/index' })
 }
 
 const toForgotPassword = () => {
