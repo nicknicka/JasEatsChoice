@@ -1,7 +1,30 @@
 <template>
   <view class="user-center-container">
-    <scroll-view class="scroll-container" scroll-y>
-      <!-- 用户信息卡片 -->
+    <scroll-view
+      class="scroll-container"
+      scroll-y
+      refresher-enabled
+      :refresher-triggered="refreshing"
+      @refresherrefresh="onRefresh"
+    >
+      <!-- 加载状态 -->
+      <view class="loading-container" v-if="loading">
+        <uni-load-more status="loading" :content-text="{ contentdown: '加载中...' }"></uni-load-more>
+      </view>
+
+      <!-- 未登录状态 -->
+      <view class="not-login-container" v-else-if="!userStore.isLogin">
+        <view class="not-login-content">
+          <text class="not-login-icon">👤</text>
+          <text class="not-login-text">您还未登录</text>
+          <text class="not-login-desc">登录后查看更多精彩内容</text>
+          <button class="login-btn" @click="goToLogin">立即登录</button>
+        </view>
+      </view>
+
+      <!-- 已登录内容 -->
+      <template v-else>
+        <!-- 用户信息卡片 -->
       <view class="user-info-card">
         <view class="user-avatar">
           <image class="avatar-image" :src="userInfo.avatar" mode="aspectFill" />
@@ -213,6 +236,7 @@
 
       <!-- 底部空白 -->
       <view class="bottom-spacer"></view>
+      </template>
     </scroll-view>
   </view>
 </template>
@@ -260,6 +284,71 @@ const wallet = ref({
 
 // 未读消息数
 const unreadCount = ref(5)
+
+// 加载状态
+const loading = ref(false)
+
+// 下拉刷新状态
+const refreshing = ref(false)
+
+/**
+ * 跳转登录页
+ */
+const goToLogin = () => {
+  uni.navigateTo({
+    url: '/pages/login/index'
+  })
+}
+
+/**
+ * 下拉刷新
+ */
+const onRefresh = async () => {
+  refreshing.value = true
+  try {
+    await Promise.all([
+      loadUserInfo(),
+      loadStats(),
+      loadOrderCounts(),
+      loadUnreadCount(),
+      loadWalletData()
+    ])
+  } catch (error) {
+    console.error('刷新失败:', error)
+  } finally {
+    refreshing.value = false
+  }
+}
+
+/**
+ * 加载钱包数据
+ */
+const loadWalletData = async () => {
+  try {
+    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
+    if (!userId) {
+      console.warn('用户ID不存在，跳过加载钱包数据')
+      return
+    }
+
+    const res = await userApi.getWalletInfo(userId)
+    if (res) {
+      wallet.value = {
+        balance: res.balance || '0.00',
+        points: res.points || 0,
+        redEnvelopes: res.redEnvelopes || res.red_envelopes || 0
+      }
+    }
+  } catch (error) {
+    console.error('加载钱包数据失败:', error)
+    // 使用默认值
+    wallet.value = {
+      balance: '0.00',
+      points: 0,
+      redEnvelopes: 0
+    }
+  }
+}
 
 /**
  * 编辑个人资料
@@ -468,11 +557,21 @@ const loadUnreadCount = async () => {
 }
 
 // 组件挂载
-onMounted(() => {
-  loadUserInfo()
-  loadStats()
-  loadOrderCounts()
-  loadUnreadCount()
+onMounted(async () => {
+  loading.value = true
+  try {
+    await Promise.all([
+      loadUserInfo(),
+      loadStats(),
+      loadOrderCounts(),
+      loadUnreadCount(),
+      loadWalletData()
+    ])
+  } catch (error) {
+    console.error('初始化加载失败:', error)
+  } finally {
+    loading.value = false
+  }
 })
 </script>
 
@@ -487,6 +586,56 @@ onMounted(() => {
 
 .scroll-container {
   height: 100vh;
+}
+
+/* 加载状态 */
+.loading-container {
+  @include flex-center;
+  padding: 100rpx 0;
+}
+
+/* 未登录状态 */
+.not-login-container {
+  @include flex-center;
+  min-height: 60vh;
+  padding: $spacing-xl;
+}
+
+.not-login-content {
+  @include flex-center-column;
+  align-items: center;
+  gap: $spacing-md;
+  text-align: center;
+}
+
+.not-login-icon {
+  font-size: 120rpx;
+  margin-bottom: $spacing-lg;
+}
+
+.not-login-text {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  color: $text-color-primary;
+}
+
+.not-login-desc {
+  font-size: $font-size-base;
+  color: $text-color-secondary;
+}
+
+.login-btn {
+  margin-top: $spacing-lg;
+  padding: $spacing-md $spacing-xl;
+  background: linear-gradient(135deg, $primary-color, #FF8F61);
+  color: #fff;
+  border-radius: $border-radius-round;
+  font-size: $font-size-base;
+  border: none;
+
+  &:active {
+    opacity: 0.8;
+  }
 }
 
 /* 用户信息卡片 */

@@ -1,8 +1,7 @@
 <template>
 	<view class="ai-page">
-		<!-- 统一顶部导航栏（合并标签栏+AI助手头部） -->
+		<!-- 统一顶部导航栏-->
 		<view class="unified-nav">
-			<!-- 左侧：4个功能标签 -->
 			<view class="nav-tabs">
 				<view
 					class="tab-item"
@@ -21,141 +20,119 @@
 		<view class="tabs-content">
 			<!-- AI聊天 -->
 			<view v-if="activeTab === 'chat'" class="tab-pane chat-pane">
-				<!-- 聊天消息 -->
-				<scroll-view
-					class="chat-messages"
-					:class="{ 'with-quick-questions': quickQuestionsExpanded }"
-					scroll-y
-					:scroll-into-view="scrollIntoView"
-					:scroll-with-animations="true"
-				>
-
-					<!-- 消息列表 -->
-					<view
-						class="message-wrapper"
-						v-for="(msg, index) in displayMessages"
-						:key="msg.id"
-						:id="'msg-' + index"
+				<view class="chat-container">
+					<!-- 聊天消息 -->
+					<scroll-view
+						class="chat-messages"
+						scroll-y
+						:scroll-into-view="scrollIntoView"
+						:scroll-with-animation="true"
 					>
-						<view class="message" :class="{ user: msg.isUser }">
-							<!-- AI消息 -->
-							<view class="message-avatar" v-if="!msg.isUser">
-								<text class="avatar-icon">🤖</text>
-							</view>
-
-							<!-- 消息内容 -->
-							<view class="message-content" :class="{ user: msg.isUser }">
-								<!-- 文本消息 -->
-								<text class="content-text">{{ msg.content }}</text>
-
-								<!-- 时间戳 -->
-								<text class="message-time">{{ msg.time }}</text>
-							</view>
-
-							<!-- 用户头像 -->
-							<view class="message-avatar user" v-if="msg.isUser">
-								<image
-									class="avatar-image"
-									:src="userInfo.avatar"
-									mode="aspectFill"
-								/>
-							</view>
+						<!-- 欢迎消息 -->
+						<view class="message-welcome" v-if="isShowWelcome">
+							<text class="welcome-icon">👋</text>
+							<text class="welcome-text">您好！我是您的专属AI饮食助手</text>
+							<text class="welcome-desc"
+								>我可以帮您推荐健康食谱、分析营养成分、制定专属饮食计划、解答各类饮食疑问</text
+							>
 						</view>
-					</view>
 
-					<!-- 加载动画 -->
-					<view class="message-wrapper" v-if="isTyping">
-						<view class="message">
-							<view class="message-avatar">
-								<text class="avatar-icon">🤖</text>
-							</view>
-							<view class="message-content typing">
-								<view class="typing-indicator">
-									<view class="typing-dot"></view>
-									<view class="typing-dot"></view>
-									<view class="typing-dot"></view>
+						<!-- 空状态提示（无历史记录且无欢迎消息时） -->
+						<view class="empty-state" v-if="messages.length === 0">
+							<text class="empty-text"
+								>暂无对话记录，试试上方的快捷提问吧</text
+							>
+						</view>
+
+						<!-- 消息列表 -->
+						<view
+							class="message-wrapper"
+							v-for="(msg, index) in displayMessages"
+							:key="msg.id"
+							:id="'msg-' + index"
+						>
+							<view class="message" :class="{ user: msg.isUser }">
+								<!-- AI消息 -->
+								<view class="message-avatar" v-if="!msg.isUser">
+									<text class="avatar-icon">🤖</text>
+								</view>
+
+								<!-- 消息内容 -->
+								<view
+									class="message-content"
+									:class="{ user: msg.isUser }"
+								>
+									<!-- 文本消息 -->
+									<text class="content-text">{{ msg.content }}</text>
+
+									<!-- 时间戳 -->
+									<text class="message-time">{{ msg.time }}</text>
+								</view>
+
+								<!-- 用户头像 -->
+								<view class="message-avatar user" v-if="msg.isUser">
+									<image
+										class="avatar-image"
+										:src="userInfo.avatar"
+										mode="aspectFill"
+									/>
 								</view>
 							</view>
 						</view>
-					</view>
-				</scroll-view>
 
-				<!-- 快捷提问悬浮层（提升到 chat-pane 级别，与输入区域平级） -->
-				<view class="quick-questions-floating" v-if="quickQuestionsExpanded">
-					<view class="quick-header">
-						<text class="quick-title">💡 快捷提问</text>
-						<!-- 关闭按钮 -->
-						<text class="quick-close" @click="quickQuestionsExpanded = false"
-							>✕</text
-						>
-					</view>
-					<view class="quick-list">
-						<view
-							class="quick-item"
-							v-for="(question, index) in quickQuestions"
-							:key="index"
-							@click="askQuickQuestion(question)"
-						>
-							<text class="quick-text">{{ question }}</text>
-							<text class="quick-arrow">→</text>
+						<!-- 加载动画 -->
+						<view class="message-wrapper" v-if="isTyping">
+							<view class="message">
+								<view class="message-avatar">
+									<text class="avatar-icon">🤖</text>
+								</view>
+								<view class="message-content typing">
+									<view class="typing-indicator">
+										<view class="typing-dot"></view>
+										<view class="typing-dot"></view>
+										<view class="typing-dot"></view>
+									</view>
+								</view>
+							</view>
 						</view>
-					</view>
-				</view>
+					</scroll-view>
 
-				<!-- 快捷提问折叠按钮（提升到 chat-pane 级别） -->
-				<view
-					class="quick-toggle-btn"
-					v-if="!quickQuestionsExpanded"
-					@click="toggleQuickQuestions"
-				>
-					<text class="toggle-icon">💡</text>
-				</view>
-
-				<!-- 输入区域（优化高度和布局） -->
-				<view class="chat-input-area">
-					<view class="input-wrapper">
-						<!-- 功能扩展位（预留：语音输入、图片上传） -->
+					<view class="chat-input-area">
 						<view class="input-extensions">
 							<text class="extension-icon">🎤</text>
+							<view class="nav-actions">
+								<text
+									class="action-btn stop-btn"
+									v-if="activeTab === 'chat' && isStreaming"
+									@click="stopStreaming"
+								>
+									⏹️
+								</text>
+								<text
+									class="action-btn clear-btn"
+									v-if="activeTab === 'chat' && !isStreaming"
+									@click="clearHistory"
+								>
+									🗑️
+								</text>
+							</view>
 						</view>
 
-						<!-- 右侧：操作按钮 -->
-						<view class="nav-actions">
-							<!-- AI回复时显示停止按钮 -->
-							<text
-								class="action-btn stop-btn"
-								v-if="activeTab === 'chat' && isStreaming"
-								@click="stopStreaming"
-							>
-								⏹️
-							</text>
-							<!-- 清空按钮（垃圾桶图标） -->
-							<text
-								class="action-btn clear-btn"
-								v-if="activeTab === 'chat' && !isStreaming"
-								@click="clearHistory"
-							>
-								🗑️
-							</text>
-						</view>
+						<view class="input-area">
+							<input
+								class="chat-input"
+								type="text"
+								v-model="inputText"
+								placeholder="输入您的饮食问题，例如：减脂一日三餐食谱、家常菜营养分析"
+								:maxlength="500"
+								@confirm="sendMessage"
+								confirm-type="send"
+							/>
 
-						<input
-							class="chat-input"
-							type="text"
-							v-model="inputText"
-							placeholder="输入您的问题...（例如：推荐适合减肥的食谱）"
-							:maxlength="500"
-							@confirm="sendMessage"
-							confirm-type="send"
-						/>
-
-						<!-- 圆形发送按钮 -->
-						<view
-							class="send-btn"
-							:class="{ disabled: !inputText.trim() }"
-							@click="sendMessage"
-						>
-							<text class="send-icon">➤</text>
+							<!-- 圆形发送按钮（有输入时显示，空输入时隐藏） -->
+							<view class="send-btn" @click="sendMessage">
+								<text class="send-icon">➤</text>
+							</view>
 						</view>
 					</view>
 				</view>
@@ -748,12 +725,13 @@ onUnmounted(() => {
 	flex-direction: column;
 	height: 100%;
 	overflow: hidden;
+	position: relative; // 为 fixed 定位的快捷提问提供参考
 }
 
 /* ==================== 快捷提问悬浮区（提升到 chat-pane 级别） ==================== */
 .quick-questions-floating {
 	position: fixed;
-	bottom: 180rpx; // 在输入框上方（输入框区域约168rpx + 间距12rpx）
+	bottom: 160rpx; // ✨ 在输入框上方（输入区域144rpx + 间距16rpx）
 	left: $spacing-lg;
 	right: $spacing-lg;
 	background: rgba(255, 255, 255, 0.98);
@@ -843,7 +821,7 @@ onUnmounted(() => {
 /* 快捷提问折叠按钮（提升到 chat-pane 级别） */
 .quick-toggle-btn {
 	position: fixed;
-	bottom: 200rpx; // 在快捷提问下方（快捷提问180rpx + 间距20rpx）
+	bottom: 180rpx; // ✨ 在快捷提问下方（快捷提问160rpx + 间距20rpx）
 	left: $spacing-lg;
 	width: 80rpx;
 	height: 80rpx;
@@ -879,10 +857,10 @@ onUnmounted(() => {
 /* ==================== 聊天消息区（可滚动区域，100%动态空间） ==================== */
 .chat-messages {
 	flex: 1;
+	height: 0; // 关键：配合 flex: 1 使用，确保不超出容器
 	padding: $spacing-lg;
-	padding-bottom: 160rpx; // 默认底部留出空间（输入框约120rpx + 间距）
-	overflow-y: auto;
-	background: $bg-color-light; // 纯色背景，删除渐变
+	padding-bottom: 160rpx; // ✨ 底部留出空间（输入区域144rpx + 间距16rpx）
+	background: $bg-color-light;
 	scrollbar-width: none;
 	-ms-overflow-style: none;
 	transition: padding-bottom 0.3s ease; // 平滑过渡
@@ -891,9 +869,9 @@ onUnmounted(() => {
 		display: none;
 	}
 
-	// 快捷提问展开时，增加底部间距（快捷提问最大高度400rpx + 间距）
+	// 快捷提问展开时，增加底部间距
 	&.with-quick-questions {
-		padding-bottom: 480rpx;
+		padding-bottom: 480rpx; // ✨ 输入区域160rpx + 快捷提问约300rpx + 间距
 	}
 }
 
@@ -903,7 +881,7 @@ onUnmounted(() => {
 	align-items: center;
 	padding: 80rpx $spacing-lg;
 	text-align: center;
-	animation: welcomeFadeIn $duration-slow ease-out; // 0.4s
+	animation: welcomeFadeIn $duration-slow ease-out;
 }
 
 @keyframes welcomeFadeIn {
@@ -921,6 +899,7 @@ onUnmounted(() => {
 	font-size: 120rpx;
 	margin-bottom: $spacing-lg;
 	animation: iconBounce 1s ease-out;
+	display: block;
 }
 
 @keyframes iconBounce {
@@ -936,34 +915,31 @@ onUnmounted(() => {
 .welcome-text {
 	font-size: $font-size-xl;
 	font-weight: $font-weight-bold;
-	color: $primary-500; // 主色
+	color: $primary-500;
 	margin-bottom: $spacing-md;
+	display: block;
 }
 
-.welcome-tips {
+.welcome-desc {
 	font-size: $font-size-base;
 	color: $text-color-regular;
-	margin-bottom: $spacing-lg;
-	font-weight: $font-weight-medium;
-}
-
-.welcome-features {
-	@include flex-center-column;
-	gap: $spacing-sm;
-	align-items: flex-start;
-	background: $primary-100; // 主色100
-	padding: $spacing-lg;
-	border-radius: $border-radius-base;
-	border: 1rpx solid $primary-300;
-	box-shadow: $box-shadow-sm;
-}
-
-.feature-item {
-	font-size: $font-size-sm;
-	color: $text-color-primary;
 	line-height: $line-height-lg;
-	padding: 8rpx 0;
-	font-weight: $font-weight-medium;
+	padding: 0 $spacing-lg;
+	display: block;
+	max-width: 600rpx;
+}
+
+/* 空状态提示 */
+.empty-state {
+	@include flex-center;
+	padding: $spacing-xl;
+	text-align: center;
+}
+
+.empty-text {
+	font-size: $font-size-sm;
+	color: $text-color-secondary;
+	line-height: $line-height-base;
 }
 
 /* 消息列表 */
@@ -1110,38 +1086,53 @@ onUnmounted(() => {
 	}
 }
 
-/* ==================== 底部输入区（优化高度96rpx+触屏规范） ==================== */
+/* ==================== 底部输入区（固定高度，防止被挤压） ==================== */
 .chat-input-area {
+	display: flex;
+	flex-direction: column;
 	background-color: $bg-color-white;
 	padding: $spacing-md $spacing-lg;
 	border-top: 1rpx solid $border-color-light;
 	box-shadow: 0 -2rpx 8rpx rgba(0, 0, 0, 0.04);
 	flex-shrink: 0;
+	min-height: 144rpx; // ✨ 最小高度：输入框96rpx + 上下padding 48rpx
+	height: auto; // ✨ 自动高度，适应内容
 }
 
-.input-wrapper {
-	@include flex-center;
-	gap: $spacing-sm;
-}
-
-/* 功能扩展位（预留：语音输入、图片上传） */
+/* 功能扩展位（语音输入） */
 .input-extensions {
-	@include flex-center;
-	gap: $spacing-sm;
+  display: flex;
+	gap: $spacing-xs;
+	padding: $spacing-sm;
+	background: $primary-50;
+	border-radius: $border-radius-base;
+	transition: $transition-base;
+
+	&:active {
+		transform: scale(0.95);
+		background: $primary-100;
+	}
 }
 
 .extension-icon {
 	font-size: $font-size-xl;
-	color: $text-color-regular;
-	padding: $spacing-sm;
-	transition: $transition-base;
-
-	&:active {
-		color: $primary-500;
-		transform: scale(0.95);
-	}
+	color: $primary-500;
 }
 
+.extension-label {
+	font-size: $font-size-sm;
+	color: $primary-500;
+	font-weight: $font-weight-medium;
+}
+
+
+.input-area {
+  display: flex;
+  gap: $spacing-md;
+  margin-top: $spacing-md;
+  align-items: center; // ✨ 垂直居中
+  justify-content: center; // 水平居中
+}
 /* 输入框（占据80%宽度） */
 .chat-input {
 	flex: 1;
@@ -1165,19 +1156,13 @@ onUnmounted(() => {
 	width: 64rpx; // 圆形按钮
 	height: 64rpx;
 	@include flex-center;
-	background: linear-gradient(135deg, $primary-500, $primary-800); // 仅保留2处渐变之一
+	background: linear-gradient(135deg, $primary-500, $primary-800);
 	color: $bg-color-white;
 	border-radius: 50%;
 	transition: $transition-base;
 	box-shadow: $box-shadow-md;
 
-	&.disabled {
-		opacity: 0.4;
-		background: linear-gradient(135deg, #ccc, #999);
-		box-shadow: none;
-	}
-
-	&:active:not(.disabled) {
+	&:active {
 		transform: scale(0.95);
 		box-shadow: $box-shadow-sm;
 	}

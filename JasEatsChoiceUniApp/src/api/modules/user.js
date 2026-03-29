@@ -136,6 +136,14 @@ export const userApi = {
   getUserStats: (userId) => get(`/v1/user-statistics/${userId}/overview`),
 
   /**
+   * 获取用户钱包信息
+   * GET /v1/users/{userId}/wallet
+   * @param {string} userId - 用户ID
+   * @returns {Promise} 返回钱包信息
+   */
+  getWalletInfo: (userId) => get(`/v1/users/${userId}/wallet`),
+
+  /**
    * 完善身体数据
    * POST /v1/user/profile
    * @param {Object} data - 身体数据
