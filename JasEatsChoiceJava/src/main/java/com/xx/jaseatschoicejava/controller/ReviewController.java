@@ -290,6 +290,33 @@ public class ReviewController {
     }
 
     /**
+     * 获取菜品的评价列表（用户端）
+     */
+    @ApiOperation("获取菜品的评价列表")
+    @GetMapping("/dish/{dishId}")
+    public ResponseResult<?> getDishReviews(
+            @PathVariable String dishId,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "10") Integer size,
+            @RequestParam(required = false) String sort
+    ) {
+        try {
+            System.out.println("获取菜品评价列表，dishId=" + dishId + ", page=" + page + ", size=" + size);
+
+            // 暂时返回空列表，因为评价功能需要复杂的订单关联查询
+            // TODO: 实现完整的菜品评价查询逻辑
+            List<Map<String, Object>> emptyList = new ArrayList<>();
+            System.out.println("该菜品暂无评价（功能开发中）");
+            return ResponseResult.success(emptyList);
+
+        } catch (Exception e) {
+            System.err.println("获取菜品评价列表失败: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseResult.fail("500", "获取评价列表失败：" + e.getMessage());
+        }
+    }
+
+    /**
      * 生成评价ID
      */
     private String generateReviewId() {

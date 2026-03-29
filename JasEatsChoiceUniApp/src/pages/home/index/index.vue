@@ -214,60 +214,16 @@ const noMore = ref(false)
 const currentPage = ref(1)
 const pageSize = 10
 
-// 轮播图数据
-const banners = ref([
-  {
-    id: 1,
-    image: 'https://via.placeholder.com/750x300/FF6B35/FFFFFF?text=今日推荐',
-    link: '',
-    title: '今日推荐'
-  },
-  {
-    id: 2,
-    image: 'https://via.placeholder.com/750x300/667eea/FFFFFF?text=美食特惠',
-    link: '',
-    title: '美食特惠'
-  },
-  {
-    id: 3,
-    image: 'https://via.placeholder.com/750x300/52c41a/FFFFFF?text=新品上市',
-    link: '',
-    title: '新品上市'
-  }
-])
+// 轮播图数据 - 从后端加载
+const banners = ref([])
 
-// 分类数据
+// 分类数据 - 从后端加载
 const categories = ref([])
 
-// 推荐商家数据
-const recommendMerchants = ref([
-  {
-    id: 1,
-    name: '老王家常菜',
-    logo: 'https://via.placeholder.com/200x200/FF6B35/FFFFFF?text=老王',
-    rating: 4.8,
-    monthlySales: 999,
-    tags: ['家常菜', '配送快', '好评多']
-  },
-  {
-    id: 2,
-    name: '李记川菜馆',
-    logo: 'https://via.placeholder.com/200x200/667eea/FFFFFF?text=李记',
-    rating: 4.6,
-    monthlySales: 666,
-    tags: ['川菜', '麻辣', '分量足']
-  },
-  {
-    id: 3,
-    name: '张胖子烧烤',
-    logo: 'https://via.placeholder.com/200x200/52c41a/FFFFFF?text=张胖',
-    rating: 4.7,
-    monthlySales: 888,
-    tags: ['烧烤', '夜宵', '啤酒']
-  }
-])
+// 推荐商家数据 - 从后端加载
+const recommendMerchants = ref([])
 
-// 推荐菜品数据
+// 推荐菜品数据 - 从后端加载
 const recommendDishes = ref([])
 
 // 筛选器配置
@@ -448,34 +404,9 @@ const loadMerchants = async () => {
       }))
     }
   } catch (error) {
-    console.error('加载商家失败，使用默认数据:', error)
-    // 使用本地默认数据作为fallback
-    recommendMerchants.value = [
-      {
-        id: 1,
-        name: '老王家常菜',
-        logo: 'https://via.placeholder.com/200x200/FF6B35/FFFFFF?text=老王',
-        rating: 4.8,
-        monthlySales: 999,
-        tags: ['家常菜', '配送快', '好评多']
-      },
-      {
-        id: 2,
-        name: '李记川菜馆',
-        logo: 'https://via.placeholder.com/200x200/667eea/FFFFFF?text=李记',
-        rating: 4.6,
-        monthlySales: 666,
-        tags: ['川菜', '麻辣', '分量足']
-      },
-      {
-        id: 3,
-        name: '张胖子烧烤',
-        logo: 'https://via.placeholder.com/200x200/52c41a/FFFFFF?text=张胖',
-        rating: 4.7,
-        monthlySales: 888,
-        tags: ['烧烤', '夜宵', '啤酒']
-      }
-    ]
+    console.error('加载商家失败:', error)
+    // 不使用mock数据，直接显示空状态
+    recommendMerchants.value = []
   }
 }
 
@@ -529,9 +460,11 @@ const loadDishes = async (refresh = false) => {
       price: dish.price ? String(dish.price) : '0',
       originalPrice: dish.originalPrice ? String(dish.originalPrice) : '',
       sales: Number(dish.monthlySales || dish.sales || 0),
-      image: processImageUrl(dish.image || dish.coverImage || ''),
-      recommendReason: String(dish.recommendReason || dish.reason || ''),
-      recommendSource: String(dish.recommendSource || '系统推荐'),
+      image: processImageUrl(dish.dishImage || dish.image || dish.coverImage || ''),
+      recommendReason: dish.reason && typeof dish.reason === 'object'
+        ? String(dish.reason.mainReason || dish.reason.text || '')
+        : String(dish.recommendReason || dish.reason || ''),
+      recommendSource: String(dish.source || dish.recommendSource || '系统推荐'),
       rating: Number(dish.rating || dish.avgRating || 4.5),
       // 标签 - 确保是数组
       tags: Array.isArray(dish.tags) ? dish.tags : [],
@@ -572,12 +505,15 @@ const loadDishes = async (refresh = false) => {
 
       const mappedDishes = dishes.map(dish => ({
         id: dish.dishId || dish.id,
-        name: dish.dishName || dish.name,
-        description: dish.description || dish.desc || '',
+        dishId: dish.dishId || dish.id,
+        name: String(dish.dishName || dish.name || '未知菜品'),
+        description: String(dish.description || dish.desc || ''),
         price: dish.price ? String(dish.price) : '0',
-        sales: dish.monthlySales || dish.sales || 0,
-        image: dish.image || dish.coverImage,
-        recommendSource: '基础推荐'
+        sales: Number(dish.monthlySales || dish.sales || 0),
+        image: processImageUrl(dish.dishImage || dish.image || dish.coverImage || ''),
+        recommendSource: '基础推荐',
+        rating: Number(dish.rating || 4.5),
+        tags: Array.isArray(dish.tags) ? dish.tags : []
       }))
 
       if (refresh) {
@@ -640,7 +576,7 @@ const handleBannerClick = (banner) => {
         // 跳转到菜品详情
         if (banner.targetId) {
           uni.navigateTo({
-            url: `/dish/detail/index?id=${banner.targetId}`
+            url: `/src/pages-user/dish/detail/index?id=${banner.targetId}`
           })
         }
         break
@@ -649,34 +585,32 @@ const handleBannerClick = (banner) => {
         // 跳转到商家详情
         if (banner.targetId) {
           uni.navigateTo({
-            url: `/merchant/detail/index?id=${banner.targetId}`
+            url: `/src/pages-user/merchant/detail/index?id=${banner.targetId}`
           })
         }
         break
 
       case 'activity':
-        // 跳转到活动页面（如果有）
-        if (banner.targetId) {
-          uni.navigateTo({
-            url: `/activity/detail/index?id=${banner.targetId}`
-          })
-        }
+        // 活动页面暂未实现
+        uni.showToast({
+          title: '活动功能开发中',
+          icon: 'none'
+        })
         break
 
       case 'link':
-        // 外部链接，使用webview打开
-        if (banner.link) {
-          uni.navigateTo({
-            url: `/webview/index?url=${encodeURIComponent(banner.link)}`
-          })
-        }
+        // 外部链接，暂不支持
+        uni.showToast({
+          title: '外部链接功能开发中',
+          icon: 'none'
+        })
         break
 
       case 'recipe':
         // 跳转到食谱详情
         if (banner.targetId) {
           uni.navigateTo({
-            url: `/recipe/detail/index?id=${banner.targetId}`
+            url: `/src/pages-user/recipe/detail/index?id=${banner.targetId}`
           })
         }
         break
@@ -702,7 +636,7 @@ const handleCategoryClick = (category) => {
 
   // U-024: 跳转到分类菜品列表页
   uni.navigateTo({
-    url: `/dish/list/index?category=${encodeURIComponent(category.code || category.name)}&name=${encodeURIComponent(category.name)}`,
+    url: `/src/pages-user/dish/list/index?category=${encodeURIComponent(category.code || category.name)}&name=${encodeURIComponent(category.name)}`,
     success: () => {
       console.log('跳转到分类列表成功:', category.name)
     },
@@ -720,19 +654,10 @@ const handleCategoryClick = (category) => {
  * 查看更多分类 - U-025: 跳转到分类页面
  */
 const toMoreCategories = () => {
-  // U-025: 跳转到全部分类页面
-  uni.navigateTo({
-    url: '/category/index',
-    success: () => {
-      console.log('跳转到分类页面成功')
-    },
-    fail: (err) => {
-      console.error('跳转分类页面失败:', err)
-      uni.showToast({
-        title: '打开分类页面失败',
-        icon: 'none'
-      })
-    }
+  // 全部分类页面暂未实现
+  uni.showToast({
+    title: '全部分类页面开发中',
+    icon: 'none'
   })
 }
 
@@ -741,7 +666,7 @@ const toMoreCategories = () => {
  */
 const toMoreMerchants = () => {
   uni.navigateTo({
-    url: '/home/merchant-list'
+    url: '/src/pages-user/home/merchant-list'
   })
 }
 

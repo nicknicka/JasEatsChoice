@@ -215,7 +215,7 @@ const acceptWish = () => {
           success: (res) => {
             if (res.confirm) {
               uni.navigateTo({
-                url: '/dish/add'
+                url: '/src/pages-merchant/dish/add'
               })
             } else {
               uni.showToast({

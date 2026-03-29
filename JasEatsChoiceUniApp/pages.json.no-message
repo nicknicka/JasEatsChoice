@@ -58,13 +58,6 @@
 			}
 		},
 		{
-			"path": "src/pages/message/index",
-			"style": {
-				"navigationBarTitleText": "消息中心",
-				"enablePullDownRefresh": true
-			}
-		},
-		{
 			"path": "src/pages/profile/user-center/index",
 			"style": {
 				"navigationBarTitleText": "用户中心",
@@ -234,13 +227,6 @@
 					"path": "wallet/index",
 					"style": {
 						"navigationBarTitleText": "我的钱包",
-						"enablePullDownRefresh": true
-					}
-				},
-				{
-					"path": "message/index",
-					"style": {
-						"navigationBarTitleText": "消息中心",
 						"enablePullDownRefresh": true
 					}
 				},

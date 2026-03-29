@@ -365,11 +365,8 @@ export function useDishDetail() {
    * 跳转到购物车
    */
   const toCart = () => {
-    uni.switchTab({
-      url: '/cart/index',
-      fail: () => {
-        uni.navigateTo({ url: '/cart/index' })
-      }
+    uni.navigateTo({
+      url: '/src/pages-user/cart/index'
     })
   }
 

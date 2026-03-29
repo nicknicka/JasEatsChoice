@@ -191,18 +191,18 @@ export const ADDRESS_API = {
 
 // ==================== 食谱相关 ====================
 export const RECIPE_API = {
-  GET_TODAY_RECIPE: '/api/recipe/today',                 // GET - 获取今日食谱推荐
-  GET_MY_RECIPES: '/api/recipe/my',                      // GET - 获取我的食谱列表
-  GET_RECIPE_DETAIL: '/api/recipe/:recipeId',           // GET - 获取食谱详情
-  CREATE_RECIPE: '/api/recipe/create',                   // POST - 创建自定义食谱
-  UPDATE_RECIPE: '/api/recipe/:recipeId',               // PUT - 更新食谱
-  DELETE_RECIPE: '/api/recipe/:recipeId',               // DELETE - 删除食谱
-  RECOMMEND_RECIPE: '/api/recipe/recommend',             // GET - 推荐食谱
-  GET_RECIPE_STEPS: '/api/recipe/:recipeId/steps',      // GET - 获取食谱制作步骤
-  FAVORITE_RECIPE: '/api/recipe/:recipeId/favorite',    // POST - 收藏食谱
-  UNFAVORITE_RECIPE: '/api/recipe/:recipeId/favorite',  // DELETE - 取消收藏食谱
-  SHARE_RECIPE: '/api/recipe/:recipeId/share',          // POST - 分享食谱
-  GET_NUTRITION: '/api/recipe/nutrition'                // GET - 获取营养分析
+  GET_TODAY_RECIPE: '/v1/recipe/today',                 // GET - 获取今日食谱推荐
+  GET_MY_RECIPES: '/v1/recipe/my',                      // GET - 获取我的食谱列表
+  GET_RECIPE_DETAIL: '/v1/recipe/:recipeId',           // GET - 获取食谱详情
+  CREATE_RECIPE: '/v1/recipe/create',                   // POST - 创建自定义食谱
+  UPDATE_RECIPE: '/v1/recipe/:recipeId',               // PUT - 更新食谱
+  DELETE_RECIPE: '/v1/recipe/:recipeId',               // DELETE - 删除食谱
+  RECOMMEND_RECIPE: '/v1/recipe/recommend',             // GET - 推荐食谱
+  GET_RECIPE_STEPS: '/v1/recipe/:recipeId/steps',      // GET - 获取食谱制作步骤
+  FAVORITE_RECIPE: '/v1/recipe/:recipeId/favorite',    // POST - 收藏食谱
+  UNFAVORITE_RECIPE: '/v1/recipe/:recipeId/favorite',  // DELETE - 取消收藏食谱
+  SHARE_RECIPE: '/v1/recipe/:recipeId/share',          // POST - 分享食谱
+  GET_NUTRITION: '/v1/recipe/nutrition'                // GET - 获取营养分析
 }
 
 // ==================== AI 相关 ====================

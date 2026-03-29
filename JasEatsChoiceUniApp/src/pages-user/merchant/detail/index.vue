@@ -277,29 +277,10 @@ const merchantDetail = ref({
   phone: '13800138000'
 })
 
-// 优惠券数据
-const coupons = ref([
-  {
-    id: 1,
-    amount: 10,
-    condition: '满50可用',
-    received: false
-  },
-  {
-    id: 2,
-    amount: 5,
-    condition: '满30可用',
-    received: true
-  },
-  {
-    id: 3,
-    amount: 20,
-    condition: '满100可用',
-    received: false
-  }
-])
+// 优惠券数据 - 从后端加载
+const coupons = ref([])
 
-// 菜品分类
+// 菜品分类 - UI固定的分类选项
 const categories = ref([
   { id: 'all', name: '全部' },
   { id: 'hot', name: '热销' },
@@ -310,7 +291,7 @@ const categories = ref([
   { id: 'staple', name: '主食' }
 ])
 
-// 菜品列表
+// 菜品列表 - 从后端加载
 const dishes = ref({
   all: [],
   hot: [],
@@ -326,15 +307,10 @@ const currentDishes = computed(() => {
   return dishes.value[activeCategory.value] || []
 })
 
-// 评价标签
-const reviewTags = ref([
-  { label: '味道好', count: 156 },
-  { label: '分量足', count: 128 },
-  { label: '配送快', count: 98 },
-  { label: '卫生好', count: 87 }
-])
+// 评价标签 - 从后端加载
+const reviewTags = ref([])
 
-// 评价列表
+// 评价列表 - 从后端加载
 const reviews = ref([])
 
 /**
@@ -753,25 +729,16 @@ const callMerchant = () => {
  */
 const toCart = () => {
   // 跳转到购物车页面
-  uni.switchTab({
-    url: '/cart/index',
+  uni.navigateTo({
+    url: '/src/pages-user/cart/index',
     success: () => {
       console.log('跳转到购物车成功')
     },
-    fail: () => {
-      // 如果switchTab失败（可能不是tabBar页面），使用navigateTo
-      uni.navigateTo({
-        url: '/cart/index',
-        success: () => {
-          console.log('跳转到购物车成功')
-        },
-        fail: (err) => {
-          console.error('跳转购物车失败:', err)
-          uni.showToast({
-            title: '打开购物车失败',
-            icon: 'none'
-          })
-        }
+    fail: (err) => {
+      console.error('跳转购物车失败:', err)
+      uni.showToast({
+        title: '打开购物车失败',
+        icon: 'none'
       })
     }
   })

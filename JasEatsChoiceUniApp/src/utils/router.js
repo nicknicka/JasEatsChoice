@@ -19,39 +19,39 @@ const MAIN_PAGES = {
  * 用户端页面路径（分包）
  */
 const USER_PAGES = {
-  HOME: '/home/index',
-  RECIPE_TODAY: '/recipe/today',
-  AI: '/ai/index',
-  PROFILE: '/profile/user-center/index',
-  SEARCH: '/search/index',
-  MERCHANT_DETAIL: '/merchant/detail/index',
-  DISH_DETAIL: '/dish/detail/index',
-  CART: '/cart/index',
-  ORDER_CONFIRM: '/order/confirm/index',
-  ORDER_DETAIL: '/order/detail/index',
-  ORDER_PROGRESS: '/order/progress/index',
-  ORDER_LIST: '/orders/index',
-  REVIEW_LIST: '/review/list/index',
-  REVIEW_SUBMIT: '/review/submit/index',
-  RECIPE_MY: '/recipe/my',
-  RECIPE_DETAIL: '/recipe/detail/index',
-  PROFILE_EDIT: '/profile/edit/index',
-  ADDRESS_LIST: '/address/index',
-  ADDRESS_EDIT: '/address/edit/index',
-  COLLECTION: '/collection/index',
-  HISTORY: '/history/index',
-  COUPON: '/coupon/index',
-  WALLET: '/wallet/index',
-  MESSAGE: '/message/index',
-  HELP: '/help/index',
-  FEEDBACK: '/feedback/index',
-  CALORIE: '/calorie/index',
-  CALORIE_RECORD: '/calorie/record',
-  CALORIE_STATISTICS: '/calorie/statistics',
-  MERCHANT_LIST: '/home/merchant-list',
-  DISH_CUSTOMIZE: '/dish/customize',
-  INTEGRAL: '/profile/integral',
-  ABOUT: '/profile/about'
+  HOME: '/src/pages-user/home/index',
+  RECIPE_TODAY: '/src/pages-user/recipe/today',
+  AI: '/src/pages-user/ai/index',
+  PROFILE: '/src/pages-user/profile/user-center/index',
+  SEARCH: '/src/pages-user/search/index',
+  MERCHANT_DETAIL: '/src/pages-user/merchant/detail/index',
+  DISH_DETAIL: '/src/pages-user/dish/detail/index',
+  CART: '/src/pages-user/cart/index',
+  ORDER_CONFIRM: '/src/pages-user/order/confirm/index',
+  ORDER_DETAIL: '/src/pages-user/order/detail/index',
+  ORDER_PROGRESS: '/src/pages-user/order/progress/index',
+  ORDER_LIST: '/src/pages-user/orders/index',
+  REVIEW_LIST: '/src/pages-user/review/list/index',
+  REVIEW_SUBMIT: '/src/pages-user/review/submit/index',
+  RECIPE_MY: '/src/pages-user/recipe/my',
+  RECIPE_DETAIL: '/src/pages-user/recipe/detail/index',
+  PROFILE_EDIT: '/src/pages-user/profile/user-center/edit/index',
+  ADDRESS_LIST: '/src/pages-user/address/index',
+  ADDRESS_EDIT: '/src/pages-user/address/edit/index',
+  COLLECTION: '/src/pages-user/collection/index',
+  HISTORY: '/src/pages-user/history/index',
+  COUPON: '/src/pages-user/coupon/index',
+  WALLET: '/src/pages-user/wallet/index',
+  MESSAGE: '/src/pages-user/message/index',
+  HELP: '/src/pages-user/help/index',
+  FEEDBACK: '/src/pages-user/feedback/index',
+  CALORIE: '/src/pages-user/calorie/index',
+  CALORIE_RECORD: '/src/pages-user/calorie/record',
+  CALORIE_STATISTICS: '/src/pages-user/calorie/statistics',
+  MERCHANT_LIST: '/src/pages-user/home/merchant-list',
+  DISH_CUSTOMIZE: '/src/pages-user/dish/customize',
+  INTEGRAL: '/src/pages-user/profile/integral',
+  ABOUT: '/src/pages-user/profile/about'
 }
 
 /**
@@ -83,32 +83,118 @@ export const paths = {
 }
 
 // 导出跳转方法
-export const toLogin = () => uni.reLaunch({ url: MAIN_PAGES.LOGIN })
-export const toUserHome = () => uni.switchTab({ url: '/src/pages/home/index/index' })
-export const toMerchantHome = () => uni.switchTab({ url: '/src/pages-merchant/home/index' })
-export const toProfile = () => uni.switchTab({ url: '/src/pages/profile/user-center/index' })
+export const toLogin = () => {
+  console.log('🔄 [路由] 跳转登录页')
+  uni.reLaunch({ url: MAIN_PAGES.LOGIN })
+}
 
-export const toDishDetail = (dishId) => uni.navigateTo({ url: `${USER_PAGES.DISH_DETAIL}?id=${dishId}` })
-export const toMerchantDetail = (merchantId) => uni.navigateTo({ url: `${USER_PAGES.MERCHANT_DETAIL}?id=${merchantId}` })
-export const toOrderDetail = (orderId) => uni.navigateTo({ url: `${USER_PAGES.ORDER_DETAIL}?id=${orderId}` })
+export const toUserHome = () => {
+  console.log('🔄 [路由] 切换到用户首页')
+  uni.switchTab({ url: '/src/pages/home/index/index' })
+}
+
+export const toMerchantHome = () => {
+  console.log('🔄 [路由] 切换到商家首页')
+  uni.switchTab({ url: '/src/pages-merchant/home/index' })
+}
+
+export const toProfile = () => {
+  console.log('🔄 [路由] 切换到用户中心')
+  uni.switchTab({ url: '/src/pages/profile/user-center/index' })
+}
+
+export const toDishDetail = (dishId) => {
+  console.log('🔄 [路由] 跳转菜品详情', { dishId, url: `${USER_PAGES.DISH_DETAIL}?id=${dishId}` })
+  uni.navigateTo({
+    url: `${USER_PAGES.DISH_DETAIL}?id=${dishId}`,
+    success: () => console.log('✅ [路由] 菜品详情跳转成功'),
+    fail: (err) => console.error('❌ [路由] 菜品详情跳转失败:', err)
+  })
+}
+
+export const toMerchantDetail = (merchantId) => {
+  console.log('🔄 [路由] 跳转商家详情', { merchantId, url: `${USER_PAGES.MERCHANT_DETAIL}?id=${merchantId}` })
+  uni.navigateTo({
+    url: `${USER_PAGES.MERCHANT_DETAIL}?id=${merchantId}`,
+    success: () => console.log('✅ [路由] 商家详情跳转成功'),
+    fail: (err) => console.error('❌ [路由] 商家详情跳转失败:', err)
+  })
+}
+
+export const toOrderDetail = (orderId) => {
+  console.log('🔄 [路由] 跳转订单详情', { orderId, url: `${USER_PAGES.ORDER_DETAIL}?id=${orderId}` })
+  uni.navigateTo({
+    url: `${USER_PAGES.ORDER_DETAIL}?id=${orderId}`,
+    success: () => console.log('✅ [路由] 订单详情跳转成功'),
+    fail: (err) => console.error('❌ [路由] 订单详情跳转失败:', err)
+  })
+}
+
 export const toOrderConfirm = (params) => {
   const query = Object.keys(params).map(key => `${key}=${encodeURIComponent(params[key])}`).join('&')
-  uni.navigateTo({ url: `${USER_PAGES.ORDER_CONFIRM}?${query}` })
+  const url = `${USER_PAGES.ORDER_CONFIRM}?${query}`
+  console.log('🔄 [路由] 跳转订单确认', { params, url })
+  uni.navigateTo({
+    url,
+    success: () => console.log('✅ [路由] 订单确认跳转成功'),
+    fail: (err) => console.error('❌ [路由] 订单确认跳转失败:', err)
+  })
 }
-export const toCart = () => uni.navigateTo({ url: USER_PAGES.CART })
-export const toSearch = () => uni.navigateTo({ url: USER_PAGES.SEARCH })
-export const toRecipeDetail = (recipeId) => uni.navigateTo({ url: `${USER_PAGES.RECIPE_DETAIL}?id=${recipeId}` })
-export const toAddressList = () => uni.navigateTo({ url: USER_PAGES.ADDRESS_LIST })
+
+export const toCart = () => {
+  console.log('🔄 [路由] 跳转购物车', { url: USER_PAGES.CART })
+  uni.navigateTo({
+    url: USER_PAGES.CART,
+    success: () => console.log('✅ [路由] 购物车跳转成功'),
+    fail: (err) => console.error('❌ [路由] 购物车跳转失败:', err)
+  })
+}
+
+export const toSearch = () => {
+  console.log('🔄 [路由] 跳转搜索页', { url: USER_PAGES.SEARCH })
+  uni.navigateTo({
+    url: USER_PAGES.SEARCH,
+    success: () => console.log('✅ [路由] 搜索页跳转成功'),
+    fail: (err) => console.error('❌ [路由] 搜索页跳转失败:', err)
+  })
+}
+
+export const toRecipeDetail = (recipeId) => {
+  console.log('🔄 [路由] 跳转食谱详情', { recipeId, url: `${USER_PAGES.RECIPE_DETAIL}?id=${recipeId}` })
+  uni.navigateTo({
+    url: `${USER_PAGES.RECIPE_DETAIL}?id=${recipeId}`,
+    success: () => console.log('✅ [路由] 食谱详情跳转成功'),
+    fail: (err) => console.error('❌ [路由] 食谱详情跳转失败:', err)
+  })
+}
+
+export const toAddressList = () => {
+  console.log('🔄 [路由] 跳转地址列表', { url: USER_PAGES.ADDRESS_LIST })
+  uni.navigateTo({
+    url: USER_PAGES.ADDRESS_LIST,
+    success: () => console.log('✅ [路由] 地址列表跳转成功'),
+    fail: (err) => console.error('❌ [路由] 地址列表跳转失败:', err)
+  })
+}
+
 export const toAddressEdit = (addressId = '') => {
   const url = addressId ? `${USER_PAGES.ADDRESS_EDIT}?id=${addressId}` : USER_PAGES.ADDRESS_EDIT
-  uni.navigateTo({ url })
+  console.log('🔄 [路由] 跳转地址编辑', { addressId, url })
+  uni.navigateTo({
+    url,
+    success: () => console.log('✅ [路由] 地址编辑跳转成功'),
+    fail: (err) => console.error('❌ [路由] 地址编辑跳转失败:', err)
+  })
 }
 
 export const backOrHome = () => {
   const pages = getCurrentPages()
+  console.log('🔄 [路由] 返回或首页', { pageCount: pages.length })
   if (pages.length > 1) {
+    console.log('🔄 [路由] 执行返回')
     uni.navigateBack()
   } else {
+    console.log('🔄 [路由] 返回首页')
     uni.switchTab({ url: '/src/pages/home/index/index' })
   }
 }

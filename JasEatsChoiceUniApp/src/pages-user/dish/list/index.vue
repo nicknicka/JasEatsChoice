@@ -14,7 +14,7 @@
         :key="dish.id"
         @click="goToDetail(dish.id)"
       >
-        <image class="dish-image" :src="dish.image || '/static/dish-placeholder.png'" mode="aspectFill"></image>
+        <image class="dish-image" :src="dish.image || 'https://via.placeholder.com/200x200?text=暂无图片'" mode="aspectFill"></image>
         <view class="dish-info">
           <text class="dish-name">{{ dish.name }}</text>
           <view class="dish-tags">
@@ -30,7 +30,7 @@
 
     <!-- 空状态 -->
     <view class="empty-state" v-else-if="!loading">
-      <image class="empty-icon" src="/static/empty.png" mode="aspectFit"></image>
+      <view class="empty-icon">🍽️</view>
       <text class="empty-text">暂无该分类菜品</text>
     </view>
 
@@ -42,7 +42,8 @@
 </template>
 
 <script setup>
-import { ref, onLoad } from 'vue'
+import { ref } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
 import { dishApi } from '@/api/modules/dish'
 
 // 数据
@@ -66,16 +67,33 @@ onLoad((options) => {
 const loadDishList = async () => {
   try {
     loading.value = true
-    const res = await dishApi.getDishList({
+    const res = await dishApi.getList({
       category: categoryCode.value
     })
-    if (res.code === 200) {
-      dishList.value = res.data || []
-    } else {
-      uni.showToast({
-        title: res.message || '加载失败',
-        icon: 'none'
-      })
+
+    // 数据映射
+    if (Array.isArray(res)) {
+      dishList.value = res.map(dish => ({
+        id: dish.dishId || dish.id,
+        name: dish.dishName || dish.name || '未知菜品',
+        price: dish.price ? String(dish.price) : '0',
+        image: dish.dishImage || dish.image || dish.coverImage || '',
+        tags: dish.tags || [],
+        calories: dish.calories || 0,
+        category: dish.category || ''
+      }))
+    } else if (res && res.data) {
+      if (Array.isArray(res.data)) {
+        dishList.value = res.data.map(dish => ({
+          id: dish.dishId || dish.id,
+          name: dish.dishName || dish.name || '未知菜品',
+          price: dish.price ? String(dish.price) : '0',
+          image: dish.dishImage || dish.image || dish.coverImage || '',
+          tags: dish.tags || [],
+          calories: dish.calories || 0,
+          category: dish.category || ''
+        }))
+      }
     }
   } catch (error) {
     console.error('加载菜品列表失败:', error)
@@ -91,7 +109,7 @@ const loadDishList = async () => {
 // 跳转到菜品详情
 const goToDetail = (dishId) => {
   uni.navigateTo({
-    url: `/pages-user/dish/detail/index?id=${dishId}`
+    url: `/src/pages-user/dish/detail/index?id=${dishId}`
   })
 }
 </script>
@@ -200,8 +218,8 @@ const goToDetail = (dishId) => {
   padding-top: 200rpx;
 
   .empty-icon {
-    width: 300rpx;
-    height: 300rpx;
+    font-size: 120rpx;
+    line-height: 1;
     margin-bottom: 40rpx;
   }
 

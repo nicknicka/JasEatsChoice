@@ -14,11 +14,8 @@
       <view class="top-section">
         <WeatherLocation ref="weatherRef" />
 
-        <!-- 搜索栏 -->
-        <view class="search-bar" @click="toSearch">
-          <view class="search-icon">🔍</view>
-          <view class="search-input">搜索菜品、商家或食谱...</view>
-        </view>
+        <!-- 增强搜索栏 -->
+        <SearchBar placeholder="搜索菜品、商家或食谱..." />
       </view>
 
       <!-- 今日热点 - U-026: 从后端获取动态热点 -->
@@ -34,7 +31,10 @@
       </view>
 
       <!-- 轮播图 -->
-      <view class="banner-section" v-if="banners.length > 0">
+      <!-- 骨架屏 -->
+      <BannerSkeleton v-if="isInitialLoading" />
+      <!-- 实际内容 -->
+      <view class="banner-section" v-else-if="banners.length > 0">
         <swiper
           class="banner-swiper"
           autoplay
@@ -45,14 +45,23 @@
           indicator-active-color="#fff"
         >
           <swiper-item v-for="banner in banners" :key="banner.id" @click="handleBannerClick(banner)">
-            <image class="banner-image" :src="banner.image" mode="aspectFill" />
+            <image
+	              class="banner-image"
+	              :src="banner.image"
+	              mode="aspectFill"
+	              lazy-load
+	              @error="handleBannerImageError($event, banner)"
+	            />
             <view class="banner-title" v-if="banner.title">{{ banner.title }}</view>
           </swiper-item>
         </swiper>
       </view>
 
       <!-- 分类导航 -->
-      <view class="category-section">
+      <!-- 骨架屏 -->
+      <CategorySkeleton v-if="isInitialLoading" />
+      <!-- 实际内容 -->
+      <view class="category-section" v-else>
         <view class="section-header">
           <text class="section-title">美食分类</text>
           <text class="section-more" @click="toMoreCategories">更多 ›</text>
@@ -73,7 +82,10 @@
       </view>
 
       <!-- 推荐商家 -->
-      <view class="merchant-section" v-if="recommendMerchants.length > 0">
+      <!-- 骨架屏 -->
+      <MerchantSkeleton v-if="isInitialLoading" />
+      <!-- 实际内容 -->
+      <view class="merchant-section" v-else-if="recommendMerchants.length > 0">
         <view class="section-header">
           <text class="section-title">推荐商家</text>
           <text class="section-more" @click="toMoreMerchants">更多 ›</text>
@@ -86,7 +98,13 @@
               :key="merchant.id"
               @click="toMerchantDetail(merchant.id)"
             >
-              <image class="merchant-logo" :src="merchant.logo" mode="aspectFill" />
+              <image
+	                class="merchant-logo"
+	                :src="merchant.logo"
+	                mode="aspectFill"
+	                lazy-load
+	                @error="handleMerchantImageError($event, merchant)"
+	              />
               <view class="merchant-info">
                 <view class="merchant-name">{{ merchant.name }}</view>
                 <view class="merchant-rating">
@@ -115,8 +133,19 @@
           </view>
         </view>
 
-        <!-- 加载状态 -->
-        <view class="loading-container" v-if="isLoadingRecommend">
+        <!-- 快速筛选 -->
+        <QuickFilters
+          v-model="activeFilter"
+          @filter-change="handleFilterChange"
+        />
+
+        <!-- 骨架屏 - 初始加载 -->
+        <view class="dish-list" v-if="isInitialLoading">
+          <DishCardSkeleton v-for="n in 5" :key="`skeleton-${n}`" />
+        </view>
+
+        <!-- 骨架屏 - 刷新中 -->
+        <view class="loading-container" v-else-if="isLoadingRecommend">
           <uni-load-more status="loading" />
         </view>
 
@@ -128,7 +157,13 @@
             :key="dish.id"
             @click="handleDishClick(dish)"
           >
-            <image class="dish-image" :src="dish.image" mode="aspectFill" />
+            <image
+	              class="dish-image"
+	              :src="dish.image"
+	              mode="aspectFill"
+	              lazy-load
+	              @error="handleDishImageError($event, dish)"
+	            />
             <view class="dish-info">
               <view class="dish-header">
                 <view class="dish-name">{{ dish.name }}</view>
@@ -165,11 +200,14 @@
         </view>
 
         <!-- 空状态 -->
-        <view class="empty-container" v-else>
-          <text class="empty-icon">🍽️</text>
-          <text class="empty-text">{{ recommendEmptyMessage }}</text>
-          <button class="retry-btn" size="mini" @click="loadRecommendations">重新加载</button>
-        </view>
+        <EmptyState
+          v-else
+          :type="emptyType"
+          :title="emptyTitle"
+          :description="emptyDescription"
+          action-text="刷新推荐"
+          @action="loadRecommendations"
+        />
       </view>
 
       <!-- 加载更多 -->
@@ -183,22 +221,46 @@
       </view>
     </scroll-view>
   </view>
+    <!-- 分享弹窗 -->
+    <ShareModal
+      ref="shareModalRef"
+      :dish="currentShareDish"
+    />
+
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { toSearch, toMerchantDetail, toDishDetail } from '@/utils/router'
 import { useLocationStore, useUserStore } from '@/store'
 import { dishApi, merchantApi } from '@/api'
 import { useRecommendations } from '@/composables/useRecommendations'
 import WeatherLocation from '@/components/common/WeatherLocation.vue'
+import DishCardSkeleton from '@/components/home/DishCardSkeleton.vue'
+import CategorySkeleton from '@/components/home/CategorySkeleton.vue'
+import MerchantSkeleton from '@/components/home/MerchantSkeleton.vue'
+import BannerSkeleton from '@/components/home/BannerSkeleton.vue'
+import EmptyState from '@/components/home/EmptyState.vue'
+import SearchBar from '@/components/home/SearchBar.vue'
+import QuickFilters from '@/components/home/QuickFilters.vue'
+import ShareModal from '@/components/home/ShareModal.vue'
+import analytics from '@/utils/analytics'
+import recommendationAnalytics from '@/utils/recommendationAnalytics'
 
 // Store
 const locationStore = useLocationStore()
 const userStore = useUserStore()
 
+// 初始加载状态
+const isInitialLoading = ref(true)
+
 // 组件引用
 const weatherRef = ref(null)
+const shareModalRef = ref(null)
+
+// 筛选状态
+const activeFilter = ref('all')
+const currentShareDish = ref(null)
 
 // 使用智能推荐系统
 const {
@@ -211,6 +273,37 @@ const {
   refreshRecommendations,
   recordClickFeedback
 } = useRecommendations()
+
+// 监听推荐菜品变化，记录曝光埋点
+const trackedDishes = ref(new Set())
+
+watch(recommendDishes, (newDishes) => {
+  if (newDishes && newDishes.length > 0) {
+    newDishes.forEach((dish, index) => {
+      const key = `${dish.id}_${dish.recommendSource || 'unknown'}`
+
+      // 只记录新曝光的菜品
+      if (!trackedDishes.value.has(key)) {
+        trackedDishes.value.add(key)
+
+        // 曝光埋点
+        analytics.trackImpression('recommend_dish', {
+          dish_id: dish.id,
+          dish_name: dish.name,
+          recommend_source: dish.recommendSource,
+          position: index,
+          price: dish.price,
+          calories: dish.calories
+        })
+
+        // 推荐分析曝光
+        recommendationAnalytics.recordImpression(dish.id, dish.recommendSource || 'unknown', {
+          position: index
+        })
+      }
+    })
+  }
+}, { deep: true })
 
 // 状态
 const refreshing = ref(false)
@@ -265,6 +358,25 @@ const recommendEmptyMessage = computed(() => {
     return '加载失败，请重试'
   }
   return '暂无推荐菜品'
+})
+
+// 空状态类型
+const emptyType = computed(() => {
+  if (recommendError.value) return 'network'
+  if (hasRecommendations.value) return 'default'
+  return 'dish'
+})
+
+// 空状态标题
+const emptyTitle = computed(() => {
+  if (recommendError.value) return '加载失败'
+  return '暂无推荐菜品'
+})
+
+// 空状态描述
+const emptyDescription = computed(() => {
+  if (recommendError.value) return '请检查网络连接后重试'
+  return '试试调整筛选条件或刷新推荐'
 })
 
 /**
@@ -387,6 +499,21 @@ const handleRefreshRecommend = async () => {
  */
 const handleDishClick = async (dish) => {
   try {
+    // 点击埋点
+    analytics.trackClick('dish_card', 'dish', {
+      dish_id: dish.id,
+      dish_name: dish.name,
+      recommend_source: dish.recommendSource,
+      position: recommendDishes.value.findIndex(d => d.id === dish.id),
+      price: dish.price,
+      calories: dish.calories
+    })
+
+    // 推荐分析埋点
+    recommendationAnalytics.recordClick(dish.id, dish.recommendSource || 'unknown', {
+      position: recommendDishes.value.findIndex(d => d.id === dish.id)
+    })
+
     // 记录点击反馈
     await recordClickFeedback(dish)
 
@@ -403,6 +530,13 @@ const handleDishClick = async (dish) => {
  * 切换收藏状态
  */
 const toggleFavorite = async (dish) => {
+  // 收藏按钮点击埋点
+  analytics.trackClick('favorite_button', 'dish', {
+    dish_id: dish.id,
+    dish_name: dish.name,
+    action: isFavorite(dish.id) ? 'unfavorite' : 'favorite'
+  })
+
   try {
     const { favoriteApi } = await import('@/api')
     const userId = userStore.userInfo?.userId || userStore.userInfo?.id
@@ -411,10 +545,23 @@ const toggleFavorite = async (dish) => {
       await favoriteApi.remove(userId, 'dish', dish.id)
       favoriteDishIds.value.delete(dish.id)
       uni.showToast({ title: '已取消收藏', icon: 'success' })
+
+      // 取消收藏埋点
+      analytics.trackEvent('unfavorite_dish', {
+        dish_id: dish.id,
+        dish_name: dish.name
+      })
     } else {
       await favoriteApi.add(userId, 'dish', dish.id)
       favoriteDishIds.value.add(dish.id)
       uni.showToast({ title: '已收藏', icon: 'success' })
+
+      // 收藏埋点
+      analytics.trackEvent('favorite_dish', {
+        dish_id: dish.id,
+        dish_name: dish.name,
+        recommend_source: dish.recommendSource
+      })
     }
   } catch (error) {
     console.error('收藏操作失败:', error)
@@ -423,10 +570,124 @@ const toggleFavorite = async (dish) => {
 }
 
 /**
+ * 处理分享
+ */
+const handleShare = (dish) => {
+  // 分享按钮点击埋点
+  analytics.trackClick('share_button', 'dish', {
+    dish_id: dish.id,
+    dish_name: dish.name,
+    recommend_source: dish.recommendSource
+  })
+
+  currentShareDish.value = dish
+  shareModalRef.value?.show()
+}
+
+/**
+ * 处理筛选变化
+ */
+const handleFilterChange = async (filterType) => {
+  console.log('筛选类型:', filterType)
+
+  // 筛选埋点
+  analytics.trackClick('quick_filter', 'filter', {
+    filter_type: filterType,
+    previous_filter: activeFilter.value
+  })
+
+  try {
+    // 根据筛选类型应用不同的过滤条件
+    const filterOptions = {
+      forceRefresh: true
+    }
+
+    switch (filterType) {
+      case 'low-calorie':
+        // 低卡路里筛选
+        filterOptions.maxCalories = 300
+        break
+
+      case 'high-rating':
+        // 高评分筛选
+        filterOptions.minRating = 4.5
+        break
+
+      case 'nearby':
+        // 附近筛选
+        if (locationStore.currentLocation) {
+          filterOptions.latitude = locationStore.currentLocation.latitude
+          filterOptions.longitude = locationStore.currentLocation.longitude
+          filterOptions.radius = 3000
+        }
+        break
+
+      case 'discount':
+        // 优惠筛选
+        filterOptions.hasDiscount = true
+        break
+
+      case 'spicy':
+        // 辣味筛选
+        filterOptions.flavor = 'spicy'
+        break
+
+      case 'sweet':
+        // 甜食筛选
+        filterOptions.flavor = 'sweet'
+        break
+
+      default:
+        // 全部，不过滤
+        break
+    }
+
+    // 重新加载推荐数据
+    await loadRecommendations(filterOptions)
+
+    uni.showToast({
+      title: '筛选已应用',
+      icon: 'success',
+      duration: 1500
+    })
+  } catch (error) {
+    console.error('应用筛选失败:', error)
+    uni.showToast({
+      title: '筛选失败',
+      icon: 'none'
+    })
+  }
+}
+
+/**
  * 检查是否已收藏
  */
 const isFavorite = (dishId) => {
   return favoriteDishIds.value.has(dishId)
+}
+
+/**
+ * 图片加载失败处理 - Banner
+ */
+const handleBannerImageError = (event, banner) => {
+  console.warn('Banner图片加载失败:', banner.image)
+  banner.image = '/static/images/default-banner.png'
+}
+
+/**
+ * 图片加载失败处理 - 商家Logo
+ */
+const handleMerchantImageError = (event, merchant) => {
+  console.warn('商家Logo加载失败:', merchant.logo)
+  merchant.logo = '/static/images/default-merchant.png'
+}
+
+/**
+ * 图片加载失败处理 - 菜品图片
+ */
+const handleDishImageError = (event, dish) => {
+  console.warn('菜品图片加载失败:', dish.image)
+  dish.image = '/static/images/default-dish.png'
 }
 
 /**
@@ -562,6 +823,13 @@ const handleBannerClick = (banner) => {
 const handleCategoryClick = (category) => {
   if (!category) return
 
+  // 分类点击埋点
+  analytics.trackClick('category_item', 'category', {
+    category_id: category.id,
+    category_name: category.name,
+    category_code: category.code
+  })
+
   // U-024: 跳转到分类菜品列表页
   uni.navigateTo({
     url: `/pages-user/dish/list/index?category=${encodeURIComponent(category.code || category.name)}&name=${encodeURIComponent(category.name)}`,
@@ -609,20 +877,37 @@ const toMoreMerchants = () => {
 
 // 组件挂载时加载数据
 onMounted(async () => {
-  // 并行加载所有数据
-  await Promise.all([
-    loadBanners(),
-    loadMerchants(),
-    loadHotTopic()
-  ])
+  // 页面访问埋点
+  analytics.trackPageView('home', {
+    source: getApp().globalData?.launchOptions?.scene || 'direct',
+    timestamp: Date.now()
+  })
 
-  // 加载智能推荐
-  await loadRecommendations()
+  try {
+    // 并行加载所有数据
+    await Promise.all([
+      loadBanners(),
+      loadMerchants(),
+      loadHotTopic()
+    ])
 
-  // 加载用户收藏
-  if (userStore.isLogin) {
-    loadUserFavorites()
+    // 加载智能推荐
+    await loadRecommendations()
+
+    // 加载用户收藏
+    if (userStore.isLogin) {
+      loadUserFavorites()
+    }
+  } finally {
+    // 初始加载完成
+    isInitialLoading.value = false
   }
+})
+
+// 组件卸载时上报埋点数据
+onUnmounted(() => {
+  analytics.flush()
+  recommendationAnalytics.report()
 })
 
 /**
@@ -947,6 +1232,7 @@ const loadUserFavorites = async () => {
   box-shadow: $box-shadow-light;
   display: flex;
   transition: transform 0.2s ease;
+  animation: slideInUp 0.4s ease-out backwards;
 
   &:active {
     transform: scale(0.98);
@@ -986,6 +1272,14 @@ const loadUserFavorites = async () => {
       font-size: 48rpx;
       color: $text-color-secondary;
       transition: all 0.3s ease;
+
+      &.share-btn {
+        font-size: 40rpx;
+
+        &:active {
+          transform: scale(0.9);
+        }
+      }
 
       &.favorite-btn.active {
         color: #ffd700;

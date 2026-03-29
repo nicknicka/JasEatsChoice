@@ -24,12 +24,44 @@ public class UserCollection {
 
     private LocalDateTime createTime; // 创建时间
 
-    // 显式声明 getter 方法，确保编译器能识别
+    // 显式声明 getter/setter 方法，确保编译器能识别
     public String getCollectableType() {
         return collectableType;
     }
 
+    public void setCollectableType(String collectableType) {
+        this.collectableType = collectableType;
+    }
+
     public String getCollectableId() {
         return collectableId;
+    }
+
+    public void setCollectableId(String collectableId) {
+        this.collectableId = collectableId;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+
+    public LocalDateTime getCreateTime() {
+        return createTime;
+    }
+
+    public void setCreateTime(LocalDateTime createTime) {
+        this.createTime = createTime;
     }
 }

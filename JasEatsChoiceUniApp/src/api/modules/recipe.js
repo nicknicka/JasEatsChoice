@@ -44,7 +44,7 @@ export const recipeApi = {
    * @param {number} id - 食谱ID
    * @returns {Promise} 返回食谱详情
    */
-  getDetail: (id) => get(`/api/recipe/${id}`),
+  getDetail: (id) => get(`/v1/recipe/${id}`),
 
   /**
    * 获取食谱制作步骤
@@ -59,7 +59,7 @@ export const recipeApi = {
    * @param {number} recipeId - 食谱ID
    * @returns {Promise} 返回制作步骤
    */
-  getSteps: (recipeId) => get(`/api/recipe/${recipeId}/steps`),
+  getSteps: (recipeId) => get(`/v1/recipe/${recipeId}/steps`),
 
   /**
    * 获取食谱食材列表
@@ -67,7 +67,7 @@ export const recipeApi = {
    * @param {string} recipeId - 食谱ID
    * @returns {Promise} 返回食材列表
    */
-  getIngredients: (recipeId) => get(`/api/recipe/${recipeId}/ingredients`),
+  getIngredients: (recipeId) => get(`/v1/recipe/${recipeId}/ingredients`),
 
   /**
    * 获取食谱营养信息
@@ -75,7 +75,7 @@ export const recipeApi = {
    * @param {string} recipeId - 食谱ID
    * @returns {Promise} 返回营养信息
    */
-  getNutrition: (recipeId) => get(`/api/recipe/${recipeId}/nutrition`),
+  getNutrition: (recipeId) => get(`/v1/recipe/${recipeId}/nutrition`),
 
   /**
    * 创建自定义食谱
@@ -118,7 +118,7 @@ export const recipeApi = {
    * @param {string} params.difficulty - 难度
    * @returns {Promise} 返回搜索结果
    */
-  search: (params) => get('/api/recipe/search', params),
+  search: (params) => get('/v1/recipe/search', params),
 
   /**
    * 推荐食谱
@@ -166,7 +166,7 @@ export const recipeApi = {
    * @param {number} recipeId - 食谱ID
    * @returns {Promise} 返回取消收藏结果
    */
-  unfavorite: (recipeId) => del(`/api/recipe/${recipeId}/favorite`),
+  unfavorite: (recipeId) => del(`/v1/recipe/${recipeId}/favorite`),
 
   /**
    * 分享食谱
@@ -181,7 +181,7 @@ export const recipeApi = {
    * GET /api/recipe/categories
    * @returns {Promise} 返回分类列表
    */
-  getCategories: () => get('/api/recipe/categories'),
+  getCategories: () => get('/v1/recipe/categories'),
 
   /**
    * 获取营养分析

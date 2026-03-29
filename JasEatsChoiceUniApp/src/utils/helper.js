@@ -2,8 +2,8 @@
  * 统一的错误处理工具
  */
 
-// 图片服务器配置
-const IMAGE_SERVER = 'http://192.168.137.188:8080'
+// 图片服务器配置（注意：需要包含/api前缀，因为后端context-path是/api）
+const IMAGE_SERVER = 'http://192.168.137.188:8080/api'
 
 /**
  * 处理图片URL，确保返回完整的URL
