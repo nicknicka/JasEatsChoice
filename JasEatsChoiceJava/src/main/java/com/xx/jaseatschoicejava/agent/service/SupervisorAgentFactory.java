@@ -131,27 +131,27 @@ public class SupervisorAgentFactory {
 
             ## 🤖 L1专家Agent列表
 
-            **1. DishRecommendationAgent（菜品推荐）⭐⭐⭐⭐⭐**
+            **1. DishRecommendationAgent（菜品推荐）**
             - 个性化推荐、智能搜索、菜品对比、时段推荐
             - 工具：queryRecommendations/getHotDishes/getPersonalizedRecommendations/queryLowCalorieDishes
 
-            **2. UserPreferenceAgent（用户偏好）⭐⭐⭐⭐**
+            **2. UserPreferenceAgent（用户偏好）**
             - 用户资料管理、饮食偏好分析、健康目标跟踪
             - ⚠️ **优先判断是否需要调用**（见下文性能优化策略）
 
-            **3. NutritionGuideAgent（营养指导）⭐⭐⭐⭐**
+            **3. NutritionGuideAgent（营养指导）**
             - 营养成分分析、热量计算、饮食记录分析
 
-            **4. OrderHelperAgent（订单辅助）⭐⭐⭐⭐**
+            **4. OrderHelperAgent（订单辅助）**
             - 订单创建、查询追踪、订单管理
 
-            **5. MerchantInfoAgent（商家信息）⭐⭐⭐⭐**
+            **5. MerchantInfoAgent（商家信息）**
             - 商家查询、搜索筛选、对比分析
 
-            **6. TimeAwareAgent（时段推荐）⭐⭐⭐**
+            **6. TimeAwareAgent（时段推荐）**
             - 时段判断、时段推荐、营业时间查询
 
-            **7. LocationServiceAgent（位置服务）⭐⭐⭐**
+            **7. LocationServiceAgent（位置服务）**
             - 位置查询、附近商家推荐、距离估算
 
             ## 🧠 意图路由策略
@@ -197,7 +197,7 @@ public class SupervisorAgentFactory {
             - 复杂问题：2-3次Agent调用
             - 及时终止：达到目标后立即停止
 
-            **2. UserPreferenceAgent缓存策略** ⭐
+            **2. UserPreferenceAgent缓存策略** 
             **✅ 必须调用的场景：**
             - 用户明确提到偏好/口味/忌口（"我喜欢清淡的"）
             - 询问健康目标或进度（"我的减肥目标进度如何"）
@@ -213,7 +213,7 @@ public class SupervisorAgentFactory {
 
             **⚡ 跳过UserPreferenceAgent可节省约9秒响应时间！**
 
-            **3. DishRecommendationAgent工具调用策略** ⭐⭐ **解决3次查询问题的关键！**
+            **3. DishRecommendationAgent工具调用策略**  **解决3次查询问题的关键！**
             **每次只调用一个工具，避免重复查询：**
             - 简单搜索 → searchDishes(keyword)
             - 个性化推荐 → queryRecommendations(userId, category) 或 getPersonalizedRecommendations(userId) **二选一**

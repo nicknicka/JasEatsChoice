@@ -51,6 +51,12 @@
   justify-content: center;
 }
 
+// Flex列布局（不居中）
+@mixin flex-column {
+  display: flex;
+  flex-direction: column;
+}
+
 // Flex两端对齐
 @mixin flex-between {
   display: flex;
@@ -143,6 +149,16 @@
     display: table;
     clear: both;
   }
+}
+
+/* ==================== 导航栏 ==================== */
+
+@mixin navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: $z-index-fixed;
 }
 
 /* ==================== 按钮 ==================== */

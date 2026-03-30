@@ -147,6 +147,7 @@ $safe-area-inset-left: env(safe-area-inset-left);
 $message-bubble-width: 75vw;
 $message-bubble-max-width: 540rpx;
 $message-bubble-min-width: 120rpx;
+$message-bubble-min-height: 80rpx; // 消息气泡最小高度，与头像高度协调
 
 // 头像尺寸：vw + 最大最小值限制
 $avatar-size: 10vw;

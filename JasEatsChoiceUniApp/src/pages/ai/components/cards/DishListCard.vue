@@ -97,6 +97,8 @@
 
 <script setup>
 import { computed } from 'vue';
+import { cartApi } from '@/api/modules/cart';
+import { favoriteApi } from '@/api/modules/favorite';
 
 const props = defineProps({
 	data: {
@@ -128,31 +130,68 @@ const handleDishTap = (dish) => {
 };
 
 // 处理操作按钮点击
-const handleAction = (actionType, dish) => {
-	console.log('操作类型:', actionType, '菜品:', dish);
-	emit('action', {
-		type: actionType,
-		dish: dish
-	});
+	const handleAction = async (actionType, dish) => {
+		console.log('操作类型:', actionType, '菜品:', dish);
+		emit('action', {
+			type: actionType,
+			dish: dish
+		});
 
-	// 根据操作类型执行相应操作
-	switch (actionType) {
-		case 'add_to_cart':
-			uni.showToast({
-				title: '已加入购物车',
-				icon: 'success'
+		// 获取用户ID
+		const userId = uni.getStorageSync('userId') || uni.getStorageSync('userInfo')?.userId;
+		if (!userId) {
+			uni.showModal({
+				title: '提示',
+				content: '请先登录',
+				showCancel: false,
+				success: () => {
+					uni.navigateTo({
+						url: '/pages/login/index'
+					});
+				}
 			});
-			break;
-		case 'add_to_favorite':
+			return;
+		}
+
+		try {
+			// 根据操作类型执行相应操作
+			switch (actionType) {
+				case 'add_to_cart':
+					await cartApi.add({
+						dishId: dish.dishId,
+						quantity: 1
+					});
+					uni.showToast({
+						title: '已加入购物车',
+						icon: 'success'
+					});
+					// 触发购物车更新事件
+					uni.$emit('cartUpdated');
+					break;
+
+				case 'add_to_favorite':
+					await favoriteApi.addDish({
+						userId: userId,
+						dishId: dish.dishId
+					});
+					uni.showToast({
+						title: '已收藏',
+						icon: 'success'
+					});
+					break;
+
+				default:
+					break;
+			}
+		} catch (error) {
+			console.error('操作失败:', error);
 			uni.showToast({
-				title: '已收藏',
-				icon: 'success'
+				title: error.message || '操作失败，请稍后重试',
+				icon: 'none',
+				duration: 2000
 			});
-			break;
-		default:
-			break;
-	}
-};
+		}
+	};
 </script>
 
 <style lang="scss" scoped>

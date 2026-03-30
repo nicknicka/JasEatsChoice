@@ -242,6 +242,14 @@
 					}
 				},
 				{
+					"path": "wallet/transactions",
+					"style": {
+						"navigationBarTitleText": "交易明细",
+						"enablePullDownRefresh": true,
+						"navigationStyle": "custom"
+					}
+				},
+				{
 					"path": "message/index",
 					"style": {
 						"navigationBarTitleText": "消息中心",

@@ -57,8 +57,6 @@
 											<view class="typing-dot"></view>
 											<view class="typing-dot"></view>
 										</view>
-										<!-- 情况2：有内容，显示实际内容 -->
-											<!-- 情况2：有内容，显示实际内容 -->
 											<template v-else>
 												<!-- 优先显示卡片 -->
 												<view
@@ -91,6 +89,12 @@
 														v-if="msg.messageType === 'user_info_card'"
 														:data="msg.cardData"
 														@action="handleCardAction"
+													/>
+
+													<!-- 健康建议卡片 -->
+													<HealthCard
+														v-if="msg.messageType === 'health_card'"
+														:data="msg.cardData"
 													/>
 												</view>
 
@@ -276,6 +280,7 @@ import RecipeOptimization from "./components/RecipeOptimization.vue";
 	import OrderListCard from "./components/cards/OrderListCard.vue";
 	import FavoriteListCard from "./components/cards/FavoriteListCard.vue";
 	import UserInfoCard from "./components/cards/UserInfoCard.vue";
+		import HealthCard from "./components/cards/HealthCard.vue";
 import ContentExtraction from "./components/ContentExtraction.vue";
 
 // 用户信息store
@@ -479,14 +484,21 @@ const loadChatHistory = async () => {
 			historyResponse.data.length > 0
 		) {
 			// 转换为前端格式
-			messages.value = historyResponse.data.map((item, index) => ({
-				id: index + 1,
-				sender: item.sender,
-				content: item.content,
-				time: formatTime(new Date(item.createTime)),
-				avatar: item.sender === "ai" ? "🤖" : "👤",
-				isUser: item.sender === "user",
-			}));
+			messages.value = historyResponse.data.map((item, index) => {
+				// 🔧 清理AI消息中的markdown代码块
+				const cleanedContent = item.sender === "ai" && item.content
+					? aiApi.cleanMarkdownCodeBlocks(item.content)
+					: item.content;
+
+				return {
+					id: index + 1,
+					sender: item.sender,
+					content: cleanedContent,
+					time: formatTime(new Date(item.createTime)),
+					avatar: item.sender === "ai" ? "🤖" : "👤",
+					isUser: item.sender === "user",
+				};
+			});
 			hasLoadedHistory.value = true;
 			console.log("✅ 成功加载聊天历史:", messages.value.length, "条消息");
 		} else {
@@ -1469,6 +1481,7 @@ page {
 	max-width: $message-bubble-width; // 75vw
 	max-width: $message-bubble-max-width; // 540rpx
 	min-width: $message-bubble-min-width; // 120rpx
+	min-height: $message-bubble-min-height; // 80rpx，确保气泡有最小高度
 	padding: 16rpx 24rpx; // 水平24rpx、垂直16rpx
 	background-color: $primary-100; // 主色100纯色，删除渐变
 	border-radius: 24rpx; // 默认24rpx对称圆角
@@ -1727,6 +1740,7 @@ page {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
+  
 	margin-top: $spacing-md;
 	padding: $spacing-sm 0;
 }

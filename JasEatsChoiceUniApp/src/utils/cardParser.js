@@ -43,24 +43,73 @@ export function parseCardDataFromContent(content) {
 	).trim();
 
 	// 移除卡片数据标记，只保留文本内容
-	const cleanContent = content.substring(0, cardDataStart).trim();
+	let cleanContent = content.substring(0, cardDataStart).trim();
+
+	// 🔧 如果卡片前没有文本，尝试从卡片数据中提取可读文本
+	if (!cleanContent) {
+		try {
+			const cardObj = JSON.parse(cardDataString);
+			// 如果是数组，取第一个对象
+			const data = Array.isArray(cardObj) ? cardObj[0] : cardObj;
+
+			// 构建可读文本
+			if (data.title) {
+				cleanContent = `**${data.title}**\n`;
+			}
+			if (data.subtitle) {
+				cleanContent += `${data.subtitle}\n\n`;
+			}
+
+			// 处理 stats 数组
+			if (data.stats && Array.isArray(data.stats)) {
+				data.stats.forEach(stat => {
+					cleanContent += `**${stat.label}**: ${stat.value}\n`;
+				});
+				cleanContent += '\n';
+			}
+
+			// 添加建议
+			if (data.suggestion) {
+				cleanContent += `${data.suggestion}`;
+			}
+
+			// 处理 recommendations/dishes/orders
+			if (data.recommendations && Array.isArray(data.recommendations)) {
+				data.recommendations.forEach(item => {
+					cleanContent += `- ${item.name || item.title}\n`;
+				});
+			}
+
+			cleanContent = cleanContent.trim();
+			console.log('📝 [UniApp] 从卡片数据中提取文本:', cleanContent.substring(0, 100));
+		} catch (e) {
+			console.warn('⚠️ [UniApp] 提取卡片文本失败:', e.message);
+			cleanContent = '';
+		}
+	}
 
 	let cardData = null;
 	let messageType = null;
 
 	try {
 		// 解析卡片数据
-		const cardDataArray = JSON.parse(cardDataString);
+		let parsedData = JSON.parse(cardDataString);
 
-		if (!Array.isArray(cardDataArray) || cardDataArray.length === 0) {
-			console.warn('⚠️ [UniApp] 卡片数据格式错误：不是数组或为空');
+		// 🔧 兼容两种格式：
+		// 1. 数组格式：[{ type: "...", recommendations: [...] }]
+		// 2. 对象格式：{ type: "...", recommendations: [...] }
+		let cardDataArray = Array.isArray(parsedData) ? parsedData : [parsedData];
+
+		if (cardDataArray.length === 0) {
+			console.warn('⚠️ [UniApp] 卡片数据为空');
 			return { content: cleanContent, cardData: null, messageType: null };
 		}
 
 		const firstCard = cardDataArray[0];
-		const cardType = firstCard.type;
+		const cardType = firstCard.type || firstCard.cardType;
 
 		console.log('✅ [UniApp] 原始卡片类型:', cardType);
+		console.log('📋 [UniApp] 原始卡片数据:', firstCard);
 
 		// 转换为支持的卡片类型
 		messageType = convertToSupportedCardType(cardType);
@@ -68,20 +117,29 @@ export function parseCardDataFromContent(content) {
 		if (messageType) {
 			console.log('✅ [UniApp] 转换后的消息类型:', messageType);
 
-			// 提取卡片数据（根据不同类型提取不同字段）
+			// 🔧 提取卡片数据（支持多种字段名）
 			if (firstCard.recommendations) {
 				cardData = { recommendations: firstCard.recommendations };
 			} else if (firstCard.orders) {
 				cardData = { orders: firstCard.orders };
 			} else if (firstCard.dishes) {
 				cardData = { dishes: firstCard.dishes };
-			} else if (cardType === 'dish') {
+			} else if (firstCard.stats || cardType === 'health' || cardType === 'food_recommendation') {
+				// 健康统计卡片（health类型）或食物推荐
+				cardData = {
+					title: firstCard.title || firstCard.name || '健康建议',
+					subtitle: firstCard.subtitle || firstCard.description || '',
+					stats: firstCard.stats || firstCard.data || [],
+					suggestion: firstCard.suggestion || firstCard.recommendation || ''
+				};
+				console.log('✅ [UniApp] 健康卡片数据已提取:', cardData);
+			} else if (cardType === 'dish' || cardType === 'food_recommendation') {
 				// 菜品卡片：整个数组就是菜品列表，需要字段映射
 				const mappedDishes = cardDataArray.map(dish => ({
 					dishId: dish.dishId || dish.id,
-					dishName: dish.dishName || dish.title,
+					dishName: dish.dishName || dish.title || dish.name,
 					imageUrl: dish.imageUrl || dish.image,
-					description: dish.description || dish.highlight,
+					description: dish.description || dish.highlight || dish.recommendation,
 					price: dish.price,
 					rating: dish.rating,
 					category: dish.category,
@@ -114,20 +172,36 @@ function convertToSupportedCardType(cardType) {
 
 	// 类型映射表（参照桌面端）
 	const typeMapping = {
+		// 菜品推荐相关
 		'recommendation_dish': 'dish_list_card',
 		'recommendation_recipe': 'dish_list_card',
 		'dish': 'dish_list_card',
 		'dishlist': 'dish_list_card',
+		'food_recommendation': 'dish_list_card',
+
+		// 订单相关
 		'orderlist': 'order_list_card',
 		'order': 'order_list_card',
+
+		// 收藏相关
 		'favoritelist': 'favorite_list_card',
 		'favorite': 'favorite_list_card',
+
+		// 评价相关
 		'reviewlist': 'review_list_card',
 		'review': 'review_list_card',
+
+		// 优惠券相关
 		'couponlist': 'coupon_list_card',
 		'coupon': 'coupon_list_card',
+
+		// 用户信息相关
 		'userinfo': 'user_info_card',
 		'user_info': 'user_info_card',
+
+		// 健康建议
+		'health': 'health_card',
+		'food_recommendation': 'health_card',
 	};
 
 	// 如果在映射表中，使用映射值
@@ -142,7 +216,8 @@ function convertToSupportedCardType(cardType) {
 		'review_list_card',
 		'coupon_list_card',
 		'user_info_card',
-		'dish_list_card'
+		'dish_list_card',
+		'health_card'
 	];
 
 	if (supportedTypes.includes(cardType)) {

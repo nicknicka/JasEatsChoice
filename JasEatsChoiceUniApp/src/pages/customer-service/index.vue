@@ -308,7 +308,7 @@
 
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
-import { useUserStore } from '@/stores/user'
+import { useUserStore } from '@/store'
 
 const userStore = useUserStore()
 const userAvatar = computed(() => userStore.userInfo?.avatar || '/static/images/default-avatar.png')

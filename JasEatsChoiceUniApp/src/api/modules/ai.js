@@ -4,9 +4,50 @@
  * 基础路径: /v1/ai
  */
 import { get, post, del } from '@/utils/request'
-import { AI_API, buildUrl } from '../urlEnum'
+import { AI_API } from '../urlEnum'
+
+/**
+ * 清理markdown代码块标记
+ * 处理AI模型返回的 ```json ... ``` 格式
+ * @param {string} content - 原始内容
+ * @returns {string} 清理后的内容
+ */
+const cleanMarkdownCodeBlocks = (content) => {
+  if (!content || typeof content !== 'string') {
+    return content
+  }
+
+  let cleaned = content
+
+  // 移除开头的 ```json 或 ``` 标记
+  cleaned = cleaned.replace(/^```json\s*\n?/i, '')
+  cleaned = cleaned.replace(/^```\s*\n?/i, '')
+
+  // 移除结尾的 ``` 标记
+  cleaned = cleaned.replace(/\n?```\s*$/i, '')
+
+  // 移除中间可能出现的独立 ``` 标记（清理多余格式）
+  cleaned = cleaned.replace(/\n?```\n?/g, '\n')
+
+  // 清理多余的空行
+  cleaned = cleaned.replace(/\n{3,}/g, '\n\n').trim()
+
+  if (cleaned !== content) {
+    console.log('🧹 已清理markdown代码块标记')
+  }
+
+  return cleaned
+}
 
 export const aiApi = {
+  /**
+   * 清理markdown代码块标记
+   * 处理AI模型返回的 ```json ... ``` 格式
+   * @param {string} content - 原始内容
+   * @returns {string} 清理后的内容
+   */
+  cleanMarkdownCodeBlocks,
+
   /**
    * AI对话（普通）
    * POST /v1/ai/chat
@@ -73,13 +114,16 @@ export const aiApi = {
 
       // SupervisorAgent返回标准ResponseResult格式: { success: true, code: "200", data: "内容" }
       if (response && (response.success === true || response.code === 200 || response.code === "200")) {
-        const message = response.data
+        let message = response.data
 
         if (!message) {
           console.error('❌ 响应data为空')
           onError && onError(new Error('响应内容为空'))
           return
         }
+
+        // 🔧 清理markdown代码块标记（如果存在）
+        message = cleanMarkdownCodeBlocks(message)
 
         console.log('📥 收到AI回复内容:', {
           content: message.substring(0, 100) + (message.length > 100 ? '...' : ''),
@@ -94,7 +138,19 @@ export const aiApi = {
         console.log('==================== AI聊天请求完成 ====================')
       } else {
         console.error('❌ 业务失败:', response)
-        const errorMsg = response?.message || 'AI回复失败'
+
+        // 解析错误信息，提取友好提示
+        let errorMsg = 'AI回复失败，请稍后重试'
+        if (response?.message) {
+          const msg = response.message
+          // 如果是JSON解析错误，给出更友好的提示
+          if (msg.includes('Failed to parse') || msg.includes('```json')) {
+            errorMsg = 'AI服务暂时异常，请重新发送消息'
+          } else {
+            errorMsg = msg
+          }
+        }
+
         onError && onError(new Error(errorMsg))
       }
     } catch (error) {
