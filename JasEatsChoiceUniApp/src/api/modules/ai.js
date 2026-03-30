@@ -32,15 +32,14 @@ export const aiApi = {
     const token = uni.getStorageSync('token') || ''
 
     try {
-      // 使用uni.request模拟SSE
+      // 使用标准JSON请求，避免406错误
       const response = await new Promise((resolve, reject) => {
         const requestTask = uni.request({
           url: `${AI_API.BASE_URL}${AI_API.CHAT}`,
           method: 'POST',
           header: {
             'Content-Type': 'application/json',
-            'Authorization': token ? `Bearer ${token}` : '',
-            'Accept': 'text/event-stream'
+            'Authorization': token ? `Bearer ${token}` : ''
           },
           data: {
             ...data,
@@ -50,7 +49,7 @@ export const aiApi = {
             if (res.statusCode === 200) {
               resolve(res.data)
             } else {
-              reject(new Error(`HTTP ${res.statusCode}`))
+              reject(new Error(`HTTP ${res.statusCode}: ${res.data?.message || '请求失败'}`))
             }
           },
           fail: (err) => {
@@ -59,15 +58,42 @@ export const aiApi = {
         })
       })
 
-      // 处理响应
-      if (response && response.data) {
-        // 如果是完整响应，一次性返回
-        if (typeof response.data === 'string') {
-          onMessage(response.data)
-        } else if (response.data.message) {
-          onMessage(response.data.message)
+      // 处理响应 - 支持多种响应格式
+      if (response) {
+        let message = ''
+
+        // 格式1: 直接返回字符串
+        if (typeof response === 'string') {
+          message = response
+        }
+        // 格式2: 返回对象包含message字段
+        else if (response.message) {
+          message = response.message
+        }
+        // 格式3: 返回对象包含data字段
+        else if (response.data && response.data.message) {
+          message = response.data.message
+        }
+        // 格式4: 返回对象包含content字段
+        else if (response.content) {
+          message = response.content
+        }
+        // 格式5: 返回对象包含reply字段
+        else if (response.reply) {
+          message = response.reply
+        }
+        // 格式6: 其他情况，尝试JSON序列化
+        else {
+          console.warn('⚠️ 未知的响应格式:', response)
+          message = JSON.stringify(response)
+        }
+
+        if (message) {
+          onMessage(message)
         }
         onComplete && onComplete()
+      } else {
+        onError && onError(new Error('空响应'))
       }
     } catch (error) {
       onError && onError(error)

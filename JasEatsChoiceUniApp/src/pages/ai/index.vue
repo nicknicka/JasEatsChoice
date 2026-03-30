@@ -37,36 +37,32 @@
 							:id="'msg-' + index"
 						>
 							<view class="message" :class="{ user: msg.isUser }">
-								<!-- AI消息 -->
+								<!-- AI头像 -->
 								<view class="message-avatar" v-if="!msg.isUser">
 									<text class="avatar-icon">🤖</text>
 								</view>
 
 								<!-- 消息内容 -->
-								<view
-									class="message-content"
-									:class="{ user: msg.isUser }"
-								>
-									<!-- 文本消息 -->
+								<view class="message-content" :class="{ user: msg.isUser }">
 									<text class="content-text">{{ msg.content }}</text>
-
-									<!-- 时间戳 -->
 									<text class="message-time">{{ msg.time }}</text>
 								</view>
 
 								<!-- 用户头像 -->
 								<view class="message-avatar user" v-if="msg.isUser">
 									<image
+										v-if="userInfo.avatar"
 										class="avatar-image"
 										:src="userInfo.avatar"
 										mode="aspectFill"
 									/>
+									<text v-else class="avatar-icon">👤</text>
 								</view>
 							</view>
 						</view>
 
 						<!-- 加载动画 -->
-						<view class="message-wrapper" v-if="isTyping">
+						<view class="message-wrapper" v-if="isTyping && isStreaming">
 							<view class="message">
 								<view class="message-avatar">
 									<text class="avatar-icon">🤖</text>
@@ -82,16 +78,75 @@
 						</view>
 					</scroll-view>
 
-					<view class="chat-input-area">
-						<!-- 第一行：语音 + 输入框 + 发送按钮 -->
-						<view class="input-row">
-							<!-- 语音输入按钮 -->
-							<view class="voice-btn" @click="startVoiceInput">
-								<text class="voice-icon">🎤</text>
-								<text class="voice-label">语音</text>
+					<!-- 快捷提问面板 -->
+					<view class="quick-questions-panel" v-if="quickQuestionsExpanded">
+						<view class="quick-questions-header">
+							<text class="quick-questions-title">💬 快捷提问</text>
+							<view class="quick-questions-close" @click="toggleQuickQuestions">
+								<text class="close-icon">✕</text>
 							</view>
+						</view>
+						<view class="quick-questions-list">
+							<view
+								class="quick-question-item"
+								v-for="(question, index) in quickQuestions"
+								:key="index"
+								@click="askQuickQuestion(question)"
+							>
+								<text class="quick-question-text">{{ question }}</text>
+								<text class="quick-question-arrow">→</text>
+							</view>
+						</view>
+					</view>
 
-							<!-- 输入框 -->
+					<view class="chat-input-area">
+						<!-- 已上传图片预览 -->
+						<view class="uploaded-images-preview" v-if="uploadedImages.length > 0">
+							<view
+								class="uploaded-image-item"
+								v-for="(img, index) in uploadedImages"
+								:key="index"
+							>
+								<image class="uploaded-image" :src="img.url" mode="aspectFill" />
+								<view class="remove-image-btn" @click="removeUploadedImage(index)">
+									<text class="remove-icon">×</text>
+								</view>
+							</view>
+						</view>
+
+						<!-- 表情面板 -->
+						<view class="emoji-panel" v-if="showEmojiPicker">
+							<view class="emoji-grid">
+								<text
+									class="emoji-item"
+									v-for="emoji in commonEmojis"
+									:key="emoji"
+									@click="selectEmoji(emoji)"
+								>
+									{{ emoji }}
+								</text>
+							</view>
+						</view>
+
+						<!-- 工具栏 -->
+						<view class="toolbar-row">
+							<view class="toolbar-btn" @click="toggleEmoji">
+								<text class="toolbar-icon">😊</text>
+							</view>
+							<view class="toolbar-btn" @click="chooseImage">
+								<text class="toolbar-icon">🖼️</text>
+							</view>
+							<view class="toolbar-btn" @click="clearHistory">
+								<text class="toolbar-icon">🗑️</text>
+							</view>
+							<view class="toolbar-spacer"></view>
+							<view class="toolbar-btn" @click="toggleQuickQuestions">
+								<text class="toolbar-icon">💬</text>
+							</view>
+						</view>
+
+						<!-- 输入行 -->
+						<view class="input-row">
 							<input
 								class="chat-input"
 								type="text"
@@ -103,12 +158,12 @@
 							/>
 
 							<!-- 发送按钮 -->
-							<view class="send-btn" @click="sendMessage">
+							<view class="send-btn" @click="sendMessage" :class="{ disabled: !inputText.trim() }">
 								<text class="send-icon">➤</text>
 							</view>
 						</view>
 
-						<!-- 第二行：AI回复状态 + 停止按钮 -->
+						<!-- AI回复状态 + 停止按钮 -->
 						<view class="action-row" v-if="isStreaming">
 							<view class="streaming-status">
 								<text class="status-dot">●</text>
@@ -167,8 +222,7 @@ const tabs = ref([
 // 用户信息
 const userInfo = ref({
 	avatar:
-		userStore.userInfo?.avatar ||
-		"https://via.placeholder.com/200x200/FF6B35/FFFFFF?text=用户",
+		userStore.userInfo?.avatar || "", // 简化：如果有头像就用，没有就留空
 });
 
 // 消息列表
@@ -188,6 +242,18 @@ const scrollIntoView = ref("");
 
 // 快捷提问展开状态（默认展开）
 const quickQuestionsExpanded = ref(true);
+
+// 已上传的图片列表
+const uploadedImages = ref([]);
+
+// 是否显示表情面板
+const showEmojiPicker = ref(false);
+
+// 常用表情列表
+const commonEmojis = ref([
+  "😊", "👍", "❤️", "🎉", "🤔", "😂",
+  "🙏", "💪", "👌", "✨", "🔥", "💯"
+]);
 
 // AbortController用于取消请求
 let abortController = null;
@@ -498,6 +564,10 @@ const askQuickQuestion = (question) => {
  */
 const toggleQuickQuestions = () => {
 	quickQuestionsExpanded.value = !quickQuestionsExpanded.value;
+	// 收起表情面板
+	if (quickQuestionsExpanded.value) {
+		showEmojiPicker.value = false;
+	}
 };
 
 /**
@@ -558,6 +628,66 @@ const clearHistory = async () => {
 };
 
 /**
+ * 切换表情面板
+ */
+const toggleEmoji = () => {
+	showEmojiPicker.value = !showEmojiPicker.value;
+	// 收起快捷提问
+	if (showEmojiPicker.value) {
+		quickQuestionsExpanded.value = false;
+	}
+};
+
+/**
+ * 选择表情
+ */
+const selectEmoji = (emoji) => {
+	inputText.value += emoji;
+	showEmojiPicker.value = false;
+};
+
+/**
+ * 选择图片
+ */
+const chooseImage = () => {
+	uni.chooseImage({
+		count: 3, // 最多选择3张
+		sizeType: ['compressed'],
+		sourceType: ['album', 'camera'],
+		success: (res) => {
+			const tempFilePaths = res.tempFilePaths;
+			tempFilePaths.forEach((filePath) => {
+				uploadedImages.value.push({
+					id: Date.now() + Math.random(),
+					url: filePath
+				});
+			});
+		},
+		fail: (err) => {
+			console.error('选择图片失败:', err);
+		}
+	});
+};
+
+/**
+ * 移除已上传的图片
+ */
+const removeUploadedImage = (index) => {
+	uploadedImages.value.splice(index, 1);
+};
+
+
+/**
+ * 语音输入（占位）
+ */
+const startVoiceInput = () => {
+	uni.showToast({
+		title: '语音输入功能开发中',
+		icon: 'none'
+	});
+};
+
+/**
  * 保存聊天历史到本地
  */
 const saveChatHistoryToLocal = () => {
@@ -604,7 +734,7 @@ onUnmounted(() => {
 @import "@/styles/mixins.scss";
 
 .ai-page {
-	min-height: 100vh;
+	min-height: 92vh;
 	background: $bg-color-white; // 纯白背景，删除渐变
 	display: flex;
 	flex-direction: column;
@@ -728,9 +858,11 @@ onUnmounted(() => {
 }
 
 .chat-container {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	min-height: 0; // 关键：允许flex子元素正确收缩
+	overflow: hidden; // 防止内容溢出
 }
 
 /* ==================== 快捷提问悬浮区（提升到 chat-pane 级别） ==================== */
@@ -863,8 +995,7 @@ onUnmounted(() => {
 .chat-messages {
 	flex: 1;
 	height: 0; // 关键：配合 flex: 1 使用，确保不超出容器
-	padding: $spacing-lg;
-	padding-bottom: 160rpx; // ✨ 底部留出空间（输入区域144rpx + 间距16rpx）
+	padding: $spacing-lg $spacing-lg 160rpx $spacing-lg; // 上、右、下、左
 	background: $bg-color-light;
 	scrollbar-width: none;
 	-ms-overflow-style: none;
@@ -965,11 +1096,22 @@ onUnmounted(() => {
 }
 
 .message {
-	@include flex-center;
+	display: flex;
+	align-items: flex-start; // 多行消息时头像对齐第一行顶部
 	gap: $spacing-sm;
+	width: 100%; // 占满宽度，方便对齐
 
+	// AI消息：靠左
+	&:not(.user) {
+		justify-content: flex-start;
+	}
+
+	// 用户消息：靠右
 	&.user {
-		flex-direction: row-reverse;
+		flex-direction: row; // 正常顺序：内容 → 头像
+		justify-content: flex-end; // 整体靠右对齐
+		max-width: 85%; // 限制最大宽度，防止超出边界
+    margin-right: 5%;
 	}
 }
 
@@ -1003,14 +1145,14 @@ onUnmounted(() => {
 	border-radius: 50%;
 }
 
-/* 消息气泡（响应式宽度+对称圆角） */
+/* 消息气泡（响应式宽度+不对称圆角） */
 .message-content {
 	max-width: $message-bubble-width; // 75vw
 	max-width: $message-bubble-max-width; // 540rpx
 	min-width: $message-bubble-min-width; // 120rpx
 	padding: 16rpx 24rpx; // 水平24rpx、垂直16rpx
 	background-color: $primary-100; // 主色100纯色，删除渐变
-	border-radius: 24rpx; // 统一24rpx对称圆角
+	border-radius: 24rpx; // 默认24rpx对称圆角
 	box-shadow: $box-shadow-sm;
 	position: relative;
 	transition: $transition-base;
@@ -1019,12 +1161,14 @@ onUnmounted(() => {
 		background: $primary-500; // 主色500纯色，删除渐变
 		color: $bg-color-white;
 		box-shadow: $box-shadow-md;
+		border-radius: 24rpx 24rpx 8rpx 24rpx; // 用户消息：左下直角贴近头像
 	}
 
 	&:not(.user) {
 		background: $primary-100;
 		color: $text-color-primary;
 		border: 1rpx solid $primary-300;
+		border-radius: 8rpx 24rpx 24rpx 24rpx; // AI消息：左上直角贴近头像
 	}
 
 	&.typing {
@@ -1089,6 +1233,96 @@ onUnmounted(() => {
 		transform: scale(1);
 		opacity: 1;
 	}
+}
+
+/* ==================== 快捷提问面板 ==================== */
+.quick-questions-panel {
+	background: $bg-color-white;
+	border-top: 1rpx solid $border-color-light;
+	padding: $spacing-md $spacing-lg;
+	animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+	from {
+		opacity: 0;
+		transform: translateY(-20rpx);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.quick-questions-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: $spacing-md;
+}
+
+.quick-questions-title {
+	font-size: $font-size-base;
+	font-weight: $font-weight-bold;
+	color: $text-color-primary;
+}
+
+.quick-questions-close {
+	width: 48rpx;
+	height: 48rpx;
+	@include flex-center;
+	background: $bg-color-base;
+	border-radius: 50%;
+	transition: $transition-base;
+
+	&:active {
+		transform: scale(0.9);
+		background: $bg-color-hover;
+	}
+}
+
+.close-icon {
+	font-size: 32rpx;
+	color: $text-color-secondary;
+	font-weight: bold;
+}
+
+.quick-questions-list {
+	display: flex;
+	flex-direction: column;
+	gap: $spacing-sm;
+	max-height: 300rpx;
+	overflow-y: auto;
+}
+
+.quick-question-item {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: $spacing-md $spacing-lg;
+	background: $primary-50;
+	border: 1rpx solid $primary-200;
+	border-radius: $border-radius-base;
+	transition: $transition-base;
+
+	&:active {
+		transform: scale(0.98);
+		background: $primary-100;
+		border-color: $primary-400;
+	}
+}
+
+.quick-question-text {
+	flex: 1;
+	font-size: $font-size-base;
+	color: $text-color-primary;
+	line-height: $line-height-lg;
+}
+
+.quick-question-arrow {
+	font-size: $font-size-xl;
+	color: $primary-500;
+	margin-left: $spacing-md;
 }
 
 /* ==================== 底部输入区（固定高度，防止被挤压） ==================== */
@@ -1238,5 +1472,114 @@ onUnmounted(() => {
 .send-icon {
 	font-size: 28rpx;
 	font-weight: $font-weight-bold;
+}
+
+/* 发送按钮禁用状态 */
+.send-btn.disabled {
+	opacity: 0.5;
+	background: $bg-color-base;
+}
+
+/* ==================== 工具栏 ==================== */
+.toolbar-row {
+	display: flex;
+	align-items: center;
+	gap: $spacing-md;
+	padding: $spacing-sm $spacing-lg;
+	border-bottom: 1rpx solid $border-color-light;
+}
+
+.toolbar-btn {
+	width: 48rpx;
+	height: 48rpx;
+	@include flex-center;
+	background: $bg-color-base;
+	border-radius: $border-radius-base;
+	transition: $transition-base;
+
+	&:active {
+		transform: scale(0.95);
+		background: $primary-100;
+	}
+}
+
+.toolbar-icon {
+	font-size: 32rpx;
+}
+
+.toolbar-spacer {
+	flex: 1;
+}
+
+/* ==================== 表情面板 ==================== */
+.emoji-panel {
+	padding: $spacing-md $spacing-lg;
+	background: $bg-color-white;
+	border-top: 1rpx solid $border-color-light;
+	max-height: 300rpx;
+	overflow-y: auto;
+}
+
+.emoji-grid {
+	display: flex;
+	flex-wrap: wrap;
+	gap: $spacing-sm;
+}
+
+.emoji-item {
+	font-size: 48rpx;
+	padding: $spacing-xs;
+	transition: $transition-base;
+
+	&:active {
+		transform: scale(1.2);
+	}
+}
+
+/* ==================== 图片预览 ==================== */
+.uploaded-images-preview {
+	display: flex;
+	flex-wrap: wrap;
+	gap: $spacing-md;
+	padding: $spacing-md $spacing-lg;
+	background: $bg-color-white;
+}
+
+.uploaded-image-item {
+	position: relative;
+	width: 160rpx;
+	height: 160rpx;
+	border-radius: $border-radius-base;
+	overflow: hidden;
+	box-shadow: $box-shadow-sm;
+}
+
+.uploaded-image {
+	width: 100%;
+	height: 100%;
+}
+
+.remove-image-btn {
+	position: absolute;
+	top: $spacing-xs;
+	right: $spacing-xs;
+	width: 40rpx;
+	height: 40rpx;
+	@include flex-center;
+	background: rgba(0, 0, 0, 0.6);
+	border-radius: 50%;
+	transition: $transition-base;
+
+	&:active {
+		transform: scale(0.9);
+		background: rgba(0, 0, 0, 0.8);
+	}
+}
+
+.remove-icon {
+	color: $bg-color-white;
+	font-size: 32rpx;
+	font-weight: bold;
+	line-height: 1;
 }
 </style>

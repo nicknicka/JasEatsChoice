@@ -2959,7 +2959,7 @@ onUnmounted(() => {
 				.message-text {
 					background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%);
 					color: #fff;
-					border-radius: 20px 20px 4px 20px;
+					border-radius: 20px 4px 20px 20px;
 					box-shadow: 0 4px 12px rgba(255, 107, 107, 0.25);
 					font-weight: 500;
 				}
@@ -2976,7 +2976,7 @@ onUnmounted(() => {
 				.message-text {
 					background: linear-gradient(135deg, #fff9fa 0%, #fff3f4 100%);
 					color: #c8232c;
-					border-radius: 20px 20px 20px 4px;
+					border-radius: 4px 20px 20px 20px;
 					box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 					border: 1px solid #ffe0e3;
 				}
@@ -2985,7 +2985,7 @@ onUnmounted(() => {
 				.ai-thinking-indicator {
 					padding: 16px 20px;
 					background: linear-gradient(135deg, #fff9fa 0%, #fff3f4 100%);
-					border-radius: 20px 20px 20px 4px;
+					border-radius: 4px 20px 20px 20px;
 					box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 					border: 1px solid #ffe0e3;
 					display: flex;

@@ -363,7 +363,7 @@ const handleCardAction = (action) => {
 .ai-message .message-text {
   background: linear-gradient(135deg, #fff9fa 0%, #fff3f4 100%);
   color: #c8232c;
-  border-radius: 20px 20px 20px 4px;
+  border-radius: 4px 20px 20px 20px; /* 左上直角贴近头像，其余圆角 */
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   border: 1px solid #ffe0e3;
 }
