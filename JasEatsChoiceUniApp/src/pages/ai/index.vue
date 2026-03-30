@@ -46,8 +46,35 @@
 									class="message-content"
 									:class="{ user: msg.isUser }"
 								>
-									<text class="content-text">{{ msg.content }}</text>
-									<text class="message-time">{{ msg.time }}</text>
+									<!-- AI消息：if-else 切换 -->
+									<template v-if="!msg.isUser">
+										<!-- 情况1：内容为空，显示加载动画 -->
+										<view
+											v-if="!msg.content"
+											class="typing-indicator"
+										>
+											<view class="typing-dot"></view>
+											<view class="typing-dot"></view>
+											<view class="typing-dot"></view>
+										</view>
+										<!-- 情况2：有内容，显示实际内容 -->
+										<template v-else>
+											<text class="content-text">{{
+												msg.content
+											}}</text>
+											<text class="message-time">{{
+												msg.time
+											}}</text>
+										</template>
+									</template>
+
+									<!-- 用户消息：正常显示 -->
+									<template v-else>
+										<text class="content-text">{{
+											msg.content
+										}}</text>
+										<text class="message-time">{{ msg.time }}</text>
+									</template>
 								</view>
 
 								<!-- 用户头像 -->
@@ -59,22 +86,6 @@
 										mode="aspectFill"
 									/>
 									<text v-else class="avatar-icon">👤</text>
-								</view>
-							</view>
-						</view>
-
-						<!-- 加载动画 -->
-						<view class="message-wrapper" v-if="isTyping && isStreaming">
-							<view class="message">
-								<view class="message-avatar">
-									<text class="avatar-icon">🤖</text>
-								</view>
-								<view class="message-content typing">
-									<view class="typing-indicator">
-										<view class="typing-dot"></view>
-										<view class="typing-dot"></view>
-										<view class="typing-dot"></view>
-									</view>
 								</view>
 							</view>
 						</view>
@@ -154,9 +165,16 @@
 							<view class="toolbar-btn" @click="clearHistory">
 								<text class="toolbar-icon">🗑️</text>
 							</view>
-							<view class="toolbar-spacer"></view>
 							<view class="toolbar-btn" @click="toggleQuickQuestions">
 								<text class="toolbar-icon">💬</text>
+							</view>
+
+							<!-- AI回复状态 + 停止按钮 -->
+							<view class="action-row" v-if="isStreaming">
+								<view class="streaming-status">
+									<text class="status-dot">●</text>
+									<text class="status-text">AI正在输入...</text>
+								</view>
 							</view>
 						</view>
 
@@ -178,19 +196,13 @@
 								@click="sendMessage"
 								:class="{ disabled: !inputText.trim() }"
 							>
-								<text class="send-icon">➤</text>
-							</view>
-						</view>
-
-						<!-- AI回复状态 + 停止按钮 -->
-						<view class="action-row" v-if="isStreaming">
-							<view class="streaming-status">
-								<text class="status-dot">●</text>
-								<text class="status-text">AI正在输入...</text>
-							</view>
-							<view class="stop-btn" @click="stopStreaming">
-								<text class="stop-icon">⏹️</text>
-								<text class="stop-label">停止</text>
+								<text
+									class="stop-icon"
+									v-if="isStreaming"
+									@click="stopStreaming"
+									>⏹️</text
+								>
+								<text class="send-icon" v-else>➤</text>
 							</view>
 						</view>
 					</view>
@@ -259,7 +271,7 @@ const isStreaming = ref(false);
 const scrollIntoView = ref("");
 
 // 快捷提问展开状态（默认展开）
-const quickQuestionsExpanded = ref(true);
+const quickQuestionsExpanded = ref(false);
 
 // 已上传的图片列表
 const uploadedImages = ref([]);
@@ -283,8 +295,10 @@ const commonEmojis = ref([
 	"💯",
 ]);
 
-// AbortController用于取消请求
+// AbortController用于取消请求（兼容性处理）
 let abortController = null;
+// 检查环境是否支持 AbortController
+const isAbortControllerSupported = typeof AbortController !== "undefined";
 
 // 是否已加载历史记录
 const hasLoadedHistory = ref(false);
@@ -479,14 +493,41 @@ const saveMessageToBackend = async (sender, content, retryCount = 0) => {
 
 	try {
 		const userId = getUserId();
-		await aiApi.saveMessage({
+		console.log(`💾 开始保存${sender}消息到后端:`, {
+			userId,
+			sender,
+			content: content.substring(0, 50) + (content.length > 50 ? "..." : ""),
+			timestamp: new Date().toISOString(),
+		});
+
+		const response = await aiApi.saveMessage({
 			userId,
 			sender,
 			content,
 		});
-		console.log("✅ 消息已保存到后端:", sender);
+
+		// 检查响应状态
+		if (
+			response &&
+			(response.success === true ||
+				response.code === 200 ||
+				response.code === "200")
+		) {
+			console.log(`✅ ${sender}消息保存成功:`, {
+				code: response.code,
+				message: response.message,
+				timestamp: new Date().toISOString(),
+			});
+		} else {
+			// API返回成功状态码，但业务失败
+			throw new Error(response?.message || "保存失败");
+		}
 	} catch (error) {
-		console.error("❌ 保存消息到后端失败:", error);
+		console.error(`❌ 保存${sender}消息失败:`, {
+			error: error.message || error,
+			retryCount: `${retryCount + 1}/${maxRetries}`,
+			timestamp: new Date().toISOString(),
+		});
 
 		// 重试机制
 		if (retryCount < maxRetries) {
@@ -494,7 +535,7 @@ const saveMessageToBackend = async (sender, content, retryCount = 0) => {
 			await new Promise((resolve) => setTimeout(resolve, 1000 * (retryCount + 1))); // 延迟重试
 			return saveMessageToBackend(sender, content, retryCount + 1);
 		} else {
-			console.error("❌ 消息保存失败，已达到最大重试次数");
+			console.error(`❌ ${sender}消息保存失败，已达到最大重试次数 (${maxRetries})`);
 			// 保存到本地存储作为备份
 			saveChatHistoryToLocal();
 		}
@@ -512,10 +553,12 @@ const sendMessage = async () => {
 	console.log("⏰ 请求时间:", new Date().toLocaleString());
 	console.log("📝 用户消息:", text);
 
-	// 🔧 中断上一个未完成的流式请求
+	// 🔧 中断上一个未完成的流式请求（兼容性处理）
 	if (abortController) {
 		console.log("🛑 中断上一个未完成的流式请求");
-		abortController.abort();
+		if (isAbortControllerSupported) {
+			abortController.abort();
+		}
 		abortController = null;
 	}
 
@@ -526,8 +569,18 @@ const sendMessage = async () => {
 		isStreaming.value = false;
 	}
 
-	// 创建新的 AbortController
-	abortController = new AbortController();
+	// 创建新的 AbortController（兼容性处理）
+	if (isAbortControllerSupported) {
+		abortController = new AbortController();
+	} else {
+		// 不支持的环境使用简单的标志对象
+		abortController = {
+			aborted: false,
+			abort: function () {
+				this.aborted = true;
+			},
+		};
+	}
 
 	// 清空输入框
 	inputText.value = "";
@@ -554,12 +607,12 @@ const sendMessage = async () => {
 	// 滚动到底部
 	await scrollToBottom();
 
-	// 创建AI消息对象（初始为空）
+	// 立即创建空的AI消息对���（显示加载动画）
 	const aiMessageIndex = messages.value.length;
 	messages.value.push({
 		id: Date.now() + 1,
 		sender: "ai",
-		content: "",
+		content: "", // 初始为空，显示加载动画
 		time: formatTime(new Date()),
 		avatar: "🤖",
 		isUser: false,
@@ -584,6 +637,7 @@ const sendMessage = async () => {
 			},
 			// onMessage - 接收消息内容
 			(content) => {
+				// 追加内容（首次收到内容时，自动从加载动画切换到显示内容）
 				messages.value[aiMessageIndex].content += content;
 				nextTick(() => scrollToBottom());
 			},
@@ -822,7 +876,12 @@ const saveChatHistoryToLocal = () => {
 const stopStreaming = () => {
 	if (abortController) {
 		console.log("🛑 用户主动停止流式传输");
-		abortController.abort();
+		if (isAbortControllerSupported) {
+			abortController.abort();
+		} else {
+			// 简单标志对象的处理
+			abortController.aborted = true;
+		}
 		isStreaming.value = false;
 		isTyping.value = false;
 
@@ -840,9 +899,13 @@ onMounted(async () => {
 
 // 组件卸载
 onUnmounted(() => {
-	// 清理请求
+	// 清理请求（兼容性处理）
 	if (abortController) {
-		abortController.abort();
+		if (isAbortControllerSupported) {
+			abortController.abort();
+		} else {
+			abortController.aborted = true;
+		}
 	}
 });
 </script>
@@ -1129,7 +1192,7 @@ page {
 	flex: 1;
 	height: 0; /* flex布局关键：强制容器只占剩余空间，不被内容撑开 */
 	width: 100%;
-	padding: $spacing-lg $spacing-lg 180rpx $spacing-lg; // 上、右、下、左（底部留出输入框空间）
+	// padding: $spacing-lg $spacing-lg 280rpx $spacing-lg; // 上、右、下、左（底部留出输入框空间，增加至280rpx防止遮挡）
 	background: $bg-color-light;
 	scrollbar-width: none;
 	-ms-overflow-style: none;
@@ -1514,9 +1577,10 @@ page {
 /* 输入框 */
 .chat-input {
 	flex: 1;
-		max-width: 80%; /* 限制最大宽度为80%，避免太宽 */
+	max-width: 77%; /* 限制最大宽度为80%，避免太宽 */
 	height: $input-height-current; // 96rpx
 	padding: 0 $spacing-md;
+	margin: $spacing-sm 0;
 	background-color: $bg-color-input;
 	border-radius: 40rpx;
 	font-size: $font-size-base;

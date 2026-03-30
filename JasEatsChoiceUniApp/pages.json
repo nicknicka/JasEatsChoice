@@ -317,6 +317,14 @@
 						"navigationBarTitleText": "性能演示",
 						"enablePullDownRefresh": false
 					}
+				},
+				{
+					"path": "customer-service/index",
+					"style": {
+						"navigationBarTitleText": "客服中心",
+						"enablePullDownRefresh": false,
+						"navigationStyle": "custom"
+					}
 				}
 			]
 		},

@@ -174,8 +174,9 @@ public class AIController {
             log.info("请求耗时: {} ms", duration);
             log.info("=== AI聊天请求完成 ===");
 
-            Map<String, Object> result = Map.of("content", response);
-            return ResponseResult.success(result);
+            // 直接返回AI回复内容，放在data字段中（匹配前端期望格式）
+            // 前端期望: response.data 是字符串
+            return ResponseResult.success(response);
 
         } catch (Exception e) {
             long endTime = System.currentTimeMillis();
@@ -200,6 +201,7 @@ public class AIController {
             String prompt = String.format("请分析【%s】的营养成分", foodName);
             String response = nutritionAiAgent.chat(prompt, "anonymous");
 
+            // 返回格式: { success: true, data: { foodName: "菜名", analysis: "分析内容" } }
             Map<String, Object> result = Map.of(
                 "foodName", foodName,
                 "analysis", response

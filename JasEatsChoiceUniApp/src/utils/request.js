@@ -101,22 +101,23 @@ export const request = (options) => {
 
           // 后端统一返回格式：{ success: boolean, code: string, message: string, data: any }
           if (response && typeof response === 'object') {
-            // 检查业务状态
-            if (response.success === true || response.code === '200' || response.code === 200) {
-              // ✅ 修复：返回完整response对象，保留code、message、data等字段
-              // 这样页面代码可以正确检查 res.code 和访问 res.data
+            // 检查业务状态码
+            // 成功的情况：success为true 或 code为200/字符串'200'
+            if (response.success === true || response.code === 200 || response.code === '200') {
               resolve(response)
             } else if (response.success === false) {
-              // 业务失败
+              // 业务失败（明确标记为失败）
               const errorMsg = response.message || '请求失败'
-              uni.showToast({
-                title: errorMsg,
-                icon: 'none',
-                duration: 2000
+              console.error('❌ 业务失败:', {
+                url: options.url,
+                code: response.code,
+                message: response.message,
+                timestamp: new Date().toISOString()
               })
               reject({ message: errorMsg, code: response.code, response })
             } else {
               // 兼容旧格式或直接返回的数据
+              console.warn('⚠️ 响应格式不标准:', response)
               resolve(response)
             }
           } else {

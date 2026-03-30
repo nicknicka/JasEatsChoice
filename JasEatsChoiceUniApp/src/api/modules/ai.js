@@ -62,25 +62,38 @@ export const aiApi = {
       if (response) {
         let message = ''
 
-        // 格式1: 直接返回字符串
+        // 格式1: 直接返回字符串（最常见，AI回复内容）
         if (typeof response === 'string') {
           message = response
         }
-        // 格式2: 返回对象包含message字段
-        else if (response.message) {
-          message = response.message
+        // 格式2: 返回对象包含data字段（标准ResponseResult格式）
+        else if (response.data && typeof response.data === 'string') {
+          message = response.data
         }
-        // 格式3: 返回对象包含data字段
-        else if (response.data && response.data.message) {
-          message = response.data.message
-        }
-        // 格式4: 返回对象包含content字段
+        // 格式3: 返回对象包含content字段
         else if (response.content) {
           message = response.content
         }
-        // 格式5: 返回对象包含reply字段
+        // 格式4: 返回对象包含reply字段
         else if (response.reply) {
           message = response.reply
+        }
+        // 格式5: 返回对象包含message字段（但要检查是否是状态消息）
+        else if (response.message) {
+          // 检查是否是状态消息（避免把"成功"当作内容）
+          const statusMessages = ['成功', '失败', '错误', 'error', 'success', 'fail']
+          if (!statusMessages.includes(response.message)) {
+            message = response.message
+          } else {
+            console.warn('⚠️ 检测到状态消息，尝试其他字段:', response.message)
+            // 如果是状态消息，尝试其他字段
+            if (response.data) {
+              message = response.data
+            } else {
+              console.error('❌ 响应中没有找到有效内容:', response)
+              message = '抱歉，我暂时无法回答这个问题。'
+            }
+          }
         }
         // 格式6: 其他情况，尝试JSON序列化
         else {
@@ -89,7 +102,15 @@ export const aiApi = {
         }
 
         if (message) {
+          console.log('📥 收到AI回复内容:', {
+            content: message.substring(0, 100) + (message.length > 100 ? '...' : ''),
+            length: message.length,
+            timestamp: new Date().toISOString()
+          })
           onMessage(message)
+        } else {
+          console.error('❌ 响应解析失败，内容为空')
+          onError && onError(new Error('响应内容为空'))
         }
         onComplete && onComplete()
       } else {
