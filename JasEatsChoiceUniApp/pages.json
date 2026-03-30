@@ -54,7 +54,11 @@
 			"path": "src/pages/ai/index",
 			"style": {
 				"navigationBarTitleText": "AI助手",
-				"enablePullDownRefresh": false
+				"enablePullDownRefresh": false,
+				"disableScroll": true,
+				"app-plus": {
+					"bounce": "none"
+				}
 			}
 		},
 		{

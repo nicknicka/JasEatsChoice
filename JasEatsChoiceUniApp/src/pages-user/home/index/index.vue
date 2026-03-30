@@ -153,8 +153,9 @@
         <view class="dish-list" v-else-if="recommendDishes.length > 0">
           <view
             class="dish-card"
-            v-for="dish in recommendDishes"
+            v-for="(dish, index) in recommendDishes"
             :key="dish.id"
+            :style="{ animationDelay: `${index * 0.05}s` }"
             @click="handleDishClick(dish)"
           >
             <image
@@ -246,6 +247,8 @@ import QuickFilters from '@/components/home/QuickFilters.vue'
 import ShareModal from '@/components/home/ShareModal.vue'
 import analytics from '@/utils/analytics'
 import recommendationAnalytics from '@/utils/recommendationAnalytics'
+import errorHandler from '@/utils/errorHandler'
+import cacheManager from '@/utils/cacheManager'
 
 // Store
 const locationStore = useLocationStore()
@@ -387,6 +390,9 @@ const onRefresh = async () => {
   currentPage.value = 1
   noMore.value = false
 
+  // 添加触觉反馈
+  uni.vibrateShort()
+
   try {
     // 重新获取数据
     await Promise.all([
@@ -401,15 +407,13 @@ const onRefresh = async () => {
       weatherRef.value.getLocationAndWeather()
     }
 
-    uni.showToast({
-      title: '刷新成功',
-      icon: 'success'
-    })
+    // 使用errorHandler显示成功提示
+    errorHandler.showSuccess('✓ 刷新成功')
   } catch (error) {
     console.error('刷新失败:', error)
-    uni.showToast({
-      title: '刷新失败',
-      icon: 'none'
+    // 使用errorHandler处理错误
+    errorHandler.handle(error, {
+      defaultMsg: '刷新失败，请重试'
     })
   } finally {
     refreshing.value = false
@@ -696,7 +700,13 @@ const handleDishImageError = (event, dish) => {
 const loadBanners = async () => {
   try {
     const { bannerApi } = await import('@/api')
-    const res = await bannerApi.getList({ position: 'home' })
+
+    // 使用缓存管理器
+    const res = await cacheManager.cacheApiResponse(
+      'home_banners',
+      async () => await bannerApi.getList({ position: 'home' }),
+      30 * 60 * 1000 // 30分钟缓存
+    )
 
     if (res && res.data && Array.isArray(res.data)) {
       banners.value = res.data.map(banner => ({
@@ -711,7 +721,14 @@ const loadBanners = async () => {
     }
   } catch (error) {
     console.error('加载轮播图失败:', error)
-    banners.value = []
+    // 尝试使用缓存数据
+    const cached = cacheManager.get('home_banners')
+    if (cached && Array.isArray(cached)) {
+      console.log('使用缓存的轮播图数据')
+      banners.value = cached
+    } else {
+      banners.value = []
+    }
   }
 }
 
@@ -730,7 +747,12 @@ const loadMerchants = async () => {
       params.radius = 5000
     }
 
-    const res = await merchantApi.getNearby(params)
+    // 使用缓存管理器
+    const res = await cacheManager.cacheApiResponse(
+      'home_merchants',
+      async () => await merchantApi.getNearby(params),
+      20 * 60 * 1000 // 20分钟缓存
+    )
 
     if (Array.isArray(res)) {
       recommendMerchants.value = res.map(merchant => ({
@@ -744,7 +766,14 @@ const loadMerchants = async () => {
     }
   } catch (error) {
     console.error('加载商家失败:', error)
-    recommendMerchants.value = []
+    // 尝试使用缓存数据
+    const cached = cacheManager.get('home_merchants')
+    if (cached && Array.isArray(cached)) {
+      console.log('使用缓存的商家数据')
+      recommendMerchants.value = cached
+    } else {
+      recommendMerchants.value = []
+    }
   }
 }
 
@@ -1405,5 +1434,37 @@ const loadUserFavorites = async () => {
   text-align: center;
   color: $text-color-secondary;
   font-size: $font-size-sm;
+}
+
+/* 页面动画 */
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 </style>

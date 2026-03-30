@@ -231,6 +231,13 @@
             <text class="menu-label">设置</text>
             <text class="menu-arrow">→</text>
           </view>
+
+          <view class="menu-item logout-item" @click="handleLogout">
+            <view class="menu-icon-wrapper logout-icon">
+              <text class="menu-icon">🚪</text>
+            </view>
+            <text class="menu-label logout-text">退出登录</text>
+          </view>
         </view>
       </view>
 
@@ -356,6 +363,38 @@ const loadWalletData = async () => {
 const editProfile = () => {
   uni.navigateTo({
     url: '/pages/user-center/edit'
+  })
+}
+
+/**
+ * 退出登录
+ */
+const handleLogout = () => {
+  uni.showModal({
+    title: '提示',
+    content: '确定要退出登录吗？',
+    success: (res) => {
+      if (res.confirm) {
+        // 清除用户信息
+        userStore.logout()
+        uni.removeStorageSync('token')
+        uni.removeStorageSync('userInfo')
+        uni.removeStorageSync('userId')
+        uni.removeStorageSync('role')
+
+        uni.showToast({
+          title: '已退出登录',
+          icon: 'success'
+        })
+
+        // 延迟跳转到登录页
+        setTimeout(() => {
+          uni.reLaunch({
+            url: '/pages/login/index'
+          })
+        }, 1500)
+      }
+    }
   })
 }
 
@@ -971,6 +1010,25 @@ onMounted(async () => {
 .menu-arrow {
   font-size: $font-size-base;
   color: $text-color-secondary;
+}
+
+/* 退出登录按钮 */
+.logout-item {
+  margin-top: $spacing-md;
+  border-top: 1rpx solid $border-color-lighter;
+
+  &:active {
+    background-color: rgba($danger-color, 0.1);
+  }
+}
+
+.logout-icon {
+  background-color: rgba($danger-color, 0.1);
+}
+
+.logout-text {
+  color: $danger-color;
+  font-weight: $font-weight-bold;
 }
 
 /* 底部空白 */

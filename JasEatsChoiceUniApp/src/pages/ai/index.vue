@@ -28,7 +28,6 @@
 						:scroll-into-view="scrollIntoView"
 						:scroll-with-animation="true"
 					>
-
 						<!-- 消息列表 -->
 						<view
 							class="message-wrapper"
@@ -43,7 +42,10 @@
 								</view>
 
 								<!-- 消息内容 -->
-								<view class="message-content" :class="{ user: msg.isUser }">
+								<view
+									class="message-content"
+									:class="{ user: msg.isUser }"
+								>
 									<text class="content-text">{{ msg.content }}</text>
 									<text class="message-time">{{ msg.time }}</text>
 								</view>
@@ -82,7 +84,10 @@
 					<view class="quick-questions-panel" v-if="quickQuestionsExpanded">
 						<view class="quick-questions-header">
 							<text class="quick-questions-title">💬 快捷提问</text>
-							<view class="quick-questions-close" @click="toggleQuickQuestions">
+							<view
+								class="quick-questions-close"
+								@click="toggleQuickQuestions"
+							>
 								<text class="close-icon">✕</text>
 							</view>
 						</view>
@@ -101,14 +106,24 @@
 
 					<view class="chat-input-area">
 						<!-- 已上传图片预览 -->
-						<view class="uploaded-images-preview" v-if="uploadedImages.length > 0">
+						<view
+							class="uploaded-images-preview"
+							v-if="uploadedImages.length > 0"
+						>
 							<view
 								class="uploaded-image-item"
 								v-for="(img, index) in uploadedImages"
 								:key="index"
 							>
-								<image class="uploaded-image" :src="img.url" mode="aspectFill" />
-								<view class="remove-image-btn" @click="removeUploadedImage(index)">
+								<image
+									class="uploaded-image"
+									:src="img.url"
+									mode="aspectFill"
+								/>
+								<view
+									class="remove-image-btn"
+									@click="removeUploadedImage(index)"
+								>
 									<text class="remove-icon">×</text>
 								</view>
 							</view>
@@ -158,7 +173,11 @@
 							/>
 
 							<!-- 发送按钮 -->
-							<view class="send-btn" @click="sendMessage" :class="{ disabled: !inputText.trim() }">
+							<view
+								class="send-btn"
+								@click="sendMessage"
+								:class="{ disabled: !inputText.trim() }"
+							>
 								<text class="send-icon">➤</text>
 							</view>
 						</view>
@@ -221,8 +240,7 @@ const tabs = ref([
 
 // 用户信息
 const userInfo = ref({
-	avatar:
-		userStore.userInfo?.avatar || "", // 简化：如果有头像就用，没有就留空
+	avatar: userStore.userInfo?.avatar || "", // 简化：如果有头像就用，没有就留空
 });
 
 // 消息列表
@@ -251,8 +269,18 @@ const showEmojiPicker = ref(false);
 
 // 常用表情列表
 const commonEmojis = ref([
-  "😊", "👍", "❤️", "🎉", "🤔", "😂",
-  "🙏", "💪", "👌", "✨", "🔥", "💯"
+	"😊",
+	"👍",
+	"❤️",
+	"🎉",
+	"🤔",
+	"😂",
+	"🙏",
+	"💪",
+	"👌",
+	"✨",
+	"🔥",
+	"💯",
 ]);
 
 // AbortController用于取消请求
@@ -314,7 +342,7 @@ const getUserId = () => {
 	}
 
 	// 判断当前环境
-	const isDevelopment = process.env.NODE_ENV === 'development';
+	const isDevelopment = process.env.NODE_ENV === "development";
 
 	if (isDevelopment) {
 		// 开发环境：允许使用默认测试用户ID
@@ -334,12 +362,12 @@ const getUserId = () => {
 		uni.showToast({
 			title: "请先登录",
 			icon: "none",
-			duration: 2000
+			duration: 2000,
 		});
 
 		setTimeout(() => {
 			uni.reLaunch({
-				url: "/pages/login/index"
+				url: "/pages/login/index",
 			});
 		}, 2000);
 
@@ -737,20 +765,26 @@ const selectEmoji = (emoji) => {
 const chooseImage = () => {
 	uni.chooseImage({
 		count: 3, // 最多选择3张
-		sizeType: ['compressed'],
-		sourceType: ['album', 'camera'],
+		sizeType: ["compressed"],
+		sourceType: ["album", "camera"],
 		success: (res) => {
 			const tempFilePaths = res.tempFilePaths;
 			tempFilePaths.forEach((filePath) => {
 				uploadedImages.value.push({
 					id: Date.now() + Math.random(),
-					url: filePath
+					url: filePath,
 				});
 			});
 		},
 		fail: (err) => {
-			console.error('选择图片失败:', err);
-		}
+			// 判断是否是用户取消，如果是则不报错
+			if (err.errMsg && err.errMsg.includes("cancel")) {
+				console.log("用户取消选择图片");
+				return;
+			}
+			// 其他错误才打印
+			console.error("选择图片失败:", err);
+		},
 	});
 };
 
@@ -761,14 +795,13 @@ const removeUploadedImage = (index) => {
 	uploadedImages.value.splice(index, 1);
 };
 
-
 /**
  * 语音输入（占位）
  */
 const startVoiceInput = () => {
 	uni.showToast({
-		title: '语音输入功能开发中',
-		icon: 'none'
+		title: "语音输入功能开发中",
+		icon: "none",
 	});
 };
 
@@ -814,15 +847,28 @@ onUnmounted(() => {
 });
 </script>
 
+<style lang="scss">
+/* 禁用页面整体原生滚动，仅允许内部scroll-view滚动 */
+page {
+	height: 100%;
+	width: 100%;
+	overflow: hidden;
+	-webkit-overflow-scrolling: touch;
+}
+</style>
+
 <style lang="scss" scoped>
 @import "@/styles/variables.scss";
 @import "@/styles/mixins.scss";
 
 .ai-page {
-	min-height: 92vh;
+	height: 100%;
+	width: 100%;
 	background: $bg-color-white; // 纯白背景，删除渐变
 	display: flex;
 	flex-direction: column;
+	/* 核心：禁止外层容器溢出，确保只有内部scroll-view滚动 */
+	overflow: hidden;
 }
 
 /* ==================== 统一顶部导航栏（合并标签栏+AI助手头部） ==================== */
@@ -833,10 +879,10 @@ onUnmounted(() => {
 	box-shadow: $box-shadow-sm;
 	@include flex-between;
 	padding: 0 $spacing-md;
-	position: sticky;
-	top: 0;
-	z-index: $z-index-sticky;
+	/* 核心：固定在顶部，不参与滚动 */
 	flex-shrink: 0;
+	position: relative; /* 确保在正常文档流中 */
+	z-index: $z-index-sticky; /* 确保显示在上层 */
 }
 
 .nav-tabs {
@@ -919,10 +965,11 @@ onUnmounted(() => {
 
 /* ==================== 标签页内容 ==================== */
 .tabs-content {
-	flex: 1;
+	flex: 1; // 占满导航栏之外的所有剩余高度
+	height: 0; /* flex布局关键：强制容器只占剩余空间，不被内容撑开 */
 	display: flex;
 	flex-direction: column;
-	overflow: hidden;
+	overflow: hidden; // 禁止溢出
 }
 
 .tab-pane {
@@ -1078,21 +1125,17 @@ onUnmounted(() => {
 
 /* ==================== 聊天消息区（可滚动区域，100%动态空间） ==================== */
 .chat-messages {
+	/* 核心：占满输入框之外的所有剩余空间，作为唯一滚动区域 */
 	flex: 1;
-	height: 0; // 关键：配合 flex: 1 使用，确保不超出容器
-	padding: $spacing-lg $spacing-lg 160rpx $spacing-lg; // 上、右、下、左
+	height: 0; /* flex布局关键：强制容器只占剩余空间，不被内容撑开 */
+	width: 100%;
+	padding: $spacing-lg $spacing-lg 180rpx $spacing-lg; // 上、右、下、左（底部留出输入框空间）
 	background: $bg-color-light;
 	scrollbar-width: none;
 	-ms-overflow-style: none;
-	transition: padding-bottom 0.3s ease; // 平滑过渡
 
 	&::-webkit-scrollbar {
 		display: none;
-	}
-
-	// 快捷提问展开时，增加底部间距
-	&.with-quick-questions {
-		padding-bottom: 480rpx; // ✨ 输入区域160rpx + 快捷提问约300rpx + 间距
 	}
 }
 
@@ -1189,6 +1232,7 @@ onUnmounted(() => {
 	// AI消息：靠左
 	&:not(.user) {
 		justify-content: flex-start;
+		max-width: 85%;
 	}
 
 	// 用户消息：靠右
@@ -1196,7 +1240,6 @@ onUnmounted(() => {
 		flex-direction: row; // 正常顺序：内容 → 头像
 		justify-content: flex-end; // 整体靠右对齐
 		max-width: 85%; // 限制最大宽度，防止超出边界
-    margin-right: 5%;
 	}
 }
 
@@ -1322,16 +1365,25 @@ onUnmounted(() => {
 
 /* ==================== 快捷提问面板 ==================== */
 .quick-questions-panel {
-	background: $bg-color-white;
+	position: fixed; /* 核心：固定定位，不占用布局空间 */
+	bottom: 240rpx; /* 悬浮在输入框上方，避免重叠（输入框+工具栏约200rpx + 间距） */
+	left: 0;
+	right: 0;
+	background: rgba(255, 255, 255, 0.98);
+	backdrop-filter: blur(20rpx);
 	border-top: 1rpx solid $border-color-light;
+	box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.08);
 	padding: $spacing-md $spacing-lg;
-	animation: slideDown 0.3s ease-out;
+	z-index: $z-index-sticky; /* 确保显示在聊天消息上方 */
+	animation: slideUp 0.3s ease-out;
+	max-height: 400rpx; /* 限制最大高度 */
+	overflow-y: auto; /* 内容过多时可滚动 */
 }
 
-@keyframes slideDown {
+@keyframes slideUp {
 	from {
 		opacity: 0;
-		transform: translateY(-20rpx);
+		transform: translateY(20rpx);
 	}
 	to {
 		opacity: 1;
@@ -1418,7 +1470,9 @@ onUnmounted(() => {
 	padding: $spacing-md $spacing-lg;
 	border-top: 1rpx solid $border-color-light;
 	box-shadow: 0 -2rpx 8rpx rgba(0, 0, 0, 0.04);
+	/* 核心：禁止收缩，永远固定在底部 */
 	flex-shrink: 0;
+	width: 100%;
 	min-height: 144rpx; // ✨ 最小高度：输入框96rpx + 上下padding 48rpx
 	height: auto; // ✨ 自动高度，适应内容
 }
@@ -1460,6 +1514,7 @@ onUnmounted(() => {
 /* 输入框 */
 .chat-input {
 	flex: 1;
+		max-width: 80%; /* 限制最大宽度为80%，避免太宽 */
 	height: $input-height-current; // 96rpx
 	padding: 0 $spacing-md;
 	background-color: $bg-color-input;
@@ -1528,12 +1583,12 @@ onUnmounted(() => {
 
 .stop-icon {
 	font-size: $font-size-base;
-	color: #FF5252;
+	color: #ff5252;
 }
 
 .stop-label {
 	font-size: $font-size-sm;
-	color: #FF5252;
+	color: #ff5252;
 	font-weight: $font-weight-medium;
 }
 
