@@ -969,62 +969,6 @@ onMounted(async () => {
 	await loadChatHistory();
 });
 
-/**
- * 处理卡片操作事件
- * @param {Object} event - 操作事件对象
- */
-const handleCardAction = (event) => {
-	console.log('🎯 卡片操作事件:', event);
-	const { type, dish, order, item } = event;
-
-	switch (type) {
-		case 'add_to_cart':
-			// 加入购物车
-			uni.showToast({
-				title: '已加入购物车',
-				icon: 'success'
-			});
-			break;
-
-		case 'add_to_favorite':
-		case 'remove':
-			// 收藏/取消收藏
-			uni.showToast({
-				title: type === 'add_to_favorite' ? '已收藏' : '已取消收藏',
-				icon: 'success'
-			});
-			break;
-
-		case 'view_detail':
-			// 查看详情
-			if (dish) {
-				uni.navigateTo({
-					url: `/pages-user/dish/detail?id=${dish.dishId}`
-				});
-			} else if (order) {
-				uni.navigateTo({
-					url: `/pages-user/order/progress?orderId=${order.orderId}`
-				});
-			} else if (item) {
-				uni.navigateTo({
-					url: `/pages-user/dish/detail?id=${item.dishId || item.id}`
-				});
-			}
-			break;
-
-		case 'view_profile':
-		case 'edit_profile':
-			// 查看或编辑个人资料
-			uni.switchTab({
-				url: '/pages/user-center/index'
-			});
-			break;
-
-		default:
-			console.log('未知操作类型:', type);
-	}
-};
-
 // 组件卸载
 onUnmounted(() => {
 	// 清理请求（兼容性处理）

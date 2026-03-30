@@ -58,50 +58,14 @@
 											<view class="typing-dot"></view>
 										</view>
 										<!-- 情况2：有内容，显示实际内容 -->
-											<!-- 情况2：有内容，显示实际内容 -->
-											<template v-else>
-												<!-- 优先显示卡片 -->
-												<view
-													v-if="msg.messageType && msg.cardData"
-													class="card-wrapper"
-												>
-													<!-- 菜品列表卡片 -->
-													<DishListCard
-														v-if="msg.messageType === 'dish_list_card'"
-														:data="msg.cardData"
-														@action="handleCardAction"
-													/>
-
-													<!-- 订单列表卡片 -->
-													<OrderListCard
-														v-if="msg.messageType === 'order_list_card'"
-														:data="msg.cardData"
-														@action="handleCardAction"
-													/>
-
-													<!-- 收藏列表卡片 -->
-													<FavoriteListCard
-														v-if="msg.messageType === 'favorite_list_card'"
-														:data="msg.cardData"
-														@action="handleCardAction"
-													/>
-
-													<!-- 用户信息卡片 -->
-													<UserInfoCard
-														v-if="msg.messageType === 'user_info_card'"
-														:data="msg.cardData"
-														@action="handleCardAction"
-													/>
-												</view>
-
-												<!-- 文本内容 -->
-												<text class="content-text">{{
-													msg.content
-												}}</text>
-												<text class="message-time">{{
-													msg.time
-												}}</text>
-											</template>
+										<template v-else>
+											<text class="content-text">{{
+												msg.content
+											}}</text>
+											<text class="message-time">{{
+												msg.time
+											}}</text>
+										</template>
 									</template>
 
 									<!-- 用户消息：正常显示 -->
@@ -271,11 +235,6 @@ import { aiApi } from "@/api";
 	import { parseCardDataFromContent, parseCardData, hasCardData } from "@/utils/cardParser";
 import DishRecognition from "./components/DishRecognition.vue";
 import RecipeOptimization from "./components/RecipeOptimization.vue";
-	// 导入卡片组件
-	import DishListCard from "./components/cards/DishListCard.vue";
-	import OrderListCard from "./components/cards/OrderListCard.vue";
-	import FavoriteListCard from "./components/cards/FavoriteListCard.vue";
-	import UserInfoCard from "./components/cards/UserInfoCard.vue";
 import ContentExtraction from "./components/ContentExtraction.vue";
 
 // 用户信息store
@@ -530,7 +489,7 @@ const addWelcomeMessage = () => {
 /**
  * 保存消息到后端（带重试机制）
  */
-const saveMessageToBackend = async (sender, content, messageType = null, cardData = null, retryCount = 0) => {
+const saveMessageToBackend = async (sender, content, retryCount = 0) => {
 	const maxRetries = 3; // 最大重试次数
 
 	try {
@@ -538,28 +497,15 @@ const saveMessageToBackend = async (sender, content, messageType = null, cardDat
 		console.log(`💾 开始保存${sender}消息到后端:`, {
 			userId,
 			sender,
-			messageType,
-			hasCardData: !!cardData,
 			content: content.substring(0, 50) + (content.length > 50 ? "..." : ""),
 			timestamp: new Date().toISOString(),
 		});
 
-		// 构建请求数据
-		const requestData = {
+		const response = await aiApi.saveMessage({
 			userId,
 			sender,
 			content,
-		};
-
-		// 如果有卡片数据，添加到请求中
-		if (messageType) {
-			requestData.messageType = messageType;
-		}
-		if (cardData) {
-			requestData.cardData = cardData;
-		}
-
-		const response = await aiApi.saveMessage(requestData);
+		});
 
 		// 检查响应状态
 		if (
@@ -702,26 +648,9 @@ const sendMessage = async () => {
 				isTyping.value = false;
 				isStreaming.value = false;
 
-					// 获取AI回复内容
-					const aiContent = messages.value[aiMessageIndex].content;
-
-					// 🔧 解析卡片数据（参照桌面端）
-					console.log("🔍 [UniApp] 开始解析卡片数据");
-					const { content: cleanContent, cardData, messageType } = parseCardDataFromContent(aiContent);
-
-					// 更新消息对象
-					messages.value[aiMessageIndex].content = cleanContent;
-					messages.value[aiMessageIndex].messageType = messageType;
-					messages.value[aiMessageIndex].cardData = cardData;
-
-					console.log("✅ [UniApp] 卡片数据解析完成:", {
-						messageType,
-						hasCardData: !!cardData,
-						contentLength: cleanContent.length
-					});
-
-					// 保存AI消息到后端（包含卡片数据）
-					await saveMessageToBackend("ai", cleanContent, messageType, cardData);
+				// 保存AI消息到后端
+				const aiContent = messages.value[aiMessageIndex].content;
+				await saveMessageToBackend("ai", aiContent);
 
 				// 保存到本地存储作为备份
 				saveChatHistoryToLocal();
@@ -968,62 +897,6 @@ const stopStreaming = () => {
 onMounted(async () => {
 	await loadChatHistory();
 });
-
-/**
- * 处理卡片操作事件
- * @param {Object} event - 操作事件对象
- */
-const handleCardAction = (event) => {
-	console.log('🎯 卡片操作事件:', event);
-	const { type, dish, order, item } = event;
-
-	switch (type) {
-		case 'add_to_cart':
-			// 加入购物车
-			uni.showToast({
-				title: '已加入购物车',
-				icon: 'success'
-			});
-			break;
-
-		case 'add_to_favorite':
-		case 'remove':
-			// 收藏/取消收藏
-			uni.showToast({
-				title: type === 'add_to_favorite' ? '已收藏' : '已取消收藏',
-				icon: 'success'
-			});
-			break;
-
-		case 'view_detail':
-			// 查看详情
-			if (dish) {
-				uni.navigateTo({
-					url: `/pages-user/dish/detail?id=${dish.dishId}`
-				});
-			} else if (order) {
-				uni.navigateTo({
-					url: `/pages-user/order/progress?orderId=${order.orderId}`
-				});
-			} else if (item) {
-				uni.navigateTo({
-					url: `/pages-user/dish/detail?id=${item.dishId || item.id}`
-				});
-			}
-			break;
-
-		case 'view_profile':
-		case 'edit_profile':
-			// 查看或编辑个人资料
-			uni.switchTab({
-				url: '/pages/user-center/index'
-			});
-			break;
-
-		default:
-			console.log('未知操作类型:', type);
-	}
-};
 
 // 组件卸载
 onUnmounted(() => {

@@ -19,22 +19,30 @@ export const aiApi = {
   chat: (data) => post(AI_API.CHAT, data),
 
   /**
-   * AI流式对话（SSE）
-   * POST /v1/ai/chat
+   * AI对话（使用SupervisorAgent）
+   * POST /agent/supervisor/chat
    * @param {Object} data - 对话数据
    * @param {Function} onMessage - 消息回调
    * @param {Function} onComplete - 完成回调
    * @param {Function} onError - 错误回调
-   * @returns {Promise} 返回流式响应
+   * @returns {Promise} 返回响应
+   *
+   * 注意：UniApp不支持SSE，使用普通POST接口
+   * 桌面端使用 /agent/supervisor-sse/chat (SSE流式)
    */
   streamChat: async (data, onMessage, onComplete, onError) => {
     const userId = uni.getStorageSync('userId') || '1'
     const token = uni.getStorageSync('token') || ''
 
+    console.log('==================== AI聊天请求开始 ====================')
+    console.log('📝 用户消息:', data.message)
+    console.log('👤 用户ID:', userId)
+    console.log('🌐 接口路径:', `${AI_API.BASE_URL}${AI_API.CHAT}`)
+
     try {
-      // 使用标准JSON请求，避免406错误
+      // 使用标准POST请求
       const response = await new Promise((resolve, reject) => {
-        const requestTask = uni.request({
+        uni.request({
           url: `${AI_API.BASE_URL}${AI_API.CHAT}`,
           method: 'POST',
           header: {
@@ -42,10 +50,12 @@ export const aiApi = {
             'Authorization': token ? `Bearer ${token}` : ''
           },
           data: {
-            ...data,
-            userId
+            message: data.message,
+            userId: userId
           },
+          timeout: 60000, // 60秒超时
           success: (res) => {
+            console.log('✅ HTTP响应状态码:', res.statusCode)
             if (res.statusCode === 200) {
               resolve(res.data)
             } else {
@@ -53,70 +63,42 @@ export const aiApi = {
             }
           },
           fail: (err) => {
+            console.error('❌ 请求失败:', err)
             reject(err)
           }
         })
       })
 
-      // 处理响应 - 支持多种响应格式
-      if (response) {
-        let message = ''
+      console.log('📦 后端响应:', response)
 
-        // 格式1: 直接返回字符串（最常见，AI回复内容）
-        if (typeof response === 'string') {
-          message = response
-        }
-        // 格式2: 返回对象包含data字段（标准ResponseResult格式）
-        else if (response.data && typeof response.data === 'string') {
-          message = response.data
-        }
-        // 格式3: 返回对象包含content字段
-        else if (response.content) {
-          message = response.content
-        }
-        // 格式4: 返回对象包含reply字段
-        else if (response.reply) {
-          message = response.reply
-        }
-        // 格式5: 返回对象包含message字段（但要检查是否是状态消息）
-        else if (response.message) {
-          // 检查是否是状态消息（避免把"成功"当作内容）
-          const statusMessages = ['成功', '失败', '错误', 'error', 'success', 'fail']
-          if (!statusMessages.includes(response.message)) {
-            message = response.message
-          } else {
-            console.warn('⚠️ 检测到状态消息，尝试其他字段:', response.message)
-            // 如果是状态消息，尝试其他字段
-            if (response.data) {
-              message = response.data
-            } else {
-              console.error('❌ 响应中没有找到有效内容:', response)
-              message = '抱歉，我暂时无法回答这个问题。'
-            }
-          }
-        }
-        // 格式6: 其他情况，尝试JSON序列化
-        else {
-          console.warn('⚠️ 未知的响应格式:', response)
-          message = JSON.stringify(response)
-        }
+      // SupervisorAgent返回标准ResponseResult格式: { success: true, code: "200", data: "内容" }
+      if (response && (response.success === true || response.code === 200 || response.code === "200")) {
+        const message = response.data
 
-        if (message) {
-          console.log('📥 收到AI回复内容:', {
-            content: message.substring(0, 100) + (message.length > 100 ? '...' : ''),
-            length: message.length,
-            timestamp: new Date().toISOString()
-          })
-          onMessage(message)
-        } else {
-          console.error('❌ 响应解析失败，内容为空')
+        if (!message) {
+          console.error('❌ 响应data为空')
           onError && onError(new Error('响应内容为空'))
+          return
         }
+
+        console.log('📥 收到AI回复内容:', {
+          content: message.substring(0, 100) + (message.length > 100 ? '...' : ''),
+          length: message.length,
+          timestamp: new Date().toISOString()
+        })
+
+        // 回调处理
+        onMessage(message)
         onComplete && onComplete()
+
+        console.log('==================== AI聊天请求完成 ====================')
       } else {
-        onError && onError(new Error('空响应'))
+        console.error('❌ 业务失败:', response)
+        const errorMsg = response?.message || 'AI回复失败'
+        onError && onError(new Error(errorMsg))
       }
     } catch (error) {
+      console.error('❌ AI聊天请求异常:', error)
       onError && onError(error)
       throw error
     }

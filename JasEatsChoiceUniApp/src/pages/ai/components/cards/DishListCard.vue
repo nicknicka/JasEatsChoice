@@ -1,0 +1,389 @@
+<template>
+	<view class="dish-list-card">
+		<!-- 卡片头部 -->
+		<view class="card-header">
+			<view class="header-title">
+				<text class="icon">🍽️</text>
+				<text class="title">菜品列表</text>
+			</view>
+			<text class="header-summary" v-if="data.summary">{{ data.summary }}</text>
+		</view>
+
+		<!-- 卡片内容 -->
+		<view class="card-content">
+			<!-- 空状态 -->
+			<view v-if="!dishes || dishes.length === 0" class="empty-state">
+				<text class="empty-icon">🍲</text>
+				<text class="empty-text">没有找到相关菜品</text>
+			</view>
+
+			<!-- 菜品列表 -->
+			<view v-else class="dish-list">
+				<view
+					v-for="(dish, index) in dishes"
+					:key="dish.dishId || dish.dishName || index"
+					class="dish-item"
+					@tap="handleDishTap(dish)"
+				>
+					<!-- 左侧：图片 -->
+					<view class="dish-image">
+						<image
+							v-if="dish.imageUrl"
+								:src="dish.imageUrl"
+								mode="aspectFill"
+								class="dish-img"
+								@error="handleImageError"
+							/>
+							<text v-else class="placeholder-icon">🍲</text>
+							mode="aspectFill"
+							class="dish-img"
+							@error="handleImageError"
+						/>
+					</view>
+
+					<!-- 右侧：信息 -->
+					<view class="dish-info">
+						<!-- 菜品名称和评分 -->
+						<view class="dish-header">
+							<text class="dish-name">{{ dish.dishName || '未命名菜品' }}</text>
+							<view class="dish-rating" v-if="dish.rating">
+								<text class="rating-star">⭐</text>
+								<text class="rating-text">{{ dish.rating }}</text>
+							</view>
+						</view>
+
+						<!-- 描述 -->
+						<text class="dish-description" v-if="dish.description">
+							{{ dish.description }}
+						</text>
+
+						<!-- 价格和分类 -->
+						<view class="dish-meta" v-if="dish.price || dish.category">
+							<text class="price" v-if="dish.price">¥{{ dish.price }}</text>
+							<view class="category-tag" v-if="dish.category">
+								<text class="category-text">{{ dish.category }}</text>
+							</view>
+						</view>
+
+						<!-- 标签 -->
+						<view class="dish-tags" v-if="dish.tags && dish.tags.length > 0">
+							<view
+								v-for="(tag, tagIndex) in dish.tags.slice(0, 3)"
+								:key="tagIndex"
+								class="tag-item"
+							>
+								<text class="tag-text">{{ tag }}</text>
+							</view>
+						</view>
+
+						<!-- 操作按钮 -->
+						<view class="dish-actions" v-if="dish.actions && dish.actions.length > 0">
+							<view
+								v-for="(action, actionIndex) in dish.actions"
+								:key="actionIndex"
+								class="action-btn"
+								:class="action.type === 'add_to_cart' ? 'primary' : 'success'"
+								@tap.stop="handleAction(action.type, dish)"
+							>
+								<text class="action-text">{{ action.text || '操作' }}</text>
+							</view>
+						</view>
+					</view>
+				</view>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup>
+import { computed } from 'vue';
+
+const props = defineProps({
+	data: {
+		type: Object,
+		default: () => ({})
+	}
+});
+
+const emit = defineEmits(['action']);
+
+// 菜品列表
+const dishes = computed(() => {
+	return props.data.dishes || [];
+});
+
+// 图片加载失败处理
+const handleImageError = (e) => {
+	console.log('菜品图片加载失败:', e);
+	e.target.src = '/static/images/placeholder-dish.png';
+};
+
+// 点击菜品
+const handleDishTap = (dish) => {
+	console.log('点击菜品:', dish);
+	// 跳转到菜品详情页
+	uni.navigateTo({
+		url: `/pages-user/dish/detail?id=${dish.dishId}`
+	});
+};
+
+// 处理操作按钮点击
+const handleAction = (actionType, dish) => {
+	console.log('操作类型:', actionType, '菜品:', dish);
+	emit('action', {
+		type: actionType,
+		dish: dish
+	});
+
+	// 根据操作类型执行相应操作
+	switch (actionType) {
+		case 'add_to_cart':
+			uni.showToast({
+				title: '已加入购物车',
+				icon: 'success'
+			});
+			break;
+		case 'add_to_favorite':
+			uni.showToast({
+				title: '已收藏',
+				icon: 'success'
+			});
+			break;
+		default:
+			break;
+	}
+};
+</script>
+
+<style lang="scss" scoped>
+@import "@/styles/variables.scss";
+
+.dish-list-card {
+	background: $bg-color-white;
+	border-radius: $border-radius-lg;
+	overflow: hidden;
+	box-shadow: $box-shadow-sm;
+	margin: $spacing-md 0;
+}
+
+.card-header {
+	padding: $spacing-lg;
+	border-bottom: 1rpx solid $border-color-light;
+	background: linear-gradient(135deg, $primary-50, $bg-color-white);
+}
+
+.header-title {
+	display: flex;
+	align-items: center;
+	gap: $spacing-sm;
+	margin-bottom: $spacing-xs;
+}
+
+.icon {
+	font-size: 40rpx;
+}
+
+.title {
+	font-size: $font-size-lg;
+	font-weight: $font-weight-bold;
+	color: $text-color-primary;
+}
+
+.header-summary {
+	font-size: $font-size-sm;
+	color: $text-color-secondary;
+	margin-left: 52rpx;
+}
+
+.card-content {
+	padding: $spacing-md;
+}
+
+.empty-state {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: 80rpx $spacing-lg;
+}
+
+.empty-icon {
+	font-size: 120rpx;
+	margin-bottom: $spacing-lg;
+	opacity: 0.5;
+}
+
+.empty-text {
+	font-size: $font-size-base;
+	color: $text-color-secondary;
+}
+
+.dish-list {
+	display: flex;
+	flex-direction: column;
+	gap: $spacing-md;
+}
+
+.dish-item {
+	display: flex;
+	gap: $spacing-md;
+	padding: $spacing-md;
+	background: $bg-color-base;
+	border-radius: $border-radius-base;
+	transition: $transition-base;
+
+	&:active {
+		background: $primary-50;
+		transform: scale(0.98);
+	}
+}
+
+.dish-image {
+	flex-shrink: 0;
+	width: 160rpx;
+	height: 160rpx;
+	border-radius: $border-radius-base;
+	overflow: hidden;
+	background: $bg-color-light;
+}
+
+.dish-img {
+	width: 100%;
+	height: 100%;
+}
+
+.placeholder-icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	height: 100%;
+	font-size: 80rpx;
+	opacity: 0.3;
+}
+
+.dish-info {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: $spacing-xs;
+	min-width: 0;
+}
+
+.dish-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: $spacing-sm;
+}
+
+.dish-name {
+	flex: 1;
+	font-size: $font-size-lg;
+	font-weight: $font-weight-bold;
+	color: $text-color-primary;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.dish-rating {
+	display: flex;
+	align-items: center;
+	gap: 4rpx;
+	flex-shrink: 0;
+}
+
+.rating-star {
+	font-size: 24rpx;
+}
+
+.rating-text {
+	font-size: $font-size-sm;
+	color: $text-color-secondary;
+}
+
+.dish-description {
+	font-size: $font-size-sm;
+	color: $text-color-secondary;
+	line-height: $line-height-base;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+}
+
+.dish-meta {
+	display: flex;
+	align-items: center;
+	gap: $spacing-sm;
+	flex-wrap: wrap;
+}
+
+.price {
+	font-size: $font-size-xl;
+	font-weight: $font-weight-bold;
+	color: $danger-color;
+}
+
+.category-tag {
+	background: $primary-100;
+	border-radius: $border-radius-sm;
+	padding: 4rpx $spacing-sm;
+}
+
+.category-text {
+	font-size: $font-size-xs;
+	color: $primary-500;
+}
+
+.dish-tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: $spacing-xs;
+}
+
+.tag-item {
+	background: $bg-color-light;
+	border-radius: $border-radius-sm;
+	padding: 4rpx $spacing-sm;
+}
+
+.tag-text {
+	font-size: $font-size-xs;
+	color: $text-color-secondary;
+}
+
+.dish-actions {
+	display: flex;
+	gap: $spacing-sm;
+	margin-top: $spacing-xs;
+}
+
+.action-btn {
+	flex: 1;
+	padding: $spacing-xs $spacing-sm;
+	border-radius: $border-radius-base;
+	text-align: center;
+	transition: $transition-base;
+
+	&.primary {
+		background: $primary-500;
+	}
+
+	&.success {
+		background: $success-color;
+	}
+
+	&:active {
+		opacity: 0.7;
+		transform: scale(0.95);
+	}
+}
+
+.action-text {
+	font-size: $font-size-sm;
+	color: $bg-color-white;
+	font-weight: $font-weight-medium;
+}
+</style>
