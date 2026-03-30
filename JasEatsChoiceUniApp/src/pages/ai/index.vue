@@ -285,24 +285,67 @@ const displayMessages = computed(() => {
 });
 
 /**
- * 获取用户ID
+ * 获取用户ID（优化版，增加环境判断和数据同步）
  */
 const getUserId = () => {
 	// 优先从 store 中获取 userId
 	if (userStore.userId) {
+		// 同步到本地存储，确保数据一致性
+		uni.setStorageSync("userId", userStore.userId);
 		return userStore.userId;
 	}
+
 	// 其次从 userInfo 中获取
 	if (userStore.userInfo?.userId) {
-		return userStore.userInfo.userId;
+		const userId = userStore.userInfo.userId;
+		// 同步到本地存储，确保数据一致性
+		uni.setStorageSync("userId", userId);
+		return userId;
 	}
-	// 最后从本地存储获取
+
+	// 从本地存储获取
 	const localUserId = uni.getStorageSync("userId");
 	if (localUserId) {
+		// 同步到 store，确保数据一致性
+		if (userStore.userInfo) {
+			userStore.userInfo.userId = localUserId;
+		}
 		return localUserId;
 	}
-	// 默认返回 "1"（测试用户）
-	return "1";
+
+	// 判断当前环境
+	const isDevelopment = process.env.NODE_ENV === 'development';
+
+	if (isDevelopment) {
+		// 开发环境：允许使用默认测试用户ID
+		console.warn("⚠️ 开发环境：使用默认测试用户ID '1'");
+		const testUserId = "1";
+		// 同步到 store 和本地存储
+		uni.setStorageSync("userId", testUserId);
+		if (userStore.userInfo) {
+			userStore.userInfo.userId = testUserId;
+		}
+		return testUserId;
+	} else {
+		// 生产环境：禁止使用默认值，抛出错误
+		console.error("❌ 生产环境：无法获取用户ID，请先登录");
+
+		// 跳转到登录页
+		uni.showToast({
+			title: "请先登录",
+			icon: "none",
+			duration: 2000
+		});
+
+		setTimeout(() => {
+			uni.reLaunch({
+				url: "/pages/login/index"
+			});
+		}, 2000);
+
+		// 返回空字符串，避免使用错误的用户ID
+		return "";
+	}
 };
 
 /**
@@ -333,6 +376,12 @@ const scrollToBottom = async () => {
  * 加载聊天历史记录
  */
 const loadChatHistory = async () => {
+	// 避免重复加载
+	if (hasLoadedHistory.value) {
+		console.log("⏭️ 已加载过历史记录，跳过重复加载");
+		return;
+	}
+
 	try {
 		const userId = getUserId();
 		console.log("📥 开始加载聊天记录，userId:", userId);
@@ -357,10 +406,12 @@ const loadChatHistory = async () => {
 			hasLoadedHistory.value = true;
 			console.log("✅ 成功加载聊天历史:", messages.value.length, "条消息");
 		} else {
-			// 没有历史记录，显示欢迎消息
-			console.log("📭 没有历史记录，显示欢迎消息");
-			addWelcomeMessage();
-			hasLoadedHistory.value = false;
+			// 没有历史记录，仅当消息列表为空时才添加欢迎消息
+			if (messages.value.length === 0) {
+				console.log("📭 没有历史记录，显示欢迎消息");
+				addWelcomeMessage();
+			}
+			hasLoadedHistory.value = true; // 标记已尝试加载
 		}
 
 		// 滚动到底部
@@ -368,9 +419,11 @@ const loadChatHistory = async () => {
 	} catch (error) {
 		console.error("❌ 加载聊天记录失败:", error);
 
-		// 加载失败时显示欢迎消息
-		addWelcomeMessage();
-		hasLoadedHistory.value = false;
+		// 加载失败时，仅当消息列表为空时才添加欢迎消息
+		if (messages.value.length === 0) {
+			addWelcomeMessage();
+		}
+		hasLoadedHistory.value = true; // 标记已尝试加载，避免重复尝试
 	}
 };
 
@@ -378,7 +431,6 @@ const loadChatHistory = async () => {
  * 添加欢迎消息
  */
 const addWelcomeMessage = () => {
-	hasLoadedHistory.value = false;
 	messages.value = [
 		{
 			id: Date.now(),
@@ -392,9 +444,11 @@ const addWelcomeMessage = () => {
 };
 
 /**
- * 保存消息到后端
+ * 保存消息到后端（带重试机制）
  */
-const saveMessageToBackend = async (sender, content) => {
+const saveMessageToBackend = async (sender, content, retryCount = 0) => {
+	const maxRetries = 3; // 最大重试次数
+
 	try {
 		const userId = getUserId();
 		await aiApi.saveMessage({
@@ -405,6 +459,17 @@ const saveMessageToBackend = async (sender, content) => {
 		console.log("✅ 消息已保存到后端:", sender);
 	} catch (error) {
 		console.error("❌ 保存消息到后端失败:", error);
+
+		// 重试机制
+		if (retryCount < maxRetries) {
+			console.log(`🔄 重试保存消息 (${retryCount + 1}/${maxRetries})...`);
+			await new Promise((resolve) => setTimeout(resolve, 1000 * (retryCount + 1))); // 延迟重试
+			return saveMessageToBackend(sender, content, retryCount + 1);
+		} else {
+			console.error("❌ 消息保存失败，已达到最大重试次数");
+			// 保存到本地存储作为备份
+			saveChatHistoryToLocal();
+		}
 	}
 };
 
@@ -419,6 +484,23 @@ const sendMessage = async () => {
 	console.log("⏰ 请求时间:", new Date().toLocaleString());
 	console.log("📝 用户消息:", text);
 
+	// 🔧 中断上一个未完成的流式请求
+	if (abortController) {
+		console.log("🛑 中断上一个未完成的流式请求");
+		abortController.abort();
+		abortController = null;
+	}
+
+	// 清空上一次的流式状态
+	if (isStreaming.value) {
+		console.log("🔄 清空上一次的流式状态");
+		isTyping.value = false;
+		isStreaming.value = false;
+	}
+
+	// 创建新的 AbortController
+	abortController = new AbortController();
+
 	// 清空输入框
 	inputText.value = "";
 
@@ -432,6 +514,9 @@ const sendMessage = async () => {
 		isUser: true,
 	};
 	messages.value.push(userMsg);
+
+	// 立即保存用户消息到后端（不阻塞后续流程）
+	saveMessageToBackend("user", text);
 
 	// 发送消息后自动收起快捷提问，提升体验
 	if (quickQuestionsExpanded.value) {
@@ -593,17 +678,21 @@ const clearHistory = async () => {
 						// 清空前端显示
 						messages.value = [];
 
-						// 重新加载消息（会显示欢迎消息）
-						await loadChatHistory();
+						// 直接添加欢迎消息，不调用loadChatHistory避免逻辑矛盾
+						addWelcomeMessage();
 
 						// 清空本地存储
 						uni.removeStorageSync("chatHistory");
+
+						// 重置加载状态
+						hasLoadedHistory.value = true;
 
 						uni.showToast({
 							title: "已清空聊天记录",
 							icon: "success",
 						});
 					} else {
+						// 后端清空失败，不清空前端数据，仅给出错误提示
 						uni.showToast({
 							title: clearResponse.message || "清空失败，请稍后重试",
 							icon: "none",
@@ -612,14 +701,10 @@ const clearHistory = async () => {
 				} catch (error) {
 					console.error("❌ 清空聊天记录失败:", error);
 
-					// 即使后端失败，也清空前端显示
-					messages.value = [];
-					addWelcomeMessage();
-					uni.removeStorageSync("chatHistory");
-
+					// 后端清空失败，不清空前端数据，仅给出错误提示
 					uni.showToast({
-						title: "已清空本地记录",
-						icon: "success",
+						title: "清空失败，请检查网络连接",
+						icon: "none",
 					});
 				}
 			}

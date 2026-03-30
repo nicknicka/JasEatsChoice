@@ -3036,7 +3036,14 @@ onUnmounted(() => {
 			filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.15));
 
 			:deep(.avatar-container) {
-				padding: 4px; /* 减小padding以匹配42px尺寸 */
+				padding: 8px; /* 适中的padding，让光晕完整显示 */
+				overflow: visible; /* 确保光晕不被裁剪 */
+			}
+
+			:deep(.avatar-container::after) {
+				/* 减小模糊范围，让光晕更集中 */
+				filter: blur(12px); /* 从21px减小到12px */
+				opacity: 0.8; /* 稍微降低不透明度，让光晕更柔和 */
 			}
 
 			:deep(.user-avatar) {

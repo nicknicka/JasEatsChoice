@@ -363,6 +363,20 @@ const editProfile = () => {
  * 页面导航
  */
 const navigateTo = (page, params = {}) => {
+  // 登录态检查：未登录时，除了登录页外，都需要先登录
+  if (!userStore.isLogin && page !== 'login') {
+    uni.showToast({
+      title: '请先登录',
+      icon: 'none'
+    })
+    setTimeout(() => {
+      uni.navigateTo({
+        url: '/pages/login/index'
+      })
+    }, 1500)
+    return
+  }
+
   const pageMap = {
     'orders': '/pages/orders/index',
     'favorites': '/pages/favorites/index',
@@ -458,14 +472,42 @@ const loadUserInfo = async () => {
     }
   } catch (error) {
     console.error('加载用户信息失败:', error)
-    // 如果API调用失败，尝试从本地存储获取
+
+    // 检查是否是404错误（用户不存在）
+    if (error.code === '404' || error.response?.status === 404 || error.message?.includes('用户不存在')) {
+      console.warn('用户不存在，清除本地数据并跳转登录页')
+
+      // 清除用户信息和token
+      userStore.logout()
+      uni.removeStorageSync('token')
+      uni.removeStorageSync('userInfo')
+      uni.removeStorageSync('userId')
+
+      // 显示提示
+      uni.showToast({
+        title: '登录已过期，请重新登录',
+        icon: 'none',
+        duration: 2000
+      })
+
+      // 延迟跳转到登录页
+      setTimeout(() => {
+        uni.reLaunch({
+          url: '/pages/login/index'
+        })
+      }, 2000)
+
+      return
+    }
+
+    // 其他错误：尝试从本地存储获取
     const localUserInfo = uni.getStorageSync('userInfo')
     if (localUserInfo) {
       userInfo.value = {
         id: localUserInfo.userId || localUserInfo.id || '',
-        name: localUserInfo.nickname || localUserInfo.name || '佳食宜选用户',
-        avatar: localUserInfo.avatar || 'https://via.placeholder.com/200x200/FF6B35/FFFFFF?text=用户',
-        gender: localUserInfo.gender || 'female',
+        name: localUserInfo.nickname,
+        avatar: localUserInfo.avatar ,
+        gender: localUserInfo.gender ,
         tags: localUserInfo.tags || [],
         vipLevel: localUserInfo.vipLevel || localUserInfo.memberLevel || 0
       }
