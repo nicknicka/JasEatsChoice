@@ -24,6 +24,12 @@
 
 /* ==================== Flex布局 ==================== */
 
+// Flex行布局（基础）
+@mixin flex-row {
+  display: flex;
+  flex-direction: row;
+}
+
 // Flex居中
 @mixin flex-center {
   display: flex;

@@ -4,7 +4,6 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [uni()],
-  root: './',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src')

@@ -3,7 +3,7 @@
     <!-- 顶部导航栏 -->
     <view class="navbar">
       <view class="nav-content">
-        <view class="nav-back" @click="goBack">
+        <view class="nav-back" @click="handleGoBack">
           <uni-icons type="left" size="20" color="#FFFFFF" />
         </view>
         <text class="nav-title">交易明细</text>
@@ -177,6 +177,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useUserStore } from '@/store'
+import { goBack, toCustomerService } from '@/utils/router'
 
 const userStore = useUserStore()
 
@@ -471,14 +472,12 @@ const cancelTransaction = () => {
 // 联系客服
 const contactService = () => {
   closeDetail()
-  uni.navigateTo({
-    url: '/src/pages-user/customer-service/index'
-  })
+  toCustomerService()
 }
 
 // 返回上一页
-const goBack = () => {
-  uni.navigateBack()
+const handleGoBack = () => {
+  goBack()
 }
 
 onMounted(() => {

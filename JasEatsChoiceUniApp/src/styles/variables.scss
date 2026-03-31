@@ -31,10 +31,26 @@ $primary-900: #E55A2B;
 
 // 功能色（保留，仅用于特定场景）
 $secondary-color: #667eea; // 辅助色，用于文本颜色等
+
+// 成功色（绿色系）
 $success-color: #52c41a;
+$success-50: #f6ffed;
+$success-100: #d9f7be;
+
+// 警告色（橙黄色系）
 $warning-color: #faad14;
+$warning-50: #fffbe6;   // 极浅色，用于背景
+$warning-100: #fff1b8;  // 浅色，用于弱背景
+
+// 危险色（红色系）
 $danger-color: #f5222d;
+$danger-50: #fff1f0;
+$danger-100: #ffccc7;
+
+// 信息色（蓝色系）
 $info-color: #1890ff;
+$info-50: #e6f7ff;
+$info-100: #bae7ff;
 
 /* ==================== 中性色 ==================== */
 

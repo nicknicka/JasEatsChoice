@@ -12,7 +12,8 @@ const MAIN_PAGES = {
   HOME: '/src/pages/home/index/index',
   RECIPE: '/src/pages/recipe/index',
   AI: '/src/pages/ai/index',
-  PROFILE: '/src/pages/profile/user-center/index'
+  PROFILE: '/src/pages/profile/user-center/index',
+  CUSTOMER_SERVICE: '/src/pages/customer-service/index'
 }
 
 /**
@@ -22,10 +23,14 @@ const USER_PAGES = {
   HOME: '/src/pages-user/home/index',
   RECIPE_TODAY: '/src/pages-user/recipe/today',
   AI: '/src/pages-user/ai/index',
+  AI_ADVANCED: '/src/pages-user/ai/advanced',
+  AI_CONTENT_EXTRACT: '/src/pages-user/ai/content-extract',
   PROFILE: '/src/pages-user/profile/user-center/index',
   SEARCH: '/src/pages-user/search/index',
   MERCHANT_DETAIL: '/src/pages-user/merchant/detail/index',
   DISH_DETAIL: '/src/pages-user/dish/detail/index',
+  DISH_LIST: '/src/pages-user/dish/list/index',
+  DISH_CUSTOMIZE: '/src/pages-user/dish/customize',
   CART: '/src/pages-user/cart/index',
   ORDER_CONFIRM: '/src/pages-user/order/confirm/index',
   ORDER_DETAIL: '/src/pages-user/order/detail/index',
@@ -42,6 +47,7 @@ const USER_PAGES = {
   HISTORY: '/src/pages-user/history/index',
   COUPON: '/src/pages-user/coupon/index',
   WALLET: '/src/pages-user/wallet/index',
+  WALLET_TRANSACTIONS: '/src/pages-user/wallet/transactions',
   MESSAGE: '/src/pages-user/message/index',
   HELP: '/src/pages-user/help/index',
   FEEDBACK: '/src/pages-user/feedback/index',
@@ -49,9 +55,10 @@ const USER_PAGES = {
   CALORIE_RECORD: '/src/pages-user/calorie/record',
   CALORIE_STATISTICS: '/src/pages-user/calorie/statistics',
   MERCHANT_LIST: '/src/pages-user/home/merchant-list',
-  DISH_CUSTOMIZE: '/src/pages-user/dish/customize',
   INTEGRAL: '/src/pages-user/profile/integral',
-  ABOUT: '/src/pages-user/profile/about'
+  ABOUT: '/src/pages-user/profile/about',
+  DEMO_PERFORMANCE: '/src/pages-user/demo/performance',
+  SETTINGS: '/src/pages-user/settings/index'
 }
 
 /**
@@ -59,9 +66,32 @@ const USER_PAGES = {
  */
 const MERCHANT_PAGES = {
   HOME: '/src/pages-merchant/home/index',
+  STATISTICS: '/src/pages-merchant/home/statistics',
+  ANALYTICS: '/src/pages-merchant/home/analytics',
   ORDER: '/src/pages-merchant/order/index',
+  ORDER_DETAIL: '/src/pages-merchant/order/detail',
+  ORDER_PROCESS: '/src/pages-merchant/order/process',
+  ORDER_TODAY: '/src/pages-merchant/order/today',
   DISH: '/src/pages-merchant/dish/index',
-  PROFILE: '/src/pages-merchant/profile/index'
+  DISH_ADD: '/src/pages-merchant/dish/add',
+  DISH_EDIT: '/src/pages-merchant/dish/edit',
+  DISH_STEP_CONFIG: '/src/pages-merchant/dish/step-config',
+  MENU: '/src/pages-merchant/menu/index',
+  MENU_EDIT: '/src/pages-merchant/menu/edit',
+  COMMENT: '/src/pages-merchant/comment/index',
+  COMMENT_DETAIL: '/src/pages-merchant/comment/detail',
+  COMMENT_REPLY: '/src/pages-merchant/comment/reply',
+  WISHLIST: '/src/pages-merchant/wishlist/index',
+  WISHLIST_AUDIT: '/src/pages-merchant/wishlist/audit',
+  CHAT: '/src/pages-merchant/chat/index',
+  CHAT_DETAIL: '/src/pages-merchant/chat/detail',
+  PROFILE: '/src/pages-merchant/profile/index',
+  PROFILE_EDIT: '/src/pages-merchant/profile/edit',
+  SHOP: '/src/pages-merchant/profile/shop',
+  FINANCE: '/src/pages-merchant/profile/finance',
+  WITHDRAW: '/src/pages-merchant/profile/withdraw',
+  SETTINGS: '/src/pages-merchant/profile/settings',
+  TUTORIALS: '/src/pages-merchant/profile/tutorials'
 }
 
 /**
@@ -199,6 +229,66 @@ export const backOrHome = () => {
   }
 }
 
+/**
+ * 通用路由跳转函数（支持参数传递）
+ * @param {string} url - 页面路径
+ * @param {object} params - 查询参数
+ * @param {string} navigationType - 导航类型：navigateTo/redirectTo/reLaunch/switchTab
+ */
+export const navigate = (url, params = {}, navigationType = 'navigateTo') => {
+  let fullUrl = url
+
+  // 拼接参数
+  if (params && Object.keys(params).length > 0) {
+    const query = Object.keys(params)
+      .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
+      .join('&')
+    fullUrl = `${url}?${query}`
+  }
+
+  console.log(`🔄 [路由] ${navigationType}`, { url: fullUrl })
+
+  const navigationMethods = {
+    navigateTo: uni.navigateTo,
+    redirectTo: uni.redirectTo,
+    reLaunch: uni.reLaunch,
+    switchTab: uni.switchTab
+  }
+
+  const method = navigationMethods[navigationType] || uni.navigateTo
+
+  method({
+    url: fullUrl,
+    success: () => console.log(`✅ [路由] ${navigationType} 成功`),
+    fail: (err) => console.error(`❌ [路由] ${navigationType} 失败:`, err)
+  })
+}
+
+/**
+ * 返回上一页
+ * @param {number} delta - 返回页面数
+ */
+export const goBack = (delta = 1) => {
+  console.log('🔄 [路由] 返回上一页', { delta })
+  uni.navigateBack({ delta })
+}
+
+/**
+ * 跳转到客服中心
+ */
+export const toCustomerService = () => {
+  console.log('🔄 [路由] 跳转客服中心')
+  navigate(MAIN_PAGES.CUSTOMER_SERVICE)
+}
+
+/**
+ * 跳转到钱包交易明细
+ */
+export const toWalletTransactions = () => {
+  console.log('🔄 [路由] 跳转交易明细')
+  navigate(USER_PAGES.WALLET_TRANSACTIONS)
+}
+
 export default {
   toLogin,
   toUserHome,
@@ -214,5 +304,9 @@ export default {
   toAddressEdit,
   toProfile,
   backOrHome,
+  navigate,
+  goBack,
+  toCustomerService,
+  toWalletTransactions,
   paths
 }
