@@ -18,7 +18,6 @@ import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.community.model.zhipu.ZhipuAiStreamingChatModel;
 import dev.langchain4j.service.AiServices;
-import dev.langchain4j.memory.ChatMemory;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,12 +32,6 @@ import jakarta.annotation.Resource;
  * LangChain4j流式输出配置类
  *
  * **架构设计：L2 Agent 直接调用工具类或L1专家Agent**
- *
- * 架构重构（2026-03-27）：
- * - 统一为L2→L1两层架构
- * - L2智能调度Agent直接对接L1专家Agent和工具类
- * - L2 Agent负责智能任务规划和Agent路由
- * - 流式Agent使用工具类提供实时响应
  *
  * 流式Agent定位：
  * - StreamingIntelligentAssistantAgent: L2智能调度（用户端）
@@ -116,32 +109,26 @@ public class LangChain4jStreamingConfig {
     }
 
     /**
-     * 配置ChatMemory（对话记忆）- 流式版本使用独立的内存
-     */
-    @Bean
-    public ChatMemory streamingChatMemory() {
-        log.info("初始化StreamingChatMemory，消息窗口大小：20");
-
-        return MessageWindowChatMemory.withMaxMessages(20);
-    }
-
-    /**
      * 构建流式智能助手AI Agent
      *
      * **架构说明**：直接使用工具类提供流式响应
      * - 用于用户端的实时对话场景
      * - 不使用Agent作为工具（Agent不能作为工具传递）
      * - 工具类提供数据查询和业务逻辑
+     *
+     * **用户隔离**：
+     * - 使用 @MemoryId 注解实现用户级别的对话隔离
+     * - 每个不同的 memoryId 会自动获得独立的 ChatMemory
+     * - 调用方需要传递 memoryId 参数（通常使用 userId）
      */
     @Bean
     public StreamingIntelligentAssistantAgent streamingIntelligentAssistantAgent(
-            StreamingChatModel streamingChatLanguageModel,
-            ChatMemory streamingChatMemory) {
-        log.info("构建流式: StreamingIntelligentAssistantAgent (直接使用工具类)...");
+            StreamingChatModel streamingChatLanguageModel) {
+        log.info("构建流式: StreamingIntelligentAssistantAgent (支持用户隔离)...");
 
         return AiServices.builder(StreamingIntelligentAssistantAgent.class)
                 .streamingChatModel(streamingChatLanguageModel)
-                .chatMemory(streamingChatMemory)
+                .chatMemoryProvider(memoryId -> MessageWindowChatMemory.withMaxMessages(20))
                 .tools(
                     // 直接使用工具类，而不是Agent（Agent不能作为工具传递）
                     userProfileTools,
@@ -168,13 +155,12 @@ public class LangChain4jStreamingConfig {
      */
     @Bean
     public StreamingMerchantAssistantAgent streamingMerchantAssistantAgent(
-            StreamingChatModel streamingChatLanguageModel,
-            ChatMemory streamingChatMemory) {
+            StreamingChatModel streamingChatLanguageModel) {
         log.info("构建商家流式: StreamingMerchantAssistantAgent (调用商家工具)...");
 
         return AiServices.builder(StreamingMerchantAssistantAgent.class)
                 .streamingChatModel(streamingChatLanguageModel)
-                .chatMemory(streamingChatMemory)
+                .chatMemoryProvider(memoryId -> MessageWindowChatMemory.withMaxMessages(20))
                 .tools(
                     // 商家查询工具
                     merchantQueryTools,

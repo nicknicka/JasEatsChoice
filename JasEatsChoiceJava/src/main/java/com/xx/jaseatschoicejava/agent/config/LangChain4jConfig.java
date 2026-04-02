@@ -1,8 +1,6 @@
 package com.xx.jaseatschoicejava.agent.config;
 
-import com.xx.jaseatschoicejava.agent.MerchantAssistantAgent;
 import com.xx.jaseatschoicejava.agent.NutritionAiAgent;
-import com.xx.jaseatschoicejava.agent.OrderAiAgent;
 import com.xx.jaseatschoicejava.agent.RecommendationAiAgent;
 import com.xx.jaseatschoicejava.agent.agents.CardRendererAgent;
 import com.xx.jaseatschoicejava.agent.agents.CustomerServiceAgent;
@@ -358,42 +356,6 @@ public class LangChain4jConfig {
                     collectionTools,
                     nutritionTools,
                     createLocationTools()
-                )
-                .build();
-    }
-
-    /**
-     * 构建订单助手AI Agent
-     */
-    @Bean
-    public OrderAiAgent orderAiAgent(ChatModel chatLanguageModel, ChatMemory chatMemory) {
-        log.info("构建OrderAiAgent...");
-
-        return AiServices.builder(OrderAiAgent.class)
-                .chatModel(chatLanguageModel)
-                .chatMemory(chatMemory)
-                .tools(
-                    createOrderTools(),
-                    recommendationTools,
-                    collectionTools,
-                    userTools
-                )
-                .build();
-    }
-
-    /**
-     * 构建商家经营助手AI Agent
-     */
-    @Bean
-    @Scope("prototype")
-    public MerchantAssistantAgent merchantAssistantAgent(ChatModel chatLanguageModel, ChatMemory chatMemory) {
-        log.info("构建MerchantAssistantAgent...");
-
-        return AiServices.builder(MerchantAssistantAgent.class)
-                .chatModel(chatLanguageModel)
-                .chatMemory(chatMemory)
-                .tools(
-                    merchantTools
                 )
                 .build();
     }

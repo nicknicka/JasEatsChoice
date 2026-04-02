@@ -133,22 +133,48 @@ const handleFavoriteTap = (item) => {
 };
 
 // 取消收藏
-const handleRemove = (item) => {
+const handleRemove = async (item) => {
 	console.log('取消收藏:', item);
 	emit('action', {
 		type: 'remove',
 		item: item
 	});
 
+	// 获取用户ID
+	const userId = uni.getStorageSync('userId') || uni.getStorageSync('userInfo')?.userId;
+	if (!userId) {
+		uni.showToast({
+			title: '请先登录',
+			icon: 'none'
+		});
+		return;
+	}
+
 	uni.showModal({
 		title: '确认取消',
 		content: '确定要取消收藏吗？',
-		success: (res) => {
+		success: async (res) => {
 			if (res.confirm) {
-				uni.showToast({
-					title: '已取消收藏',
-					icon: 'success'
-				});
+				try {
+					// 调用取消收藏API
+					const dishId = item.dishId || item.id;
+					await favoriteApi.removeDish(dishId, userId);
+
+					uni.showToast({
+						title: '已取消收藏',
+						icon: 'success'
+					});
+
+					// 触发列表更新事件
+					uni.$emit('favoriteUpdated');
+				} catch (error) {
+					console.error('取消收藏失败:', error);
+					uni.showToast({
+						title: error.message || '取消失败，请稍后重试',
+						icon: 'none',
+						duration: 2000
+					});
+				}
 			}
 		}
 	});

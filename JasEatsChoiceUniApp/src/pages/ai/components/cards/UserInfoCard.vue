@@ -126,9 +126,9 @@ const handleViewProfile = () => {
 		data: props.data
 	});
 
-	// 跳转到个人中心
+	// 跳转到个人中心主页
 	uni.navigateTo({
-		url: '/pages-user/user-center/index'
+		url: '/pages/profile/user-center/index'
 	});
 };
 

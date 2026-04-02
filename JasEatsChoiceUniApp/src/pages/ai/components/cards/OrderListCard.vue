@@ -123,9 +123,9 @@ const handleViewDetail = (order) => {
 		order: order
 	});
 
-	// 跳转到订单详情页
+	// 跳转到订单进度页（使用id参数）
 	uni.navigateTo({
-		url: `/pages-user/order/progress?orderId=${order.orderId}`
+		url: `/pages-user/order/progress?id=${order.orderId || order.id}`
 	});
 };
 </script>

@@ -2,15 +2,12 @@ package com.xx.jaseatschoicejava.service;
 
 import com.xx.jaseatschoicejava.agent.agents.stream.StreamingIntelligentAssistantAgent;
 import dev.langchain4j.service.TokenStream;
-import dev.langchain4j.data.message.AiMessage;
-import dev.langchain4j.model.output.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.Resource;
 import java.io.IOException;
-import java.util.function.Consumer;
 
 /**
  * 流式Agent服务
@@ -32,12 +29,13 @@ public class StreamingAgentService {
      *
      * @param userMessage 用户消息
      * @param userId 用户ID
+     * @param memoryId 会话记忆ID（用于隔离不同用户的对话历史）
      * @param tokenHandler token处理器，接收每个生成的token
      */
-    public void chatStream(String userMessage, String userId, TokenHandler tokenHandler) {
-        log.info("收到流式对话请求, 用户: {}, 消息: {}", userId, userMessage);
+    public void chatStream(String userMessage, String userId, String memoryId, TokenHandler tokenHandler) {
+        log.info("收到流式对话请求, 用户: {}, 记忆ID: {}, 消息: {}", userId, memoryId, userMessage);
 
-        TokenStream tokenStream = streamingIntelligentAssistantAgent.chat(userMessage, userId);
+        TokenStream tokenStream = streamingIntelligentAssistantAgent.chat(userMessage, userId, memoryId);
 
         tokenStream.onPartialResponse(token -> {
             // 处理每个token（token是String类型）

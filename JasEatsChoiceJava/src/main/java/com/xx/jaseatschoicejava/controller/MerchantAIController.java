@@ -89,8 +89,9 @@ public class MerchantAIController {
             log.info("   - 商家ID: {}", merchantId);
             log.info("   - 消息内容: {}", message);
 
-            // 3. 调用商家流式Agent（传递merchantId）
-            streamingMerchantAssistantAgent.chat(message, merchantId)
+            // 3. 调用商家流式Agent（传递merchantId和memoryId，实现商家隔离）
+            // 使用 merchantId 作为 memoryId，确保每个商家的对话历史相互隔离
+            streamingMerchantAssistantAgent.chat(message, merchantId, merchantId)
                 .onPartialResponse(token -> {
                     // 处理每个token（从LLM流式接收）
                     try {
@@ -178,7 +179,7 @@ public class MerchantAIController {
             // 流式Agent需要转为同步调用
             StringBuilder fullResponse = new StringBuilder();
 
-            streamingMerchantAssistantAgent.chat(message, merchantId)
+            streamingMerchantAssistantAgent.chat(message, merchantId, merchantId)
                 .onPartialResponse(token -> {
                     if (token != null) {
                         fullResponse.append(token);

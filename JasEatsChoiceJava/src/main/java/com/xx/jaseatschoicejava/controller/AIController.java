@@ -112,8 +112,9 @@ public class AIController {
             log.info("   - userId类型: {}", userId != null ? userId.getClass().getSimpleName() : "null");
             log.info("   - 消息内容: {}", message);
 
-            // 3. 调用真正的流式Agent（传递userId）
-            streamingIntelligentAssistantAgent.chat(message, userId)
+            // 3. 调用真正的流式Agent（传递userId和memoryId，实现用户隔离）
+            // 使用 userId 作为 memoryId，确保每个用户的对话历史相互隔离
+            streamingIntelligentAssistantAgent.chat(message, userId, userId)
                 .onPartialResponse(token -> {
                     // 处理每个token（从LLM流式接收）
                     try {

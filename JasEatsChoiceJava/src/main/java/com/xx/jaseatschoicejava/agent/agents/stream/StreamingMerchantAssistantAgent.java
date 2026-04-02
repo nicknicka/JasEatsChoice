@@ -4,6 +4,7 @@ import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
 import dev.langchain4j.service.TokenStream;
 import dev.langchain4j.service.V;
+import dev.langchain4j.service.MemoryId;
 
 /**
  * L3 商家经营助手Agent（流式输出版本）
@@ -21,6 +22,7 @@ public interface StreamingMerchantAssistantAgent {
      *
      * @param userMessage 用户消息
      * @param merchantId 商家ID（用于识别当前商家，查询订单、评价、数据等）
+     * @param memoryId 会话记忆ID（用于隔离不同商家的对话历史）
      * @return TokenStream 流式Token流
      */
     @SystemMessage("""
@@ -90,6 +92,7 @@ public interface StreamingMerchantAssistantAgent {
         """)
     TokenStream chat(
         @UserMessage String userMessage,
-        @V("merchantId") String merchantId
+        @V("merchantId") String merchantId,
+        @MemoryId String memoryId
     );
 }
