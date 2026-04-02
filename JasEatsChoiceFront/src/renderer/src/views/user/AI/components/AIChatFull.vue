@@ -389,10 +389,8 @@ import { ElMessage, ElMessageBox } from "element-plus";
 import {
 	ChatDotRound,
 	Close,
-	ChatDotRound as ChatDotRoundIcon,
 	Delete,
 	Picture,
-	ChatLineRound,
 	DocumentCopy,
 	More,
 	Operation,
@@ -433,7 +431,7 @@ const router = useRouter();
 
 // 获取用户ID
 const getUserId = () => {
-	return String(authStore.userId || "1");
+	return String(authStore.userId);
 };
 
 // ========== 计算属性优化 ==========

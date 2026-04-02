@@ -12,18 +12,24 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 /**
- * SupervisorAgent 工厂类（L3 → L1 架构）
+ * SupervisorAgent 工厂类（L2 → L1 架构）
  *
  * 动态创建带监听器的SupervisorAgent实例
  * 支持每个用户独立的ChatMemory（Redis + MySQL混合存储）
  *
+ * **架构说明**：
+ * - L2层：SupervisorAgent智能调度
+ * - L1层：7个专家Agent（菜品推荐、用户偏好、营养指导、订单辅助、商家信息、时间感知、位置服务）
+ *
  * 架构重构：
- * - 移除L2层，L3 SupervisorAgent直接对接L1专家Agent
+ * - 统一为L2→L1两层架构
+ * - L2 SupervisorAgent直接协调L1专家Agent
  * - 实现智能任务规划和Agent路由
  * - 提升性能，减少调用层次
  *
  * @author Claude
  * @since 2026-03-27
+ * @updated 2026-04-02 架构统一为L2→L1
  */
 @Component
 public class SupervisorAgentFactory {
@@ -65,14 +71,14 @@ public class SupervisorAgentFactory {
         this.timeAwareAgent = timeAwareAgent;
         this.locationServiceAgent = locationServiceAgent;
 
-        log.info("SupervisorAgentFactory初始化完成（L3 → L1 架构）");
+        log.info("SupervisorAgentFactory初始化完成（L2 → L1 架构）");
     }
 
     /**
-     * 创建带监听器的SupervisorAgent（L3直接对接L1）
+     * 创建带监听器的SupervisorAgent（L2直接对接L1）
      *
      * 重构说明：
-     * - 移除L2层，直接注入7个L1专家Agent
+     * - L2层直接注入7个L1专家Agent
      * - 实现智能任务规划和路由逻辑
      * - 提升性能和响应速度
      *
@@ -81,14 +87,14 @@ public class SupervisorAgentFactory {
      * @return SupervisorAgent实例
      */
     public SupervisorAgent createWithListener(AgentListener listener, String userId) {
-        log.debug("创建带监听器的L3 SupervisorAgent（直接对接L1），userId={}", userId);
+        log.debug("创建带监听器的L2 SupervisorAgent（直接对接L1），userId={}", userId);
 
         return AgenticServices
                 .supervisorBuilder()
                 .chatModel(supervisorModel)
                 .chatMemoryProvider(memoryId -> chatMemoryFactory.createChatMemory(userId))
                 .name("SupervisorAgent")
-                .description("L3智能监督代理，直接协调L1专家Agent完成复杂任务")
+                .description("L2智能调度代理，直接协调L1专家Agent完成复杂任务")
                 .subAgents(
                     // 直接注入所有L1专家Agent
                     dishRecommendationAgent,
@@ -120,7 +126,7 @@ public class SupervisorAgentFactory {
      */
     private String createSupervisorContext() {
         return """
-            你是"佳食宜选"的L3智能监督代理，负责协调L1专家Agent为用户提供精准服务。
+            你是"佳食宜选"的L2智能调度代理，负责协调L1专家Agent为用户提供精准服务。
 
             ## 🎯 核心职责
             1. **意图识别**：理解用户真实需求
@@ -247,7 +253,7 @@ public class SupervisorAgentFactory {
     /**
      * 将原始结果渲染为卡片格式
      *
-     * @param originalResult L3 Supervisor的原始总结结果
+     * @param originalResult L2 Supervisor的原始总结结果
      * @return 格式化后的卡片格式消息
      */
     public String renderCards(String originalResult) {

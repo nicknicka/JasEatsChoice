@@ -77,6 +77,7 @@
 
 <script setup>
 import { computed } from 'vue';
+import { favoriteApi } from '@/api/modules/favorite';
 
 const props = defineProps({
 	data: {

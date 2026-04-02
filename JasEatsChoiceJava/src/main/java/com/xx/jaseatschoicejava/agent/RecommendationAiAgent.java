@@ -7,11 +7,34 @@ import dev.langchain4j.service.V;
 /**
  * 智能推荐AI Agent接口
  *
+ * ⚠️ **已废弃** - 请使用L2智能调度Agent（StreamingIntelligentAssistantAgent）
+ *
+ * **废弃原因**：
+ * - 功能已被L2智能调度Agent完全替代
+ * - L2 Agent可以调用L1专家Agent（DishRecommendationAgent）提供更专业的推荐
+ * - 支持流式响应，用户体验更好
+ *
+ * **替代方案**：
+ * - 使用 `/v1/ai/stream/chat` 接口（L2智能调度Agent）
+ * - L2 Agent会自动调用DishRecommendationAgent（L1专家Agent）
+ * - 获得更精准的个性化推荐
+ *
+ * **迁移指南**：
+ * ```java
+ * // 旧版本（废弃）
+ * recommendationAiAgent.chat(message, userId);
+ *
+ * // 新版本（推荐）
+ * streamingIntelligentAssistantAgent.chat(message, userId);
+ * ```
+ *
  * LangChain4j会自动实现此接口
  *
  * @author Claude
  * @since 2026-03-22 v2.0
+ * @deprecated 自2026-04-02起废弃，请使用{@link com.xx.jaseatschoicejava.agent.agents.stream.StreamingIntelligentAssistantAgent}
  */
+@Deprecated(since = "2026-04-02", forRemoval = true)
 public interface RecommendationAiAgent {
 
     /**

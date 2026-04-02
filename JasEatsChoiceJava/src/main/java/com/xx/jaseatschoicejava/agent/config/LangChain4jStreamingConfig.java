@@ -32,19 +32,21 @@ import jakarta.annotation.Resource;
 /**
  * LangChain4j流式输出配置类
  *
- * **架构设计：L3 Agent 直接调用工具类**
+ * **架构设计：L2 Agent 直接调用工具类或L1专家Agent**
  *
  * 架构重构（2026-03-27）：
- * - 移除L2层，L3直接对接L1专家Agent和工具类
- * - L3 SupervisorAgent负责智能任务规划和Agent路由
+ * - 统一为L2→L1两层架构
+ * - L2智能调度Agent直接对接L1专家Agent和工具类
+ * - L2 Agent负责智能任务规划和Agent路由
  * - 流式Agent使用工具类提供实时响应
  *
  * 流式Agent定位：
- * - StreamingIntelligentAssistantAgent: 用户端智能助手（流式响应）
- * - StreamingMerchantAssistantAgent: 商家端经营助手（流式响应）
+ * - StreamingIntelligentAssistantAgent: L2智能调度（用户端）
+ * - StreamingMerchantAssistantAgent: L2智能调度（商家端）
  *
  * @author Claude
  * @since 2026-03-24
+ * @updated 2026-04-02 架构统一为L2→L1
  */
 @Configuration
 @EnableConfigurationProperties(ZhipuAIConfig.class)

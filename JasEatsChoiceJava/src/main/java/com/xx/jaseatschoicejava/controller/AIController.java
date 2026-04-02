@@ -1,52 +1,236 @@
 package com.xx.jaseatschoicejava.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xx.jaseatschoicejava.agent.NutritionAiAgent;
 import com.xx.jaseatschoicejava.agent.RecommendationAiAgent;
+import com.xx.jaseatschoicejava.agent.agents.stream.StreamingIntelligentAssistantAgent;
+import com.xx.jaseatschoicejava.agent.context.ToolExecutionContext;
 import com.xx.jaseatschoicejava.common.ResponseResult;
 import com.xx.jaseatschoicejava.config.FileUploadConfig;
 import com.xx.jaseatschoicejava.service.ZhipuAIService;
+import dev.langchain4j.data.message.AiMessage;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationContext;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import jakarta.annotation.Resource;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
- * AI能力控制器
+ * AI助手统一控制器（合并版）
  *
- * 注意：部分功能已迁移到 Agent 系统
- * - 营养分析 → NutritionAgent
- * - 智能推荐 → RecommendationAgent
- * - 对话聊天 → NutritionAgent
+ * **架构说明**：
+ * - L2智能调度Agent：StreamingIntelligentAssistantAgent（流式聊天）
+ * - 旧版Agent：NutritionAiAgent、RecommendationAiAgent（标记废弃）
+ *
+ * **功能整合**：
+ * - 流式聊天（推荐）：使用L2智能调度Agent
+ * - 菜品识别：使用ZhipuAIService
+ * - 营养分析：使用NutritionAiAgent（@Deprecated）
+ * - 食谱推荐：使用RecommendationAiAgent（@Deprecated）
  *
  * @author Claude
  * @since 2026-03-22
+ * @updated 2026-04-02 Controller合并（AIStreamController + AIController）
  */
+@Api(tags = "AI助手（统一接口）")
 @RestController
 @RequestMapping("/v1/ai")
 public class AIController {
 
     private static final Logger log = LoggerFactory.getLogger(AIController.class);
 
+    // ==================== L2 智能调度Agent（流式） ====================
     @Resource
-    private ZhipuAIService zhipuAIService;
+    private StreamingIntelligentAssistantAgent streamingIntelligentAssistantAgent;
 
+    // ==================== 旧版Agent（保留兼容） ====================
     @Resource
     private NutritionAiAgent nutritionAiAgent;
 
     @Resource
     private RecommendationAiAgent recommendationAiAgent;
 
+    // ==================== 服务层 ====================
+    @Resource
+    private ZhipuAIService zhipuAIService;
+
     @Resource
     private FileUploadConfig fileUploadConfig;
 
+    @Resource
+    private ObjectMapper objectMapper;
+
+    @Resource
+    private ApplicationContext applicationContext;
+
+    // ==================== 流式聊天接口 ====================
+
     /**
-     * AI菜品识别
-     * 注意：GLM-4-Flash不支持图片识别，需要GLM-4V
-     * 当前返回模拟数据
+     * SSE流式聊天接口（主流接口）
+     *
+     * 路由: /v1/ai/stream/chat
+     * Agent: StreamingIntelligentAssistantAgent (L2智能调度)
+     * 返回: SseEmitter (流式响应)
+     *
+     * @param params 请求参数，包含：
+     *               - message: 用户消息
+     *               - userId: 用户ID（可选，默认"anonymous"）
+     * @return SseEmitter 流式响应
      */
+    @ApiOperation(value = "SSE流式聊天（推荐）", notes = "使用L2智能调度Agent，支持流式输出和工具调用")
+    @PostMapping("/stream/chat")
+    public SseEmitter streamChat(@RequestBody Map<String, Object> params) {
+        // 创建SseEmitter（5分钟超时，适配工具调用和AI生成）
+        SseEmitter emitter = new SseEmitter(300000L);
+
+        try {
+            // 1. 提取参数
+            String message = (String) params.get("message");
+            String userId = (String) params.getOrDefault("userId", "anonymous");
+
+            // 2. 参数验证
+            if (message == null || message.trim().isEmpty()) {
+                emitter.send(SseEmitter.event()
+                    .name("error")
+                    .data("消息内容不能为空"));
+                emitter.complete();
+                return emitter;
+            }
+
+            log.info("📥 收到流式聊天请求");
+            log.info("   - 原始userId参数: {}", params.get("userId"));
+            log.info("   - 使用的userId: {}", userId);
+            log.info("   - userId类型: {}", userId != null ? userId.getClass().getSimpleName() : "null");
+            log.info("   - 消息内容: {}", message);
+
+            // 3. 调用真正的流式Agent（传递userId）
+            streamingIntelligentAssistantAgent.chat(message, userId)
+                .onPartialResponse(token -> {
+                    // 处理每个token（从LLM流式接收）
+                    try {
+                        if (token != null && !token.isEmpty()) {
+                            // 检查 emitter 是否已完成
+                            SseEmitter.SseEventBuilder event = SseEmitter.event()
+                                .name("message")
+                                .data(Map.of("char", token));
+                            emitter.send(event);
+                        }
+                    } catch (IllegalStateException e) {
+                        // Emitter 已完成，忽略此错误
+                        log.debug("Emitter 已完成，停止发送");
+                    } catch (IOException e) {
+                        log.error("发送token失败", e);
+                    }
+                })
+                .onCompleteResponse(response -> {
+                    // 流完成时调用
+                    try {
+                        log.info("✅ 流式响应完成");
+
+                        AiMessage aiMessage = response.aiMessage();
+                        String responseText = aiMessage.text();
+                        log.info("📊 响应内容: {}", responseText);
+
+                        // 检查是否有工具执行请求
+                        log.info("🔍 检查是否有工具执行请求...");
+                        log.info("🔍 aiMessage.hasToolExecutionRequests(): {}", aiMessage.hasToolExecutionRequests());
+
+                        if (aiMessage.hasToolExecutionRequests()) {
+                            log.info("✅ 发现工具执行请求！");
+                            aiMessage.toolExecutionRequests().forEach(request -> {
+                                log.info("🔧 工具调用: {} | 参数: {}", request.id(), request.arguments());
+                            });
+                        } else {
+                            log.info("⚠️ 没有检测到工具执行请求");
+                        }
+
+                        // 从ToolExecutionContext获取工具执行信息（AOP方式）
+                        Map<String, ToolExecutionContext.ToolExecutionInfo> cardExecutions =
+                            ToolExecutionContext.getCardExecutions();
+
+                        log.info("📊 检测到 {} 个需要生成卡片的工具调用", cardExecutions.size());
+
+                        // 如果有工具执行信息，生成对应的卡片数据
+                        if (!cardExecutions.isEmpty()) {
+                            // 选择优先级最高的卡片（如果有多个）
+                            ToolExecutionContext.ToolExecutionInfo executionInfo =
+                                cardExecutions.values().stream()
+                                    .findFirst()
+                                    .orElse(null);
+
+                            if (executionInfo != null) {
+                                String cardType = executionInfo.getCardType();
+                                log.info("📊 生成卡片数据: cardType={}", cardType);
+
+                                Map<String, Object> cardData = buildCardData(cardType, userId, executionInfo);
+
+                                if (cardData != null) {
+                                    emitter.send(SseEmitter.event()
+                                        .name("message")
+                                        .data(Map.of("card_data", cardData)));
+                                    log.info("✅ 卡片数据已发送: {}", cardType);
+                                }
+                            }
+                        }
+
+                        // 发送完成事件
+                        emitter.send(SseEmitter.event()
+                            .name("end")
+                            .data(Map.of("done", true)));
+                        emitter.complete();
+
+                        // 清理ThreadLocal
+                        ToolExecutionContext.clear();
+
+                    } catch (IOException e) {
+                        log.error("发送完成事件失败", e);
+                        ToolExecutionContext.clear();
+                        emitter.completeWithError(e);
+                    }
+                })
+                .onError(error -> {
+                    // 发生错误时调用
+                    log.error("❌ 流式响应出错", error);
+                    ToolExecutionContext.clear();
+                    try {
+                        emitter.send(SseEmitter.event()
+                            .name("error")
+                            .data("处理失败：" + error.getMessage()));
+                        emitter.completeWithError(error);
+                    } catch (IOException e) {
+                        log.error("发送错误事件失败", e);
+                    }
+                })
+                .start(); // 启动流式处理
+
+        } catch (Exception e) {
+            log.error("创建SseEmitter失败", e);
+            emitter.completeWithError(e);
+        }
+
+        return emitter;
+    }
+
+    // ==================== 菜品识别 ====================
+
+    /**
+     * AI菜品识别接口
+     *
+     * 路由: /v1/ai/dish-recognize
+     * 返回: ResponseResult (识别结果)
+     *
+     * 注意：GLM-4-Flash不支持图片识别，需要GLM-4V
+     */
+    @ApiOperation(value = "AI菜品识别", notes = "使用GLM-4V模型识别菜品图片")
     @PostMapping(value = "/dish-recognize", consumes = "multipart/form-data")
     public ResponseResult<?> dishRecognize(@RequestParam("image") MultipartFile image,
                                           @RequestParam(value = "userId", required = false) String userId) {
@@ -86,18 +270,16 @@ public class AIController {
             String imageUrl = fileUploadConfig.getServerUrl() + "/" + fileUploadConfig.getUrlPrefix() + "dish-recognition/" + fileName;
             log.info("图片上传成功，URL：{}", imageUrl);
 
-            log.info("图片Base64编码长度：{} 字符", base64Data != null ? base64Data.length() : 0);
-
-            // 3. 调用AI识别服务（使用Base64编码）
+            // 5. 调用AI识别服务（使用Base64编码）
             Map<String, Object> result = zhipuAIService.recognizeDishWithBase64(base64Data);
 
-            // 4. 检查识别结果是否有效
+            // 6. 检查识别结果是否有效
             if (result == null) {
                 log.error("AI识别返回null结果");
                 return ResponseResult.fail("500", "菜品识别失败：服务返回空结果");
             }
 
-            // 5. 检查识别结果是否包含错误
+            // 7. 检查识别结果是否包含错误
             if (Boolean.TRUE.equals(result.get("error"))) {
                 // AI识别失败，返回错误信息
                 String errorMessage = (String) result.get("message");
@@ -105,7 +287,7 @@ public class AIController {
                 return ResponseResult.fail("500", errorMessage != null ? errorMessage : "菜品识别失败");
             }
 
-            // 6. 添加图片URL到结果中
+            // 8. 添加图片URL到结果中
             result.put("imageUrl", imageUrl);
 
             return ResponseResult.success(result);
@@ -130,68 +312,18 @@ public class AIController {
         }
     }
 
-    /**
-     * AI食谱优化
-     */
-    @PostMapping("/recipe-upload")
-    public ResponseResult<?> recipeUpload(@RequestBody Map<String, Object> params) {
-        try {
-            Map<String, Object> recipe = (Map<String, Object>) params.get("recipe");
-            String recipeText = (String) recipe.get("text");
-
-            Map<String, Object> result = zhipuAIService.optimizeRecipe(recipeText);
-            return ResponseResult.success(result);
-        } catch (Exception e) {
-            log.error("食谱优化失败", e);
-            return ResponseResult.fail("500", "食谱优化失败：" + e.getMessage());
-        }
-    }
+    // ==================== 营养分析 ====================
 
     /**
-     * AI聊天接口（使用 NutritionAgent）
+     * AI营养分析接口（已废弃）
      *
-     * 已迁移到 Agent 系统，具备自动 Tool 调用能力
-     */
-    @PostMapping("/chat")
-    public ResponseResult<?> chat(@RequestBody Map<String, Object> params) {
-        long startTime = System.currentTimeMillis();
-        String message = (String) params.get("message");
-
-        log.info("=== AI聊天请求开始 ===");
-        log.info("用户消息: {}", message);
-        log.info("消息长度: {} 字符", message != null ? message.length() : 0);
-
-        try {
-            // 调用 NutritionAgent（具备 Tool 调用能力）
-            log.info("开始调用 NutritionAgent...");
-            String response = nutritionAiAgent.chat(message, "anonymous");
-
-            long endTime = System.currentTimeMillis();
-            long duration = endTime - startTime;
-
-            log.info("Agent响应成功");
-            log.info("响应长度: {} 字符", response.length());
-            log.info("请求耗时: {} ms", duration);
-            log.info("=== AI聊天请求完成 ===");
-
-            // 直接返回AI回复内容，放在data字段中（匹配前端期望格式）
-            // 前端期望: response.data 是字符串
-            return ResponseResult.success(response);
-
-        } catch (Exception e) {
-            long endTime = System.currentTimeMillis();
-            long duration = endTime - startTime;
-            log.error("AI聊天失败，耗时: {} ms", duration, e);
-            log.error("错误详情: {}", e.getMessage());
-            return ResponseResult.fail("500", "AI聊天失败：" + e.getMessage());
-        }
-    }
-
-    /**
-     * AI营养分析接口（使用 NutritionAgent）
+     * @deprecated 建议使用流式聊天接口 /stream/chat（L2智能调度Agent）
      *
-     * 已迁移到 Agent 系统，LLM 自动调用营养分析工具
+     * 路由: /v1/ai/nutrient
+     * Agent: NutritionAiAgent (旧版)
      */
+    @Deprecated(since = "2026-04-02", forRemoval = true)
+    @ApiOperation(value = "AI营养分析（已废弃）", notes = "建议使用流式聊天接口 /stream/chat")
     @PostMapping("/nutrient")
     public ResponseResult<?> nutrient(@RequestBody Map<String, Object> params) {
         try {
@@ -214,11 +346,18 @@ public class AIController {
         }
     }
 
+    // ==================== 食谱推荐 ====================
+
     /**
-     * AI食谱推荐接口（使用 RecommendationAgent）
+     * AI食谱推荐接口（已废弃）
      *
-     * 已迁移到 Agent 系统，LLM 自动调用食谱推荐工具
+     * @deprecated 建议使用流式聊天接口 /stream/chat（L2智能调度Agent）
+     *
+     * 路由: /v1/ai/recipe
+     * Agent: RecommendationAiAgent (旧版)
      */
+    @Deprecated(since = "2026-04-02", forRemoval = true)
+    @ApiOperation(value = "AI食谱推荐（已废弃）", notes = "建议使用流式聊天接口 /stream/chat")
     @PostMapping("/recipe")
     public ResponseResult<?> recipe(@RequestBody Map<String, Object> params) {
         try {
@@ -235,8 +374,462 @@ public class AIController {
             return ResponseResult.success(result);
 
         } catch (Exception e) {
-            log.error("食谱推荐失败",     e);
+            log.error("食谱推荐失败", e);
             return ResponseResult.fail("500", "食谱推荐失败：" + e.getMessage());
         }
+    }
+
+    // ==================== 食谱优化 ====================
+
+    /**
+     * AI食谱优化接口
+     *
+     * 路由: /v1/ai/recipe-upload
+     */
+    @ApiOperation(value = "AI食谱优化", notes = "上传食谱进行优化建议")
+    @PostMapping("/recipe-upload")
+    public ResponseResult<?> recipeUpload(@RequestBody Map<String, Object> params) {
+        try {
+            Map<String, Object> recipe = (Map<String, Object>) params.get("recipe");
+            String recipeText = (String) recipe.get("text");
+
+            Map<String, Object> result = zhipuAIService.optimizeRecipe(recipeText);
+            return ResponseResult.success(result);
+        } catch (Exception e) {
+            log.error("食谱优化失败", e);
+            return ResponseResult.fail("500", "食谱优化失败：" + e.getMessage());
+        }
+    }
+
+    // ==================== 非流式聊天接口（已废弃） ====================
+
+    /**
+     * AI聊天接口（已废弃）
+     *
+     * @deprecated 建议使用流式聊天接口 /stream/chat（L2智能调度Agent）
+     *
+     * 路由: /v1/ai/chat
+     * Agent: NutritionAiAgent (旧版)
+     */
+    @Deprecated(since = "2026-04-02", forRemoval = true)
+    @ApiOperation(value = "AI聊天（已废弃）", notes = "建议使用流式聊天接口 /stream/chat")
+    @PostMapping("/chat")
+    public ResponseResult<?> chat(@RequestBody Map<String, Object> params) {
+        long startTime = System.currentTimeMillis();
+        String message = (String) params.get("message");
+
+        log.info("=== AI聊天请求开始（旧版接口）===");
+        log.info("用户消息: {}", message);
+
+        try {
+            // 调用 NutritionAgent（具备 Tool 调用能力）
+            String response = nutritionAiAgent.chat(message, "anonymous");
+
+            long endTime = System.currentTimeMillis();
+            long duration = endTime - startTime;
+
+            log.info("Agent响应成功，耗时: {} ms", duration);
+            log.info("=== AI聊天请求完成 ===");
+
+            // 直接返回AI回复内容
+            return ResponseResult.success(response);
+
+        } catch (Exception e) {
+            long endTime = System.currentTimeMillis();
+            long duration = endTime - startTime;
+            log.error("AI聊天失败，耗时: {} ms", duration, e);
+            return ResponseResult.fail("500", "AI聊天失败：" + e.getMessage());
+        }
+    }
+
+    // ==================== 健康检查 ====================
+
+    /**
+     * 健康检查接口
+     *
+     * 路由: /v1/ai/health
+     */
+    @ApiOperation(value = "健康检查", notes = "检查AI服务状态")
+    @GetMapping("/health")
+    public ResponseResult<Map<String, Object>> health() {
+        Map<String, Object> health = new HashMap<>();
+        health.put("status", "UP");
+        health.put("service", "AI Assistant (Unified)");
+        health.put("version", "2.0.0");
+        health.put("timestamp", System.currentTimeMillis());
+        health.put("features", new String[]{
+            "流式聊天 (L2智能调度)",
+            "菜品识别",
+            "营养分析 (@Deprecated)",
+            "食谱推荐 (@Deprecated)",
+            "食谱优化"
+        });
+        health.put("architecture", "L2→L1两层架构");
+        health.put("note", "Controller已合并（AIStreamController + AIController）");
+
+        return ResponseResult.success(health);
+    }
+
+    // ==================== 辅助方法：卡片数据构建 ====================
+
+    /**
+     * 根据卡片类型构建卡片数据
+     * @param cardType 卡片类型
+     * @param userId 用户ID
+     * @param executionInfo 工具执行信息
+     * @return 卡片数据，如果不需要卡片则返回null
+     */
+    private Map<String, Object> buildCardData(String cardType, String userId,
+                                               ToolExecutionContext.ToolExecutionInfo executionInfo) {
+        try {
+            log.info("📊 开始构建卡片数据: cardType={}, userId={}", cardType, userId);
+
+            switch (cardType) {
+                case "order_list_card":
+                    return buildOrderListCardData(userId);
+                case "user_info_card":
+                    return buildUserInfoCardData(userId);
+                case "order_guide_card":
+                    return buildOrderGuideCardData(executionInfo);
+                default:
+                    log.warn("⚠️ 未知的卡片类型: {}", cardType);
+                    return null;
+            }
+        } catch (Exception e) {
+            log.error("构建卡片数据失败: cardType=" + cardType, e);
+            return null;
+        }
+    }
+
+    /**
+     * 构建订单列表卡片数据
+     */
+    private Map<String, Object> buildOrderListCardData(String userId) {
+        try {
+            // 查询订单服务获取实际数据
+            com.xx.jaseatschoicejava.service.OrderService orderService =
+                applicationContext.getBean(com.xx.jaseatschoicejava.service.OrderService.class);
+
+            // 查询订单列表
+            com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<com.xx.jaseatschoicejava.entity.Order> queryWrapper =
+                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>();
+            queryWrapper.eq("user_id", userId)
+                    .orderByDesc("create_time")
+                    .last("LIMIT 20");
+
+            List<com.xx.jaseatschoicejava.entity.Order> orders = orderService.list(queryWrapper);
+
+            if (orders == null || orders.isEmpty()) {
+                log.info("用户暂无订单记录: userId={}", userId);
+                return null;
+            }
+
+            // 构建前端OrderListCard组件需要的数据结构
+            Map<String, Object> data = new HashMap<>();
+            data.put("total", orders.size());
+            data.put("pendingCount", orders.stream()
+                    .filter(o -> o.getStatus() != null && o.getStatus() < 5)
+                    .count());
+            data.put("summary", String.format("找到 %d 条订单记录", orders.size()));
+
+            // 构建订单列表
+            List<Map<String, Object>> orderList = new java.util.ArrayList<>();
+            for (com.xx.jaseatschoicejava.entity.Order order : orders) {
+                Map<String, Object> orderItem = new HashMap<>();
+                orderItem.put("orderId", order.getId());
+                orderItem.put("status", order.getStatus());
+                orderItem.put("statusText", getOrderStatusText(order.getStatus()));
+                orderItem.put("totalAmount", order.getTotalAmount() != null ?
+                        String.format("%.2f", order.getTotalAmount()) : "0.00");
+                orderItem.put("dishCount", 0); // TODO: 从订单详情表获取菜品数量
+                orderItem.put("createTime", order.getCreateTime() != null ?
+                        order.getCreateTime().toString() : "");
+
+                // 添加可操作按钮
+                List<Map<String, String>> actions = new java.util.ArrayList<>();
+                if (order.getStatus() != null && order.getStatus() < 3) {
+                    actions.add(Map.of("type", "detail", "text", "查看详情", "icon", "View"));
+                    if (order.getStatus() == 0 || order.getStatus() == 1) {
+                        actions.add(Map.of("type", "cancel", "text", "取消订单", "icon", "Delete"));
+                    }
+                    actions.add(Map.of("type", "urge", "text", "催单", "icon", "Bell"));
+                }
+                orderItem.put("actions", actions);
+
+                orderList.add(orderItem);
+            }
+            data.put("orders", orderList);
+
+            // 返回完整结构
+            Map<String, Object> result = new HashMap<>();
+            result.put("messageType", "order_list_card");
+            result.put("data", data);
+            return result;
+
+        } catch (Exception e) {
+            log.error("构建订单卡片失败", e);
+            return null;
+        }
+    }
+
+    /**
+     * 构建用户信息卡片数据
+     */
+    private Map<String, Object> buildUserInfoCardData(String userId) {
+        try {
+            // 查询用户服务获取实际数据
+            com.xx.jaseatschoicejava.service.UserService userService =
+                applicationContext.getBean(com.xx.jaseatschoicejava.service.UserService.class);
+
+            com.xx.jaseatschoicejava.entity.User user = userService.getById(userId);
+            if (user == null) {
+                log.info("未找到用户信息: userId={}", userId);
+                return null;
+            }
+
+            // 构建基本信息
+            Map<String, Object> basicInfo = new HashMap<>();
+            basicInfo.put("nickname", user.getNickname() != null ? user.getNickname() : "未设置");
+            basicInfo.put("phone", user.getPhone() != null ?
+                    user.getPhone().replaceAll("(\\d{3})\\d{4}(\\d{4})", "$1****$2") : "未设置");
+            basicInfo.put("email", user.getEmail() != null ? user.getEmail() : "未设置");
+            basicInfo.put("location", user.getLocation() != null ? user.getLocation() : "未设置");
+            basicInfo.put("gender", user.getGender() != null ? user.getGender() : "未设置");
+            basicInfo.put("registerTime", user.getCreateTime() != null ?
+                    user.getCreateTime().toLocalDate().toString() : "未设置");
+
+            // 构建身体数据
+            Map<String, Object> bodyData = new HashMap<>();
+            bodyData.put("height", user.getHeight() != null ? user.getHeight() : "-");
+            bodyData.put("weight", user.getWeight() != null ? user.getWeight() : "-");
+
+            if (user.getHeight() != null && user.getHeight() > 0
+                    && user.getWeight() != null && user.getWeight() > 0) {
+                double height = user.getHeight() / 100.0; // 转换为米
+                double bmi = user.getWeight() / (height * height);
+                bodyData.put("bmi", String.format("%.1f", bmi));
+                bodyData.put("bmiStatus", getBMIStatus(bmi));
+                bodyData.put("bmiText", getBMIStatusText(bmi));
+            }
+
+            // 构建饮食偏好
+            Map<String, Object> preferences = new HashMap<>();
+            preferences.put("dietGoal", user.getDietGoal() != null ? user.getDietGoal() : "未设置");
+
+            // 操作按钮
+            List<Map<String, String>> actions = new java.util.ArrayList<>();
+            actions.add(Map.of("type", "edit_profile", "text", "编辑资料", "icon", "Edit"));
+            actions.add(Map.of("type", "view_health", "text", "健康分析", "icon", "TrendCharts"));
+
+            // 按照前端UserInfoCard组件期望的数据结构组装
+            Map<String, Object> data = new HashMap<>();
+            data.put("summary", "用户基本信息档案");
+            data.put("basicInfo", basicInfo);
+            data.put("bodyData", bodyData);
+            data.put("preferences", preferences);
+            data.put("actions", actions);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("messageType", "user_info_card");
+            result.put("data", data);
+            return result;
+
+        } catch (Exception e) {
+            log.error("构建用户信息卡片失败", e);
+            return null;
+        }
+    }
+
+    /**
+     * 构建下单引导卡片数据
+     * 根据工具执行信息中保存的参数和结果，构建前端需要的卡片数据
+     *
+     * @param executionInfo 工具执行信息
+     * @return 卡片数据
+     */
+    private Map<String, Object> buildOrderGuideCardData(ToolExecutionContext.ToolExecutionInfo executionInfo) {
+        try {
+            log.info("📊 构建下单引导卡片，工具：{}", executionInfo.getToolName());
+
+            // 从工具执行信息中获取参数和结果
+            Map<String, Object> parameters = executionInfo.getParameters();
+            Object result = executionInfo.getResult();
+
+            if (parameters == null || result == null) {
+                log.warn("⚠️ 工具执行信息不完整");
+                return null;
+            }
+
+            // 获取用户需求和用户ID
+            String requirement = (String) parameters.get("requirement");
+            String userId = (String) parameters.get("userIdentifier");
+
+            log.info("📊 用户需求：{}，用户ID：{}", requirement, userId);
+
+            // 解析用户需求，提取菜品名称
+            List<String> dishNames = extractDishNames(requirement);
+            List<Integer> quantities = extractQuantities(requirement, dishNames.size());
+
+            if (dishNames.isEmpty()) {
+                log.warn("⚠️ 未找到菜品名称");
+                return null;
+            }
+
+            // 搜索菜品
+            com.xx.jaseatschoicejava.service.DishService dishService =
+                applicationContext.getBean(com.xx.jaseatschoicejava.service.DishService.class);
+
+            List<Map<String, Object>> foundDishes = new java.util.ArrayList<>();
+            List<String> notFoundDishes = new java.util.ArrayList<>();
+            java.math.BigDecimal totalAmount = java.math.BigDecimal.ZERO;
+            int totalCalories = 0;
+
+            for (int i = 0; i < dishNames.size(); i++) {
+                String dishName = dishNames.get(i);
+
+                // 模糊搜索菜品
+                com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<com.xx.jaseatschoicejava.entity.Dish> queryWrapper =
+                    new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>();
+                queryWrapper.like("name", dishName)
+                        .eq("is_online", true);
+
+                List<com.xx.jaseatschoicejava.entity.Dish> dishes = dishService.list(queryWrapper);
+
+                if (dishes.isEmpty()) {
+                    notFoundDishes.add(dishName);
+                } else {
+                    // 取第一个匹配的菜品
+                    com.xx.jaseatschoicejava.entity.Dish dish = dishes.get(0);
+                    Integer quantity = quantities.get(i);
+
+                    java.math.BigDecimal subtotal = dish.getPrice().multiply(new java.math.BigDecimal(quantity));
+                    totalAmount = totalAmount.add(subtotal);
+
+                    if (dish.getCalorie() != null) {
+                        totalCalories += dish.getCalorie() * quantity;
+                    }
+
+                    // 构建菜品信息
+                    Map<String, Object> dishInfo = new HashMap<>();
+                    dishInfo.put("name", dish.getName());
+                    dishInfo.put("dishId", dish.getId());
+                    dishInfo.put("price", dish.getPrice());
+                    dishInfo.put("quantity", quantity);
+                    dishInfo.put("subtotal", subtotal);
+                    dishInfo.put("calories", dish.getCalorie() != null ? dish.getCalorie() * quantity : 0);
+                    dishInfo.put("merchantId", dish.getMerchantId());
+
+                    foundDishes.add(dishInfo);
+                }
+            }
+
+            // 构建卡片数据
+            Map<String, Object> data = new HashMap<>();
+            data.put("messageType", "order_guide_card");
+            data.put("summary", String.format("已为您找到 %d 个菜品", foundDishes.size()));
+            data.put("dishes", foundDishes);
+            data.put("notFoundDishes", notFoundDishes);
+            data.put("totalAmount", totalAmount);
+            data.put("totalCalories", totalCalories);
+
+            log.info("✅ 下单引导卡片构建成功，找到 {} 个菜品", foundDishes.size());
+
+            return data;
+
+        } catch (Exception e) {
+            log.error("构建下单引导卡片失败", e);
+            return null;
+        }
+    }
+
+    /**
+     * 从用户需求中提取菜品名称
+     */
+    private List<String> extractDishNames(String requirement) {
+        List<String> dishNames = new java.util.ArrayList<>();
+
+        // 常见的量词
+        String[] quantityPatterns = {"\\d+个", "\\d+份", "\\d+碗", "\\d+盘",
+                                     "\\d+\\s*个", "\\d+\\s*份", "\\d+\\s*碗", "\\d+\\s*盘"};
+
+        // 先移除数量词，提取菜品名
+        String cleaned = requirement;
+        for (String pattern : quantityPatterns) {
+            cleaned = cleaned.replaceAll(pattern, "");
+        }
+
+        // 移除常见词汇
+        cleaned = cleaned.replaceAll("[我要想吃来份个碗盘]+", "");
+        cleaned = cleaned.replaceAll("[和，,、]+", " ");
+
+        // 分割菜品名
+        String[] parts = cleaned.trim().split("\\s+");
+        for (String part : parts) {
+            if (!part.isEmpty() && part.length() >= 2) {
+                dishNames.add(part);
+            }
+        }
+
+        return dishNames;
+    }
+
+    /**
+     * 从用户需求中提取数量
+     */
+    private List<Integer> extractQuantities(String requirement, int dishCount) {
+        List<Integer> quantities = new java.util.ArrayList<>();
+
+        // 提取所有数字
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("(\\d+)[个份碗盘]");
+        java.util.regex.Matcher matcher = pattern.matcher(requirement);
+
+        while (matcher.find()) {
+            quantities.add(Integer.parseInt(matcher.group(1)));
+        }
+
+        // 如果没有明确数量，默认为1
+        while (quantities.size() < dishCount) {
+            quantities.add(1);
+        }
+
+        return quantities;
+    }
+
+    /**
+     * 获取订单状态文本
+     */
+    private String getOrderStatusText(Integer status) {
+        if (status == null) return "未知";
+        switch (status) {
+            case 0: return "待支付";
+            case 1: return "待商家接单";
+            case 2: return "商家已接单";
+            case 3: return "配送中";
+            case 4: return "已完成";
+            case 5: return "已取消";
+            case 6: return "退款中";
+            case 7: return "已退款";
+            default: return "未知";
+        }
+    }
+
+    /**
+     * 计算BMI状态
+     */
+    private String getBMIStatus(double bmi) {
+        if (bmi < 18.5) return "underweight";
+        if (bmi < 24) return "normal";
+        if (bmi < 28) return "overweight";
+        return "obese";
+    }
+
+    /**
+     * 获取BMI状态文本
+     */
+    private String getBMIStatusText(double bmi) {
+        if (bmi < 18.5) return "偏瘦";
+        if (bmi < 24) return "正常";
+        if (bmi < 28) return "偏胖";
+        return "肥胖";
     }
 }

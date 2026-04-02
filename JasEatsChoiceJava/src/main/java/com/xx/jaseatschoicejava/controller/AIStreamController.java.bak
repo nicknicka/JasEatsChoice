@@ -70,7 +70,9 @@ public class AIStreamController {
             }
 
             log.info("📥 收到流式聊天请求");
-            log.info("   - 用户ID: {}", userId);
+            log.info("   - 原始userId参数: {}", params.get("userId"));
+            log.info("   - 使用的userId: {}", userId);
+            log.info("   - userId类型: {}", userId != null ? userId.getClass().getSimpleName() : "null");
             log.info("   - 消息内容: {}", message);
 
             // 注意：用户消息由前端保存，这里不重复保存

@@ -6,17 +6,18 @@ import dev.langchain4j.service.V;
 
 /**
  * 卡片渲染Agent
- * 负责将L3 Supervisor的结果格式化为统一的卡片格式
+ * 负责将L2 Supervisor的结果格式化为统一的卡片格式
  *
  * @author Claude
  * @since 2026-03-26
+ * @updated 2026-04-02 架构统一为L2→L1
  */
 public interface CardRendererAgent {
 
     /**
      * 将原始结果渲染为卡片格式
      *
-     * @param originalResult L3 Supervisor的原始总结结果
+     * @param originalResult L2 Supervisor的原始总结结果
      * @return 格式化后的卡片格式消息
      */
     @UserMessage("""
