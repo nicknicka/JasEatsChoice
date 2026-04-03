@@ -5,6 +5,7 @@ import com.xx.jaseatschoicejava.entity.Dish;
 import com.xx.jaseatschoicejava.entity.Merchant;
 import com.xx.jaseatschoicejava.service.DishService;
 import com.xx.jaseatschoicejava.service.MerchantService;
+import dev.langchain4j.agentic.scope.AgenticScope;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.agent.tool.P;
 import lombok.extern.slf4j.Slf4j;
@@ -411,18 +412,23 @@ public class LocationTools {
         - 用户没有明确目标，需要建议
 
         **参数：**
-        - userId - 用户ID
         - maxDistance - 最大距离（公里）
         - preference - 偏好标签（可选）
+
+        **无需参数**，userId自动从上下文获取
 
         **返回：** 附近美食推荐列表
         """)
     @CardType("food_recommendation_card")
     public String recommendNearbyFood(
-        @P("用户ID") String userId,
+        AgenticScope scope,
         @P("最大距离（公里）") Double maxDistance,
         @P("偏好标签，如：辣、清淡") String preference
     ) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return "❌ 无法获取用户信息，请重新登录";
+        }
         log.info("🔍 [Tool] 推荐附近美食，用户：{}，距离：{}km，偏好：{}",
             userId, maxDistance, preference);
 

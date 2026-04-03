@@ -4,6 +4,7 @@ import com.xx.jaseatschoicejava.entity.User;
 import com.xx.jaseatschoicejava.service.UserService;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.agent.tool.P;
+import dev.langchain4j.agentic.scope.AgenticScope;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -47,13 +48,17 @@ public class UserProfileTools {
         - 个性化推荐
         - 制定饮食计划
 
-        **参数：** userId - 用户ID
+        **无需参数**，userId自动从上下文获取
 
         **返回：** 用户完整资料
         """)
     public String getCompleteProfile(
-        @P("用户ID") String userId
+        AgenticScope scope
     ) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return "❌ 无法获取用户信息，请重新登录";
+        }
         log.info("🔍 [Tool] 获取用户完整资料，userId: {}", userId);
 
         try {
@@ -127,7 +132,7 @@ public class UserProfileTools {
         - 完善用户信息
 
         **参数：**
-        - userId - 用户ID
+        - **无需参数**，userId自动从上下文获取
         - nickname - 昵称（可选）
         - gender - 性别（可选）
         - phone - 手机号（可选）
@@ -135,11 +140,15 @@ public class UserProfileTools {
         **返回：** 更新结果
         """)
     public String updateBasicInfo(
-        @P("用户ID") String userId,
+        AgenticScope scope,
         @P("昵称（可选）") String nickname,
         @P("性别：男/女（可选）") String gender,
         @P("手机号（可选）") String phone
     ) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return "❌ 无法获取用户信息，请重新登录";
+        }
         log.info("🔍 [Tool] 更新用户基本信息，userId: {}", userId);
 
         try {
@@ -212,17 +221,21 @@ public class UserProfileTools {
         - 计算热量目标
 
         **参数：**
-        - userId - 用户ID
+        - **无需参数**，userId自动从上下文获取
         - height - 身高cm（可选）
         - weight - 体重kg（可选）
 
         **返回：** 更新结果和BMI分析
         """)
     public String updateBodyData(
-        @P("用户ID") String userId,
+        AgenticScope scope,
         @P("身高cm（可选）") Double height,
         @P("体重kg（可选）") Double weight
     ) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return "❌ 无法获取用户信息，请重新登录";
+        }
         log.info("🔍 [Tool] 更新用户身体数据，userId: {}, height: {}, weight: {}", userId, height, weight);
 
         try {
@@ -296,13 +309,17 @@ public class UserProfileTools {
         - 引导用户完善资料
         - 提升个性化体验
 
-        **参数：** userId - 用户ID
+        **无需参数**，userId自动从上下文获取
 
         **返回：** 完整度评分和待完善项
         """)
     public String analyzeProfileCompleteness(
-        @P("用户ID") String userId
+        AgenticScope scope
     ) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return "❌ 无法获取用户信息，请重新登录";
+        }
         log.info("🔍 [Tool] 分析用户资料完整度，userId: {}", userId);
 
         try {
@@ -414,13 +431,17 @@ public class UserProfileTools {
         - 新用户引导
         - 提升资料完整度
 
-        **参数：** userId - 用户ID
+        **无需参数**，userId自动从上下文获取
 
         **返回：** 完善建议
         """)
     public String getProfileImprovementSuggestions(
-        @P("用户ID") String userId
+        AgenticScope scope
     ) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return "❌ 无法获取用户信息，请重新登录";
+        }
         log.info("🔍 [Tool] 获取资料完善建议，userId: {}", userId);
 
         try {

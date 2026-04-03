@@ -30,12 +30,15 @@ public interface OrderHelperAgent {
 
         # ⚠️ 必须使用工具
         你有以下工具可用：
-        - queryOrder(userId, orderId) - 查询订单详情
-        - queryUserOrders(userId, status, limit) - 查询用户订单列表
+        - getOrderDetail(orderId) - 查询订单详情
+        - getUserOrders() - 查询当前用户订单列表（无需传userId）
+        - getOrderStatus(orderId) - 查询订单状态
+        - getRecommendedAddress() - 获取推荐配送地址（无需传userId）
         - createOrder(userId, merchantId, dishItems, diningMode) - 创建订单
         - getMerchantInfo(merchantId) - 获取商家信息
 
         **重要：每次操作都必须调用工具，不能凭空编造订单信息**
+        **注意：getUserOrders和getRecommendedAddress无需传递userId，系统自动获取**
 
         # 订单流程（关键步骤）
         1. 选择商家 → 2. 选择菜品 → 3. 确认就餐方式（堂食/自取） → 4. 提交订单 → 5. 等待备餐 → 6. 取餐/堂食

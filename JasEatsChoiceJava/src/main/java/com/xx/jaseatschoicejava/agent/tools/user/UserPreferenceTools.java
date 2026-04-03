@@ -10,6 +10,7 @@ import com.xx.jaseatschoicejava.entity.User;
 import com.xx.jaseatschoicejava.service.UserService;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.agent.tool.P;
+import dev.langchain4j.agentic.scope.AgenticScope;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -55,13 +56,20 @@ public class UserPreferenceTools {
         - 菜品筛选
         - 制定饮食计划
 
-        **参数：** userId - 用户ID
+        **无需参数**，userId自动从上下文获取
 
         **返回：** 饮食偏好信息
         """)
     public UserDietPreference getDietPreference(
-        @P("用户ID") String userId
+        AgenticScope scope
     ) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return UserDietPreference.builder()
+                    .userId(null)
+                    .exists(false)
+                    .build();
+        }
         log.info("🔍 [Tool] 查询用户饮食偏好，userId: {}", userId);
 
         try {
@@ -153,15 +161,19 @@ public class UserPreferenceTools {
         - 用户修改偏好设置
 
         **参数：**
-        - userId - 用户ID
+        - **无需参数**，userId自动从上下文获取
         - preferenceJson - 偏好信息（JSON格式）
 
         **返回：** 更新结果
         """)
     public String updateDietPreference(
-        @P("用户ID") String userId,
+        AgenticScope scope,
         @P("偏好信息（JSON格式）") String preferenceJson
     ) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return "❌ 无法获取用户信息，请重新登录";
+        }
         log.info("🔍 [Tool] 更新用户饮食偏好，userId: {}, preference: {}", userId, preferenceJson);
 
         try {
@@ -221,15 +233,19 @@ public class UserPreferenceTools {
         - 用户有饮食禁忌
 
         **参数：**
-        - userId - 用户ID
+        - **无需参数**，userId自动从上下文获取
         - foodItem - 忌口食物名称
 
         **返回：** 添加结果
         """)
     public String addAllergy(
-        @P("用户ID") String userId,
+        AgenticScope scope,
         @P("忌口食物") String foodItem
     ) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return "❌ 无法获取用户信息，请重新登录";
+        }
         log.info("🔍 [Tool] 添加用户忌口，userId: {}, food: {}", userId, foodItem);
 
         try {
@@ -288,15 +304,19 @@ public class UserPreferenceTools {
         - 用户想要移除饮食禁忌
 
         **参数：**
-        - userId - 用户ID
+        - **无需参数**，userId自动从上下文获取
         - foodItem - 忌口食物名称
 
         **返回：** 移除结果
         """)
     public String removeAllergy(
-        @P("用户ID") String userId,
+        AgenticScope scope,
         @P("忌口食物") String foodItem
     ) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return "❌ 无法获取用户信息，请重新登录";
+        }
         log.info("🔍 [Tool] 移除用户忌口，userId: {}, food: {}", userId, foodItem);
 
         try {
@@ -353,13 +373,17 @@ public class UserPreferenceTools {
         - 推荐菜品时需要过滤
         - 检查食物是否安全
 
-        **参数：** userId - 用户ID
+        **无需参数**，userId自动从上下文获取
 
         **返回：** 忌口食物列表
         """)
     public List<String> getAllergyList(
-        @P("用户ID") String userId
+        AgenticScope scope
     ) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return List.of();
+        }
         log.info("🔍 [Tool] 查询用户忌口列表，userId: {}", userId);
 
         try {

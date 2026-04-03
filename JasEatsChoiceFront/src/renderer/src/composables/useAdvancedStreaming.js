@@ -268,15 +268,48 @@ export function useAdvancedStreaming(options) {
 			parsedData._isFinalResult = true
 		}
 
-		// 处理 card_data 字段
+		// 处理 card_data 字段（后端发来的 card_data 是 JSON 字符串，需先解析）
 		if (parsedData.card_data) {
 			const message = getMessage(messageIndex)
 			if (message) {
 				try {
-					const { messageType, data } = parsedData.card_data
-					if (messageType && data) {
-						message.messageType = messageType
-						message.cardData = data
+					let cardDataObj = parsedData.card_data
+					if (typeof cardDataObj === 'string') {
+						cardDataObj = JSON.parse(cardDataObj)
+					}
+
+					let cardArray = Array.isArray(cardDataObj) ? cardDataObj : [cardDataObj]
+					if (cardArray.length > 0) {
+						const firstCard = cardArray[0]
+						const cardType = firstCard.type || firstCard.cardType
+
+						if (cardType) {
+							const messageType = convertToSupportedCardType(cardType)
+							if (messageType) message.messageType = messageType
+						}
+
+						if (firstCard.orders) {
+							message.cardData = { orders: firstCard.orders }
+						} else if (firstCard.dishes) {
+							message.cardData = {
+								dishes: firstCard.dishes.map(dish => ({
+									dishId: dish.dishId || dish.id,
+									dishName: dish.dishName || dish.title,
+									imageUrl: dish.imageUrl || dish.image,
+									description: dish.description || dish.highlight,
+									price: dish.price,
+									rating: dish.rating,
+									category: dish.category,
+									tags: dish.tags || [],
+									actions: dish.actions || []
+								}))
+							}
+						} else if (firstCard.recommendations) {
+							message.cardData = { recommendations: firstCard.recommendations }
+						} else {
+							message.cardData = firstCard
+						}
+
 						if (updateUI) await updateUI()
 					}
 				} catch (error) {

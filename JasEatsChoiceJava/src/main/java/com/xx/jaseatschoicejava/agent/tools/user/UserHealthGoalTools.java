@@ -5,6 +5,7 @@ import com.xx.jaseatschoicejava.entity.User;
 import com.xx.jaseatschoicejava.service.UserService;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.agent.tool.P;
+import dev.langchain4j.agentic.scope.AgenticScope;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -43,13 +44,20 @@ public class UserHealthGoalTools {
         - 追踪健康进度
         - 营养建议
 
-        **参数：** userId - 用户ID
+        **无需参数**，userId自动从上下文获取
 
         **返回：** 健康目标信息
         """)
     public UserHealthGoal getHealthGoal(
-        @P("用户ID") String userId
+        AgenticScope scope
     ) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return UserHealthGoal.builder()
+                    .userId(null)
+                    .exists(false)
+                    .build();
+        }
         log.info("🔍 [Tool] 查询用户健康目标，userId: {}", userId);
 
         try {
@@ -114,7 +122,7 @@ public class UserHealthGoalTools {
         - 用户制定健康计划
 
         **参数：**
-        - userId - 用户ID
+        - **无需参数**，userId自动从上下文获取
         - goalType - 目标类型（减肥/增肌/保持/增重）
         - targetWeight - 目标体重（kg，可选）
         - deadlineWeeks - 目标期限（周，可选）
@@ -122,11 +130,15 @@ public class UserHealthGoalTools {
         **返回：** 设置结果和热量目标
         """)
     public String setHealthGoal(
-        @P("用户ID") String userId,
+        AgenticScope scope,
         @P("目标类型：减肥/增肌/保持/增重") String goalType,
         @P("目标体重（kg，可选）") Double targetWeight,
         @P("目标期限（周，可选）") Integer deadlineWeeks
     ) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return "❌ 无法获取用户信息，请重新登录";
+        }
         log.info("🔍 [Tool] 设置健康目标，userId: {}, goalType: {}", userId, goalType);
 
         try {
@@ -201,15 +213,19 @@ public class UserHealthGoalTools {
         - 设置健康目标
 
         **参数：**
-        - userId - 用户ID
+        - **无需参数**，userId自动从上下文获取
         - goalType - 目标类型（减肥/增肌/保持/增重）
 
         **返回：** 每日热量目标和建议
         """)
     public String calculateCalorieTarget(
-        @P("用户ID") String userId,
+        AgenticScope scope,
         @P("目标类型：减肥/增肌/保持/增重") String goalType
     ) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return "❌ 无法获取用户信息，请重新登录";
+        }
         log.info("🔍 [Tool] 计算热量目标，userId: {}, goalType: {}", userId, goalType);
 
         try {
@@ -295,13 +311,17 @@ public class UserHealthGoalTools {
         - 用户询问进度
         - 评估目标完成情况
 
-        **参数：** userId - 用户ID
+        **无需参数**，userId自动从上下文获取
 
         **返回：** 目标进度信息
         """)
     public String trackGoalProgress(
-        @P("用户ID") String userId
+        AgenticScope scope
     ) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return "❌ 无法获取用户信息，请重新登录";
+        }
         log.info("🔍 [Tool] 追踪健康目标进度，userId: {}", userId);
 
         try {

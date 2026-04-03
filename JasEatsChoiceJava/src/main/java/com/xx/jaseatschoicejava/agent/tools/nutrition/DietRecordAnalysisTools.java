@@ -3,6 +3,7 @@ package com.xx.jaseatschoicejava.agent.tools.nutrition;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.xx.jaseatschoicejava.entity.CalorieRecord;
 import com.xx.jaseatschoicejava.mapper.CalorieRecordMapper;
+import dev.langchain4j.agentic.scope.AgenticScope;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.agent.tool.P;
 import lombok.extern.slf4j.Slf4j;
@@ -50,13 +51,17 @@ public class DietRecordAnalysisTools {
         - 评估每日饮食质量
         - 调整饮食计划
 
-        **参数：** userId - 用户ID
+        **无需参数**，userId自动从上下文获取
 
         **返回：** 今日营养统计
         """)
     public String getTodayNutritionStats(
-        @P("用户ID") String userId
+        AgenticScope scope
     ) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return "❌ 无法获取用户信息，请重新登录";
+        }
         log.info("🔍 [Tool] 查询今日营养统计，userId: {}", userId);
 
         try {
@@ -173,15 +178,20 @@ public class DietRecordAnalysisTools {
         - 制定改善计划
 
         **参数：**
-        - userId - 用户ID
         - days - 分析天数（1-30天）
+
+        **无需参数**，userId自动从上下文获取
 
         **返回：** 饮食习惯分析报告
         """)
     public String analyzeDietHealth(
-        @P("用户ID") String userId,
+        AgenticScope scope,
         @P("分析天数（1-30天）") Integer days
     ) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return "❌ 无法获取用户信息，请重新登录";
+        }
         log.info("🔍 [Tool] 分析饮食习惯健康度，userId: {}, days: {}", userId, days);
 
         try {
@@ -293,15 +303,20 @@ public class DietRecordAnalysisTools {
         - 达成健康目标
 
         **参数：**
-        - userId - 用户ID
         - goalType - 目标类型（减肥/增肌/保持/增重）
+
+        **无需参数**，userId自动从上下文获取
 
         **返回：** 饮食改善建议
         """)
     public String generateDietAdvice(
-        @P("用户ID") String userId,
+        AgenticScope scope,
         @P("目标类型：减肥/增肌/保持/增重") String goalType
     ) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return "❌ 无法获取用户信息，请重新登录";
+        }
         log.info("🔍 [Tool] 生成饮食改善建议，userId: {}, goalType: {}", userId, goalType);
 
         try {

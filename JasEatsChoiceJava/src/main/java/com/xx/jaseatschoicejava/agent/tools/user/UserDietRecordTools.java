@@ -8,6 +8,7 @@ import com.xx.jaseatschoicejava.service.NutritionService;
 import com.xx.jaseatschoicejava.service.UserService;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.agent.tool.P;
+import dev.langchain4j.agentic.scope.AgenticScope;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -57,17 +58,21 @@ public class UserDietRecordTools {
         - 追踪热量摄入
 
         **参数：**
-        - userId - 用户ID
+        - **无需参数**，userId自动从上下文获取
         - foodItemsJson - 食物列表（JSON数组格式）
         - mealType - 餐次（早餐/午餐/晚餐/加餐）
 
         **返回：** 记录结果和总热量
         """)
     public String recordDiet(
-        @P("用户ID") String userId,
+        AgenticScope scope,
         @P("食物列表，JSON数组格式") String foodItemsJson,
         @P("餐次：早餐/午餐/晚餐/加餐") String mealType
     ) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return "❌ 无法获取用户信息，请重新登录";
+        }
         log.info("🔍 [Tool] 记录饮食，userId: {}, mealType: {}", userId, mealType);
 
         try {
@@ -142,13 +147,17 @@ public class UserDietRecordTools {
         - 分析今日饮食
         - 对比热量目标
 
-        **参数：** userId - 用户ID
+        **无需参数**，userId自动从上下文获取
 
         **返回：** 今日饮食记录和汇总
         """)
     public String getTodayDietRecord(
-        @P("用户ID") String userId
+        AgenticScope scope
     ) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return "❌ 无法获取用户信息，请重新登录";
+        }
         log.info("🔍 [Tool] 查询今日饮食记录，userId: {}", userId);
 
         try {
@@ -199,13 +208,17 @@ public class UserDietRecordTools {
         - 用户追踪健康目标
         - 生成饮食建议
 
-        **参数：** userId - 用户ID
+        **无需参数**，userId自动从上下文获取
 
         **返回：** 达标分析报告
         """)
     public String analyzeTodayDietCompliance(
-        @P("用户ID") String userId
+        AgenticScope scope
     ) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return "❌ 无法获取用户信息，请重新登录";
+        }
         log.info("🔍 [Tool] 分析今日饮食达标情况，userId: {}", userId);
 
         try {

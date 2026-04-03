@@ -6,6 +6,7 @@ import com.xx.jaseatschoicejava.entity.Dish;
 import com.xx.jaseatschoicejava.entity.User;
 import com.xx.jaseatschoicejava.service.DishService;
 import com.xx.jaseatschoicejava.service.UserService;
+import dev.langchain4j.agentic.scope.AgenticScope;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.agent.tool.P;
 import lombok.extern.slf4j.Slf4j;
@@ -55,15 +56,20 @@ public class RecommendationQueryTools {
         - 个性化建议
 
         **参数：**
-        - userId - 用户ID（用于个性化）
         - category - 分类（可选，如：主食、汤羹、小吃）
+
+        **无需参数**，userId自动从上下文获取
 
         **返回：** 推荐菜品列表（文本格式）
         """)
     public String queryRecommendations(
-        @P("用户ID") String userId,
+        AgenticScope scope,
         @P("分类（可选）") String category
     ) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return "❌ 无法获取用户信息，请重新登录";
+        }
         log.info("🔍 [Tool] 查询推荐菜品，userId: {}, category: {}", userId, category);
 
         try {
@@ -231,13 +237,17 @@ public class RecommendationQueryTools {
         - 个性化建议
         - 智能推荐
 
-        **参数：** userId - 用户ID
+        **无需参数**，userId自动从上下文获取
 
         **返回：** 个性化推荐菜品
         """)
     public String getPersonalizedRecommendations(
-        @P("用户ID") String userId
+        AgenticScope scope
     ) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return "❌ 无法获取用户信息，请重新登录";
+        }
         log.info("🔍 [Tool] 获取个性化推荐，userId: {}", userId);
 
         try {

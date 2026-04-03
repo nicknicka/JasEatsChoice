@@ -4,6 +4,7 @@ import com.xx.jaseatschoicejava.entity.User;
 import com.xx.jaseatschoicejava.service.UserService;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.agent.tool.P;
+import dev.langchain4j.agentic.scope.AgenticScope;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -44,13 +45,15 @@ public class HealthGoalTrackerTools {
         - 制定饮食计划时参考
         - 追踪健康改善情况
 
-        **参数：** userId - 用户ID
+        **无需参数**，userId自动从上下文获取
 
         **返回：** 目标信息详情
         """)
-    public String getHealthGoalStatus(
-        @P("用户ID") String userId
-    ) {
+    public String getHealthGoalStatus(AgenticScope scope) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return "❌ 无法获取用户信息，请重新登录";
+        }
         log.info("🔍 [Tool] 查询健康目标状态，userId: {}", userId);
 
         try {
@@ -149,15 +152,19 @@ public class HealthGoalTrackerTools {
         - 制定健康计划
 
         **参数：**
-        - userId - 用户ID
         - goalType - 目标类型（减肥/增肌/保持/增重）
+        - userId自动从上下文获取
 
         **返回：** 更新结果和建议
         """)
     public String updateHealthGoal(
-        @P("用户ID") String userId,
+        AgenticScope scope,
         @P("目标类型：减肥/增肌/保持/增重") String goalType
     ) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return "❌ 无法获取用户信息，请重新登录";
+        }
         log.info("🔍 [Tool] 更新健康目标，userId: {}, goalType: {}", userId, goalType);
 
         try {
@@ -253,13 +260,15 @@ public class HealthGoalTrackerTools {
         - 制定饮食计划
         - 调整饮食习惯
 
-        **参数：** userId - 用户ID
+        **无需参数**，userId自动从上下文获取
 
         **返回：** 个性化饮食建议
         """)
-    public String generatePersonalizedAdvice(
-        @P("用户ID") String userId
-    ) {
+    public String generatePersonalizedAdvice(AgenticScope scope) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return "❌ 无法获取用户信息，请重新登录";
+        }
         log.info("🔍 [Tool] 生成个性化饮食建议，userId: {}", userId);
 
         try {

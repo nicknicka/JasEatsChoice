@@ -5,6 +5,7 @@ import com.xx.jaseatschoicejava.entity.Dish;
 import com.xx.jaseatschoicejava.entity.User;
 import com.xx.jaseatschoicejava.service.DishService;
 import com.xx.jaseatschoicejava.service.UserService;
+import dev.langchain4j.agentic.scope.AgenticScope;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.agent.tool.P;
 import lombok.extern.slf4j.Slf4j;
@@ -49,13 +50,17 @@ public class RecommendationFilterTools {
         - 为过敏用户推荐菜品
         - 安全饮食建议
 
-        **参数：** userId - 用户ID
+        **无需参数**，userId自动从上下文获取
 
         **返回：** 安全菜品列表
         """)
     public String filterByAllergies(
-        @P("用户ID") String userId
+        AgenticScope scope
     ) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return "❌ 无法获取用户信息，请重新登录";
+        }
         log.info("🔍 [Tool] 根据过敏原过滤菜品，userId: {}", userId);
 
         try {
@@ -392,19 +397,24 @@ public class RecommendationFilterTools {
         - 个性化筛选
 
         **参数：**
-        - userId - 用户ID
         - category - 分类（可选）
         - maxPrice - 最高价格（可选）
         - maxCalories - 最大热量（可选）
 
+        **无需参数**，userId自动从上下文获取
+
         **返回：** 符合所有条件的菜品列表
         """)
     public String comprehensiveFilter(
-        @P("用户ID") String userId,
+        AgenticScope scope,
         @P("分类（可选）") String category,
         @P("最高价格（元，可选）") Double maxPrice,
         @P("最大热量（千卡/100g，可选）") Integer maxCalories
     ) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return "❌ 无法获取用户信息，请重新登录";
+        }
         log.info("🔍 [Tool] 综合过滤，userId: {}, category: {}, maxPrice: {}, maxCalories: {}",
             userId, category, maxPrice, maxCalories);
 

@@ -111,17 +111,22 @@ public class LangChain4jConfig {
     /**
      * Supervisor专用模型（更强推理能力）
      * 使用glm-4-plus提供更好的规划和决策能力
+     *
+     * 包装MarkdownStrippingChatModel：GLM模型倾向将JSON包裹在```json中，
+     * langchain4j的extractAndParseJson无法处理，需要预先剥离
      */
     @Bean("supervisorModel")
     public ChatModel supervisorModel() {
-        log.info("初始化Supervisor专用模型，模型：glm-4-plus");
+        log.info("初始化Supervisor专用模型，模型：glm-4-plus（含Markdown剥离包装）");
 
-        return ZhipuAiChatModel.builder()
+        ChatModel rawModel = ZhipuAiChatModel.builder()
                 .apiKey(zhipuAIConfig.getApiKey())
                 .model("glm-4-plus")
                 .temperature(0.3)
                 .maxRetries(1)
                 .build();
+
+        return new MarkdownStrippingChatModel(rawModel);
     }
 
     /**

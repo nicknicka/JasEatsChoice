@@ -7,6 +7,7 @@ import com.xx.jaseatschoicejava.entity.User;
 import com.xx.jaseatschoicejava.service.UserService;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.agent.tool.P;
+import dev.langchain4j.agentic.scope.AgenticScope;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -50,13 +51,21 @@ public class UserQueryTools {
         - 验证用户身份
         - 个性化推荐时获取用户特征
 
-        **参数：** userId - 用户ID
+        **无需参数**，userId自动从上下文获取
 
         **返回：** 用户基本信息对象
         """)
     public UserBasicInfo getUserInfo(
-        @P("用户ID") String userId
+        AgenticScope scope
     ) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return UserBasicInfo.builder()
+                    .userId(null)
+                    .nickname("未知用户")
+                    .exists(false)
+                    .build();
+        }
         log.info("🔍 [Tool] 查询用户基本信息，userId: {}", userId);
 
         try {
@@ -114,13 +123,20 @@ public class UserQueryTools {
         - 制定饮食计划
         - 健康建议
 
-        **参数：** userId - 用户ID
+        **无需参数**，userId自动从上下文获取
 
         **返回：** 用户详细资料对象
         """)
     public UserProfile getUserProfile(
-        @P("用户ID") String userId
+        AgenticScope scope
     ) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return UserProfile.builder()
+                    .userId(null)
+                    .exists(false)
+                    .build();
+        }
         log.info("🔍 [Tool] 查询用户详细资料，userId: {}", userId);
 
         try {
@@ -187,7 +203,25 @@ public class UserQueryTools {
 
         try {
             List<UserBasicInfo> results = userIds.stream()
-                .map(userId -> getUserInfo(userId))
+                .<UserBasicInfo>map(uid -> {
+                    User u = userService.getById(uid);
+                    if (u == null) {
+                        return UserBasicInfo.builder()
+                                .userId(uid)
+                                .nickname("未知用户")
+                                .exists(false)
+                                .build();
+                    }
+                    return UserBasicInfo.builder()
+                            .userId(u.getUserId())
+                            .nickname(u.getNickname())
+                            .phone(u.getPhone())
+                            .email(u.getEmail())
+                            .memberLevel("普通会员")
+                            .status("正常")
+                            .exists(true)
+                            .build();
+                })
                 .filter(info -> info.getExists())
                 .toList();
 
@@ -214,13 +248,17 @@ public class UserQueryTools {
         - 注册前检查
         - 登录验证
 
-        **参数：** userId - 用户ID
+        **无需参数**，userId自动从上下文获取
 
         **返回：** true-存在，false-不存在
         """)
     public boolean checkUserExists(
-        @P("用户ID") String userId
+        AgenticScope scope
     ) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return false;
+        }
         log.info("🔍 [Tool] 检查用户是否存在，userId: {}", userId);
 
         try {
@@ -253,13 +291,21 @@ public class UserQueryTools {
         - 推荐策略调整
         - 用户价值评估
 
-        **参数：** userId - 用户ID
+        **无需参数**，userId自动从上下文获取
 
         **返回：** 用户统计信息
         """)
     public UserStatistics getUserStatistics(
-        @P("用户ID") String userId
+        AgenticScope scope
     ) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return UserStatistics.builder()
+                    .userId(null)
+                    .totalOrders(0)
+                    .totalSpending(0.0)
+                    .build();
+        }
         log.info("🔍 [Tool] 查询用户统计信息，userId: {}", userId);
 
         try {
@@ -314,13 +360,17 @@ public class UserQueryTools {
         - 个性化推荐
         - 菜品筛选
 
-        **参数：** userId - 用户ID
+        **无需参数**，userId自动从上下文获取
 
         **返回：** 偏好标签JSON字符串
         """)
     public String getUserPreferenceTags(
-        @P("用户ID") String userId
+        AgenticScope scope
     ) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return "❌ 无法获取用户信息，请重新登录";
+        }
         log.info("🔍 [Tool] 查询用户偏好标签，userId: {}", userId);
 
         try {
@@ -351,13 +401,17 @@ public class UserQueryTools {
         - 推荐菜品时过滤
         - 检查食物安全性
 
-        **参数：** userId - 用户ID
+        **无需参数**，userId自动从上下文获取
 
         **返回：** 过敏信息JSON字符串
         """)
     public String getUserAllergies(
-        @P("用户ID") String userId
+        AgenticScope scope
     ) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return "❌ 无法获取用户信息，请重新登录";
+        }
         log.info("🔍 [Tool] 查询用户过敏信息，userId: {}", userId);
 
         try {

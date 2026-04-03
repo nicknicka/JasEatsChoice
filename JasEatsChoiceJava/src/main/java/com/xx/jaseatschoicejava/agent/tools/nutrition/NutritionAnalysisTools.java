@@ -6,6 +6,7 @@ import com.xx.jaseatschoicejava.entity.Nutrition;
 import com.xx.jaseatschoicejava.entity.User;
 import com.xx.jaseatschoicejava.service.NutritionService;
 import com.xx.jaseatschoicejava.service.UserService;
+import dev.langchain4j.agentic.scope.AgenticScope;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.agent.tool.P;
 import lombok.extern.slf4j.Slf4j;
@@ -66,14 +67,19 @@ public class NutritionAnalysisTools {
 
         **参数：**
         - foodItemsJson - 食物列表（JSON格式）
-        - userId - 用户ID（可选，用于对比目标）
+
+        **无需参数**，userId自动从上下文获取（用于对比目标）
 
         **返回：** 营养分析报告和评分
         """)
     public String analyzeNutritionBalance(
         @P("食物列表（JSON格式）") String foodItemsJson,
-        @P("用户ID（可选）") String userId
+        AgenticScope scope
     ) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return "❌ 无法获取用户信息，请重新登录";
+        }
         log.info("🔍 [Tool] 分析营养均衡性，userId: {}", userId);
 
         try {
@@ -299,13 +305,17 @@ public class NutritionAnalysisTools {
         - 制定饮食计划
         - 健康咨询
 
-        **参数：** userId - 用户ID
+        **无需参数**，userId自动从上下文获取
 
         **返回：** 营养改进建议
         """)
     public String generateNutritionAdvice(
-        @P("用户ID") String userId
+        AgenticScope scope
     ) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return "❌ 无法获取用户信息，请重新登录";
+        }
         log.info("🔍 [Tool] 生成营养建议，userId: {}", userId);
 
         try {

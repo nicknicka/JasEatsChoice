@@ -11,6 +11,7 @@ import com.xx.jaseatschoicejava.service.MerchantService;
 import com.xx.jaseatschoicejava.service.OrderDishService;
 import com.xx.jaseatschoicejava.service.OrderService;
 import com.xx.jaseatschoicejava.util.IdGenerator;
+import dev.langchain4j.agentic.scope.AgenticScope;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.agent.tool.P;
 import lombok.extern.slf4j.Slf4j;
@@ -72,16 +73,21 @@ public class OrderCreateTools {
         **参数：**
         - dishItemsJson - 菜品列表（JSON格式）
           例如：[{"dishId":"xxx","quantity":2,"price":15.5}]
-        - userId - 用户ID
         - diningMode - 就餐方式（堂食/dine_in 或 自取/takeout）
+
+        **无需参数**，userId自动从上下文获取
 
         **返回：** 价格明细（文本格式）
         """)
     public String calculateOrderPrice(
         @P("菜品列表（JSON格式）") String dishItemsJson,
-        @P("用户ID") String userId,
+        AgenticScope scope,
         @P("就餐方式（堂食/dine_in 或 自取/takeout）") String diningMode
     ) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return "❌ 无法获取用户信息，请重新登录";
+        }
         log.info("🔍 [Tool] 计算订单价格，userId: {}, diningMode: {}", userId, diningMode);
 
         try {
@@ -167,10 +173,11 @@ public class OrderCreateTools {
         创建一个新的订单（堂食/自取模式）
 
         **必需参数：**
-        - userId: 用户ID
         - merchantId: 商家ID
         - dishItemsJson: 菜品列表（JSON数组字符串格式）
         - diningMode: 就餐方式（"dine_in"=堂食 或 "takeout"=自取）
+
+        **无需参数**，userId自动从上下文获取
 
         **可选参数：**
         - tableNumber: 座号（堂食时填写）
@@ -192,13 +199,17 @@ public class OrderCreateTools {
         **返回：** 订单创建结果
         """)
     public String createOrder(
-        @P("用户ID") String userId,
+        AgenticScope scope,
         @P("商家ID") String merchantId,
         @P("菜品列表（JSON数组字符串）") String dishItemsJson,
         @P("就餐方式（dine_in=堂食 或 takeout=自取）") String diningMode,
         @P(value = "座号（可选，堂食时建议填写）", required = false) String tableNumber,
         @P(value = "备注信息（可选）", required = false) String note
     ) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return "❌ 无法获取用户信息，请重新登录";
+        }
         log.info("🔍 [Tool] 创建订单，userId: {}, merchantId: {}, diningMode: {}", userId, merchantId, diningMode);
 
         try {
@@ -380,15 +391,20 @@ public class OrderCreateTools {
         - 推荐最优优惠
 
         **参数：**
-        - userId - 用户ID
         - orderAmount - 订单金额
+
+        **无需参数**，userId自动从上下文获取
 
         **返回：** 可用优惠券信息
         """)
     public String getAvailableCoupons(
-        @P("用户ID") String userId,
+        AgenticScope scope,
         @P("订单金额") double orderAmount
     ) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return "❌ 无法获取用户信息，请重新登录";
+        }
         log.info("🔍 [Tool] 查询可用优惠券，userId: {}, orderAmount: {}", userId, orderAmount);
 
         // 简化版本：返回固定的优惠券示例
@@ -433,12 +449,18 @@ public class OrderCreateTools {
         **参数：**
         - merchantNameOrDishName - 商家名称或菜品名称
 
+        **无需参数**，userId自动从上下文获取
+
         **返回：** 商家菜品卡片数据（JSON格式）
         """)
     public String prepareOrder(
         @P("商家名称或菜品名称") String merchantNameOrDishName,
-        @P("用户ID") String userId
+        AgenticScope scope
     ) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return "❌ 无法获取用户信息，请重新登录";
+        }
         log.info("🛒 [Tool] 准备订单，商家/菜品：{}, 用户：{}", merchantNameOrDishName, userId);
 
         try {

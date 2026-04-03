@@ -9,6 +9,7 @@ import com.xx.jaseatschoicejava.entity.Dish;
 import com.xx.jaseatschoicejava.entity.Merchant;
 import com.xx.jaseatschoicejava.service.DishService;
 import com.xx.jaseatschoicejava.service.MerchantService;
+import dev.langchain4j.agentic.scope.AgenticScope;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.agent.tool.P;
 import lombok.extern.slf4j.Slf4j;
@@ -67,10 +68,11 @@ public class OrderGuideTools {
         - 用户准备下单
 
         **参数：**
-        - userId - 用户ID（必需）
         - merchantId - 商家ID（可选，不指定则自动推荐）
         - diningMode - 就餐方式：dine_in（堂食）或 takeout（自取）
         - preference - 用户偏好，如"辣"、"清淡"、"营养均衡"（可选）
+
+        **无需参数**，userId自动从上下文获取
 
         **返回：** 商家下单卡片数据（JSON格式），包含：
         - 商家信息（ID、名称、评分、地址等）
@@ -89,11 +91,15 @@ public class OrderGuideTools {
         """)
     @CardType("merchant_order_card")
     public String recommendMerchantForOrder(
-        @P("用户ID") String userId,
+        AgenticScope scope,
         @P(value = "商家ID（可选，不指定则自动推荐）", required = false) String merchantId,
         @P("就餐方式（dine_in=堂食 或 takeout=自取）") String diningMode,
         @P(value = "用户偏好，如：辣、清淡、营养均衡", required = false) String preference
     ) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return "❌ 无法获取用户信息，请重新登录";
+        }
         log.info("🔍 [Tool] 推荐商家并生成下单卡片，userId: {}, merchantId: {}, diningMode: {}",
             userId, merchantId, diningMode);
 
@@ -223,20 +229,25 @@ public class OrderGuideTools {
         - 用户点击"调整菜品"按钮
 
         **参数：**
-        - userId - 用户ID
         - merchantId - 商家ID
         - selectedDishesJson - 用户选择的菜品（JSON格式）
           格式：[{"dishId":"D001","quantity":2},{"dishId":"D002","quantity":1}]
         - diningMode - 就餐方式（dine_in=堂食 或 takeout=自取）
 
+        **无需参数**，userId自动从上下文获取
+
         **返回：** 更新后的订单信息和价格明细
         """)
     public String updateSelectedDishes(
-        @P("用户ID") String userId,
+        AgenticScope scope,
         @P("商家ID") String merchantId,
         @P("用户选择的菜品（JSON格式）") String selectedDishesJson,
         @P("就餐方式（dine_in=堂食 或 takeout=自取）") String diningMode
     ) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return "❌ 无法获取用户信息，请重新登录";
+        }
         log.info("🔍 [Tool] 更新用户选择的菜品，userId: {}, merchantId: {}", userId, merchantId);
 
         try {

@@ -23,9 +23,12 @@ public class SSEAgentListener implements AgentListener {
 
     private final SseEmitter emitter;
     private final ObjectMapper objectMapper;
+    private final String userId;
+    private volatile boolean emitterFailed = false;
 
-    public SSEAgentListener(SseEmitter emitter) {
+    public SSEAgentListener(SseEmitter emitter, String userId) {
         this.emitter = emitter;
+        this.userId = userId;
         this.objectMapper = new ObjectMapper();
     }
 
@@ -117,6 +120,12 @@ public class SSEAgentListener implements AgentListener {
     public void afterAgenticScopeCreated(AgenticScope scope) {
         // ========== 【技术细节】只记录到日志 ==========
         log.info("🎯 [技术细节] AgenticScope创建: {}", scope.memoryId());
+
+        // 将userId写入AgenticScope，供所有L1子Agent的工具读取
+        if (userId != null && !userId.isEmpty()) {
+            scope.writeState("userId", userId);
+            log.info("🔑 [AgenticScope] 已写入userId: {}", userId);
+        }
 
         // ========== 【用户友好消息】发送任务开始提示 ==========
         ExecutionEvent event = new ExecutionEvent();
@@ -232,6 +241,12 @@ public class SSEAgentListener implements AgentListener {
      * ⚠️ 重要：事件名必须使用 "message"，因为前端只监听 message 事件
      */
     private void sendEvent(ExecutionEventType type, ExecutionEvent event) {
+        // 如果 emitter 已失败，跳过后续所有发送，避免级联错误
+        if (emitterFailed) {
+            log.debug("⏭️ [SSE] 跳过发送（emitter已失败）: type={}", type.name());
+            return;
+        }
+
         long startTime = System.currentTimeMillis();
         try {
             String eventData = objectMapper.writeValueAsString(event);
@@ -263,14 +278,16 @@ public class SSEAgentListener implements AgentListener {
             long duration = System.currentTimeMillis() - startTime;
             log.info("✅ [SSE] 事件发送成功: type={}, 耗时={}ms", type.name(), duration);
         } catch (IOException e) {
+            emitterFailed = true;
             long duration = System.currentTimeMillis() - startTime;
             log.error("❌ [SSE] 发送SSE事件失败: type={}, 耗时={}ms, error={}", type.name(), duration, e.getMessage());
-            log.error("❌ [SSE] 失败详情:", e);
-            emitter.completeWithError(e);
+            // 不调用 emitter.completeWithError()，避免级联 IllegalStateException
+            // emitter 的生命周期由 SupervisorSSEController 统一管理
         } catch (Exception e) {
+            emitterFailed = true;
             long duration = System.currentTimeMillis() - startTime;
-            log.error("❌ [SSE] 发送SSE事件异常: type={}, 耗时={}ms, error={}", type.name(), duration, e.getMessage(), e);
-            emitter.completeWithError(e);
+            log.error("❌ [SSE] 发送SSE事件异常: type={}, 耗时={}ms, error={}", type.name(), duration, e.getMessage());
+            // 不调用 emitter.completeWithError()，避免级联 IllegalStateException
         }
     }
 

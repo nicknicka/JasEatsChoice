@@ -131,7 +131,7 @@ public class SupervisorSSEController {
         SseEmitter emitter = new SseEmitter(120000L); // 120秒超时
 
         // 创建监听器（进度推送）
-        SSEAgentListener listener = new SSEAgentListener(emitter);
+        SSEAgentListener listener = new SSEAgentListener(emitter, userId);
 
         CompletableFuture.runAsync(() -> {
             try {
@@ -266,8 +266,11 @@ public class SupervisorSSEController {
 
             } catch (Exception e) {
                 log.error("SupervisorAgent处理失败: userId={}", userId, e);
-                sendSseEvent(emitter, "message", Map.of("error", "处理失败: " + e.getMessage()));
-                try { emitter.completeWithError(e); } catch (Exception ignored) {}
+                // 通过SSE发送错误事件，前端可以正常显示错误信息
+                sendSseEvent(emitter, "message", Map.of("error", "处理失败，请重试"));
+                // 使用complete()而非completeWithError()，避免异常传播到Spring MVC的
+                // GlobalExceptionHandler，导致尝试用text/event-stream Content-Type返回JSON
+                try { emitter.complete(); } catch (Exception ignored) {}
             }
         }, executorService);
 

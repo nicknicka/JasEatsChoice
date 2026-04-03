@@ -5,6 +5,7 @@ import com.xx.jaseatschoicejava.entity.Order;
 import com.xx.jaseatschoicejava.service.OrderService;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.agent.tool.P;
+import dev.langchain4j.agentic.scope.AgenticScope;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -101,20 +102,22 @@ public class OrderQueryTools {
      * @return 订单列表摘要
      */
     @Tool("""
-        查询用户的所有订单（最近20条）
+        查询当前用户的所有订单（最近20条）
 
         **何时使用：**
         - 用户查看历史订单
         - 订单管理
         - 订单统计
 
-        **参数：** userId - 用户ID
+        **无需参数**，userId自动从上下文获取
 
         **返回：** 订单列表摘要
         """)
-    public String getUserOrders(
-        @P("用户ID") String userId
-    ) {
+    public String getUserOrders(AgenticScope scope) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return "❌ 无法获取用户信息，请重新登录";
+        }
         log.info("🔍 [Tool] 查询用户订单列表，userId: {}", userId);
 
         try {
@@ -221,7 +224,7 @@ public class OrderQueryTools {
      * @return 推荐地址列表
      */
     @Tool("""
-        获取用户的推荐配送地址
+        获取当前用户的推荐配送地址
 
         **推荐地址基于：**
         - 历史订单地址
@@ -232,13 +235,15 @@ public class OrderQueryTools {
         - 创建订单时智能填充
         - 用户询问"送到哪里"
 
-        **参数：** userId - 用户ID
+        **无需参数**，userId自动从上下文获取
 
         **返回：** 推荐地址列表（按优先级排序）
         """)
-    public String getRecommendedAddress(
-        @P("用户ID") String userId
-    ) {
+    public String getRecommendedAddress(AgenticScope scope) {
+        String userId = (String) scope.readState("userId");
+        if (userId == null || userId.isEmpty()) {
+            return "❌ 无法获取用户信息，请重新登录";
+        }
         log.info("🔍 [Tool] 查询推荐地址，userId: {}", userId);
 
         try {
