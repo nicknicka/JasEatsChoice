@@ -118,7 +118,7 @@ const getStatusText = (status) => {
 }
 
 .card-header {
-  background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+  background: linear-gradient(135deg, #ff6b6b 0%, #f8a5c2 100%);
   color: white;
   padding: 16px 20px;
 }
@@ -227,7 +227,7 @@ const getStatusText = (status) => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #ff6b6b 0%, #c44569 100%);
   color: white;
 }
 

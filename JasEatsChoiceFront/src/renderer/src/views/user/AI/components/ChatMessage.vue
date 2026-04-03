@@ -92,11 +92,6 @@ const props = defineProps({
 
 const emit = defineEmits(['action', 'card-click', 'view-menu', 'order-now'])
 
-// 调试：监听props变化
-watch(() => props.isLoading, (newVal) => {
-  console.log('🔄 ChatMessage isLoading changed:', newVal, 'sender:', props.sender)
-}, { immediate: true })
-
 // 消息类型
 const messageType = ref('text')
 const cardData = ref(null)
@@ -389,7 +384,7 @@ const handleCardAction = (action) => {
 }
 
 .message-text:hover {
-  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
 .message-time {
@@ -404,7 +399,7 @@ const handleCardAction = (action) => {
 }
 
 .markdown-content :deep(p) {
-  margin: 0 0 8px 0;
+  margin: 4px 0 8px 0;
 }
 
 .markdown-content :deep(p:last-child) {
@@ -433,7 +428,7 @@ const handleCardAction = (action) => {
 }
 
 .markdown-content :deep(li) {
-  margin: 4px 0;
+  margin: 6px 0;
 }
 
 .markdown-content :deep(strong) {

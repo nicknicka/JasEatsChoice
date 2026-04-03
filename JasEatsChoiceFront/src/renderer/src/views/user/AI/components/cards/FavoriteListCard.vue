@@ -105,7 +105,7 @@ const handleAction = (actionType, favorite) => {
 }
 
 .card-header {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  background: linear-gradient(135deg, #ff6b6b 0%, #f78fb3 100%);
   color: white;
   padding: 16px 20px;
 }

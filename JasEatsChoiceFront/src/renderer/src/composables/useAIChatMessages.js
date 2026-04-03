@@ -238,18 +238,8 @@ export function useAIChatMessages(options = {}) {
 	// ========== 私有辅助方法 ==========
 
 	const _loadWelcomeMessage = async (userId) => {
-		try {
-			const response = await axios.delete(`${API_CONFIG.baseURL}/v1/agent/context/${userId}`)
-			if (response.data.success === true) {
-				const welcomeMessage = response.data.data?.welcomeMessage || WELCOME_MESSAGE
-				messages.value = [_createWelcomeMessage(welcomeMessage)]
-			} else {
-				messages.value = [_createWelcomeMessage(WELCOME_MESSAGE)]
-			}
-		} catch (error) {
-			console.error('获取欢迎消息失败:', error)
-			messages.value = [_createWelcomeMessage(WELCOME_MESSAGE)]
-		}
+		// 无历史记录时直接显示欢迎消息，无需调用后端
+		messages.value = [_createWelcomeMessage(WELCOME_MESSAGE)]
 	}
 
 	const _setFallbackWelcome = () => {

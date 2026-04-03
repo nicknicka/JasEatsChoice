@@ -6,7 +6,7 @@
 			<transition name="fade-in">
 				<div v-if="isInitialLoading" class="initial-loading-container">
 					<div class="ai-avatar-loading">
-						<div class="avatar-emoji">🤖</div>
+						<div class="avatar-emoji"><el-icon :size="32"><Service /></el-icon></div>
 						<div class="typing-indicator">
 							<span class="typing-dot"></span>
 							<span class="typing-dot"></span>
@@ -33,7 +33,9 @@
 						class="message-avatar-custom"
 					/>
 					<!-- AI头像 -->
-					<div v-else class="message-avatar">{{ message.avatar }}</div>
+					<div v-else class="message-avatar">
+							<div class="ai-avatar-icon"><el-icon :size="24"><Service /></el-icon></div>
+						</div>
 					<div class="message-content">
 						<!-- 图片附件 -->
 						<div v-if="message.images && message.images.length > 0" class="message-images">
@@ -151,10 +153,6 @@
 								<el-button :icon="Picture" circle size="small" @click="triggerImageUpload" />
 							</el-tooltip>
 
-							<el-tooltip content="清空对话" placement="top">
-								<el-button :icon="Delete" circle size="small" @click="clearChat" />
-							</el-tooltip>
-
 							<!-- 快捷提问 -->
 							<div class="quick-question-button-wrapper">
 								<transition name="fade-slide">
@@ -194,7 +192,11 @@
 								<el-switch v-model="aiPersonalDataEnabled" @change="handlePersonalDataToggle" size="small" />
 							</el-tooltip>
 						</div>
-						<div class="toolbar-right"></div>
+						<div class="toolbar-right">
+							<el-tooltip content="清空对话" placement="top">
+								<el-button :icon="Delete" circle size="small" type="danger" plain @click="clearChat" class="clear-chat-btn" />
+							</el-tooltip>
+						</div>
 					</div>
 
 					<!-- 文本输入框 -->
@@ -218,13 +220,22 @@
 				</div>
 
 				<el-button
-					:type="isStreaming ? 'danger' : 'primary'"
-					class="send-btn"
-					@click="handleSendClick"
-					:disabled="isLoading && !isStreaming"
-					:loading="isLoading && !isStreaming"
+					v-if="isStreaming"
+					class="stop-btn"
+					@click="stopStreamRequest(); ElMessage.info('已停止AI回复')"
 				>
-					{{ isStreaming ? "停止" : "发送" }}
+					<el-icon><VideoPause /></el-icon>
+					<span>停止</span>
+				</el-button>
+				<el-button
+					v-else
+					type="primary"
+					class="send-btn"
+					@click="sendMessage"
+					:disabled="isLoading"
+					:loading="isLoading"
+				>
+					发送
 				</el-button>
 			</div>
 		</div>
@@ -236,7 +247,7 @@ import { ref, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
 	Close, Delete, Picture, DocumentCopy, More, Operation,
-	QuestionFilled, ArrowRight,
+	QuestionFilled, ArrowRight, Service, VideoPause,
 } from '@element-plus/icons-vue'
 import { useAuthStore } from '../../../../store/authStore'
 import { useUserStore } from '../../../../store/userStore'
@@ -306,7 +317,7 @@ const {
 	getProgressStatus, startTypewriterEffect,
 } = useAIChatMessages({
 	parseCardDataFromContent,
-	restoreCardDataForMessages,
+	restoreCardDataForMessages: _restoreCardData,
 })
 
 // 将消息ref传给cardHandler（用于restoreCardDataForMessages）
@@ -412,7 +423,7 @@ const sendMessage = async () => {
 		content: '',
 		displayContent: '',
 		time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-		avatar: '🤖',
+		avatar: 'ai',
 		enableMarkdown: true,
 		isToolExecuting: false,
 		toolCompleted: false,
@@ -457,12 +468,12 @@ const clearChat = () => {
 	}).then(async () => {
 		try {
 			const userId = String(authStore.userId)
-			const clearResponse = await fetch(`${API_CONFIG.baseURL}/v1/agent/context/${userId}`, {
+			const clearResponse = await fetch(`${API_CONFIG.baseURL}${API_CONFIG.ai.clear}?userId=${userId}`, {
 				method: 'DELETE',
 				headers: { Authorization: `Bearer ${authStore.token}` }
 			})
 			const data = await clearResponse.json()
-			if (data.success === true) {
+			if (data.code === 200) {
 				messages.value = []
 				const welcomeMessage = data.data?.welcomeMessage || '您好！我是您的AI饮食助手。'
 				messages.value.push({
@@ -470,7 +481,7 @@ const clearChat = () => {
 					sender: 'ai',
 					content: welcomeMessage,
 					time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-					avatar: '🤖',
+					avatar: 'ai',
 					enableMarkdown: true,
 				})
 				ElMessage.success('聊天记录已清空')
@@ -698,7 +709,7 @@ onUnmounted(() => {
 		display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 24px;
 		.ai-avatar-loading {
 			display: flex; align-items: center; gap: 16px;
-			.avatar-emoji { font-size: 48px; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.15)); animation: avatarFloat 2s ease-in-out infinite; }
+			.avatar-emoji { display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%); border-radius: 16px; color: #fff; box-shadow: 0 4px 12px rgba(255,107,107,0.3); animation: avatarFloat 2s ease-in-out infinite; }
 			.typing-indicator {
 				display: flex; align-items: center; gap: 6px; padding: 12px 18px;
 				background: linear-gradient(135deg, #fff9fa 0%, #fff3f4 100%); border-radius: 20px; border: 1px solid #ffe0e3;
@@ -742,18 +753,18 @@ onUnmounted(() => {
 				.more-btn { display: inline; cursor: pointer; opacity: 0; transition: opacity 0.2s; color: inherit; vertical-align: middle; margin-left: 2px; user-select: none; &:active { transform: scale(0.95); } }
 				&:hover .more-btn { opacity: 0.5; }
 				.more-btn:hover { opacity: 1 !important; }
-				&:hover { transform: translateY(-2px) scale(1.01); }
+				&:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
 				&.markdown-content {
 					:deep(br) { display: block; content: ""; margin: 0; }
 					:deep(h1), :deep(h2), :deep(h3) { margin: 8px 0 6px 0; font-weight: 600; line-height: 1.5; }
 					:deep(h1) { font-size: 1.286rem; } :deep(h2) { font-size: 1.143rem; } :deep(h3) { font-size: 1rem; }
-					:deep(p) { margin: 2px 0; line-height: 1.3; }
+					:deep(p) { margin: 6px 0; line-height: 1.6; }
 					:deep(pre) { background: rgba(0,0,0,0.05); border-radius: 8px; padding: 8px; margin: 6px 0; overflow-x: auto; code { font-family: 'Courier New', monospace; font-size: 0.857rem; line-height: 1.4; color: #333; } }
 					:deep(code:not(pre code)) { background: rgba(0,0,0,0.05); padding: 2px 5px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.85em; }
-					:deep(ul), :deep(ol) { margin: 2px 0; padding-left: 18px; line-height: 1.25; }
-					:deep(li) { margin: 1px 0; }
+					:deep(ul), :deep(ol) { margin: 6px 0; padding-left: 20px; line-height: 1.5; }
+					:deep(li) { margin: 4px 0; }
 					:deep(table) { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 0.929rem; background: #fff; border-radius: 8px; overflow: hidden;
-						th { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; font-weight: 600; padding: 10px 12px; text-align: left; }
+						th { background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%); color: #fff; font-weight: 600; padding: 10px 12px; text-align: left; }
 						td { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; color: #333; line-height: 1.5; }
 						tr:last-child td { border-bottom: none; } tr:hover { background-color: #f8f9fa; }
 					}
@@ -778,13 +789,13 @@ onUnmounted(() => {
 		}
 	}
 	&.status-thinking .progress-text { color: #ff6b6b; } &.status-thinking .progress-dot { background: #ff6b6b; }
-	&.status-executing .progress-text { color: #667eea; } &.status-executing .progress-dot { background: #667eea; }
+	&.status-executing .progress-text { color: #ff9f43; } &.status-executing .progress-dot { background: #ff9f43; }
 	&.status-completed { background: linear-gradient(135deg, #43a047 0%, #66bb6a 100%); border: 1px solid #43a047; .progress-text { color: #fff; } }
 }
 
 .card-message-wrapper { width: 100%; max-width: 600px; margin-bottom: 12px; }
-.card-summary-text { margin-top: 12px; padding: 12px 16px; background: #f8f9fa; border-left: 3px solid #667eea; border-radius: 4px; font-size: 14px; line-height: 1.6; color: #666; }
-.message-text-content.typing, .card-summary-text.typing { position: relative; &::after { content: ""; display: inline-block; width: 2px; height: 1.2em; background: #667eea; margin-left: 2px; vertical-align: text-bottom; animation: cursorBlink 1s step-end infinite; } }
+.card-summary-text { margin-top: 12px; padding: 12px 16px; background: #f8f9fa; border-left: 3px solid #ff6b6b; border-radius: 4px; font-size: 14px; line-height: 1.6; color: #666; }
+.message-text-content.typing, .card-summary-text.typing { position: relative; &::after { content: ""; display: inline-block; width: 2px; height: 1.2em; background: #ff6b6b; margin-left: 2px; vertical-align: text-bottom; animation: cursorBlink 1s step-end infinite; } }
 
 // 底部容器
 .bottom-container { flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; position: relative; }
@@ -792,20 +803,20 @@ onUnmounted(() => {
 // 快捷提问面板
 .quick-question-button-wrapper { position: relative; display: inline-block; }
 .quick-questions-panel-fixed {
-	position: absolute; bottom: calc(100% + 4px); left: calc(100% + 4px); width: 200px; max-height: 400px;
+	position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); width: 360px; max-height: 420px;
 	background: #fff; border: 1px solid #e8ecef; border-radius: 12px; padding: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); z-index: 9999;
 	.quick-questions-title { display: flex; align-items: center; justify-content: space-between; font-size: 1rem; font-weight: 600; color: #303133; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 2px solid #ff6b6b;
 		.close-panel-icon { cursor: pointer; color: #909399; transition: all 0.2s ease; &:hover { color: #ff6b6b; transform: rotate(90deg); } }
 	}
 	.quick-questions-categories { display: flex; flex-direction: column; gap: 8px;
-		.question-category { position: relative; display: flex; align-items: flex-start;
-			.category-header { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: linear-gradient(135deg, #f8f9fa 0%, #fff 100%); border: 1px solid #e8ecef; border-radius: 8px; cursor: pointer; user-select: none; transition: all 0.2s ease; width: 160px;
+		.question-category { position: relative; display: flex; flex-direction: column; align-items: stretch;
+			.category-header { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: linear-gradient(135deg, #f8f9fa 0%, #fff 100%); border: 1px solid #e8ecef; border-radius: 8px; cursor: pointer; user-select: none; transition: all 0.2s ease; width: 100%;
 				&:hover { background: linear-gradient(135deg, #fff5f5 0%, #fff 100%); border-color: #ff6b6b; }
 				&.is-active { background: linear-gradient(135deg, #ff6b6b 0%, #ff8787 100%); border-color: #ff6b6b; color: #fff; .category-arrow { color: #fff; } }
 				span { font-size: 0.857rem; font-weight: 600; }
 				.category-arrow { color: #909399; transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); &.is-expanded { transform: rotate(90deg); } }
 			}
-			.category-questions { position: absolute; left: 100%; top: 0; margin-left: 8px; display: flex; flex-direction: column; gap: 6px; width: 280px; background: #fff; border: 1px solid #e8ecef; border-radius: 8px; padding: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+			.category-questions { position: static; margin-top: 8px; margin-left: 0; display: flex; flex-direction: column; gap: 6px; width: 100%; background: #fff; border: 1px solid #e8ecef; border-radius: 8px; padding: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 				.question-item { padding: 10px 12px; font-size: 0.786rem; color: #606266; background: #f5f7fa; border-radius: 6px; cursor: pointer; transition: all 0.2s cubic-bezier(0.4,0,0.2,1); text-align: left; line-height: 1.4;
 					&:hover { background: linear-gradient(135deg, #409eff 0%, #5dade2 100%); color: #fff; transform: translateX(4px); }
 				}
@@ -863,12 +874,19 @@ onUnmounted(() => {
 			&.at-limit { color: #f56c6c; background: linear-gradient(135deg, #fee 0%, #fecaca 100%); border-color: #fbc4c4; animation: pulse 1.5s ease-in-out infinite; }
 		}
 	}
+	.stop-btn { flex-shrink: 0; background: #fff; border: 2px solid #f56c6c; color: #f56c6c; padding: 10px 20px; font-size: 1rem; font-weight: 600; border-radius: 10px; height: 56px; transition: all 0.3s cubic-bezier(0.4,0,0.2,1); display: flex; align-items: center; gap: 6px;
+		&:hover { background: #f56c6c; color: #fff; box-shadow: 0 4px 12px rgba(245,108,108,0.35); transform: translateY(-2px); }
+	}
 	.send-btn { flex-shrink: 0; background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%); border: none; padding: 10px 28px; font-size: 1.071rem; font-weight: 600; border-radius: 10px; box-shadow: 0 2px 8px rgba(255,107,107,0.25); transition: all 0.3s cubic-bezier(0.4,0,0.2,1); height: 56px;
 		&:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(255,107,107,0.35); }
 		&:active:not(:disabled) { transform: translateY(0); }
 		&:disabled { background: #e9ecef; box-shadow: none; color: #adb5bd; }
 	}
-}
+	.toolbar-right { display: flex; align-items: center; }
+	.clear-chat-btn { border-color: #fbc4c4; color: #f56c6c;
+		&:hover { background-color: #f56c6c; border-color: #f56c6c; color: #fff; }
+	}
+	}
 
 // 动画
 @keyframes messageFadeIn { from { opacity: 0; transform: translateY(15px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
@@ -890,4 +908,16 @@ onUnmounted(() => {
 .slide-right-sub-leave-active { transition: all 0.2s cubic-bezier(0.4,0,0.2,1); }
 .slide-right-sub-enter-from, .slide-right-sub-leave-to { opacity: 0; transform: translateX(-10px); }
 .hidden-file-input { display: none; }
+
+	// ========== 减少动画偏好支持 ==========
+	@media (prefers-reduced-motion: reduce) {
+		.chat-message { animation: none !important; }
+		.avatar-emoji { animation: none !important; }
+		.typing-dot { animation: none !important; opacity: 1; }
+		.loading-text { animation: none !important; opacity: 1; }
+		.progress-dot { animation: none !important; opacity: 1; }
+		.char-count.at-limit { animation: none !important; }
+		.message-text-content.typing::after,
+		.card-summary-text.typing::after { animation: none !important; opacity: 1; }
+	}
 </style>

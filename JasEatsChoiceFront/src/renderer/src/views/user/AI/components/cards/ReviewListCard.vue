@@ -137,7 +137,7 @@ const handleAction = (actionType, review) => {
 }
 
 .card-header {
-  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+  background: linear-gradient(135deg, #ff6b6b 0%, #e66767 100%);
   color: white;
   padding: 16px 20px;
 }

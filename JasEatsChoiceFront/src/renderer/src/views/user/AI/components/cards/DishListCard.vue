@@ -101,15 +101,8 @@
 </template>
 
 <script setup>
-import { watch, onMounted, computed } from 'vue'
+import { computed } from 'vue'
 import CommonImage from '@/components/CommonImage.vue'
-
-// 检测开发模式
-const isDevelopment = computed(() => {
-  return import.meta.env.MODE === 'development' ||
-         import.meta.env.DEV ||
-         window.location.hostname === 'localhost'
-})
 
 const props = defineProps({
   data: {
@@ -124,38 +117,24 @@ const emit = defineEmits(['action'])
 
 /**
  * 检查值是否有意义（非 null、非 undefined、非空字符串、非空数组）
- * @param {any} value - 要检查的值
- * @returns {boolean} - 是否有意义
  */
 const hasValue = (value) => {
-  // null 或 undefined
   if (value == null) return false
-
-  // 空字符串
   if (typeof value === 'string' && value.trim() === '') return false
-
-  // 空数组
   if (Array.isArray(value) && value.length === 0) return false
-
   return true
 }
 
 // ========== 数据标准化 ==========
-// 注意：必须定义在 validateAndLogData 之前，因为函数中会使用
 
-// 计算属性：标准化菜品数据（兼容多种数据格式）
 const normalizedDishes = computed(() => {
   if (!props.data) return []
 
-  // 方案1: 使用 dishes 字段（标准格式）
   if (props.data.dishes && Array.isArray(props.data.dishes)) {
-    console.log('✅ [DishListCard] 使用 dishes 字段')
     return props.data.dishes
   }
 
-  // 方案2: 使用 recommendations 字段（推荐格式）
   if (props.data.recommendations && Array.isArray(props.data.recommendations)) {
-    console.log('✅ [DishListCard] 使用 recommendations 字段，进行字段映射')
     return props.data.recommendations.map(rec => ({
       dishId: rec.dishId || rec.id,
       dishName: rec.dishName || rec.name || '未命名菜品',
@@ -166,147 +145,27 @@ const normalizedDishes = computed(() => {
       category: rec.category || null,
       tags: rec.tags || [],
       actions: rec.actions || [],
-      // 保留原始字段
       _original: rec
     }))
   }
 
-  // 方案3: 数据本身是数组
   if (Array.isArray(props.data)) {
-    console.log('✅ [DishListCard] 数据本身是数组')
     return props.data
   }
 
-  console.warn('⚠️ [DishListCard] 无法识别数据格式:', props.data)
+  console.warn('[DishListCard] 无法识别数据格式:', Object.keys(props.data))
   return []
 })
-
-// ========== 调试日志 ==========
-
-// 数据验证和日志函数（必须定义在 watch 之前）
-const validateAndLogData = () => {
-  console.log('🔍 [DishListCard] 开始数据验证')
-
-  // 检查1: data是否存在
-  if (!props.data) {
-    console.error('❌ [DishListCard] 错误: props.data 为空')
-    return
-  }
-  console.log('✅ [DishListCard] data 存在')
-
-  // 检查2: 可用字段
-  console.log('📋 [DishListCard] 原始数据字段:', Object.keys(props.data))
-  console.log('📋 [DishListCard] 包含:', {
-    hasDishes: !!props.data.dishes,
-    hasRecommendations: !!props.data.recommendations,
-    isDataArray: Array.isArray(props.data)
-  })
-
-  // 检查3: 标准化后的数据
-  const dishes = normalizedDishes.value
-  console.log('📋 [DishListCard] 标准化后:', {
-    length: dishes.length,
-    firstItem: dishes[0] || null
-  })
-
-  if (dishes.length === 0) {
-    console.warn('⚠️ [DishListCard] 警告: 标准化后数组为空（将显示空状态）')
-    return
-  }
-
-  console.log(`✅ [DishListCard] 标准化后包含 ${dishes.length} 个菜品`)
-
-  // 检查4: 遍历每个菜品
-  dishes.forEach((dish, index) => {
-    console.log(`🍲 [DishListCard] 菜品 #${index + 1}:`, {
-      dishId: dish.dishId,
-      dishName: dish.dishName,
-      hasImage: !!dish.imageUrl,
-      imageUrl: dish.imageUrl,
-      price: dish.price,
-      rating: dish.rating,
-      hasActions: !!dish.actions && dish.actions.length > 0,
-      actionsCount: dish.actions ? dish.actions.length : 0
-    })
-
-    // 检查必填字段（仅在开发模式警告）
-    if (isDevelopment.value) {
-      if (!dish.dishId) {
-        console.warn(`⚠️ [DishListCard] 菜品 #${index + 1} 缺少 dishId（AI生成数据可能不包含此字段）`)
-      }
-      if (!dish.dishName) {
-        console.warn(`⚠️ [DishListCard] 菜品 #${index + 1} 缺少 dishName`)
-      }
-      if (!dish.imageUrl) {
-        console.warn(`⚠️ [DishListCard] 菜品 #${index + 1} 缺少 imageUrl（AI生成数据可能不包含此字段）`)
-      }
-    }
-  })
-
-  // 检查5: summary字段（仅在开发模式警告）
-  if (props.data.summary) {
-    console.log('📝 [DishListCard] summary:', props.data.summary)
-  } else if (isDevelopment.value) {
-    console.warn('⚠️ [DishListCard] 缺少 summary 字段')
-  }
-
-  console.log('✅ [DishListCard] 数据验证完成')
-}
-
-// 组件挂载时的日志
-onMounted(() => {
-  console.log('🍽️ [DishListCard] 组件已挂载')
-  console.log('📊 [DishListCard] 接收到的数据:', {
-    rawData: props.data,
-    hasData: !!props.data,
-    dataType: typeof props.data,
-    keys: props.data ? Object.keys(props.data) : []
-  })
-  validateAndLogData()
-})
-
-// 监听数据变化
-watch(() => props.data, (newData, oldData) => {
-  console.log('🔄 [DishListCard] 数据变化')
-  console.log('📥 [DishListCard] 新数据:', newData)
-  console.log('📤 [DishListCard] 旧数据:', oldData)
-  validateAndLogData()
-}, { deep: true, immediate: true })
-
-// 计算属性：用于调试
-const debugInfo = computed(() => {
-  return {
-    hasData: !!props.data,
-    hasDishes: !!props.data?.dishes,
-    hasRecommendations: !!props.data?.recommendations,
-    dishesCount: normalizedDishes.value.length,
-    isEmpty: normalizedDishes.value.length === 0,
-    firstDish: normalizedDishes.value[0] || null
-  }
-})
-
-// 监听调试信息
-watch(debugInfo, (info) => {
-  console.log('🐛 [DishListCard] 调试信息:', info)
-}, { immediate: true })
 
 // ========== 原有功能 ==========
 
 // 处理操作
 const handleAction = (actionType, dish) => {
-  console.log('🎯 [DishListCard] 卡片操作触发:', {
-    actionType,
-    dishId: dish.dishId,
-    dishName: dish.dishName,
-    fullDish: dish
-  })
 
   emit('action', {
     type: actionType,
     data: dish
   })
-
-  console.log('✅ [DishListCard] 事件已发送到父组件')
 }
 </script>
 
@@ -317,7 +176,7 @@ const handleAction = (actionType, dish) => {
 }
 
 .card-header {
-  background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+  background: linear-gradient(135deg, #ff6b6b 0%, #ff9f43 100%);
   color: white;
   padding: 16px 20px;
 }
@@ -366,8 +225,8 @@ const handleAction = (actionType, dish) => {
 }
 
 .dish-item:hover {
-  border-color: #fcb69f;
-  box-shadow: 0 4px 12px rgba(252, 182, 159, 0.15);
+  border-color: #ff9f43;
+  box-shadow: 0 4px 12px rgba(255, 159, 67, 0.15);
   transform: translateX(4px);
 }
 

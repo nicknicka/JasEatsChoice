@@ -40,7 +40,7 @@ const props = defineProps({
 }
 
 .card-header {
-  background: linear-gradient(135deg, #f44336 0%, #e91e63 100%);
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
   color: white;
   padding: 16px 20px;
 }

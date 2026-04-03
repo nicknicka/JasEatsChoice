@@ -129,7 +129,7 @@ const handleAction = (actionType, order) => {
 }
 
 .card-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #ff6b6b 0%, #c44569 100%);
   color: white;
   padding: 16px 20px;
 }
@@ -205,7 +205,7 @@ const handleAction = (actionType, order) => {
 }
 
 .order-item:hover {
-  border-color: #667eea;
+  border-color: #ff6b6b;
   box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
 }
 
@@ -225,7 +225,7 @@ const handleAction = (actionType, order) => {
 }
 
 .order-number {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #ff6b6b 0%, #c44569 100%);
   color: white;
   padding: 2px 8px;
   border-radius: 4px;

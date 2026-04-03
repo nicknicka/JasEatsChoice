@@ -155,7 +155,7 @@ const handleCancel = () => {
 }
 
 .card-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #ff6b6b 0%, #38ada9 100%);
   color: white;
   padding: 16px 20px;
 }

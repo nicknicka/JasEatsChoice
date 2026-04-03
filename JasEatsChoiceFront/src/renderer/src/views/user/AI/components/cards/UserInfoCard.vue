@@ -185,7 +185,7 @@ const handleAction = (actionType) => {
 }
 
 .card-header {
-  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+  background: linear-gradient(135deg, #ff6b6b 0%, #e17055 100%);
   color: white;
   padding: 16px 20px;
 }

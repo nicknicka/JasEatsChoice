@@ -110,10 +110,12 @@ export function useAdvancedStreaming(options) {
 
 	/**
 	 * 处理卡片数据标记
+	 * 支持：精确匹配（标记独占一行）和内嵌匹配（标记和文本混在同一 chunk 中）
 	 */
 	const _processCardDataMarkers = (data, isCollectingCardData, cardDataBuffer, messageIndex) => {
 		const trimmed = data.trim()
 
+		// 精确匹配：标记独占一个 data 字段
 		if (trimmed === '[CARD_DATA_START]') {
 			return { action: 'start_collect', cardDataBuffer: '', isCollectingCardData: true }
 		}
@@ -122,6 +124,28 @@ export function useAdvancedStreaming(options) {
 			if (cardDataBuffer.trim()) {
 				_finalizeCardData(cardDataBuffer, messageIndex)
 			}
+			return { action: 'end_collect', cardDataBuffer: '', isCollectingCardData: false }
+		}
+
+		// 增强：内嵌标记检测（标记和文本混在同一 chunk 中）
+		if (!isCollectingCardData && trimmed.includes('[CARD_DATA_START]')) {
+			const idx = trimmed.indexOf('[CARD_DATA_START]')
+			const after = trimmed.substring(idx + '[CARD_DATA_START]'.length)
+
+			if (after.includes('[CARD_DATA_END]')) {
+				const endIdx = after.indexOf('[CARD_DATA_END]')
+				_finalizeCardData(after.substring(0, endIdx).trim(), messageIndex)
+				return { action: 'complete', cardDataBuffer: '', isCollectingCardData: false }
+			}
+
+			return { action: 'start_collect', cardDataBuffer: after, isCollectingCardData: true }
+		}
+
+		// 正在收集时检测结束标记
+		if (isCollectingCardData && trimmed.includes('[CARD_DATA_END]')) {
+			const endIdx = trimmed.indexOf('[CARD_DATA_END]')
+			cardDataBuffer += trimmed.substring(0, endIdx)
+			_finalizeCardData(cardDataBuffer.trim(), messageIndex)
 			return { action: 'end_collect', cardDataBuffer: '', isCollectingCardData: false }
 		}
 
@@ -271,6 +295,14 @@ export function useAdvancedStreaming(options) {
 			if (message.progress === true) message.progress = false
 
 			let newContent = parsedData.content
+
+			// 过滤卡片数据标记（防止流式过程中标记泄漏到显示内容）
+			if (newContent) {
+				const cardStartIdx = newContent.indexOf('[CARD_DATA_START]')
+				if (cardStartIdx !== -1) newContent = newContent.substring(0, cardStartIdx)
+				const cardEndIdx = newContent.indexOf('[CARD_DATA_END]')
+				if (cardEndIdx !== -1) newContent = newContent.substring(0, cardEndIdx)
+			}
 
 			// 解析内容中的卡片数据
 			if (parseCardDataFromContent) {
