@@ -1,9 +1,12 @@
 package com.xx.jaseatschoicejava.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xx.jaseatschoicejava.agent.agents.CustomerServiceAgent;
+import com.xx.jaseatschoicejava.agent.agents.stream.StreamingResponseAgent;
 import com.xx.jaseatschoicejava.agent.listener.SSEAgentListener;
 import com.xx.jaseatschoicejava.agent.service.SupervisorAgentFactory;
 import dev.langchain4j.agentic.supervisor.SupervisorAgent;
+import dev.langchain4j.service.TokenStream;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -13,19 +16,30 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * SupervisorAgent SSE 流式输出控制器
+ * SupervisorAgent SSE 流式输出控制器（V2 架构）
  *
- * 提供实时流式输出，展示SupervisorAgent的执行过程
- * 支持每个用户独立的ChatMemory（Redis + MySQL混合存储）
+ * 架构：同步 Supervisor（数据收集）+ 流式 Response（逐字输出）
+ *
+ * 执行流程：
+ * 1. 同步阶段：SupervisorAgent 协调 L1 专家 Agent 收集数据（用户看到进度事件）
+ * 2. 流式阶段：StreamingResponseAgent 将结果逐字输出（用户看到打字机效果）
+ *
+ * SSE 事件格式（兼容前端 useStreamResponse.js）：
+ * - 进度事件: {"message":"正在搜索菜品","progress":true} → 前端过滤跳过
+ * - Token事件: {"content":"推"} → 前端逐字追加
+ * - 完成事件: {"done":true} → 前端触发 onComplete
  *
  * @author Claude
  * @since 2026-03-26
+ * @updated 2026-04-03 V2: 同步 Supervisor + 流式 Response 架构
  */
 @Tag(name = "Supervisor监督代理（SSE流式）", description = "SupervisorAgent流式输出接口")
 @RestController
@@ -35,33 +49,32 @@ public class SupervisorSSEController {
     private static final Logger log = LoggerFactory.getLogger(SupervisorSSEController.class);
 
     private final SupervisorAgentFactory supervisorAgentFactory;
+    private final StreamingResponseAgent streamingResponseAgent;
     private final CustomerServiceAgent customerServiceAgent;
     private final ExecutorService executorService = Executors.newCachedThreadPool();
     private final com.xx.jaseatschoicejava.service.AIChatHistoryService aiChatHistoryService;
+    private final ObjectMapper objectMapper;
 
     public SupervisorSSEController(
             SupervisorAgentFactory supervisorAgentFactory,
+            StreamingResponseAgent streamingResponseAgent,
             CustomerServiceAgent customerServiceAgent,
             com.xx.jaseatschoicejava.service.AIChatHistoryService aiChatHistoryService) {
         this.supervisorAgentFactory = supervisorAgentFactory;
+        this.streamingResponseAgent = streamingResponseAgent;
         this.customerServiceAgent = customerServiceAgent;
         this.aiChatHistoryService = aiChatHistoryService;
+        this.objectMapper = new ObjectMapper();
     }
 
     /**
      * SSE流式聊天接口
      *
-     * 实时推送Agent执行过程，包括：
-     * - Agent调用开始
-     * - Agent调用完成
-     * - 工具执行过程
-     * - 最终结果
-     *
      * @param message 用户消息
      * @param userId 用户ID（推荐传入，以保持对话历史）
      * @return SSE流
      */
-    @Operation(summary = "SSE流式聊天", description = "实时推送Agent执行过程和结果")
+    @Operation(summary = "SSE流式聊天", description = "实时推送Agent执行过程和流式结果")
     @GetMapping(value = "/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter chatStream(
             @Parameter(description = "用户消息", required = true)
@@ -77,7 +90,7 @@ public class SupervisorSSEController {
             log.info("未提供userId，使用客服助手Agent（无个性化服务）");
             return handleCustomerServiceChat(message);
         } else {
-            log.info("提供userId={}，使用SupervisorAgent（个性化服务）", userId);
+            log.info("提供userId={}，使用SupervisorAgent + StreamingResponse（个性化服务）", userId);
             return handleSupervisorChat(message, userId);
         }
     }
@@ -86,180 +99,139 @@ public class SupervisorSSEController {
      * 处理客服助手对话（无个性化服务）
      */
     private SseEmitter handleCustomerServiceChat(String message) {
-        // 创建SSE发射器（30秒超时，客服对话相对简单）
         SseEmitter emitter = new SseEmitter(30000L);
 
         CompletableFuture.runAsync(() -> {
             try {
-                log.info("客服助手处理消息: {}", message);
-
-                // 调用客服助手
                 String response = customerServiceAgent.chat(message);
-
-                // 发送结果
-                emitter.send(SseEmitter.event()
-                        .name("FINAL_RESULT")
-                        .data(response));
-
-                log.info("客服助手响应完成");
-
+                sendSseEvent(emitter, "message", Map.of("content", response));
+                sendSseEvent(emitter, "message", Map.of("done", true));
             } catch (Exception e) {
                 log.error("客服助手处理失败", e);
-                try {
-                    emitter.send(SseEmitter.event()
-                            .name("ERROR")
-                            .data("处理失败: " + e.getMessage()));
-                } catch (Exception ioException) {
-                    log.error("发送错误消息失败", ioException);
-                } finally {
-                    emitter.completeWithError(e);
-                }
+                sendSseEvent(emitter, "message", Map.of("error", e.getMessage()));
+                emitter.completeWithError(e);
             } finally {
-                emitter.complete();
+                try { emitter.complete(); } catch (Exception ignored) {}
             }
         }, executorService);
 
-        // 设置超时和错误回调
-        emitter.onTimeout(() -> {
-            log.warn("客服助手SSE连接超时");
-            emitter.complete();
-        });
-
-        emitter.onError((e) -> {
-            log.error("客服助手SSE连接错误", e);
-            emitter.completeWithError(e);
-        });
-
+        emitter.onTimeout(() -> emitter.complete());
+        emitter.onError(e -> emitter.completeWithError(e));
         return emitter;
     }
 
     /**
-     * 处理SupervisorAgent对话（个性化服务）
+     * 处理 SupervisorAgent + StreamingResponse 对话（核心方法）
+     *
+     * 执行流程：
+     * 阶段1（同步）：SupervisorAgent 协调 L1 专家 Agent，进度事件实时推送
+     * 阶段2（流式）：StreamingResponseAgent 逐字输出，每个 token 作为 SSE 事件发送
      */
     private SseEmitter handleSupervisorChat(String message, String userId) {
-        // 创建SSE发射器（60秒超时）
-        SseEmitter emitter = new SseEmitter(60000L);
+        SseEmitter emitter = new SseEmitter(120000L); // 120秒超时
 
-        // 创建监听器
+        // 创建监听器（进度推送）
         SSEAgentListener listener = new SSEAgentListener(emitter);
 
-        // 创建带监听器的SupervisorAgent（使用userId作为memoryId）
-        SupervisorAgent agent = supervisorAgentFactory.createWithListener(listener, userId);
-
-        // 异步执行（不阻塞请求）
-        final String finalUserId = userId;
-        final SseEmitter finalEmitter = emitter;
         CompletableFuture.runAsync(() -> {
             try {
-                log.info("SupervisorAgent开始处理: userId={}, message={}", userId, message);
+                // ===== 阶段1：同步 Supervisor 执行 =====
+                log.info("[阶段1] SupervisorAgent开始处理: userId={}, message={}", userId, message);
 
-                // 1. 获取原始结果
-                String originalResponse = agent.invoke(message);
+                SupervisorAgent agent = supervisorAgentFactory.createWithListener(listener, userId);
+                String supervisorResult = agent.invoke(message);
 
-                log.info("📊 [Controller] SupervisorAgent原始结果长度: {}", originalResponse.length());
+                // 清理 LangChain4j 调试信息
+                String cleanedResult = supervisorAgentFactory.cleanDebugInfo(supervisorResult);
 
-                // 2. 渲染为卡片格式
-                String renderedResponse = supervisorAgentFactory.renderCards(originalResponse);
+                log.info("[阶段1] SupervisorAgent完成，结果长度: {} 字符", cleanedResult.length());
 
-                log.info("📊 [Controller] 渲染后结果长度: {}", renderedResponse.length());
+                // ===== 阶段2：流式 Response 输出 =====
+                log.info("[阶段2] StreamingResponseAgent开始流式输出: userId={}", userId);
 
-                // 3. 发送最终结果（检查连接是否还活着）
-                log.info("==================== 最终结果发送开始 ====================");
-                log.info("📤 [Controller] 准备发送FINAL_RESULT");
-                log.info("📤 [Controller] userId: {}", finalUserId);
-                log.info("📤 [Controller] 数据长度: {} 字符", renderedResponse.length());
-                log.info("📤 [Controller] 完整数据内容:");
-                log.info("─ 开始 ({} 字符) ─", renderedResponse.length());
-                log.info(renderedResponse);
-                log.info("─ 结束 ─");
-                log.info("=====================================================");
+                // 用于累积完整响应（保存到聊天历史）
+                StringBuilder fullResponse = new StringBuilder();
 
-                try {
-                    // ========== 【在发送前保存到Redis和MySQL】 ==========
-                    // 保存用户消息到Redis和MySQL
-                    aiChatHistoryService.saveMessage(finalUserId, "user", message);
+                String memoryId = userId + "_" + UUID.randomUUID().toString().substring(0, 8);
 
-                    // 保存AI回复到Redis和MySQL
-                    aiChatHistoryService.saveMessage(finalUserId, "ai", renderedResponse);
+                TokenStream tokenStream = streamingResponseAgent.streamResponse(
+                        message, cleanedResult, userId, memoryId
+                );
 
-                    // ✅ 使用 "message" 事件名，前端才能接收
-                    finalEmitter.send(SseEmitter.event()
-                            .name("message")  // 改为message事件名
-                            .data(renderedResponse));
+                tokenStream
+                    .onPartialResponse(token -> {
+                        if (token != null && !token.isEmpty()) {
+                            fullResponse.append(token);
+                            // 发送 token 级别的 SSE 事件
+                            sendSseEvent(emitter, "message", Map.of("content", token));
+                        }
+                    })
+                    .onCompleteResponse(response -> {
+                        log.info("[阶段2] StreamingResponseAgent流式输出完成");
 
-                    log.info("✅ [Controller] FINAL_RESULT发送成功, userId={}", finalUserId);
+                        // 保存聊天历史
+                        try {
+                            aiChatHistoryService.saveMessage(userId, "user", message);
+                            aiChatHistoryService.saveMessage(userId, "ai", fullResponse.toString());
+                        } catch (Exception e) {
+                            log.error("保存聊天历史失败", e);
+                        }
 
-                    // 发送成功后完成SSE流
-                    finalEmitter.complete();
-                    log.info("✅ [Controller] SSE连接正常完成: userId={}", finalUserId);
-                } catch (IllegalStateException e) {
-                    // 连接已关闭，记录WARN级别日志
-                    log.warn("⚠️ [Controller] SSE连接已关闭，无法发送最终结果: userId={}", finalUserId);
-                } catch (Exception e) {
-                    log.error("❌ [Controller] 发送FINAL_RESULT失败: userId={}, error={}",
-                        finalUserId, e.getMessage(), e);
-                }
+                        // 发送完成事件
+                        sendSseEvent(emitter, "message", Map.of("done", true));
 
-                log.info("🏁 [Controller] SupervisorAgent处理完成: message={}, userId={}", message, finalUserId);
+                        try { emitter.complete(); } catch (Exception ignored) {}
+                        log.info("Supervisor + Streaming 响应完成: userId={}", userId);
+                    })
+                    .onError(error -> {
+                        log.error("[阶段2] StreamingResponseAgent流式输出错误", error);
+                        sendSseEvent(emitter, "message", Map.of("error", error.getMessage()));
+                        try { emitter.completeWithError(error); } catch (Exception ignored) {}
+                    })
+                    .start();
 
             } catch (Exception e) {
-                log.error("SupervisorAgent处理失败: userId={}", finalUserId, e);
-                try {
-                    finalEmitter.send(SseEmitter.event()
-                            .name("ERROR")
-                            .data("处理失败: " + e.getMessage()));
-                } catch (IllegalStateException ie) {
-                    // 连接已关闭，记录DEBUG级别日志
-                    log.debug("SSE连接已关闭，无法发送错误消息: userId={}", finalUserId);
-                } catch (Exception ioException) {
-                    log.error("发送错误消息失败（非连接关闭问题）", ioException);
-                } finally {
-                    try {
-                        finalEmitter.completeWithError(e);
-                    } catch (IllegalStateException ie) {
-                        // emitter已经完成，忽略
-                        log.debug("SSE emitter已经完成: userId={}", finalUserId);
-                    }
-                }
+                log.error("SupervisorAgent处理失败: userId={}", userId, e);
+                sendSseEvent(emitter, "message", Map.of("error", "处理失败: " + e.getMessage()));
+                try { emitter.completeWithError(e); } catch (Exception ignored) {}
             }
         }, executorService);
 
         // 设置超时和错误回调
         emitter.onTimeout(() -> {
-            log.warn("SupervisorAgent SSE连接超时: userId={}", finalUserId);
-            try {
-                emitter.complete();
-            } catch (IllegalStateException e) {
-                log.debug("SSE emitter已经完成（超时回调）: userId={}", finalUserId);
-            }
+            log.warn("SSE连接超时: userId={}", userId);
+            try { emitter.complete(); } catch (Exception ignored) {}
         });
 
-        emitter.onError((e) -> {
-            log.error("SupervisorAgent SSE连接错误: userId={}", finalUserId, e);
-            try {
-                emitter.completeWithError(e);
-            } catch (IllegalStateException ie) {
-                log.debug("SSE emitter已经完成（错误回调）: userId={}", finalUserId);
-            }
+        emitter.onError(e -> {
+            log.error("SSE连接错误: userId={}", userId, e);
+            try { emitter.completeWithError(e); } catch (Exception ignored) {}
         });
 
-        emitter.onCompletion(() -> {
-            log.debug("SupervisorAgent SSE连接完成: userId={}", finalUserId);
-        });
+        emitter.onCompletion(() -> log.debug("SSE连接完成: userId={}", userId));
 
         return emitter;
     }
 
     /**
      * POST方式的SSE流式聊天（支持更复杂的请求体）
-     *
-     * @param request 聊天请求
-     * @return SSE流
      */
     @Operation(summary = "POST方式SSE流式聊天", description = "支持复杂请求体的流式聊天")
     @PostMapping(value = "/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter chatStreamPost(@RequestBody ChatRequest request) {
         return chatStream(request.getMessage(), request.getUserId());
+    }
+
+    /**
+     * 发送 SSE 事件
+     */
+    private void sendSseEvent(SseEmitter emitter, String eventName, Object data) {
+        try {
+            String jsonData = objectMapper.writeValueAsString(data);
+            emitter.send(SseEmitter.event().name(eventName).data(jsonData));
+        } catch (Exception e) {
+            log.debug("SSE事件发送失败（连接可能已关闭）: {}", e.getMessage());
+        }
     }
 
     /**
@@ -269,20 +241,9 @@ public class SupervisorSSEController {
         private String message;
         private String userId;
 
-        public String getMessage() {
-            return message;
-        }
-
-        public void setMessage(String message) {
-            this.message = message;
-        }
-
-        public String getUserId() {
-            return userId;
-        }
-
-        public void setUserId(String userId) {
-            this.userId = userId;
-        }
+        public String getMessage() { return message; }
+        public void setMessage(String message) { this.message = message; }
+        public String getUserId() { return userId; }
+        public void setUserId(String userId) { this.userId = userId; }
     }
 }

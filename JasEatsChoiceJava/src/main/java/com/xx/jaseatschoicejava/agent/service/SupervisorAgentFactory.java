@@ -293,6 +293,16 @@ public class SupervisorAgentFactory {
     }
 
     /**
+     * 清理 LangChain4j 调试信息（公开方法，供 Controller 调用）
+     *
+     * @param result 原始结果
+     * @return 清理后的结果
+     */
+    public String cleanDebugInfo(String result) {
+        return removeLangChain4jDebugInfo(result);
+    }
+
+    /**
      * 移除LangChain4j内部调试信息和SystemMessage
      *
      * @param result 原始结果

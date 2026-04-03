@@ -18,6 +18,18 @@
         <div class="loading-text">AI正在思考中...</div>
       </div>
 
+      <!-- 进度状态（AI消息专属） -->
+      <div v-else-if="sender === 'ai' && (isThinking || progress)" class="message-progress">
+        <div class="progress-indicator">
+          <div class="typing-indicator">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <div class="progress-text">{{ progress ? content : 'AI正在思考中...' }}</div>
+        </div>
+      </div>
+
       <!-- 渲染卡片或文本 -->
       <template v-else-if="content">
         <!-- 商家下单卡片 -->
@@ -65,6 +77,14 @@ const props = defineProps({
     default: '🤖'
   },
   isLoading: {
+    type: Boolean,
+    default: false
+  },
+  isThinking: {
+    type: Boolean,
+    default: false
+  },
+  progress: {
     type: Boolean,
     default: false
   }
@@ -477,6 +497,31 @@ const handleCardAction = (action) => {
 .loading-text {
   font-size: 0.857rem;
   color: #909399;
+  font-weight: 500;
+}
+
+.message-progress {
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #fff9fa 0%, #fff3f4 100%);
+  border-radius: 20px 20px 20px 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #ffe0e3;
+}
+
+.progress-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.progress-indicator .typing-indicator {
+  margin-bottom: 0;
+  flex-shrink: 0;
+}
+
+.progress-text {
+  font-size: 0.857rem;
+  color: #606266;
   font-weight: 500;
 }
 </style>

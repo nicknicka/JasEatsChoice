@@ -224,14 +224,15 @@ export function useAIChat() {
     await addMessage('user', message, false) // ✅ saveToBackend=false
     scrollToBottom(true)
 
-    // 创建AI消息对象（初始为空）
+    // 创建AI消息对象（初始为空，带思考状态）
     const aiMessageIndex = messages.value.length
     messages.value.push({
       id: aiMessageIndex + 1,
       sender: 'ai',
       content: '',
       time: formatTime(),
-      avatar: '🤖'
+      avatar: '🤖',
+      isThinking: true
     })
 
     scrollToBottom(false)
@@ -268,22 +269,41 @@ export function useAIChat() {
       // 处理流式响应
       await processStream(
         reader,
-        // onContent - 追加内容
+        // onContent - 追加内容（收到首个内容时清除思考状态）
         (content) => {
-          messages.value[aiMessageIndex].content += content
+          const msg = messages.value[aiMessageIndex]
+          if (msg.isThinking) {
+            msg.isThinking = false
+            msg.progress = false
+          }
+          msg.content += content
           nextTick(() => scrollToBottom(false))
         },
         // onComplete - 完成回调（后端已保存，无需重复保存）
         async () => {
           const aiContent = messages.value[aiMessageIndex].content
+          const msg = messages.value[aiMessageIndex]
+          msg.isThinking = false
+          msg.progress = false
           logger.log('✅ AI消息接收完成，内容长度:', aiContent?.length || 0)
           // ✅ 后端已经在发送SSE前保存了消息，这里不需要重复保存
         },
         // onError - 错误处理
         (error) => {
-          if (!messages.value[aiMessageIndex].content) {
-            messages.value[aiMessageIndex].content = handleApiError(error)
+          const msg = messages.value[aiMessageIndex]
+          msg.isThinking = false
+          msg.progress = false
+          if (!msg.content) {
+            msg.content = handleApiError(error)
           }
+        },
+        // onProgress - 进度回调
+        (progressText) => {
+          const msg = messages.value[aiMessageIndex]
+          msg.isThinking = false
+          msg.progress = true
+          msg.content = progressText
+          nextTick(() => scrollToBottom(false))
         }
       )
 

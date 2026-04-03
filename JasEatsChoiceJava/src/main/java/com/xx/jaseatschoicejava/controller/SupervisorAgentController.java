@@ -1,6 +1,9 @@
 package com.xx.jaseatschoicejava.controller;
 
+import com.xx.jaseatschoicejava.agent.agents.stream.StreamingResponseAgent;
+import com.xx.jaseatschoicejava.agent.service.SupervisorAgentFactory;
 import com.xx.jaseatschoicejava.common.ResponseResult;
+import dev.langchain4j.service.TokenStream;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
@@ -9,21 +12,24 @@ import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.annotation.Resource;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * SupervisorAgent 控制器
+ * SupervisorAgent 控制器（V2 架构）
  *
- * 提供L3监督代理的统一接口，智能调度L1专家Agent
+ * 提供 Supervisor + StreamingResponse 的同步接口（UniApp 端）
  *
- * 架构重构（2026-03-27）：
- * - 移除L2层，L3直接对接L1专家Agent
- * - 使用工厂模式动态创建SupervisorAgent
- * - 支持用户独立的ChatMemory
+ * 执行流程：
+ * 1. 同步阶段：SupervisorAgent 协调 L1 专家 Agent 收集数据
+ * 2. 流式阶段：StreamingResponseAgent 格式化输出（同步收集完整结果）
  *
  * @author Claude
  * @since 2026-03-25
+ * @updated 2026-04-03 V2: 同步 Supervisor + StreamingResponse 格式化
  */
-@Api(tags = "L3监督代理接口")
+@Api(tags = "Supervisor监督代理接口")
 @RestController
 @RequestMapping("/agent/supervisor")
 @CrossOrigin(originPatterns = "*", allowCredentials = "false")
@@ -32,15 +38,13 @@ public class SupervisorAgentController {
     private static final Logger log = LoggerFactory.getLogger(SupervisorAgentController.class);
 
     @Resource
-    private com.xx.jaseatschoicejava.agent.service.SupervisorAgentFactory supervisorAgentFactory;
+    private SupervisorAgentFactory supervisorAgentFactory;
+
+    @Resource
+    private StreamingResponseAgent streamingResponseAgent;
 
     /**
-     * 统一聊天接口
-     *
-     * SupervisorAgent会自动分析用户问题，智能路由到合适的L1 Agent
-     *
-     * @param request 聊天请求
-     * @return Agent响应
+     * 统一聊天接口（智能路由）
      */
     @ApiOperation("统一聊天接口（智能路由）")
     @PostMapping("/chat")
@@ -49,18 +53,8 @@ public class SupervisorAgentController {
                 request.getUserId(), truncate(request.getMessage(), 100));
 
         try {
-            // 使用工厂创建SupervisorAgent（L3→L1架构）
-            String userId = request.getUserId() != null ? request.getUserId() : "anonymous";
-            dev.langchain4j.agentic.supervisor.SupervisorAgent supervisorAgent =
-                supervisorAgentFactory.createWithListener(null, userId);
-
-            String response = supervisorAgent.invoke(request.getMessage());
-
-            // 渲染为卡片格式
-            String renderedResponse = supervisorAgentFactory.renderCards(response);
-
-            log.info("SupervisorAgent响应成功, 长度: {}", renderedResponse.length());
-            return ResponseResult.success(renderedResponse);
+            String result = processWithSupervisor(request.getMessage(), request.getUserId());
+            return ResponseResult.success(result);
         } catch (Exception e) {
             log.error("SupervisorAgent处理失败", e);
             return ResponseResult.fail("500", "处理失败: " + e.getMessage());
@@ -69,11 +63,6 @@ public class SupervisorAgentController {
 
     /**
      * 带用户上下文的聊天接口
-     *
-     * 使用用户ID进行个性化查询和推荐
-     *
-     * @param request 聊天请求（包含用户ID）
-     * @return Agent响应
      */
     @ApiOperation("带用户上下文的聊天接口")
     @PostMapping("/chatWithContext")
@@ -82,22 +71,10 @@ public class SupervisorAgentController {
                 request.getUserId(), truncate(request.getMessage(), 100));
 
         try {
-            String userId = request.getUserId() != null ? request.getUserId() : "anonymous";
-
-            // 使用工厂创建SupervisorAgent（L3→L1架构）
-            dev.langchain4j.agentic.supervisor.SupervisorAgent supervisorAgent =
-                supervisorAgentFactory.createWithListener(null, userId);
-
-            // 将用户ID拼接到消息中，方便Supervisor处理
             String messageWithUser = String.format("[用户ID: %s] %s",
                     request.getUserId(), request.getMessage());
-            String response = supervisorAgent.invoke(messageWithUser);
-
-            // 渲染为卡片格式
-            String renderedResponse = supervisorAgentFactory.renderCards(response);
-
-            log.info("SupervisorAgent响应成功, 长度: {}", renderedResponse.length());
-            return ResponseResult.success(renderedResponse);
+            String result = processWithSupervisor(messageWithUser, request.getUserId());
+            return ResponseResult.success(result);
         } catch (Exception e) {
             log.error("SupervisorAgent处理失败", e);
             return ResponseResult.fail("500", "处理失败: " + e.getMessage());
@@ -106,10 +83,6 @@ public class SupervisorAgentController {
 
     /**
      * GET方式的快速聊天接口
-     *
-     * @param message 用户消息
-     * @param userId 用户ID（可选）
-     * @return Agent响应
      */
     @ApiOperation("GET方式快速聊天")
     @GetMapping("/chat")
@@ -121,26 +94,84 @@ public class SupervisorAgentController {
 
         try {
             String effectiveUserId = (userId != null && !userId.isEmpty()) ? userId : "anonymous";
-
-            // 使用工厂创建SupervisorAgent（L3→L1架构）
-            dev.langchain4j.agentic.supervisor.SupervisorAgent supervisorAgent =
-                supervisorAgentFactory.createWithListener(null, effectiveUserId);
-
-            // 将用户ID拼接到消息中（如果有）
             String messageWithUser = (userId != null && !userId.isEmpty())
                     ? String.format("[用户ID: %s] %s", userId, message)
                     : message;
-            String response = supervisorAgent.invoke(messageWithUser);
-
-            // 渲染为卡片格式
-            String renderedResponse = supervisorAgentFactory.renderCards(response);
-
-            log.info("SupervisorAgent响应成功, 长度: {}", renderedResponse.length());
-            return ResponseResult.success(renderedResponse);
+            String result = processWithSupervisor(messageWithUser, effectiveUserId);
+            return ResponseResult.success(result);
         } catch (Exception e) {
             log.error("SupervisorAgent处理失败", e);
             return ResponseResult.fail("500", "处理失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * 核心处理方法：Supervisor 同步执行 + StreamingResponse 格式化
+     *
+     * 阶段1：SupervisorAgent 协调 L1 专家 Agent（同步）
+     * 阶段2：StreamingResponseAgent 格式化输出（同步收集完整结果）
+     */
+    private String processWithSupervisor(String message, String userId) {
+        // ===== 阶段1：同步 Supervisor 执行 =====
+        log.info("[阶段1] SupervisorAgent开始处理: userId={}", userId);
+        dev.langchain4j.agentic.supervisor.SupervisorAgent supervisorAgent =
+                supervisorAgentFactory.createWithListener(null, userId);
+        String supervisorResult = supervisorAgent.invoke(message);
+
+        // 清理 LangChain4j 调试信息
+        String cleanedResult = supervisorAgentFactory.cleanDebugInfo(supervisorResult);
+        log.info("[阶段1] SupervisorAgent完成，结果长度: {} 字符", cleanedResult.length());
+
+        // ===== 阶段2：StreamingResponse 格式化（同步收集） =====
+        log.info("[阶段2] StreamingResponseAgent开始格式化: userId={}", userId);
+
+        StringBuilder fullResponse = new StringBuilder();
+        CountDownLatch latch = new CountDownLatch(1);
+        AtomicReference<Throwable> errorRef = new AtomicReference<>();
+
+        String memoryId = userId + "_" + System.currentTimeMillis();
+
+        TokenStream tokenStream = streamingResponseAgent.streamResponse(
+                message, cleanedResult, userId, memoryId
+        );
+
+        tokenStream
+                .onPartialResponse(token -> {
+                    if (token != null && !token.isEmpty()) {
+                        fullResponse.append(token);
+                    }
+                })
+                .onCompleteResponse(response -> {
+                    log.info("[阶段2] StreamingResponseAgent格式化完成");
+                    latch.countDown();
+                })
+                .onError(error -> {
+                    log.error("[阶段2] StreamingResponseAgent格式化失败", error);
+                    errorRef.set(error);
+                    latch.countDown();
+                })
+                .start();
+
+        try {
+            // 等待完成（最多60秒）
+            boolean completed = latch.await(60, TimeUnit.SECONDS);
+            if (!completed) {
+                log.warn("StreamingResponseAgent超时，返回已收集的内容");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("StreamingResponseAgent被中断");
+        }
+
+        // 如果流式出错，降级使用原始 Supervisor 结果
+        if (errorRef.get() != null) {
+            log.warn("StreamingResponseAgent失败，降级返回原始结果");
+            return cleanedResult;
+        }
+
+        String finalResult = fullResponse.toString();
+        log.info("Supervisor + Streaming 响应完成: userId={}, 结果长度: {}", userId, finalResult.length());
+        return finalResult;
     }
 
     /**
@@ -151,41 +182,19 @@ public class SupervisorAgentController {
         private String userId;
         private String sessionId;
 
-        public String getMessage() {
-            return message;
-        }
-
-        public void setMessage(String message) {
-            this.message = message;
-        }
-
-        public String getUserId() {
-            return userId;
-        }
-
-        public void setUserId(String userId) {
-            this.userId = userId;
-        }
-
-        public String getSessionId() {
-            return sessionId;
-        }
-
-        public void setSessionId(String sessionId) {
-            this.sessionId = sessionId;
-        }
+        public String getMessage() { return message; }
+        public void setMessage(String message) { this.message = message; }
+        public String getUserId() { return userId; }
+        public void setUserId(String userId) { this.userId = userId; }
+        public String getSessionId() { return sessionId; }
+        public void setSessionId(String sessionId) { this.sessionId = sessionId; }
     }
 
     /**
      * 截断过长的文本
      */
     private String truncate(String text, int maxLength) {
-        if (text == null) {
-            return "null";
-        }
-        if (text.length() <= maxLength) {
-            return text;
-        }
-        return text.substring(0, maxLength) + "...";
+        if (text == null) return "null";
+        return text.length() <= maxLength ? text : text.substring(0, maxLength) + "...";
     }
 }

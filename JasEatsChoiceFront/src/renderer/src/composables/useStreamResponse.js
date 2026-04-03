@@ -52,13 +52,14 @@ export function useStreamResponse() {
 
         // ✅ 如果有message字段但没有content字段，转换格式
         if (parsedData.message && !parsedData.content) {
-          // 如果是进度消息（包含progress字段），跳过不显示
+          // 进度消息：保留progress标记，同时设置content便于显示
           if (parsedData.progress === true) {
-            logger.log('⏭️ 跳过进度消息:', parsedData.message)
-            return null
+            logger.log('📢 进度消息:', parsedData.message)
+            parsedData.content = parsedData.message
+          } else {
+            // 普通消息：将message作为content
+            parsedData.content = parsedData.message
           }
-          // 否则将message作为content
-          parsedData.content = parsedData.message
         }
       } else {
         // ✅ 纯文本格式（最终结果）
@@ -89,9 +90,10 @@ export function useStreamResponse() {
    * @param {Function} onContent - 内容回调
    * @param {Function} onComplete - 完成回调
    * @param {Function} onError - 错误回调
+   * @param {Function} onProgress - 进度回调（可选）
    * @returns {Promise<void>}
    */
-  const processStream = async (reader, onContent, onComplete, onError) => {
+  const processStream = async (reader, onContent, onComplete, onError, onProgress) => {
     isStreaming.value = true
     const decoder = new TextDecoder()
     let buffer = ''
@@ -128,6 +130,18 @@ export function useStreamResponse() {
             logger.log('✅ 接收到完成标记')
             if (onComplete) onComplete()
             return
+          }
+
+          // 进度消息：通过 onProgress 回调传递
+          if (parsedData.progress === true && parsedData.content) {
+            hasReceivedContent = true
+            logger.log('📢 进度更新:', parsedData.content)
+            if (onProgress) {
+              onProgress(parsedData.content)
+            } else if (onContent) {
+              onContent(parsedData.content)
+            }
+            continue
           }
 
           // 追加内容
