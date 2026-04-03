@@ -4,6 +4,8 @@ import axios from 'axios'
 import { API_CONFIG } from '../config/index'
 import { useAuthStore } from '../store/authStore'
 import { orderActions, favoriteActions, cartActions, reviewActions } from '../views/user/AI/utils/cardActionService'
+// [UniCard迁移] 导入 UniCardParser
+import { useUniCardParser } from '../views/user/AI/composables/useUniCardParser'
 
 /**
  * 卡片操作处理器
@@ -57,6 +59,17 @@ export function useCardHandler(messages) {
 		if (supportedTypes.includes(cardType)) return cardType
 
 		console.warn('未知的卡片类型:', cardType)
+		return null
+	}
+
+	/**
+	 * 将后端返回的卡片类型统一转换为 'uni_card'
+	 * 所有卡片类型统一走 UniCard 渲染路径
+	 * @param {string} cardType - 后端卡片类型
+	 * @returns {string|null} 'uni_card' 或 null
+	 */
+	const convertToSupportedCardTypeWithUniCard = (cardType) => {
+		if (cardType) return 'uni_card'
 		return null
 	}
 
@@ -129,6 +142,63 @@ export function useCardHandler(messages) {
 			}
 		} catch (error) {
 			console.warn('解析卡片数据失败:', error.message)
+		}
+
+		return { content: cleanContent, cardData, messageType }
+	}
+
+	/**
+	 * 使用 UniCardParser 解析卡片数据
+	 * 所有卡片类型统一走 UniCard 路径
+	 * @param {string} content - 原始消息内容
+	 * @returns {{ content: string, cardData: object|null, messageType: string|null }}
+	 */
+	const parseCardDataFromContentUniCard = (content) => {
+		if (!content || typeof content !== 'string') {
+			return { content, cardData: null, messageType: null }
+		}
+
+		if (!content.includes('[CARD_DATA_START]') || !content.includes('[CARD_DATA_END]')) {
+			return { content, cardData: null, messageType: null }
+		}
+
+		const cardDataStart = content.indexOf('[CARD_DATA_START]')
+		const cardDataEnd = content.indexOf('[CARD_DATA_END]')
+
+		if (cardDataStart === -1 || cardDataEnd === -1) {
+			return { content, cardData: null, messageType: null }
+		}
+
+		const cardDataString = content.substring(
+			cardDataStart + '[CARD_DATA_START]'.length,
+			cardDataEnd
+		).trim()
+
+		const cleanContent = content.substring(0, cardDataStart).trim()
+
+		let cardData = null
+		let messageType = null
+
+		try {
+			let parsedData = JSON.parse(cardDataString)
+			let cardDataArray = Array.isArray(parsedData) ? parsedData : [parsedData]
+
+			if (cardDataArray.length > 0) {
+				const firstCard = cardDataArray[0]
+
+				// 统一使用 UniCardParser 解析
+				const { parseCardData } = useUniCardParser()
+				const parseResult = parseCardData(firstCard)
+				if (parseResult.parsed) {
+					cardData = parseResult.card
+					messageType = 'uni_card'
+				} else {
+					cardData = firstCard
+					messageType = 'uni_card'
+				}
+			}
+		} catch (error) {
+			console.warn('[UniCard] 解析卡片数据失败:', error.message)
 		}
 
 		return { content: cleanContent, cardData, messageType }
@@ -362,5 +432,8 @@ export function useCardHandler(messages) {
 		handleCardAction,
 		refreshCard,
 		restoreCardDataForMessages,
+		// [UniCard迁移] 新增导出
+		convertToSupportedCardTypeWithUniCard,
+		parseCardDataFromContentUniCard,
 	}
 }

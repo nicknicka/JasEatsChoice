@@ -66,7 +66,7 @@
 							</div>
 
 							<!-- 卡片消息 -->
-							<div v-if="shouldShowCard(message)" class="card-message-wrapper">
+							<div v-if="shouldShowCardEnhanced(message)" class="card-message-wrapper">
 								<component
 									:is="getCardComponent(message.messageType)"
 									:data="parseCardData(message.cardData)"
@@ -268,27 +268,14 @@ const userStore = useUserStore()
 const router = useRouter()
 
 // ========== 卡片组件导入 ==========
-import OrderListCard from './cards/OrderListCard.vue'
-import FavoriteListCard from './cards/FavoriteListCard.vue'
-import ReviewListCard from './cards/ReviewListCard.vue'
-import CouponListCard from './cards/CouponListCard.vue'
-import UserInfoCard from './cards/UserInfoCard.vue'
-import DishListCard from './cards/DishListCard.vue'
-import ErrorCard from './cards/ErrorCard.vue'
-import OrderGuideCard from './cards/OrderGuideCard.vue'
+// 所有卡片统一走 UniCard 渲染，旧卡片组件不再使用
+import UniCard from './cards/UniCard.vue'
 
-const cardComponents = {
-	order_list_card: OrderListCard,
-	favorite_list_card: FavoriteListCard,
-	review_list_card: ReviewListCard,
-	coupon_list_card: CouponListCard,
-	user_info_card: UserInfoCard,
-	dish_list_card: DishListCard,
-	error_card: ErrorCard,
-	order_guide_card: OrderGuideCard,
-}
+/**
+ * 所有卡片消息统一使用 UniCard 组件渲染
+ */
+const getCardComponent = () => UniCard
 
-const getCardComponent = (messageType) => cardComponents[messageType]
 const parseCardData = (cardData) => {
 	if (!cardData) return null
 	if (typeof cardData === 'object') return cardData
@@ -303,16 +290,16 @@ const chatContainerRef = ref(null)
 const bottomContainerRef = ref(null)
 // ========== 卡片处理器 ==========
 const {
-	parseCardDataFromContent,
+	parseCardDataFromContentUniCard: parseCardDataFromContent,
 	restoreCardDataForMessages: _restoreCardData,
-} = useCardHandler(ref([])) // 临时空ref，后面替换
+} = useCardHandler(ref([]))
 
 // ========== 消息管理 ==========
 const {
 	messages, isMounted, isInitialLoading,
 	loadMessages, saveMessageToBackend, validateAndSaveMessage,
 	getMessage, renderContent, getMessageClasses,
-	shouldShowCard, shouldShowTextContent, shouldShowCardSummary,
+	shouldShowCard, shouldShowCardEnhanced, shouldShowTextContent, shouldShowCardSummary,
 	shouldShowMoreButton, shouldShowMessage, getDisplayContent,
 	getProgressStatus, startTypewriterEffect,
 } = useAIChatMessages({
@@ -343,7 +330,7 @@ const {
 	getProgressDots, getProgressClass,
 } = useAdvancedStreaming({
 	messages, isMounted, getMessage, parseCardDataFromContent,
-	convertToSupportedCardType: cardHandler.convertToSupportedCardType,
+	convertToSupportedCardType: cardHandler.convertToSupportedCardTypeWithUniCard,
 	validateAndSaveMessage,
 	handleFinalResult: async (messageIndex, _parsedData) => {
 		const message = getMessage(messageIndex)

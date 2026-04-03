@@ -7,11 +7,11 @@ import dev.langchain4j.service.UserMessage;
 import dev.langchain4j.service.V;
 
 /**
- * 流式响应 Agent
+ * 流式响应 Agent（UniCard Schema 输出格式）
  *
  * 作为 Supervisor 架构的最后一个环节，负责：
  * 1. 将 Supervisor 收集的结构化数据以流式方式输出给用户
- * 2. 集成卡片渲染功能（替代独立的 CardRendererAgent）
+ * 2. 集成卡片渲染功能（UniCard Schema 格式）
  * 3. 提供自然语言 + 卡片数据的混合输出
  *
  * 设计原则：
@@ -22,6 +22,7 @@ import dev.langchain4j.service.V;
  *
  * @author Claude
  * @since 2026-04-03
+ * @updated 2026-04-03 改造为 UniCard Schema 输出格式
  */
 public interface StreamingResponseAgent {
 
@@ -42,10 +43,58 @@ public interface StreamingResponseAgent {
 
         # 核心职责
         1. 将专家Agent的分析结果用自然语言呈现给用户
-        2. 识别结构化数据并转换为卡片格式
+        2. 识别结构化数据并转换为 UniCard Schema 卡片格式
         3. 保持对话的友好性和专业性
 
-        # 卡片格式化规则
+        # UniCard Schema 卡片格式
+
+        所有卡片使用统一结构，前端根据 `schema` 字段识别版本，根据 `elements[].tag` 动态选择渲染组件。
+
+        基本结构：
+        {
+          "schema": "jaseat_card_v1",
+          "header": {
+            "title": { "text": "标题", "icon": "emoji" },
+            "subtitle": "副标题",
+            "theme": "dish|merchant|order|health"
+          },
+          "elements": [ ... ],
+          "actions": [ ... ],
+          "footer": { "note": "备注" },
+          "displayMode": "inline"
+        }
+
+        Theme 映射：
+        - 菜品/美食 → "dish"
+        - 商家/店铺 → "merchant"
+        - 订单 → "order"
+        - 营养/健康 → "health"
+
+        Element 类型：
+        1. dish_list（菜品列表）：
+           { "tag": "dish_list", "dishes": [
+             { "dishId": "", "dishName": "菜名", "merchantName": "商家", "price": 28, "rating": 4.8, "calories": 450, "category": "", "tags": [] }
+           ]}
+
+        2. order_list（订单列表）：
+           { "tag": "order_list", "total": N, "pendingCount": N, "orders": [
+             { "orderId": "", "status": "", "statusText": "", "statusColor": "orange", "dishCount": N, "totalAmount": N, "createTime": "" }
+           ]}
+
+        3. health_stats（营养统计）：
+           { "tag": "health_stats", "stats": [
+             { "label": "卡路里", "value": "1450/1800", "percent": 80, "color": "green" }
+           ], "suggestion": "建议文本" }
+
+        4. markdown（富文本）：{ "tag": "markdown", "content": "文本" }
+        5. note（提示）：{ "tag": "note", "content": "提示", "type": "info" }
+        6. stats_row（统计数字）：{ "tag": "stats_row", "items": [{ "label": "", "value": "", "color": "", "icon": "" }] }
+        7. divider（分割线）：{ "tag": "divider" }
+
+        Actions 按钮：
+        { "tag": "button", "text": "按钮", "type": "primary", "action": { "type": "action_type", "data": {} } }
+
+        # 卡片生成规则
 
         ⚠️ 重要：什么情况下不生成卡片
         - **搜索无结果**：不要生成卡片，直接返回原始文本
@@ -57,78 +106,106 @@ public interface StreamingResponseAgent {
         格式化规则：
         1. 优先识别文本中的JSON代码块（```json ... ```）
         2. 如果没有JSON，尝试从Markdown文本中提取结构化数据
-        3. 将提取的数据转换为对应的卡片格式
+        3. 将提取的数据转换为对应的 UniCard Schema 卡片格式
         4. 卡片数据用 [CARD_DATA_START] 和 [CARD_DATA_END] 包围
         5. **只有包含实际数据时才生成卡片，否则返回原始文本**
 
         Markdown文本识别规则：
         - 菜品列表：识别 "1. **菜名**" 或 "- **菜名**" 格式，必须包含至少一个菜品
         - 提取菜名、价格、热量、评分等信息
-        - 将提取的信息转换为JSON卡片格式
+        - 将提取的信息转换为 UniCard Schema JSON 格式
 
         JSON类型识别：
-        - 菜品数据：包含 items 数组（数组长度>0），每个item有name/price/merchant → food_recommendation_card卡片
-        - 商家数据：包含 items 数组（数组长度>0），每个item有name/rating/distance → merchant_card卡片
-        - 订单数据：包含orderId/items/status/total → order_card卡片
-        - 健康数据：包含calories/protein/carbs/stats → health_card卡片
+        - 菜品数据：包含 items 数组（数组长度>0），每个item有name/price/merchant → theme: "dish", dish_list element
+        - 商家数据：包含 items 数组（数组长度>0），每个item有name/rating/distance → theme: "merchant"
+        - 订单数据：包含orderId/items/status/total → theme: "order", order_list element
+        - 健康数据：包含calories/protein/carbs/stats → theme: "health", health_stats element
 
-        卡片格式定义：
-        1. 菜品卡片：
-           {
-             "type": "dish",
-             "title": "宫保鸡丁",
-             "subtitle": "川味轩 ⭐ 4.8",
-             "tags": ["辣", "推荐"],
-             "price": 28,
-             "rating": 4.8,
-             "image": "图片URL（可选）",
-             "highlight": "符合你的口味偏好"
-           }
+        # 营养数据来源说明
+        - 如果数据来自数据库：suggestion 中可以不特别说明
+        - 如果数据是估算值：suggestion 应包含"基于食物组成的估算值"等说明
+        - 即使是估算数据，只要包含完整的 stats 数组，就应该生成卡片
 
-        2. 商家卡片：
-           {
-             "type": "merchant",
-             "title": "川味轩",
-             "subtitle": "川菜 · 配送中",
-             "tags": ["4.8分", "月售1000+"],
-             "info": {
-               "distance": "1.2km",
-               "deliveryTime": "30分钟",
-               "deliveryFee": "¥5"
-             },
-             "image": "图片URL（可选）"
-           }
+        # 转换示例
 
-        3. 订单卡片：
-           {
-             "type": "order",
-             "title": "订单 #2024032612345",
-             "subtitle": "川味轩",
-             "status": "配送中",
-             "statusColor": "orange",
-             "items": [
-               {"name": "宫保鸡丁", "quantity": 1, "price": 28},
-               {"name": "米饭", "quantity": 2, "price": 4}
-             ],
-             "total": 32,
-             "timeline": [
-               {"time": "12:30", "event": "订单已创建"},
-               {"time": "12:35", "event": "商家已接单"}
-             ]
-           }
+        ## 示例1：JSON代码块（菜品推荐）
+        原始：
+        "我为你推荐以下菜品：
 
-        4. 健康卡片：
-           {
-             "type": "health",
-             "title": "今日营养分析",
-             "subtitle": "2024-03-26",
-             "stats": [
-               {"label": "卡路里", "value": "1450/1800", "percent": 80, "color": "green"},
-               {"label": "蛋白质", "value": "65g/80g", "percent": 81, "color": "blue"},
-               {"label": "碳水", "value": "180g/250g", "percent": 72, "color": "orange"}
-             ],
-             "suggestion": "晚餐建议补充蛋白质，可以选清蒸鱼或鸡胸肉"
-           }
+        ```json
+        {"items": [{"name": "宫保鸡丁", "price": 28, "merchant": "川味轩", "rating": 4.8, "calories": 450}]}
+        ```
+
+        这些菜品都很适合你的口味。"
+
+        转换后：
+        "我为你推荐以下菜品：
+
+        [CARD_DATA_START]
+        {
+          "schema": "jaseat_card_v1",
+          "header": {
+            "title": { "text": "菜品推荐", "icon": "🍽️" },
+            "subtitle": "为您找到1道菜品",
+            "theme": "dish"
+          },
+          "elements": [
+            {
+              "tag": "dish_list",
+              "dishes": [
+                { "dishId": "", "dishName": "宫保鸡丁", "merchantName": "川味轩", "price": 28, "rating": 4.8, "calories": 450 }
+              ]
+            }
+          ],
+          "displayMode": "inline"
+        }
+        [CARD_DATA_END]
+
+        这些菜品都很适合你的口味。"
+
+        ## 示例2：Markdown文本（菜品推荐）
+        原始：
+        "**1. 菜品ID：dish123**
+        🍲 宫保鸡丁
+        💰 ¥38.00 | 🔥 450 kcal | ⭐ 4.8分
+        🏪 商家ID：merchant123 - 川味轩
+        综合评分：85.50分
+
+        **2. 菜品ID：dish456**
+        🍲 皮蛋瘦肉粥
+        💰 ¥12.00 | 🔥 180 kcal | ⭐ 4.5分
+        🏪 商家ID：merchant456 - 粤香阁
+        综合评分：82.30分"
+
+        转换后：
+        [CARD_DATA_START]
+        {
+          "schema": "jaseat_card_v1",
+          "header": {
+            "title": { "text": "菜品推荐", "icon": "🍽️" },
+            "subtitle": "为您找到2道菜品",
+            "theme": "dish"
+          },
+          "elements": [
+            {
+              "tag": "dish_list",
+              "dishes": [
+                { "dishId": "dish123", "dishName": "宫保鸡丁", "merchantName": "川味轩", "merchantId": "merchant123", "price": 38, "rating": 4.8, "calories": 450 },
+                { "dishId": "dish456", "dishName": "皮蛋瘦肉粥", "merchantName": "粤香阁", "merchantId": "merchant456", "price": 12, "rating": 4.5, "calories": 180 }
+              ]
+            }
+          ],
+          "displayMode": "inline"
+        }
+        [CARD_DATA_END]
+
+        # 字段提取规则
+        - dishId：从"菜品ID：xxx"提取
+        - dishName：从"🍲 菜名"提取
+        - price：从"¥xxx"提取数字
+        - calories：从"xxx kcal"提取数字
+        - score：从"⭐ x.x分"提取数字
+        - merchantName：从"商家：xxx"或"商家ID：xxx - xxx"提取
 
         # 输出原则
         - 有结构化数据时：自然语言描述 + [CARD_DATA_START]...[CARD_DATA_END]

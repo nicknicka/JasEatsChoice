@@ -1,10 +1,9 @@
 package com.xx.jaseatschoicejava.agent.tools.order;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xx.jaseatschoicejava.agent.annotation.CardType;
-import com.xx.jaseatschoicejava.agent.dto.MerchantOrderCardDTO;
+import com.xx.jaseatschoicejava.agent.dto.UniCardDTO;
+import com.xx.jaseatschoicejava.agent.util.UniCardBuilder;
 import com.xx.jaseatschoicejava.entity.Dish;
 import com.xx.jaseatschoicejava.entity.Merchant;
 import com.xx.jaseatschoicejava.service.DishService;
@@ -24,6 +23,7 @@ import java.util.stream.Collectors;
  * 下单引导工具类
  *
  * 为Agent提供智能下单引导功能，包括商家推荐、菜品预选、下单卡片生成等
+ * 使用 UniCardBuilder 构建统一卡片格式
  *
  * @author Claude
  * @since 2026-03-25
@@ -38,19 +38,15 @@ public class OrderGuideTools {
     @Resource
     private DishService dishService;
 
-    @Resource
-    private ObjectMapper objectMapper;
-
     /**
      * 推荐商家并生成下单卡片
      *
-     * 根据用户需求推荐商家，AI自动预选菜品，生成结构化卡片数据供前端展示
+     * 根据用户需求推荐商家，AI自动预选菜品，使用 UniCardBuilder 生成统一卡片数据
      *
-     * @param userId 用户ID
      * @param merchantId 商家ID（可选，如果不指定则自动推荐）
      * @param diningMode 就餐方式（dine_in=堂食 或 takeout=自取）
      * @param preference 用户偏好（可选，如"辣"、"清淡"等）
-     * @return 商家下单卡片数据（JSON格式）
+     * @return 商家下单卡片数据（UniCard JSON格式）
      */
     @Tool("""
         推荐商家并生成下单卡片
@@ -58,7 +54,7 @@ public class OrderGuideTools {
         **功能说明：**
         - 根据用户需求智能推荐商家
         - AI自动预选符合用户口味的菜品
-        - 生成结构化卡片数据供前端展示
+        - 生成统一卡片数据供前端展示
         - 支持堂食和自取两种模式
 
         **何时使用：**
@@ -74,7 +70,7 @@ public class OrderGuideTools {
 
         **无需参数**，userId自动从上下文获取
 
-        **返回：** 商家下单卡片数据（JSON格式），包含：
+        **返回：** 商家推荐卡片（UniCard JSON格式），包含：
         - 商家信息（ID、名称、评分、地址等）
         - AI预选的菜品列表（菜品ID、名称、价格、数量、推荐理由）
         - 就餐方式
@@ -82,12 +78,11 @@ public class OrderGuideTools {
         - 操作按钮配置
 
         **前端使用说明：**
-        1. 解析返回的JSON数据
-        2. 显示商家卡片信息
-        3. 点击卡片弹出菜品选择弹窗
-        4. 弹窗中显示AI预选的菜品
-        5. 用户可以修改/增加菜品
-        6. 用户确认后调用 createOrder 工具创建订单
+        1. 解析返回的UniCard JSON数据
+        2. 根据 schema 识别卡片版本
+        3. 根据 element.tag 动态渲染对应组件
+        4. 用户可以修改/增加菜品
+        5. 用户确认后调用 createOrder 工具创建订单
         """)
     @CardType("merchant_order_card")
     public String recommendMerchantForOrder(
@@ -98,110 +93,54 @@ public class OrderGuideTools {
     ) {
         String userId = (String) scope.readState("userId");
         if (userId == null || userId.isEmpty()) {
-            return "❌ 无法获取用户信息，请重新登录";
+            return buildErrorText("无法获取用户信息，请重新登录");
         }
-        log.info("🔍 [Tool] 推荐商家并生成下单卡片，userId: {}, merchantId: {}, diningMode: {}",
+        log.info("[Tool] 推荐商家并生成下单卡片，userId: {}, merchantId: {}, diningMode: {}",
             userId, merchantId, diningMode);
 
         try {
             // 1. 验证就餐方式
             if (!diningMode.matches("^(dine_in|takeout)$")) {
-                return buildErrorResponse("就餐方式错误，必须是：dine_in（堂食）或 takeout（自取）");
+                return buildErrorText("就餐方式错误，必须是：dine_in（堂食）或 takeout（自取）");
             }
 
             // 2. 获取商家信息
-            Merchant merchant;
-            if (merchantId != null && !merchantId.isEmpty()) {
-                // 用户指定了商家
-                merchant = merchantService.getById(merchantId);
-                if (merchant == null) {
-                    return buildErrorResponse("商家不存在，商家ID：" + merchantId);
-                }
-            } else {
-                // 自动推荐商家（取评分最高的营业中商家）
-                List<Merchant> merchants = merchantService.list().stream()
-                    .filter(m -> m.getStatus() != null && m.getStatus())
-                    .sorted((a, b) -> {
-                        BigDecimal ratingA = a.getRating() != null ? a.getRating() : BigDecimal.ZERO;
-                        BigDecimal ratingB = b.getRating() != null ? b.getRating() : BigDecimal.ZERO;
-                        return ratingB.compareTo(ratingA);
-                    })
-                    .limit(1)
-                    .collect(Collectors.toList());
-
-                if (merchants.isEmpty()) {
-                    return buildErrorResponse("暂无营业中的商家");
-                }
-                merchant = merchants.get(0);
-                merchantId = merchant.getId();
+            Merchant merchant = resolveMerchant(merchantId);
+            if (merchant == null) {
+                return buildErrorText(merchantId != null ? "商家不存在，商家ID：" + merchantId : "暂无营业中的商家");
             }
 
             // 3. 获取商家菜品（只取在线的）
             List<Dish> allDishes = dishService.list(
                 new LambdaQueryWrapper<Dish>()
-                    .eq(Dish::getMerchantId, merchantId)
+                    .eq(Dish::getMerchantId, merchant.getId())
                     .eq(Dish::getIsOnline, true)
             );
 
             if (allDishes.isEmpty()) {
-                return buildErrorResponse("该商家暂无上架菜品");
+                return buildErrorText("该商家暂无上架菜品");
             }
 
-            // 4. AI预选菜品（根据用户偏好）
-            List<MerchantOrderCardDTO.PreSelectedDish> preSelectedDishes = preSelectDishes(
-                allDishes, preference, diningMode
-            );
+            // 4. AI预选菜品
+            List<PreSelectResult> preSelected = preSelectDishes(allDishes, preference);
 
             // 5. 计算预估总价
-            BigDecimal estimatedTotal = calculateEstimatedTotal(preSelectedDishes, diningMode);
+            BigDecimal estimatedTotal = calculateEstimatedTotal(preSelected, diningMode);
 
-            // 6. 构建推荐理由
-            String recommendationReason = buildRecommendationReason(merchant, preference, diningMode);
+            // 6. 构建人类可读文本
+            String humanText = buildHumanReadableText(merchant, preSelected, diningMode, estimatedTotal, preference);
 
-            // 7. 构建商家信息
-            MerchantOrderCardDTO.MerchantInfo merchantInfo = new MerchantOrderCardDTO.MerchantInfo();
-            merchantInfo.setMerchantId(merchant.getId());
-            merchantInfo.setName(merchant.getName());
-            merchantInfo.setRating(merchant.getRating() != null ? merchant.getRating().doubleValue() : null);
-            merchantInfo.setAveragePrice(merchant.getAveragePrice());
-            merchantInfo.setAddress(merchant.getAddress());
-            merchantInfo.setDistance(300); // TODO: 实际应根据用户位置计算
-            merchantInfo.setEstimatedTime(diningMode.equals("takeout") ? 15 : 10);
-            merchantInfo.setIsOpen(merchant.getStatus());
+            // 7. 使用 UniCardBuilder 构建卡片
+            String cardJson = buildMerchantOrderCard(merchant, preSelected, diningMode, estimatedTotal, preference);
 
-            // 8. 构建操作按钮配置
-            MerchantOrderCardDTO.ActionButtons actionButtons = new MerchantOrderCardDTO.ActionButtons();
-            actionButtons.setPrimaryButton("确认下单");
-            actionButtons.setSecondaryButton("调整菜品");
-            actionButtons.setTertiaryButton("换一家");
-            actionButtons.setAllowAIOrder(true);  // 允许AI帮助下单
-            actionButtons.setRequirePaymentConfirmation(true);  // 付款需要用户手动确认
+            log.info("[Tool] 推荐商家并生成下单卡片成功，merchantId: {}, 预选菜品数: {}",
+                merchant.getId(), preSelected.size());
 
-            // 9. 构建完整的卡片数据
-            MerchantOrderCardDTO cardData = new MerchantOrderCardDTO();
-            cardData.setCardType("merchant_order_card");
-            cardData.setMerchant(merchantInfo);
-            cardData.setPreSelectedDishes(preSelectedDishes);
-            cardData.setDiningMode(diningMode);
-            cardData.setEstimatedTotal(estimatedTotal);
-            cardData.setActionButtons(actionButtons);
-            cardData.setRecommendationReason(recommendationReason);
-
-            // 10. 转换为JSON返回
-            String cardJson = objectMapper.writeValueAsString(cardData);
-
-            // 11. 同时返回人类可读的文本
-            String humanReadableText = buildHumanReadableText(cardData);
-
-            log.info("✅ [Tool] 推荐商家并生成下单卡片成功，merchantId: {}, 预选菜品数: {}",
-                merchantId, preSelectedDishes.size());
-
-            // 返回格式：人类可读文本 + JSON数据
-            return humanReadableText + "\n\n[CARD_DATA_START]\n" + cardJson + "\n[CARD_DATA_END]";
+            return humanText + "\n\n" + cardJson;
 
         } catch (Exception e) {
-            log.error("❌ [Tool] 推荐商家并生成下单卡片失败", e);
-            return buildErrorResponse("推荐失败：" + e.getMessage());
+            log.error("[Tool] 推荐商家并生成下单卡片失败", e);
+            return buildErrorText("推荐失败：" + e.getMessage());
         }
     }
 
@@ -210,9 +149,9 @@ public class OrderGuideTools {
      *
      * 用户在前端弹窗中修改菜品后，调用此方法更新选择
      *
-     * @param userId 用户ID
      * @param merchantId 商家ID
      * @param selectedDishesJson 用户选择的菜品JSON
+     * @param diningMode 就餐方式（dine_in=堂食 或 takeout=自取）
      * @return 更新后的订单信息
      */
     @Tool("""
@@ -231,7 +170,7 @@ public class OrderGuideTools {
         **参数：**
         - merchantId - 商家ID
         - selectedDishesJson - 用户选择的菜品（JSON格式）
-          格式：[{"dishId":"D001","quantity":2},{"dishId":"D002","quantity":1}]
+              格式：[{"dishId":"D001","quantity":2},{"dishId":"D002","quantity":1}]
         - diningMode - 就餐方式（dine_in=堂食 或 takeout=自取）
 
         **无需参数**，userId自动从上下文获取
@@ -246,104 +185,172 @@ public class OrderGuideTools {
     ) {
         String userId = (String) scope.readState("userId");
         if (userId == null || userId.isEmpty()) {
-            return "❌ 无法获取用户信息，请重新登录";
+            return buildErrorText("无法获取用户信息，请重新登录");
         }
-        log.info("🔍 [Tool] 更新用户选择的菜品，userId: {}, merchantId: {}", userId, merchantId);
+        log.info("[Tool] 更新用户选择的菜品，userId: {}, merchantId: {}", userId, merchantId);
 
         try {
-            // 1. 解析菜品列表
-            List<Map<String, Object>> selectedDishes;
-            try {
-                selectedDishes = objectMapper.readValue(
-                    selectedDishesJson,
-                    new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, Object>>>() {}
-                );
-            } catch (JsonProcessingException e) {
-                return buildErrorResponse("菜品列表格式错误：" + e.getMessage());
+            // 解析并验证菜品列表
+            List<ParsedDishItem> parsedItems = parseSelectedDishes(selectedDishesJson);
+            if (parsedItems.isEmpty()) {
+                return buildErrorText("请至少选择一道菜品");
             }
 
-            if (selectedDishes.isEmpty()) {
-                return buildErrorResponse("请至少选择一道菜品");
-            }
-
-            // 2. 获取菜品详细信息
-            StringBuilder orderDetails = new StringBuilder();
+            // 查询菜品详情并构建列表
+            List<UniCardDTO.DishItem> dishItems = new ArrayList<>();
             BigDecimal dishTotal = BigDecimal.ZERO;
             int totalItems = 0;
 
-            orderDetails.append("📋 **订单详情**\n\n");
-
-            for (Map<String, Object> item : selectedDishes) {
-                String dishId = (String) item.get("dishId");
-                Integer quantity = ((Number) item.get("quantity")).intValue();
-
-                Dish dish = dishService.getById(dishId);
+            for (ParsedDishItem parsed : parsedItems) {
+                Dish dish = dishService.getById(parsed.dishId);
                 if (dish == null) {
                     continue;
                 }
 
-                BigDecimal subtotal = dish.getPrice().multiply(BigDecimal.valueOf(quantity));
+                BigDecimal subtotal = dish.getPrice().multiply(BigDecimal.valueOf(parsed.quantity));
                 dishTotal = dishTotal.add(subtotal);
-                totalItems += quantity;
+                totalItems += parsed.quantity;
 
-                orderDetails.append(String.format(
-                    "• %s × %d份 = %.2f元\n",
-                    dish.getName(), quantity, subtotal
+                dishItems.add(UniCardBuilder.createDishItem(
+                    dish.getId(), dish.getName(), dish.getPrice(),
+                    dish.getAvgRating() != null ? dish.getAvgRating().doubleValue() : null,
+                    dish.getImage(), dish.getDescription(), dish.getCategory(),
+                    null
                 ));
             }
 
-            // 3. 计算其他费用
+            // 计算其他费用
             boolean isTakeout = "takeout".equalsIgnoreCase(diningMode);
             BigDecimal packagingFee = isTakeout
                 ? BigDecimal.valueOf(totalItems * 2.0)
                 : BigDecimal.ZERO;
             BigDecimal totalAmount = dishTotal.add(packagingFee);
 
-            // 4. 构建返回信息
-            String result = String.format(
-                "%s" +
-                "💰 **金额明细**\n" +
-                "• 菜品小计：%.2f元\n" +
-                "• 包装费：%.2f元\n" +
-                "• 应付总额：%.2f元\n\n" +
-                "💡 您可以直接让AI帮您创建订单，或者继续调整菜品",
-                orderDetails.toString(),
-                dishTotal,
-                packagingFee,
-                totalAmount
-            );
+            // 构建人类可读文本
+            String modeText = isTakeout ? "自取" : "堂食";
+            String humanText = buildOrderSummaryText(dishItems, parsedItems, modeText, dishTotal, packagingFee, totalAmount);
 
-            log.info("✅ [Tool] 更新用户选择的菜品成功，总金额: {}元", totalAmount);
-            return result;
+            // 使用 UniCardBuilder 构建更新后的菜品卡片
+            String cardJson = UniCardBuilder.create("dish")
+                .title("订单菜品确认", "🍽️")
+                .subtitle(modeText + " | 共" + totalItems + "件")
+                .addDishList(dishItems)
+                .addDivider()
+                .addStatsRow(buildPriceStats(dishTotal, packagingFee, totalAmount))
+                .addNote("您可以直接让AI帮您创建订单，或者继续调整菜品", "info")
+                .addAction("确认下单", "primary", "create_order",
+                    Map.of("merchantId", merchantId, "diningMode", diningMode, "totalAmount", totalAmount))
+                .addAction("调整菜品", "default", "adjust_dishes",
+                    Map.of("merchantId", merchantId))
+                .buildJson();
+
+            log.info("[Tool] 更新用户选择的菜品成功，总金额: {}元", totalAmount);
+            return humanText + "\n\n" + cardJson;
 
         } catch (Exception e) {
-            log.error("❌ [Tool] 更新用户选择的菜品失败", e);
-            return buildErrorResponse("更新失败：" + e.getMessage());
+            log.error("[Tool] 更新用户选择的菜品失败", e);
+            return buildErrorText("更新失败：" + e.getMessage());
         }
     }
 
+    // ========== 内部辅助数据结构 ==========
+
     /**
-     * AI预选菜品
-     *
-     * 根据用户偏好和AI推荐算法，自动选择合适的菜品
-     *
-     * @param allDishes 商家所有菜品
-     * @param preference 用户偏好
-     * @param diningMode 就餐方式
-     * @return 预选菜品列表
+     * 预选菜品结果
      */
-    private List<MerchantOrderCardDTO.PreSelectedDish> preSelectDishes(
-        List<Dish> allDishes,
-        String preference,
-        String diningMode
-    ) {
-        List<MerchantOrderCardDTO.PreSelectedDish> selectedDishes = new ArrayList<>();
+    private record PreSelectResult(Dish dish, int quantity, String reason) {}
+
+    /**
+     * 解析后的菜品项
+     */
+    private record ParsedDishItem(String dishId, int quantity) {}
+
+    // ========== 商家推荐卡片构建 ==========
+
+    /**
+     * 使用 UniCardBuilder 构建商家推荐下单卡片
+     */
+    private String buildMerchantOrderCard(Merchant merchant, List<PreSelectResult> preSelected,
+                                          String diningMode, BigDecimal estimatedTotal, String preference) {
+
+        // 构建菜品列表
+        List<UniCardDTO.DishItem> dishItems = preSelected.stream()
+            .map(ps -> UniCardBuilder.createDishItem(
+                ps.dish().getId(),
+                ps.dish().getName(),
+                ps.dish().getPrice(),
+                ps.dish().getAvgRating() != null ? ps.dish().getAvgRating().doubleValue() : null,
+                ps.dish().getImage(),
+                ps.reason(),
+                ps.dish().getCategory(),
+                null
+            ))
+            .collect(Collectors.toList());
+
+        // 商家信息统计
+        String modeText = "dine_in".equals(diningMode) ? "堂食" : "自取";
+        BigDecimal rating = merchant.getRating() != null ? merchant.getRating() : BigDecimal.ZERO;
+        int estimatedTime = "takeout".equals(diningMode) ? 15 : 10;
+
+        // 推荐理由
+        String recommendationReason = buildRecommendationReason(merchant, preference, diningMode);
+
+        return UniCardBuilder.create("merchant_order")
+            .title(merchant.getName(), "🏪")
+            .subtitle(String.format("%.1f分 | %s | 预计%d分钟", rating, modeText, estimatedTime))
+            .addStatsRow(buildMerchantStats(merchant, estimatedTime, modeText))
+            .addDivider()
+            .addDishList(dishItems)
+            .addDivider()
+            .addStatsRow(buildPriceStats(
+                calculateDishTotal(preSelected),
+                calculatePackagingFee(preSelected, diningMode),
+                estimatedTotal
+            ))
+            .addNote(recommendationReason, "info")
+            .addAction("确认下单", "primary", "create_order",
+                Map.of("merchantId", merchant.getId(), "diningMode", diningMode, "estimatedTotal", estimatedTotal))
+            .addAction("调整菜品", "default", "adjust_dishes",
+                Map.of("merchantId", merchant.getId()))
+            .addAction("换一家", "default", "change_merchant",
+                Map.of("diningMode", diningMode, "preference", preference != null ? preference : ""))
+            .footerNote("AI为您预选了" + preSelected.size() + "道菜品，您可以自由调整")
+            .buildJson();
+    }
+
+    // ========== 预选逻辑 ==========
+
+    /**
+     * 解析商家（指定ID或自动推荐）
+     */
+    private Merchant resolveMerchant(String merchantId) {
+        if (merchantId != null && !merchantId.isEmpty()) {
+            return merchantService.getById(merchantId);
+        }
+
+        // 自动推荐：取评分最高的营业中商家
+        return merchantService.list().stream()
+            .filter(m -> m.getStatus() != null && m.getStatus())
+            .sorted((a, b) -> {
+                BigDecimal ratingA = a.getRating() != null ? a.getRating() : BigDecimal.ZERO;
+                BigDecimal ratingB = b.getRating() != null ? b.getRating() : BigDecimal.ZERO;
+                return ratingB.compareTo(ratingA);
+            })
+            .findFirst()
+            .orElse(null);
+    }
+
+    /**
+     * AI预选菜品，根据分类优先级和用户偏好选择
+     */
+    private List<PreSelectResult> preSelectDishes(List<Dish> allDishes, String preference) {
+        List<PreSelectResult> selectedDishes = new ArrayList<>();
 
         // 按分类分组
         Map<String, List<Dish>> dishesByCategory = allDishes.stream()
             .collect(Collectors.groupingBy(d -> d.getCategory() != null ? d.getCategory() : "其他"));
 
-        // AI推荐逻辑：从每个主要分类中选择1-2个高分菜品
+        // 按分类优先级选择菜品
         String[] priorityCategories = {"主食", "热菜", "凉菜", "汤羹", "小吃"};
 
         for (String category : priorityCategories) {
@@ -363,22 +370,11 @@ public class OrderGuideTools {
                 .collect(Collectors.toList());
 
             for (Dish dish : topDishes) {
-                // 根据用户偏好决定是否选择该菜品
-                if (shouldSelectDish(dish, preference)) {
-                    MerchantOrderCardDTO.PreSelectedDish preSelectedDish = new MerchantOrderCardDTO.PreSelectedDish();
-                    preSelectedDish.setDishId(dish.getId());
-                    preSelectedDish.setDishName(dish.getName());
-                    preSelectedDish.setPrice(dish.getPrice());
-                    preSelectedDish.setQuantity(1);  // 默认数量为1
-                    preSelectedDish.setCalories(dish.getCalorie());
-                    preSelectedDish.setImageUrl(dish.getImage());
-                    preSelectedDish.setReason(buildDishRecommendationReason(dish, preference));
-                    preSelectedDish.setCategory(dish.getCategory());
-                    selectedDishes.add(preSelectedDish);
-                }
+                String reason = buildDishRecommendationReason(dish, preference);
+                selectedDishes.add(new PreSelectResult(dish, 1, reason));
             }
 
-            // 限制最多选择4个菜品
+            // 限制最多4个菜品
             if (selectedDishes.size() >= 4) {
                 break;
             }
@@ -389,35 +385,136 @@ public class OrderGuideTools {
             Dish topDish = allDishes.stream()
                 .max(Comparator.comparing(d -> d.getAvgRating() != null ? d.getAvgRating() : BigDecimal.ZERO))
                 .orElse(allDishes.get(0));
-
-            MerchantOrderCardDTO.PreSelectedDish preSelectedDish = new MerchantOrderCardDTO.PreSelectedDish();
-            preSelectedDish.setDishId(topDish.getId());
-            preSelectedDish.setDishName(topDish.getName());
-            preSelectedDish.setPrice(topDish.getPrice());
-            preSelectedDish.setQuantity(1);
-            preSelectedDish.setCalories(topDish.getCalorie());
-            preSelectedDish.setImageUrl(topDish.getImage());
-            preSelectedDish.setReason("这是该店最受欢迎的菜品");
-            preSelectedDish.setCategory(topDish.getCategory());
-            selectedDishes.add(preSelectedDish);
+            selectedDishes.add(new PreSelectResult(topDish, 1, "这是该店最受欢迎的菜品"));
         }
 
         return selectedDishes;
     }
 
+    // ========== 价格计算 ==========
+
     /**
-     * 判断是否应该选择该菜品
+     * 计算预估总价
      */
-    private boolean shouldSelectDish(Dish dish, String preference) {
-        // 如果用户没有特殊偏好，默认选择
-        if (preference == null || preference.isEmpty()) {
-            return true;
+    private BigDecimal calculateEstimatedTotal(List<PreSelectResult> dishes, String diningMode) {
+        BigDecimal dishTotal = calculateDishTotal(dishes);
+        BigDecimal packagingFee = calculatePackagingFee(dishes, diningMode);
+        return dishTotal.add(packagingFee);
+    }
+
+    /**
+     * 计算菜品总价
+     */
+    private BigDecimal calculateDishTotal(List<PreSelectResult> dishes) {
+        return dishes.stream()
+            .map(ps -> ps.dish().getPrice().multiply(BigDecimal.valueOf(ps.quantity())))
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /**
+     * 计算包装费（仅自取收取）
+     */
+    private BigDecimal calculatePackagingFee(List<PreSelectResult> dishes, String diningMode) {
+        boolean isTakeout = "takeout".equalsIgnoreCase(diningMode);
+        if (!isTakeout) {
+            return BigDecimal.ZERO;
+        }
+        int itemCount = dishes.stream().mapToInt(PreSelectResult::quantity).sum();
+        return BigDecimal.valueOf(itemCount * 2.0);
+    }
+
+    // ========== 文本构建 ==========
+
+    /**
+     * 构建人类可读文本
+     */
+    private String buildHumanReadableText(Merchant merchant, List<PreSelectResult> preSelected,
+                                           String diningMode, BigDecimal estimatedTotal, String preference) {
+        StringBuilder text = new StringBuilder();
+        BigDecimal rating = merchant.getRating() != null ? merchant.getRating() : BigDecimal.ZERO;
+        String modeText = "dine_in".equals(diningMode) ? "堂食" : "自取";
+        int estimatedTime = "takeout".equals(diningMode) ? 15 : 10;
+
+        text.append("为您推荐以下商家和菜品\n\n");
+        text.append(String.format("%s | %.1f分 | 预计%d分钟\n\n", merchant.getName(), rating, estimatedTime));
+
+        text.append("AI为您预选的菜品：\n");
+        for (PreSelectResult ps : preSelected) {
+            BigDecimal subtotal = ps.dish().getPrice().multiply(BigDecimal.valueOf(ps.quantity()));
+            text.append(String.format("  %s x %d = %.2f元 (%s)\n",
+                ps.dish().getName(), ps.quantity(), subtotal, ps.reason()));
         }
 
-        // TODO: 可以根据菜品描述、标签等更智能地判断
-        // 这里简化处理，默认返回true
-        return true;
+        text.append(String.format("\n就餐方式：%s | 预估总价：%.2f元\n", modeText, estimatedTotal));
+
+        if (preference != null && !preference.isEmpty()) {
+            text.append(String.format("偏好标签：%s\n", preference));
+        }
+
+        return text.toString();
     }
+
+    /**
+     * 构建订单摘要文本（更新菜品时使用）
+     */
+    private String buildOrderSummaryText(List<UniCardDTO.DishItem> dishItems, List<ParsedDishItem> parsedItems,
+                                         String modeText, BigDecimal dishTotal, BigDecimal packagingFee,
+                                         BigDecimal totalAmount) {
+        StringBuilder text = new StringBuilder();
+        text.append("订单详情\n\n");
+        text.append("菜品明细：\n");
+        for (int i = 0; i < dishItems.size(); i++) {
+            UniCardDTO.DishItem dish = dishItems.get(i);
+            text.append(String.format("  %s x %d = %.2f元\n",
+                dish.getDishName(), parsedItems.get(i).quantity, dish.getPrice()));
+        }
+        text.append(String.format("\n就餐方式：%s\n", modeText));
+        text.append(String.format("菜品小计：%.2f元\n", dishTotal));
+        text.append(String.format("包装费：%.2f元\n", packagingFee));
+        text.append(String.format("应付总额：%.2f元\n", totalAmount));
+        return text.toString();
+    }
+
+    // ========== 统计行构建 ==========
+
+    /**
+     * 构建商家信息统计行
+     */
+    private List<UniCardDTO.StatItem> buildMerchantStats(Merchant merchant, int estimatedTime, String modeText) {
+        List<UniCardDTO.StatItem> items = new ArrayList<>();
+        items.add(createStatItem("评分",
+            merchant.getRating() != null ? merchant.getRating().toString() : "暂无", "amber", "⭐"));
+        items.add(createStatItem("人均",
+            merchant.getAveragePrice() != null ? merchant.getAveragePrice().toString() + "元" : "暂无", "green", "💰"));
+        items.add(createStatItem("预计", estimatedTime + "分钟", "blue", "⏰"));
+        items.add(createStatItem("方式", modeText, "purple", "🍽️"));
+        return items;
+    }
+
+    /**
+     * 构建价格统计行
+     */
+    private List<UniCardDTO.StatItem> buildPriceStats(BigDecimal dishTotal, BigDecimal packagingFee, BigDecimal total) {
+        List<UniCardDTO.StatItem> items = new ArrayList<>();
+        items.add(createStatItem("菜品小计", dishTotal.toString() + "元", "blue", "🍱"));
+        items.add(createStatItem("包装费", packagingFee.toString() + "元", "orange", "📦"));
+        items.add(createStatItem("应付总额", total.toString() + "元", "red", "💵"));
+        return items;
+    }
+
+    /**
+     * 创建统计项
+     */
+    private UniCardDTO.StatItem createStatItem(String label, String value, String color, String icon) {
+        UniCardDTO.StatItem item = new UniCardDTO.StatItem();
+        item.setLabel(label);
+        item.setValue(value);
+        item.setColor(color);
+        item.setIcon(icon);
+        return item;
+    }
+
+    // ========== 推荐理由 ==========
 
     /**
      * 构建菜品推荐理由
@@ -428,11 +525,9 @@ public class OrderGuideTools {
         if (dish.getAvgRating() != null && dish.getAvgRating().compareTo(new BigDecimal("4.5")) >= 0) {
             reasons.add("评分高");
         }
-
         if (preference != null && !preference.isEmpty()) {
             reasons.add("符合您的口味偏好");
         }
-
         if (dish.getCalorie() != null && dish.getCalorie() <= 500) {
             reasons.add("热量适中");
         }
@@ -441,114 +536,59 @@ public class OrderGuideTools {
     }
 
     /**
-     * 计算预估总价
-     */
-    private BigDecimal calculateEstimatedTotal(
-        List<MerchantOrderCardDTO.PreSelectedDish> dishes,
-        String diningMode
-    ) {
-        BigDecimal dishTotal = dishes.stream()
-            .map(d -> d.getPrice().multiply(BigDecimal.valueOf(d.getQuantity())))
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        boolean isTakeout = "takeout".equalsIgnoreCase(diningMode);
-        int itemCount = dishes.stream().mapToInt(d -> d.getQuantity()).sum();
-        BigDecimal packagingFee = isTakeout
-            ? BigDecimal.valueOf(itemCount * 2.0)
-            : BigDecimal.ZERO;
-
-        return dishTotal.add(packagingFee);
-    }
-
-    /**
      * 构建推荐理由
      */
     private String buildRecommendationReason(Merchant merchant, String preference, String diningMode) {
         StringBuilder reason = new StringBuilder();
-
-        reason.append("我为您推荐了").append(merchant.getName());
+        reason.append("为您推荐").append(merchant.getName());
 
         if (merchant.getRating() != null && merchant.getRating().compareTo(new BigDecimal("4.5")) >= 0) {
-            reason.append("，该店评分高达").append(merchant.getRating()).append("分");
+            reason.append("，评分高达").append(merchant.getRating()).append("分");
         }
 
         if (preference != null && !preference.isEmpty()) {
-            reason.append("，并根据您对").append(preference).append("的偏好预选了菜品");
+            reason.append("，根据您对「").append(preference).append("」的偏好预选了菜品");
         } else {
-            reason.append("，并根据该店热门菜品为您预选了");
+            reason.append("，根据热门菜品为您预选");
         }
 
-        String modeText = diningMode.equals("takeout") ? "自取" : "堂食";
+        String modeText = "takeout".equals(diningMode) ? "自取" : "堂食";
         reason.append("，适合").append(modeText);
 
         return reason.toString();
     }
 
+    // ========== 辅助方法 ==========
+
     /**
-     * 构建人类可读的文本
+     * 解析用户选择的菜品JSON
      */
-    private String buildHumanReadableText(MerchantOrderCardDTO cardData) {
-        StringBuilder text = new StringBuilder();
-
-        text.append("🛒 **为您推荐以下商家和菜品**\n\n");
-
-        // 商家信息
-        MerchantOrderCardDTO.MerchantInfo merchant = cardData.getMerchant();
-        text.append(String.format(
-            "🏪 **%s**\n",
-            merchant.getName()
-        ));
-        text.append(String.format(
-            "   ⭐ %.1f分 | 📍 距离约%d米 | ⏰ 预计%d分钟\n\n",
-            merchant.getRating() != null ? merchant.getRating() : 0,
-            merchant.getDistance(),
-            merchant.getEstimatedTime()
-        ));
-
-        // 预选菜品
-        text.append("🍽️ **AI为您预选的菜品：**\n\n");
-        for (MerchantOrderCardDTO.PreSelectedDish dish : cardData.getPreSelectedDishes()) {
-            text.append(String.format(
-                "• **%s** × %d份 = %.2f元\n",
-                dish.getDishName(),
-                dish.getQuantity(),
-                dish.getPrice().multiply(BigDecimal.valueOf(dish.getQuantity()))
-            ));
-            text.append(String.format(
-                "  %s\n\n",
-                dish.getReason()
-            ));
+    private List<ParsedDishItem> parseSelectedDishes(String selectedDishesJson) {
+        // 简化解析：使用 Jackson 手动解析
+        List<ParsedDishItem> items = new ArrayList<>();
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            List<Map<String, Object>> rawItems = mapper.readValue(
+                selectedDishesJson,
+                new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, Object>>>() {}
+            );
+            for (Map<String, Object> item : rawItems) {
+                String dishId = (String) item.get("dishId");
+                int quantity = ((Number) item.get("quantity")).intValue();
+                if (dishId != null && quantity > 0) {
+                    items.add(new ParsedDishItem(dishId, quantity));
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[Tool] 解析菜品列表失败: {}", e.getMessage());
         }
-
-        // 价格信息
-        String modeText = "dine_in".equals(cardData.getDiningMode()) ? "堂食" : "自取";
-        text.append(String.format(
-            "🍽️ 就餐方式：%s\n",
-            modeText
-        ));
-        text.append(String.format(
-            "💰 预估总价：**%.2f元**\n\n",
-            cardData.getEstimatedTotal()
-        ));
-
-        // 推荐理由
-        text.append(String.format(
-            "💡 %s\n\n",
-            cardData.getRecommendationReason()
-        ));
-
-        text.append("👇 **您可以：**\n");
-        text.append("1. 直接确认下单\n");
-        text.append("2. 点击卡片调整菜品\n");
-        text.append("3. 让AI帮您换一家");
-
-        return text.toString();
+        return items;
     }
 
     /**
-     * 构建错误响应
+     * 构建错误文本响应
      */
-    private String buildErrorResponse(String errorMessage) {
-        return "❌ " + errorMessage;
+    private String buildErrorText(String errorMessage) {
+        return "错误：" + errorMessage;
     }
 }

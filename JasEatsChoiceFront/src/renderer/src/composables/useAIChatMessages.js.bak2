@@ -62,6 +62,8 @@ export function useAIChatMessages(options = {}) {
 	 */
 	const shouldShowCard = (message) =>
 		message.messageType && (isCardMessage(message.messageType) || message.messageType === 'uni_card')
+		message.messageType && (isCardMessage(message.messageType) || message.messageType === 'uni_card')
+
 
 	/**
 	 * [UniCard迁移] 是否显示 UniCard 类型消息
@@ -97,7 +99,7 @@ export function useAIChatMessages(options = {}) {
 	 * 是否显示更多操作按钮
 	 */
 	const shouldShowMoreButton = (message) =>
-		!message.messageType || !(isCardMessage(message.messageType) || message.messageType === 'uni_card')
+		!message.messageType || !isCardMessage(message.messageType)
 
 	/**
 	 * 判断消息是否应该显示
@@ -108,7 +110,7 @@ export function useAIChatMessages(options = {}) {
 		if (message.displayContent !== undefined) {
 			return (
 				message.displayContent.length > 0 ||
-				(message.messageType && (isCardMessage(message.messageType) || message.messageType === 'uni_card'))
+				(message.messageType && isCardMessage(message.messageType))
 			)
 		}
 		return message.content && message.content.length > 0

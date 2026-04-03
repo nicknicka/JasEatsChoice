@@ -5,6 +5,8 @@ import {
 	Search, User, Apple, Document, Shop, Clock, Location, Tools,
 	ChatDotRound, CircleCheck, Loading
 } from '@element-plus/icons-vue'
+// [UniCard迁移] 导入 UniCardParser
+import { useUniCardParser } from '../views/user/AI/composables/useUniCardParser'
 
 /**
  * 增强版流式传输
@@ -268,7 +270,8 @@ export function useAdvancedStreaming(options) {
 			parsedData._isFinalResult = true
 		}
 
-		// 处理 card_data 字段（后端发来的 card_data 是 JSON 字符串，需先解析）
+
+		// 处理 card_data 字段 — 统一使用 UniCardParser
 		if (parsedData.card_data) {
 			const message = getMessage(messageIndex)
 			if (message) {
@@ -281,43 +284,25 @@ export function useAdvancedStreaming(options) {
 					let cardArray = Array.isArray(cardDataObj) ? cardDataObj : [cardDataObj]
 					if (cardArray.length > 0) {
 						const firstCard = cardArray[0]
-						const cardType = firstCard.type || firstCard.cardType
 
-						if (cardType) {
-							const messageType = convertToSupportedCardType(cardType)
-							if (messageType) message.messageType = messageType
-						}
+						// 统一使用 UniCardParser 解析所有卡片数据
+						const { parseCardData } = useUniCardParser()
+						const parseResult = parseCardData(firstCard)
 
-						if (firstCard.orders) {
-							message.cardData = { orders: firstCard.orders }
-						} else if (firstCard.dishes) {
-							message.cardData = {
-								dishes: firstCard.dishes.map(dish => ({
-									dishId: dish.dishId || dish.id,
-									dishName: dish.dishName || dish.title,
-									imageUrl: dish.imageUrl || dish.image,
-									description: dish.description || dish.highlight,
-									price: dish.price,
-									rating: dish.rating,
-									category: dish.category,
-									tags: dish.tags || [],
-									actions: dish.actions || []
-								}))
-							}
-						} else if (firstCard.recommendations) {
-							message.cardData = { recommendations: firstCard.recommendations }
+						if (parseResult.parsed) {
+							message.cardData = parseResult.card
 						} else {
 							message.cardData = firstCard
 						}
+						message.messageType = 'uni_card'
 
 						if (updateUI) await updateUI()
 					}
 				} catch (error) {
-					console.warn('更新卡片数据失败:', error.message)
+					console.warn('[UniCard] 流式卡片数据解析失败:', error.message)
 				}
 			}
 		}
-
 		// 处理 content 字段
 		if (parsedData.content) {
 			const message = getMessage(messageIndex)

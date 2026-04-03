@@ -2,6 +2,8 @@ package com.xx.jaseatschoicejava.agent.tools.order;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xx.jaseatschoicejava.agent.dto.UniCardDTO;
+import com.xx.jaseatschoicejava.agent.util.UniCardBuilder;
 import com.xx.jaseatschoicejava.entity.Dish;
 import com.xx.jaseatschoicejava.entity.Merchant;
 import com.xx.jaseatschoicejava.entity.Order;
@@ -25,7 +27,7 @@ import java.util.stream.Collectors;
 /**
  * 订单创建工具类
  *
- * 为Agent提供订单创建和价格计算功能
+ * 为Agent提供订单创建和价格计算功能，使用 UniCardBuilder 构建统一卡片格式
  *
  * @author Claude
  * @since 2026-03-24
@@ -53,8 +55,8 @@ public class OrderCreateTools {
      * 计算订单价格
      *
      * @param dishItemsJson 菜品列表JSON
-     * @param userId 用户ID
-     * @return 价格明细
+     * @param diningMode 就餐方式
+     * @return 价格明细（UniCard JSON格式）
      */
     @Tool("""
         计算订单的价格
@@ -72,12 +74,12 @@ public class OrderCreateTools {
 
         **参数：**
         - dishItemsJson - 菜品列表（JSON格式）
-          例如：[{"dishId":"xxx","quantity":2,"price":15.5}]
+              例如：[{"dishId":"xxx","quantity":2,"price":15.5}]
         - diningMode - 就餐方式（堂食/dine_in 或 自取/takeout）
 
         **无需参数**，userId自动从上下文获取
 
-        **返回：** 价格明细（文本格式）
+        **返回：** 价格明细（UniCard JSON格式）
         """)
     public String calculateOrderPrice(
         @P("菜品列表（JSON格式）") String dishItemsJson,
@@ -86,9 +88,9 @@ public class OrderCreateTools {
     ) {
         String userId = (String) scope.readState("userId");
         if (userId == null || userId.isEmpty()) {
-            return "❌ 无法获取用户信息，请重新登录";
+            return buildErrorText("无法获取用户信息，请重新登录");
         }
-        log.info("🔍 [Tool] 计算订单价格，userId: {}, diningMode: {}", userId, diningMode);
+        log.info("[Tool] 计算订单价格，userId: {}, diningMode: {}", userId, diningMode);
 
         try {
             List<Map<String, Object>> dishItems = objectMapper.readValue(
@@ -97,77 +99,74 @@ public class OrderCreateTools {
             );
 
             if (dishItems == null || dishItems.isEmpty()) {
-                return "❌ 菜品列表为空";
+                return buildErrorText("菜品列表为空");
             }
 
-            // 计算菜品总价
+            // 计算菜品总价并构建菜品列表
             double dishTotal = 0;
             int itemCount = 0;
-
-            StringBuilder itemsDetail = new StringBuilder();
-            itemsDetail.append("📋 菜品明细：\n");
+            List<UniCardDTO.DishItem> cardDishItems = new ArrayList<>();
 
             for (Map<String, Object> item : dishItems) {
                 String dishId = (String) item.get("dishId");
-                Integer quantity = ((Number) item.get("quantity")).intValue();
-                Double price = ((Number) item.get("price")).doubleValue();
+                int quantity = ((Number) item.get("quantity")).intValue();
+                double price = ((Number) item.get("price")).doubleValue();
 
                 double subtotal = quantity * price;
                 dishTotal += subtotal;
                 itemCount += quantity;
 
-                itemsDetail.append(String.format(
-                    "  - 菜品ID: %s × %d = %.2f元\n",
-                    dishId, quantity, subtotal
+                // 尝试获取菜品详情以丰富卡片数据
+                Dish dish = dishService.getById(dishId);
+                String dishName = dish != null ? dish.getName() : "菜品" + dishId;
+                String imageUrl = dish != null ? dish.getImage() : null;
+
+                cardDishItems.add(UniCardBuilder.createDishItem(
+                    dishId, dishName, BigDecimal.valueOf(price),
+                    null, imageUrl, null, null, null
                 ));
             }
 
-            // 计算其他费用
+            // 计算费用
             boolean isTakeout = "takeout".equalsIgnoreCase(diningMode) || "自取".equals(diningMode);
-            double deliveryFee = 0.0;  // 堂食和自取均无配送费
-            double packagingFee = isTakeout ? itemCount * 2.0 : 0.0;  // 仅自取收取包装费
-            double total = dishTotal + deliveryFee + packagingFee;
+            double packagingFee = isTakeout ? itemCount * 2.0 : 0.0;
+            double total = dishTotal + packagingFee;
+            String modeText = isTakeout ? "自取" : "堂食";
 
-            String modeText = isTakeout ? "🥡 自取" : "🍽️ 堂食";
-
-            String result = String.format(
-                "💰 订单价格明细\n\n" +
-                "%s" +
-                "🍽️ 就餐方式：%s\n" +
-                "🍱 菜品小计：%.2f元\n" +
-                "📦 包装费：%.2f元\n" +
-                "\n" +
-                "─".repeat(30) + "\n" +
-                "💵 **总计：%.2f元**\n\n" +
-                "💡 下单时如有优惠券，系统会自动抵扣",
-                itemsDetail.toString(),
-                modeText,
-                dishTotal,
-                packagingFee,
-                total
+            // 构建人类可读文本
+            String humanText = String.format(
+                "订单价格计算完成：%s，菜品小计 %.2f元，包装费 %.2f元，总计 %.2f元",
+                modeText, dishTotal, packagingFee, total
             );
 
-            log.info("✅ [Tool] 计算订单价格成功，总计: {}元", total);
-            return result;
+            // 使用 UniCardBuilder 构建价格卡片
+            String cardJson = UniCardBuilder.create("dish")
+                .title("订单价格明细", "💰")
+                .subtitle(modeText + " | 共" + itemCount + "件")
+                .addDishList(cardDishItems)
+                .addDivider()
+                .addStatsRow(buildPriceStats(dishTotal, packagingFee, total))
+                .addNote("如有优惠券，下单时系统会自动抵扣", "info")
+                .buildJson();
+
+            log.info("[Tool] 计算订单价格成功，总计: {}元", total);
+            return humanText + "\n\n" + cardJson;
 
         } catch (Exception e) {
-            log.error("❌ [Tool] 计算订单价格失败", e);
-            return "❌ 计算失败：" + e.getMessage();
+            log.error("[Tool] 计算订单价格失败", e);
+            return buildErrorText("计算失败：" + e.getMessage());
         }
     }
 
     /**
      * 创建订单
      *
-     * 使用多个独立参数，便于AI正确调用
-     *
-     * @param userId 用户ID
      * @param merchantId 商家ID
      * @param dishItemsJson 菜品列表JSON字符串
      * @param diningMode 就餐方式
      * @param tableNumber 座号（可选）
      * @param note 备注（可选）
-     * @return 订单创建结果
+     * @return 订单创建结果（UniCard JSON格式）
      */
     @Tool("""
         创建一个新的订单（堂食/自取模式）
@@ -196,7 +195,7 @@ public class OrderCreateTools {
         - 堂食和自取均无配送费
         - 堂食时建议填写座号
 
-        **返回：** 订单创建结果
+        **返回：** 订单创建结果（UniCard JSON格式）
         """)
     public String createOrder(
         AgenticScope scope,
@@ -208,178 +207,74 @@ public class OrderCreateTools {
     ) {
         String userId = (String) scope.readState("userId");
         if (userId == null || userId.isEmpty()) {
-            return "❌ 无法获取用户信息，请重新登录";
+            return buildErrorText("无法获取用户信息，请重新登录");
         }
-        log.info("🔍 [Tool] 创建订单，userId: {}, merchantId: {}, diningMode: {}", userId, merchantId, diningMode);
+        log.info("[Tool] 创建订单，userId: {}, merchantId: {}, diningMode: {}", userId, merchantId, diningMode);
 
         try {
-            // 验证必需参数
-            if (userId == null || userId.isEmpty()) {
-                return "❌ 缺少用户ID（userId）";
-            }
-            if (merchantId == null || merchantId.isEmpty()) {
-                return "❌ 缺少商家ID（merchantId）";
-            }
-            if (diningMode == null || diningMode.isEmpty()) {
-                return "❌ 缺少就餐方式（diningMode），请指定：dine_in（堂食）或 takeout（自取）";
-            }
-
-            // 验证就餐方式
-            if (!diningMode.matches("^(dine_in|takeout)$")) {
-                return "❌ 就餐方式错误，diningMode 必须是：dine_in（堂食）或 takeout（自取）";
+            // 参数验证
+            String validationError = validateCreateOrderParams(userId, merchantId, diningMode, dishItemsJson);
+            if (validationError != null) {
+                return buildErrorText(validationError);
             }
 
             // 解析菜品列表
-            List<Map<String, Object>> dishItems;
-            try {
-                dishItems = objectMapper.readValue(
-                    dishItemsJson,
-                    new TypeReference<List<Map<String, Object>>>() {}
-                );
-            } catch (Exception e) {
-                return "❌ 菜品列表格式错误，正确格式：[{\"dishId\":\"xxx\",\"quantity\":1,\"price\":15.5}]";
+            List<Map<String, Object>> dishItems = parseDishItems(dishItemsJson);
+            if (dishItems == null) {
+                return buildErrorText("菜品列表格式错误，正确格式：[{\"dishId\":\"xxx\",\"quantity\":1,\"price\":15.5}]");
+            }
+            if (dishItems.isEmpty()) {
+                return buildErrorText("菜品列表不能为空");
             }
 
-            if (dishItems == null || dishItems.isEmpty()) {
-                return "❌ 菜品列表不能为空";
-            }
-
+            // 计算费用
             double dishTotal = 0;
             int itemCount = 0;
             for (Map<String, Object> item : dishItems) {
-                Integer quantity = ((Number) item.get("quantity")).intValue();
-                Double price = ((Number) item.get("price")).doubleValue();
+                int quantity = ((Number) item.get("quantity")).intValue();
+                double price = ((Number) item.get("price")).doubleValue();
                 dishTotal += quantity * price;
                 itemCount += quantity;
             }
 
-            // 计算费用（堂食/自取模式）
             boolean isTakeout = "takeout".equalsIgnoreCase(diningMode);
-            double deliveryFee = 0.0;  // 无配送费
-            double packagingFee = isTakeout ? itemCount * 2.0 : 0.0;  // 仅自取收取包装费
-            double totalAmount = dishTotal + deliveryFee + packagingFee;
+            double packagingFee = isTakeout ? itemCount * 2.0 : 0.0;
+            double totalAmount = dishTotal + packagingFee;
 
-            // tableNumber 和 note 已经作为方法参数传入
-
-            // 创建订单
-            Order order = new Order();
-
-            // 生成订单ID
-            String orderId = IdGenerator.toOrderIdString(IdGenerator.generateId());
-            order.setId(orderId);
-
-            order.setUserId(userId);
-            order.setMerchantId(merchantId);
-
-            // 设置地址信息（堂食显示座号，自取显示自取标识）
-            String addressInfo;
-            if (isTakeout) {
-                addressInfo = "自取";
-            } else {
-                addressInfo = "堂食" + (tableNumber != null ? " - 座号：" + tableNumber : "");
-            }
-            order.setAddress(addressInfo);
-
-            order.setTotalAmount(BigDecimal.valueOf(totalAmount));
-            order.setPaidAmount(BigDecimal.ZERO);
-            order.setStatus(0);  // 待支付
-
-            // 备注中包含就餐方式和座号信息
-            StringBuilder remarkBuilder = new StringBuilder();
-            remarkBuilder.append("就餐方式：").append(isTakeout ? "自取" : "堂食");
-            if (!isTakeout && tableNumber != null) {
-                remarkBuilder.append("，座号：").append(tableNumber);
-            }
-            if (note != null && !note.isEmpty()) {
-                remarkBuilder.append("，备注：").append(note);
-            }
-            order.setRemark(remarkBuilder.toString());
-
-            // 保存订单
+            // 创建订单记录
+            Order order = buildOrderEntity(userId, merchantId, diningMode, tableNumber, note,
+                totalAmount, isTakeout);
             boolean success = orderService.save(order);
-
             if (!success) {
-                log.error("❌ [Tool] 创建订单失败");
-                return "❌ 订单创建失败，请稍后重试";
+                log.error("[Tool] 创建订单失败");
+                return buildErrorText("订单创建失败，请稍后重试");
             }
 
             // 保存订单菜品
-            List<OrderDish> orderDishList = new ArrayList<>();
-            for (Map<String, Object> item : dishItems) {
-                String dishId = (String) item.get("dishId");
-                Integer quantity = ((Number) item.get("quantity")).intValue();
-                Double price = ((Number) item.get("price")).doubleValue();
+            saveOrderDishes(order.getId(), dishItems);
 
-                OrderDish orderDish = new OrderDish();
-                orderDish.setId(IdGenerator.toOrderDishIdString(IdGenerator.generateId()));
-                orderDish.setOrderId(orderId);
-                orderDish.setDishId(dishId);
-                orderDish.setQuantity(quantity);
-                orderDish.setPrice(BigDecimal.valueOf(price));
-                orderDish.setServingStatus(0); // 未上菜
-                orderDish.setStepStatus(0); // 待备菜
+            // 获取商家信息
+            Merchant merchant = merchantService.getById(merchantId);
+            String merchantName = merchant != null ? merchant.getName() : "未知商家";
 
-                orderDishList.add(orderDish);
-            }
+            // 构建人类可读文本
+            String humanText = buildCreateOrderHumanText(order, merchantName, isTakeout, tableNumber);
 
-            // 批量保存订单菜品
-            boolean dishesSaved = orderDishService.saveBatch(orderDishList);
+            // 使用 UniCardBuilder 构建订单创建成功卡片
+            String cardJson = buildOrderCreatedCard(order, merchantName, dishItems, isTakeout, tableNumber);
 
-            if (!dishesSaved) {
-                log.warn("⚠️ [Tool] 订单菜品保存失败，但订单已创建: {}", orderId);
-            }
-
-            // 构建菜品明细文本
-            StringBuilder dishesDetail = new StringBuilder();
-            dishesDetail.append("📝 菜品明细：\n");
-            for (Map<String, Object> item : dishItems) {
-                String dishId = (String) item.get("dishId");
-                Integer quantity = ((Number) item.get("quantity")).intValue();
-                Double price = ((Number) item.get("price")).doubleValue();
-                dishesDetail.append(String.format(
-                    "  • 菜品ID:%s × %d份 = %.2f元\n",
-                    dishId, quantity, price * quantity
-                ));
-            }
-
-            // 返回待支付状态的订单信息（不说"下单成功"）
-            String result = String.format(
-                "📋 订单已创建，等待支付\n\n" +
-                "🆔 订单号：%s\n" +
-                "🏪 商家ID：%s\n" +
-                "%s" +
-                "🍽️ 就餐方式：%s\n" +
-                "%s" +
-                "💰 订单金额：%.2f元\n" +
-                "📦 包装费：%.2f元\n" +
-                "─".repeat(30) + "\n" +
-                "💵 **应付总额：%.2f元**\n\n" +
-                "💡 请在15分钟内完成支付，超时订单将自动取消\n" +
-                "⏰ 预计%s后可取餐",
-                orderId,
-                merchantId,
-                dishesDetail.toString(),
-                isTakeout ? "🥡 自取" : "🍽️ 堂食",
-                !isTakeout && tableNumber != null ? "🪑 座号：" + tableNumber + "\n" : "",
-                dishTotal,
-                packagingFee,
-                totalAmount,
-                isTakeout ? "15-20分钟" : "10-15分钟"
-            );
-
-            log.info("✅ [Tool] 订单创建成功: {}, 菜品数: {}", orderId, dishItems.size());
-            return result;
+            log.info("[Tool] 订单创建成功: {}, 菜品数: {}", order.getId(), dishItems.size());
+            return humanText + "\n\n" + cardJson;
 
         } catch (Exception e) {
-            log.error("❌ [Tool] 创建订单失败", e);
-            return "❌ 创建失败：" + e.getMessage();
+            log.error("[Tool] 创建订单失败", e);
+            return buildErrorText("创建失败：" + e.getMessage());
         }
     }
 
     /**
      * 查询可用优惠券（简化版）
      *
-     * @param userId 用户ID
      * @param orderAmount 订单金额
      * @return 可用优惠券信息
      */
@@ -403,40 +298,32 @@ public class OrderCreateTools {
     ) {
         String userId = (String) scope.readState("userId");
         if (userId == null || userId.isEmpty()) {
-            return "❌ 无法获取用户信息，请重新登录";
+            return buildErrorText("无法获取用户信息，请重新登录");
         }
-        log.info("🔍 [Tool] 查询可用优惠券，userId: {}, orderAmount: {}", userId, orderAmount);
+        log.info("[Tool] 查询可用优惠券，userId: {}, orderAmount: {}", userId, orderAmount);
 
-        // 简化版本：返回固定的优惠券示例
-        // 实际应用中需要从数据库查询用户的真实优惠券
-        return """
-            🎫 可用优惠券
+        // 使用 UniCardBuilder 构建优惠券卡片
+        List<UniCardDTO.StatItem> couponStats = new ArrayList<>();
+        couponStats.add(createStatItem("新用户专享券", "满20减5元", "green", "🎫"));
+        couponStats.add(createStatItem("午餐优惠券", "满30减8元", "blue", "🎫"));
 
-            1. 新用户专享券
-               - 满减：满20元减5元
-               - 适用：所有商家
-               - 有效期：2026-12-31
+        String humanText = "查询到2张可用优惠券，下单时系统会自动使用最优优惠券";
 
-            2. 午餐优惠券
-               - 满减：满30元减8元
-               - 适用：所有商家
-               - 有效期：2026-06-30
+        String cardJson = UniCardBuilder.create("dish")
+            .title("可用优惠券", "🎫")
+            .subtitle("订单金额：" + orderAmount + "元")
+            .addStatsRow(couponStats)
+            .addNote("下单时系统会自动使用最优优惠券", "info")
+            .buildJson();
 
-            💡 提示：下单时系统会自动使用最优优惠券
-            """;
+        return humanText + "\n\n" + cardJson;
     }
 
     /**
      * 准备订单（触发前端显示商家菜品选择卡片）
      *
-     * 这个方法用于：
-     * 1. 根据商家名称或菜品名称查询商家
-     * 2. 获取商家的所有菜品
-     * 3. 返回结构化数据，触发前端显示商家菜品卡片
-     *
      * @param merchantNameOrDishName 商家名称或菜品名称
-     * @param userId 用户ID
-     * @return JSON格式的商家菜品数据
+     * @return UniCard JSON格式的商家菜品数据
      */
     @Tool("""
         准备订单，查询商家和菜品信息（触发前端显示商家菜品选择卡片）
@@ -451,7 +338,7 @@ public class OrderCreateTools {
 
         **无需参数**，userId自动从上下文获取
 
-        **返回：** 商家菜品卡片数据（JSON格式）
+        **返回：** 商家菜品卡片数据（UniCard JSON格式）
         """)
     public String prepareOrder(
         @P("商家名称或菜品名称") String merchantNameOrDishName,
@@ -459,46 +346,27 @@ public class OrderCreateTools {
     ) {
         String userId = (String) scope.readState("userId");
         if (userId == null || userId.isEmpty()) {
-            return "❌ 无法获取用户信息，请重新登录";
+            return buildErrorText("无法获取用户信息，请重新登录");
         }
-        log.info("🛒 [Tool] 准备订单，商家/菜品：{}, 用户：{}", merchantNameOrDishName, userId);
+        log.info("[Tool] 准备订单，商家/菜品：{}, 用户：{}", merchantNameOrDishName, userId);
 
         try {
             if (merchantNameOrDishName == null || merchantNameOrDishName.trim().isEmpty()) {
-                return "{\"error\": \"请提供商家名称或菜品名称\"}";
+                return buildErrorText("请提供商家名称或菜品名称");
             }
 
             // 1. 先尝试按商家名称查询
-            List<Merchant> merchants = merchantService.list().stream()
-                .filter(m -> m.getStatus() != null && m.getStatus())
-                .filter(m -> m.getName() != null && m.getName().contains(merchantNameOrDishName))
-                .collect(Collectors.toList());
+            List<Merchant> merchants = findMerchantsByName(merchantNameOrDishName);
 
             // 2. 如果没找到商家，尝试按菜品名称查询
             if (merchants.isEmpty()) {
-                List<Dish> dishes = dishService.list().stream()
-                    .filter(d -> d.getName() != null && d.getName().contains(merchantNameOrDishName))
-                    .filter(d -> d.getIsOnline() != null && d.getIsOnline())
-                    .collect(Collectors.toList());
-
-                if (!dishes.isEmpty()) {
-                    // 通过菜品找到商家
-                    Set<String> merchantIds = dishes.stream()
-                        .map(Dish::getMerchantId)
-                        .collect(Collectors.toSet());
-
-                    merchants = merchantService.list().stream()
-                        .filter(m -> merchantIds.contains(m.getId()))
-                        .filter(m -> m.getStatus() != null && m.getStatus())
-                        .collect(Collectors.toList());
-                }
+                merchants = findMerchantsByDishName(merchantNameOrDishName);
             }
 
             if (merchants.isEmpty()) {
-                return "{\"error\": \"未找到相关商家，请确认商家名称或菜品名称\"}";
+                return buildErrorText("未找到相关商家，请确认商家名称或菜品名称");
             }
 
-            // 选择第一个匹配的商家
             Merchant merchant = merchants.get(0);
 
             // 3. 查询该商家的所有在线菜品
@@ -507,59 +375,202 @@ public class OrderCreateTools {
                 .filter(d -> d.getIsOnline() != null && d.getIsOnline())
                 .collect(Collectors.toList());
 
-            // 4. 构建返回数据
-            Map<String, Object> result = new HashMap<>();
-            result.put("cardType", "MERCHANT_MENU_CARD");
-            result.put("merchant", buildMerchantInfo(merchant));
-            result.put("dishes", buildDishesList(allDishes));
-            result.put("defaultSelection", findDefaultDishes(allDishes, merchantNameOrDishName));
+            // 4. 使用 UniCardBuilder 构建商家菜品卡片
+            String humanText = String.format("找到商家【%s】，共%d道菜品可选",
+                merchant.getName(), allDishes.size());
 
-            String jsonResult = objectMapper.writeValueAsString(result);
-            log.info("✅ [Tool] 准备订单成功，商家：{}，菜品数：{}", merchant.getName(), allDishes.size());
-            return jsonResult;
+            String cardJson = buildMerchantMenuCard(merchant, allDishes, merchantNameOrDishName);
+
+            log.info("[Tool] 准备订单成功，商家：{}，菜品数：{}", merchant.getName(), allDishes.size());
+            return humanText + "\n\n" + cardJson;
 
         } catch (Exception e) {
-            log.error("❌ [Tool] 准备订单失败", e);
-            return "{\"error\": \"查询失败：" + e.getMessage() + "\"}";
+            log.error("[Tool] 准备订单失败", e);
+            return buildErrorText("查询失败：" + e.getMessage());
+        }
+    }
+
+    // ========== 订单创建辅助方法 ==========
+
+    /**
+     * 验证创建订单参数
+     */
+    private String validateCreateOrderParams(String userId, String merchantId,
+                                              String diningMode, String dishItemsJson) {
+        if (userId == null || userId.isEmpty()) {
+            return "缺少用户ID";
+        }
+        if (merchantId == null || merchantId.isEmpty()) {
+            return "缺少商家ID（merchantId）";
+        }
+        if (diningMode == null || diningMode.isEmpty()) {
+            return "缺少就餐方式（diningMode），请指定：dine_in（堂食）或 takeout（自取）";
+        }
+        if (!diningMode.matches("^(dine_in|takeout)$")) {
+            return "就餐方式错误，diningMode 必须是：dine_in（堂食）或 takeout（自取）";
+        }
+        return null;
+    }
+
+    /**
+     * 解析菜品列表JSON
+     */
+    private List<Map<String, Object>> parseDishItems(String dishItemsJson) {
+        try {
+            return objectMapper.readValue(
+                dishItemsJson,
+                new TypeReference<List<Map<String, Object>>>() {}
+            );
+        } catch (Exception e) {
+            return null;
         }
     }
 
     /**
-     * 构建商家信息
+     * 构建订单实体
      */
-    private Map<String, Object> buildMerchantInfo(Merchant merchant) {
-        Map<String, Object> info = new HashMap<>();
-        info.put("id", merchant.getId());
-        info.put("name", merchant.getName());
-        info.put("address", merchant.getAddress());
-        info.put("rating", merchant.getRating());
-        info.put("averagePrice", merchant.getAveragePrice());
-        info.put("status", merchant.getStatus());
-        return info;
+    private Order buildOrderEntity(String userId, String merchantId, String diningMode,
+                                    String tableNumber, String note, double totalAmount,
+                                    boolean isTakeout) {
+        Order order = new Order();
+        order.setId(IdGenerator.toOrderIdString(IdGenerator.generateId()));
+        order.setUserId(userId);
+        order.setMerchantId(merchantId);
+
+        // 设置地址信息
+        String addressInfo = isTakeout
+            ? "自取"
+            : "堂食" + (tableNumber != null ? " - 座号：" + tableNumber : "");
+        order.setAddress(addressInfo);
+
+        order.setTotalAmount(BigDecimal.valueOf(totalAmount));
+        order.setPaidAmount(BigDecimal.ZERO);
+        order.setStatus(0);  // 待支付
+
+        // 构建备注
+        StringBuilder remarkBuilder = new StringBuilder();
+        remarkBuilder.append("就餐方式：").append(isTakeout ? "自取" : "堂食");
+        if (!isTakeout && tableNumber != null) {
+            remarkBuilder.append("，座号：").append(tableNumber);
+        }
+        if (note != null && !note.isEmpty()) {
+            remarkBuilder.append("，备注：").append(note);
+        }
+        order.setRemark(remarkBuilder.toString());
+
+        return order;
     }
 
     /**
-     * 构建菜品列表
+     * 保存订单菜品关联
      */
-    private List<Map<String, Object>> buildDishesList(List<Dish> dishes) {
-        return dishes.stream().map(dish -> {
-            Map<String, Object> d = new HashMap<>();
-            d.put("id", dish.getId());
-            d.put("name", dish.getName());
-            d.put("price", dish.getPrice());
-            d.put("calorie", dish.getCalorie());
-            d.put("avgRating", dish.getAvgRating());
-            d.put("image", dish.getImage());
-            d.put("description", dish.getDescription());
-            return d;
-        }).collect(Collectors.toList());
+    private void saveOrderDishes(String orderId, List<Map<String, Object>> dishItems) {
+        List<OrderDish> orderDishList = new ArrayList<>();
+        for (Map<String, Object> item : dishItems) {
+            String dishId = (String) item.get("dishId");
+            int quantity = ((Number) item.get("quantity")).intValue();
+            double price = ((Number) item.get("price")).doubleValue();
+
+            OrderDish orderDish = new OrderDish();
+            orderDish.setId(IdGenerator.toOrderDishIdString(IdGenerator.generateId()));
+            orderDish.setOrderId(orderId);
+            orderDish.setDishId(dishId);
+            orderDish.setQuantity(quantity);
+            orderDish.setPrice(BigDecimal.valueOf(price));
+            orderDish.setServingStatus(0); // 未上菜
+            orderDish.setStepStatus(0); // 待备菜
+
+            orderDishList.add(orderDish);
+        }
+        orderDishService.saveBatch(orderDishList);
+    }
+
+    // ========== 卡片构建方法 ==========
+
+    /**
+     * 使用 UniCardBuilder 构建订单创建成功卡片
+     */
+    private String buildOrderCreatedCard(Order order, String merchantName,
+                                          List<Map<String, Object>> dishItems,
+                                          boolean isTakeout, String tableNumber) {
+        // 构建菜品列表
+        List<UniCardDTO.DishItem> cardDishItems = new ArrayList<>();
+        for (Map<String, Object> item : dishItems) {
+            String dishId = (String) item.get("dishId");
+            int quantity = ((Number) item.get("quantity")).intValue();
+            double price = ((Number) item.get("price")).doubleValue();
+
+            Dish dish = dishService.getById(dishId);
+            String dishName = dish != null ? dish.getName() : "菜品" + dishId;
+            String imageUrl = dish != null ? dish.getImage() : null;
+
+            cardDishItems.add(UniCardBuilder.createDishItem(
+                dishId, dishName, BigDecimal.valueOf(price),
+                null, imageUrl, null, null, null
+            ));
+        }
+
+        // 计算金额
+        double dishTotal = 0;
+        int itemCount = 0;
+        for (Map<String, Object> item : dishItems) {
+            int quantity = ((Number) item.get("quantity")).intValue();
+            double price = ((Number) item.get("price")).doubleValue();
+            dishTotal += quantity * price;
+            itemCount += quantity;
+        }
+        double packagingFee = isTakeout ? itemCount * 2.0 : 0.0;
+        String modeText = isTakeout ? "自取" : "堂食";
+
+        // 订单状态统计
+        List<UniCardDTO.StatItem> orderStats = new ArrayList<>();
+        orderStats.add(createStatItem("订单号", order.getId(), "blue", "📋"));
+        orderStats.add(createStatItem("状态", "待支付", "orange", "📊"));
+        orderStats.add(createStatItem("商家", merchantName, "green", "🏪"));
+
+        if (!isTakeout && tableNumber != null) {
+            orderStats.add(createStatItem("座号", tableNumber, "purple", "🪑"));
+        }
+
+        return UniCardBuilder.create("merchant_order")
+            .title("订单已创建", "📋")
+            .subtitle(modeText + " | 等待支付")
+            .addStatsRow(orderStats)
+            .addDivider()
+            .addDishList(cardDishItems)
+            .addDivider()
+            .addStatsRow(buildPriceStats(dishTotal, packagingFee, order.getTotalAmount().doubleValue()))
+            .addNote("请在15分钟内完成支付，超时订单将自动取消", "warning")
+            .addNote("预计" + (isTakeout ? "15-20分钟" : "10-15分钟") + "后可取餐", "info")
+            .addAction("查看订单", "primary", "view_order",
+                Map.of("orderId", order.getId()))
+            .addAction("继续点餐", "default", "continue_order",
+                Map.of("merchantId", order.getMerchantId()))
+            .footerNote("订单号：" + order.getId())
+            .buildJson();
     }
 
     /**
-     * 根据用户输入查找默认选中的菜品
+     * 使用 UniCardBuilder 构建商家菜单卡片
      */
-    private List<Map<String, Object>> findDefaultDishes(List<Dish> dishes, String keyword) {
-        return dishes.stream()
+    private String buildMerchantMenuCard(Merchant merchant, List<Dish> allDishes,
+                                          String keyword) {
+        // 构建菜品列表
+        List<UniCardDTO.DishItem> cardDishItems = allDishes.stream()
+            .map(dish -> UniCardBuilder.createDishItem(
+                dish.getId(),
+                dish.getName(),
+                dish.getPrice(),
+                dish.getAvgRating() != null ? dish.getAvgRating().doubleValue() : null,
+                dish.getImage(),
+                dish.getDescription(),
+                dish.getCategory(),
+                null
+            ))
+            .collect(Collectors.toList());
+
+        // 查找默认选中的菜品（匹配关键词的菜品）
+        List<Map<String, Object>> defaultSelection = allDishes.stream()
             .filter(d -> d.getName() != null && d.getName().contains(keyword))
             .limit(3)
             .map(dish -> {
@@ -571,5 +582,115 @@ public class OrderCreateTools {
                 return d;
             })
             .collect(Collectors.toList());
+
+        // 商家信息统计
+        List<UniCardDTO.StatItem> merchantStats = new ArrayList<>();
+        merchantStats.add(createStatItem("评分",
+            merchant.getRating() != null ? merchant.getRating().toString() : "暂无", "amber", "⭐"));
+        merchantStats.add(createStatItem("人均",
+            merchant.getAveragePrice() != null ? merchant.getAveragePrice().toString() + "元" : "暂无", "green", "💰"));
+        merchantStats.add(createStatItem("菜品", allDishes.size() + "道", "blue", "🍽️"));
+
+        UniCardBuilder builder = UniCardBuilder.create("dish")
+            .title(merchant.getName(), "🏪")
+            .subtitle(merchant.getAddress() != null ? merchant.getAddress() : "")
+            .addStatsRow(merchantStats)
+            .addDivider()
+            .addDishList(cardDishItems);
+
+        // 如果有默认选中的菜品，添加提示
+        if (!defaultSelection.isEmpty()) {
+            builder.addNote("已为您预选" + defaultSelection.size() + "道匹配的菜品", "info");
+        }
+
+        return builder
+            .addAction("立即下单", "primary", "create_order",
+                Map.of("merchantId", merchant.getId(),
+                       "defaultSelection", defaultSelection))
+            .footerNote(merchant.getStatus() ? "营业中" : "已休息")
+            .buildJson();
+    }
+
+    // ========== 商家查询辅助方法 ==========
+
+    /**
+     * 按商家名称查询
+     */
+    private List<Merchant> findMerchantsByName(String name) {
+        return merchantService.list().stream()
+            .filter(m -> m.getStatus() != null && m.getStatus())
+            .filter(m -> m.getName() != null && m.getName().contains(name))
+            .collect(Collectors.toList());
+    }
+
+    /**
+     * 按菜品名称查找对应商家
+     */
+    private List<Merchant> findMerchantsByDishName(String dishName) {
+        List<Dish> dishes = dishService.list().stream()
+            .filter(d -> d.getName() != null && d.getName().contains(dishName))
+            .filter(d -> d.getIsOnline() != null && d.getIsOnline())
+            .collect(Collectors.toList());
+
+        if (dishes.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        Set<String> merchantIds = dishes.stream()
+            .map(Dish::getMerchantId)
+            .collect(Collectors.toSet());
+
+        return merchantService.list().stream()
+            .filter(m -> merchantIds.contains(m.getId()))
+            .filter(m -> m.getStatus() != null && m.getStatus())
+            .collect(Collectors.toList());
+    }
+
+    // ========== 通用辅助方法 ==========
+
+    /**
+     * 构建价格统计行
+     */
+    private List<UniCardDTO.StatItem> buildPriceStats(double dishTotal, double packagingFee, double total) {
+        List<UniCardDTO.StatItem> items = new ArrayList<>();
+        items.add(createStatItem("菜品小计", String.format("%.2f元", dishTotal), "blue", "🍱"));
+        items.add(createStatItem("包装费", String.format("%.2f元", packagingFee), "orange", "📦"));
+        items.add(createStatItem("应付总额", String.format("%.2f元", total), "red", "💵"));
+        return items;
+    }
+
+    /**
+     * 创建统计项
+     */
+    private UniCardDTO.StatItem createStatItem(String label, String value, String color, String icon) {
+        UniCardDTO.StatItem item = new UniCardDTO.StatItem();
+        item.setLabel(label);
+        item.setValue(value);
+        item.setColor(color);
+        item.setIcon(icon);
+        return item;
+    }
+
+    /**
+     * 构建订单创建的人类可读文本
+     */
+    private String buildCreateOrderHumanText(Order order, String merchantName,
+                                              boolean isTakeout, String tableNumber) {
+        String modeText = isTakeout ? "自取" : "堂食";
+        StringBuilder text = new StringBuilder();
+        text.append("订单已创建，等待支付\n");
+        text.append(String.format("订单号：%s | 商家：%s | %s", order.getId(), merchantName, modeText));
+        if (!isTakeout && tableNumber != null) {
+            text.append(" | 座号：").append(tableNumber);
+        }
+        text.append(String.format("\n应付总额：%.2f元", order.getTotalAmount()));
+        return text.toString();
+    }
+
+    /**
+     * 构建错误文本
+     */
+    private String buildErrorText(String errorMessage) {
+        return "错误：" + errorMessage;
     }
 }
