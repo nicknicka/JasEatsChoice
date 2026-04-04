@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: 7777
   servlet:
     context-path: /api
     # 强制请求和响应使用UTF-8编码
@@ -120,7 +120,7 @@ file:
   upload:
     path: /Users/nickxiao/JasEatsChoice/uploads/  # 文件上传保存路径
     url-prefix: /uploads/  # 访问URL前缀（相对路径，注意不带/api前缀，因为会自动添加）
-    server-url: http://192.168.137.188:8080/api  # 服务器完整URL（用于构建完整访问地址）
+    server-url: http://192.168.137.188:7777/api  # 服务器完整URL（用于构建完整访问地址）
 
 # Netty配置
 netty:

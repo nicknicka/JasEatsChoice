@@ -211,7 +211,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Search, Refresh } from '@element-plus/icons-vue'
-import api from '@/utils/api'
+import { getDishAuditList, getDishAuditDetail, auditDish } from '@/api/admin'
 
 const loading = ref(false)
 const auditList = ref([])
@@ -247,13 +247,11 @@ const auditForm = reactive({
 const fetchAuditList = async () => {
   loading.value = true
   try {
-    const response = await api.get('http://localhost:8080/api/admin/dishes/audit', {
-      params: {
-        page: pagination.page,
-        pageSize: pagination.pageSize,
-        keyword: searchForm.keyword,
-        auditStatus: searchForm.auditStatus
-      }
+    const response = await getDishAuditList({
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+      keyword: searchForm.keyword,
+      auditStatus: searchForm.auditStatus
     })
 
     if (response) {
@@ -309,7 +307,7 @@ const handleReset = () => {
 // 查看详情
 const handleView = async (row) => {
   try {
-    const response = await api.get(`http://localhost:8080/api/admin/dishes/audit/${row.dishId}`)
+    const response = await getDishAuditDetail(row.dishId)
     if (response) {
       currentDish.value = response
       detailDialogVisible.value = true
@@ -323,7 +321,7 @@ const handleView = async (row) => {
 // 审核
 const handleAudit = async (row) => {
   try {
-    const response = await api.get(`http://localhost:8080/api/admin/dishes/audit/${row.dishId}`)
+    const response = await getDishAuditDetail(row.dishId)
     if (response) {
       currentDish.value = response
       auditForm.decision = 'approve'
@@ -344,13 +342,10 @@ const submitAudit = async () => {
   }
 
   try {
-    const response = await api.post(
-      `http://localhost:8080/api/admin/dishes/audit/${currentDish.value.dishId}`,
-      {
-        decision: auditForm.decision,
-        comment: auditForm.comment
-      }
-    )
+    const response = await auditDish(currentDish.value.dishId, {
+      decision: auditForm.decision,
+      comment: auditForm.comment
+    })
 
     if (response) {
       ElMessage.success('审核提交成功')

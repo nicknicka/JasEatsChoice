@@ -499,6 +499,44 @@ export function auditDish(dishId, auditData) {
 }
 
 /**
+ * 获取菜品审核列表
+ * @param {Object} params - 查询参数
+ * @returns {Promise} 菜品审核列表
+ */
+export function getDishAuditList(params = {}) {
+  console.log('[管理员API] 获取菜品审核列表:', params)
+  return api
+    .get(API_CONFIG.admin.dishAuditList, { params })
+    .then((response) => {
+      console.log('[管理员API] 获取菜品审核列表成功')
+      return response
+    })
+    .catch((error) => {
+      console.error('[管理员API] 获取菜品审核列表失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 获取菜品审核详情
+ * @param {number} dishId - 菜品ID
+ * @returns {Promise} 菜品审核详情
+ */
+export function getDishAuditDetail(dishId) {
+  console.log('[管理员API] 获取菜品审核详情:', dishId)
+  return api
+    .get(API_CONFIG.admin.dishAuditDetail.replace('{dishId}', dishId))
+    .then((response) => {
+      console.log('[管理员API] 获取菜品审核详情成功')
+      return response
+    })
+    .catch((error) => {
+      console.error('[管理员API] 获取菜品审核详情失败:', error)
+      throw error
+    })
+}
+
+/**
  * 修改菜品状态
  * @param {number} dishId - 菜品ID
  * @param {string} status - 状态
@@ -542,6 +580,43 @@ export function getRechargeList(params = {}) {
 }
 
 /**
+ * 获取充值统计
+ * @returns {Promise} 充值统计数据
+ */
+export function getRechargeStats() {
+  console.log('[管理员API] 获取充值统计')
+  return api
+    .get(API_CONFIG.admin.rechargeStats)
+    .then((response) => {
+      console.log('[管理员API] 获取充值统计成功')
+      return response
+    })
+    .catch((error) => {
+      console.error('[管理员API] 获取充值统计失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 获取充值详情
+ * @param {string} rechargeId - 充值ID
+ * @returns {Promise} 充值详情
+ */
+export function getRechargeDetail(rechargeId) {
+  console.log('[管理员API] 获取充值详情:', rechargeId)
+  return api
+    .get(API_CONFIG.admin.rechargeDetail.replace('{rechargeId}', rechargeId))
+    .then((response) => {
+      console.log('[管理员API] 获取充值详情成功')
+      return response
+    })
+    .catch((error) => {
+      console.error('[管理员API] 获取充值详情失败:', error)
+      throw error
+    })
+}
+
+/**
  * 获取退款记录列表
  * @param {Object} params - 查询参数
  * @returns {Promise} 退款记录列表
@@ -556,6 +631,43 @@ export function getRefundList(params = {}) {
     })
     .catch((error) => {
       console.error('[管理员API] 获取退款记录列表失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 获取退款统计
+ * @returns {Promise} 退款统计数据
+ */
+export function getRefundStats() {
+  console.log('[管理员API] 获取退款统计')
+  return api
+    .get(API_CONFIG.admin.refundStats)
+    .then((response) => {
+      console.log('[管理员API] 获取退款统计成功')
+      return response
+    })
+    .catch((error) => {
+      console.error('[管理员API] 获取退款统计失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 获取退款详情
+ * @param {string} refundId - 退款ID
+ * @returns {Promise} 退款详情
+ */
+export function getRefundDetail(refundId) {
+  console.log('[管理员API] 获取退款详情:', refundId)
+  return api
+    .get(API_CONFIG.admin.refundDetail.replace('{refundId}', refundId))
+    .then((response) => {
+      console.log('[管理员API] 获取退款详情成功')
+      return response
+    })
+    .catch((error) => {
+      console.error('[管理员API] 获取退款详情失败:', error)
       throw error
     })
 }
@@ -652,7 +764,7 @@ export function updateUser(userId, userData) {
 export function updateOrderStatus(orderId, statusData) {
   console.log('[管理员API] 修改订单状态:', orderId, statusData)
   return api
-    .put(`/admin/orders/${orderId}/status`, statusData)
+    .put(API_CONFIG.admin.orderUpdateStatus.replace('{orderId}', orderId), statusData)
     .then((response) => {
       console.log('[管理员API] 修改订单状态成功')
       return response
@@ -1077,7 +1189,7 @@ export function deletePermission(permissionId) {
 export function processRefund(refundId, processData) {
   console.log('[管理员API] 处理退款申请:', refundId, processData)
   return api
-    .post(`/admin/finance/refunds/${refundId}/process`, processData)
+    .post(API_CONFIG.admin.refundProcess.replace('{refundId}', refundId), processData)
     .then((response) => {
       console.log('[管理员API] 处理退款申请成功')
       return response
@@ -1095,7 +1207,7 @@ export function processRefund(refundId, processData) {
 export function getRefundStatistics() {
   console.log('[管理员API] 获取退款统计')
   return api
-    .get('/admin/finance/refunds/statistics')
+    .get(API_CONFIG.admin.refundStats)
     .then((response) => {
       console.log('[管理员API] 获取退款统计成功')
       return response

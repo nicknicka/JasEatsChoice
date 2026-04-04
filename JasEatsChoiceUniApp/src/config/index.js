@@ -8,9 +8,9 @@ const ENV = process.env.NODE_ENV || 'development'
 
 // 开发环境配置
 const development = {
-  baseURL: 'http://localhost:8080/api', // 改为 localhost
-  wsURL: 'ws://localhost:8080/api/ws',
-  uploadURL: 'http://localhost:8080/api/v1/upload',
+  baseURL: 'http://localhost:7777/api', // 改为 localhost
+  wsURL: 'ws://localhost:7777/api/ws',
+  uploadURL: 'http://localhost:7777/api/v1/upload',
   imageCDN: '',
   debug: true,
   timeout: 30000,

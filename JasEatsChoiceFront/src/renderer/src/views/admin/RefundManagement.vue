@@ -199,7 +199,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Search, Refresh } from '@element-plus/icons-vue'
-import api from '@/utils/api'
+import { getRefundList, getRefundStats, getRefundDetail, processRefund } from '@/api/admin'
 
 const loading = ref(false)
 const refundList = ref([])
@@ -229,7 +229,7 @@ const pagination = reactive({
 // 获取退款统计数据
 const fetchRefundStats = async () => {
   try {
-    const response = await api.get('http://localhost:8080/api/admin/finance/refunds/stats')
+    const response = await getRefundStats()
     if (response) {
       stats.pending = response.pending || 0
       stats.todayApproved = response.todayApproved || 0
@@ -250,13 +250,11 @@ const processForm = reactive({
 const fetchRefundList = async () => {
   loading.value = true
   try {
-    const response = await api.get('http://localhost:8080/api/admin/finance/refunds', {
-      params: {
-        page: pagination.page,
-        pageSize: pagination.pageSize,
-        keyword: searchForm.keyword,
-        status: searchForm.status
-      }
+    const response = await getRefundList({
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+      keyword: searchForm.keyword,
+      status: searchForm.status
     })
 
     if (response) {
@@ -313,7 +311,7 @@ const handleReset = () => {
 // 查看详情
 const handleView = async (row) => {
   try {
-    const response = await api.get(`http://localhost:8080/api/admin/finance/refunds/${row.refundId}`)
+    const response = await getRefundDetail(row.refundId)
     if (response) {
       currentRefund.value = response
       detailDialogVisible.value = true
@@ -327,7 +325,7 @@ const handleView = async (row) => {
 // 处理退款
 const handleProcess = async (row) => {
   try {
-    const response = await api.get(`http://localhost:8080/api/admin/finance/refunds/${row.refundId}`)
+    const response = await getRefundDetail(row.refundId)
     if (response) {
       currentRefund.value = response
       processForm.decision = 'approve'
@@ -348,13 +346,10 @@ const submitProcess = async () => {
   }
 
   try {
-    const response = await api.post(
-      `http://localhost:8080/api/admin/finance/refunds/${currentRefund.value.refundId}/process`,
-      {
-        decision: processForm.decision,
-        comment: processForm.comment
-      }
-    )
+    const response = await processRefund(currentRefund.value.refundId, {
+      decision: processForm.decision,
+      comment: processForm.comment
+    })
 
     if (response) {
       ElMessage.success('处理提交成功')

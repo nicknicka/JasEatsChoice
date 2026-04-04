@@ -741,28 +741,21 @@ const thirdPartyLogin = (type) => {
 
 // === 用户协议 ===
 .agreement-row {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
   margin-bottom: 10px;
   padding: 0 2px;
-  line-height: 1;
 
   :deep(.el-checkbox__label) {
-    font-size: 11px;
     color: @text-muted;
-    line-height: 1.4;
+    font-size: 11px;
   }
 
   :deep(.el-checkbox__inner) {
     background: transparent;
     border-color: #CCC;
     border-radius: 3px;
-    width: 14px;
-    height: 14px;
-
-    &::after {
-      border-width: 1.5px;
-      left: 3px;
-      top: 0px;
-    }
   }
 
   :deep(.el-checkbox__input.is-checked .el-checkbox__inner) {

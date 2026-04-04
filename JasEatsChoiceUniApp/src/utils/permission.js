@@ -167,7 +167,7 @@ export const permission = {
       // 这里应该调用后端接口，使用code换取手机号
       // 暂时返回模拟数据
       uni.request({
-        url: 'http://localhost:8080/api/wechat/phone',
+        url: 'http://localhost:7777/api/wechat/phone',
         method: 'POST',
         data: { code },
         success: (res) => {

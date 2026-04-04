@@ -6,9 +6,9 @@ const Store = require('electron-store')
 const WebSocket = require('ws')
 // 窗口尺寸常量
 const WINDOW_SIZES = {
-  LOGIN: { width: 400, height: 560 },
-  REGISTER: { width: 400, height: 620 },
-  ADMIN_LOGIN: { width: 400, height: 560 },
+  LOGIN: { width: 400, height: 600 },
+  REGISTER: { width: 400, height: 600 },
+  ADMIN_LOGIN: { width: 400, height: 600 },
   MAIN: { width: 1200, height: 800 }
 }
 
@@ -198,7 +198,7 @@ app.whenReady().then(() => {
             " font-src 'self' data: https://webapi.amap.com https://vdata.amap.com;" +
             " worker-src 'self' blob:;" +
             " connect-src 'self' ws://localhost:* wss://localhost:* ws://127.0.0.1:* wss://127.0.0.1:* http://localhost:* http://127.0.0.1:* https://localhost:* https://127.0.0.1:* https: https://webapi.amap.com https://restapi.amap.com https://vdata.amap.com;" +
-            " media-src 'self' blob: http://localhost:8080 http://127.0.0.1:8080;" +
+            " media-src 'self' blob: http://localhost:7777 http://127.0.0.1:7777;" +
             " object-src 'none';" +
             " base-uri 'self';" +
             " form-action 'self';"

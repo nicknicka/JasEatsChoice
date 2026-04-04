@@ -149,7 +149,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Search, Refresh } from '@element-plus/icons-vue'
-import api from '@/utils/api'
+import { getRechargeList, getRechargeStats, getRechargeDetail } from '@/api/admin'
 
 const loading = ref(false)
 const rechargeList = ref([])
@@ -179,7 +179,7 @@ const pagination = reactive({
 // 获取充值统计数据
 const fetchRechargeStats = async () => {
   try {
-    const response = await api.get('http://localhost:8080/api/admin/finance/recharges/stats')
+    const response = await getRechargeStats()
     if (response) {
       stats.todayAmount = response.todayAmount || 0
       stats.todayCount = response.todayCount || 0
@@ -195,14 +195,12 @@ const fetchRechargeStats = async () => {
 const fetchRechargeList = async () => {
   loading.value = true
   try {
-    const response = await api.get('http://localhost:8080/api/admin/finance/recharges', {
-      params: {
-        page: pagination.page,
-        pageSize: pagination.pageSize,
-        keyword: searchForm.keyword,
-        paymentMethod: searchForm.paymentMethod,
-        status: searchForm.status
-      }
+    const response = await getRechargeList({
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+      keyword: searchForm.keyword,
+      paymentMethod: searchForm.paymentMethod,
+      status: searchForm.status
     })
 
     if (response) {
@@ -266,7 +264,7 @@ const handleReset = () => {
 // 查看详情
 const handleView = async (row) => {
   try {
-    const response = await api.get(`http://localhost:8080/api/admin/finance/recharges/${row.rechargeId}`)
+    const response = await getRechargeDetail(row.rechargeId)
     if (response) {
       currentRecord.value = response
       detailDialogVisible.value = true

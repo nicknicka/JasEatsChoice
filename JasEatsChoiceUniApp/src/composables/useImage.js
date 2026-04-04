@@ -5,7 +5,7 @@
 import { computed } from 'vue'
 
 // 服务器配置（注意：需要包含/api前缀，因为后端context-path是/api）
-const IMAGE_SERVER = 'http://192.168.137.188:8080/api'
+const IMAGE_SERVER = 'http://192.168.137.188:7777/api'
 
 /**
  * 处理单个图片URL

@@ -183,7 +183,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Search, Refresh } from '@element-plus/icons-vue'
-import { getOrderList, getOrderDetail } from '@/api/admin'
+import { getOrderList, getOrderDetail, updateOrderStatus } from '@/api/admin'
 
 const loading = ref(false)
 const orderList = ref([])
@@ -351,10 +351,7 @@ const handleUpdateStatus = (row) => {
 // 提交状态修改
 const submitStatusUpdate = async () => {
   try {
-    const response = await api.put(
-      `http://localhost:8080/api/admin/orders/${statusForm.orderId}/status`,
-      { status: statusForm.status }
-    )
+    const response = await updateOrderStatus(statusForm.orderId, { status: statusForm.status })
 
     if (response) {
       ElMessage.success('状态修改成功')

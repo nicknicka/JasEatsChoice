@@ -225,6 +225,7 @@ import { Camera, Delete, Loading } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { validateImageFile } from '../../../../utils/imageValidator'
 import { logger } from '../../../../config/chatConfig'
+import { API_CONFIG } from '../../../../config'
 
 // 数字滚动动画组件
 const AnimatedNumber = {
@@ -411,7 +412,7 @@ const recognizeDish = async () => {
     // formData.append('userId', 'xxx')
 
     // 调用后端API
-    const apiUrl = 'http://localhost:8080/api/v1/ai/dish-recognize'
+    const apiUrl = API_CONFIG.baseURL + API_CONFIG.ai.recognizeDish
     console.log('🔍 开始识别菜品，API URL:', apiUrl)
     console.log('📤 发送图片:', selectedFile.value.name, selectedFile.value.size, 'bytes')
 

@@ -1,6 +1,6 @@
 // API服务器配置
 export const API_SERVER = {
-  BASE_URL: 'http://localhost:8080/api'
+  BASE_URL: 'http://localhost:7777/api'
 }
 
 // AI助手API端点

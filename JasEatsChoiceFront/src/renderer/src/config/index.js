@@ -1,7 +1,7 @@
 // 后端API配置
 export const API_CONFIG = {
   // 基础URL
-  baseURL: 'http://localhost:8080/api',
+  baseURL: 'http://localhost:7777/api',
 
   // AI助手API端点
   ai: {
@@ -222,10 +222,13 @@ export const API_CONFIG = {
     // 订单管理
     orderList: '/admin/orders', // 订单列表
     orderDetail: '/admin/orders/{orderId}', // 订单详情
+    orderUpdateStatus: '/admin/orders/{orderId}/status', // 修改订单状态
 
     // 菜品管理
     dishList: '/admin/dishes', // 菜品列表
     dishDetail: '/admin/dishes/{dishId}', // 菜品详情
+    dishAuditList: '/admin/dishes/audit', // 菜品审核列表
+    dishAuditDetail: '/admin/dishes/audit/{dishId}', // 菜品审核详情
     auditDish: '/admin/dishes/{dishId}/audit', // 审核菜品
     updateDishStatus: '/admin/dishes/{dishId}/status', // 修改菜品状态
 
@@ -238,7 +241,12 @@ export const API_CONFIG = {
     failWithdrawal: '/admin/finance/withdrawals/{id}/fail', // 标记提现失败
     withdrawalStatistics: '/admin/finance/withdrawals/statistics', // 提现统计
     rechargeList: '/admin/finance/recharges', // 充值记录
+    rechargeStats: '/admin/finance/recharges/stats', // 充值统计
+    rechargeDetail: '/admin/finance/recharges/{rechargeId}', // 充值详情
     refundList: '/admin/finance/refunds', // 退款记录
+    refundStats: '/admin/finance/refunds/stats', // 退款统计
+    refundDetail: '/admin/finance/refunds/{refundId}', // 退款详情
+    refundProcess: '/admin/finance/refunds/{refundId}/process', // 处理退款
 
     // 系统日志
     operationLogs: '/admin/logs/operations', // 操作日志

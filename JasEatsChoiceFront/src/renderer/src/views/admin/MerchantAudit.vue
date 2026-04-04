@@ -97,7 +97,6 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
-import api from '@/utils/api'
 import { getPendingMerchants, auditMerchant } from '../../api/admin'
 
 const loading = ref(false)
@@ -201,20 +200,17 @@ const handleAudit = (row, status) => {
 // 提交审核
 const submitAudit = async () => {
   try {
-    const response = await api.put(
-      `http://localhost:8080/api/admin/merchants/${auditForm.merchantId}/audit`,
-      {
-        status: auditForm.status,
-        reason: auditForm.reason
-      }
-    )
+    const response = await auditMerchant(auditForm.merchantId, {
+      status: auditForm.status,
+      reason: auditForm.reason
+    })
 
-    if (response.data?.success) {
+    if (response.success) {
       ElMessage.success('审核完成')
       auditDialogVisible.value = false
       fetchPendingList()
     } else {
-      ElMessage.error(response.data?.message || '审核失败')
+      ElMessage.error(response.message || '审核失败')
     }
   } catch (error) {
     console.error('审核失败:', error)

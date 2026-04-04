@@ -207,7 +207,7 @@ export const RECIPE_API = {
 
 // ==================== AI 相关 ====================
 export const AI_API = {
-  BASE_URL: 'http://localhost:8080/api', // 基础URL
+  BASE_URL: 'http://localhost:7777/api', // 基础URL
   CHAT: '/agent/supervisor/chat',                        // POST - AI 对话（统一使用SupervisorAgent）
   STREAM_CHAT: '/agent/supervisor-sse/chat',             // POST - AI 流式对话（SSE，桌面端专用）
   HISTORY: '/v1/ai/chat/history',                       // GET - 获取聊天历史
