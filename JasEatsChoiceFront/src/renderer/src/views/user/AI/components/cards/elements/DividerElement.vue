@@ -1,6 +1,6 @@
 <template>
   <div class="divider-element">
-    <el-divider />
+    <div class="divider-line"></div>
   </div>
 </template>
 
@@ -17,5 +17,11 @@ defineProps({
 .divider-element {
   width: 100%;
   padding: 4px 0;
+}
+
+.divider-line {
+  height: 1px;
+  background: #e8e8f8;
+  border-radius: 1px;
 }
 </style>

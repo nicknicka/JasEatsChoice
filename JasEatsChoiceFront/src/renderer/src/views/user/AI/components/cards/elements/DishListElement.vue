@@ -16,8 +16,8 @@
         <div class="dish-image">
           <CommonImage
             :src="dish.imageUrl"
-            :width="120"
-            :height="120"
+            :width="80"
+            :height="80"
             fit="cover"
             :radius="8"
             error-icon="🍲"
@@ -31,9 +31,7 @@
           <div class="dish-header">
             <div class="dish-name">
               {{ dish.dishName || '未命名菜品' }}
-              <el-tag v-if="dish.isRecommended" size="small" type="success" class="recommend-tag">
-                AI推荐
-              </el-tag>
+              <span v-if="dish.isRecommended" class="recommend-pill">AI推荐</span>
             </div>
             <div class="dish-rating" v-if="hasValue(dish.rating)">
               <el-rate
@@ -56,25 +54,20 @@
             <span v-if="hasValue(dish.price)" class="price">
               ¥{{ dish.price }}
             </span>
-            <el-tag
-              v-if="hasValue(dish.category)"
-              size="small"
-              type="success"
-            >
+            <span v-if="hasValue(dish.category)" class="category-pill">
               {{ dish.category }}
-            </el-tag>
+            </span>
           </div>
 
           <!-- 标签 -->
           <div class="dish-tags" v-if="hasValue(dish.tags)">
-            <el-tag
+            <span
               v-for="(tag, index) in dish.tags"
               :key="index"
-              size="small"
-              type="info"
+              class="tag-pill"
             >
               {{ tag }}
-            </el-tag>
+            </span>
           </div>
 
           <!-- 操作按钮 -->
@@ -153,33 +146,33 @@ const handleAction = (actionType, dish) => {
 
 .dish-item {
   display: flex;
-  gap: 16px;
-  padding: 16px;
-  border: 1px solid #e0e0e0;
-  border-radius: 12px;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #f0f2f5;
+  border-radius: 14px;
   background: white;
-  transition: all 0.3s;
+  transition: all 0.2s ease;
 }
 
 .dish-item:hover {
-  border-color: #ff9f43;
-  box-shadow: 0 4px 12px rgba(255, 159, 67, 0.15);
-  transform: translateX(4px);
+  border-color: rgba(255, 159, 67, 0.35);
+  box-shadow: 0 4px 12px rgba(255, 159, 67, 0.12);
+  transform: translateY(2px);
 }
 
 .dish-image {
   flex-shrink: 0;
-  width: 120px;
-  height: 120px;
+  width: 80px;
+  height: 80px;
   overflow: hidden;
-  border-radius: 8px;
+  border-radius: 10px;
 }
 
 .dish-info {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
 }
 
@@ -187,22 +180,31 @@ const handleAction = (actionType, dish) => {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 12px;
+  gap: 8px;
 }
 
 .dish-name {
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 600;
-  color: #333;
+  color: #1f2937;
   flex: 1;
   line-height: 1.4;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
-.recommend-tag {
+.recommend-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  color: white;
+  background: linear-gradient(135deg, #667eea, #764ba2);
   flex-shrink: 0;
+  letter-spacing: 0.3px;
 }
 
 .dish-rating {
@@ -210,8 +212,8 @@ const handleAction = (actionType, dish) => {
 }
 
 .dish-description {
-  font-size: 14px;
-  color: #666;
+  font-size: 13px;
+  color: #64748b;
   line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -222,20 +224,43 @@ const handleAction = (actionType, dish) => {
 .dish-meta {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
 .price {
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 600;
-  color: #f56c6c;
+  color: #ff6347;
+}
+
+.category-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #38b26a;
+  background: rgba(86, 212, 143, 0.12);
 }
 
 .dish-tags {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+}
+
+.tag-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 400;
+  color: #64748b;
+  background: #f0f2f5;
+  letter-spacing: 0.2px;
 }
 
 .dish-actions {

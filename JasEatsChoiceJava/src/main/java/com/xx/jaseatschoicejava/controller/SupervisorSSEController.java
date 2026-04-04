@@ -52,18 +52,15 @@ public class SupervisorSSEController {
     private final StreamingResponseAgent streamingResponseAgent;
     private final CustomerServiceAgent customerServiceAgent;
     private final ExecutorService executorService = Executors.newCachedThreadPool();
-    private final com.xx.jaseatschoicejava.service.AIChatHistoryService aiChatHistoryService;
     private final ObjectMapper objectMapper;
 
     public SupervisorSSEController(
             SupervisorAgentFactory supervisorAgentFactory,
             StreamingResponseAgent streamingResponseAgent,
-            CustomerServiceAgent customerServiceAgent,
-            com.xx.jaseatschoicejava.service.AIChatHistoryService aiChatHistoryService) {
+            CustomerServiceAgent customerServiceAgent) {
         this.supervisorAgentFactory = supervisorAgentFactory;
         this.streamingResponseAgent = streamingResponseAgent;
         this.customerServiceAgent = customerServiceAgent;
-        this.aiChatHistoryService = aiChatHistoryService;
         this.objectMapper = new ObjectMapper();
     }
 
@@ -146,6 +143,18 @@ public class SupervisorSSEController {
 
                 log.info("[阶段1] SupervisorAgent完成，结果长度: {} 字符", cleanedResult.length());
 
+                // ===== 预提取卡片数据 =====
+                // 从 ToolExecutionContext 中提取工具返回的卡片数据，直接发送给前端
+                // 不依赖 Supervisor LLM 或 StreamingResponseAgent LLM 透传
+                java.util.List<String> preExtractedCards = com.xx.jaseatschoicejava.agent.context.ToolExecutionContext.extractCardJsonData();
+                boolean hasPreExtractedCards = !preExtractedCards.isEmpty();
+                if (hasPreExtractedCards) {
+                    log.info("[预提取] 从工具结果中提取到 {} 张卡片，直接发送给前端", preExtractedCards.size());
+                    for (String cardJson : preExtractedCards) {
+                        sendSseEvent(emitter, "message", Map.of("card_data", cardJson, "type", "card"));
+                    }
+                }
+
                 // ===== 阶段2：流式 Response 输出 =====
                 log.info("[阶段2] StreamingResponseAgent开始流式输出: userId={}", userId);
 
@@ -154,11 +163,12 @@ public class SupervisorSSEController {
 
                 // 跨 token 文本缓冲区：LLM 可能将 [CARD_DATA_START] 拆成多个 token 输出
                 // 策略：KMP 流式匹配，逐字符扫描，O(m) per token
+                // 注意：预提取后 LLM 输入已不含卡片标记，但仍保留匹配逻辑作为兜底
+                final String CARD_START = "[CARD_DATA_START]";
+                final String CARD_END = "[CARD_DATA_END]";
                 StringBuilder textBuffer = new StringBuilder();     // 普通模式缓冲区
                 StringBuilder cardDataBuffer = new StringBuilder(); // 收集模式：卡片 JSON 缓冲区
                 StringBuilder matchBuffer = new StringBuilder();    // KMP 部分匹配暂存区
-                final String CARD_START = "[CARD_DATA_START]";
-                final String CARD_END = "[CARD_DATA_END]";
                 final boolean[] isCollecting = {false};
                 final int[] kmpMatchLen = {0}; // KMP 状态：已匹配 CARD_END 的字符数
                 final int[] kmpFailure = _buildKMPFailure(CARD_END);
@@ -243,13 +253,8 @@ public class SupervisorSSEController {
                     .onCompleteResponse(response -> {
                         log.info("[阶段2] StreamingResponseAgent流式输出完成");
 
-                        // 保存聊天历史
-                        try {
-                            aiChatHistoryService.saveMessage(userId, "user", message);
-                            aiChatHistoryService.saveMessage(userId, "ai", fullResponse.toString());
-                        } catch (Exception e) {
-                            log.error("保存聊天历史失败", e);
-                        }
+                        // 聊天历史由前端负责保存（前端能保存cardData等扩展字段）
+                        // 后端不再重复保存，避免消息入库两次
 
                         // 发送完成事件
                         sendSseEvent(emitter, "message", Map.of("done", true));
@@ -271,6 +276,9 @@ public class SupervisorSSEController {
                 // 使用complete()而非completeWithError()，避免异常传播到Spring MVC的
                 // GlobalExceptionHandler，导致尝试用text/event-stream Content-Type返回JSON
                 try { emitter.complete(); } catch (Exception ignored) {}
+            } finally {
+                // 清理工具执行上下文，防止 ThreadLocal 泄漏
+                com.xx.jaseatschoicejava.agent.context.ToolExecutionContext.clear();
             }
         }, executorService);
 

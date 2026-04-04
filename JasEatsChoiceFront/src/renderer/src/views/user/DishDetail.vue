@@ -311,7 +311,7 @@ import {
   Van,
   WarningFilled,
   Food,
-  FriedFood,
+  Food as FriedFood,
   CirclePlus,
   ShoppingCart,
   Delete,

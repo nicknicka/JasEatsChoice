@@ -3,10 +3,13 @@ package com.xx.jaseatschoicejava.agent.config;
 import com.xx.jaseatschoicejava.agent.agents.*;
 import com.xx.jaseatschoicejava.agent.tools.merchant.MerchantQueryTools;
 import com.xx.jaseatschoicejava.agent.tools.merchant.MerchantStatsTools;
+import com.xx.jaseatschoicejava.agent.tools.menu.MenuQueryTools;
 import com.xx.jaseatschoicejava.agent.tools.nutrition.CalorieCalculatorTools;
 import com.xx.jaseatschoicejava.agent.tools.nutrition.NutritionAnalysisTools;
 import com.xx.jaseatschoicejava.agent.tools.nutrition.DietRecordAnalysisTools;
+import com.xx.jaseatschoicejava.agent.tools.nutrition.NutritionQueryTools;
 import com.xx.jaseatschoicejava.agent.tools.order.OrderCreateTools;
+import com.xx.jaseatschoicejava.agent.tools.order.OrderGuideTools;
 import com.xx.jaseatschoicejava.agent.tools.order.OrderQueryTools;
 import com.xx.jaseatschoicejava.agent.tools.recommendation.RecommendationFilterTools;
 import com.xx.jaseatschoicejava.agent.tools.recommendation.RecommendationQueryTools;
@@ -15,7 +18,11 @@ import com.xx.jaseatschoicejava.agent.tools.system.LocationTools;
 import com.xx.jaseatschoicejava.agent.tools.system.LocationRecommendationTools;
 import com.xx.jaseatschoicejava.agent.tools.system.TimeTools;
 import com.xx.jaseatschoicejava.agent.tools.system.TimeRecommendationTools;
+import com.xx.jaseatschoicejava.agent.tools.user.UserDietRecordTools;
+import com.xx.jaseatschoicejava.agent.tools.user.UserHealthGoalTools;
+import com.xx.jaseatschoicejava.agent.tools.user.UserPreferenceTools;
 import com.xx.jaseatschoicejava.agent.tools.user.UserProfileTools;
+import com.xx.jaseatschoicejava.agent.tools.user.UserQueryTools;
 import com.xx.jaseatschoicejava.agent.tools.user.HealthGoalTrackerTools;
 import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 import dev.langchain4j.agentic.AgenticServices;
@@ -70,6 +77,9 @@ public class LangChain4jConfig {
     private DietRecordAnalysisTools dietRecordAnalysisTools;
 
     @Resource
+    private NutritionQueryTools nutritionQueryTools;
+
+    @Resource
     private RecommendationQueryTools recommendationQueryTools;
 
     @Resource
@@ -93,11 +103,33 @@ public class LangChain4jConfig {
     @Resource
     private LocationRecommendationTools locationRecommendationTools;
 
-    @Resource
-    private OrderQueryTools orderQueryTools;
+    // OrderQueryTools 手动创建，避免Spring AOP代理导致@Tool注解无法扫描
+    // OrderCreateTools 手动创建，避免Spring AOP代理导致@Tool注解无法扫描
+
+    // OrderGuideTools 手动创建，避免Spring AOP代理导致@Tool注解无法扫描
+
+    // MenuQueryTools 手动创建，避免Spring AOP代理导致@Tool注解无法扫描
 
     @Resource
-    private OrderCreateTools orderCreateTools;
+    private com.xx.jaseatschoicejava.service.OrderService orderService;
+
+    @Resource
+    private com.xx.jaseatschoicejava.service.OrderDishService orderDishService;
+
+    @Resource
+    private com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+
+    @Resource
+    private UserQueryTools userQueryTools;
+
+    @Resource
+    private UserPreferenceTools userPreferenceTools;
+
+    @Resource
+    private UserHealthGoalTools userHealthGoalTools;
+
+    @Resource
+    private UserDietRecordTools userDietRecordTools;
 
     // 需要手动创建的工具（避免Spring AOP代理导致@Tool注解无法扫描）
     @Resource
@@ -123,6 +155,7 @@ public class LangChain4jConfig {
                 .apiKey(zhipuAIConfig.getApiKey())
                 .model("glm-4-plus")
                 .temperature(0.3)
+                .maxToken(4096)
                 .maxRetries(1)
                 .build();
 
@@ -189,7 +222,7 @@ public class LangChain4jConfig {
                 .chatModel(agentModel)
                 .chatMemory(MessageWindowChatMemory.withMaxMessages(20))
                 .name("UserPreferenceAgent")
-                .tools(userProfileTools, healthGoalTrackerTools)
+                .tools(userProfileTools, healthGoalTrackerTools, userQueryTools, userPreferenceTools, userHealthGoalTools)
                 .build();
     }
 
@@ -205,7 +238,7 @@ public class LangChain4jConfig {
                 .chatModel(agentModel)
                 .chatMemory(MessageWindowChatMemory.withMaxMessages(20))
                 .name("NutritionGuideAgent")
-                .tools(nutritionAnalysisTools, calorieCalculatorTools, dietRecordAnalysisTools)
+                .tools(nutritionQueryTools, nutritionAnalysisTools, calorieCalculatorTools, dietRecordAnalysisTools, userDietRecordTools)
                 .build();
     }
 
@@ -221,7 +254,7 @@ public class LangChain4jConfig {
                 .chatModel(agentModel)
                 .chatMemory(MessageWindowChatMemory.withMaxMessages(20))
                 .name("DishRecommendationAgent")
-                .tools(recommendationQueryTools, recommendationFilterTools, recommendationRankTools)
+                .tools(recommendationQueryTools, recommendationFilterTools, recommendationRankTools, createMenuQueryTools())
                 .build();
     }
 
@@ -285,7 +318,7 @@ public class LangChain4jConfig {
                 .chatModel(agentModel)
                 .chatMemory(MessageWindowChatMemory.withMaxMessages(20))
                 .name("OrderHelperAgent")
-                .tools(orderQueryTools, orderCreateTools)
+                .tools(createOrderQueryTools(), createOrderCreateTools(), createOrderGuideTools())
                 .build();
     }
 
@@ -306,6 +339,52 @@ public class LangChain4jConfig {
     }
 
     // ==================== 辅助方法 ====================
+
+    /**
+     * 创建非代理的OrderQueryTools实例
+     * 必须手动创建，避免Spring AOP代理导致LangChain4j无法扫描@Tool注解
+     */
+    private OrderQueryTools createOrderQueryTools() {
+        OrderQueryTools tools = new OrderQueryTools();
+        setField(tools, "orderService", orderService);
+        setField(tools, "orderDishService", orderDishService);
+        return tools;
+    }
+
+    /**
+     * 创建非代理的OrderCreateTools实例
+     * 必须手动创建，避免Spring AOP代理导致LangChain4j无法扫描@Tool注解
+     */
+    private OrderCreateTools createOrderCreateTools() {
+        OrderCreateTools tools = new OrderCreateTools();
+        setField(tools, "orderService", orderService);
+        setField(tools, "orderDishService", orderDishService);
+        setField(tools, "merchantService", merchantService);
+        setField(tools, "dishService", dishService);
+        setField(tools, "objectMapper", objectMapper);
+        return tools;
+    }
+
+    /**
+     * 创建非代理的OrderGuideTools实例
+     * 必须手动创建，避免Spring AOP代理导致LangChain4j无法扫描@Tool注解
+     */
+    private OrderGuideTools createOrderGuideTools() {
+        OrderGuideTools tools = new OrderGuideTools();
+        setField(tools, "merchantService", merchantService);
+        setField(tools, "dishService", dishService);
+        return tools;
+    }
+
+    /**
+     * 创建非代理的MenuQueryTools实例
+     * 必须手动创建，避免Spring AOP代理导致LangChain4j无法扫描@Tool注解
+     */
+    private MenuQueryTools createMenuQueryTools() {
+        MenuQueryTools tools = new MenuQueryTools();
+        setField(tools, "dishService", dishService);
+        return tools;
+    }
 
     /**
      * 创建非代理的LocationTools实例

@@ -1,17 +1,15 @@
 <template>
   <div class="uni-card-footer">
-    <div v-if="footer.text" class="footer-text">{{ footer.text }}</div>
+    <div v-if="footer.note" class="footer-text">{{ footer.note }}</div>
     <div v-if="footer.actions?.length" class="footer-actions">
-      <el-button
+      <button
         v-for="(action, index) in footer.actions"
         :key="index"
-        type="primary"
-        link
-        size="small"
+        class="footer-link-btn"
         @click="handleAction(action)"
       >
         {{ action.text }}
-      </el-button>
+      </button>
     </div>
   </div>
 </template>
@@ -43,20 +41,38 @@ const handleAction = (action) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 20px;
-  background: #f9fafb;
-  border-top: 1px solid #f0f0f0;
+  padding: 10px 20px;
+  background: #f8f9fa;
+  border-top: 1px solid #f0f2f5;
+  border-radius: 0 0 16px 16px;
 }
 
 .footer-text {
   font-size: 12px;
-  color: #999;
+  color: #8c93a0;
   line-height: 1.5;
 }
 
 .footer-actions {
   display: flex;
-  gap: 4px;
+  gap: 8px;
   flex-shrink: 0;
+}
+
+.footer-link-btn {
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #667eea;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  white-space: nowrap;
+}
+
+.footer-link-btn:hover {
+  color: #5562d6;
+  text-decoration: underline;
 }
 </style>

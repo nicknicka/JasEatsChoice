@@ -268,13 +268,41 @@ const userStore = useUserStore()
 const router = useRouter()
 
 // ========== 卡片组件导入 ==========
-// 所有卡片统一走 UniCard 渲染，旧卡片组件不再使用
+import OrderListCard from './cards/OrderListCard.vue'
+import FavoriteListCard from './cards/FavoriteListCard.vue'
+import ReviewListCard from './cards/ReviewListCard.vue'
+import CouponListCard from './cards/CouponListCard.vue'
+import UserInfoCard from './cards/UserInfoCard.vue'
+import DishListCard from './cards/DishListCard.vue'
+import ErrorCard from './cards/ErrorCard.vue'
+import OrderGuideCard from './cards/OrderGuideCard.vue'
+// [UniCard迁移] 导入 UniCard 统一卡片组件
 import UniCard from './cards/UniCard.vue'
 
+const cardComponents = {
+	order_list_card: OrderListCard,
+	favorite_list_card: FavoriteListCard,
+	review_list_card: ReviewListCard,
+	coupon_list_card: CouponListCard,
+	user_info_card: UserInfoCard,
+	dish_list_card: DishListCard,
+	error_card: ErrorCard,
+	order_guide_card: OrderGuideCard,
+}
+
+// 旧映射逻辑保留不动
+const _legacyGetCardComponent = (messageType) => cardComponents[messageType]
+
 /**
- * 所有卡片消息统一使用 UniCard 组件渲染
+ * [UniCard迁移] 新版 getCardComponent
+ * 优先走旧映射，找不到则回退到 UniCard 统一组件
  */
-const getCardComponent = () => UniCard
+const getCardComponent = (messageType) => {
+	const legacy = _legacyGetCardComponent(messageType)
+	if (legacy) return legacy
+	// 旧映射未命中，统一交给 UniCard 渲染
+	return UniCard
+}
 
 const parseCardData = (cardData) => {
 	if (!cardData) return null
@@ -290,9 +318,9 @@ const chatContainerRef = ref(null)
 const bottomContainerRef = ref(null)
 // ========== 卡片处理器 ==========
 const {
-	parseCardDataFromContentUniCard: parseCardDataFromContent,
+	parseCardDataFromContent,
 	restoreCardDataForMessages: _restoreCardData,
-} = useCardHandler(ref([]))
+} = useCardHandler(ref([])) // 临时空ref，后面替换
 
 // ========== 消息管理 ==========
 const {
@@ -330,7 +358,7 @@ const {
 	getProgressDots, getProgressClass,
 } = useAdvancedStreaming({
 	messages, isMounted, getMessage, parseCardDataFromContent,
-	convertToSupportedCardType: cardHandler.convertToSupportedCardTypeWithUniCard,
+	convertToSupportedCardType: cardHandler.convertToSupportedCardType,
 	validateAndSaveMessage,
 	handleFinalResult: async (messageIndex, _parsedData) => {
 		const message = getMessage(messageIndex)

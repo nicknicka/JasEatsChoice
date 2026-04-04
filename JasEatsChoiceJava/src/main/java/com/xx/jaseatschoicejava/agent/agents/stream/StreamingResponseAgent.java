@@ -41,8 +41,13 @@ public interface StreamingResponseAgent {
         # 用户ID识别
         当前对话的用户ID是：{{userId}}
 
+        # 专家Agent分析结果
+        以下是专家Agent为您收集的分析结果，请基于这些数据进行回复。不要否认数据的存在，这些数据是真实查询结果：
+
+        {{supervisorResult}}
+
         # 核心职责
-        1. 将专家Agent的分析结果用自然语言呈现给用户
+        1. 将上方专家Agent的分析结果用自然语言呈现给用户
         2. 识别结构化数据并转换为 UniCard Schema 卡片格式
         3. 保持对话的友好性和专业性
 
@@ -113,6 +118,7 @@ public interface StreamingResponseAgent {
         Markdown文本识别规则：
         - 菜品列表：识别 "1. **菜名**" 或 "- **菜名**" 格式，必须包含至少一个菜品
         - 提取菜名、价格、热量、评分等信息
+        - 订单列表：识别 "订单号：xxx | 状态：xxx | 金额：xxx" 格式，提取订单号、状态、金额、时间
         - 将提取的信息转换为 UniCard Schema JSON 格式
 
         JSON类型识别：
@@ -120,6 +126,10 @@ public interface StreamingResponseAgent {
         - 商家数据：包含 items 数组（数组长度>0），每个item有name/rating/distance → theme: "merchant"
         - 订单数据：包含orderId/items/status/total → theme: "order", order_list element
         - 健康数据：包含calories/protein/carbs/stats → theme: "health", health_stats element
+
+        特殊标记识别（优先级最高）：
+        - 如果输入中已包含 [CARD_DATA_START]...[CARD_DATA_END] 包裹的 UniCard JSON，直接透传，不要修改或重新生成
+        - 只在自然语言前面/后面添加适当的说明文字即可
 
         # 营养数据来源说明
         - 如果数据来自数据库：suggestion 中可以不特别说明
@@ -198,6 +208,26 @@ public interface StreamingResponseAgent {
           "displayMode": "inline"
         }
         [CARD_DATA_END]
+
+        ## 示例3：订单列表（工具已返回 UniCard JSON）
+        原始：
+        "📋 用户订单列表（最近3条）
+
+        1. 订单号：O123 | 状态：已完成 | 金额：40.00元 | 菜品数：2 | 时间：2026-04-01
+        2. 订单号：O456 | 状态：已取消 | 金额：12.00元 | 菜品数：1 | 时间：2026-03-28
+
+        [CARD_DATA_START]
+        {"schema":"jaseat_card_v1","header":{"title":{"text":"我的订单","icon":"📋"},"subtitle":"共3条订单","theme":"order"},"elements":[{"tag":"order_list","orders":[...]}]}
+        [CARD_DATA_END]"
+
+        转换后（直接透传卡片数据，添加自然语言描述）：
+        "📋 您的订单查询结果如下：
+
+        [CARD_DATA_START]
+        {"schema":"jaseat_card_v1","header":{"title":{"text":"我的订单","icon":"📋"},"subtitle":"共3条订单","theme":"order"},"elements":[{"tag":"order_list","orders":[...]}]}
+        [CARD_DATA_END]
+
+        如需查看某个订单的详细信息，请告诉我订单号。"
 
         # 字段提取规则
         - dishId：从"菜品ID：xxx"提取

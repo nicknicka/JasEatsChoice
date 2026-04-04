@@ -1,10 +1,14 @@
 <template>
   <div class="uni-card-header" :style="headerStyle">
-    <div class="header-title">
-      <span v-if="header.title?.icon" class="icon">{{ header.title.icon }}</span>
-      <span class="title">{{ header.title?.text }}</span>
+    <!-- 噪点纹理覆盖层 -->
+    <div class="header-noise-overlay"></div>
+    <div class="header-content">
+      <div class="header-title">
+        <span v-if="header.title?.icon" class="icon">{{ header.title.icon }}</span>
+        <span class="title">{{ header.title?.text }}</span>
+      </div>
+      <div v-if="header.subtitle" class="header-subtitle">{{ header.subtitle }}</div>
     </div>
-    <div v-if="header.subtitle" class="header-subtitle">{{ header.subtitle }}</div>
   </div>
 </template>
 
@@ -42,30 +46,52 @@ const headerStyle = computed(() => {
 
 <style scoped>
 .uni-card-header {
+  position: relative;
   color: white;
-  padding: 16px 20px;
+  padding: 14px 20px;
+  border-radius: 16px 16px 0 0;
+  overflow: hidden;
+}
+
+/* SVG 噪点纹理 */
+.header-noise-overlay {
+  position: absolute;
+  inset: 0;
+  opacity: 0.06;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-size: 128px 128px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.header-content {
+  position: relative;
+  z-index: 2;
 }
 
 .header-title {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 600;
   margin-bottom: 4px;
 }
 
 .icon {
-  font-size: 24px;
+  font-size: 22px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.15));
 }
 
 .title {
   line-height: 1.4;
+  letter-spacing: 0.3px;
 }
 
 .header-subtitle {
-  font-size: 14px;
-  opacity: 0.9;
+  font-size: 13px;
+  opacity: 0.85;
   margin-top: 2px;
+  letter-spacing: 0.2px;
 }
 </style>

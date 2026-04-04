@@ -26,6 +26,12 @@ public class ToolExecutionContext {
     private static final ThreadLocal<Stack<ToolExecutionInfo>> EXECUTION_STACK = ThreadLocal.withInitial(Stack::new);
 
     /**
+     * 已完成的工具执行列表（不会被 pop 清除）
+     * 用于在 supervisor 完成后提取卡片数据
+     */
+    private static final ThreadLocal<java.util.List<ToolExecutionInfo>> COMPLETED_EXECUTIONS = ThreadLocal.withInitial(java.util.ArrayList::new);
+
+    /**
      * 工具执行信息
      */
     @Data
@@ -67,6 +73,8 @@ public class ToolExecutionContext {
         if (!stack.isEmpty()) {
             ToolExecutionInfo info = stack.pop();
             info.setResult(result);
+            // 同时保存到已完成列表（不被 pop 清除）
+            COMPLETED_EXECUTIONS.get().add(info);
             log.debug("工具执行结束: {}, 结果类型: {}", info.getToolName(),
                     result != null ? result.getClass().getSimpleName() : "null");
         }
@@ -101,11 +109,52 @@ public class ToolExecutionContext {
     }
 
     /**
-     * 清空当前线程的工具执行栈
+     * 获取所有已完成的工具执行结果（包含卡片数据）
+     * 用于在 supervisor 完成后提取卡片 JSON
+     *
+     * @return 已完成的工具执行结果列表
+     */
+    public static java.util.List<ToolExecutionInfo> getCompletedExecutions() {
+        return new java.util.ArrayList<>(COMPLETED_EXECUTIONS.get());
+    }
+
+    /**
+     * 从已完成的工具结果中提取所有卡片 JSON 数据
+     * 查找结果中包含 [CARD_DATA_START]...[CARD_DATA_END] 的内容
+     *
+     * @return 提取到的卡片 JSON 字符串列表
+     */
+    public static java.util.List<String> extractCardJsonData() {
+        java.util.List<String> cards = new java.util.ArrayList<>();
+        String CARD_START = "[CARD_DATA_START]";
+        String CARD_END = "[CARD_DATA_END]";
+
+        for (ToolExecutionInfo info : COMPLETED_EXECUTIONS.get()) {
+            if (info.getResult() instanceof String resultStr) {
+                int searchFrom = 0;
+                while (true) {
+                    int sIdx = resultStr.indexOf(CARD_START, searchFrom);
+                    if (sIdx == -1) break;
+                    int eIdx = resultStr.indexOf(CARD_END, sIdx + CARD_START.length());
+                    if (eIdx == -1) break;
+                    String cardJson = resultStr.substring(sIdx + CARD_START.length(), eIdx).trim();
+                    if (!cardJson.isEmpty()) {
+                        cards.add(cardJson);
+                    }
+                    searchFrom = eIdx + CARD_END.length();
+                }
+            }
+        }
+        return cards;
+    }
+
+    /**
+     * 清空当前线程的工具执行栈和已完成列表
      * 通常在请求处理完成后调用
      */
     public static void clear() {
         EXECUTION_STACK.get().clear();
+        COMPLETED_EXECUTIONS.get().clear();
         log.debug("工具执行栈已清空");
     }
 
