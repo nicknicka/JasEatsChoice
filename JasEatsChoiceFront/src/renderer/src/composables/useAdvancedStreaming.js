@@ -250,6 +250,7 @@ export function useAdvancedStreaming(options) {
 			if (message) {
 				message.content = parsedData.message
 				message.progress = true
+				message._isProgressContent = true
 			}
 			return { shouldContinue: true }
 		}
@@ -311,6 +312,13 @@ export function useAdvancedStreaming(options) {
 			// 清除思考/进度状态
 			if (message.isThinking) message.isThinking = false
 			if (message.progress === true) message.progress = false
+
+			// 清除进度文本残留
+			if (message._isProgressContent) {
+				message.content = ''
+				message.displayContent = ''
+				message._isProgressContent = false
+			}
 
 			let newContent = parsedData.content
 

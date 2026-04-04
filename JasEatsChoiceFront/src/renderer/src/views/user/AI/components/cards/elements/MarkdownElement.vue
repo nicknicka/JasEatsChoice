@@ -33,7 +33,7 @@ const sanitizedContent = computed(() => {
 
 .markdown-content {
   font-size: 14px;
-  line-height: 1.8;
+  line-height: 1.4;
   color: #333;
   word-break: break-word;
 }
@@ -41,18 +41,18 @@ const sanitizedContent = computed(() => {
 .markdown-content :deep(h1),
 .markdown-content :deep(h2),
 .markdown-content :deep(h3) {
-  margin: 12px 0 8px;
+  margin: 6px 0 4px;
   color: #1a1a1a;
 }
 
 .markdown-content :deep(p) {
-  margin: 8px 0;
+  margin: 4px 0;
 }
 
 .markdown-content :deep(ul),
 .markdown-content :deep(ol) {
   padding-left: 20px;
-  margin: 8px 0;
+  margin: 4px 0;
 }
 
 .markdown-content :deep(code) {
@@ -65,16 +65,16 @@ const sanitizedContent = computed(() => {
 
 .markdown-content :deep(pre) {
   background: #f5f7fa;
-  padding: 12px;
+  padding: 6px;
   border-radius: 8px;
   overflow-x: auto;
-  margin: 8px 0;
+  margin: 4px 0;
 }
 
 .markdown-content :deep(blockquote) {
   border-left: 4px solid #667eea;
   padding-left: 12px;
-  margin: 8px 0;
+  margin: 4px 0;
   color: #666;
 }
 </style>

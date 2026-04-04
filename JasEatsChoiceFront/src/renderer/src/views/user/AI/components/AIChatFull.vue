@@ -770,15 +770,16 @@ onUnmounted(() => {
 				.more-btn:hover { opacity: 1 !important; }
 				&:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
 				&.markdown-content {
-					:deep(br) { display: block; content: ""; margin: 0; }
-					:deep(h1), :deep(h2), :deep(h3) { margin: 8px 0 6px 0; font-weight: 600; line-height: 1.5; }
+					:deep(br) { display: inline; content: ""; margin: 0; }
+					:deep(h1), :deep(h2), :deep(h3) { margin: 4px 0 2px 0; font-weight: 600; line-height: 1.4; }
 					:deep(h1) { font-size: 1.286rem; } :deep(h2) { font-size: 1.143rem; } :deep(h3) { font-size: 1rem; }
-					:deep(p) { margin: 6px 0; line-height: 1.6; }
-					:deep(pre) { background: rgba(0,0,0,0.05); border-radius: 8px; padding: 8px; margin: 6px 0; overflow-x: auto; code { font-family: 'Courier New', monospace; font-size: 0.857rem; line-height: 1.4; color: #333; } }
+					:deep(p) { margin: 2px 0; line-height: 1.5; }
+					:deep(pre) { background: rgba(0,0,0,0.05); border-radius: 8px; padding: 8px; margin: 4px 0; overflow-x: auto; code { font-family: 'Courier New', monospace; font-size: 0.857rem; line-height: 1.4; color: #333; } }
 					:deep(code:not(pre code)) { background: rgba(0,0,0,0.05); padding: 2px 5px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.85em; }
-					:deep(ul), :deep(ol) { margin: 6px 0; padding-left: 20px; line-height: 1.5; }
-					:deep(li) { margin: 4px 0; }
-					:deep(table) { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 0.929rem; background: #fff; border-radius: 8px; overflow: hidden;
+					:deep(ul), :deep(ol) { margin: 0; padding-left: 20px; line-height: 1.4; }
+					:deep(li) { margin: 0; }
+					:deep(li p) { margin: 0; line-height: 1.4; }
+					:deep(table) { width: 100%; border-collapse: collapse; margin: 6px 0; font-size: 0.929rem; background: #fff; border-radius: 8px; overflow: hidden;
 						th { background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%); color: #fff; font-weight: 600; padding: 10px 12px; text-align: left; }
 						td { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; color: #333; line-height: 1.5; }
 						tr:last-child td { border-bottom: none; } tr:hover { background-color: #f8f9fa; }
