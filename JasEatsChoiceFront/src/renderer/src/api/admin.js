@@ -4,7 +4,7 @@
  */
 
 import api from '../utils/api'
-import { API_CONFIG } from '../config'
+import API, { buildUrl } from './index'
 
 // ==================== 管理员认证 ====================
 
@@ -17,7 +17,7 @@ import { API_CONFIG } from '../config'
 export function adminLogin(username, password) {
   console.log('[管理员API] 尝试登录:', username)
   return api
-    .post(API_CONFIG.admin.login, { username, password })
+    .post(API.ADMIN.LOGIN, { username, password })
     .then((response) => {
       console.log('[管理员API] 登录成功:', response)
       return response
@@ -35,7 +35,7 @@ export function adminLogin(username, password) {
 export function getCurrentAdmin() {
   console.log('[管理员API] 获取当前管理员信息')
   return api
-    .get(API_CONFIG.admin.current)
+    .get(API.ADMIN.CURRENT)
     .then((response) => {
       console.log('[管理员API] 获取管理员信息成功:', response)
       return response
@@ -54,7 +54,7 @@ export function getCurrentAdmin() {
 export function getAdminList(params = {}) {
   console.log('[管理员API] 获取管理员列表:', params)
   return api
-    .get(API_CONFIG.admin.list, { params })
+    .get(API.ADMIN.LIST, { params })
     .then((response) => {
       console.log('[管理员API] 获取管理员列表成功')
       return response
@@ -73,7 +73,7 @@ export function getAdminList(params = {}) {
 export function createAdmin(adminData) {
   console.log('[管理员API] 创建管理员:', adminData.username)
   return api
-    .post(API_CONFIG.admin.create, adminData)
+    .post(API.ADMIN.CREATE, adminData)
     .then((response) => {
       console.log('[管理员API] 创建管理员成功')
       return response
@@ -93,7 +93,7 @@ export function createAdmin(adminData) {
 export function updateAdminStatus(adminId, status) {
   console.log('[管理员API] 修改管理员状态:', adminId, status)
   return api
-    .put(API_CONFIG.admin.updateStatus.replace('{adminId}', adminId), { status })
+    .put(buildUrl(API.ADMIN.UPDATE_STATUS, { adminId }), { status })
     .then((response) => {
       console.log('[管理员API] 修改管理员状态成功')
       return response
@@ -113,7 +113,7 @@ export function updateAdminStatus(adminId, status) {
 export function resetAdminPassword(adminId, password) {
   console.log('[管理员API] 重置管理员密码:', adminId)
   return api
-    .put(API_CONFIG.admin.resetPassword.replace('{adminId}', adminId), { password })
+    .put(buildUrl(API.ADMIN.RESET_PASSWORD, { adminId }), { password })
     .then((response) => {
       console.log('[管理员API] 重置管理员密码成功')
       return response
@@ -171,7 +171,7 @@ export function changeAdminPassword(passwordData) {
 export function getDashboardStats() {
   console.log('[管理员API] 获取控制台统计数据')
   return api
-    .get(API_CONFIG.admin.dashboard)
+    .get(API.ADMIN.DASHBOARD)
     .then((response) => {
       console.log('[管理员API] 获取控制台统计数据成功')
       return response
@@ -190,7 +190,7 @@ export function getDashboardStats() {
 export function getUserStats(days = 7) {
   console.log('[管理员API] 获取用户统计数据, 天数:', days)
   return api
-    .get(API_CONFIG.admin.userStats, { params: { days } })
+    .get(API.ADMIN.USER_STATS, { params: { days } })
     .then((response) => {
       console.log('[管理员API] 获取用户统计数据成功')
       return response
@@ -209,7 +209,7 @@ export function getUserStats(days = 7) {
 export function getOrderStats(days = 7) {
   console.log('[管理员API] 获取订单统计数据, 天数:', days)
   return api
-    .get(API_CONFIG.admin.orderStats, { params: { days } })
+    .get(API.ADMIN.ORDER_STATS, { params: { days } })
     .then((response) => {
       console.log('[管理员API] 获取订单统计数据成功')
       return response
@@ -228,7 +228,7 @@ export function getOrderStats(days = 7) {
 export function getRevenueStats(days = 7) {
   console.log('[管理员API] 获取收入统计数据, 天数:', days)
   return api
-    .get(API_CONFIG.admin.revenueStats, { params: { days } })
+    .get(API.ADMIN.REVENUE_STATS, { params: { days } })
     .then((response) => {
       console.log('[管理员API] 获取收入统计数据成功')
       return response
@@ -249,7 +249,7 @@ export function getRevenueStats(days = 7) {
 export function getUserList(params = {}) {
   console.log('[管理员API] 获取用户列表:', params)
   return api
-    .get(API_CONFIG.admin.userList, { params })
+    .get(API.ADMIN.USER_LIST, { params })
     .then((response) => {
       console.log('[管理员API] 获取用户列表成功')
       return response
@@ -268,7 +268,7 @@ export function getUserList(params = {}) {
 export function getUserDetail(userId) {
   console.log('[管理员API] 获取用户详情:', userId)
   return api
-    .get(API_CONFIG.admin.userDetail.replace('{userId}', userId))
+    .get(buildUrl(API.ADMIN.USER_DETAIL, { userId }))
     .then((response) => {
       console.log('[管理员API] 获取用户详情成功')
       return response
@@ -288,7 +288,7 @@ export function getUserDetail(userId) {
 export function updateUserStatus(userId, status) {
   console.log('[管理员API] 修改用户状态:', userId, status)
   return api
-    .put(API_CONFIG.admin.updateUserStatus.replace('{userId}', userId), { status })
+    .put(buildUrl(API.ADMIN.UPDATE_USER_STATUS, { userId }), { status })
     .then((response) => {
       console.log('[管理员API] 修改用户状态成功')
       return response
@@ -307,7 +307,7 @@ export function updateUserStatus(userId, status) {
 export function deleteUser(userId) {
   console.log('[管理员API] 删除用户:', userId)
   return api
-    .delete(API_CONFIG.admin.deleteUser.replace('{userId}', userId))
+    .delete(buildUrl(API.ADMIN.DELETE_USER, { userId }))
     .then((response) => {
       console.log('[管理员API] 删除用户成功')
       return response
@@ -328,7 +328,7 @@ export function deleteUser(userId) {
 export function getMerchantList(params = {}) {
   console.log('[管理员API] 获取商家列表:', params)
   return api
-    .get(API_CONFIG.admin.merchantList, { params })
+    .get(API.ADMIN.MERCHANT_LIST, { params })
     .then((response) => {
       console.log('[管理员API] 获取商家列表成功')
       return response
@@ -347,7 +347,7 @@ export function getMerchantList(params = {}) {
 export function getMerchantDetail(merchantId) {
   console.log('[管理员API] 获取商家详情:', merchantId)
   return api
-    .get(API_CONFIG.admin.merchantDetail.replace('{merchantId}', merchantId))
+    .get(buildUrl(API.ADMIN.MERCHANT_DETAIL, { merchantId }))
     .then((response) => {
       console.log('[管理员API] 获取商家详情成功')
       return response
@@ -367,7 +367,7 @@ export function getMerchantDetail(merchantId) {
 export function auditMerchant(merchantId, auditData) {
   console.log('[管理员API] 审核商家:', merchantId, auditData)
   return api
-    .post(API_CONFIG.admin.auditMerchant.replace('{merchantId}', merchantId), auditData)
+    .post(buildUrl(API.ADMIN.AUDIT_MERCHANT, { merchantId }), auditData)
     .then((response) => {
       console.log('[管理员API] 审核商家成功')
       return response
@@ -387,7 +387,7 @@ export function auditMerchant(merchantId, auditData) {
 export function updateMerchantStatus(merchantId, status) {
   console.log('[管理员API] 修改商家状态:', merchantId, status)
   return api
-    .put(API_CONFIG.admin.updateMerchantStatus.replace('{merchantId}', merchantId), { status })
+    .put(buildUrl(API.ADMIN.UPDATE_MERCHANT_STATUS, { merchantId }), { status })
     .then((response) => {
       console.log('[管理员API] 修改商家状态成功')
       return response
@@ -408,7 +408,7 @@ export function updateMerchantStatus(merchantId, status) {
 export function getOrderList(params = {}) {
   console.log('[管理员API] 获取订单列表:', params)
   return api
-    .get(API_CONFIG.admin.orderList, { params })
+    .get(API.ADMIN.ORDER_LIST, { params })
     .then((response) => {
       console.log('[管理员API] 获取订单列表成功')
       return response
@@ -427,7 +427,7 @@ export function getOrderList(params = {}) {
 export function getOrderDetail(orderId) {
   console.log('[管理员API] 获取订单详情:', orderId)
   return api
-    .get(API_CONFIG.admin.orderDetail.replace('{orderId}', orderId))
+    .get(buildUrl(API.ADMIN.ORDER_DETAIL, { orderId }))
     .then((response) => {
       console.log('[管理员API] 获取订单详情成功')
       return response
@@ -448,7 +448,7 @@ export function getOrderDetail(orderId) {
 export function getDishList(params = {}) {
   console.log('[管理员API] 获取菜品列表:', params)
   return api
-    .get(API_CONFIG.admin.dishList, { params })
+    .get(API.ADMIN.DISH_LIST, { params })
     .then((response) => {
       console.log('[管理员API] 获取菜品列表成功')
       return response
@@ -467,7 +467,7 @@ export function getDishList(params = {}) {
 export function getDishDetail(dishId) {
   console.log('[管理员API] 获取菜品详情:', dishId)
   return api
-    .get(API_CONFIG.admin.dishDetail.replace('{dishId}', dishId))
+    .get(buildUrl(API.ADMIN.DISH_DETAIL, { dishId }))
     .then((response) => {
       console.log('[管理员API] 获取菜品详情成功')
       return response
@@ -487,7 +487,7 @@ export function getDishDetail(dishId) {
 export function auditDish(dishId, auditData) {
   console.log('[管理员API] 审核菜品:', dishId, auditData)
   return api
-    .post(API_CONFIG.admin.auditDish.replace('{dishId}', dishId), auditData)
+    .post(buildUrl(API.ADMIN.AUDIT_DISH, { dishId }), auditData)
     .then((response) => {
       console.log('[管理员API] 审核菜品成功')
       return response
@@ -506,7 +506,7 @@ export function auditDish(dishId, auditData) {
 export function getDishAuditList(params = {}) {
   console.log('[管理员API] 获取菜品审核列表:', params)
   return api
-    .get(API_CONFIG.admin.dishAuditList, { params })
+    .get(API.ADMIN.DISH_AUDIT_LIST, { params })
     .then((response) => {
       console.log('[管理员API] 获取菜品审核列表成功')
       return response
@@ -525,7 +525,7 @@ export function getDishAuditList(params = {}) {
 export function getDishAuditDetail(dishId) {
   console.log('[管理员API] 获取菜品审核详情:', dishId)
   return api
-    .get(API_CONFIG.admin.dishAuditDetail.replace('{dishId}', dishId))
+    .get(buildUrl(API.ADMIN.DISH_AUDIT_DETAIL, { dishId }))
     .then((response) => {
       console.log('[管理员API] 获取菜品审核详情成功')
       return response
@@ -545,7 +545,7 @@ export function getDishAuditDetail(dishId) {
 export function updateDishStatus(dishId, status) {
   console.log('[管理员API] 修改菜品状态:', dishId, status)
   return api
-    .put(API_CONFIG.admin.updateDishStatus.replace('{dishId}', dishId), { status })
+    .put(buildUrl(API.ADMIN.UPDATE_DISH_STATUS, { dishId }), { status })
     .then((response) => {
       console.log('[管理员API] 修改菜品状态成功')
       return response
@@ -568,7 +568,7 @@ export function updateDishStatus(dishId, status) {
 export function getRechargeList(params = {}) {
   console.log('[管理员API] 获取充值记录列表:', params)
   return api
-    .get(API_CONFIG.admin.rechargeList, { params })
+    .get(API.ADMIN.RECHARGE_LIST, { params })
     .then((response) => {
       console.log('[管理员API] 获取充值记录列表成功')
       return response
@@ -586,7 +586,7 @@ export function getRechargeList(params = {}) {
 export function getRechargeStats() {
   console.log('[管理员API] 获取充值统计')
   return api
-    .get(API_CONFIG.admin.rechargeStats)
+    .get(API.ADMIN.RECHARGE_STATS)
     .then((response) => {
       console.log('[管理员API] 获取充值统计成功')
       return response
@@ -605,7 +605,7 @@ export function getRechargeStats() {
 export function getRechargeDetail(rechargeId) {
   console.log('[管理员API] 获取充值详情:', rechargeId)
   return api
-    .get(API_CONFIG.admin.rechargeDetail.replace('{rechargeId}', rechargeId))
+    .get(buildUrl(API.ADMIN.RECHARGE_DETAIL, { rechargeId }))
     .then((response) => {
       console.log('[管理员API] 获取充值详情成功')
       return response
@@ -624,7 +624,7 @@ export function getRechargeDetail(rechargeId) {
 export function getRefundList(params = {}) {
   console.log('[管理员API] 获取退款记录列表:', params)
   return api
-    .get(API_CONFIG.admin.refundList, { params })
+    .get(API.ADMIN.REFUND_LIST, { params })
     .then((response) => {
       console.log('[管理员API] 获取退款记录列表成功')
       return response
@@ -642,7 +642,7 @@ export function getRefundList(params = {}) {
 export function getRefundStats() {
   console.log('[管理员API] 获取退款统计')
   return api
-    .get(API_CONFIG.admin.refundStats)
+    .get(API.ADMIN.REFUND_STATS)
     .then((response) => {
       console.log('[管理员API] 获取退款统计成功')
       return response
@@ -661,7 +661,7 @@ export function getRefundStats() {
 export function getRefundDetail(refundId) {
   console.log('[管理员API] 获取退款详情:', refundId)
   return api
-    .get(API_CONFIG.admin.refundDetail.replace('{refundId}', refundId))
+    .get(buildUrl(API.ADMIN.REFUND_DETAIL, { refundId }))
     .then((response) => {
       console.log('[管理员API] 获取退款详情成功')
       return response
@@ -682,7 +682,7 @@ export function getRefundDetail(refundId) {
 export function getOperationLogs(params = {}) {
   console.log('[管理员API] 获取操作日志:', params)
   return api
-    .get(API_CONFIG.admin.operationLogs, { params })
+    .get(API.ADMIN.OPERATION_LOGS, { params })
     .then((response) => {
       console.log('[管理员API] 获取操作日志成功')
       return response
@@ -701,7 +701,7 @@ export function getOperationLogs(params = {}) {
 export function getSystemLogs(params = {}) {
   console.log('[管理员API] 获取系统日志:', params)
   return api
-    .get(API_CONFIG.admin.systemLogs, { params })
+    .get(API.ADMIN.SYSTEM_LOGS, { params })
     .then((response) => {
       console.log('[管理员API] 获取系统日志成功')
       return response
@@ -720,7 +720,7 @@ export function getSystemLogs(params = {}) {
 export function getLoginLogs(params = {}) {
   console.log('[管理员API] 获取登录日志:', params)
   return api
-    .get(API_CONFIG.admin.loginLogs, { params })
+    .get(API.ADMIN.LOGIN_LOGS, { params })
     .then((response) => {
       console.log('[管理员API] 获取登录日志成功')
       return response
@@ -764,7 +764,7 @@ export function updateUser(userId, userData) {
 export function updateOrderStatus(orderId, statusData) {
   console.log('[管理员API] 修改订单状态:', orderId, statusData)
   return api
-    .put(API_CONFIG.admin.orderUpdateStatus.replace('{orderId}', orderId), statusData)
+    .put(buildUrl(API.ADMIN.ORDER_UPDATE_STATUS, { orderId }), statusData)
     .then((response) => {
       console.log('[管理员API] 修改订单状态成功')
       return response
@@ -1189,7 +1189,7 @@ export function deletePermission(permissionId) {
 export function processRefund(refundId, processData) {
   console.log('[管理员API] 处理退款申请:', refundId, processData)
   return api
-    .post(API_CONFIG.admin.refundProcess.replace('{refundId}', refundId), processData)
+    .post(buildUrl(API.ADMIN.PROCESS_REFUND, { refundId }), processData)
     .then((response) => {
       console.log('[管理员API] 处理退款申请成功')
       return response
@@ -1207,7 +1207,7 @@ export function processRefund(refundId, processData) {
 export function getRefundStatistics() {
   console.log('[管理员API] 获取退款统计')
   return api
-    .get(API_CONFIG.admin.refundStats)
+    .get(API.ADMIN.REFUND_STATS)
     .then((response) => {
       console.log('[管理员API] 获取退款统计成功')
       return response
@@ -1249,7 +1249,7 @@ export function getPendingMerchants(params = {}) {
 export function getWithdrawList(params = {}) {
   console.log('[管理员API] 获取提现记录列表:', params)
   return api
-    .get(API_CONFIG.admin.withdrawalList, { params })
+    .get(API.ADMIN.WITHDRAWAL_LIST, { params })
     .then((response) => {
       console.log('[管理员API] 获取提现记录列表成功')
       return response
@@ -1268,7 +1268,7 @@ export function getWithdrawList(params = {}) {
 export function getWithdrawDetail(withdrawId) {
   console.log('[管理员API] 获取提现详情:', withdrawId)
   return api
-    .get(API_CONFIG.admin.withdrawalDetail.replace('{id}', withdrawId))
+    .get(buildUrl(API.ADMIN.WITHDRAWAL_DETAIL, { id: withdrawId }))
     .then((response) => {
       console.log('[管理员API] 获取提现详情成功')
       return response
@@ -1288,7 +1288,7 @@ export function getWithdrawDetail(withdrawId) {
 export function processWithdraw(withdrawId, auditData) {
   console.log('[管理员API] 审核提现申请:', withdrawId, auditData)
   return api
-    .post(API_CONFIG.admin.auditWithdrawal.replace('{id}', withdrawId), auditData)
+    .post(buildUrl(API.ADMIN.AUDIT_WITHDRAWAL, { id: withdrawId }), auditData)
     .then((response) => {
       console.log('[管理员API] 审核提现申请成功')
       return response
@@ -1307,7 +1307,7 @@ export function processWithdraw(withdrawId, auditData) {
 export function batchProcessWithdraw(batchData) {
   console.log('[管理员API] 批量审核提现:', batchData)
   return api
-    .post(API_CONFIG.admin.batchProcessWithdrawal, batchData)
+    .post(API.ADMIN.BATCH_PROCESS_WITHDRAWAL, batchData)
     .then((response) => {
       console.log('[管理员API] 批量审核提现成功')
       return response
@@ -1327,7 +1327,7 @@ export function batchProcessWithdraw(batchData) {
 export function completeWithdraw(withdrawId, data = {}) {
   console.log('[管理员API] 完成提现:', withdrawId)
   return api
-    .put(API_CONFIG.admin.completeWithdrawal.replace('{id}', withdrawId), data)
+    .put(buildUrl(API.ADMIN.COMPLETE_WITHDRAWAL, { id: withdrawId }), data)
     .then((response) => {
       console.log('[管理员API] 完成提现成功')
       return response
@@ -1347,7 +1347,7 @@ export function completeWithdraw(withdrawId, data = {}) {
 export function failWithdraw(withdrawId, data) {
   console.log('[管理员API] 标记提现失败:', withdrawId)
   return api
-    .put(API_CONFIG.admin.failWithdrawal.replace('{id}', withdrawId), data)
+    .put(buildUrl(API.ADMIN.FAIL_WITHDRAWAL, { id: withdrawId }), data)
     .then((response) => {
       console.log('[管理员API] 标记提现失败成功')
       return response
@@ -1365,7 +1365,7 @@ export function failWithdraw(withdrawId, data) {
 export function getWithdrawStatistics() {
   console.log('[管理员API] 获取提现统计')
   return api
-    .get(API_CONFIG.admin.withdrawalStatistics)
+    .get(API.ADMIN.WITHDRAWAL_STATISTICS)
     .then((response) => {
       console.log('[管理员API] 获取提现统计成功')
       return response

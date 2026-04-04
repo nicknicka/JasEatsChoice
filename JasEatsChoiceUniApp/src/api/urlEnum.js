@@ -1,10 +1,10 @@
 /**
- * API 接口地址统一枚举
+ * API 接口地址统一枚举（UniApp 小程序端）
  * 统一管理所有后端接口地址，便于维护和版本控制
  *
  * 使用说明：
  * 1. 所有接口地址使用大写命名
- * 2. 使用 :param 表示路径参数，如 :id
+ * 2. 使用 :param 表示路径参数，如 :userId
  * 3. 按功能模块分组
  * 4. 注释中标注请求方法和参数说明
  */
@@ -51,18 +51,18 @@ export const MERCHANT_API = {
 
   // 商家信息
   GET_MERCHANT_INFO: '/v1/merchant/info',                // GET - 获取商家信息（当前登录）
-  GET_MERCHANT_PROFILE: '/v1/merchant/profile',          // GET - M-001 获取商家资料
-  UPDATE_MERCHANT_PROFILE: '/v1/merchant/profile',       // PUT - M-002 保存商家资料
+  GET_MERCHANT_PROFILE: '/v1/merchant/profile',          // GET - 获取商家资料
+  UPDATE_MERCHANT_PROFILE: '/v1/merchant/profile',       // PUT - 保存商家资料
   UPDATE_MERCHANT_INFO: '/v1/merchants/:merchantId',     // PUT - 更新商家信息
 
   // 店铺管理
-  GET_SHOP_INFO: '/v1/merchant/shop',                    // GET - M-003 获取店铺信息
-  UPDATE_SHOP_INFO: '/v1/merchant/shop',                 // PUT - M-004 保存店铺信息
+  GET_SHOP_INFO: '/v1/merchant/shop',                    // GET - 获取店铺信息
+  UPDATE_SHOP_INFO: '/v1/merchant/shop',                 // PUT - 保存店铺信息
 
   // 商家设置
-  GET_SETTINGS: '/v1/merchant/settings',                 // GET - M-005 获取商家设置
+  GET_SETTINGS: '/v1/merchant/settings',                 // GET - 获取商家设置
   UPDATE_SETTINGS: '/v1/merchant/settings',              // PUT - 保存商家设置
-  UPDATE_LANGUAGE: '/v1/merchant/settings/language',     // PUT - M-009 保存语言设置
+  UPDATE_LANGUAGE: '/v1/merchant/settings/language',     // PUT - 保存语言设置
 
   // 商家收藏
   FAVORITE_MERCHANT: '/v1/users/:userId/favorites/merchants',  // POST - 收藏商家
@@ -81,14 +81,14 @@ export const MERCHANT_API = {
   MERCHANT_WITHDRAW: '/v1/merchants/:merchantId/withdraw',  // POST - 商家提现申请
 
   // 商家财务（新接口）
-  GET_FINANCE_DATA: '/v1/merchant/finance',              // GET - M-012 获取商家财务数据
-  GET_TRANSACTIONS: '/v1/merchant/finance/transactions', // GET - M-013 获取交易记录
-  GET_WITHDRAW_DATA: '/v1/merchant/withdraw',            // GET - M-015 获取提现数据
-  SUBMIT_WITHDRAW: '/v1/merchant/withdraw',              // POST - M-016 提交提现申请
+  GET_FINANCE_DATA: '/v1/merchant/finance',              // GET - 获取商家财务数据
+  GET_TRANSACTIONS: '/v1/merchant/finance/transactions', // GET - 获取交易记录
+  GET_WITHDRAW_DATA: '/v1/merchant/withdraw',            // GET - 获取提现数据
+  SUBMIT_WITHDRAW: '/v1/merchant/withdraw',              // POST - 提交提现申请
 
   // 商家教程
-  GET_TUTORIALS: '/v1/merchant/tutorials',               // GET - M-017 获取教程数据
-  SUBMIT_TUTORIAL_FEEDBACK: '/v1/merchant/tutorials/:tutorialId/feedback',  // POST - M-019 记录反馈
+  GET_TUTORIALS: '/v1/merchant/tutorials',               // GET - 获取教程数据
+  SUBMIT_TUTORIAL_FEEDBACK: '/v1/merchant/tutorials/:tutorialId/feedback',  // POST - 记录反馈
 }
 
 // ==================== 轮播图相关 ====================
@@ -168,6 +168,7 @@ export const COUPON_API = {
   GET_AVAILABLE_COUPONS: '/v1/coupons/available',        // GET - 获取可用优惠券
   CLAIM_COUPON: '/v1/coupons/:couponId/claim',           // POST - 领取优惠券
   USE_COUPON: '/v1/coupons/:couponId/use',               // POST - 使用优惠券
+  RECEIVE_COUPON: '/v1/coupons/:id/receive'              // POST - 领取优惠券（小程序端）
 }
 
 // ==================== 钱包相关 ====================
@@ -177,6 +178,7 @@ export const WALLET_API = {
   RECHARGE: '/v1/wallet/:userId/recharge',               // POST - 充值
   WITHDRAW: '/v1/wallet/:userId/withdraw',               // POST - 提现
   GET_TRANSACTIONS: '/v1/wallet/:userId/transactions',   // GET - 获取交易记录
+  GET_WALLET_INFO: '/v1/wallet'                           // GET - 获取钱包信息（小程序端）
 }
 
 // ==================== 地址相关 ====================
@@ -186,7 +188,8 @@ export const ADDRESS_API = {
   CREATE_ADDRESS: '/v1/addresses',                        // POST - 创建地址
   UPDATE_ADDRESS: '/v1/addresses/:addressId',            // PUT - 更新地址
   DELETE_ADDRESS: '/v1/addresses/:addressId',            // DELETE - 删除地址
-  SET_DEFAULT: '/v1/addresses/:addressId/default'        // PUT - 设置默认地址
+  SET_DEFAULT: '/v1/addresses/:addressId/default',       // PUT - 设置默认地址
+  GET_DEFAULT: '/v1/addresses/default'                   // GET - 获取默认地址
 }
 
 // ==================== 食谱相关 ====================
@@ -202,12 +205,13 @@ export const RECIPE_API = {
   FAVORITE_RECIPE: '/v1/recipe/:recipeId/favorite',    // POST - 收藏食谱
   UNFAVORITE_RECIPE: '/v1/recipe/:recipeId/favorite',  // DELETE - 取消收藏食谱
   SHARE_RECIPE: '/v1/recipe/:recipeId/share',          // POST - 分享食谱
-  GET_NUTRITION: '/v1/recipe/nutrition'                // GET - 获取营养分析
+  GET_NUTRITION: '/v1/recipe/nutrition',                // GET - 获取营养分析
+  GET_ALL: '/v1/recipe/all',                            // GET - 获取所有食谱
+  TOGGLE_FAVORITE: '/v1/recipe/toggle-favorite/:id'    // PUT - 切换收藏状态
 }
 
 // ==================== AI 相关 ====================
 export const AI_API = {
-  BASE_URL: 'http://localhost:7777/api', // 基础URL
   CHAT: '/agent/supervisor/chat',                        // POST - AI 对话（统一使用SupervisorAgent）
   STREAM_CHAT: '/agent/supervisor-sse/chat',             // POST - AI 流式对话（SSE，桌面端专用）
   HISTORY: '/v1/ai/chat/history',                       // GET - 获取聊天历史
@@ -215,7 +219,10 @@ export const AI_API = {
   CLEAR: '/v1/ai/chat/clear',                           // DELETE - 清空聊天记录
   HAS_HISTORY: '/v1/ai/chat/has-history',               // GET - 检查是否有历史
   RECOMMEND: '/v1/ai/recommend',                         // POST - AI 推荐
-  ANALYZE: '/v1/ai/analyze'                             // POST - AI 分析
+  ANALYZE: '/v1/ai/analyze',                             // POST - AI 分析
+  RECIPE: '/v1/ai/recipe',                               // POST - AI 食谱推荐
+  NUTRIENT: '/v1/ai/nutrient',                           // POST - AI 营养分析
+  RECOGNIZE_DISH: '/v1/ai/dish-recognize'               // POST - AI 菜品识别
 }
 
 // ==================== 聊天相关 ====================
@@ -238,6 +245,7 @@ export const NOTIFICATION_API = {
   MARK_READ: '/v1/notifications/:notificationId/read',  // PUT - 标记通知已读
   MARK_ALL_READ: '/v1/notifications/read-all',          // PUT - 标记所有通知已读
   DELETE_NOTIFICATION: '/v1/notifications/:notificationId',  // DELETE - 删除通知
+  GET_LIST: '/notifications/user'                        // GET - 获取用户通知列表
 }
 
 // ==================== 历史记录相关 ====================
@@ -295,14 +303,28 @@ export const PAYMENT_API = {
   CALLBACK: '/v1/payment/callback'                       // POST - 支付回调
 }
 
-// ==================== 管理员相关 ====================
-export const ADMIN_API = {
-  LOGIN: '/v1/admin/login',                              // POST - 管理员登录
-  GET_USERS: '/v1/admin/users',                          // GET - 获取用户列表
-  GET_MERCHANTS: '/v1/admin/merchants',                  // GET - 获取商家列表
-  GET_DISHES: '/v1/admin/dishes',                        // GET - 获取菜品列表
-  GET_ORDERS: '/v1/admin/orders',                        // GET - 获取订单列表
-  GET_STATISTICS: '/v1/admin/statistics'                // GET - 获取统计数据
+// ==================== 分类相关 ====================
+export const CATEGORY_API = {
+  GET_LIST: '/v1/category/list',                         // GET - 获取分类列表
+  GET_COMMON: '/v1/category/common'                      // GET - 获取常用分类
+}
+
+// ==================== 推荐相关 ====================
+export const RECOMMENDATION_API = {
+  GET_RECOMMENDATIONS: '/v1/recommendations',            // GET - 获取推荐列表
+  RECORD_BEHAVIOR: '/v1/recommendations/behavior',       // POST - 记录用户行为
+  REJECT: '/v1/recommendations/rejects',                 // POST - 记录拒绝推荐
+  GET_REJECT_COUNT: '/v1/recommendations/rejects/count', // GET - 统计拒绝次数
+  GET_REJECT_LIST: '/v1/recommendations/rejects/list',   // GET - 获取已拒绝菜品列表
+  CLEAR_REJECT: '/v1/recommendations/rejects'            // DELETE - 清除拒绝记录
+}
+
+// ==================== 收藏相关（旧版，兼容） ====================
+export const COLLECTION_API = {
+  GET_LIST: '/v1/collections',                           // GET - 获取用户收藏列表
+  ADD: '/v1/collections',                                // POST - 添加收藏
+  REMOVE: '/v1/collections',                             // DELETE - 取消收藏
+  CHECK: '/v1/collections/check'                         // GET - 检查是否已收藏
 }
 
 // ==================== 辅助函数 ====================
@@ -362,7 +384,9 @@ export default {
   CAPTCHA_API,
   LOCATION_API,
   PAYMENT_API,
-  ADMIN_API,
+  CATEGORY_API,
+  RECOMMENDATION_API,
+  COLLECTION_API,
   buildUrl,
   buildQueryParams
 }

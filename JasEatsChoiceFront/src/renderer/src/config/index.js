@@ -1,293 +1,55 @@
-// 后端API配置
-export const API_CONFIG = {
-  // 基础URL
+/**
+ * 应用配置文件
+ * 统一管理所有配置项
+ */
+
+// 环境判断
+const ENV = process.env.NODE_ENV || 'development'
+
+// 开发环境配置
+const development = {
   baseURL: 'http://localhost:7777/api',
-
-  // AI助手API端点
-  ai: {
-    chat: '/agent/supervisor-sse/chat', // ✅ SupervisorAgent SSE接口（带Listener，支持位置服务）
-    chatLegacy: '/v1/ai/stream/chat', // 旧版AI聊天接口（流式传输，备用）
-    chatSupervisor: '/agent/supervisor/chat', // SupervisorAgent接口（非流式，智能路由）
-    recipe: '/v1/ai/recipe', // 食谱推荐接口
-    nutrient: '/v1/ai/nutrient', // 营养分析接口
-    recognizeDish: '/v1/ai/dish-recognize', // 菜品识别接口
-    // AI聊天历史管理
-    history: '/v1/ai/chat/history', // 获取聊天历史
-    save: '/v1/ai/chat/save', // 保存聊天消息
-    clear: '/v1/ai/chat/clear', // 清空聊天记录
-    hasHistory: '/v1/ai/chat/has-history' // 检查是否有聊天历史
-  },
-
-  // 用户API端点
-  user: {
-    login: '/v1/users/login', // 登录接口
-    register: '/v1/users/register', // 注册接口
-    profile: '/v1/users/{userId}', // 用户信息接口
-    update: '/v1/users/{userId}', // 更新用户信息接口
-    updatePassword: '/v1/users/{userId}/password', // 修改密码接口
-    uploadAvatar: '/v1/users/{userId}/avatar/base64', // 上传头像接口
-    preferences: '/v1/users/{userId}/preferences', // 用户偏好接口
-    feedback: '/v1/users/feedback', // 提交反馈接口
-    sendSmsCode: '/v1/users/send-sms-code', // 发送手机验证码接口
-    sendEmailCode: '/v1/users/send-email-code' // 发送邮箱验证码接口
-  },
-
-  // 食谱API端点
-  recipe: {
-    today: '/v1/recipe/today', // 今日食谱接口
-    favorite: '/v1/recipe/favorite', // 我的食谱接口
-    recommend: '/v1/recipe/recommend', // 推荐食谱接口
-    all: '/v1/recipe/all', // 所有食谱接口
-    add: '/v1/recipe', // 新增食谱接口
-    update: '/v1/recipe/', // 更新食谱接口 (需要拼接id)
-    delete: '/v1/recipe/', // 删除食谱接口 (需要拼接id)
-    toggleFavorite: '/v1/recipe/toggle-favorite/', // 切换收藏状态 (需要拼接id)
-    batchToggleFavorite: '/v1/recipe/batch-toggle-favorite', // 批量切换收藏状态
-    setToday: '/v1/recipe/', // 设置为今日食谱 (需要拼接id)
-    unsetToday: '/v1/recipe/' // 取消今日食谱 (需要拼接id)
-  },
-
-  // 商家API端点
-  merchant: {
-    list: '/v1/merchant', // 商家列表接口
-    detail: '/v1/merchant/', // 商家详情接口
-    register: '/v1/merchant/register', // 商家注册接口
-    update: '/v1/merchant/{merchantId}', // 更新商家信息接口
-    menu: '/v1/menus/merchants/{merchantId}/menu', // 商家菜单接口
-    comments: '/v1/merchant/{merchantId}/comments', // 商家评价接口
-    album: '/v1/merchant/{merchantId}/album', // 商家相册接口
-    discounts: '/v1/merchant/{merchantId}/discounts', // 商家优惠接口
-    announcements: '/v1/merchant/{merchantId}/announcements', // 商家公告接口
-    businessOverview: '/v1/merchant/{merchantId}/business-overview', // 营业概览接口
-    avatar: '/v1/merchant/{merchantId}/avatar' // 商家头像接口
-  },
-
-  // 菜品API端点
-  dish: {
-    list: '/v1/dishes', // 菜品列表接口
-    detail: '/v1/dishes/', // 菜品详情接口
-    status: '/v1/dishes', // 菜品状态更新接口（使用时拼接 /{dishId}/status）
-    batchStatus: '/v1/dishes/batch/status', // 批量更新菜品状态接口
-    batchDelete: '/v1/dishes/batch' // 批量删除菜品接口
-  },
-
-  // 消息API端点
-  message: {
-    list: '/notifications/user', // 消息列表接口（系统通知）
-    send: '/v1/message/send' // 发送消息接口（聊天消息）
-  },
-
-  // 教程API端点
-  tutorial: {
-    // 用户端（公开）
-    featured: '/v1/tutorial/featured', // 精选教程接口（用于首页展示）
-    list: '/v1/tutorial/list', // 全部教程接口
-    detail: '/v1/tutorial/', // 教程详情接口（需要拼接id）
-    page: '/v1/tutorial/page', // 分页查询教程
-
-    // 普通用户（需要认证）
-    userCreate: '/v1/tutorial/user/create', // 用户创建教程
-    userMy: '/v1/tutorial/user/my', // 获取我的教程列表
-    userUpdate: '/v1/tutorial/user', // 更新教程（需要拼接 '/' + id）
-    userSubmit: '/v1/tutorial/user', // 提交审核（需要拼接 '/' + id + '/submit'）
-    userDelete: '/v1/tutorial/user', // 删除教程（需要拼接 '/' + id）
-
-    // 管理员端
-    adminList: '/v1/tutorial/admin/list', // 获取所有教程（管理员专用）
-    adminCreate: '/v1/tutorial/admin/create', // 管理员创建教程
-    adminPending: '/v1/tutorial/admin/pending', // 获取待审核列表
-    adminApprove: '/v1/tutorial/admin/', // 审核通过（需要拼接 id + '/approve'）
-    adminReject: '/v1/tutorial/admin/', // 审核拒绝（需要拼接 id + '/reject'）
-    adminToggleFeatured: '/v1/tutorial/admin/', // 设置精选（需要拼接 id + '/featured'）
-    adminDelete: '/v1/tutorial/admin/', // 删除教程（需要拼接 id）
-
-    // 商家端
-    merchantCreate: '/v1/tutorial/merchant/create', // 商家创建教程
-    merchantUpdate: '/v1/tutorial/merchant', // 商家更新教程（需要拼接 '/' + id）
-    merchantSubmit: '/v1/tutorial/merchant', // 提交审核（需要拼接 '/' + id + '/submit'）
-    merchantMy: '/v1/tutorial/merchant/my', // 获取商家教程列表
-    merchantDelete: '/v1/tutorial/merchant' // 商家删除教程（需要拼接 '/' + id）
-  },
-
-  // 首页API端点
-  home: {
-    hotTopic: '/v1/home/hot-topic', // 今日热点接口
-    hotTopicClick: '/v1/home/hot-topic/click', // 记录热点点击
-    hotTopicShare: '/v1/home/hot-topic/share' // 记录热点分享
-  },
-
-  // 天气API端点
-  weather: {
-    current: '/v1/weather' // 获取天气信息接口
-  },
-
-  // 位置选择API端点
-  location: {
-    location: '/v1/location', // 获取当前定位接口
-    cascaderData: '/v1/location/cascader', // 获取级联选择器地址数据接口
-    search: '/v1/location/search' // 地址搜索接口
-  },
-
-  // 经营品类API端点
-  category: {
-    list: '/v1/category/list', // 获取所有经营品类接口
-    common: '/v1/category/common' // 获取常用品类接口
-  },
-
-  // 订单API端点
-  order: {
-    list: '/v1/orders/user/', // 获取用户订单列表接口
-    detail: '/v1/orders/' // 获取订单详情接口
-  },
-
-  // 饮食记录API端点
-  diet: {
-    list: '/calorie-records', // 饮食记录接口
-    user: '/calorie-records/user/', // 根据用户ID获取记录
-    date: '/calorie-records/user/{userId}/date/', // 根据用户ID和日期获取记录
-    week: '/calorie-records/user/{userId}/week', // 根据用户ID获取本周记录
-    add: '/calorie-records', // 添加饮食记录接口
-    update: '/calorie-records', // 编辑饮食记录接口
-    delete: '/calorie-records/{id}' // 删除饮食记录接口
-  },
-
-  // 收藏API端点
-  collection: {
-    list: '/v1/collections', // 获取用户收藏列表 (参数: userId)
-    listByType: '/v1/collections/type', // 根据类型获取收藏 (参数: userId, type)
-    add: '/v1/collections', // 添加收藏
-    remove: '/v1/collections', // 取消收藏 (参数: userId, type, id)
-    check: '/v1/collections/check', // 检查是否已收藏 (参数: userId, type, id)
-    clear: '/v1/collections/user/{userId}' // 清空用户所有收藏
-  },
-
-  // 推荐拒绝API端点
-  recommendReject: {
-    add: '/v1/recommendations/rejects', // 记录拒绝推荐 (参数: userId, dishId, reason?)
-    count: '/v1/recommendations/rejects/count', // 统计拒绝次数 (参数: userId, dishId)
-    list: '/v1/recommendations/rejects/list', // 获取已拒绝菜品列表 (参数: userId)
-    frequent: '/v1/recommendations/rejects/frequent', // 获取频繁拒绝的菜品 (参数: userId, threshold?)
-    clear: '/v1/recommendations/rejects' // 清除拒绝记录 (参数: userId, dishId)
-  },
-
-  // 文件上传API端点
-  upload: {
-    image: '/v1/chat/upload-image', // 上传图片接口
-    file: '/v1/chat/upload-file' // 上传文件接口
-  },
-
-  // 群组API端点
-  group: {
-    list: '/v1/groups/my', // 获取我的群组列表
-    detail: '/v1/groups/{groupId}', // 获取群组详情
-    create: '/v1/groups', // 创建群组
-    update: '/v1/groups/{groupId}', // 更新群组信息
-    delete: '/v1/groups/{groupId}', // 删除群组（解散）
-    leave: '/v1/groups/{groupId}/leave', // 退出群聊
-    members: '/v1/groups/{groupId}/members', // 获取群成员列表
-    addMember: '/v1/groups/{groupId}/members', // 添加成员
-    removeMember: '/v1/groups/{groupId}/members/{userId}', // 移除成员
-    checkMember: '/v1/groups/{groupId}/members/{userId}/check', // 检查是否是群成员
-    userRole: '/v1/groups/{groupId}/members/{userId}/role' // 获取用户在群中的角色
-  },
-
-  // 管理员API端点
-  admin: {
-    // 认证
-    login: '/admin/login', // 管理员登录
-    current: '/admin/current', // 获取当前管理员信息
-    list: '/admin/list', // 获取管理员列表
-    create: '/admin/create', // 创建管理员
-    updateStatus: '/admin/{adminId}/status', // 修改管理员状态
-    resetPassword: '/admin/{adminId}/password', // 重置管理员密码
-
-    // 统计
-    dashboard: '/admin/statistics/dashboard', // 控制台统计数据
-    userStats: '/admin/statistics/users', // 用户统计数据
-    orderStats: '/admin/statistics/orders', // 订单统计数据
-    revenueStats: '/admin/statistics/revenue', // 收入统计数据
-
-    // 用户管理
-    userList: '/admin/users', // 用户列表
-    userDetail: '/admin/users/{userId}', // 用户详情
-    updateUserStatus: '/admin/users/{userId}/status', // 修改用户状态
-    deleteUser: '/admin/users/{userId}', // 删除用户
-
-    // 商家管理
-    merchantList: '/admin/merchants', // 商家列表
-    merchantDetail: '/admin/merchants/{merchantId}', // 商家详情
-    auditMerchant: '/admin/merchants/{merchantId}/audit', // 审核商家
-    updateMerchantStatus: '/admin/merchants/{merchantId}/status', // 修改商家状态
-
-    // 订单管理
-    orderList: '/admin/orders', // 订单列表
-    orderDetail: '/admin/orders/{orderId}', // 订单详情
-    orderUpdateStatus: '/admin/orders/{orderId}/status', // 修改订单状态
-
-    // 菜品管理
-    dishList: '/admin/dishes', // 菜品列表
-    dishDetail: '/admin/dishes/{dishId}', // 菜品详情
-    dishAuditList: '/admin/dishes/audit', // 菜品审核列表
-    dishAuditDetail: '/admin/dishes/audit/{dishId}', // 菜品审核详情
-    auditDish: '/admin/dishes/{dishId}/audit', // 审核菜品
-    updateDishStatus: '/admin/dishes/{dishId}/status', // 修改菜品状态
-
-    // 财务管理
-    withdrawalList: '/admin/finance/withdrawals', // 提现申请列表
-    withdrawalDetail: '/admin/finance/withdrawals/{id}', // 提现详情
-    auditWithdrawal: '/admin/finance/withdrawals/{id}/process', // 审核提现
-    batchProcessWithdrawal: '/admin/finance/withdrawals/batch/process', // 批量审核提现
-    completeWithdrawal: '/admin/finance/withdrawals/{id}/complete', // 完成提现
-    failWithdrawal: '/admin/finance/withdrawals/{id}/fail', // 标记提现失败
-    withdrawalStatistics: '/admin/finance/withdrawals/statistics', // 提现统计
-    rechargeList: '/admin/finance/recharges', // 充值记录
-    rechargeStats: '/admin/finance/recharges/stats', // 充值统计
-    rechargeDetail: '/admin/finance/recharges/{rechargeId}', // 充值详情
-    refundList: '/admin/finance/refunds', // 退款记录
-    refundStats: '/admin/finance/refunds/stats', // 退款统计
-    refundDetail: '/admin/finance/refunds/{refundId}', // 退款详情
-    refundProcess: '/admin/finance/refunds/{refundId}/process', // 处理退款
-
-    // 系统日志
-    operationLogs: '/admin/logs/operations', // 操作日志
-    systemLogs: '/admin/logs/system', // 系统日志
-    loginLogs: '/admin/logs/login', // 登录日志
-
-    // 内容管理
-    hotTopics: '/v1/admin/hot-topic', // 热点话题管理
-    hotTopicDetail: '/v1/admin/hot-topic/detail', // 热点话题详情
-    hotTopicCreate: '/v1/admin/hot-topic/create', // 创建热点
-    hotTopicUpdate: '/v1/admin/hot-topic/update', // 更新热点
-    hotTopicDelete: '/v1/admin/hot-topic/delete', // 删除热点
-    hotTopicReview: '/v1/admin/hot-topic/review', // 审核热点
-    hotTopicBatchDelete: '/v1/admin/hot-topic/batch-delete', // 批量删除热点
-    hotTopicStatistics: '/v1/admin/hot-topic/statistics', // 热点统计
-
-    announcements: '/admin/announcements', // 公告列表
-    announcementDetail: '/admin/announcements', // 公告详情（需要拼接/{id}）
-    announcementCreate: '/admin/announcements', // 创建公告
-    announcementUpdate: '/admin/announcements', // 更新公告（需要拼接/{id}）
-    announcementDelete: '/admin/announcements', // 删除公告（需要拼接/{id}）
-    announcementBatchDelete: '/admin/announcements/batch', // 批量删除公告
-    announcementUpdateStatus: '/admin/announcements', // 修改状态（需要拼接/{id}/status）
-    announcementStatistics: '/admin/announcements/statistics' // 公告统计
-  }
+  wsURL: 'ws://localhost:11277/ws',
+  wsChatURL: 'ws://localhost:11277/ws/chat',
+  uploadURL: 'http://localhost:7777/api/v1/upload',
+  imageCDN: '',
+  debug: true,
+  timeout: 30000,
+  enableLog: true
 }
+
+// 生产环境配置
+const production = {
+  baseURL: 'https://api.yourdomain.com',
+  wsURL: 'wss://api.yourdomain.com/ws',
+  wsChatURL: 'wss://api.yourdomain.com/ws/chat',
+  uploadURL: 'https://api.yourdomain.com/v1/upload',
+  imageCDN: 'https://cdn.yourdomain.com',
+  debug: false,
+  timeout: 30000,
+  enableLog: false
+}
+
+// 根据环境选择配置
+const envConfig = {
+  development,
+  production
+}[ENV] || development
 
 // WebSocket配置
 export const WS_CONFIG = {
-  url: 'ws://localhost:11277/ws', // WebSocket服务器地址 - 通用端点（用于订单等）
-  chatUrl: 'ws://localhost:11277/ws/chat' // 聁天专用端点
+  url: envConfig.wsURL,
+  chatUrl: envConfig.wsChatURL
 }
 
 // 高德地图API配置
 export const AMAP_CONFIG = {
-  key: 'YOUR_AMAP_KEY', // 高德地图API Key，需要在高德开放平台申请: https://console.amap.com/dev/key/app
+  key: 'YOUR_AMAP_KEY',
   baseURL: 'https://restapi.amap.com/v3',
-  district: '/config/district' // 行政区域查询接口
+  district: '/config/district'
 }
 
-// 角色名称映射配置（用于修复数据库中的乱码问题）
+// 角色名称映射配置
 export const ROLE_NAME_MAP = {
   SUPER_ADMIN: '超级管理员',
   ADMIN: '管理员',
@@ -295,4 +57,40 @@ export const ROLE_NAME_MAP = {
   MERCHANT_MANAGER: '商家管理员',
   CONTENT_MANAGER: '内容管理员',
   FINANCE_MANAGER: '财务管理员'
+}
+
+// 业务配置
+export const BUSINESS_CONFIG = {
+  // 订单超时时间（分钟）
+  orderTimeout: 30,
+  // 自动收货时间（天）
+  autoConfirmDays: 7,
+  // 退款审核时间（天）
+  refundAuditDays: 3,
+  // 配送范围（米）
+  deliveryRadius: 5000,
+  // 最小起送金额
+  minOrderAmount: 10,
+  // 免配送费金额
+  freeDeliveryAmount: 50
+}
+
+// API配置（命名导出，供其他模块使用）
+export const API_CONFIG = envConfig
+
+// 导出环境判断方法
+export const isDev = ENV === 'development'
+export const isProd = ENV === 'production'
+
+// 导出环境配置
+export const ENV_CONFIG = envConfig
+
+// 默认导出
+export default {
+  ENV,
+  ...envConfig,
+  WS_CONFIG,
+  AMAP_CONFIG,
+  ROLE_NAME_MAP,
+  BUSINESS_CONFIG
 }
