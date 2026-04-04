@@ -1302,7 +1302,7 @@ const logout = () => {
     cancelButtonText: '取消',
     type: 'warning'
   })
-    .then(() => {
+    .then(async () => {
       // 清除localStorage中的所有用户相关数据
       localStorage.removeItem('userInfo')
       localStorage.removeItem('userAvatar')
@@ -1313,6 +1313,11 @@ const logout = () => {
       // 清除Store中的用户信息
       authStore.clearAuth()
       userStore.clearUserInfo()
+
+      // 缩小窗口到登录尺寸
+      if (window.api?.window?.resizeToLogin) {
+        await window.api.window.resizeToLogin()
+      }
 
       // 跳转到登录页面
       router.push('/login')

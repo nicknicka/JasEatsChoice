@@ -1,9 +1,51 @@
 // CommonJS syntax for Electron main process
-const { app, shell, BrowserWindow, ipcMain, session } = require('electron')
+const { app, shell, BrowserWindow, ipcMain, session, screen } = require('electron')
 const path = require('path')
 const fs = require('fs/promises')
 const Store = require('electron-store')
 const WebSocket = require('ws')
+// 窗口尺寸常量
+const WINDOW_SIZES = {
+  LOGIN: { width: 400, height: 560 },
+  REGISTER: { width: 400, height: 620 },
+  ADMIN_LOGIN: { width: 400, height: 560 },
+  MAIN: { width: 1200, height: 800 }
+}
+
+/**
+ * 将窗口居中到屏幕
+ */
+function centerWindow(win, width, height) {
+  const { width: screenW, height: screenH } = screen.getPrimaryDisplay().workAreaSize
+  win.setPosition(Math.round((screenW - width) / 2), Math.round((screenH - height) / 2))
+}
+
+/**
+ * 切换窗口尺寸并居中
+ */
+function resizeWindow(win, sizeType, options = {}) {
+  const { animate = true, resizable } = options
+  const targetSize = WINDOW_SIZES[sizeType]
+  if (!targetSize) {
+    console.error(`[WindowManager] 未知的窗口尺寸类型: ${sizeType}`)
+    return
+  }
+  const { width, height } = targetSize
+  const shouldResizable = resizable !== undefined ? resizable : sizeType === 'MAIN'
+  win.setResizable(shouldResizable)
+  if (process.platform === 'darwin' && animate) {
+    const { width: screenW, height: screenH } = screen.getPrimaryDisplay().workAreaSize
+    win.setBounds({
+      x: Math.round((screenW - width) / 2),
+      y: Math.round((screenH - height) / 2),
+      width, height
+    }, true)
+  } else {
+    win.setSize(width, height)
+    centerWindow(win, width, height)
+  }
+  console.log(`[WindowManager] 窗口调整到 ${sizeType} (${width}x${height}), resizable=${shouldResizable}`)
+}
 
 // Check if we're in development mode
 const isDev = process.env.NODE_ENV === 'development' || process.env.ELECTRON_IS_DEV
@@ -13,13 +55,17 @@ const icon = path.join(__dirname, '../../resources/icon.png')
 let store
 let mainWindow
 let webSocketClient = null
+// 当前窗口状态：login / main
+let windowState = 'login'
 
 function createWindow() {
-  // Create the browser window.
+  // 创建小窗口用于登录
   mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    width: WINDOW_SIZES.LOGIN.width,
+    height: WINDOW_SIZES.LOGIN.height,
     show: false,
+    frame: false,
+    resizable: false,
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
@@ -35,7 +81,7 @@ function createWindow() {
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
-    mainWindow.webContents.openDevTools()
+    // 登录阶段不自动打开 DevTools
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -213,6 +259,43 @@ app.whenReady().then(() => {
   })
 
   createWindow()
+
+  // === 窗口控制 IPC 通道 ===
+  ipcMain.handle('window:resizeToLogin', () => {
+    windowState = 'login'
+    resizeWindow(mainWindow, 'LOGIN')
+  })
+
+  ipcMain.handle('window:resizeToRegister', () => {
+    windowState = 'login'
+    resizeWindow(mainWindow, 'REGISTER')
+  })
+
+  ipcMain.handle('window:resizeToAdminLogin', () => {
+    windowState = 'login'
+    resizeWindow(mainWindow, 'ADMIN_LOGIN')
+  })
+
+  ipcMain.handle('window:resizeToMain', () => {
+    windowState = 'main'
+    resizeWindow(mainWindow, 'MAIN')
+    // 切换到主窗口后打开 DevTools（仅开发模式）
+    if (isDev) {
+      mainWindow.webContents.openDevTools()
+    }
+  })
+
+  ipcMain.handle('window:close', () => {
+    if (mainWindow) {
+      mainWindow.close()
+    }
+  })
+
+  ipcMain.handle('window:minimize', () => {
+    if (mainWindow) {
+      mainWindow.minimize()
+    }
+  })
 
   // Electron-store IPC handlers
   ipcMain.handle('store:set', (_, key, value) => store.set(key, value))

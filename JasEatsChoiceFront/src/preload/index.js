@@ -15,6 +15,15 @@ const api = {
     writeText: (text) => clipboard.writeText(text),
     readText: () => clipboard.readText()
   },
+  // 窗口控制方法
+  window: {
+    resizeToLogin: () => ipcRenderer.invoke('window:resizeToLogin'),
+    resizeToRegister: () => ipcRenderer.invoke('window:resizeToRegister'),
+    resizeToAdminLogin: () => ipcRenderer.invoke('window:resizeToAdminLogin'),
+    resizeToMain: () => ipcRenderer.invoke('window:resizeToMain'),
+    close: () => ipcRenderer.invoke('window:close'),
+    minimize: () => ipcRenderer.invoke('window:minimize')
+  },
   // WebSocket event listeners
   onWebSocketMessage: (callback) => {
     ipcRenderer.on('websocket:message', (event, message) => callback(message))

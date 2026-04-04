@@ -1,186 +1,179 @@
 <template>
   <div class="login-container">
-    <!-- 加载动画遮罩 -->
-    <div class="loading-mask" v-if="showLoading">
-      <div class="loading-content">
-        <svg
-          t="1578185648636"
-          class="loading-svg"
-          viewBox="0 0 1024 1024"
-          version="1.1"
-          xmlns="http://www.w3.org/2000/svg"
-          p-id="3603"
-          width="80"
-          height="80"
-        >
-          <path
-            d="M512 96c-229.888 0-416 186.112-416 416s186.112 416 416 416 416-186.112 416-416S741.888 96 512 96z m0 768c-194.688 0-352-157.312-352-352s157.312-352 352-352 352 157.312 352 352-157.312 352-352 352z"
-            p-id="3604"
-            fill="#fff"
-          ></path>
-          <path
-            d="M671.808 512c0-88.256-71.552-159.808-159.808-159.808V256c123.776 0 224 100.224 224 224 0 5.184-0.128 10.304-0.384 15.424-2.048 39.36-16.384 75.712-39.488 105.408l-87.488-87.488zM352.192 512c0 88.256 71.552 159.808 159.808 159.808V768c-123.776 0-224-100.224-224-224 0-5.184 0.128-10.304 0.384-15.424 2.048-39.36 16.384-75.712 39.488-105.408l87.488 87.488z"
-            p-id="3605"
-            fill="#409eff"
-            animation-name="loadingRotate"
-            animation-duration="1s"
-            animation-iteration-count="infinite"
-            animation-timing-function="linear"
-          ></path>
+    <!-- 装饰光球 -->
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
+    <!-- 自定义标题栏 -->
+    <WindowTitleBar />
+
+    <!-- 品牌区域 -->
+    <div class="brand-area">
+      <div class="brand-logo">
+        <svg width="44" height="44" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6 20C6 20 8 34 24 34C40 34 42 20 42 20" stroke="#E8825C" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          <path d="M4 20H44" stroke="#E8825C" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+          <path d="M20 16L30 4" stroke="#E8825C" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
+          <path d="M24 16L36 6" stroke="#E8825C" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
+          <path d="M18 38H30" stroke="#E8825C" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
         </svg>
-        <p class="loading-text">正在加载...</p>
       </div>
+      <h1 class="brand-name">佳食宜选</h1>
+      <p class="brand-tagline">美食由你选择</p>
     </div>
 
-    <div class="login-card">
-      <h2 class="login-title">用户登录</h2>
-
-      <el-form ref="loginFormRef" :model="loginForm" :rules="loginRules" label-width="80px">
-        <el-form-item label="手机号" prop="phone">
+    <!-- 表单卡片 -->
+    <div class="glass-card">
+      <el-form ref="loginFormRef" :model="loginForm" :rules="loginRules" @submit.prevent>
+        <!-- 手机号 -->
+        <el-form-item prop="phone">
           <el-autocomplete
             v-model="loginForm.phone"
             :fetch-suggestions="querySearch"
             :trigger-on-focus="true"
             @select="handlePhoneChange"
             @input="clearFieldError('phone')"
-            placeholder="请输入手机号"
+            placeholder="手机号"
             clearable
-            size="large"
+            popper-class="login-autocomplete-popper"
           >
+            <template #prefix>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <rect x="5" y="2" width="14" height="20" rx="2"/>
+                <line x1="12" y1="18" x2="12" y2="18.01"/>
+              </svg>
+            </template>
             <template #default="{ item }">
               <div class="saved-account-item">
                 <span>{{ item.label }}</span>
-                <el-link
-                  type="danger"
-                  size="small"
-                  class="delete-account-btn"
-                  @click.stop="deleteSavedAccount(item.value)"
-                >
-                  x
-                </el-link>
+                <span class="delete-btn" @click.stop="deleteSavedAccount(item.value)">删除</span>
               </div>
             </template>
           </el-autocomplete>
         </el-form-item>
 
-        <el-form-item label="密码" prop="password">
+        <!-- 密码 -->
+        <el-form-item prop="password">
           <el-input
             v-model="loginForm.password"
             type="password"
-            placeholder="请输入密码"
+            placeholder="密码"
+            show-password
             @input="clearFieldError('password')"
-          />
+          >
+            <template #prefix>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <rect x="3" y="11" width="18" height="11" rx="2"/>
+                <path d="M7 11V7a5 5 0 0110 0v4"/>
+              </svg>
+            </template>
+          </el-input>
         </el-form-item>
 
-        <el-form-item label="验证码" prop="captcha">
-          <div style="display: flex; align-items: center">
+        <!-- 验证码 -->
+        <el-form-item prop="captcha">
+          <div class="captcha-row">
             <el-input
               v-model="loginForm.captcha"
-              placeholder="请输入验证码"
-              style="width: 160px; margin-right: 10px"
-              @input="
-                (val) => {
-                  loginForm.captcha = val.toUpperCase()
-                  clearFieldError('captcha')
-                }
-              "
-            />
+              placeholder="验证码"
+              @input="(val) => { loginForm.captcha = val.toUpperCase(); clearFieldError('captcha') }"
+            >
+              <template #prefix>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                  <path d="M2 17l10 5 10-5"/>
+                  <path d="M2 12l10 5 10-5"/>
+                </svg>
+              </template>
+            </el-input>
             <img
               :src="captchaBase64"
               alt="验证码"
-              style="width: 100px; height: 36px; background-color: #f5f7fa; cursor: pointer"
-              @click="generateCaptcha"
+              class="captcha-img"
+              @click="refreshCaptcha"
             />
-            <el-link
-              type="primary"
-              size="small"
-              :underline="false"
-              class="captcha-refresh-link"
-              @click="generateCaptcha"
-              >刷新</el-link
-            >
+            <button class="captcha-refresh" :class="{ 'is-spinning': captchaSpinning }" @click.prevent="refreshCaptcha" title="刷新验证码">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M23 4v6h-6"/>
+                <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/>
+              </svg>
+            </button>
           </div>
         </el-form-item>
 
-        <el-form-item>
-          <div style="display: flex; align-items: center; justify-content: center">
-            <el-button type="primary" style="margin-right: 20px" @click="submitForm"
-              >登录</el-button
-            >
-            <el-checkbox v-model="rememberPassword" size="small">记住密码</el-checkbox>
-          </div>
-        </el-form-item>
-
-        <!-- 第三方登录 -->
-        <el-divider>第三方登录</el-divider>
-
-        <el-form-item>
-          <el-button type="warning" block @click="wechatScanLogin">
-            <svg
-              t="1631581532856"
-              class="icon"
-              viewBox="0 0 1024 1024"
-              version="1.1"
-              xmlns="http://www.w3.org/2000/svg"
-              p-id="6153"
-              width="18"
-              height="18"
-              style="margin-right: 8px"
-            >
-              <path
-                d="M976.9 478.8C977.2 454 953.7 435.4 928.6 435.4h-72.1c-19 0-34.4 15.6-34.4 34.6 0 19.1 15.4 34.5 34.4 34.5h72.1c8.1 0 13.2 10.1 7.9 16.3L798.6 602.1c-4.6 5.5-10.3 5.8-14.8 0.7-20.7-24.5-34.7-52.8-39.9-83.6-5-30.1 3.8-60.5 16.4-89.2 4.5-10 10.5-19.6 18-28.8 42.6-56.4 78.6-102.5 86.2-113.7 10.4-14.7 7.3-28.3-6.2-38.1-13.8-9.9-27.7-7.9-38.2 6.7-8.6 13.2-49 63.9-93.9 123.7h-37.1c-27.8 0-50.4 21.8-53.7 49.4-0.8 6.8-0.6 28.5 0.4 45.4 5.1 83.6 41.6 160 88.1 224.3 11.2 15.4 35.1 18.8 48.9 7.2 16.4-13.5 18.8-33 9.7-53-6.3-13.4-20.3-41.3-23.2-66.4 0-0.1-0.1-7.2-0.1-12.2 0-17.3 4-33.7 6.2-37.8 1.8-3.2 5.3-4.2 8.3-2.1 4.1 2.7 22.8 23.9 41.9 63.3 8 15.4 12.6 33.3 11.7 51.2-0.6 11.5-1.8 23.2-3.8 34.5-7.4 42.7-13.1 74.2-28 108.8-10.5 24.6-23.6 45.8-48.5 66.1-34.9 27.3-82.1 36.3-124.1 34.9-62.6-2-121.2-24.2-165.7-53.5-41.1-26.5-74.2-58.8-98.8-96.5 54.7 61.5 104 93.3 154.8 93.3 52.6 0.5 113.3-10.2 149.8-51.8 24.9-27.2 40.4-58.9 43.6-95.4 0.9-9.7 0.9-19.8 0-29.3-7.4-77-24.9-148.1-69.9-207.3 22.9-11.8 44.5-26.3 64.3-43.1 18.4-15.5 36.2-32.5 52.6-51.1 19.3-21.3 36-44.2 49.2-68.4 17.5-31.8 18.3-76-1.4-108.4-19.6-32.4-57.5-40.7-89.1-20.8-42.6 27.6-81.1 83.3-128.7 179.3C404.6 184 378.6 158 350.1 133.5c-45.1-41.3-94.6-51.8-145.2-51.8C84.7 81.7 0 166.4 0 274.1c0 107.7 84.7 192.4 192.3 192.4h112.6c5.8 0 10.5 4.7 10.5 10.5v1.1c0 5.8-4.7 10.5-10.5 10.5H192.3c-30.1 0-56.2 22.6-61 52.1-5.1 31.5 18.3 59 49.2 59.9 31.8 1 57.8-22.4 63.4-54.3 16.2 16.4 41.8 32.5 75.2 44.9 65.1 24.1 119.8 22.9 170.1-0.6C707 638.2 763 604.4 813 560.9c13.1 83.7 55.5 126.3 126.5 131.1 5.9 0.4 10.5 5.6 10.5 11.5 0 6-4.6 10.9-10.5 10.9-82.7 2.8-136.9-66.9-149-127.8-1.7-8.6-1.5-17.5 0.6-25.9 4.5-18.8 26.2-87.2 30.1-119.7 1.1-10.3 0.8-21.7-0.8-32.2-2.5-17.2-45.5-126.2-89.1-177.7 12.5 4.6 30.1 13.1 51.6 25.2 21.5 12.1 47.5 29.4 75.9 49.9 21.9 15.5 43.7 33.3 64.3 53.2 27.4 26 51.8 56.7 70.2 89.4 2.4 4.2 6.8 6.1 10.9 4.3 3.8-1.6 5.9-5.6 5.3-9.6L976.9 478.8z"
-                fill="#00d52e"
-                p-id="6154"
-              ></path>
-            </svg>
-            微信扫码登录
-          </el-button>
-
-          <el-button type="info" block @click="thirdPartyLogin('QQ')">
-            <svg
-              t="1631581785467"
-              class="icon"
-              viewBox="0 0 1024 1024"
-              version="1.1"
-              xmlns="http://www.w3.org/2000/svg"
-              p-id="7863"
-              width="18"
-              height="18"
-              style="margin-right: 8px"
-            >
-              <path
-                d="M511.2 81.1c-237.7 0-430.2 186.9-430.2 430.1 0 241.9 192.5 439.4 430.2 439.4 245.7 0 437.4-197.5 437.4-439.4C948.5 267.9 756.9 81.1 511.2 81.1zM750.4 617.3c-4.7 0.2-9.1 0.4-14 0.4-2.6 0-5.2-0.1-7.7-0.2 61.1-28 107.9-90.2 107.9-162.2 0-98.5-84.4-178.3-186.6-178.3-101.1 0-187.9 85.2-187.9 187.7 0 0.9 0 1.8 0 2.8 0.6 0.1 1.3 0.3 1.9 0.4 83.3 0.2 142.3 72.3 139.7 154.2-0.2 4.2 0.8 9.8 6.3 13.4 5.8 3.8 12.6 1.4 16.9-4.4 32.3-44.8 15.7-103-31.4-122.1-49.2-20-107-3.5-126.9 48.6-2.7 7.4-4.4 14.7-5 22.1-0.2 17.9 1.7 35.8 5.6 52.8 14.5 0.2 27.4 0.2 39.8 0.1 24.6 0 45.1-17.5 45.1-40.6 0-11.4-6.8-21.9-17.7-29.7-0.7 3.8-1.4 7.7-2.1 11.5-7.4 40-44.2 69.2-86.2 69.2-49.6 0-91.1-40.7-91.1-91.5 0-50.9 42.5-91.3 91.2-91.3 37.1 0 68.7 20.1 85 51.8 0.8 1.8 2.1 3.1 3.6 3.8 4.4 2.2 6.6 7.2 5.4 12-0.4 1.5-1.2 3.2-2.2 5.3-18.6 39.5-59 68.7-103.3 75.3v2.2h0-0.1C377 616.7 319.9 555.5 319.9 476c0-86.1 73.5-154.6 159.3-154.6 85.9 0 154.6 73.5 154.6 154.6 0 20.2-4.2 40.4-12.4 60.7C779.6 569.2 774.8 589.7 750.4 617.3z"
-                p-id="7864"
-                fill="#00c5ff"
-              ></path>
-            </svg>
-            QQ登录
-          </el-button>
-        </el-form-item>
-
-        <div class="register-link">
-          <span>没有账号？</span>
-          <el-link type="primary" @click="toRegister">立即注册</el-link>
+        <!-- 记住密码 + 忘记密码 -->
+        <div class="remember-row">
+          <el-checkbox v-model="rememberPassword">记住密码</el-checkbox>
+          <a class="forgot-link" @click="forgotPassword">忘记密码？</a>
         </div>
 
-        <div class="admin-link">
-          <el-link type="info" @click="toAdminLogin">管理员登录</el-link>
+        <!-- 用户协议 -->
+        <div class="agreement-row">
+          <el-checkbox v-model="agreedToTerms">
+            <span class="agreement-text">
+              我已阅读并同意
+              <a class="agreement-link" @click.stop="showAgreement('user')">《用户协议》</a>
+              和
+              <a class="agreement-link" @click.stop="showAgreement('privacy')">《隐私政策》</a>
+            </span>
+          </el-checkbox>
         </div>
+
+        <!-- 登录按钮 -->
+        <button class="login-btn" @click="submitForm" :disabled="showLoading">
+          <span>登 录</span>
+        </button>
       </el-form>
+
+      <!-- 第三方登录 -->
+      <div class="third-party">
+        <div class="divider-line">
+          <span>其他方式</span>
+        </div>
+        <div class="social-btns">
+          <button class="social-btn wechat-btn" @click="wechatScanLogin" title="微信登录">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <path d="M9.5 4C5.36 4 2 6.69 2 10c0 1.89 1.08 3.56 2.78 4.66L4 17l2.5-1.18C7.45 16.07 8.46 16.2 9.5 16.2c.34 0 .67-.02 1-.06C10.17 15.7 10 15.12 10 14.5 10 11.47 12.69 9 16 9c.35 0 .69.03 1.02.08C16.43 6.15 13.27 4 9.5 4zM7 9a1 1 0 110-2 1 1 0 010 2zm5 0a1 1 0 110-2 1 1 0 010 2z" fill="#07C160"/>
+              <path d="M22 14.5c0-2.49-2.46-4.5-5.5-4.5S11 12.01 11 14.5 13.46 19 16.5 19c.86 0 1.67-.15 2.39-.42L21 20l-.58-2.11C21.37 16.95 22 15.79 22 14.5zm-7-1a.75.75 0 110-1.5.75.75 0 010 1.5zm3.5 0a.75.75 0 110-1.5.75.75 0 010 1.5z" fill="#07C160"/>
+            </svg>
+          </button>
+          <button class="social-btn qq-btn" @click="thirdPartyLogin('QQ')" title="QQ登录">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2C8.13 2 5 5.13 5 9.5c0 2.38 1 4.28 2.5 5.5v3.5l2.83-1.42C11.18 17.36 11.57 17.5 12 17.5c.43 0 .82-.14 1.67-.42L16.5 18.5V15c1.5-1.22 2.5-3.12 2.5-5.5C19 5.13 15.87 2 12 2z" fill="#12B7F5"/>
+              <circle cx="9.8" cy="9" r="1.3" fill="white"/>
+              <circle cx="14.2" cy="9" r="1.3" fill="white"/>
+              <path d="M7 15.5c-1.5 1.5-1 3.5.5 4.5" stroke="#12B7F5" stroke-width="1.2" stroke-linecap="round"/>
+              <path d="M17 15.5c1.5 1.5 1 3.5-.5 4.5" stroke="#12B7F5" stroke-width="1.2" stroke-linecap="round"/>
+              <ellipse cx="12" cy="14" rx="2.5" ry="1.2" fill="#FFD54F" opacity="0.8"/>
+              <path d="M9.5 21c.83.5 1.5.5 2.5.5s1.67 0 2.5-.5" stroke="#12B7F5" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- 底部链接 -->
+      <div class="bottom-links">
+        <span>没有账号？</span>
+        <a class="link" @click="toRegister">立即注册</a>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted, watch } from 'vue'
-import { ElMessage, ElForm, ElFormItem, ElInput, ElButton } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { API_CONFIG } from '../../config'
 import { useAuthStore } from '../../store/authStore'
 import { useUserStore } from '../../store/userStore'
+import { useWindowControl } from '../../composables/useWindowControl'
+import WindowTitleBar from '../../components/WindowTitleBar.vue'
 
 const router = useRouter()
+const { expandToMain } = useWindowControl()
 
 // 登录表单数据
 const loginForm = reactive({
@@ -195,48 +188,53 @@ const savedAccounts = ref([])
 // 记住密码选项
 const rememberPassword = ref(false)
 
+// 用户协议勾选
+const agreedToTerms = ref(false)
+
 // 表单验证规则
 const loginRules = reactive({
   phone: [
     { required: true, message: '请输入手机号', trigger: 'blur' },
-    {
-      pattern: /^1[3456789]\d{9}$/,
-      message: '请输入正确的手机号码',
-      trigger: 'blur'
-    }
+    { pattern: /^1[3456789]\d{9}$/, message: '请输入正确的手机号码', trigger: 'blur' }
   ],
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
   captcha: [{ required: true, message: '请输入验证码', trigger: 'blur' }]
 })
 
 // 验证码相关
-const captchaBase64 = ref('') // 后端返回的验证码图片Base64
-const checkCodeKey = ref('') // 后端返回的验证码会话key
+const captchaBase64 = ref('')
+const checkCodeKey = ref('')
 
 const authStore = useAuthStore()
 const userStore = useUserStore()
 
 // 从后端获取验证码
+const captchaSpinning = ref(false)
+
 const generateCaptcha = async () => {
   try {
     const response = await axios.get(`${API_CONFIG.baseURL}/v1/captcha/checkCode`)
     const result = response.data.data
-    // 添加base64图片前缀，否则浏览器无法识别
     captchaBase64.value = 'data:image/png;base64,' + result.checkCode
     checkCodeKey.value = result.checkCodeKey
-    // 开发者模式下自动填充验证码答案
     const isDevMode = import.meta.env.MODE === 'development' || import.meta.env.DEV
     if (isDevMode && result.captchaAnswer) {
       loginForm.captcha = result.captchaAnswer.toUpperCase()
-      console.log('开发者模式: 自动填充验证码答案 ->', result.captchaAnswer)
     }
   } catch (error) {
     console.error('获取验证码失败:', error)
     ElMessage.error('获取验证码失败，请稍后重试')
-    // 失败时使用本地模拟验证码作为 fallback
     captchaBase64.value = ''
     checkCodeKey.value = ''
   }
+}
+
+const refreshCaptcha = async () => {
+  if (captchaSpinning.value) return
+  captchaSpinning.value = true
+  await generateCaptcha()
+  loginForm.captcha = ''
+  setTimeout(() => { captchaSpinning.value = false }, 500)
 }
 
 // 表单引用
@@ -254,30 +252,23 @@ const showLoading = ref(false)
 
 // 页面加载时生成验证码并读取保存的账号信息
 onMounted(async () => {
-  generateCaptcha() // 生成验证码
+  generateCaptcha()
   await loadSavedAccounts()
-  // 自动填充最后登录的账号
   autofillLastAccount()
 })
 
-// 监听路由变化，确保每次进入页面都刷新验证码、重置表单和清除加载状态
+// 监听路由变化
 watch(
   () => router.currentRoute.value.path,
   async (newPath) => {
     if (newPath === '/login') {
       generateCaptcha()
-      // 清除加载状态
       showLoading.value = false
-      // 重置表单
       if (loginFormRef.value) {
         loginFormRef.value.resetFields()
       }
-      // 重新加载保存的账号并自动填充（必须在重置表单之后）
       await loadSavedAccounts()
-      // 使用 setTimeout 确保在 resetFields 完成后再填充
-      setTimeout(() => {
-        autofillLastAccount()
-      }, 0)
+      setTimeout(() => autofillLastAccount(), 0)
     }
   }
 )
@@ -285,22 +276,13 @@ watch(
 // 读取保存的账号信息
 const loadSavedAccounts = async () => {
   try {
-    // 从 electron-store 读取账号信息
     const accounts = await window.api.store.get('savedAccounts')
     if (accounts && Array.isArray(accounts)) {
-      // 解析并清理旧格式的数据
-      const parsedAccounts = accounts
-      // 过滤掉没有phone字段的旧数据，并将旧的username字段转换为phone字段
-      savedAccounts.value = parsedAccounts
+      savedAccounts.value = accounts
         .map((account) => {
-          // 如果账号有username字段但没有phone字段，将username转换为phone
           if (account.username && !account.phone) {
-            return {
-              phone: account.username,
-              password: account.password || ''
-            }
+            return { phone: account.username, password: account.password || '' }
           }
-          // 只保留有phone字段的账号
           return account
         })
         .filter((account) => account.phone)
@@ -316,11 +298,9 @@ const loadSavedAccounts = async () => {
 // 自动填充最后登录的账号
 const autofillLastAccount = () => {
   if (savedAccounts.value.length > 0) {
-    // 获取最后一个保存的账号（通常是最后登录的）
     const lastAccount = savedAccounts.value[savedAccounts.value.length - 1]
     if (lastAccount && lastAccount.phone) {
       loginForm.phone = lastAccount.phone
-      // 如果有保存的密码，则自动填充密码并勾选记住密码
       if (lastAccount.password) {
         loginForm.password = lastAccount.password
         rememberPassword.value = true
@@ -331,32 +311,27 @@ const autofillLastAccount = () => {
 
 // 手机号搜索函数
 const querySearch = (queryString, cb) => {
-  // 根据输入的手机号过滤已保存的账号
   const results = queryString
     ? savedAccounts.value.filter((account) => account.phone && account.phone.includes(queryString))
-    : savedAccounts.value // 当用户没有输入时，显示所有保存的账号
-  // 返回处理后的结果，注意需要将结果转换为el-autocomplete需要的格式
+    : savedAccounts.value
   cb(results.map((account) => ({ value: account.phone, label: account.phone })))
 }
 
 // 当手机号变化或选择时，自动填充密码
 const handlePhoneChange = (value) => {
-  // 确保value是字符串类型
   const selectedPhone = typeof value === 'object' ? value.value : value
   if (!selectedPhone) return
 
   const account = savedAccounts.value.find((acc) => acc.phone === selectedPhone)
   if (account) {
     loginForm.password = account.password || ''
-    rememberPassword.value = !!account.password // 如果有保存的密码，则自动勾选记住密码
+    rememberPassword.value = !!account.password
   } else {
     loginForm.password = ''
     rememberPassword.value = false
   }
-  // 清除手机号和密码字段的验证错误
   clearFieldError('phone')
   clearFieldError('password')
-  // 清除整个表单的验证错误
   if (loginFormRef.value) {
     loginFormRef.value.clearValidate()
   }
@@ -364,83 +339,50 @@ const handlePhoneChange = (value) => {
 
 // 删除保存的账号
 const deleteSavedAccount = async (phone) => {
-  // 过滤掉要删除的账号
   savedAccounts.value = savedAccounts.value.filter((account) => account.phone !== phone)
-  // 更新 electron-store（将 Vue 响应式对象转换为普通对象）
   await window.api.store.set('savedAccounts', JSON.parse(JSON.stringify(savedAccounts.value)))
-
-  // 清空密码输入框和记住密码选项
   loginForm.password = ''
   rememberPassword.value = false
-
-  // 如果当前输入的手机号就是被删除的账号，清空手机号输入框
   if (loginForm.phone === phone) {
     loginForm.phone = ''
-  } else {
-    // 如果输入框不是被删除的账号，强制刷新下拉列表
-    const currentPhone = loginForm.phone
-    if (currentPhone === '') {
-      // 输入框为空时，设置一个临时值再清空，强制触发组件更新
-      loginForm.phone = ' '
-      setTimeout(() => {
-        loginForm.phone = ''
-      }, 0)
-    } else {
-      // 输入框有内容时，清空再恢复
-      loginForm.phone = ''
-      setTimeout(() => {
-        loginForm.phone = currentPhone
-      }, 0)
-    }
   }
-  // 提示删除成功
   ElMessage.success('已删除保存的账号')
 }
 
 // 提交表单
 const submitForm = async () => {
+  if (!agreedToTerms.value) {
+    ElMessage.warning('请先阅读并同意用户协议和隐私政策')
+    return
+  }
+
   if (loginFormRef.value) {
     loginFormRef.value.validate(async (valid) => {
       if (valid) {
         try {
-          // 实际登录逻辑 - 发送用户名、密码、验证码和验证码key到后端
           const response = await axios.post(`${API_CONFIG.baseURL}${API_CONFIG.user.login}`, {
             phone: loginForm.phone,
             password: loginForm.password,
             captcha: loginForm.captcha,
             checkCodeKey: checkCodeKey.value
           })
-          console.log('登录响应:', response.data)
 
-          // 检查后端返回的业务码，不是200则抛出错误
           if (response.data.code !== '200') {
-            throw {
-              response: {
-                data: response.data
-              }
-            }
+            throw { response: { data: response.data } }
           }
 
-          // 登录成功处理
-          const responseData = response.data.data // 后端返回对象包含token和user
-          const token = responseData.token // 提取token
-          const userData = responseData.user // 提取用户信息
-          console.log('Token:', token)
-          // 使用 Pinia 存储认证信息和用户信息
+          const responseData = response.data.data
+          const token = responseData.token
+          const userData = responseData.user
 
-          // 保存认证信息到 Pinia
           authStore.setToken(token)
           authStore.setUserId(userData.userId)
           authStore.setPhone(userData.phone)
-
-          // 保存用户完整信息到 Pinia
           userStore.setUserInfo(userData)
 
-          // 将关键信息保存到localStorage，用于页面刷新或重新登录时恢复
           localStorage.setItem('userId', userData.userId)
           localStorage.setItem('token', token)
           localStorage.setItem('phone', userData.phone)
-          // 可以考虑只保存用户基本信息，避免localStorage过大
           localStorage.setItem(
             'userInfo',
             JSON.stringify({
@@ -451,50 +393,32 @@ const submitForm = async () => {
             })
           )
 
-          console.log('userStore', userStore.userInfo)
-          console.log('authStore', authStore)
           // 保存账号信息
-          // 检查账号是否已经存在
           const accountIndex = savedAccounts.value.findIndex((acc) => acc.phone === loginForm.phone)
-
           if (accountIndex !== -1) {
-            // 更新已有账号
-            savedAccounts.value[accountIndex].password = rememberPassword.value
-              ? loginForm.password
-              : ''
+            savedAccounts.value[accountIndex].password = rememberPassword.value ? loginForm.password : ''
           } else {
-            // 添加新账号
             savedAccounts.value.push({
               phone: loginForm.phone,
               password: rememberPassword.value ? loginForm.password : ''
             })
           }
-
-          // 保存到 electron-store（持久化存储，不会因清除缓存而丢失）
-          // 将 Vue 响应式对象转换为普通对象，避免 IPC 克隆错误
           await window.api.store.set('savedAccounts', JSON.parse(JSON.stringify(savedAccounts.value)))
           ElMessage.success('登录成功！')
 
-          // 登录成功后显示加载动画
+          // 放大窗口并跳转
           showLoading.value = true
-          // 登录成功后根据当前角色跳转到对应首页
-          setTimeout(() => {
-            // 直接跳转到用户首页
+          setTimeout(async () => {
+            await expandToMain()
             router.push('/user/home')
-          }, 270)
+          }, 300)
         } catch (error) {
-          // console.log('登录失败:', error)
-          // 登录失败处理
           console.error('登录失败:', error)
-          ElMessage.error(
-            error.response?.data?.message || '登录失败，请检查验证码或账号密码是否正确'
-          )
-          // 登录失败，重新生成验证码
+          ElMessage.error(error.response?.data?.message || '登录失败，请检查验证码或账号密码是否正确')
           generateCaptcha()
         }
       } else {
         ElMessage.error('表单验证失败，请检查输入')
-        // 验证失败，重新生成验证码
         generateCaptcha()
       }
     })
@@ -503,162 +427,520 @@ const submitForm = async () => {
 
 // 跳转到注册页面
 const toRegister = () => {
-  // 重置表单
   if (loginFormRef.value) {
     loginFormRef.value.resetFields()
   }
   router.push('/register')
 }
 
-// 跳转到管理员登录页面
-const toAdminLogin = () => {
-  // 重置表单
-  if (loginFormRef.value) {
-    loginFormRef.value.resetFields()
-  }
-  router.push('/admin/login')
+// 忘记密码
+const forgotPassword = () => {
+  ElMessage.info('忘记密码功能开发中，请联系客服重置密码')
+}
+
+// 显示协议
+const showAgreement = (type) => {
+  const title = type === 'user' ? '用户协议' : '隐私政策'
+  ElMessage.info(`${title}页面开发中...`)
 }
 
 // 微信扫码登录
 const wechatScanLogin = () => {
-  // 弹出微信扫码登录窗口或显示二维码
   ElMessage.info('微信扫码登录功能开发中...')
-  // 实际实现中，这里会调用微信SDK或后端接口生成二维码
-  // 并监听扫码结果和登录状态
 }
 
 // 第三方登录
 const thirdPartyLogin = (type) => {
-  // 根据第三方类型执行不同的登录逻辑
   ElMessage.info(`${type}登录功能开发中...`)
-  // 实际实现中，这里会调用对应第三方SDK的登录接口
 }
 </script>
 
 <style scoped lang="less">
+// === 配色：简约暖橙 + 玻璃感 ===
+@accent: #F2784B;
+@accent-light: #FF9A76;
+@accent-gradient: linear-gradient(135deg, #F2784B, #E85D3A);
+@text-dark: #2C3E50;
+@text-muted: #8E9AAF;
+@text-placeholder: #B8C4CE;
+@card-bg: rgba(255, 255, 255, 0.55);
+@card-border: rgba(255, 255, 255, 0.7);
+@input-bg: #FFFFFF;
+@input-border: #E8E4E0;
+
 .login-container {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  width: 100%;
+  height: 100vh;
+  background: #FFF7F2;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
-  padding: 20px;
+  position: relative;
+  overflow: hidden;
+  font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
 }
 
-.login-card {
-  width: 100%;
-  max-width: 400px;
-  background-color: #fff;
+// === 柔和装饰光球 ===
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+}
+
+.orb-1 {
+  width: 280px;
+  height: 280px;
+  background: radial-gradient(circle, rgba(242, 120, 75, 0.2) 0%, transparent 70%);
+  top: -80px;
+  right: -60px;
+}
+
+.orb-2 {
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(255, 154, 118, 0.18) 0%, transparent 70%);
+  bottom: 40px;
+  left: -60px;
+}
+
+.orb-3 {
+  width: 150px;
+  height: 150px;
+  background: radial-gradient(circle, rgba(242, 120, 75, 0.12) 0%, transparent 70%);
+  top: 40%;
+  left: 60%;
+}
+
+// === 品牌区域 ===
+.brand-area {
+  text-align: center;
+  margin-top: 8px;
+  position: relative;
+  z-index: 2;
+}
+
+.brand-logo {
+  animation: breathe 4s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.04); opacity: 1; }
+}
+
+.brand-name {
+  font-size: 22px;
+  font-weight: 700;
+  color: @text-dark;
+  margin: 6px 0 2px;
+  letter-spacing: 3px;
+}
+
+.brand-tagline {
+  font-size: 11px;
+  color: @text-muted;
+  letter-spacing: 2px;
+  font-weight: 400;
+}
+
+// === 毛玻璃卡片 ===
+.glass-card {
+  width: calc(100% - 40px);
+  margin: 14px 20px 16px;
+  padding: 22px 24px 16px;
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+// === Element Plus 输入框覆盖 ===
+:deep(.el-form-item) {
+  margin-bottom: 10px;
+}
+
+:deep(.el-form-item__error) {
+  color: #E07060;
+  font-size: 11px;
+  padding-top: 2px;
+}
+
+:deep(.el-input__wrapper),
+:deep(.el-autocomplete .el-input__wrapper) {
+  background: @input-bg;
+  border: 1px solid @input-border;
   border-radius: 10px;
-  padding: 30px;
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-}
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  padding: 7px 12px;
+  transition: all 0.2s ease;
 
-.login-title {
-  text-align: center;
-  margin-bottom: 30px;
-  color: #333;
-  font-size: 1.714rem /* 原值: 24px */;
-}
+  &:hover {
+    border-color: darken(@input-border, 12%);
+  }
 
-/* 确保表单标签和输入框垂直居中对齐 */
-.el-form-item {
-  display: flex !important;
-  align-items: center !important;
-  margin-bottom: 20px;
-}
-
-/* 验证码区域内部垂直居中 */
-.el-form-item .el-form-item__content {
-  align-self: center;
-}
-
-.register-link {
-  text-align: center;
-  margin-top: 15px;
-  font-size: 1rem /* 原值: 14px */;
-  color: #666;
-
-  span {
-    margin-right: 8px;
+  &.is-focus {
+    border-color: @accent;
+    box-shadow: 0 0 0 3px rgba(242, 120, 75, 0.1);
   }
 }
 
-.admin-link {
-  text-align: center;
-  margin-top: 10px;
-  font-size: 0.929rem /* 原值: 13px */;
-}
+:deep(.el-input__inner) {
+  color: @text-dark;
+  font-size: 13px;
+  caret-color: @accent;
 
-// 加载动画样式
-.loading-mask {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 9999;
-  transition: opacity 0.3s ease;
-}
-
-.loading-content {
-  text-align: center;
-  color: #fff;
-}
-
-.loading-svg {
-  animation: rotate 1s linear infinite;
-}
-
-@keyframes rotate {
-  100% {
-    transform: rotate(360deg);
+  &::placeholder {
+    color: @text-placeholder;
+    font-size: 13px;
   }
 }
 
+:deep(.el-input__prefix) {
+  color: @text-muted;
+  margin-right: 6px;
+}
+
+:deep(.el-input__suffix) {
+  color: @text-muted;
+}
+
+:deep(.el-input__clear) {
+  color: @text-muted;
+  &:hover { color: @text-dark; }
+}
+
+:deep(.el-input__password) {
+  color: @text-muted;
+  &:hover { color: @text-dark; }
+}
+
+// 下拉菜单项样式
 .saved-account-item {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
   width: 100%;
 
-  .delete-account-btn {
-    color: #f56c6c;
-    padding: 0;
-    margin: 0;
-    transition: all 0.2s ease;
+  .delete-btn {
+    font-size: 11px;
+    color: #E07060;
+    cursor: pointer;
+    padding: 2px 8px;
+    border-radius: 4px;
+    transition: all 0.2s;
 
     &:hover {
-      color: #ff0000;
-      text-decoration: none;
-      transform: scale(1.2);
+      background: rgba(224, 112, 96, 0.08);
+    }
+  }
+}
+
+// === 验证码行 ===
+.captcha-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+
+  :deep(.el-input) {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.captcha-img {
+  height: 36px;
+  width: 90px;
+  border-radius: 8px;
+  border: 1px solid @input-border;
+  background: #FAFAFA;
+  cursor: pointer;
+  object-fit: contain;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  padding: 2px;
+
+  &:hover {
+    border-color: @accent;
+  }
+}
+
+.captcha-refresh {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: @text-muted;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  flex-shrink: 0;
+
+  &:hover {
+    color: @accent;
+  }
+
+  &.is-spinning svg {
+    animation: spin-once 0.5s ease-out;
+  }
+}
+
+@keyframes spin-once {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+// === 记住密码 + 忘记密码 ===
+.remember-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  padding: 0 2px;
+
+  :deep(.el-checkbox__label) {
+    color: @text-muted;
+    font-size: 12px;
+  }
+
+  :deep(.el-checkbox__inner) {
+    background: transparent;
+    border-color: #CCC;
+    border-radius: 3px;
+  }
+
+  :deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
+    background: @accent;
+    border-color: @accent;
+
+    &::after {
+      border-color: white;
     }
   }
 
-  &:hover {
-    background-color: #f5f7fa;
+  :deep(.el-checkbox__input.is-checked + .el-checkbox__label) {
+    color: @text-dark;
   }
 }
 
-.loading-text {
-  margin-top: 20px;
-  font-size: 1.286rem /* 原值: 18px */;
-  color: #fff;
+.forgot-link {
+  font-size: 12px;
+  color: @text-muted;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.2s;
+
+  &:hover {
+    color: @accent;
+  }
 }
 
-.captcha-refresh-link {
-  margin-left: 10px;
-  font-size: 0.857rem /* 原值: 12px */;
-  opacity: 0.8;
-  transition: opacity 0.2s;
+// === 用户协议 ===
+.agreement-row {
+  margin-bottom: 10px;
+  padding: 0 2px;
+  line-height: 1;
+
+  :deep(.el-checkbox__label) {
+    font-size: 11px;
+    color: @text-muted;
+    line-height: 1.4;
+  }
+
+  :deep(.el-checkbox__inner) {
+    background: transparent;
+    border-color: #CCC;
+    border-radius: 3px;
+    width: 14px;
+    height: 14px;
+
+    &::after {
+      border-width: 1.5px;
+      left: 3px;
+      top: 0px;
+    }
+  }
+
+  :deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
+    background: @accent;
+    border-color: @accent;
+
+    &::after {
+      border-color: white;
+    }
+  }
+
+  :deep(.el-checkbox__input.is-checked + .el-checkbox__label) {
+    color: @text-dark;
+  }
 }
 
-.captcha-refresh-link:hover {
-  font-size: 0.929rem /* 原值: 13px */;
-  opacity: 1;
+.agreement-text {
+  font-size: 11px;
+}
+
+.agreement-link {
+  color: @accent;
+  cursor: pointer;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(242, 120, 75, 0.3);
+  transition: border-color 0.2s;
+
+  &:hover {
+    border-bottom-color: @accent;
+  }
+}
+
+// === 登录按钮 ===
+.login-btn {
+  width: 100%;
+  height: 42px;
+  border: none;
+  border-radius: 10px;
+  background: @accent-gradient;
+  color: white;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 6px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 14px rgba(242, 120, 75, 0.3);
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(242, 120, 75, 0.4);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0) scale(0.98);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// === 第三方登录 ===
+.third-party {
+  margin-top: auto;
+}
+
+.divider-line {
+  display: flex;
+  align-items: center;
+  margin: 14px 0 10px;
+
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(0, 0, 0, 0.06);
+  }
+
+  span {
+    padding: 0 12px;
+    font-size: 11px;
+    color: @text-placeholder;
+    white-space: nowrap;
+  }
+}
+
+.social-btns {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+.social-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  background: rgba(255, 255, 255, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+// === 底部链接 ===
+.bottom-links {
+  text-align: center;
+  margin-top: 14px;
+  font-size: 12px;
+  color: @text-muted;
+
+  .link {
+    color: @accent;
+    cursor: pointer;
+    text-decoration: none;
+    font-weight: 500;
+    transition: opacity 0.2s;
+
+    &:hover {
+      opacity: 0.8;
+    }
+  }
+}
+</style>
+
+<!-- 非 scoped 样式：下拉菜单毛玻璃 -->
+<style lang="less">
+.login-autocomplete-popper {
+  &.el-popper {
+    background: rgba(255, 255, 255, 0.85) !important;
+    backdrop-filter: blur(20px) saturate(1.2);
+    -webkit-backdrop-filter: blur(20px) saturate(1.2);
+    border: 1px solid rgba(0, 0, 0, 0.06) !important;
+    border-radius: 10px !important;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08) !important;
+  }
+
+  .el-autocomplete-suggestion {
+    background: transparent !important;
+    border: none !important;
+    border-radius: 10px !important;
+    padding: 4px 0 !important;
+  }
+
+  .el-autocomplete-suggestion__wrap {
+    max-height: 180px;
+    padding: 0 !important;
+  }
+
+  .el-autocomplete-suggestion li {
+    color: #2C3E50 !important;
+    font-size: 13px;
+    line-height: 36px;
+    padding: 0 14px;
+    transition: background 0.15s;
+    border-radius: 6px;
+    margin: 0 4px;
+
+    &:hover {
+      background: rgba(242, 120, 75, 0.08) !important;
+    }
+  }
+
+  .el-popper__arrow::before {
+    background: rgba(255, 255, 255, 0.85) !important;
+    border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  }
 }
 </style>

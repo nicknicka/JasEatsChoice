@@ -147,59 +147,61 @@ const menuData = {
       isSetting: true
     }
   ],
-  // 商家端菜单
-  // 商家端菜单 - 按功能模块重新排序：首页 → 核心业务 → 店铺管理 → 客户沟通 → 经营分析
+  // 商家端菜单 - 按功能模块重新排序：首页 → AI助手 → 核心业务 → 店铺管理 → 客户沟通 → 经营分析
   merchant: [
     // 首页模块
     { index: '1', name: '我的店铺', icon: HomeFilled, path: '/merchant/home' },
 
+    // AI经营助手 - 单独一级菜单
+    { index: '2', name: 'AI经营助手', icon: ChatDotRound, path: '/merchant/home/ai' },
+
     // 订单管理模块
     {
-      index: '2',
+      index: '3',
       name: '订单管理',
       icon: List,
       children: [
-        { index: '2-1', name: '今日订单', icon: Calendar, path: '/merchant/home/today-orders' },
-        { index: '2-2', name: '全部订单', icon: Document, path: '/merchant/home/orders' }
+        { index: '3-1', name: '今日订单', icon: Calendar, path: '/merchant/home/today-orders' },
+        { index: '3-2', name: '全部订单', icon: Document, path: '/merchant/home/orders' }
       ]
     },
 
     // 店铺管理模块
     {
-      index: '3',
+      index: '4',
       name: '店铺管理',
       icon: Shop,
       children: [
-        { index: '3-1', name: '菜单管理', icon: Shop, path: '/merchant/home/menu' },
-        { index: '3-2', name: '菜品管理', icon: Document, path: '/merchant/home/dish-management' }
+        { index: '4-1', name: '菜单管理', icon: Shop, path: '/merchant/home/menu' },
+        { index: '4-2', name: '菜品管理', icon: Document, path: '/merchant/home/dish-management' }
       ]
     },
 
     // 客户沟通模块
     {
-      index: '4',
+      index: '5',
       name: '客户沟通',
       icon: Message,
       children: [
-        { index: '4-1', name: '商家聊天', icon: ChatDotRound, path: '/merchant/home/chat' },
-        { index: '4-2', name: '消息管理', icon: Message, path: '/merchant/home/messages' }
+        { index: '5-1', name: '商家聊天', icon: ChatDotRound, path: '/merchant/home/chat' },
+        { index: '5-2', name: '消息管理', icon: Message, path: '/merchant/home/messages' }
       ]
     },
 
     // 经营分析模块
     {
-      index: '5',
+      index: '6',
       name: '经营分析',
       icon: DataAnalysis,
       children: [
-        { index: '5-1', name: '评价中心', icon: DataAnalysis, path: '/merchant/home/comments' },
-        { index: '5-2', name: '经营统计', icon: DataAnalysis, path: '/merchant/home/statistics' }
+        { index: '6-1', name: '评价中心', icon: DataAnalysis, path: '/merchant/home/comments' },
+        { index: '6-2', name: '经营统计', icon: DataAnalysis, path: '/merchant/home/statistics' }
       ]
     },
 
     // 设置菜单
     {
-      index: '6',
+      index: '7',
       name: '设置',
       icon: Setting,
       path: '/merchant/home/settings',

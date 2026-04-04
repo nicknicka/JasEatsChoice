@@ -49,6 +49,7 @@ const MerchantOrderDetail = () => import('../views/merchant/OrderDetail.vue') //
 const MerchantComments = () => import('../views/merchant/Comments.vue') // 商家评价中心
 const MerchantRegister = () => import('../views/merchant/MerchantRegister.vue') // 商家注册
 const MerchantWishListAudit = () => import('../views/merchant/WishListAudit.vue') // 想吃列表审核
+const MerchantAI = () => import('../views/merchant/AI/index.vue') // AI经营助手
 
 // Import admin layout
 const AdminLayout = () => import('../components/AdminLayout.vue') // 管理员布局
@@ -403,6 +404,12 @@ const router = createRouter({
           name: 'merchant-wish-list-audit',
           component: MerchantWishListAudit,
           meta: { title: '想吃列表审核' }
+        },
+        {
+          path: 'ai', // AI经营助手
+          name: 'merchant-ai',
+          component: MerchantAI,
+          meta: { title: 'AI经营助手' }
         }
       ]
     },
@@ -551,11 +558,26 @@ const router = createRouter({
   ]
 })
 
-// 路由导航守卫 - 用于设置页面标题和登录状态检查
-router.beforeEach((to, from, next) => {
+// 路由导航守卫 - 用于设置页面标题、登录状态检查和窗口尺寸管理
+router.beforeEach(async (to, from, next) => {
   // 设置当前页面标题
   if (to?.meta?.title) {
     document.title = to.meta.title
+  }
+
+  // 窗口尺寸自动切换
+  const authRoutes = ['/login', '/register', '/admin/login', '/merchant/register']
+  const api = window.api
+  if (api?.window) {
+    if (to.path === '/register' || to.path === '/merchant/register') {
+      await api.window.resizeToRegister()
+    } else if (to.path === '/admin/login') {
+      await api.window.resizeToAdminLogin()
+    } else if (to.path === '/login') {
+      await api.window.resizeToLogin()
+    } else if (to.path.startsWith('/user') || to.path.startsWith('/merchant') || to.path.startsWith('/admin')) {
+      await api.window.resizeToMain()
+    }
   }
 
   // 管理员路由权限验证

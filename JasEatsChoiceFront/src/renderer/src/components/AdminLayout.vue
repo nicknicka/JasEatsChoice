@@ -104,6 +104,20 @@
       <!-- 顶栏 -->
       <el-header height="60px" class="admin-header">
         <div class="header-left">
+          <!-- macOS 窗口控制按钮 -->
+          <div v-if="isMac" class="mac-controls">
+            <button class="mac-btn mac-close" @click="handleClose" title="关闭">
+              <svg width="12" height="12" viewBox="0 0 12 12">
+                <line x1="3.5" y1="3.5" x2="8.5" y2="8.5" stroke="currentColor" stroke-width="1.1" />
+                <line x1="8.5" y1="3.5" x2="3.5" y2="8.5" stroke="currentColor" stroke-width="1.1" />
+              </svg>
+            </button>
+            <button class="mac-btn mac-minimize" @click="handleMinimize" title="最小化">
+              <svg width="12" height="12" viewBox="0 0 12 12">
+                <line x1="3" y1="6" x2="9" y2="6" stroke="currentColor" stroke-width="1.1" />
+              </svg>
+            </button>
+          </div>
           <el-icon class="collapse-icon" @click="toggleCollapse">
             <Fold v-if="!isCollapse" />
             <Expand v-else />
@@ -175,6 +189,20 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+
+const isMac = computed(() => navigator.platform.toLowerCase().includes('mac'))
+
+const handleClose = async () => {
+  if (window.api?.window?.close) {
+    await window.api.window.close()
+  }
+}
+
+const handleMinimize = async () => {
+  if (window.api?.window?.minimize) {
+    await window.api.window.minimize()
+  }
+}
 import {
   DataBoard,
   User,
@@ -268,6 +296,10 @@ const handleCommand = async (command) => {
           cancelButtonText: '取消',
           type: 'warning'
         })
+        // 缩小窗口到登录尺寸
+        if (window.api?.window?.resizeToLogin) {
+          await window.api.window.resizeToLogin()
+        }
         // 使用统一的登出方法
         adminLogout()
         ElMessage.success('退出登录成功')
@@ -463,6 +495,47 @@ watch(
     .header-left {
       display: flex;
       align-items: center;
+
+      .mac-controls {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-right: 16px;
+      }
+
+      .mac-btn {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: default;
+        transition: all 0.15s ease;
+
+        svg {
+          opacity: 0;
+          transition: opacity 0.15s;
+          color: rgba(0, 0, 0, 0.6);
+        }
+      }
+
+      .mac-close {
+        background: #ff5f57;
+        &:hover {
+          background: #ff3b30;
+          svg { opacity: 1; }
+        }
+      }
+
+      .mac-minimize {
+        background: #ffbd2e;
+        &:hover {
+          background: #f0a000;
+          svg { opacity: 1; }
+        }
+      }
 
       .collapse-icon {
         font-size: 1.25rem; /* 使用相对单位，会继承 body 的字体大小 */
