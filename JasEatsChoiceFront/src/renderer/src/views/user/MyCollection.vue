@@ -747,31 +747,33 @@ onMounted(async () => {
 </script>
 
 <style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+
 .my-collection-container {
-  padding: 0 20px 20px 20px;
+  padding: 0 @nordic-space-lg @nordic-space-lg @nordic-space-lg;
   min-height: calc(100vh - 40px);
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background: linear-gradient(135deg, @nordic-bg 0%, darken(@nordic-bg, 5%) 100%);
 
   .header {
     display: flex;
     align-items: center;
-    margin-bottom: 24px;
-    padding: 20px;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    margin-bottom: @nordic-space-lg;
+    padding: @nordic-space-lg;
+    background: @nordic-surface;
+    border-radius: @nordic-radius-lg;
+    box-shadow: 0 2px 12px @nordic-shadow;
 
     .header-content {
       flex: 1;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-left: 20px;
+      margin-left: @nordic-space-lg;
 
       h2 {
-        font-size: 2rem /* 原值: 28px */;
+        font-size: @nordic-text-xl;
         margin: 0;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
@@ -784,13 +786,13 @@ onMounted(async () => {
         gap: 12px;
 
         :deep(.el-tag) {
-          font-size: 1rem /* 原值: 14px */;
-          padding: 8px 16px;
+          font-size: @nordic-text-base;
+          padding: @nordic-space-sm @nordic-space-md;
           font-weight: 500;
         }
 
         .refresh-btn {
-          transition: all 0.3s ease;
+          transition: all @nordic-transition-slow ease;
 
           &:hover {
             transform: rotate(180deg);
@@ -801,16 +803,16 @@ onMounted(async () => {
   }
 
   .filter-bar {
-    margin-bottom: 24px;
-    padding: 20px;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    margin-bottom: @nordic-space-lg;
+    padding: @nordic-space-lg;
+    background: @nordic-surface;
+    border-radius: @nordic-radius-lg;
+    box-shadow: 0 2px 12px @nordic-shadow;
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
-    gap: 16px;
+    gap: @nordic-space-md;
 
     .filter-left {
       display: flex;
@@ -825,7 +827,7 @@ onMounted(async () => {
         min-width: 200px;
 
         :deep(.el-input__wrapper) {
-          border-radius: 8px;
+          border-radius: @nordic-radius-sm;
         }
       }
 
@@ -833,16 +835,16 @@ onMounted(async () => {
         width: 160px;
 
         :deep(.el-input__wrapper) {
-          border-radius: 8px;
+          border-radius: @nordic-radius-sm;
         }
 
         .option-label {
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: @nordic-space-sm;
 
           .el-icon {
-            font-size: 1.143rem /* 原值: 16px */;
+            font-size: @nordic-text-md;
           }
         }
       }
@@ -851,7 +853,7 @@ onMounted(async () => {
         width: 140px;
 
         :deep(.el-input__wrapper) {
-          border-radius: 8px;
+          border-radius: @nordic-radius-sm;
         }
       }
 
@@ -859,9 +861,9 @@ onMounted(async () => {
         .filter-active {
           display: flex;
           align-items: center;
-          gap: 8px;
-          font-size: 1rem /* 原值: 14px */;
-          color: #606266;
+          gap: @nordic-space-sm;
+          font-size: @nordic-text-base;
+          color: @nordic-text-secondary;
           flex-wrap: wrap;
         }
       }
@@ -880,22 +882,22 @@ onMounted(async () => {
   }
 
   .loading-state {
-    padding: 40px 20px;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    padding: 40px @nordic-space-lg;
+    background: @nordic-surface;
+    border-radius: @nordic-radius-lg;
+    box-shadow: 0 2px 12px @nordic-shadow;
   }
 
   .collection-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 24px;
-    margin-bottom: 24px;
+    gap: @nordic-space-lg;
+    margin-bottom: @nordic-space-lg;
 
     // 列表动画
     .collection-fade-enter-active,
     .collection-fade-leave-active {
-      transition: all 0.3s ease;
+      transition: all @nordic-transition-slow ease;
     }
 
     .collection-fade-enter-from {
@@ -913,15 +915,15 @@ onMounted(async () => {
 
       .collection-card {
         height: 100%;
-        border-radius: 16px;
+        border-radius: @nordic-radius-lg;
         border: none;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: all @nordic-transition-slow cubic-bezier(0.4, 0, 0.2, 1);
         cursor: pointer;
         overflow: hidden;
 
         &:hover {
           transform: translateY(-8px);
-          box-shadow: 0 12px 40px rgba(102, 126, 234, 0.25);
+          box-shadow: 0 12px 40px fade(@nordic-accent, 25%);
         }
 
         :deep(.el-card__body) {
@@ -932,44 +934,44 @@ onMounted(async () => {
         }
 
         .card-header {
-          padding: 16px;
+          padding: @nordic-space-md;
           display: flex;
           justify-content: space-between;
           align-items: center;
-          background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-          border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+          background: linear-gradient(135deg, @nordic-bg 0%, @nordic-divider 100%);
+          border-bottom: 1px solid @nordic-border;
 
           .item-type-badge {
             display: flex;
             align-items: center;
             gap: 6px;
             padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 0.929rem /* 原值: 13px */;
+            border-radius: @nordic-radius-pill;
+            font-size: @nordic-text-sm;
             font-weight: 600;
-            color: white;
-            transition: all 0.3s ease;
+            color: @nordic-surface;
+            transition: all @nordic-transition-slow ease;
 
             .type-icon {
-              font-size: 1.143rem /* 原值: 16px */;
+              font-size: @nordic-text-md;
             }
 
             &.type-merchant {
-              background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+              background: linear-gradient(135deg, @nordic-green 0%, darken(@nordic-green, 8%) 100%);
             }
 
             &.type-dish {
-              background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+              background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
             }
 
             &.type-article {
-              background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+              background: linear-gradient(135deg, @nordic-blue 0%, darken(@nordic-blue, 8%) 100%);
             }
           }
 
           .delete-btn {
             opacity: 0;
-            transition: all 0.3s ease;
+            transition: all @nordic-transition-slow ease;
 
             &:hover {
               transform: rotate(90deg) scale(1.1);
@@ -982,7 +984,7 @@ onMounted(async () => {
         }
 
         // 移动端优化：始终显示删除按钮
-        @media (max-width: 768px) {
+        @media (max-width: @nordic-breakpoint-md) {
           .delete-btn {
             opacity: 1;
           }
@@ -990,7 +992,7 @@ onMounted(async () => {
 
         .card-body {
           flex: 1;
-          padding: 16px;
+          padding: @nordic-space-md;
           display: flex;
           flex-direction: column;
 
@@ -998,21 +1000,21 @@ onMounted(async () => {
             position: relative;
             width: 100%;
             height: 200px;
-            border-radius: 12px;
+            border-radius: @nordic-radius-lg;
             overflow: hidden;
-            margin-bottom: 16px;
+            margin-bottom: @nordic-space-md;
 
             // 类型渐变背景
             &.gradient-merchant {
-              background: linear-gradient(135deg, #4caf50 0%, #81c784 100%);
+              background: linear-gradient(135deg, @nordic-green 0%, lighten(@nordic-green, 15%) 100%);
             }
 
             &.gradient-dish {
-              background: linear-gradient(135deg, #ff9800 0%, #ffb74d 100%);
+              background: linear-gradient(135deg, @nordic-accent 0%, lighten(@nordic-accent, 15%) 100%);
             }
 
             &.gradient-article {
-              background: linear-gradient(135deg, #2196f3 0%, #64b5f6 100%);
+              background: linear-gradient(135deg, @nordic-blue 0%, lighten(@nordic-blue, 15%) 100%);
             }
 
             // 备用内容（图标+首字）
@@ -1023,8 +1025,8 @@ onMounted(async () => {
               flex-direction: column;
               align-items: center;
               justify-content: center;
-              gap: 16px;
-              color: white;
+              gap: @nordic-space-md;
+              color: @nordic-surface;
               position: relative;
 
               .type-icon-bg {
@@ -1034,10 +1036,10 @@ onMounted(async () => {
                 background: rgba(255, 255, 255, 0.2);
                 backdrop-filter: blur(10px);
                 display: flex;
-              align-items: center;
-              justify-content: center;
-                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-                transition: transform 0.3s ease;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 8px 24px @nordic-shadow;
+                transition: transform @nordic-transition-slow ease;
 
                 .type-fallback-icon {
                   font-size: 2.857rem /* 原值: 40px */;
@@ -1047,7 +1049,7 @@ onMounted(async () => {
               .title-first-char {
                 font-size: 72px;
                 font-weight: 700;
-                text-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+                text-shadow: 0 4px 12px @nordic-shadow;
                 line-height: 1;
                 margin: 0;
               }
@@ -1057,7 +1059,7 @@ onMounted(async () => {
               width: 100%;
               height: 100%;
               object-fit: cover;
-              transition: transform 0.3s ease;
+              transition: transform @nordic-transition-slow ease;
             }
 
             .image-overlay {
@@ -1071,17 +1073,17 @@ onMounted(async () => {
               flex-direction: column;
               align-items: center;
               justify-content: center;
-              gap: 8px;
-              color: white;
+              gap: @nordic-space-sm;
+              color: @nordic-surface;
               opacity: 0;
-              transition: opacity 0.3s ease;
+              transition: opacity @nordic-transition-slow ease;
 
               .view-icon {
                 font-size: 2.286rem /* 原值: 32px */;
               }
 
               span {
-                font-size: 1rem /* 原值: 14px */;
+                font-size: @nordic-text-base;
                 font-weight: 500;
               }
             }
@@ -1108,19 +1110,19 @@ onMounted(async () => {
           }
 
           .collection-title {
-            font-size: 1.286rem /* 原值: 18px */;
+            font-size: @nordic-text-lg;
             font-weight: 700;
             margin: 0 0 12px 0;
-            color: #2c3e50;
+            color: @nordic-text;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
           }
 
           .collection-description {
-            font-size: 1rem /* 原值: 14px */;
-            color: #666;
-            margin: 0 0 16px 0;
+            font-size: @nordic-text-base;
+            color: @nordic-text-secondary;
+            margin: 0 0 @nordic-space-md 0;
             line-height: 1.6;
             display: -webkit-box;
             -webkit-line-clamp: 2;
@@ -1137,33 +1139,33 @@ onMounted(async () => {
               display: flex;
               align-items: center;
               gap: 6px;
-              font-size: 0.929rem /* 原值: 13px */;
-              color: #999;
-              padding: 8px 12px;
-              background: #f8f9fa;
-              border-radius: 8px;
+              font-size: @nordic-text-sm;
+              color: @nordic-text-muted;
+              padding: @nordic-space-sm 12px;
+              background: @nordic-bg;
+              border-radius: @nordic-radius-sm;
 
               .el-icon {
-                font-size: 1rem /* 原值: 14px */;
+                font-size: @nordic-text-base;
               }
             }
           }
         }
 
         .card-footer {
-          padding: 16px;
-          border-top: 1px solid rgba(0, 0, 0, 0.05);
-          background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+          padding: @nordic-space-md;
+          border-top: 1px solid @nordic-border;
+          background: linear-gradient(135deg, @nordic-bg 0%, @nordic-divider 100%);
 
           .view-btn {
             width: 100%;
-            border-radius: 8px;
+            border-radius: @nordic-radius-sm;
             font-weight: 500;
-            transition: all 0.3s ease;
+            transition: all @nordic-transition-slow ease;
 
             &:hover {
               transform: translateY(-2px);
-              box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+              box-shadow: 0 4px 12px fade(@nordic-accent, 30%);
             }
           }
         }
@@ -1172,46 +1174,46 @@ onMounted(async () => {
   }
 
   .empty-state {
-    padding: 80px 20px;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    padding: 80px @nordic-space-lg;
+    background: @nordic-surface;
+    border-radius: @nordic-radius-lg;
+    box-shadow: 0 2px 12px @nordic-shadow;
     text-align: center;
 
     .empty-content {
       .empty-icon {
         font-size: 120px;
-        color: #ddd;
-        margin-bottom: 24px;
+        color: @nordic-border;
+        margin-bottom: @nordic-space-lg;
         animation: float 3s ease-in-out infinite;
       }
 
       .empty-title {
-        font-size: 1.714rem /* 原值: 24px */;
+        font-size: @nordic-text-lg;
         font-weight: 600;
-        color: #2c3e50;
+        color: @nordic-text;
         margin: 0 0 12px 0;
       }
 
       .empty-description {
-        font-size: 1.143rem /* 原值: 16px */;
-        color: #999;
-        margin: 0 0 32px 0;
+        font-size: @nordic-text-md;
+        color: @nordic-text-muted;
+        margin: 0 0 @nordic-space-xl 0;
       }
 
       .empty-actions {
         display: flex;
         justify-content: center;
-        gap: 16px;
+        gap: @nordic-space-md;
       }
     }
   }
 
   .pagination-container {
-    padding: 24px;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    padding: @nordic-space-lg;
+    background: @nordic-surface;
+    border-radius: @nordic-radius-lg;
+    box-shadow: 0 2px 12px @nordic-shadow;
     display: flex;
     justify-content: center;
 
@@ -1219,13 +1221,13 @@ onMounted(async () => {
       .btn-prev,
       .btn-next,
       .el-pager li {
-        border-radius: 8px;
+        border-radius: @nordic-radius-sm;
         font-weight: 500;
       }
 
       .el-pager li.is-active {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
+        background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
+        color: @nordic-surface;
       }
     }
   }
@@ -1243,12 +1245,12 @@ onMounted(async () => {
 }
 
 // 响应式设计
-@media (max-width: 768px) {
+@media (max-width: @nordic-breakpoint-md) {
   .my-collection-container {
     padding: 0 10px 10px 10px;
 
     .header {
-      padding: 16px;
+      padding: @nordic-space-md;
 
       .header-content {
         margin-left: 12px;
@@ -1263,7 +1265,7 @@ onMounted(async () => {
     }
 
     .filter-bar {
-      padding: 16px;
+      padding: @nordic-space-md;
       flex-direction: column;
       align-items: stretch;
 
@@ -1284,7 +1286,7 @@ onMounted(async () => {
 
       .filter-right {
         flex-direction: column;
-        gap: 8px;
+        gap: @nordic-space-sm;
 
         .el-button {
           width: 100%;
@@ -1294,11 +1296,11 @@ onMounted(async () => {
 
     .collection-grid {
       grid-template-columns: 1fr;
-      gap: 16px;
+      gap: @nordic-space-md;
     }
 
     .empty-state {
-      padding: 40px 16px;
+      padding: 40px @nordic-space-md;
 
       .empty-content {
         .empty-icon {
@@ -1306,11 +1308,11 @@ onMounted(async () => {
         }
 
         .empty-title {
-          font-size: 1.429rem /* 原值: 20px */;
+          font-size: @nordic-text-lg;
         }
 
         .empty-description {
-          font-size: 1rem /* 原值: 14px */;
+          font-size: @nordic-text-base;
         }
 
         .empty-actions {

@@ -539,6 +539,8 @@ const handleDeleteFromDetail = async (messageId) => {
 </template>
 
 <style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+
 // 优化列表项动画性能 - 使用GPU加速
 .list-enter-active {
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -548,7 +550,7 @@ const handleDeleteFromDetail = async (messageId) => {
 .list-leave-active {
   transition: all 0.2s cubic-bezier(0.4, 0, 1, 1);
   will-change: opacity, transform;
-  position: absolute; /* 优化：移除的元素不占用空间 */
+  position: absolute;
   width: 100%;
 }
 
@@ -566,7 +568,7 @@ const handleDeleteFromDetail = async (messageId) => {
   transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-// 工具栏滑动动画 - 优化
+// 工具栏滑动动画
 .toolbar-slide-enter-active {
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -585,7 +587,7 @@ const handleDeleteFromDetail = async (messageId) => {
   transform: translateY(-8px);
 }
 
-// 空状态动画 - 优化性能
+// 空状态动画
 .empty-fade-enter-active {
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -605,68 +607,69 @@ const handleDeleteFromDetail = async (messageId) => {
 }
 
 .message-center-container {
-  padding: 0 20px 20px 20px;
+  padding: 0 @nordic-space-lg @nordic-space-lg @nordic-space-lg;
 
   // 全局按钮圆角统一
   :deep(.el-button) {
-    border-radius: 10px;
+    border-radius: @nordic-radius-md;
   }
 
   // Badge 徽章圆角
   :deep(.el-badge__content) {
-    border-radius: 12px;
+    border-radius: @nordic-radius-lg;
   }
 
   // Tag 标签圆角
   :deep(.el-tag) {
-    border-radius: 8px;
+    border-radius: @nordic-radius-sm;
   }
 
   // Checkbox 复选框圆角
   :deep(.el-checkbox__inner) {
-    border-radius: 6px;
+    border-radius: @nordic-radius-xs;
   }
 
   h2 {
-    font-size: 1.714rem /* 原值: 24px */;
-    margin: 0 0 20px 0;
+    .nordic-section-title();
+    font-size: @nordic-text-xl;
+    margin: 0 0 @nordic-space-lg 0;
   }
 
   // 汇总卡片样式
   .message-summary-card {
-    margin-bottom: 20px;
-    padding: 16px 20px;
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-    border-radius: 20px;
-    box-shadow: 0 4px 16px rgba(79, 172, 254, 0.35);
+    margin-bottom: @nordic-space-lg;
+    padding: @nordic-space-md @nordic-space-lg;
+    background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
+    border-radius: @nordic-radius-lg;
+    box-shadow: 0 4px 16px fade(@nordic-accent, 35%);
     animation: slideInDown 0.5s ease-out;
 
     .summary-content {
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: @nordic-space-md;
 
       .summary-icon {
-        font-size: 2.571rem /* 原值: 36px */;
+        font-size: @nordic-text-2xl;
         animation: ring 2s ease-in-out infinite;
       }
 
       .summary-text {
         flex: 1;
-        color: #ffffff;
+        color: @nordic-surface;
 
         .summary-title {
-          font-size: 1.143rem /* 原值: 16px */;
+          font-size: @nordic-text-md;
           font-weight: 600;
           margin-bottom: 6px;
         }
 
         .summary-details {
-          font-size: 1rem /* 原值: 14px */;
+          font-size: @nordic-text-base;
           opacity: 0.95;
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: @nordic-space-sm;
 
           .divider {
             opacity: 0.7;
@@ -677,17 +680,17 @@ const handleDeleteFromDetail = async (messageId) => {
   }
 
   .message-tabs {
-    margin-bottom: 20px;
+    margin-bottom: @nordic-space-lg;
 
     .tab-label {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: @nordic-space-sm;
 
       .tab-badge {
         :deep(.el-badge__content) {
-          background-color: #f56c6c;
-          border-color: #f56c6c;
+          background-color: @nordic-red;
+          border-color: @nordic-red;
         }
       }
     }
@@ -695,12 +698,12 @@ const handleDeleteFromDetail = async (messageId) => {
     .friend-tab {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: @nordic-space-sm;
 
       .friend-badge {
         :deep(.el-badge__content) {
-          background-color: #f56c6c;
-          border-color: #f56c6c;
+          background-color: @nordic-red;
+          border-color: @nordic-red;
         }
       }
     }
@@ -713,17 +716,17 @@ const handleDeleteFromDetail = async (messageId) => {
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 60px 20px;
-      color: #909399;
+      padding: 60px @nordic-space-lg;
+      color: @nordic-text-muted;
 
       p {
-        margin-top: 16px;
-        font-size: 1rem /* 原值: 14px */;
+        margin-top: @nordic-space-md;
+        font-size: @nordic-text-base;
       }
     }
 
     .empty-requests {
-      padding: 60px 20px;
+      padding: 60px @nordic-space-lg;
 
       .empty-icon-animated {
         .empty-icon-circle {
@@ -734,13 +737,13 @@ const handleDeleteFromDetail = async (messageId) => {
           justify-content: center;
           font-size: 64px;
           margin: 0 auto 20px;
-          background: linear-gradient(135deg, #f5f7fa 0%, #e4e7ed 100%);
+          background: linear-gradient(135deg, @nordic-bg 0%, @nordic-border 100%);
           border-radius: 50%;
           animation: emptyFloat 3s ease-in-out infinite;
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+          box-shadow: 0 8px 24px @nordic-shadow;
 
           &.friend-empty {
-            background: linear-gradient(135deg, #fff5f5 0%, #ffe4e4 100%);
+            background: linear-gradient(135deg, @nordic-red-light 0%, fade(@nordic-red, 20%) 100%);
             animation: waveHand 2s ease-in-out infinite;
           }
         }
@@ -754,36 +757,31 @@ const handleDeleteFromDetail = async (messageId) => {
     .request-list {
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: @nordic-space-md;
 
       .request-card {
-        transition: all 0.3s ease;
-        border-radius: 16px;
-
-        &:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-        }
+        .nordic-card();
+        border-radius: @nordic-radius-lg;
 
         .request-content {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          gap: 20px;
+          gap: @nordic-space-lg;
 
           .requester-info {
             display: flex;
             align-items: center;
-            gap: 16px;
+            gap: @nordic-space-md;
             flex: 1;
 
             .requester-avatar {
               width: 64px;
               height: 64px;
-              border-radius: 16px;
+              border-radius: @nordic-radius-lg;
               overflow: hidden;
-              background: #f5f7fa;
-              border: 1px solid #e4e7ed;
+              background: @nordic-bg;
+              border: 1px solid @nordic-border;
               display: flex;
               align-items: center;
               justify-content: center;
@@ -796,7 +794,7 @@ const handleDeleteFromDetail = async (messageId) => {
               }
 
               .avatar-emoji {
-                font-size: 2.571rem /* 原值: 36px */;
+                font-size: @nordic-text-2xl;
               }
             }
 
@@ -804,21 +802,21 @@ const handleDeleteFromDetail = async (messageId) => {
               flex: 1;
 
               .requester-name {
-                font-size: 1.143rem /* 原值: 16px */;
+                font-size: @nordic-text-md;
                 font-weight: 600;
-                color: #303133;
+                color: @nordic-text;
                 margin: 0 0 6px 0;
               }
 
               .requester-id {
-                font-size: 0.929rem /* 原值: 13px */;
-                color: #909399;
+                font-size: @nordic-text-sm;
+                color: @nordic-text-muted;
                 margin: 0 0 4px 0;
               }
 
               .request-time {
-                font-size: 0.857rem /* 原值: 12px */;
-                color: #c0c4cc;
+                font-size: @nordic-text-xs;
+                color: @nordic-text-muted;
                 margin: 0;
               }
             }
@@ -830,8 +828,8 @@ const handleDeleteFromDetail = async (messageId) => {
             flex-shrink: 0;
 
             .el-button {
-              border-radius: 12px;
-              padding: 10px 20px;
+              border-radius: @nordic-radius-sm;
+              padding: 10px @nordic-space-lg;
               font-weight: 500;
               transition: all 0.3s ease;
 
@@ -847,7 +845,6 @@ const handleDeleteFromDetail = async (messageId) => {
 
   // 消息列表样式
   .message-list-container {
-    // 性能优化：启用GPU加速
     transform: translateZ(0);
     -webkit-transform: translateZ(0);
 
@@ -855,34 +852,33 @@ const handleDeleteFromDetail = async (messageId) => {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 12px 16px;
-      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-      border-radius: 16px;
-      margin-bottom: 16px;
-      box-shadow: 0 4px 12px rgba(79, 172, 254, 0.3);
+      padding: 12px @nordic-space-md;
+      background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
+      border-radius: @nordic-radius-lg;
+      margin-bottom: @nordic-space-md;
+      box-shadow: 0 4px 12px fade(@nordic-accent, 30%);
 
-      // 使复选框文字在深色背景上更清晰
       :deep(.el-checkbox__label) {
-        color: #ffffff;
+        color: @nordic-surface;
         font-weight: 500;
       }
 
       :deep(.el-checkbox__input.is-checked + .el-checkbox__label) {
-        color: #ffffff;
+        color: @nordic-surface;
       }
 
       :deep(.el-checkbox__inner) {
-        background-color: rgba(255, 255, 255, 0.2);
-        border-color: rgba(255, 255, 255, 0.4);
+        background-color: fade(@nordic-surface, 20%);
+        border-color: fade(@nordic-surface, 40%);
       }
 
       :deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
-        background-color: #ffffff;
-        border-color: #ffffff;
+        background-color: @nordic-surface;
+        border-color: @nordic-surface;
       }
 
       :deep(.el-checkbox__input.is-checked .el-checkbox__inner::after) {
-        border-color: #667eea;
+        border-color: @nordic-accent;
       }
 
       .toolbar-actions {
@@ -894,16 +890,14 @@ const handleDeleteFromDetail = async (messageId) => {
     .message-list {
       display: flex;
       flex-direction: column;
-      gap: 20px;
-
-      // 性能优化
+      gap: @nordic-space-lg;
       transform: translateZ(0);
       -webkit-transform: translateZ(0);
     }
 
     // 空状态包装器
     .empty-state-wrapper {
-      padding: 40px 20px;
+      padding: 40px @nordic-space-lg;
 
       .empty-icon-animated {
         .empty-icon-circle {
@@ -914,30 +908,28 @@ const handleDeleteFromDetail = async (messageId) => {
           justify-content: center;
           font-size: 64px;
           margin: 0 auto 20px;
-          background: linear-gradient(135deg, #f5f7fa 0%, #e4e7ed 100%);
+          background: linear-gradient(135deg, @nordic-bg 0%, @nordic-border 100%);
           border-radius: 50%;
           animation: emptyFloat 3s ease-in-out infinite;
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+          box-shadow: 0 8px 24px @nordic-shadow;
         }
       }
 
-      // 为空状态描述添加动画延迟
       :deep(.el-empty__description) {
         animation: emptyFadeIn 0.8s ease-out 0.3s both;
       }
 
-      // 空状态提示
       .empty-tips {
-        margin-top: 16px;
-        padding: 12px 20px;
-        background: linear-gradient(135deg, #fff5f5 0%, #ffe4e4 100%);
-        border-radius: 12px;
+        margin-top: @nordic-space-md;
+        padding: 12px @nordic-space-lg;
+        background: linear-gradient(135deg, @nordic-red-light 0%, fade(@nordic-red, 10%) 100%);
+        border-radius: @nordic-radius-sm;
         animation: emptyFadeIn 0.8s ease-out 0.5s both;
 
         p {
           margin: 0;
-          font-size: 1rem /* 原值: 14px */;
-          color: #666;
+          font-size: @nordic-text-base;
+          color: @nordic-text-secondary;
           text-align: center;
         }
       }
@@ -945,27 +937,23 @@ const handleDeleteFromDetail = async (messageId) => {
   }
 
   .message-card {
+    .nordic-card();
     cursor: pointer;
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    border-radius: 16px;
-    will-change: transform; // 性能优化
+    border-radius: @nordic-radius-lg;
+    will-change: transform;
     margin-bottom: 17px;
 
     &:last-child {
       margin-bottom: 0;
     }
 
-    &:hover {
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      transform: translateY(-2px);
-    }
-
     &.unread {
-      border-left: 4px solid #409eff;
+      border-left: 4px solid @nordic-blue;
     }
 
     &.selected {
-      background-color: #ecf5ff;
+      background-color: @nordic-blue-light;
     }
 
     .message-card-content {
@@ -986,7 +974,7 @@ const handleDeleteFromDetail = async (messageId) => {
       .message-actions {
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: @nordic-space-sm;
         flex-shrink: 0;
       }
     }
@@ -998,8 +986,8 @@ const handleDeleteFromDetail = async (messageId) => {
       margin-bottom: 10px;
 
       .message-time {
-        font-size: 1rem /* 原值: 14px */;
-        color: #909399;
+        font-size: @nordic-text-base;
+        color: @nordic-text-muted;
       }
     }
 
@@ -1007,15 +995,16 @@ const handleDeleteFromDetail = async (messageId) => {
       margin-bottom: 15px;
 
       .message-title {
-        font-size: 1.143rem /* 原值: 16px */;
+        font-size: @nordic-text-md;
         font-weight: bold;
         margin-bottom: 5px;
         margin: 0;
+        color: @nordic-text;
       }
 
       .message-text {
-        color: #606266;
-        font-size: 1rem /* 原值: 14px */;
+        color: @nordic-text-secondary;
+        font-size: @nordic-text-base;
         margin: 0;
       }
     }
@@ -1023,7 +1012,7 @@ const handleDeleteFromDetail = async (messageId) => {
 
   /* 消息详情模态框样式 */
   :deep(.message-detail-dialog) {
-    border-radius: 16px;
+    border-radius: @nordic-radius-lg;
 
     .el-dialog__header {
       padding: 0;
@@ -1031,13 +1020,13 @@ const handleDeleteFromDetail = async (messageId) => {
     }
 
     .el-dialog__body {
-      padding: 0 20px 20px 20px;
+      padding: 0 @nordic-space-lg @nordic-space-lg @nordic-space-lg;
     }
 
     .el-dialog__footer {
-      padding: 16px 20px;
-      border-top: 1px solid #ebeef5;
-      border-radius: 0 0 16px 16px;
+      padding: @nordic-space-md @nordic-space-lg;
+      border-top: 1px solid @nordic-border;
+      border-radius: 0 0 @nordic-radius-lg @nordic-radius-lg;
     }
   }
 
@@ -1045,15 +1034,15 @@ const handleDeleteFromDetail = async (messageId) => {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 20px;
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-    border-radius: 16px 16px 0 0;
+    padding: @nordic-space-lg;
+    background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
+    border-radius: @nordic-radius-lg @nordic-radius-lg 0 0;
     margin: -20px -20px 0 -20px;
 
     .header-left {
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: @nordic-space-md;
       flex: 1;
 
       .detail-icon-wrapper {
@@ -1062,26 +1051,26 @@ const handleDeleteFromDetail = async (messageId) => {
         display: flex;
         align-items: center;
         justify-content: center;
-        background: rgba(255, 255, 255, 0.25);
-        border-radius: 16px;
+        background: fade(@nordic-surface, 25%);
+        border-radius: @nordic-radius-lg;
         backdrop-filter: blur(10px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 12px @nordic-shadow;
 
         .detail-icon {
-          font-size: 2.286rem /* 原值: 32px */;
-          filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+          font-size: @nordic-text-xl;
+          filter: drop-shadow(0 2px 4px @nordic-shadow);
         }
       }
 
       .header-title-section {
         flex: 1;
-        color: #ffffff;
+        color: @nordic-surface;
 
         .detail-modal-title {
           margin: 0 0 8px 0;
-          font-size: 1.429rem /* 原值: 20px */;
+          font-size: @nordic-text-lg;
           font-weight: 600;
-          color: #ffffff;
+          color: @nordic-surface;
           line-height: 1.3;
         }
 
@@ -1091,9 +1080,9 @@ const handleDeleteFromDetail = async (messageId) => {
           gap: 12px;
 
           .detail-time {
-            font-size: 0.929rem /* 原值: 13px */;
+            font-size: @nordic-text-sm;
             opacity: 0.95;
-            color: #ffffff;
+            color: @nordic-surface;
           }
         }
       }
@@ -1102,12 +1091,12 @@ const handleDeleteFromDetail = async (messageId) => {
 
   .message-detail-content {
     .detail-body {
-      padding: 24px 0;
+      padding: @nordic-space-xl 0;
 
       .detail-text {
-        font-size: 1.071rem /* 原值: 15px */;
+        font-size: 15px;
         line-height: 1.8;
-        color: #303133;
+        color: @nordic-text;
         text-align: justify;
         word-wrap: break-word;
         white-space: pre-wrap;

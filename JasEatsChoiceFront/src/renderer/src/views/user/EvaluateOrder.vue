@@ -549,9 +549,11 @@ onMounted(() => {
 </template>
 
 <style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+
 .evaluate-order-container {
   padding: 0 20px 20px 20px;
-  background: #f5f7fa;
+  background: @nordic-bg;
   min-height: calc(100vh - 80px);
 
   .page-header {
@@ -559,17 +561,17 @@ onMounted(() => {
     align-items: center;
     margin-bottom: 20px;
     padding: 16px 20px;
-    background: #ffffff;
-    border-radius: 16px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-    border: 1px solid rgba(0, 0, 0, 0.06);
+    background: @nordic-surface;
+    border-radius: @nordic-radius-lg;
+    box-shadow: 0 2px 8px @nordic-shadow;
+    border: 1px solid @nordic-border;
   }
 
   .page-title {
-    font-size: 1.714rem /* 原值: 24px */;
+    font-size: 1.714rem;
     margin: 0;
     margin-left: 15px;
-    color: #2c5282;
+    color: @nordic-text;
     font-weight: 600;
   }
 
@@ -580,27 +582,27 @@ onMounted(() => {
   .evaluate-content {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: @nordic-space-md;
   }
 
   // 通用卡片样式
   .el-card {
-    background: #ffffff;
-    border-radius: 16px;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    background: @nordic-surface;
+    border-radius: @nordic-radius-lg;
+    border: 1px solid @nordic-border;
+    box-shadow: 0 2px 12px @nordic-shadow;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 
     &:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(92, 142, 255, 0.15);
-      border-color: rgba(92, 142, 255, 0.3);
+      box-shadow: 0 8px 24px @nordic-shadow-hover;
+      border-color: @nordic-accent-light;
     }
 
     :deep(.el-card__header) {
-      padding: 16px 20px;
-      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-      background: linear-gradient(to bottom, #fafbfc 0%, #ffffff 100%);
+      padding: @nordic-space-md 20px;
+      border-bottom: 1px solid @nordic-divider;
+      background: linear-gradient(to bottom, fade(@nordic-bg, 60%) 0%, @nordic-surface 100%);
     }
 
     :deep(.el-card__body) {
@@ -614,14 +616,14 @@ onMounted(() => {
     justify-content: space-between;
 
     .card-title {
-      font-size: 1.143rem /* 原值: 16px */;
+      font-size: 1.143rem;
       font-weight: 600;
-      color: #2c3e50;
+      color: @nordic-text;
     }
 
     .order-no {
-      font-size: 1rem /* 原值: 14px */;
-      color: #64748b;
+      font-size: 1rem;
+      color: @nordic-text-secondary;
     }
   }
 
@@ -629,19 +631,19 @@ onMounted(() => {
   .order-info-card {
     .merchant-info {
       .merchant-name {
-        font-size: 1.286rem /* 原值: 18px */;
+        font-size: 1.286rem;
         font-weight: 600;
-        color: #2c3e50;
-        margin-bottom: 16px;
+        color: @nordic-text;
+        margin-bottom: @nordic-space-md;
       }
 
       .order-items {
         display: flex;
         flex-direction: column;
         gap: 12px;
-        margin-bottom: 16px;
-        padding-bottom: 16px;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+        margin-bottom: @nordic-space-md;
+        padding-bottom: @nordic-space-md;
+        border-bottom: 1px solid @nordic-divider;
       }
 
       .order-item {
@@ -652,23 +654,23 @@ onMounted(() => {
         .item-image {
           width: 60px;
           height: 60px;
-          border-radius: 8px;
+          border-radius: @nordic-radius-sm;
           object-fit: cover;
         }
 
         .item-image-placeholder {
           width: 60px;
           height: 60px;
-          border-radius: 8px;
-          background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
+          border-radius: @nordic-radius-sm;
+          background: linear-gradient(135deg, @nordic-blue-light 0%, fade(@nordic-blue, 30%) 100%);
           display: flex;
           align-items: center;
           justify-content: center;
 
           span {
-            font-size: 1.714rem /* 原值: 24px */;
+            font-size: 1.714rem;
             font-weight: 600;
-            color: #1890ff;
+            color: @nordic-blue;
           }
         }
 
@@ -680,20 +682,20 @@ onMounted(() => {
 
           .item-name {
             flex: 1;
-            font-size: 1.071rem /* 原值: 15px */;
+            font-size: 1.071rem;
             font-weight: 500;
-            color: #2c5282;
+            color: @nordic-text;
           }
 
           .item-quantity {
-            font-size: 1rem /* 原值: 14px */;
-            color: #64748b;
+            font-size: 1rem;
+            color: @nordic-text-secondary;
           }
 
           .item-price {
-            font-size: 1.143rem /* 原值: 16px */;
+            font-size: 1.143rem;
             font-weight: 600;
-            color: #ff6b6b;
+            color: @nordic-red;
           }
         }
       }
@@ -705,14 +707,14 @@ onMounted(() => {
         gap: 12px;
 
         .total-label {
-          font-size: 1.071rem /* 原值: 15px */;
-          color: #64748b;
+          font-size: 1.071rem;
+          color: @nordic-text-secondary;
         }
 
         .total-amount {
           font-size: 22px;
           font-weight: 700;
-          color: #ff6b6b;
+          color: @nordic-red;
         }
       }
     }
@@ -724,8 +726,8 @@ onMounted(() => {
       text-align: center;
 
       .rating-label {
-        font-size: 1.143rem /* 原值: 16px */;
-        color: #2c3e50;
+        font-size: 1.143rem;
+        color: @nordic-text;
         margin-bottom: 20px;
       }
 
@@ -749,7 +751,7 @@ onMounted(() => {
             }
 
             .el-rate__icon {
-              font-size: 2.857rem /* 原值: 40px */;
+              font-size: 2.857rem;
               display: inline-block;
               vertical-align: middle;
               line-height: 1;
@@ -773,16 +775,16 @@ onMounted(() => {
         }
 
         .rating-text {
-          font-size: 1.286rem /* 原值: 18px */;
+          font-size: 1.286rem;
           font-weight: 600;
-          color: #F7BA2A;
+          color: @nordic-yellow;
           min-width: 80px;
           text-align: center;
           line-height: 1.5;
-          transition: color 0.3s ease;
+          transition: color @nordic-transition-base ease;
 
           &.no-rating {
-            color: #999;
+            color: @nordic-text-muted;
             font-weight: 400;
           }
         }
@@ -795,21 +797,21 @@ onMounted(() => {
     .tags-section {
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: @nordic-space-md;
 
       // 预设标签容器
       .preset-tags {
         display: flex;
         flex-wrap: wrap;
-        gap: 10px;
+        gap: @nordic-space-2sm;
 
         .tag-item {
           cursor: pointer;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          transition: all @nordic-transition-slow cubic-bezier(0.4, 0, 0.2, 1);
 
           &:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 12px @nordic-shadow-hover;
           }
         }
       }
@@ -817,38 +819,38 @@ onMounted(() => {
       // 自定义标签输入区域
       .custom-tag-input {
         display: flex;
-        gap: 10px;
+        gap: @nordic-space-2sm;
         width: 100%;
 
         .tag-input {
           flex: 1;
 
           :deep(.el-input__wrapper) {
-            border-radius: 8px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: @nordic-radius-sm;
+            transition: all @nordic-transition-slow cubic-bezier(0.4, 0, 0.2, 1);
 
             &:hover {
-              border-color: #6ba4ff;
+              border-color: @nordic-blue;
             }
 
             &.is-focus {
-              border-color: #6ba4ff;
-              box-shadow: 0 0 0 2px rgba(107, 164, 255, 0.1);
+              border-color: @nordic-blue;
+              box-shadow: 0 0 0 2px fade(@nordic-blue, 10%);
             }
           }
         }
 
         .add-tag-btn {
-          border-radius: 8px;
-          background: linear-gradient(135deg, #6ba4ff 0%, #5c8eff 100%);
+          border-radius: @nordic-radius-sm;
+          background: linear-gradient(135deg, @nordic-blue 0%, fade(@nordic-blue, 80%) 100%);
           border: none;
-          box-shadow: 0 2px 8px rgba(92, 142, 255, 0.25);
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 2px 8px fade(@nordic-blue, 25%);
+          transition: all @nordic-transition-slow cubic-bezier(0.4, 0, 0.2, 1);
           white-space: nowrap;
 
           &:hover {
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(92, 142, 255, 0.35);
+            box-shadow: 0 4px 12px fade(@nordic-blue, 35%);
           }
 
           &:active {
@@ -860,21 +862,21 @@ onMounted(() => {
       // 已选标签显示区域
       .selected-tags {
         padding: 12px;
-        background: linear-gradient(135deg, #fff9e6 0%, #fff3cd 100%);
-        border-radius: 8px;
-        border: 1px solid rgba(255, 193, 7, 0.3);
+        background: @nordic-yellow-light;
+        border-radius: @nordic-radius-sm;
+        border: 1px solid fade(@nordic-yellow, 30%);
 
         .selected-tags-label {
-          font-size: 1rem /* 原值: 14px */;
-          color: #856404;
+          font-size: 1rem;
+          color: @nordic-yellow-dark;
           font-weight: 500;
-          margin-bottom: 8px;
+          margin-bottom: @nordic-space-sm;
         }
 
         .selected-tags-list {
           display: flex;
           flex-wrap: wrap;
-          gap: 8px;
+          gap: @nordic-space-sm;
 
           .selected-tag-item {
             :deep(.el-tag__close) {
@@ -895,25 +897,25 @@ onMounted(() => {
   .existing-review-card {
     .existing-review-content {
       .review-rating {
-        margin-bottom: 16px;
+        margin-bottom: @nordic-space-md;
       }
 
       .review-tags {
         margin-bottom: 12px;
 
         .review-tag {
-          margin-right: 8px;
-          margin-bottom: 8px;
+          margin-right: @nordic-space-sm;
+          margin-bottom: @nordic-space-sm;
         }
       }
 
       .review-content {
-        font-size: 1.071rem /* 原值: 15px */;
+        font-size: 1.071rem;
         line-height: 1.6;
-        color: #606266;
+        color: @nordic-text-secondary;
         padding: 12px;
-        background: #f5f7fa;
-        border-radius: 8px;
+        background: @nordic-bg;
+        border-radius: @nordic-radius-sm;
       }
     }
   }
@@ -922,14 +924,14 @@ onMounted(() => {
   .content-card {
     .review-textarea {
       :deep(.el-textarea__inner) {
-        border-radius: 8px;
-        border: 1px solid rgba(0, 0, 0, 0.1);
-        font-size: 1.071rem /* 原值: 15px */;
+        border-radius: @nordic-radius-sm;
+        border: 1px solid @nordic-border;
+        font-size: 1.071rem;
         line-height: 1.6;
 
         &:focus {
-          border-color: #6ba4ff;
-          box-shadow: 0 0 0 2px rgba(107, 164, 255, 0.1);
+          border-color: @nordic-blue;
+          box-shadow: 0 0 0 2px fade(@nordic-blue, 10%);
         }
       }
     }
@@ -944,17 +946,17 @@ onMounted(() => {
     .submit-btn {
       min-width: 200px;
       height: 50px;
-      font-size: 1.143rem /* 原值: 16px */;
+      font-size: 1.143rem;
       font-weight: 600;
-      border-radius: 25px;
-      background: linear-gradient(135deg, #6ba4ff 0%, #5c8eff 100%);
+      border-radius: @nordic-radius-pill;
+      background: linear-gradient(135deg, @nordic-blue 0%, fade(@nordic-blue, 80%) 100%);
       border: none;
-      box-shadow: 0 4px 12px rgba(92, 142, 255, 0.3);
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 12px fade(@nordic-blue, 30%);
+      transition: all @nordic-transition-slow cubic-bezier(0.4, 0, 0.2, 1);
 
       &:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(92, 142, 255, 0.4);
+        box-shadow: 0 6px 16px fade(@nordic-blue, 40%);
       }
 
       &:active {
@@ -975,7 +977,7 @@ onMounted(() => {
     }
 
     .page-title {
-      font-size: 1.429rem /* 原值: 20px */;
+      font-size: 1.429rem;
     }
 
     .evaluate-content {
@@ -986,11 +988,11 @@ onMounted(() => {
       border-radius: 14px;
 
       :deep(.el-card__body) {
-        padding: 16px;
+        padding: @nordic-space-md;
       }
 
       :deep(.el-card__header) {
-        padding: 14px 16px;
+        padding: 14px @nordic-space-md;
       }
     }
 
@@ -1006,11 +1008,11 @@ onMounted(() => {
 
             .item-details {
               .item-name {
-                font-size: 1rem /* 原值: 14px */;
+                font-size: 1rem;
               }
 
               .item-price {
-                font-size: 1.071rem /* 原值: 15px */;
+                font-size: 1.071rem;
               }
             }
           }
@@ -1018,11 +1020,11 @@ onMounted(() => {
 
         .order-total {
           .total-label {
-            font-size: 1rem /* 原值: 14px */;
+            font-size: 1rem;
           }
 
           .total-amount {
-            font-size: 1.429rem /* 原值: 20px */;
+            font-size: 1.429rem;
           }
         }
       }
@@ -1034,13 +1036,13 @@ onMounted(() => {
           .rating-stars {
             :deep(.el-rate) {
               .el-rate__icon {
-                font-size: 2.571rem /* 原值: 36px */;
+                font-size: 2.571rem;
               }
             }
           }
 
           .rating-text {
-            font-size: 1.143rem /* 原值: 16px */;
+            font-size: 1.143rem;
             min-width: 70px;
           }
         }
@@ -1052,7 +1054,7 @@ onMounted(() => {
         gap: 12px;
 
         .preset-tags {
-          gap: 8px;
+          gap: @nordic-space-sm;
         }
 
         .custom-tag-input {
@@ -1064,17 +1066,17 @@ onMounted(() => {
         }
 
         .selected-tags {
-          padding: 10px;
+          padding: @nordic-space-2sm;
 
           .selected-tags-label {
-            font-size: 0.929rem /* 原值: 13px */;
+            font-size: 0.929rem;
           }
 
           .selected-tags-list {
             gap: 6px;
 
             .selected-tag-item {
-              font-size: 0.857rem /* 原值: 12px */;
+              font-size: 0.857rem;
             }
           }
         }
@@ -1082,12 +1084,12 @@ onMounted(() => {
     }
 
     .submit-section {
-      padding: 16px 0;
+      padding: @nordic-space-md 0;
 
       .submit-btn {
         min-width: 100%;
         height: 48px;
-        font-size: 1.071rem /* 原值: 15px */;
+        font-size: 1.071rem;
       }
     }
   }

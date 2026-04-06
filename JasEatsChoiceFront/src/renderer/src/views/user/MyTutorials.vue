@@ -536,50 +536,52 @@ onMounted(() => {
 </template>
 
 <style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+
 .my-tutorials-container {
-  padding: 24px;
-  background: linear-gradient(180deg, #f8f9fa 0%, #ffffff 100%);
+  padding: @nordic-space-lg;
+  background: linear-gradient(180deg, @nordic-bg 0%, @nordic-surface 100%);
   min-height: calc(100vh - 60px);
 
   .page-header {
-    margin-bottom: 24px;
+    margin-bottom: @nordic-space-lg;
 
     .header-content {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 28px 32px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      border-radius: 16px;
-      box-shadow: 0 8px 24px rgba(102, 126, 234, 0.25);
+      padding: 28px @nordic-space-xl;
+      background: linear-gradient(135deg, @nordic-accent 0%, @nordic-blue 100%);
+      border-radius: @nordic-radius-lg;
+      box-shadow: 0 8px 24px fade(@nordic-accent, 25%);
 
       .breadcrumb-nav {
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: @nordic-space-sm + 4px;
 
         :deep(.el-breadcrumb) {
           .el-breadcrumb__separator {
-            color: #eaedf5 !important;
+            color: @nordic-border !important;
           }
 
           .el-breadcrumb__inner {
-            color: #e8eaf5 !important;
+            color: @nordic-border !important;
             font-weight: 500 !important;
-            font-size: 0.929rem /* 原值: 13px */ !important;
+            font-size: @nordic-text-sm !important;
             transition: all 0.3s ease;
           }
 
           .el-breadcrumb__item {
             &:hover .el-breadcrumb__inner {
-              color: #ffffff !important;
+              color: @nordic-surface !important;
               text-shadow: 0 0 8px rgba(255, 255, 255, 0.5) !important;
             }
           }
 
           .el-breadcrumb__item:last-child {
             .el-breadcrumb__inner {
-              color: #ffffff !important;
+              color: @nordic-surface !important;
               font-weight: 600 !important;
             }
           }
@@ -590,14 +592,14 @@ onMounted(() => {
             margin: 0 0 6px 0;
             font-size: 30px;
             font-weight: 800;
-            color: #ffffff;
+            color: @nordic-surface;
             letter-spacing: 0.5px;
             line-height: 1.3;
           }
 
           .subtitle {
             margin: 0;
-            font-size: 1rem /* 原值: 14px */;
+            font-size: @nordic-text-base;
             font-weight: 400;
             color: rgba(255, 255, 255, 0.75);
             letter-spacing: 0.3px;
@@ -607,15 +609,15 @@ onMounted(() => {
       }
 
       .publish-btn {
-        background: #ffffff;
+        background: @nordic-surface;
         border: none;
-        color: #667eea;
+        color: @nordic-accent;
         font-weight: 600;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         box-shadow: 0 4px 12px rgba(255, 255, 255, 0.3);
 
         &:hover {
-          background: #f8f9fa;
+          background: @nordic-bg;
           transform: translateY(-2px) scale(1.02);
           box-shadow: 0 8px 20px rgba(255, 255, 255, 0.4);
         }
@@ -630,17 +632,17 @@ onMounted(() => {
   .stats-cards {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-    margin-bottom: 24px;
+    gap: @nordic-space-md;
+    margin-bottom: @nordic-space-lg;
 
     .stat-card {
-      background: white;
-      border-radius: 12px;
-      padding: 20px 24px;
+      .nordic-card();
+      border-radius: @nordic-radius-md;
+      padding: 20px @nordic-space-lg;
       display: flex;
       align-items: center;
-      gap: 16px;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+      gap: @nordic-space-md;
+      box-shadow: 0 2px 12px @nordic-shadow;
       transition: all 0.3s;
       position: relative;
       overflow: hidden;
@@ -656,57 +658,57 @@ onMounted(() => {
 
       &:hover {
         transform: translateY(-4px);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        box-shadow: 0 8px 24px @nordic-shadow-hover;
       }
 
       &.total::before {
-        background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(180deg, @nordic-accent 0%, @nordic-blue 100%);
       }
 
       &.draft::before {
-        background: linear-gradient(180deg, #909399 0%, #606266 100%);
+        background: linear-gradient(180deg, @nordic-text-muted 0%, @nordic-text-secondary 100%);
       }
 
       &.pending::before {
-        background: linear-gradient(180deg, #e6a23c 0%, #d9983a 100%);
+        background: linear-gradient(180deg, @nordic-yellow 0%, #d9983a 100%);
       }
 
       &.published::before {
-        background: linear-gradient(180deg, #67c23a 0%, #5abd34 100%);
+        background: linear-gradient(180deg, @nordic-green 0%, #5abd34 100%);
       }
 
       &.rejected::before {
-        background: linear-gradient(180deg, #f56c6c 0%, #f35858 100%);
+        background: linear-gradient(180deg, @nordic-red 0%, #f35858 100%);
       }
 
       .stat-icon {
         width: 56px;
         height: 56px;
-        border-radius: 12px;
+        border-radius: @nordic-radius-md;
         display: flex;
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
 
         .total & {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
+          background: linear-gradient(135deg, @nordic-accent 0%, @nordic-blue 100%);
+          color: @nordic-surface;
         }
 
         .draft & {
-          background: linear-gradient(135deg, #909399 0%, #606266 100%);
+          background: linear-gradient(135deg, @nordic-text-muted 0%, @nordic-text-secondary 100%);
         }
 
         .pending & {
-          background: linear-gradient(135deg, #e6a23c 0%, #d9983a 100%);
+          background: linear-gradient(135deg, @nordic-yellow 0%, #d9983a 100%);
         }
 
         .published & {
-          background: linear-gradient(135deg, #67c23a 0%, #5abd34 100%);
+          background: linear-gradient(135deg, @nordic-green 0%, #5abd34 100%);
         }
 
         .rejected & {
-          background: linear-gradient(135deg, #f56c6c 0%, #f35858 100%);
+          background: linear-gradient(135deg, @nordic-red 0%, #f35858 100%);
         }
 
         .icon-emoji {
@@ -718,31 +720,31 @@ onMounted(() => {
         .stat-value {
           font-size: 2rem /* 原值: 28px */;
           font-weight: bold;
-          color: #303133;
+          color: @nordic-text;
           margin-bottom: 4px;
           line-height: 1;
         }
 
         .stat-label {
-          font-size: 0.929rem /* 原值: 13px */;
-          color: #909399;
+          font-size: @nordic-text-sm;
+          color: @nordic-text-muted;
         }
       }
     }
   }
 
   .content-card {
-    background: white;
-    border-radius: 16px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    .nordic-card();
+    border-radius: @nordic-radius-lg;
+    box-shadow: 0 2px 12px @nordic-shadow;
     overflow: hidden;
 
     .custom-tabs {
-      padding: 0 24px;
+      padding: 0 @nordic-space-lg;
 
       :deep(.el-tabs__header) {
         margin: 0;
-        border-bottom: 2px solid #f5f5f5;
+        border-bottom: 2px solid @nordic-divider;
       }
 
       :deep(.el-tabs__nav-wrap::after) {
@@ -750,19 +752,19 @@ onMounted(() => {
       }
 
       :deep(.el-tabs__item) {
-        padding: 20px 24px;
+        padding: 20px @nordic-space-lg;
         font-size: 1.071rem /* 原值: 15px */;
         font-weight: 500;
-        color: #606266;
+        color: @nordic-text-secondary;
 
         &.is-active {
-          color: #667eea;
+          color: @nordic-accent;
         }
 
         .tab-label {
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: @nordic-space-sm;
 
           .tab-icon {
             font-size: 1.286rem /* 原值: 18px */;
@@ -775,25 +777,25 @@ onMounted(() => {
       }
 
       :deep(.el-tabs__active-bar) {
-        background-color: #667eea;
+        background-color: @nordic-accent;
         height: 3px;
         border-radius: 3px 3px 0 0;
       }
     }
 
     .tutorial-list {
-      padding: 24px;
+      padding: @nordic-space-lg;
       min-height: 400px;
 
       .tutorial-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-        gap: 24px;
+        gap: @nordic-space-lg;
 
         .tutorial-card {
-          background: white;
-          border: 1px solid #e6e8eb;
-          border-radius: 12px;
+          background: @nordic-surface;
+          border: 1px solid @nordic-border;
+          border-radius: @nordic-radius-md;
           overflow: hidden;
           cursor: pointer;
           transition: all 0.3s;
@@ -801,8 +803,8 @@ onMounted(() => {
 
           &:hover {
             transform: translateY(-8px);
-            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
-            border-color: #667eea;
+            box-shadow: 0 12px 32px @nordic-shadow-hover;
+            border-color: @nordic-accent;
           }
 
           .tutorial-cover {
@@ -820,17 +822,17 @@ onMounted(() => {
               display: flex;
               align-items: center;
               justify-content: center;
-              color: white;
+              color: @nordic-surface;
               position: relative;
 
               // 视频教程的渐变背景
               &.type-video {
-                background: linear-gradient(135deg, #ff6b6b 0%, #ff8e8e 50%, #ffa8a8 100%);
+                background: linear-gradient(135deg, @nordic-red 0%, #ff8e8e 50%, #ffa8a8 100%);
               }
 
               // 图文指南的渐变背景
               &.type-article {
-                background: linear-gradient(135deg, #f7b267 0%, #ffcc80 50%, #ffd699 100%);
+                background: linear-gradient(135deg, @nordic-yellow 0%, #ffcc80 50%, #ffd699 100%);
               }
 
               // 装饰性图案
@@ -897,20 +899,20 @@ onMounted(() => {
               right: 12px;
               width: 36px;
               height: 36px;
-              border-radius: 8px;
+              border-radius: @nordic-radius-sm;
               display: flex;
               align-items: center;
               justify-content: center;
               backdrop-filter: blur(10px);
-              color: white;
+              color: @nordic-surface;
               z-index: 2;
 
               &.video {
-                background: rgba(255, 107, 107, 0.9);
+                background: rgba(212, 123, 123, 0.9);
               }
 
               &.article {
-                background: rgba(247, 178, 103, 0.9);
+                background: rgba(226, 180, 85, 0.9);
               }
             }
           }
@@ -920,7 +922,7 @@ onMounted(() => {
 
             .status-tags {
               display: flex;
-              gap: 8px;
+              gap: @nordic-space-sm;
               margin-bottom: 12px;
               flex-wrap: wrap;
 
@@ -938,7 +940,7 @@ onMounted(() => {
             .tutorial-title {
               font-size: 1.286rem /* 原值: 18px */;
               font-weight: 700;
-              color: #303133;
+              color: @nordic-text;
               margin: 0 0 12px 0;
               line-height: 1.5;
               overflow: hidden;
@@ -951,16 +953,16 @@ onMounted(() => {
 
             .tutorial-meta {
               display: flex;
-              gap: 16px;
-              margin-bottom: 16px;
+              gap: @nordic-space-md;
+              margin-bottom: @nordic-space-md;
               flex-wrap: wrap;
 
               .meta-item {
                 display: flex;
                 align-items: center;
                 gap: 4px;
-                font-size: 0.929rem /* 原值: 13px */;
-                color: #909399;
+                font-size: @nordic-text-sm;
+                color: @nordic-text-muted;
 
                 .el-icon {
                   font-size: 1rem /* 原值: 14px */;
@@ -973,16 +975,16 @@ onMounted(() => {
               justify-content: space-between;
               align-items: center;
               padding-top: 12px;
-              border-top: 1px solid #f5f5f5;
+              border-top: 1px solid @nordic-divider;
 
               .create-time {
-                font-size: 0.857rem /* 原值: 12px */;
-                color: #909399;
+                font-size: @nordic-text-xs;
+                color: @nordic-text-muted;
               }
 
               .action-buttons {
                 display: flex;
-                gap: 8px;
+                gap: @nordic-space-sm;
               }
             }
           }
@@ -997,19 +999,19 @@ onMounted(() => {
             transition: opacity 0.3s;
 
             &.info {
-              background: linear-gradient(90deg, #909399 0%, #606266 100%);
+              background: linear-gradient(90deg, @nordic-text-muted 0%, @nordic-text-secondary 100%);
             }
 
             &.warning {
-              background: linear-gradient(90deg, #e6a23c 0%, #d9983a 100%);
+              background: linear-gradient(90deg, @nordic-yellow 0%, #d9983a 100%);
             }
 
             &.success {
-              background: linear-gradient(90deg, #67c23a 0%, #5abd34 100%);
+              background: linear-gradient(90deg, @nordic-green 0%, #5abd34 100%);
             }
 
             &.danger {
-              background: linear-gradient(90deg, #f56c6c 0%, #f35858 100%);
+              background: linear-gradient(90deg, @nordic-red 0%, #f35858 100%);
             }
           }
 
@@ -1054,24 +1056,24 @@ onMounted(() => {
 
 @media (max-width: 768px) {
   .my-tutorials-container {
-    padding: 16px;
+    padding: @nordic-space-md;
 
     .page-header {
       .header-content {
         flex-direction: column;
-        gap: 16px;
+        gap: @nordic-space-md;
         padding: 20px;
 
         .breadcrumb-nav {
           width: 100%;
-          gap: 8px;
+          gap: @nordic-space-sm;
 
           :deep(.el-breadcrumb) {
-            font-size: 0.929rem /* 原值: 13px */;
+            font-size: @nordic-text-sm;
 
             .breadcrumb-item,
             .breadcrumb-current {
-              font-size: 0.929rem /* 原值: 13px */;
+              font-size: @nordic-text-sm;
             }
           }
 
@@ -1081,7 +1083,7 @@ onMounted(() => {
             }
 
             .subtitle {
-              font-size: 0.929rem /* 原值: 13px */;
+              font-size: @nordic-text-sm;
             }
           }
         }
@@ -1097,7 +1099,7 @@ onMounted(() => {
       gap: 12px;
 
       .stat-card {
-        padding: 16px;
+        padding: @nordic-space-md;
 
         .stat-icon {
           width: 48px;
@@ -1110,7 +1112,7 @@ onMounted(() => {
           }
 
           .stat-label {
-            font-size: 0.857rem /* 原值: 12px */;
+            font-size: @nordic-text-xs;
           }
         }
       }
@@ -1118,11 +1120,11 @@ onMounted(() => {
 
     .content-card {
       .custom-tabs {
-        padding: 0 16px;
+        padding: 0 @nordic-space-md;
 
         :deep(.el-tabs__item) {
-          padding: 16px 12px;
-          font-size: 1rem /* 原值: 14px */;
+          padding: @nordic-space-md 12px;
+          font-size: @nordic-text-base;
 
           .tab-label {
             gap: 4px;
@@ -1135,11 +1137,11 @@ onMounted(() => {
       }
 
       .tutorial-list {
-        padding: 16px;
+        padding: @nordic-space-md;
 
         .tutorial-grid {
           grid-template-columns: 1fr;
-          gap: 16px;
+          gap: @nordic-space-md;
         }
       }
     }

@@ -1,0 +1,194 @@
+// ============================================
+// 北欧暖光主题 (Nordic Warmth)
+// 全站统一设计系统
+// ============================================
+
+// --- 色彩体系 ---
+@nordic-bg:            #F5F3EF;        // 主背景 - 暖灰
+@nordic-surface:       #FFFFFF;        // 卡片表面
+@nordic-white:         #FFFFFF;        // 白色
+@nordic-text:          #1A1A1A;        // 主文字
+@nordic-text-secondary:#6B6B6B;        // 次要文字
+@nordic-text-muted:    #9E9E9E;        // 弱化文字
+@nordic-accent:        #D4845A;        // 陶土色 - 主强调色
+@nordic-accent-light:  #F0D5C4;        // 陶土浅色
+@nordic-accent-dark:   #B8704A;        // 陶土深色
+@nordic-green:         #7BAE7F;        // 鼠尾草绿
+@nordic-green-light:   #E3F0E4;        // 浅绿
+@nordic-green-dark:    #4a7a4d;        // 深绿（成功文字）
+@nordic-blue:          #6B9BD2;        // 雾蓝
+@nordic-blue-light:    #E0EDF6;        // 浅蓝
+@nordic-yellow:        #E2B455;        // 暖金
+@nordic-yellow-light:  #F7EDDA;        // 浅金
+@nordic-yellow-dark:   #8B6914;        // 深金（警告文字）
+@nordic-red:           #D47B7B;        // 柔红
+@nordic-red-light:     #F6E0E0;        // 浅红
+@nordic-border:        #E8E4DE;        // 边框色
+@nordic-divider:       #F0ECE6;        // 分割线
+@nordic-shadow:        rgba(0, 0, 0, 0.06); // 阴影
+@nordic-shadow-hover:  rgba(0, 0, 0, 0.1);  // 悬浮阴影
+
+// --- 圆角 ---
+@nordic-radius-xs:    3px;
+@nordic-radius-sm:    6px;
+@nordic-radius-md:    10px;
+@nordic-radius-lg:    16px;
+@nordic-radius-pill:  50px;
+
+// --- 间距 ---
+@nordic-space-xs:   4px;
+@nordic-space-sm:   8px;
+@nordic-space-2sm:  10px;
+@nordic-space-md:   16px;
+@nordic-space-lg:   24px;
+@nordic-space-xl:   32px;
+@nordic-space-2xl:  48px;
+
+// --- 字号 ---
+@nordic-text-xs:    12px;
+@nordic-text-sm:    13px;
+@nordic-text-base:  14px;
+@nordic-text-md:    16px;
+@nordic-text-lg:    20px;
+@nordic-text-xl:    28px;
+@nordic-text-2xl:   36px;
+
+// --- 字间距 ---
+@nordic-letter-tight:   -0.5px;
+@nordic-letter-tighter: -1px;
+@nordic-letter-wide:    0.5px;
+@nordic-letter-wider:   0.8px;
+
+// --- 响应式断点 ---
+@nordic-breakpoint-sm:  640px;
+@nordic-breakpoint-md:  768px;
+@nordic-breakpoint-lg:  1024px;
+
+// --- 动画时长 ---
+@nordic-transition-fast: 0.2s;
+@nordic-transition-base: 0.25s;
+@nordic-transition-slow: 0.3s;
+
+// --- 通用混合 ---
+.nordic-card() {
+  background: @nordic-surface;
+  border-radius: @nordic-radius-lg;
+  border: 1px solid @nordic-border;
+  box-shadow: 0 1px 4px @nordic-shadow;
+  transition: all 0.25s ease;
+
+  &:hover {
+    box-shadow: 0 4px 16px @nordic-shadow-hover;
+    transform: translateY(-2px);
+  }
+}
+
+.nordic-pill-tag(@bg: @nordic-accent-light; @color: @nordic-accent) {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: @nordic-radius-pill;
+  background: @bg;
+  color: @color;
+  font-size: @nordic-text-xs;
+  font-weight: 500;
+  border: none;
+}
+
+.nordic-section-title() {
+  font-size: @nordic-text-lg;
+  font-weight: 600;
+  color: @nordic-text;
+  margin: 0;
+  letter-spacing: -0.3px;
+}
+
+.nordic-stat-value() {
+  font-size: @nordic-text-2xl;
+  font-weight: 700;
+  color: @nordic-text;
+  letter-spacing: -1px;
+  line-height: 1;
+}
+
+.nordic-stat-label() {
+  font-size: @nordic-text-sm;
+  color: @nordic-text-muted;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  font-weight: 500;
+}
+
+.nordic-page-container() {
+  padding: @nordic-space-lg;
+  background: @nordic-bg;
+  min-height: 100%;
+
+  h2 {
+    font-size: @nordic-text-xl;
+    font-weight: 700;
+    color: @nordic-text;
+    margin: 0 0 @nordic-space-lg;
+    letter-spacing: -0.5px;
+  }
+}
+
+// --- 进度环 ---
+.nordic-progress-ring() {
+  position: relative;
+  width: 120px;
+  height: 120px;
+
+  .ring-bg {
+    fill: none;
+    stroke: @nordic-divider;
+    stroke-width: 8;
+  }
+
+  .ring-fill {
+    fill: none;
+    stroke-width: 8;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .ring-text {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+// --- 入场动画 ---
+@keyframes nordic-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes nordic-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.nordic-animate-fade() {
+  animation: nordic-fade-in 0.4s ease both;
+}
+
+.nordic-animate-scale() {
+  animation: nordic-scale-in 0.3s ease both;
+}

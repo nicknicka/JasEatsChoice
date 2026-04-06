@@ -652,31 +652,33 @@ onMounted(() => {
 })
 </script>
 
-<style scoped>
+<style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+
 .wallet-management-container {
-  padding: 0 20px 20px 20px;
+  padding: 0 @nordic-space-lg @nordic-space-lg @nordic-space-lg;
   min-height: 100vh;
-  background: #f5f7fa;
+  background: @nordic-bg;
 }
 
 .page-title {
-  font-size: 2rem /* 原值: 28px */;
+  font-size: @nordic-text-xl;
   margin: 0 0 25px 0;
-  color: #333;
+  color: @nordic-text;
   font-weight: 700;
 }
 
 .wallet-overview-card {
-  background: linear-gradient(135deg, #fef5e7 0%, #fdebd0 100%);
-  border-radius: 16px;
-  box-shadow: 0 4px 16px rgba(214, 158, 46, 0.15);
-  margin-bottom: 20px;
+  background: linear-gradient(135deg, @nordic-accent-light 0%, darken(@nordic-accent-light, 5%) 100%);
+  border-radius: @nordic-radius-lg;
+  box-shadow: 0 4px 16px fade(@nordic-accent, 15%);
+  margin-bottom: @nordic-space-lg;
   border: none;
-  transition: all 0.3s ease;
+  transition: all @nordic-transition-slow ease;
 }
 
 .wallet-overview-card:hover {
-  box-shadow: 0 6px 24px rgba(214, 158, 46, 0.25);
+  box-shadow: 0 6px 24px fade(@nordic-accent, 25%);
 }
 
 .wallet-overview-content {
@@ -689,33 +691,33 @@ onMounted(() => {
 }
 
 .balance-label {
-  font-size: 1.143rem /* 原值: 16px */;
-  color: #718096;
+  font-size: @nordic-text-md;
+  color: @nordic-text-secondary;
   font-weight: 500;
-  margin-bottom: 10px;
+  margin-bottom: @nordic-space-sm;
 }
 
 .balance-value {
   display: flex;
   align-items: baseline;
   justify-content: center;
-  gap: 8px;
+  gap: @nordic-space-sm;
 }
 
 .balance-number {
   font-size: 56px;
   font-weight: 700;
-  color: #d69e2e;
+  color: @nordic-yellow;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: linear-gradient(135deg, #d69e2e 0%, #ecc94b 100%);
+  background: linear-gradient(135deg, @nordic-yellow 0%, lighten(@nordic-yellow, 10%) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .balance-unit {
-  font-size: 1.429rem /* 原值: 20px */;
-  color: #d69e2e;
+  font-size: @nordic-text-lg;
+  color: @nordic-yellow;
   font-weight: 500;
 }
 
@@ -724,18 +726,18 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   gap: 5px;
-  margin-top: 10px;
-  font-size: 0.929rem /* 原值: 13px */;
-  color: #a0aec0;
+  margin-top: @nordic-space-sm;
+  font-size: @nordic-text-sm;
+  color: @nordic-text-muted;
 }
 
 .wallet-stats {
   display: flex;
   justify-content: space-around;
   margin-bottom: 30px;
-  padding: 20px 0;
-  border-top: 1px solid rgba(214, 158, 46, 0.2);
-  border-bottom: 1px solid rgba(214, 158, 46, 0.2);
+  padding: @nordic-space-lg 0;
+  border-top: 1px solid fade(@nordic-yellow, 20%);
+  border-bottom: 1px solid fade(@nordic-yellow, 20%);
 }
 
 .stat-item {
@@ -745,7 +747,7 @@ onMounted(() => {
 }
 
 .stat-icon {
-  font-size: 2.571rem /* 原值: 36px */;
+  font-size: 2.571rem;
   line-height: 1;
 }
 
@@ -754,26 +756,26 @@ onMounted(() => {
 }
 
 .stat-label {
-  font-size: 1rem /* 原值: 14px */;
-  color: #718096;
+  font-size: @nordic-text-base;
+  color: @nordic-text-secondary;
   margin-bottom: 5px;
 }
 
 .stat-value {
-  font-size: 1.429rem /* 原值: 20px */;
+  font-size: @nordic-text-lg;
   font-weight: 600;
 }
 
 .recharge-color {
-  color: #48bb78;
+  color: @nordic-green;
 }
 
 .consume-color {
-  color: #f56565;
+  color: @nordic-red;
 }
 
 .withdraw-color {
-  color: #4299e1;
+  color: @nordic-blue;
 }
 
 .wallet-actions {
@@ -785,36 +787,36 @@ onMounted(() => {
 
 .wallet-actions .el-button {
   min-width: 120px;
-  font-size: 1.143rem /* 原值: 16px */;
-  padding: 12px 24px;
-  border-radius: 8px;
+  font-size: @nordic-text-md;
+  padding: 12px @nordic-space-lg;
+  border-radius: @nordic-radius-sm;
   font-weight: 500;
 }
 
 .wallet-actions .btn-icon {
   margin-right: 5px;
-  font-size: 1.286rem /* 原值: 18px */;
+  font-size: @nordic-text-lg;
 }
 
 .quick-actions-card {
-  border-radius: 16px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-  margin-bottom: 20px;
+  border-radius: @nordic-radius-lg;
+  box-shadow: 0 2px 12px @nordic-shadow;
+  margin-bottom: @nordic-space-lg;
   border: none;
 }
 
 .card-title {
-  font-size: 1.286rem /* 原值: 18px */;
-  margin: 0 0 20px 0;
+  font-size: @nordic-text-md + 2px;
+  margin: 0 0 @nordic-space-lg 0;
   font-weight: 700;
-  color: #2d3748;
+  color: @nordic-text;
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: @nordic-space-lg;
 }
 
 .quick-actions-grid {
@@ -827,42 +829,42 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 20px;
-  background: linear-gradient(135deg, #ebf8ff 0%, #bee3f8 100%);
-  border-radius: 12px;
+  padding: @nordic-space-lg;
+  background: linear-gradient(135deg, @nordic-blue-light 0%, darken(@nordic-blue-light, 5%) 100%);
+  border-radius: @nordic-radius-md;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all @nordic-transition-slow ease;
   border: 2px solid transparent;
 }
 
 .quick-action-item:hover {
   transform: translateY(-4px);
-  box-shadow: 0 6px 16px rgba(66, 153, 225, 0.3);
-  border-color: #4299e1;
+  box-shadow: 0 6px 16px fade(@nordic-blue, 30%);
+  border-color: @nordic-blue;
 }
 
 .action-icon {
-  font-size: 2.286rem /* 原值: 32px */;
-  margin-bottom: 10px;
+  font-size: 2.286rem;
+  margin-bottom: @nordic-space-sm;
 }
 
 .action-text {
-  font-size: 1rem /* 原值: 14px */;
+  font-size: @nordic-text-base;
   font-weight: 600;
-  color: #2b6cb0;
+  color: @nordic-blue;
   margin-bottom: 4px;
 }
 
 .action-desc {
-  font-size: 0.857rem /* 原值: 12px */;
-  color: #718096;
+  font-size: @nordic-text-xs;
+  color: @nordic-text-secondary;
   text-align: center;
   line-height: 1.4;
 }
 
 .recent-transactions-card {
-  border-radius: 16px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  border-radius: @nordic-radius-lg;
+  box-shadow: 0 2px 12px @nordic-shadow;
   border: none;
 }
 
@@ -876,38 +878,38 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 15px;
-  padding: 16px;
-  background: #f8fafc;
-  border-radius: 12px;
-  transition: all 0.2s ease;
+  padding: @nordic-space-md;
+  background: @nordic-divider;
+  border-radius: @nordic-radius-md;
+  transition: all @nordic-transition-fast ease;
 }
 
 .transaction-item:hover {
-  background: #edf2f7;
+  background: @nordic-border;
   transform: translateX(4px);
 }
 
 .transaction-icon {
   width: 48px;
   height: 48px;
-  border-radius: 12px;
+  border-radius: @nordic-radius-md;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.714rem /* 原值: 24px */;
-  background: white;
+  font-size: 1.714rem;
+  background: @nordic-surface;
 }
 
 .icon-recharge {
-  background: linear-gradient(135deg, #c6f6d5 0%, #9ae6b4 100%);
+  background: linear-gradient(135deg, @nordic-green-light 0%, darken(@nordic-green-light, 5%) 100%);
 }
 
 .icon-consume {
-  background: linear-gradient(135deg, #fed7d7 0%, #feb2b2 100%);
+  background: linear-gradient(135deg, @nordic-red-light 0%, darken(@nordic-red-light, 5%) 100%);
 }
 
 .icon-withdraw {
-  background: linear-gradient(135deg, #bee3f8 0%, #90cdf4 100%);
+  background: linear-gradient(135deg, @nordic-blue-light 0%, darken(@nordic-blue-light, 5%) 100%);
 }
 
 .transaction-info {
@@ -915,51 +917,51 @@ onMounted(() => {
 }
 
 .transaction-type {
-  font-size: 1.071rem /* 原值: 15px */;
+  font-size: 1.071rem;
   font-weight: 600;
-  color: #2d3748;
+  color: @nordic-text;
   margin-bottom: 4px;
 }
 
 .transaction-time {
-  font-size: 0.929rem /* 原值: 13px */;
-  color: #a0aec0;
+  font-size: @nordic-text-sm;
+  color: @nordic-text-muted;
 }
 
 .transaction-amount {
-  font-size: 1.286rem /* 原值: 18px */;
+  font-size: 1.286rem;
   font-weight: 600;
 }
 
 .amount-income {
-  color: #48bb78;
+  color: @nordic-green;
 }
 
 .amount-expense {
-  color: #f56565;
+  color: @nordic-red;
 }
 
 .quick-amount-buttons {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: @nordic-space-sm;
 }
 
 .balance-highlight {
-  color: #d69e2e;
+  color: @nordic-yellow;
   font-weight: 600;
-  font-size: 1.143rem /* 原值: 16px */;
+  font-size: @nordic-text-md;
 }
 
 .fee-text {
-  color: #f56565;
+  color: @nordic-red;
   font-weight: 500;
-  font-size: 1.071rem /* 原值: 15px */;
+  font-size: 1.071rem;
 }
 
 .actual-amount {
-  color: #48bb78;
+  color: @nordic-green;
   font-weight: 600;
-  font-size: 1.143rem /* 原值: 16px */;
+  font-size: @nordic-text-md;
 }
 </style>

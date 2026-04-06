@@ -53,6 +53,8 @@ onMounted(() => {
 </script>
 
 <style scoped lang="less">
+@import '../../../assets/css/nordic-theme.less';
+
 .app-container {
   height: 100vh;
   display: flex;
@@ -67,7 +69,7 @@ onMounted(() => {
 
 .content-area {
   padding: 20px 20px 0 20px;
-  background-color: #fafafa;
+  background-color: @nordic-bg;
   overflow-y: auto;
   height: 100%;
   box-sizing: border-box;
@@ -89,13 +91,13 @@ onMounted(() => {
     align-items: center;
     margin-bottom: 24px;
     padding-bottom: 16px;
-    border-bottom: 2px solid #f0f0f0;
+    border-bottom: 2px solid @nordic-border;
 
     h2 {
       font-size: 26px;
       font-weight: 700;
       margin: 0;
-      background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%);
+      background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
@@ -112,15 +114,15 @@ onMounted(() => {
     flex: 1;
     display: flex;
     flex-direction: column;
-    border-radius: 16px;
+    border-radius: @nordic-radius-lg;
     overflow: hidden;
-    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 2px 16px @nordic-shadow;
     height: 100%;
 
     :deep(.el-tabs__header) {
       margin: 0;
-      background: linear-gradient(135deg, #fff9fa 0%, #fff 100%);
-      border-bottom: 2px solid #ffe0e3;
+      background: linear-gradient(135deg, @nordic-surface 0%, @nordic-white 100%);
+      border-bottom: 2px solid @nordic-border;
       flex-shrink: 0;
     }
 
@@ -131,16 +133,16 @@ onMounted(() => {
     :deep(.el-tabs__item) {
       font-size: 1.071rem /* 原值: 15px */;
       font-weight: 600;
-      color: #606266;
-      transition: all 0.3s ease;
+      color: @nordic-text-secondary;
+      transition: all @nordic-transition-slow ease;
 
       &:hover {
-        color: #ff6b6b;
+        color: @nordic-accent;
       }
 
       &.is-active {
-        color: #ff6b6b;
-        background: linear-gradient(135deg, #ffe8e8 0%, #fff 100%);
+        color: @nordic-accent;
+        background: linear-gradient(135deg, @nordic-accent-light 0%, @nordic-white 100%);
       }
     }
 

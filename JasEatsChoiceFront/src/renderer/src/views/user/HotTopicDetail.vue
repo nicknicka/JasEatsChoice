@@ -200,10 +200,12 @@ onMounted(() => {
 </template>
 
 <style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+
 .hot-topic-detail-page {
   width: 100%;
   min-height: 100vh;
-  background: linear-gradient(135deg, #fff5f5 0%, #fff 50%, #f8f9fa 100%);
+  background: linear-gradient(135deg, @nordic-red-light 0%, @nordic-white 50%, @nordic-bg 100%);
   padding-bottom: 40px;
 }
 
@@ -212,35 +214,35 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
-  background: #ffffff;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  padding: @nordic-space-md 20px;
+  background: @nordic-surface;
+  box-shadow: 0 2px 12px @nordic-shadow-hover;
   position: sticky;
   top: 0;
   z-index: 100;
   backdrop-filter: blur(10px);
-  background-color: rgba(255, 255, 255, 0.95);
+  background-color: fade(@nordic-white, 95%);
 
   .back-btn,
   .share-btn {
     width: 40px;
     height: 40px;
     border: none;
-    background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%);
-    color: #fff;
-    transition: all 0.3s ease;
+    background: linear-gradient(135deg, @nordic-red 0%, @nordic-accent 100%);
+    color: @nordic-white;
+    transition: all @nordic-transition-slow ease;
 
     &:hover {
       transform: scale(1.1);
-      box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
+      box-shadow: 0 4px 12px fade(@nordic-red, 40%);
     }
   }
 
   .page-title {
     margin: 0;
-    font-size: 1.429rem /* 原值: 20px */;
+    font-size: @nordic-text-lg;
     font-weight: 700;
-    color: #333;
+    color: @nordic-text;
     text-align: center;
     flex: 1;
   }
@@ -263,71 +265,71 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 24px;
+  margin-bottom: @nordic-space-lg;
   flex-wrap: wrap;
 
   .publish-time {
-    font-size: 1rem /* 原值: 14px */;
-    color: #999;
+    font-size: @nordic-text-base;
+    color: @nordic-text-muted;
     padding: 6px 12px;
-    background: rgba(0, 0, 0, 0.05);
-    border-radius: 16px;
+    background: @nordic-divider;
+    border-radius: @nordic-radius-lg;
   }
 }
 
 // 热点标题
 .topic-content {
-  margin-bottom: 32px;
+  margin-bottom: @nordic-space-xl;
 
   .topic-title {
-    font-size: 2rem /* 原值: 28px */;
+    font-size: @nordic-text-xl;
     font-weight: 700;
-    color: #333;
+    color: @nordic-text;
     line-height: 1.6;
     margin: 0;
-    padding: 24px;
-    background: #ffffff;
-    border-radius: 16px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    padding: @nordic-space-lg;
+    background: @nordic-surface;
+    border-radius: @nordic-radius-lg;
+    box-shadow: 0 4px 16px @nordic-shadow-hover;
   }
 }
 
 // 扩展信息
 .extended-info {
-  background: #ffffff;
-  border-radius: 16px;
-  padding: 24px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  background: @nordic-surface;
+  border-radius: @nordic-radius-lg;
+  padding: @nordic-space-lg;
+  box-shadow: 0 4px 16px @nordic-shadow-hover;
 
   .info-item {
     display: flex;
     align-items: center;
     gap: 12px;
     padding: 12px 0;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid @nordic-divider;
 
     &:last-child {
       border-bottom: none;
     }
 
     .info-label {
-      font-size: 1rem /* 原值: 14px */;
-      color: #666;
+      font-size: @nordic-text-base;
+      color: @nordic-text-secondary;
       font-weight: 600;
       min-width: 80px;
     }
 
     .info-value {
-      font-size: 1rem /* 原值: 14px */;
-      color: #333;
+      font-size: @nordic-text-base;
+      color: @nordic-text;
     }
   }
 }
 
 // 响应式适配
-@media (max-width: 768px) {
+@media (max-width: @nordic-breakpoint-md) {
   .topic-content .topic-title {
-    font-size: 1.714rem /* 原值: 24px */;
+    font-size: @nordic-text-md;
     padding: 20px;
   }
 
@@ -336,7 +338,7 @@ onMounted(() => {
   }
 
   .meta-info .publish-time {
-    font-size: 0.857rem /* 原值: 12px */;
+    font-size: @nordic-text-xs;
   }
 }
 </style>

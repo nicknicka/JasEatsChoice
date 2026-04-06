@@ -567,22 +567,24 @@ onMounted(() => {
 })
 </script>
 
-<style scoped>
+<style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+
 .diet-record-container {
   width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: @nordic-space-lg;
   padding: 0;
 }
 
 /* 顶部日历区域 */
 .calendar-section {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 32px;
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
+  padding: @nordic-space-xl;
+  border-radius: @nordic-radius-lg;
+  box-shadow: 0 8px 32px @nordic-shadow;
 }
 
 .section-header {
@@ -590,20 +592,20 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: @nordic-space-md;
 }
 
 .section-title {
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 2rem /* 原值: 28px */;
+  font-size: @nordic-text-xl;
   font-weight: 700;
-  color: white;
+  color: @nordic-surface;
 }
 
 .title-icon {
-  font-size: 2.286rem /* 原值: 32px */;
+  font-size: 2.286rem;
 }
 
 .calendar-control {
@@ -613,43 +615,41 @@ onMounted(() => {
 }
 
 .calendar-picker {
-  background-color: white;
-  border-radius: 8px;
-  padding: 4px;
+  background-color: @nordic-surface;
+  border-radius: @nordic-radius-sm;
+  padding: @nordic-space-xs;
 }
 
 .calendar-suffix-icon {
-  color: #667eea;
+  color: @nordic-accent;
 }
 
 .add-btn {
-  border-radius: 24px !important;
+  border-radius: @nordic-radius-pill !important;
   padding: 10px 24px !important;
   font-weight: 600 !important;
-  background: white;
-  color: #667eea;
-  border: 2px solid white;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: @nordic-surface;
+  color: @nordic-accent;
+  border: 2px solid @nordic-surface;
+  transition: all @nordic-transition-slow ease;
+  box-shadow: 0 2px 8px @nordic-shadow;
 }
 
 .add-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 16px rgba(255, 255, 255, 0.3);
-  background: white;
-  color: #667eea;
+  background: @nordic-surface;
+  color: @nordic-accent;
 }
 
-/* 优化后的统计卡片 */
+/* 统计卡片 */
 .stats-card {
+  .nordic-card();
   display: flex;
   align-items: center;
   justify-content: space-around;
-  gap: 24px;
-  background-color: white;
-  padding: 24px;
-  border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  gap: @nordic-space-lg;
+  padding: @nordic-space-lg;
   flex-wrap: wrap;
 }
 
@@ -659,37 +659,37 @@ onMounted(() => {
 }
 
 .stat-number {
-  font-size: 2.286rem /* 原值: 32px */;
+  font-size: 2.286rem;
   font-weight: 700;
-  color: #333;
-  margin-bottom: 4px;
+  color: @nordic-text;
+  margin-bottom: @nordic-space-xs;
   display: flex;
   align-items: baseline;
   justify-content: center;
-  gap: 4px;
+  gap: @nordic-space-xs;
 }
 
 .stat-unit {
-  font-size: 1rem /* 原值: 14px */;
-  color: #999;
+  font-size: @nordic-text-base;
+  color: @nordic-text-muted;
   font-weight: 500;
 }
 
 .stat-label {
-  font-size: 1rem /* 原值: 14px */;
-  color: #999;
+  font-size: @nordic-text-base;
+  color: @nordic-text-muted;
   font-weight: 500;
 }
 
 .stat-progress {
-  margin-top: 8px;
+  margin-top: @nordic-space-sm;
   width: 100%;
 }
 
 .stat-detail {
-  font-size: 0.857rem /* 原值: 12px */;
-  color: #999;
-  margin-top: 4px;
+  font-size: @nordic-text-xs;
+  color: @nordic-text-muted;
+  margin-top: @nordic-space-xs;
 }
 
 /* 营养素统计样式 */
@@ -698,9 +698,9 @@ onMounted(() => {
 }
 
 .nutrient-value {
-  font-size: 1.429rem /* 原值: 20px */;
+  font-size: @nordic-text-lg;
   font-weight: 600;
-  color: #667eea;
+  color: @nordic-accent;
   display: flex;
   align-items: baseline;
   justify-content: center;
@@ -708,42 +708,40 @@ onMounted(() => {
 }
 
 .nutrient-unit {
-  font-size: 0.857rem /* 原值: 12px */;
-  color: #999;
+  font-size: @nordic-text-xs;
+  color: @nordic-text-muted;
 }
 
 .nutrient-label {
-  font-size: 0.857rem /* 原值: 12px */;
-  color: #999;
+  font-size: @nordic-text-xs;
+  color: @nordic-text-muted;
   margin-top: 2px;
 }
 
 .stat-divider {
   width: 2px;
   height: 48px;
-  background-color: #e8e8e8;
+  background-color: @nordic-border;
 }
 
 /* 记录区域 */
 .records-section {
+  .nordic-card();
   flex: 1;
-  background-color: white;
-  padding: 24px;
-  border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  padding: @nordic-space-lg;
   overflow-y: auto;
   min-height: 400px;
 }
 
 /* 骨架屏样式 */
 .skeleton-container {
-  padding: 20px;
+  padding: @nordic-space-lg;
 }
 
 .meal-sections {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: @nordic-space-lg;
 }
 
 /* 餐食分类标题 */
@@ -757,32 +755,32 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 16px;
-  border-radius: 8px;
-  font-size: 1.286rem /* 原值: 18px */;
+  padding: 12px @nordic-space-md;
+  border-radius: @nordic-radius-sm;
+  font-size: 1.286rem;
   font-weight: 600;
-  color: white;
+  color: @nordic-surface;
   user-select: none;
 }
 
 .meal-section-header.breakfast {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
 }
 
 .meal-section-header.lunch {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  background: linear-gradient(135deg, @nordic-red 0%, @nordic-yellow 100%);
 }
 
 .meal-section-header.dinner {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  background: linear-gradient(135deg, @nordic-blue 0%, lighten(@nordic-blue, 20%) 100%);
 }
 
 .meal-section-header.snack {
-  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+  background: linear-gradient(135deg, @nordic-green 0%, lighten(@nordic-green, 20%) 100%);
 }
 
 .meal-icon {
-  font-size: 1.714rem /* 原值: 24px */;
+  font-size: 1.714rem;
 }
 
 .meal-count {
@@ -791,9 +789,9 @@ onMounted(() => {
 
 /* 箭头图标样式 */
 .arrow-icon {
-  transition: transform 0.3s ease;
-  font-size: 1.143rem /* 原值: 16px */;
-  margin-left: 8px;
+  transition: transform @nordic-transition-slow ease;
+  font-size: 1.143rem;
+  margin-left: @nordic-space-sm;
 }
 
 .rotate-180 {
@@ -803,7 +801,7 @@ onMounted(() => {
 /* 折叠动画样式 */
 .collapse-enter-active,
 .collapse-leave-active {
-  transition: all 0.3s ease;
+  transition: all @nordic-transition-slow ease;
   overflow: hidden;
 }
 
@@ -819,25 +817,25 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 0 8px;
+  padding: 0 @nordic-space-sm;
 }
 
 /* 删除确认弹窗样式 */
 .delete-confirm-content {
   text-align: center;
-  padding: 20px 0;
+  padding: @nordic-space-lg 0;
 }
 
 .delete-icon {
-  font-size: 3.429rem /* 原值: 48px */;
-  color: #f56c6c;
-  margin-bottom: 16px;
+  font-size: 3.429rem;
+  color: @nordic-red;
+  margin-bottom: @nordic-space-md;
 }
 
 .delete-record-info {
-  font-size: 1rem /* 原值: 14px */;
-  color: #666;
-  margin-top: 8px;
+  font-size: @nordic-text-base;
+  color: @nordic-text-secondary;
+  margin-top: @nordic-space-sm;
 }
 
 /* 空数据 */
@@ -847,25 +845,25 @@ onMounted(() => {
 }
 
 .add-empty-btn {
-  margin-top: 24px;
-  border-radius: 8px;
+  margin-top: @nordic-space-lg;
+  border-radius: @nordic-radius-sm;
   font-weight: 600;
 }
 
 .empty-tips {
-  margin-top: 16px;
-  font-size: 1rem /* 原值: 14px */;
-  color: #999;
-  padding: 12px 20px;
-  background-color: #f5f7fa;
-  border-radius: 8px;
+  margin-top: @nordic-space-md;
+  font-size: @nordic-text-base;
+  color: @nordic-text-muted;
+  padding: 12px @nordic-space-lg;
+  background-color: @nordic-bg;
+  border-radius: @nordic-radius-sm;
   display: inline-block;
 }
 
 /* 响应式设计 */
-@media (max-width: 768px) {
+@media (max-width: @nordic-breakpoint-md) {
   .calendar-section {
-    padding: 20px;
+    padding: @nordic-space-lg;
   }
 
   .section-header {
@@ -874,27 +872,27 @@ onMounted(() => {
   }
 
   .section-title {
-    font-size: 1.714rem /* 原值: 24px */;
+    font-size: 1.714rem;
   }
 
   .stats-card {
-    gap: 16px;
-    padding: 16px;
+    gap: @nordic-space-md;
+    padding: @nordic-space-md;
   }
 
   .stat-number {
-    font-size: 1.714rem /* 原值: 24px */;
+    font-size: 1.714rem;
   }
 
   .nutrient-value {
-    font-size: 1.286rem /* 原值: 18px */;
+    font-size: 1.286rem;
   }
 }
 
 @media (max-width: 480px) {
   .stats-card {
     flex-direction: column;
-    gap: 20px;
+    gap: @nordic-space-lg;
   }
 
   .stat-divider {

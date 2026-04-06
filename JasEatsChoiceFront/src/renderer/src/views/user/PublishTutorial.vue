@@ -1415,16 +1415,18 @@ watch(() => tutorialForm.value.content, () => {
 </template>
 
 <style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+
 .user-tutorial-publish-container {
   padding: 0;
-  background: #f5f7fa;
+  background: @nordic-bg;
   min-height: calc(100vh - 60px);
 
   .page-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    padding: 32px 40px;
-    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
-    margin-bottom: 32px;
+    background: linear-gradient(135deg, @nordic-accent 0%, @nordic-blue 100%);
+    padding: @nordic-space-xl 40px;
+    box-shadow: 0 4px 20px @nordic-shadow-hover;
+    margin-bottom: @nordic-space-xl;
 
     .header-content {
       max-width: 1600px;
@@ -1432,12 +1434,12 @@ watch(() => tutorialForm.value.content, () => {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 24px;
+      gap: @nordic-space-lg;
 
       .header-left {
         display: flex;
         align-items: center;
-        gap: 20px;
+        gap: 20px; // 保持20px，不在主题变量中
         flex: 1;
 
         .title-section {
@@ -1449,7 +1451,7 @@ watch(() => tutorialForm.value.content, () => {
             margin: 0 0 8px 0;
             font-size: 2.286rem /* 原值: 32px */;
             font-weight: bold;
-            color: white;
+            color: @nordic-surface;
             line-height: 1.2;
           }
 
@@ -1477,13 +1479,13 @@ watch(() => tutorialForm.value.content, () => {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          padding: 8px 16px;
+          padding: 8px @nordic-space-md;
           height: 40px;
           line-height: 1;
           box-sizing: border-box;
           text-align: center;
           background: rgba(255, 255, 255, 0.2);
-          color: white;
+          color: @nordic-surface;
           backdrop-filter: blur(10px);
 
           :deep(.el-icon) {
@@ -1510,69 +1512,69 @@ watch(() => tutorialForm.value.content, () => {
   .content-wrapper {
     max-width: 1600px;
     margin: 0 auto;
-    padding: 0 40px 40px;
+    padding: 0 40px @nordic-space-xl;
     display: grid;
     grid-template-columns: 1fr 420px;
-    gap: 24px;
+    gap: @nordic-space-lg;
   }
 
   .main-content {
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: @nordic-space-lg;
 
     .card-header {
       display: flex;
       align-items: center;
-      gap: 8px;
-      font-size: 1.143rem /* 原值: 16px */;
+      gap: @nordic-space-sm;
+      font-size: @nordic-text-md;
       font-weight: 600;
-      color: #303133;
+      color: @nordic-text;
 
       .el-icon {
         font-size: 1.286rem /* 原值: 18px */;
-        color: #667eea;
+        color: @nordic-accent;
       }
     }
 
     .template-card {
       border: none;
-      border-radius: 16px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+      border-radius: @nordic-radius-lg;
+      box-shadow: 0 4px 16px @nordic-shadow;
       transition: all 0.3s;
 
       &:hover {
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        box-shadow: 0 8px 24px @nordic-shadow-hover;
         transform: translateY(-2px);
       }
 
       .templates-grid {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
-        gap: 16px;
+        gap: @nordic-space-md;
 
         .template-item {
           padding: 20px;
-          background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-          border: 2px solid #e9ecef;
-          border-radius: 12px;
+          background: linear-gradient(135deg, @nordic-bg 0%, @nordic-surface 100%);
+          border: 2px solid @nordic-border;
+          border-radius: @nordic-radius-md;
           cursor: pointer;
           transition: all 0.3s;
           display: flex;
           align-items: center;
-          gap: 16px;
+          gap: @nordic-space-md;
 
           &:hover {
-            border-color: #667eea;
-            background: linear-gradient(135deg, #f0f3ff 0%, #ffffff 100%);
+            border-color: @nordic-accent;
+            background: linear-gradient(135deg, @nordic-accent-light 0%, @nordic-surface 100%);
             transform: translateY(-4px);
-            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.2);
+            box-shadow: 0 8px 20px fade(@nordic-accent, 20%);
           }
 
           .template-icon {
             width: 56px;
             height: 56px;
-            border-radius: 12px;
+            border-radius: @nordic-radius-md;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1580,13 +1582,13 @@ watch(() => tutorialForm.value.content, () => {
             font-size: 1.714rem /* 原值: 24px */;
 
             &.video {
-              background: linear-gradient(135deg, #ff6b6b 0%, #ff8e8e 100%);
-              color: white;
+              background: linear-gradient(135deg, @nordic-red 0%, @nordic-red-light 100%);
+              color: @nordic-surface;
             }
 
             &.article {
-              background: linear-gradient(135deg, #f7b267 0%, #ffcc80 100%);
-              color: white;
+              background: linear-gradient(135deg, @nordic-yellow 0%, @nordic-yellow-light 100%);
+              color: @nordic-surface;
             }
 
             .el-icon {
@@ -1600,8 +1602,8 @@ watch(() => tutorialForm.value.content, () => {
             .template-title {
               font-size: 1.071rem /* 原值: 15px */;
               font-weight: 600;
-              color: #303133;
-              margin-bottom: 8px;
+              color: @nordic-text;
+              margin-bottom: @nordic-space-sm;
             }
 
             .template-difficulty {
@@ -1615,12 +1617,12 @@ watch(() => tutorialForm.value.content, () => {
 
     .form-card {
       border: none;
-      border-radius: 16px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+      border-radius: @nordic-radius-lg;
+      box-shadow: 0 4px 16px @nordic-shadow;
       transition: all 0.3s;
 
       &:hover {
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        box-shadow: 0 8px 24px @nordic-shadow-hover;
       }
 
       &.content-card {
@@ -1636,14 +1638,14 @@ watch(() => tutorialForm.value.content, () => {
 
           .preview-mode-switcher {
             display: flex;
-            gap: 8px;
+            gap: @nordic-space-sm;
           }
         }
 
         .content-editor-wrapper {
           display: grid;
           gap: 20px;
-          margin-bottom: 16px;
+          margin-bottom: @nordic-space-md;
 
           &.mode-edit {
             grid-template-columns: 1fr;
@@ -1664,7 +1666,7 @@ watch(() => tutorialForm.value.content, () => {
           .editor-pane,
           .preview-pane {
             min-height: 72px; /* 3行高度 */
-            border-radius: 8px;
+            border-radius: @nordic-radius-sm;
             display: flex;
             flex-direction: column;
           }
@@ -1674,16 +1676,16 @@ watch(() => tutorialForm.value.content, () => {
               display: flex;
               align-items: center;
               gap: 12px;
-              padding: 12px 16px;
-              background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-              border: 1px solid #dcdfe6;
+              padding: 12px @nordic-space-md;
+              background: linear-gradient(135deg, @nordic-bg 0%, @nordic-surface 100%);
+              border: 1px solid @nordic-border;
               border-bottom: none;
-              border-radius: 8px 8px 0 0;
+              border-radius: @nordic-radius-sm @nordic-radius-sm 0 0;
 
               .toolbar-tip {
                 flex: 1;
-                font-size: 0.857rem /* 原值: 12px */;
-                color: #909399;
+                font-size: @nordic-text-xs;
+                color: @nordic-text-muted;
               }
             }
           }
@@ -1692,15 +1694,15 @@ watch(() => tutorialForm.value.content, () => {
             .native-textarea {
               width: 100%;
               min-height: 72px; /* 3行高度 (24px * 3) */
-              border: 1px solid #dcdfe6;
-              border-radius: 0 0 8px 8px;
+              border: 1px solid @nordic-border;
+              border-radius: 0 0 @nordic-radius-sm @nordic-radius-sm;
               border-top: none;
-              padding: 12px 16px;
+              padding: 12px @nordic-space-md;
               font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-              font-size: 1rem /* 原值: 14px */;
+              font-size: @nordic-text-base;
               line-height: 1.6;
-              color: #606266;
-              background-color: #ffffff;
+              color: @nordic-text-secondary;
+              background-color: @nordic-surface;
               resize: vertical; /* 允许手动拖动调整高度 */
               overflow-y: auto;
               overflow-x: hidden;
@@ -1709,22 +1711,22 @@ watch(() => tutorialForm.value.content, () => {
               box-sizing: border-box;
 
               &:hover {
-                border-color: #c0c4cc;
+                border-color: @nordic-text-muted;
               }
 
               &:focus {
-                border-color: #409eff;
+                border-color: @nordic-blue;
               }
 
               &::placeholder {
-                color: #c0c4cc;
+                color: @nordic-text-muted;
               }
             }
           }
 
           .preview-pane {
-            background: #ffffff;
-            border: 1px solid #dcdfe6;
+            background: @nordic-surface;
+            border: 1px solid @nordic-border;
             padding: 20px;
             overflow-y: auto;
             min-height: 72px; /* 与编辑器保持一致，3行高度 */
@@ -1733,18 +1735,18 @@ watch(() => tutorialForm.value.content, () => {
 
             .markdown-preview {
               line-height: 1.8;
-              color: #303133;
+              color: @nordic-text;
 
               h1, h2, h3, h4, h5, h6 {
-                margin-top: 24px;
-                margin-bottom: 16px;
+                margin-top: @nordic-space-lg;
+                margin-bottom: @nordic-space-md;
                 font-weight: 600;
                 line-height: 1.4;
-                color: #303133;
+                color: @nordic-text;
               }
 
-              h1 { font-size: 2rem /* 原值: 28px */; border-bottom: 2px solid #e4e7ed; padding-bottom: 10px; }
-              h2 { font-size: 1.714rem /* 原值: 24px */; border-bottom: 1px solid #e4e7ed; padding-bottom: 8px; }
+              h1 { font-size: 2rem /* 原值: 28px */; border-bottom: 2px solid @nordic-border; padding-bottom: 10px; }
+              h2 { font-size: 1.714rem /* 原值: 24px */; border-bottom: 1px solid @nordic-border; padding-bottom: 8px; }
               h3 { font-size: 1.429rem /* 原值: 20px */; }
               h4 { font-size: 1.286rem /* 原值: 18px */; }
               h5 { font-size: 1.143rem /* 原值: 16px */; }
@@ -1766,50 +1768,50 @@ watch(() => tutorialForm.value.content, () => {
               }
 
               strong {
-                color: #667eea;
+                color: @nordic-accent;
                 font-weight: 600;
               }
 
               em {
                 font-style: italic;
-                color: #606266;
+                color: @nordic-text-secondary;
               }
 
               a {
-                color: #409eff;
+                color: @nordic-blue;
                 text-decoration: none;
-                border-bottom: 1px solid #409eff;
+                border-bottom: 1px solid @nordic-blue;
                 transition: all 0.3s;
 
                 &:hover {
-                  color: #66b1ff;
-                  border-bottom-color: #66b1ff;
+                  color: @nordic-blue;
+                  border-bottom-color: @nordic-blue-light;
                 }
               }
 
               code {
-                background: #f4f4f5;
+                background: @nordic-divider;
                 padding: 2px 6px;
                 border-radius: 4px;
                 font-family: 'Monaco', 'Menlo', monospace;
-                font-size: 0.929rem /* 原值: 13px */;
-                color: #e83e8c;
+                font-size: @nordic-text-sm;
+                color: @nordic-red;
               }
 
               blockquote {
-                margin: 16px 0;
-                padding: 12px 16px;
-                background: #f4f4f5;
-                border-left: 4px solid #667eea;
-                color: #606266;
+                margin: @nordic-space-md 0;
+                padding: 12px @nordic-space-md;
+                background: @nordic-divider;
+                border-left: 4px solid @nordic-accent;
+                color: @nordic-text-secondary;
               }
 
               .markdown-image {
                 max-width: 100%;
                 height: auto;
-                border-radius: 8px;
+                border-radius: @nordic-radius-sm;
                 margin: 12px 0;
-                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                box-shadow: 0 2px 8px @nordic-shadow-hover;
                 display: block;
               }
             }
@@ -1820,16 +1822,16 @@ watch(() => tutorialForm.value.content, () => {
               align-items: center;
               justify-content: center;
               height: 100%;
-              color: #909399;
+              color: @nordic-text-muted;
               gap: 12px;
 
               .el-icon {
-                color: #c0c4cc;
+                color: @nordic-text-muted;
               }
 
               p {
                 margin: 0;
-                font-size: 1rem /* 原值: 14px */;
+                font-size: @nordic-text-base;
               }
             }
           }
@@ -1847,13 +1849,13 @@ watch(() => tutorialForm.value.content, () => {
       .publish-form {
         :deep(.el-form-item__label) {
           font-weight: 500;
-          color: #606266;
+          color: @nordic-text-secondary;
         }
 
         .form-tip {
           margin-left: 12px;
-          color: #909399;
-          font-size: 0.929rem /* 原值: 13px */;
+          color: @nordic-text-muted;
+          font-size: @nordic-text-sm;
         }
 
         // 封面图上传容器
@@ -1861,7 +1863,7 @@ watch(() => tutorialForm.value.content, () => {
           width: 100%;
           display: flex;
           align-items: flex-start;
-          gap: 16px;
+          gap: @nordic-space-md;
 
           .cover-preview-wrapper {
             margin-top: 0;
@@ -1873,11 +1875,11 @@ watch(() => tutorialForm.value.content, () => {
               position: relative;
               width: 100%;
               height: 100%;
-              border-radius: 10px;
+              border-radius: @nordic-radius-md;
               overflow: hidden;
-              box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+              box-shadow: 0 3px 8px @nordic-shadow-hover;
               margin-bottom: 0;
-              background: #f5f7fa;
+              background: @nordic-bg;
 
               .cover-preview-image {
                 width: 100%;
@@ -1916,8 +1918,8 @@ watch(() => tutorialForm.value.content, () => {
 
             .cover-url-display {
               :deep(.el-input__inner) {
-                background: #f5f7fa;
-                color: #909399;
+                background: @nordic-bg;
+                color: @nordic-text-muted;
               }
             }
 
@@ -1925,9 +1927,9 @@ watch(() => tutorialForm.value.content, () => {
               position: relative;
               width: 100%;
               height: 100%;
-              border-radius: 10px;
+              border-radius: @nordic-radius-md;
               overflow: hidden;
-              box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+              box-shadow: 0 3px 8px @nordic-shadow-hover;
               margin-bottom: 0;
               background: #000;
 
@@ -1969,7 +1971,7 @@ watch(() => tutorialForm.value.content, () => {
                 }
 
                 .el-icon {
-                  color: #303133;
+                  color: @nordic-text;
                   font-size: 1.143rem /* 原值: 16px */;
                   font-weight: bold;
                 }
@@ -1992,8 +1994,8 @@ watch(() => tutorialForm.value.content, () => {
                 align-items: center;
                 padding: 8px 12px;
                 background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
-                border-radius: 0 0 10px 10px;
-                font-size: 0.857rem /* 原值: 12px */;
+                border-radius: 0 0 @nordic-radius-md @nordic-radius-md;
+                font-size: @nordic-text-xs;
                 color: white;
                 pointer-events: none;
 
@@ -2028,17 +2030,17 @@ watch(() => tutorialForm.value.content, () => {
               width: 100%;
               height: 100%;
               padding: 20px 10px;
-              border: 2px dashed #dcdfe6;
-              border-radius: 12px;
-              background: linear-gradient(135deg, #fafbfc 0%, #f5f7fa 100%);
+              border: 2px dashed @nordic-border;
+              border-radius: @nordic-radius-md;
+              background: linear-gradient(135deg, @nordic-bg 0%, @nordic-surface 100%);
               transition: all 0.3s;
               display: flex;
               align-items: center;
               justify-content: center;
 
               &:hover {
-                border-color: #667eea;
-                background: linear-gradient(135deg, #f0f3ff 0%, #fafbfc 100%);
+                border-color: @nordic-accent;
+                background: linear-gradient(135deg, @nordic-accent-light 0%, @nordic-surface 100%);
               }
             }
 
@@ -2046,12 +2048,12 @@ watch(() => tutorialForm.value.content, () => {
               display: flex;
               flex-direction: column;
               align-items: center;
-              gap: 8px;
+              gap: @nordic-space-sm;
 
               p {
                 margin: 0;
-                font-size: 0.857rem /* 原值: 12px */;
-                color: #606266;
+                font-size: @nordic-text-xs;
+                color: @nordic-text-secondary;
               }
             }
 
@@ -2059,11 +2061,11 @@ watch(() => tutorialForm.value.content, () => {
               display: flex;
               flex-direction: column;
               align-items: center;
-              gap: 8px;
+              gap: @nordic-space-sm;
 
               .upload-icon {
                 font-size: 2.286rem /* 原值: 32px */;
-                color: #667eea;
+                color: @nordic-accent;
               }
 
               .upload-text {
@@ -2071,13 +2073,13 @@ watch(() => tutorialForm.value.content, () => {
 
                 p {
                   margin: 0;
-                  font-size: 0.857rem /* 原值: 12px */;
-                  color: #303133;
+                  font-size: @nordic-text-xs;
+                  color: @nordic-text;
 
                   &.upload-hint {
                     margin-top: 2px;
                     font-size: 10px;
-                    color: #909399;
+                    color: @nordic-text-muted;
                   }
                 }
               }
@@ -2086,16 +2088,16 @@ watch(() => tutorialForm.value.content, () => {
         }
 
         .content-help {
-          margin-top: 16px;
-          padding: 16px;
-          background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
-          border-left: 4px solid #667eea;
-          border-radius: 8px;
+          margin-top: @nordic-space-md;
+          padding: @nordic-space-md;
+          background: linear-gradient(135deg, @nordic-blue-light 0%, @nordic-accent-light 100%);
+          border-left: 4px solid @nordic-accent;
+          border-radius: @nordic-radius-sm;
 
           p {
-            margin: 0 0 8px 0;
-            font-size: 1rem /* 原值: 14px */;
-            color: #303133;
+            margin: 0 0 @nordic-space-sm 0;
+            font-size: @nordic-text-base;
+            color: @nordic-text;
 
             &:first-child {
               margin-top: 0;
@@ -2103,13 +2105,13 @@ watch(() => tutorialForm.value.content, () => {
           }
 
           ul {
-            margin: 8px 0 0 0;
+            margin: @nordic-space-sm 0 0 0;
             padding-left: 20px;
 
             li {
               margin: 6px 0;
-              font-size: 0.929rem /* 原值: 13px */;
-              color: #606266;
+              font-size: @nordic-text-sm;
+              color: @nordic-text-secondary;
               line-height: 1.6;
             }
           }
@@ -2119,12 +2121,12 @@ watch(() => tutorialForm.value.content, () => {
 
     .tips-card {
       border: none;
-      border-radius: 16px;
-      background: linear-gradient(135deg, #fff9e6 0%, #ffffff 100%);
+      border-radius: @nordic-radius-lg;
+      background: linear-gradient(135deg, @nordic-yellow-light 0%, @nordic-surface 100%);
 
       .tips-content {
         .tip-section {
-          margin-bottom: 24px;
+          margin-bottom: @nordic-space-lg;
 
           &:last-child {
             margin-bottom: 0;
@@ -2132,31 +2134,31 @@ watch(() => tutorialForm.value.content, () => {
 
           h5 {
             font-size: 1.071rem /* 原值: 15px */;
-            color: #303133;
+            color: @nordic-text;
             margin: 0 0 12px 0;
             font-weight: 600;
           }
 
           p {
-            font-size: 1rem /* 原值: 14px */;
-            color: #606266;
+            font-size: @nordic-text-base;
+            color: @nordic-text-secondary;
             line-height: 1.8;
-            margin: 8px 0;
+            margin: @nordic-space-sm 0;
 
             strong {
-              color: #667eea;
+              color: @nordic-accent;
               font-weight: 600;
             }
           }
 
           ul {
-            margin: 8px 0 0 0;
+            margin: @nordic-space-sm 0 0 0;
             padding-left: 20px;
 
             li {
-              font-size: 1rem /* 原值: 14px */;
-              color: #606266;
-              margin: 8px 0;
+              font-size: @nordic-text-base;
+              color: @nordic-text-secondary;
+              margin: @nordic-space-sm 0;
               line-height: 1.6;
             }
           }
@@ -2170,18 +2172,18 @@ watch(() => tutorialForm.value.content, () => {
       position: sticky;
       top: 20px;
       border: none;
-      border-radius: 16px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+      border-radius: @nordic-radius-lg;
+      box-shadow: 0 4px 16px @nordic-shadow;
 
       .preview-content {
         .preview-cover {
           position: relative;
           width: 100%;
           height: 140px;
-          border-radius: 12px;
+          border-radius: @nordic-radius-md;
           overflow: hidden;
           margin-bottom: 20px;
-          background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+          background: linear-gradient(135deg, @nordic-bg 0%, @nordic-border 100%);
 
           img {
             width: 100%;
@@ -2196,37 +2198,37 @@ watch(() => tutorialForm.value.content, () => {
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            color: #909399;
-            gap: 8px;
+            color: @nordic-text-muted;
+            gap: @nordic-space-sm;
 
             .el-icon {
-              color: #c0c4cc;
+              color: @nordic-text-muted;
             }
           }
 
           .type-badge {
             position: absolute;
-            top: 16px;
-            right: 16px;
+            top: @nordic-space-md;
+            right: @nordic-space-md;
             background: rgba(255, 255, 255, 0.98);
-            padding: 8px 16px;
+            padding: @nordic-space-sm @nordic-space-md;
             border-radius: 20px;
             display: flex;
             align-items: center;
             gap: 6px;
-            font-size: 0.929rem /* 原值: 13px */;
+            font-size: @nordic-text-sm;
             font-weight: 600;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 4px 12px @nordic-shadow-hover;
             backdrop-filter: blur(10px);
           }
         }
 
         .preview-info {
           h3 {
-            font-size: 1.429rem /* 原值: 20px */;
+            font-size: @nordic-text-lg;
             font-weight: 700;
-            color: #303133;
-            margin: 0 0 16px 0;
+            color: @nordic-text;
+            margin: 0 0 @nordic-space-md 0;
             line-height: 1.4;
             min-height: 28px;
           }
@@ -2239,8 +2241,8 @@ watch(() => tutorialForm.value.content, () => {
 
             span {
               padding: 6px 14px;
-              border-radius: 16px;
-              font-size: 0.929rem /* 原值: 13px */;
+              border-radius: @nordic-radius-lg;
+              font-size: @nordic-text-sm;
               font-weight: 500;
               display: flex;
               align-items: center;
@@ -2248,64 +2250,64 @@ watch(() => tutorialForm.value.content, () => {
             }
 
             .difficulty-badge {
-              background: linear-gradient(135deg, #e0f2ff 0%, #f0f7ff 100%);
-              color: #409eff;
+              background: linear-gradient(135deg, @nordic-blue-light 0%, @nordic-blue-light 100%);
+              color: @nordic-blue;
             }
 
             .duration-badge {
-              background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
-              color: #f57c00;
+              background: linear-gradient(135deg, @nordic-yellow-light 0%, @nordic-yellow-light 100%);
+              color: @nordic-yellow;
             }
 
             .calories-badge {
-              background: linear-gradient(135deg, #f0f9ff 0%, #e1f5fe 100%);
-              color: #67c23a;
+              background: linear-gradient(135deg, @nordic-green-light 0%, @nordic-green-light 100%);
+              color: @nordic-green;
             }
           }
 
           .preview-body {
             .content-preview {
-              font-size: 1rem /* 原值: 14px */;
-              color: #606266;
+              font-size: @nordic-text-base;
+              color: @nordic-text-secondary;
               line-height: 1.8;
               max-height: 500px;
               overflow-y: auto;
-              padding: 16px;
-              background: #f8f9fa;
-              border-radius: 8px;
+              padding: @nordic-space-md;
+              background: @nordic-bg;
+              border-radius: @nordic-radius-sm;
 
               :deep(h1),
               :deep(h2),
               :deep(h3) {
-                margin-top: 16px;
-                margin-bottom: 8px;
-                color: #303133;
+                margin-top: @nordic-space-md;
+                margin-bottom: @nordic-space-sm;
+                color: @nordic-text;
                 font-weight: 600;
               }
 
               :deep(p) {
-                margin-bottom: 8px;
+                margin-bottom: @nordic-space-sm;
               }
 
               :deep(ul),
               :deep(ol) {
                 padding-left: 20px;
-                margin-bottom: 8px;
+                margin-bottom: @nordic-space-sm;
               }
 
               :deep(strong) {
-                color: #667eea;
+                color: @nordic-accent;
                 font-weight: 600;
               }
             }
 
             .no-content {
-              color: #c0c4cc;
+              color: @nordic-text-muted;
               font-style: italic;
               text-align: center;
               padding: 60px 20px;
-              background: #f8f9fa;
-              border-radius: 8px;
+              background: @nordic-bg;
+              border-radius: @nordic-radius-sm;
             }
           }
         }
@@ -2413,8 +2415,8 @@ watch(() => tutorialForm.value.content, () => {
   .preview-dialog-image {
     max-width: 100%;
     max-height: 70vh;
-    border-radius: 8px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    border-radius: @nordic-radius-sm;
+    box-shadow: 0 4px 16px @nordic-shadow-hover;
   }
 }
 
@@ -2429,8 +2431,8 @@ watch(() => tutorialForm.value.content, () => {
     width: 100%;
     max-height: 70vh;
     object-fit: contain;
-    border-radius: 8px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    border-radius: @nordic-radius-sm;
+    box-shadow: 0 4px 16px @nordic-shadow-hover;
   }
 }
 
@@ -2447,17 +2449,17 @@ watch(() => tutorialForm.value.content, () => {
     :deep(.el-upload-dragger) {
       width: 100%;
       padding: 30px;
-      border: 2px dashed #dcdfe6;
-      border-radius: 12px;
-      background: linear-gradient(135deg, #fafbfc 0%, #f5f7fa 100%);
+      border: 2px dashed @nordic-border;
+      border-radius: @nordic-radius-md;
+      background: linear-gradient(135deg, @nordic-bg 0%, @nordic-surface 100%);
       transition: all 0.3s;
       display: flex;
       align-items: center;
       justify-content: center;
 
       &:hover {
-        border-color: #667eea;
-        background: linear-gradient(135deg, #f0f3ff 0%, #fafbfc 100%);
+        border-color: @nordic-accent;
+        background: linear-gradient(135deg, @nordic-accent-light 0%, @nordic-surface 100%);
       }
     }
 
@@ -2469,8 +2471,8 @@ watch(() => tutorialForm.value.content, () => {
 
       p {
         margin: 0;
-        font-size: 0.929rem /* 原值: 13px */;
-        color: #606266;
+        font-size: @nordic-text-sm;
+        color: @nordic-text-secondary;
       }
     }
 
@@ -2482,7 +2484,7 @@ watch(() => tutorialForm.value.content, () => {
 
       .upload-icon {
         font-size: 2.857rem /* 原值: 40px */;
-        color: #667eea;
+        color: @nordic-accent;
       }
 
       .upload-text {
@@ -2490,13 +2492,13 @@ watch(() => tutorialForm.value.content, () => {
 
         p {
           margin: 0;
-          font-size: 1rem /* 原值: 14px */;
-          color: #303133;
+          font-size: @nordic-text-base;
+          color: @nordic-text;
 
           &.upload-hint {
             margin-top: 4px;
-            font-size: 0.857rem /* 原值: 12px */;
-            color: #909399;
+            font-size: @nordic-text-xs;
+            color: @nordic-text-muted;
           }
         }
       }
@@ -2504,23 +2506,23 @@ watch(() => tutorialForm.value.content, () => {
   }
 
   .uploaded-preview {
-    padding: 16px;
-    background: #f5f7fa;
-    border-radius: 8px;
+    padding: @nordic-space-md;
+    background: @nordic-bg;
+    border-radius: @nordic-radius-sm;
 
     .preview-title {
       margin: 0 0 12px 0;
-      font-size: 1rem /* 原值: 14px */;
+      font-size: @nordic-text-base;
       font-weight: 500;
-      color: #303133;
+      color: @nordic-text;
     }
 
     .preview-image {
       width: 100%;
       max-height: 300px;
       object-fit: contain;
-      border-radius: 8px;
-      border: 1px solid #e4e7ed;
+      border-radius: @nordic-radius-sm;
+      border: 1px solid @nordic-border;
     }
   }
 }
@@ -2549,7 +2551,7 @@ watch(() => tutorialForm.value.content, () => {
     cursor: grab;
     pointer-events: auto;
     will-change: transform;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 16px @nordic-shadow-hover;
     backdrop-filter: blur(10px);
     user-select: none;
 
@@ -2559,7 +2561,7 @@ watch(() => tutorialForm.value.content, () => {
     }
 
     &:hover {
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+      box-shadow: 0 6px 20px @nordic-shadow-hover;
 
       .floating-ball-tooltip {
         opacity: 1;
@@ -2583,20 +2585,20 @@ watch(() => tutorialForm.value.content, () => {
 
     &.is-dragging {
       cursor: grabbing;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 8px 24px @nordic-shadow-hover;
       transition: none; // 拖拽时移除过渡，实现丝滑跟随
     }
 
     &.floating-ball-draft {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
+      background: linear-gradient(135deg, @nordic-accent 0%, @nordic-blue 100%);
+      color: @nordic-surface;
     }
 
     &.floating-ball-submit {
       width: 64px;
       height: 64px;
-      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-      color: white;
+      background: linear-gradient(135deg, @nordic-red 0%, @nordic-accent 100%);
+      color: @nordic-surface;
     }
 
     .floating-ball-icon {
@@ -2617,9 +2619,9 @@ watch(() => tutorialForm.value.content, () => {
       left: 50%;
       transform: translateX(-50%) translateY(-8px);
       background: rgba(0, 0, 0, 0.85);
-      color: white;
+      color: @nordic-surface;
       padding: 5px 10px;
-      border-radius: 6px;
+      border-radius: @nordic-radius-sm;
       font-size: 0.75rem /* 原值: 11px */;
       white-space: nowrap;
       opacity: 0;

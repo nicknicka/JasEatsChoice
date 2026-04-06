@@ -397,32 +397,34 @@ onMounted(() => {
 })
 </script>
 
-<style scoped>
+<style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+
 .payment-password-setup-container {
-  padding: 0 20px 20px 20px;
+  padding: 0 @nordic-space-lg @nordic-space-lg @nordic-space-lg;
   min-height: 100vh;
-  background: #f5f7fa;
+  background: @nordic-bg;
 }
 
 .page-title {
-  font-size: 2rem /* 原值: 28px */;
+  font-size: @nordic-text-xl;
   margin: 0 0 25px 0;
-  color: #333;
+  color: @nordic-text;
   font-weight: 700;
 }
 
 .security-tips {
   margin: 0;
-  padding-left: 20px;
+  padding-left: @nordic-space-lg;
 }
 
 .security-tips li {
   line-height: 1.8;
-  color: #606266;
+  color: @nordic-text-secondary;
 }
 
 .password-card {
-  border-radius: 16px;
+  border-radius: @nordic-radius-lg;
   border: none;
   max-width: 600px;
 }
@@ -432,10 +434,10 @@ onMounted(() => {
 }
 
 .forgot-card {
-  border-radius: 16px;
+  border-radius: @nordic-radius-lg;
   border: none;
   max-width: 600px;
-  margin-top: 20px;
+  margin-top: @nordic-space-lg;
 }
 
 .forgot-content {
@@ -446,8 +448,8 @@ onMounted(() => {
 }
 
 .forgot-text {
-  color: #606266;
-  font-size: 1rem /* 原值: 14px */;
+  color: @nordic-text-secondary;
+  font-size: @nordic-text-base;
 }
 
 .verification-code-wrapper {

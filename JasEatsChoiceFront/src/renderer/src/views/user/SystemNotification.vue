@@ -9,8 +9,12 @@
 // Add ${page} specific functionality here
 </script>
 
-<style scoped>
+<style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+
 .page-container {
-  padding: 20px;
+  padding: @nordic-space-xl;
+  background: @nordic-bg;
+  min-height: 100%;
 }
 </style>

@@ -2611,9 +2611,11 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
 </script>
 
 <style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+
 .chat-container {
-  padding: 16px;
-  background-color: #f5f7fa;
+  padding: @nordic-space-md;
+  background-color: @nordic-bg;
   height: 85vh;
   box-sizing: border-box;
   display: flex;
@@ -2622,7 +2624,7 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
 
   .chat-content {
     display: flex;
-    gap: 8px;
+    gap: @nordic-space-sm;
     flex: 1;
     min-height: 0;
     overflow: hidden;
@@ -2644,17 +2646,17 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
       height: 100%;
       display: flex;
       flex-direction: column;
-      border: 1px solid #e4e7ed;
-      border-radius: 12px;
-      background-color: #fff;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      border: 1px solid @nordic-border;
+      border-radius: @nordic-radius-md;
+      background-color: @nordic-surface;
+      box-shadow: 0 4px 20px @nordic-shadow;
       overflow: hidden;
-      transition: box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                  transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: box-shadow @nordic-transition-base cubic-bezier(0.4, 0, 0.2, 1),
+                  transform @nordic-transition-base cubic-bezier(0.4, 0, 0.2, 1);
       transform: translateY(0);
 
       &:hover {
-        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+        box-shadow: 0 8px 30px @nordic-shadow-hover;
         transform: translateY(-4px);
       }
 
@@ -2666,10 +2668,10 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
 
     @keyframes subtle-pulse {
       0%, 100% {
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 20px @nordic-shadow;
       }
       50% {
-        box-shadow: 0 4px 25px rgba(64, 158, 255, 0.2);
+        box-shadow: 0 4px 25px rgba(212, 132, 90, 0.15);
       }
     }
 
@@ -2679,17 +2681,17 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
       background: linear-gradient(
         90deg,
         transparent 0%,
-        #e4e7ed 40%,
-        #c0c4cc 50%,
-        #e4e7ed 60%,
+        @nordic-border 40%,
+        @nordic-text-muted 50%,
+        @nordic-border 60%,
         transparent 100%
       );
       cursor: col-resize;
       position: relative;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: all @nordic-transition-base cubic-bezier(0.4, 0, 0.2, 1);
       flex-shrink: 0;
       align-self: center;
-      border-radius: 4px;
+      border-radius: @nordic-radius-xs;
 
       // 分隔条中间的拖动手柄样式 - 使用虚线效果
       &::before {
@@ -2702,23 +2704,23 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
         height: 60px;
         background: repeating-linear-gradient(
           to bottom,
-          #909399 0px,
-          #909399 4px,
+          @nordic-text-muted 0px,
+          @nordic-text-muted 4px,
           transparent 4px,
           transparent 8px
         );
         border-radius: 1px;
         opacity: 0.6;
-        transition: all 0.3s ease;
+        transition: all @nordic-transition-base ease;
       }
 
       &:hover {
         background: linear-gradient(
           90deg,
           transparent 0%,
-          #dcdfe6 40%,
-          #b0b4bc 50%,
-          #dcdfe6 60%,
+          @nordic-divider 40%,
+          @nordic-text-secondary 50%,
+          @nordic-divider 60%,
           transparent 100%
         );
 
@@ -2726,8 +2728,8 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
           opacity: 1;
           background: repeating-linear-gradient(
             to bottom,
-            #409eff 0px,
-            #409eff 4px,
+            @nordic-accent 0px,
+            @nordic-accent 4px,
             transparent 4px,
             transparent 8px
           );
@@ -2739,8 +2741,8 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
       &.near-min-width::before {
         background: repeating-linear-gradient(
           to bottom,
-          #e6a23c 0px,
-          #e6a23c 4px,
+          @nordic-yellow 0px,
+          @nordic-yellow 4px,
           transparent 4px,
           transparent 8px
         ) !important;
@@ -2751,8 +2753,8 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
       &.near-max-width::before {
         background: repeating-linear-gradient(
           to bottom,
-          #f56c6c 0px,
-          #f56c6c 4px,
+          @nordic-red 0px,
+          @nordic-red 4px,
           transparent 4px,
           transparent 8px
         ) !important;
@@ -2763,17 +2765,17 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
         background: linear-gradient(
           90deg,
           transparent 0%,
-          #409eff 40%,
-          #66b1ff 50%,
-          #409eff 60%,
+          @nordic-accent 40%,
+          @nordic-accent-light 50%,
+          @nordic-accent 60%,
           transparent 100%
         );
-        box-shadow: 0 0 12px rgba(64, 158, 255, 0.5);
+        box-shadow: 0 0 12px rgba(212, 132, 90, 0.4);
         transition: none;
 
         &::before {
           opacity: 1;
-          background: #ffffff;
+          background: @nordic-surface;
           height: 80px;
           transition: none;
         }
@@ -2791,11 +2793,11 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
         top: -40px;
         left: 50%;
         transform: translateX(-50%);
-        background: #409eff;
-        color: #fff;
-        padding: 6px 14px;
-        border-radius: 6px;
-        font-size: 0.929rem /* 原值: 13px */;
+        background: @nordic-accent;
+        color: @nordic-surface;
+        padding: @nordic-space-sm @nordic-space-md;
+        border-radius: @nordic-radius-sm;
+        font-size: @nordic-text-sm;
         font-weight: 500;
         white-space: nowrap;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
@@ -2811,7 +2813,7 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
           transform: translateX(-50%);
           border-left: 6px solid transparent;
           border-right: 6px solid transparent;
-          border-top: 6px solid #409eff;
+          border-top: 6px solid @nordic-accent;
         }
       }
 
@@ -2831,31 +2833,31 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
       flex: 1;
       display: flex;
       flex-direction: column;
-      border: 1px solid #e4e7ed;
-      border-radius: 8px;
-      background-color: #fff;
+      border: 1px solid @nordic-border;
+      border-radius: @nordic-radius-sm;
+      background-color: @nordic-surface;
       position: relative;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+      box-shadow: 0 2px 12px @nordic-shadow;
       overflow: hidden;
-      transition: box-shadow 0.3s ease;
+      transition: box-shadow @nordic-transition-base ease;
 
       &:hover {
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+        box-shadow: 0 4px 16px @nordic-shadow-hover;
       }
 
       .messages-container {
         flex: 1;
         overflow-y: auto;
-        padding: 16px;
+        padding: @nordic-space-md;
 
         .load-more-tip {
           text-align: center;
           padding: 12px;
           cursor: pointer;
-          color: #909399;
+          color: @nordic-text-muted;
 
           .clickable-text:hover {
-            color: #409eff;
+            color: @nordic-accent;
           }
         }
       }
@@ -2874,19 +2876,19 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      border: 1px solid #e4e7ed;
-      border-radius: 8px;
-      background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);
-      color: #666;
+      border: 1px solid @nordic-border;
+      border-radius: @nordic-radius-sm;
+      background: linear-gradient(135deg, @nordic-bg 0%, @nordic-surface 100%);
+      color: @nordic-text-secondary;
       padding: 60px 20px;
       min-height: 400px;
       cursor: pointer;
       user-select: none;
-      transition: all 0.3s ease;
+      transition: all @nordic-transition-base ease;
 
       &:hover {
-        border-color: #409eff;
-        box-shadow: 0 4px 16px rgba(64, 158, 255, 0.2);
+        border-color: @nordic-accent;
+        box-shadow: 0 4px 16px rgba(212, 132, 90, 0.15);
         transform: translateY(-2px);
 
         .empty-icon {
@@ -2896,7 +2898,7 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
 
       &:active {
         transform: translateY(0);
-        box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
+        box-shadow: 0 2px 8px rgba(212, 132, 90, 0.2);
       }
 
       .empty-icon {
@@ -2907,22 +2909,22 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: transform 0.3s ease;
+        transition: transform @nordic-transition-base ease;
       }
 
       .empty-title {
-        font-size: 1.286rem /* 原值: 18px */;
+        font-size: @nordic-text-lg;
         font-weight: 500;
-        color: #1a1a1a;
-        margin: 0 0 8px 0;
+        color: @nordic-text;
+        margin: 0 0 @nordic-space-sm 0;
         display: flex;
         align-items: center;
         justify-content: center;
       }
 
       .empty-tip {
-        font-size: 1rem /* 原值: 14px */;
-        color: #666;
+        font-size: @nordic-text-base;
+        color: @nordic-text-secondary;
         margin: 0;
         line-height: 1.6;
         display: flex;
@@ -2956,18 +2958,18 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 12px;
+      gap: @nordic-space-md;
       background: rgba(255, 255, 255, 0.85);
       backdrop-filter: blur(4px);
-      border-radius: 8px;
-      color: #c2410c;
-      font-size: 1.071rem /* 原值: 15px */;
+      border-radius: @nordic-radius-sm;
+      color: @nordic-accent-dark;
+      font-size: @nordic-text-md;
       font-weight: 500;
       animation: fadeIn 0.3s ease-out;
       z-index: 10;
 
       .notice-icon {
-        font-size: 1.429rem /* 原值: 20px */;
+        font-size: @nordic-text-lg;
         animation: pulse 2s ease-in-out infinite;
       }
     }

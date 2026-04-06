@@ -379,33 +379,32 @@ watch(
 </template>
 
 <style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+
 .orders-container {
-  padding: 0 20px 20px 20px;
-  background: #f5f7fa;
+  padding: 0 @nordic-space-lg @nordic-space-lg @nordic-space-lg;
+  background: @nordic-bg;
   min-height: calc(100vh - 80px);
 
   .page-header {
+    .nordic-card();
     display: flex;
     align-items: center;
-    margin-bottom: 20px;
-    padding: 16px 20px;
-    background: #ffffff;
-    border-radius: 16px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-    border: 1px solid rgba(0, 0, 0, 0.06);
+    margin-bottom: @nordic-space-lg;
+    padding: @nordic-space-md @nordic-space-lg;
   }
 
   h2 {
-    font-size: 1.714rem /* 原值: 24px */;
+    font-size: @nordic-text-lg;
     margin: 0;
-    color: #2c5282;
+    color: @nordic-text;
     font-weight: 600;
   }
 
   .order-list {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: @nordic-space-md;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 
     /* 淡出动画 */
@@ -442,26 +441,26 @@ watch(
   }
 
   .order-pagination {
-    margin-top: 24px;
+    margin-top: @nordic-space-lg;
     text-align: center;
 
     :deep(.el-pagination) {
       .btn-prev,
       .btn-next,
       .el-pager li {
-        border-radius: 8px;
-        border: 1px solid rgba(179, 212, 252, 0.3);
-        background: rgba(255, 255, 255, 0.8);
+        border-radius: @nordic-radius-sm;
+        border: 1px solid @nordic-border;
+        background: @nordic-surface;
 
         &:hover {
-          color: #5c8eff;
-          border-color: #6ba4ff;
-          background: rgba(235, 244, 255, 0.6);
+          color: @nordic-blue;
+          border-color: @nordic-blue;
+          background: @nordic-blue-light;
         }
 
         &.active {
-          background: linear-gradient(135deg, #6ba4ff 0%, #5c8eff 100%);
-          color: white;
+          background: @nordic-blue;
+          color: @nordic-white;
           border-color: transparent;
         }
       }
@@ -487,10 +486,10 @@ watch(
 
     /* 刷新中的状态 */
     &.is-refreshing {
-      background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%) !important;
-      border-color: #69c0ff !important;
-      color: #1890ff !important;
-      box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3);
+      background: linear-gradient(135deg, @nordic-blue-light 0%, fade(@nordic-blue, 20%) 100%) !important;
+      border-color: @nordic-blue !important;
+      color: @nordic-blue !important;
+      box-shadow: 0 2px 8px fade(@nordic-blue, 30%);
 
       .refresh-text {
         animation: text-pulse 1s ease-in-out infinite;
@@ -505,7 +504,7 @@ watch(
         width: 0;
         height: 0;
         border-radius: 50%;
-        background: rgba(24, 144, 255, 0.3);
+        background: fade(@nordic-blue, 30%);
         transform: translate(-50%, -50%);
         animation: ripple 1.5s ease-out infinite;
       }
@@ -513,16 +512,16 @@ watch(
 
     /* 刷新成功的状态 */
     &.is-success {
-      background: linear-gradient(135deg, #f6ffed 0%, #d9f7be 100%) !important;
-      border-color: #95de64 !important;
-      color: #52c41a !important;
-      box-shadow: 0 2px 8px rgba(82, 196, 26, 0.3);
+      background: linear-gradient(135deg, @nordic-green-light 0%, fade(@nordic-green, 20%) 100%) !important;
+      border-color: @nordic-green !important;
+      color: @nordic-green !important;
+      box-shadow: 0 2px 8px fade(@nordic-green, 30%);
 
       /* 成功时的缩放动画 */
       animation: success-bounce 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 
       .refresh-text {
-        color: #52c41a;
+        color: @nordic-green;
         font-weight: 600;
       }
     }
@@ -536,7 +535,7 @@ watch(
   /* 刷新成功时的图标动画 */
   .refresh-success {
     animation: success-check 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-    color: #52c41a;
+    color: @nordic-green;
   }
 
   @keyframes refresh-rotate {
@@ -601,26 +600,26 @@ watch(
 }
 
 /* 响应式设计 */
-@media (max-width: 768px) {
+@media (max-width: @nordic-breakpoint-md) {
   .orders-container {
-    padding: 0 12px 16px 12px;
-    background: #f5f7fa;
+    padding: 0 @nordic-space-md @nordic-space-md @nordic-space-md;
+    background: @nordic-bg;
 
     .page-header {
-      padding: 14px 16px;
+      padding: 14px @nordic-space-md;
       border-radius: 14px;
     }
 
     h2 {
-      font-size: 1.429rem /* 原值: 20px */;
+      font-size: @nordic-text-md;
     }
 
     .order-list {
-      gap: 12px;
+      gap: @nordic-space-md - 4px;
     }
 
     .order-pagination {
-      margin-top: 20px;
+      margin-top: @nordic-space-lg - @nordic-space-xs;
     }
   }
 }

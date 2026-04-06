@@ -161,7 +161,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="recommend-container">
+  <div class="nordic-recommend">
     <!-- 引入定位和天气组件 -->
     <CommonLocationPicker
       ref="locationPicker"
@@ -175,831 +175,816 @@ onMounted(async () => {
       @weather-updated="handleWeatherUpdated"
     />
 
-    <h2 class="fade-in-up">我的推荐</h2>
+    <!-- 页面标题 -->
+    <div class="nordic-page-header">
+      <h2>我的推荐</h2>
+      <button class="refresh-btn" @click="onRefresh" :class="{ spinning: refreshing }">
+        <span class="refresh-icon">&#8635;</span>
+      </button>
+    </div>
 
     <!-- 定位警告提示 -->
-    <el-alert
-      v-if="locationError"
-      type="warning"
-      :closable="false"
-      show-icon
-      class="location-warning"
-    >
+    <div v-if="locationError" class="location-warn">
       定位服务不可用，推荐准确性可能受影响
-    </el-alert>
+    </div>
 
-    <!-- 筛选和排序工具栏 -->
-    <div class="toolbar fade-in-up delay-100">
-      <div class="toolbar-left">
-        <el-input
+    <!-- 搜索与筛选 -->
+    <div class="toolbar-row">
+      <div class="search-box">
+        <span class="search-icon">&#128269;</span>
+        <input
           v-model="searchKeyword"
           placeholder="搜索推荐菜品..."
-          prefix-icon="Search"
-          clearable
-          style="width: 300px"
+          class="search-input"
         />
       </div>
-      <div class="toolbar-right">
-        <el-button
-          :type="showFilters ? 'primary' : 'default'"
-          :icon="showFilters ? 'FilterFilled' : 'Filter'"
-          @click="showFilters = !showFilters"
-        >
-          筛选
-        </el-button>
-        <el-select v-model="sortBy" placeholder="排序方式" style="width: 150px; margin-left: 10px">
-          <el-option label="默认排序" value="default" />
-          <el-option label="卡路里从低到高" value="calories_asc" />
-          <el-option label="卡路里从高到低" value="calories_desc" />
-          <el-option label="评分从高到低" value="rating_desc" />
-          <el-option label="评分从低到高" value="rating_asc" />
-        </el-select>
-      </div>
+      <button
+        class="filter-toggle"
+        :class="{ active: showFilters }"
+        @click="showFilters = !showFilters"
+      >
+        筛选 <span class="filter-arrow" :class="{ open: showFilters }">&#x276F;</span>
+      </button>
+      <select v-model="sortBy" class="sort-select">
+        <option value="default">默认排序</option>
+        <option value="calories_asc">卡路里 ↑</option>
+        <option value="calories_desc">卡路里 ↓</option>
+        <option value="rating_desc">评分最高</option>
+        <option value="rating_asc">评分最低</option>
+      </select>
     </div>
 
     <!-- 筛选面板 -->
-    <transition name="filter-slide">
-      <div class="filter-panel slide-in-left" v-show="showFilters">
-        <div class="filter-section">
-          <div class="filter-title">卡路里范围</div>
-          <el-radio-group v-model="selectedCalorieRange">
-            <el-radio :label="0">全部</el-radio>
-            <el-radio v-for="range in CALORIE_RANGES" :key="range.id" :label="range.id">{{
-              range.label
-            }}</el-radio>
-          </el-radio-group>
+    <transition name="nordic-slide">
+      <div class="filter-panel" v-show="showFilters">
+        <div class="filter-group">
+          <div class="filter-label">卡路里范围</div>
+          <div class="filter-options">
+            <label class="filter-chip" :class="{ selected: selectedCalorieRange === 0 }">
+              <input type="radio" :value="0" v-model="selectedCalorieRange" /> 全部
+            </label>
+            <label
+              v-for="range in CALORIE_RANGES"
+              :key="range.id"
+              class="filter-chip"
+              :class="{ selected: selectedCalorieRange === range.id }"
+            >
+              <input type="radio" :value="range.id" v-model="selectedCalorieRange" /> {{ range.label }}
+            </label>
+          </div>
         </div>
-
-        <div class="filter-section">
-          <div class="filter-title">推荐来源</div>
-          <el-checkbox-group v-model="selectedSources">
-            <el-checkbox
-              label="全部"
-              @change="
-                (checked) =>
-                  checked
-                    ? (selectedSources = Object.values(RECOMMENDATION_TYPES))
-                    : (selectedSources = [])
-              "
-            />
-            <el-checkbox v-for="(label, key) in RECOMMENDATION_TYPES" :key="key" :label="label">{{
-              label
-            }}</el-checkbox>
-          </el-checkbox-group>
+        <div class="filter-group">
+          <div class="filter-label">推荐来源</div>
+          <div class="filter-options">
+            <label class="filter-chip" :class="{ selected: selectedSources.length === Object.values(RECOMMENDATION_TYPES).length }">
+              <input
+                type="checkbox"
+                :checked="selectedSources.length === Object.values(RECOMMENDATION_TYPES).length"
+                @change="(e) => e.target.checked ? (selectedSources = Object.values(RECOMMENDATION_TYPES)) : (selectedSources = [])"
+              /> 全部
+            </label>
+            <label
+              v-for="(label, key) in RECOMMENDATION_TYPES"
+              :key="key"
+              class="filter-chip"
+              :class="{ selected: selectedSources.includes(label) }"
+            >
+              <input type="checkbox" :value="label" v-model="selectedSources" /> {{ label }}
+            </label>
+          </div>
         </div>
-
-        <div class="filter-actions">
-          <el-button @click="resetFilters">重置筛选</el-button>
+        <div class="filter-footer">
+          <button class="filter-reset" @click="resetFilters">重置筛选</button>
         </div>
       </div>
     </transition>
 
     <!-- 筛选结果提示 -->
-    <div class="filter-info fade-in-up delay-200" v-if="hasActiveFilters">
-      <span>找到 {{ filteredAndSortedRecommendations.length }} 个推荐结果</span>
-      <el-button type="text" size="small" @click="resetFilters">清除筛选</el-button>
+    <div class="filter-info" v-if="hasActiveFilters">
+      <span>找到 {{ filteredAndSortedRecommendations.length }} 个推荐</span>
+      <button class="clear-link" @click="resetFilters">清除</button>
     </div>
 
-    <!-- 刷新按钮 -->
-    <div class="refresh-bar fade-in-up delay-200">
-      <el-button
-        :icon="refreshing ? 'Loading' : 'Refresh'"
-        :loading="refreshing"
-        @click="onRefresh"
-        circle
-      />
-    </div>
-
-    <!-- 加载中状态 -->
-    <div class="loading-skeleton" v-if="isLoading && recommendations.length === 0">
-      <el-skeleton :rows="6" type="card" :border="false" />
+    <!-- 加载中 -->
+    <div class="loading-state" v-if="isLoading && recommendations.length === 0">
+      <div class="loading-skeleton" v-for="n in 3" :key="n">
+        <div class="skel-img"></div>
+        <div class="skel-lines">
+          <div class="skel-line long"></div>
+          <div class="skel-line mid"></div>
+          <div class="skel-line short"></div>
+        </div>
+      </div>
     </div>
 
     <!-- 推荐列表 -->
-    <transition-group
-      name="recommend-card"
-      tag="div"
-      class="recommend-grid"
-      v-else-if="filteredAndSortedRecommendations.length > 0"
-    >
-      <el-card
+    <transition-group name="card-list" tag="div" class="recommend-list" v-else-if="filteredAndSortedRecommendations.length > 0">
+      <div
         v-for="item in filteredAndSortedRecommendations"
         :key="item.id"
-        class="recommend-card stagger-item"
-        :class="{ featured: item.rating >= 4.9 }"
+        class="recommend-item"
+        @click="handleDishClick(item)"
       >
-        <!-- 推荐来源标签 -->
-        <div class="recommend-source-tag" v-if="item.recommendSource">
-          <el-tag
-            :type="RECOMMENDATION_TYPE_TAGS[item.recommendSource]?.type || 'info'"
-            size="small"
-            effect="dark"
-          >
-            {{ item.recommendSource }}
-          </el-tag>
-        </div>
-
-        <div class="card-header">
-          <div class="dish-image">
-            <el-image
-              :src="item.image"
-              fit="cover"
-              lazy
-              class="recommend-image"
-            >
-              <template #error>
-                <div class="image-placeholder">
-                  {{ item.name?.charAt(0) || '🍽️' }}
-                </div>
-              </template>
-              <template #placeholder>
-                <div class="image-loading">
-                  <el-icon class="is-loading"><Loading /></el-icon>
-                </div>
-              </template>
-            </el-image>
+        <!-- 卡片顶部：图片 + 信息 -->
+        <div class="item-top">
+          <div class="item-image">
+            <img v-if="item.image" :src="item.image" :alt="item.name" loading="lazy" />
+            <span v-else class="img-placeholder">{{ item.name?.charAt(0) || '?' }}</span>
           </div>
-          <div class="dish-info">
-            <div class="dish-name">{{ item.name }}</div>
-            <div class="dish-type">
-              <el-tag type="primary" size="small" v-if="item.type">{{ item.type }}</el-tag>
-              <el-tag type="info" size="small" effect="plain" v-else>未分类</el-tag>
+          <div class="item-info">
+            <div class="item-name">{{ item.name }}</div>
+            <div class="item-meta">
+              <span class="meta-tag" v-if="item.type">{{ item.type }}</span>
+              <span class="meta-source" v-if="item.recommendSource">{{ getSourceLabel(item.recommendSource) }}</span>
+            </div>
+            <!-- 匹配度 -->
+            <div class="match-bar" v-if="item.score !== undefined && item.score !== null">
+              <div class="match-track">
+                <div
+                  class="match-fill"
+                  :class="getScoreLevel(item.score)"
+                  :style="{ width: formatScore(item.score) + '%' }"
+                ></div>
+              </div>
+              <span class="match-val" :class="getScoreLevel(item.score)">{{ formatScore(item.score) }}%</span>
             </div>
           </div>
         </div>
 
-        <!-- 卡路里信息（带营养详情） -->
-        <div class="calories-info" v-if="item.calories">
-          <span>🔥</span>
-          <span>{{ item.calories }} kcal</span>
-          <el-button
-            type="text"
-            size="small"
-            @click="openNutritionDetail(item)"
-            v-if="item.nutrition"
-            style="margin-left: auto"
-          >
-            营养详情
-          </el-button>
-        </div>
-        <div class="calories-info-unavailable" v-else>
-          <span>🔥</span>
-          <span>卡路里信息暂不可用</span>
+        <!-- 卡路里 -->
+        <div class="item-calories" v-if="item.calories">
+          <span class="cal-val">{{ item.calories }}</span>
+          <span class="cal-unit">kcal</span>
+          <button class="cal-detail" v-if="item.nutrition" @click.stop="openNutritionDetail(item)">营养详情</button>
         </div>
 
         <!-- 标签 -->
-        <div class="tags-section">
-          <el-tag v-for="tag in item.tagsWithType" :key="tag.name" size="small" :type="tag.type">
-            {{ tag.name }}
-          </el-tag>
+        <div class="item-tags" v-if="item.tagsWithType && item.tagsWithType.length">
+          <span v-for="tag in item.tagsWithType" :key="tag.name" class="tag-chip">{{ tag.name }}</span>
         </div>
 
-        <!-- 匹配度（简约设计） -->
-        <div class="match-score-section" v-if="item.score !== undefined && item.score !== null">
-          <div class="score-compact" :class="getScoreLevel(item.score)">
-            <span class="score-label">匹配度</span>
-            <div class="score-bar-bg">
-              <div class="score-bar-fill" :style="{ width: formatScore(item.score) + '%' }"></div>
-            </div>
-            <span class="score-value">{{ formatScore(item.score) }}%</span>
-          </div>
-        </div>
-
-        <!-- 推荐理由（优化版 - 支持多因素显示）-->
-        <div class="reason-section">
-          <div class="reason-title">
-            <span>推荐理由</span>
-          </div>
-
-          <!-- 主要推荐理由 -->
-          <div class="reason-text" :class="{ 'empty-reason': !item.reason }">
-            {{ item.reason || '暂无推荐理由' }}
-          </div>
-
-          <!-- 推荐来源标签（增强版）-->
-          <div v-if="item.recommendSource" class="recommend-source-info">
-            <el-tag size="small" :type="getSourceTagType(item.recommendSource)" effect="plain">
-              {{ getSourceLabel(item.recommendSource) }}
-            </el-tag>
-          </div>
-        </div>
-
-        <!-- 评分 -->
-        <div class="rating">
-          <el-rate v-model="item.rating" :disabled="true" show-text />
+        <!-- 推荐理由 -->
+        <div class="item-reason" v-if="item.reason">
+          {{ item.reason }}
         </div>
 
         <!-- 操作按钮 -->
-        <div class="card-actions">
-          <el-button
-            type="primary"
-            size="small"
-            @click="handleOrder(item)"
+        <div class="item-actions">
+          <button class="act-btn primary" @click.stop="handleOrder(item)">下单</button>
+          <button
+            class="act-btn"
+            :class="{ favorited: isFavoritedItem(item) }"
+            @click.stop="handleFavoriteClick(item)"
           >
-            立即下单
-          </el-button>
-          <el-button
-            :type="isFavoritedItem(item) ? 'warning' : 'default'"
-            size="small"
-            :icon="isFavoritedItem(item) ? 'StarFilled' : 'Star'"
-            @click="handleFavoriteClick(item)"
-          >
-            {{ isFavoritedItem(item) ? '已收藏' : '收藏' }}
-          </el-button>
-          <el-button type="text" size="small" @click="rejectRecommendation(item)">
-            不感兴趣
-          </el-button>
+            {{ isFavoritedItem(item) ? '★ 已收藏' : '☆ 收藏' }}
+          </button>
+          <button class="act-btn ghost" @click.stop="rejectRecommendation(item)">不感兴趣</button>
         </div>
-      </el-card>
+      </div>
     </transition-group>
 
-    <!-- 空状态提示 -->
+    <!-- 空状态 -->
     <div class="empty-state" v-else>
-      <div class="empty-icon">🥺</div>
-      <div class="empty-text">
-        {{ hasActiveFilters ? '没有找到符合条件的推荐' : '暂无推荐数据' }}
-      </div>
-      <div class="empty-subtext">
-        {{ hasActiveFilters ? '试试调整筛选条件' : '系统正在努力为您生成个性化推荐' }}
-      </div>
-      <el-button
-        type="primary"
-        size="small"
-        @click="hasActiveFilters ? resetFilters() : onRefresh()"
-      >
-        {{ hasActiveFilters ? '清除筛选' : '重新获取推荐' }}
-      </el-button>
+      <div class="empty-icon">🍽</div>
+      <div class="empty-title">{{ hasActiveFilters ? '没有找到符合条件的推荐' : '暂无推荐数据' }}</div>
+      <div class="empty-desc">{{ hasActiveFilters ? '试试调整筛选条件' : '系统正在努力为您生成个性化推荐' }}</div>
+      <button class="act-btn primary" @click="hasActiveFilters ? resetFilters() : onRefresh()">
+        {{ hasActiveFilters ? '清除筛选' : '重新获取' }}
+      </button>
     </div>
 
     <!-- 营养详情弹窗 -->
-    <el-dialog v-model="showNutritionDetail" title="营养成分详情" width="400px">
-      <div class="nutrition-detail" v-if="showNutritionDetail?.nutrition">
-        <div class="nutrition-item">
-          <span class="nutrition-label">碳水化合物</span>
-          <span class="nutrition-value">{{ showNutritionDetail.nutrition.carbs }}g</span>
+    <el-dialog v-model="showNutritionDetail" title="营养成分" width="380px" :append-to-body="true">
+      <div class="nutrition-modal" v-if="showNutritionDetail?.nutrition">
+        <div class="nutri-row">
+          <span>碳水化合物</span>
+          <span class="nutri-val">{{ showNutritionDetail.nutrition.carbs }}g</span>
         </div>
-        <div class="nutrition-item">
-          <span class="nutrition-label">蛋白质</span>
-          <span class="nutrition-value">{{ showNutritionDetail.nutrition.protein }}g</span>
+        <div class="nutri-row">
+          <span>蛋白质</span>
+          <span class="nutri-val">{{ showNutritionDetail.nutrition.protein }}g</span>
         </div>
-        <div class="nutrition-item">
-          <span class="nutrition-label">脂肪</span>
-          <span class="nutrition-value">{{ showNutritionDetail.nutrition.fat }}g</span>
+        <div class="nutri-row">
+          <span>脂肪</span>
+          <span class="nutri-val">{{ showNutritionDetail.nutrition.fat }}g</span>
         </div>
       </div>
-      <div class="nutrition-empty" v-else>暂无详细营养信息</div>
+      <div v-else class="nutri-empty">暂无详细营养信息</div>
     </el-dialog>
   </div>
 </template>
 
 <style scoped lang="less">
-.recommend-container {
-  padding: 0 20px 20px 20px;
+@import '../../assets/css/nordic-theme.less';
+
+.nordic-recommend {
+  .nordic-page-container();
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+// --- 页面标题 ---
+.nordic-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: @nordic-space-lg;
 
   h2 {
-    font-size: 2.286rem /* 原值: 32px */;
-    margin: 0 0 32px 20px;
-    color: #1a202c;
-    font-weight: 800;
+    font-size: @nordic-text-xl;
+    font-weight: 700;
+    color: @nordic-text;
+    margin: 0;
     letter-spacing: -0.5px;
-
-    &::after {
-      content: '';
-      display: block;
-      width: 60px;
-      height: 4px;
-      background: linear-gradient(135deg, #23d160 0%, #20c997 100%);
-      border-radius: 2px;
-      margin-top: 12px;
-    }
   }
 
-  // 定位警告
-  .location-warning {
-    margin: 0 20px 20px 20px;
-  }
-
-  // 工具栏
-  .toolbar {
+  .refresh-btn {
+    width: 36px;
+    height: 36px;
+    border: 1px solid @nordic-border;
+    background: @nordic-surface;
+    border-radius: @nordic-radius-sm;
+    cursor: pointer;
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    padding: 0 20px 20px 20px;
-    gap: 15px;
+    justify-content: center;
+    transition: all 0.2s;
 
-    .toolbar-left {
-      display: flex;
-      gap: 15px;
+    &:hover {
+      border-color: @nordic-accent;
+      color: @nordic-accent;
     }
 
-    .toolbar-right {
-      display: flex;
-      gap: 10px;
+    &.spinning .refresh-icon {
+      animation: spin 0.8s linear infinite;
+    }
+
+    .refresh-icon {
+      font-size: 18px;
+    }
+  }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+// --- 定位警告 ---
+.location-warn {
+  padding: 10px 16px;
+  background: @nordic-yellow-light;
+  color: #8B6914;
+  border-radius: @nordic-radius-md;
+  font-size: @nordic-text-sm;
+  margin-bottom: @nordic-space-md;
+}
+
+// --- 工具栏 ---
+.toolbar-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: @nordic-space-md;
+  align-items: center;
+}
+
+.search-box {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: @nordic-surface;
+  border: 1px solid @nordic-border;
+  border-radius: @nordic-radius-md;
+  transition: border-color 0.2s;
+
+  &:focus-within {
+    border-color: @nordic-accent;
+  }
+
+  .search-icon {
+    color: @nordic-text-muted;
+    font-size: 14px;
+  }
+
+  .search-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: @nordic-text-base;
+    color: @nordic-text;
+
+    &::placeholder {
+      color: @nordic-text-muted;
+    }
+  }
+}
+
+.filter-toggle {
+  padding: 8px 16px;
+  background: @nordic-surface;
+  border: 1px solid @nordic-border;
+  border-radius: @nordic-radius-md;
+  cursor: pointer;
+  font-size: @nordic-text-sm;
+  color: @nordic-text-secondary;
+  transition: all 0.2s;
+  white-space: nowrap;
+
+  &.active {
+    border-color: @nordic-accent;
+    color: @nordic-accent;
+    background: @nordic-accent-light;
+  }
+
+  .filter-arrow {
+    font-size: 10px;
+    transition: transform 0.2s;
+    display: inline-block;
+
+    &.open { transform: rotate(90deg); }
+  }
+}
+
+.sort-select {
+  padding: 8px 12px;
+  background: @nordic-surface;
+  border: 1px solid @nordic-border;
+  border-radius: @nordic-radius-md;
+  font-size: @nordic-text-sm;
+  color: @nordic-text-secondary;
+  cursor: pointer;
+  outline: none;
+  min-width: 120px;
+
+  &:focus {
+    border-color: @nordic-accent;
+  }
+}
+
+// --- 筛选面板 ---
+.filter-panel {
+  background: @nordic-surface;
+  border: 1px solid @nordic-border;
+  border-radius: @nordic-radius-lg;
+  padding: @nordic-space-lg;
+  margin-bottom: @nordic-space-md;
+
+  .filter-group {
+    margin-bottom: @nordic-space-md;
+
+    &:last-child { margin-bottom: 0; }
+  }
+
+  .filter-label {
+    font-size: @nordic-text-sm;
+    font-weight: 600;
+    color: @nordic-text;
+    margin-bottom: 10px;
+  }
+
+  .filter-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 14px;
+    background: @nordic-bg;
+    border: 1px solid @nordic-border;
+    border-radius: @nordic-radius-pill;
+    font-size: @nordic-text-sm;
+    color: @nordic-text-secondary;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    input { display: none; }
+
+    &.selected {
+      background: @nordic-accent-light;
+      border-color: @nordic-accent;
+      color: @nordic-accent;
+    }
+
+    &:hover {
+      border-color: @nordic-accent;
     }
   }
 
-  // 筛选面板
-  .filter-panel {
-    background: #f9fafb;
-    border-radius: 12px;
-    padding: 20px;
-    margin: 0 20px 20px 20px;
-    border: 1px solid #e5e7eb;
+  .filter-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: @nordic-space-md;
+    border-top: 1px solid @nordic-divider;
 
-    .filter-section {
-      margin-bottom: 20px;
+    .filter-reset {
+      padding: 6px 16px;
+      border: 1px solid @nordic-border;
+      background: transparent;
+      border-radius: @nordic-radius-md;
+      font-size: @nordic-text-sm;
+      color: @nordic-text-secondary;
+      cursor: pointer;
+      transition: all 0.2s;
 
-      &:last-child {
-        margin-bottom: 0;
+      &:hover {
+        border-color: @nordic-accent;
+        color: @nordic-accent;
       }
-
-      .filter-title {
-        font-weight: 600;
-        color: #333;
-        margin-bottom: 12px;
-        font-size: 1rem /* 原值: 14px */;
-      }
-    }
-
-    .filter-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-      margin-top: 20px;
-      padding-top: 20px;
-      border-top: 1px solid #e5e7eb;
     }
   }
+}
 
-  .filter-slide-enter-active,
-  .filter-slide-leave-active {
-    transition: all 0.3s ease;
-    max-height: 500px;
+// --- 筛选信息 ---
+.filter-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  background: @nordic-blue-light;
+  border-radius: @nordic-radius-md;
+  font-size: @nordic-text-sm;
+  color: @nordic-text-secondary;
+  margin-bottom: @nordic-space-md;
+
+  .clear-link {
+    background: none;
+    border: none;
+    color: @nordic-blue;
+    cursor: pointer;
+    font-size: @nordic-text-sm;
+    font-weight: 500;
+
+    &:hover { text-decoration: underline; }
+  }
+}
+
+// --- 加载骨架 ---
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  gap: @nordic-space-md;
+}
+
+.loading-skeleton {
+  display: flex;
+  gap: @nordic-space-md;
+  padding: @nordic-space-lg;
+  background: @nordic-surface;
+  border-radius: @nordic-radius-lg;
+  border: 1px solid @nordic-border;
+
+  .skel-img {
+    width: 64px;
+    height: 64px;
+    border-radius: @nordic-radius-md;
+    background: @nordic-divider;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  .skel-lines { flex: 1; }
+
+  .skel-line {
+    height: 12px;
+    background: @nordic-divider;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    animation: pulse 1.5s ease-in-out infinite;
+
+    &.long { width: 70%; }
+    &.mid { width: 50%; }
+    &.short { width: 30%; }
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+// --- 推荐卡片列表 ---
+.recommend-list {
+  display: flex;
+  flex-direction: column;
+  gap: @nordic-space-md;
+}
+
+.recommend-item {
+  background: @nordic-surface;
+  border: 1px solid @nordic-border;
+  border-radius: @nordic-radius-lg;
+  padding: @nordic-space-lg;
+  cursor: pointer;
+  transition: all 0.25s ease;
+
+  &:hover {
+    border-color: darken(@nordic-border, 10%);
+    box-shadow: 0 4px 16px @nordic-shadow-hover;
+    transform: translateY(-2px);
+  }
+}
+
+.item-top {
+  display: flex;
+  gap: @nordic-space-md;
+  margin-bottom: @nordic-space-md;
+}
+
+.item-image {
+  width: 64px;
+  height: 64px;
+  border-radius: @nordic-radius-md;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: @nordic-bg;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .img-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: @nordic-text-muted;
+    background: @nordic-divider;
+  }
+}
+
+.item-info {
+  flex: 1;
+  min-width: 0;
+
+  .item-name {
+    font-size: @nordic-text-md;
+    font-weight: 600;
+    color: @nordic-text;
+    margin-bottom: 6px;
+  }
+
+  .item-meta {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+
+    .meta-tag {
+      .nordic-pill-tag(@nordic-blue-light, @nordic-blue);
+    }
+
+    .meta-source {
+      .nordic-pill-tag(@nordic-accent-light, @nordic-accent);
+    }
+  }
+}
+
+// 匹配度
+.match-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  .match-track {
+    flex: 1;
+    height: 4px;
+    background: @nordic-divider;
+    border-radius: 2px;
     overflow: hidden;
   }
 
-  .filter-slide-enter-from,
-  .filter-slide-leave-to {
-    max-height: 0;
-    opacity: 0;
+  .match-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.6s ease;
+
+    &.excellent { background: @nordic-green; }
+    &.good { background: @nordic-blue; }
+    &.medium { background: @nordic-yellow; }
+    &.low { background: @nordic-red; }
   }
 
-  // 筛选信息
-  .filter-info {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 20px;
-    margin: 0 20px 20px 20px;
-    background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
-    border-radius: 8px;
-    color: #333;
-    font-size: 1rem /* 原值: 14px */;
+  .match-val {
+    font-size: @nordic-text-xs;
+    font-weight: 600;
+    min-width: 32px;
+    text-align: right;
+
+    &.excellent { color: @nordic-green; }
+    &.good { color: @nordic-blue; }
+    &.medium { color: @nordic-yellow; }
+    &.low { color: @nordic-red; }
+  }
+}
+
+// 卡路里
+.item-calories {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: @nordic-space-sm;
+
+  .cal-val {
+    font-size: @nordic-text-lg;
+    font-weight: 700;
+    color: @nordic-accent;
   }
 
-  // 刷新按钮
-  .refresh-bar {
-    display: flex;
-    justify-content: center;
-    padding: 20px;
+  .cal-unit {
+    font-size: @nordic-text-xs;
+    color: @nordic-text-muted;
   }
 
-  .recommend-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-    gap: 20px;
-    padding: 0 20px;
+  .cal-detail {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: @nordic-blue;
+    font-size: @nordic-text-xs;
+    cursor: pointer;
+    padding: 2px 8px;
+
+    &:hover { text-decoration: underline; }
+  }
+}
+
+// 标签
+.item-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: @nordic-space-sm;
+
+  .tag-chip {
+    padding: 2px 10px;
+    background: @nordic-bg;
+    border-radius: @nordic-radius-pill;
+    font-size: @nordic-text-xs;
+    color: @nordic-text-secondary;
+  }
+}
+
+// 推荐理由
+.item-reason {
+  font-size: @nordic-text-sm;
+  color: @nordic-text-secondary;
+  line-height: 1.5;
+  margin-bottom: @nordic-space-md;
+}
+
+// 操作按钮
+.item-actions {
+  display: flex;
+  gap: 8px;
+  padding-top: @nordic-space-md;
+  border-top: 1px solid @nordic-divider;
+}
+
+.act-btn {
+  padding: 6px 16px;
+  border: 1px solid @nordic-border;
+  background: transparent;
+  border-radius: @nordic-radius-md;
+  font-size: @nordic-text-sm;
+  color: @nordic-text-secondary;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: @nordic-text-secondary;
   }
 
-  .recommend-card {
-    width: 100%;
-    box-sizing: border-box;
-    transition: all 0.3s ease;
-    border-radius: 12px;
-    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
-    position: relative;
+  &.primary {
+    background: @nordic-accent;
+    border-color: @nordic-accent;
+    color: #fff;
 
     &:hover {
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-      transform: translateY(-8px) scale(1.02);
-    }
-
-    // 精选推荐卡片
-    &.featured {
-      border: 2px solid #f59e0b;
-      box-shadow: 0 4px 20px rgba(245, 158, 11, 0.2);
-
-      &:hover {
-        box-shadow: 0 10px 40px rgba(245, 158, 11, 0.3);
-      }
-    }
-
-    // 推荐来源标签
-    .recommend-source-tag {
-      position: absolute;
-      top: 12px;
-      right: 12px;
-      z-index: 1;
-    }
-
-    .card-header {
-      display: flex;
-      gap: 20px;
-      margin-bottom: 20px;
-      align-items: center;
-      padding: 0;
-
-      .dish-image {
-        width: 80px;
-        height: 80px;
-        border-radius: 12px;
-        overflow: hidden;
-        flex-shrink: 0;
-
-        .recommend-image {
-          width: 100%;
-          height: 100%;
-        }
-
-        .image-placeholder {
-          width: 80px;
-          height: 80px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
-          font-size: 2.571rem /* 原值: 36px */;
-          font-weight: bold;
-          color: #666;
-        }
-
-        .image-loading {
-          width: 80px;
-          height: 80px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: #f5f5f5;
-          color: #999;
-        }
-      }
-
-      .dish-info {
-        flex: 1;
-
-        .dish-name {
-          font-size: 1.429rem /* 原值: 20px */;
-          font-weight: bold;
-          margin-bottom: 8px;
-          color: #333;
-        }
-      }
-    }
-
-    .calories-info {
-      display: flex;
-      gap: 10px;
-      color: #ff6b6b;
-      font-weight: 800;
-      margin-bottom: 18px;
-      font-size: 1.429rem /* 原值: 20px */;
-      align-items: center;
-      padding: 8px 16px;
-      background: linear-gradient(135deg, #fff5f5 0%, #ffe4e4 100%);
-      border-radius: 20px;
-    }
-
-    .calories-info-unavailable {
-      display: flex;
-      gap: 8px;
-      color: #c0c4cc;
-      margin-bottom: 18px;
-      font-size: 1rem /* 原值: 14px */;
-      align-items: center;
-    }
-
-    .tags-section {
-      margin-bottom: 20px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-
-      :deep(.el-tag) {
-        border-radius: 20px;
-      }
-    }
-
-    // 匹配度简约进度条
-    .match-score-section {
-      margin-bottom: 16px;
-      padding: 0;
-
-      .score-compact {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 10px 14px;
-        background: #f9fafb;
-        border-radius: 8px;
-
-        .score-label {
-          font-size: 0.929rem /* 原值: 13px */;
-          color: #606266;
-          font-weight: 500;
-          white-space: nowrap;
-        }
-
-        .score-bar-bg {
-          flex: 1;
-          height: 8px;
-          background: #e4e7ed;
-          border-radius: 4px;
-          overflow: hidden;
-          min-width: 80px;
-        }
-
-        .score-bar-fill {
-          height: 100%;
-          border-radius: 4px;
-          transition: width 0.6s ease;
-        }
-
-        .score-value {
-          font-size: 1rem /* 原值: 14px */;
-          font-weight: 600;
-          white-space: nowrap;
-          min-width: 45px;
-          text-align: right;
-        }
-
-        // 优秀等级 (90%+)
-        &.excellent {
-          .score-bar-fill {
-            background: linear-gradient(90deg, #67c23a 0%, #85ce61 100%);
-          }
-          .score-value {
-            color: #67c23a;
-          }
-        }
-
-        // 良好等级 (80-89%)
-        &.good {
-          .score-bar-fill {
-            background: linear-gradient(90deg, #409eff 0%, #66b1ff 100%);
-          }
-          .score-value {
-            color: #409eff;
-          }
-        }
-
-        // 中等等级 (70-79%)
-        &.medium {
-          .score-bar-fill {
-            background: linear-gradient(90deg, #e6a23c 0%, #ebb563 100%);
-          }
-          .score-value {
-            color: #e6a23c;
-          }
-        }
-
-        // 较低等级 (<70%)
-        &.low {
-          .score-bar-fill {
-            background: linear-gradient(90deg, #f56c6c 0%, #f78989 100%);
-          }
-          .score-value {
-            color: #f56c6c;
-          }
-        }
-      }
-    }
-
-    .reason-section {
-      margin-bottom: 24px;
-
-      .reason-title {
-        font-weight: bold;
-        margin-bottom: 8px;
-        color: #333;
-        font-size: 1.071rem /* 原值: 15px */;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 8px;
-
-        .score-tag {
-          font-size: 0.857rem /* 原值: 12px */;
-        }
-      }
-
-      .reason-text {
-        color: #666;
-        font-size: 1rem /* 原值: 14px */;
-        line-height: 1.6;
-      }
-
-      .reason-text.empty-reason {
-        color: #c0c4cc;
-        font-style: italic;
-      }
-
-      // 推荐因素列表
-      .reason-factors {
-        margin-top: 12px;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-      }
-
-      .reason-factor-item {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-
-        .factor-score {
-          font-size: 0.857rem /* 原值: 12px */;
-          color: #909399;
-          font-weight: 600;
-        }
-      }
-
-      // 推荐来源信息
-      .recommend-source-info {
-        margin-top: 12px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-    }
-
-    .rating {
-      margin-bottom: 24px;
-
-      :deep(.el-rate__text) {
-        font-size: 1rem /* 原值: 14px */;
-        color: #e6a23c;
-      }
-
-      :deep(.el-rate__icon) {
-        font-size: 1.143rem /* 原值: 16px */;
-      }
-    }
-
-    .card-actions {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 15px;
-      padding-top: 16px;
-      border-top: 1px solid #f0f0f0;
-      flex-wrap: wrap;
-
-      .el-button {
-        border-radius: 8px;
-        font-weight: 500;
-      }
+      background: darken(@nordic-accent, 8%);
     }
   }
 
-  /* 推荐卡片过渡动画 */
-  .recommend-card-move {
-    transition: all 0.5s ease;
+  &.favorited {
+    color: @nordic-yellow;
+    border-color: @nordic-yellow;
   }
 
-  .recommend-card-enter-active,
-  .recommend-card-leave-active {
-    transition:
-      opacity 0.3s ease,
-      transform 0.5s ease;
-  }
+  &.ghost {
+    color: @nordic-text-muted;
+    border-color: transparent;
 
-  .recommend-card-enter-from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-
-  .recommend-card-leave-to {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-
-  // 加载中样式
-  .loading-skeleton {
-    padding: 20px 0;
+    &:hover {
+      color: @nordic-text-secondary;
+      border-color: @nordic-border;
+    }
   }
 }
 
+// --- 空状态 ---
 .empty-state {
   text-align: center;
-  padding: 100px 20px;
-  background-color: #ffffff;
-  border-radius: 12px;
-  margin-top: 20px;
-  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
-  border: 1px dashed #e4e7ed;
+  padding: 60px 20px;
+  background: @nordic-surface;
+  border: 1px dashed @nordic-border;
+  border-radius: @nordic-radius-lg;
 
   .empty-icon {
-    font-size: 90px;
-    margin-bottom: 20px;
-    opacity: 0.7;
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.6;
   }
 
-  .empty-text {
-    font-size: 22px;
-    font-weight: bold;
-    color: #333;
-    margin-bottom: 12px;
+  .empty-title {
+    font-size: @nordic-text-lg;
+    font-weight: 600;
+    color: @nordic-text;
+    margin-bottom: 8px;
   }
 
-  .empty-subtext {
-    font-size: 1rem /* 原值: 14px */;
-    color: #909399;
-    margin-bottom: 36px;
-    line-height: 1.6;
-  }
-
-  .el-button {
-    border-radius: 8px;
-    font-weight: 500;
-    padding: 10px 24px;
+  .empty-desc {
+    font-size: @nordic-text-sm;
+    color: @nordic-text-muted;
+    margin-bottom: 24px;
   }
 }
 
-// 营养详情弹窗
-.nutrition-detail {
-  padding: 20px 0;
-
-  .nutrition-item {
+// --- 营养弹窗 ---
+.nutrition-modal {
+  .nutri-row {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    padding: 15px 0;
-    border-bottom: 1px solid #f0f0f0;
+    padding: 12px 0;
+    border-bottom: 1px solid @nordic-divider;
+    font-size: @nordic-text-base;
+    color: @nordic-text-secondary;
 
-    &:last-child {
-      border-bottom: none;
-    }
+    &:last-child { border-bottom: none; }
 
-    .nutrition-label {
-      font-size: 1.071rem /* 原值: 15px */;
-      color: #666;
-    }
-
-    .nutrition-value {
-      font-size: 1.286rem /* 原值: 18px */;
-      font-weight: bold;
-      color: #333;
+    .nutri-val {
+      font-weight: 600;
+      color: @nordic-text;
     }
   }
 }
 
-.nutrition-empty {
+.nutri-empty {
   text-align: center;
-  padding: 40px 20px;
-  color: #999;
+  padding: 32px;
+  color: @nordic-text-muted;
+  font-size: @nordic-text-sm;
 }
 
-// 响应式优化
-@media (max-width: 768px) {
-  .recommend-container {
-    padding: 0 10px 20px 10px;
+// --- 卡片过渡 ---
+.card-list-enter-active,
+.card-list-leave-active {
+  transition: all 0.3s ease;
+}
 
-    h2 {
-      font-size: 1.714rem /* 原值: 24px */;
-      margin: 0 0 20px 10px;
-    }
+.card-list-enter-from {
+  opacity: 0;
+  transform: translateY(12px);
+}
 
-    .toolbar {
-      flex-direction: column;
-      align-items: stretch;
+.card-list-leave-to {
+  opacity: 0;
+  transform: translateX(-20px);
+}
 
-      .toolbar-left {
-        flex-direction: column;
-      }
+.card-list-move {
+  transition: transform 0.3s ease;
+}
 
-      .toolbar-right {
-        flex-direction: column;
+// --- 滑入过渡 ---
+.nordic-slide-enter-active,
+.nordic-slide-leave-active {
+  transition: all 0.3s ease;
+  max-height: 400px;
+  overflow: hidden;
+}
 
-        .el-select {
-          width: 100% !important;
-          margin-left: 0 !important;
-        }
-      }
-    }
+.nordic-slide-enter-from,
+.nordic-slide-leave-to {
+  max-height: 0;
+  opacity: 0;
+  margin-bottom: 0;
+}
 
-    .recommend-grid {
-      grid-template-columns: 1fr;
-      gap: 12px;
-      padding: 0 10px;
-    }
+// --- 响应式 ---
+@media (max-width: 640px) {
+  .toolbar-row {
+    flex-wrap: wrap;
 
-    .filter-panel {
-      margin: 0 10px 20px 10px;
-    }
-
-    .filter-info {
-      margin: 0 10px 20px 10px;
-    }
+    .search-box { width: 100%; order: 1; }
+    .filter-toggle { order: 2; }
+    .sort-select { order: 3; flex: 1; min-width: 0; }
   }
 }
 </style>

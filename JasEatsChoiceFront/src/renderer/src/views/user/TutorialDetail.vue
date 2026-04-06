@@ -271,8 +271,10 @@ onMounted(() => {
 </template>
 
 <style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+
 .tutorial-detail-container {
-  padding: 20px 0;
+  .nordic-page-container();
   max-width: 900px;
   margin: 0 auto;
 
@@ -285,6 +287,7 @@ onMounted(() => {
   }
 
   .tutorial-detail-card {
+    .nordic-card();
     padding: 0;
     overflow: hidden;
   }
@@ -306,7 +309,7 @@ onMounted(() => {
 
     // 没有封面图时的渐变背景
     &.has-no-cover {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, @nordic-accent 0%, @nordic-blue 100%);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -314,28 +317,28 @@ onMounted(() => {
       .default-cover-content {
         display: flex;
         align-items: center;
-        gap: 24px;
-        color: white;
+        gap: @nordic-space-lg;
+        color: @nordic-surface;
         z-index: 1;
       }
 
       .default-cover-text {
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: @nordic-space-sm;
         align-items: center;
 
         .cover-type-badge {
           background: rgba(255, 255, 255, 0.3);
-          padding: 6px 16px;
-          border-radius: 20px;
-          font-size: 0.929rem /* 原值: 13px */;
+          padding: 6px @nordic-space-md;
+          border-radius: @nordic-radius-lg;
+          font-size: @nordic-text-sm;
           font-weight: 600;
           backdrop-filter: blur(10px);
         }
 
         .cover-label {
-          font-size: 1.143rem /* 原值: 16px */;
+          font-size: @nordic-text-md;
           font-weight: 500;
           text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
         }
@@ -347,27 +350,27 @@ onMounted(() => {
       top: 20px;
       right: 20px;
       background: rgba(255, 255, 255, 0.95);
-      padding: 8px 12px;
-      border-radius: 8px;
+      padding: @nordic-space-sm @nordic-space-md;
+      border-radius: @nordic-radius-sm;
       display: flex;
       align-items: center;
       gap: 5px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 2px 8px @nordic-shadow;
 
       .video-icon {
-        color: #ff6b6b;
-        font-size: 1.429rem /* 原值: 20px */;
+        color: @nordic-red;
+        font-size: @nordic-text-lg;
       }
 
       .article-icon {
-        color: #f7b267;
-        font-size: 1.429rem /* 原值: 20px */;
+        color: @nordic-yellow;
+        font-size: @nordic-text-lg;
       }
 
       span {
         font-weight: 600;
-        color: #303133;
-        font-size: 1rem /* 原值: 14px */;
+        color: @nordic-text;
+        font-size: @nordic-text-base;
       }
     }
   }
@@ -378,26 +381,26 @@ onMounted(() => {
     .tutorial-source-badges {
       display: flex;
       gap: 10px;
-      margin-bottom: 20px;
+      margin-bottom: @nordic-space-lg;
       flex-wrap: wrap;
 
       .el-tag {
         display: flex;
         align-items: center;
         gap: 6px;
-        padding: 6px 12px;
-        border-radius: 12px;
-        font-size: 0.929rem /* 原值: 13px */;
+        padding: 6px @nordic-space-md;
+        border-radius: @nordic-radius-md;
+        font-size: @nordic-text-sm;
 
         .el-icon {
-          font-size: 1.143rem /* 原值: 16px */;
+          font-size: @nordic-text-md;
         }
 
         .reviewed-badge {
           margin-left: 4px;
           padding-left: 6px;
           border-left: 1px solid currentColor;
-          font-size: 0.857rem /* 原值: 12px */;
+          font-size: @nordic-text-xs;
         }
       }
     }
@@ -405,13 +408,13 @@ onMounted(() => {
     .tutorial-title {
       font-size: 2.286rem /* 原值: 32px */;
       font-weight: bold;
-      color: #303133;
-      margin-bottom: 20px;
+      color: @nordic-text;
+      margin-bottom: @nordic-space-lg;
       line-height: 1.4;
     }
 
     .tutorial-meta {
-      color: #606266;
+      color: @nordic-text-secondary;
       font-size: 1.071rem /* 原值: 15px */;
       margin-bottom: 35px;
       display: flex;
@@ -430,8 +433,8 @@ onMounted(() => {
       }
 
       .rating-count {
-        color: #909399;
-        font-size: 0.929rem /* 原值: 13px */;
+        color: @nordic-text-muted;
+        font-size: @nordic-text-sm;
         margin-left: 4px;
       }
     }
@@ -440,23 +443,23 @@ onMounted(() => {
       h3 {
         font-size: 1.714rem /* 原值: 24px */;
         font-weight: bold;
-        color: #303133;
-        margin-bottom: 20px;
+        color: @nordic-text;
+        margin-bottom: @nordic-space-lg;
         padding-bottom: 10px;
-        border-bottom: 2px solid #ff6b6b;
+        border-bottom: 2px solid @nordic-red;
       }
 
       .content-text {
-        font-size: 1.143rem /* 原值: 16px */;
+        font-size: @nordic-text-md;
         line-height: 2;
-        color: #606266;
+        color: @nordic-text-secondary;
 
         :deep(h1),
         :deep(h2),
         :deep(h3) {
-          margin-top: 20px;
+          margin-top: @nordic-space-lg;
           margin-bottom: 12px;
-          color: #303133;
+          color: @nordic-text;
         }
 
         :deep(p) {
@@ -469,17 +472,17 @@ onMounted(() => {
           margin-bottom: 15px;
 
           li {
-            margin-bottom: 8px;
+            margin-bottom: @nordic-space-sm;
           }
         }
 
         :deep(strong) {
-          color: #ff6b6b;
+          color: @nordic-red;
           font-weight: 600;
         }
 
         :deep(code) {
-          background: #f5f5f5;
+          background: @nordic-divider;
           padding: 2px 6px;
           border-radius: 4px;
           font-family: 'Courier New', monospace;
@@ -493,7 +496,7 @@ onMounted(() => {
     padding: 80px 0;
 
     h2 {
-      color: #606266;
+      color: @nordic-text-secondary;
       margin-bottom: 25px;
       font-size: 1.714rem /* 原值: 24px */;
     }
@@ -510,19 +513,19 @@ onMounted(() => {
     }
 
     .tutorial-info {
-      padding: 20px;
+      padding: @nordic-space-lg;
 
       .tutorial-title {
         font-size: 1.714rem /* 原值: 24px */;
       }
 
       .tutorial-meta {
-        font-size: 0.929rem /* 原值: 13px */;
+        font-size: @nordic-text-sm;
         gap: 15px;
       }
 
       .tutorial-content h3 {
-        font-size: 1.429rem /* 原值: 20px */;
+        font-size: @nordic-text-lg;
       }
     }
   }

@@ -331,26 +331,29 @@ const goToMerchantDetail = (merchant) => {
 </template>
 
 <style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+
 .merchant-list-container {
-  width: 100%; // 确保容器宽度为100%
-  box-sizing: border-box; // 确保padding不会增加额外宽度
-  padding: 0 20px 20px 20px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0 @nordic-space-lg @nordic-space-lg @nordic-space-lg;
+  background: @nordic-bg;
+  min-height: 100%;
 
   h2 {
-    font-size: 2.286rem /* 原值: 32px */;
-    margin: 0 0 20px 20px;
-    color: #1a202c;
+    font-size: @nordic-text-xl;
+    margin: 0 0 @nordic-space-lg @nordic-space-lg;
+    color: @nordic-text;
     font-weight: 800;
-    letter-spacing: -0.5px;
+    letter-spacing: @nordic-letter-tight;
 
-    // 添加装饰性下划线 - 蓝色渐变
     &::after {
       content: '';
       display: block;
       width: 60px;
       height: 4px;
-      background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
-      border-radius: 2px;
+      background: linear-gradient(135deg, @nordic-accent 0%, @nordic-blue 100%);
+      border-radius: @nordic-radius-xs;
       margin-top: 12px;
     }
   }
@@ -358,19 +361,19 @@ const goToMerchantDetail = (merchant) => {
   .search-filter-section {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    margin-bottom: 24px;
-    padding: 20px;
-    background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
-    border-radius: 20px;
-    box-shadow: 0 6px 24px rgba(59, 130, 246, 0.12);
-    border: 1px solid rgba(59, 130, 246, 0.1);
+    gap: @nordic-space-md - @nordic-space-xs;
+    margin-bottom: @nordic-space-lg;
+    padding: @nordic-space-lg;
+    background: linear-gradient(135deg, @nordic-accent-light 0%, @nordic-blue-light 100%);
+    border-radius: @nordic-radius-lg;
+    box-shadow: 0 6px 24px fade(@nordic-accent, 12%);
+    border: 1px solid fade(@nordic-accent, 10%);
     width: 100%;
     box-sizing: border-box;
 
     .search-row {
       display: flex;
-      gap: 12px;
+      gap: @nordic-space-md - @nordic-space-xs;
       align-items: center;
     }
 
@@ -378,87 +381,86 @@ const goToMerchantDetail = (merchant) => {
       flex: 1;
 
       :deep(.el-input__wrapper) {
-        border-radius: 14px;
-        border: 2px solid rgba(59, 130, 246, 0.15);
-        padding: 8px 16px;
-        transition: all 0.3s ease;
-        background-color: #ffffff;
+        border-radius: @nordic-radius-md;
+        border: 2px solid fade(@nordic-accent, 15%);
+        padding: @nordic-space-sm @nordic-space-md;
+        transition: all @nordic-transition-slow ease;
+        background-color: @nordic-surface;
         box-shadow: none;
 
         &:hover {
-          border-color: rgba(59, 130, 246, 0.3);
+          border-color: fade(@nordic-accent, 30%);
         }
 
         &.is-focus {
-          border-color: #3b82f6;
-          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+          border-color: @nordic-accent;
+          box-shadow: 0 0 0 3px fade(@nordic-accent, 10%);
         }
       }
 
       :deep(.el-input__inner) {
-        font-size: 1.071rem /* 原值: 15px */;
-        color: #1e293b;
+        font-size: @nordic-text-md - 1px;
+        color: @nordic-text;
       }
 
       :deep(.el-input__prefix) {
-        color: #3b82f6;
-        font-size: 1.286rem /* 原值: 18px */;
+        color: @nordic-accent;
+        font-size: @nordic-text-lg - 2px;
       }
 
       :deep(.el-input__suffix) {
         .el-icon {
-          font-size: 1.143rem /* 原值: 16px */;
-          color: #cbd5e1;
+          font-size: @nordic-text-base + 2px;
+          color: @nordic-text-muted;
 
           &:hover {
-            color: #3b82f6;
+            color: @nordic-accent;
           }
         }
       }
     }
 
-    /* 重置按钮样式 */
     .reset-btn {
       flex-shrink: 0;
-      border-radius: 14px;
+      border-radius: @nordic-radius-md;
       height: 48px;
-      padding: 0 24px;
-      font-size: 1.071rem /* 原值: 15px */;
-      transition: all 0.3s ease;
-      background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-      border: 1px solid #cbd5e1;
-      color: #475569;
+      padding: 0 @nordic-space-lg;
+      font-size: @nordic-text-md - 1px;
+      transition: all @nordic-transition-slow ease;
+      background: linear-gradient(135deg, @nordic-bg 0%, @nordic-border 100%);
+      border: 1px solid @nordic-border;
+      color: @nordic-text-secondary;
 
       &:hover {
-        background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
-        border-color: #94a3b8;
-        color: #1e293b;
+        background: linear-gradient(135deg, @nordic-border 0%, darken(@nordic-border, 5%) 100%);
+        border-color: @nordic-text-muted;
+        color: @nordic-text;
       }
     }
 
     .filter-tags {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
+      gap: @nordic-space-2sm;
       align-items: center;
-      padding-bottom: 4px;
+      padding-bottom: @nordic-space-xs;
 
       .filter-tag {
-        padding: 8px 18px;
-        border-radius: 20px;
-        font-size: 1rem /* 原值: 14px */;
-        color: #64748b;
-        background: #ffffff;
-        border: 1px solid rgba(59, 130, 246, 0.1);
+        padding: @nordic-space-sm 18px;
+        border-radius: @nordic-radius-pill;
+        font-size: @nordic-text-base;
+        color: @nordic-text-secondary;
+        background: @nordic-surface;
+        border: 1px solid fade(@nordic-accent, 10%);
         cursor: pointer;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: all @nordic-transition-slow cubic-bezier(0.4, 0, 0.2, 1);
         user-select: none;
         position: relative;
 
         &:hover {
-          color: #3b82f6;
-          border-color: rgba(59, 130, 246, 0.3);
-          background: rgba(59, 130, 246, 0.05);
+          color: @nordic-accent;
+          border-color: fade(@nordic-accent, 30%);
+          background: fade(@nordic-accent, 5%);
           transform: translateY(-1px);
         }
 
@@ -467,14 +469,14 @@ const goToMerchantDetail = (merchant) => {
         }
 
         &.active {
-          color: #ffffff;
-          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+          color: @nordic-surface;
+          background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
           border-color: transparent;
           font-weight: 500;
-          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+          box-shadow: 0 4px 12px fade(@nordic-accent, 30%);
 
           &:hover {
-            box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+            box-shadow: 0 6px 16px fade(@nordic-accent, 40%);
             transform: translateY(-2px);
           }
 
@@ -489,32 +491,32 @@ const goToMerchantDetail = (merchant) => {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 10px;
-      padding-top: 8px;
-      border-top: 1px dashed rgba(59, 130, 246, 0.15);
+      gap: @nordic-space-2sm;
+      padding-top: @nordic-space-sm;
+      border-top: 1px dashed fade(@nordic-accent, 15%);
 
       .sort-label {
-        font-size: 0.929rem /* 原值: 13px */;
-        color: #64748b;
+        font-size: @nordic-text-sm;
+        color: @nordic-text-secondary;
         font-weight: 500;
-        margin-right: 4px;
+        margin-right: @nordic-space-xs;
       }
 
       .sort-tag {
-        padding: 6px 16px;
-        border-radius: 18px;
-        font-size: 0.929rem /* 原值: 13px */;
-        color: #64748b;
-        background: #ffffff;
-        border: 1px solid rgba(59, 130, 246, 0.1);
+        padding: 6px @nordic-space-md;
+        border-radius: @nordic-radius-pill - 10px;
+        font-size: @nordic-text-sm;
+        color: @nordic-text-secondary;
+        background: @nordic-surface;
+        border: 1px solid fade(@nordic-accent, 10%);
         cursor: pointer;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: all @nordic-transition-slow cubic-bezier(0.4, 0, 0.2, 1);
         user-select: none;
 
         &:hover {
-          color: #3b82f6;
-          border-color: rgba(59, 130, 246, 0.3);
-          background: rgba(59, 130, 246, 0.05);
+          color: @nordic-accent;
+          border-color: fade(@nordic-accent, 30%);
+          background: fade(@nordic-accent, 5%);
           transform: translateY(-1px);
         }
 
@@ -523,14 +525,14 @@ const goToMerchantDetail = (merchant) => {
         }
 
         &.active {
-          color: #ffffff;
-          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+          color: @nordic-surface;
+          background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
           border-color: transparent;
           font-weight: 500;
-          box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+          box-shadow: 0 2px 8px fade(@nordic-accent, 25%);
 
           &:hover {
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+            box-shadow: 0 4px 12px fade(@nordic-accent, 35%);
             transform: translateY(-1px);
           }
 
@@ -546,8 +548,8 @@ const goToMerchantDetail = (merchant) => {
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
-    gap: 24px;
-    padding: 0 20px;
+    gap: @nordic-space-lg;
+    padding: 0 @nordic-space-lg;
     justify-content: center;
   }
 
@@ -555,11 +557,7 @@ const goToMerchantDetail = (merchant) => {
     flex: 1 1 320px;
     max-width: 480px;
     box-sizing: border-box;
-    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-    border-radius: 16px;
-    box-shadow: 0 2px 15px rgba(59, 130, 246, 0.08);
-    border: 1px solid rgba(59, 130, 246, 0.08);
-    background: linear-gradient(to bottom, #ffffff 0%, #f8fafc 100%);
+    .nordic-card();
     cursor: pointer;
     position: relative;
     overflow: hidden;
@@ -571,15 +569,15 @@ const goToMerchantDetail = (merchant) => {
       left: 0;
       right: 0;
       height: 3px;
-      background: linear-gradient(90deg, #3b82f6 0%, #06b6d4 100%);
+      background: linear-gradient(90deg, @nordic-accent 0%, @nordic-blue 100%);
       opacity: 0;
-      transition: opacity 0.3s ease;
+      transition: opacity @nordic-transition-slow ease;
     }
 
     &:hover {
-      box-shadow: 0 12px 40px rgba(59, 130, 246, 0.18);
+      box-shadow: 0 12px 40px fade(@nordic-accent, 18%);
       transform: translateY(-6px);
-      border-color: rgba(59, 130, 246, 0.25);
+      border-color: fade(@nordic-accent, 25%);
 
       &::before {
         opacity: 1;
@@ -591,16 +589,15 @@ const goToMerchantDetail = (merchant) => {
     }
   }
 
-  // 营业中商家卡片 - 蓝色光晕效果
+  // 营业中商家卡片
   .merchant-card-open {
-    box-shadow: 0 2px 15px rgba(59, 130, 246, 0.08);
+    box-shadow: 0 2px 15px fade(@nordic-accent, 8%);
 
     &:hover {
-      box-shadow: 0 12px 40px rgba(59, 130, 246, 0.22);
+      box-shadow: 0 12px 40px fade(@nordic-accent, 22%);
 
-      // 卡片悬浮时，为营业中标签添加蓝色光晕
       .merchant-status .el-tag--success {
-        box-shadow: 0 0 20px rgba(59, 130, 246, 0.6);
+        box-shadow: 0 0 20px fade(@nordic-green, 60%);
         transform: scale(1.05);
       }
     }
@@ -619,10 +616,10 @@ const goToMerchantDetail = (merchant) => {
   .merchant-card {
     .card-header {
       display: flex;
-      gap: 20px;
-      margin-bottom: 20px;
+      gap: @nordic-space-lg;
+      margin-bottom: @nordic-space-lg;
       align-items: center;
-      padding: 4px;
+      padding: @nordic-space-xs;
 
       .merchant-image {
         font-size: 50px;
@@ -636,20 +633,20 @@ const goToMerchantDetail = (merchant) => {
           height: 80px;
           border-radius: 50%;
           object-fit: cover;
-          border: 3px solid rgba(59, 130, 246, 0.1);
-          transition: all 0.3s ease;
+          border: 3px solid fade(@nordic-accent, 10%);
+          transition: all @nordic-transition-slow ease;
         }
 
         .default-icon {
           width: 80px;
           height: 80px;
           border-radius: 50%;
-          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+          background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
           display: flex;
           align-items: center;
           justify-content: center;
-          color: #ffffff;
-          filter: drop-shadow(0 2px 8px rgba(59, 130, 246, 0.15));
+          color: @nordic-surface;
+          filter: drop-shadow(0 2px 8px fade(@nordic-accent, 15%));
         }
       }
 
@@ -657,18 +654,15 @@ const goToMerchantDetail = (merchant) => {
         display: flex;
         flex-direction: column;
         align-items: flex-start;
-        gap: 10px;
+        gap: @nordic-space-2sm;
         flex: 1;
-        min-width: 0; /* 防止文本溢出 */
+        min-width: 0;
 
         .merchant-name {
-          font-size: 1.429rem /* 原值: 20px */;
+          font-size: @nordic-text-lg;
           font-weight: 700;
           margin-bottom: 2px;
-          background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
+          color: @nordic-accent-dark;
           letter-spacing: -0.3px;
           line-height: 1.3;
         }
@@ -678,7 +672,7 @@ const goToMerchantDetail = (merchant) => {
           align-items: center;
           justify-content: space-between;
           width: 100%;
-          gap: 12px;
+          gap: @nordic-space-md - @nordic-space-xs;
         }
 
         .merchant-rating {
@@ -691,36 +685,32 @@ const goToMerchantDetail = (merchant) => {
           .rating-wrapper {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: @nordic-space-sm;
 
             :deep(.el-rate) {
               .el-rate__icon {
-                font-size: 1.143rem /* 原值: 16px */;
+                font-size: @nordic-text-base + 2px;
               }
             }
 
             .rating-number {
-              font-size: 1.071rem /* 原值: 15px */;
+              font-size: @nordic-text-md - 1px;
               font-weight: 600;
-              color: #f59e0b;
-              background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-              -webkit-background-clip: text;
-              -webkit-text-fill-color: transparent;
-              background-clip: text;
+              color: @nordic-yellow;
             }
           }
 
           .distance {
-            font-size: 0.929rem /* 原值: 13px */;
-            color: #64748b;
+            font-size: @nordic-text-sm;
+            color: @nordic-text-secondary;
             display: flex;
             align-items: center;
-            gap: 4px;
+            gap: @nordic-space-xs;
             font-weight: 500;
 
             .distance-icon {
-              font-size: 1rem /* 原值: 14px */;
-              color: #94a3b8;
+              font-size: @nordic-text-base;
+              color: @nordic-text-muted;
             }
           }
         }
@@ -729,44 +719,44 @@ const goToMerchantDetail = (merchant) => {
           flex-shrink: 0;
 
           .el-tag {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all @nordic-transition-slow cubic-bezier(0.4, 0, 0.2, 1);
           }
 
-          // 营业中标签样式 - 蓝色系
+          // 营业中标签样式
           .el-tag--success {
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            background: linear-gradient(135deg, @nordic-green 0%, @nordic-green-dark 100%);
             border: none;
-            color: white;
+            color: @nordic-surface;
             font-weight: 500;
-            padding: 4px 12px;
+            padding: @nordic-space-xs @nordic-space-md - @nordic-space-xs;
 
             &:hover {
-              background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+              background: linear-gradient(135deg, @nordic-green-dark 0%, darken(@nordic-green-dark, 8%) 100%);
               transform: scale(1.05);
             }
           }
 
           // 非营业中标签样式
           .el-tag--danger {
-            background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
+            background: linear-gradient(135deg, @nordic-text-muted 0%, @nordic-text-secondary 100%);
             border: none;
-            color: white;
+            color: @nordic-surface;
             font-weight: 500;
-            padding: 4px 12px;
+            padding: @nordic-space-xs @nordic-space-md - @nordic-space-xs;
           }
         }
       }
     }
 
     .merchant-details {
-      margin-bottom: 16px;
-      padding: 12px;
+      margin-bottom: @nordic-space-md;
+      padding: @nordic-space-md - @nordic-space-xs;
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: @nordic-space-sm;
       align-items: center;
-      background: rgba(59, 130, 246, 0.03);
-      border-radius: 10px;
+      background: fade(@nordic-accent, 3%);
+      border-radius: @nordic-radius-md;
     }
 
     .merchant-type {
@@ -775,44 +765,44 @@ const goToMerchantDetail = (merchant) => {
 
     .merchant-features {
       display: flex;
-      gap: 8px;
+      gap: @nordic-space-sm;
     }
 
     .merchant-tags {
       margin: 0;
       display: flex;
-      gap: 8px;
+      gap: @nordic-space-sm;
       flex-wrap: wrap;
     }
 
     .card-actions {
       display: flex;
       justify-content: center;
-      padding-top: 16px;
-      border-top: 1px solid rgba(59, 130, 246, 0.1);
+      padding-top: @nordic-space-md;
+      border-top: 1px solid fade(@nordic-accent, 10%);
 
       .el-button {
         width: 100%;
-        border-radius: 12px;
+        border-radius: @nordic-radius-md;
         font-weight: 600;
         height: 46px;
-        font-size: 1.071rem /* 原值: 15px */;
-        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        font-size: @nordic-text-md - 1px;
+        background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
         border: none;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: all @nordic-transition-slow cubic-bezier(0.4, 0, 0.2, 1);
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 8px;
+        gap: @nordic-space-sm;
 
         .btn-icon {
-          font-size: 1.286rem /* 原值: 18px */;
+          font-size: @nordic-text-lg - 2px;
         }
 
         &:hover {
-          background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+          background: linear-gradient(135deg, @nordic-accent-dark 0%, darken(@nordic-accent-dark, 8%) 100%);
           transform: translateY(-2px);
-          box-shadow: 0 6px 20px rgba(59, 130, 246, 0.45);
+          box-shadow: 0 6px 20px fade(@nordic-accent, 45%);
         }
 
         &:active {
@@ -833,31 +823,31 @@ const goToMerchantDetail = (merchant) => {
     width: 100%;
     flex-shrink: 0;
     text-align: center;
-    padding: 80px 20px;
-    background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
-    border-radius: 16px;
-    border: 2px dashed rgba(59, 130, 246, 0.2);
+    padding: 80px @nordic-space-lg;
+    background: linear-gradient(135deg, @nordic-accent-light 0%, @nordic-blue-light 100%);
+    border-radius: @nordic-radius-lg;
+    border: 2px dashed fade(@nordic-accent, 20%);
 
     .empty-icon {
       font-size: 80px;
-      margin-bottom: 20px;
+      margin-bottom: @nordic-space-lg;
       opacity: 0.7;
     }
 
     .empty-text {
-      color: #475569;
+      color: @nordic-text-secondary;
 
       h3 {
-        font-size: 1.429rem /* 原值: 20px */;
-        margin: 0 0 10px 0;
-        color: #1e40af;
+        font-size: @nordic-text-lg;
+        margin: 0 0 @nordic-space-2sm 0;
+        color: @nordic-accent-dark;
         font-weight: 600;
       }
 
       p {
-        font-size: 1rem /* 原值: 14px */;
+        font-size: @nordic-text-base;
         margin: 0;
-        color: #64748b;
+        color: @nordic-text-secondary;
       }
     }
 
@@ -865,15 +855,15 @@ const goToMerchantDetail = (merchant) => {
       margin-top: 30px;
 
       .el-button {
-        padding: 10px 28px;
-        font-size: 1rem /* 原值: 14px */;
-        border-radius: 10px;
-        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        padding: @nordic-space-sm 28px;
+        font-size: @nordic-text-base;
+        border-radius: @nordic-radius-md;
+        background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
         border: none;
 
         &:hover {
-          background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+          background: linear-gradient(135deg, @nordic-accent-dark 0%, darken(@nordic-accent-dark, 8%) 100%);
+          box-shadow: 0 4px 12px fade(@nordic-accent, 40%);
         }
       }
     }

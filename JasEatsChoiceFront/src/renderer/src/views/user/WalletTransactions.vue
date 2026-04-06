@@ -412,47 +412,49 @@ onMounted(() => {
 })
 </script>
 
-<style scoped>
+<style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+
 .wallet-transactions-container {
-  padding: 0 20px 20px 20px;
+  padding: 0 @nordic-space-lg @nordic-space-lg @nordic-space-lg;
   min-height: 100vh;
-  background: #f5f7fa;
+  background: @nordic-bg;
 }
 
 .page-title {
-  font-size: 2rem /* 原值: 28px */;
+  font-size: @nordic-text-xl;
   margin: 0 0 25px 0;
-  color: #333;
+  color: @nordic-text;
   font-weight: 700;
 }
 
 .balance-card {
-  background: linear-gradient(135deg, #fef5e7 0%, #fdebd0 100%);
-  border-radius: 16px;
-  margin-bottom: 20px;
+  background: linear-gradient(135deg, @nordic-accent-light 0%, darken(@nordic-accent-light, 5%) 100%);
+  border-radius: @nordic-radius-lg;
+  margin-bottom: @nordic-space-lg;
   border: none;
 }
 
 .balance-info {
   text-align: center;
-  padding: 20px;
+  padding: @nordic-space-lg;
 }
 
 .balance-label {
-  font-size: 1.143rem /* 原值: 16px */;
-  color: #718096;
-  margin-bottom: 10px;
+  font-size: @nordic-text-md;
+  color: @nordic-text-secondary;
+  margin-bottom: @nordic-space-sm;
 }
 
 .balance-amount {
-  font-size: 2.571rem /* 原值: 36px */;
+  font-size: @nordic-text-2xl;
   font-weight: 700;
-  color: #d69e2e;
+  color: @nordic-yellow;
 }
 
 .filter-card {
-  border-radius: 16px;
-  margin-bottom: 20px;
+  border-radius: @nordic-radius-lg;
+  margin-bottom: @nordic-space-lg;
   border: none;
 }
 
@@ -467,46 +469,46 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 15px;
-  margin-bottom: 20px;
+  margin-bottom: @nordic-space-lg;
 }
 
 .stat-card {
   display: flex;
   align-items: center;
   gap: 15px;
-  padding: 20px;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  transition: all 0.3s ease;
+  padding: @nordic-space-lg;
+  background: @nordic-surface;
+  border-radius: @nordic-radius-md;
+  box-shadow: 0 2px 8px @nordic-shadow;
+  transition: all @nordic-transition-slow ease;
 }
 
 .stat-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 12px @nordic-shadow-hover;
 }
 
 .stat-icon {
-  font-size: 2.857rem /* 原值: 40px */;
+  font-size: 2.857rem;
   width: 60px;
   height: 60px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f7fafc;
-  border-radius: 12px;
+  background: @nordic-divider;
+  border-radius: @nordic-radius-md;
 }
 
 .recharge-icon {
-  background: linear-gradient(135deg, #c6f6d5 0%, #9ae6b4 100%);
+  background: linear-gradient(135deg, @nordic-green-light 0%, darken(@nordic-green-light, 5%) 100%);
 }
 
 .expense-icon {
-  background: linear-gradient(135deg, #fed7d7 0%, #feb2b2 100%);
+  background: linear-gradient(135deg, @nordic-red-light 0%, darken(@nordic-red-light, 5%) 100%);
 }
 
 .count-icon {
-  background: linear-gradient(135deg, #bee3f8 0%, #90cdf4 100%);
+  background: linear-gradient(135deg, @nordic-blue-light 0%, darken(@nordic-blue-light, 5%) 100%);
 }
 
 .stat-content {
@@ -514,27 +516,27 @@ onMounted(() => {
 }
 
 .stat-label {
-  font-size: 1rem /* 原值: 14px */;
-  color: #718096;
+  font-size: @nordic-text-base;
+  color: @nordic-text-secondary;
   margin-bottom: 5px;
 }
 
 .stat-value {
-  font-size: 1.714rem /* 原值: 24px */;
+  font-size: 1.714rem;
   font-weight: 700;
-  color: #2d3748;
+  color: @nordic-text;
 }
 
 .recharge-color {
-  color: #48bb78;
+  color: @nordic-green;
 }
 
 .expense-color {
-  color: #f56565;
+  color: @nordic-red;
 }
 
 .transactions-card {
-  border-radius: 16px;
+  border-radius: @nordic-radius-lg;
   border: none;
 }
 
@@ -546,16 +548,16 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 15px;
-  padding: 16px;
-  background: #f8fafc;
-  border-radius: 12px;
+  padding: @nordic-space-md;
+  background: @nordic-divider;
+  border-radius: @nordic-radius-md;
   margin-bottom: 12px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all @nordic-transition-fast ease;
 }
 
 .transaction-item:hover {
-  background: #edf2f7;
+  background: @nordic-border;
   transform: translateX(4px);
 }
 
@@ -566,25 +568,25 @@ onMounted(() => {
 .transaction-icon {
   width: 48px;
   height: 48px;
-  border-radius: 12px;
+  border-radius: @nordic-radius-md;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.714rem /* 原值: 24px */;
-  background: white;
+  font-size: 1.714rem;
+  background: @nordic-surface;
   flex-shrink: 0;
 }
 
 .icon-recharge {
-  background: linear-gradient(135deg, #c6f6d5 0%, #9ae6b4 100%);
+  background: linear-gradient(135deg, @nordic-green-light 0%, darken(@nordic-green-light, 5%) 100%);
 }
 
 .icon-consume {
-  background: linear-gradient(135deg, #fed7d7 0%, #feb2b2 100%);
+  background: linear-gradient(135deg, @nordic-red-light 0%, darken(@nordic-red-light, 5%) 100%);
 }
 
 .icon-withdraw {
-  background: linear-gradient(135deg, #bee3f8 0%, #90cdf4 100%);
+  background: linear-gradient(135deg, @nordic-blue-light 0%, darken(@nordic-blue-light, 5%) 100%);
 }
 
 .transaction-info {
@@ -600,14 +602,14 @@ onMounted(() => {
 }
 
 .transaction-type {
-  font-size: 1.071rem /* 原值: 15px */;
+  font-size: 1.071rem;
   font-weight: 600;
-  color: #2d3748;
+  color: @nordic-text;
 }
 
 .transaction-desc {
-  font-size: 0.929rem /* 原值: 13px */;
-  color: #718096;
+  font-size: @nordic-text-sm;
+  color: @nordic-text-secondary;
   margin-bottom: 5px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -615,26 +617,26 @@ onMounted(() => {
 }
 
 .transaction-time {
-  font-size: 0.857rem /* 原值: 12px */;
-  color: #a0aec0;
+  font-size: @nordic-text-xs;
+  color: @nordic-text-muted;
 }
 
 .transaction-amount {
-  font-size: 1.286rem /* 原值: 18px */;
+  font-size: 1.286rem;
   font-weight: 600;
   flex-shrink: 0;
 }
 
 .amount-income {
-  color: #48bb78;
+  color: @nordic-green;
 }
 
 .amount-expense {
-  color: #f56565;
+  color: @nordic-red;
 }
 
 .pagination-container {
-  margin-top: 20px;
+  margin-top: @nordic-space-lg;
   display: flex;
   justify-content: center;
 }
@@ -646,9 +648,9 @@ onMounted(() => {
 .detail-row {
   display: flex;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: @nordic-space-lg;
   padding-bottom: 15px;
-  border-bottom: 1px solid #edf2f7;
+  border-bottom: 1px solid @nordic-divider;
 }
 
 .detail-row:last-child {
@@ -657,19 +659,19 @@ onMounted(() => {
 }
 
 .detail-label {
-  font-size: 1rem /* 原值: 14px */;
-  color: #718096;
+  font-size: @nordic-text-base;
+  color: @nordic-text-secondary;
   width: 100px;
   flex-shrink: 0;
 }
 
 .detail-value {
-  font-size: 1rem /* 原值: 14px */;
-  color: #2d3748;
+  font-size: @nordic-text-base;
+  color: @nordic-text;
 }
 
 .detail-amount {
-  font-size: 1.286rem /* 原值: 18px */;
+  font-size: 1.286rem;
   font-weight: 600;
 }
 </style>

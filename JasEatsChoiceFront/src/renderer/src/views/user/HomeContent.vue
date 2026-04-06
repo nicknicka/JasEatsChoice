@@ -1130,12 +1130,15 @@ onMounted(async () => {
 </template>
 
 <style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+
 // 主内容包裹层
 .main-content-wrapper {
   width: 100%;
   height: 100%;
   overflow-y: auto;
-  background-color: #fafafa;
+  background-color: @nordic-bg;
+  .nordic-page-container();
 }
 
 // 顶部操作栏
@@ -1143,17 +1146,17 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 16px 20px;
-  background: #ffffff;
-  border-radius: 0 0 16px 16px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-  margin-bottom: 20px;
+  gap: @nordic-space-md;
+  padding: @nordic-space-md 20px;
+  background: @nordic-surface;
+  border-radius: 0 0 @nordic-radius-lg @nordic-radius-lg;
+  box-shadow: 0 2px 12px @nordic-shadow;
+  margin-bottom: @nordic-space-lg;
   position: sticky;
   top: 0;
   z-index: 100;
   backdrop-filter: blur(10px);
-  background-color: rgba(255, 255, 255, 0.95);
+  background-color: fade(@nordic-surface, 95%);
 
   // 确保所有元素使用相同的盒模型
   * {
@@ -1187,14 +1190,14 @@ onMounted(async () => {
 
       :deep(.el-input__wrapper) {
         // 左侧圆角，右侧直角以便与按钮完美衔接
-        border-radius: 24px 0 0 24px;
+        border-radius: @nordic-radius-pill 0 0 @nordic-radius-pill;
         border-right: none;
-        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 2px 12px @nordic-shadow;
+        transition: all @nordic-transition-slow cubic-bezier(0.4, 0, 0.2, 1);
         padding-right: 0;
         padding-top: 0;
         padding-bottom: 0;
-        background: rgba(255, 255, 255, 0.95);
+        background: fade(@nordic-surface, 95%);
         height: 100%;
         display: flex;
         align-items: center;
@@ -1208,21 +1211,21 @@ onMounted(async () => {
         }
 
         &:hover {
-          box-shadow: 0 4px 16px rgba(255, 107, 107, 0.15);
-          background: rgba(255, 255, 255, 1);
+          box-shadow: 0 4px 16px fade(@nordic-accent, 15%);
+          background: @nordic-surface;
         }
 
         &.is-focus {
-          box-shadow: 0 4px 24px rgba(255, 107, 107, 0.3);
+          box-shadow: 0 4px 24px fade(@nordic-accent, 30%);
           border-right: none;
-          background: rgba(255, 255, 255, 1);
+          background: @nordic-surface;
         }
       }
 
       :deep(.el-input-group__append) {
         // 左侧直角，右侧圆角
-        border-radius: 0 24px 24px 0;
-        background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%);
+        border-radius: 0 @nordic-radius-pill @nordic-radius-pill 0;
+        background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
         border: none;
         border-left: none;
         padding: 0;
@@ -1230,8 +1233,8 @@ onMounted(async () => {
         padding-bottom: 0;
         margin: 0;
         margin-left: -1px; // 负边距确保无缝衔接
-        box-shadow: 0 2px 12px rgba(255, 107, 107, 0.3);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 2px 12px fade(@nordic-accent, 30%);
+        transition: all @nordic-transition-slow cubic-bezier(0.4, 0, 0.2, 1);
         position: relative;
         z-index: 1; // 确保按钮覆盖在输入框边框上
         overflow: hidden;

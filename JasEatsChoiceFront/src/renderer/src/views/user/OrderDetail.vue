@@ -731,27 +731,26 @@ const getActiveStep = () => {
 </template>
 
 <style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+
 .order-detail-container {
-  padding: 0 20px 20px 20px;
-  background: #f5f7fa;
+  padding: 0 @nordic-space-lg @nordic-space-lg @nordic-space-lg;
+  background: @nordic-bg;
   min-height: calc(100vh - 80px);
 
   .page-header {
+    .nordic-card();
     display: flex;
     align-items: center;
-    margin-bottom: 20px;
-    padding: 16px 20px;
-    background: #ffffff;
-    border-radius: 16px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-    border: 1px solid rgba(0, 0, 0, 0.06);
+    margin-bottom: @nordic-space-lg;
+    padding: @nordic-space-md @nordic-space-lg;
   }
 
   .page-title {
-    font-size: 1.714rem /* 原值: 24px */;
+    font-size: @nordic-text-xl;
     margin: 0;
     margin-left: 15px;
-    color: #2c5282;
+    color: @nordic-text;
     font-weight: 600;
   }
 
@@ -762,59 +761,49 @@ const getActiveStep = () => {
   .order-detail-content {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: @nordic-space-md;
   }
 
   // 通用卡片样式
   .el-card {
-    background: #ffffff;
-    border-radius: 16px;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    .nordic-card();
     overflow: hidden;
 
-    &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(92, 142, 255, 0.15);
-      border-color: rgba(92, 142, 255, 0.3);
-    }
-
     :deep(.el-card__header) {
-      padding: 16px 20px;
-      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-      background: linear-gradient(to bottom, #fafbfc 0%, #ffffff 100%);
+      padding: @nordic-space-md @nordic-space-lg;
+      border-bottom: 1px solid @nordic-divider;
+      background: linear-gradient(to bottom, fade(@nordic-bg, 50%) 0%, @nordic-surface 100%);
     }
 
     :deep(.el-card__body) {
-      padding: 20px;
+      padding: @nordic-space-lg;
     }
   }
 
   .card-header {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: @nordic-space-2sm;
 
     .card-title {
-      font-size: 1.143rem /* 原值: 16px */;
+      font-size: @nordic-text-md;
       font-weight: 600;
-      color: #2c3e50;
+      color: @nordic-text;
       flex: 1;
     }
   }
 
   // 状态卡片
   .status-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
     border: none;
 
     :deep(.el-card__body) {
-      padding: 24px;
+      padding: @nordic-space-xl;
     }
 
     .status-header {
-      margin-bottom: 24px;
+      margin-bottom: @nordic-space-xl;
     }
 
     .order-info-basic {
@@ -822,12 +811,12 @@ const getActiveStep = () => {
       justify-content: space-between;
       align-items: center;
       flex-wrap: wrap;
-      gap: 12px;
+      gap: @nordic-space-md;
 
       .order-no {
-        font-size: 1.143rem /* 原值: 16px */;
+        font-size: @nordic-text-md;
         font-weight: 600;
-        color: #ffffff;
+        color: @nordic-white;
       }
 
       :deep(.el-tag) {
@@ -844,17 +833,17 @@ const getActiveStep = () => {
             border-color: rgba(255, 255, 255, 0.4);
 
             .el-step__icon-inner {
-              color: #ffffff;
+              color: @nordic-white;
             }
           }
 
           &.is-process {
             .el-step__icon {
-              background: #ffffff;
-              border-color: #ffffff;
+              background: @nordic-white;
+              border-color: @nordic-white;
 
               .el-step__icon-inner {
-                color: #667eea;
+                color: @nordic-accent;
               }
             }
           }
@@ -862,10 +851,10 @@ const getActiveStep = () => {
           &.is-success {
             .el-step__icon {
               background: rgba(255, 255, 255, 0.3);
-              border-color: #ffffff;
+              border-color: @nordic-white;
 
               .el-step__icon-inner {
-                color: #ffffff;
+                color: @nordic-white;
               }
             }
           }
@@ -873,7 +862,7 @@ const getActiveStep = () => {
 
         .el-step__title {
           &.is-process {
-            color: #ffffff;
+            color: @nordic-white;
             font-weight: 600;
           }
 
@@ -886,7 +875,7 @@ const getActiveStep = () => {
           background-color: rgba(255, 255, 255, 0.3);
 
           .el-step__line-inner {
-            background-color: #ffffff;
+            background-color: @nordic-white;
           }
         }
       }
@@ -897,21 +886,21 @@ const getActiveStep = () => {
   .merchant-card {
     .merchant-details {
       .merchant-name {
-        font-size: 1.286rem /* 原值: 18px */;
+        font-size: @nordic-text-lg;
         font-weight: 600;
-        color: #2c3e50;
-        margin-bottom: 8px;
+        color: @nordic-text;
+        margin-bottom: @nordic-space-sm;
       }
 
       .merchant-meta {
         display: flex;
         align-items: center;
-        gap: 16px;
-        font-size: 1rem /* 原值: 14px */;
-        color: #7f8c8d;
+        gap: @nordic-space-md;
+        font-size: @nordic-text-base;
+        color: @nordic-text-secondary;
 
         .rating {
-          color: #e6a23c;
+          color: @nordic-yellow;
           font-weight: 500;
         }
       }
@@ -930,25 +919,25 @@ const getActiveStep = () => {
       display: flex;
       align-items: stretch;
       padding: 14px;
-      background: #fafbfc;
-      border-radius: 12px;
+      background: fade(@nordic-bg, 50%);
+      border-radius: @nordic-radius-md;
       transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
       position: relative;
-      border: 1px solid rgba(0, 0, 0, 0.06);
+      border: 1px solid @nordic-border;
       min-height: 94px;
 
       &:hover {
-        box-shadow: 0 6px 20px rgba(92, 142, 255, 0.2);
+        box-shadow: 0 6px 20px fade(@nordic-accent, 20%);
         transform: translateY(-3px) scale(1.015);
-        border-color: rgba(92, 142, 255, 0.5);
-        background: linear-gradient(to bottom, #ffffff 0%, #f8faff 100%);
+        border-color: fade(@nordic-accent, 50%);
+        background: linear-gradient(to bottom, @nordic-surface 0%, fade(@nordic-accent-light, 30%) 100%);
 
         &::after {
           content: '';
           position: absolute;
           inset: 0;
-          border-radius: 12px;
-          box-shadow: inset 0 0 0 1px rgba(92, 142, 255, 0.3);
+          border-radius: @nordic-radius-md;
+          box-shadow: inset 0 0 0 1px fade(@nordic-accent, 30%);
           pointer-events: none;
         }
       }
@@ -957,24 +946,24 @@ const getActiveStep = () => {
         width: 70px;
         min-height: 70px;
         height: 70px;
-        border-radius: 10px;
+        border-radius: @nordic-radius-md;
         overflow: visible;
         margin-right: 14px;
         flex-shrink: 0;
-        background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
+        background: linear-gradient(135deg, @nordic-blue-light 0%, fade(@nordic-blue, 20%) 100%);
         position: relative;
         z-index: 1;
-        box-shadow: 0 2px 8px rgba(24, 144, 255, 0.15);
+        box-shadow: 0 2px 8px fade(@nordic-blue, 15%);
         display: flex;
         align-items: center;
         justify-content: center;
-        border: 1px solid #91d5ff;
+        border: 1px solid fade(@nordic-blue, 30%);
 
         img {
           width: 100%;
           height: 100%;
           object-fit: cover;
-          border-radius: 10px;
+          border-radius: @nordic-radius-md;
           position: relative;
           z-index: 1;
         }
@@ -987,9 +976,9 @@ const getActiveStep = () => {
           justify-content: center;
 
           span {
-            font-size: 2rem /* 原值: 28px */;
+            font-size: 2rem;
             font-weight: 600;
-            color: #1890ff;
+            color: @nordic-blue;
           }
         }
 
@@ -997,17 +986,17 @@ const getActiveStep = () => {
           position: absolute;
           top: -4px;
           right: -4px;
-          background: linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%);
-          color: white;
-          font-size: 0.75rem /* 原值: 11px */;
+          background: linear-gradient(135deg, @nordic-red 0%, @nordic-red 100%);
+          color: @nordic-white;
+          font-size: @nordic-text-xs;
           font-weight: 700;
           min-width: 18px;
           height: 18px;
           padding: 0 5px;
-          border-radius: 9px;
+          border-radius: @nordic-radius-pill;
           box-shadow:
-            0 2px 6px rgba(255, 77, 79, 0.4),
-            0 0 0 1.5px rgba(255, 255, 255, 1);
+            0 2px 6px fade(@nordic-red, 40%),
+            0 0 0 1.5px @nordic-white;
           z-index: 100;
           display: flex;
           align-items: center;
@@ -1020,9 +1009,8 @@ const getActiveStep = () => {
           .item-row:hover & {
             transform: scale(1.1) rotate(-3deg);
             box-shadow:
-              0 3px 8px rgba(255, 77, 79, 0.5),
-              0 0 0 1.5px rgba(255, 255, 255, 1);
-            background: linear-gradient(135deg, #ff4d4f 0%, #ff2626 100%);
+              0 3px 8px fade(@nordic-red, 50%),
+              0 0 0 1.5px @nordic-white;
           }
 
           &.large-number {
@@ -1055,10 +1043,10 @@ const getActiveStep = () => {
         justify-content: space-between;
 
         .item-name {
-          font-size: 1.071rem /* 原值: 15px */;
+          font-size: 15px;
           font-weight: 600;
-          color: #2c5282;
-          margin-bottom: 8px;
+          color: @nordic-text;
+          margin-bottom: @nordic-space-sm;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
@@ -1072,7 +1060,7 @@ const getActiveStep = () => {
           opacity: 0.6;
 
           .item-name {
-            color: #909399;
+            color: @nordic-text-muted;
           }
         }
 
@@ -1080,14 +1068,14 @@ const getActiveStep = () => {
           display: flex;
           align-items: flex-start;
           gap: 6px;
-          margin-bottom: 8px;
-          font-size: 0.857rem /* 原值: 12px */;
+          margin-bottom: @nordic-space-sm;
+          font-size: @nordic-text-xs;
 
           .ingredients-label {
             flex-shrink: 0;
 
             .label-text {
-              color: #64748b;
+              color: @nordic-text-secondary;
               font-weight: 500;
             }
           }
@@ -1103,26 +1091,22 @@ const getActiveStep = () => {
               align-items: center;
               gap: 3px;
               padding: 3px 8px;
-              border-radius: 6px;
-              font-size: 0.75rem /* 原值: 11px */;
+              border-radius: @nordic-radius-sm;
+              font-size: @nordic-text-xs;
               line-height: 1.4;
               transition: all 0.2s ease;
 
               &.required {
-                background: linear-gradient(
-                  135deg,
-                  rgba(103, 194, 58, 0.9) 0%,
-                  rgba(93, 175, 52, 0.9) 100%
-                );
-                color: white;
+                background: @nordic-green;
+                color: @nordic-white;
                 font-weight: 500;
-                box-shadow: 0 1px 4px rgba(103, 194, 58, 0.25);
+                box-shadow: 0 1px 4px fade(@nordic-green, 25%);
               }
 
               &.optional {
-                background: rgba(232, 244, 232, 0.8);
-                color: #5da842;
-                border: 1px solid rgba(179, 225, 157, 0.5);
+                background: @nordic-green-light;
+                color: @nordic-green-dark;
+                border: 1px solid fade(@nordic-green, 30%);
               }
 
               .ingredient-price {
@@ -1138,19 +1122,19 @@ const getActiveStep = () => {
           display: flex;
           align-items: flex-start;
           gap: 5px;
-          margin-bottom: 8px;
-          font-size: 0.857rem /* 原值: 12px */;
-          color: #c4873a;
-          padding: 6px 10px;
-          background: rgba(253, 246, 236, 0.8);
-          border-radius: 8px;
-          border: 1px solid rgba(245, 218, 177, 0.5);
+          margin-bottom: @nordic-space-sm;
+          font-size: @nordic-text-xs;
+          color: @nordic-accent-dark;
+          padding: 6px @nordic-space-2sm;
+          background: @nordic-yellow-light;
+          border-radius: @nordic-radius-sm;
+          border: 1px solid fade(@nordic-yellow, 30%);
           line-height: 1.5;
-          box-shadow: 0 1px 4px rgba(230, 162, 60, 0.08);
+          box-shadow: 0 1px 4px fade(@nordic-yellow, 8%);
 
           .el-icon {
-            font-size: 0.929rem /* 原值: 13px */;
-            color: #c4873a;
+            font-size: 13px;
+            color: @nordic-accent-dark;
             flex-shrink: 0;
             margin-top: 1px;
           }
@@ -1164,19 +1148,19 @@ const getActiveStep = () => {
         .item-price-detail {
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: @nordic-space-md;
           margin-top: auto;
           flex-shrink: 0;
 
           .unit-price {
-            font-size: 0.857rem /* 原值: 12px */;
-            color: #94a3b8;
+            font-size: @nordic-text-xs;
+            color: @nordic-text-muted;
           }
 
           .total-price {
-            font-size: 1.143rem /* 原值: 16px */;
+            font-size: @nordic-text-md;
             font-weight: 700;
-            color: #ff6b6b;
+            color: @nordic-red;
           }
         }
       }
@@ -1184,9 +1168,9 @@ const getActiveStep = () => {
 
     .items-empty {
       text-align: center;
-      padding: 24px;
-      color: #94a3b8;
-      font-size: 1rem /* 原值: 14px */;
+      padding: @nordic-space-xl;
+      color: @nordic-text-muted;
+      font-size: @nordic-text-base;
     }
   }
 
@@ -1197,32 +1181,32 @@ const getActiveStep = () => {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 10px 0;
+        padding: @nordic-space-2sm 0;
 
         .amount-label {
-          font-size: 1rem /* 原值: 14px */;
-          color: #7f8c8d;
+          font-size: @nordic-text-base;
+          color: @nordic-text-secondary;
         }
 
         .amount-value {
-          font-size: 1.071rem /* 原值: 15px */;
-          color: #2c3e50;
+          font-size: 15px;
+          color: @nordic-text;
           font-weight: 500;
         }
 
         &.total-row {
-          padding-top: 16px;
+          padding-top: @nordic-space-md;
 
           .total-label {
-            font-size: 1.143rem /* 原值: 16px */;
+            font-size: @nordic-text-md;
             font-weight: 600;
-            color: #2c3e50;
+            color: @nordic-text;
           }
 
           .total-value {
-            font-size: 1.714rem /* 原值: 24px */;
+            font-size: @nordic-text-xl;
             font-weight: 700;
-            color: #e6a23c;
+            color: @nordic-yellow;
           }
         }
       }
@@ -1234,22 +1218,22 @@ const getActiveStep = () => {
     .payment-details {
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: @nordic-space-2sm;
 
       .payment-row {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 8px 0;
+        padding: @nordic-space-sm 0;
 
         .payment-label {
-          font-size: 1rem /* 原值: 14px */;
-          color: #7f8c8d;
+          font-size: @nordic-text-base;
+          color: @nordic-text-secondary;
         }
 
         .payment-value {
-          font-size: 1rem /* 原值: 14px */;
-          color: #2c3e50;
+          font-size: @nordic-text-base;
+          color: @nordic-text;
           font-weight: 500;
         }
       }
@@ -1259,12 +1243,12 @@ const getActiveStep = () => {
   // 备注卡片
   .remark-card {
     .remark-content {
-      font-size: 1rem /* 原值: 14px */;
-      color: #606266;
+      font-size: @nordic-text-base;
+      color: @nordic-text-secondary;
       line-height: 1.6;
-      padding: 12px;
-      background: #f8f9fa;
-      border-radius: 8px;
+      padding: @nordic-space-md;
+      background: fade(@nordic-bg, 60%);
+      border-radius: @nordic-radius-sm;
     }
   }
 
@@ -1274,60 +1258,60 @@ const getActiveStep = () => {
       .review-rating {
         display: flex;
         align-items: center;
-        gap: 12px;
-        padding: 16px 0;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-        margin-bottom: 16px;
+        gap: @nordic-space-md;
+        padding: @nordic-space-md 0;
+        border-bottom: 1px solid @nordic-divider;
+        margin-bottom: @nordic-space-md;
 
         .rating-label {
-          font-size: 1.071rem /* 原值: 15px */;
+          font-size: 15px;
           font-weight: 600;
-          color: #606266;
+          color: @nordic-text-secondary;
         }
 
         .rating-score {
-          font-size: 1.286rem /* 原值: 18px */;
+          font-size: @nordic-text-lg;
           font-weight: 700;
-          color: #f7ba2a;
-          margin-left: 8px;
+          color: @nordic-yellow;
+          margin-left: @nordic-space-sm;
         }
 
         :deep(.el-rate) {
           .el-rate__icon {
-            font-size: 1.714rem /* 原值: 24px */;
+            font-size: 1.714rem;
             margin-right: 4px;
           }
         }
       }
 
       .review-text {
-        font-size: 1.071rem /* 原值: 15px */;
-        color: #303133;
+        font-size: 15px;
+        color: @nordic-text;
         line-height: 1.8;
-        padding: 12px 16px;
-        background: #f8f9fa;
-        border-radius: 8px;
-        margin-bottom: 16px;
+        padding: @nordic-space-md;
+        background: fade(@nordic-bg, 60%);
+        border-radius: @nordic-radius-sm;
+        margin-bottom: @nordic-space-md;
       }
 
       .review-images {
         display: flex;
-        gap: 12px;
+        gap: @nordic-space-md;
         flex-wrap: wrap;
-        margin-bottom: 20px;
+        margin-bottom: @nordic-space-xl;
 
         .review-image {
           width: 100px;
           height: 100px;
-          border-radius: 8px;
+          border-radius: @nordic-radius-sm;
           overflow: hidden;
-          border: 1px solid rgba(0, 0, 0, 0.08);
+          border: 1px solid @nordic-border;
           cursor: pointer;
           transition: all 0.3s ease;
 
           &:hover {
             transform: scale(1.05);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 4px 12px @nordic-shadow-hover;
           }
 
           :deep(.el-image__inner) {
@@ -1342,9 +1326,9 @@ const getActiveStep = () => {
             display: flex;
             align-items: center;
             justify-content: center;
-            background: #f5f7fa;
-            color: #c0c4cc;
-            font-size: 2.286rem /* 原值: 32px */;
+            background: @nordic-bg;
+            color: @nordic-text-muted;
+            font-size: 2.286rem;
           }
         }
       }
@@ -1352,51 +1336,51 @@ const getActiveStep = () => {
       .review-replies {
         display: flex;
         flex-direction: column;
-        gap: 12px;
-        margin-top: 16px;
-        padding-top: 16px;
-        border-top: 1px dashed rgba(0, 0, 0, 0.1);
+        gap: @nordic-space-md;
+        margin-top: @nordic-space-md;
+        padding-top: @nordic-space-md;
+        border-top: 1px dashed @nordic-border;
 
         .reply-item {
-          padding: 12px 16px;
-          border-radius: 8px;
+          padding: @nordic-space-md;
+          border-radius: @nordic-radius-sm;
           transition: all 0.3s ease;
 
           &.merchant-reply {
-            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-            border-left: 3px solid #10b981;
+            background: linear-gradient(135deg, @nordic-green-light 0%, fade(@nordic-green-light, 60%) 100%);
+            border-left: 3px solid @nordic-green;
           }
 
           &.user-reply {
-            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
-            border-left: 3px solid #f59e0b;
+            background: linear-gradient(135deg, @nordic-yellow-light 0%, fade(@nordic-yellow-light, 60%) 100%);
+            border-left: 3px solid @nordic-yellow;
           }
 
           &:hover {
             transform: translateX(4px);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 2px 8px @nordic-shadow;
           }
 
           .reply-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 8px;
+            margin-bottom: @nordic-space-sm;
 
             .reply-type {
               display: flex;
-              gap: 8px;
+              gap: @nordic-space-sm;
             }
 
             .reply-time {
-              font-size: 0.857rem /* 原值: 12px */;
-              color: #909399;
+              font-size: @nordic-text-xs;
+              color: @nordic-text-muted;
             }
           }
 
           .reply-content {
-            font-size: 1rem /* 原值: 14px */;
-            color: #606266;
+            font-size: @nordic-text-base;
+            color: @nordic-text-secondary;
             line-height: 1.6;
           }
         }
@@ -1408,50 +1392,50 @@ const getActiveStep = () => {
   .order-actions {
     display: flex;
     justify-content: center;
-    gap: 16px;
-    padding: 20px 0;
+    gap: @nordic-space-md;
+    padding: @nordic-space-lg 0;
 
     .action-btn {
       min-width: 160px;
       height: 48px;
-      font-size: 1.143rem /* 原值: 16px */;
+      font-size: @nordic-text-md;
       font-weight: 600;
-      border-radius: 24px;
+      border-radius: @nordic-radius-pill;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 4px 12px @nordic-shadow;
 
       &:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+        box-shadow: 0 6px 16px @nordic-shadow-hover;
       }
 
       &.cancel-btn {
-        background: linear-gradient(135deg, #ff8a80 0%, #ff6b6b 100%);
+        background: linear-gradient(135deg, @nordic-red 0%, @nordic-red 100%);
         border: none;
-        box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+        box-shadow: 0 4px 12px fade(@nordic-red, 30%);
 
         &:hover {
-          box-shadow: 0 6px 16px rgba(255, 107, 107, 0.4);
+          box-shadow: 0 6px 16px fade(@nordic-red, 40%);
         }
       }
 
       &.evaluate-btn {
-        background: linear-gradient(135deg, #81c784 0%, #66bb6a 100%);
+        background: linear-gradient(135deg, @nordic-green 0%, @nordic-green 100%);
         border: none;
-        box-shadow: 0 4px 12px rgba(102, 187, 106, 0.3);
+        box-shadow: 0 4px 12px fade(@nordic-green, 30%);
 
         &:hover {
-          box-shadow: 0 6px 16px rgba(102, 187, 106, 0.4);
+          box-shadow: 0 6px 16px fade(@nordic-green, 40%);
         }
       }
 
       &.contact-btn {
-        background: linear-gradient(135deg, #6ba4ff 0%, #5c8eff 100%);
+        background: linear-gradient(135deg, @nordic-blue 0%, @nordic-blue 100%);
         border: none;
-        box-shadow: 0 4px 12px rgba(92, 142, 255, 0.3);
+        box-shadow: 0 4px 12px fade(@nordic-blue, 30%);
 
         &:hover {
-          box-shadow: 0 6px 16px rgba(92, 142, 255, 0.4);
+          box-shadow: 0 6px 16px fade(@nordic-blue, 40%);
         }
       }
     }
@@ -1459,50 +1443,50 @@ const getActiveStep = () => {
 }
 
 // 响应式设计
-@media (max-width: 768px) {
+@media (max-width: @nordic-breakpoint-md) {
   .order-detail-container {
-    padding: 0 12px 16px 12px;
+    padding: 0 12px @nordic-space-md 12px;
 
     .page-header {
-      padding: 14px 16px;
-      border-radius: 14px;
+      padding: 14px @nordic-space-md;
+      border-radius: @nordic-radius-lg;
     }
 
     .page-title {
-      font-size: 1.429rem /* 原值: 20px */;
+      font-size: @nordic-text-lg;
     }
 
     .order-detail-content {
-      gap: 12px;
+      gap: @nordic-space-md;
     }
 
     .el-card {
-      border-radius: 14px;
+      border-radius: @nordic-radius-lg;
 
       :deep(.el-card__body) {
-        padding: 16px;
+        padding: @nordic-space-md;
       }
 
       :deep(.el-card__header) {
-        padding: 14px 16px;
+        padding: 14px @nordic-space-md;
       }
     }
 
     .status-card {
       :deep(.el-card__body) {
-        padding: 20px 16px;
+        padding: @nordic-space-lg @nordic-space-md;
       }
 
       .order-info-basic {
         flex-direction: column;
         align-items: flex-start !important;
-        gap: 10px;
+        gap: @nordic-space-2sm;
       }
 
       .order-progress {
         :deep(.el-steps) {
           .el-step__title {
-            font-size: 0.857rem /* 原值: 12px */ !important;
+            font-size: @nordic-text-xs !important;
           }
 
           .el-step__icon {
@@ -1515,19 +1499,19 @@ const getActiveStep = () => {
 
     .items-card {
       .item-row {
-        padding: 12px;
+        padding: @nordic-space-md;
         min-height: 80px;
-        border-radius: 10px;
+        border-radius: @nordic-radius-md;
 
         .item-image {
           width: 56px;
           min-height: 56px;
           height: 56px;
-          margin-right: 12px;
-          border-radius: 8px;
+          margin-right: @nordic-space-md;
+          border-radius: @nordic-radius-sm;
 
           img {
-            border-radius: 8px;
+            border-radius: @nordic-radius-sm;
           }
 
           .quantity-badge {
@@ -1537,7 +1521,7 @@ const getActiveStep = () => {
             padding: 0 4px;
             top: -3px;
             right: -3px;
-            border-radius: 8px;
+            border-radius: @nordic-radius-sm;
 
             &.large-number {
               font-size: 8px;
@@ -1553,12 +1537,12 @@ const getActiveStep = () => {
 
         .item-info {
           .item-name {
-            font-size: 1rem /* 原值: 14px */;
+            font-size: @nordic-text-base;
             margin-bottom: 6px;
           }
 
           .item-ingredients {
-            font-size: 0.75rem /* 原值: 11px */;
+            font-size: @nordic-text-xs;
             margin-bottom: 6px;
             gap: 5px;
 
@@ -1568,19 +1552,19 @@ const getActiveStep = () => {
               .ingredient-tag {
                 font-size: 10px;
                 padding: 2px 6px;
-                border-radius: 4px;
+                border-radius: @nordic-radius-xs;
               }
             }
           }
 
           .item-note {
-            font-size: 0.75rem /* 原值: 11px */;
-            padding: 5px 8px;
+            font-size: @nordic-text-xs;
+            padding: 5px @nordic-space-sm;
             margin-bottom: 6px;
-            border-radius: 6px;
+            border-radius: @nordic-radius-sm;
 
             .el-icon {
-              font-size: 0.857rem /* 原值: 12px */;
+              font-size: @nordic-text-xs;
             }
           }
 
@@ -1590,11 +1574,11 @@ const getActiveStep = () => {
             gap: 4px;
 
             .unit-price {
-              font-size: 0.75rem /* 原值: 11px */;
+              font-size: @nordic-text-xs;
             }
 
             .total-price {
-              font-size: 1.071rem /* 原值: 15px */;
+              font-size: 15px;
             }
           }
         }
@@ -1603,14 +1587,14 @@ const getActiveStep = () => {
 
     .order-actions {
       flex-direction: column;
-      gap: 10px;
-      padding: 16px 0;
+      gap: @nordic-space-2sm;
+      padding: @nordic-space-md 0;
 
       .action-btn {
         width: 100%;
         min-width: auto;
         height: 44px;
-        font-size: 1.071rem /* 原值: 15px */;
+        font-size: 15px;
       }
     }
   }

@@ -5,6 +5,7 @@ import { API_CONFIG } from '../../config/index.js'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from './../../store/authStore'
 import { useUserStore } from './../../store/userStore'
+import { NORDIC_COLORS, NORDIC_NUTRITION_COLORS, NORDIC_NUTRITION_BG } from '../../constants/nordicTheme.js'
 // 新增图标导入
 import { ArrowDown, WarningFilled, CircleCheckFilled } from '@element-plus/icons-vue'
 
@@ -194,30 +195,27 @@ const isExtremeValue = (value, name) => {
   return percent > 150
 }
 
-// 获取营养颜色 - 基于百分比动态变化
+// 获取营养颜色 - 基于百分比动态变化（使用主题常量）
 const getNutritionColor = (name, percentage) => {
-  // 正常范围（0-100%）
   const normalColors = {
-    蛋白质: '#2196F3',
-    碳水化合物: '#4CAF50',
-    脂肪: '#FF9800',
-    default: '#FF6B6B'
+    蛋白质: NORDIC_COLORS.blue,
+    碳水化合物: NORDIC_COLORS.green,
+    脂肪: NORDIC_COLORS.yellow,
+    default: NORDIC_COLORS.red
   }
 
-  // 警告范围（101-200%）
   const warningColors = {
-    蛋白质: '#FFC107',
-    碳水化合物: '#FFC107',
-    脂肪: '#FFC107',
-    default: '#FFC107'
+    蛋白质: NORDIC_COLORS.yellow,
+    碳水化合物: NORDIC_COLORS.yellow,
+    脂肪: NORDIC_COLORS.yellow,
+    default: NORDIC_COLORS.yellow
   }
 
-  // 危险范围（>200%）
   const dangerColors = {
-    蛋白质: '#FF6B6B',
-    碳水化合物: '#FF6B6B',
-    脂肪: '#FF6B6B',
-    default: '#FF6B6B'
+    蛋白质: NORDIC_COLORS.red,
+    碳水化合物: NORDIC_COLORS.red,
+    脂肪: NORDIC_COLORS.red,
+    default: NORDIC_COLORS.red
   }
 
   if (percentage > 200) {
@@ -229,14 +227,14 @@ const getNutritionColor = (name, percentage) => {
   }
 }
 
-// 获取卡路里进度条颜色 - 基于百分比动态变化
+// 获取卡路里进度条颜色 - 基于百分比动态变化（使用主题常量）
 const getCalorieColor = (percentage) => {
   if (percentage > 200) {
-    return '#FF6B6B' // 危险红色
+    return NORDIC_COLORS.red
   } else if (percentage > 100) {
-    return '#FFC107' // 警告黄色
+    return NORDIC_COLORS.yellow
   } else {
-    return '#2196F3' // 正常蓝色
+    return NORDIC_COLORS.blue
   }
 }
 
@@ -279,660 +277,590 @@ const healthAdvice = computed(() => {
 
   return advice
 })
+
+// --- 北欧暖光主题计算属性 ---
+
+// 圆环进度相关
+const calorieRingCircumference = 2 * Math.PI * 54 // r=54
+
+const calorieRingOffset = computed(() => {
+  const pct = Math.min(getCaloriePercentage(calorieData.value.today.consumed), 100) / 100
+  return calorieRingCircumference * (1 - pct)
+})
+
+const calorieRingColor = computed(() => {
+  const pct = getCaloriePercentage(calorieData.value.today.consumed)
+  return getCalorieColor(pct)
+})
+
+// 营养素颜色映射（引用主题常量）
+const nordicNutritionColors = NORDIC_NUTRITION_COLORS
+
+const nordicNutritionBg = NORDIC_NUTRITION_BG
+
+// 每周柱状图最大值
+const weeklyMax = computed(() => {
+  const maxVal = Math.max(...calorieData.value.weekly.map((d) => d.consumed))
+  return maxVal > 0 ? maxVal : calorieData.value.today.target
+})
+
+// 今日是周几 (0=周一 ... 6=周日)
+const todayDayIndex = computed(() => {
+  const day = new Date().getDay()
+  return day === 0 ? 6 : day - 1 // 转为周一=0
+})
 </script>
 
 <template>
-  <div class="calorie-container">
-    <h2 class="fade-in-up">卡路里统计</h2>
-
-    <!-- 今日概览 -->
-    <div class="today-overview-section">
-      <h3>今日概览</h3>
-      <div class="today-overview">
-        <el-card class="overview-card scale-in">
-          <div class="overview-item">
-            <div class="overview-label">今日已摄入</div>
-            <div class="overview-value number-scroll">{{ calorieData.today.consumed }} kcal</div>
-          </div>
-        </el-card>
-
-        <el-card class="overview-card scale-in">
-          <div class="overview-item">
-            <div class="overview-label">今日剩余</div>
-            <div class="overview-value remaining number-scroll">{{ calorieData.today.remaining }} kcal</div>
-          </div>
-        </el-card>
-
-        <el-card class="overview-card scale-in">
-          <div class="overview-item">
-            <div class="overview-label">今日目标</div>
-            <div class="overview-value target number-scroll">{{ calorieData.today.target }} kcal</div>
-          </div>
-        </el-card>
-      </div>
-
-      <!-- 营养比例 -->
-      <el-card class="nutrition-card fade-in-up delay-100">
-        <template #header>
-          <div class="card-header">营养摄入比例</div>
-        </template>
-        <div class="nutrition-chart">
-          <div
-            v-for="item in calorieData.nutrition"
-            :key="item.name"
-            class="nutrition-item stagger-item"
-            :class="{ 'extreme-value': isExtremeValue(item.value, item.name) }"
-          >
-            <div class="nutrition-info">
-              <div class="nutrition-name">{{ item.name }}</div>
-              <div class="nutrition-value">
-                {{ item.value }}{{ item.unit }}
-                <span class="recommended-goal">
-                  (推荐: {{ customGoals[item.name] || recommendedGoals[item.name] || 0
-                  }}{{ item.unit }})
-                </span>
-              </div>
-            </div>
-            <el-progress
-              :percentage="Math.min(getNutritionPercentage(item.value, item.name), 100)"
-              :color="getNutritionColor(item.name, getNutritionPercentage(item.value, item.name))"
-              :stroke-width="21"
-              :text-inside="true"
-              :class="[
-                { 'extreme-progress': getNutritionPercentage(item.value, item.name) > 200 },
-                `${item.name}-progress`,
-                {
-                  'zero-progress':
-                    Math.min(getNutritionPercentage(item.value, item.name), 100) === 0
-                }
-              ]"
-            >
-              <span>
-                {{
-                  getNutritionPercentage(item.value, item.name) === 0
-                    ? '0%'
-                    : getNutritionPercentage(item.value, item.name) > 200
-                      ? '严重超出'
-                      : getNutritionPercentage(item.value, item.name) + '%'
-                }}
-              </span>
-            </el-progress>
-          </div>
-
-          <!-- 饮食健康建议部分 -->
-          <div class="health-advice-section">
-            <div class="advice-header" @click="toggleAdvice">
-              <el-icon class="arrow-icon" :class="{ rotate: showAdvice }"><ArrowDown /></el-icon>
-              <span class="advice-title">饮食健康建议</span>
-            </div>
-
-            <div :class="['advice-content', { show: showAdvice }]">
-              <div v-for="advice in healthAdvice" :key="advice" class="advice-item">
-                <el-icon class="advice-icon"><WarningFilled /></el-icon>
-                <span>{{ advice }}</span>
-              </div>
-
-              <div v-if="healthAdvice.length === 0" class="advice-empty">
-                <el-icon class="empty-icon"><CircleCheckFilled /></el-icon>
-                <span>您的营养摄入在推荐范围内，保持均衡饮食哦！</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </el-card>
+  <div class="nordic-calorie">
+    <!-- 页面标题 -->
+    <div class="nordic-page-header">
+      <h2>卡路里统计</h2>
+      <span class="header-date">{{ new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' }) }}</span>
     </div>
 
-    <!-- 周统计 -->
-    <div class="weekly-statistics-section">
-      <h3>本周统计</h3>
-
-      <!-- 周统计概览 -->
-      <div class="weekly-overview">
-        <el-card class="overview-card scale-in">
-          <div class="overview-item">
-            <div class="overview-label">本周总摄入</div>
-            <div class="overview-value total number-scroll">
-              {{ calorieData.weekly.reduce((sum, item) => sum + item.consumed, 0) }} kcal
-            </div>
-          </div>
-        </el-card>
-
-        <el-card class="overview-card scale-in">
-          <div class="overview-item">
-            <div class="overview-label">本周日均</div>
-            <div class="overview-value average number-scroll">
-              {{
-                Math.round(
-                  calorieData.weekly.reduce((sum, item) => sum + item.consumed, 0) /
-                    Math.max(calorieData.weekly.length, 1)
-                )
-              }}
-              kcal
-            </div>
-          </div>
-        </el-card>
-
-        <el-card class="overview-card scale-in">
-          <div class="overview-item">
-            <div class="overview-label">每日目标</div>
-            <div class="overview-value target number-scroll">{{ calorieData.today.target }} kcal</div>
-          </div>
-        </el-card>
+    <!-- 今日摄入 - 圆环卡片 -->
+    <div class="today-hero nordic-card">
+      <div class="hero-ring-wrapper">
+        <svg class="ring-svg" viewBox="0 0 120 120">
+          <circle class="ring-bg" cx="60" cy="60" r="54" />
+          <circle
+            class="ring-fill"
+            cx="60" cy="60" r="54"
+            :stroke="calorieRingColor"
+            :stroke-dasharray="calorieRingCircumference"
+            :stroke-dashoffset="calorieRingOffset"
+          />
+        </svg>
+        <div class="ring-center">
+          <span class="ring-value">{{ calorieData.today.consumed }}</span>
+          <span class="ring-label">已摄入 kcal</span>
+        </div>
       </div>
 
-      <el-card class="weekly-card">
-        <template #header>
-          <div class="card-header">每日卡路里摄入</div>
-        </template>
-        <div class="weekly-chart">
-          <div v-for="item in calorieData.weekly" :key="item.day" class="weekly-bar stagger-item">
-            <!-- 与营养摄入比例相同的信息布局：周几和卡路里值同行 -->
-            <div class="weekly-info">
-              <div class="bar-label">{{ item.day }}</div>
-              <div class="bar-text">{{ item.consumed }} kcal</div>
-            </div>
+      <div class="hero-stats">
+        <div class="stat-pill">
+          <span class="stat-dot remaining"></span>
+          <span class="stat-num">{{ Math.max(0, calorieData.today.remaining) }}</span>
+          <span class="stat-txt">剩余</span>
+        </div>
+        <div class="stat-pill">
+          <span class="stat-dot target"></span>
+          <span class="stat-num">{{ calorieData.today.target }}</span>
+          <span class="stat-txt">目标</span>
+        </div>
+      </div>
+    </div>
 
-            <!-- 进度条容器 -->
-            <div class="bar-container">
-              <!-- 完全匹配营养摄入比例的进度条实现 -->
-              <el-progress
-                :percentage="Math.min(Math.round(getCaloriePercentage(item.consumed)), 100)"
-                :color="getCalorieColor(getCaloriePercentage(item.consumed))"
-                :stroke-width="21"
-                :text-inside="true"
-                :class="[
-                  { 'extreme-progress': getCaloriePercentage(item.consumed) > 200 },
-                  'calorie-progress',
-                  {
-                    'zero-progress':
-                      Math.min(Math.round(getCaloriePercentage(item.consumed)), 100) === 0
-                  }
-                ]"
-              >
-                <span>
-                  {{
-                    getCaloriePercentage(item.consumed) === 0
-                      ? '0%'
-                      : getCaloriePercentage(item.consumed) > 200
-                        ? '严重超出'
-                        : Math.round(getCaloriePercentage(item.consumed)) + '%'
-                  }}
-                </span>
-              </el-progress>
-            </div>
+    <!-- 营养摄入 -->
+    <div class="section-title">
+      <span>营养摄入</span>
+    </div>
+
+    <div class="nutrition-grid">
+      <div
+        v-for="item in calorieData.nutrition"
+        :key="item.name"
+        class="nutrition-item nordic-card"
+        :class="{ 'extreme': isExtremeValue(item.value, item.name) }"
+      >
+        <div class="nutri-header">
+          <span class="nutri-name">{{ item.name }}</span>
+          <span class="nutri-badge" :style="{ background: nordicNutritionBg[item.name], color: nordicNutritionColors[item.name] }">
+            {{ Math.round(getNutritionPercentage(item.value, item.name)) }}%
+          </span>
+        </div>
+        <div class="nutri-value-row">
+          <span class="nutri-val">{{ item.value }}</span>
+          <span class="nutri-unit">{{ item.unit }}</span>
+          <span class="nutri-goal">/ {{ customGoals[item.name] || recommendedGoals[item.name] || 0 }}{{ item.unit }}</span>
+        </div>
+        <div class="nutri-bar-track">
+          <div
+            class="nutri-bar-fill"
+            :style="{
+              width: Math.min(getNutritionPercentage(item.value, item.name), 100) + '%',
+              background: nordicNutritionColors[item.name]
+            }"
+          ></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 健康建议 -->
+    <div class="advice-section nordic-card" v-if="healthAdvice.length > 0 || true">
+      <div class="advice-toggle" @click="toggleAdvice">
+        <span class="advice-title-text">饮食建议</span>
+        <span class="advice-count" v-if="healthAdvice.length > 0">{{ healthAdvice.length }}条</span>
+        <span class="advice-arrow" :class="{ open: showAdvice }">&#x276F;</span>
+      </div>
+      <transition name="nordic-slide">
+        <div class="advice-body" v-show="showAdvice">
+          <div v-for="(tip, idx) in healthAdvice" :key="idx" class="advice-tip">
+            <span class="tip-icon">&#9679;</span>
+            <span>{{ tip }}</span>
+          </div>
+          <div class="advice-ok" v-if="healthAdvice.length === 0">
+            <span class="ok-icon">&#10003;</span>
+            <span>营养摄入在推荐范围内，继续保持</span>
           </div>
         </div>
-      </el-card>
+      </transition>
+    </div>
+
+    <!-- 本周统计 -->
+    <div class="section-title" style="margin-top: var(--nordic-space-xl, 32px);">
+      <span>本周趋势</span>
+    </div>
+
+    <div class="weekly-summary">
+      <div class="weekly-stat">
+        <span class="ws-value">{{ calorieData.weekly.reduce((s, i) => s + i.consumed, 0) }}</span>
+        <span class="ws-label">总摄入 kcal</span>
+      </div>
+      <div class="weekly-divider"></div>
+      <div class="weekly-stat">
+        <span class="ws-value">{{ Math.round(calorieData.weekly.reduce((s, i) => s + i.consumed, 0) / Math.max(calorieData.weekly.length, 1)) }}</span>
+        <span class="ws-label">日均 kcal</span>
+      </div>
+      <div class="weekly-divider"></div>
+      <div class="weekly-stat">
+        <span class="ws-value">{{ calorieData.today.target }}</span>
+        <span class="ws-label">每日目标</span>
+      </div>
+    </div>
+
+    <div class="weekly-chart nordic-card">
+      <div
+        v-for="(item, idx) in calorieData.weekly"
+        :key="item.day"
+        class="weekly-bar-row"
+        :class="{ today: idx === todayDayIndex }"
+      >
+        <span class="bar-day">{{ item.day }}</span>
+        <div class="bar-track">
+          <div
+            class="bar-fill"
+            :style="{
+              width: (weeklyMax > 0 ? (item.consumed / weeklyMax) * 100 : 0) + '%',
+              background: idx === todayDayIndex ? 'var(--nordic-accent, #D4845A)' : 'var(--nordic-blue, #6B9BD2)'
+            }"
+          ></div>
+        </div>
+        <span class="bar-val">{{ item.consumed }}</span>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped lang="less">
-.calorie-container {
-  padding: 24px;
-  min-height: 100vh;
-  background: #f5f7fa;
+@import '../../assets/css/nordic-theme.less';
+
+.nordic-calorie {
+  .nordic-page-container();
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+// --- 页面标题 ---
+.nordic-page-header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: @nordic-space-lg;
 
   h2 {
-    font-size: 2rem /* 原值: 28px */;
-    margin: 0 0 32px 0;
-    text-align: center;
-    color: #333;
+    font-size: @nordic-text-xl;
     font-weight: 700;
+    color: @nordic-text;
+    margin: 0;
+    letter-spacing: -0.5px;
   }
 
-  .today-overview {
+  .header-date {
+    font-size: @nordic-text-sm;
+    color: @nordic-text-muted;
+  }
+}
+
+// --- 通用卡片 ---
+.nordic-card {
+  .nordic-card();
+  padding: @nordic-space-lg;
+}
+
+// --- 今日摄入 ---
+.today-hero {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  padding: 32px;
+  margin-bottom: @nordic-space-lg;
+  .nordic-animate-fade();
+}
+
+.hero-ring-wrapper {
+  position: relative;
+  width: 160px;
+  height: 160px;
+  flex-shrink: 0;
+
+  .ring-svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+  }
+
+  .ring-bg {
+    fill: none;
+    stroke: @nordic-divider;
+    stroke-width: 8;
+  }
+
+  .ring-fill {
+    fill: none;
+    stroke-width: 8;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 1s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .ring-center {
+    position: absolute;
+    inset: 0;
     display: flex;
-    gap: 24px;
-    margin-bottom: 32px;
-    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
 
-    .overview-card {
-      flex: 1;
-      min-width: 200px;
-      background: rgba(255, 255, 255, 0.95) !important;
-      border-radius: 16px !important;
-      padding: 24px !important;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-      transition: all 0.3s ease;
-
-      &:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
-      }
-
-      .overview-item {
-        text-align: center;
-
-        .overview-label {
-          font-size: 1rem /* 原值: 14px */;
-          color: #666;
-          margin-bottom: 12px;
-          text-transform: uppercase;
-          letter-spacing: 1px;
-        }
-
-        .overview-value {
-          font-size: 2.286rem /* 原值: 32px */;
-          font-weight: 700;
-          background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-
-          &.remaining {
-            background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-          }
-
-          &.target {
-            background: linear-gradient(135deg, #2196f3 0%, #0b7dda 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-          }
-        }
-      }
-    }
-  }
-
-  .nutrition-card {
-    margin-bottom: 32px;
-    background: rgba(255, 255, 255, 0.95) !important;
-    border-radius: 16px !important;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-    transform: translateY(0);
-
-    &:hover {
-      transform: translateY(-8px);
-      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.15);
-    }
-
-    .card-header {
-      font-size: 1.286rem /* 原值: 18px */;
+    .ring-value {
+      font-size: 36px;
       font-weight: 700;
-      color: #333;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      color: @nordic-text;
+      letter-spacing: -1px;
+      line-height: 1;
     }
 
-    .nutrition-chart {
-      padding: 28px;
-    }
-
-    .nutrition-item {
-      margin-bottom: 28px;
-
-      &:last-child {
-        margin-bottom: 0;
-      }
-
-      .nutrition-info {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 12px;
-        font-size: 1rem /* 原值: 14px */;
-        font-weight: 600;
-      }
-
-      // 极端值样式 - 简化，移除卡片效果
-      &.extreme-value {
-        // 只有文字颜色变化
-        .nutrition-value {
-          color: #ff6b6b !important; // 红色数值
-        }
-      }
-
-      // 推荐目标值样式
-      .recommended-goal {
-        font-size: 0.857rem /* 原值: 12px */; // 小号字体
-        color: #999; // 灰色文字
-        margin-left: 6px; // 与实际值保持间距
-      }
-
-      // 严重超出的进度条样式
-      :deep(.extreme-progress) {
-        .el-progress__text {
-          color: #ff6b6b !important; // 红色文本
-          font-weight: 700 !important; // 加粗
-          font-size: 1.143rem /* 原值: 16px */ !important; // 增大字号
-        }
-
-        // 进度条光晕效果
-        .el-progress-bar {
-          filter: drop-shadow(0 0 12px rgba(255, 107, 107, 0.6));
-        }
-      }
+    .ring-label {
+      font-size: @nordic-text-xs;
+      color: @nordic-text-muted;
+      margin-top: 4px;
     }
   }
+}
 
-  /* Section styles */
-  .today-overview-section,
-  .weekly-statistics-section {
-    margin-bottom: 32px;
-  }
+.hero-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
 
-  .today-overview-section h3,
-  .weekly-statistics-section h3 {
-    font-size: 22px;
-    font-weight: 700;
-    margin: 0 0 24px 0;
-    color: #333;
-  }
-
-  // 周统计概览样式
-  .weekly-overview {
+  .stat-pill {
     display: flex;
-    gap: 24px;
-    margin-bottom: 32px;
-    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: @nordic-bg;
+    border-radius: @nordic-radius-md;
 
-    .overview-card {
-      flex: 1;
-      min-width: 200px;
-      background: rgba(255, 255, 255, 0.95) !important;
-      border-radius: 16px !important;
-      padding: 24px !important;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-      transition: all 0.3s ease;
+    .stat-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
 
-      &:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
-      }
-
-      .overview-item {
-        text-align: center;
-
-        .overview-label {
-          font-size: 1rem /* 原值: 14px */;
-          color: #666;
-          margin-bottom: 12px;
-          text-transform: uppercase;
-          letter-spacing: 1px;
-        }
-
-        .overview-value {
-          font-size: 2.286rem /* 原值: 32px */;
-          font-weight: 700;
-          background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-
-          &.total {
-            background: linear-gradient(135deg, #2196f3 0%, #0b7dda 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-          }
-
-          &.average {
-            background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-          }
-        }
-      }
-    }
-  }
-
-  .weekly-card {
-    background: rgba(255, 255, 255, 0.95) !important;
-    border-radius: 16px !important;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-    transform: translateY(0);
-
-    &:hover {
-      transform: translateY(-8px);
-      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.15);
+      &.remaining { background: @nordic-green; }
+      &.target { background: @nordic-blue; }
     }
 
-    .card-header {
-      font-size: 1.286rem /* 原值: 18px */;
-      font-weight: 700;
-      color: #333;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+    .stat-num {
+      font-size: @nordic-text-lg;
+      font-weight: 600;
+      color: @nordic-text;
     }
 
-    .weekly-chart {
-      padding: 32px;
-    }
-
-    .weekly-bar {
-      margin-bottom: 32px;
-      position: relative;
-
-      &:last-child {
-        margin-bottom: 0;
-      }
-
-      // 与营养摄入比例相同的信息布局
-      .weekly-info {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 12px;
-        font-size: 1rem /* 原值: 14px */;
-        font-weight: 600;
-
-        .bar-label {
-          color: #555;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-
-        .bar-text {
-          font-weight: 700;
-          font-size: 1rem /* 原值: 14px */;
-          color: #333;
-        }
-      }
-
-      .bar-container {
-        width: 100%;
-        height: 21px; /* 与 stroke-width 保持一致 */
-        background-color: #f0f0f0;
-        border-radius: 11px; /* 保持与高度的比例 */
-        box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.08);
-        position: relative;
-      }
-
-      // 目标线指示器已移除
-      .bar-target-line {
-        display: none;
-      }
+    .stat-txt {
+      font-size: @nordic-text-sm;
+      color: @nordic-text-muted;
     }
   }
 }
 
-// 进度条样式 - 所有进度条通用
-:deep(.el-progress) {
-  --el-progress-transition-duration: 3s; // 使用CSS变量控制动画持续时间
-  transition: transform 0.3s ease; // 添加容器过渡动画
-  transform-origin: center center; // 设置变换原点为中心
-
-  .el-progress-bar__inner {
-    transition: width var(--el-progress-transition-duration) cubic-bezier(0.25, 0.8, 0.25, 1);
-    min-width: 30px; /* 为0%进度条设置最小宽度，确保文本可见 */
-    border-radius: 10.5px 0 0 10.5px !important; /* 保持进度条与容器的圆角一致 */
-  }
-
-  .el-progress__text {
-    transform-origin: center center; // 设置文本变换原点为中心，确保缩放时居中
-  }
-
-  // 进度条容器悬浮时等比例放大
-  &:hover {
-    transform: scale(1.05); // 等比例缩放，1.05倍大小
-  }
-
-  // 进度条容器默认无光晕，仅悬浮时显示
-  .el-progress-bar {
-    filter: none;
-    transition: filter 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); // 添加光晕过渡动画
-  }
-
-  // 蛋白质进度条 - 蓝色光晕
-  &.蛋白质-progress:hover .el-progress-bar {
-    filter: drop-shadow(0 0 18px rgba(33, 150, 243, 0.6));
-  }
-
-  // 碳水化合物进度条 - 绿色光晕
-  &.碳水化合物-progress:hover .el-progress-bar {
-    filter: drop-shadow(0 0 18px rgba(76, 175, 80, 0.6));
-  }
-
-  // 脂肪进度条 - 橙色光晕
-  &.脂肪-progress:hover .el-progress-bar {
-    filter: drop-shadow(0 0 18px rgba(255, 152, 0, 0.6));
-  }
-
-  // 卡路里进度条 - 蓝色光晕
-  &.calorie-progress:hover .el-progress-bar {
-    filter: drop-shadow(0 0 18px rgba(33, 150, 243, 0.6));
-  }
-
-  // 0%进度条样式优化
-  &.zero-progress {
-    .el-progress__text {
-      color: #666; /* 更醒目的文本颜色 */
-      font-weight: 600; /* 加粗文本 */
-    }
-
-    .el-progress-bar__inner {
-      background-color: #e5e7eb; /* 浅灰色背景，增强对比度 */
-    }
-  }
-
-  // 严重超出进度条的基础样式 - 默认小光晕
-  &.extreme-progress {
-    .el-progress-bar {
-      filter: drop-shadow(0 0 8px rgba(255, 107, 107, 0.4)); // 默认小光晕
-    }
-  }
-
-  // 针对各种类型的严重超出进度条，设置更具特异性的hover效果
-  &.蛋白质-progress.extreme-progress:hover .el-progress-bar {
-    filter: drop-shadow(0 0 20px rgba(255, 107, 107, 0.8));
-  }
-
-  &.碳水化合物-progress.extreme-progress:hover .el-progress-bar {
-    filter: drop-shadow(0 0 20px rgba(255, 107, 107, 0.8));
-  }
-
-  &.脂肪-progress.extreme-progress:hover .el-progress-bar {
-    filter: drop-shadow(0 0 20px rgba(255, 107, 107, 0.8));
-  }
-
-  // 严重超出的卡路里进度条，设置hover效果
-  &.calorie-progress.extreme-progress:hover .el-progress-bar {
-    filter: drop-shadow(0 0 20px rgba(255, 107, 107, 0.8));
-  }
-}
-
-// 饮食健康建议样式
-.nutrition-chart .health-advice-section {
-  margin-top: 20px; /* 减小上边距 */
-  border-top: 1px solid #f0f0f0;
-  padding-top: 16px; /* 减小内边距 */
-}
-
-.health-advice-section .advice-header {
+// --- 分区标题 ---
+.section-title {
   display: flex;
   align-items: center;
   gap: 8px;
-  cursor: pointer;
-  font-size: 1.143rem /* 原值: 16px */;
-  font-weight: 600;
-  color: #333;
-  transition: all 0.3s ease;
-  padding: 12px 0;
+  margin-bottom: @nordic-space-md;
 
-  &:hover {
-    color: #409eff; /* 更柔和的蓝色 */
+  span {
+    font-size: @nordic-text-md;
+    font-weight: 600;
+    color: @nordic-text;
   }
 }
 
-.advice-header .arrow-icon {
-  transition: transform 0.3s ease;
+// --- 营养摄入 ---
+.nutrition-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: @nordic-space-md;
+  margin-bottom: @nordic-space-lg;
 
-  &.rotate {
-    transform: rotate(180deg);
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
   }
 }
 
-.nutrition-chart .health-advice-section .advice-content {
-  margin-top: 16px;
-  padding-left: 28px;
-  max-height: 0;
+.nutrition-item {
+  padding: @nordic-space-md;
+  animation: nordic-fade-in 0.4s ease both;
+
+  &.extreme {
+    border-color: @nordic-red;
+  }
+
+  .nutri-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .nutri-name {
+    font-size: @nordic-text-sm;
+    color: @nordic-text-secondary;
+    font-weight: 500;
+  }
+
+  .nutri-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: @nordic-radius-pill;
+  }
+
+  .nutri-value-row {
+    margin-bottom: 12px;
+
+    .nutri-val {
+      font-size: @nordic-text-xl;
+      font-weight: 700;
+      color: @nordic-text;
+      letter-spacing: -0.5px;
+    }
+
+    .nutri-unit {
+      font-size: @nordic-text-sm;
+      color: @nordic-text-muted;
+      margin-left: 2px;
+    }
+
+    .nutri-goal {
+      font-size: @nordic-text-xs;
+      color: @nordic-text-muted;
+      margin-left: 4px;
+    }
+  }
+
+  .nutri-bar-track {
+    height: 6px;
+    background: @nordic-divider;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .nutri-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+// --- 健康建议 ---
+.advice-section {
+  margin-bottom: @nordic-space-lg;
+  padding: 0;
   overflow: hidden;
-  opacity: 0;
-  transition:
-    max-height 0.4s cubic-bezier(0.25, 0.8, 0.25, 1),
-    opacity 0.3s ease;
 
-  &.show {
-    max-height: 300px; /* 足够大的高度容纳内容 */
-    opacity: 1;
-    animation: fadeIn 0.3s ease;
+  .advice-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: @nordic-space-md @nordic-space-lg;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s;
+
+    &:hover {
+      background: @nordic-bg;
+    }
+
+    .advice-title-text {
+      font-size: @nordic-text-base;
+      font-weight: 600;
+      color: @nordic-text;
+    }
+
+    .advice-count {
+      .nordic-pill-tag(@nordic-yellow-light, @nordic-yellow);
+    }
+
+    .advice-arrow {
+      margin-left: auto;
+      font-size: 11px;
+      color: @nordic-text-muted;
+      transition: transform 0.3s ease;
+
+      &.open {
+        transform: rotate(90deg);
+      }
+    }
+  }
+
+  .advice-body {
+    padding: 0 @nordic-space-lg @nordic-space-md;
+  }
+
+  .advice-tip {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: @nordic-text-sm;
+    color: @nordic-text-secondary;
+    line-height: 1.6;
+    padding: 6px 0;
+
+    .tip-icon {
+      color: @nordic-accent;
+      font-size: 8px;
+      margin-top: 6px;
+      flex-shrink: 0;
+    }
+  }
+
+  .advice-ok {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: @nordic-green-light;
+    border-radius: @nordic-radius-md;
+    color: #4a7a4d;
+    font-size: @nordic-text-sm;
+
+    .ok-icon {
+      font-weight: 700;
+      flex-shrink: 0;
+    }
   }
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.advice-content .advice-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  margin-bottom: 14px;
-  font-size: 1rem /* 原值: 14px */;
-  color: #666;
-  line-height: 22px;
-
-  &:last-child {
-    margin-bottom: 0;
-  }
-}
-
-.advice-item .advice-icon {
-  color: #ff9800;
-  margin-top: 2px;
-  flex-shrink: 0;
-}
-
-.advice-content .advice-empty {
+// --- 本周汇总 ---
+.weekly-summary {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 1rem /* 原值: 14px */;
-  color: #4caf50;
-  padding: 16px;
-  background-color: #f6fff6;
-  border-radius: 8px;
-  margin-top: 8px;
+  justify-content: space-around;
+  padding: @nordic-space-lg;
+  background: @nordic-surface;
+  border-radius: @nordic-radius-lg;
+  border: 1px solid @nordic-border;
+  margin-bottom: @nordic-space-md;
+
+  .weekly-stat {
+    text-align: center;
+
+    .ws-value {
+      display: block;
+      font-size: @nordic-text-lg;
+      font-weight: 700;
+      color: @nordic-text;
+      letter-spacing: -0.5px;
+    }
+
+    .ws-label {
+      display: block;
+      font-size: @nordic-text-xs;
+      color: @nordic-text-muted;
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+  }
+
+  .weekly-divider {
+    width: 1px;
+    height: 40px;
+    background: @nordic-border;
+  }
 }
 
-.advice-empty .empty-icon {
-  font-size: 1.286rem /* 原值: 18px */;
-  flex-shrink: 0;
+// --- 周趋势图 ---
+.weekly-chart {
+  padding: @nordic-space-lg;
+
+  .weekly-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+
+    &:not(:last-child) {
+      border-bottom: 1px solid @nordic-divider;
+    }
+
+    &.today {
+      .bar-day {
+        color: @nordic-accent;
+        font-weight: 600;
+      }
+    }
+
+    .bar-day {
+      width: 32px;
+      font-size: @nordic-text-sm;
+      color: @nordic-text-muted;
+      flex-shrink: 0;
+    }
+
+    .bar-track {
+      flex: 1;
+      height: 8px;
+      background: @nordic-divider;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+      min-width: 2px;
+    }
+
+    .bar-val {
+      width: 50px;
+      text-align: right;
+      font-size: @nordic-text-sm;
+      color: @nordic-text-secondary;
+      font-weight: 500;
+      flex-shrink: 0;
+    }
+  }
+}
+
+// --- 过渡动画 ---
+.nordic-slide-enter-active,
+.nordic-slide-leave-active {
+  transition: all 0.3s ease;
+  max-height: 400px;
+  overflow: hidden;
+}
+
+.nordic-slide-enter-from,
+.nordic-slide-leave-to {
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 </style>

@@ -1,7 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 
-import { Search } from '@element-plus/icons-vue'
 import axios from 'axios'
 import { API_CONFIG } from '../../config'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -1091,85 +1090,84 @@ const exportToDietRecord = () => {
 </script>
 
 <template>
-  <!-- 单一根节点包裹器，用于 Transition 动画 -->
   <div class="my-recipe-wrapper">
-    <div ref="scrollContainer" class="my-recipe-container">
-      <div class="recipe-header fade-in-up">
-        <div>
-          <h2>我的食谱</h2>
-          <div v-if="filteredRecipes.length > 0" class="search-result-count">
-            <span>共找到 {{ filteredRecipes.length }} 个食谱</span>
-          </div>
-        </div>
-
-        <div class="filter-section fade-in-up">
-        <el-input
-          v-model="searchKeyword"
-          placeholder="搜索食谱、菜品或食材"
-          size="default"
-          style="width: 100%; max-width: 500px; margin: 0 0 12px 0"
-          clearable
-        >
-          <template #prefix>
-            <el-icon class="el-input__icon"><Search /></el-icon>
-          </template>
-        </el-input>
-        <el-select
-          v-model="recipeFilter"
-          placeholder="筛选食谱"
-          size="small"
-          style="width: 160px; margin: 0"
-        >
-          <el-option label="全部" value="all" />
-          <el-option label="早餐" value="早餐" />
-          <el-option label="午餐" value="午餐" />
-          <el-option label="晚餐" value="晚餐" />
-          <el-option label="加餐" value="加餐" />
-        </el-select>
+  <div ref="scrollContainer" class="nordic-my-recipe">
+    <!-- 页面标题 -->
+    <div class="nordic-page-header">
+      <div>
+        <h2>我的食谱</h2>
+        <span class="recipe-count" v-if="filteredRecipes.length > 0">
+          共 {{ filteredRecipes.length }} 个食谱
+        </span>
       </div>
     </div>
 
-    <!-- 添加食谱和批量管理按钮 -->
-    <div class="add-recipe-section">
-      <div class="button-group">
-        <el-button type="primary" size="small" @click="openAddDialog"> ➕ 添加食谱 </el-button>
-        <el-button type="success" size="small" @click="importFromOrders"> 📥 从订单导入 </el-button>
-
-        <!-- 全选/取消全选按钮 -->
-        <el-button
-          type="default"
-          size="small"
-          @click="toggleAllRecipes"
-          :disabled="filteredRecipes.length === 0"
-        >
-          {{ selectedRecipes.length === filteredRecipes.length ? '❌ 取消全选' : '✅ 全选' }}
-        </el-button>
-
-        <el-button
-          type="danger"
-          size="small"
-          :disabled="selectedRecipes.length === 0"
-          @click="batchDeleteRecipes"
-        >
-          🗑️ 批量删除
-        </el-button>
-        <el-button
-          type="warning"
-          size="small"
-          :disabled="selectedRecipes.length === 0"
-          @click="batchFavoriteRecipes"
-        >
-          ⭐ 批量收藏
-        </el-button>
-        <el-button
-          type="info"
-          size="small"
-          :disabled="selectedRecipes.length === 0"
-          @click="exportToDietRecord"
-        >
-          📤 导出到饮食记录
-        </el-button>
+    <!-- 搜索与筛选 -->
+    <div class="toolbar-row">
+      <div class="search-box">
+        <span class="search-icon">&#128269;</span>
+        <input
+          v-model="searchKeyword"
+          placeholder="搜索食谱、菜品或食材..."
+          class="search-input"
+        />
       </div>
+      <div class="filter-chips">
+        <button
+          class="meal-chip"
+          :class="{ active: recipeFilter === 'all' }"
+          @click="recipeFilter = 'all'"
+        >全部</button>
+        <button
+          class="meal-chip"
+          :class="{ active: recipeFilter === '早餐' }"
+          @click="recipeFilter = '早餐'"
+        >早餐</button>
+        <button
+          class="meal-chip"
+          :class="{ active: recipeFilter === '午餐' }"
+          @click="recipeFilter = '午餐'"
+        >午餐</button>
+        <button
+          class="meal-chip"
+          :class="{ active: recipeFilter === '晚餐' }"
+          @click="recipeFilter = '晚餐'"
+        >晚餐</button>
+        <button
+          class="meal-chip"
+          :class="{ active: recipeFilter === '加餐' }"
+          @click="recipeFilter = '加餐'"
+        >加餐</button>
+      </div>
+    </div>
+
+    <!-- 操作按钮 -->
+    <div class="action-bar">
+      <button class="nordic-btn accent" @click="openAddDialog">+ 添加食谱</button>
+      <button class="nordic-btn" @click="importFromOrders">从订单导入</button>
+      <div class="action-spacer"></div>
+      <button
+        class="nordic-btn ghost"
+        @click="toggleAllRecipes"
+        :disabled="filteredRecipes.length === 0"
+      >
+        {{ selectedRecipes.length === filteredRecipes.length ? '取消全选' : '全选' }}
+      </button>
+      <button
+        class="nordic-btn ghost"
+        :disabled="selectedRecipes.length === 0"
+        @click="batchDeleteRecipes"
+      >批量删除</button>
+      <button
+        class="nordic-btn ghost"
+        :disabled="selectedRecipes.length === 0"
+        @click="batchFavoriteRecipes"
+      >批量收藏</button>
+      <button
+        class="nordic-btn ghost"
+        :disabled="selectedRecipes.length === 0"
+        @click="exportToDietRecord"
+      >导出到饮食记录</button>
     </div>
 
     <!-- 食谱列表 -->
@@ -1193,15 +1191,14 @@ const exportToDietRecord = () => {
     </div>
 
     <!-- 空数据提示 -->
-    <el-empty
-      v-if="filteredRecipes.length === 0"
-      :description="loadingFailed ? '暂未找到我的食谱' : '暂无食谱'"
-    ></el-empty>
+    <div class="empty-state" v-if="filteredRecipes.length === 0">
+      <div class="empty-icon">&#127858;</div>
+      <div class="empty-title">{{ loadingFailed ? '暂未找到我的食谱' : '暂无食谱' }}</div>
+      <div class="empty-desc">{{ loadingFailed ? '请稍后重试' : '点击上方按钮添加你的第一个食谱' }}</div>
+    </div>
 
-    <!-- 滚动到顶部按钮 -->
-    <el-button type="primary" circle size="small" class="scroll-to-top-btn" @click="scrollToTop">
-      ↑
-    </el-button>
+    <!-- 回到顶部 -->
+    <button class="scroll-top-btn" @click="scrollToTop" title="回到顶部">&#8593;</button>
   </div>
 
   <!-- 食谱详情组件 -->
@@ -1255,37 +1252,38 @@ const exportToDietRecord = () => {
     top="10%"
     @close="selectedOrder = null"
   >
-    <div v-if="orders.length > 0">
-      <el-select
-        v-model="selectedOrder"
-        placeholder="请选择要导入的订单"
-        style="width: 100%"
-        size="large"
-      >
-        <el-option
-          v-for="order in orders"
-          :key="order.id"
-          :label="`订单号: ${order.orderNo} (${new Date(order.createTime).toLocaleString()})`"
-          :value="order"
-        />
-      </el-select>
-
-      <div v-if="selectedOrder" style="margin-top: 20px">
-        <h4>订单详情:</h4>
-        <p>订单号: {{ selectedOrder.orderNo }}</p>
-        <p>创建时间: {{ new Date(selectedOrder.createTime).toLocaleString() }}</p>
-        <h5>菜品:</h5>
-        <el-tag
-          v-for="(item, index) in selectedOrder.items"
-          :key="index"
-          type="info"
-          style="margin: 2px"
+    <div class="import-order-panel">
+      <div v-if="orders.length > 0">
+        <el-select
+          v-model="selectedOrder"
+          placeholder="请选择要导入的订单"
+          style="width: 100%"
+          size="large"
         >
-          {{ item.name }} ({{ item.quantity }})
-        </el-tag>
+          <el-option
+            v-for="order in orders"
+            :key="order.id"
+            :label="`订单号: ${order.orderNo} (${new Date(order.createTime).toLocaleString()})`"
+            :value="order"
+          />
+        </el-select>
+
+        <div v-if="selectedOrder" class="order-preview">
+          <div class="order-meta">
+            <span>订单号: {{ selectedOrder.orderNo }}</span>
+            <span>{{ new Date(selectedOrder.createTime).toLocaleString() }}</span>
+          </div>
+          <div class="order-dishes">
+            <span
+              v-for="(item, index) in selectedOrder.items"
+              :key="index"
+              class="dish-chip"
+            >{{ item.name }} ({{ item.quantity }})</span>
+          </div>
+        </div>
       </div>
+      <div v-else class="no-orders">暂无订单数据</div>
     </div>
-    <div v-else>暂无订单数据</div>
 
     <template #footer>
       <el-button @click="importDialogVisible = false">取消</el-button>
@@ -1295,440 +1293,287 @@ const exportToDietRecord = () => {
   </div>
 </template>
 
-<style lang="less">
+<style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+
 .my-recipe-wrapper {
   display: contents;
 }
 
-.my-recipe-container {
-  padding: 24px;
-  max-height: 100%;
-  overflow-y: auto;
+.nordic-my-recipe {
+  .nordic-page-container();
+  max-width: 900px;
+  margin: 0 auto;
 
-  .recipe-header {
+  // --- 页面标题 ---
+  .nordic-page-header {
     display: flex;
+    align-items: baseline;
     justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 16px;
-    margin-bottom: 24px;
+    margin-bottom: @nordic-space-lg;
 
     h2 {
-      font-size: 2.286rem /* 原值: 32px */;
-      margin: 0;
-      color: #333;
-    }
-
-    .filter-section {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-  }
-
-  .recipe-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    gap: 0 !important; /* 设置为0以避免双重间距 */
-
-    // 在中等屏幕以下改为一行一列
-    @media (max-width: 768px) {
-      grid-template-columns: 1fr;
-    }
-
-    // 在极小屏幕上确保卡片有最小边距
-    @media (max-width: 420px) {
-      padding: 0 10px;
-    }
-  }
-
-  .recipe-card {
-    background: #ffffff !important;
-    border-radius: 16px !important;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
-    border: 1px solid #e8e8e8 !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    overflow: hidden;
-    position: relative;
-    margin-bottom: 27px !important;
-
-    &::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 4px;
-      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-    }
-
-    &.recipe-card-favorited {
-      border: 2px solid #ffd700 !important;
-      box-shadow:
-        0 8px 24px rgba(255, 215, 0, 0.2),
-        0 0 0 4px rgba(255, 215, 0, 0.08);
-
-      &::before {
-        background: linear-gradient(90deg, #ffd700 0%, #ffed4e 100%);
-      }
-    }
-
-    &:hover {
-      transform: translateY(-6px) scale(1.02);
-      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
-      border-color: #d8d8d8 !important;
-    }
-
-    .card-header {
-      position: relative;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      font-size: 1.429rem /* 原值: 20px */;
+      font-size: @nordic-text-xl;
       font-weight: 700;
-      color: #2c3e50;
-      padding: 20px 24px !important;
-
-      .meal-icon {
-        font-size: 2.286rem /* 原值: 32px */;
-        padding: 10px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        box-shadow: none;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 56px;
-        height: 56px;
-      }
+      color: @nordic-text;
+      margin: 0;
+      letter-spacing: -0.5px;
     }
 
-    .recipe-items {
-      margin: 24px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-
-      .el-tag {
-        padding: 8px 16px;
-        border-radius: 20px;
-        font-size: 1rem /* 原值: 14px */;
-        font-weight: 500;
-      }
-    }
-
-    .recipe-stats {
-      margin: 0 24px;
-      display: flex;
-      gap: 20px;
-
-      .stat-item {
-        display: flex;
-        align-items: center;
-        gap: 5px;
-        color: #666;
-      }
-    }
-
-    .recipe-actions {
-      display: flex;
-      justify-content: flex-end;
-      margin: 20px 24px 24px;
-      gap: 8px; /* 统一间距 */
-
-      .el-button {
-        font-size: 1rem /* 原值: 14px */;
-        padding: 6px 16px;
-        border-radius: 8px;
-        margin: 0;
-      }
+    .recipe-count {
+      font-size: @nordic-text-sm;
+      color: @nordic-text-muted;
+      margin-left: 8px;
     }
   }
 
-  // 右上角收藏按钮样式
-  .card-favorite {
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-  }
-
-  // 批量选择复选框样式
-  .checkbox-wrapper {
-    :deep(.el-checkbox__label) {
-      display: none !important;
-    }
-    margin-right: 10px;
-  }
-
-  // 添加食谱按钮样式
-  .add-recipe-section {
-    margin-bottom: 24px;
-  }
-
-  .button-group {
+  // --- 搜索与筛选 ---
+  .toolbar-row {
     display: flex;
+    gap: @nordic-space-md;
+    align-items: center;
+    margin-bottom: @nordic-space-md;
     flex-wrap: wrap;
-    gap: 12px; /* 按钮之间的间距 */
-    padding: 16px;
-    background: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
-
-    .el-button {
-      border-radius: 8px !important;
-      padding: 10px 20px !important;
-      font-weight: 500 !important;
-      transition: all 0.3s ease;
-
-      &:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
-      }
-
-      &:active {
-        transform: translateY(-1px);
-      }
-    }
   }
 
-  // 选中卡片样式 - 增强版
-  .recipe-card-selected {
-    border: 3px solid #667eea !important; /* 更粗的边框 */
-    box-shadow:
-      0 12px 32px rgba(102, 126, 234, 0.3),
-      /* 更强的阴影 */ 0 0 0 6px rgba(102, 126, 234, 0.12); /* 更大的光晕 */
-    transform: scale(1.05); /* 轻微放大效果 */
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  .search-box {
+    flex: 1;
+    min-width: 200px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    background: @nordic-surface;
+    border: 1px solid @nordic-border;
+    border-radius: @nordic-radius-md;
+    transition: border-color 0.2s;
 
-    &::before {
-      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-      height: 6px; /* 更宽的顶部渐变条 */
+    &:focus-within {
+      border-color: @nordic-accent;
     }
 
-    // 同时处理选中和悬停状态，确保样式优先级
-    &:hover {
-      border: 3px solid #667eea !important;
-      box-shadow:
-        0 12px 32px rgba(102, 126, 234, 0.3),
-        0 0 0 6px rgba(102, 126, 234, 0.12) !important;
-      transform: scale(1.05) !important;
-      border-color: #667eea !important;
-    }
-  }
-
-  // 收藏按钮样式
-  .favorite-btn {
-    color: #ffd700 !important; // 收藏状态用金色，确保覆盖默认样式
-    font-weight: bold;
-  }
-
-  /* 添加食谱表单样式 */
-  .add-recipe-form {
-    padding: 20px 0;
-
-    .el-form {
-      max-width: 400px;
-      margin: 0 auto;
+    .search-icon {
+      color: @nordic-text-muted;
+      font-size: 14px;
     }
 
-    .el-form-item {
-      margin-bottom: 20px;
-    }
-  }
-
-  /* 不同类型食谱卡片的样式 */
-  .recipe-card {
-    &.早餐 {
-      border-left: 4px solid #ffc107;
-
-      &::before {
-        background: linear-gradient(90deg, #ffc107 0%, #ffeb3b 100%);
-      }
-
-      .meal-icon {
-        background: linear-gradient(135deg, #ffc107 0%, #ffeb3b 100%) !important;
-        color: #333 !important;
-      }
-    }
-
-    &.午餐 {
-      border-left: 4px solid #4caf50;
-
-      &::before {
-        background: linear-gradient(90deg, #4caf50 0%, #8bc34a 100%);
-      }
-
-      .meal-icon {
-        background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%) !important;
-        color: white !important;
-      }
-    }
-
-    &.晚餐 {
-      border-left: 4px solid #2196f3;
-
-      &::before {
-        background: linear-gradient(90deg, #2196f3 0%, #64b5f6 100%);
-      }
-
-      .meal-icon {
-        background: linear-gradient(135deg, #2196f3 0%, #64b5f6 100%) !important;
-        color: white !important;
-      }
-    }
-
-    &.加餐 {
-      border-left: 4px solid #1e88e5;
-
-      &::before {
-        background: linear-gradient(90deg, #1e88e5 0%, #42a5f5 100%);
-      }
-
-      .meal-icon {
-        background: linear-gradient(135deg, #1e88e5 0%, #42a5f5 100%) !important;
-        color: white !important;
-      }
-    }
-  }
-
-  /* 自定义搜索框和筛选框样式 - 优化版 */
-  :deep(.el-input) {
-    border-radius: 8px;
-    border: 1px solid #e0e0e0;
-    transition: all 0.3s ease;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-
-    &:hover {
-      border-color: #667eea;
-      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.12);
-    }
-
-    &__inner {
-      background-color: #ffffff;
+    .search-input {
+      flex: 1;
       border: none;
-      color: #333;
-      font-size: 1rem /* 原值: 14px */;
-      padding: 10px 14px;
-      border-radius: 8px;
-    }
+      outline: none;
+      background: transparent;
+      font-size: @nordic-text-base;
+      color: @nordic-text;
 
-    &__prefix {
-      color: #999;
-      font-size: 1.143rem /* 原值: 16px */;
-    }
-
-    &__suffix {
-      color: #999;
+      &::placeholder {
+        color: @nordic-text-muted;
+      }
     }
   }
 
-  :deep(.el-select) {
-    border-radius: 8px;
-    border: 1px solid #e0e0e0;
-    transition: all 0.3s ease;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-
-    &:hover {
-      border-color: #667eea;
-      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.12);
-    }
-
-    &__inner {
-      background-color: #ffffff;
-      border: none;
-      color: #333;
-      font-size: 1rem /* 原值: 14px */;
-      padding: 10px 14px;
-      border-radius: 8px;
-    }
-
-    &__arrow {
-      color: #999;
-    }
+  .filter-chips {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
   }
 
-  /* 自定义标签颜色和交互 */
-  :deep(.el-tag) {
-    transition: all 0.3s ease;
+  .meal-chip {
+    padding: 6px 18px;
+    border: 1px solid @nordic-border;
+    background: @nordic-surface;
+    border-radius: @nordic-radius-pill;
+    font-size: @nordic-text-sm;
+    color: @nordic-text-secondary;
     cursor: pointer;
-    border-radius: 20px;
+    transition: all 0.2s;
     font-weight: 500;
 
     &:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
-      opacity: 0.9;
+      border-color: @nordic-accent;
+      color: @nordic-accent;
+    }
+
+    &.active {
+      background: @nordic-accent;
+      border-color: @nordic-accent;
+      color: #fff;
     }
   }
 
-  :deep(.el-tag--warning) {
-    background-color: #fff3e0;
-    color: #f57c00;
+  // --- 操作按钮栏 ---
+  .action-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: @nordic-space-lg;
+    flex-wrap: wrap;
+
+    .action-spacer {
+      flex: 1;
+    }
   }
 
-  :deep(.el-tag--success) {
-    background-color: #e8f5e9;
-    color: #388e3c;
+  .nordic-btn {
+    padding: 6px 16px;
+    border: 1px solid @nordic-border;
+    background: @nordic-surface;
+    border-radius: @nordic-radius-md;
+    font-size: @nordic-text-sm;
+    color: @nordic-text-secondary;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 500;
+    white-space: nowrap;
+
+    &:hover:not(:disabled) {
+      border-color: @nordic-text-secondary;
+    }
+
+    &.accent {
+      background: @nordic-accent;
+      border-color: @nordic-accent;
+      color: #fff;
+
+      &:hover {
+        background: darken(@nordic-accent, 8%);
+      }
+    }
+
+    &.ghost {
+      border-color: transparent;
+      color: @nordic-text-muted;
+
+      &:hover:not(:disabled) {
+        color: @nordic-text-secondary;
+        border-color: @nordic-border;
+      }
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
   }
 
-  :deep(.el-tag--primary) {
-    background-color: #e3f2fd;
-    color: #1976d2;
+  // --- 食谱列表 ---
+  .recipe-list {
+    display: flex;
+    flex-direction: column;
+    gap: @nordic-space-md;
   }
 
-  :deep(.el-tag--info) {
-    background-color: #e1f5fe;
-    color: #0288d1;
+  // --- 空状态 ---
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    background: @nordic-surface;
+    border: 1px dashed @nordic-border;
+    border-radius: @nordic-radius-lg;
+
+    .empty-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.6;
+    }
+
+    .empty-title {
+      font-size: @nordic-text-lg;
+      font-weight: 600;
+      color: @nordic-text;
+      margin-bottom: 8px;
+    }
+
+    .empty-desc {
+      font-size: @nordic-text-sm;
+      color: @nordic-text-muted;
+    }
   }
 
-  :deep(.el-tag--purple) {
-    background-color: #f3e5f5;
-    color: #7b1fa2;
-  }
-  :deep(.el-tag--blue) {
-    background-color: #e3f2fd;
-    color: #1565c0;
-  }
-
-  // 滚动到顶部按钮
-  .scroll-to-top-btn {
+  // --- 回到顶部 ---
+  .scroll-top-btn {
     position: fixed;
     bottom: 30px;
     right: 30px;
     z-index: 1000;
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
+    border: 1px solid @nordic-border;
+    background: @nordic-surface;
+    border-radius: @nordic-radius-sm;
+    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.429rem /* 原值: 20px */;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    transition: opacity 0.3s;
+    font-size: 16px;
+    color: @nordic-text-secondary;
+    box-shadow: 0 2px 8px @nordic-shadow;
+    transition: all 0.2s;
     opacity: 0.8;
 
     &:hover {
       opacity: 1;
+      border-color: @nordic-accent;
+      color: @nordic-accent;
       transform: translateY(-2px);
     }
   }
 
-  .recipe-detail-dialog {
-    padding: 24px;
-    background-color: #f5f7fa;
-    font-family:
-      -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  // --- 导入订单面板 ---
+  .import-order-panel {
+    padding: @nordic-space-lg;
+    background: @nordic-bg;
+    border-radius: @nordic-radius-md;
+
+    .order-preview {
+      margin-top: @nordic-space-md;
+      padding: @nordic-space-md;
+      background: @nordic-surface;
+      border-radius: @nordic-radius-md;
+      border: 1px solid @nordic-border;
+
+      .order-meta {
+        display: flex;
+        justify-content: space-between;
+        font-size: @nordic-text-sm;
+        color: @nordic-text-secondary;
+        margin-bottom: @nordic-space-sm;
+      }
+
+      .order-dishes {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .dish-chip {
+        padding: 4px 12px;
+        background: @nordic-blue-light;
+        color: @nordic-blue;
+        border-radius: @nordic-radius-pill;
+        font-size: @nordic-text-xs;
+        font-weight: 500;
+      }
+    }
+
+    .no-orders {
+      text-align: center;
+      padding: 32px;
+      color: @nordic-text-muted;
+      font-size: @nordic-text-sm;
+    }
   }
 
-  .detail-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 700px;
-    border: 1px solid red;
-  }
+  // --- 响应式 ---
+  @media (max-width: 640px) {
+    .toolbar-row {
+      flex-direction: column;
+      align-items: stretch;
+
+      .search-box { width: 100%; }
+    }
+
+    .action-bar {
+      flex-wrap: wrap;
+      .action-spacer { display:  }
 }
 </style>

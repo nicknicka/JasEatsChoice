@@ -536,9 +536,11 @@ const setDefault = async (address) => {
 </script>
 
 <style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+
 .address-container {
-  padding: 20px 30px;
-  background-color: #fafafa;
+  padding: @nordic-space-lg @nordic-space-xl;
+  background-color: @nordic-bg;
   min-height: 100vh;
 
   .header {
@@ -550,9 +552,9 @@ const setDefault = async (address) => {
     /* 移除自定义返回按钮样式，使用组件默认样式 */
 
     h2 {
-      font-size: 2rem /* 原值: 28px */;
+      font-size: @nordic-text-xl;
       font-weight: 600;
-      color: #2c3e50;
+      color: @nordic-text;
       margin: 0;
     }
   }
@@ -560,44 +562,44 @@ const setDefault = async (address) => {
   .address-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-    gap: 20px;
+    gap: @nordic-space-lg;
     margin-bottom: 30px;
 
-    @media (max-width: 768px) {
+    @media (max-width: @nordic-breakpoint-md) {
       grid-template-columns: 1fr;
     }
   }
 
   .address-card {
     position: relative;
-    padding: 24px;
-    background: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
-    transition: all 0.3s ease;
-    border: 1px solid #e8e8e8;
-    border-left: 4px solid #409eff; /* 默认蓝色左侧边框 */
+    padding: @nordic-space-lg;
+    background: @nordic-surface;
+    border-radius: @nordic-radius-lg;
+    box-shadow: 0 2px 12px @nordic-shadow;
+    transition: all @nordic-transition-slow ease;
+    border: 1px solid @nordic-border;
+    border-left: 4px solid @nordic-blue; /* 默认蓝色左侧边框 */
 
     &:hover {
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      box-shadow: 0 4px 20px @nordic-shadow-hover;
       transform: translateY(-2px);
     }
 
     &.default-address {
-      border-left: 4px solid #67c23a;
-      border-color: #67c23a;
+      border-left: 4px solid @nordic-green;
+      border-color: @nordic-green;
 
       &::before {
         content: '默认地址';
         position: absolute;
         top: 24px;
         right: 24px;
-        color: #67c23a;
-        font-size: 1rem /* 原值: 14px */;
+        color: @nordic-green;
+        font-size: @nordic-text-base;
         font-weight: 500;
         padding: 2px 12px;
-        background-color: rgba(103, 194, 58, 0.1);
-        border-radius: 4px;
+        background-color: @nordic-green-light;
+        border-radius: @nordic-radius-xs;
       }
     }
 
@@ -608,14 +610,14 @@ const setDefault = async (address) => {
       margin-bottom: 14px;
 
       .address-name {
-        font-size: 1.286rem /* 原值: 18px */;
+        font-size: @nordic-text-lg;
         font-weight: 600;
-        color: #2c3e50;
+        color: @nordic-text;
       }
 
       .address-phone {
-        color: #333;
-        font-size: 1.071rem /* 原值: 15px */;
+        color: @nordic-text;
+        font-size: @nordic-text-md;
         font-weight: 500;
       }
     }
@@ -625,19 +627,19 @@ const setDefault = async (address) => {
       line-height: 1.6;
 
       .address-full {
-        font-size: 1.071rem /* 原值: 15px */;
-        color: #555;
-        margin-bottom: 8px;
+        font-size: @nordic-text-md;
+        color: @nordic-text-secondary;
+        margin-bottom: @nordic-space-sm;
         white-space: pre-line;
       }
 
       .address-tag {
         display: inline-block;
-        color: #409eff;
-        background-color: rgba(64, 158, 255, 0.1);
-        padding: 4px 12px;
-        border-radius: 4px;
-        font-size: 0.929rem /* 原值: 13px */;
+        color: @nordic-blue;
+        background-color: @nordic-blue-light;
+        padding: @nordic-space-xs 12px;
+        border-radius: @nordic-radius-xs;
+        font-size: @nordic-text-sm;
         font-weight: 500;
       }
     }
@@ -646,7 +648,7 @@ const setDefault = async (address) => {
       text-align: right;
 
       .el-button {
-        margin-left: 8px;
+        margin-left: @nordic-space-sm;
       }
     }
   }
@@ -654,19 +656,19 @@ const setDefault = async (address) => {
   .empty-state {
     text-align: center;
     padding: 120px 20px;
-    background: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+    background: @nordic-surface;
+    border-radius: @nordic-radius-lg;
+    box-shadow: 0 2px 12px @nordic-shadow;
 
     .empty-icon {
       font-size: 80px;
-      color: #e6e6e6;
-      margin-bottom: 24px;
+      color: @nordic-border;
+      margin-bottom: @nordic-space-lg;
     }
 
     p {
-      font-size: 19px;
-      color: #999;
+      font-size: @nordic-text-lg;
+      color: @nordic-text-muted;
       margin-bottom: 36px;
     }
   }

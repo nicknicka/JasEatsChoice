@@ -1010,9 +1010,11 @@ onMounted(async () => {
 </script>
 
 <style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+
 .contacts-container {
-  padding: 24px;
-  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  padding: @nordic-space-lg;
+  background: linear-gradient(135deg, @nordic-bg 0%, @nordic-surface 100%);
   min-height: calc(100vh - 100px);
   position: relative;
   overflow-x: hidden;
@@ -1024,8 +1026,8 @@ onMounted(async () => {
     left: 0;
     right: 0;
     bottom: 0;
-    background: radial-gradient(circle at 20% 30%, rgba(59, 130, 246, 0.06) 0%, transparent 50%),
-                radial-gradient(circle at 80% 70%, rgba(96, 165, 250, 0.06) 0%, transparent 50%);
+    background: radial-gradient(circle at 20% 30%, rgba(212, 132, 90, 0.06) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(212, 132, 90, 0.06) 0%, transparent 50%);
     pointer-events: none;
     z-index: 0;
   }
@@ -1039,40 +1041,40 @@ onMounted(async () => {
 // 好友请求区域
 .friend-requests-section {
   margin-bottom: 20px;
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  background: @nordic-surface;
+  border-radius: @nordic-radius-lg;
+  box-shadow: 0 4px 20px @nordic-shadow;
   overflow: hidden;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all @nordic-transition-slow cubic-bezier(0.4, 0, 0.2, 1);
 
   &:hover {
-    box-shadow: 0 8px 30px rgba(59, 130, 246, 0.2);
+    box-shadow: 0 8px 30px rgba(212, 132, 90, 0.15);
   }
 
   .section-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 16px 24px;
-    background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
-    border-bottom: 1px solid #e4e7ed;
+    padding: @nordic-space-md @nordic-space-lg;
+    background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-light 100%);
+    border-bottom: 1px solid @nordic-border;
 
     .section-title {
       display: flex;
       align-items: center;
       margin: 0;
-      font-size: 1.143rem /* 原值: 16px */;
+      font-size: @nordic-text-md;
       font-weight: 600;
-      color: #fff;
+      color: @nordic-surface;
 
       .title-icon {
-        margin-right: 8px;
-        font-size: 1.429rem /* 原值: 20px */;
+        margin-right: @nordic-space-sm;
+        font-size: @nordic-text-lg;
       }
     }
 
     :deep(.el-button) {
-      color: #fff;
+      color: @nordic-surface;
       font-weight: 500;
 
       &:hover {
@@ -1080,7 +1082,7 @@ onMounted(async () => {
       }
 
       .el-icon {
-        transition: transform 0.3s ease;
+        transition: transform @nordic-transition-slow ease;
 
         &.rotate-180 {
           transform: rotate(180deg);
@@ -1090,25 +1092,25 @@ onMounted(async () => {
   }
 
   .requests-list {
-    padding: 16px;
+    padding: @nordic-space-md;
     display: flex;
     flex-direction: column;
     gap: 12px;
-    background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
+    background: linear-gradient(135deg, @nordic-bg 0%, @nordic-surface 100%);
 
     .request-card {
-      border-radius: 12px;
-      border: 2px solid #e4e7ed;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: @nordic-radius-md;
+      border: 2px solid @nordic-border;
+      transition: all @nordic-transition-slow cubic-bezier(0.4, 0, 0.2, 1);
 
       &:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(59, 130, 246, 0.2);
-        border-color: #3b82f6;
+        box-shadow: 0 8px 24px rgba(212, 132, 90, 0.15);
+        border-color: @nordic-accent;
       }
 
       :deep(.el-card__body) {
-        padding: 16px;
+        padding: @nordic-space-md;
       }
 
       .request-content {
@@ -1120,16 +1122,16 @@ onMounted(async () => {
         .requester-info {
           display: flex;
           align-items: center;
-          gap: 16px;
+          gap: @nordic-space-md;
           flex: 1;
 
           .requester-avatar {
             width: 56px;
             height: 56px;
-            border-radius: 12px;
+            border-radius: @nordic-radius-md;
             overflow: hidden;
-            background: #f5f7fa;
-            border: 2px solid #e4e7ed;
+            background: @nordic-bg;
+            border: 2px solid @nordic-border;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1142,7 +1144,7 @@ onMounted(async () => {
             }
 
             .avatar-emoji {
-              font-size: 2.286rem /* 原值: 32px */;
+              font-size: 2.286rem;
             }
           }
 
@@ -1150,21 +1152,21 @@ onMounted(async () => {
             flex: 1;
 
             .requester-name {
-              font-size: 1.071rem /* 原值: 15px */;
+              font-size: @nordic-text-md - 1px;
               font-weight: 600;
-              color: #303133;
+              color: @nordic-text;
               margin: 0 0 6px 0;
             }
 
             .requester-id {
-              font-size: 0.857rem /* 原值: 12px */;
-              color: #909399;
+              font-size: @nordic-text-xs;
+              color: @nordic-text-muted;
               margin: 0 0 4px 0;
             }
 
             .request-time {
-              font-size: 0.857rem /* 原值: 12px */;
-              color: #c0c4cc;
+              font-size: @nordic-text-xs;
+              color: @nordic-text-muted;
               margin: 0;
             }
           }
@@ -1176,19 +1178,19 @@ onMounted(async () => {
           flex-shrink: 0;
 
           :deep(.el-button) {
-            border-radius: 10px;
+            border-radius: @nordic-radius-sm;
             padding: 10px 20px;
             font-weight: 500;
-            transition: all 0.3s ease;
+            transition: all @nordic-transition-slow ease;
 
             &:hover {
               transform: translateY(-2px);
-              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+              box-shadow: 0 4px 12px @nordic-shadow-hover;
             }
           }
 
           .el-button--primary {
-            background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+            background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-light 100%);
             border: none;
           }
         }
@@ -1202,36 +1204,36 @@ onMounted(async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  padding: 20px 24px;
-  background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
-  border-radius: 16px;
-  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.35);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-bottom: @nordic-space-lg;
+  padding: 20px @nordic-space-lg;
+  background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-light 100%);
+  border-radius: @nordic-radius-lg;
+  box-shadow: 0 8px 24px rgba(212, 132, 90, 0.35);
+  transition: all @nordic-transition-slow cubic-bezier(0.4, 0, 0.2, 1);
 
   &:hover {
-    box-shadow: 0 12px 32px rgba(59, 130, 246, 0.45);
+    box-shadow: 0 12px 32px rgba(212, 132, 90, 0.45);
     transform: translateY(-2px);
   }
 
   .header-content {
     display: flex;
     align-items: center;
-    gap: 32px;
+    gap: @nordic-space-xl;
   }
 
   .page-title {
     display: flex;
     align-items: center;
     margin: 0;
-    color: #fff;
-    font-size: 1.714rem /* 原值: 24px */;
+    color: @nordic-surface;
+    font-size: @nordic-text-xl;
     font-weight: 700;
     letter-spacing: 0.5px;
 
     .title-icon {
       margin-right: 12px;
-      font-size: 2rem /* 原值: 28px */;
+      font-size: 2rem;
       animation: icon-pulse 2s ease-in-out infinite;
     }
   }
@@ -1239,27 +1241,27 @@ onMounted(async () => {
   .header-stats {
     display: flex;
     align-items: center;
-    gap: 16px;
-    padding: 8px 16px;
+    gap: @nordic-space-md;
+    padding: @nordic-space-sm @nordic-space-md;
     background: rgba(255, 255, 255, 0.15);
-    border-radius: 10px;
+    border-radius: @nordic-radius-sm;
     backdrop-filter: blur(10px);
 
     .stat-item {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: @nordic-space-sm;
 
       .stat-label {
-        font-size: 0.929rem /* 原值: 13px */;
+        font-size: @nordic-text-sm;
         color: rgba(255, 255, 255, 0.9);
         font-weight: 500;
       }
 
       .stat-value {
-        font-size: 1.286rem /* 原值: 18px */;
+        font-size: @nordic-text-lg;
         font-weight: 700;
-        color: #fff;
+        color: @nordic-surface;
       }
     }
 
@@ -1274,17 +1276,17 @@ onMounted(async () => {
     :deep(.el-button) {
       background: rgba(255, 255, 255, 0.25);
       border: 1px solid rgba(255, 255, 255, 0.4);
-      color: #fff;
+      color: @nordic-surface;
       font-weight: 600;
-      padding: 12px 24px;
-      font-size: 1rem /* 原值: 14px */;
+      padding: 12px @nordic-space-lg;
+      font-size: @nordic-text-base;
       backdrop-filter: blur(10px);
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: all @nordic-transition-slow cubic-bezier(0.4, 0, 0.2, 1);
 
       &:hover {
         background: rgba(255, 255, 255, 0.35);
         transform: translateY(-2px) scale(1.02);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        box-shadow: 0 4px 12px @nordic-shadow-hover;
       }
 
       &:active {

@@ -948,14 +948,16 @@ const confirmOrder = async () => {
 </script>
 
 <style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+
 .order-confirmation-container {
   min-height: 100vh;
-  background: #f5f7fa;
-  padding-bottom: 100px; // 为底部栏留出空间
+  background: @nordic-bg;
+  padding-bottom: 100px;
 
   .page-header {
-    background: #fff;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    background: @nordic-surface;
+    box-shadow: 0 2px 8px @nordic-shadow;
     position: sticky;
     top: 0;
     z-index: 100;
@@ -963,22 +965,22 @@ const confirmOrder = async () => {
     .header-content {
       max-width: 1200px;
       margin: 0 auto;
-      padding: 16px 24px;
+      padding: @nordic-space-md @nordic-space-lg;
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: @nordic-space-md;
 
       .page-title {
-        font-size: 1.429rem /* 原值: 20px */;
+        font-size: @nordic-text-lg;
         font-weight: 600;
         margin: 0;
-        color: #2c3e50;
+        color: @nordic-text;
         display: flex;
         align-items: center;
         gap: 12px;
 
         .chat-tag {
-          font-size: 1rem /* 原值: 14px */;
+          font-size: @nordic-text-base;
         }
       }
     }
@@ -986,23 +988,23 @@ const confirmOrder = async () => {
 
   .main-content {
     max-width: 1200px;
-    margin: 24px auto;
-    padding: 0 24px;
+    margin: @nordic-space-lg auto;
+    padding: 0 @nordic-space-lg;
 
     .content-left {
       display: flex;
       flex-direction: column;
-      gap: 20px;
+      gap: @nordic-space-md + 4px;
     }
   }
 
   .info-card {
-    border-radius: 12px;
-    border: none;
+    .nordic-card();
+    border-radius: @nordic-radius-lg;
 
     :deep(.el-card__header) {
-      padding: 16px 20px;
-      border-bottom: 1px solid #f0f0f0;
+      padding: @nordic-space-md 20px;
+      border-bottom: 1px solid @nordic-divider;
     }
 
     :deep(.el-card__body) {
@@ -1015,9 +1017,9 @@ const confirmOrder = async () => {
       align-items: center;
 
       .card-title {
-        font-size: 1.143rem /* 原值: 16px */;
+        font-size: @nordic-text-md;
         font-weight: 600;
-        color: #2c3e50;
+        color: @nordic-text;
       }
     }
   }
@@ -1026,43 +1028,43 @@ const confirmOrder = async () => {
   .merchant-card {
     .merchant-info {
       display: flex;
-      gap: 16px;
+      gap: @nordic-space-md;
       align-items: center;
 
       .merchant-avatar {
         width: 60px;
         height: 60px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 12px;
+        background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
+        border-radius: @nordic-radius-lg;
         display: flex;
         align-items: center;
         justify-content: center;
-        color: #fff;
+        color: @nordic-white;
       }
 
       .merchant-details {
         flex: 1;
 
         .merchant-name {
-          font-size: 1.286rem /* 原值: 18px */;
+          font-size: @nordic-text-md + 2px;
           font-weight: 600;
-          color: #2c3e50;
-          margin-bottom: 8px;
+          color: @nordic-text;
+          margin-bottom: @nordic-space-sm;
         }
 
         .merchant-meta {
           display: flex;
           align-items: center;
-          gap: 8px;
-          font-size: 1rem /* 原值: 14px */;
-          color: #7f8c8d;
+          gap: @nordic-space-sm;
+          font-size: @nordic-text-base;
+          color: @nordic-text-secondary;
 
           .separator {
-            color: #dcdfe6;
+            color: @nordic-border;
           }
 
           .pickup-type {
-            color: #67c23a;
+            color: @nordic-green;
             font-weight: 500;
           }
         }
@@ -1072,23 +1074,23 @@ const confirmOrder = async () => {
 
   // 自取提示卡片
   .pickup-card {
-    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-    border: 1px solid #bae6fd;
+    background: linear-gradient(135deg, @nordic-blue-light 0%, @nordic-blue-light 100%);
+    border: 1px solid @nordic-blue;
 
     .pickup-info {
       display: flex;
-      gap: 16px;
+      gap: @nordic-space-md;
       align-items: flex-start;
 
       .pickup-icon {
         width: 56px;
         height: 56px;
-        background: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);
-        border-radius: 12px;
+        background: linear-gradient(135deg, @nordic-green 0%, lighten(@nordic-green, 8%) 100%);
+        border-radius: @nordic-radius-lg;
         display: flex;
         align-items: center;
         justify-content: center;
-        color: #fff;
+        color: @nordic-white;
         flex-shrink: 0;
       }
 
@@ -1096,29 +1098,29 @@ const confirmOrder = async () => {
         flex: 1;
 
         .pickup-title {
-          font-size: 1.143rem /* 原值: 16px */;
+          font-size: @nordic-text-md;
           font-weight: 600;
-          color: #2c3e50;
-          margin-bottom: 8px;
+          color: @nordic-text;
+          margin-bottom: @nordic-space-sm;
         }
 
         .pickup-desc {
-          font-size: 1rem /* 原值: 14px */;
-          color: #5a6c7d;
+          font-size: @nordic-text-base;
+          color: @nordic-text-secondary;
           margin-bottom: 6px;
           line-height: 1.5;
         }
 
         .pickup-time {
-          font-size: 0.929rem /* 原值: 13px */;
-          color: #7f8c8d;
+          font-size: @nordic-text-sm;
+          color: @nordic-text-secondary;
           display: flex;
           align-items: center;
-          gap: 4px;
+          gap: @nordic-space-xs;
 
           &::before {
             content: '⏱';
-            font-size: 1rem /* 原值: 14px */;
+            font-size: @nordic-text-base;
           }
         }
       }
@@ -1132,19 +1134,19 @@ const confirmOrder = async () => {
       justify-content: space-between;
       align-items: center;
       padding: 12px 0;
-      border-bottom: 1px solid #f5f7fa;
+      border-bottom: 1px solid @nordic-divider;
 
       &:last-child {
         border-bottom: none;
       }
 
       .label {
-        color: #7f8c8d;
-        font-size: 1rem /* 原值: 14px */;
+        color: @nordic-text-secondary;
+        font-size: @nordic-text-base;
       }
 
       .value {
-        color: #2c3e50;
+        color: @nordic-text;
         font-weight: 500;
       }
 
@@ -1152,37 +1154,37 @@ const confirmOrder = async () => {
         display: flex;
         justify-content: space-around;
         padding: 20px 0;
-        margin-top: 8px;
-        background: #f8f9fa;
-        border-radius: 8px;
+        margin-top: @nordic-space-sm;
+        background: @nordic-bg;
+        border-radius: @nordic-radius-sm;
 
         .amount-item {
           text-align: center;
           flex: 1;
 
           .amount-label {
-            font-size: 0.929rem /* 原值: 13px */;
-            color: #7f8c8d;
-            margin-bottom: 8px;
+            font-size: @nordic-text-sm;
+            color: @nordic-text-secondary;
+            margin-bottom: @nordic-space-sm;
           }
 
           .amount-value {
-            font-size: 1.714rem /* 原值: 24px */;
+            font-size: @nordic-text-xl;
             font-weight: 700;
 
             &.paid {
-              color: #67c23a;
+              color: @nordic-green;
             }
 
             &.unpaid {
-              color: #e6a23c;
+              color: @nordic-yellow;
             }
           }
         }
 
         .amount-divider {
           width: 1px;
-          background: #dcdfe6;
+          background: @nordic-border;
         }
       }
     }
@@ -1197,13 +1199,13 @@ const confirmOrder = async () => {
     .section-header {
       display: flex;
       align-items: center;
-      gap: 8px;
-      margin-bottom: 16px;
+      gap: @nordic-space-sm;
+      margin-bottom: @nordic-space-md;
 
       .section-title {
-        font-size: 1.071rem /* 原值: 15px */;
+        font-size: @nordic-text-base + 1px;
         font-weight: 600;
-        color: #2c3e50;
+        color: @nordic-text;
         flex: 1;
       }
     }
@@ -1219,39 +1221,39 @@ const confirmOrder = async () => {
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 16px;
-      border: 2px solid #e4e7ed;
-      border-radius: 8px;
+      padding: @nordic-space-md;
+      border: 2px solid @nordic-border;
+      border-radius: @nordic-radius-sm;
       cursor: pointer;
-      transition: all 0.3s;
+      transition: all @nordic-transition-slow;
 
       &:hover {
-        border-color: #409eff;
-        background: #f5f7fa;
+        border-color: @nordic-blue;
+        background: @nordic-bg;
       }
 
       &.active {
-        border-color: #409eff;
-        background: rgba(64, 158, 255, 0.05);
+        border-color: @nordic-blue;
+        background: @nordic-blue-light;
       }
 
       .method-icon {
-        font-size: 2rem /* 原值: 28px */;
+        font-size: @nordic-text-xl;
       }
 
       .method-info {
         flex: 1;
 
         .method-name {
-          font-size: 1.071rem /* 原值: 15px */;
+          font-size: @nordic-text-base + 1px;
           font-weight: 500;
-          color: #2c3e50;
+          color: @nordic-text;
         }
 
         .method-desc {
-          font-size: 0.929rem /* 原值: 13px */;
-          color: #7f8c8d;
-          margin-top: 4px;
+          font-size: @nordic-text-sm;
+          color: @nordic-text-secondary;
+          margin-top: @nordic-space-xs;
         }
       }
     }
@@ -1263,27 +1265,27 @@ const confirmOrder = async () => {
       margin-bottom: 12px;
 
       :deep(.el-textarea__inner) {
-        border-radius: 8px;
-        font-size: 1rem /* 原值: 14px */;
+        border-radius: @nordic-radius-sm;
+        font-size: @nordic-text-base;
         padding: 12px;
-        background: #fafafa;
-        transition: all 0.3s;
+        background: @nordic-bg;
+        transition: all @nordic-transition-slow;
 
         &:focus {
-          background: #fff;
-          border-color: #409eff;
-          box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.1);
+          background: @nordic-surface;
+          border-color: @nordic-blue;
+          box-shadow: 0 0 0 2px @nordic-blue-light;
         }
 
         &::placeholder {
-          color: #bbb;
-          font-size: 0.929rem /* 原值: 13px */;
+          color: @nordic-text-muted;
+          font-size: @nordic-text-sm;
         }
       }
 
       :deep(.el-input__count) {
-        font-size: 0.857rem /* 原值: 12px */;
-        color: #999;
+        font-size: @nordic-text-xs;
+        color: @nordic-text-muted;
         background: transparent;
       }
     }
@@ -1292,25 +1294,25 @@ const confirmOrder = async () => {
       display: flex;
       align-items: center;
       flex-wrap: wrap;
-      gap: 8px;
-      padding-top: 8px;
-      border-top: 1px solid #f0f0f0;
+      gap: @nordic-space-sm;
+      padding-top: @nordic-space-sm;
+      border-top: 1px solid @nordic-divider;
 
       .quick-remark-label {
-        font-size: 0.929rem /* 原值: 13px */;
-        color: #7f8c8d;
+        font-size: @nordic-text-sm;
+        color: @nordic-text-secondary;
         font-weight: 500;
       }
 
       .quick-remark-tag {
         cursor: pointer;
-        transition: all 0.3s;
+        transition: all @nordic-transition-slow;
         user-select: none;
 
         &:hover {
-          background: #409eff;
-          color: #fff;
-          border-color: #409eff;
+          background: @nordic-blue;
+          color: @nordic-white;
+          border-color: @nordic-blue;
           transform: translateY(-1px);
         }
 
@@ -1328,19 +1330,19 @@ const confirmOrder = async () => {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 8px 0;
+        padding: @nordic-space-sm 0;
 
         .detail-label {
-          color: #7f8c8d;
-          font-size: 1rem /* 原值: 14px */;
+          color: @nordic-text-secondary;
+          font-size: @nordic-text-base;
         }
 
         .detail-value {
-          color: #2c3e50;
+          color: @nordic-text;
           font-weight: 500;
 
           &.discount {
-            color: #f56c6c;
+            color: @nordic-red;
           }
         }
 
@@ -1348,33 +1350,33 @@ const confirmOrder = async () => {
           padding-top: 12px;
 
           .total-label {
-            font-size: 1.143rem /* 原值: 16px */;
+            font-size: @nordic-text-md;
             font-weight: 600;
-            color: #2c3e50;
+            color: @nordic-text;
           }
 
           .total-value {
-            font-size: 2rem /* 原值: 28px */;
+            font-size: @nordic-text-xl;
             font-weight: 700;
-            color: #e6a23c;
+            color: @nordic-yellow;
           }
         }
       }
     }
 
     .coupon-section {
-      margin: 16px 0;
+      margin: @nordic-space-md 0;
 
       .coupon-item {
         display: flex;
         flex-direction: column;
         gap: 12px;
-        padding: 16px;
-        background: linear-gradient(135deg, #fff9e6 0%, #fff3cd 100%);
-        border: 1px solid #ffe58f;
-        border-radius: 12px;
+        padding: @nordic-space-md;
+        background: linear-gradient(135deg, @nordic-yellow-light 0%, @nordic-yellow-light 100%);
+        border: 1px solid @nordic-yellow;
+        border-radius: @nordic-radius-lg;
         margin-bottom: 12px;
-        transition: all 0.3s ease;
+        transition: all @nordic-transition-slow ease;
 
         &:last-child {
           margin-bottom: 0;
@@ -1382,7 +1384,7 @@ const confirmOrder = async () => {
 
         &:hover {
           transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(230, 162, 60, 0.2);
+          box-shadow: 0 4px 12px @nordic-shadow-hover;
         }
 
         .coupon-info-main {
@@ -1395,35 +1397,35 @@ const confirmOrder = async () => {
             flex: 1;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: @nordic-space-2sm;
 
             .el-icon {
-              font-size: 1.714rem /* 原值: 24px */;
+              font-size: @nordic-text-xl;
             }
 
             .coupon-details {
               display: flex;
               flex-direction: column;
-              gap: 4px;
+              gap: @nordic-space-xs;
 
               .coupon-name {
-                font-size: 1.071rem /* 原值: 15px */;
+                font-size: @nordic-text-base + 1px;
                 font-weight: 600;
-                color: #856404;
+                color: @nordic-yellow-dark;
               }
 
               .coupon-desc {
-                font-size: 0.857rem /* 原值: 12px */;
-                color: #a67c00;
+                font-size: @nordic-text-xs;
+                color: @nordic-yellow-dark;
               }
             }
           }
 
           .coupon-amount {
-            font-size: 1.429rem /* 原值: 20px */;
+            font-size: @nordic-text-lg;
             font-weight: 700;
-            color: #e6a23c;
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            color: @nordic-yellow;
+            text-shadow: 0 1px 2px @nordic-shadow;
           }
         }
       }
@@ -1435,18 +1437,18 @@ const confirmOrder = async () => {
         justify-content: space-between;
         align-items: center;
         padding: 10px 12px;
-        background: #f0f9ff;
-        border-radius: 6px;
+        background: @nordic-blue-light;
+        border-radius: @nordic-radius-sm;
 
         .balance-label {
-          font-size: 0.929rem /* 原值: 13px */;
-          color: #7f8c8d;
+          font-size: @nordic-text-sm;
+          color: @nordic-text-secondary;
         }
 
         .balance-value {
-          font-size: 1.071rem /* 原值: 15px */;
+          font-size: @nordic-text-base + 1px;
           font-weight: 600;
-          color: #67c23a;
+          color: @nordic-green;
         }
       }
     }
@@ -1458,10 +1460,10 @@ const confirmOrder = async () => {
     align-items: center;
     gap: 6px;
     padding: 12px;
-    background: #f8f9fa;
-    border-radius: 6px;
-    font-size: 0.929rem /* 原值: 13px */;
-    color: #7f8c8d;
+    background: @nordic-bg;
+    border-radius: @nordic-radius-sm;
+    font-size: @nordic-text-sm;
+    color: @nordic-text-secondary;
     text-align: center;
     justify-content: center;
   }
@@ -1474,18 +1476,18 @@ const confirmOrder = async () => {
   left: 0;
   right: 0;
   z-index: 999;
-  background: #fff;
-  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
-  border-top: 1px solid #e4e7ed;
+  background: @nordic-surface;
+  box-shadow: 0 -2px 12px @nordic-shadow-hover;
+  border-top: 1px solid @nordic-border;
 
   .submit-bar-content {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 16px 24px;
+    padding: @nordic-space-md @nordic-space-lg;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 24px;
+    gap: @nordic-space-lg;
 
     @media (max-width: 768px) {
       flex-direction: column;
@@ -1498,9 +1500,9 @@ const confirmOrder = async () => {
       .payment-tips {
         display: flex;
         align-items: center;
-        gap: 8px;
-        font-size: 1rem /* 原值: 14px */;
-        color: #7f8c8d;
+        gap: @nordic-space-sm;
+        font-size: @nordic-text-base;
+        color: @nordic-text-secondary;
         text-align: left;
         justify-content: flex-start;
         padding: 0;
@@ -1512,7 +1514,7 @@ const confirmOrder = async () => {
     .submit-bar-right {
       display: flex;
       align-items: center;
-      gap: 24px;
+      gap: @nordic-space-lg;
 
       @media (max-width: 768px) {
         width: 100%;
@@ -1527,31 +1529,31 @@ const confirmOrder = async () => {
         }
 
         .total-label {
-          font-size: 1rem /* 原值: 14px */;
-          color: #7f8c8d;
-          margin-right: 8px;
+          font-size: @nordic-text-base;
+          color: @nordic-text-secondary;
+          margin-right: @nordic-space-sm;
         }
 
         .total-amount {
-          font-size: 2rem /* 原值: 28px */;
+          font-size: @nordic-text-xl;
           font-weight: 700;
-          color: #e6a23c;
+          color: @nordic-yellow;
         }
       }
 
       .submit-button-fixed {
         min-width: 180px;
         height: 48px;
-        font-size: 1.143rem /* 原值: 16px */;
+        font-size: @nordic-text-md;
         font-weight: 600;
-        border-radius: 24px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: @nordic-radius-pill;
+        background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
         border: none;
-        box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+        box-shadow: 0 4px 16px @nordic-shadow-hover;
 
         &:hover {
-          background: linear-gradient(135deg, #7c8ff0 0%, #865aba 100%);
-          box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+          background: linear-gradient(135deg, lighten(@nordic-accent, 5%) 0%, lighten(@nordic-accent-dark, 5%) 100%);
+          box-shadow: 0 6px 20px @nordic-shadow-hover;
           transform: translateY(-2px);
         }
 
@@ -1562,7 +1564,7 @@ const confirmOrder = async () => {
         @media (max-width: 768px) {
           min-width: 140px;
           height: 44px;
-          font-size: 1.071rem /* 原值: 15px */;
+          font-size: @nordic-text-base + 1px;
         }
       }
     }
@@ -1579,8 +1581,8 @@ const confirmOrder = async () => {
     justify-content: space-between;
     align-items: flex-start;
     padding: 12px;
-    border: 1px solid #f0f0f0;
-    border-radius: 8px;
+    border: 1px solid @nordic-divider;
+    border-radius: @nordic-radius-sm;
     margin-bottom: 12px;
 
     &:last-child {
@@ -1592,53 +1594,53 @@ const confirmOrder = async () => {
       padding-right: 12px;
 
       .item-name {
-        font-size: 1.071rem /* 原值: 15px */;
+        font-size: @nordic-text-base + 1px;
         font-weight: 500;
-        color: #2c3e50;
+        color: @nordic-text;
         margin-bottom: 6px;
       }
 
       .item-price {
-        font-size: 1rem /* 原值: 14px */;
-        color: #7f8c8d;
-        margin-bottom: 8px;
+        font-size: @nordic-text-base;
+        color: @nordic-text-secondary;
+        margin-bottom: @nordic-space-sm;
       }
 
       .item-specs {
         display: flex;
         flex-wrap: wrap;
         gap: 6px;
-        margin-bottom: 8px;
+        margin-bottom: @nordic-space-sm;
 
         .ingredient-tag {
-          font-size: 0.857rem /* 原值: 12px */;
+          font-size: @nordic-text-xs;
         }
       }
 
       .item-note-edit {
-        margin-top: 8px;
+        margin-top: @nordic-space-sm;
 
         :deep(.el-textarea__inner) {
-          border-radius: 6px;
-          font-size: 0.929rem /* 原值: 13px */;
-          padding: 8px 12px;
-          background: #fafafa;
-          transition: all 0.3s;
+          border-radius: @nordic-radius-sm;
+          font-size: @nordic-text-sm;
+          padding: @nordic-space-sm 12px;
+          background: @nordic-bg;
+          transition: all @nordic-transition-slow;
 
           &:focus {
-            background: #fff;
-            border-color: #409eff;
+            background: @nordic-surface;
+            border-color: @nordic-blue;
           }
 
           &::placeholder {
-            color: #bbb;
-            font-size: 0.857rem /* 原值: 12px */;
+            color: @nordic-text-muted;
+            font-size: @nordic-text-xs;
           }
         }
 
         :deep(.el-input__count) {
-          font-size: 0.75rem /* 原值: 11px */;
-          color: #999;
+          font-size: 11px;
+          color: @nordic-text-muted;
           background: transparent;
         }
       }
@@ -1650,9 +1652,9 @@ const confirmOrder = async () => {
       gap: 12px;
 
       .item-total {
-        font-size: 1.143rem /* 原值: 16px */;
+        font-size: @nordic-text-md;
         font-weight: 600;
-        color: #e6a23c;
+        color: @nordic-yellow;
         min-width: 80px;
         text-align: right;
       }
@@ -1672,10 +1674,10 @@ const confirmOrder = async () => {
     .info-item {
       display: flex;
       justify-content: space-between;
-      margin-bottom: 16px;
+      margin-bottom: @nordic-space-md;
       padding: 12px;
-      background: #f8f9fa;
-      border-radius: 6px;
+      background: @nordic-bg;
+      border-radius: @nordic-radius-sm;
 
       &:last-child {
         margin-bottom: 0;
@@ -1683,18 +1685,18 @@ const confirmOrder = async () => {
 
       .info-label {
         font-weight: 500;
-        color: #7f8c8d;
+        color: @nordic-text-secondary;
       }
 
       .info-value {
-        font-size: 1.143rem /* 原值: 16px */;
-        color: #2c3e50;
+        font-size: @nordic-text-md;
+        color: @nordic-text;
         font-weight: 500;
 
         &.highlight {
-          color: #e6a23c;
+          color: @nordic-yellow;
           font-weight: 600;
-          font-size: 1.429rem /* 原值: 20px */;
+          font-size: @nordic-text-lg;
         }
       }
     }
@@ -1712,17 +1714,17 @@ const confirmOrder = async () => {
       display: flex;
       justify-content: space-between;
       padding: 12px;
-      background: #f8f9fa;
-      border-radius: 6px;
+      background: @nordic-bg;
+      border-radius: @nordic-radius-sm;
 
       .info-label {
         font-weight: 500;
-        color: #7f8c8d;
+        color: @nordic-text-secondary;
       }
 
       .info-value {
-        font-size: 1.143rem /* 原值: 16px */;
-        color: #2c3e50;
+        font-size: @nordic-text-md;
+        color: @nordic-text;
         font-weight: 500;
       }
     }
@@ -1734,8 +1736,8 @@ const confirmOrder = async () => {
       justify-content: space-between;
       align-items: center;
       padding: 12px;
-      border: 1px solid #f0f0f0;
-      border-radius: 6px;
+      border: 1px solid @nordic-divider;
+      border-radius: @nordic-radius-sm;
       margin-bottom: 12px;
 
       &:last-child {
@@ -1744,7 +1746,7 @@ const confirmOrder = async () => {
 
       .member-name {
         font-weight: 500;
-        color: #2c3e50;
+        color: @nordic-text;
       }
     }
   }

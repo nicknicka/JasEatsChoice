@@ -1392,43 +1392,49 @@ defineExpose({
 })
 </script>
 
-<style scoped>
+<style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+
 /* 基础容器样式 */
 .profile-container {
-  padding: 0 20px 20px 20px;
+  padding: 0 @nordic-space-lg @nordic-space-lg @nordic-space-lg;
   min-height: 100vh;
+  background: @nordic-bg;
 }
 
 .loading-container {
   padding: 40px;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  background: @nordic-surface;
+  border-radius: @nordic-radius-lg;
+  box-shadow: 0 2px 8px @nordic-shadow;
 }
 
 .profile-card {
   padding: 25px;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  background-color: #fff;
+  border-radius: @nordic-radius-lg;
+  box-shadow: 0 1px 4px @nordic-shadow;
+  background-color: @nordic-surface;
+  border: 1px solid @nordic-border;
 }
 
 /* 标题样式 */
 .profile-container h2 {
-  font-size: 2rem /* 原值: 28px */;
-  margin: 0 0 25px 0;
-  color: #333;
+  font-size: @nordic-text-xl;
+  margin: 0 0 @nordic-space-lg 0;
+  color: @nordic-text;
   font-weight: 700;
+  letter-spacing: @nordic-letter-tight;
 }
 
 .module-title {
-  font-size: 1.286rem /* 原值: 18px */;
-  margin: 0 0 20px 0;
-  font-weight: 700;
-  color: #2d3748;
+  font-size: @nordic-text-md;
+  margin: 0 0 @nordic-space-lg 0;
+  font-weight: 600;
+  color: @nordic-text;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: @nordic-space-sm;
+  letter-spacing: -0.3px;
 }
 
 /* 顶部头像区域 */
@@ -1437,8 +1443,8 @@ defineExpose({
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 25px;
-  padding: 25px;
+  gap: @nordic-space-lg;
+  padding: @nordic-space-lg;
   flex-wrap: wrap;
 }
 
@@ -1448,14 +1454,13 @@ defineExpose({
 }
 
 .user-name {
-  font-size: 2.286rem /* 原值: 32px */;
+  font-size: @nordic-text-2xl;
   font-weight: 800;
   margin: 10px 0 20px 0;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  text-shadow: 2px 2px 4px rgba(102, 126, 234, 0.15);
   display: inline-block;
   letter-spacing: 1px;
   line-height: 1.2;
@@ -1479,20 +1484,20 @@ defineExpose({
 
 .user-info-section {
   min-width: 300px;
-  padding-right: 20px;
+  padding-right: @nordic-space-lg;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
 }
 
 .user-basic-info {
-  margin-bottom: 20px;
+  margin-bottom: @nordic-space-lg;
 }
 
 /* 用户统计信息 */
 .user-stats {
-  font-size: 1rem /* 原值: 14px */;
-  margin-bottom: 20px;
+  font-size: @nordic-text-base;
+  margin-bottom: @nordic-space-lg;
 }
 
 .stat-row {
@@ -1505,39 +1510,39 @@ defineExpose({
 .stat-item {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: @nordic-space-xs;
   text-align: center;
   min-width: clamp(120px, 20vw, 140px);
 }
 
 .stat-label {
-  font-size: 1rem /* 原值: 14px */;
+  font-size: @nordic-text-base;
   font-weight: 500;
-  color: #718096;
+  color: @nordic-text-secondary;
 }
 
 .user-stats .stat-label {
-  color: #606266;
+  color: @nordic-text-secondary;
   margin-bottom: 5px;
 }
 
 .stat-value {
-  font-size: 1.286rem /* 原值: 18px */;
+  font-size: @nordic-text-md;
   font-weight: 600;
-  color: #2d3748;
+  color: @nordic-text;
 }
 
 .user-stats .stat-value {
   font-weight: bold;
-  color: #ff6b6b;
+  color: @nordic-red;
 }
 
 .calorie-highlight {
-  color: #ff6b6b;
+  color: @nordic-red;
 }
 
 .balance-highlight {
-  color: #48bb78;
+  color: @nordic-green;
 }
 
 /* 操作按钮 */
@@ -1549,78 +1554,80 @@ defineExpose({
 }
 
 .action-btn {
-  transition: all 0.2s ease;
+  transition: all @nordic-transition-fast ease;
 }
 
 .action-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px @nordic-shadow-hover;
 }
 
 /* 订单统计 */
 .order-stats {
   display: flex;
   flex-wrap: wrap;
-  gap: 20px;
-  margin-bottom: 20px;
+  gap: @nordic-space-lg;
+  margin-bottom: @nordic-space-lg;
 }
 
 .order-stat-card {
   flex: 1;
   min-width: 140px;
-  padding: 20px;
-  background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
-  border-radius: 12px;
+  padding: @nordic-space-lg;
+  background: @nordic-surface;
+  border-radius: @nordic-radius-lg;
+  border: 1px solid @nordic-border;
   text-align: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 4px @nordic-shadow;
   transition:
-    transform 0.3s ease,
-    box-shadow 0.3s ease;
+    transform @nordic-transition-slow ease,
+    box-shadow @nordic-transition-slow ease;
   cursor: pointer;
-}
 
-.order-stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-}
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px @nordic-shadow-hover;
+  }
 
-.order-stat-card .stat-value {
-  font-size: 2.286rem /* 原值: 32px */;
-  color: #2d3748;
-  margin-bottom: 6px;
-}
+  .stat-value {
+    font-size: @nordic-text-2xl;
+    color: @nordic-text;
+    margin-bottom: 6px;
+  }
 
-.order-stat-card .stat-label {
-  font-size: 1rem /* 原值: 14px */;
-  color: #718096;
-  margin-bottom: 2px;
+  .stat-label {
+    font-size: @nordic-text-base;
+    color: @nordic-text-secondary;
+    margin-bottom: 2px;
+  }
 }
 
 .order-in-progress {
-  color: #2b6cb0;
+  color: @nordic-blue;
 }
 
 .order-pending {
-  color: #dd6b20;
+  color: @nordic-yellow;
 }
 
 .order-pending-comment {
-  color: #805ad5;
+  color: @nordic-accent;
 }
 
 /* 钱包模块 */
 .wallet-card {
-  background: linear-gradient(135deg, #fef5e7 0%, #fdebd0 100%);
+  background: linear-gradient(135deg, @nordic-yellow-light 0%, @nordic-accent-light 100%);
   padding: 25px;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-radius: @nordic-radius-lg;
+  box-shadow: 0 1px 4px @nordic-shadow;
+  border: 1px solid @nordic-border;
   cursor: pointer;
-  transition: all 0.3s ease;
-}
+  transition: all @nordic-transition-slow ease;
 
-.wallet-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(214, 158, 46, 0.2);
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px @nordic-shadow-hover;
+  }
 }
 
 .wallet-header {
@@ -1631,34 +1638,34 @@ defineExpose({
 }
 
 .wallet-label {
-  font-size: 1.143rem /* 原值: 16px */;
-  color: #718096;
+  font-size: @nordic-text-md;
+  color: @nordic-text-secondary;
   font-weight: 500;
 }
 
 .wallet-hint {
-  font-size: 1rem /* 原值: 14px */;
-  color: #d69e2e;
+  font-size: @nordic-text-base;
+  color: @nordic-yellow-dark;
   font-weight: 500;
 }
 
 .wallet-balance {
   display: flex;
   align-items: baseline;
-  gap: 8px;
-  margin-bottom: 20px;
+  gap: @nordic-space-sm;
+  margin-bottom: @nordic-space-lg;
 }
 
 .balance-number {
-  font-size: 3.429rem /* 原值: 48px */;
+  font-size: 3.429rem;
   font-weight: 700;
-  color: #d69e2e;
+  color: @nordic-yellow-dark;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .balance-unit {
-  font-size: 1.286rem /* 原值: 18px */;
-  color: #d69e2e;
+  font-size: @nordic-text-md;
+  color: @nordic-yellow-dark;
   font-weight: 500;
 }
 
@@ -1666,7 +1673,7 @@ defineExpose({
   display: flex;
   gap: 30px;
   padding-top: 15px;
-  border-top: 1px solid rgba(214, 158, 46, 0.2);
+  border-top: 1px solid @nordic-divider;
   flex-wrap: wrap;
 }
 
@@ -1677,42 +1684,43 @@ defineExpose({
 }
 
 .summary-label {
-  font-size: 0.929rem /* 原值: 13px */;
-  color: #718096;
+  font-size: @nordic-text-sm;
+  color: @nordic-text-muted;
 }
 
 .summary-value {
-  font-size: 1.143rem /* 原值: 16px */;
+  font-size: @nordic-text-md;
   font-weight: 600;
-  color: #2d3748;
+  color: @nordic-text;
 }
 
 /* 其他模块 */
 .other-modules {
-  margin-bottom: 20px;
+  margin-bottom: @nordic-space-lg;
 }
 
 .module-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px;
+  gap: @nordic-space-lg;
 }
 
 .module-item-card {
-  background: linear-gradient(135deg, #ebf8ff 0%, #bee3f8 100%);
-  padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  background: @nordic-blue-light;
+  padding: @nordic-space-lg;
+  border-radius: @nordic-radius-lg;
+  border: 1px solid @nordic-border;
+  box-shadow: 0 1px 4px @nordic-shadow;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  transition: all 0.3s ease;
+  transition: all @nordic-transition-slow ease;
   cursor: pointer;
-}
 
-.module-item-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(190, 227, 248, 0.3);
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px @nordic-shadow-hover;
+  }
 }
 
 .module-item-content {
@@ -1727,88 +1735,82 @@ defineExpose({
   justify-content: center;
   width: 40px;
   height: 40px;
-  background: rgba(43, 108, 176, 0.1);
-  border-radius: 8px;
-  color: #2b6cb0;
+  background: fade(@nordic-blue, 12%);
+  border-radius: @nordic-radius-sm;
+  color: @nordic-blue;
 }
 
 .module-item-info {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: @nordic-space-xs;
 }
 
 .module-item-title {
-  font-size: 1.143rem /* 原值: 16px */;
+  font-size: @nordic-text-md;
   font-weight: 600;
-  color: #2b6cb0;
+  color: @nordic-blue;
 }
 
 .module-item-desc {
-  font-size: 1rem /* 原值: 14px */;
-  color: #718096;
+  font-size: @nordic-text-base;
+  color: @nordic-text-secondary;
 }
 
 .module-item-btn {
-  color: #2b6cb0;
+  color: @nordic-blue;
   font-weight: 600;
 }
 
 /* 底部操作按钮 */
 .bottom-actions {
-  margin-top: 30px;
+  margin-top: @nordic-space-xl;
   display: flex;
   flex-wrap: wrap;
   gap: 15px;
-}
 
-.bottom-actions .el-button {
-  flex: 1;
-  min-width: 120px;
-  height: 40px;
-  border-radius: 8px;
-  font-weight: 600;
-  transition: transform 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
+  .el-button {
+    flex: 1;
+    min-width: 120px;
+    height: 40px;
+    border-radius: @nordic-radius-sm;
+    font-weight: 600;
+    transition: transform @nordic-transition-fast ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
-.bottom-actions .el-button:hover {
-  transform: translateY(-2px);
-}
+    &:hover {
+      transform: translateY(-2px);
+    }
 
-.bottom-actions .el-button:nth-child(1) {
-  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
-  border: none;
-  color: #fff;
-}
+    &:nth-child(1) {
+      background: linear-gradient(135deg, @nordic-green 0%, @nordic-green-dark 100%);
+      border: none;
+      color: @nordic-surface;
+    }
 
-.bottom-actions .el-button:nth-child(2) {
-  background: linear-gradient(135deg, #9f7aea 0%, #805ad5 100%);
-  border: none;
-  color: #fff;
-}
-
-.bottom-actions .el-button:nth-child(3) {
-  background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
-  border: none;
-  color: #fff;
+    &:nth-child(2) {
+      background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
+      border: none;
+      color: @nordic-surface;
+    }
+  }
 }
 
 /* 分享对话框样式 */
 .share-content {
-  padding: 20px 0;
+  padding: @nordic-space-lg 0;
 }
 
 .share-link-section {
-  margin-bottom: 20px;
+  margin-bottom: @nordic-space-lg;
 }
 
 .section-title {
-  font-size: 1.143rem /* 原值: 16px */;
+  font-size: @nordic-text-md;
   font-weight: 600;
-  color: #333;
+  color: @nordic-text;
   margin-bottom: 15px;
 }
 
@@ -1823,7 +1825,7 @@ defineExpose({
 .qr-code-section {
   margin-top: 25px;
   padding-top: 25px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid @nordic-border;
 }
 
 .qr-code {
@@ -1836,12 +1838,12 @@ defineExpose({
 /* 单位提示 */
 .unit-hint {
   margin-left: 10px;
-  color: #909399;
-  font-size: 1rem /* 原值: 14px */;
+  color: @nordic-text-muted;
+  font-size: @nordic-text-base;
 }
 
 /* 响应式优化 */
-@media (max-width: 768px) {
+@media (max-width: @nordic-breakpoint-md) {
   .profile-content {
     flex-direction: column;
     align-items: center;

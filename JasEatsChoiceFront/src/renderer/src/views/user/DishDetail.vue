@@ -542,26 +542,28 @@ onMounted(() => {
 </script>
 
 <style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+
 .dish-detail-container {
-  padding: 0 20px 20px;
-  background: #f5f7fa;
+  padding: 0 @nordic-space-lg @nordic-space-lg;
+  background: @nordic-bg;
   min-height: calc(100vh - 80px);
 }
 
 .page-header {
   display: flex;
   align-items: center;
-  margin-bottom: 20px;
-  padding: 16px 20px;
-  background: #ffffff;
-  border-radius: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  margin-bottom: @nordic-space-lg;
+  padding: @nordic-space-md @nordic-space-lg;
+  background: @nordic-surface;
+  border-radius: @nordic-radius-lg;
+  box-shadow: 0 2px 8px @nordic-shadow;
 }
 
 .page-title {
-  font-size: 1.714rem /* 原值: 24px */;
+  font-size: @nordic-text-lg;
   margin: 0;
-  color: #2c3e50;
+  color: @nordic-text;
   font-weight: 600;
 }
 
@@ -572,14 +574,14 @@ onMounted(() => {
 .dish-detail-content {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: @nordic-space-lg;
 }
 
 .dish-image-card {
-  border-radius: 16px;
+  border-radius: @nordic-radius-lg;
   overflow: hidden;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-  background: #ffffff;
+  box-shadow: 0 2px 12px @nordic-shadow;
+  background: @nordic-surface;
 }
 
 .dish-image {
@@ -595,8 +597,8 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
+  color: @nordic-surface;
   font-size: 3.429rem /* 原值: 48px */;
 }
 
@@ -605,9 +607,9 @@ onMounted(() => {
 }
 
 .dish-info-card {
-  background: #ffffff;
-  border-radius: 16px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  background: @nordic-surface;
+  border-radius: @nordic-radius-lg;
+  box-shadow: 0 2px 12px @nordic-shadow;
   overflow: hidden;
 }
 
@@ -615,93 +617,93 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 24px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  padding: @nordic-space-lg 24px;
+  border-bottom: 1px solid @nordic-border;
 }
 
 .dish-name {
-  font-size: 1.714rem /* 原值: 24px */;
+  font-size: @nordic-text-lg;
   font-weight: 600;
-  color: #2c3e50;
+  color: @nordic-text;
   flex: 1;
-  margin-right: 16px;
+  margin-right: @nordic-space-md;
 }
 
 .dish-price-row {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: @nordic-space-sm;
 }
 
 .current-price {
   font-size: 2.286rem /* 原值: 32px */;
   font-weight: 700;
-  color: #ff6b6b;
+  color: @nordic-red;
 }
 
 .unit-price {
-  font-size: 1rem /* 原值: 14px */;
-  color: #7f8c8d;
+  font-size: @nordic-text-base;
+  color: @nordic-text-muted;
 }
 
 .dish-body {
-  padding: 24px;
+  padding: @nordic-space-lg;
 }
 
 .dish-meta {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  margin-bottom: 20px;
+  margin-bottom: @nordic-space-lg;
 }
 
 .meta-item {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 1rem /* 原值: 14px */;
+  font-size: @nordic-text-base;
 }
 
 .meta-item .label {
-  color: #7f8c8d;
+  color: @nordic-text-muted;
 }
 
 .meta-item .value {
-  color: #2c3e50;
+  color: @nordic-text;
   font-weight: 500;
 }
 
 .section-title {
-  font-size: 1.143rem /* 原值: 16px */;
+  font-size: @nordic-text-md;
   font-weight: 600;
-  color: #2c3e50;
-  margin-bottom: 16px;
+  color: @nordic-text;
+  margin-bottom: @nordic-space-md;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: @nordic-space-sm;
 }
 
 .section-title .el-icon {
-  color: #e6a23c;
+  color: @nordic-yellow;
 }
 
 .description-text {
-  color: #606266;
+  color: @nordic-text-secondary;
   line-height: 1.6;
 }
 
 .ingredients-section {
-  margin-bottom: 24px;
+  margin-bottom: @nordic-space-lg;
 }
 
 .ingredient-group {
-  margin-bottom: 20px;
+  margin-bottom: @nordic-space-lg;
 }
 
 .ingredient-group-title {
-  font-size: 1rem /* 原值: 14px */;
+  font-size: @nordic-text-base;
   font-weight: 600;
-  color: #333;
+  color: @nordic-text;
   margin-bottom: 12px;
   display: flex;
   align-items: center;
@@ -709,11 +711,11 @@ onMounted(() => {
 }
 
 .ingredient-group-title.required-group {
-  color: #e6a23c;
+  color: @nordic-yellow;
 }
 
 .ingredient-group-title.optional-group {
-  color: #67c23a;
+  color: @nordic-green;
 }
 
 .ingredients-list {
@@ -725,77 +727,77 @@ onMounted(() => {
 .optional-ingredient-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: #f5f7fa;
-  border-radius: 8px;
-  transition: all 0.3s;
+  gap: @nordic-space-sm;
+  padding: @nordic-space-sm 12px;
+  background: @nordic-bg;
+  border-radius: @nordic-radius-sm;
+  transition: all @nordic-transition-slow;
 }
 
 .optional-ingredient-item:hover {
-  background: #e8f4fd;
+  background: @nordic-blue-light;
   transform: translateY(-2px);
 }
 
 .ingredient-name {
-  font-size: 1rem /* 原值: 14px */;
-  color: #333;
+  font-size: @nordic-text-base;
+  color: @nordic-text;
   flex: 1;
 }
 
 .ingredient-price {
-  font-size: 0.857rem /* 原值: 12px */;
-  color: #ff6b6b;
+  font-size: @nordic-text-xs;
+  color: @nordic-red;
 }
 
 .allergen-tag {
-  margin-left: 4px;
+  margin-left: @nordic-space-xs;
 }
 
 .cooking-section {
-  margin-bottom: 24px;
+  margin-bottom: @nordic-space-lg;
 }
 
 .nutrition-section {
-  margin-bottom: 24px;
+  margin-bottom: @nordic-space-lg;
 }
 
 .nutrition-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
+  gap: @nordic-space-md;
 }
 
 .nutrition-item {
   padding: 12px;
-  background: #f9f9fa;
-  border-radius: 8px;
+  background: @nordic-bg;
+  border-radius: @nordic-radius-sm;
   text-align: center;
 }
 
 .nutrition-label {
-  font-size: 0.857rem /* 原值: 12px */;
-  color: #7f8c8d;
-  margin-bottom: 8px;
+  font-size: @nordic-text-xs;
+  color: @nordic-text-muted;
+  margin-bottom: @nordic-space-sm;
 }
 
 .nutrition-value {
-  font-size: 1.143rem /* 原值: 16px */;
+  font-size: @nordic-text-md;
   font-weight: 600;
-  color: #2c3e50;
+  color: @nordic-text;
 }
 
 .allergen-warning {
-  margin-bottom: 20px;
+  margin-bottom: @nordic-space-lg;
 }
 
 .alert-title {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 1.143rem /* 原值: 16px */;
+  gap: @nordic-space-sm;
+  font-size: @nordic-text-md;
   font-weight: 600;
-  color: #e6a23c;
+  color: @nordic-yellow;
 }
 
 .alert-icon {
@@ -804,21 +806,21 @@ onMounted(() => {
 
 .alert-content {
   line-height: 1.6;
-  color: #606266;
+  color: @nordic-text-secondary;
 }
 
 .tip {
-  margin-top: 8px;
-  font-size: 0.857rem /* 原值: 12px */;
-  color: #909399;
+  margin-top: @nordic-space-sm;
+  font-size: @nordic-text-xs;
+  color: @nordic-text-muted;
 }
 
 .dish-remark {
-  margin-bottom: 20px;
+  margin-bottom: @nordic-space-lg;
 }
 
 .remark-text {
-  color: #606266;
+  color: @nordic-text-secondary;
   line-height: 1.6;
   white-space: pre-wrap;
 }
@@ -826,14 +828,14 @@ onMounted(() => {
 .bottom-actions {
   position: sticky;
   bottom: 0;
-  background: #ffffff;
-  padding: 16px 24px;
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+  background: @nordic-surface;
+  padding: @nordic-space-md @nordic-space-lg;
+  border-top: 1px solid @nordic-border;
+  box-shadow: 0 -2px 10px @nordic-shadow;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 16px;
+  gap: @nordic-space-md;
 }
 
 .action-group {
@@ -849,15 +851,15 @@ onMounted(() => {
 .add-to-cart-btn,
 .remove-from-cart-btn {
   height: 40px;
-  padding: 0 24px;
+  padding: 0 @nordic-space-lg;
 }
 
 .back-btn {
   height: 40px;
-  padding: 0 32px;
+  padding: 0 @nordic-space-xl;
 }
 
-@media (max-width: 768px) {
+@media (max-width: @nordic-breakpoint-md) {
   .bottom-actions {
     flex-direction: column;
     align-items: stretch;

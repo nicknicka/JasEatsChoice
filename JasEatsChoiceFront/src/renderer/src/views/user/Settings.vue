@@ -1269,56 +1269,77 @@ const submitFeedbackForm = async () => {
 }
 </script>
 
-<style scoped>
+<style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+
 .settings-container {
-  padding: 0 20px 20px 20px;
+  padding: 0 @nordic-space-lg @nordic-space-lg @nordic-space-lg;
+  background: @nordic-bg;
+  min-height: 100%;
+
+  h2 {
+    font-size: @nordic-text-xl;
+    font-weight: 700;
+    color: @nordic-text;
+    margin: 0 0 @nordic-space-lg 0;
+    letter-spacing: @nordic-letter-tight;
+  }
+
+  .settings-card {
+    padding: @nordic-space-lg;
+    background: @nordic-surface;
+    border-radius: @nordic-radius-lg;
+    border: 1px solid @nordic-border;
+    box-shadow: 0 1px 4px @nordic-shadow;
+  }
+
+  .settings-section {
+    margin-bottom: @nordic-space-lg;
+
+    h3 {
+      font-size: @nordic-text-md;
+      margin: 0 0 @nordic-space-lg 0;
+      font-weight: 600;
+      color: @nordic-text;
+    }
+  }
+
+  .form-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+
+    .form-label {
+      width: 150px;
+      font-weight: 600;
+      color: @nordic-text;
+      font-size: @nordic-text-base;
+    }
+
+    .form-content {
+      flex: 1;
+      color: @nordic-text-secondary;
+      font-size: @nordic-text-base;
+    }
+  }
+
+  .settings-actions {
+    margin-top: @nordic-space-xl;
+    text-align: center;
+    padding-top: @nordic-space-lg;
+    border-top: 1px solid @nordic-divider;
+  }
+
+  .user-avatar {
+    background-color: transparent;
+  }
 }
 
-.settings-container h2 {
-  font-size: 1.714rem /* 原值: 24px */;
-  margin: 0 0 20px 0;
-}
-
-.settings-container .settings-card {
-  padding: 20px;
-}
-
-.settings-container .settings-section {
-  margin-bottom: 20px;
-}
-
-.settings-container .settings-section h3 {
-  font-size: 1.286rem /* 原值: 18px */;
-  margin: 0 0 20px 0;
-  font-weight: bold;
-}
-
-.settings-container .form-row {
-  display: flex;
-  align-items: center;
-  margin-bottom: 15px;
-}
-
-.settings-container .form-row .form-label {
-  width: 150px;
-  font-weight: bold;
-}
-
-.settings-container .form-row .form-content {
-  flex: 1;
-}
-
-.settings-container .settings-actions {
-  margin-top: 30px;
-  text-align: center;
-}
-
-.settings-container .user-avatar {
-  background-color: transparent; /* 移除额外的背景颜色 */
-}
-
-.update-content p {
-  margin: 10px 0;
-  font-size: 1rem /* 原值: 14px */;
+.update-content {
+  p {
+    margin: 10px 0;
+    font-size: @nordic-text-base;
+    color: @nordic-text-secondary;
+  }
 }
 </style>

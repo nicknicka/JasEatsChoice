@@ -823,120 +823,91 @@ const filteredRecipes = computed(() => {
 </script>
 
 <template>
-  <!-- 单一根节点包裹器，用于 Transition 动画 -->
   <div class="today-recipe-wrapper">
-    <div class="today-recipe-container">
-    <div class="recipe-header">
+    <div class="nordic-today-recipe">
+    <!-- 页面标题 -->
+    <div class="nordic-page-header">
       <h2>今日食谱</h2>
     </div>
 
-    <!-- 营养摄入统计 -->
-    <el-card class="nutrition-card">
-      <template #header>
-        <div class="card-header">营养摄入统计</div>
-      </template>
-      <div class="nutrition-stats">
-        <div class="stat-item">
-          <div class="stat-label">卡路里</div>
-          <div class="stat-value">{{ nutritionData.calories }} kcal</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-label">蛋白质</div>
-          <div class="stat-value">{{ nutritionData.protein }} g</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-label">碳水化合物</div>
-          <div class="stat-value">{{ nutritionData.carbs }} g</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-label">脂肪</div>
-          <div class="stat-value">{{ nutritionData.fat }} g</div>
-        </div>
+    <!-- 营养摄入概览 -->
+    <div class="nutrition-overview">
+      <div class="nutri-stat">
+        <span class="nutri-val">{{ nutritionData.calories }}</span>
+        <span class="nutri-unit">kcal</span>
+        <span class="nutri-label">卡路里</span>
       </div>
-    </el-card>
-
-    <!-- 餐型筛选与操作按钮区 -->
-    <div class="filter-action-container">
-      <!-- 餐型筛选 -->
-      <div class="meal-type-tabs">
-        <el-button
-          type="primary"
-          :plain="filters.mealType !== 'all'"
-          size="small"
-          @click="filters.mealType = 'all'"
-        >
-          全部
-        </el-button>
-        <el-button
-          type="primary"
-          :plain="filters.mealType !== 'breakfast'"
-          size="small"
-          @click="filters.mealType = 'breakfast'"
-        >
-          早餐
-        </el-button>
-        <el-button
-          type="primary"
-          :plain="filters.mealType !== 'lunch'"
-          size="small"
-          @click="filters.mealType = 'lunch'"
-        >
-          午餐
-        </el-button>
-        <el-button
-          type="primary"
-          :plain="filters.mealType !== 'dinner'"
-          size="small"
-          @click="filters.mealType = 'dinner'"
-        >
-          晚餐
-        </el-button>
-        <el-button
-          type="primary"
-          :plain="filters.mealType !== 'snack'"
-          size="small"
-          @click="filters.mealType = 'snack'"
-        >
-          加餐
-        </el-button>
+      <div class="nutri-divider"></div>
+      <div class="nutri-stat">
+        <span class="nutri-val green">{{ nutritionData.protein }}</span>
+        <span class="nutri-unit">g</span>
+        <span class="nutri-label">蛋白质</span>
       </div>
-
-      <!-- 操作按钮 -->
-      <div class="action-buttons">
-        <el-button type="primary" size="small" @click="addRecipeVisible = true">
-          ➕ 添加食谱
-        </el-button>
-
-        <el-button type="success" size="small" @click="importOrderVisible = true">
-          ➕ 从订单导入
-        </el-button>
-
-        <!-- 批量管理按钮 -->
-        <el-button
-          type="danger"
-          size="small"
-          :disabled="selectedRecipes.length === 0"
-          @click="batchDeleteRecipes"
-        >
-          🗑️ 批量删除
-        </el-button>
-
-        <el-button
-          type="warning"
-          size="small"
-          :disabled="selectedRecipes.length === 0"
-          @click="batchFavoriteRecipes"
-        >
-          ⭐ 批量收藏
-        </el-button>
+      <div class="nutri-divider"></div>
+      <div class="nutri-stat">
+        <span class="nutri-val blue">{{ nutritionData.carbs }}</span>
+        <span class="nutri-unit">g</span>
+        <span class="nutri-label">碳水</span>
+      </div>
+      <div class="nutri-divider"></div>
+      <div class="nutri-stat">
+        <span class="nutri-val amber">{{ nutritionData.fat }}</span>
+        <span class="nutri-unit">g</span>
+        <span class="nutri-label">脂肪</span>
       </div>
     </div>
+
+    <!-- 餐型筛选 -->
+    <div class="meal-filter-row">
+      <div class="meal-chips">
+        <button
+          class="meal-chip"
+          :class="{ active: filters.mealType === 'all' }"
+          @click="filters.mealType = 'all'"
+        >全部</button>
+        <button
+          class="meal-chip"
+          :class="{ active: filters.mealType === 'breakfast' }"
+          @click="filters.mealType = 'breakfast'"
+        >早餐</button>
+        <button
+          class="meal-chip"
+          :class="{ active: filters.mealType === 'lunch' }"
+          @click="filters.mealType = 'lunch'"
+        >午餐</button>
+        <button
+          class="meal-chip"
+          :class="{ active: filters.mealType === 'dinner' }"
+          @click="filters.mealType = 'dinner'"
+        >晚餐</button>
+        <button
+          class="meal-chip"
+          :class="{ active: filters.mealType === 'snack' }"
+          @click="filters.mealType = 'snack'"
+        >加餐</button>
+      </div>
+      <div class="action-btns">
+        <button class="nordic-btn accent" @click="addRecipeVisible = true">+ 添加食谱</button>
+        <button class="nordic-btn" @click="importOrderVisible = true">从订单导入</button>
+        <button
+          class="nordic-btn ghost"
+          :disabled="selectedRecipes.length === 0"
+          @click="batchDeleteRecipes"
+        >批量删除</button>
+        <button
+          class="nordic-btn ghost"
+          :disabled="selectedRecipes.length === 0"
+          @click="batchFavoriteRecipes"
+        >批量收藏</button>
+      </div>
+    </div>
+
     <!-- 食谱列表 -->
-    <div :class="['recipe-list', layoutType]">
-      <div v-if="filteredRecipes.length === 0" class="no-recipes-message">
+    <div class="recipe-list" :class="layoutType">
+      <div v-if="filteredRecipes.length === 0" class="empty-recipes">
         <el-empty description="今日没有食谱数据"></el-empty>
       </div>
-      <div v-else>
+      <div v-else class="recipe-cards">
         <RecipeCard
           v-for="recipe in filteredRecipes"
           :key="recipe.id"
@@ -990,8 +961,7 @@ const filteredRecipes = computed(() => {
 
   <!-- 导入订单对话框 -->
   <el-dialog v-model="importOrderVisible" title="从订单导入食谱" width="600px" top="10%">
-    <div class="import-merchant-dish-container">
-      <!-- 订单列表 -->
+    <div class="import-order-panel">
       <el-select v-model="selectedOrder" placeholder="请选择要导入的订单" style="width: 100%">
         <el-option
           v-for="order in orders"
@@ -1001,10 +971,8 @@ const filteredRecipes = computed(() => {
         >
           <template #default>
             <div>
-              <div class="order-option-header">
-                <span>{{ `订单号: ${order.orderNo} - 总价: ${order.totalPrice}元` }}</span>
-              </div>
-              <div class="order-option-dishes" style="margin-top: 8px">
+              <div style="margin-bottom: 6px;">订单号: {{ order.orderNo }} - 总价: {{ order.totalPrice }}元</div>
+              <div style="display: flex; gap: 6px; flex-wrap: wrap;">
                 <el-tag v-for="dish in order.dishes" :key="dish.name" size="small" type="info">
                   {{ dish.name }}
                 </el-tag>
@@ -1017,7 +985,7 @@ const filteredRecipes = computed(() => {
 
     <template #footer>
       <el-button @click="importOrderVisible = false">取消</el-button>
-      <el-button type="primary" @click="confirmImportOrder"> 导入为新食谱 </el-button>
+      <el-button type="primary" @click="confirmImportOrder">导入为新食谱</el-button>
     </template>
   </el-dialog>
 
@@ -1027,854 +995,187 @@ const filteredRecipes = computed(() => {
 </template>
 
 <style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+
 .today-recipe-wrapper {
   display: contents;
 }
 
-.today-recipe-container {
-  padding: 24px;
-  background: #f5f7fa;
+.nordic-today-recipe {
+  .nordic-page-container();
+  max-width: 900px;
+  margin: 0 auto;
 
-  .recipe-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 24px;
+  // --- 页面标题 ---
+  .nordic-page-header {
+    margin-bottom: @nordic-space-lg;
 
     h2 {
-      font-size: 2.286rem /* 原值: 32px */;
-      margin: 0;
-      color: #333;
-    }
-
-    .meal-type-tabs {
-      gap: 10px;
-    }
-  }
-
-  .nutrition-card {
-    margin-bottom: 24px;
-    background: rgba(255, 255, 255, 0.95) !important;
-    border-radius: 16px !important;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-
-    .card-header {
-      font-size: 1.286rem /* 原值: 18px */;
+      font-size: @nordic-text-xl;
       font-weight: 700;
-    }
-
-    .nutrition-stats {
-      display: flex;
-      justify-content: space-between;
-      padding: 20px;
-
-      .stat-item {
-        text-align: center;
-        min-width: 120px;
-        flex: 1;
-
-        .stat-label {
-          font-size: 1rem /* 原值: 14px */;
-          color: #666;
-          margin-bottom: 8px;
-        }
-
-        .stat-value {
-          font-size: 2rem /* 原值: 28px */;
-          font-weight: 700;
-          color: #ff6b6b;
-          margin-bottom: 12px;
-        }
-      }
+      color: @nordic-text;
+      margin: 0;
+      letter-spacing: -0.5px;
     }
   }
 
-  .recipe-list {
+  // --- 营养概览 ---
+  .nutrition-overview {
     display: flex;
-    flex-direction: column;
-    width: 100%;
-    gap: 25px;
+    align-items: center;
+    justify-content: space-around;
+    padding: @nordic-space-lg;
+    background: @nordic-surface;
+    border-radius: @nordic-radius-lg;
+    border: 1px solid @nordic-border;
+    margin-bottom: @nordic-space-lg;
+    .nordic-animate-fade();
 
-    .recipe-card {
-      flex: 1 1 100%;
-      max-width: 100%;
-      min-width: 317px;
-      box-sizing: border-box;
-      margin: 0;
+    .nutri-stat {
+      text-align: center;
+      flex: 1;
+
+      .nutri-val {
+        display: block;
+        font-size: @nordic-text-2xl;
+        font-weight: 700;
+        color: @nordic-accent;
+        letter-spacing: -1px;
+        line-height: 1;
+
+        &.green { color: @nordic-green; }
+        &.blue { color: @nordic-blue; }
+        &.amber { color: @nordic-yellow; }
+      }
+
+      .nutri-unit {
+        font-size: @nordic-text-xs;
+        color: @nordic-text-muted;
+      }
+
+      .nutri-label {
+        display: block;
+        font-size: @nordic-text-xs;
+        color: @nordic-text-muted;
+        margin-top: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+    }
+
+    .nutri-divider {
+      width: 1px;
+      height: 40px;
+      background: @nordic-border;
     }
   }
 
-  .recipe-card {
-    margin-bottom: 16px !important;
-    background: #ffffff !important;
-    border-radius: 12px !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    border: 1px solid #e0e0e0 !important;
-    overflow: hidden;
-    position: relative;
-
-    &.recipe-card-favorited {
-      border: 2px solid #ffd700 !important;
-      box-shadow: 0 2px 8px rgba(255, 215, 0, 0.2);
-    }
-
-    // 选中状态的卡片
-    &.recipe-card-selected {
-      border: 2px solid #667eea !important;
-      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
-    }
-
-    // 为收藏状态的卡片添加与餐型匹配的hover阴影效果
-    &.recipe-card-favorited:hover {
-      background: #fffbf0 !important;
-    }
-
-    &:hover {
-      background: #f5f7ff !important;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-    }
-
-    .card-header {
-      position: relative;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      font-size: 1.429rem /* 原值: 20px */;
-      font-weight: 700;
-      color: #2c3e50;
-      padding: 20px 24px !important;
-      cursor: pointer;
-      user-select: none;
-      // border-bottom: 1px solid #eef2f7 !important;
-
-      .meal-icon {
-        font-size: 2.286rem /* 原值: 32px */;
-        padding: 10px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 56px;
-        height: 56px;
-      }
-    }
-
-    .recipe-items {
-      margin: 24px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      cursor: default;
-
-      .el-tag {
-        padding: 8px 16px;
-        border-radius: 20px;
-        font-size: 1rem /* 原值: 14px */;
-        font-weight: 500;
-      }
-    }
-
-    .recipe-actions {
-      text-align: right;
-      margin: 0 24px 20px;
-      padding-top: 16px;
-      border-top: 1px solid #eef2f7;
-      cursor: default;
-
-      /* 让所有按钮和下拉触发元素在一行显示 */
-      display: flex;
-      justify-content: flex-end;
-      gap: 4px; /* 缩小统一间距 */
-
-      .el-button {
-        font-size: 0.929rem /* 原值: 13px */;
-        padding: 4px 12px;
-        border-radius: 6px;
-        margin: 0;
-      }
-    }
-
-    &.breakfast {
-      // border-left: 4px solid #ffc107;
-      border-left: 4px solid #ffc;
-      // .meal-icon.breakfast {
-      // 	color: #ffc107;
-      // }
-    }
-
-    &.lunch {
-      border-left: 4px solid #4caf50;
-
-      .meal-icon.lunch {
-        color: #4caf50;
-      }
-    }
-
-    &.dinner {
-      border-left: 4px solid #2196f3;
-
-      .meal-icon.dinner {
-        color: #2196f3;
-      }
-    }
-
-    // 自定义菜单类型样式 - 早餐
-    &.breakfast {
-      border-left: 4px solid #ffc107;
-
-      &::before {
-        background: linear-gradient(90deg, #ffc107 0%, #ffeb3b 100%);
-      }
-
-      .meal-icon {
-        background: linear-gradient(135deg, #ffc107 0%, #ffeb3b 100%) !important;
-        color: #333 !important;
-      }
-    }
-
-    // 午餐
-    &.lunch {
-      border-left: 4px solid #4caf50;
-
-      &::before {
-        background: linear-gradient(90deg, #4caf50 0%, #8bc34a 100%);
-      }
-
-      .meal-icon {
-        background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%) !important;
-        color: white !important;
-      }
-    }
-
-    // 晚餐
-    &.dinner {
-      border-left: 4px solid #2196f3;
-
-      &::before {
-        background: linear-gradient(90deg, #2196f3 0%, #64b5f6 100%);
-      }
-
-      .meal-icon {
-        background: linear-gradient(135deg, #2196f3 0%, #64b5f6 100%) !important;
-        color: white !important;
-      }
-    }
-
-    // 下午茶/茶点
-    &.afternoon_tea,
-    &.tea {
-      border-left: 4px solid #9c27b0;
-
-      &::before {
-        background: linear-gradient(90deg, #9c27b0 0%, #ba68c8 100%);
-      }
-
-      .meal-icon {
-        background: linear-gradient(135deg, #9c27b0 0%, #ba68c8 100%) !important;
-        color: white !important;
-      }
-    }
-
-    // 夜宵/零食
-    &.night_snack,
-    &.snack {
-      border-left: 4px solid #1e88e5;
-
-      &::before {
-        background: linear-gradient(90deg, #1e88e5 0%, #42a5f5 100%);
-      }
-
-      .meal-icon {
-        background: linear-gradient(135deg, #1e88e5 0%, #42a5f5 100%) !important;
-        color: white !important;
-      }
-    }
-
-    // 上午加餐/早午餐
-    &.morning_snack,
-    &.brunch {
-      border-left: 4px solid #ff9800;
-
-      &::before {
-        background: linear-gradient(90deg, #ff9800 0%, #ffa726 100%);
-      }
-
-      .meal-icon {
-        background: linear-gradient(135deg, #ff9800 0%, #ffa726 100%) !important;
-        color: white !important;
-      }
-    }
-
-    // 宵夜/深夜零食
-    &.supper,
-    &.midnight_snack {
-      border-left: 4px solid #00bcd4;
-
-      &::before {
-        background: linear-gradient(90deg, #00bcd4 0%, #29b6f6 100%);
-      }
-
-      .meal-icon {
-        background: linear-gradient(135deg, #00bcd4 0%, #29b6f6 100%) !important;
-        color: white !important;
-      }
-    }
-
-    // 健康零食/健身餐
-    &.health_snack,
-    &.fitness_meal {
-      border-left: 4px solid #4caf50;
-
-      &::before {
-        background: linear-gradient(90deg, #4caf50 0%, #81c784 100%);
-      }
-
-      .meal-icon {
-        background: linear-gradient(135deg, #4caf50 0%, #81c784 100%) !important;
-        color: white !important;
-      }
-    }
-
-    // 甜点/甜食
-    &.dessert,
-    &.sweet {
-      border-left: 4px solid #e91e63;
-
-      &::before {
-        background: linear-gradient(90deg, #e91e63 0%, #f06292 100%);
-      }
-
-      .meal-icon {
-        background: linear-gradient(135deg, #e91e63 0%, #f06292 100%) !important;
-        color: white !important;
-      }
-    }
-
-    // 汤/粥
-    &.soup,
-    &.porridge {
-      border-left: 4px solid #009688;
-
-      &::before {
-        background: linear-gradient(90deg, #009688 0%, #26a69a 100%);
-      }
-
-      .meal-icon {
-        background: linear-gradient(135deg, #009688 0%, #26a69a 100%) !important;
-        color: white !important;
-      }
-    }
-
-    // 沙拉/蔬菜
-    &.salad,
-    &.vegetable {
-      border-left: 4px solid #8bc34a;
-
-      &::before {
-        background: linear-gradient(90deg, #8bc34a 0%, #aed581 100%);
-      }
-
-      .meal-icon {
-        background: linear-gradient(135deg, #8bc34a 0%, #aed581 100%) !important;
-        color: white !important;
-      }
-    }
-
-    // 肉类/蛋白质
-    &.meat,
-    &.protein {
-      border-left: 4px solid #795548;
-
-      &::before {
-        background: linear-gradient(90deg, #795548 0%, #a1887f 100%);
-      }
-
-      .meal-icon {
-        background: linear-gradient(135deg, #795548 0%, #a1887f 100%) !important;
-        color: white !important;
-      }
-    }
-
-    // 默认样式
-    &.info {
-      border-left: 4px solid #00bcd4;
-
-      .meal-icon.info {
-        color: #00bcd4;
-        font-size: 1.714rem /* 原值: 24px */;
-      }
-    }
-  }
-
-  /* 筛选与操作按钮容器 */
-  .filter-action-container {
+  // --- 筛选与操作 ---
+  .meal-filter-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 24px;
-    flex-wrap: wrap; /* 响应式换行 */
-    gap: 12px;
+    gap: @nordic-space-md;
+    margin-bottom: @nordic-space-lg;
+    flex-wrap: wrap;
 
-    .meal-type-tabs {
+    .meal-chips {
       display: flex;
-      gap: 10px;
+      gap: 6px;
     }
 
-    .action-buttons {
-      display: flex;
-      gap: 12px; /* 统一按钮间距 */
-    }
-
-    .el-button {
-      border-radius: 24px !important;
-      padding: 10px 24px !important;
-      font-weight: 600 !important;
-    }
-  }
-}
-
-// 自定义标签颜色和交互
-:deep(.el-tag) {
-  cursor: pointer;
-
-  &:hover {
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-  }
-}
-
-:deep(.el-tag--warning) {
-  background-color: #fff3e0;
-  color: #f57c00;
-}
-
-:deep(.el-tag--success) {
-  background-color: #e8f5e9;
-  color: #388e3c;
-}
-
-:deep(.el-tag--primary) {
-  background-color: #e3f2fd;
-  color: #1976d2;
-}
-
-// 食材输入区域样式
-.ingredients-input {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 15px;
-  align-items: center;
-
-  .el-input {
-    flex: 1;
-  }
-}
-
-.ingredients-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  width: 100%;
-}
-
-// 所有对话框标题样式
-.el-dialog__header {
-  .el-dialog__title {
-    font-size: 1.714rem /* 原值: 24px */ !important;
-    font-weight: 700 !important;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-    background-clip: text !important;
-    -webkit-background-clip: text !important;
-    color: transparent !important;
-    text-shadow: 2px 2px 6px rgba(102, 126, 234, 0.3) !important;
-    letter-spacing: 1px !important;
-    padding: 6px 0 !important;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  }
-}
-
-// 食谱详情对话框样式
-.recipe-details {
-  .detail-item {
-    margin-bottom: 20px;
-
-    .detail-label {
-      font-weight: 700;
-      font-size: 1.143rem /* 原值: 16px */;
-      color: #2c3e50;
-      margin-right: 12px;
-      padding: 8px 16px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      border-radius: 24px;
-      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-      letter-spacing: 0.5px;
-      margin-bottom: 12px;
-      display: inline-block;
-    }
-
-    .detail-value {
-      font-size: 1rem /* 原值: 14px */;
-      color: #666;
-    }
-
-    // 餐型值样式
-    .detail-item:first-child .detail-value {
-      font-size: 1.429rem /* 原值: 20px */;
-      font-weight: 700;
-      color: #2196f3;
-      margin-left: 8px;
-      text-shadow: 1px 1px 3px rgba(33, 150, 243, 0.2);
-    }
-
-    .nutrition-info {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 16px;
-      padding: 20px;
-      background: linear-gradient(135deg, #ffffff 0%, #fff5f5 100%);
-      border-radius: 12px;
-      border: 1px solid #ffebee;
-      margin-top: 12px;
-    }
-
-    .nutrition-item {
-      margin-bottom: 0;
-      padding: 12px 16px;
-      background: white;
-      border-radius: 8px;
-      text-align: center;
-      border: 1px solid #ffcdd2;
+    .meal-chip {
+      padding: 6px 18px;
+      border: 1px solid @nordic-border;
+      background: @nordic-surface;
+      border-radius: @nordic-radius-pill;
+      font-size: @nordic-text-sm;
+      color: @nordic-text-secondary;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: 500;
 
       &:hover {
-        box-shadow: 0 2px 6px rgba(255, 107, 107, 0.08);
+        border-color: @nordic-accent;
+        color: @nordic-accent;
       }
 
-      .nutrition-label {
-        font-weight: 600;
-        font-size: 1rem /* 原值: 14px */;
-        color: #757575;
-        display: block;
-        margin-bottom: 4px;
-      }
-
-      .nutrition-value {
-        color: #ff5252;
-        font-weight: 700;
-        font-size: 1.429rem /* 原值: 20px */;
-        margin-left: 0;
+      &.active {
+        background: @nordic-accent;
+        border-color: @nordic-accent;
+        color: #fff;
       }
     }
 
-    // 菜品列表样式
-    .dish-list {
+    .action-btns {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+  }
+
+  // --- 北欧按钮 ---
+  .nordic-btn {
+    padding: 6px 16px;
+    border: 1px solid @nordic-border;
+    background: @nordic-surface;
+    border-radius: @nordic-radius-md;
+    font-size: @nordic-text-sm;
+    color: @nordic-text-secondary;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 500;
+
+    &:hover:not(:disabled) {
+      border-color: @nordic-text-secondary;
+    }
+
+    &.accent {
+      background: @nordic-accent;
+      border-color: @nordic-accent;
+      color: #fff;
+
+      &:hover {
+        background: darken(@nordic-accent, 8%);
+      }
+    }
+
+    &.ghost {
+      border-color: transparent;
+      color: @nordic-text-muted;
+
+      &:hover:not(:disabled) {
+        color: @nordic-text-secondary;
+        border-color: @nordic-border;
+      }
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+  }
+
+  // --- 食谱列表 ---
+  .recipe-list {
+    .recipe-cards {
       display: flex;
       flex-direction: column;
-      gap: 24px;
-      margin-top: 16px;
-      max-height: 200px; /* 调整为你需要的最大高度 */
-      overflow-y: auto; /* 超过最大高度时显示垂直滚动条 */
-      padding-right: 10px; /* 为滚动条预留空间 */
-    }
-
-    .dish-item {
-      padding: 20px;
-      background: linear-gradient(135deg, #ffffff 0%, #f5f9ff 100%);
-      border-radius: 12px;
-      border-left: 5px solid #2196f3;
-      border: 1px solid #e3f2fd;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-
-      &:hover {
-        box-shadow: 0 4px 12px rgba(33, 150, 243, 0.12);
-        border-color: #1976d2;
-      }
-
-      // 待添加菜品样式
-      &.empty-dish {
-        background: #fafafa !important;
-        border: 1px dashed #ccc !important;
-        border-left: 5px solid #9e9e9e !important;
-        opacity: 0.7;
-        box-shadow: none !important;
-
-        &:hover {
-          cursor: default;
-        }
-
-        .dish-name {
-          font-style: italic;
-          color: #999;
-        }
-      }
-    }
-
-    .dish-name {
-      font-size: 1.286rem /* 原值: 18px */;
-      font-weight: 700;
-      margin: 0 0 14px 0;
-      color: #2c3e50;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-
-      &::before {
-        content: '🍽️';
-        font-size: 22px;
-      }
-    }
-
-    .dish-ingredients {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 8px;
-    }
-
-    .dish-ingredients .el-tag {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      border: none;
-      color: white;
-      font-weight: 500;
-      opacity: 0.9;
-
-      &:hover {
-        opacity: 1;
-        box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
-      }
-    }
-
-    .no-ingredients {
-      margin-top: 12px;
-    }
-
-    .no-ingredients .el-tag {
-      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-      border: none;
-      color: white;
-    }
-  }
-}
-
-// 营养编辑区域样式
-.nutrition-edit-section {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  margin-top: 8px;
-}
-
-.nutrition-input-group {
-  margin-bottom: 8px;
-}
-
-// 添加菜品对话框样式
-.add-dish-form {
-  .form-container {
-    background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
-    padding: 24px;
-    border-radius: 12px;
-    border: 1px solid #e3f2fd;
-  }
-
-  // 表单标签样式
-  .el-form-item__label {
-    font-weight: 700 !important;
-    font-size: 1rem /* 原值: 14px */ !important;
-    color: #2c3e50 !important;
-  }
-
-  // 必填项红色星号
-  .el-form-item.is-required > .el-form-item__label::before {
-    color: #ff4d4f;
-    font-weight: 700;
-  }
-
-  // 输入框样式
-  .el-input__wrapper {
-    border-radius: 8px !important;
-    border: 1px solid #d9d9d9 !important;
-
-    &:focus-within {
-      border-color: #667eea !important;
-      box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1) !important;
+      gap: @nordic-space-md;
     }
   }
 
-  // 食材输入区域样式
-  .ingredients-input {
-    display: flex;
-    gap: 12px;
-    align-items: center;
+  // --- 空状态 ---
+  .empty-recipes {
+    text-align: center;
+    padding: 60px 20px;
   }
 
-  // 添加食材按钮样式
-  .ingredients-input .el-button {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border: none;
-    color: white;
-    border-radius: 8px;
-
-    &:hover {
-      background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
-      box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
-    }
-  }
-
-  // 食材列表样式
-  .ingredients-list {
-    .el-tag {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      border: none;
-      color: white;
-      opacity: 0.9;
-
-      &:hover {
-        opacity: 1;
-        box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
-      }
-    }
-  }
-}
-
-// 所有对话框按钮样式
-:deep(.el-dialog__footer) {
-  display: flex;
-  gap: 12px;
-  justify-content: flex-end;
-  padding: 16px 24px;
-
-  .el-button {
-    padding: 8px 20px;
-    border-radius: 8px;
-    font-weight: 600;
-  }
-
-  // 取消按钮
-  .el-button--default {
-    border-color: #d9d9d9;
-
-    &:hover {
-      border-color: #667eea;
-      color: #667eea;
-      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
-    }
-  }
-
-  // 确定/主按钮
-  .el-button--primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border: none;
-
-    &:hover {
-      background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
-      box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
-    }
-  }
-}
-
-// 隐藏批量选择复选框的自动label
-.checkbox-wrapper {
-  :deep(.el-checkbox__label) {
-    display: none !important;
-  }
-  margin-right: 10px;
-}
-
-// 收藏按钮样式
-.favorite-btn {
-  color: #ffd700 !important; // 收藏状态用金色，确保覆盖默认样式
-  font-weight: bold;
-}
-
-// 卡片头部样式
-.card-header {
-  position: relative; // 设置为相对定位，让收藏按钮可以绝对定位
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-// 右上角收藏按钮样式
-.card-favorite {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-// 收藏按钮通用样式
-.recipe-actions .el-button {
-  // 确保所有按钮样式统一
-  margin-right: 10px;
-}
-
-// 导入商家菜品对话框样式
-.import-merchant-dish-container {
-  background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
-  padding: 24px;
-  border-radius: 12px;
-  border: 1px solid #e3f2fd;
-
-  // 表单标签
-  .el-form-item__label {
-    font-weight: 700 !important;
-    font-size: 1rem /* 原值: 14px */ !important;
-    color: #2c3e50 !important;
-  }
-
-  // 下拉选择框
-  .el-select__wrapper {
-    border-radius: 8px !important;
-    border: 1px solid #d9d9d9 !important;
-
-    &:focus-within {
-      border-color: #667eea !important;
-      box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1) !important;
-    }
-  }
-
-  // 菜品列表
-  .merchant-dishes-list {
-    margin-top: 20px;
-    padding: 16px;
-    background: white;
-    border-radius: 8px;
-    border: 1px solid #e0e0e0;
-
-    h4 {
-      color: #2c3e50;
-      margin-bottom: 16px;
-      font-size: 1.143rem /* 原值: 16px */;
-      font-weight: 700;
-    }
-  }
-
-  // 菜品项
-  .dish-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 8px 0;
-    border-bottom: 1px solid #f5f5f5;
-
-    &:last-child {
-      border-bottom: none;
-    }
-
-    // 复选框
-    :deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
-      background-color: #667eea;
-      border-color: #667eea;
-    }
-
-    // 营养信息
-    .dish-nutrition {
-      font-size: 1rem /* 原值: 14px */;
-      color: #999;
-    }
+  // --- 导入订单面板 ---
+  .import-order-panel {
+    padding: @nordic-space-lg;
+    background: @nordic-bg;
+    border-radius: @nordic-radius-md;
   }
 }
 </style>

@@ -382,35 +382,37 @@ onMounted(async () => {
 })
 </script>
 
-<style scoped>
+<style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+
 .wallet-security-container {
-  padding: 0 20px 20px 20px;
+  padding: 0 @nordic-space-lg @nordic-space-lg @nordic-space-lg;
   min-height: 100vh;
-  background: #f5f7fa;
+  background: @nordic-bg;
 }
 
 .page-title {
-  font-size: 2rem /* 原值: 28px */;
+  font-size: @nordic-text-xl;
   margin: 0 0 25px 0;
-  color: #333;
+  color: @nordic-text;
   font-weight: 700;
 }
 
 .security-level-card {
-  border-radius: 16px;
-  margin-bottom: 20px;
+  border-radius: @nordic-radius-lg;
+  margin-bottom: @nordic-space-lg;
   border: none;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
+  color: @nordic-surface;
 }
 
 .security-level-content {
-  padding: 20px;
+  padding: @nordic-space-lg;
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 20px;
+  gap: @nordic-space-lg;
 }
 
 .level-info {
@@ -418,17 +420,17 @@ onMounted(async () => {
 }
 
 .level-title {
-  font-size: 1.143rem /* 原值: 16px */;
-  margin-bottom: 10px;
+  font-size: @nordic-text-md;
+  margin-bottom: @nordic-space-sm;
   opacity: 0.9;
 }
 
 .level-value {
-  margin-bottom: 10px;
+  margin-bottom: @nordic-space-sm;
 }
 
 .level-desc {
-  font-size: 1rem /* 原值: 14px */;
+  font-size: @nordic-text-base;
   opacity: 0.8;
 }
 
@@ -437,40 +439,40 @@ onMounted(async () => {
 }
 
 .security-tips h4 {
-  margin: 0 0 10px 0;
-  font-size: 1rem /* 原值: 14px */;
+  margin: 0 0 @nordic-space-sm 0;
+  font-size: @nordic-text-base;
   opacity: 0.9;
 }
 
 .security-tips ul {
   margin: 0;
-  padding-left: 20px;
+  padding-left: @nordic-space-lg;
 }
 
 .security-tips li {
-  font-size: 0.929rem /* 原值: 13px */;
+  font-size: @nordic-text-sm;
   line-height: 1.8;
   opacity: 0.85;
 }
 
 .security-section-card {
-  border-radius: 16px;
-  margin-bottom: 20px;
+  border-radius: @nordic-radius-lg;
+  margin-bottom: @nordic-space-lg;
   border: none;
 }
 
 .section-title {
-  font-size: 1.286rem /* 原值: 18px */;
-  margin: 0 0 20px 0;
+  font-size: @nordic-text-md + 2px;
+  margin: 0 0 @nordic-space-lg 0;
   font-weight: 700;
-  color: #2d3748;
+  color: @nordic-text;
 }
 
 .section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: @nordic-space-lg;
 }
 
 .security-items {
@@ -483,14 +485,14 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px;
-  background: #f8fafc;
-  border-radius: 12px;
-  transition: all 0.2s ease;
+  padding: @nordic-space-md;
+  background: @nordic-divider;
+  border-radius: @nordic-radius-md;
+  transition: all @nordic-transition-fast ease;
 }
 
 .security-item:hover {
-  background: #edf2f7;
+  background: @nordic-border;
 }
 
 .item-info {
@@ -501,14 +503,14 @@ onMounted(async () => {
 }
 
 .item-icon {
-  font-size: 2.286rem /* 原值: 32px */;
+  font-size: 2.286rem;
   width: 50px;
   height: 50px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: white;
-  border-radius: 10px;
+  background: @nordic-surface;
+  border-radius: @nordic-radius-sm;
 }
 
 .item-content {
@@ -516,32 +518,32 @@ onMounted(async () => {
 }
 
 .item-name {
-  font-size: 1.071rem /* 原值: 15px */;
+  font-size: 1.071rem;
   font-weight: 600;
-  color: #2d3748;
+  color: @nordic-text;
   margin-bottom: 5px;
 }
 
 .item-status {
-  font-size: 0.929rem /* 原值: 13px */;
+  font-size: @nordic-text-sm;
   display: inline-block;
-  padding: 2px 8px;
-  border-radius: 4px;
+  padding: 2px @nordic-space-sm;
+  border-radius: @nordic-radius-xs;
 }
 
 .status-set {
-  color: #67c23a;
-  background: #f0f9ff;
+  color: @nordic-green;
+  background: @nordic-green-light;
 }
 
 .status-unset {
-  color: #f56c6c;
-  background: #fef2f2;
+  color: @nordic-red;
+  background: @nordic-red-light;
 }
 
 .item-desc {
-  font-size: 0.929rem /* 原值: 13px */;
-  color: #718096;
+  font-size: @nordic-text-sm;
+  color: @nordic-text-secondary;
 }
 
 .logs-list {
@@ -555,35 +557,35 @@ onMounted(async () => {
   align-items: center;
   gap: 12px;
   padding: 12px;
-  background: #f8fafc;
-  border-radius: 10px;
+  background: @nordic-divider;
+  border-radius: @nordic-radius-sm;
 }
 
 .log-icon {
   width: 40px;
   height: 40px;
-  border-radius: 8px;
+  border-radius: @nordic-radius-sm;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.429rem /* 原值: 20px */;
-  background: white;
+  font-size: 1.429rem;
+  background: @nordic-surface;
 }
 
 .icon-login {
-  background: linear-gradient(135deg, #bee3f8 0%, #90cdf4 100%);
+  background: linear-gradient(135deg, @nordic-blue-light 0%, darken(@nordic-blue-light, 5%) 100%);
 }
 
 .icon-payment {
-  background: linear-gradient(135deg, #c6f6d5 0%, #9ae6b4 100%);
+  background: linear-gradient(135deg, @nordic-green-light 0%, darken(@nordic-green-light, 5%) 100%);
 }
 
 .icon-password {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  background: linear-gradient(135deg, @nordic-yellow-light 0%, darken(@nordic-yellow-light, 5%) 100%);
 }
 
 .icon-withdraw {
-  background: linear-gradient(135deg, #fed7d7 0%, #feb2b2 100%);
+  background: linear-gradient(135deg, @nordic-red-light 0%, darken(@nordic-red-light, 5%) 100%);
 }
 
 .log-info {
@@ -591,31 +593,31 @@ onMounted(async () => {
 }
 
 .log-action {
-  font-size: 1rem /* 原值: 14px */;
+  font-size: @nordic-text-base;
   font-weight: 500;
-  color: #2d3748;
+  color: @nordic-text;
   margin-bottom: 4px;
 }
 
 .log-time {
-  font-size: 0.857rem /* 原值: 12px */;
-  color: #a0aec0;
+  font-size: @nordic-text-xs;
+  color: @nordic-text-muted;
 }
 
 .log-result {
-  font-size: 0.929rem /* 原值: 13px */;
+  font-size: @nordic-text-sm;
   padding: 4px 10px;
-  border-radius: 4px;
+  border-radius: @nordic-radius-xs;
   font-weight: 500;
 }
 
 .log-result.success {
-  color: #67c23a;
-  background: #f0f9ff;
+  color: @nordic-green;
+  background: @nordic-green-light;
 }
 
 .log-result.failed {
-  color: #f56c6c;
-  background: #fef2f2;
+  color: @nordic-red;
+  background: @nordic-red-light;
 }
 </style>

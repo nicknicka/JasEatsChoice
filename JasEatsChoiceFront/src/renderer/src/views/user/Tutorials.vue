@@ -496,9 +496,11 @@ onMounted(() => {
 </template>
 
 <style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+
 .tutorials-plaza-container {
-  padding: 24px;
-  background: linear-gradient(180deg, #f8f9fa 0%, #ffffff 100%);
+  padding: @nordic-space-lg;
+  background: linear-gradient(180deg, @nordic-bg 0%, @nordic-white 100%);
   min-height: calc(100vh - 60px);
 
   .page-header {
@@ -507,9 +509,9 @@ onMounted(() => {
     align-items: center;
     margin-bottom: 24px;
     padding: 24px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 16px;
-    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.25);
+    background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
+    border-radius: @nordic-radius-lg;
+    box-shadow: 0 8px 24px rgba(212, 132, 90, 0.25);
     color: white;
 
     .header-left {
@@ -569,13 +571,13 @@ onMounted(() => {
       .publish-btn {
         background: white;
         border-color: white;
-        color: #667eea;
+        color: @nordic-accent;
         font-weight: 600;
         transition: all 0.3s;
 
         &:hover {
-          background: #f0f0f0;
-          border-color: #f0f0f0;
+          background: @nordic-accent-light;
+          border-color: @nordic-accent-light;
           transform: translateY(-2px);
           box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
         }
@@ -616,23 +618,23 @@ onMounted(() => {
       }
 
       &.total::before {
-        background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(180deg, @nordic-accent 0%, @nordic-accent-dark 100%);
       }
 
       &.admin::before {
-        background: linear-gradient(180deg, #f093fb 0%, #f5576c 100%);
+        background: linear-gradient(180deg, @nordic-red 0%, @nordic-red-light 100%);
       }
 
       &.merchant::before {
-        background: linear-gradient(180deg, #ffecd2 0%, #fcb69f 100%);
+        background: linear-gradient(180deg, @nordic-yellow-light 0%, @nordic-accent-light 100%);
       }
 
       &.user::before {
-        background: linear-gradient(180deg, #a8edea 0%, #fed6e3 100%);
+        background: linear-gradient(180deg, @nordic-green-light 0%, @nordic-blue-light 100%);
       }
 
       &.ai::before {
-        background: linear-gradient(180deg, #d299c2 0%, #fef9d7 100%);
+        background: linear-gradient(180deg, @nordic-blue-light 0%, @nordic-yellow-light 100%);
       }
 
       .stat-icon {

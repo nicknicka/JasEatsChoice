@@ -1048,10 +1048,12 @@ watch(activeMenuTab, (newTab, oldTab) => {
 </script>
 
 <style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+
 .merchant-detail-container {
   padding: 0;
   min-height: 100vh;
-  background-color: #f5f5f5;
+  background-color: @nordic-bg;
 
   .merchant-detail-card {
     border-radius: 0;
@@ -1061,28 +1063,28 @@ watch(activeMenuTab, (newTab, oldTab) => {
 
     // 返回按钮
     .back-button-container {
-      padding: 12px 24px;
-      background-color: #ffffff;
+      padding: @nordic-space-md @nordic-space-lg;
+      background-color: @nordic-surface;
 
       .back-button {
-        font-size: 1.286rem /* 原值: 18px */;
-        color: #409eff;
-        padding: 8px 16px;
-        border-radius: 6px;
-        transition: all 0.3s ease;
+        font-size: @nordic-text-lg;
+        color: @nordic-blue;
+        padding: @nordic-space-sm @nordic-space-md;
+        border-radius: @nordic-radius-sm;
+        transition: all @nordic-transition-slow ease;
 
         &:hover {
-          color: #66b1ff;
-          background-color: rgba(64, 158, 255, 0.1);
+          color: @nordic-blue;
+          background-color: @nordic-blue-light;
         }
       }
     }
 
     // 菜单类型切换
     .menu-tabs {
-      padding: 0 24px;
-      background-color: #ffffff;
-      border-bottom: 1px solid #e8e8e8;
+      padding: 0 @nordic-space-lg;
+      background-color: @nordic-surface;
+      border-bottom: 1px solid @nordic-border;
 
       .merchant-menu-tabs {
         .el-tabs__nav {
@@ -1090,14 +1092,14 @@ watch(activeMenuTab, (newTab, oldTab) => {
         }
 
         .el-tabs__item {
-          font-size: 1rem /* 原值: 14px */;
-          color: #666666;
-          padding: 12px 0;
-          transition: all 0.3s ease;
+          font-size: @nordic-text-base;
+          color: @nordic-text-secondary;
+          padding: @nordic-space-md 0;
+          transition: all @nordic-transition-slow ease;
 
           &.is-active {
-            color: #ff6b6b;
-            border-bottom: 2px solid #ff6b6b;
+            color: @nordic-red;
+            border-bottom: 2px solid @nordic-red;
             font-weight: 500;
           }
         }
@@ -1106,13 +1108,13 @@ watch(activeMenuTab, (newTab, oldTab) => {
 
     // 菜单展示区
     .menu-display-area {
-      padding: 24px;
-      background-color: #ffffff;
+      padding: @nordic-space-lg;
+      background-color: @nordic-surface;
       min-height: 400px;
 
       // 加载状态
       .loading-container {
-        padding: 40px 24px;
+        padding: 40px @nordic-space-lg;
       }
 
       // 空状态
@@ -1121,48 +1123,48 @@ watch(activeMenuTab, (newTab, oldTab) => {
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        padding: 60px 24px;
+        padding: 60px @nordic-space-lg;
         text-align: center;
         min-height: 400px;
 
         .empty-state-icon {
           font-size: 64px;
-          margin-bottom: 16px;
+          margin-bottom: @nordic-space-md;
           opacity: 0.8;
         }
 
         .empty-state-title {
-          font-size: 1.429rem /* 原值: 20px */;
+          font-size: @nordic-text-lg;
           font-weight: 600;
-          color: #333;
-          margin: 0 0 8px 0;
+          color: @nordic-text;
+          margin: 0 0 @nordic-space-sm 0;
         }
 
         .empty-state-desc {
-          font-size: 1rem /* 原值: 14px */;
-          color: #666;
-          margin: 0 0 24px 0;
+          font-size: @nordic-text-base;
+          color: @nordic-text-secondary;
+          margin: 0 0 @nordic-space-lg 0;
         }
       }
 
       // 当前菜单名称
       .current-menu-name {
-        margin-bottom: 24px;
+        margin-bottom: @nordic-space-lg;
 
         .menu-name-title {
-          font-size: 1.714rem /* 原值: 24px */;
+          font-size: @nordic-text-xl;
           font-weight: bold;
-          color: #333;
-          padding-bottom: 12px;
-          border-bottom: 2px solid #e8e8e8;
-          margin-bottom: 16px;
+          color: @nordic-text;
+          padding-bottom: @nordic-space-md;
+          border-bottom: 2px solid @nordic-border;
+          margin-bottom: @nordic-space-md;
         }
 
         // 菜品搜索和筛选
         .dish-search-filter {
           display: flex;
-          gap: 12px;
-          margin-bottom: 16px;
+          gap: @nordic-space-md;
+          margin-bottom: @nordic-space-md;
           flex-wrap: wrap;
 
           .search-input {
@@ -1179,27 +1181,26 @@ watch(activeMenuTab, (newTab, oldTab) => {
         .category-nav {
           display: flex;
           flex-wrap: wrap;
-          gap: 8px;
-          margin-top: 16px;
+          gap: @nordic-space-sm;
           position: sticky;
           top: 0;
           z-index: 10;
-          background: rgba(255, 255, 255, 0.95);
+          background: fade(@nordic-surface, 95%);
           backdrop-filter: blur(10px);
-          padding: 12px 0;
-          border-radius: 8px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-          margin-top: 16px;
+          padding: @nordic-space-md 0;
+          border-radius: @nordic-radius-md;
+          box-shadow: 0 2px 8px @nordic-shadow;
+          margin-top: @nordic-space-md;
 
           .category-nav-tag {
             cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 1rem /* 原值: 14px */;
-            padding: 6px 12px;
+            transition: all @nordic-transition-slow ease;
+            font-size: @nordic-text-base;
+            padding: @nordic-space-sm @nordic-space-md;
 
             &:hover {
               transform: translateY(-2px);
-              box-shadow: 0 4px 12px rgba(64, 158, 255, 0.2);
+              box-shadow: 0 4px 12px fade(@nordic-accent, 20%);
             }
           }
         }
@@ -1207,65 +1208,51 @@ watch(activeMenuTab, (newTab, oldTab) => {
 
       // 分类空状态
       .category-empty {
-        padding: 32px;
+        padding: @nordic-space-xl;
         text-align: center;
-        color: #999;
-        font-size: 1rem /* 原值: 14px */;
-        background-color: #f9f9f9;
-        border-radius: 8px;
-        margin-top: 16px;
-      }
-
-      // 没有菜单的提示
-      .no-menus-notice {
-        margin: 24px 0;
-        padding: 20px;
-        background-color: #f5f5f5;
-        border-radius: 8px;
-        text-align: center;
-
-        .notice-text {
-          color: #999;
-          font-size: 1.143rem /* 原值: 16px */;
-        }
+        color: @nordic-text-muted;
+        font-size: @nordic-text-base;
+        background-color: @nordic-bg;
+        border-radius: @nordic-radius-md;
+        margin-top: @nordic-space-md;
       }
 
       // 菜品分类
       .dish-category-section {
-        margin-bottom: 32px;
+        margin-bottom: @nordic-space-xl;
 
         .category-title {
-          font-size: 1.286rem /* 原值: 18px */;
+          font-size: @nordic-text-md;
           font-weight: bold;
-          color: #333333;
-          margin-bottom: 16px;
+          color: @nordic-text;
+          margin-bottom: @nordic-space-md;
         }
 
         // 菜品网格布局
         .dish-grid {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-          gap: 24px;
+          gap: @nordic-space-lg;
         }
       }
 
       // 没有菜单的提示
       .no-menus-notice {
-        margin: 24px 0;
-        padding: 32px;
-        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-        border-radius: 12px;
+        margin: @nordic-space-lg 0;
+        padding: @nordic-space-xl;
+        background: @nordic-yellow-light;
+        border-radius: @nordic-radius-lg;
         text-align: center;
-        border: 1px solid rgba(251, 191, 36, 0.3);
+        border: 1px solid fade(@nordic-yellow, 30%);
 
         .notice-icon {
-          font-size: 3.429rem /* 原值: 48px */;
-          margin-bottom: 12px;
+          font-size: 3.429rem;
+          margin-bottom: @nordic-space-md;
         }
 
         .notice-text {
-          color: #92400e;
-          font-size: 1.143rem /* 原值: 16px */;
+          color: @nordic-yellow-dark;
+          font-size: @nordic-text-md;
           font-weight: 500;
           margin: 0;
         }
@@ -1274,25 +1261,25 @@ watch(activeMenuTab, (newTab, oldTab) => {
 
     // 立即下单快捷操作区
     .quick-order-section {
-      padding: 24px;
-      background-color: #ffffff;
-      border-top: 1px solid rgba(59, 130, 246, 0.1);
+      padding: @nordic-space-lg;
+      background-color: @nordic-surface;
+      border-top: 1px solid fade(@nordic-accent, 10%);
 
       .quick-order-button {
         width: 100%;
         height: 52px;
-        font-size: 1.143rem /* 原值: 16px */;
-        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        font-size: @nordic-text-md;
+        background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
         border: none;
-        border-radius: 12px;
+        border-radius: @nordic-radius-lg;
         font-weight: 600;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+        transition: all @nordic-transition-slow cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 4px 16px fade(@nordic-accent, 30%);
 
         &:hover {
-          background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+          background: linear-gradient(135deg, @nordic-accent-dark 0%, darken(@nordic-accent-dark, 8%) 100%);
           transform: translateY(-2px);
-          box-shadow: 0 6px 24px rgba(59, 130, 246, 0.4);
+          box-shadow: 0 6px 24px fade(@nordic-accent, 40%);
         }
 
         &:active {
@@ -1306,29 +1293,29 @@ watch(activeMenuTab, (newTab, oldTab) => {
 // 可拖动悬浮购物车
 .draggable-cart-ball {
   position: fixed;
-  right: 24px;
+  right: @nordic-space-lg;
   bottom: 100px;
   width: 88px;
   height: 88px;
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
   border-radius: 50%;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   cursor: grab;
-  box-shadow: 0 8px 32px rgba(59, 130, 246, 0.5);
-  color: white;
+  box-shadow: 0 8px 32px fade(@nordic-accent, 50%);
+  color: @nordic-white;
   transition:
-    box-shadow 0.3s ease,
-    transform 0.2s ease;
+    box-shadow @nordic-transition-slow ease,
+    transform @nordic-transition-fast ease;
   z-index: 9999;
-  border: 3px solid rgba(255, 255, 255, 0.3);
+  border: 3px solid fade(@nordic-white, 30%);
   backdrop-filter: blur(10px);
   user-select: none;
   touch-action: none;
   will-change: transform, left, top;
-  padding: 8px;
+  padding: @nordic-space-sm;
   box-sizing: border-box;
 
   &:active {
@@ -1337,7 +1324,7 @@ watch(activeMenuTab, (newTab, oldTab) => {
 
   &:hover:not(:active) {
     transform: translateY(-4px);
-    box-shadow: 0 12px 40px rgba(59, 130, 246, 0.5);
+    box-shadow: 0 12px 40px fade(@nordic-accent, 50%);
   }
 
   // 购物车图标容器
@@ -1348,12 +1335,12 @@ watch(activeMenuTab, (newTab, oldTab) => {
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 4px;
+    margin-bottom: @nordic-space-xs;
     pointer-events: none;
 
     .cart-icon {
-      color: #ffffff;
-      font-size: 2rem /* 原值: 28px */;
+      color: @nordic-white;
+      font-size: 2rem;
     }
   }
 
@@ -1367,23 +1354,23 @@ watch(activeMenuTab, (newTab, oldTab) => {
     z-index: 1;
 
     :deep(.el-badge__content) {
-      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-      border: 2px solid #ffffff;
+      background: linear-gradient(135deg, @nordic-yellow 0%, darken(@nordic-yellow, 10%) 100%);
+      border: 2px solid @nordic-white;
       font-weight: 700;
-      font-size: 0.75rem /* 原值: 11px */;
+      font-size: 0.75rem;
       min-width: 18px;
       height: 18px;
       line-height: 18px;
       padding: 0 5px;
-      box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+      box-shadow: 0 2px 8px fade(@nordic-yellow, 40%);
     }
   }
 
   // 金额显示
   .cart-amount {
-    font-size: 0.75rem /* 原值: 11px */;
+    font-size: 0.75rem;
     font-weight: 700;
-    color: #ffffff;
+    color: @nordic-white;
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
     pointer-events: none;
     white-space: nowrap;
@@ -1402,25 +1389,25 @@ watch(activeMenuTab, (newTab, oldTab) => {
 // 返回顶部按钮
 .back-to-top {
   position: fixed;
-  right: 24px;
+  right: @nordic-space-lg;
   bottom: 200px;
   width: 48px;
   height: 48px;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: linear-gradient(135deg, @nordic-green 0%, @nordic-green-dark 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
+  box-shadow: 0 4px 16px fade(@nordic-green, 40%);
   z-index: 9998;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  transition: all 0.3s ease;
-  color: white;
+  border: 2px solid fade(@nordic-white, 30%);
+  transition: all @nordic-transition-slow ease;
+  color: @nordic-white;
 
   &:hover {
     transform: translateY(-4px);
-    box-shadow: 0 6px 24px rgba(16, 185, 129, 0.5);
+    box-shadow: 0 6px 24px fade(@nordic-green, 50%);
   }
 
   &:active {
@@ -1431,7 +1418,7 @@ watch(activeMenuTab, (newTab, oldTab) => {
 // 淡入淡出动画
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.3s ease;
+  transition: opacity @nordic-transition-slow ease;
 }
 
 .fade-enter-from,
