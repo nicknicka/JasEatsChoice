@@ -243,4 +243,26 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     public void evictUserCacheByPhone(String phone) {
         log.debug("清除用户缓存: phone={}", phone);
     }
+
+    /**
+     * 通过手机号重置密码（忘记密码）
+     * @param phone 手机号
+     * @param newPassword 新密码
+     * @return 重置成功返回true，否则返回false
+     */
+    @Override
+    public boolean resetPasswordByPhone(String phone, String newPassword) {
+        User user = lambdaQuery()
+                .eq(User::getPhone, phone)
+                .one();
+
+        if (user == null) {
+            return false;
+        }
+
+        String encryptedPassword = passwordEncoder.encode(newPassword);
+        user.setPassword(encryptedPassword);
+
+        return updateById(user);
+    }
 }

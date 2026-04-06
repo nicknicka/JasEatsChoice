@@ -54,4 +54,12 @@ public interface UserService extends IService<User> {
      * @return 修改成功返回true，否则返回false
      */
     boolean updatePassword(String userId, String oldPassword, String newPassword);
+
+    /**
+     * 通过手机号重置密码（忘记密码）
+     * @param phone 手机号
+     * @param newPassword 新密码
+     * @return 重置成功返回true，否则返回false
+     */
+    boolean resetPasswordByPhone(String phone, String newPassword);
 }

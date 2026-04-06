@@ -1,17 +1,15 @@
 <template>
-  <div class="register-container">
+  <div class="forgot-container">
     <!-- 装饰光球 -->
     <div class="orb orb-1"></div>
     <div class="orb orb-2"></div>
-    <div class="orb orb-3"></div>
 
     <!-- 自定义标题栏 -->
     <WindowTitleBar />
 
     <!-- 标题 -->
-    <div class="register-header">
-      <h1 class="register-title">创建账号</h1>
-      <!-- 步骤指示器 -->
+    <div class="forgot-header">
+      <h1 class="forgot-title">重置密码</h1>
       <div class="steps-indicator">
         <div class="step-dot" :class="{ active: currentStep >= 1, done: currentStep > 1 }">
           <span v-if="currentStep > 1">
@@ -22,35 +20,69 @@
         <div class="step-line" :class="{ filled: currentStep > 1 }"></div>
         <div class="step-dot" :class="{ active: currentStep >= 2 }">2</div>
       </div>
-      <p class="step-desc">{{ currentStep === 1 ? '设置登录信息' : '填写联系方式' }}</p>
+      <p class="step-desc">{{ currentStep === 1 ? '验证手机号' : '设置新密码' }}</p>
     </div>
 
     <!-- 表单卡片 -->
     <div class="glass-card">
-      <el-form ref="registerFormRef" :model="registerForm" :rules="registerRules" @submit.prevent>
+      <el-form ref="formRef" :model="formData" :rules="formRules" @submit.prevent>
         <transition name="slide" mode="out-in">
-          <!-- 步骤1：基本信息 -->
+          <!-- 步骤1：验证手机号 -->
           <div v-if="currentStep === 1" key="step1" class="step-content">
-            <el-form-item prop="nickname">
+            <el-form-item prop="phone">
               <el-input
-                v-model="registerForm.nickname"
-                placeholder="用户名"
+                v-model="formData.phone"
+                placeholder="注册时使用的手机号"
                 autocomplete="off"
               >
                 <template #prefix>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                    <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
-                    <circle cx="12" cy="7" r="4"/>
+                    <rect x="5" y="2" width="14" height="20" rx="2"/>
+                    <line x1="12" y1="18" x2="12" y2="18.01"/>
                   </svg>
                 </template>
               </el-input>
             </el-form-item>
 
-            <el-form-item prop="password">
+            <el-form-item prop="code">
+              <div class="code-row">
+                <el-input
+                  v-model="formData.code"
+                  placeholder="短信验证码"
+                >
+                  <template #prefix>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                      <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                      <path d="M2 17l10 5 10-5"/>
+                      <path d="M2 12l10 5 10-5"/>
+                    </svg>
+                  </template>
+                </el-input>
+                <button
+                  class="code-btn"
+                  :disabled="codeCooldown > 0 || isSendingCode"
+                  @click.prevent="sendSmsCode"
+                >
+                  {{ codeCooldown > 0 ? `${codeCooldown}s` : '获取验证码' }}
+                </button>
+              </div>
+            </el-form-item>
+
+            <button class="step-btn next-btn" @click="nextStep">
+              <span>下一步</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </button>
+          </div>
+
+          <!-- 步骤2：设置新密码 -->
+          <div v-else key="step2" class="step-content">
+            <el-form-item prop="newPassword">
               <el-input
-                v-model="registerForm.password"
+                v-model="formData.newPassword"
                 type="password"
-                placeholder="密码（6-32位）"
+                placeholder="新密码（6-32位）"
                 show-password
               >
                 <template #prefix>
@@ -64,9 +96,9 @@
 
             <el-form-item prop="confirmPassword">
               <el-input
-                v-model="registerForm.confirmPassword"
+                v-model="formData.confirmPassword"
                 type="password"
-                placeholder="确认密码"
+                placeholder="确认新密码"
                 show-password
               >
                 <template #prefix>
@@ -77,74 +109,6 @@
               </el-input>
             </el-form-item>
 
-            <button class="step-btn next-btn" @click="nextStep">
-              <span>下一步</span>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="9 18 15 12 9 6"/>
-              </svg>
-            </button>
-          </div>
-
-          <!-- 步骤2：联系方式 -->
-          <div v-else key="step2" class="step-content">
-            <el-form-item prop="email">
-              <el-input
-                v-model="registerForm.email"
-                placeholder="邮箱"
-                type="email"
-              >
-                <template #prefix>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                    <rect x="2" y="4" width="20" height="16" rx="2"/>
-                    <path d="M22 4l-10 8L2 4"/>
-                  </svg>
-                </template>
-              </el-input>
-            </el-form-item>
-
-            <el-form-item prop="phone">
-              <el-input
-                v-model="registerForm.phone"
-                placeholder="手机号"
-              >
-                <template #prefix>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                    <rect x="5" y="2" width="14" height="20" rx="2"/>
-                    <line x1="12" y1="18" x2="12" y2="18.01"/>
-                  </svg>
-                </template>
-              </el-input>
-            </el-form-item>
-
-            <el-form-item prop="captcha">
-              <div class="captcha-row">
-                <el-input
-                  v-model="registerForm.captcha"
-                  placeholder="验证码"
-                >
-                  <template #prefix>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                      <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-                      <path d="M2 17l10 5 10-5"/>
-                      <path d="M2 12l10 5 10-5"/>
-                    </svg>
-                  </template>
-                </el-input>
-                <img
-                  :src="captchaBase64"
-                  alt="验证码"
-                  class="captcha-img"
-                  @click="generateCaptcha"
-                />
-                <button class="captcha-refresh" @click.prevent="generateCaptcha" title="刷新验证码">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M23 4v6h-6"/>
-                    <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/>
-                  </svg>
-                </button>
-              </div>
-            </el-form-item>
-
             <div class="btn-row">
               <button class="step-btn back-btn" @click="prevStep">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -152,8 +116,8 @@
                 </svg>
                 <span>返回</span>
               </button>
-              <button class="step-btn submit-btn" @click="submitForm" :disabled="isSubmitting">
-                <span>{{ isSubmitting ? '注册中...' : '注册' }}</span>
+              <button class="step-btn submit-btn" @click="submitReset" :disabled="isSubmitting">
+                <span>{{ isSubmitting ? '重置中...' : '确认重置' }}</span>
               </button>
             </div>
           </div>
@@ -162,15 +126,15 @@
 
       <!-- 底部链接 -->
       <div class="bottom-links">
-        <span>已有账号？</span>
-        <a class="link" @click="toLogin">立即登录</a>
+        <span>想起密码了？</span>
+        <a class="link" @click="toLogin">返回登录</a>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, reactive, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
@@ -181,37 +145,37 @@ import WindowTitleBar from '../../components/WindowTitleBar.vue'
 const router = useRouter()
 const { shrinkToLogin } = useWindowControl()
 
-// 当前步骤
 const currentStep = ref(1)
-
-// 提交状态
 const isSubmitting = ref(false)
+const isSendingCode = ref(false)
+const codeCooldown = ref(0)
+let cooldownTimer = null
 
-// 注册表单数据
-const registerForm = reactive({
-  nickname: '',
-  password: '',
-  confirmPassword: '',
-  email: '',
+const formData = reactive({
   phone: '',
-  captcha: ''
+  code: '',
+  newPassword: '',
+  confirmPassword: ''
 })
 
-// 表单验证规则
-const registerRules = reactive({
-  nickname: [
-    { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 3, max: 20, message: '用户名长度在 3 到 20 个字符', trigger: 'blur' }
+const formRules = reactive({
+  phone: [
+    { required: true, message: '请输入手机号', trigger: 'blur' },
+    { pattern: /^1[3456789]\d{9}$/, message: '请输入正确的手机号码', trigger: 'blur' }
   ],
-  password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, max: 32, message: '密码长度在 6 到 32 个字符', trigger: 'blur' }
+  code: [
+    { required: true, message: '请输入验证码', trigger: 'blur' },
+    { len: 6, message: '验证码为6位数字', trigger: 'blur' }
+  ],
+  newPassword: [
+    { required: true, message: '请输入新密码', trigger: 'blur' },
+    { min: 6, max: 32, message: '密码长度在6到32个字符', trigger: 'blur' }
   ],
   confirmPassword: [
-    { required: true, message: '请确认密码', trigger: 'blur' },
+    { required: true, message: '请确认新密码', trigger: 'blur' },
     {
       validator: (rule, value, callback) => {
-        if (value !== registerForm.password) {
+        if (value !== formData.newPassword) {
           callback(new Error('两次输入密码不一致'))
         } else {
           callback()
@@ -219,61 +183,55 @@ const registerRules = reactive({
       },
       trigger: 'blur'
     }
-  ],
-  email: [
-    { required: true, message: '请输入邮箱地址', trigger: 'blur' },
-    { type: 'email', message: '请输入正确的邮箱地址', trigger: ['blur', 'change'] }
-  ],
-  phone: [
-    { required: true, message: '请输入手机号码', trigger: 'blur' },
-    { pattern: /^1[3456789]\d{9}$/, message: '请输入正确的手机号码', trigger: ['blur', 'change'] }
-  ],
-  captcha: [{ required: true, message: '请输入验证码', trigger: 'blur' }]
+  ]
 })
 
-// 验证码相关
-const captchaBase64 = ref('')
-const checkCodeKey = ref('')
+const formRef = ref(null)
 
-const generateCaptcha = async () => {
+// 发送短信验证码
+const sendSmsCode = async () => {
+  // 先校验手机号
   try {
-    const response = await axios.get(`${API_CONFIG.baseURL}/v1/captcha/checkCode`)
-    const result = response.data.data
-    captchaBase64.value = 'data:image/png;base64,' + result.checkCode
-    checkCodeKey.value = result.checkCodeKey
+    await formRef.value.validateField(['phone'])
+  } catch {
+    return
+  }
+
+  isSendingCode.value = true
+  try {
+    const response = await axios.post(`${API_CONFIG.baseURL}${API_CONFIG.user.sendSmsCode}`, {
+      phone: formData.phone
+    })
+
+    if (response.data.code === '200') {
+      ElMessage.success('验证码已发送')
+      // 开始倒计时
+      codeCooldown.value = 60
+      cooldownTimer = setInterval(() => {
+        codeCooldown.value--
+        if (codeCooldown.value <= 0) {
+          clearInterval(cooldownTimer)
+          cooldownTimer = null
+        }
+      }, 1000)
+    } else {
+      ElMessage.error(response.data.message || '发送验证码失败')
+    }
   } catch (error) {
-    console.error('获取验证码失败:', error)
-    ElMessage.error('获取验证码失败，请稍后重试')
+    ElMessage.error(error.response?.data?.message || '发送验证码失败，请稍后重试')
+  } finally {
+    isSendingCode.value = false
   }
 }
 
-const registerFormRef = ref(null)
-
-onMounted(() => {
-  generateCaptcha()
-})
-
-watch(
-  () => router.currentRoute.value.path,
-  (newPath) => {
-    if (newPath === '/register') {
-      generateCaptcha()
-      currentStep.value = 1
-    }
-  }
-)
-
-// 步骤1验证的字段
-const step1Fields = ['nickname', 'password', 'confirmPassword']
-
 // 下一步
 const nextStep = async () => {
-  if (!registerFormRef.value) return
+  if (!formRef.value) return
   try {
-    await registerFormRef.value.validateField(step1Fields)
+    await formRef.value.validateField(['phone', 'code'])
     currentStep.value = 2
   } catch {
-    ElMessage.error('请完善第一步信息')
+    ElMessage.error('请完善验证信息')
   }
 }
 
@@ -282,59 +240,58 @@ const prevStep = () => {
   currentStep.value = 1
 }
 
-// 提交表单
-const submitForm = async () => {
-  if (!registerFormRef.value) return
+// 提交重置密码
+const submitReset = async () => {
+  if (!formRef.value) return
 
   try {
-    await registerFormRef.value.validate()
+    await formRef.value.validate()
     isSubmitting.value = true
 
-    const response = await axios.post(`${API_CONFIG.baseURL}${API_CONFIG.user.register}`, {
-      nickname: registerForm.nickname,
-      password: registerForm.password,
-      email: registerForm.email,
-      phone: registerForm.phone,
-      captcha: registerForm.captcha,
-      checkCodeKey: checkCodeKey.value
+    const response = await axios.post(`${API_CONFIG.baseURL}/v1/users/reset-password`, {
+      phone: formData.phone,
+      code: formData.code,
+      newPassword: formData.newPassword
     })
 
     if (response.data.code === '200') {
-      ElMessage.success('注册成功！')
+      ElMessage.success('密码重置成功，请使用新密码登录')
       await shrinkToLogin()
       setTimeout(() => {
         router.push('/login')
       }, 200)
     } else {
-      ElMessage.error(response.data.message || '注册失败，请稍后重试')
-      generateCaptcha()
+      ElMessage.error(response.data.message || '密码重置失败')
     }
   } catch (error) {
-    // 区分表单验证错误和接口请求错误
     const isFormError = error && typeof error === 'object' && !Array.isArray(error) && !(error instanceof Error)
     if (isFormError && error.fields) {
-      // Element Plus 表单验证失败
       ElMessage.error('请检查表单填写是否正确')
     } else {
-      ElMessage.error(error.response?.data?.message || '注册请求失败，请稍后重试')
+      ElMessage.error(error.response?.data?.message || '密码重置失败，请稍后重试')
     }
-    generateCaptcha()
   } finally {
     isSubmitting.value = false
   }
 }
 
-// 跳转到登录页面
+// 返回登录
 const toLogin = async () => {
   await shrinkToLogin()
   setTimeout(() => {
     router.push('/login')
   }, 200)
 }
+
+// 清理倒计时
+onUnmounted(() => {
+  if (cooldownTimer) {
+    clearInterval(cooldownTimer)
+  }
+})
 </script>
 
 <style scoped lang="less">
-// === 配色：简约暖橙 + 玻璃感 ===
 @accent: #F2784B;
 @accent-light: #FF9A76;
 @accent-gradient: linear-gradient(135deg, #F2784B, #E85D3A);
@@ -346,7 +303,7 @@ const toLogin = async () => {
 @input-bg: #FFFFFF;
 @input-border: #E8E4E0;
 
-.register-container {
+.forgot-container {
   width: 100%;
   height: 100vh;
   background: #FFF7F2;
@@ -358,7 +315,6 @@ const toLogin = async () => {
   font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
 }
 
-// 装饰光球
 .orb {
   position: absolute;
   border-radius: 50%;
@@ -367,38 +323,29 @@ const toLogin = async () => {
 }
 
 .orb-1 {
-  width: 260px;
-  height: 260px;
+  width: 240px;
+  height: 240px;
   background: radial-gradient(circle, rgba(242, 120, 75, 0.2) 0%, transparent 70%);
-  top: -70px;
-  left: -50px;
+  top: -60px;
+  left: -40px;
 }
 
 .orb-2 {
-  width: 180px;
-  height: 180px;
+  width: 160px;
+  height: 160px;
   background: radial-gradient(circle, rgba(255, 154, 118, 0.18) 0%, transparent 70%);
-  bottom: 30px;
-  right: -50px;
+  bottom: 40px;
+  right: -40px;
 }
 
-.orb-3 {
-  width: 120px;
-  height: 120px;
-  background: radial-gradient(circle, rgba(242, 120, 75, 0.12) 0%, transparent 70%);
-  top: 50%;
-  left: 65%;
-}
-
-// 标题区域
-.register-header {
+.forgot-header {
   text-align: center;
   margin-top: 8px;
   position: relative;
   z-index: 2;
 }
 
-.register-title {
+.forgot-title {
   font-size: 22px;
   font-weight: 700;
   color: @text-dark;
@@ -406,12 +353,10 @@ const toLogin = async () => {
   letter-spacing: 2px;
 }
 
-// 步骤指示器
 .steps-indicator {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0;
 }
 
 .step-dot {
@@ -458,7 +403,6 @@ const toLogin = async () => {
   letter-spacing: 1px;
 }
 
-// 毛玻璃卡片
 .glass-card {
   width: calc(100% - 40px);
   margin: 14px 20px 16px;
@@ -477,7 +421,6 @@ const toLogin = async () => {
   overflow-y: auto;
 }
 
-// 步骤切换动画
 .slide-enter-active {
   animation: slideIn 0.3s ease forwards;
 }
@@ -487,28 +430,15 @@ const toLogin = async () => {
 }
 
 @keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
 @keyframes slideOut {
-  from {
-    opacity: 1;
-    transform: translateX(0);
-  }
-  to {
-    opacity: 0;
-    transform: translateX(-20px);
-  }
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(-20px); }
 }
 
-// Element Plus 输入框
 :deep(.el-form-item) {
   margin-bottom: 10px;
 }
@@ -563,7 +493,7 @@ const toLogin = async () => {
 }
 
 // 验证码行
-.captcha-row {
+.code-row {
   display: flex;
   gap: 8px;
   align-items: center;
@@ -575,39 +505,29 @@ const toLogin = async () => {
   }
 }
 
-.captcha-img {
-  height: 36px;
-  width: 90px;
-  border-radius: 8px;
-  border: 1px solid @input-border;
-  background: #FAFAFA;
-  cursor: pointer;
-  object-fit: contain;
-  transition: all 0.2s;
+.code-btn {
   flex-shrink: 0;
-  padding: 2px;
-
-  &:hover {
-    border-color: @accent;
-  }
-}
-
-.captcha-refresh {
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: none;
-  color: @text-muted;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid @accent;
+  border-radius: 10px;
+  background: white;
+  color: @accent;
+  font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
-  flex-shrink: 0;
+  white-space: nowrap;
 
-  &:hover {
-    color: @accent;
-    transform: rotate(90deg);
+  &:hover:not(:disabled) {
+    background: rgba(242, 120, 75, 0.06);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    border-color: @input-border;
+    color: @text-muted;
   }
 }
 
@@ -683,7 +603,6 @@ const toLogin = async () => {
   }
 }
 
-// 底部链接
 .bottom-links {
   text-align: center;
   margin-top: auto;

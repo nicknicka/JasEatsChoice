@@ -739,4 +739,58 @@ public class UserController {
             return ResponseResult.fail("500", "反馈提交失败");
         }
     }
+
+    /**
+     * 忘记密码 - 重置密码
+     * 需要验证手机号 + 短信验证码 + 新密码
+     */
+    @PostMapping("/reset-password")
+    public ResponseResult<?> resetPassword(@RequestBody Map<String, String> request) {
+        try {
+            String phone = request.get("phone");
+            String code = request.get("code");
+            String newPassword = request.get("newPassword");
+
+            // 参数校验
+            if (phone == null || phone.isEmpty()) {
+                return ResponseResult.fail("400", "手机号不能为空");
+            }
+            if (code == null || code.isEmpty()) {
+                return ResponseResult.fail("400", "验证码不能为空");
+            }
+            if (newPassword == null || newPassword.isEmpty()) {
+                return ResponseResult.fail("400", "新密码不能为空");
+            }
+            if (newPassword.length() < 6 || newPassword.length() > 32) {
+                return ResponseResult.fail("400", "密码长度需在6-32位之间");
+            }
+
+            // 验证短信验证码
+            String storedCode = redisTemplate.opsForValue().get("sms-code:" + phone);
+            if (storedCode == null) {
+                return ResponseResult.fail("400", "验证码不存在或已过期，请重新获取");
+            }
+            if (!code.equals(storedCode)) {
+                return ResponseResult.fail("400", "验证码错误");
+            }
+
+            // 验证通过，删除验证码
+            redisTemplate.delete("sms-code:" + phone);
+
+            // 检查手机号是否已注册
+            if (!userService.isPhoneExists(phone)) {
+                return ResponseResult.fail("400", "该手机号未注册");
+            }
+
+            // 重置密码
+            boolean success = userService.resetPasswordByPhone(phone, newPassword);
+            if (success) {
+                return ResponseResult.success("密码重置成功");
+            }
+            return ResponseResult.fail("500", "密码重置失败");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseResult.fail("500", "密码重置失败");
+        }
+    }
 }
