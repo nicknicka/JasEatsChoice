@@ -23,12 +23,16 @@ import {
 import { decodeJwt } from '../utils/api.js'
 import { useAuthStore } from '../store/authStore'
 import { useUserStore } from '../store/userStore'
+import { useLoginTransition } from '../composables/useLoginTransition'
 import api from '../utils/api.js'
 // 导入CommonAvatar组件
 import CommonAvatar from './CommonAvatar.vue'
 
 const router = useRouter()
 const route = useRoute()
+
+// 登录过渡动画控制
+const { hideTransition } = useLoginTransition()
 
 // 内容区域引用
 const contentAreaRef = ref(null)
@@ -507,6 +511,12 @@ onMounted(() => {
       // 等待路由完全准备就绪
       router.isReady().then(() => {
         updateActiveMenuIndex()
+        // 页面渲染完成后，隐藏登录过渡动画覆盖层
+        nextTick(() => {
+          setTimeout(() => {
+            hideTransition()
+          }, 300)
+        })
       })
     })
   } catch (error) {

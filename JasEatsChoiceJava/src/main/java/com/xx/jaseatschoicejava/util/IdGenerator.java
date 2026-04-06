@@ -44,6 +44,7 @@ public class IdGenerator {
     public static final String REVIEW_REPLY_ID_PREFIX = "RRP";
     public static final String MENU_DISH_ID_PREFIX = "MND";
     public static final String ADD_DISH_REQUEST_ID_PREFIX = "ADR";
+    public static final String OAUTH_ID_PREFIX = "OA";
 
     // ID长度
     public static final int ID_LENGTH = 16;
@@ -431,6 +432,18 @@ public class IdGenerator {
             return null;
         }
         return ADD_DISH_REQUEST_ID_PREFIX + addDishRequestId;
+    }
+
+    /**
+     * 将OAuth ID转换为带OA前缀的字符串
+     * @param oauthId OAuth ID
+     * @return 带OA前缀的OAuth ID字符串
+     */
+    public static String toOAuthIdString(Long oauthId) {
+        if (oauthId == null) {
+            return null;
+        }
+        return OAUTH_ID_PREFIX + oauthId;
     }
 
     /**

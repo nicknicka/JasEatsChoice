@@ -1574,6 +1574,8 @@ const exportToDietRecord = () => {
 
     .action-bar {
       flex-wrap: wrap;
-      .action-spacer { display:  }
+      .action-spacer { display: none; }
+    }
+  }
 }
 </style>

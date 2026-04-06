@@ -1,20 +1,18 @@
 <script setup>
-// App.vue now acts as a root container for router views
 import { onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import LoginTransitionOverlay from './components/LoginTransitionOverlay.vue'
 
-// 路由监听：路由切换时自动滚动到页面顶部
 const route = useRoute()
 
 watch(
   () => route.path,
   () => {
-    // 路由变化时，延迟滚动到顶部
     setTimeout(() => {
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }, 100)
   },
-  { immediate: false } // 不在首次加载时触发
+  { immediate: false }
 )
 
 onMounted(() => {
@@ -30,6 +28,8 @@ onMounted(() => {
       </keep-alive>
     </router-view>
   </div>
+  <!-- 登录过渡动画覆盖层 -->
+  <LoginTransitionOverlay />
 </template>
 
 <style lang="less">

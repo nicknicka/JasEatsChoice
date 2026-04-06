@@ -170,10 +170,12 @@ import { API_CONFIG } from '../../config'
 import { useAuthStore } from '../../store/authStore'
 import { useUserStore } from '../../store/userStore'
 import { useWindowControl } from '../../composables/useWindowControl'
+import { useLoginTransition } from '../../composables/useLoginTransition'
 import WindowTitleBar from '../../components/WindowTitleBar.vue'
 
 const router = useRouter()
 const { expandToMain } = useWindowControl()
+const { showTransition } = useLoginTransition()
 
 // 登录表单数据
 const loginForm = reactive({
@@ -406,12 +408,15 @@ const submitForm = async () => {
           await window.api.store.set('savedAccounts', JSON.parse(JSON.stringify(savedAccounts.value)))
           ElMessage.success('登录成功！')
 
-          // 放大窗口并跳转
+          // 显示过渡动画覆盖层
+          showTransition()
           showLoading.value = true
+
+          // 等覆盖层动画显示后再拉伸窗口并跳转
           setTimeout(async () => {
             await expandToMain()
             router.push('/user/home')
-          }, 300)
+          }, 400)
         } catch (error) {
           console.error('登录失败:', error)
           ElMessage.error(error.response?.data?.message || '登录失败，请检查验证码或账号密码是否正确')
