@@ -288,12 +288,43 @@ public class AMapService {
                     }
                 }
 
-                // 如果没有矩形数据，至少返回城市信息
+                // 如果没有矩形数据，尝试通过城市名做地理编码获取坐标
                 if (!province.isEmpty() || !city.isEmpty()) {
+                    String address = city.isEmpty() ? province : city;
+                    log.info("IP定位无坐标，尝试地理编码: {}", address);
+
+                    try {
+                        Map<String, Object> geocodeResult = geocode(address, city);
+                        if ("200".equals(geocodeResult.get("code")) && geocodeResult.get("data") != null) {
+                            @SuppressWarnings("unchecked")
+                            Map<String, Object> geoData = (Map<String, Object>) geocodeResult.get("data");
+                            if (geoData.get("lng") != null && geoData.get("lat") != null) {
+                                Map<String, Object> locationData = new HashMap<>();
+                                locationData.put("lng", geoData.get("lng"));
+                                locationData.put("lat", geoData.get("lat"));
+                                locationData.put("province", province);
+                                locationData.put("city", city);
+                                locationData.put("accuracy", "city");
+
+                                log.info("IP定位通过地理编码成功: {} {}, lng={}, lat={}",
+                                    province, city, geoData.get("lng"), geoData.get("lat"));
+
+                                return Map.of(
+                                    "code", "200",
+                                    "message", "IP定位成功",
+                                    "data", locationData
+                                );
+                            }
+                        }
+                    } catch (Exception e) {
+                        log.warn("地理编码降级失败: {}", e.getMessage());
+                    }
+
+                    // 地理编码也失败，返回无坐标的省市信息
                     Map<String, Object> locationData = new HashMap<>();
                     locationData.put("province", province);
                     locationData.put("city", city);
-                    locationData.put("accuracy", "province"); // 省级精度
+                    locationData.put("accuracy", "province");
 
                     return Map.of(
                         "code", "200",

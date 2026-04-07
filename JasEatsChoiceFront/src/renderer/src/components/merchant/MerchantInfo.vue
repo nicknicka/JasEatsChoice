@@ -32,6 +32,7 @@ import {
 } from '@element-plus/icons-vue'
 import api from '../../utils/api.js'
 import { API_CONFIG } from '../../config/index.js'
+import { getAvatarUrl } from '../../utils/avatar'
 
 const authStore = useAuthStore()
 const userStore = useUserStore()
@@ -779,7 +780,7 @@ const handleSaveAvatar = async () => {
           <div class="avatar-wrapper">
             <img
               v-if="merchantInfo.avatar"
-              :src="merchantInfo.avatar"
+              :src="getAvatarUrl(merchantInfo.avatar)"
               class="avatar"
               alt="商家头像"
             />

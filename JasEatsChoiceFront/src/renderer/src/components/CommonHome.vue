@@ -579,10 +579,18 @@ watch(
 
       // Update user info based on role (using Pinia store)
       if (userRole.value === 'merchant') {
-        // 商户端信息从userStore.merchantInfo获取
-        userStore.userInfo = {
-          name: '商户端',
-          avatar: userStore.merchantInfo?.avatar || ''
+        // 商户端信息从userStore.merchantInfo获取，保留原有 userInfo 字段
+        if (userStore.userInfo) {
+          userStore.userInfo = {
+            ...userStore.userInfo,
+            avatar: userStore.merchantInfo?.avatar || userStore.userInfo.avatar || ''
+          }
+        } else {
+          userStore.userInfo = {
+            name: '商户端',
+            nickname: userStore.merchantInfo?.name || '商户端',
+            avatar: userStore.merchantInfo?.avatar || ''
+          }
         }
       } else if (userRole.value === 'user') {
         // 从authStore获取token并解码用户名

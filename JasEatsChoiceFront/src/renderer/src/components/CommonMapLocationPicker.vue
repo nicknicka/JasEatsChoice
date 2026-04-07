@@ -186,28 +186,73 @@ watch(dialogVisible, (val) => {
   emit('update:visible', val)
 })
 
-// 等待高德地图 SDK 完全加载
-const waitForAMap = () => {
-  return new Promise((resolve, reject) => {
+// 高德地图 SDK 加载状态（全局共享，避免重复加载）
+let amapLoadPromise = null
+
+// 动态加载高德地图 SDK（兼容 Electron 环境）
+const loadAMapSDK = () => {
+  if (amapLoadPromise) return amapLoadPromise
+
+  amapLoadPromise = new Promise((resolve, reject) => {
+    // 已经加载过
     if (typeof AMap !== 'undefined' && AMap.Map) {
-      console.log('高德地图 SDK 已就绪')
       resolve()
       return
     }
 
+    // 检查是否已有 script 标签（可能由其他途径加载）
+    const existingScript = document.querySelector('script[src*="webapi.amap.com/maps"]')
+    if (existingScript) {
+      // 已存在，等待加载完成
+      const waitExisting = () => {
+        if (typeof AMap !== 'undefined' && AMap.Map) {
+          resolve()
+        } else {
+          setTimeout(waitExisting, 100)
+        }
+      }
+      setTimeout(waitExisting, 100)
+      // 设置超时
+      setTimeout(() => {
+        reject(new Error('高德地图 SDK 加载超时'))
+      }, 15000)
+      return
+    }
+
+    // 动态创建 script 标签加载 SDK
+    const script = document.createElement('script')
+    script.src = 'https://webapi.amap.com/maps?v=1.4.15&key=140e4ebfe143855a4cc7440533ff27b3&plugin=AMap.Scale,AMap.ToolBar,AMap.Geocoder,AMap.PlaceSearch,AMap.Geolocation'
+    script.type = 'text/javascript'
+
     const timeout = setTimeout(() => {
       reject(new Error('高德地图 SDK 加载超时'))
-    }, 10000)
+    }, 15000)
 
-    const checkInterval = setInterval(() => {
-      if (typeof AMap !== 'undefined' && AMap.Map) {
-        clearTimeout(timeout)
-        clearInterval(checkInterval)
-        console.log('高德地图 SDK 加载完成')
-        resolve()
+    script.onload = () => {
+      clearTimeout(timeout)
+      // SDK script 加载后，AMap 可能还需要一点时间初始化
+      const checkReady = () => {
+        if (typeof AMap !== 'undefined' && AMap.Map) {
+          console.log('高德地图 SDK 动态加载完成')
+          resolve()
+        } else {
+          setTimeout(checkReady, 50)
+        }
       }
-    }, 100)
+      checkReady()
+    }
+
+    script.onerror = (e) => {
+      clearTimeout(timeout)
+      console.error('高德地图 SDK 脚本加载失败:', e)
+      amapLoadPromise = null // 允许重试
+      reject(new Error('高德地图 SDK 脚本加载失败，请检查网络连接'))
+    }
+
+    document.head.appendChild(script)
   })
+
+  return amapLoadPromise
 }
 
 // 初始化高德地图
@@ -215,8 +260,8 @@ const initMap = async () => {
   mapLoading.value = true
 
   try {
-    // 等待 AMap SDK 加载完成
-    await waitForAMap()
+    // 动态加载 AMap SDK（Electron 兼容）
+    await loadAMapSDK()
 
     console.log('开始初始化地图...')
 
@@ -456,6 +501,8 @@ const handleGetCurrentLocation = async () => {
     const amapApi = (await import('../api/amap.js')).default
     const response = await amapApi.ipLocation()
 
+    console.log('IP定位响应:', JSON.stringify(response))
+
     if (response && response.code === '200' && response.data) {
       const { lng, lat, province, city } = response.data
 
@@ -463,15 +510,39 @@ const handleGetCurrentLocation = async () => {
         console.log('IP定位成功:', province, city, lng, lat)
         updateMarkerPosition(lng, lat)
         getAddressByLocation(lng, lat)
-
-        // 保存到本地存储
         saveLastLocation(lng, lat)
 
         locating.value = false
-        ElMessage.success(`IP定位成功：${province || ''}${city || ''}`)
+        ElMessage.success(`定位成功：${province || ''}${city || ''}`)
         return
       }
+
+      // 有省市但无坐标，用城市名做前端地理编码
+      if (province || city) {
+        const address = city || province
+        console.log('IP定位有省市无坐标，尝试地理编码:', address)
+        if (map.value && typeof AMap !== 'undefined' && AMap.Geocoder) {
+          const geocoder = new AMap.Geocoder()
+          const geocodeResult = await new Promise((resolve) => {
+            geocoder.getLocation(address, (status, result) => {
+              resolve(status === 'complete' && result.geocodes?.length > 0 ? result.geocodes[0] : null)
+            })
+          })
+          if (geocodeResult) {
+            const { lng: gLng, lat: gLat } = geocodeResult.location
+            console.log('地理编码成功:', address, gLng, gLat)
+            updateMarkerPosition(gLng, gLat)
+            getAddressByLocation(gLng, gLat)
+            saveLastLocation(gLng, gLat)
+
+            locating.value = false
+            ElMessage.success(`定位成功：${province || ''}${city || ''}`)
+            return
+          }
+        }
+      }
     }
+    console.log('IP定位未返回有效数据')
   } catch (error) {
     console.error('IP定位失败:', error)
   }
@@ -487,37 +558,40 @@ const handleGetCurrentLocation = async () => {
     return
   }
 
-  // ========== 第三级：尝试浏览器 GPS 定位（可选，用于移动端） ==========
-  if ('geolocation' in navigator) {
+  // ========== 第三级：使用高德地图定位插件（国内可用） ==========
+  if (map.value && typeof AMap !== 'undefined' && AMap.Geolocation) {
     try {
-      await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            console.log('GPS定位成功:', position)
-            const { latitude, longitude } = position.coords
-            updateMarkerPosition(longitude, latitude)
-            getAddressByLocation(longitude, latitude)
+      const position = await new Promise((resolve, reject) => {
+        const geolocation = new AMap.Geolocation({
+          enableHighAccuracy: true,
+          timeout: 15000,
+          zoomToAccuracy: true,
+          GeoLocationFirst: false,
+          noIpLocate: 0,
+          needAddress: false,
+          extensions: 'base'
+        })
 
-            // 保存到本地存储
-            saveLastLocation(longitude, latitude)
-
-            locating.value = false
-            ElMessage.success('GPS定位成功')
-            resolve()
-          },
-          (error) => {
-            console.log('GPS定位失败，已降级到其他方式')
-            reject(error)
-          },
-          {
-            enableHighAccuracy: false,
-            timeout: 15000, // 增加到 15 秒，给用户主动点击的定位更多时间
-            maximumAge: 600000
+        geolocation.getCurrentPosition((status, result) => {
+          if (status === 'complete') {
+            resolve(result)
+          } else {
+            reject(new Error(result.message || '高德定位失败'))
           }
-        )
+        })
       })
+
+      const { lng, lat } = position.position
+      console.log('高德定位成功:', lng, lat)
+      updateMarkerPosition(lng, lat)
+      getAddressByLocation(lng, lat)
+      saveLastLocation(lng, lat)
+
+      locating.value = false
+      ElMessage.success('定位成功')
+      return
     } catch (error) {
-      console.log('GPS定位异常，继续其他方式')
+      console.log('高德定位失败，继续其他方式:', error.message)
     }
   }
 
@@ -621,53 +695,77 @@ const autoLocate = async () => {
     const amapApi = (await import('../api/amap.js')).default
     const response = await amapApi.ipLocation()
 
+    console.log('IP定位响应:', JSON.stringify(response))
+
     if (response && response.code === '200' && response.data) {
-      const { lng, lat } = response.data
+      const { lng, lat, province, city } = response.data
 
       if (lng && lat) {
-        console.log('IP定位成功:', lng, lat)
+        console.log('IP定位成功:', province, city, lng, lat)
         updateMarkerPosition(lng, lat)
         getAddressByLocation(lng, lat)
-
-        // 保存到本地存储
         saveLastLocation(lng, lat)
         return
       }
+
+      // 有省市但无坐标，用城市名做前端地理编码
+      if (province || city) {
+        const address = city || province
+        console.log('IP定位有省市无坐标，尝试地理编码:', address)
+        if (map.value && typeof AMap !== 'undefined' && AMap.Geocoder) {
+          const geocoder = new AMap.Geocoder()
+          const geocodeResult = await new Promise((resolve) => {
+            geocoder.getLocation(address, (status, result) => {
+              resolve(status === 'complete' && result.geocodes?.length > 0 ? result.geocodes[0] : null)
+            })
+          })
+          if (geocodeResult) {
+            const { lng: gLng, lat: gLat } = geocodeResult.location
+            console.log('地理编码成功:', address, gLng, gLat)
+            updateMarkerPosition(gLng, gLat)
+            getAddressByLocation(gLng, gLat)
+            saveLastLocation(gLng, gLat)
+            return
+          }
+        }
+      }
     }
+    console.log('IP定位未返回有效数据')
   } catch (error) {
     console.log('IP定位失败，尝试其他方式:', error.message)
   }
 
-  // ========== 第三级：尝试浏览器 GPS 定位（需要用户授权，超时限制较短） ==========
-  if ('geolocation' in navigator) {
+  // ========== 第三级：使用高德地图定位插件（国内可用，不依赖 Google 服务） ==========
+  if (map.value && typeof AMap !== 'undefined' && AMap.Geolocation) {
     try {
-      await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            console.log('GPS定位成功:', position)
-            const { latitude, longitude } = position.coords
-            updateMarkerPosition(longitude, latitude)
-            getAddressByLocation(longitude, latitude)
+      const position = await new Promise((resolve, reject) => {
+        const geolocation = new AMap.Geolocation({
+          enableHighAccuracy: true,
+          timeout: 10000,
+          zoomToAccuracy: true,
+          GeoLocationFirst: false,
+          noIpLocate: 0,
+          needAddress: false,
+          extensions: 'base'
+        })
 
-            // 保存到本地存储
-            saveLastLocation(longitude, latitude)
-
-            resolve()
-          },
-          (error) => {
-            console.log('GPS定位失败:', error.message)
-            reject(error)
-          },
-          {
-            enableHighAccuracy: false,
-            timeout: 8000, // 增加到 8 秒
-            maximumAge: 600000
+        geolocation.getCurrentPosition((status, result) => {
+          if (status === 'complete') {
+            resolve(result)
+          } else {
+            reject(new Error(result.message || '高德定位失败'))
           }
-        )
+        })
       })
+
+      const { lng, lat } = position.position
+      console.log('高德定位成功:', lng, lat)
+      updateMarkerPosition(lng, lat)
+      getAddressByLocation(lng, lat)
+      saveLastLocation(lng, lat)
       return
     } catch (error) {
-      console.log('GPS定位异常或被拒绝:', error)
+      console.log('高德定位失败:', error.message)
     }
   }
 

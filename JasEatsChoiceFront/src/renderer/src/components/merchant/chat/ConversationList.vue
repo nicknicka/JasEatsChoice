@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { ChatDotRound } from '@element-plus/icons-vue'
+import { getAvatarUrl } from '../../../utils/avatar'
 
 const props = defineProps({
   conversations: {
@@ -144,7 +145,7 @@ const formatTime = (timeStr) => {
         <div class="conversation-avatar">
           <img
             v-if="getAvatarContent(conversation.avatar).type === 'image'"
-            :src="conversation.avatar"
+            :src="getAvatarUrl(conversation.avatar)"
             :alt="conversation.name"
             class="avatar-image"
           />
