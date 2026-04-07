@@ -793,67 +793,70 @@ onMounted(() => {
 </template>
 
 <style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+@import '../../assets/css/merchant-theme.less';
+
 // 复用今日订单的样式
 .merchant-orders-container {
-  padding: 0 20px 20px 20px;
+  padding: 0 @nordic-space-lg @nordic-space-lg @nordic-space-lg;
 
   .orders-header {
-    margin-bottom: 20px;
+    margin-bottom: @nordic-space-lg;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 20px 24px;
-    background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
-    border-radius: 16px;
-    box-shadow: 0 4px 16px rgba(33, 150, 243, 0.3);
+    padding: @nordic-space-lg 24px;
+    background: linear-gradient(135deg, @merchant-primary 0%, @merchant-primary-dark 100%);
+    border-radius: @nordic-radius-lg;
+    box-shadow: 0 4px 16px rgba(74, 122, 77, 0.3);
 
     .header-left {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: @nordic-space-sm;
 
       .page-title {
-        font-size: 1.714rem /* 原值: 24px */;
+        font-size: @nordic-text-xl;
         font-weight: 700;
         margin: 0;
-        color: #ffffff;
+        color: @merchant-surface;
         letter-spacing: 0.5px;
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        text-shadow: 0 2px 4px @merchant-shadow;
       }
 
       .page-subtitle {
-        font-size: 1rem /* 原值: 14px */;
+        font-size: @nordic-text-base;
         color: rgba(255, 255, 255, 0.9);
       }
     }
 
     .header-right {
       display: flex;
-      gap: 8px;
+      gap: @nordic-space-sm;
       align-items: center;
 
       :deep(.el-button) {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        gap: 4px;
-        padding: 8px 14px;
-        font-size: 0.929rem /* 原值: 13px */;
+        gap: @nordic-space-xs;
+        padding: @nordic-space-sm 14px;
+        font-size: @nordic-text-sm;
         font-weight: 500;
         border-radius: 6px;
         height: 34px;
         backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.3);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 2px 8px @merchant-shadow;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
         .el-icon {
-          font-size: 1rem /* 原值: 14px */;
+          font-size: @nordic-text-base;
         }
 
         &:hover {
           transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          box-shadow: 0 4px 12px @merchant-shadow-hover;
         }
 
         &:active {
@@ -868,31 +871,31 @@ onMounted(() => {
     justify-content: space-between;
     align-items: center;
     padding: 24px;
-    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
-    border: 1px solid #d1d5db;
-    border-radius: 16px;
+    background: linear-gradient(135deg, @merchant-bg 0%, darken(@merchant-bg, 3%) 100%);
+    border: 1px solid @merchant-border;
+    border-radius: @nordic-radius-lg;
     margin-bottom: 24px;
     flex-wrap: wrap;
-    gap: 16px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    gap: @nordic-space-lg;
+    box-shadow: 0 4px 12px @merchant-shadow;
 
     .stat-card {
       display: flex;
       align-items: center;
-      gap: 16px;
-      padding: 20px 24px;
-      background: #ffffff;
-      border-radius: 16px;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+      gap: @nordic-space-lg;
+      padding: @nordic-space-lg 24px;
+      background: @merchant-surface;
+      border-radius: @nordic-radius-lg;
+      box-shadow: 0 2px 12px @merchant-shadow;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       cursor: pointer;
       flex: 1;
       min-width: 160px;
-      border: 1px solid rgba(209, 213, 219, 0.3);
+      border: 1px solid rgba(226, 222, 216, 0.3);
 
       &:hover {
         transform: translateY(-8px) scale(1.02);
-        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15);
+        box-shadow: 0 12px 28px @merchant-shadow-hover;
       }
 
       .stat-icon {
@@ -916,93 +919,93 @@ onMounted(() => {
         .stat-value {
           font-size: 26px;
           font-weight: 700;
-          color: #374151;
+          color: @merchant-text;
           line-height: 1.2;
         }
 
         .stat-label {
-          font-size: 0.929rem /* 原值: 13px */;
-          color: #6b7280;
+          font-size: @nordic-text-sm;
+          color: @merchant-text-sec;
           margin-top: 6px;
           font-weight: 500;
         }
       }
 
       &.total {
-        border-left: 4px solid #667eea;
+        border-left: 4px solid @merchant-info;
         .stat-icon {
           background: linear-gradient(
             135deg,
-            rgba(102, 126, 234, 0.15) 0%,
-            rgba(102, 126, 234, 0.08) 100%
+            rgba(91, 139, 210, 0.15) 0%,
+            rgba(91, 139, 210, 0.08) 100%
           );
-          color: #667eea;
+          color: @merchant-info;
         }
         .stat-value {
-          color: #667eea;
+          color: @merchant-info;
         }
       }
 
       &.amount {
-        border-left: 4px solid #f56c6c;
+        border-left: 4px solid @merchant-secondary;
         .stat-icon {
           background: linear-gradient(
             135deg,
-            rgba(245, 108, 108, 0.15) 0%,
-            rgba(245, 108, 108, 0.08) 100%
+            rgba(181, 106, 74, 0.15) 0%,
+            rgba(181, 106, 74, 0.08) 100%
           );
-          color: #f56c6c;
+          color: @merchant-secondary;
         }
         .stat-value {
-          color: #d32f2f;
+          color: @merchant-secondary;
         }
         &.highlight .stat-value {
-          font-size: 2rem /* 原值: 28px */;
+          font-size: @nordic-text-xl;
         }
       }
 
       &.pending {
-        border-left: 4px solid #ff9800;
+        border-left: 4px solid @merchant-warning;
         .stat-icon {
           background: linear-gradient(
             135deg,
-            rgba(255, 152, 0, 0.15) 0%,
-            rgba(255, 152, 0, 0.08) 100%
+            rgba(212, 168, 85, 0.15) 0%,
+            rgba(212, 168, 85, 0.08) 100%
           );
-          color: #ff9800;
+          color: @merchant-warning;
         }
         .stat-value {
-          color: #f57c00;
+          color: @merchant-warning;
         }
       }
 
       &.preparing {
-        border-left: 4px solid #ff9800;
+        border-left: 4px solid @merchant-warning;
         .stat-icon {
           background: linear-gradient(
             135deg,
-            rgba(255, 152, 0, 0.15) 0%,
-            rgba(255, 152, 0, 0.08) 100%
+            rgba(212, 168, 85, 0.15) 0%,
+            rgba(212, 168, 85, 0.08) 100%
           );
-          color: #ff9800;
+          color: @merchant-warning;
         }
         .stat-value {
-          color: #f57c00;
+          color: @merchant-warning;
         }
       }
 
       &.completed {
-        border-left: 4px solid #4caf50;
+        border-left: 4px solid @merchant-success;
         .stat-icon {
           background: linear-gradient(
             135deg,
-            rgba(76, 175, 80, 0.15) 0%,
-            rgba(76, 175, 80, 0.08) 100%
+            rgba(90, 143, 94, 0.15) 0%,
+            rgba(90, 143, 94, 0.08) 100%
           );
-          color: #4caf50;
+          color: @merchant-success;
         }
         .stat-value {
-          color: #388e3c;
+          color: @merchant-success;
         }
       }
     }
@@ -1012,17 +1015,17 @@ onMounted(() => {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 20px;
-    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    padding: @nordic-space-md @nordic-space-lg;
+    background: linear-gradient(135deg, @merchant-surface-alt 0%, @merchant-surface 100%);
     border-radius: 10px;
-    margin-bottom: 16px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-    border: 1px solid #e8eef5;
+    margin-bottom: @nordic-space-lg;
+    box-shadow: 0 2px 12px @merchant-shadow;
+    border: 1px solid @merchant-border;
 
     .filter-left {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: @nordic-space-sm;
       flex: 1;
 
       .filter-header {
@@ -1031,14 +1034,14 @@ onMounted(() => {
         gap: 6px;
 
         .filter-icon {
-          font-size: 1.071rem /* 原值: 15px */;
-          color: #667eea;
+          font-size: @nordic-text-md;
+          color: @merchant-primary;
         }
 
         .filter-label {
-          font-size: 0.929rem /* 原值: 13px */;
+          font-size: @nordic-text-sm;
           font-weight: 600;
-          color: #303133;
+          color: @merchant-text;
         }
       }
 
@@ -1051,42 +1054,42 @@ onMounted(() => {
         .custom-status-tag {
           // 默认未选中状态：透明/灰色
           background: transparent;
-          color: #909399;
-          border: 1px solid #dcdfe6;
+          color: @merchant-text-muted;
+          border: 1px solid @merchant-border;
 
           cursor: pointer;
           transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-          padding: 6px 12px;
-          font-size: 0.857rem;
+          padding: 6px @nordic-space-md;
+          font-size: @nordic-text-xs;
           font-weight: 500;
-          border-radius: 8px;
+          border-radius: @nordic-radius-sm;
           display: inline-flex;
           align-items: center;
-          gap: 4px;
+          gap: @nordic-space-xs;
           user-select: none;
           white-space: nowrap;
 
           .tag-icon {
-            font-size: 0.857rem /* 原值: 12px */;
+            font-size: @nordic-text-xs;
             opacity: 0.6;
           }
 
           .tag-text {
-            font-size: 0.857rem;
+            font-size: @nordic-text-xs;
           }
 
           // hover 状态：轻微提示可点击
           &:hover {
-            background: #f5f7fa;
-            border-color: #409eff;
-            color: #409eff;
+            background: @merchant-surface-alt;
+            border-color: @merchant-primary;
+            color: @merchant-primary;
 
             .tag-icon {
               opacity: 0.8;
             }
 
             transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 2px 8px @merchant-shadow;
           }
 
           &:active {

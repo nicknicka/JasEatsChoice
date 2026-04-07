@@ -51,35 +51,35 @@ onMounted(() => {
 </script>
 
 <style scoped lang="less">
+@import '../../../assets/css/nordic-theme.less';
+@import '../../../assets/css/merchant-theme.less';
+
 .merchant-ai-container {
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding: 20px;
-  background: linear-gradient(135deg, #FEF2F2 0%, #FFF 100%);
+  padding: @nordic-space-lg;
+  background: linear-gradient(135deg, @merchant-secondary-light 0%, @merchant-surface 100%);
 
   .ai-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 16px;
-    border-bottom: 2px solid #FECACA;
+    margin-bottom: @nordic-space-lg;
+    padding-bottom: @nordic-space-md;
+    border-bottom: 2px solid @merchant-border;
 
     h2 {
-      font-family: 'Playfair Display SC', serif;
-      font-size: 28px;
+      font-family: 'Georgia', 'Noto Serif SC', 'Songti SC', serif;
+      font-size: @nordic-text-xl;
       font-weight: 700;
       margin: 0;
-      background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      color: @merchant-secondary;
     }
 
     .header-actions {
       display: flex;
-      gap: 12px;
+      gap: @nordic-space-md;
       align-items: center;
 
       .el-tag {
@@ -94,14 +94,14 @@ onMounted(() => {
     flex: 1;
     display: flex;
     flex-direction: column;
-    border-radius: 16px;
+    border-radius: @nordic-radius-lg;
     overflow: hidden;
-    box-shadow: 0 4px 20px rgba(220, 38, 38, 0.1);
+    box-shadow: 0 4px 20px @merchant-shadow;
 
     :deep(.el-tabs__header) {
       margin: 0;
-      background: linear-gradient(135deg, #FEF2F2 0%, #FFF 100%);
-      border-bottom: 2px solid #FECACA;
+      background: linear-gradient(135deg, @merchant-secondary-light 0%, @merchant-surface 100%);
+      border-bottom: 2px solid @merchant-border;
       flex-shrink: 0;
     }
 
@@ -110,18 +110,18 @@ onMounted(() => {
     }
 
     :deep(.el-tabs__item) {
-      font-size: 15px;
+      font-size: @nordic-text-sm;
       font-weight: 600;
-      color: #6B7280;
-      transition: all 0.3s ease;
+      color: @merchant-text-sec;
+      transition: all @nordic-transition-base ease;
 
       &:hover {
-        color: #DC2626;
+        color: @merchant-secondary;
       }
 
       &.is-active {
-        color: #DC2626;
-        background: linear-gradient(135deg, #FEE2E2 0%, #FFF 100%);
+        color: @merchant-secondary;
+        background: linear-gradient(135deg, @merchant-secondary-light 0%, @merchant-surface 100%);
       }
     }
 

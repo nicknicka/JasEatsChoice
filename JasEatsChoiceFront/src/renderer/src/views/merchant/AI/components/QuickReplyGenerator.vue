@@ -226,6 +226,9 @@ const submitReply = () => {
 </script>
 
 <style scoped lang="less">
+@import '../../../../../assets/css/nordic-theme.less';
+@import '../../../../../assets/css/merchant-theme.less';
+
 .reply-generator {
   display: grid;
   grid-template-columns: 320px 1fr;
@@ -237,7 +240,7 @@ const submitReply = () => {
 .review-list {
   display: flex;
   flex-direction: column;
-  background: #FFF;
+  background: @merchant-surface;
   border-radius: 12px;
   overflow: hidden;
 
@@ -246,12 +249,12 @@ const submitReply = () => {
     justify-content: space-between;
     align-items: center;
     padding: 16px;
-    border-bottom: 1px solid #FECACA;
+    border-bottom: 1px solid @merchant-border;
 
     h3 {
       margin: 0;
       font-size: 16px;
-      color: #DC2626;
+      color: @merchant-secondary;
     }
   }
 
@@ -264,7 +267,7 @@ const submitReply = () => {
 
 .review-card {
   padding: 12px;
-  background: #FAFAFA;
+  background: @merchant-surface-alt;
   border: 2px solid transparent;
   border-radius: 8px;
   margin-bottom: 8px;
@@ -272,13 +275,13 @@ const submitReply = () => {
   transition: all 0.2s ease;
 
   &:hover {
-    background: #FEF2F2;
-    border-color: #FECACA;
+    background: @merchant-secondary-light;
+    border-color: @merchant-border;
   }
 
   &.active {
-    background: #FEF2F2;
-    border-color: #DC2626;
+    background: @merchant-secondary-light;
+    border-color: @merchant-secondary;
   }
 
   .review-header {
@@ -289,13 +292,13 @@ const submitReply = () => {
 
     .user {
       font-weight: 600;
-      color: #374151;
+      color: @merchant-text;
     }
   }
 
   .review-content {
     font-size: 13px;
-    color: #6B7280;
+    color: @merchant-text-sec;
     line-height: 1.5;
     margin-bottom: 8px;
     display: -webkit-box;
@@ -311,7 +314,7 @@ const submitReply = () => {
 
     .time {
       font-size: 12px;
-      color: #9CA3AF;
+      color: @merchant-text-muted;
     }
   }
 }
@@ -319,7 +322,7 @@ const submitReply = () => {
 .suggestions-panel {
   display: flex;
   flex-direction: column;
-  background: #FFF;
+  background: @merchant-surface;
   border-radius: 12px;
   overflow: hidden;
 
@@ -328,19 +331,19 @@ const submitReply = () => {
     justify-content: space-between;
     align-items: center;
     padding: 16px;
-    border-bottom: 1px solid #FECACA;
+    border-bottom: 1px solid @merchant-border;
 
     h3 {
       margin: 0;
       font-size: 16px;
-      color: #DC2626;
+      color: @merchant-secondary;
     }
   }
 
   .review-detail {
     padding: 16px;
-    background: #FEF2F2;
-    border-bottom: 1px solid #FECACA;
+    background: @merchant-secondary-light;
+    border-bottom: 1px solid @merchant-border;
 
     .detail-header {
       display: flex;
@@ -350,13 +353,13 @@ const submitReply = () => {
 
       .user {
         font-weight: 600;
-        color: #374151;
+        color: @merchant-text;
       }
     }
 
     .detail-content {
       font-size: 14px;
-      color: #374151;
+      color: @merchant-text;
       line-height: 1.6;
     }
   }
@@ -369,7 +372,7 @@ const submitReply = () => {
 }
 
 .suggestion-item {
-  background: #FAFAFA;
+  background: @merchant-surface-alt;
   border: 2px solid transparent;
   border-radius: 12px;
   padding: 16px;
@@ -378,20 +381,20 @@ const submitReply = () => {
   transition: all 0.2s ease;
 
   &:hover {
-    background: #FEF2F2;
-    border-color: #FECACA;
+    background: @merchant-secondary-light;
+    border-color: @merchant-border;
   }
 
   &.selected {
-    background: #FEF2F2;
-    border-color: #CA8A04;
+    background: @merchant-secondary-light;
+    border-color: @merchant-primary;
   }
 
   .style-tag {
     display: inline-block;
     padding: 4px 12px;
-    background: #FEF3C7;
-    color: #CA8A04;
+    background: @merchant-warning-light;
+    color: @merchant-warning;
     border-radius: 20px;
     font-size: 12px;
     font-weight: 600;
@@ -400,7 +403,7 @@ const submitReply = () => {
 
   .text {
     font-size: 14px;
-    color: #374151;
+    color: @merchant-text;
     line-height: 1.6;
     margin-bottom: 12px;
   }
@@ -418,18 +421,18 @@ const submitReply = () => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #DC2626;
+  color: @merchant-secondary;
 
   p {
     margin-top: 12px;
-    color: #6B7280;
+    color: @merchant-text-sec;
   }
 }
 
 .edit-area {
   padding: 16px;
-  background: #FEF2F2;
-  border-top: 1px solid #FECACA;
+  background: @merchant-secondary-light;
+  border-top: 1px solid @merchant-border;
 
   .edit-actions {
     display: flex;
@@ -445,11 +448,11 @@ const submitReply = () => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #9CA3AF;
+  color: @merchant-text-muted;
 
   .el-icon {
     margin-bottom: 12px;
-    color: #FECACA;
+    color: @merchant-error;
   }
 
   p {
@@ -458,7 +461,7 @@ const submitReply = () => {
 
   .hint {
     font-size: 13px;
-    color: #D1D5DB;
+    color: @merchant-text-muted;
   }
 }
 </style>

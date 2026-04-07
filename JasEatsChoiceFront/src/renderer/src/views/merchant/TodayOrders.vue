@@ -801,6 +801,9 @@ onMounted(() => {
 </template>
 
 <style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+@import '../../assets/css/merchant-theme.less';
+
 .merchant-orders-container {
   padding: 0 20px 20px 20px;
 
@@ -810,9 +813,9 @@ onMounted(() => {
     justify-content: space-between;
     align-items: center;
     padding: 20px 24px;
-    background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+    background: linear-gradient(135deg, @merchant-primary 0%, @merchant-primary-dark 100%);
     border-radius: 16px;
-    box-shadow: 0 4px 16px rgba(33, 150, 243, 0.3);
+    box-shadow: 0 4px 16px rgba(74, 122, 77, 0.3);
 
     .header-left {
       display: flex;
@@ -864,27 +867,27 @@ onMounted(() => {
     justify-content: space-between;
     align-items: center;
     padding: 24px;
-    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-    border: 1px solid #90caf9;
+    background: @merchant-primary-light;
+    border: 1px solid @merchant-primary;
     border-radius: 16px;
     margin-bottom: 24px;
     flex-wrap: wrap;
     gap: 16px;
-    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.15);
+    box-shadow: 0 4px 12px @merchant-shadow;
 
     .stat-card {
       display: flex;
       align-items: center;
       gap: 16px;
       padding: 20px 24px;
-      background: #ffffff;
+      background: @merchant-surface;
       border-radius: 16px;
-      box-shadow: 0 2px 12px rgba(33, 150, 243, 0.08);
+      box-shadow: 0 2px 12px @merchant-shadow;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       cursor: pointer;
       flex: 1;
       min-width: 160px;
-      border: 1px solid rgba(144, 202, 249, 0.3);
+      border: 1px solid @merchant-border;
       position: relative;
       overflow: hidden;
 
@@ -906,8 +909,8 @@ onMounted(() => {
 
       &:hover {
         transform: translateY(-8px) scale(1.02);
-        box-shadow: 0 12px 28px rgba(33, 150, 243, 0.25);
-        border-color: rgba(144, 202, 249, 0.8);
+        box-shadow: 0 12px 28px rgba(74, 122, 77, 0.25);
+        border-color: @merchant-primary-light;
 
         &::before {
           opacity: 1;
@@ -948,7 +951,7 @@ onMounted(() => {
         .stat-value {
           font-size: 26px;
           font-weight: 700;
-          color: #1976d2;
+          color: @merchant-primary-dark;
           line-height: 1.2;
           letter-spacing: -0.5px;
           transition: all 0.3s ease;
@@ -961,7 +964,7 @@ onMounted(() => {
 
         .stat-label {
           font-size: 0.929rem /* 原值: 13px */;
-          color: #64b5f6;
+          color: @merchant-info;
           margin-top: 6px;
           font-weight: 500;
           letter-spacing: 0.3px;
@@ -969,40 +972,40 @@ onMounted(() => {
       }
 
       &.total {
-        border-left: 4px solid #2196f3;
+        border-left: 4px solid @merchant-info;
 
         .stat-icon {
           background: linear-gradient(
             135deg,
-            rgba(33, 150, 243, 0.15) 0%,
-            rgba(33, 150, 243, 0.08) 100%
+            rgba(91, 139, 210, 0.15) 0%,
+            rgba(91, 139, 210, 0.08) 100%
           );
-          color: #2196f3;
+          color: @merchant-info;
         }
 
         .stat-value {
-          color: #1976d2;
+          color: @merchant-info;
         }
       }
 
       &.amount {
-        border-left: 4px solid #f56c6c;
+        border-left: 4px solid @merchant-secondary;
 
         .stat-icon {
           background: linear-gradient(
             135deg,
-            rgba(245, 108, 108, 0.15) 0%,
-            rgba(245, 108, 108, 0.08) 100%
+            rgba(181, 106, 74, 0.15) 0%,
+            rgba(181, 106, 74, 0.08) 100%
           );
-          color: #f56c6c;
+          color: @merchant-secondary;
         }
 
         .stat-value {
-          color: #d32f2f;
+          color: @merchant-secondary;
         }
 
         &.highlight {
-          background: linear-gradient(135deg, #fff5f5 0%, #ffffff 100%);
+          background: linear-gradient(135deg, @merchant-secondary-light 0%, @merchant-surface 100%);
           border-width: 2px;
 
           .stat-value {

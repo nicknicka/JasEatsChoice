@@ -298,6 +298,9 @@ const handleUpload = (file) => {
 </template>
 
 <style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+@import '../../assets/css/merchant-theme.less';
+
 .dish-edit-container {
   padding: 0 20px 20px 20px;
 
@@ -314,11 +317,11 @@ const handleUpload = (file) => {
   .dish-edit-content {
     .dish-images-section,
     .dish-info-section {
-      background-color: #fff;
+      background-color: @merchant-surface;
       border-radius: 8px;
       padding: 16px;
       margin-bottom: 20px;
-      box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+      box-shadow: 0 2px 12px 0 @merchant-shadow;
     }
 
     .section-title {
@@ -334,13 +337,13 @@ const handleUpload = (file) => {
       margin-bottom: 16px;
 
       .info-label {
-        color: #606266;
+        color: @merchant-text-sec;
         width: 120px;
       }
 
       .unit {
         margin-left: 8px;
-        color: #606266;
+        color: @merchant-text-sec;
       }
     }
 
@@ -353,7 +356,7 @@ const handleUpload = (file) => {
 .calorie-display {
   font-size: 1.143rem /* 原值: 16px */;
   font-weight: 600;
-  color: #f56c6c;
+  color: @merchant-error;
 }
 
 .optional-ingredients-container {

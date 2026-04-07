@@ -438,6 +438,9 @@ onMounted(() => {
 
 
 <style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+@import '../../assets/css/merchant-theme.less';
+
 .merchant-tutorial-manage-container {
   padding: 20px;
 
@@ -449,7 +452,7 @@ onMounted(() => {
     h3 {
       margin: 0;
       font-size: 1.429rem /* 原值: 20px */;
-      color: #303133;
+      color: @merchant-text;
     }
   }
 
@@ -463,26 +466,26 @@ onMounted(() => {
       padding: 20px;
       border-radius: 8px;
       text-align: center;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      box-shadow: 0 2px 8px @merchant-shadow-hover;
 
       &.total {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
+        background: linear-gradient(135deg, @merchant-primary 0%, @merchant-primary-dark 100%);
+        color: @merchant-surface;
       }
 
       &.draft {
-        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-        color: white;
+        background: linear-gradient(135deg, @merchant-secondary 0%, @merchant-error 100%);
+        color: @merchant-surface;
       }
 
       &.pending {
-        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-        color: white;
+        background: linear-gradient(135deg, @merchant-warning 0%, @merchant-warning-light 100%);
+        color: @merchant-surface;
       }
 
       &.published {
-        background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
-        color: white;
+        background: linear-gradient(135deg, @merchant-success 0%, @merchant-primary-dark 100%);
+        color: @merchant-surface;
       }
 
       .stat-value {
@@ -502,11 +505,11 @@ onMounted(() => {
     font-size: 1.286rem /* 原值: 18px */;
 
     &.video {
-      color: #ff6b6b;
+      color: @merchant-error;
     }
 
     &.article {
-      color: #f7b267;
+      color: @merchant-warning;
     }
   }
 }

@@ -698,13 +698,16 @@ const batchAssociateDishes = async () => {
 </template>
 
 <style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+@import '../../assets/css/merchant-theme.less';
+
 // 时间设置按钮样式
 .time-set-btn {
-  color: #1890ff;
+  color: @merchant-primary;
   font-weight: 500;
 
   &:hover {
-    color: #40a9ff;
+    color: @merchant-primary-light;
     text-decoration: underline;
   }
 }
@@ -725,12 +728,12 @@ const batchAssociateDishes = async () => {
 
   .dish-name {
     font-weight: 600;
-    color: #2d3748;
+    color: @merchant-text;
     font-size: 1rem /* 原值: 14px */;
   }
 
   .dish-price {
-    color: #e6a23c;
+    color: @merchant-warning;
     font-weight: 600;
     font-size: 1rem /* 原值: 14px */;
   }
@@ -740,38 +743,38 @@ const batchAssociateDishes = async () => {
   padding: 0 20px 20px 20px;
 
   .menu-edit-header {
-    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    background: linear-gradient(135deg, @merchant-primary-light 0%, @merchant-primary 100%);
     padding: 20px;
     margin: -20px -20px 20px -20px;
     border-radius: 0 0 12px 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 8px @merchant-shadow-hover;
 
     .page-title {
       font-size: 1.714rem /* 原值: 24px */;
       font-weight: 700;
       margin: 0;
       margin-left: 17px;
-      color: #1976d2;
+      color: @merchant-surface;
     }
   }
 
   .menu-edit-content {
     .menu-info-section,
     .dishes-section {
-      background-color: #fff;
+      background-color: @merchant-surface;
       border-radius: 12px;
       padding: 24px;
       margin-bottom: 24px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+      box-shadow: 0 4px 16px @merchant-shadow-hover;
     }
 
     .section-title {
       font-size: 1.286rem /* 原值: 18px */;
       font-weight: 600;
       margin-bottom: 20px;
-      color: #333;
+      color: @merchant-text;
       padding-bottom: 10px;
-      border-bottom: 2px solid #e0e0e0;
+      border-bottom: 2px solid @merchant-border;
     }
 
     .info-item {
@@ -781,7 +784,7 @@ const batchAssociateDishes = async () => {
       margin-bottom: 20px;
 
       .info-label {
-        color: #555;
+        color: @merchant-text-sec;
         width: 130px;
         font-weight: 500;
         font-size: 1rem /* 原值: 14px */;
@@ -794,13 +797,13 @@ const batchAssociateDishes = async () => {
           border-radius: 6px;
 
           &:hover {
-            border-color: #409eff;
-            box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.1);
+            border-color: @merchant-primary;
+            box-shadow: 0 0 0 2px @merchant-primary-light;
           }
 
           &.is-focus {
-            border-color: #409eff;
-            box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+            border-color: @merchant-primary;
+            box-shadow: 0 0 0 2px fade(@merchant-primary, 20%);
           }
         }
       }
@@ -813,13 +816,13 @@ const batchAssociateDishes = async () => {
             border-radius: 6px;
 
             &:hover {
-              border-color: #409eff;
-              box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.1);
+              border-color: @merchant-primary;
+              box-shadow: 0 0 0 2px @merchant-primary-light;
             }
 
             &.is-focus {
-              border-color: #409eff;
-              box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+              border-color: @merchant-primary;
+              box-shadow: 0 0 0 2px fade(@merchant-primary, 20%);
             }
           }
         }
@@ -833,13 +836,13 @@ const batchAssociateDishes = async () => {
             border-radius: 6px;
 
             &:hover {
-              border-color: #409eff;
-              box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.1);
+              border-color: @merchant-primary;
+              box-shadow: 0 0 0 2px @merchant-primary-light;
             }
 
             &.is-focus {
-              border-color: #409eff;
-              box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+              border-color: @merchant-primary;
+              box-shadow: 0 0 0 2px fade(@merchant-primary, 20%);
             }
           }
         }
@@ -862,13 +865,13 @@ const batchAssociateDishes = async () => {
             border-radius: 6px;
 
             &:hover {
-              border-color: #409eff;
-              box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.1);
+              border-color: @merchant-primary;
+              box-shadow: 0 0 0 2px @merchant-primary-light;
             }
 
             &.is-focus {
-              border-color: #409eff;
-              box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+              border-color: @merchant-primary;
+              box-shadow: 0 0 0 2px fade(@merchant-primary, 20%);
             }
           }
         }
@@ -884,12 +887,12 @@ const batchAssociateDishes = async () => {
         border: none;
         border-radius: 8px;
         margin-bottom: 12px;
-        background-color: #ffffff;
+        background-color: @merchant-surface;
         transition: all 0.3s ease;
-        box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+        box-shadow: 0 2px 12px 0 @merchant-shadow;
 
         &:hover {
-          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+          box-shadow: 0 4px 16px @merchant-shadow-hover;
         }
 
         .dish-actions {
@@ -913,30 +916,30 @@ const batchAssociateDishes = async () => {
 // 对话框样式
 :deep(.el-dialog) {
   border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 20px @merchant-shadow-hover;
 }
 
 :deep(.el-dialog__header) {
-  border-bottom: 1px solid #f1f3f5;
+  border-bottom: 1px solid @merchant-divider;
   padding: 20px 24px;
   border-radius: 12px 12px 0 0;
 }
 
 :deep(.el-dialog__title) {
-  color: #495057;
+  color: @merchant-text;
   font-weight: 600;
 }
 
 :deep(.el-dialog__body) {
   padding: 24px;
-  background-color: #fafbfc;
+  background-color: @merchant-surface-alt;
 }
 
 :deep(.el-dialog__footer) {
-  border-top: 1px solid #f1f3f5;
+  border-top: 1px solid @merchant-divider;
   padding: 16px 24px;
   border-radius: 0 0 12px 12px;
-  background-color: #ffffff;
+  background-color: @merchant-surface;
 }
 
 .dialog-footer {

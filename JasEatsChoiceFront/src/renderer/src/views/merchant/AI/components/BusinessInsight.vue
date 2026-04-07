@@ -239,9 +239,12 @@ onMounted(() => {
 </script>
 
 <style scoped lang="less">
+@import '../../../../../assets/css/nordic-theme.less';
+@import '../../../../../assets/css/merchant-theme.less';
+
 .business-insight {
   height: 100%;
-  padding: 16px;
+  padding: @nordic-space-md;
   overflow-y: auto;
 }
 
@@ -249,78 +252,78 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: @nordic-space-lg;
 }
 
 .metrics-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 20px;
+  gap: @nordic-space-md;
+  margin-bottom: @nordic-space-lg;
 }
 
 .metric-card {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 20px;
-  background: #FFF;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  gap: @nordic-space-md;
+  padding: @nordic-space-lg;
+  background: @merchant-surface;
+  border-radius: @nordic-radius-md;
+  box-shadow: 0 2px 8px @merchant-shadow;
 
   .metric-icon {
     width: 48px;
     height: 48px;
-    border-radius: 12px;
+    border-radius: @nordic-radius-md;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 24px;
 
     &.revenue {
-      background: linear-gradient(135deg, #FEF3C7, #FDE68A);
-      color: #CA8A04;
+      background: linear-gradient(135deg, @merchant-warning-light, #F5E0B0);
+      color: @merchant-warning;
     }
 
     &.orders {
-      background: linear-gradient(135deg, #DBEAFE, #BFDBFE);
-      color: #2563EB;
+      background: linear-gradient(135deg, @merchant-info-light, #C8DEF2);
+      color: @merchant-info;
     }
 
     &.average {
-      background: linear-gradient(135deg, #D1FAE5, #A7F3D0);
-      color: #059669;
+      background: linear-gradient(135deg, @merchant-success-light, #C5E8C8);
+      color: @merchant-success;
     }
 
     &.rating {
-      background: linear-gradient(135deg, #FEE2E2, #FECACA);
-      color: #DC2626;
+      background: linear-gradient(135deg, @merchant-secondary-light, #F0D5C8);
+      color: @merchant-secondary;
     }
   }
 
   .metric-content {
     .metric-value {
-      font-size: 24px;
+      font-size: @nordic-text-xl;
       font-weight: 700;
-      color: #374151;
+      color: @merchant-text;
     }
 
     .metric-label {
-      font-size: 13px;
-      color: #6B7280;
+      font-size: @nordic-text-sm;
+      color: @merchant-text-sec;
       margin-top: 4px;
     }
 
     .metric-change {
-      font-size: 12px;
+      font-size: @nordic-text-xs;
       margin-top: 4px;
 
       &.up {
-        color: #059669;
+        color: @merchant-success;
       }
 
       &.down {
-        color: #DC2626;
+        color: @merchant-error;
       }
     }
   }
@@ -329,29 +332,29 @@ onMounted(() => {
 .insights-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
+  gap: @nordic-space-md;
 }
 
 .insight-card {
-  background: #FFF;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  background: @merchant-surface;
+  border-radius: @nordic-radius-md;
+  padding: @nordic-space-lg;
+  box-shadow: 0 2px 8px @merchant-shadow;
 
   .card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 16px;
+    margin-bottom: @nordic-space-md;
 
     h3 {
       margin: 0;
       font-size: 15px;
-      color: #374151;
+      color: @merchant-text;
     }
 
     .ai-icon {
-      color: #DC2626;
+      color: @merchant-secondary;
       font-size: 20px;
     }
   }
@@ -369,7 +372,7 @@ onMounted(() => {
     flex-direction: column;
     align-items: center;
     width: 12%;
-    background: linear-gradient(to top, #DC2626, #F87171);
+    background: linear-gradient(to top, @merchant-primary, lighten(@merchant-primary, 20%));
     border-radius: 4px 4px 0 0;
     min-height: 20px;
     position: relative;
@@ -378,15 +381,15 @@ onMounted(() => {
       position: absolute;
       top: -20px;
       font-size: 11px;
-      color: #6B7280;
+      color: @merchant-text-sec;
       white-space: nowrap;
     }
 
     .bar-label {
       position: absolute;
       bottom: -24px;
-      font-size: 12px;
-      color: #9CA3AF;
+      font-size: @nordic-text-xs;
+      color: @merchant-text-muted;
     }
   }
 }
@@ -395,9 +398,9 @@ onMounted(() => {
   .dish-item {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: @nordic-space-md;
     padding: 10px 0;
-    border-bottom: 1px solid #F3F4F6;
+    border-bottom: 1px solid @merchant-divider;
 
     &:last-child {
       border-bottom: none;
@@ -410,47 +413,47 @@ onMounted(() => {
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 12px;
+      font-size: @nordic-text-xs;
       font-weight: 600;
-      background: #F3F4F6;
-      color: #6B7280;
+      background: @merchant-surface-alt;
+      color: @merchant-text-sec;
 
       &.rank-1 {
-        background: linear-gradient(135deg, #FEF3C7, #FDE68A);
-        color: #CA8A04;
+        background: linear-gradient(135deg, @merchant-warning-light, #F5E0B0);
+        color: @merchant-warning;
       }
 
       &.rank-2 {
-        background: linear-gradient(135deg, #E5E7EB, #D1D5DB);
-        color: #374151;
+        background: linear-gradient(135deg, @merchant-border, #D1D5DB);
+        color: @merchant-text;
       }
 
       &.rank-3 {
-        background: linear-gradient(135deg, #FED7AA, #FDBA74);
-        color: #C2410C;
+        background: linear-gradient(135deg, @merchant-secondary-light, #F0C8B0);
+        color: @merchant-secondary;
       }
     }
 
     .name {
       flex: 1;
-      font-size: 14px;
-      color: #374151;
+      font-size: @nordic-text-base;
+      color: @merchant-text;
     }
 
     .sales {
-      font-size: 13px;
-      color: #6B7280;
+      font-size: @nordic-text-sm;
+      color: @merchant-text-sec;
     }
 
     .trend {
-      font-size: 12px;
+      font-size: @nordic-text-xs;
 
       &.up {
-        color: #059669;
+        color: @merchant-success;
       }
 
       &.down {
-        color: #DC2626;
+        color: @merchant-error;
       }
     }
   }
@@ -462,8 +465,8 @@ onMounted(() => {
     align-items: flex-start;
     gap: 10px;
     padding: 10px 0;
-    font-size: 13px;
-    color: #374151;
+    font-size: @nordic-text-sm;
+    color: @merchant-text;
     line-height: 1.5;
 
     .el-icon {
@@ -471,15 +474,15 @@ onMounted(() => {
       flex-shrink: 0;
 
       &.warning {
-        color: #F59E0B;
+        color: @merchant-warning;
       }
 
       &.success {
-        color: #059669;
+        color: @merchant-success;
       }
 
       &.opportunity {
-        color: #2563EB;
+        color: @merchant-info;
       }
     }
   }
@@ -489,25 +492,25 @@ onMounted(() => {
   .rating-item {
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin-bottom: 8px;
+    gap: @nordic-space-md;
+    margin-bottom: @nordic-space-sm;
 
     .stars {
       width: 36px;
-      font-size: 13px;
-      color: #6B7280;
+      font-size: @nordic-text-sm;
+      color: @merchant-text-sec;
     }
 
     .bar-container {
       flex: 1;
       height: 8px;
-      background: #F3F4F6;
+      background: @merchant-divider;
       border-radius: 4px;
       overflow: hidden;
 
       .bar {
         height: 100%;
-        background: linear-gradient(90deg, #DC2626, #F87171);
+        background: linear-gradient(90deg, @merchant-primary, lighten(@merchant-primary, 15%));
         border-radius: 4px;
         transition: width 0.3s ease;
       }
@@ -515,8 +518,8 @@ onMounted(() => {
 
     .count {
       width: 40px;
-      font-size: 12px;
-      color: #9CA3AF;
+      font-size: @nordic-text-xs;
+      color: @merchant-text-muted;
       text-align: right;
     }
   }

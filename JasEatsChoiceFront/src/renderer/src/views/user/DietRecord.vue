@@ -208,18 +208,17 @@
 
       <!-- 优化后的空数据提示 -->
       <div v-if="!loading && dietRecords.length === 0" class="empty-records">
-        <el-empty
-          image="https://cdn-icons-png.flaticon.com/128/4385/4385277.png"
-          description="暂无饮食记录"
-        >
-          <template #bottom>
-            <el-button type="primary" class="add-empty-btn" @click="openAddRecordDialog">
-              <el-icon><Plus /></el-icon>
-              开始记录第一餐
-            </el-button>
-            <div class="empty-tips">💡 小提示：记录饮食可以帮助你更好地管理健康</div>
-          </template>
-        </el-empty>
+        <div class="empty-content">
+          <div class="empty-icon-wrapper">
+            <el-icon class="empty-icon"><Document /></el-icon>
+          </div>
+          <p class="empty-description">暂无饮食记录</p>
+          <el-button type="primary" class="add-empty-btn" @click="openAddRecordDialog">
+            <el-icon><Plus /></el-icon>
+            开始记录第一餐
+          </el-button>
+          <div class="empty-tips">💡 小提示：记录饮食可以帮助你更好地管理健康</div>
+        </div>
       </div>
     </div>
 
@@ -266,7 +265,8 @@ import {
   Moon,
   Coffee,
   ArrowDown,
-  Warning
+  Warning,
+  Document
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import api from '../../utils/api.js'
@@ -863,20 +863,61 @@ onMounted(() => {
   text-align: center;
 }
 
+.empty-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: @nordic-space-md;
+}
+
+.empty-icon-wrapper {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, @nordic-accent-light 0%, @nordic-bg 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: @nordic-space-sm;
+}
+
+.empty-icon {
+  font-size: 3.429rem;
+  color: @nordic-accent;
+}
+
+.empty-description {
+  font-size: @nordic-text-lg;
+  color: @nordic-text-secondary;
+  margin: 0;
+  font-weight: 500;
+}
+
 .add-empty-btn {
-  margin-top: @nordic-space-lg;
-  border-radius: @nordic-radius-sm;
+  margin-top: @nordic-space-sm;
+  border-radius: @nordic-radius-pill;
   font-weight: 600;
+  padding: 12px 28px;
+  background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
+  border: none;
+  box-shadow: 0 4px 12px rgba(212, 132, 90, 0.3);
+  transition: all @nordic-transition-base ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(212, 132, 90, 0.4);
+  }
 }
 
 .empty-tips {
-  margin-top: @nordic-space-md;
+  margin-top: @nordic-space-sm;
   font-size: @nordic-text-base;
   color: @nordic-text-muted;
   padding: 12px @nordic-space-lg;
   background-color: @nordic-bg;
-  border-radius: @nordic-radius-sm;
+  border-radius: @nordic-radius-md;
   display: inline-block;
+  border: 1px solid @nordic-border;
 }
 
 /* 响应式设计 */

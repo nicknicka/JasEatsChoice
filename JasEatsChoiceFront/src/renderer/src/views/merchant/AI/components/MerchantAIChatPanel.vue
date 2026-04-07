@@ -165,13 +165,16 @@ onMounted(() => {
 </script>
 
 <style scoped lang="less">
+@import '../../../../../assets/css/nordic-theme.less';
+@import '../../../../../assets/css/merchant-theme.less';
+
 .chat-panel {
   display: flex;
   flex-direction: column;
   height: 100%;
   gap: 12px;
   padding: 16px;
-  background: #FFF;
+  background: @merchant-surface;
   border-radius: 12px;
 }
 
@@ -179,7 +182,7 @@ onMounted(() => {
   flex: 1;
   overflow-y: auto;
   padding: 16px;
-  background: #FAFAFA;
+  background: @merchant-surface-alt;
   border-radius: 12px;
 
   &::-webkit-scrollbar {
@@ -187,11 +190,11 @@ onMounted(() => {
   }
 
   &::-webkit-scrollbar-thumb {
-    background: #DEE2E6;
+    background: @merchant-border;
     border-radius: 3px;
 
     &:hover {
-      background: #ADB5BD;
+      background: @merchant-text-muted;
     }
   }
 }
@@ -203,29 +206,29 @@ onMounted(() => {
 
   &.ai {
     .avatar {
-      background: linear-gradient(135deg, #DC2626, #B91C1C);
+      background: @merchant-secondary;
     }
     .content {
-      background: #FEF2F2;
-      border: 1px solid #FECACA;
+      background: @merchant-secondary-light;
+      border: 1px solid @merchant-border;
     }
   }
 
   &.user {
     flex-direction: row-reverse;
     .avatar {
-      background: #F3F4F6;
+      background: @merchant-primary-light;
     }
     .content {
-      background: #FEE2E2;
-      border: 1px solid #FECACA;
+      background: @merchant-secondary-light;
+      border: 1px solid @merchant-border;
     }
   }
 
   &.error {
     .content {
-      background: #FEF2F2;
-      border-color: #FCA5A5;
+      background: @merchant-secondary-light;
+      border-color: @merchant-error;
     }
   }
 
@@ -248,42 +251,42 @@ onMounted(() => {
     .text {
       font-size: 14px;
       line-height: 1.6;
-      color: #374151;
+      color: @merchant-text;
 
       :deep(h2) {
         font-size: 18px;
         font-weight: 700;
         margin: 8px 0;
-        color: #DC2626;
+        color: @merchant-secondary;
       }
 
       :deep(h3) {
         font-size: 16px;
         font-weight: 600;
         margin: 6px 0;
-        color: #B91C1C;
+        color: @merchant-secondary;
       }
 
       :deep(h4) {
         font-size: 15px;
         font-weight: 600;
         margin: 4px 0;
-        color: #450A0A;
+        color: @merchant-secondary;
       }
 
       :deep(strong) {
-        color: #DC2626;
+        color: @merchant-secondary;
       }
 
       :deep(code) {
-        background: #F3F4F6;
+        background: @merchant-surface-alt;
         padding: 2px 6px;
         border-radius: 4px;
         font-family: monospace;
       }
 
       :deep(pre) {
-        background: #F3F4F6;
+        background: @merchant-surface-alt;
         padding: 12px;
         border-radius: 8px;
         overflow-x: auto;
@@ -299,7 +302,7 @@ onMounted(() => {
         display: flex;
         gap: 12px;
         padding: 4px 0;
-        border-bottom: 1px solid #FECACA;
+        border-bottom: 1px solid @merchant-border;
 
         .cell {
           flex: 1;
@@ -310,7 +313,7 @@ onMounted(() => {
 
     .time {
       font-size: 12px;
-      color: #9CA3AF;
+      color: @merchant-text-muted;
       margin-top: 4px;
       text-align: right;
     }
@@ -325,7 +328,7 @@ onMounted(() => {
   span {
     width: 8px;
     height: 8px;
-    background: #DC2626;
+    background: @merchant-secondary;
     border-radius: 50%;
     animation: bounce 1.4s infinite ease-in-out;
 
@@ -340,14 +343,14 @@ onMounted(() => {
 }
 
 .quick-questions {
-  background: #FEF2F2;
+  background: @merchant-secondary-light;
   border-radius: 12px;
   padding: 16px;
 
   .quick-title {
     font-size: 14px;
     font-weight: 600;
-    color: #DC2626;
+    color: @merchant-secondary;
     margin-bottom: 12px;
   }
 
@@ -359,19 +362,19 @@ onMounted(() => {
 
   .quick-btn {
     padding: 8px 16px;
-    background: #FFF;
-    border: 1px solid #FECACA;
+    background: @merchant-surface;
+    border: 1px solid @merchant-border;
     border-radius: 20px;
     font-size: 13px;
-    color: #DC2626;
+    color: @merchant-secondary;
     cursor: pointer;
     transition: all 0.2s ease;
 
     &:hover {
-      background: #FEE2E2;
-      border-color: #DC2626;
+      background: @merchant-secondary-light;
+      border-color: @merchant-secondary;
       transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.15);
+      box-shadow: 0 4px 12px rgba(181, 106, 74, 0.15);
     }
   }
 }

@@ -411,9 +411,12 @@ watch(currentOrderTrend, () => {
 </template>
 
 <style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+@import '../../assets/css/merchant-theme.less';
+
 .statistics-container {
-  padding: 20px;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+  padding: @nordic-space-lg;
+  background: @merchant-bg;
   min-height: calc(100vh - 40px);
 
   // 页面头部
@@ -421,25 +424,25 @@ watch(currentOrderTrend, () => {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-    padding: 20px;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    margin-bottom: @nordic-space-lg;
+    padding: @nordic-space-lg;
+    background: @merchant-surface;
+    border-radius: @nordic-radius-md;
+    box-shadow: 0 2px 12px @merchant-shadow;
 
     .header-left {
       .page-title {
         display: flex;
         align-items: center;
-        gap: 12px;
-        font-size: 1.714rem;
+        gap: @nordic-space-md;
+        font-size: @nordic-text-xl;
         font-weight: 600;
         margin: 0;
-        color: #303133;
+        color: @merchant-text;
 
         .title-icon {
           font-size: 2rem;
-          color: #409eff;
+          color: @merchant-primary;
         }
       }
     }
@@ -447,18 +450,18 @@ watch(currentOrderTrend, () => {
     .header-right {
       .time-range-selector {
         display: flex;
-        gap: 8px;
+        gap: @nordic-space-sm;
 
         .time-range-tag {
           cursor: pointer;
-          transition: all 0.3s ease;
-          padding: 8px 16px;
-          font-size: 0.929rem;
-          border-radius: 8px;
+          transition: all @nordic-transition-base ease;
+          padding: @nordic-space-sm @nordic-space-md;
+          font-size: @nordic-text-sm;
+          border-radius: @nordic-radius-sm;
 
           &:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(64, 158, 255, 0.2);
+            box-shadow: 0 4px 12px rgba(74, 122, 77, 0.2);
           }
         }
       }
@@ -468,30 +471,30 @@ watch(currentOrderTrend, () => {
   .stats-content {
     // 统计卡片样式
     .basic-stats-section {
-      margin-bottom: 20px;
+      margin-bottom: @nordic-space-lg;
 
       .stat-card {
         display: flex;
         flex-direction: column;
-        gap: 16px;
-        padding: 20px;
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-        transition: all 0.3s ease;
+        gap: @nordic-radius-lg;
+        padding: @nordic-space-lg;
+        background: @merchant-surface;
+        border-radius: @nordic-radius-md;
+        box-shadow: 0 2px 12px @merchant-shadow;
+        transition: all @nordic-transition-base ease;
         cursor: default;
         min-height: 120px;
 
         &:hover {
           transform: translateY(-5px);
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+          box-shadow: 0 8px 24px @merchant-shadow-hover;
         }
 
         // 第一行：图标 + 数值
         .stat-row-first {
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: @nordic-space-md;
           flex: 1;
 
           .stat-icon {
@@ -509,7 +512,7 @@ watch(currentOrderTrend, () => {
           .stat-value {
             font-size: clamp(1.286rem, 3vw, 2.286rem);
             font-weight: 700;
-            color: #303133;
+            color: @merchant-text;
             line-height: 1.2;
             flex: 1;
             min-width: 0;
@@ -521,18 +524,18 @@ watch(currentOrderTrend, () => {
 
         // 第二行：描述
         .stat-label {
-          font-size: 0.929rem;
-          color: #909399;
+          font-size: @nordic-text-sm;
+          color: @merchant-text-muted;
           text-align: center;
         }
 
         // 不同颜色主题
         &.stat-card-primary {
           .stat-icon {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, @merchant-primary 0%, @merchant-primary-dark 100%);
           }
           .stat-value {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, @merchant-primary 0%, @merchant-primary-dark 100%);
             background-clip: text;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -541,28 +544,28 @@ watch(currentOrderTrend, () => {
 
         &.stat-card-success {
           .stat-icon {
-            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+            background: linear-gradient(135deg, @merchant-success 0%, @merchant-success-light 100%);
           }
           .stat-value {
-            color: #67c23a;
+            color: @merchant-success;
           }
         }
 
         &.stat-card-info {
           .stat-icon {
-            background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
+            background: linear-gradient(135deg, @merchant-info 0%, @merchant-info-light 100%);
           }
           .stat-value {
-            color: #409eff;
+            color: @merchant-info;
           }
         }
 
         &.stat-card-warning {
           .stat-icon {
-            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            background: linear-gradient(135deg, @merchant-warning 0%, @merchant-warning-light 100%);
           }
           .stat-value {
-            color: #e6a23c;
+            color: @merchant-warning;
           }
         }
       }
@@ -570,35 +573,35 @@ watch(currentOrderTrend, () => {
 
     // 图表卡片样式
     .order-trend-section {
-      margin-bottom: 20px;
+      margin-bottom: @nordic-space-lg;
 
       .chart-card {
-        border-radius: 12px;
-        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-        transition: all 0.3s ease;
+        border-radius: @nordic-radius-md;
+        box-shadow: 0 2px 12px @merchant-shadow;
+        transition: all @nordic-transition-base ease;
 
         &:hover {
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+          box-shadow: 0 4px 20px @merchant-shadow-hover;
         }
 
         :deep(.el-card__header) {
-          background: linear-gradient(135deg, #fafbfc 0%, #f5f7fa 100%);
-          border-bottom: 1px solid #f0f0f0;
-          padding: 16px 24px;
+          background: @merchant-surface-alt;
+          border-bottom: 1px solid @merchant-divider;
+          padding: @nordic-space-md 24px;
 
           .card-header {
             .section-title {
               display: flex;
               align-items: center;
-              gap: 8px;
+              gap: @nordic-space-sm;
               margin: 0;
-              font-size: 1.143rem;
+              font-size: @nordic-text-md;
               font-weight: 600;
-              color: #303133;
+              color: @merchant-text;
 
               .title-icon {
-                font-size: 1.286rem;
-                color: #409eff;
+                font-size: @nordic-text-lg;
+                color: @merchant-primary;
               }
             }
           }
@@ -634,35 +637,35 @@ watch(currentOrderTrend, () => {
 
     // 销量排行卡片样式
     .dish-sales-section {
-      margin-bottom: 20px;
+      margin-bottom: @nordic-space-lg;
 
       .rank-card {
-        border-radius: 12px;
-        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-        transition: all 0.3s ease;
+        border-radius: @nordic-radius-md;
+        box-shadow: 0 2px 12px @merchant-shadow;
+        transition: all @nordic-transition-base ease;
 
         &:hover {
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+          box-shadow: 0 4px 20px @merchant-shadow-hover;
         }
 
         :deep(.el-card__header) {
-          background: linear-gradient(135deg, #fafbfc 0%, #f5f7fa 100%);
-          border-bottom: 1px solid #f0f0f0;
-          padding: 16px 24px;
+          background: @merchant-surface-alt;
+          border-bottom: 1px solid @merchant-divider;
+          padding: @nordic-space-md 24px;
 
           .card-header {
             .section-title {
               display: flex;
               align-items: center;
-              gap: 8px;
+              gap: @nordic-space-sm;
               margin: 0;
-              font-size: 1.143rem;
+              font-size: @nordic-text-md;
               font-weight: 600;
-              color: #303133;
+              color: @merchant-text;
 
               .title-icon {
-                font-size: 1.286rem;
-                color: #e6a23c;
+                font-size: @nordic-text-lg;
+                color: @merchant-warning;
               }
             }
           }
@@ -681,13 +684,13 @@ watch(currentOrderTrend, () => {
           .sales-rank-item {
             display: flex;
             align-items: center;
-            gap: 16px;
-            padding: 16px;
-            border: 1px solid #ebeef5;
-            border-radius: 12px;
-            margin-bottom: 16px;
-            background: white;
-            transition: all 0.3s ease;
+            gap: @nordic-radius-lg;
+            padding: @nordic-space-md;
+            border: 1px solid @merchant-border;
+            border-radius: @nordic-radius-md;
+            margin-bottom: @nordic-radius-lg;
+            background: @merchant-surface;
+            transition: all @nordic-transition-base ease;
             animation: slideInUp 0.5s ease-out forwards;
 
             &:last-child {
@@ -695,9 +698,9 @@ watch(currentOrderTrend, () => {
             }
 
             &:hover {
-              box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+              box-shadow: 0 8px 24px @merchant-shadow-hover;
               transform: translateY(-3px);
-              border-color: #e6a23c;
+              border-color: @merchant-primary;
             }
 
             .rank-badge {
@@ -706,14 +709,14 @@ watch(currentOrderTrend, () => {
               display: flex;
               align-items: center;
               justify-content: center;
-              border-radius: 12px;
+              border-radius: @nordic-radius-md;
               flex-shrink: 0;
-              background: #f0f2f5;
+              background: @merchant-surface-alt;
 
               .rank-number {
-                font-size: 1.286rem;
+                font-size: @nordic-text-lg;
                 font-weight: 700;
-                color: #606266;
+                color: @merchant-text-sec;
               }
 
               // 前三名特殊样式
@@ -754,21 +757,21 @@ watch(currentOrderTrend, () => {
               .dish-name {
                 display: flex;
                 align-items: center;
-                gap: 8px;
+                gap: @nordic-space-sm;
                 font-size: 1rem;
                 font-weight: 600;
                 margin-bottom: 6px;
-                color: #303133;
+                color: @merchant-text;
 
                 .dish-icon {
-                  color: #e6a23c;
-                  font-size: 1.143rem;
+                  color: @merchant-warning;
+                  font-size: @nordic-text-md;
                 }
               }
 
               .dish-sales {
-                font-size: 0.857rem;
-                color: #909399;
+                font-size: @nordic-text-xs;
+                color: @merchant-text-muted;
               }
             }
 
@@ -776,17 +779,17 @@ watch(currentOrderTrend, () => {
               display: flex;
               flex-direction: column;
               align-items: flex-end;
-              gap: 4px;
+              gap: @nordic-space-xs;
 
               .revenue-label {
-                font-size: 0.857rem;
-                color: #909399;
+                font-size: @nordic-text-xs;
+                color: @merchant-text-muted;
               }
 
               .revenue-value {
-                font-size: 1.286rem;
+                font-size: @nordic-text-lg;
                 font-weight: 700;
-                color: #67c23a;
+                color: @merchant-success;
               }
             }
           }
@@ -814,7 +817,7 @@ watch(currentOrderTrend, () => {
     .stats-content {
       .basic-stats-section {
         .el-col {
-          margin-bottom: 16px;
+          margin-bottom: @nordic-radius-lg;
         }
       }
     }
@@ -823,18 +826,18 @@ watch(currentOrderTrend, () => {
 
 @media (max-width: 768px) {
   .statistics-container {
-    padding: 12px;
+    padding: @nordic-space-md;
 
     .stats-header {
       flex-direction: column;
       align-items: flex-start;
-      gap: 12px;
+      gap: @nordic-space-md;
     }
 
     .stats-content {
       .basic-stats-section {
         .el-col {
-          margin-bottom: 12px;
+          margin-bottom: @nordic-space-md;
         }
       }
     }

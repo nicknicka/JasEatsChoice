@@ -34,6 +34,9 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
+@import '../../assets/css/nordic-theme.less';
+@import '../../assets/css/merchant-theme.less';
+
 .wish-list-audit-page {
   padding: 20px;
 }

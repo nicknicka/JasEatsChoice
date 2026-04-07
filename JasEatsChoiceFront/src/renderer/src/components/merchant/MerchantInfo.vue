@@ -1153,12 +1153,13 @@ const handleSaveAvatar = async () => {
 </template>
 
 <style scoped lang="less">
-/* 对话框淡入动画 */
+@import '../../assets/css/nordic-theme.less';
+@import '../../assets/css/merchant-theme.less';
+
+// ===== 对话框动画 =====
 :deep(.dialog-fade-enter-active),
 :deep(.dialog-fade-leave-active) {
-  transition:
-    opacity 0.3s ease,
-    transform 0.3s ease;
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
 :deep(.dialog-fade-enter-from) {
@@ -1171,9 +1172,8 @@ const handleSaveAvatar = async () => {
   transform: translateY(-20px) scale(0.95);
 }
 
-/* 地址级联选择器样式优化 - 修复长文字导致上级选择器左移问题 */
+// ===== 地址级联选择器样式 =====
 :deep(.address-cascader-popper) {
-  /* 强制级联菜单容器使用固定布局 */
   .el-cascader__menus {
     display: flex !important;
     width: fit-content !important;
@@ -1181,7 +1181,6 @@ const handleSaveAvatar = async () => {
 
   .el-cascader__menu {
     flex-shrink: 0 !important;
-    /* 设置固定宽度，防止菜单列宽变化导致位移 */
     width: 160px !important;
     min-width: 160px !important;
     max-width: 160px !important;
@@ -1189,12 +1188,10 @@ const handleSaveAvatar = async () => {
   }
 
   .el-cascader-menu {
-    /* 确保每一列都有固定宽度 */
     width: 160px !important;
     min-width: 160px !important;
     max-width: 160px !important;
     flex-basis: 160px !important;
-    /* 防止菜单内容溢出 */
     overflow: hidden !important;
     box-sizing: border-box !important;
 
@@ -1204,31 +1201,9 @@ const handleSaveAvatar = async () => {
       white-space: nowrap !important;
       width: 100% !important;
       box-sizing: border-box !important;
-
-      :deep(.el-cascader-menu__label) {
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-        white-space: nowrap !important;
-        /* 确保标签文字不会撑破容器 */
-        max-width: 130px !important;
-        display: inline-block !important;
-        vertical-align: middle !important;
-        /* 强制限制最大宽度 */
-        width: 100% !important;
-        box-sizing: border-box !important;
-      }
-
-      /* 确保箭头图标不会导致宽度变化 */
-      .el-cascader-menu__item__arrow {
-        flex-shrink: 0 !important;
-        width: 16px !important;
-        min-width: 16px !important;
-        max-width: 16px !important;
-      }
     }
   }
 
-  /* 确保整个级联菜单容器不会被撑大 */
   &.el-popper {
     width: auto !important;
     min-width: 0 !important;
@@ -1237,7 +1212,7 @@ const handleSaveAvatar = async () => {
   }
 }
 
-/* 编辑表单样式 - 参考菜单管理添加菜单样式 */
+// ===== 编辑表单样式 =====
 .edit-form {
   padding-left: 40px;
 
@@ -1245,152 +1220,122 @@ const handleSaveAvatar = async () => {
     display: flex;
     align-items: center;
     gap: 4px;
-    margin-bottom: 20px;
+    margin-bottom: @nordic-space-lg;
 
     .info-label {
-      color: #555;
+      color: @merchant-text-sec;
       width: 100px;
       font-weight: 500;
-      font-size: 1rem /* 原值: 14px */;
-      padding-top: 5px; /* 调整标签顶部对齐 */
+      font-size: @nordic-text-base;
+      padding-top: 5px;
     }
 
-    /* 输入框、选择框、数字输入器悬浮效果优化 - 与菜单管理保持一致 */
     :deep(.el-input__wrapper),
     :deep(.el-select__wrapper),
     :deep(.el-input-number .el-input__wrapper) {
-      border-radius: 8px;
-      border: 2px solid #e5e7eb;
-      transition: all 0.3s ease;
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+      border-radius: @nordic-radius-sm;
+      border: 2px solid @merchant-border;
+      transition: all @nordic-transition-base ease;
+      box-shadow: 0 1px 2px @merchant-shadow;
 
       &:hover {
-        border-color: #91d5ff;
-        box-shadow: 0 0 0 3px rgba(145, 213, 255, 0.1);
+        border-color: @merchant-primary;
+        box-shadow: 0 0 0 3px @merchant-primary-light;
       }
 
       &.is-focus,
       &.is-focused {
-        border-color: #40a9ff;
-        box-shadow: 0 0 0 3px rgba(64, 169, 255, 0.15);
+        border-color: @merchant-primary;
+        box-shadow: 0 0 0 3px @merchant-primary-light;
       }
     }
   }
 }
 
-/* 对话框样式优化 - 与菜单管理添加菜单保持一致 */
+// ===== 对话框样式 =====
 :deep(.el-dialog) {
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border-radius: @nordic-radius-lg;
+  box-shadow: 0 4px 20px @merchant-shadow;
 }
 
 :deep(.el-dialog__header) {
-  border-bottom: 2px solid rgba(102, 126, 234, 0.3);
-  background: linear-gradient(135deg, rgba(230, 247, 255, 0.8) 0%, rgba(186, 231, 255, 0.8) 100%);
+  border-bottom: 2px solid @merchant-primary-light;
+  background: linear-gradient(135deg, @merchant-primary-light, @merchant-surface);
   padding: 24px 28px;
-  border-radius: 12px 12px 0 0;
+  border-radius: @nordic-radius-lg @nordic-radius-lg 0 0;
 }
 
 :deep(.el-dialog__title) {
-  font-size: 1.429rem /* 原值: 20px */;
+  font-size: @nordic-text-lg;
   font-weight: 600;
-  color: #1890ff;
-  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: @merchant-primary-dark;
 }
 
 :deep(.el-dialog__body) {
-  padding: 32px 28px;
-  background-color: #fafbfc;
+  padding: @nordic-space-xl 28px;
+  background-color: @merchant-surface-alt;
 }
 
 :deep(.el-dialog__footer) {
-  border-top: 1px solid #f1f3f5;
+  border-top: 1px solid @merchant-divider;
   padding: 0 28px 24px;
-  border-radius: 0 0 12px 12px;
-  background-color: #ffffff;
+  border-radius: 0 0 @nordic-radius-lg @nordic-radius-lg;
+  background-color: @merchant-surface;
 }
 
-/* 经营品类选择器样式 */
+// ===== 经营品类选择器样式 =====
 .category-selector {
   width: 300px;
 }
 
-/* 选择器内部标签显示样式 - 蓝色主题 */
 :deep(.category-selector .el-select__tags) {
   .el-tag {
-    background-color: #e6f7ff;
-    border-color: #91d5ff;
-    color: #0050b3;
+    background-color: @merchant-primary-light;
+    border-color: @merchant-primary;
+    color: @merchant-primary-dark;
 
     &:hover {
-      background-color: #bae7ff;
-      border-color: #69c0ff;
+      background-color: @merchant-primary;
+      border-color: @merchant-primary-dark;
+      color: #fff;
     }
 
     .el-tag__close {
-      color: #0050b3;
+      color: @merchant-primary-dark;
 
       &:hover {
-        color: #ffffff;
-        background-color: #409eff;
+        color: #fff;
+        background-color: @merchant-primary;
       }
     }
   }
 }
 
-/* 优化选择器下拉框样式 */
 :deep(.category-selector) {
   .el-select-dropdown__item {
     padding: 8px 12px;
-    font-size: 0.929rem /* 原值: 13px */;
+    font-size: @nordic-text-sm;
     transition: all 0.2s ease;
 
     &:hover {
-      background-color: #ecf5ff;
-      color: #409eff;
+      background-color: @merchant-primary-light;
+      color: @merchant-primary;
     }
 
     &.is-selected {
-      color: #409eff;
+      color: @merchant-primary;
       font-weight: 600;
-      background-color: #e6f7ff;
+      background-color: @merchant-primary-light;
     }
   }
-
-  .el-select__popper {
-    border-radius: 8px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-  }
 }
 
-/* 已选品类标签 */
-.selected-categories {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 8px;
-  max-width: 300px;
-}
-
-.selected-tag {
-  cursor: pointer;
-  transition: all 0.2s ease;
-
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(64, 169, 255, 0.3);
-  }
-}
-
-/* 快捷选择区域 */
+// ===== 快捷选择区域 =====
 .quick-categories {
-  margin-top: 8px;
+  margin-top: @nordic-space-sm;
   max-width: 300px;
-  background-color: #f5f7fa;
-  border-radius: 6px;
+  background-color: @merchant-surface-alt;
+  border-radius: @nordic-radius-sm;
   overflow: hidden;
 }
 
@@ -1404,18 +1349,18 @@ const handleSaveAvatar = async () => {
   transition: all 0.2s ease;
 
   &:hover {
-    background-color: #ecf5ff;
+    background-color: @merchant-primary-light;
   }
 
   .quick-label {
-    font-size: 0.929rem /* 原值: 13px */;
+    font-size: @nordic-text-sm;
     font-weight: 500;
-    color: #606266;
+    color: @merchant-text-sec;
   }
 
   .el-icon {
-    font-size: 1rem /* 原值: 14px */;
-    color: #909399;
+    font-size: @nordic-text-base;
+    color: @merchant-text-muted;
     transition: transform 0.2s ease;
   }
 
@@ -1433,14 +1378,8 @@ const handleSaveAvatar = async () => {
 }
 
 @keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .quick-tag {
@@ -1450,46 +1389,47 @@ const handleSaveAvatar = async () => {
 
   &:hover {
     transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(64, 169, 255, 0.3);
+    box-shadow: 0 2px 8px rgba(74, 122, 77, 0.2);
   }
 
   &.quick-tag-default {
-    background-color: #e6f7ff;
-    border-color: #91d5ff;
-    color: #0050b3;
+    background-color: @merchant-primary-light;
+    border-color: @merchant-primary;
+    color: @merchant-primary-dark;
 
     &:hover {
-      background-color: #bae7ff;
-      border-color: #69c0ff;
+      background-color: @merchant-primary;
+      border-color: @merchant-primary-dark;
+      color: #fff;
     }
   }
 
   &.quick-tag-selected {
-    background-color: #409eff;
-    border-color: #409eff;
-    color: #ffffff;
+    background-color: @merchant-primary;
+    border-color: @merchant-primary;
+    color: #fff;
     font-weight: 500;
 
     &:hover {
-      background-color: #66b1ff;
-      border-color: #66b1ff;
+      background-color: @merchant-primary-dark;
+      border-color: @merchant-primary-dark;
     }
   }
 }
 
-/* 搜索结果下拉框样式 */
+// ===== 搜索结果下拉框样式 =====
 .search-results-dropdown {
-  margin-top: 8px;
-  width: 328px; /* 与输入框宽度一致 */
+  margin-top: @nordic-space-sm;
+  width: 328px;
   max-height: 300px;
   overflow-y: auto;
-  border: 1px solid #e4e7ed;
-  border-radius: 8px;
-  background-color: #ffffff;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  border: 1px solid @merchant-border;
+  border-radius: @nordic-radius-sm;
+  background-color: @merchant-surface;
+  box-shadow: 0 2px 12px @merchant-shadow;
   z-index: 1000;
   position: absolute;
-  left: 100px; /* 与详细地址标签宽度一致，确保对齐 */
+  left: 100px;
   top: 100%;
 }
 
@@ -1497,16 +1437,16 @@ const handleSaveAvatar = async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 16px;
-  border-bottom: 1px solid #f0f0f0;
-  background-color: #fafafa;
-  border-radius: 8px 8px 0 0;
-  font-size: 0.857rem /* 原值: 12px */;
-  color: #606266;
-}
+  padding: 12px @nordic-space-md;
+  border-bottom: 1px solid @merchant-divider;
+  background-color: @merchant-surface-alt;
+  border-radius: @nordic-radius-sm @nordic-radius-sm 0 0;
+  font-size: @nordic-text-xs;
+  color: @merchant-text-sec;
 
-.dropdown-header span {
-  font-weight: 500;
+  span {
+    font-weight: 500;
+  }
 }
 
 .dropdown-content {
@@ -1514,137 +1454,133 @@ const handleSaveAvatar = async () => {
 }
 
 .result-item {
-  padding: 12px 16px;
+  padding: 12px @nordic-space-md;
   cursor: pointer;
   transition: all 0.2s ease;
-  border-bottom: 1px solid #f5f7fa;
-}
+  border-bottom: 1px solid @merchant-divider;
 
-.result-item:last-child {
-  border-bottom: none;
-}
+  &:last-child {
+    border-bottom: none;
+  }
 
-.result-item:hover {
-  background-color: #f5f7fa;
-}
+  &:hover {
+    background-color: @merchant-surface-alt;
 
-.result-item:hover .result-name {
-  color: #409eff;
+    .result-name {
+      color: @merchant-primary;
+    }
+  }
 }
 
 .result-name {
   font-weight: 500;
-  font-size: 1rem /* 原值: 14px */;
-  color: #303133;
+  font-size: @nordic-text-base;
+  color: @merchant-text;
   margin-bottom: 4px;
 }
 
 .result-address {
-  font-size: 0.857rem /* 原值: 12px */;
-  color: #606266;
+  font-size: @nordic-text-xs;
+  color: @merchant-text-sec;
   margin-bottom: 4px;
   line-height: 1.4;
 }
 
 .result-location {
-  font-size: 0.75rem /* 原值: 11px */;
-  color: #909399;
+  font-size: 11px;
+  color: @merchant-text-muted;
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
-/* 对话框按钮样式 - 参考编辑按钮样式 */
+// ===== 对话框按钮样式 =====
 .dialog-footer {
   text-align: right;
   padding: 0 28px 24px;
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
+  gap: @nordic-space-md;
 }
 
 :deep(.dialog-footer .el-button) {
-  padding: 8px 16px;
-  border-radius: 8px;
+  padding: 8px @nordic-space-md;
+  border-radius: @nordic-radius-sm;
   font-weight: 500;
-  font-size: 1rem /* 原值: 14px */;
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
+  font-size: @nordic-text-base;
+  transition: all @nordic-transition-base ease;
   min-width: 80px;
 }
 
 :deep(.dialog-footer .el-button--primary) {
-  background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
-  border: 1px solid #91d5ff;
-  color: #0050b3;
-  box-shadow: 0 2px 8px rgba(64, 169, 255, 0.2);
-}
+  background: @merchant-primary;
+  border: 1px solid @merchant-primary;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(74, 122, 77, 0.2);
 
-:deep(.dialog-footer .el-button--primary:hover) {
-  background: linear-gradient(135deg, #bae7ff 0%, #91d5ff 100%);
-  box-shadow: 0 4px 12px rgba(64, 169, 255, 0.3);
-  transform: translateY(-1px);
+  &:hover {
+    background: @merchant-primary-dark;
+    border-color: @merchant-primary-dark;
+    box-shadow: 0 4px 12px rgba(74, 122, 77, 0.3);
+    transform: translateY(-1px);
+  }
 }
 
 :deep(.dialog-footer .el-button--default) {
-  background: linear-gradient(135deg, #f5f7fa 0%, #e4e7ed 100%);
-  border: 1px solid #dcdfe6;
-  color: #606266;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: @merchant-surface-alt;
+  border: 1px solid @merchant-border;
+  color: @merchant-text-sec;
+  box-shadow: 0 2px 8px @merchant-shadow;
+
+  &:hover {
+    background: @merchant-divider;
+    box-shadow: 0 4px 12px @merchant-shadow-hover;
+    transform: translateY(-1px);
+  }
 }
 
-:deep(.dialog-footer .el-button--default:hover) {
-  background: linear-gradient(135deg, #e4e7ed 0%, #c0c4cc 100%);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  transform: translateY(-1px);
-}
-
-/* 按钮点击动画 */
 :deep(.dialog-footer .el-button:active) {
   transform: translateY(0);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 1px 4px @merchant-shadow;
 }
 
-/* 搜索定位按钮样式美化 */
 :deep(.info-item .el-button) {
-  border-radius: 8px;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-  position: relative;
-  overflow: hidden;
+  border-radius: @nordic-radius-sm;
+  transition: all @nordic-transition-base ease;
+  box-shadow: 0 2px 6px @merchant-shadow;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(74, 122, 77, 0.2);
+  }
 }
 
-:deep(.info-item .el-button:hover) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(64, 169, 255, 0.3);
-}
-
-/* 按钮点击效果 */
 :deep(.el-button) {
   &:active {
     transform: translateY(0);
   }
 }
 
-/* 按钮加载状态 */
 :deep(.el-button.is-loading) {
   opacity: 0.7;
   cursor: not-allowed;
 }
 
+// ===== 商家信息卡片 =====
 .merchant-info-card {
-  margin-bottom: 24px;
-  padding: 24px;
-  border: 1px solid #ebeef5;
-  border-radius: 16px;
-  background-color: #ffffff;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
+  margin-bottom: @nordic-space-lg;
+  padding: @nordic-space-lg;
+  background: @merchant-surface;
+  border-radius: @nordic-radius-lg;
+  border: 1px solid @merchant-border;
+  border-left: 4px solid @merchant-secondary;
+  box-shadow: 0 1px 4px @merchant-shadow;
+  transition: all @nordic-transition-base ease;
 
   &:hover {
-    box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.15);
-    transform: translateY(-2px);
+    box-shadow: 0 8px 24px @merchant-shadow-hover;
+    border-color: @merchant-primary;
+    transform: translateY(-3px);
   }
 
   .loading-container {
@@ -1652,12 +1588,12 @@ const handleSaveAvatar = async () => {
     align-items: center;
     justify-content: center;
     padding: 40px;
-    color: #606266;
-    font-size: 1rem /* 原值: 14px */;
+    color: @merchant-text-sec;
+    font-size: @nordic-text-base;
 
     .el-icon {
-      margin-right: 8px;
-      font-size: 1.429rem /* 原值: 20px */;
+      margin-right: @nordic-space-sm;
+      font-size: @nordic-text-lg;
     }
   }
 
@@ -1665,10 +1601,10 @@ const handleSaveAvatar = async () => {
     .info-header {
       display: flex;
       align-items: flex-start;
-      gap: 24px;
-      margin-bottom: 20px;
-      padding-bottom: 20px;
-      border-bottom: 1px solid #f0f0f0;
+      gap: @nordic-space-lg;
+      margin-bottom: @nordic-space-lg;
+      padding-bottom: @nordic-space-lg;
+      border-bottom: 1px solid @merchant-divider;
 
       .avatar-section {
         flex-shrink: 0;
@@ -1682,14 +1618,14 @@ const handleSaveAvatar = async () => {
             height: 80px;
             border-radius: 50%;
             object-fit: cover;
-            border: 3px solid #f0f9ff;
+            border: 3px solid @merchant-primary-light;
           }
 
           .avatar-placeholder {
             width: 80px;
             height: 80px;
             border-radius: 50%;
-            background-color: #f0f9ff;
+            background-color: @merchant-primary-light;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1706,7 +1642,7 @@ const handleSaveAvatar = async () => {
             align-items: center;
             justify-content: center;
             border: 2px solid #fff;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 2px 8px @merchant-shadow;
 
             &:hover {
               transform: scale(1.1);
@@ -1722,68 +1658,36 @@ const handleSaveAvatar = async () => {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          margin-bottom: 12px;
+          margin-bottom: @nordic-space-md;
 
           .merchant-name {
-            font-size: 1.714rem /* 原值: 24px */;
+            font-size: @nordic-text-xl;
             font-weight: 700;
-            color: #303133;
+            color: @merchant-text;
             display: flex;
             align-items: center;
-            gap: 12px;
-          }
-
-          .merchant-actions {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-
-            .merchant-status {
-              .status-text {
-                margin-left: 4px;
-              }
-            }
-
-            .edit-button {
-              display: flex;
-              align-items: center;
-              gap: 4px;
-              background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
-              border: 1px solid #91d5ff;
-              color: #0050b3;
-              border-radius: 8px;
-              padding: 8px 16px;
-              font-weight: 500;
-              box-shadow: 0 2px 8px rgba(64, 169, 255, 0.2);
-              transition: all 0.3s ease;
-
-              &:hover {
-                background: linear-gradient(135deg, #bae7ff 0%, #91d5ff 100%);
-                box-shadow: 0 4px 12px rgba(64, 169, 255, 0.3);
-                transform: translateY(-1px);
-              }
-            }
+            gap: @nordic-space-md;
           }
         }
 
         .merchant-rating {
-          margin-bottom: 12px;
+          margin-bottom: @nordic-space-md;
         }
 
         .contact-info {
           display: flex;
           flex-wrap: wrap;
-          gap: 20px;
+          gap: @nordic-space-lg;
 
           .contact-item {
             display: flex;
             align-items: center;
-            font-size: 1rem /* 原值: 14px */;
-            color: #606266;
+            font-size: @nordic-text-base;
+            color: @merchant-text-sec;
 
             .icon {
               margin-right: 6px;
-              color: #409eff;
+              color: @merchant-primary;
             }
           }
         }
@@ -1793,30 +1697,30 @@ const handleSaveAvatar = async () => {
     .info-details {
       display: flex;
       flex-wrap: wrap;
-      gap: 32px;
+      gap: @nordic-space-xl;
 
       .detail-item {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: @nordic-space-sm;
 
         .detail-label {
           display: flex;
           align-items: center;
           min-width: 100px;
-          color: #606266;
-          font-size: 1rem /* 原值: 14px */;
+          color: @merchant-text-sec;
+          font-size: @nordic-text-base;
           font-weight: 500;
 
           .el-icon {
             margin-right: 6px;
-            color: #409eff;
+            color: @merchant-primary;
           }
         }
 
         .detail-value {
-          color: #303133;
-          font-size: 1rem /* 原值: 14px */;
+          color: @merchant-text;
+          font-size: @nordic-text-base;
           font-weight: 400;
         }
       }
@@ -1824,7 +1728,7 @@ const handleSaveAvatar = async () => {
   }
 }
 
-// 状态标签和评分标签样式优化
+// ===== 状态标签和评分标签 =====
 .status-tag,
 .rating-tag {
   cursor: pointer;
@@ -1832,7 +1736,7 @@ const handleSaveAvatar = async () => {
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
-  border-radius: 8px;
+  border-radius: @nordic-radius-sm;
   padding: 4px 12px;
 
   :deep(.el-tag__content) {
@@ -1847,28 +1751,93 @@ const handleSaveAvatar = async () => {
   }
 }
 
-// 编辑按钮样式优化
+// ===== 编辑按钮 =====
 .edit-button {
-  background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
-  border: 1px solid #91d5ff;
-  color: #0050b3;
-  border-radius: 8px;
-  padding: 8px 16px;
+  background: @merchant-primary;
+  border: 1px solid @merchant-primary;
+  color: #fff;
+  border-radius: @nordic-radius-sm;
+  padding: 8px @nordic-space-md;
   font-weight: 500;
-  box-shadow: 0 2px 8px rgba(64, 169, 255, 0.2);
-  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(74, 122, 77, 0.2);
+  transition: all @nordic-transition-base ease;
 
   &:hover {
-    background: linear-gradient(135deg, #bae7ff 0%, #91d5ff 100%);
-    box-shadow: 0 4px 12px rgba(64, 169, 255, 0.3);
+    background: @merchant-primary-dark;
+    border-color: @merchant-primary-dark;
+    box-shadow: 0 4px 12px rgba(74, 122, 77, 0.3);
     transform: translateY(-1px);
   }
 }
 
-// 响应式设计
+// ===== 头像上传对话框 =====
+.avatar-upload-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: @nordic-space-lg;
+  padding: 20px 0;
+}
+
+.avatar-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: @nordic-space-md;
+
+  .preview-avatar {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid @merchant-primary-light;
+    box-shadow: 0 4px 16px @merchant-shadow;
+  }
+
+  .preview-avatar-placeholder {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    background-color: @merchant-surface-alt;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 4px solid @merchant-border;
+    box-shadow: 0 4px 16px @merchant-shadow;
+
+    p {
+      margin: 8px 0 0 0;
+      font-size: @nordic-text-base;
+      color: @merchant-text-muted;
+    }
+  }
+}
+
+.avatar-uploader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: @nordic-space-sm;
+
+  .el-button {
+    border-radius: @nordic-radius-sm;
+    padding: 10px 20px;
+    font-weight: 500;
+  }
+
+  .el-upload__tip {
+    font-size: @nordic-text-xs;
+    color: @merchant-text-muted;
+    line-height: 1.5;
+    text-align: center;
+  }
+}
+
+// ===== 响应式 =====
 @media (max-width: 768px) {
   .merchant-info-card {
-    padding: 16px;
+    padding: @nordic-space-md;
 
     .info-header {
       flex-direction: column;
@@ -1878,15 +1847,10 @@ const handleSaveAvatar = async () => {
       .detail-section {
         .merchant-header {
           flex-direction: column;
-          gap: 8px;
+          gap: @nordic-space-sm;
 
           .merchant-name {
-            font-size: 1.429rem /* 原值: 20px */;
-          }
-
-          .merchant-actions {
-            flex-direction: column;
-            gap: 8px;
+            font-size: @nordic-text-lg;
           }
         }
 
@@ -1898,72 +1862,8 @@ const handleSaveAvatar = async () => {
 
     .info-details {
       flex-direction: column;
-      gap: 16px;
+      gap: @nordic-space-md;
     }
-  }
-}
-
-/* 头像上传对话框样式 */
-.avatar-upload-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 24px;
-  padding: 20px 0;
-}
-
-.avatar-preview {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-
-  .preview-avatar {
-    width: 150px;
-    height: 150px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 4px solid #f0f9ff;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-  }
-
-  .preview-avatar-placeholder {
-    width: 150px;
-    height: 150px;
-    border-radius: 50%;
-    background-color: #f5f7fa;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    border: 4px solid #e4e7ed;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
-
-    p {
-      margin: 8px 0 0 0;
-      font-size: 1rem /* 原值: 14px */;
-      color: #909399;
-    }
-  }
-}
-
-.avatar-uploader {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-
-  .el-button {
-    border-radius: 8px;
-    padding: 10px 20px;
-    font-weight: 500;
-  }
-
-  .el-upload__tip {
-    font-size: 0.857rem /* 原值: 12px */;
-    color: #909399;
-    line-height: 1.5;
-    text-align: center;
   }
 }
 </style>

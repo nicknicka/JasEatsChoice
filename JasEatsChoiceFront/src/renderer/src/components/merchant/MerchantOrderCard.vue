@@ -107,35 +107,40 @@ const handleOrderNow = () => {
 }
 </script>
 
-<style lang="scss" scoped>
+<style lang="less" scoped>
+@import '../../assets/css/nordic-theme.less';
+@import '../../assets/css/merchant-theme.less';
+
 .merchant-order-card {
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  background: @merchant-surface;
+  border-radius: @nordic-radius-lg;
+  border: 1px solid @merchant-border;
+  box-shadow: 0 1px 4px @merchant-shadow;
   margin: 12px 0;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all @nordic-transition-base ease;
   overflow: hidden;
 
   &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px @merchant-shadow-hover;
+    border-color: @merchant-primary;
   }
 }
 
 .merchant-header {
   display: flex;
   align-items: center;
-  padding: 16px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: @nordic-space-md;
+  background: linear-gradient(135deg, @merchant-primary 0%, @merchant-primary-dark 100%);
   color: #fff;
 
   .merchant-avatar {
     width: 56px;
     height: 56px;
-    border-radius: 8px;
+    border-radius: @nordic-radius-sm;
     overflow: hidden;
-    margin-right: 12px;
+    margin-right: @nordic-space-md;
     background: rgba(255, 255, 255, 0.2);
     display: flex;
     align-items: center;
@@ -157,15 +162,15 @@ const handleOrderNow = () => {
 
     .merchant-name {
       margin: 0 0 6px 0;
-      font-size: 18px;
+      font-size: @nordic-text-md;
       font-weight: 600;
       color: #fff;
     }
 
     .merchant-meta {
       display: flex;
-      gap: 12px;
-      font-size: 13px;
+      gap: @nordic-space-md;
+      font-size: @nordic-text-sm;
       opacity: 0.9;
 
       span {
@@ -174,7 +179,7 @@ const handleOrderNow = () => {
         gap: 4px;
 
         .el-icon {
-          font-size: 14px;
+          font-size: @nordic-text-base;
         }
       }
     }
@@ -190,45 +195,45 @@ const handleOrderNow = () => {
 }
 
 .preselected-dishes {
-  padding: 12px 16px;
-  background: #f8f9fa;
-  border-top: 1px solid #e9ecef;
+  padding: @nordic-space-md;
+  background: @merchant-surface-alt;
+  border-top: 1px solid @merchant-divider;
 
   .dishes-title {
-    font-size: 13px;
-    color: #666;
-    margin-bottom: 8px;
+    font-size: @nordic-text-sm;
+    color: @merchant-text-sec;
+    margin-bottom: @nordic-space-sm;
   }
 
   .dishes-list {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: @nordic-space-sm;
 
     .dish-preview {
       display: flex;
       align-items: center;
       gap: 4px;
       padding: 4px 8px;
-      background: #fff;
-      border-radius: 4px;
-      font-size: 12px;
+      background: @merchant-surface;
+      border-radius: @nordic-radius-xs;
+      font-size: @nordic-text-xs;
 
       .dish-name {
-        color: #333;
+        color: @merchant-text;
       }
 
       .dish-info {
-        color: #666;
+        color: @merchant-text-sec;
       }
     }
 
     .more-dishes {
       padding: 4px 8px;
-      background: #e9ecef;
-      border-radius: 4px;
-      font-size: 12px;
-      color: #666;
+      background: @merchant-divider;
+      border-radius: @nordic-radius-xs;
+      font-size: @nordic-text-xs;
+      color: @merchant-text-sec;
     }
   }
 }
@@ -237,26 +242,26 @@ const handleOrderNow = () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
-  background: #fff;
+  padding: @nordic-space-md;
+  background: @merchant-surface;
 
   .price-info {
     .estimated-label {
-      font-size: 13px;
-      color: #666;
+      font-size: @nordic-text-sm;
+      color: @merchant-text-sec;
     }
 
     .estimated-price {
-      font-size: 18px;
+      font-size: @nordic-text-md;
       font-weight: 600;
-      color: #f56c6c;
-      margin-left: 8px;
+      color: @merchant-secondary;
+      margin-left: @nordic-space-sm;
     }
   }
 
   .action-buttons {
     display: flex;
-    gap: 8px;
+    gap: @nordic-space-sm;
 
     .el-button {
       :deep(.el-icon) {
@@ -269,11 +274,11 @@ const handleOrderNow = () => {
 // 响应式
 @media (max-width: 768px) {
   .merchant-order-card {
-    margin: 8px 0;
+    margin: @nordic-space-sm 0;
   }
 
   .merchant-header {
-    padding: 12px;
+    padding: @nordic-space-md;
 
     .merchant-avatar {
       width: 48px;
@@ -286,24 +291,24 @@ const handleOrderNow = () => {
 
     .merchant-info {
       .merchant-name {
-        font-size: 16px;
+        font-size: @nordic-text-base;
       }
 
       .merchant-meta {
-        gap: 8px;
-        font-size: 12px;
+        gap: @nordic-space-sm;
+        font-size: @nordic-text-xs;
       }
     }
   }
 
   .preselected-dishes {
-    padding: 10px 12px;
+    padding: 10px @nordic-space-md;
   }
 
   .merchant-footer {
-    padding: 10px 12px;
+    padding: 10px @nordic-space-md;
     flex-direction: column;
-    gap: 12px;
+    gap: @nordic-space-md;
     align-items: stretch;
 
     .price-info {

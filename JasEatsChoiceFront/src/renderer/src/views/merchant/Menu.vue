@@ -797,9 +797,12 @@ const toggleSelectAll = () => {
 </template>
 
 <style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+@import '../../assets/css/merchant-theme.less';
+
 .menu-management-container {
   padding: 24px;
-  background-color: #fafbfc;
+  background-color: @merchant-bg;
   min-height: 100vh;
 
   /* 输入框样式 - 与菜品管理保持一致 */
@@ -807,23 +810,23 @@ const toggleSelectAll = () => {
   :deep(.el-select__wrapper),
   :deep(.el-textarea__inner) {
     border-radius: 8px;
-    border: 2px solid #e5e7eb;
+    border: 2px solid @merchant-border;
     transition: all 0.3s ease;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 1px 2px @merchant-shadow;
   }
 
   :deep(.el-input__wrapper:hover),
   :deep(.el-select__wrapper:hover),
   :deep(.el-textarea__inner:hover) {
-    border-color: #91d5ff;
-    box-shadow: 0 0 0 3px rgba(145, 213, 255, 0.1);
+    border-color: @merchant-primary;
+    box-shadow: 0 0 0 3px rgba(74, 122, 77, 0.1);
   }
 
   :deep(.el-input__wrapper.is-focus),
   :deep(.el-select__wrapper.is-focus),
   :deep(.el-textarea__inner.is-focus) {
-    border-color: #40a9ff;
-    box-shadow: 0 0 0 3px rgba(64, 169, 255, 0.15);
+    border-color: @merchant-primary;
+    box-shadow: 0 0 0 3px rgba(74, 122, 77, 0.15);
   }
 
   .menu-header {
@@ -832,15 +835,15 @@ const toggleSelectAll = () => {
     align-items: center;
     margin-bottom: 24px;
     padding: 20px;
-    background: #ffffff;
+    background: @merchant-surface;
     border-radius: 16px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 1px 3px @merchant-shadow-hover;
 
     .page-title {
       font-size: 1.429rem /* 原值: 20px */;
       font-weight: 700;
       margin: 0;
-      color: #4a5568;
+      color: @merchant-text;
     }
 
     // 固定搜索和新增按钮区域的宽度范围，确保布局稳定
@@ -875,16 +878,16 @@ const toggleSelectAll = () => {
   }
 
   .filter-panel {
-    background-color: #ffffff;
+    background-color: @merchant-surface;
     padding: 20px 24px;
     border-radius: 12px;
     margin-bottom: 24px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-    border: 1px solid #e9ecef;
+    box-shadow: 0 1px 3px @merchant-shadow-hover;
+    border: 1px solid @merchant-border;
     transition: all 0.3s ease;
 
     &:hover {
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 4px 12px @merchant-shadow-hover;
       transform: translateY(-2px);
     }
   }
@@ -905,7 +908,7 @@ const toggleSelectAll = () => {
         font-weight: 500;
         white-space: nowrap; /* 确保标签文本不换行 */
         margin-right: 8px;
-        color: #6c757d;
+        color: @merchant-text-muted;
       }
 
       .status-filter {
@@ -917,13 +920,13 @@ const toggleSelectAll = () => {
         /* 激活状态 */
         &[type="primary"] {
           transform: scale(1.05);
-          box-shadow: 0 4px 12px rgba(64, 169, 255, 0.25);
+          box-shadow: 0 4px 12px rgba(74, 122, 77, 0.25);
         }
 
         &:hover {
           opacity: 0.85;
           transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          box-shadow: 0 4px 12px @merchant-shadow-hover;
         }
 
         &:active {
@@ -983,9 +986,9 @@ const toggleSelectAll = () => {
       border: none;
       border-radius: 16px;
       margin-bottom: 16px;
-      background-color: #ffffff;
+      background-color: @merchant-surface;
       transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      box-shadow: 0 2px 8px @merchant-shadow;
       position: relative;
       overflow: hidden;
 
@@ -1012,8 +1015,8 @@ const toggleSelectAll = () => {
         bottom: 0;
         background: linear-gradient(
           135deg,
-          rgba(64, 169, 255, 0.08) 0%,
-          rgba(145, 213, 255, 0.08) 100%
+          rgba(74, 122, 77, 0.08) 0%,
+          rgba(74, 122, 77, 0.04) 100%
         );
         opacity: 0;
         transition: opacity 0.4s ease;
@@ -1022,7 +1025,7 @@ const toggleSelectAll = () => {
       }
 
       &:hover {
-        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+        box-shadow: 0 15px 35px @merchant-shadow-hover;
         transform: translateY(-8px) scale(1.03);
         cursor: pointer;
 
@@ -1058,7 +1061,7 @@ const toggleSelectAll = () => {
             .name {
               font-size: 1.286rem /* 原值: 18px */;
               font-weight: 700;
-              color: #2d3748;
+              color: @merchant-text;
             }
           }
 
@@ -1075,20 +1078,20 @@ const toggleSelectAll = () => {
               gap: 4px;
 
               .stat-label {
-                color: #718096;
+                color: @merchant-text-sec;
                 font-size: 0.857rem /* 原值: 12px */;
                 font-weight: 500;
               }
 
               .stat-value {
-                color: #4a5568;
+                color: @merchant-text;
                 font-size: 1rem /* 原值: 14px */;
                 font-weight: 600;
               }
             }
 
             .dishes-count {
-              color: #6c757d;
+              color: @merchant-text-muted;
             }
           }
 
@@ -1130,17 +1133,17 @@ const toggleSelectAll = () => {
                 position: absolute;
                 right: 0;
                 bottom: 8px;
-                background: #ffffff;
+                background: @merchant-surface;
                 padding-left: 5px;
                 font-size: 1rem /* 原值: 14px */;
-                color: #adb5bd;
+                color: @merchant-text-muted;
               }
             }
           }
 
           .auto-times {
             font-size: 0.929rem /* 原值: 13px */;
-            color: #adb5bd;
+            color: @merchant-text-muted;
             margin-bottom: 12px;
           }
         }
@@ -1159,13 +1162,13 @@ const toggleSelectAll = () => {
             font-weight: 500;
             transition: all 0.3s ease;
             border: none;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 1px 3px @merchant-shadow;
             transform: translateY(5px);
             opacity: 0.9;
 
             &:hover {
               transform: translateY(-1px);
-              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+              box-shadow: 0 2px 8px @merchant-shadow-hover;
             }
 
             &:active {
@@ -1173,11 +1176,11 @@ const toggleSelectAll = () => {
             }
 
             &.btn-active {
-              background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
-              color: #0050b3;
+              background: linear-gradient(135deg, @merchant-primary-light 0%, @merchant-primary 100%);
+              color: @merchant-surface;
 
               &:hover {
-                background: linear-gradient(135deg, #bae7ff 0%, #91d5ff 100%);
+                background: linear-gradient(135deg, @merchant-primary 0%, @merchant-primary-dark 100%);
               }
             }
           }
@@ -1191,23 +1194,23 @@ const toggleSelectAll = () => {
     align-items: center;
     gap: 16px;
     padding: 16px 20px;
-    background: #ffffff;
+    background: @merchant-surface;
     border-radius: 16px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 1px 3px @merchant-shadow;
 
     .select-all {
       display: flex;
       align-items: center;
       gap: 8px;
       font-weight: 600;
-      color: #4a5568;
+      color: @merchant-text;
       white-space: nowrap; /* 防止全选文本换行 */
       min-width: 100px; /* 设置固定最小宽度，让批量操作按钮位置稳定 */
 
       .selected-count {
         font-size: 0.929rem /* 原值: 13px */;
         font-weight: 400;
-        color: #909399;
+        color: @merchant-text-muted;
       }
     }
   }
@@ -1218,27 +1221,27 @@ const toggleSelectAll = () => {
     display: flex;
     justify-content: flex-end;
     padding: 16px;
-    background: #ffffff;
+    background: @merchant-surface;
     border-radius: 16px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 1px 3px @merchant-shadow;
     text-align: right;
   }
 
   // 新增按钮样式
   .add-button {
-    background: linear-gradient(135deg, #f6ffed 0%, #d9f7be 100%);
+    background: linear-gradient(135deg, @merchant-success-light 0%, @merchant-success 100%);
     border: none;
     border-radius: 10px;
     padding: 10px 20px;
     font-weight: 600;
-    color: #389e0d;
-    box-shadow: 0 2px 8px rgba(56, 158, 13, 0.2);
+    color: @merchant-surface;
+    box-shadow: 0 2px 8px rgba(90, 143, 94, 0.2);
     transition: all 0.3s ease;
 
     &:hover {
-      background: linear-gradient(135deg, #d9f7be 0%, #b7eb8f 100%);
+      background: linear-gradient(135deg, @merchant-success 0%, @merchant-primary-dark 100%);
       transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(56, 158, 13, 0.3);
+      box-shadow: 0 4px 12px rgba(90, 143, 94, 0.3);
     }
 
     &:active {
@@ -1252,11 +1255,11 @@ const toggleSelectAll = () => {
     font-weight: 500;
     transition: all 0.3s ease;
     border: none;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 1px 3px @merchant-shadow;
 
     &:hover:not(:disabled) {
       transform: translateY(-1px);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+      box-shadow: 0 2px 8px @merchant-shadow-hover;
     }
 
     &:active:not(:disabled) {
@@ -1293,10 +1296,10 @@ const toggleSelectAll = () => {
   .batch-pagination-container {
     margin-bottom: 20px;
     padding: 16px 20px;
-    background-color: #ffffff;
+    background-color: @merchant-surface;
     border-radius: 12px;
-    border: 1px solid #f1f3f5;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    border: 1px solid @merchant-border;
+    box-shadow: 0 1px 3px @merchant-shadow-hover;
 
     .batch-actions {
       justify-content: flex-start; /* 批量操作左对齐 */
@@ -1320,44 +1323,44 @@ const toggleSelectAll = () => {
     font-weight: 500;
     font-size: 1rem /* 原值: 14px */;
     transition: all 0.3s ease;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 8px @merchant-shadow;
   }
 
   :deep(.dialog-footer .el-button--primary) {
-    background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
-    border: 1px solid #91d5ff;
-    color: #0050b3;
+    background: linear-gradient(135deg, @merchant-primary-light 0%, @merchant-primary 100%);
+    border: 1px solid @merchant-primary;
+    color: @merchant-surface;
   }
 
   :deep(.dialog-footer .el-button--primary:hover) {
-    background: linear-gradient(135deg, #bae7ff 0%, #91d5ff 100%);
+    background: linear-gradient(135deg, @merchant-primary 0%, @merchant-primary-dark 100%);
     transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(64, 169, 255, 0.3);
+    box-shadow: 0 4px 16px rgba(74, 122, 77, 0.3);
   }
 
   :deep(.dialog-footer .el-button--default) {
-    border-color: #e5e7eb;
-    background-color: #fafafa;
-    color: #666;
+    border-color: @merchant-border;
+    background-color: @merchant-surface-alt;
+    color: @merchant-text-sec;
   }
 
   :deep(.dialog-footer .el-button--default:hover) {
-    border-color: #d9d9d9;
-    background-color: #f0f0f0;
-    color: #333;
+    border-color: @merchant-border;
+    background-color: @merchant-surface-alt;
+    color: @merchant-text;
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px @merchant-shadow;
   }
 
   /* 对话框内容区域样式 - 与添加菜品保持一致 */
   :deep(.el-dialog) {
     border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 20px @merchant-shadow-hover;
   }
 
   :deep(.el-dialog__header) {
-    border-bottom: 2px solid rgba(102, 126, 234, 0.3);
-    background: linear-gradient(135deg, rgba(230, 247, 255, 0.8) 0%, rgba(186, 231, 255, 0.8) 100%);
+    border-bottom: 2px solid rgba(74, 122, 77, 0.3);
+    background: linear-gradient(135deg, rgba(227, 240, 228, 0.8) 0%, rgba(74, 122, 77, 0.08) 100%);
     padding: 24px 28px;
     border-radius: 12px 12px 0 0;
   }
@@ -1365,8 +1368,8 @@ const toggleSelectAll = () => {
   :deep(.el-dialog__title) {
     font-size: 1.429rem /* 原值: 20px */;
     font-weight: 600;
-    color: #1890ff;
-    background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+    color: @merchant-primary;
+    background: linear-gradient(135deg, @merchant-primary 0%, @merchant-primary-dark 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -1374,14 +1377,14 @@ const toggleSelectAll = () => {
 
   :deep(.el-dialog__body) {
     padding: 32px 28px;
-    background-color: #fafbfc;
+    background-color: @merchant-surface-alt;
   }
 
   :deep(.el-dialog__footer) {
-    border-top: 1px solid #f1f3f5;
+    border-top: 1px solid @merchant-border;
     padding: 0 28px 24px;
     border-radius: 0 0 12px 12px;
-    background-color: #ffffff;
+    background-color: @merchant-surface;
   }
 
   /* 添加菜单表单样式 */
@@ -1393,7 +1396,7 @@ const toggleSelectAll = () => {
       margin-bottom: 20px;
 
       .info-label {
-        color: #555;
+        color: @merchant-text-sec;
         width: 130px;
         font-weight: 500;
         font-size: 1rem /* 原值: 14px */;
@@ -1404,19 +1407,19 @@ const toggleSelectAll = () => {
       :deep(.el-select__wrapper),
       :deep(.el-time-picker .el-input__wrapper) {
         border-radius: 8px;
-        border: 2px solid #e5e7eb;
+        border: 2px solid @merchant-border;
         transition: all 0.3s ease;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 1px 2px @merchant-shadow;
 
         &:hover {
-          border-color: #91d5ff;
-          box-shadow: 0 0 0 3px rgba(145, 213, 255, 0.1);
+          border-color: @merchant-primary;
+          box-shadow: 0 0 0 3px rgba(74, 122, 77, 0.1);
         }
 
         &.is-focus,
         &.is-focused {
-          border-color: #40a9ff;
-          box-shadow: 0 0 0 3px rgba(64, 169, 255, 0.15);
+          border-color: @merchant-primary;
+          box-shadow: 0 0 0 3px rgba(74, 122, 77, 0.15);
         }
       }
     }

@@ -1,0 +1,354 @@
+// ============================================
+// Nordic Pro 商家端主题
+// 基于北欧暖光主题，专为商家管理后台设计
+// ============================================
+
+// --- 背景色 ---
+@merchant-bg:            #F0EDE8;        // 主背景 - 暖灰（比用户端略深）
+@merchant-surface:       #FFFFFF;        // 卡片表面
+@merchant-surface-alt:   #FAF8F5;        // 备用表面色（hover状态）
+
+// --- 主色调 ---
+@merchant-primary:       #4A7A4D;        // 深鼠尾草绿 - 主强调色
+@merchant-primary-light: #E3F0E4;        // 浅绿背景
+@merchant-primary-dark:  #3A603D;        // 深绿文字/边框
+
+@merchant-secondary:     #B56A4A;        // 深陶土色 - 次要强调色
+@merchant-secondary-light: #F4E6DE;      // 浅陶土背景
+
+// --- 功能色 ---
+@merchant-success:       #5A8F5E;        // 成功绿 - 比用户端更深
+@merchant-success-light: #E8F4E9;        // 浅绿背景
+
+@merchant-warning:       #D4A855;        // 暖金
+@merchant-warning-light: #F7EDDA;        // 浅金背景
+
+@merchant-error:         #C45B5B;        // 柔红
+@merchant-error-light:   #F6E0E0;        // 浅红背景
+
+@merchant-info:          #5B8BD2;        // 雾蓝
+@merchant-info-light:    #E0EDF6;        // 浅蓝背景
+
+// --- 文字色 ---
+@merchant-text:          #2D2A26;        // 主文字
+@merchant-text-sec:      #6B6560;        // 次要文字
+@merchant-text-muted:    #9E9893;        // 弱化文字
+
+// --- 边框与分割 ---
+@merchant-border:        #E2DED8;        // 边框色
+@merchant-divider:       #EBE7E2;        // 分割线
+
+// --- 阴影 ---
+@merchant-shadow:        rgba(45, 42, 38, 0.06);
+@merchant-shadow-hover:  rgba(45, 42, 38, 0.12);
+
+// --- 状态色 ---
+@merchant-status-pending:   #E6A23C;     // 待处理 - 橙色
+@merchant-status-processing: #5B8BD2;    // 处理中 - 蓝色
+@merchant-status-completed: #5A8F5E;     // 已完成 - 绿色
+@merchant-status-cancelled:  #9E9893;    // 已取消 - 灰色
+
+// ============================================
+// 通用混合类
+// ============================================
+
+// --- 数据卡片 ---
+.merchant-stat-card() {
+  background: @merchant-surface;
+  border-radius: @nordic-radius-lg;
+  border: 1px solid @merchant-border;
+  padding: 20px;
+  transition: all @nordic-transition-base ease;
+  position: relative;
+
+  // 左侧强调边框
+  border-left: 4px solid @merchant-primary;
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px @merchant-shadow-hover;
+    border-color: @merchant-primary;
+  }
+
+  .stat-value {
+    font-size: @nordic-text-xl;
+    font-weight: 700;
+    color: @merchant-text;
+    letter-spacing: @nordic-letter-tighter;
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: @nordic-text-sm;
+    color: @merchant-text-muted;
+    text-transform: uppercase;
+    letter-spacing: @nordic-letter-wide;
+    font-weight: 500;
+    margin-top: 4px;
+  }
+
+  .stat-trend {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: @nordic-text-xs;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: @nordic-radius-pill;
+    margin-top: 8px;
+
+    &.trend-up {
+      color: @merchant-success;
+      background: @merchant-success-light;
+    }
+
+    &.trend-down {
+      color: @merchant-error;
+      background: @merchant-error-light;
+    }
+
+    &.trend-neutral {
+      color: @merchant-text-muted;
+      background: @merchant-divider;
+    }
+  }
+}
+
+// --- 订单卡片 ---
+.merchant-order-card() {
+  background: @merchant-surface;
+  border-radius: @nordic-radius-md;
+  border: 1px solid @merchant-border;
+  padding: 16px 20px;
+  margin-bottom: 12px;
+  transition: all @nordic-transition-fast ease;
+  position: relative;
+
+  // 左侧状态指示条
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    border-radius: @nordic-radius-md 0 0 @nordic-radius-md;
+  }
+
+  // 不同状态的左边框颜色
+  &.status-pending::before {
+    background: @merchant-status-pending;
+  }
+
+  &.status-processing::before {
+    background: @merchant-status-processing;
+  }
+
+  &.status-completed::before {
+    background: @merchant-status-completed;
+  }
+
+  &.status-cancelled::before {
+    background: @merchant-status-cancelled;
+  }
+
+  &:hover {
+    border-color: @merchant-primary;
+    box-shadow: 0 4px 12px rgba(74, 122, 77, 0.1);
+  }
+}
+
+// --- 主要按钮 ---
+.merchant-btn-primary() {
+  background: @merchant-primary;
+  color: #fff;
+  border: none;
+  border-radius: @nordic-radius-sm;
+  padding: 8px 16px;
+  font-weight: 600;
+  font-size: @nordic-text-base;
+  transition: all @nordic-transition-base ease;
+  cursor: pointer;
+
+  &:hover {
+    background: @merchant-primary-dark;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(74, 122, 77, 0.3);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+// --- 次要按钮 ---
+.merchant-btn-secondary() {
+  background: transparent;
+  color: @merchant-primary;
+  border: 1.5px solid @merchant-primary;
+  border-radius: @nordic-radius-sm;
+  padding: 7px 15px;
+  font-weight: 600;
+  font-size: @nordic-text-base;
+  transition: all @nordic-transition-base ease;
+  cursor: pointer;
+
+  &:hover {
+    background: @merchant-primary-light;
+    border-color: @merchant-primary-dark;
+  }
+}
+
+// --- 状态标签 ---
+.merchant-status-tag() {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: @nordic-radius-pill;
+  font-size: @nordic-text-xs;
+  font-weight: 600;
+
+  &.status-pending {
+    background: @merchant-warning-light;
+    color: @merchant-warning;
+  }
+
+  &.status-processing {
+    background: @merchant-info-light;
+    color: @merchant-info;
+  }
+
+  &.status-completed {
+    background: @merchant-success-light;
+    color: @merchant-success;
+  }
+
+  &.status-cancelled {
+    background: @merchant-divider;
+    color: @merchant-text-muted;
+  }
+}
+
+// --- 表格样式 ---
+.merchant-table() {
+  width: 100%;
+  border-collapse: collapse;
+
+  th {
+    background: @merchant-surface-alt;
+    color: @merchant-text-sec;
+    font-weight: 600;
+    font-size: @nordic-text-sm;
+    text-transform: uppercase;
+    letter-spacing: @nordic-letter-wide;
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 2px solid @merchant-border;
+  }
+
+  td {
+    padding: 16px;
+    border-bottom: 1px solid @merchant-divider;
+    color: @merchant-text;
+    font-size: @nordic-text-base;
+  }
+
+  tr:hover td {
+    background: @merchant-surface-alt;
+  }
+}
+
+// --- 页面容器 ---
+.merchant-page-container() {
+  padding: @nordic-space-lg;
+  background: @merchant-bg;
+  min-height: 100%;
+
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: @nordic-space-lg;
+
+    .page-title {
+      font-size: @nordic-text-xl;
+      font-weight: 700;
+      color: @merchant-text;
+      margin: 0;
+      letter-spacing: @nordic-letter-tight;
+    }
+  }
+}
+
+// --- 章节标题 ---
+.merchant-section-title() {
+  font-size: @nordic-text-lg;
+  font-weight: 600;
+  color: @merchant-text;
+  margin: 0 0 @nordic-space-md;
+  letter-spacing: @nordic-letter-tight;
+}
+
+// --- 菜品卡片 ---
+.merchant-dish-card() {
+  background: @merchant-surface;
+  border-radius: @nordic-radius-lg;
+  border: 1px solid @merchant-border;
+  overflow: hidden;
+  transition: all @nordic-transition-base ease;
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px @merchant-shadow-hover;
+    border-color: @merchant-primary;
+  }
+
+  .dish-image {
+    width: 100%;
+    height: 140px;
+    object-fit: cover;
+  }
+
+  .dish-info {
+    padding: @nordic-space-md;
+
+    .dish-name {
+      font-size: @nordic-text-md;
+      font-weight: 600;
+      color: @merchant-text;
+      margin-bottom: 4px;
+    }
+
+    .dish-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: @nordic-text-sm;
+      color: @merchant-text-sec;
+    }
+  }
+}
+
+// --- 入场动画 ---
+@keyframes merchant-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.merchant-animate-fade-up() {
+  animation: merchant-fade-up 0.4s ease both;
+}
+
+// --- 交错动画延迟 ---
+.merchant-stagger-1 { animation-delay: 0.05s; }
+.merchant-stagger-2 { animation-delay: 0.1s; }
+.merchant-stagger-3 { animation-delay: 0.15s; }
+.merchant-stagger-4 { animation-delay: 0.2s; }
+.merchant-stagger-5 { animation-delay: 0.25s; }

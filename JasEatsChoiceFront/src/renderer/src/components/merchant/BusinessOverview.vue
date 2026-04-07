@@ -123,111 +123,131 @@ onMounted(() => {
 </template>
 
 <style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+@import '../../assets/css/merchant-theme.less';
+
 .overview-card {
-  margin-bottom: 24px;
-  padding: 24px;
-  border: 2px solid #67c23a;
-  border-radius: 12px;
-  background-color: #ffffff;
-  box-shadow: 0 4px 20px rgba(103, 194, 58, 0.12);
+  margin-bottom: @nordic-space-lg;
+  padding: @nordic-space-lg;
+  background: @merchant-surface;
+  border-radius: @nordic-radius-lg;
+  border: 1px solid @merchant-border;
+  border-left: 4px solid @merchant-success;
+  box-shadow: 0 1px 4px @merchant-shadow;
+  transition: all @nordic-transition-base ease;
+
+  &:hover {
+    box-shadow: 0 8px 24px @merchant-shadow-hover;
+    border-color: @merchant-primary;
+  }
 
   .card-title {
-    font-size: 1.429rem /* 原值: 20px */;
-    font-weight: 700;
-    margin-bottom: 20px;
-    color: #e6a23c;
+    .merchant-section-title();
     display: flex;
     align-items: center;
+    gap: @nordic-space-sm;
+    margin-bottom: @nordic-space-lg;
 
     &::after {
       content: '';
       flex: 1;
       height: 1px;
-      background: linear-gradient(to right, #e6a23c, transparent);
-      margin-left: 15px;
+      background: linear-gradient(to right, @merchant-border, transparent);
+      margin-left: @nordic-space-md;
     }
   }
 
   .overview-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: @nordic-space-md;
 
     .overview-item {
       display: flex;
       align-items: center;
-      gap: 16px;
-      padding: 20px;
-      border-radius: 12px;
-      background: white;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-      transition: all 0.3s ease;
+      gap: @nordic-space-md;
+      padding: @nordic-space-lg;
+      border-radius: @nordic-radius-lg;
+      background: @merchant-surface;
+      border: 1px solid @merchant-border;
+      transition: all @nordic-transition-base ease;
       cursor: pointer;
-      border: 1px solid #f0f0f0;
+      position: relative;
+      overflow: hidden;
+
+      // 左侧强调边框
+      &::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        border-radius: @nordic-radius-lg 0 0 @nordic-radius-lg;
+      }
+
+      &.sales::before { background: @merchant-success; }
+      &.orders::before { background: @merchant-info; }
+      &.newComments::before { background: @merchant-warning; }
+      &.unreadMessages::before { background: @merchant-error; }
 
       &:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
-        border-color: #ffd7a3;
-      }
-
-      &.sales {
-        border-left: 4px solid #67c23a;
-      }
-
-      &.orders {
-        border-left: 4px solid #409eff;
-      }
-
-      &.newComments {
-        border-left: 4px solid #e6a23c;
-      }
-
-      &.unreadMessages {
-        border-left: 4px solid #f56c6c;
+        transform: translateY(-3px);
+        box-shadow: 0 8px 24px @merchant-shadow-hover;
+        border-color: @merchant-primary;
       }
 
       .item-icon {
-        font-size: 2.286rem /* 原值: 32px */;
-        width: 60px;
-        height: 60px;
+        font-size: 32px;
+        width: 56px;
+        height: 56px;
         display: flex;
         align-items: center;
         justify-content: center;
-        border-radius: 50%;
-        background: rgba(230, 162, 60, 0.1);
+        border-radius: @nordic-radius-md;
+        background: @merchant-primary-light;
       }
 
       .item-content {
         flex: 1;
 
         .overview-label {
-          font-size: 1rem /* 原值: 14px */;
-          color: #909399;
+          font-size: @nordic-text-sm;
+          color: @merchant-text-muted;
           margin-bottom: 4px;
           font-weight: 500;
+          text-transform: uppercase;
+          letter-spacing: @nordic-letter-wide;
         }
 
         .overview-value {
-          font-size: 1.714rem /* 原值: 24px */;
+          font-size: @nordic-text-xl;
           font-weight: 700;
+          color: @merchant-text;
+          letter-spacing: @nordic-letter-tighter;
           margin-bottom: 4px;
         }
 
         .item-trend {
-          font-size: 0.857rem /* 原值: 12px */;
+          font-size: @nordic-text-xs;
           font-weight: 600;
+          padding: 2px 8px;
+          border-radius: @nordic-radius-pill;
+          display: inline-block;
 
           &.trend-up {
-            color: #67c23a;
+            color: @merchant-success;
+            background: @merchant-success-light;
           }
 
           &.trend-down {
-            color: #f56c6c;
+            color: @merchant-error;
+            background: @merchant-error-light;
           }
 
           &.trend-neutral {
-            color: #909399;
+            color: @merchant-text-muted;
+            background: @merchant-divider;
           }
         }
       }

@@ -219,6 +219,9 @@ const useHistory = (item) => {
 </script>
 
 <style scoped lang="less">
+@import '../../../../../assets/css/nordic-theme.less';
+@import '../../../../../assets/css/merchant-theme.less';
+
 .dish-generator {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -229,7 +232,7 @@ const useHistory = (item) => {
 
 .input-section,
 .result-section {
-  background: #FFF;
+  background: @merchant-surface;
   border-radius: 12px;
   padding: 20px;
   overflow-y: auto;
@@ -237,9 +240,9 @@ const useHistory = (item) => {
   h3 {
     margin: 0 0 20px;
     font-size: 16px;
-    color: #DC2626;
+    color: @merchant-secondary;
     padding-bottom: 12px;
-    border-bottom: 2px solid #FECACA;
+    border-bottom: 2px solid @merchant-border;
   }
 }
 
@@ -261,32 +264,32 @@ const useHistory = (item) => {
   align-items: center;
   gap: 8px;
   padding: 16px 12px;
-  border: 2px solid #FECACA;
+  border: 2px solid @merchant-border;
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.2s ease;
 
   &:hover {
-    border-color: #DC2626;
-    background: #FEF2F2;
+    border-color: @merchant-secondary;
+    background: @merchant-secondary-light;
   }
 
   &.active {
-    border-color: #DC2626;
-    background: #FEE2E2;
+    border-color: @merchant-secondary;
+    background: @merchant-secondary-light;
 
     .el-icon {
-      color: #DC2626;
+      color: @merchant-secondary;
     }
   }
 
   .el-icon {
-    color: #F87171;
+    color: @merchant-secondary;
   }
 
   span {
     font-size: 13px;
-    color: #374151;
+    color: @merchant-text;
   }
 }
 
@@ -298,7 +301,7 @@ const useHistory = (item) => {
 }
 
 .result-card {
-  background: #FEF2F2;
+  background: @merchant-secondary-light;
   border-radius: 12px;
   padding: 20px;
   margin-bottom: 20px;
@@ -306,7 +309,7 @@ const useHistory = (item) => {
   .description-text {
     font-size: 15px;
     line-height: 1.8;
-    color: #374151;
+    color: @merchant-text;
     margin-bottom: 16px;
   }
 
@@ -323,11 +326,11 @@ const useHistory = (item) => {
   align-items: center;
   justify-content: center;
   height: 200px;
-  color: #9CA3AF;
+  color: @merchant-text-muted;
 
   .el-icon {
     margin-bottom: 12px;
-    color: #FECACA;
+    color: @merchant-border;
   }
 
   p {
@@ -336,19 +339,19 @@ const useHistory = (item) => {
 
   .hint {
     font-size: 13px;
-    color: #D1D5DB;
+    color: @merchant-text-muted;
   }
 }
 
 .history-section {
   margin-top: 20px;
   padding-top: 16px;
-  border-top: 1px solid #FECACA;
+  border-top: 1px solid @merchant-border;
 
   h4 {
     margin: 0 0 12px;
     font-size: 14px;
-    color: #6B7280;
+    color: @merchant-text-sec;
   }
 
   .history-list {
@@ -362,24 +365,24 @@ const useHistory = (item) => {
     justify-content: space-between;
     align-items: center;
     padding: 10px 12px;
-    background: #FAFAFA;
+    background: @merchant-surface-alt;
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s ease;
 
     &:hover {
-      background: #FEF2F2;
+      background: @merchant-secondary-light;
     }
 
     .dish-name {
       font-size: 14px;
-      color: #374151;
+      color: @merchant-text;
     }
 
     .style-tag {
       font-size: 12px;
-      color: #DC2626;
-      background: #FEE2E2;
+      color: @merchant-secondary;
+      background: @merchant-secondary-light;
       padding: 2px 8px;
       border-radius: 10px;
     }
