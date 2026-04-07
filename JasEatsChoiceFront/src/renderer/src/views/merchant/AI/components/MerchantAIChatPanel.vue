@@ -165,8 +165,8 @@ onMounted(() => {
 </script>
 
 <style scoped lang="less">
-@import '../../../../../assets/css/nordic-theme.less';
-@import '../../../../../assets/css/merchant-theme.less';
+@import '../../../../assets/css/nordic-theme.less';
+@import '../../../../assets/css/merchant-theme.less';
 
 .chat-panel {
   display: flex;

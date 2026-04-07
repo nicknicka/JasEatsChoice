@@ -868,6 +868,9 @@ const refreshMessages = async () => {
 </template>
 
 <style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+@import '../../assets/css/merchant-theme.less';
+
 .messages-management-container {
   padding: 0 20px 20px 20px;
 
@@ -876,9 +879,9 @@ const refreshMessages = async () => {
     justify-content: space-between;
     align-items: center;
     padding: 24px 28px;
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    background: linear-gradient(135deg, @merchant-primary 0%, @merchant-primary-dark 100%);
     border-radius: 20px;
-    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.25);
+    box-shadow: 0 8px 24px @merchant-shadow-hover;
     margin-bottom: 24px;
     position: relative;
     overflow: hidden;
@@ -905,14 +908,14 @@ const refreshMessages = async () => {
         font-size: 26px;
         font-weight: 700;
         margin: 0;
-        color: #ffffff;
+        color: @merchant-surface;
         letter-spacing: 0.8px;
         text-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
       }
 
       .page-subtitle {
         font-size: 1rem /* 原值: 14px */;
-        color: rgba(255, 255, 255, 0.95);
+        color: rgba(255, 255, 255, 0.9);
         margin: 0;
         font-weight: 400;
       }
@@ -932,7 +935,7 @@ const refreshMessages = async () => {
         :deep(.el-input__wrapper) {
           background: rgba(255, 255, 255, 0.9);
           border-radius: 8px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+          box-shadow: 0 2px 8px @merchant-shadow;
         }
       }
 
@@ -940,15 +943,15 @@ const refreshMessages = async () => {
         backdrop-filter: blur(12px);
         background: rgba(255, 255, 255, 0.15);
         border: 1px solid rgba(255, 255, 255, 0.35);
-        color: #ffffff;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        color: @merchant-surface;
+        box-shadow: 0 4px 12px @merchant-shadow;
         font-weight: 500;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
         &:hover {
           transform: translateY(-2px);
           background: rgba(255, 255, 255, 0.25);
-          box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+          box-shadow: 0 6px 16px @merchant-shadow-hover;
         }
 
         &:active {
@@ -969,27 +972,27 @@ const refreshMessages = async () => {
     justify-content: space-between;
     align-items: stretch;
     padding: 20px;
-    background: linear-gradient(135deg, #f8f9fa 0%, #f3f4f6 100%);
-    border: 1px solid #e8eef5;
+    background: linear-gradient(135deg, @merchant-surface-alt 0%, @merchant-bg 100%);
+    border: 1px solid @merchant-border;
     border-radius: 20px;
     margin-bottom: 24px;
     flex-wrap: wrap;
     gap: 16px;
-    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 2px 16px @merchant-shadow;
 
     .stat-card {
       display: flex;
       align-items: center;
       gap: 18px;
       padding: 22px 24px;
-      background: #ffffff;
+      background: @merchant-surface;
       border-radius: 18px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+      box-shadow: 0 4px 16px @merchant-shadow;
       transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
       cursor: pointer;
       flex: 1;
       min-width: 160px;
-      border: 1px solid #e8eef5;
+      border: 1px solid @merchant-border;
       position: relative;
       overflow: hidden;
 
@@ -1005,7 +1008,7 @@ const refreshMessages = async () => {
 
       &:hover {
         transform: translateY(-6px) scale(1.01);
-        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+        box-shadow: 0 12px 32px @merchant-shadow-hover;
 
         &::before {
           width: 6px;
@@ -1041,14 +1044,14 @@ const refreshMessages = async () => {
         .stat-value {
           font-size: 2rem /* 原值: 28px */;
           font-weight: 700;
-          color: #1f2937;
+          color: @merchant-text;
           line-height: 1.1;
           margin-bottom: 4px;
         }
 
         .stat-label {
           font-size: 0.929rem /* 原值: 13px */;
-          color: #6b7280;
+          color: @merchant-text-muted;
           font-weight: 500;
           letter-spacing: 0.3px;
         }
@@ -1056,19 +1059,15 @@ const refreshMessages = async () => {
 
       &.total {
         &::before {
-          background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+          background: linear-gradient(180deg, @merchant-primary 0%, @merchant-primary-dark 100%);
         }
         .stat-icon {
-          background: linear-gradient(
-            135deg,
-            rgba(59, 130, 246, 0.12) 0%,
-            rgba(37, 99, 235, 0.08) 100%
-          );
-          color: #3b82f6;
-          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+          background: @merchant-primary-light;
+          color: @merchant-primary;
+          box-shadow: 0 4px 12px rgba(74, 122, 77, 0.15);
         }
         .stat-value {
-          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+          background: linear-gradient(135deg, @merchant-primary 0%, @merchant-primary-dark 100%);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           background-clip: text;
@@ -1077,73 +1076,57 @@ const refreshMessages = async () => {
 
       &.unread {
         &::before {
-          background: linear-gradient(180deg, #f56c6c 0%, #ff8787 100%);
+          background: linear-gradient(180deg, @merchant-error 0%, darken(@merchant-error, 8%) 100%);
         }
         .stat-icon {
-          background: linear-gradient(
-            135deg,
-            rgba(245, 108, 108, 0.12) 0%,
-            rgba(255, 135, 135, 0.08) 100%
-          );
-          color: #f56c6c;
-          box-shadow: 0 4px 12px rgba(245, 108, 108, 0.15);
+          background: @merchant-error-light;
+          color: @merchant-error;
+          box-shadow: 0 4px 12px rgba(196, 91, 91, 0.15);
         }
         .stat-value {
-          color: #f56c6c;
+          color: @merchant-error;
         }
       }
 
       &.system {
         &::before {
-          background: linear-gradient(180deg, #e6a23c 0%, #f0a858 100%);
+          background: linear-gradient(180deg, @merchant-warning 0%, darken(@merchant-warning, 5%) 100%);
         }
         .stat-icon {
-          background: linear-gradient(
-            135deg,
-            rgba(230, 162, 60, 0.12) 0%,
-            rgba(240, 168, 88, 0.08) 100%
-          );
-          color: #e6a23c;
-          box-shadow: 0 4px 12px rgba(230, 162, 60, 0.15);
+          background: @merchant-warning-light;
+          color: @merchant-warning;
+          box-shadow: 0 4px 12px rgba(212, 168, 85, 0.15);
         }
         .stat-value {
-          color: #e6a23c;
+          color: @merchant-warning;
         }
       }
 
       &.order {
         &::before {
-          background: linear-gradient(180deg, #409eff 0%, #66b1ff 100%);
+          background: linear-gradient(180deg, @merchant-info 0%, darken(@merchant-info, 8%) 100%);
         }
         .stat-icon {
-          background: linear-gradient(
-            135deg,
-            rgba(64, 158, 255, 0.12) 0%,
-            rgba(102, 177, 255, 0.08) 100%
-          );
-          color: #409eff;
-          box-shadow: 0 4px 12px rgba(64, 158, 255, 0.15);
+          background: @merchant-info-light;
+          color: @merchant-info;
+          box-shadow: 0 4px 12px rgba(91, 139, 210, 0.15);
         }
         .stat-value {
-          color: #409eff;
+          color: @merchant-info;
         }
       }
 
       &.comment {
         &::before {
-          background: linear-gradient(180deg, #67c23a 0%, #7bcf58 100%);
+          background: linear-gradient(180deg, @merchant-success 0%, darken(@merchant-success, 8%) 100%);
         }
         .stat-icon {
-          background: linear-gradient(
-            135deg,
-            rgba(103, 194, 58, 0.12) 0%,
-            rgba(123, 207, 88, 0.08) 100%
-          );
-          color: #67c23a;
-          box-shadow: 0 4px 12px rgba(103, 194, 58, 0.15);
+          background: @merchant-success-light;
+          color: @merchant-success;
+          box-shadow: 0 4px 12px rgba(90, 143, 94, 0.15);
         }
         .stat-value {
-          color: #67c23a;
+          color: @merchant-success;
         }
       }
     }
@@ -1156,11 +1139,11 @@ const refreshMessages = async () => {
         flex-direction: column;
         gap: 12px;
         padding: 16px 20px;
-        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+        background: linear-gradient(135deg, @merchant-surface-alt 0%, @merchant-surface 100%);
         border-radius: 12px;
         margin-bottom: 16px;
-        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-        border: 1px solid #e8eef5;
+        box-shadow: 0 2px 12px @merchant-shadow;
+        border: 1px solid @merchant-border;
 
         .filter-header {
           display: flex;
@@ -1169,13 +1152,13 @@ const refreshMessages = async () => {
 
           .filter-icon {
             font-size: 1.143rem /* 原值: 16px */;
-            color: #3b82f6;
+            color: @merchant-primary;
           }
 
           .filter-label {
             font-size: 0.929rem /* 原值: 13px */;
             font-weight: 600;
-            color: #303133;
+            color: @merchant-text;
           }
         }
 
@@ -1215,44 +1198,44 @@ const refreshMessages = async () => {
             }
 
             &.category-tag-all {
-              background: #f0f2f5;
-              color: #606266;
-              border: 1px solid #dcdfe6;
+              background: @merchant-surface-alt;
+              color: @merchant-text-sec;
+              border: 1px solid @merchant-border;
               &.active {
-                background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-                color: #ffffff;
-                border-color: #3b82f6;
-                box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
+                background: linear-gradient(135deg, @merchant-primary 0%, @merchant-primary-dark 100%);
+                color: @merchant-surface;
+                border-color: @merchant-primary;
+                box-shadow: 0 2px 6px rgba(74, 122, 77, 0.3);
               }
             }
 
             &.category-tag-system {
-              background: #fff7e6;
-              color: #e6a23c;
-              border: 1px solid #ffd591;
+              background: @merchant-warning-light;
+              color: @merchant-warning;
+              border: 1px solid @merchant-warning-light;
               &.active {
-                background: linear-gradient(135deg, #e6a23c 0%, #f0a858 100%);
-                color: #ffffff;
+                background: linear-gradient(135deg, @merchant-warning 0%, darken(@merchant-warning, 5%) 100%);
+                color: @merchant-surface;
               }
             }
 
             &.category-tag-order {
-              background: #e6f7ff;
-              color: #409eff;
-              border: 1px solid #91d5ff;
+              background: @merchant-info-light;
+              color: @merchant-info;
+              border: 1px solid @merchant-info-light;
               &.active {
-                background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
-                color: #ffffff;
+                background: linear-gradient(135deg, @merchant-info 0%, lighten(@merchant-info, 8%) 100%);
+                color: @merchant-surface;
               }
             }
 
             &.category-tag-comment {
-              background: #f6ffed;
-              color: #67c23a;
-              border: 1px solid #b7eb8f;
+              background: @merchant-success-light;
+              color: @merchant-success;
+              border: 1px solid @merchant-success-light;
               &.active {
-                background: linear-gradient(135deg, #67c23a 0%, #7bcf58 100%);
-                color: #ffffff;
+                background: linear-gradient(135deg, @merchant-success 0%, lighten(@merchant-success, 8%) 100%);
+                color: @merchant-surface;
               }
             }
           }
@@ -1265,7 +1248,7 @@ const refreshMessages = async () => {
           align-items: center;
           margin-top: 12px;
           padding-top: 12px;
-          border-top: 1px solid #e8eef5;
+          border-top: 1px solid @merchant-divider;
 
           :deep(.el-button) {
             height: 32px;
@@ -1293,10 +1276,10 @@ const refreshMessages = async () => {
           display: flex;
           align-items: flex-start;
           padding: 18px 22px;
-          border: 2px solid #e8eef5;
+          border: 2px solid @merchant-border;
           border-radius: 14px;
           margin-bottom: 12px;
-          background-color: #fff;
+          background-color: @merchant-surface;
           cursor: pointer;
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
@@ -1310,14 +1293,14 @@ const refreshMessages = async () => {
             top: 0;
             bottom: 0;
             width: 4px;
-            background: #e8eef5;
+            background: @merchant-border;
             transition: all 0.3s ease;
             border-radius: 14px 0 0 14px;
           }
 
           &:hover {
             box-shadow: 0 8px 28px rgba(0, 0, 0, 0.1);
-            border-color: #cbd5e1;
+            border-color: @merchant-border;
             transform: translateY(-3px);
 
             .message-icon {
@@ -1325,7 +1308,7 @@ const refreshMessages = async () => {
             }
 
             .message-title {
-              color: #3b82f6;
+              color: @merchant-primary;
             }
           }
 
@@ -1334,27 +1317,27 @@ const refreshMessages = async () => {
           }
 
           &.unread-message {
-            background: linear-gradient(to right, #fef2f2 0%, #ffffff 35%);
-            border-color: #fca5a5;
+            background: linear-gradient(to right, @merchant-error-light 0%, @merchant-surface 35%);
+            border-color: @merchant-error-light;
 
             &::before {
-              background: linear-gradient(180deg, #f56c6c 0%, #ff8787 100%);
+              background: linear-gradient(180deg, @merchant-error 0%, lighten(@merchant-error, 10%) 100%);
               box-shadow: 0 0 12px rgba(245, 108, 108, 0.4);
             }
 
             .message-title {
-              color: #1f2937;
+              color: @merchant-text;
               font-weight: 700;
             }
 
             .message-preview {
-              color: #4b5563;
+              color: @merchant-text-sec;
             }
           }
 
           &.selected {
-            background: linear-gradient(to right, #e6f7ff 0%, #ffffff 35%);
-            border-color: #91d5ff;
+            background: linear-gradient(to right, @merchant-info-light 0%, @merchant-surface 35%);
+            border-color: @merchant-info-light;
           }
 
           .message-checkbox {
@@ -1386,28 +1369,28 @@ const refreshMessages = async () => {
                   rgba(230, 162, 60, 0.12) 0%,
                   rgba(230, 162, 60, 0.06) 100%
                 );
-                color: #e6a23c;
+                color: @merchant-warning;
                 box-shadow: 0 4px 12px rgba(230, 162, 60, 0.12);
               }
 
               &.icon-order {
                 background: linear-gradient(
                   135deg,
-                  rgba(64, 158, 255, 0.12) 0%,
-                  rgba(64, 158, 255, 0.06) 100%
+                  rgba(91, 139, 210, 0.12) 0%,
+                  rgba(91, 139, 210, 0.06) 100%
                 );
-                color: #409eff;
-                box-shadow: 0 4px 12px rgba(64, 158, 255, 0.12);
+                color: @merchant-info;
+                box-shadow: 0 4px 12px rgba(91, 139, 210, 0.12);
               }
 
               &.icon-comment {
                 background: linear-gradient(
                   135deg,
-                  rgba(103, 194, 58, 0.12) 0%,
-                  rgba(103, 194, 58, 0.06) 100%
+                  rgba(90, 143, 94, 0.12) 0%,
+                  rgba(90, 143, 94, 0.06) 100%
                 );
-                color: #67c23a;
-                box-shadow: 0 4px 12px rgba(103, 194, 58, 0.12);
+                color: @merchant-success;
+                box-shadow: 0 4px 12px rgba(90, 143, 94, 0.12);
               }
             }
 
@@ -1417,8 +1400,8 @@ const refreshMessages = async () => {
               right: -3px;
               width: 12px;
               height: 12px;
-              background: linear-gradient(135deg, #f56c6c 0%, #ff8787 100%);
-              border: 2.5px solid #fff;
+              background: linear-gradient(135deg, @merchant-error 0%, lighten(@merchant-error, 10%) 100%);
+              border: 2.5px solid @merchant-surface;
               border-radius: 50%;
               box-shadow: 0 2px 8px rgba(245, 108, 108, 0.4);
               animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
@@ -1432,13 +1415,13 @@ const refreshMessages = async () => {
               font-size: 1.071rem /* 原值: 15px */;
               font-weight: 600;
               margin-bottom: 7px;
-              color: #1f2937;
+              color: @merchant-text;
               transition: color 0.2s ease;
             }
 
             .message-preview {
               font-size: 0.929rem /* 原值: 13px */;
-              color: #6b7280;
+              color: @merchant-text-sec;
               margin-bottom: 10px;
               line-height: 1.6;
             }
@@ -1448,7 +1431,7 @@ const refreshMessages = async () => {
               justify-content: space-between;
               align-items: center;
               font-size: 0.857rem /* 原值: 12px */;
-              color: #9ca3af;
+              color: @merchant-text-muted;
               gap: 8px;
 
               .delete-btn {
@@ -1480,9 +1463,9 @@ const refreshMessages = async () => {
       .detail-header {
         margin-bottom: 20px;
         padding: 20px;
-        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+        background: @merchant-surface;
         border-radius: 12px;
-        border: 1px solid #e8eef5;
+        border: 1px solid @merchant-border;
 
         .detail-title {
           display: flex;
@@ -1504,25 +1487,25 @@ const refreshMessages = async () => {
                 rgba(230, 162, 60, 0.15) 0%,
                 rgba(230, 162, 60, 0.08) 100%
               );
-              color: #e6a23c;
+              color: @merchant-warning;
             }
 
             &.icon-order {
               background: linear-gradient(
                 135deg,
-                rgba(64, 158, 255, 0.15) 0%,
-                rgba(64, 158, 255, 0.08) 100%
+                rgba(91, 139, 210, 0.15) 0%,
+                rgba(91, 139, 210, 0.08) 100%
               );
-              color: #409eff;
+              color: @merchant-info;
             }
 
             &.icon-comment {
               background: linear-gradient(
                 135deg,
-                rgba(103, 194, 58, 0.15) 0%,
-                rgba(103, 194, 58, 0.08) 100%
+                rgba(90, 143, 94, 0.15) 0%,
+                rgba(90, 143, 94, 0.08) 100%
               );
-              color: #67c23a;
+              color: @merchant-success;
             }
           }
 
@@ -1545,13 +1528,13 @@ const refreshMessages = async () => {
             gap: 8px;
 
             .meta-label {
-              color: #909399;
+              color: @merchant-text-muted;
               font-weight: 500;
               min-width: 60px;
             }
 
             .meta-value {
-              color: #303133;
+              color: @merchant-text;
             }
           }
         }
@@ -1562,10 +1545,10 @@ const refreshMessages = async () => {
         line-height: 1.8;
         margin-bottom: 30px;
         padding: 24px;
-        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+        background: @merchant-surface;
         border-radius: 12px;
-        border: 1px solid #e8eef5;
-        color: #303133;
+        border: 1px solid @merchant-border;
+        color: @merchant-text;
       }
 
       .detail-actions {

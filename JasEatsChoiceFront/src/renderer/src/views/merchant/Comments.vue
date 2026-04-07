@@ -72,7 +72,7 @@ const getRatingColor = (rating) => {
     2: '#F56C6C',
     1: '#f78989'
   }
-  return colors[rating] || '#909399'
+  return colors[rating] || '@merchant-text-muted'
 }
 
 // 评价评分对应文本
@@ -712,9 +712,12 @@ onMounted(() => {
 </template>
 
 <style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+@import '../../assets/css/merchant-theme.less';
+
 .merchant-comments-container {
   padding: 20px;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+  background: @merchant-bg;
   min-height: 100vh;
 
   // 页面头部
@@ -735,11 +738,11 @@ onMounted(() => {
       font-size: 1.714rem;
       font-weight: 600;
       margin: 0;
-      color: #303133;
+      color: @merchant-text;
 
       .title-icon {
         font-size: 2rem;
-        color: #409eff;
+        color: @merchant-info;
       }
     }
 
@@ -806,7 +809,7 @@ onMounted(() => {
         .stat-value {
           font-size: 2rem;
           font-weight: 700;
-          color: #303133;
+          color: @merchant-text;
           line-height: 1;
           flex: 1;
         }
@@ -815,16 +818,16 @@ onMounted(() => {
       // 第二行：描述
       .stat-label {
         font-size: 0.929rem;
-        color: #909399;
+        color: @merchant-text-muted;
         text-align: center;
       }
 
       &.stat-card-primary {
         .stat-icon {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: linear-gradient(135deg, @merchant-secondary 0%, @merchant-secondary 100%);
         }
         .stat-value {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: linear-gradient(135deg, @merchant-secondary 0%, @merchant-secondary 100%);
           background-clip: text;
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
@@ -833,28 +836,28 @@ onMounted(() => {
 
       &.stat-card-success {
         .stat-icon {
-          background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+          background: linear-gradient(135deg, @merchant-success-light 0%, lighten(@merchant-success-light, 5%) 100%);
         }
         .stat-value {
-          color: #67c23a;
+          color: @merchant-success;
         }
       }
 
       &.stat-card-info {
         .stat-icon {
-          background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
+          background: linear-gradient(135deg, @merchant-info-light 0%, lighten(@merchant-info-light, 5%) 100%);
         }
         .stat-value {
-          color: #409eff;
+          color: @merchant-info;
         }
       }
 
       &.stat-card-warning {
         .stat-icon {
-          background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+          background: linear-gradient(135deg, @merchant-warning-light 0%, lighten(@merchant-warning-light, 5%) 100%);
         }
         .stat-value {
-          color: #e6a23c;
+          color: @merchant-warning;
         }
       }
     }
@@ -875,8 +878,8 @@ onMounted(() => {
 
       .overview-header {
         padding: 20px;
-        border-bottom: 1px solid #f0f0f0;
-        background: linear-gradient(135deg, #fafbfc 0%, #f5f7fa 100%);
+        border-bottom: 1px solid @merchant-border;
+        background: @merchant-surface-alt;
 
         .overview-title {
           display: flex;
@@ -885,11 +888,11 @@ onMounted(() => {
           margin: 0;
           font-size: 1.143rem;
           font-weight: 600;
-          color: #303133;
+          color: @merchant-text;
 
           .el-icon {
             font-size: 1.286rem;
-            color: #409eff;
+            color: @merchant-info;
           }
         }
       }
@@ -911,12 +914,12 @@ onMounted(() => {
             justify-content: space-between;
             align-items: center;
             padding: 12px 16px;
-            background: #f8f9fa;
+            background: @merchant-surface-alt;
             border-radius: 8px;
 
             .stat-item-label {
               font-size: 1rem;
-              color: #606266;
+              color: @merchant-text-sec;
               font-weight: 500;
             }
 
@@ -925,15 +928,15 @@ onMounted(() => {
               font-weight: 700;
 
               &.stat-item-success {
-                color: #67c23a;
+                color: @merchant-success;
               }
 
               &.stat-item-primary {
-                color: #409eff;
+                color: @merchant-info;
               }
 
               &.stat-item-warning {
-                color: #e6a23c;
+                color: @merchant-warning;
               }
             }
           }
@@ -959,7 +962,7 @@ onMounted(() => {
               .rating-text {
                 font-size: 1rem;
                 font-weight: 600;
-                color: #606266;
+                color: @merchant-text-sec;
               }
 
               :deep(.el-rate) {
@@ -975,7 +978,7 @@ onMounted(() => {
 
               .el-progress-bar__outer {
                 border-radius: 6px;
-                background-color: #f0f2f5;
+                background-color: @merchant-surface-alt;
               }
 
               .el-progress-bar__inner {
@@ -989,7 +992,7 @@ onMounted(() => {
               text-align: right;
               font-size: 1rem;
               font-weight: 600;
-              color: #303133;
+              color: @merchant-text;
             }
           }
         }
@@ -1000,14 +1003,14 @@ onMounted(() => {
           gap: 6px;
           margin-top: 20px;
           padding: 10px 14px;
-          background: #f0f9ff;
-          border-left: 3px solid #409eff;
+          background: @merchant-info-light;
+          border-left: 3px solid @merchant-info;
           border-radius: 4px;
           font-size: 0.857rem;
-          color: #606266;
+          color: @merchant-text-sec;
 
           .el-icon {
-            color: #409eff;
+            color: @merchant-info;
             font-size: 1rem;
           }
         }
@@ -1044,11 +1047,11 @@ onMounted(() => {
             gap: 6px;
             font-weight: 600;
             font-size: 1rem;
-            color: #303133;
+            color: @merchant-text;
             white-space: nowrap;
 
             .el-icon {
-              color: #409eff;
+              color: @merchant-info;
             }
           }
 
@@ -1095,8 +1098,8 @@ onMounted(() => {
       box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
 
       :deep(.el-card__header) {
-        background: linear-gradient(135deg, #fafbfc 0%, #f5f7fa 100%);
-        border-bottom: 1px solid #f0f0f0;
+        background: @merchant-surface-alt;
+        border-bottom: 1px solid @merchant-border;
         padding: 16px 24px;
 
         .comments-list-header {
@@ -1110,10 +1113,10 @@ onMounted(() => {
             gap: 8px;
             font-size: 1.143rem;
             font-weight: 600;
-            color: #303133;
+            color: @merchant-text;
 
             .el-icon {
-              color: #409eff;
+              color: @merchant-info;
               font-size: 1.286rem;
             }
           }
@@ -1125,7 +1128,7 @@ onMounted(() => {
 
         .comment-item {
           padding: 24px;
-          border: 1px solid #ebeef5;
+          border: 1px solid @merchant-border;
           border-radius: 12px;
           margin-bottom: 16px;
           background: white;
@@ -1140,7 +1143,7 @@ onMounted(() => {
           &:hover {
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
             transform: translateY(-3px);
-            border-color: #409eff;
+            border-color: @merchant-info;
           }
 
           .comment-header {
@@ -1155,7 +1158,7 @@ onMounted(() => {
 
               .user-avatar {
                 :deep(.el-avatar) {
-                  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                  background: linear-gradient(135deg, @merchant-secondary 0%, @merchant-secondary 100%);
                   font-weight: 600;
                   font-size: 1.286rem;
                 }
@@ -1166,14 +1169,14 @@ onMounted(() => {
                   font-weight: 600;
                   font-size: 1.143rem;
                   margin-bottom: 8px;
-                  color: #303133;
+                  color: @merchant-text;
                 }
 
                 .order-info {
                   display: flex;
                   gap: 20px;
                   font-size: 0.857rem;
-                  color: #909399;
+                  color: @merchant-text-muted;
 
                   .order-no,
                   .time {
@@ -1213,7 +1216,7 @@ onMounted(() => {
               gap: 10px;
               margin-bottom: 16px;
               padding: 12px;
-              background: #f8f9fa;
+              background: @merchant-surface-alt;
               border-radius: 8px;
 
               .dish-label {
@@ -1222,10 +1225,10 @@ onMounted(() => {
                 gap: 6px;
                 font-weight: 600;
                 font-size: 1rem;
-                color: #303133;
+                color: @merchant-text;
 
                 .el-icon {
-                  color: #e6a23c;
+                  color: @merchant-warning;
                 }
               }
 
@@ -1247,17 +1250,17 @@ onMounted(() => {
                 font-weight: 600;
                 font-size: 1rem;
                 margin-bottom: 10px;
-                color: #303133;
+                color: @merchant-text;
 
                 .el-icon {
-                  color: #409eff;
+                  color: @merchant-info;
                 }
               }
 
               .comment-value,
               .reply-value {
                 font-size: 1rem;
-                color: #303133;
+                color: @merchant-text;
                 line-height: 1.8;
                 padding: 16px;
                 border-radius: 8px;
@@ -1265,14 +1268,14 @@ onMounted(() => {
               }
 
               .comment-value {
-                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-                border-left: 4px solid #409eff;
+                background: linear-gradient(135deg, @merchant-surface-alt 0%, @merchant-border 100%);
+                border-left: 4px solid @merchant-info;
               }
 
               .reply-value {
-                background: linear-gradient(135deg, #e8f4ff 0%, #d6e9ff 100%);
-                color: #409eff;
-                border-left: 4px solid #409eff;
+                background: linear-gradient(135deg, @merchant-info-light 0%, lighten(@merchant-info-light, 5%) 100%);
+                color: @merchant-info;
+                border-left: 4px solid @merchant-info;
               }
             }
 
@@ -1280,14 +1283,14 @@ onMounted(() => {
             .comment-reply {
               .reply-label {
                 .el-icon {
-                  color: #409eff;
+                  color: @merchant-info;
                 }
               }
 
               .reply-value {
-                background: linear-gradient(135deg, #e8f4ff 0%, #d6e9ff 100%);
-                color: #0052cc;
-                border-left: 4px solid #409eff;
+                background: linear-gradient(135deg, @merchant-info-light 0%, lighten(@merchant-info-light, 5%) 100%);
+                color: @merchant-info;
+                border-left: 4px solid @merchant-info;
               }
             }
 
@@ -1298,15 +1301,15 @@ onMounted(() => {
 
               .reply-label {
                 .el-icon {
-                  color: #e6a23c;
+                  color: @merchant-warning;
                 }
-                color: #e6a23c;
+                color: @merchant-warning;
               }
 
               .reply-value {
-                background: linear-gradient(135deg, #fff7e6 0%, #ffe8cc 100%);
-                color: #d46b08;
-                border-left: 4px solid #e6a23c;
+                background: linear-gradient(135deg, @merchant-warning-light 0%, lighten(@merchant-warning-light, 5%) 100%);
+                color: @merchant-secondary;
+                border-left: 4px solid @merchant-warning;
               }
             }
 
@@ -1317,7 +1320,7 @@ onMounted(() => {
               padding: 8px 16px;
               margin-top: 12px;
               cursor: pointer;
-              color: #409eff;
+              color: @merchant-info;
               font-size: 0.929rem;
               border-radius: 6px;
               transition: all 0.3s ease;
@@ -1364,7 +1367,7 @@ onMounted(() => {
 .reply-dialog {
   :deep(.el-dialog__header) {
     padding: 20px 24px;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid @merchant-border;
   }
 
   :deep(.el-dialog__body) {
@@ -1375,13 +1378,13 @@ onMounted(() => {
     .quick-replies {
       margin-bottom: 20px;
       padding: 16px;
-      background: #f8f9fa;
+      background: @merchant-surface-alt;
       border-radius: 8px;
 
       .quick-replies-label {
         font-weight: 600;
         font-size: 1rem;
-        color: #303133;
+        color: @merchant-text;
         margin-bottom: 12px;
       }
 
@@ -1411,14 +1414,14 @@ onMounted(() => {
     :deep(.el-textarea) {
       .el-textarea__inner {
         border-radius: 8px;
-        border: 2px solid #e4e7ed;
+        border: 2px solid @merchant-border;
         padding: 12px;
         font-size: 1rem;
         line-height: 1.6;
         transition: all 0.3s ease;
 
         &:focus {
-          border-color: #409eff;
+          border-color: @merchant-info;
           box-shadow: 0 0 0 3px rgba(64, 158, 255, 0.1);
         }
       }
@@ -1427,7 +1430,7 @@ onMounted(() => {
 
   :deep(.el-dialog__footer) {
     padding: 16px 24px;
-    border-top: 1px solid #f0f0f0;
+    border-top: 1px solid @merchant-border;
   }
 
   .dialog-footer {

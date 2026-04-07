@@ -190,9 +190,11 @@ defineExpose({
 })
 </script>
 
-<style scoped>
+<style scoped lang="less">
+@import '../../assets/css/merchant-theme.less';
+
 .merchant-remark-display {
-  background: #fff;
+  background: @merchant-surface;
   padding: 20px;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -204,14 +206,14 @@ defineExpose({
   justify-content: space-between;
   margin-bottom: 16px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #EBEEF5;
+  border-bottom: 1px solid @merchant-border;
 }
 
 .remark-header h4 {
   margin: 0;
   font-size: 1.143rem /* 原值: 16px */;
   font-weight: 600;
-  color: #303133;
+  color: @merchant-text;
 }
 
 .no-remark {
@@ -237,26 +239,26 @@ defineExpose({
 
 /* 高优先级：过敏 - 红色 */
 .remark-item.priority-high {
-  background: #fef0f0;
-  border-left-color: #f56c6c;
+  background: @merchant-error-light;
+  border-left-color: @merchant-error;
 }
 
 /* 中高优先级：核心需求 - 黄色 */
 .remark-item.priority-medium-high {
-  background: #fdf6ec;
-  border-left-color: #e6a23c;
+  background: @merchant-warning-light;
+  border-left-color: @merchant-warning;
 }
 
 /* 中优先级：口味调整 - 蓝色 */
 .remark-item.priority-medium {
-  background: #ecf5ff;
-  border-left-color: #409eff;
+  background: @merchant-info-light;
+  border-left-color: @merchant-info;
 }
 
 /* 低优先级：一般备注 - 灰色 */
 .remark-item.priority-low {
-  background: #f4f4f5;
-  border-left-color: #909399;
+  background: @merchant-surface-alt;
+  border-left-color: @merchant-text-muted;
 }
 
 .remark-item > .remark-header {
@@ -273,19 +275,19 @@ defineExpose({
 }
 
 .priority-high .priority-icon {
-  color: #f56c6c;
+  color: @merchant-error;
 }
 
 .priority-medium-high .priority-icon {
-  color: #e6a23c;
+  color: @merchant-warning;
 }
 
 .priority-medium .priority-icon {
-  color: #409eff;
+  color: @merchant-info;
 }
 
 .priority-low .priority-icon {
-  color: #909399;
+  color: @merchant-text-muted;
 }
 
 .priority-label {
@@ -297,30 +299,30 @@ defineExpose({
 }
 
 .priority-high .priority-label {
-  color: #f56c6c;
+  color: @merchant-error;
 }
 
 .priority-medium-high .priority-label {
-  color: #e6a23c;
+  color: @merchant-warning;
 }
 
 .priority-medium .priority-label {
-  color: #409eff;
+  color: @merchant-info;
 }
 
 .priority-low .priority-label {
-  color: #909399;
+  color: @merchant-text-muted;
 }
 
 .dish-name {
   font-size: 1rem /* 原值: 14px */;
-  color: #606266;
+  color: @merchant-text-sec;
   font-weight: 500;
 }
 
 .remark-content {
   font-size: 1rem /* 原值: 14px */;
-  color: #303133;
+  color: @merchant-text;
   line-height: 1.6;
   margin-bottom: 8px;
 }
@@ -330,7 +332,7 @@ defineExpose({
   align-items: center;
   gap: 12px;
   font-size: 0.857rem /* 原值: 12px */;
-  color: #909399;
+  color: @merchant-text-muted;
 }
 
 .remark-time {

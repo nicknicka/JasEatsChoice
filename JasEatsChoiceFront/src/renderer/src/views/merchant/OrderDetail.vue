@@ -476,6 +476,9 @@ onMounted(() => {
 </template>
 
 <style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+@import '../../assets/css/merchant-theme.less';
+
 .order-detail-container {
   padding: 0 20px 20px 20px;
 
@@ -484,10 +487,10 @@ onMounted(() => {
     justify-content: space-between;
     align-items: center;
     padding: 20px 24px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, @merchant-primary 0%, @merchant-primary-dark 100%);
     border-radius: 16px;
     margin-bottom: 20px;
-    box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 4px 16px rgba(74, 122, 77, 0.3);
 
     .header-left {
       display: flex;
@@ -498,18 +501,18 @@ onMounted(() => {
         display: flex;
         align-items: center;
         gap: 10px;
-        font-size: 1.714rem /* 原值: 24px */;
+        font-size: 1.714rem;
         font-weight: 700;
-        color: #ffffff;
+        color: @merchant-surface;
         margin: 0;
 
         .title-icon {
-          font-size: 2rem /* 原值: 28px */;
+          font-size: 2rem;
         }
       }
 
       .order-no {
-        font-size: 1rem /* 原值: 14px */;
+        font-size: 1rem;
         color: rgba(255, 255, 255, 0.9);
         font-family: 'Consolas', 'Monaco', monospace;
         font-weight: 500;
@@ -524,13 +527,13 @@ onMounted(() => {
       :deep(.el-button) {
         height: 32px;
         padding: 6px 14px;
-        font-size: 0.929rem /* 原值: 13px */;
+        font-size: 0.929rem;
         font-weight: 500;
         white-space: nowrap;
         backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.3);
         background: rgba(255, 255, 255, 0.1);
-        color: #ffffff;
+        color: @merchant-surface;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
         &:hover {
@@ -544,12 +547,12 @@ onMounted(() => {
 
   .detail-content {
     .status-card {
-      background: #ffffff;
+      background: @merchant-surface;
       border-radius: 16px;
       padding: 24px;
       margin-bottom: 20px;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-      border: 2px solid #e2e8f0;
+      box-shadow: 0 2px 12px @merchant-shadow;
+      border: 2px solid @merchant-border;
       position: relative;
       overflow: hidden;
 
@@ -560,36 +563,36 @@ onMounted(() => {
         top: 0;
         bottom: 0;
         width: 4px;
-        background: #e2e8f0;
+        background: @merchant-border;
         transition: all 0.3s ease;
       }
 
       &.status-0::before {
-        background: linear-gradient(180deg, #909399 0%, #a6a9ad 100%);
+        background: linear-gradient(180deg, @merchant-text-muted 0%, lighten(@merchant-text-muted, 10%) 100%);
       }
       &.status-1::before {
-        background: linear-gradient(180deg, #f56c6c 0%, #ff7875 100%);
+        background: linear-gradient(180deg, @merchant-error 0%, lighten(@merchant-error, 10%) 100%);
       }
       &.status-2::before {
-        background: linear-gradient(180deg, #e6a23c 0%, #f0a858 100%);
+        background: linear-gradient(180deg, @merchant-status-pending 0%, lighten(@merchant-status-pending, 8%) 100%);
       }
       &.status-3::before {
-        background: linear-gradient(180deg, #ff9800 0%, #ffa726 100%);
+        background: linear-gradient(180deg, @merchant-warning 0%, lighten(@merchant-warning, 10%) 100%);
       }
       &.status-4::before {
-        background: linear-gradient(180deg, #409eff 0%, #66b1ff 100%);
+        background: linear-gradient(180deg, @merchant-info 0%, lighten(@merchant-info, 10%) 100%);
       }
       &.status-3::before {
-        background: linear-gradient(180deg, #67c23a 0%, #7bcf58 100%);
+        background: linear-gradient(180deg, @merchant-success 0%, lighten(@merchant-success, 10%) 100%);
       }
       &.status-6::before {
-        background: linear-gradient(180deg, #c0c4cc 0%, #d3d4d6 100%);
+        background: linear-gradient(180deg, @merchant-status-cancelled 0%, lighten(@merchant-status-cancelled, 8%) 100%);
       }
       &.status-3::before {
-        background: linear-gradient(180deg, #85ce61 0%, #95d475 100%);
+        background: linear-gradient(180deg, @merchant-success 0%, lighten(@merchant-success, 15%) 100%);
       }
       &.status-4::before {
-        background: linear-gradient(180deg, #c0c4cc 0%, #d3d4d6 100%);
+        background: linear-gradient(180deg, @merchant-status-cancelled 0%, lighten(@merchant-status-cancelled, 8%) 100%);
       }
 
       .status-header {
@@ -598,7 +601,7 @@ onMounted(() => {
         align-items: center;
         margin-bottom: 24px;
         padding-bottom: 20px;
-        border-bottom: 1px solid #f0f0f0;
+        border-bottom: 1px solid @merchant-divider;
 
         .status-info {
           display: flex;
@@ -607,13 +610,13 @@ onMounted(() => {
 
           .status-icon {
             font-size: 28px;
-            color: #409eff;
+            color: @merchant-info;
           }
 
           .status-text {
-            font-size: 1.286rem /* 原值: 18px */;
+            font-size: 1.286rem;
             font-weight: 600;
-            color: #303133;
+            color: @merchant-text;
           }
         }
 
@@ -625,7 +628,7 @@ onMounted(() => {
           :deep(.el-button) {
             height: 32px;
             padding: 6px 14px;
-            font-size: 0.929rem /* 原值: 13px */;
+            font-size: 0.929rem;
             font-weight: 500;
             white-space: nowrap;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -637,32 +640,32 @@ onMounted(() => {
             }
 
             &.el-button--success {
-              background: linear-gradient(135deg, #81c784 0%, #66bb6a 100%);
+              background: linear-gradient(135deg, @merchant-success 0%, lighten(@merchant-success, 8%) 100%);
               border-color: transparent;
-              box-shadow: 0 2px 6px rgba(102, 187, 106, 0.25);
+              box-shadow: 0 2px 6px rgba(90, 143, 94, 0.25);
 
               &:hover {
-                box-shadow: 0 4px 10px rgba(102, 187, 106, 0.35);
+                box-shadow: 0 4px 10px rgba(90, 143, 94, 0.35);
               }
             }
 
             &.el-button--warning {
-              background: linear-gradient(135deg, #ffb74d 0%, #ffa726 100%);
+              background: linear-gradient(135deg, @merchant-warning 0%, lighten(@merchant-warning, 10%) 100%);
               border-color: transparent;
-              box-shadow: 0 2px 6px rgba(255, 167, 38, 0.25);
+              box-shadow: 0 2px 6px rgba(212, 168, 85, 0.25);
 
               &:hover {
-                box-shadow: 0 4px 10px rgba(255, 167, 38, 0.35);
+                box-shadow: 0 4px 10px rgba(212, 168, 85, 0.35);
               }
             }
 
             &.el-button--primary {
-              background: linear-gradient(135deg, #6ba4ff 0%, #5c8eff 100%);
+              background: linear-gradient(135deg, @merchant-info 0%, lighten(@merchant-info, 8%) 100%);
               border-color: transparent;
-              box-shadow: 0 2px 6px rgba(92, 142, 255, 0.25);
+              box-shadow: 0 2px 6px rgba(91, 139, 210, 0.25);
 
               &:hover {
-                box-shadow: 0 4px 10px rgba(92, 142, 255, 0.35);
+                box-shadow: 0 4px 10px rgba(91, 139, 210, 0.35);
               }
             }
           }
@@ -690,8 +693,8 @@ onMounted(() => {
             opacity: 1;
 
             .step-icon {
-              color: #409eff;
-              background: #ecf5ff;
+              color: @merchant-info;
+              background: @merchant-primary-light;
             }
           }
 
@@ -704,13 +707,13 @@ onMounted(() => {
             background: transparent;
             border-radius: 50%;
             font-size: 18px;
-            color: #c0c4cc;
+            color: @merchant-text-muted;
             transition: all 0.3s ease;
           }
 
           .step-text {
-            font-size: 0.786rem /* 原值: 11px */;
-            color: #909399;
+            font-size: 0.786rem;
+            color: @merchant-text-muted;
             font-weight: 500;
           }
         }
@@ -718,41 +721,41 @@ onMounted(() => {
         .progress-line {
           flex: 1;
           height: 1px;
-          background: #e0e0e0;
+          background: @merchant-divider;
           margin: 0 4px;
           position: relative;
           top: -16px;
           transition: all 0.3s ease;
 
           &.active {
-            background: #409eff;
+            background: @merchant-info;
           }
         }
       }
     }
 
     .info-section {
-      background: #ffffff;
+      background: @merchant-surface;
       border-radius: 16px;
       padding: 24px;
       margin-bottom: 20px;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-      border: 2px solid #e2e8f0;
+      box-shadow: 0 2px 12px @merchant-shadow;
+      border: 2px solid @merchant-border;
 
       .section-title {
         display: flex;
         align-items: center;
         gap: 8px;
-        font-size: 1.143rem /* 原值: 16px */;
+        font-size: 1.143rem;
         font-weight: 600;
-        color: #303133;
+        color: @merchant-text;
         margin-bottom: 20px;
         padding-bottom: 12px;
-        border-bottom: 2px solid #f0f0f0;
+        border-bottom: 2px solid @merchant-divider;
 
         .el-icon {
-          font-size: 1.286rem /* 原值: 18px */;
-          color: #667eea;
+          font-size: 1.286rem;
+          color: @merchant-primary;
         }
       }
 
@@ -766,13 +769,13 @@ onMounted(() => {
           flex-direction: column;
           gap: 8px;
           padding: 16px;
-          background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+          background: linear-gradient(135deg, @merchant-surface-alt 0%, @merchant-surface 100%);
           border-radius: 12px;
-          border: 1px solid #e8eef5;
+          border: 1px solid @merchant-border;
           transition: all 0.3s ease;
 
           &:hover {
-            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 2px 12px @merchant-shadow;
             transform: translateY(-2px);
           }
 
@@ -781,15 +784,15 @@ onMounted(() => {
           }
 
           &.remark-card {
-            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
-            border-color: #fcd34d;
+            background: linear-gradient(135deg, @merchant-warning-light 0%, lighten(@merchant-warning-light, 2%) 100%);
+            border-color: @merchant-warning;
 
             .info-label span {
-              color: #d97706;
+              color: darken(@merchant-warning, 15%);
             }
 
             .info-value {
-              color: #b45309;
+              color: darken(@merchant-warning, 25%);
               font-style: italic;
             }
           }
@@ -798,33 +801,33 @@ onMounted(() => {
             display: flex;
             align-items: center;
             gap: 6px;
-            font-size: 0.929rem /* 原值: 13px */;
-            color: #909399;
+            font-size: 0.929rem;
+            color: @merchant-text-muted;
             font-weight: 500;
 
             .el-icon {
-              font-size: 1rem /* 原值: 14px */;
+              font-size: 1rem;
             }
           }
 
           .info-value {
-            font-size: 1.071rem /* 原值: 15px */;
-            color: #303133;
+            font-size: 1.071rem;
+            color: @merchant-text;
             font-weight: 500;
 
             &.payment-amount {
-              color: #67c23a;
-              font-size: 1.286rem /* 原值: 18px */;
+              color: @merchant-success;
+              font-size: 1.286rem;
               font-weight: 700;
             }
 
             &.amount-diff {
-              color: #e6a23c;
+              color: @merchant-status-pending;
               font-weight: 600;
 
               .diff-hint {
-                font-size: 0.857rem /* 原值: 12px */;
-                color: #909399;
+                font-size: 0.857rem;
+                color: @merchant-text-muted;
                 font-weight: 400;
                 margin-left: 8px;
               }
@@ -835,22 +838,22 @@ onMounted(() => {
     }
 
     .items-section {
-      background: #ffffff;
+      background: @merchant-surface;
       border-radius: 16px;
       padding: 24px;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-      border: 2px solid #e2e8f0;
+      box-shadow: 0 2px 12px @merchant-shadow;
+      border: 2px solid @merchant-border;
 
       .section-title {
         display: flex;
         align-items: center;
         gap: 8px;
-        font-size: 1.143rem /* 原值: 16px */;
+        font-size: 1.143rem;
         font-weight: 600;
-        color: #303133;
+        color: @merchant-text;
         margin-bottom: 20px;
         padding-bottom: 12px;
-        border-bottom: 2px solid #f0f0f0;
+        border-bottom: 2px solid @merchant-divider;
       }
 
       .items-list {
@@ -862,9 +865,9 @@ onMounted(() => {
           align-items: center;
           padding: 16px;
           margin-bottom: 12px;
-          background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+          background: linear-gradient(135deg, @merchant-surface-alt 0%, @merchant-surface 100%);
           border-radius: 12px;
-          border: 1px solid #e8eef5;
+          border: 1px solid @merchant-border;
           transition: all 0.3s ease;
 
           &:last-child {
@@ -872,7 +875,7 @@ onMounted(() => {
           }
 
           &:hover {
-            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 2px 12px @merchant-shadow;
             transform: translateX(4px);
           }
 
@@ -880,15 +883,15 @@ onMounted(() => {
             flex: 1;
 
             .item-name {
-              font-size: 1.071rem /* 原值: 15px */;
+              font-size: 1.071rem;
               font-weight: 600;
-              color: #303133;
+              color: @merchant-text;
               margin-bottom: 4px;
             }
 
             .item-customization {
-              font-size: 0.857rem /* 原值: 12px */;
-              color: #e6a23c;
+              font-size: 0.857rem;
+              color: @merchant-status-pending;
               font-style: italic;
             }
           }
@@ -899,23 +902,23 @@ onMounted(() => {
             gap: 16px;
 
             .item-price {
-              font-size: 1rem /* 原值: 14px */;
-              color: #606266;
+              font-size: 1rem;
+              color: @merchant-text-sec;
               min-width: 60px;
               text-align: right;
             }
 
             .item-quantity {
-              font-size: 1rem /* 原值: 14px */;
-              color: #606266;
+              font-size: 1rem;
+              color: @merchant-text-sec;
               min-width: 50px;
               text-align: center;
             }
 
             .item-subtotal {
-              font-size: 1.143rem /* 原值: 16px */;
+              font-size: 1.143rem;
               font-weight: 600;
-              color: #f56c6c;
+              color: @merchant-error;
               min-width: 80px;
               text-align: right;
             }
@@ -928,21 +931,21 @@ onMounted(() => {
         justify-content: flex-end;
         align-items: center;
         padding: 20px;
-        background: linear-gradient(135deg, #f3f4f6 0%, #ffffff 100%);
+        background: linear-gradient(135deg, @merchant-bg 0%, @merchant-surface 100%);
         border-radius: 12px;
-        border: 2px solid #e2e8f0;
+        border: 2px solid @merchant-border;
 
         .total-label {
-          font-size: 1.143rem /* 原值: 16px */;
-          color: #606266;
+          font-size: 1.143rem;
+          color: @merchant-text-sec;
           margin-right: 16px;
           font-weight: 500;
         }
 
         .total-value {
-          font-size: 2rem /* 原值: 28px */;
+          font-size: 2rem;
           font-weight: 700;
-          color: #f56c6c;
+          color: @merchant-error;
           font-family: 'Consolas', 'Monaco', monospace;
         }
       }
@@ -1031,7 +1034,7 @@ onMounted(() => {
           text-align: center;
 
           .total-value {
-            font-size: 1.714rem /* 原值: 24px */;
+            font-size: 1.714rem;
           }
         }
       }
@@ -1042,7 +1045,7 @@ onMounted(() => {
 // 打印样式
 @media print {
   .detail-header {
-    background: white !important;
+    background: @merchant-surface !important;
     box-shadow: none !important;
   }
 

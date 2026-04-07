@@ -978,7 +978,7 @@ const getDishCheckedState = (dish) => {
           @input="updateFilter"
         >
           <template #prefix>
-            <el-icon style="color: #909399"><Search /></el-icon>
+            <el-icon style="color: @merchant-text-muted"><Search /></el-icon>
           </template>
         </el-input>
         <el-button type="primary" class="add-button" @click="openAddDishDialog">
@@ -1089,7 +1089,7 @@ const getDishCheckedState = (dish) => {
                 <!-- 必选食材 -->
                 <div class="ingredients-section">
                   <div class="ingredients-title">
-                    <el-icon :size="14" color="#f56c6c"><StarIcon /></el-icon>
+                    <el-icon :size="14" color="@merchant-error"><StarIcon /></el-icon>
                     <span>必选食材</span>
                   </div>
                   <div v-if="dish.ingredients.mandatory && dish.ingredients.mandatory.length > 0" class="ingredients-tags">
@@ -1115,7 +1115,7 @@ const getDishCheckedState = (dish) => {
                 <!-- 可选食材 -->
                 <div class="ingredients-section">
                   <div class="ingredients-title">
-                    <el-icon :size="14" color="#409eff"><CirclePlusIcon /></el-icon>
+                    <el-icon :size="14" color="@merchant-info"><CirclePlusIcon /></el-icon>
                     <span>可选食材</span>
                   </div>
                   <div v-if="dish.ingredients.optional && dish.ingredients.optional.length > 0" class="ingredients-tags">
@@ -1142,7 +1142,7 @@ const getDishCheckedState = (dish) => {
               <!-- 营养成分信息 -->
               <div v-if="dish.totalCalories || dish.protein || dish.fat || dish.carbs" class="dish-nutrition">
                 <div class="nutrition-title">
-                  <el-icon :size="14" color="#52c41a"><FlameIcon /></el-icon>
+                  <el-icon :size="14" color="@merchant-success"><FlameIcon /></el-icon>
                   <span>营养成分</span>
                 </div>
                 <div class="nutrition-tags">
@@ -1804,24 +1804,27 @@ const getDishCheckedState = (dish) => {
 </template>
 
 <style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+@import '../../assets/css/merchant-theme.less';
+
 /* 菜单关联对话框样式 */
 .menu-association-container {
   .dialog-header {
     margin-bottom: 20px;
     padding-bottom: 15px;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid @merchant-border;
 
     h4 {
       margin: 0 0 5px 0;
       font-size: 1.143rem /* 原值: 16px */;
       font-weight: 600;
-      color: #303133;
+      color: @merchant-text;
     }
 
     .dialog-description {
       margin: 0;
       font-size: 1rem /* 原值: 14px */;
-      color: #909399;
+      color: @merchant-text-muted;
     }
   }
 
@@ -1840,10 +1843,10 @@ const getDishCheckedState = (dish) => {
     .el-table__header-wrapper {
       .el-table__header {
         th {
-          background-color: #f5f7fa;
-          color: #606266;
+          background-color: @merchant-surface-alt;
+          color: @merchant-text-sec;
           font-weight: 600;
-          border-bottom: 1px solid #e8eaed;
+          border-bottom: 1px solid @merchant-border;
         }
       }
     }
@@ -1854,13 +1857,13 @@ const getDishCheckedState = (dish) => {
         tr {
           &:hover {
             td {
-              background-color: #f5f7fa;
+              background-color: @merchant-surface-alt;
             }
           }
 
           &.el-table__row--striped {
             td {
-              background-color: #fafbfc;
+              background-color: @merchant-surface-alt;
             }
           }
         }
@@ -1870,7 +1873,7 @@ const getDishCheckedState = (dish) => {
     // 空数据样式
     .el-table__empty-block {
       .el-table__empty-text {
-        color: #909399;
+        color: @merchant-text-muted;
         font-size: 1rem /* 原值: 14px */;
       }
     }
@@ -1886,7 +1889,7 @@ const getDishCheckedState = (dish) => {
 
     .menu-name {
       font-weight: 500;
-      color: #303133;
+      color: @merchant-text;
       margin-top: 4px;
     }
   }
@@ -1895,7 +1898,7 @@ const getDishCheckedState = (dish) => {
 .calorie-display {
   font-size: 1.143rem /* 原值: 16px */;
   font-weight: 600;
-  color: #e6a23c;
+  color: @merchant-warning;
 }
 
 .calorie-hint {
@@ -1904,8 +1907,8 @@ const getDishCheckedState = (dish) => {
   gap: 4px;
   margin-top: 8px;
   font-size: 0.857rem /* 原值: 12px */;
-  color: #909399;
-  background-color: #f5f7fa;
+  color: @merchant-text-muted;
+  background-color: @merchant-surface-alt;
   padding: 6px 12px;
   border-radius: 6px;
   width: fit-content;
@@ -1939,16 +1942,16 @@ const getDishCheckedState = (dish) => {
 
 /* 自定义Dialog样式 */
 :deep(.el-dialog__header) {
-  border-bottom: 2px solid rgba(102, 126, 234, 0.3);
-  background: linear-gradient(135deg, rgba(230, 247, 255, 0.8) 0%, rgba(186, 231, 255, 0.8) 100%);
+  border-bottom: 2px solid rgba(74, 122, 77, 0.3);
+  background: linear-gradient(135deg, @merchant-primary-light 0%, lighten(@merchant-primary-light, 3%) 100%);
   padding: 24px 28px;
 }
 
 :deep(.el-dialog__title) {
   font-size: 1.429rem /* 原值: 20px */;
   font-weight: 600;
-  color: #1890ff;
-  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+  color: @merchant-info;
+  background: linear-gradient(135deg, @merchant-info 0%, lighten(@merchant-info, 8%) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -1972,7 +1975,7 @@ const getDishCheckedState = (dish) => {
 
 .label-icon {
   font-size: 1.286rem /* 原值: 18px */;
-  color: #667eea;
+  color: @merchant-secondary;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1981,7 +1984,7 @@ const getDishCheckedState = (dish) => {
 
 :deep(.el-form-item__label) {
   font-weight: 500;
-  color: #555;
+  color: @merchant-text-sec;
   font-size: 1rem /* 原值: 14px */;
 }
 
@@ -1995,7 +1998,7 @@ const getDishCheckedState = (dish) => {
 :deep(.el-select__wrapper),
 :deep(.el-textarea__inner) {
   border-radius: 8px;
-  border: 2px solid #e5e7eb;
+  border: 2px solid @merchant-border;
   transition: all 0.3s ease;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
@@ -2003,14 +2006,14 @@ const getDishCheckedState = (dish) => {
 :deep(.el-input__wrapper:hover),
 :deep(.el-select__wrapper:hover),
 :deep(.el-textarea__inner:hover) {
-  border-color: #91d5ff;
+  border-color: @merchant-info-light;
   box-shadow: 0 0 0 3px rgba(145, 213, 255, 0.1);
 }
 
 :deep(.el-input__wrapper.is-focus),
 :deep(.el-select__wrapper.is-focus),
 :deep(.el-textarea__inner.is-focus) {
-  border-color: #40a9ff;
+  border-color: lighten(@merchant-info, 8%);
   box-shadow: 0 0 0 3px rgba(64, 169, 255, 0.15);
 }
 
@@ -2046,45 +2049,45 @@ const getDishCheckedState = (dish) => {
 }
 
 :deep(.dialog-footer .el-button--primary) {
-  background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
-  border: 1px solid #91d5ff;
-  color: #0050b3;
+  background: linear-gradient(135deg, @merchant-info-light 0%, lighten(@merchant-info-light, 5%) 100%);
+  border: 1px solid @merchant-info-light;
+  color: @merchant-info;
 }
 
 :deep(.dialog-footer .el-button--primary:hover) {
-  background: linear-gradient(135deg, #bae7ff 0%, #91d5ff 100%);
+  background: linear-gradient(135deg, lighten(@merchant-info-light, 5%) 0%, @merchant-info-light 100%);
   transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(64, 169, 255, 0.3);
+  box-shadow: 0 4px 16px rgba(91, 139, 210, 0.3);
 }
 
 :deep(.dialog-footer .el-button--default) {
-  border-color: #e5e7eb;
-  background-color: #fafafa;
-  color: #666;
+  border-color: @merchant-border;
+  background-color: @merchant-surface-alt;
+  color: @merchant-text-sec;
 }
 
 :deep(.dialog-footer .el-button--default:hover) {
-  border-color: #d9d9d9;
-  background-color: #f0f0f0;
-  color: #333;
+  border-color: @merchant-border;
+  background-color: @merchant-border;
+  color: @merchant-text;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 /* 添加食材按钮样式 */
 .add-ingredient-btn {
-  background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
-  border: 1px solid #91d5ff;
-  color: #0050b3;
+  background: linear-gradient(135deg, @merchant-info-light 0%, lighten(@merchant-info-light, 5%) 100%);
+  border: 1px solid @merchant-info-light;
+  color: @merchant-info;
   border-radius: 8px;
   padding: 8px 16px;
   font-weight: 500;
-  box-shadow: 0 2px 8px rgba(64, 169, 255, 0.2);
+  box-shadow: 0 2px 8px rgba(91, 139, 210, 0.2);
   transition: all 0.3s ease;
 
   &:hover {
-    background: linear-gradient(135deg, #bae7ff 0%, #91d5ff 100%);
-    box-shadow: 0 4px 12px rgba(64, 169, 255, 0.3);
+    background: linear-gradient(135deg, lighten(@merchant-info-light, 5%) 0%, @merchant-info-light 100%);
+    box-shadow: 0 4px 12px rgba(91, 139, 210, 0.3);
     transform: translateY(-1px);
   }
 }
@@ -2104,7 +2107,7 @@ const getDishCheckedState = (dish) => {
 
 .dish-management-container {
   padding: 24px;
-  background-color: #fafbfc;
+  background-color: @merchant-surface-alt;
   min-height: 100vh;
 
   .dish-header {
@@ -2113,7 +2116,7 @@ const getDishCheckedState = (dish) => {
     align-items: center;
     margin-bottom: 24px;
     padding: 20px;
-    background: #ffffff;
+    background: @merchant-surface;
     border-radius: 16px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 
@@ -2121,7 +2124,7 @@ const getDishCheckedState = (dish) => {
       font-size: 1.429rem /* 原值: 20px */;
       font-weight: 700;
       margin: 0;
-      color: #4a5568;
+      color: @merchant-text;
     }
 
     // 固定搜索和新增按钮区域的宽度范围，确保布局稳定
@@ -2199,7 +2202,7 @@ const getDishCheckedState = (dish) => {
       border: none;
       border-radius: 16px;
       margin-bottom: 16px;
-      background-color: #ffffff;
+      background-color: @merchant-surface;
       transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
       position: relative;
@@ -2275,7 +2278,7 @@ const getDishCheckedState = (dish) => {
             .name {
               font-size: 1.286rem /* 原值: 18px */;
               font-weight: 700;
-              color: #2d3748;
+              color: @merchant-text;
             }
           }
 
@@ -2292,13 +2295,13 @@ const getDishCheckedState = (dish) => {
               gap: 4px;
 
               .stat-label {
-                color: #718096;
+                color: @merchant-text-sec;
                 font-size: 0.857rem /* 原值: 12px */;
                 font-weight: 500;
               }
 
               .stat-value {
-                color: #4a5568;
+                color: @merchant-text;
                 font-size: 1rem /* 原值: 14px */;
                 font-weight: 600;
               }
@@ -2310,7 +2313,7 @@ const getDishCheckedState = (dish) => {
             margin-bottom: 20px;
             padding-top: 16px;
             padding-bottom: 8px;
-            border-top: 1px solid #f0f0f0;
+            border-top: 1px solid @merchant-border;
 
             .ingredients-section {
               margin-bottom: 12px;
@@ -2326,7 +2329,7 @@ const getDishCheckedState = (dish) => {
                 margin-bottom: 8px;
                 font-size: 0.929rem /* 原值: 13px */;
                 font-weight: 600;
-                color: #4a5568;
+                color: @merchant-text;
               }
 
               .ingredients-tags {
@@ -2345,23 +2348,23 @@ const getDishCheckedState = (dish) => {
 
                 .more-ingredients {
                   font-size: 0.857rem /* 原值: 12px */;
-                  color: #909399;
+                  color: @merchant-text-muted;
                   font-weight: 500;
                   padding: 2px 6px;
-                  background-color: #f5f7fa;
+                  background-color: @merchant-surface-alt;
                   border-radius: 6px;
                 }
               }
 
               .no-ingredients {
                 padding: 8px 12px;
-                background-color: #fafafa;
+                background-color: @merchant-surface-alt;
                 border-radius: 6px;
-                border: 1px dashed #e4e7ed;
+                border: 1px dashed @merchant-border;
 
                 .no-ingredients-text {
                   font-size: 0.857rem /* 原值: 12px */;
-                  color: #909399;
+                  color: @merchant-text-muted;
                   font-weight: 400;
                 }
               }
@@ -2374,7 +2377,7 @@ const getDishCheckedState = (dish) => {
           margin-top: 16px;
           padding-top: 16px;
           padding-bottom: 8px;
-          border-top: 1px solid #f0f0f0;
+          border-top: 1px solid @merchant-border;
 
           .nutrition-title {
             display: flex;
@@ -2383,7 +2386,7 @@ const getDishCheckedState = (dish) => {
             margin-bottom: 12px;
             font-size: 0.929rem /* 原值: 13px */;
             font-weight: 600;
-            color: #4a5568;
+            color: @merchant-text;
           }
 
           .nutrition-tags {
@@ -2429,11 +2432,11 @@ const getDishCheckedState = (dish) => {
           }
 
           .btn-active {
-            background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
-            color: #0050b3;
+            background: linear-gradient(135deg, @merchant-info-light 0%, lighten(@merchant-info-light, 5%) 100%);
+            color: @merchant-info;
 
             &:hover {
-              background: linear-gradient(135deg, #bae7ff 0%, #91d5ff 100%);
+              background: linear-gradient(135deg, lighten(@merchant-info-light, 5%) 0%, @merchant-info-light 100%);
             }
           }
         }
@@ -2444,10 +2447,10 @@ const getDishCheckedState = (dish) => {
   // 批量操作区域样式
   .batch-actions-section {
     margin-bottom: 20px;
-    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    background: linear-gradient(135deg, @merchant-surface 0%, @merchant-surface-alt 100%);
     border-radius: 16px;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-    border: 1px solid #e9ecef;
+    border: 1px solid @merchant-border;
     overflow: hidden;
 
     .batch-actions-bar {
@@ -2467,7 +2470,7 @@ const getDishCheckedState = (dish) => {
           :deep(.el-checkbox__label) {
             .select-all-text {
               font-weight: 600;
-              color: #4a5568;
+              color: @merchant-text;
               font-size: 1rem /* 原值: 14px */;
             }
           }
@@ -2477,17 +2480,17 @@ const getDishCheckedState = (dish) => {
           display: inline-flex;
           align-items: center;
           padding: 6px 14px;
-          background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
+          background: linear-gradient(135deg, @merchant-info-light 0%, lighten(@merchant-info-light, 5%) 100%);
           border-radius: 20px;
           font-size: 0.929rem /* 原值: 13px */;
-          color: #0050b3;
+          color: @merchant-info;
           font-weight: 500;
-          box-shadow: 0 2px 6px rgba(64, 169, 255, 0.15);
+          box-shadow: 0 2px 6px rgba(91, 139, 210, 0.15);
 
           strong {
             margin: 0 4px;
             font-size: 1.071rem /* 原值: 15px */;
-            color: #1890ff;
+            color: @merchant-info;
           }
         }
       }
@@ -2535,31 +2538,31 @@ const getDishCheckedState = (dish) => {
   }
 
   .batch-btn-success {
-    background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
-    color: #ffffff;
+    background: linear-gradient(135deg, @merchant-success 0%, lighten(@merchant-success, 10%) 100%);
+    color: @merchant-surface;
 
     &:hover:not(:disabled) {
-      background: linear-gradient(135deg, #73d13d 0%, #95de64 100%);
+      background: linear-gradient(135deg, lighten(@merchant-success, 10%) 0%, lighten(@merchant-success, 15%) 100%);
       box-shadow: 0 4px 12px rgba(82, 196, 26, 0.3);
     }
   }
 
   .batch-btn-warning {
-    background: linear-gradient(135deg, #faad14 0%, #ffc53d 100%);
-    color: #ffffff;
+    background: linear-gradient(135deg, @merchant-warning 0%, lighten(@merchant-warning, 10%) 100%);
+    color: @merchant-surface;
 
     &:hover:not(:disabled) {
-      background: linear-gradient(135deg, #ffc53d 0%, #ffd666 100%);
+      background: linear-gradient(135deg, lighten(@merchant-warning, 10%) 0%, lighten(@merchant-warning, 15%) 100%);
       box-shadow: 0 4px 12px rgba(250, 173, 20, 0.3);
     }
   }
 
   .batch-btn-danger {
-    background: linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%);
-    color: #ffffff;
+    background: linear-gradient(135deg, @merchant-error 0%, lighten(@merchant-error, 10%) 100%);
+    color: @merchant-surface;
 
     &:hover:not(:disabled) {
-      background: linear-gradient(135deg, #ff7875 0%, #ffa39e 100%);
+      background: linear-gradient(135deg, lighten(@merchant-error, 10%) 0%, lighten(@merchant-error, 15%) 100%);
       box-shadow: 0 4px 12px rgba(255, 77, 79, 0.3);
     }
   }
@@ -2570,7 +2573,7 @@ const getDishCheckedState = (dish) => {
     align-items: center;
     gap: 16px;
     padding: 16px 20px;
-    background: #ffffff;
+    background: @merchant-surface;
     border-radius: 16px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 
@@ -2579,7 +2582,7 @@ const getDishCheckedState = (dish) => {
       align-items: center;
       gap: 8px;
       font-weight: 600;
-      color: #4a5568;
+      color: @merchant-text;
     }
   }
 
@@ -2589,7 +2592,7 @@ const getDishCheckedState = (dish) => {
     display: flex;
     justify-content: flex-end;
     padding: 16px;
-    background: #ffffff;
+    background: @merchant-surface;
     border-radius: 16px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   }
@@ -2599,17 +2602,17 @@ const getDishCheckedState = (dish) => {
   }
 
   .add-button {
-    background: linear-gradient(135deg, #f6ffed 0%, #d9f7be 100%);
+    background: linear-gradient(135deg, @merchant-success-light 0%, lighten(@merchant-success-light, 5%) 100%);
     border: none;
     border-radius: 10px;
     padding: 10px 20px;
     font-weight: 600;
-    color: #389e0d;
+    color: @merchant-success;
     box-shadow: 0 2px 8px rgba(56, 158, 13, 0.2);
     transition: all 0.3s ease;
 
     &:hover {
-      background: linear-gradient(135deg, #d9f7be 0%, #b7eb8f 100%);
+      background: linear-gradient(135deg, lighten(@merchant-success-light, 5%) 0%, lighten(@merchant-success-light, 10%) 100%);
       transform: translateY(-2px);
       box-shadow: 0 4px 12px rgba(56, 158, 13, 0.3);
     }

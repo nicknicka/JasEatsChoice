@@ -460,6 +460,8 @@ const optimizeRecipe = async () => {
 </script>
 
 <style scoped lang="less">
+@import '../../../../assets/css/nordic-theme.less';
+
 .recipe-content-wrapper {
 	display: flex;
 	flex-direction: column;
@@ -477,11 +479,8 @@ const optimizeRecipe = async () => {
 	flex: 1;
 	min-height: 0;
 	overflow-y: auto;
-	background-color: #fff;
-	border-radius: 16px;
 	padding: 24px;
 	box-sizing: border-box;
-	box-shadow: 0 2px 16px 0 rgba(0, 0, 0, 0.06);
 
 	.recipe-input {
 		margin-bottom: 24px;
@@ -493,8 +492,8 @@ const optimizeRecipe = async () => {
 			padding: 14px 16px;
 
 			&:focus {
-				box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.12);
-				border-color: #ff6b6b;
+				box-shadow: 0 0 0 3px rgba(212, 132, 90, 0.12);
+				border-color: @nordic-accent;
 			}
 		}
 	}
@@ -505,7 +504,7 @@ const optimizeRecipe = async () => {
 		font-size: 17px;
 		font-weight: 600;
 		margin-bottom: 24px;
-		background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%);
+		background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
 		border: none;
 		transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 		border-radius: 14px;
@@ -516,7 +515,7 @@ const optimizeRecipe = async () => {
 
 		&:hover:not(:disabled) {
 			transform: translateY(-3px);
-			box-shadow: 0 8px 20px rgba(255, 107, 107, 0.4);
+			box-shadow: 0 8px 20px rgba(212, 132, 90, 0.4);
 		}
 
 		&:disabled {
@@ -527,8 +526,8 @@ const optimizeRecipe = async () => {
 
 	// 优化中动画
 	.optimization-loading {
-		background: linear-gradient(135deg, #fff9fa 0%, #ffe8e8 100%);
-		border: 2px solid #ffe0e3;
+		background: linear-gradient(135deg, @nordic-accent-light 0%, @nordic-accent-light 100%);
+		border: 2px solid @nordic-border;
 		border-radius: 16px;
 		padding: 32px 24px;
 		margin-bottom: 24px;
@@ -544,7 +543,7 @@ const optimizeRecipe = async () => {
 			.loading-dot {
 				width: 12px;
 				height: 12px;
-				background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%);
+				background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
 				border-radius: 50%;
 				animation: bounce 1.4s infinite ease-in-out both;
 
@@ -629,20 +628,20 @@ const optimizeRecipe = async () => {
 			.recipe-card {
 				flex: 1;
 				background: #fff;
-				border: 2px solid #ffe0e3;
+				border: 2px solid @nordic-border;
 				border-radius: 16px;
 				overflow: hidden;
 				transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 
 				&:hover {
 					transform: translateY(-6px);
-					box-shadow: 0 8px 24px rgba(255, 107, 107, 0.2);
+					box-shadow: 0 8px 24px rgba(212, 132, 90, 0.2);
 				}
 
 				.card-header {
 					padding: 18px 24px;
-					background: linear-gradient(135deg, #fff9fa 0%, #ffe8e8 100%);
-					border-bottom: 2px solid #ffe0e3;
+					background: linear-gradient(135deg, @nordic-accent-light 0%, @nordic-accent-light 100%);
+					border-bottom: 2px solid @nordic-border;
 					display: flex;
 					justify-content: center;
 					align-items: center;
@@ -720,7 +719,7 @@ const optimizeRecipe = async () => {
 						font-size: 1rem /* 原值: 14px */;
 						font-weight: 600;
 						transition: all 0.4s ease;
-						background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+						background: linear-gradient(135deg, @nordic-green 0%, @nordic-green-dark 100%);
 						border: none;
 
 						.el-icon {
@@ -730,15 +729,15 @@ const optimizeRecipe = async () => {
 
 						&:hover {
 							transform: translateY(-2px);
-							box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-							background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+							box-shadow: 0 4px 12px rgba(123, 174, 127, 0.3);
+							background: linear-gradient(135deg, #6a9e6e 0%, #3d6a40 100%);
 						}
 					}
 				}
 
 				&.optimized-recipe-card {
 					.card-header {
-						background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%);
+						background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
 						border-bottom: none;
 
 						.card-title {
@@ -752,7 +751,7 @@ const optimizeRecipe = async () => {
 				display: flex;
 				align-items: center;
 				font-size: 2.857rem /* 原值: 40px */;
-				color: #ff6b6b;
+				color: @nordic-accent;
 				font-weight: 700;
 				flex-shrink: 0;
 

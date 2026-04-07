@@ -1,38 +1,58 @@
 <template>
   <el-main class="ai-page-content">
-    <!-- 功能标签页 -->
-    <el-tabs v-model="activeTab" type="border-card" class="ai-tabs fade-in-up">
-      <!-- AI聊天 - 使用简化版组件 -->
-      <el-tab-pane label="AI聊天" name="chat">
-        <AiChatFull ref="aiChatRef" />
-      </el-tab-pane>
+    <!-- 页面头部 -->
+    <header class="page-header">
+      <h2>AI饮食助手</h2>
+      <div class="status-badge">
+        <span class="status-dot"></span>
+        在线
+      </div>
+    </header>
 
-      <!-- 菜品识别 -->
-      <el-tab-pane label="菜品识别" name="recognition">
-        <DishRecognition />
-      </el-tab-pane>
+    <!-- 自定义标签导航 -->
+    <nav class="tab-nav">
+      <div class="tab-nav-track">
+        <button
+          v-for="tab in tabs"
+          :id="`tab-btn-${tab.name}`"
+          :key="tab.name"
+          class="tab-btn"
+          :class="{ active: activeTab === tab.name }"
+          @click="switchTab(tab.name)"
+        >
+          <el-icon :size="16"><component :is="tab.icon" /></el-icon>
+          <span>{{ tab.label }}</span>
+        </button>
+        <div class="tab-slider" :style="sliderStyle"></div>
+      </div>
+    </nav>
 
-      <!-- 食谱优化 -->
-      <el-tab-pane label="食谱优化" name="recipe">
-        <RecipeOptimization />
-      </el-tab-pane>
-
-      <!-- 内容提取 - 新增 -->
-      <el-tab-pane label="内容提取" name="extraction">
-        <ContentExtractionTab />
-      </el-tab-pane>
-    </el-tabs>
+    <!-- 标签内容区域 -->
+    <div class="tab-content-area">
+      <Transition :name="transitionName" mode="out-in">
+        <div v-if="activeTab === 'chat'" key="chat" class="tab-pane">
+          <AiChatFull ref="aiChatRef" />
+        </div>
+        <div v-else-if="activeTab === 'recognition'" key="recognition" class="tab-pane">
+          <DishRecognition />
+        </div>
+        <div v-else-if="activeTab === 'recipe'" key="recipe" class="tab-pane">
+          <RecipeOptimization />
+        </div>
+        <div v-else-if="activeTab === 'extraction'" key="extraction" class="tab-pane">
+          <ContentExtractionTab />
+        </div>
+      </Transition>
+    </div>
   </el-main>
 </template>
 
 <script setup>
-import { ref, defineAsyncComponent, h, watch, nextTick, onMounted, onActivated } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onActivated, defineAsyncComponent, h } from 'vue'
+import { ChatRound, Camera, Document, Link as LinkIcon } from '@element-plus/icons-vue'
 import AiChatFull from './AI/components/AIChatFull.vue'
 
-// AI聊天组件引用
-const aiChatRef = ref(null)
-
-// 使用异步加载组件，避免编译错误
+// 异步加载组件
 const DishRecognition = defineAsyncComponent(() =>
   import('./AI/components/DishRecognition.vue')
 )
@@ -41,28 +61,66 @@ const RecipeOptimization = defineAsyncComponent({
   loader: () => import('./AI/components/RecipeOptimization.vue'),
   errorComponent: () => h('div', { style: 'padding: 20px; text-align: center; color: #909399;' }, [
     h('p', '食谱优化组件加载失败'),
-    h('p', { style: 'font-size: 1rem /* 原值: 14px */; margin-top: 8px;' }, '请刷新页面重试')
+    h('p', { style: 'font-size: 14px; margin-top: 8px;' }, '请刷新页面重试')
   ]),
   delay: 200,
   timeout: 3000
 })
 
-// 内容提取组件
 const ContentExtractionTab = defineAsyncComponent({
   loader: () => import('./AI/components/ContentExtractionTab.vue'),
   errorComponent: () => h('div', { style: 'padding: 20px; text-align: center; color: #909399;' }, [
     h('p', '内容提取组件加载失败'),
-    h('p', { style: 'font-size: 1rem /* 原值: 14px */; margin-top: 8px;' }, '请刷新页面重试')
+    h('p', { style: 'font-size: 14px; margin-top: 8px;' }, '请刷新页面重试')
   ]),
   delay: 200,
   timeout: 3000
 })
 
-const activeTab = ref('')
+// 标签页配置
+const tabs = [
+  { name: 'chat', label: 'AI聊天', icon: ChatRound },
+  { name: 'recognition', label: '菜品识别', icon: Camera },
+  { name: 'recipe', label: '食谱优化', icon: Document },
+  { name: 'extraction', label: '内容提取', icon: LinkIcon }
+]
 
-// 触发AI聊天滚动的统一方法
+const activeTab = ref('')
+const transitionName = ref('slide-left')
+const sliderLeft = ref(0)
+const sliderWidth = ref(0)
+const aiChatRef = ref(null)
+
+// 滑块位置样式
+const sliderStyle = computed(() => ({
+  left: `${sliderLeft.value}px`,
+  width: `${sliderWidth.value}px`,
+  opacity: sliderWidth.value > 0 ? 1 : 0
+}))
+
+// 更新滑块位置
+const updateSlider = () => {
+  nextTick(() => {
+    const el = document.getElementById(`tab-btn-${activeTab.value}`)
+    if (el) {
+      sliderLeft.value = el.offsetLeft
+      sliderWidth.value = el.offsetWidth
+    }
+  })
+}
+
+// 切换标签页
+const switchTab = (name) => {
+  if (name === activeTab.value) return
+  const oldIndex = tabs.findIndex(t => t.name === activeTab.value)
+  const newIndex = tabs.findIndex(t => t.name === name)
+  transitionName.value = newIndex > oldIndex ? 'slide-left' : 'slide-right'
+  activeTab.value = name
+  updateSlider()
+}
+
+// 触发AI聊天滚动
 const triggerAiChatScroll = async () => {
-  console.log('📑 触发AI聊天滚动')
   await nextTick()
   setTimeout(() => {
     if (aiChatRef.value && aiChatRef.value.scrollToBottomOnActivate) {
@@ -71,42 +129,35 @@ const triggerAiChatScroll = async () => {
   }, 100)
 }
 
-// 监听tab切换，当切换到AI聊天时触发滚动
+// 监听tab切换
 watch(activeTab, async (newTab) => {
   if (newTab === 'chat') {
-    console.log('📑 切换到AI聊天tab')
     await triggerAiChatScroll()
   }
+  updateSlider()
 })
 
-// 页面加载后延迟自动激活AI聊天tab
 onMounted(() => {
-  console.log('🚀 AI页面加载完成，准备延迟激活tab')
-  // 延迟800ms后自动激活"AI聊天"tab，确保组件完全初始化
   setTimeout(() => {
-    console.log('✅ 延迟激活AI聊天tab')
     activeTab.value = 'chat'
-  }, 800)
+    updateSlider()
+  }, 100)
 })
 
-// 页面被激活时（从其他菜单切换回来），触发滚动
 onActivated(() => {
-  console.log('🔄 AI页面被激活（keep-alive）')
-  // 如果当前激活的是聊天tab，则触发滚动
   if (activeTab.value === 'chat') {
-    console.log('📑 页面激活时当前在聊天tab，准备滚动')
-    setTimeout(() => {
-      triggerAiChatScroll()
-    }, 300) // 延时300ms确保页面完全显示
+    setTimeout(() => triggerAiChatScroll(), 300)
   }
+  updateSlider()
 })
 </script>
 
 <style scoped lang="less">
-/* AI页面内容区域 — 暖陶花园 */
+@import '../../assets/css/nordic-theme.less';
+
 .ai-page-content {
   padding: 20px 20px 0 20px;
-  background-color: #F5F3EF;
+  background-color: @nordic-bg;
   height: 100%;
   box-sizing: border-box;
   display: flex;
@@ -116,84 +167,154 @@ onActivated(() => {
   margin: 0 auto;
 }
 
-.ai-tabs {
-  flex: 1;
+.page-header {
   display: flex;
-  flex-direction: column;
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 4px 24px rgba(180, 140, 100, 0.1);
-  height: 100%;
-  border: 1px solid #E8E4DE;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid @nordic-border;
 
-  :deep(.el-tabs__header) {
+  h2 {
+    font-size: @nordic-text-xl;
+    font-weight: 700;
     margin: 0;
-    background: linear-gradient(135deg, #FDF8F3 0%, #FEFCF9 100%);
-    border-bottom: 2px solid #F0D5C4;
-    flex-shrink: 0;
+    color: @nordic-text;
+    letter-spacing: -0.5px;
   }
 
-  :deep(.el-tabs__nav) {
-    border: none;
-  }
-
-  :deep(.el-tabs__item) {
-    font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
-    font-size: 1.071rem;
+  .status-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: @nordic-green-light;
+    color: @nordic-green-dark;
+    border-radius: @nordic-radius-pill;
+    font-size: @nordic-text-sm;
     font-weight: 600;
-    color: #7A7168;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    letter-spacing: 0.3px;
 
-    &:hover {
-      color: #D4845A;
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: @nordic-green;
+      animation: statusPulse 2s ease-in-out infinite;
     }
-
-    &.is-active {
-      color: #D4845A;
-      background: linear-gradient(135deg, #F0D5C4 0%, #FDF8F3 100%);
-    }
-  }
-
-  :deep(.el-tabs__active-bar) {
-    background-color: #D4845A;
-    height: 3px;
-    border-radius: 3px 3px 0 0;
-  }
-
-  :deep(.el-tabs__content) {
-    flex: 1;
-    overflow: hidden;
-    padding: 0 !important;
-    display: flex;
-    flex-direction: column;
-    background: #FEFCF9;
-  }
-
-  :deep(.el-tab-pane) {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    padding: 8px 0 0 0 !important;
   }
 }
 
-.chat-placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: #9E9E9E;
+// 自定义标签导航
+.tab-nav {
+  margin-bottom: 16px;
+  flex-shrink: 0;
 
-  p {
-    margin: 12px 0 0 0;
-    font-size: 1.143rem;
+  .tab-nav-track {
+    display: inline-flex;
+    position: relative;
+    background: @nordic-border;
+    border-radius: 12px;
+    padding: 4px;
+    gap: 4px;
   }
 
-  .hint {
-    font-size: 1rem;
-    color: #BFB8B0;
+  .tab-btn {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 10px 20px;
+    border: none;
+    background: transparent;
+    color: @nordic-text-secondary;
+    font-family: inherit;
+    font-size: @nordic-text-base;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 9px;
+    transition: color 0.3s ease;
+    white-space: nowrap;
+
+    &:hover:not(.active) {
+      color: @nordic-text;
+    }
+
+    &.active {
+      color: @nordic-text;
+      font-weight: 600;
+    }
+  }
+
+  .tab-slider {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    background: @nordic-surface;
+    border-radius: 9px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.04);
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 0;
+  }
+}
+
+// 标签内容区域
+.tab-content-area {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: @nordic-surface;
+  border-radius: @nordic-radius-lg;
+  box-shadow: 0 2px 12px @nordic-shadow;
+
+  .tab-pane {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+}
+
+// 过渡动画 - 左滑
+.slide-left-enter-active,
+.slide-left-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slide-left-enter-from {
+  opacity: 0;
+  transform: translateX(30px);
+}
+
+.slide-left-leave-to {
+  opacity: 0;
+  transform: translateX(-30px) scale(0.98);
+}
+
+// 过渡动画 - 右滑
+.slide-right-enter-active,
+.slide-right-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slide-right-enter-from {
+  opacity: 0;
+  transform: translateX(-30px);
+}
+
+.slide-right-leave-to {
+  opacity: 0;
+  transform: translateX(30px) scale(0.98);
+}
+
+@keyframes statusPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(0.8);
   }
 }
 </style>

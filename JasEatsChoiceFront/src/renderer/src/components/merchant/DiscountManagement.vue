@@ -810,13 +810,14 @@ onMounted(() => {
 </template>
 
 <style scoped lang="less">
+@import '../../assets/css/merchant-theme.less';
+
 .discounts-section {
   margin-bottom: 24px;
   padding: 24px;
-  border: 2px solid #409eff;
+  border: 2px solid @merchant-info;
   border-radius: 12px;
-  background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%);
-  box-shadow: 0 4px 20px rgba(64, 158, 255, 0.15);
+  background: linear-gradient(135deg, @merchant-surface 0%, @merchant-info-light 100%);
 
   .discounts-header {
     display: flex;
@@ -824,7 +825,7 @@ onMounted(() => {
     align-items: center;
     margin-bottom: 24px;
     padding-bottom: 20px;
-    border-bottom: 2px solid #d4e7ff;
+    border-bottom: 2px solid @merchant-info-light;
     flex-wrap: wrap;
     gap: 16px;
 
@@ -833,7 +834,7 @@ onMounted(() => {
         margin: 0;
         font-size: 22px;
         font-weight: 700;
-        color: #409eff;
+        color: @merchant-info;
         text-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
         display: flex;
         align-items: center;
@@ -842,11 +843,11 @@ onMounted(() => {
 
       .active-discounts {
         font-size: 1rem /* 原值: 14px */;
-        color: #909399;
+        color: @merchant-text-muted;
         margin-top: 6px;
         font-weight: 500;
         padding: 4px 12px;
-        background: linear-gradient(135deg, #e8f4ff 0%, #ffffff 100%);
+        background: linear-gradient(135deg, @merchant-info-light 0%, @merchant-surface 100%);
         border-radius: 12px;
         display: inline-block;
       }
@@ -865,7 +866,7 @@ onMounted(() => {
 
         &:hover:not(:disabled) {
           transform: translateY(-2px);
-          box-shadow: 0 6px 16px rgba(64, 158, 255, 0.3);
+          box-shadow: 0 6px 16px fade(@merchant-info, 30%);
         }
 
         &:disabled {
@@ -873,34 +874,34 @@ onMounted(() => {
         }
 
         &.el-button--primary {
-          background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
+          background: linear-gradient(135deg, @merchant-info 0%, lighten(@merchant-info, 15%) 100%);
 
           &:hover:not(:disabled) {
-            background: linear-gradient(135deg, #66b1ff 0%, #409eff 100%);
+            background: linear-gradient(135deg, lighten(@merchant-info, 15%) 0%, @merchant-info 100%);
           }
         }
 
         &.el-button--success {
-          background: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);
+          background: linear-gradient(135deg, @merchant-success 0%, lighten(@merchant-success, 15%) 100%);
 
           &:hover:not(:disabled) {
-            background: linear-gradient(135deg, #85ce61 0%, #67c23a 100%);
+            background: linear-gradient(135deg, lighten(@merchant-success, 15%) 0%, @merchant-success 100%);
           }
         }
 
         &.el-button--warning {
-          background: linear-gradient(135deg, #e6a23c 0%, #f0c78a 100%);
+          background: linear-gradient(135deg, @merchant-warning 0%, lighten(@merchant-warning, 15%) 100%);
 
           &:hover:not(:disabled) {
-            background: linear-gradient(135deg, #f0c78a 0%, #e6a23c 100%);
+            background: linear-gradient(135deg, lighten(@merchant-warning, 15%) 0%, @merchant-warning 100%);
           }
         }
 
         &.el-button--danger {
-          background: linear-gradient(135deg, #f56c6c 0%, #f89898 100%);
+          background: linear-gradient(135deg, @merchant-error 0%, lighten(@merchant-error, 15%) 100%);
 
           &:hover:not(:disabled) {
-            background: linear-gradient(135deg, #f89898 0%, #f56c6c 100%);
+            background: linear-gradient(135deg, lighten(@merchant-error, 15%) 0%, @merchant-error 100%);
           }
         }
       }
@@ -912,11 +913,11 @@ onMounted(() => {
     max-width: 100%;
     overflow-x: auto;
     overflow-y: visible;
-    background: linear-gradient(135deg, #ffffff 0%, #fafbff 100%);
+    background: linear-gradient(135deg, @merchant-surface 0%, @merchant-surface-alt 100%);
     border-radius: 12px;
     padding: 20px;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-    border: 1px solid #e4e7ed;
+    border: 1px solid @merchant-border;
     box-sizing: border-box;
 
     :deep(.el-table) {
@@ -940,13 +941,13 @@ onMounted(() => {
         }
 
         th {
-          background: linear-gradient(135deg, #e8f4ff 0%, #d4e7ff 100%);
-          color: #303133;
+          background: linear-gradient(135deg, @merchant-info-light 0%, @merchant-info-light 100%);
+          color: @merchant-text;
           font-weight: 700;
           font-size: 1rem /* 原值: 14px */;
           padding: 14px 12px;
           white-space: nowrap;
-          border-bottom: 2px solid #b3d8ff;
+          border-bottom: 2px solid fade(@merchant-info, 40%);
           text-align: center;
         }
       }
@@ -956,14 +957,14 @@ onMounted(() => {
           transition: all 0.3s ease;
 
           &:hover {
-            background: linear-gradient(90deg, #f0f7ff 0%, #ffffff 100%);
+            background: linear-gradient(90deg, @merchant-info-light 0%, @merchant-surface 100%);
             transform: scale(1.002);
-            box-shadow: 0 2px 8px rgba(64, 158, 255, 0.1);
+            box-shadow: 0 2px 8px fade(@merchant-info, 10%);
           }
 
           td {
             padding: 12px 12px;
-            border-bottom: 1px solid #f0f0f0;
+            border-bottom: 1px solid @merchant-divider;
           }
         }
       }
@@ -1002,15 +1003,15 @@ onMounted(() => {
       justify-content: center;
       gap: 4px;
       font-size: 0.857rem /* 原值: 12px */;
-      color: #606266;
+      color: @merchant-text-sec;
       font-weight: 500;
       padding: 4px 6px;
-      background: linear-gradient(135deg, #f0f7ff 0%, #ffffff 100%);
+      background: linear-gradient(135deg, @merchant-info-light 0%, @merchant-surface 100%);
       border-radius: 6px;
 
       .el-icon {
         font-size: 1rem /* 原值: 14px */;
-        color: #409eff;
+        color: @merchant-info;
       }
     }
   }
@@ -1022,43 +1023,43 @@ onMounted(() => {
     font-size: 0.929rem /* 原值: 13px */;
     font-weight: 500;
     padding: 4px 6px;
-    background: linear-gradient(135deg, #fff5f5 0%, #ffffff 100%);
+    background: linear-gradient(135deg, @merchant-error-light 0%, @merchant-surface 100%);
     border-radius: 6px;
-    border: 1px solid #ffebeb;
+    border: 1px solid fade(@merchant-error, 30%);
 
     .rule-highlight {
-      color: #606266;
+      color: @merchant-text-sec;
       font-weight: 500;
     }
 
     .rule-divider {
-      color: #909399;
+      color: @merchant-text-muted;
       margin: 0 2px;
       font-weight: 400;
       font-size: 0.857rem /* 原值: 12px */;
     }
 
     .rule-value {
-      color: #f56c6c;
+      color: @merchant-error;
       font-weight: 700;
       font-size: 1rem /* 原值: 14px */;
-      text-shadow: 0 1px 2px rgba(245, 108, 108, 0.2);
+      text-shadow: 0 1px 2px fade(@merchant-error, 20%);
     }
 
     .rule-empty {
-      color: #c0c4cc;
+      color: @merchant-text-muted;
     }
   }
 
   .empty-discount-state {
     padding: 60px 20px;
-    background: linear-gradient(135deg, #f9f9f9 0%, #ffffff 100%);
+    background: linear-gradient(135deg, @merchant-surface-alt 0%, @merchant-surface 100%);
     border-radius: 12px;
-    border: 2px dashed #d4e7ff;
+    border: 2px dashed @merchant-info-light;
 
     .empty-tips {
       margin-top: 12px;
-      color: #909399;
+      color: @merchant-text-muted;
       font-size: 1.071rem /* 原值: 15px */;
       font-weight: 500;
     }
@@ -1067,7 +1068,7 @@ onMounted(() => {
       .el-result__title {
         font-size: 1.286rem /* 原值: 18px */;
         font-weight: 600;
-        color: #606266;
+        color: @merchant-text-sec;
       }
 
       .el-result__subtitle {
@@ -1081,14 +1082,14 @@ onMounted(() => {
         border-radius: 8px;
         font-weight: 600;
         padding: 12px 24px;
-        background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
+        background: linear-gradient(135deg, @merchant-info 0%, lighten(@merchant-info, 15%) 100%);
         border: none;
         transition: all 0.3s ease;
 
         &:hover {
           transform: translateY(-2px);
-          box-shadow: 0 6px 16px rgba(64, 158, 255, 0.4);
-          background: linear-gradient(135deg, #66b1ff 0%, #409eff 100%);
+          box-shadow: 0 6px 16px fade(@merchant-info, 40%);
+          background: linear-gradient(135deg, lighten(@merchant-info, 15%) 0%, @merchant-info 100%);
         }
       }
     }
@@ -1096,7 +1097,7 @@ onMounted(() => {
 
   :deep(.time-column) {
     font-size: 0.929rem /* 原值: 13px */;
-    color: #909399;
+    color: @merchant-text-muted;
     font-weight: 500;
 
     .cell {
@@ -1151,24 +1152,24 @@ onMounted(() => {
 
         .el-form-item__label {
           font-weight: 600;
-          color: #606266;
+          color: @merchant-text-sec;
           font-size: 1rem /* 原值: 14px */;
         }
 
         .el-input__inner,
         .el-textarea__inner {
           border-radius: 8px;
-          border: 2px solid #dcdfe6;
+          border: 2px solid @merchant-border;
           transition: all 0.3s ease;
           font-size: 1rem /* 原值: 14px */;
 
           &:focus {
-            border-color: #409eff;
-            box-shadow: 0 0 0 3px rgba(64, 158, 255, 0.1);
+            border-color: @merchant-info;
+            box-shadow: 0 0 0 3px fade(@merchant-info, 10%);
           }
 
           &:hover {
-            border-color: #c0c4cc;
+            border-color: @merchant-text-muted;
           }
         }
 
@@ -1202,7 +1203,7 @@ onMounted(() => {
 
     .unit-text {
       margin-left: 12px;
-      color: #909399;
+      color: @merchant-text-muted;
       font-size: 1rem /* 原值: 14px */;
       font-weight: 500;
     }
@@ -1214,7 +1215,7 @@ onMounted(() => {
       .preview-label {
         font-size: 1.143rem /* 原值: 16px */;
         font-weight: 700;
-        color: #303133;
+        color: @merchant-text;
         margin-bottom: 16px;
         display: flex;
         align-items: center;
@@ -1222,11 +1223,11 @@ onMounted(() => {
       }
 
       .preview-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, @merchant-primary 0%, @merchant-primary-dark 100%);
         border-radius: 16px;
         padding: 24px;
         color: white;
-        box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+        box-shadow: 0 8px 24px fade(@merchant-primary, 40%);
         transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
         position: relative;
         overflow: hidden;
@@ -1244,7 +1245,7 @@ onMounted(() => {
 
         &:hover {
           transform: translateY(-8px) scale(1.02);
-          box-shadow: 0 12px 32px rgba(102, 126, 234, 0.5);
+          box-shadow: 0 12px 32px fade(@merchant-primary, 50%);
 
           &::before {
             top: -30%;
@@ -1253,8 +1254,8 @@ onMounted(() => {
         }
 
         &.type-满减 {
-          background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-          box-shadow: 0 8px 24px rgba(245, 87, 108, 0.4);
+          background: linear-gradient(135deg, @merchant-secondary 0%, @merchant-error 100%);
+          box-shadow: 0 8px 24px fade(@merchant-error, 40%);
 
           &:hover {
             box-shadow: 0 12px 32px rgba(245, 87, 108, 0.5);
@@ -1262,7 +1263,7 @@ onMounted(() => {
         }
 
         &.type-折扣 {
-          background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+          background: linear-gradient(135deg, @merchant-info 0%, lighten(@merchant-info, 15%) 100%);
           box-shadow: 0 8px 24px rgba(79, 172, 254, 0.4);
 
           &:hover {
@@ -1271,7 +1272,7 @@ onMounted(() => {
         }
 
         &.type-买赠 {
-          background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+          background: linear-gradient(135deg, @merchant-success 0%, lighten(@merchant-success, 15%) 100%);
           box-shadow: 0 8px 24px rgba(67, 233, 123, 0.4);
 
           &:hover {
@@ -1280,7 +1281,7 @@ onMounted(() => {
         }
 
         &.type-特价 {
-          background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+          background: linear-gradient(135deg, @merchant-secondary 0%, @merchant-warning 100%);
           box-shadow: 0 8px 24px rgba(250, 112, 154, 0.4);
 
           &:hover {
@@ -1360,13 +1361,13 @@ onMounted(() => {
 
     .el-dialog__header {
       padding: 24px 28px;
-      border-bottom: 2px solid #e4e7ed;
-      background: linear-gradient(135deg, #f0f7ff 0%, #ffffff 100%);
+      border-bottom: 2px solid @merchant-border;
+      background: linear-gradient(135deg, @merchant-info-light 0%, @merchant-surface 100%);
 
       .el-dialog__title {
         font-size: 1.429rem /* 原值: 20px */;
         font-weight: 700;
-        color: #409eff;
+        color: @merchant-info;
       }
 
       .el-dialog__headerbtn {
@@ -1378,12 +1379,12 @@ onMounted(() => {
         transition: all 0.3s ease;
 
         &:hover {
-          background-color: #f0f7ff;
+          background-color: @merchant-info-light;
         }
 
         .el-dialog__close {
           font-size: 1.286rem /* 原值: 18px */;
-          color: #909399;
+          color: @merchant-text-muted;
         }
       }
     }
@@ -1394,8 +1395,8 @@ onMounted(() => {
 
     .el-dialog__footer {
       padding: 20px 28px;
-      border-top: 2px solid #e4e7ed;
-      background: linear-gradient(135deg, #ffffff 0%, #f9f9f9 100%);
+      border-top: 2px solid @merchant-border;
+      background: linear-gradient(135deg, @merchant-surface 0%, @merchant-surface-alt 100%);
 
       .dialog-footer {
         display: flex;
@@ -1416,20 +1417,20 @@ onMounted(() => {
           }
 
           &.el-button--primary {
-            background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
+            background: linear-gradient(135deg, @merchant-info 0%, lighten(@merchant-info, 15%) 100%);
             border: none;
 
             &:hover {
-              background: linear-gradient(135deg, #66b1ff 0%, #409eff 100%);
+              background: linear-gradient(135deg, lighten(@merchant-info, 15%) 0%, @merchant-info 100%);
             }
           }
 
           &.el-button--default {
-            border-color: #dcdfe6;
+            border-color: @merchant-border;
 
             &:hover {
-              border-color: #c0c4cc;
-              background-color: #f5f7fa;
+              border-color: @merchant-text-muted;
+              background-color: @merchant-surface-alt;
             }
           }
         }

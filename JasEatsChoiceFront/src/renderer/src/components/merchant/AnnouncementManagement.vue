@@ -469,12 +469,14 @@ onMounted(() => {
 </template>
 
 <style scoped lang="less">
+@import '../../assets/css/merchant-theme.less';
+
 .announcement-section {
   margin-bottom: 24px;
   padding: 24px;
-  border: 2px solid #909399;
+  border: 2px solid @merchant-text-muted;
   border-radius: 12px;
-  background: linear-gradient(135deg, #ffffff 0%, #f5f7fa 100%);
+  background: linear-gradient(135deg, @merchant-surface 0%, @merchant-surface-alt 100%);
   box-shadow: 0 4px 20px rgba(144, 147, 153, 0.15);
 
   .announcement-header {
@@ -483,13 +485,13 @@ onMounted(() => {
     align-items: center;
     margin-bottom: 24px;
     padding-bottom: 20px;
-    border-bottom: 2px solid #e4e7ed;
+    border-bottom: 2px solid @merchant-border;
 
     .card-title {
       margin: 0;
       font-size: 22px;
       font-weight: 700;
-      color: #606266;
+      color: @merchant-text-sec;
       display: flex;
       align-items: center;
       gap: 10px;
@@ -510,11 +512,11 @@ onMounted(() => {
   }
 
   .announcement-table-container {
-    background: linear-gradient(135deg, #ffffff 0%, #fafafa 100%);
+    background: linear-gradient(135deg, @merchant-surface 0%, @merchant-surface-alt 100%);
     border-radius: 12px;
     padding: 20px;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-    border: 1px solid #e4e7ed;
+    border: 1px solid @merchant-border;
 
     :deep(.el-table) {
       border-radius: 8px;
@@ -526,10 +528,10 @@ onMounted(() => {
 
       .el-table__header-wrapper {
         th {
-          background: linear-gradient(135deg, #f5f7fa 0%, #e8eaf0 100%);
-          color: #303133;
+          background: linear-gradient(135deg, @merchant-surface-alt 0%, @merchant-border 100%);
+          color: @merchant-text;
           font-weight: 700;
-          border-bottom: 2px solid #d4d7de;
+          border-bottom: 2px solid @merchant-border;
           padding: 14px 0;
         }
       }
@@ -537,16 +539,16 @@ onMounted(() => {
       .el-table__body-wrapper {
         tr {
           transition: all 0.3s ease;
-          background-color: #ffffff;
+          background-color: @merchant-surface;
 
           &:hover {
-            background: linear-gradient(90deg, #f5f7fa 0%, #ffffff 100%);
+            background: linear-gradient(90deg, @merchant-surface-alt 0%, @merchant-surface 100%);
             transform: scale(1.005);
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
           }
 
           td {
-            border-bottom: 1px solid #f0f0f0;
+            border-bottom: 1px solid @merchant-divider;
             padding: 14px 0;
           }
         }
@@ -575,11 +577,11 @@ onMounted(() => {
     .empty-state {
       padding: 80px 20px;
       text-align: center;
-      color: #909399;
+      color: @merchant-text-muted;
       font-size: 1.071rem /* 原值: 15px */;
-      background: linear-gradient(135deg, #f9f9f9 0%, #ffffff 100%);
+      background: linear-gradient(135deg, @merchant-surface-alt 0%, @merchant-surface 100%);
       border-radius: 8px;
-      border: 2px dashed #dcdfe6;
+      border: 2px dashed @merchant-border;
 
       span {
         font-size: 64px;
@@ -603,13 +605,13 @@ onMounted(() => {
 
     .el-dialog__header {
       padding: 24px 28px;
-      border-bottom: 2px solid #e4e7ed;
-      background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);
+      border-bottom: 2px solid @merchant-border;
+      background: linear-gradient(135deg, @merchant-surface-alt 0%, @merchant-surface 100%);
 
       .el-dialog__title {
         font-size: 1.429rem /* 原值: 20px */;
         font-weight: 700;
-        color: #303133;
+        color: @merchant-text;
       }
 
       .el-dialog__headerbtn {
@@ -621,12 +623,12 @@ onMounted(() => {
         transition: all 0.3s ease;
 
         &:hover {
-          background-color: #f5f7fa;
+          background-color: @merchant-surface-alt;
         }
 
         .el-dialog__close {
           font-size: 1.286rem /* 原值: 18px */;
-          color: #909399;
+          color: @merchant-text-muted;
         }
       }
     }
@@ -640,7 +642,7 @@ onMounted(() => {
 
           .el-form-item__label {
             font-weight: 600;
-            color: #606266;
+            color: @merchant-text-sec;
             font-size: 1rem /* 原值: 14px */;
           }
 
@@ -651,12 +653,12 @@ onMounted(() => {
             font-size: 1rem /* 原值: 14px */;
 
             &:hover {
-              border-color: #c0c4cc;
+              border-color: @merchant-text-muted;
             }
 
             &:focus {
-              border-color: #409eff;
-              box-shadow: 0 0 0 3px rgba(64, 158, 255, 0.1);
+              border-color: @merchant-info;
+              box-shadow: 0 0 0 3px fade(@merchant-info, 10%);
             }
           }
 
@@ -682,8 +684,8 @@ onMounted(() => {
 
     .el-dialog__footer {
       padding: 20px 28px;
-      border-top: 2px solid #e4e7ed;
-      background: linear-gradient(135deg, #ffffff 0%, #f9f9f9 100%);
+      border-top: 2px solid @merchant-border;
+      background: linear-gradient(135deg, @merchant-surface 0%, @merchant-surface-alt 100%);
 
       .dialog-footer {
         display: flex;
@@ -704,20 +706,20 @@ onMounted(() => {
           }
 
           &.el-button--primary {
-            background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
+            background: linear-gradient(135deg, @merchant-info 0%, lighten(@merchant-info, 15%) 100%);
             border: none;
 
             &:hover {
-              background: linear-gradient(135deg, #66b1ff 0%, #409eff 100%);
+              background: linear-gradient(135deg, lighten(@merchant-info, 15%) 0%, @merchant-info 100%);
             }
           }
 
           &.el-button--default {
-            border-color: #dcdfe6;
+            border-color: @merchant-border;
 
             &:hover {
-              border-color: #c0c4cc;
-              background-color: #f5f7fa;
+              border-color: @merchant-text-muted;
+              background-color: @merchant-surface-alt;
             }
           }
         }

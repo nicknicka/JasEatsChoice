@@ -44,6 +44,7 @@ const avatarFileList = ref([])
 const avatarUploading = ref(false)
 const tempAvatarUrl = ref('')
 const avatarFile = ref(null)
+const avatarLoadError = ref(false)
 
 // 编辑对话框相关
 const editDialogVisible = ref(false)
@@ -675,6 +676,11 @@ const handleCancelEdit = () => {
   editFormRef.value?.resetFields()
 }
 
+// 头像加载失败时回退到占位符
+const handleAvatarError = () => {
+  avatarLoadError.value = true
+}
+
 // 打开头像上传对话框
 const handleAvatarUpload = () => {
   avatarUploadDialogVisible.value = true
@@ -779,10 +785,11 @@ const handleSaveAvatar = async () => {
         <div class="avatar-section">
           <div class="avatar-wrapper">
             <img
-              v-if="merchantInfo.avatar"
+              v-if="merchantInfo.avatar && !avatarLoadError"
               :src="getAvatarUrl(merchantInfo.avatar)"
               class="avatar"
               alt="商家头像"
+              @error="handleAvatarError"
             />
             <div v-else class="avatar-placeholder">
               <ShoppingBag style="font-size: 2.286rem /* 原值: 32px */; color: #409eff" />
@@ -1297,14 +1304,14 @@ const handleSaveAvatar = async () => {
     &:hover {
       background-color: @merchant-primary;
       border-color: @merchant-primary-dark;
-      color: #fff;
+      color: @merchant-surface;
     }
 
     .el-tag__close {
       color: @merchant-primary-dark;
 
       &:hover {
-        color: #fff;
+        color: @merchant-surface;
         background-color: @merchant-primary;
       }
     }
@@ -1400,14 +1407,14 @@ const handleSaveAvatar = async () => {
     &:hover {
       background-color: @merchant-primary;
       border-color: @merchant-primary-dark;
-      color: #fff;
+      color: @merchant-surface;
     }
   }
 
   &.quick-tag-selected {
     background-color: @merchant-primary;
     border-color: @merchant-primary;
-    color: #fff;
+    color: @merchant-surface;
     font-weight: 500;
 
     &:hover {
@@ -1515,7 +1522,7 @@ const handleSaveAvatar = async () => {
 :deep(.dialog-footer .el-button--primary) {
   background: @merchant-primary;
   border: 1px solid @merchant-primary;
-  color: #fff;
+  color: @merchant-surface;
   box-shadow: 0 2px 8px rgba(74, 122, 77, 0.2);
 
   &:hover {
@@ -1641,7 +1648,7 @@ const handleSaveAvatar = async () => {
             display: flex;
             align-items: center;
             justify-content: center;
-            border: 2px solid #fff;
+            border: 2px solid @merchant-surface;
             box-shadow: 0 2px 8px @merchant-shadow;
 
             &:hover {
@@ -1755,7 +1762,7 @@ const handleSaveAvatar = async () => {
 .edit-button {
   background: @merchant-primary;
   border: 1px solid @merchant-primary;
-  color: #fff;
+  color: @merchant-surface;
   border-radius: @nordic-radius-sm;
   padding: 8px @nordic-space-md;
   font-weight: 500;

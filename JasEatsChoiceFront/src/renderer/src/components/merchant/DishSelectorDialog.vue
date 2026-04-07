@@ -260,6 +260,9 @@ const getSelectedDishes = () => {
 </script>
 
 <style lang="scss" scoped>
+@import '../../../assets/css/nordic-theme.less';
+@import '../../../assets/css/merchant-theme.less';
+
 .dish-selector-dialog {
   :deep(.el-dialog__body) {
     padding: 20px;
@@ -272,9 +275,9 @@ const getSelectedDishes = () => {
   .merchant-summary {
     margin-bottom: 20px;
     padding: 16px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, @merchant-primary 0%, @merchant-primary-dark 100%);
     border-radius: 8px;
-    color: #fff;
+    color: @merchant-surface;
 
     h3 {
       margin: 0 0 8px 0;
@@ -290,7 +293,7 @@ const getSelectedDishes = () => {
       :deep(.el-tag) {
         background: rgba(255, 255, 255, 0.2);
         border-color: rgba(255, 255, 255, 0.3);
-        color: #fff;
+        color: @merchant-surface;
       }
 
       .address {
@@ -308,10 +311,10 @@ const getSelectedDishes = () => {
   .section-title {
     font-size: 14px;
     font-weight: 600;
-    color: #333;
+    color: @merchant-text;
     margin-bottom: 12px;
     padding-bottom: 8px;
-    border-bottom: 2px solid #e9ecef;
+    border-bottom: 2px solid @merchant-border;
   }
 
   .dishes-list {
@@ -322,7 +325,7 @@ const getSelectedDishes = () => {
       align-items: center;
       gap: 12px;
       padding: 12px;
-      background: #f8f9fa;
+      background: @merchant-surface-alt;
       border-radius: 8px;
       margin-bottom: 12px;
       transition: all 0.3s;
@@ -332,7 +335,7 @@ const getSelectedDishes = () => {
       }
 
       &:hover {
-        background: #e9ecef;
+        background: @merchant-divider;
       }
 
       .dish-image {
@@ -354,8 +357,8 @@ const getSelectedDishes = () => {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: #dee2e6;
-          color: #6c757d;
+          background: @merchant-border;
+          color: @merchant-text-muted;
           font-size: 24px;
           font-weight: 600;
         }
@@ -367,7 +370,7 @@ const getSelectedDishes = () => {
         .dish-name {
           margin: 0 0 4px 0;
           font-size: 15px;
-          color: #333;
+          color: @merchant-text;
         }
 
         .dish-meta {
@@ -378,7 +381,7 @@ const getSelectedDishes = () => {
 
           .calories {
             font-size: 12px;
-            color: #666;
+            color: @merchant-text-sec;
           }
         }
 
@@ -387,7 +390,7 @@ const getSelectedDishes = () => {
           align-items: center;
           gap: 4px;
           font-size: 12px;
-          color: #ff9800;
+          color: @merchant-warning;
           margin-bottom: 4px;
 
           .el-icon {
@@ -398,7 +401,7 @@ const getSelectedDishes = () => {
         .dish-price {
           font-size: 16px;
           font-weight: 600;
-          color: #f56c6c;
+          color: @merchant-error;
         }
       }
 
@@ -418,7 +421,7 @@ const getSelectedDishes = () => {
 
   .price-breakdown {
     padding: 16px;
-    background: #f8f9fa;
+    background: @merchant-surface-alt;
     border-radius: 8px;
 
     .price-row {
@@ -434,13 +437,13 @@ const getSelectedDishes = () => {
 
       &.total {
         padding-top: 8px;
-        border-top: 1px solid #dee2e6;
+        border-top: 1px solid @merchant-border;
         font-weight: 600;
         font-size: 16px;
 
         .total-price {
           font-size: 20px;
-          color: #f56c6c;
+          color: @merchant-error;
         }
       }
     }

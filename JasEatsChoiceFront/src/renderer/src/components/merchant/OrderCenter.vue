@@ -368,13 +368,15 @@ onMounted(() => {
 </template>
 
 <style scoped lang="less">
+@import '../../assets/css/merchant-theme.less';
+
 .orders-card {
   margin-bottom: 24px;
   padding: 20px;
-  background: #ffffff;
+  background: @merchant-surface;
   border-radius: 16px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-  border: 1px solid #f0f0f0;
+  border: 1px solid @merchant-divider;
 
   .orders-header {
     display: flex;
@@ -382,12 +384,12 @@ onMounted(() => {
     align-items: center;
     margin-bottom: 16px;
     padding-bottom: 16px;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid @merchant-divider;
 
     .card-title {
       font-size: 18px;
       font-weight: 600;
-      color: #1a1a1a;
+      color: @merchant-text;
       margin: 0;
       display: flex;
       align-items: center;
@@ -434,23 +436,23 @@ onMounted(() => {
     }
 
     &::-webkit-scrollbar-track {
-      background: #f1f1f1;
+      background: @merchant-surface-alt;
       border-radius: 3px;
     }
 
     &::-webkit-scrollbar-thumb {
-      background: #c1c1c1;
+      background: @merchant-text-muted;
       border-radius: 3px;
       transition: background 0.2s ease;
 
       &:hover {
-        background: #a8a8a8;
+        background: darken(@merchant-text-muted, 10%);
       }
     }
 
     // Firefox滚动条样式
     scrollbar-width: thin;
-    scrollbar-color: #c1c1c1 #f1f1f1;
+    scrollbar-color: @merchant-text-muted @merchant-surface-alt;
 
     // 响应式调整
     @media (max-width: 768px) {
@@ -472,7 +474,7 @@ onMounted(() => {
     .no-orders {
       text-align: center;
       padding: 40px 20px;
-      color: #999;
+      color: @merchant-text-muted;
 
       .empty-icon {
         font-size: 48px;
@@ -494,17 +496,17 @@ onMounted(() => {
       gap: 12px;
       align-items: center;
       padding: 16px;
-      background: #fafafa;
+      background: @merchant-surface-alt;
       border-radius: 12px;
-      border: 1px solid #e8e8e8;
+      border: 1px solid @merchant-border;
       // 🔧 修复：只过渡hover相关的颜色属性
       transition: background 0.2s ease, border-color 0.2s ease;
       // 🔧 完全移除动画，避免布局跳动
       animation: none;
 
       &:hover {
-        background: #ffffff;
-        border-color: #409eff;
+        background: @merchant-surface;
+        border-color: @merchant-info;
         // 🔧 移除box-shadow，避免影响布局计算
       }
 
@@ -542,7 +544,7 @@ onMounted(() => {
         .order-no {
           font-size: 14px;
           font-weight: 600;
-          color: #1a1a1a;
+          color: @merchant-text;
           margin-bottom: 8px;
         }
 
@@ -551,11 +553,11 @@ onMounted(() => {
           align-items: center;
           gap: 12px;
           font-size: 13px;
-          color: #666;
+          color: @merchant-text-sec;
 
           .amount {
             font-weight: 600;
-            color: #ff4d4f;
+            color: @merchant-error;
             font-size: 15px;
           }
 
@@ -607,32 +609,32 @@ onMounted(() => {
           }
 
           &.el-button--primary {
-            background: #409eff;
-            border-color: #409eff;
+            background: @merchant-info;
+            border-color: @merchant-info;
 
             &:hover {
-              background: #66b1ff;
-              border-color: #66b1ff;
+              background: lighten(@merchant-info, 10%);
+              border-color: lighten(@merchant-info, 10%);
             }
           }
 
           &.el-button--success {
-            background: #67c23a;
-            border-color: #67c23a;
+            background: @merchant-success;
+            border-color: @merchant-success;
 
             &:hover {
-              background: #85ce61;
-              border-color: #85ce61;
+              background: lighten(@merchant-success, 10%);
+              border-color: lighten(@merchant-success, 10%);
             }
           }
 
           &.el-button--warning {
-            background: #e6a23c;
-            border-color: #e6a23c;
+            background: @merchant-warning;
+            border-color: @merchant-warning;
 
             &:hover {
-              background: #ebb563;
-              border-color: #ebb563;
+              background: lighten(@merchant-warning, 10%);
+              border-color: lighten(@merchant-warning, 10%);
             }
           }
         }
@@ -643,16 +645,16 @@ onMounted(() => {
   .view-all {
     margin-top: 16px;
     padding-top: 16px;
-    border-top: 1px solid #f0f0f0;
+    border-top: 1px solid @merchant-divider;
     text-align: center;
 
     :deep(.el-button) {
-      color: #409eff;
+      color: @merchant-info;
       font-size: 14px;
       transition: all 0.2s ease;
 
       &:hover {
-        color: #66b1ff;
+        color: lighten(@merchant-info, 10%);
       }
     }
   }

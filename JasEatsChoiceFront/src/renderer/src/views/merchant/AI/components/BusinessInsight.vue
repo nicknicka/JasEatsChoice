@@ -239,8 +239,8 @@ onMounted(() => {
 </script>
 
 <style scoped lang="less">
-@import '../../../../../assets/css/nordic-theme.less';
-@import '../../../../../assets/css/merchant-theme.less';
+@import '../../../../assets/css/nordic-theme.less';
+@import '../../../../assets/css/merchant-theme.less';
 
 .business-insight {
   height: 100%;
@@ -281,22 +281,22 @@ onMounted(() => {
     font-size: 24px;
 
     &.revenue {
-      background: linear-gradient(135deg, @merchant-warning-light, #F5E0B0);
+      background: linear-gradient(135deg, @merchant-warning-light, lighten(@merchant-warning, 30%));
       color: @merchant-warning;
     }
 
     &.orders {
-      background: linear-gradient(135deg, @merchant-info-light, #C8DEF2);
+      background: linear-gradient(135deg, @merchant-info-light, lighten(@merchant-info, 30%));
       color: @merchant-info;
     }
 
     &.average {
-      background: linear-gradient(135deg, @merchant-success-light, #C5E8C8);
+      background: linear-gradient(135deg, @merchant-success-light, lighten(@merchant-success, 30%));
       color: @merchant-success;
     }
 
     &.rating {
-      background: linear-gradient(135deg, @merchant-secondary-light, #F0D5C8);
+      background: linear-gradient(135deg, @merchant-secondary-light, lighten(@merchant-secondary, 30%));
       color: @merchant-secondary;
     }
   }
@@ -419,17 +419,17 @@ onMounted(() => {
       color: @merchant-text-sec;
 
       &.rank-1 {
-        background: linear-gradient(135deg, @merchant-warning-light, #F5E0B0);
+        background: linear-gradient(135deg, @merchant-warning-light, lighten(@merchant-warning, 30%));
         color: @merchant-warning;
       }
 
       &.rank-2 {
-        background: linear-gradient(135deg, @merchant-border, #D1D5DB);
+        background: linear-gradient(135deg, @merchant-border, lighten(@merchant-border, 10%));
         color: @merchant-text;
       }
 
       &.rank-3 {
-        background: linear-gradient(135deg, @merchant-secondary-light, #F0C8B0);
+        background: linear-gradient(135deg, @merchant-secondary-light, lighten(@merchant-secondary, 20%));
         color: @merchant-secondary;
       }
     }

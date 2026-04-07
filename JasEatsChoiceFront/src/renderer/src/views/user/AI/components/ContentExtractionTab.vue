@@ -238,14 +238,80 @@ onUnmounted(() => {
 })
 </script>
 
-<style scoped lang="scss">
+<style scoped lang="less">
+@import '../../../../assets/css/nordic-theme.less';
+
 .content-extraction-tab {
-  padding: 20px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 24px;
+  box-sizing: border-box;
+  animation: tabFadeIn 0.35s ease-out;
 }
 
 .tab-header {
   display: flex;
   gap: 12px;
   margin-bottom: 20px;
+  flex-shrink: 0;
+
+  :deep(.el-button--primary) {
+    background: @nordic-accent;
+    border-color: @nordic-accent;
+    border-radius: @nordic-radius-sm;
+    font-weight: 600;
+    transition: all @nordic-transition-base ease;
+
+    &:hover {
+      background: @nordic-accent-dark;
+      border-color: @nordic-accent-dark;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(212, 132, 90, 0.3);
+    }
+  }
+
+  :deep(.el-button--default) {
+    border-radius: @nordic-radius-sm;
+    font-weight: 600;
+    color: @nordic-text-secondary;
+    border-color: @nordic-border;
+    transition: all @nordic-transition-base ease;
+
+    &:hover {
+      color: @nordic-accent;
+      border-color: @nordic-accent;
+      background: @nordic-accent-light;
+    }
+  }
+}
+
+// 提取历史弹窗样式
+:deep(.el-dialog) {
+  border-radius: @nordic-radius-lg;
+
+  .el-dialog__header {
+    border-bottom: 1px solid @nordic-border;
+    padding-bottom: 16px;
+  }
+
+  .el-table {
+    --el-table-border-color: @nordic-border;
+    --el-table-header-bg-color: @nordic-bg;
+    border-radius: @nordic-radius-md;
+    overflow: hidden;
+  }
+}
+
+@keyframes tabFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 </style>

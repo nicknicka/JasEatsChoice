@@ -808,7 +808,7 @@ onMounted(() => {
 
         &:hover {
           background: @merchant-primary;
-          color: #fff;
+          color: @merchant-surface;
           transform: scale(1.05);
         }
       }

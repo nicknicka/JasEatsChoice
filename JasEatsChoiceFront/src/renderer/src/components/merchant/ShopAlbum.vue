@@ -348,13 +348,15 @@ onMounted(() => {
 </template>
 
 <style scoped lang="less">
+@import '../../assets/css/merchant-theme.less';
+
 .shop-album-card {
   margin-bottom: 24px;
   padding: 24px;
-  border: 2px solid #e6a23c; /* 橙色主题 */
+  border: 2px solid @merchant-warning; /* 橙色主题 */
   border-radius: 12px;
-  background: linear-gradient(135deg, #ffffff 0%, #fffbf5 100%);
-  box-shadow: 0 4px 20px rgba(230, 162, 60, 0.15);
+  background: linear-gradient(135deg, @merchant-surface 0%, lighten(@merchant-warning-light, 5%) 100%);
+  box-shadow: 0 4px 20px rgba(212, 168, 85, 0.15);
 
   .album-header {
     display: flex;
@@ -371,26 +373,26 @@ onMounted(() => {
         margin: 0 0 12px 0;
         font-size: 1.429rem /* 原值: 20px */;
         font-weight: 700;
-        color: #e6a23c;
+        color: @merchant-warning;
       }
 
       .album-stats {
         display: flex;
         gap: 24px;
         font-size: 1rem /* 原值: 14px */;
-        color: #606266;
+        color: @merchant-text-sec;
 
         .stat-item {
           display: flex;
           align-items: center;
           gap: 6px;
           padding: 4px 12px;
-          background-color: #fff7e6;
+          background-color: @merchant-warning-light;
           border-radius: 12px;
           transition: all 0.3s ease;
 
           &:hover {
-            background-color: #ffe7ba;
+            background-color: lighten(@merchant-warning-light, 2%);
             transform: translateY(-2px);
           }
         }
@@ -416,13 +418,13 @@ onMounted(() => {
       .section-title {
         font-size: 1.143rem /* 原值: 16px */;
         font-weight: 600;
-        color: #303133;
+        color: @merchant-text;
         margin: 0;
         display: flex;
         align-items: center;
         gap: 8px;
         padding-bottom: 8px;
-        border-bottom: 2px solid #e6a23c;
+        border-bottom: 2px solid @merchant-warning;
 
         .title-icon {
           font-size: 1.429rem /* 原值: 20px */;
@@ -444,13 +446,13 @@ onMounted(() => {
       box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
       transition: all 0.3s ease;
       cursor: pointer;
-      background: #fff;
+      background: @merchant-surface;
       padding: 8px;
-      border: 1px solid #f0f0f0;
+      border: 1px solid @merchant-divider;
 
       &:hover {
         transform: translateY(-6px);
-        box-shadow: 0 8px 24px rgba(230, 162, 60, 0.25);
+        box-shadow: 0 8px 24px rgba(212, 168, 85, 0.25);
       }
 
       // 添加预览提示层
@@ -465,7 +467,7 @@ onMounted(() => {
         align-items: center;
         justify-content: center;
         background: rgba(0, 0, 0, 0.5);
-        color: #fff;
+        color: @merchant-surface;
         font-size: 1rem /* 原值: 14px */;
         font-weight: 500;
         opacity: 0;
@@ -509,14 +511,14 @@ onMounted(() => {
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 2px 12px rgba(245, 108, 108, 0.4);
-        background: linear-gradient(135deg, #f56c6c, #ff8787);
+        box-shadow: 0 2px 12px rgba(196, 91, 91, 0.4);
+        background: linear-gradient(135deg, @merchant-error, lighten(@merchant-error, 10%));
         border: none;
         transition: all 0.3s ease;
 
         &:hover {
           transform: scale(1.1);
-          box-shadow: 0 4px 16px rgba(245, 108, 108, 0.6);
+          box-shadow: 0 4px 16px rgba(196, 91, 91, 0.6);
         }
       }
 
@@ -526,7 +528,7 @@ onMounted(() => {
         display: flex;
         align-items: center;
         justify-content: center;
-        background-color: #fff;
+        background-color: @merchant-surface;
         overflow: hidden;
         border-radius: 8px;
         box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.05);
@@ -537,8 +539,8 @@ onMounted(() => {
           justify-content: center;
           width: 100%;
           height: 100%;
-          background: linear-gradient(135deg, #f5f7fa 0%, #e4e7ed 100%);
-          color: #909399;
+          background: linear-gradient(135deg, @merchant-surface-alt 0%, @merchant-border 100%);
+          color: @merchant-text-muted;
           font-size: 2.286rem /* 原值: 32px */;
         }
 
@@ -557,12 +559,12 @@ onMounted(() => {
   .album-empty-simple {
     text-align: center;
     padding: 40px 20px;
-    color: #909399;
+    color: @merchant-text-muted;
 
     .empty-icon {
       font-size: 3.429rem /* 原值: 48px */;
       margin-bottom: 12px;
-      color: #e6a23c;
+      color: @merchant-warning;
     }
 
     .empty-text {
@@ -572,12 +574,12 @@ onMounted(() => {
   }
 
   .upload-section {
-    background: linear-gradient(135deg, #fffaf0 0%, #ffffff 100%);
+    background: linear-gradient(135deg, lighten(@merchant-warning-light, 5%) 0%, @merchant-surface 100%);
     padding: 24px;
     border-radius: 12px;
-    border: 2px solid #ffe7ba;
+    border: 2px solid lighten(@merchant-warning-light, 2%);
     margin-top: 24px;
-    box-shadow: 0 2px 12px rgba(230, 162, 60, 0.08);
+    box-shadow: 0 2px 12px rgba(212, 168, 85, 0.08);
 
     .upload-header {
       margin-bottom: 20px;
@@ -585,7 +587,7 @@ onMounted(() => {
       .upload-title {
         font-size: 1.143rem /* 原值: 16px */;
         font-weight: 600;
-        color: #e6a23c;
+        color: @merchant-warning;
         margin: 0;
         display: flex;
         align-items: center;
@@ -608,7 +610,7 @@ onMounted(() => {
 
         .upload-label {
           font-weight: 600;
-          color: #303133;
+          color: @merchant-text;
           font-size: 1rem /* 原值: 14px */;
         }
 
@@ -622,13 +624,13 @@ onMounted(() => {
         align-items: center;
         gap: 6px;
         font-size: 0.929rem /* 原值: 13px */;
-        color: #909399;
+        color: @merchant-text-muted;
         padding: 6px 12px;
-        background-color: #f5f7fa;
+        background-color: @merchant-surface-alt;
         border-radius: 6px;
 
         .el-icon {
-          color: #409eff;
+          color: @merchant-info;
           font-size: 1rem /* 原值: 14px */;
         }
       }
@@ -646,33 +648,33 @@ onMounted(() => {
       :deep(.el-upload-dragger) {
         width: 100%;
         height: 200px;
-        border: 2px dashed #d9a066;
+        border: 2px dashed @merchant-secondary;
         border-radius: 12px;
-        background: linear-gradient(135deg, #fff9f0 0%, #ffffff 100%);
+        background: linear-gradient(135deg, lighten(@merchant-warning-light, 5%) 0%, @merchant-surface 100%);
         transition: all 0.3s ease;
 
         &:hover {
-          border-color: #e6a23c;
-          background: linear-gradient(135deg, #ffe7ba 0%, #ffffff 100%);
+          border-color: @merchant-warning;
+          background: linear-gradient(135deg, lighten(@merchant-warning-light, 2%) 0%, @merchant-surface 100%);
         }
 
         .el-icon-plus {
           font-size: 3.429rem /* 原值: 48px */;
-          color: #e6a23c;
+          color: @merchant-warning;
           margin-bottom: 16px;
         }
 
         .el-upload__text {
           .upload-text {
             font-size: 1.143rem /* 原值: 16px */;
-            color: #303133;
+            color: @merchant-text;
             font-weight: 500;
             margin-bottom: 8px;
           }
 
           .upload-hint {
             font-size: 0.929rem /* 原值: 13px */;
-            color: #909399;
+            color: @merchant-text-muted;
           }
         }
       }
@@ -720,18 +722,18 @@ onMounted(() => {
           font-size: 1.143rem /* 原值: 16px */;
           font-weight: 600;
           border: none;
-          box-shadow: 0 4px 12px rgba(103, 194, 58, 0.3);
+          box-shadow: 0 4px 12px rgba(90, 143, 94, 0.3);
           transition: all 0.3s ease;
 
           &:hover:not(:disabled) {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(103, 194, 58, 0.4);
+            box-shadow: 0 6px 20px rgba(90, 143, 94, 0.4);
           }
 
           &:disabled {
             opacity: 0.5;
             cursor: not-allowed;
-            background: #c0c4cc;
+            background: @merchant-text-muted;
             box-shadow: none;
           }
         }
@@ -743,11 +745,11 @@ onMounted(() => {
 // 自定义图片预览查看器样式
 :deep(.el-image-viewer-wrapper) {
   .el-image-viewer__mask {
-    background-color: #f5f5f5 !important;
+    background-color: @merchant-surface-alt !important;
   }
 
   .el-image-viewer__canvas {
-    background-color: #ffffff;
+    background-color: @merchant-surface;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -755,7 +757,7 @@ onMounted(() => {
     box-shadow: 0 0 60px rgba(0, 0, 0, 0.1);
 
     img {
-      background-color: #ffffff;
+      background-color: @merchant-surface;
       object-fit: contain;
       max-width: 85vw;
       max-height: 85vh;
@@ -769,7 +771,7 @@ onMounted(() => {
 
   .el-image-viewer__btn {
     background-color: rgba(0, 0, 0, 0.6);
-    color: #fff;
+    color: @merchant-surface;
     border-radius: 50%;
     width: 44px;
     height: 44px;

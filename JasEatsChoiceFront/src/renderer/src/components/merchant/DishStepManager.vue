@@ -539,13 +539,15 @@ watch(() => props.orderId, () => {
 })
 </script>
 
-<style scoped>
+<style scoped lang="less">
+@import '../../assets/css/merchant-theme.less';
+
 .dish-step-manager {
   padding: 20px;
 }
 
 .step-toolbar {
-  background: #fff;
+  background: @merchant-surface;
   padding: 16px;
   border-radius: 8px;
   margin-bottom: 20px;
@@ -566,7 +568,7 @@ watch(() => props.orderId, () => {
   display: flex;
   align-items: center;
   gap: 16px;
-  background: #fff;
+  background: @merchant-surface;
   padding: 16px;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -579,8 +581,8 @@ watch(() => props.orderId, () => {
 }
 
 .dish-step-card.selected {
-  background: #f0f9ff;
-  border: 2px solid #409EFF;
+  background: @merchant-info-light;
+  border: 2px solid @merchant-info;
 }
 
 .dish-checkbox {
@@ -610,7 +612,7 @@ watch(() => props.orderId, () => {
 .dish-name {
   font-size: 1.143rem /* 原值: 16px */;
   font-weight: 600;
-  color: #303133;
+  color: @merchant-text;
 }
 
 .step-status-badge {
@@ -618,7 +620,7 @@ watch(() => props.orderId, () => {
   padding: 4px 12px;
   border-radius: 4px;
   font-size: 0.857rem /* 原值: 12px */;
-  color: #fff;
+  color: @merchant-surface;
   font-weight: 500;
 }
 
@@ -632,11 +634,11 @@ watch(() => props.orderId, () => {
   justify-content: space-between;
   margin-top: 8px;
   font-size: 0.857rem /* 原值: 12px */;
-  color: #909399;
+  color: @merchant-text-muted;
 }
 
 .remaining-time {
-  color: #67C23A;
+  color: @merchant-success;
   font-weight: 600;
 }
 
@@ -650,12 +652,12 @@ watch(() => props.orderId, () => {
   flex-shrink: 0;
   cursor: move;
   padding: 8px;
-  color: #909399;
+  color: @merchant-text-muted;
   transition: color 0.3s;
 }
 
 .drag-handle:hover {
-  color: #409EFF;
+  color: @merchant-info;
 }
 
 .history-item {
@@ -674,16 +676,16 @@ watch(() => props.orderId, () => {
   display: flex;
   gap: 16px;
   font-size: 0.857rem /* 原值: 12px */;
-  color: #909399;
+  color: @merchant-text-muted;
 }
 
 .history-reason {
-  color: #F56C6C;
+  color: @merchant-error;
   font-size: 0.857rem /* 原值: 12px */;
 }
 
 .history-remark {
-  color: #606266;
+  color: @merchant-text-sec;
   font-size: 0.857rem /* 原值: 12px */;
 }
 </style>

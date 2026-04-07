@@ -186,17 +186,20 @@ const formatTime = (timeStr) => {
 </template>
 
 <style scoped lang="less">
+@import '../../../../assets/css/nordic-theme.less';
+@import '../../../../assets/css/merchant-theme.less';
+
 .conversation-list-wrapper {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: #ffffff;
+  background: @merchant-surface;
   overflow: hidden;
 
   .list-header {
     padding: 18px 20px;
-    border-bottom: 1px solid #e8eef5;
-    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    border-bottom: 1px solid @merchant-border;
+    background: linear-gradient(135deg, @merchant-surface-alt 0%, @merchant-surface 100%);
     flex-shrink: 0;
 
     .header-title {
@@ -205,7 +208,7 @@ const formatTime = (timeStr) => {
       gap: 8px;
       font-size: 1.071rem /* 原值: 15px */;
       font-weight: 600;
-      color: #1f2937;
+      color: @merchant-text;
 
       .el-badge {
         margin-left: auto;
@@ -222,7 +225,7 @@ const formatTime = (timeStr) => {
       align-items: center;
       padding: 14px 16px;
       cursor: pointer;
-      border-bottom: 1px solid #f3f4f6;
+      border-bottom: 1px solid @merchant-divider;
       transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
       position: relative;
 
@@ -231,18 +234,18 @@ const formatTime = (timeStr) => {
       }
 
       &:hover {
-        background-color: #f8f9fa;
+        background-color: @merchant-surface-alt;
         transform: translateX(2px);
       }
 
       &.active {
-        background: linear-gradient(135deg, #ecf5ff 0%, #e3f2fd 100%);
-        border-left: 3px solid #3b82f6;
+        background: linear-gradient(135deg, @merchant-primary-light 0%, @merchant-surface-alt 100%);
+        border-left: 3px solid @merchant-primary;
         padding-left: 13px;
       }
 
       &.has-unread {
-        background-color: #fef2f2;
+        background-color: @merchant-error-light;
       }
 
       .conversation-avatar {
@@ -264,7 +267,7 @@ const formatTime = (timeStr) => {
           align-items: center;
           justify-content: center;
           font-size: 1.714rem /* 原值: 24px */;
-          background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+          background: linear-gradient(135deg, @merchant-surface-alt 0%, @merchant-border 100%);
           border-radius: 50%;
           transition: transform 0.2s ease;
         }
@@ -273,14 +276,14 @@ const formatTime = (timeStr) => {
           position: absolute;
           top: -4px;
           right: -4px;
-          background: linear-gradient(135deg, #f56c6c 0%, #ff8787 100%);
-          color: #ffffff;
+          background: linear-gradient(135deg, @merchant-error 0%, @merchant-error-light 100%);
+          color: @merchant-surface;
           border-radius: 12px;
           padding: 2px 7px;
           font-size: 0.75rem /* 原值: 11px */;
           font-weight: 600;
-          box-shadow: 0 2px 8px rgba(245, 108, 108, 0.4);
-          border: 2px solid #fff;
+          box-shadow: 0 2px 8px @merchant-shadow-hover;
+          border: 2px solid @merchant-surface;
           min-width: 18px;
           text-align: center;
         }
@@ -291,14 +294,14 @@ const formatTime = (timeStr) => {
           right: -2px;
           width: 20px;
           height: 20px;
-          background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
+          background: linear-gradient(135deg, @merchant-primary 0%, @merchant-primary-light 100%);
           border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
           font-size: 10px;
-          box-shadow: 0 2px 6px rgba(64, 158, 255, 0.4);
-          border: 2px solid #fff;
+          box-shadow: 0 2px 6px @merchant-shadow-hover;
+          border: 2px solid @merchant-surface;
         }
       }
 
@@ -315,8 +318,8 @@ const formatTime = (timeStr) => {
 
           .name {
             font-weight: 600;
-            font-size: 1rem /* 原值: 14px */;
-            color: #1f2937;
+            font-size: @nordic-text-base;
+            color: @merchant-text;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
@@ -326,7 +329,7 @@ const formatTime = (timeStr) => {
 
           .time {
             font-size: 0.75rem /* 原值: 11px */;
-            color: #9ca3af;
+            color: @merchant-text-muted;
             font-weight: 500;
             flex-shrink: 0;
             max-width: 60px;
@@ -337,8 +340,8 @@ const formatTime = (timeStr) => {
         }
 
         .last-message {
-          font-size: 0.929rem /* 原值: 13px */;
-          color: #6b7280;
+          font-size: @nordic-text-sm;
+          color: @merchant-text-sec;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -347,7 +350,7 @@ const formatTime = (timeStr) => {
 
         .member-count {
           font-size: 0.75rem /* 原值: 11px */;
-          color: #909399;
+          color: @merchant-text-muted;
           margin-top: 2px;
         }
       }
@@ -366,15 +369,15 @@ const formatTime = (timeStr) => {
 }
 
 .conversation-list::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: @merchant-divider;
 }
 
 .conversation-list::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: @merchant-border;
   border-radius: 3px;
 }
 
 .conversation-list::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: @merchant-text-muted;
 }
 </style>

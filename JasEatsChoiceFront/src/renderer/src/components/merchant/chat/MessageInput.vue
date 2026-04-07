@@ -114,27 +114,30 @@ defineExpose({
 </template>
 
 <style scoped lang="less">
+@import '../../../../assets/css/nordic-theme.less';
+@import '../../../../assets/css/merchant-theme.less';
+
 .message-input-wrapper {
   padding: 16px 20px;
-  border-top: 1px solid #e8eef5;
-  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.04);
+  border-top: 1px solid @merchant-border;
+  background: linear-gradient(135deg, @merchant-surface-alt 0%, @merchant-surface 100%);
+  box-shadow: 0 -2px 8px @merchant-shadow;
 
   .sync-toggle {
     margin-bottom: 10px;
     padding: 8px 12px;
-    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-    border-radius: 8px;
-    border: 1px solid #bae6fd;
+    background: linear-gradient(135deg, @merchant-primary-light 0%, @merchant-surface-alt 100%);
+    border-radius: @nordic-radius-sm;
+    border: 1px solid @merchant-border;
 
     .sync-label {
-      font-size: 0.857rem /* 原值: 12px */;
-      color: #0369a1;
+      font-size: @nordic-text-xs;
+      color: @merchant-primary-dark;
       font-weight: 500;
     }
 
     :deep(.el-checkbox__label) {
-      color: #0369a1;
+      color: @merchant-primary-dark;
     }
   }
 
@@ -147,22 +150,22 @@ defineExpose({
       flex: 1;
 
       :deep(.el-textarea__inner) {
-        border-radius: 12px;
-        border: 1px solid #e5e7eb;
-        background: #ffffff;
+        border-radius: @nordic-radius-lg;
+        border: 1px solid @merchant-border;
+        background: @merchant-surface;
         padding: 12px 14px;
-        font-size: 1rem /* 原值: 14px */;
+        font-size: @nordic-text-base;
         line-height: 1.6;
         transition: all 0.3s ease;
         resize: none;
 
         &:focus {
-          border-color: #3b82f6;
-          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+          border-color: @merchant-primary;
+          box-shadow: 0 0 0 3px @merchant-shadow-hover;
         }
 
         &:disabled {
-          background-color: #f5f7fa;
+          background-color: @merchant-surface-alt;
           cursor: not-allowed;
         }
       }
@@ -170,18 +173,18 @@ defineExpose({
 
     .send-button {
       align-self: flex-end;
-      border-radius: 10px;
+      border-radius: @nordic-radius-md;
       font-weight: 600;
       padding: 10px 24px;
-      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      background: linear-gradient(135deg, @merchant-primary 0%, @merchant-primary-dark 100%);
       border: none;
-      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+      box-shadow: 0 4px 12px @merchant-shadow-hover;
       transition: all 0.2s ease;
       height: auto;
 
       &:hover:not(:disabled) {
         transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+        box-shadow: 0 6px 16px @merchant-shadow-hover;
       }
 
       &:active:not(:disabled) {
@@ -189,7 +192,7 @@ defineExpose({
       }
 
       &:disabled {
-        background: #d1d5db;
+        background: @merchant-text-muted;
         box-shadow: none;
       }
     }
@@ -201,7 +204,7 @@ defineExpose({
 
     .hint-text {
       font-size: 0.75rem /* 原值: 11px */;
-      color: #9ca3af;
+      color: @merchant-text-muted;
       font-weight: 500;
     }
   }

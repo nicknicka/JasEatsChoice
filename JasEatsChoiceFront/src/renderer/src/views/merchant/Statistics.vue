@@ -212,10 +212,10 @@ const orderChartOptions = ref({
       type: 'line',
       smooth: true,
       lineStyle: {
-        color: '#67c23a'
+        color: '#5A8F5E' // @merchant-success
       },
       itemStyle: {
-        color: '#67c23a'
+        color: '#5A8F5E' // @merchant-success
       }
     }
   ]
@@ -721,31 +721,31 @@ watch(currentOrderTrend, () => {
 
               // 前三名特殊样式
               &.rank-1 {
-                background: linear-gradient(135deg, #ffd700, #ffed4e);
-                box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
+                background: linear-gradient(135deg, @merchant-warning, lighten(@merchant-warning, 25%));
+                box-shadow: 0 4px 12px rgba(212, 168, 85, 0.3);
 
                 .rank-number {
-                  color: #fff;
+                  color: @merchant-surface;
                   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
                 }
               }
 
               &.rank-2 {
-                background: linear-gradient(135deg, #c0c0c0, #e8e8e8);
-                box-shadow: 0 4px 12px rgba(192, 192, 192, 0.3);
+                background: linear-gradient(135deg, @merchant-text-muted, lighten(@merchant-text-muted, 12%));
+                box-shadow: 0 4px 12px rgba(158, 152, 147, 0.3);
 
                 .rank-number {
-                  color: #fff;
+                  color: @merchant-surface;
                   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
                 }
               }
 
               &.rank-3 {
-                background: linear-gradient(135deg, #cd7f32, #e3a869);
-                box-shadow: 0 4px 12px rgba(205, 127, 50, 0.3);
+                background: linear-gradient(135deg, @merchant-secondary, lighten(@merchant-secondary, 15%));
+                box-shadow: 0 4px 12px rgba(181, 106, 74, 0.3);
 
                 .rank-number {
-                  color: #fff;
+                  color: @merchant-surface;
                   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
                 }
               }

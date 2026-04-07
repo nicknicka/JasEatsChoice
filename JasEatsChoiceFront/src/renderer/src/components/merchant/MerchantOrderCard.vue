@@ -133,7 +133,7 @@ const handleOrderNow = () => {
   align-items: center;
   padding: @nordic-space-md;
   background: linear-gradient(135deg, @merchant-primary 0%, @merchant-primary-dark 100%);
-  color: #fff;
+  color: @merchant-surface;
 
   .merchant-avatar {
     width: 56px;
@@ -164,7 +164,7 @@ const handleOrderNow = () => {
       margin: 0 0 6px 0;
       font-size: @nordic-text-md;
       font-weight: 600;
-      color: #fff;
+      color: @merchant-surface;
     }
 
     .merchant-meta {
@@ -189,7 +189,7 @@ const handleOrderNow = () => {
     :deep(.el-tag) {
       background: rgba(255, 255, 255, 0.2);
       border-color: rgba(255, 255, 255, 0.3);
-      color: #fff;
+      color: @merchant-surface;
     }
   }
 }

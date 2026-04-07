@@ -195,15 +195,18 @@ const sendReminder = () => {
 </template>
 
 <style scoped lang="less">
+@import '../../../../assets/css/nordic-theme.less';
+@import '../../../../assets/css/merchant-theme.less';
+
 .order-info-panel-wrapper {
   margin: 12px;
 
   .order-summary {
     padding: 16px 20px;
-    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-    border: 1px solid #bae6fd;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(14, 165, 233, 0.1);
+    background: linear-gradient(135deg, @merchant-primary-light 0%, @merchant-surface-alt 100%);
+    border: 1px solid @merchant-border;
+    border-radius: @nordic-radius-lg;
+    box-shadow: 0 2px 8px @merchant-shadow;
 
     .summary-header {
       display: flex;
@@ -215,9 +218,9 @@ const sendReminder = () => {
         display: flex;
         align-items: center;
         gap: 8px;
-        font-size: 1rem /* 原值: 14px */;
+        font-size: @nordic-text-base;
         font-weight: 600;
-        color: #0369a1;
+        color: @merchant-primary-dark;
       }
 
       :deep(.el-button) {
@@ -236,18 +239,18 @@ const sendReminder = () => {
         gap: 4px;
 
         .label {
-          font-size: 0.857rem /* 原值: 12px */;
-          color: #64748b;
+          font-size: @nordic-text-xs;
+          color: @merchant-text-sec;
           font-weight: 500;
         }
 
         .value {
-          font-size: 1rem /* 原值: 14px */;
-          color: #0c4a6e;
+          font-size: @nordic-text-base;
+          color: @merchant-text;
           font-weight: 600;
 
           &.amount {
-            color: #ea580c;
+            color: @merchant-secondary;
           }
         }
       }
@@ -256,10 +259,10 @@ const sendReminder = () => {
 
   .order-detail {
     padding: 16px;
-    background: #ffffff;
-    border: 1px solid #e8eef5;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    background: @merchant-surface;
+    border: 1px solid @merchant-border;
+    border-radius: @nordic-radius-lg;
+    box-shadow: 0 2px 8px @merchant-shadow;
 
     .detail-header {
       display: flex;
@@ -267,15 +270,15 @@ const sendReminder = () => {
       align-items: center;
       margin-bottom: 16px;
       padding-bottom: 12px;
-      border-bottom: 1px solid #e8eef5;
+      border-bottom: 1px solid @merchant-divider;
 
       .header-title {
         display: flex;
         align-items: center;
         gap: 8px;
-        font-size: 1rem /* 原值: 14px */;
+        font-size: @nordic-text-base;
         font-weight: 600;
-        color: #1f2937;
+        color: @merchant-text;
       }
     }
 
@@ -283,44 +286,44 @@ const sendReminder = () => {
       margin-bottom: 16px;
 
       .order-basic-info {
-        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+        background: linear-gradient(135deg, @merchant-surface-alt 0%, @merchant-surface 100%);
         padding: 14px;
-        border-radius: 10px;
+        border-radius: @nordic-radius-md;
         margin-bottom: 12px;
-        border: 1px solid #e8eef5;
+        border: 1px solid @merchant-border;
 
         .info-row {
           display: flex;
           justify-content: space-between;
           padding: 6px 0;
-          font-size: 0.929rem /* 原值: 13px */;
+          font-size: @nordic-text-sm;
 
           .label {
-            color: #6b7280;
+            color: @merchant-text-sec;
             font-weight: 500;
           }
 
           .value {
-            color: #1f2937;
+            color: @merchant-text;
             font-weight: 600;
           }
         }
       }
 
       .order-items {
-        background: #ffffff;
+        background: @merchant-surface;
         padding: 14px;
-        border-radius: 10px;
+        border-radius: @nordic-radius-md;
         margin-bottom: 12px;
-        border: 1px solid #e8eef5;
+        border: 1px solid @merchant-border;
 
         .items-title {
-          font-size: 0.929rem /* 原值: 13px */;
+          font-size: @nordic-text-sm;
           font-weight: 600;
-          color: #1f2937;
+          color: @merchant-text;
           margin-bottom: 10px;
           padding-bottom: 8px;
-          border-bottom: 1px solid #e8eef5;
+          border-bottom: 1px solid @merchant-divider;
         }
 
         .item-row {
@@ -328,8 +331,8 @@ const sendReminder = () => {
           justify-content: space-between;
           align-items: center;
           padding: 8px 0;
-          font-size: 0.929rem /* 原值: 13px */;
-          border-bottom: 1px dashed #e8eef5;
+          font-size: @nordic-text-sm;
+          border-bottom: 1px dashed @merchant-divider;
 
           &:last-child {
             border-bottom: none;
@@ -337,28 +340,28 @@ const sendReminder = () => {
 
           .item-name {
             flex: 1;
-            color: #374151;
+            color: @merchant-text;
             font-weight: 500;
           }
 
           .item-quantity {
-            color: #6b7280;
+            color: @merchant-text-sec;
             margin: 0 12px;
             font-weight: 500;
           }
 
           .item-price {
-            color: #ea580c;
+            color: @merchant-secondary;
             font-weight: 700;
           }
         }
       }
 
       .order-total {
-        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        background: linear-gradient(135deg, @merchant-warning-light 0%, @nordic-yellow-light 100%);
         padding: 14px;
-        border-radius: 10px;
-        border: 1px solid #fbbf24;
+        border-radius: @nordic-radius-md;
+        border: 1px solid @merchant-warning;
 
         .total-row {
           display: flex;
@@ -366,14 +369,14 @@ const sendReminder = () => {
           align-items: center;
 
           .label {
-            font-size: 1rem /* 原值: 14px */;
-            color: #78350f;
+            font-size: @nordic-text-base;
+            color: @merchant-text;
             font-weight: 600;
           }
 
           .value {
             font-size: 1.286rem /* 原值: 18px */;
-            color: #b45309;
+            color: @merchant-secondary;
             font-weight: 700;
           }
         }
@@ -382,9 +385,9 @@ const sendReminder = () => {
 
     .detail-actions {
       .actions-title {
-        font-size: 0.929rem /* 原值: 13px */;
+        font-size: @nordic-text-sm;
         font-weight: 600;
-        color: #6b7280;
+        color: @merchant-text-sec;
         margin-bottom: 10px;
       }
 

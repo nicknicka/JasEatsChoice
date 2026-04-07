@@ -325,53 +325,56 @@ const submitForm = () => {
 </script>
 
 <style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+@import '../../assets/css/merchant-theme.less';
+
 .register-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, @merchant-primary 0%, @merchant-primary-dark 100%);
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 20px;
+  padding: @nordic-space-lg;
 }
 
 .register-card {
   width: 100%;
   max-width: 500px;
-  background-color: #fff;
-  border-radius: 10px;
-  padding: 30px;
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+  background-color: @merchant-surface;
+  border-radius: @nordic-radius-lg;
+  padding: @nordic-space-xl;
+  box-shadow: 0 15px 35px @merchant-shadow-hover;
 }
 
 .register-back-btn {
-  margin-bottom: 20px;
+  margin-bottom: @nordic-space-lg;
 }
 
 .register-title {
   text-align: center;
-  margin-bottom: 30px;
-  color: #333;
-  font-size: 1.714rem /* 原值: 24px */;
+  margin-bottom: @nordic-space-xl;
+  color: @merchant-text;
+  font-size: @nordic-text-xl;
 }
 
 .login-link {
   text-align: center;
-  margin-top: 15px;
-  font-size: 1rem /* 原值: 14px */;
-  color: #666;
+  margin-top: @nordic-space-md;
+  font-size: @nordic-text-base;
+  color: @merchant-text-sec;
 
   span {
-    margin-right: 8px;
+    margin-right: @nordic-space-sm;
   }
 }
 
 .captcha-refresh-link {
   height: 36px;
   line-height: 36px;
-  font-size: 0.857rem /* 原值: 12px */;
+  font-size: @nordic-text-xs;
   opacity: 0.8;
   transition: opacity 0.2s;
-  text-decoration: none !important; /* 始终去除下划线 */
+  text-decoration: none !important;
 }
 
 .captcha-refresh-link:hover {

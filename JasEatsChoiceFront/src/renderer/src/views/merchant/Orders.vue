@@ -771,11 +771,11 @@ onMounted(() => {
                     @click="cancelOrder(order)"
                   >
                     <el-icon><CircleClose /></el-icon>
-                    <span style="color: #e6a23c">取消订单</span>
+                    <span class="dropdown-text-warning">取消订单</span>
                   </el-dropdown-item>
                   <el-dropdown-item divided @click="deleteOrder(order)">
                     <el-icon><Delete /></el-icon>
-                    <span style="color: #f56c6c">删除订单</span>
+                    <span class="dropdown-text-danger">删除订单</span>
                   </el-dropdown-item>
                 </el-dropdown-menu>
               </template>
@@ -1100,26 +1100,26 @@ onMounted(() => {
 
           // 全部标签选中
           &.status-tag-all.active {
-            background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
-            color: #ffffff;
-            border-color: #1890ff;
-            box-shadow: 0 2px 8px rgba(24, 144, 255, 0.4);
+            background: linear-gradient(135deg, @merchant-primary 0%, lighten(@merchant-primary, 8%) 100%);
+            color: @merchant-surface;
+            border-color: @merchant-primary;
+            box-shadow: 0 2px 8px rgba(74, 122, 77, 0.4);
 
             .tag-icon {
               opacity: 1;
             }
 
             &:hover {
-              background: linear-gradient(135deg, #40a9ff 0%, #69c0ff 100%);
+              background: linear-gradient(135deg, lighten(@merchant-primary, 5%) 0%, lighten(@merchant-primary, 15%) 100%);
             }
           }
 
           // 待支付选中 - 灰色
           &.status-tag-0.active {
-            background: linear-gradient(135deg, #909399 0%, #a6a9ad 100%);
-            color: #ffffff;
-            border-color: #909399;
-            box-shadow: 0 2px 8px rgba(144, 147, 153, 0.3);
+            background: linear-gradient(135deg, @merchant-text-muted 0%, lighten(@merchant-text-muted, 8%) 100%);
+            color: @merchant-surface;
+            border-color: @merchant-text-muted;
+            box-shadow: 0 2px 8px rgba(158, 152, 147, 0.3);
 
             .tag-icon {
               opacity: 1;
@@ -1128,10 +1128,10 @@ onMounted(() => {
 
           // 待接单选中 - 红色
           &.status-tag-1.active {
-            background: linear-gradient(135deg, #f56c6c 0%, #ff7875 100%);
-            color: #ffffff;
-            border-color: #f56c6c;
-            box-shadow: 0 2px 8px rgba(245, 108, 108, 0.4);
+            background: linear-gradient(135deg, @merchant-error 0%, lighten(@merchant-error, 10%) 100%);
+            color: @merchant-surface;
+            border-color: @merchant-error;
+            box-shadow: 0 2px 8px rgba(196, 91, 91, 0.4);
 
             .tag-icon {
               opacity: 1;
@@ -1140,10 +1140,10 @@ onMounted(() => {
 
           // 备菜中选中
           &.status-tag-2.active {
-            background: linear-gradient(135deg, #e6a23c 0%, #f0a858 100%);
-            color: #ffffff;
-            border-color: #e6a23c;
-            box-shadow: 0 2px 8px rgba(230, 162, 60, 0.4);
+            background: linear-gradient(135deg, @merchant-warning 0%, lighten(@merchant-warning, 8%) 100%);
+            color: @merchant-surface;
+            border-color: @merchant-warning;
+            box-shadow: 0 2px 8px rgba(212, 168, 85, 0.4);
 
             .tag-icon {
               opacity: 1;
@@ -1153,10 +1153,10 @@ onMounted(() => {
           // 进行中选中（合并状态）
           &.status-tag-2-4.active,
           &.status-tag-2-3.active {
-            background: linear-gradient(135deg, #e6a23c 0%, #f0a858 100%);
-            color: #ffffff;
-            border-color: #e6a23c;
-            box-shadow: 0 2px 8px rgba(230, 162, 60, 0.4);
+            background: linear-gradient(135deg, @merchant-warning 0%, lighten(@merchant-warning, 8%) 100%);
+            color: @merchant-surface;
+            border-color: @merchant-warning;
+            box-shadow: 0 2px 8px rgba(212, 168, 85, 0.4);
 
             .tag-icon {
               opacity: 1;
@@ -1165,10 +1165,10 @@ onMounted(() => {
 
           // 烹饪中选中
           &.status-tag-3.active {
-            background: linear-gradient(135deg, #ff9800 0%, #ffa726 100%);
-            color: #ffffff;
-            border-color: #ff9800;
-            box-shadow: 0 2px 8px rgba(255, 152, 0, 0.4);
+            background: linear-gradient(135deg, @merchant-warning 0%, lighten(@merchant-warning, 10%) 100%);
+            color: @merchant-surface;
+            border-color: @merchant-warning;
+            box-shadow: 0 2px 8px rgba(212, 168, 85, 0.4);
 
             .tag-icon {
               opacity: 1;
@@ -1177,10 +1177,10 @@ onMounted(() => {
 
           // 待上菜选中
           &.status-tag-4.active {
-            background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
-            color: #ffffff;
-            border-color: #409eff;
-            box-shadow: 0 2px 8px rgba(64, 158, 255, 0.4);
+            background: linear-gradient(135deg, @merchant-info 0%, lighten(@merchant-info, 10%) 100%);
+            color: @merchant-surface;
+            border-color: @merchant-info;
+            box-shadow: 0 2px 8px rgba(91, 139, 210, 0.4);
 
             .tag-icon {
               opacity: 1;
@@ -1189,10 +1189,10 @@ onMounted(() => {
 
           // 已完成选中 - 绿色
           &.status-tag-3.active {
-            background: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);
-            color: #ffffff;
-            border-color: #67c23a;
-            box-shadow: 0 2px 8px rgba(103, 194, 58, 0.4);
+            background: linear-gradient(135deg, @merchant-success 0%, lighten(@merchant-success, 10%) 100%);
+            color: @merchant-surface;
+            border-color: @merchant-success;
+            box-shadow: 0 2px 8px rgba(90, 143, 94, 0.4);
 
             .tag-icon {
               opacity: 1;
@@ -1206,7 +1206,7 @@ onMounted(() => {
       flex-shrink: 0;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: @nordic-space-md;
       align-items: stretch;
 
       :deep(.search-input) {
@@ -1214,17 +1214,17 @@ onMounted(() => {
 
         .el-input__wrapper {
           border-radius: 10px;
-          padding: 8px 12px;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+          padding: @nordic-space-sm @nordic-space-md;
+          box-shadow: 0 1px 3px @merchant-shadow;
 
           &:hover {
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+            box-shadow: 0 2px 8px @merchant-shadow-hover;
           }
 
           &.is-focus {
             box-shadow:
-              0 0 0 2px rgba(102, 126, 234, 0.2),
-              0 2px 8px rgba(102, 126, 234, 0.3);
+              0 0 0 2px rgba(74, 122, 77, 0.2),
+              0 2px 8px rgba(74, 122, 77, 0.3);
           }
         }
       }
@@ -1234,17 +1234,17 @@ onMounted(() => {
 
         .el-input__wrapper {
           border-radius: 10px;
-          padding: 8px 12px;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+          padding: @nordic-space-sm @nordic-space-md;
+          box-shadow: 0 1px 3px @merchant-shadow;
 
           &:hover {
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+            box-shadow: 0 2px 8px @merchant-shadow-hover;
           }
 
           &.is-focus {
             box-shadow:
-              0 0 0 2px rgba(102, 126, 234, 0.2),
-              0 2px 8px rgba(102, 126, 234, 0.3);
+              0 0 0 2px rgba(74, 122, 77, 0.2),
+              0 2px 8px rgba(74, 122, 77, 0.3);
           }
         }
       }
@@ -1255,37 +1255,37 @@ onMounted(() => {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 20px;
-    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    padding: @nordic-space-md @nordic-space-lg;
+    background: linear-gradient(135deg, @merchant-surface-alt 0%, @merchant-surface 100%);
     border-radius: 10px;
-    margin-bottom: 16px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-    border: 1px solid #e8eef5;
+    margin-bottom: @nordic-space-lg;
+    box-shadow: 0 2px 12px @merchant-shadow;
+    border: 1px solid @merchant-border;
 
     .quick-actions-left {
       display: flex;
-      gap: 12px;
+      gap: @nordic-space-md;
 
       .quick-action-btn {
         display: inline-flex;
         align-items: center;
         justify-content: center;
         gap: 6px;
-        padding: 8px 16px;
+        padding: @nordic-space-sm 16px;
         border-radius: 6px;
-        font-size: 0.929rem /* 原值: 13px */;
+        font-size: @nordic-text-sm;
         font-weight: 500;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 1px 3px @merchant-shadow;
         height: 34px;
 
         .el-icon {
-          font-size: 1rem /* 原值: 14px */;
+          font-size: @nordic-text-base;
         }
 
         &:hover {
           transform: translateY(-1px);
-          box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
+          box-shadow: 0 3px 10px @merchant-shadow-hover;
         }
 
         &:active {
@@ -1296,17 +1296,17 @@ onMounted(() => {
 
     .quick-actions-right {
       .order-count-info {
-        font-size: 0.929rem /* 原值: 13px */;
-        color: #606266;
-        padding: 8px 14px;
-        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        font-size: @nordic-text-sm;
+        color: @merchant-text-sec;
+        padding: @nordic-space-sm 14px;
+        background: linear-gradient(135deg, @merchant-primary-light 0%, lighten(@merchant-primary-light, 3%) 100%);
         border-radius: 6px;
-        border: 1px solid #bae6fd;
+        border: 1px solid @merchant-primary-light;
         font-weight: 500;
 
         strong {
-          color: #667eea;
-          font-size: 1.071rem /* 原值: 15px */;
+          color: @merchant-primary;
+          font-size: @nordic-text-md;
           font-weight: 700;
         }
       }
@@ -1317,12 +1317,12 @@ onMounted(() => {
     min-height: 400px;
 
     .order-item {
-      margin-bottom: 16px;
-      margin-top: 16px;
-      background-color: #fff;
+      margin-bottom: @nordic-space-lg;
+      margin-top: @nordic-space-lg;
+      background-color: @merchant-surface;
       position: relative;
       overflow: visible;
-      border-radius: 12px;
+      border-radius: @nordic-radius-md;
       /* 卡片入场动画 */
       animation: card-slide-in 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
       opacity: 0;
@@ -1330,14 +1330,14 @@ onMounted(() => {
       .order-main {
         display: flex;
         flex-direction: column;
-        padding: 18px 20px;
-        border: 2px solid #e2e8f0;
-        border-radius: 12px;
+        padding: 18px @nordic-space-lg;
+        border: 2px solid @merchant-border;
+        border-radius: @nordic-radius-md;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        box-shadow: 0 2px 8px @merchant-shadow;
         position: relative;
         overflow: visible;
-        gap: 16px;
+        gap: @nordic-space-lg;
 
         .order-content {
           display: flex;
@@ -1351,8 +1351,8 @@ onMounted(() => {
           background: linear-gradient(
             90deg,
             transparent 0%,
-            #e2e8f0 10%,
-            #e2e8f0 90%,
+            @merchant-divider 10%,
+            @merchant-divider 90%,
             transparent 100%
           );
           margin: 0;
@@ -1365,15 +1365,15 @@ onMounted(() => {
           top: 0;
           bottom: 0;
           width: 4px;
-          background: #e2e8f0;
+          background: @merchant-border;
           transition: all 0.3s ease;
-          border-radius: 12px 0 0 12px;
+          border-radius: @nordic-radius-md 0 0 @nordic-radius-md;
         }
 
         &:hover {
           transform: translateY(-4px) scale(1.01);
-          box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
-          border-color: #94a3b8;
+          box-shadow: 0 12px 32px @merchant-shadow-hover;
+          border-color: @merchant-text-muted;
         }
 
         &:active {
@@ -1383,42 +1383,42 @@ onMounted(() => {
 
       // 状态边框颜色
       &.status-0 .order-main::before {
-        background: linear-gradient(180deg, #909399 0%, #a6a9ad 100%);
+        background: linear-gradient(180deg, @merchant-text-muted 0%, lighten(@merchant-text-muted, 8%) 100%);
       }
 
       &.status-1 .order-main::before {
-        background: linear-gradient(180deg, #f56c6c 0%, #ff7875 100%);
-        box-shadow: 0 0 8px rgba(245, 108, 108, 0.3);
+        background: linear-gradient(180deg, @merchant-error 0%, lighten(@merchant-error, 10%) 100%);
+        box-shadow: 0 0 8px rgba(196, 91, 91, 0.3);
       }
 
       &.status-2 .order-main::before {
-        background: linear-gradient(180deg, #e6a23c 0%, #f0a858 100%);
-        box-shadow: 0 0 8px rgba(230, 162, 60, 0.3);
+        background: linear-gradient(180deg, @merchant-warning 0%, lighten(@merchant-warning, 8%) 100%);
+        box-shadow: 0 0 8px rgba(212, 168, 85, 0.3);
       }
 
       &.status-3 .order-main::before {
-        background: linear-gradient(180deg, #ff9800 0%, #ffa726 100%);
-        box-shadow: 0 0 8px rgba(255, 152, 0, 0.3);
+        background: linear-gradient(180deg, @merchant-warning 0%, lighten(@merchant-warning, 10%) 100%);
+        box-shadow: 0 0 8px rgba(212, 168, 85, 0.3);
       }
 
       &.status-4 .order-main::before {
-        background: linear-gradient(180deg, #409eff 0%, #66b1ff 100%);
-        box-shadow: 0 0 8px rgba(64, 158, 255, 0.3);
+        background: linear-gradient(180deg, @merchant-info 0%, lighten(@merchant-info, 10%) 100%);
+        box-shadow: 0 0 8px rgba(91, 139, 210, 0.3);
       }
 
       &.status-3 .order-main::before {
-        background: linear-gradient(180deg, #67c23a 0%, #7bcf58 100%);
-        box-shadow: 0 0 8px rgba(103, 194, 58, 0.3);
+        background: linear-gradient(180deg, @merchant-success 0%, lighten(@merchant-success, 10%) 100%);
+        box-shadow: 0 0 8px rgba(90, 143, 94, 0.3);
       }
 
       &.status-4 .order-main::before {
-        background: linear-gradient(180deg, #c0c4cc 0%, #d3d4d6 100%);
+        background: linear-gradient(180deg, @merchant-text-muted 0%, lighten(@merchant-text-muted, 8%) 100%);
       }
 
       // 未读订单样式
       &.unread-order .order-main {
-        background: linear-gradient(to right, #fef2f2 0%, #ffffff 40%);
-        border-color: #fee2e2;
+        background: linear-gradient(to right, @merchant-error-light 0%, @merchant-surface 40%);
+        border-color: @merchant-error-light;
       }
 
       .order-left {
@@ -1428,31 +1428,31 @@ onMounted(() => {
         .order-basic-info {
           display: grid;
           grid-template-columns: 1fr auto auto;
-          gap: 12px 20px;
-          margin-bottom: 12px;
-          font-size: 1rem /* 原值: 14px */;
+          gap: @nordic-space-md @nordic-space-lg;
+          margin-bottom: @nordic-space-md;
+          font-size: @nordic-text-base;
           align-items: center;
 
           .order-no {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: @nordic-space-sm;
             font-weight: 600;
-            font-size: 1.071rem /* 原值: 15px */;
+            font-size: @nordic-text-md;
             white-space: nowrap;
             min-width: 0;
             overflow: hidden;
 
             .no-label {
-              color: #909399;
-              font-size: 0.857rem /* 原值: 12px */;
+              color: @merchant-text-muted;
+              font-size: @nordic-text-xs;
               font-weight: 500;
               margin-right: 4px;
               flex-shrink: 0;
             }
 
             .no-value {
-              color: #303133;
+              color: @merchant-text;
               font-family: 'Consolas', 'Monaco', monospace;
               font-weight: 600;
               overflow: hidden;
@@ -1466,13 +1466,13 @@ onMounted(() => {
             gap: 6px;
             font-weight: 700;
             font-size: 17px;
-            color: #f56c6c;
+            color: @merchant-secondary;
             white-space: nowrap;
             flex-shrink: 0;
 
             .amount-label {
-              font-size: 0.857rem /* 原值: 12px */;
-              color: #909399;
+              font-size: @nordic-text-xs;
+              color: @merchant-text-muted;
               font-weight: 500;
             }
 
@@ -1485,15 +1485,15 @@ onMounted(() => {
             display: flex;
             align-items: center;
             gap: 6px;
-            color: #606266;
-            font-size: 0.929rem /* 原值: 13px */;
+            color: @merchant-text-sec;
+            font-size: @nordic-text-sm;
             white-space: nowrap;
             flex-shrink: 0;
             justify-self: end;
 
             .time-label {
-              color: #909399;
-              font-size: 0.857rem /* 原值: 12px */;
+              color: @merchant-text-muted;
+              font-size: @nordic-text-xs;
               font-weight: 500;
             }
 
@@ -1504,32 +1504,32 @@ onMounted(() => {
         }
         // 菜品列表样式
         .order-dishes-list {
-          margin-top: 12px;
-          padding: 12px 16px;
-          background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+          margin-top: @nordic-space-md;
+          padding: @nordic-space-md 16px;
+          background: linear-gradient(135deg, @merchant-surface-alt 0%, @merchant-surface 100%);
           border-radius: 10px;
-          border: 1px solid #e8eef5;
-          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+          border: 1px solid @merchant-border;
+          box-shadow: 0 1px 4px @merchant-shadow;
 
           .dishes-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 10px;
-            padding-bottom: 8px;
-            border-bottom: 1px dashed #e2e8f0;
+            padding-bottom: @nordic-space-sm;
+            border-bottom: 1px dashed @merchant-border;
 
             .dishes-title {
-              font-size: 0.929rem /* 原值: 13px */;
+              font-size: @nordic-text-sm;
               font-weight: 600;
-              color: #303133;
+              color: @merchant-text;
             }
 
             .dishes-count {
-              font-size: 0.857rem /* 原值: 12px */;
-              color: #909399;
-              background: #f0f2f5;
-              padding: 2px 8px;
+              font-size: @nordic-text-xs;
+              color: @merchant-text-muted;
+              background: @merchant-surface-alt;
+              padding: 2px @nordic-space-sm;
               border-radius: 10px;
             }
           }
@@ -1537,21 +1537,21 @@ onMounted(() => {
           .dishes-items {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: @nordic-space-sm;
 
             .dish-item {
               display: flex;
               justify-content: space-between;
               align-items: center;
-              padding: 8px 12px;
-              background: #ffffff;
-              border-radius: 8px;
-              border: 1px solid #f0f0f0;
+              padding: @nordic-space-sm @nordic-space-md;
+              background: @merchant-surface;
+              border-radius: @nordic-radius-sm;
+              border: 1px solid @merchant-divider;
               transition: all 0.2s ease;
 
               &:hover {
-                border-color: #667eea;
-                box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+                border-color: @merchant-primary;
+                box-shadow: 0 2px 8px rgba(74, 122, 77, 0.1);
                 transform: translateX(4px);
               }
 
@@ -1563,33 +1563,33 @@ onMounted(() => {
                 min-width: 0;
 
                 .dish-name {
-                  font-size: 1rem /* 原值: 14px */;
+                  font-size: @nordic-text-base;
                   font-weight: 500;
-                  color: #303133;
+                  color: @merchant-text;
                   overflow: hidden;
                   text-overflow: ellipsis;
                   white-space: nowrap;
                 }
 
                 .dish-quantity {
-                  font-size: 0.929rem /* 原值: 13px */;
-                  color: #667eea;
+                  font-size: @nordic-text-sm;
+                  color: @merchant-primary;
                   font-weight: 600;
                   flex-shrink: 0;
                   background: linear-gradient(
                     135deg,
-                    rgba(102, 126, 234, 0.1) 0%,
-                    rgba(102, 126, 234, 0.05) 100%
+                    rgba(74, 122, 77, 0.1) 0%,
+                    rgba(74, 122, 77, 0.05) 100%
                   );
-                  padding: 2px 8px;
-                  border-radius: 12px;
+                  padding: 2px @nordic-space-sm;
+                  border-radius: @nordic-radius-pill;
                 }
               }
 
               .dish-price {
-                font-size: 1rem /* 原值: 14px */;
+                font-size: @nordic-text-base;
                 font-weight: 600;
-                color: #f56c6c;
+                color: @merchant-secondary;
                 font-family: 'Consolas', 'Monaco', monospace;
                 flex-shrink: 0;
               }
@@ -1600,20 +1600,20 @@ onMounted(() => {
         .order-user-info {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-          gap: 10px 20px;
-          margin-top: 16px;
-          font-size: 1rem /* 原值: 14px */;
-          color: #606266;
+          gap: 10px @nordic-space-lg;
+          margin-top: @nordic-space-lg;
+          font-size: @nordic-text-base;
+          color: @merchant-text-sec;
 
           > div {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: @nordic-space-sm;
             min-width: 0;
 
             .info-label {
-              font-size: 0.857rem /* 原值: 12px */;
-              color: #909399;
+              font-size: @nordic-text-xs;
+              color: @merchant-text-muted;
               font-weight: 500;
               flex-shrink: 0;
               min-width: 36px;
@@ -1633,10 +1633,10 @@ onMounted(() => {
         display: flex;
         flex-direction: column;
         align-items: flex-end;
-        gap: 12px;
+        gap: @nordic-space-md;
         flex-shrink: 0;
         align-self: flex-start;
-        padding-left: 8px;
+        padding-left: @nordic-space-sm;
 
         .order-status {
           position: relative;
@@ -1653,14 +1653,14 @@ onMounted(() => {
         display: flex;
         justify-content: flex-end;
         align-items: center;
-        gap: 8px;
+        gap: @nordic-space-sm;
         width: 100%;
-        padding-top: 12px;
+        padding-top: @nordic-space-md;
         flex-wrap: wrap;
 
         .primary-actions {
           display: flex;
-          gap: 8px;
+          gap: @nordic-space-sm;
           align-items: center;
           flex-wrap: wrap;
         }
@@ -1669,23 +1669,23 @@ onMounted(() => {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          gap: 4px;
+          gap: @nordic-space-xs;
           padding: 6px 14px;
-          font-size: 0.929rem /* 原值: 13px */;
+          font-size: @nordic-text-sm;
           font-weight: 500;
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           border-radius: 6px;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          box-shadow: 0 1px 3px @merchant-shadow;
           height: 32px;
           white-space: nowrap;
 
           .el-icon {
-            font-size: 1rem /* 原值: 14px */;
+            font-size: @nordic-text-base;
           }
 
           &:hover {
             transform: translateY(-1px);
-            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 3px 8px @merchant-shadow-hover;
           }
 
           &:active {
@@ -1693,12 +1693,12 @@ onMounted(() => {
           }
 
           &.detail-btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, @merchant-primary 0%, @merchant-primary-dark 100%);
             border: none;
-            color: white;
+            color: @merchant-surface;
 
             &:hover {
-              background: linear-gradient(135deg, #5568d3 0%, #653a8b 100%);
+              background: linear-gradient(135deg, darken(@merchant-primary, 5%) 0%, darken(@merchant-primary-dark, 5%) 100%);
             }
           }
 
@@ -1708,26 +1708,26 @@ onMounted(() => {
           }
 
           &.complete-btn {
-            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            background: linear-gradient(135deg, @merchant-success 0%, lighten(@merchant-success, 15%) 100%);
             border: none;
-            color: white;
+            color: @merchant-surface;
 
             &:hover {
-              background: linear-gradient(135deg, #0e837a 0%, #2ed16b 100%);
-              box-shadow: 0 3px 10px rgba(56, 239, 125, 0.3);
+              background: linear-gradient(135deg, darken(@merchant-success, 5%) 0%, lighten(@merchant-success, 10%) 100%);
+              box-shadow: 0 3px 10px rgba(90, 143, 94, 0.3);
             }
           }
 
           &:disabled {
             opacity: 0.5;
             cursor: not-allowed;
-            background: #f5f5f5;
-            border-color: #d9d9d9;
-            color: #999;
+            background: @merchant-surface-alt;
+            border-color: @merchant-border;
+            color: @merchant-text-muted;
 
             &:hover {
               transform: none;
-              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+              box-shadow: 0 1px 3px @merchant-shadow;
             }
           }
         }
@@ -1752,16 +1752,16 @@ onMounted(() => {
           .el-dropdown-menu__item {
             display: flex;
             align-items: center;
-            gap: 8px;
-            padding: 8px 16px;
-            font-size: 0.929rem /* 原值: 13px */;
+            gap: @nordic-space-sm;
+            padding: @nordic-space-sm 16px;
+            font-size: @nordic-text-sm;
 
             .el-icon {
-              font-size: 1.143rem /* 原值: 16px */;
+              font-size: @nordic-text-md;
             }
 
             &:hover {
-              background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+              background: linear-gradient(135deg, @merchant-surface-alt 0%, @merchant-bg 100%);
             }
           }
         }
@@ -1920,32 +1920,41 @@ onMounted(() => {
 .sort-option {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: @nordic-space-sm;
 
   .el-icon {
-    font-size: 1rem;
-    color: #667eea;
+    font-size: @nordic-text-base;
+    color: @merchant-primary;
   }
 
   span {
-    font-size: 0.929rem;
+    font-size: @nordic-text-sm;
   }
 }
 
 // 排序下拉选择器弹窗样式
 :deep(.sort-select-popper) {
   .el-select-dropdown__item {
-    padding: 8px 12px;
+    padding: @nordic-space-sm @nordic-space-md;
 
     &.selected {
-      background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 131, 248, 0.1) 100%);
-      color: #667eea;
+      background: linear-gradient(135deg, rgba(74, 122, 77, 0.1) 0%, rgba(74, 122, 77, 0.08) 100%);
+      color: @merchant-primary;
       font-weight: 500;
     }
 
     &:hover {
-      background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 131, 248, 0.08) 100%);
+      background: linear-gradient(135deg, rgba(74, 122, 77, 0.08) 0%, rgba(74, 122, 77, 0.05) 100%);
     }
   }
+}
+
+// 下拉菜单文字颜色
+.dropdown-text-warning {
+  color: @merchant-warning;
+}
+
+.dropdown-text-danger {
+  color: @merchant-error;
 }
 </style>

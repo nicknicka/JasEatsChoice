@@ -619,6 +619,9 @@ const stopResize = () => {
 </template>
 
 <style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+@import '../../assets/css/merchant-theme.less';
+
 .chat-optimized-container {
   padding: 0 20px 20px 20px;
   height: calc(100vh - 60px);
@@ -630,7 +633,7 @@ const stopResize = () => {
       font-size: 1.286rem /* 原值: 18px */;
       font-weight: 600;
       margin: 0;
-      color: #1f2937;
+      color: @merchant-text;
     }
   }
 
@@ -640,9 +643,9 @@ const stopResize = () => {
     gap: 16px;
     margin-bottom: 16px;
     padding: 12px 16px;
-    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    background: @merchant-surface;
     border-radius: 12px;
-    border: 1px solid #e8eef5;
+    border: 1px solid @merchant-border;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 
     .search-input {
@@ -663,11 +666,11 @@ const stopResize = () => {
     .conversation-list-container {
       flex-shrink: 0;
       transition: width 0.1s ease;
-      border: 1px solid #e8eef5;
+      border: 1px solid @merchant-border;
       border-right: none;
       border-radius: 16px 0 0 16px;
       overflow: hidden;
-      background: #ffffff;
+      background: @merchant-surface;
       height: 100%;
     }
 
@@ -678,33 +681,33 @@ const stopResize = () => {
       align-items: center;
       justify-content: center;
       cursor: col-resize;
-      background: #e8eef5;
+      background: @merchant-border;
       transition: all 0.2s ease;
       position: relative;
       user-select: none;
 
       &:hover {
-        background: #3b82f6;
+        background: @merchant-primary;
         width: 8px;
 
         .resize-handle-bar {
-          background: #ffffff;
+          background: @merchant-surface;
         }
       }
 
       &.is-resizing {
-        background: #3b82f6;
+        background: @merchant-primary;
         width: 8px;
 
         .resize-handle-bar {
-          background: #ffffff;
+          background: @merchant-surface;
         }
       }
 
       .resize-handle-bar {
         width: 3px;
         height: 40px;
-        background: #cbd5e1;
+        background: @merchant-border;
         border-radius: 2px;
         transition: all 0.2s ease;
       }
@@ -712,19 +715,19 @@ const stopResize = () => {
 
     .chat-area {
       flex: 1;
-      border: 1px solid #e8eef5;
+      border: 1px solid @merchant-border;
       border-left: none;
       border-radius: 0 16px 16px 0;
       display: flex;
       flex-direction: column;
-      background: #ffffff;
+      background: @merchant-surface;
       box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
       overflow: hidden;
 
       .chat-area-header {
         padding: 16px 20px;
-        border-bottom: 1px solid #e8eef5;
-        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+        border-bottom: 1px solid @merchant-border;
+        background: @merchant-surface;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
         flex-shrink: 0;
 
@@ -736,12 +739,12 @@ const stopResize = () => {
             .name {
               font-size: 1.143rem /* 原值: 16px */;
               font-weight: 600;
-              color: #1f2937;
+              color: @merchant-text;
             }
 
             .member-count {
               font-size: 0.857rem /* 原值: 12px */;
-              color: #909399;
+              color: @merchant-text-muted;
               margin-left: 8px;
             }
           }

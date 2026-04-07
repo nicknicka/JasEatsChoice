@@ -475,6 +475,8 @@ const reRecognize = () => {
 </script>
 
 <style scoped lang="less">
+@import '../../../../assets/css/nordic-theme.less';
+
 .recognition-content-wrapper {
   display: flex;
   flex-direction: column;
@@ -492,23 +494,20 @@ const reRecognize = () => {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  background-color: #fff;
-  border-radius: 16px;
   padding: 24px;
   box-sizing: border-box;
-  box-shadow: 0 2px 16px 0 rgba(0, 0, 0, 0.06);
 
   .upload-area {
     margin-bottom: 24px;
 
     .upload-zone {
-      border: 3px dashed #ff6b6b;
+      border: 3px dashed @nordic-accent;
       border-radius: 16px;
       padding: 48px;
       text-align: center;
       cursor: pointer;
       transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-      background: linear-gradient(135deg, #fff9fa 0%, #fff 100%);
+      background: linear-gradient(135deg, @nordic-accent-light 0%, #fff 100%);
       position: relative;
       overflow: hidden;
 
@@ -520,16 +519,16 @@ const reRecognize = () => {
         width: 0;
         height: 0;
         border-radius: 50%;
-        background: radial-gradient(circle, rgba(255, 107, 107, 0.1) 0%, transparent 70%);
+        background: radial-gradient(circle, rgba(212, 132, 90, 0.1) 0%, transparent 70%);
         transform: translate(-50%, -50%);
         transition: width 0.6s ease, height 0.6s ease;
       }
 
       &:hover {
-        border-color: #ff5252;
-        background: linear-gradient(135deg, #ffe8e8 0%, #fff 100%);
+        border-color: @nordic-accent-dark;
+        background: linear-gradient(135deg, @nordic-accent-light 0%, #fff 100%);
         transform: scale(1.02);
-        box-shadow: 0 8px 24px rgba(255, 107, 107, 0.2);
+        box-shadow: 0 8px 24px rgba(212, 132, 90, 0.2);
 
         &::before {
           width: 600px;
@@ -560,7 +559,7 @@ const reRecognize = () => {
 
       .upload-placeholder {
         .camera-icon {
-          color: #ff6b6b;
+          color: @nordic-accent;
           margin-bottom: 16px;
           font-size: 56px;
           display: inline-block;
@@ -679,7 +678,7 @@ const reRecognize = () => {
       height: 54px;
       font-size: 17px;
       font-weight: 600;
-      background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%);
+      background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
       border: none;
       transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
       border-radius: 14px;
@@ -701,7 +700,7 @@ const reRecognize = () => {
 
       &:hover:not(:disabled) {
         transform: translateY(-3px);
-        box-shadow: 0 12px 28px rgba(255, 107, 107, 0.5);
+        box-shadow: 0 12px 28px rgba(212, 132, 90, 0.5);
 
         &::before {
           width: 500px;
@@ -711,7 +710,7 @@ const reRecognize = () => {
 
       &:active:not(:disabled) {
         transform: translateY(-1px);
-        box-shadow: 0 6px 16px rgba(255, 107, 107, 0.4);
+        box-shadow: 0 6px 16px rgba(212, 132, 90, 0.4);
       }
 
       &:disabled {
@@ -733,7 +732,7 @@ const reRecognize = () => {
         font-weight: 700;
         color: #303133;
         margin: 0;
-        background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%);
+        background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
@@ -746,8 +745,8 @@ const reRecognize = () => {
       gap: 18px;
 
       .result-card {
-        background: linear-gradient(135deg, #fff 0%, #fff9fa 100%);
-        border: 2px solid #ffe0e3;
+        background: linear-gradient(135deg, #fff 0%, @nordic-accent-light 100%);
+        border: 2px solid @nordic-border;
         border-radius: 16px;
         padding: 24px;
         opacity: 0;
@@ -769,8 +768,8 @@ const reRecognize = () => {
 
         &:hover {
           transform: translateY(-8px);
-          box-shadow: 0 12px 32px rgba(255, 107, 107, 0.25);
-          border-color: #ff6b6b;
+          box-shadow: 0 12px 32px rgba(212, 132, 90, 0.25);
+          border-color: @nordic-accent;
 
           &::before {
             left: 100%;
@@ -779,11 +778,11 @@ const reRecognize = () => {
 
         &.main-card {
           grid-column: 1 / -1;
-          background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%);
+          background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
           border: none;
 
           &:hover {
-            box-shadow: 0 12px 32px rgba(255, 107, 107, 0.4);
+            box-shadow: 0 12px 32px rgba(212, 132, 90, 0.4);
           }
 
           .card-label {
@@ -801,10 +800,10 @@ const reRecognize = () => {
 
         &.calories-card {
           .card-value.highlight {
-            color: #ff6b6b;
+            color: @nordic-accent;
             font-size: 2.286rem /* 原值: 32px */;
             font-weight: 700;
-            background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%);
+            background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;

@@ -238,6 +238,9 @@ const getPaymentMethodName = (method) => {
 </script>
 
 <style lang="scss" scoped>
+@import '../../../assets/css/nordic-theme.less';
+@import '../../../assets/css/merchant-theme.less';
+
 .payment-dialog {
   :deep(.el-dialog__body) {
     padding: 20px;
@@ -248,7 +251,7 @@ const getPaymentMethodName = (method) => {
   .order-summary {
     margin-bottom: 24px;
     padding: 16px;
-    background: #f8f9fa;
+    background: @merchant-surface-alt;
     border-radius: 8px;
 
     .summary-item {
@@ -264,23 +267,23 @@ const getPaymentMethodName = (method) => {
 
       &.total {
         padding-top: 12px;
-        border-top: 1px solid #dee2e6;
+        border-top: 1px solid @merchant-border;
         font-weight: 600;
         font-size: 16px;
 
         .amount {
           font-size: 24px;
-          color: #f56c6c;
+          color: @merchant-error;
           font-weight: 700;
         }
       }
 
       .label {
-        color: #666;
+        color: @merchant-text-sec;
       }
 
       .value {
-        color: #333;
+        color: @merchant-text;
         font-weight: 500;
       }
     }
@@ -294,8 +297,8 @@ const getPaymentMethodName = (method) => {
       align-items: center;
       gap: 12px;
       padding: 16px;
-      background: #fff;
-      border: 2px solid #e9ecef;
+      background: @merchant-surface;
+      border: 2px solid @merchant-border;
       border-radius: 8px;
       margin-bottom: 12px;
       cursor: pointer;
@@ -306,13 +309,13 @@ const getPaymentMethodName = (method) => {
       }
 
       &:hover {
-        border-color: #667eea;
-        background: #f8f9fa;
+        border-color: @merchant-primary;
+        background: @merchant-surface-alt;
       }
 
       &.is-selected {
-        border-color: #667eea;
-        background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+        border-color: @merchant-primary;
+        background: linear-gradient(135deg, rgba(74, 122, 77, 0.05) 0%, rgba(58, 96, 61, 0.05) 100%);
       }
 
       .method-icon {
@@ -322,7 +325,7 @@ const getPaymentMethodName = (method) => {
         align-items: center;
         justify-content: center;
         font-size: 28px;
-        background: #f8f9fa;
+        background: @merchant-surface-alt;
         border-radius: 8px;
         flex-shrink: 0;
       }
@@ -333,13 +336,13 @@ const getPaymentMethodName = (method) => {
         .method-name {
           font-size: 16px;
           font-weight: 600;
-          color: #333;
+          color: @merchant-text;
           margin-bottom: 4px;
         }
 
         .method-description {
           font-size: 13px;
-          color: #666;
+          color: @merchant-text-sec;
         }
       }
 
@@ -364,7 +367,7 @@ const getPaymentMethodName = (method) => {
       font-size: 14px;
 
       .insufficient {
-        color: #f56c6c;
+        color: @merchant-error;
         font-weight: 600;
       }
     }

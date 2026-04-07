@@ -128,11 +128,14 @@ defineExpose({
 </template>
 
 <style scoped lang="less">
+@import '../../../../assets/css/nordic-theme.less';
+@import '../../../../assets/css/merchant-theme.less';
+
 .chat-message-list {
   flex: 1;
   padding: 18px 20px;
   overflow-y: auto;
-  background: linear-gradient(180deg, #f8f9fa 0%, #ffffff 100%);
+  background: linear-gradient(180deg, @merchant-surface-alt 0%, @merchant-surface 100%);
 
   .messages-wrapper {
     display: flex;
@@ -148,17 +151,17 @@ defineExpose({
         margin-left: auto;
 
         .message-content {
-          background: #dbeafe;
-          border: 1px solid #93c5fd;
-          color: #1e3a8a;
-          box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+          background: @merchant-info-light;
+          border: 1px solid @merchant-info;
+          color: @merchant-primary-dark;
+          box-shadow: 0 2px 8px @merchant-shadow;
 
           .message-text {
             font-weight: 500;
           }
 
           .message-time {
-            color: #60a5fa;
+            color: @merchant-info;
           }
         }
       }
@@ -167,13 +170,13 @@ defineExpose({
         align-self: flex-start;
 
         .message-content {
-          background: #f0fdf4;
-          border: 1px solid #86efac;
-          color: #166534;
-          box-shadow: 0 2px 8px rgba(34, 197, 94, 0.15);
+          background: @merchant-success-light;
+          border: 1px solid @merchant-success;
+          color: @merchant-primary-dark;
+          box-shadow: 0 2px 8px @merchant-shadow;
 
           .message-time {
-            color: #4ade80;
+            color: @merchant-success;
           }
         }
       }
@@ -182,24 +185,24 @@ defineExpose({
         margin-bottom: 6px;
 
         .sender-name {
-          font-size: 0.857rem /* 原值: 12px */;
-          color: #666;
+          font-size: @nordic-text-xs;
+          color: @merchant-text-sec;
           font-weight: 500;
         }
       }
 
       .message-content {
-        border-radius: 14px;
+        border-radius: @nordic-radius-lg;
         padding: 12px 16px;
         transition: all 0.2s ease;
 
         &:hover {
           transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          box-shadow: 0 4px 12px @merchant-shadow-hover;
         }
 
         .message-text {
-          font-size: 1rem /* 原值: 14px */;
+          font-size: @nordic-text-base;
           line-height: 1.6;
           word-wrap: break-word;
           white-space: pre-wrap;
@@ -210,7 +213,7 @@ defineExpose({
           font-size: 0.75rem /* 原值: 11px */;
           margin-top: 6px;
           font-weight: 500;
-          color: #9ca3af;
+          color: @merchant-text-muted;
         }
       }
     }
@@ -241,15 +244,15 @@ defineExpose({
 }
 
 .chat-message-list::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: @merchant-divider;
 }
 
 .chat-message-list::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: @merchant-border;
   border-radius: 3px;
 }
 
 .chat-message-list::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: @merchant-text-muted;
 }
 </style>
