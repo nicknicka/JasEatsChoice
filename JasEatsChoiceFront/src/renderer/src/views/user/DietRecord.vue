@@ -576,7 +576,8 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: @nordic-space-lg;
-  padding: 0;
+  padding: 0 @nordic-space-xl;
+  box-sizing: border-box;
 }
 
 /* 顶部日历区域 */
@@ -606,6 +607,7 @@ onMounted(() => {
 
 .title-icon {
   font-size: 2.286rem;
+  color: @nordic-surface;
 }
 
 .calendar-control {
@@ -781,6 +783,23 @@ onMounted(() => {
 
 .meal-icon {
   font-size: 1.714rem;
+  color: @nordic-surface;
+}
+
+.meal-section-header.breakfast .meal-icon {
+  color: @nordic-accent-light;
+}
+
+.meal-section-header.lunch .meal-icon {
+  color: @nordic-yellow-light;
+}
+
+.meal-section-header.dinner .meal-icon {
+  color: @nordic-blue-light;
+}
+
+.meal-section-header.snack .meal-icon {
+  color: @nordic-green-light;
 }
 
 .meal-count {
@@ -862,6 +881,10 @@ onMounted(() => {
 
 /* 响应式设计 */
 @media (max-width: @nordic-breakpoint-md) {
+  .diet-record-container {
+    padding: 0 @nordic-space-lg;
+  }
+
   .calendar-section {
     padding: @nordic-space-lg;
   }
@@ -890,6 +913,10 @@ onMounted(() => {
 }
 
 @media (max-width: 480px) {
+  .diet-record-container {
+    padding: 0 @nordic-space-md;
+  }
+
   .stats-card {
     flex-direction: column;
     gap: @nordic-space-lg;

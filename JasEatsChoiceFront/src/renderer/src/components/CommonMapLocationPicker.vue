@@ -221,7 +221,7 @@ const loadAMapSDK = () => {
 
     // 动态创建 script 标签加载 SDK
     const script = document.createElement('script')
-    script.src = 'https://webapi.amap.com/maps?v=1.4.15&key=140e4ebfe143855a4cc7440533ff27b3&plugin=AMap.Scale,AMap.ToolBar,AMap.Geocoder,AMap.PlaceSearch,AMap.Geolocation'
+    script.src = 'https://webapi.amap.com/maps?v=1.4.15&key=140e4ebfe143855a4cc7440533ff27b3&plugin=AMap.Scale,AMap.ToolBar,AMap.Geocoder,AMap.PlaceSearch,AMap.Geolocation,AMap.CitySearch'
     script.type = 'text/javascript'
 
     const timeout = setTimeout(() => {
@@ -490,6 +490,62 @@ const selectSearchResult = (item) => {
   }
 }
 
+// 城市级定位兜底（避免依赖浏览器定位服务）
+const tryCitySearchFallback = async () => {
+  if (!map.value || typeof AMap === 'undefined' || !AMap.CitySearch) {
+    return null
+  }
+
+  try {
+    const cityResult = await new Promise((resolve, reject) => {
+      const citySearch = new AMap.CitySearch()
+      citySearch.getLocalCity((status, result) => {
+        if (status === 'complete' && result) {
+          resolve(result)
+        } else {
+          const detail = typeof result === 'object' ? JSON.stringify(result) : String(result || '')
+          reject(new Error(result?.info || detail || '城市级定位失败'))
+        }
+      })
+    })
+
+    // 优先使用行政区 bounds 的中心点
+    if (cityResult?.bounds && typeof cityResult.bounds.getCenter === 'function') {
+      const center = cityResult.bounds.getCenter()
+      if (center?.lng && center?.lat) {
+        return {
+          lng: center.lng,
+          lat: center.lat,
+          city: cityResult.city || cityResult.province || ''
+        }
+      }
+    }
+
+    // 如果没有 bounds 坐标，退化到城市名地理编码
+    const fallbackAddress = cityResult?.city || cityResult?.province
+    if (fallbackAddress && AMap.Geocoder) {
+      const geocoder = new AMap.Geocoder()
+      const geocodeResult = await new Promise((resolve) => {
+        geocoder.getLocation(fallbackAddress, (status, result) => {
+          resolve(status === 'complete' && result.geocodes?.length > 0 ? result.geocodes[0] : null)
+        })
+      })
+
+      if (geocodeResult?.location?.lng && geocodeResult?.location?.lat) {
+        return {
+          lng: geocodeResult.location.lng,
+          lat: geocodeResult.location.lat,
+          city: fallbackAddress
+        }
+      }
+    }
+  } catch (error) {
+    console.log('城市级兜底定位失败:', error.message)
+  }
+
+  return null
+}
+
 // 获取当前位置（直接使用 IP 定位）
 const handleGetCurrentLocation = async () => {
   locating.value = true
@@ -567,7 +623,7 @@ const handleGetCurrentLocation = async () => {
           timeout: 15000,
           zoomToAccuracy: true,
           GeoLocationFirst: false,
-          noIpLocate: 0,
+          noIpLocate: 1,
           needAddress: false,
           extensions: 'base'
         })
@@ -595,7 +651,19 @@ const handleGetCurrentLocation = async () => {
     }
   }
 
-  // ========== 第四级：使用默认位置 ==========
+  // ========== 第四级：城市级兜底（不依赖 Google 定位服务） ==========
+  const cityFallback = await tryCitySearchFallback()
+  if (cityFallback) {
+    console.log('城市级兜底定位成功:', cityFallback)
+    updateMarkerPosition(cityFallback.lng, cityFallback.lat)
+    getAddressByLocation(cityFallback.lng, cityFallback.lat)
+    saveLastLocation(cityFallback.lng, cityFallback.lat)
+    locating.value = false
+    ElMessage.success('定位成功（城市级）')
+    return
+  }
+
+  // ========== 第五级：使用默认位置 ==========
   console.log('使用默认位置')
   if (props.defaultPosition) {
     updateMarkerPosition(props.defaultPosition.lng, props.defaultPosition.lat)
@@ -744,7 +812,7 @@ const autoLocate = async () => {
           timeout: 10000,
           zoomToAccuracy: true,
           GeoLocationFirst: false,
-          noIpLocate: 0,
+          noIpLocate: 1,
           needAddress: false,
           extensions: 'base'
         })
@@ -769,7 +837,17 @@ const autoLocate = async () => {
     }
   }
 
-  // ========== 第四级：使用默认位置（北京） ==========
+  // ========== 第四级：城市级兜底（不依赖 Google 定位服务） ==========
+  const cityFallback = await tryCitySearchFallback()
+  if (cityFallback) {
+    console.log('城市级兜底定位成功:', cityFallback)
+    updateMarkerPosition(cityFallback.lng, cityFallback.lat)
+    getAddressByLocation(cityFallback.lng, cityFallback.lat)
+    saveLastLocation(cityFallback.lng, cityFallback.lat)
+    return
+  }
+
+  // ========== 第五级：使用默认位置（北京） ==========
   console.log('使用默认位置（北京）')
   if (props.defaultPosition) {
     updateMarkerPosition(props.defaultPosition.lng, props.defaultPosition.lat)

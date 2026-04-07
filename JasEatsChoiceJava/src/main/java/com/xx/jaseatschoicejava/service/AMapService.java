@@ -137,11 +137,7 @@ public class AMapService {
             }
         } catch (Exception e) {
             log.error("高德地图地理编码异常", e);
-            return Map.of(
-                "code", "500",
-                "message", "地理编码异常: " + e.getMessage(),
-                "data", null
-            );
+            return buildResult("500", "地理编码异常: " + e.getMessage(), null);
         }
     }
 
@@ -157,34 +153,36 @@ public class AMapService {
                 JsonNode geocodes = jsonNode.path("geocodes");
                 if (geocodes != null && geocodes.isArray() && geocodes.size() > 0) {
                     JsonNode geocode = geocodes.get(0);
-                    JsonNode location = geocode.path("location");
+                    String locationStr = geocode.path("location").asText("");
 
-                    if (location != null) {
-                        return Map.of(
-                            "code", "200",
-                            "message", "地理编码成功",
-                            "data", Map.of(
-                                "lng", location.path("lng").asText(),
-                                "lat", location.path("lat").asText(),
-                                "formattedAddress", geocode.path("formattedAddress").asText()
-                            )
-                        );
+                    if (!locationStr.isEmpty()) {
+                        String[] coords = locationStr.split(",");
+                        if (coords.length == 2) {
+                            String lng = coords[0].trim();
+                            String lat = coords[1].trim();
+
+                            return Map.of(
+                                "code", "200",
+                                "message", "地理编码成功",
+                                "data", Map.of(
+                                    "lng", lng,
+                                    "lat", lat,
+                                    "formattedAddress", geocode.path("formatted_address").asText("")
+                                )
+                            );
+                        }
                     }
+
+                    // location 字段解析失败，返回明确错误信息，便于排查第三方接口格式变化
+                    log.warn("地理编码返回location字段格式异常: {}", locationStr);
+                    return buildResult("500", "地理编码返回坐标格式异常", null);
                 }
             }
 
-            return Map.of(
-                "code", "404",
-                "message", "未找到该地址",
-                "data", null
-            );
+            return buildResult("404", "未找到该地址", null);
         } catch (Exception e) {
             log.error("解析地理编码响应异常", e);
-            return Map.of(
-                "code", "500",
-                "message", "解析响应失败",
-                "data", null
-            );
+            return buildResult("500", "解析响应失败", null);
         }
     }
 
@@ -219,19 +217,22 @@ public class AMapService {
                 }
             }
 
-            return Map.of(
-                "code", "404",
-                "message", "未找到该位置",
-                "data", null
-            );
+            return buildResult("404", "未找到该位置", null);
         } catch (Exception e) {
             log.error("高德地图逆地理编码异常", e);
-            return Map.of(
-                "code", "500",
-                "message", "逆地理编码异常: " + e.getMessage(),
-                "data", null
-            );
+            return buildResult("500", "逆地理编码异常: " + e.getMessage(), null);
         }
+    }
+
+    /**
+     * 构建响应结果（支持 null 值，避免 Map.of() 的 NPE 问题）
+     */
+    private Map<String, Object> buildResult(String code, String message, Object data) {
+        Map<String, Object> result = new HashMap<>();
+        result.put("code", code);
+        result.put("message", message);
+        result.put("data", data);
+        return result;
     }
 
     /**
@@ -242,53 +243,65 @@ public class AMapService {
     public Map<String, Object> ipLocation() {
         try {
             String url = "https://restapi.amap.com/v3/ip";
+            String apiKey = aMapConfig.getApiKey();
+
+            if (apiKey == null || apiKey.trim().isEmpty()) {
+                log.error("高德IP定位失败: amap.api-key 未配置");
+                return buildResult("500", "IP定位失败: amap.api-key 未配置", null);
+            }
 
             ResponseEntity<String> response = restTemplate.getForEntity(
                 url + "?key={key}",
                 String.class,
-                aMapConfig.getApiKey()
+                apiKey
             );
 
+            String responseBody = response.getBody();
+            if (responseBody == null || responseBody.isEmpty()) {
+                log.error("高德IP定位失败: 响应体为空");
+                return buildResult("500", "IP定位失败: 高德接口响应为空", null);
+            }
+
             ObjectMapper mapper = new ObjectMapper();
-            JsonNode jsonNode = mapper.readTree(response.getBody());
+            JsonNode jsonNode = mapper.readTree(responseBody);
+
+            log.debug("高德IP定位原始响应: {}", responseBody);
 
             if ("1".equals(jsonNode.path("status").asText())) {
-                JsonNode locationNode = jsonNode.path("rectangle");
                 String province = jsonNode.path("province").asText("");
                 String city = jsonNode.path("city").asText("");
 
-                // 高德 IP 定位返回的是一个矩形范围，取中心点
-                if (locationNode != null && !locationNode.isMissingNode()) {
-                    String rectangle = locationNode.asText();
-                    String[] points = rectangle.split(";");
-                    if (points.length >= 2) {
-                        String[] southwest = points[0].split(",");
-                        String[] northeast = points[1].split(",");
-
-                        if (southwest.length == 2 && northeast.length == 2) {
-                            // 计算中心点
-                            double lng = (Double.parseDouble(southwest[0]) + Double.parseDouble(northeast[0])) / 2;
-                            double lat = (Double.parseDouble(southwest[1]) + Double.parseDouble(northeast[1])) / 2;
+                // 高德 IP 定位 API 直接返回 location 字段（经纬度）
+                JsonNode locationNode = jsonNode.path("location");
+                if (locationNode != null && !locationNode.isMissingNode() && !locationNode.asText().isEmpty()) {
+                    String locationStr = locationNode.asText();
+                    String[] coords = locationStr.split(",");
+                    if (coords.length == 2) {
+                        try {
+                            double lng = Double.parseDouble(coords[0]);
+                            double lat = Double.parseDouble(coords[1]);
 
                             Map<String, Object> locationData = new HashMap<>();
                             locationData.put("lng", lng);
                             locationData.put("lat", lat);
                             locationData.put("province", province);
                             locationData.put("city", city);
-                            locationData.put("accuracy", "city"); // 标识精度级别
+                            locationData.put("accuracy", "city");
 
-                            log.info("IP定位成功: {} {}, 精度: 城市级", province, city);
+                            log.info("IP定位成功: {} {}, lng={}, lat={}", province, city, lng, lat);
 
                             return Map.of(
                                 "code", "200",
                                 "message", "IP定位成功",
                                 "data", locationData
                             );
+                        } catch (NumberFormatException e) {
+                            log.warn("解析坐标失败: {}", locationStr);
                         }
                     }
                 }
 
-                // 如果没有矩形数据，尝试通过城市名做地理编码获取坐标
+                // 如果没有坐标，尝试通过城市名做地理编码获取坐标
                 if (!province.isEmpty() || !city.isEmpty()) {
                     String address = city.isEmpty() ? province : city;
                     log.info("IP定位无坐标，尝试地理编码: {}", address);
@@ -332,20 +345,34 @@ public class AMapService {
                         "data", locationData
                     );
                 }
+            } else {
+                String info = jsonNode.path("info").asText();
+                String infocode = jsonNode.path("infocode").asText();
+                log.error("高德IP定位API返回错误 - status: {}, info: {}, infocode: {}",
+                    jsonNode.path("status").asText(), info, infocode);
+
+                String detail = String.format("IP定位失败: %s (%s)",
+                    info == null || info.isEmpty() ? "未知错误" : info,
+                    infocode == null || infocode.isEmpty() ? "NO_INFOCODE" : infocode);
+                return buildResult("500", detail, null);
             }
 
-            return Map.of(
-                "code", "404",
-                "message", "IP定位失败",
-                "data", null
+            String status = jsonNode.path("status").asText("");
+            String info = jsonNode.path("info").asText("");
+            String infocode = jsonNode.path("infocode").asText("");
+            String province = jsonNode.path("province").asText("");
+            String city = jsonNode.path("city").asText("");
+            String location = jsonNode.path("location").asText("");
+
+            String detail = String.format(
+                "IP定位失败: 未获取到有效位置数据 [status=%s, info=%s, infocode=%s, province=%s, city=%s, location=%s]",
+                status, info, infocode, province, city, location
             );
+            log.error(detail);
+            return buildResult("500", detail, null);
         } catch (Exception e) {
             log.error("高德地图IP定位异常", e);
-            return Map.of(
-                "code", "500",
-                "message", "IP定位异常: " + e.getMessage(),
-                "data", null
-            );
+            return buildResult("500", "IP定位异常: " + e.getMessage(), null);
         }
     }
 }

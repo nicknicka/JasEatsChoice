@@ -3,6 +3,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { ref, onMounted, computed, watch, provide, nextTick } from 'vue'
 import {
   Search,
+  Close,
   Menu,
   Shop,
   Calendar,
@@ -353,7 +354,7 @@ const updateActiveMenuIndex = () => {
   }
 
   // 重置侧边栏宽度为默认值，防止自动展开菜单时宽度变宽
-  sidebarWidth.value = '170px' // 这里的默认宽度要和初始化时一致
+  sidebarWidth.value = '200px' // 这里的默认宽度要和初始化时一致
 
   // 延迟更新菜单激活状态，确保DOM已渲染完成
   nextTick(() => {
@@ -405,7 +406,7 @@ const handleMenuSelect = (index) => {
 // 头像放大弹窗
 const showLargeAvatar = ref(false)
 
-const sidebarWidth = ref('170px')
+const sidebarWidth = ref('200px')
 
 // 跟踪所有展开的子菜单索引
 const openedMenus = ref(new Set())
@@ -413,7 +414,7 @@ const openedMenus = ref(new Set())
 // 监听菜单展开事件 - 展开时增宽，给二级菜单足够空间
 const handleMenuOpen = (index) => {
   openedMenus.value.add(index)
-  sidebarWidth.value = '220px' // 有菜单展开时保持较宽
+  sidebarWidth.value = '240px' // 有菜单展开时保持较宽
 }
 
 // 监听菜单关闭事件 - 只有当所有菜单都关闭时才恢复较窄宽度
@@ -422,7 +423,7 @@ const handleMenuClose = (index) => {
 
   // 只有当所有子菜单都关闭时，才恢复较窄宽度
   if (openedMenus.value.size === 0) {
-    sidebarWidth.value = '170px'
+    sidebarWidth.value = '200px'
   }
 
   // 确保菜单关闭后，包含激活子菜单的一级菜单组仍然保持激活状态
@@ -455,7 +456,7 @@ const toggleRole = () => {
 
     // 重置展开的菜单状态
     openedMenus.value.clear()
-    sidebarWidth.value = '170px'
+    sidebarWidth.value = '200px'
 
     // 跳转对应页面
     if (userRole.value === 'user') {
@@ -477,7 +478,7 @@ onMounted(() => {
   try {
     // 初始化时重置展开菜单状态
     openedMenus.value.clear()
-    sidebarWidth.value = '170px'
+    sidebarWidth.value = '200px'
 
     if (!userStore.userInfo || userStore.userInfo.avatar === '') {
       userStore.fetchUserInfo()
@@ -575,7 +576,7 @@ watch(
 
       // 重置展开的菜单状态
       openedMenus.value.clear()
-      sidebarWidth.value = '170px'
+      sidebarWidth.value = '200px'
 
       // Update user info based on role (using Pinia store)
       if (userRole.value === 'merchant') {
@@ -760,23 +761,21 @@ const handleSearch = (value) => {
         class="logo"
         @click="() => navigateTo(userRole === 'merchant' ? '/merchant/home' : '/user/home')"
       >
-        🎨 佳食宜选
+        佳食宜选
       </div>
-      <el-input
-        v-model="searchQuery"
-        placeholder="🔍 搜索框(支持菜品/商家搜索)"
-        clearable
-        class="search-input"
-        @input="handleSearch"
-        @keyup.enter="handleSearch(searchQuery)"
-      >
-        <template #append>
-          <el-button type="primary" @click="handleSearch(searchQuery)">
-            <el-icon><Search /></el-icon>
-            搜索
-          </el-button>
-        </template>
-      </el-input>
+      <div class="search-box">
+        <el-icon class="search-icon"><Search /></el-icon>
+        <input
+          v-model="searchQuery"
+          type="text"
+          class="search-input-native"
+          placeholder="搜索菜品、商家、教程..."
+          @keyup.enter="handleSearch(searchQuery)"
+        />
+        <button v-if="searchQuery" class="search-clear" @click="searchQuery = ''">
+          <el-icon><Close /></el-icon>
+        </button>
+      </div>
       <div class="user-info">
         <!-- 商家端已注册：显示角色切换按钮 -->
         <el-button
@@ -945,142 +944,482 @@ const handleSearch = (value) => {
 </template>
 
 <style scoped lang="less">
+@import '../assets/css/nordic-theme.less';
+
+// ===== Savour 设计系统变量 =====
+@savour-bg: #F6F3ED;
+@savour-surface: #FFFFFF;
+@savour-text: #2D2A26;
+@savour-text-sec: #8A857E;
+@savour-text-muted: #B5AFA6;
+@savour-accent: #C67B5C;
+@savour-accent-hover: #B56A4A;
+@savour-accent-light: #F4E6DE;
+@savour-green: #7BAE7F;
+@savour-gold: #D4A855;
+@savour-border: #E8E2D8;
+@savour-radius: 16px;
+@savour-radius-lg: 24px;
+@savour-pill: 100px;
+
+.font-display() {
+  font-family: 'Georgia', 'Noto Serif SC', 'Songti SC', 'STSong', serif;
+}
+
+// ===== 动画 =====
+@keyframes savour-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes nav-slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes sidebar-fade-in {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes menu-item-enter {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes avatar-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(198, 123, 92, 0.2); }
+  50% { box-shadow: 0 0 0 8px rgba(198, 123, 92, 0); }
+}
+
 .app-container {
   height: 100vh;
   width: 100%;
+  background: @savour-bg;
+  position: relative;
+
+  // 噪点纹理覆盖层
+  &::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.015;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 256px;
+  }
 }
 
+// ===== 顶部导航栏 =====
 .top-nav-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
-  height: 60px;
-  background-color: #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
+  padding: 0 @nordic-space-lg;
+  height: 64px;
+  background: linear-gradient(180deg, @savour-surface 0%, rgba(255, 255, 255, 0.95) 100%);
+  border-bottom: 1px solid @savour-border;
+  position: relative;
+  z-index: 100;
+  animation: nav-slide-down 0.4s ease both;
 
-.logo {
-  font-size: 1.5rem; /* 使用相对单位，会继承 body 的字体大小 */
-  font-weight: bold;
-  color: #ff6b6b;
-  cursor: pointer;
-}
+  // 顶部细微阴影
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 0;
+    right: 0;
+    height: 8px;
+    background: linear-gradient(180deg, rgba(45, 42, 38, 0.03) 0%, transparent 100%);
+    pointer-events: none;
+  }
 
-.search-input {
-  width: 400px;
-  margin: 0 20px;
-}
+  .logo {
+    .font-display();
+    font-size: 22px;
+    font-weight: 700;
+    color: @savour-accent;
+    cursor: pointer;
+    letter-spacing: -0.3px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.25s ease;
+    padding: 8px 16px;
+    margin-left: -16px;
+    border-radius: @savour-radius;
 
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  margin-right: 10px;
-
-  .identity-switch {
-    font-size: 1.125rem; /* 使用相对单位，会继承 body 的字体大小 */
-    padding: 0;
-
-    .user-icon,
-    .merchant-icon {
-      transition:
-        transform 0.3s ease,
-        color 0.3s ease;
-      font-size: 1.125rem; /* 使用相对单位，会继承 body 的字体大小 */
+    &::before {
+      content: '🍽';
+      font-size: 24px;
+      filter: drop-shadow(0 2px 4px rgba(198, 123, 92, 0.3));
     }
 
-    .icon-enlarged {
-      transform: scale(1.3);
-      color: #ff6b6b;
+    &:hover {
+      background: @savour-accent-light;
+      transform: translateY(-1px);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+  }
+
+  .search-box {
+    display: flex;
+    align-items: center;
+    width: 380px;
+    height: 42px;
+    margin: 0 @nordic-space-lg;
+    padding: 0 16px;
+    background: @savour-bg;
+    border: 1.5px solid @savour-border;
+    border-radius: @savour-pill;
+    transition: all 0.25s ease;
+
+    &:hover {
+      border-color: @savour-accent;
+      box-shadow: 0 2px 8px rgba(198, 123, 92, 0.08);
+    }
+
+    &:focus-within {
+      border-color: @savour-accent;
+      background: @savour-surface;
+      box-shadow: 0 4px 16px rgba(198, 123, 92, 0.12);
+    }
+
+    .search-icon {
+      font-size: 18px;
+      color: @savour-text-muted;
+      margin-right: 10px;
+      flex-shrink: 0;
+      transition: color 0.25s ease;
+    }
+
+    &:focus-within .search-icon {
+      color: @savour-accent;
+    }
+
+    .search-input-native {
+      flex: 1;
+      height: 100%;
+      border: none;
+      background: transparent;
+      font-size: @nordic-text-base;
+      color: @savour-text;
+      outline: none;
+
+      &::placeholder {
+        color: @savour-text-muted;
+      }
+    }
+
+    .search-clear {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border: none;
+      background: @savour-border;
+      border-radius: 50%;
+      cursor: pointer;
+      opacity: 0;
+      transform: scale(0.8);
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+
+      .el-icon {
+        font-size: 12px;
+        color: @savour-text-sec;
+      }
+
+      &:hover {
+        background: @savour-accent-light;
+
+        .el-icon {
+          color: @savour-accent;
+        }
+      }
+    }
+
+    &:focus-within .search-clear,
+    &:hover .search-clear {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .user-info {
+    display: flex;
+    align-items: center;
+    gap: @nordic-space-md;
+    margin-right: 8px;
+
+    .identity-switch {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: @savour-radius;
+      background: @savour-bg;
+      border: 1.5px solid @savour-border;
+      transition: all 0.25s ease;
+      font-size: @nordic-text-base;
+
+      &:hover {
+        border-color: @savour-accent;
+        background: @savour-accent-light;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(198, 123, 92, 0.15);
+      }
+
+      .user-icon,
+      .merchant-icon {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        font-size: 18px;
+        color: @savour-text-sec;
+      }
+
+      .icon-enlarged {
+        transform: scale(1.25);
+        color: @savour-accent;
+        filter: drop-shadow(0 2px 4px rgba(198, 123, 92, 0.3));
+      }
+    }
+
+    .el-button:not(.identity-switch) {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: @savour-radius;
+      background: @savour-accent;
+      border: none;
+      color: #fff;
+      font-weight: 600;
+      font-size: @nordic-text-sm;
+      transition: all 0.25s ease;
+
+      &:hover {
+        background: @savour-accent-hover;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(198, 123, 92, 0.3);
+      }
+
+      .el-icon {
+        font-size: 16px;
+      }
     }
   }
 }
 
 .main-content {
   display: flex;
-  height: calc(100vh - 60px);
+  height: calc(100vh - 64px);
 }
 
+// ===== 侧边栏 =====
 .sidebar-menu {
-  background-color: #fff;
-  border-right: 1px solid #eee;
-  transition: width 0.3s ease-in-out; /* 添加平滑过渡动画 */
+  background: linear-gradient(180deg, @savour-surface 0%, rgba(255, 255, 255, 0.98) 100%);
+  border-right: 1px solid @savour-border;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
   height: 100%;
+  position: relative;
+  animation: sidebar-fade-in 0.5s ease both;
+
+  // 右侧细微阴影
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: -8px;
+    bottom: 0;
+    width: 8px;
+    background: linear-gradient(90deg, transparent 0%, rgba(45, 42, 38, 0.02) 100%);
+    pointer-events: none;
+  }
 
   .avatar-section {
     text-align: center;
-    padding: 20px 0;
-    border-bottom: 1px solid #eee;
+    padding: @nordic-space-lg 0;
+    border-bottom: 1px solid @savour-border;
+    background: linear-gradient(180deg, @savour-accent-light 0%, @savour-surface 100%);
+
+    .user-avatar {
+      animation: avatar-pulse 3s ease-in-out infinite;
+      cursor: pointer;
+      transition: transform 0.3s ease;
+
+      &:hover {
+        transform: scale(1.05);
+      }
+    }
 
     .username {
-      margin-top: 8px;
-      font-size: 1rem; /* 使用相对单位，会继承 body 的字体大小 */
-      font-weight: 500;
-      color: #333;
-      white-space: nowrap; /* 不换行 */
-      overflow: hidden; /* 隐藏溢出 */
-      text-overflow: ellipsis; /* 显示省略号 */
-      width: 100%; /* 自适应宽度 */
+      margin-top: @nordic-space-sm;
+      .font-display();
+      font-size: @nordic-text-md;
+      font-weight: 600;
+      color: @savour-text;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      width: 100%;
+      padding: 0 @nordic-space-sm;
     }
   }
 
   .menu-content {
     flex: 1;
     overflow-y: auto;
+    padding: @nordic-space-sm 0;
+
+    &::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: @savour-border;
+      border-radius: 2px;
+
+      &:hover {
+        background: @savour-text-muted;
+      }
+    }
 
     .menu-list {
       border: none;
+      background: transparent;
       height: 100%;
       overflow-y: auto;
     }
   }
 
-  /* 当一级菜单组包含激活的子菜单时，保持高亮 */
-  /* 确保即使在 scoped 样式下，激活状态也能正确应用 */
-
-  /* ========== 自定义菜单字体响应式设置 ========== */
-  /* 使用 custom-menu 类名 + :deep() 穿透，配合相对单位 */
+  // ===== 自定义菜单样式 =====
   .custom-menu {
-    /* 菜单项和子菜单标题 - 使用相对单位响应全局字体设置 */
+    background: transparent;
+
     :deep(.el-menu-item),
     :deep(.el-sub-menu__title) {
-      font-size: 1em !important; /* 相对于父元素 */
+      font-size: @nordic-text-base !important;
+      color: @savour-text;
+      border-radius: 0;
+      margin: 2px @nordic-space-sm;
+      transition: all 0.25s ease;
+      position: relative;
+
+      &::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 3px;
+        height: 0;
+        background: @savour-accent;
+        border-radius: 0 2px 2px 0;
+        transition: height 0.25s ease;
+      }
+
+      &:hover {
+        background: @savour-accent-light;
+        color: @savour-accent;
+
+        &::before {
+          height: 60%;
+        }
+      }
+
+      .el-icon {
+        color: @savour-text-sec;
+        transition: color 0.25s ease;
+      }
+
+      &:hover .el-icon {
+        color: @savour-accent;
+      }
     }
 
-    /* 菜单项内的所有子元素（图标、文本等） */
-    :deep(.el-menu-item *),
-    :deep(.el-sub-menu__title *) {
-      font-size: 1em !important;
-    }
-
-    /* 菜单项激活状态 */
     :deep(.el-menu-item.is-active),
     :deep(.el-sub-menu__title.is-active) {
-      background-color: var(--el-menu-item-hover-bg-color) !important;
-      color: var(--el-menu-active-color) !important;
+      background: @savour-accent-light !important;
+      color: @savour-accent !important;
+      font-weight: 600;
+
+      &::before {
+        height: 70%;
+      }
+
+      .el-icon {
+        color: @savour-accent;
+      }
+    }
+
+    :deep(.el-sub-menu) {
+      .el-menu {
+        background: rgba(246, 243, 237, 0.5);
+        padding: 4px 0;
+      }
+
+      .el-menu-item {
+        padding-left: 52px !important;
+        font-size: @nordic-text-sm !important;
+
+        &::before {
+          left: 32px;
+        }
+      }
+
+      &.is-opened {
+        > .el-sub-menu__title {
+          .el-sub-menu__icon-arrow {
+            transform: rotate(180deg);
+          }
+        }
+      }
+    }
+
+    :deep(.el-sub-menu__icon-arrow) {
+      color: @savour-text-muted;
+      transition: transform 0.25s ease;
     }
   }
 
-  .menu-list,
-  .setting-menu-list {
-    /* 保留原有的激活状态样式 */
-    :deep(.el-menu-item.is-active),
-    :deep(.el-sub-menu__title.is-active) {
-      background-color: var(--el-menu-item-hover-bg-color) !important;
-      color: var(--el-menu-active-color) !important;
-    }
-  }
-
-  /* 菜单项带徽章容器 */
+  // 菜单项带徽章容器
   .menu-item-with-badge {
     display: flex;
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    gap: 8px;
+    gap: @nordic-space-sm;
 
     .menu-text {
       flex: 1;
@@ -1090,41 +1429,63 @@ const handleSearch = (value) => {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      background-color: #f56c6c;
-      color: #ffffff;
-      font-size: 0.75rem; /* 使用相对单位，会继承 body 的字体大小 */
-      font-weight: 500;
-      height: 1.2rem;
-      line-height: 1.2rem;
-      padding: 0 0.4rem;
-      min-width: 1.2rem;
-      border-radius: 0.6rem;
+      background: linear-gradient(135deg, #E25B45, #FF7B5C);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      height: 18px;
+      line-height: 18px;
+      padding: 0 6px;
+      min-width: 18px;
+      border-radius: 9px;
       white-space: nowrap;
       flex-shrink: 0;
+      box-shadow: 0 2px 6px rgba(226, 91, 69, 0.3);
     }
   }
 
   .setting-menu-container {
-    border-top: 1px solid #eee;
+    border-top: 1px solid @savour-border;
     flex-shrink: 0;
+    background: linear-gradient(180deg, transparent 0%, rgba(246, 243, 237, 0.3) 100%);
 
     .setting-menu-list {
       border: none;
-      background-color: transparent;
+      background: transparent;
 
       .setting-menu-item {
-        background-color: transparent;
+        background: transparent;
+        border-radius: 0;
+        margin: 2px @nordic-space-sm;
+
+        &::before {
+          content: '';
+          position: absolute;
+          left: 0;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 3px;
+          height: 0;
+          background: @savour-text-muted;
+          border-radius: 0 2px 2px 0;
+          transition: height 0.25s ease;
+        }
+
+        &:hover::before {
+          height: 60%;
+          background: @savour-text-sec;
+        }
       }
     }
   }
 }
 
 .content-area {
-  flex: 1; /* 让内容区占据剩余空间 */
-  padding: 20px;
-  background-color: #f5f5f5;
+  flex: 1;
+  padding: 0;
+  background: @savour-bg;
   overflow-y: auto;
-  position: relative; /* 为动画定位 */
+  position: relative;
 }
 
 /* ========== 页面转换动画样式 ========== */

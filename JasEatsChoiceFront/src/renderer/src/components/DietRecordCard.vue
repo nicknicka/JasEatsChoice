@@ -60,46 +60,48 @@ const onDelete = () => {
 }
 </script>
 
-<style scoped>
+<style scoped lang="less">
+@import '../assets/css/nordic-theme.less';
+
 /* 记录卡片 */
 .record-card {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
-  background-color: #f9fafb;
-  border-radius: 12px;
-  border-left: 4px solid #e5e7eb;
-  transition: all 0.3s ease;
+  background-color: @nordic-surface;
+  border-radius: @nordic-radius-md;
+  border-left: 4px solid @nordic-border;
+  transition: all @nordic-transition-base ease;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 4px @nordic-shadow;
 }
 
 .record-card:hover {
-  background-color: white;
-  border-left-color: #667eea;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  background-color: @nordic-surface;
+  border-left-color: @nordic-accent;
+  box-shadow: 0 4px 16px @nordic-shadow-hover;
   transform: translateY(-2px);
 }
 
 /* 早餐卡片 */
 .record-card-breakfast {
-  border-left-color: #667eea;
+  border-left-color: @nordic-accent;
 }
 
 /* 午餐卡片 */
 .record-card-lunch {
-  border-left-color: #f093fb;
+  border-left-color: @nordic-yellow;
 }
 
 /* 晚餐卡片 */
 .record-card-dinner {
-  border-left-color: #4facfe;
+  border-left-color: @nordic-blue;
 }
 
 /* 加餐卡片 */
 .record-card-snack {
-  border-left-color: #43e97b;
+  border-left-color: @nordic-green;
 }
 
 .record-info {
@@ -108,22 +110,22 @@ const onDelete = () => {
 }
 
 .record-time {
-  font-size: 1rem /* 原值: 14px */;
-  color: #6b7280;
+  font-size: @nordic-text-base;
+  color: @nordic-text-muted;
   font-weight: 500;
   margin-bottom: 4px;
 }
 
 .food-name {
-  font-size: 1.286rem /* 原值: 18px */;
+  font-size: @nordic-text-lg;
   font-weight: 600;
-  color: #111827;
+  color: @nordic-text;
   margin-bottom: 2px;
 }
 
 .food-description {
-  font-size: 1rem /* 原值: 14px */;
-  color: #6b7280;
+  font-size: @nordic-text-base;
+  color: @nordic-text-secondary;
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
