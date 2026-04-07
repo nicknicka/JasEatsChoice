@@ -1,106 +1,134 @@
 <template>
   <el-dialog
     v-model="dialogVisible"
-    title="选择位置"
-    width="600px"
+    width="560px"
     :close-on-click-modal="false"
-    class="map-location-dialog"
+    class="atlas-dialog"
     @open="handleDialogOpen"
     @close="handleDialogClose"
   >
-    <div class="map-location-content">
-      <!-- 搜索栏 -->
-      <div class="search-section">
-        <el-input
-          v-model="searchKeyword"
-          placeholder="搜索地址"
-          clearable
-          @clear="clearSearch"
-          @keyup.enter="handleSearch"
-        >
-          <template #prefix>
-            <el-icon><Search /></el-icon>
-          </template>
-          <template #append>
-            <el-button :icon="Search" @click="handleSearch">搜索</el-button>
-          </template>
-        </el-input>
+    <!-- 自定义头部 -->
+    <template #header>
+      <div class="atlas-header">
+        <span class="atlas-header-icon">📍</span>
+        <span class="atlas-header-title">选择位置</span>
+      </div>
+    </template>
+
+    <div class="atlas-body">
+      <!-- 搜索栏（浮动在顶部） -->
+      <div class="atlas-search-panel">
+        <div class="atlas-search-bar">
+          <el-icon class="atlas-search-icon"><Search /></el-icon>
+          <input
+            v-model="searchKeyword"
+            class="atlas-search-input"
+            placeholder="搜索地点、商圈、学校、地铁站…"
+            @keyup.enter="handleSearch"
+            @focus="searchFocused = true"
+            @blur="handleSearchBlur"
+          />
+          <button v-if="searchKeyword" class="atlas-search-clear" @click="clearSearch">
+            <el-icon :size="14"><Close /></el-icon>
+          </button>
+          <button class="atlas-search-btn" @click="handleSearch" :class="{ active: searchKeyword }">
+            搜索
+          </button>
+        </div>
+
+        <!-- 搜索结果（浮动面板） -->
+        <transition name="slide-down">
+          <div v-if="showResultsPanel" class="atlas-results-dropdown">
+            <!-- 搜索中 -->
+            <div v-if="searching" class="atlas-results-loading">
+              <el-icon class="is-loading" :size="20"><Loading /></el-icon>
+              <span>正在搜索…</span>
+            </div>
+            <!-- 搜索结果列表 -->
+            <template v-else-if="searchResults.length > 0">
+              <div class="atlas-results-header">
+                <span>找到 {{ searchResults.length }} 个结果</span>
+              </div>
+              <div
+                v-for="(item, index) in searchResults"
+                :key="index"
+                class="atlas-result-item"
+                @mousedown.prevent="selectSearchResult(item)"
+              >
+                <span class="atlas-result-letter">{{ String.fromCharCode(65 + index) }}</span>
+                <div class="atlas-result-body">
+                  <span class="atlas-result-name">{{ item.name }}</span>
+                  <span class="atlas-result-addr">{{ item.address }}</span>
+                </div>
+                <el-icon class="atlas-result-arrow"><ArrowRight /></el-icon>
+              </div>
+            </template>
+            <!-- 无结果 -->
+            <div v-else-if="searchKeyword && hasSearched" class="atlas-results-empty">
+              <span class="atlas-results-empty-icon">🔍</span>
+              <p>未找到「{{ searchKeyword }}」相关结果</p>
+              <p class="atlas-results-empty-hint">试试更换关键词，或在地图上直接点击选择</p>
+            </div>
+          </div>
+        </transition>
       </div>
 
-      <!-- 地图容器 -->
-      <div class="map-container">
-        <div id="mapContainer" class="map-wrapper"></div>
+      <!-- 地图 -->
+      <div class="atlas-map-wrap">
+        <div id="mapContainer" class="atlas-map-el"></div>
 
-        <!-- 地图加载状态 -->
-        <div v-if="mapLoading" class="map-loading">
-          <el-icon class="is-loading"><Loading /></el-icon>
-          <span>地图加载中...</span>
+        <div v-if="mapLoading" class="atlas-map-loading">
+          <el-icon class="is-loading" :size="28"><Loading /></el-icon>
+          <span>地图载入中…</span>
         </div>
 
         <!-- 定位按钮 -->
-        <div class="location-controls">
-          <el-button
-            type="primary"
-            circle
-            :icon="Location"
-            :loading="locating"
-            @click="handleGetCurrentLocation"
-            title="获取当前位置"
-          />
-        </div>
-      </div>
-
-      <!-- 当前位置显示 -->
-      <div class="current-location-section">
-        <div class="location-info">
-          <div class="location-icon">
-            <el-icon><Location /></el-icon>
-          </div>
-          <div class="location-details">
-            <div class="location-address">
-              {{ selectedAddress || '请在地图上选择位置' }}
-            </div>
-            <div v-if="selectedPosition" class="location-coords">
-              经度: {{ selectedPosition.lng.toFixed(6) }} | 纬度:
-              {{ selectedPosition.lat.toFixed(6) }}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 搜索结果列表 -->
-      <div v-if="searchResults.length > 0" class="search-results">
-        <div
-          v-for="(item, index) in searchResults"
-          :key="index"
-          class="search-result-item"
-          @click="selectSearchResult(item)"
+        <button
+          class="atlas-locate-fab"
+          :class="{ 'is-locating': locating }"
+          @click="handleGetCurrentLocation"
+          title="我的位置"
         >
-          <div class="result-icon">
-            <el-icon><Location /></el-icon>
+          <span class="atlas-locate-ring" v-if="locating"></span>
+          <span class="atlas-locate-ring atlas-locate-ring-2" v-if="locating"></span>
+          <el-icon :size="18"><Location /></el-icon>
+        </button>
+
+        <!-- 已选位置浮层（在地图上方） -->
+        <transition name="slide-up">
+          <div v-if="selectedAddress" class="atlas-selected-overlay" @click="handleConfirm">
+            <div class="atlas-selected-content">
+              <div class="atlas-selected-pin">
+                <el-icon :size="16"><Location /></el-icon>
+              </div>
+              <div class="atlas-selected-info">
+                <p class="atlas-selected-addr">{{ selectedAddress }}</p>
+              </div>
+              <span class="atlas-selected-action">确认</span>
+            </div>
           </div>
-          <div class="result-details">
-            <div class="result-name">{{ item.name }}</div>
-            <div class="result-address">{{ item.address }}</div>
-          </div>
-        </div>
+        </transition>
       </div>
     </div>
 
+    <!-- 底部提示 -->
     <template #footer>
-      <div class="dialog-footer">
-        <el-button @click="handleCancel">取消</el-button>
-        <el-button type="primary" @click="handleConfirm" :disabled="!selectedPosition">
-          确认选择
-        </el-button>
+      <div class="atlas-footer">
+        <span class="atlas-footer-hint">点击地图或搜索选择位置</span>
+        <div class="atlas-footer-actions">
+          <el-button @click="handleCancel" text>取消</el-button>
+          <el-button type="primary" @click="handleConfirm" :disabled="!selectedPosition" size="default">
+            确认选择
+          </el-button>
+        </div>
       </div>
     </template>
   </el-dialog>
 </template>
 
 <script setup>
-import { ref, watch, onBeforeUnmount } from 'vue'
-import { Search, Location, Loading } from '@element-plus/icons-vue'
+import { ref, watch, computed, onBeforeUnmount } from 'vue'
+import { Search, Location, Loading, Close, ArrowRight } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
 // Props
@@ -129,6 +157,21 @@ const searchKeyword = ref('')
 const searchResults = ref([])
 const selectedPosition = ref(null)
 const selectedAddress = ref('')
+const searchFocused = ref(false)
+const searching = ref(false)
+const hasSearched = ref(false)
+
+// 计算属性：是否显示搜索结果面板
+const showResultsPanel = computed(() => {
+  return searchFocused.value && (searchResults.value.length > 0 || (searchKeyword.value && hasSearched.value) || searching.value)
+})
+
+// 处理搜索框失焦（延迟关闭以允许点击结果）
+const handleSearchBlur = () => {
+  setTimeout(() => {
+    searchFocused.value = false
+  }, 200)
+}
 
 // 监听 visible prop
 watch(
@@ -301,9 +344,13 @@ const getAddressByLocation = async (lng, lat) => {
 // 搜索地址（使用后端代理）
 const handleSearch = async () => {
   if (!searchKeyword.value.trim()) {
-    ElMessage.warning('请输入搜索关键词')
     return
   }
+
+  searching.value = true
+  searchResults.value = []
+  hasSearched.value = false
+  searchFocused.value = true
 
   try {
     console.log('开始搜索:', searchKeyword.value)
@@ -326,14 +373,13 @@ const handleSearch = async () => {
           address: item.address || '暂无详细地址',
           location: item.location
         }))
-        ElMessage.success('找到 ' + results.length + ' 个结果，请点击选择')
       } else {
         searchResults.value = []
-        ElMessage.warning('未找到相关地址，请尝试其他关键词')
       }
+      hasSearched.value = true
     } else {
       searchResults.value = []
-      ElMessage.warning(response?.message || '搜索失败，请直接在地图上点击选择位置')
+      hasSearched.value = true
     }
   } catch (error) {
     console.error('搜索异常:', error)
@@ -361,29 +407,29 @@ const handleSearch = async () => {
                     }
                   }))
                   .slice(0, 10)
-                ElMessage.success('找到 ' + searchResults.value.length + ' 个结果')
-              } else {
-                ElMessage.warning('未找到相关地址')
               }
-            } else {
-              ElMessage.warning('搜索失败，请直接在地图上选择位置')
             }
+            hasSearched.value = true
+            searching.value = false
           })
         })
-      } else {
-        ElMessage.error('地图功能不可用，请刷新页面')
       }
     } catch (fallbackError) {
       console.error('前端 API 降级也失败:', fallbackError)
-      ElMessage.error('搜索功能不可用，请直接在地图上点击选择位置')
+      hasSearched.value = true
+      searching.value = false
     }
   }
+
+  searching.value = false
 }
 
 // 清空搜索
 const clearSearch = () => {
   searchKeyword.value = ''
   searchResults.value = []
+  hasSearched.value = false
+  searchFocused.value = false
 }
 
 // 选择搜索结果
@@ -394,6 +440,8 @@ const selectSearchResult = (item) => {
     selectedAddress.value = item.name + ' ' + item.address
     searchResults.value = []
     searchKeyword.value = ''
+    hasSearched.value = false
+    searchFocused.value = false
   }
 }
 
@@ -648,237 +696,518 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped lang="less">
-.map-location-dialog {
-  :deep(.el-dialog__body) {
-    padding: 20px;
-    max-height: 70vh;
-    overflow-y: auto;
-  }
-}
+@import '../assets/css/nordic-theme.less';
 
-.map-location-content {
-  .search-section {
-    margin-bottom: 16px;
+// ===== 设计令牌 =====
+@clay: #C67B5C;
+@clay-dark: #A8613F;
+@clay-glow: rgba(198, 123, 92, 0.2);
+@ink: #2D2A26;
+@ink-sec: #8A857E;
+@ink-muted: #B5AFA6;
+@warm-bg: #F6F3ED;
+@warm-surface: #FFFDF9;
+@warm-border: #E8E2D8;
 
-    .el-input {
-      :deep(.el-input__wrapper) {
-        border-radius: 20px;
-      }
-
-      :deep(.el-input-group__append) {
-        border-radius: 0 20px 20px 0;
-        background: linear-gradient(135deg, #409eff 0%, #5dade2 100%);
-        border: none;
-        color: white;
-
-        .el-button {
-          background: transparent;
-          border: none;
-          color: white;
-
-          &:hover {
-            background: rgba(255, 255, 255, 0.1);
-          }
-        }
-      }
-    }
-  }
-
-  .map-container {
-    position: relative;
-    width: 100%;
-    height: 350px;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-    margin-bottom: 16px;
-
-    .map-wrapper {
-      width: 100%;
-      height: 100%;
-    }
-
-    .map-loading {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(255, 255, 255, 0.95);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      z-index: 10;
-
-      .el-icon {
-        font-size: 2.286rem /* 原值: 32px */;
-        color: #409eff;
-      }
-
-      span {
-        font-size: 1rem /* 原值: 14px */;
-        color: #666;
-      }
-    }
-
-    .location-controls {
-      position: absolute;
-      right: 16px;
-      bottom: 16px;
-      z-index: 5;
-
-      .el-button {
-        width: 48px;
-        height: 48px;
-        background: linear-gradient(135deg, #409eff 0%, #5dade2 100%);
-        border: none;
-        box-shadow: 0 4px 12px rgba(64, 158, 255, 0.4);
-
-        &:hover {
-          transform: scale(1.05);
-          box-shadow: 0 6px 16px rgba(64, 158, 255, 0.5);
-        }
-      }
-    }
-  }
-
-  .current-location-section {
-    margin-bottom: 16px;
-
-    .location-info {
-      display: flex;
-      gap: 12px;
-      padding: 16px;
-      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-      border-radius: 12px;
-      border-left: 4px solid #409eff;
-
-      .location-icon {
-        flex-shrink: 0;
-        width: 40px;
-        height: 40px;
-        background: linear-gradient(135deg, #409eff 0%, #5dade2 100%);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-size: 1.429rem /* 原值: 20px */;
-      }
-
-      .location-details {
-        flex: 1;
-        min-width: 0;
-
-        .location-address {
-          font-size: 1.071rem /* 原值: 15px */;
-          font-weight: 600;
-          color: #333;
-          margin-bottom: 4px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .location-coords {
-          font-size: 0.857rem /* 原值: 12px */;
-          color: #999;
-        }
-      }
-    }
-  }
-
-  .search-results {
-    max-height: 250px;
-    overflow-y: auto;
-    border: 1px solid #e4e7ed;
-    border-radius: 8px;
-    background: white;
-
-    .search-result-item {
-      display: flex;
-      gap: 12px;
-      padding: 12px 16px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      border-bottom: 1px solid #f5f5f5;
-
-      &:last-child {
-        border-bottom: none;
-      }
-
-      &:hover {
-        background: #f5f7fa;
-      }
-
-      .result-icon {
-        flex-shrink: 0;
-        width: 32px;
-        height: 32px;
-        background: #e8f3ff;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #409eff;
-      }
-
-      .result-details {
-        flex: 1;
-        min-width: 0;
-
-        .result-name {
-          font-size: 1rem /* 原值: 14px */;
-          font-weight: 600;
-          color: #333;
-          margin-bottom: 4px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .result-address {
-          font-size: 0.857rem /* 原值: 12px */;
-          color: #999;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-      }
-    }
-  }
-}
-
-.dialog-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-
-  .el-button {
+// ===== Dialog 整体 =====
+.atlas-dialog {
+  :deep(.el-dialog) {
     border-radius: 20px;
-    padding: 10px 24px;
+    overflow: hidden;
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
+  }
+
+  :deep(.el-dialog__header) {
+    margin: 0;
+    padding: 0;
+    border-bottom: 1px solid @warm-border;
+  }
+
+  :deep(.el-dialog__body) {
+    padding: 12px 16px;
+    background: @warm-surface;
+  }
+
+  :deep(.el-dialog__footer) {
+    padding: 10px 16px;
+    border-top: 1px solid @warm-border;
+    background: @warm-surface;
   }
 }
 
-// 自定义滚动条
-.search-results {
-  &::-webkit-scrollbar {
-    width: 6px;
+// ===== 头部 =====
+.atlas-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, #FAF0E8 0%, #F4E6DE 100%);
+
+  .atlas-header-icon {
+    font-size: 20px;
   }
 
-  &::-webkit-scrollbar-thumb {
-    background: #dcdfe6;
-    border-radius: 3px;
+  .atlas-header-title {
+    font-family: 'Noto Serif SC', 'Georgia', serif;
+    font-size: 17px;
+    font-weight: 700;
+    color: @ink;
+    letter-spacing: -0.2px;
+  }
+}
+
+// ===== 搜索面板（相对定位容器） =====
+.atlas-search-panel {
+  position: relative;
+  z-index: 20;
+  margin-bottom: 10px;
+}
+
+// ===== 搜索栏 =====
+.atlas-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  height: 42px;
+  background: #fff;
+  border: 1.5px solid @warm-border;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+
+  &:focus-within {
+    border-color: @clay;
+    box-shadow: 0 0 0 3px @clay-glow;
+  }
+}
+
+.atlas-search-icon {
+  flex-shrink: 0;
+  padding-left: 12px;
+  color: @ink-muted;
+  font-size: 16px;
+}
+
+.atlas-search-input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0 10px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  color: @ink;
+  font-family: inherit;
+
+  &::placeholder {
+    color: @ink-muted;
+    font-size: 13px;
+  }
+}
+
+.atlas-search-clear {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: #F0ECE6;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: @ink-sec;
+  margin-right: 6px;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: @clay;
+    color: #fff;
+  }
+}
+
+.atlas-search-btn {
+  flex-shrink: 0;
+  height: 100%;
+  padding: 0 16px;
+  border: none;
+  background: #F0ECE6;
+  color: @ink-sec;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+
+  &.active {
+    background: @clay;
+    color: #fff;
 
     &:hover {
-      background: #c0c4cc;
+      background: @clay-dark;
+    }
+  }
+}
+
+// ===== 搜索结果下拉面板 =====
+.atlas-results-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  max-height: 280px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1.5px solid @warm-border;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  z-index: 30;
+
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-thumb {
+    background: @warm-border;
+    border-radius: 2px;
+  }
+}
+
+.atlas-results-header {
+  padding: 8px 14px 4px;
+  font-size: 12px;
+  color: @ink-muted;
+  border-bottom: 1px solid #F5F0EA;
+}
+
+.atlas-results-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  color: @ink-sec;
+  font-size: 13px;
+
+  .el-icon { color: @clay; }
+}
+
+.atlas-results-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  text-align: center;
+
+  .atlas-results-empty-icon {
+    font-size: 28px;
+    margin-bottom: 8px;
+  }
+
+  p {
+    margin: 0;
+    font-size: 13px;
+    color: @ink-sec;
+  }
+
+  .atlas-results-empty-hint {
+    font-size: 12px;
+    color: @ink-muted;
+    margin-top: 4px;
+  }
+}
+
+.atlas-result-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  border-bottom: 1px solid #F5F0EA;
+
+  &:last-child { border-bottom: none; }
+
+  &:hover {
+    background: #FAF0E8;
+
+    .atlas-result-letter {
+      background: @clay;
+      color: #fff;
+    }
+
+    .atlas-result-arrow {
+      color: @clay;
     }
   }
 
-  &::-webkit-scrollbar-track {
-    background: #f5f5f5;
+  .atlas-result-letter {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: #F0ECE6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: @clay;
+    transition: all 0.15s ease;
+  }
+
+  .atlas-result-body {
+    flex: 1;
+    min-width: 0;
+
+    .atlas-result-name {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: @ink;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .atlas-result-addr {
+      display: block;
+      font-size: 12px;
+      color: @ink-muted;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      margin-top: 2px;
+    }
+  }
+
+  .atlas-result-arrow {
+    flex-shrink: 0;
+    color: @warm-border;
+    transition: color 0.15s ease;
+  }
+}
+
+// ===== 地图区域 =====
+.atlas-map-wrap {
+  position: relative;
+  width: 100%;
+  height: 340px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1.5px solid @warm-border;
+  background: #EDE9E1;
+
+  .atlas-map-el {
+    width: 100%;
+    height: 100%;
+  }
+
+  .atlas-map-loading {
+    position: absolute;
+    inset: 0;
+    background: rgba(246, 243, 237, 0.9);
+    backdrop-filter: blur(4px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    z-index: 10;
+
+    .el-icon { color: @clay; }
+
+    span {
+      font-size: 13px;
+      color: @ink-sec;
+    }
+  }
+}
+
+// 定位按钮
+.atlas-locate-fab {
+  position: absolute;
+  right: 12px;
+  bottom: 72px;
+  z-index: 5;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1.5px solid rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(8px);
+  color: @clay;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: @clay;
+    color: #fff;
+    border-color: @clay;
+    transform: scale(1.08);
+    box-shadow: 0 4px 14px @clay-glow;
+  }
+
+  &.is-locating {
+    pointer-events: none;
+    background: fade(@clay, 12%);
+    border-color: fade(@clay, 30%);
+  }
+}
+
+// 定位脉冲波纹
+.atlas-locate-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  border: 2px solid @clay;
+  animation: pulse-ring 1.6s ease-out infinite;
+
+  &.atlas-locate-ring-2 {
+    animation-delay: 0.5s;
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+
+// 已选位置浮层（地图底部）
+.atlas-selected-overlay {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  z-index: 5;
+  cursor: pointer;
+
+  .atlas-selected-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
+    border-radius: 12px;
+    border: 1.5px solid rgba(198, 123, 92, 0.2);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+
+    &:hover {
+      border-color: @clay;
+      box-shadow: 0 4px 20px rgba(198, 123, 92, 0.2);
+    }
+  }
+
+  .atlas-selected-pin {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    background: @clay;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+  }
+
+  .atlas-selected-info {
+    flex: 1;
+    min-width: 0;
+
+    .atlas-selected-addr {
+      font-size: 13px;
+      font-weight: 600;
+      color: @ink;
+      margin: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  .atlas-selected-action {
+    flex-shrink: 0;
+    padding: 4px 12px;
+    background: @clay;
+    color: #fff;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+}
+
+// ===== 动画 =====
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.slide-down-enter-active,
+.slide-down-leave-active {
+  transition: all 0.2s ease;
+}
+
+.slide-down-enter-from,
+.slide-down-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: all 0.3s ease;
+}
+
+.slide-up-enter-from,
+.slide-up-leave-to {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+// ===== 底部 =====
+.atlas-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  .atlas-footer-hint {
+    font-size: 12px;
+    color: @ink-muted;
+  }
+
+  .atlas-footer-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  :deep(.el-button) {
+    border-radius: 10px;
+    font-weight: 600;
+  }
+
+  :deep(.el-button--primary) {
+    background: @clay;
+    border-color: @clay;
+
+    &:hover {
+      background: @clay-dark;
+      border-color: @clay-dark;
+      box-shadow: 0 4px 12px @clay-glow;
+    }
+
+    &.is-disabled {
+      background: @warm-border;
+      border-color: @warm-border;
+    }
   }
 }
 </style>

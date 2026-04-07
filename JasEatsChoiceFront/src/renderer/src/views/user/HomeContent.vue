@@ -355,8 +355,24 @@ const recommendEmptyMessage = computed(() => {
 // 处理搜索
 const handleSearch = () => {
   console.log('搜索:', searchKeyword.value)
-  // 可以添加搜索分析或跳转到搜索结果页
 }
+
+// 问候语
+const greetingText = computed(() => {
+  const hour = new Date().getHours()
+  if (hour < 6) return '夜深了'
+  if (hour < 12) return '早上好'
+  if (hour < 14) return '中午好'
+  if (hour < 18) return '下午好'
+  return '晚上好'
+})
+
+// 今日日期
+const todayDate = computed(() => {
+  const now = new Date()
+  const weekdays = ['日', '一', '二', '三', '四', '五', '六']
+  return `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 星期${weekdays[now.getDay()]}`
+})
 
 // 清空搜索
 const clearSearch = () => {
@@ -722,404 +738,329 @@ onMounted(async () => {
 })
 </script>
 
+
 <template>
-  <!-- 主内容区域 -->
-  <div class="main-content-wrapper">
-    <!-- 顶部操作栏 -->
-    <div class="top-action-bar">
-      <div class="search-section" role="search">
+  <div class="savour-home">
+    <!-- 噪点纹理 -->
+    <div class="noise-layer"></div>
+
+    <!-- 可滚动内容 -->
+    <div class="home-scroll-container">
+      <!-- 英雄区域：问候 + 天气 -->
+      <section class="hero-section fade-in-up">
+        <div class="hero-grid">
+          <!-- 左侧：问候与快捷操作 -->
+          <div class="hero-greeting">
+            <p class="greeting-label">{{ greetingText }}</p>
+            <h1 class="greeting-title">发现今日美味</h1>
+            <p class="greeting-date">{{ todayDate }}</p>
+            <div class="hero-actions">
+              <button
+                class="action-pill pill-primary"
+                @click="handleNearbySearch"
+                :disabled="nearbyLoading"
+              >
+                <span class="pill-icon">📍</span>
+                <span>附近商家</span>
+              </button>
+              <button class="action-pill" @click="router.push('/user/home/ai')">
+                <span class="pill-icon">🤖</span>
+                <span>AI 助手</span>
+              </button>
+              <button class="action-pill" @click="router.push('/user/home/today-recipe')">
+                <span class="pill-icon">📅</span>
+                <span>今日食谱</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 右侧：天气卡片 -->
+          <div class="hero-weather fade-in-up-delay">
+            <!-- 骨架屏 -->
+            <div v-if="showWeatherSkeleton" class="weather-skeleton">
+              <el-skeleton animated>
+                <template #template>
+                  <div style="padding: 24px; display: flex; flex-direction: column; gap: 12px;">
+                    <el-skeleton-item variant="text" style="width: 60%; height: 20px" />
+                    <el-skeleton-item variant="text" style="width: 40%; height: 48px" />
+                    <el-skeleton-item variant="text" style="width: 80%; height: 16px" />
+                    <el-skeleton-item variant="text" style="width: 70%; height: 16px" />
+                  </div>
+                </template>
+              </el-skeleton>
+            </div>
+
+            <!-- 天气卡片 -->
+            <div v-else class="weather-card scale-in" :style="{ background: weatherGradient }">
+              <div class="weather-inner">
+                <div class="weather-temp-row">
+                  <span class="weather-emoji">{{ weatherEmoji }}</span>
+                  <span class="weather-temp-value">{{ weather.temp }}°</span>
+                </div>
+                <div v-if="tempRangeText" class="weather-range">{{ tempRangeText }}</div>
+                <div class="weather-condition" @click="showWeatherDetail">
+                  {{ weather.condition || '未知天气' }}
+                </div>
+                <div class="weather-location">
+                  <span>📍</span>
+                  <span class="location-name">{{ weather.address || weather.city || '当前位置' }}</span>
+                  <button class="location-change-btn" @click="mapLocationPickerVisible = true">
+                    更换位置
+                  </button>
+                </div>
+                <div class="weather-recommendation">
+                  <span class="sparkle">✨</span>
+                  <span class="rec-text">{{ getWeatherRecommendation() }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 搜索栏 -->
+      <section class="search-section fade-in-up-delay-100">
         <el-input
           v-model="searchKeyword"
-          placeholder="搜索菜品、教程..."
+          placeholder="搜索菜品、教程、商家..."
           clearable
           size="large"
-          class="search-input"
+          class="savour-search"
           @keyup.enter="handleSearch"
           @clear="clearSearch"
-          aria-label="搜索菜品和教程"
         >
-          <template #append>
-            <el-button :icon="Search" @click="handleSearch" aria-label="执行搜索">搜索</el-button>
+          <template #prefix>
+            <el-icon><Search /></el-icon>
           </template>
         </el-input>
-      </div>
-    </div>
+      </section>
 
-    <!-- 天气信息区域 - 新设计 -->
-    <div class="weather-section-new fade-in-up" role="region" aria-label="天气信息">
-      <!-- 天气骨架屏 -->
-      <div v-if="showWeatherSkeleton" class="weather-skeleton-wrapper">
-        <div class="weather-card-new skeleton-weather">
-          <el-skeleton animated>
-            <template #template>
-              <div class="weather-skeleton-vertical">
-                <el-skeleton-item variant="text" style="width: 80px; height: 24px" />
-                <el-skeleton-item variant="text" style="width: 100px; height: 18px; margin-top: 12px" />
-                <el-skeleton-item variant="text" style="width: 120px; height: 16px; margin-top: 12px" />
-                <el-skeleton-item variant="text" style="width: 140px; height: 16px; margin-top: 12px" />
-                <el-skeleton-item variant="text" style="width: 150px; height: 16px; margin-top: 12px" />
-              </div>
-            </template>
-          </el-skeleton>
-        </div>
-      </div>
-
-      <!-- 天气卡片 - 新设计 -->
-      <div v-else class="weather-card-new scale-in" :style="{ background: weatherGradient }">
-        <div class="weather-content-new">
-          <!-- 温度显示 -->
-          <div class="weather-temp-line">
-            <span class="weather-icon-new">{{ weatherEmoji }}</span>
-            <span class="temp-value-new">{{ weather.temp }}°C</span>
-          </div>
-
-          <!-- 温度范围 -->
-          <div v-if="tempRangeText" class="temp-range-new">
-            {{ tempRangeText }}
-          </div>
-
-          <!-- 位置信息 -->
-          <div class="location-line">
-            <span class="location-icon-new">📍</span>
-            <span class="location-text-new">{{ weather.address || weather.city || '当前位置' }}</span>
-            <button
-              class="location-select-btn"
-              @click="mapLocationPickerVisible = true"
-              :title="weather.city || '点击选择位置'"
-            >
-              点击选择位置 ↗
-            </button>
-          </div>
-
-          <!-- 天气状况 -->
-          <div class="weather-condition-line" @click="showWeatherDetail" style="cursor: pointer">
-            <span class="weather-icon-new">{{ weatherEmoji }}</span>
-            <span class="weather-condition-text">{{ weather.condition || '未知天气' }}</span>
-          </div>
-
-          <!-- 今日推荐 -->
-          <div class="recommendation-line">
-            <span class="sparkle-icon-new">✨</span>
-            <span class="recommendation-label-new">今日推荐</span>
-            <div class="recommendation-text-new" :title="getWeatherRecommendation()">
-              {{ getWeatherRecommendation() }}
-            </div>
+      <!-- 今日推荐 -->
+      <section class="recs-section fade-in-up-delay-200">
+        <div class="section-header-row">
+          <div>
+            <h2 class="section-title">今日推荐</h2>
+            <p class="section-subtitle">根据你的口味和天气精心挑选</p>
           </div>
         </div>
-      </div>
-    </div>
 
-    <!-- 天气详情弹窗 -->
-    <el-dialog
-      v-model="weatherDetailVisible"
-      title="天气详情"
-      width="500px"
-      class="weather-detail-dialog"
-    >
-      <div class="weather-detail-content">
-        <div class="detail-item">
-          <span class="detail-label">当前温度</span>
-          <span class="detail-value">{{ weather.temp }}°C</span>
-        </div>
-        <div v-if="tempRangeText" class="detail-item">
-          <span class="detail-label">温度范围</span>
-          <span class="detail-value">{{ tempRangeText }}</span>
-        </div>
-        <div class="detail-item">
-          <span class="detail-label">天气状况</span>
-          <span class="detail-value">
-            {{ weatherEmoji }} {{ weather.condition || '未知天气' }}
-          </span>
-        </div>
-        <div class="detail-item">
-          <span class="detail-label">湿度</span>
-          <span class="detail-value">{{ weather.humidity }}%</span>
-        </div>
-        <div class="detail-item">
-          <span class="detail-label">风速</span>
-          <span class="detail-value">{{ weather.windSpeed }} m/s</span>
-        </div>
-        <div class="detail-item">
-          <span class="detail-label">空气质量</span>
-          <span class="detail-value" :style="{ color: aqiInfo.color }">
-            {{ aqiInfo.text }} (AQI: {{ weather.aqi }})
-          </span>
-        </div>
-        <div class="detail-item">
-          <span class="detail-label">位置</span>
-          <span class="detail-value">{{ weather.city }} {{ weather.address }}</span>
-        </div>
-        <div class="detail-advice">
-          <div class="advice-item">
-            <span class="advice-label">穿衣建议</span>
-            <span class="advice-text">{{ clothingAdvice }}</span>
-          </div>
-          <div class="advice-item">
-            <span class="advice-label">运动建议</span>
-            <span class="advice-text">{{ exerciseAdvice }}</span>
-          </div>
-        </div>
-      </div>
-    </el-dialog>
-
-    <div class="recommendation-section fade-in-up-delay-100" role="region" aria-label="今日推荐菜品">
-      <h3 id="recommendations-heading">今日推荐</h3>
-      <!-- 骨架屏加载中 -->
-      <div v-if="recommendedDishesLoading" class="skeleton-wrapper">
-        <el-skeleton animated>
-          <template #template>
-            <el-skeleton-item
-              variant="image"
-              style="width: 100%; height: 320px; border-radius: 8px"
-            />
-          </template>
-        </el-skeleton>
-      </div>
-      <!-- When there are no recommended dishes or filtered results -->
-      <div v-else-if="filteredDishes.length === 0" class="empty-recommendations">
-        <el-empty :description="recommendEmptyMessage">
-          <template #image>
-            <div class="empty-icon">
-              <el-icon :size="80"><Coffee /></el-icon>
-            </div>
-          </template>
-          <el-button type="primary" @click="fetchRecommendedDishes">重新加载</el-button>
-        </el-empty>
-      </div>
-
-      <!-- When there are recommended dishes -->
-      <div v-else class="fade-in">
-        <el-carousel
-          :interval="3000"
-          height="320px"
-          indicator-position="outside"
-          arrow="never"
-          class="recommendation-carousel"
-          role="region"
-          :aria-label="'推荐菜品轮播,共' + filteredDishes.length + '个'"
-        >
-          <el-carousel-item v-for="(dish, index) in filteredDishes" :key="index">
-            <el-card
-              shadow="hover"
-              class="dish-card enhanced-card"
-              @click="handleDishClick(dish)"
-              :aria-label="`菜品: ${dish.name}, ${dish.kcal} 卡路里, 评分: ${dish.rating}分`"
-              role="article"
-              tabindex="0"
-              @keyup.enter="handleDishClick(dish)"
-            >
-              <!-- 菜品图片区域 - 作为背景层 -->
-              <div class="dish-image-background">
-                <img
-                  :src="dish.image || defaultDishImage"
-                  :alt="dish.name"
-                  loading="lazy"
-                  @error="handleImageError"
-                />
-                <!-- 分类标签 -->
-                <span class="dish-category">{{ dish.category || '推荐' }}</span>
-              </div>
-              <!-- 菜品信息区域 - 覆盖在图片上方 -->
-              <div class="dish-info-overlay">
-                <div class="dish-header">
-                  <div class="dish-name">{{ dish.name }}</div>
-                  <div class="dish-actions">
-                    <el-button
-                      circle
-                      size="small"
-                      class="share-btn"
-                      @click="shareDish(dish, $event)"
-                      :aria-label="`分享 ${dish.name}`"
-                      tabindex="0"
-                      @keyup.enter="shareDish(dish, $event)"
-                    >
-                      <el-icon><Share /></el-icon>
-                    </el-button>
-                    <el-button
-                      circle
-                      size="small"
-                      class="favorite-btn"
-                      @click="toggleFavorite(dish, $event)"
-                      :class="{ 'is-favorite': isFavorite(dish) }"
-                      :aria-label="`${isFavorite(dish) ? '取消收藏' : '收藏'} ${dish.name}`"
-                      tabindex="0"
-                      @keyup.enter="toggleFavorite(dish, $event)"
-                    >
-                      <el-icon><Star /></el-icon>
-                    </el-button>
-                  </div>
+        <!-- 骨架屏 -->
+        <div v-if="recommendedDishesLoading" class="recs-scroll">
+          <div v-for="i in 3" :key="i" class="rec-skeleton">
+            <el-skeleton animated>
+              <template #template>
+                <el-skeleton-item variant="image" style="width: 100%; height: 200px; border-radius: 16px" />
+                <div style="padding: 16px;">
+                  <el-skeleton-item variant="h3" style="width: 70%" />
+                  <el-skeleton-item variant="text" style="width: 40%; margin-top: 8px" />
                 </div>
-                <div class="dish-meta">
-                  <span class="dish-kcal">{{ dish.kcal }} kcal</span>
-                  <span v-if="dish.tags" class="dish-tags">{{ dish.tags }}</span>
-                </div>
-                <div class="dish-rating">
-                  <el-rate
-                    v-if="dish.rating && dish.rating > 0"
-                    v-model="dish.rating"
-                    disabled
-                    show-score
-                    text-color="#FF6B6B"
-                    class="rating"
-                  ></el-rate>
-                  <div v-else class="no-rating">
+              </template>
+            </el-skeleton>
+          </div>
+        </div>
+
+        <!-- 空状态 -->
+        <div v-else-if="filteredDishes.length === 0" class="recs-empty">
+          <div class="empty-icon-wrapper">
+            <el-icon :size="48"><Coffee /></el-icon>
+          </div>
+          <p class="empty-text">{{ recommendEmptyMessage }}</p>
+          <button class="retry-btn" @click="fetchRecommendedDishes">重新加载</button>
+        </div>
+
+        <!-- 推荐卡片 -->
+        <div v-else class="recs-scroll">
+          <div
+            v-for="(dish, index) in filteredDishes"
+            :key="index"
+            class="rec-card"
+            @click="handleDishClick(dish)"
+            tabindex="0"
+            @keyup.enter="handleDishClick(dish)"
+            :style="{ animationDelay: `${index * 0.1}s` }"
+          >
+            <div class="rec-card-image">
+              <img :src="dish.image || defaultDishImage" :alt="dish.name" loading="lazy" @error="handleImageError" />
+              <span class="rec-category-badge">{{ dish.category || '推荐' }}</span>
+              <div class="rec-card-overlay">
+                <div class="rec-card-top">
+                  <button class="rec-action-btn" @click="shareDish(dish, $event)" title="分享">
+                    <el-icon><Share /></el-icon>
+                  </button>
+                  <button
+                    class="rec-action-btn"
+                    :class="{ 'is-fav': isFavorite(dish) }"
+                    @click="toggleFavorite(dish, $event)"
+                    :title="isFavorite(dish) ? '取消收藏' : '收藏'"
+                  >
                     <el-icon><Star /></el-icon>
-                    <span>暂无评分</span>
+                  </button>
+                </div>
+                <div class="rec-card-bottom">
+                  <h3 class="rec-dish-name">{{ dish.name }}</h3>
+                  <div class="rec-dish-meta">
+                    <span class="rec-kcal">{{ dish.kcal }} kcal</span>
+                    <span v-if="dish.tags" class="rec-tags">{{ dish.tags }}</span>
+                  </div>
+                  <div class="rec-rating">
+                    <el-rate
+                      v-if="dish.rating && dish.rating > 0"
+                      v-model="dish.rating"
+                      disabled
+                      show-score
+                      size="small"
+                    />
+                    <span v-else class="no-rating">暂无评分</span>
                   </div>
                 </div>
               </div>
-            </el-card>
-          </el-carousel-item>
-        </el-carousel>
-      </div>
-    </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-    <!-- 今日热点 - 只有当有数据时显示 -->
-    <div class="hot-section fade-in-up delay-200" v-if="hotTopic.content" @click="handleHotTopicClick">
-      <el-card shadow="hover" class="hot-card" :class="{ 'is-clickable': hotTopic.clickable }">
-        <div class="hot-content">
-          <div class="hot-icon-wrapper">
-            <span class="fire-icon">🔥</span>
+      <!-- 今日热点 -->
+      <section v-if="hotTopic.content" class="hot-section fade-in-up-delay-300" @click="handleHotTopicClick">
+        <div class="hot-card" :class="{ clickable: hotTopic.clickable }">
+          <div class="hot-left">
+            <span class="hot-emoji">🔥</span>
             <span class="hot-badge">HOT</span>
           </div>
-          <div class="hot-text">
+          <div class="hot-center">
             <span class="hot-label">今日热点</span>
-            <span class="hot-description">{{ hotTopic.content }}</span>
+            <p class="hot-content">{{ hotTopic.content }}</p>
           </div>
-          <el-icon class="hot-arrow" v-if="hotTopic.clickable"><ArrowRight /></el-icon>
+          <el-icon v-if="hotTopic.clickable" class="hot-arrow"><ArrowRight /></el-icon>
         </div>
-      </el-card>
-    </div>
+      </section>
 
-    <div class="nearby-section fade-in-up delay-300">
-      <el-button
-        type="primary"
-        size="large"
-        class="nearby-btn"
-        @click="handleNearbySearch"
-        :loading="nearbyLoading"
-        :loading-icon="Location"
-      >
-        <el-icon v-if="!nearbyLoading"><Location /></el-icon>
-        {{ nearbyLoading ? '定位中...' : '查找附近商家' }}
-      </el-button>
-    </div>
-
-    <div class="tutorial-section fade-in-up delay-400" role="region" aria-label="制作教程与指南">
-      <div class="section-header">
-        <h3 id="tutorials-heading">制作教程与指南</h3>
-        <el-button
-          text
-          type="primary"
-          @click="router.push('/user/home/tutorials?fromSidebar=true')"
-          class="view-all-btn"
-          aria-label="查看所有教程"
-        >
-          查看全部 <el-icon><ArrowRight /></el-icon>
-        </el-button>
-      </div>
-
-      <!-- 教程骨架屏 -->
-      <div v-if="tutorialsLoading" class="tutorial-skeleton">
-        <div class="tutorial-grid">
-          <el-skeleton v-for="i in 4" :key="i" animated>
-            <template #template>
-              <el-skeleton-item
-                variant="image"
-                style="width: 100%; height: 120px; border-radius: 4px"
-              />
-              <el-skeleton-item variant="h3" style="width: 80%; margin: 12px 0 8px" />
-              <el-skeleton-item variant="text" style="width: 60%" />
-            </template>
-          </el-skeleton>
+      <!-- 美食教程 -->
+      <section class="tutorials-section fade-in-up-delay-400">
+        <div class="section-header-row">
+          <div>
+            <h2 class="section-title">美食教程</h2>
+            <p class="section-subtitle">跟着大厨学做菜</p>
+          </div>
+          <button class="view-all-link" @click="router.push('/user/home/tutorials?fromSidebar=true')">
+            查看全部
+            <el-icon><ArrowRight /></el-icon>
+          </button>
         </div>
-      </div>
 
-      <!-- 当教程数据为空时显示 -->
-      <div v-else-if="featuredTutorials.length === 0" class="empty-tutorials">
-        <el-empty description="暂无教程数据">
-          <template #image>
-            <div class="empty-icon">
-              <el-icon :size="80"><Document /></el-icon>
-            </div>
-          </template>
-          <el-button type="primary" @click="fetchFeaturedTutorials">重新加载</el-button>
-        </el-empty>
-      </div>
+        <!-- 教程骨架屏 -->
+        <div v-if="tutorialsLoading" class="tuts-scroll">
+          <div v-for="i in 3" :key="i" class="tut-skeleton">
+            <el-skeleton animated>
+              <template #template>
+                <el-skeleton-item variant="image" style="width: 100%; height: 140px; border-radius: 12px" />
+                <div style="padding: 12px;">
+                  <el-skeleton-item variant="h3" style="width: 80%" />
+                  <el-skeleton-item variant="text" style="width: 50%; margin-top: 8px" />
+                </div>
+              </template>
+            </el-skeleton>
+          </div>
+        </div>
 
-      <!-- 当教程数据不为空时显示 -->
-      <div v-else class="fade-in">
-        <div class="tutorial-grid" role="list" aria-label="教程列表">
-          <el-card
-            shadow="hover"
-            class="tutorial-card enhanced stagger-item"
+        <!-- 空教程 -->
+        <div v-else-if="featuredTutorials.length === 0" class="tuts-empty">
+          <div class="empty-icon-wrapper">
+            <el-icon :size="48"><Document /></el-icon>
+          </div>
+          <p class="empty-text">暂无教程数据</p>
+          <button class="retry-btn" @click="fetchFeaturedTutorials">重新加载</button>
+        </div>
+
+        <!-- 教程卡片 -->
+        <div v-else class="tuts-scroll">
+          <div
             v-for="(tutorial, index) in featuredTutorials.slice(0, 4)"
             :key="index"
+            class="tut-card"
             @click="handleTutorialClick(tutorial)"
-            :aria-label="`教程: ${tutorial.name || tutorial.title}, ${tutorial.duration || '5分钟'}`"
-            role="listitem"
             tabindex="0"
             @keyup.enter="handleTutorialClick(tutorial)"
+            :style="{ animationDelay: `${index * 0.08}s` }"
           >
-            <div class="tutorial-thumbnail">
+            <div class="tut-image">
               <img
                 :src="tutorial.thumbnail || tutorial.coverImage || defaultTutorialThumbnail"
                 :alt="tutorial.name || tutorial.title"
                 loading="lazy"
               />
-              <div class="tutorial-type-badge">
+              <div class="tut-type-badge">
                 <el-icon v-if="tutorial.type === 'video'"><VideoCamera /></el-icon>
                 <span v-else>💡</span>
               </div>
             </div>
-            <div class="tutorial-content">
-              <!-- 来源标签 -->
-              <div class="tutorial-source-badges">
-                <!-- 官方认证标签 -->
-                <el-tag v-if="tutorial.source_type === 'ADMIN' && tutorial.is_official"
-                        type="danger"
-                        size="small"
-                        effect="dark">
-                  <el-icon><Check /></el-icon> 官方认证
+            <div class="tut-info">
+              <div class="tut-badges">
+                <el-tag v-if="tutorial.source_type === 'ADMIN' && tutorial.is_official" type="danger" size="small" effect="dark">
+                  <el-icon><Check /></el-icon> 官方
                 </el-tag>
-
-                <!-- 商家标签 -->
-                <el-tag v-if="tutorial.source_type === 'MERCHANT'"
-                        type="warning"
-                        size="small"
-                        effect="plain">
+                <el-tag v-if="tutorial.source_type === 'MERCHANT'" type="warning" size="small" effect="plain">
                   <el-icon><Shop /></el-icon> {{ tutorial.merchantName || '商家' }}
                 </el-tag>
-
-                <!-- AI生成标签 -->
-                <el-tag v-if="tutorial.source_type === 'AI_GENERATED'"
-                        :type="tutorial.review_status === 'APPROVED' ? 'success' : 'info'"
-                        size="small"
-                        effect="plain">
-                  <el-icon><MagicStick /></el-icon>
-                  AI生成
-                  <span v-if="tutorial.review_status === 'APPROVED'" class="reviewed-badge">
-                    ✓ 人工审核
-                  </span>
+                <el-tag v-if="tutorial.source_type === 'AI_GENERATED'" :type="tutorial.review_status === 'APPROVED' ? 'success' : 'info'" size="small" effect="plain">
+                  <el-icon><MagicStick /></el-icon> AI
                 </el-tag>
               </div>
-
-              <h4 class="tutorial-title">{{ tutorial.name || tutorial.title }}</h4>
-              <div class="tutorial-meta">
-                <span class="tutorial-duration">{{ tutorial.duration || '5分钟' }}</span>
-                <el-rate
-                  v-if="tutorial.rating"
-                  v-model="tutorial.rating"
-                  disabled
-                  size="small"
-                  show-score
-                />
+              <h4 class="tut-title">{{ tutorial.name || tutorial.title }}</h4>
+              <div class="tut-meta">
+                <span class="tut-duration">{{ tutorial.duration || '5分钟' }}</span>
+                <el-rate v-if="tutorial.rating" v-model="tutorial.rating" disabled size="small" show-score />
               </div>
             </div>
-          </el-card>
+          </div>
+        </div>
+      </section>
+
+      <div class="bottom-spacer"></div>
+    </div>
+
+    <!-- 天气详情弹窗 -->
+    <el-dialog v-model="weatherDetailVisible" title="天气详情" width="480px" class="savour-dialog">
+      <div class="weather-detail">
+        <div class="detail-row">
+          <span class="detail-label">当前温度</span>
+          <span class="detail-value">{{ weather.temp }}°C</span>
+        </div>
+        <div v-if="tempRangeText" class="detail-row">
+          <span class="detail-label">温度范围</span>
+          <span class="detail-value">{{ tempRangeText }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">天气状况</span>
+          <span class="detail-value">{{ weatherEmoji }} {{ weather.condition || '未知' }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">湿度</span>
+          <span class="detail-value">{{ weather.humidity }}%</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">风速</span>
+          <span class="detail-value">{{ weather.windSpeed }} m/s</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">空气质量</span>
+          <span class="detail-value" :style="{ color: aqiInfo.color }">{{ aqiInfo.text }} (AQI: {{ weather.aqi }})</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">位置</span>
+          <span class="detail-value">{{ weather.city }} {{ weather.address }}</span>
+        </div>
+        <div class="detail-advice-section">
+          <div class="advice-card">
+            <span class="advice-label">穿衣建议</span>
+            <p class="advice-text">{{ clothingAdvice }}</p>
+          </div>
+          <div class="advice-card">
+            <span class="advice-label">运动建议</span>
+            <p class="advice-text">{{ exerciseAdvice }}</p>
+          </div>
         </div>
       </div>
-    </div>
+    </el-dialog>
 
     <!-- 地图位置选择弹窗 -->
     <CommonMapLocationPicker
@@ -1132,2048 +1073,930 @@ onMounted(async () => {
 <style scoped lang="less">
 @import '../../assets/css/nordic-theme.less';
 
-// 主内容包裹层
-.main-content-wrapper {
+// ===== Savour 设计系统 =====
+@savour-bg: #F6F3ED;
+@savour-surface: #FFFFFF;
+@savour-text: #2D2A26;
+@savour-text-sec: #8A857E;
+@savour-text-muted: #B5AFA6;
+@savour-accent: #C67B5C;
+@savour-accent-hover: #B56A4A;
+@savour-accent-light: #F4E6DE;
+@savour-green: #7BAE7F;
+@savour-gold: #D4A855;
+@savour-border: #E8E2D8;
+@savour-radius: 16px;
+@savour-radius-lg: 24px;
+@savour-pill: 100px;
+
+.font-display() {
+  font-family: 'Georgia', 'Noto Serif SC', 'Songti SC', 'STSong', serif;
+}
+
+// ===== 动画 =====
+@keyframes savour-fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes savour-scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes sparkle-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.15); opacity: 0.7; }
+}
+
+@keyframes weather-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes fire-dance {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  25% { transform: scale(1.05) rotate(-3deg); }
+  75% { transform: scale(1.05) rotate(3deg); }
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.fade-in-up { animation: savour-fade-up 0.5s ease both; }
+.fade-in-up-delay { animation: savour-fade-up 0.5s ease 0.1s both; }
+.fade-in-up-delay-100 { animation: savour-fade-up 0.5s ease 0.15s both; }
+.fade-in-up-delay-200 { animation: savour-fade-up 0.5s ease 0.25s both; }
+.fade-in-up-delay-300 { animation: savour-fade-up 0.5s ease 0.35s both; }
+.fade-in-up-delay-400 { animation: savour-fade-up 0.5s ease 0.45s both; }
+.scale-in { animation: savour-scale-in 0.4s ease both; }
+
+// ===== 主容器 =====
+.savour-home {
   width: 100%;
   height: 100%;
-  overflow-y: auto;
-  background-color: @nordic-bg;
-  .nordic-page-container();
-}
-
-// 顶部操作栏
-.top-action-bar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: @nordic-space-md;
-  padding: @nordic-space-md 20px;
-  background: @nordic-surface;
-  border-radius: 0 0 @nordic-radius-lg @nordic-radius-lg;
-  box-shadow: 0 2px 12px @nordic-shadow;
-  margin-bottom: @nordic-space-lg;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  backdrop-filter: blur(10px);
-  background-color: fade(@nordic-surface, 95%);
-
-  // 确保所有元素使用相同的盒模型
-  * {
-    box-sizing: border-box;
-  }
-
-  // 确保所有直接子元素在垂直方向上对齐
-  > * {
-    align-self: center;
-  }
-
-  .search-section {
-    flex: 1;
-    margin: 0;
-    display: flex;
-    align-items: center;
-    height: 48px;
-
-    .search-input {
-      // 确保输入框容器没有额外间距
-      display: flex;
-      width: 100%;
-      height: 100%;
-      align-items: center;
-
-      :deep(.el-input) {
-        height: 100%;
-        display: flex;
-        align-items: center;
-      }
-
-      :deep(.el-input__wrapper) {
-        // 左侧圆角，右侧直角以便与按钮完美衔接
-        border-radius: @nordic-radius-pill 0 0 @nordic-radius-pill;
-        border-right: none;
-        box-shadow: 0 2px 12px @nordic-shadow;
-        transition: all @nordic-transition-slow cubic-bezier(0.4, 0, 0.2, 1);
-        padding-right: 0;
-        padding-top: 0;
-        padding-bottom: 0;
-        background: fade(@nordic-surface, 95%);
-        height: 100%;
-        display: flex;
-        align-items: center;
-
-        // 重置内部输入框的样式
-        .el-input__inner {
-          height: 100% !important;
-          line-height: 48px !important;
-          display: flex;
-          align-items: center;
-        }
-
-        &:hover {
-          box-shadow: 0 4px 16px fade(@nordic-accent, 15%);
-          background: @nordic-surface;
-        }
-
-        &.is-focus {
-          box-shadow: 0 4px 24px fade(@nordic-accent, 30%);
-          border-right: none;
-          background: @nordic-surface;
-        }
-      }
-
-      :deep(.el-input-group__append) {
-        // 左侧直角，右侧圆角
-        border-radius: 0 @nordic-radius-pill @nordic-radius-pill 0;
-        background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
-        border: none;
-        border-left: none;
-        padding: 0;
-        padding-top: 0;
-        padding-bottom: 0;
-        margin: 0;
-        margin-left: -1px; // 负边距确保无缝衔接
-        box-shadow: 0 2px 12px fade(@nordic-accent, 30%);
-        transition: all @nordic-transition-slow cubic-bezier(0.4, 0, 0.2, 1);
-        position: relative;
-        z-index: 1; // 确保按钮覆盖在输入框边框上
-        overflow: hidden;
-        height: 100%;
-        display: flex;
-        align-items: center;
-
-        // 添加波纹效果
-        &::before {
-          content: '';
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          width: 0;
-          height: 0;
-          border-radius: 50%;
-          background: rgba(255, 255, 255, 0.3);
-          transform: translate(-50%, -50%);
-          transition:
-            width 0.6s,
-            height 0.6s;
-        }
-
-        &:hover::before {
-          width: 300px;
-          height: 300px;
-        }
-
-        .el-button {
-          background-color: transparent;
-          border: none;
-          color: #fff;
-          font-weight: 600;
-          padding: 0 24px;
-          height: 100%;
-          border-radius: 0 24px 24px 0;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          box-shadow: none;
-          margin: 0;
-          position: relative;
-          z-index: 1;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-
-          &:hover {
-            background-color: rgba(255, 255, 255, 0.15);
-            transform: scale(1.02);
-            box-shadow: none;
-          }
-
-          &:active {
-            transform: scale(0.98);
-          }
-        }
-      }
-
-      // 修复输入框组整体的边框问题
-      :deep(.el-input-group__append),
-      :deep(.el-input-group__prepend) {
-        box-shadow: none;
-      }
-    }
-  }
-}
-
-// 刷新旋转动画
-@keyframes refresh-rotate {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes loading-spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-.app-container {
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.top-nav-bar {
-  background-color: #fff;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 20px;
-}
-
-.logo {
-  font-size: 1.714rem /* 原值: 24px */;
-  font-weight: bold;
-  color: #ff6b6b;
-}
-
-.search-input {
-  width: 400px;
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 1.143rem /* 原值: 16px */;
-}
-
-.main-content {
-  display: flex;
-  flex: 1;
+  position: relative;
+  background: @savour-bg;
   overflow: hidden;
-}
+  box-sizing: border-box;
 
-.sidebar-menu {
-  background-color: #f0f2f5;
-  border-right: 1px solid #e6e8eb;
-  padding: 20px 0;
-  display: flex;
-  flex-direction: column;
-
-  .avatar-section {
-    text-align: center;
-    padding-bottom: 20px;
-    border-bottom: 1px solid #e6e8eb;
-    margin-bottom: 20px;
+  // 噪点纹理
+  .noise-layer {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.02;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 256px;
   }
 
-  .menu-list {
-    border: none;
-    flex: 1;
-  }
-
-  .setting-menu {
-    border-top: 1px solid #e6e8eb;
-    margin-top: auto;
+  .home-scroll-container {
     width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    box-sizing: border-box;
+    padding: @nordic-space-lg @nordic-space-xl @nordic-space-2xl;
+
+    &::-webkit-scrollbar { width: 6px; }
+    &::-webkit-scrollbar-track { background: transparent; }
+    &::-webkit-scrollbar-thumb {
+      background: @savour-border;
+      border-radius: 3px;
+      &:hover { background: @savour-text-muted; }
+    }
   }
 }
 
-.content-area {
-  padding: 20px;
-  background-color: #fafafa;
-  overflow-y: auto;
+// ===== 英雄区域 =====
+.hero-section {
+  margin-bottom: @nordic-space-lg;
 
-  .search-section {
-    margin-bottom: 16px;
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: @nordic-space-lg;
+    align-items: stretch;
+  }
 
-    .search-input {
-      // 确保输入框容器没有额外间距
-      display: inline-flex;
-      width: 100%;
+  .hero-greeting {
+    .greeting-label {
+      .font-display();
+      font-size: @nordic-text-md;
+      color: @savour-accent;
+      font-weight: 600;
+      margin: 0 0 @nordic-space-sm;
+      letter-spacing: 0.5px;
+    }
 
-      :deep(.el-input__wrapper) {
-        // 左侧圆角，右侧直角以便与按钮完美衔接
-        border-radius: 24px 0 0 24px;
-        border-right: none;
-        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-        transition: all 0.3s ease;
+    .greeting-title {
+      .font-display();
+      font-size: 36px;
+      font-weight: 700;
+      color: @savour-text;
+      margin: 0 0 @nordic-space-sm;
+      letter-spacing: -0.5px;
+      line-height: 1.2;
+    }
+
+    .greeting-date {
+      font-size: @nordic-text-sm;
+      color: @savour-text-sec;
+      margin: 0 0 @nordic-space-lg;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: @nordic-space-sm;
+      flex-wrap: wrap;
+
+      .action-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: @nordic-space-sm;
+        padding: 10px 20px;
+        border-radius: @savour-pill;
+        border: 1.5px solid @savour-border;
+        background: @savour-surface;
+        color: @savour-text;
+        font-size: @nordic-text-sm;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.25s ease;
+        white-space: nowrap;
+
+        .pill-icon { font-size: @nordic-text-md; }
 
         &:hover {
-          box-shadow: 0 4px 16px rgba(255, 107, 107, 0.15);
+          border-color: @savour-accent;
+          background: @savour-accent-light;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(198, 123, 92, 0.15);
         }
 
-        &.is-focus {
-          box-shadow: 0 4px 16px rgba(255, 107, 107, 0.25);
-        }
-      }
+        &:active { transform: translateY(0); }
 
-      :deep(.el-input-group__append) {
-        // 左侧直角，右侧圆角
-        border-radius: 0 24px 24px 0;
-        background-color: #ff6b6b;
-        border-color: #ff6b6b;
-        border-left: none;
-        color: #fff;
-        padding: 0;
-        margin: 0;
-        margin-left: -1px; // 负边距确保无缝衔接
-        position: relative;
-        z-index: 1; // 确保按钮覆盖在输入框边框上
-
-        .el-button {
-          background-color: transparent;
-          border: none;
+        &.pill-primary {
+          background: @savour-accent;
           color: #fff;
-          border-radius: 0 24px 24px 0;
-          margin: 0;
+          border-color: @savour-accent;
 
           &:hover {
-            background-color: rgba(255, 255, 255, 0.1);
+            background: @savour-accent-hover;
+            border-color: @savour-accent-hover;
+            box-shadow: 0 4px 16px rgba(198, 123, 92, 0.3);
           }
+        }
+
+        &:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+          transform: none;
         }
       }
     }
   }
 
-  .weather-section {
-    margin-bottom: 20px;
-
-    .weather-skeleton-wrapper {
-      .weather-card {
-        background: linear-gradient(
-          135deg,
-          rgba(255, 255, 255, 0.9) 0%,
-          rgba(255, 255, 255, 0.7) 100%
-        );
-        border: 1px solid rgba(0, 0, 0, 0.06);
-
-        .weather-skeleton-content {
-          display: flex;
-          align-items: center;
-        }
-      }
+  .hero-weather {
+    .weather-skeleton {
+      background: @savour-surface;
+      border-radius: @savour-radius-lg;
+      border: 1px solid @savour-border;
+      overflow: hidden;
     }
 
     .weather-card {
-      border: none;
-      overflow: visible;
+      border-radius: @savour-radius-lg;
+      overflow: hidden;
       position: relative;
-      border-radius: 16px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      min-height: 240px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+
+      &::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.15) 0%, transparent 60%);
+        pointer-events: none;
+      }
 
       &:hover {
         transform: translateY(-4px);
-        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
       }
 
-      &::before {
-        content: '';
-        position: absolute;
-        top: -50%;
-        right: -10%;
-        width: 200px;
-        height: 200px;
-        background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, transparent 70%);
-        border-radius: 50%;
-        pointer-events: none;
-      }
-
-      &::after {
-        content: '';
-        position: absolute;
-        bottom: -30%;
-        left: -5%;
-        width: 150px;
-        height: 150px;
-        background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 70%);
-        border-radius: 50%;
-        pointer-events: none;
-      }
-
-      :deep(.el-card__body) {
-        padding: 24px 28px;
+      .weather-inner {
         position: relative;
         z-index: 1;
-      }
-    }
-
-    &.enhanced-weather {
-      .weather-content {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 24px;
-        color: #fff;
-
-        .weather-visual {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          flex-shrink: 0;
-
-          .weather-icon-wrapper {
-            width: 80px;
-            height: 80px;
-            background: linear-gradient(
-              135deg,
-              rgba(255, 255, 255, 0.3),
-              rgba(255, 255, 255, 0.15)
-            );
-            backdrop-filter: blur(12px);
-            border-radius: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow:
-              0 8px 20px rgba(0, 0, 0, 0.18),
-              inset 0 1px 1px rgba(255, 255, 255, 0.3);
-            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-            border: 1px solid rgba(255, 255, 255, 0.25);
-            cursor: pointer;
-
-            &:hover {
-              transform: scale(1.06) rotate(6deg);
-              background: linear-gradient(
-                135deg,
-                rgba(255, 255, 255, 0.35),
-                rgba(255, 255, 255, 0.2)
-              );
-              box-shadow:
-                0 12px 28px rgba(0, 0, 0, 0.22),
-                inset 0 1px 1px rgba(255, 255, 255, 0.4);
-            }
-
-            .weather-emoji {
-              font-size: 2.857rem /* 原值: 40px */;
-              filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.25));
-              animation: emoji-bounce 2s ease-in-out infinite;
-            }
-
-            .weather-icon {
-              font-size: 3.429rem /* 原值: 48px */;
-              color: #fff;
-              filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.25));
-            }
-          }
-
-          .temp-display {
-            display: flex;
-            align-items: baseline;
-            gap: 4px;
-            padding: 4px 0;
-
-            .temp-value {
-              font-size: 56px;
-              font-weight: 800;
-              line-height: 1;
-              background: linear-gradient(180deg, #ffffff 0%, rgba(255, 255, 255, 0.85) 100%);
-              -webkit-background-clip: text;
-              -webkit-text-fill-color: transparent;
-              background-clip: text;
-              filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.25));
-              letter-spacing: -2px;
-              font-family:
-                -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
-                sans-serif;
-            }
-
-            .temp-unit {
-              font-size: 1.714rem /* 原值: 24px */;
-              font-weight: 600;
-              opacity: 0.9;
-              text-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-              letter-spacing: -0.3px;
-            }
-          }
-
-          .temp-range {
-            font-size: 1rem /* 原值: 14px */;
-            font-weight: 600;
-            opacity: 0.85;
-            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
-            letter-spacing: 0.5px;
-            margin-top: 4px;
-          }
-        }
-
-        .weather-info {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          gap: 14px;
-          min-width: 0;
-
-          .location-section {
-            .location-label {
-              display: flex;
-              align-items: center;
-              gap: 6px;
-              margin-bottom: 8px;
-              font-size: 0.75rem /* 原值: 11px */;
-              font-weight: 600;
-              letter-spacing: 1px;
-              text-transform: uppercase;
-              opacity: 0.85;
-
-              .location-icon {
-                font-size: 1rem /* 原值: 14px */;
-                animation: location-pulse 2s ease-in-out infinite;
-              }
-
-              .label-text {
-                text-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
-              }
-            }
-
-            .location-button {
-              display: inline-flex;
-              align-items: center;
-              gap: 8px;
-              color: #fff;
-              padding: 10px 18px;
-              background: linear-gradient(
-                135deg,
-                rgba(255, 255, 255, 0.25),
-                rgba(255, 255, 255, 0.15)
-              );
-              backdrop-filter: blur(12px);
-              border-radius: 20px;
-              transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-              border: 1px solid rgba(255, 255, 255, 0.2);
-              font-size: 1rem /* 原值: 14px */;
-              box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1);
-              min-width: 0;
-              max-width: 100%;
-
-              &:hover {
-                background: linear-gradient(
-                  135deg,
-                  rgba(255, 255, 255, 0.32),
-                  rgba(255, 255, 255, 0.2)
-                );
-                transform: translateY(-2px);
-                box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
-
-                .edit-icon {
-                  transform: rotate(90deg) scale(1.1);
-                }
-              }
-
-              &:active {
-                transform: translateY(0);
-              }
-
-              .location-text {
-                font-size: 1rem /* 原值: 14px */;
-                font-weight: 600;
-                flex: 1;
-                min-width: 0;
-                max-width: 280px;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-                letter-spacing: 0.3px;
-                text-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
-                line-height: 1.3;
-              }
-
-              .edit-icon {
-                font-size: 1.143rem /* 原值: 16px */;
-                opacity: 0.85;
-                transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                flex-shrink: 0;
-              }
-            }
-          }
-
-          .weather-details {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-
-            .condition-badge {
-              display: inline-flex;
-              align-items: center;
-              gap: 8px;
-              padding: 8px 16px;
-              background: linear-gradient(
-                135deg,
-                rgba(255, 255, 255, 0.22),
-                rgba(255, 255, 255, 0.12)
-              );
-              backdrop-filter: blur(10px);
-              border-radius: 18px;
-              border: 1px solid rgba(255, 255, 255, 0.18);
-              box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
-              align-self: flex-start;
-              transition: all 0.25s ease;
-
-              &:hover {
-                transform: translateX(3px);
-                background: linear-gradient(
-                  135deg,
-                  rgba(255, 255, 255, 0.28),
-                  rgba(255, 255, 255, 0.16)
-                );
-              }
-
-              .condition-icon {
-                font-size: 1.429rem /* 原值: 20px */;
-                filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.15));
-                line-height: 1;
-              }
-
-              .condition-text {
-                font-size: 1rem /* 原值: 14px */;
-                font-weight: 600;
-                letter-spacing: 0.5px;
-                text-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
-                line-height: 1.3;
-              }
-            }
-
-            .recommendation-card {
-              background: linear-gradient(
-                135deg,
-                rgba(255, 255, 255, 0.28),
-                rgba(255, 255, 255, 0.16)
-              );
-              backdrop-filter: blur(12px);
-              border-radius: 16px;
-              padding: 12px 18px;
-              border: 1px solid rgba(255, 255, 255, 0.22);
-              box-shadow:
-                0 4px 14px rgba(0, 0, 0, 0.12),
-                inset 0 1px 1px rgba(255, 255, 255, 0.25);
-              transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-              max-width: 100%;
-              overflow: hidden;
-
-              &:hover {
-                transform: translateY(-1px);
-                background: linear-gradient(
-                  135deg,
-                  rgba(255, 255, 255, 0.35),
-                  rgba(255, 255, 255, 0.22)
-                );
-                box-shadow:
-                  0 6px 18px rgba(0, 0, 0, 0.16),
-                  inset 0 1px 1px rgba(255, 255, 255, 0.3);
-              }
-
-              .recommendation-header {
-                display: flex;
-                align-items: center;
-                gap: 6px;
-                margin-bottom: 6px;
-                font-size: 10px;
-                font-weight: 600;
-                letter-spacing: 1.2px;
-                text-transform: uppercase;
-                opacity: 0.9;
-
-                .sparkle-icon {
-                  font-size: 1rem /* 原值: 14px */;
-                  animation: sparkle 2s ease-in-out infinite;
-                  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.5));
-                  line-height: 1;
-                }
-
-                .recommendation-label {
-                  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
-                }
-              }
-
-              .recommendation-content {
-                font-size: 1.071rem /* 原值: 15px */;
-                font-weight: 700;
-                line-height: 1.4;
-                letter-spacing: 0.4px;
-                text-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-              }
-            }
-          }
-        }
-      }
-    }
-
-    // 位置脉冲动画
-    @keyframes location-pulse {
-      0%,
-      100% {
-        opacity: 1;
-        transform: scale(1);
-      }
-      50% {
-        opacity: 0.7;
-        transform: scale(1.1);
-      }
-    }
-  }
-
-  // 星光动画
-  @keyframes sparkle {
-    0%,
-    100% {
-      opacity: 1;
-      transform: scale(1);
-    }
-
-    50% {
-      opacity: 0.6;
-      transform: scale(1.1);
-    }
-  }
-
-  // 新的天气部分样式
-  .weather-section-new {
-    margin-bottom: 20px;
-    padding: 0 20px;
-
-    .weather-card-new {
-      border-radius: 16px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      overflow: hidden;
-      position: relative;
-
-      &::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
-        pointer-events: none;
-      }
-
-      &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-      }
-
-      .weather-content-new {
-        position: relative;
-        z-index: 1;
-        padding: 20px 24px;
+        padding: 24px;
         display: flex;
         flex-direction: column;
         gap: 12px;
         color: #fff;
+      }
 
-        // 温度行
-        .weather-temp-line {
-          display: flex;
-          align-items: center;
-          gap: 12px;
+      .weather-temp-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
 
-          .weather-icon-new {
-            font-size: 2.286rem /* 原值: 32px */;
-            filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.2));
-            animation: icon-float 3s ease-in-out infinite;
-          }
-
-          .temp-value-new {
-            font-size: 3.429rem /* 原值: 48px */;
-            font-weight: 700;
-            line-height: 1;
-            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-            letter-spacing: -1px;
-            background: linear-gradient(180deg, #ffffff 0%, rgba(255, 255, 255, 0.9) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-          }
+        .weather-emoji {
+          font-size: 40px;
+          filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.25));
+          animation: weather-float 3s ease-in-out infinite;
         }
 
-        // 温度范围
-        .temp-range-new {
-          font-size: 1.286rem /* 原值: 18px */;
+        .weather-temp-value {
+          font-size: 56px;
+          font-weight: 800;
+          line-height: 1;
+          letter-spacing: -2px;
+          background: linear-gradient(180deg, #fff 0%, rgba(255, 255, 255, 0.85) 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.25));
+        }
+      }
+
+      .weather-range {
+        font-size: 18px;
+        font-weight: 500;
+        opacity: 0.9;
+        text-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+        margin-top: -4px;
+      }
+
+      .weather-condition {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 16px;
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s ease;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        align-self: flex-start;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+
+        &:hover { background: rgba(255, 255, 255, 0.3); }
+      }
+
+      .weather-location {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 14px;
+
+        .location-name {
           font-weight: 500;
           opacity: 0.95;
-          text-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
-          letter-spacing: 0.5px;
-          margin-top: -4px;
-        }
-
-        // 位置信息行
-        .location-line {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          flex-wrap: wrap;
-
-          .location-icon-new {
-            font-size: 1.286rem /* 原值: 18px */;
-            filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.15));
-            animation: location-pulse 2s ease-in-out infinite;
-          }
-
-          .location-text-new {
-            font-size: 1.143rem /* 原值: 16px */;
-            font-weight: 500;
-            opacity: 0.95;
-            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
-          }
-
-          .location-select-btn {
-            background: rgba(255, 255, 255, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: #64b5f6;
-            padding: 6px 14px;
-            border-radius: 16px;
-            font-size: 1rem /* 原值: 14px */;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-            backdrop-filter: blur(8px);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            text-shadow: none;
-
-            &:hover {
-              background: rgba(255, 255, 255, 0.3);
-              transform: translateY(-1px);
-              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            }
-
-            &:active {
-              transform: translateY(0);
-            }
-          }
-        }
-
-        // 天气状况行
-        .weather-condition-line {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          transition: all 0.25s ease;
-
-          &:hover {
-            transform: translateX(4px);
-          }
-
-          .weather-icon-new {
-            font-size: 22px;
-            filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.15));
-          }
-
-          .weather-condition-text {
-            font-size: 1.143rem /* 原值: 16px */;
-            font-weight: 600;
-            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
-          }
-        }
-
-        // 推荐行
-        .recommendation-line {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 12px 16px;
-          background: rgba(255, 255, 255, 0.15);
-          backdrop-filter: blur(10px);
-          border-radius: 12px;
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-
-          &:hover {
-            background: rgba(255, 255, 255, 0.22);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
-          }
-
-          .sparkle-icon-new {
-            font-size: 1.429rem /* 原值: 20px */;
-            animation: sparkle 2s ease-in-out infinite;
-            filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.4));
-          }
-
-          .recommendation-label-new {
-            font-size: 1rem /* 原值: 14px */;
-            font-weight: 700;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            opacity: 0.9;
-            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
-          }
-
-          .recommendation-text-new {
-            font-size: 1.071rem /* 原值: 15px */;
-            font-weight: 600;
-            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-          }
-        }
-      }
-    }
-
-    // 图标浮动动画
-    @keyframes icon-float {
-      0%,
-      100% {
-        transform: translateY(0);
-      }
-      50% {
-        transform: translateY(-6px);
-      }
-    }
-
-    // 骨架屏样式
-    .skeleton-weather {
-      background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
-      border: 1px solid rgba(0, 0, 0, 0.06);
-
-      .weather-skeleton-vertical {
-        padding: 20px 24px;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-      }
-    }
-  }
-
-  // 火焰闪烁动画
-  @keyframes flame-flicker {
-    0% {
-      transform: scale(1) rotate(-2deg);
-      opacity: 0.9;
-    }
-
-    100% {
-      transform: scale(1.1) rotate(2deg);
-      opacity: 1;
-    }
-  }
-
-  // 浮动动画
-  @keyframes float {
-    0%,
-    100% {
-      transform: translateY(0px);
-    }
-
-    50% {
-      transform: translateY(-10px);
-    }
-  }
-
-  .recommendation-section {
-    margin-bottom: 16px;
-
-    h3 {
-      margin-bottom: 12px;
-      font-size: 1.429rem /* 原值: 20px */;
-      font-weight: bold;
-    }
-
-    .dish-card {
-      height: 320px;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      position: relative;
-      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-      cursor: pointer;
-      border-radius: 16px;
-
-      &:hover {
-        transform: translateY(-8px) scale(1.02);
-        box-shadow: 0 16px 40px rgba(255, 107, 107, 0.3);
-
-        .dish-image-background img {
-          transform: scale(1.1);
-        }
-
-        .share-btn,
-        .favorite-btn {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-
-      &:active {
-        transform: translateY(-4px) scale(0.98);
-        transition: all 0.1s ease;
-      }
-
-      .dish-image-background {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        z-index: 1;
-
-        img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-          filter: brightness(0.95) contrast(1.05) saturate(1.05);
-        }
-
-        .dish-category {
-          position: absolute;
-          top: 16px;
-          left: 16px;
-          background: linear-gradient(
-            135deg,
-            rgba(255, 107, 107, 0.95) 0%,
-            rgba(255, 135, 135, 0.95) 100%
-          );
-          color: white;
-          padding: 8px 16px;
-          border-radius: 20px;
-          font-size: 0.929rem /* 原值: 13px */;
-          font-weight: 700;
-          backdrop-filter: blur(8px);
-          box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
-          z-index: 2;
-          letter-spacing: 0.5px;
-          border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-      }
-
-      .dish-info-overlay {
-        position: relative;
-        z-index: 2;
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-end;
-        padding: 24px;
-        background: linear-gradient(
-          to top,
-          rgba(0, 0, 0, 0.88) 0%,
-          rgba(0, 0, 0, 0.65) 35%,
-          rgba(0, 0, 0, 0.35) 65%,
-          transparent 100%
-        );
-
-        .dish-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 12px;
-          margin-bottom: 12px;
-
-          .dish-name {
-            flex: 1;
-            font-size: 1.714rem /* 原值: 24px */;
-            font-weight: 700;
-            color: #fff;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
-            letter-spacing: 0.5px;
-          }
-
-          .dish-actions {
-            display: flex;
-            gap: 8px;
-            flex-shrink: 0;
-          }
-
-          .share-btn,
-          .favorite-btn {
-            width: 40px;
-            height: 40px;
-            background: rgba(255, 255, 255, 0.15);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(8px);
-            color: #fff;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            opacity: 0.9;
-
-            &:hover {
-              background: rgba(255, 255, 255, 0.35);
-              transform: scale(1.15) translateY(-2px);
-              box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
-              opacity: 1;
-            }
-
-            &:active {
-              transform: scale(1.05) translateY(0);
-            }
-          }
-
-          .favorite-btn {
-            &.is-favorite {
-              background: rgba(255, 215, 0, 0.35);
-              border-color: rgba(255, 215, 0, 0.5);
-              color: #ffd700;
-              box-shadow: 0 0 16px rgba(255, 215, 0, 0.4);
-
-              .el-icon {
-                animation: star-bounce 0.3s ease;
-              }
-            }
-          }
-        }
-
-        .dish-meta {
-          display: flex;
-          justify-content: flex-start;
-          align-items: center;
-          gap: 12px;
-          margin-bottom: 12px;
-          font-size: 1rem /* 原值: 14px */;
-
-          .dish-kcal {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            color: #fff;
-            font-weight: 700;
-            padding: 8px 16px;
-            background: linear-gradient(135deg, #ff6b6b 0%, #ff8787 100%);
-            border-radius: 20px;
-            backdrop-filter: blur(8px);
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-            box-shadow: 0 3px 10px rgba(255, 107, 107, 0.4);
-            font-size: 1.071rem /* 原值: 15px */;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-
-            &::before {
-              content: '🔥';
-              font-size: 1.143rem /* 原值: 16px */;
-              animation: flame-flicker 0.5s ease-in-out infinite alternate;
-            }
-          }
-
-          .dish-tags {
-            color: rgba(255, 255, 255, 0.95);
-            font-size: 0.929rem /* 原值: 13px */;
-            font-weight: 600;
-            padding: 6px 14px;
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(8px);
-            border-radius: 16px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-          }
-        }
-
-        .dish-rating {
-          margin-top: 4px;
-
-          :deep(.el-rate) {
-            .el-rate__icon {
-              font-size: 22px;
-              color: #ffd700;
-              text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-            }
-          }
-
-          :deep(.el-rate__text) {
-            color: #fff !important;
-            font-size: 1.143rem /* 原值: 16px */;
-            font-weight: 700;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-          }
-
-          .no-rating {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            color: rgba(255, 255, 255, 0.8);
-            font-size: 1rem /* 原值: 14px */;
-            font-weight: 500;
-
-            .el-icon {
-              font-size: 1.286rem /* 原值: 18px */;
-              opacity: 0.6;
-            }
-          }
-        }
-      }
-    }
-
-    // 轮播指示器样式优化
-    :deep(.el-carousel__indicators) {
-      .el-carousel__indicator {
-        .el-carousel__button {
-          width: 24px;
-          height: 3px;
-          border-radius: 2px;
-          background-color: #ddd;
-        }
-
-        &.is-active .el-carousel__button {
-          background-color: #ff6b6b;
-        }
-      }
-    }
-
-    /* Empty recommendations styling */
-    .empty-recommendations {
-      margin-bottom: 16px;
-      text-align: center;
-      padding: 60px 20px;
-      background: linear-gradient(135deg, #fff9f9 0%, #fff 100%);
-      border-radius: 16px;
-      box-shadow: 0 4px 16px rgba(255, 107, 107, 0.08);
-      border: 1px solid rgba(255, 107, 107, 0.1);
-      transition: all 0.3s ease;
-
-      &:hover {
-        box-shadow: 0 6px 20px rgba(255, 107, 107, 0.12);
-        transform: translateY(-2px);
-      }
-
-      .empty-icon {
-        color: #ff9a9a;
-        margin-bottom: 24px;
-        animation: float 3s ease-in-out infinite;
-      }
-
-      /* 美化空状态的文本 */
-      :deep(.el-empty__description) {
-        color: #666;
-        font-size: 1.071rem /* 原值: 15px */;
-        margin-top: 16px;
-        font-weight: 500;
-      }
-
-      /* 美化重新加载按钮 */
-      :deep(.el-button) {
-        margin-top: 24px;
-        border-radius: 24px;
-        padding: 10px 32px;
-        font-size: 1rem /* 原值: 14px */;
-        font-weight: 600;
-        background: linear-gradient(135deg, #ff6b6b 0%, #ff8787 100%);
-        border: none;
-        box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
-        transition: all 0.3s ease;
-
-        &:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 6px 16px rgba(255, 107, 107, 0.4);
-        }
-
-        &:active {
-          transform: translateY(0);
-        }
-      }
-    }
-  }
-
-  .hot-section {
-    margin-bottom: 20px;
-
-    .hot-card {
-      background: linear-gradient(135deg, #fff5f5 0%, #ffe8e8 50%, #fff 100%);
-      border: none;
-      overflow: hidden;
-      position: relative;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 0 4px 16px rgba(255, 107, 107, 0.1);
-      cursor: default;
-
-      &::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 4px;
-        height: 100%;
-        background: linear-gradient(180deg, #ff6b6b 0%, #ff8787 100%);
-      }
-
-      &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(255, 107, 107, 0.2);
-      }
-
-      // 可点击状态
-      &.is-clickable {
-        cursor: pointer;
-
-        &:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 8px 24px rgba(255, 107, 107, 0.3);
-        }
-
-        .hot-content {
-          .hot-description {
-            color: #ff6b6b;
-            font-weight: 600;
-          }
-
-          .hot-arrow {
-            opacity: 1;
-            transform: translateX(4px);
-          }
-        }
-      }
-
-      :deep(.el-card__body) {
-        padding: 20px 24px;
-      }
-    }
-
-    .hot-content {
-      display: flex;
-      align-items: center;
-      gap: 20px;
-
-      .hot-icon-wrapper {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        flex-shrink: 0;
-
-        .fire-icon {
-          font-size: 2.571rem /* 原值: 36px */;
-          animation: fire-pulse 2s ease-in-out infinite;
-          display: inline-block;
-          filter: drop-shadow(0 2px 4px rgba(255, 107, 107, 0.3));
-        }
-
-        .hot-badge {
-          background: linear-gradient(135deg, #ff6b6b 0%, #ff8787 100%);
-          color: white;
-          padding: 6px 14px;
-          border-radius: 16px;
-          font-size: 0.857rem /* 原值: 12px */;
-          font-weight: 700;
-          letter-spacing: 1px;
-          box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
-          border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-      }
-
-      .hot-text {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-
-        .hot-label {
-          font-size: 0.929rem /* 原值: 13px */;
-          color: #999;
-          font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-
-        .hot-description {
-          font-size: 17px;
-          color: #333;
-          font-weight: 600;
+          max-width: 200px;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
-          line-height: 1.4;
+        }
+
+        .location-change-btn {
+          padding: 4px 12px;
+          background: rgba(255, 255, 255, 0.2);
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          border-radius: 12px;
+          color: #fff;
+          font-size: 12px;
+          cursor: pointer;
+          backdrop-filter: blur(8px);
+          transition: all 0.2s ease;
+
+          &:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+          }
         }
       }
 
-      .hot-arrow {
-        color: #ff6b6b;
-        font-size: 1.429rem /* 原值: 20px */;
-        flex-shrink: 0;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        background: rgba(255, 107, 107, 0.1);
-        padding: 8px;
+      .weather-recommendation {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(10px);
         border-radius: 12px;
-        opacity: 0.5;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        font-size: 14px;
+        font-weight: 600;
+        margin-top: 4px;
 
-        &:hover {
-          transform: translateX(6px);
-          background: rgba(255, 107, 107, 0.2);
+        .sparkle {
+          animation: sparkle-pulse 2s ease-in-out infinite;
+          font-size: 18px;
+        }
+
+        .rec-text {
+          opacity: 0.95;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
       }
     }
   }
+}
 
-  // 火焰动画
-  @keyframes fire-pulse {
-    0%,
-    100% {
-      transform: scale(1) rotate(0deg);
-    }
-    25% {
-      transform: scale(1.05) rotate(-3deg);
-    }
-    50% {
-      transform: scale(1.1) rotate(0deg);
-    }
-    75% {
-      transform: scale(1.05) rotate(3deg);
-    }
-  }
+// ===== 搜索栏 =====
+.search-section {
+  margin-bottom: @nordic-space-lg;
 
-  .nearby-section {
-    margin-bottom: 16px;
+  .savour-search {
+    max-width: 600px;
 
-    .nearby-btn {
-      background-color: #ff6b6b;
-      border: none;
-      width: 100%;
-      height: 48px;
-      font-size: 1.143rem /* 原值: 16px */;
-      font-weight: 500;
+    :deep(.el-input__wrapper) {
+      border-radius: @savour-pill;
+      background: @savour-surface;
+      border: 1.5px solid @savour-border;
+      box-shadow: none;
+      padding: 4px 20px;
+      transition: all 0.25s ease;
 
       &:hover {
-        background-color: #ff5252;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+        border-color: @savour-accent;
+        box-shadow: 0 2px 8px rgba(198, 123, 92, 0.1);
       }
 
-      &:active {
+      &.is-focus {
+        border-color: @savour-accent;
+        box-shadow: 0 4px 16px rgba(198, 123, 92, 0.15);
+      }
+    }
+  }
+}
+
+// ===== 通用区域头部 =====
+.section-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: @nordic-space-md;
+
+  .section-title {
+    .font-display();
+    font-size: 24px;
+    font-weight: 700;
+    color: @savour-text;
+    margin: 0;
+    letter-spacing: -0.3px;
+  }
+
+  .section-subtitle {
+    font-size: @nordic-text-sm;
+    color: @savour-text-sec;
+    margin: 4px 0 0;
+  }
+
+  .view-all-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: @savour-accent;
+    font-size: @nordic-text-sm;
+    font-weight: 600;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px 12px;
+    border-radius: @savour-pill;
+    transition: all 0.2s ease;
+
+    &:hover { background: @savour-accent-light; }
+
+    .el-icon { transition: transform 0.2s ease; }
+
+    &:hover .el-icon { transform: translateX(3px); }
+  }
+}
+
+// ===== 推荐区域 =====
+.recs-section {
+  margin-bottom: @nordic-space-lg;
+}
+
+.recs-scroll {
+  display: flex;
+  gap: @nordic-space-md;
+  overflow-x: auto;
+  padding-bottom: @nordic-space-sm;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar { display: none; }
+}
+
+.rec-card {
+  flex: 0 0 300px;
+  scroll-snap-align: start;
+  border-radius: @savour-radius;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  animation: savour-scale-in 0.4s ease both;
+
+  &:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 12px 36px rgba(45, 42, 38, 0.15);
+
+    .rec-card-image img { transform: scale(1.06); }
+    .rec-action-btn { opacity: 1; transform: translateY(0); }
+  }
+
+  .rec-card-image {
+    position: relative;
+    width: 100%;
+    height: 320px;
+    overflow: hidden;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.5s ease;
+    }
+
+    .rec-category-badge {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      padding: 6px 14px;
+      background: @savour-accent;
+      color: #fff;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      z-index: 3;
+      box-shadow: 0 2px 8px rgba(198, 123, 92, 0.4);
+    }
+
+    .rec-card-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.5) 40%, transparent 70%);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 16px;
+      z-index: 2;
+    }
+
+    .rec-card-top {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .rec-action-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(8px);
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.25s ease;
+      opacity: 0;
+      transform: translateY(-8px);
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: scale(1.1);
+      }
+
+      &.is-fav {
+        background: rgba(212, 168, 85, 0.35);
+        color: @savour-gold;
+        opacity: 1;
         transform: translateY(0);
       }
     }
+
+    .rec-card-bottom {
+      .rec-dish-name {
+        font-size: 20px;
+        font-weight: 700;
+        color: #fff;
+        margin: 0 0 8px;
+        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+      }
+
+      .rec-dish-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+
+        .rec-kcal {
+          padding: 4px 12px;
+          background: @savour-accent;
+          border-radius: 16px;
+          color: #fff;
+          font-size: 13px;
+          font-weight: 700;
+        }
+
+        .rec-tags {
+          padding: 4px 10px;
+          background: rgba(255, 255, 255, 0.15);
+          backdrop-filter: blur(8px);
+          border-radius: 12px;
+          color: rgba(255, 255, 255, 0.9);
+          font-size: 12px;
+        }
+      }
+
+      .rec-rating {
+        :deep(.el-rate__icon) {
+          color: @savour-gold;
+          text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+        }
+        :deep(.el-rate__text) {
+          color: #fff !important;
+          font-size: 13px;
+        }
+      }
+
+      .no-rating {
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 13px;
+      }
+    }
+  }
+}
+
+// 骨架屏
+.rec-skeleton,
+.tut-skeleton {
+  flex: 0 0 280px;
+  background: @savour-surface;
+  border-radius: @savour-radius;
+  overflow: hidden;
+  border: 1px solid @savour-border;
+
+  :deep(.el-skeleton__item) {
+    background: linear-gradient(90deg, rgba(0, 0, 0, 0.04) 25%, rgba(0, 0, 0, 0.08) 50%, rgba(0, 0, 0, 0.04) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease infinite;
+  }
+}
+
+// 空状态
+.recs-empty,
+.tuts-empty {
+  text-align: center;
+  padding: 48px 20px;
+  background: @savour-surface;
+  border-radius: @savour-radius;
+  border: 1px dashed @savour-border;
+
+  .empty-icon-wrapper {
+    color: @savour-text-muted;
+    margin-bottom: @nordic-space-md;
   }
 
-  .tutorial-section {
-    margin-bottom: 16px;
+  .empty-text {
+    color: @savour-text-sec;
+    font-size: @nordic-text-base;
+    margin: 0 0 @nordic-space-md;
+  }
 
-    .section-header {
+  .retry-btn {
+    padding: 8px 24px;
+    background: @savour-accent;
+    color: #fff;
+    border: none;
+    border-radius: @savour-pill;
+    font-size: @nordic-text-sm;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: @savour-accent-hover;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(198, 123, 92, 0.3);
+    }
+  }
+}
+
+// ===== 今日热点 =====
+.hot-section {
+  margin-bottom: @nordic-space-lg;
+  cursor: pointer;
+
+  .hot-card {
+    display: flex;
+    align-items: center;
+    gap: @nordic-space-md;
+    padding: @nordic-space-md @nordic-space-lg;
+    background: @savour-surface;
+    border-radius: @savour-radius;
+    border: 1px solid @savour-border;
+    border-left: 4px solid #E25B45;
+    transition: all 0.25s ease;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+    }
+
+    &.clickable {
+      cursor: pointer;
+
+      &:hover {
+        box-shadow: 0 8px 24px rgba(226, 91, 69, 0.12);
+        .hot-arrow { transform: translateX(4px); }
+      }
+    }
+
+    .hot-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+
+      .hot-emoji {
+        font-size: 32px;
+        animation: fire-dance 2s ease-in-out infinite;
+      }
+
+      .hot-badge {
+        padding: 4px 10px;
+        background: linear-gradient(135deg, #E25B45, #FF7B5C);
+        color: #fff;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 1px;
+      }
+    }
+
+    .hot-center {
+      flex: 1;
+      min-width: 0;
+
+      .hot-label {
+        font-size: 12px;
+        color: @savour-text-muted;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .hot-content {
+        font-size: 15px;
+        font-weight: 600;
+        color: @savour-text;
+        margin: 4px 0 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+
+    .hot-arrow {
+      color: #E25B45;
+      font-size: 18px;
+      transition: transform 0.2s ease;
+      flex-shrink: 0;
+    }
+  }
+}
+
+// ===== 教程区域 =====
+.tutorials-section {
+  margin-bottom: @nordic-space-lg;
+}
+
+.tuts-scroll {
+  display: flex;
+  gap: @nordic-space-md;
+  overflow-x: auto;
+  padding-bottom: @nordic-space-sm;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar { display: none; }
+}
+
+.tut-card {
+  flex: 0 0 260px;
+  scroll-snap-align: start;
+  background: @savour-surface;
+  border-radius: @savour-radius;
+  overflow: hidden;
+  cursor: pointer;
+  border: 1px solid @savour-border;
+  transition: all 0.3s ease;
+  animation: savour-scale-in 0.4s ease both;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(45, 42, 38, 0.1);
+
+    .tut-image img { transform: scale(1.05); }
+  }
+
+  .tut-image {
+    width: 100%;
+    height: 150px;
+    overflow: hidden;
+    position: relative;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.4s ease;
+    }
+
+    .tut-type-badge {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 28px;
+      height: 28px;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(4px);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 12px;
+    }
+  }
+
+  .tut-info {
+    padding: 12px 16px;
+
+    .tut-badges {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+
+      .el-tag {
+        font-size: 11px;
+        padding: 2px 6px;
+        border-radius: 8px;
+        height: 18px;
+        line-height: 1;
+
+        .el-icon { font-size: 10px; }
+      }
+    }
+
+    .tut-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: @savour-text;
+      margin: 0 0 8px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .tut-meta {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 16px;
+      font-size: 12px;
 
-      h3 {
-        margin: 0;
-        font-size: 1.429rem /* 原值: 20px */;
-        font-weight: bold;
-        color: #333;
-      }
-
-      .header-actions {
-        display: flex;
-        gap: 12px;
-        align-items: center;
-      }
-
-      .publish-btn {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        border-radius: 20px;
-        padding: 8px 16px;
-        font-size: 1rem /* 原值: 14px */;
-        font-weight: 500;
-        transition: all 0.3s;
-
-        &:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
-        }
-
-        .el-icon {
-          font-size: 1.143rem /* 原值: 16px */;
-        }
-      }
-
-      .view-all-btn {
-        font-size: 1rem /* 原值: 14px */;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-
-        &:hover {
-          .el-icon {
-            transform: translateX(4px);
-          }
-        }
-
-        .el-icon {
-          transition: transform 0.3s ease;
-        }
-      }
-    }
-
-    .tutorial-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 16px;
-      margin-bottom: 20px;
-    }
-
-    .tutorial-card {
-      height: 200px;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      cursor: pointer;
-      transition: all 0.3s ease;
-
-      &:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 8px 24px rgba(255, 107, 107, 0.15);
-
-        .tutorial-thumbnail img {
-          transform: scale(1.05);
-        }
-      }
-
-      .tutorial-thumbnail {
-        width: 100%;
-        height: 120px;
-        position: relative;
-        overflow: hidden;
-
-        img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          transition: transform 0.3s ease;
-        }
-
-        .tutorial-type-badge {
-          position: absolute;
-          top: 8px;
-          right: 8px;
-          width: 32px;
-          height: 32px;
-          background: rgba(0, 0, 0, 0.6);
-          backdrop-filter: blur(4px);
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          font-size: 1rem /* 原值: 14px */;
-
-          .el-icon {
-            font-size: 1.143rem /* 原值: 16px */;
-          }
-        }
-      }
-
-      .tutorial-content {
-        flex: 1;
-        padding: 12px;
-        display: flex;
-        flex-direction: column;
-
-        .tutorial-title {
-          margin: 0 0 8px 0;
-          font-size: 1.071rem /* 原值: 15px */;
-          font-weight: 600;
-          color: #333;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .tutorial-source-badges {
-          display: flex;
-          gap: 6px;
-          margin-bottom: 8px;
-          flex-wrap: wrap;
-
-          .el-tag {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            font-size: 0.75rem /* 原值: 11px */;
-            padding: 2px 8px;
-            border-radius: 10px;
-            height: 20px;
-            line-height: 1;
-
-            .el-icon {
-              font-size: 0.857rem /* 原值: 12px */;
-            }
-
-            .reviewed-badge {
-              margin-left: 4px;
-              padding-left: 4px;
-              border-left: 1px solid currentColor;
-            }
-          }
-        }
-
-        .tutorial-meta {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-top: auto;
-          font-size: 0.929rem /* 原值: 13px */;
-
-          .tutorial-duration {
-            color: #999;
-          }
-
-          .el-rate {
-            :deep(.el-rate__text) {
-              font-size: 0.857rem /* 原值: 12px */;
-            }
-          }
-        }
-      }
-    }
-
-    .empty-tutorials {
-      margin-bottom: 20px;
-      text-align: center;
-      padding: 60px 0;
-      background-color: #fafafa;
-      border-radius: 10px;
-      box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.06);
-
-      .empty-icon {
-        color: #ddd;
-        margin-bottom: 20px;
-      }
-    }
-
-    /* 美化空状态的文本 */
-    :deep(.el-empty__description) {
-      color: #909399;
-      font-size: 1.143rem /* 原值: 16px */;
-      margin-top: 20px;
-    }
-
-    /* 美化重新加载按钮 */
-    .empty-tutorials .el-button {
-      margin-top: 30px;
-      border-radius: 25px;
-      padding: 8px 32px;
-      font-size: 1rem /* 原值: 14px */;
+      .tut-duration { color: @savour-text-sec; }
+      :deep(.el-rate__text) { font-size: 11px; }
     }
   }
+}
 
-  // 星星收藏动画
-  @keyframes star-bounce {
-    0% {
-      transform: scale(1);
-    }
-    50% {
-      transform: scale(1.3);
-    }
-    100% {
-      transform: scale(1);
-    }
-  }
-
-  // 淡入动画
-  .fade-in {
-    animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-    opacity: 0;
-  }
-
-  // 淡入上移动画（带延迟）
-  .fade-in-up {
-    animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-    opacity: 0;
-  }
-
-  .fade-in-up-delay-100 {
-    animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.1s forwards;
-    opacity: 0;
-  }
-
-  .fade-in-up-delay-200 {
-    animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.2s forwards;
-    opacity: 0;
-  }
-
-  .fade-in-up-delay-300 {
-    animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.3s forwards;
-    opacity: 0;
-  }
-
-  .fade-in-up-delay-400 {
-    animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.4s forwards;
-    opacity: 0;
-  }
-
-  @keyframes fadeInUp {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  // 为轮播项添加交错动画
-  :deep(.el-carousel-item) {
-    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-
-    &.is-active {
-      .dish-card {
-        animation: cardSlideIn 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-      }
-    }
-  }
-
-  @keyframes cardSlideIn {
-    0% {
-      opacity: 0;
-      transform: translateX(30px) scale(0.95);
-    }
-    100% {
-      opacity: 1;
-      transform: translateX(0) scale(1);
-    }
-  }
-
-  // 骨架屏样式
-  .skeleton-wrapper {
-    margin-bottom: 16px;
-    border-radius: 16px;
+// ===== 弹窗样式 =====
+.savour-dialog {
+  :deep(.el-dialog) {
+    border-radius: @savour-radius-lg;
     overflow: hidden;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  }
 
-    :deep(.el-skeleton) {
-      padding: 0;
+  :deep(.el-dialog__header) {
+    background: @savour-accent-light;
+    padding: 16px 20px;
+    margin: 0;
 
-      .el-skeleton__item {
-        background: linear-gradient(
-          90deg,
-          rgba(0, 0, 0, 0.06) 25%,
-          rgba(0, 0, 0, 0.12) 50%,
-          rgba(0, 0, 0, 0.06) 75%
-        );
-        background-size: 200% 100%;
-        animation: skeleton-loading 1.5s ease-in-out infinite;
-      }
+    .el-dialog__title {
+      .font-display();
+      font-weight: 700;
+      color: @savour-text;
     }
   }
 
-  .tutorial-skeleton {
-    margin-bottom: 16px;
+  :deep(.el-dialog__body) {
+    padding: 20px;
+  }
+}
+
+.weather-detail {
+  .detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    background: @savour-bg;
     border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    margin-bottom: 8px;
+    transition: background 0.2s ease;
 
-    :deep(.el-skeleton) {
-      .el-skeleton__item {
-        background: linear-gradient(
-          90deg,
-          rgba(0, 0, 0, 0.06) 25%,
-          rgba(0, 0, 0, 0.12) 50%,
-          rgba(0, 0, 0, 0.06) 75%
-        );
-        background-size: 200% 100%;
-        animation: skeleton-loading 1.5s ease-in-out infinite;
-      }
+    &:hover { background: darken(@savour-bg, 3%); }
+
+    .detail-label {
+      font-size: 14px;
+      color: @savour-text-sec;
+      font-weight: 500;
+    }
+
+    .detail-value {
+      font-size: 14px;
+      color: @savour-text;
+      font-weight: 700;
     }
   }
 
-  // 骨架屏加载动画
-  @keyframes skeleton-loading {
-    0% {
-      background-position: 200% 0;
-    }
+  .detail-advice-section {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid @savour-border;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 
-    100% {
-      background-position: -200% 0;
-    }
-  }
+    .advice-card {
+      padding: 12px 16px;
+      background: @savour-accent-light;
+      border-radius: 12px;
+      border-left: 3px solid @savour-accent;
 
-  // Emoji 弹跳动画
-  @keyframes emoji-bounce {
-    0%,
-    100% {
-      transform: translateY(0);
-    }
-
-    50% {
-      transform: translateY(-8px);
-    }
-  }
-
-  // 天气详情弹窗样式
-  .weather-detail-dialog {
-    :deep(.el-dialog__body) {
-      padding: 20px;
-    }
-
-    .weather-detail-content {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-
-      .detail-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 12px 16px;
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        border-radius: 12px;
-        transition: all 0.3s ease;
-
-        &:hover {
-          background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
-          transform: translateX(4px);
-        }
-
-        .detail-label {
-          font-size: 1rem /* 原值: 14px */;
-          color: #666;
-          font-weight: 600;
-        }
-
-        .detail-value {
-          font-size: 1.071rem /* 原值: 15px */;
-          color: #333;
-          font-weight: 700;
-        }
+      .advice-label {
+        font-size: 12px;
+        color: @savour-accent;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
       }
 
-      .detail-advice {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        margin-top: 8px;
-        padding-top: 16px;
-        border-top: 1px solid #e9ecef;
-
-        .advice-item {
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-          padding: 12px;
-          background: linear-gradient(135deg, #fff9f0 0%, #fff3e0 100%);
-          border-radius: 10px;
-          border-left: 3px solid #ff9800;
-
-          .advice-label {
-            font-size: 0.929rem /* 原值: 13px */;
-            color: #ff9800;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-          }
-
-          .advice-text {
-            font-size: 1rem /* 原值: 14px */;
-            color: #555;
-            line-height: 1.5;
-          }
-        }
+      .advice-text {
+        font-size: 14px;
+        color: @savour-text;
+        margin: 4px 0 0;
+        line-height: 1.5;
       }
     }
   }
+}
 
-  // 移动端响应式适配
-  @media (max-width: 768px) {
-    padding: 12px;
+// ===== 底部间距 =====
+.bottom-spacer {
+  height: 32px;
+}
 
-    .weather-section {
-      .weather-card {
-        :deep(.el-card__body) {
-          padding: 18px 20px;
-        }
-      }
+// ===== 响应式 =====
+@media (max-width: 900px) {
+  .hero-section .hero-grid {
+    grid-template-columns: 1fr;
+    gap: @nordic-space-md;
+  }
 
-      .weather-content {
-        flex-direction: column;
-        gap: 16px;
+  .hero-greeting .greeting-title {
+    font-size: 28px;
+  }
 
-        .weather-visual {
-          width: 100%;
-          justify-content: center;
+  .rec-card {
+    flex: 0 0 260px;
 
-          .weather-icon-wrapper {
-            width: 64px;
-            height: 64px;
+    .rec-card-image { height: 260px; }
+  }
 
-            .weather-icon {
-              font-size: 2.571rem /* 原值: 36px */;
-            }
-          }
-
-          .temp-display {
-            .temp-value {
-              font-size: 42px;
-              letter-spacing: -1.5px;
-            }
-
-            .temp-unit {
-              font-size: 1.286rem /* 原值: 18px */;
-            }
-          }
-        }
-
-        .weather-info {
-          width: 100%;
-          gap: 12px;
-
-          .location-section {
-            .location-label {
-              font-size: 10px;
-              gap: 4px;
-              margin-bottom: 6px;
-
-              .location-icon {
-                font-size: 0.857rem /* 原值: 12px */;
-              }
-            }
-
-            .location-button {
-              padding: 8px 14px;
-              font-size: 0.929rem /* 原值: 13px */;
-              width: 100%;
-              justify-content: center;
-
-              .location-text {
-                font-size: 0.929rem /* 原值: 13px */;
-                max-width: 200px;
-              }
-
-              .edit-icon {
-                font-size: 1rem /* 原值: 14px */;
-              }
-            }
-          }
-
-          .weather-details {
-            gap: 8px;
-
-            .condition-badge {
-              padding: 6px 12px;
-              width: 100%;
-              justify-content: center;
-
-              .condition-icon {
-                font-size: 1.143rem /* 原值: 16px */;
-              }
-
-              .condition-text {
-                font-size: 0.929rem /* 原值: 13px */;
-              }
-            }
-
-            .recommendation-card {
-              padding: 10px 14px;
-              width: 100%;
-
-              .recommendation-header {
-                gap: 4px;
-                margin-bottom: 4px;
-
-                .sparkle-icon {
-                  font-size: 0.857rem /* 原值: 12px */;
-                }
-
-                .recommendation-label {
-                  font-size: 9px;
-                }
-              }
-
-              .recommendation-content {
-                font-size: 0.929rem /* 原值: 13px */;
-                text-align: center;
-              }
-            }
-          }
-        }
-      }
-    }
-
-    .recommendation-section {
-      h3 {
-        font-size: 1.286rem /* 原值: 18px */;
-      }
-
-      .dish-card {
-        height: 280px;
-
-        .dish-info-overlay {
-          padding: 12px;
-
-          .dish-name {
-            font-size: 1.143rem /* 原值: 16px */;
-          }
-
-          .dish-meta {
-            font-size: 0.857rem /* 原值: 12px */;
-            gap: 8px;
-          }
-
-          .dish-rating {
-            :deep(.el-rate) {
-              font-size: 0.857rem /* 原值: 12px */;
-            }
-          }
-        }
-      }
-    }
-
-    .tutorial-section {
-      .section-header {
-        h3 {
-          font-size: 1.286rem /* 原值: 18px */;
-        }
-
-        .header-actions {
-          gap: 8px;
-        }
-
-        .publish-btn {
-          padding: 6px 12px;
-          font-size: 0.857rem /* 原值: 12px */;
-
-          .el-icon {
-            font-size: 1rem /* 原值: 14px */;
-          }
-        }
-
-        .view-all-btn {
-          font-size: 0.857rem /* 原值: 12px */;
-        }
-      }
-
-      .tutorial-grid {
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-        gap: 12px;
-      }
-
-      .tutorial-card {
-        height: 180px;
-
-        .tutorial-thumbnail {
-          height: 100px;
-        }
-
-        .tutorial-content {
-          padding: 8px;
-
-          .tutorial-title {
-            font-size: 0.929rem /* 原值: 13px */;
-          }
-
-          .tutorial-meta {
-            font-size: 0.75rem /* 原值: 11px */;
-          }
-        }
-      }
-    }
-
-    .nearby-section {
-      .nearby-btn {
-        height: 44px;
-        font-size: 1rem /* 原值: 14px */;
-      }
-    }
+  .tut-card {
+    flex: 0 0 220px;
   }
 }
 </style>

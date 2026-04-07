@@ -819,6 +819,7 @@ const handleSearch = (value) => {
           <el-menu
             v-model:default-active="activeMenuIndex"
             class="custom-menu menu-list"
+            :key="userRole"
             @select="handleMenuSelect"
             @open="handleMenuOpen"
             @close="handleMenuClose"

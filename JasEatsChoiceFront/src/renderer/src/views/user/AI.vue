@@ -103,10 +103,10 @@ onActivated(() => {
 </script>
 
 <style scoped lang="less">
-/* AI页面内容区域 */
+/* AI页面内容区域 — 暖陶花园 */
 .ai-page-content {
   padding: 20px 20px 0 20px;
-  background-color: #fafafa;
+  background-color: #F5F3EF;
   height: 100%;
   box-sizing: border-box;
   display: flex;
@@ -122,13 +122,14 @@ onActivated(() => {
   flex-direction: column;
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 24px rgba(180, 140, 100, 0.1);
   height: 100%;
+  border: 1px solid #E8E4DE;
 
   :deep(.el-tabs__header) {
     margin: 0;
-    background: linear-gradient(135deg, #fff9fa 0%, #fff 100%);
-    border-bottom: 2px solid #ffe0e3;
+    background: linear-gradient(135deg, #FDF8F3 0%, #FEFCF9 100%);
+    border-bottom: 2px solid #F0D5C4;
     flex-shrink: 0;
   }
 
@@ -137,19 +138,27 @@ onActivated(() => {
   }
 
   :deep(.el-tabs__item) {
-    font-size: 1.071rem /* 原值: 15px */;
+    font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    font-size: 1.071rem;
     font-weight: 600;
-    color: #606266;
-    transition: all 0.3s ease;
+    color: #7A7168;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    letter-spacing: 0.3px;
 
     &:hover {
-      color: #ff6b6b;
+      color: #D4845A;
     }
 
     &.is-active {
-      color: #ff6b6b;
-      background: linear-gradient(135deg, #ffe8e8 0%, #fff 100%);
+      color: #D4845A;
+      background: linear-gradient(135deg, #F0D5C4 0%, #FDF8F3 100%);
     }
+  }
+
+  :deep(.el-tabs__active-bar) {
+    background-color: #D4845A;
+    height: 3px;
+    border-radius: 3px 3px 0 0;
   }
 
   :deep(.el-tabs__content) {
@@ -158,6 +167,7 @@ onActivated(() => {
     padding: 0 !important;
     display: flex;
     flex-direction: column;
+    background: #FEFCF9;
   }
 
   :deep(.el-tab-pane) {
@@ -174,16 +184,16 @@ onActivated(() => {
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #909399;
+  color: #9E9E9E;
 
   p {
     margin: 12px 0 0 0;
-    font-size: 1.143rem /* 原值: 16px */;
+    font-size: 1.143rem;
   }
 
   .hint {
-    font-size: 1rem /* 原值: 14px */;
-    color: #c0c4cc;
+    font-size: 1rem;
+    color: #BFB8B0;
   }
 }
 </style>
