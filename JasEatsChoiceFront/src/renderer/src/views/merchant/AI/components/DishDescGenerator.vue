@@ -124,7 +124,8 @@ import {
   TrendCharts
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import api, { AI_API } from '@/api'
+import api from '@/utils/api'
+import { AI_API } from '@/api'
 
 const dishForm = reactive({
   name: '',

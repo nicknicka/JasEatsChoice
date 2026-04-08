@@ -154,7 +154,8 @@ import {
   Opportunity
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import api, { buildUrl, MERCHANT_AI_API } from '@/api'
+import api from '@/utils/api'
+import { buildUrl, MERCHANT_AI_API } from '@/api'
 
 const props = defineProps({
   merchantId: {
