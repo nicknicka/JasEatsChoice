@@ -74,10 +74,38 @@ const form = reactive({
   contentType: 'VIDEO'
 })
 
+const normalizeContentUrl = (value) => {
+  return typeof value === 'string' ? value.trim() : ''
+}
+
+const validateContentUrl = (_rule, value, callback) => {
+  const url = normalizeContentUrl(value)
+
+  if (!url) {
+    callback(new Error('请输入内容链接'))
+    return
+  }
+
+  // 放宽校验，兼容短链和部分平台分享链接格式
+  const looseUrlPattern = /^(https?:\/\/)?([\w-]+\.)+[\w-]+([/?#].*)?$/i
+  if (!looseUrlPattern.test(url)) {
+    callback(new Error('请输入有效的内容链接'))
+    return
+  }
+
+  callback()
+}
+
+const isValidationError = (error) => {
+  return !!error &&
+    typeof error === 'object' &&
+    !('status' in error) &&
+    Object.values(error).some((item) => Array.isArray(item))
+}
+
 const rules = {
   contentUrl: [
-    { required: true, message: '请输入内容链接', trigger: 'blur' },
-    { type: 'url', message: '请输入正确的URL格式', trigger: 'blur' }
+    { validator: validateContentUrl, trigger: 'blur' }
   ]
 }
 
@@ -101,8 +129,11 @@ const handleSubmit = async () => {
     await formRef.value.validate()
 
     submitting.value = true
+    const contentUrl = normalizeContentUrl(form.contentUrl)
+    form.contentUrl = contentUrl
+
     const response = await contentExtractionApi.createSource({
-      contentUrl: form.contentUrl
+      contentUrl
     })
 
     // 修复：API 响应拦截器已经返回 response.data，所以直接检查 response.code
@@ -114,10 +145,13 @@ const handleSubmit = async () => {
       ElMessage.error(response.message || '添加失败，请稍后重试')
     }
   } catch (error) {
-    console.error('添加失败:', error)
-    if (error !== false) {
-      ElMessage.error('添加失败，请稍后重试')
+    if (isValidationError(error) || error === false) {
+      return
     }
+
+    console.error('添加失败:', error)
+    const backendMessage = error?.data?.message || error?.response?.data?.message
+    ElMessage.error(backendMessage || error?.message || '添加失败，请稍后重试')
   } finally {
     submitting.value = false
   }
