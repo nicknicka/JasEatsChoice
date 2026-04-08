@@ -378,25 +378,17 @@ const saveToMyRecipes = async () => {
     const newRecipe = {
       name: recipeName,
       type: "晚餐",
-      items: ingredients,
-      ingredients: ingredients,
+      items: JSON.stringify(ingredients),
       calories: calorie,
-      time: "30分钟",
       cookTime: "30分钟",
       favorite: false,
-      description: steps,
-      difficulty: difficulty,
+      detail: steps,
+      userId: userId,
     };
 
     const response = await axios.post(
       `${API_CONFIG.baseURL}${API_CONFIG.recipe.add}`,
-      {
-        ...newRecipe,
-        userId: userId,
-        favorite: false,
-        items: ingredients,
-        calories: calorie,
-      }
+      newRecipe
     );
 
     if (response.data?.code === "200" && response.data?.data) {

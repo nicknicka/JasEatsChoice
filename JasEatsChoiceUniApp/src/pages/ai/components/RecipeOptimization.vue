@@ -161,6 +161,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { formatTime } from '@/utils/helper'
+import { aiApi } from '@/api/modules/ai'
 
 // 优化目标选项
 const optimizationOptions = ref([
@@ -208,41 +209,28 @@ const optimizeRecipe = async () => {
   isOptimizing.value = true
 
   try {
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    const res = await aiApi.optimizeRecipe({
+      recipe: recipeText.value,
+      goal: selectedGoal.value
+    })
 
-    // 模拟优化结果
+    // 后端返回 ResponseResult 格式: { success: true, code: "200", data: {...} }
+    const data = res.data || res
+
+    if (!data || data.error) {
+      throw new Error(data?.message || '优化失败')
+    }
+
     optimizationResult.value = {
-      originalCalories: 650,
-      originalProtein: 35,
-      originalFat: 28,
-      originalCarb: 45,
-      optimizedCalories: 420,
-      optimizedProtein: 42,
-      optimizedFat: 15,
-      optimizedCarb: 38,
-      suggestions: [
-        {
-          icon: '🍗',
-          title: '替换鸡胸肉烹饪方式',
-          content: '建议用水煮或蒸代替煎制，可以减少约120卡路里的油脂摄入'
-        },
-        {
-          icon: '🥦',
-          title: '增加蔬菜比例',
-          content: '将西兰花增加到150g，增加饱腹感同时提供更多维生素'
-        },
-        {
-          icon: '🫒',
-          title: '减少油脂用量',
-          content: '橄榄油用量减少到5ml，使用喷雾瓶可以更均匀地控制用量'
-        },
-        {
-          icon: '🧄',
-          title: '添加香料调味',
-          content: '使用大蒜、黑胡椒等天然香料增加风味，减少对油脂的依赖'
-        }
-      ]
+      originalCalories: Number(data.originalCalories) || 0,
+      originalProtein: Number(data.originalProtein) || 0,
+      originalFat: Number(data.originalFat) || 0,
+      originalCarb: Number(data.originalCarb) || 0,
+      optimizedCalories: Number(data.optimizedCalories) || 0,
+      optimizedProtein: Number(data.optimizedProtein) || 0,
+      optimizedFat: Number(data.optimizedFat) || 0,
+      optimizedCarb: Number(data.optimizedCarb) || 0,
+      suggestions: Array.isArray(data.suggestions) ? data.suggestions : []
     }
 
     // 添加到历史记录
@@ -265,7 +253,7 @@ const optimizeRecipe = async () => {
   } catch (error) {
     console.error('优化失败:', error)
     uni.showToast({
-      title: '优化失败，请重试',
+      title: error.message || '优化失败，请重试',
       icon: 'none'
     })
   } finally {

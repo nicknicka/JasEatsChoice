@@ -49,8 +49,17 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
      * 菜品识别提示词
      */
     private static final String DISH_RECOGNITION_PROMPT = """
-        你是一个专业的菜品识别专家和营养师。请仔细分析这张食物图片，返回以下JSON格式：
+        你是一个专业的菜品识别专家和营养师。请仔细分析这张图片。
+
+        首先判断图片中是否包含食物/菜品。如果不是食物图片（如风景、人物、动物、物品等），请返回：
         {
+          "isDish": false,
+          "reason": "只能识别食物图片，请确认上传的是食物图片"
+        }
+
+        如果图片中确实是食物/菜品，请返回以下JSON格式：
+        {
+          "isDish": true,
           "name": "菜品名称（具体且准确）",
           "calories": 估算卡路里(数字，单位大卡),
           "protein": 蛋白质含量(数字，单位克),
@@ -65,35 +74,42 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
         }
 
         注意：
-        1. 卡路里和营养成分要根据菜品分量合理估算
-        2. 食材列表要包含主要食材和调料
-        3. 标签可以是菜系、口味、场景等
-        4. 只返回JSON，不要其他解释文字
+        1. 必须先判断是否为食物图片，isDish字段必填
+        2. 卡路里和营养成分要根据菜品分量合理估算
+        3. 食材列表要包含主要食材和调料
+        4. 标签可以是菜系、口味、场景等
+        5. 只返回JSON，不要其他解释文字
         """;
 
     /**
      * 食谱优化提示词
      */
     private static final String RECIPE_OPTIMIZATION_PROMPT = """
-        你是一个专业的营养师和烹饪专家。请优化以下食谱，使其更健康、更美味、更易于操作。
+        你是一个专业的营养师和烹饪专家。用户提供了食材或食谱描述，请基于此推荐优化后的食谱方案。
 
-        原食谱：
+        用户输入：
         %s
 
-        请返回以下JSON格式：
-        {
-          "original": "原食谱内容（保持原样）",
-          "optimized": "优化后的完整食谱，格式如下：\\n推荐食谱：[菜名]\\n难度：[简单/中等/困难]\\n卡路里：[数字]大卡\\n食材：[食材列表]\\n步骤：[详细步骤]",
-          "improvements": ["改进点1：具体说明", "改进点2：具体说明", "改进点3：具体说明"]
-        }
+        请严格返回以下JSON格式（不要添加任何其他文字，不要用markdown代码块）：
+        [
+          {
+            "name": "食谱名称",
+            "difficulty": "简单/中等/困难",
+            "calorie": 数字（总卡路里，单位kcal），
+            "ingredients": "食材及用量列表",
+            "steps": "详细烹饪步骤",
+            "protein": 数字（蛋白质，单位g），
+            "fat": 数字（脂肪，单位g），
+            "carb": 数字（碳水化合物，单位g）
+          }
+        ]
 
-        优化原则：
-        1. 减少油盐用量，保持健康
-        2. 增加蔬菜搭配，营养均衡
-        3. 简化步骤，易于操作
-        4. 保留菜品特色和美味
-
-        只返回JSON，不要其他解释文字。
+        要求：
+        1. 返回1-3个优化后的食谱方案
+        2. 食材搭配合理，营养均衡
+        3. 减少油盐用量，保持健康
+        4. 步骤清晰，易于操作
+        5. 只返回JSON数组，不要其他解释文字
         """;
 
     /**
@@ -138,12 +154,10 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
             log.info("开始调用视觉模型进行菜品识别，Base64长度: {}", imageBase64.length());
 
             // 构建多模态消息
-            UserMessage userMessage = UserMessage.builder()
-                    .content(List.of(
-                            TextContent.from(DISH_RECOGNITION_PROMPT),
-                            ImageContent.fromBase64(imageBase64, "image/jpeg")
-                    ))
-                    .build();
+            UserMessage userMessage = UserMessage.from(
+                    TextContent.from(DISH_RECOGNITION_PROMPT),
+                    ImageContent.from(imageBase64, "image/jpeg")
+            );
 
             // 调用视觉模型
             ChatResponse chatResponse = visionModel.chat(userMessage);
@@ -184,15 +198,21 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
             // 调用对话模型
             String responseText = agentModel.chat(prompt);
 
-            log.info("AI返回优化结果: {}", responseText.length() > 200 ? responseText.substring(0, 200) + "..." : responseText);
+            log.info("AI返回优化结果: {}", responseText.length() > 300 ? responseText.substring(0, 300) + "..." : responseText);
 
-            // 解析JSON响应
-            Map<String, Object> result = parseRecipeOptimizationResult(responseText, originalRecipe);
+            // 解析JSON响应，返回食谱列表
+            List<Map<String, Object>> recipes = parseRecipeListResult(responseText);
 
-            // 添加成功标记
+            if (recipes.isEmpty()) {
+                log.warn("AI返回的食谱列表为空");
+                return Map.of("error", true, "message", "没有找到合适的优化食谱");
+            }
+
+            Map<String, Object> result = new HashMap<>();
             result.put("error", false);
-
-            log.info("食谱优化成功");
+            result.put("recipes", recipes);
+            // 兼容桌面端：直接返回数组（Controller 会包装在 ResponseResult.data 中）
+            log.info("食谱优化成功，返回 {} 个食谱方案", recipes.size());
             return result;
 
         } catch (Exception e) {
@@ -232,6 +252,21 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
             // 解析为Map
             Map<String, Object> result = objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {});
 
+            // 检查是否为非菜品图片
+            Object isDishObj = result.get("isDish");
+            if (isDishObj != null) {
+                boolean isDish = Boolean.TRUE.equals(isDishObj);
+                if (!isDish) {
+                    String reason = (String) result.getOrDefault("reason", "图片中未检测到菜品");
+                    log.warn("图片不是菜品: {}", reason);
+                    Map<String, Object> notDishResult = new HashMap<>();
+                    notDishResult.put("error", true);
+                    notDishResult.put("notDish", true);
+                    notDishResult.put("message", reason);
+                    return notDishResult;
+                }
+            }
+
             // 确保必要字段存在
             result.putIfAbsent("name", "未知菜品");
             result.putIfAbsent("calories", 0);
@@ -268,33 +303,93 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
     }
 
     /**
-     * 解析食谱优化结果
+     * 解析食谱列表结果（AI返回JSON数组格式）
      */
-    private Map<String, Object> parseRecipeOptimizationResult(String responseText, String originalRecipe) {
+    private List<Map<String, Object>> parseRecipeListResult(String responseText) {
         try {
-            // 提取JSON
-            String json = extractJson(responseText);
+            String json = extractJsonArray(responseText);
 
-            // 解析为Map
-            Map<String, Object> result = objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {});
+            // 尝试解析为数组
+            if (json.trim().startsWith("[")) {
+                List<Map<String, Object>> recipes = objectMapper.readValue(json, new TypeReference<List<Map<String, Object>>>() {});
+                // 确保每个食谱有必要字段
+                for (Map<String, Object> recipe : recipes) {
+                    recipe.putIfAbsent("name", "未知食谱");
+                    recipe.putIfAbsent("difficulty", "中等");
+                    recipe.putIfAbsent("calorie", 0);
+                    recipe.putIfAbsent("ingredients", "");
+                    recipe.putIfAbsent("steps", "");
+                    recipe.putIfAbsent("protein", 0);
+                    recipe.putIfAbsent("fat", 0);
+                    recipe.putIfAbsent("carb", 0);
+                    // 确保数值类型
+                    for (String key : List.of("calorie", "protein", "fat", "carb")) {
+                        Object val = recipe.get(key);
+                        if (val instanceof String) {
+                            try {
+                                recipe.put(key, Double.parseDouble((String) val));
+                            } catch (NumberFormatException ignored) {}
+                        }
+                    }
+                }
+                return recipes;
+            }
 
-            // 确保必要字段存在
-            result.putIfAbsent("original", originalRecipe);
-            result.putIfAbsent("optimized", originalRecipe + "\n\n（AI优化建议：减少油盐，增加蔬菜）");
-            result.putIfAbsent("improvements", Arrays.asList("营养均衡", "口味优化", "步骤简化"));
+            // 如果返回的是单个对象（非数组），包装为数组
+            if (json.trim().startsWith("{")) {
+                Map<String, Object> single = objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {});
+                return List.of(single);
+            }
 
-            return result;
+            log.warn("无法解析为JSON数组或对象: {}", json.substring(0, Math.min(100, json.length())));
+            return new ArrayList<>();
 
         } catch (Exception e) {
-            log.error("解析食谱优化结果失败: {}", responseText, e);
-            // 返回默认值
-            Map<String, Object> defaultResult = new HashMap<>();
-            defaultResult.put("original", originalRecipe);
-            defaultResult.put("optimized", originalRecipe + "\n\n（AI优化建议：减少油盐，增加蔬菜）");
-            defaultResult.put("improvements", Arrays.asList("营养均衡", "口味优化", "步骤简化"));
-            defaultResult.put("parseError", e.getMessage());
-            return defaultResult;
+            log.error("解析食谱列表失败: {}", responseText.substring(0, Math.min(200, responseText.length())), e);
+            return new ArrayList<>();
         }
+    }
+
+    /**
+     * 从响应文本中提取JSON数组
+     */
+    private String extractJsonArray(String text) {
+        if (text == null || text.isEmpty()) {
+            return "[]";
+        }
+
+        String trimmed = text.trim();
+
+        // 处理 ```json ... ``` 格式
+        if (trimmed.contains("```json")) {
+            int start = trimmed.indexOf("```json") + 7;
+            int end = trimmed.indexOf("```", start);
+            if (end > start) {
+                return trimmed.substring(start, end).trim();
+            }
+        }
+
+        // 处理 ``` ... ``` 格式
+        if (trimmed.contains("```")) {
+            int start = trimmed.indexOf("```") + 3;
+            while (start < trimmed.length() && !Character.isWhitespace(trimmed.charAt(start)) && trimmed.charAt(start) != '[' && trimmed.charAt(start) != '{') {
+                start++;
+            }
+            int end = trimmed.indexOf("```", start);
+            if (end > start) {
+                return trimmed.substring(start, end).trim();
+            }
+        }
+
+        // 尝试找到JSON数组 [ ... ]
+        int arrayStart = trimmed.indexOf('[');
+        int arrayEnd = trimmed.lastIndexOf(']');
+        if (arrayStart >= 0 && arrayEnd > arrayStart) {
+            return trimmed.substring(arrayStart, arrayEnd + 1);
+        }
+
+        // 回退到对象查找
+        return extractJson(text);
     }
 
     /**

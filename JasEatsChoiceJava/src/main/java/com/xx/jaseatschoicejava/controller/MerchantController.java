@@ -1,7 +1,5 @@
 package com.xx.jaseatschoicejava.controller;
 
-import com.xx.jaseatschoicejava.constants.ApiConstants;
-
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.xx.jaseatschoicejava.common.ResponseResult;
 import com.xx.jaseatschoicejava.entity.Merchant;
@@ -549,8 +547,8 @@ public class MerchantController {
                     fos.write(image.getBytes());
                 }
 
-                // 生成访问URL（这里使用本地服务器地址，实际项目中可以用域名或CDN地址）
-                String imageUrl = ApiConstants.UPLOAD_URL_PREFIX + uniqueFilename;
+                // 生成访问URL（使用配置的相对路径前缀，由前端拼接完整URL）
+                String imageUrl = fileUploadConfig.getUrlPrefix() + uniqueFilename;
                 albumArray.add(imageUrl);
             }
 
@@ -672,8 +670,8 @@ public class MerchantController {
                 fos.write(avatar.getBytes());
             }
 
-            // 生成访问URL
-            String avatarUrl = ApiConstants.UPLOAD_URL_PREFIX + uniqueFilename;
+            // 生成访问URL（使用配置的相对路径前缀，由前端拼接完整URL）
+            String avatarUrl = fileUploadConfig.getUrlPrefix() + uniqueFilename;
 
             // 更新商家头像
             merchant.setAvatar(avatarUrl);

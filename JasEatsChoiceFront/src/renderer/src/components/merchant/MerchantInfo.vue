@@ -1,7 +1,7 @@
 <script setup>
 import { useAuthStore } from '../../store/authStore'
 import { useUserStore } from '../../store/userStore'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import {
   ElMessage,
   ElTag,
@@ -352,6 +352,14 @@ const merchantInfo = computed(
     }
 )
 
+// 当头像地址变化时，重置加载失败标记，避免旧错误状态阻塞新头像显示
+watch(
+  () => merchantInfo.value?.avatar,
+  () => {
+    avatarLoadError.value = false
+  }
+)
+
 // 获取商家信息
 const fetchMerchantInfo = async () => {
   if (!authStore.merchantId) {
@@ -684,7 +692,7 @@ const handleAvatarError = () => {
 // 打开头像上传对话框
 const handleAvatarUpload = () => {
   avatarUploadDialogVisible.value = true
-  tempAvatarUrl.value = merchantInfo.value.avatar || ''
+  tempAvatarUrl.value = merchantInfo.value.avatar ? getAvatarUrl(merchantInfo.value.avatar) : ''
   avatarFileList.value = []
   avatarFile.value = null
 }
@@ -755,8 +763,14 @@ const handleSaveAvatar = async () => {
     )
 
     if (response.code === '200') {
+      // 接口返回新头像地址时，先做本地回填，避免等待刷新期间的显示空窗
+      if (typeof response.data === 'string' && response.data) {
+        userStore.updateMerchantAvatar(response.data)
+      }
+
       // 更新商家信息
       await userStore.fetchMerchantInfo()
+      avatarLoadError.value = false
       ElMessage.success('头像更新成功')
       handleCloseAvatarDialog()
     } else {

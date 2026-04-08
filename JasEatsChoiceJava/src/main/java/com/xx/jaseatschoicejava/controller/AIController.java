@@ -99,6 +99,10 @@ public class AIController {
             if (Boolean.TRUE.equals(result.get("error"))) {
                 String errorMessage = (String) result.get("message");
                 log.error("AI识别失败：{}", errorMessage);
+                // 非菜品图片，返回特定错误码
+                if (Boolean.TRUE.equals(result.get("notDish"))) {
+                    return ResponseResult.fail("4001", errorMessage != null ? errorMessage : "请上传菜品图片");
+                }
                 return ResponseResult.fail("500", errorMessage != null ? errorMessage : "菜品识别失败");
             }
 
@@ -140,6 +144,56 @@ public class AIController {
             String recipeText = (String) recipe.get("text");
 
             Map<String, Object> result = zhipuAIService.optimizeRecipe(recipeText);
+            return ResponseResult.success(result);
+        } catch (Exception e) {
+            log.error("食谱优化失败", e);
+            return ResponseResult.fail("500", "食谱优化失败：" + e.getMessage());
+        }
+    }
+
+    // ==================== 食谱优化（前端统一入口） ====================
+
+    /**
+     * AI食谱优化接口（前端统一调用）
+     *
+     * 路由: POST /v1/ai/recipe
+     * 接收: { "recipe": "食谱内容", "goal": "优化目标" }
+     * 返回: 优化后的食谱结果
+     */
+    @ApiOperation(value = "AI食谱优化（统一入口）", notes = "根据食材或食谱生成优化建议")
+    @PostMapping("/recipe")
+    public ResponseResult<?> recipeOptimize(@RequestBody Map<String, Object> params) {
+        try {
+            // 兼容桌面端 {foodName: "..."} 和 UniApp {recipe: "...", goal: "..."}
+            String foodName = (String) params.get("foodName");
+            String recipeText = (String) params.get("recipe");
+            String goal = (String) params.get("goal");
+
+            log.info("食谱优化请求，参数：{}, foodName：{}, goal：{}", params.keySet(), foodName, goal);
+
+            String inputText = (foodName != null && !foodName.trim().isEmpty()) ? foodName : recipeText;
+
+            if (inputText == null || inputText.trim().isEmpty()) {
+                return ResponseResult.fail("400", "食谱内容不能为空");
+            }
+
+            log.info("食谱优化请求，目标：{}，输入：{}", goal, inputText.length() > 100 ? inputText.substring(0, 100) + "..." : inputText);
+            Map<String, Object> result = zhipuAIService.optimizeRecipe(inputText);
+
+            // 检查 service 层是否返回了错误
+            if (Boolean.TRUE.equals(result.get("error"))) {
+                String errorMsg = (String) result.get("message");
+                log.warn("食谱优化服务返回错误：{}", errorMsg);
+                return ResponseResult.fail("500", errorMsg != null ? errorMsg : "食谱优化失败");
+            }
+
+            log.info("食谱优化成功，返回字段：{}", result.keySet());
+
+            // 兼容桌面端：前端期望 data 直接是数组
+            Object recipes = result.get("recipes");
+            if (recipes != null) {
+                return ResponseResult.success(recipes);
+            }
             return ResponseResult.success(result);
         } catch (Exception e) {
             log.error("食谱优化失败", e);

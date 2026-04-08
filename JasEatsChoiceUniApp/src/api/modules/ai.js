@@ -228,6 +228,16 @@ export const aiApi = {
   extractContent: (data) => post('/api/ai/extract', data),
 
   /**
+   * 食谱优化
+   * POST /v1/ai/recipe
+   * @param {Object} data - 优化参数
+   * @param {string} data.recipe - 食谱内容
+   * @param {string} data.goal - 优化目标(lowCalorie/highProtein/lowFat/balanced)
+   * @returns {Promise} 返回优化结果
+   */
+  optimizeRecipe: (data) => post(AI_API.RECIPE, data),
+
+  /**
    * 营养分析
    * POST /api/ai/nutrition
    * @param {Object} data - 分析数据

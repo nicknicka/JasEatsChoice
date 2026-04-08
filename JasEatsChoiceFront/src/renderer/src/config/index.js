@@ -42,12 +42,20 @@ export const WS_CONFIG = {
   chatUrl: envConfig.wsChatURL
 }
 
+const getEnvValue = (name, fallback) => {
+  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[name]) {
+    return import.meta.env[name]
+  }
+
+  return fallback
+}
+
 // 高德地图API配置
 export const AMAP_CONFIG = {
   // Web端(JS API) Key
-  key: 'ef5cbde8753cd2fa578899bee7f9bf71',
+  key: getEnvValue('VITE_AMAP_KEY', 'ef5cbde8753cd2fa578899bee7f9bf71'),
   // 对应的安全密钥（用于后续接入安全校验时使用）
-  securityJsCode: '34a9a321bca66a4623d9ddc3c6e5228f',
+  securityJsCode: getEnvValue('VITE_AMAP_SECURITY_JS_CODE', '34a9a321bca66a4623d9ddc3c6e5228f'),
   baseURL: 'https://restapi.amap.com/v3',
   district: '/config/district'
 }

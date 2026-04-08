@@ -195,6 +195,12 @@ const loadAMapSDK = () => {
   if (amapLoadPromise) return amapLoadPromise
 
   amapLoadPromise = new Promise((resolve, reject) => {
+    if (typeof window !== 'undefined') {
+      window._AMapSecurityConfig = {
+        securityJsCode: AMAP_CONFIG.securityJsCode
+      }
+    }
+
     // 已经加载过
     if (typeof AMap !== 'undefined' && AMap.Map) {
       resolve()

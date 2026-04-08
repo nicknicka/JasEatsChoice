@@ -247,7 +247,7 @@
 </template>
 
 <script setup>
-import { ref, watch, nextTick } from 'vue'
+import { ref, watch, nextTick, h } from 'vue'
 import { Camera, Delete, Loading } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { validateImageFile } from '../../../../utils/imageValidator'
@@ -292,9 +292,9 @@ const AnimatedNumber = {
       displayValue
     }
   },
-  template: `
-    <span>{{ displayValue }}{{ suffix }}</span>
-  `
+  render() {
+    return h('span', `${this.displayValue}${this.suffix || ''}`)
+  }
 }
 
 // 状态
@@ -304,6 +304,33 @@ const recognitionLoading = ref(false)
 const recognitionProgress = ref(0)
 const recognitionResult = ref(null)
 const isDragging = ref(false)
+
+const normalizeRecognitionMessage = (result, fallbackMessage) => {
+  return result?.message || result?.msg || result?.data?.reason || result?.reason || fallbackMessage
+}
+
+const isNonDishRecognitionResult = (result) => {
+  if (!result) {
+    return false
+  }
+
+  const payload = result.data || result
+  return result.code === '4001' || result.code === 4001 || result.notDish === true || result.isDish === false || payload?.notDish === true || payload?.isDish === false
+}
+
+const mapRecognitionResult = (data) => ({
+  name: data.name || '未知菜品',
+  calories: Number(data.calories) || 0,
+  protein: Number(data.protein) || 0,
+  fat: Number(data.fat) || 0,
+  carbs: Number(data.carbs) || 0,
+  difficulty: data.difficulty || '中等',
+  preparationTime: data.preparationTime || '30分钟',
+  ingredients: Array.isArray(data.ingredients) ? data.ingredients : [],
+  tags: Array.isArray(data.tags) ? data.tags : [],
+  confidence: Number(data.confidence) || 0,
+  nutritionScore: Number(data.nutritionScore) || 0
+})
 
 // 营养条宽度动画
 const proteinBarWidth = ref(0)
@@ -456,36 +483,44 @@ const recognizeDish = async () => {
 
     const result = await response.json()
 
-    if (result.code === '200' && result.data) {
+    const responseData = result?.data || null
+    const nonDishMessage = normalizeRecognitionMessage(result, '请上传菜品图片')
+
+    if (isNonDishRecognitionResult(result) || responseData?.isDish === false) {
+      clearInterval(progressInterval)
+      recognitionLoading.value = false
+      recognitionProgress.value = 0
+      recognitionResult.value = null
+      ElMessage.warning(nonDishMessage || '请上传菜品图片')
+      logger.warn('⚠️ 非菜品图片:', nonDishMessage)
+      return
+    }
+
+    if ((result.success === true || result.code === '200') && responseData) {
       clearInterval(progressInterval)
       recognitionProgress.value = 100
 
       // 映射后端返回的数据结构
-      recognitionResult.value = {
-        name: result.data.name,
-        calories: result.data.calories,
-        protein: result.data.protein,
-        fat: result.data.fat,
-        carbs: result.data.carbs,
-        difficulty: result.data.difficulty,
-        preparationTime: result.data.preparationTime,
-        ingredients: result.data.ingredients || [],
-        tags: result.data.tags || [],
-        confidence: result.data.confidence,
-        nutritionScore: result.data.nutritionScore
-      }
+      recognitionResult.value = mapRecognitionResult(responseData)
 
       recognitionLoading.value = false
       ElMessage.success('识别成功！')
       logger.log('✅ 菜品识别完成:', recognitionResult.value.name)
     } else {
-      throw new Error(result.msg || '识别失败')
+      throw new Error(normalizeRecognitionMessage(result, '识别失败'))
     }
   } catch (error) {
     clearInterval(progressInterval)
     recognitionLoading.value = false
     recognitionProgress.value = 0
-    ElMessage.error('识别失败：' + error.message)
+    const errorMessage = error?.message || '识别失败'
+    if (/菜品|食物图片/.test(errorMessage)) {
+      ElMessage.warning(errorMessage)
+      logger.warn('⚠️ 非菜品图片:', errorMessage)
+      return
+    }
+
+    ElMessage.error('识别失败：' + errorMessage)
     logger.error('❌ 菜品识别失败:', error)
   }
 }
@@ -710,12 +745,13 @@ const reRecognize = () => {
   height: 320px;
   overflow: hidden;
   border-radius: 14px;
+  background: @nordic-surface;
   animation: imgReveal 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 
   img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
     transition: transform 0.6s ease;
   }
 

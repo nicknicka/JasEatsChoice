@@ -243,7 +243,7 @@
 </template>
 
 <script setup>
-import { ref, nextTick, onMounted, onUnmounted, watch } from 'vue'
+import { ref, nextTick, onMounted, onUnmounted, onActivated, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
 	Close, Delete, Picture, DocumentCopy, More, Operation,
@@ -342,11 +342,64 @@ const handleCardAction = (action) => cardHandler.handleCardAction(action, router
 // ========== 滚动管理 ==========
 const { scrollToBottom, handleScroll, resetScrollState, initScrollPosition } = useScrollManager(chatContainerRef, isMounted)
 
+// 高频流式更新时对滚动进行帧级节流，避免连续触发造成掉帧
+let scrollRafId = null
+let scrollScheduled = false
+let enterScrollTimeoutId = null
+
+const scheduleScrollToBottom = () => {
+	if (scrollScheduled || !isMounted.value) return
+	scrollScheduled = true
+	scrollRafId = requestAnimationFrame(() => {
+		scrollToBottom(true)
+		scrollScheduled = false
+		scrollRafId = null
+	})
+}
+
+const clearEnterScrollTask = () => {
+	if (enterScrollTimeoutId !== null) {
+		clearTimeout(enterScrollTimeoutId)
+		enterScrollTimeoutId = null
+	}
+}
+
+const smoothScrollToBottomOnEnter = async () => {
+	if (!chatContainerRef.value || !isMounted.value) return
+
+	clearEnterScrollTask()
+	resetScrollState()
+
+	await nextTick()
+	await nextTick()
+
+	requestAnimationFrame(() => {
+		requestAnimationFrame(() => {
+			const container = chatContainerRef.value
+			if (!container) return
+
+			const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
+			if (!prefersReducedMotion && typeof container.scrollTo === 'function') {
+				container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' })
+				// 平滑动画结束后兜底对齐到底部，避免少量偏差
+				enterScrollTimeoutId = setTimeout(() => {
+					if (chatContainerRef.value) {
+						chatContainerRef.value.scrollTop = chatContainerRef.value.scrollHeight
+					}
+					enterScrollTimeoutId = null
+				}, 320)
+			} else {
+				container.scrollTop = container.scrollHeight
+			}
+		})
+	})
+}
+
 // ========== UI更新 ==========
 const updateUI = async () => {
 	if (isMounted.value) {
 		await nextTick()
-		scrollToBottom()
+		scheduleScrollToBottom()
 	}
 }
 
@@ -648,12 +701,8 @@ const handleClickOutside = (event) => {
 
 watch(messages, async (newMessages) => {
 	if (isMounted.value && newMessages.length > 0) {
-		setTimeout(async () => {
-			if (!isMounted.value) return
-			await nextTick()
-			await nextTick()
-			scrollToBottom(true)
-		}, 300)
+		await nextTick()
+		scheduleScrollToBottom()
 	}
 }, { flush: 'post', immediate: false })
 
@@ -668,26 +717,27 @@ onMounted(async () => {
 	}
 	await loadMessages()
 	await loadUserPreference()
+	await smoothScrollToBottomOnEnter()
 })
 
 const scrollToBottomOnActivate = async () => {
-	if (!chatContainerRef.value) return
-	resetScrollState()
-	await nextTick()
-	await nextTick()
-	requestAnimationFrame(() => {
-		requestAnimationFrame(() => {
-			if (chatContainerRef.value) {
-				chatContainerRef.value.scrollTop = chatContainerRef.value.scrollHeight
-			}
-		})
-	})
+	await smoothScrollToBottomOnEnter()
 }
 
 defineExpose({ scrollToBottomOnActivate })
 
+onActivated(async () => {
+	await smoothScrollToBottomOnEnter()
+})
+
 onUnmounted(() => {
 	isMounted.value = false
+	clearEnterScrollTask()
+	if (scrollRafId !== null) {
+		cancelAnimationFrame(scrollRafId)
+		scrollRafId = null
+		scrollScheduled = false
+	}
 	document.removeEventListener('click', handleClickOutside)
 	if (chatContainerRef.value) chatContainerRef.value.removeEventListener('scroll', handleScroll)
 })
@@ -728,7 +778,7 @@ onUnmounted(() => {
   border-radius: 16px;
   padding: 24px;
   box-shadow: 0 2px 12px rgba(180, 140, 100, 0.08);
-  scroll-behavior: smooth;
+	scroll-behavior: auto;
   transform: translateZ(0);
   -webkit-overflow-scrolling: touch;
   border: 1px solid @warm-border;
@@ -1141,8 +1191,8 @@ onUnmounted(() => {
 
 // ========== 动画关键帧 ==========
 @keyframes messageFadeIn {
-  from { opacity: 0; transform: translateY(12px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+	from { opacity: 0; transform: translateY(8px); }
+	to { opacity: 1; transform: translateY(0); }
 }
 @keyframes avatarFloat {
   0%, 100% { transform: translateY(0); }

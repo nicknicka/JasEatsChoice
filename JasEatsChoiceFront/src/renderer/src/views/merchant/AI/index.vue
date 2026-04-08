@@ -51,7 +51,7 @@
 import { ref, computed, watch, nextTick, onMounted, onActivated, defineAsyncComponent, h } from 'vue'
 import { ChatRound, TrendCharts, Comment, Dish } from '@element-plus/icons-vue'
 import MerchantAIChatPanel from './components/MerchantAIChatPanel.vue'
-import { useUserStore } from '@/stores/user'
+import { useUserStore } from '@/store/userStore'
 
 // 获取当前商家ID
 const userStore = useUserStore()
