@@ -102,17 +102,20 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { Refresh, CopyDocument, Loading, ChatLineSquare } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import api, { buildUrl, MERCHANT_AI_API } from '@/api'
+
+const props = defineProps({
+  merchantId: {
+    type: String,
+    required: true
+  }
+})
 
 // 待回复评价列表
-const pendingReviews = ref([
-  { id: 1, userName: '张先生', rating: 5, content: '菜品非常新鲜，服务态度也很好！下次还会再来！', time: '2024-01-15 12:30', replied: false },
-  { id: 2, userName: '李女士', rating: 3, content: '味道还可以，但是上菜有点慢，等了快半小时', time: '2024-01-15 11:20', replied: false },
-  { id: 3, userName: '王先生', rating: 4, content: '整体不错，就是分量稍微有点少，希望能改进', time: '2024-01-14 19:45', replied: false },
-  { id: 4, userName: '赵女士', rating: 2, content: '菜品味道一般，价格偏贵，性价比不高', time: '2024-01-14 18:30', replied: true }
-])
+const pendingReviews = ref([])
 
 const selectedReview = ref(null)
 const suggestions = ref([])
@@ -123,6 +126,20 @@ const editingReply = ref(null)
 const styleTags = ['感谢好评', '处理问题', '邀请再访']
 
 const getStyleTag = (index) => styleTags[index] || '其他建议'
+
+/**
+ * 加载待回复评价列表
+ */
+const loadPendingReviews = async () => {
+  try {
+    const url = buildUrl(MERCHANT_AI_API.REVIEW_PENDING, { merchantId: props.merchantId })
+    const response = await api.get(url)
+    pendingReviews.value = response.data || []
+  } catch (error) {
+    console.error('加载评价列表失败:', error)
+    ElMessage.error('加载评价列表失败')
+  }
+}
 
 /**
  * 选择评价
@@ -141,31 +158,21 @@ const selectReview = async (review) => {
 const generateSuggestions = async (review) => {
   isLoading.value = true
 
-  // 模拟AI生成
-  await new Promise(resolve => setTimeout(resolve, 1500))
-
-  // 根据评分生成不同风格的回复
-  if (review.rating >= 4) {
-    suggestions.value = [
-      `感谢您的好评！您的满意是我们最大的动力，我们会继续努力为您提供更优质的菜品和服务，期待您的再次光临！`,
-      `非常感谢您的认可！我们一直坚持选用新鲜食材，用心做好每一道菜。您的支持是我们前进的动力，欢迎下次再来！`,
-      `谢谢您的五星好评！很高兴您喜欢我们的菜品和服务。我们会继续保持，也欢迎您向朋友推荐我们哦！`
-    ]
-  } else if (review.rating === 3) {
-    suggestions.value = [
-      `感谢您的反馈！对于您提到的问题，我们非常重视。我们会加强培训，提升服务效率，希望能给您带来更好的体验。`,
-      `非常抱歉给您带来了不好的体验！您提到的问题我们已经记录，会立即改进。期待您再次光临，让我们有机会为您提供更好的服务。`,
-      `感谢您的宝贵意见！我们会认真对待每一个问题，努力改进。希望下次能为您提供满意的用餐体验！`
-    ]
-  } else {
-    suggestions.value = [
-      `非常抱歉给您带来了不好的体验！您提到的问题我们非常重视，会立即进行整改。希望能有机会再次为您服务，让您看到我们的改变。`,
-      `感谢您的反馈，我们深感抱歉！请您联系我们的客服，我们愿意为您提供补偿方案。我们会认真改进，争取下次让您满意。`,
-      `非常抱歉让您失望了！您的意见对我们非常重要，我们会认真分析问题并改进。期待您给我们一个弥补的机会！`
-    ]
+  try {
+    const response = await api.post(MERCHANT_AI_API.REVIEW_GENERATE_REPLY, {
+      reviewId: review.id,
+      reviewContent: review.content,
+      rating: review.rating,
+      userName: review.userName
+    })
+    suggestions.value = response.data || []
+  } catch (error) {
+    console.error('生成回复建议失败:', error)
+    ElMessage.error('生成回复建议失败')
+    suggestions.value = []
+  } finally {
+    isLoading.value = false
   }
-
-  isLoading.value = false
 }
 
 /**
@@ -203,26 +210,40 @@ const useSuggestion = (text) => {
 /**
  * 提交回复
  */
-const submitReply = () => {
+const submitReply = async () => {
   if (!editingReply.value.trim()) {
     ElMessage.warning('请输入回复内容')
     return
   }
 
-  // 模拟提交
-  ElMessage.success('回复已提交')
+  try {
+    await api.post(MERCHANT_AI_API.REVIEW_SUBMIT_REPLY, {
+      reviewId: selectedReview.value.id,
+      merchantId: props.merchantId,
+      content: editingReply.value
+    })
 
-  // 更新状态
-  const index = pendingReviews.value.findIndex(r => r.id === selectedReview.value.id)
-  if (index !== -1) {
-    pendingReviews.value[index].replied = true
+    ElMessage.success('回复已提交')
+
+    // 更新状态
+    const index = pendingReviews.value.findIndex(r => r.id === selectedReview.value.id)
+    if (index !== -1) {
+      pendingReviews.value[index].replied = true
+    }
+
+    // 重置
+    editingReply.value = null
+    selectedReview.value = null
+    suggestions.value = []
+  } catch (error) {
+    console.error('提交回复失败:', error)
+    ElMessage.error('提交回复失败')
   }
-
-  // 重置
-  editingReply.value = null
-  selectedReview.value = null
-  suggestions.value = []
 }
+
+onMounted(() => {
+  loadPendingReviews()
+})
 </script>
 
 <style scoped lang="less">

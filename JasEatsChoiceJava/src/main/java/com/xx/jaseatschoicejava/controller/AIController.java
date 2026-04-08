@@ -2,6 +2,8 @@ package com.xx.jaseatschoicejava.controller;
 
 import com.xx.jaseatschoicejava.common.ResponseResult;
 import com.xx.jaseatschoicejava.config.FileUploadConfig;
+import com.xx.jaseatschoicejava.dto.DishDescriptionRequestDTO;
+import com.xx.jaseatschoicejava.service.DishDescriptionService;
 import com.xx.jaseatschoicejava.service.ZhipuAIService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -36,6 +38,9 @@ public class AIController {
 
     @Resource
     private FileUploadConfig fileUploadConfig;
+
+    @Resource
+    private DishDescriptionService dishDescriptionService;
 
     // ==================== 菜品识别 ====================
 
@@ -139,6 +144,28 @@ public class AIController {
         } catch (Exception e) {
             log.error("食谱优化失败", e);
             return ResponseResult.fail("500", "食谱优化失败：" + e.getMessage());
+        }
+    }
+
+    // ==================== 菜品描述生成 ====================
+
+    /**
+     * AI菜品描述生成接口
+     *
+     * 路由: /v1/ai/dish-description
+     */
+    @ApiOperation(value = "AI菜品描述生成", notes = "使用AI生成吸引人的菜品描述")
+    @PostMapping("/dish-description")
+    public ResponseResult<?> generateDishDescription(@RequestBody DishDescriptionRequestDTO request) {
+        try {
+            if (request.getName() == null || request.getName().isEmpty()) {
+                return ResponseResult.fail("400", "菜品名称不能为空");
+            }
+            String description = dishDescriptionService.generateDescription(request);
+            return ResponseResult.success(description);
+        } catch (Exception e) {
+            log.error("菜品描述生成失败", e);
+            return ResponseResult.fail("500", "菜品描述生成失败：" + e.getMessage());
         }
     }
 

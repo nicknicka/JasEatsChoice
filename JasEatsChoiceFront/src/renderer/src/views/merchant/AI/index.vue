@@ -34,10 +34,10 @@
           <MerchantAIChatPanel />
         </div>
         <div v-else-if="activeTab === 'insight'" key="insight" class="tab-pane">
-          <BusinessInsight />
+          <BusinessInsight :merchant-id="merchantId" />
         </div>
         <div v-else-if="activeTab === 'reply'" key="reply" class="tab-pane">
-          <QuickReplyGenerator />
+          <QuickReplyGenerator :merchant-id="merchantId" />
         </div>
         <div v-else-if="activeTab === 'dish'" key="dish" class="tab-pane">
           <DishDescGenerator />
@@ -51,6 +51,11 @@
 import { ref, computed, watch, nextTick, onMounted, onActivated, defineAsyncComponent, h } from 'vue'
 import { ChatRound, TrendCharts, Comment, Dish } from '@element-plus/icons-vue'
 import MerchantAIChatPanel from './components/MerchantAIChatPanel.vue'
+import { useUserStore } from '@/stores/user'
+
+// 获取当前商家ID
+const userStore = useUserStore()
+const merchantId = computed(() => userStore.userInfo?.merchantId || '')
 
 // 异步加载非核心组件
 const BusinessInsight = defineAsyncComponent({

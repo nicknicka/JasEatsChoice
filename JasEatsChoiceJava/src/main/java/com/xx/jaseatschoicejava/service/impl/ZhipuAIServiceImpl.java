@@ -3,12 +3,11 @@ package com.xx.jaseatschoicejava.service.impl;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xx.jaseatschoicejava.service.ZhipuAIService;
-import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ImageContent;
 import dev.langchain4j.data.message.TextContent;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.model.chat.ChatModel;
-import dev.langchain4j.model.output.Response;
+import dev.langchain4j.model.chat.response.ChatResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
@@ -147,8 +146,8 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
                     .build();
 
             // 调用视觉模型
-            Response<AiMessage> response = visionModel.generate(userMessage);
-            String responseText = response.content().text();
+            ChatResponse chatResponse = visionModel.chat(userMessage);
+            String responseText = chatResponse.aiMessage().text();
 
             log.info("视觉模型返回结果: {}", responseText.length() > 200 ? responseText.substring(0, 200) + "..." : responseText);
 
@@ -183,8 +182,7 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
             String prompt = String.format(RECIPE_OPTIMIZATION_PROMPT, originalRecipe);
 
             // 调用对话模型
-            Response<AiMessage> response = agentModel.generate(prompt);
-            String responseText = response.content().text();
+            String responseText = agentModel.chat(prompt);
 
             log.info("AI返回优化结果: {}", responseText.length() > 200 ? responseText.substring(0, 200) + "..." : responseText);
 
@@ -213,8 +211,7 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
 
             String prompt = String.format(RECOMMENDATION_REASON_PROMPT, dishName, preferences, scene);
 
-            Response<AiMessage> response = agentModel.generate(prompt);
-            return response.content().text().trim();
+            return agentModel.chat(prompt).trim();
 
         } catch (Exception e) {
             log.error("生成推荐理由失败", e);

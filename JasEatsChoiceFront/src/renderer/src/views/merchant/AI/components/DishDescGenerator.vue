@@ -124,6 +124,7 @@ import {
   TrendCharts
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import api, { AI_API } from '@/api'
 
 const dishForm = reactive({
   name: '',
@@ -159,37 +160,33 @@ const generateDescription = async () => {
 
   isGenerating.value = true
 
-  // 模拟AI生成
-  await new Promise(resolve => setTimeout(resolve, 2000))
+  try {
+    const response = await api.post(AI_API.DISH_DESCRIPTION, {
+      name: dishForm.name,
+      ingredients: dishForm.ingredients,
+      category: dishForm.category,
+      style: dishForm.style
+    })
 
-  const { name, ingredients, style } = dishForm
-  const ingredientText = ingredients.length > 0 ? ingredients.join('、') : '精选食材'
+    generatedDescription.value = response.data || ''
 
-  const descriptions = {
-    traditional: `【${name}】精选${ingredientText}精心烹制，传承经典做法，色香味俱全。菜品口感鲜美，回味无穷，是您不可错过的美味佳肴。每一口都能品尝到食材的鲜美与厨师的匠心。`,
+    // 添加到历史记录
+    history.value.unshift({
+      name: dishForm.name,
+      style: dishForm.style,
+      description: generatedDescription.value
+    })
 
-    health: `【${name}】富含优质蛋白和多种维生素，低脂健康，营养均衡。选用新鲜${ingredientText}，采用健康烹饪方式，保留食材原味与营养。适合注重健康饮食的您，美味与健康兼得。`,
-
-    story: `每一道【${name}】都承载着厨师的匠心与故事。精选${ingredientText}，经过多道工序精心烹制，只为给您带来最纯正的味觉体验。这不仅是一道菜，更是一份用心的传递，期待您的品尝。`,
-
-    promotion: `🔥 限时特惠！【${name}】原价XX元，现价仅需XX元！精选${ingredientText}，大师级烹饪，美味不容错过！数量有限，先到先得！立即下单，享受超值优惠！`
+    // 只保留最近5条
+    if (history.value.length > 5) {
+      history.value.pop()
+    }
+  } catch (error) {
+    console.error('生成菜品描述失败:', error)
+    ElMessage.error('生成菜品描述失败')
+  } finally {
+    isGenerating.value = false
   }
-
-  generatedDescription.value = descriptions[style]
-
-  // 添加到历史记录
-  history.value.unshift({
-    name: dishForm.name,
-    style: dishForm.style,
-    description: generatedDescription.value
-  })
-
-  // 只保留最近5条
-  if (history.value.length > 5) {
-    history.value.pop()
-  }
-
-  isGenerating.value = false
 }
 
 /**

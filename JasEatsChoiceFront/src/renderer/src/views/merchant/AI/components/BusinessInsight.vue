@@ -153,60 +153,47 @@ import {
   CircleCheck,
   Opportunity
 } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import api, { buildUrl, MERCHANT_AI_API } from '@/api'
+
+const props = defineProps({
+  merchantId: {
+    type: String,
+    required: true
+  }
+})
 
 const timeRange = ref('week')
 const isLoading = ref(false)
 
 // 核心指标
 const metrics = ref({
-  revenue: 25680,
-  revenueChange: 12.5,
-  orders: 892,
-  ordersChange: 8.3,
-  averagePrice: 28.75,
-  averageChange: 3.8,
-  rating: 4.6,
-  ratingChange: 0.2
+  revenue: 0,
+  revenueChange: 0,
+  orders: 0,
+  ordersChange: 0,
+  averagePrice: 0,
+  averageChange: 0,
+  rating: 0,
+  ratingChange: 0
 })
 
 // 销售趋势
-const salesTrend = ref([
-  { label: '周一', value: 3200 },
-  { label: '周二', value: 2800 },
-  { label: '周三', value: 3500 },
-  { label: '周四', value: 3100 },
-  { label: '周五', value: 4200 },
-  { label: '周六', value: 4800 },
-  { label: '周日', value: 4080 }
-])
+const salesTrend = ref([])
 
-const maxSales = computed(() => Math.max(...salesTrend.value.map(s => s.value)))
+const maxSales = computed(() => {
+  const values = salesTrend.value.map(s => s.value)
+  return values.length > 0 ? Math.max(...values) : 1
+})
 
 // 热销菜品
-const topDishes = ref([
-  { name: '红烧肉', sales: 156, trend: 12 },
-  { name: '宫保鸡丁', sales: 142, trend: 8 },
-  { name: '鱼香肉丝', sales: 128, trend: -3 },
-  { name: '麻婆豆腐', sales: 98, trend: 5 },
-  { name: '糖醋排骨', sales: 86, trend: 15 }
-])
+const topDishes = ref([])
 
 // AI建议
-const aiSuggestions = ref([
-  { type: 'warning', content: '「麻婆豆腐」销量下滑3%，建议检查口味或推出优惠活动' },
-  { type: 'success', content: '周末订单量较高，建议增加人手和备货量' },
-  { type: 'opportunity', content: '晚餐时段订单较少，可考虑推出晚餐专属优惠' },
-  { type: 'success', content: '「糖醋排骨」增长最快，可设为主推菜品' }
-])
+const aiSuggestions = ref([])
 
 // 评价分布
-const ratingDistribution = ref([
-  { stars: 5, count: 156, percent: 65 },
-  { stars: 4, count: 52, percent: 22 },
-  { stars: 3, count: 18, percent: 8 },
-  { stars: 2, count: 8, percent: 3 },
-  { stars: 1, count: 6, percent: 2 }
-])
+const ratingDistribution = ref([])
 
 const timeRangeLabel = computed(() => {
   const labels = { today: '今日', week: '本周', month: '本月' }
@@ -222,15 +209,50 @@ const getSuggestionIcon = (type) => {
   return icons[type] || CircleCheck
 }
 
-const loadInsights = () => {
-  // TODO: 加载实际数据
+const loadInsights = async () => {
+  isLoading.value = true
+  try {
+    // 调用完整洞察接口
+    const url = buildUrl(MERCHANT_AI_API.INSIGHT_FULL, { merchantId: props.merchantId })
+    const response = await api.get(`${url}?timeRange=${timeRange.value}`)
+
+    if (response.data) {
+      // 核心指标
+      if (response.data.metrics) {
+        metrics.value = {
+          revenue: response.data.metrics.revenue || 0,
+          revenueChange: response.data.metrics.revenueChange || 0,
+          orders: response.data.metrics.orders || 0,
+          ordersChange: response.data.metrics.ordersChange || 0,
+          averagePrice: response.data.metrics.averagePrice || 0,
+          averageChange: response.data.metrics.averageChange || 0,
+          rating: response.data.metrics.rating || 0,
+          ratingChange: response.data.metrics.ratingChange || 0
+        }
+      }
+
+      // 销售趋势
+      salesTrend.value = response.data.salesTrend || []
+
+      // 热销菜品
+      topDishes.value = response.data.topDishes || []
+
+      // AI建议
+      aiSuggestions.value = response.data.aiSuggestions || []
+
+      // 评价分布
+      ratingDistribution.value = response.data.ratingDistribution || []
+    }
+  } catch (error) {
+    console.error('加载经营洞察失败:', error)
+    ElMessage.error('加载数据失败')
+  } finally {
+    isLoading.value = false
+  }
 }
 
 const refreshData = () => {
-  isLoading.value = true
-  setTimeout(() => {
-    isLoading.value = false
-  }, 1000)
+  loadInsights()
 }
 
 onMounted(() => {

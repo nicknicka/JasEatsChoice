@@ -15,9 +15,7 @@ import com.xx.jaseatschoicejava.service.ContentExtractionService;
 import com.xx.jaseatschoicejava.vo.ContentExtractionDetailVO;
 import com.xx.jaseatschoicejava.vo.ContentSourceVO;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.model.chat.ChatModel;
-import dev.langchain4j.model.output.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
@@ -412,8 +410,7 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
                 "\n\n如果URL无法直接访问，请根据URL中的关键词推断可能的菜谱信息。");
 
             // 调用AI进行提取
-            Response<AiMessage> response = agentModel.generate(prompt);
-            String responseText = response.content().text();
+            String responseText = agentModel.chat(prompt);
 
             log.info("AI提取结果: {}", responseText.length() > 200 ? responseText.substring(0, 200) + "..." : responseText);
 

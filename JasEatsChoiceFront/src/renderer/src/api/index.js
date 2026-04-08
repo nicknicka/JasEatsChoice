@@ -221,7 +221,24 @@ export const AI_API = {
   NUTRIENT: '/v1/ai/nutrient',
   RECOGNIZE_DISH: '/v1/ai/dish-recognize',
   RECOMMEND: '/v1/ai/recommend',
-  ANALYZE: '/v1/ai/analyze'
+  ANALYZE: '/v1/ai/analyze',
+  DISH_DESCRIPTION: '/v1/ai/dish-description'
+}
+
+// ==================== 商家AI助手 ====================
+export const MERCHANT_AI_API = {
+  // 经营洞察
+  INSIGHT_METRICS: '/v1/merchant/insight/:merchantId/metrics',
+  INSIGHT_TREND: '/v1/merchant/insight/:merchantId/trend',
+  INSIGHT_TOP_DISHES: '/v1/merchant/insight/:merchantId/top-dishes',
+  INSIGHT_RATING: '/v1/merchant/insight/:merchantId/rating-distribution',
+  INSIGHT_AI_SUGGESTIONS: '/v1/merchant/insight/:merchantId/ai-suggestions',
+  INSIGHT_FULL: '/v1/merchant/insight/:merchantId/full',
+
+  // 评价回复
+  REVIEW_PENDING: '/v1/merchant/review/:merchantId/pending',
+  REVIEW_GENERATE_REPLY: '/v1/merchant/review/generate-reply',
+  REVIEW_SUBMIT_REPLY: '/v1/merchant/review/submit-reply'
 }
 
 // ==================== 聊天相关 ====================
@@ -627,6 +644,7 @@ const API = {
   ADDRESS: ADDRESS_API,
   RECIPE: RECIPE_API,
   AI: AI_API,
+  MERCHANT_AI: MERCHANT_AI_API,
   CHAT: CHAT_API,
   GROUP: GROUP_API,
   COLLECTION: COLLECTION_API,
