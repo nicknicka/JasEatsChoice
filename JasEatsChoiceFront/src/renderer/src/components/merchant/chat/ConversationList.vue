@@ -186,8 +186,8 @@ const formatTime = (timeStr) => {
 </template>
 
 <style scoped lang="less">
-@import '../../../../assets/css/nordic-theme.less';
-@import '../../../../assets/css/merchant-theme.less';
+@import '../../../assets/css/nordic-theme.less';
+@import '../../../assets/css/merchant-theme.less';
 
 .conversation-list-wrapper {
   height: 100%;

@@ -212,7 +212,7 @@ const handleCloseDialog = () => {
   position: relative;
   display: inline-block; /* 确保容器只占内容宽度 */
   margin: 0; /* 清除默认外边距 */
-  padding: 12px; /* 增加padding用于显示模糊效果 */
+  padding: 20px; /* 增加padding用于显示模糊效果 */
   /* 为容器添加圆角 */
   border-radius: 50%;
   /* 隐藏溢出内容 */
@@ -223,21 +223,22 @@ const handleCloseDialog = () => {
 .avatar-container::after {
   content: '';
   position: absolute;
-  /* 覆盖整个容器，包括padding区域 */
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  /* 扩大光晕范围，覆盖更大区域 */
+  top: -8px;
+  left: -8px;
+  right: -8px;
+  bottom: -8px;
   border-radius: 50%;
-  /* 渐变背景 */
-  background: linear-gradient(
-    135deg,
-    rgba(255, 221, 187, 0.7) 0%,
-    rgba(187, 224, 255, 0.5) 50%,
-    rgba(204, 204, 255, 0.3) 100%
+  /* 更柔和的渐变背景，增加透明度过渡 */
+  background: radial-gradient(
+    circle at center,
+    rgba(255, 221, 187, 0.6) 0%,
+    rgba(255, 200, 180, 0.4) 30%,
+    rgba(187, 224, 255, 0.3) 60%,
+    rgba(204, 204, 255, 0.15) 100%
   );
-  /* 模糊效果 */
-  filter: blur(21px);
+  /* 增强模糊效果，使光晕更晕染 */
+  filter: blur(28px);
   /* 确保在头像后面 */
   z-index: 0;
 }

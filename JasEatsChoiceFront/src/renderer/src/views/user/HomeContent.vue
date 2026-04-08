@@ -1528,7 +1528,8 @@ onMounted(async () => {
     img {
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      object-fit: contain;
+      background: @savour-bg;
       transition: transform 0.5s ease;
     }
 
@@ -1828,7 +1829,8 @@ onMounted(async () => {
     img {
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      object-fit: contain;
+      background: @savour-bg;
       transition: transform 0.4s ease;
     }
 

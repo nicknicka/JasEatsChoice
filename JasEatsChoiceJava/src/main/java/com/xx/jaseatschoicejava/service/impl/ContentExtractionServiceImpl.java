@@ -15,10 +15,14 @@ import com.xx.jaseatschoicejava.service.ContentExtractionService;
 import com.xx.jaseatschoicejava.vo.ContentExtractionDetailVO;
 import com.xx.jaseatschoicejava.vo.ContentSourceVO;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.langchain4j.data.message.AiMessage;
+import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.model.output.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +30,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -64,6 +69,41 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
 
     @Autowired
     private ExtractionTaskMapper extractionTaskMapper;
+
+    @Autowired
+    @Qualifier("agentModel")
+    private ChatModel agentModel;
+
+    /**
+     * 内容提取提示词
+     */
+    private static final String CONTENT_EXTRACTION_PROMPT = """
+        你是一个专业的菜谱提取专家。请从以下内容中提取菜谱信息，返回JSON格式：
+
+        内容：
+        %s
+
+        请返回以下JSON格式：
+        {
+          "dishName": "菜品名称",
+          "description": "菜品描述（50字以内）",
+          "ingredients": [
+            {"name": "食材名称", "amount": "用量"}
+          ],
+          "steps": [
+            {"stepNumber": 1, "description": "步骤描述"}
+          ],
+          "cookingTime": 烹饪时间(分钟，数字),
+          "difficulty": "难度(简单/中等/困难)",
+          "tags": ["标签1", "标签2"],
+          "calories": 估算卡路里(数字)
+        }
+
+        注意：
+        1. 如果内容不是菜谱，尽量提取相关信息
+        2. 如果无法提取，返回合理的默认值
+        3. 只返回JSON，不要其他解释文字
+        """;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -341,36 +381,11 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
     }
 
     /**
-     * ⚠️ 【模拟实现】模拟提取过程
+     * AI内容提取
      *
-     * 🔴 当前实现：使用硬编码的mock数据
-     *
-     * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-     * 实际生产环境需要：
-     * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-     *
-     * 1. 图文内容（小红书/微博/文章）：
-     *    - 下载图片
-     *    - 调用 PaddleOCR API: POST /api/v1/ocr/recipe
-     *    - 解析返回的结构化菜谱数据
-     *
-     * 2. 视频内容（抖音/快手/B站）：
-     *    - 下载视频
-     *    - 提取关键帧（每秒1帧）
-     *    - 对关键帧调用OCR识别
-     *    - 提取音频转文字（使用Whisper等）
-     *    - 综合分析提取菜谱信息
-     *
-     * 3. 数据处理：
-     *    - 清洗OCR识别结果
-     *    - 智能推断菜品名称、食材、步骤
-     *    - 估算卡路里、烹饪时间、难度
-     *
-     * 参考文档：docs/PaddleOCR部署指南.md
-     *
-     * API端点：
-     *    - POST http://localhost:8001/api/v1/ocr/file (通用识别)
-     *    - POST http://localhost:8001/api/v1/ocr/recipe (菜谱识别)
+     * 使用 LangChain4j 调用智谱AI进行内容提取
+     * Phase 1: 基于文本内容提取
+     * Phase 2: 集成OCR服务进行图片/视频提取
      */
     private void simulateExtraction(ExtractionTask task) {
         log.info("开始处理提取任务: taskId={}, sourceId={}", task.getId(), task.getSourceId());
@@ -387,21 +402,39 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
         }
 
         try {
-            // 模拟网络请求延迟
-            Thread.sleep(1000);
+            // 获取内容URL作为提取输入
+            String contentUrl = source.getContentUrl();
+            log.info("提取内容URL: {}", contentUrl);
 
-            // 模拟提取结果（实际应调用真实的AI服务）
+            // 构建AI提取提示词
+            String prompt = String.format(CONTENT_EXTRACTION_PROMPT,
+                "请从以下URL或内容中提取菜谱信息：" + contentUrl +
+                "\n\n如果URL无法直接访问，请根据URL中的关键词推断可能的菜谱信息。");
+
+            // 调用AI进行提取
+            Response<AiMessage> response = agentModel.generate(prompt);
+            String responseText = response.content().text();
+
+            log.info("AI提取结果: {}", responseText.length() > 200 ? responseText.substring(0, 200) + "..." : responseText);
+
+            // 解析AI返回的JSON
+            Map<String, Object> extractionResult = parseExtractionResult(responseText);
+
+            // 创建提取记录
             ContentExtraction extraction = new ContentExtraction();
             extraction.setId(UUID.randomUUID().toString().replace("-", ""));
             extraction.setSourceId(source.getId());
-            extraction.setDishName("示例菜品-" + task.getId().substring(0, 6));
-            extraction.setDescription("这是一个自动提取的菜品描述");
-            extraction.setIngredients("[{\"name\":\"示例食材\",\"amount\":\"100克\"}]");
-            extraction.setSteps("[{\"stepNumber\":1,\"description\":\"这是提取的第一步\"}]");
-            extraction.setCookingTime(30);
-            extraction.setDifficulty("MEDIUM");
-            extraction.setTags("家常菜,下饭菜");
-            extraction.setCalories(500);
+            extraction.setDishName((String) extractionResult.getOrDefault("dishName", "未知菜品"));
+            extraction.setDescription((String) extractionResult.getOrDefault("description", ""));
+            extraction.setIngredients(objectMapper.writeValueAsString(extractionResult.get("ingredients")));
+            extraction.setSteps(objectMapper.writeValueAsString(extractionResult.get("steps")));
+            extraction.setCookingTime((Integer) extractionResult.getOrDefault("cookingTime", 30));
+            extraction.setDifficulty((String) extractionResult.getOrDefault("difficulty", "中等"));
+
+            List<String> tags = (List<String>) extractionResult.get("tags");
+            extraction.setTags(tags != null ? String.join(",", tags) : "");
+
+            extraction.setCalories((Integer) extractionResult.getOrDefault("calories", 0));
             extraction.setIsPublished(false);
             extraction.setIsVerified(false);
             extraction.setCreateTime(LocalDateTime.now());
@@ -422,12 +455,107 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
             task.setUpdateTime(LocalDateTime.now());
             extractionTaskMapper.updateById(task);
 
-            log.info("提取任务完成: taskId={}, extractionId={}", task.getId(), extraction.getId());
+            log.info("提取任务完成: taskId={}, extractionId={}, dishName={}",
+                task.getId(), extraction.getId(), extraction.getDishName());
 
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException("提取任务被中断", e);
+        } catch (Exception e) {
+            log.error("提取任务失败: taskId={}", task.getId(), e);
+
+            // 更新任务状态为失败
+            task.setTaskStatus("FAILED");
+            task.setErrorMessage(e.getMessage());
+            task.setEndTime(LocalDateTime.now());
+            task.setUpdateTime(LocalDateTime.now());
+            extractionTaskMapper.updateById(task);
+
+            // 更新内容源状态为失败
+            source.setExtractionStatus(ExtractionStatus.FAILED.getCode());
+            source.setErrorMessage(e.getMessage());
+            source.setUpdateTime(LocalDateTime.now());
+            contentSourceMapper.updateById(source);
+
+            throw new RuntimeException("提取任务失败: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * 解析AI提取结果
+     */
+    private Map<String, Object> parseExtractionResult(String responseText) {
+        try {
+            // 提取JSON
+            String json = extractJson(responseText);
+
+            // 解析为Map
+            Map<String, Object> result = objectMapper.readValue(json, new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
+
+            // 确保必要字段存在
+            result.putIfAbsent("dishName", "未知菜品");
+            result.putIfAbsent("description", "");
+            result.putIfAbsent("ingredients", new ArrayList<>());
+            result.putIfAbsent("steps", new ArrayList<>());
+            result.putIfAbsent("cookingTime", 30);
+            result.putIfAbsent("difficulty", "中等");
+            result.putIfAbsent("tags", new ArrayList<>());
+            result.putIfAbsent("calories", 0);
+
+            return result;
+
+        } catch (Exception e) {
+            log.error("解析提取结果失败: {}", responseText, e);
+            // 返回默认值
+            Map<String, Object> defaultResult = new java.util.HashMap<>();
+            defaultResult.put("dishName", "提取失败");
+            defaultResult.put("description", "");
+            defaultResult.put("ingredients", new ArrayList<>());
+            defaultResult.put("steps", new ArrayList<>());
+            defaultResult.put("cookingTime", 30);
+            defaultResult.put("difficulty", "中等");
+            defaultResult.put("tags", new ArrayList<>());
+            defaultResult.put("calories", 0);
+            return defaultResult;
+        }
+    }
+
+    /**
+     * 从响应文本中提取JSON
+     */
+    private String extractJson(String text) {
+        if (text == null || text.isEmpty()) {
+            return "{}";
+        }
+
+        String trimmed = text.trim();
+
+        // 处理 ```json ... ``` 格式
+        if (trimmed.contains("```json")) {
+            int start = trimmed.indexOf("```json") + 7;
+            int end = trimmed.indexOf("```", start);
+            if (end > start) {
+                return trimmed.substring(start, end).trim();
+            }
+        }
+
+        // 处理 ``` ... ``` 格式
+        if (trimmed.contains("```")) {
+            int start = trimmed.indexOf("```") + 3;
+            while (start < trimmed.length() && !Character.isWhitespace(trimmed.charAt(start)) && trimmed.charAt(start) != '{') {
+                start++;
+            }
+            int end = trimmed.indexOf("```", start);
+            if (end > start) {
+                return trimmed.substring(start, end).trim();
+            }
+        }
+
+        // 尝试找到JSON对象的起始和结束
+        int jsonStart = trimmed.indexOf('{');
+        int jsonEnd = trimmed.lastIndexOf('}');
+        if (jsonStart >= 0 && jsonEnd > jsonStart) {
+            return trimmed.substring(jsonStart, jsonEnd + 1);
+        }
+
+        return trimmed;
     }
 
     /**

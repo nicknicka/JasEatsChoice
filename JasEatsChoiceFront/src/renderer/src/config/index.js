@@ -44,7 +44,10 @@ export const WS_CONFIG = {
 
 // 高德地图API配置
 export const AMAP_CONFIG = {
-  key: 'YOUR_AMAP_KEY',
+  // Web端(JS API) Key
+  key: 'ef5cbde8753cd2fa578899bee7f9bf71',
+  // 对应的安全密钥（用于后续接入安全校验时使用）
+  securityJsCode: '34a9a321bca66a4623d9ddc3c6e5228f',
   baseURL: 'https://restapi.amap.com/v3',
   district: '/config/district'
 }

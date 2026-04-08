@@ -130,6 +130,7 @@
 import { ref, watch, computed, onBeforeUnmount } from 'vue'
 import { Search, Location, Loading, Close, ArrowRight } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { AMAP_CONFIG } from '../config'
 
 // Props
 const props = defineProps({
@@ -221,7 +222,7 @@ const loadAMapSDK = () => {
 
     // 动态创建 script 标签加载 SDK
     const script = document.createElement('script')
-    script.src = 'https://webapi.amap.com/maps?v=1.4.15&key=140e4ebfe143855a4cc7440533ff27b3&plugin=AMap.Scale,AMap.ToolBar,AMap.Geocoder,AMap.PlaceSearch,AMap.Geolocation,AMap.CitySearch'
+    script.src = `https://webapi.amap.com/maps?v=1.4.15&key=${AMAP_CONFIG.key}&plugin=AMap.Scale,AMap.ToolBar,AMap.Geocoder,AMap.PlaceSearch,AMap.Geolocation,AMap.CitySearch`
     script.type = 'text/javascript'
 
     const timeout = setTimeout(() => {

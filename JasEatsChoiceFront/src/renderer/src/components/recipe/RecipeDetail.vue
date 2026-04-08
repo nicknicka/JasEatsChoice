@@ -262,21 +262,30 @@ const activeDishName = ref('')
   </el-dialog>
 </template>
 
-<style scoped>
+<style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+
 .recipe-detail-container {
-  text-align: left; /* 统一文字左对齐 */
+  text-align: left;
 }
 
 .stat-card {
-  margin: 24px 0;
-  text-align: left; /* 卡片内文字左对齐 */
+  margin: @nordic-space-md 0;
+  text-align: left;
+  border-radius: @nordic-radius-md !important;
+  border: 1px solid @nordic-border !important;
+  box-shadow: none !important;
+
+  :deep(.el-card__body) {
+    background: @nordic-surface !important;
+    border-radius: @nordic-radius-md !important;
+  }
 }
 
-/* 统一统计信息标题大小 */
 .stat-label {
-  font-size: 1.286rem /* 原值: 18px */;
+  font-size: @nordic-text-md;
   font-weight: 600;
-  color: #333;
+  color: @nordic-text;
 }
 
 .detail-header {
@@ -285,65 +294,57 @@ const activeDishName = ref('')
   align-items: center;
 }
 
-/* 统一标题样式 */
 .section-title {
-  font-size: 1.286rem /* 原值: 18px */;
+  font-size: @nordic-text-md;
   font-weight: 600;
-  color: #333;
-  margin-bottom: 16px;
+  color: @nordic-text;
+  margin-bottom: @nordic-space-md;
   display: flex;
   align-items: center;
   gap: 8px;
+  padding-left: @nordic-space-sm;
+  border-left: 3px solid @nordic-accent;
 }
 
 .section-icon {
-  font-size: 1.429rem /* 原值: 20px */;
+  font-size: @nordic-text-lg;
 }
 
-/* 食材标签间隙 */
 .ingredient-tag {
   margin-right: 8px;
   margin-bottom: 8px;
 }
 
-/* 空数据提示样式 */
 .empty-dish {
-  color: #909399;
+  color: @nordic-text-muted;
   font-style: italic;
 }
 
-/* 详细内容样式 */
 .detail-content {
-  color: #606266;
+  color: @nordic-text-secondary;
   line-height: 1.8;
   text-align: left;
 }
 
 .favorite-icon {
-  font-size: 1.714rem /* 原值: 24px */;
+  font-size: 1.714rem;
   cursor: pointer;
   transition: all 0.3s ease;
-  color: #c0c4cc;
-}
+  color: @nordic-border;
 
-.favorite-icon.active {
-  color: #ffd700;
-  animation: pulse 0.5s ease;
-}
+  &.active {
+    color: @nordic-yellow;
+    animation: pulse 0.5s ease;
+  }
 
-.favorite-icon:hover {
-  transform: scale(1.1);
+  &:hover {
+    transform: scale(1.1);
+  }
 }
 
 @keyframes pulse {
-  0% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.2);
-  }
-  100% {
-    transform: scale(1);
-  }
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
 }
 </style>

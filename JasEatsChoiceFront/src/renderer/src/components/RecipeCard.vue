@@ -345,322 +345,226 @@ const handleDeleteDish = (e, dish) => {
 </template>
 
 <style scoped lang="less">
+@import '../assets/css/nordic-theme.less';
+
+// --- 北欧餐型色系 ---
+@meal-amber:       #D9A84E;
+@meal-amber-light: #F7EDDA;
+@meal-sage:        #7BAE7F;
+@meal-sage-light:  #E3F0E4;
+@meal-slate:       #6B9BD2;
+@meal-slate-light: #E0EDF6;
+@meal-rose:        #C9898B;
+@meal-rose-light:  #F3E2E2;
+@meal-plum:        #9B8EC4;
+@meal-plum-light:  #EDE8F5;
+@meal-teal:        #6BAEA8;
+@meal-teal-light:  #E0F0EE;
+@meal-walnut:      #A08070;
+@meal-walnut-light:#F0E6E0;
+
 .recipe-card {
-  margin-bottom: 16px !important;
-  background: #ffffff !important;
-  border-radius: 12px !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  border: 1px solid #e0e0e0 !important;
+  margin-bottom: 0 !important;
+  .nordic-card();
+  border-left: 4px solid @nordic-accent;
   overflow: hidden;
   position: relative;
 
   &.recipe-card-favorited {
-    border: 2px solid #ffd700 !important;
-    box-shadow: 0 2px 8px rgba(255, 215, 0, 0.2);
+    border-color: @nordic-yellow;
+    border-left-color: @nordic-yellow;
+    box-shadow: 0 2px 12px fade(@nordic-yellow, 20%);
+    &:hover { box-shadow: 0 6px 20px fade(@nordic-yellow, 25%); }
   }
 
   &.recipe-card-selected {
-    border: 2px solid #667eea !important;
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
-  }
-
-  &.recipe-card-favorited:hover {
-    background: #fffbf0 !important;
+    border-color: @nordic-accent;
+    border-left-color: @nordic-accent;
+    box-shadow: 0 2px 12px fade(@nordic-accent, 18%);
+    background: @nordic-accent-light !important;
   }
 
   &:hover {
-    background: #f5f7ff !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    background: @nordic-surface !important;
   }
 
   .card-header {
     position: relative;
     display: flex;
     align-items: center;
-    gap: 16px;
-    font-size: 1.429rem /* 原值: 20px */;
-    font-weight: 700;
-    color: #2c3e50;
-    padding: 20px 24px !important;
+    gap: @nordic-space-md;
+    font-size: @nordic-text-md;
+    font-weight: 600;
+    color: @nordic-text;
+    padding: 18px 20px !important;
     cursor: pointer;
     user-select: none;
 
     .recipe-name {
       flex: 1;
+      letter-spacing: -0.3px;
     }
 
     .meal-icon {
-      font-size: 2.286rem /* 原值: 32px */;
-      padding: 10px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+      font-size: 1.6rem;
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      border-radius: @nordic-radius-lg;
+      background: @nordic-accent-light;
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 56px;
-      height: 56px;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
     }
   }
 
   .recipe-items {
-    margin: 24px;
+    margin: 0 20px 16px;
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 8px;
     cursor: default;
 
     .el-tag {
-      padding: 8px 16px;
-      border-radius: 20px;
-      font-size: 1rem /* 原值: 14px */;
-      font-weight: 500;
+      .nordic-pill-tag();
+      background: @nordic-accent-light;
+      color: @nordic-accent-dark;
     }
   }
 
   .recipe-stats {
-    margin: 0 24px;
+    margin: 0 20px;
     display: flex;
-    gap: 20px;
-
+    gap: @nordic-space-md;
     .stat-item {
       display: flex;
       align-items: center;
       gap: 5px;
-      color: #666;
-      font-size: 1rem /* 原值: 14px */;
+      color: @nordic-text-secondary;
+      font-size: @nordic-text-sm;
     }
   }
 
   .recipe-actions {
-    text-align: right;
-    margin: 0 24px 20px;
-    padding-top: 16px;
-    border-top: 1px solid #eef2f7;
+    margin: 0 20px 16px;
+    padding-top: 12px;
+    border-top: 1px solid @nordic-divider;
     cursor: default;
     display: flex;
     justify-content: flex-end;
-    gap: 6px;
-    flex-wrap: wrap; /* 允许按钮换行 */
-    align-items: center; /* 垂直对齐 */
+    gap: 4px;
+    flex-wrap: wrap;
+    align-items: center;
 
     .el-button {
-      font-size: 0.857rem /* 原值: 12px */;
+      font-size: @nordic-text-xs;
       padding: 4px 10px;
-      border-radius: 6px;
+      border-radius: @nordic-radius-sm;
       margin: 0;
-      white-space: nowrap; /* 防止按钮文字换行 */
+      white-space: nowrap;
+      color: @nordic-text-secondary;
+      &:hover { color: @nordic-accent; }
     }
   }
 
-  /* 不同餐型的样式 */
-  &.breakfast,
-  &.早餐 {
-    border-left: 4px solid #ffc107;
-
-    &::before {
-      background: linear-gradient(90deg, #ffc107 0%, #ffeb3b 100%);
-    }
-
-    .meal-icon {
-      background: linear-gradient(135deg, #ffc107 0%, #ffeb3b 100%) !important;
-      color: #333 !important;
-    }
+  // 早餐 — 暖金
+  &.breakfast, &.早餐 {
+    border-left-color: @meal-amber;
+    .meal-icon { background: @meal-amber-light; }
+    .recipe-items .el-tag { background: @meal-amber-light; color: darken(@meal-amber, 15%); }
   }
-
-  &.lunch,
-  &.午餐 {
-    border-left: 4px solid #4caf50;
-
-    &::before {
-      background: linear-gradient(90deg, #4caf50 0%, #8bc34a 100%);
-    }
-
-    .meal-icon {
-      background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%) !important;
-      color: white !important;
-    }
+  // 午餐 — 鼠尾草绿
+  &.lunch, &.午餐 {
+    border-left-color: @meal-sage;
+    .meal-icon { background: @meal-sage-light; }
+    .recipe-items .el-tag { background: @meal-sage-light; color: @nordic-green-dark; }
   }
-
-  &.dinner,
-  &.晚餐 {
-    border-left: 4px solid #2196f3;
-
-    &::before {
-      background: linear-gradient(90deg, #2196f3 0%, #64b5f6 100%);
-    }
-
-    .meal-icon {
-      background: linear-gradient(135deg, #2196f3 0%, #64b5f6 100%) !important;
-      color: white !important;
-    }
+  // 晚餐 — 雾蓝
+  &.dinner, &.晚餐 {
+    border-left-color: @meal-slate;
+    .meal-icon { background: @meal-slate-light; }
+    .recipe-items .el-tag { background: @meal-slate-light; color: darken(@meal-slate, 18%); }
   }
-
-  &.afternoon_tea,
-  &.tea,
-  &.加餐 {
-    border-left: 4px solid #9c27b0;
-
-    &::before {
-      background: linear-gradient(90deg, #9c27b0 0%, #ba68c8 100%);
-    }
-
-    .meal-icon {
-      background: linear-gradient(135deg, #9c27b0 0%, #ba68c8 100%) !important;
-      color: white !important;
-    }
+  // 下午茶/加餐 — 柔紫
+  &.afternoon_tea, &.tea, &.加餐 {
+    border-left-color: @meal-plum;
+    .meal-icon { background: @meal-plum-light; }
+    .recipe-items .el-tag { background: @meal-plum-light; color: darken(@meal-plum, 15%); }
   }
-
-  &.night_snack,
-  &.snack {
-    border-left: 4px solid #1e88e5;
-
-    &::before {
-      background: linear-gradient(90deg, #1e88e5 0%, #42a5f5 100%);
-    }
-
-    .meal-icon {
-      background: linear-gradient(135deg, #1e88e5 0%, #42a5f5 100%) !important;
-      color: white !important;
-    }
+  // 夜宵/零食 — 玫瑰
+  &.night_snack, &.snack {
+    border-left-color: @meal-rose;
+    .meal-icon { background: @meal-rose-light; }
+    .recipe-items .el-tag { background: @meal-rose-light; color: darken(@meal-rose, 15%); }
   }
-
-  &.morning_snack,
-  &.brunch {
-    border-left: 4px solid #ff9800;
-
-    &::before {
-      background: linear-gradient(90deg, #ff9800 0%, #ffa726 100%);
-    }
-
-    .meal-icon {
-      background: linear-gradient(135deg, #ff9800 0%, #ffa726 100%) !important;
-      color: white !important;
-    }
+  // 早午餐 — 暖金
+  &.morning_snack, &.brunch {
+    border-left-color: @meal-amber;
+    .meal-icon { background: @meal-amber-light; }
   }
-
-  &.supper,
-  &.midnight_snack {
-    border-left: 4px solid #00bcd4;
-
-    &::before {
-      background: linear-gradient(90deg, #00bcd4 0%, #29b6f6 100%);
-    }
-
-    .meal-icon {
-      background: linear-gradient(135deg, #00bcd4 0%, #29b6f6 100%) !important;
-      color: white !important;
-    }
+  // 晚间/宵夜 — 青绿
+  &.supper, &.midnight_snack {
+    border-left-color: @meal-teal;
+    .meal-icon { background: @meal-teal-light; }
   }
-
-  &.health_snack,
-  &.fitness_meal {
-    border-left: 4px solid #4caf50;
-
-    &::before {
-      background: linear-gradient(90deg, #4caf50 0%, #81c784 100%);
-    }
-
-    .meal-icon {
-      background: linear-gradient(135deg, #4caf50 0%, #81c784 100%) !important;
-      color: white !important;
-    }
+  // 健身/健康 — 鼠尾草绿
+  &.health_snack, &.fitness_meal {
+    border-left-color: @meal-sage;
+    .meal-icon { background: @meal-sage-light; }
   }
-
-  &.dessert,
-  &.sweet {
-    border-left: 4px solid #e91e63;
-
-    &::before {
-      background: linear-gradient(90deg, #e91e63 0%, #f06292 100%);
-    }
-
-    .meal-icon {
-      background: linear-gradient(135deg, #e91e63 0%, #f06292 100%) !important;
-      color: white !important;
-    }
+  // 甜点 — 玫瑰
+  &.dessert, &.sweet {
+    border-left-color: @meal-rose;
+    .meal-icon { background: @meal-rose-light; }
   }
-
-  &.soup,
-  &.porridge {
-    border-left: 4px solid #009688;
-
-    &::before {
-      background: linear-gradient(90deg, #009688 0%, #26a69a 100%);
-    }
-
-    .meal-icon {
-      background: linear-gradient(135deg, #009688 0%, #26a69a 100%) !important;
-      color: white !important;
-    }
+  // 汤/粥 — 青绿
+  &.soup, &.porridge {
+    border-left-color: @meal-teal;
+    .meal-icon { background: @meal-teal-light; }
   }
-
-  &.salad,
-  &.vegetable {
-    border-left: 4px solid #8bc34a;
-
-    &::before {
-      background: linear-gradient(90deg, #8bc34a 0%, #aed581 100%);
-    }
-
-    .meal-icon {
-      background: linear-gradient(135deg, #8bc34a 0%, #aed581 100%) !important;
-      color: white !important;
-    }
+  // 沙拉/蔬菜 — 鼠尾草绿
+  &.salad, &.vegetable {
+    border-left-color: @meal-sage;
+    .meal-icon { background: @meal-sage-light; }
   }
-
-  &.meat,
-  &.protein {
-    border-left: 4px solid #795548;
-
-    &::before {
-      background: linear-gradient(90deg, #795548 0%, #a1887f 100%);
-    }
-
-    .meal-icon {
-      background: linear-gradient(135deg, #795548 0%, #a1887f 100%) !important;
-      color: white !important;
-    }
+  // 肉类 — 胡桃棕
+  &.meat, &.protein {
+    border-left-color: @meal-walnut;
+    .meal-icon { background: @meal-walnut-light; }
   }
-
+  // 默认
   &.info {
-    border-left: 4px solid #00bcd4;
+    border-left-color: @nordic-text-muted;
+    .meal-icon { background: @nordic-divider; }
+  }
 
-    .meal-icon {
-      color: #00bcd4;
-      font-size: 1.714rem /* 原值: 24px */;
+  // --- 复选框 ---
+  .checkbox-wrapper {
+    margin-right: @nordic-space-sm;
+    :deep(.el-checkbox) {
+      .el-checkbox__input.is-checked .el-checkbox__inner {
+        background-color: @nordic-accent !important;
+        border-color: @nordic-accent !important;
+      }
+    }
+    :deep(.el-checkbox__label) {
+      display: none !important;
     }
   }
 
-// 复选框样式
-.checkbox-wrapper {
-  :deep(.el-checkbox) {
-    .el-checkbox__input.is-checked .el-checkbox__inner {
-      background-color: #667eea !important;
-      border-color: #667eea !important;
-    }
+  // --- 收藏按钮 ---
+  .favorite-btn {
+    color: @nordic-yellow !important;
+    font-weight: bold;
   }
 
-  :deep(.el-checkbox__label) {
-    display: none !important;
+  .card-favorite {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
   }
-
-  margin-right: 10px;
-}
-
-/* 收藏按钮样式 */
-.favorite-btn {
-  color: #ffd700 !important;
-  font-weight: bold;
-}
-
-/* 右上角收藏按钮 */
-.card-favorite {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-}
 }
 </style>

@@ -1,120 +1,203 @@
 <template>
-	<div class="recipe-content-wrapper">
-		<div class="recipe-section">
-			<div class="recipe-input">
-				<el-input
-					v-model="originalRecipe"
-					placeholder="请输入您的食谱...&#10;例如：西红柿鸡蛋的做法：1. 准备西红柿2个，鸡蛋2个；2. 煎鸡蛋；3. 炒西红柿；4. 混合翻炒"
-					clearable
-					resize="vertical"
-					:rows="6"
-					type="textarea"
-					maxlength="10000"
-					show-word-limit
-				/>
-			</div>
+  <div class="recipe-content-wrapper">
+    <!-- 顶部装饰条 -->
+    <div class="page-header-strip">
+      <div class="strip-pattern"></div>
+    </div>
 
-			<el-button
-				type="primary"
-				size="large"
-				class="optimize-btn"
-				@click="optimizeRecipe"
-				:disabled="!originalRecipe || optimizationLoading"
-			>
-				<el-icon v-if="optimizationLoading" class="rotating"><Loading /></el-icon>
-				{{ optimizationLoading ? "优化中..." : "✨ 开始优化食谱" }}
-			</el-button>
+    <div class="recipe-section">
+      <!-- 输入区域 -->
+      <div class="input-section">
+        <div class="input-header">
+          <div class="input-title">
+            <span class="title-icon">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+                <polyline points="10 9 9 9 8 9"/>
+              </svg>
+            </span>
+            输入您的食谱
+          </div>
+          <span class="input-hint">详细描述食材和步骤，AI将为您优化</span>
+        </div>
+        <div class="input-area">
+          <textarea
+            v-model="originalRecipe"
+            placeholder="例如：西红柿鸡蛋的做法：1. 准备西红柿2个，鸡蛋2个；2. 煎鸡蛋；3. 炒西红柿；4. 混合翻炒..."
+            maxlength="10000"
+            class="recipe-textarea"
+          ></textarea>
+          <div class="input-footer">
+            <span class="char-count">{{ originalRecipe.length }} / 10000</span>
+          </div>
+        </div>
+      </div>
 
-			<!-- 优化中动画 -->
-			<div v-if="optimizationLoading" class="optimization-loading">
-				<div class="loading-animation">
-					<div class="loading-dot"></div>
-					<div class="loading-dot"></div>
-					<div class="loading-dot"></div>
-				</div>
-				<div class="loading-steps">
-					<div class="step-item" :class="{ active: loadingStep >= 1, blinking: loadingStep === 1 && blinkingStep === 1 }">
-						<span class="step-icon">🔍</span>
-						<span class="step-text">分析食谱内容</span>
-					</div>
-					<div class="step-item" :class="{ active: loadingStep >= 2, blinking: loadingStep === 2 && blinkingStep === 2 }">
-						<span class="step-icon">🧠</span>
-						<span class="step-text">AI智能优化</span>
-					</div>
-					<div class="step-item" :class="{ active: loadingStep >= 3, blinking: loadingStep === 3 && blinkingStep === 3 }">
-						<span class="step-icon">✨</span>
-						<span class="step-text">生成完美食谱中</span>
-					</div>
-				</div>
-			</div>
+      <!-- 操作按钮 -->
+      <div class="action-bar">
+        <button
+          class="action-btn primary-btn"
+          @click="optimizeRecipe"
+          :disabled="!originalRecipe || optimizationLoading"
+        >
+          <span class="btn-bg"></span>
+          <span class="btn-content">
+            <svg v-if="optimizationLoading" class="spin-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M12 2v4m0 12v4m-7.07-3.93l2.83-2.83m8.48-8.48l2.83-2.83M2 12h4m12 0h4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83"/>
+            </svg>
+            <svg v-else viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/>
+              <path d="M5 19l1 3 3-1 3 2 3-2 3 1 1-3" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            {{ optimizationLoading ? '优化中...' : '开始优化' }}
+          </span>
+        </button>
+      </div>
 
-			<div v-if="optimizedRecipe" class="recipe-result">
-				<div class="result-header">
-					<h4>✨ 优化结果</h4>
-				</div>
+      <!-- 优化中动画 -->
+      <Transition name="process-reveal">
+        <div v-if="optimizationLoading" class="optimization-process">
+          <div class="process-track">
+            <div class="process-line">
+              <div class="process-fill" :style="{ width: processProgress + '%' }"></div>
+            </div>
+          </div>
+          <div class="process-steps">
+            <div
+              v-for="(step, index) in processSteps"
+              :key="index"
+              class="process-step"
+              :class="{ active: loadingStep >= index + 1, current: loadingStep === index + 1 }"
+            >
+              <div class="step-indicator">
+                <span class="step-ring"></span>
+                <span class="step-dot"></span>
+                <span class="step-icon">{{ step.icon }}</span>
+              </div>
+              <span class="step-label">{{ step.label }}</span>
+            </div>
+          </div>
+        </div>
+      </Transition>
 
-				<div class="recipe-comparison">
-					<div class="recipe-card original-recipe-card">
-						<div class="card-header">
-							<span class="card-title">📝 原食谱</span>
-						</div>
-						<div class="card-content-wrapper" @mouseenter="showCopyBtn.original = true" @mouseleave="showCopyBtn.original = false">
-							<div class="card-content">
-								<pre>{{ optimizedRecipe.original }}</pre>
-							</div>
-							<transition name="copy-btn-fade">
-								<el-button
-									v-show="showCopyBtn.original"
-									class="copy-icon-btn"
-									@click="copyToClipboard(optimizedRecipe.original, '原食谱')"
-								>
-									<el-icon><DocumentCopy /></el-icon>
-								</el-button>
-							</transition>
-						</div>
-					</div>
+      <!-- 优化结果 -->
+      <Transition name="result-reveal">
+        <div v-if="optimizedRecipe" class="recipe-result">
+          <!-- 结果标题 -->
+          <div class="result-hero">
+            <div class="result-badge">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/>
+              </svg>
+              AI 优化完成
+            </div>
+            <h3 class="result-title">食谱对比</h3>
+            <p class="result-subtitle">左侧为原食谱，右侧为优化后的食谱</p>
+          </div>
 
-					<div class="recipe-arrow">→</div>
+          <!-- 对比卡片 -->
+          <div class="comparison-container">
+            <!-- 原食谱 -->
+            <div class="recipe-card original-card">
+              <div class="card-header">
+                <span class="card-badge original-badge">原食谱</span>
+                <span class="card-label">输入内容</span>
+              </div>
+              <div class="card-body">
+                <pre class="recipe-text">{{ optimizedRecipe.original }}</pre>
+              </div>
+              <div class="card-footer">
+                <button class="copy-btn" @click="copyToClipboard(optimizedRecipe.original, '原食谱')">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                  </svg>
+                  复制
+                </button>
+              </div>
+            </div>
 
-					<div class="recipe-card optimized-recipe-card">
-						<div class="card-header">
-							<span class="card-title">⭐ 优化后</span>
-						</div>
-						<div class="card-content-wrapper" @mouseenter="showCopyBtn.optimized = true" @mouseleave="showCopyBtn.optimized = false">
-							<div class="card-content">
-								<pre>{{ optimizedRecipe.optimized }}</pre>
-							</div>
-							<transition name="copy-btn-fade">
-								<el-button
-									v-show="showCopyBtn.optimized"
-									class="copy-icon-btn"
-									@click="copyToClipboard(optimizedRecipe.optimized, '优化后食谱')"
-								>
-									<el-icon><DocumentCopy /></el-icon>
-								</el-button>
-							</transition>
-						</div>
-						<div class="card-footer">
-							<el-button
-								type="primary"
-								size="small"
-								class="save-btn"
-								@click="saveToMyRecipes"
-								:loading="savingRecipe"
-							>
-								<el-icon><FolderAdd /></el-icon>
-								{{ savingRecipe ? "保存中..." : "保存食谱" }}
-							</el-button>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>
+            <!-- 箭头 -->
+            <div class="comparison-arrow">
+              <div class="arrow-line"></div>
+              <div class="arrow-icon">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <path d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
+              </div>
+              <div class="arrow-line"></div>
+            </div>
+
+            <!-- 优化后食谱 -->
+            <div class="recipe-card optimized-card">
+              <div class="card-header optimized">
+                <span class="card-badge optimized-badge">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                    <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/>
+                  </svg>
+                  优化后
+                </span>
+                <span class="card-label">AI 推荐</span>
+              </div>
+              <div class="card-body">
+                <pre class="recipe-text">{{ optimizedRecipe.optimized }}</pre>
+              </div>
+              <div class="card-footer">
+                <button class="copy-btn" @click="copyToClipboard(optimizedRecipe.optimized, '优化后食谱')">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                  </svg>
+                  复制
+                </button>
+                <button class="save-btn" @click="saveToMyRecipes" :disabled="savingRecipe">
+                  <svg v-if="savingRecipe" class="spin-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2v4m0 12v4m-7.07-3.93l2.83-2.83m8.48-8.48l2.83-2.83M2 12h4m12 0h4"/>
+                  </svg>
+                  <svg v-else viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                    <polyline points="17 21 17 13 7 13 7 21"/>
+                    <polyline points="7 3 7 8 15 8"/>
+                  </svg>
+                  {{ savingRecipe ? '保存中...' : '保存食谱' }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 优化亮点 -->
+          <div v-if="optimizedRecipe.improvements?.length" class="improvements-section">
+            <div class="section-title">
+              <span class="title-bar"></span>
+              优化亮点
+            </div>
+            <div class="improvements-list">
+              <div
+                v-for="(improvement, index) in optimizedRecipe.improvements"
+                :key="index"
+                class="improvement-item"
+                :style="{ animationDelay: (index * 100) + 'ms' }"
+              >
+                <span class="improvement-icon">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                    <path d="M20 6L9 17l-5-5"/>
+                  </svg>
+                </span>
+                <span class="improvement-text">{{ improvement }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </div>
+  </div>
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { Loading, DocumentCopy, FolderAdd } from "@element-plus/icons-vue";
 import { ElMessage } from "element-plus";
 import axios from "axios";
@@ -133,329 +216,264 @@ const userStore = useUserStore();
 const originalRecipe = ref("");
 const optimizedRecipe = ref(null);
 const optimizationLoading = ref(false);
-const loadingStep = ref(1); // 初始显示第一步
-const blinkingStep = ref(1); // 当前闪烁的步骤
+const loadingStep = ref(0);
 const savingRecipe = ref(false);
-const showCopyBtn = ref({
-	original: false,
-	optimized: false
+
+// 处理步骤
+const processSteps = [
+  { icon: '🔍', label: '分析食谱' },
+  { icon: '🧠', label: 'AI优化' },
+  { icon: '✨', label: '生成结果' }
+];
+
+// 进度百分比
+const processProgress = computed(() => {
+  return (loadingStep.value / processSteps.length) * 100;
 });
 
 /**
  * 复制到剪贴板
  */
 const copyToClipboard = async (text, name) => {
-	try {
-		await navigator.clipboard.writeText(text);
-		ElMessage.success(`${name}已复制到剪贴板`);
-		logger.log(`✅ 已复制${name}:`, text.substring(0, 50) + "...");
-	} catch (error) {
-		// 降级方案：使用传统方法
-		try {
-			const textArea = document.createElement("textarea");
-			textArea.value = text;
-			textArea.style.position = "fixed";
-			textArea.style.opacity = "0";
-			document.body.appendChild(textArea);
-			textArea.select();
-			document.execCommand("copy");
-			document.body.removeChild(textArea);
-			ElMessage.success(`${name}已复制到剪贴板`);
-			logger.log(`✅ 已复制${name}:`, text.substring(0, 50) + "...");
-		} catch (fallbackError) {
-			logger.error("❌ 复制失败:", fallbackError);
-			ElMessage.error("复制失败，请手动复制");
-		}
-	}
+  try {
+    await navigator.clipboard.writeText(text);
+    ElMessage.success(`${name}已复制到剪贴板`);
+    logger.log(`✅ 已复制${name}:`, text.substring(0, 50) + "...");
+  } catch (error) {
+    // 降级方案：使用传统方法
+    try {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      textArea.style.opacity = "0";
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textArea);
+      ElMessage.success(`${name}已复制到剪贴板`);
+      logger.log(`✅ 已复制${name}:`, text.substring(0, 50) + "...");
+    } catch (fallbackError) {
+      logger.error("❌ 复制失败:", fallbackError);
+      ElMessage.error("复制失败，请手动复制");
+    }
+  }
 };
 
 /**
  * 解析食材字符串
- * 支持多种分隔符和格式
  */
 const parseIngredients = (ingredientsStr) => {
-	if (!ingredientsStr) return [];
+  if (!ingredientsStr) return [];
 
-	logger.log("🔍 开始解析食材:", ingredientsStr);
+  logger.log("🔍 开始解析食材:", ingredientsStr);
 
-	// 1. 首先替换各种分隔符为统一的分隔符
-	let normalized = ingredientsStr
-		// 替换中文顿号为逗号
-		.replace(/、/g, ',')
-		// 替换中文分号为逗号
-		.replace(/；/g, ',')
-		// 替换英文分号为逗号
-		.replace(/;/g, ',')
-		// 替换中文句号为逗号
-		.replace(/。/g, ',')
-		// 移除换行符
-		.replace(/[\n\r]/g, ',');
+  let normalized = ingredientsStr
+    .replace(/、/g, ',')
+    .replace(/；/g, ',')
+    .replace(/;/g, ',')
+    .replace(/。/g, ',')
+    .replace(/[\n\r]/g, ',');
 
-	// 2. 按逗号分割
-	let parts = normalized.split(',').map(item => item.trim()).filter(item => item);
+  let parts = normalized.split(',').map(item => item.trim()).filter(item => item);
 
-	logger.log("📋 分割后的部分:", parts);
+  logger.log("📋 分割后的部分:", parts);
 
-	// 3. 进一步处理每个食材项
-	const ingredients = [];
+  const ingredients = [];
 
-	parts.forEach(part => {
-		// 处理括号中的说明，如 "鸡蛋(2个)" 或 "猪肉（200克）"
-		// 优先匹配括号格式
-		const bracketMatch = part.match(/^(.+?)（(.+?)）$/);
+  parts.forEach(part => {
+    const bracketMatch = part.match(/^(.+?)（(.+?)）$/);
 
-		if (bracketMatch) {
-			// 中文括号
-			const name = bracketMatch[1].trim();
-			const bracketContent = bracketMatch[2].trim();
-			ingredients.push({ name, amount: bracketContent });
-			logger.log("✅ 匹配到中文括号:", name, bracketContent);
-		} else {
-			// 尝试英文括号
-			const bracketMatchEn = part.match(/^(.+?)\((.+?)\)$/);
-			if (bracketMatchEn) {
-				const name = bracketMatchEn[1].trim();
-				const bracketContent = bracketMatchEn[2].trim();
-				ingredients.push({ name, amount: bracketContent });
-				logger.log("✅ 匹配到英文括号:", name, bracketContent);
-			} else {
-				// 无括号的情况：尝试匹配数字+单位
-				// 匹配模式：食材名称 + 数字 + 单位
-				// 支持的常见单位：克、g、千克、kg、斤、两、个、只、条、根、勺等
-				const amountMatch = part.match(/^(.+?)(\d+\.?\d*)\s*(克|g|千克|kg|斤|两|个|只|条|根|勺|毫升|ml|升|l|杯|颗|片|块|张|把|朵|包|袋|瓶|粒|枚|支|节|片|块|颗|粒|枚|支|朵|把|张|袋|包|瓶|勺|匙|茶匙|汤匙|适量|少许|若干)?$/);
+    if (bracketMatch) {
+      const name = bracketMatch[1].trim();
+      const bracketContent = bracketMatch[2].trim();
+      ingredients.push({ name, amount: bracketContent });
+      logger.log("✅ 匹配到中文括号:", name, bracketContent);
+    } else {
+      const bracketMatchEn = part.match(/^(.+?)\((.+?)\)$/);
+      if (bracketMatchEn) {
+        const name = bracketMatchEn[1].trim();
+        const bracketContent = bracketMatchEn[2].trim();
+        ingredients.push({ name, amount: bracketContent });
+        logger.log("✅ 匹配到英文括号:", name, bracketContent);
+      } else {
+        const amountMatch = part.match(/^(.+?)(\d+\.?\d*)\s*(克|g|千克|kg|斤|两|个|只|条|根|勺|毫升|ml|升|l|杯|颗|片|块|张|把|朵|包|袋|瓶|粒|枚|支|节|适量|少许|若干)?$/);
 
-				if (amountMatch) {
-					const name = amountMatch[1].trim();
-					const amount = amountMatch[2];
-					const unit = amountMatch[3] || "";
-					ingredients.push({ name, amount: unit ? `${amount}${unit}` : amount });
-					logger.log("✅ 匹配到数字+单位:", name, amount, unit);
-				} else {
-					// 无法匹配格式，直接使用原始文本
-					ingredients.push({ name: part.trim(), amount: "" });
-					logger.log("⚠️ 无法匹配，使用原始文本:", part);
-				}
-			}
-		}
-	});
+        if (amountMatch) {
+          const name = amountMatch[1].trim();
+          const amount = amountMatch[2];
+          const unit = amountMatch[3] || "";
+          ingredients.push({ name, amount: unit ? `${amount}${unit}` : amount });
+          logger.log("✅ 匹配到数字+单位:", name, amount, unit);
+        } else {
+          ingredients.push({ name: part.trim(), amount: "" });
+          logger.log("⚠️ 无法匹配，使用原始文本:", part);
+        }
+      }
+    }
+  });
 
-	logger.log("📦 解析完成的食材列表:", ingredients);
+  logger.log("📦 解析完成的食材列表:", ingredients);
 
-	return ingredients.map(item => ({
-		name: item.amount ? `${item.name} ${item.amount}` : item.name,
-		calories: 0,
-		protein: 0,
-		carbs: 0,
-		fat: 0
-	}));
+  return ingredients.map(item => ({
+    name: item.amount ? `${item.name} ${item.amount}` : item.name,
+    calories: 0,
+    protein: 0,
+    carbs: 0,
+    fat: 0
+  }));
 };
 
 /**
  * 保存到我的食谱
  */
 const saveToMyRecipes = async () => {
-	if (!optimizedRecipe.value) {
-		ElMessage.warning("请先优化食谱");
-		return;
-	}
+  if (!optimizedRecipe.value) {
+    ElMessage.warning("请先优化食谱");
+    return;
+  }
 
-	// 获取用户ID
-	let userId = null;
-	if (authStore.userId) {
-		userId = authStore.userId;
-	} else if (userStore.userInfo?.userId) {
-		userId = userStore.userInfo.userId;
-	} else {
-		ElMessage.error("无法获取用户ID,请先登录");
-		return;
-	}
+  let userId = null;
+  if (authStore.userId) {
+    userId = authStore.userId;
+  } else if (userStore.userInfo?.userId) {
+    userId = userStore.userInfo.userId;
+  } else {
+    ElMessage.error("无法获取用户ID,请先登录");
+    return;
+  }
 
-	savingRecipe.value = true;
+  savingRecipe.value = true;
 
-	try {
-		// 解析优化后的食谱信息
-		const recipeText = optimizedRecipe.value.optimized;
-		const lines = recipeText.split("\n");
+  try {
+    const recipeText = optimizedRecipe.value.optimized;
+    const lines = recipeText.split("\n");
 
-		// 提取食谱信息
-		let recipeName = "AI优化食谱";
-		let difficulty = "简单";
-		let calorie = 0;
-		let ingredients = [];
-		let steps = "";
+    let recipeName = "AI优化食谱";
+    let difficulty = "简单";
+    let calorie = 0;
+    let ingredients = [];
+    let steps = "";
 
-		lines.forEach((line) => {
-			if (line.includes("推荐食谱：")) {
-				recipeName = line.replace("推荐食谱：", "").trim();
-			} else if (line.includes("难度：")) {
-				difficulty = line.replace("难度：", "").trim();
-			} else if (line.includes("卡路里：")) {
-				const calorieStr = line
-					.replace("卡路里：", "")
-					.replace("大卡", "")
-					.trim();
-				calorie = parseInt(calorieStr) || 0;
-			} else if (line.includes("食材：")) {
-				const ingredientsStr = line.replace("食材：", "").trim();
-				ingredients = parseIngredients(ingredientsStr);
-			} else if (line.includes("步骤：")) {
-				steps = line.replace("步骤：", "").trim();
-			}
-		});
+    lines.forEach((line) => {
+      if (line.includes("推荐食谱：")) {
+        recipeName = line.replace("推荐食谱：", "").trim();
+      } else if (line.includes("难度：")) {
+        difficulty = line.replace("难度：", "").trim();
+      } else if (line.includes("卡路里：")) {
+        const calorieStr = line
+          .replace("卡路里：", "")
+          .replace("大卡", "")
+          .trim();
+        calorie = parseInt(calorieStr) || 0;
+      } else if (line.includes("食材：")) {
+        const ingredientsStr = line.replace("食材：", "").trim();
+        ingredients = parseIngredients(ingredientsStr);
+      } else if (line.includes("步骤：")) {
+        steps = line.replace("步骤：", "").trim();
+      }
+    });
 
-		logger.log("📦 解析后的食材列表:", ingredients);
+    logger.log("📦 解析后的食材列表:", ingredients);
 
-		// 构造食谱数据
-		const newRecipe = {
-			name: recipeName,
-			type: "晚餐", // 默认为晚餐,用户可以在我的食谱中修改
-			items: ingredients,
-			ingredients: ingredients,
-			calories: calorie,
-			time: "30分钟", // 默认30分钟
-			cookTime: "30分钟",
-			favorite: false,
-			// 添加AI优化相关信息
-			description: steps,
-			difficulty: difficulty,
-		};
+    const newRecipe = {
+      name: recipeName,
+      type: "晚餐",
+      items: ingredients,
+      ingredients: ingredients,
+      calories: calorie,
+      time: "30分钟",
+      cookTime: "30分钟",
+      favorite: false,
+      description: steps,
+      difficulty: difficulty,
+    };
 
-		// 调用后端API保存食谱
-		const response = await axios.post(
-			`${API_CONFIG.baseURL}${API_CONFIG.recipe.add}`,
-			{
-				...newRecipe,
-				userId: userId,
-				favorite: false,
-				items: ingredients, // 直接传递数组，不要序列化
-				calories: calorie,
-			}
-		);
+    const response = await axios.post(
+      `${API_CONFIG.baseURL}${API_CONFIG.recipe.add}`,
+      {
+        ...newRecipe,
+        userId: userId,
+        favorite: false,
+        items: ingredients,
+        calories: calorie,
+      }
+    );
 
-		if (response.data?.code === "200" && response.data?.data) {
-			logger.log("✅ 食谱保存成功:", response.data.data);
-			ElMessage.success("已成功保存到我的食谱");
-		} else {
-			ElMessage.error("保存食谱失败,请稍后重试");
-		}
-	} catch (error) {
-		logger.error("❌ 保存食谱失败:", error);
-		ElMessage.error("保存食谱失败,请稍后重试");
-	} finally {
-		savingRecipe.value = false;
-	}
+    if (response.data?.code === "200" && response.data?.data) {
+      logger.log("✅ 食谱保存成功:", response.data.data);
+      ElMessage.success("已成功保存到我的食谱");
+    } else {
+      ElMessage.error("保存食谱失败,请稍后重试");
+    }
+  } catch (error) {
+    logger.error("❌ 保存食谱失败:", error);
+    ElMessage.error("保存食谱失败,请稍后重试");
+  } finally {
+    savingRecipe.value = false;
+  }
 };
 
 /**
  * 优化食谱
  */
 const optimizeRecipe = async () => {
-	// 验证食谱
-	const validation = validateRecipe(originalRecipe.value);
-	if (!validation.valid) {
-		ElMessage.warning(validation.error);
-		return;
-	}
+  const validation = validateRecipe(originalRecipe.value);
+  if (!validation.valid) {
+    ElMessage.warning(validation.error);
+    return;
+  }
 
-	optimizationLoading.value = true;
-	loadingStep.value = 1; // 初始显示第一步
-	blinkingStep.value = 1; // 第一步开始闪烁
+  optimizationLoading.value = true;
+  loadingStep.value = 0;
 
-	// 记录开始时间
-	const startTime = Date.now();
-	let apiResponded = false; // 标记API是否已响应
+  // 步骤动画
+  const stepInterval = setInterval(() => {
+    if (loadingStep.value < 3) {
+      loadingStep.value++;
+    }
+  }, 2000);
 
-	// 步骤1: 分析食谱内容 - 闪烁一段时间后进入步骤2 (3000ms)
-	const step1Timer = setTimeout(() => {
-		if (optimizationLoading.value && !apiResponded) {
-			blinkingStep.value = 0; // 停止步骤1闪烁
-			loadingStep.value = 2; // 进入步骤2
-			blinkingStep.value = 2; // 开始步骤2闪烁
-		}
-	}, 3000);
+  try {
+    const response = await axios.post(API_CONFIG.baseURL + API_CONFIG.ai.recipe, {
+      foodName: originalRecipe.value,
+    });
 
-	// 步骤2: AI智能优化 - 闪烁一段时间后进入步骤3 (3000ms后，共6000ms)
-	const step2Timer = setTimeout(() => {
-		if (optimizationLoading.value && !apiResponded) {
-			blinkingStep.value = 0; // 停止步骤2闪烁
-			loadingStep.value = 3; // 进入步骤3
-			blinkingStep.value = 3; // 开始步骤3闪烁
-		}
-	}, 6000);
+    const backendRecipes = response.data.data;
 
-	// 步骤3: 生成完美食谱 - 等待API响应后停止闪烁，等待500ms显示结果
-	const step3Timer = setTimeout(async () => {
-		if (optimizationLoading.value) {
-			// 如果API还未响应，等待API响应
-			if (!apiResponded) {
-				// 等待API响应（最多再等30秒，总时长约36秒）
-				const checkResponse = setInterval(() => {
-					if (apiResponded || Date.now() - startTime > 30000) {
-						clearInterval(checkResponse);
-						// API已响应或超时，停止闪烁
-						blinkingStep.value = 0; // 停止闪烁
-						// 等待500ms后显示结果
-						setTimeout(() => {
-							optimizationLoading.value = false;
-							loadingStep.value = 0;
-						}, 500);
-					}
-				}, 100);
-			} else {
-				// API已响应，停止闪烁
-				blinkingStep.value = 0;
-				// 等待500ms后显示结果
-				setTimeout(() => {
-					optimizationLoading.value = false;
-					loadingStep.value = 0;
-				}, 500);
-			}
-		}
-	}, 10000);
-
-	// 调用后端API
-	axios
-		.post(API_CONFIG.baseURL + API_CONFIG.ai.recipe, {
-			foodName: originalRecipe.value,
-		})
-		.then((response) => {
-			const backendRecipes = response.data.data;
-
-			if (backendRecipes && backendRecipes.length > 0) {
-				const firstRecipe = backendRecipes[0];
-				optimizedRecipe.value = {
-					original: originalRecipe.value,
-					optimized: `推荐食谱：${firstRecipe.name}
+    if (backendRecipes && backendRecipes.length > 0) {
+      const firstRecipe = backendRecipes[0];
+      optimizedRecipe.value = {
+        original: originalRecipe.value,
+        optimized: `推荐食谱：${firstRecipe.name}
 难度：${firstRecipe.difficulty}
 卡路里：${firstRecipe.calorie}大卡
 食材：${firstRecipe.ingredients}
 步骤：${firstRecipe.steps}`,
-					improvements: ["营养均衡", "口味优化", "步骤简化"],
-				};
-				logger.log("✅ 食谱优化成功:", firstRecipe.name);
-			} else {
-				optimizedRecipe.value = {
-					original: originalRecipe.value,
-					optimized: "优化失败：没有找到合适的优化食谱。",
-					improvements: [],
-				};
-			}
-		})
-		.catch((error) => {
-			logger.error("❌ 食谱优化失败:", error);
-
-			optimizedRecipe.value = {
-				original: originalRecipe.value,
-				optimized: handleApiError(error),
-				improvements: [],
-			};
-
-			ElMessage.error(handleApiError(error));
-		})
-		.finally(() => {
-			// 标记API已响应
-			apiResponded = true;
-		});
+        improvements: ["营养均衡", "口味优化", "步骤简化"],
+      };
+      logger.log("✅ 食谱优化成功:", firstRecipe.name);
+    } else {
+      optimizedRecipe.value = {
+        original: originalRecipe.value,
+        optimized: "优化失败：没有找到合适的优化食谱。",
+        improvements: [],
+      };
+    }
+  } catch (error) {
+    logger.error("❌ 食谱优化失败:", error);
+    optimizedRecipe.value = {
+      original: originalRecipe.value,
+      optimized: handleApiError(error),
+      improvements: [],
+    };
+    ElMessage.error(handleApiError(error));
+  } finally {
+    clearInterval(stepInterval);
+    loadingStep.value = 3;
+    setTimeout(() => {
+      optimizationLoading.value = false;
+    }, 500);
+  }
 };
 </script>
 
@@ -463,384 +481,632 @@ const optimizeRecipe = async () => {
 @import '../../../../assets/css/nordic-theme.less';
 
 .recipe-content-wrapper {
-	display: flex;
-	flex-direction: column;
-	height: 100%;
-	width: 100%;
-	flex: 1;
-	gap: 8px;
-	overflow: hidden;
-	min-height: 0;
-	box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+  box-sizing: border-box;
+  background: @nordic-bg;
+}
+
+// 顶部装饰条
+.page-header-strip {
+  height: 4px;
+  flex-shrink: 0;
+  background: linear-gradient(90deg, @nordic-green, @nordic-accent, @nordic-yellow, @nordic-green);
+  background-size: 200% 100%;
+  animation: gradientShift 4s ease infinite;
+
+  .strip-pattern {
+    height: 100%;
+    background: repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 8px,
+      rgba(255,255,255,0.3) 8px,
+      rgba(255,255,255,0.3) 10px
+    );
+  }
+}
+
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
 }
 
 .recipe-section {
-	width: 100%;
-	flex: 1;
-	min-height: 0;
-	overflow-y: auto;
-	padding: 24px;
-	box-sizing: border-box;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 28px 24px;
+  box-sizing: border-box;
 
-	.recipe-input {
-		margin-bottom: 24px;
-
-		:deep(.el-textarea__inner) {
-			border-radius: 14px;
-			transition: all 0.3s ease;
-			font-size: 1.071rem /* 原值: 15px */;
-			padding: 14px 16px;
-
-			&:focus {
-				box-shadow: 0 0 0 3px rgba(212, 132, 90, 0.12);
-				border-color: @nordic-accent;
-			}
-		}
-	}
-
-	.optimize-btn {
-		width: 100%;
-		height: 54px;
-		font-size: 17px;
-		font-weight: 600;
-		margin-bottom: 24px;
-		background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
-		border: none;
-		transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-		border-radius: 14px;
-
-		.rotating {
-			animation: rotate 1s linear infinite;
-		}
-
-		&:hover:not(:disabled) {
-			transform: translateY(-3px);
-			box-shadow: 0 8px 20px rgba(212, 132, 90, 0.4);
-		}
-
-		&:disabled {
-			background: linear-gradient(135deg, #d3d4d6 0%, #c8c9cc 100%);
-			cursor: not-allowed;
-		}
-	}
-
-	// 优化中动画
-	.optimization-loading {
-		background: linear-gradient(135deg, @nordic-accent-light 0%, @nordic-accent-light 100%);
-		border: 2px solid @nordic-border;
-		border-radius: 16px;
-		padding: 32px 24px;
-		margin-bottom: 24px;
-		animation: loadingFadeIn 0.5s ease-out;
-
-		.loading-animation {
-			display: flex;
-			justify-content: center;
-			align-items: center;
-			gap: 12px;
-			margin-bottom: 24px;
-
-			.loading-dot {
-				width: 12px;
-				height: 12px;
-				background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
-				border-radius: 50%;
-				animation: bounce 1.4s infinite ease-in-out both;
-
-				&:nth-child(1) {
-					animation-delay: -0.32s;
-				}
-
-				&:nth-child(2) {
-					animation-delay: -0.16s;
-				}
-			}
-		}
-
-		.loading-steps {
-			display: flex;
-			justify-content: space-around;
-			align-items: center;
-
-			.step-item {
-				display: flex;
-				flex-direction: column;
-				align-items: center;
-				gap: 8px;
-				opacity: 0.3;
-				transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-				transform: scale(0.9);
-
-				&.active {
-					opacity: 1;
-					transform: scale(1);
-
-					&.blinking {
-						.step-icon {
-							animation: blinkingPulse 1.2s ease-in-out infinite;
-						}
-					}
-
-					.step-icon {
-						animation: pulse 1.5s ease-in-out infinite;
-					}
-				}
-
-				.step-icon {
-					font-size: 2.286rem /* 原值: 32px */;
-					transition: all 0.3s ease;
-				}
-
-				.step-text {
-					font-size: 1rem /* 原值: 14px */;
-					font-weight: 600;
-					color: #606266;
-				}
-			}
-		}
-	}
-
-	.recipe-result {
-		animation: resultFadeIn 0.5s ease-out;
-
-		.result-header {
-			text-align: center;
-			margin-bottom: 28px;
-
-			h4 {
-				font-size: 22px;
-				font-weight: 700;
-				color: #303133;
-				margin: 0;
-			}
-		}
-
-		.recipe-comparison {
-			display: flex;
-			align-items: stretch;
-			gap: 24px;
-			margin-bottom: 32px;
-
-			@media (max-width: 768px) {
-				flex-direction: column;
-			}
-
-			.recipe-card {
-				flex: 1;
-				background: #fff;
-				border: 2px solid @nordic-border;
-				border-radius: 16px;
-				overflow: hidden;
-				transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-
-				&:hover {
-					transform: translateY(-6px);
-					box-shadow: 0 8px 24px rgba(212, 132, 90, 0.2);
-				}
-
-				.card-header {
-					padding: 18px 24px;
-					background: linear-gradient(135deg, @nordic-accent-light 0%, @nordic-accent-light 100%);
-					border-bottom: 2px solid @nordic-border;
-					display: flex;
-					justify-content: center;
-					align-items: center;
-
-					.card-title {
-						font-size: 17px;
-						font-weight: 700;
-						color: #303133;
-					}
-				}
-
-				.card-content-wrapper {
-					position: relative;
-					padding-bottom: 72px; /* 为复制按钮留出空间 */
-
-					.card-content {
-						padding: 24px;
-						max-height: 420px;
-						overflow-y: auto;
-
-						pre {
-							margin: 0;
-							white-space: pre-wrap;
-							word-wrap: break-word;
-							font-family: inherit;
-							line-height: 1.9;
-							color: #606266;
-							font-size: 1.071rem /* 原值: 15px */;
-						}
-					}
-
-					.copy-icon-btn {
-						position: absolute;
-						bottom: 16px;
-						right: 16px;
-						width: 40px;
-						height: 40px;
-						border-radius: 50%;
-						padding: 0;
-						background-color: #f5f5f5;
-						border: 1px solid #e0e0e0;
-						color: #909399;
-						transition: all 0.3s ease;
-						z-index: 10;
-						display: flex;
-						align-items: center;
-						justify-content: center;
-
-						.el-icon {
-							font-size: 1.286rem /* 原值: 18px */;
-							margin: 0;
-						}
-
-						&:hover {
-							background-color: #e0e0e0;
-							border-color: #c0c0c0;
-							color: #606266;
-							transform: translateY(-2px);
-							box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-						}
-					}
-				}
-
-				.card-footer {
-					padding: 16px 24px;
-					background: #fafafa;
-					border-top: 1px solid #f0f0f0;
-					display: flex;
-					justify-content: center;
-					align-items: center;
-
-					.save-btn {
-						border-radius: 8px;
-						padding: 8px 20px;
-						font-size: 1rem /* 原值: 14px */;
-						font-weight: 600;
-						transition: all 0.4s ease;
-						background: linear-gradient(135deg, @nordic-green 0%, @nordic-green-dark 100%);
-						border: none;
-
-						.el-icon {
-							margin-right: 4px;
-							font-size: 1rem /* 原值: 14px */;
-						}
-
-						&:hover {
-							transform: translateY(-2px);
-							box-shadow: 0 4px 12px rgba(123, 174, 127, 0.3);
-							background: linear-gradient(135deg, #6a9e6e 0%, #3d6a40 100%);
-						}
-					}
-				}
-
-				&.optimized-recipe-card {
-					.card-header {
-						background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
-						border-bottom: none;
-
-						.card-title {
-							color: #fff;
-						}
-					}
-				}
-			}
-
-			.recipe-arrow {
-				display: flex;
-				align-items: center;
-				font-size: 2.857rem /* 原值: 40px */;
-				color: @nordic-accent;
-				font-weight: 700;
-				flex-shrink: 0;
-
-				@media (max-width: 768px) {
-					transform: rotate(90deg);
-				}
-			}
-		}
-	}
+  &::-webkit-scrollbar {
+    width: 5px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: @nordic-border;
+    border-radius: 3px;
+  }
 }
 
-@keyframes resultFadeIn {
-	from {
-		opacity: 0;
-		transform: scale(0.95) translateY(10px);
-	}
-	to {
-		opacity: 1;
-		transform: scale(1) translateY(0);
-	}
+// ===== 输入区域 =====
+.input-section {
+  background: @nordic-surface;
+  border-radius: 18px;
+  padding: 24px;
+  margin-bottom: 16px;
+  border: 1px solid @nordic-border;
 }
 
-
-@keyframes rotate {
-	from {
-		transform: rotate(0deg);
-	}
-	to {
-		transform: rotate(360deg);
-	}
+.input-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-@keyframes bounce {
-	0%,
-	80%,
-	100% {
-		transform: scale(0);
-	}
-	40% {
-		transform: scale(1);
-	}
+.input-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 700;
+  color: @nordic-text;
+  letter-spacing: -0.3px;
+
+  .title-icon {
+    display: flex;
+    color: @nordic-green;
+  }
 }
 
-@keyframes pulse {
-	0%,
-	100% {
-		transform: scale(1);
-		opacity: 1;
-	}
-	50% {
-		transform: scale(1.1);
-		opacity: 0.8;
-	}
+.input-hint {
+  font-size: 12px;
+  color: @nordic-text-muted;
+  letter-spacing: 0.2px;
 }
 
-@keyframes blinkingPulse {
-	0%,
-	100% {
-		transform: scale(1);
-		opacity: 1;
-		filter: brightness(1);
-	}
-	50% {
-		transform: scale(1.15);
-		opacity: 0.6;
-		filter: brightness(1.3);
-	}
+.input-area {
+  position: relative;
 }
 
-@keyframes loadingFadeIn {
-	from {
-		opacity: 0;
-		transform: translateY(-10px);
-	}
-	to {
-		opacity: 1;
-		transform: translateY(0);
-	}
+.recipe-textarea {
+  width: 100%;
+  min-height: 160px;
+  padding: 16px;
+  border: 2px solid @nordic-border;
+  border-radius: 14px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: @nordic-text;
+  background: @nordic-bg;
+  resize: vertical;
+  transition: all 0.3s ease;
+  font-family: inherit;
+  box-sizing: border-box;
+
+  &::placeholder {
+    color: @nordic-text-muted;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: @nordic-green;
+    box-shadow: 0 0 0 4px rgba(123, 174, 127, 0.1);
+  }
 }
 
-/* 复制按钮淡入淡出动画 */
-.copy-btn-fade-enter-active,
-.copy-btn-fade-leave-active {
-	transition: opacity 0.3s ease, transform 0.3s ease;
+.input-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
 }
 
-.copy-btn-fade-enter-from,
-.copy-btn-fade-leave-to {
-	opacity: 0;
-	transform: translateY(5px);
+.char-count {
+  font-size: 12px;
+  color: @nordic-text-muted;
+}
+
+// ===== 操作按钮 =====
+.action-bar {
+  margin-bottom: 20px;
+}
+
+.action-btn {
+  width: 100%;
+  height: 52px;
+  border: none;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  letter-spacing: -0.2px;
+
+  &.primary-btn {
+    background: linear-gradient(135deg, @nordic-green, @nordic-green-dark);
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(123, 174, 127, 0.25);
+
+    .btn-bg {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    &:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(123, 174, 127, 0.35);
+
+      .btn-bg {
+        opacity: 1;
+      }
+    }
+
+    &:disabled {
+      background: @nordic-border;
+      box-shadow: none;
+      cursor: not-allowed;
+      color: @nordic-text-muted;
+    }
+  }
+
+  .spin-icon {
+    animation: spin 1s linear infinite;
+  }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+// ===== 优化过程 =====
+.optimization-process {
+  background: @nordic-surface;
+  border-radius: 18px;
+  padding: 28px 24px;
+  margin-bottom: 20px;
+  border: 1px solid @nordic-border;
+}
+
+.process-track {
+  margin-bottom: 24px;
+}
+
+.process-line {
+  height: 4px;
+  background: @nordic-divider;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.process-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, @nordic-green, @nordic-accent);
+  transition: width 0.5s ease;
+}
+
+.process-steps {
+  display: flex;
+  justify-content: space-between;
+}
+
+.process-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  opacity: 0.35;
+  transition: all 0.4s ease;
+
+  &.active {
+    opacity: 1;
+  }
+
+  &.current {
+    .step-indicator {
+      transform: scale(1.1);
+    }
+
+    .step-ring {
+      animation: ringPulse 1.5s ease-in-out infinite;
+    }
+
+    .step-icon {
+      animation: iconBounce 0.8s ease-in-out infinite;
+    }
+  }
+}
+
+.step-indicator {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease;
+}
+
+.step-ring {
+  position: absolute;
+  inset: 0;
+  border: 2px solid @nordic-green;
+  border-radius: 50%;
+  opacity: 0.3;
+}
+
+.step-dot {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: @nordic-green;
+  border-radius: 50%;
+}
+
+.step-icon {
+  position: relative;
+  font-size: 20px;
+  z-index: 1;
+}
+
+.step-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: @nordic-text-secondary;
+}
+
+@keyframes ringPulse {
+  0%, 100% { transform: scale(1); opacity: 0.3; }
+  50% { transform: scale(1.2); opacity: 0.5; }
+}
+
+@keyframes iconBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+// ===== 优化结果 =====
+.recipe-result {
+  animation: resultReveal 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes resultReveal {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.result-hero {
+  text-align: center;
+  margin-bottom: 24px;
+  padding: 24px;
+  background: @nordic-surface;
+  border-radius: 18px;
+  border: 1px solid @nordic-border;
+}
+
+.result-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 30px;
+  background: @nordic-green-light;
+  color: @nordic-green-dark;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.result-title {
+  font-family: 'Georgia', 'Palatino', serif;
+  font-size: 26px;
+  font-weight: 700;
+  color: @nordic-text;
+  margin: 0 0 8px;
+  letter-spacing: -0.5px;
+}
+
+.result-subtitle {
+  font-size: 13px;
+  color: @nordic-text-muted;
+  margin: 0;
+}
+
+// 对比容器
+.comparison-container {
+  display: flex;
+  align-items: stretch;
+  gap: 16px;
+  margin-bottom: 20px;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+
+    .comparison-arrow {
+      transform: rotate(90deg);
+      align-self: center;
+    }
+  }
+}
+
+.recipe-card {
+  flex: 1;
+  background: @nordic-surface;
+  border-radius: 18px;
+  border: 1px solid @nordic-border;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+  }
+}
+
+.card-header {
+  padding: 18px 20px;
+  background: @nordic-bg;
+  border-bottom: 1px solid @nordic-border;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  &.optimized {
+    background: linear-gradient(135deg, @nordic-green-light, @nordic-surface);
+    border-bottom-color: rgba(123, 174, 127, 0.2);
+  }
+}
+
+.card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+
+  &.original-badge {
+    background: @nordic-divider;
+    color: @nordic-text-secondary;
+  }
+
+  &.optimized-badge {
+    background: @nordic-green;
+    color: #fff;
+  }
+}
+
+.card-label {
+  font-size: 12px;
+  color: @nordic-text-muted;
+  font-weight: 500;
+}
+
+.card-body {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  max-height: 320px;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: @nordic-border;
+    border-radius: 2px;
+  }
+}
+
+.recipe-text {
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.8;
+  color: @nordic-text;
+}
+
+.card-footer {
+  padding: 14px 20px;
+  background: @nordic-bg;
+  border-top: 1px solid @nordic-border;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.copy-btn, .save-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  border: none;
+}
+
+.copy-btn {
+  background: @nordic-surface;
+  border: 1px solid @nordic-border;
+  color: @nordic-text-secondary;
+
+  &:hover {
+    border-color: @nordic-accent;
+    color: @nordic-accent;
+    background: @nordic-accent-light;
+  }
+}
+
+.save-btn {
+  background: linear-gradient(135deg, @nordic-green, @nordic-green-dark);
+  color: #fff;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(123, 174, 127, 0.3);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .spin-icon {
+    animation: spin 1s linear infinite;
+  }
+}
+
+// 箭头
+.comparison-arrow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 0 8px;
+}
+
+.arrow-line {
+  width: 2px;
+  height: 24px;
+  background: linear-gradient(180deg, transparent, @nordic-green);
+  border-radius: 1px;
+
+  &:last-child {
+    background: linear-gradient(180deg, @nordic-green, transparent);
+  }
+}
+
+.arrow-icon {
+  color: @nordic-green;
+  display: flex;
+}
+
+// 优化亮点
+.improvements-section {
+  background: @nordic-surface;
+  border-radius: 18px;
+  padding: 24px;
+  border: 1px solid @nordic-border;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  color: @nordic-text;
+  margin-bottom: 18px;
+  letter-spacing: -0.3px;
+
+  .title-bar {
+    width: 3px;
+    height: 16px;
+    border-radius: 2px;
+    background: @nordic-green;
+    flex-shrink: 0;
+  }
+}
+
+.improvements-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.improvement-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 12px;
+  background: @nordic-green-light;
+  color: @nordic-green-dark;
+  font-size: 13px;
+  font-weight: 500;
+  animation: chipIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.improvement-icon {
+  display: flex;
+  color: @nordic-green;
+}
+
+.improvement-text {
+  letter-spacing: -0.2px;
+}
+
+// ===== 动画 =====
+.process-reveal-enter-active {
+  animation: slideDown 0.35s ease-out;
+}
+.process-reveal-leave-active {
+  animation: slideUp 0.25s ease-in forwards;
+}
+
+.result-reveal-enter-active {
+  animation: resultReveal 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.result-reveal-leave-active {
+  animation: resultHide 0.3s ease-in forwards;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  to { opacity: 0; transform: translateY(-8px); }
+}
+
+@keyframes resultHide {
+  to { opacity: 0; transform: translateY(-12px); }
+}
+
+@keyframes chipIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 </style>

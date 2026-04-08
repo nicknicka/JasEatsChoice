@@ -213,26 +213,24 @@ const saveNewRecipe = () => {
   </el-dialog>
 </template>
 
-<style>
+<style lang="less">
+@import '../../assets/css/nordic-theme.less';
+
 /* 只针对添加食谱对话框的样式，不影响其他组件 */
 .add-recipe-dialog .el-dialog__header {
-  border-bottom: 2px solid rgba(102, 126, 234, 0.3);
-  background: linear-gradient(135deg, rgba(230, 247, 255, 0.8) 0%, rgba(186, 231, 255, 0.8) 100%);
-  padding: 24px 28px;
+  border-bottom: 2px solid @nordic-accent-light;
+  background: @nordic-accent-light;
+  padding: @nordic-space-lg 28px;
 }
 
 .add-recipe-dialog .el-dialog__title {
-  font-size: 1.429rem /* 原值: 20px */;
+  font-size: @nordic-text-lg;
   font-weight: 600;
-  color: #1890ff;
-  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: @nordic-accent-dark;
 }
 
 .add-recipe-dialog .el-dialog__body {
-  padding: 32px 28px;
+  padding: @nordic-space-xl 28px;
 }
 
 /* 表单容器 */
@@ -244,13 +242,13 @@ const saveNewRecipe = () => {
 
 /* 表单字段样式 - 只影响对话框内的表单项 */
 .add-recipe-dialog .el-form-item {
-  margin-bottom: 32px;
+  margin-bottom: @nordic-space-xl;
 }
 
 .add-recipe-dialog .el-form-item__label {
   font-weight: 500;
-  color: #555;
-  font-size: 1rem /* 原值: 14px */;
+  color: @nordic-text-secondary;
+  font-size: @nordic-text-base;
 }
 
 .add-recipe-dialog .el-form-item__label::before {
@@ -266,8 +264,8 @@ const saveNewRecipe = () => {
 }
 
 .label-icon {
-  font-size: 1.286rem /* 原值: 18px */;
-  color: #1890ff;
+  font-size: @nordic-text-lg;
+  color: @nordic-accent;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -278,70 +276,68 @@ const saveNewRecipe = () => {
 .add-recipe-dialog .el-input__wrapper,
 .add-recipe-dialog .el-select__wrapper,
 .add-recipe-dialog .el-textarea__inner {
-  border-radius: 8px;
-  border: 2px solid #e5e7eb;
-  transition: all 0.3s ease;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  border-radius: @nordic-radius-sm;
+  border: 2px solid @nordic-border;
+  transition: all 0.25s ease;
+  box-shadow: none;
 }
 
 .add-recipe-dialog .el-input__wrapper:hover,
 .add-recipe-dialog .el-select__wrapper:hover,
 .add-recipe-dialog .el-textarea__inner:hover {
-  border-color: #91d5ff;
-  box-shadow: 0 0 0 3px rgba(145, 213, 255, 0.1);
+  border-color: @nordic-accent;
+  box-shadow: 0 0 0 3px fade(@nordic-accent, 10%);
 }
 
 .add-recipe-dialog .el-input__wrapper.is-focus,
 .add-recipe-dialog .el-select__wrapper.is-focus,
 .add-recipe-dialog .el-textarea__inner.is-focus {
-  border-color: #40a9ff;
-  box-shadow: 0 0 0 3px rgba(64, 169, 255, 0.15);
+  border-color: @nordic-accent;
+  box-shadow: 0 0 0 3px fade(@nordic-accent, 12%);
 }
 
 /* 时间选择器样式 - 只影响对话框内 */
 .add-recipe-dialog .el-time-picker__input {
-  font-size: 1rem /* 原值: 14px */;
+  font-size: @nordic-text-base;
 }
 
 /* 按钮样式 - 只影响对话框内的按钮 */
 .add-recipe-dialog .dialog-footer {
   text-align: center;
-  padding: 0 28px 24px;
+  padding: 0 28px @nordic-space-lg;
 }
 
 .add-recipe-dialog .dialog-footer .el-button {
   padding: 10px 28px;
-  border-radius: 8px;
+  border-radius: @nordic-radius-sm;
   font-weight: 500;
-  font-size: 1rem /* 原值: 14px */;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  font-size: @nordic-text-base;
+  transition: all 0.25s ease;
 }
 
 .add-recipe-dialog .dialog-footer .el-button--primary {
-  background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
-  border: 1px solid #91d5ff;
-  color: #0050b3;
-}
+  background: @nordic-accent;
+  border: none;
+  color: white;
 
-.add-recipe-dialog .dialog-footer .el-button--primary:hover {
-  background: linear-gradient(135deg, #bae7ff 0%, #91d5ff 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(64, 169, 255, 0.3);
+  &:hover {
+    background: @nordic-accent-dark;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px fade(@nordic-accent, 30%);
+  }
 }
 
 .add-recipe-dialog .dialog-footer .el-button--default {
-  border-color: #e5e7eb;
-  background-color: #fafafa;
-  color: #666;
-}
+  border-color: @nordic-border;
+  background-color: @nordic-surface;
+  color: @nordic-text-secondary;
 
-.add-recipe-dialog .dialog-footer .el-button--default:hover {
-  border-color: #d9d9d9;
-  background-color: #f0f0f0;
-  color: #333;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  &:hover {
+    border-color: @nordic-text-muted;
+    background-color: @nordic-bg;
+    color: @nordic-text;
+    transform: translateY(-2px);
+  }
 }
 
 /* 弹窗动画 */

@@ -554,20 +554,26 @@ const updateCustomNutrition = (field, value) => {
   </el-dialog>
 </template>
 
-<style scoped>
-/* 食谱详情对话框样式 */
+<style scoped lang="less">
+@import '../assets/css/nordic-theme.less';
+
+// --- 北欧餐型色系 ---
+@meal-amber: #D9A84E;
+@meal-sage: #7BAE7F;
+@meal-slate: #6B9BD2;
+@meal-rose: #C9898B;
+
 .recipe-details {
-  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-  padding: 16px;
-  border-radius: 20px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  background: @nordic-surface;
+  padding: @nordic-space-md;
+  border-radius: @nordic-radius-lg;
+  box-shadow: 0 4px 20px @nordic-shadow;
 }
 
-/* 食谱头部区域 */
 .recipe-header-section {
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 2px solid #f0f2f5;
+  margin-bottom: @nordic-space-md;
+  padding-bottom: @nordic-space-sm;
+  border-bottom: 2px solid @nordic-divider;
 }
 
 .recipe-title-block {
@@ -575,11 +581,10 @@ const updateCustomNutrition = (field, value) => {
 }
 
 .recipe-main-title {
-  font-size: 1.714rem /* 原值: 24px */;
+  font-size: @nordic-text-xl;
   font-weight: 700;
-  color: #2c3e50;
-  margin-bottom: 16px;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  color: @nordic-text;
+  margin-bottom: @nordic-space-md;
 }
 
 .recipe-basic-info {
@@ -597,261 +602,230 @@ const updateCustomNutrition = (field, value) => {
 
 .info-label {
   font-weight: 600;
-  color: #667eea;
-  font-size: 1rem /* 原值: 14px */;
+  color: @nordic-accent;
+  font-size: @nordic-text-base;
 }
 
 .info-value {
-  font-size: 1.143rem /* 原值: 16px */;
+  font-size: @nordic-text-md;
   font-weight: 500;
-  color: #4a5568;
+  color: @nordic-text-secondary;
 }
 
 .type-tag {
-  background: linear-gradient(135deg, #e6f2ff 0%, #e8d5ff 100%);
-  color: #333;
+  background: @nordic-accent-light;
+  color: @nordic-accent-dark;
   padding: 8px 18px;
-  border-radius: 20px;
+  border-radius: @nordic-radius-pill;
   font-weight: 600;
 }
 
 .time-text {
-  font-size: 1.143rem /* 原值: 16px */;
+  font-size: @nordic-text-md;
   font-weight: 600;
-  color: #f57c00;
+  color: @nordic-accent;
 }
 
-/* 内容区域 */
 .recipe-content-section {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: @nordic-space-md;
 }
 
 .section-title {
-  font-size: 1.286rem /* 原值: 18px */;
+  font-size: @nordic-text-lg;
   font-weight: 700;
-  color: #2c3e50;
-  margin-bottom: 12px;
-  padding-left: 8px;
-  border-left: 4px solid #667eea;
+  color: @nordic-text;
+  margin-bottom: @nordic-space-sm;
+  padding-left: @nordic-space-sm;
+  border-left: 4px solid @nordic-accent;
   display: flex;
   align-items: center;
 }
 
-/* 营养信息 */
 .nutrition-section {
-  background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
-  padding: 24px;
-  border-radius: 16px;
-  border: 2px solid #e6ecf5;
-  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.08);
+  background: @nordic-surface;
+  padding: @nordic-space-lg;
+  border-radius: @nordic-radius-lg;
+  border: 1px solid @nordic-border;
 }
 
 .nutrition-card-container {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
+  gap: @nordic-space-md;
 }
 
 .nutrition-card {
-  background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
-  padding: 16px;
-  border-radius: 14px;
+  background: @nordic-surface;
+  padding: @nordic-space-md;
+  border-radius: @nordic-radius-md;
   text-align: center;
-  border: 2px solid #e2e8f0;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid @nordic-border;
+  transition: all 0.25s ease;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 110px;
-}
+  min-height: 100px;
 
-.nutrition-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.15);
-  border-color: #667eea;
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px @nordic-shadow-hover;
+    border-color: @nordic-accent;
+  }
 }
 
 .nutrition-icon {
-  font-size: 3.429rem /* 原值: 48px */;
-  margin-bottom: 12px;
+  font-size: 2.5rem;
 }
 
 .nutrition-label {
-  font-size: 1rem /* 原值: 14px */;
+  font-size: @nordic-text-base;
   font-weight: 600;
-  color: #718096;
-  margin-bottom: 8px;
+  color: @nordic-text-secondary;
 }
 
 .nutrition-value {
-  font-size: 1.429rem /* 原值: 20px */;
+  font-size: @nordic-text-lg;
   font-weight: 700;
-  color: #667eea;
-  min-height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  color: @nordic-accent;
 }
 
-/* 营养信息编辑模式样式 */
 .nutrition-card :deep(.el-input-number) {
   .el-input__inner {
     text-align: center;
     font-weight: 700;
-    color: #667eea;
+    color: @nordic-accent;
   }
-
   .el-input-number__decrease,
   .el-input-number__increase {
-    background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
-    border-color: #667eea40;
-
+    background: @nordic-accent-light;
+    border-color: @nordic-border;
     &:hover {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      border-color: #667eea;
+      background: @nordic-accent;
+      border-color: @nordic-accent;
       color: white;
     }
   }
 }
 
-/* 菜品列表 */
 .dishes-section {
-  background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
-  padding: 16px;
-  border-radius: 16px;
-  border: 2px solid #e6ecf5;
-  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.08);
+  background: @nordic-surface;
+  padding: @nordic-space-md;
+  border-radius: @nordic-radius-lg;
+  border: 1px solid @nordic-border;
 }
 
 .dish-list-container {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: @nordic-space-md;
   max-height: calc(100vh - 400px);
   overflow-y: auto;
   padding-right: 8px;
 }
 
 .dish-card-item {
-  background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
-  padding: 20px;
-  border-radius: 14px;
-  border-left: 5px solid #667eea;
-  border: 2px solid #e2e8f0;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
+  background: @nordic-surface;
+  padding: @nordic-space-md;
+  border-radius: @nordic-radius-md;
+  border-left: 4px solid @nordic-accent;
+  border: 1px solid @nordic-border;
+  transition: all 0.25s ease;
 
-.dish-card-item:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 32px rgba(102, 126, 234, 0.12);
-  border-color: #667eea;
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px @nordic-shadow-hover;
+    border-color: @nordic-accent;
+  }
 }
 
 .dish-card-header {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 16px;
+  margin-bottom: @nordic-space-sm;
 }
 
 .dish-emoji {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: @nordic-accent-light;
   border-radius: 50%;
-  color: white;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+  font-size: 1.4rem;
 }
 
 .dish-name-text {
-  font-size: 1.286rem /* 原值: 18px */;
+  font-size: @nordic-text-lg;
   font-weight: 700;
-  color: #2d3748;
+  color: @nordic-text;
   margin: 0;
 }
 
 .ingredients-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-}
+  gap: 8px;
 
-.ingredients-list .el-tag {
-  background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
-  border: 1px solid #667eea40;
-  color: #667eea;
-  font-weight: 500;
-  font-size: 0.929rem /* 原值: 13px */;
-  border-radius: 20px;
-  padding: 6px 14px;
-  transition: all 0.3s ease;
-}
+  .el-tag {
+    background: @nordic-accent-light;
+    border: none;
+    color: @nordic-accent-dark;
+    font-weight: 500;
+    font-size: @nordic-text-sm;
+    border-radius: @nordic-radius-pill;
+    padding: 4px 12px;
+    transition: all 0.2s ease;
 
-.ingredients-list .el-tag:hover {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-color: #667eea;
-  color: white;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+    &:hover {
+      background: @nordic-accent;
+      color: white;
+    }
+  }
 }
 
 .no-ingredients-info {
-  margin-top: 12px;
+  margin-top: @nordic-space-sm;
 }
 
-/* 空菜品卡片 */
 .empty-dish-card {
-  background: linear-gradient(135deg, #ffffff 0%, #f7fafc 100%) !important;
-  border: 2px dashed #cbd5e0 !important;
-  border-left: 5px solid #a0aec0 !important;
+  background: @nordic-bg !important;
+  border: 2px dashed @nordic-border !important;
   opacity: 0.8;
+
+  .dish-name-text {
+    font-style: italic;
+    color: @nordic-text-muted;
+  }
 }
 
-.empty-dish-card:hover {
-  transform: translateY(-3px) !important;
-  cursor: default;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05) !important;
-}
-
-.empty-dish-card .dish-name-text {
-  font-style: italic;
-  color: #a0aec0;
-}
-
-/* 食谱详情 */
 .details-section {
-  background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
-  padding: 16px;
-  border-radius: 16px;
-  border: 2px solid #e6ecf5;
-  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.08);
-  margin-top: 16px;
+  background: @nordic-surface;
+  padding: @nordic-space-md;
+  border-radius: @nordic-radius-lg;
+  border: 1px solid @nordic-border;
+  margin-top: @nordic-space-md;
 }
 
 .details-content {
-  margin-top: 12px;
+  margin-top: @nordic-space-sm;
 }
 
 .details-display {
-  position: relative;
-  padding: 12px;
-  background-color: #f9fafb;
-  border-radius: 8px;
+  padding: @nordic-space-sm;
+  background-color: @nordic-bg;
+  border-radius: @nordic-radius-sm;
 }
 
 .details-text {
-  font-size: 1rem /* 原值: 14px */;
+  font-size: @nordic-text-base;
   line-height: 1.6;
-  color: #4a5568;
+  color: @nordic-text-secondary;
   white-space: pre-wrap;
 }
 
@@ -860,62 +834,45 @@ const updateCustomNutrition = (field, value) => {
   flex-direction: column;
 }
 
-/* 对话框底部 */
 .dialog-footer {
   text-align: center;
-  padding: 20px;
+  padding: @nordic-space-lg;
   display: flex;
   justify-content: center;
-  gap: 16px;
+  gap: @nordic-space-md;
+
+  .el-button {
+    border-radius: @nordic-radius-pill;
+    padding: 10px 28px;
+    font-weight: 600;
+    font-size: @nordic-text-md;
+    transition: all 0.2s ease;
+  }
+
+  .el-button--primary {
+    background: @nordic-accent;
+    border: none;
+    color: white;
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px fade(@nordic-accent, 30%);
+    }
+  }
+
+  .el-button--success {
+    background: @nordic-green;
+    border: none;
+    color: white;
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px fade(@nordic-green, 30%);
+    }
+  }
 }
 
-.dialog-footer .el-button {
-  border-radius: 24px;
-  padding: 12px 36px;
-  font-weight: 600;
-  font-size: 1.143rem /* 原值: 16px */;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.1);
-  transition: all 0.3s ease;
-}
-
-.dialog-footer .el-button--primary {
-  background: linear-gradient(135deg, #e3f2fd 0%, #f8f9ff 100%);
-  border: none;
-  color: #333333;
-}
-
-.dialog-footer .el-button--primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2);
-  background: linear-gradient(135deg, #d1ecf1 0%, #e6f7ff 100%);
-}
-
-.dialog-footer .el-button--success {
-  background: linear-gradient(135deg, #e8f5e9 0%, #f1f8ff 100%);
-  border: none;
-  color: #333333;
-}
-
-.dialog-footer .el-button--success:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(76, 175, 80, 0.2);
-  background: linear-gradient(135deg, #c8e6c9 0%, #e6f7ff 100%);
-}
-
-/* 不同主题颜色适配 */
-.recipe-details.breakfast .section-title {
-  border-left-color: #f57c00;
-}
-
-.recipe-details.lunch .section-title {
-  border-left-color: #388e3c;
-}
-
-.recipe-details.dinner .section-title {
-  border-left-color: #1976d2;
-}
-
-.recipe-details.snack .section-title {
-  border-left-color: #1565c0;
-}
+// 餐型主题色
+.recipe-details.breakfast .section-title { border-left-color: @meal-amber; }
+.recipe-details.lunch .section-title { border-left-color: @meal-sage; }
+.recipe-details.dinner .section-title { border-left-color: @meal-slate; }
+.recipe-details.snack .section-title { border-left-color: @nordic-accent; }
 </style>

@@ -195,6 +195,23 @@ public class LangChain4jConfig {
                 .build();
     }
 
+    /**
+     * 视觉模型（用于菜品识别、图像理解）
+     * 使用 glm-4.6v-flash 支持视觉识别
+     */
+    @Bean("visionModel")
+    public ChatModel visionModel() {
+        log.info("初始化视觉模型，模型：{}", zhipuAIConfig.getVisionModel());
+
+        return ZhipuAiChatModel.builder()
+                .apiKey(zhipuAIConfig.getApiKey())
+                .model(zhipuAIConfig.getVisionModel())
+                .temperature(0.3)
+                .maxToken(2048)
+                .maxRetries(1)
+                .build();
+    }
+
     // ==================== L1 专家 Agent ====================
 
     /**

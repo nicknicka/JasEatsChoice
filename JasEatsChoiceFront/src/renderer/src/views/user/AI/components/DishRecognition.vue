@@ -1,6 +1,12 @@
 <template>
   <div class="recognition-content-wrapper">
+    <!-- 顶部装饰条 -->
+    <div class="page-header-strip">
+      <div class="strip-pattern"></div>
+    </div>
+
     <div class="recognition-section">
+      <!-- 上传区域 -->
       <div class="upload-area">
         <input
           type="file"
@@ -21,196 +27,217 @@
           @drop="handleDrop"
         >
           <div v-if="!selectedImage" class="upload-placeholder">
-            <el-icon :size="48" class="camera-icon"><Camera /></el-icon>
-            <p class="upload-text">点击或拖拽上传菜品图片</p>
-            <p class="upload-hint">支持 JPG、PNG 格式，最大 10MB</p>
+            <div class="upload-icon-ring">
+              <div class="ring-dashed"></div>
+              <div class="ring-inner">
+                <svg class="camera-svg" viewBox="0 0 48 48" fill="none">
+                  <path d="M8 18C8 15.7909 9.79086 14 12 14H14.5L17 10H31L33.5 14H36C38.2091 14 40 15.7909 40 18V34C40 36.2091 38.2091 38 36 38H12C9.79086 38 8 36.2091 8 34V18Z" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/>
+                  <circle cx="24" cy="25" r="6" stroke="currentColor" stroke-width="2.5"/>
+                  <circle cx="24" cy="25" r="2.5" fill="currentColor"/>
+                </svg>
+              </div>
+            </div>
+            <div class="upload-text-group">
+              <p class="upload-title">拖放或点击上传菜品图片</p>
+              <p class="upload-hint">JPG / PNG，最大 10MB</p>
+            </div>
+            <div class="upload-decorations">
+              <span class="deco-dot"></span>
+              <span class="deco-dot"></span>
+              <span class="deco-dot"></span>
+            </div>
           </div>
           <div v-else class="image-preview">
             <img :src="selectedImage" alt="菜品图片" />
             <div class="image-overlay">
-              <el-button
-                type="danger"
-                size="small"
-                @click.stop="clearImage"
-                class="delete-btn"
-              >
-                <el-icon><Delete /></el-icon>
-                删除图片
-              </el-button>
+              <button class="overlay-btn change-btn" @click.stop="triggerUpload">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                  <circle cx="12" cy="13" r="4"/>
+                </svg>
+                更换图片
+              </button>
+              <button class="overlay-btn delete-btn" @click.stop="clearImage">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                </svg>
+                删除
+              </button>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- 识别进度条 -->
-      <Transition name="progress-fade">
+      <!-- 识别进度 -->
+      <Transition name="progress-slide">
         <div v-if="recognitionLoading" class="recognition-progress">
-          <div class="progress-container">
-            <el-progress
-              :percentage="recognitionProgress"
-              :stroke-width="12"
-              class="progress-bar"
-            />
-            <p class="progress-text">
-              <span class="pulse-dot"></span>
-              正在识别菜品，请稍候...
-            </p>
+          <div class="progress-track">
+            <div class="progress-fill" :style="{ width: recognitionProgress + '%' }">
+              <div class="progress-glow"></div>
+            </div>
+          </div>
+          <div class="progress-info">
+            <div class="progress-dot-wave">
+              <span></span><span></span><span></span><span></span>
+            </div>
+            <span class="progress-label">AI 正在分析您的菜品</span>
           </div>
         </div>
       </Transition>
 
-      <div class="recognition-buttons">
-        <el-button
-          type="primary"
-          size="large"
-          class="recognize-btn"
+      <!-- 操作按钮 -->
+      <div class="action-bar">
+        <button
+          class="action-btn primary-btn"
           @click="recognizeDish"
           :disabled="!selectedImage || recognitionLoading"
         >
-          <el-icon v-if="recognitionLoading"><Loading /></el-icon>
-          {{ recognitionLoading ? '识别中...' : '🔍 开始识别菜品' }}
-        </el-button>
+          <span class="btn-bg"></span>
+          <span class="btn-content">
+            <svg v-if="recognitionLoading" class="spin-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M12 2v4m0 12v4m-7.07-3.93l2.83-2.83m8.48-8.48l2.83-2.83M2 12h4m12 0h4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83"/>
+            </svg>
+            <svg v-else viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+            {{ recognitionLoading ? '识别中...' : '开始识别' }}
+          </span>
+        </button>
 
-        <el-button
+        <button
           v-if="recognitionResult"
-          type="success"
-          size="large"
-          class="re-recognize-btn"
+          class="action-btn outline-btn"
           @click="reRecognize"
           :disabled="recognitionLoading"
         >
-          🔄 重新识别
-        </el-button>
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+          </svg>
+          重新识别
+        </button>
       </div>
 
-      <Transition name="result-fade">
+      <!-- 识别结果 -->
+      <Transition name="result-reveal">
         <div v-if="recognitionResult" class="recognition-result">
-          <div class="result-header">
-            <h4>✨ 识别结果</h4>
+          <!-- 菜品名称 - 大标题 -->
+          <div class="dish-hero">
+            <div class="dish-name-label">识别结果</div>
+            <h2 class="dish-name">{{ recognitionResult.name }}</h2>
+            <div class="dish-meta-row">
+              <div class="meta-chip">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 23c-3.866 0-7-2.686-7-6 0-2.918 2.163-5.475 4-7.5l1-1c.3-.3.7-.3 1 0l1 1c1.837 2.025 4 4.582 4 7.5 0 3.314-3.134 6-7 6z"/></svg>
+                <span>{{ recognitionResult.difficulty }}</span>
+              </div>
+              <div class="meta-chip">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.4 0-8-3.6-8-8s3.6-8 8-8 8 3.6 8 8-3.6 8-8 8zm.5-13H11v6l5.2 3.2.8-1.3-4.5-2.7V7z"/></svg>
+                <span>{{ recognitionResult.preparationTime }}</span>
+              </div>
+            </div>
           </div>
-          <div class="result-cards">
-            <div
-              class="result-card main-card"
-              :style="{ 'animation-delay': '0ms' }"
-            >
-              <div class="card-label">菜品名称</div>
-              <div class="card-value">{{ recognitionResult.name }}</div>
-            </div>
-            <div
-              class="result-card calories-card"
-              :style="{ 'animation-delay': '100ms' }"
-            >
-              <div class="card-label">🔥 卡路里</div>
-              <div class="card-value highlight">
-                <AnimatedNumber :value="recognitionResult.calories" suffix=" kcal" />
-              </div>
-            </div>
-            <div
-              class="result-card"
-              :style="{ 'animation-delay': '200ms' }"
-            >
-              <div class="card-label">👨‍🍳 难度</div>
-              <div class="card-value">{{ recognitionResult.difficulty }}</div>
-            </div>
-            <div
-              class="result-card"
-              :style="{ 'animation-delay': '300ms' }"
-            >
-              <div class="card-label">⏱️ 烹饪时间</div>
-              <div class="card-value">{{ recognitionResult.preparationTime }}</div>
-            </div>
 
-            <!-- 营养成分图表 -->
-            <div
-              class="result-card full-width nutrition-card"
-              :style="{ 'animation-delay': '400ms' }"
-            >
-              <div class="card-label">📊 营养成分</div>
-              <div class="nutrition-chart">
-                <div class="nutrition-item">
-                  <div class="nutrition-label">
-                    <span class="nutrition-icon">💪</span>
-                    <span>蛋白质</span>
-                  </div>
-                  <div class="nutrition-bar">
-                    <div
-                      class="nutrition-fill protein"
-                      :style="{ width: proteinBarWidth + '%' }"
-                    ></div>
-                  </div>
-                  <div class="nutrition-value">
-                    <AnimatedNumber :value="displayProtein" suffix="g" />
-                  </div>
-                </div>
-                <div class="nutrition-item">
-                  <div class="nutrition-label">
-                    <span class="nutrition-icon">🧈</span>
-                    <span>脂肪</span>
-                  </div>
-                  <div class="nutrition-bar">
-                    <div
-                      class="nutrition-fill fat"
-                      :style="{ width: fatBarWidth + '%' }"
-                    ></div>
-                  </div>
-                  <div class="nutrition-value">
-                    <AnimatedNumber :value="displayFat" suffix="g" />
-                  </div>
-                </div>
-                <div class="nutrition-item">
-                  <div class="nutrition-label">
-                    <span class="nutrition-icon">🍞</span>
-                    <span>碳水</span>
-                  </div>
-                  <div class="nutrition-bar">
-                    <div
-                      class="nutrition-fill carbs"
-                      :style="{ width: carbsBarWidth + '%' }"
-                    ></div>
-                  </div>
-                  <div class="nutrition-value">
-                    <AnimatedNumber :value="displayCarbs" suffix="g" />
-                  </div>
-                </div>
+          <!-- 卡路里突出展示 -->
+          <div class="calorie-showcase">
+            <div class="calorie-ring">
+              <svg viewBox="0 0 120 120">
+                <circle class="ring-bg" cx="60" cy="60" r="52" />
+                <circle
+                  class="ring-fill"
+                  cx="60" cy="60" r="52"
+                  :style="{ strokeDasharray: 326.7, strokeDashoffset: 326.7 - (326.7 * Math.min(recognitionResult.calories / 800, 1)) }"
+                />
+              </svg>
+              <div class="calorie-center">
+                <span class="calorie-number"><AnimatedNumber :value="recognitionResult.calories" /></span>
+                <span class="calorie-unit">千卡</span>
               </div>
             </div>
+            <div class="calorie-label">
+              <span class="fire-icon">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 23c-3.866 0-7-2.686-7-6 0-2.918 2.163-5.475 4-7.5l1-1c.3-.3.7-.3 1 0l1 1c1.837 2.025 4 4.582 4 7.5 0 3.314-3.134 6-7 6z"/></svg>
+              </span>
+              卡路里
+            </div>
+          </div>
 
-            <div
-              class="result-card full-width"
-              :style="{ 'animation-delay': '500ms' }"
-            >
-              <div class="card-label">🥗 主要食材</div>
-              <div class="card-value">
-                <TransitionGroup name="tag-fade">
-                  <el-tag
-                    v-for="(ingredient, index) in recognitionResult.ingredients"
-                    :key="ingredient"
-                    class="ingredient-tag"
-                    :style="{ 'animation-delay': (index * 50) + 'ms' }"
-                  >
-                    {{ ingredient }}
-                  </el-tag>
-                </TransitionGroup>
+          <!-- 营养成分 -->
+          <div class="nutrition-section">
+            <div class="section-title">
+              <span class="title-bar"></span>
+              营养成分
+            </div>
+            <div class="nutrition-grid">
+              <div class="nutrition-item protein-item">
+                <div class="nutrition-header">
+                  <span class="nutrition-dot protein-dot"></span>
+                  <span class="nutrition-name">蛋白质</span>
+                </div>
+                <div class="nutrition-bar-track">
+                  <div class="nutrition-bar-fill protein-fill" :style="{ width: proteinBarWidth + '%' }"></div>
+                </div>
+                <div class="nutrition-val"><AnimatedNumber :value="displayProtein" /><span class="val-unit">g</span></div>
+              </div>
+              <div class="nutrition-item fat-item">
+                <div class="nutrition-header">
+                  <span class="nutrition-dot fat-dot"></span>
+                  <span class="nutrition-name">脂肪</span>
+                </div>
+                <div class="nutrition-bar-track">
+                  <div class="nutrition-bar-fill fat-fill" :style="{ width: fatBarWidth + '%' }"></div>
+                </div>
+                <div class="nutrition-val"><AnimatedNumber :value="displayFat" /><span class="val-unit">g</span></div>
+              </div>
+              <div class="nutrition-item carbs-item">
+                <div class="nutrition-header">
+                  <span class="nutrition-dot carbs-dot"></span>
+                  <span class="nutrition-name">碳水</span>
+                </div>
+                <div class="nutrition-bar-track">
+                  <div class="nutrition-bar-fill carbs-fill" :style="{ width: carbsBarWidth + '%' }"></div>
+                </div>
+                <div class="nutrition-val"><AnimatedNumber :value="displayCarbs" /><span class="val-unit">g</span></div>
               </div>
             </div>
-            <div
-              class="result-card full-width"
-              :style="{ 'animation-delay': '600ms' }"
-            >
-              <div class="card-label">🏷️ 标签</div>
-              <div class="card-value">
-                <TransitionGroup name="tag-fade">
-                  <el-tag
-                    v-for="(tag, index) in recognitionResult.tags"
-                    :key="tag"
-                    type="success"
-                    class="tag-item"
-                    :style="{ 'animation-delay': (index * 50) + 'ms' }"
-                  >
-                    {{ tag }}
-                  </el-tag>
-                </TransitionGroup>
-              </div>
+          </div>
+
+          <!-- 食材 -->
+          <div v-if="recognitionResult.ingredients?.length" class="info-section">
+            <div class="section-title">
+              <span class="title-bar"></span>
+              主要食材
+            </div>
+            <div class="tags-wrap">
+              <TransitionGroup name="chip-pop">
+                <span
+                  v-for="(ingredient, index) in recognitionResult.ingredients"
+                  :key="ingredient"
+                  class="ingredient-chip"
+                  :style="{ animationDelay: (index * 60) + 'ms' }"
+                >
+                  {{ ingredient }}
+                </span>
+              </TransitionGroup>
+            </div>
+          </div>
+
+          <!-- 标签 -->
+          <div v-if="recognitionResult.tags?.length" class="info-section">
+            <div class="section-title">
+              <span class="title-bar"></span>
+              标签
+            </div>
+            <div class="tags-wrap">
+              <TransitionGroup name="chip-pop">
+                <span
+                  v-for="(tag, index) in recognitionResult.tags"
+                  :key="tag"
+                  class="tag-chip"
+                  :style="{ animationDelay: (index * 60) + 'ms' }"
+                >
+                  {{ tag }}
+                </span>
+              </TransitionGroup>
             </div>
           </div>
         </div>
@@ -408,8 +435,6 @@ const recognizeDish = async () => {
     // 构建FormData
     const formData = new FormData()
     formData.append('image', selectedFile.value)
-    // 可选：添加用户ID（如果有的话）
-    // formData.append('userId', 'xxx')
 
     // 调用后端API
     const apiUrl = API_CONFIG.baseURL + API_CONFIG.ai.recognizeDish
@@ -483,10 +508,35 @@ const reRecognize = () => {
   height: 100%;
   width: 100%;
   flex: 1;
-  gap: 8px;
   overflow: hidden;
   min-height: 0;
   box-sizing: border-box;
+  background: @nordic-bg;
+}
+
+// 顶部装饰条
+.page-header-strip {
+  height: 4px;
+  flex-shrink: 0;
+  background: linear-gradient(90deg, @nordic-accent, @nordic-yellow, @nordic-green, @nordic-accent);
+  background-size: 200% 100%;
+  animation: gradientShift 4s ease infinite;
+
+  .strip-pattern {
+    height: 100%;
+    background: repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 8px,
+      rgba(255,255,255,0.3) 8px,
+      rgba(255,255,255,0.3) 10px
+    );
+  }
+}
+
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
 }
 
 .recognition-section {
@@ -494,600 +544,757 @@ const reRecognize = () => {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 24px;
+  padding: 28px 24px;
   box-sizing: border-box;
 
-  .upload-area {
-    margin-bottom: 24px;
-
-    .upload-zone {
-      border: 3px dashed @nordic-accent;
-      border-radius: 16px;
-      padding: 48px;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-      background: linear-gradient(135deg, @nordic-accent-light 0%, #fff 100%);
-      position: relative;
-      overflow: hidden;
-
-      &::before {
-        content: '';
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 0;
-        height: 0;
-        border-radius: 50%;
-        background: radial-gradient(circle, rgba(212, 132, 90, 0.1) 0%, transparent 70%);
-        transform: translate(-50%, -50%);
-        transition: width 0.6s ease, height 0.6s ease;
-      }
-
-      &:hover {
-        border-color: @nordic-accent-dark;
-        background: linear-gradient(135deg, @nordic-accent-light 0%, #fff 100%);
-        transform: scale(1.02);
-        box-shadow: 0 8px 24px rgba(212, 132, 90, 0.2);
-
-        &::before {
-          width: 600px;
-          height: 600px;
-        }
-
-        .camera-icon {
-          animation: cameraBounce 0.6s ease;
-        }
-      }
-
-      &.has-image {
-        padding: 0;
-        border-style: solid;
-        border-width: 2px;
-
-        &:hover {
-          transform: scale(1.01);
-        }
-      }
-
-      &.is-dragging {
-        border-color: #409eff;
-        background: linear-gradient(135deg, #e3f2fd 0%, #fff 100%);
-        transform: scale(1.02);
-        animation: dragPulse 1s ease-in-out infinite;
-      }
-
-      .upload-placeholder {
-        .camera-icon {
-          color: @nordic-accent;
-          margin-bottom: 16px;
-          font-size: 56px;
-          display: inline-block;
-        }
-
-        .upload-text {
-          font-size: 17px;
-          font-weight: 600;
-          color: #303133;
-          margin: 12px 0;
-        }
-
-        .upload-hint {
-          font-size: 1rem /* 原值: 14px */;
-          color: #909399;
-        }
-      }
-
-      .image-preview {
-        position: relative;
-        width: 100%;
-        height: 320px;
-        overflow: hidden;
-        border-radius: 12px;
-        animation: imageFadeIn 0.4s ease-out;
-
-        img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          transition: transform 0.6s ease;
-        }
-
-        &:hover img {
-          transform: scale(1.05);
-        }
-
-        .image-overlay {
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.6);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          opacity: 0;
-          transition: all 0.4s ease;
-          backdrop-filter: blur(2px);
-
-          &:hover {
-            opacity: 1;
-          }
-
-          .delete-btn {
-            animation: buttonPop 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-          }
-        }
-      }
-    }
+  // 自定义滚动条
+  &::-webkit-scrollbar {
+    width: 5px;
   }
-
-  .recognition-progress {
-    margin: 20px 0;
-    padding: 20px;
-    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-    border-radius: 12px;
-    box-shadow: 0 2px 12px rgba(64, 158, 255, 0.15);
-
-    .progress-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
-    .progress-bar {
-      width: 100%;
-      margin-bottom: 12px;
-
-      :deep(.el-progress-bar__inner) {
-        background: linear-gradient(90deg, #409eff 0%, #66b1ff 100%);
-        transition: all 0.3s ease;
-        box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
-      }
-    }
-
-    .progress-text {
-      text-align: center;
-      font-size: 1rem /* 原值: 14px */;
-      color: #409eff;
-      font-weight: 500;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-
-      .pulse-dot {
-        display: inline-block;
-        width: 8px;
-        height: 8px;
-        background: #409eff;
-        border-radius: 50%;
-        animation: pulse 1.5s ease-in-out infinite;
-      }
-    }
+  &::-webkit-scrollbar-track {
+    background: transparent;
   }
-
-  .recognition-buttons {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
-
-    .recognize-btn,
-    .re-recognize-btn {
-      flex: 1;
-      height: 54px;
-      font-size: 17px;
-      font-weight: 600;
-      background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
-      border: none;
-      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-      border-radius: 14px;
-      position: relative;
-      overflow: hidden;
-
-      &::before {
-        content: '';
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 0;
-        height: 0;
-        border-radius: 50%;
-        background: rgba(255, 255, 255, 0.3);
-        transform: translate(-50%, -50%);
-        transition: width 0.6s, height 0.6s;
-      }
-
-      &:hover:not(:disabled) {
-        transform: translateY(-3px);
-        box-shadow: 0 12px 28px rgba(212, 132, 90, 0.5);
-
-        &::before {
-          width: 500px;
-          height: 500px;
-        }
-      }
-
-      &:active:not(:disabled) {
-        transform: translateY(-1px);
-        box-shadow: 0 6px 16px rgba(212, 132, 90, 0.4);
-      }
-
-      &:disabled {
-        background: linear-gradient(135deg, #d3d4d6 0%, #c8c9cc 100%);
-        cursor: not-allowed;
-        opacity: 0.7;
-      }
-    }
-  }
-
-  .recognition-result {
-    .result-header {
-      text-align: center;
-      margin-bottom: 28px;
-      animation: headerSlideDown 0.5s ease-out;
-
-      h4 {
-        font-size: 22px;
-        font-weight: 700;
-        color: #303133;
-        margin: 0;
-        background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-      }
-    }
-
-    .result-cards {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 18px;
-
-      .result-card {
-        background: linear-gradient(135deg, #fff 0%, @nordic-accent-light 100%);
-        border: 2px solid @nordic-border;
-        border-radius: 16px;
-        padding: 24px;
-        opacity: 0;
-        animation: cardSlideUp 0.5s ease-out forwards;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        position: relative;
-        overflow: hidden;
-
-        &::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: -100%;
-          width: 100%;
-          height: 100%;
-          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-          transition: left 0.6s;
-        }
-
-        &:hover {
-          transform: translateY(-8px);
-          box-shadow: 0 12px 32px rgba(212, 132, 90, 0.25);
-          border-color: @nordic-accent;
-
-          &::before {
-            left: 100%;
-          }
-        }
-
-        &.main-card {
-          grid-column: 1 / -1;
-          background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
-          border: none;
-
-          &:hover {
-            box-shadow: 0 12px 32px rgba(212, 132, 90, 0.4);
-          }
-
-          .card-label {
-            color: rgba(255, 255, 255, 0.95);
-            font-size: 1.071rem /* 原值: 15px */;
-          }
-
-          .card-value {
-            color: #fff;
-            font-size: 2rem /* 原值: 28px */;
-            font-weight: 700;
-            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-          }
-        }
-
-        &.calories-card {
-          .card-value.highlight {
-            color: @nordic-accent;
-            font-size: 2.286rem /* 原值: 32px */;
-            font-weight: 700;
-            background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-          }
-        }
-
-        &.full-width {
-          grid-column: 1 / -1;
-        }
-
-        .card-label {
-          font-size: 1rem /* 原值: 14px */;
-          font-weight: 600;
-          color: #909399;
-          margin-bottom: 10px;
-        }
-
-        .card-value {
-          font-size: 17px;
-          font-weight: 600;
-          color: #303133;
-
-          .ingredient-tag,
-          .tag-item {
-            margin: 5px;
-            padding: 8px 14px;
-            font-weight: 500;
-            border-radius: 20px;
-            animation: tagPopIn 0.3s ease-out forwards;
-            opacity: 0;
-          }
-        }
-      }
-    }
-
-    .nutrition-card {
-      .nutrition-chart {
-        margin-top: 15px;
-
-        .nutrition-item {
-          display: flex;
-          align-items: center;
-          gap: 15px;
-          margin-bottom: 15px;
-
-          &:last-child {
-            margin-bottom: 0;
-          }
-
-          .nutrition-label {
-            flex: 0 0 80px;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            font-size: 0.929rem /* 原值: 13px */;
-            font-weight: 500;
-            color: #606266;
-
-            .nutrition-icon {
-              font-size: 1.286rem /* 原值: 18px */;
-              transition: transform 0.3s ease;
-            }
-          }
-
-          .nutrition-bar {
-            flex: 1;
-            height: 24px;
-            background-color: #f0f2f5;
-            border-radius: 12px;
-            overflow: hidden;
-            position: relative;
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
-
-            .nutrition-fill {
-              height: 100%;
-              border-radius: 12px;
-              transition: width 1.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-              position: relative;
-
-              &::after {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-                animation: shimmer 1.5s ease-in-out infinite;
-              }
-
-              &.protein {
-                background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-                box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-              }
-
-              &.fat {
-                background: linear-gradient(90deg, #f093fb 0%, #f5576c 100%);
-                box-shadow: 0 2px 8px rgba(240, 147, 251, 0.3);
-              }
-
-              &.carbs {
-                background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
-                box-shadow: 0 2px 8px rgba(79, 172, 254, 0.3);
-              }
-            }
-          }
-
-          .nutrition-value {
-            flex: 0 0 50px;
-            text-align: right;
-            font-size: 1rem /* 原值: 14px */;
-            font-weight: bold;
-            color: #303133;
-          }
-        }
-
-        .nutrition-item:hover .nutrition-icon {
-          transform: scale(1.2) rotate(5deg);
-        }
-      }
-    }
+  &::-webkit-scrollbar-thumb {
+    background: @nordic-border;
+    border-radius: 3px;
   }
 }
 
-// ============ 动画定义 ============
-
-// 结果淡入淡出
-.result-fade-enter-active {
-  animation: resultFadeIn 0.5s ease-out;
+// ===== 上传区域 =====
+.upload-area {
+  margin-bottom: 20px;
 }
 
-.result-fade-leave-active {
-  animation: resultFadeOut 0.3s ease-in;
-}
+.upload-zone {
+  border: 2px dashed @nordic-border;
+  border-radius: 20px;
+  padding: 52px 32px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  background: @nordic-surface;
+  position: relative;
+  overflow: hidden;
 
-// 进度条淡入淡出
-.progress-fade-enter-active {
-  animation: progressFadeIn 0.3s ease-out;
-}
-
-.progress-fade-leave-active {
-  animation: progressFadeOut 0.3s ease-in;
-}
-
-// 标签淡入
-.tag-fade-enter-active {
-  animation: tagPopIn 0.3s ease-out forwards;
-}
-
-@keyframes resultFadeIn {
-  from {
-    opacity: 0;
-    transform: scale(0.95) translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-@keyframes resultFadeOut {
-  from {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-  to {
-    opacity: 0;
-    transform: scale(0.95) translateY(-20px);
-  }
-}
-
-@keyframes progressFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes progressFadeOut {
-  from {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  to {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-}
-
-@keyframes cardSlideUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px) scale(0.9);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes tagPopIn {
-  from {
-    opacity: 0;
-    transform: scale(0.5);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes pulse {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.5);
+  // 背景装饰点阵
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle, @nordic-divider 1px, transparent 1px);
+    background-size: 24px 24px;
     opacity: 0.5;
+    transition: opacity 0.3s;
+  }
+
+  &:hover {
+    border-color: @nordic-accent;
+    box-shadow: 0 8px 32px rgba(212, 132, 90, 0.12);
+    transform: translateY(-2px);
+
+    &::before {
+      opacity: 0.3;
+    }
+
+    .upload-icon-ring {
+      transform: scale(1.05);
+    }
+
+    .ring-dashed {
+      animation: ringRotate 12s linear infinite;
+    }
+  }
+
+  &.has-image {
+    padding: 0;
+    border-style: solid;
+    border-color: @nordic-border;
+    border-radius: 16px;
+
+    &::before {
+      display: none;
+    }
+
+    &:hover {
+      transform: translateY(-1px);
+    }
+  }
+
+  &.is-dragging {
+    border-color: @nordic-accent;
+    background: @nordic-accent-light;
+    transform: scale(1.01);
   }
 }
 
-@keyframes shimmer {
-  0% {
-    transform: translateX(-100%);
+@keyframes ringRotate {
+  to { transform: rotate(360deg); }
+}
+
+.upload-placeholder {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.upload-icon-ring {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  transition: transform 0.3s ease;
+
+  .ring-dashed {
+    position: absolute;
+    inset: 0;
+    border: 2.5px dashed @nordic-accent;
+    border-radius: 50%;
+    opacity: 0.4;
   }
-  100% {
-    transform: translateX(100%);
+
+  .ring-inner {
+    position: absolute;
+    inset: 8px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, @nordic-accent-light, @nordic-surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(212, 132, 90, 0.15);
+  }
+
+  .camera-svg {
+    width: 36px;
+    height: 36px;
+    color: @nordic-accent;
   }
 }
 
-@keyframes cameraBounce {
-  0%, 100% {
-    transform: translateY(0);
+.upload-text-group {
+  .upload-title {
+    font-family: 'Georgia', 'Palatino', serif;
+    font-size: 17px;
+    font-weight: 600;
+    color: @nordic-text;
+    margin: 0 0 6px;
+    letter-spacing: -0.3px;
   }
-  50% {
-    transform: translateY(-10px);
+
+  .upload-hint {
+    font-size: 13px;
+    color: @nordic-text-muted;
+    margin: 0;
+    letter-spacing: 0.3px;
   }
 }
 
-@keyframes dragPulse {
-  0%, 100% {
-    box-shadow: 0 0 0 0 rgba(64, 158, 255, 0.4);
-  }
-  50% {
-    box-shadow: 0 0 0 10px rgba(64, 158, 255, 0);
+.upload-decorations {
+  display: flex;
+  gap: 6px;
+
+  .deco-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: @nordic-accent;
+    opacity: 0.3;
   }
 }
 
-@keyframes buttonPop {
-  0% {
-    transform: scale(0);
+// 图片预览
+.image-preview {
+  position: relative;
+  width: 100%;
+  height: 320px;
+  overflow: hidden;
+  border-radius: 14px;
+  animation: imgReveal 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.6s ease;
   }
-  50% {
-    transform: scale(1.1);
-  }
-  100% {
-    transform: scale(1);
+
+  &:hover img {
+    transform: scale(1.03);
   }
 }
 
-@keyframes imageFadeIn {
+@keyframes imgReveal {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.image-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,0.65) 100%);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 20px;
+  gap: 12px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+.overlay-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border: none;
+  border-radius: 30px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  backdrop-filter: blur(8px);
+
+  &.change-btn {
+    background: rgba(255,255,255,0.2);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.3);
+
+    &:hover {
+      background: rgba(255,255,255,0.35);
+    }
+  }
+
+  &.delete-btn {
+    background: rgba(212, 75, 75, 0.6);
+    color: #fff;
+
+    &:hover {
+      background: rgba(212, 75, 75, 0.85);
+    }
+  }
+}
+
+// ===== 进度条 =====
+.recognition-progress {
+  margin-bottom: 20px;
+  padding: 20px 24px;
+  background: @nordic-surface;
+  border-radius: 14px;
+  border: 1px solid @nordic-border;
+  animation: slideDown 0.35s ease-out;
+}
+
+.progress-track {
+  height: 6px;
+  background: @nordic-divider;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, @nordic-accent, @nordic-yellow);
+  transition: width 0.3s ease;
+  position: relative;
+
+  .progress-glow {
+    position: absolute;
+    right: 0;
+    top: -3px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: @nordic-accent;
+    box-shadow: 0 0 12px @nordic-accent;
+  }
+}
+
+.progress-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.progress-dot-wave {
+  display: flex;
+  gap: 4px;
+  span {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: @nordic-accent;
+    animation: wave 1.2s ease-in-out infinite;
+
+    &:nth-child(2) { animation-delay: 0.1s; }
+    &:nth-child(3) { animation-delay: 0.2s; }
+    &:nth-child(4) { animation-delay: 0.3s; }
+  }
+}
+
+@keyframes wave {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-6px); opacity: 1; }
+}
+
+.progress-label {
+  font-size: 13px;
+  color: @nordic-text-secondary;
+  font-weight: 500;
+}
+
+// ===== 操作按钮 =====
+.action-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.action-btn {
+  flex: 1;
+  height: 50px;
+  border: none;
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  letter-spacing: -0.2px;
+
+  &.primary-btn {
+    background: linear-gradient(135deg, @nordic-accent, @nordic-accent-dark);
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(212, 132, 90, 0.25);
+
+    .btn-bg {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    &:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(212, 132, 90, 0.35);
+
+      .btn-bg {
+        opacity: 1;
+      }
+    }
+
+    &:disabled {
+      background: @nordic-border;
+      box-shadow: none;
+      cursor: not-allowed;
+      color: @nordic-text-muted;
+    }
+  }
+
+  &.outline-btn {
+    background: @nordic-surface;
+    border: 2px solid @nordic-border;
+    color: @nordic-text-secondary;
+    flex: 0 0 auto;
+    padding: 0 24px;
+
+    &:hover:not(:disabled) {
+      border-color: @nordic-accent;
+      color: @nordic-accent;
+      background: @nordic-accent-light;
+    }
+  }
+
+  .spin-icon {
+    animation: spin 1s linear infinite;
+  }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+// ===== 识别结果 =====
+.recognition-result {
+  animation: resultReveal 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes resultReveal {
   from {
     opacity: 0;
-    transform: scale(0.95);
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// 菜品大标题
+.dish-hero {
+  background: @nordic-surface;
+  border-radius: 18px;
+  padding: 32px 28px 28px;
+  margin-bottom: 16px;
+  border: 1px solid @nordic-border;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, @nordic-accent, @nordic-yellow);
+  }
+}
+
+.dish-name-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: @nordic-accent;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.dish-name {
+  font-family: 'Georgia', 'Palatino', serif;
+  font-size: 32px;
+  font-weight: 700;
+  color: @nordic-text;
+  margin: 0 0 16px;
+  letter-spacing: -1px;
+  line-height: 1.2;
+}
+
+.dish-meta-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.meta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 14px;
+  border-radius: 30px;
+  background: @nordic-bg;
+  font-size: 13px;
+  color: @nordic-text-secondary;
+  font-weight: 500;
+
+  svg {
+    color: @nordic-accent;
+  }
+}
+
+// 卡路里展示
+.calorie-showcase {
+  background: linear-gradient(135deg, #FFF8F3 0%, #FFF1E8 100%);
+  border-radius: 18px;
+  padding: 28px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  border: 1px solid rgba(212, 132, 90, 0.15);
+}
+
+.calorie-ring {
+  position: relative;
+  width: 110px;
+  height: 110px;
+  flex-shrink: 0;
+
+  svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+  }
+
+  .ring-bg {
+    fill: none;
+    stroke: rgba(212, 132, 90, 0.12);
+    stroke-width: 8;
+  }
+
+  .ring-fill {
+    fill: none;
+    stroke: @nordic-accent;
+    stroke-width: 8;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 1s cubic-bezier(0.4, 0, 0.2, 1);
+    filter: drop-shadow(0 2px 4px rgba(212, 132, 90, 0.3));
+  }
+}
+
+.calorie-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  .calorie-number {
+    font-family: 'Georgia', serif;
+    font-size: 30px;
+    font-weight: 700;
+    color: @nordic-accent-dark;
+    line-height: 1;
+    letter-spacing: -1px;
+  }
+
+  .calorie-unit {
+    font-size: 12px;
+    color: @nordic-text-muted;
+    margin-top: 4px;
+    font-weight: 500;
+  }
+}
+
+.calorie-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  .fire-icon {
+    color: @nordic-accent;
+    display: flex;
+  }
+
+  font-size: 15px;
+  font-weight: 600;
+  color: @nordic-text;
+}
+
+// 营养成分
+.nutrition-section {
+  background: @nordic-surface;
+  border-radius: 18px;
+  padding: 24px 28px;
+  margin-bottom: 16px;
+  border: 1px solid @nordic-border;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  color: @nordic-text;
+  margin-bottom: 18px;
+  letter-spacing: -0.3px;
+
+  .title-bar {
+    width: 3px;
+    height: 16px;
+    border-radius: 2px;
+    background: @nordic-accent;
+    flex-shrink: 0;
+  }
+}
+
+.nutrition-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.nutrition-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.nutrition-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 72px;
+}
+
+.nutrition-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+
+  &.protein-dot { background: #7C6FD0; }
+  &.fat-dot { background: #E07B7B; }
+  &.carbs-dot { background: #5DADE2; }
+}
+
+.nutrition-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: @nordic-text-secondary;
+}
+
+.nutrition-bar-track {
+  flex: 1;
+  height: 10px;
+  background: @nordic-bg;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.nutrition-bar-fill {
+  height: 100%;
+  border-radius: 5px;
+  transition: width 1.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%);
+    animation: barShimmer 2s ease-in-out infinite;
+  }
+
+  &.protein-fill {
+    background: linear-gradient(90deg, #7C6FD0, #A99BF0);
+  }
+  &.fat-fill {
+    background: linear-gradient(90deg, #E07B7B, #F0A0A0);
+  }
+  &.carbs-fill {
+    background: linear-gradient(90deg, #5DADE2, #85C7F0);
+  }
+}
+
+@keyframes barShimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+.nutrition-val {
+  flex: 0 0 56px;
+  text-align: right;
+  font-size: 16px;
+  font-weight: 700;
+  color: @nordic-text;
+  letter-spacing: -0.5px;
+
+  .val-unit {
+    font-size: 12px;
+    font-weight: 500;
+    color: @nordic-text-muted;
+    margin-left: 1px;
+  }
+}
+
+// 食材/标签区
+.info-section {
+  background: @nordic-surface;
+  border-radius: 18px;
+  padding: 24px 28px;
+  margin-bottom: 16px;
+  border: 1px solid @nordic-border;
+}
+
+.tags-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ingredient-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 16px;
+  border-radius: 30px;
+  background: @nordic-accent-light;
+  color: @nordic-accent-dark;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.25s ease;
+  border: 1px solid rgba(212, 132, 90, 0.15);
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(212, 132, 90, 0.15);
+  }
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 16px;
+  border-radius: 30px;
+  background: @nordic-green-light;
+  color: @nordic-green-dark;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.25s ease;
+  border: 1px solid rgba(123, 174, 127, 0.15);
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(123, 174, 127, 0.15);
+  }
+}
+
+// ===== 动画 =====
+.result-reveal-enter-active {
+  animation: resultReveal 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.result-reveal-leave-active {
+  animation: resultHide 0.3s ease-in forwards;
+}
+
+@keyframes resultHide {
+  to {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+}
+
+.progress-slide-enter-active {
+  animation: slideDown 0.35s ease-out;
+}
+.progress-slide-leave-active {
+  animation: slideUp 0.25s ease-in forwards;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  to { opacity: 0; transform: translateY(-8px); }
+}
+
+.chip-pop-enter-active {
+  animation: chipIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes chipIn {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
   }
   to {
     opacity: 1;
     transform: scale(1);
-  }
-}
-
-@keyframes headerSlideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
   }
 }
 </style>
