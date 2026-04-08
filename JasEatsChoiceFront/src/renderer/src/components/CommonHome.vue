@@ -806,7 +806,7 @@ const handleSearch = (value) => {
           <CommonAvatar
             :size="80"
             class="user-avatar"
-            :avatar-url="userStore.userInfo?.avatar"
+            :avatar-url="userRole === 'merchant' ? userStore.merchantInfo?.avatar : userStore.userInfo?.avatar"
             :fallback-text="userStore.userInfo?.nickname"
             :show-upload="false"
             :click-to-enlarge="true"
@@ -928,7 +928,7 @@ const handleSearch = (value) => {
         <CommonAvatar
           :size="200"
           class="user-avatar"
-          :avatar-url="userStore.userInfo?.avatar"
+          :avatar-url="userRole === 'merchant' ? userStore.merchantInfo?.avatar : userStore.userInfo?.avatar"
           :fallback-text="userRole === 'merchant' ? '商户' : '用户'"
           :show-upload="false"
         >

@@ -168,7 +168,12 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
             // 解析JSON响应
             Map<String, Object> result = parseDishRecognitionResult(responseText);
 
-            // 添加成功标记
+            // 非菜品图片直接返回（parseDishRecognitionResult 已设置 error=true）
+            if (Boolean.TRUE.equals(result.get("notDish"))) {
+                log.warn("非菜品图片: {}", result.get("message"));
+                return result;
+            }
+
             result.put("error", false);
 
             log.info("菜品识别成功: {}", result.get("name"));

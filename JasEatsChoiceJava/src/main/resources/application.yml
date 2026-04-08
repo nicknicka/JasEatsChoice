@@ -15,6 +15,10 @@ lombok:
   enabled: true  # 启用Lombok注解处理器
 
 spring:
+  # 关闭DevTools热重载，避免开发时中断正在执行的请求
+  devtools:
+    restart:
+      enabled: false
   # 文件上传配置
   servlet:
     multipart:

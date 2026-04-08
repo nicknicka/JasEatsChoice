@@ -151,6 +151,7 @@ export const useUserStore = defineStore('user', {
         )
         if (response.data.code === '200') {
           this.merchantInfo = response.data.data
+          localStorage.setItem('merchantInfo', JSON.stringify(this.merchantInfo))
           return response.data.data
         } else {
           throw new Error(response.data.message || '获取商家信息失败')
@@ -194,12 +195,17 @@ export const useUserStore = defineStore('user', {
     // 更新商家头像
     updateMerchantAvatar(avatar: string) {
       if (this.merchantInfo) {
-        this.merchantInfo.avatar = avatar
+        this.merchantInfo = {
+          ...this.merchantInfo,
+          avatar
+        }
+        localStorage.setItem('merchantInfo', JSON.stringify(this.merchantInfo))
       }
     },
 
     setMerchantInfo(info: MerchantInfo) {
       this.merchantInfo = info
+      localStorage.setItem('merchantInfo', JSON.stringify(this.merchantInfo))
     },
 
     clearUserInfo() {
