@@ -5,3 +5,4 @@ out/
 *.log
 uploads/
 .claude/
+dump.rdb
