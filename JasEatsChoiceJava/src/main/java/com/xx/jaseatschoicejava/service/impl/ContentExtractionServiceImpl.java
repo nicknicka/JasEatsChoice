@@ -12,20 +12,21 @@ import com.xx.jaseatschoicejava.mapper.ContentExtractionMapper;
 import com.xx.jaseatschoicejava.mapper.ContentSourceMapper;
 import com.xx.jaseatschoicejava.mapper.ExtractionTaskMapper;
 import com.xx.jaseatschoicejava.service.ContentExtractionService;
+import com.xx.jaseatschoicejava.service.extraction.dto.FetchedContent;
+import com.xx.jaseatschoicejava.service.extraction.fetcher.ContentFetcher;
+import com.xx.jaseatschoicejava.service.extraction.fetcher.ContentFetcherFactory;
+import com.xx.jaseatschoicejava.service.extraction.recognizer.ContentRecognizer;
 import com.xx.jaseatschoicejava.vo.ContentExtractionDetailVO;
 import com.xx.jaseatschoicejava.vo.ContentSourceVO;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import dev.langchain4j.model.chat.ChatModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -33,29 +34,23 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * ═══════════════════════════════════════════════════════════════════════════════
- * ⚠️  警告：包含模拟实现（MOCK IMPLEMENTATION）
- * ═══════════════════════════════════════════════════════════════════════════════
- *
- * 本类中的 `simulateExtraction()` 方法使用硬编码的mock数据进行内容提取。
- *
- * 实际生产环境需要：
- * 1. 部署PaddleOCR服务（参考文档：docs/PaddleOCR部署指南.md）
- * 2. 实现图文内容OCR识别（调用PaddleOCR服务）
- * 3. 实现视频关键帧提取和识别
- * 4. 实现菜谱结构化信息提取
- *
- * ─────────────────────────────────────────────────────────────────────────────
  * 内容提取服务实现类
- * ═══════════════════════════════════════════════════════════════════════════════
+ *
+ * 使用 GLM-4.6V-Flash 视觉模型进行内容识别：
+ * - 文章/图文：Jsoup抓取 + GLM-4.6V-Flash OCR识别
+ * - 视频：平台API获取视频流 + GLM-4.6V-Flash 视频理解
+ * - 图片：下载 + GLM-4.6V-Flash 图片识别
  *
  * @author Claude
  * @since 2025-01-31
+ * @updated 2026-04-08 实现真实的内容抓取和AI识别
  */
 @Service
 public class ContentExtractionServiceImpl implements ContentExtractionService {
 
     private static final Logger log = LoggerFactory.getLogger(ContentExtractionServiceImpl.class);
+
+    private static final int MAX_RETRY_COUNT = 3;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -69,39 +64,10 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
     private ExtractionTaskMapper extractionTaskMapper;
 
     @Autowired
-    @Qualifier("agentModel")
-    private ChatModel agentModel;
+    private ContentFetcherFactory fetcherFactory;
 
-    /**
-     * 内容提取提示词
-     */
-    private static final String CONTENT_EXTRACTION_PROMPT = """
-        你是一个专业的菜谱提取专家。请从以下内容中提取菜谱信息，返回JSON格式：
-
-        内容：
-        %s
-
-        请返回以下JSON格式：
-        {
-          "dishName": "菜品名称",
-          "description": "菜品描述（50字以内）",
-          "ingredients": [
-            {"name": "食材名称", "amount": "用量"}
-          ],
-          "steps": [
-            {"stepNumber": 1, "description": "步骤描述"}
-          ],
-          "cookingTime": 烹饪时间(分钟，数字),
-          "difficulty": "难度(简单/中等/困难)",
-          "tags": ["标签1", "标签2"],
-          "calories": 估算卡路里(数字)
-        }
-
-        注意：
-        1. 如果内容不是菜谱，尽量提取相关信息
-        2. 如果无法提取，返回合理的默认值
-        3. 只返回JSON，不要其他解释文字
-        """;
+    @Autowired
+    private ContentRecognizer contentRecognizer;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -347,31 +313,11 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
 
         for (ExtractionTask task : tasks) {
             try {
-                // ⚠️ 【模拟实现】当前调用模拟提取方法
-                //
-                // 实际生产环境需要：
-                //   1. 根据ContentSource的platform和url类型选择提取策略
-                //   2. 图文内容：调用PaddleOCR识别图片和文字
-                //   3. 视频内容：提取关键帧后调用OCR
-                //   4. 结构化提取菜谱信息（菜名、食材、步骤）
-                //
-                // 参考文档：docs/PaddleOCR部署指南.md
-                //
-                // API示例：
-                //   - POST http://localhost:8001/api/v1/ocr/file
-                //   - POST http://localhost:8001/api/v1/ocr/recipe
-                simulateExtraction(task);
-
+                doExtract(task);
                 processedCount++;
             } catch (Exception e) {
                 log.error("处理提取任务失败: taskId={}", task.getId(), e);
-
-                // 更新任务状态为失败
-                task.setTaskStatus("FAILED");
-                task.setErrorMessage(e.getMessage());
-                task.setEndTime(LocalDateTime.now());
-                task.setUpdateTime(LocalDateTime.now());
-                extractionTaskMapper.updateById(task);
+                handleTaskFailure(task, e);
             }
         }
 
@@ -379,13 +325,10 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
     }
 
     /**
-     * AI内容提取
-     *
-     * 使用 LangChain4j 调用智谱AI进行内容提取
-     * Phase 1: 基于文本内容提取
-     * Phase 2: 集成OCR服务进行图片/视频提取
+     * 真实内容提取
+     * 抓取内容 → AI识别 → 解析结果 → 写入数据库
      */
-    private void simulateExtraction(ExtractionTask task) {
+    private void doExtract(ExtractionTask task) {
         log.info("开始处理提取任务: taskId={}, sourceId={}", task.getId(), task.getSourceId());
 
         // 更新任务状态为处理中
@@ -400,24 +343,40 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
         }
 
         try {
-            // 获取内容URL作为提取输入
-            String contentUrl = source.getContentUrl();
-            log.info("提取内容URL: {}", contentUrl);
+            // 1. 确定平台和内容类型
+            ContentPlatform platform = ContentPlatform.getByCode(source.getPlatform());
+            ContentType contentType = ContentType.getByCode(source.getContentType());
 
-            // 构建AI提取提示词
-            String prompt = String.format(CONTENT_EXTRACTION_PROMPT,
-                "请从以下URL或内容中提取菜谱信息：" + contentUrl +
-                "\n\n如果URL无法直接访问，请根据URL中的关键词推断可能的菜谱信息。");
+            // 2. 抓取内容（Layer 1）
+            log.info("抓取内容: platform={}, type={}, url={}", platform, contentType, source.getContentUrl());
+            ContentFetcher fetcher = fetcherFactory.getFetcher(platform, contentType);
+            FetchedContent fetchedContent = fetcher.fetch(source.getContentUrl());
 
-            // 调用AI进行提取
-            String responseText = agentModel.chat(prompt);
+            // 3. AI识别（Layer 2）
+            log.info("AI识别: fetchSuccess={}, hasImages={}, hasVideo={}, hasText={}",
+                fetchedContent.isFetchSuccess(),
+                fetchedContent.hasImages(),
+                fetchedContent.hasVideo(),
+                fetchedContent.hasText());
+            String aiResponse = contentRecognizer.recognize(fetchedContent);
 
-            log.info("AI提取结果: {}", responseText.length() > 200 ? responseText.substring(0, 200) + "..." : responseText);
+            log.info("AI识别结果: {}", aiResponse.length() > 200 ? aiResponse.substring(0, 200) + "..." : aiResponse);
 
-            // 解析AI返回的JSON
-            Map<String, Object> extractionResult = parseExtractionResult(responseText);
+            // 4. 解析结果（Layer 3）
+            Map<String, Object> extractionResult = parseExtractionResult(aiResponse);
 
-            // 创建提取记录
+            // 5. 补充抓取到的元数据
+            if (fetchedContent.getTitle() != null && !fetchedContent.getTitle().isEmpty()) {
+                source.setTitle(fetchedContent.getTitle());
+            }
+            if (fetchedContent.getAuthor() != null && !fetchedContent.getAuthor().isEmpty()) {
+                source.setAuthor(fetchedContent.getAuthor());
+            }
+            if (fetchedContent.getCoverImage() != null && !fetchedContent.getCoverImage().isEmpty()) {
+                source.setCoverImage(fetchedContent.getCoverImage());
+            }
+
+            // 6. 创建提取记录
             ContentExtraction extraction = new ContentExtraction();
             extraction.setId(UUID.randomUUID().toString().replace("-", ""));
             extraction.setSourceId(source.getId());
@@ -425,13 +384,19 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
             extraction.setDescription((String) extractionResult.getOrDefault("description", ""));
             extraction.setIngredients(objectMapper.writeValueAsString(extractionResult.get("ingredients")));
             extraction.setSteps(objectMapper.writeValueAsString(extractionResult.get("steps")));
-            extraction.setCookingTime((Integer) extractionResult.getOrDefault("cookingTime", 30));
+            extraction.setCookingTime(extractIntValue(extractionResult.get("cookingTime"), 30));
             extraction.setDifficulty((String) extractionResult.getOrDefault("difficulty", "中等"));
 
             List<String> tags = (List<String>) extractionResult.get("tags");
             extraction.setTags(tags != null ? String.join(",", tags) : "");
 
-            extraction.setCalories((Integer) extractionResult.getOrDefault("calories", 0));
+            extraction.setCalories(extractIntValue(extractionResult.get("calories"), 0));
+
+            // 如果有封面图，设置为菜品图片
+            if (fetchedContent.getCoverImage() != null && !fetchedContent.getCoverImage().isEmpty()) {
+                extraction.setDishImage(fetchedContent.getCoverImage());
+            }
+
             extraction.setIsPublished(false);
             extraction.setIsVerified(false);
             extraction.setCreateTime(LocalDateTime.now());
@@ -439,14 +404,14 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
 
             contentExtractionMapper.insert(extraction);
 
-            // 更新内容源状态
+            // 7. 更新内容源状态
             source.setExtractionStatus(ExtractionStatus.SUCCESS.getCode());
             source.setIsExtracted(true);
             source.setExtractionTime(LocalDateTime.now());
             source.setUpdateTime(LocalDateTime.now());
             contentSourceMapper.updateById(source);
 
-            // 更新任务状态为成功
+            // 8. 更新任务状态为成功
             task.setTaskStatus("SUCCESS");
             task.setEndTime(LocalDateTime.now());
             task.setUpdateTime(LocalDateTime.now());
@@ -472,6 +437,38 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
             contentSourceMapper.updateById(source);
 
             throw new RuntimeException("提取任务失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 处理任务失败（含重试逻辑）
+     */
+    private void handleTaskFailure(ExtractionTask task, Exception e) {
+        if (task.getRetryCount() < MAX_RETRY_COUNT) {
+            task.setRetryCount(task.getRetryCount() + 1);
+            task.setTaskStatus("PENDING"); // 重新排队
+            task.setUpdateTime(LocalDateTime.now());
+            extractionTaskMapper.updateById(task);
+            log.info("任务将重试: taskId={}, retryCount={}", task.getId(), task.getRetryCount());
+        } else {
+            task.setTaskStatus("FAILED");
+            task.setErrorMessage("重试" + MAX_RETRY_COUNT + "次后仍失败: " + e.getMessage());
+            task.setEndTime(LocalDateTime.now());
+            task.setUpdateTime(LocalDateTime.now());
+            extractionTaskMapper.updateById(task);
+        }
+    }
+
+    /**
+     * 安全提取整数值
+     */
+    private int extractIntValue(Object value, int defaultValue) {
+        if (value == null) return defaultValue;
+        if (value instanceof Number) return ((Number) value).intValue();
+        try {
+            return Integer.parseInt(value.toString());
+        } catch (NumberFormatException e) {
+            return defaultValue;
         }
     }
 

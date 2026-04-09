@@ -186,6 +186,13 @@
             <version>1.2.0</version>
         </dependency>
 
+        <!-- Jsoup - HTML解析和网页抓取 -->
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.17.2</version>
+        </dependency>
+
         <!-- OkHttp - 用于调用智谱AI API（保留，SDK内部依赖） -->
         <dependency>
             <groupId>com.squareup.okhttp3</groupId>
@@ -283,7 +290,7 @@
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
-                            <version>1.18.34</version>
+                            <version>1.18.42</version>
                         </path>
                     </annotationProcessorPaths>
                 </configuration>

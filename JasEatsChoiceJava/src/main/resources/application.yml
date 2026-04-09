@@ -193,6 +193,21 @@ zhipuai:
   # 超时时间（毫秒）
   timeout: 30000
 
+# ==================== 内容提取配置 ====================
+content-extraction:
+  fetch:
+    user-agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    connect-timeout: 30000
+    read-timeout: 60000
+    max-images: 5
+    max-image-size: 2097152       # 2MB
+    max-video-size: 52428800      # 50MB
+  retry:
+    max-count: 3
+    delay-ms: 5000
+  ai:
+    video-api-timeout: 120000     # 视频理解API超时（毫秒）
+
 # ==================== 邮件服务配置 ====================
 email:
   # SMTP服务器地址（根据邮箱服务商填写）
