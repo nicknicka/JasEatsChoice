@@ -378,10 +378,9 @@ const handleDeleteDish = (e, dish) => {
   }
 
   &.recipe-card-selected {
-    border-color: @nordic-accent;
+    border: 2px solid @nordic-accent;
     border-left-color: @nordic-accent;
     box-shadow: 0 2px 12px fade(@nordic-accent, 18%);
-    background: @nordic-accent-light !important;
   }
 
   &:hover {

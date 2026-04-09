@@ -476,7 +476,7 @@ const updateCustomNutrition = (field, value) => {
 
         <!-- 菜品列表区域 -->
         <div class="dishes-section">
-          <div class="section-title">菜品组成</div>
+          <div class="section-title">菜品列表</div>
           <div class="dish-list-container">
             <div
               v-for="(item, index) in recipe.items && recipe.items.length > 0
