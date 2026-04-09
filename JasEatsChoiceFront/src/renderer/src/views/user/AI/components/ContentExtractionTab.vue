@@ -366,6 +366,7 @@ const showHistory = () => {
 const handleAddSuccess = () => {
   ElMessage.success('内容源添加成功，正在提取中...')
   loadSources()
+  startPolling()
 }
 
 // 查看详情

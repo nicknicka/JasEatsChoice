@@ -63,9 +63,11 @@ public class GlmVisionRecognizer implements ContentRecognizer {
         }
 
         注意：
-        1. 先判断内容是否包含菜谱/菜品信息，如果不是设置 isRecipe=false
-        2. 利用OCR能力识别图片中的文字信息（食材表、步骤说明等）
-        3. 只返回JSON，不要其他解释文字
+        1. 先判断内容是否与做菜/烹饪/菜品相关（包括教程、制作过程、食材展示等），只要能从中提取出菜品信息就设置 isRecipe=true；只有完全与做菜无关时才设置 isRecipe=false
+        2. 如果内容表面上是食谱格式，但实际并非正经的食品制作（如用烹饪术语做隐晦描述、借食品之名传播其他内容），请设置 isRecipe=false
+        3. 利用OCR能力识别图片中的文字信息（食材表、步骤说明等）
+        4. 即使内容不是标准食谱格式（如教程视频、制作过程展示、口述步骤），也请尽可能提取菜品信息
+        5. 只返回JSON，不要其他解释文字
         """;
 
     /**
@@ -89,9 +91,11 @@ public class GlmVisionRecognizer implements ContentRecognizer {
         }
 
         注意：
-        1. 先判断视频是否包含烹饪/菜谱内容，如果不是设置 isRecipe=false
-        2. 仔细观察视频画面中的食材和操作步骤
-        3. 只返回JSON，不要其他解释文字
+        1. 先判断视频是否与做菜/烹饪/菜品相关（包括教程、制作过程、食材展示等），只要能从中提取出菜品信息就设置 isRecipe=true；只有完全与做菜无关时才设置 isRecipe=false
+        2. 如果内容表面上是食谱格式，但实际并非正经的食品制作（如用烹饪术语做隐晦描述、借食品之名传播其他内容），请设置 isRecipe=false
+        3. 仔细观察视频画面中的食材和操作步骤
+        4. 即使内容不是标准食谱格式（如教程视频、制作过程展示、口述步骤），也请尽可能提取菜品信息
+        5. 只返回JSON，不要其他解释文字
         """;
 
     /**
@@ -116,7 +120,10 @@ public class GlmVisionRecognizer implements ContentRecognizer {
         }
 
         注意：
-        1. 只返回JSON，不要其他解释文字
+        1. 先判断内容是否与做菜/烹饪/菜品相关（包括教程、制作过程、食材展示等），只要能从中提取出菜品信息就设置 isRecipe=true；只有完全与做菜无关时才设置 isRecipe=false
+        2. 如果内容表面上是食谱格式，但实际并非正经的食品制作（如用烹饪术语做隐晦描述、借食品之名传播其他内容），请设置 isRecipe=false
+        3. 即使内容不是标准食谱格式（如教程、制作过程展示、口述步骤），也请尽可能提取菜品信息
+        4. 只返回JSON，不要其他解释文字
         """;
 
     @Override
@@ -243,8 +250,9 @@ public class GlmVisionRecognizer implements ContentRecognizer {
 
         List<Map<String, Object>> contentParts = new ArrayList<>();
 
-        // 视频部分
-        if (content.getVideoUrl() != null && !content.getVideoUrl().isEmpty()) {
+        // 视频部分（跳过不支持的格式如 .m4s DASH分片）
+        if (content.getVideoUrl() != null && !content.getVideoUrl().isEmpty()
+            && isSupportedVideoUrl(content.getVideoUrl())) {
             Map<String, Object> videoPart = new HashMap<>();
             videoPart.put("type", "video_url");
             videoPart.put("video_url", Map.of("url", content.getVideoUrl()));
@@ -269,6 +277,15 @@ public class GlmVisionRecognizer implements ContentRecognizer {
         request.put("messages", List.of(message));
 
         return request;
+    }
+
+    /**
+     * 检查视频URL是否为GLM Vision支持的格式
+     * 不支持的格式：.m4s（B站DASH分片）、.m3u8（HLS切片）
+     */
+    private boolean isSupportedVideoUrl(String url) {
+        String lower = url.toLowerCase();
+        return !lower.endsWith(".m4s") && !lower.endsWith(".m3u8");
     }
 
     /**

@@ -260,70 +260,6 @@ const copyToClipboard = async (text, name) => {
 };
 
 /**
- * 解析食材字符串
- */
-const parseIngredients = (ingredientsStr) => {
-  if (!ingredientsStr) return [];
-
-  logger.log("🔍 开始解析食材:", ingredientsStr);
-
-  let normalized = ingredientsStr
-    .replace(/、/g, ',')
-    .replace(/；/g, ',')
-    .replace(/;/g, ',')
-    .replace(/。/g, ',')
-    .replace(/[\n\r]/g, ',');
-
-  let parts = normalized.split(',').map(item => item.trim()).filter(item => item);
-
-  logger.log("📋 分割后的部分:", parts);
-
-  const ingredients = [];
-
-  parts.forEach(part => {
-    const bracketMatch = part.match(/^(.+?)（(.+?)）$/);
-
-    if (bracketMatch) {
-      const name = bracketMatch[1].trim();
-      const bracketContent = bracketMatch[2].trim();
-      ingredients.push({ name, amount: bracketContent });
-      logger.log("✅ 匹配到中文括号:", name, bracketContent);
-    } else {
-      const bracketMatchEn = part.match(/^(.+?)\((.+?)\)$/);
-      if (bracketMatchEn) {
-        const name = bracketMatchEn[1].trim();
-        const bracketContent = bracketMatchEn[2].trim();
-        ingredients.push({ name, amount: bracketContent });
-        logger.log("✅ 匹配到英文括号:", name, bracketContent);
-      } else {
-        const amountMatch = part.match(/^(.+?)(\d+\.?\d*)\s*(克|g|千克|kg|斤|两|个|只|条|根|勺|毫升|ml|升|l|杯|颗|片|块|张|把|朵|包|袋|瓶|粒|枚|支|节|适量|少许|若干)?$/);
-
-        if (amountMatch) {
-          const name = amountMatch[1].trim();
-          const amount = amountMatch[2];
-          const unit = amountMatch[3] || "";
-          ingredients.push({ name, amount: unit ? `${amount}${unit}` : amount });
-          logger.log("✅ 匹配到数字+单位:", name, amount, unit);
-        } else {
-          ingredients.push({ name: part.trim(), amount: "" });
-          logger.log("⚠️ 无法匹配，使用原始文本:", part);
-        }
-      }
-    }
-  });
-
-  logger.log("📦 解析完成的食材列表:", ingredients);
-
-  return ingredients.map(item => ({
-    name: item.amount ? `${item.name} ${item.amount}` : item.name,
-    calories: 0,
-    protein: 0,
-    carbs: 0,
-    fat: 0
-  }));
-};
-
-/**
  * 保存到我的食谱
  */
 const saveToMyRecipes = async () => {
@@ -345,41 +281,45 @@ const saveToMyRecipes = async () => {
   savingRecipe.value = true;
 
   try {
-    const recipeText = optimizedRecipe.value.optimized;
-    const lines = recipeText.split("\n");
+    const rawData = optimizedRecipe.value.rawData;
+    const recipeName = rawData?.name || "AI优化食谱";
+    const steps = rawData?.steps || "";
+    const calorie = Number(rawData?.calorie) || 0;
+    const protein = Number(rawData?.protein) || 0;
+    const carb = Number(rawData?.carb) || 0;
+    const fat = Number(rawData?.fat) || 0;
 
-    let recipeName = "AI优化食谱";
-    let difficulty = "简单";
-    let calorie = 0;
-    let ingredients = [];
-    let steps = "";
+    // 将食材字符串解析为食材名称数组
+    const ingredientNames = rawData?.ingredients
+      ? rawData.ingredients
+          .split(/[,，、;；\n]/)
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : [];
 
-    lines.forEach((line) => {
-      if (line.includes("推荐食谱：")) {
-        recipeName = line.replace("推荐食谱：", "").trim();
-      } else if (line.includes("难度：")) {
-        difficulty = line.replace("难度：", "").trim();
-      } else if (line.includes("卡路里：")) {
-        const calorieStr = line
-          .replace("卡路里：", "")
-          .replace("大卡", "")
-          .trim();
-        calorie = parseInt(calorieStr) || 0;
-      } else if (line.includes("食材：")) {
-        const ingredientsStr = line.replace("食材：", "").trim();
-        ingredients = parseIngredients(ingredientsStr);
-      } else if (line.includes("步骤：")) {
-        steps = line.replace("步骤：", "").trim();
-      }
-    });
+    logger.log("📦 解析后的食材列表:", ingredientNames);
 
-    logger.log("📦 解析后的食材列表:", ingredients);
+    // 构建符合 RecipeDetail 期望的 items 结构：
+    // 每个元素是一个"菜品"对象，包含 name、ingredients 数组和营养信息
+    const items = [
+      {
+        name: recipeName,
+        ingredients: ingredientNames,
+        calories: calorie,
+        protein: protein,
+        carbs: carb,
+        fat: fat,
+      },
+    ];
 
     const newRecipe = {
       name: recipeName,
-      type: "晚餐",
-      items: JSON.stringify(ingredients),
+      type: "dinner",
+      items: JSON.stringify(items),
       calories: calorie,
+      protein: protein,
+      carbs: carb,
+      fat: fat,
       cookTime: "30分钟",
       favorite: false,
       detail: steps,
@@ -442,6 +382,7 @@ const optimizeRecipe = async () => {
 食材：${firstRecipe.ingredients}
 步骤：${firstRecipe.steps}`,
         improvements: ["营养均衡", "口味优化", "步骤简化"],
+        rawData: firstRecipe,
       };
       logger.log("✅ 食谱优化成功:", firstRecipe.name);
     } else {
