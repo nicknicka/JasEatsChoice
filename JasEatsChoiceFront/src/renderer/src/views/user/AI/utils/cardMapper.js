@@ -10,7 +10,6 @@ import FavoriteListCard from '../components/cards/FavoriteListCard.vue'
 import ReviewListCard from '../components/cards/ReviewListCard.vue'
 import CouponListCard from '../components/cards/CouponListCard.vue'
 import DishListCard from '../components/cards/DishListCard.vue'
-import NotificationListCard from '../components/cards/NotificationListCard.vue'
 import ErrorCard from '../components/cards/ErrorCard.vue'
 
 // 组件映射表
