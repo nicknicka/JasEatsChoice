@@ -96,6 +96,7 @@ export const API_CONFIG = {
     chatLegacy: '/v1/ai/stream/chat',
     chatSupervisor: '/agent/supervisor/chat',
     recipe: '/v1/ai/recipe',
+    recipeStream: '/v1/ai/recipe/stream',
     nutrient: '/v1/ai/nutrient',
     recognizeDish: '/v1/ai/dish-recognize',
     history: '/v1/ai/chat/history',

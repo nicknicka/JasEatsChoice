@@ -17,7 +17,7 @@
       <!-- 快捷提问区域 -->
       <QuickQuestions
         :show="showQuickQuestions"
-        :questions="quickQuestions"
+        :categories="quickQuestionCategories"
         @close="showQuickQuestions = false"
         @select="handleQuickQuestion"
       />
@@ -47,8 +47,9 @@
 
     <!-- 菜品选择弹窗 -->
     <DishSelectorDialog
+      v-if="showDishSelectorDialog"
       v-model="showDishSelectorDialog"
-      :card-data="selectedCardData"
+      :card-data="selectedCardData || emptyCardData"
       @confirm="handleConfirmOrder"
       @close="handleDishSelectorClose"
       @add-dish="handleAddDish"
@@ -74,12 +75,12 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import ChatMessage from './ChatMessage.vue'
 import QuickQuestions from './QuickQuestions.vue'
 import MessageInput from './MessageInput.vue'
-import DishSelectorDialog from '../../../components/merchant/DishSelectorDialog.vue'
-import PaymentDialog from '../../../components/merchant/PaymentDialog.vue'
-import { useAIChat } from '../../../composables/useAIChat'
-import { useUserPreference } from '../../../composables/useUserPreference'
-import { useImageUpload } from '../../../composables/useImageUpload'
-import { QUICK_QUESTIONS, COMMON_EMOJIS, ERROR_MESSAGES, logger } from '../../../config/chatConfig'
+import DishSelectorDialog from '../../../../components/merchant/DishSelectorDialog.vue'
+import PaymentDialog from '../../../../components/merchant/PaymentDialog.vue'
+import { useAIChat } from '../../../../composables/useAIChat'
+import { useUserPreference } from '../../../../composables/useUserPreference'
+import { useImageUpload } from '../../../../composables/useImageUpload'
+import { QUICK_QUESTION_CATEGORIES, COMMON_EMOJIS, ERROR_MESSAGES, logger } from '../../../../config/chatConfig'
 
 // 聊天功能
 const {
@@ -165,12 +166,19 @@ const inputMessage = ref('')
 const showQuickQuestions = ref(true)
 const showEmojiPicker = ref(false)
 const inputContainerRef = ref(null)
-const quickQuestions = ref(QUICK_QUESTIONS)
+const quickQuestionCategories = QUICK_QUESTION_CATEGORIES
 const commonEmojis = ref(COMMON_EMOJIS)
 
 // 菜品选择弹窗状态
 const showDishSelectorDialog = ref(false)
 const selectedCardData = ref(null)
+const emptyCardData = {
+  merchant: null,
+  diningMode: '',
+  recommendationReason: '',
+  preSelectedDishes: [],
+  actionButtons: null
+}
 
 // 支付弹窗状态
 const showPaymentDialog = ref(false)
@@ -227,6 +235,7 @@ const handleQuickQuestion = (question) => {
   inputMessage.value = question
   // 自动发送
   sendMessage()
+  showQuickQuestions.value = false
 }
 
 /**
@@ -462,6 +471,7 @@ onUnmounted(() => {
 
 /* 底部输入容器 */
 .bottom-input-container {
+  position: relative;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;

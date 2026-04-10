@@ -40,7 +40,7 @@ import {
   Camera,
   Document
 } from '@element-plus/icons-vue'
-import AIChatPanel from './components/AIChatPanel.vue'
+import { AIChatPanel } from './components/chat/index.js'
 import DishRecognition from './components/DishRecognition.vue'
 import RecipeOptimization from './components/RecipeOptimization.vue'
 

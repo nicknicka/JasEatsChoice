@@ -380,7 +380,9 @@ const updateCustomNutrition = (field, value) => {
     :model-value="props.visible"
     :title="recipe ? `${recipe.name} 详情` : '食谱详情'"
     width="600px"
-    top="5%"
+    top="16px"
+    :style="{ height : '70vh' }"
+    class="recipe-detail-dialog"
     @update:model-value="emit('update:visible', $event)"
     @close="handleClose"
   >
@@ -722,8 +724,6 @@ const updateCustomNutrition = (field, value) => {
   display: flex;
   flex-direction: column;
   gap: @nordic-space-md;
-  max-height: calc(100vh - 400px);
-  overflow-y: auto;
   padding-right: 8px;
 }
 
@@ -875,4 +875,25 @@ const updateCustomNutrition = (field, value) => {
 .recipe-details.lunch .section-title { border-left-color: @meal-sage; }
 .recipe-details.dinner .section-title { border-left-color: @meal-slate; }
 .recipe-details.snack .section-title { border-left-color: @nordic-accent; }
+</style>
+
+<style lang="less" scoped>
+.recipe-detail-dialog {
+  :deep(.el-dialog__wrapper) {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+  }
+  :deep(.el-dialog) {
+    height: 70vh;
+    max-height: 700px;
+    display: flex;
+    flex-direction: column;
+  }
+  :deep(.el-dialog__body) {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+  }
+}
 </style>

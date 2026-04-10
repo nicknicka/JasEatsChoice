@@ -196,14 +196,14 @@ import AIIndex from './AI/index.vue'
 </script>
 ```
 
-### 增强功能（推荐）
+### 聊天面板
 ```vue
 <template>
-  <AIChatPanelEnhanced />
+  <AIChatPanel />
 </template>
 
 <script setup>
-import AIChatPanelEnhanced from './AI/components/AIChatPanelEnhanced.vue'
+import { AIChatPanel } from './AI/components/chat'
 </script>
 ```
 
@@ -282,8 +282,8 @@ import AI from './views/user/AI.vue'
 
 // 新版本
 import AI from './views/user/AI/index.vue'
-// 或使用增强版
-import AI from './views/user/AI/components/AIChatPanelEnhanced.vue'
+// 聊天组件统一入口
+import { AIChatPanel } from './views/user/AI/components/chat'
 ```
 
 3. **功能对应**

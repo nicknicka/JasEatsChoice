@@ -5,16 +5,22 @@ import com.xx.jaseatschoicejava.config.FileUploadConfig;
 import com.xx.jaseatschoicejava.dto.DishDescriptionRequestDTO;
 import com.xx.jaseatschoicejava.service.DishDescriptionService;
 import com.xx.jaseatschoicejava.service.ZhipuAIService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import jakarta.annotation.Resource;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * AI助手控制器（活跃端点）
@@ -32,6 +38,9 @@ import java.util.Map;
 public class AIController {
 
     private static final Logger log = LoggerFactory.getLogger(AIController.class);
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ExecutorService recipeExecutorService = Executors.newCachedThreadPool();
 
     @Resource
     private ZhipuAIService zhipuAIService;
@@ -198,6 +207,85 @@ public class AIController {
         } catch (Exception e) {
             log.error("食谱优化失败", e);
             return ResponseResult.fail("500", "食谱优化失败：" + e.getMessage());
+        }
+    }
+
+    // ==================== 食谱优化（SSE流式进度，桌面端专用） ====================
+
+    /**
+     * AI食谱优化 SSE 流式端点
+     *
+     * 路由: POST /v1/ai/recipe/stream
+     * 事件格式（复用 SupervisorSSEController 格式）：
+     * - 进度: {"message":"正在分析食谱内容...","progress":true}
+     * - 结果: {"recipes":[...],"done":true}
+     * - 错误: {"error":true,"message":"...","done":true}
+     */
+    @ApiOperation(value = "AI食谱优化（SSE流式进度）", notes = "实时推送优化进度，桌面端专用")
+    @PostMapping(value = "/recipe/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter recipeOptimizeStream(@RequestBody Map<String, Object> params) {
+        String foodName = (String) params.get("foodName");
+        String recipeText = (String) params.get("recipe");
+        String inputText = (foodName != null && !foodName.trim().isEmpty()) ? foodName : recipeText;
+
+        SseEmitter emitter = new SseEmitter(60000L);
+
+        if (inputText == null || inputText.trim().isEmpty()) {
+            sendRecipeSseData(emitter, Map.of("error", true, "message", "食谱内容不能为空", "done", true));
+            emitter.complete();
+            return emitter;
+        }
+
+        CompletableFuture.runAsync(() -> {
+            try {
+                Map<String, Object> result = zhipuAIService.optimizeRecipeWithProgress(
+                        inputText,
+                        message -> sendRecipeSseEvent(emitter, message)
+                );
+
+                Object recipes = result.get("recipes");
+                if (recipes != null && !Boolean.TRUE.equals(result.get("error"))) {
+                    sendRecipeSseData(emitter, Map.of("recipes", recipes, "done", true));
+                } else {
+                    sendRecipeSseData(emitter, Map.of("error", true,
+                            "message", result.getOrDefault("message", "优化失败"), "done", true));
+                }
+                emitter.complete();
+            } catch (Exception e) {
+                log.error("SSE食谱优化失败", e);
+                sendRecipeSseData(emitter, Map.of("error", true,
+                        "message", "优化失败：" + e.getMessage(), "done", true));
+                emitter.complete();
+            }
+        }, recipeExecutorService);
+
+        emitter.onTimeout(() -> {
+            log.warn("SSE食谱优化连接超时");
+            emitter.complete();
+        });
+        emitter.onError(e -> {
+            log.error("SSE食谱优化连接错误", e);
+        });
+
+        return emitter;
+    }
+
+    private void sendRecipeSseEvent(SseEmitter emitter, String message) {
+        try {
+            String jsonData = objectMapper.writeValueAsString(
+                    Map.of("message", message, "progress", true));
+            emitter.send(SseEmitter.event().name("message").data(jsonData));
+        } catch (Exception e) {
+            log.debug("SSE进度事件发送失败: {}", e.getMessage());
+        }
+    }
+
+    private void sendRecipeSseData(SseEmitter emitter, Object data) {
+        try {
+            String jsonData = objectMapper.writeValueAsString(data);
+            emitter.send(SseEmitter.event().name("message").data(jsonData));
+        } catch (Exception e) {
+            log.debug("SSE数据发送失败: {}", e.getMessage());
         }
     }
 

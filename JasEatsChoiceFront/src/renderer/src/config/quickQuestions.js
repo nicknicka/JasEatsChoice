@@ -6,62 +6,54 @@
 /**
  * 默认展开的分类ID
  */
-export const DEFAULT_EXPANDED_CATEGORY = 'dish-exploration'
+export const DEFAULT_EXPANDED_CATEGORY = 'recommendation'
 
 /**
  * 快速问题分类配置
  */
 export const QUICK_QUESTION_CATEGORIES = [
   {
-    id: 'dish-exploration',
-    title: '🍽️ 菜品探索',
-    icon: 'dish',
-    description: '搜索和发现各种美食',
-    expanded: false, // 将在使用时动态设置
+    id: 'recommendation',
+    title: '饮食推荐',
+    description: '想不到吃什么时，先从这里开始',
+    accent: '#D4845A',
     questions: [
-      '帮我搜索一些主食菜品',
-      '有什么推荐的甜点吗',
-      '搜索包含鸡肉的菜肴',
-      '查看汤品分类的菜品'
+      '给我推荐一份适合减脂的午餐',
+      '今天晚餐吃什么更清爽',
+      '推荐几道高蛋白又好做的菜'
     ]
   },
   {
-    id: 'nutrition-analysis',
-    title: '📊 营养分析',
-    icon: 'chart',
-    description: '了解菜品的营养成分和热量',
-    expanded: false,
+    id: 'nutrition',
+    title: '营养分析',
+    description: '快速看热量、蛋白质和搭配是否合理',
+    accent: '#7BAE7F',
     questions: [
-      '分析西红柿炒鸡蛋的营养成分',
-      '宫保鸡丁的热量是多少',
-      '这份菜的蛋白质含量高吗',
-      '分析这碗米饭的营养价值'
+      '帮我分析番茄炒蛋的热量和营养',
+      '这份餐的蛋白质够不够',
+      '我今天的饮食有没有太油腻'
     ]
   },
   {
-    id: 'order-management',
-    title: '🛒 订单管理',
-    icon: 'cart',
-    description: '创建和管理您的订单',
-    expanded: false,
+    id: 'plan',
+    title: '饮食规划',
+    description: '适合给自己做一份更完整的安排',
+    accent: '#8E7CC3',
     questions: [
-      '我要下单宫保鸡丁和红烧肉',
-      '查询我的订单状态',
-      '创建一个新订单',
-      '我的订单准备好了吗'
+      '给我做一份一周健康饮食计划',
+      '帮我安排今天三餐的搭配',
+      '运动后适合吃什么'
     ]
   },
   {
-    id: 'personalized-recommendation',
-    title: '👤 个性化推荐',
-    icon: 'user',
-    description: '根据您的喜好获取推荐',
-    expanded: false,
+    id: 'personal',
+    title: '个性化建议',
+    description: '结合你的偏好和目标做推荐',
+    accent: '#E2B455',
     questions: [
-      '根据我的喜好推荐菜品',
-      '查看我的饮食偏好',
-      '我最近都点了什么菜',
-      '有什么适合我的健康菜品推荐'
+      '根据我的口味推荐几道菜',
+      '适合控糖的外卖怎么点',
+      '推荐几种低卡但有饱腹感的食物'
     ]
   }
 ]

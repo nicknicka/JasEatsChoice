@@ -1,6 +1,5 @@
 <template>
   <el-main class="ai-page-content">
-    <!-- 页面头部 -->
     <header class="page-header">
       <h2>AI饮食助手</h2>
       <div class="status-badge">
@@ -9,7 +8,6 @@
       </div>
     </header>
 
-    <!-- 自定义标签导航 -->
     <nav class="tab-nav">
       <div class="tab-nav-track">
         <button
@@ -27,7 +25,6 @@
       </div>
     </nav>
 
-    <!-- 标签内容区域 -->
     <div class="tab-content-area">
       <Transition :name="transitionName" mode="out-in">
         <div v-if="activeTab === 'chat'" key="chat" class="tab-pane">
@@ -52,7 +49,6 @@ import { ref, computed, watch, nextTick, onMounted, onActivated, defineAsyncComp
 import { ChatRound, Camera, Document, Link as LinkIcon } from '@element-plus/icons-vue'
 import AiChatFull from './AI/components/AIChatFull.vue'
 
-// 异步加载组件
 const DishRecognition = defineAsyncComponent(() =>
   import('./AI/components/DishRecognition.vue')
 )
@@ -77,7 +73,6 @@ const ContentExtractionTab = defineAsyncComponent({
   timeout: 3000
 })
 
-// 标签页配置
 const tabs = [
   { name: 'chat', label: 'AI聊天', icon: ChatRound },
   { name: 'recognition', label: '菜品识别', icon: Camera },
@@ -91,14 +86,12 @@ const sliderLeft = ref(0)
 const sliderWidth = ref(0)
 const aiChatRef = ref(null)
 
-// 滑块位置样式
 const sliderStyle = computed(() => ({
   left: `${sliderLeft.value}px`,
   width: `${sliderWidth.value}px`,
   opacity: sliderWidth.value > 0 ? 1 : 0
 }))
 
-// 更新滑块位置
 const updateSlider = () => {
   nextTick(() => {
     const el = document.getElementById(`tab-btn-${activeTab.value}`)
@@ -109,7 +102,6 @@ const updateSlider = () => {
   })
 }
 
-// 切换标签页
 const switchTab = (name) => {
   if (name === activeTab.value) return
   const oldIndex = tabs.findIndex(t => t.name === activeTab.value)
@@ -119,7 +111,6 @@ const switchTab = (name) => {
   updateSlider()
 }
 
-// 触发AI聊天滚动
 const triggerAiChatScroll = async () => {
   await nextTick()
   setTimeout(() => {
@@ -129,7 +120,6 @@ const triggerAiChatScroll = async () => {
   }, 100)
 }
 
-// 监听tab切换
 watch(activeTab, async (newTab) => {
   if (newTab === 'chat') {
     await triggerAiChatScroll()
@@ -204,7 +194,6 @@ onActivated(() => {
   }
 }
 
-// 自定义标签导航
 .tab-nav {
   margin-bottom: 16px;
   flex-shrink: 0;
@@ -258,7 +247,6 @@ onActivated(() => {
   }
 }
 
-// 标签内容区域
 .tab-content-area {
   flex: 1;
   min-height: 0;
@@ -275,7 +263,6 @@ onActivated(() => {
   }
 }
 
-// 过渡动画 - 左滑
 .slide-left-enter-active,
 .slide-left-leave-active {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -291,7 +278,6 @@ onActivated(() => {
   transform: translateX(-30px) scale(0.98);
 }
 
-// 过渡动画 - 右滑
 .slide-right-enter-active,
 .slide-right-leave-active {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);

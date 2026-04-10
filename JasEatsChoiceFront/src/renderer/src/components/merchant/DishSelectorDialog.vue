@@ -259,9 +259,9 @@ const getSelectedDishes = () => {
 }
 </script>
 
-<style lang="scss" scoped>
-@import '../../../assets/css/nordic-theme.less';
-@import '../../../assets/css/merchant-theme.less';
+<style lang="less" scoped>
+@import '../../assets/css/nordic-theme.less';
+@import '../../assets/css/merchant-theme.less';
 
 .dish-selector-dialog {
   :deep(.el-dialog__body) {

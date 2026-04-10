@@ -226,6 +226,52 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
         }
     }
 
+    @Override
+    public Map<String, Object> optimizeRecipeWithProgress(String originalRecipe,
+            java.util.function.Consumer<String> progressCallback) {
+        if (originalRecipe == null || originalRecipe.trim().isEmpty()) {
+            return Map.of("error", true, "message", "食谱内容不能为空");
+        }
+
+        try {
+            // 阶段1：分析食谱内容
+            progressCallback.accept("正在分析食谱内容...");
+            log.info("[食谱优化-SSE] 阶段1：分析食谱，长度={}", originalRecipe.length());
+
+            String prompt = String.format(RECIPE_OPTIMIZATION_PROMPT, originalRecipe);
+
+            // 阶段2：调用AI优化（最耗时阶段，约 5-15 秒）
+            progressCallback.accept("正在调用AI进行优化...");
+            log.info("[食谱优化-SSE] 阶段2：调用LLM");
+            long startTime = System.currentTimeMillis();
+
+            String responseText = agentModel.chat(prompt);
+
+            long elapsed = System.currentTimeMillis() - startTime;
+            log.info("[食谱优化-SSE] LLM调用完成，耗时={}ms，结果长度={}", elapsed, responseText.length());
+
+            // 阶段3：生成优化结果
+            progressCallback.accept("正在生成优化结果...");
+            log.info("[食谱优化-SSE] 阶段3：解析结果");
+
+            List<Map<String, Object>> recipes = parseRecipeListResult(responseText);
+
+            if (recipes.isEmpty()) {
+                return Map.of("error", true, "message", "没有找到合适的优化食谱");
+            }
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("error", false);
+            result.put("recipes", recipes);
+            log.info("[食谱优化-SSE] 成功，返回 {} 个食谱方案", recipes.size());
+            return result;
+
+        } catch (Exception e) {
+            log.error("[食谱优化-SSE] 失败", e);
+            return Map.of("error", true, "message", "食谱优化失败：" + e.getMessage());
+        }
+    }
+
     // ==================== 推荐理由生成 ====================
 
     @Override

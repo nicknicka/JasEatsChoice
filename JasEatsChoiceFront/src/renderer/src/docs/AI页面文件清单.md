@@ -40,16 +40,19 @@ src/renderer/src/components/common/
 ```
 src/renderer/src/views/user/AI/
 ├── index.vue                              # ✅ 主入口容器
+├── AI.vue                                 # ✅ 兼容入口（转发到 index.vue）
 └── components/
-    ├── AIChatPanel.vue                    # ✅ 基础聊天面板
-    ├── AIChatPanelEnhanced.vue            # ✅ 增强聊天面板（推荐）
-    ├── ChatMessage.vue                    # ✅ 基础消息组件
-    ├── ChatMessageEnhanced.vue            # ✅ 增强消息组件（Markdown+复制）
-    ├── ChatSkeleton.vue                   # ✅ 骨架屏加载组件
-    ├── QuickQuestions.vue                 # ✅ 快捷提问组件
-    ├── MessageInput.vue                   # ✅ 消息输入组件
-    ├── DishRecognition.vue                # ✅ 菜品识别组件
-    └── RecipeOptimization.vue             # ✅ 食谱优化组件
+  ├── chat/
+  │   ├── index.js                       # ✅ 聊天组件统一导出入口
+  │   └── (AIChatPanel / ChatMessage / MessageInput / QuickQuestions)
+  ├── AIChatPanel.vue                    # ✅ 当前正在使用的聊天面板
+  ├── ChatMessage.vue                    # ✅ 消息组件
+  ├── QuickQuestions.vue                 # ✅ 快捷提问面板
+  ├── MessageInput.vue                   # ✅ 消息输入组件
+  ├── DishRecognition.vue                # ✅ 菜品识别组件
+  ├── RecipeOptimization.vue             # ✅ 食谱优化组件
+  └── legacy/
+    └── README.md                      # ⚠️ 归档说明，历史文件暂留在上一层
 ```
 
 ### 📄 文档 (Documentation)
@@ -122,20 +125,17 @@ src/renderer/src/views/user/
 
 ### 核心依赖链
 ```
-AI.vue (入口)
+AI.vue (兼容入口)
   └─> AI/index.vue (容器)
-        ├─> AIChatPanelEnhanced (增强面板)
-        │     ├─> ErrorBoundary (错误边界)
-        │     ├─> VirtualList (虚拟滚动)
-        │     ├─> ChatMessageEnhanced (增强消息)
-        │     │     ├─> markdownParser (Markdown解析)
-        │     │     └─> dateFormatter (日期格式化)
-        │     ├─> ChatSkeleton (骨架屏)
-        │     ├─> QuickQuestions (快捷提问)
-        │     ├─> MessageInput (输入框)
-        │     │     ├─> useImageUpload (图片上传)
-        │     │     │     └─> imageValidator (图片验证)
-        │     │     └─> emojiPicker (表情选择)
+  ├─> AIChatPanel (当前聊天面板)
+  │     ├─> ChatMessage (消息渲染)
+  │     │     ├─> cards/ (卡片消息)
+  │     │     └─> parseCardData (结构化消息解析)
+  │     ├─> QuickQuestions (快捷提问)
+  │     ├─> MessageInput (输入框)
+  │     │     ├─> useImageUpload (图片上传)
+  │     │     │     └─> imageValidator (图片验证)
+  │     │     └─> emojiPicker (表情选择)
         │     ├─> useAIChat (聊天逻辑)
         │     │     ├─> useStreamResponse (流式传输)
         │     │     │     └─> performanceUtils (性能工具)
@@ -173,10 +173,9 @@ performanceMonitor.observeWebVitals()
 ### 组件选择
 | 场景 | 推荐组件 | 原因 |
 |------|----------|------|
-| 标准使用 | AIChatPanel | 基础功能完整 |
-| 高性能需求 | AIChatPanelEnhanced | 虚拟滚动+错误边界 |
-| 需要Markdown | ChatMessageEnhanced | 支持格式化文本 |
-| 长时间加载 | ChatSkeleton | 优雅的加载状态 |
+| 标准使用 | AIChatPanel | 当前主线实现，结构清晰 |
+| 新代码引入聊天组件 | components/chat/index.js | 统一导出入口，避免路径散落 |
+| 维护旧页面 | AIChatFull / AIChatSimple | 仅作历史兼容，不建议继续扩展 |
 
 ### 性能优化
 ```javascript
@@ -220,15 +219,16 @@ const handleScroll = rafThrottle((e) => {
 
 ### 业务组件
 - **index.vue**: 主容器，路由入口
-- **AIChatPanel.vue**: 基础聊天面板
-- **AIChatPanelEnhanced.vue**: 增强版（虚拟滚动+错误边界+Markdown）
-- **ChatMessage.vue**: 基础消息组件
-- **ChatMessageEnhanced.vue**: 增强消息（Markdown+复制）
-- **ChatSkeleton.vue**: 骨架屏加载
+- **AI.vue**: 兼容入口，转发到 `index.vue`
+- **AIChatPanel.vue**: 当前使用的聊天面板
+- **ChatMessage.vue**: 消息组件
 - **QuickQuestions.vue**: 快捷提问面板
 - **MessageInput.vue**: 消息输入框（工具栏+表情+图片）
 - **DishRecognition.vue**: 菜品识别功能
 - **RecipeOptimization.vue**: 食谱优化功能
+- **AIChatFull.vue**: 旧版全量实现，已归档
+- **AIChatSimple.vue**: 旧版演示实现，已归档
+- **QuickActions.vue**: 旧版快捷操作，已归档
 
 ## 📝 维护建议
 

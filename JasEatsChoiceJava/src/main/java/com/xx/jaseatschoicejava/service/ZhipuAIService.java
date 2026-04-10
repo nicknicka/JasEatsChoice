@@ -1,6 +1,7 @@
 package com.xx.jaseatschoicejava.service;
 
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * 智谱AI服务接口
@@ -37,6 +38,17 @@ public interface ZhipuAIService {
      * @return 优化后的食谱
      */
     Map<String, Object> optimizeRecipe(String originalRecipe);
+
+    /**
+     * AI食谱优化（带进度回调，用于 SSE 流式推送）
+     *
+     * 三阶段进度：分析食谱 → AI优化 → 生成结果
+     *
+     * @param originalRecipe 原始食谱
+     * @param progressCallback 进度回调，接收进度描述文本
+     * @return 优化后的食谱
+     */
+    Map<String, Object> optimizeRecipeWithProgress(String originalRecipe, Consumer<String> progressCallback);
 
     /**
      * AI生成推荐理由

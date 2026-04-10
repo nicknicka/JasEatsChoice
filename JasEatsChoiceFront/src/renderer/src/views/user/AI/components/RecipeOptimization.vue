@@ -207,6 +207,7 @@ import { handleApiError } from "../../../../utils/errorHandler";
 import { logger } from "../../../../config/chatConfig";
 import { useAuthStore } from "../../../../store/authStore";
 import { useUserStore } from "../../../../store/userStore";
+import { useStreamResponse } from "../../../../composables/useStreamResponse";
 
 // 初始化 Pinia store
 const authStore = useAuthStore();
@@ -345,8 +346,10 @@ const saveToMyRecipes = async () => {
   }
 };
 
+const { parseSSELine } = useStreamResponse();
+
 /**
- * 优化食谱
+ * 优化食谱（通过 SSE 获取真实进度）
  */
 const optimizeRecipe = async () => {
   const validation = validateRecipe(originalRecipe.value);
@@ -358,39 +361,86 @@ const optimizeRecipe = async () => {
   optimizationLoading.value = true;
   loadingStep.value = 0;
 
-  // 步骤动画
-  const stepInterval = setInterval(() => {
-    if (loadingStep.value < 3) {
-      loadingStep.value++;
-    }
-  }, 2000);
+  // 进度消息到步骤编号的映射
+  const progressToStepMap = {
+    '分析食谱': 1,
+    '调用AI': 2,
+    '生成优化结果': 3,
+  };
 
   try {
-    const response = await axios.post(API_CONFIG.baseURL + API_CONFIG.ai.recipe, {
-      foodName: originalRecipe.value,
+    const response = await fetch(API_CONFIG.baseURL + API_CONFIG.ai.recipeStream, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'text/event-stream',
+      },
+      body: JSON.stringify({ foodName: originalRecipe.value }),
     });
 
-    const backendRecipes = response.data.data;
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
 
-    if (backendRecipes && backendRecipes.length > 0) {
-      const firstRecipe = backendRecipes[0];
-      optimizedRecipe.value = {
-        original: originalRecipe.value,
-        optimized: `推荐食谱：${firstRecipe.name}
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        const parsedData = parseSSELine(line);
+        if (!parsedData) continue;
+
+        // 进度事件：推进步骤指示器
+        if (parsedData.progress === true && parsedData.content) {
+          for (const [keyword, step] of Object.entries(progressToStepMap)) {
+            if (parsedData.content.includes(keyword)) {
+              loadingStep.value = step;
+              break;
+            }
+          }
+          continue;
+        }
+
+        // 完成事件：包含食谱数据
+        if (parsedData.done === true && parsedData.recipes) {
+          loadingStep.value = 3;
+          const backendRecipes = parsedData.recipes;
+          if (backendRecipes.length > 0) {
+            const firstRecipe = backendRecipes[0];
+            optimizedRecipe.value = {
+              original: originalRecipe.value,
+              optimized: `推荐食谱：${firstRecipe.name}
 难度：${firstRecipe.difficulty}
 卡路里：${firstRecipe.calorie}大卡
 食材：${firstRecipe.ingredients}
 步骤：${firstRecipe.steps}`,
-        improvements: ["营养均衡", "口味优化", "步骤简化"],
-        rawData: firstRecipe,
-      };
-      logger.log("✅ 食谱优化成功:", firstRecipe.name);
-    } else {
-      optimizedRecipe.value = {
-        original: originalRecipe.value,
-        optimized: "优化失败：没有找到合适的优化食谱。",
-        improvements: [],
-      };
+              improvements: ["营养均衡", "口味优化", "步骤简化"],
+              rawData: firstRecipe,
+            };
+            logger.log("✅ 食谱优化成功:", firstRecipe.name);
+          } else {
+            optimizedRecipe.value = {
+              original: originalRecipe.value,
+              optimized: "优化失败：没有找到合适的优化食谱。",
+              improvements: [],
+            };
+          }
+          continue;
+        }
+
+        // 错误事件
+        if (parsedData.error) {
+          throw new Error(parsedData.message || '优化失败');
+        }
+      }
     }
   } catch (error) {
     logger.error("❌ 食谱优化失败:", error);
@@ -401,7 +451,6 @@ const optimizeRecipe = async () => {
     };
     ElMessage.error(handleApiError(error));
   } finally {
-    clearInterval(stepInterval);
     loadingStep.value = 3;
     setTimeout(() => {
       optimizationLoading.value = false;

@@ -18,14 +18,56 @@ export const CHAT_CONFIG = {
   IMAGE_TYPES: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
 }
 
-// 快捷提问列表
-export const QUICK_QUESTIONS = [
-  '推荐适合减肥的食谱',
-  '今日卡路里摄入建议',
-  '如何搭配营养均衡的饮食',
-  '推荐低卡路里零食',
-  '适合运动后的食物'
+// 快捷提问分组
+export const QUICK_QUESTION_CATEGORIES = [
+  {
+    id: 'recommendation',
+    title: '饮食推荐',
+    description: '想不到吃什么时，先从这里开始',
+    accent: '#D4845A',
+    questions: [
+      '给我推荐一份适合减脂的午餐',
+      '今天晚餐吃什么更清爽',
+      '推荐几道高蛋白又好做的菜'
+    ]
+  },
+  {
+    id: 'nutrition',
+    title: '营养分析',
+    description: '快速看热量、蛋白质和搭配是否合理',
+    accent: '#7BAE7F',
+    questions: [
+      '帮我分析番茄炒蛋的热量和营养',
+      '这份餐的蛋白质够不够',
+      '我今天的饮食有没有太油腻'
+    ]
+  },
+  {
+    id: 'plan',
+    title: '饮食规划',
+    description: '适合给自己做一份更完整的安排',
+    accent: '#8E7CC3',
+    questions: [
+      '给我做一份一周健康饮食计划',
+      '帮我安排今天三餐的搭配',
+      '运动后适合吃什么'
+    ]
+  },
+  {
+    id: 'personal',
+    title: '个性化建议',
+    description: '结合你的偏好和目标做推荐',
+    accent: '#E2B455',
+    questions: [
+      '根据我的口味推荐几道菜',
+      '适合控糖的外卖怎么点',
+      '推荐几种低卡但有饱腹感的食物'
+    ]
+  }
 ]
+
+// 快捷提问列表（兼容旧逻辑）
+export const QUICK_QUESTIONS = QUICK_QUESTION_CATEGORIES.flatMap((category) => category.questions)
 
 // 常用表情列表
 export const COMMON_EMOJIS = [

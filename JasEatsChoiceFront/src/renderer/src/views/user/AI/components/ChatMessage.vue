@@ -56,8 +56,8 @@
 import { computed, ref, watch } from 'vue'
 import { marked } from 'marked'
 import OrderListCard from './cards/OrderListCard.vue'
-import CardMessage from '../../../components/chat/CardMessage.vue'
-import { parseCardData } from '../../../utils/cardMessageParser'
+import CardMessage from '../../../../components/chat/CardMessage.vue'
+import { parseCardData } from '../../../../utils/cardMessageParser'
 
 const props = defineProps({
   sender: {
@@ -129,7 +129,7 @@ watch(() => props.content, (newContent) => {
 /**
  * 解析消息内容，检测是否包含结构化数据
  */
-const parseMessageContent = (content) => {
+function parseMessageContent(content) {
   if (!content || props.sender === 'user') {
     messageType.value = 'text'
     cardData.value = null
@@ -198,7 +198,7 @@ const handleOrderNow = (orderData) => {
  * 解析订单列表
  * 从文本中提取订单信息并转换为卡片数据格式
  */
-const parseOrderList = (content) => {
+function parseOrderList(content) {
   // 检测是否包含订单列表标识
   if (!content.includes('📜') && !content.includes('订单列表')) {
     return null

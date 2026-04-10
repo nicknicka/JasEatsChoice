@@ -237,9 +237,9 @@ const getPaymentMethodName = (method) => {
 }
 </script>
 
-<style lang="scss" scoped>
-@import '../../../assets/css/nordic-theme.less';
-@import '../../../assets/css/merchant-theme.less';
+<style lang="less" scoped>
+@import '../../assets/css/nordic-theme.less';
+@import '../../assets/css/merchant-theme.less';
 
 .payment-dialog {
   :deep(.el-dialog__body) {
