@@ -51,6 +51,19 @@ public interface ZhipuAIService {
     Map<String, Object> optimizeRecipeWithProgress(String originalRecipe, Consumer<String> progressCallback);
 
     /**
+     * AI食谱优化（真正流式输出，逐 token 推送）
+     *
+     * @param originalRecipe 原始食谱
+     * @param progressCallback 阶段进度回调
+     * @param tokenCallback 逐 token 回调
+     * @param onComplete 流式结束回调
+     */
+    void optimizeRecipeStreaming(String originalRecipe,
+            Consumer<String> progressCallback,
+            Consumer<String> tokenCallback,
+            Runnable onComplete);
+
+    /**
      * AI生成推荐理由
      * @param dishName 菜品名称
      * @param userProfile 用户画像信息

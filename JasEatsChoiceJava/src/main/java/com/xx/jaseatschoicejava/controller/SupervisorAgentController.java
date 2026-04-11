@@ -1,20 +1,22 @@
 package com.xx.jaseatschoicejava.controller;
 
-import com.xx.jaseatschoicejava.agent.agents.stream.StreamingResponseAgent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.xx.jaseatschoicejava.agent.service.SupervisorAgentFactory;
 import com.xx.jaseatschoicejava.common.ResponseResult;
-import dev.langchain4j.service.TokenStream;
+
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.web.bind.annotation.*;
-
 import jakarta.annotation.Resource;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * SupervisorAgent 控制器（V2 架构）
@@ -39,9 +41,6 @@ public class SupervisorAgentController {
 
     @Resource
     private SupervisorAgentFactory supervisorAgentFactory;
-
-    @Resource
-    private StreamingResponseAgent streamingResponseAgent;
 
     /**
      * 统一聊天接口（智能路由）
@@ -106,10 +105,9 @@ public class SupervisorAgentController {
     }
 
     /**
-     * 核心处理方法：Supervisor 同步执行 + StreamingResponse 格式化
+    * 核心处理方法：Supervisor 同步执行后直接返回结果
      *
      * 阶段1：SupervisorAgent 协调 L1 专家 Agent（同步）
-     * 阶段2：StreamingResponseAgent 格式化输出（同步收集完整结果）
      */
     private String processWithSupervisor(String message, String userId) {
         // ===== 阶段1：同步 Supervisor 执行 =====
@@ -122,56 +120,8 @@ public class SupervisorAgentController {
         String cleanedResult = supervisorAgentFactory.cleanDebugInfo(supervisorResult);
         log.info("[阶段1] SupervisorAgent完成，结果长度: {} 字符", cleanedResult.length());
 
-        // ===== 阶段2：StreamingResponse 格式化（同步收集） =====
-        log.info("[阶段2] StreamingResponseAgent开始格式化: userId={}", userId);
-
-        StringBuilder fullResponse = new StringBuilder();
-        CountDownLatch latch = new CountDownLatch(1);
-        AtomicReference<Throwable> errorRef = new AtomicReference<>();
-
-        String memoryId = userId + "_" + System.currentTimeMillis();
-
-        TokenStream tokenStream = streamingResponseAgent.streamResponse(
-                message, cleanedResult, userId, memoryId
-        );
-
-        tokenStream
-                .onPartialResponse(token -> {
-                    if (token != null && !token.isEmpty()) {
-                        fullResponse.append(token);
-                    }
-                })
-                .onCompleteResponse(response -> {
-                    log.info("[阶段2] StreamingResponseAgent格式化完成");
-                    latch.countDown();
-                })
-                .onError(error -> {
-                    log.error("[阶段2] StreamingResponseAgent格式化失败", error);
-                    errorRef.set(error);
-                    latch.countDown();
-                })
-                .start();
-
-        try {
-            // 等待完成（最多60秒）
-            boolean completed = latch.await(60, TimeUnit.SECONDS);
-            if (!completed) {
-                log.warn("StreamingResponseAgent超时，返回已收集的内容");
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            log.warn("StreamingResponseAgent被中断");
-        }
-
-        // 如果流式出错，降级使用原始 Supervisor 结果
-        if (errorRef.get() != null) {
-            log.warn("StreamingResponseAgent失败，降级返回原始结果");
-            return cleanedResult;
-        }
-
-        String finalResult = fullResponse.toString();
-        log.info("Supervisor + Streaming 响应完成: userId={}, 结果长度: {}", userId, finalResult.length());
-        return finalResult;
+        log.info("[阶段2] 直接返回阶段1结果: userId={}, 结果长度: {}", userId, cleanedResult.length());
+        return cleanedResult;
     }
 
     /**

@@ -21,14 +21,9 @@ public class ZhipuAIConfig {
     private String apiKey;
 
     /**
-    * 使用的模型（默认：glm-4.7）
-     * glm-4-flash: 标准Flash版本，免费，速度快，并发限制中等（推荐）
-     * glm-4-air: 轻量级版本，免费，更低的并发限制
-     * glm-4: 标准版，需要付费，能力强
-     * glm-4-plus: 增强版，需要付费，能力最强
-     * glm-4.7: 新一代推理模型，适合更强的文本推理任务
+    * 使用的模型
      */
-    private String model = "glm-4.7";
+    private String model = "glm-4-flash";
 
     /**
      * 视觉识别模型（用于菜品识别、图像理解）

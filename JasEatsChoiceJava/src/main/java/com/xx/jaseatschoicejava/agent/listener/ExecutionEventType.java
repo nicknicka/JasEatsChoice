@@ -35,6 +35,16 @@ public enum ExecutionEventType {
     TOOL_COMPLETE,
 
     /**
+     * 流程初始化
+     */
+    INIT,
+
+    /**
+     * 流程结束
+     */
+    FINISH,
+
+    /**
      * 全部完成
      */
     COMPLETE

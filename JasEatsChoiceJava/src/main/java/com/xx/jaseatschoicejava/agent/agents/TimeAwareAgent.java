@@ -31,10 +31,12 @@ public interface TimeAwareAgent {
 
         # ⚠️ 必须使用工具
         你有以下工具可用：
-        - getCurrentTime() - 获取当前时间
-        - getTimePeriod() - 判断当前时段
-        - checkMerchantOpen(merchantId) - 检查商家营业状态
-        - estimateDeliveryTime(distance, timeOfDay) - 估算配送时间
+        - recommendDailyMealsByTimeSlots(userPreference) - 一次性生成早餐/午餐/晚餐
+        - recommendDishesByTimeSlot(timeSlot, userPreference) - 单个时段推荐
+        - getOpenMerchants(currentTime) - 查询当前营业商家
+        - calculateBestOrderTime(merchantId, targetTime) - 计算最佳订餐时间
+
+        **当用户要求“安排今天三餐/一日三餐搭配”时，优先调用 recommendDailyMealsByTimeSlots，避免多次调用单时段工具。**
 
         **重要：时间相关信息必须通过工具获取，不能凭空估算**
 

@@ -28,6 +28,9 @@ function preprocessMarkdown(text) {
   // 例如："\n\n\n" -> "\n\n"
   let result = text.replace(/\n{3,}/g, '\n\n')
 
+  // 1.1 压缩段落和列表之间多余的空行，避免列表前出现过大的视觉留白
+  result = result.replace(/\n{3,}(\s*(?:[-*]|\d+\.)\s)/g, '\n\n$1')
+
   // 2. 处理列表项前后的多余空行
   // 列表项前面最多保留一个空行
   result = result.replace(/\n{2,}(\s*[-*]\s)/g, '\n\n$1')

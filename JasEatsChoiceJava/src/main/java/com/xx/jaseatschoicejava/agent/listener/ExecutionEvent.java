@@ -10,6 +10,11 @@ package com.xx.jaseatschoicejava.agent.listener;
  */
 public class ExecutionEvent {
     /**
+     * 事件类型（AGENT_START/TOOL_START/INIT/FINISH等）
+     */
+    private String eventType;
+
+    /**
      * Agent名称
      */
     private String agentName;
@@ -140,5 +145,13 @@ public class ExecutionEvent {
 
     public void setCompleted(boolean completed) {
         this.completed = completed;
+    }
+
+    public String getEventType() {
+        return eventType;
+    }
+
+    public void setEventType(String eventType) {
+        this.eventType = eventType;
     }
 }

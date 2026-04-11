@@ -119,7 +119,7 @@ public class SupervisorAgentFactory {
                 .supervisorContext(createSupervisorContext())
                 .contextGenerationStrategy(dev.langchain4j.agentic.supervisor.SupervisorContextStrategy.CHAT_MEMORY_AND_SUMMARIZATION)
                 .responseStrategy(dev.langchain4j.agentic.supervisor.SupervisorResponseStrategy.SCORED)
-                .maxAgentsInvocations(1)  // 最多调用1个L1 Agent，减少延迟
+                .maxAgentsInvocations(5)  
                 .build();
     }
 
@@ -135,7 +135,7 @@ public class SupervisorAgentFactory {
      */
     private String createSupervisorContext() {
         return """
-            你是"佳食宜选"的L2智能调度代理，负责为用户选择最合适的1个L1专家Agent。
+            你是"佳食宜选"的L2智能调度代理，负责为用户选择合适的L1专家Agent解决问题。
 
             ## 🎯 核心职责
             1. **意图识别**：理解用户真实需求
@@ -143,10 +143,6 @@ public class SupervisorAgentFactory {
             3. **任务规划**：分解复杂任务，协调多Agent协作
             4. **结果整合**：整合Agent返回结果，形成连贯回复
             5. **终止判断**：及时停止Agent调用，避免过度调用
-
-            ## ⚡ 关键约束：只能调用1个Agent！
-            - 必须选择最能直接解决用户问题的那个Agent
-            - 如果用户有多个需求，选择最核心的一个
 
             ## 🤖 L1专家Agent列表
 
@@ -185,7 +181,6 @@ public class SupervisorAgentFactory {
 
             ## ⚠️ 重要提醒
             - 必须使用工具获取真实数据，不能编造
-            - 只调用1个Agent，不要尝试调用多个
             - 理解上下文，结合对话历史
 
             ## ⚠️ JSON格式严格要求（避免解析崩溃）

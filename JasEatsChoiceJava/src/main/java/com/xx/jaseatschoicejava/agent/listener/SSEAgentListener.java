@@ -1,13 +1,24 @@
 package com.xx.jaseatschoicejava.agent.listener;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import dev.langchain4j.agentic.observability.*;
-import dev.langchain4j.agentic.scope.AgenticScope;
+import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.io.IOException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import dev.langchain4j.agentic.observability.AfterAgentToolExecution;
+import dev.langchain4j.agentic.observability.AgentInvocationError;
+import dev.langchain4j.agentic.observability.AgentListener;
+import dev.langchain4j.agentic.observability.AgentRequest;
+import dev.langchain4j.agentic.observability.AgentResponse;
+import dev.langchain4j.agentic.observability.BeforeAgentToolExecution;
+import dev.langchain4j.agentic.scope.AgenticScope;
 
 /**
  * SSE Agent 执行监听器
@@ -52,6 +63,15 @@ public class SSEAgentListener implements AgentListener {
         String userFriendlyMessage = getUserFriendlyProgressMessage(agentName, true);
 
         ExecutionEvent event = new ExecutionEvent();
+        event.setAgentName(agentName);
+        event.setAgentId(firstNonBlank(
+            extractPropertyAsString(request, "agentId", "id"),
+            agentName
+        ));
+        event.setInputs(firstNonBlank(
+            extractPropertyAsString(request, "inputs", "input", "arguments", "parameters", "message", "userMessage", "content"),
+            request.toString()
+        ));
         event.setMessage(userFriendlyMessage);
         event.setTimestamp(System.currentTimeMillis());
         event.setProgress(true);  // 标记为进度消息，不保存到数据库
@@ -71,6 +91,15 @@ public class SSEAgentListener implements AgentListener {
         String userFriendlyMessage = getUserFriendlyProgressMessage(agentName, false);
 
         ExecutionEvent event = new ExecutionEvent();
+        event.setAgentName(agentName);
+        event.setAgentId(firstNonBlank(
+            extractPropertyAsString(response, "agentId", "id"),
+            agentName
+        ));
+        event.setOutput(firstNonBlank(
+            extractPropertyAsString(response, "output", "result", "value", "content"),
+            response.toString()
+        ));
         event.setMessage(userFriendlyMessage);
         event.setTimestamp(System.currentTimeMillis());
         event.setProgress(true);  // 标记为进度消息
@@ -87,6 +116,9 @@ public class SSEAgentListener implements AgentListener {
 
         // ========== 【用户友好消息】发送简化的错误提示 ==========
         ExecutionEvent event = new ExecutionEvent();
+        event.setAgentName(agentName);
+        event.setAgentId(firstNonBlank(agentName, error.agentName()));
+        event.setError(firstNonBlank(extractPropertyAsString(error, "message", "detail"), error.toString()));
         event.setMessage("处理过程中遇到问题，请稍后重试...");
         event.setTimestamp(System.currentTimeMillis());
         event.setProgress(true);  // 标记为进度消息
@@ -102,6 +134,14 @@ public class SSEAgentListener implements AgentListener {
 
         // ========== 【用户友好进度】发送工具执行消息 ==========
         ExecutionEvent event = new ExecutionEvent();
+        event.setToolName(firstNonBlank(
+            extractPropertyAsString(execution, "toolName", "name", "tool"),
+            execution.toString()
+        ));
+        event.setInputs(firstNonBlank(
+            extractPropertyAsString(execution, "inputs", "input", "arguments", "parameters", "args"),
+            execution.toString()
+        ));
         event.setMessage("正在查询数据");
         event.setTimestamp(System.currentTimeMillis());
         event.setProgress(true);  // 标记为进度消息
@@ -117,6 +157,14 @@ public class SSEAgentListener implements AgentListener {
 
         // ========== 【用户友好进度】发送工具完成消息 ==========
         ExecutionEvent event = new ExecutionEvent();
+        event.setToolName(firstNonBlank(
+            extractPropertyAsString(execution, "toolName", "name", "tool"),
+            execution.toString()
+        ));
+        event.setOutput(firstNonBlank(
+            extractPropertyAsString(execution, "output", "result", "response", "value"),
+            execution.toString()
+        ));
         event.setMessage("数据查询完成");
         event.setTimestamp(System.currentTimeMillis());
         event.setProgress(true);  // 标记为进度消息
@@ -129,6 +177,10 @@ public class SSEAgentListener implements AgentListener {
         // ========== 【技术细节】只记录到日志 ==========
         log.info("🎯 [技术细节] AgenticScope创建: {}", scope.memoryId());
 
+        ExecutionEvent event = new ExecutionEvent();
+        event.setAgentName("SupervisorAgent");
+        event.setAgentId(String.valueOf(scope.memoryId()));
+
         // 将userId写入AgenticScope，供所有L1子Agent的工具读取
         if (userId != null && !userId.isEmpty()) {
             scope.writeState("userId", userId);
@@ -136,12 +188,11 @@ public class SSEAgentListener implements AgentListener {
         }
 
         // ========== 【用户友好消息】发送任务开始提示 ==========
-        ExecutionEvent event = new ExecutionEvent();
         event.setMessage("正在为您处理...");
         event.setTimestamp(System.currentTimeMillis());
         event.setProgress(true);  // 标记为进度消息
 
-        sendEvent(ExecutionEventType.COMPLETE, event);
+        sendEvent(ExecutionEventType.INIT, event);
     }
 
     @Override
@@ -151,12 +202,14 @@ public class SSEAgentListener implements AgentListener {
 
         // ========== 【用户友好消息】发送完成标记 ==========
         ExecutionEvent event = new ExecutionEvent();
+        event.setAgentName("SupervisorAgent");
+        event.setAgentId(String.valueOf(scope.memoryId()));
         event.setMessage("处理完成");
         event.setTimestamp(System.currentTimeMillis());
         event.setProgress(true);   // 标记为进度消息
         event.setCompleted(true);  // 标记为完成，前端应隐藏进度指示器
 
-        sendEvent(ExecutionEventType.COMPLETE, event);
+        sendEvent(ExecutionEventType.FINISH, event);
     }
 
     /**
@@ -170,71 +223,92 @@ public class SSEAgentListener implements AgentListener {
         // 提取简单的agent名称（去掉$0、$1等后缀）
         String simpleName = agentName.replaceAll("\\$\\d+", "");
 
-        if (isStart) {
-            switch (simpleName) {
-                case "DishRecommendationAgent":
-                    return "正在为您搜索菜品";
-                case "UserPreferenceAgent":
-                    return "正在分析您的偏好";
-                case "NutritionGuideAgent":
-                    return "正在分析营养成分";
-                case "OrderHelperAgent":
-                    return "正在处理订单";
-                case "MerchantInfoAgent":
-                    return "正在查询商家信息";
-                case "TimeAwareAgent":
-                    return "正在分析时段推荐";
-                case "LocationServiceAgent":
-                    return "正在查询位置服务";
-                case "SupervisorAgent":
-                    return "正在为您分析需求";
-                default:
-                    return "正在处理中";
+        return switch (simpleName) {
+            case "DishRecommendationAgent" -> isStart ? "正在为您搜索菜品" : "菜品搜索完成";
+            case "UserPreferenceAgent" -> isStart ? "正在分析您的偏好" : "偏好分析完成";
+            case "NutritionGuideAgent" -> isStart ? "正在分析营养成分" : "营养分析完成";
+            case "OrderHelperAgent" -> isStart ? "正在处理订单" : "订单处理完成";
+            case "MerchantInfoAgent" -> isStart ? "正在查询商家信息" : "商家信息查询完成";
+            case "TimeAwareAgent" -> isStart ? "正在分析时段推荐" : "时段分析完成";
+            case "LocationServiceAgent" -> isStart ? "正在查询位置服务" : "位置服务查询完成";
+            case "SupervisorAgent" -> isStart ? "正在为您分析需求" : "需求分析完成";
+            default -> isStart ? "正在处理中" : "处理完成";
+        };
+    }
+
+    private String extractPropertyAsString(Object source, String... propertyNames) {
+        if (source == null || propertyNames == null || propertyNames.length == 0) {
+            return null;
+        }
+
+        for (String propertyName : propertyNames) {
+            Object value = readProperty(source, propertyName);
+            if (value == null) {
+                continue;
             }
-        } else {
-            switch (simpleName) {
-                case "DishRecommendationAgent":
-                    return "菜品搜索完成";
-                case "UserPreferenceAgent":
-                    return "偏好分析完成";
-                case "NutritionGuideAgent":
-                    return "营养分析完成";
-                case "OrderHelperAgent":
-                    return "订单处理完成";
-                case "MerchantInfoAgent":
-                    return "商家信息查询完成";
-                case "TimeAwareAgent":
-                    return "时段分析完成";
-                case "LocationServiceAgent":
-                    return "位置服务查询完成";
-                case "SupervisorAgent":
-                    return "需求分析完成";
-                default:
-                    return "处理完成";
+
+            String text = normalizeValue(value);
+            if (text != null && !text.isBlank()) {
+                return text;
             }
+        }
+
+        return null;
+    }
+
+    private Object readProperty(Object source, String propertyName) {
+        Class<?> sourceClass = source.getClass();
+        String capitalized = propertyName.substring(0, 1).toUpperCase() + propertyName.substring(1);
+
+        try {
+            Method getter = sourceClass.getMethod("get" + capitalized);
+            return getter.invoke(source);
+        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException ignored) {
+        }
+
+        try {
+            Method getter = sourceClass.getMethod(propertyName);
+            return getter.invoke(source);
+        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException ignored) {
+        }
+
+        try {
+            Field field = sourceClass.getDeclaredField(propertyName);
+            field.setAccessible(true);
+            return field.get(source);
+        } catch (NoSuchFieldException | IllegalAccessException ignored) {
+        }
+
+        return null;
+    }
+
+    private String normalizeValue(Object value) {
+        if (value == null) {
+            return null;
+        }
+
+        if (value instanceof String stringValue) {
+            return stringValue;
+        }
+
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (JsonProcessingException ignored) {
+            return value.toString();
         }
     }
 
-    /**
-     * 获取工具执行的用户友好消息
-     *
-     * @param toolName 工具名称
-     * @param isStart 是否为开始阶段
-     * @return 用户友好的工具执行描述
-     */
-    private String getToolExecutionMessage(String toolName, boolean isStart) {
-        if (toolName == null) {
-            return isStart ? "正在查询数据" : "数据查询完成";
+    private String firstNonBlank(String... values) {
+        if (values == null) {
+            return null;
         }
 
-        // 简化工具名称
-        String simpleToolName = toolName.replaceAll("Tools$", "");
-
-        if (isStart) {
-            return "正在查询数据";
-        } else {
-            return "数据查询完成";
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
         }
+        return null;
     }
 
     @Override
@@ -254,6 +328,8 @@ public class SSEAgentListener implements AgentListener {
             log.debug("⏭️ [SSE] 跳过发送（emitter已失败）: type={}", type.name());
             return;
         }
+
+        event.setEventType(type.name());
 
         long startTime = System.currentTimeMillis();
         try {
@@ -299,33 +375,6 @@ public class SSEAgentListener implements AgentListener {
         }
     }
 
-    /**
-     * 格式化输入参数
-     */
-    private String formatInputs(java.util.Map<String, Object> inputs) {
-        if (inputs == null || inputs.isEmpty()) {
-            return "{}";
-        }
-        try {
-            return objectMapper.writeValueAsString(inputs);
-        } catch (Exception e) {
-            return inputs.toString();
-        }
-    }
-
-    /**
-     * 格式化输出结果
-     */
-    private String formatOutput(Object output) {
-        if (output == null) {
-            return "null";
-        }
-        if (output instanceof String) {
-            String str = (String) output;
-            return str.length() > 200 ? str.substring(0, 200) + "..." : str;
-        }
-        // ✅ 避免序列化Agent对象或其他复杂对象
-        String outputStr = output.toString();
-        return outputStr.length() > 200 ? outputStr.substring(0, 200) + "..." : outputStr;
-    }
 }
+
+

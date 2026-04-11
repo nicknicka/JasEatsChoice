@@ -58,75 +58,7 @@ public class TimeRecommendationTools {
         try {
             StringBuilder sb = new StringBuilder();
             sb.append(String.format("🕐 **%s菜品推荐**\n\n", timeSlot));
-
-            switch (timeSlot) {
-                case "早晨" -> {
-                    sb.append("🌅 **早餐推荐**\n");
-                    sb.append("  • 蛋白质：鸡蛋、牛奶、豆浆\n");
-                    sb.append("  • 碳水：燕麦粥、全麦面包、红薯\n");
-                    sb.append("  • 维生素：水果、蔬菜沙拉\n");
-                    sb.append("  • 营养重点：高蛋白、高纤维\n\n");
-                    sb.append("💡 **推荐搭配**\n");
-                    sb.append("  • 鸡蛋+牛奶+全麦面包\n");
-                    sb.append("  • 豆浆+包子+鸡蛋\n");
-                    sb.append("  • 燕麦粥+鸡蛋+水果");
-                    break;
-                }
-                case "上午" -> {
-                    sb.append("☀️ **上午时段**\n");
-                    sb.append("  • 可以预订午餐，避开高峰\n");
-                    sb.append("  • 建议提前10-15分钟下单\n");
-                    sb.append("  • 工作时间可适量加餐（坚果、酸奶）");
-                    break;
-                }
-                case "中午" -> {
-                    sb.append("🌞 **午餐推荐**\n");
-                    sb.append("  • 主食：米饭、面条（适量）\n");
-                    sb.append("  • 蛋白质：鸡胸肉、鱼虾、豆腐\n");
-                    sb.append("  • 蔬菜：西兰花、菠菜、白菜\n");
-                    sb.append("  • 汤：紫菜蛋花汤、冬瓜汤\n\n");
-                    sb.append("💡 **营养搭配**\n");
-                    sb.append("  • 主食+菜品+汤，均衡搭配\n");
-                    sb.append("  • 七分饱，避免午后困倦\n");
-                    sb.append("  • 及时下单，避免高峰等待");
-                    break;
-                }
-                case "下午" -> {
-                    sb.append("☕ **下午时段**\n");
-                    sb.append("  • 下午茶时间，可以适量加餐\n");
-                    sb.append("  • 推荐酸奶、水果、坚果\n");
-                    sb.append("  • 可以预订晚餐，避开高峰");
-                    break;
-                }
-                case "晚上" -> {
-                    sb.append("🌙 **晚餐推荐**\n");
-                    sb.append("  • 主食：减半（红薯、玉米）\n");
-                    sb.append("  • 蛋白质：鱼虾、豆腐（易消化）\n");
-                    sb.append("  • 蔬菜：大量蔬菜（膳食纤维）\n");
-                    sb.append("  • 清汤：蔬菜汤\n\n");
-                    sb.append("💡 **晚餐原则**\n");
-                    sb.append("  • 清淡为主，避免油腻\n");
-                    sb.append("  • 七分饱，影响睡眠\n");
-                    sb.append("  • 避免辛辣和咖啡因");
-                    break;
-                }
-                case "深夜" -> {
-                    sb.append("🌜 **深夜时段**\n");
-                    sb.append("  • 建议不吃夜宵\n");
-                    sb.append("  • 如必须，选择：\n");
-                    sb.append("    - 热牛奶（助眠）\n");
-                    sb.append("    - 燕麦粥（易消化）\n");
-                    sb.append("    - 水果（苹果、香蕉）\n\n");
-                    sb.append("⚠️ **注意**\n");
-                    sb.append("  • 避免油腻、辛辣\n");
-                    sb.append("  • 睡前3小时不进食\n");
-                    sb.append("  • 适量即可，不要吃太饱");
-                    break;
-                }
-                default -> {
-                    sb.append("请提供正确的时段（早晨/上午/中午/下午/晚上/深夜）");
-                }
-            }
+            sb.append(buildTimeSlotRecommendation(timeSlot));
 
             log.info("✅ [Tool] 时段推荐菜品成功");
             return sb.toString();
@@ -135,6 +67,121 @@ public class TimeRecommendationTools {
             log.error("❌ [Tool] 时段推荐菜品失败", e);
             return "❌ 推荐失败：" + e.getMessage();
         }
+    }
+
+    /**
+     * 一次性返回早餐/午餐/晚餐推荐，减少Agent多次工具调用。
+     */
+    @Tool("""
+        一次性生成今日三餐（早餐/午餐/晚餐）推荐。
+
+        **适用场景：**
+        - 用户要求“安排今天三餐”
+        - 用户希望获取一整天饮食搭配
+        - 需要减少多次工具调用、提升响应速度
+
+        **参数：**
+        - userPreference - 用户偏好（可选）
+
+        **返回：** 按早餐/午餐/晚餐分段的建议
+        """)
+    public String recommendDailyMealsByTimeSlots(
+        @P("用户偏好（可选）") String userPreference
+    ) {
+        log.info("🔍 [Tool] 批量时段推荐（三餐），preference: {}", userPreference);
+
+        try {
+            StringBuilder sb = new StringBuilder();
+            sb.append("🍽️ **今日三餐搭配建议**\n\n");
+
+            sb.append("【早餐】\n");
+            sb.append(buildTimeSlotRecommendation("早晨"));
+            sb.append("\n\n");
+
+            sb.append("【午餐】\n");
+            sb.append(buildTimeSlotRecommendation("中午"));
+            sb.append("\n\n");
+
+            sb.append("【晚餐】\n");
+            sb.append(buildTimeSlotRecommendation("晚上"));
+
+            if (userPreference != null && !userPreference.isBlank()) {
+                sb.append("\n\n🎯 **偏好补充**\n");
+                sb.append("- 已参考您的偏好：").append(userPreference).append("\n");
+                sb.append("- 如需更细化，可继续说明忌口、预算或口味偏好");
+            }
+
+            log.info("✅ [Tool] 批量时段推荐（三餐）成功");
+            return sb.toString();
+        } catch (Exception e) {
+            log.error("❌ [Tool] 批量时段推荐（三餐）失败", e);
+            return "❌ 推荐失败：" + e.getMessage();
+        }
+    }
+
+    private String buildTimeSlotRecommendation(String timeSlot) {
+        StringBuilder sb = new StringBuilder();
+        switch (timeSlot) {
+            case "早晨" -> {
+                sb.append("🌅 **早餐推荐**\n");
+                sb.append("  • 蛋白质：鸡蛋、牛奶、豆浆\n");
+                sb.append("  • 碳水：燕麦粥、全麦面包、红薯\n");
+                sb.append("  • 维生素：水果、蔬菜沙拉\n");
+                sb.append("  • 营养重点：高蛋白、高纤维\n\n");
+                sb.append("💡 **推荐搭配**\n");
+                sb.append("  • 鸡蛋+牛奶+全麦面包\n");
+                sb.append("  • 豆浆+包子+鸡蛋\n");
+                sb.append("  • 燕麦粥+鸡蛋+水果");
+            }
+            case "上午" -> {
+                sb.append("☀️ **上午时段**\n");
+                sb.append("  • 可以预订午餐，避开高峰\n");
+                sb.append("  • 建议提前10-15分钟下单\n");
+                sb.append("  • 工作时间可适量加餐（坚果、酸奶）");
+            }
+            case "中午" -> {
+                sb.append("🌞 **午餐推荐**\n");
+                sb.append("  • 主食：米饭、面条（适量）\n");
+                sb.append("  • 蛋白质：鸡胸肉、鱼虾、豆腐\n");
+                sb.append("  • 蔬菜：西兰花、菠菜、白菜\n");
+                sb.append("  • 汤：紫菜蛋花汤、冬瓜汤\n\n");
+                sb.append("💡 **营养搭配**\n");
+                sb.append("  • 主食+菜品+汤，均衡搭配\n");
+                sb.append("  • 七分饱，避免午后困倦\n");
+                sb.append("  • 及时下单，避免高峰等待");
+            }
+            case "下午" -> {
+                sb.append("☕ **下午时段**\n");
+                sb.append("  • 下午茶时间，可以适量加餐\n");
+                sb.append("  • 推荐酸奶、水果、坚果\n");
+                sb.append("  • 可以预订晚餐，避开高峰");
+            }
+            case "晚上" -> {
+                sb.append("🌙 **晚餐推荐**\n");
+                sb.append("  • 主食：减半（红薯、玉米）\n");
+                sb.append("  • 蛋白质：鱼虾、豆腐（易消化）\n");
+                sb.append("  • 蔬菜：大量蔬菜（膳食纤维）\n");
+                sb.append("  • 清汤：蔬菜汤\n\n");
+                sb.append("💡 **晚餐原则**\n");
+                sb.append("  • 清淡为主，避免油腻\n");
+                sb.append("  • 七分饱，影响睡眠\n");
+                sb.append("  • 避免辛辣和咖啡因");
+            }
+            case "深夜" -> {
+                sb.append("🌜 **深夜时段**\n");
+                sb.append("  • 建议不吃夜宵\n");
+                sb.append("  • 如必须，选择：\n");
+                sb.append("    - 热牛奶（助眠）\n");
+                sb.append("    - 燕麦粥（易消化）\n");
+                sb.append("    - 水果（苹果、香蕉）\n\n");
+                sb.append("⚠️ **注意**\n");
+                sb.append("  • 避免油腻、辛辣\n");
+                sb.append("  • 睡前3小时不进食\n");
+                sb.append("  • 适量即可，不要吃太饱");
+            }
+            default -> sb.append("请提供正确的时段（早晨/上午/中午/下午/晚上/深夜）");
+        }
+        return sb.toString();
     }
 
     /**
@@ -173,23 +220,27 @@ public class TimeRecommendationTools {
             sb.append(String.format("🕐 当前时间：%s\n", now.format(DateTimeFormatter.ofPattern("HH:mm"))));
             sb.append(String.format("📌 时段：%s\n\n", period));
 
-            if ("中午".equals(period) || "晚上".equals(period)) {
-                sb.append("✅ **大部分商家正在营业**\n\n");
-                sb.append("⚠️ **高峰提示**\n");
-                sb.append("  • 当前为用餐高峰期\n");
-                sb.append("  • 建议提前下单避免等待\n");
-                sb.append("  • 配送时间可能延长");
-            } else if ("深夜".equals(period)) {
-                sb.append("⚠️ **部分商家已打烊**\n\n");
-                sb.append("💡 **建议**\n");
-                sb.append("  • 选择24小时营业的商家\n");
-                sb.append("  • 提前确认营业时间\n");
-                sb.append("  • 建议选择快餐类");
-            } else {
-                sb.append("✅ **大部分商家正常营业**\n\n");
-                sb.append("💡 **建议**\n");
-                sb.append("  • 当前时段订单较少\n");
-                sb.append("  • 配送速度较快");
+            switch (period) {
+                case "中午", "晚上" -> {
+                    sb.append("✅ **大部分商家正在营业**\n\n");
+                    sb.append("⚠️ **高峰提示**\n");
+                    sb.append("  • 当前为用餐高峰期\n");
+                    sb.append("  • 建议提前下单避免等待\n");
+                    sb.append("  • 配送时间可能延长");
+                }
+                case "深夜" -> {
+                    sb.append("⚠️ **部分商家已打烊**\n\n");
+                    sb.append("💡 **建议**\n");
+                    sb.append("  • 选择24小时营业的商家\n");
+                    sb.append("  • 提前确认营业时间\n");
+                    sb.append("  • 建议选择快餐类");
+                }
+                default -> {
+                    sb.append("✅ **大部分商家正常营业**\n\n");
+                    sb.append("💡 **建议**\n");
+                    sb.append("  • 当前时段订单较少\n");
+                    sb.append("  • 配送速度较快");
+                }
             }
 
             log.info("✅ [Tool] 查询营业中的商家成功");

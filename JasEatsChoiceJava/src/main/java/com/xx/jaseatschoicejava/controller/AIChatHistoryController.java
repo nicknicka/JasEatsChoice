@@ -1,6 +1,7 @@
 package com.xx.jaseatschoicejava.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.xx.jaseatschoicejava.entity.AIChatHistory;
 import com.xx.jaseatschoicejava.service.AIChatHistoryService;
 import io.swagger.annotations.Api;
@@ -74,31 +75,32 @@ public class AIChatHistoryController {
             String sender = (String) params.get("sender");
             String content = (String) params.get("content");
             String messageType = (String) params.get("messageType");
+            String clientMessageId = (String) params.get("clientMessageId");
 
             // cardData 可能是 String（历史数据）或 Map（新数据）
             String cardData = null;
             Object cardDataObj = params.get("cardData");
             if (cardDataObj != null) {
-                if (cardDataObj instanceof String) {
+                if (cardDataObj instanceof String cardDataStr) {
                     // 已经是字符串，直接使用
-                    cardData = (String) cardDataObj;
+                    cardData = cardDataStr;
                 } else {
                     // 是对象类型，转换为JSON字符串
                     cardData = objectMapper.writeValueAsString(cardDataObj);
                 }
             }
 
-            log.info("保存AI聊天消息: userId={}, sender={}, messageType={}, cardData={}",
-                    userId, sender, messageType, cardData != null ? "存在" : "不存在");
+                log.info("保存AI聊天消息: userId={}, sender={}, messageType={}, clientMessageId={}, cardData={}",
+                    userId, sender, messageType, clientMessageId, cardData != null ? "存在" : "不存在");
 
-            aiChatHistoryService.saveMessage(userId, sender, content, messageType, cardData);
+                aiChatHistoryService.saveMessage(userId, sender, content, messageType, cardData, clientMessageId);
 
             Map<String, Object> result = new HashMap<>();
             result.put("code", 200);
             result.put("message", "保存成功");
 
             return result;
-        } catch (Exception e) {
+        } catch (JsonProcessingException | RuntimeException e) {
             log.error("保存AI聊天消息失败", e);
 
             Map<String, Object> result = new HashMap<>();

@@ -160,13 +160,22 @@ export function useAIChatMessages(options = {}) {
 	/**
 	 * 保存消息到后端
 	 */
-	const saveMessageToBackend = async (sender, content, messageType = null, cardData = null) => {
+	const saveMessageToBackend = async (
+		sender,
+		content,
+		messageType = null,
+		cardData = null,
+		clientMessageId = null
+	) => {
 		try {
 			const userId = getUserId()
 			const payload = { userId, sender, content }
 			if (messageType && cardData) {
 				payload.messageType = messageType
 				payload.cardData = cardData
+			}
+			if (clientMessageId) {
+				payload.clientMessageId = clientMessageId
 			}
 			await axios.post(API_CONFIG.baseURL + API_CONFIG.ai.save, payload, {
 				headers: { Authorization: `Bearer ${authStore.token}` }
@@ -184,8 +193,16 @@ export function useAIChatMessages(options = {}) {
 		const message = messages.value[messageIndex]
 		if (!message || !message.content) return false
 		if (message._isProgressMessage) return true
+		if (message._saved === true) return true
 		try {
-			await saveMessageToBackend('ai', message.content, message.messageType, message.cardData)
+			await saveMessageToBackend(
+				'ai',
+				message.content,
+				message.messageType,
+				message.cardData,
+				message.clientMessageId
+			)
+			message._saved = true
 			return true
 		} catch (error) {
 			console.warn('保存消息到后端失败:', error.message)

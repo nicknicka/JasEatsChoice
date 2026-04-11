@@ -80,6 +80,12 @@
               <span class="step-label">{{ step.label }}</span>
             </div>
           </div>
+          <!-- 流式预览：实时展示AI生成内容 -->
+          <Transition name="fade">
+            <div v-if="streamingText" class="streaming-preview">
+              <pre class="streaming-content">{{ streamingText }}<span class="cursor-blink">|</span></pre>
+            </div>
+          </Transition>
         </div>
       </Transition>
 
@@ -219,6 +225,7 @@ const optimizedRecipe = ref(null);
 const optimizationLoading = ref(false);
 const loadingStep = ref(0);
 const savingRecipe = ref(false);
+const streamingText = ref("");
 
 // 处理步骤
 const processSteps = [
@@ -360,6 +367,7 @@ const optimizeRecipe = async () => {
 
   optimizationLoading.value = true;
   loadingStep.value = 0;
+  streamingText.value = "";
 
   // 进度消息到步骤编号的映射
   const progressToStepMap = {
@@ -397,6 +405,12 @@ const optimizeRecipe = async () => {
       for (const line of lines) {
         const parsedData = parseSSELine(line);
         if (!parsedData) continue;
+
+        // 流式token事件：累积展示AI生成内容
+        if (parsedData.streaming === true && parsedData.content) {
+          streamingText.value += parsedData.content;
+          continue;
+        }
 
         // 进度事件：推进步骤指示器
         if (parsedData.progress === true && parsedData.content) {
@@ -452,6 +466,7 @@ const optimizeRecipe = async () => {
     ElMessage.error(handleApiError(error));
   } finally {
     loadingStep.value = 3;
+    streamingText.value = "";
     setTimeout(() => {
       optimizationLoading.value = false;
     }, 500);
@@ -755,6 +770,46 @@ const optimizeRecipe = async () => {
   font-size: 12px;
   font-weight: 600;
   color: @nordic-text-secondary;
+}
+
+// ===== 流式预览 =====
+.streaming-preview {
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: @nordic-surface;
+  border-radius: 8px;
+  border: 1px solid @nordic-border;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.streaming-content {
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: @nordic-text-secondary;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.cursor-blink {
+  animation: cursorBlink 1s step-end infinite;
+  color: @nordic-accent;
+  font-weight: bold;
+}
+
+@keyframes cursorBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+// ===== 过渡动画 =====
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
 }
 
 @keyframes ringPulse {

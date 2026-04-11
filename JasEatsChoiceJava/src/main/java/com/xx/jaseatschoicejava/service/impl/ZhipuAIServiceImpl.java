@@ -1,8 +1,6 @@
 package com.xx.jaseatschoicejava.service.impl;
 
 import ai.z.openapi.ZhipuAiClient;
-import ai.z.openapi.service.model.ChatCompletionCreateParams;
-import ai.z.openapi.service.model.ChatMessage;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xx.jaseatschoicejava.service.ZhipuAIService;
@@ -10,7 +8,9 @@ import dev.langchain4j.data.message.ImageContent;
 import dev.langchain4j.data.message.TextContent;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.chat.response.ChatResponse;
+import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
@@ -52,6 +52,9 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
 
     @Resource
     private ZhipuAIConfig zhipuAIConfig;
+
+    @Resource
+    private StreamingChatModel streamingChatLanguageModel;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -294,6 +297,73 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
         }
     }
 
+    @Override
+    public void optimizeRecipeStreaming(String originalRecipe,
+            java.util.function.Consumer<String> progressCallback,
+            java.util.function.Consumer<String> tokenCallback,
+            Runnable onComplete) {
+
+        if (originalRecipe == null || originalRecipe.trim().isEmpty()) {
+            progressCallback.accept("ERROR:食谱内容不能为空");
+            onComplete.run();
+            return;
+        }
+
+        // 阶段1：分析食谱
+        progressCallback.accept("正在分析食谱内容...");
+        log.info("[食谱优化-流式] 阶段1：分析食谱，长度={}", originalRecipe.length());
+
+        String prompt = String.format(RECIPE_OPTIMIZATION_PROMPT, originalRecipe);
+
+        // 阶段2：流式调用AI
+        progressCallback.accept("正在调用AI进行优化...");
+        log.info("[食谱优化-流式] 阶段2：流式调用LLM");
+        long startTime = System.currentTimeMillis();
+
+        StringBuilder fullResponse = new StringBuilder();
+
+        streamingChatLanguageModel.chat(prompt, new StreamingChatResponseHandler() {
+            @Override
+            public void onPartialResponse(String partialResponse) {
+                if (partialResponse != null && !partialResponse.isEmpty()) {
+                    fullResponse.append(partialResponse);
+                    tokenCallback.accept(partialResponse);
+                }
+            }
+
+            @Override
+            public void onCompleteResponse(ChatResponse completeResponse) {
+                long elapsed = System.currentTimeMillis() - startTime;
+                log.info("[食谱优化-流式] LLM流式完成，耗时={}ms，结果长度={}", elapsed, fullResponse.length());
+
+                // 阶段3：解析结果
+                progressCallback.accept("正在生成优化结果...");
+                List<Map<String, Object>> recipes = parseRecipeListResult(fullResponse.toString());
+
+                if (recipes.isEmpty()) {
+                    progressCallback.accept("ERROR:没有找到合适的优化食谱");
+                } else {
+                    // 通过特殊前缀传递最终结果
+                    try {
+                        String recipesJson = objectMapper.writeValueAsString(recipes);
+                        progressCallback.accept("RECIPES:" + recipesJson);
+                    } catch (Exception e) {
+                        progressCallback.accept("ERROR:结果解析失败");
+                    }
+                    log.info("[食谱优化-流式] 成功，返回 {} 个食谱方案", recipes.size());
+                }
+                onComplete.run();
+            }
+
+            @Override
+            public void onError(Throwable error) {
+                log.error("[食谱优化-流式] LLM调用失败", error);
+                progressCallback.accept("ERROR:AI调用失败：" + error.getMessage());
+                onComplete.run();
+            }
+        });
+    }
+
     // ==================== 推荐理由生成 ====================
 
     @Override
@@ -509,9 +579,7 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
     }
 
     /**
-     * 调用食谱优化模型。
-     *
-     * 先走 LangChain4j 通用模型；如果返回空串，再回退到官方 SDK。
+     * 调用食谱优化模型（使用通用 aiModel，由配置决定具体模型）。
      */
     private String callRecipeOptimizationModel(String prompt) {
         try {
@@ -519,29 +587,10 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
             if (responseText != null && !responseText.isBlank()) {
                 return responseText.trim();
             }
-            log.warn("LangChain4j食谱优化返回空结果，改用官方SDK重试");
+            log.warn("食谱优化模型返回空结果");
         } catch (Exception e) {
-            log.warn("LangChain4j食谱优化调用失败，改用官方SDK重试: {}", e.getMessage());
+            log.error("食谱优化模型调用失败", e);
         }
-
-        try {
-            ChatCompletionCreateParams request = ChatCompletionCreateParams.builder()
-                    .model(zhipuAIConfig.getModel())
-                    .messages(List.of(
-                            ChatMessage.builder()
-                                    .role("user")
-                                    .content(prompt)
-                                    .build()
-                    ))
-                    .temperature(0.7f)
-                    .build();
-
-            var response = zhipuClient.chat().createChatCompletion(request);
-            Object contentObj = response.getData().getChoices().get(0).getMessage().getContent();
-            return contentObj != null ? contentObj.toString().trim() : "";
-        } catch (Exception e) {
-            log.error("官方SDK食谱优化重试失败", e);
-            return "";
-        }
+        return "";
     }
 }

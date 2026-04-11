@@ -1,17 +1,19 @@
 package com.xx.jaseatschoicejava.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xx.jaseatschoicejava.entity.AIChatHistory;
 import com.xx.jaseatschoicejava.mapper.AIChatHistoryMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import jakarta.annotation.Resource;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -29,14 +31,13 @@ public class AIChatHistoryService {
     @Resource
     private RedisTemplate<String, Object> redisTemplate;
 
-    @Resource
-    private ObjectMapper objectMapper;
-
     // Redis key前缀
     private static final String REDIS_KEY_PREFIX = "ai:chat:history:";
+    private static final String REDIS_DEDUP_KEY_PREFIX = "ai:chat:dedup:";
 
     // Redis缓存过期时间（2小时）
     private static final long REDIS_CACHE_HOURS = 2;
+    private static final long DEDUP_TTL_MINUTES = 10;
 
     /**
      * 保存聊天消息
@@ -66,11 +67,41 @@ public class AIChatHistoryService {
      */
     @Transactional(rollbackFor = Exception.class)
     public void saveMessage(String userId, String sender, String content, String messageType, String cardData) {
+        saveMessage(userId, sender, content, messageType, cardData, null);
+    }
+
+    /**
+     * 保存聊天消息（支持幂等）
+     *
+     * @param userId 用户ID
+     * @param sender 发送者（user/ai）
+     * @param content 消息内容
+     * @param messageType 消息类型
+     * @param cardData 卡片数据
+     * @param clientMessageId 客户端消息ID（可选，用于幂等）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void saveMessage(String userId, String sender, String content, String messageType, String cardData, String clientMessageId) {
         try {
+            if (StringUtils.hasText(clientMessageId)) {
+                String dedupKey = buildDedupKey(userId, sender, clientMessageId);
+                Boolean firstSeen = redisTemplate.opsForValue().setIfAbsent(
+                    Objects.requireNonNull(dedupKey),
+                    "1",
+                    DEDUP_TTL_MINUTES,
+                    TimeUnit.MINUTES);
+                if (!Boolean.TRUE.equals(firstSeen)) {
+                    log.info("⏭️ [AIChatHistoryService] 命中幂等去重，跳过写库: userId={}, sender={}, clientMessageId={}",
+                            userId, sender, clientMessageId);
+                    return;
+                }
+            }
+
             log.info("==================== 💾 数据库写入开始 ====================");
             log.info("📝 [AIChatHistoryService] 准备保存消息到数据库");
             log.info("📝 [AIChatHistoryService] userId: {}", userId);
             log.info("📝 [AIChatHistoryService] sender: {}", sender);
+            log.info("📝 [AIChatHistoryService] clientMessageId: {}", clientMessageId);
             log.info("📝 [AIChatHistoryService] messageType: {}", messageType);
             log.info("📝 [AIChatHistoryService] 内容长度: {} 字符", content != null ? content.length() : 0);
             log.info("📝 [AIChatHistoryService] 完整内容:");
@@ -109,6 +140,10 @@ public class AIChatHistoryService {
         }
     }
 
+    private String buildDedupKey(String userId, String sender, String clientMessageId) {
+        return REDIS_DEDUP_KEY_PREFIX + userId + ":" + sender + ":" + clientMessageId;
+    }
+
     /**
      * 获取用户的所有聊天历史
      * 先查Redis缓存，未命中再查MySQL
@@ -137,9 +172,12 @@ public class AIChatHistoryService {
                     .orderByAsc("create_time");
 
             List<AIChatHistory> historyList = aiChatHistoryMapper.selectList(queryWrapper);
+            if (historyList == null) {
+                historyList = new ArrayList<>();
+            }
 
             // 3. 将查询结果写入Redis缓存
-            if (historyList != null && !historyList.isEmpty()) {
+            if (!historyList.isEmpty()) {
                 saveToRedis(userId, historyList);
                 log.info("✅ [Redis缓存] 已写入缓存: userId={}, 消息数量={}", userId, historyList.size());
             }
@@ -251,6 +289,9 @@ public class AIChatHistoryService {
      */
     private void saveToRedis(String userId, List<AIChatHistory> historyList) {
         try {
+            if (historyList == null) {
+                return;
+            }
             String redisKey = REDIS_KEY_PREFIX + userId;
 
             // 保存到Redis

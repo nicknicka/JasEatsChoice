@@ -245,6 +245,7 @@ onMounted(() => {
 
   .content {
     max-width: 70%;
+    min-width: 0;
     padding: 12px 16px;
     border-radius: 16px;
 
@@ -252,6 +253,9 @@ onMounted(() => {
       font-size: 14px;
       line-height: 1.6;
       color: @merchant-text;
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow-wrap: anywhere;
 
       :deep(h2) {
         font-size: 18px;
