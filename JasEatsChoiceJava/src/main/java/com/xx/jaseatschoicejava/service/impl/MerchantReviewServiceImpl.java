@@ -1,7 +1,18 @@
 package com.xx.jaseatschoicejava.service.impl;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Service;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.xx.jaseatschoicejava.dto.*;
+import com.xx.jaseatschoicejava.dto.PendingReviewDTO;
+import com.xx.jaseatschoicejava.dto.ReviewReplyRequestDTO;
+import com.xx.jaseatschoicejava.dto.SubmitReplyDTO;
 import com.xx.jaseatschoicejava.entity.Review;
 import com.xx.jaseatschoicejava.entity.ReviewReply;
 import com.xx.jaseatschoicejava.entity.User;
@@ -9,16 +20,9 @@ import com.xx.jaseatschoicejava.mapper.ReviewReplyMapper;
 import com.xx.jaseatschoicejava.service.MerchantReviewService;
 import com.xx.jaseatschoicejava.service.ReviewService;
 import com.xx.jaseatschoicejava.service.UserService;
+
 import dev.langchain4j.model.chat.ChatModel;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.stereotype.Service;
-
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * 商家评价回复服务实现
@@ -36,11 +40,11 @@ public class MerchantReviewServiceImpl implements MerchantReviewService {
             ReviewService reviewService,
             UserService userService,
             ReviewReplyMapper reviewReplyMapper,
-            @Qualifier("agentModel") ChatModel agentModel) {
+            @Qualifier("aiModel") ChatModel aiModel) {
         this.reviewService = reviewService;
         this.userService = userService;
         this.reviewReplyMapper = reviewReplyMapper;
-        this.agentModel = agentModel;
+        this.agentModel = aiModel;
     }
 
     @Override

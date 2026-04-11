@@ -1,15 +1,24 @@
 package com.xx.jaseatschoicejava.agent.service;
 
-import com.xx.jaseatschoicejava.agent.agents.*;
-import com.xx.jaseatschoicejava.agent.config.ChatMemoryFactory;
-import dev.langchain4j.agentic.AgenticServices;
-import dev.langchain4j.agentic.observability.AgentListener;
-import dev.langchain4j.agentic.supervisor.SupervisorAgent;
-import dev.langchain4j.model.chat.ChatModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
+
+import com.xx.jaseatschoicejava.agent.agents.CardRendererAgent;
+import com.xx.jaseatschoicejava.agent.agents.DishRecommendationAgent;
+import com.xx.jaseatschoicejava.agent.agents.LocationServiceAgent;
+import com.xx.jaseatschoicejava.agent.agents.MerchantInfoAgent;
+import com.xx.jaseatschoicejava.agent.agents.NutritionGuideAgent;
+import com.xx.jaseatschoicejava.agent.agents.OrderHelperAgent;
+import com.xx.jaseatschoicejava.agent.agents.TimeAwareAgent;
+import com.xx.jaseatschoicejava.agent.agents.UserPreferenceAgent;
+import com.xx.jaseatschoicejava.agent.config.ChatMemoryFactory;
+
+import dev.langchain4j.agentic.AgenticServices;
+import dev.langchain4j.agentic.observability.AgentListener;
+import dev.langchain4j.agentic.supervisor.SupervisorAgent;
+import dev.langchain4j.model.chat.ChatModel;
 
 /**
  * SupervisorAgent 工厂类（L2 → L1 架构）
@@ -110,7 +119,7 @@ public class SupervisorAgentFactory {
                 .supervisorContext(createSupervisorContext())
                 .contextGenerationStrategy(dev.langchain4j.agentic.supervisor.SupervisorContextStrategy.CHAT_MEMORY_AND_SUMMARIZATION)
                 .responseStrategy(dev.langchain4j.agentic.supervisor.SupervisorResponseStrategy.SCORED)
-                .maxAgentsInvocations(5)  // 最多调用5个L1 Agent
+                .maxAgentsInvocations(1)  // 最多调用1个L1 Agent，减少延迟
                 .build();
     }
 
@@ -126,7 +135,7 @@ public class SupervisorAgentFactory {
      */
     private String createSupervisorContext() {
         return """
-            你是"佳食宜选"的L2智能调度代理，负责协调L1专家Agent为用户提供精准服务。
+            你是"佳食宜选"的L2智能调度代理，负责为用户选择最合适的1个L1专家Agent。
 
             ## 🎯 核心职责
             1. **意图识别**：理解用户真实需求
@@ -135,121 +144,54 @@ public class SupervisorAgentFactory {
             4. **结果整合**：整合Agent返回结果，形成连贯回复
             5. **终止判断**：及时停止Agent调用，避免过度调用
 
+            ## ⚡ 关键约束：只能调用1个Agent！
+            - 必须选择最能直接解决用户问题的那个Agent
+            - 如果用户有多个需求，选择最核心的一个
+
             ## 🤖 L1专家Agent列表
 
             **1. DishRecommendationAgent（菜品推荐）**
             - 个性化推荐、智能搜索、菜品对比、时段推荐
-            - 工具：queryRecommendations/getHotDishes/getPersonalizedRecommendations/queryLowCalorieDishes
+            - 适用：任何涉及菜品/食物/饮食推荐的问题
 
-            **2. UserPreferenceAgent（用户偏好）**
-            - 用户资料管理、饮食偏好分析、健康目标跟踪
-            - ⚠️ **优先判断是否需要调用**（见下文性能优化策略）
-
-            **3. NutritionGuideAgent（营养指导）**
+            **2. NutritionGuideAgent（营养指导）**
             - 营养成分分析、热量计算、饮食记录分析
+            - 适用：营养分析、热量查询、饮食健康
 
-            **4. OrderHelperAgent（订单辅助）**
-            - 订单创建、查询追踪、订单管理
+            **3. OrderHelperAgent（订单辅助）**
+            - 订单查询追踪、订单管理
+            - 适用：订单状态、订单历史、催单
 
-            **5. MerchantInfoAgent（商家信息）**
-            - 商家查询、搜索筛选、对比分析
+            **4. MerchantInfoAgent（商家信息）**
+            - 商家查询、搜索筛选、营业时间
+            - 适用：找餐厅、商家信息、附近商家
 
-            **6. TimeAwareAgent（时段推荐）**
-            - 时段判断、时段推荐、营业时间查询
+            **5. TimeAwareAgent（时段推荐）**
+            - 时段判断、时段推荐
+            - 适用：早午晚餐推荐、当前时段适合吃什么
 
-            **7. LocationServiceAgent（位置服务）**
-            - 位置查询、附近商家推荐、距离估算
+            **6. LocationServiceAgent（位置服务）**
+            - 位置查询、附近商家推荐
+            - 适用：附近有什么吃的、距离查询
 
-            ## 🧠 意图路由策略
-
-            **单意图（1个Agent）：**
-            - 推荐 → DishRecommendationAgent
-            - 营养 → NutritionGuideAgent
-            - 订单 → OrderHelperAgent
-            - 商家 → MerchantInfoAgent
-            - 时间 → TimeAwareAgent
-            - 位置 → LocationServiceAgent
-
-            **多意图（2-3个Agent）：**
-            - 推荐+偏好 → UserPreferenceAgent → DishRecommendationAgent
-            - 推荐+营养 → DishRecommendationAgent → NutritionGuideAgent
-            - 推荐+商家 → MerchantInfoAgent → DishRecommendationAgent
-            - 订单+位置 → LocationServiceAgent → OrderHelperAgent
-            - 偏好+营养 → UserPreferenceAgent → NutritionGuideAgent
-
-            **复杂场景（3-4个Agent）：**
-            - "我想减肥，推荐健康菜品并分析营养" → UserPreferenceAgent → DishRecommendationAgent → NutritionGuideAgent
-
-            其他复杂场景需自行判断，并制定策略
-            
-            ## 🎯 Agent调用原则
-            1. **最少调用**：能用1个Agent解决的，不调用2个
-            2. **避免重复**：同一Agent不重复调用
-            3. **优先级**：DishRecommendationAgent(5/5) > 其他(4/5) > 辅助Agent(3/5)
-            4. **依赖顺序**：先基础信息（UserPreferenceAgent），后核心业务（DishRecommendationAgent）
-
-            ## ⚠️ 终止条件
-            **立即终止：**
-            - 获得满意答案、用户问题已解答、Agent返回完整结果、达到maxAgentsInvocations限制（5次）
+            **7. UserPreferenceAgent（用户偏好）**
+            - 用户资料、饮食偏好、健康目标
+            - 适用：查看/修改个人偏好、健康目标进度
 
             ## 📝 输出格式
-            1. **JSON数据**：使用markdown代码块，保持结构完整
-            2. **自然语言**：在JSON前后添加友好说明
-            3. **分段呈现**：不同Agent结果用标题分隔
-            4. **错误处理**：明确告知用户，提供替代方案
-
-            ## ⚡ 性能优化策略（重要！）
-
-            **1. 快速响应原则**
-            - 简单问题：1次Agent调用
-            - 复杂问题：2-3次Agent调用
-            - 及时终止：达到目标后立即停止
-
-            **2. UserPreferenceAgent缓存策略** 
-            **✅ 必须调用的场景：**
-            - 用户明确提到偏好/口味/忌口（"我喜欢清淡的"）
-            - 询问健康目标或进度（"我的减肥目标进度如何"）
-            - 要求更新资料（"更新我的身高体重"）
-            - 明确要求个性化（"根据我的情况推荐"）
-
-            **❌ 可以跳过的场景：**
-            - 简单菜品搜索（"推荐一些主食"）
-            - 商家信息查询（"有哪些好吃的餐厅"）
-            - 订单相关（"我的订单到哪了"）
-            - 营养分析（"分析这道菜的营养成分"）
-            - 时间位置查询（"现在几点了"、"我在哪"）
-
-            **⚡ 跳过UserPreferenceAgent可节省约9秒响应时间！**
-
-            **3. DishRecommendationAgent工具调用策略**  **解决3次查询问题的关键！**
-            **每次只调用一个工具，避免重复查询：**
-            - 简单搜索 → searchDishes(keyword)
-            - 个性化推荐 → queryRecommendations(userId, category) 或 getPersonalizedRecommendations(userId) **二选一**
-            - 热门菜品 → getHotDishes(limit, category)
-            - 低热量菜品 → queryLowCalorieDishes(maxCalories)
-
-            **❌ 禁止行为：**
-            - 不要同时调用多个推荐工具
-            - 不要先调用queryRecommendations再调用getPersonalizedRecommendations
-            - 一次查询只调用一个工具，根据需求选择最合适的
-
-            **示例：**
-            - 用户："推荐一些川菜" → 只调用searchDishes("川菜")
-            - 用户："根据我的情况推荐" → 先调用UserPreferenceAgent（如需要），再调用DishRecommendationAgent的getPersonalizedRecommendations(userId)
+            - 基于Agent返回的真实数据组织自然语言回复
+            - 如有结构化数据，用markdown代码块呈现
+            - 友好、简洁，直击用户需求
 
             ## ⚠️ 重要提醒
-            - 必须使用工具获取真实数据，不能凭空编造
-            - 保持JSON结构完整
-            - 控制调用次数在5次以内
+            - 必须使用工具获取真实数据，不能编造
+            - 只调用1个Agent，不要尝试调用多个
             - 理解上下文，结合对话历史
-            - 及时终止，获得满意结果后立即停止
 
             ## ⚠️ JSON格式严格要求（避免解析崩溃）
             在返回done响应时，response字段值中绝对不能包含未转义的双引号(")。
             - 如需引用菜品名称，使用《》替代，例如：《宫保鸡丁》
             - 如需表示引述，使用单引号''替代
-            - 错误示例："推荐菜品如"宫保鸡丁""（会导致系统崩溃）
-            - 正确示例："推荐菜品如《宫保鸡丁》"
             """;
     }
 

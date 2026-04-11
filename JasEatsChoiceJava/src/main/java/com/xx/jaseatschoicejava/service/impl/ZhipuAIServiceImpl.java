@@ -1,5 +1,8 @@
 package com.xx.jaseatschoicejava.service.impl;
 
+import ai.z.openapi.ZhipuAiClient;
+import ai.z.openapi.service.model.ChatCompletionCreateParams;
+import ai.z.openapi.service.model.ChatMessage;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xx.jaseatschoicejava.service.ZhipuAIService;
@@ -14,6 +17,9 @@ import org.springframework.stereotype.Service;
 
 import jakarta.annotation.Resource;
 import java.util.*;
+import java.io.IOException;
+
+import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 
 /**
  * 智谱AI服务实现（视觉识别与特殊功能）
@@ -38,8 +44,14 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
     private ChatModel visionModel;
 
     @Resource
-    @Qualifier("agentModel")
-    private ChatModel agentModel;
+    @Qualifier("aiModel")
+    private ChatModel aiModel;
+
+    @Resource
+    private ZhipuAiClient zhipuClient;
+
+    @Resource
+    private ZhipuAIConfig zhipuAIConfig;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -200,8 +212,13 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
             // 构建提示词
             String prompt = String.format(RECIPE_OPTIMIZATION_PROMPT, originalRecipe);
 
-            // 调用对话模型
-            String responseText = agentModel.chat(prompt);
+            // 调用对话模型，优先使用 LangChain4j，空结果时回退到官方 SDK
+            String responseText = callRecipeOptimizationModel(prompt);
+
+            if (responseText.isBlank()) {
+                log.warn("食谱优化模型返回空结果");
+                return Map.of("error", true, "message", "AI返回空结果，请稍后重试");
+            }
 
             log.info("AI返回优化结果: {}", responseText.length() > 300 ? responseText.substring(0, 300) + "..." : responseText);
 
@@ -240,12 +257,17 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
 
             String prompt = String.format(RECIPE_OPTIMIZATION_PROMPT, originalRecipe);
 
-            // 阶段2：调用AI优化（最耗时阶段，约 5-15 秒）
+            // 阶段2：调用AI优化
             progressCallback.accept("正在调用AI进行优化...");
             log.info("[食谱优化-SSE] 阶段2：调用LLM");
             long startTime = System.currentTimeMillis();
 
-            String responseText = agentModel.chat(prompt);
+            String responseText = callRecipeOptimizationModel(prompt);
+
+            if (responseText.isBlank()) {
+                log.warn("[食谱优化-SSE] 模型返回空结果");
+                return Map.of("error", true, "message", "AI返回空结果，请稍后重试");
+            }
 
             long elapsed = System.currentTimeMillis() - startTime;
             log.info("[食谱优化-SSE] LLM调用完成，耗时={}ms，结果长度={}", elapsed, responseText.length());
@@ -282,7 +304,7 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
 
             String prompt = String.format(RECOMMENDATION_REASON_PROMPT, dishName, preferences, scene);
 
-            return agentModel.chat(prompt).trim();
+            return aiModel.chat(prompt).trim();
 
         } catch (Exception e) {
             log.error("生成推荐理由失败", e);
@@ -333,7 +355,7 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
 
             return result;
 
-        } catch (Exception e) {
+        } catch (IOException e) {
             log.error("解析菜品识别结果失败: {}", responseText, e);
             // 返回默认值
             Map<String, Object> defaultResult = new HashMap<>();
@@ -376,9 +398,9 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
                     // 确保数值类型
                     for (String key : List.of("calorie", "protein", "fat", "carb")) {
                         Object val = recipe.get(key);
-                        if (val instanceof String) {
+                        if (val instanceof String stringValue) {
                             try {
-                                recipe.put(key, Double.parseDouble((String) val));
+                                recipe.put(key, Double.valueOf(stringValue));
                             } catch (NumberFormatException ignored) {}
                         }
                     }
@@ -395,7 +417,7 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
             log.warn("无法解析为JSON数组或对象: {}", json.substring(0, Math.min(100, json.length())));
             return new ArrayList<>();
 
-        } catch (Exception e) {
+        } catch (IOException e) {
             log.error("解析食谱列表失败: {}", responseText.substring(0, Math.min(200, responseText.length())), e);
             return new ArrayList<>();
         }
@@ -484,5 +506,42 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
         }
 
         return trimmed;
+    }
+
+    /**
+     * 调用食谱优化模型。
+     *
+     * 先走 LangChain4j 通用模型；如果返回空串，再回退到官方 SDK。
+     */
+    private String callRecipeOptimizationModel(String prompt) {
+        try {
+            String responseText = aiModel.chat(prompt);
+            if (responseText != null && !responseText.isBlank()) {
+                return responseText.trim();
+            }
+            log.warn("LangChain4j食谱优化返回空结果，改用官方SDK重试");
+        } catch (Exception e) {
+            log.warn("LangChain4j食谱优化调用失败，改用官方SDK重试: {}", e.getMessage());
+        }
+
+        try {
+            ChatCompletionCreateParams request = ChatCompletionCreateParams.builder()
+                    .model(zhipuAIConfig.getModel())
+                    .messages(List.of(
+                            ChatMessage.builder()
+                                    .role("user")
+                                    .content(prompt)
+                                    .build()
+                    ))
+                    .temperature(0.7f)
+                    .build();
+
+            var response = zhipuClient.chat().createChatCompletion(request);
+            Object contentObj = response.getData().getChoices().get(0).getMessage().getContent();
+            return contentObj != null ? contentObj.toString().trim() : "";
+        } catch (Exception e) {
+            log.error("官方SDK食谱优化重试失败", e);
+            return "";
+        }
     }
 }

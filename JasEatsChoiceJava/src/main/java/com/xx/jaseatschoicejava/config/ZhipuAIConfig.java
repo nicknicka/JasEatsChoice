@@ -1,9 +1,10 @@
 package com.xx.jaseatschoicejava.config;
 
+import org.springframework.boot.context.properties.ConfigurationProperties;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * 智谱AI配置类
@@ -20,14 +21,14 @@ public class ZhipuAIConfig {
     private String apiKey;
 
     /**
-     * 使用的模型（默认：glm-4-flash）
+    * 使用的模型（默认：glm-4.7）
      * glm-4-flash: 标准Flash版本，免费，速度快，并发限制中等（推荐）
      * glm-4-air: 轻量级版本，免费，更低的并发限制
      * glm-4: 标准版，需要付费，能力强
      * glm-4-plus: 增强版，需要付费，能力最强
-     * glm-4.7-flash: 最新Flash版本，免费但并发限制严格
+     * glm-4.7: 新一代推理模型，适合更强的文本推理任务
      */
-    private String model = "glm-4-flash";
+    private String model = "glm-4.7";
 
     /**
      * 视觉识别模型（用于菜品识别、图像理解）

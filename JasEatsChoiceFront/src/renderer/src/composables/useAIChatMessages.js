@@ -2,13 +2,11 @@ import { ref, nextTick } from 'vue'
 import axios from 'axios'
 import DOMPurify from 'dompurify'
 import { API_CONFIG } from '../config/index'
+import { WELCOME_MESSAGE } from '../config/chatConfig'
 import { useAuthStore } from '../store/authStore'
 import { useUserStore } from '../store/userStore'
 import { parseMarkdown } from '../utils/markdownParser'
 import { isCardMessage } from '../views/user/AI/utils/cardMapper'
-
-// 欢迎消息常量
-const WELCOME_MESSAGE = '您好！我是您的AI饮食助手。\n\n我可以帮助您：\n\n- 推荐健康食谱\n- 分析营养成分\n- 提供饮食建议\n\n有什么可以帮您的吗？'
 
 /**
  * AI聊天消息管理

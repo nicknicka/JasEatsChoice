@@ -261,6 +261,7 @@ import { useScrollManager } from '../../../../composables/useScrollManager'
 import { useCardHandler } from '../../../../composables/useCardHandler'
 import { useAIChatMessages } from '../../../../composables/useAIChatMessages'
 import { useAdvancedStreaming } from '../../../../composables/useAdvancedStreaming'
+import { WELCOME_MESSAGE } from '../../../../config/chatConfig'
 
 // ========== Stores ==========
 const authStore = useAuthStore()
@@ -543,7 +544,7 @@ const clearChat = () => {
 			const data = await clearResponse.json()
 			if (data.code === 200) {
 				messages.value = []
-				const welcomeMessage = data.data?.welcomeMessage || '您好！我是您的AI饮食助手。'
+				const welcomeMessage = data.data?.welcomeMessage || WELCOME_MESSAGE
 				messages.value.push({
 					id: Date.now(),
 					sender: 'ai',

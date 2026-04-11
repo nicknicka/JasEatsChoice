@@ -1,26 +1,35 @@
 package com.xx.jaseatschoicejava.controller;
 
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xx.jaseatschoicejava.common.ResponseResult;
 import com.xx.jaseatschoicejava.config.FileUploadConfig;
 import com.xx.jaseatschoicejava.dto.DishDescriptionRequestDTO;
 import com.xx.jaseatschoicejava.service.DishDescriptionService;
 import com.xx.jaseatschoicejava.service.ZhipuAIService;
-import com.fasterxml.jackson.databind.ObjectMapper;
+
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-
 import jakarta.annotation.Resource;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * AI助手控制器（活跃端点）
@@ -38,6 +47,7 @@ import java.util.concurrent.Executors;
 public class AIController {
 
     private static final Logger log = LoggerFactory.getLogger(AIController.class);
+    private static final long SSE_TIMEOUT_MS = 300000L;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final ExecutorService recipeExecutorService = Executors.newCachedThreadPool();
@@ -68,8 +78,11 @@ public class AIController {
 
             // 1. 读取图片字节数据
             byte[] imageBytes;
-            try (java.io.InputStream is = image.getInputStream()) {
-                imageBytes = is.readAllBytes();
+            try {
+                imageBytes = image.getBytes();
+            } catch (IOException e) {
+                log.error("读取上传图片失败", e);
+                return ResponseResult.fail("500", "读取上传图片失败：" + e.getMessage());
             }
 
             // 2. 将图片转为Base64编码（用于AI识别）
@@ -90,7 +103,12 @@ public class AIController {
             }
             String fileName = java.util.UUID.randomUUID().toString() + suffix;
             java.nio.file.Path filePath = java.nio.file.Paths.get(uploadDir + fileName);
-            java.nio.file.Files.write(filePath, imageBytes);
+            try {
+                java.nio.file.Files.write(filePath, imageBytes);
+            } catch (IOException e) {
+                log.error("保存上传图片失败", e);
+                return ResponseResult.fail("500", "保存上传图片失败：" + e.getMessage());
+            }
 
             // 4. 构建图片URL
             String imageUrl = fileUploadConfig.getServerUrl() + "/" + fileUploadConfig.getUrlPrefix() + "dish-recognition/" + fileName;
@@ -117,7 +135,7 @@ public class AIController {
 
             result.put("imageUrl", imageUrl);
             return ResponseResult.success(result);
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             log.error("菜品识别失败", e);
             return ResponseResult.fail("500", "菜品识别失败：" + e.getMessage());
         }
@@ -132,7 +150,7 @@ public class AIController {
             String imageUrl = (String) params.get("imageUrl");
             Map<String, Object> result = zhipuAIService.recognizeDish(imageUrl);
             return ResponseResult.success(result);
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             log.error("菜品识别失败", e);
             return ResponseResult.fail("500", "菜品识别失败：" + e.getMessage());
         }
@@ -149,8 +167,16 @@ public class AIController {
     @PostMapping("/recipe-upload")
     public ResponseResult<?> recipeUpload(@RequestBody Map<String, Object> params) {
         try {
-            Map<String, Object> recipe = (Map<String, Object>) params.get("recipe");
-            String recipeText = (String) recipe.get("text");
+            Object recipeObj = params.get("recipe");
+            if (!(recipeObj instanceof Map<?, ?> recipe)) {
+                return ResponseResult.fail("400", "食谱内容格式不正确");
+            }
+
+            Object recipeTextObj = recipe.get("text");
+            String recipeText = recipeTextObj != null ? recipeTextObj.toString() : null;
+            if (recipeText == null || recipeText.trim().isEmpty()) {
+                return ResponseResult.fail("400", "食谱内容不能为空");
+            }
 
             Map<String, Object> result = zhipuAIService.optimizeRecipe(recipeText);
             return ResponseResult.success(result);
@@ -228,7 +254,7 @@ public class AIController {
         String recipeText = (String) params.get("recipe");
         String inputText = (foodName != null && !foodName.trim().isEmpty()) ? foodName : recipeText;
 
-        SseEmitter emitter = new SseEmitter(60000L);
+        SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MS);
 
         if (inputText == null || inputText.trim().isEmpty()) {
             sendRecipeSseData(emitter, Map.of("error", true, "message", "食谱内容不能为空", "done", true));
@@ -272,19 +298,19 @@ public class AIController {
 
     private void sendRecipeSseEvent(SseEmitter emitter, String message) {
         try {
-            String jsonData = objectMapper.writeValueAsString(
-                    Map.of("message", message, "progress", true));
+            final String jsonData = Objects.requireNonNull(objectMapper.writeValueAsString(
+                    Map.of("message", message, "progress", true)));
             emitter.send(SseEmitter.event().name("message").data(jsonData));
-        } catch (Exception e) {
+        } catch (java.io.IOException e) {
             log.debug("SSE进度事件发送失败: {}", e.getMessage());
         }
     }
 
     private void sendRecipeSseData(SseEmitter emitter, Object data) {
         try {
-            String jsonData = objectMapper.writeValueAsString(data);
+            final String jsonData = Objects.requireNonNull(objectMapper.writeValueAsString(data));
             emitter.send(SseEmitter.event().name("message").data(jsonData));
-        } catch (Exception e) {
+        } catch (java.io.IOException e) {
             log.debug("SSE数据发送失败: {}", e.getMessage());
         }
     }

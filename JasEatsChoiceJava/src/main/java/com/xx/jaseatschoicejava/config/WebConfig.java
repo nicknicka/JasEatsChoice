@@ -1,22 +1,22 @@
 package com.xx.jaseatschoicejava.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Objects;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.jackson.Jackson2ObjectMapperBuilderCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.lang.NonNull;
+import org.springframework.web.servlet.config.annotation.AsyncSupportConfigurer;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.lang.NonNull;
-
-import java.io.File;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
 
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
@@ -30,14 +30,14 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void configureMessageConverters(@NonNull List<HttpMessageConverter<?>> converters) {
         // 添加字符串转换器，明确指定UTF-8编码
-        StringHttpMessageConverter stringConverter = new StringHttpMessageConverter(StandardCharsets.UTF_8);
+        final java.nio.charset.Charset utf8Charset = Objects.requireNonNull(StandardCharsets.UTF_8);
+        StringHttpMessageConverter stringConverter = new StringHttpMessageConverter(utf8Charset);
         stringConverter.setWriteAcceptCharset(false); // 避免在响应头中添加charset
         converters.add(0, stringConverter);
 
         // 配置JSON转换器使用UTF-8
         for (HttpMessageConverter<?> converter : converters) {
-            if (converter instanceof MappingJackson2HttpMessageConverter) {
-                MappingJackson2HttpMessageConverter jsonConverter = (MappingJackson2HttpMessageConverter) converter;
+            if (converter instanceof MappingJackson2HttpMessageConverter jsonConverter) {
                 jsonConverter.setDefaultCharset(StandardCharsets.UTF_8);
             }
         }
@@ -118,5 +118,13 @@ public class WebConfig implements WebMvcConfigurer {
                 .allowedHeaders("*")
                 .allowCredentials(true)
                 .maxAge(3600);
+    }
+
+    /**
+     * 延长异步请求默认超时，避免 SSE 流式响应被 Spring MVC 默认回收。
+     */
+    @Override
+    public void configureAsyncSupport(@NonNull AsyncSupportConfigurer configurer) {
+        configurer.setDefaultTimeout(300000L);
     }
 }

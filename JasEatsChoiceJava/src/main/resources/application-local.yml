@@ -1,0 +1,30 @@
+server:
+  port: 7777
+
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/jia_shi_yi_xuan?useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=GMT%2B8&allowPublicKeyRetrieval=true
+    username: root
+    password: 123456
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password:
+      database: 0
+
+file:
+  upload:
+    path: /Users/nickxiao/JasEatsChoice/uploads/
+    server-url: http://localhost:7777/api
+
+zhipuai:
+  api-key: ${ZHIPU_API_KEY:${ZHIPUAI_API_KEY:}}
+  model: ${ZHIPU_MODEL:glm-4.7}
+  # 本地预留 Ollama 配置位：当前代码尚未接入，先放这里方便后续切换
+  ollama:
+    enabled: false
+    base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+    chat-model: ${OLLAMA_CHAT_MODEL:qwen2.5:7b}
+    vision-model: ${OLLAMA_VISION_MODEL:llava:7b}
+

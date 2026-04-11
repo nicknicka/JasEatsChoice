@@ -1,20 +1,29 @@
 package com.xx.jaseatschoicejava.service.extraction.recognizer;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
 import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 import com.xx.jaseatschoicejava.service.extraction.dto.FetchedContent;
+
 import dev.langchain4j.data.message.ImageContent;
 import dev.langchain4j.data.message.TextContent;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.http.*;
-import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
-
-import java.util.*;
 
 /**
  * GLM-4.6V-Flash 内容识别器
@@ -32,8 +41,8 @@ public class GlmVisionRecognizer implements ContentRecognizer {
     private ChatModel visionModel;
 
     @Autowired
-    @Qualifier("agentModel")
-    private ChatModel agentModel;
+    @Qualifier("aiModel")
+    private ChatModel aiModel;
 
     @Autowired
     private ZhipuAIConfig zhipuAIConfig;
@@ -320,7 +329,7 @@ public class GlmVisionRecognizer implements ContentRecognizer {
         if (content.hasText()) {
             // 有文字内容，用文本模型提取
             String prompt = String.format(TEXT_ONLY_PROMPT, content.getTextContent());
-            return agentModel.chat(prompt);
+            return aiModel.chat(prompt);
         }
 
         // 最后降级：URL关键词推断
@@ -328,6 +337,6 @@ public class GlmVisionRecognizer implements ContentRecognizer {
             "请根据以下信息推断可能的菜谱。URL: " +
             (content.getCoverImage() != null ? content.getCoverImage() : "未知来源") +
             "。如果无法推断，请返回 isRecipe=false。");
-        return agentModel.chat(fallbackPrompt);
+        return aiModel.chat(fallbackPrompt);
     }
 }

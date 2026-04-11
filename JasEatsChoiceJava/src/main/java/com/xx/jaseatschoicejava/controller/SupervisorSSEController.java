@@ -1,27 +1,34 @@
 package com.xx.jaseatschoicejava.controller;
 
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xx.jaseatschoicejava.agent.agents.CustomerServiceAgent;
 import com.xx.jaseatschoicejava.agent.agents.stream.StreamingResponseAgent;
 import com.xx.jaseatschoicejava.agent.listener.SSEAgentListener;
 import com.xx.jaseatschoicejava.agent.service.SupervisorAgentFactory;
+
 import dev.langchain4j.agentic.supervisor.SupervisorAgent;
 import dev.langchain4j.service.TokenStream;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * SupervisorAgent SSE 流式输出控制器（V2 架构）
@@ -47,6 +54,7 @@ import java.util.concurrent.Executors;
 public class SupervisorSSEController {
 
     private static final Logger log = LoggerFactory.getLogger(SupervisorSSEController.class);
+    private static final long SSE_TIMEOUT_MS = 300000L;
 
     private final SupervisorAgentFactory supervisorAgentFactory;
     private final StreamingResponseAgent streamingResponseAgent;
@@ -96,7 +104,7 @@ public class SupervisorSSEController {
      * 处理客服助手对话（无个性化服务）
      */
     private SseEmitter handleCustomerServiceChat(String message) {
-        SseEmitter emitter = new SseEmitter(30000L);
+        SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MS);
 
         CompletableFuture.runAsync(() -> {
             try {
@@ -113,7 +121,7 @@ public class SupervisorSSEController {
         }, executorService);
 
         emitter.onTimeout(() -> emitter.complete());
-        emitter.onError(e -> emitter.completeWithError(e));
+        emitter.onError(error -> emitter.completeWithError(Objects.requireNonNull(error)));
         return emitter;
     }
 
@@ -125,23 +133,32 @@ public class SupervisorSSEController {
      * 阶段2（流式）：StreamingResponseAgent 逐字输出，每个 token 作为 SSE 事件发送
      */
     private SseEmitter handleSupervisorChat(String message, String userId) {
-        SseEmitter emitter = new SseEmitter(120000L); // 120秒超时
+        SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MS);
 
         // 创建监听器（进度推送）
         SSEAgentListener listener = new SSEAgentListener(emitter, userId);
 
         CompletableFuture.runAsync(() -> {
+            long totalStartTime = System.currentTimeMillis();
             try {
                 // ===== 阶段1：同步 Supervisor 执行 =====
                 log.info("[阶段1] SupervisorAgent开始处理: userId={}, message={}", userId, message);
 
+                long t1 = System.currentTimeMillis();
                 SupervisorAgent agent = supervisorAgentFactory.createWithListener(listener, userId);
+                long t1Create = System.currentTimeMillis();
+                log.info("⏱️ [耗时] SupervisorAgent创建: {}ms", t1Create - t1);
+
                 String supervisorResult = agent.invoke(message);
+                long t1Invoke = System.currentTimeMillis();
+                log.info("⏱️ [耗时] SupervisorAgent.invoke(): {}ms", t1Invoke - t1Create);
 
                 // 清理 LangChain4j 调试信息
                 String cleanedResult = supervisorAgentFactory.cleanDebugInfo(supervisorResult);
+                long t1Clean = System.currentTimeMillis();
+                log.info("⏱️ [耗时] cleanDebugInfo: {}ms", t1Clean - t1Invoke);
 
-                log.info("[阶段1] SupervisorAgent完成，结果长度: {} 字符", cleanedResult.length());
+                log.info("[阶段1] SupervisorAgent完成，结果长度: {} 字符，总耗时: {}ms", cleanedResult.length(), t1Clean - t1);
 
                 // ===== 预提取卡片数据 =====
                 // 从 ToolExecutionContext 中提取工具返回的卡片数据，直接发送给前端
@@ -157,6 +174,7 @@ public class SupervisorSSEController {
 
                 // ===== 阶段2：流式 Response 输出 =====
                 log.info("[阶段2] StreamingResponseAgent开始流式输出: userId={}", userId);
+                long t2Start = System.currentTimeMillis();
 
                 // 用于累积完整响应（保存到聊天历史）
                 StringBuilder fullResponse = new StringBuilder();
@@ -251,7 +269,10 @@ public class SupervisorSSEController {
                     })
 
                     .onCompleteResponse(response -> {
-                        log.info("[阶段2] StreamingResponseAgent流式输出完成");
+                        long t2End = System.currentTimeMillis();
+                        log.info("[阶段2] StreamingResponseAgent流式输出完成，耗时: {}ms", t2End - t2Start);
+                        log.info("⏱️ [耗时] 总耗时: {}ms (阶段1={}ms, 阶段2={}ms)",
+                                t2End - totalStartTime, t2Start - totalStartTime, t2End - t2Start);
 
                         // 聊天历史由前端负责保存（前端能保存cardData等扩展字段）
                         // 后端不再重复保存，避免消息入库两次
@@ -288,9 +309,10 @@ public class SupervisorSSEController {
             try { emitter.complete(); } catch (Exception ignored) {}
         });
 
-        emitter.onError(e -> {
-            log.error("SSE连接错误: userId={}", userId, e);
-            try { emitter.completeWithError(e); } catch (Exception ignored) {}
+        emitter.onError(error -> {
+            Throwable safeError = Objects.requireNonNull(error);
+            log.error("SSE连接错误: userId={}", userId, safeError);
+            try { emitter.completeWithError(safeError); } catch (Exception ignored) {}
         });
 
         emitter.onCompletion(() -> log.debug("SSE连接完成: userId={}", userId));
@@ -416,9 +438,10 @@ public class SupervisorSSEController {
      */
     private void sendSseEvent(SseEmitter emitter, String eventName, Object data) {
         try {
-            String jsonData = objectMapper.writeValueAsString(data);
-            emitter.send(SseEmitter.event().name(eventName).data(jsonData));
-        } catch (Exception e) {
+            final String jsonData = Objects.requireNonNull(objectMapper.writeValueAsString(data));
+            final String safeEventName = Objects.requireNonNull(eventName);
+            emitter.send(SseEmitter.event().name(safeEventName).data(jsonData));
+        } catch (java.io.IOException e) {
             log.debug("SSE事件发送失败（连接可能已关闭）: {}", e.getMessage());
         }
     }

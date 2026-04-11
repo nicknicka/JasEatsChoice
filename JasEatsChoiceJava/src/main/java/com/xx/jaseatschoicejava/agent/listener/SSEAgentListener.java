@@ -36,12 +36,17 @@ public class SSEAgentListener implements AgentListener {
         return emitter;
     }
 
+    // 耗时追踪
+    private long agentStartTime;
+    private long toolStartTime;
+
     @Override
     public void beforeAgentInvocation(AgentRequest request) {
         String agentName = request.agentName();
+        agentStartTime = System.currentTimeMillis();
 
         // ========== 【技术细节】只记录到日志 ==========
-        log.debug("🔧 [技术细节] Agent调用开始: {}", agentName);
+        log.info("⏱️ [耗时追踪] Agent调用开始: {}, 时间={}", agentName, agentStartTime);
 
         // ========== 【用户友好进度】发送可理解的进度消息 ==========
         String userFriendlyMessage = getUserFriendlyProgressMessage(agentName, true);
@@ -57,9 +62,10 @@ public class SSEAgentListener implements AgentListener {
     @Override
     public void afterAgentInvocation(AgentResponse response) {
         String agentName = response.agentName();
+        long duration = agentStartTime > 0 ? System.currentTimeMillis() - agentStartTime : -1;
 
         // ========== 【技术细节】只记录到日志 ==========
-        log.debug("✅ [技术细节] Agent调用完成: {}", agentName);
+        log.info("⏱️ [耗时追踪] Agent调用完成: {}, 耗时={}ms", agentName, duration);
 
         // ========== 【用户友好进度】发送完成消息 ==========
         String userFriendlyMessage = getUserFriendlyProgressMessage(agentName, false);
@@ -90,8 +96,9 @@ public class SSEAgentListener implements AgentListener {
 
     @Override
     public void beforeAgentToolExecution(BeforeAgentToolExecution execution) {
+        toolStartTime = System.currentTimeMillis();
         // ========== 【技术细节】只记录到日志 ==========
-        log.debug("🔧 [技术细节] 工具执行开始: {}", execution);
+        log.info("⏱️ [耗时追踪] 工具执行开始: {}", execution);
 
         // ========== 【用户友好进度】发送工具执行消息 ==========
         ExecutionEvent event = new ExecutionEvent();
@@ -104,8 +111,9 @@ public class SSEAgentListener implements AgentListener {
 
     @Override
     public void afterAgentToolExecution(AfterAgentToolExecution execution) {
+        long duration = toolStartTime > 0 ? System.currentTimeMillis() - toolStartTime : -1;
         // ========== 【技术细节】只记录到日志 ==========
-        log.debug("✅ [技术细节] 工具执行完成: {}", execution);
+        log.info("⏱️ [耗时追踪] 工具执行完成: {}, 耗时={}ms", execution, duration);
 
         // ========== 【用户友好进度】发送工具完成消息 ==========
         ExecutionEvent event = new ExecutionEvent();

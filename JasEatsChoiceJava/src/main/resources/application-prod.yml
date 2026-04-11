@@ -1,0 +1,19 @@
+server:
+  port: ${SERVER_PORT:7777}
+
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:mysql://prod-db-host:3306/jia_shi_yi_xuan?useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=GMT%2B8&allowPublicKeyRetrieval=true}
+    username: ${DB_USERNAME:}
+    password: ${DB_PASSWORD:}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: ${REDIS_DATABASE:0}
+
+file:
+  upload:
+    path: ${FILE_UPLOAD_PATH:/data/uploads/}
+    server-url: ${FILE_SERVER_URL:https://api.yourdomain.com/api}

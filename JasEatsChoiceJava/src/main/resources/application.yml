@@ -96,6 +96,9 @@ spring.mvc:
     time: HH:mm:ss
   # 设置静态资源编码
   staticpath-pattern: /**
+  # AI流式接口允许更长的异步处理时间，避免长对话在默认超时后被回收
+  async:
+    request-timeout: 300000
 
 # MyBatis-Plus配置
 mybatis-plus:
@@ -177,14 +180,10 @@ id:
 
 # ==================== 智谱AI配置 ====================
 zhipuai:
-  # API密钥（从 https://open.bigmodel.cn/usercenter/apikeys 获取）
-  api-key: 03221a26791e408c8b90fc60153b21c8.cQtSYhnFrFEoT27u
-  # 文本模型选择（用于聊天、推荐等文本交互）
-  # glm-4-flash: 标准Flash版本，免费，速度快，并发限制中等（推荐）
-  # glm-4-air: 轻量级版本，免费，更低的并发限制
-  # glm-4: 标准版，需要付费，能力强
-  # glm-4-plus: 增强版，需要付费，能力最强
-  model: ${ZHIPU_MODEL:glm-4-flash}
+  # API密钥（建议通过环境变量 ZHIPU_API_KEY 注入，兼容旧名 ZHIPUAI_API_KEY）
+  api-key: ${ZHIPU_API_KEY:${ZHIPUAI_API_KEY:}}
+  # 文本推理模型：GLM-4.7
+  model: ${ZHIPU_MODEL:glm-4.7}
   # 视觉模型选择（用于菜品识别、图像理解）
   # glm-4.6v-flash: 支持视觉识别的免费模型（推荐用于菜品识别）
   vision-model: glm-4.6v-flash

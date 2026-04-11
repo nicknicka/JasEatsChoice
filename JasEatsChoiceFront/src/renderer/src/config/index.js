@@ -3,51 +3,34 @@
  * 统一管理所有配置项
  */
 
-// 环境判断
-const ENV = process.env.NODE_ENV || 'development'
-
-// 开发环境配置
-const development = {
-  baseURL: 'http://localhost:7777/api',
-  wsURL: 'ws://localhost:11277/ws',
-  wsChatURL: 'ws://localhost:11277/ws/chat',
-  uploadURL: 'http://localhost:7777/api/v1/upload',
-  imageCDN: '',
-  debug: true,
-  timeout: 30000,
-  enableLog: true
-}
-
-// 生产环境配置
-const production = {
-  baseURL: 'https://api.yourdomain.com',
-  wsURL: 'wss://api.yourdomain.com/ws',
-  wsChatURL: 'wss://api.yourdomain.com/ws/chat',
-  uploadURL: 'https://api.yourdomain.com/v1/upload',
-  imageCDN: 'https://cdn.yourdomain.com',
-  debug: false,
-  timeout: 30000,
-  enableLog: false
-}
-
-// 根据环境选择配置
-const envConfig = {
-  development,
-  production
-}[ENV] || development
-
-// WebSocket配置
-export const WS_CONFIG = {
-  url: envConfig.wsURL,
-  chatUrl: envConfig.wsChatURL
-}
-
 const getEnvValue = (name, fallback) => {
   if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[name]) {
     return import.meta.env[name]
   }
 
   return fallback
+}
+
+// 环境判断
+const ENV = process.env.NODE_ENV || 'development'
+const isProdEnv = ENV === 'production'
+
+// 根据环境变量生成配置，优先读取 .env.local / .env.production
+const envConfig = {
+  baseURL: getEnvValue('VITE_API_BASE_URL', isProdEnv ? 'https://api.yourdomain.com' : 'http://localhost:7777/api'),
+  wsURL: getEnvValue('VITE_WS_URL', isProdEnv ? 'wss://api.yourdomain.com/ws' : 'ws://localhost:11277/ws'),
+  wsChatURL: getEnvValue('VITE_WS_CHAT_URL', isProdEnv ? 'wss://api.yourdomain.com/ws/chat' : 'ws://localhost:11277/ws/chat'),
+  uploadURL: getEnvValue('VITE_UPLOAD_URL', isProdEnv ? 'https://api.yourdomain.com/v1/upload' : 'http://localhost:7777/api/v1/upload'),
+  imageCDN: getEnvValue('VITE_IMAGE_CDN', isProdEnv ? 'https://cdn.yourdomain.com' : ''),
+  debug: !isProdEnv,
+  timeout: 30000,
+  enableLog: !isProdEnv
+}
+
+// WebSocket配置
+export const WS_CONFIG = {
+  url: envConfig.wsURL,
+  chatUrl: envConfig.wsChatURL
 }
 
 // 高德地图API配置

@@ -1,12 +1,28 @@
 package com.xx.jaseatschoicejava.agent.config;
 
-import com.xx.jaseatschoicejava.agent.agents.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Scope;
+
+import com.xx.jaseatschoicejava.agent.agents.CardRendererAgent;
+import com.xx.jaseatschoicejava.agent.agents.CustomerServiceAgent;
+import com.xx.jaseatschoicejava.agent.agents.DishRecommendationAgent;
+import com.xx.jaseatschoicejava.agent.agents.LocationServiceAgent;
+import com.xx.jaseatschoicejava.agent.agents.MerchantInfoAgent;
+import com.xx.jaseatschoicejava.agent.agents.NutritionGuideAgent;
+import com.xx.jaseatschoicejava.agent.agents.OrderHelperAgent;
+import com.xx.jaseatschoicejava.agent.agents.TimeAwareAgent;
+import com.xx.jaseatschoicejava.agent.agents.UserPreferenceAgent;
+import com.xx.jaseatschoicejava.agent.tools.menu.MenuQueryTools;
 import com.xx.jaseatschoicejava.agent.tools.merchant.MerchantQueryTools;
 import com.xx.jaseatschoicejava.agent.tools.merchant.MerchantStatsTools;
-import com.xx.jaseatschoicejava.agent.tools.menu.MenuQueryTools;
 import com.xx.jaseatschoicejava.agent.tools.nutrition.CalorieCalculatorTools;
-import com.xx.jaseatschoicejava.agent.tools.nutrition.NutritionAnalysisTools;
 import com.xx.jaseatschoicejava.agent.tools.nutrition.DietRecordAnalysisTools;
+import com.xx.jaseatschoicejava.agent.tools.nutrition.NutritionAnalysisTools;
 import com.xx.jaseatschoicejava.agent.tools.nutrition.NutritionQueryTools;
 import com.xx.jaseatschoicejava.agent.tools.order.OrderCreateTools;
 import com.xx.jaseatschoicejava.agent.tools.order.OrderGuideTools;
@@ -14,29 +30,22 @@ import com.xx.jaseatschoicejava.agent.tools.order.OrderQueryTools;
 import com.xx.jaseatschoicejava.agent.tools.recommendation.RecommendationFilterTools;
 import com.xx.jaseatschoicejava.agent.tools.recommendation.RecommendationQueryTools;
 import com.xx.jaseatschoicejava.agent.tools.recommendation.RecommendationRankTools;
-import com.xx.jaseatschoicejava.agent.tools.system.LocationTools;
 import com.xx.jaseatschoicejava.agent.tools.system.LocationRecommendationTools;
-import com.xx.jaseatschoicejava.agent.tools.system.TimeTools;
+import com.xx.jaseatschoicejava.agent.tools.system.LocationTools;
 import com.xx.jaseatschoicejava.agent.tools.system.TimeRecommendationTools;
+import com.xx.jaseatschoicejava.agent.tools.system.TimeTools;
+import com.xx.jaseatschoicejava.agent.tools.user.HealthGoalTrackerTools;
 import com.xx.jaseatschoicejava.agent.tools.user.UserDietRecordTools;
 import com.xx.jaseatschoicejava.agent.tools.user.UserHealthGoalTools;
 import com.xx.jaseatschoicejava.agent.tools.user.UserPreferenceTools;
 import com.xx.jaseatschoicejava.agent.tools.user.UserProfileTools;
 import com.xx.jaseatschoicejava.agent.tools.user.UserQueryTools;
-import com.xx.jaseatschoicejava.agent.tools.user.HealthGoalTrackerTools;
 import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
+
 import dev.langchain4j.agentic.AgenticServices;
-import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.community.model.zhipu.ZhipuAiChatModel;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Scope;
-
+import dev.langchain4j.model.chat.ChatModel;
 import jakarta.annotation.PreDestroy;
 import jakarta.annotation.Resource;
 
@@ -149,11 +158,11 @@ public class LangChain4jConfig {
      */
     @Bean("supervisorModel")
     public ChatModel supervisorModel() {
-        log.info("初始化Supervisor专用模型，模型：glm-4-plus（含Markdown剥离包装）");
+        log.info("初始化Supervisor专用模型，模型：{}（含Markdown剥离包装）", zhipuAIConfig.getModel());
 
         ChatModel rawModel = ZhipuAiChatModel.builder()
                 .apiKey(zhipuAIConfig.getApiKey())
-                .model("glm-4-plus")
+            .model(zhipuAIConfig.getModel())
                 .temperature(0.3)
                 .maxToken(4096)
                 .maxRetries(1)
@@ -163,19 +172,31 @@ public class LangChain4jConfig {
     }
 
     /**
-     * 子Agent通用模型（快速响应）
-     * 使用glm-4-flash提供快速响应
+     * 通用AI模型
+     * 实际模型由 application.yml 中的 zhipuai.model 决定
      */
-    @Bean("agentModel")
-    public ChatModel agentModel() {
-        log.info("初始化子Agent通用模型，模型：glm-4-flash");
+    @Bean("aiModel")
+    public ChatModel aiModel() {
+        log.info("初始化通用AI模型，模型：{}", zhipuAIConfig.getModel());
 
         return ZhipuAiChatModel.builder()
                 .apiKey(zhipuAIConfig.getApiKey())
-                .model("glm-4-flash")
+                .model(zhipuAIConfig.getModel())
                 .temperature(0.7)
-                .maxRetries(1)
+                .maxRetries(2)
+                .connectTimeout(java.time.Duration.ofSeconds(60))
+                .readTimeout(java.time.Duration.ofSeconds(60))
                 .build();
+    }
+
+    /**
+     * 子Agent通用模型（兼容别名）
+     */
+    @Bean("agentModel")
+    @Deprecated
+    public ChatModel agentModel(@Qualifier("aiModel") ChatModel aiModel) {
+        log.info("初始化子Agent通用模型别名：agentModel -> aiModel");
+        return aiModel;
     }
 
     /**
@@ -184,15 +205,9 @@ public class LangChain4jConfig {
      */
     @Bean(destroyMethod = "")
     @Deprecated
-    public ChatModel chatLanguageModel() {
-        log.info("初始化兼容ChatModel，模型：{}", zhipuAIConfig.getModel());
-
-        return ZhipuAiChatModel.builder()
-                .apiKey(zhipuAIConfig.getApiKey())
-                .model(zhipuAIConfig.getModel())
-                .temperature(0.7)
-                .maxRetries(1)
-                .build();
+    public ChatModel chatLanguageModel(@Qualifier("aiModel") ChatModel aiModel) {
+        log.info("初始化兼容ChatModel别名：chatLanguageModel -> aiModel");
+        return aiModel;
     }
 
     /**
@@ -219,11 +234,11 @@ public class LangChain4jConfig {
      */
     @Bean
     @Scope("prototype")
-    public CustomerServiceAgent customerServiceAgent(ChatModel chatLanguageModel) {
+    public CustomerServiceAgent customerServiceAgent(@Qualifier("aiModel") ChatModel aiModel) {
         log.info("构建CustomerServiceAgent（客服助手）...");
 
         return dev.langchain4j.service.AiServices.builder(CustomerServiceAgent.class)
-                .chatModel(chatLanguageModel)
+                .chatModel(aiModel)
                 .build();
     }
 
@@ -232,11 +247,11 @@ public class LangChain4jConfig {
      */
     @Bean
     @Scope("prototype")
-    public UserPreferenceAgent userPreferenceAgent(@Qualifier("agentModel") ChatModel agentModel) {
+    public UserPreferenceAgent userPreferenceAgent(@Qualifier("aiModel") ChatModel aiModel) {
         log.info("构建UserPreferenceAgent...");
 
         return AgenticServices.agentBuilder(UserPreferenceAgent.class)
-                .chatModel(agentModel)
+                .chatModel(aiModel)
                 .chatMemory(MessageWindowChatMemory.withMaxMessages(20))
                 .name("UserPreferenceAgent")
                 .tools(userProfileTools, healthGoalTrackerTools, userQueryTools, userPreferenceTools, userHealthGoalTools)
@@ -248,11 +263,11 @@ public class LangChain4jConfig {
      */
     @Bean
     @Scope("prototype")
-    public NutritionGuideAgent nutritionGuideAgent(@Qualifier("agentModel") ChatModel agentModel) {
+    public NutritionGuideAgent nutritionGuideAgent(@Qualifier("aiModel") ChatModel aiModel) {
         log.info("构建NutritionGuideAgent...");
 
         return AgenticServices.agentBuilder(NutritionGuideAgent.class)
-                .chatModel(agentModel)
+                .chatModel(aiModel)
                 .chatMemory(MessageWindowChatMemory.withMaxMessages(20))
                 .name("NutritionGuideAgent")
                 .tools(nutritionQueryTools, nutritionAnalysisTools, calorieCalculatorTools, dietRecordAnalysisTools, userDietRecordTools)
@@ -264,11 +279,11 @@ public class LangChain4jConfig {
      */
     @Bean
     @Scope("prototype")
-    public DishRecommendationAgent dishRecommendationAgent(@Qualifier("agentModel") ChatModel agentModel) {
+    public DishRecommendationAgent dishRecommendationAgent(@Qualifier("aiModel") ChatModel aiModel) {
         log.info("构建DishRecommendationAgent...");
 
         return AgenticServices.agentBuilder(DishRecommendationAgent.class)
-                .chatModel(agentModel)
+                .chatModel(aiModel)
                 .chatMemory(MessageWindowChatMemory.withMaxMessages(20))
                 .name("DishRecommendationAgent")
                 .tools(recommendationQueryTools, recommendationFilterTools, recommendationRankTools, createMenuQueryTools())
@@ -280,11 +295,11 @@ public class LangChain4jConfig {
      */
     @Bean
     @Scope("prototype")
-    public MerchantInfoAgent merchantInfoAgent(@Qualifier("agentModel") ChatModel agentModel) {
+    public MerchantInfoAgent merchantInfoAgent(@Qualifier("aiModel") ChatModel aiModel) {
         log.info("构建MerchantInfoAgent...");
 
         return AgenticServices.agentBuilder(MerchantInfoAgent.class)
-                .chatModel(agentModel)
+                .chatModel(aiModel)
                 .chatMemory(MessageWindowChatMemory.withMaxMessages(20))
                 .name("MerchantInfoAgent")
                 .tools(merchantQueryTools, merchantStatsTools)
@@ -296,11 +311,11 @@ public class LangChain4jConfig {
      */
     @Bean
     @Scope("prototype")
-    public TimeAwareAgent timeAwareAgent(@Qualifier("agentModel") ChatModel agentModel) {
+    public TimeAwareAgent timeAwareAgent(@Qualifier("aiModel") ChatModel aiModel) {
         log.info("构建TimeAwareAgent...");
 
         return AgenticServices.agentBuilder(TimeAwareAgent.class)
-                .chatModel(agentModel)
+                .chatModel(aiModel)
                 .chatMemory(MessageWindowChatMemory.withMaxMessages(20))
                 .name("TimeAwareAgent")
                 .tools(timeTools, timeRecommendationTools)
@@ -312,11 +327,11 @@ public class LangChain4jConfig {
      */
     @Bean
     @Scope("prototype")
-    public LocationServiceAgent locationServiceAgent(ChatModel chatLanguageModel) {
+    public LocationServiceAgent locationServiceAgent(@Qualifier("aiModel") ChatModel aiModel) {
         log.info("构建LocationServiceAgent...");
 
         return AgenticServices.agentBuilder(LocationServiceAgent.class)
-                .chatModel(chatLanguageModel)
+                .chatModel(aiModel)
                 .chatMemory(MessageWindowChatMemory.withMaxMessages(20))
                 .name("LocationServiceAgent")
                 .tools(createLocationTools(), locationRecommendationTools)
@@ -328,11 +343,11 @@ public class LangChain4jConfig {
      */
     @Bean
     @Scope("prototype")
-    public OrderHelperAgent orderHelperAgent(@Qualifier("agentModel") ChatModel agentModel) {
+    public OrderHelperAgent orderHelperAgent(@Qualifier("aiModel") ChatModel aiModel) {
         log.info("构建OrderHelperAgent...");
 
         return AgenticServices.agentBuilder(OrderHelperAgent.class)
-                .chatModel(agentModel)
+                .chatModel(aiModel)
                 .chatMemory(MessageWindowChatMemory.withMaxMessages(20))
                 .name("OrderHelperAgent")
                 .tools(createOrderQueryTools(), createOrderCreateTools(), createOrderGuideTools())
@@ -345,11 +360,11 @@ public class LangChain4jConfig {
      */
     @Bean
     @Scope("prototype")
-    public CardRendererAgent cardRendererAgent(ChatModel chatLanguageModel) {
+    public CardRendererAgent cardRendererAgent(@Qualifier("aiModel") ChatModel aiModel) {
         log.info("构建CardRendererAgent（L1 Agent）...");
 
         return AgenticServices.agentBuilder(CardRendererAgent.class)
-                .chatModel(chatLanguageModel)
+                .chatModel(aiModel)
                 .name("CardRendererAgent")
                 .description("消息格式化专家，将结果渲染为卡片格式")
                 .build();
@@ -422,7 +437,7 @@ public class LangChain4jConfig {
             java.lang.reflect.Field field = target.getClass().getDeclaredField(fieldName);
             field.setAccessible(true);
             field.set(target, value);
-        } catch (Exception e) {
+        } catch (NoSuchFieldException | IllegalAccessException e) {
             log.error("设置字段失败: {} = {}", fieldName, value, e);
         }
     }

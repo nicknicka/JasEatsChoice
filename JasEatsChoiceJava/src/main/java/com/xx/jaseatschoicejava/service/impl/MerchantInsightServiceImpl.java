@@ -1,25 +1,35 @@
 package com.xx.jaseatschoicejava.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.xx.jaseatschoicejava.dto.*;
-import com.xx.jaseatschoicejava.entity.Dish;
-import com.xx.jaseatschoicejava.entity.Order;
-import com.xx.jaseatschoicejava.entity.OrderDish;
-import com.xx.jaseatschoicejava.entity.Review;
-import com.xx.jaseatschoicejava.service.*;
-import dev.langchain4j.data.message.AiMessage;
-import dev.langchain4j.model.chat.ChatModel;
-import dev.langchain4j.model.output.Response;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.stereotype.Service;
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Service;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.xx.jaseatschoicejava.dto.AiSuggestionDTO;
+import com.xx.jaseatschoicejava.dto.InsightMetricsDTO;
+import com.xx.jaseatschoicejava.dto.RatingDistributionDTO;
+import com.xx.jaseatschoicejava.dto.SalesTrendItemDTO;
+import com.xx.jaseatschoicejava.dto.TopDishDTO;
+import com.xx.jaseatschoicejava.entity.Dish;
+import com.xx.jaseatschoicejava.entity.Order;
+import com.xx.jaseatschoicejava.entity.OrderDish;
+import com.xx.jaseatschoicejava.entity.Review;
+import com.xx.jaseatschoicejava.service.DishService;
+import com.xx.jaseatschoicejava.service.MerchantInsightService;
+import com.xx.jaseatschoicejava.service.OrderDishService;
+import com.xx.jaseatschoicejava.service.OrderService;
+import com.xx.jaseatschoicejava.service.ReviewService;
+
+import dev.langchain4j.model.chat.ChatModel;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 商家经营洞察服务实现
@@ -39,12 +49,12 @@ public class MerchantInsightServiceImpl implements MerchantInsightService {
             OrderDishService orderDishService,
             DishService dishService,
             ReviewService reviewService,
-            @Qualifier("agentModel") ChatModel agentModel) {
+            @Qualifier("aiModel") ChatModel aiModel) {
         this.orderService = orderService;
         this.orderDishService = orderDishService;
         this.dishService = dishService;
         this.reviewService = reviewService;
-        this.agentModel = agentModel;
+        this.agentModel = aiModel;
     }
 
     @Override

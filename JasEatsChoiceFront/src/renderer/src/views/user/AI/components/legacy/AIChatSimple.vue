@@ -64,6 +64,7 @@
 import { ref, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Loading, ChatDotRound } from '@element-plus/icons-vue'
+import { WELCOME_MESSAGE } from '../../../../../config/chatConfig'
 
 // 状态
 const messages = ref([])
@@ -80,7 +81,7 @@ const loadMessages = () => {
       {
         id: 1,
         sender: 'ai',
-        content: '您好！我是您的AI饮食助手。有什么可以帮您的吗？',
+        content: WELCOME_MESSAGE,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         avatar: '🤖'
       }

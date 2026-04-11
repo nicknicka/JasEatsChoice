@@ -5,6 +5,10 @@
         "/^cd /Users/nickxiao/JasEatsChoice/JasEatsChoiceJava && \\./mvnw -q -DskipTests compile$/": {
             "approve": true,
             "matchCommandLine": true
+        },
+        "/^\\./mvnw -q -DskipTests compile$/": {
+            "approve": true,
+            "matchCommandLine": true
         }
     }
 }

@@ -1,11 +1,13 @@
 package com.xx.jaseatschoicejava.service.impl;
 
-import com.xx.jaseatschoicejava.dto.DishDescriptionRequestDTO;
-import com.xx.jaseatschoicejava.service.DishDescriptionService;
-import dev.langchain4j.model.chat.ChatModel;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
+
+import com.xx.jaseatschoicejava.dto.DishDescriptionRequestDTO;
+import com.xx.jaseatschoicejava.service.DishDescriptionService;
+
+import dev.langchain4j.model.chat.ChatModel;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 菜品描述生成服务实现
@@ -16,8 +18,8 @@ public class DishDescriptionServiceImpl implements DishDescriptionService {
 
     private final ChatModel agentModel;
 
-    public DishDescriptionServiceImpl(@Qualifier("agentModel") ChatModel agentModel) {
-        this.agentModel = agentModel;
+    public DishDescriptionServiceImpl(@Qualifier("aiModel") ChatModel aiModel) {
+        this.agentModel = aiModel;
     }
 
     @Override
