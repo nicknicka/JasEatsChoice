@@ -60,32 +60,26 @@
       <!-- 优化中动画 -->
       <Transition name="process-reveal">
         <div v-if="optimizationLoading" class="optimization-process">
-          <div class="process-track">
-            <div class="process-line">
-              <div class="process-fill" :style="{ width: processProgress + '%' }"></div>
+          <!-- 平滑进度条 -->
+          <div class="progress-bar-wrapper">
+            <div class="progress-bar-track">
+              <div class="progress-bar-fill" :style="{ width: smoothProgress + '%' }"></div>
+              <div class="progress-bar-glow" :style="{ left: smoothProgress + '%' }"></div>
+            </div>
+            <span class="progress-percent">{{ Math.round(smoothProgress) }}%</span>
+          </div>
+          <!-- 动态状态文字 -->
+          <div class="progress-status">
+            <div class="status-indicator">
+              <span class="status-dot"></span>
+              <span class="status-text">{{ progressStatus }}</span>
+            </div>
+            <div class="thinking-dots" v-if="smoothProgress < 95">
+              <span class="dot"></span>
+              <span class="dot"></span>
+              <span class="dot"></span>
             </div>
           </div>
-          <div class="process-steps">
-            <div
-              v-for="(step, index) in processSteps"
-              :key="index"
-              class="process-step"
-              :class="{ active: loadingStep >= index + 1, current: loadingStep === index + 1 }"
-            >
-              <div class="step-indicator">
-                <span class="step-ring"></span>
-                <span class="step-dot"></span>
-                <span class="step-icon">{{ step.icon }}</span>
-              </div>
-              <span class="step-label">{{ step.label }}</span>
-            </div>
-          </div>
-          <!-- 流式预览：实时展示AI生成内容 -->
-          <Transition name="fade">
-            <div v-if="streamingText" class="streaming-preview">
-              <pre class="streaming-content">{{ streamingText }}<span class="cursor-blink">|</span></pre>
-            </div>
-          </Transition>
         </div>
       </Transition>
 
@@ -203,7 +197,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, onUnmounted } from "vue";
 import { Loading, DocumentCopy, FolderAdd } from "@element-plus/icons-vue";
 import { ElMessage } from "element-plus";
 import axios from "axios";
@@ -223,21 +217,62 @@ const userStore = useUserStore();
 const originalRecipe = ref("");
 const optimizedRecipe = ref(null);
 const optimizationLoading = ref(false);
-const loadingStep = ref(0);
 const savingRecipe = ref(false);
-const streamingText = ref("");
 
-// 处理步骤
-const processSteps = [
-  { icon: '🔍', label: '分析食谱' },
-  { icon: '🧠', label: 'AI优化' },
-  { icon: '✨', label: '生成结果' }
-];
+// 平滑进度相关
+const smoothProgress = ref(0);
+const progressStatus = ref("");
+let progressTimer = null;
 
-// 进度百分比
-const processProgress = computed(() => {
-  return (loadingStep.value / processSteps.length) * 100;
+// 清理定时器
+onUnmounted(() => {
+  if (progressTimer) {
+    clearInterval(progressTimer);
+    progressTimer = null;
+  }
 });
+
+/**
+ * 启动平滑进度动画
+ * - 0~15%: 快速推进（分析阶段，实际很快）
+ * - 15~85%: 缓慢推进（AI生成阶段，耗时最长）
+ * - 85~95%: 极慢推进（等待结果返回）
+ * - 100%: 由完成事件直接设置
+ */
+const startSmoothProgress = () => {
+  smoothProgress.value = 0;
+  progressStatus.value = "正在分析食谱内容...";
+
+  progressTimer = setInterval(() => {
+    if (smoothProgress.value < 15) {
+      // 分析阶段：快速推进
+      smoothProgress.value += 2;
+    } else if (smoothProgress.value < 85) {
+      // AI生成阶段：缓慢推进（约20秒走完70%）
+      smoothProgress.value += 0.3;
+    } else if (smoothProgress.value < 95) {
+      // 等待结果阶段：极慢推进
+      smoothProgress.value += 0.05;
+    }
+    smoothProgress.value = Math.min(smoothProgress.value, 95);
+
+    // 根据进度更新状态文字
+    if (smoothProgress.value >= 15 && smoothProgress.value < 85) {
+      progressStatus.value = "AI 正在精心优化您的食谱...";
+    } else if (smoothProgress.value >= 85) {
+      progressStatus.value = "正在生成优化结果...";
+    }
+  }, 200);
+};
+
+const stopSmoothProgress = () => {
+  if (progressTimer) {
+    clearInterval(progressTimer);
+    progressTimer = null;
+  }
+  smoothProgress.value = 100;
+  progressStatus.value = "优化完成";
+};
 
 /**
  * 复制到剪贴板
@@ -366,15 +401,7 @@ const optimizeRecipe = async () => {
   }
 
   optimizationLoading.value = true;
-  loadingStep.value = 0;
-  streamingText.value = "";
-
-  // 进度消息到步骤编号的映射
-  const progressToStepMap = {
-    '分析食谱': 1,
-    '调用AI': 2,
-    '生成优化结果': 3,
-  };
+  startSmoothProgress();
 
   try {
     const response = await fetch(API_CONFIG.baseURL + API_CONFIG.ai.recipeStream, {
@@ -406,26 +433,20 @@ const optimizeRecipe = async () => {
         const parsedData = parseSSELine(line);
         if (!parsedData) continue;
 
-        // 流式token事件：累积展示AI生成内容
+        // 流式token事件：静默接收
         if (parsedData.streaming === true && parsedData.content) {
-          streamingText.value += parsedData.content;
           continue;
         }
 
-        // 进度事件：推进步骤指示器
+        // 进度事件：同步状态文字（进度条由定时器驱动）
         if (parsedData.progress === true && parsedData.content) {
-          for (const [keyword, step] of Object.entries(progressToStepMap)) {
-            if (parsedData.content.includes(keyword)) {
-              loadingStep.value = step;
-              break;
-            }
-          }
+          progressStatus.value = parsedData.content;
           continue;
         }
 
         // 完成事件：包含食谱数据
         if (parsedData.done === true && parsedData.recipes) {
-          loadingStep.value = 3;
+          stopSmoothProgress();
           const backendRecipes = parsedData.recipes;
           if (backendRecipes.length > 0) {
             const firstRecipe = backendRecipes[0];
@@ -465,11 +486,10 @@ const optimizeRecipe = async () => {
     };
     ElMessage.error(handleApiError(error));
   } finally {
-    loadingStep.value = 3;
-    streamingText.value = "";
+    stopSmoothProgress();
     setTimeout(() => {
       optimizationLoading.value = false;
-    }, 500);
+    }, 600);
   }
 };
 </script>
@@ -684,124 +704,111 @@ const optimizeRecipe = async () => {
   border: 1px solid @nordic-border;
 }
 
-.process-track {
-  margin-bottom: 24px;
+// ===== 平滑进度条 =====
+.progress-bar-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 14px;
 }
 
-.process-line {
-  height: 4px;
+.progress-bar-track {
+  flex: 1;
+  height: 8px;
   background: @nordic-divider;
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.process-fill {
-  height: 100%;
-  border-radius: 2px;
-  background: linear-gradient(90deg, @nordic-green, @nordic-accent);
-  transition: width 0.5s ease;
-}
-
-.process-steps {
-  display: flex;
-  justify-content: space-between;
-}
-
-.process-step {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  opacity: 0.35;
-  transition: all 0.4s ease;
-
-  &.active {
-    opacity: 1;
-  }
-
-  &.current {
-    .step-indicator {
-      transform: scale(1.1);
-    }
-
-    .step-ring {
-      animation: ringPulse 1.5s ease-in-out infinite;
-    }
-
-    .step-icon {
-      animation: iconBounce 0.8s ease-in-out infinite;
-    }
-  }
-}
-
-.step-indicator {
+  border-radius: 4px;
+  overflow: visible;
   position: relative;
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.3s ease;
 }
 
-.step-ring {
-  position: absolute;
-  inset: 0;
-  border: 2px solid @nordic-green;
-  border-radius: 50%;
-  opacity: 0.3;
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, @nordic-green, @nordic-accent);
+  transition: width 0.4s ease-out;
 }
 
-.step-dot {
+.progress-bar-glow {
   position: absolute;
+  top: -2px;
   width: 12px;
   height: 12px;
-  background: @nordic-green;
   border-radius: 50%;
+  background: @nordic-green;
+  box-shadow: 0 0 12px rgba(123, 174, 127, 0.5);
+  transition: left 0.4s ease-out;
+  transform: translateX(-50%);
 }
 
-.step-icon {
-  position: relative;
-  font-size: 20px;
-  z-index: 1;
+.progress-percent {
+  font-size: 14px;
+  font-weight: 700;
+  color: @nordic-green;
+  min-width: 36px;
+  text-align: right;
 }
 
-.step-label {
-  font-size: 12px;
-  font-weight: 600;
+// ===== 状态文字 =====
+.progress-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 18px;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: @nordic-green;
+  animation: statusPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes statusPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+.status-text {
+  font-size: 13px;
+  font-weight: 500;
   color: @nordic-text-secondary;
 }
 
-// ===== 流式预览 =====
-.streaming-preview {
-  margin-top: 16px;
-  padding: 12px 16px;
-  background: @nordic-surface;
-  border-radius: 8px;
-  border: 1px solid @nordic-border;
-  max-height: 120px;
-  overflow-y: auto;
+.thinking-dots {
+  display: flex;
+  gap: 4px;
 }
 
-.streaming-content {
-  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
-  font-size: 12px;
-  line-height: 1.5;
-  color: @nordic-text-secondary;
-  margin: 0;
-  white-space: pre-wrap;
-  word-break: break-all;
+.thinking-dots .dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: @nordic-green;
+  animation: dotPulse 1.4s ease-in-out infinite;
+
+  &:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+  &:nth-child(3) {
+    animation-delay: 0.4s;
+  }
 }
 
-.cursor-blink {
-  animation: cursorBlink 1s step-end infinite;
-  color: @nordic-accent;
-  font-weight: bold;
-}
-
-@keyframes cursorBlink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
+@keyframes dotPulse {
+  0%, 80%, 100% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 // ===== 过渡动画 =====
@@ -810,16 +817,6 @@ const optimizeRecipe = async () => {
 }
 .fade-enter-from, .fade-leave-to {
   opacity: 0;
-}
-
-@keyframes ringPulse {
-  0%, 100% { transform: scale(1); opacity: 0.3; }
-  50% { transform: scale(1.2); opacity: 0.5; }
-}
-
-@keyframes iconBounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-3px); }
 }
 
 // ===== 优化结果 =====

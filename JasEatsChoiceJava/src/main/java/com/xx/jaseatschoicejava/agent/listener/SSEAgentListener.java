@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,11 +37,16 @@ public class SSEAgentListener implements AgentListener {
     private final SseEmitter emitter;
     private final ObjectMapper objectMapper;
     private final String userId;
+    private final String originalUserMessage;
     private volatile boolean emitterFailed = false;
 
-    public SSEAgentListener(SseEmitter emitter, String userId) {
+    // 去重：记录已发送的事件签名（agentId + eventType），防止重复推送
+    private final Set<String> sentEventKeys = new HashSet<>();
+
+    public SSEAgentListener(SseEmitter emitter, String userId, String originalUserMessage) {
         this.emitter = emitter;
         this.userId = userId;
+        this.originalUserMessage = originalUserMessage;
         this.objectMapper = new ObjectMapper();
     }
 
@@ -187,6 +194,11 @@ public class SSEAgentListener implements AgentListener {
             log.info("🔑 [AgenticScope] 已写入userId: {}", userId);
         }
 
+        if (originalUserMessage != null && !originalUserMessage.isEmpty()) {
+            scope.writeState("originalUserMessage", originalUserMessage);
+            scope.writeState("preferenceWriteAllowed", String.valueOf(isExplicitPreferenceUpdateRequest(originalUserMessage)));
+        }
+
         // ========== 【用户友好消息】发送任务开始提示 ==========
         event.setMessage("正在为您处理...");
         event.setTimestamp(System.currentTimeMillis());
@@ -313,8 +325,26 @@ public class SSEAgentListener implements AgentListener {
 
     @Override
     public boolean inheritedBySubagents() {
-        // 监听器继承到子Agent
-        return true;
+        // 不继承到子Agent，避免 Supervisor 层和子 Agent 层重复触发同一事件
+        return false;
+    }
+
+    private boolean isExplicitPreferenceUpdateRequest(String message) {
+        if (message == null) {
+            return false;
+        }
+
+        String normalized = message.replaceAll("\\s+", "");
+        return normalized.contains("修改偏好")
+                || normalized.contains("更新偏好")
+                || normalized.contains("设置偏好")
+                || normalized.contains("调整偏好")
+                || normalized.contains("修改忌口")
+                || normalized.contains("设置忌口")
+                || normalized.contains("更新忌口")
+                || normalized.contains("修改过敏")
+                || normalized.contains("添加过敏")
+                || normalized.contains("更新资料");
     }
 
     /**
@@ -329,30 +359,37 @@ public class SSEAgentListener implements AgentListener {
             return;
         }
 
+        // 去重保护：同一 agentId + eventType 只发送一次
+        String eventKey = event.getAgentId() + ":" + type.name();
+        if (!sentEventKeys.add(eventKey)) {
+            log.debug("⏭️ [SSE] 跳过重复事件: key={}", eventKey);
+            return;
+        }
+
         event.setEventType(type.name());
 
         long startTime = System.currentTimeMillis();
         try {
             String eventData = objectMapper.writeValueAsString(event);
 
-            // ========== 【详细日志】发送前记录完整数据 ==========
-            log.info("==================== SSE事件发送开始 ====================");
-            log.info("📤 [SSE] 事件类型: {}", type.name());
-            log.info("📤 [SSE] 事件时间: {}", new java.util.Date());
-            log.info("📤 [SSE] 数据长度: {} 字符", eventData.length());
-            log.info("📤 [SSE] 完整数据:");
-            log.info("─ 开始 ({} 字符) ─", eventData.length());
-            log.info(eventData);
-            log.info("─ 结束 ─");
-            log.info("📤 [SSE] Event对象详情:");
-            log.info("   - agentName: {}", event.getAgentName());
-            log.info("   - message: {}", event.getMessage());
-            log.info("   - isProgress: {}", event.isProgress());
-            log.info("   - timestamp: {}", event.getTimestamp());
-            log.info("   - toolName: {}", event.getToolName());
-            log.info("   - inputs: {}", event.getInputs() != null ? event.getInputs().substring(0, Math.min(100, event.getInputs().length())) + "..." : "null");
-            log.info("   - output: {}", event.getOutput() != null ? event.getOutput().substring(0, Math.min(100, event.getOutput().length())) + "..." : "null");
-            log.info("=====================================================");
+            // ========== 【详细日志】降为DEBUG，减少生产环境噪音 ==========
+            log.debug("==================== SSE事件发送开始 ====================");
+            log.debug("📤 [SSE] 事件类型: {}", type.name());
+            log.debug("📤 [SSE] 事件时间: {}", new java.util.Date());
+            log.debug("📤 [SSE] 数据长度: {} 字符", eventData.length());
+            log.debug("📤 [SSE] 完整数据:");
+            log.debug("─ 开始 ({} 字符) ─", eventData.length());
+            log.debug(eventData);
+            log.debug("─ 结束 ─");
+            log.debug("📤 [SSE] Event对象详情:");
+            log.debug("   - agentName: {}", event.getAgentName());
+            log.debug("   - message: {}", event.getMessage());
+            log.debug("   - isProgress: {}", event.isProgress());
+            log.debug("   - timestamp: {}", event.getTimestamp());
+            log.debug("   - toolName: {}", event.getToolName());
+            log.debug("   - inputs: {}", event.getInputs() != null ? event.getInputs().substring(0, Math.min(100, event.getInputs().length())) + "..." : "null");
+            log.debug("   - output: {}", event.getOutput() != null ? event.getOutput().substring(0, Math.min(100, event.getOutput().length())) + "..." : "null");
+            log.debug("=====================================================");
 
             // ✅ 统一使用 "message" 事件名，前端才能接收
             emitter.send(SseEmitter.event()
@@ -360,7 +397,7 @@ public class SSEAgentListener implements AgentListener {
                     .data(eventData));
 
             long duration = System.currentTimeMillis() - startTime;
-            log.info("✅ [SSE] 事件发送成功: type={}, 耗时={}ms", type.name(), duration);
+            log.debug("✅ [SSE] 事件发送成功: type={}, 耗时={}ms", type.name(), duration);
         } catch (IOException e) {
             emitterFailed = true;
             long duration = System.currentTimeMillis() - startTime;

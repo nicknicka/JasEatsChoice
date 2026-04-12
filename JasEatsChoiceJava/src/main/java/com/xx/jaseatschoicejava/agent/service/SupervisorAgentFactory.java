@@ -118,9 +118,64 @@ public class SupervisorAgentFactory {
                 .listener(listener)
                 .supervisorContext(createSupervisorContext())
                 .contextGenerationStrategy(dev.langchain4j.agentic.supervisor.SupervisorContextStrategy.CHAT_MEMORY_AND_SUMMARIZATION)
-                .responseStrategy(dev.langchain4j.agentic.supervisor.SupervisorResponseStrategy.SCORED)
-                .maxAgentsInvocations(5)  
+                .responseStrategy(dev.langchain4j.agentic.supervisor.SupervisorResponseStrategy.LAST)
+                .maxAgentsInvocations(3)
                 .build();
+    }
+
+    /**
+     * 创建简化版SupervisorAgent（用于重试降级）
+     *
+     * 使用更简短的supervisorContext，限制最多调用1个子Agent，
+     * 降低LLM输出复杂度和JSON截断风险
+     *
+     * @param listener Agent监听器（可为null，降级场景不发送进度事件）
+     * @param userId 用户ID
+     * @return 简化版SupervisorAgent实例
+     */
+    public SupervisorAgent createRetryAgent(AgentListener listener, String userId) {
+        log.debug("创建简化版SupervisorAgent（降级重试），userId={}", userId);
+
+        return AgenticServices
+                .supervisorBuilder()
+                .chatModel(supervisorModel)
+                .chatMemoryProvider(memoryId -> chatMemoryFactory.createChatMemory(userId))
+                .name("SupervisorAgent-Retry")
+                .description("降级重试调度代理")
+                .subAgents(
+                    dishRecommendationAgent,
+                    userPreferenceAgent,
+                    nutritionGuideAgent
+                )
+                .outputKey("supervisorResult")
+                .listener(listener)
+                .supervisorContext(createRetrySupervisorContext())
+                .contextGenerationStrategy(dev.langchain4j.agentic.supervisor.SupervisorContextStrategy.CHAT_MEMORY_AND_SUMMARIZATION)
+                .responseStrategy(dev.langchain4j.agentic.supervisor.SupervisorResponseStrategy.LAST)
+                .maxAgentsInvocations(1)
+                .build();
+    }
+
+    /**
+     * 简化版SupervisorContext（用于降级重试）
+     *
+     * 只保留核心路由规则，严格限制输出格式，
+     * 最大限度降低JSON截断风险
+     */
+    private String createRetrySupervisorContext() {
+        return """
+            你是调度代理，只选择一个最合适的Agent处理用户请求。
+
+            路由规则：
+            - 推荐菜品 → DishRecommendationAgent
+            - 偏好/忌口 → UserPreferenceAgent
+            - 营养/健康 → NutritionGuideAgent
+
+            严格约束：
+            - 只调用1个Agent
+            - arguments.userMessage不超过20个字，只传递用户意图，禁止生成任何推荐或回答内容
+            - 禁止在userMessage中列举菜品名称
+            """;
     }
 
     /**
@@ -135,58 +190,46 @@ public class SupervisorAgentFactory {
      */
     private String createSupervisorContext() {
         return """
-            你是"佳食宜选"的L2智能调度代理，负责为用户选择合适的L1专家Agent解决问题。
+            你是"佳食宜选"智能调度代理。你的唯一职责是：选择最合适的子Agent，并把用户意图转发给它。
 
-            ## 🎯 核心职责
-            1. **意图识别**：理解用户真实需求
-            2. **智能路由**：选择最合适的Agent，避免不必要调用
-            3. **任务规划**：分解复杂任务，协调多Agent协作
-            4. **结果整合**：整合Agent返回结果，形成连贯回复
-            5. **终止判断**：及时停止Agent调用，避免过度调用
+            ## 你的角色边界（严格遵守）
+            - 你只做"路由决策"，不做"内容生成"
+            - 你绝不能自己生成推荐、建议、菜品列表或任何回答内容
+            - 你只输出一个JSON：选择哪个Agent、传什么意图给它
 
-            ## 🤖 L1专家Agent列表
+            ## 路由规则（按优先级匹配）
 
-            **1. DishRecommendationAgent（菜品推荐）**
-            - 个性化推荐、智能搜索、菜品对比、时段推荐
-            - 适用：任何涉及菜品/食物/饮食推荐的问题
+            ### 复合意图（必须按顺序调用多个Agent）
+            1. 涉及"口味推荐"、"根据我的偏好推荐"、"适合我的菜"等推荐+偏好请求：
+               → 先调用 UserPreferenceAgent 获取偏好，再调用 DishRecommendationAgent 推荐菜品
+            2. 涉及"营养推荐"、"健康饮食"等营养+推荐请求：
+               → 先调用 NutritionGuideAgent 获取营养建议，再调用 DishRecommendationAgent 推荐菜品
 
-            **2. NutritionGuideAgent（营养指导）**
-            - 营养成分分析、热量计算、饮食记录分析
-            - 适用：营养分析、热量查询、饮食健康
+            ### 单一意图（只调用1个Agent）
+            - 纯菜品/食物推荐（上下文已有偏好数据）→ DishRecommendationAgent
+            - 纯偏好/忌口/过敏设置 → UserPreferenceAgent
+            - 纯营养/热量/健康咨询 → NutritionGuideAgent
+            - 订单/催单/配送 → OrderHelperAgent
+            - 商家/餐厅信息 → MerchantInfoAgent
+            - 时段/三餐搭配 → TimeAwareAgent
+            - 附近/距离/位置 → LocationServiceAgent
 
-            **3. OrderHelperAgent（订单辅助）**
-            - 订单查询追踪、订单管理
-            - 适用：订单状态、订单历史、催单
+            ## 禁止行为
+            1. 禁止把子Agent的追问当成新的主任务继续分发
+            2. 禁止重复调用同一个Agent
+            3. 禁止编造数据，所有数据必须来自工具调用结果
+            4. 单轮请求最多调用3个Agent
+            5. 推荐完成后必须立即结束，不得在推荐之后继续调用偏好修改、资料优化或其他Agent
+            6. 禁止在arguments.userMessage中生成推荐内容、菜品列表、建议或回答
 
-            **4. MerchantInfoAgent（商家信息）**
-            - 商家查询、搜索筛选、营业时间
-            - 适用：找餐厅、商家信息、附近商家
+            ## JSON格式要求
+            1. response字段中禁止未转义双引号，用《》替代，如《宫保鸡丁》
+            2. arguments.userMessage只能是用户意图的简短转述，不超过30个字，禁止包含具体菜品名称
 
-            **5. TimeAwareAgent（时段推荐）**
-            - 时段判断、时段推荐
-            - 适用：早午晚餐推荐、当前时段适合吃什么
-
-            **6. LocationServiceAgent（位置服务）**
-            - 位置查询、附近商家推荐
-            - 适用：附近有什么吃的、距离查询
-
-            **7. UserPreferenceAgent（用户偏好）**
-            - 用户资料、饮食偏好、健康目标
-            - 适用：查看/修改个人偏好、健康目标进度
-
-            ## 📝 输出格式
-            - 基于Agent返回的真实数据组织自然语言回复
-            - 如有结构化数据，用markdown代码块呈现
-            - 友好、简洁，直击用户需求
-
-            ## ⚠️ 重要提醒
-            - 必须使用工具获取真实数据，不能编造
-            - 理解上下文，结合对话历史
-
-            ## ⚠️ JSON格式严格要求（避免解析崩溃）
-            在返回done响应时，response字段值中绝对不能包含未转义的双引号(")。
-            - 如需引用菜品名称，使用《》替代，例如：《宫保鸡丁》
-            - 如需表示引述，使用单引号''替代
+            ## 输出正反示例
+            正确: {"agentName":"DishRecommendationAgent","arguments":{"userMessage":"根据用户口味推荐菜品"}}
+            正确: {"agentName":"UserPreferenceAgent","arguments":{"userMessage":"查询用户饮食偏好"}}
+            错误: {"agentName":"DishRecommendationAgent","arguments":{"userMessage":"推荐：蒜蓉西兰花、清炒时蔬、蒜香排骨...这些菜品口感清淡，营养丰富"}}（禁止生成推荐内容）
             """;
     }
 
@@ -294,14 +337,16 @@ public class SupervisorAgentFactory {
         // ========== 【移除 JSON 格式要求】 ==========
 
         // 6. 移除 "You must answer strictly in the following JSON format" 及后续内容
-        cleaned = cleaned.replace(
-            "You must answer strictly in the following JSON format:\n" +
-            "  {\n" +
-            "\"agentName\": (type: string),\n" +
-            "\"arguments\": (type: java.util.Map<java.lang.String, java.lang.Object>)\n" +
-            "}\n",
-            ""
-        );
+                cleaned = cleaned.replace(
+                        """
+                        You must answer strictly in the following JSON format:
+                            {
+                        "agentName": (type: string),
+                        "arguments": (type: java.util.Map<java.lang.String, java.lang.Object>)
+                        }
+                        """,
+                        ""
+                );
 
         // 7. 移除 "The user request is:" 行
         cleaned = cleaned.replaceAll("The user request is: '.*?'\\.\n", "");

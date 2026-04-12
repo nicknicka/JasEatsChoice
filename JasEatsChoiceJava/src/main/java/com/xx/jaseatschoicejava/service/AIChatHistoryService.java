@@ -1,20 +1,22 @@
 package com.xx.jaseatschoicejava.service;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.xx.jaseatschoicejava.entity.AIChatHistory;
-import com.xx.jaseatschoicejava.mapper.AIChatHistoryMapper;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
-
-import jakarta.annotation.Resource;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.xx.jaseatschoicejava.entity.AIChatHistory;
+import com.xx.jaseatschoicejava.mapper.AIChatHistoryMapper;
+
+import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * AI聊天历史服务类

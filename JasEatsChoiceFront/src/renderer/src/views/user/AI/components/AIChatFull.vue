@@ -1422,11 +1422,16 @@ onUnmounted(() => {
 			}
 
 			.message-text {
+				display: block;
+				width: fit-content;
 				max-width: 100%;
 				min-width: 0;
-				overflow: hidden;
+				box-sizing: border-box;
+				overflow: visible;
 
 				&.card-only {
+					display: block;
+					width: 100%;
 					background: transparent !important;
 					border: none !important;
 					box-shadow: none !important;
@@ -1440,17 +1445,19 @@ onUnmounted(() => {
 
 // ========== 进度指示器 ==========
 .message-progress-indicator {
-	display: flex !important;
+	display: inline-flex !important;
 	align-items: center;
 	gap: 8px;
-	padding: 0;
+	max-width: 100%;
+	padding: 12px 16px;
 	margin: 0;
+	box-sizing: border-box;
 	border-radius: 0;
 	box-shadow: none;
 	border: none;
 	background: transparent;
 	.progress-content {
-		flex: 1;
+		flex: 0 1 auto;
 		display: flex;
 		flex-direction: row;
 		align-items: center;
@@ -1475,11 +1482,12 @@ onUnmounted(() => {
 			font-size: 0.9rem;
 			font-weight: 500;
 			line-height: 1.5;
-			flex: 1;
+			flex: 1 1 auto;
 			min-width: 0;
 			white-space: normal;
 			word-break: break-word;
-			overflow-wrap: anywhere;
+			overflow-wrap: break-word;
+			line-break: loose;
 		}
 		.progress-dots {
 			display: flex;

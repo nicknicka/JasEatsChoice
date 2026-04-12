@@ -87,9 +87,15 @@ public class RecommendationQueryTools {
                 queryWrapper.eq(Dish::getCategory, category);
             }
 
-            // 根据用户偏好过滤
+            // 根据用户偏好过滤（输出到结果中供用户参考）
             String allergies = user.getAllergies() != null ?
                 user.getAllergies().toString() : "[]";
+
+            // 如果用户有饮食目标，优先按目标筛选
+            String dietGoal = user.getDietGoal();
+            if ("减肥".equals(dietGoal)) {
+                queryWrapper.le(Dish::getCalorie, 300);
+            }
 
             // 按推荐得分排序
             queryWrapper.orderByDesc(Dish::getScore)
@@ -260,6 +266,8 @@ public class RecommendationQueryTools {
             // 获取用户偏好
             String dietGoal = user.getDietGoal();
             JsonNode preferTags = user.getPreferTags();
+
+            log.info("🎯 [Tool] 用户偏好 - dietGoal: {}, preferTags: {}", dietGoal, preferTags);
 
             StringBuilder sb = new StringBuilder();
             sb.append("🎯 为您量身定制的推荐\n\n");

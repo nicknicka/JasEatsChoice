@@ -89,7 +89,7 @@
               :style="{ animationDelay: (index * 80) + 'ms' }"
             >
               <div class="card-cover">
-                <img v-if="source.coverImage" :src="source.coverImage" :alt="source.title" />
+                <img v-if="source.coverImage" :src="source.coverImage" :alt="source.title" referrerpolicy="no-referrer" />
                 <div v-else class="cover-placeholder">
                   <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5">
                     <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/>
@@ -160,8 +160,8 @@
               @click="handleViewDetail(source)"
             >
               <div class="card-cover">
-                <img v-if="source.extractedDishImage" :src="source.extractedDishImage" :alt="source.extractedDishName" />
-                <img v-else-if="source.coverImage" :src="source.coverImage" :alt="source.title" />
+                <img v-if="source.extractedDishImage" :src="source.extractedDishImage" :alt="source.extractedDishName" referrerpolicy="no-referrer" />
+                <img v-else-if="source.coverImage" :src="source.coverImage" :alt="source.title" referrerpolicy="no-referrer" />
                 <div v-else class="cover-placeholder">
                   <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>

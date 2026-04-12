@@ -1,6 +1,11 @@
 package com.xx.jaseatschoicejava.agent.tools.user;
 
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -8,15 +13,12 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.xx.jaseatschoicejava.agent.dto.UserDietPreference;
 import com.xx.jaseatschoicejava.entity.User;
 import com.xx.jaseatschoicejava.service.UserService;
-import dev.langchain4j.agent.tool.Tool;
-import dev.langchain4j.agent.tool.P;
-import dev.langchain4j.agentic.scope.AgenticScope;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
 
+import dev.langchain4j.agent.tool.P;
+import dev.langchain4j.agent.tool.Tool;
+import dev.langchain4j.agentic.scope.AgenticScope;
 import jakarta.annotation.Resource;
-import java.util.ArrayList;
-import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 用户偏好工具类
@@ -129,7 +131,7 @@ public class UserPreferenceTools {
             log.info("✅ [Tool] 查询用户偏好成功: {}", preference.getCuisinePreference());
             return preference;
 
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             log.error("❌ [Tool] 查询用户饮食偏好失败，userId: {}", userId, e);
             return UserDietPreference.builder()
                     .userId(userId)
@@ -174,6 +176,12 @@ public class UserPreferenceTools {
         if (userId == null || userId.isEmpty()) {
             return "❌ 无法获取用户信息，请重新登录";
         }
+
+        if (!isPreferenceWriteAllowed(scope)) {
+            log.warn("⛔ [Tool] 拒绝未授权的偏好写入，userId: {}, preference: {}", userId, preferenceJson);
+            return "❌ 当前请求未获得修改偏好的授权，仅允许查询用户饮食偏好";
+        }
+
         log.info("🔍 [Tool] 更新用户饮食偏好，userId: {}, preference: {}", userId, preferenceJson);
 
         try {
@@ -211,7 +219,10 @@ public class UserPreferenceTools {
             log.info("✅ [Tool] 更新用户偏好成功");
             return "✅ 偏好更新成功：" + mergedPreference.toString();
 
-        } catch (Exception e) {
+        } catch (JsonProcessingException e) {
+            log.error("❌ [Tool] 更新用户饮食偏好失败，userId: {}", userId, e);
+            return "❌ 更新失败：" + e.getMessage();
+        } catch (RuntimeException e) {
             log.error("❌ [Tool] 更新用户饮食偏好失败，userId: {}", userId, e);
             return "❌ 更新失败：" + e.getMessage();
         }
@@ -246,6 +257,12 @@ public class UserPreferenceTools {
         if (userId == null || userId.isEmpty()) {
             return "❌ 无法获取用户信息，请重新登录";
         }
+
+        if (!isPreferenceWriteAllowed(scope)) {
+            log.warn("⛔ [Tool] 拒绝未授权的忌口写入，userId: {}, food: {}", userId, foodItem);
+            return "❌ 当前请求未获得修改忌口的授权，仅允许查询用户饮食偏好";
+        }
+
         log.info("🔍 [Tool] 添加用户忌口，userId: {}, food: {}", userId, foodItem);
 
         try {
@@ -283,7 +300,7 @@ public class UserPreferenceTools {
             log.info("✅ [Tool] 添加忌口成功: {}", foodItem);
             return "✅ 忌口添加成功：" + foodItem;
 
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             log.error("❌ [Tool] 添加用户忌口失败，userId: {}", userId, e);
             return "❌ 添加失败：" + e.getMessage();
         }
@@ -354,7 +371,7 @@ public class UserPreferenceTools {
             log.info("✅ [Tool] 移除忌口成功: {}", foodItem);
             return "✅ 忌口移除成功：" + foodItem;
 
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             log.error("❌ [Tool] 移除用户忌口失败，userId: {}", userId, e);
             return "❌ 移除失败：" + e.getMessage();
         }
@@ -403,9 +420,26 @@ public class UserPreferenceTools {
             log.info("✅ [Tool] 查询忌口列表成功，数量: {}", allergyList.size());
             return allergyList;
 
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             log.error("❌ [Tool] 查询用户忌口列表失败，userId: {}", userId, e);
             return List.of();
         }
+    }
+
+    private boolean isPreferenceWriteAllowed(AgenticScope scope) {
+        if (scope == null) {
+            return false;
+        }
+
+        Object allowed = scope.readState("preferenceWriteAllowed");
+        if (allowed == null) {
+            return false;
+        }
+
+        if (allowed instanceof Boolean booleanAllowed) {
+            return booleanAllowed;
+        }
+
+        return Boolean.parseBoolean(String.valueOf(allowed));
     }
 }

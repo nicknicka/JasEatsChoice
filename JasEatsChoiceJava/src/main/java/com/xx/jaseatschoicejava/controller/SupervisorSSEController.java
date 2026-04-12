@@ -130,7 +130,7 @@ public class SupervisorSSEController {
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MS);
 
         // 创建监听器（进度推送）
-        SSEAgentListener listener = new SSEAgentListener(emitter, userId);
+        SSEAgentListener listener = new SSEAgentListener(emitter, userId, message);
 
         CompletableFuture.runAsync(() -> {
             long totalStartTime = System.currentTimeMillis();
@@ -180,12 +180,8 @@ public class SupervisorSSEController {
                 log.info("Supervisor + Direct Response 完成: userId={}", userId);
 
             } catch (Exception e) {
-                log.error("SupervisorAgent处理失败: userId={}", userId, e);
-                // 通过SSE发送错误事件，前端可以正常显示错误信息
-                sendSseEvent(emitter, "message", Map.of("error", "处理失败，请重试"));
-                // 使用complete()而非completeWithError()，避免异常传播到Spring MVC的
-                // GlobalExceptionHandler，导致尝试用text/event-stream Content-Type返回JSON
-                try { emitter.complete(); } catch (Exception ignored) {}
+                log.error("SupervisorAgent处理失败: userId={}, 错误类型={}", userId, e.getClass().getSimpleName(), e);
+                handleSupervisorFailure(emitter, message, userId, e);
             } finally {
                 // 清理工具执行上下文，防止 ThreadLocal 泄漏
                 com.xx.jaseatschoicejava.agent.context.ToolExecutionContext.clear();
@@ -216,6 +212,48 @@ public class SupervisorSSEController {
     @PostMapping(value = "/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter chatStreamPost(@RequestBody ChatRequest request) {
         return chatStream(request.getMessage(), request.getUserId());
+    }
+
+    /**
+     * SupervisorAgent 失败时的重试和降级处理
+     *
+     * 策略：
+     * 1. 第一次失败后，用简化提示词重试一次（仅路由到最相关的单个Agent）
+     * 2. 重试仍失败则返回用户友好的错误提示，SSE链路正常结束
+     */
+    private void handleSupervisorFailure(SseEmitter emitter, String message, String userId, Exception firstError) {
+        // 重试：用简化提示词再触发一次
+        log.info("[降级重试] SupervisorAgent第一次失败，尝试简化重试: userId={}", userId);
+        try {
+            String retryResult = retryWithSimplePrompt(message, userId);
+            if (retryResult != null && !retryResult.isEmpty()) {
+                log.info("[降级重试] 成功，结果长度: {} 字符", retryResult.length());
+                String cleanedResult = supervisorAgentFactory.cleanDebugInfo(retryResult);
+                emitFinalResponse(emitter, cleanedResult, false);
+                try { emitter.complete(); } catch (Exception ignored) {}
+                return;
+            }
+        } catch (Exception retryError) {
+            log.warn("[降级重试] 重试也失败: userId={}, 错误={}", userId, retryError.getMessage());
+        }
+
+        // 重试失败：返回用户友好的错误提示，SSE链路正常结束
+        log.error("[降级] SupervisorAgent最终失败: userId={}, 原始错误={}", userId, firstError.getMessage());
+        sendSseEvent(emitter, "message", Map.of("error", "抱歉，智能推荐暂时遇到了问题，请稍后重试"));
+        sendSseEvent(emitter, "message", Map.of("done", true));
+        try { emitter.complete(); } catch (Exception ignored) {}
+    }
+
+    /**
+     * 用简化提示词重试Supervisor调用
+     *
+     * 不使用完整的supervisorContext，只传递最基本的信息，
+     * 降低LLM输出复杂度和JSON截断风险
+     */
+    private String retryWithSimplePrompt(String message, String userId) {
+        SSEAgentListener retryListener = new SSEAgentListener(null, userId, message);
+        SupervisorAgent retryAgent = supervisorAgentFactory.createRetryAgent(retryListener, userId);
+        return retryAgent.invoke(message);
     }
 
     /**
