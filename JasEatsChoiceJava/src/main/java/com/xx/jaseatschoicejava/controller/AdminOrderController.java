@@ -180,47 +180,31 @@ public class AdminOrderController {
 
         boolean success = orderService.updateById(order);
 
-        // 根据新状态发送通知
+        // 根据新状态发送通知（5状态系统：0-待支付、1-待接单、2-制作中、3-已完成、4-已取消）
         if (success) {
             switch (newStatus) {
-                case 2: // 备菜中
+                case 2: // 制作中
                     NotificationUtil.createOrderNotification(
                         order.getUserId(),
                         NotificationTypeEnum.ORDER_PREPARING_COMPLETE,
                         orderId,
-                        "备菜中"
+                        "商家已接单，正在制作中"
                     );
                     break;
-                case 3: // 烹饪中
-                    NotificationUtil.createOrderNotification(
-                        order.getUserId(),
-                        NotificationTypeEnum.ORDER_COOKING_COMPLETE,
-                        orderId,
-                        "烹饪中"
-                    );
-                    break;
-                case 4: // 待上菜
-                    NotificationUtil.createOrderNotification(
-                        order.getUserId(),
-                        NotificationTypeEnum.ORDER_WAITING_SERVING,
-                        orderId,
-                        "待上菜"
-                    );
-                    break;
-                case 5: // 已送达
+                case 3: // 已完成
                     NotificationUtil.createOrderNotification(
                         order.getUserId(),
                         NotificationTypeEnum.ORDER_DELIVERED,
                         orderId,
-                        "已送达"
+                        "订单已完成"
                     );
                     break;
-                case 7: // 待评价
+                case 4: // 已取消
                     NotificationUtil.createOrderNotification(
                         order.getUserId(),
-                        NotificationTypeEnum.ORDER_COMPLETE,
+                        NotificationTypeEnum.ORDER_CANCELLED,
                         orderId,
-                        "待评价"
+                        "订单已取消"
                     );
                     break;
             }
@@ -297,49 +281,33 @@ public class AdminOrderController {
             }
         }
 
-        // 批量通知用户
+        // 批量通知用户（5状态系统：0-待支付、1-待接单、2-制作中、3-已完成、4-已取消）
         for (String orderId : orderIds) {
             Order updatedOrder = orderService.getById(orderId);
             if (updatedOrder != null) {
                 switch (newStatus) {
-                    case 2:
+                    case 2: // 制作中
                         NotificationUtil.createOrderNotification(
                             updatedOrder.getUserId(),
                             NotificationTypeEnum.ORDER_PREPARING_COMPLETE,
                             orderId,
-                            "备菜中"
+                            "商家已接单，正在制作中"
                         );
                         break;
-                    case 3:
-                        NotificationUtil.createOrderNotification(
-                            updatedOrder.getUserId(),
-                            NotificationTypeEnum.ORDER_COOKING_COMPLETE,
-                            orderId,
-                            "烹饪中"
-                        );
-                        break;
-                    case 4:
-                        NotificationUtil.createOrderNotification(
-                            updatedOrder.getUserId(),
-                            NotificationTypeEnum.ORDER_WAITING_SERVING,
-                            orderId,
-                            "待上菜"
-                        );
-                        break;
-                    case 5:
+                    case 3: // 已完成
                         NotificationUtil.createOrderNotification(
                             updatedOrder.getUserId(),
                             NotificationTypeEnum.ORDER_DELIVERED,
                             orderId,
-                            "已送达"
+                            "订单已完成"
                         );
                         break;
-                    case 7:
+                    case 4: // 已取消
                         NotificationUtil.createOrderNotification(
                             updatedOrder.getUserId(),
-                            NotificationTypeEnum.ORDER_COMPLETE,
+                            NotificationTypeEnum.ORDER_CANCELLED,
                             orderId,
-                            "待评价"
+                            "订单已取消"
                         );
                         break;
                 }
@@ -396,25 +364,30 @@ public class AdminOrderController {
     }
 
     /**
-     * 验证状态转换是否合法
+     * 验证状态转换是否合法（5状态系统：0-待支付、1-待接单、2-制作中、3-已完成、4-已取消）
      */
     private boolean isValidStatusTransition(Integer oldStatus, Integer newStatus) {
         if (oldStatus == null || newStatus == null) {
             return false;
         }
 
-        // 已取消或已完成的订单不能修改状态
-        if (oldStatus == 6 || oldStatus == 7) {
+        // 已取消(4)或已完成(3)的订单不能修改状态
+        if (oldStatus == 3 || oldStatus == 4) {
             return false;
         }
 
-        // 待支付订单只能修改为已取消
-        if (oldStatus == 0 && newStatus != 6) {
+        // 待支付订单只能修改为已取消(4)
+        if (oldStatus == 0 && newStatus != 4) {
             return false;
         }
 
-        // 状态只能向前推进（0->1->2->3->4->5/7，或者6->任何状态）
-        if (newStatus < oldStatus && newStatus != 6) {
+        // 状态只能向前推进（0->1->2->3，或者任意可取消状态->4）
+        if (newStatus < oldStatus && newStatus != 4) {
+            return false;
+        }
+
+        // 不允许跳过中间状态（例如不能从待支付直接到制作中）
+        if (newStatus > oldStatus + 1 && newStatus != 4) {
             return false;
         }
 
@@ -422,7 +395,7 @@ public class AdminOrderController {
     }
 
     /**
-     * 获取订单状态文本
+     * 获取订单状态文本（5状态系统：0-待支付、1-待接单、2-制作中、3-已完成、4-已取消）
      */
     private String getStatusText(Integer status) {
         if (status == null) {
@@ -431,12 +404,9 @@ public class AdminOrderController {
         switch (status) {
             case 0: return "待支付";
             case 1: return "待接单";
-            case 2: return "备菜中";
-            case 3: return "烹饪中";
-            case 4: return "待上菜";
-            case 5: return "已送达";
-            case 6: return "已取消";
-            case 7: return "已完成";
+            case 2: return "制作中";
+            case 3: return "已完成";
+            case 4: return "已取消";
             default: return "未知";
         }
     }

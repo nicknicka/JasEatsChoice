@@ -68,8 +68,8 @@ export default {
   },
 
   /**
-   * 获取行政区域数据 - 前端直接调用高德API
-   * 注意：需要在config/index.js中配置有效的AMAP_CONFIG.key
+   * 获取行政区域数据 - 前端直连高德API
+   * 注意：需要在config/index.js中配置有效的 AMAP_CONFIG.key 和 securityJsCode
    * @param {string} keywords - 查询关键词（如：中国）
    * @param {number} subdistrict - 子级行政区域等级（1-3）
    * @param {string} key - 高德地图API Key（可选，如果不传则使用配置文件中的key）
@@ -78,7 +78,7 @@ export default {
   async getDistrictDataDirect(keywords = '中国', subdistrict = 3, key = null) {
     const apiKey = key || AMAP_CONFIG.key
 
-    if (apiKey === 'YOUR_AMAP_KEY') {
+    if (!apiKey || apiKey === 'YOUR_AMAP_KEY') {
       throw new Error('请先在config/index.js中配置有效的高德地图API Key')
     }
 

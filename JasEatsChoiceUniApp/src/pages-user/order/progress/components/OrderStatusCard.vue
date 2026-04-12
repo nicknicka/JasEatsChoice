@@ -27,36 +27,26 @@ const props = defineProps({
   }
 })
 
-// 订单状态映射
+// 订单状态映射（5状态系统：pending-待支付、pendingAccept-待接单、preparing-制作中、completed-已完成、cancelled-已取消）
 const statusConfig = {
   pending: {
     icon: '⏰',
-    text: '等待商家接单',
+    text: '等待支付',
     class: 'pending'
   },
-  confirmed: {
+  pendingAccept: {
     icon: '👨‍🍳',
-    text: '商家已接单',
-    class: 'confirmed'
+    text: '待接单',
+    class: 'pendingAccept'
   },
   preparing: {
     icon: '🍳',
-    text: '正在准备中',
+    text: '制作中',
     class: 'preparing'
-  },
-  ready: {
-    icon: '✅',
-    text: '餐品已完成',
-    class: 'ready'
-  },
-  delivering: {
-    icon: '🚴',
-    text: '配送中',
-    class: 'delivering'
   },
   completed: {
     icon: '✓',
-    text: '已送达',
+    text: '已完成',
     class: 'completed'
   },
   cancelled: {
@@ -99,16 +89,11 @@ const statusText = computed(() => {
     background: linear-gradient(135deg, #FFB74D, #FF9800);
   }
 
-  &.confirmed,
-  &.preparing {
+  &.pendingAccept {
     background: linear-gradient(135deg, #64B5F6, #42A5F5);
   }
 
-  &.ready {
-    background: linear-gradient(135deg, #81C784, #66BB6A);
-  }
-
-  &.delivering {
+  &.preparing {
     background: linear-gradient(135deg, #FF6B35, #FF8F61);
   }
 

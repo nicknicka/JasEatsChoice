@@ -1,15 +1,18 @@
 package com.xx.jaseatschoicejava.service.extraction.fetcher;
 
-import cn.hutool.http.HttpUtil;
-import com.xx.jaseatschoicejava.enums.ContentPlatform;
-import com.xx.jaseatschoicejava.enums.ContentType;
-import com.xx.jaseatschoicejava.service.extraction.dto.FetchedContent;
-import lombok.extern.slf4j.Slf4j;
+import java.util.Base64;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.Base64;
-import java.util.List;
+import com.xx.jaseatschoicejava.enums.ContentPlatform;
+import com.xx.jaseatschoicejava.enums.ContentType;
+import com.xx.jaseatschoicejava.service.extraction.dto.FetchedContent;
+import com.xx.jaseatschoicejava.util.FileUploadUtil;
+
+import cn.hutool.http.HttpUtil;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 图片内容抓取策略
@@ -20,9 +23,6 @@ import java.util.List;
 public class ImageContentFetcher implements ContentFetcher {
 
     private static final long MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
-    private static final List<String> IMAGE_EXTENSIONS = List.of(
-        ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"
-    );
 
     @Autowired
     private ArticleContentFetcher articleFetcher;
@@ -49,17 +49,18 @@ public class ImageContentFetcher implements ContentFetcher {
 
             String base64 = Base64.getEncoder().encodeToString(imageBytes);
             String mimeType = guessMimeType(url);
+            String localImageUrl = storeImage(url, imageBytes);
 
             return FetchedContent.builder()
                 .textContent("")
                 .imageBase64List(List.of("data:" + mimeType + ";base64," + base64))
-                .imageUrls(List.of(url))
-                .coverImage(url)
+                .imageUrls(List.of(localImageUrl))
+                .coverImage(localImageUrl)
                 .contentType(ContentType.IMAGE)
                 .fetchSuccess(true)
                 .build();
 
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             log.error("抓取图片内容失败: {}", url, e);
             // 降级：尝试用文章抓取器处理
             return articleFetcher.fetch(url);
@@ -77,7 +78,7 @@ public class ImageContentFetcher implements ContentFetcher {
                 return null;
             }
             return bytes;
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             log.error("下载图片失败: {}", url, e);
             return null;
         }
@@ -92,5 +93,14 @@ public class ImageContentFetcher implements ContentFetcher {
         if (lower.contains(".gif")) return "image/gif";
         if (lower.contains(".webp")) return "image/webp";
         return "image/jpeg"; // 默认jpeg
+    }
+
+    private String storeImage(String sourceUrl, byte[] imageBytes) {
+        try {
+            return FileUploadUtil.uploadImageBytes(imageBytes, sourceUrl, "content-extraction/image", null);
+        } catch (java.io.IOException | RuntimeException e) {
+            log.warn("图片转存失败，继续使用原始地址: {}", sourceUrl, e);
+            return sourceUrl;
+        }
     }
 }

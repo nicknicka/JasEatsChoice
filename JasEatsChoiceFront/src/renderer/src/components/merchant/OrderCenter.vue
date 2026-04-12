@@ -29,18 +29,13 @@ const filteredOrders = ref([])
 // 当前激活的筛选条件
 const activeFilter = ref('today')
 
-// 订单状态映射（对应后端状态码）
-// 0-待支付、1-待接单、2-备菜中、3-烹饪中、4-待上菜、5-已送达、6-已取消、7-待评价、8-已评价
+// 订单状态映射（5状态系统：0-待支付、1-待接单、2-制作中、3-已完成、4-已取消）
 const orderStatusMap = {
   0: '待支付',
   1: '待接单',
-  2: '备菜中',
-  3: '烹饪中',
-  4: '待上菜',
-  5: '已送达',
-  6: '已取消',
-  7: '待评价',
-  8: '已评价'
+  2: '制作中',
+  3: '已完成',
+  4: '已取消'
 }
 
 // 筛选订单
@@ -85,27 +80,23 @@ const viewOrderDetails = (order) => {
   router.push(`/merchant/home/order-detail/${order.id}`)
 }
 
-// 获取下一个状态按钮文案
+// 获取下一个状态按钮文案（5状态系统）
 const getNextStatusText = (currentStatus) => {
   const statusFlow = {
-    1: '👉 开始备菜',    // 待接单 -> 备菜中
-    2: '🔥 开始烹饪',    // 备菜中 -> 烹饪中
-    3: '🚦 准备配送',    // 烹饪中 -> 待配送
-    4: '✅ 完成订单',    // 待配送 -> 已完成
-    5: null,             // 已完成 -> 不可再改
-    6: null              // 已取消 -> 不可再改
+    1: '👉 开始制作',    // 待接单 -> 制作中
+    2: '✅ 完成订单',    // 制作中 -> 已完成
   }
   return statusFlow[currentStatus] || null
 }
 
 // 判断是否可以更新状态
 const canUpdateStatus = (currentStatus) => {
-  return [1, 2, 3, 4].includes(currentStatus)
+  return [1, 2].includes(currentStatus)
 }
 
 // 判断是否可以通知用户
 const canNotifyUser = (currentStatus) => {
-  return ![6, 8].includes(currentStatus) // 排除已取消和已评价
+  return ![3, 4].includes(currentStatus) // 排除已完成和已取消
 }
 
 // 获取订单状态标签的类型
@@ -113,27 +104,19 @@ const getStatusTagType = (status) => {
   const typeMap = {
     0: 'warning',    // 待支付 - 橙色
     1: 'info',       // 待接单 - 蓝灰色
-    2: 'primary',    // 备菜中 - 蓝色
-    3: '',           // 烹饪中 - 默认
-    4: 'warning',    // 待配送 - 橙色
-    5: 'success',    // 已送达 - 绿色
-    6: 'danger',     // 已取消 - 红色
-    7: 'info',       // 待评价 - 蓝灰色
-    8: 'success'     // 已评价 - 绿色
+    2: 'primary',    // 制作中 - 蓝色
+    3: 'success',    // 已完成 - 绿色
+    4: 'danger'      // 已取消 - 红色
   }
   return typeMap[status] || 'info'
 }
 
 // 更新订单状态
 const updateOrderStatus = (order) => {
-  // 定义订单状态流转逻辑
+  // 定义订单状态流转逻辑（5状态系统：0-待支付、1-待接单、2-制作中、3-已完成、4-已取消）
   const statusFlow = {
-    1: 2, // 待处理 -> 备菜中
-    2: 3, // 备菜中 -> 烹饪中
-    3: 4, // 烹饪中 -> 待配送
-    4: 5, // 待配送 -> 已完成
-    5: 5, // 已完成 -> 已完成（不可再改）
-    6: 6 // 已取消 -> 已取消（不可再改）
+    1: 2, // 待接单 -> 制作中
+    2: 3, // 制作中 -> 已完成
   }
 
   const nextStatus = statusFlow[order.status] || order.status

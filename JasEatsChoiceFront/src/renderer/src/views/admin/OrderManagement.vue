@@ -35,12 +35,11 @@
         </el-form-item>
         <el-form-item label="订单状态">
           <el-select v-model="searchForm.status" placeholder="全部" clearable style="width: 140px">
-            <el-option label="待处理" value="PENDING" />
-            <el-option label="已确认" value="CONFIRMED" />
-            <el-option label="制作中" value="PREPARING" />
-            <el-option label="配送中" value="DELIVERING" />
-            <el-option label="已完成" value="COMPLETED" />
-            <el-option label="已取消" value="CANCELLED" />
+            <el-option label="待支付" :value="0" />
+            <el-option label="待接单" :value="1" />
+            <el-option label="制作中" :value="2" />
+            <el-option label="已完成" :value="3" />
+            <el-option label="已取消" :value="4" />
           </el-select>
         </el-form-item>
         <el-form-item label="日期范围">
@@ -161,12 +160,11 @@
         </el-form-item>
         <el-form-item label="新状态">
           <el-select v-model="statusForm.status" placeholder="请选择新状态">
-            <el-option label="待处理" value="PENDING" />
-            <el-option label="已确认" value="CONFIRMED" />
-            <el-option label="制作中" value="PREPARING" />
-            <el-option label="配送中" value="DELIVERING" />
-            <el-option label="已完成" value="COMPLETED" />
-            <el-option label="已取消" value="CANCELLED" />
+            <el-option label="待支付" :value="0" />
+            <el-option label="待接单" :value="1" />
+            <el-option label="制作中" :value="2" />
+            <el-option label="已完成" :value="3" />
+            <el-option label="已取消" :value="4" />
           </el-select>
         </el-form-item>
       </el-form>
@@ -233,12 +231,10 @@ const fetchOrderList = async () => {
       orderList.value = response.records || []
       pagination.total = response.total || 0
 
-      // 更新统计数据
-      stats.pending = orderList.value.filter(o => o.status === 'PENDING').length
-      stats.processing = orderList.value.filter(o =>
-        ['CONFIRMED', 'PREPARING', 'DELIVERING'].includes(o.status)
-      ).length
-      stats.completed = orderList.value.filter(o => o.status === 'COMPLETED').length
+      // 更新统计数据（5状态系统：0-待支付、1-待接单、2-制作中、3-已完成、4-已取消）
+      stats.pending = orderList.value.filter(o => o.status === 0 || o.status === 1).length
+      stats.processing = orderList.value.filter(o => o.status === 2).length
+      stats.completed = orderList.value.filter(o => o.status === 3).length
       console.log('[订单管理] 获取订单列表成功, 总数:', pagination.total)
     }
   } catch (error) {
@@ -249,62 +245,28 @@ const fetchOrderList = async () => {
   }
 }
 
-// 获取状态类型
+// 获取状态类型（5状态系统：0-待支付、1-待接单、2-制作中、3-已完成、4-已取消）
 const getStatusType = (status) => {
-  // 如果status是数字，转换为状态代码
-  let statusCode = status
-  if (typeof status === 'number') {
-    const statusMap = {
-      0: 'PENDING',    // 待支付
-      1: 'CONFIRMED',  // 待接单
-      2: 'PREPARING',  // 备菜中
-      3: 'PREPARING',  // 烹饪中
-      4: 'DELIVERING', // 待上菜
-      5: 'COMPLETED',  // 已上菜
-      6: 'CANCELLED',  // 已取消
-      7: 'COMPLETED'   // 已完成
-    }
-    statusCode = statusMap[status] || 'PENDING'
-  }
-
   const types = {
-    'PENDING': 'warning',
-    'CONFIRMED': 'primary',
-    'PREPARING': 'info',
-    'DELIVERING': 'primary',
-    'COMPLETED': 'success',
-    'CANCELLED': 'danger'
+    0: 'warning',   // 待支付
+    1: 'info',      // 待接单
+    2: 'primary',   // 制作中
+    3: 'success',   // 已完成
+    4: 'danger'     // 已取消
   }
-  return types[statusCode] || 'info'
+  return types[status] || 'info'
 }
 
 // 获取状态文本
 const getStatusText = (status) => {
-  // 如果status是数字，转换为对应的文本
-  if (typeof status === 'number') {
-    const statusTextMap = {
-      0: '待支付',
-      1: '待接单',
-      2: '备菜中',
-      3: '烹饪中',
-      4: '待上菜',
-      5: '已上菜',
-      6: '已取消',
-      7: '已完成'
-    }
-    return statusTextMap[status] || '未知'
+  const statusTextMap = {
+    0: '待支付',
+    1: '待接单',
+    2: '制作中',
+    3: '已完成',
+    4: '已取消'
   }
-
-  // 如果是字符串状态代码
-  const texts = {
-    'PENDING': '待处理',
-    'CONFIRMED': '已确认',
-    'PREPARING': '制作中',
-    'DELIVERING': '配送中',
-    'COMPLETED': '已完成',
-    'CANCELLED': '已取消'
-  }
-  return texts[status] || '未知'
+  return statusTextMap[status] || '未知'
 }
 
 // 搜索

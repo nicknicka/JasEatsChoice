@@ -1,13 +1,18 @@
 package com.xx.jaseatschoicejava.util;
 
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOException;
+import java.net.URLConnection;
+import java.util.UUID;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
+
 import com.xx.jaseatschoicejava.config.FileUploadConfig;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.UUID;
+import cn.hutool.http.HttpUtil;
 
 @Component
 public class FileUploadUtil {
@@ -161,6 +166,68 @@ public class FileUploadUtil {
     }
 
     /**
+     * 下载远程图片并保存到本地 uploads 目录，返回可访问的完整 URL。
+     *
+     * @param imageUrl 远程图片地址
+     * @param category 保存目录分类
+     * @param userId 用户ID（用于分类存储）
+     * @return 可访问的完整图片 URL
+     * @throws IOException 文件保存异常
+     */
+    public static String uploadRemoteImage(String imageUrl, String category, String userId) throws IOException {
+        if (imageUrl == null || imageUrl.isEmpty()) {
+            throw new IllegalArgumentException("图片URL不能为空");
+        }
+
+        byte[] imageBytes = HttpUtil.downloadBytes(imageUrl);
+        return uploadImageBytes(imageBytes, imageUrl, category, userId);
+    }
+
+    /**
+     * 将图片字节保存到本地 uploads 目录，返回可访问的完整 URL。
+     *
+     * @param imageBytes 图片字节
+     * @param sourceName 来源名称或URL，用于推断后缀
+     * @param category 保存目录分类
+     * @param userId 用户ID（用于分类存储）
+     * @return 可访问的完整图片 URL
+     * @throws IOException 文件保存异常
+     */
+    public static String uploadImageBytes(byte[] imageBytes, String sourceName, String category, String userId) throws IOException {
+        if (imageBytes == null || imageBytes.length == 0) {
+            throw new IllegalArgumentException("图片内容不能为空");
+        }
+
+        String baseUploadPath = fileUploadConfig.getUploadPath();
+
+        String finalUploadDir = baseUploadPath + category + "/";
+        if (userId != null && !userId.isEmpty()) {
+            finalUploadDir += userId + "/";
+        }
+
+        File directory = new File(finalUploadDir);
+        if (!directory.exists()) {
+            directory.mkdirs();
+        }
+
+        String suffix = resolveImageSuffix(sourceName, imageBytes);
+        String fileName = UUID.randomUUID().toString() + suffix;
+
+        File dest = new File(finalUploadDir + fileName);
+        try (java.io.FileOutputStream fos = new java.io.FileOutputStream(dest)) {
+            fos.write(imageBytes);
+        }
+
+        String relativePath = category + "/";
+        if (userId != null && !userId.isEmpty()) {
+            relativePath += userId + "/";
+        }
+        relativePath += fileName;
+
+        return buildPublicUrl(relativePath);
+    }
+
+    /**
      * 上传base64格式图片并返回文件名（兼容旧接口）
      *
      * @param base64Str base64图片字符串
@@ -189,5 +256,53 @@ public class FileUploadUtil {
             // 默认使用.png
             return ".png";
         }
+    }
+
+    private static String resolveImageSuffix(String sourceName, byte[] imageBytes) {
+        try {
+            String mimeType = URLConnection.guessContentTypeFromStream(new ByteArrayInputStream(imageBytes));
+            if (mimeType != null) {
+                if (mimeType.contains("png")) {
+                    return ".png";
+                }
+                if (mimeType.contains("gif")) {
+                    return ".gif";
+                }
+                if (mimeType.contains("webp")) {
+                    return ".webp";
+                }
+                if (mimeType.contains("jpeg") || mimeType.contains("jpg")) {
+                    return ".jpg";
+                }
+            }
+        } catch (IOException ignored) {
+            // 继续使用文件名兜底
+        }
+
+        if (sourceName != null) {
+            String lower = sourceName.toLowerCase();
+            if (lower.contains(".png")) return ".png";
+            if (lower.contains(".gif")) return ".gif";
+            if (lower.contains(".webp")) return ".webp";
+            if (lower.contains(".jpg") || lower.contains(".jpeg")) return ".jpg";
+        }
+
+        return ".jpg";
+    }
+
+    private static String buildPublicUrl(String relativePath) {
+        String prefix = fileUploadConfig.getUrlPrefix();
+        if (prefix == null || prefix.isEmpty()) {
+            prefix = "/api/uploads/";
+        }
+
+        String serverUrl = fileUploadConfig.getServerUrl();
+        if (serverUrl == null || serverUrl.isEmpty()) {
+            return prefix + relativePath;
+        }
+
+        String normalizedServerUrl = serverUrl.endsWith("/") ? serverUrl.substring(0, serverUrl.length() - 1) : serverUrl;
+        String normalizedPrefix = prefix.startsWith("/") ? prefix : "/" + prefix;
+        return normalizedServerUrl + normalizedPrefix + relativePath;
     }
 }

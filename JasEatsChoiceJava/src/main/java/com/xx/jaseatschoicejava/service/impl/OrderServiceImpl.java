@@ -366,39 +366,31 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
 
     @Override
     public List<Integer> getRollbackOptions(Integer currentStatus) {
-        // 根据当前状态返回可以回退到的状态列表
-        // 规则：只能回退到之前的普通流转状态，不能跳过中间状态
+        // 根据当前状态返回可以回退到的状态列表（5状态系统：0-待支付、1-待接单、2-制作中、3-已完成、4-已取消）
+        // 规则：只能回退到前一状态，不能跳过中间状态
         switch (currentStatus) {
             case 0: // 待支付 - 不能回退
                 return new ArrayList<>();
             case 1: // 待接单 - 可回退到待支付
                 return List.of(0);
-            case 2: // 备菜中 - 可回退到待接单
+            case 2: // 制作中 - 可回退到待接单
                 return List.of(1);
-            case 3: // 烹饪中 - 可回退到备菜中
+            case 3: // 已完成 - 可回退到制作中
                 return List.of(2);
-            case 4: // 待上菜 - 可回退到烹饪中
-                return List.of(3);
-            case 5: // 已完成 - 可回退到待上菜
-                return List.of(4);
-            case 6: // 已取消 - 不能回退
-            return new ArrayList<>();
+            case 4: // 已取消 - 不能回退
+                return new ArrayList<>();
             default:
                 return new ArrayList<>();
         }
     }
 
     /**
-     * 检查状态回退是否合法
+     * 检查状态回退是否合法（5状态系统：0-待支付、1-待接单、2-制作中、3-已完成、4-已取消）
      */
     private boolean isValidRollback(Integer fromStatus, Integer toStatus) {
-        // 规则：
-        // 1. 不能从已取消回退
-        // 2. 不能跳过状态（例如不能从烹饪中直接回退到待支付）
-        // 3. 只能回退到相邻的前一状态
-
-        if (fromStatus == 6) { // 已取消
-            return false; // 已取消不能回退
+        // 已取消(4)不能回退
+        if (fromStatus == 4) {
+            return false;
         }
 
         // 只能回退到前一状态

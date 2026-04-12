@@ -33,29 +33,17 @@ const statusMap = {
     text: '等待支付',
     tips: '请在30分钟内完成支付'
   },
-  paid: {
+  pendingAccept: {
     icon: 'checkmarkempty',
-    color: '#52C41A',
-    text: '支付成功',
-    tips: '商家正在接单'
-  },
-  confirmed: {
-    icon: 'loop',
     color: '#1677FF',
-    text: '商家已接单',
-    tips: '正在准备您的美食'
+    text: '待接单',
+    tips: '商家正在接单'
   },
   preparing: {
     icon: 'spinner-cycle',
     color: '#FF6B35',
     text: '制作中',
     tips: '预计还需15分钟'
-  },
-  delivering: {
-    icon: 'paperplane',
-    color: '#722ED1',
-    text: '配送中',
-    tips: '骑手正在全力配送'
   },
   completed: {
     icon: 'checkbox-filled',
@@ -68,18 +56,6 @@ const statusMap = {
     color: '#999',
     text: '已取消',
     tips: '订单已取消'
-  },
-  refunding: {
-    icon: 'refresh',
-    color: '#FF6B35',
-    text: '退款中',
-    tips: '预计1-3个工作日到账'
-  },
-  refunded: {
-    icon: 'undo',
-    color: '#999',
-    text: '已退款',
-    tips: '退款已到账'
   }
 }
 

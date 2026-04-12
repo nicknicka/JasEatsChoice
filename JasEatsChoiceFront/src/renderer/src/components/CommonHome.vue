@@ -1,6 +1,6 @@
 <script setup>
 import { useRouter, useRoute } from 'vue-router'
-import { ref, onMounted, computed, watch, provide, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch, provide, nextTick } from 'vue'
 import {
   Search,
   Close,
@@ -15,10 +15,6 @@ import {
   Setting,
   HomeFilled,
   User,
-  CircleClose,
-  CircleCheckFilled,
-  Goods,
-  Dish,
   VideoCamera
 } from '@element-plus/icons-vue'
 import { decodeJwt } from '../utils/api.js'
@@ -86,8 +82,8 @@ const userRole = ref('user') // 'user' 或 'merchant'
 
 // 提供更新用户信息的方法给子组件
 const updateSidebarAvatar = (avatarUrl) => {
-  if (userStore.userInfo) {
-    userStore.userInfo.avatar = avatarUrl
+  if (userStore.userInfo && avatarUrl) {
+    userStore.setUserInfo({ ...userStore.userInfo, avatar: avatarUrl })
   }
 }
 provide('updateSidebarAvatar', updateSidebarAvatar)
@@ -346,11 +342,9 @@ const updateActiveMenuIndex = () => {
   const parentMenuIndex = smartMatchParentMenu(currentPath, userRole.value)
   if (parentMenuIndex) {
     activeMenuIndex.value = parentMenuIndex
-    console.log('智能匹配到父级菜单:', parentMenuIndex)
   } else {
     // 实在没有匹配，才激活第一个菜单项
     activeMenuIndex.value = currentMenu.value[0]?.index || '1'
-    console.log('未匹配到菜单项，默认激活第一个')
   }
 
   // 重置侧边栏宽度为默认值，防止自动展开菜单时宽度变宽
@@ -465,9 +459,6 @@ const toggleRole = () => {
       navigateTo('/merchant/home')
     }
 
-    // Don't save role to localStorage - always default to user
-
-    console.log('角色切换成功:', userRole.value)
   } catch (error) {
     console.error('角色切换失败:', error)
   }
@@ -485,27 +476,20 @@ onMounted(() => {
     }
 
     // 1. First check current route to determine role
-    let detectedRole = 'user' // Always default to user
+    let detectedRole = 'user'
 
     if (router.currentRoute.value?.path?.startsWith('/merchant/')) {
       detectedRole = 'merchant'
     }
 
-    // 3. Always use detected role from route or default to user, ignore saved role
     userRole.value = detectedRole
 
-    // User info is now managed through Pinia - no need to initialize it here
-    // 从JWT令牌获取实际用户名（仅作参考，实际应用应将用户信息存储在userStore中）
     if (userRole.value === 'user' && authStore.token) {
       const decodedToken = decodeJwt(authStore.token)
       if (decodedToken && decodedToken.username && userStore.userInfo) {
         userStore.userInfo.name = decodedToken.username
       }
     }
-
-    // Don't save role to localStorage - always default to user
-
-    console.log('恢复角色成功:', userRole.value)
 
     // 确保当前菜单已更新后再计算激活菜单，使用nextTick确保DOM更新完成
     nextTick(() => {
@@ -594,24 +578,10 @@ watch(
           }
         }
       } else if (userRole.value === 'user') {
-        // 从authStore获取token并解码用户名
-        let username = '用户端'
-        if (authStore.token) {
-          const decodedToken = decodeJwt(authStore.token)
-          if (decodedToken && decodedToken.username) {
-            username = decodedToken.username
-          }
-        }
-        // 使用userStore管理用户信息
-        userStore.userInfo = {
-          ...userStore.userInfo
-        }
+        // 用户端信息已在 userStore 中，无需额外处理
       }
 
       // Role is now managed through Pinia - no need to save to localStorage
-      console.log('路由变化自动更新角色:', userRole.value)
-      // 更新角色后，重新计算激活的菜单项索引
-      console.log('=== 更新角色后调用updateActiveMenuIndex ===')
       updateActiveMenuIndex()
     }
   }
@@ -697,14 +667,25 @@ const refreshUnreadCount = () => {
 // 将刷新方法提供给子组件
 provide('refreshUnreadCount', refreshUnreadCount)
 
+// 未读消息定时器引用
+let unreadCountTimer = null
+
 // 在组件挂载时获取未读消息数量
 onMounted(() => {
   fetchUnreadMessageCount()
 
   // 每30秒刷新一次未读消息数量
-  setInterval(() => {
+  unreadCountTimer = setInterval(() => {
     fetchUnreadMessageCount()
   }, 30000)
+})
+
+// 组件卸载时清理定时器
+onUnmounted(() => {
+  if (unreadCountTimer) {
+    clearInterval(unreadCountTimer)
+    unreadCountTimer = null
+  }
 })
 
 // 监听路由变化，当从消息中心返回时刷新未读数量
@@ -723,14 +704,10 @@ watch(
 )
 
 const handleSearch = (value) => {
-  // 实现搜索逻辑
   try {
-    // 如果搜索内容为空，不执行搜索
     if (!value || value.trim() === '') {
       return
     }
-
-    console.log('开始搜索:', value)
 
     // 根据当前角色跳转到对应的搜索页面
     if (userRole.value === 'user') {
@@ -745,7 +722,6 @@ const handleSearch = (value) => {
         path: '/merchant/home/orders',
         query: { search: value.trim() }
       })
-      console.log('商家角色搜索功能:', value)
     }
   } catch (error) {
     console.error('搜索失败:', error)
@@ -1042,6 +1018,8 @@ const handleSearch = (value) => {
   position: relative;
   z-index: 100;
   animation: nav-slide-down 0.4s ease both;
+  -webkit-app-region: drag;
+  user-select: none;
 
   // 顶部细微阴影
   &::after {
@@ -1061,6 +1039,7 @@ const handleSearch = (value) => {
     font-weight: 700;
     color: @savour-accent;
     cursor: pointer;
+    -webkit-app-region: no-drag;
     letter-spacing: -0.3px;
     display: flex;
     align-items: center;
@@ -1097,6 +1076,7 @@ const handleSearch = (value) => {
     border: 1.5px solid @savour-border;
     border-radius: @savour-pill;
     transition: all 0.25s ease;
+    -webkit-app-region: no-drag;
 
     &:hover {
       border-color: @savour-accent;
@@ -1176,6 +1156,7 @@ const handleSearch = (value) => {
     align-items: center;
     gap: @nordic-space-md;
     margin-right: 8px;
+    -webkit-app-region: no-drag;
 
     .identity-switch {
       display: flex;

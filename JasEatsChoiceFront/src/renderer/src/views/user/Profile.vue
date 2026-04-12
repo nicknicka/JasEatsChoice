@@ -506,9 +506,7 @@ import {
 import CommonAvatar from '../../components/CommonAvatar.vue'
 import api from '../../utils/api'
 import { API_CONFIG } from '../../config'
-import { AMAP_CONFIG } from '../../config'
 import QRCode from 'qrcode'
-import amapApi from '../../api/amap'
 
 // 导入状态管理
 import { useAuthStore } from '../../store/authStore'
@@ -622,11 +620,82 @@ const editForm = reactive({
 const selectedLocation = ref([])
 const cascaderData = ref([])
 const locationDataLoading = ref(false) // 地址数据加载状态
+const ADDRESS_OPTIONS_CACHE_KEY = 'user_profile_address_options'
 const cascaderProps = {
   value: 'value',
   label: 'label',
   children: 'children',
   expandTrigger: 'hover'
+}
+
+const readCachedAddressData = () => {
+  try {
+    const cachedData = localStorage.getItem(ADDRESS_OPTIONS_CACHE_KEY)
+    return cachedData ? JSON.parse(cachedData) : []
+  } catch (error) {
+    console.warn('读取缓存地址数据失败:', error)
+    return []
+  }
+}
+
+const saveCachedAddressData = (data) => {
+  try {
+    localStorage.setItem(ADDRESS_OPTIONS_CACHE_KEY, JSON.stringify(data))
+  } catch (error) {
+    console.warn('保存缓存地址数据失败:', error)
+  }
+}
+
+const getFallbackAddressData = () => [
+  {
+    value: '北京市',
+    label: '北京市',
+    children: [
+      { value: '朝阳区', label: '朝阳区' },
+      { value: '海淀区', label: '海淀区' },
+      { value: '东城区', label: '东城区' },
+      { value: '西城区', label: '西城区' }
+    ]
+  },
+  {
+    value: '上海市',
+    label: '上海市',
+    children: [
+      { value: '黄浦区', label: '黄浦区' },
+      { value: '徐汇区', label: '徐汇区' },
+      { value: '长宁区', label: '长宁区' },
+      { value: '浦东新区', label: '浦东新区' }
+    ]
+  },
+  {
+    value: '广东省',
+    label: '广东省',
+    children: [
+      {
+        value: '广州市',
+        label: '广州市',
+        children: [
+          { value: '天河区', label: '天河区' },
+          { value: '越秀区', label: '越秀区' }
+        ]
+      },
+      {
+        value: '深圳市',
+        label: '深圳市',
+        children: [
+          { value: '福田区', label: '福田区' },
+          { value: '南山区', label: '南山区' }
+        ]
+      }
+    ]
+  }
+]
+
+const applyAddressData = (data) => {
+  cascaderData.value = Array.isArray(data) ? data : []
+  if (cascaderData.value.length > 0) {
+    saveCachedAddressData(cascaderData.value)
+  }
 }
 
 // 资料编辑表单验证规则
@@ -746,33 +815,39 @@ const fetchUserInfo = async () => {
   }
 
   // 检查是否需要从后端获取
+  const storedInfo = userStore.userInfo
   const isUserInfoEmpty =
-    !userStore.userInfo ||
-    Object.keys(userStore.userInfo).length === 0 ||
-    !userStore.userInfo.nickname ||
-    !userStore.userInfo.phone ||
-    !userStore.userInfo.avatar ||
-    !userStore.userInfo.avatar.length
+    !storedInfo ||
+    Object.keys(storedInfo).length === 0 ||
+    !storedInfo.nickname ||
+    !storedInfo.phone
 
   if (isUserInfoEmpty) {
-    console.log('从后端API获取用户信息')
-    userInfo.value = await userStore.fetchUserInfo(userId)
+    const freshInfo = await userStore.fetchUserInfo(userId)
+    userInfo.value = { ...userInfo.value, ...freshInfo }
   } else {
-    userInfo.value = { ...userStore.userInfo }
+    userInfo.value = { ...userInfo.value, ...storedInfo }
   }
-
-  console.log('用户信息:', userInfo.value)
 }
 
 // 获取钱包信息
 const fetchWalletInfo = async () => {
   try {
     const userId = parseInt(authStore.userId || '0', 10)
+    if (isNaN(userId) || userId <= 0) return
+
     const walletResponse = await walletApi.getWalletInfo(userId)
 
     if (walletResponse.code === '200' && walletResponse.data) {
-      userInfo.value.wallet = walletResponse.data
-      console.log('钱包信息已更新:', walletResponse.data)
+      userInfo.value = {
+        ...userInfo.value,
+        wallet: {
+          balance: walletResponse.data.balance || 0,
+          totalRecharge: walletResponse.data.totalRecharge || 0,
+          totalConsume: walletResponse.data.totalConsume || 0,
+          totalWithdraw: walletResponse.data.totalWithdraw || 0
+        }
+      }
     }
   } catch (error) {
     console.error('获取钱包信息失败:', error)
@@ -780,60 +855,32 @@ const fetchWalletInfo = async () => {
   }
 }
 
-// 获取地址数据（使用高德地图API）
+// 获取地址数据（优先使用后端级联接口，避免前端高德 Key 平台限制）
 const fetchAddressData = async () => {
   try {
     locationDataLoading.value = true
 
-    // 检查是否配置了高德地图API Key
-    const hasApiKey = AMAP_CONFIG.key && AMAP_CONFIG.key !== 'YOUR_AMAP_KEY'
+    const response = await api.get(API_CONFIG.location.cascaderData)
 
-    if (hasApiKey) {
-      // 方案1: 前端直接调用高德地图API（需要配置API Key）
-      console.log('使用高德地图API获取地址数据...')
-      const response = await amapApi.getDistrictDataDirect('中国', 3)
-      console.log('高德地图API返回:', response)
-
-      if (response.status === '1' && response.districts) {
-        // 将高德地图数据转换为级联选择器格式
-        cascaderData.value = amapApi.convertToCascaderFormat(response.districts)
-        console.log('地址数据已加载，共', cascaderData.value.length, '个省/直辖市/自治区')
-      } else {
-        throw new Error(response.info || '获取地址数据失败')
-      }
-    } else {
-      // 方案2: 使用后端代理API（后备方案）
-      console.log('使用后端代理API获取地址数据...')
-      const response = await api.get('/v1/location/cascader')
-      console.log('后端API返回:', response)
-
-      if (response.code === '200' && response.data) {
-        cascaderData.value = response.data
-        console.log('地址数据已加载，共', response.data.length, '个省/市/区')
-      } else {
-        throw new Error(response.message || '获取地址数据失败')
-      }
+    const addressData = response?.data || response
+    if (Array.isArray(addressData) && addressData.length > 0) {
+      applyAddressData(addressData)
+      return
     }
+
+    throw new Error(response?.message || response?.msg || '获取地址数据失败')
   } catch (error) {
     console.error('获取地址数据失败:', error)
 
-    // 尝试使用后备方案
-    if (AMAP_CONFIG.key && AMAP_CONFIG.key !== 'YOUR_AMAP_KEY') {
-      console.log('高德API失败，尝试使用后端API...')
-      try {
-        const response = await api.get('/v1/location/cascader')
-        if (response.code === '200' && response.data) {
-          cascaderData.value = response.data
-          console.log('后备方案成功：地址数据已加载')
-          return
-        }
-      } catch (fallbackError) {
-        console.error('后备方案也失败了:', fallbackError)
-      }
+    const cachedData = readCachedAddressData()
+    if (Array.isArray(cachedData) && cachedData.length > 0) {
+      cascaderData.value = cachedData
+      ElMessage.warning('地址数据加载失败，已使用本地缓存')
+      return
     }
 
-    ElMessage.error('地址数据加载失败，所在地选择功能可能不可用')
-    // 地址数据获取失败不影响其他功能
+    cascaderData.value = getFallbackAddressData()
+    ElMessage.warning('地址数据加载失败，已使用本地备用数据')
   } finally {
     locationDataLoading.value = false
   }
@@ -843,75 +890,74 @@ const fetchAddressData = async () => {
 const fetchHealthData = async () => {
   try {
     const userId = authStore.userId || '0'
+    if (!userId || userId === '0') return
 
     // 获取今日营养摄入统计
     const todayResponse = await api.get(`/calorie-records/user/${userId}/today-summary`)
     if (todayResponse.code === '200' && todayResponse.data) {
-      userInfo.value.todayCalorie = Math.round(todayResponse.data.totalCalorie || 0)
+      userInfo.value = {
+        ...userInfo.value,
+        todayCalorie: Math.round(todayResponse.data.totalCalorie || 0)
+      }
     }
 
     // 获取本周卡路里数据并计算均衡度
     const weekResponse = await api.get(`/calorie-records/user/${userId}/week`)
     if (weekResponse.code === '200' && weekResponse.data) {
-      // 计算本周均衡度（简单算法：根据每日摄入是否在合理范围内）
-      const weekData = weekResponse.data || []
-      let totalDays = weekData.length
+      const weekData = Array.isArray(weekResponse.data) ? weekResponse.data : []
+      const totalDays = weekData.length
       let balancedDays = 0
 
-      // 假设合理摄入范围是1500-2500卡路里
+      // 合理摄入范围是1500-2500卡路里
       const minCalorie = 1500
       const maxCalorie = 2500
 
       weekData.forEach(day => {
-        const consumed = day.consumed || 0
+        const consumed = day?.consumed || 0
         if (consumed >= minCalorie && consumed <= maxCalorie) {
           balancedDays++
         }
       })
 
-      // 计算均衡度百分比
-      userInfo.value.weekBalance = totalDays > 0 ? Math.round((balancedDays / totalDays) * 100) : 0
+      userInfo.value = {
+        ...userInfo.value,
+        weekBalance: totalDays > 0 ? Math.round((balancedDays / totalDays) * 100) : 0
+      }
     }
-
-    console.log('健康数据:', {
-      todayCalorie: userInfo.value.todayCalorie,
-      weekBalance: userInfo.value.weekBalance
-    })
   } catch (error) {
     console.error('获取健康数据失败:', error)
-    userInfo.value.todayCalorie = 0
-    userInfo.value.weekBalance = 0
+    userInfo.value = { ...userInfo.value, todayCalorie: 0, weekBalance: 0 }
   }
 }
 
 // 获取订单统计
 const fetchOrderStats = async () => {
+  const defaultOrders = { inProgress: 0, pending: 0, pendingComment: 0 }
+
   try {
     const userId = authStore.userId || '0'
+    if (!userId || userId === '0') {
+      userInfo.value = { ...userInfo.value, orders: defaultOrders }
+      return
+    }
+
     const response = await api.get(`/v1/orders/user/${userId}/statistics`)
 
     if (response.code === '200' && response.data) {
-      userInfo.value.orders = {
-        inProgress: response.data.inProgress || 0,
-        pending: response.data.pending || 0,
-        pendingComment: response.data.pendingComment || 0
+      userInfo.value = {
+        ...userInfo.value,
+        orders: {
+          inProgress: response.data.inProgress || 0,
+          pending: response.data.pending || 0,
+          pendingComment: response.data.pendingComment || 0
+        }
       }
     } else {
-      userInfo.value.orders = {
-        inProgress: 0,
-        pending: 0,
-        pendingComment: 0
-      }
+      userInfo.value = { ...userInfo.value, orders: defaultOrders }
     }
-
-    console.log('订单统计:', userInfo.value.orders)
   } catch (error) {
     console.error('获取订单统计失败:', error)
-    userInfo.value.orders = {
-      inProgress: 0,
-      pending: 0,
-      pendingComment: 0
-    }
+    userInfo.value = { ...userInfo.value, orders: defaultOrders }
   }
 }
 
@@ -919,6 +965,11 @@ const fetchOrderStats = async () => {
 const fetchCollectionCount = async () => {
   try {
     const userId = authStore.userId || '0'
+    if (!userId || userId === '0') {
+      userInfo.value = { ...userInfo.value, collections: 0 }
+      return
+    }
+
     const response = await api.get('/v1/collections', {
       params: { userId }
     })
@@ -931,15 +982,13 @@ const fetchCollectionCount = async () => {
         ? response.data
         : []
 
-      userInfo.value.collections = collectionsData.length || 0
+      userInfo.value = { ...userInfo.value, collections: collectionsData.length || 0 }
     } else {
-      userInfo.value.collections = 0
+      userInfo.value = { ...userInfo.value, collections: 0 }
     }
-
-    console.log('收藏数量:', userInfo.value.collections)
   } catch (error) {
     console.error('获取收藏数量失败:', error)
-    userInfo.value.collections = 0
+    userInfo.value = { ...userInfo.value, collections: 0 }
   }
 }
 
@@ -975,16 +1024,17 @@ const handleAvatarUpload = (file) => {
         avatarBase64: base64Image
       })
 
-      console.log('update avatar response:', response)
       if (response.code === '200') {
-        console.log('update avatar success')
-        userInfo.value = await userStore.fetchUserInfo(userId)
+        const freshInfo = await userStore.fetchUserInfo(userId)
+        if (freshInfo) {
+          userInfo.value = { ...userInfo.value, ...freshInfo }
+        }
         ElMessage.success('头像上传成功')
       } else {
-        ElMessage.error('头像上传失败: ' + response.message)
+        ElMessage.error('头像上传失败: ' + (response.message || '未知错误'))
       }
     } catch (error) {
-      console.error('Avatar upload failed:', error)
+      console.error('头像上传失败:', error)
       ElMessage.error('头像上传失败')
     }
   }
@@ -1041,7 +1091,6 @@ const submitFeedback = () => {
 // 提交反馈表单
 const submitFeedbackForm = async () => {
   if (feedbackFormRef.value) {
-    console.log('feedbackForm:', feedbackForm)
     feedbackFormRef.value.validate(async (valid) => {
       if (valid) {
         try {
@@ -1059,12 +1108,9 @@ const submitFeedbackForm = async () => {
             images: feedbackForm.images.map(img => img.url || img.response?.data?.url || img.url)
           }
 
-          console.log('提交反馈数据:', submitData)
-
           // 发送POST请求提交反馈
           const response = await api.post(API_CONFIG.user.feedback, submitData)
 
-          console.log('反馈提交响应:', response)
           if (response.code === '200') {
             // 关闭对话框
             feedbackDialogVisible.value = false
@@ -1086,9 +1132,8 @@ const submitFeedbackForm = async () => {
 }
 
 // 反馈类型变化处理
-const handleFeedbackTypeChange = (value) => {
-  console.log('反馈类型变化:', value)
-  // 可以根据类型动态调整表单提示等
+const handleFeedbackTypeChange = () => {
+  // 可以根据类型动态调整表单提示
 }
 
 // 图片上传前校验
@@ -1121,7 +1166,6 @@ const handleImageUploadSuccess = (response, file, fileList) => {
       url: response.data.url,
       name: file.name
     })
-    ElMessage.success('图片上传成功')
   } else {
     ElMessage.error('图片上传失败: ' + response.message)
     // 上传失败，从文件列表中移除
@@ -1139,8 +1183,7 @@ const handleImagePreview = (file) => {
 }
 
 // 图片移除
-const handleImageRemove = (file, fileList) => {
-  console.log('移除图片:', file)
+const handleImageRemove = (file) => {
   // 从表单中移除对应的图片
   const index = feedbackForm.images.findIndex(img => img.name === file.name)
   if (index > -1) {
@@ -1151,8 +1194,6 @@ const handleImageRemove = (file, fileList) => {
 // 资料编辑功能
 // 编辑资料
 const editProfile = () => {
-  console.log('userInfo:', userInfo.value)
-
   // 将当前用户信息填充到编辑表单
   Object.assign(editForm, {
     nickname: userInfo.value.nickname || '',
@@ -1162,8 +1203,8 @@ const editProfile = () => {
     height: Number(userInfo.value.height) || 0,
     weight: Number(userInfo.value.weight) || 0,
     dietGoal: userInfo.value.dietGoal || '',
-    preferTags: userInfo.value.preferTags || [],        // ✅ 映射饮食偏好标签
-    allergies: userInfo.value.allergies || ''          // ✅ 映射过敏信息
+    preferTags: userInfo.value.preferTags || [],
+    allergies: userInfo.value.allergies || ''
   })
 
   // 初始化地址选择器
@@ -1175,27 +1216,20 @@ const editProfile = () => {
 
 // 地址选择变化处理
 const handleLocationChange = (value) => {
-  console.log('地址选择变化:', value)
-
   if (value && Array.isArray(value) && value.length > 0) {
     // 将选中的adcode转换为对应的地区名称
     const locationNames = getLabelsByValues(value, cascaderData.value)
     editForm.location = locationNames.join(' ')
-    console.log('设置的location:', editForm.location)
   } else {
     editForm.location = ''
-    console.log('清空location')
   }
 }
 
 // 初始化地址选择器
 const initLocationSelect = (location) => {
-  console.log('初始化地址选择器，原始location:', location)
-
   // 处理空值或null/undefined
   if (!location || location.trim() === '') {
     selectedLocation.value = []
-    console.log('location为空，设置selectedLocation为空数组')
     return
   }
 
@@ -1205,7 +1239,6 @@ const initLocationSelect = (location) => {
   // 将地区名称转换为对应的adcode
   const adcodes = getValuesByLabels(parts, cascaderData.value)
   selectedLocation.value = adcodes
-  console.log('初始化后的selectedLocation (adcodes):', selectedLocation.value)
 }
 
 // 辅助函数：根据value（adcode）获取label（地区名称）
@@ -1252,47 +1285,60 @@ const getValuesByLabels = (labels, data, level = 0, result = []) => {
 
 // 更新保存编辑的资料方法
 const saveEditProfile = () => {
-  if (editFormRef.value) {
-    console.log('editForm:', editForm)
-    editFormRef.value.validate(async (valid) => {
-      if (valid) {
-        try {
-          saving.value = true
-
-          const userId = parseInt(String(authStore.userId || 1), 10)
-
-          // 发送PUT请求更新用户资料
-          const response = await api.put(
-            API_CONFIG.user.update.replace('{userId}', userId),
-            editForm
-          )
-
-          console.log('更新用户信息响应:', response)
-          if (response.code === '200') {
-            // 更新本地用户信息
-            const updatedUserInfo = { ...userInfo.value, ...editForm }
-            userInfo.value = updatedUserInfo
-
-            // 更新store中的用户信息并保存到localStorage
-            userStore.setUserInfo(updatedUserInfo)
-
-            // 关闭对话框
-            editProfileDialogVisible.value = false
-            ElMessage.success('资料更新成功')
-          } else {
-            ElMessage.error('资料更新失败: ' + (response.message || '未知错误'))
-          }
-        } catch (error) {
-          console.error('更新资料失败:', error)
-          ElMessage.error('网络请求失败，请稍后重试')
-        } finally {
-          saving.value = false
-        }
-      } else {
-        ElMessage.error('表单验证失败，请检查输入')
-      }
-    })
+  if (!editFormRef.value) {
+    ElMessage.error('表单初始化异常，请刷新页面重试')
+    return
   }
+
+  editFormRef.value.validate(async (valid) => {
+    if (!valid) {
+      ElMessage.error('表单验证失败，请检查输入')
+      return
+    }
+
+    try {
+      saving.value = true
+
+      const userId = parseInt(String(authStore.userId || '0'), 10)
+      if (isNaN(userId) || userId <= 0) {
+        ElMessage.error('用户信息异常，请重新登录')
+        return
+      }
+
+      // 使用 updateInfo 端点更新基本信息（昵称/身高/体重/饮食目标/地址等）
+      const response = await api.put(
+        API_CONFIG.user.updateInfo.replace('{userId}', userId),
+        {
+          nickname: editForm.nickname,
+          email: editForm.email,
+          height: editForm.height,
+          weight: editForm.weight,
+          dietGoal: editForm.dietGoal,
+          location: editForm.location,
+          preferTags: editForm.preferTags,
+          allergies: editForm.allergies
+        }
+      )
+
+      if (response.code === '200') {
+        // 从后端重新获取最新用户信息，确保数据一致
+        const freshInfo = await userStore.fetchUserInfo(userId)
+        if (freshInfo) {
+          userInfo.value = { ...freshInfo }
+        }
+
+        editProfileDialogVisible.value = false
+        ElMessage.success('资料更新成功')
+      } else {
+        ElMessage.error('资料更新失败: ' + (response.message || '未知错误'))
+      }
+    } catch (error) {
+      console.error('更新资料失败:', error)
+      ElMessage.error('网络请求失败，请稍后重试')
+    } finally {
+      saving.value = false
+    }
+  })
 }
 
 // 退出登录

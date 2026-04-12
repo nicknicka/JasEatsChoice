@@ -14,8 +14,7 @@ import { ElMessage } from 'element-plus'
 import { orderStatusToText } from '../utils/orderStatus'
 import { formatTime, calculateItemCount } from '../utils/formatters'
 
-// 显示常量
-const MAX_DISPLAY_ITEMS = 3
+// 默认用户ID
 const DEFAULT_USER_ID = '1'
 
 /**
@@ -84,13 +83,18 @@ export function useOrderData() {
       )
       const dish = dishResponse.data?.data
 
+      // 过滤不可达的外部占位图URL，避免无意义网络请求
+      const unreachableHosts = ['via.placeholder.com', 'placehold.co', 'placeholder.com']
+      const rawImage = dish?.image || ''
+      const isPlaceholder = unreachableHosts.some((host) => rawImage.includes(host))
+
       return {
         name: dish?.name || orderDish.dishName || '菜品',
         quantity: orderDish.quantity,
         price: orderDish.price,
         customization: orderDish.customization,
-        image: dish?.image || '',
-        imageLoadError: false, // 用于控制图片加载失败时的显示
+        image: isPlaceholder ? '' : rawImage,
+        imageLoadError: isPlaceholder,
         optionalIngredients: dish?.optionalIngredients || [],
         requiredIngredients: dish?.requiredIngredients || [],
         dishNote: orderDish.note || ''
@@ -142,45 +146,38 @@ export function useOrderData() {
   async function loadOrders() {
     // 防止并发请求
     if (isLoadingRequest) {
-      console.log('订单正在加载中，跳过重复请求')
       return
     }
 
     isLoadingRequest = true
     loading.value = true
-    // 重置列表动画状态，确保列表可见
     listTransitionName.value = ''
 
     try {
       const userId = getUserId()
-      console.log('正在加载订单，用户ID:', userId)
-      const response = await axios.get(API_CONFIG.baseURL + API_CONFIG.order.list + userId)
+      if (!userId) {
+        loading.value = false
+        isLoadingRequest = false
+        return
+      }
 
-      console.log('订单API响应:', response.data)
+      const response = await axios.get(API_CONFIG.baseURL + API_CONFIG.order.list + userId)
 
       const orderList = response.data?.data
       if (orderList && Array.isArray(orderList)) {
-        // 并行获取所有订单的菜品信息
         const ordersWithItems = await Promise.all(orderList.map((order) => fetchOrderDishes(order)))
         orders.value = ordersWithItems
-        console.log('订单加载成功，共', ordersWithItems.length, '条订单')
-      } else {
-        console.warn('订单数据格式不正确或为空:', orderList)
-        // 只有在确实没有数据时才清空，保留旧数据以防 API 错误
-        if (orderList === undefined || orderList === null) {
-          console.error('API 返回数据结构异常，保留现有订单数据')
-        } else {
-          orders.value = []
-        }
+      } else if (orderList !== undefined && orderList !== null) {
+        // API 返回了有效但为空的数据
+        orders.value = []
       }
+      // API 返回结构异常时保留现有订单数据
     } catch (error) {
       console.error('加载订单失败:', error)
       ElMessage.error('加载订单失败，请稍后重试')
-      // 加载失败时不清空现有数据，保留用户的订单显示
     } finally {
       isLoadingRequest = false
       loading.value = false
-      // 确保列表动画状态被重置
       listTransitionName.value = ''
     }
   }
@@ -240,15 +237,14 @@ export function useOrderData() {
    * @param {string|number} newStatus - 新状态（可能是后端状态码或前端状态文本）
    */
   function updateOrderStatus(orderId, newStatus) {
-    const order = orders.value.find((o) => o.id === orderId)
-    if (order) {
-      // 如果是数字，转换为前端状态文本
-      const statusText = typeof newStatus === 'number' ? orderStatusToText(newStatus) : newStatus
-      order.status = statusText
-      console.log(`订单 ${orderId} 状态已更新为:`, statusText)
-    } else {
-      console.warn(`未找到订单 ${orderId}，无法更新状态`)
-    }
+    const index = orders.value.findIndex((o) => o.id === orderId)
+    if (index === -1) return
+
+    const statusText = typeof newStatus === 'number' ? orderStatusToText(newStatus) : newStatus
+    // 不可变更新：创建新数组替换整个 orders
+    orders.value = orders.value.map((o, i) =>
+      i === index ? { ...o, status: statusText } : o
+    )
   }
 
   return {

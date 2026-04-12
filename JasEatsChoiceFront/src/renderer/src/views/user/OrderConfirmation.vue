@@ -395,8 +395,13 @@ const pendingOrder = JSON.parse(sessionStorage.getItem('pendingOrder')) || {}
 // 检查订单是否为空
 const isEmptyOrder = !pendingOrder.cartItems || pendingOrder.cartItems.length === 0
 
-// 从pendingOrder中提取商家ID
-const merchantId = ref(pendingOrder.merchant?.id)
+// 从pendingOrder中提取商家ID（兼容 merchantId 和 id 两种字段名）
+const merchantId = ref(pendingOrder.merchant?.merchantId || pendingOrder.merchant?.id)
+if (!merchantId.value) {
+  console.error('商家ID缺失，pendingOrder:', pendingOrder)
+  ElMessage.error('商家信息异常，请返回重试')
+  router.back()
+}
 console.log('商家ID:', merchantId.value)
 
 // 订单信息
@@ -424,7 +429,7 @@ if (isEmptyOrder) {
 
 // 商家信息 - 从pendingOrder中获取，如果没有则使用默认值
 const merchantInfo = ref({
-  id: pendingOrder.merchant?.id || 1,
+  id: pendingOrder.merchant?.merchantId || pendingOrder.merchant?.id || 1,
   name: pendingOrder.merchant?.name || '佳食优选餐厅',
   rating: pendingOrder.merchant?.rating || 4.8,
   deliveryTime: pendingOrder.merchant?.deliveryTime || '约30分钟',
@@ -509,21 +514,18 @@ onMounted(async () => {
       // 获取用户优惠券
       try {
         const couponResponse = await couponApi.getUserCoupons(userId)
-        console.log('优惠券获取响应:', couponResponse)
         if (couponResponse.code === '200') {
-          // 过滤出可用的优惠券
+          const currentAmount = orderInfo.value.totalUnpaid
+          // 过滤：状态可用 且 满足最低消费金额
           const availableCoupons = (couponResponse.data || []).filter(
-            c => c.status === 'available' || c.status === 'valid'
+            c => (c.status === 'available' || c.status === 'valid')
+              && (!c.minAmount || c.minAmount <= currentAmount)
           )
-          if (availableCoupons.length > 0) {
-            discounts.value = availableCoupons
-          } else {
-            console.log('暂无可用优惠券')
-          }
+          discounts.value = availableCoupons
         }
       } catch (couponError) {
-        console.error('获取优惠券失败，使用默认优惠券:', couponError)
-        // 保持使用默认优惠券数据
+        console.error('获取优惠券失败:', couponError)
+        discounts.value = []
       }
 
     }
@@ -558,17 +560,8 @@ const aaShareAmount = ref(0)
 const customShareModalVisible = ref(false)
 const customShares = ref([])
 
-// 优惠券
-const discounts = ref([
-  {
-    id: '1',
-    name: '新用户专享50元优惠券',
-    amount: 50.0,
-    minAmount: 100, // 满100元可用
-    available: true,
-    used: false
-  }
-])
+// 优惠券（从后端加载，初始为空）
+const discounts = ref([])
 
 const selectedDiscount = ref(null)
 const discountApplied = computed(() => selectedDiscount.value !== null)
@@ -667,8 +660,12 @@ const useDiscount = async () => {
   // 检查优惠券是否可用（调用后端API）
   try {
     const checkResponse = await couponApi.checkCouponAvailable(discount.id, currentAmount)
-    if (checkResponse.code !== '200' || !checkResponse.data.available) {
+    if (checkResponse.code !== '200') {
       ElMessage.warning(checkResponse.message || '优惠券不可用')
+      return
+    }
+    if (!checkResponse.data?.available) {
+      ElMessage.warning(checkResponse.data?.note || '优惠券不可用')
       return
     }
   } catch (error) {

@@ -1,17 +1,13 @@
 package com.xx.jaseatschoicejava.service.impl;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.xx.jaseatschoicejava.service.WeatherService;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import com.xx.jaseatschoicejava.service.WeatherService;
 
 /**
  * 天气服务实现
@@ -20,21 +16,6 @@ import java.util.Map;
 public class WeatherServiceImpl implements WeatherService {
 
     private static final Logger logger = LoggerFactory.getLogger(WeatherServiceImpl.class);
-
-    private final RestTemplate restTemplate;
-
-    private final String gaodeApiKey;
-    // private final String gaodeApiUrl; // 已废弃，使用gaodeApiWeatherUrl替代
-    private final String gaodeApiWeatherUrl;
-
-    @Autowired
-    public WeatherServiceImpl(RestTemplate restTemplate,
-                              @Value("${gaode.map.api.key}") String gaodeApiKey,
-                              @Value("${gaode.map.api.weatherUrl}") String gaodeApiWeatherUrl) {
-        this.restTemplate = restTemplate;
-        this.gaodeApiKey = gaodeApiKey;
-        this.gaodeApiWeatherUrl = gaodeApiWeatherUrl;
-    }
 
     @Override
     public Map<String, Object> getWeatherInfo(String city) {

@@ -26,18 +26,13 @@ const route = useRoute()
 const router = useRouter()
 const loading = ref(false)
 
-// 订单状态映射（对应后端状态码）
-// 0-待支付、1-待接单、2-备菜中、3-烹饪中、4-待上菜、5-已送达、6-已取消、7-待评价、8-已评价
+// 订单状态映射（5状态系统：0-待支付、1-待接单、2-制作中、3-已完成、4-已取消）
 const orderStatusMap = {
   0: { text: '待支付', type: 'info', color: '#909399', icon: '💳' },
   1: { text: '待接单', type: 'danger', color: '#f56c6c', icon: '⏰' },
-  2: { text: '备菜中', type: 'warning', color: '#e6a23c', icon: '🔪' },
-  3: { text: '烹饪中', type: 'warning', color: '#ff9800', icon: '🍳' },
-  4: { text: '待上菜', type: 'primary', color: '#409eff', icon: '🔔' },
-  5: { text: '已送达', type: 'success', color: '#67c23a', icon: '✅' },
-  6: { text: '已取消', type: 'info', color: '#c0c4cc', icon: '❌' },
-  7: { text: '待评价', type: 'success', color: '#95d475', icon: '⭐' },
-  8: { text: '已评价', type: 'success', color: '#85ce61', icon: '🌟' }
+  2: { text: '制作中', type: 'warning', color: '#e6a23c', icon: '🍳' },
+  3: { text: '已完成', type: 'success', color: '#67c23a', icon: '✅' },
+  4: { text: '已取消', type: 'info', color: '#c0c4cc', icon: '❌' }
 }
 
 // 订单详情数据
@@ -182,16 +177,14 @@ const getItemSubtotal = (item) => {
   return (item.price || 0) * (item.quantity || 0)
 }
 
-// 获取状态进度
+// 获取状态进度（5状态系统：0-待支付、1-待接单、2-制作中、3-已完成、4-已取消）
 const getStatusProgress = () => {
   const status = orderDetail.value.status
-  if (status === 0) return 0
-  if (status === 1) return 1
-  if (status === 2) return 2
-  if (status === 3) return 3
-  if (status === 4) return 4
-  if (status === 3) return 3  // 已完成
-  if (status === 4) return -1  // 已取消
+  if (status === 0) return 0    // 待支付
+  if (status === 1) return 1    // 待接单
+  if (status === 2) return 2    // 制作中
+  if (status === 3) return 3    // 已完成
+  if (status === 4) return -1   // 已取消
   return 0
 }
 
@@ -234,8 +227,6 @@ onMounted(() => {
               <el-icon v-if="orderDetail.status === 0"><Document /></el-icon>
               <el-icon v-else-if="orderDetail.status === 1"><Clock /></el-icon>
               <el-icon v-else-if="orderDetail.status === 2"><Goods /></el-icon>
-              <el-icon v-else-if="orderDetail.status === 3"><Dish /></el-icon>
-              <el-icon v-else-if="orderDetail.status === 4"><Document /></el-icon>
               <el-icon v-else-if="orderDetail.status === 3"><CircleCheckFilled /></el-icon>
               <el-icon v-else-if="orderDetail.status === 4"><CircleClose /></el-icon>
               <el-icon v-else><Document /></el-icon>
@@ -254,36 +245,9 @@ onMounted(() => {
             </el-button>
             <el-button
               v-if="orderDetail.status === 2"
-              type="warning"
-              size="small"
-              @click="updateOrderStatus(3)"
-            >
-              <el-icon><Goods /></el-icon>
-              开始烹饪
-            </el-button>
-            <el-button
-              v-if="orderDetail.status === 3"
               type="primary"
               size="small"
-              @click="updateOrderStatus(4)"
-            >
-              <el-icon><Dish /></el-icon>
-              上菜
-            </el-button>
-            <el-button
-              v-if="orderDetail.status === 4"
-              type="success"
-              size="small"
-              @click="updateOrderStatus(5)"
-            >
-              <el-icon><CircleCheckFilled /></el-icon>
-              确认送达
-            </el-button>
-            <el-button
-              v-if="orderDetail.status === 3"
-              type="success"
-              size="small"
-              @click="updateOrderStatus(7)"
+              @click="updateOrderStatus(3)"
             >
               <el-icon><CircleCheckFilled /></el-icon>
               完成订单
@@ -309,42 +273,14 @@ onMounted(() => {
             <div class="step-icon">
               <el-icon><Goods /></el-icon>
             </div>
-            <div class="step-text">备菜中</div>
+            <div class="step-text">制作中</div>
           </div>
           <div class="progress-line" :class="{ active: getStatusProgress() >= 3 }"></div>
           <div class="progress-step" :class="{ active: getStatusProgress() >= 3 }">
             <div class="step-icon">
-              <el-icon><Dish /></el-icon>
-            </div>
-            <div class="step-text">烹饪中</div>
-          </div>
-          <div class="progress-line" :class="{ active: getStatusProgress() >= 4 }"></div>
-          <div class="progress-step" :class="{ active: getStatusProgress() >= 4 }">
-            <div class="step-icon">
-              <el-icon><Document /></el-icon>
-            </div>
-            <div class="step-text">待上菜</div>
-          </div>
-          <div class="progress-line" :class="{ active: getStatusProgress() >= 5 }"></div>
-          <div class="progress-step" :class="{ active: getStatusProgress() >= 5 }">
-            <div class="step-icon">
-              <el-icon><CircleCheck /></el-icon>
-            </div>
-            <div class="step-text">已送达</div>
-          </div>
-          <div class="progress-line" :class="{ active: getStatusProgress() >= 6 }"></div>
-          <div class="progress-step" :class="{ active: getStatusProgress() >= 6 }">
-            <div class="step-icon">
-              <el-icon><Star /></el-icon>
-            </div>
-            <div class="step-text">待评价</div>
-          </div>
-          <div class="progress-line" :class="{ active: getStatusProgress() >= 7 }"></div>
-          <div class="progress-step" :class="{ active: getStatusProgress() >= 7 }">
-            <div class="step-icon">
               <el-icon><CircleCheckFilled /></el-icon>
             </div>
-            <div class="step-text">已评价</div>
+            <div class="step-text">已完成</div>
           </div>
         </div>
       </div>
@@ -577,19 +513,7 @@ onMounted(() => {
         background: linear-gradient(180deg, @merchant-status-pending 0%, lighten(@merchant-status-pending, 8%) 100%);
       }
       &.status-3::before {
-        background: linear-gradient(180deg, @merchant-warning 0%, lighten(@merchant-warning, 10%) 100%);
-      }
-      &.status-4::before {
-        background: linear-gradient(180deg, @merchant-info 0%, lighten(@merchant-info, 10%) 100%);
-      }
-      &.status-3::before {
         background: linear-gradient(180deg, @merchant-success 0%, lighten(@merchant-success, 10%) 100%);
-      }
-      &.status-6::before {
-        background: linear-gradient(180deg, @merchant-status-cancelled 0%, lighten(@merchant-status-cancelled, 8%) 100%);
-      }
-      &.status-3::before {
-        background: linear-gradient(180deg, @merchant-success 0%, lighten(@merchant-success, 15%) 100%);
       }
       &.status-4::before {
         background: linear-gradient(180deg, @merchant-status-cancelled 0%, lighten(@merchant-status-cancelled, 8%) 100%);

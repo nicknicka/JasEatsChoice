@@ -13,8 +13,6 @@ import { useOrderFilter } from '../../composables/useOrderFilter'
 import { useOrderPagination } from '../../composables/useOrderPagination'
 import { useOrderWebSocket } from '../../composables/useOrderWebSocket'
 import orderApi from '../../api/order'
-import axios from 'axios'
-import { API_CONFIG } from '../../config'
 
 const router = useRouter()
 const route = useRoute()
@@ -58,9 +56,9 @@ const {
 
 // WebSocket 订单更新回调
 function handleOrderUpdate(orderUpdate) {
-  updateOrderStatus(orderUpdate.id, orderUpdate.status)
-  // 只更新本地状态，不再重新加载所有订单
-  // 重新加载会导致订单显示又消失的问题
+  if (orderUpdate?.id && orderUpdate?.status !== undefined) {
+    updateOrderStatus(orderUpdate.id, orderUpdate.status)
+  }
 }
 
 // 初始化 WebSocket
@@ -82,11 +80,10 @@ function viewOrderDetails(order) {
  */
 async function cancelOrder(order) {
   try {
-    await axios.put(
-      API_CONFIG.baseURL + API_CONFIG.order.detail + order.id + '/cancel'
-    )
+    await orderApi.updateOrderStatus(order.id, 4)
 
-    order.status = 'cancelled'
+    // 使用不可变更新：通过 updateOrderStatus 更新本地状态
+    updateOrderStatus(order.id, 4)
     ElMessage.success('订单已取消')
   } catch (error) {
     console.error('取消订单失败:', error)
@@ -98,14 +95,6 @@ async function cancelOrder(order) {
  * 确认收货
  */
 async function confirmReceipt(order) {
-  console.log('📦 Orders.vue - 开始确认收货流程', {
-    orderId: order.id,
-    orderNo: order.orderNo,
-    currentStatus: order.status,
-    statusText: getOrderStatusText(order.status),
-    timestamp: new Date().toISOString()
-  })
-
   try {
     await ElMessageBox.confirm('确认已收到餐品并完成订单吗？', '确认收货', {
       confirmButtonText: '确认收货',
@@ -113,48 +102,18 @@ async function confirmReceipt(order) {
       type: 'info'
     })
 
-    console.log('📦 Orders.vue - 用户确认，开始调用API', {
-      orderId: order.id,
-      apiEndpoint: `/v1/orders/${order.id}/status`,
-      targetStatus: 7,
-      timestamp: new Date().toISOString()
-    })
-
     const response = await orderApi.confirmReceipt(order.id)
 
-    console.log('📦 Orders.vue - API响应', {
-      orderId: order.id,
-      response: response.data,
-      success: response.data?.success,
-      timestamp: new Date().toISOString()
-    })
-
-    if (response.data.success) {
-      order.status = 'pendingComment'
-      console.log('✅ Orders.vue - 确认收货成功', {
-        orderId: order.id,
-        newStatus: order.status,
-        statusText: getOrderStatusText(order.status),
-        timestamp: new Date().toISOString()
-      })
-      ElMessage.success('已确认收货，请对订单进行评价')
+    if (response?.success) {
+      // 使用不可变更新：通过 updateOrderStatus 更新本地状态
+      updateOrderStatus(order.id, 3)
+      ElMessage.success('已确认收货')
     } else {
-      console.error('❌ Orders.vue - 确认收货失败（业务错误）', {
-        orderId: order.id,
-        message: response.data.message,
-        timestamp: new Date().toISOString()
-      })
-      ElMessage.error(response.data.message || '确认收货失败')
+      ElMessage.error(response?.message || '确认收货失败')
     }
   } catch (error) {
     if (error !== 'cancel') {
-      console.error('❌ Orders.vue - 确认收货异常', {
-        orderId: order.id,
-        error: error,
-        errorMessage: error.message,
-        errorStack: error.stack,
-        timestamp: new Date().toISOString()
-      })
+      console.error('确认收货失败:', error)
       ElMessage.error('确认收货失败，请稍后重试')
     }
   }
@@ -227,22 +186,6 @@ watch([activeStatus, sortBy], () => {
   resetToFirstPage()
 })
 
-// 调试：监控订单数据变化
-watch(orders, (newOrders) => {
-  console.log('Orders.vue - orders 变化:', {
-    订单数量: newOrders.length,
-    订单列表: newOrders.map(o => ({ id: o.id, status: o.status }))
-  })
-}, { deep: true })
-
-// 调试：监控分页后订单变化
-watch(paginatedOrders, (newPaginated) => {
-  console.log('Orders.vue - paginatedOrders 变化:', {
-    订单数量: newPaginated.length,
-    订单IDs: newPaginated.map(o => o.id)
-  })
-}, { deep: true })
-
 /**
  * 监听搜索关键词变化，重置分页
  */
@@ -273,11 +216,6 @@ watch(
   (newRefresh, oldRefresh) => {
     // 如果refresh参数发生变化，说明是从评价页面返回，刷新订单列表
     if (newRefresh && newRefresh !== oldRefresh) {
-      console.log('🔄 检测到刷新参数，重新加载订单列表', {
-        newRefresh,
-        oldRefresh,
-        timestamp: new Date().toISOString()
-      })
       loadOrders()
     }
   }

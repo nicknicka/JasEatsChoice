@@ -1,21 +1,25 @@
 package com.xx.jaseatschoicejava.service.extraction.fetcher;
 
-import cn.hutool.http.HttpUtil;
-import com.xx.jaseatschoicejava.enums.ContentPlatform;
-import com.xx.jaseatschoicejava.enums.ContentType;
-import com.xx.jaseatschoicejava.service.extraction.dto.FetchedContent;
-import lombok.extern.slf4j.Slf4j;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import com.xx.jaseatschoicejava.enums.ContentPlatform;
+import com.xx.jaseatschoicejava.enums.ContentType;
+import com.xx.jaseatschoicejava.service.extraction.dto.FetchedContent;
+import com.xx.jaseatschoicejava.util.FileUploadUtil;
+
+import cn.hutool.http.HttpUtil;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 文章/图文内容抓取策略
@@ -62,7 +66,8 @@ public class ArticleContentFetcher implements ContentFetcher {
             String author = extractAuthor(doc, platform);
 
             // 提取封面图
-            String coverImage = extractCoverImage(doc, platform);
+            String coverImage = extractCoverImage(doc);
+            String localCoverImage = storeCoverImage(coverImage, "content-extraction/article/cover");
 
             // 按平台提取正文和图片
             ExtractedArticle article = extractArticleContent(doc, platform);
@@ -73,7 +78,7 @@ public class ArticleContentFetcher implements ContentFetcher {
             return FetchedContent.builder()
                 .title(title)
                 .author(author)
-                .coverImage(coverImage)
+                .coverImage(localCoverImage)
                 .textContent(article.textContent)
                 .imageUrls(article.imageUrls)
                 .imageBase64List(imageBase64List)
@@ -82,7 +87,7 @@ public class ArticleContentFetcher implements ContentFetcher {
                 .fetchSuccess(true)
                 .build();
 
-        } catch (Exception e) {
+        } catch (IOException | RuntimeException e) {
             log.error("抓取文章内容失败: {}", url, e);
             return FetchedContent.builder()
                 .fetchSuccess(false)
@@ -106,7 +111,7 @@ public class ArticleContentFetcher implements ContentFetcher {
                     .execute();
                 return response.url().toString();
             }
-        } catch (Exception e) {
+        } catch (IOException | RuntimeException e) {
             log.warn("解析重定向失败，使用原始URL: {}", url);
         }
         return url;
@@ -147,7 +152,7 @@ public class ArticleContentFetcher implements ContentFetcher {
     /**
      * 提取封面图
      */
-    private String extractCoverImage(Document doc, ContentPlatform platform) {
+    private String extractCoverImage(Document doc) {
         Element ogImage = doc.selectFirst("meta[property=og:image]");
         if (ogImage != null && !ogImage.attr("content").isEmpty()) {
             return ogImage.attr("content");
@@ -311,11 +316,24 @@ public class ArticleContentFetcher implements ContentFetcher {
                 } else {
                     log.warn("图片过大或为空({}字节)，跳过: {}", bytes.length, url);
                 }
-            } catch (Exception e) {
+            } catch (RuntimeException e) {
                 log.warn("下载图片失败: {}", url, e);
             }
         }
         return base64List;
+    }
+
+    private String storeCoverImage(String coverImage, String category) {
+        if (coverImage == null || coverImage.isEmpty()) {
+            return "";
+        }
+
+        try {
+            return FileUploadUtil.uploadRemoteImage(coverImage, category, null);
+        } catch (IOException | RuntimeException e) {
+            log.warn("封面图转存失败，继续使用原始地址: {}", coverImage, e);
+            return coverImage;
+        }
     }
 
     /**

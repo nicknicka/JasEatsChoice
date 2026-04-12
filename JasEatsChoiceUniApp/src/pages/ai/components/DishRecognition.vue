@@ -49,8 +49,44 @@
       </view>
     </view>
 
-    <!-- 可滚动内容：识别结果 -->
-    <scroll-view v-if="recognitionResult" class="scrollable-content" scroll-y>
+      <!-- 可滚动内容：识别结果 -->
+      <scroll-view v-if="isRecognizing" class="scrollable-content" scroll-y>
+        <view class="loading-section">
+          <view class="section-title">⏳ AI 正在分析菜品</view>
+          <view class="loading-card">
+            <view class="loading-header">
+              <text class="loading-icon">🔍</text>
+              <view class="loading-title-group">
+                <text class="loading-title">正在识别图片内容</text>
+                <text class="loading-subtitle">参考食材结构、烹饪特征和营养信息生成结果</text>
+              </view>
+            </view>
+
+            <view class="loading-steps">
+              <view class="loading-step">
+                <text class="loading-step-badge">1</text>
+                <text class="loading-step-text">检测菜品主体与摆盘特征</text>
+              </view>
+              <view class="loading-step">
+                <text class="loading-step-badge">2</text>
+                <text class="loading-step-text">分析可能的食材与烹饪方式</text>
+              </view>
+              <view class="loading-step">
+                <text class="loading-step-badge">3</text>
+                <text class="loading-step-text">生成卡路里和营养成分结果</text>
+              </view>
+            </view>
+
+            <view class="loading-pulse">
+              <view class="loading-dot"></view>
+              <view class="loading-dot"></view>
+              <view class="loading-dot"></view>
+            </view>
+          </view>
+        </view>
+      </scroll-view>
+
+      <scroll-view v-else-if="recognitionResult" class="scrollable-content" scroll-y>
       <view class="result-section">
         <view class="section-title">✨ 识别结果</view>
         <!-- 菜品名称 -->
@@ -135,10 +171,10 @@
           </button>
         </view>
       </view>
-    </scroll-view>
+	    </scroll-view>
 
     <!-- 使用说明 -->
-    <scroll-view v-if="!recognitionResult" class="scrollable-content" scroll-y>
+	    <scroll-view v-else class="scrollable-content" scroll-y>
       <view class="tips-section">
         <view class="section-title">💡 使用说明</view>
         <view class="tips-list">
@@ -198,10 +234,11 @@ const recognizeDish = async () => {
   if (!selectedImage.value) return
 
   isRecognizing.value = true
+  recognitionResult.value = null
 
   try {
     // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    await new Promise(resolve => setTimeout(resolve, 2800))
 
     // 模拟识别结果
     recognitionResult.value = {
@@ -278,6 +315,123 @@ const shareResult = () => {
   overflow-y: auto;
   padding: $spacing-lg;
   background: $bg-color-base;
+}
+
+/* 等待识别 */
+.loading-section {
+  margin-bottom: $spacing-lg;
+}
+
+.loading-card {
+  background: $bg-color-white;
+  border-radius: $border-radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $box-shadow-sm;
+  border: 1rpx solid rgba(255, 107, 53, 0.12);
+}
+
+.loading-header {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-md;
+  margin-bottom: $spacing-lg;
+}
+
+.loading-icon {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: $border-radius-round;
+  background: linear-gradient(135deg, rgba(255, 107, 53, 0.12), rgba(255, 82, 82, 0.12));
+  @include flex-center;
+  font-size: 40rpx;
+  flex-shrink: 0;
+}
+
+.loading-title-group {
+  flex: 1;
+  min-width: 0;
+}
+
+.loading-title {
+  display: block;
+  font-size: $font-size-base;
+  font-weight: $font-weight-bold;
+  color: $text-color-primary;
+  margin-bottom: 8rpx;
+}
+
+.loading-subtitle {
+  display: block;
+  font-size: $font-size-sm;
+  color: $text-color-secondary;
+  line-height: 1.6;
+}
+
+.loading-steps {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-lg;
+}
+
+.loading-step {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  background: linear-gradient(135deg, #fff9fa 0%, #fff 100%);
+  border-radius: $border-radius-md;
+  border: 1rpx solid rgba(255, 107, 53, 0.08);
+}
+
+.loading-step-badge {
+  width: 32rpx;
+  height: 32rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, $primary-color, #ff5252);
+  color: #fff;
+  font-size: 20rpx;
+  @include flex-center;
+  flex-shrink: 0;
+}
+
+.loading-step-text {
+  font-size: $font-size-sm;
+  color: $text-color-regular;
+}
+
+.loading-pulse {
+  @include flex-center;
+  gap: 10rpx;
+}
+
+.loading-dot {
+  width: 14rpx;
+  height: 14rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, $primary-color, #ff5252);
+  animation: loadingPulse 1.8s infinite ease-in-out;
+
+  &:nth-child(2) {
+    animation-delay: 0.15s;
+  }
+
+  &:nth-child(3) {
+    animation-delay: 0.3s;
+  }
+}
+
+@keyframes loadingPulse {
+  0%,
+  80%,
+  100% {
+    transform: scale(0.7);
+    opacity: 0.4;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .section-title {

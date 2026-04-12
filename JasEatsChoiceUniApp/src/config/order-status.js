@@ -11,70 +11,53 @@
  */
 
 // uni-ui 图标映射
-// 参考：https://uniapp.dcloud.net.cn/component/uniui/uni-icons.html
 const ICON_MAP = {
   wallet: 'wallet',           // 钱包 - 待支付
   loading: 'loop',            // 加载 - 制作中
-  paperplane: 'paperplane',   // 纸飞机 - 配送中
-  star: 'star',               // 星星 - 待评价
   close: 'close',             // 关闭 - 已取消
   checkmark: 'checkmarkempty' // 勾选 - 已完成
 }
 
-// 订单状态配置
+// 订单状态配置（5状态系统：0-待支付、1-待接单、2-制作中、3-已完成、4-已取消）
 export const ORDER_STATUS_CONFIG = {
   // 待支付
   pending: {
     key: 'pending',
     label: '待支付',
-    backendStatus: [0],  // 后端状态码
+    backendStatus: [0],
     icon: ICON_MAP.wallet,
-    iconType: 'uni-ui',  // 使用 uni-ui 图标
-    color: '#FF6B35',    // 品牌色
-    bgColor: '#FFF2ED',  // 浅色背景
-    badgeColor: '#FF6B35', // 角标颜色（红色，需要用户操作）
-    showBadge: true,     // 显示角标
-    urgent: true         // 紧急状态
+    iconType: 'uni-ui',
+    color: '#FF6B35',
+    bgColor: '#FFF2ED',
+    badgeColor: '#FF6B35',
+    showBadge: true,
+    urgent: true
   },
 
   // 制作中（包含：待接单 + 制作中）
   preparing: {
     key: 'preparing',
     label: '制作中',
-    backendStatus: [1, 2],  // 待接单、制作中
+    backendStatus: [1, 2],
     icon: ICON_MAP.loading,
     iconType: 'uni-ui',
     color: '#FF9800',
     bgColor: '#FFF3E0',
-    badgeColor: null,  // 不显示角标（系统流程）
+    badgeColor: null,
     showBadge: false,
     urgent: false
   },
 
-  // 配送中
-  delivering: {
-    key: 'delivering',
-    label: '配送中',
-    backendStatus: ['delivering'],  // 自定义状态（可能由骑手信息判断）
-    icon: ICON_MAP.paperplane,
-    iconType: 'uni-ui',
-    color: '#4CAF50',
-    bgColor: '#E8F5E9',
-    badgeColor: null,  // 不显示角标（系统流程）
-    showBadge: false,
-    urgent: false
-  },
-
-  // 待评价（已完成但未评价）
+  // 已完成
   completed: {
     key: 'completed',
-    label: '待评价',
-    backendStatus: [3],  // 已完成
-    icon: ICON_MAP.star,
+    label: '已完成',
+    backendStatus: [3],
+    icon: ICON_MAP.checkmark,
     iconType: 'uni-ui',
-    color: '#FFC107',
-    bgColor: '#FFF8E1',
-    badgeColor: null,  // 不显示角标（非紧急）
+    color: '#52C41A',
+    bgColor: '#E8F5E9',
+    badgeColor: null,
     showBadge: false,
     urgent: false
   },
@@ -107,7 +90,6 @@ export const BACKEND_TO_FRONTEND_MAP = {
 export const FRONTEND_TO_BACKEND_MAP = {
   pending: [0],
   preparing: [1, 2],
-  delivering: ['delivering'],
   completed: [3],
   cancelled: [4]
 }
@@ -139,28 +121,24 @@ export function getStatusByKey(key) {
  * @example
  * // 后端返回格式
  * {
- *   pending: 2,    // 待支付
- *   paid: 1,       // 已支付（待接单）
- *   preparing: 3,  // 制作中
- *   delivering: 2, // 配送中
- *   completed: 5,  // 已完成
- *   cancelled: 0   // 已取消
+ *   pending: 2,       // 待支付
+ *   processing: 1,    // 待接单
+ *   delivering: 3,    // 制作中
+ *   completed: 5,     // 已完成
  * }
  *
  * // 前端转换后格式
  * {
  *   pending: 2,        // 待支付
- *   preparing: 4,      // 制作中（paid + preparing）
- *   delivering: 2,     // 配送中
- *   completed: 5,      // 待评价
+ *   preparing: 4,      // 制作中（processing + delivering）
+ *   completed: 5,      // 已完成
  *   cancelled: 0       // 已取消
  * }
  */
 export function mapOrderCounts(backendData) {
   return {
     pending: backendData.pending || 0,
-    preparing: (backendData.paid || 0) + (backendData.preparing || 0),
-    delivering: backendData.delivering || 0,
+    preparing: (backendData.processing || 0) + (backendData.delivering || 0),
     completed: backendData.completed || 0,
     cancelled: backendData.cancelled || 0
   }
@@ -178,14 +156,13 @@ export function calculateActiveOrders(orderCounts) {
 }
 
 /**
- * 获取用户中心显示的4个核心状态
+ * 获取用户中心显示的3个核心状态
  * @returns {Array} 核心状态配置数组
  */
 export function getCoreStatuses() {
   return [
     ORDER_STATUS_CONFIG.pending,
     ORDER_STATUS_CONFIG.preparing,
-    ORDER_STATUS_CONFIG.delivering,
     ORDER_STATUS_CONFIG.completed
   ]
 }

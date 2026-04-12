@@ -565,7 +565,7 @@ router.beforeEach(async (to, from, next) => {
     document.title = to.meta.title
   }
 
-  // 窗口尺寸自动切换
+  // 窗口尺寸自动切换：仅在登录/注册等页面之间切换时调整，主页面内导航不触发
   const authRoutes = ['/login', '/register', '/admin/login', '/merchant/register']
   const api = window.api
   if (api?.window) {
@@ -575,7 +575,8 @@ router.beforeEach(async (to, from, next) => {
       await api.window.resizeToAdminLogin()
     } else if (to.path === '/login') {
       await api.window.resizeToLogin()
-    } else if (to.path.startsWith('/user') || to.path.startsWith('/merchant') || to.path.startsWith('/admin')) {
+    } else if (authRoutes.some(r => from.path === r || from.path.startsWith(r)) && (to.path.startsWith('/user') || to.path.startsWith('/merchant') || to.path.startsWith('/admin'))) {
+      // 仅从登录/注册页进入主页面时才调整窗口尺寸
       await api.window.resizeToMain()
     }
   }

@@ -26,41 +26,33 @@ const loading = ref(true)
 const review = ref(null)
 const reviewLoading = ref(false)
 
-// 订单状态映射（与 orderStatus.js 保持一致）
+// 订单状态映射（5状态系统：0-待支付、1-待接单、2-制作中、3-已完成、4-已取消）
 const orderStatusMap = {
   all: '全部订单',
   pending: '待支付',
   pendingAccept: '待接单',
-  processing: '进行中',
-  pendingComment: '待评价',
-  delivered: '已上菜',
-  reviewed: '已评价',
+  preparing: '制作中',
+  completed: '已完成',
   cancelled: '已取消'
 }
 
-// 订单状态标签样式映射（与 orderStatus.js 保持一致）
+// 订单状态标签样式映射
 const statusTagTypeMap = {
   pending: 'info',
   pendingAccept: 'warning',
-  processing: 'primary',
-  pendingComment: 'info',
-  delivered: 'success',
-  reviewed: 'success',
+  preparing: 'primary',
+  completed: 'success',
   cancelled: 'danger'
 }
 
-// 将后端状态码转换为前端状态文本
+// 将后端状态码转换为前端状态文本（5状态系统）
 const orderStatusToText = (statusCode) => {
   const statusMap = {
-    0: 'pending', // 待支付
+    0: 'pending',       // 待支付
     1: 'pendingAccept', // 待接单
-    2: 'processing', // 备菜中
-    3: 'processing', // 烹饪中
-    4: 'processing', // 待上菜
-    5: 'delivered', // 已上菜
-    6: 'cancelled', // 已取消
-    7: 'pendingComment', // 待评价
-    8: 'reviewed' // 已评价
+    2: 'preparing',     // 制作中
+    3: 'completed',     // 已完成
+    4: 'cancelled'      // 已取消
   }
   return statusMap[statusCode] || 'pending'
 }
@@ -182,17 +174,12 @@ const loadOrderDetail = async () => {
     order.value = null
   } finally {
     loading.value = false
-    // 订单详情加载完成后，如果订单已评价，则加载评价数据
-    console.log('📋 订单详情加载完成，检查是否需要加载评价', {
+    // 订单详情加载完成
+    console.log('📋 订单详情加载完成', {
       hasOrder: !!order.value,
       orderStatus: order.value?.status,
-      rawStatus: order.value?._raw?.status,
-      shouldLoadReview: order.value && order.value.status === 'reviewed'
+      rawStatus: order.value?._raw?.status
     })
-
-    if (order.value && order.value.status === 'reviewed') {
-      await loadReview()
-    }
   }
 }
 
@@ -279,18 +266,12 @@ onMounted(() => {
   })
   loadOrderDetail()
 
-  // 延迟检查，确保订单状态更新后再尝试加载评价
+  // 延迟检查订单状态
   setTimeout(() => {
     console.log('⏰ 延迟检查订单状态', {
       hasOrder: !!order.value,
-      orderStatus: order.value?.status,
-      orderStatusText: orderStatusToText(order.value?.status)
+      orderStatus: order.value?.status
     })
-
-    if (order.value && order.value.status === 'reviewed' && !review.value) {
-      console.log('📝 延迟加载评价数据')
-      loadReview()
-    }
   }, 500)
 })
 
@@ -305,10 +286,6 @@ watch(
       })
       // 重新加载订单详情
       loadOrderDetail()
-      // 如果订单已评价，重新加载评价数据
-      if (order.value?.status === 'reviewed') {
-        loadReview()
-      }
     }
   }
 )
@@ -362,18 +339,16 @@ const contactMerchant = () => {
   })
 }
 
-// 获取当前活动步骤
+// 获取当前活动步骤（5状态系统）
 const getActiveStep = () => {
   if (!order.value) return 0
 
   const statusStepMap = {
     pending: 0,
     pendingAccept: 1,
-    processing: 2,
-    delivered: 3,
-    pendingComment: 4,
-    reviewed: 4,
-    cancelled: 2
+    preparing: 2,
+    completed: 3,
+    cancelled: 0
   }
 
   return statusStepMap[order.value.status] || 0
@@ -408,8 +383,7 @@ const getActiveStep = () => {
             <el-steps :active="getActiveStep()" finish-status="success" align-center>
               <el-step title="待支付" />
               <el-step title="待接单" />
-              <el-step title="进行中" />
-              <el-step title="已上菜" />
+              <el-step title="制作中" />
               <el-step title="已完成" />
             </el-steps>
           </div>
@@ -503,12 +477,14 @@ const getActiveStep = () => {
                   <div class="ingredients-list">
                     <span
                       class="ingredient-tag optional"
-                      v-for="ing in item.optionalIngredients"
-                      :key="ing.id || ing.name"
+                      v-for="(ing, idx) in item.optionalIngredients"
+                      :key="typeof ing === 'string' ? ing : (ing.id || ing.name || idx)"
                     >
-                      {{ ing.name }}
-                      <span v-if="ing.price" class="ingredient-price"
-                        >+¥{{ ing.price.toFixed(2) }}</span
+                      {{ typeof ing === 'string' ? ing : ing.name }}
+                      <span
+                        v-if="typeof ing !== 'string' && ing.price"
+                        class="ingredient-price"
+                        >+¥{{ Number(ing.price).toFixed(2) }}</span
                       >
                     </span>
                   </div>
@@ -595,95 +571,10 @@ const getActiveStep = () => {
           <div class="remark-content">{{ order.remark }}</div>
         </el-card>
 
-        <!-- 评价卡片 -->
-        <el-card v-if="review" class="review-card" shadow="hover">
-          <!-- 调试信息 -->
-          <div style="display: none;">
-            <pre>{{ JSON.stringify({
-              hasReview: !!review,
-              reviewId: review?.id,
-              rating: review?.rating,
-              hasContent: !!review?.content,
-              hasImages: review?.images?.length > 0,
-              hasReplies: review?.replies?.length > 0,
-              repliesCount: review?.replies?.length
-            }, null, 2) }}</pre>
-          </div>
-          <!-- 调试信息结束 -->
-          <template #header>
-            <div class="card-header">
-              <el-icon :size="20" color="#f7ba2a"><Star /></el-icon>
-              <span class="card-title">我的评价</span>
-            </div>
-          </template>
-
-          <div v-loading="reviewLoading" class="review-content">
-            <!-- 评分 -->
-            <div class="review-rating">
-              <span class="rating-label">评分：</span>
-              <el-rate
-                v-model="review.rating"
-                disabled
-                :colors="['#F7BA2A', '#F7BA2A', '#F7BA2A']"
-                size="large"
-              />
-              <span class="rating-score">{{ review.rating }}分</span>
-            </div>
-
-            <!-- 评价内容 -->
-            <div v-if="review.content" class="review-text">
-              {{ review.content }}
-            </div>
-
-            <!-- 评价图片 -->
-            <div v-if="review.images && review.images.length > 0" class="review-images">
-              <el-image
-                v-for="(img, index) in review.images"
-                :key="index"
-                :src="img"
-                :preview-src-list="review.images"
-                :initial-index="index"
-                fit="cover"
-                class="review-image"
-                lazy
-              >
-                <template #error>
-                  <div class="image-error">
-                    <el-icon><Picture /></el-icon>
-                  </div>
-                </template>
-              </el-image>
-            </div>
-
-            <!-- 追评和商家回复 -->
-            <div v-if="review.replies && review.replies.length > 0" class="review-replies">
-              <div
-                v-for="reply in review.replies"
-                :key="reply.id"
-                class="reply-item"
-                :class="{ 'merchant-reply': reply.isAdditional === 0, 'user-reply': reply.isAdditional === 1 }"
-              >
-                <div class="reply-header">
-                  <div class="reply-type">
-                    <el-tag v-if="reply.isAdditional === 0" type="success" size="small">
-                      商家回复
-                    </el-tag>
-                    <el-tag v-else-if="reply.isAdditional === 1" type="warning" size="small">
-                      追加评价
-                    </el-tag>
-                  </div>
-                  <span class="reply-time">{{ formatTime(reply.createTime) }}</span>
-                </div>
-                <div class="reply-content">{{ reply.content }}</div>
-              </div>
-            </div>
-          </div>
-        </el-card>
-
         <!-- 操作按钮 -->
         <div class="order-actions">
           <el-button
-            v-if="order.status === 'pendingAccept'"
+            v-if="order.status === 'pending' || order.status === 'pendingAccept'"
             type="danger"
             size="large"
             @click="cancelOrder(order)"
@@ -692,27 +583,7 @@ const getActiveStep = () => {
             取消订单
           </el-button>
           <el-button
-            v-if="order.status === 'pendingComment'"
-            type="success"
-            size="large"
-            @click="goToEvaluate(order.id)"
-            class="action-btn evaluate-btn"
-          >
-            <el-icon><CircleCheck /></el-icon>
-            去评价
-          </el-button>
-          <el-button
-            v-if="order.status === 'reviewed'"
-            type="warning"
-            size="large"
-            @click="goToEvaluate(order.id, true)"
-            class="action-btn additional-review-btn"
-          >
-            <el-icon><EditPen /></el-icon>
-            追加评价
-          </el-button>
-          <el-button
-            v-if="order.status === 'pendingAccept' || order.status === 'processing'"
+            v-if="order.status === 'pendingAccept' || order.status === 'preparing'"
             type="primary"
             size="large"
             @click="contactMerchant"

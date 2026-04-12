@@ -77,7 +77,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed } from 'vue'
 import OrderItemsList from './OrderItemsList.vue'
 import {
   getOrderStatusText,
@@ -104,22 +104,6 @@ const props = defineProps({
 
 const emit = defineEmits(['view-details', 'cancel', 'confirm-receipt', 'evaluate', 'additional-review', 'reorder', 'image-error'])
 
-// 组件挂载时打印订单状态
-onMounted(() => {
-  console.log('📦 OrderCard组件挂载 - 订单状态详情', {
-    orderId: props.order.id,
-    orderNo: props.order.orderNo,
-    status: props.order.status,
-    statusText: getStatusText(props.order.status),
-    backendStatus: props.order._raw?.status,
-    canCancel: canCancel.value,
-    canConfirmReceiptOrder: canConfirmReceiptOrder.value,
-    canEvaluate: canEvaluate.value,
-    canReorder: canReorder.value,
-    timestamp: new Date().toISOString()
-  })
-})
-
 /**
  * 获取状态文本
  */
@@ -142,18 +126,7 @@ const canCancel = computed(() => canCancelOrder(props.order.status))
 /**
  * 是否可以确认收货
  */
-const canConfirmReceiptOrder = computed(() => {
-  const canConfirm = canConfirmReceipt(props.order.status)
-  console.log('📦 OrderCard - 订单确认收货状态检查', {
-    orderId: props.order.id,
-    orderNo: props.order.orderNo,
-    currentStatus: props.order.status,
-    statusText: getStatusText(props.order.status),
-    canConfirmReceipt: canConfirm,
-    timestamp: new Date().toISOString()
-  })
-  return canConfirm
-})
+const canConfirmReceiptOrder = computed(() => canConfirmReceipt(props.order.status))
 
 /**
  * 是否可以评价
@@ -196,14 +169,6 @@ function handleCancel() {
  * 确认收货
  */
 function handleConfirmReceipt() {
-  console.log('📦 OrderCard - 点击确认收货按钮', {
-    orderId: props.order.id,
-    orderNo: props.order.orderNo,
-    currentStatus: props.order.status,
-    statusText: getStatusText(props.order.status),
-    canConfirmReceipt: canConfirmReceipt.value,
-    timestamp: new Date().toISOString()
-  })
   emit('confirm-receipt', props.order)
 }
 

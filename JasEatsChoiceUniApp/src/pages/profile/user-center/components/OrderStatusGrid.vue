@@ -37,7 +37,6 @@ const props = defineProps({
     default: () => ({
       pending: 0,
       preparing: 0,
-      delivering: 0,
       completed: 0
     })
   }

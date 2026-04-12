@@ -36,9 +36,9 @@ export const WS_CONFIG = {
 // 高德地图API配置
 export const AMAP_CONFIG = {
   // Web端(JS API) Key
-  key: getEnvValue('VITE_AMAP_KEY', 'ef5cbde8753cd2fa578899bee7f9bf71'),
+  key: getEnvValue('VITE_AMAP_KEY', ''),
   // 对应的安全密钥（用于后续接入安全校验时使用）
-  securityJsCode: getEnvValue('VITE_AMAP_SECURITY_JS_CODE', '34a9a321bca66a4623d9ddc3c6e5228f'),
+  securityJsCode: getEnvValue('VITE_AMAP_SECURITY_JS_CODE', ''),
   baseURL: 'https://restapi.amap.com/v3',
   district: '/config/district'
 }
@@ -93,7 +93,8 @@ export const API_CONFIG = {
     login: '/v1/users/login',
     register: '/v1/users/register',
     profile: '/v1/users/{userId}',
-    update: '/v1/users/{userId}',
+    update: '/v1/users/{userId}',              // 敏感信息更新（手机/邮箱，需验证码）
+    updateInfo: '/v1/users/{userId}/info',      // 基本信息更新（昵称/身高/体重/饮食目标/地址等）
     updatePassword: '/v1/users/{userId}/password',
     uploadAvatar: '/v1/users/{userId}/avatar/base64',
     preferences: '/v1/users/{userId}/preferences',

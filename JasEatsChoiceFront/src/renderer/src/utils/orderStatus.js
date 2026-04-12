@@ -56,11 +56,11 @@ export const STATUS_LIST = [
 const BACKEND_STATUS_MAP = {
   0: 'pending', // 待支付
   1: 'pendingAccept', // 待接单
-  2: 'preparing', // 制作中（包含备菜、烹饪、待上菜）
-  3: 'preparing', // 兼容旧状态：烹饪中 → 制作中
-  4: 'preparing', // 兼容旧状态：待上菜 → 制作中
+  2: 'preparing', // 制作中
+  3: 'completed', // 已完成
+  4: 'cancelled', // 已取消（新5状态系统）
   5: 'completed', // 兼容旧状态：已送达 → 已完成
-  6: 'cancelled', // 已取消
+  6: 'cancelled', // 兼容旧状态：已取消
   7: 'completed', // 兼容旧状态：待评价 → 已完成
   8: 'completed' // 兼容旧状态：已评价 → 已完成
 }
