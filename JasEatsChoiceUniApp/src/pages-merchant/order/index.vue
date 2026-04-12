@@ -121,6 +121,7 @@ import { ref, onMounted } from 'vue'
 import { toOrderDetail } from '@/utils/router'
 import { merchantApi } from '@/api'
 import { useMerchantStore } from '@/store/modules/merchant'
+import { normalizeOrderStatusCode } from '@/config/order-status'
 
 const merchantStore = useMerchantStore()
 
@@ -194,6 +195,7 @@ const loadOrders = async (isRefresh = false) => {
       // 为每个订单获取菜品列表
       const orderListWithData = await Promise.all(
         orders.map(async (order) => {
+          const normalizedStatus = normalizeOrderStatusCode(order.status)
           try {
             const dishesRes = await merchantApi.getOrderDishes(order.id)
             const dishes = dishesRes && dishesRes.success ? dishesRes.data || [] : []
@@ -201,8 +203,8 @@ const loadOrders = async (isRefresh = false) => {
             return {
               id: order.id,
               orderNo: `OD${String(order.id).padStart(6, '0')}`,
-              status: order.status,
-              statusText: getStatusText(order.status),
+              status: normalizedStatus,
+              statusText: getStatusText(normalizedStatus),
               dishes: dishes.map(dish => ({
                 id: dish.dishId || dish.id,
                 name: dish.dishName || dish.name,
@@ -221,8 +223,8 @@ const loadOrders = async (isRefresh = false) => {
             return {
               id: order.id,
               orderNo: `OD${String(order.id).padStart(6, '0')}`,
-              status: order.status,
-              statusText: getStatusText(order.status),
+              status: normalizedStatus,
+              statusText: getStatusText(normalizedStatus),
               dishes: [],
               remark: order.remark || '',
               orderTime: formatFullTime(order.createTime),
@@ -521,17 +523,22 @@ const contactCustomer = (order) => {
     color: #FAAD14;
   }
 
-  &.status-cooking {
+  &.status-1 {
+    background: #FFF7E6;
+    color: #FAAD14;
+  }
+
+  &.status-2 {
     background: #E6F7FF;
     color: #1890FF;
   }
 
-  &.status-ready {
+  &.status-3 {
     background: #F6FFED;
     color: #52C41A;
   }
 
-  &.status-completed {
+  &.status-4 {
     background: #F5F5F5;
     color: #999;
   }

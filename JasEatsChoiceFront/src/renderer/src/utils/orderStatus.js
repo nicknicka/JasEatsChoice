@@ -49,6 +49,37 @@ export const STATUS_LIST = [
 ]
 
 /**
+ * 后端订单状态码归一化到 5 状态系统
+ * 兼容旧状态：2/3/4/5/7/8 会被折叠到制作中/已完成/已取消
+ */
+export function normalizeOrderStatusCode(statusCode) {
+  const code = Number(statusCode)
+
+  if (Number.isNaN(code)) {
+    return 0
+  }
+
+  switch (code) {
+    case 0:
+      return 0
+    case 1:
+      return 1
+    case 2:
+    case 3:
+    case 4:
+      return 2
+    case 5:
+    case 7:
+    case 8:
+      return 3
+    case 6:
+      return 4
+    default:
+      return code >= 4 ? 4 : 0
+  }
+}
+
+/**
  * 后端状态码到前端状态的映射
  * 旧状态兼容：0-待支付、1-待接单、2-备菜中、3-烹饪中、4-待上菜、5-已送达、6-已取消、7-待评价、8-已评价
  * 新状态：0-待支付、1-待接单、2-制作中、3-已完成、4-已取消
@@ -71,7 +102,7 @@ const BACKEND_STATUS_MAP = {
  * @returns {string} 前端状态标识
  */
 export function orderStatusToText(statusCode) {
-  return BACKEND_STATUS_MAP[statusCode] || 'pending'
+  return BACKEND_STATUS_MAP[normalizeOrderStatusCode(statusCode)] || 'pending'
 }
 
 /**

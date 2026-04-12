@@ -13,6 +13,7 @@ import TodayMenu from '../../components/merchant/TodayMenu.vue'
 import ShopAlbum from '../../components/merchant/ShopAlbum.vue'
 import DiscountManagement from '../../components/merchant/DiscountManagement.vue'
 import AnnouncementManagement from '../../components/merchant/AnnouncementManagement.vue'
+import { normalizeOrderStatusCode } from '../../utils/orderStatus'
 
 const router = useRouter()
 
@@ -64,14 +65,10 @@ const viewOrderDetails = (order) => {
 
 // 更新订单状态
 const updateOrderStatus = (order) => {
-  // 定义订单状态流转逻辑
+  // 定义订单状态流转逻辑（5状态系统）
   const statusFlow = {
-    1: 2, // 待处理 -> 备菜中
-    2: 3, // 备菜中 -> 烹饪中
-    3: 4, // 烹饪中 -> 待配送
-    4: 5, // 待配送 -> 已完成
-    5: 5, // 已完成 -> 已完成（不可再改）
-    6: 6 // 已取消 -> 已取消（不可再改）
+    1: 2, // 待接单 -> 制作中
+    2: 3 // 制作中 -> 已完成
   }
 
   const nextStatus = statusFlow[order.status] || order.status
@@ -184,17 +181,13 @@ const allOrders = ref([])
 const filteredOrders = ref([])
 
 // 订单状态映射（对应后端状态码）
-// 0-待支付、1-待接单、2-备菜中、3-烹饪中、4-待上菜、5-已送达、6-已取消、7-待评价、8-已评价
+// 0-待支付、1-待接单、2-制作中、3-已完成、4-已取消
 const orderStatusMap = {
   0: '待支付',
   1: '待接单',
-  2: '备菜中',
-  3: '烹饪中',
-  4: '待上菜',
-  5: '已送达',
-  6: '已取消',
-  7: '待评价',
-  8: '已评价'
+  2: '制作中',
+  3: '已完成',
+  4: '已取消'
 }
 
 // 筛选订单
@@ -310,7 +303,10 @@ onMounted(() => {
     .get(`/v1/orders/merchant/${merchantId}`)
     .then((response) => {
       if (response.code === '200' && response.data) {
-        allOrders.value = response.data
+        allOrders.value = response.data.map((order) => ({
+          ...order,
+          status: normalizeOrderStatusCode(order.status)
+        }))
         // 默认显示今日订单
         filterOrders('today')
       }

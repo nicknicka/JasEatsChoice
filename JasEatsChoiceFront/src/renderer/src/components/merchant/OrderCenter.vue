@@ -5,6 +5,7 @@ import { ElMessage } from 'element-plus'
 import api from '../../utils/api.js'
 import { API_CONFIG } from '../../config/index.js'
 import { useAuthStore } from '../../store/authStore'
+import { normalizeOrderStatusCode } from '../../utils/orderStatus'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -207,7 +208,10 @@ const fetchOrders = () => {
       // 修改判断逻辑：使用 response.success 而不是 response.code
       if (response.success && response.data) {
         console.log('[OrderCenter] 订单数量:', response.data.length)
-        allOrders.value = response.data
+        allOrders.value = response.data.map((order) => ({
+          ...order,
+          status: normalizeOrderStatusCode(order.status)
+        }))
         // 默认显示今日订单
         filterOrders('today')
       } else {

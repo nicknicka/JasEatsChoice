@@ -4,6 +4,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { ElImageViewer } from 'element-plus'
 import api from '../../utils/api.js'
 import { API_CONFIG } from '../../config/index.js'
+import { normalizeImageUrl } from '../../utils/avatar.js'
 
 const props = defineProps({
   merchantId: {
@@ -51,18 +52,28 @@ const fetchMerchantAlbum = async () => {
     if (response.success && response.data) {
       console.log('相册原始数据:', response.data)
 
-      // 后端返回的应该已经是完整的URL，直接使用
-      // 如果返回的是相对路径，需要拼接
+      // 处理图片URL，标准化端口和路径
       const processImageUrls = (urls) => {
         if (!urls) return []
         return urls.map((url) => {
-          console.log('处理图片URL:', url)
-          // 如果URL已经是完整的HTTP地址，直接返回
+          // 完整URL：标准化错误端口
           if (url.startsWith('http://') || url.startsWith('https://')) {
-            return url
+            return normalizeImageUrl(url)
           }
-          // 其他情况，返回原值（后端应该已经处理好）
-          return url
+          // 相对路径：拼接 baseURL
+          if (url.startsWith('/api/')) {
+            return API_CONFIG.baseURL + url.substring(4)
+          }
+          if (url.startsWith('/uploads/')) {
+            return API_CONFIG.baseURL + url
+          }
+          if (url.startsWith('uploads/')) {
+            return API_CONFIG.baseURL + '/uploads/' + url.substring(8)
+          }
+          if (!url.startsWith('/')) {
+            return API_CONFIG.baseURL + '/uploads/' + url
+          }
+          return API_CONFIG.baseURL + url
         })
       }
 

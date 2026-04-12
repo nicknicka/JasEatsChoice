@@ -94,6 +94,7 @@ const searchKeyword = ref('')
 
 // 位置选择弹窗
 const mapLocationPickerVisible = ref(false)
+const locationSource = ref('unknown')
 
 // 从后端获取推荐菜品 - 使用智能推荐算法
 const fetchRecommendedDishes = async () => {
@@ -192,11 +193,14 @@ const handleHotTopicClick = () => {
 
 // 处理位置选择
 const handleLocationSelected = async (locationData) => {
-  const { address } = locationData
+  const { address, source, position } = locationData
+
+  locationSource.value = source || 'manual'
 
   // 更新天气位置信息
   weather.value.address = address || '已选择位置'
   weather.value.city = extractCityFromAddress(address)
+  weather.value.locationSource = locationSource.value
 
   // 获取详细天气信息
   fetchWeather(weather.value.city)
@@ -209,6 +213,14 @@ const handleLocationSelected = async (locationData) => {
         API_CONFIG.user.update.replace('{userId}', userId),
         { location: address }
       )
+
+      localStorage.setItem('user_last_location', JSON.stringify({
+        address,
+        lng: position?.lng ?? null,
+        lat: position?.lat ?? null,
+        timestamp: Date.now(),
+        source: locationSource.value
+      }))
 
       // 更新本地用户信息
       if (userStore.userInfo) {
@@ -253,11 +265,20 @@ const loadLastLocation = async () => {
     const stored = localStorage.getItem('user_last_location')
     if (stored) {
       const locationData = JSON.parse(stored)
+      locationSource.value = locationData.source || 'cache'
 
       // 检查是否过期（7天内有效）
       const sevenDays = 7 * 24 * 60 * 60 * 1000
       if (Date.now() - locationData.timestamp < sevenDays) {
-        const { lng, lat } = locationData
+        const { lng, lat, address } = locationData
+
+        if (address) {
+          weather.value.address = address
+          weather.value.city = extractCityFromAddress(address)
+          weather.value.locationSource = locationSource.value
+          console.log('已加载上次保存的位置:', address, locationSource.value)
+          return
+        }
 
         // 调用逆地理编码获取地址
         try {
@@ -268,7 +289,8 @@ const loadLastLocation = async () => {
             const address = response.data.formattedAddress
             weather.value.address = address
             weather.value.city = extractCityFromAddress(address)
-            console.log('已加载上次保存的位置:', address)
+            weather.value.locationSource = locationSource.value
+            console.log('已加载上次保存的位置:', address, locationSource.value)
           }
         } catch (error) {
           console.warn('获取上次位置地址失败:', error)

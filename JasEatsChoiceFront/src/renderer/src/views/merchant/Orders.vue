@@ -25,6 +25,7 @@ import api from '../../utils/api.js'
 import { useRouter, useRoute } from 'vue-router'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
 import { useAuthStore } from '../../store/authStore'
+import { normalizeOrderStatusCode } from '../../utils/orderStatus'
 
 const router = useRouter()
 const route = useRoute()
@@ -35,17 +36,13 @@ const loading = ref(false)
 const merchantId = authStore.merchantId || localStorage.getItem('auth_merchantId')
 
 // 订单状态映射（对应后端状态码）
-// 0-待支付、1-待接单、2-备菜中、3-烹饪中、4-待上菜、5-已送达、6-已取消、7-待评价、8-已评价
+// 0-待支付、1-待接单、2-制作中、3-已完成、4-已取消
 const orderStatusMap = {
   0: { text: '待支付', type: 'info', color: '#909399' },
   1: { text: '待接单', type: 'danger', color: '#f56c6c' },
-  2: { text: '备菜中', type: 'warning', color: '#e6a23c' },
-  3: { text: '烹饪中', type: 'warning', color: '#ff9800' },
-  4: { text: '待上菜', type: 'primary', color: '#409eff' },
-  5: { text: '已送达', type: 'success', color: '#67c23a' },
-  6: { text: '已取消', type: 'info', color: '#c0c4cc' },
-  7: { text: '待评价', type: 'success', color: '#95d475' },
-  8: { text: '已评价', type: 'success', color: '#85ce61' }
+  2: { text: '制作中', type: 'warning', color: '#e6a23c' },
+  3: { text: '已完成', type: 'success', color: '#67c23a' },
+  4: { text: '已取消', type: 'info', color: '#c0c4cc' }
 }
 
 // 状态筛选映射
@@ -53,13 +50,9 @@ const statusFilterMap = {
   all: { text: '全部', value: 'all' },
   0: { text: '待支付', value: 0 },
   1: { text: '待接单', value: 1 },
-  2: { text: '备菜中', value: 2 },
-  3: { text: '烹饪中', value: 3 },
-  4: { text: '待上菜', value: 4 },
-  5: { text: '已送达', value: 5 },
-  6: { text: '已取消', value: 6 },
-  7: { text: '待评价', value: 7 },
-  8: { text: '已评价', value: 8 }
+  2: { text: '制作中', value: 2 },
+  3: { text: '已完成', value: 3 },
+  4: { text: '已取消', value: 4 }
 }
 
 // 订单数据
@@ -113,16 +106,9 @@ const animateValue = (key, endValue, duration = 1000) => {
   requestAnimationFrame(animate)
 }
 
-// 获取筛选状态列表（支持多状态筛选，如"2-4"表示状态2、3、4）
+// 获取筛选状态列表
 const getStatusFilters = (statusFilter) => {
   if (statusFilter === 'all' || statusFilter === '') return []
-
-  // 处理特殊状态 "2-4"（进行中 = 备菜+烹饪+待上菜）
-  if (statusFilter === '2-4' || statusFilter === '2-3') {
-    return [2, 3, 4] // 备菜中、烹饪中、待上菜
-  }
-
-  // 单个状态
   return [parseInt(statusFilter)]
 }
 
@@ -167,9 +153,7 @@ const orderOverview = computed(() => {
   const total = filteredOrders.value.length
   const totalAmount = filteredOrders.value.reduce((sum, order) => sum + (order.totalAmount || 0), 0)
   const pendingCount = filteredOrders.value.filter((order) => order.status === 1).length
-  const preparingCount = filteredOrders.value.filter(
-    (order) => order.status === 2
-  ).length
+  const preparingCount = filteredOrders.value.filter((order) => order.status === 2).length
   const completedCount = filteredOrders.value.filter((order) => order.status === 3).length
   const cancelledCount = filteredOrders.value.filter((order) => order.status === 4).length
 
@@ -302,16 +286,12 @@ const getTagType = (status) => {
 // 获取状态的订单数量
 const getStatusCount = (status) => {
   if (status === 'all') return orders.value.length
-  if (status === '2-4' || status === '2-3') {
-    return orders.value.filter((o) => o.status === 2 || o.status === 3 || o.status === 4).length
-  }
   return orders.value.filter((o) => o.status === status).length
 }
 
 // 获取状态标签文本
 const getStatusLabel = (status) => {
   if (status === 'all') return '全部'
-  if (status === '2-4' || status === '2-3') return '进行中'
   return statusFilterMap[status]?.text || '未知'
 }
 
@@ -328,9 +308,6 @@ const getEmptyDescription = () => {
   if (searchKeyword.value) {
     return '未找到匹配的订单'
   }
-  if (activeStatusFilter.value === '2-4' || activeStatusFilter.value === '2-3') {
-    return '暂无进行中订单'
-  }
   if (activeStatusFilter.value === 0) {
     return '暂无待支付订单'
   }
@@ -338,18 +315,12 @@ const getEmptyDescription = () => {
     return '暂无待接单订单'
   }
   if (activeStatusFilter.value === 2) {
-    return '暂无备菜中订单'
+    return '暂无制作中订单'
   }
   if (activeStatusFilter.value === 3) {
-    return '暂无烹饪中订单'
-  }
-  if (activeStatusFilter.value === 4) {
-    return '暂无待上菜订单'
-  }
-  if (activeStatusFilter.value === 5) {
     return '暂无已完成订单'
   }
-  if (activeStatusFilter.value === 6) {
+  if (activeStatusFilter.value === 4) {
     return '暂无已取消订单'
   }
   return '暂无订单'
@@ -401,7 +372,10 @@ const fetchOrders = async () => {
       }
 
       console.log('[Orders] 订单数据:', ordersData)
-      orders.value = ordersData
+      orders.value = ordersData.map((order) => ({
+        ...order,
+        status: normalizeOrderStatusCode(order.status)
+      }))
     } else {
       console.error('[Orders] API返回失败:', response)
       ElMessage.error(response.message || '获取订单列表失败')
@@ -716,35 +690,13 @@ onMounted(() => {
 
               <el-button
                 v-if="order.status === 2"
-                type="warning"
-                size="small"
-                @click="updateOrderStatus(order, 3)"
-                class="action-btn"
-              >
-                <el-icon><Goods /></el-icon>
-                <span>烹饪</span>
-              </el-button>
-
-              <el-button
-                v-if="order.status === 3"
-                type="primary"
-                size="small"
-                @click="updateOrderStatus(order, 4)"
-                class="action-btn"
-              >
-                <el-icon><Dish /></el-icon>
-                <span>上菜</span>
-              </el-button>
-
-              <el-button
-                v-if="order.status === 4"
                 type="success"
                 size="small"
-                @click="updateOrderStatus(order, 5)"
+                @click="updateOrderStatus(order, 3)"
                 class="action-btn complete-btn"
               >
                 <el-icon><CircleCheckFilled /></el-icon>
-                <span>完成</span>
+                <span>完成订单</span>
               </el-button>
 
               <el-button
@@ -1138,49 +1090,12 @@ onMounted(() => {
             }
           }
 
-          // 备菜中选中
+          // 制作中选中
           &.status-tag-2.active {
             background: linear-gradient(135deg, @merchant-warning 0%, lighten(@merchant-warning, 8%) 100%);
             color: @merchant-surface;
             border-color: @merchant-warning;
             box-shadow: 0 2px 8px rgba(212, 168, 85, 0.4);
-
-            .tag-icon {
-              opacity: 1;
-            }
-          }
-
-          // 进行中选中（合并状态）
-          &.status-tag-2-4.active,
-          &.status-tag-2-3.active {
-            background: linear-gradient(135deg, @merchant-warning 0%, lighten(@merchant-warning, 8%) 100%);
-            color: @merchant-surface;
-            border-color: @merchant-warning;
-            box-shadow: 0 2px 8px rgba(212, 168, 85, 0.4);
-
-            .tag-icon {
-              opacity: 1;
-            }
-          }
-
-          // 烹饪中选中
-          &.status-tag-3.active {
-            background: linear-gradient(135deg, @merchant-warning 0%, lighten(@merchant-warning, 10%) 100%);
-            color: @merchant-surface;
-            border-color: @merchant-warning;
-            box-shadow: 0 2px 8px rgba(212, 168, 85, 0.4);
-
-            .tag-icon {
-              opacity: 1;
-            }
-          }
-
-          // 待上菜选中
-          &.status-tag-4.active {
-            background: linear-gradient(135deg, @merchant-info 0%, lighten(@merchant-info, 10%) 100%);
-            color: @merchant-surface;
-            border-color: @merchant-info;
-            box-shadow: 0 2px 8px rgba(91, 139, 210, 0.4);
 
             .tag-icon {
               opacity: 1;

@@ -10,6 +10,7 @@ const AUTH_WHITELIST = [
   '/v1/users/register',           // 用户注册
   '/v1/users/send-sms-code',      // 发送验证码
   '/v1/users/wechat-login',       // 微信登录
+  '/v1/users/reset-password',     // 重置密码
   '/v1/merchant/login',           // 商家登录
   '/v1/merchant/register',        // 商家注册
   '/v1/admin/login',              // 管理员登录

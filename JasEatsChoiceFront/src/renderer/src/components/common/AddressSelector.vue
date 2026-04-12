@@ -265,6 +265,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import addressApi from '../../api/address'
 import { useAuthStore } from '../../store/authStore'
+import { useCascaderLocationData } from '../../composables/useCascaderLocationData'
 
 const props = defineProps({
   modelValue: {
@@ -318,70 +319,7 @@ const addressFormRules = {
   ]
 }
 
-const regionOptions = ref([
-  {
-    value: '北京市',
-    label: '北京市',
-    children: [
-      {
-        value: '北京市',
-        label: '北京市',
-        children: [
-          { value: '朝阳区', label: '朝阳区' },
-          { value: '海淀区', label: '海淀区' },
-          { value: '东城区', label: '东城区' },
-          { value: '西城区', label: '西城区' },
-          { value: '丰台区', label: '丰台区' },
-          { value: '石景山区', label: '石景山区' }
-        ]
-      }
-    ]
-  },
-  {
-    value: '上海市',
-    label: '上海市',
-    children: [
-      {
-        value: '上海市',
-        label: '上海市',
-        children: [
-          { value: '黄浦区', label: '黄浦区' },
-          { value: '徐汇区', label: '徐汇区' },
-          { value: '长宁区', label: '长宁区' },
-          { value: '静安区', label: '静安区' },
-          { value: '普陀区', label: '普陀区' },
-          { value: '虹口区', label: '虹口区' }
-        ]
-      }
-    ]
-  },
-  {
-    value: '广东省',
-    label: '广东省',
-    children: [
-      {
-        value: '广州市',
-        label: '广州市',
-        children: [
-          { value: '天河区', label: '天河区' },
-          { value: '越秀区', label: '越秀区' },
-          { value: '海珠区', label: '海珠区' },
-          { value: '荔湾区', label: '荔湾区' }
-        ]
-      },
-      {
-        value: '深圳市',
-        label: '深圳市',
-        children: [
-          { value: '福田区', label: '福田区' },
-          { value: '罗湖区', label: '罗湖区' },
-          { value: '南山区', label: '南山区' },
-          { value: '宝安区', label: '宝安区' }
-        ]
-      }
-    ]
-  }
-])
+const { cascaderData: regionOptions, loadLocationData } = useCascaderLocationData()
 
 watch(
   () => props.modelValue,
@@ -573,6 +511,7 @@ const saveAddress = async () => {
 }
 
 onMounted(() => {
+  loadLocationData()
   if (userId.value > 0) {
     loadAddresses()
   }

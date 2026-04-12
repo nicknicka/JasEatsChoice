@@ -1,11 +1,8 @@
 import { ref, watch } from 'vue'
-import api from '../utils/api.js'
-import { API_CONFIG } from '../config/index.js'
+import { useCascaderLocationData } from './useCascaderLocationData'
 
 export function useLocation() {
-  // Cascader location data
-  // 级联选择器地址数据
-  const cascaderLocationData = ref([])
+  const { cascaderData: cascaderLocationData, loadLocationData } = useCascaderLocationData()
 
   // Location dialog
   // 位置选择对话框
@@ -17,21 +14,7 @@ export function useLocation() {
 
   // Fetch location data from API when dialog opens
   // 当对话框打开时从API获取地址数据
-  const fetchLocationData = () => {
-    api
-      .get(API_CONFIG.location.cascaderData)
-      .then((response) => {
-        if (response.data && response.data.data) {
-          cascaderLocationData.value = response.data.data // API返回的是对象，需要提取其中的data数组
-        }
-      })
-      .catch((error) => {
-        console.error('加载地址数据失败:', error)
-        // Fallback to empty array if API fails
-        // 如果API失败，回退到空数组
-        cascaderLocationData.value = []
-      })
-  }
+  const fetchLocationData = () => loadLocationData()
 
   // Watch dialog visibility and fetch location data when dialog opens
   // 监听对话框可见性并在对话框打开时获取位置数据

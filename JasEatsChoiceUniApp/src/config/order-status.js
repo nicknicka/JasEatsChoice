@@ -95,12 +95,44 @@ export const FRONTEND_TO_BACKEND_MAP = {
 }
 
 /**
+ * 后端状态码归一化到 5 状态系统
+ * @param {number|string} statusCode - 后端状态码
+ * @returns {number} 0-4 的统一状态码
+ */
+export function normalizeOrderStatusCode(statusCode) {
+  const code = Number(statusCode)
+
+  if (Number.isNaN(code)) {
+    return 0
+  }
+
+  switch (code) {
+    case 0:
+      return 0
+    case 1:
+      return 1
+    case 2:
+    case 3:
+    case 4:
+      return 2
+    case 5:
+    case 7:
+    case 8:
+      return 3
+    case 6:
+      return 4
+    default:
+      return code >= 4 ? 4 : 0
+  }
+}
+
+/**
  * 根据后端状态码获取前端状态配置
  * @param {number|string} backendStatus - 后端状态码
  * @returns {Object} 前端状态配置
  */
 export function getStatusConfig(backendStatus) {
-  const frontendKey = BACKEND_TO_FRONTEND_MAP[backendStatus]
+  const frontendKey = BACKEND_TO_FRONTEND_MAP[normalizeOrderStatusCode(backendStatus)]
   return ORDER_STATUS_CONFIG[frontendKey] || ORDER_STATUS_CONFIG.pending
 }
 

@@ -12,7 +12,7 @@
     </view>
 
     <!-- 订单进度 -->
-    <view class="progress-section" v-if="orderInfo.status !== 'cancelled'">
+    <view class="progress-section" v-if="orderInfo.status !== 4">
       <view class="section-title">订单进度</view>
       <view class="progress-timeline">
         <view
@@ -174,6 +174,7 @@
 import { ref, onMounted } from 'vue'
 import { merchantApi } from '@/api'
 import { useMerchantStore } from '@/store/modules/merchant'
+import { normalizeOrderStatusCode } from '@/config/order-status'
 
 const merchantStore = useMerchantStore()
 
@@ -184,7 +185,7 @@ const orderId = ref('')
 const orderInfo = ref({
   id: 1,
   orderNo: 'OD202603180001',
-  status: 'cooking',
+  status: 2,
   statusText: '制作中',
   dishes: [
     {
@@ -251,6 +252,7 @@ const loadOrderDetail = async () => {
 
     if (res && res.success && res.data) {
       const data = res.data
+      const normalizedStatus = normalizeOrderStatusCode(data.status)
 
       // 获取订单菜品列表
       const dishesRes = await merchantApi.getOrderDishes(orderId.value)
@@ -260,8 +262,8 @@ const loadOrderDetail = async () => {
       orderInfo.value = {
         id: data.id,
         orderNo: `OD${String(data.id).padStart(6, '0')}`,
-        status: data.status,
-        statusText: getStatusText(data.status),
+        status: normalizedStatus,
+        statusText: getStatusText(normalizedStatus),
         dishes: dishes.map(dish => ({
           id: dish.dishId || dish.id,
           name: dish.dishName || dish.name,
@@ -289,7 +291,7 @@ const loadOrderDetail = async () => {
       }
 
       // 更新进度步骤
-      updateProgressSteps(data.status)
+      updateProgressSteps(normalizedStatus)
     }
   } catch (error) {
     console.error('加载订单详情失败:', error)
@@ -344,11 +346,11 @@ const formatAmount = (amount) => {
  */
 const getStatusIcon = (status) => {
   const iconMap = {
-    pending: 'clock',
-    cooking: 'loop',
-    ready: 'checkbox',
-    completed: 'checkmarkempty',
-    cancelled: 'closeempty'
+    0: 'clock',
+    1: 'clock',
+    2: 'loop',
+    3: 'checkmarkempty',
+    4: 'closeempty'
   }
   return iconMap[status] || 'info'
 }
@@ -391,7 +393,7 @@ const acceptOrder = async () => {
     success: async (res) => {
       if (res.confirm) {
         try {
-          // 调用API接单（状态改为2-备菜中）
+          // 调用API接单（状态改为2-制作中）
           await merchantApi.acceptOrder(orderId.value)
 
           uni.showToast({
@@ -527,23 +529,20 @@ const sendMessage = () => {
   align-items: center;
   gap: 20rpx;
 
-  &.status-pending {
+  &.status-0,
+  &.status-1 {
     background: linear-gradient(135deg, #FAAD14, #FFC53D);
   }
 
-  &.status-cooking {
+  &.status-2 {
     background: linear-gradient(135deg, #1890FF, #40A9FF);
   }
 
-  &.status-ready {
+  &.status-3 {
     background: linear-gradient(135deg, #52C41A, #73D13D);
   }
 
-  &.status-completed {
-    background: linear-gradient(135deg, #52C41A, #73D13D);
-  }
-
-  &.status-cancelled {
+  &.status-4 {
     background: linear-gradient(135deg, #999, #BFBFBF);
   }
 }

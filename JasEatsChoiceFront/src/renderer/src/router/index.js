@@ -4,6 +4,7 @@ import { isAdminLoggedIn } from '../utils/auth'
 // Import auth views
 const Login = () => import('../views/user/Login.vue')
 const Register = () => import('../views/user/Register.vue')
+const ForgotPassword = () => import('../views/user/ForgotPassword.vue')
 
 // Import user views
 const UserHome = () => import('../views/user/Home.vue') // 用户首页
@@ -76,6 +77,12 @@ const router = createRouter({
       name: 'register',
       component: Register,
       meta: { title: '用户注册' }
+    },
+    {
+      path: '/forgot-password',
+      name: 'forgot-password',
+      component: ForgotPassword,
+      meta: { title: '重置密码' }
     },
     {
       path: '/merchant/register',
@@ -566,13 +573,15 @@ router.beforeEach(async (to, from, next) => {
   }
 
   // 窗口尺寸自动切换：仅在登录/注册等页面之间切换时调整，主页面内导航不触发
-  const authRoutes = ['/login', '/register', '/admin/login', '/merchant/register']
+  const authRoutes = ['/login', '/register', '/forgot-password', '/admin/login', '/merchant/register']
   const api = window.api
   if (api?.window) {
     if (to.path === '/register' || to.path === '/merchant/register') {
       await api.window.resizeToRegister()
     } else if (to.path === '/admin/login') {
       await api.window.resizeToAdminLogin()
+    } else if (to.path === '/forgot-password') {
+      await api.window.resizeToLogin()
     } else if (to.path === '/login') {
       await api.window.resizeToLogin()
     } else if (authRoutes.some(r => from.path === r || from.path.startsWith(r)) && (to.path.startsWith('/user') || to.path.startsWith('/merchant') || to.path.startsWith('/admin'))) {

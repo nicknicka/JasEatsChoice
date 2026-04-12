@@ -25,6 +25,7 @@ const isLocating = ref(false)
 const currentLocation = ref(null)
 const locationError = ref(false)
 const locationCity = ref('')
+const locationSource = ref('unknown')
 
 // 本地存储键名
 const LOCATION_STORAGE_KEY = 'user_last_location'
@@ -48,6 +49,7 @@ const getCurrentLocation = async () => {
     console.log('使用本地缓存位置:', lastLocation)
     currentLocation.value = { latitude: lastLocation.lat, longitude: lastLocation.lng }
     locationError.value = false
+    locationSource.value = 'cache'
 
     // 获取城市信息
     await getCityByLocation(lastLocation.lng, lastLocation.lat)
@@ -67,9 +69,10 @@ const getCurrentLocation = async () => {
         console.log('IP 定位成功:', province, city, lng, lat)
         currentLocation.value = { latitude: lat, longitude: lng }
         locationError.value = false
+        locationSource.value = 'ip'
 
         // 保存到本地缓存
-        saveLastLocation(lng, lat)
+        saveLastLocation(lng, lat, locationSource.value)
 
         // 直接使用IP定位返回的城市信息，无需再调用逆地理编码
         locationCity.value = city || ''
@@ -77,7 +80,8 @@ const getCurrentLocation = async () => {
           latitude: lat,
           longitude: lng,
           city: city || '',
-          location: currentLocation.value
+          location: currentLocation.value,
+          source: locationSource.value
         })
 
         isLocating.value = false
@@ -100,6 +104,7 @@ const getCurrentLocation = async () => {
           const accuracy = position.coords.accuracy
 
           currentLocation.value = { latitude, longitude }
+          locationSource.value = 'gps'
 
           // 检查定位误差
           if (showAccuracyAlert.value && accuracy > 500) {
@@ -147,6 +152,7 @@ const getCurrentLocation = async () => {
   const defaultLocation = { lng: 116.397428, lat: 39.90923 }
   currentLocation.value = { latitude: defaultLocation.lat, longitude: defaultLocation.lng }
   locationError.value = true // 标记为定位失败状态
+  locationSource.value = 'default'
 
   await getCityByLocation(defaultLocation.lng, defaultLocation.lat)
   isLocating.value = false
@@ -163,7 +169,7 @@ const getCurrentLocation = async () => {
  */
 const processLocationAfterGPS = async (latitude, longitude) => {
   // 保存到本地缓存
-  saveLastLocation(longitude, latitude)
+  saveLastLocation(longitude, latitude, 'gps')
 
   // 获取城市信息
   await getCityByLocation(longitude, latitude)
@@ -190,7 +196,8 @@ const getCityByLocation = async (longitude, latitude) => {
         latitude,
         longitude,
         city,
-        location: currentLocation.value
+        location: currentLocation.value,
+        source: locationSource.value
       })
     }
   } catch (error) {
@@ -201,7 +208,8 @@ const getCityByLocation = async (longitude, latitude) => {
       latitude,
       longitude,
       city: '',
-      location: currentLocation.value
+      location: currentLocation.value,
+      source: locationSource.value
     })
   }
 }
@@ -213,25 +221,28 @@ const selectCity = async (city) => {
   if (!city) return
 
   locationCity.value = city
+  locationSource.value = 'manual'
 
   // 对外发射定位结果（手动选择城市时，经纬度为空）
   emit('location-changed', {
     latitude: null,
     longitude: null,
     city,
-    location: null
+    location: null,
+    source: locationSource.value
   })
 }
 
 /**
  * 保存位置到本地存储（7天有效期）
  */
-const saveLastLocation = (lng, lat) => {
+const saveLastLocation = (lng, lat, source = 'unknown') => {
   try {
     const locationData = {
       lng,
       lat,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      source
     }
     localStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify(locationData))
     console.log('位置已保存到本地存储')
@@ -254,7 +265,8 @@ const getLastLocation = () => {
       if (Date.now() - locationData.timestamp < sevenDays) {
         return {
           lng: locationData.lng,
-          lat: locationData.lat
+          lat: locationData.lat,
+          source: locationData.source || 'cache'
         }
       } else {
         // 过期则删除
@@ -281,6 +293,7 @@ defineExpose({
   currentLocation,
   locationCity,
   locationError,
+  locationSource,
   getLastLocation,
   saveLastLocation
 })

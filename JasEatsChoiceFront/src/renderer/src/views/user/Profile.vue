@@ -507,6 +507,7 @@ import CommonAvatar from '../../components/CommonAvatar.vue'
 import api from '../../utils/api'
 import { API_CONFIG } from '../../config'
 import QRCode from 'qrcode'
+import { useCascaderLocationData } from '../../composables/useCascaderLocationData'
 
 // 导入状态管理
 import { useAuthStore } from '../../store/authStore'
@@ -618,84 +619,12 @@ const editForm = reactive({
 
 // 地址选择功能变量
 const selectedLocation = ref([])
-const cascaderData = ref([])
-const locationDataLoading = ref(false) // 地址数据加载状态
-const ADDRESS_OPTIONS_CACHE_KEY = 'user_profile_address_options'
+const { cascaderData, loading: locationDataLoading, loadLocationData } = useCascaderLocationData()
 const cascaderProps = {
   value: 'value',
   label: 'label',
   children: 'children',
   expandTrigger: 'hover'
-}
-
-const readCachedAddressData = () => {
-  try {
-    const cachedData = localStorage.getItem(ADDRESS_OPTIONS_CACHE_KEY)
-    return cachedData ? JSON.parse(cachedData) : []
-  } catch (error) {
-    console.warn('读取缓存地址数据失败:', error)
-    return []
-  }
-}
-
-const saveCachedAddressData = (data) => {
-  try {
-    localStorage.setItem(ADDRESS_OPTIONS_CACHE_KEY, JSON.stringify(data))
-  } catch (error) {
-    console.warn('保存缓存地址数据失败:', error)
-  }
-}
-
-const getFallbackAddressData = () => [
-  {
-    value: '北京市',
-    label: '北京市',
-    children: [
-      { value: '朝阳区', label: '朝阳区' },
-      { value: '海淀区', label: '海淀区' },
-      { value: '东城区', label: '东城区' },
-      { value: '西城区', label: '西城区' }
-    ]
-  },
-  {
-    value: '上海市',
-    label: '上海市',
-    children: [
-      { value: '黄浦区', label: '黄浦区' },
-      { value: '徐汇区', label: '徐汇区' },
-      { value: '长宁区', label: '长宁区' },
-      { value: '浦东新区', label: '浦东新区' }
-    ]
-  },
-  {
-    value: '广东省',
-    label: '广东省',
-    children: [
-      {
-        value: '广州市',
-        label: '广州市',
-        children: [
-          { value: '天河区', label: '天河区' },
-          { value: '越秀区', label: '越秀区' }
-        ]
-      },
-      {
-        value: '深圳市',
-        label: '深圳市',
-        children: [
-          { value: '福田区', label: '福田区' },
-          { value: '南山区', label: '南山区' }
-        ]
-      }
-    ]
-  }
-]
-
-const applyAddressData = (data) => {
-  cascaderData.value = Array.isArray(data) ? data : []
-  if (cascaderData.value.length > 0) {
-    saveCachedAddressData(cascaderData.value)
-  }
 }
 
 // 资料编辑表单验证规则
@@ -789,7 +718,7 @@ const initPage = async () => {
     await Promise.all([
       fetchUserInfo(),
       fetchWalletInfo(),
-      fetchAddressData(),
+      loadLocationData(),
       fetchHealthData(),
       fetchOrderStats(),
       fetchCollectionCount()
@@ -852,37 +781,6 @@ const fetchWalletInfo = async () => {
   } catch (error) {
     console.error('获取钱包信息失败:', error)
     // 钱包信息获取失败不影响其他功能
-  }
-}
-
-// 获取地址数据（优先使用后端级联接口，避免前端高德 Key 平台限制）
-const fetchAddressData = async () => {
-  try {
-    locationDataLoading.value = true
-
-    const response = await api.get(API_CONFIG.location.cascaderData)
-
-    const addressData = response?.data || response
-    if (Array.isArray(addressData) && addressData.length > 0) {
-      applyAddressData(addressData)
-      return
-    }
-
-    throw new Error(response?.message || response?.msg || '获取地址数据失败')
-  } catch (error) {
-    console.error('获取地址数据失败:', error)
-
-    const cachedData = readCachedAddressData()
-    if (Array.isArray(cachedData) && cachedData.length > 0) {
-      cascaderData.value = cachedData
-      ElMessage.warning('地址数据加载失败，已使用本地缓存')
-      return
-    }
-
-    cascaderData.value = getFallbackAddressData()
-    ElMessage.warning('地址数据加载失败，已使用本地备用数据')
-  } finally {
-    locationDataLoading.value = false
   }
 }
 

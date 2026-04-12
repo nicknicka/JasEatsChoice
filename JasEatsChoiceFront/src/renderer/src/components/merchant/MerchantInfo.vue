@@ -33,6 +33,7 @@ import {
 import api from '../../utils/api.js'
 import { API_CONFIG } from '../../config/index.js'
 import { getAvatarUrl } from '../../utils/avatar'
+import { useCascaderLocationData } from '../../composables/useCascaderLocationData'
 
 const authStore = useAuthStore()
 const userStore = useUserStore()
@@ -51,54 +52,8 @@ const editDialogVisible = ref(false)
 const editForm = ref({})
 const editFormRef = ref(null)
 
-// 地址选项数据（通过API获取）
-const addressOptions = ref([])
-
-// 获取地址数据
-const fetchAddressOptions = async () => {
-  try {
-    // console.log('开始获取地址数据，API配置:', API_CONFIG.baseURL + API_CONFIG.location.cascaderData)
-    const response = await api.get(API_CONFIG.location.cascaderData)
-    // console.log('地址数据API响应:', response)
-
-    if (response && response.success) {
-      addressOptions.value = response.data || []
-      // console.log('地址数据设置成功:', addressOptions.value)
-      // 将成功获取的地址数据保存到 localStorage 中
-      localStorage.setItem('addressOptions', JSON.stringify(addressOptions.value))
-    } else {
-      console.error('获取地址数据失败：API返回失败', response)
-      // 从 localStorage 中获取缓存的地址数据
-      const cachedOptions = localStorage.getItem('addressOptions')
-      if (cachedOptions) {
-        addressOptions.value = JSON.parse(cachedOptions)
-        ElMessage.warning('地址数据加载失败，使用缓存数据')
-      } else {
-        ElMessage.error('获取地址数据失败，请检查网络连接')
-        addressOptions.value = []
-      }
-    }
-  } catch (error) {
-    console.error('获取地址数据失败:', error)
-    console.error('错误详情:', {
-      name: error.name,
-      message: error.message,
-      stack: error.stack,
-      response: error.response,
-      request: error.request,
-      code: error.code
-    })
-    // 从 localStorage 中获取缓存的地址数据
-    const cachedOptions = localStorage.getItem('addressOptions')
-    if (cachedOptions) {
-      addressOptions.value = JSON.parse(cachedOptions)
-      ElMessage.warning('地址数据加载失败，使用缓存数据')
-    } else {
-      ElMessage.error('获取地址数据失败，请检查网络连接')
-      addressOptions.value = []
-    }
-  }
-}
+// 地址选项数据（统一通过公共加载器获取）
+const { cascaderData: addressOptions, loadLocationData: fetchAddressOptions } = useCascaderLocationData()
 
 // 经营品类相关变量
 const categoryOptions = ref([])

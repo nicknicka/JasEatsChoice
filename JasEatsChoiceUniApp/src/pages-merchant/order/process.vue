@@ -106,6 +106,7 @@ import { ref, onMounted } from 'vue'
 import { merchantApi } from '@/api'
 import { formatTime } from '@/utils/helper'
 import { useMerchantStore } from '@/store/modules/merchant'
+import { normalizeOrderStatusCode } from '@/config/order-status'
 
 const merchantStore = useMerchantStore()
 
@@ -116,6 +117,7 @@ const orderId = ref('')
 const orderInfo = ref({
   id: 1,
   orderNo: 'OD202603180001',
+  status: 2,
   statusText: '制作中',
   dishes: [
     { id: 1, name: '宫保鸡丁', quantity: 1 },
@@ -172,13 +174,15 @@ const loadOrderProcess = async () => {
 
     if (res && res.data) {
       const data = res.data
+      const normalizedStatus = normalizeOrderStatusCode(data.order?.status)
 
       // 更新订单信息
       if (data.order) {
         orderInfo.value = {
           id: data.order.orderId || data.order.id,
           orderNo: data.order.orderNo || data.order.order_no,
-          statusText: getStatusText(data.order.status),
+          status: normalizedStatus,
+          statusText: getStatusText(normalizedStatus),
           dishes: Array.isArray(data.order.dishes) ? data.order.dishes.map(dish => ({
             id: dish.dishId || dish.id,
             name: dish.dishName || dish.name,
@@ -226,9 +230,11 @@ const loadOrderProcess = async () => {
  */
 const getStatusText = (status) => {
   const statusMap = {
-    pending: '待接单',
-    cooking: '制作中',
-    ready: '待取餐',
+    0: '待支付',
+    1: '待接单',
+    2: '制作中',
+    3: '已完成',
+    4: '已取消',
     completed: '已完成',
     cancelled: '已取消'
   }

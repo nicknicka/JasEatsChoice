@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Scope;
 import com.xx.jaseatschoicejava.agent.agents.CardRendererAgent;
 import com.xx.jaseatschoicejava.agent.agents.CustomerServiceAgent;
 import com.xx.jaseatschoicejava.agent.agents.DishRecommendationAgent;
+import com.xx.jaseatschoicejava.agent.agents.SimpleChatAgent;
 import com.xx.jaseatschoicejava.agent.agents.LocationServiceAgent;
 import com.xx.jaseatschoicejava.agent.agents.MerchantInfoAgent;
 import com.xx.jaseatschoicejava.agent.agents.NutritionGuideAgent;
@@ -238,6 +239,20 @@ public class LangChain4jConfig {
         log.info("构建CustomerServiceAgent（客服助手）...");
 
         return dev.langchain4j.service.AiServices.builder(CustomerServiceAgent.class)
+                .chatModel(aiModel)
+                .build();
+    }
+
+    /**
+     * 轻量对话Agent（简单对话快速通道）
+     * 用于已登录用户的简单对话场景，无工具、无ChatMemory
+     */
+    @Bean
+    @Scope("prototype")
+    public SimpleChatAgent simpleChatAgent(@Qualifier("aiModel") ChatModel aiModel) {
+        log.info("构建SimpleChatAgent（轻量对话）...");
+
+        return dev.langchain4j.service.AiServices.builder(SimpleChatAgent.class)
                 .chatModel(aiModel)
                 .build();
     }

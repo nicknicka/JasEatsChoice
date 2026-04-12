@@ -404,9 +404,9 @@ if (!merchantId.value) {
 }
 console.log('商家ID:', merchantId.value)
 
-// 订单信息
+// 订单信息（ID由后端IdGenerator统一生成，避免重复）
 const orderInfo = ref({
-  orderId: `O${new Date().getTime()}`,  // 修改为 O 前缀
+  orderId: null,
   groupName: pendingOrder.groupName || '默认订单群',
   userName: pendingOrder.userName || '',
   creator: pendingOrder.creator || '',
@@ -865,7 +865,7 @@ const confirmOrder = async () => {
 
         const createOrderResponse = await orderApi.createOrder({
           order: {
-            id: orderInfo.value.orderId,
+            id: null,  // 不传ID，由后端IdGenerator统一生成
             userId: String(userId),
             merchantId: String(merchantId.value),
             totalAmount: finalAmount.value,
@@ -884,8 +884,8 @@ const confirmOrder = async () => {
           return
         }
 
-        // 使用后端返回的订单ID
-        const actualOrderId = createOrderResponse.data || orderInfo.value.orderId
+        // 使用后端返回的订单ID（后端IdGenerator生成的唯一ID）
+        const actualOrderId = createOrderResponse.data
         console.log('订单创建成功，订单ID:', actualOrderId)
 
         // 调用支付API

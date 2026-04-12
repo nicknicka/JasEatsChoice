@@ -19,7 +19,10 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xx.jaseatschoicejava.agent.agents.CustomerServiceAgent;
+import com.xx.jaseatschoicejava.agent.agents.SimpleChatAgent;
 import com.xx.jaseatschoicejava.agent.listener.SSEAgentListener;
+import com.xx.jaseatschoicejava.agent.service.IntentClassifier;
+import com.xx.jaseatschoicejava.agent.service.IntentClassifier.IntentType;
 import com.xx.jaseatschoicejava.agent.service.SupervisorAgentFactory;
 
 import dev.langchain4j.agentic.supervisor.SupervisorAgent;
@@ -55,14 +58,20 @@ public class SupervisorSSEController {
 
     private final SupervisorAgentFactory supervisorAgentFactory;
     private final CustomerServiceAgent customerServiceAgent;
+    private final SimpleChatAgent simpleChatAgent;
+    private final IntentClassifier intentClassifier;
     private final ExecutorService executorService = Executors.newCachedThreadPool();
     private final ObjectMapper objectMapper;
 
     public SupervisorSSEController(
             SupervisorAgentFactory supervisorAgentFactory,
-            CustomerServiceAgent customerServiceAgent) {
+            CustomerServiceAgent customerServiceAgent,
+            SimpleChatAgent simpleChatAgent,
+            IntentClassifier intentClassifier) {
         this.supervisorAgentFactory = supervisorAgentFactory;
         this.customerServiceAgent = customerServiceAgent;
+        this.simpleChatAgent = simpleChatAgent;
+        this.intentClassifier = intentClassifier;
         this.objectMapper = new ObjectMapper();
     }
 
@@ -84,12 +93,18 @@ public class SupervisorSSEController {
 
         log.info("收到SSE聊天请求: message={}, userId={}", message, userId);
 
-        // 路由逻辑：无userId使用客服助手，有userId使用SupervisorAgent
+        // 路由逻辑：无userId使用客服助手，有userId先做意图分类
         if (userId == null || userId.isEmpty()) {
             log.info("未提供userId，使用客服助手Agent（无个性化服务）");
             return handleCustomerServiceChat(message);
         } else {
-            log.info("提供userId={}，使用SupervisorAgent + StreamingResponse（个性化服务）", userId);
+            // 意图分类：简单对话走快速通道，业务意图走 SupervisorAgent
+            IntentType intent = intentClassifier.classify(message);
+            if (intent == IntentType.SIMPLE_CHAT) {
+                log.info("简单对话意图，走快速通道: userId={}", userId);
+                return handleSimpleChat(message);
+            }
+            log.info("业务意图，使用SupervisorAgent: userId={}", userId);
             return handleSupervisorChat(message, userId);
         }
     }
@@ -109,6 +124,37 @@ public class SupervisorSSEController {
                 log.error("客服助手处理失败", e);
                 sendSseEvent(emitter, "message", Map.of("error", e.getMessage()));
                 emitter.completeWithError(e);
+            } finally {
+                try { emitter.complete(); } catch (Exception ignored) {}
+            }
+        }, executorService);
+
+        emitter.onTimeout(() -> emitter.complete());
+        emitter.onError(error -> emitter.completeWithError(Objects.requireNonNull(error)));
+        return emitter;
+    }
+
+    /**
+     * 处理简单对话（快速通道）
+     *
+     * 使用 SimpleChatAgent 直接调用 LLM，无需走 SupervisorAgent 全流程
+     */
+    private SseEmitter handleSimpleChat(String message) {
+        SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MS);
+
+        CompletableFuture.runAsync(() -> {
+            try {
+                long startTime = System.currentTimeMillis();
+                String response = simpleChatAgent.chat(message);
+                long elapsed = System.currentTimeMillis() - startTime;
+                log.info("⏱️ [快速通道] SimpleChatAgent完成，耗时: {}ms，结果长度: {} 字符", elapsed, response.length());
+
+                sendSseEvent(emitter, "message", Map.of("content", response));
+                sendSseEvent(emitter, "message", Map.of("done", true));
+            } catch (Exception e) {
+                log.error("简单对话处理失败", e);
+                sendSseEvent(emitter, "message", Map.of("error", "抱歉，回复出了点问题，请稍后重试"));
+                sendSseEvent(emitter, "message", Map.of("done", true));
             } finally {
                 try { emitter.complete(); } catch (Exception ignored) {}
             }

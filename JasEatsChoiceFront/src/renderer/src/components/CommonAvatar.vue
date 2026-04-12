@@ -161,15 +161,12 @@ const showLargeAvatar = ref(false)
 
 // 监听头像URL变化，管理加载状态
 watch(
-  () => props.avatarUrl,
-  (newUrl) => {
-    if (newUrl) {
+  timestampedAvatarUrl,
+  (processedUrl) => {
+    if (processedUrl) {
       isLoading.value = true
       // 创建临时图片对象来监听加载状态
       const img = new Image()
-
-      // 直接使用原始URL
-      const urlWithTimestamp = newUrl
 
       img.onload = () => {
         isLoading.value = false
@@ -181,12 +178,12 @@ watch(
         isLoaded.value = true
       }
 
-      img.src = urlWithTimestamp
+      img.src = processedUrl
     } else {
       isLoaded.value = false
     }
   },
-  { immediate: true } // 立即执行一次
+  { immediate: true }
 )
 
 // Handle avatar click event

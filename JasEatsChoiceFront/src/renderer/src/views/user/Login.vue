@@ -440,7 +440,7 @@ const toRegister = () => {
 
 // 忘记密码
 const forgotPassword = () => {
-  ElMessage.info('忘记密码功能开发中，请联系客服重置密码')
+  router.push('/forgot-password')
 }
 
 // 显示协议

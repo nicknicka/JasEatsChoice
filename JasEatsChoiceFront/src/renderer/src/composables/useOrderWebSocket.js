@@ -4,7 +4,7 @@
 import { ref, onUnmounted } from 'vue'
 import { WS_CONFIG } from '../config'
 import { ElMessage } from 'element-plus'
-import { ORDER_STATUS_MAP } from '../utils/orderStatus'
+import { getOrderStatusText, orderStatusToText } from '../utils/orderStatus'
 import pinia from '../store'
 import { useAuthStore } from '../store/authStore'
 
@@ -158,7 +158,7 @@ export function useOrderWebSocket(onOrderUpdate) {
     }
 
     // 显示更新提示
-    const statusText = ORDER_STATUS_MAP[orderUpdate.status] || orderUpdate.status
+    const statusText = getOrderStatusText(orderStatusToText(orderUpdate.status))
     ElMessage.info(`订单 ${orderUpdate.id} 状态已更新为: ${statusText}`)
   }
 

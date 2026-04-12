@@ -158,6 +158,7 @@ const searchKeyword = ref('')
 const searchResults = ref([])
 const selectedPosition = ref(null)
 const selectedAddress = ref('')
+const selectedAddressSource = ref('unknown')
 const searchFocused = ref(false)
 const searching = ref(false)
 const hasSearched = ref(false)
@@ -490,6 +491,7 @@ const selectSearchResult = (item) => {
     const { lng, lat } = item.location
     updateMarkerPosition(lng, lat)
     selectedAddress.value = item.name + ' ' + item.address
+    selectedAddressSource.value = 'search'
     searchResults.value = []
     searchKeyword.value = ''
     hasSearched.value = false
@@ -523,7 +525,8 @@ const tryCitySearchFallback = async () => {
         return {
           lng: center.lng,
           lat: center.lat,
-          city: cityResult.city || cityResult.province || ''
+          city: cityResult.city || cityResult.province || '',
+          source: 'city-fallback'
         }
       }
     }
@@ -542,7 +545,8 @@ const tryCitySearchFallback = async () => {
         return {
           lng: geocodeResult.location.lng,
           lat: geocodeResult.location.lat,
-          city: fallbackAddress
+          city: fallbackAddress,
+          source: 'city-fallback'
         }
       }
     }
@@ -573,7 +577,7 @@ const handleGetCurrentLocation = async () => {
         console.log('IP定位成功:', province, city, lng, lat)
         updateMarkerPosition(lng, lat)
         getAddressByLocation(lng, lat)
-        saveLastLocation(lng, lat)
+        saveLastLocation(lng, lat, 'ip')
 
         locating.value = false
         ElMessage.success(`定位成功：${province || ''}${city || ''}`)
@@ -596,7 +600,7 @@ const handleGetCurrentLocation = async () => {
             console.log('地理编码成功:', address, gLng, gLat)
             updateMarkerPosition(gLng, gLat)
             getAddressByLocation(gLng, gLat)
-            saveLastLocation(gLng, gLat)
+            saveLastLocation(gLng, gLat, 'ip')
 
             locating.value = false
             ElMessage.success(`定位成功：${province || ''}${city || ''}`)
@@ -614,6 +618,7 @@ const handleGetCurrentLocation = async () => {
   const lastLocation = getLastLocation()
   if (lastLocation) {
     console.log('使用上次保存的位置:', lastLocation)
+    selectedAddressSource.value = lastLocation.source || 'cache'
     updateMarkerPosition(lastLocation.lng, lastLocation.lat)
     getAddressByLocation(lastLocation.lng, lastLocation.lat)
     locating.value = false
@@ -646,9 +651,10 @@ const handleGetCurrentLocation = async () => {
 
       const { lng, lat } = position.position
       console.log('高德定位成功:', lng, lat)
+      selectedAddressSource.value = 'gps'
       updateMarkerPosition(lng, lat)
       getAddressByLocation(lng, lat)
-      saveLastLocation(lng, lat)
+      saveLastLocation(lng, lat, selectedAddressSource.value)
 
       locating.value = false
       ElMessage.success('定位成功')
@@ -664,7 +670,7 @@ const handleGetCurrentLocation = async () => {
     console.log('城市级兜底定位成功:', cityFallback)
     updateMarkerPosition(cityFallback.lng, cityFallback.lat)
     getAddressByLocation(cityFallback.lng, cityFallback.lat)
-    saveLastLocation(cityFallback.lng, cityFallback.lat)
+    saveLastLocation(cityFallback.lng, cityFallback.lat, cityFallback.source || 'city-fallback')
     locating.value = false
     ElMessage.success('定位成功（城市级）')
     return
@@ -675,6 +681,7 @@ const handleGetCurrentLocation = async () => {
   if (props.defaultPosition) {
     updateMarkerPosition(props.defaultPosition.lng, props.defaultPosition.lat)
     getAddressByLocation(props.defaultPosition.lng, props.defaultPosition.lat)
+    selectedAddressSource.value = 'default'
   }
   locating.value = false
   ElMessage.warning({
@@ -685,12 +692,13 @@ const handleGetCurrentLocation = async () => {
 }
 
 // 保存位置到本地存储
-const saveLastLocation = (lng, lat) => {
+const saveLastLocation = (lng, lat, source = 'unknown') => {
   try {
     const locationData = {
       lng,
       lat,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      source
     }
     localStorage.setItem('user_last_location', JSON.stringify(locationData))
     console.log('位置已保存到本地存储')
@@ -711,7 +719,8 @@ const getLastLocation = () => {
       if (Date.now() - locationData.timestamp < sevenDays) {
         return {
           lng: locationData.lng,
-          lat: locationData.lat
+          lat: locationData.lat,
+          source: locationData.source || 'cache'
         }
       } else {
         // 过期则删除
@@ -733,7 +742,8 @@ const handleConfirm = () => {
 
   emit('location-selected', {
     position: selectedPosition.value,
-    address: selectedAddress.value
+    address: selectedAddress.value,
+    source: selectedAddressSource.value
   })
 
   dialogVisible.value = false
@@ -777,9 +787,10 @@ const autoLocate = async () => {
 
       if (lng && lat) {
         console.log('IP定位成功:', province, city, lng, lat)
+        selectedAddressSource.value = 'ip'
         updateMarkerPosition(lng, lat)
         getAddressByLocation(lng, lat)
-        saveLastLocation(lng, lat)
+        saveLastLocation(lng, lat, selectedAddressSource.value)
         return
       }
 
@@ -797,9 +808,10 @@ const autoLocate = async () => {
           if (geocodeResult) {
             const { lng: gLng, lat: gLat } = geocodeResult.location
             console.log('地理编码成功:', address, gLng, gLat)
+            selectedAddressSource.value = 'ip'
             updateMarkerPosition(gLng, gLat)
             getAddressByLocation(gLng, gLat)
-            saveLastLocation(gLng, gLat)
+            saveLastLocation(gLng, gLat, selectedAddressSource.value)
             return
           }
         }
@@ -835,9 +847,10 @@ const autoLocate = async () => {
 
       const { lng, lat } = position.position
       console.log('高德定位成功:', lng, lat)
+      selectedAddressSource.value = 'gps'
       updateMarkerPosition(lng, lat)
       getAddressByLocation(lng, lat)
-      saveLastLocation(lng, lat)
+      saveLastLocation(lng, lat, selectedAddressSource.value)
       return
     } catch (error) {
       console.log('高德定位失败:', error.message)
@@ -848,15 +861,17 @@ const autoLocate = async () => {
   const cityFallback = await tryCitySearchFallback()
   if (cityFallback) {
     console.log('城市级兜底定位成功:', cityFallback)
+    selectedAddressSource.value = cityFallback.source || 'city-fallback'
     updateMarkerPosition(cityFallback.lng, cityFallback.lat)
     getAddressByLocation(cityFallback.lng, cityFallback.lat)
-    saveLastLocation(cityFallback.lng, cityFallback.lat)
+    saveLastLocation(cityFallback.lng, cityFallback.lat, selectedAddressSource.value)
     return
   }
 
   // ========== 第五级：使用默认位置（北京） ==========
   console.log('使用默认位置（北京）')
   if (props.defaultPosition) {
+    selectedAddressSource.value = 'default'
     updateMarkerPosition(props.defaultPosition.lng, props.defaultPosition.lat)
     getAddressByLocation(props.defaultPosition.lng, props.defaultPosition.lat)
   }

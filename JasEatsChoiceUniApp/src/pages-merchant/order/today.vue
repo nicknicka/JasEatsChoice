@@ -135,6 +135,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { merchantApi } from '@/api'
 import { formatTime } from '@/utils/helper'
 import { useMerchantStore } from '@/store/modules/merchant'
+import { normalizeOrderStatusCode } from '@/config/order-status'
 
 const merchantStore = useMerchantStore()
 
@@ -243,6 +244,7 @@ const loadOrders = async (isRefresh = false) => {
       // 为每个订单获取菜品列表
       const orderListWithData = await Promise.all(
         orders.map(async (order) => {
+          const normalizedStatus = normalizeOrderStatusCode(order.status)
           try {
             const dishesRes = await merchantApi.getOrderDishes(order.id)
             const dishes = dishesRes && dishesRes.success ? dishesRes.data || [] : []
@@ -250,8 +252,8 @@ const loadOrders = async (isRefresh = false) => {
             return {
               id: order.id,
               orderNo: `OD${String(order.id).padStart(6, '0')}`,
-              status: order.status,
-              statusText: getStatusText(order.status),
+              status: normalizedStatus,
+              statusText: getStatusText(normalizedStatus),
               dishes: dishes.map(dish => ({
                 id: dish.dishId || dish.id,
                 name: dish.dishName || dish.name,
@@ -270,8 +272,8 @@ const loadOrders = async (isRefresh = false) => {
             return {
               id: order.id,
               orderNo: `OD${String(order.id).padStart(6, '0')}`,
-              status: order.status,
-              statusText: getStatusText(order.status),
+              status: normalizedStatus,
+              statusText: getStatusText(normalizedStatus),
               dishes: [],
               remark: order.remark || '',
               tableNo: 'A01',
@@ -364,7 +366,7 @@ const generateMockOrders = () => {
   const count = Math.floor(Math.random() * 5) + 5
 
   for (let i = 0; i < count; i++) {
-    const statusList = ['pending', 'cooking', 'ready']
+    const statusList = [1, 2, 3]
     const status = activeFilter.value === 'all'
       ? statusList[Math.floor(Math.random() * statusList.length)]
       : activeFilter.value
@@ -435,7 +437,7 @@ const quickAccept = async (order) => {
     success: async (res) => {
       if (res.confirm) {
         try {
-          // 调用API接单（状态改为2-备菜中）
+          // 调用API接单（状态改为2-制作中）
           await merchantApi.acceptOrder(order.id)
 
           uni.showToast({
@@ -453,7 +455,7 @@ const quickAccept = async (order) => {
           })
         }
       }
-    }
+                  status: normalizedStatus,
   })
 }
 
@@ -467,13 +469,13 @@ const quickComplete = async (order) => {
     success: async (res) => {
       if (res.confirm) {
         try {
-          // 调用API完成订单（状态改为5-已送达）
+          // 调用API完成订单（状态改为3-已完成）
           await merchantApi.completeOrder(order.id)
 
           uni.showToast({
             title: '已完成',
             icon: 'success'
-          })
+                  status: normalizedStatus,
 
           // 刷新订单列表
           loadOrders()
@@ -682,22 +684,22 @@ const toOrderDetail = (id) => {
   font-size: 24rpx;
   font-weight: bold;
 
-  &.status-pending {
+  &.status-1 {
     background: #FFF7E6;
     color: #FAAD14;
   }
 
-  &.status-cooking {
+  &.status-2 {
     background: #E6F7FF;
     color: #1890FF;
   }
 
-  &.status-ready {
+  &.status-3 {
     background: #F6FFED;
     color: #52C41A;
   }
 
-  &.status-completed {
+  &.status-4 {
     background: #F5F5F5;
     color: #999;
   }
