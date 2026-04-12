@@ -1,12 +1,13 @@
 package com.xx.jaseatschoicejava.mapper;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.xx.jaseatschoicejava.entity.ContentSource;
+import java.util.List;
+
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
-import java.util.List;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.xx.jaseatschoicejava.entity.ContentSource;
 
 /**
  * 内容源Mapper接口
@@ -40,6 +41,6 @@ public interface ContentSourceMapper extends BaseMapper<ContentSource> {
      * @param maxRetryCount 最大重试次数
      * @return 内容源列表
      */
-    @Select("SELECT * FROM t_content_source WHERE extraction_status = 'FAILED' ORDER BY create_time ASC LIMIT #{limit}")
+    @Select("SELECT * FROM t_content_source WHERE extraction_status IN ('FAILED', 'PARSE_FAILED') ORDER BY create_time ASC LIMIT #{limit}")
     List<ContentSource> selectFailedSources(@Param("limit") int limit);
 }

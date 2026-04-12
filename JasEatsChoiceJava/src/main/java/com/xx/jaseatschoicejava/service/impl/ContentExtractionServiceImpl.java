@@ -18,6 +18,7 @@ import com.xx.jaseatschoicejava.service.extraction.fetcher.ContentFetcherFactory
 import com.xx.jaseatschoicejava.service.extraction.recognizer.ContentRecognizer;
 import com.xx.jaseatschoicejava.vo.ContentExtractionDetailVO;
 import com.xx.jaseatschoicejava.vo.ContentSourceVO;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,9 +35,9 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * 内容提取服务实现类
- *
- * 使用 GLM-4.6V-Flash 视觉模型进行内容识别：
+        } catch (ExtractionParseException e) {
+            log.error("提取任务解析失败: taskId={}", task.getId(), e);
+            handleParseFailure(task, e);
  * - 文章/图文：Jsoup抓取 + GLM-4.6V-Flash OCR识别
  * - 视频：平台API获取视频流 + GLM-4.6V-Flash 视频理解
  * - 图片：下载 + GLM-4.6V-Flash 图片识别
@@ -167,20 +168,12 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
 
         // 转换食材列表为JSON
         if (dto.getIngredients() != null) {
-            try {
-                extraction.setIngredients(objectMapper.writeValueAsString(dto.getIngredients()));
-            } catch (Exception e) {
-                log.error("转换食材列表为JSON失败", e);
-            }
+            extraction.setIngredients(serializeToJson(dto.getIngredients(), "食材列表"));
         }
 
         // 转换步骤列表为JSON
         if (dto.getSteps() != null) {
-            try {
-                extraction.setSteps(objectMapper.writeValueAsString(dto.getSteps()));
-            } catch (Exception e) {
-                log.error("转换步骤列表为JSON失败", e);
-            }
+            extraction.setSteps(serializeToJson(dto.getSteps(), "步骤列表"));
         }
 
         extraction.setCookingTime(dto.getCookingTime());
@@ -315,7 +308,10 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
             try {
                 doExtract(task);
                 processedCount++;
-            } catch (Exception e) {
+            } catch (ExtractionParseException e) {
+                log.error("处理提取任务解析失败: taskId={}", task.getId(), e);
+                handleParseFailure(task, e);
+            } catch (RuntimeException e) {
                 log.error("处理提取任务失败: taskId={}", task.getId(), e);
                 handleTaskFailure(task, e);
             }
@@ -375,6 +371,8 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
             if (fetchedContent.getCoverImage() != null && !fetchedContent.getCoverImage().isEmpty()) {
                 source.setCoverImage(fetchedContent.getCoverImage());
             }
+            source.setUpdateTime(LocalDateTime.now());
+            contentSourceMapper.updateById(source);
 
             // 6. 创建提取记录
             ContentExtraction extraction = new ContentExtraction();
@@ -382,13 +380,12 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
             extraction.setSourceId(source.getId());
             extraction.setDishName((String) extractionResult.getOrDefault("dishName", "未知菜品"));
             extraction.setDescription((String) extractionResult.getOrDefault("description", ""));
-            extraction.setIngredients(objectMapper.writeValueAsString(extractionResult.get("ingredients")));
-            extraction.setSteps(objectMapper.writeValueAsString(extractionResult.get("steps")));
+            extraction.setIngredients(serializeToJson(extractionResult.get("ingredients"), "食材列表"));
+            extraction.setSteps(serializeToJson(extractionResult.get("steps"), "步骤列表"));
             extraction.setCookingTime(extractIntValue(extractionResult.get("cookingTime"), 30));
             extraction.setDifficulty((String) extractionResult.getOrDefault("difficulty", "中等"));
 
-            List<String> tags = (List<String>) extractionResult.get("tags");
-            extraction.setTags(tags != null ? String.join(",", tags) : "");
+            extraction.setTags(joinStringList(extractionResult.get("tags")));
 
             extraction.setCalories(extractIntValue(extractionResult.get("calories"), 0));
 
@@ -420,7 +417,9 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
             log.info("提取任务完成: taskId={}, extractionId={}, dishName={}",
                 task.getId(), extraction.getId(), extraction.getDishName());
 
-        } catch (Exception e) {
+        } catch (ExtractionParseException e) {
+            throw e;
+        } catch (RuntimeException e) {
             log.error("提取任务失败: taskId={}", task.getId(), e);
 
             // 更新任务状态为失败
@@ -443,7 +442,7 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
     /**
      * 处理任务失败（含重试逻辑）
      */
-    private void handleTaskFailure(ExtractionTask task, Exception e) {
+    private void handleTaskFailure(ExtractionTask task, RuntimeException e) {
         if (task.getRetryCount() < MAX_RETRY_COUNT) {
             task.setRetryCount(task.getRetryCount() + 1);
             task.setTaskStatus("PENDING"); // 重新排队
@@ -460,11 +459,32 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
     }
 
     /**
+     * 处理解析失败：不重试，保留原始AI响应供人工排查或后续重新解析。
+     */
+    private void handleParseFailure(ExtractionTask task, ExtractionParseException e) {
+        task.setTaskStatus("FAILED");
+        task.setResultData(e.getRawResponse());
+        task.setErrorMessage(e.getMessage());
+        task.setEndTime(LocalDateTime.now());
+        task.setUpdateTime(LocalDateTime.now());
+        extractionTaskMapper.updateById(task);
+
+        ContentSource source = contentSourceMapper.selectById(task.getSourceId());
+        if (source != null) {
+            source.setExtractionStatus(ExtractionStatus.PARSE_FAILED.getCode());
+            source.setIsExtracted(false);
+            source.setErrorMessage(e.getMessage());
+            source.setUpdateTime(LocalDateTime.now());
+            contentSourceMapper.updateById(source);
+        }
+    }
+
+    /**
      * 安全提取整数值
      */
     private int extractIntValue(Object value, int defaultValue) {
         if (value == null) return defaultValue;
-        if (value instanceof Number) return ((Number) value).intValue();
+        if (value instanceof Number number) return number.intValue();
         try {
             return Integer.parseInt(value.toString());
         } catch (NumberFormatException e) {
@@ -495,19 +515,9 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
 
             return result;
 
-        } catch (Exception e) {
+        } catch (IllegalArgumentException | JsonProcessingException e) {
             log.error("解析提取结果失败: {}", responseText, e);
-            // 返回默认值
-            Map<String, Object> defaultResult = new java.util.HashMap<>();
-            defaultResult.put("dishName", "提取失败");
-            defaultResult.put("description", "");
-            defaultResult.put("ingredients", new ArrayList<>());
-            defaultResult.put("steps", new ArrayList<>());
-            defaultResult.put("cookingTime", 30);
-            defaultResult.put("difficulty", "中等");
-            defaultResult.put("tags", new ArrayList<>());
-            defaultResult.put("calories", 0);
-            return defaultResult;
+            throw new ExtractionParseException("AI识别结果解析失败: " + e.getMessage(), responseText, e);
         }
     }
 
@@ -515,8 +525,8 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
      * 从响应文本中提取JSON
      */
     private String extractJson(String text) {
-        if (text == null || text.isEmpty()) {
-            return "{}";
+        if (text == null || text.isBlank()) {
+            throw new IllegalArgumentException("AI返回内容为空");
         }
 
         String trimmed = text.trim();
@@ -549,7 +559,36 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
             return trimmed.substring(jsonStart, jsonEnd + 1);
         }
 
-        return trimmed;
+        throw new IllegalArgumentException("AI返回内容中未找到JSON对象");
+    }
+
+    /**
+     * 序列化为JSON。失败时直接抛出异常，避免静默丢字段。
+     */
+    private String serializeToJson(Object value, String fieldName) {
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (JsonProcessingException e) {
+            log.error("转换{}为JSON失败", fieldName, e);
+            throw new RuntimeException("转换" + fieldName + "为JSON失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 将 tags 安全拼接为逗号分隔字符串。
+     */
+    private String joinStringList(Object value) {
+        if (value == null) {
+            return "";
+        }
+
+        if (value instanceof List<?> items) {
+            return items.stream()
+                .map(Object::toString)
+                .collect(Collectors.joining(","));
+        }
+
+        return value.toString();
     }
 
     /**
@@ -570,6 +609,7 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
     /**
      * 转换为内容源VO
      */
+    @SuppressWarnings("null")
     private ContentSourceVO convertToContentSourceVO(ContentSource source) {
         ContentSourceVO vo = new ContentSourceVO();
         BeanUtils.copyProperties(source, vo);
@@ -612,6 +652,7 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
     /**
      * 转换为提取详情VO
      */
+    @SuppressWarnings("null")
     private ContentExtractionDetailVO convertToExtractionDetailVO(ContentExtraction extraction, ContentSource source) {
         ContentExtractionDetailVO vo = new ContentExtractionDetailVO();
         BeanUtils.copyProperties(extraction, vo);
@@ -645,7 +686,7 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
             if (extraction.getTags() != null) {
                 vo.setTags(List.of(extraction.getTags().split(",")));
             }
-        } catch (Exception e) {
+        } catch (JsonProcessingException e) {
             log.error("解析JSON数据失败: extractionId={}", extraction.getId(), e);
             vo.setIngredients(new ArrayList<>());
             vo.setSteps(new ArrayList<>());

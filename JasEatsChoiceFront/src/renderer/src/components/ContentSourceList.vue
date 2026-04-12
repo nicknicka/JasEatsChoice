@@ -52,7 +52,7 @@
             v-for="source in completedSources"
             :key="source.id"
             class="source-card"
-            :class="{ published: source.isPublished }"
+            :class="{ published: source.isPublished, failed: source.extractionStatus === 'FAILED' || source.extractionStatus === 'PARSE_FAILED' }"
             @click="viewExtraction(source)"
           >
             <div class="source-cover" v-if="source.extractedDishImage">
@@ -162,7 +162,7 @@ const processingSources = computed(() => {
 // 已完成的提取
 const completedSources = computed(() => {
   return props.sources.filter(s =>
-    s.extractionStatus === 'SUCCESS' || s.extractionStatus === 'FAILED'
+    s.extractionStatus === 'SUCCESS' || s.extractionStatus === 'FAILED' || s.extractionStatus === 'PARSE_FAILED'
   )
 })
 
@@ -214,6 +214,8 @@ const viewExtraction = (source) => {
     emit('view-detail', source)
   } else if (source.extractionStatus === 'PENDING' || source.extractionStatus === 'PROCESSING') {
     ElMessage.info('内容正在提取中，请稍后查看')
+  } else if (source.extractionStatus === 'PARSE_FAILED') {
+    ElMessage.warning('内容已抓取但解析失败，请查看错误信息')
   } else {
     ElMessage.warning('无法查看详情，提取可能失败或未完成')
   }

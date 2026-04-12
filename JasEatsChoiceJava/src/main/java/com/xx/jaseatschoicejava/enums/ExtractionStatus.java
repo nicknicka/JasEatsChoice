@@ -31,7 +31,12 @@ public enum ExtractionStatus {
     /**
      * 提取失败
      */
-    FAILED("FAILED", "失败");
+    FAILED("FAILED", "失败"),
+
+    /**
+     * 解析失败
+     */
+    PARSE_FAILED("PARSE_FAILED", "解析失败");
 
     /**
      * 状态代码
@@ -59,7 +64,7 @@ public enum ExtractionStatus {
      * 是否为最终状态
      */
     public boolean isFinalStatus() {
-        return this == SUCCESS || this == FAILED;
+        return this == SUCCESS || this == FAILED || this == PARSE_FAILED;
     }
 
     /**
@@ -73,6 +78,13 @@ public enum ExtractionStatus {
      * 是否失败
      */
     public boolean isFailed() {
-        return this == FAILED;
+        return this == FAILED || this == PARSE_FAILED;
+    }
+
+    /**
+     * 是否为解析失败
+     */
+    public boolean isParseFailed() {
+        return this == PARSE_FAILED;
     }
 }

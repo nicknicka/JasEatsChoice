@@ -118,9 +118,9 @@ public class RecommendationQueryTools {
                     "   📝 %s\n\n",
                     i + 1,
                     dish.getName(),
-                    dish.getPrice(),
+                    dish.getPrice() != null ? dish.getPrice() : BigDecimal.ZERO,
                     dish.getCalorie() != null ? dish.getCalorie() : 0,
-                    dish.getAvgRating() != null ? dish.getAvgRating() : 0,
+                    dish.getAvgRating() != null ? dish.getAvgRating() : BigDecimal.ZERO,
                     dish.getDescription() != null && !dish.getDescription().isEmpty()
                         ? dish.getDescription()
                         : "暂无描述"

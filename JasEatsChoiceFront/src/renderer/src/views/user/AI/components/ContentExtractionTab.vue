@@ -155,7 +155,7 @@
               v-for="(source, index) in completedSources"
               :key="source.id"
               class="source-card"
-              :class="{ published: source.isPublished, failed: source.extractionStatus === 'FAILED' }"
+              :class="{ published: source.isPublished, failed: source.extractionStatus === 'FAILED' || source.extractionStatus === 'PARSE_FAILED' }"
               :style="{ animationDelay: (index * 60) + 'ms' }"
               @click="handleViewDetail(source)"
             >
@@ -323,7 +323,7 @@ const processingSources = computed(() => {
 // 已完成的提取
 const completedSources = computed(() => {
   return sources.value.filter(s =>
-    s.extractionStatus === 'SUCCESS' || s.extractionStatus === 'FAILED'
+    s.extractionStatus === 'SUCCESS' || s.extractionStatus === 'FAILED' || s.extractionStatus === 'PARSE_FAILED'
   )
 })
 
@@ -375,7 +375,7 @@ const handleViewDetail = (source) => {
     selectedExtractionId.value = source.extractionId
     detailDialogVisible.value = true
   } else {
-    ElMessage.info('内容正在提取中，请稍后查看')
+    ElMessage.info(source.extractionStatus === 'PARSE_FAILED' ? '内容解析失败，请查看错误信息' : '内容正在提取中，请稍后查看')
   }
 }
 
@@ -454,7 +454,8 @@ const getStatusClass = (status) => {
     'PENDING': 'pending',
     'PROCESSING': 'processing',
     'SUCCESS': 'success',
-    'FAILED': 'failed'
+    'FAILED': 'failed',
+    'PARSE_FAILED': 'failed'
   }
   return classMap[status] || 'pending'
 }
