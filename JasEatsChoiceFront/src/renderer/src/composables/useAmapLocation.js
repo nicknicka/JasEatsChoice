@@ -86,7 +86,7 @@ export const loadAMapSDK = () => {
 const reverseGeocode = async ({ lng, lat, AMap }) => {
   try {
     const locationApi = (await import('../api/location.js')).default
-    const response = await locationApi.regeocode(String(lng), String(lat))
+    const response = await locationApi.reverseGeocode(String(lng), String(lat))
 
     if (response && response.code === '200' && response.data) {
       return response.data.formattedAddress || ''

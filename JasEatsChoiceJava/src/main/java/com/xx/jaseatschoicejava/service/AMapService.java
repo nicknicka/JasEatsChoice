@@ -234,7 +234,7 @@ public class AMapService {
     /**
      * 逆地理编码（坐标 → 地址）
      */
-    public AmapApiResponse<AmapLocationData> regeocode(String lng, String lat) {
+    public AmapApiResponse<AmapLocationData> reverseGeocode(String lng, String lat) {
         try {
             String url = "https://restapi.amap.com/v3/geocode/regeo";
 

@@ -291,8 +291,8 @@ export const CAPTCHA_API = {
 export const LOCATION_API = {
   GET_LOCATION: '/v1/location',                           // GET - 获取位置信息
   UPDATE_LOCATION: '/v1/location',                        // PUT - 更新位置信息
-  GEOCODE: '/v1/location/geocode',                       // POST - 地址转坐标
-  REVERSE_GEOCODE: '/v1/location/reverse-geocode'        // POST - 坐标转地址
+  GEOCODE: '/v1/location/geocode',                       // GET - 地址转坐标
+  REVERSE_GEOCODE: '/v1/location/reverse-geocode'        // GET - 坐标转地址
 }
 
 // ==================== 支付相关 ====================

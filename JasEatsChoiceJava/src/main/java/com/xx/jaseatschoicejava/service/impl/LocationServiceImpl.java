@@ -36,14 +36,9 @@ public class LocationServiceImpl implements LocationService {
             return reverseGeocode(longitude.toString(), latitude.toString());
         }
 
-        AmapApiResponse<AmapLocationData> ipResult = aMapService.ipLocation();
-        Map<String, Object> location = toLocationMap(ipResult != null ? ipResult.data() : null);
-
-        if (location.isEmpty()) {
-            logger.warn("通过高德IP定位未获取到有效数据，返回空结果");
-        }
-
-        return location;
+        // 无经纬度时不再触发第三方 IP 定位，交给前端继续走本地定位/默认兜底链路。
+        logger.warn("未提供经纬度参数，跳过第三方IP定位，返回空结果");
+        return new HashMap<>();
     }
 
     @Override
@@ -54,7 +49,7 @@ public class LocationServiceImpl implements LocationService {
 
     @Override
     public Map<String, Object> reverseGeocode(String lng, String lat) {
-        AmapApiResponse<AmapLocationData> result = aMapService.regeocode(lng, lat);
+        AmapApiResponse<AmapLocationData> result = aMapService.reverseGeocode(lng, lat);
         return toLocationMap(result != null ? result.data() : null);
     }
 

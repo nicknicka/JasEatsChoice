@@ -22,7 +22,7 @@ export default {
     return api.get('/v1/location/geocode', { params })
   },
 
-  regeocode(lng, lat) {
+  reverseGeocode(lng, lat) {
     return api.get('/v1/location/reverse-geocode', {
       params: { lng, lat }
     })

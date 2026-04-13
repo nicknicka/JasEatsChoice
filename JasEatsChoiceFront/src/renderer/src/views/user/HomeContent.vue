@@ -283,7 +283,7 @@ const loadLastLocation = async () => {
         // 调用逆地理编码获取地址
         try {
           const locationApi = (await import('../../api/location.js')).default
-          const response = await locationApi.regeocode(lng.toString(), lat.toString())
+          const response = await locationApi.reverseGeocode(lng.toString(), lat.toString())
 
           if (response && response.code === '200' && response.data) {
             const address = response.data.formattedAddress
