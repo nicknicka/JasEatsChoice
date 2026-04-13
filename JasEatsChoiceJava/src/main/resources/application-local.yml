@@ -16,7 +16,7 @@ spring:
 file:
   upload:
     path: /Users/nickxiao/JasEatsChoice/uploads/
-    server-url: http://localhost:7777/api
+    server-url: ${FILE_SERVER_URL:http://localhost:7777/api}
 
 zhipuai:
   api-key: ${ZHIPU_API_KEY:${ZHIPUAI_API_KEY:}}

@@ -53,31 +53,7 @@ export const resolveAndStorePublicIp = async (): Promise<string | null> => {
     console.info('[定位] 开始获取公网IP...')
   }
 
-  // 优先使用后端代理（避免CORS问题）
-  try {
-    const locationApi = (await import('../api/location.js')).default
-    const response = await locationApi.getPublicIp()
-    // api拦截器已返回response.data，所以response就是{code, message, data}
-    const data = response as { code?: string; data?: { ip?: string } } | undefined
-
-    if (data && data.code === '200' && data.data?.ip) {
-      const ip = data.data.ip
-      if (isValidIp(ip)) {
-        PUBLIC_IP_STORAGE_KEYS.forEach((key) => localStorage.setItem(key, ip))
-        ;(window as Window & { __CLIENT_IP__?: string }).__CLIENT_IP__ = ip
-        if (IS_DEV) {
-          console.info('[定位] 公网IP获取成功（后端代理）:', ip)
-        }
-        return ip
-      }
-    }
-  } catch (error) {
-    if (IS_DEV) {
-      console.warn('[定位] 后端代理获取IP失败，尝试前端备用方案:', (error as Error).message)
-    }
-  }
-
-  // 前端备用方案（仅使用支持CORS的服务）
+  // 前端优先：先尝试支持 CORS 的公网 IP 服务
   const errors: string[] = []
 
   for (const api of IP_CANDIDATE_APIS) {
@@ -106,6 +82,30 @@ export const resolveAndStorePublicIp = async (): Promise<string | null> => {
       if (IS_DEV) {
         console.warn('[定位] 获取公网IP失败，尝试下一个来源:', message)
       }
+    }
+  }
+
+  // 前端直连失败后，再走后端代理兜底，降低部分网络环境下的失败率
+  try {
+    const locationApi = (await import('../api/location.js')).default
+    const response = await locationApi.getPublicIp()
+    // api拦截器已返回response.data，所以response就是{code, message, data}
+    const data = response as { code?: string; data?: { ip?: string } } | undefined
+
+    if (data && data.code === '200' && data.data?.ip) {
+      const ip = data.data.ip
+      if (isValidIp(ip)) {
+        PUBLIC_IP_STORAGE_KEYS.forEach((key) => localStorage.setItem(key, ip))
+        ;(window as Window & { __CLIENT_IP__?: string }).__CLIENT_IP__ = ip
+        if (IS_DEV) {
+          console.info('[定位] 公网IP获取成功（后端代理兜底）:', ip)
+        }
+        return ip
+      }
+    }
+  } catch (error) {
+    if (IS_DEV) {
+      console.warn('[定位] 后端代理获取IP失败:', (error as Error).message)
     }
   }
 

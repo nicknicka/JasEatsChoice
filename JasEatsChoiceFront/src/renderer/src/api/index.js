@@ -21,10 +21,13 @@
  */
 
 // ==================== 服务器配置 ====================
+// 从集中配置导入，避免硬编码（部署 Nginx 时只需修改 config/index.js）
+import { ENV_CONFIG } from '@/config'
+
 export const SERVER_CONFIG = {
-  BASE_URL: 'http://localhost:7777/api',
-  WS_URL: 'ws://localhost:11277/ws',
-  WS_CHAT_URL: 'ws://localhost:11277/ws/chat',
+  BASE_URL: ENV_CONFIG.baseURL,
+  WS_URL: ENV_CONFIG.wsURL,
+  WS_CHAT_URL: ENV_CONFIG.wsChatURL,
   TIMEOUT: 30000
 }
 

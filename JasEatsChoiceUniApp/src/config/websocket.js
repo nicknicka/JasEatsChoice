@@ -20,12 +20,12 @@ export const getWebSocketUrl = (path = '') => {
 
   #ifdef MP-WEIXIN
   // 微信小程序环境
-  wsUrl = 'wss://api.example.com/ws' + path
+  wsUrl = 'wss://api.yourdomain.com/ws' + path
   #endif
 
   #ifdef APP-PLUS
   // App环境
-  wsUrl = 'wss://api.example.com/ws' + path
+  wsUrl = 'wss://api.yourdomain.com/ws' + path
   #endif
 
   return wsUrl

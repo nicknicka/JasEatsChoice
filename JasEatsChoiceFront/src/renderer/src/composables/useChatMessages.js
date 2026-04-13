@@ -124,8 +124,8 @@ export function useChatMessages({ userId, selectedConversation }) {
         // 如果后端只返回了相对路径 fileUrl，构建完整的 fullUrl
         if (fileUrl && !fullUrl && !fileUrl.startsWith('http')) {
           // 构建完整URL（与上传时的逻辑一致）
-          const serverUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:7777'
-          fullUrl = `${serverUrl}/api/uploads/${fileUrl}`
+          const serverUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:7777/api'
+          fullUrl = `${serverUrl}/uploads/${fileUrl}`
         }
 
         // 确定消息类型

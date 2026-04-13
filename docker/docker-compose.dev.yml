@@ -1,0 +1,104 @@
+version: '3.8'
+
+services:
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: jaseats-nginx-dev
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d/dev.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/snippets:/etc/nginx/snippets:ro
+      - ../uploads:/data/uploads:ro
+      - nginx-dev-logs:/var/log/nginx
+    depends_on:
+      spring-boot:
+        condition: service_healthy
+    networks:
+      - jaseats-net
+    restart: unless-stopped
+
+  spring-boot:
+    build:
+      context: ../JasEatsChoiceJava
+      dockerfile: Dockerfile
+    container_name: jaseats-app-dev
+    ports:
+      - "7777:7777"    # 直接访问用于调试
+      - "11277:11277"  # WebSocket 直接访问用于调试
+    environment:
+      - SPRING_PROFILES_ACTIVE=local
+      - SERVER_PORT=7777
+      - DB_URL=jdbc:mysql://mysql:3306/jia_shi_yi_xuan?useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=GMT%2B8&allowPublicKeyRetrieval=true
+      - DB_USERNAME=root
+      - DB_PASSWORD=123456
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - FILE_UPLOAD_PATH=/data/uploads/
+      - FILE_SERVER_URL=http://localhost/api
+      - NETTY_PORT=11277
+      - ZHIPU_API_KEY=${ZHIPU_API_KEY}
+    volumes:
+      - ../uploads:/data/uploads
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - jaseats-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7777/api/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.0
+    container_name: jaseats-mysql-dev
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=123456
+      - MYSQL_DATABASE=jia_shi_yi_xuan
+      - MYSQL_CHARACTER_SET_SERVER=utf8mb4
+      - MYSQL_COLLATION_SERVER=utf8mb4_unicode_ci
+    volumes:
+      - mysql-dev-data:/var/lib/mysql
+    networks:
+      - jaseats-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p123456"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: jaseats-redis-dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-dev-data:/data
+    networks:
+      - jaseats-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+
+networks:
+  jaseats-net:
+    driver: bridge
+
+volumes:
+  mysql-dev-data:
+  redis-dev-data:
+  nginx-dev-logs:

@@ -2,8 +2,10 @@
  * 统一的错误处理工具
  */
 
-// 图片服务器配置（注意：需要包含/api前缀，因为后端context-path是/api）
-const IMAGE_SERVER = 'http://192.168.137.188:7777/api'
+import config from '@/config'
+
+// 从集中配置获取服务器地址
+const IMAGE_SERVER = config.baseURL
 
 /**
  * 处理图片URL，确保返回完整的URL
@@ -15,12 +17,8 @@ export const processImageUrl = (url) => {
     return url || ''
   }
 
-  // 如果已经是完整URL（http/https开头）
+  // 如果已经是完整URL（http/https开头），直接返回
   if (url.startsWith('http://') || url.startsWith('https://')) {
-    // 开发环境下替换localhost为局域网IP
-    if (url.includes('localhost')) {
-      return url.replace('localhost', '192.168.137.188')
-    }
     return url
   }
 

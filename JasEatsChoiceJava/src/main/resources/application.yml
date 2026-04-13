@@ -127,7 +127,7 @@ file:
   upload:
     path: /Users/nickxiao/JasEatsChoice/uploads/  # 文件上传保存路径
     url-prefix: /uploads/  # 访问URL前缀（相对路径，注意不带/api前缀，因为会自动添加）
-    server-url: http://192.168.137.188:7777/api  # 服务器完整URL（用于构建完整访问地址）
+    server-url: ${FILE_SERVER_URL:http://localhost:7777/api}  # 服务器完整URL（通过环境变量注入，便于 Nginx 代理后切换）
 
 # Netty配置
 netty:

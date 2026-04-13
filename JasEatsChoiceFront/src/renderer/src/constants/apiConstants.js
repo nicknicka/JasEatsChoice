@@ -1,6 +1,8 @@
-// API服务器配置
+// API服务器配置 - 从集中配置导入，避免硬编码
+import { ENV_CONFIG } from '@/config'
+
 export const API_SERVER = {
-  BASE_URL: 'http://localhost:7777/api'
+  BASE_URL: ENV_CONFIG.baseURL
 }
 
 // AI助手API端点

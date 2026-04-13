@@ -1,6 +1,11 @@
 // WebSocket配置
+// 注意：URL 从集中配置导入，部署 Nginx 时只需修改 config/index.js
+import { ENV_CONFIG } from '@/config'
+
+const _wsBase = ENV_CONFIG.wsURL || 'ws://localhost:11277/ws'
+
 export const WS_CONFIG = {
-  URL: 'ws://localhost:11277', // WebSocket服务器地址
+  URL: _wsBase.replace(/\/ws\/?$/, ''), // 去掉末尾 /ws，保留协议+host
   ENDPOINT: '/ws/chat' // WebSocket端点路径（必须与后端NettyServer配置一致）
 }
 
