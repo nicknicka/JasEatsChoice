@@ -35,7 +35,7 @@ export const WS_CONFIG = {
   chatUrl: envConfig.wsChatURL
 }
 
-// 高德地图API配置
+// 地图 API 配置
 export const AMAP_CONFIG = {
   // Web端(JS API) Key
   key: getEnvValue('VITE_AMAP_KEY', isProdEnv ? '' : devAmapKeyFallback),

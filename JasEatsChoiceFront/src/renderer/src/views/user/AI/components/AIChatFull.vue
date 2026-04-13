@@ -411,7 +411,7 @@
 </template>
 
 <script setup>
-import { ref, nextTick, onMounted, onUnmounted, onActivated, watch } from "vue";
+import { ref, nextTick, onMounted, onUnmounted, onActivated, watch, defineOptions } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import {
 	Close,
@@ -434,6 +434,11 @@ import {
 } from "../../../../config/quickQuestions";
 import CommonAvatar from "@/components/CommonAvatar.vue";
 import { useRouter } from "vue-router";
+
+// 定义组件名称，用于 keep-alive 匹配
+defineOptions({
+	name: "AiChatFull"
+});
 
 // ========== Composables ==========
 import { useScrollManager } from "../../../../composables/useScrollManager";

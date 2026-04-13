@@ -172,6 +172,7 @@ import { useUserStore } from '../../store/userStore'
 import { useWindowControl } from '../../composables/useWindowControl'
 import { useLoginTransition } from '../../composables/useLoginTransition'
 import WindowTitleBar from '../../components/WindowTitleBar.vue'
+import { resolveAndStorePublicIp } from '../../utils/publicIp'
 
 const router = useRouter()
 const { expandToMain } = useWindowControl()
@@ -394,6 +395,17 @@ const submitForm = async () => {
               avatar: userData.avatar || ''
             })
           )
+
+          // 登录后异步刷新公网IP，失败不影响登录主流程
+          resolveAndStorePublicIp()
+            .then((ip) => {
+              if (!ip) {
+                console.warn('[定位] 登录后未获取到公网IP，将使用后端请求头兜底定位')
+              }
+            })
+            .catch((error) => {
+              console.warn('[定位] 登录后获取公网IP失败:', error?.message || error)
+            })
 
           // 保存账号信息
           const accountIndex = savedAccounts.value.findIndex((acc) => acc.phone === loginForm.phone)

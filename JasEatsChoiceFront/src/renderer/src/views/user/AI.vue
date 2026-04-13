@@ -26,26 +26,16 @@
     </nav>
 
     <div class="tab-content-area">
-      <Transition :name="transitionName" mode="out-in">
-        <div v-if="activeTab === 'chat'" key="chat" class="tab-pane">
-          <AiChatFull ref="aiChatRef" />
-        </div>
-        <div v-else-if="activeTab === 'recognition'" key="recognition" class="tab-pane">
-          <DishRecognition />
-        </div>
-        <div v-else-if="activeTab === 'recipe'" key="recipe" class="tab-pane">
-          <RecipeOptimization />
-        </div>
-        <div v-else-if="activeTab === 'extraction'" key="extraction" class="tab-pane">
-          <ContentExtractionTab />
-        </div>
-      </Transition>
+      <!-- 使用 keep-alive 缓存聊天组件，避免切换 tab 时中断流式传输 -->
+      <keep-alive :include="['AiChatFull']">
+        <component :is="currentTabComponent" :key="activeTab" ref="aiChatRef" class="tab-pane" />
+      </keep-alive>
     </div>
   </el-main>
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick, onMounted, onActivated, defineAsyncComponent, h } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onActivated, defineAsyncComponent, h, markRaw } from 'vue'
 import { ChatRound, Camera, Document, Link as LinkIcon } from '@element-plus/icons-vue'
 import AiChatFull from './AI/components/AIChatFull.vue'
 
@@ -81,10 +71,20 @@ const tabs = [
 ]
 
 const activeTab = ref('')
-const transitionName = ref('slide-left')
 const sliderLeft = ref(0)
 const sliderWidth = ref(0)
 const aiChatRef = ref(null)
+
+// 动态组件映射
+const tabComponents = {
+  chat: markRaw(AiChatFull),
+  recognition: markRaw(DishRecognition),
+  recipe: markRaw(RecipeOptimization),
+  extraction: markRaw(ContentExtractionTab)
+}
+
+// 当前 tab 对应的组件
+const currentTabComponent = computed(() => tabComponents[activeTab.value] || null)
 
 const sliderStyle = computed(() => ({
   left: `${sliderLeft.value}px`,
@@ -104,9 +104,6 @@ const updateSlider = () => {
 
 const switchTab = (name) => {
   if (name === activeTab.value) return
-  const oldIndex = tabs.findIndex(t => t.name === activeTab.value)
-  const newIndex = tabs.findIndex(t => t.name === name)
-  transitionName.value = newIndex > oldIndex ? 'slide-left' : 'slide-right'
   activeTab.value = name
   updateSlider()
 }

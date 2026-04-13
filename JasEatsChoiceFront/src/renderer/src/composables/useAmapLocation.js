@@ -41,7 +41,7 @@ export const loadAMapSDK = () => {
 
       setTimeout(waitExisting, 100)
       setTimeout(() => {
-        reject(new Error('高德地图 SDK 加载超时'))
+        reject(new Error('地图 SDK 加载超时'))
       }, 15000)
       return
     }
@@ -51,7 +51,7 @@ export const loadAMapSDK = () => {
     script.type = 'text/javascript'
 
     const timeout = setTimeout(() => {
-      reject(new Error('高德地图 SDK 加载超时'))
+      reject(new Error('地图 SDK 加载超时'))
     }, 15000)
 
     script.onload = () => {
@@ -60,7 +60,7 @@ export const loadAMapSDK = () => {
       const checkReady = () => {
         const loadedAMap = getAmapGlobal()
         if (loadedAMap && loadedAMap.Map) {
-          console.log('高德地图 SDK 动态加载完成')
+          console.log('地图 SDK 动态加载完成')
           resolve(loadedAMap)
         } else {
           setTimeout(checkReady, 50)
@@ -72,9 +72,9 @@ export const loadAMapSDK = () => {
 
     script.onerror = (event) => {
       clearTimeout(timeout)
-      console.error('高德地图 SDK 脚本加载失败:', event)
+      console.error('地图 SDK 脚本加载失败:', event)
       amapLoadPromise = null
-      reject(new Error('高德地图 SDK 脚本加载失败，请检查网络连接'))
+      reject(new Error('地图 SDK 脚本加载失败，请检查网络连接'))
     }
 
     document.head.appendChild(script)
@@ -119,9 +119,31 @@ const reverseGeocode = async ({ lng, lat, AMap }) => {
   return ''
 }
 
-const getIpLocationFromBackend = async () => {
+const getIpLocationFromBackend = async (clientIp = null) => {
   const locationApi = (await import('../api/location.js')).default
-  return locationApi.ipLocation()
+  return locationApi.ipLocation(clientIp)
+}
+
+const getClientIpCandidate = () => {
+  if (typeof window === 'undefined') {
+    return null
+  }
+
+  const fromRuntime = window.__CLIENT_IP__
+  if (typeof fromRuntime === 'string' && fromRuntime.trim()) {
+    return fromRuntime.trim()
+  }
+
+  try {
+    const fromStorage = localStorage.getItem('client_ip') || localStorage.getItem('public_ip')
+    if (typeof fromStorage === 'string' && fromStorage.trim()) {
+      return fromStorage.trim()
+    }
+  } catch (error) {
+    console.warn('读取本地IP候选失败:', error.message)
+  }
+
+  return null
 }
 
 const geocodeAddress = async ({ address, AMap }) => {
@@ -213,6 +235,7 @@ export const resolveAmapLocation = async ({
   getLastLocation,
   saveLastLocation,
   defaultPosition,
+  clientIp = null,
   preferCacheFirst = true,
   AMap = getAmapGlobal()
 } = {}) => {
@@ -233,7 +256,8 @@ export const resolveAmapLocation = async ({
   }
 
   try {
-    const response = await getIpLocationFromBackend()
+    const effectiveIp = clientIp || getClientIpCandidate()
+    const response = await getIpLocationFromBackend(effectiveIp)
 
     if (response && response.code === '200' && response.data) {
       const { lng, lat, province, city, accuracy } = response.data
@@ -280,7 +304,7 @@ export const resolveAmapLocation = async ({
       }
     }
   } catch (error) {
-    console.log('IP定位失败，尝试其他方式:', error.message)
+    console.log('IP 定位失败，尝试其他方式:', error.message)
   }
 
   if (AMap && AMap.Geolocation) {
@@ -301,7 +325,7 @@ export const resolveAmapLocation = async ({
           if (status === 'complete' && result?.position) {
             resolve(result)
           } else {
-            reject(new Error(result?.message || '高德定位失败'))
+            reject(new Error(result?.message || '定位失败'))
           }
         })
       })
@@ -323,7 +347,7 @@ export const resolveAmapLocation = async ({
         hasLocation: true
       }
     } catch (error) {
-      console.log('高德定位失败，继续其他方式:', error.message)
+      console.log('定位失败，继续其他方式:', error.message)
     }
   }
 

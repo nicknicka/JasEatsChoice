@@ -152,8 +152,16 @@ amap:
 gaode:
   map:
     api:
+      key: 140e4ebfe143855a4cc7440533ff27b3
       url: https://restapi.amap.com/v3
       weatherUrl: https://restapi.amap.com/v3/weather/weatherInfo
+
+tencent:
+  map:
+    api:
+      # 腾讯地图服务端 API Key（用于 IP 定位）
+      key: YT2BZ-EC5LJ-VUEF7-X76XQ-6HELK-JWFNQ
+      url: https://apis.map.qq.com
 
 
 aliyun:

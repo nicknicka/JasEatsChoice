@@ -30,6 +30,16 @@ const locationSource = ref('unknown')
 const LOCATION_STORAGE_KEY = 'user_last_location'
 const DEFAULT_LOCATION = { lng: 116.397428, lat: 39.90923 }
 
+const getClientIpForLocation = () => {
+  try {
+    const ip = localStorage.getItem('client_ip') || localStorage.getItem('public_ip')
+    return ip && ip.trim() ? ip.trim() : null
+  } catch (error) {
+    console.warn('读取本地IP失败:', error)
+    return null
+  }
+}
+
 /**
  * 多级定位策略（自动定位）
  * 优先级：本地缓存 > IP定位 > GPS定位 > 默认位置
@@ -40,7 +50,7 @@ const getCurrentLocation = async () => {
   try {
     await loadAMapSDK()
   } catch (error) {
-    console.warn('高德 SDK 加载失败，继续使用后端定位与降级链路:', error.message)
+    console.warn('地图 SDK 加载失败，继续使用后端定位与降级链路:', error.message)
   }
 
   try {
@@ -48,6 +58,7 @@ const getCurrentLocation = async () => {
       getLastLocation,
       saveLastLocation,
       defaultPosition: DEFAULT_LOCATION,
+      clientIp: getClientIpForLocation(),
       AMap: typeof AMap !== 'undefined' ? AMap : null
     })
 

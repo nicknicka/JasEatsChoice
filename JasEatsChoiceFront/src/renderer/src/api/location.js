@@ -28,8 +28,19 @@ export default {
     })
   },
 
-  ipLocation() {
-    return api.get('/v1/location')
+  ipLocation(ip = null) {
+    const params = {}
+    if (ip) {
+      params.ip = ip
+    }
+    return api.get('/v1/location', { params })
+  },
+
+  /**
+   * 获取公网IP（后端代理，避免CORS）
+   */
+  getPublicIp() {
+    return api.get('/v1/location/public-ip')
   },
 
   getDistrictData(keywords = '中国', subdistrict = 3) {
@@ -42,7 +53,7 @@ export default {
     const apiKey = key || AMAP_CONFIG.key
 
     if (!apiKey || apiKey === 'YOUR_AMAP_KEY') {
-      throw new Error('请先在config/index.js中配置有效的高德地图API Key')
+      throw new Error('请先在config/index.js中配置有效的地图 API Key')
     }
 
     const url = `${AMAP_CONFIG.baseURL}${AMAP_CONFIG.district}`
@@ -59,7 +70,7 @@ export default {
       const data = await response.json()
       return data
     } catch (error) {
-      console.error('调用高德地图API失败:', error)
+      console.error('调用地图行政区接口失败:', error)
       throw error
     }
   },

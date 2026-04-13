@@ -163,6 +163,16 @@ const searchFocused = ref(false)
 const searching = ref(false)
 const hasSearched = ref(false)
 
+const getClientIpForLocation = () => {
+  try {
+    const ip = localStorage.getItem('client_ip') || localStorage.getItem('public_ip')
+    return ip && ip.trim() ? ip.trim() : null
+  } catch (error) {
+    console.warn('读取本地IP失败:', error)
+    return null
+  }
+}
+
 // 计算属性：是否显示搜索结果面板
 const showResultsPanel = computed(() => {
   return searchFocused.value && (searchResults.value.length > 0 || (searchKeyword.value && hasSearched.value) || searching.value)
@@ -188,17 +198,17 @@ watch(dialogVisible, (val) => {
   emit('update:visible', val)
 })
 
-// 初始化高德地图
+// 初始化地图
 const initMap = async () => {
   mapLoading.value = true
 
   try {
-    // 动态加载 AMap SDK（Electron 兼容）
+    // 动态加载地图 SDK（Electron 兼容）
     await loadAMapSDK()
 
     console.log('开始初始化地图...')
 
-    // 创建地图实例 - 高德地图 1.4.15 使用标准配置
+    // 创建地图实例 - 1.4.15 使用标准配置
     map.value = new AMap.Map('mapContainer', {
       zoom: 15,
       center: [props.defaultPosition.lng, props.defaultPosition.lat]
@@ -444,6 +454,7 @@ const runLocationFlow = async ({ silent = false } = {}) => {
     getLastLocation,
     saveLastLocation,
     defaultPosition: props.defaultPosition,
+    clientIp: getClientIpForLocation(),
     AMap: AMapGlobal
   })
 
@@ -515,7 +526,7 @@ const getLastLocation = () => {
       }
     }
   } catch (error) {
-    console.warn('读取本地位置失败:', error)
+    console.warn('读取本地缓存位置失败:', error)
   }
   return null
 }

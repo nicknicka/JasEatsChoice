@@ -1,5 +1,7 @@
 package com.xx.jaseatschoicejava.service.impl;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -7,8 +9,15 @@ import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClientException;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xx.jaseatschoicejava.service.AMapService;
 import com.xx.jaseatschoicejava.service.LocationService;
 import com.xx.jaseatschoicejava.service.dto.AmapApiResponse;
@@ -24,21 +33,243 @@ public class LocationServiceImpl implements LocationService {
 
     private static final Logger logger = LoggerFactory.getLogger(LocationServiceImpl.class);
 
+    @Autowired
+    private RestTemplate restTemplate;
+
+    @Value("${gaode.map.api.key}")
+    private String gaodeApiKey;
+
+    @Value("${gaode.map.api.url}")
+    private String gaodeApiUrl;
+
+    @Value("${tencent.map.api.key:}")
+    private String tencentApiKey;
+
+    @Value("${tencent.map.api.url:https://apis.map.qq.com}")
+    private String tencentApiUrl;
+
     private final AMapService aMapService;
 
     public LocationServiceImpl(AMapService aMapService) {
         this.aMapService = aMapService;
     }
 
-    @Override
     public Map<String, Object> getCurrentLocation(Double latitude, Double longitude) {
+        return getCurrentLocation(latitude, longitude, null);
+    }
+
+    @Override
+    public Map<String, Object> getCurrentLocation(Double latitude, Double longitude, String clientIp) {
+        // 如果前端传入了经纬度，使用逆地理编码获取定位信息
         if (latitude != null && longitude != null) {
-            return reverseGeocode(longitude.toString(), latitude.toString());
+            try {
+                String url = String.format("%s/geocode/regeo?location=%f,%f&key=%s", gaodeApiUrl, longitude, latitude, gaodeApiKey);
+                ResponseEntity<String> responseEntity = restTemplate.getForEntity(url, String.class);
+                String response = responseEntity.getBody();
+                if (response == null || response.isEmpty()) {
+                    return new HashMap<>();
+                }
+
+                ObjectMapper mapper = new ObjectMapper();
+                Map<String, Object> responseMap = mapper.readValue(response, new TypeReference<Map<String, Object>>() {});
+
+                boolean success = "1".equals(responseMap.get("status"));
+                if (success) {
+                    Map<String, Object> location = new HashMap<>();
+
+                    Map<String, Object> regeocode = asMap(responseMap.get("regeocode"));
+                    if (regeocode != null) {
+                        String formattedAddress = (String) regeocode.get("formatted_address");
+                        location.put("address", formattedAddress);
+
+                        Map<String, Object> addressComponent = asMap(regeocode.get("addressComponent"));
+                        if (addressComponent != null) {
+                            String province = (String) addressComponent.get("province");
+                            String city = (String) addressComponent.get("city");
+                            String district = (String) addressComponent.get("district");
+
+                            location.put("province", province != null ? province : "");
+                            location.put("city", city != null ? city : "");
+                            location.put("district", district != null ? district : "");
+                        }
+                    }
+
+                    location.put("longitude", longitude.toString());
+                    location.put("latitude", latitude.toString());
+                    return location;
+                }
+            } catch (RestClientException | java.io.IOException e) {
+                logger.error("从高德地图API获取逆地理编码数据失败: {}", e.getMessage());
+            }
         }
 
-        // 无经纬度时不再触发第三方 IP 定位，交给前端继续走本地定位/默认兜底链路。
-        logger.warn("未提供经纬度参数，跳过第三方IP定位，返回空结果");
+        // 如果前端没有传入经纬度或者逆地理编码失败，回退到腾讯IP定位
+        Map<String, Object> tencentLocation = getLocationByTencentIp(clientIp);
+        if (!tencentLocation.isEmpty()) {
+            return tencentLocation;
+        }
+
+        logger.warn("腾讯IP定位未返回有效结果，返回空定位数据供前端继续降级处理");
         return new HashMap<>();
+    }
+
+    private Map<String, Object> getLocationByTencentIp(String clientIp) {
+        Map<String, Object> emptyLocation = new HashMap<>();
+
+        if (!hasText(tencentApiKey)) {
+            logger.warn("腾讯IP定位失败: tencent.map.api.key 未配置");
+            return emptyLocation;
+        }
+
+        try {
+            StringBuilder urlBuilder = new StringBuilder(tencentApiUrl)
+                .append("/ws/location/v1/ip?key=")
+                .append(URLEncoder.encode(tencentApiKey.trim(), StandardCharsets.UTF_8));
+
+            if (hasText(clientIp)) {
+                urlBuilder.append("&ip=")
+                    .append(URLEncoder.encode(clientIp.trim(), StandardCharsets.UTF_8));
+            }
+
+            String url = urlBuilder.toString();
+            ResponseEntity<String> responseEntity = restTemplate.getForEntity(url, String.class);
+            String response = responseEntity.getBody();
+            if (response == null || response.isEmpty()) {
+                logger.warn("腾讯IP定位失败: 响应体为空");
+                return emptyLocation;
+            }
+
+            logger.info("腾讯IP接口原始响应: {}", response);
+
+            ObjectMapper mapper = new ObjectMapper();
+            Map<String, Object> responseMap = mapper.readValue(response, new TypeReference<Map<String, Object>>() {});
+            if (responseMap == null) {
+                logger.warn("腾讯IP定位失败: 响应解析为空");
+                return emptyLocation;
+            }
+
+            String status = extractTextField(responseMap.get("status"));
+            String message = extractTextField(responseMap.get("message"));
+            Map<String, Object> result = asMap(responseMap.get("result"));
+            Map<String, Object> resultLocation = result != null ? asMap(result.get("location")) : null;
+            Map<String, Object> adInfo = result != null ? asMap(result.get("ad_info")) : null;
+
+            String province = adInfo != null ? extractTextField(adInfo.get("province")) : "";
+            String city = adInfo != null ? extractTextField(adInfo.get("city")) : "";
+            String district = adInfo != null ? extractTextField(adInfo.get("district")) : "";
+            String address = adInfo != null ? extractTextField(adInfo.get("nation")) + province + city + district : "";
+
+            logger.info(
+                "腾讯IP定位响应: clientIp={}, status={}, message={}, province={}, city={}, district={}, address={}",
+                hasText(clientIp) ? clientIp.trim() : "",
+                status,
+                message,
+                province,
+                city,
+                district,
+                address
+            );
+
+            boolean success = "0".equals(status);
+            if (success) {
+                Map<String, Object> locationResult = new HashMap<>();
+                locationResult.put("province", province);
+                locationResult.put("city", city);
+                locationResult.put("district", district);
+
+                String resolvedAddress = hasText(address) ? address : province + city + district;
+                locationResult.put("address", resolvedAddress);
+
+                Map<String, Object> geocodedLocation = geocodeLocationFromTencentIp(province, city, district);
+                if (!geocodedLocation.isEmpty()) {
+                    locationResult.putAll(geocodedLocation);
+                    return locationResult;
+                }
+
+                String pointLongitude = extractTextField(resultLocation != null ? resultLocation.get("lng") : null);
+                String pointLatitude = extractTextField(resultLocation != null ? resultLocation.get("lat") : null);
+                locationResult.put("longitude", hasText(pointLongitude) ? pointLongitude : null);
+                locationResult.put("latitude", hasText(pointLatitude) ? pointLatitude : null);
+
+                boolean hasRegionData = hasText(province) || hasText(city) || hasText(district);
+                boolean hasCoordinateData = hasText(pointLongitude) && hasText(pointLatitude);
+
+                if (hasRegionData || hasCoordinateData) {
+                    return locationResult;
+                }
+
+                logger.info("腾讯IP定位返回status=0但区域与坐标字段为空，返回空定位结果供前端降级处理");
+                return locationResult;
+            }
+
+            logger.warn("腾讯IP定位返回非成功状态: clientIp={}, status={}, message={}",
+                hasText(clientIp) ? clientIp.trim() : "", status, message);
+        } catch (java.io.IOException e) {
+            logger.error("从腾讯地图API解析定位数据失败: {}", e.getMessage());
+            logger.warn("由于API解析失败，返回空的定位数据");
+        } catch (RuntimeException e) {
+            logger.error("从腾讯地图API获取真实定位数据失败: {}", e.getMessage());
+            logger.warn("由于API获取失败，返回空的定位数据");
+        }
+
+        return emptyLocation;
+    }
+
+    private Map<String, Object> geocodeLocationFromTencentIp(String province, String city, String district) {
+        String geocodeCity = hasText(city) ? city : province;
+        String geocodeAddress = hasText(district) ? district : geocodeCity;
+
+        if (!hasText(geocodeAddress)) {
+            return new HashMap<>();
+        }
+
+        try {
+            AmapApiResponse<AmapLocationData> geocodeResult = aMapService.geocode(geocodeAddress, geocodeCity);
+            if (geocodeResult != null && geocodeResult.isSuccess() && geocodeResult.data() != null) {
+                AmapLocationData data = geocodeResult.data();
+                if (data.lng() != null && data.lat() != null) {
+                    Map<String, Object> location = new HashMap<>();
+                    location.put("longitude", data.lng().toString());
+                    location.put("latitude", data.lat().toString());
+                    if (hasText(data.formattedAddress())) {
+                        location.put("address", data.formattedAddress());
+                    }
+                    return location;
+                }
+            }
+        } catch (RuntimeException e) {
+            logger.warn("腾讯IP定位后的高德地理编码失败: {}", e.getMessage());
+        }
+
+        return new HashMap<>();
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> asMap(Object value) {
+        if (value instanceof Map<?, ?> mapValue) {
+            return (Map<String, Object>) mapValue;
+        }
+        return null;
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.trim().isEmpty();
+    }
+
+    private String extractTextField(Object field) {
+        if (field instanceof List<?> list) {
+            if (list.isEmpty() || list.get(0) == null) {
+                return "";
+            }
+            String value = list.get(0).toString().trim();
+            return value;
+        }
+
+        if (field == null) {
+            return "";
+        }
+
+        return field.toString().trim();
     }
 
     @Override
