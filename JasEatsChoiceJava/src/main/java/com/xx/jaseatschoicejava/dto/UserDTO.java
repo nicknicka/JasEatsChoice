@@ -20,6 +20,7 @@ public class UserDTO {
     private JsonNode allergies;
     private JsonNode preferTags;
     private String email;
+    private String location;
     private Boolean disableWeatherRecommend;
     private String merchantId; // 商家ID，如果不为空表示用户已注册为商家
     private String avatar;
@@ -48,6 +49,7 @@ public class UserDTO {
         userDTO.setAllergies(user.getAllergies());
         userDTO.setPreferTags(user.getPreferTags());
         userDTO.setEmail(user.getEmail());
+        userDTO.setLocation(user.getLocation());
         userDTO.setDisableWeatherRecommend(user.getDisableWeatherRecommend());
         userDTO.setMerchantId(user.getMerchantId());
         userDTO.setAvatar(user.getAvatar());

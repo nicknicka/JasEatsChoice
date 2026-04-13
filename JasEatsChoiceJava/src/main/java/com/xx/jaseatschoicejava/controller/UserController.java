@@ -645,10 +645,16 @@ public class UserController {
                 user.setEmail((String) updateData.get("email"));
             }
             if (updateData.containsKey("height")) {
-                user.setHeight((Double) updateData.get("height"));
+                Object heightVal = updateData.get("height");
+                if (heightVal instanceof Number) {
+                    user.setHeight(((Number) heightVal).doubleValue());
+                }
             }
             if (updateData.containsKey("weight")) {
-                user.setWeight((Double) updateData.get("weight"));
+                Object weightVal = updateData.get("weight");
+                if (weightVal instanceof Number) {
+                    user.setWeight(((Number) weightVal).doubleValue());
+                }
             }
             if (updateData.containsKey("dietGoal")) {
                 user.setDietGoal((String) updateData.get("dietGoal"));

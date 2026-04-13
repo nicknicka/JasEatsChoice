@@ -247,114 +247,180 @@
     </el-dialog>
 
     <!-- 编辑资料对话框 -->
-    <el-dialog v-model="editProfileDialogVisible" title="编辑资料" width="500px" center>
-      <el-form
-        ref="editFormRef"
-        :model="editForm"
-        :rules="editFormRules"
-        label-width="100px"
-        style="margin-top: 20px"
-      >
-        <el-form-item label="昵称" prop="nickname">
-          <el-input v-model="editForm.nickname" placeholder="请输入昵称" />
-        </el-form-item>
-
-        <el-form-item label="手机号" prop="phone">
-          <el-input v-model="editForm.phone" placeholder="请输入手机号" disabled />
-        </el-form-item>
-
-        <el-form-item label="邮箱" prop="email">
-          <el-input v-model="editForm.email" placeholder="请输入邮箱" type="email" />
-        </el-form-item>
-
-        <el-form-item label="所在地" prop="location">
-          <el-cascader
-            v-model="selectedLocation"
-            :options="cascaderData"
-            :props="cascaderProps"
-            :loading="locationDataLoading"
-            :disabled="cascaderData.length === 0 && !locationDataLoading"
-            placeholder="请选择所在地"
-            clearable
-            filterable
-            style="width: 100%"
-            @change="handleLocationChange"
-          />
-          <div v-if="cascaderData.length === 0 && !locationDataLoading" style="color: #f56c6c; font-size: 0.857rem /* 原值: 12px */; margin-top: 4px;">
-            地址数据加载失败，请刷新页面重试
+    <el-dialog
+      v-model="editProfileDialogVisible"
+      width="600px"
+      :close-on-click-modal="false"
+      :show-close="false"
+      destroy-on-close
+      class="edit-profile-dialog"
+    >
+      <template #header="{ close }">
+        <div class="ep-header">
+          <div class="ep-header-left">
+            <CommonAvatar
+              :avatar-url="avatarSrc"
+              :fallback-text="editForm.nickname || '用户'"
+              :size="48"
+              :show-upload="false"
+              :click-to-enlarge="false"
+            />
+            <div class="ep-header-text">
+              <h3 class="ep-title">编辑资料</h3>
+              <p class="ep-subtitle">完善个人信息，获取精准饮食推荐</p>
+            </div>
           </div>
-        </el-form-item>
+          <button class="ep-close-btn" @click="close">
+            <el-icon :size="16"><Close /></el-icon>
+          </button>
+        </div>
+      </template>
 
-        <el-form-item label="身高" prop="height">
-          <el-input-number
-            v-model="editForm.height"
-            :min="30"
-            :max="280"
-            :precision="1"
-            :step="0.1"
-            controls-position="right"
-            placeholder="请输入身高"
-            style="width: 100%"
-          />
-          <span class="unit-hint">cm</span>
-        </el-form-item>
+      <div class="ep-body">
+        <el-form
+          ref="editFormRef"
+          :model="editForm"
+          :rules="editFormRules"
+          label-position="top"
+          class="ep-form"
+          hide-required-asterisk
+        >
+          <!-- 基本信息 -->
+          <div class="ep-section">
+            <div class="ep-section-bar">
+              <div class="ep-section-icon"><el-icon :size="15"><User /></el-icon></div>
+              <span class="ep-section-label">基本信息</span>
+              <div class="ep-section-line"></div>
+            </div>
+            <div class="ep-section-content">
+              <div class="ep-grid-2">
+                <el-form-item label="昵称" prop="nickname">
+                  <el-input v-model="editForm.nickname" placeholder="给自己取个名字吧" maxlength="20" show-word-limit />
+                </el-form-item>
+                <el-form-item label="邮箱" prop="email">
+                  <el-input v-model="editForm.email" placeholder="example@email.com" />
+                </el-form-item>
+              </div>
+              <el-form-item label="手机号" prop="phone">
+                <el-input v-model="editForm.phone" disabled>
+                  <template #prefix><el-icon><Iphone /></el-icon></template>
+                </el-input>
+                <div class="ep-hint">手机号暂不支持修改</div>
+              </el-form-item>
+            </div>
+          </div>
 
-        <el-form-item label="体重" prop="weight">
-          <el-input-number
-            v-model="editForm.weight"
-            :min="5"
-            :max="300"
-            :precision="1"
-            :step="0.1"
-            controls-position="right"
-            placeholder="请输入体重"
-            style="width: 100%"
-          />
-          <span class="unit-hint">kg</span>
-        </el-form-item>
+          <!-- 所在地区 -->
+          <div class="ep-section">
+            <div class="ep-section-bar">
+              <div class="ep-section-icon ep-icon--green"><el-icon :size="15"><Location /></el-icon></div>
+              <span class="ep-section-label">所在地区</span>
+              <div class="ep-section-line"></div>
+            </div>
+            <div class="ep-section-content">
+              <el-form-item prop="location">
+                <el-cascader
+                  v-model="selectedLocation"
+                  :options="cascaderData"
+                  :props="cascaderProps"
+                  :loading="locationDataLoading"
+                  :disabled="cascaderData.length === 0 && !locationDataLoading"
+                  placeholder="选择省 / 市 / 区"
+                  clearable
+                  filterable
+                  style="width: 100%"
+                  @change="handleLocationChange"
+                />
+                <div v-if="cascaderData.length === 0 && !locationDataLoading" class="ep-error">
+                  地址数据加载失败，请刷新页面重试
+                </div>
+              </el-form-item>
+            </div>
+          </div>
 
-        <el-form-item label="饮食目标" prop="dietGoal">
-          <el-select v-model="editForm.dietGoal" placeholder="请选择饮食目标" style="width: 100%">
-            <el-option label="减肥" value="减肥" />
-            <el-option label="增肌" value="增肌" />
-            <el-option label="保持健康" value="保持健康" />
-          </el-select>
-        </el-form-item>
+          <!-- 身体数据 -->
+          <div class="ep-section">
+            <div class="ep-section-bar">
+              <div class="ep-section-icon ep-icon--blue"><el-icon :size="15"><DataLine /></el-icon></div>
+              <span class="ep-section-label">身体数据</span>
+              <div class="ep-section-line"></div>
+            </div>
+            <div class="ep-section-content">
+              <div class="ep-grid-2">
+                <el-form-item label="身高" prop="height">
+                  <div class="ep-number-wrap">
+                    <el-input-number v-model="editForm.height" :min="30" :max="280" :precision="1" :step="0.1" controls-position="right" style="width: 100%" />
+                    <span class="ep-unit">cm</span>
+                  </div>
+                </el-form-item>
+                <el-form-item label="体重" prop="weight">
+                  <div class="ep-number-wrap">
+                    <el-input-number v-model="editForm.weight" :min="5" :max="300" :precision="1" :step="0.1" controls-position="right" style="width: 100%" />
+                    <span class="ep-unit">kg</span>
+                  </div>
+                </el-form-item>
+              </div>
+              <el-form-item label="饮食目标" prop="dietGoal">
+                <div class="ep-goal-cards">
+                  <div
+                    v-for="goal in dietGoalOptions"
+                    :key="goal.value"
+                    :class="['ep-goal-card', { 'ep-goal-card--active': editForm.dietGoal === goal.value }]"
+                    :style="{ '--goal-accent': goal.color }"
+                    @click="selectDietGoal(goal.value)"
+                  >
+                    <span class="ep-goal-name">{{ goal.label }}</span>
+                    <el-icon v-if="editForm.dietGoal === goal.value" class="ep-goal-check" :size="14"><Check /></el-icon>
+                  </div>
+                </div>
+              </el-form-item>
+            </div>
+          </div>
 
-        <el-form-item label="饮食偏好标签" prop="preferTags">
-          <el-select
-            v-model="editForm.preferTags"
-            multiple
-            filterable
-            allow-create
-            placeholder="请选择您的饮食偏好（可多选）"
-            style="width: 100%"
-          >
-            <el-option label="🥬 蔬菜" value="蒸菜" />
-            <el-option label="🥗 清淡" value="清淡" />
-            <el-option label="🌶️ 重辣" value="重辣" />
-            <el-option label="🥗 油腻" value="油腻" />
-            <el-option label="🥬 素食" value="素食" />
-            <el-option label="🍤 甜食" value="甜食" />
-            <el-option label="🥦 健康" value="健康" />
-          </el-select>
-        </el-form-item>
-
-        <el-form-item label="过敏信息" prop="allergies">
-          <el-input
-            v-model="editForm.allergies"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入您的过敏信息（如：花生、海鲜等）"
-            clearable
-          />
-        </el-form-item>
-      </el-form>
+          <!-- 饮食偏好 -->
+          <div class="ep-section">
+            <div class="ep-section-bar">
+              <div class="ep-section-icon ep-icon--accent"><el-icon :size="15"><Edit /></el-icon></div>
+              <span class="ep-section-label">饮食偏好</span>
+              <div class="ep-section-line"></div>
+            </div>
+            <div class="ep-section-content">
+              <el-form-item label="口味标签" prop="preferTags">
+                <el-select
+                  v-model="editForm.preferTags"
+                  multiple
+                  filterable
+                  allow-create
+                  placeholder="选择或输入你的口味偏好"
+                  style="width: 100%"
+                >
+                  <el-option v-for="tag in tasteTagOptions" :key="tag.value" :label="tag.label" :value="tag.value">
+                    <span class="ep-tag-dot" :style="{ background: tag.color }"></span>
+                    {{ tag.label }}
+                  </el-option>
+                </el-select>
+              </el-form-item>
+              <el-form-item label="过敏信息" prop="allergies">
+                <el-input
+                  v-model="editForm.allergies"
+                  type="textarea"
+                  :rows="3"
+                  placeholder="如有过敏请详细说明，如：花生、海鲜、牛奶等"
+                  resize="none"
+                />
+              </el-form-item>
+            </div>
+          </div>
+        </el-form>
+      </div>
 
       <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="editProfileDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="saveEditProfile" :loading="saving">保存</el-button>
+        <div class="ep-footer">
+          <el-button class="ep-btn-cancel" @click="editProfileDialogVisible = false">取消</el-button>
+          <el-button class="ep-btn-save" type="primary" @click="saveEditProfile" :loading="saving">
+            <el-icon v-if="!saving"><Check /></el-icon>
+            <span>{{ saving ? '保存中...' : '保存修改' }}</span>
+          </el-button>
         </div>
       </template>
     </el-dialog>
@@ -501,7 +567,12 @@ import {
   InfoFilled,
   MoreFilled,
   Plus,
-  Promotion
+  Promotion,
+  User,
+  Iphone,
+  DataLine,
+  Close,
+  Check
 } from '@element-plus/icons-vue'
 import CommonAvatar from '../../components/CommonAvatar.vue'
 import api from '../../utils/api'
@@ -633,15 +704,15 @@ const editFormRules = ref({
     { required: true, message: '请输入昵称', trigger: 'blur' },
     { min: 2, max: 20, message: '昵称长度在 2 到 20 个字符', trigger: 'blur' }
   ],
-  email: [{ type: 'email', message: '请输入正确的邮箱地址', trigger: ['blur', 'change'] }],
-  location: [{ required: false, message: '请选择所在地', trigger: ['blur', 'change'] }],
+  email: [{ type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }],
+  location: [{ required: false, message: '请选择所在地', trigger: 'blur' }],
   height: [
     {
       type: 'number',
       min: 30,
       max: 280,
       message: '身高范围在 30 到 280 cm',
-      trigger: ['blur', 'change']
+      trigger: 'blur'
     }
   ],
   weight: [
@@ -650,7 +721,7 @@ const editFormRules = ref({
       min: 5,
       max: 300,
       message: '体重范围在 5 到 300 kg',
-      trigger: ['blur', 'change']
+      trigger: 'blur'
     }
   ],
   dietGoal: [{ required: true, message: '请选择饮食目标', trigger: 'change' }]
@@ -658,6 +729,30 @@ const editFormRules = ref({
 
 // 编辑表单引用
 const editFormRef = ref(null)
+
+// 饮食目标选项
+const dietGoalOptions = [
+  { value: '减肥', label: '减肥', color: '#7BAE7F' },
+  { value: '增肌', label: '增肌', color: '#6B9BD2' },
+  { value: '保持健康', label: '保持健康', color: '#E2B455' }
+]
+
+// 口味标签选项
+const tasteTagOptions = [
+  { label: '蔬菜', value: '蒸菜', color: '#7BAE7F' },
+  { label: '清淡', value: '清淡', color: '#6B9BD2' },
+  { label: '重辣', value: '重辣', color: '#D47B7B' },
+  { label: '油腻', value: '油腻', color: '#E2B455' },
+  { label: '素食', value: '素食', color: '#4a7a4d' },
+  { label: '甜食', value: '甜食', color: '#D4845A' },
+  { label: '健康', value: '健康', color: '#7BAE7F' }
+]
+
+// 选择饮食目标
+const selectDietGoal = (value) => {
+  editForm.dietGoal = value
+  editFormRef.value?.validateField('dietGoal')
+}
 
 // 反馈功能变量
 const feedbackDialogVisible = ref(false)
@@ -1786,6 +1881,327 @@ defineExpose({
   font-size: @nordic-text-base;
 }
 
+/* === 编辑资料对话框 === */
+
+/* 对话框头部 */
+.ep-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.ep-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.ep-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: @nordic-text;
+  margin: 0;
+  letter-spacing: @nordic-letter-tight;
+  line-height: 1.3;
+}
+
+.ep-subtitle {
+  font-size: @nordic-text-sm;
+  color: @nordic-text-muted;
+  margin: 4px 0 0;
+  letter-spacing: 0.2px;
+}
+
+.ep-close-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: @nordic-bg;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: @nordic-text-secondary;
+  transition: all @nordic-transition-fast ease;
+  flex-shrink: 0;
+
+  &:hover {
+    background: @nordic-accent-light;
+    color: @nordic-accent;
+  }
+}
+
+/* 对话框内容区 */
+.ep-body {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 4px;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: @nordic-border;
+    border-radius: 2px;
+  }
+}
+
+/* 表单全局样式 */
+.ep-form {
+  :deep(.el-form-item__label) {
+    font-size: @nordic-text-sm;
+    font-weight: 500;
+    color: @nordic-text-secondary;
+    padding-bottom: 6px;
+    line-height: 1;
+  }
+
+  :deep(.el-form-item) {
+    margin-bottom: 18px;
+  }
+
+  :deep(.el-input__wrapper),
+  :deep(.el-textarea__inner) {
+    border-radius: @nordic-radius-md;
+    transition: all @nordic-transition-base ease;
+
+    &:hover {
+      box-shadow: 0 0 0 1px @nordic-border inset;
+    }
+  }
+
+  :deep(.el-input__wrapper.is-focus) {
+    box-shadow: 0 0 0 1px @nordic-accent inset !important;
+  }
+
+  :deep(.el-textarea__inner:focus) {
+    box-shadow: 0 0 0 1px @nordic-accent inset !important;
+  }
+
+  :deep(.el-input.is-disabled .el-input__wrapper) {
+    background: @nordic-bg;
+    box-shadow: 0 0 0 1px @nordic-border inset;
+  }
+}
+
+/* 分区 */
+.ep-section {
+  margin-bottom: 28px;
+  animation: ep-fade-up 0.4s ease both;
+
+  &:nth-child(1) { animation-delay: 0s; }
+  &:nth-child(2) { animation-delay: 0.06s; }
+  &:nth-child(3) { animation-delay: 0.12s; }
+  &:nth-child(4) { animation-delay: 0.18s; }
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+@keyframes ep-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ep-section-bar {
+  display: flex;
+  align-items: center;
+  gap: @nordic-space-sm;
+  margin-bottom: @nordic-space-lg;
+}
+
+.ep-section-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: @nordic-radius-md;
+  background: fade(@nordic-accent, 10%);
+  color: @nordic-accent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  &.ep-icon--green {
+    background: fade(@nordic-green, 10%);
+    color: @nordic-green;
+  }
+  &.ep-icon--blue {
+    background: fade(@nordic-blue, 10%);
+    color: @nordic-blue;
+  }
+  &.ep-icon--accent {
+    background: fade(@nordic-accent, 10%);
+    color: @nordic-accent;
+  }
+}
+
+.ep-section-label {
+  font-size: @nordic-text-base;
+  font-weight: 600;
+  color: @nordic-text;
+  white-space: nowrap;
+  letter-spacing: -0.2px;
+}
+
+.ep-section-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, @nordic-divider 0%, transparent 100%);
+}
+
+.ep-section-content {
+  padding-left: 36px;
+}
+
+/* 双列网格 */
+.ep-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 20px;
+}
+
+/* 数字输入包装 */
+.ep-number-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.ep-unit {
+  position: absolute;
+  right: 44px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: @nordic-text-muted;
+  font-size: @nordic-text-sm;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* 提示文字 */
+.ep-hint {
+  font-size: @nordic-text-xs;
+  color: @nordic-text-muted;
+  margin-top: 4px;
+}
+
+.ep-error {
+  color: @nordic-red;
+  font-size: @nordic-text-xs;
+  margin-top: 4px;
+}
+
+/* 饮食目标卡片 */
+.ep-goal-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  width: 100%;
+}
+
+.ep-goal-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 12px;
+  border: 2px solid @nordic-border;
+  border-radius: @nordic-radius-lg;
+  cursor: pointer;
+  transition: all @nordic-transition-base ease;
+  background: @nordic-surface;
+  user-select: none;
+
+  &:hover {
+    border-color: var(--goal-accent);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px @nordic-shadow-hover;
+  }
+
+  &--active {
+    border-color: var(--goal-accent);
+    background: fade(@nordic-accent-light, 40%);
+    box-shadow: 0 2px 8px @nordic-shadow;
+
+    .ep-goal-name {
+      color: var(--goal-accent);
+      font-weight: 600;
+    }
+    .ep-goal-check {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+}
+
+.ep-goal-name {
+  font-size: @nordic-text-base;
+  color: @nordic-text;
+  font-weight: 500;
+  transition: color @nordic-transition-fast ease;
+}
+
+.ep-goal-check {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  color: var(--goal-accent);
+  opacity: 0;
+  transform: scale(0.5);
+  transition: all @nordic-transition-fast ease;
+}
+
+/* 口味标签选项圆点 */
+.ep-tag-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+/* 底部按钮 */
+.ep-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.ep-btn-cancel {
+  min-width: 88px;
+  height: 36px;
+  border-radius: @nordic-radius-md;
+  font-weight: 500;
+}
+
+.ep-btn-save {
+  min-width: 120px;
+  height: 36px;
+  border-radius: @nordic-radius-md;
+  font-weight: 600;
+  background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
+  border: none;
+  letter-spacing: 0.5px;
+
+  &:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px fade(@nordic-accent, 30%);
+  }
+}
+
 /* 响应式优化 */
 @media (max-width: @nordic-breakpoint-md) {
   .profile-content {
@@ -1812,6 +2228,35 @@ defineExpose({
 
   .bottom-actions .el-button {
     min-width: 100px;
+  }
+}
+</style>
+
+<style lang="less">
+@import '../../assets/css/nordic-theme.less';
+
+/* 编辑资料对话框 - 容器级覆盖 (unscoped) */
+.edit-profile-dialog {
+  border-radius: @nordic-radius-lg;
+  overflow: hidden;
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.12),
+    0 0 0 1px rgba(0, 0, 0, 0.04);
+
+  .el-dialog__header {
+    padding: 20px 24px 16px;
+    margin-right: 0;
+    border-bottom: 1px solid @nordic-divider;
+    background: linear-gradient(180deg, @nordic-bg 0%, @nordic-surface 100%);
+  }
+
+  .el-dialog__body {
+    padding: 24px;
+  }
+
+  .el-dialog__footer {
+    padding: 16px 24px 20px;
+    border-top: 1px solid @nordic-divider;
   }
 }
 </style>
