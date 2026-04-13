@@ -25,6 +25,31 @@ export const getCurrentUserId = () => {
 }
 
 /**
+ * 获取当前商家ID（商家端聊天使用）
+ * @returns {string|number} 商家ID
+ */
+export const getCurrentMerchantId = () => {
+  const authStore = useAuthStore()
+
+  // 优先使用 merchantId
+  if (authStore.merchantId) {
+    return authStore.merchantId
+  }
+
+  // 如果没有 merchantId，尝试从 token 获取 userId 作为降级
+  const token = authStore.token
+  if (token) {
+    const decodedToken = decodeJwt(token)
+    if (decodedToken && decodedToken.userId) {
+      console.warn('[getCurrentMerchantId] 未找到 merchantId，使用 userId 作为降级')
+      return decodedToken.userId
+    }
+  }
+
+  return '1' // 默认值
+}
+
+/**
  * 处理认证错误
  * @param {Error} error - 错误对象
  */

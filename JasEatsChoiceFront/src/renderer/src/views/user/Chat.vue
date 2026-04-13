@@ -2194,8 +2194,8 @@ watch(orderDrawerVisible, async (newVal) => {
 
 // ========== 监听路由变化 ==========
 watch(() => route.query, async (newQuery) => {
-  // 当路由参数中的 friendId 变化时，处理从联系人页面跳转
-  if (newQuery.friendId) {
+  // 当路由参数中的 friendId 或 targetId 变化时，处理从联系人页面或订单详情页跳转
+  if (newQuery.friendId || newQuery.targetId) {
     console.log('📍 [Chat] 检测到路由参数变化:', newQuery)
     await handleChatFromContact()
   }
@@ -2397,19 +2397,21 @@ const fetchConversations = async () => {
 
 // ========== 处理从联系人页面跳转 ==========
 /**
- * 处理从联系人页面跳转到聊天页面
+ * 处理从联系人页面或订单详情页跳转到聊天页面
  * 检查是否存在会话，如果不存在则创建新会话
+ * 支持 friendId（联系人跳转）和 targetId（订单详情页"联系商家"）两种参数
  */
 const handleChatFromContact = async () => {
-  const friendId = route.query.friendId
-  const friendName = route.query.friendName
+  // 兼容两种参数：friendId（联系人跳转）和 targetId（订单详情页"联系商家"）
+  const friendId = route.query.friendId || route.query.targetId
+  const friendName = route.query.friendName || route.query.targetName
 
   if (!friendId) {
-    console.log('💬 [handleChatFromContact] 没有friendId参数，跳过处理')
+    console.log('💬 [handleChatFromContact] 没有friendId或targetId参数，跳过处理')
     return
   }
 
-  console.log('💬 [handleChatFromContact] 从联系人页面跳转:', { friendId, friendName })
+  console.log('💬 [handleChatFromContact] 从联系人/订单页面跳转:', { friendId, friendName })
 
   // 检查会话列表中是否已存在与该好友的会话
   const existingConversation = conversations.value.find(

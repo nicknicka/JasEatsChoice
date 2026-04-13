@@ -637,7 +637,7 @@ const toRegister = () => {
 }
 
 const toForgotPassword = () => {
-  uni.showToast({ title: '忘记密码功能开发中', icon: 'none' })
+  uni.navigateTo({ url: '/src/pages/forgot-password/index' })
 }
 </script>
 

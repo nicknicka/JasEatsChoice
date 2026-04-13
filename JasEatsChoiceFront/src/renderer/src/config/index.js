@@ -14,6 +14,8 @@ const getEnvValue = (name, fallback) => {
 // 环境判断
 const ENV = process.env.NODE_ENV || 'development'
 const isProdEnv = ENV === 'production'
+const devAmapKeyFallback = 'ef5cbde8753cd2fa578899bee7f9bf71'
+const devAmapSecurityJsCodeFallback = '34a9a321bca66a4623d9ddc3c6e5228f'
 
 // 根据环境变量生成配置，优先读取 .env.local / .env.production
 const envConfig = {
@@ -36,9 +38,9 @@ export const WS_CONFIG = {
 // 高德地图API配置
 export const AMAP_CONFIG = {
   // Web端(JS API) Key
-  key: getEnvValue('VITE_AMAP_KEY', ''),
+  key: getEnvValue('VITE_AMAP_KEY', isProdEnv ? '' : devAmapKeyFallback),
   // 对应的安全密钥（用于后续接入安全校验时使用）
-  securityJsCode: getEnvValue('VITE_AMAP_SECURITY_JS_CODE', ''),
+  securityJsCode: getEnvValue('VITE_AMAP_SECURITY_JS_CODE', isProdEnv ? '' : devAmapSecurityJsCodeFallback),
   baseURL: 'https://restapi.amap.com/v3',
   district: '/config/district'
 }

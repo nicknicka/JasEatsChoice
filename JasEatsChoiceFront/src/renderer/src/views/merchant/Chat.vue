@@ -8,7 +8,7 @@ import ConversationList from '../../components/merchant/chat/ConversationList.vu
 import ChatMessageList from '../../components/merchant/chat/ChatMessageList.vue'
 import MessageInput from '../../components/merchant/chat/MessageInput.vue'
 import {
-  getCurrentUserId,
+  getCurrentMerchantId,
   getChatSessions,
   getChatMessages,
   sendMessage as sendChatMessage,
@@ -292,13 +292,13 @@ onMounted(async () => {
     return
   }
 
-  // 获取当前用户ID
-  currentUserId.value = getCurrentUserId()
+  // 获取当前商家ID（商家端聊天使用 merchantId）
+  currentUserId.value = getCurrentMerchantId()
 
-  // 验证用户ID
+  // 验证商家ID
   if (!currentUserId.value || currentUserId.value === '1') {
-    // 无法获取用户ID，弹出提示框要求重新登录
-    ElMessageBox.alert('无法获取用户ID，请重新登录', '身份验证失败', {
+    // 无法获取商家ID，弹出提示框要求重新登录
+    ElMessageBox.alert('无法获取商家ID，请重新登录', '身份验证失败', {
       confirmButtonText: '重新登录',
       type: 'error',
       closeOnClickModal: false,
@@ -411,13 +411,38 @@ const sendMessage = async (content) => {
     // 清理消息内容
     const cleanedContent = cleanMessage(content)
 
+    // ⭐ 确定 toId：
+    // - 单聊：使用 targetId（对方的 userId 或 merchantId）
+    // - 群聊：使用 groupId
+    let toId
+    let sessionType
+    if (selectedConversation.value.type === 'group') {
+      toId = selectedConversation.value.groupId
+      sessionType = 'group'
+    } else {
+      toId = selectedConversation.value.targetId || selectedConversation.value.userId
+      sessionType = 'single'
+    }
+
+    if (!toId) {
+      ElMessage.error('无法获取接收者ID')
+      sending.value = false
+      return
+    }
+
     // 构建消息数据
     const messageData = formatMessageForSend(
       cleanedContent,
-      currentUserId.value,
-      selectedConversation.value.id,
-      selectedConversation.value.type
+      currentUserId.value,  // fromId: 商家的 merchantId
+      toId,                 // toId: 用户的 userId 或群ID
+      sessionType
     )
+
+    console.log('📤 [商家端发送消息]', {
+      fromId: currentUserId.value,
+      toId: toId,
+      sessionType: sessionType
+    })
 
     // 发送到后端
     const result = await sendChatMessage(messageData)

@@ -16,6 +16,22 @@ public interface LocationService {
     Map<String, Object> getCurrentLocation(Double latitude, Double longitude);
 
     /**
+     * 地址转坐标
+     * @param address 地址
+     * @param city 城市（可选）
+     * @return 坐标信息
+     */
+    Map<String, Object> geocode(String address, String city);
+
+    /**
+     * 坐标转地址
+     * @param lng 经度
+     * @param lat 纬度
+     * @return 地址信息
+     */
+    Map<String, Object> reverseGeocode(String lng, String lat);
+
+    /**
      * 获取级联选择器地址数据
      * @return 地址数据列表
      */

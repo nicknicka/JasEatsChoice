@@ -164,7 +164,7 @@ public class IntentClassifier {
                     "只回答一个词：CONVERSATION 或 BUSINESS\n\n" +
                     "用户消息：" + message;
 
-            String response = aiModel.chat(prompt).aiMessage().text();
+            String response = aiModel.chat(prompt);
             log.debug("[意图分类] LLM原始响应: {}", response);
 
             if (response != null) {

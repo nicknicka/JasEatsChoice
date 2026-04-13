@@ -1,19 +1,27 @@
 package com.xx.jaseatschoicejava.controller;
 
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.xx.jaseatschoicejava.common.ResponseResult;
 import com.xx.jaseatschoicejava.service.AMapService;
+import com.xx.jaseatschoicejava.service.dto.AmapApiResponse;
+import com.xx.jaseatschoicejava.service.dto.AmapPoiData;
+
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
 
 /**
- * 高德地图代理控制器
- * 通过后端代理高德地图 API，避免安全密钥暴露给前端
+ * 旧高德地图代理控制器（兼容保留）
+ *
+ * 主业务入口已收敛到 LocationController / LocationServiceImpl。
+ * 这里仅保留给历史调用方做兼容过渡。
  */
 @Api(tags = "高德地图代理")
+@Deprecated
 @RestController
 @RequestMapping("/v1/amap")
 public class AMapController {
@@ -33,8 +41,11 @@ public class AMapController {
             @ApiParam("搜索关键词") @RequestParam String keywords,
             @ApiParam("城市（可选，默认全国）") @RequestParam(required = false) String city
     ) {
-        Map<String, Object> result = aMapService.searchAddress(keywords, city);
-        return ResponseResult.success(result.get("data"), result.get("message").toString());
+        AmapApiResponse<java.util.List<AmapPoiData>> result = aMapService.searchAddress(keywords, city);
+        if (result.isSuccess()) {
+            return ResponseResult.success(result.data(), result.message());
+        }
+        return ResponseResult.fail(result.code(), result.message());
     }
 
     /**
@@ -46,11 +57,11 @@ public class AMapController {
             @ApiParam("地址") @RequestParam String address,
             @ApiParam("城市（可选）") @RequestParam(required = false) String city
     ) {
-        Map<String, Object> result = aMapService.geocode(address, city);
-        if ("200".equals(result.get("code"))) {
-            return ResponseResult.success(result.get("data"), result.get("message").toString());
+        AmapApiResponse<?> result = aMapService.geocode(address, city);
+        if (result.isSuccess()) {
+            return ResponseResult.success(result.data(), result.message());
         } else {
-            return ResponseResult.fail(result.get("code").toString(), result.get("message").toString());
+            return ResponseResult.fail(result.code(), result.message());
         }
     }
 
@@ -63,11 +74,11 @@ public class AMapController {
             @ApiParam("经度") @RequestParam String lng,
             @ApiParam("纬度") @RequestParam String lat
     ) {
-        Map<String, Object> result = aMapService.regeocode(lng, lat);
-        if ("200".equals(result.get("code"))) {
-            return ResponseResult.success(result.get("data"), result.get("message").toString());
+        AmapApiResponse<?> result = aMapService.regeocode(lng, lat);
+        if (result.isSuccess()) {
+            return ResponseResult.success(result.data(), result.message());
         } else {
-            return ResponseResult.fail(result.get("code").toString(), result.get("message").toString());
+            return ResponseResult.fail(result.code(), result.message());
         }
     }
 
@@ -77,11 +88,11 @@ public class AMapController {
     @ApiOperation("IP定位")
     @GetMapping("/ip/location")
     public ResponseResult<?> ipLocation() {
-        Map<String, Object> result = aMapService.ipLocation();
-        if ("200".equals(result.get("code"))) {
-            return ResponseResult.success(result.get("data"), result.get("message").toString());
+        AmapApiResponse<?> result = aMapService.ipLocation();
+        if (result.isSuccess()) {
+            return ResponseResult.success(result.data(), result.message());
         } else {
-            return ResponseResult.fail(result.get("code").toString(), result.get("message").toString());
+            return ResponseResult.fail(result.code(), result.message());
         }
     }
 }

@@ -37,6 +37,13 @@
 			}
 		},
 		{
+			"path": "src/pages/forgot-password/index",
+			"style": {
+				"navigationBarTitleText": "重置密码",
+				"navigationStyle": "custom"
+			}
+		},
+		{
 			"path": "src/pages/home/index/index",
 			"style": {
 				"navigationBarTitleText": "佳食宜选",
