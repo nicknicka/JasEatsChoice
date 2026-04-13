@@ -3,8 +3,10 @@
     <!-- 评价列表 -->
     <div class="review-list">
       <div class="list-header">
-        <h3>待回复评价</h3>
-        <el-tag type="warning">{{ pendingReviews.length }} 条待处理</el-tag>
+        <div class="list-title-group">
+          <h3>待回复评价</h3>
+          <span class="pending-count">{{ pendingReviews.length }}</span>
+        </div>
       </div>
       <div class="list-content">
         <div
@@ -15,15 +17,25 @@
           @click="selectReview(review)"
         >
           <div class="review-header">
-            <span class="user">{{ review.userName }}</span>
+            <div class="user-info">
+              <span class="user-avatar">{{ review.userName.charAt(0) }}</span>
+              <span class="user-name">{{ review.userName }}</span>
+            </div>
             <el-rate :model-value="review.rating" disabled size="small" />
           </div>
           <div class="review-content">{{ review.content }}</div>
           <div class="review-footer">
             <span class="time">{{ review.time }}</span>
-            <el-tag v-if="!review.replied" type="danger" size="small">未回复</el-tag>
-            <el-tag v-else type="success" size="small">已回复</el-tag>
+            <span class="reply-status" :class="review.replied ? 'replied' : 'pending'">
+              {{ review.replied ? '已回复' : '待回复' }}
+            </span>
           </div>
+        </div>
+
+        <!-- 空状态 -->
+        <div v-if="pendingReviews.length === 0" class="list-empty">
+          <span class="empty-icon">✓</span>
+          <p>所有评价已回复</p>
         </div>
       </div>
     </div>
@@ -32,17 +44,20 @@
     <div class="suggestions-panel">
       <template v-if="selectedReview">
         <div class="panel-header">
-          <h3>AI回复建议</h3>
-          <el-button size="small" @click="refreshSuggestions" :loading="isLoading">
-            <el-icon><Refresh /></el-icon>
-            重新生成
-          </el-button>
+          <div class="panel-title-group">
+            <span class="ai-badge">AI</span>
+            <h3>智能回复建议</h3>
+          </div>
+          <button class="refresh-btn" @click="refreshSuggestions" :class="{ spinning: isLoading }">
+            <el-icon :size="14"><Refresh /></el-icon>
+            <span>重新生成</span>
+          </button>
         </div>
 
         <!-- 评价详情 -->
         <div class="review-detail">
           <div class="detail-header">
-            <span class="user">{{ selectedReview.userName }}</span>
+            <span class="user-name">{{ selectedReview.userName }}</span>
             <el-rate :model-value="selectedReview.rating" disabled size="small" />
           </div>
           <div class="detail-content">{{ selectedReview.content }}</div>
@@ -53,49 +68,67 @@
           <div
             v-for="(suggestion, index) in suggestions"
             :key="index"
-            class="suggestion-item"
+            class="suggestion-card"
             :class="{ selected: selectedSuggestion === index }"
             @click="selectSuggestion(index)"
           >
-            <div class="style-tag">{{ getStyleTag(index) }}</div>
-            <div class="text">{{ suggestion }}</div>
-            <div class="actions">
-              <el-button size="small" @click.stop="copySuggestion(suggestion)">
-                <el-icon><CopyDocument /></el-icon>
-              </el-button>
-              <el-button size="small" type="primary" @click.stop="useSuggestion(suggestion)">
-                采用
-              </el-button>
+            <div class="suggestion-header">
+              <span class="style-tag" :class="`style-${index}`">{{ getStyleTag(index) }}</span>
+              <div class="suggestion-actions">
+                <button class="icon-btn" @click.stop="copySuggestion(suggestion)" title="复制">
+                  <el-icon :size="14"><CopyDocument /></el-icon>
+                </button>
+              </div>
             </div>
+            <div class="suggestion-text">{{ suggestion }}</div>
+            <button class="use-btn" @click.stop="useSuggestion(suggestion)">
+              <el-icon :size="14"><Check /></el-icon>
+              <span>采用此回复</span>
+            </button>
           </div>
         </div>
 
         <!-- 加载状态 -->
         <div v-else-if="isLoading" class="loading-state">
-          <el-icon class="is-loading" :size="32"><Loading /></el-icon>
+          <div class="loading-dots">
+            <span></span><span></span><span></span>
+          </div>
           <p>正在生成回复建议...</p>
         </div>
 
         <!-- 编辑区域 -->
-        <div class="edit-area" v-if="editingReply">
-          <el-input
-            v-model="editingReply"
-            type="textarea"
-            :rows="4"
-            placeholder="编辑回复内容..."
-          />
-          <div class="edit-actions">
-            <el-button @click="editingReply = null">取消</el-button>
-            <el-button type="primary" @click="submitReply">提交回复</el-button>
+        <Transition name="edit-slide">
+          <div class="edit-area" v-if="editingReply">
+            <div class="edit-header">
+              <span>编辑回复</span>
+              <button class="icon-btn" @click="editingReply = null">
+                <el-icon :size="16"><Close /></el-icon>
+              </button>
+            </div>
+            <el-input
+              v-model="editingReply"
+              type="textarea"
+              :rows="4"
+              placeholder="编辑回复内容..."
+            />
+            <div class="edit-actions">
+              <button class="cancel-btn" @click="editingReply = null">取消</button>
+              <button class="submit-btn" @click="submitReply">
+                <el-icon :size="14"><Position /></el-icon>
+                <span>提交回复</span>
+              </button>
+            </div>
           </div>
-        </div>
+        </Transition>
       </template>
 
       <!-- 空状态 -->
       <div v-else class="empty-state">
-        <el-icon :size="48"><ChatLineSquare /></el-icon>
-        <p>请从左侧选择一条评价</p>
-        <p class="hint">AI将为您生成专业的回复建议</p>
+        <div class="empty-icon-wrap">
+          <el-icon :size="36"><ChatLineSquare /></el-icon>
+        </div>
+        <p class="empty-title">选择一条评价</p>
+        <p class="empty-hint">AI将为您生成专业的回复建议</p>
       </div>
     </div>
   </div>
@@ -103,7 +136,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { Refresh, CopyDocument, Loading, ChatLineSquare } from '@element-plus/icons-vue'
+import { Refresh, CopyDocument, Check, ChatLineSquare, Position, Close } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import api from '@/utils/api'
 import { buildUrl, MERCHANT_AI_API } from '@/api'
@@ -229,7 +262,9 @@ const submitReply = async () => {
     // 更新状态
     const index = pendingReviews.value.findIndex(r => r.id === selectedReview.value.id)
     if (index !== -1) {
-      pendingReviews.value[index].replied = true
+      pendingReviews.value = pendingReviews.value.map((r, i) =>
+        i === index ? { ...r, replied: true } : r
+      )
     }
 
     // 重置
@@ -253,30 +288,49 @@ onMounted(() => {
 
 .reply-generator {
   display: grid;
-  grid-template-columns: 320px 1fr;
-  gap: 20px;
+  grid-template-columns: 300px 1fr;
+  gap: 16px;
   height: 100%;
-  padding: 16px;
+  padding: 20px;
 }
 
+// --- 评价列表 ---
 .review-list {
   display: flex;
   flex-direction: column;
-  background: @merchant-surface;
-  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.85), rgba(255,255,255,0.7));
+  border: 1px solid rgba(226, 222, 216, 0.5);
+  border-radius: 16px;
   overflow: hidden;
 
   .list-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 16px;
-    border-bottom: 1px solid @merchant-border;
+    padding: 18px 16px;
+    border-bottom: 1px solid @merchant-divider;
+
+    .list-title-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
 
     h3 {
       margin: 0;
-      font-size: 16px;
-      color: @merchant-secondary;
+      font-size: 15px;
+      font-weight: 600;
+      color: @merchant-text;
+    }
+
+    .pending-count {
+      width: 24px;
+      height: 24px;
+      border-radius: 8px;
+      background: @merchant-warning-light;
+      color: @merchant-warning;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
     }
   }
 
@@ -284,36 +338,66 @@ onMounted(() => {
     flex: 1;
     overflow-y: auto;
     padding: 12px;
+
+    &::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: @merchant-border;
+      border-radius: 2px;
+    }
   }
 }
 
 .review-card {
-  padding: 12px;
-  background: @merchant-surface-alt;
-  border: 2px solid transparent;
-  border-radius: 8px;
+  padding: 14px;
+  background: rgba(250, 248, 245, 0.4);
+  border: 1.5px solid transparent;
+  border-radius: 12px;
   margin-bottom: 8px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
 
   &:hover {
-    background: @merchant-secondary-light;
+    background: rgba(244, 230, 222, 0.3);
     border-color: @merchant-border;
   }
 
   &.active {
-    background: @merchant-secondary-light;
-    border-color: @merchant-secondary;
+    background: rgba(227, 240, 228, 0.3);
+    border-color: @merchant-primary;
+    box-shadow: 0 2px 8px rgba(74, 122, 77, 0.08);
   }
 
   .review-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
 
-    .user {
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .user-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, @merchant-secondary-light, rgba(244, 230, 222, 0.6));
+      color: @merchant-secondary;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .user-name {
       font-weight: 600;
+      font-size: 13px;
       color: @merchant-text;
     }
   }
@@ -321,8 +405,8 @@ onMounted(() => {
   .review-content {
     font-size: 13px;
     color: @merchant-text-sec;
-    line-height: 1.5;
-    margin-bottom: 8px;
+    line-height: 1.6;
+    margin-bottom: 10px;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
@@ -335,155 +419,446 @@ onMounted(() => {
     align-items: center;
 
     .time {
-      font-size: 12px;
+      font-size: 11px;
       color: @merchant-text-muted;
+    }
+
+    .reply-status {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 20px;
+
+      &.replied {
+        background: rgba(90, 143, 94, 0.08);
+        color: @merchant-success;
+      }
+
+      &.pending {
+        background: rgba(196, 91, 91, 0.08);
+        color: @merchant-error;
+      }
     }
   }
 }
 
+.list-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0;
+  color: @merchant-text-muted;
+
+  .empty-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: @merchant-success-light;
+    color: @merchant-success;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  p {
+    font-size: 13px;
+    margin: 0;
+  }
+}
+
+// --- 建议面板 ---
 .suggestions-panel {
   display: flex;
   flex-direction: column;
-  background: @merchant-surface;
-  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.85), rgba(255,255,255,0.7));
+  border: 1px solid rgba(226, 222, 216, 0.5);
+  border-radius: 16px;
   overflow: hidden;
 
   .panel-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px;
-    border-bottom: 1px solid @merchant-border;
+    padding: 18px 20px;
+    border-bottom: 1px solid @merchant-divider;
+
+    .panel-title-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
 
     h3 {
       margin: 0;
-      font-size: 16px;
-      color: @merchant-secondary;
+      font-size: 15px;
+      font-weight: 600;
+      color: @merchant-text;
+    }
+
+    .ai-badge {
+      font-size: 10px;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(135deg, @merchant-primary, darken(@merchant-primary, 5%));
+      padding: 3px 8px;
+      border-radius: 6px;
+      letter-spacing: 0.5px;
     }
   }
 
-  .review-detail {
-    padding: 16px;
-    background: @merchant-secondary-light;
-    border-bottom: 1px solid @merchant-border;
+  .refresh-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    border: 1px solid @merchant-border;
+    border-radius: 8px;
+    background: @merchant-surface;
+    color: @merchant-text-sec;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    font-family: inherit;
 
-    .detail-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-
-      .user {
-        font-weight: 600;
-        color: @merchant-text;
-      }
+    &:hover {
+      border-color: @merchant-primary;
+      color: @merchant-primary;
     }
 
-    .detail-content {
-      font-size: 14px;
-      color: @merchant-text;
-      line-height: 1.6;
+    &.spinning .el-icon {
+      animation: spin 1s linear infinite;
     }
   }
 }
 
+// --- 评价详情 ---
+.review-detail {
+  padding: 16px 20px;
+  background: rgba(250, 248, 245, 0.5);
+  border-bottom: 1px solid @merchant-divider;
+
+  .detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+
+    .user-name {
+      font-weight: 600;
+      font-size: 14px;
+      color: @merchant-text;
+    }
+  }
+
+  .detail-content {
+    font-size: 14px;
+    color: @merchant-text;
+    line-height: 1.7;
+  }
+}
+
+// --- 建议卡片 ---
 .suggestions {
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: @merchant-border;
+    border-radius: 2px;
+  }
 }
 
-.suggestion-item {
-  background: @merchant-surface-alt;
-  border: 2px solid transparent;
-  border-radius: 12px;
+.suggestion-card {
+  background: rgba(250, 248, 245, 0.5);
+  border: 1.5px solid transparent;
+  border-radius: 14px;
   padding: 16px;
-  margin-bottom: 12px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
 
   &:hover {
-    background: @merchant-secondary-light;
+    background: @merchant-surface;
     border-color: @merchant-border;
+    box-shadow: 0 2px 8px rgba(45, 42, 38, 0.04);
   }
 
   &.selected {
-    background: @merchant-secondary-light;
+    background: @merchant-surface;
     border-color: @merchant-primary;
+    box-shadow: 0 4px 14px rgba(74, 122, 77, 0.08);
+  }
+
+  .suggestion-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
   }
 
   .style-tag {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
     padding: 4px 12px;
-    background: @merchant-warning-light;
-    color: @merchant-warning;
     border-radius: 20px;
     font-size: 12px;
     font-weight: 600;
-    margin-bottom: 8px;
+
+    &.style-0 {
+      background: rgba(90, 143, 94, 0.1);
+      color: @merchant-success;
+    }
+
+    &.style-1 {
+      background: rgba(212, 168, 85, 0.1);
+      color: @merchant-warning;
+    }
+
+    &.style-2 {
+      background: rgba(91, 139, 210, 0.1);
+      color: @merchant-info;
+    }
   }
 
-  .text {
+  .suggestion-actions {
+    display: flex;
+    gap: 4px;
+  }
+
+  .icon-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    border: 1px solid @merchant-border;
+    background: @merchant-surface;
+    color: @merchant-text-sec;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      border-color: @merchant-primary;
+      color: @merchant-primary;
+    }
+  }
+
+  .suggestion-text {
     font-size: 14px;
     color: @merchant-text;
-    line-height: 1.6;
+    line-height: 1.7;
     margin-bottom: 12px;
   }
 
-  .actions {
+  .use-btn {
     display: flex;
-    justify-content: flex-end;
-    gap: 8px;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    background: linear-gradient(135deg, @merchant-primary, darken(@merchant-primary, 4%));
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+    font-family: inherit;
+
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 3px 10px rgba(74, 122, 77, 0.25);
+    }
   }
 }
 
+// --- 加载状态 ---
 .loading-state {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: @merchant-secondary;
+  gap: 16px;
+
+  .loading-dots {
+    display: flex;
+    gap: 6px;
+
+    span {
+      width: 8px;
+      height: 8px;
+      background: @merchant-primary;
+      border-radius: 50%;
+      animation: loadingBounce 1.4s ease-in-out infinite;
+
+      &:nth-child(1) { animation-delay: 0s; }
+      &:nth-child(2) { animation-delay: 0.15s; }
+      &:nth-child(3) { animation-delay: 0.3s; }
+    }
+  }
 
   p {
-    margin-top: 12px;
     color: @merchant-text-sec;
+    font-size: 14px;
+    margin: 0;
   }
 }
 
+// --- 编辑区域 ---
 .edit-area {
-  padding: 16px;
-  background: @merchant-secondary-light;
-  border-top: 1px solid @merchant-border;
+  padding: 16px 20px;
+  background: rgba(244, 230, 222, 0.3);
+  border-top: 1px solid @merchant-divider;
+
+  .edit-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+
+    span {
+      font-size: 13px;
+      font-weight: 600;
+      color: @merchant-text;
+    }
+  }
+
+  :deep(.el-textarea__inner) {
+    border-radius: 10px;
+    border-color: @merchant-border;
+    font-size: 14px;
+    line-height: 1.6;
+
+    &:focus {
+      border-color: @merchant-primary;
+      box-shadow: 0 0 0 3px rgba(74, 122, 77, 0.08);
+    }
+  }
 
   .edit-actions {
     display: flex;
     justify-content: flex-end;
-    gap: 12px;
+    gap: 10px;
     margin-top: 12px;
+  }
+
+  .cancel-btn {
+    padding: 8px 16px;
+    border: 1px solid @merchant-border;
+    border-radius: 8px;
+    background: @merchant-surface;
+    color: @merchant-text-sec;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+
+    &:hover {
+      border-color: @merchant-text-muted;
+    }
+  }
+
+  .submit-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 18px;
+    background: linear-gradient(135deg, @merchant-primary, darken(@merchant-primary, 4%));
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    font-family: inherit;
+
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 3px 10px rgba(74, 122, 77, 0.25);
+    }
   }
 }
 
+// --- 空状态 ---
 .empty-state {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: @merchant-text-muted;
 
-  .el-icon {
-    margin-bottom: 12px;
-    color: @merchant-error;
+  .empty-icon-wrap {
+    width: 64px;
+    height: 64px;
+    border-radius: 18px;
+    background: rgba(226, 222, 216, 0.3);
+    color: @merchant-text-muted;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
   }
 
-  p {
-    margin: 4px 0;
+  .empty-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: @merchant-text;
+    margin: 0 0 6px;
   }
 
-  .hint {
+  .empty-hint {
     font-size: 13px;
     color: @merchant-text-muted;
+    margin: 0;
   }
+}
+
+// --- 动画 ---
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes loadingBounce {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-8px);
+    opacity: 1;
+  }
+}
+
+.edit-slide-enter-active {
+  transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.edit-slide-leave-active {
+  transition: all 0.25s ease;
+}
+
+.edit-slide-enter-from {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.edit-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
 }
 </style>
