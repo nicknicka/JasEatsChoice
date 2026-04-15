@@ -1,53 +1,112 @@
 /**
  * 会话管理 API
- * 对接后端 ConversationController
- * 基础路径: /v1/conversations
+ * 对接后端 ChatSessionController
  */
-import { get, post, put, del } from '@/utils/request'
+import { get, post, del } from '@/utils/request'
 import { CHAT_API, buildUrl } from '../urlEnum'
+
+const buildQueryUrl = (url, params = {}) => {
+  const query = Object.entries(params)
+    .filter(([, value]) => value !== undefined && value !== null && value !== '')
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+    .join('&')
+
+  return query ? `${url}?${query}` : url
+}
+
+const normalizeConversation = (conversation = {}) => ({
+  ...conversation,
+  id: conversation.conversationId || conversation.sessionId || conversation.id,
+  sessionId: conversation.sessionId || conversation.id,
+  conversationId: conversation.conversationId || conversation.sessionId || conversation.id,
+  type: conversation.type || conversation.sessionType || 'single',
+  isPinned: conversation.isPinned ?? conversation.pinned ?? false,
+  unreadCount: Number(conversation.unreadCount || 0),
+  targetId: conversation.targetId || conversation.targetUserId || '',
+  lastMessage: typeof conversation.lastMessage === 'string'
+    ? {
+        content: conversation.lastMessage,
+        type: conversation.lastMessageType || 'text'
+      }
+    : (conversation.lastMessage || { content: '', type: 'text' })
+})
+
+const normalizeListResponse = (response) => {
+  const list = Array.isArray(response?.data) ? response.data.map(normalizeConversation) : []
+  return {
+    ...response,
+    data: list,
+    list
+  }
+}
 
 export const conversationApi = {
   /**
-   * IM-029: 获取会话列表
-   * GET /v1/conversations
+   * 获取会话列表
+   * GET /v1/chat/users/{userId}/chat-sessions
    * @param {string} userId - 用户ID
    * @returns {Promise} 返回会话列表
    */
-  getList: (userId) => get(buildUrl('/v1/conversations/user/:userId', { userId })),
+  getList: (userId) => get(
+    buildUrl(CHAT_API.GET_CONVERSATIONS, { userId })
+  ).then(normalizeListResponse),
 
   /**
-   * IM-033: 搜索会话
-   * GET /v1/conversations/user/{userId}/search
+   * 搜索会话
+   * 当前后端未提供独立搜索接口，改为本地过滤
    * @param {string} userId - 用户ID
    * @param {string} keyword - 搜索关键词
    * @returns {Promise} 返回搜索结果
    */
-  search: (userId, keyword) => get(buildUrl('/v1/conversations/user/:userId/search', { userId }), { keyword }),
+  search: async (userId, keyword) => {
+    const response = await conversationApi.getList(userId)
+    const lowerKeyword = (keyword || '').trim().toLowerCase()
+
+    if (!lowerKeyword) {
+      return response
+    }
+
+    return {
+      ...response,
+      data: response.data.filter(item =>
+        item.name?.toLowerCase().includes(lowerKeyword) ||
+        item.lastMessage?.content?.toLowerCase().includes(lowerKeyword)
+      )
+    }
+  },
 
   /**
-   * IM-034: 保存置顶状态
-   * PUT /v1/conversations/{conversationId}/pin
+   * 保存置顶状态
+   * POST /v1/chat/sessions/{conversationId}/toggle-pin
    * @param {string} conversationId - 会话ID
-   * @param {boolean} isPinned - 是否置顶
    * @returns {Promise} 返回更新结果
    */
-  setPin: (conversationId, isPinned) => put(buildUrl('/v1/conversations/:conversationId/pin', { conversationId }), { isPinned }),
+  setPin: (conversationId) => post(
+    buildUrl('/v1/chat/sessions/:conversationId/toggle-pin', { conversationId }),
+    { userId: uni.getStorageSync('userInfo')?.userId || uni.getStorageSync('userId') || '' }
+  ),
 
   /**
-   * IM-035: 标记已读
-   * PUT /v1/conversations/{conversationId}/read
+   * 标记已读
+   * POST /v1/chat/sessions/{conversationId}/unread-clear
    * @param {string} conversationId - 会话ID
    * @returns {Promise} 返回标记结果
    */
-  markRead: (conversationId) => put(buildUrl('/v1/conversations/:conversationId/read', { conversationId })),
+  markRead: (conversationId) => post(
+    buildUrl('/v1/chat/sessions/:conversationId/unread-clear', { conversationId }),
+    { userId: uni.getStorageSync('userInfo')?.userId || uni.getStorageSync('userId') || '' }
+  ),
 
   /**
-   * IM-036: 删除会话
-   * DELETE /v1/conversations/{conversationId}
+   * 删除会话
+   * DELETE /v1/chat/sessions/{conversationId}?userId=xxx
    * @param {string} conversationId - 会话ID
    * @returns {Promise} 返回删除结果
    */
-  delete: (conversationId) => del(buildUrl(CHAT_API.DELETE_CONVERSATION, { conversationId }))
+  delete: (conversationId) => del(buildQueryUrl(
+    buildUrl(CHAT_API.DELETE_CONVERSATION, { conversationId }),
+    { userId: uni.getStorageSync('userInfo')?.userId || uni.getStorageSync('userId') || '' }
+  ))
 }
 
 export default conversationApi

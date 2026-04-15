@@ -236,6 +236,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import config from '@/config/index.js'
 import { groupApi } from '@/api/modules/group.js'
 import WebSocketClient from '@/utils/websocket.js'
 
@@ -302,8 +303,12 @@ onUnmounted(() => {
  */
 const connectWebSocket = async () => {
   try {
+    if (!currentUserId.value || !token.value) {
+      return
+    }
+
     // 构建WebSocket URL（群聊）
-    const wsUrl = `wss://api.example.com/ws/group/${groupInfo.value.id}`
+    const wsUrl = `${config.wsURL}/chat?userId=${encodeURIComponent(currentUserId.value)}&token=${encodeURIComponent(token.value)}`
 
     // 创建WebSocket客户端
     wsClient = new WebSocketClient(wsUrl)

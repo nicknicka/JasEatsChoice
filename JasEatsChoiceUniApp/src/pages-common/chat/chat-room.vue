@@ -201,6 +201,8 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { messageApi } from '@/api/modules/message.js'
+import { CHAT_API } from '@/api/urlEnum.js'
+import config from '@/config/index.js'
 import WebSocketClient from '@/utils/websocket.js'
 
 // 当前用户ID
@@ -236,9 +238,50 @@ const morePopup = ref(null)
 // WebSocket客户端
 let wsClient = null
 
+const getStoredUserId = () => {
+  const userInfo = uni.getStorageSync('userInfo') || {}
+  return userInfo.userId || userInfo.id || uni.getStorageSync('userId') || ''
+}
+
+const getStoredAvatar = () => {
+  const userInfo = uni.getStorageSync('userInfo') || {}
+  return userInfo.avatar || uni.getStorageSync('avatar') || 'https://via.placeholder.com/80/52C41A/FFFFFF?text=我'
+}
+
+const formatMessageItem = (msg) => {
+  const senderId = msg.senderId || msg.fromId
+  const messageId = msg.id || msg.msgId || Date.now()
+  const messageTime = new Date(msg.createTime || msg.timestamp || Date.now())
+
+  return {
+    id: messageId,
+    isSelf: senderId === currentUserId.value,
+    avatar: senderId === currentUserId.value ? getStoredAvatar() : (msg.senderAvatar || msg.fromAvatar || userInfo.value.avatar),
+    type: msg.messageType || msg.msgType || 'text',
+    content: msg.content,
+    time: messageTime,
+    showTime: false,
+    status: 'success'
+  }
+}
+
+const applyShowTime = (messages) => {
+  messages.forEach((msg, index) => {
+    if (index === 0) {
+      msg.showTime = true
+      return
+    }
+
+    const prevMsg = messages[index - 1]
+    msg.showTime = msg.time - prevMsg.time > 5 * 60 * 1000
+  })
+
+  return messages
+}
+
 onMounted(() => {
   // 获取用户信息
-  currentUserId.value = uni.getStorageSync('userId') || ''
+  currentUserId.value = getStoredUserId()
   token.value = uni.getStorageSync('token') || ''
 
   // 获取页面参数
@@ -248,8 +291,8 @@ onMounted(() => {
 
   if (options) {
     // 解析用户信息
-    if (options.userId) {
-      userInfo.value.id = options.userId
+    if (options.userId || options.merchantId) {
+      userInfo.value.id = options.userId || options.merchantId
     }
     if (options.userName) {
       userInfo.value.name = decodeURIComponent(options.userName)
@@ -276,8 +319,12 @@ onUnmounted(() => {
  */
 const connectWebSocket = async () => {
   try {
+    if (!currentUserId.value || !token.value) {
+      return
+    }
+
     // 构建WebSocket URL
-    const wsUrl = `wss://api.example.com/ws/chat/${currentUserId.value}/${userInfo.value.id}`
+    const wsUrl = `${config.wsURL}/chat?userId=${encodeURIComponent(currentUserId.value)}&token=${encodeURIComponent(token.value)}`
 
     // 创建WebSocket客户端
     wsClient = new WebSocketClient(wsUrl)
@@ -320,16 +367,8 @@ const disconnectWebSocket = () => {
 const handleMessage = (message) => {
   // 转换消息格式
   const formattedMessage = {
-    id: message.id || Date.now(),
-    isSelf: message.senderId === currentUserId.value,
-    avatar: message.senderId === currentUserId.value
-      ? uni.getStorageSync('avatar') || ''
-      : userInfo.value.avatar,
-    type: message.type || 'text',
-    content: message.content,
-    time: new Date(message.timestamp || Date.now()),
-    showTime: shouldShowTime(message),
-    status: 'success'
+    ...formatMessageItem(message),
+    showTime: shouldShowTime(message)
   }
 
   messageList.value.push(formattedMessage)
@@ -349,7 +388,7 @@ const shouldShowTime = (message) => {
   }
 
   const lastMessage = messageList.value[messageList.value.length - 1]
-  const timeDiff = new Date(message.timestamp || Date.now()) - new Date(lastMessage.time)
+  const timeDiff = new Date(message.createTime || message.timestamp || Date.now()) - new Date(lastMessage.time)
 
   // 如果距离上一条消息超过5分钟，显示时间
   return timeDiff > 5 * 60 * 1000
@@ -362,8 +401,13 @@ const loadMessages = async () => {
   try {
     uni.showLoading({ title: '加载中...' })
 
+    if (!conversationId.value) {
+      throw new Error('会话不存在')
+    }
+
     // IM-002: 调用API获取消息列表
     const res = await messageApi.getMessages({
+      conversationId: conversationId.value,
       userId: currentUserId.value,
       pageSize: pageSize,
       pageNum: currentPage.value
@@ -371,33 +415,11 @@ const loadMessages = async () => {
 
     uni.hideLoading()
 
-    if (res.code === 200 && res.data) {
-      // 转换消息格式
-      const formattedMessages = res.data.map(msg => ({
-        id: msg.id,
-        isSelf: msg.senderId === currentUserId.value,
-        avatar: msg.senderId === currentUserId.value
-          ? uni.getStorageSync('avatar') || ''
-          : userInfo.value.avatar,
-        type: msg.messageType || 'text',
-        content: msg.content,
-        time: new Date(msg.createTime || Date.now()),
-        showTime: false, // 稍后计算
-        status: 'success'
-      }))
-
-      // 计算是否显示时间
-      formattedMessages.forEach((msg, index) => {
-        if (index === 0) {
-          msg.showTime = true
-        } else {
-          const prevMsg = formattedMessages[index - 1]
-          const timeDiff = msg.time - prevMsg.time
-          msg.showTime = timeDiff > 5 * 60 * 1000
-        }
-      })
+    if (res.code === 200 && Array.isArray(res.data)) {
+      const formattedMessages = applyShowTime(res.data.map(formatMessageItem))
 
       messageList.value = formattedMessages
+      hasMoreHistory.value = (res.pageData?.pages || 1) > currentPage.value
 
       // 滚动到底部
       nextTick(() => {
@@ -463,30 +485,22 @@ const loadMoreMessages = async () => {
 
     // IM-003: 调用API获取历史消息
     const res = await messageApi.getMessages({
+      conversationId: conversationId.value,
       userId: currentUserId.value,
       pageSize: pageSize,
       pageNum: currentPage.value
     })
 
-    if (res.code === 200 && res.data) {
+    if (res.code === 200 && Array.isArray(res.data)) {
       if (res.data.length === 0) {
         hasMoreHistory.value = false
       } else {
         // 转换消息格式并插入到列表顶部
-        const formattedMessages = res.data.map(msg => ({
-          id: msg.id,
-          isSelf: msg.senderId === currentUserId.value,
-          avatar: msg.senderId === currentUserId.value
-            ? uni.getStorageSync('avatar') || ''
-            : userInfo.value.avatar,
-          type: msg.messageType || 'text',
-          content: msg.content,
-          time: new Date(msg.createTime || Date.now()),
-          showTime: false,
-          status: 'success'
-        }))
+        const formattedMessages = res.data.map(formatMessageItem)
 
         messageList.value = [...formattedMessages, ...messageList.value]
+        applyShowTime(messageList.value)
+        hasMoreHistory.value = (res.pageData?.pages || currentPage.value) > currentPage.value
 
         // 滚动到第一条新消息的位置
         if (formattedMessages.length > 0) {
@@ -551,7 +565,7 @@ const sendMessage = async () => {
   const newMessage = {
     id: Date.now(),
     isSelf: true,
-    avatar: uni.getStorageSync('avatar') || 'https://via.placeholder.com/80/52C41A/FFFFFF?text=我',
+    avatar: getStoredAvatar(),
     type: 'text',
     content: inputContent.value,
     time: new Date(),
@@ -573,33 +587,21 @@ const sendMessage = async () => {
   try {
     // IM-004: 调用API发送文本消息
     const res = await messageApi.sendTextMessage({
+      conversationId: conversationId.value,
       senderId: currentUserId.value,
       receiverId: userInfo.value.id,
+      sessionType: 'single',
       content: contentToSend
     })
 
     if (res.code === 200) {
       newMessage.status = 'success'
-
-      // 同时通过WebSocket发送（实时通信）
-      if (wsClient && wsClient.isConnected()) {
-        wsClient.send({
-          type: 'message',
-          dataType: 'text',
-          senderId: currentUserId.value,
-          receiverId: userInfo.value.id,
-          content: contentToSend,
-          timestamp: Date.now()
-        }).catch(err => {
-          console.error('[ChatRoom] WebSocket发送消息失败', err)
-        })
-      }
     } else {
       throw new Error(res.message || '发送失败')
     }
   } catch (error) {
     console.error('[ChatRoom] 发送消息失败', error)
-    newMessage.status = 'failed'
+    newMessage.status = 'fail'
     uni.showToast({
       title: error.message || '发送失败',
       icon: 'none'
@@ -628,7 +630,7 @@ const sendImageMessage = async (imagePath) => {
   const newMessage = {
     id: Date.now(),
     isSelf: true,
-    avatar: uni.getStorageSync('avatar') || 'https://via.placeholder.com/80/52C41A/FFFFFF?text=我',
+    avatar: getStoredAvatar(),
     type: 'image',
     content: imagePath,
     time: new Date(),
@@ -645,11 +647,11 @@ const sendImageMessage = async (imagePath) => {
 
     const uploadRes = await new Promise((resolve, reject) => {
       uni.uploadFile({
-        url: 'https://api.example.com/v1/upload/image',
+        url: `${config.baseURL}${CHAT_API.UPLOAD_IMAGE}`,
         filePath: imagePath,
         name: 'file',
         header: {
-          'Authorization': token.value
+          'Authorization': `Bearer ${token.value}`
         },
         success: (res) => {
           try {
@@ -668,32 +670,20 @@ const sendImageMessage = async (imagePath) => {
     uni.hideLoading()
 
     if (uploadRes.code === 200) {
-      const imageUrl = uploadRes.data.url
+      const imageUrl = uploadRes.data?.fullUrl || uploadRes.data?.fileUrl
 
       // 发送图片消息
       const res = await messageApi.sendImageMessage({
+        conversationId: conversationId.value,
         senderId: currentUserId.value,
         receiverId: userInfo.value.id,
+        sessionType: 'single',
         imageUrl: imageUrl
       })
 
       if (res.code === 200) {
         newMessage.status = 'success'
         newMessage.content = imageUrl
-
-        // 同时通过WebSocket发送（实时通信）
-        if (wsClient && wsClient.isConnected()) {
-          wsClient.send({
-            type: 'message',
-            dataType: 'image',
-            senderId: currentUserId.value,
-            receiverId: userInfo.value.id,
-            content: imageUrl,
-            timestamp: Date.now()
-          }).catch(err => {
-            console.error('[ChatRoom] WebSocket发送图片失败', err)
-          })
-        }
       } else {
         throw new Error(res.message || '发送失败')
       }
@@ -703,7 +693,7 @@ const sendImageMessage = async (imagePath) => {
   } catch (error) {
     console.error('[ChatRoom] 发送图片失败', error)
     uni.hideLoading()
-    newMessage.status = 'failed'
+    newMessage.status = 'fail'
     uni.showToast({
       title: error.message || '发送失败',
       icon: 'none'

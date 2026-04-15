@@ -173,12 +173,12 @@ export const COUPON_API = {
 
 // ==================== 钱包相关 ====================
 export const WALLET_API = {
-  GET_WALLET: '/v1/wallet/:userId',                       // GET - 获取钱包信息
-  GET_BALANCE: '/v1/wallet/:userId/balance',             // GET - 获取余额
-  RECHARGE: '/v1/wallet/:userId/recharge',               // POST - 充值
-  WITHDRAW: '/v1/wallet/:userId/withdraw',               // POST - 提现
-  GET_TRANSACTIONS: '/v1/wallet/:userId/transactions',   // GET - 获取交易记录
-  GET_WALLET_INFO: '/v1/wallet'                           // GET - 获取钱包信息（小程序端）
+  GET_WALLET: '/v1/wallet/info/:userId',                 // GET - 获取钱包信息
+  GET_BALANCE: '/v1/wallet/balance/:userId',             // GET - 获取余额
+  RECHARGE: '/v1/wallet/recharge',                       // POST - 充值
+  WITHDRAW: '/v1/wallet/withdraw',                       // POST - 提现
+  GET_TRANSACTIONS: '/v1/consume-history',               // GET - 获取交易记录
+  GET_WALLET_INFO: '/v1/wallet/info/:userId'             // GET - 获取钱包信息（小程序端）
 }
 
 // ==================== 地址相关 ====================
@@ -227,15 +227,17 @@ export const AI_API = {
 
 // ==================== 聊天相关 ====================
 export const CHAT_API = {
-  GET_CONVERSATIONS: '/v1/conversations',                // GET - 获取会话列表
-  GET_CONVERSATION: '/v1/conversations/:conversationId', // GET - 获取会话详情
-  CREATE_CONVERSATION: '/v1/conversations',              // POST - 创建会话
-  DELETE_CONVERSATION: '/v1/conversations/:conversationId',  // DELETE - 删除会话
+  GET_CONVERSATIONS: '/v1/chat/users/:userId/chat-sessions', // GET - 获取会话列表
+  GET_CONVERSATION: '/v1/chat/sessions/:conversationId', // GET - 获取会话详情（当前由接口层兼容）
+  CREATE_CONVERSATION: '/v1/chat/sessions',             // POST - 创建会话
+  DELETE_CONVERSATION: '/v1/chat/sessions/:conversationId', // DELETE - 删除会话
 
-  GET_MESSAGES: '/v1/messages',                          // GET - 获取消息列表
-  SEND_MESSAGE: '/v1/messages',                          // POST - 发送消息
-  DELETE_MESSAGE: '/v1/messages/:messageId',            // DELETE - 删除消息
-  MARK_READ: '/v1/messages/:messageId/read'             // PUT - 标记消息已读
+  GET_MESSAGES: '/v1/chat/:conversationId/messages',    // GET - 获取消息列表
+  SEND_MESSAGE: '/v1/chat/messages',                    // POST - 发送消息
+  DELETE_MESSAGE: '/v1/chat/messages/:messageId',       // DELETE - 删除消息（当前由接口层兼容撤回）
+  MARK_READ: '/v1/chat/messages/:messageId/read',       // PUT - 标记消息已读
+  RECALL_MESSAGE: '/v1/chat/messages/:messageId/recall', // POST - 撤回消息
+  UPLOAD_IMAGE: '/v1/chat/upload-image'                 // POST - 上传聊天图片
 }
 
 // ==================== 通知相关 ====================

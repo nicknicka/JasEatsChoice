@@ -206,6 +206,8 @@ const loadConversations = async (isRefresh = false) => {
       // 转换会话数据格式
       const formattedConversations = res.data.map(conv => ({
         id: conv.id,
+        conversationId: conv.conversationId || conv.id,
+        targetId: conv.targetId || '',
         name: conv.name || conv.displayName || '未命名',
         avatar: conv.avatar || '/static/default-avatar.png',
         isGroup: conv.type === 'group',
@@ -332,8 +334,8 @@ const openChat = (conversation) => {
   conversation.unread = 0
 
   const url = conversation.isGroup
-    ? `/pages-common/chat/group-chat?id=${conversation.id}`
-    : `/pages-common/chat/chat-room?userId=${conversation.id}`
+    ? `/pages-common/chat/group-chat?id=${conversation.conversationId || conversation.id}`
+    : `/pages-common/chat/chat-room?conversationId=${conversation.conversationId || conversation.id}&userId=${conversation.targetId || ''}&userName=${encodeURIComponent(conversation.name || '')}&userAvatar=${encodeURIComponent(conversation.avatar || '')}`
 
   uni.navigateTo({ url })
 }
