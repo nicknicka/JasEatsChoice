@@ -228,7 +228,7 @@ export const merchantApi = {
    * @param {string} merchantId - 商家ID
    * @returns {Promise} 返回优惠券列表
    */
-  getCoupons: (merchantId) => get(buildUrl(MERCHANT_API.GET_MERCHANT_COUPONS, { merchantId })),
+  getCoupons: () => Promise.resolve([]),
 
   // ==================== 商家评价 ====================
 

@@ -1,124 +1,152 @@
 /**
  * 消息管理 API
- * 对接后端 MessageController
- * 基础路径: /v1/messages
+ * 对接后端 ChatController
  */
-import { get, post } from '@/utils/request'
+import { get, post, put } from '@/utils/request'
 import { CHAT_API, buildUrl } from '../urlEnum'
+
+const getCurrentUserId = () => {
+  const userInfo = uni.getStorageSync('userInfo') || {}
+  return userInfo.userId || userInfo.id || uni.getStorageSync('userId') || ''
+}
+
+const normalizeMessageItem = (message = {}) => ({
+  ...message,
+  id: message.id || message.msgId,
+  msgId: message.msgId || message.id,
+  senderId: message.senderId || message.fromId,
+  receiverId: message.receiverId || message.toId,
+  messageType: message.messageType || message.msgType || 'text',
+  senderNickname: message.senderNickname || message.fromName,
+  senderAvatar: message.senderAvatar || message.fromAvatar
+})
+
+const normalizeMessageResponse = (response) => {
+  const pageData = response?.data || {}
+  const list = Array.isArray(pageData.records)
+    ? pageData.records.map(normalizeMessageItem)
+    : Array.isArray(pageData)
+      ? pageData.map(normalizeMessageItem)
+      : []
+
+  return {
+    ...response,
+    list,
+    pageData,
+    data: list
+  }
+}
+
+const resolveMessageQuery = (conversationIdOrParams, maybeParams) => {
+  if (typeof conversationIdOrParams === 'object' || conversationIdOrParams === undefined) {
+    return { ...(conversationIdOrParams || {}) }
+  }
+
+  return {
+    ...(maybeParams || {}),
+    conversationId: conversationIdOrParams
+  }
+}
+
+const buildMessagePayload = (data = {}, msgType, content) => ({
+  fromId: data.senderId || data.fromId || getCurrentUserId(),
+  toId: data.receiverId || data.toId || data.targetId || '',
+  sessionType: data.sessionType || 'single',
+  msgType,
+  content,
+  replyTo: data.replyTo,
+  sessionId: data.conversationId || data.sessionId
+})
 
 export const messageApi = {
   /**
-   * IM-002: 获取消息列表
-   * GET /v1/messages
+   * 获取消息列表
+   * GET /v1/chat/{conversationId}/messages
+   * @param {Object|string} conversationId - 会话ID或查询参数对象
    * @param {Object} params - 查询参数
-   * @param {string} params.conversationId - 会话ID
-   * @param {number} params.page - 页码
-   * @param {number} params.size - 每页数量
    * @returns {Promise} 返回消息列表
    */
-  getMessages: (params) => get(CHAT_API.GET_MESSAGES, params),
+  getMessages: (conversationId, params) => {
+    const query = resolveMessageQuery(conversationId, params)
+    const conversationKey = query.conversationId || query.sessionId
+
+    return get(buildUrl(CHAT_API.GET_MESSAGES, { conversationId: conversationKey }), {
+      userId: query.userId || getCurrentUserId(),
+      page: query.page || query.pageNum || 1,
+      size: query.size || query.pageSize || 20
+    }).then(normalizeMessageResponse)
+  },
 
   /**
    * 获取消息列表（旧版）
-   * GET /v1/legacy/message/list
+   * @param {Object|string} conversationId - 会话ID或查询参数对象
    * @param {Object} params - 查询参数
    * @returns {Promise} 返回消息列表
    */
-  getMessagesLegacy: (params) => get('/v1/legacy/message/list', params),
+  getMessagesLegacy: (conversationId, params) => messageApi.getMessages(conversationId, params),
 
   /**
-   * IM-004: 发送文本消息
-   * POST /v1/messages
+   * 发送文本消息
+   * POST /v1/chat/messages
    * @param {Object} data - 消息数据
-   * @param {string} data.senderId - 发送者ID
-   * @param {string} data.receiverId - 接收者ID
-   * @param {string} data.content - 消息内容
-   * @param {string} data.messageType - 消息类型(text)
    * @returns {Promise} 返回发送结果
    */
-  sendTextMessage: (data) => post(CHAT_API.SEND_MESSAGE, {
-    senderId: data.senderId,
-    receiverId: data.receiverId,
-    content: data.content,
-    messageType: 'text'
-  }),
+  sendTextMessage: (data) => post(
+    CHAT_API.SEND_MESSAGE,
+    buildMessagePayload(data, 'text', data.content)
+  ),
 
   /**
    * 发送文本消息（旧版）
-   * POST /v1/legacy/message/send
    * @param {Object} data - 消息数据
    * @returns {Promise} 返回发送结果
    */
-  sendTextMessageLegacy: (data) => post('/v1/legacy/message/send', {
-    senderId: data.senderId,
-    receiverId: data.receiverId,
-    content: data.content,
-    messageType: 'text'
-  }),
+  sendTextMessageLegacy: (data) => messageApi.sendTextMessage(data),
 
   /**
-   * IM-005: 发送图片消息
-   * POST /v1/messages
+   * 发送图片消息
+   * POST /v1/chat/messages
    * @param {Object} data - 消息数据
-   * @param {string} data.senderId - 发送者ID
-   * @param {string} data.receiverId - 接收者ID
-   * @param {string} data.imageUrl - 图片URL
-   * @param {string} data.messageType - 消息类型(image)
    * @returns {Promise} 返回发送结果
    */
-  sendImageMessage: (data) => post(CHAT_API.SEND_MESSAGE, {
-    senderId: data.senderId,
-    receiverId: data.receiverId,
-    content: data.imageUrl,
-    messageType: 'image'
-  }),
+  sendImageMessage: (data) => post(
+    CHAT_API.SEND_MESSAGE,
+    buildMessagePayload(data, 'image', data.imageUrl || data.content)
+  ),
 
   /**
    * 发送图片消息（旧版）
-   * POST /v1/legacy/message/send
    * @param {Object} data - 消息数据
    * @returns {Promise} 返回发送结果
    */
-  sendImageMessageLegacy: (data) => post('/v1/legacy/message/send', {
-    senderId: data.senderId,
-    receiverId: data.receiverId,
-    content: data.imageUrl,
-    messageType: 'image'
-  }),
+  sendImageMessageLegacy: (data) => messageApi.sendImageMessage(data),
 
   /**
    * 发送菜品卡片消息
-   * POST /v1/messages
    * @param {Object} data - 消息数据
-   * @param {string} data.senderId - 发送者ID
-   * @param {string} data.receiverId - 接收者ID
-   * @param {string} data.dishId - 菜品ID
-   * @param {string} data.messageType - 消息类型(dish)
    * @returns {Promise} 返回发送结果
    */
-  sendDishMessage: (data) => post(CHAT_API.SEND_MESSAGE, {
-    senderId: data.senderId,
-    receiverId: data.receiverId,
-    content: JSON.stringify({ dishId: data.dishId }),
-    messageType: 'dish'
-  }),
+  sendDishMessage: (data) => post(
+    CHAT_API.SEND_MESSAGE,
+    buildMessagePayload(data, 'dish', JSON.stringify({ dishId: data.dishId }))
+  ),
 
   /**
    * 发送订单卡片消息
-   * POST /v1/messages
    * @param {Object} data - 消息数据
-   * @param {string} data.senderId - 发送者ID
-   * @param {string} data.receiverId - 接收者ID
-   * @param {string} data.orderId - 订单ID
-   * @param {string} data.messageType - 消息类型(order)
    * @returns {Promise} 返回发送结果
    */
-  sendOrderMessage: (data) => post(CHAT_API.SEND_MESSAGE, {
-    senderId: data.senderId,
-    receiverId: data.receiverId,
-    content: JSON.stringify({ orderId: data.orderId }),
-    messageType: 'order'
-  })
+  sendOrderMessage: (data) => post(
+    CHAT_API.SEND_MESSAGE,
+    buildMessagePayload(data, 'order', JSON.stringify({ orderId: data.orderId }))
+  ),
+
+  /**
+   * 标记消息已读
+   * @param {string} messageId - 消息ID
+   * @returns {Promise}
+   */
+  markRead: (messageId) => put(buildUrl(CHAT_API.MARK_READ, { messageId }))
 }
 
 export default messageApi

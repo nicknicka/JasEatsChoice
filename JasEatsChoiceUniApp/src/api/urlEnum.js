@@ -20,9 +20,9 @@ export const USER_API = {
 
   // 用户信息
   GET_USER_INFO: '/v1/users/:userId',                    // GET - 获取用户信息
-  UPDATE_USER_INFO: '/v1/users/:userId',                 // PUT - 更新用户信息
-  CHANGE_PASSWORD: '/v1/users/:userId/password',         // POST - 修改密码
-  UPLOAD_AVATAR: '/v1/users/:userId/avatar/base64',      // POST - 上传头像
+  UPDATE_USER_INFO: '/v1/users/:userId/info',            // PUT - 更新用户资料
+  CHANGE_PASSWORD: '/v1/users/:userId/password',         // PUT - 修改密码
+  UPLOAD_AVATAR: '/v1/users/:userId/avatar/base64',      // PUT - 上传头像
   DELETE_USER: '/v1/users/:userId',                      // DELETE - 删除用户
 
   // 用户统计和目标
@@ -163,12 +163,12 @@ export const REVIEW_API = {
 
 // ==================== 优惠券相关 ====================
 export const COUPON_API = {
-  GET_USER_COUPONS: '/v1/coupons/user/:userId',          // GET - 获取用户优惠券
-  GET_MERCHANT_COUPONS: '/v1/coupons/merchant/:merchantId',  // GET - 获取商家优惠券
-  GET_AVAILABLE_COUPONS: '/v1/coupons/available',        // GET - 获取可用优惠券
-  CLAIM_COUPON: '/v1/coupons/:couponId/claim',           // POST - 领取优惠券
-  USE_COUPON: '/v1/coupons/:couponId/use',               // POST - 使用优惠券
-  RECEIVE_COUPON: '/v1/coupons/:id/receive'              // POST - 领取优惠券（小程序端）
+  GET_USER_COUPONS: '/v1/coupons/user',                  // GET - 获取用户优惠券
+  GET_AVAILABLE_COUPONS: '/v1/payment/coupons',          // GET - 获取支付场景可用优惠券
+  CHECK_COUPON: '/v1/coupons/check',                     // POST - 校验优惠券
+  USE_COUPON: '/v1/coupons/use',                         // POST - 使用优惠券
+  RELEASE_COUPON: '/v1/coupons/release',                 // POST - 释放优惠券
+  ISSUE_TEST_COUPON: '/v1/coupons/issue-test'            // POST - 发放测试优惠券
 }
 
 // ==================== 钱包相关 ====================
@@ -183,8 +183,8 @@ export const WALLET_API = {
 
 // ==================== 地址相关 ====================
 export const ADDRESS_API = {
-  GET_ADDRESSES: '/v1/addresses',                         // GET - 获取地址列表
-  GET_ADDRESS: '/v1/addresses/:addressId',               // GET - 获取地址详情
+  GET_ADDRESSES: '/v1/addresses/user',                   // GET - 获取地址列表
+  GET_ADDRESS: '/v1/addresses/:addressId',               // GET - 获取地址详情（当前由接口层兼容）
   CREATE_ADDRESS: '/v1/addresses',                        // POST - 创建地址
   UPDATE_ADDRESS: '/v1/addresses/:addressId',            // PUT - 更新地址
   DELETE_ADDRESS: '/v1/addresses/:addressId',            // DELETE - 删除地址
@@ -240,12 +240,12 @@ export const CHAT_API = {
 
 // ==================== 通知相关 ====================
 export const NOTIFICATION_API = {
-  GET_NOTIFICATIONS: '/v1/notifications',                // GET - 获取通知列表
-  GET_NOTIFICATION: '/v1/notifications/:notificationId', // GET - 获取通知详情
-  MARK_READ: '/v1/notifications/:notificationId/read',  // PUT - 标记通知已读
-  MARK_ALL_READ: '/v1/notifications/read-all',          // PUT - 标记所有通知已读
-  DELETE_NOTIFICATION: '/v1/notifications/:notificationId',  // DELETE - 删除通知
-  GET_LIST: '/notifications/user'                        // GET - 获取用户通知列表
+  GET_NOTIFICATIONS: '/notifications/user/:userId',      // GET - 获取通知列表
+  GET_NOTIFICATION: '/notifications/:notificationId',    // GET - 获取通知详情
+  MARK_READ: '/notifications/:notificationId/read',      // PUT - 标记通知已读
+  MARK_ALL_READ: '/notifications/all-read',              // PUT - 标记所有通知已读
+  DELETE_NOTIFICATION: '/notifications/:notificationId', // DELETE - 删除通知
+  GET_LIST: '/notifications/user/:userId'                // GET - 获取用户通知列表
 }
 
 // ==================== 历史记录相关 ====================

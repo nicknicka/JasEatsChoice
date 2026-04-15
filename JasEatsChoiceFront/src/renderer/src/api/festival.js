@@ -8,7 +8,7 @@ export default {
    * 获取节日列表
    */
   getFestivals() {
-    return api.get('/v1/festival/festivals')
+    return api.get('/v1/festival/active')
   },
 
   /**
@@ -29,34 +29,37 @@ export default {
    * 提交反馈
    */
   submitFeedback(recommendId, data) {
-    return api.post(`/v1/festival/recommendations/${recommendId}/feedback`, data)
+    return api.post('/v1/festival/feedback', {
+      recommendHistoryId: recommendId,
+      ...data
+    })
   },
 
   /**
    * 获取用户自定义事件
    */
   getCustomEvents() {
-    return api.get('/v1/festival/events/custom')
+    return api.get('/v1/festival/custom-events')
   },
 
   /**
    * 创建用户自定义事件
    */
   createCustomEvent(data) {
-    return api.post('/v1/festival/events/custom', data)
+    return api.post('/v1/festival/custom-event', data)
   },
 
   /**
    * 更新用户自定义事件
    */
   updateCustomEvent(eventId, data) {
-    return api.put(`/v1/festival/events/custom/${eventId}`, data)
+    return Promise.reject(new Error('后端暂未提供自定义事件更新接口'))
   },
 
   /**
    * 删除用户自定义事件
    */
   deleteCustomEvent(eventId) {
-    return api.delete(`/v1/festival/events/custom/${eventId}`)
+    return Promise.reject(new Error('后端暂未提供自定义事件删除接口'))
   }
 }

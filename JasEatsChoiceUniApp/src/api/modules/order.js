@@ -6,6 +6,14 @@
 import { get, post, put, del } from '@/utils/request'
 import { ORDER_API, buildUrl } from '../urlEnum'
 
+const buildQueryUrl = (url, params = {}) => {
+  const query = Object.entries(params)
+    .filter(([, value]) => value !== undefined && value !== null && value !== '')
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+    .join('&')
+  return query ? `${url}?${query}` : url
+}
+
 export const orderApi = {
   /**
    * 创建订单
@@ -70,22 +78,27 @@ export const orderApi = {
    * 更新订单状态
    * PUT /v1/orders/{orderId}/status
    * @param {string} orderId - 订单ID
-   * @param {Object} data - 状态数据
-   * @param {string} data.status - 新状态(0-待支付,1-待接单,2-制作中,3-已完成,4-已取消)
+   * @param {Object|number|string} data - 状态数据或状态值
+   * @param {string|number} data.status - 新状态(0-待支付,1-待接单,2-制作中,3-已完成,4-已取消)
    * @param {string} data.remark - 备注信息
    * @returns {Promise} 返回更新结果
    */
-  updateStatus: (orderId, data) => put(buildUrl(ORDER_API.UPDATE_ORDER_STATUS, { orderId }), data),
+  updateStatus: (orderId, data) => {
+    const payload = typeof data === 'object' ? data : { status: data }
+    return put(buildUrl(ORDER_API.UPDATE_ORDER_STATUS, { orderId }), payload)
+  },
 
   /**
    * 取消订单
-   * POST /v1/orders/{orderId}/cancel
+   * PUT /v1/orders/{orderId}/cancel
    * @param {string} orderId - 订单ID
    * @param {Object} data - 取消原因
    * @param {string} data.reason - 取消原因
    * @returns {Promise} 返回取消结果
    */
-  cancel: (orderId, data) => post(buildUrl(ORDER_API.CANCEL_ORDER, { orderId }), data),
+  cancel: (orderId, data = {}) => put(
+    buildQueryUrl(buildUrl(ORDER_API.CANCEL_ORDER, { orderId }), { reason: data.reason })
+  ),
 
   /**
    * 确认收货

@@ -69,7 +69,7 @@ export const reviewAPI = {
   /**
    * 更新订单状态（确认收货/完成订单）
    * @param {string} orderId - 订单ID
-   * @param {number} status - 新状态（7-待评价）
+   * @param {number} status - 新状态（5状态体系：3-已完成）
    */
   updateOrderStatus(orderId, status) {
     return axios.put(`${BASE_URL}/v1/orders/${orderId}/status`, null, {
@@ -78,11 +78,11 @@ export const reviewAPI = {
   },
 
   /**
-   * 确认收货并更新订单状态为待评价
+   * 确认收货并更新订单状态为已完成
    * @param {string} orderId - 订单ID
    */
   confirmReceipt(orderId) {
-    return this.updateOrderStatus(orderId, 7) // 7-待评价状态
+    return this.updateOrderStatus(orderId, 3)
   },
 
   /**

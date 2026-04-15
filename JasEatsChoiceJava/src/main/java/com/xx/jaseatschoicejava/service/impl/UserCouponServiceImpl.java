@@ -23,6 +23,31 @@ public class UserCouponServiceImpl extends ServiceImpl<UserCouponMapper, UserCou
     }
 
     @Override
+    public List<UserCoupon> getUserCoupons(String userId, String status) {
+        String normalizedStatus = status == null ? null : status.trim().toLowerCase();
+        final String statusFilter = "unused".equals(normalizedStatus) ? "available" : normalizedStatus;
+
+        LocalDateTime now = LocalDateTime.now();
+
+        return baseMapper.findByUserId(userId).stream()
+                .peek(coupon -> coupon.setStatus(resolveCouponStatus(coupon, now)))
+                .filter(coupon -> statusFilter == null || statusFilter.isEmpty() || statusFilter.equals(coupon.getStatus()))
+                .toList();
+    }
+
+    private String resolveCouponStatus(UserCoupon coupon, LocalDateTime now) {
+        if ("used".equals(coupon.getStatus())) {
+            return "used";
+        }
+
+        if (coupon.getExpireTime() != null && coupon.getExpireTime().isBefore(now)) {
+            return "expired";
+        }
+
+        return "available";
+    }
+
+    @Override
     public boolean checkCouponAvailable(String couponId, BigDecimal orderAmount) {
         UserCoupon coupon = baseMapper.selectById(couponId);
         if (coupon == null) {

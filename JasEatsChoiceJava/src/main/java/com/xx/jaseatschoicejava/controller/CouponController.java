@@ -28,8 +28,9 @@ public class CouponController {
     @ApiOperation("获取用户优惠券列表")
     @GetMapping("/user")
     public ResponseResult<List<UserCoupon>> getUserCoupons(
-            @ApiParam("用户ID") @RequestParam String userId) {
-        List<UserCoupon> coupons = userCouponService.getAvailableCoupons(userId);
+            @ApiParam("用户ID") @RequestParam String userId,
+            @ApiParam("优惠券状态：available/unused/used/expired") @RequestParam(required = false) String status) {
+        List<UserCoupon> coupons = userCouponService.getUserCoupons(userId, status);
         return ResponseResult.success(coupons);
     }
 

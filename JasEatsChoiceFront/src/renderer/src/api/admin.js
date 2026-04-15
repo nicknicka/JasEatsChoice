@@ -367,7 +367,7 @@ export function getMerchantDetail(merchantId) {
 export function auditMerchant(merchantId, auditData) {
   console.log('[管理员API] 审核商家:', merchantId, auditData)
   return api
-    .post(buildUrl(API.ADMIN.AUDIT_MERCHANT, { merchantId }), auditData)
+    .put(buildUrl(API.ADMIN.AUDIT_MERCHANT, { merchantId }), auditData)
     .then((response) => {
       console.log('[管理员API] 审核商家成功')
       return response

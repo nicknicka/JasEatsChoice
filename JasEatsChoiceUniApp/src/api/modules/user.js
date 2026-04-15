@@ -6,6 +6,39 @@
 import { get, post, put, del } from '@/utils/request'
 import { USER_API, CAPTCHA_API, buildUrl } from '../urlEnum'
 
+const getCurrentUserId = () => {
+  const userInfo = uni.getStorageSync('userInfo') || {}
+  return userInfo.userId || userInfo.id || ''
+}
+
+const normalizeUserProfile = (data = {}) => {
+  const normalized = { ...data }
+
+  if (normalized.goal && !normalized.dietGoal) {
+    normalized.dietGoal = normalized.goal
+  }
+
+  if (normalized.signature && !normalized.bio) {
+    normalized.bio = normalized.signature
+  }
+
+  if (normalized.tags && !normalized.taste) {
+    normalized.taste = normalized.tags
+  }
+
+  return normalized
+}
+
+const readFileAsBase64 = (filePath) => new Promise((resolve, reject) => {
+  const fileManager = uni.getFileSystemManager()
+  fileManager.readFile({
+    filePath,
+    encoding: 'base64',
+    success: (res) => resolve(`data:image/jpeg;base64,${res.data}`),
+    fail: reject
+  })
+})
+
 export const userApi = {
   // ==================== 认证相关 ====================
 
@@ -34,10 +67,11 @@ export const userApi = {
    * POST /v1/users/register
    * @param {Object} data - 注册数据
    * @param {string} data.phone - 手机号
-   * @param {string} data.code - 验证码
-   * @param {string} data.password - 密码（可选）
+   * @param {string} data.password - 密码
    * @param {string} data.nickname - 昵称
-   * @param {string} data.avatar - 头像URL
+   * @param {string} data.captcha - 图形验证码
+   * @param {string} data.checkCodeKey - 图形验证码key
+   * @param {string} data.email - 邮箱（可选）
    * @returns {Promise} 返回注册结果
    */
   register: (data) => post(USER_API.REGISTER, data),
@@ -84,38 +118,60 @@ export const userApi = {
 
   /**
    * 更新用户信息
-   * PUT /v1/users/{userId}
-   * @param {string} userId - 用户ID
+   * PUT /v1/users/{userId}/info
+   * @param {string|Object} userId - 用户ID，或直接传资料对象
    * @param {Object} data - 用户信息
    * @param {string} data.nickname - 昵称
-   * @param {string} data.avatar - 头像URL
-   * @param {string} data.gender - 性别
+   * @param {string} data.avatar - 头像URL或base64
+   * @param {string|number} data.gender - 性别
    * @param {string} data.birthday - 生日
-   * @param {string} data.signature - 个性签名
+   * @param {string} data.bio - 个人简介
+   * @param {string} data.signature - 个性签名（兼容字段）
+   * @param {string} data.goal - 饮食目标（兼容字段）
    * @returns {Promise} 返回更新结果
    */
-  updateUserInfo: (userId, data) => put(buildUrl(USER_API.UPDATE_USER_INFO, { userId }), data),
+  updateUserInfo: (userId, data) => {
+    const resolvedUserId = typeof userId === 'object' || userId === undefined ? getCurrentUserId() : userId
+    const profileData = typeof userId === 'object' || userId === undefined ? userId : data
+    return put(
+      buildUrl(USER_API.UPDATE_USER_INFO, { userId: resolvedUserId }),
+      normalizeUserProfile(profileData)
+    )
+  },
 
   /**
    * 修改密码
-   * POST /v1/users/{userId}/password
+   * PUT /v1/users/{userId}/password
    * @param {string} userId - 用户ID
    * @param {Object} data - 密码数据
    * @param {string} data.oldPassword - 旧密码
    * @param {string} data.newPassword - 新密码
    * @returns {Promise} 返回修改结果
    */
-  changePassword: (userId, data) => post(buildUrl(USER_API.CHANGE_PASSWORD, { userId }), data),
+  changePassword: (userId, data) => put(buildUrl(USER_API.CHANGE_PASSWORD, { userId }), data),
 
   /**
    * 上传头像
-   * POST /v1/users/{userId}/avatar/base64
-   * @param {string} userId - 用户ID
+   * PUT /v1/users/{userId}/avatar/base64
+   * @param {string|Object} userId - 用户ID，或直接传头像对象
    * @param {Object} data - 头像数据
    * @param {string} data.avatarBase64 - base64编码的头像
+   * @param {string} data.file - 本地文件路径
    * @returns {Promise} 返回上传结果
    */
-  uploadAvatar: (userId, data) => post(buildUrl(USER_API.UPLOAD_AVATAR, { userId }), data),
+  uploadAvatar: async (userId, data) => {
+    const resolvedUserId = typeof userId === 'object' || userId === undefined ? getCurrentUserId() : userId
+    const uploadData = typeof userId === 'object' || userId === undefined ? userId : data
+    const payload = { ...uploadData }
+
+    if (!payload.avatarBase64 && payload.file) {
+      payload.avatarBase64 = await readFileAsBase64(payload.file)
+    }
+
+    delete payload.file
+
+    return put(buildUrl(USER_API.UPLOAD_AVATAR, { userId: resolvedUserId }), payload)
+  },
 
   /**
    * 删除用户

@@ -157,8 +157,23 @@ public class OrderController {
      * 更新订单状态
      */
     @PutMapping("/{orderId}/status")
-    public ResponseResult<?> updateOrderStatus(@PathVariable String orderId, @RequestParam Integer status) {
+    public ResponseResult<?> updateOrderStatus(@PathVariable String orderId,
+                                               @RequestParam(required = false) Integer status,
+                                               @RequestBody(required = false) Map<String, Object> requestBody) {
         try {
+            if (status == null && requestBody != null) {
+                Object statusValue = requestBody.get("status");
+                if (statusValue instanceof Number) {
+                    status = ((Number) statusValue).intValue();
+                } else if (statusValue instanceof String && !((String) statusValue).isBlank()) {
+                    status = Integer.parseInt((String) statusValue);
+                }
+            }
+
+            if (status == null) {
+                return ResponseResult.fail("400", "订单状态不能为空");
+            }
+
             // 先查询订单是否存在
             Order order = orderService.getById(orderId);
             if (order == null) {

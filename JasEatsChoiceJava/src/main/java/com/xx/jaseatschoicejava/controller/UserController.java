@@ -1,5 +1,6 @@
 package com.xx.jaseatschoicejava.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xx.jaseatschoicejava.common.ResponseResult;
 import com.xx.jaseatschoicejava.entity.LoginRequest;
 import com.xx.jaseatschoicejava.dto.UserDTO;
@@ -112,6 +113,9 @@ public class UserController {
 
     @Autowired
     private FileUploadConfig fileUploadConfig;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     // 短信服务配置
     private static final Integer DEFAULT_SMS_EXPIRATION_MINUTES = 5;
@@ -644,6 +648,21 @@ public class UserController {
             if (updateData.containsKey("email")) {
                 user.setEmail((String) updateData.get("email"));
             }
+            if (updateData.containsKey("avatar")) {
+                user.setAvatar((String) updateData.get("avatar"));
+            }
+            if (updateData.containsKey("gender")) {
+                Object gender = updateData.get("gender");
+                if (gender != null) {
+                    user.setGender(String.valueOf(gender));
+                }
+            }
+            if (updateData.containsKey("birthday")) {
+                user.setBirthday((String) updateData.get("birthday"));
+            }
+            if (updateData.containsKey("bio")) {
+                user.setBio((String) updateData.get("bio"));
+            }
             if (updateData.containsKey("height")) {
                 Object heightVal = updateData.get("height");
                 if (heightVal instanceof Number) {
@@ -659,8 +678,20 @@ public class UserController {
             if (updateData.containsKey("dietGoal")) {
                 user.setDietGoal((String) updateData.get("dietGoal"));
             }
+            if (updateData.containsKey("goal")) {
+                user.setDietGoal((String) updateData.get("goal"));
+            }
             if (updateData.containsKey("location")) {
                 user.setLocation((String) updateData.get("location"));
+            }
+            if (updateData.containsKey("allergies")) {
+                user.setAllergies(objectMapper.valueToTree(updateData.get("allergies")));
+            }
+            if (updateData.containsKey("taste")) {
+                user.setPreferTags(objectMapper.valueToTree(updateData.get("taste")));
+            }
+            if (updateData.containsKey("tags")) {
+                user.setPreferTags(objectMapper.valueToTree(updateData.get("tags")));
             }
 
             boolean success = userService.updateById(user);

@@ -27,7 +27,7 @@ export const groupApi = {
   /**
    * IM-016: 退出群聊
    */
-  leaveGroup: (groupId) => post(`/v1/groups/${groupId}/leave`),
+  leaveGroup: (groupId) => del(`/v1/groups/${groupId}/leave`),
 
   /**
    * IM-028: 解散群聊

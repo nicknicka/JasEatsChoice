@@ -16,6 +16,13 @@ public interface UserCouponService extends IService<UserCoupon> {
     java.util.List<UserCoupon> getAvailableCoupons(String userId);
 
     /**
+     * 获取用户优惠券列表
+     * @param userId 用户ID
+     * @param status 状态筛选：available/unused/used/expired/null
+     */
+    java.util.List<UserCoupon> getUserCoupons(String userId, String status);
+
+    /**
      * 检查优惠券是否可用
      */
     boolean checkCouponAvailable(String couponId, BigDecimal orderAmount);

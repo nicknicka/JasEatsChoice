@@ -1,193 +1,260 @@
 /**
  * 聊天相关API
- * 对接后端 ChatController
- * 基础路径: /api/chat
+ * 对接后端 ChatSessionController / ChatController
  */
 import { get, post, put, del } from '@/utils/request'
 import { CHAT_API, buildUrl } from '../urlEnum'
 
+const getCurrentUserId = () => {
+  const userInfo = uni.getStorageSync('userInfo') || {}
+  return userInfo.userId || userInfo.id || uni.getStorageSync('userId') || ''
+}
+
+const buildQueryUrl = (url, params = {}) => {
+  const query = Object.entries(params)
+    .filter(([, value]) => value !== undefined && value !== null && value !== '')
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+    .join('&')
+
+  return query ? `${url}?${query}` : url
+}
+
+const normalizeConversation = (session = {}) => ({
+  ...session,
+  id: session.id || session.sessionId,
+  conversationId: session.conversationId || session.sessionId || session.id,
+  sessionId: session.sessionId || session.id || session.conversationId,
+  targetUserId: session.targetUserId || session.targetId || '',
+  unreadCount: Number(session.unreadCount || 0)
+})
+
+const normalizeConversationList = (response) => {
+  const list = Array.isArray(response?.data) ? response.data.map(normalizeConversation) : []
+  return {
+    ...response,
+    data: list,
+    list
+  }
+}
+
+const normalizeConversationResponse = (response) => {
+  const data = normalizeConversation(response?.data || response || {})
+  return {
+    ...response,
+    conversationId: data.conversationId,
+    sessionId: data.sessionId,
+    id: data.id,
+    data
+  }
+}
+
+const sumUnreadCount = (sessions = []) => sessions.reduce(
+  (total, item) => total + Number(item.unreadCount || 0),
+  0
+)
+
 export const chatApi = {
   /**
    * 获取会话列表
-   * GET /v1/conversations
+   * GET /v1/chat/users/{userId}/chat-sessions
+   * @param {string} userId - 用户ID
    * @returns {Promise} 返回会话列表
    */
-  getConversations: () => get(CHAT_API.GET_CONVERSATIONS),
+  getConversations: (userId = getCurrentUserId()) => get(
+    buildUrl(CHAT_API.GET_CONVERSATIONS, { userId })
+  ).then(normalizeConversationList),
 
   /**
    * 获取会话列表（别名）
+   * @param {string} userId - 用户ID
    * @returns {Promise} 返回会话列表
    */
-  getConversationsOld: () => get('/api/chat/conversations'),
+  getConversationsOld: (userId) => chatApi.getConversations(userId),
 
   /**
    * 获取会话详情
-   * GET /v1/conversations/{conversationId}
+   * 当前后端未提供单独详情接口，先从列表中筛选
    * @param {string} conversationId - 会话ID
-   * @returns {Promise} 返回会话详情
+   * @param {string} userId - 用户ID
+   * @returns {Promise<Object|null>} 返回会话详情
    */
-  getConversation: (conversationId) => get(buildUrl(CHAT_API.GET_CONVERSATION, { conversationId })),
+  getConversation: async (conversationId, userId = getCurrentUserId()) => {
+    const response = await chatApi.getConversations(userId)
+    return response.data.find(item => item.conversationId === conversationId) || null
+  },
 
   /**
    * 获取会话详情（别名）
    * @param {string} conversationId - 会话ID
-   * @returns {Promise} 返回会话详情
+   * @param {string} userId - 用户ID
+   * @returns {Promise<Object|null>} 返回会话详情
    */
-  getConversationOld: (conversationId) => get(`/api/chat/conversation/${conversationId}`),
+  getConversationOld: (conversationId, userId) => chatApi.getConversation(conversationId, userId),
 
   /**
    * 创建会话
-   * POST /v1/conversations
+   * POST /v1/chat/sessions
    * @param {Object} data - 会话数据
-   * @param {string} data.targetUserId - 目标用户ID
-   * @param {string} data.type - 会话类型(single/group)
    * @returns {Promise} 返回创建结果
    */
-  createConversation: (data) => post(CHAT_API.CREATE_CONVERSATION, data),
+  createConversation: (data = {}) => {
+    const userId = data.userId || getCurrentUserId()
+    const targetId = data.targetUserId || data.targetId || data.merchantId || ''
+
+    return post(CHAT_API.CREATE_CONVERSATION, {
+      userId,
+      targetId,
+      sessionType: data.type || data.sessionType || 'single',
+      sessionName: data.sessionName || data.targetName || data.userName || '聊天会话',
+      avatar: data.avatar || data.targetAvatar || '',
+      relatedDishId: data.dishId,
+      relatedOrderId: data.orderId
+    }).then(normalizeConversationResponse)
+  },
 
   /**
    * 创建会话（别名）
    * @param {Object} data - 会话数据
    * @returns {Promise} 返回创建结果
    */
-  createConversationOld: (data) => post('/api/chat/conversation', data),
+  createConversationOld: (data) => chatApi.createConversation(data),
 
   /**
    * 删除会话
-   * DELETE /v1/conversations/{conversationId}
+   * DELETE /v1/chat/sessions/{conversationId}?userId=xxx
    * @param {string} conversationId - 会话ID
+   * @param {string} userId - 用户ID
    * @returns {Promise} 返回删除结果
    */
-  deleteConversation: (conversationId) => del(buildUrl(CHAT_API.DELETE_CONVERSATION, { conversationId })),
+  deleteConversation: (conversationId, userId = getCurrentUserId()) => del(
+    buildQueryUrl(buildUrl(CHAT_API.DELETE_CONVERSATION, { conversationId }), { userId })
+  ),
 
   /**
    * 删除会话（别名）
    * @param {string} conversationId - 会话ID
+   * @param {string} userId - 用户ID
    * @returns {Promise} 返回删除结果
    */
-  deleteConversationOld: (conversationId) => del(`/api/chat/conversation/${conversationId}`),
+  deleteConversationOld: (conversationId, userId) => chatApi.deleteConversation(conversationId, userId),
 
   /**
    * 获取消息列表
-   * GET /v1/messages
    * @param {Object} params - 查询参数
-   * @param {string} params.conversationId - 会话ID
-   * @param {number} params.page - 页码
-   * @param {number} params.size - 每页数量
-   * @returns {Promise} 返回消息列表
+   * @returns {Promise}
    */
-  getMessages: (params) => get(CHAT_API.GET_MESSAGES, params),
+  getMessages: (params) => get(
+    buildUrl(CHAT_API.GET_MESSAGES, { conversationId: params?.conversationId || params?.sessionId || '' }),
+    {
+      userId: params?.userId || getCurrentUserId(),
+      page: params?.page || params?.pageNum || 1,
+      size: params?.size || params?.pageSize || 20
+    }
+  ),
 
   /**
    * 获取消息列表（别名）
-   * @param {string} conversationId - 会话ID
    * @param {Object} params - 查询参数
-   * @returns {Promise} 返回消息列表
+   * @returns {Promise}
    */
-  getMessagesOld: (conversationId, params) => get(`/api/chat/conversation/${conversationId}/messages`, params),
+  getMessagesOld: (params) => chatApi.getMessages(params),
 
   /**
    * 发送消息
-   * POST /v1/messages
+   * POST /v1/chat/messages
    * @param {Object} data - 消息数据
-   * @param {string} data.conversationId - 会话ID
-   * @param {string} data.type - 消息类型(text/image/dish/order)
-   * @param {string} data.content - 消息内容
-   * @returns {Promise} 返回发送结果
+   * @returns {Promise}
    */
   sendMessage: (data) => post(CHAT_API.SEND_MESSAGE, data),
 
   /**
    * 发送消息（别名）
    * @param {Object} data - 消息数据
-   * @returns {Promise} 返回发送结果
+   * @returns {Promise}
    */
-  sendMessageOld: (data) => post('/api/chat/message', data),
+  sendMessageOld: (data) => chatApi.sendMessage(data),
 
   /**
    * 删除消息
-   * DELETE /v1/messages/{messageId}
+   * 当前后端提供的是撤回接口，这里兼容为撤回
    * @param {string} messageId - 消息ID
-   * @returns {Promise} 返回删除结果
+   * @returns {Promise}
    */
-  deleteMessage: (messageId) => del(buildUrl(CHAT_API.DELETE_MESSAGE, { messageId })),
+  deleteMessage: (messageId) => post(buildUrl(CHAT_API.RECALL_MESSAGE, { messageId })),
 
   /**
    * 标记消息已读
-   * PUT /v1/messages/{messageId}/read
+   * PUT /v1/chat/messages/{messageId}/read
    * @param {string} messageId - 消息ID
-   * @returns {Promise} 返回标记结果
+   * @returns {Promise}
    */
   markMessageRead: (messageId) => put(buildUrl(CHAT_API.MARK_READ, { messageId })),
 
   /**
    * 标记消息已读（别名）
-   * @param {string} conversationId - 会话ID
-   * @returns {Promise} 返回标记结果
+   * @param {string} messageId - 消息ID
+   * @returns {Promise}
    */
-  markReadOld: (conversationId) => put(`/api/chat/conversation/${conversationId}/read`),
+  markReadOld: (messageId) => chatApi.markMessageRead(messageId),
 
   /**
    * 发送图片消息
-   * POST /api/chat/message/image
    * @param {Object} data - 消息数据
-   * @param {string} data.conversationId - 会话ID
-   * @param {string} data.imageUrl - 图片URL
-   * @returns {Promise} 返回发送结果
+   * @returns {Promise}
    */
-  sendImage: (data) => post('/api/chat/message/image', data),
+  sendImage: (data) => chatApi.sendMessage(data),
 
   /**
    * 发送菜品卡片
-   * POST /api/chat/message/dish
    * @param {Object} data - 数据
-   * @param {string} data.conversationId - 会话ID
-   * @param {number} data.dishId - 菜品ID
-   * @returns {Promise} 返回发送结果
+   * @returns {Promise}
    */
-  sendDishCard: (data) => post('/api/chat/message/dish', data),
+  sendDishCard: (data) => chatApi.sendMessage(data),
 
   /**
    * 发送订单卡片
-   * POST /api/chat/message/order
    * @param {Object} data - 数据
-   * @param {string} data.conversationId - 会话ID
-   * @param {number} data.orderId - 订单ID
-   * @returns {Promise} 返回发送结果
+   * @returns {Promise}
    */
-  sendOrderCard: (data) => post('/api/chat/message/order', data),
+  sendOrderCard: (data) => chatApi.sendMessage(data),
 
   /**
    * 撤回消息
-   * DELETE /api/chat/message/{messageId}
    * @param {string} messageId - 消息ID
-   * @returns {Promise} 返回撤回结果
+   * @returns {Promise}
    */
-  recallMessage: (messageId) => del(`/api/chat/message/${messageId}`),
+  recallMessage: (messageId) => post(buildUrl(CHAT_API.RECALL_MESSAGE, { messageId })),
 
   /**
    * 创建群聊
-   * POST /api/chat/group
-   * @param {Object} data - 群聊数据
-   * @param {string} data.name - 群名称
-   * @param {Array} data.memberIds - 成员ID列表
-   * @returns {Promise} 返回创建结果
+   * 当前小程序未接群聊创建接口，这里保留占位
+   * @returns {Promise}
    */
-  createGroup: (data) => post('/api/chat/group', data),
+  createGroup: () => Promise.reject(new Error('小程序暂未接入群聊创建接口')),
 
   /**
    * 获取未读消息数
-   * GET /api/chat/unread
-   * @returns {Promise} 返回未读数
+   * 当前后端未提供单独计数接口，改为汇总会话未读数
+   * @param {string} userId - 用户ID
+   * @returns {Promise}
    */
-  getUnreadCount: (userId) => get(`/v1/message/unread-count`, { userId }),
+  getUnreadCount: async (userId = getCurrentUserId()) => {
+    const response = await chatApi.getConversations(userId)
+    const count = sumUnreadCount(response.data)
+    return {
+      ...response,
+      count,
+      total: count,
+      data: count
+    }
+  },
 
   /**
    * 获取快捷回复
-   * GET /api/chat/quick-replies
-   * @returns {Promise} 返回快捷回复列表
+   * 当前后端未提供快捷回复接口
+   * @returns {Promise<Array>}
    */
-  getQuickReplies: () => get('/api/chat/quick-replies')
+  getQuickReplies: async () => []
 }
 
 export default chatApi
