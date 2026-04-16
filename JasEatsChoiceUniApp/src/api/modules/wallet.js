@@ -2,7 +2,7 @@
  * 钱包相关API
  * 对接后端 WalletController 和 ConsumeHistoryController
  */
-import { get, post, put } from '@/utils/request'
+import { get, post } from '@/utils/request'
 import { WALLET_API, PAYMENT_API, buildUrl } from '../urlEnum'
 
 const getCurrentUserId = () => {

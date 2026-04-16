@@ -1,258 +1,546 @@
 /**
- * 拼单相关API
- * 对接后端 GroupOrderController
- * 基础路径: /v1/group-orders
+ * 拼单相关 API
+ * 对接后端 GroupOrderController，未落地能力使用本地兼容
  */
 import { get, post, put, del } from '@/utils/request'
-import { GROUP_ORDER_API, buildUrl } from '../urlEnum'
+import { dishApi } from './dish'
+
+const GROUP_ORDER_CACHE_KEY = 'groupOrderCache'
+const GROUP_ORDER_SELECTION_KEY = 'groupOrderSelections'
+
+const STATUS_TO_CODE = {
+  draft: -1,
+  pending: 0,
+  in_progress: 1,
+  completed: 5,
+  cancelled: 6
+}
+
+const getCurrentUserId = () => {
+  const userInfo = uni.getStorageSync('userInfo') || {}
+  return userInfo.userId || userInfo.id || uni.getStorageSync('userId') || ''
+}
+
+const buildQueryUrl = (url, params = {}) => {
+  const query = Object.entries(params)
+    .filter(([, value]) => value !== undefined && value !== null && value !== '')
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+    .join('&')
+  return query ? `${url}?${query}` : url
+}
+
+const getOrderCache = () => uni.getStorageSync(GROUP_ORDER_CACHE_KEY) || {}
+
+const saveOrderCache = (cache) => {
+  uni.setStorageSync(GROUP_ORDER_CACHE_KEY, cache)
+}
+
+const mergeOrderCache = (orderId, patch = {}) => {
+  const cache = getOrderCache()
+  cache[orderId] = {
+    ...(cache[orderId] || {}),
+    ...patch
+  }
+  saveOrderCache(cache)
+  return cache[orderId]
+}
+
+const getSelectionCache = () => uni.getStorageSync(GROUP_ORDER_SELECTION_KEY) || {}
+
+const saveSelectionCache = (cache) => {
+  uni.setStorageSync(GROUP_ORDER_SELECTION_KEY, cache)
+}
+
+const getSelectionKey = (orderId, userId) => `${orderId}:${userId}`
+
+const getOrderCode = (orderId = '') => `${orderId}`.replace(/\D/g, '').slice(-6).padStart(6, '0')
+
+const mapStatusCodeToText = (status) => {
+  switch (status) {
+    case -1:
+    case 0:
+      return 'pending'
+    case 1:
+    case 2:
+    case 3:
+    case 4:
+      return 'in_progress'
+    case 5:
+      return 'completed'
+    case 6:
+      return 'cancelled'
+    default:
+      return 'pending'
+  }
+}
+
+const mapStatusTextToCode = (status) => {
+  if (typeof status === 'number') {
+    return status
+  }
+  return STATUS_TO_CODE[status] ?? undefined
+}
+
+const groupDishItems = (dishItems = []) => {
+  const dishMap = {}
+  const memberMap = {}
+
+  dishItems.forEach((item) => {
+    const dishId = item.dishId || ''
+    const userId = item.userId || ''
+
+    if (!dishMap[dishId]) {
+      dishMap[dishId] = {
+        id: dishId,
+        dishId,
+        name: item.dishName || `菜品 ${dishId.slice(-4) || dishId}`,
+        image: item.image || 'https://via.placeholder.com/100',
+        specification: item.customization || '',
+        totalQuantity: 0
+      }
+    }
+    dishMap[dishId].totalQuantity += Number(item.quantity || 0)
+
+    if (!memberMap[userId]) {
+      memberMap[userId] = {
+        id: userId,
+        userId,
+        name: item.userName || `用户${userId.slice(-4) || ''}`,
+        avatar: item.avatar || 'https://via.placeholder.com/100',
+        paid: false,
+        totalAmount: '0.00',
+        dishes: []
+      }
+    }
+    memberMap[userId].dishes.push({
+      dishId,
+      name: dishMap[dishId].name,
+      quantity: Number(item.quantity || 0)
+    })
+  })
+
+  return {
+    dishes: Object.values(dishMap),
+    members: Object.values(memberMap)
+  }
+}
+
+const normalizeDetailData = (rawData = {}, orderId) => {
+  const cached = getOrderCache()[orderId] || {}
+  const groupOrder = rawData.groupOrder || rawData || {}
+  const rawDishItems = rawData.dishItems || cached.dishItems || []
+  const grouped = groupDishItems(rawDishItems)
+  const statusText = cached.status || mapStatusCodeToText(groupOrder.status)
+  const orderCode = cached.orderCode || getOrderCode(orderId || groupOrder.id)
+  const selected = getSelectionCache()[getSelectionKey(orderId || groupOrder.id, getCurrentUserId())] || []
+
+  let myOrder = null
+  if (selected.length > 0) {
+    const totalAmount = selected.reduce((sum, item) => sum + (Number(item.price || 0) * Number(item.quantity || 0)), 0)
+    myOrder = {
+      userId: getCurrentUserId(),
+      totalAmount: totalAmount.toFixed(2),
+      paid: false,
+      dishes: selected.map(item => ({
+        dishId: item.dishId,
+        name: item.name,
+        quantity: item.quantity
+      }))
+    }
+  }
+
+  const members = [...grouped.members]
+  if (myOrder && !members.find(item => item.userId === myOrder.userId)) {
+    members.push({
+      id: myOrder.userId,
+      userId: myOrder.userId,
+      name: cached.creatorName || `用户${myOrder.userId.slice(-4) || ''}`,
+      avatar: 'https://via.placeholder.com/100',
+      paid: false,
+      totalAmount: myOrder.totalAmount,
+      dishes: myOrder.dishes
+    })
+  }
+
+  return {
+    id: groupOrder.id || orderId,
+    orderId: groupOrder.id || orderId,
+    name: cached.name || `群订单 ${orderCode}`,
+    orderCode,
+    status: statusText,
+    merchantId: groupOrder.merchantId || cached.merchantId || '',
+    merchantName: cached.merchantName || groupOrder.merchantId || '',
+    merchantAvatar: cached.merchantAvatar || 'https://via.placeholder.com/100',
+    creatorId: groupOrder.initiatorId || cached.creatorId || '',
+    creatorName: cached.creatorName || '',
+    groupId: groupOrder.groupId || cached.groupId || '',
+    currentCount: groupOrder.currentCount || cached.currentCount || members.length || (groupOrder.initiatorId || cached.creatorId ? 1 : 0),
+    maxParticipants: cached.maxParticipants || members.length,
+    deadline: cached.deadline || groupOrder.updateTime || groupOrder.createTime || '',
+    deliveryAddress: cached.deliveryAddress || groupOrder.addressId || '',
+    addressId: groupOrder.addressId || cached.addressId || '',
+    remark: groupOrder.remark || cached.remark || '',
+    totalAmount: Number(groupOrder.totalAmount || cached.totalAmount || 0).toFixed(2),
+    createTime: groupOrder.createTime || cached.createTime || '',
+    members,
+    dishes: grouped.dishes,
+    dishItems: rawDishItems,
+    completed: statusText === 'completed' || statusText === 'cancelled'
+  }
+}
+
+const normalizeCreateResponse = (response, payload) => {
+  const orderId = typeof response?.data === 'string' ? response.data : (response?.data?.id || response?.data?.orderId)
+  if (!orderId) {
+    return response
+  }
+
+  mergeOrderCache(orderId, {
+    id: orderId,
+    groupId: payload.groupId,
+    creatorId: payload.initiatorId,
+    creatorName: payload.creatorName || '',
+    merchantId: payload.merchantId || '',
+    merchantName: payload.merchantName || '',
+    merchantAvatar: payload.merchantAvatar || '',
+    name: payload.name || `群订单 ${getOrderCode(orderId)}`,
+    orderCode: payload.orderCode || getOrderCode(orderId),
+    maxParticipants: payload.maxParticipants || payload.targetPeople || 0,
+    deadline: payload.deadline || '',
+    deliveryAddress: payload.deliveryAddress || '',
+    addressId: payload.addressId || '',
+    remark: payload.remark || '',
+    dishItems: payload.dishItems || [],
+    status: 'pending',
+    currentCount: 1,
+    createTime: new Date().toISOString()
+  })
+
+  return {
+    ...response,
+    data: {
+      id: orderId,
+      orderId,
+      orderCode: getOrderCode(orderId)
+    }
+  }
+}
+
+const normalizeListItem = (order = {}) => {
+  const cached = getOrderCache()[order.id] || {}
+  const statusText = cached.status || mapStatusCodeToText(order.status)
+  return {
+    id: order.id,
+    name: cached.name || `群订单 ${getOrderCode(order.id)}`,
+    orderCode: cached.orderCode || getOrderCode(order.id),
+    status: statusText,
+    merchantId: order.merchantId || cached.merchantId || '',
+    merchantName: cached.merchantName || order.merchantId || '',
+    merchantAvatar: cached.merchantAvatar || 'https://via.placeholder.com/100',
+    creatorId: order.initiatorId || cached.creatorId || '',
+    creatorName: cached.creatorName || '',
+    currentCount: order.currentCount || cached.currentCount || (order.initiatorId || cached.creatorId ? 1 : 0),
+    maxParticipants: order.maxParticipants || cached.maxParticipants || 0,
+    deadline: cached.deadline || order.updateTime || order.createTime || '',
+    members: cached.members || []
+  }
+}
+
+const unsupported = (message) => Promise.reject(new Error(message))
 
 export const groupOrderApi = {
   /**
    * 创建拼单
-   * POST /v1/group-orders
-   * @param {Object} data - 拼单数据
-   * @param {string} data.userId - 发起人ID
-   * @param {string} data.merchantId - 商家ID
-   * @param {string} data.dishId - 菜品ID
-   * @param {number} data.targetPeople - 目标人数
-   * @param {number} data.minPeople - 最少人数
-   * @param {number} data.maxPeople - 最多人数
-   * @param {string} data.deadline - 截止时间
-   * @param {string} data.description - 拼单说明
-   * @param {number} data.discountRate - 折扣率
-   * @returns {Promise} 返回创建结果
+   * POST /v1/group-orders/group-orders
    */
-  createGroupOrder: (data) => post(GROUP_ORDER_API.CREATE_GROUP_ORDER, data),
+  create: async (data = {}) => {
+    const initiatorId = data.initiatorId || data.creatorId || data.userId || getCurrentUserId()
+    const payload = {
+      initiatorId,
+      groupId: data.groupId,
+      merchantId: data.merchantId,
+      addressId: data.addressId,
+      remark: data.remark || '',
+      dishItems: data.dishItems || [],
+      name: data.name,
+      maxParticipants: data.maxParticipants,
+      deadline: data.deadline,
+      deliveryAddress: data.deliveryAddress,
+      merchantName: data.merchantName,
+      merchantAvatar: data.merchantAvatar,
+      creatorName: data.creatorName
+    }
 
-  /**
-   * 创建拼单（别名）
-   * @param {Object} data - 拼单数据
-   * @returns {Promise} 返回创建结果
-   */
-  create: (data) => post(GROUP_ORDER_API.CREATE_GROUP_ORDER, data),
+    if (!payload.groupId) {
+      throw new Error('后端创建拼单必须提供群ID（groupId）')
+    }
+
+    const response = await post('/v1/group-orders/group-orders', payload)
+    return normalizeCreateResponse(response, payload)
+  },
+
+  createGroupOrder: (data) => groupOrderApi.create(data),
 
   /**
    * 获取拼单列表
-   * GET /v1/group-orders
-   * @param {Object} params - 查询参数
-   * @param {number} params.page - 页码
-   * @param {number} params.size - 每页数量
-   * @param {string} params.status - 状态(recruiting/in_progress/completed/cancelled)
-   * @param {string} params.merchantId - 商家ID
-   * @param {string} params.userId - 用户ID
-   * @returns {Promise} 返回拼单列表
+   * 当前后端仅支持按群获取；无 groupId 时回退本地缓存
    */
-  getGroupOrders: (params) => get(GROUP_ORDER_API.GET_GROUP_ORDERS, params),
+  getList: async (params = {}) => {
+    const statusCode = mapStatusTextToCode(params.status)
 
-  /**
-   * 获取拼单列表（别名）
-   * @param {Object} params - 查询参数
-   * @returns {Promise} 返回拼单列表
-   */
-  getList: (params) => get(GROUP_ORDER_API.GET_GROUP_ORDERS, params),
+    if (!params.groupId && params.userId) {
+      const response = await get(`/v1/group-orders/users/${params.userId}/orders`, {
+        status: statusCode,
+        page: params.page || 1,
+        size: params.size || 10
+      })
 
-  /**
-   * 获取附近拼单
-   * GET /v1/group-orders/nearby
-   * @param {Object} params - 查询参数
-   * @param {number} params.latitude - 纬度（Double类型）
-   * @param {number} params.longitude - 经度（Double类型）
-   * @param {number} params.radius - 半径(km)
-   * @param {number} params.page - 页码
-   * @param {number} params.size - 每页数量
-   * @returns {Promise} 返回附近拼单列表
-   */
-  getNearby: (params) => {
-    // 确保数值类型正确
-    const processedParams = {}
-    if (params) {
-      if (params.latitude !== undefined && params.latitude !== null) {
-        processedParams.latitude = Number(params.latitude)
-      }
-      if (params.longitude !== undefined && params.longitude !== null) {
-        processedParams.longitude = Number(params.longitude)
-      }
-      if (params.radius !== undefined && params.radius !== null) {
-        processedParams.radius = Number(params.radius)
-      }
-      if (params.page !== undefined) {
-        processedParams.page = Number(params.page)
-      }
-      if (params.size !== undefined) {
-        processedParams.size = Number(params.size)
+      return {
+        ...response,
+        data: Array.isArray(response?.data) ? response.data.map(normalizeListItem) : []
       }
     }
-    return get('/v1/group-orders/nearby', processedParams)
+
+    if (!params.groupId) {
+      const cache = Object.values(getOrderCache())
+        .filter(item => !params.userId || item.creatorId === params.userId)
+        .filter(item => !params.status || item.status === params.status)
+        .map(item => ({
+          id: item.id,
+          initiatorId: item.creatorId,
+          merchantId: item.merchantId,
+          status: mapStatusTextToCode(item.status) ?? 0,
+          createTime: item.createTime,
+          updateTime: item.deadline
+        }))
+
+      return {
+        code: 200,
+        success: true,
+        data: cache.map(normalizeListItem)
+      }
+    }
+
+    const response = await get(`/v1/group-orders/groups/${params.groupId}/orders`, {
+      status: statusCode,
+      page: params.page || 1,
+      size: params.size || 10
+    })
+
+    return {
+      ...response,
+      data: Array.isArray(response?.data) ? response.data.map(normalizeListItem) : []
+    }
   },
+
+  getGroupOrders: (params) => groupOrderApi.getList(params),
 
   /**
    * 获取拼单详情
-   * GET /v1/group-orders/{groupOrderId}
-   * @param {string} id - 拼单ID
-   * @returns {Promise} 返回拼单详情
+   * GET /v1/group-orders/group-orders/{groupOrderId}
    */
-  getGroupOrder: (id) => get(buildUrl(GROUP_ORDER_API.GET_GROUP_ORDER, { groupOrderId: id })),
+  getDetail: async (orderId) => {
+    try {
+      const response = await get(`/v1/group-orders/group-orders/${orderId}`)
+      const data = normalizeDetailData(response?.data || {}, orderId)
+      mergeOrderCache(orderId, {
+        ...getOrderCache()[orderId],
+        ...data
+      })
+      return {
+        ...response,
+        data
+      }
+    } catch (error) {
+      const cached = getOrderCache()[orderId]
+      if (!cached) {
+        throw error
+      }
+      return {
+        code: 200,
+        success: true,
+        data: normalizeDetailData(cached, orderId)
+      }
+    }
+  },
+
+  getGroupOrder: (id) => groupOrderApi.getDetail(id),
 
   /**
-   * 获取拼单详情（别名）
-   * @param {string} id - 拼单ID
-   * @returns {Promise} 返回拼单详情
+   * 取消拼单
+   * DELETE /v1/group-orders/group-orders/{groupOrderId}
    */
-  getDetail: (id) => get(`/v1/group-orders/${id}`),
+  cancel: async (orderId) => {
+    const response = await del(`/v1/group-orders/group-orders/${orderId}`)
+    const cached = getOrderCache()[orderId]
+    if (cached) {
+      mergeOrderCache(orderId, { status: 'cancelled' })
+    }
+    return response
+  },
+
+  delete: (orderId) => groupOrderApi.cancel(orderId),
+  deleteGroupOrder: (orderId) => groupOrderApi.cancel(orderId),
 
   /**
-   * 加入拼单
-   * POST /v1/group-orders/{groupOrderId}/join
-   * @param {string} id - 拼单ID
-   * @param {Object} data - 数据
-   * @param {string} data.userId - 用户ID
-   * @param {number} data.peopleCount - 参与人数
-   * @param {string} data.remark - 备注
-   * @returns {Promise} 返回加入结果
+   * 更新拼单状态
    */
-  joinGroupOrder: (id, data) => post(buildUrl(GROUP_ORDER_API.JOIN_GROUP_ORDER, { groupOrderId: id }), data),
+  updateStatus: async (orderId, data = {}) => {
+    const payload = {
+      status: mapStatusTextToCode(data.status),
+      totalAmount: data.totalAmount
+    }
+    const response = await put(`/v1/group-orders/group-orders/${orderId}/status`, payload)
+    if (data.status) {
+      mergeOrderCache(orderId, { status: data.status })
+    }
+    return response
+  },
 
   /**
-   * 加入拼单（别名）
-   * @param {string} id - 拼单ID
-   * @param {Object} data - 数据
-   * @returns {Promise} 返回加入结果
+   * 获取邀请码二维码
    */
-  join: (id, data) => post(`/v1/group-orders/${id}/join`, data),
+  getQRCode: (orderId) => get(`/v1/group-orders/group-orders/${orderId}/qrcode`),
 
   /**
-   * 离开拼单
-   * POST /v1/group-orders/{groupOrderId}/leave
-   * @param {string} id - 拼单ID
-   * @param {Object} data - 数据
-   * @param {string} data.userId - 用户ID
-   * @param {string} data.reason - 离开原因
-   * @returns {Promise} 返回离开结果
+   * 获取可选菜品
+   * 用订单详情中的 merchantId 调真实菜品接口
    */
-  leaveGroupOrder: (id, data) => post(buildUrl(GROUP_ORDER_API.LEAVE_GROUP_ORDER, { groupOrderId: id }), data),
+  getAvailableDishes: async (orderId, params = {}) => {
+    const detail = await groupOrderApi.getDetail(orderId)
+    const merchantId = detail?.data?.merchantId
+    if (!merchantId) {
+      return {
+        code: 200,
+        success: true,
+        data: []
+      }
+    }
+
+    const response = await dishApi.getList({
+      merchantId,
+      category: params.category === 'all' ? undefined : params.category,
+      keyword: params.keyword
+    })
+
+    const list = Array.isArray(response?.data) ? response.data : (Array.isArray(response) ? response : [])
+    const page = Number(params.page || 1)
+    const size = Number(params.size || 20)
+    const start = (page - 1) * size
+
+    return {
+      code: 200,
+      success: true,
+      data: list.slice(start, start + size)
+    }
+  },
 
   /**
-   * 离开拼单（别名）
-   * @param {string} id - 拼单ID
-   * @param {Object} data - 数据
-   * @returns {Promise} 返回离开结果
+   * 保存用户选菜
    */
-  quit: (id, data) => post(`/v1/group-orders/${id}/quit`, data),
+  saveSelections: async (orderId, data = {}) => {
+    const userId = data.userId || getCurrentUserId()
+    const response = await post(`/v1/group-orders/group-orders/${orderId}/selections`, {
+      userId,
+      dishes: data.dishes || []
+    })
+
+    const normalizedSelections = Array.isArray(response?.data)
+      ? response.data.map(item => ({
+        dishId: item.dishId,
+        quantity: Number(item.quantity || 0),
+        specification: item.specification || item.customization || '',
+        name: item.name || item.dishName || `菜品 ${`${item.dishId}`.slice(-4)}`,
+        image: item.image || 'https://via.placeholder.com/100',
+        price: Number(item.price || 0)
+      }))
+      : []
+
+    const selectionCache = getSelectionCache()
+    selectionCache[getSelectionKey(orderId, userId)] = normalizedSelections
+    saveSelectionCache(selectionCache)
+
+    return {
+      ...response,
+      data: normalizedSelections
+    }
+  },
 
   /**
-   * 更新拼单
-   * PUT /v1/group-orders/{groupOrderId}
-   * @param {string} id - 拼单ID
-   * @param {Object} data - 数据
-   * @param {string} data.userId - 用户ID
-   * @param {number} data.targetPeople - 目标人数
-   * @param {string} data.deadline - 截止时间
-   * @param {string} data.description - 说明
-   * @returns {Promise} 返回更新结果
+   * 获取用户已选菜品
    */
-  updateGroupOrder: (id, data) => put(buildUrl(GROUP_ORDER_API.UPDATE_GROUP_ORDER, { groupOrderId: id }), data),
+  getUserSelections: async (orderId, userId = getCurrentUserId()) => {
+    const response = await get(`/v1/group-orders/group-orders/${orderId}/selections/${userId}`)
+    const normalizedSelections = Array.isArray(response?.data)
+      ? response.data.map(item => ({
+        dishId: item.dishId,
+        quantity: Number(item.quantity || 0),
+        specification: item.specification || item.customization || '',
+        name: item.name || item.dishName || `菜品 ${`${item.dishId}`.slice(-4)}`,
+        image: item.image || 'https://via.placeholder.com/100',
+        price: Number(item.price || 0)
+      }))
+      : []
+
+    const selectionCache = getSelectionCache()
+    selectionCache[getSelectionKey(orderId, userId)] = normalizedSelections
+    saveSelectionCache(selectionCache)
+
+    return {
+      ...response,
+      data: normalizedSelections
+    }
+  },
 
   /**
-   * 更新拼单（别名）
-   * @param {string} id - 拼单ID
-   * @param {Object} data - 数据
-   * @returns {Promise} 返回更新结果
+   * 获取结算信息
    */
-  update: (id, data) => put(`/v1/group-orders/${id}`, data),
+  getSettlement: async (orderId, userId = getCurrentUserId()) => get(
+    `/v1/group-orders/group-orders/${orderId}/settlement`,
+    { userId }
+  ),
 
-  /**
-   * 删除拼单
-   * DELETE /v1/group-orders/{groupOrderId}
-   * @param {string} id - 拼单ID
-   * @param {Object} params - 参数
-   * @param {string} params.userId - 用户ID
-   * @param {string} params.reason - 取消原因
-   * @returns {Promise} 返回删除结果
-   */
-  deleteGroupOrder: (id, params) => del(buildUrl(GROUP_ORDER_API.DELETE_GROUP_ORDER, { groupOrderId: id }), params),
-
-  /**
-   * 删除拼单（别名）
-   * @param {string} id - 拼单ID
-   * @param {Object} params - 参数
-   * @returns {Promise} 返回删除结果
-   */
-  delete: (id, params) => del(`/v1/group-orders/${id}`, params),
-
-  /**
-   * 获取拼单成员列表
-   * GET /v1/group-orders/{id}/members
-   * @param {string} id - 拼单ID
-   * @param {Object} params - 查询参数
-   * @param {number} params.page - 页码
-   * @param {number} params.size - 每页数量
-   * @returns {Promise} 返回成员列表
-   */
-  getMembers: (id, params) => get(`/v1/group-orders/${id}/members`, params),
-
-  /**
-   * 邀请好友加入拼单
-   * POST /v1/group-orders/{id}/invite
-   * @param {string} id - 拼单ID
-   * @param {Object} data - 数据
-   * @param {string} data.userId - 邀请人ID
-   * @param {Array} data.friendIds - 好友ID数组
-   * @returns {Promise} 返回邀请结果
-   */
-  invite: (id, data) => post(`/v1/group-orders/${id}/invite`, data),
-
-  /**
-   * 确认拼单成团
-   * POST /v1/group-orders/{id}/confirm
-   * @param {string} id - 拼单ID
-   * @param {Object} data - 数据
-   * @param {string} data.userId - 用户ID
-   * @returns {Promise} 返回确认结果
-   */
-  confirm: (id, data) => post(`/v1/group-orders/${id}/confirm`, data),
-
-  /**
-   * 获取拼单订单
-   * GET /v1/group-orders/{id}/orders
-   * @param {string} id - 拼单ID
-   * @param {Object} params - 查询参数
-   * @param {number} params.page - 页码
-   * @param {number} params.size - 每页数量
-   * @returns {Promise} 返回订单列表
-   */
-  getOrders: (id, params) => get(`/v1/group-orders/${id}/orders`, params),
-
-  /**
-   * 分享拼单
-   * POST /v1/group-orders/{id}/share
-   * @param {string} id - 拼单ID
-   * @param {Object} data - 数据
-   * @param {string} data.userId - 用户ID
-   * @param {string} data.platform - 分享平台(wechat/friends/moment)
-   * @returns {Promise} 返回分享结果
-   */
-  share: (id, data) => post(`/v1/group-orders/${id}/share`, data),
-
-  /**
-   * 获取拼单统计
-   * GET /v1/group-orders/statistics
-   * @param {Object} params - 查询参数
-   * @param {string} params.groupOrderId - 拼单ID
-   * @returns {Promise} 返回统计数据
-   */
-  getStatistics: (params) => get('/v1/group-orders/statistics', params),
-
-  /**
-   * 获取用户参与的拼单
-   * GET /v1/group-orders/user/{userId}
-   * @param {string} userId - 用户ID
-   * @param {Object} params - 查询参数
-   * @param {number} params.page - 页码
-   * @param {number} params.size - 每页数量
-   * @param {string} params.status - 状态
-   * @returns {Promise} 返回拼单列表
-   */
-  getUserGroupOrders: (userId, params) => get(`/v1/group-orders/user/${userId}`, params)
+  pay: () => unsupported('后端暂未提供群订单支付接口'),
+  payOrder: () => unsupported('后端暂未提供群订单支付接口'),
+  payMember: () => unsupported('后端暂未提供群订单成员支付接口'),
+  payMemberOrder: () => unsupported('后端暂未提供群订单成员支付接口'),
+  joinByCode: async (data = {}) => post('/v1/group-orders/join', data),
+  join: () => unsupported('后端暂未提供加入拼单接口'),
+  joinGroupOrder: () => unsupported('后端暂未提供加入拼单接口'),
+  leave: () => unsupported('后端暂未提供退出拼单接口'),
+  leaveGroupOrder: () => unsupported('后端暂未提供退出拼单接口'),
+  quit: () => unsupported('后端暂未提供退出拼单接口'),
+  update: () => unsupported('后端暂未提供更新拼单基础信息接口'),
+  updateGroupOrder: () => unsupported('后端暂未提供更新拼单基础信息接口'),
+  getMembers: async (orderId) => {
+    const detail = await groupOrderApi.getDetail(orderId)
+    return {
+      code: 200,
+      success: true,
+      data: detail?.data?.members || []
+    }
+  },
+  invite: () => unsupported('后端暂未提供拼单邀请接口'),
+  confirm: () => unsupported('后端暂未提供拼单确认接口'),
+  getOrders: (params = {}) => groupOrderApi.getList(params),
+  share: async (orderId) => ({
+    code: 200,
+    success: true,
+    data: {
+      orderId,
+      orderCode: getOrderCode(orderId)
+    }
+  }),
+  getStatistics: async (params = {}) => ({
+    code: 200,
+    success: true,
+    data: {
+      groupOrderId: params.groupOrderId || '',
+      currentCount: 0,
+      paidCount: 0
+    }
+  }),
+  getUserGroupOrders: (userId, params = {}) => groupOrderApi.getList({ ...params, userId })
 }
 
 export default groupOrderApi

@@ -137,6 +137,7 @@ import { ref, onMounted } from 'vue'
 import { groupOrderApi } from '@/api/modules/group-order-api.js'
 
 const userId = ref('')
+const groupId = ref('')
 
 // 加入码
 const joinCode = ref('')
@@ -159,6 +160,10 @@ const hasMore = ref(true)
 
 onMounted(() => {
   userId.value = uni.getStorageSync('userId') || ''
+  const pages = getCurrentPages()
+  const currentPage = pages[pages.length - 1]
+  const options = currentPage.options || {}
+  groupId.value = options.groupId || ''
 
   // GROUP-008: 加载群订单列表
   loadOrderList()
@@ -180,6 +185,7 @@ const loadOrderList = async (isRefresh = false) => {
 
     const params = {
       userId: userId.value,
+      groupId: groupId.value || undefined,
       page: pageNum.value,
       size: pageSize.value
     }
@@ -294,18 +300,26 @@ const joinByCode = async () => {
     uni.hideLoading()
 
     if (res.code === 200) {
-      uni.showToast({
-        title: '加入成功',
-        icon: 'success'
-      })
+      const groupOrderId = res.data?.groupOrderId || res.data?.orderId || ''
 
       // 清空输入
       joinCode.value = ''
 
-      // 刷新列表
+      uni.showToast({
+        title: '订单码有效，请先选菜',
+        icon: 'none'
+      })
+
       setTimeout(() => {
+        if (groupOrderId) {
+          uni.navigateTo({
+            url: `/pages-user/group-order/select-dishes?id=${groupOrderId}`
+          })
+          return
+        }
+
         loadOrderList(true)
-      }, 1500)
+      }, 600)
     } else {
       throw new Error(res.message || '加入失败')
     }
@@ -421,7 +435,7 @@ const shareOrder = (order) => {
  */
 const createOrder = () => {
   uni.navigateTo({
-    url: '/group-order/create'
+    url: groupId.value ? `/group-order/create?groupId=${groupId.value}` : '/group-order/create'
   })
 }
 </script>

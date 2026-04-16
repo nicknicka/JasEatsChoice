@@ -5,6 +5,7 @@ import com.xx.jaseatschoicejava.entity.GroupOrder;
 import com.xx.jaseatschoicejava.entity.GroupOrderDish;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 群订单服务
@@ -39,4 +40,47 @@ public interface GroupOrderService extends IService<GroupOrder> {
      * @return 菜品列表
      */
     List<GroupOrderDish> getGroupOrderDishes(String groupOrderId);
+
+    /**
+     * 获取用户参与或发起的拼单列表
+     * @param userId 用户ID
+     * @param status 状态筛选
+     * @param page 页码
+     * @param size 每页数量
+     * @return 拼单列表
+     */
+    List<GroupOrder> getUserGroupOrders(String userId, Integer status, Integer page, Integer size);
+
+    /**
+     * 按订单码加入拼单
+     * @param orderCode 订单码
+     * @param userId 用户ID
+     * @return 加入结果
+     */
+    Map<String, Object> joinByOrderCode(String orderCode, String userId);
+
+    /**
+     * 替换用户选菜记录
+     * @param groupOrderId 拼单ID
+     * @param userId 用户ID
+     * @param dishes 菜品列表
+     * @return 保存后的记录
+     */
+    List<Map<String, Object>> saveUserSelections(String groupOrderId, String userId, List<Map<String, Object>> dishes);
+
+    /**
+     * 获取用户选菜记录
+     * @param groupOrderId 拼单ID
+     * @param userId 用户ID
+     * @return 选菜记录
+     */
+    List<Map<String, Object>> getUserSelections(String groupOrderId, String userId);
+
+    /**
+     * 获取结算信息
+     * @param groupOrderId 拼单ID
+     * @param userId 用户ID
+     * @return 结算信息
+     */
+    Map<String, Object> getSettlement(String groupOrderId, String userId);
 }

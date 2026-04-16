@@ -115,6 +115,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
 import { groupOrderApi } from '@/api/modules/group-order-api.js'
 
 // 商家信息
@@ -124,6 +125,8 @@ const merchantInfo = ref({
   avatar: '',
   address: ''
 })
+
+const groupId = ref('')
 
 // 表单数据
 const formData = ref({
@@ -152,11 +155,26 @@ onMounted(() => {
   if (options.merchantId) {
     loadMerchantInfo(options.merchantId)
   }
+  if (options.groupId) {
+    groupId.value = options.groupId
+  }
 
   // 设置默认截止时间为当前时间+2小时
   const now = new Date()
   now.setHours(now.getHours() + 2)
   formData.value.deadline = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+})
+
+onShow(() => {
+  const selected = uni.getStorageSync('selectedAddress')
+  if (selected) {
+    selectedAddress.value = {
+      id: selected.id || selected.addressId || '',
+      address: selected.detailAddress || selected.detail || selected.address || '',
+      contact: selected.receiverName || selected.name || '',
+      phone: selected.receiverPhone || selected.phone || ''
+    }
+  }
 })
 
 /**
@@ -237,6 +255,14 @@ const createGroupOrder = async () => {
     return
   }
 
+  if (!groupId.value) {
+    uni.showToast({
+      title: '当前页面缺少群ID，无法创建拼单',
+      icon: 'none'
+    })
+    return
+  }
+
   try {
     uni.showLoading({
       title: '创建中...',
@@ -247,12 +273,16 @@ const createGroupOrder = async () => {
 
     // GROUP-002: 调用API创建群订单
     const res = await groupOrderApi.create({
+      groupId: groupId.value,
       merchantId: merchantInfo.value.id,
       creatorId: userId,
+      merchantName: merchantInfo.value.name,
+      merchantAvatar: merchantInfo.value.avatar,
       name: formData.value.name,
       maxParticipants: formData.value.maxParticipants,
       deadline: formData.value.deadline,
       deliveryAddress: selectedAddress.value.address,
+      addressId: selectedAddress.value.id,
       remark: formData.value.remark || ''
     })
 

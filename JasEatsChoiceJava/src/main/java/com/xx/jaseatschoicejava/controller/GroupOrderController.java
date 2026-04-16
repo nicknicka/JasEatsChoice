@@ -2,13 +2,17 @@ package com.xx.jaseatschoicejava.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.xx.jaseatschoicejava.common.ResponseResult;
+import com.xx.jaseatschoicejava.entity.Dish;
 import com.xx.jaseatschoicejava.entity.GroupOrder;
 import com.xx.jaseatschoicejava.entity.GroupOrderDish;
 import com.xx.jaseatschoicejava.entity.PaymentRecord;
+import com.xx.jaseatschoicejava.entity.User;
 import com.xx.jaseatschoicejava.enums.NotificationTypeEnum;
+import com.xx.jaseatschoicejava.service.DishService;
 import com.xx.jaseatschoicejava.service.GroupChatService;
 import com.xx.jaseatschoicejava.service.GroupOrderService;
 import com.xx.jaseatschoicejava.service.PaymentService;
+import com.xx.jaseatschoicejava.service.UserService;
 import com.xx.jaseatschoicejava.util.NotificationUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -36,6 +41,12 @@ public class GroupOrderController {
 
     @Autowired
     private PaymentService paymentService;
+
+    @Autowired
+    private DishService dishService;
+
+    @Autowired
+    private UserService userService;
 
     /**
      * 获取或创建群组的草稿订单
@@ -113,13 +124,14 @@ public class GroupOrderController {
             // 解析菜品列表 - 添加@SuppressWarnings消除未检查转换警告
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> dishItemsMap = (List<Map<String, Object>>) request.get("dishItems");
-            List<GroupOrderDish> dishItems = dishItemsMap.stream()
+            List<GroupOrderDish> dishItems = dishItemsMap == null ? new ArrayList<>() : dishItemsMap.stream()
                     .map(item -> {
                         GroupOrderDish dish = new GroupOrderDish();
                         dish.setDishId(item.get("dishId").toString());
                         dish.setQuantity(Integer.valueOf(item.get("quantity").toString()));
                         dish.setCustomization((String) item.get("customization"));
-                        dish.setUserId(item.get("userId").toString());
+                        Object userId = item.get("userId") != null ? item.get("userId") : request.get("initiatorId");
+                        dish.setUserId(userId == null ? null : userId.toString());
                         return dish;
                     }).toList();
 
@@ -149,6 +161,18 @@ public class GroupOrderController {
     }
 
     /**
+     * 获取用户参与或发起的拼单列表
+     */
+    @GetMapping("/users/{userId}/orders")
+    public ResponseResult<?> getUserGroupOrders(@PathVariable String userId,
+                                                @RequestParam(required = false) Integer status,
+                                                @RequestParam(defaultValue = "1") Integer page,
+                                                @RequestParam(defaultValue = "10") Integer size) {
+        List<GroupOrder> groupOrders = groupOrderService.getUserGroupOrders(userId, status, page, size);
+        return ResponseResult.success(groupOrders);
+    }
+
+    /**
      * 获取群订单详情
      */
     @GetMapping("/group-orders/{groupOrderId}")
@@ -156,7 +180,9 @@ public class GroupOrderController {
         GroupOrder groupOrder = groupOrderService.getGroupOrderDetail(groupOrderId);
         if (groupOrder != null) {
             // 获取菜品列表
-            List<GroupOrderDish> dishItems = groupOrderService.getGroupOrderDishes(groupOrderId);
+            List<Map<String, Object>> dishItems = groupOrderService.getGroupOrderDishes(groupOrderId).stream()
+                    .map(this::buildDishItemDetail)
+                    .toList();
             // 构建返回结果
             return ResponseResult.success(Map.of(
                     "groupOrder", groupOrder,
@@ -164,6 +190,102 @@ public class GroupOrderController {
             ));
         }
         return ResponseResult.fail("404", "群订单不存在");
+    }
+
+    /**
+     * 按订单码加入拼单
+     */
+    @PostMapping("/join")
+    public ResponseResult<?> joinByOrderCode(@RequestBody Map<String, Object> params) {
+        Object orderCodeValue = params.get("orderCode");
+        Object userIdValue = params.get("userId");
+        if (orderCodeValue == null || orderCodeValue.toString().isBlank()) {
+            return ResponseResult.fail("400", "orderCode不能为空");
+        }
+        if (userIdValue == null || userIdValue.toString().isBlank()) {
+            return ResponseResult.fail("400", "userId不能为空");
+        }
+
+        Map<String, Object> result = groupOrderService.joinByOrderCode(orderCodeValue.toString(), userIdValue.toString());
+        if (result == null) {
+            return ResponseResult.fail("404", "未找到对应的拼单订单");
+        }
+
+        Integer status = (Integer) result.get("status");
+        if (status != null && status >= 5) {
+            return ResponseResult.fail("400", "当前拼单已结束，无法加入");
+        }
+        return ResponseResult.success(result, "加入成功");
+    }
+
+    /**
+     * 获取用户选菜记录
+     */
+    @GetMapping("/group-orders/{groupOrderId}/selections/{userId}")
+    public ResponseResult<?> getUserSelections(@PathVariable String groupOrderId, @PathVariable String userId) {
+        GroupOrder groupOrder = groupOrderService.getGroupOrderDetail(groupOrderId);
+        if (groupOrder == null) {
+            return ResponseResult.fail("404", "群订单不存在");
+        }
+        return ResponseResult.success(groupOrderService.getUserSelections(groupOrderId, userId));
+    }
+
+    /**
+     * 保存用户选菜记录
+     */
+    @PostMapping("/group-orders/{groupOrderId}/selections")
+    public ResponseResult<?> saveUserSelections(@PathVariable String groupOrderId,
+                                                @RequestBody Map<String, Object> params) {
+        GroupOrder groupOrder = groupOrderService.getGroupOrderDetail(groupOrderId);
+        if (groupOrder == null) {
+            return ResponseResult.fail("404", "群订单不存在");
+        }
+
+        Object userIdValue = params.get("userId");
+        if (userIdValue == null || userIdValue.toString().isBlank()) {
+            return ResponseResult.fail("400", "userId不能为空");
+        }
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> dishes = (List<Map<String, Object>>) params.get("dishes");
+        List<Map<String, Object>> saved = groupOrderService.saveUserSelections(
+                groupOrderId,
+                userIdValue.toString(),
+                dishes == null ? new ArrayList<>() : dishes
+        );
+        return ResponseResult.success(saved, "保存成功");
+    }
+
+    /**
+     * 获取结算信息
+     */
+    @GetMapping("/group-orders/{groupOrderId}/settlement")
+    public ResponseResult<?> getSettlement(@PathVariable String groupOrderId,
+                                           @RequestParam String userId) {
+        GroupOrder groupOrder = groupOrderService.getGroupOrderDetail(groupOrderId);
+        if (groupOrder == null) {
+            return ResponseResult.fail("404", "群订单不存在");
+        }
+        return ResponseResult.success(groupOrderService.getSettlement(groupOrderId, userId));
+    }
+
+    /**
+     * 获取拼单二维码内容
+     */
+    @GetMapping("/group-orders/{groupOrderId}/qrcode")
+    public ResponseResult<?> getGroupOrderQRCode(@PathVariable String groupOrderId) {
+        GroupOrder groupOrder = groupOrderService.getGroupOrderDetail(groupOrderId);
+        if (groupOrder == null) {
+            return ResponseResult.fail("404", "群订单不存在");
+        }
+
+        String digits = groupOrderId.replaceAll("\\D", "");
+        String orderCode = digits.length() > 6 ? digits.substring(digits.length() - 6) : String.format("%6s", digits).replace(' ', '0');
+        return ResponseResult.success(Map.of(
+                "groupOrderId", groupOrderId,
+                "orderCode", orderCode,
+                "qrcodeContent", String.format("{\"type\":\"group_order\",\"orderId\":\"%s\",\"orderCode\":\"%s\"}", groupOrderId, orderCode)
+        ));
     }
 
     /**
@@ -382,5 +504,23 @@ public class GroupOrderController {
             logger.error("更新群订单状态失败", e);
             return ResponseResult.fail("500", "更新状态失败：" + e.getMessage());
         }
+    }
+
+    private Map<String, Object> buildDishItemDetail(GroupOrderDish dishItem) {
+        Dish dish = dishService.getById(dishItem.getDishId());
+        User user = userService.getById(dishItem.getUserId());
+        return Map.of(
+                "id", dishItem.getId(),
+                "groupOrderId", dishItem.getGroupOrderId(),
+                "dishId", dishItem.getDishId(),
+                "quantity", dishItem.getQuantity(),
+                "customization", dishItem.getCustomization() == null ? "" : dishItem.getCustomization(),
+                "userId", dishItem.getUserId() == null ? "" : dishItem.getUserId(),
+                "dishName", dish == null || dish.getName() == null ? "菜品" + dishItem.getDishId() : dish.getName(),
+                "image", dish == null ? "" : (dish.getImage() == null ? "" : dish.getImage()),
+                "price", dish == null || dish.getPrice() == null ? 0 : dish.getPrice(),
+                "userName", user == null || user.getNickname() == null ? "" : user.getNickname(),
+                "avatar", user == null ? "" : (user.getAvatar() == null ? "" : user.getAvatar())
+        );
     }
 }

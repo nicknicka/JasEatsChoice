@@ -142,6 +142,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { groupApi } from '@/api/modules/group.js'
+import { CHAT_API } from '@/api/urlEnum.js'
+import config from '@/config/index.js'
 
 // 当前用户ID
 const currentUserId = ref('')
@@ -683,9 +685,12 @@ const editGroupAvatar = () => {
         // IM-025: 上传头像
         const uploadRes = await new Promise((resolve, reject) => {
           uni.uploadFile({
-            url: 'https://api.example.com/v1/upload/image',
+            url: `${config.baseURL}${CHAT_API.UPLOAD_IMAGE}`,
             filePath: res.tempFilePaths[0],
             name: 'file',
+            header: {
+              Authorization: `Bearer ${uni.getStorageSync('token') || ''}`
+            },
             success: (uploadRes) => {
               try {
                 const data = JSON.parse(uploadRes.data)
@@ -701,7 +706,7 @@ const editGroupAvatar = () => {
         })
 
         if (uploadRes.code === 200) {
-          const avatarUrl = uploadRes.data.url
+          const avatarUrl = uploadRes.data?.fullUrl || uploadRes.data?.fileUrl
 
           // 调用API更新群头像
           // const apiRes = await groupApi.updateAvatar(groupId.value, avatarUrl)

@@ -5,6 +5,11 @@
 import { get, post, del } from '@/utils/request'
 import { CHAT_API, buildUrl } from '../urlEnum'
 
+const getCurrentUserId = () => {
+  const userInfo = uni.getStorageSync('userInfo') || {}
+  return userInfo.userId || userInfo.id || uni.getStorageSync('userId') || ''
+}
+
 const buildQueryUrl = (url, params = {}) => {
   const query = Object.entries(params)
     .filter(([, value]) => value !== undefined && value !== null && value !== '')
@@ -83,7 +88,7 @@ export const conversationApi = {
    */
   setPin: (conversationId) => post(
     buildUrl('/v1/chat/sessions/:conversationId/toggle-pin', { conversationId }),
-    { userId: uni.getStorageSync('userInfo')?.userId || uni.getStorageSync('userId') || '' }
+    { userId: getCurrentUserId() }
   ),
 
   /**
@@ -94,7 +99,7 @@ export const conversationApi = {
    */
   markRead: (conversationId) => post(
     buildUrl('/v1/chat/sessions/:conversationId/unread-clear', { conversationId }),
-    { userId: uni.getStorageSync('userInfo')?.userId || uni.getStorageSync('userId') || '' }
+    { userId: getCurrentUserId() }
   ),
 
   /**
@@ -105,7 +110,7 @@ export const conversationApi = {
    */
   delete: (conversationId) => del(buildQueryUrl(
     buildUrl(CHAT_API.DELETE_CONVERSATION, { conversationId }),
-    { userId: uni.getStorageSync('userInfo')?.userId || uni.getStorageSync('userId') || '' }
+    { userId: getCurrentUserId() }
   ))
 }
 
