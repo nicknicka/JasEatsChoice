@@ -14,13 +14,13 @@ import java.time.LocalDateTime;
 @Data
 @TableName("t_add_dish_setting")
 public class AddDishSetting {
-    @TableId(value = "id", type = IdType.AUTO)
-    private Long id;
+    @TableId(value = "id", type = IdType.ASSIGN_ID)
+    private String id;
 
     /**
      * 群订单ID
      */
-    private Long groupOrderId;
+    private String groupOrderId;
 
     /**
      * 加菜权限: 0-全员可加菜,1-仅发起者可加菜

@@ -23,8 +23,8 @@ import java.time.LocalDateTime;
 @ApiModel(description = "用户实体")
 public class User {
     @TableId(value = "user_id", type = com.baomidou.mybatisplus.annotation.IdType.INPUT)
-    @ApiModelProperty(value = "用户ID (U + 16位数字)")
-    private String userId; // 用户ID (U + 16位数字)
+    @ApiModelProperty(value = "用户ID（当前存储为16位数字字符串）")
+    private String userId; // 用户ID（当前存储为16位数字字符串）
 
     @TableField("phone")
     @ApiModelProperty(value = "手机号码（登录账号）")

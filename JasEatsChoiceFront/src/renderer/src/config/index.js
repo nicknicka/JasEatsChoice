@@ -14,19 +14,22 @@ const getEnvValue = (name, fallback) => {
 // 环境判断
 const ENV = process.env.NODE_ENV || 'development'
 const isProdEnv = ENV === 'production'
+const isFileProtocolEnv =
+  typeof window !== 'undefined' && window.location && window.location.protocol === 'file:'
 const devAmapKeyFallback = 'ef5cbde8753cd2fa578899bee7f9bf71'
 const devAmapSecurityJsCodeFallback = '34a9a321bca66a4623d9ddc3c6e5228f'
+const shouldUseLocalApi = !isProdEnv || isFileProtocolEnv
 
 // 根据环境变量生成配置，优先读取 .env.local / .env.production
 const envConfig = {
-  baseURL: getEnvValue('VITE_API_BASE_URL', isProdEnv ? 'https://api.yourdomain.com' : 'http://localhost:7777/api'),
-  wsURL: getEnvValue('VITE_WS_URL', isProdEnv ? 'wss://api.yourdomain.com/ws' : 'ws://localhost:11277/ws'),
-  wsChatURL: getEnvValue('VITE_WS_CHAT_URL', isProdEnv ? 'wss://api.yourdomain.com/ws/chat' : 'ws://localhost:11277/ws/chat'),
-  uploadURL: getEnvValue('VITE_UPLOAD_URL', isProdEnv ? 'https://api.yourdomain.com/v1/upload' : 'http://localhost:7777/api/v1/upload'),
-  imageCDN: getEnvValue('VITE_IMAGE_CDN', isProdEnv ? 'https://cdn.yourdomain.com' : ''),
-  debug: !isProdEnv,
+  baseURL: getEnvValue('VITE_API_BASE_URL', shouldUseLocalApi ? 'http://localhost:7777/api' : 'https://api.yourdomain.com'),
+  wsURL: getEnvValue('VITE_WS_URL', shouldUseLocalApi ? 'ws://localhost:11277/ws' : 'wss://api.yourdomain.com/ws'),
+  wsChatURL: getEnvValue('VITE_WS_CHAT_URL', shouldUseLocalApi ? 'ws://localhost:11277/ws/chat' : 'wss://api.yourdomain.com/ws/chat'),
+  uploadURL: getEnvValue('VITE_UPLOAD_URL', shouldUseLocalApi ? 'http://localhost:7777/api/v1/upload' : 'https://api.yourdomain.com/v1/upload'),
+  imageCDN: getEnvValue('VITE_IMAGE_CDN', shouldUseLocalApi ? '' : 'https://cdn.yourdomain.com'),
+  debug: shouldUseLocalApi,
   timeout: 30000,
-  enableLog: !isProdEnv
+  enableLog: shouldUseLocalApi
 }
 
 // WebSocket配置

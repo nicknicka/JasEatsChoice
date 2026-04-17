@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { Plus, Edit, Delete, Send, VideoCamera, Document } from '@element-plus/icons-vue'
+import { Plus, Edit, Delete, VideoCamera, Document } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../../utils/api.js'
 import { API_CONFIG } from '../../config/index.js'

@@ -17,7 +17,7 @@ public interface AddDishService extends IService<AddDishRequest> {
      * @param requestUserId 请求用户ID
      * @return 加菜请求ID
      */
-    String createAddDishRequest(CreateAddDishDTO dto, Long requestUserId);
+    String createAddDishRequest(CreateAddDishDTO dto, String requestUserId);
 
     /**
      * 批量审核加菜请求
@@ -32,21 +32,21 @@ public interface AddDishService extends IService<AddDishRequest> {
      * @param userId 用户ID
      * @return 是否成功
      */
-    boolean withdrawRequest(String requestId, Long userId);
+    boolean withdrawRequest(String requestId, String userId);
 
     /**
      * 获取待审核列表
      * @param groupOrderId 群订单ID
      * @return 待审核列表
      */
-    List<AddDishRequestVO> getReviewList(Long groupOrderId);
+    List<AddDishRequestVO> getReviewList(String groupOrderId);
 
     /**
      * 获取加菜历史
      * @param groupOrderId 群订单ID
      * @return 加菜历史列表
      */
-    List<AddDishRequestVO> getHistory(Long groupOrderId);
+    List<AddDishRequestVO> getHistory(String groupOrderId);
 
     /**
      * 检查饮食禁忌冲突
@@ -71,14 +71,14 @@ public interface AddDishService extends IService<AddDishRequest> {
      * @param userId 用户ID
      * @return 是否有权限
      */
-    boolean checkAddDishPermission(Long groupOrderId, Long userId);
+    boolean checkAddDishPermission(String groupOrderId, String userId);
 
     /**
      * 获取加菜设置
      * @param groupOrderId 群订单ID
      * @return 加菜设置
      */
-    AddDishSettingDTO getSetting(Long groupOrderId);
+    AddDishSettingDTO getSetting(String groupOrderId);
 
     /**
      * 更新加菜设置

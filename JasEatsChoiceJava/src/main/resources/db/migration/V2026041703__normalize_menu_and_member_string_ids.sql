@@ -1,0 +1,34 @@
+-- 统一菜单链、拼单成员与加菜设置剩余ID为字符类型，避免业务ID溢出与前端精度丢失
+-- Date: 2026-04-17
+
+SET FOREIGN_KEY_CHECKS = 0;
+
+ALTER TABLE `t_menu`
+    MODIFY COLUMN `id` VARCHAR(64) NOT NULL COMMENT '菜单ID',
+    MODIFY COLUMN `merchant_id` VARCHAR(64) NOT NULL COMMENT '商家ID';
+
+ALTER TABLE `t_menu_dish`
+    MODIFY COLUMN `id` VARCHAR(64) NOT NULL COMMENT '菜单菜品关联ID',
+    MODIFY COLUMN `menu_id` VARCHAR(64) NOT NULL COMMENT '菜单ID',
+    MODIFY COLUMN `dish_id` VARCHAR(64) NOT NULL COMMENT '菜品ID';
+
+ALTER TABLE `t_group_order_member`
+    MODIFY COLUMN `id` VARCHAR(64) NOT NULL COMMENT '主键ID';
+
+ALTER TABLE `t_add_dish_setting`
+    MODIFY COLUMN `id` VARCHAR(64) NOT NULL COMMENT '主键ID',
+    MODIFY COLUMN `group_order_id` VARCHAR(64) NOT NULL COMMENT '群订单ID';
+
+ALTER TABLE `t_menu`
+    CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+
+ALTER TABLE `t_menu_dish`
+    CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+
+ALTER TABLE `t_group_order_member`
+    CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+
+ALTER TABLE `t_add_dish_setting`
+    CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+
+SET FOREIGN_KEY_CHECKS = 1;

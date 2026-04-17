@@ -214,16 +214,29 @@ const userStore = useUserStore()
 // 从后端获取验证码
 const captchaSpinning = ref(false)
 
+const applyAutoCaptcha = (result) => {
+  if (result.fixedCaptchaEnabled === 'true' && result.fixedCaptchaCode) {
+    loginForm.captcha = result.fixedCaptchaCode.toUpperCase()
+    return true
+  }
+
+  const isDevMode = import.meta.env.MODE === 'development' || import.meta.env.DEV
+  if (isDevMode && result.captchaAnswer) {
+    loginForm.captcha = result.captchaAnswer.toUpperCase()
+    return true
+  }
+
+  loginForm.captcha = ''
+  return false
+}
+
 const generateCaptcha = async () => {
   try {
     const response = await axios.get(`${API_CONFIG.baseURL}/v1/captcha/checkCode`)
     const result = response.data.data
     captchaBase64.value = 'data:image/png;base64,' + result.checkCode
     checkCodeKey.value = result.checkCodeKey
-    const isDevMode = import.meta.env.MODE === 'development' || import.meta.env.DEV
-    if (isDevMode && result.captchaAnswer) {
-      loginForm.captcha = result.captchaAnswer.toUpperCase()
-    }
+    applyAutoCaptcha(result)
   } catch (error) {
     console.error('获取验证码失败:', error)
     ElMessage.error('获取验证码失败，请稍后重试')
@@ -236,7 +249,6 @@ const refreshCaptcha = async () => {
   if (captchaSpinning.value) return
   captchaSpinning.value = true
   await generateCaptcha()
-  loginForm.captcha = ''
   setTimeout(() => { captchaSpinning.value = false }, 500)
 }
 

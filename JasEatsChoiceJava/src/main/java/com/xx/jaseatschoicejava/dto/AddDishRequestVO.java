@@ -23,7 +23,7 @@ public class AddDishRequestVO {
     private String id;
 
     @ApiModelProperty(value = "群订单ID")
-    private Long groupOrderId;
+    private String groupOrderId;
 
     @ApiModelProperty(value = "请求用户信息")
     private UserInfo requestUserInfo;
@@ -63,7 +63,7 @@ public class AddDishRequestVO {
     @AllArgsConstructor
     public static class UserInfo {
         @ApiModelProperty(value = "用户ID")
-        private Long userId;
+        private String userId;
 
         @ApiModelProperty(value = "昵称")
         private String nickname;
@@ -80,7 +80,7 @@ public class AddDishRequestVO {
     @AllArgsConstructor
     public static class DishInfo {
         @ApiModelProperty(value = "菜品ID")
-        private Long dishId;
+        private String dishId;
 
         @ApiModelProperty(value = "菜品名称")
         private String dishName;

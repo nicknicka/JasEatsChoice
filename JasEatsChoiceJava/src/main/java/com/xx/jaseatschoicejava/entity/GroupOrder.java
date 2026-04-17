@@ -52,6 +52,21 @@ public class GroupOrder {
     private Integer status;
 
     /**
+     * 最大参与人数
+     */
+    private Integer maxParticipants;
+
+    /**
+     * 是否锁单
+     */
+    private Boolean locked;
+
+    /**
+     * 确认成团时间
+     */
+    private LocalDateTime confirmedTime;
+
+    /**
      * 创建时间
      */
     private LocalDateTime createTime;

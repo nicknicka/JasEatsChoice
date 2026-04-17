@@ -15,7 +15,7 @@
           <text class="status-desc">{{ getStatusDesc(orderInfo.status) }}</text>
         </view>
       </view>
-      <view class="countdown" v-if="orderInfo.status === 'pending'">
+      <view class="countdown" v-if="orderInfo.status === 'pending' && !orderInfo.locked">
         <uni-icons type="clock" size="16" color="#fff"></uni-icons>
         <text class="countdown-text">{{ countdownText }}</text>
       </view>
@@ -34,7 +34,7 @@
     <!-- 参与人员 -->
     <view class="participants-card">
       <view class="card-header">
-        <text class="card-title">参与人员 ({{ participantList.length }}人)</text>
+        <text class="card-title">参与人员 ({{ displayParticipantCount }}人)</text>
         <text class="card-action" @tap="viewAllParticipants">查看全部</text>
       </view>
       <view class="participants-list">
@@ -133,21 +133,23 @@
     <view class="bottom-actions">
       <button
         class="action-btn secondary"
-        v-if="orderInfo.status === 'pending'"
+        v-if="orderInfo.status === 'pending' && !orderInfo.locked"
         @tap="addDishes"
+        :disabled="!canAddDishes"
       >
         加菜
       </button>
       <button
         class="action-btn primary"
-        v-if="orderInfo.status === 'pending' && myOrder && !myOrder.paid"
+        v-if="orderInfo.status === 'pending' && orderInfo.locked && myOrder && !myOrder.paid"
         @tap="payMyOrder"
+        :disabled="!canPaySelf"
       >
         支付我的 ¥{{ myOrder?.totalAmount }}
       </button>
       <button
         class="action-btn primary"
-        v-if="orderInfo.status === 'pending' && canPayAll"
+        v-if="orderInfo.status === 'pending' && orderInfo.locked && canPayAll"
         @tap="payAllOrder"
       >
         统一支付 ¥{{ orderInfo.finalAmount }}
@@ -186,6 +188,14 @@ const orderId = ref('')
 const orderInfo = ref({
   id: '',
   status: 'pending', // pending, in_progress, completed
+  locked: false,
+  canEdit: false,
+  canPay: false,
+  creatorId: '',
+  currentCount: 0,
+  maxParticipants: 0,
+  currentUserJoined: false,
+  currentUserPaid: false,
   totalAmount: '0.00',
   discount: '0.00',
   finalAmount: '0.00'
@@ -207,6 +217,14 @@ const dishSummary = ref([])
 
 // 我的订单
 const myOrder = ref(null)
+
+const isCreator = computed(() => {
+  return orderInfo.value.creatorId === currentUserId.value
+})
+
+const displayParticipantCount = computed(() => {
+  return Number(orderInfo.value.currentCount ?? participantList.value.length ?? 0)
+})
 
 // 倒计时
 let countdownTimer = null
@@ -247,6 +265,18 @@ const loadOrderDetail = async () => {
       orderInfo.value = {
         id: data.id,
         status: data.status || 'pending',
+        locked: Boolean(data.locked),
+        canEdit: typeof data.canEdit === 'boolean' ? data.canEdit : !data.locked,
+        canPay: typeof data.canPay === 'boolean' ? data.canPay : Boolean(data.locked),
+        creatorId: data.creatorId || '',
+        currentCount: Number(data.currentCount ?? data.participants?.length ?? 0),
+        maxParticipants: Number(data.maxParticipants ?? data.participants?.length ?? 0),
+        currentUserJoined: typeof data.currentUserJoined === 'boolean'
+          ? data.currentUserJoined
+          : Boolean((data.participants || []).find(p => p.userId === currentUserId.value)),
+        currentUserPaid: typeof data.currentUserPaid === 'boolean'
+          ? data.currentUserPaid
+          : Boolean((data.participants || []).find(p => p.userId === currentUserId.value)?.paid),
         totalAmount: parseFloat(data.totalAmount || 0).toFixed(2),
         discount: parseFloat(data.discount || 0).toFixed(2),
         finalAmount: parseFloat(data.finalAmount || data.totalAmount || 0).toFixed(2),
@@ -297,6 +327,8 @@ const loadOrderDetail = async () => {
           totalAmount: parseFloat(myOrder.value.amount || 0).toFixed(2),
           paid: myOrder.value.paid || false
         }
+      } else {
+        myOrder.value = null
       }
 
       // 设置倒计时
@@ -323,6 +355,10 @@ const loadOrderDetail = async () => {
  * 生成模拟数据
  */
 const generateMockData = () => {
+  orderInfo.value.currentCount = 5
+  orderInfo.value.currentUserJoined = true
+  orderInfo.value.currentUserPaid = false
+
   // 参与人员
   const participants = []
   const names = ['张三', '李四', '王五', '赵六', '钱七']
@@ -390,8 +426,11 @@ const getStatusIcon = (status) => {
  * 获取状态标题
  */
 const getStatusTitle = (status) => {
+  if (status === 'pending' && orderInfo.value.locked) {
+    return '已确认成团'
+  }
   const titleMap = {
-    pending: '等待支付',
+    pending: '待确认成团',
     in_progress: '制作中',
     completed: '已完成'
   }
@@ -402,8 +441,11 @@ const getStatusTitle = (status) => {
  * 获取状态描述
  */
 const getStatusDesc = (status) => {
+  if (status === 'pending' && orderInfo.value.locked) {
+    return '菜品已锁定，等待成员完成支付'
+  }
   const descMap = {
-    pending: '部分成员已支付',
+    pending: '等待发起人确认成团后开始支付',
     in_progress: '商家正在制作',
     completed: '订单已完成'
   }
@@ -421,12 +463,25 @@ const getOrderStatusText = (status) => {
   return textMap[status] || ''
 }
 
+const canAddDishes = computed(() => {
+  return Boolean(orderInfo.value.currentUserJoined && !orderInfo.value.currentUserPaid && orderInfo.value.canEdit && !orderInfo.value.locked)
+})
+
+const canPaySelf = computed(() => {
+  return Boolean(orderInfo.value.currentUserJoined && !orderInfo.value.currentUserPaid && orderInfo.value.canPay && myOrder.value)
+})
+
 /**
  * 能否统一支付
  */
 const canPayAll = computed(() => {
-  // 只有创建者可以统一支付
-  return true
+  return Boolean(
+    isCreator.value &&
+    orderInfo.value.locked &&
+    orderInfo.value.currentUserJoined &&
+    !orderInfo.value.currentUserPaid &&
+    participantList.value.some(item => item.orderStatus !== 'paid')
+  )
 })
 
 /**
@@ -495,6 +550,22 @@ const viewAllDishes = () => {
  * 加菜
  */
 const addDishes = () => {
+  if (!orderInfo.value.currentUserJoined) {
+    uni.showToast({
+      title: '您还未加入此拼单',
+      icon: 'none'
+    })
+    return
+  }
+
+  if (!canAddDishes.value) {
+    uni.showToast({
+      title: orderInfo.value.locked ? '拼单已锁定，不能再加菜' : '当前暂不可修改菜品',
+      icon: 'none'
+    })
+    return
+  }
+
   uni.navigateTo({
     url: `/pages/group-order/select-dishes?id=${orderId.value}`
   })
@@ -504,7 +575,13 @@ const addDishes = () => {
  * 支付我的订单 - IM-038: 调用支付API
  */
 const payMyOrder = async () => {
-  if (!myOrder.value) return
+  if (!canPaySelf.value) {
+    uni.showToast({
+      title: orderInfo.value.currentUserPaid ? '您已支付过此订单' : '当前暂不可支付',
+      icon: 'none'
+    })
+    return
+  }
 
   uni.showModal({
     title: '确认支付',
@@ -521,6 +598,14 @@ const payMyOrder = async () => {
  * 统一支付 - IM-038: 调用支付API
  */
 const payAllOrder = async () => {
+  if (!canPayAll.value) {
+    uni.showToast({
+      title: isCreator.value ? '当前暂无可统一支付的订单' : '仅发起人可统一支付',
+      icon: 'none'
+    })
+    return
+  }
+
   uni.showModal({
     title: '统一支付',
     content: `确认支付所有人的订单，共计 ¥${orderInfo.value.finalAmount}？`,
@@ -536,6 +621,38 @@ const payAllOrder = async () => {
  * 处理支付 - IM-038: 调用支付API
  */
 const processPayment = async (paymentType = 'single') => {
+  if (!orderInfo.value.currentUserJoined) {
+    uni.showToast({
+      title: '您还未加入此拼单',
+      icon: 'none'
+    })
+    return
+  }
+
+  if (!orderInfo.value.locked) {
+    uni.showToast({
+      title: '请先由发起人确认成团',
+      icon: 'none'
+    })
+    return
+  }
+
+  if (paymentType === 'single' && !canPaySelf.value) {
+    uni.showToast({
+      title: orderInfo.value.currentUserPaid ? '您已支付过此订单' : '当前暂不可支付',
+      icon: 'none'
+    })
+    return
+  }
+
+  if (paymentType === 'all' && !canPayAll.value) {
+    uni.showToast({
+      title: isCreator.value ? '当前暂无可统一支付的订单' : '仅发起人可统一支付',
+      icon: 'none'
+    })
+    return
+  }
+
   try {
     uni.showLoading({
       title: '处理中...',
@@ -546,7 +663,7 @@ const processPayment = async (paymentType = 'single') => {
     const paymentData = {
       orderId: orderId.value,
       paymentType: paymentType, // single 或 all
-      paymentMethod: 'wechat', // 默认使用微信支付
+      paymentMethod: 'balance', // 当前优先走可闭环的余额支付
       userId: currentUserId.value,
       amount: paymentType === 'single' ? myOrder.value.totalAmount : orderInfo.value.finalAmount
     }
@@ -569,6 +686,7 @@ const processPayment = async (paymentType = 'single') => {
         // 更新订单状态
         if (paymentType === 'single' && myOrder.value) {
           myOrder.value.paid = true
+          orderInfo.value.currentUserPaid = true
         } else {
           orderInfo.value.status = 'in_progress'
         }
@@ -599,30 +717,20 @@ const processPayment = async (paymentType = 'single') => {
 const invokePayment = (paymentParams) => {
   return new Promise((resolve) => {
     // 根据支付方式调起不同的支付
-    if (paymentParams.type === 'wechat') {
-      // 微信支付
-      uni.requestPayment({
-        provider: 'wxpay',
-        ...paymentParams,
-        success: () => {
-          resolve({ success: true })
-        },
-        fail: (err) => {
-          resolve({ success: false, error: err.errMsg })
-        }
+    if (paymentParams.type === 'balance') {
+      resolve({ success: true })
+    } else if (paymentParams.type === 'wechat') {
+      uni.showToast({
+        title: '微信支付为模拟流程',
+        icon: 'none'
       })
+      resolve({ success: true })
     } else if (paymentParams.type === 'alipay') {
-      // 支付宝支付
-      uni.requestPayment({
-        provider: 'alipay',
-        ...paymentParams,
-        success: () => {
-          resolve({ success: true })
-        },
-        fail: (err) => {
-          resolve({ success: false, error: err.errMsg })
-        }
+      uni.showToast({
+        title: '支付宝支付为模拟流程',
+        icon: 'none'
       })
+      resolve({ success: true })
     } else {
       // 其他支付方式
       resolve({ success: false, error: '不支持的支付方式' })

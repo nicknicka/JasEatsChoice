@@ -81,6 +81,47 @@ const mapStatusTextToCode = (status) => {
   return STATUS_TO_CODE[status] ?? undefined
 }
 
+const hasValue = (value) => value !== undefined && value !== null && value !== ''
+
+const pickFirst = (...values) => {
+  for (const value of values) {
+    if (hasValue(value)) {
+      return value
+    }
+  }
+  return undefined
+}
+
+const pickNumber = (...values) => {
+  for (const value of values) {
+    if (!hasValue(value)) {
+      continue
+    }
+    const parsed = Number(value)
+    if (!Number.isNaN(parsed)) {
+      return parsed
+    }
+  }
+  return undefined
+}
+
+const pickBoolean = (...values) => {
+  for (const value of values) {
+    if (typeof value === 'boolean') {
+      return value
+    }
+    if (value === 1 || value === 0) {
+      return Boolean(value)
+    }
+    if (value === 'true' || value === 'false') {
+      return value === 'true'
+    }
+  }
+  return undefined
+}
+
+const formatAmount = (value = 0) => Number(value || 0).toFixed(2)
+
 const groupDishItems = (dishItems = []) => {
   const dishMap = {}
   const memberMap = {}
@@ -88,6 +129,10 @@ const groupDishItems = (dishItems = []) => {
   dishItems.forEach((item) => {
     const dishId = item.dishId || ''
     const userId = item.userId || ''
+    const quantity = Number(item.quantity || 0)
+    const price = Number(item.price || 0)
+    const lineAmount = Number(item.lineAmount || (price * quantity))
+    const paid = Boolean(item.paid)
 
     if (!dishMap[dishId]) {
       dishMap[dishId] = {
@@ -96,10 +141,16 @@ const groupDishItems = (dishItems = []) => {
         name: item.dishName || `菜品 ${dishId.slice(-4) || dishId}`,
         image: item.image || 'https://via.placeholder.com/100',
         specification: item.customization || '',
-        totalQuantity: 0
+        totalQuantity: 0,
+        amount: 0,
+        participantIds: new Set()
       }
     }
-    dishMap[dishId].totalQuantity += Number(item.quantity || 0)
+    dishMap[dishId].totalQuantity += quantity
+    dishMap[dishId].amount += lineAmount
+    if (userId) {
+      dishMap[dishId].participantIds.add(userId)
+    }
 
     if (!memberMap[userId]) {
       memberMap[userId] = {
@@ -107,38 +158,162 @@ const groupDishItems = (dishItems = []) => {
         userId,
         name: item.userName || `用户${userId.slice(-4) || ''}`,
         avatar: item.avatar || 'https://via.placeholder.com/100',
-        paid: false,
+        paid,
         totalAmount: '0.00',
         dishes: []
       }
     }
+    memberMap[userId].paid = memberMap[userId].paid || paid
+    memberMap[userId].totalAmount = (Number(memberMap[userId].totalAmount || 0) + lineAmount).toFixed(2)
     memberMap[userId].dishes.push({
       dishId,
       name: dishMap[dishId].name,
-      quantity: Number(item.quantity || 0)
+      quantity,
+      price: price.toFixed(2),
+      spec: item.customization || item.specification || ''
     })
   })
 
   return {
-    dishes: Object.values(dishMap),
+    dishes: Object.values(dishMap).map(item => ({
+      id: item.id,
+      dishId: item.dishId,
+      name: item.name,
+      image: item.image,
+      specification: item.specification,
+      totalQuantity: item.totalQuantity,
+      amount: item.amount.toFixed(2),
+      participantCount: item.participantIds.size
+    })),
     members: Object.values(memberMap)
   }
 }
 
+const normalizeMemberDish = (dish = {}) => ({
+  dishId: pickFirst(dish.dishId, dish.id, ''),
+  name: pickFirst(dish.name, dish.dishName, '未命名菜品'),
+  quantity: pickNumber(dish.quantity, dish.count, 0) || 0,
+  price: formatAmount(pickFirst(dish.price, 0)),
+  spec: pickFirst(dish.spec, dish.specification, dish.customization, '')
+})
+
+const normalizeParticipantDish = (dish = {}) => ({
+  dishId: pickFirst(dish.dishId, dish.id, ''),
+  dishName: pickFirst(dish.dishName, dish.name, '未命名菜品'),
+  spec: pickFirst(dish.spec, dish.specification, dish.customization, ''),
+  count: pickNumber(dish.count, dish.quantity, 0) || 0,
+  price: formatAmount(pickFirst(dish.price, 0))
+})
+
+const normalizeMember = (member = {}) => {
+  const userId = pickFirst(member.userId, member.id, '')
+  return {
+    id: userId,
+    userId,
+    name: pickFirst(member.name, member.nickname, member.userName, `用户${`${userId}`.slice(-4) || ''}`),
+    avatar: pickFirst(member.avatar, 'https://via.placeholder.com/100'),
+    paid: pickBoolean(member.paid, member.orderStatus === 'paid') ?? false,
+    totalAmount: formatAmount(pickFirst(member.totalAmount, member.amount, 0)),
+    dishes: Array.isArray(member.dishes) ? member.dishes.map(normalizeMemberDish) : []
+  }
+}
+
+const normalizeParticipant = (participant = {}) => {
+  const userId = pickFirst(participant.userId, participant.id, '')
+  const dishes = Array.isArray(participant.dishes) ? participant.dishes.map(normalizeParticipantDish) : []
+  return {
+    userId,
+    nickname: pickFirst(participant.nickname, participant.userName, participant.name, `用户${`${userId}`.slice(-4) || ''}`),
+    userName: pickFirst(participant.userName, participant.nickname, participant.name, `用户${`${userId}`.slice(-4) || ''}`),
+    avatar: pickFirst(participant.avatar, 'https://via.placeholder.com/100'),
+    dishCount: pickNumber(participant.dishCount, dishes.length, 0) || 0,
+    amount: formatAmount(pickFirst(participant.amount, participant.totalAmount, 0)),
+    paid: pickBoolean(participant.paid, participant.orderStatus === 'paid') ?? false,
+    dishes
+  }
+}
+
+const buildMembersFromParticipants = (participants = []) => participants.map(item => ({
+  id: item.userId,
+  userId: item.userId,
+  name: pickFirst(item.nickname, item.userName, `用户${`${item.userId}`.slice(-4) || ''}`),
+  avatar: item.avatar || 'https://via.placeholder.com/100',
+  paid: Boolean(item.paid),
+  totalAmount: formatAmount(item.amount),
+  dishes: (item.dishes || []).map(dish => ({
+    dishId: dish.dishId,
+    name: dish.dishName,
+    quantity: pickNumber(dish.count, dish.quantity, 0) || 0,
+    price: formatAmount(dish.price),
+    spec: pickFirst(dish.spec, '')
+  }))
+}))
+
+const buildParticipantsFromMembers = (members = []) => members.map(member => ({
+  userId: member.userId,
+  nickname: member.name,
+  userName: member.name,
+  avatar: member.avatar,
+  dishCount: (member.dishes || []).length,
+  amount: formatAmount(member.totalAmount),
+  paid: Boolean(member.paid),
+  dishes: (member.dishes || []).map(dish => ({
+    dishId: dish.dishId,
+    dishName: dish.name,
+    spec: pickFirst(dish.spec, ''),
+    count: pickNumber(dish.quantity, dish.count, 0) || 0,
+    price: formatAmount(dish.price)
+  }))
+}))
+
+const normalizeDishSummary = (dish = {}) => ({
+  dishId: pickFirst(dish.dishId, dish.id, ''),
+  dishName: pickFirst(dish.dishName, dish.name, '未命名菜品'),
+  dishImage: pickFirst(dish.dishImage, dish.image, 'https://via.placeholder.com/100'),
+  count: pickNumber(dish.count, dish.totalQuantity, 0) || 0,
+  participantCount: pickNumber(dish.participantCount, 0) || 0,
+  amount: formatAmount(pickFirst(dish.amount, 0))
+})
+
+const normalizeDishDetail = (dish = {}) => ({
+  id: pickFirst(dish.id, dish.dishId, ''),
+  dishId: pickFirst(dish.dishId, dish.id, ''),
+  name: pickFirst(dish.name, dish.dishName, '未命名菜品'),
+  image: pickFirst(dish.image, dish.dishImage, 'https://via.placeholder.com/100'),
+  specification: pickFirst(dish.specification, dish.spec, ''),
+  totalQuantity: pickNumber(dish.totalQuantity, dish.count, 0) || 0,
+  amount: formatAmount(pickFirst(dish.amount, 0)),
+  participantCount: pickNumber(dish.participantCount, 0) || 0
+})
+
 const normalizeDetailData = (rawData = {}, orderId) => {
   const cached = getOrderCache()[orderId] || {}
   const groupOrder = rawData.groupOrder || rawData || {}
-  const rawDishItems = rawData.dishItems || cached.dishItems || []
+  const rawDishItems = Array.isArray(rawData.dishItems)
+    ? rawData.dishItems
+    : (Array.isArray(groupOrder.dishItems) ? groupOrder.dishItems : (cached.dishItems || []))
   const grouped = groupDishItems(rawDishItems)
-  const statusText = cached.status || mapStatusCodeToText(groupOrder.status)
-  const orderCode = cached.orderCode || getOrderCode(orderId || groupOrder.id)
-  const selected = getSelectionCache()[getSelectionKey(orderId || groupOrder.id, getCurrentUserId())] || []
+  const currentUserId = getCurrentUserId()
+  const rawStatus = pickFirst(groupOrder.status, rawData.status, cached.rawStatus)
+  const statusText = typeof rawStatus === 'string'
+    ? rawStatus
+    : mapStatusCodeToText(pickNumber(rawStatus, cached.rawStatus, 0))
+  const orderCode = pickFirst(groupOrder.orderCode, rawData.orderCode, cached.orderCode, getOrderCode(orderId || groupOrder.id))
+  const selected = getSelectionCache()[getSelectionKey(orderId || groupOrder.id, currentUserId)] || []
+  const locked = pickBoolean(groupOrder.locked, rawData.locked, cached.locked) ?? false
+  const serverParticipants = Array.isArray(rawData.participants)
+    ? rawData.participants.map(normalizeParticipant)
+    : (Array.isArray(groupOrder.participants) ? groupOrder.participants.map(normalizeParticipant) : [])
+  const serverMembers = Array.isArray(rawData.members)
+    ? rawData.members.map(normalizeMember)
+    : (Array.isArray(groupOrder.members) ? groupOrder.members.map(normalizeMember) : [])
+  const hasServerMemberData = serverParticipants.length > 0 || serverMembers.length > 0
 
   let myOrder = null
   if (selected.length > 0) {
     const totalAmount = selected.reduce((sum, item) => sum + (Number(item.price || 0) * Number(item.quantity || 0)), 0)
     myOrder = {
-      userId: getCurrentUserId(),
+      userId: currentUserId,
       totalAmount: totalAmount.toFixed(2),
       paid: false,
       dishes: selected.map(item => ({
@@ -149,8 +324,11 @@ const normalizeDetailData = (rawData = {}, orderId) => {
     }
   }
 
-  const members = [...grouped.members]
-  if (myOrder && !members.find(item => item.userId === myOrder.userId)) {
+  const members = serverMembers.length > 0
+    ? serverMembers
+    : (serverParticipants.length > 0 ? buildMembersFromParticipants(serverParticipants) : [...grouped.members])
+
+  if (myOrder && !hasServerMemberData && !members.find(item => item.userId === myOrder.userId)) {
     members.push({
       id: myOrder.userId,
       userId: myOrder.userId,
@@ -162,28 +340,90 @@ const normalizeDetailData = (rawData = {}, orderId) => {
     })
   }
 
+  const participants = serverParticipants.length > 0 ? serverParticipants : buildParticipantsFromMembers(members)
+  const dishList = Array.isArray(rawData.dishes)
+    ? rawData.dishes.map(normalizeDishDetail)
+    : (Array.isArray(groupOrder.dishes) ? groupOrder.dishes.map(normalizeDishDetail) : grouped.dishes.map(normalizeDishDetail))
+  const dishSummary = Array.isArray(rawData.dishSummary)
+    ? rawData.dishSummary.map(normalizeDishSummary)
+    : (Array.isArray(groupOrder.dishSummary) ? groupOrder.dishSummary.map(normalizeDishSummary) : grouped.dishes.map(normalizeDishSummary))
+  const orderTotalAmount = dishSummary.reduce((sum, item) => sum + Number(item.amount || 0), 0)
+  const creatorId = pickFirst(groupOrder.initiatorId, rawData.creatorId, groupOrder.creatorId, cached.creatorId, '')
+  const currentUserJoined = pickBoolean(
+    groupOrder.currentUserJoined,
+    rawData.currentUserJoined,
+    participants.some(item => item.userId === currentUserId),
+    members.some(item => item.userId === currentUserId),
+    myOrder && myOrder.userId === currentUserId
+  ) ?? false
+  const currentUserPaid = pickBoolean(
+    groupOrder.currentUserPaid,
+    rawData.currentUserPaid,
+    participants.find(item => item.userId === currentUserId)?.paid,
+    members.find(item => item.userId === currentUserId)?.paid
+  ) ?? false
+  const rawStatusCode = typeof rawStatus === 'number' ? rawStatus : mapStatusTextToCode(statusText)
+  const canEdit = pickBoolean(groupOrder.canEdit, rawData.canEdit, currentUserJoined && !currentUserPaid && !locked) ?? false
+  const canLeave = pickBoolean(
+    groupOrder.canLeave,
+    rawData.canLeave,
+    currentUserJoined && !currentUserPaid && !locked && creatorId !== currentUserId
+  ) ?? false
+  const canConfirm = pickBoolean(
+    groupOrder.canConfirm,
+    rawData.canConfirm,
+    creatorId === currentUserId && !locked && (participants.some(item => item.dishCount > 0) || dishSummary.some(item => Number(item.count || 0) > 0))
+  ) ?? false
+  const canPay = pickBoolean(
+    groupOrder.canPay,
+    rawData.canPay,
+    currentUserJoined && !currentUserPaid && locked && rawStatusCode === 0
+  ) ?? false
+  const currentCount = pickNumber(
+    groupOrder.currentCount,
+    rawData.currentCount,
+    participants.length,
+    members.length,
+    creatorId ? 1 : 0
+  ) || 0
+  const maxParticipants = pickNumber(groupOrder.maxParticipants, rawData.maxParticipants, cached.maxParticipants, currentCount) || currentCount
+
   return {
     id: groupOrder.id || orderId,
     orderId: groupOrder.id || orderId,
-    name: cached.name || `群订单 ${orderCode}`,
+    name: pickFirst(groupOrder.name, rawData.name, cached.name, `群订单 ${orderCode}`),
     orderCode,
     status: statusText,
-    merchantId: groupOrder.merchantId || cached.merchantId || '',
-    merchantName: cached.merchantName || groupOrder.merchantId || '',
-    merchantAvatar: cached.merchantAvatar || 'https://via.placeholder.com/100',
-    creatorId: groupOrder.initiatorId || cached.creatorId || '',
-    creatorName: cached.creatorName || '',
-    groupId: groupOrder.groupId || cached.groupId || '',
-    currentCount: groupOrder.currentCount || cached.currentCount || members.length || (groupOrder.initiatorId || cached.creatorId ? 1 : 0),
-    maxParticipants: cached.maxParticipants || members.length,
-    deadline: cached.deadline || groupOrder.updateTime || groupOrder.createTime || '',
-    deliveryAddress: cached.deliveryAddress || groupOrder.addressId || '',
-    addressId: groupOrder.addressId || cached.addressId || '',
-    remark: groupOrder.remark || cached.remark || '',
-    totalAmount: Number(groupOrder.totalAmount || cached.totalAmount || 0).toFixed(2),
-    createTime: groupOrder.createTime || cached.createTime || '',
+    rawStatus: rawStatusCode,
+    locked,
+    joinable: pickBoolean(groupOrder.joinable, rawData.joinable, !locked) ?? !locked,
+    canEdit,
+    canLeave,
+    canConfirm,
+    canPay,
+    currentUserJoined,
+    currentUserPaid,
+    merchantId: pickFirst(groupOrder.merchantId, rawData.merchantId, cached.merchantId, ''),
+    merchantName: pickFirst(groupOrder.merchantName, rawData.merchantName, cached.merchantName, groupOrder.merchantId, ''),
+    merchantAvatar: pickFirst(groupOrder.merchantAvatar, rawData.merchantAvatar, cached.merchantAvatar, 'https://via.placeholder.com/100'),
+    creatorId,
+    creatorName: pickFirst(groupOrder.creatorName, rawData.creatorName, cached.creatorName, ''),
+    groupId: pickFirst(groupOrder.groupId, rawData.groupId, cached.groupId, ''),
+    currentCount,
+    maxParticipants,
+    deadline: pickFirst(groupOrder.deadline, rawData.deadline, cached.deadline, groupOrder.updateTime, groupOrder.createTime, ''),
+    deliveryAddress: pickFirst(groupOrder.deliveryAddress, rawData.deliveryAddress, cached.deliveryAddress, groupOrder.addressId, ''),
+    addressId: pickFirst(groupOrder.addressId, rawData.addressId, cached.addressId, ''),
+    remark: pickFirst(groupOrder.remark, rawData.remark, cached.remark, ''),
+    totalAmount: formatAmount(pickFirst(groupOrder.totalAmount, rawData.totalAmount, cached.totalAmount, orderTotalAmount, 0)),
+    discount: formatAmount(pickFirst(groupOrder.discount, rawData.discount, cached.discount, 0)),
+    finalAmount: formatAmount(pickFirst(groupOrder.finalAmount, rawData.finalAmount, groupOrder.totalAmount, rawData.totalAmount, cached.finalAmount, cached.totalAmount, orderTotalAmount, 0)),
+    createTime: pickFirst(groupOrder.createTime, rawData.createTime, cached.createTime, ''),
+    expireTime: pickFirst(groupOrder.expireTime, rawData.expireTime, cached.expireTime, ''),
     members,
-    dishes: grouped.dishes,
+    participants,
+    dishes: dishList,
+    dishSummary,
     dishItems: rawDishItems,
     completed: statusText === 'completed' || statusText === 'cancelled'
   }
@@ -228,21 +468,25 @@ const normalizeCreateResponse = (response, payload) => {
 
 const normalizeListItem = (order = {}) => {
   const cached = getOrderCache()[order.id] || {}
-  const statusText = cached.status || mapStatusCodeToText(order.status)
+  const rawStatus = pickFirst(order.status, cached.rawStatus)
+  const statusText = typeof rawStatus === 'string' ? rawStatus : mapStatusCodeToText(pickNumber(rawStatus, 0))
+  const members = Array.isArray(order.members) ? order.members : (cached.members || [])
+  const currentCount = pickNumber(order.currentCount, cached.currentCount, members.length, order.initiatorId || cached.creatorId ? 1 : 0) || 0
+  const maxParticipants = pickNumber(order.maxParticipants, cached.maxParticipants, currentCount) || currentCount
   return {
     id: order.id,
-    name: cached.name || `群订单 ${getOrderCode(order.id)}`,
-    orderCode: cached.orderCode || getOrderCode(order.id),
+    name: pickFirst(order.name, cached.name, `群订单 ${getOrderCode(order.id)}`),
+    orderCode: pickFirst(order.orderCode, cached.orderCode, getOrderCode(order.id)),
     status: statusText,
-    merchantId: order.merchantId || cached.merchantId || '',
-    merchantName: cached.merchantName || order.merchantId || '',
-    merchantAvatar: cached.merchantAvatar || 'https://via.placeholder.com/100',
-    creatorId: order.initiatorId || cached.creatorId || '',
-    creatorName: cached.creatorName || '',
-    currentCount: order.currentCount || cached.currentCount || (order.initiatorId || cached.creatorId ? 1 : 0),
-    maxParticipants: order.maxParticipants || cached.maxParticipants || 0,
-    deadline: cached.deadline || order.updateTime || order.createTime || '',
-    members: cached.members || []
+    merchantId: pickFirst(order.merchantId, cached.merchantId, ''),
+    merchantName: pickFirst(order.merchantName, cached.merchantName, order.merchantId, ''),
+    merchantAvatar: pickFirst(order.merchantAvatar, cached.merchantAvatar, 'https://via.placeholder.com/100'),
+    creatorId: pickFirst(order.initiatorId, order.creatorId, cached.creatorId, ''),
+    creatorName: pickFirst(order.creatorName, cached.creatorName, ''),
+    currentCount,
+    maxParticipants,
+    deadline: pickFirst(order.deadline, cached.deadline, order.updateTime, order.createTime, ''),
+    members
   }
 }
 
@@ -341,7 +585,9 @@ export const groupOrderApi = {
    */
   getDetail: async (orderId) => {
     try {
-      const response = await get(`/v1/group-orders/group-orders/${orderId}`)
+      const response = await get(`/v1/group-orders/group-orders/${orderId}`, {
+        userId: getCurrentUserId()
+      })
       const data = normalizeDetailData(response?.data || {}, orderId)
       mergeOrderCache(orderId, {
         ...getOrderCache()[orderId],
@@ -500,16 +746,36 @@ export const groupOrderApi = {
     { userId }
   ),
 
-  pay: () => unsupported('后端暂未提供群订单支付接口'),
-  payOrder: () => unsupported('后端暂未提供群订单支付接口'),
-  payMember: () => unsupported('后端暂未提供群订单成员支付接口'),
-  payMemberOrder: () => unsupported('后端暂未提供群订单成员支付接口'),
+  pay: (orderId, data = {}) => post(`/v1/group-orders/group-orders/${orderId}/pay`, data),
+  payOrder: (orderId, data = {}) => groupOrderApi.pay(orderId, data),
+  payMember: (orderId, data = {}) => groupOrderApi.pay(orderId, { ...data, paymentType: 'single' }),
+  payMemberOrder: (orderId, data = {}) => groupOrderApi.pay(orderId, { ...data, paymentType: 'single' }),
   joinByCode: async (data = {}) => post('/v1/group-orders/join', data),
   join: () => unsupported('后端暂未提供加入拼单接口'),
   joinGroupOrder: () => unsupported('后端暂未提供加入拼单接口'),
-  leave: () => unsupported('后端暂未提供退出拼单接口'),
-  leaveGroupOrder: () => unsupported('后端暂未提供退出拼单接口'),
-  quit: () => unsupported('后端暂未提供退出拼单接口'),
+  leave: async (orderId, data = {}) => {
+    const userId = data.userId || getCurrentUserId()
+    const response = await del(buildQueryUrl(`/v1/group-orders/group-orders/${orderId}/leave`, { userId }))
+
+    const selectionCache = getSelectionCache()
+    delete selectionCache[getSelectionKey(orderId, userId)]
+    saveSelectionCache(selectionCache)
+
+    const orderCache = getOrderCache()
+    if (orderCache[orderId]) {
+      const members = Array.isArray(orderCache[orderId].members) ? orderCache[orderId].members : []
+      orderCache[orderId] = {
+        ...orderCache[orderId],
+        members: members.filter(member => member.userId !== userId),
+        currentCount: Math.max(0, Number(orderCache[orderId].currentCount || members.length || 0) - 1)
+      }
+      saveOrderCache(orderCache)
+    }
+
+    return response
+  },
+  leaveGroupOrder: (orderId, data = {}) => groupOrderApi.leave(orderId, data),
+  quit: (orderId, data = {}) => groupOrderApi.leave(orderId, data),
   update: () => unsupported('后端暂未提供更新拼单基础信息接口'),
   updateGroupOrder: () => unsupported('后端暂未提供更新拼单基础信息接口'),
   getMembers: async (orderId) => {
@@ -520,8 +786,26 @@ export const groupOrderApi = {
       data: detail?.data?.members || []
     }
   },
-  invite: () => unsupported('后端暂未提供拼单邀请接口'),
-  confirm: () => unsupported('后端暂未提供拼单确认接口'),
+  invite: (orderId, data = {}) => post(`/v1/group-orders/group-orders/${orderId}/invite`, data),
+  confirm: async (orderId, data = {}) => {
+    const response = await post(`/v1/group-orders/group-orders/${orderId}/confirm`, {
+      userId: data.userId || getCurrentUserId()
+    })
+
+    let normalized = response?.data
+    if (response?.data?.id || response?.data?.orderId) {
+      normalized = normalizeDetailData({ groupOrder: response.data, dishItems: getOrderCache()[orderId]?.dishItems || [] }, orderId)
+      mergeOrderCache(orderId, {
+        ...getOrderCache()[orderId],
+        ...normalized
+      })
+    }
+
+    return {
+      ...response,
+      data: normalized
+    }
+  },
   getOrders: (params = {}) => groupOrderApi.getList(params),
   share: async (orderId) => ({
     code: 200,

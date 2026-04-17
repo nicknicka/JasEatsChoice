@@ -31,7 +31,7 @@ public class AllergyCheckResultDTO {
     @AllArgsConstructor
     public static class ConflictItem {
         @ApiModelProperty(value = "菜品ID")
-        private Long dishId;
+        private String dishId;
 
         @ApiModelProperty(value = "菜品名称")
         private String dishName;
@@ -48,7 +48,7 @@ public class AllergyCheckResultDTO {
     @AllArgsConstructor
     public static class UserConflict {
         @ApiModelProperty(value = "用户ID")
-        private Long userId;
+        private String userId;
 
         @ApiModelProperty(value = "昵称")
         private String nickname;

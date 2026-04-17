@@ -235,12 +235,28 @@ const registerRules = reactive({
 const captchaBase64 = ref('')
 const checkCodeKey = ref('')
 
+const applyAutoCaptcha = (result) => {
+  if (result.fixedCaptchaEnabled === 'true' && result.fixedCaptchaCode) {
+    registerForm.captcha = result.fixedCaptchaCode.toUpperCase()
+    return
+  }
+
+  const isDevMode = import.meta.env.MODE === 'development' || import.meta.env.DEV
+  if (isDevMode && result.captchaAnswer) {
+    registerForm.captcha = result.captchaAnswer.toUpperCase()
+    return
+  }
+
+  registerForm.captcha = ''
+}
+
 const generateCaptcha = async () => {
   try {
     const response = await axios.get(`${API_CONFIG.baseURL}/v1/captcha/checkCode`)
     const result = response.data.data
     captchaBase64.value = 'data:image/png;base64,' + result.checkCode
     checkCodeKey.value = result.checkCodeKey
+    applyAutoCaptcha(result)
   } catch (error) {
     console.error('获取验证码失败:', error)
     ElMessage.error('获取验证码失败，请稍后重试')

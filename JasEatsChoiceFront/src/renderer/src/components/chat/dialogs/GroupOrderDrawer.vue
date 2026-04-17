@@ -89,10 +89,10 @@
         </div>
       </div>
 
-      <!-- 快速点餐入口（仅草稿和进行中状态显示） -->
+      <!-- 快速点餐入口（仅未锁单时显示） -->
       <div
         class="quick-order-entry"
-        v-if="['draft', 'active'].includes(groupOrder.status)"
+        v-if="canEditOrder"
       >
         <div class="quick-order-card">
           <div class="quick-order-content">
@@ -305,7 +305,7 @@
               取消订单
             </el-button>
 
-            <el-button size="default" @click="$emit('select-merchant')">
+            <el-button v-if="canEditOrder" size="default" @click="$emit('select-merchant')">
               <el-icon><Shop /></el-icon>
               {{ hasMerchant ? '去点菜' : '选择商家' }}
             </el-button>
@@ -313,10 +313,10 @@
               type="success"
               size="default"
               @click="$emit('go-to-pay')"
-              :disabled="!hasMerchant"
+              :disabled="!canProceedToSettle"
             >
               <el-icon><Wallet /></el-icon>
-              去支付
+              {{ payActionText }}
             </el-button>
           </template>
 
@@ -418,12 +418,29 @@ const hasMerchant = computed(() => {
   return props.groupOrder && props.groupOrder.merchantName
 })
 
+const hasOrderItems = computed(() => {
+  return Boolean(props.groupOrder?.orderItems?.length)
+})
+
+const canEditOrder = computed(() => {
+  return props.groupOrder && props.groupOrder.status === 'active' && !props.groupOrder.locked
+})
+
+const canProceedToSettle = computed(() => {
+  return Boolean(props.groupOrder && hasMerchant.value && hasOrderItems.value)
+})
+
+const payActionText = computed(() => {
+  return props.groupOrder?.locked ? '去支付' : '确认成团并结算'
+})
+
 const canChangeMerchant = computed(() => {
   return (
     props.groupOrder &&
     props.groupOrder.creator === '我' &&
     props.groupOrder.orderItems.length === 0 &&
-    props.groupOrder.status === 'active'
+    props.groupOrder.status === 'active' &&
+    !props.groupOrder.locked
   )
 })
 

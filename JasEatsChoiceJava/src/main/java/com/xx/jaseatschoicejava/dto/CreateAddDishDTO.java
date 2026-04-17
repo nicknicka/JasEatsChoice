@@ -18,7 +18,7 @@ import java.util.List;
 public class CreateAddDishDTO {
 
     @ApiModelProperty(value = "群订单ID", required = true)
-    private Long groupOrderId;
+    private String groupOrderId;
 
     @ApiModelProperty(value = "原订单ID(可选,已支付订单才需要)")
     private String originalOrderId;
@@ -34,7 +34,7 @@ public class CreateAddDishDTO {
     @AllArgsConstructor
     public static class DishItem {
         @ApiModelProperty(value = "菜品ID", required = true)
-        private Long dishId;
+        private String dishId;
 
         @ApiModelProperty(value = "菜品数量", required = true)
         private Integer quantity;

@@ -180,7 +180,6 @@ const recommendedMerchants = computed(() => {
 const loadMerchants = async () => {
   try {
     const response = await merchantApi.getMerchants()
-    console.log('加载商家列表响应:', response)
     if (response.code === "200" && response.data) {
       allMerchants.value = response.data
     }

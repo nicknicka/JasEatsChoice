@@ -206,7 +206,7 @@ public class OAuthServiceImpl implements OAuthService {
 
         // 3. 创建新用户
         User newUser = new User();
-        String userId = IdGenerator.toUserIdString(IdGenerator.generateId());
+        String userId = String.valueOf(IdGenerator.generateId());
         newUser.setUserId(userId);
         newUser.setPhone(request.getPhone());
         newUser.setPassword(""); // 第三方登录用户无密码

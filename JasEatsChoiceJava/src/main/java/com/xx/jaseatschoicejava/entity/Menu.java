@@ -1,5 +1,6 @@
 package com.xx.jaseatschoicejava.entity;
 
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.TableField;
@@ -22,7 +23,7 @@ import java.time.LocalDateTime;
 @ApiModel(description = "菜单实体")
 public class Menu {
 
-    @TableId
+    @TableId(type = IdType.ASSIGN_ID)
     @ApiModelProperty(value = "菜单ID")
     private String id; // 菜单ID
 

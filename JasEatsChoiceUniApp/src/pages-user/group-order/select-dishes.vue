@@ -1,5 +1,9 @@
 <template>
   <view class="select-dishes-container">
+    <view class="lock-banner" v-if="isReadonly">
+      {{ readonlyMessage }}
+    </view>
+
     <!-- 分类筛选 -->
     <view class="category-tabs">
       <scroll-view scroll-x class="category-scroll">
@@ -57,13 +61,13 @@
             <view class="quantity-control">
               <view
                 class="control-btn minus"
-                :class="{ disabled: !getSelectedQuantity(dish.id) }"
+                :class="{ disabled: isReadonly || !getSelectedQuantity(dish.id) }"
                 @tap="decreaseQuantity(dish)"
               >
                 <text>-</text>
               </view>
               <text class="quantity">{{ getSelectedQuantity(dish.id) }}</text>
-              <view class="control-btn plus" @tap="increaseQuantity(dish)">
+              <view class="control-btn plus" :class="{ disabled: isReadonly }" @tap="increaseQuantity(dish)">
                 <text>+</text>
               </view>
             </view>
@@ -86,7 +90,7 @@
     <view class="selected-dishes" v-if="selectedDishes.length > 0">
       <view class="selected-header">
         <text class="title">已选 {{ selectedDishes.length }} 件</text>
-        <text class="clear-btn" @tap="clearAll">清空</text>
+        <text class="clear-btn" @tap="clearAll" :class="{ disabled: isReadonly }">清空</text>
       </view>
       <scroll-view scroll-x class="selected-list">
         <view
@@ -106,8 +110,8 @@
         <text class="quantity">已选 {{ totalQuantity }} 件</text>
         <text class="amount">¥{{ totalAmount }}</text>
       </view>
-      <button class="submit-btn" @tap="submitSelections" :disabled="selectedDishes.length === 0">
-        确认选择
+      <button class="submit-btn" @tap="submitSelections" :disabled="selectedDishes.length === 0 || isReadonly">
+        {{ isReadonly ? '不可修改' : '确认选择' }}
       </button>
     </view>
   </view>
@@ -119,6 +123,30 @@ import { groupOrderApi } from '@/api/modules/group-order-api.js'
 
 const orderId = ref('')
 const userId = ref('')
+const orderLocked = ref(false)
+const currentUserJoined = ref(false)
+const currentUserPaid = ref(false)
+const canEdit = ref(true)
+
+const readonlyMessage = computed(() => {
+  if (!currentUserJoined.value) {
+    return '您还未加入该拼单，当前页面为只读模式。'
+  }
+  if (currentUserPaid.value) {
+    return '您已完成支付，当前页面为只读模式，不能再修改选菜。'
+  }
+  if (orderLocked.value) {
+    return '拼单已确认成团，当前页面为只读模式，不能再修改选菜。'
+  }
+  if (!canEdit.value) {
+    return '当前拼单暂不可修改菜品，请稍后再试。'
+  }
+  return ''
+})
+
+const isReadonly = computed(() => {
+  return !currentUserJoined.value || currentUserPaid.value || orderLocked.value || !canEdit.value
+})
 
 // 分类
 const activeCategory = ref('all')
@@ -174,7 +202,7 @@ const totalAmount = computed(() => {
   }, 0).toFixed(2)
 })
 
-onMounted(() => {
+onMounted(async () => {
   // 获取页面参数
   const pages = getCurrentPages()
   const currentPage = pages[pages.length - 1]
@@ -183,12 +211,34 @@ onMounted(() => {
   orderId.value = options.id || ''
   userId.value = uni.getStorageSync('userId') || ''
 
+  await loadOrderMeta()
+
   // 加载菜品列表
   loadDishList()
 
   // 加载已选菜品
   loadUserSelections()
 })
+
+const loadOrderMeta = async () => {
+  try {
+    const res = await groupOrderApi.getDetail(orderId.value)
+    if (res.code === 200 && res.data) {
+      orderLocked.value = Boolean(res.data.locked)
+      currentUserJoined.value = typeof res.data.currentUserJoined === 'boolean'
+        ? res.data.currentUserJoined
+        : Boolean((res.data.members || []).find(item => item.userId === userId.value))
+      currentUserPaid.value = typeof res.data.currentUserPaid === 'boolean'
+        ? res.data.currentUserPaid
+        : Boolean((res.data.members || []).find(item => item.userId === userId.value)?.paid)
+      canEdit.value = typeof res.data.canEdit === 'boolean'
+        ? res.data.canEdit
+        : !orderLocked.value
+    }
+  } catch (error) {
+    console.error('加载拼单状态失败:', error)
+  }
+}
 
 /**
  * GROUP-005: 加载可选菜品列表
@@ -321,6 +371,13 @@ const getSelectedQuantity = (dishId) => {
  * 增加数量
  */
 const increaseQuantity = (dish) => {
+  if (isReadonly.value) {
+    uni.showToast({
+      title: readonlyMessage.value || '当前不可修改菜品',
+      icon: 'none'
+    })
+    return
+  }
   const currentQuantity = selectedMap.value[dish.id] || 0
   selectedMap.value[dish.id] = currentQuantity + 1
 }
@@ -329,6 +386,13 @@ const increaseQuantity = (dish) => {
  * 减少数量
  */
 const decreaseQuantity = (dish) => {
+  if (isReadonly.value) {
+    uni.showToast({
+      title: readonlyMessage.value || '当前不可修改菜品',
+      icon: 'none'
+    })
+    return
+  }
   const currentQuantity = selectedMap.value[dish.id] || 0
   if (currentQuantity > 0) {
     selectedMap.value[dish.id] = currentQuantity - 1
@@ -339,6 +403,14 @@ const decreaseQuantity = (dish) => {
  * 清空所有
  */
 const clearAll = () => {
+  if (isReadonly.value) {
+    uni.showToast({
+      title: readonlyMessage.value || '当前不可修改菜品',
+      icon: 'none'
+    })
+    return
+  }
+
   uni.showModal({
     title: '提示',
     content: '确定清空已选菜品吗？',
@@ -354,6 +426,14 @@ const clearAll = () => {
  * GROUP-006: 保存菜品选择
  */
 const submitSelections = async () => {
+  if (isReadonly.value) {
+    uni.showToast({
+      title: readonlyMessage.value || '当前不可修改菜品',
+      icon: 'none'
+    })
+    return
+  }
+
   if (selectedDishes.value.length === 0) {
     uni.showToast({
       title: '请先选择菜品',
@@ -416,6 +496,17 @@ const submitSelections = async () => {
   padding-bottom: 120rpx;
 }
 
+.lock-banner {
+  margin: 20rpx;
+  padding: 20rpx 24rpx;
+  background: #fff7e6;
+  color: #d48806;
+  border: 2rpx solid #ffd591;
+  border-radius: 16rpx;
+  font-size: 24rpx;
+  line-height: 1.5;
+}
+
 /* 分类筛选 */
 .category-tabs {
   background: #fff;
@@ -441,6 +532,10 @@ const submitSelections = async () => {
     background: #FF6B35;
     color: #fff;
   }
+}
+
+.disabled {
+  opacity: 0.45;
 }
 
 /* 搜索栏 */

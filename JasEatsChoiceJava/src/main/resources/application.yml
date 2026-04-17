@@ -122,6 +122,12 @@ jwt:
   secret: jia_shi_yi_xuan_secret_key_1234567890
   expiration: 86400000  # 24小时
 
+# 验证码测试模式
+captcha:
+  test:
+    fixed-code-enabled: true   # 临时测试开关，上线前需关闭
+    fixed-code: "8888"
+
 # 文件上传配置
 file:
   upload:

@@ -27,7 +27,7 @@ public class AddDishController {
      */
     @PostMapping("/request")
     public ResponseResult<?> createAddDishRequest(@RequestBody CreateAddDishDTO dto,
-                                                   @RequestHeader("X-User-Id") Long userId) {
+                                                   @RequestHeader("X-User-Id") String userId) {
         try {
             String requestId = addDishService.createAddDishRequest(dto, userId);
             return ResponseResult.success(requestId);
@@ -41,7 +41,7 @@ public class AddDishController {
      * 获取加菜审核列表
      */
     @GetMapping("/review-list/{groupOrderId}")
-    public ResponseResult<?> getReviewList(@PathVariable Long groupOrderId) {
+    public ResponseResult<?> getReviewList(@PathVariable String groupOrderId) {
         try {
             List<AddDishRequestVO> reviewList = addDishService.getReviewList(groupOrderId);
             return ResponseResult.success(reviewList);
@@ -70,7 +70,7 @@ public class AddDishController {
      */
     @DeleteMapping("/request/{requestId}")
     public ResponseResult<?> withdrawRequest(@PathVariable String requestId,
-                                              @RequestHeader("X-User-Id") Long userId) {
+                                              @RequestHeader("X-User-Id") String userId) {
         try {
             boolean success = addDishService.withdrawRequest(requestId, userId);
             return ResponseResult.success(success);
@@ -84,7 +84,7 @@ public class AddDishController {
      * 获取加菜历史
      */
     @GetMapping("/history/{groupOrderId}")
-    public ResponseResult<?> getHistory(@PathVariable Long groupOrderId) {
+    public ResponseResult<?> getHistory(@PathVariable String groupOrderId) {
         try {
             List<AddDishRequestVO> history = addDishService.getHistory(groupOrderId);
             return ResponseResult.success(history);
@@ -112,7 +112,7 @@ public class AddDishController {
      * 获取加菜设置
      */
     @GetMapping("/setting/{groupOrderId}")
-    public ResponseResult<?> getSetting(@PathVariable Long groupOrderId) {
+    public ResponseResult<?> getSetting(@PathVariable String groupOrderId) {
         try {
             AddDishSettingDTO setting = addDishService.getSetting(groupOrderId);
             return ResponseResult.success(setting);

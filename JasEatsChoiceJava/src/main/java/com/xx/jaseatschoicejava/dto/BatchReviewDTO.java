@@ -27,5 +27,5 @@ public class BatchReviewDTO {
     private String rejectReason;
 
     @ApiModelProperty(value = "审核人ID", required = true)
-    private Long reviewerId;
+    private String reviewerId;
 }

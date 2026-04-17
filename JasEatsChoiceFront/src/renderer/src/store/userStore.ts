@@ -18,12 +18,12 @@ export interface UserInfo {
   disableWeatherRecommend: boolean | null
   createTime: string // 创建时间
   updateTime: string | null
-  merchantId: number | null // 商家ID，如果不为空表示用户已注册为商家
+  merchantId: string | null // 商家ID，如果不为空表示用户已注册为商家
   avatar: string // 用户头像URL
 }
 
 export interface MerchantInfo {
-  id: number
+  id: string
   name: string
   address?: string
   phone: string
@@ -147,7 +147,7 @@ export const useUserStore = defineStore('user', {
         }
 
         const response = await axios.get(
-          `${API_CONFIG.baseURL}/v1/merchant/${Number(authStore.merchantId)}`
+          `${API_CONFIG.baseURL}/v1/merchant/${authStore.merchantId}`
         )
         if (response.data.code === '200') {
           this.merchantInfo = response.data.data

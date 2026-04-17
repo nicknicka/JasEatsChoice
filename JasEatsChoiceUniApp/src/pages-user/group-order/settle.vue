@@ -9,7 +9,7 @@
 
       <!-- 成员列表 -->
       <view class="members-section">
-        <text class="section-title">成员订单 ({{ orderInfo.members.length }}人)</text>
+        <text class="section-title">成员订单 ({{ memberCount }}人)</text>
         <scroll-view scroll-x class="members-scroll">
           <view
             class="member-item"
@@ -112,7 +112,7 @@
         <text class="label">应付金额：</text>
         <text class="amount">¥{{ finalAmount }}</text>
       </view>
-      <button class="pay-btn" @tap="processPayment">立即支付</button>
+      <button class="pay-btn" @tap="processPayment" :disabled="!canProcessPayment">{{ paymentButtonText }}</button>
     </view>
   </view>
 </template>
@@ -128,6 +128,11 @@ const userId = ref('')
 // 订单信息
 const orderInfo = ref({
   orderCode: '',
+  locked: false,
+  canPay: false,
+  currentUserJoined: false,
+  currentUserPaid: false,
+  currentCount: 0,
   members: [],
   dishes: []
 })
@@ -149,11 +154,11 @@ const availableCoupons = ref([])
 const selectedCoupon = ref(null)
 
 // 支付方式
-const paymentMethod = ref('wechat')
+const paymentMethod = ref('balance')
 const paymentMethods = [
-  { value: 'wechat', label: '微信支付', icon: '💚' },
-  { value: 'alipay', label: '支付宝', icon: '💙' },
-  { value: 'balance', label: '余额支付', icon: '💰' }
+  { value: 'balance', label: '余额支付', icon: '💰' },
+  { value: 'wechat', label: '微信支付（模拟）', icon: '💚' },
+  { value: 'alipay', label: '支付宝支付（模拟）', icon: '💙' },
 ]
 
 // 最终金额
@@ -162,6 +167,30 @@ const finalAmount = computed(() => {
     return myOrder.value.totalAmount
   }
   return settlementInfo.value.totalAmount
+})
+
+const memberCount = computed(() => {
+  return Number(orderInfo.value.currentCount ?? orderInfo.value.members.length ?? 0)
+})
+
+const canProcessPayment = computed(() => {
+  return Boolean(orderInfo.value.locked && orderInfo.value.currentUserJoined && !orderInfo.value.currentUserPaid && orderInfo.value.canPay && myOrder.value)
+})
+
+const paymentButtonText = computed(() => {
+  if (!orderInfo.value.currentUserJoined) {
+    return '未加入拼单'
+  }
+  if (!orderInfo.value.locked) {
+    return '待确认成团'
+  }
+  if (orderInfo.value.currentUserPaid) {
+    return '已支付'
+  }
+  if (!orderInfo.value.canPay) {
+    return '暂不可支付'
+  }
+  return '立即支付'
 })
 
 onMounted(async () => {
@@ -214,8 +243,18 @@ const loadOrderDetail = async () => {
     const data = res.data
     orderInfo.value = {
       orderCode: data.orderCode || '',
+      locked: Boolean(data.locked),
+      canPay: typeof data.canPay === 'boolean' ? data.canPay : Boolean(data.locked),
+      currentUserJoined: typeof data.currentUserJoined === 'boolean'
+        ? data.currentUserJoined
+        : Boolean((data.members || []).find(m => m.userId === userId.value)),
+      currentUserPaid: typeof data.currentUserPaid === 'boolean'
+        ? data.currentUserPaid
+        : Boolean((data.members || []).find(m => m.userId === userId.value)?.paid),
+      currentCount: Number(data.currentCount ?? data.members?.length ?? 0),
       members: (data.members || []).map(m => ({
         id: m.id,
+        userId: m.userId,
         name: m.name,
         avatar: m.avatar || 'https://via.placeholder.com/100',
         paid: m.paid || false
@@ -234,8 +273,11 @@ const loadOrderDetail = async () => {
     if (myOrderData) {
       myOrder.value = {
         totalAmount: myOrderData.totalAmount || '0.00',
-        dishes: myOrderData.dishes || []
+        dishes: myOrderData.dishes || [],
+        paid: Boolean(myOrderData.paid)
       }
+    } else {
+      myOrder.value = null
     }
   }
 }
@@ -281,6 +323,22 @@ const loadAvailableCoupons = async () => {
  * 选择优惠券
  */
 const selectCoupon = () => {
+  if (!orderInfo.value.currentUserJoined) {
+    uni.showToast({
+      title: '您还未加入此拼单',
+      icon: 'none'
+    })
+    return
+  }
+
+  if (orderInfo.value.currentUserPaid) {
+    uni.showToast({
+      title: '您已支付，无需再选择优惠券',
+      icon: 'none'
+    })
+    return
+  }
+
   if (availableCoupons.value.length === 0) {
     uni.showToast({
       title: '暂无可用优惠券',
@@ -323,6 +381,22 @@ const onPaymentMethodChange = (e) => {
  * GROUP-004: 处理支付
  */
 const processPayment = async () => {
+  if (!orderInfo.value.currentUserJoined) {
+    uni.showToast({
+      title: '您还未加入此拼单',
+      icon: 'none'
+    })
+    return
+  }
+
+  if (!orderInfo.value.locked) {
+    uni.showToast({
+      title: '请先由发起人确认成团',
+      icon: 'none'
+    })
+    return
+  }
+
   if (!myOrder.value) {
     uni.showToast({
       title: '未找到订单信息',
@@ -331,9 +405,17 @@ const processPayment = async () => {
     return
   }
 
-  if (myOrder.value.paid) {
+  if (orderInfo.value.currentUserPaid || myOrder.value.paid) {
     uni.showToast({
       title: '您已支付过此订单',
+      icon: 'none'
+    })
+    return
+  }
+
+  if (!orderInfo.value.canPay) {
+    uni.showToast({
+      title: '当前暂不可支付',
       icon: 'none'
     })
     return
@@ -383,29 +465,15 @@ const processPayment = async () => {
  * 调用微信支付
  */
 const invokeWechatPayment = (paymentParams) => {
-  return new Promise((resolve, reject) => {
-    uni.requestPayment({
-      provider: 'wxpay',
-      ...paymentParams,
-      success: () => {
-        handlePaymentSuccess()
-        resolve()
-      },
-      fail: (err) => {
-        if (err.errMsg.includes('cancel')) {
-          uni.showToast({
-            title: '已取消支付',
-            icon: 'none'
-          })
-        } else {
-          uni.showToast({
-            title: '支付失败',
-            icon: 'none'
-          })
-        }
-        reject(err)
-      }
-    })
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      uni.showToast({
+        title: '微信支付为模拟流程',
+        icon: 'none'
+      })
+      handlePaymentSuccess()
+      resolve(paymentParams)
+    }, 500)
   })
 }
 
@@ -413,34 +481,15 @@ const invokeWechatPayment = (paymentParams) => {
  * 调用支付宝支付
  */
 const invokeAlipayPayment = (paymentParams) => {
-  return new Promise((resolve, reject) => {
-    // H5环境
-    // #ifdef H5
-    if (paymentParams.payUrl) {
-      window.location.href = paymentParams.payUrl
-    }
-    // #endif
-
-    // APP环境
-    // #ifdef APP-PLUS
-    uni.requestPayment({
-      provider: 'alipay',
-      orderInfo: paymentParams.orderInfo,
-      success: () => {
-        handlePaymentSuccess()
-        resolve()
-      },
-      fail: (err) => {
-        uni.showToast({
-          title: '支付失败',
-          icon: 'none'
-        })
-        reject(err)
-      }
-    })
-    // #endif
-
-    resolve()
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      uni.showToast({
+        title: '支付宝支付为模拟流程',
+        icon: 'none'
+      })
+      handlePaymentSuccess()
+      resolve(paymentParams)
+    }, 500)
   })
 }
 
@@ -487,6 +536,7 @@ const handlePaymentSuccess = () => {
   if (myOrder.value) {
     myOrder.value.paid = true
   }
+  orderInfo.value.currentUserPaid = true
 
   // 延迟跳转到订单详情
   setTimeout(() => {

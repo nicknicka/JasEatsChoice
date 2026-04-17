@@ -20,7 +20,7 @@ public class AddDishRequest {
     /**
      * 群订单ID
      */
-    private Long groupOrderId;
+    private String groupOrderId;
 
     /**
      * 原订单ID(关联已支付订单)
@@ -30,16 +30,16 @@ public class AddDishRequest {
     /**
      * 加菜请求人ID
      */
-    private Long requestUserId;
+    private String requestUserId;
 
     /**
      * 商家ID
      */
-    private Long merchantId;
+    private String merchantId;
 
     /**
      * 加菜菜品信息JSON
-     * 格式: [{"dishId":1,"quantity":2,"customization":"微辣","price":28.00}]
+     * 格式: [{"dishId":"2016329138809384963","quantity":2,"customization":"微辣","price":28.00}]
      */
     private String dishInfo;
 
@@ -61,7 +61,7 @@ public class AddDishRequest {
     /**
      * 审核人ID(群订单发起者)
      */
-    private Long reviewerId;
+    private String reviewerId;
 
     /**
      * 审核时间

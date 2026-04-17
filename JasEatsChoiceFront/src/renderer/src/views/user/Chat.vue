@@ -318,6 +318,7 @@ import { MESSAGE_CONFIG } from '../../constants/chatConstants'
 import { MERCHANT_API } from '../../constants/apiConstants'
 import api from '../../utils/api.js'
 import { decodeJwt } from '../../utils/api.js'
+import groupOrderApi from '../../api/groupOrder'
 
 // ========== 用户信息 ==========
 import pinia from '../../store'
@@ -328,7 +329,7 @@ const authStore = useAuthStore(pinia)
 // 提供 authStore 给子组件
 provide('authStore', authStore)
 
-const userId = ref(authStore.userId || 1)
+const userId = ref(String(authStore.userId || '1'))
 const token = ref(authStore.token || '')
 const msgPageSize = MESSAGE_CONFIG.DEFAULT_PAGE_SIZE
 
@@ -336,7 +337,7 @@ const msgPageSize = MESSAGE_CONFIG.DEFAULT_PAGE_SIZE
 if (token.value) {
   const decodedToken = decodeJwt(token.value)
   if (decodedToken && decodedToken.userId) {
-    userId.value = parseInt(decodedToken.userId, 10)
+    userId.value = String(decodedToken.userId)
   }
 }
 
@@ -530,6 +531,26 @@ const handleWebSocketMessage = (data) => {
     default:
       console.log('⚠️ [WebSocket] 未知消息类型:', data.type)
   }
+}
+
+const extractGroupMemberNames = (members = []) => {
+  if (!Array.isArray(members) || members.length === 0) {
+    return ['我']
+  }
+
+  return members.map((member) => {
+    if (typeof member === 'string') {
+      return member
+    }
+
+    const displayName = member?.name || member?.nickname || member?.userName || member?.username
+    if (displayName) {
+      return displayName
+    }
+
+    const rawId = String(member?.userId || member?.id || '')
+    return rawId ? `用户${rawId.slice(-4)}` : '成员'
+  })
 }
 
 const { initWebSocket, closeWebSocket } = useWebSocketChat({
@@ -823,15 +844,17 @@ const selectConversation = async (conversation) => {
           groupId: draftOrder.groupId,
           groupName: conversation.name,
           creator: '我',
-          members: ['我'],
+          members: extractGroupMemberNames(draftOrder.members || draftOrder.participants || []),
           orderItems: [],
-          totalAmount: 0,
+          totalAmount: Number(draftOrder.totalAmount || 0),
           status: 'active',
           createTime: draftOrder.createTime,
           merchantId: draftOrder.merchantId,
+          merchantName: draftOrder.merchantName,
           addressId: draftOrder.addressId,
           remark: draftOrder.remark,
-          draftStatus: draftOrder.status
+          draftStatus: draftOrder.status,
+          locked: Boolean(draftOrder.locked)
         }
         console.log('✅ [selectConversation] 已从后端恢复草稿订单:', draftOrder)
         console.log('✅ [selectConversation] groupOrders.value[conversation.id]:', groupOrders.value[conversation.id])
@@ -891,9 +914,10 @@ const selectConversation = async (conversation) => {
           const justPaidOrder = paidOrders.find(order => order.id === paidGroupOrderId)
           if (justPaidOrder) {
             // 更新当前订单状态为已支付
-            groupOrders.value[conversation.id].status = 'paid'
+        groupOrders.value[conversation.id].status = 'paid'
             groupOrders.value[conversation.id].totalAmount = justPaidOrder.totalAmount || 0
             groupOrders.value[conversation.id].draftStatus = 1 // 更新后端状态
+            groupOrders.value[conversation.id].locked = true
             console.log('✅ [selectConversation] 已更新订单状态为已支付')
 
             // ========== 支付成功后清除商家和购物车数据 ==========
@@ -947,7 +971,11 @@ const selectConversation = async (conversation) => {
           orderItems: pendingOrder.cartItems,
           totalAmount: pendingOrder.totalAmount,
           status: 'active',
-          createTime: new Date().toISOString()
+          createTime: new Date().toISOString(),
+          merchantId: pendingOrder.merchant?.id || pendingOrder.merchant?.merchantId,
+          merchantName: pendingOrder.merchant?.name,
+          locked: Boolean(pendingOrder.locked),
+          draftStatus: pendingOrder.locked ? 0 : -1
         }
         ElMessage.info('已恢复未完成的订单')
       }
@@ -1784,16 +1812,18 @@ const createGroupOrder = async () => {
         groupId: draftOrder.groupId,
         groupName: selectedConversation.value.name,
         creator: '我',
-        members: ['我'],
+        members: extractGroupMemberNames(draftOrder.members || draftOrder.participants || []),
         orderItems: [],
-        totalAmount: 0,
+        totalAmount: Number(draftOrder.totalAmount || 0),
         status: 'active',
         createTime: draftOrder.createTime || new Date().toISOString(),
         // 保存后端订单信息
         merchantId: draftOrder.merchantId,
+        merchantName: draftOrder.merchantName,
         addressId: draftOrder.addressId,
         remark: draftOrder.remark,
-        draftStatus: draftOrder.status
+        draftStatus: draftOrder.status,
+        locked: Boolean(draftOrder.locked)
       }
 
       groupOrders.value[selectedConversation.value.id] = newOrder
@@ -1827,16 +1857,18 @@ const createGroupOrder = async () => {
         groupId: draftOrder.groupId,
         groupName: selectedConversation.value.name,
         creator: '我',
-        members: ['我'],
+        members: extractGroupMemberNames(draftOrder.members || draftOrder.participants || []),
         orderItems: [],
-        totalAmount: 0,
+        totalAmount: Number(draftOrder.totalAmount || 0),
         status: 'active',
         createTime: draftOrder.createTime || new Date().toISOString(),
         // 保存后端订单信息
         merchantId: draftOrder.merchantId,
+        merchantName: draftOrder.merchantName,
         addressId: draftOrder.addressId,
         remark: draftOrder.remark,
-        draftStatus: draftOrder.status
+        draftStatus: draftOrder.status,
+        locked: Boolean(draftOrder.locked)
       }
 
       groupOrders.value[selectedConversation.value.id] = newOrder
@@ -1923,18 +1955,24 @@ const handleChangeMerchantFromProductDialog = async () => {
 }
 
 const selectMerchant = async (merchant) => {
-  selectedMerchant.value = merchant
-  orderingMerchant.value = merchant
+  const normalizedMerchant = {
+    ...merchant,
+    id: String(merchant.id || merchant.merchantId || ''),
+    merchantId: String(merchant.merchantId || merchant.id || '')
+  }
+
+  selectedMerchant.value = normalizedMerchant
+  orderingMerchant.value = normalizedMerchant
   merchantSelectDialogVisible.value = false
 
   if (selectedConversation.value && hasGroupOrder.value) {
     const currentOrder = groupOrders.value[selectedConversation.value.id]
-    currentOrder.merchantId = merchant.id
-    currentOrder.merchantName = merchant.name
+    currentOrder.merchantId = normalizedMerchant.id
+    currentOrder.merchantName = normalizedMerchant.name
   }
 
   // 从后端获取商家菜品数据（显示加载提示）
-  await fetchMerchantProducts(merchant.id, false)
+  await fetchMerchantProducts(normalizedMerchant.id, false)
 
   // 打开商品选择对话框
   productSelectDialogVisible.value = true
@@ -1963,6 +2001,10 @@ const addProductToCart = ({ product, customization }) => {
 
   const currentOrder = groupOrders.value[selectedConversation.value.id]
   if (!currentOrder) return
+  if (currentOrder.locked) {
+    ElMessage.warning('拼单已确认成团，不能继续加菜')
+    return
+  }
 
   // 构建购物车项
   const cartItemId = `${product.id}_${Date.now()}`
@@ -2010,7 +2052,57 @@ const changeMerchant = () => {
   merchantSelectDialogVisible.value = true
 }
 
-const goToOrderConfirmation = () => {
+const buildGroupOrderSelections = (orderItems = []) => {
+  return orderItems
+    .map((item) => ({
+      dishId: String(item.productId || item.dishId || item.id || ''),
+      quantity: Number(item.quantity || 0),
+      customization: item.remark || item.customization || ''
+    }))
+    .filter((item) => item.dishId && item.quantity > 0)
+}
+
+const syncGroupOrderSelections = async (currentOrder) => {
+  const dishes = buildGroupOrderSelections(currentOrder.orderItems || [])
+  if (dishes.length === 0) {
+    throw new Error('购物车为空，无法保存选菜')
+  }
+
+  const response = await groupOrderApi.saveSelections(currentOrder.orderId, {
+    userId: String(userId.value),
+    merchantId: String(currentOrder.merchantId || ''),
+    addressId: currentOrder.addressId || '',
+    remark: currentOrder.remark || '',
+    dishes
+  })
+
+  if (!(response.code === '200' || response.code === 200 || response.success)) {
+    throw new Error(response.message || '保存选菜失败')
+  }
+
+  return response.data || []
+}
+
+const confirmGroupOrderForSettlement = async (currentOrder) => {
+  const response = await groupOrderApi.confirm(currentOrder.orderId, {
+    userId: String(userId.value)
+  })
+
+  if (!(response.code === '200' || response.code === 200 || response.success)) {
+    throw new Error(response.message || '确认成团失败')
+  }
+
+  const payload = response.data || {}
+  currentOrder.locked = Boolean(payload.locked ?? true)
+  currentOrder.draftStatus = payload.status ?? currentOrder.draftStatus
+  currentOrder.totalAmount = Number(payload.totalAmount ?? currentOrder.totalAmount ?? 0)
+  currentOrder.merchantId = payload.merchantId || currentOrder.merchantId
+  currentOrder.merchantName = payload.merchantName || currentOrder.merchantName
+  currentOrder.members = extractGroupMemberNames(payload.members || payload.participants || currentOrder.members)
+  return payload
+}
+
+const goToOrderConfirmation = async () => {
   if (!selectedConversation.value || !groupOrders.value[selectedConversation.value.id]) {
     ElMessage.error('当前没有群订单')
     return
@@ -2020,6 +2112,22 @@ const goToOrderConfirmation = () => {
 
   if (!currentOrder.orderItems || currentOrder.orderItems.length === 0) {
     ElMessage.warning('购物车为空，无法进行订单确认')
+    return
+  }
+
+  if (!currentOrder.merchantId) {
+    ElMessage.warning('请先选择商家')
+    return
+  }
+
+  try {
+    if (!currentOrder.locked) {
+      await syncGroupOrderSelections(currentOrder)
+      await confirmGroupOrderForSettlement(currentOrder)
+    }
+  } catch (error) {
+    console.error('同步拼单失败:', error)
+    ElMessage.error(error.message || '拼单确认失败，请稍后重试')
     return
   }
 
@@ -2034,8 +2142,10 @@ const goToOrderConfirmation = () => {
     fromChat: true,
     groupName: currentOrder.groupName,
     orderId: currentOrder.orderId,
+    groupOrderId: currentOrder.orderId,
     creator: currentOrder.creator,
     members: currentOrder.members,
+    locked: Boolean(currentOrder.locked),
     // 商家信息以对象格式传递，符合OrderConfirmation页面的期望
     merchant: {
       id: currentOrder.merchantId,
@@ -2507,7 +2617,11 @@ const fetchMerchants = async () => {
     const response = await api.get(MERCHANT_API.LIST)
 
     if (response.code === '200' || response.data) {
-      merchants.value = response.data || []
+      merchants.value = (response.data || []).map((merchant) => ({
+        ...merchant,
+        id: String(merchant.id || merchant.merchantId || ''),
+        merchantId: String(merchant.merchantId || merchant.id || '')
+      }))
       // console.log(`🏪 [Chat] 商家列表已加载 - 共 ${merchants.value.length} 个商家`)
       ElMessage.success(`已加载 ${merchants.value.length} 个商家`)
     } else {
@@ -2531,7 +2645,7 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
     }
     const response = await api.get(`/v1/menus/merchants/${merchantId}/menu`)
 
-    if (response.code === '200' && response.data) {
+    if ((response.code === '200' || response.code === 200) && response.data) {
       const menuData = response.data
       if (selectedMerchant.value) {
         // MenuController返回的是菜单数组,每个菜单包含dishes
@@ -2547,8 +2661,6 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
           })
         }
 
-        console.log(`📦 [Chat] 从 ${menuData.length} 个菜单中加载了 ${products.length} 个菜品`)
-
         // 处理商品数据，确保包含必选食材、可选食材等信息
         selectedMerchant.value.products = products.map(product => {
           // 后端返回的是 requiredIngredients (字符串数组) 和 optionalIngredients (对象数组)
@@ -2558,7 +2670,7 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
           return {
             ...product,
             // 确保基本字段存在
-            id: product.id || product.dishId || Date.now() + Math.random(),
+            id: String(product.id || product.dishId || `${Date.now()}_${Math.random()}`),
             name: product.name || product.dishName || '未命名商品',
             price: product.price || 0,
             description: product.description || product.desc || '',
@@ -2592,7 +2704,6 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
         // ========== 商品数据加载完成后，手动保存完整的商家信息到 sessionStorage ==========
         saveToStorage(STORAGE_KEYS.SELECTED_MERCHANT, selectedMerchant.value)
         saveToStorage(STORAGE_KEYS.ORDERING_MERCHANT, selectedMerchant.value)
-        console.log('💾 [Chat] 商品数据加载完成，已保存完整商家信息')
       }
       if (!silent) {
         ElMessage.success(`已加载 ${selectedMerchant.value?.products?.length || 0} 个菜品`)

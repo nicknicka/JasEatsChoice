@@ -44,8 +44,12 @@
 
 ### 3.2 测试环境配置建议
 
+- 测试库需先执行拼单数据模型迁移：`V2026041701__create_group_order_member_table.sql`
 - 单独测试库、单独 Redis 库编号、单独上传目录
 - 关闭真实短信、真实邮件、真实支付回调，统一使用模拟开关或测试配置
+- 拼单场景中：
+  - 余额支付走真实闭环
+  - 微信支付、支付宝支付仅走模拟流程
 - AI接口建议分为两套：
   - 基础连通性测试：走真实服务
   - 回归稳定性测试：走模拟响应
@@ -60,6 +64,11 @@
 - 钱包：余额充足、余额不足
 - 优惠券：可用、已用、已释放、过期
 - 评价：未评价订单、已评价订单、已回复评价、未回复评价
+- 拼单：
+  - 草稿拼单、待确认拼单、已锁单待支付拼单、已全部支付拼单
+  - 发起人成员、普通成员、已退出成员、未加入用户
+  - `t_group_order_member` 中存在有效成员、已退出成员、已支付成员
+  - `t_group_order.max_participants`、`locked`、`confirmed_time` 有明确预置值
 
 ## 四、测试方法
 
@@ -75,6 +84,11 @@
 - 使用接口测试工具构造请求
 - 同步核对数据库、Redis、文件目录、副作用通知
 - 对照 `前后端字段对接分析报告.md` 验证高风险接口
+- 拼单接口除接口返回外，必须额外核对：
+  - `t_group_order_member`
+  - `t_group_order.max_participants`
+  - `t_group_order.locked`
+  - `t_group_order.confirmed_time`
 
 ### 4.2 接口自动化测试
 
@@ -129,6 +143,10 @@
 - 成功场景返回值正确
 - 异常场景返回错误码和提示正确
 - 数据库、Redis、文件、副作用通知符合预期
+- 拼单接口还需满足：
+  - 成员表记录与接口返回的 `members/participants/currentCount` 一致
+  - 锁单状态与 `locked/confirmedTime/canEdit/canLeave/canConfirm/canPay` 一致
+  - 支付结果与 `currentUserPaid/payStatus/paidAmount` 一致
 
 ### 6.2 回归通过标准
 
@@ -136,6 +154,7 @@
 - P1 用例通过率不低于 95%
 - 不允许出现新增的字段名不一致、类型不一致、路径不存在、请求方式错误
 - 不允许出现订单、支付、钱包、评价状态流转错误
+- 不允许出现拼单成员表、锁单状态、支付状态与接口返回不一致
 
 ## 七、按接口分类的测试用例
 
@@ -229,6 +248,43 @@
 | AI-03 | `GET /api/v1/ai/chat/history` | 获取聊天历史 | `userId` | 返回历史消息 | P1 |
 | AI-04 | `POST /api/agent/supervisor/chat` | 非流式对话 | 合法请求体 | 返回完整回答 | P2 |
 | AI-05 | `POST /api/agent/supervisor-sse/chat` | 流式对话 | 合法请求体 | 按事件流返回内容 | P2 |
+
+## 7.9 拼单专项
+
+| 用例编号 | 接口 | 场景 | 输入 | 预期输出 | 优先级 |
+| --- | --- | --- | --- | --- | --- |
+| GO-01 | `POST /api/v1/group-orders/group-orders` | 创建拼单并持久化人数上限 | 合法 `initiatorId/groupId/merchantId/addressId/maxParticipants` | 返回拼单ID，`t_group_order.max_participants` 正确落库，`locked=false`，`confirmed_time=NULL` | P0 |
+| GO-02 | `POST /api/v1/group-orders/group-orders` | 创建拼单后初始化成员表 | 创建成功后查询数据库 | `t_group_order_member` 至少存在发起人一条有效记录，`role=initiator`，`leave_status=0` | P0 |
+| GO-03 | `POST /api/v1/group-orders/join` | 按订单码加入 | 合法 `orderCode/userId` | 返回 `groupOrderId/orderCode/currentCount/maxParticipants/joined/joinable`，成员表新增或恢复有效成员记录 | P0 |
+| GO-04 | `GET /api/v1/group-orders/group-orders/{groupOrderId}` | 详情真值回显 | 携带 `userId` | `members/participants/currentCount/maxParticipants/currentUserJoined/currentUserPaid/canEdit/canLeave/canConfirm/canPay` 与数据库一致 | P0 |
+| GO-05 | `GET /api/v1/group-orders/users/{userId}/orders` | 用户拼单列表真值回显 | 合法 `userId` | 列表项中的 `members/participants/currentCount/maxParticipants/locked` 与详情口径一致 | P0 |
+| GO-06 | `POST /api/v1/group-orders/group-orders/{groupOrderId}/selections` | 保存选菜 | 合法 `userId/dishes[]` | 返回当前用户选菜记录，详情中的成员金额、菜品汇总同步更新 | P0 |
+| GO-07 | `POST /api/v1/group-orders/group-orders/{groupOrderId}/selections` | 已锁单后改菜 | 已确认成团的拼单 + 合法菜品 | 返回失败，提示不能继续修改选菜 | P0 |
+| GO-08 | `GET /api/v1/group-orders/group-orders/{groupOrderId}/selections/{userId}` | 获取用户选菜 | 合法拼单ID与用户ID | 返回该用户菜品列表，字段完整正确 | P0 |
+| GO-09 | `POST /api/v1/group-orders/group-orders/{groupOrderId}/confirm` | 发起人确认成团 | `userId=initiatorId` 且至少有一份菜品 | 返回 `locked=true`、`confirmedTime` 非空、`canConfirm=false`、`canEdit=false` | P0 |
+| GO-10 | `POST /api/v1/group-orders/group-orders/{groupOrderId}/confirm` | 非发起人确认成团 | 普通成员 `userId` | `code=403`，提示仅发起人可确认 | P0 |
+| GO-11 | `POST /api/v1/group-orders/group-orders/{groupOrderId}/confirm` | 空拼单确认 | 无任何选菜 | `code=400`，提示至少选择一份菜品 | P0 |
+| GO-12 | `DELETE /api/v1/group-orders/group-orders/{groupOrderId}/leave` | 未确认前退出 | 普通成员 `userId` | 返回退出成功，成员表 `leave_status=1`、`leave_time` 非空，用户菜品被清理，`currentCount` 减少 | P0 |
+| GO-13 | `DELETE /api/v1/group-orders/group-orders/{groupOrderId}/leave` | 发起人退出 | 发起人 `userId` | `code=400`，提示发起人不能直接退出 | P0 |
+| GO-14 | `DELETE /api/v1/group-orders/group-orders/{groupOrderId}/leave` | 已支付成员退出 | 已支付普通成员 `userId` | `code=400`，提示已支付成员暂不支持退出拼单 | P0 |
+| GO-15 | `DELETE /api/v1/group-orders/group-orders/{groupOrderId}/leave` | 已确认后退出 | 已锁定拼单 | `code=400`，提示不能退出 | P0 |
+| GO-16 | `POST /api/v1/group-orders/group-orders/{groupOrderId}/pay` | 单人余额支付 | `paymentType=single,paymentMethod=balance` | 支付成功，成员表该用户 `pay_status=paid`、`paid_amount` 正确，详情 `currentUserPaid=true` | P0 |
+| GO-17 | `POST /api/v1/group-orders/group-orders/{groupOrderId}/pay` | 发起人统一余额支付 | `paymentType=all,paymentMethod=balance` | 全部有效成员 `pay_status=paid`，拼单状态流转到 `1`，`locked=true` | P0 |
+| GO-18 | `POST /api/v1/group-orders/group-orders/{groupOrderId}/pay` | 未确认直接支付 | `paymentMethod=balance` | `code=400`，提示先确认成团 | P0 |
+| GO-19 | `POST /api/v1/group-orders/group-orders/{groupOrderId}/pay` | 无金额可支付 | 当前用户无应付金额或已支付 | `code=400`，提示当前没有可支付的拼单金额 | P0 |
+| GO-20 | `POST /api/v1/group-orders/group-orders/{groupOrderId}/pay` | 微信支付模拟 | `paymentMethod=wechat` | 返回 `paymentNo/status/paymentParams`，且 `paymentParams.type=wechat`，不校验真实商户回调 | P1 |
+| GO-21 | `POST /api/v1/group-orders/group-orders/{groupOrderId}/pay` | 支付宝支付模拟 | `paymentMethod=alipay` | 返回 `paymentNo/status/paymentParams`，且 `paymentParams.type=alipay`，不校验真实商户回调 | P1 |
+| GO-22 | `POST /api/v1/group-orders/group-orders/{groupOrderId}/invite` | 获取分享信息 | 可选 `friendIds[]` | 返回 `orderCode/shareTitle/shareText/qrcodeContent/inviteeCount` | P1 |
+
+### 7.9.1 拼单数据库校验矩阵
+
+| 校验对象 | 校验点 | 通过标准 |
+| --- | --- | --- |
+| `t_group_order_member` | 成员增删、角色、支付状态、退出状态 | 与接口返回的 `members/participants` 完全一致 |
+| `t_group_order.max_participants` | 创建、详情、列表人数上限 | 与接口返回的 `maxParticipants` 一致 |
+| `t_group_order.locked` | 确认成团、全部支付后状态 | 与接口返回的 `locked/canEdit/canLeave/canConfirm/canPay` 一致 |
+| `t_group_order.confirmed_time` | 确认成团后写入时间 | 与接口返回的 `confirmedTime` 一致，且锁单前为空 |
+| `t_payment_record` | 单人支付、统一支付、模拟支付 | 余额支付写真实成功记录；微信/支付宝仅校验模拟返回结构 |
 
 ## 八、执行节奏建议
 

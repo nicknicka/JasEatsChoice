@@ -55,7 +55,7 @@
           <template #header>
             <div class="card-header">
               <span class="card-title">订单商品</span>
-              <el-button type="text" size="small" @click="openCart">
+              <el-button v-if="canEditOrderItems" type="text" size="small" @click="openCart">
                 <el-icon><Edit /></el-icon>
                 编辑订单
               </el-button>
@@ -77,7 +77,9 @@
             <div class="section-header">
               <el-icon color="#e6a23c"><Clock /></el-icon>
               <span class="section-title">待支付商品</span>
-              <el-tag type="warning" size="small" effect="plain">可编辑</el-tag>
+              <el-tag :type="canEditOrderItems ? 'warning' : 'info'" size="small" effect="plain">
+                {{ canEditOrderItems ? '可编辑' : '已锁单' }}
+              </el-tag>
             </div>
             <order-item-list :items="orderInfo.unpaidItems" :show-payment-info="false" />
           </div>
@@ -373,18 +375,18 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { Shop, Edit, CircleCheck, Clock, Ticket, InfoFilled } from '@element-plus/icons-vue'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
 import OrderItemList from './components/OrderItemList.vue'
+import groupOrderApi from '../../api/groupOrder'
 import walletApi from '../../api/wallet'
 import paymentApi from '../../api/payment'
 import orderApi from '../../api/order'
 import couponApi from '../../api/coupon'
 import { useAuthStore } from '../../store/authStore'
-import api from '../../utils/api'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -396,13 +398,12 @@ const pendingOrder = JSON.parse(sessionStorage.getItem('pendingOrder')) || {}
 const isEmptyOrder = !pendingOrder.cartItems || pendingOrder.cartItems.length === 0
 
 // 从pendingOrder中提取商家ID（兼容 merchantId 和 id 两种字段名）
-const merchantId = ref(pendingOrder.merchant?.merchantId || pendingOrder.merchant?.id)
+const merchantId = ref(String(pendingOrder.merchant?.merchantId || pendingOrder.merchant?.id || ''))
 if (!merchantId.value) {
   console.error('商家ID缺失，pendingOrder:', pendingOrder)
   ElMessage.error('商家信息异常，请返回重试')
   router.back()
 }
-console.log('商家ID:', merchantId.value)
 
 // 订单信息（ID由后端IdGenerator统一生成，避免重复）
 const orderInfo = ref({
@@ -410,6 +411,7 @@ const orderInfo = ref({
   groupName: pendingOrder.groupName || '默认订单群',
   userName: pendingOrder.userName || '',
   creator: pendingOrder.creator || '',
+  members: pendingOrder.members || [],
   paidItems: [],
   unpaidItems: pendingOrder.cartItems || [],
   totalPaid: 0.0,
@@ -429,7 +431,7 @@ if (isEmptyOrder) {
 
 // 商家信息 - 从pendingOrder中获取，如果没有则使用默认值
 const merchantInfo = ref({
-  id: pendingOrder.merchant?.merchantId || pendingOrder.merchant?.id || 1,
+  id: String(pendingOrder.merchant?.merchantId || pendingOrder.merchant?.id || '1'),
   name: pendingOrder.merchant?.name || '佳食优选餐厅',
   rating: pendingOrder.merchant?.rating || 4.8,
   deliveryTime: pendingOrder.merchant?.deliveryTime || '约30分钟',
@@ -461,6 +463,11 @@ const addQuickRemark = (remark) => {
 
 // 打开购物车编辑弹窗
 const openCart = () => {
+  if (!canEditOrderItems.value) {
+    ElMessage.warning('拼单已确认成团，订单商品不可修改')
+    return
+  }
+
   // 创建深拷贝，避免直接修改原始数据
   cartItems.value = JSON.parse(JSON.stringify(orderInfo.value.unpaidItems))
   cartVisible.value = true
@@ -470,6 +477,10 @@ const openCart = () => {
 const isGroupOrder = ref(orderInfo.value.groupName !== '默认订单群')
 const fromChat = ref(pendingOrder.fromChat || false)
 const fromSingleChat = ref(fromChat.value && !isGroupOrder.value)
+const groupOrderId = ref(String(pendingOrder.groupOrderId || pendingOrder.orderId || ''))
+const groupOrderTotalAmount = ref(Number(pendingOrder.totalAmount || orderInfo.value.totalUnpaid || 0))
+const personalPayableAmount = ref(Number(orderInfo.value.totalUnpaid || 0))
+const canEditOrderItems = computed(() => !(isGroupOrder.value && fromChat.value))
 
 // 支付方式
 const paymentMethods = computed(() => {
@@ -498,42 +509,6 @@ const submitting = ref(false)
 
 // 平台币余额 - 从后端获取
 const platformBalance = ref(0.0)
-
-// 初始化余额、优惠券
-onMounted(async () => {
-  try {
-    const userId = parseInt(authStore.userId || '0', 10)
-    if (userId > 0) {
-      // 获取余额
-      const balanceResponse = await walletApi.getBalance(userId)
-      console.log('余额获取响应:', balanceResponse)
-      if (balanceResponse.code === '200') {
-        platformBalance.value = balanceResponse.data || 0.0
-      }
-
-      // 获取用户优惠券
-      try {
-        const couponResponse = await couponApi.getUserCoupons(userId)
-        if (couponResponse.code === '200') {
-          const currentAmount = orderInfo.value.totalUnpaid
-          // 过滤：状态可用 且 满足最低消费金额
-          const availableCoupons = (couponResponse.data || []).filter(
-            c => (c.status === 'available' || c.status === 'valid')
-              && (!c.minAmount || c.minAmount <= currentAmount)
-          )
-          discounts.value = availableCoupons
-        }
-      } catch (couponError) {
-        console.error('获取优惠券失败:', couponError)
-        discounts.value = []
-      }
-
-    }
-  } catch (error) {
-    console.error('初始化失败:', error)
-    ElMessage.warning('初始化失败，请刷新页面重试')
-  }
-})
 
 // 提交按钮文字
 const submitButtonText = computed(() => {
@@ -574,6 +549,129 @@ const discountAmount = computed(() => {
 // 最终金额（注意：orderInfo.totalUnpaid 已经在 useDiscount 中被修改过了）
 const finalAmount = computed(() => {
   return orderInfo.value.totalUnpaid
+})
+
+const resetDiscountState = () => {
+  if (selectedDiscount.value) {
+    selectedDiscount.value.used = false
+    selectedDiscount.value = null
+  }
+  delete orderInfo.value.originalTotal
+}
+
+const syncGroupOrderPayableAmount = () => {
+  if (!(isGroupOrder.value && fromChat.value)) {
+    return
+  }
+
+  const methodId = selectedPaymentMethod.value.id
+  orderInfo.value.totalUnpaid = methodId === 2
+    ? Number(groupOrderTotalAmount.value || 0)
+    : Number(personalPayableAmount.value || 0)
+}
+
+const loadBalance = async (userId) => {
+  const balanceResponse = await walletApi.getBalance(userId)
+  console.log('余额获取响应:', balanceResponse)
+  if (balanceResponse.code === '200' || balanceResponse.code === 200) {
+    platformBalance.value = Number(balanceResponse.data || 0)
+  }
+}
+
+const loadCoupons = async (userId) => {
+  try {
+    const couponResponse = await couponApi.getUserCoupons(userId)
+    if (couponResponse.code === '200' || couponResponse.code === 200) {
+      const currentAmount = orderInfo.value.totalUnpaid
+      const availableCoupons = (couponResponse.data || []).filter(
+        (c) => (c.status === 'available' || c.status === 'valid')
+          && (!c.minAmount || c.minAmount <= currentAmount)
+      )
+      discounts.value = availableCoupons
+      return
+    }
+  } catch (couponError) {
+    console.error('获取优惠券失败:', couponError)
+  }
+
+  discounts.value = []
+}
+
+const refreshGroupOrderSettlement = async (userId) => {
+  if (!groupOrderId.value) {
+    return
+  }
+
+  const response = await groupOrderApi.getSettlement(groupOrderId.value, userId)
+  if (!(response.code === '200' || response.code === 200 || response.success)) {
+    throw new Error(response.message || '获取拼单结算信息失败')
+  }
+
+  const settlement = response.data || {}
+  personalPayableAmount.value = Number(settlement.totalAmount || 0)
+  if (Array.isArray(settlement.participants) && settlement.participants.length > 0) {
+    orderInfo.value.members = settlement.participants
+  }
+}
+
+const payGroupOrder = async (userId, methodId) => {
+  const paymentType = methodId === 2 ? 'all' : 'single'
+  const response = await groupOrderApi.pay(groupOrderId.value, {
+    userId,
+    paymentType,
+    paymentMethod: 'balance',
+    couponId: selectedDiscount.value?.id || ''
+  })
+
+  if (!(response.code === '200' || response.code === 200 || response.success)) {
+    throw new Error(response.message || '支付失败，请重试')
+  }
+
+  const paymentData = response.data || {}
+  sessionStorage.removeItem('pendingOrder')
+  sessionStorage.setItem('paidGroupOrderId', groupOrderId.value)
+  sessionStorage.setItem('paidGroupOrderAmount', String(paymentData.amount || finalAmount.value))
+  ElMessage.success(paymentType === 'all' ? '统一支付成功！' : '支付成功！您的拼单正在等待商家接单')
+
+  await loadBalance(userId)
+
+  setTimeout(() => {
+    submitting.value = false
+    router.push('/user/home/orders')
+  }, 1500)
+}
+
+watch(() => selectedPaymentMethod.value.id, async () => {
+  if (!(isGroupOrder.value && fromChat.value)) {
+    return
+  }
+
+  resetDiscountState()
+  syncGroupOrderPayableAmount()
+
+  const userId = String(authStore.userId || '').trim()
+  if (userId) {
+    await loadCoupons(userId)
+  }
+})
+
+// 初始化余额、优惠券
+onMounted(async () => {
+  try {
+    const userId = String(authStore.userId || '').trim()
+    if (userId) {
+      if (isGroupOrder.value && fromChat.value) {
+        await refreshGroupOrderSettlement(userId)
+        syncGroupOrderPayableAmount()
+      }
+
+      await loadBalance(userId)
+      await loadCoupons(userId)
+    }
+  } catch (error) {
+    console.error('初始化失败:', error)
+    ElMessage.warning('初始化失败，请刷新页面重试')
+  }
 })
 
 // 计算AA支付每人金额
@@ -775,6 +873,11 @@ const formatOptionalIngredients = (ingredients) => {
 const confirmOrder = async () => {
   const methodId = selectedPaymentMethod.value.id
 
+  if (isGroupOrder.value && fromChat.value && (methodId === 3 || methodId === 4)) {
+    ElMessage.warning('桌面端拼单暂仅支持个人支付或统一支付')
+    return
+  }
+
   if (methodId === 3) {
     openAAPaymentModal()
     return
@@ -808,8 +911,8 @@ const confirmOrder = async () => {
   }
 
   // 检查余额
-  const userId = parseInt(authStore.userId || '0', 10)
-  if (userId <= 0) {
+  const userId = String(authStore.userId || '').trim()
+  if (!userId) {
     ElMessage.error('用户未登录，请重新登录')
     return
   }
@@ -830,6 +933,11 @@ const confirmOrder = async () => {
     .then(async () => {
       try {
         submitting.value = true
+
+        if (isGroupOrder.value && fromChat.value) {
+          await payGroupOrder(userId, methodId)
+          return
+        }
 
         console.log('开始创建订单...', {
           orderId: orderInfo.value.orderId,
@@ -897,32 +1005,7 @@ const confirmOrder = async () => {
           ElMessage.success('支付成功！您的订单正在处理中')
 
           // 更新余额
-          const balanceResponse = await walletApi.getBalance(userId)
-          if (balanceResponse.code === '200') {
-            platformBalance.value = balanceResponse.data || 0.0
-          }
-
-          // ⭐ 如果是群订单，更新群订单状态为已支付
-          if (pendingOrder.fromChat && pendingOrder.orderId) {
-            try {
-              console.log('更新群订单状态 - orderId:', pendingOrder.orderId)
-
-              // 调用后端API更新群订单状态为1（待接单/已支付）
-              await api.put(`/v1/group-orders/group-orders/${pendingOrder.orderId}/status`, {
-                status: 1, // 1表示待接单（已支付）
-                totalAmount: finalAmount.value
-              })
-
-              console.log('群订单状态更新成功')
-
-              // 保存支付成功的群订单ID，用于返回聊天页面时识别
-              sessionStorage.setItem('paidGroupOrderId', pendingOrder.orderId)
-              sessionStorage.setItem('paidGroupOrderAmount', finalAmount.value)
-            } catch (error) {
-              console.error('更新群订单状态失败:', error)
-              // 不阻塞支付流程，仅记录错误
-            }
-          }
+          await loadBalance(userId)
 
           setTimeout(() => {
             submitting.value = false

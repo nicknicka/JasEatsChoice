@@ -14185,10 +14185,221 @@
 | `405` | 请求方法不支持 | 请求方式与控制器定义不一致 |
 | `500` | 系统异常，请联系管理员 | 未捕获异常、服务内部错误 |
 
+### 8. 拼单主链真值补充修订（2026-04-17）
+
+以下内容为 `group-order-controller` 最新人工回写，优先级高于本章节中旧的占位示例。
+
+#### 8.1 数据模型真值基线
+
+1. 新增拼单成员真表：`t_group_order_member`
+2. 成员状态统一以成员表字段为准：
+   - `role`
+   - `join_time`
+   - `pay_status`
+   - `paid_amount`
+   - `leave_status`
+   - `leave_time`
+   - `invite_by`
+3. `t_group_order` 已新增并启用以下真字段：
+   - `maxParticipants`
+   - `locked`
+   - `confirmedTime`
+4. 详情页和列表页人数、成员支付态、当前用户权限均以后端聚合结果为准，不再要求前端自行推断。
+
+#### 8.2 详情与列表返回字段基线
+
+适用接口：
+
+- `GET /api/v1/group-orders/group-orders/{groupOrderId}`
+- `GET /api/v1/group-orders/groups/{groupId}/orders`
+- `GET /api/v1/group-orders/users/{userId}/orders`
+
+说明：
+
+- 详情接口返回结构为 `data.groupOrder + data.dishItems`
+- 列表接口返回数组元素，数组元素结构与详情中的 `data.groupOrder` 一致
+
+拼单摘要字段：
+
+| 参数名 | 类型 | 说明 | 示例值 |
+| --- | --- | --- | --- |
+| `id` | 字符串 | 拼单ID | `"194857392001"` |
+| `initiatorId` | 字符串 | 发起人用户ID | `"10001"` |
+| `merchantId` | 字符串 | 商家ID | `"20001"` |
+| `groupId` | 字符串 | 群ID | `"30001"` |
+| `status` | 整数 | 拼单状态 | `0` |
+| `totalAmount` | 数值 | 拼单总金额 | `58.00` |
+| `currentCount` | 整数 | 当前有效成员人数 | `2` |
+| `maxParticipants` | 整数 | 最大参与人数 | `4` |
+| `locked` | 布尔 | 是否已锁单 | `true` |
+| `confirmedTime` | 字符串 | 确认成团时间 | `"2026-04-17T10:30:00"` |
+| `currentUserJoined` | 布尔 | 当前用户是否已加入 | `true` |
+| `currentUserPaid` | 布尔 | 当前用户是否已支付 | `false` |
+| `canConfirm` | 布尔 | 当前用户是否可确认成团 | `false` |
+| `canEdit` | 布尔 | 当前用户是否可改菜 | `false` |
+| `canLeave` | 布尔 | 当前用户是否可退出 | `false` |
+| `canPay` | 布尔 | 当前用户是否可支付 | `true` |
+| `members` | 数组<Participant> | 有效成员数组，和 `participants` 同源 | `[]` |
+| `participants` | 数组<Participant> | 前端主展示成员数组 | `[]` |
+
+`Participant` 字段：
+
+| 参数名 | 类型 | 说明 | 示例值 |
+| --- | --- | --- | --- |
+| `participants[].userId` | 字符串 | 成员用户ID | `"10002"` |
+| `participants[].nickname` | 字符串 | 成员昵称 | `"李四"` |
+| `participants[].avatar` | 字符串 | 成员头像 | `"https://example.com/avatar.png"` |
+| `participants[].role` | 字符串 | `initiator/member` | `"member"` |
+| `participants[].joinTime` | 字符串 | 加入时间 | `"2026-04-17T10:05:00"` |
+| `participants[].paid` | 布尔 | 当前成员是否已支付 | `false` |
+| `participants[].payStatus` | 字符串 | `paid/pending`，兼容历史 `unpaid` | `"pending"` |
+| `participants[].amount` | 数值 | 当前成员应付金额 | `18.00` |
+| `participants[].paidAmount` | 数值 | 当前成员累计实付金额 | `0.00` |
+
+详情接口 `dishItems` 字段：
+
+| 参数名 | 类型 | 说明 | 示例值 |
+| --- | --- | --- | --- |
+| `data.dishItems[].dishId` | 字符串 | 菜品ID | `"50001"` |
+| `data.dishItems[].dishName` | 字符串 | 菜品名称 | `"宫保鸡丁"` |
+| `data.dishItems[].userId` | 字符串 | 选菜用户ID | `"10002"` |
+| `data.dishItems[].quantity` | 整数 | 数量 | `2` |
+| `data.dishItems[].lineAmount` | 数值 | 行金额 | `36.00` |
+| `data.dishItems[].paid` | 布尔 | 对应选菜用户是否已支付 | `false` |
+
+详情响应示例：
+
+```json
+{
+  "success": true,
+  "code": "200",
+  "message": "成功",
+  "data": {
+    "groupOrder": {
+      "id": "194857392001",
+      "initiatorId": "10001",
+      "merchantId": "20001",
+      "groupId": "30001",
+      "status": 0,
+      "totalAmount": 58.0,
+      "currentCount": 2,
+      "maxParticipants": 4,
+      "locked": true,
+      "confirmedTime": "2026-04-17T10:30:00",
+      "currentUserJoined": true,
+      "currentUserPaid": false,
+      "canConfirm": false,
+      "canEdit": false,
+      "canLeave": false,
+      "canPay": true,
+      "participants": [
+        {
+          "userId": "10001",
+          "nickname": "张三",
+          "role": "initiator",
+          "paid": false,
+          "payStatus": "pending",
+          "amount": 40.0,
+          "paidAmount": 0.0
+        },
+        {
+          "userId": "10002",
+          "nickname": "李四",
+          "role": "member",
+          "paid": false,
+          "payStatus": "pending",
+          "amount": 18.0,
+          "paidAmount": 0.0
+        }
+      ],
+      "members": [
+        {
+          "userId": "10001",
+          "nickname": "张三",
+          "role": "initiator",
+          "paid": false,
+          "payStatus": "pending",
+          "amount": 40.0,
+          "paidAmount": 0.0
+        },
+        {
+          "userId": "10002",
+          "nickname": "李四",
+          "role": "member",
+          "paid": false,
+          "payStatus": "pending",
+          "amount": 18.0,
+          "paidAmount": 0.0
+        }
+      ]
+    },
+    "dishItems": [
+      {
+        "dishId": "50001",
+        "dishName": "宫保鸡丁",
+        "userId": "10002",
+        "quantity": 2,
+        "lineAmount": 36.0,
+        "paid": false
+      }
+    ]
+  }
+}
+```
+
+#### 8.3 确认成团
+
+#### 接口基本信息
+
+| 项目 | 内容 |
+| --- | --- |
+| 接口名称 | `confirmGroupOrder` |
+| 请求地址 | `/api/v1/group-orders/group-orders/{groupOrderId}/confirm` |
+| 请求方式 | `POST` |
+| 接口描述 | 发起人确认成团。确认后写入 `locked=true`、`confirmedTime=当前时间`，并返回锁单后的拼单摘要。 |
+
+#### 请求参数
+
+| 参数名 | 类型 | 必填 | 说明 | 示例值 |
+| --- | --- | --- | --- | --- |
+| `groupOrderId` | 字符串 | 是 | 拼单ID（path） | `"194857392001"` |
+| `userId` | 字符串 | 是 | 当前操作用户ID（body） | `"10001"` |
+
+#### 响应参数
+
+| 参数名 | 类型 | 说明 | 示例值 |
+| --- | --- | --- | --- |
+| `data.id` | 字符串 | 拼单ID | `"194857392001"` |
+| `data.status` | 整数 | 当前拼单状态；确认成团后仍为 `0`，待全部支付后流转到 `1` | `0` |
+| `data.locked` | 布尔 | 是否已锁定选菜 | `true` |
+| `data.confirmedTime` | 字符串 | 确认成团时间 | `"2026-04-17T10:30:00"` |
+| `data.currentCount` | 整数 | 当前有效成员人数 | `2` |
+| `data.maxParticipants` | 整数 | 最大参与人数 | `4` |
+| `data.participants` | 数组<Participant> | 当前有效成员列表 | `[]` |
+| `data.currentUserJoined` | 布尔 | 当前用户是否已加入 | `true` |
+| `data.currentUserPaid` | 布尔 | 当前用户是否已支付 | `false` |
+| `data.canConfirm` | 布尔 | 当前用户是否仍可确认 | `false` |
+| `data.canEdit` | 布尔 | 当前用户是否还可改菜 | `false` |
+| `data.canLeave` | 布尔 | 当前用户是否还可退出 | `false` |
+| `data.canPay` | 布尔 | 当前用户是否可支付 | `true` |
+
+#### 异常响应
+
+| 错误码 | 错误信息 | 异常场景 |
+| --- | --- | --- |
+| `400` | `userId不能为空` | 请求体未传 `userId` |
+| `400` | `当前拼单状态不支持确认成团` | 非待确认状态调用 |
+| `400` | `当前拼单已确认成团，无需重复确认` | 已锁单后重复调用 |
+| `400` | `至少选择一份菜品后才能确认成团` | 拼单还没有任何菜品 |
+| `403` | `只有发起人可以确认成团` | 非发起人调用 |
+| `404` | `群订单不存在` | 拼单ID不存在 |
+
 #### 请求示例
 
 ```json
-{}
+{
+  "userId": "10001"
+}
 ```
 
 #### 响应示例
@@ -14197,10 +14408,273 @@
 {
   "success": true,
   "code": "200",
-  "message": "示例内容",
-  "data": {}
+  "message": "确认成团成功",
+  "data": {
+    "id": "194857392001",
+    "status": 0,
+    "locked": true,
+    "confirmedTime": "2026-04-17T10:30:00",
+    "currentCount": 2,
+    "maxParticipants": 4,
+    "currentUserJoined": true,
+    "currentUserPaid": false,
+    "canConfirm": false,
+    "canEdit": false,
+    "canLeave": false,
+    "canPay": true,
+    "participants": [
+      {
+        "userId": "10001",
+        "nickname": "张三",
+        "role": "initiator",
+        "paid": false,
+        "payStatus": "pending",
+        "amount": 40.0,
+        "paidAmount": 0.0
+      },
+      {
+        "userId": "10002",
+        "nickname": "李四",
+        "role": "member",
+        "paid": false,
+        "payStatus": "pending",
+        "amount": 18.0,
+        "paidAmount": 0.0
+      }
+    ]
+  }
 }
 ```
+
+#### 8.4 退出拼单
+
+#### 接口基本信息
+
+| 项目 | 内容 |
+| --- | --- |
+| 接口名称 | `leaveGroupOrder` |
+| 请求地址 | `/api/v1/group-orders/group-orders/{groupOrderId}/leave` |
+| 请求方式 | `DELETE` |
+| 接口描述 | 普通成员退出拼单。仅未确认成团、未支付、且当前仍在拼单中的成员可退出。退出后成员表写入离开状态，并清理该成员的选菜。 |
+
+#### 请求参数
+
+| 参数名 | 类型 | 必填 | 说明 | 示例值 |
+| --- | --- | --- | --- | --- |
+| `groupOrderId` | 字符串 | 是 | 拼单ID（path） | `"194857392001"` |
+| `userId` | 字符串 | 是 | 当前操作用户ID（query） | `"10002"` |
+
+#### 响应参数
+
+| 参数名 | 类型 | 说明 | 示例值 |
+| --- | --- | --- | --- |
+| `data.groupOrderId` | 字符串 | 拼单ID | `"194857392001"` |
+| `data.userId` | 字符串 | 退出成员用户ID | `"10002"` |
+| `data.message` | 字符串 | 结果消息 | `"退出拼单成功"` |
+
+#### 异常响应
+
+| 错误码 | 错误信息 | 异常场景 |
+| --- | --- | --- |
+| `400` | `发起人不能直接退出拼单，请取消群订单` | 发起人尝试退出 |
+| `400` | `当前拼单状态不支持退出` | 拼单状态已进入后续处理态 |
+| `400` | `当前拼单已确认成团，不能退出` | 已锁单后退出 |
+| `400` | `已支付成员暂不支持退出拼单` | 当前成员已支付 |
+| `404` | `群订单不存在` | 拼单ID不存在 |
+| `404` | `当前用户未加入该拼单` | 非成员调用退出 |
+
+#### 请求示例
+
+```http
+DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
+```
+
+#### 响应示例
+
+```json
+{
+  "success": true,
+  "code": "200",
+  "message": "成功",
+  "data": {
+    "groupOrderId": "194857392001",
+    "userId": "10002",
+    "message": "退出拼单成功"
+  }
+}
+```
+
+#### 8.5 邀请好友
+
+#### 接口基本信息
+
+| 项目 | 内容 |
+| --- | --- |
+| 接口名称 | `inviteGroupOrder` |
+| 请求地址 | `/api/v1/group-orders/group-orders/{groupOrderId}/invite` |
+| 请求方式 | `POST` |
+| 接口描述 | 生成拼单分享元数据，用于订单码邀请、分享卡片和二维码展示。 |
+
+#### 请求参数
+
+| 参数名 | 类型 | 必填 | 说明 | 示例值 |
+| --- | --- | --- | --- | --- |
+| `groupOrderId` | 字符串 | 是 | 拼单ID（path） | `"194857392001"` |
+| `friendIds` | 数组<字符串> | 否 | 预期邀请好友ID列表（body） | `["10003","10004"]` |
+
+#### 响应参数
+
+| 参数名 | 类型 | 说明 | 示例值 |
+| --- | --- | --- | --- |
+| `data.groupOrderId` | 字符串 | 拼单ID | `"194857392001"` |
+| `data.groupId` | 字符串 | 群ID | `"30001"` |
+| `data.orderCode` | 字符串 | 6位订单码 | `"392001"` |
+| `data.inviteeCount` | 整数 | 本次传入的邀请人数 | `2` |
+| `data.shareTitle` | 字符串 | 分享标题 | `"加入我的群订单「午餐拼单」"` |
+| `data.shareText` | 字符串 | 分享文案 | `"使用订单码 392001 参与拼单"` |
+| `data.qrcodeContent` | 字符串 | 二维码内容 | `"{\"type\":\"group_order\",\"orderId\":\"194857392001\",\"orderCode\":\"392001\"}"` |
+
+#### 异常响应
+
+| 错误码 | 错误信息 | 异常场景 |
+| --- | --- | --- |
+| `404` | `群订单不存在` | 拼单ID不存在 |
+
+#### 请求示例
+
+```json
+{
+  "friendIds": [
+    "10003",
+    "10004"
+  ]
+}
+```
+
+#### 响应示例
+
+```json
+{
+  "success": true,
+  "code": "200",
+  "message": "成功",
+  "data": {
+    "groupOrderId": "194857392001",
+    "groupId": "30001",
+    "orderCode": "392001",
+    "inviteeCount": 2,
+    "shareTitle": "加入我的群订单「午餐拼单」",
+    "shareText": "使用订单码 392001 参与拼单",
+    "qrcodeContent": "{\"type\":\"group_order\",\"orderId\":\"194857392001\",\"orderCode\":\"392001\"}"
+  }
+}
+```
+
+#### 8.6 拼单支付
+
+#### 接口基本信息
+
+| 项目 | 内容 |
+| --- | --- |
+| 接口名称 | `payGroupOrder` |
+| 请求地址 | `/api/v1/group-orders/group-orders/{groupOrderId}/pay` |
+| 请求方式 | `POST` |
+| 接口描述 | 发起拼单支付。`balance` 为真实余额扣款闭环；`wechat`、`alipay` 仅返回模拟支付参数，不接真实商户回调。 |
+
+#### 请求参数
+
+| 参数名 | 类型 | 必填 | 说明 | 示例值 |
+| --- | --- | --- | --- | --- |
+| `groupOrderId` | 字符串 | 是 | 拼单ID（path） | `"194857392001"` |
+| `userId` | 字符串 | 是 | 支付用户ID | `"10001"` |
+| `paymentType` | 字符串 | 否 | 支付类型：`single` 单人支付，`all` 发起人统一支付；默认 `single` | `"single"` |
+| `paymentMethod` | 字符串 | 否 | 支付方式：`balance/wechat/alipay`；默认 `balance` | `"balance"` |
+| `couponId` | 字符串 | 否 | 优惠券ID | `"20001"` |
+| `paymentPassword` | 字符串 | 否 | 支付密码兼容入参，当前页面未启用真实校验 | `"123456"` |
+
+#### 响应参数
+
+| 参数名 | 类型 | 说明 | 示例值 |
+| --- | --- | --- | --- |
+| `data.paymentNo` | 字符串 | 支付流水号 | `"P202604170001"` |
+| `data.orderId` | 字符串 | 拼单ID | `"194857392001"` |
+| `data.amount` | 数值 | 本次支付金额 | `40.00` |
+| `data.paymentMethod` | 字符串 | 支付方式 | `"balance"` |
+| `data.status` | 字符串 | 支付状态；余额支付成功后为 `success`，模拟支付通常为待后续处理状态 | `"success"` |
+| `data.paymentParams` | 对象 | 支付补充参数 | `{}` |
+| `data.paymentParams.type` | 字符串 | 支付参数类型：`balance/wechat/alipay` | `"balance"` |
+
+#### 异常响应
+
+| 错误码 | 错误信息 | 异常场景 |
+| --- | --- | --- |
+| `400` | `userId不能为空` | 未传支付用户ID |
+| `400` | `请先确认成团后再支付` | 未锁单前直接支付 |
+| `400` | `当前群订单已结束，无法继续支付` | 拼单已完成或已取消 |
+| `400` | `当前没有可支付的拼单金额` | 当前用户没有应付金额或已付完 |
+| `400` | `优惠券不可用` | 优惠券不可使用 |
+| `400` | `暂不支持该支付方式` | 传入不支持的支付方式 |
+| `403` | `当前用户未加入该拼单` | 非成员发起支付 |
+| `404` | `群订单不存在` | 拼单ID不存在 |
+| `500` | `支付失败：钱包余额不足` 等 | 余额不足、扣款失败或下单异常 |
+
+#### 请求示例
+
+```json
+{
+  "userId": "10001",
+  "paymentType": "single",
+  "paymentMethod": "balance",
+  "couponId": "20001"
+}
+```
+
+#### 响应示例
+
+```json
+{
+  "success": true,
+  "code": "200",
+  "message": "支付成功",
+  "data": {
+    "paymentNo": "P202604170001",
+    "orderId": "194857392001",
+    "amount": 40.0,
+    "paymentMethod": "balance",
+    "status": "success",
+    "paymentParams": {
+      "type": "balance",
+      "status": "success"
+    }
+  }
+}
+```
+
+#### 8.7 状态流转与支付说明
+
+状态流转：
+
+| 状态值 | 含义 | 说明 |
+| --- | --- | --- |
+| `-1` | 草稿 | 尚未形成有效拼单 |
+| `0` | 待确认/待支付 | 未确认成团，或已确认但尚未全部支付 |
+| `1` | 待接单 | 所有有效成员支付完成 |
+| `2-4` | 商家处理态 | 商家接单、制作、待完成 |
+| `5` | 已完成 | 拼单完成 |
+| `6` | 已取消 | 拼单取消 |
+
+支付说明：
+
+1. `balance` 为真实闭环，成功后会扣减钱包余额、写入支付记录、同步成员支付状态。
+2. `paymentType=single` 仅同步当前成员支付状态。
+3. `paymentType=all` 由发起人统一支付后，会同步所有有效成员支付状态。
+4. 当所有有效成员完成支付后，拼单状态自动流转为 `1`，并保持 `locked=true`。
+5. `wechat`、`alipay` 仅保留模拟返回结构，统一返回：
+   - `paymentNo`
+   - `status`
+   - `paymentParams`
+   - `paymentParams.type=wechat` 或 `paymentParams.type=alipay`
+6. 微信支付、支付宝支付本轮不实现真实商户资质接入、签名验签和异步回调闭环。
 
 ## home-controller
 

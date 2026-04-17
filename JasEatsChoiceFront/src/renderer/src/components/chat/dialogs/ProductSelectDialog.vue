@@ -343,7 +343,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['update:modelValue', 'addToCart', 'confirm', 'confirmAll', 'change-merchant'])
+const emit = defineEmits(['update:modelValue', 'add-to-cart', 'confirm', 'confirmAll', 'change-merchant'])
 
 // 对话框状态
 const visible = ref(props.modelValue)
@@ -691,8 +691,7 @@ const handleProductCardClick = (product, event) => {
  */
 const handleAddToCart = (product) => {
   const customization = getProductCustomization(product.id)
-
-  emit('addToCart', {
+  emit('add-to-cart', {
     product,
     customization: customization || {
       quantity: 1,
@@ -724,12 +723,12 @@ const handleBatchAddToCart = () => {
         quantity: 1,
         optionalIngredients: [],
         remark: ''
-      }
+    }
     return { product, customization }
   })
 
   items.forEach((item) => {
-    emit('addToCart', item)
+    emit('add-to-cart', item)
   })
 
   // 重置所有商品的定制配置

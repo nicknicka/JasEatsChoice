@@ -6,6 +6,7 @@ import com.xx.jaseatschoicejava.common.ResponseResult;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,6 +26,12 @@ import java.util.concurrent.TimeUnit;
 @RequestMapping("/v1/captcha")
 @Api(tags = "验证码接口")
 public class CaptchaController {
+
+    @Value("${captcha.test.fixed-code-enabled:false}")
+    private boolean fixedCodeEnabled;
+
+    @Value("${captcha.test.fixed-code:8888}")
+    private String fixedCode;
 
     @Autowired
     private RedisTemplate<String, String> redisTemplate;
@@ -57,15 +64,22 @@ public class CaptchaController {
             // 生成唯一key用于验证
             String checkCodeKey = UUID.randomUUID().toString().replace("-", "");
 
+            String effectiveCaptcha = fixedCodeEnabled ? fixedCode : captchaResult;
+
             // 将验证码结果存入Redis，有效期5分钟
-            redisTemplate.opsForValue().set("captcha:" + checkCodeKey, captchaResult, 5, TimeUnit.MINUTES);
+            redisTemplate.opsForValue().set("captcha:" + checkCodeKey, effectiveCaptcha, 5, TimeUnit.MINUTES);
 
             // 构造返回结果
             Map<String, String> result = new HashMap<>();
             result.put("checkCode", captchaBase64);
             result.put("checkCodeKey", checkCodeKey);
-            // 返回验证码答案，仅用于开发环境快速测试
-            result.put("captchaAnswer", captchaResult);
+            // 返回验证码答案，仅用于开发环境或测试环境快速验证
+            result.put("captchaAnswer", effectiveCaptcha);
+            result.put("fixedCaptchaEnabled", String.valueOf(fixedCodeEnabled));
+            if (fixedCodeEnabled) {
+                result.put("fixedCaptchaCode", fixedCode);
+                log.warn("验证码固定测试模式已启用，当前固定验证码: {}", fixedCode);
+            }
 
             return ResponseResult.success(result);
         } catch (Exception e) {

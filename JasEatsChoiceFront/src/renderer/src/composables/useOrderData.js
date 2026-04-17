@@ -30,11 +30,11 @@ export function useOrderData() {
 
   /**
    * 获取用户ID
-   * @returns {number} 用户ID
+   * @returns {string} 用户ID
    */
   function getUserId() {
     const userId = String(authStore.userId || 1) || DEFAULT_USER_ID
-    return parseInt(userId, 10)
+    return userId
   }
 
   /**

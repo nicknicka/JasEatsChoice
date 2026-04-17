@@ -75,7 +75,7 @@ public class AdminMerchantController {
     @ApiOperation("获取商家详情")
     @GetMapping("/{merchantId}")
     @PreAuthorize("hasAnyAuthority('admin:merchant:list')")
-    public ResponseEntity<Map<String, Object>> getMerchantDetail(@PathVariable Long merchantId) {
+    public ResponseEntity<Map<String, Object>> getMerchantDetail(@PathVariable String merchantId) {
         Merchant merchant = merchantService.getById(merchantId);
 
         Map<String, Object> response = new HashMap<>();
@@ -97,7 +97,7 @@ public class AdminMerchantController {
     @PutMapping("/{merchantId}/audit")
     @PreAuthorize("hasAnyAuthority('admin:merchant:audit')")
     public ResponseEntity<Map<String, Object>> auditMerchant(
-            @PathVariable Long merchantId,
+            @PathVariable String merchantId,
             @RequestBody Map<String, Object> request) {
 
         String status = (String) request.get("status"); // APPROVED, REJECTED
@@ -147,7 +147,7 @@ public class AdminMerchantController {
                 : NotificationTypeEnum.MERCHANT_REJECTED;
 
             NotificationUtil.createMerchantAuditNotification(
-                merchantId.toString(),
+                merchantId,
                 notificationType,
                 reason != null ? reason : "审核未通过"
             );
@@ -172,7 +172,7 @@ public class AdminMerchantController {
     @PutMapping("/{merchantId}/status")
     @PreAuthorize("hasAnyAuthority('admin:merchant:status')")
     public ResponseEntity<Map<String, Object>> updateMerchantStatus(
-            @PathVariable Long merchantId,
+            @PathVariable String merchantId,
             @RequestBody Map<String, String> request) {
 
         String newStatus = request.get("status"); // ACTIVE, LOCKED, DELETED

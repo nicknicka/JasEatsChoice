@@ -1,5 +1,8 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory, createWebHistory } from 'vue-router'
 import { isAdminLoggedIn } from '../utils/auth'
+
+const useFileProtocolHistory =
+  typeof window !== 'undefined' && window.location && window.location.protocol === 'file:'
 
 // Import auth views
 const Login = () => import('../views/user/Login.vue')
@@ -63,7 +66,7 @@ const AdminSettings = () => import('../views/admin/Settings.vue') // 系统设�
 
 // 创建路由实例
 const router = createRouter({
-  history: createWebHistory(),
+  history: useFileProtocolHistory ? createWebHashHistory() : createWebHistory(),
   routes: [
     // 认证相关路由
     {

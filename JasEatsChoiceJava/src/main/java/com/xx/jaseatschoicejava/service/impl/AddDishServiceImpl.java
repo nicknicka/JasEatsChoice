@@ -38,7 +38,7 @@ public class AddDishServiceImpl extends ServiceImpl<AddDishRequestMapper, AddDis
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public String createAddDishRequest(CreateAddDishDTO dto, Long requestUserId) {
+    public String createAddDishRequest(CreateAddDishDTO dto, String requestUserId) {
         // 1. 检查权限
         if (!checkAddDishPermission(dto.getGroupOrderId(), requestUserId)) {
             throw new RuntimeException("无加菜权限");
@@ -152,7 +152,7 @@ public class AddDishServiceImpl extends ServiceImpl<AddDishRequestMapper, AddDis
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean withdrawRequest(String requestId, Long userId) {
+    public boolean withdrawRequest(String requestId, String userId) {
         AddDishRequest request = getById(requestId);
         if (request == null) {
             throw new RuntimeException("请求不存在");
@@ -175,7 +175,7 @@ public class AddDishServiceImpl extends ServiceImpl<AddDishRequestMapper, AddDis
     }
 
     @Override
-    public List<AddDishRequestVO> getReviewList(Long groupOrderId) {
+    public List<AddDishRequestVO> getReviewList(String groupOrderId) {
         LambdaQueryWrapper<AddDishRequest> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(AddDishRequest::getGroupOrderId, groupOrderId)
                    .eq(AddDishRequest::getApprovalStatus, AddDishApprovalStatus.PENDING.getValue())
@@ -186,7 +186,7 @@ public class AddDishServiceImpl extends ServiceImpl<AddDishRequestMapper, AddDis
     }
 
     @Override
-    public List<AddDishRequestVO> getHistory(Long groupOrderId) {
+    public List<AddDishRequestVO> getHistory(String groupOrderId) {
         LambdaQueryWrapper<AddDishRequest> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(AddDishRequest::getGroupOrderId, groupOrderId)
                    .in(AddDishRequest::getApprovalStatus,
@@ -251,7 +251,7 @@ public class AddDishServiceImpl extends ServiceImpl<AddDishRequestMapper, AddDis
     }
 
     @Override
-    public boolean checkAddDishPermission(Long groupOrderId, Long userId) {
+    public boolean checkAddDishPermission(String groupOrderId, String userId) {
         // 1. 检查群订单是否允许加菜
         // 2. 获取加菜设置
         AddDishSetting setting = getSettingEntity(groupOrderId);
@@ -272,7 +272,7 @@ public class AddDishServiceImpl extends ServiceImpl<AddDishRequestMapper, AddDis
     }
 
     @Override
-    public AddDishSettingDTO getSetting(Long groupOrderId) {
+    public AddDishSettingDTO getSetting(String groupOrderId) {
         AddDishSetting setting = getSettingEntity(groupOrderId);
         AddDishSettingDTO dto = new AddDishSettingDTO();
         if (setting != null) {
@@ -312,7 +312,7 @@ public class AddDishServiceImpl extends ServiceImpl<AddDishRequestMapper, AddDis
     /**
      * 获取加菜设置实体
      */
-    private AddDishSetting getSettingEntity(Long groupOrderId) {
+    private AddDishSetting getSettingEntity(String groupOrderId) {
         LambdaQueryWrapper<AddDishSetting> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(AddDishSetting::getGroupOrderId, groupOrderId);
         return settingMapper.selectOne(queryWrapper);

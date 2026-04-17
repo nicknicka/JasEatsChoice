@@ -18,7 +18,7 @@ import java.math.BigDecimal;
 public class AddDishSettingDTO {
 
     @ApiModelProperty(value = "群订单ID")
-    private Long groupOrderId;
+    private String groupOrderId;
 
     @ApiModelProperty(value = "加菜权限: 0-全员可加菜,1-仅发起者可加菜")
     private Integer addDishPermission;

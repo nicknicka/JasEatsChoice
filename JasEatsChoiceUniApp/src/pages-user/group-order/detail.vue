@@ -27,7 +27,7 @@
         </view>
         <view class="grid-item">
           <text class="label">参与人数</text>
-          <text class="value">{{ orderInfo.currentCount }}/{{ orderInfo.maxParticipants }}人</text>
+          <text class="value">{{ displayCurrentCount }}/{{ displayMaxParticipants }}人</text>
         </view>
         <view class="grid-item">
           <text class="label">截止时间</text>
@@ -97,29 +97,32 @@
 
     <!-- 底部操作 -->
     <view class="action-bar" v-if="!orderInfo.completed">
-      <!-- 如果我是发起人，显示确认和结算按钮 -->
       <template v-if="isCreator">
         <button class="action-btn secondary" @tap="inviteMore">邀请好友</button>
         <button
           class="action-btn primary"
-          @tap="confirmOrder"
-          :disabled="!canConfirm"
+          @tap="orderInfo.locked ? goToSettle() : confirmOrder()"
+          :disabled="!orderInfo.locked && !canConfirm"
         >
-          {{ canConfirm ? '去结算' : '等待成员选择' }}
+          {{ orderInfo.locked ? '去结算' : (canConfirm ? '确认成团' : '等待成员选择') }}
         </button>
       </template>
 
-      <!-- 如果我是成员，显示支付按钮 -->
-      <template v-else-if="myMember && !myMember.paid">
-        <button class="action-btn secondary" @tap="selectDishes">选择菜品</button>
-        <button class="action-btn primary" @tap="goToSettle">
-          去支付 (¥{{ myMember.totalAmount }})
+      <template v-else-if="hasJoined && !isCurrentUserPaid">
+        <button class="action-btn secondary" @tap="selectDishes" :disabled="!canSelectDishes">选择菜品</button>
+        <button class="action-btn secondary" @tap="leaveOrder" :disabled="!canLeaveOrder">退出拼单</button>
+        <button class="action-btn primary" @tap="goToSettle" :disabled="!orderInfo.canPay">
+          去支付 (¥{{ payableAmount }})
         </button>
       </template>
 
       <!-- 已支付 -->
-      <template v-else-if="myMember && myMember.paid">
+      <template v-else-if="hasJoined && isCurrentUserPaid">
         <button class="action-btn full" disabled>已支付</button>
+      </template>
+
+      <template v-else>
+        <button class="action-btn full" disabled>您还未加入此拼单</button>
       </template>
     </view>
   </view>
@@ -138,6 +141,13 @@ const orderInfo = ref({
   name: '',
   orderCode: '',
   status: 'pending',
+  locked: false,
+  canEdit: false,
+  canLeave: false,
+  canConfirm: false,
+  canPay: false,
+  currentUserJoined: false,
+  currentUserPaid: false,
   merchantName: '',
   creatorId: '',
   creatorName: '',
@@ -161,10 +171,37 @@ const myMember = computed(() => {
   return orderInfo.value.members.find(m => m.userId === userId.value)
 })
 
+const hasJoined = computed(() => {
+  return Boolean(orderInfo.value.currentUserJoined || myMember.value)
+})
+
+const isCurrentUserPaid = computed(() => {
+  return Boolean(orderInfo.value.currentUserPaid || myMember.value?.paid)
+})
+
+const displayCurrentCount = computed(() => {
+  return Number(orderInfo.value.currentCount ?? orderInfo.value.members.length ?? 0)
+})
+
+const displayMaxParticipants = computed(() => {
+  return Number((orderInfo.value.maxParticipants ?? displayCurrentCount.value) || 0)
+})
+
+const payableAmount = computed(() => {
+  return myMember.value?.totalAmount || '0.00'
+})
+
+const canSelectDishes = computed(() => {
+  return hasJoined.value && !isCurrentUserPaid.value && Boolean(orderInfo.value.canEdit)
+})
+
+const canLeaveOrder = computed(() => {
+  return hasJoined.value && !isCurrentUserPaid.value && Boolean(orderInfo.value.canLeave)
+})
+
 // 是否可以确认订单
 const canConfirm = computed(() => {
-  // 至少有一个成员选择了菜品
-  return orderInfo.value.members.some(m => m.dishes && m.dishes.length > 0)
+  return Boolean(orderInfo.value.canConfirm)
 })
 
 onMounted(() => {
@@ -196,11 +233,19 @@ const loadOrderDetail = async () => {
         name: data.name,
         orderCode: data.orderCode,
         status: data.status || 'pending',
+        locked: Boolean(data.locked),
+        canEdit: Boolean(data.canEdit),
+        canLeave: Boolean(data.canLeave),
+        canConfirm: Boolean(data.canConfirm),
+        canPay: Boolean(data.canPay),
+        currentUserJoined: typeof data.currentUserJoined === 'boolean' ? data.currentUserJoined : Boolean((data.members || []).find(m => m.userId === userId.value)),
+        currentUserPaid: typeof data.currentUserPaid === 'boolean' ? data.currentUserPaid : Boolean((data.members || []).find(m => m.userId === userId.value)?.paid),
         merchantName: data.merchantName || '',
         creatorId: data.creatorId || '',
         creatorName: data.creatorName || '',
-        maxParticipants: data.maxParticipants || 0,
-        currentCount: data.currentCount || 0,
+        groupId: data.groupId || '',
+        maxParticipants: Number(data.maxParticipants ?? data.members?.length ?? 0),
+        currentCount: Number(data.currentCount ?? data.members?.length ?? 0),
         deadline: data.deadline || '',
         deliveryAddress: data.deliveryAddress || '',
         remark: data.remark || '',
@@ -233,7 +278,7 @@ const loadOrderDetail = async () => {
       icon: 'none'
     })
   }
-})
+}
 
 /**
  * 获取状态图标
@@ -252,8 +297,11 @@ const getStatusIcon = (status) => {
  * 获取状态文本
  */
 const getStatusText = (status) => {
+  if (status === 'pending' && orderInfo.value.locked) {
+    return '已确认成团'
+  }
   const texts = {
-    pending: '等待中',
+    pending: '待确认成团',
     in_progress: '进行中',
     completed: '已完成',
     cancelled: '已取消'
@@ -265,9 +313,12 @@ const getStatusText = (status) => {
  * 获取状态描述
  */
 const getStatusDesc = (status) => {
+  if (status === 'pending' && orderInfo.value.locked) {
+    return '菜品已锁定，等待成员完成支付'
+  }
   const descs = {
-    pending: '等待成员选择菜品',
-    in_progress: '正在配送中',
+    pending: '等待成员选择菜品后由发起人确认成团',
+    in_progress: '成员已支付完成，等待商家接单或处理中',
     completed: '订单已完成',
     cancelled: '订单已取消'
   }
@@ -287,6 +338,13 @@ const inviteMore = () => {
  * 选择菜品
  */
 const selectDishes = () => {
+  if (!canSelectDishes.value) {
+    uni.showToast({
+      title: orderInfo.value.locked ? '拼单已锁定，不能再改菜' : (hasJoined.value ? '当前暂不可修改菜品' : '您还未加入此拼单'),
+      icon: 'none'
+    })
+    return
+  }
   uni.navigateTo({
     url: `/pages-user/group-order/select-dishes?id=${orderId.value}`
   })
@@ -295,7 +353,7 @@ const selectDishes = () => {
 /**
  * 确认订单
  */
-const confirmOrder = () => {
+const confirmOrder = async () => {
   if (!canConfirm.value) {
     uni.showToast({
       title: '请等待成员选择菜品',
@@ -304,17 +362,113 @@ const confirmOrder = () => {
     return
   }
 
-  uni.navigateTo({
-    url: `/pages-user/group-order/settle?id=${orderId.value}`
-  })
+  try {
+    uni.showLoading({ title: '确认中...' })
+    const res = await groupOrderApi.confirm(orderId.value, { userId: userId.value })
+    uni.hideLoading()
+
+    if (res.code === 200) {
+      await loadOrderDetail()
+      uni.navigateTo({
+        url: `/pages-user/group-order/settle?id=${orderId.value}`
+      })
+      return
+    }
+
+    throw new Error(res.message || '确认成团失败')
+  } catch (error) {
+    console.error('确认成团失败:', error)
+    uni.hideLoading()
+    uni.showToast({
+      title: error.message || '确认成团失败',
+      icon: 'none'
+    })
+  }
 }
 
 /**
  * 去结算
  */
 const goToSettle = () => {
+  if (!hasJoined.value && !isCreator.value) {
+    uni.showToast({
+      title: '您还未加入此拼单',
+      icon: 'none'
+    })
+    return
+  }
+  if (!orderInfo.value.canPay && !isCreator.value) {
+    uni.showToast({
+      title: isCurrentUserPaid.value ? '您已支付过此拼单' : (orderInfo.value.locked ? '当前暂不可支付' : '请等待发起人确认成团'),
+      icon: 'none'
+    })
+    return
+  }
   uni.navigateTo({
     url: `/pages-user/group-order/settle?id=${orderId.value}`
+  })
+}
+
+/**
+ * 退出拼单
+ */
+const leaveOrder = () => {
+  if (!hasJoined.value) {
+    uni.showToast({
+      title: '您还未加入此拼单',
+      icon: 'none'
+    })
+    return
+  }
+
+  if (!canLeaveOrder.value) {
+    uni.showToast({
+      title: isCurrentUserPaid.value ? '已支付后不能退出拼单' : (orderInfo.value.locked ? '已确认成团，无法退出' : '当前暂不可退出'),
+      icon: 'none'
+    })
+    return
+  }
+
+  uni.showModal({
+    title: '退出拼单',
+    content: '确定退出当前拼单吗？已选菜品将被移除。',
+    success: async (res) => {
+      if (!res.confirm) {
+        return
+      }
+
+      try {
+        uni.showLoading({ title: '退出中...' })
+        const result = await groupOrderApi.leave(orderId.value, { userId: userId.value })
+        uni.hideLoading()
+
+        if (result.code === 200) {
+          uni.showToast({
+            title: '已退出拼单',
+            icon: 'success'
+          })
+
+          setTimeout(() => {
+            if (orderInfo.value.groupId) {
+              uni.redirectTo({
+                url: `/pages-user/group-order/index?groupId=${orderInfo.value.groupId}`
+              })
+            } else {
+              uni.navigateBack()
+            }
+          }, 600)
+        } else {
+          throw new Error(result.message || '退出失败')
+        }
+      } catch (error) {
+        console.error('退出拼单失败:', error)
+        uni.hideLoading()
+        uni.showToast({
+          title: error.message || '退出失败',
+          icon: 'none'
+        })
+      }
+    }
   })
 }
 </script>
