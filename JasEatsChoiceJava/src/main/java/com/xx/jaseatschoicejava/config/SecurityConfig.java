@@ -60,6 +60,7 @@ public class SecurityConfig {
             System.out.println("ServletPath: " + httpRequest.getServletPath());
             System.out.println("QueryString: " + httpRequest.getQueryString());
             System.out.println("Method: " + httpRequest.getMethod());
+            System.out.println("Content-Type: " + httpRequest.getContentType());
             System.out.println("========================================");
             chain.doFilter(request, response);
         }

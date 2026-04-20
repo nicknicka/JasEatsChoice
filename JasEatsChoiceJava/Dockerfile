@@ -18,6 +18,6 @@ COPY --from=build /app/target/*.jar app.jar
 EXPOSE 7777 11277
 
 ENTRYPOINT ["java", \
-    "-jar", "app.jar", \
     "-Dfile.encoding=UTF-8", \
-    "-Dsun.jnu.encoding=UTF-8"]
+    "-Dsun.jnu.encoding=UTF-8", \
+    "-jar", "app.jar"]

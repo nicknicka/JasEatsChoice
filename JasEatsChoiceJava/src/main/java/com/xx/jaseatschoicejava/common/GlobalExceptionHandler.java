@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.InvalidDataAccessResourceUsageException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
@@ -56,6 +57,30 @@ public class GlobalExceptionHandler {
         logger.debug("Client aborted the connection: {}", e.getMessage());
         // 连接已断开，无需返回响应
         return null;
+    }
+
+    /**
+     * 处理Content-Type不支持的异常
+     * 当客户端发送的Content-Type与后端期望的不匹配时调用此方法
+     * 例如：后端期望application/json，但客户端发送了application/x-www-form-urlencoded
+     * @param e Content-Type不支持异常对象
+     * @param request HTTP请求对象
+     * @return 标准化的响应结果
+     */
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseResult<?> handleHttpMediaTypeNotSupported(
+            HttpMediaTypeNotSupportedException e, HttpServletRequest request) {
+        // 记录详细的异常日志，帮助定位问题
+        logger.error("HttpMediaTypeNotSupportedException: URI={}, Method={}, ContentType={}, SupportedTypes={}",
+            request.getRequestURI(),
+            request.getMethod(),
+            request.getContentType(),
+            e.getSupportedMediaTypes());
+
+        // 返回标准化的错误响应，提示正确的Content-Type
+        return ResponseResult.fail("415",
+            "Content-Type不支持: " + request.getContentType() +
+            "。该接口支持: " + e.getSupportedMediaTypes());
     }
 
     /**
