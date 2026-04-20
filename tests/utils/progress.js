@@ -8,7 +8,9 @@ function updateProgress(id, status, message = '') {
   const lines = content.split('\n')
   const updated = lines.map(line => {
     if (line.includes(`] ${id} |`)) {
-      return line.replace(/\[PENDING\]/, `[${status}]`).replace(/\[RUNNING\]/, `[${status}]`).replace(/-$/, message || '-')
+      return line
+        .replace(/\[(PENDING|RUNNING|PASSED|FAILED|SKIPPED)\]/, `[${status}]`)
+        .replace(/-$/, message || '-')
     }
     return line
   })
@@ -32,6 +34,7 @@ function updateSummary() {
 
   const lines = content.split('\n')
   const updated = lines.map(line => {
+    if (line.startsWith('# 总计:')) return `# 总计: ${total} 项记录`
     if (line.startsWith('# PASSED:')) return `# PASSED: ${passed}`
     if (line.startsWith('# FAILED:')) return `# FAILED: ${failed}`
     if (line.startsWith('# SKIPPED:')) return `# SKIPPED: ${skipped}`

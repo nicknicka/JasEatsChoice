@@ -1,9 +1,9 @@
-const { test, expect, loginAsAdmin } = require('../fixtures/test-base')
+const { test, expect, bootstrapAdminSession } = require('../fixtures/test-base')
 const { markRunning, markPassed, markFailed, markSkipped, updateSummary } = require('../utils/progress')
 
 test.describe('模块十四：管理员端-系统管理', () => {
 
-  test.beforeEach(async ({ page }) => { await loginAsAdmin(page) })
+  test.beforeEach(async ({ page }) => { await bootstrapAdminSession(page) })
 
   test('14.1 数据统计', async ({ page }) => {
     markRunning('14.1')

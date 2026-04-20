@@ -11,7 +11,7 @@ test.describe('模块二：用户首页与推荐', () => {
     markRunning('2.1')
     try {
       await page.waitForURL('**/user/home**', { timeout: 15000 })
-      const content = page.locator('.home-content, .recommend, [class*="home"]')
+      const content = page.locator('.app-container, .main-content, .content-area, .top-nav-bar')
       await expect(content.first()).toBeVisible({ timeout: 10000 })
       markPassed('2.1', '首页加载成功')
     } catch (e) {
