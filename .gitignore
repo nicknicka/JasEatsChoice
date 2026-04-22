@@ -10,3 +10,4 @@ dump.rdb
 # Tests
 tests/node_modules/
 tests/reports/
+.omx/
