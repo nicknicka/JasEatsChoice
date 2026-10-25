@@ -1,0 +1,37 @@
+name: static
+
+# 不起容器、不打 seeded 数据库，几分钟的端到端之前先花一分钟把机械性问题挡掉。
+# 由 smoke.yml 调用；它是可复用工作流，自己不挂 push/pull_request 触发器，
+# 免得 PR 上同一个检查跑两遍。
+
+on:
+  workflow_call:
+
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/client/package-lock.json
+
+      - name: Install client dependencies
+        # Electron 二进制与静态检查无关，跳过下载省几分钟
+        run: ELECTRON_SKIP_BINARY_DOWNLOAD=1 npm --prefix apps/client ci --ignore-scripts
+
+      - name: Restore ESLint cache
+        uses: actions/cache@v4
+        with:
+          path: apps/client/node_modules/.cache/eslint
+          key: eslint-${{ runner.os }}-${{ hashFiles('apps/client/src/**/*.js', 'apps/client/src/**/*.vue') }}
+          restore-keys: eslint-${{ runner.os }}-
+
+      - name: Static checks
+        # 三件事：静态检查脚本自身的单测、前后端路由漂移、lint error 数的冻结基线
+        run: make check CHECK_SOURCE=static

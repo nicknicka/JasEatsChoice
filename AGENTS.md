@@ -36,6 +36,7 @@
 
 ```
 make doctor        # Docker/端口/.env/依赖体检
+make check         # 静态防线：单测 + 前后端路由漂移 + lint 冻结基线（不起容器，约 1 分钟）
 make env           # 生成 deploy/.env（随机库密码 + JWT 密钥）
 make deps          # 装 apps/client 与 tests 的 node_modules
 make up            # 起四件套并等健康
@@ -53,6 +54,20 @@ bash scripts/ci-e2e.sh [spec ...]   # 一条命令从空仓到跑完用例
 - **种子数据是用例的前提。** `db/init` 只在空卷执行，改种子后要 `make reset-db`。测试账号 `17322222222 / asdasd`、`admin / admin123` 必须存在且密码哈希与明文匹配，否则用例会整片红。
 - **`tests/progress.txt` 是用例台账**，跑测试会写它，不要手工改成"通过"。
 - macOS 自带 `/bin/bash` 是 3.2，没有关联数组；脚本里别用 `declare -A`。
+
+## Agent skills
+
+### Issue tracker
+
+Issue 与 spec 都放 GitHub Issues（私有仓 nicknicka/JasEatsChoice），一律用 `gh` CLI 操作。见 `docs/agents/issue-tracker.md`。
+
+### Triage labels
+
+五个标准 triage 角色与本仓标签同名（needs-triage / needs-info / ready-for-agent / ready-for-human / wontfix）。见 `docs/agents/triage-labels.md`。
+
+### Domain docs
+
+single-context：词表在根目录 `GLOSSARY.md`，架构决策在 `docs/adr/`；两者目前都不存在，读到时静默跳过。见 `docs/agents/domain.md`。
 
 ## 代码规范
 

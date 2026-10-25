@@ -1,0 +1,19 @@
+# 已知的前端/后端路径差异（路由漂移检查基线）。
+# 这个文件的语义是：这些差异已经知道，暂时不判失败；**新增**的差异才判失败。
+# 修好一条后端缺失后重新跑 `python3 scripts/check_routes.py --update-baseline` 收紧它。
+
+/admin/logs/login
+/admin/logs/operations
+/admin/logs/system
+/admin/statistics/orders
+/admin/statistics/users
+/calorie-records/user/{userId}/date
+/v1/admin/hot-topic/delete
+/v1/admin/hot-topic/detail
+/v1/admin/hot-topic/review
+/v1/admin/hot-topic/update
+/v1/ai/nutrient
+/v1/ai/stream/chat
+/v1/collections/user/{userId}
+/v1/merchant/{merchantId}/comments
+/v1/tutorial

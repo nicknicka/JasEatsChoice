@@ -8,6 +8,7 @@
 #   make web         构建 Web 版静态产物到 apps/client/dist-web
 #   make test        跑全部 107 条 Playwright 用例
 #   make test-smoke  只跑 01/04/10 三条冒烟
+#   make check       静态防线：单测 + 路由漂移 + lint 门禁（不起容器）
 #   make desktop     Electron 打包回归（build:mac）
 #   make logs        跟随后端日志
 
@@ -16,8 +17,11 @@ ROOT  := $(shell pwd)
 COMPOSE_DEV  := docker compose --env-file deploy/.env -f deploy/compose.yml -f deploy/compose.dev.yml
 COMPOSE_PROD := docker compose --env-file deploy/.env -f deploy/compose.yml -f deploy/compose.prod.yml
 NPM := npm --no-audit --no-fund
+# 后端路由来源：auto=栈在跑就读 OpenAPI，否则静态解析 Controller；CI 一般走 static
+CHECK_SOURCE ?= auto
 
-.PHONY: doctor env deps up down ps logs reset-db web desktop test test-smoke lint nginx-test config-prod
+.PHONY: doctor env deps up down ps logs reset-db web desktop test test-smoke lint \
+	check check-unit check-routes check-lint nginx-test config-prod
 
 doctor:
 	@echo "== Docker =="
@@ -99,6 +103,22 @@ test-smoke:
 
 lint:
 	cd apps/client && $(NPM) run lint
+
+# 静态防线：不起容器、不打桩，一分钟内把机械性问题挡在跑 5 分钟端到端之前。
+# CI 与本地共用这三个目标，命令不在两处各自演化。
+check: check-unit check-routes check-lint
+
+check-unit:
+	python3 -m unittest discover -s scripts -p 'test_*.py'
+
+check-routes:
+	python3 scripts/check_routes.py --source $(CHECK_SOURCE)
+
+# eslint 自己会因 error 数非零退出 1，所以这里容忍它的退出码，
+# 由 check_lint.py 拿冻结基线去判“有没有变差”。
+check-lint:
+	@cd apps/client && $(NPM) run lint:ci -- -f json -o $(ROOT)/.lint-report.json || true
+	@python3 scripts/check_lint.py --json $(ROOT)/.lint-report.json
 
 # 只解析 compose，不启动
 config-prod:

@@ -7,6 +7,7 @@
   "homepage": "https://www.electronjs.org",
   "scripts": {
     "format": "prettier --write .",
+  "lint:ci": "eslint src --ext .js,.vue --cache --cache-location node_modules/.cache/eslint",
     "lint": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
     "start": "electron-vite preview",
     "dev": "ELECTRON_RUN_AS_NODE= electron-vite dev",

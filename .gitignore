@@ -12,6 +12,7 @@ output/
 *.log
 *.dump
 tests/reports/
+.lint-report.json
 
 # 本地凭据（只提交 .env.example）
 .env

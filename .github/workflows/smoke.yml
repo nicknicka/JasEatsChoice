@@ -9,7 +9,12 @@ on:
     branches: [main]
 
 jobs:
+  # 静态门：先花一分钟挡机械性问题，红了就不必再拉容器跑端到端
+  static:
+    uses: ./.github/workflows/static.yml
+
   e2e:
+    needs: static
     runs-on: ubuntu-24.04
     timeout-minutes: 30
 
