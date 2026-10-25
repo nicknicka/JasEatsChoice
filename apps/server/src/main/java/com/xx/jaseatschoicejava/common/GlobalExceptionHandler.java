@@ -1,0 +1,206 @@
+package com.xx.jaseatschoicejava.common;
+
+import com.xx.jaseatschoicejava.exception.BusinessException;
+import org.apache.catalina.connector.ClientAbortException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.InvalidDataAccessResourceUsageException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+
+import jakarta.servlet.http.HttpServletRequest;
+import java.net.BindException;
+import java.sql.SQLException;
+
+/**
+ * 全局异常处理类
+ * 用于捕获和处理项目中所有控制器抛出的异常
+ * 使用 @RestControllerAdvice 实现全局异常拦截，自动处理 JSON 响应
+ */
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    /**
+     * 处理业务异常
+     * 当项目中抛出 BusinessException 时，会自动调用此方法
+     * @param e 业务异常对象
+     * @return 标准化的响应结果
+     */
+    @ExceptionHandler(BusinessException.class)
+    public ResponseResult<?> handleBusinessException(BusinessException e) {
+        // 记录业务异常日志（仅记录代码和消息，不记录堆栈轨迹）
+        logger.error("Business Exception: Code={}, Message={}", e.getCode(), e.getMessage());
+        // 返回标准化的失败响应
+        return ResponseResult.fail(e.getCode(), e.getMessage());
+    }
+
+    /**
+     * 处理客户端断开连接异常
+     * 当客户端在服务器完成响应之前断开连接时调用此方法
+     * 这通常是因为用户刷新页面、关闭浏览器或取消请求导致的
+     * @param e 客户端断开连接异常对象
+     * @return null（因为连接已经断开，无需返回响应）
+     */
+    @ExceptionHandler(ClientAbortException.class)
+    public ResponseResult<?> handleClientAbortException(ClientAbortException e) {
+        // 仅在 DEBUG 级别记录日志，避免日志污染
+        logger.debug("Client aborted the connection: {}", e.getMessage());
+        // 连接已断开，无需返回响应
+        return null;
+    }
+
+    /**
+     * 处理Content-Type不支持的异常
+     * 当客户端发送的Content-Type与后端期望的不匹配时调用此方法
+     * 例如：后端期望application/json，但客户端发送了application/x-www-form-urlencoded
+     * @param e Content-Type不支持异常对象
+     * @param request HTTP请求对象
+     * @return 标准化的响应结果
+     */
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseResult<?> handleHttpMediaTypeNotSupported(
+            HttpMediaTypeNotSupportedException e, HttpServletRequest request) {
+        // 记录详细的异常日志，帮助定位问题
+        logger.error("HttpMediaTypeNotSupportedException: URI={}, Method={}, ContentType={}, SupportedTypes={}",
+            request.getRequestURI(),
+            request.getMethod(),
+            request.getContentType(),
+            e.getSupportedMediaTypes());
+
+        // 返回标准化的错误响应，提示正确的Content-Type
+        return ResponseResult.fail("415",
+            "Content-Type不支持: " + request.getContentType() +
+            "。该接口支持: " + e.getSupportedMediaTypes());
+    }
+
+    /**
+     * 处理请求方法不支持异常
+     * 当前端使用的HTTP方法与后端定义的不匹配时调用此方法
+     * @param e 请求方法不支持异常对象
+     * @param request HTTP请求对象
+     * @return 标准化的响应结果
+     */
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseResult<?> handleHttpRequestMethodNotSupported(
+            HttpRequestMethodNotSupportedException e, HttpServletRequest request) {
+        // 记录详细的异常日志，包括请求URL和方法
+        logger.error("HttpRequestMethodNotSupportedException: URI={}, Method={}, SupportedMethods={}",
+            request.getRequestURI(),
+            request.getMethod(),
+            e.getSupportedMethods());
+
+        // 返回标准化的错误响应
+        return ResponseResult.fail("405", "请求方法不支持: " + request.getMethod() +
+            "。该接口仅支持: " + (e.getSupportedMethods() != null ? String.join(", ", e.getSupportedMethods()) : "其他方法"));
+    }
+
+    /**
+     * 处理方法参数类型不匹配异常
+     * 当前端传递的参数类型与后端方法参数类型不匹配时调用此方法
+     * 特别是处理将字符串"undefined"转换为Long类型失败的情况
+     * @param e 参数类型不匹配异常对象
+     * @return 标准化的响应结果
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseResult<?> handleMethodArgumentTypeMismatch(MethodArgumentTypeMismatchException e) {
+        // 记录异常日志
+        logger.error("MethodArgumentTypeMismatchException: Parameter={}, ExpectedType={}, Value={}",
+            e.getPropertyName(), e.getRequiredType().getSimpleName(), e.getValue());
+
+        // 处理"undefined"字符串和"NaN"字符串的特殊情况
+        String value = String.valueOf(e.getValue());
+        if ("undefined".equals(value) || "NaN".equals(value)) {
+            return ResponseResult.fail("400", "参数错误：ID不能为空或无效");
+        }
+
+        // 处理其他类型不匹配情况
+        return ResponseResult.fail("400", "参数类型错误：" + e.getPropertyName() + " 应是 " + e.getRequiredType().getSimpleName() + " 类型");
+    }
+
+    /**
+     * 处理文件上传大小超限异常
+     * 当上传的文件大小超过配置的限制时调用此方法
+     * @param e 文件上传大小超限异常对象
+     * @return 标准化的响应结果
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseResult<?> handleMaxUploadSizeExceeded(MaxUploadSizeExceededException e) {
+        // 记录异常日志
+        logger.error("MaxUploadSizeExceededException: {}", e.getMessage());
+
+        // 返回友好的错误提示
+        return ResponseResult.fail("400", "文件大小超过限制（最大200MB）");
+    }
+
+    /**
+     * 处理数据完整性约束异常
+     * 当数据库操作违反数据完整性约束时调用此方法
+     * 如JSON格式错误、字段长度超限等
+     * @param e 数据完整性约束异常对象
+     * @return 标准化的响应结果
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseResult<?> handleDataIntegrityViolation(DataIntegrityViolationException e) {
+        // 记录异常日志
+        logger.error("DataIntegrityViolationException: {}", e.getMessage());
+
+        // 处理JSON格式错误的特殊情况
+        if (e.getMessage() != null && (e.getMessage().contains("JSON") || e.getMessage().contains("json"))) {
+            // Check for business_hours specific error
+            if (e.getMessage().contains("business_hours")) {
+                return ResponseResult.fail("400", "参数错误：营业时间格式无效，请确保为有效的JSON格式");
+            }
+            // Check for album specific error
+            if (e.getMessage().contains("album")) {
+                return ResponseResult.fail("400", "参数错误：店铺相册格式无效，请确保为有效的JSON格式");
+            }
+            // Generic JSON error
+            return ResponseResult.fail("400", "参数错误：JSON格式无效，请确保为有效的JSON格式");
+        }
+
+        // 处理其他数据完整性约束错误
+        return ResponseResult.fail("400", "参数错误：数据格式不符合要求");
+    }
+
+    /**
+     * 处理缺少请求参数异常
+     */
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseResult<?> handleMissingServletRequestParameter(MissingServletRequestParameterException e) {
+        logger.error("MissingServletRequestParameterException: Parameter={}", e.getParameterName());
+        return ResponseResult.fail("400", "缺少必需参数: " + e.getParameterName());
+    }
+
+    /**
+     * 处理参数绑定异常
+     */
+    @ExceptionHandler(org.springframework.validation.BindException.class)
+    public ResponseResult<?> handleBindException(org.springframework.validation.BindException e) {
+        logger.error("BindException: {}", e.getMessage());
+        return ResponseResult.fail("400", "参数绑定失败: " + e.getFieldError().getDefaultMessage());
+    }
+
+    /**
+     * 处理所有其他未捕获的异常
+     * 作为全局兜底异常处理，确保不会返回原始错误信息给客户端
+     * @param e 异常对象
+     * @return 标准化的响应结果
+     */
+    @ExceptionHandler(Exception.class)
+    public ResponseResult<?> handleGlobalException(Exception e) {
+        // 记录完整的异常信息和堆栈轨迹
+        logger.error("Unexpected Exception:", e);
+        // 返回标准化的系统异常响应
+        return ResponseResult.fail("500", "系统异常，请联系管理员");
+    }
+}

@@ -1,0 +1,177 @@
+<template>
+  <view class="splash-container">
+    <view class="logo-section">
+      <view class="logo-placeholder">
+        <text class="logo-text">佳</text>
+      </view>
+      <text class="app-name">佳食宜选</text>
+      <text class="app-slogan">智能饮食，健康生活</text>
+    </view>
+    <view class="loading-section">
+      <view class="loading-bar">
+        <view class="loading-progress" :style="{ width: progress + '%' }"></view>
+      </view>
+      <text class="loading-text">{{ loadingText }}</text>
+    </view>
+  </view>
+</template>
+
+<script setup>
+import { ref } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
+import { toLogin } from '@/utils/router'
+import { createPageDebug } from '@/utils/page-debug'
+
+const progress = ref(0)
+const loadingText = ref('加载中...')
+let hasNavigated = false
+let hasInitialized = false
+
+const pageDebug = createPageDebug('启动页')
+
+onLoad(() => {
+  if (hasInitialized) return
+  hasInitialized = true
+  pageDebug.lifecycle('onLoad')
+  initApp()
+})
+
+const initApp = async () => {
+  try {
+    pageDebug.lifecycle('initApp:start')
+
+    // 模拟加载进度
+    const interval = setInterval(() => {
+      progress.value += 5
+      if (progress.value >= 100) {
+        clearInterval(interval)
+      }
+    }, 100)
+
+    // 等待至少 2 秒，让用户看到启动页
+    await new Promise(resolve => setTimeout(resolve, 2000))
+
+    // 检查登录状态
+    const token = uni.getStorageSync('token')
+    const role = uni.getStorageSync('role')
+    pageDebug.state('本地登录态', {
+      hasToken: !!token,
+      role: role || 'user'
+    })
+
+    if (!token) {
+      loadingText.value = '请先登录'
+      pageDebug.action('跳转登录页')
+      executeNavigate(() => toLogin())
+      return
+    }
+
+    // 根据角色跳转
+    loadingText.value = '准备进入...'
+    executeNavigate(() => {
+      pageDebug.action('跳转首页', {
+        role: role || 'user'
+      })
+      if (role === 'merchant') {
+        uni.reLaunch({
+          url: '/pages-merchant/home/index'
+        })
+      } else {
+        uni.switchTab({
+          url: '/pages/home/index/index'
+        })
+      }
+    })
+  } catch (error) {
+    console.error('启动失败:', error)
+    pageDebug.anomaly('启动失败', error)
+    loadingText.value = '加载失败，请重试'
+    executeNavigate(() => toLogin())
+  }
+}
+
+const executeNavigate = (callback) => {
+  pageDebug.state('执行跳转')
+  if (hasNavigated) return
+  hasNavigated = true
+  callback()
+}
+</script>
+
+<style lang="scss" scoped>
+.splash-container {
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(135deg, #FF6B35 0%, #FF8F6B 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 100rpx;
+}
+
+.logo-placeholder {
+  width: 200rpx;
+  height: 200rpx;
+  border-radius: 40rpx;
+  background: #fff;
+  margin-bottom: 40rpx;
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-text {
+  font-size: 100rpx;
+  font-weight: bold;
+  color: #FF6B35;
+}
+
+.app-name {
+  font-size: 56rpx;
+  font-weight: bold;
+  color: #fff;
+  margin-bottom: 20rpx;
+  letter-spacing: 4rpx;
+}
+
+.app-slogan {
+  font-size: 28rpx;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.loading-section {
+  width: 80%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.loading-bar {
+  width: 100%;
+  height: 8rpx;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4rpx;
+  overflow: hidden;
+  margin-bottom: 30rpx;
+}
+
+.loading-progress {
+  height: 100%;
+  background: #fff;
+  border-radius: 4rpx;
+  transition: width 0.3s ease;
+}
+
+.loading-text {
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.8);
+}
+</style>

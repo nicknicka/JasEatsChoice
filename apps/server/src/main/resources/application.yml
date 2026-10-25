@@ -1,0 +1,281 @@
+server:
+  port: 7777
+  servlet:
+    context-path: /api
+    # 强制请求和响应使用UTF-8编码
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+      force-request: true
+      force-response: true
+
+# ============ Lombok配置 ============
+lombok:
+  enabled: true  # 启用Lombok注解处理器
+
+spring:
+  # 关闭DevTools热重载，避免开发时中断正在执行的请求
+  devtools:
+    restart:
+      enabled: false
+  # 文件上传配置
+  servlet:
+    multipart:
+      max-file-size: 200MB  # 单个文件最大大小（支持视频上传）
+      max-request-size: 220MB  # 单次请求最大大小
+  # HTTP编码配置
+  http:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+  # 数据库配置 - 使用utf8mb4字符集
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/jia_shi_yi_xuan?useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=GMT%2B8&allowPublicKeyRetrieval=true}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    # HikariCP连接池配置
+    hikari:
+      maximum-pool-size: 20              # 最大连接数
+      minimum-idle: 5                   # 最小空闲连接数
+      connection-timeout: 30000         # 连接超时时间（30秒）
+      idle-timeout: 600000               # 空闲连接超时（10分钟）
+      max-lifetime: 1800000              # 连接最大生命周期（30分钟）
+      connection-test-query: SELECT 1   # 连接测试查询（保活）
+      validation-timeout: 5000           # 验证超时时间（5秒）
+      leak-detection-threshold: 60000    # 连接泄漏检测（60秒）
+      # 数据库连接初始化SQL，确保使用UTF8MB4字符集
+      data-source-properties:
+        useUnicode: true
+        characterEncoding: UTF-8
+        cachePrepStmts: true              # 缓存PreparedStatement
+        prepStmtCacheSize: 250            #PreparedStatement缓存大小
+        prepStmtCacheSqlLimit: 2048      # SQL长度限制
+
+  # Redis配置
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: 0
+      timeout: 10000ms
+      # Redis连接配置（使用lettuce）
+      lettuce:
+        pool:
+          max-active: 16      # 最大连接数（优化后）
+          max-idle: 8         # 最大空闲连接数
+          min-idle: 2         # 最小空闲连接数（优化后）
+          max-wait: 3000ms    # 最大等待时间（优化后）
+
+  # Jackson配置 - JSON序列化编码
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+    # 确保JSON使用UTF-8编码
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+    # 强制UTF-8编码
+    charset: UTF-8
+    # 禁止转义Unicode字符（让中文直接显示，而不是\uXXXX格式）
+    parser:
+      allow-unquoted-control-chars: true
+    # 非严格JSON解析
+    lenient: true
+    # 使用驼峰命名策略（camelCase），与前端保持一致
+    property-naming-strategy: LOWER_CAMEL_CASE
+
+# Spring MVC配置
+spring.mvc:
+  # 强制响应编码为UTF-8
+  format:
+    date: yyyy-MM-dd HH:mm:ss
+    time: HH:mm:ss
+  # 设置静态资源编码
+  staticpath-pattern: /**
+  # AI流式接口允许更长的异步处理时间，避免长对话在默认超时后被回收
+  async:
+    request-timeout: 300000
+
+# MyBatis-Plus配置
+mybatis-plus:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.xx.jaseatschoicejava.entity
+  type-handlers-package: com.xx.jaseatschoicejava.handler  # 注册类型处理器
+  configuration:
+    map-underscore-to-camel-case: true  # 自动驼峰命名转换
+    # log-impl: org.apache.ibatis.logging.stdout.StdOutImpl  # 关闭 SQL 日志输出
+  global-config:
+    db-config:
+      id-type: AUTO  # 主键自动递增
+      table-underline: true  # 表名驼峰转下划线
+      # 开启自动更新表结构
+      # 如果表不存在则自动创建，如果字段不存在则自动添加，不会删除字段
+      logic-delete-value: 1  # 逻辑删除值
+      logic-not-delete-value: 0  # 逻辑未删除值
+
+# JWT配置
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION:86400000}  # 24小时
+
+# 验证码测试模式
+captcha:
+  test:
+    # 开启后 /captcha 会把固定验证码直接回给前端，登录可绕过图片验证。
+    # 仅允许本地开发与自动化测试开启，公网部署必须保持 false。
+    fixed-code-enabled: ${CAPTCHA_TEST_FIXED_CODE_ENABLED:false}
+    fixed-code: ${CAPTCHA_TEST_FIXED_CODE:}
+
+# 文件上传配置
+file:
+  upload:
+    path: ${FILE_UPLOAD_PATH:./uploads/}  # 文件上传保存路径
+    url-prefix: /uploads/  # 访问URL前缀（相对路径，注意不带/api前缀，因为会自动添加）
+    server-url: ${FILE_SERVER_URL:http://localhost:7777/api}  # 服务器完整URL（通过环境变量注入，便于 Nginx 代理后切换）
+
+# Netty配置
+netty:
+  port: ${NETTY_PORT:11277}
+  bossGroup:
+    threads: 1
+  workerGroup:
+    threads: 8
+  maxFrameLength: 65536  # 从application.properties同步的配置
+  lengthFieldOffset: 0
+  lengthFieldLength: 4
+  lengthAdjustment: 0
+  initialBytesToStrip: 4
+
+# 高德地图API配置
+amap:
+  # Web 服务 API Key（后端使用），由 deploy/.env 注入
+  api-key: ${AMAP_API_KEY:}
+  # 是否启用后端代理模式
+  proxy-enabled: true
+
+gaode:
+  map:
+    api:
+      key: ${AMAP_API_KEY:}
+      url: https://restapi.amap.com/v3
+      weatherUrl: https://restapi.amap.com/v3/weather/weatherInfo
+
+tencent:
+  map:
+    api:
+      # 腾讯地图服务端 API Key（用于 IP 定位）
+      key: ${TENCENT_MAP_KEY:}
+      url: https://apis.map.qq.com
+
+
+aliyun:
+  sms:
+    # 接入点地址（固定值，无需改）
+    endpoint: dypnsapi.aliyuncs.com
+    # 签名（从阿里云号码认证控制台→短信认证→签名管理获取）
+    signName: 速通互联验证码
+    # 模板CODE（从控制台→模板管理获取，如：SMS_XXXXXX）
+    templateCode: 100001
+    # 验证码有效期（可选，默认5分钟）
+    codeExpireMinutes: 5
+    # 模拟模式（true=只打印到控制台不真实发送，false=真实发送短信）
+    mockMode: true
+
+# ==================== ID生成器配置 ====================
+# XOR雪花算法ID生成器配置
+id:
+  generator:
+    worker-id: ${WORKER_ID:1}          # 机器ID（0-31），可通过环境变量覆盖
+    datacenter-id: ${DATACENTER_ID:1}  # 数据中心ID（0-31），可通过环境变量覆盖
+    epoch: 1704067200000                  # 纪元时间（2024-01-01 00:00:00 CST）
+
+# ==================== 智谱AI配置 ====================
+zhipuai:
+  # API密钥（建议通过环境变量 ZHIPU_API_KEY 注入，兼容旧名 ZHIPUAI_API_KEY）
+  api-key: ${ZHIPU_API_KEY:${ZHIPUAI_API_KEY:}}
+  # 文本推理模型：GLM-4-flash（快速响应，免费）
+  model: ${ZHIPU_MODEL:glm-4-flash}
+  # 视觉模型选择（用于菜品识别、图像理解）
+  # glm-4.1v-thinking-flash: 免费视觉推理模型，作为菜品识别的默认模型
+  vision-model: glm-4.1v-thinking-flash
+  # API地址
+  base-url: https://open.bigmodel.cn/api/paas/v4/chat/completions
+  # 超时时间（毫秒）
+  timeout: 30000
+
+# ==================== 内容提取配置 ====================
+content-extraction:
+  fetch:
+    user-agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    connect-timeout: 30000
+    read-timeout: 60000
+    max-images: 5
+    max-image-size: 2097152       # 2MB
+    max-video-size: 52428800      # 50MB
+  retry:
+    max-count: 3
+    delay-ms: 5000
+  ai:
+    video-api-timeout: 120000     # 视频理解API超时（毫秒）
+
+# ==================== 邮件服务配置 ====================
+email:
+  # SMTP服务器地址（根据邮箱服务商填写）
+  # QQ邮箱: smtp.qq.com
+  # 163邮箱: smtp.163.com
+  # Gmail: smtp.gmail.com
+  host: smtp.qq.com
+  # SMTP端口（SSL加密通常使用465，TLS加密通常使用587）
+  port: 465
+  # 发件人邮箱账号（由 deploy/.env 注入，未配置时邮件功能不发信）
+  username: ${MAIL_USERNAME:}
+  # 邮箱密码或授权码（QQ邮箱需要使用授权码，不是登录密码）
+  password: ${MAIL_PASSWORD:}
+  # 是否启用SSL加密（推荐true）
+  ssl-enable: true
+  # 是否启用STARTTLS（SSL开启时通常设为false）
+  starttls-enable: false
+
+# ==================== 今日热点配置 ====================
+hot-topic:
+  # 第三方API配置（备选数据源）
+  api:
+    # 是否启用第三方API（默认关闭，需要配置URL后才能启用）
+    enabled: false
+    # API地址（例如：微博热搜API、知乎热榜API等）
+    # 示例格式：https://api.example.com/hot-search
+    url: ""
+    # API密钥（如果需要的话）
+    key: ""
+    # 请求超时时间（毫秒）
+    timeout: 5000
+
+# ==================== Actuator监控配置 ====================
+management:
+  endpoints:
+    web:
+      exposure:
+        # 暴露的端点：health, info, metrics, cachestats（自定义）
+        include: health,info,metrics,cachestats
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+    # 启用cachestats端点
+    cachestats:
+      enabled: true
+  # 启用Prometheus指标导出（可选）
+  metrics:
+    export:
+      prometheus:
+        enabled: false  # 如果需要Prometheus监控，设为true
+
+# ==================== ChatMemory配置 ====================
+chat:
+  memory:
+    ttl-hours: 2  # Redis消息过期时间（小时）
+    max-messages: 20  # 最多保留的消息数量

@@ -1,0 +1,2687 @@
+<script setup>
+import { ref, onMounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { VideoCamera, Document, Upload, ArrowLeft, View, Edit, Close } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import api from '../../utils/api.js'
+import { API_CONFIG } from '../../config/index.js'
+
+const router = useRouter()
+const route = useRoute()
+
+// 表单数据
+const tutorialForm = ref({
+  id: null,
+  title: '',
+  type: 'article',
+  content: '',
+  difficulty: 'BEGINNER',
+  duration: '',
+  calories: null,
+  prep_time: '',
+  servings: null,
+  cover_image: '',
+  video_url: '', // 视频URL（视频教程专用）
+  tags: null, // 改为 null，避免空字符串导致数据库 JSON 字段报错
+  status: 'DRAFT',
+  review_status: 'NOT_SUBMITTED'
+})
+
+// 提交状态
+const submitting = ref(false)
+
+// 图片上传相关
+const uploading = ref(false)
+const uploadProgress = ref(0)
+const uploadDialogVisible = ref(false)
+const uploadPreviewUrl = ref('')
+
+// 视频上传相关
+const uploadingVideo = ref(false)
+const videoUploadProgress = ref(0)
+const videoPreviewDialogVisible = ref(false)
+const videoPreviewUrl = ref('')
+const videoFileInfo = ref(null) // 保存视频文件信息
+const videoPlayerRef = ref(null) // 视频播放器引用
+
+// 内容图片上传相关
+const uploadingContentImage = ref(false)
+const contentImageUploadProgress = ref(0)
+const contentImageDialogVisible = ref(false)
+const uploadedContentImageUrl = ref('')
+
+// Markdown 预览模式：'edit' | 'preview' | 'split'
+const previewMode = ref('edit')
+
+// Textarea引用
+const contentTextarea = ref(null)
+
+// 悬浮球相关
+const floatingBalls = ref({
+  draft: {
+    visible: true,
+    dragging: false,
+    position: { x: 0, y: 0 },
+    offset: { x: 0, y: 0 },
+    scale: 1,
+    hasMoved: false,
+    startX: 0,
+    startY: 0
+  },
+  submit: {
+    visible: true,
+    dragging: false,
+    position: { x: 0, y: 0 },
+    offset: { x: 0, y: 0 },
+    scale: 1,
+    hasMoved: false,
+    startX: 0,
+    startY: 0
+  }
+})
+
+// 自动调整textarea高度
+const autoResizeTextarea = () => {
+  const textarea = contentTextarea.value
+  if (!textarea) return
+
+  // 重置高度以获取正确的scrollHeight
+  textarea.style.height = 'auto'
+
+  // 计算新高度（基于内容）
+  const scrollHeight = textarea.scrollHeight
+
+  // 设置最小高度为3行（约72px，24px每行）
+  const minHeight = 72
+
+  // 设置新高度
+  textarea.style.height = Math.max(minHeight, scrollHeight) + 'px'
+}
+
+// 监听内容变化
+const handleContentInput = () => {
+  autoResizeTextarea()
+}
+
+// 快速模板
+const quickTemplates = [
+  {
+    title: '我的拿手菜',
+    type: 'video',
+    difficulty: 'INTERMEDIATE',
+    contentTemplate: '## 菜品介绍\n\n### 食材准备\n\n### 制作步骤\n\n### 小贴士'
+  },
+  {
+    title: '健康饮食心得',
+    type: 'article',
+    difficulty: 'BEGINNER',
+    contentTemplate: '## 饮食心得\n\n### 推荐搭配\n\n### 营养建议'
+  },
+  {
+    title: '快手食谱分享',
+    type: 'video',
+    difficulty: 'BEGINNER',
+    contentTemplate: '## 食谱名称\n\n### 食材\n\n### 步骤\n\n### 注意事项'
+  }
+]
+
+// 切换预览模式
+const togglePreviewMode = (mode) => {
+  previewMode.value = mode
+}
+
+// 简单的 Markdown 转 HTML
+const renderMarkdown = (content) => {
+  if (!content) return ''
+
+  let html = content
+    // 图片（需要在标题、粗体等之前处理）
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/gim, '<img src="$2" alt="$1" class="markdown-image" />')
+    // 标题
+    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+    .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+    // 粗体
+    .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
+    // 斜体
+    .replace(/\*(.*?)\*/gim, '<em>$1</em>')
+    // 链接
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/gim, '<a href="$2" target="_blank">$1</a>')
+    // 列表
+    .replace(/^- (.*$)/gim, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>)/gim, '<ul>$1</ul>')
+    // 换行
+    .replace(/\n/gim, '<br>')
+
+  return html
+}
+
+// 使用快速模板
+const useTemplate = (template) => {
+  tutorialForm.value.title = template.title
+  tutorialForm.value.type = template.type
+  tutorialForm.value.difficulty = template.difficulty
+  tutorialForm.value.content = template.contentTemplate
+  ElMessage.success('模板已应用，请填写具体内容')
+}
+
+// 提交教程
+const submitTutorial = async () => {
+  console.log('submitTutorial 被调用')
+
+  // 验证表单
+  if (!tutorialForm.value.title) {
+    ElMessage.warning('请输入教程标题')
+    return
+  }
+  if (!tutorialForm.value.content) {
+    ElMessage.warning('请输入教程内容')
+    return
+  }
+
+  submitting.value = true
+
+  try {
+    // 先保存教程（创建或更新）
+    // 构建请求数据，将前端字段名转换为后端期望的字段名
+    const data = {
+      id: tutorialForm.value.id,
+      title: tutorialForm.value.title,
+      type: tutorialForm.value.type,
+      content: tutorialForm.value.content,
+      difficulty: tutorialForm.value.difficulty,
+      duration: tutorialForm.value.duration,
+      calories: tutorialForm.value.calories,
+      prepTime: tutorialForm.value.prep_time,
+      servings: tutorialForm.value.servings,
+      coverImage: tutorialForm.value.cover_image, // 转换为驼峰命名
+      videoUrl: tutorialForm.value.video_url, // 转换为驼峰命名
+      tags: tutorialForm.value.tags,
+      status: 'DRAFT',
+      reviewStatus: 'NOT_SUBMITTED' // 转换为驼峰命名
+    }
+
+    let tutorialId = tutorialForm.value.id
+    console.log('教程ID:', tutorialId)
+
+    if (tutorialId) {
+      // 更新现有教程
+      console.log('更新现有教程')
+      await api.put(`${API_CONFIG.tutorial.userUpdate}/${tutorialId}`, data)
+    } else {
+      // 创建新教程
+      console.log('创建新教程，请求数据:', data)
+      const createResponse = await api.post(API_CONFIG.tutorial.userCreate, data)
+      console.log('创建响应完整内容:', createResponse)
+      console.log('创建响应的data:', createResponse.data)
+
+      if (!createResponse) {
+        throw new Error('创建教程失败：服务器未返回数据')
+      }
+
+      tutorialId = createResponse.id || createResponse.data?.id
+      if (!tutorialId) {
+        console.error('无法从响应中获取教程ID，响应内容:', createResponse)
+        throw new Error('创建教程失败：无法获取教程ID')
+      }
+
+      tutorialForm.value.id = tutorialId
+      console.log('创建成功，教程ID:', tutorialId)
+    }
+
+    // 然后调用专门的提交审核接口
+    console.log('提交审核，教程ID:', tutorialId)
+    const submitResponse = await api.post(`${API_CONFIG.tutorial.userSubmit}/${tutorialId}/submit`)
+    console.log('提交审核响应:', submitResponse)
+
+    if (submitResponse && submitResponse.success) {
+      tutorialForm.value.status = 'PENDING'
+      tutorialForm.value.review_status = 'PENDING'
+
+      ElMessage.success('提交成功！您的教程已进入审核队列')
+    } else {
+      throw new Error(submitResponse?.message || '提交失败')
+    }
+  } catch (error) {
+    console.error('提交失败:', error)
+    ElMessage.error(error.response?.data?.message || error.message || '提交失败，请稍后重试')
+  } finally {
+    submitting.value = false
+  }
+}
+
+// 保存为草稿
+const saveDraft = async () => {
+  console.log('=== saveDraft 开始执行 ===')
+
+  if (!tutorialForm.value.title) {
+    ElMessage.warning('请至少输入教程标题')
+    return
+  }
+
+  submitting.value = true
+  console.log('当前教程ID:', tutorialForm.value.id)
+
+  try {
+    // 构建请求数据，将前端字段名转换为后端期望的字段名
+    const data = {
+      id: tutorialForm.value.id,
+      title: tutorialForm.value.title,
+      type: tutorialForm.value.type,
+      content: tutorialForm.value.content,
+      difficulty: tutorialForm.value.difficulty,
+      duration: tutorialForm.value.duration,
+      calories: tutorialForm.value.calories,
+      // 将下划线命名转换为驼峰命名
+      prepTime: tutorialForm.value.prep_time,
+      servings: tutorialForm.value.servings,
+      coverImage: tutorialForm.value.cover_image, // 转换为驼峰命名
+      videoUrl: tutorialForm.value.video_url, // 转换为驼峰命名
+      tags: tutorialForm.value.tags,
+      status: 'DRAFT',
+      reviewStatus: 'NOT_SUBMITTED' // 转换为驼峰命名
+    }
+
+    console.log('请求数据（转换后）:', data)
+
+    let response
+    if (tutorialForm.value.id) {
+      // 更新现有草稿
+      console.log('更新现有草稿，URL:', `${API_CONFIG.tutorial.userUpdate}/${tutorialForm.value.id}`)
+      response = await api.put(`${API_CONFIG.tutorial.userUpdate}/${tutorialForm.value.id}`, data)
+    } else {
+      // 创建新草稿
+      console.log('创建新草稿，URL:', API_CONFIG.tutorial.userCreate)
+      response = await api.post(API_CONFIG.tutorial.userCreate, data)
+    }
+
+    console.log('API响应完整内容:', response)
+    console.log('response.data:', response.data)
+    console.log('response.status:', response.status)
+
+    // 判断响应是否成功：
+    // 1. 创建操作：response本身是教程对象（有id）
+    // 2. 更新操作：response包含success=true或message字段
+    // 3. 标准格式：response包含data或status字段
+    const isSuccess = response && (
+      (response.success === true) ||                          // 操作成功标识
+      (response.message && response.message.includes('成功')) || // 成功消息
+      (response.data && typeof response.data === 'object') || // response.data存在
+      (response.id && typeof response.id === 'string') ||      // response本身是教程对象
+      response.status === 200 ||                                // 有status字段
+      response.status === 201
+    )
+
+    if (isSuccess) {
+      // 尝试从不同位置获取id
+      const newId = response.data?.id || response.id || tutorialForm.value.id
+
+      if (newId) {
+        tutorialForm.value.id = newId
+        console.log('教程ID已更新:', newId)
+      }
+
+      tutorialForm.value.status = 'DRAFT'
+      tutorialForm.value.review_status = 'NOT_SUBMITTED'
+
+      console.log('✅ 草稿保存成功')
+      ElMessage.success('草稿已保存！')
+    } else {
+      console.warn('❌ 响应格式异常，response:', response)
+      ElMessage.warning('保存完成，但响应格式异常')
+    }
+  } catch (error) {
+    console.error('=== 保存草稿失败 ===')
+    console.error('错误对象:', error)
+    console.error('错误消息:', error.message)
+    console.error('响应数据:', error.response?.data)
+    console.error('响应状态:', error.response?.status)
+    console.error('请求配置:', error.config)
+
+    // 显示更详细的错误信息
+    const errorMsg = error.response?.data?.message || error.message || '保存失败，请稍后重试'
+    ElMessage.error(errorMsg)
+  } finally {
+    submitting.value = false
+    console.log('=== saveDraft 执行结束 ===')
+  }
+}
+
+// 图片上传处理
+const handleImageUpload = async (file) => {
+  // 验证文件类型
+  const isImage = file.type.startsWith('image/')
+  if (!isImage) {
+    ElMessage.error('只能上传图片文件！')
+    return false
+  }
+
+  // 验证文件大小（5MB）
+  const isLt5M = file.size / 1024 / 1024 < 5
+  if (!isLt5M) {
+    ElMessage.error('图片大小不能超过 5MB！')
+    return false
+  }
+
+  uploading.value = true
+  uploadProgress.value = 0
+
+  try {
+    // 创建 FormData
+    const formData = new FormData()
+    formData.append('file', file)
+
+    // 使用原生 axios 进行上传，以便监听进度
+    const response = await api.post(API_CONFIG.upload.image, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      onUploadProgress: (progressEvent) => {
+        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+        uploadProgress.value = percentCompleted
+      }
+    })
+
+    if (response.data && response.data.fullUrl) {
+      tutorialForm.value.cover_image = response.data.fullUrl
+      ElMessage.success('图片上传成功！')
+    } else {
+      throw new Error('上传响应格式错误')
+    }
+  } catch (error) {
+    console.error('图片上传失败:', error)
+    ElMessage.error('图片上传失败，请稍后重试')
+  } finally {
+    uploading.value = false
+    uploadProgress.value = 0
+  }
+
+  return false // 阻止 el-upload 的默认上传行为
+}
+
+// 删除封面图
+const removeCoverImage = () => {
+  tutorialForm.value.cover_image = ''
+  ElMessage.success('已删除封面图')
+}
+
+// 预览封面图
+const previewCoverImage = () => {
+  if (tutorialForm.value.cover_image) {
+    uploadPreviewUrl.value = tutorialForm.value.cover_image
+    uploadDialogVisible.value = true
+  }
+}
+
+// 视频上传处理
+const handleVideoUpload = async (file) => {
+  // 验证文件类型
+  const isVideo = file.type.startsWith('video/')
+  if (!isVideo) {
+    ElMessage.error('只能上传视频文件！')
+    return false
+  }
+
+  // 验证文件大小（200MB）
+  const isLt200M = file.size / 1024 / 1024 < 200
+  if (!isLt200M) {
+    ElMessage.error('视频大小不能超过 200MB！')
+    return false
+  }
+
+  uploadingVideo.value = true
+  videoUploadProgress.value = 0
+
+  try {
+    // 创建 FormData
+    const formData = new FormData()
+    formData.append('file', file)
+
+    console.log('=== 开始上传视频 ===')
+    console.log('文件名:', file.name)
+    console.log('文件大小:', file.size)
+    console.log('文件类型:', file.type)
+
+    // 保存文件信息用于显示
+    videoFileInfo.value = {
+      name: file.name,
+      size: file.size,
+      type: file.type
+    }
+
+    // 使用原生 axios 进行上传，以便监听进度
+    const response = await api.post(API_CONFIG.upload.file, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      onUploadProgress: (progressEvent) => {
+        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+        videoUploadProgress.value = percentCompleted
+      }
+    })
+
+    console.log('=== 视频上传响应 ===')
+    console.log('完整响应:', response)
+    console.log('响应类型:', typeof response)
+    console.log('response.data:', response?.data)
+
+    // 与图片上传保持一致的响应解析逻辑
+    if (response.data && response.data.fullUrl) {
+      tutorialForm.value.video_url = response.data.fullUrl
+      ElMessage.success('视频上传成功！')
+    } else {
+      console.error('❌ 响应格式错误')
+      console.error('期望格式: { data: { fullUrl: "..." } }')
+      console.error('实际响应:', response)
+      throw new Error('上传响应格式错误')
+    }
+  } catch (error) {
+    console.error('视频上传失败:', error)
+    ElMessage.error('视频上传失败，请稍后重试')
+  } finally {
+    uploadingVideo.value = false
+    videoUploadProgress.value = 0
+  }
+
+  return false // 阻止 el-upload 的默认上传行为
+}
+
+// 格式化文件大小
+const formatFileSize = (bytes) => {
+  if (!bytes || bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  const size = bytes / Math.pow(k, i)
+  return `${size.toFixed(i === 0 ? 0 : 2)} ${sizes[i]}`
+}
+
+// 删除视频
+const removeVideo = () => {
+  tutorialForm.value.video_url = ''
+  videoFileInfo.value = null
+  ElMessage.success('已删除视频')
+}
+
+// 打开内容图片上传对话框
+const openContentImageUpload = () => {
+  // 清空之前的上传记录
+  uploadedContentImageUrl.value = ''
+  contentImageUploadProgress.value = 0
+  contentImageDialogVisible.value = true
+}
+
+// 内容图片上传处理
+const handleContentImageUpload = async (file) => {
+  // 验证文件类型
+  const isImage = file.type.startsWith('image/')
+  if (!isImage) {
+    ElMessage.error('只能上传图片文件！')
+    return false
+  }
+
+  // 验证文件大小（5MB）
+  const isLt5M = file.size / 1024 / 1024 < 5
+  if (!isLt5M) {
+    ElMessage.error('图片大小不能超过 5MB！')
+    return false
+  }
+
+  uploadingContentImage.value = true
+  contentImageUploadProgress.value = 0
+
+  try {
+    // 创建 FormData
+    const formData = new FormData()
+    formData.append('file', file)
+
+    // 使用原生 axios 进行上传，以便监听进度
+    const response = await api.post(API_CONFIG.upload.image, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      onUploadProgress: (progressEvent) => {
+        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+        contentImageUploadProgress.value = percentCompleted
+      }
+    })
+
+    if (response.data && response.data.fullUrl) {
+      uploadedContentImageUrl.value = response.data.fullUrl
+      ElMessage.success('图片上传成功！请点击"插入到内容"按钮')
+      // 不再自动插入，让用户手动点击按钮插入
+    } else {
+      throw new Error('上传响应格式错误')
+    }
+  } catch (error) {
+    console.error('内容图片上传失败:', error)
+    ElMessage.error('图片上传失败，请稍后重试')
+  } finally {
+    uploadingContentImage.value = false
+    contentImageUploadProgress.value = 0
+  }
+
+  return false // 阻止 el-upload 的默认上传行为
+}
+
+// 在光标位置插入图片语法
+const insertImageToContent = (imageUrl) => {
+  const textarea = contentTextarea.value
+  if (!textarea) return
+
+  const start = textarea.selectionStart
+  const end = textarea.selectionEnd
+  const text = tutorialForm.value.content
+
+  // 在光标位置插入 Markdown 图片语法
+  const imageMarkdown = `\n
+![图片描述](${imageUrl})\n`
+
+  const before = text.substring(0, start)
+  const after = text.substring(end)
+
+  tutorialForm.value.content = before + imageMarkdown + after
+
+  // 设置光标位置到插入的图片后面
+  setTimeout(() => {
+    const newPosition = start + imageMarkdown.length
+    textarea.setSelectionRange(newPosition, newPosition)
+    textarea.focus()
+  }, 10)
+}
+
+// 手动插入图片URL（用于对话框中手动输入URL）
+const insertContentImageUrl = () => {
+  if (!uploadedContentImageUrl.value) {
+    ElMessage.warning('请先上传图片')
+    return
+  }
+
+  insertImageToContent(uploadedContentImageUrl.value)
+
+  // 关闭对话框
+  contentImageDialogVisible.value = false
+  uploadedContentImageUrl.value = ''
+}
+
+// 预览视频
+const previewVideo = () => {
+  if (tutorialForm.value.video_url) {
+    videoPreviewUrl.value = tutorialForm.value.video_url
+    videoPreviewDialogVisible.value = true
+  }
+}
+
+// 关闭视频预览对话框时暂停并销毁视频
+const handleVideoDialogClose = () => {
+  if (videoPlayerRef.value) {
+    videoPlayerRef.value.pause()
+    videoPlayerRef.value.src = ''
+    videoPlayerRef.value.load()
+  }
+}
+
+// 返回
+const goBack = () => {
+  router.back()
+}
+
+// 悬浮球拖拽开始
+const handleDragStart = (event, type) => {
+  console.log('悬浮球拖拽开始:', type)
+  const ball = floatingBalls.value[type]
+  ball.dragging = true
+  ball.scale = 1.05
+  ball.hasMoved = false
+  ball.startX = event.clientX
+  ball.startY = event.clientY
+  ball.offset.x = event.clientX - ball.position.x
+  ball.offset.y = event.clientY - ball.position.y
+}
+
+// 悬浮球拖拽中（使用requestAnimationFrame优化性能）
+let animationFrameId = null
+const handleDragMove = (event) => {
+  if (animationFrameId) {
+    cancelAnimationFrame(animationFrameId)
+  }
+
+  animationFrameId = requestAnimationFrame(() => {
+    const types = ['draft', 'submit']
+    types.forEach(type => {
+      const ball = floatingBalls.value[type]
+      if (ball.dragging) {
+        // 检查是否真正移动了（避免误点击）
+        const moveDistance = Math.sqrt(
+          Math.pow(event.clientX - ball.startX, 2) +
+          Math.pow(event.clientY - ball.startY, 2)
+        )
+        if (moveDistance > 5) {
+          ball.hasMoved = true
+        }
+
+        ball.position.x = event.clientX - ball.offset.x
+        ball.position.y = event.clientY - ball.offset.y
+
+        // 边界检查，防止拖出屏幕
+        const ballSize = type === 'submit' ? 64 : 56
+        const maxX = window.innerWidth - ballSize
+        const maxY = window.innerHeight - ballSize
+
+        ball.position.x = Math.max(0, Math.min(maxX, ball.position.x))
+        ball.position.y = Math.max(0, Math.min(maxY, ball.position.y))
+      }
+    })
+  })
+}
+
+// 悬浮球拖拽结束
+const handleDragEnd = (type) => {
+  console.log('悬浮球拖拽结束:', type, 'hasMoved:', floatingBalls.value[type].hasMoved)
+  const ball = floatingBalls.value[type]
+
+  // 立即重置所有状态，确保click事件能正常触发
+  ball.dragging = false
+  ball.scale = 1
+
+  // 使用nextTick确保DOM更新完成后再重置hasMoved
+  // 这样可以避免阻止click事件的触发
+  setTimeout(() => {
+    ball.hasMoved = false
+  }, 0)
+}
+
+// 初始化悬浮球位置
+const initFloatingBalls = () => {
+  const windowWidth = window.innerWidth
+  const windowHeight = window.innerHeight
+
+  // 保存草稿悬浮球：右侧边缘，垂直方向居中
+  floatingBalls.value.draft.position = {
+    x: windowWidth - 76, // 右边距20px
+    y: windowHeight * 0.45
+  }
+  floatingBalls.value.draft.hasMoved = false
+
+  // 提交审核悬浮球：在保存草稿下方
+  floatingBalls.value.submit.position = {
+    x: windowWidth - 84, // 右边距20px
+    y: windowHeight * 0.45 + 72
+  }
+  floatingBalls.value.submit.hasMoved = false
+}
+
+// 加载教程数据（用于编辑）
+const loadTutorialData = async (tutorialId) => {
+  console.log('=== loadTutorialData 开始执行 ===')
+  console.log('教程ID:', tutorialId)
+
+  try {
+    const response = await api.get(`${API_CONFIG.tutorial.detail}${tutorialId}`)
+
+    console.log('API响应完整内容:', response)
+
+    // 支持多种响应格式
+    let tutorial = null
+    if (response.data && typeof response.data === 'object' && response.data.id) {
+      tutorial = response.data
+      console.log('使用 response.data')
+    } else if (response && typeof response === 'object' && response.id) {
+      tutorial = response
+      console.log('使用 response')
+    }
+
+    if (tutorial) {
+      // 详细打印所有字段，帮助调试
+      console.log('教程对象所有字段:', {
+        id: tutorial.id,
+        title: tutorial.title,
+        type: tutorial.type,
+        coverImage: tutorial.coverImage,
+        content: tutorial.content ? tutorial.content.substring(0, 50) + '...' : '',
+        difficulty: tutorial.difficulty,
+        duration: tutorial.duration
+      })
+
+      // 将后端数据映射到表单字段（后端返回驼峰命名）
+      tutorialForm.value = {
+        id: tutorial.id,
+        title: tutorial.title || '',
+        type: tutorial.type || 'article',
+        content: tutorial.content || '',
+        difficulty: tutorial.difficulty || 'BEGINNER',
+        duration: tutorial.duration || '',
+        calories: tutorial.calories || null,
+        prep_time: tutorial.prepTime || '',
+        servings: tutorial.servings || null,
+        cover_image: tutorial.coverImage || '',
+        video_url: tutorial.videoUrl || '', // 加载视频URL
+        tags: tutorial.tags || null,
+        status: tutorial.status || 'DRAFT',
+        review_status: tutorial.reviewStatus || 'NOT_SUBMITTED'
+      }
+
+      console.log('✅ 教程数据加载成功:', tutorialForm.value.title)
+      console.log('表单数据:', tutorialForm.value)
+      console.log('封面图URL:', tutorialForm.value.cover_image)
+
+      // 自动调整textarea高度
+      setTimeout(() => {
+        autoResizeTextarea()
+      }, 200)
+    } else {
+      console.warn('⚠️ 未找到教程数据')
+      ElMessage.warning('未找到教程数据')
+    }
+  } catch (error) {
+    console.error('❌ 加载教程数据失败')
+    console.error('错误对象:', error)
+    console.error('错误消息:', error.message)
+
+    if (error.response?.status === 404) {
+      ElMessage.error('教程不存在')
+    } else {
+      ElMessage.error(error.response?.data?.message || error.message || '加载教程数据失败')
+    }
+
+    // 如果加载失败，跳转回我的教程页面
+    setTimeout(() => {
+      router.push('/user/home/tutorials/my')
+    }, 1500)
+  } finally {
+    console.log('=== loadTutorialData 执行结束 ===')
+  }
+}
+
+// 初始化和监听
+onMounted(async () => {
+  // 检查URL参数，如果有id则加载教程数据（编辑模式）
+  const tutorialId = route.query.id
+  if (tutorialId) {
+    console.log('检测到教程ID，进入编辑模式:', tutorialId)
+    await loadTutorialData(tutorialId)
+  } else {
+    console.log('未检测到教程ID，进入新建模式')
+  }
+
+  // 初始化textarea高度
+  setTimeout(() => {
+    autoResizeTextarea()
+  }, 100)
+
+  // 初始化悬浮球位置
+  initFloatingBalls()
+
+  // 添加全局鼠标移动事件
+  document.addEventListener('mousemove', handleDragMove)
+  document.addEventListener('mouseup', () => {
+    handleDragEnd('draft')
+    handleDragEnd('submit')
+  })
+})
+
+// 监听内容变化（处理编程式的内容变更）
+watch(() => tutorialForm.value.content, () => {
+  setTimeout(() => {
+    autoResizeTextarea()
+  }, 10)
+})
+</script>
+
+<template>
+  <div class="user-tutorial-publish-container">
+    <!-- 页面头部 -->
+    <div class="page-header">
+      <div class="header-content">
+        <div class="header-left">
+          <div class="title-section">
+            <h1>发布教程</h1>
+            <p class="subtitle">分享你的美食经验，帮助更多人</p>
+          </div>
+        </div>
+        <div class="header-actions">
+          <el-button @click="goBack" size="default">
+            <el-icon><ArrowLeft /></el-icon> 取消
+          </el-button>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-wrapper">
+      <!-- 左侧：编辑表单 -->
+      <div class="main-content">
+        <!-- 快速模板 -->
+        <el-card class="template-card" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <el-icon><Document /></el-icon>
+              <span>快速模板</span>
+            </div>
+          </template>
+          <div class="templates-grid">
+            <div
+              v-for="(template, index) in quickTemplates"
+              :key="index"
+              class="template-item"
+              @click="useTemplate(template)"
+            >
+              <div class="template-icon" :class="template.type">
+                <el-icon v-if="template.type === 'video'"><VideoCamera /></el-icon>
+                <el-icon v-else><Document /></el-icon>
+              </div>
+              <div class="template-info">
+                <div class="template-title">{{ template.title }}</div>
+                <div class="template-difficulty">
+                  <el-tag size="small" :type="template.difficulty === 'BEGINNER' ? 'success' : template.difficulty === 'INTERMEDIATE' ? 'warning' : 'danger'">
+                    {{ template.difficulty === 'BEGINNER' ? '初级' : template.difficulty === 'INTERMEDIATE' ? '中级' : '高级' }}
+                  </el-tag>
+                </div>
+              </div>
+            </div>
+          </div>
+        </el-card>
+
+        <!-- 基本信息表单 -->
+        <el-card class="form-card" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <el-icon><Document /></el-icon>
+              <span>基本信息</span>
+            </div>
+          </template>
+
+          <el-form :model="tutorialForm" label-width="100px" class="publish-form">
+            <el-form-item label="教程标题" required>
+              <el-input
+                v-model="tutorialForm.title"
+                placeholder="给教程起个好标题，例如：家常红烧肉的秘诀"
+                maxlength="100"
+                show-word-limit
+                size="large"
+              />
+            </el-form-item>
+
+            <el-form-item label="教程类型" required>
+              <el-radio-group v-model="tutorialForm.type" size="large">
+                <el-radio-button value="article">
+                  <el-icon><Document /></el-icon> 图文指南
+                </el-radio-button>
+                <el-radio-button value="video">
+                  <el-icon><VideoCamera /></el-icon> 视频教程
+                </el-radio-button>
+              </el-radio-group>
+            </el-form-item>
+
+            <el-form-item label="难度">
+              <el-radio-group v-model="tutorialForm.difficulty" size="large">
+                <el-radio-button value="BEGINNER">🌱 初级</el-radio-button>
+                <el-radio-button value="INTERMEDIATE">🌿 中级</el-radio-button>
+                <el-radio-button value="ADVANCED">🌳 高级</el-radio-button>
+              </el-radio-group>
+            </el-form-item>
+
+            <el-form-item label="时长">
+              <el-input
+                v-model="tutorialForm.duration"
+                placeholder="例如: 15分钟（可选）"
+                size="large"
+              >
+                <template #prefix>
+                  <el-icon><VideoCamera /></el-icon>
+                </template>
+              </el-input>
+            </el-form-item>
+          </el-form>
+        </el-card>
+
+        <!-- 详细信息表单 -->
+        <el-card class="form-card" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <el-icon><Document /></el-icon>
+              <span>详细信息</span>
+            </div>
+          </template>
+
+          <el-form :model="tutorialForm" label-width="100px" class="publish-form">
+            <el-form-item label="卡路里">
+              <el-input-number
+                v-model="tutorialForm.calories"
+                :min="0"
+                :step="10"
+                placeholder="千卡"
+                size="large"
+              />
+              <span class="form-tip">标注卡路里有助于健康管理</span>
+            </el-form-item>
+
+            <el-form-item label="准备时间">
+              <el-input
+                v-model="tutorialForm.prep_time"
+                placeholder="例如: 20分钟（可选）"
+                size="large"
+              />
+            </el-form-item>
+
+            <el-form-item label="份量">
+              <el-input-number
+                v-model="tutorialForm.servings"
+                :min="1"
+                :max="20"
+                placeholder="人份"
+                size="large"
+              />
+            </el-form-item>
+
+            <el-form-item label="封面图">
+              <div class="cover-upload-container">
+                <!-- 上传区域 -->
+                <el-upload
+                  class="cover-uploader"
+                  :show-file-list="false"
+                  :before-upload="handleImageUpload"
+                  :disabled="uploading"
+                  accept="image/*"
+                  drag
+                >
+                  <div v-if="uploading" class="uploading-state">
+                    <el-progress
+                      type="circle"
+                      :percentage="uploadProgress"
+                      :width="60"
+                    />
+                    <p>正在上传... {{ uploadProgress }}%</p>
+                  </div>
+                  <div v-else class="upload-placeholder">
+                    <el-icon class="upload-icon"><Upload /></el-icon>
+                    <div class="upload-text">
+                      <p>点击或拖拽上传</p>
+                      <p class="upload-hint">支持 jpg、png、gif</p>
+                    </div>
+                  </div>
+                </el-upload>
+
+                <!-- 已有封面图时显示预览 -->
+                <div v-if="tutorialForm.cover_image" class="cover-preview-wrapper">
+                  <div class="cover-image-box">
+                    <img
+                      :src="tutorialForm.cover_image"
+                      alt="封面图"
+                      class="cover-preview-image"
+                      @click="previewCoverImage"
+                    />
+                    <div class="cover-image-actions">
+                      <el-button
+                        type="primary"
+                        size="small"
+                        @click="previewCoverImage"
+                        :disabled="uploading"
+                      >
+                        <el-icon><View /></el-icon> 预览
+                      </el-button>
+                      <el-button
+                        type="danger"
+                        size="small"
+                        @click="removeCoverImage"
+                        :disabled="uploading"
+                      >
+                        删除
+                      </el-button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </el-form-item>
+
+            <!-- 视频上传（仅视频教程显示） -->
+            <el-form-item v-if="tutorialForm.type === 'video'" label="视频文件">
+              <div class="cover-upload-container">
+                <!-- 上传区域 -->
+                <el-upload
+                  class="cover-uploader"
+                  :show-file-list="false"
+                  :before-upload="handleVideoUpload"
+                  :disabled="uploadingVideo"
+                  accept="video/*"
+                  drag
+                >
+                  <div v-if="uploadingVideo" class="uploading-state">
+                    <el-progress
+                      type="circle"
+                      :percentage="videoUploadProgress"
+                      :width="60"
+                    />
+                    <p>正在上传... {{ videoUploadProgress }}%</p>
+                  </div>
+                  <div v-else class="upload-placeholder">
+                    <el-icon class="upload-icon"><VideoCamera /></el-icon>
+                    <div class="upload-text">
+                      <p>点击或拖拽上传视频</p>
+                      <p class="upload-hint">支持 mp4、avi、mov等格式，最大200MB</p>
+                    </div>
+                  </div>
+                </el-upload>
+
+                <!-- 已有视频时显示预览 -->
+                <div v-if="tutorialForm.video_url" class="cover-preview-wrapper">
+                  <div class="video-preview-box">
+                    <video
+                      :src="tutorialForm.video_url"
+                      class="video-preview-player"
+                      preload="metadata"
+                      @click="previewVideo"
+                    ></video>
+                    <!-- 删除按钮 -->
+                    <div
+                      class="video-delete-btn"
+                      @click="removeVideo"
+                      :disabled="uploadingVideo"
+                      title="删除视频"
+                    >
+                      <el-icon><Close /></el-icon>
+                    </div>
+                    <!-- 文件信息 -->
+                    <div v-if="videoFileInfo" class="video-file-info">
+                      <span class="file-name">{{ videoFileInfo.name }}</span>
+                      <span class="file-size">{{ formatFileSize(videoFileInfo.size) }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </el-form-item>
+          </el-form>
+        </el-card>
+
+        <!-- 教程内容 -->
+        <el-card class="form-card content-card" shadow="hover">
+          <template #header>
+            <div class="card-header-content">
+              <div class="card-header">
+                <el-icon><Document /></el-icon>
+                <span>教程内容</span>
+              </div>
+              <div class="preview-mode-switcher">
+                <el-button
+                  :type="previewMode === 'edit' ? 'primary' : ''"
+                  size="small"
+                  @click="togglePreviewMode('edit')"
+                >
+                  <el-icon><Edit /></el-icon> 编辑
+                </el-button>
+                <el-button
+                  :type="previewMode === 'preview' ? 'primary' : ''"
+                  size="small"
+                  @click="togglePreviewMode('preview')"
+                >
+                  <el-icon><View /></el-icon> 预览
+                </el-button>
+                <el-button
+                  :type="previewMode === 'split' ? 'primary' : ''"
+                  size="small"
+                  @click="togglePreviewMode('split')"
+                >
+                  <el-icon><View /></el-icon> 分屏
+                </el-button>
+              </div>
+            </div>
+          </template>
+
+          <div :class="['content-editor-wrapper', `mode-${previewMode}`]">
+            <!-- 编辑区域 -->
+            <div v-show="previewMode === 'edit' || previewMode === 'split'" class="editor-pane">
+              <!-- 工具栏 -->
+              <div class="editor-toolbar">
+                <el-button
+                  type="primary"
+                  size="small"
+                  @click="openContentImageUpload"
+                  :disabled="uploadingContentImage"
+                >
+                  <el-icon><Upload /></el-icon>
+                  插入图片
+                </el-button>
+                <span class="toolbar-tip">
+                  💡 支持Markdown语法，上传的图片会自动插入到光标位置
+                </span>
+              </div>
+
+              <textarea
+                ref="contentTextarea"
+                v-model="tutorialForm.content"
+                class="native-textarea"
+                rows="3"
+                @input="handleContentInput"
+                placeholder="💡 输入内容会自动增高，也可拖动右下角手动调整
+
+支持Markdown格式，例如：
+## 标题
+- 要点1
+- 要点2
+
+**粗体文字**
+![图片](url)
+[链接](url)"
+              ></textarea>
+            </div>
+
+            <!-- 预览区域 -->
+            <div v-show="previewMode === 'preview' || previewMode === 'split'" class="preview-pane">
+              <div v-if="tutorialForm.content" class="markdown-preview" v-html="renderMarkdown(tutorialForm.content)"></div>
+              <div v-else class="no-preview-content">
+                <el-icon :size="48"><Document /></el-icon>
+                <p>暂无内容预览</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="content-help">
+            <p><strong>💡 内容提示：</strong></p>
+            <ul>
+              <li>详细描述制作步骤或饮食建议</li>
+              <li>可以添加小贴士和注意事项</li>
+              <li>支持Markdown格式，排版更美观（支持标题、粗体、列表、链接等）</li>
+            </ul>
+          </div>
+        </el-card>
+
+        <!-- 提示信息 -->
+        <el-card class="tips-card" shadow="never">
+          <template #header>
+            <div class="card-header">
+              <el-icon><Document /></el-icon>
+              <span>发布须知</span>
+            </div>
+          </template>
+          <div class="tips-content">
+            <div class="tip-section">
+              <h5>✅ 内容要求</h5>
+              <ul>
+                <li>内容需原创，不得抄袭</li>
+                <li>步骤清晰，易于理解</li>
+                <li>图片清晰，画质良好</li>
+                <li>语言文明，友善交流</li>
+              </ul>
+            </div>
+
+            <div class="tip-section">
+              <h5>⏰ 审核时效</h5>
+              <p>提交后，我们将在 <strong>1-3个工作日</strong> 内完成审核</p>
+              <p>审核通过后，您的教程将展示在"制作教程与指南"板块</p>
+            </div>
+
+            <div class="tip-section">
+              <h5>📝 审核标准</h5>
+              <ul>
+                <li>内容完整度：步骤/信息是否详细</li>
+                <li>实用价值：是否有实际指导意义</li>
+                <li>原创性：是否为原创内容</li>
+                <li>规范性：是否符合社区规范</li>
+              </ul>
+            </div>
+
+            <div class="tip-section">
+              <h5>⚠️ 注意事项</h5>
+              <ul>
+                <li>请勿发布虚假信息</li>
+                <li>请勿发布违反法律法规的内容</li>
+                <li>请勿发布广告或推广信息</li>
+                <li>审核通过后，您的教程将展示给所有用户</li>
+              </ul>
+            </div>
+          </div>
+        </el-card>
+      </div>
+
+      <!-- 右侧：预览面板 -->
+      <div class="side-content">
+        <el-card class="preview-card" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <el-icon><Document /></el-icon>
+              <span>教程预览</span>
+            </div>
+          </template>
+
+          <div class="preview-content">
+            <div class="preview-cover">
+              <img
+                v-if="tutorialForm.cover_image"
+                :src="tutorialForm.cover_image"
+                alt="封面预览"
+              />
+              <div v-else class="no-cover">
+                <el-icon :size="48"><Document /></el-icon>
+                <span>暂无封面</span>
+              </div>
+              <div class="type-badge">
+                <el-icon v-if="tutorialForm.type === 'video'"><VideoCamera /></el-icon>
+                <el-icon v-else><Document /></el-icon>
+                {{ tutorialForm.type === 'video' ? '视频' : '图文' }}
+              </div>
+            </div>
+
+            <div class="preview-info">
+              <h3>{{ tutorialForm.title || '教程标题' }}</h3>
+
+              <div class="preview-meta">
+                <span v-if="tutorialForm.difficulty" class="difficulty-badge">
+                  {{ tutorialForm.difficulty === 'BEGINNER' ? '🌱 初级' : tutorialForm.difficulty === 'INTERMEDIATE' ? '🌿 中级' : '🌳 高级' }}
+                </span>
+                <span v-if="tutorialForm.duration" class="duration-badge">
+                  <el-icon><VideoCamera /></el-icon> {{ tutorialForm.duration }}
+                </span>
+                <span v-if="tutorialForm.calories" class="calories-badge">
+                  {{ tutorialForm.calories }} 千卡
+                </span>
+              </div>
+
+              <div class="preview-body">
+                <div v-if="tutorialForm.content" class="content-preview">
+                  <div v-html="tutorialForm.content.replace(/\n/g, '<br>')"></div>
+                </div>
+                <div v-else class="no-content">
+                  教程内容将在这里显示...
+                </div>
+              </div>
+            </div>
+          </div>
+        </el-card>
+      </div>
+    </div>
+
+    <!-- 图片预览对话框 -->
+    <el-dialog
+      v-model="uploadDialogVisible"
+      title="封面图预览"
+      width="60%"
+      :close-on-click-modal="true"
+    >
+      <div class="preview-dialog-content">
+        <img :src="uploadPreviewUrl" alt="封面图预览" class="preview-dialog-image" />
+      </div>
+    </el-dialog>
+
+    <!-- 视频预览对话框 -->
+    <el-dialog
+      v-model="videoPreviewDialogVisible"
+      title="视频预览"
+      width="70%"
+      :close-on-click-modal="true"
+      @close="handleVideoDialogClose"
+    >
+      <div class="video-preview-dialog-content">
+        <video
+          ref="videoPlayerRef"
+          :src="videoPreviewUrl"
+          controls
+          autoplay
+          class="video-preview-dialog-player"
+        ></video>
+      </div>
+    </el-dialog>
+
+    <!-- 内容图片上传对话框 -->
+    <el-dialog
+      v-model="contentImageDialogVisible"
+      title="插入图片到内容"
+      width="500px"
+      :close-on-click-modal="false"
+    >
+      <div class="content-image-upload-dialog">
+        <el-upload
+          class="content-image-uploader"
+          :show-file-list="false"
+          :before-upload="handleContentImageUpload"
+          :disabled="uploadingContentImage"
+          accept="image/*"
+          drag
+        >
+          <div v-if="uploadingContentImage" class="uploading-state">
+            <el-progress
+              type="circle"
+              :percentage="contentImageUploadProgress"
+              :width="80"
+            />
+            <p>正在上传... {{ contentImageUploadProgress }}%</p>
+          </div>
+          <div v-else class="upload-placeholder">
+            <el-icon class="upload-icon"><Upload /></el-icon>
+            <div class="upload-text">
+              <p>点击或拖拽上传图片</p>
+              <p class="upload-hint">支持 jpg、png、gif，最大 5MB</p>
+            </div>
+          </div>
+        </el-upload>
+
+        <div v-if="uploadedContentImageUrl" class="uploaded-preview">
+          <p class="preview-title">图片预览：</p>
+          <img :src="uploadedContentImageUrl" alt="上传的图片" class="preview-image" />
+        </div>
+      </div>
+
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="contentImageDialogVisible = false">取消</el-button>
+          <el-button
+            type="primary"
+            @click="insertContentImageUrl"
+            :disabled="!uploadedContentImageUrl"
+          >
+            插入到内容
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
+
+    <!-- 智能悬浮球 -->
+    <div class="floating-balls-container">
+      <!-- 保存草稿悬浮球 -->
+      <div
+        class="floating-ball floating-ball-draft"
+        :class="{ 'is-dragging': floatingBalls.draft.dragging }"
+        :style="{
+          transform: `translate(${floatingBalls.draft.position.x}px, ${floatingBalls.draft.position.y}px) scale(${floatingBalls.draft.scale})`
+        }"
+        @mousedown="handleDragStart($event, 'draft')"
+        @click="!floatingBalls.draft.dragging && !floatingBalls.draft.hasMoved && saveDraft()"
+        title="保存草稿"
+      >
+        <div class="floating-ball-icon">
+          <el-icon :size="22"><Document /></el-icon>
+        </div>
+        <div class="floating-ball-tooltip">保存草稿</div>
+        <el-icon class="drag-hint" :size="10"><Upload /></el-icon>
+      </div>
+
+      <!-- 提交审核悬浮球 -->
+      <div
+        class="floating-ball floating-ball-submit"
+        :class="{ 'is-dragging': floatingBalls.submit.dragging }"
+        :style="{
+          transform: `translate(${floatingBalls.submit.position.x}px, ${floatingBalls.submit.position.y}px) scale(${floatingBalls.submit.scale})`
+        }"
+        @mousedown="handleDragStart($event, 'submit')"
+        @click="!floatingBalls.submit.dragging && !floatingBalls.submit.hasMoved && submitTutorial()"
+        title="提交审核"
+      >
+        <div class="floating-ball-icon">
+          <el-icon :size="26"><Upload /></el-icon>
+        </div>
+        <div class="floating-ball-tooltip">提交审核</div>
+        <el-icon class="drag-hint" :size="10"><Upload /></el-icon>
+      </div>
+    </div>
+  </div>
+</template>
+
+<style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+
+.user-tutorial-publish-container {
+  padding: 0;
+  background: @nordic-bg;
+  min-height: calc(100vh - 60px);
+
+  .page-header {
+    background: linear-gradient(135deg, @nordic-accent 0%, @nordic-blue 100%);
+    padding: @nordic-space-xl 40px;
+    box-shadow: 0 4px 20px @nordic-shadow-hover;
+    margin-bottom: @nordic-space-xl;
+
+    .header-content {
+      max-width: 1600px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: @nordic-space-lg;
+
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 20px; // 保持20px，不在主题变量中
+        flex: 1;
+
+        .title-section {
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+
+          h1 {
+            margin: 0 0 8px 0;
+            font-size: 2.286rem /* 原值: 32px */;
+            font-weight: bold;
+            color: @nordic-surface;
+            line-height: 1.2;
+          }
+
+          .subtitle {
+            margin: 0;
+            font-size: 1.071rem /* 原值: 15px */;
+            color: rgba(255, 255, 255, 0.85);
+          }
+        }
+      }
+
+      .header-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        flex-shrink: 0;
+        min-width: 140px;
+        justify-content: center;
+
+        .el-button {
+          width: 100%;
+          min-width: auto;
+          font-weight: 500;
+          border: none;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 8px @nordic-space-md;
+          height: 40px;
+          line-height: 1;
+          box-sizing: border-box;
+          text-align: center;
+          background: rgba(255, 255, 255, 0.2);
+          color: @nordic-surface;
+          backdrop-filter: blur(10px);
+
+          :deep(.el-icon) {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+          }
+
+          :deep(span) {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+          }
+
+          &:hover {
+            background: rgba(255, 255, 255, 0.3);
+          }
+        }
+      }
+    }
+  }
+
+  .content-wrapper {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 0 40px @nordic-space-xl;
+    display: grid;
+    grid-template-columns: 1fr 420px;
+    gap: @nordic-space-lg;
+  }
+
+  .main-content {
+    display: flex;
+    flex-direction: column;
+    gap: @nordic-space-lg;
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: @nordic-space-sm;
+      font-size: @nordic-text-md;
+      font-weight: 600;
+      color: @nordic-text;
+
+      .el-icon {
+        font-size: 1.286rem /* 原值: 18px */;
+        color: @nordic-accent;
+      }
+    }
+
+    .template-card {
+      border: none;
+      border-radius: @nordic-radius-lg;
+      box-shadow: 0 4px 16px @nordic-shadow;
+      transition: all 0.3s;
+
+      &:hover {
+        box-shadow: 0 8px 24px @nordic-shadow-hover;
+        transform: translateY(-2px);
+      }
+
+      .templates-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: @nordic-space-md;
+
+        .template-item {
+          padding: 20px;
+          background: linear-gradient(135deg, @nordic-bg 0%, @nordic-surface 100%);
+          border: 2px solid @nordic-border;
+          border-radius: @nordic-radius-md;
+          cursor: pointer;
+          transition: all 0.3s;
+          display: flex;
+          align-items: center;
+          gap: @nordic-space-md;
+
+          &:hover {
+            border-color: @nordic-accent;
+            background: linear-gradient(135deg, @nordic-accent-light 0%, @nordic-surface 100%);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px fade(@nordic-accent, 20%);
+          }
+
+          .template-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: @nordic-radius-md;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 1.714rem /* 原值: 24px */;
+
+            &.video {
+              background: linear-gradient(135deg, @nordic-red 0%, @nordic-red-light 100%);
+              color: @nordic-surface;
+            }
+
+            &.article {
+              background: linear-gradient(135deg, @nordic-yellow 0%, @nordic-yellow-light 100%);
+              color: @nordic-surface;
+            }
+
+            .el-icon {
+              font-size: 2rem /* 原值: 28px */;
+            }
+          }
+
+          .template-info {
+            flex: 1;
+
+            .template-title {
+              font-size: 1.071rem /* 原值: 15px */;
+              font-weight: 600;
+              color: @nordic-text;
+              margin-bottom: @nordic-space-sm;
+            }
+
+            .template-difficulty {
+              display: flex;
+              align-items: center;
+            }
+          }
+        }
+      }
+    }
+
+    .form-card {
+      border: none;
+      border-radius: @nordic-radius-lg;
+      box-shadow: 0 4px 16px @nordic-shadow;
+      transition: all 0.3s;
+
+      &:hover {
+        box-shadow: 0 8px 24px @nordic-shadow-hover;
+      }
+
+      &.content-card {
+        .card-header-content {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          width: 100%;
+
+          .card-header {
+            flex: 1;
+          }
+
+          .preview-mode-switcher {
+            display: flex;
+            gap: @nordic-space-sm;
+          }
+        }
+
+        .content-editor-wrapper {
+          display: grid;
+          gap: 20px;
+          margin-bottom: @nordic-space-md;
+
+          &.mode-edit {
+            grid-template-columns: 1fr;
+          }
+
+          &.mode-preview {
+            grid-template-columns: 1fr;
+          }
+
+          &.mode-split {
+            grid-template-columns: 1fr 1fr;
+
+            @media (max-width: 1200px) {
+              grid-template-columns: 1fr;
+            }
+          }
+
+          .editor-pane,
+          .preview-pane {
+            min-height: 72px; /* 3行高度 */
+            border-radius: @nordic-radius-sm;
+            display: flex;
+            flex-direction: column;
+          }
+
+          .editor-pane {
+            .editor-toolbar {
+              display: flex;
+              align-items: center;
+              gap: 12px;
+              padding: 12px @nordic-space-md;
+              background: linear-gradient(135deg, @nordic-bg 0%, @nordic-surface 100%);
+              border: 1px solid @nordic-border;
+              border-bottom: none;
+              border-radius: @nordic-radius-sm @nordic-radius-sm 0 0;
+
+              .toolbar-tip {
+                flex: 1;
+                font-size: @nordic-text-xs;
+                color: @nordic-text-muted;
+              }
+            }
+          }
+
+          .editor-pane {
+            .native-textarea {
+              width: 100%;
+              min-height: 72px; /* 3行高度 (24px * 3) */
+              border: 1px solid @nordic-border;
+              border-radius: 0 0 @nordic-radius-sm @nordic-radius-sm;
+              border-top: none;
+              padding: 12px @nordic-space-md;
+              font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+              font-size: @nordic-text-base;
+              line-height: 1.6;
+              color: @nordic-text-secondary;
+              background-color: @nordic-surface;
+              resize: vertical; /* 允许手动拖动调整高度 */
+              overflow-y: auto;
+              overflow-x: hidden;
+              outline: none;
+              transition: border-color 0.3s;
+              box-sizing: border-box;
+
+              &:hover {
+                border-color: @nordic-text-muted;
+              }
+
+              &:focus {
+                border-color: @nordic-blue;
+              }
+
+              &::placeholder {
+                color: @nordic-text-muted;
+              }
+            }
+          }
+
+          .preview-pane {
+            background: @nordic-surface;
+            border: 1px solid @nordic-border;
+            padding: 20px;
+            overflow-y: auto;
+            min-height: 72px; /* 与编辑器保持一致，3行高度 */
+            max-height: none;
+            align-self: flex-start;
+
+            .markdown-preview {
+              line-height: 1.8;
+              color: @nordic-text;
+
+              h1, h2, h3, h4, h5, h6 {
+                margin-top: @nordic-space-lg;
+                margin-bottom: @nordic-space-md;
+                font-weight: 600;
+                line-height: 1.4;
+                color: @nordic-text;
+              }
+
+              h1 { font-size: 2rem /* 原值: 28px */; border-bottom: 2px solid @nordic-border; padding-bottom: 10px; }
+              h2 { font-size: 1.714rem /* 原值: 24px */; border-bottom: 1px solid @nordic-border; padding-bottom: 8px; }
+              h3 { font-size: 1.429rem /* 原值: 20px */; }
+              h4 { font-size: 1.286rem /* 原值: 18px */; }
+              h5 { font-size: 1.143rem /* 原值: 16px */; }
+              h6 { font-size: 1rem /* 原值: 14px */; }
+
+              p {
+                margin-bottom: 16px;
+                line-height: 1.8;
+              }
+
+              ul, ol {
+                margin-bottom: 16px;
+                padding-left: 24px;
+
+                li {
+                  margin-bottom: 8px;
+                  line-height: 1.8;
+                }
+              }
+
+              strong {
+                color: @nordic-accent;
+                font-weight: 600;
+              }
+
+              em {
+                font-style: italic;
+                color: @nordic-text-secondary;
+              }
+
+              a {
+                color: @nordic-blue;
+                text-decoration: none;
+                border-bottom: 1px solid @nordic-blue;
+                transition: all 0.3s;
+
+                &:hover {
+                  color: @nordic-blue;
+                  border-bottom-color: @nordic-blue-light;
+                }
+              }
+
+              code {
+                background: @nordic-divider;
+                padding: 2px 6px;
+                border-radius: 4px;
+                font-family: 'Monaco', 'Menlo', monospace;
+                font-size: @nordic-text-sm;
+                color: @nordic-red;
+              }
+
+              blockquote {
+                margin: @nordic-space-md 0;
+                padding: 12px @nordic-space-md;
+                background: @nordic-divider;
+                border-left: 4px solid @nordic-accent;
+                color: @nordic-text-secondary;
+              }
+
+              .markdown-image {
+                max-width: 100%;
+                height: auto;
+                border-radius: @nordic-radius-sm;
+                margin: 12px 0;
+                box-shadow: 0 2px 8px @nordic-shadow-hover;
+                display: block;
+              }
+            }
+
+            .no-preview-content {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              height: 100%;
+              color: @nordic-text-muted;
+              gap: 12px;
+
+              .el-icon {
+                color: @nordic-text-muted;
+              }
+
+              p {
+                margin: 0;
+                font-size: @nordic-text-base;
+              }
+            }
+          }
+        }
+
+        .el-form-item {
+          margin-bottom: 0;
+        }
+
+        :deep(.el-form-item__content) {
+          line-height: 1;
+        }
+      }
+
+      .publish-form {
+        :deep(.el-form-item__label) {
+          font-weight: 500;
+          color: @nordic-text-secondary;
+        }
+
+        .form-tip {
+          margin-left: 12px;
+          color: @nordic-text-muted;
+          font-size: @nordic-text-sm;
+        }
+
+        // 封面图上传容器
+        .cover-upload-container {
+          width: 100%;
+          display: flex;
+          align-items: flex-start;
+          gap: @nordic-space-md;
+
+          .cover-preview-wrapper {
+            margin-top: 0;
+            margin-bottom: 0;
+            width: 33.33%;
+            aspect-ratio: 1 / 1;
+
+            .cover-image-box {
+              position: relative;
+              width: 100%;
+              height: 100%;
+              border-radius: @nordic-radius-md;
+              overflow: hidden;
+              box-shadow: 0 3px 8px @nordic-shadow-hover;
+              margin-bottom: 0;
+              background: @nordic-bg;
+
+              .cover-preview-image {
+                width: 100%;
+                height: 100%;
+                display: block;
+                object-fit: cover;
+                cursor: pointer;
+                transition: transform 0.3s;
+
+                &:hover {
+                  transform: scale(1.02);
+                }
+              }
+
+              .cover-image-actions {
+                position: absolute;
+                top: 6px;
+                right: 6px;
+                display: flex;
+                gap: 6px;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+                z-index: 10;
+
+                .el-button {
+                  padding: 6px 10px;
+                  font-size: 0.929rem /* 原值: 13px */;
+                  backdrop-filter: blur(10px);
+                }
+              }
+
+              &:hover .cover-image-actions {
+                opacity: 1;
+              }
+            }
+
+            .cover-url-display {
+              :deep(.el-input__inner) {
+                background: @nordic-bg;
+                color: @nordic-text-muted;
+              }
+            }
+
+            .video-preview-box {
+              position: relative;
+              width: 100%;
+              height: 100%;
+              border-radius: @nordic-radius-md;
+              overflow: hidden;
+              box-shadow: 0 3px 8px @nordic-shadow-hover;
+              margin-bottom: 0;
+              background: #000;
+
+              .video-preview-player {
+                width: 100%;
+                height: 100%;
+                display: block;
+                object-fit: cover;
+                cursor: pointer;
+                transition: transform 0.3s ease;
+
+                &:hover {
+                  transform: scale(1.02);
+                }
+              }
+
+              // 右上角删除按钮
+              .video-delete-btn {
+                position: absolute;
+                top: 6px;
+                right: 6px;
+                width: 28px;
+                height: 28px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.95);
+                backdrop-filter: blur(10px);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                z-index: 10;
+                opacity: 0;
+                transform: scale(0.8);
+
+                &:hover {
+                  background: rgba(255, 107, 107, 0.95);
+                  transform: scale(1.1);
+                }
+
+                .el-icon {
+                  color: @nordic-text;
+                  font-size: 1.143rem /* 原值: 16px */;
+                  font-weight: bold;
+                }
+              }
+
+              // 鼠标悬停时显示删除按钮
+              &:hover .video-delete-btn {
+                opacity: 1;
+                transform: scale(1);
+              }
+
+              // 文件信息
+              .video-file-info {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 8px 12px;
+                background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+                border-radius: 0 0 @nordic-radius-md @nordic-radius-md;
+                font-size: @nordic-text-xs;
+                color: white;
+                pointer-events: none;
+
+                .file-name {
+                  flex: 1;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                  white-space: nowrap;
+                  font-weight: 500;
+                }
+
+                .file-size {
+                  margin-left: 8px;
+                  opacity: 0.85;
+                  font-size: 0.75rem /* 原值: 11px */;
+                  white-space: nowrap;
+                }
+              }
+            }
+          }
+
+          .cover-uploader {
+            width: 33.33%;
+            aspect-ratio: 1 / 1;
+
+            :deep(.el-upload) {
+              width: 100%;
+              height: 100%;
+            }
+
+            :deep(.el-upload-dragger) {
+              width: 100%;
+              height: 100%;
+              padding: 20px 10px;
+              border: 2px dashed @nordic-border;
+              border-radius: @nordic-radius-md;
+              background: linear-gradient(135deg, @nordic-bg 0%, @nordic-surface 100%);
+              transition: all 0.3s;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+
+              &:hover {
+                border-color: @nordic-accent;
+                background: linear-gradient(135deg, @nordic-accent-light 0%, @nordic-surface 100%);
+              }
+            }
+
+            .uploading-state {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              gap: @nordic-space-sm;
+
+              p {
+                margin: 0;
+                font-size: @nordic-text-xs;
+                color: @nordic-text-secondary;
+              }
+            }
+
+            .upload-placeholder {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              gap: @nordic-space-sm;
+
+              .upload-icon {
+                font-size: 2.286rem /* 原值: 32px */;
+                color: @nordic-accent;
+              }
+
+              .upload-text {
+                text-align: center;
+
+                p {
+                  margin: 0;
+                  font-size: @nordic-text-xs;
+                  color: @nordic-text;
+
+                  &.upload-hint {
+                    margin-top: 2px;
+                    font-size: 10px;
+                    color: @nordic-text-muted;
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        .content-help {
+          margin-top: @nordic-space-md;
+          padding: @nordic-space-md;
+          background: linear-gradient(135deg, @nordic-blue-light 0%, @nordic-accent-light 100%);
+          border-left: 4px solid @nordic-accent;
+          border-radius: @nordic-radius-sm;
+
+          p {
+            margin: 0 0 @nordic-space-sm 0;
+            font-size: @nordic-text-base;
+            color: @nordic-text;
+
+            &:first-child {
+              margin-top: 0;
+            }
+          }
+
+          ul {
+            margin: @nordic-space-sm 0 0 0;
+            padding-left: 20px;
+
+            li {
+              margin: 6px 0;
+              font-size: @nordic-text-sm;
+              color: @nordic-text-secondary;
+              line-height: 1.6;
+            }
+          }
+        }
+      }
+    }
+
+    .tips-card {
+      border: none;
+      border-radius: @nordic-radius-lg;
+      background: linear-gradient(135deg, @nordic-yellow-light 0%, @nordic-surface 100%);
+
+      .tips-content {
+        .tip-section {
+          margin-bottom: @nordic-space-lg;
+
+          &:last-child {
+            margin-bottom: 0;
+          }
+
+          h5 {
+            font-size: 1.071rem /* 原值: 15px */;
+            color: @nordic-text;
+            margin: 0 0 12px 0;
+            font-weight: 600;
+          }
+
+          p {
+            font-size: @nordic-text-base;
+            color: @nordic-text-secondary;
+            line-height: 1.8;
+            margin: @nordic-space-sm 0;
+
+            strong {
+              color: @nordic-accent;
+              font-weight: 600;
+            }
+          }
+
+          ul {
+            margin: @nordic-space-sm 0 0 0;
+            padding-left: 20px;
+
+            li {
+              font-size: @nordic-text-base;
+              color: @nordic-text-secondary;
+              margin: @nordic-space-sm 0;
+              line-height: 1.6;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  .side-content {
+    .preview-card {
+      position: sticky;
+      top: 20px;
+      border: none;
+      border-radius: @nordic-radius-lg;
+      box-shadow: 0 4px 16px @nordic-shadow;
+
+      .preview-content {
+        .preview-cover {
+          position: relative;
+          width: 100%;
+          height: 140px;
+          border-radius: @nordic-radius-md;
+          overflow: hidden;
+          margin-bottom: 20px;
+          background: linear-gradient(135deg, @nordic-bg 0%, @nordic-border 100%);
+
+          img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+          }
+
+          .no-cover {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: @nordic-text-muted;
+            gap: @nordic-space-sm;
+
+            .el-icon {
+              color: @nordic-text-muted;
+            }
+          }
+
+          .type-badge {
+            position: absolute;
+            top: @nordic-space-md;
+            right: @nordic-space-md;
+            background: rgba(255, 255, 255, 0.98);
+            padding: @nordic-space-sm @nordic-space-md;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: @nordic-text-sm;
+            font-weight: 600;
+            box-shadow: 0 4px 12px @nordic-shadow-hover;
+            backdrop-filter: blur(10px);
+          }
+        }
+
+        .preview-info {
+          h3 {
+            font-size: @nordic-text-lg;
+            font-weight: 700;
+            color: @nordic-text;
+            margin: 0 0 @nordic-space-md 0;
+            line-height: 1.4;
+            min-height: 28px;
+          }
+
+          .preview-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+
+            span {
+              padding: 6px 14px;
+              border-radius: @nordic-radius-lg;
+              font-size: @nordic-text-sm;
+              font-weight: 500;
+              display: flex;
+              align-items: center;
+              gap: 6px;
+            }
+
+            .difficulty-badge {
+              background: linear-gradient(135deg, @nordic-blue-light 0%, @nordic-blue-light 100%);
+              color: @nordic-blue;
+            }
+
+            .duration-badge {
+              background: linear-gradient(135deg, @nordic-yellow-light 0%, @nordic-yellow-light 100%);
+              color: @nordic-yellow;
+            }
+
+            .calories-badge {
+              background: linear-gradient(135deg, @nordic-green-light 0%, @nordic-green-light 100%);
+              color: @nordic-green;
+            }
+          }
+
+          .preview-body {
+            .content-preview {
+              font-size: @nordic-text-base;
+              color: @nordic-text-secondary;
+              line-height: 1.8;
+              max-height: 500px;
+              overflow-y: auto;
+              padding: @nordic-space-md;
+              background: @nordic-bg;
+              border-radius: @nordic-radius-sm;
+
+              :deep(h1),
+              :deep(h2),
+              :deep(h3) {
+                margin-top: @nordic-space-md;
+                margin-bottom: @nordic-space-sm;
+                color: @nordic-text;
+                font-weight: 600;
+              }
+
+              :deep(p) {
+                margin-bottom: @nordic-space-sm;
+              }
+
+              :deep(ul),
+              :deep(ol) {
+                padding-left: 20px;
+                margin-bottom: @nordic-space-sm;
+              }
+
+              :deep(strong) {
+                color: @nordic-accent;
+                font-weight: 600;
+              }
+            }
+
+            .no-content {
+              color: @nordic-text-muted;
+              font-style: italic;
+              text-align: center;
+              padding: 60px 20px;
+              background: @nordic-bg;
+              border-radius: @nordic-radius-sm;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// 响应式设计
+@media (max-width: 1400px) {
+  .user-tutorial-publish-container {
+    .content-wrapper {
+      grid-template-columns: 1fr 380px;
+    }
+  }
+}
+
+@media (max-width: 1200px) {
+  .user-tutorial-publish-container {
+    .content-wrapper {
+      grid-template-columns: 1fr;
+      padding: 0 24px 24px;
+    }
+
+    .side-content {
+      display: none;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .user-tutorial-publish-container {
+    .page-header {
+      padding: 24px 20px;
+
+      .header-content {
+        flex-direction: column;
+        gap: 20px;
+
+        .header-left {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 12px;
+
+          .title-section {
+            h1 {
+              font-size: 1.714rem /* 原值: 24px */;
+            }
+
+            .subtitle {
+              font-size: 0.929rem /* 原值: 13px */;
+            }
+          }
+        }
+
+        .header-actions {
+          width: 100%;
+          flex-direction: column;
+          gap: 8px;
+
+          .el-button {
+            width: 100%;
+            min-width: auto;
+          }
+        }
+      }
+    }
+
+    .main-content {
+      .template-card {
+        .templates-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .form-card {
+        &.content-card {
+          .content-editor-wrapper {
+            &.mode-split {
+              grid-template-columns: 1fr;
+            }
+          }
+
+          .preview-mode-switcher {
+            flex-wrap: wrap;
+
+            .el-button {
+              flex: 1;
+              min-width: 60px;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// 图片预览对话框
+.preview-dialog-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+
+  .preview-dialog-image {
+    max-width: 100%;
+    max-height: 70vh;
+    border-radius: @nordic-radius-sm;
+    box-shadow: 0 4px 16px @nordic-shadow-hover;
+  }
+}
+
+// 视频预览对话框
+.video-preview-dialog-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+
+  .video-preview-dialog-player {
+    width: 100%;
+    max-height: 70vh;
+    object-fit: contain;
+    border-radius: @nordic-radius-sm;
+    box-shadow: 0 4px 16px @nordic-shadow-hover;
+  }
+}
+
+// 内容图片上传对话框
+.content-image-upload-dialog {
+  .content-image-uploader {
+    width: 100%;
+    margin-bottom: 20px;
+
+    :deep(.el-upload) {
+      width: 100%;
+    }
+
+    :deep(.el-upload-dragger) {
+      width: 100%;
+      padding: 30px;
+      border: 2px dashed @nordic-border;
+      border-radius: @nordic-radius-md;
+      background: linear-gradient(135deg, @nordic-bg 0%, @nordic-surface 100%);
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      &:hover {
+        border-color: @nordic-accent;
+        background: linear-gradient(135deg, @nordic-accent-light 0%, @nordic-surface 100%);
+      }
+    }
+
+    .uploading-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+
+      p {
+        margin: 0;
+        font-size: @nordic-text-sm;
+        color: @nordic-text-secondary;
+      }
+    }
+
+    .upload-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+
+      .upload-icon {
+        font-size: 2.857rem /* 原值: 40px */;
+        color: @nordic-accent;
+      }
+
+      .upload-text {
+        text-align: center;
+
+        p {
+          margin: 0;
+          font-size: @nordic-text-base;
+          color: @nordic-text;
+
+          &.upload-hint {
+            margin-top: 4px;
+            font-size: @nordic-text-xs;
+            color: @nordic-text-muted;
+          }
+        }
+      }
+    }
+  }
+
+  .uploaded-preview {
+    padding: @nordic-space-md;
+    background: @nordic-bg;
+    border-radius: @nordic-radius-sm;
+
+    .preview-title {
+      margin: 0 0 12px 0;
+      font-size: @nordic-text-base;
+      font-weight: 500;
+      color: @nordic-text;
+    }
+
+    .preview-image {
+      width: 100%;
+      max-height: 300px;
+      object-fit: contain;
+      border-radius: @nordic-radius-sm;
+      border: 1px solid @nordic-border;
+    }
+  }
+}
+
+// 智能悬浮球样式
+.floating-balls-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9999;
+
+  .floating-ball {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    pointer-events: auto;
+    will-change: transform;
+    box-shadow: 0 4px 16px @nordic-shadow-hover;
+    backdrop-filter: blur(10px);
+    user-select: none;
+
+    // 非拖拽状态下的平滑过渡
+    &:not(.is-dragging) {
+      transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease;
+    }
+
+    &:hover {
+      box-shadow: 0 6px 20px @nordic-shadow-hover;
+
+      .floating-ball-tooltip {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+
+      .drag-hint {
+        opacity: 1;
+      }
+
+      .floating-ball-icon {
+        .el-icon {
+          transform: scale(1.1);
+        }
+      }
+    }
+
+    &:active {
+      cursor: grabbing;
+    }
+
+    &.is-dragging {
+      cursor: grabbing;
+      box-shadow: 0 8px 24px @nordic-shadow-hover;
+      transition: none; // 拖拽时移除过渡，实现丝滑跟随
+    }
+
+    &.floating-ball-draft {
+      background: linear-gradient(135deg, @nordic-accent 0%, @nordic-blue 100%);
+      color: @nordic-surface;
+    }
+
+    &.floating-ball-submit {
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, @nordic-red 0%, @nordic-accent 100%);
+      color: @nordic-surface;
+    }
+
+    .floating-ball-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+
+      .el-icon {
+        transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+    }
+
+    .floating-ball-tooltip {
+      position: absolute;
+      bottom: -36px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-8px);
+      background: rgba(0, 0, 0, 0.85);
+      color: @nordic-surface;
+      padding: 5px 10px;
+      border-radius: @nordic-radius-sm;
+      font-size: 0.75rem /* 原值: 11px */;
+      white-space: nowrap;
+      opacity: 0;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      pointer-events: none;
+      backdrop-filter: blur(10px);
+      font-weight: 500;
+
+      &::after {
+        content: '';
+        position: absolute;
+        top: -5px;
+        left: 50%;
+        transform: translateX(-50%);
+        border-left: 5px solid transparent;
+        border-right: 5px solid transparent;
+        border-bottom: 5px solid rgba(0, 0, 0, 0.85);
+      }
+    }
+
+    .drag-hint {
+      position: absolute;
+      bottom: 6px;
+      right: 6px;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      transform: rotate(45deg);
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    // 脉冲动画效果（更柔和）
+    &::before {
+      content: '';
+      position: absolute;
+      top: -3px;
+      left: -3px;
+      right: -3px;
+      bottom: -3px;
+      border-radius: 50%;
+      background: inherit;
+      opacity: 0;
+      animation: pulse 2.5s infinite;
+      z-index: -1;
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: scale(1);
+        opacity: 0.3;
+      }
+      50% {
+        transform: scale(1.15);
+        opacity: 0.15;
+      }
+      100% {
+        transform: scale(1);
+        opacity: 0;
+      }
+    }
+  }
+}
+</style>

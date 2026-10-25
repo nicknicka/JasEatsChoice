@@ -1,0 +1,53 @@
+name: smoke
+
+# PR 与主干推送只跑三条冒烟用例（登录/下单/商家侧），几分钟内给结论。
+# 全量 107 条走 regression.yml（定时或手动触发）。
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  e2e:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            apps/client/package-lock.json
+            tests/package-lock.json
+
+      - name: Install dependencies
+        # Electron 二进制与 Web 用例无关，跳过下载能省几分钟且不怕 GitHub 抽风
+        run: |
+          ELECTRON_SKIP_BINARY_DOWNLOAD=1 npm --prefix apps/client ci --ignore-scripts
+          npm --prefix tests ci
+
+      - name: Prepare env file
+        # deploy/.env 不入库；CI 里生成一次性随机凭据即可
+        run: bash scripts/gen-env.sh
+
+      - name: Install Playwright browser
+        run: cd tests && npx playwright install --with-deps chromium
+
+      - name: Run smoke specs
+        run: bash scripts/ci-e2e.sh 01-auth.spec.js 04-order.spec.js 10-merchant-order-dish.spec.js
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-report
+          path: |
+            tests/reports/html
+            tests/reports/results.json
+            /tmp/vite.log
+          retention-days: 7
+          if-no-files-found: ignore

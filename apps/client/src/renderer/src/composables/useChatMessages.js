@@ -1,0 +1,382 @@
+/**
+ * 聊天消息管理
+ */
+import { ref, nextTick } from 'vue'
+import { ElMessage } from 'element-plus'
+import api from '@/utils/api.js'
+import { API_CONFIG } from '@/config'
+import { MESSAGE_CONFIG, STORAGE_CONFIG } from '@/constants/chatConstants'
+
+export function useChatMessages({ userId, selectedConversation }) {
+  // 聊天记录
+  const chatHistory = ref({})
+  const chatMessages = ref([])
+
+  // 分页相关
+  const msgPageNum = ref(1)
+  const totalMessages = ref(0)
+  const hasMoreMessages = ref(true)
+  const isLoadingMessages = ref(false)
+
+  // 消息容器引用
+  const messagesContainerRef = ref(null)
+
+  /**
+   * 获取回复消息的显示名称
+   */
+  const getReplyDisplayName = (replyFromId) => {
+    if (!replyFromId) return '未知'
+
+    if (replyFromId === userId.value.toString()) {
+      return '我'
+    }
+
+    // 返回会话名称（对于单聊是对手的名字，对于群聊是群名称）
+    return selectedConversation.value?.name || replyFromId
+  }
+
+  /**
+   * 格式化消息时间
+   */
+  const formatMessageTime = (time) => {
+    if (!time) return ''
+
+    const date = new Date(time)
+    const now = new Date()
+    const diffMs = now - date
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
+
+    // 获取时间部分
+    const timeStr = date.toLocaleTimeString('zh-CN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    })
+
+    // 今天
+    if (diffDays === 0) {
+      if (diffMins < 1) return '刚刚'
+      if (diffMins < 60) return `${diffMins}分钟前`
+      if (diffHours < 24) {
+        // 今天的消息：只显示时间
+        return timeStr
+      }
+    }
+    // 昨天
+    else if (diffDays === 1) {
+      return `昨天 ${timeStr}`
+    }
+    // 更早但在一周内
+    else if (diffDays < 7) {
+      return `${diffDays}天前 ${timeStr}`
+    }
+
+    // 超过一周显示完整日期和时间
+    return date.toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
+  /**
+   * 预处理消息
+   */
+  const preprocessMessages = (messages) => {
+    if (!Array.isArray(messages)) return []
+
+    const uniqueMessages = []
+    const messageIds = new Set()
+
+    messages.forEach((msg) => {
+      // ⭐ 修复：使用 msgId 作为唯一标识
+      const messageMsgId = msg.msgId || msg.id
+
+      if (!messageIds.has(messageMsgId)) {
+        messageIds.add(messageMsgId)
+
+        // 确定发送者显示名称
+        let senderName = null
+        const fromId = msg.fromId || msg.sender || '未知'
+
+        if (fromId === userId.value.toString()) {
+          // 自己的消息，不需要显示名称（在UI中会显示"我"）
+          senderName = null
+        } else if (msg.senderName || msg.fromName) {
+          // 后端返回的发送者名称
+          senderName = msg.senderName || msg.fromName
+        } else if (selectedConversation.value?.type === 'single') {
+          // 单聊：使用会话名称
+          senderName = selectedConversation.value.name
+        } else if (selectedConversation.value?.type === 'group') {
+          // 群聊：尝试使用后端返回的名称，如果没有则显示ID
+          senderName = msg.username || msg.nickname || msg.fromName || fromId
+        }
+
+        // ⭐ 修复：先确保 fileUrl 和 fullUrl 字段存在，再创建 processedMsg
+        // 这样可以确保这些字段被正确复制到新对象中
+        let fileUrl = msg.fileUrl || ''
+        let fullUrl = msg.fullUrl || ''
+
+        // 如果后端只返回了相对路径 fileUrl，构建完整的 fullUrl
+        if (fileUrl && !fullUrl && !fileUrl.startsWith('http')) {
+          // 构建完整URL（与上传时的逻辑一致）
+          fullUrl = `${API_CONFIG.baseURL}/uploads/${fileUrl}`
+        }
+
+        // 确定消息类型
+        let msgType = msg.msgType
+
+        const processedMsg = {
+          ...msg,
+          msgId: messageMsgId, // ⭐ 标准化 msgId 字段
+          id: messageMsgId, // 同时保留 id 字段用于兼容
+          msgType,
+          formattedTime: formatMessageTime(msg.createTime || msg.time),
+          fromId,
+          senderName,
+          // 显式确保 URL 字段存在
+          fileUrl,
+          fullUrl
+        }
+
+        // 如果有回复信息但没有回复者名称，则生成显示名称
+        if (msg.replyTo && !msg.replyFromName) {
+          processedMsg.replyFromName = getReplyDisplayName(msg.replyFromId)
+        }
+
+        uniqueMessages.push(processedMsg)
+      }
+    })
+
+    return uniqueMessages
+  }
+
+  /**
+   * 滚动到底部
+   */
+  const scrollToBottom = () => {
+    nextTick(() => {
+      if (messagesContainerRef.value) {
+        messagesContainerRef.value.scrollTop = messagesContainerRef.value.scrollHeight
+      }
+    })
+  }
+
+  /**
+   * 保存聊天历史到本地
+   */
+  const saveChatHistoryToLocal = () => {
+    try {
+      const storageDays =
+        parseInt(localStorage.getItem(STORAGE_CONFIG.CHAT_STORAGE_DAYS_KEY)) ||
+        STORAGE_CONFIG.DEFAULT_STORAGE_DAYS
+      const maxMessagesPerSession =
+        parseInt(localStorage.getItem(STORAGE_CONFIG.CHAT_MAX_MESSAGES_KEY)) ||
+        STORAGE_CONFIG.MAX_MESSAGES_PER_SESSION
+
+      const cutoffTime = Date.now() - storageDays * 24 * 60 * 60 * 1000
+      const filteredHistory = {}
+
+      Object.keys(chatHistory.value).forEach((sessionId) => {
+        const recentMessages = chatHistory.value[sessionId].filter((msg) => {
+          const msgTime = new Date(msg.createTime || msg.time).getTime()
+          return msgTime > cutoffTime
+        })
+
+        if (recentMessages.length > 0) {
+          filteredHistory[sessionId] = recentMessages.slice(-maxMessagesPerSession)
+        }
+      })
+
+      localStorage.setItem(STORAGE_CONFIG.CHAT_HISTORY_KEY, JSON.stringify(filteredHistory))
+    } catch (error) {
+      console.error('保存聊天历史失败:', error)
+    }
+  }
+
+  /**
+   * 从本地加载聊天历史
+   */
+  const loadChatHistoryFromLocal = () => {
+    try {
+      const saved = localStorage.getItem(STORAGE_CONFIG.CHAT_HISTORY_KEY)
+      if (saved) {
+        const parsedHistory = JSON.parse(saved)
+        Object.keys(parsedHistory).forEach((sessionId) => {
+          if (!chatHistory.value[sessionId]) {
+            chatHistory.value[sessionId] = parsedHistory[sessionId]
+          }
+        })
+      }
+    } catch (error) {
+      console.error('加载聊天历史失败:', error)
+    }
+  }
+
+  /**
+   * 加载聊天记录
+   */
+  const loadChatMessages = async (sessionId, loadMore = false) => {
+    if (!loadMore) {
+      msgPageNum.value = 1
+      hasMoreMessages.value = true
+    }
+
+    // 先显示缓存（快速响应用户体验）
+    if (!loadMore && chatHistory.value[sessionId]) {
+      const cachedMessages = chatHistory.value[sessionId]
+      chatMessages.value = cachedMessages
+      scrollToBottom()
+    }
+
+    if (isLoadingMessages.value || !hasMoreMessages.value) {
+      return
+    }
+
+    isLoadingMessages.value = true
+
+    try {
+      const response = await api.get(`/v1/chat/${sessionId}/messages`, {
+        params: {
+          pageNum: msgPageNum.value,
+          pageSize: MESSAGE_CONFIG.DEFAULT_PAGE_SIZE,
+          userId: userId.value
+        }
+      })
+
+      if (response.code === '200') {
+        const data = response.data
+        const messages = data.records || []
+
+        const processedMessages = preprocessMessages(messages)
+
+        if (loadMore) {
+          chatMessages.value = [...processedMessages, ...chatMessages.value]
+          const scrollTop = messagesContainerRef.value?.scrollTop || 0
+          nextTick(() => {
+            if (messagesContainerRef.value) {
+              messagesContainerRef.value.scrollTop = scrollTop + 100
+            }
+          })
+        } else {
+          // 用后端数据覆盖缓存数据（保证数据准确性）
+          chatHistory.value[sessionId] = processedMessages
+          chatMessages.value = processedMessages
+          scrollToBottom()
+        }
+
+        totalMessages.value = data.total || 0
+        hasMoreMessages.value =
+          data.records && data.records.length >= MESSAGE_CONFIG.DEFAULT_PAGE_SIZE
+
+        saveChatHistoryToLocal()
+      } else {
+        console.warn('[loadChatMessages] API返回非200状态码', response.code, response.message)
+      }
+    } catch (error) {
+      console.error('[loadChatMessages] 请求失败:', error.message)
+      ElMessage.error('加载聊天记录失败，请稍后重试')
+      if (!loadMore) {
+        chatMessages.value = []
+      }
+    } finally {
+      isLoadingMessages.value = false
+    }
+  }
+
+  /**
+   * 加载更多消息
+   */
+  const loadMoreMessages = async () => {
+    if (!selectedConversation.value || isLoadingMessages.value || !hasMoreMessages.value) {
+      return
+    }
+    msgPageNum.value++
+    await loadChatMessages(selectedConversation.value.id, true)
+  }
+
+  /**
+   * 添加新消息
+   */
+  const addMessage = (message, sessionId) => {
+    // ⭐ 修改：使用 msgId 进行消息去重检测
+    const messageMsgId = message.msgId || message.id
+    const exists = chatMessages.value.some((msg) => (msg.msgId || msg.id) === messageMsgId)
+
+    if (!exists) {
+      const fromId = message.fromId || message.sender || '未知'
+
+      // 确定发送者显示名称（如果消息中没有）
+      let senderName = message.senderName
+      if (!senderName && fromId !== userId.value.toString()) {
+        if (message.senderName || message.fromName) {
+          senderName = message.senderName || message.fromName
+        } else if (selectedConversation.value?.type === 'single') {
+          senderName = selectedConversation.value.name
+        } else if (selectedConversation.value?.type === 'group') {
+          senderName = message.username || message.nickname || message.fromName || fromId
+        }
+      }
+
+      // ⭐ 修复：先确保 fileUrl 和 fullUrl 字段存在，再创建 processedMsg
+      const fileUrl = message.fileUrl || message.fullUrl || ''
+      const fullUrl = message.fullUrl || message.fileUrl || ''
+
+      // 确定消息类型
+      let msgType = message.msgType
+      if (message.msgType === 'image' || message.content === '[图片]' || fileUrl) {
+        msgType = 'image'
+      } else if (
+        message.msgType === 'file' ||
+        message.content?.startsWith('[文件]') ||
+        message.fileName
+      ) {
+        msgType = 'file'
+      }
+
+      const processedMsg = {
+        ...message,
+        msgId: messageMsgId, // ⭐ 确保 msgId 字段存在
+        msgType,
+        formattedTime: formatMessageTime(message.createTime || message.time),
+        fromId,
+        senderName,
+        // 显式确保 URL 字段存在
+        fileUrl,
+        fullUrl
+      }
+
+      // 如果有回复信息但没有回复者名称，则生成显示名称
+      if (message.replyTo && !message.replyFromName) {
+        processedMsg.replyFromName = getReplyDisplayName(message.replyFromId)
+      }
+
+      chatMessages.value.push(processedMsg)
+      chatHistory.value[sessionId] = chatMessages.value
+      scrollToBottom()
+      saveChatHistoryToLocal()
+    }
+  }
+
+  return {
+    chatHistory,
+    chatMessages,
+    msgPageNum,
+    totalMessages,
+    hasMoreMessages,
+    isLoadingMessages,
+    messagesContainerRef,
+    formatMessageTime,
+    loadChatMessages,
+    loadMoreMessages,
+    addMessage,
+    saveChatHistoryToLocal,
+    loadChatHistoryFromLocal,
+    scrollToBottom
+  }
+}

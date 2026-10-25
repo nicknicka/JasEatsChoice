@@ -1,0 +1,435 @@
+<script setup>
+import { computed, ref } from 'vue'
+import { ElMessage } from 'element-plus'
+import { ChatDotRound } from '@element-plus/icons-vue'
+import { getAvatarText, getAvatarUrl } from '../../../utils/avatar'
+
+const props = defineProps({
+  conversations: {
+    type: Array,
+    default: () => []
+  },
+  selectedConversation: {
+    type: Object,
+    default: null
+  },
+  searchKeyword: {
+    type: String,
+    default: ''
+  },
+  showUnreadOnly: {
+    type: Boolean,
+    default: false
+  }
+})
+
+const emit = defineEmits(['select', 'search', 'filter'])
+const failedAvatarIds = ref(new Set())
+
+// 过滤后的会话列表
+const filteredConversations = computed(() => {
+  let result = props.conversations
+
+  // 搜索过滤
+  if (props.searchKeyword) {
+    const keyword = props.searchKeyword.toLowerCase()
+    result = result.filter(
+      (conv) =>
+        conv.name.toLowerCase().includes(keyword) ||
+        conv.lastMessage.toLowerCase().includes(keyword)
+    )
+  }
+
+  // 仅显示未读
+  if (props.showUnreadOnly) {
+    result = result.filter((conv) => conv.unreadCount > 0)
+  }
+
+  // 按未读消息排序
+  return result.sort((a, b) => {
+    if (a.unreadCount > 0 && b.unreadCount === 0) return -1
+    if (a.unreadCount === 0 && b.unreadCount > 0) return 1
+    return 0
+  })
+})
+
+// 选择会话
+const selectConversation = (conversation) => {
+  emit('select', conversation)
+  // 清空未读消息
+  if (conversation.unreadCount > 0) {
+    conversation.unreadCount = 0
+    ElMessage.success('消息已标记为已读')
+  }
+}
+
+const shouldShowImageAvatar = (conversation) => {
+  return (
+    getAvatarContent(conversation.avatar).type === 'image' &&
+    !failedAvatarIds.value.has(conversation.id)
+  )
+}
+
+const handleAvatarError = (conversationId) => {
+  failedAvatarIds.value = new Set([...failedAvatarIds.value, conversationId])
+}
+
+const getFallbackAvatarContent = (conversation) => {
+  if (conversation.type === 'group') {
+    return '👥'
+  }
+
+  return getAvatarText(conversation.name, conversation.username)
+}
+
+// 获取头像显示内容
+const getAvatarContent = (avatar) => {
+  if (!avatar || typeof avatar !== 'string') {
+    return { type: 'emoji', content: '👤' }
+  }
+
+  const trimmedAvatar = avatar.trim()
+  const isImageAvatar =
+    /^https?:/i.test(trimmedAvatar) ||
+    /^data:image/i.test(trimmedAvatar) ||
+    /^\/?(api\/)?uploads\//i.test(trimmedAvatar) ||
+    /[\\/]/.test(trimmedAvatar) ||
+    /\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(trimmedAvatar)
+
+  if (isImageAvatar) {
+    return { type: 'image', content: trimmedAvatar }
+  }
+
+  return { type: 'emoji', content: trimmedAvatar }
+}
+
+// 格式化时间显示
+const formatTime = (timeStr) => {
+  if (!timeStr) return ''
+
+  if (typeof timeStr === 'string') {
+    const trimmedTime = timeStr.trim()
+
+    if (/^\d{1,2}:\d{2}$/.test(trimmedTime)) {
+      return trimmedTime
+    }
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmedTime)) {
+      const [, month, day] = trimmedTime.split('-')
+      return `${Number(month)}/${Number(day)}`
+    }
+  }
+
+  const now = new Date()
+  const time = new Date(timeStr)
+  if (Number.isNaN(time.getTime())) return ''
+  const diff = now - time
+
+  // 小于1分钟 - 刚刚
+  if (diff < 60000) {
+    return '刚刚'
+  }
+
+  // 小于1小时 - X分钟前
+  if (diff < 3600000) {
+    return `${Math.floor(diff / 60000)}分钟前`
+  }
+
+  // 今天 - X小时前
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  if (time >= today) {
+    return `${Math.floor(diff / 3600000)}小时前`
+  }
+
+  // 昨天
+  const yesterday = new Date(today)
+  yesterday.setDate(yesterday.getDate() - 1)
+  if (time >= yesterday) {
+    return '昨天'
+  }
+
+  // 前天
+  const dayBeforeYesterday = new Date(today)
+  dayBeforeYesterday.setDate(dayBeforeYesterday.getDate() - 2)
+  if (time >= dayBeforeYesterday) {
+    return '前天'
+  }
+
+  // 更早 - 显示日期（月/日）
+  return `${time.getMonth() + 1}/${time.getDate()}`
+}
+</script>
+
+<template>
+  <div class="conversation-list-wrapper">
+    <!-- 会话列表头部 -->
+    <div class="list-header">
+      <div class="header-title">
+        <el-icon :size="18"><ChatDotRound /></el-icon>
+        <span>会话列表</span>
+        <el-badge
+          v-if="filteredConversations.length > 0"
+          :value="filteredConversations.length"
+          class="item"
+        />
+      </div>
+    </div>
+
+    <!-- 会话列表 -->
+    <div class="conversation-list">
+      <div
+        v-for="conversation in filteredConversations"
+        :key="conversation.id"
+        class="conversation-item"
+        :class="{
+          active: selectedConversation?.id === conversation.id,
+          'has-unread': conversation.unreadCount > 0,
+          'has-order': conversation.relatedOrder
+        }"
+        @click="selectConversation(conversation)"
+      >
+        <div class="conversation-avatar">
+          <img
+            v-if="shouldShowImageAvatar(conversation)"
+            :src="getAvatarUrl(conversation.avatar)"
+            :alt="conversation.name"
+            class="avatar-image"
+            @error="handleAvatarError(conversation.id)"
+          />
+          <div v-else class="emoji-avatar">
+            {{ getAvatarContent(conversation.avatar).type === 'image'
+              ? getFallbackAvatarContent(conversation)
+              : getAvatarContent(conversation.avatar).content }}
+          </div>
+
+          <!-- 未读消息徽章 -->
+          <div v-if="conversation.unreadCount > 0" class="unread-badge">
+            {{ conversation.unreadCount > 99 ? '99+' : conversation.unreadCount }}
+          </div>
+
+          <!-- 订单指示器 -->
+          <div v-if="conversation.relatedOrder" class="order-indicator" title="有关联订单">📋</div>
+        </div>
+
+        <div class="conversation-info">
+          <div class="name-time">
+            <span class="name">{{ conversation.name }}</span>
+            <span class="time">{{ formatTime(conversation.time) }}</span>
+          </div>
+          <div class="last-message">{{ conversation.lastMessage }}</div>
+          <div
+            v-if="conversation.type === 'group' && conversation.memberCount"
+            class="member-count"
+          >
+            {{ conversation.memberCount }}人
+          </div>
+        </div>
+      </div>
+
+      <!-- 空状态 -->
+      <div v-if="filteredConversations.length === 0" class="empty-conversations">
+        <el-empty :description="searchKeyword ? '未找到匹配的会话' : '暂无会话'" />
+      </div>
+    </div>
+  </div>
+</template>
+
+<style scoped lang="less">
+@import '../../../assets/css/nordic-theme.less';
+@import '../../../assets/css/merchant-theme.less';
+
+.conversation-list-wrapper {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: @merchant-surface;
+  overflow: hidden;
+
+  .list-header {
+    padding: 18px 20px;
+    border-bottom: 1px solid @merchant-border;
+    background: linear-gradient(135deg, @merchant-surface-alt 0%, @merchant-surface 100%);
+    flex-shrink: 0;
+
+    .header-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 1.071rem /* 原值: 15px */;
+      font-weight: 600;
+      color: @merchant-text;
+
+      .el-badge {
+        margin-left: auto;
+      }
+    }
+  }
+
+  .conversation-list {
+    flex: 1;
+    overflow-y: auto;
+
+    .conversation-item {
+      display: flex;
+      align-items: center;
+      padding: 14px 16px;
+      cursor: pointer;
+      border-bottom: 1px solid @merchant-divider;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      &:hover {
+        background-color: @merchant-surface-alt;
+        transform: translateX(2px);
+      }
+
+      &.active {
+        background: linear-gradient(135deg, @merchant-primary-light 0%, @merchant-surface-alt 100%);
+        border-left: 3px solid @merchant-primary;
+        padding-left: 13px;
+      }
+
+      &.has-unread {
+        background-color: @merchant-error-light;
+      }
+
+      .conversation-avatar {
+        position: relative;
+        margin-right: 14px;
+        flex-shrink: 0;
+
+        .avatar-image {
+          width: 50px;
+          height: 50px;
+          border-radius: 50%;
+          object-fit: cover;
+        }
+
+        .emoji-avatar {
+          width: 50px;
+          height: 50px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.714rem /* 原值: 24px */;
+          background: linear-gradient(135deg, @merchant-surface-alt 0%, @merchant-border 100%);
+          border-radius: 50%;
+          transition: transform 0.2s ease;
+          overflow: hidden;
+          white-space: nowrap;
+        }
+
+        .unread-badge {
+          position: absolute;
+          top: -4px;
+          right: -4px;
+          background: linear-gradient(135deg, @merchant-error 0%, @merchant-error-light 100%);
+          color: @merchant-surface;
+          border-radius: 12px;
+          padding: 2px 7px;
+          font-size: 0.75rem /* 原值: 11px */;
+          font-weight: 600;
+          box-shadow: 0 2px 8px @merchant-shadow-hover;
+          border: 2px solid @merchant-surface;
+          min-width: 18px;
+          text-align: center;
+        }
+
+        .order-indicator {
+          position: absolute;
+          bottom: -2px;
+          right: -2px;
+          width: 20px;
+          height: 20px;
+          background: linear-gradient(135deg, @merchant-primary 0%, @merchant-primary-light 100%);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 10px;
+          box-shadow: 0 2px 6px @merchant-shadow-hover;
+          border: 2px solid @merchant-surface;
+        }
+      }
+
+      .conversation-info {
+        flex: 1;
+        min-width: 0;
+
+        .name-time {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 5px;
+          gap: 8px;
+
+          .name {
+            font-weight: 600;
+            font-size: @nordic-text-base;
+            color: @merchant-text;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+            min-width: 0;
+          }
+
+          .time {
+            font-size: 0.75rem /* 原值: 11px */;
+            color: @merchant-text-muted;
+            font-weight: 500;
+            flex-shrink: 0;
+            max-width: 60px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+        }
+
+        .last-message {
+          font-size: @nordic-text-sm;
+          color: @merchant-text-sec;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          line-height: 1.4;
+        }
+
+        .member-count {
+          font-size: 0.75rem /* 原值: 11px */;
+          color: @merchant-text-muted;
+          margin-top: 2px;
+        }
+      }
+    }
+
+    .empty-conversations {
+      padding: 40px 20px;
+      text-align: center;
+    }
+  }
+}
+
+// 滚动条样式
+.conversation-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.conversation-list::-webkit-scrollbar-track {
+  background: @merchant-divider;
+}
+
+.conversation-list::-webkit-scrollbar-thumb {
+  background: @merchant-border;
+  border-radius: 3px;
+}
+
+.conversation-list::-webkit-scrollbar-thumb:hover {
+  background: @merchant-text-muted;
+}
+</style>

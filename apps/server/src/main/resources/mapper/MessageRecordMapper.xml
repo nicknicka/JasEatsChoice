@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xx.jaseatschoicejava.mapper.MessageRecordMapper">
+
+    <!-- 根据用户ID获取消息记录列表 -->
+    <select id="getMessageRecordsByUserId" resultType="com.xx.jaseatschoicejava.entity.MessageRecord">
+        SELECT * FROM t_message_record
+        WHERE sender_id = #{userId} OR receiver_id = #{userId}
+        ORDER BY send_time DESC
+        LIMIT #{pageSize} OFFSET #{pageNum}
+    </select>
+
+    <!-- 根据用户ID获取未读消息数量 -->
+    <select id="getUnreadMessageCountByUserId" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM t_message_record
+        WHERE receiver_id = #{userId} AND read_status = 0
+    </select>
+</mapper>

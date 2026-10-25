@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.xx.jaseatschoicejava.mapper.TutorialMapper">
+    <!-- 自定义查询：获取首页推荐的教程 -->
+    <select id="selectFeaturedTutorials" resultType="com.xx.jaseatschoicejava.entity.Tutorial">
+        SELECT * FROM tutorial WHERE featured = 1 ORDER BY create_time DESC LIMIT 2
+    </select>
+
+    <!-- 查询最热门的教程（按浏览量排序） -->
+    <select id="selectHottestTutorial" resultType="com.xx.jaseatschoicejava.entity.Tutorial">
+        SELECT * FROM tutorial
+        WHERE status = 'PUBLISHED'
+        AND review_status = 'APPROVED'
+        ORDER BY view_count DESC, create_time DESC
+        LIMIT 1
+    </select>
+</mapper>

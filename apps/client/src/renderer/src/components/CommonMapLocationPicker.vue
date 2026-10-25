@@ -1,0 +1,1196 @@
+<template>
+  <el-dialog
+    v-model="dialogVisible"
+    width="560px"
+    :close-on-click-modal="false"
+    class="atlas-dialog"
+    @open="handleDialogOpen"
+    @close="handleDialogClose"
+  >
+    <!-- 自定义头部 -->
+    <template #header>
+      <div class="atlas-header">
+        <span class="atlas-header-icon">📍</span>
+        <span class="atlas-header-title">选择位置</span>
+      </div>
+    </template>
+
+    <div class="atlas-body">
+      <!-- 搜索栏（浮动在顶部） -->
+      <div class="atlas-search-panel">
+        <div class="atlas-search-bar">
+          <el-icon class="atlas-search-icon"><Search /></el-icon>
+          <input
+            v-model="searchKeyword"
+            class="atlas-search-input"
+            placeholder="搜索地点、商圈、学校、地铁站…"
+            @keyup.enter="handleSearch"
+            @focus="searchFocused = true"
+            @blur="handleSearchBlur"
+          />
+          <button v-if="searchKeyword" class="atlas-search-clear" @click="clearSearch">
+            <el-icon :size="14"><Close /></el-icon>
+          </button>
+          <button class="atlas-search-btn" @click="handleSearch" :class="{ active: searchKeyword }">
+            搜索
+          </button>
+        </div>
+
+        <!-- 搜索结果（浮动面板） -->
+        <transition name="slide-down">
+          <div v-if="showResultsPanel" class="atlas-results-dropdown">
+            <!-- 搜索中 -->
+            <div v-if="searching" class="atlas-results-loading">
+              <el-icon class="is-loading" :size="20"><Loading /></el-icon>
+              <span>正在搜索…</span>
+            </div>
+            <!-- 搜索结果列表 -->
+            <template v-else-if="searchResults.length > 0">
+              <div class="atlas-results-header">
+                <span>找到 {{ searchResults.length }} 个结果</span>
+              </div>
+              <div
+                v-for="(item, index) in searchResults"
+                :key="index"
+                class="atlas-result-item"
+                @mousedown.prevent="selectSearchResult(item)"
+              >
+                <span class="atlas-result-letter">{{ String.fromCharCode(65 + index) }}</span>
+                <div class="atlas-result-body">
+                  <span class="atlas-result-name">{{ item.name }}</span>
+                  <span class="atlas-result-addr">{{ item.address }}</span>
+                </div>
+                <el-icon class="atlas-result-arrow"><ArrowRight /></el-icon>
+              </div>
+            </template>
+            <!-- 无结果 -->
+            <div v-else-if="searchKeyword && hasSearched" class="atlas-results-empty">
+              <span class="atlas-results-empty-icon">🔍</span>
+              <p>未找到「{{ searchKeyword }}」相关结果</p>
+              <p class="atlas-results-empty-hint">试试更换关键词，或在地图上直接点击选择</p>
+            </div>
+          </div>
+        </transition>
+      </div>
+
+      <!-- 地图 -->
+      <div class="atlas-map-wrap">
+        <div id="mapContainer" class="atlas-map-el"></div>
+
+        <div v-if="mapErrorMessage" class="atlas-map-error">
+          <span class="atlas-map-error-icon">🛰️</span>
+          <p class="atlas-map-error-title">地图暂时不可用</p>
+          <p class="atlas-map-error-text">{{ mapErrorMessage }}</p>
+          <p class="atlas-map-error-hint">你仍可以稍后联网后重新打开，或通过搜索框输入地址再确认。</p>
+        </div>
+
+        <div v-if="mapLoading" class="atlas-map-loading">
+          <el-icon class="is-loading" :size="28"><Loading /></el-icon>
+          <span>地图载入中…</span>
+        </div>
+
+        <!-- 定位按钮 -->
+        <button
+          class="atlas-locate-fab"
+          :class="{ 'is-locating': locating }"
+          @click="handleGetCurrentLocation"
+          title="我的位置"
+        >
+          <span class="atlas-locate-ring" v-if="locating"></span>
+          <span class="atlas-locate-ring atlas-locate-ring-2" v-if="locating"></span>
+          <el-icon :size="18"><Location /></el-icon>
+        </button>
+
+        <!-- 已选位置浮层（在地图上方） -->
+        <transition name="slide-up">
+          <div v-if="selectedAddress" class="atlas-selected-overlay" @click="handleConfirm">
+            <div class="atlas-selected-content">
+              <div class="atlas-selected-pin">
+                <el-icon :size="16"><Location /></el-icon>
+              </div>
+              <div class="atlas-selected-info">
+                <p class="atlas-selected-addr">{{ selectedAddress }}</p>
+              </div>
+              <span class="atlas-selected-action">确认</span>
+            </div>
+          </div>
+        </transition>
+      </div>
+    </div>
+
+    <!-- 底部提示 -->
+    <template #footer>
+      <div class="atlas-footer">
+        <span class="atlas-footer-hint">点击地图或搜索选择位置</span>
+        <div class="atlas-footer-actions">
+          <el-button @click="handleCancel" text>取消</el-button>
+          <el-button type="primary" @click="handleConfirm" :disabled="!selectedPosition" size="default">
+            确认选择
+          </el-button>
+        </div>
+      </div>
+    </template>
+  </el-dialog>
+</template>
+
+<script setup>
+import { ref, watch, computed, onBeforeUnmount } from 'vue'
+import { Search, Location, Loading, Close, ArrowRight } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import { loadAMapSDK, resolveAmapAddress, resolveAmapLocation } from '../composables/useAmapLocation'
+
+// Props
+const props = defineProps({
+  visible: {
+    type: Boolean,
+    default: false
+  },
+  // 默认位置
+  defaultPosition: {
+    type: Object,
+    default: () => ({ lng: 116.397428, lat: 39.90923 }) // 默认北京
+  }
+})
+
+// Emits
+const emit = defineEmits(['update:visible', 'location-selected'])
+
+// 状态管理
+const dialogVisible = ref(false)
+const map = ref(null)
+const marker = ref(null)
+const mapLoading = ref(false)
+const mapErrorMessage = ref('')
+const locating = ref(false)
+const searchKeyword = ref('')
+const searchResults = ref([])
+const selectedPosition = ref(null)
+const selectedAddress = ref('')
+const selectedAddressSource = ref('unknown')
+const searchFocused = ref(false)
+const searching = ref(false)
+const hasSearched = ref(false)
+const LOCATION_CACHE_DURATION = 24 * 60 * 60 * 1000
+const TRUSTED_LOCATION_SOURCES = ['gps', 'manual', 'search']
+
+const getClientIpForLocation = () => {
+  try {
+    const ip = localStorage.getItem('client_ip') || localStorage.getItem('public_ip')
+    return ip && ip.trim() ? ip.trim() : null
+  } catch (error) {
+    console.warn('读取本地IP失败:', error)
+    return null
+  }
+}
+
+// 计算属性：是否显示搜索结果面板
+const showResultsPanel = computed(() => {
+  return searchFocused.value && (searchResults.value.length > 0 || (searchKeyword.value && hasSearched.value) || searching.value)
+})
+
+// 处理搜索框失焦（延迟关闭以允许点击结果）
+const handleSearchBlur = () => {
+  setTimeout(() => {
+    searchFocused.value = false
+  }, 200)
+}
+
+// 监听 visible prop
+watch(
+  () => props.visible,
+  (val) => {
+    dialogVisible.value = val
+  }
+)
+
+// 监听 dialogVisible
+watch(dialogVisible, (val) => {
+  emit('update:visible', val)
+})
+
+// 初始化地图
+const initMap = async () => {
+  mapLoading.value = true
+  mapErrorMessage.value = ''
+
+  try {
+    // 动态加载地图 SDK（Electron 兼容）
+    await loadAMapSDK()
+
+    console.log('开始初始化地图...')
+
+    // 创建地图实例 - 1.4.15 使用标准配置
+    map.value = new AMap.Map('mapContainer', {
+      zoom: 15,
+      center: [props.defaultPosition.lng, props.defaultPosition.lat]
+    })
+
+    console.log('地图实例创建成功')
+
+    // 添加标记
+    if (props.defaultPosition) {
+      addMarker(props.defaultPosition.lng, props.defaultPosition.lat)
+      console.log('默认标记已添加')
+    }
+
+    // 点击地图事件
+    map.value.on('click', (e) => {
+      const { lng, lat } = e.lnglat
+      console.log('地图点击位置:', lng, lat)
+      selectedAddressSource.value = 'manual'
+      updateMarkerPosition(lng, lat)
+      getAddressByLocation(lng, lat)
+    })
+
+    // 地图加载完成
+    map.value.on('complete', () => {
+      mapLoading.value = false
+      console.log('地图加载完成')
+
+      // 地图加载完成后自动定位
+      console.log('开始自动定位...')
+      autoLocate()
+    })
+
+    // 捕获地图错误
+    map.value.on('error', (error) => {
+      console.error('地图运行时错误:', error)
+      mapLoading.value = false
+    })
+
+    // 设置超时，防止一直loading
+    setTimeout(() => {
+      if (mapLoading.value) {
+        mapLoading.value = false
+        console.log('地图初始化超时，但已继续')
+      }
+    }, 5000)
+  } catch (error) {
+    console.error('地图初始化失败:', error)
+    mapLoading.value = false
+    mapErrorMessage.value = navigator.onLine
+      ? '在线地图脚本加载失败，请检查是否被网络策略、代理或防火墙拦截。'
+      : '当前设备处于离线状态，高德地图脚本无法加载。'
+    ElMessage.error(mapErrorMessage.value)
+  }
+}
+
+// 添加标记
+const addMarker = (lng, lat) => {
+  if (!map.value) return
+
+  // 移除旧标记
+  if (marker.value) {
+    map.value.remove(marker.value)
+  }
+
+  // 创建新标记（2.0 API 简化）
+  marker.value = new AMap.Marker({
+    position: [lng, lat],
+    title: '选中的位置',
+    // 2.0 版本动画参数不同
+    animation: 'AMAP_ANIMATION_DROP' // 1.4.15 的写法，2.0 应该兼容
+  })
+
+  map.value.add(marker.value)
+}
+
+// 更新标记位置
+const updateMarkerPosition = (lng, lat) => {
+  selectedPosition.value = { lng, lat }
+
+  if (marker.value) {
+    marker.value.setPosition([lng, lat])
+  } else {
+    addMarker(lng, lat)
+  }
+
+  // 移动地图中心
+  if (map.value) {
+    map.value.setCenter([lng, lat])
+  }
+}
+
+// 根据经纬度获取地址（使用后端代理）
+const getAddressByLocation = async (lng, lat) => {
+  try {
+    selectedAddress.value = (await resolveAmapAddress({ lng, lat })) || '未知地址'
+  } catch (error) {
+    console.error('获取地址失败:', error)
+    selectedAddress.value = '未知地址'
+  }
+}
+
+// 搜索地址（使用后端代理）
+const handleSearch = async () => {
+  if (!searchKeyword.value.trim()) {
+    return
+  }
+
+  searching.value = true
+  searchResults.value = []
+  hasSearched.value = false
+  searchFocused.value = true
+
+  try {
+    console.log('开始搜索:', searchKeyword.value)
+
+    // 动态导入 api 模块
+    const locationApi = (await import('../api/location.js')).default
+
+    const response = await locationApi.searchAddress(searchKeyword.value, '全国')
+
+    console.log('后端搜索响应:', response)
+
+    // 修复：response 直接包含 code, message, data（不是 response.data.code）
+    if (response && response.code === '200') {
+      const results = response.data || []
+      console.log('搜索成功，找到', results.length, '个结果')
+
+      if (results.length > 0) {
+        searchResults.value = results.map((item) => ({
+          name: item.name,
+          address: item.address || '暂无详细地址',
+          location: item.location
+        }))
+      } else {
+        searchResults.value = []
+      }
+      hasSearched.value = true
+    } else {
+      searchResults.value = []
+      hasSearched.value = true
+    }
+  } catch (error) {
+    console.error('搜索异常:', error)
+    // 降级到前端 Autocomplete API
+    console.log('降级使用前端 API 搜索')
+    try {
+      if (typeof AMap !== 'undefined') {
+        AMap.plugin('AMap.Autocomplete', function () {
+          const autocomplete = new AMap.Autocomplete({
+            city: '全国',
+            input: searchKeyword.value
+          })
+
+          autocomplete.search(searchKeyword.value, function (status, result) {
+            if (status === 'complete' && result.info === 'OK') {
+              if (result.tips && result.tips.length > 0) {
+                searchResults.value = result.tips
+                  .filter(tip => tip.location && tip.name)
+                  .map(tip => ({
+                    name: tip.name,
+                    address: tip.district || tip.address || '暂无详细地址',
+                    location: {
+                      lng: tip.location.lng,
+                      lat: tip.location.lat
+                    }
+                  }))
+                  .slice(0, 10)
+              }
+            }
+            hasSearched.value = true
+            searching.value = false
+          })
+        })
+      }
+    } catch (fallbackError) {
+      console.error('前端 API 降级也失败:', fallbackError)
+      hasSearched.value = true
+      searching.value = false
+    }
+  }
+
+  searching.value = false
+}
+
+// 清空搜索
+const clearSearch = () => {
+  searchKeyword.value = ''
+  searchResults.value = []
+  hasSearched.value = false
+  searchFocused.value = false
+}
+
+// 选择搜索结果
+const selectSearchResult = (item) => {
+  if (item.location) {
+    const { lng, lat } = item.location
+    updateMarkerPosition(lng, lat)
+    selectedAddress.value = item.name + ' ' + item.address
+    selectedAddressSource.value = 'search'
+    searchResults.value = []
+    searchKeyword.value = ''
+    hasSearched.value = false
+    searchFocused.value = false
+  }
+}
+
+const applyResolvedLocation = async (result, { source = 'unknown', silent = false } = {}) => {
+  if (!result) {
+    return false
+  }
+
+  const { lng, lat, address, province, city, source: resolvedSource, accuracy, reason } = result
+  const finalSource = resolvedSource || source || 'unknown'
+
+  if (lng && lat) {
+    selectedAddressSource.value = finalSource
+    updateMarkerPosition(lng, lat)
+    if (map.value && (accuracy === 'city' || finalSource === 'ip' || finalSource === 'city-fallback')) {
+      map.value.setZoom(11)
+    }
+    selectedAddress.value = address || province || city || '未知地址'
+
+    if (finalSource === 'default') {
+      if (!silent) {
+        ElMessage.warning({
+          message: '无法获取精确位置，已显示默认位置。请在地图上点击选择您的实际位置。',
+          duration: 5000,
+          showClose: true
+        })
+      }
+      return false
+    }
+
+    if (TRUSTED_LOCATION_SOURCES.includes(finalSource)) {
+      saveLastLocation(lng, lat, finalSource, {
+        address: selectedAddress.value,
+        accuracy: accuracy || finalSource
+      })
+    }
+
+    if (!silent) {
+      const locationLabel = `${province || ''}${city || ''}`.trim() || selectedAddress.value
+      const message = accuracy === 'city' || finalSource === 'ip'
+        ? `已定位到大致区域：${locationLabel}，请在地图上确认具体位置`
+        : `定位成功：${locationLabel}`
+      if (reason && (accuracy === 'city' || finalSource === 'ip')) {
+        console.info('精确定位失败原因:', reason)
+      }
+      ElMessage.success(message)
+    }
+
+    return true
+  }
+
+  if (province || city) {
+    selectedAddressSource.value = finalSource
+    selectedAddress.value = address || `${province || ''}${city || ''}`.trim() || '未知位置'
+    if (!silent) {
+      ElMessage.info(`已识别到位置：${selectedAddress.value}`)
+    }
+    return false
+  }
+
+  return false
+}
+
+const runLocationFlow = async ({ silent = false, preferCacheFirst = true } = {}) => {
+  const AMapGlobal = typeof AMap !== 'undefined' ? AMap : null
+  const result = await resolveAmapLocation({
+    getLastLocation,
+    saveLastLocation,
+    defaultPosition: props.defaultPosition,
+    clientIp: null,
+    preferCacheFirst,
+    cacheSources: TRUSTED_LOCATION_SOURCES,
+    useHighAccuracy: false,
+    AMap: AMapGlobal
+  })
+
+  const applied = await applyResolvedLocation(result, {
+    source: result?.source || 'unknown',
+    silent
+  })
+
+  if (!applied && !silent && result?.source !== 'default') {
+    ElMessage.warning({
+      message: '无法自动定位，已显示默认位置。请在地图上点击选择您的实际位置。',
+      duration: 5000,
+      showClose: true
+    })
+  }
+
+  return applied
+}
+
+// 获取当前位置（优先 GPS，失败后回退 IP）
+const handleGetCurrentLocation = async () => {
+  locating.value = true
+
+  console.log('开始获取当前位置...')
+
+  try {
+    await runLocationFlow({ silent: false, preferCacheFirst: false })
+  } catch (error) {
+    console.error('手动定位失败:', error)
+  } finally {
+    locating.value = false
+  }
+}
+
+// 保存位置到本地存储
+const saveLastLocation = (lng, lat, source = 'unknown', extra = {}) => {
+  if (!TRUSTED_LOCATION_SOURCES.includes(source)) {
+    return
+  }
+
+  try {
+    const locationData = {
+      lng,
+      lat,
+      timestamp: Date.now(),
+      source,
+      accuracy: extra.accuracy || source,
+      address: extra.address || ''
+    }
+    localStorage.setItem('user_last_location', JSON.stringify(locationData))
+    console.log('位置已保存到本地存储')
+  } catch (error) {
+    console.warn('保存位置失败:', error)
+  }
+}
+
+// 从本地存储获取上次位置
+const getLastLocation = () => {
+  try {
+    const stored = localStorage.getItem('user_last_location')
+    if (stored) {
+      const locationData = JSON.parse(stored)
+
+      // 检查是否过期（24小时内有效）
+      if (Date.now() - locationData.timestamp < LOCATION_CACHE_DURATION) {
+        return {
+          lng: locationData.lng,
+          lat: locationData.lat,
+          source: locationData.source || 'cache',
+          timestamp: locationData.timestamp,
+          accuracy: locationData.accuracy || locationData.source || 'cache',
+          address: locationData.address || ''
+        }
+      } else {
+        // 过期则删除
+        localStorage.removeItem('user_last_location')
+      }
+    }
+  } catch (error) {
+    console.warn('读取本地缓存位置失败:', error)
+  }
+  return null
+}
+
+// 确认选择
+const handleConfirm = () => {
+  if (!selectedPosition.value) {
+    ElMessage.warning('请先选择位置')
+    return
+  }
+
+  emit('location-selected', {
+    position: selectedPosition.value,
+    address: selectedAddress.value,
+    source: selectedAddressSource.value
+  })
+
+  dialogVisible.value = false
+}
+
+// 取消
+const handleCancel = () => {
+  dialogVisible.value = false
+}
+
+// 对话框打开
+const handleDialogOpen = () => {
+  // 延迟初始化地图，确保 DOM 已渲染
+  setTimeout(() => {
+    initMap()
+  }, 300)
+}
+
+// 自动定位（静默模式，不显示加载状态和提示）
+const autoLocate = async () => {
+  console.log('开始自动定位...')
+
+  try {
+    await runLocationFlow({ silent: true })
+  } catch (error) {
+    console.log('自动定位失败:', error.message)
+  }
+}
+
+// 对话框关闭
+const handleDialogClose = () => {
+  // 清理搜索结果
+  searchResults.value = []
+  searchKeyword.value = ''
+}
+
+// 组件卸载
+onBeforeUnmount(() => {
+  if (map.value) {
+    map.value.destroy()
+    map.value = null
+  }
+})
+</script>
+
+<style scoped lang="less">
+@import '../assets/css/nordic-theme.less';
+
+// ===== 设计令牌 =====
+@clay: #C67B5C;
+@clay-dark: #A8613F;
+@clay-glow: rgba(198, 123, 92, 0.2);
+@ink: #2D2A26;
+@ink-sec: #8A857E;
+@ink-muted: #B5AFA6;
+@warm-bg: #F6F3ED;
+@warm-surface: #FFFDF9;
+@warm-border: #E8E2D8;
+
+// ===== Dialog 整体 =====
+.atlas-dialog {
+  :deep(.el-dialog) {
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
+  }
+
+  :deep(.el-dialog__header) {
+    margin: 0;
+    padding: 0;
+    border-bottom: 1px solid @warm-border;
+  }
+
+  :deep(.el-dialog__body) {
+    padding: 12px 16px;
+    background: @warm-surface;
+  }
+
+  :deep(.el-dialog__footer) {
+    padding: 10px 16px;
+    border-top: 1px solid @warm-border;
+    background: @warm-surface;
+  }
+}
+
+// ===== 头部 =====
+.atlas-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, #FAF0E8 0%, #F4E6DE 100%);
+
+  .atlas-header-icon {
+    font-size: 20px;
+  }
+
+  .atlas-header-title {
+    font-family: 'Noto Serif SC', 'Georgia', serif;
+    font-size: 17px;
+    font-weight: 700;
+    color: @ink;
+    letter-spacing: -0.2px;
+  }
+}
+
+// ===== 搜索面板（相对定位容器） =====
+.atlas-search-panel {
+  position: relative;
+  z-index: 20;
+  margin-bottom: 10px;
+}
+
+// ===== 搜索栏 =====
+.atlas-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  height: 42px;
+  background: #fff;
+  border: 1.5px solid @warm-border;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+
+  &:focus-within {
+    border-color: @clay;
+    box-shadow: 0 0 0 3px @clay-glow;
+  }
+}
+
+.atlas-search-icon {
+  flex-shrink: 0;
+  padding-left: 12px;
+  color: @ink-muted;
+  font-size: 16px;
+}
+
+.atlas-search-input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0 10px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  color: @ink;
+  font-family: inherit;
+
+  &::placeholder {
+    color: @ink-muted;
+    font-size: 13px;
+  }
+}
+
+.atlas-search-clear {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: #F0ECE6;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: @ink-sec;
+  margin-right: 6px;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: @clay;
+    color: #fff;
+  }
+}
+
+.atlas-search-btn {
+  flex-shrink: 0;
+  height: 100%;
+  padding: 0 16px;
+  border: none;
+  background: #F0ECE6;
+  color: @ink-sec;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+
+  &.active {
+    background: @clay;
+    color: #fff;
+
+    &:hover {
+      background: @clay-dark;
+    }
+  }
+}
+
+// ===== 搜索结果下拉面板 =====
+.atlas-results-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  max-height: 280px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1.5px solid @warm-border;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  z-index: 30;
+
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-thumb {
+    background: @warm-border;
+    border-radius: 2px;
+  }
+}
+
+.atlas-results-header {
+  padding: 8px 14px 4px;
+  font-size: 12px;
+  color: @ink-muted;
+  border-bottom: 1px solid #F5F0EA;
+}
+
+.atlas-results-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  color: @ink-sec;
+  font-size: 13px;
+
+  .el-icon { color: @clay; }
+}
+
+.atlas-results-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  text-align: center;
+
+  .atlas-results-empty-icon {
+    font-size: 28px;
+    margin-bottom: 8px;
+  }
+
+  p {
+    margin: 0;
+    font-size: 13px;
+    color: @ink-sec;
+  }
+
+  .atlas-results-empty-hint {
+    font-size: 12px;
+    color: @ink-muted;
+    margin-top: 4px;
+  }
+}
+
+.atlas-result-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  border-bottom: 1px solid #F5F0EA;
+
+  &:last-child { border-bottom: none; }
+
+  &:hover {
+    background: #FAF0E8;
+
+    .atlas-result-letter {
+      background: @clay;
+      color: #fff;
+    }
+
+    .atlas-result-arrow {
+      color: @clay;
+    }
+  }
+
+  .atlas-result-letter {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: #F0ECE6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: @clay;
+    transition: all 0.15s ease;
+  }
+
+  .atlas-result-body {
+    flex: 1;
+    min-width: 0;
+
+    .atlas-result-name {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: @ink;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .atlas-result-addr {
+      display: block;
+      font-size: 12px;
+      color: @ink-muted;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      margin-top: 2px;
+    }
+  }
+
+  .atlas-result-arrow {
+    flex-shrink: 0;
+    color: @warm-border;
+    transition: color 0.15s ease;
+  }
+}
+
+// ===== 地图区域 =====
+.atlas-map-wrap {
+  position: relative;
+  width: 100%;
+  height: 340px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1.5px solid @warm-border;
+  background: #EDE9E1;
+
+  .atlas-map-el {
+    width: 100%;
+    height: 100%;
+  }
+
+  .atlas-map-loading {
+    position: absolute;
+    inset: 0;
+    background: rgba(246, 243, 237, 0.9);
+    backdrop-filter: blur(4px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    z-index: 10;
+
+    .el-icon { color: @clay; }
+
+    span {
+      font-size: 13px;
+      color: @ink-sec;
+    }
+  }
+
+  .atlas-map-error {
+    position: absolute;
+    inset: 0;
+    z-index: 9;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 28px;
+    text-align: center;
+    background:
+      radial-gradient(circle at 20% 15%, rgba(198, 123, 92, 0.16), transparent 28%),
+      linear-gradient(135deg, rgba(255, 253, 249, 0.96), rgba(246, 243, 237, 0.96));
+  }
+
+  .atlas-map-error-icon {
+    font-size: 34px;
+    margin-bottom: 8px;
+  }
+
+  .atlas-map-error-title {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+    color: @ink;
+  }
+
+  .atlas-map-error-text {
+    margin: 8px 0 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: @ink-sec;
+  }
+
+  .atlas-map-error-hint {
+    max-width: 360px;
+    margin: 6px 0 0;
+    font-size: 12px;
+    line-height: 1.6;
+    color: @ink-muted;
+  }
+}
+
+// 定位按钮
+.atlas-locate-fab {
+  position: absolute;
+  right: 12px;
+  bottom: 72px;
+  z-index: 5;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1.5px solid rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(8px);
+  color: @clay;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: @clay;
+    color: #fff;
+    border-color: @clay;
+    transform: scale(1.08);
+    box-shadow: 0 4px 14px @clay-glow;
+  }
+
+  &.is-locating {
+    pointer-events: none;
+    background: fade(@clay, 12%);
+    border-color: fade(@clay, 30%);
+  }
+}
+
+// 定位脉冲波纹
+.atlas-locate-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  border: 2px solid @clay;
+  animation: pulse-ring 1.6s ease-out infinite;
+
+  &.atlas-locate-ring-2 {
+    animation-delay: 0.5s;
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+
+// 已选位置浮层（地图底部）
+.atlas-selected-overlay {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  z-index: 5;
+  cursor: pointer;
+
+  .atlas-selected-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
+    border-radius: 12px;
+    border: 1.5px solid rgba(198, 123, 92, 0.2);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+
+    &:hover {
+      border-color: @clay;
+      box-shadow: 0 4px 20px rgba(198, 123, 92, 0.2);
+    }
+  }
+
+  .atlas-selected-pin {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    background: @clay;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+  }
+
+  .atlas-selected-info {
+    flex: 1;
+    min-width: 0;
+
+    .atlas-selected-addr {
+      font-size: 13px;
+      font-weight: 600;
+      color: @ink;
+      margin: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  .atlas-selected-action {
+    flex-shrink: 0;
+    padding: 4px 12px;
+    background: @clay;
+    color: #fff;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+}
+
+// ===== 动画 =====
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.slide-down-enter-active,
+.slide-down-leave-active {
+  transition: all 0.2s ease;
+}
+
+.slide-down-enter-from,
+.slide-down-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: all 0.3s ease;
+}
+
+.slide-up-enter-from,
+.slide-up-leave-to {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+// ===== 底部 =====
+.atlas-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  .atlas-footer-hint {
+    font-size: 12px;
+    color: @ink-muted;
+  }
+
+  .atlas-footer-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  :deep(.el-button) {
+    border-radius: 10px;
+    font-weight: 600;
+  }
+
+  :deep(.el-button--primary) {
+    background: @clay;
+    border-color: @clay;
+
+    &:hover {
+      background: @clay-dark;
+      border-color: @clay-dark;
+      box-shadow: 0 4px 12px @clay-glow;
+    }
+
+    &.is-disabled {
+      background: @warm-border;
+      border-color: @warm-border;
+    }
+  }
+}
+</style>

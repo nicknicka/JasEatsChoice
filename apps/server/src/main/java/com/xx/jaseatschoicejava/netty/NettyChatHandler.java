@@ -1,0 +1,300 @@
+package com.xx.jaseatschoicejava.netty;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xx.jaseatschoicejava.constants.Constant;
+import com.xx.jaseatschoicejava.enums.MsgType;
+import com.xx.jaseatschoicejava.entity.ChatMsg;
+import com.xx.jaseatschoicejava.entity.User;
+import com.xx.jaseatschoicejava.service.ChatMsgService;
+import com.xx.jaseatschoicejava.service.UserService;
+import com.xx.jaseatschoicejava.websocket.WebSocketMessageService;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.group.ChannelGroup;
+import io.netty.channel.group.DefaultChannelGroup;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import io.netty.util.concurrent.GlobalEventExecutor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * Netty聊天消息处理器
+ *
+ * @Author nickxiao
+ * @Date 2025/11/22
+ */
+@ChannelHandler.Sharable
+@Component
+public class NettyChatHandler extends SimpleChannelInboundHandler<TextWebSocketFrame> {
+
+    private static final Logger logger = LoggerFactory.getLogger(NettyChatHandler.class);
+
+    // 存储所有在线Channel
+    private static final ChannelGroup CHANNEL_GROUP = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
+
+    // 存储用户ID与Channel的映射关系
+    private static final ConcurrentHashMap<String, Channel> USER_CHANNEL_MAP = new ConcurrentHashMap<>();
+
+    // JSON解析器
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    // 聊天消息服务（用于存储离线消息）
+    private final ChatMsgService chatMsgService;
+
+    // 用户服务（用于查询用户信息）
+    private final UserService userService;
+
+    // 构造函数注入
+    public NettyChatHandler(ChatMsgService chatMsgService, UserService userService) {
+        this.chatMsgService = chatMsgService;
+        this.userService = userService;
+    }
+
+    @Override
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        CHANNEL_GROUP.add(ctx.channel());
+        logger.info("Channel {} connected", ctx.channel().remoteAddress());
+    }
+
+    @Override
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        // 处理WebSocket握手完成事件
+        if (evt instanceof io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler.HandshakeComplete) {
+            logger.info("WebSocket握手完成: {}", ctx.channel().remoteAddress());
+
+            // ⭐ 从Channel属性中获取userId（在WebSocketAuthHandler中设置的）
+            String userId = ctx.channel().attr(com.xx.jaseatschoicejava.netty.WebSocketAuthHandler.USER_ID_KEY).get();
+
+            if (userId != null && !userId.isEmpty()) {
+                // 绑定用户ID与Channel
+                USER_CHANNEL_MAP.put(userId, ctx.channel());
+
+                // ⭐ 注册到WebSocketMessageService（用于HTTP API推送）
+                WebSocketMessageService.registerChannel(userId, ctx.channel());
+
+                logger.info("✅ [WebSocket] 用户 {} 的Channel已自动注册", userId);
+            } else {
+                logger.warn("⚠️ [WebSocket] Channel属性中未找到userId，等待客户端发送auth消息");
+            }
+        } else {
+            super.userEventTriggered(ctx, evt);
+        }
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        // 移除Channel
+        CHANNEL_GROUP.remove(ctx.channel());
+
+        // ⭐ 从WebSocketMessageService中移除Channel
+        WebSocketMessageService.removeChannel(ctx.channel());
+
+        // 移除用户映射
+        USER_CHANNEL_MAP.entrySet().removeIf(entry -> entry.getValue().equals(ctx.channel()));
+
+        logger.info("Channel {} disconnected", ctx.channel().remoteAddress());
+    }
+
+    @Override
+    protected void channelRead0(ChannelHandlerContext ctx, TextWebSocketFrame frame) throws Exception {
+        // 将WebSocket帧转换为字符串消息
+        String message = frame.text();
+        logger.info("Received message: {} from channel: {}", message, ctx.channel().remoteAddress());
+
+        try {
+            // 解析JSON消息
+            com.fasterxml.jackson.databind.JsonNode msgNode = objectMapper.readTree(message);
+
+            // 获取消息类型（兼容 type 和 msgType 两种字段）
+            String msgType = msgNode.has("msgType") ? msgNode.get("msgType").asText() :
+                            msgNode.has("type") ? msgNode.get("type").asText() : "";
+            // 获取发送方
+            String fromId = msgNode.has("fromId") ? msgNode.get("fromId").asText() : "";
+            // 获取接收方
+            String toId = msgNode.has("toId") ? msgNode.get("toId").asText() : "";
+            // 获取消息内容
+            String content = msgNode.has("content") ? msgNode.get("content").asText() : "";
+
+            // 查询发送者名称
+            String fromName = fromId;
+            try {
+                if (fromId != null && !fromId.isEmpty()) {
+                    User sender = userService.getById(fromId);
+                    if (sender != null && sender.getNickname() != null) {
+                        fromName = sender.getNickname();
+                    }
+                }
+            } catch (Exception e) {
+                logger.warn("查询发送者名称失败: fromId={}, error={}", fromId, e.getMessage());
+            }
+
+            // 构造响应消息
+            com.fasterxml.jackson.databind.node.ObjectNode responseMsg = objectMapper.createObjectNode();
+            responseMsg.put("msgType", msgType);
+            responseMsg.put("fromId", fromId);
+            responseMsg.put("fromName", fromName);  // 添加发送者名称
+            responseMsg.put("toId", toId);
+            responseMsg.put("content", content);
+            responseMsg.put("timestamp", Instant.now().toEpochMilli());
+            responseMsg.put("ack", true);
+
+            // 将用户ID与Channel绑定
+            USER_CHANNEL_MAP.putIfAbsent(fromId, ctx.channel());
+
+            // ⭐ 注册到WebSocketMessageService（用于HTTP API推送）
+            if (!fromId.isEmpty()) {
+                WebSocketMessageService.registerChannel(fromId, ctx.channel());
+            }
+
+            // 根据消息类型处理
+            switch (msgType) {
+                case "heartbeat":
+                    // 心跳消息，直接忽略，不需要回复
+                    logger.debug("收到心跳消息 from: {}", fromId);
+                    break;
+                case "single":
+                    // 单聊，发送给指定用户
+                    sendMessageToUser(toId, objectMapper.writeValueAsString(responseMsg));
+                    break;
+                case "group":
+                    // 群聊，发送给所有在线用户（简化处理，实际需根据群成员列表发送）
+                    sendMessageToAll(objectMapper.writeValueAsString(responseMsg));
+                    break;
+                case "order_sync":
+                    // 订单同步消息，发送给指定用户或群组
+                    sendMessageToUser(toId, objectMapper.writeValueAsString(responseMsg));
+                    break;
+                case "order_status":
+                    // 订单状态通知，发送给指定用户
+                    sendMessageToUser(toId, objectMapper.writeValueAsString(responseMsg));
+                    break;
+                case "auth":
+                    // 身份验证消息，验证用户身份
+                    // 从fromId获取用户ID（前端发送auth消息时，fromId应为用户ID）
+                    if (!fromId.isEmpty()) {
+                        // 绑定用户ID与Channel
+                        USER_CHANNEL_MAP.put(fromId, ctx.channel());
+
+                        // ⭐ 注册到WebSocketMessageService（用于HTTP API推送）
+                        WebSocketMessageService.registerChannel(fromId, ctx.channel());
+
+                        // 返回认证成功响应
+                        responseMsg.put("content", "认证成功");
+                        responseMsg.put("authenticated", true);
+                        ctx.writeAndFlush(new TextWebSocketFrame(objectMapper.writeValueAsString(responseMsg)));
+                        logger.info("User {} authenticated successfully", fromId);
+                    } else {
+                        // 认证失败
+                        responseMsg.put("content", "认证失败：用户ID为空");
+                        responseMsg.put("authenticated", false);
+                        ctx.writeAndFlush(new TextWebSocketFrame(objectMapper.writeValueAsString(responseMsg)));
+                        logger.warn("Authentication failed: userId is empty");
+                    }
+                    break;
+                default:
+                    // 未知消息类型，发送错误提示
+                    responseMsg.put("content", "未知消息类型");
+                    ctx.writeAndFlush(new TextWebSocketFrame(objectMapper.writeValueAsString(responseMsg)));
+                    break;
+            }
+        } catch (Exception e) {
+            logger.error("Failed to process message: {}", message, e);
+            ctx.writeAndFlush(new TextWebSocketFrame("{\"msgType\":\"error\",\"content\":\"消息格式错误\"}"));
+        }
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        logger.error("Channel {} exception: {}", ctx.channel().remoteAddress(), cause.getMessage(), cause);
+        ctx.close();
+    }
+
+    /**
+     * 发送消息给指定用户
+     */
+    private void sendMessageToUser(String userId, String message) {
+        Channel channel = USER_CHANNEL_MAP.get(userId);
+        if (channel != null && channel.isActive()) {
+            try {
+                // 发送WebSocket文本帧消息
+                channel.writeAndFlush(new TextWebSocketFrame(message));
+                logger.info("Sent message: {} to user: {}", message, userId);
+            } catch (Exception e) {
+                logger.error("Failed to send message to user {}: {}", userId, e.getMessage());
+            }
+        } else {
+            logger.info("User {} is offline, storing message in database", userId);
+            // 将消息存入数据库，等待用户上线后推送
+            try {
+                // 解析JSON消息
+                com.fasterxml.jackson.databind.JsonNode msgNode = objectMapper.readTree(message);
+
+                // 提取消息内容
+                String fromId = msgNode.get("fromId").asText();
+                String toId = msgNode.get("toId").asText();
+                String msgType = msgNode.get("msgType").asText();
+                String content = msgNode.get("content").asText();
+
+                // 保存到数据库
+                ChatMsg chatMsg = new ChatMsg();
+                chatMsg.setFromId(fromId);
+                chatMsg.setToId(toId);
+                chatMsg.setMsgType(msgType);
+                chatMsg.setContent(content);
+                chatMsg.setReadStatus(false); // 未读状态
+                chatMsg.setCreateTime(LocalDateTime.now());
+
+                chatMsgService.save(chatMsg);
+                logger.info("Message stored in database for user: {}", userId);
+            } catch (Exception e) {
+                logger.error("Failed to store offline message: {}", e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * 发送消息给所有在线用户
+     */
+    private void sendMessageToAll(String message) {
+        // 发送WebSocket文本帧消息
+        CHANNEL_GROUP.writeAndFlush(new TextWebSocketFrame(message));
+        logger.info("Broadcast message: {}", message);
+    }
+
+    /**
+     * 静态方法：发送头像更新通知给指定用户
+     *
+     * @param userId 用户ID
+     * @param avatar 新的头像
+     */
+    public static void sendAvatarUpdateNotification(Object userId, String avatar) {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+
+            // 构造头像更新通知消息
+            com.fasterxml.jackson.databind.node.ObjectNode responseMsg = objectMapper.createObjectNode();
+            responseMsg.put("msgType", "avatar_update");
+            responseMsg.put("userId", userId.toString());
+            responseMsg.put("avatar", avatar);
+            responseMsg.put("timestamp", Instant.now().toEpochMilli());
+
+            String message = objectMapper.writeValueAsString(responseMsg);
+
+            // 发送消息给所有在线用户（或指定好友）
+            // 注意：这里需要根据实际业务逻辑发送给该用户的所有好友
+            // 目前先简化处理，发送给所有在线用户
+            CHANNEL_GROUP.writeAndFlush(new TextWebSocketFrame(message));
+//            logger.info("Sent avatar update notification: {} for user: {}", message, userId);
+        } catch (Exception e) {
+            logger.error("Failed to send avatar update notification for user {}: {}", userId, e.getMessage());
+        }
+    }
+}
+

@@ -1,0 +1,501 @@
+package com.xx.jaseatschoicejava.controller;
+
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.xx.jaseatschoicejava.entity.Announcement;
+import com.xx.jaseatschoicejava.service.AnnouncementService;
+import com.xx.jaseatschoicejava.util.AdminContext;
+import com.xx.jaseatschoicejava.util.SystemLogHelper;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * 管理员-公告管理控制器
+ */
+@Api(tags = "管理员-公告管理")
+@RestController
+@RequestMapping("/admin/announcements")
+@PreAuthorize("hasRole('ADMIN')")
+public class AdminAnnouncementController {
+
+    private static final Logger log = LoggerFactory.getLogger(AdminAnnouncementController.class);
+
+    @Autowired
+    private AnnouncementService announcementService;
+
+
+    /**
+     * 获取公告列表（分页）
+     */
+    @ApiOperation("获取公告列表")
+    @GetMapping("")
+    public ResponseEntity<IPage<Announcement>> getAnnouncementList(
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String priority,
+            @RequestParam(required = false) String targetAudience,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
+
+        Page<Announcement> pageParam = new Page<>(page, pageSize);
+
+        // 构建查询条件
+        QueryWrapper<Announcement> queryWrapper = new QueryWrapper<>();
+
+        // 只查询系统级公告（merchantId为null）
+        queryWrapper.isNull("merchant_id");
+
+        // 状态筛选
+        if (StringUtils.hasText(status)) {
+            queryWrapper.eq("status", status);
+        }
+
+        // 类型筛选
+        if (StringUtils.hasText(type)) {
+            queryWrapper.eq("type", type);
+        }
+
+        // 优先级筛选
+        if (StringUtils.hasText(priority)) {
+            queryWrapper.eq("priority", priority);
+        }
+
+        // 目标群体筛选
+        if (StringUtils.hasText(targetAudience)) {
+            queryWrapper.eq("target_audience", targetAudience);
+        }
+
+        // 创建时间范围筛选
+        if (StringUtils.hasText(startDate)) {
+            try {
+                LocalDateTime start = LocalDateTime.parse(startDate + "T00:00:00");
+                queryWrapper.ge("create_time", start);
+            } catch (Exception e) {
+                log.warn("开始时间格式错误: {}", startDate);
+            }
+        }
+        if (StringUtils.hasText(endDate)) {
+            try {
+                LocalDateTime end = LocalDateTime.parse(endDate + "T23:59:59");
+                queryWrapper.le("create_time", end);
+            } catch (Exception e) {
+                log.warn("结束时间格式错误: {}", endDate);
+            }
+        }
+
+        // 关键词搜索（标题、内容）
+        if (StringUtils.hasText(keyword)) {
+            queryWrapper.and(wrapper -> wrapper
+                .like("title", keyword)
+                .or()
+                .like("content", keyword)
+            );
+        }
+
+        // 按创建时间倒序
+        queryWrapper.orderByDesc("create_time");
+
+        IPage<Announcement> result = announcementService.page(pageParam, queryWrapper);
+
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * 获取公告详情
+     */
+    @ApiOperation("获取公告详情")
+    @GetMapping("/{announcementId}")
+    public ResponseEntity<Map<String, Object>> getAnnouncementDetail(@PathVariable String announcementId) {
+        Announcement announcement = announcementService.getById(announcementId);
+
+        Map<String, Object> response = new HashMap<>();
+        if (announcement != null) {
+            response.put("success", true);
+            response.put("data", announcement);
+            return ResponseEntity.ok(response);
+        } else {
+            response.put("success", false);
+            response.put("message", "公告不存在");
+            return ResponseEntity.status(404).body(response);
+        }
+    }
+
+    /**
+     * 创建公告
+     */
+    @ApiOperation("创建公告")
+    @PostMapping("")
+    public ResponseEntity<Map<String, Object>> createAnnouncement(@RequestBody Map<String, Object> request) {
+        String title = (String) request.get("title");
+        String content = (String) request.get("content");
+        String type = (String) request.get("type");
+        String priority = (String) request.get("priority");
+        String targetAudience = (String) request.get("targetAudience");
+        String status = (String) request.get("status");
+        String startTimeStr = (String) request.get("startTime");
+        String endTimeStr = (String) request.get("endTime");
+
+        if (!StringUtils.hasText(title)) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "公告标题不能为空");
+            return ResponseEntity.status(400).body(response);
+        }
+
+        if (!StringUtils.hasText(content)) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "公告内容不能为空");
+            return ResponseEntity.status(400).body(response);
+        }
+
+        Announcement announcement = new Announcement();
+        announcement.setTitle(title);
+        announcement.setContent(content);
+        announcement.setType(StringUtils.hasText(type) ? type : "system");
+        announcement.setPriority(StringUtils.hasText(priority) ? priority : "normal");
+        announcement.setTargetAudience(StringUtils.hasText(targetAudience) ? targetAudience : "all");
+        announcement.setStatus(StringUtils.hasText(status) ? status : "active");
+        announcement.setReadCount(0L);
+        announcement.setReadUsers(0L);
+        announcement.setMerchantId(null); // NULL表示系统级公告
+
+        // 设置开始和结束时间
+        if (StringUtils.hasText(startTimeStr)) {
+            try {
+                announcement.setStartTime(LocalDateTime.parse(startTimeStr));
+            } catch (Exception e) {
+                log.warn("开始时间格式错误: {}", startTimeStr);
+            }
+        }
+        if (StringUtils.hasText(endTimeStr)) {
+            try {
+                announcement.setEndTime(LocalDateTime.parse(endTimeStr));
+            } catch (Exception e) {
+                log.warn("结束时间格式错误: {}", endTimeStr);
+            }
+        }
+
+        boolean success = announcementService.save(announcement);
+
+        // 记录操作日志
+        if (success) {
+            SystemLogHelper.logCreate(
+                "公告管理",
+                "创建系统公告：" + title,
+                AdminContext.getAdminId(),
+                AdminContext.getAdminUsername(),
+                Map.of("title", title, "type", announcement.getType(), "priority", announcement.getPriority())
+            );
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        if (success) {
+            response.put("success", true);
+            response.put("message", "公告创建成功");
+            response.put("data", announcement);
+            return ResponseEntity.ok(response);
+        } else {
+            response.put("success", false);
+            response.put("message", "公告创建失败");
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+
+    /**
+     * 更新公告
+     */
+    @ApiOperation("更新公告")
+    @PutMapping("/{announcementId}")
+    public ResponseEntity<Map<String, Object>> updateAnnouncement(
+            @PathVariable String announcementId,
+            @RequestBody Map<String, Object> request) {
+
+        Announcement announcement = announcementService.getById(announcementId);
+        if (announcement == null) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "公告不存在");
+            return ResponseEntity.status(404).body(response);
+        }
+
+        // 检查是否为系统级公告（merchantId为null）
+        if (announcement.getMerchantId() != null) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "只能修改系统级公告");
+            return ResponseEntity.status(403).body(response);
+        }
+
+        String title = (String) request.get("title");
+        String content = (String) request.get("content");
+        String type = (String) request.get("type");
+        String priority = (String) request.get("priority");
+        String targetAudience = (String) request.get("targetAudience");
+        String status = (String) request.get("status");
+        String startTimeStr = (String) request.get("startTime");
+        String endTimeStr = (String) request.get("endTime");
+
+        if (StringUtils.hasText(title)) announcement.setTitle(title);
+        if (StringUtils.hasText(content)) announcement.setContent(content);
+        if (StringUtils.hasText(type)) announcement.setType(type);
+        if (StringUtils.hasText(priority)) announcement.setPriority(priority);
+        if (StringUtils.hasText(targetAudience)) announcement.setTargetAudience(targetAudience);
+        if (StringUtils.hasText(status)) announcement.setStatus(status);
+
+        if (StringUtils.hasText(startTimeStr)) {
+            try {
+                announcement.setStartTime(LocalDateTime.parse(startTimeStr));
+            } catch (Exception e) {
+                log.warn("开始时间格式错误: {}", startTimeStr);
+            }
+        }
+        if (StringUtils.hasText(endTimeStr)) {
+            try {
+                announcement.setEndTime(LocalDateTime.parse(endTimeStr));
+            } catch (Exception e) {
+                log.warn("结束时间格式错误: {}", endTimeStr);
+            }
+        }
+
+        boolean success = announcementService.updateById(announcement);
+
+        // 记录操作日志
+        if (success) {
+            SystemLogHelper.logUpdate(
+                "公告管理",
+                "更新系统公告：" + title,
+                AdminContext.getAdminId(),
+                AdminContext.getAdminUsername(),
+                Map.of("announcementId", announcementId)
+            );
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        if (success) {
+            response.put("success", true);
+            response.put("message", "公告更新成功");
+            return ResponseEntity.ok(response);
+        } else {
+            response.put("success", false);
+            response.put("message", "公告更新失败");
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+
+    /**
+     * 删除公告
+     */
+    @ApiOperation("删除公告")
+    @DeleteMapping("/{announcementId}")
+    public ResponseEntity<Map<String, Object>> deleteAnnouncement(@PathVariable String announcementId) {
+        Announcement announcement = announcementService.getById(announcementId);
+        if (announcement == null) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "公告不存在");
+            return ResponseEntity.status(404).body(response);
+        }
+
+        // 检查是否为系统级公告（merchantId为null）
+        if (announcement.getMerchantId() != null) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "只能删除系统级公告");
+            return ResponseEntity.status(403).body(response);
+        }
+
+        boolean success = announcementService.removeById(announcementId);
+
+        // 记录操作日志
+        if (success) {
+            SystemLogHelper.logDelete(
+                "公告管理",
+                "删除系统公告：" + announcement.getTitle(),
+                AdminContext.getAdminId(),
+                AdminContext.getAdminUsername(),
+                Map.of("announcementId", announcementId)
+            );
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        if (success) {
+            response.put("success", true);
+            response.put("message", "公告删除成功");
+            return ResponseEntity.ok(response);
+        } else {
+            response.put("success", false);
+            response.put("message", "公告删除失败");
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+
+    /**
+     * 批量删除公告
+     */
+    @ApiOperation("批量删除公告")
+    @DeleteMapping("/batch")
+    public ResponseEntity<Map<String, Object>> batchDeleteAnnouncements(@RequestBody java.util.List<String> announcementIds) {
+        if (announcementIds == null || announcementIds.isEmpty()) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "公告ID列表不能为空");
+            return ResponseEntity.status(400).body(response);
+        }
+
+        int successCount = 0;
+        int failCount = 0;
+
+        for (String announcementId : announcementIds) {
+            Announcement announcement = announcementService.getById(announcementId);
+            // 只删除系统级公告（merchantId为null）
+            if (announcement != null && announcement.getMerchantId() == null) {
+                if (announcementService.removeById(announcementId)) {
+                    successCount++;
+                } else {
+                    failCount++;
+                }
+            } else {
+                failCount++;
+            }
+        }
+
+        // 记录操作日志
+        if (successCount > 0) {
+            SystemLogHelper.logDelete(
+                "公告管理",
+                "批量删除系统公告：" + successCount + "个成功",
+                AdminContext.getAdminId(),
+                AdminContext.getAdminUsername(),
+                Map.of("totalCount", announcementIds.size(), "successCount", successCount, "failCount", failCount)
+            );
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "批量删除完成：成功" + successCount + "个，失败" + failCount + "个");
+        response.put("successCount", successCount);
+        response.put("failCount", failCount);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 发布/下线公告（修改状态）
+     */
+    @ApiOperation("发布/下线公告")
+    @PutMapping("/{announcementId}/status")
+    public ResponseEntity<Map<String, Object>> updateAnnouncementStatus(
+            @PathVariable String announcementId,
+            @RequestBody Map<String, String> request) {
+
+        Announcement announcement = announcementService.getById(announcementId);
+        if (announcement == null) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "公告不存在");
+            return ResponseEntity.status(404).body(response);
+        }
+
+        // 检查是否为系统级公告（merchantId为null）
+        if (announcement.getMerchantId() != null) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "只能修改系统级公告");
+            return ResponseEntity.status(403).body(response);
+        }
+
+        String status = request.get("status"); // active, draft 或 inactive
+        announcement.setStatus(status);
+
+        boolean success = announcementService.updateById(announcement);
+
+        // 记录操作日志
+        if (success) {
+            String operation;
+            if ("active".equals(status)) {
+                operation = "发布";
+            } else if ("draft".equals(status)) {
+                operation = "存为草稿";
+            } else {
+                operation = "下线";
+            }
+
+            SystemLogHelper.logUpdate(
+                "公告管理",
+                operation + "系统公告：" + announcement.getTitle(),
+                AdminContext.getAdminId(),
+                AdminContext.getAdminUsername(),
+                Map.of("announcementId", announcementId, "status", status)
+            );
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        if (success) {
+            response.put("success", true);
+            response.put("message", "active".equals(status) ? "公告已发布" : "draft".equals(status) ? "已存为草稿" : "公告已下线");
+            return ResponseEntity.ok(response);
+        } else {
+            response.put("success", false);
+            response.put("message", "状态修改失败");
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+
+    /**
+     * 获取公告统计
+     */
+    @ApiOperation("获取公告统计")
+    @GetMapping("/statistics")
+    public ResponseEntity<Map<String, Object>> getAnnouncementStatistics() {
+        Map<String, Object> stats = new HashMap<>();
+
+        // 只查询系统级公告（merchantId为null）
+        QueryWrapper<Announcement> systemWrapper = new QueryWrapper<>();
+        systemWrapper.isNull("merchant_id");
+
+        // 总公告数
+        long totalCount = announcementService.count(systemWrapper);
+
+        // 已发布的公告数
+        QueryWrapper<Announcement> activeWrapper = new QueryWrapper<>();
+        activeWrapper.isNull("merchant_id").eq("status", "active");
+        long activeCount = announcementService.count(activeWrapper);
+
+        // 草稿数
+        QueryWrapper<Announcement> draftWrapper = new QueryWrapper<>();
+        draftWrapper.isNull("merchant_id").eq("status", "draft");
+        long draftCount = announcementService.count(draftWrapper);
+
+        // 今日新增公告数
+        LocalDateTime todayStart = java.time.LocalDate.now().atStartOfDay();
+        QueryWrapper<Announcement> todayWrapper = new QueryWrapper<>();
+        todayWrapper.isNull("merchant_id").ge("create_time", todayStart);
+        long todayNewCount = announcementService.count(todayWrapper);
+
+        stats.put("totalCount", totalCount);
+        stats.put("activeCount", activeCount);
+        stats.put("draftCount", draftCount);
+        stats.put("inactiveCount", totalCount - activeCount - draftCount);
+        stats.put("todayNewCount", todayNewCount);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("data", stats);
+        return ResponseEntity.ok(response);
+    }
+}

@@ -1,0 +1,1473 @@
+<script setup>
+import { ref, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import axios from 'axios'
+import { API_CONFIG } from '../../config'
+import { ElMessage } from 'element-plus'
+import CommonBackButton from '../../components/common/CommonBackButton.vue'
+import { reviewAPI } from '../../api/review.js'
+import {
+  Shop,
+  Money,
+  CircleCheck,
+  EditPen,
+  Phone,
+  Star,
+  Picture
+} from '@element-plus/icons-vue'
+
+const route = useRoute()
+const router = useRouter()
+const orderId = ref(route.params.id)
+const order = ref(null)
+const loading = ref(true)
+
+// 评价相关
+const review = ref(null)
+const reviewLoading = ref(false)
+
+// 订单状态映射（5状态系统：0-待支付、1-待接单、2-制作中、3-已完成、4-已取消）
+const orderStatusMap = {
+  all: '全部订单',
+  pending: '待支付',
+  pendingAccept: '待接单',
+  preparing: '制作中',
+  completed: '已完成',
+  cancelled: '已取消'
+}
+
+// 订单状态标签样式映射
+const statusTagTypeMap = {
+  pending: 'info',
+  pendingAccept: 'warning',
+  preparing: 'primary',
+  completed: 'success',
+  cancelled: 'danger'
+}
+
+// 将后端状态码转换为前端状态文本（5状态系统）
+const orderStatusToText = (statusCode) => {
+  const statusMap = {
+    0: 'pending',       // 待支付
+    1: 'pendingAccept', // 待接单
+    2: 'preparing',     // 制作中
+    3: 'completed',     // 已完成
+    4: 'cancelled'      // 已取消
+  }
+  return statusMap[statusCode] || 'pending'
+}
+
+// 格式化时间
+const formatTime = (time) => {
+  if (!time) return ''
+  const date = new Date(time)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  return `${year}-${month}-${day} ${hours}:${minutes}`
+}
+
+// 处理图片加载错误
+const handleImageError = (event) => {
+  const img = event.target
+  img.style.display = 'none'
+  const parent = img.parentElement
+  if (parent && !parent.querySelector('.no-image')) {
+    const noImageDiv = document.createElement('div')
+    noImageDiv.className = 'no-image'
+    noImageDiv.innerHTML = '<span>菜</span>'
+    parent.appendChild(noImageDiv)
+  }
+}
+
+// 加载订单详情(包含菜品信息)
+const loadOrderDetail = async () => {
+  loading.value = true
+  try {
+    // 1. 获取订单基本信息
+    const orderResponse = await axios.get(
+      API_CONFIG.baseURL + API_CONFIG.order.detail + orderId.value
+    )
+
+    if (!orderResponse.data?.data) {
+      throw new Error('订单不存在')
+    }
+
+    const orderData = orderResponse.data.data
+
+    // 2. 获取商家名称
+    let merchantName = ''
+    try {
+      const merchantResponse = await axios.get(
+        `${API_CONFIG.baseURL}${API_CONFIG.merchant.detail}${orderData.merchantId}`
+      )
+      if (merchantResponse.data?.data?.name) {
+        merchantName = merchantResponse.data.data.name
+      }
+    } catch (error) {
+      console.error('获取商家名称失败:', error)
+    }
+
+    // 3. 获取订单菜品信息
+    const dishesResponse = await axios.get(`${API_CONFIG.baseURL}/v1/orders/${orderData.id}/dishes`)
+
+    // 3. 获取菜品详情
+    let items = []
+    if (dishesResponse.data?.data && dishesResponse.data.data.length > 0) {
+      items = await Promise.all(
+        dishesResponse.data.data.map(async (orderDish) => {
+          try {
+            const dishResponse = await axios.get(`${API_CONFIG.baseURL}${API_CONFIG.dish.detail}${orderDish.dishId}`)
+            const dish = dishResponse.data?.data
+            return {
+              id: dish?.id || orderDish.dishId,
+              name: dish?.name || orderDish.dishName || '菜品',
+              quantity: orderDish.quantity,
+              price: orderDish.price,
+              customization: orderDish.customization,
+              note: orderDish.note || '',
+              image: dish?.image || '',
+              // 添加食材信息
+              optionalIngredients: dish?.optionalIngredients || [],
+              requiredIngredients: dish?.requiredIngredients || []
+            }
+          } catch (error) {
+            console.error(`获取菜品${orderDish.dishId}详情失败:`, error)
+            // 降级处理：使用订单中存储的信息
+            return {
+              id: orderDish.dishId,
+              name: orderDish.dishName || '菜品',
+              quantity: orderDish.quantity,
+              price: orderDish.price,
+              image: orderDish.dishImage || '',
+              optionalIngredients: orderDish.optionalIngredients || [],
+              requiredIngredients: orderDish.requiredIngredients || [],
+              note: orderDish.note || '',
+              unavailable: true
+            }
+          }
+        })
+      )
+    }
+
+    // 4. 组装订单数据
+    order.value = {
+      id: orderData.id,
+      orderNo: orderData.id,
+      status: orderStatusToText(orderData.status),
+      merchant: merchantName,
+      merchantId: orderData.merchantId,
+      total: orderData.totalAmount,
+      time: formatTime(orderData.createTime),
+      items: items,
+      itemCount: items.reduce((sum, item) => sum + item.quantity, 0),
+      paymentMethod: '平台币余额',
+      paymentTime: orderData.updateTime ? formatTime(orderData.updateTime) : null,
+      remark: orderData.remark || '',
+      _raw: orderData
+    }
+  } catch (error) {
+    console.error('加载订单详情失败:', error)
+    ElMessage.error('加载订单详情失败')
+    order.value = null
+  } finally {
+    loading.value = false
+    // 订单详情加载完成
+    console.log('📋 订单详情加载完成', {
+      hasOrder: !!order.value,
+      orderStatus: order.value?.status,
+      rawStatus: order.value?._raw?.status
+    })
+  }
+}
+
+// 加载评价数据
+const loadReview = async () => {
+  console.log('🔍 loadReview 函数被调用', {
+    hasOrder: !!order.value,
+    orderStatus: order.value?.status
+  })
+
+  if (!order.value) {
+    console.error('❌ 订单数据不存在，无法加载评价')
+    return
+  }
+
+  if (order.value.status !== 'reviewed') {
+    console.error('❌ 订单状态不是"已评价"，无需加载评价数据', {
+      currentStatus: order.value.status,
+      expectedStatus: 'reviewed'
+    })
+    return
+  }
+
+  reviewLoading.value = true
+  try {
+    console.log('📋 开始加载订单评价', {
+      orderId: orderId.value,
+      timestamp: new Date().toISOString()
+    })
+
+    const response = await reviewAPI.getReviewByOrderId(orderId.value)
+
+    console.log('📡 API响应数据', {
+      status: response.status,
+      success: response.data?.success,
+      hasData: !!response.data?.data,
+      data: response.data?.data
+    })
+
+    // 检查响应是否成功且包含数据
+    if (response.data?.success && response.data?.data) {
+      review.value = response.data.data
+      console.log('✅ 评价数据加载成功', {
+        reviewId: review.value.id,
+        rating: review.value.rating,
+        content: review.value.content,
+        hasImages: review.value.images?.length || 0,
+        hasReplies: review.value.replies?.length || 0
+      })
+    } else {
+      // 评价数据不存在，可能是数据不一致问题
+      console.warn('⚠️ 评价数据不存在，订单状态与评价记录不一致', {
+        orderId: orderId.value,
+        responseMessage: response.data?.message,
+        orderStatus: order.value?.status
+      })
+
+      // 如果订单状态是已评价但没有评价记录，提示用户
+      if (order.value?.status === 'reviewed') {
+        console.warn('⚠️ 检测到数据不一致：订单状态为已评价，但没有找到评价记录')
+        // 可以选择将订单状态回滚到待评价，或者只是不显示评价卡片
+      }
+    }
+  } catch (error) {
+    console.error('❌ 加载评价数据出错', {
+      orderId: orderId.value,
+      errorMessage: error.message,
+      errorStatus: error.response?.status,
+      errorData: error.response?.data
+    })
+    // 不显示错误给用户，只是没有评价而已
+  } finally {
+    reviewLoading.value = false
+    console.log('✅ 评价加载流程结束', {
+      hasReview: !!review.value
+    })
+  }
+}
+
+// 组件挂载时加载订单详情
+onMounted(() => {
+  console.log('🚀 OrderDetail组件挂载', {
+    orderId: orderId.value
+  })
+  loadOrderDetail()
+
+  // 延迟检查订单状态
+  setTimeout(() => {
+    console.log('⏰ 延迟检查订单状态', {
+      hasOrder: !!order.value,
+      orderStatus: order.value?.status
+    })
+  }, 500)
+})
+
+// 监听路由变化，当从评价页面返回时重新加载数据
+watch(
+  () => route.query.refresh,
+  (newRefresh) => {
+    if (newRefresh) {
+      console.log('🔄 检测到刷新参数，重新加载数据', {
+        refresh: newRefresh,
+        timestamp: new Date().toISOString()
+      })
+      // 重新加载订单详情
+      loadOrderDetail()
+    }
+  }
+)
+
+// 取消订单
+const cancelOrder = (order) => {
+  axios
+    .put(API_CONFIG.baseURL + API_CONFIG.order.detail + order.id + '/cancel')
+    .then((response) => {
+      if (response.data.success) {
+        order.status = 'cancelled'
+        ElMessage.success('订单已取消')
+        loadOrderDetail() // 重新加载订单详情
+      } else {
+        ElMessage.error(response.data.message || '取消订单失败')
+      }
+    })
+    .catch((error) => {
+      console.error('取消订单失败:', error)
+      ElMessage.error('取消订单失败，请稍后重试')
+    })
+}
+
+// 跳转到评价页面
+const goToEvaluate = (orderId, isAdditional = false) => {
+  if (isAdditional) {
+    router.push({
+      path: `/user/home/evaluate-order/${orderId}`,
+      query: { type: 'additional' }
+    })
+  } else {
+    router.push(`/user/home/evaluate-order/${orderId}`)
+  }
+}
+
+// 联系商家
+const contactMerchant = () => {
+  if (!order.value?.merchantId) {
+    ElMessage.error('商家信息不存在')
+    return
+  }
+
+  // 跳转到聊天页面，并创建与商家的对话
+  router.push({
+    path: '/user/home/chat',
+    query: {
+      type: 'single',
+      targetId: order.value.merchantId,
+      targetName: order.value.merchantName || '商家'
+    }
+  })
+}
+
+// 获取当前活动步骤（5状态系统）
+const getActiveStep = () => {
+  if (!order.value) return 0
+
+  const statusStepMap = {
+    pending: 0,
+    pendingAccept: 1,
+    preparing: 2,
+    completed: 3,
+    cancelled: 0
+  }
+
+  return statusStepMap[order.value.status] || 0
+}
+</script>
+
+<template>
+  <div class="order-detail-container">
+    <!-- 页面头部 -->
+    <div class="page-header">
+      <CommonBackButton />
+      <h2 class="page-title">订单详情</h2>
+    </div>
+
+    <!-- 加载状态 -->
+    <div v-loading="loading" element-loading-text="加载中..." class="loading-container">
+      <!-- 订单详情内容 -->
+      <div v-if="order" class="order-detail-content">
+        <!-- 订单状态卡片 -->
+        <el-card class="status-card scale-in" shadow="hover">
+          <div class="status-header">
+            <div class="order-info-basic">
+              <div class="order-no">订单号: {{ order.orderNo }}</div>
+              <el-tag :type="statusTagTypeMap[order.status]" size="large" effect="dark">
+                {{ orderStatusMap[order.status] }}
+              </el-tag>
+            </div>
+          </div>
+
+          <!-- 订单进度 -->
+          <div class="order-progress">
+            <el-steps :active="getActiveStep()" finish-status="success" align-center>
+              <el-step title="待支付" />
+              <el-step title="待接单" />
+              <el-step title="制作中" />
+              <el-step title="已完成" />
+            </el-steps>
+          </div>
+        </el-card>
+
+        <!-- 商家信息卡片 -->
+        <el-card class="merchant-card fade-in-up delay-100" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <el-icon :size="20" color="#6ba4ff"><Shop /></el-icon>
+              <span class="card-title">商家信息</span>
+              <el-button type="primary" link @click="contactMerchant">
+                <el-icon><Phone /></el-icon>
+                联系商家
+              </el-button>
+            </div>
+          </template>
+          <div class="merchant-details">
+            <div class="merchant-name">{{ order.merchant }}</div>
+            <div class="merchant-meta">
+              <span class="rating">4.8分</span>
+            </div>
+          </div>
+        </el-card>
+
+        <!-- 订单商品卡片 -->
+        <el-card class="items-card" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span class="card-title">订单商品</span>
+              <el-tag type="info" effect="plain">共 {{ order.itemCount || 0 }} 件商品</el-tag>
+            </div>
+          </template>
+
+          <div class="items-list" v-if="order.items && order.items.length > 0">
+            <div class="item-row stagger-item" v-for="(item, index) in order.items" :key="index">
+              <!-- 商品图片 -->
+              <div class="item-image">
+                <img
+                  v-if="item.image"
+                  :src="item.image"
+                  :alt="item.name"
+                  loading="lazy"
+                  @error="handleImageError($event)"
+                />
+                <div v-else class="no-image">
+                  <span>{{ item.name?.charAt(0) || '菜' }}</span>
+                </div>
+                <!-- 数量徽章 -->
+                <div class="quantity-badge" :class="{ 'large-number': item.quantity > 9 }">
+                  {{ item.quantity }}
+                </div>
+              </div>
+
+              <!-- 商品信息 -->
+              <div class="item-info" :class="{ 'item-unavailable': item.unavailable }">
+                <div class="item-name">
+                  {{ item.name }}
+                  <el-tag v-if="item.unavailable" type="danger" size="small" style="margin-left: 8px">
+                    该菜品已下架
+                  </el-tag>
+                </div>
+
+                <!-- 必选食材 -->
+                <div
+                  v-if="item.requiredIngredients && item.requiredIngredients.length > 0"
+                  class="item-ingredients"
+                >
+                  <div class="ingredients-label">
+                    <span class="label-text">必选:</span>
+                  </div>
+                  <div class="ingredients-list">
+                    <span
+                      class="ingredient-tag required"
+                      v-for="ing in item.requiredIngredients"
+                      :key="ing"
+                    >
+                      {{ ing }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- 可选食材 -->
+                <div
+                  v-if="item.optionalIngredients && item.optionalIngredients.length > 0"
+                  class="item-ingredients"
+                >
+                  <div class="ingredients-label">
+                    <span class="label-text">可选:</span>
+                  </div>
+                  <div class="ingredients-list">
+                    <span
+                      class="ingredient-tag optional"
+                      v-for="(ing, idx) in item.optionalIngredients"
+                      :key="typeof ing === 'string' ? ing : (ing.id || ing.name || idx)"
+                    >
+                      {{ typeof ing === 'string' ? ing : ing.name }}
+                      <span
+                        v-if="typeof ing !== 'string' && ing.price"
+                        class="ingredient-price"
+                        >+¥{{ Number(ing.price).toFixed(2) }}</span
+                      >
+                    </span>
+                  </div>
+                </div>
+
+                <!-- 备注信息 -->
+                <div v-if="item.note" class="item-note">
+                  <el-icon><EditPen /></el-icon>
+                  <span class="note-text">{{ item.note }}</span>
+                </div>
+
+                <!-- 自定义信息（兼容旧数据） -->
+                <div v-if="item.customization && !item.note" class="item-note">
+                  <el-icon><EditPen /></el-icon>
+                  <span class="note-text">{{ item.customization }}</span>
+                </div>
+
+                <div class="item-price-detail">
+                  <span class="unit-price">¥{{ item.price.toFixed(2) }} /份</span>
+                  <span class="total-price"
+                    >小计 ¥{{ (item.price * item.quantity).toFixed(2) }}</span
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 空状态 -->
+          <div v-else class="items-empty">
+            <el-empty description="暂无商品信息" :image-size="60" />
+          </div>
+        </el-card>
+
+        <!-- 订单金额卡片 -->
+        <el-card class="amount-card" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <el-icon :size="20" color="#e6a23c"><Money /></el-icon>
+              <span class="card-title">订单金额</span>
+            </div>
+          </template>
+
+          <div class="amount-details">
+            <div class="amount-row total-row">
+              <span class="total-label">订单总额</span>
+              <span class="total-value number-scroll">¥{{ order.total.toFixed(2) }}</span>
+            </div>
+          </div>
+        </el-card>
+
+        <!-- 支付信息卡片 -->
+        <el-card class="payment-card" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <el-icon :size="20" color="#909399"><Money /></el-icon>
+              <span class="card-title">支付信息</span>
+            </div>
+          </template>
+
+          <div class="payment-details">
+            <div class="payment-row">
+              <span class="payment-label">支付方式:</span>
+              <span class="payment-value">{{ order.paymentMethod }}</span>
+            </div>
+            <div class="payment-row">
+              <span class="payment-label">下单时间:</span>
+              <span class="payment-value">{{ order.time }}</span>
+            </div>
+            <div class="payment-row" v-if="order.paymentTime">
+              <span class="payment-label">支付时间:</span>
+              <span class="payment-value">{{ order.paymentTime }}</span>
+            </div>
+          </div>
+        </el-card>
+
+        <!-- 订单备注卡片 -->
+        <el-card v-if="order.remark" class="remark-card" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <el-icon :size="20" color="#409eff"><EditPen /></el-icon>
+              <span class="card-title">订单备注</span>
+            </div>
+          </template>
+          <div class="remark-content">{{ order.remark }}</div>
+        </el-card>
+
+        <!-- 操作按钮 -->
+        <div class="order-actions">
+          <el-button
+            v-if="order.status === 'pending' || order.status === 'pendingAccept'"
+            type="danger"
+            size="large"
+            @click="cancelOrder(order)"
+            class="action-btn cancel-btn"
+          >
+            取消订单
+          </el-button>
+          <el-button
+            v-if="order.status === 'pendingAccept' || order.status === 'preparing'"
+            type="primary"
+            size="large"
+            @click="contactMerchant"
+            class="action-btn contact-btn"
+          >
+            <el-icon><Phone /></el-icon>
+            联系商家
+          </el-button>
+        </div>
+      </div>
+
+      <!-- 空数据提示 -->
+      <el-empty v-else-if="!loading" description="暂无订单详情" />
+    </div>
+  </div>
+</template>
+
+<style scoped lang="less">
+@import '../../assets/css/nordic-theme.less';
+
+.order-detail-container {
+  padding: 0 @nordic-space-lg @nordic-space-lg @nordic-space-lg;
+  background: @nordic-bg;
+  min-height: calc(100vh - 80px);
+
+  .page-header {
+    .nordic-card();
+    display: flex;
+    align-items: center;
+    margin-bottom: @nordic-space-lg;
+    padding: @nordic-space-md @nordic-space-lg;
+  }
+
+  .page-title {
+    font-size: @nordic-text-xl;
+    margin: 0;
+    margin-left: 15px;
+    color: @nordic-text;
+    font-weight: 600;
+  }
+
+  .loading-container {
+    min-height: 400px;
+  }
+
+  .order-detail-content {
+    display: flex;
+    flex-direction: column;
+    gap: @nordic-space-md;
+  }
+
+  // 通用卡片样式
+  .el-card {
+    .nordic-card();
+    overflow: hidden;
+
+    :deep(.el-card__header) {
+      padding: @nordic-space-md @nordic-space-lg;
+      border-bottom: 1px solid @nordic-divider;
+      background: linear-gradient(to bottom, fade(@nordic-bg, 50%) 0%, @nordic-surface 100%);
+    }
+
+    :deep(.el-card__body) {
+      padding: @nordic-space-lg;
+    }
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: @nordic-space-2sm;
+
+    .card-title {
+      font-size: @nordic-text-md;
+      font-weight: 600;
+      color: @nordic-text;
+      flex: 1;
+    }
+  }
+
+  // 状态卡片
+  .status-card {
+    background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
+    border: none;
+
+    :deep(.el-card__body) {
+      padding: @nordic-space-xl;
+    }
+
+    .status-header {
+      margin-bottom: @nordic-space-xl;
+    }
+
+    .order-info-basic {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: @nordic-space-md;
+
+      .order-no {
+        font-size: @nordic-text-md;
+        font-weight: 600;
+        color: @nordic-white;
+      }
+
+      :deep(.el-tag) {
+        border: none;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      }
+    }
+
+    .order-progress {
+      :deep(.el-steps) {
+        .el-step__head {
+          .el-step__icon {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.4);
+
+            .el-step__icon-inner {
+              color: @nordic-white;
+            }
+          }
+
+          &.is-process {
+            .el-step__icon {
+              background: @nordic-white;
+              border-color: @nordic-white;
+
+              .el-step__icon-inner {
+                color: @nordic-accent;
+              }
+            }
+          }
+
+          &.is-success {
+            .el-step__icon {
+              background: rgba(255, 255, 255, 0.3);
+              border-color: @nordic-white;
+
+              .el-step__icon-inner {
+                color: @nordic-white;
+              }
+            }
+          }
+        }
+
+        .el-step__title {
+          &.is-process {
+            color: @nordic-white;
+            font-weight: 600;
+          }
+
+          &.is-success {
+            color: rgba(255, 255, 255, 0.8);
+          }
+        }
+
+        .el-step__line {
+          background-color: rgba(255, 255, 255, 0.3);
+
+          .el-step__line-inner {
+            background-color: @nordic-white;
+          }
+        }
+      }
+    }
+  }
+
+  // 商家卡片
+  .merchant-card {
+    .merchant-details {
+      .merchant-name {
+        font-size: @nordic-text-lg;
+        font-weight: 600;
+        color: @nordic-text;
+        margin-bottom: @nordic-space-sm;
+      }
+
+      .merchant-meta {
+        display: flex;
+        align-items: center;
+        gap: @nordic-space-md;
+        font-size: @nordic-text-base;
+        color: @nordic-text-secondary;
+
+        .rating {
+          color: @nordic-yellow;
+          font-weight: 500;
+        }
+      }
+    }
+  }
+
+  // 商品卡片
+  .items-card {
+    .items-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .item-row {
+      display: flex;
+      align-items: stretch;
+      padding: 14px;
+      background: fade(@nordic-bg, 50%);
+      border-radius: @nordic-radius-md;
+      transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      border: 1px solid @nordic-border;
+      min-height: 94px;
+
+      &:hover {
+        box-shadow: 0 6px 20px fade(@nordic-accent, 20%);
+        transform: translateY(-3px) scale(1.015);
+        border-color: fade(@nordic-accent, 50%);
+        background: linear-gradient(to bottom, @nordic-surface 0%, fade(@nordic-accent-light, 30%) 100%);
+
+        &::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          border-radius: @nordic-radius-md;
+          box-shadow: inset 0 0 0 1px fade(@nordic-accent, 30%);
+          pointer-events: none;
+        }
+      }
+
+      .item-image {
+        width: 70px;
+        min-height: 70px;
+        height: 70px;
+        border-radius: @nordic-radius-md;
+        overflow: visible;
+        margin-right: 14px;
+        flex-shrink: 0;
+        background: linear-gradient(135deg, @nordic-blue-light 0%, fade(@nordic-blue, 20%) 100%);
+        position: relative;
+        z-index: 1;
+        box-shadow: 0 2px 8px fade(@nordic-blue, 15%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid fade(@nordic-blue, 30%);
+
+        img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          border-radius: @nordic-radius-md;
+          position: relative;
+          z-index: 1;
+        }
+
+        .no-image {
+          width: 100%;
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+
+          span {
+            font-size: 2rem;
+            font-weight: 600;
+            color: @nordic-blue;
+          }
+        }
+
+        .quantity-badge {
+          position: absolute;
+          top: -4px;
+          right: -4px;
+          background: linear-gradient(135deg, @nordic-red 0%, @nordic-red 100%);
+          color: @nordic-white;
+          font-size: @nordic-text-xs;
+          font-weight: 700;
+          min-width: 18px;
+          height: 18px;
+          padding: 0 5px;
+          border-radius: @nordic-radius-pill;
+          box-shadow:
+            0 2px 6px fade(@nordic-red, 40%),
+            0 0 0 1.5px @nordic-white;
+          z-index: 100;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          line-height: 1;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          animation: badge-bounce 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+          pointer-events: none;
+
+          .item-row:hover & {
+            transform: scale(1.1) rotate(-3deg);
+            box-shadow:
+              0 3px 8px fade(@nordic-red, 50%),
+              0 0 0 1.5px @nordic-white;
+          }
+
+          &.large-number {
+            font-size: 9px;
+            min-width: 20px;
+            padding: 0 4px;
+          }
+        }
+
+        @keyframes badge-bounce {
+          0% {
+            transform: scale(0) rotate(-180deg);
+            opacity: 0;
+          }
+          50% {
+            transform: scale(1.2) rotate(10deg);
+          }
+          100% {
+            transform: scale(1) rotate(0deg);
+            opacity: 1;
+          }
+        }
+      }
+
+      .item-info {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+
+        .item-name {
+          font-size: 15px;
+          font-weight: 600;
+          color: @nordic-text;
+          margin-bottom: @nordic-space-sm;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          flex-shrink: 0;
+          display: flex;
+          align-items: center;
+        }
+
+        // 不可用菜品样式
+        &.item-unavailable {
+          opacity: 0.6;
+
+          .item-name {
+            color: @nordic-text-muted;
+          }
+        }
+
+        .item-ingredients {
+          display: flex;
+          align-items: flex-start;
+          gap: 6px;
+          margin-bottom: @nordic-space-sm;
+          font-size: @nordic-text-xs;
+
+          .ingredients-label {
+            flex-shrink: 0;
+
+            .label-text {
+              color: @nordic-text-secondary;
+              font-weight: 500;
+            }
+          }
+
+          .ingredients-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            flex: 1;
+
+            .ingredient-tag {
+              display: inline-flex;
+              align-items: center;
+              gap: 3px;
+              padding: 3px 8px;
+              border-radius: @nordic-radius-sm;
+              font-size: @nordic-text-xs;
+              line-height: 1.4;
+              transition: all 0.2s ease;
+
+              &.required {
+                background: @nordic-green;
+                color: @nordic-white;
+                font-weight: 500;
+                box-shadow: 0 1px 4px fade(@nordic-green, 25%);
+              }
+
+              &.optional {
+                background: @nordic-green-light;
+                color: @nordic-green-dark;
+                border: 1px solid fade(@nordic-green, 30%);
+              }
+
+              .ingredient-price {
+                font-size: 10px;
+                opacity: 0.85;
+                margin-left: 2px;
+              }
+            }
+          }
+        }
+
+        .item-note {
+          display: flex;
+          align-items: flex-start;
+          gap: 5px;
+          margin-bottom: @nordic-space-sm;
+          font-size: @nordic-text-xs;
+          color: @nordic-accent-dark;
+          padding: 6px @nordic-space-2sm;
+          background: @nordic-yellow-light;
+          border-radius: @nordic-radius-sm;
+          border: 1px solid fade(@nordic-yellow, 30%);
+          line-height: 1.5;
+          box-shadow: 0 1px 4px fade(@nordic-yellow, 8%);
+
+          .el-icon {
+            font-size: 13px;
+            color: @nordic-accent-dark;
+            flex-shrink: 0;
+            margin-top: 1px;
+          }
+
+          .note-text {
+            flex: 1;
+            word-break: break-word;
+          }
+        }
+
+        .item-price-detail {
+          display: flex;
+          align-items: center;
+          gap: @nordic-space-md;
+          margin-top: auto;
+          flex-shrink: 0;
+
+          .unit-price {
+            font-size: @nordic-text-xs;
+            color: @nordic-text-muted;
+          }
+
+          .total-price {
+            font-size: @nordic-text-md;
+            font-weight: 700;
+            color: @nordic-red;
+          }
+        }
+      }
+    }
+
+    .items-empty {
+      text-align: center;
+      padding: @nordic-space-xl;
+      color: @nordic-text-muted;
+      font-size: @nordic-text-base;
+    }
+  }
+
+  // 金额卡片
+  .amount-card {
+    .amount-details {
+      .amount-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: @nordic-space-2sm 0;
+
+        .amount-label {
+          font-size: @nordic-text-base;
+          color: @nordic-text-secondary;
+        }
+
+        .amount-value {
+          font-size: 15px;
+          color: @nordic-text;
+          font-weight: 500;
+        }
+
+        &.total-row {
+          padding-top: @nordic-space-md;
+
+          .total-label {
+            font-size: @nordic-text-md;
+            font-weight: 600;
+            color: @nordic-text;
+          }
+
+          .total-value {
+            font-size: @nordic-text-xl;
+            font-weight: 700;
+            color: @nordic-yellow;
+          }
+        }
+      }
+    }
+  }
+
+  // 支付信息卡片
+  .payment-card {
+    .payment-details {
+      display: flex;
+      flex-direction: column;
+      gap: @nordic-space-2sm;
+
+      .payment-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: @nordic-space-sm 0;
+
+        .payment-label {
+          font-size: @nordic-text-base;
+          color: @nordic-text-secondary;
+        }
+
+        .payment-value {
+          font-size: @nordic-text-base;
+          color: @nordic-text;
+          font-weight: 500;
+        }
+      }
+    }
+  }
+
+  // 备注卡片
+  .remark-card {
+    .remark-content {
+      font-size: @nordic-text-base;
+      color: @nordic-text-secondary;
+      line-height: 1.6;
+      padding: @nordic-space-md;
+      background: fade(@nordic-bg, 60%);
+      border-radius: @nordic-radius-sm;
+    }
+  }
+
+  // 评价卡片
+  .review-card {
+    .review-content {
+      .review-rating {
+        display: flex;
+        align-items: center;
+        gap: @nordic-space-md;
+        padding: @nordic-space-md 0;
+        border-bottom: 1px solid @nordic-divider;
+        margin-bottom: @nordic-space-md;
+
+        .rating-label {
+          font-size: 15px;
+          font-weight: 600;
+          color: @nordic-text-secondary;
+        }
+
+        .rating-score {
+          font-size: @nordic-text-lg;
+          font-weight: 700;
+          color: @nordic-yellow;
+          margin-left: @nordic-space-sm;
+        }
+
+        :deep(.el-rate) {
+          .el-rate__icon {
+            font-size: 1.714rem;
+            margin-right: 4px;
+          }
+        }
+      }
+
+      .review-text {
+        font-size: 15px;
+        color: @nordic-text;
+        line-height: 1.8;
+        padding: @nordic-space-md;
+        background: fade(@nordic-bg, 60%);
+        border-radius: @nordic-radius-sm;
+        margin-bottom: @nordic-space-md;
+      }
+
+      .review-images {
+        display: flex;
+        gap: @nordic-space-md;
+        flex-wrap: wrap;
+        margin-bottom: @nordic-space-xl;
+
+        .review-image {
+          width: 100px;
+          height: 100px;
+          border-radius: @nordic-radius-sm;
+          overflow: hidden;
+          border: 1px solid @nordic-border;
+          cursor: pointer;
+          transition: all 0.3s ease;
+
+          &:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px @nordic-shadow-hover;
+          }
+
+          :deep(.el-image__inner) {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+          }
+
+          .image-error {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: @nordic-bg;
+            color: @nordic-text-muted;
+            font-size: 2.286rem;
+          }
+        }
+      }
+
+      .review-replies {
+        display: flex;
+        flex-direction: column;
+        gap: @nordic-space-md;
+        margin-top: @nordic-space-md;
+        padding-top: @nordic-space-md;
+        border-top: 1px dashed @nordic-border;
+
+        .reply-item {
+          padding: @nordic-space-md;
+          border-radius: @nordic-radius-sm;
+          transition: all 0.3s ease;
+
+          &.merchant-reply {
+            background: linear-gradient(135deg, @nordic-green-light 0%, fade(@nordic-green-light, 60%) 100%);
+            border-left: 3px solid @nordic-green;
+          }
+
+          &.user-reply {
+            background: linear-gradient(135deg, @nordic-yellow-light 0%, fade(@nordic-yellow-light, 60%) 100%);
+            border-left: 3px solid @nordic-yellow;
+          }
+
+          &:hover {
+            transform: translateX(4px);
+            box-shadow: 0 2px 8px @nordic-shadow;
+          }
+
+          .reply-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: @nordic-space-sm;
+
+            .reply-type {
+              display: flex;
+              gap: @nordic-space-sm;
+            }
+
+            .reply-time {
+              font-size: @nordic-text-xs;
+              color: @nordic-text-muted;
+            }
+          }
+
+          .reply-content {
+            font-size: @nordic-text-base;
+            color: @nordic-text-secondary;
+            line-height: 1.6;
+          }
+        }
+      }
+    }
+  }
+
+  // 操作按钮
+  .order-actions {
+    display: flex;
+    justify-content: center;
+    gap: @nordic-space-md;
+    padding: @nordic-space-lg 0;
+
+    .action-btn {
+      min-width: 160px;
+      height: 48px;
+      font-size: @nordic-text-md;
+      font-weight: 600;
+      border-radius: @nordic-radius-pill;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 12px @nordic-shadow;
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px @nordic-shadow-hover;
+      }
+
+      &.cancel-btn {
+        background: linear-gradient(135deg, @nordic-red 0%, @nordic-red 100%);
+        border: none;
+        box-shadow: 0 4px 12px fade(@nordic-red, 30%);
+
+        &:hover {
+          box-shadow: 0 6px 16px fade(@nordic-red, 40%);
+        }
+      }
+
+      &.evaluate-btn {
+        background: linear-gradient(135deg, @nordic-green 0%, @nordic-green 100%);
+        border: none;
+        box-shadow: 0 4px 12px fade(@nordic-green, 30%);
+
+        &:hover {
+          box-shadow: 0 6px 16px fade(@nordic-green, 40%);
+        }
+      }
+
+      &.contact-btn {
+        background: linear-gradient(135deg, @nordic-blue 0%, @nordic-blue 100%);
+        border: none;
+        box-shadow: 0 4px 12px fade(@nordic-blue, 30%);
+
+        &:hover {
+          box-shadow: 0 6px 16px fade(@nordic-blue, 40%);
+        }
+      }
+    }
+  }
+}
+
+// 响应式设计
+@media (max-width: @nordic-breakpoint-md) {
+  .order-detail-container {
+    padding: 0 12px @nordic-space-md 12px;
+
+    .page-header {
+      padding: 14px @nordic-space-md;
+      border-radius: @nordic-radius-lg;
+    }
+
+    .page-title {
+      font-size: @nordic-text-lg;
+    }
+
+    .order-detail-content {
+      gap: @nordic-space-md;
+    }
+
+    .el-card {
+      border-radius: @nordic-radius-lg;
+
+      :deep(.el-card__body) {
+        padding: @nordic-space-md;
+      }
+
+      :deep(.el-card__header) {
+        padding: 14px @nordic-space-md;
+      }
+    }
+
+    .status-card {
+      :deep(.el-card__body) {
+        padding: @nordic-space-lg @nordic-space-md;
+      }
+
+      .order-info-basic {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: @nordic-space-2sm;
+      }
+
+      .order-progress {
+        :deep(.el-steps) {
+          .el-step__title {
+            font-size: @nordic-text-xs !important;
+          }
+
+          .el-step__icon {
+            width: 28px;
+            height: 28px;
+          }
+        }
+      }
+    }
+
+    .items-card {
+      .item-row {
+        padding: @nordic-space-md;
+        min-height: 80px;
+        border-radius: @nordic-radius-md;
+
+        .item-image {
+          width: 56px;
+          min-height: 56px;
+          height: 56px;
+          margin-right: @nordic-space-md;
+          border-radius: @nordic-radius-sm;
+
+          img {
+            border-radius: @nordic-radius-sm;
+          }
+
+          .quantity-badge {
+            min-width: 16px;
+            height: 16px;
+            font-size: 10px;
+            padding: 0 4px;
+            top: -3px;
+            right: -3px;
+            border-radius: @nordic-radius-sm;
+
+            &.large-number {
+              font-size: 8px;
+              min-width: 18px;
+              padding: 0 3px;
+            }
+          }
+
+          .no-image span {
+            font-size: 22px;
+          }
+        }
+
+        .item-info {
+          .item-name {
+            font-size: @nordic-text-base;
+            margin-bottom: 6px;
+          }
+
+          .item-ingredients {
+            font-size: @nordic-text-xs;
+            margin-bottom: 6px;
+            gap: 5px;
+
+            .ingredients-list {
+              gap: 4px;
+
+              .ingredient-tag {
+                font-size: 10px;
+                padding: 2px 6px;
+                border-radius: @nordic-radius-xs;
+              }
+            }
+          }
+
+          .item-note {
+            font-size: @nordic-text-xs;
+            padding: 5px @nordic-space-sm;
+            margin-bottom: 6px;
+            border-radius: @nordic-radius-sm;
+
+            .el-icon {
+              font-size: @nordic-text-xs;
+            }
+          }
+
+          .item-price-detail {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+
+            .unit-price {
+              font-size: @nordic-text-xs;
+            }
+
+            .total-price {
+              font-size: 15px;
+            }
+          }
+        }
+      }
+    }
+
+    .order-actions {
+      flex-direction: column;
+      gap: @nordic-space-2sm;
+      padding: @nordic-space-md 0;
+
+      .action-btn {
+        width: 100%;
+        min-width: auto;
+        height: 44px;
+        font-size: 15px;
+      }
+    }
+  }
+}
+</style>

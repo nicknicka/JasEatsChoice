@@ -1,0 +1,7 @@
+node_modules
+dist
+out
+.gitignore
+# 项目未安装 @typescript-eslint/parser，该 SFC 使用 lang="ts"（interface/类型导入），
+# 现有 parser 无法解析；构建由 electron-vite/esbuild 处理，不受影响。
+src/renderer/src/views/user/components/home/DishCard.vue

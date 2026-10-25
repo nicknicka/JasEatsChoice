@@ -1,0 +1,221 @@
+package com.xx.jaseatschoicejava.controller;
+
+import com.xx.jaseatschoicejava.common.ResponseResult;
+import com.xx.jaseatschoicejava.dto.FriendRequestActionDTO;
+import com.xx.jaseatschoicejava.entity.Contact;
+import com.xx.jaseatschoicejava.service.ContactService;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+/**
+ * 联系人关系控制器
+ */
+@Api(tags = "联系人关系模块")
+@RestController
+@RequestMapping("/v1/contacts")
+public class ContactController {
+
+    @Autowired
+    private ContactService contactService;
+
+    /**
+     * 获取我的好友列表
+     */
+    @ApiOperation("获取我的好友列表")
+    @GetMapping("/friends")
+    public ResponseResult<?> getMyFriends(@RequestParam String userId) {
+        List<Contact> friends = contactService.lambdaQuery()
+                .eq(Contact::getUserId, userId)
+                .eq(Contact::getRelationType, "friend")
+                .eq(Contact::getStatus, "normal")
+                .list();
+        return ResponseResult.success(friends);
+    }
+
+    /**
+     * 获取群成员列表
+     */
+    @ApiOperation("获取群成员列表")
+    @GetMapping("/groups/{groupId}/members")
+    public ResponseResult<?> getGroupMembers(@PathVariable String groupId) {
+        List<Contact> members = contactService.lambdaQuery()
+                .eq(Contact::getTargetId, groupId)
+                .eq(Contact::getRelationType, "group")
+                .list();
+        return ResponseResult.success(members);
+    }
+
+    /**
+     * 加入群
+     */
+    @ApiOperation("加入群")
+    @PostMapping("/groups/join")
+    public ResponseResult<?> joinGroup(@RequestBody Contact contact) {
+        contact.setRelationType("group");
+        contact.setStatus("normal");
+        boolean success = contactService.save(contact);
+        if (success) {
+            return ResponseResult.success("加入群成功");
+        } else {
+            return ResponseResult.fail("500", "加入群失败");
+        }
+    }
+
+    /**
+     * 退出群
+     */
+    @ApiOperation("退出群")
+    @DeleteMapping("/groups/leave")
+    public ResponseResult<?> leaveGroup(@RequestParam String userId, @RequestParam String groupId) {
+        boolean success = contactService.remove(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Contact>()
+                .eq(Contact::getUserId, userId)
+                .eq(Contact::getTargetId, groupId)
+                .eq(Contact::getRelationType, "group"));
+        if (success) {
+            return ResponseResult.success("退出群成功");
+        } else {
+            return ResponseResult.fail("500", "退出群失败");
+        }
+    }
+
+    /**
+     * 发送好友请求
+     */
+    @ApiOperation("发送好友请求")
+    @PostMapping("/friends/request")
+    public ResponseResult<?> sendFriendRequest(@RequestBody Contact contact) {
+        String userId = contact.getUserId();
+        String targetId = contact.getTargetId();
+
+        // 1. 检查是否添加自己
+        if (userId.equals(targetId)) {
+            return ResponseResult.fail("400", "不能添加自己为好友");
+        }
+
+        // 2. 检查是否已经是好友
+        List<Contact> existingFriends = contactService.lambdaQuery()
+                .eq(Contact::getUserId, userId)
+                .eq(Contact::getTargetId, targetId)
+                .eq(Contact::getRelationType, "friend")
+                .eq(Contact::getStatus, "normal")
+                .list();
+
+        if (!existingFriends.isEmpty()) {
+            return ResponseResult.fail("400", "对方已经是你的好友了");
+        }
+
+        // 3. 发送好友请求（允许重复发送）
+        contact.setRelationType("friend");
+        contact.setStatus("pending");
+        boolean success = contactService.save(contact);
+        if (success) {
+            return ResponseResult.success("好友请求发送成功");
+        } else {
+            return ResponseResult.fail("500", "好友请求发送失败");
+        }
+    }
+
+    /**
+     * 删除好友
+     */
+    @ApiOperation("删除好友")
+    @DeleteMapping("/friends")
+    public ResponseResult<?> deleteFriend(@RequestParam String userId, @RequestParam String friendId) {
+        // 删除双向好友关系
+        boolean success1 = contactService.remove(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Contact>()
+                .eq(Contact::getUserId, userId)
+                .eq(Contact::getTargetId, friendId)
+                .eq(Contact::getRelationType, "friend"));
+
+        boolean success2 = contactService.remove(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Contact>()
+                .eq(Contact::getUserId, friendId)
+                .eq(Contact::getTargetId, userId)
+                .eq(Contact::getRelationType, "friend"));
+
+        if (success1 && success2) {
+            return ResponseResult.success("删除好友成功");
+        } else {
+            return ResponseResult.fail("500", "删除好友失败");
+        }
+    }
+
+    /**
+     * 获取待处理的好友请求列表
+     */
+    @ApiOperation("获取待处理的好友请求列表")
+    @GetMapping("/friends/requests")
+    public ResponseResult<?> getFriendRequests(@RequestParam String userId) {
+        // 查找发给当前用户的待处理好友请求
+        List<Contact> requests = contactService.lambdaQuery()
+                .eq(Contact::getTargetId, userId)
+                .eq(Contact::getRelationType, "friend")
+                .eq(Contact::getStatus, "pending")
+                .orderByDesc(Contact::getCreateTime)
+                .list();
+        System.out.println("获取好友请求列表，userId: " + userId + ", 请求数量: " + requests.size());
+        for (Contact contact : requests) {
+            System.out.println("好友请求: " + contact);
+        }
+        return ResponseResult.success(requests);
+    }
+
+    /**
+     * 接受好友请求
+     */
+    @ApiOperation("接受好友请求")
+    @PostMapping("/friends/accept")
+    public ResponseResult<?> acceptFriendRequest(@RequestBody FriendRequestActionDTO dto) {
+        String userId = dto.getUserId();
+        String requesterId = dto.getRequesterId();
+
+        // 1. 将请求者的记录状态改为normal
+        boolean success1 = contactService.lambdaUpdate()
+                .eq(Contact::getUserId, requesterId)
+                .eq(Contact::getTargetId, userId)
+                .eq(Contact::getRelationType, "friend")
+                .eq(Contact::getStatus, "pending")
+                .set(Contact::getStatus, "normal")
+                .update();
+
+        // 2. 为接受者创建双向好友关系
+        Contact newContact = new Contact();
+        newContact.setUserId(userId);
+        newContact.setTargetId(requesterId);
+        newContact.setRelationType("friend");
+        newContact.setStatus("normal");
+        boolean success2 = contactService.save(newContact);
+
+        if (success1 && success2) {
+            return ResponseResult.success("已接受好友请求");
+        } else {
+            return ResponseResult.fail("500", "接受好友请求失败");
+        }
+    }
+
+    /**
+     * 拒绝好友请求
+     */
+    @ApiOperation("拒绝好友请求")
+    @PostMapping("/friends/reject")
+    public ResponseResult<?> rejectFriendRequest(@RequestBody FriendRequestActionDTO dto) {
+        String userId = dto.getUserId();
+        String requesterId = dto.getRequesterId();
+
+        // 删除好友请求记录
+        boolean success = contactService.remove(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Contact>()
+                .eq(Contact::getUserId, requesterId)
+                .eq(Contact::getTargetId, userId)
+                .eq(Contact::getRelationType, "friend")
+                .eq(Contact::getStatus, "pending"));
+
+        if (success) {
+            return ResponseResult.success("已拒绝好友请求");
+        } else {
+            return ResponseResult.fail("500", "拒绝好友请求失败");
+        }
+    }
+}

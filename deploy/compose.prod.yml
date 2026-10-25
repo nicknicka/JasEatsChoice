@@ -1,0 +1,44 @@
+services:
+  spring-boot:
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      FILE_SERVER_URL: https://${API_DOMAIN:-api.example.com}/api
+      FILE_UPLOAD_PATH: /data/uploads/
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
+
+  mysql:
+    volumes:
+      - mysql-backup:/backup
+
+  nginx:
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      API_DOMAIN: ${API_DOMAIN:?API_DOMAIN missing; set it in deploy/.env}
+      SSL_CERT_DIR: ${SSL_CERT_DIR:-/etc/letsencrypt}
+    volumes:
+      - ./nginx/templates:/etc/nginx/templates:ro
+      - ./nginx/conf.d/prod-catchall.conf:/etc/nginx/conf.d/default.conf:ro
+      - ${WEB_ROOT:-../apps/client/dist-web}:/usr/share/nginx/html:ro
+      - ${SSL_CERT_DIR:-/etc/letsencrypt}:${SSL_CERT_DIR:-/etc/letsencrypt}:ro
+      - /var/www/certbot:/var/www/certbot:ro
+    restart: always
+
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - ${SSL_CERT_DIR:-/etc/letsencrypt}:${SSL_CERT_DIR:-/etc/letsencrypt}
+      - /var/www/certbot:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    networks:
+      - jaseats-net
+    restart: always
+
+volumes:
+  mysql-backup:

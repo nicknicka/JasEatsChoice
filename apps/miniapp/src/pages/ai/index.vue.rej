@@ -1,0 +1,10 @@
+@@ -1479,7 +1479,8 @@
+ 	/* 消息气泡（响应式宽度+不对称圆角） */
+ 	.message-content {
+-		max-width: $message-bubble-width; // 75vw
++		/* ✅ 修复：减去左右边距(64rpx)，确保气泡不溢出屏幕 */
++		max-width: calc(75vw - 64rpx); // 减去左右边距各32rpx
+ 		max-width: $message-bubble-max-width; // 540rpx
+ 		min-width: $message-bubble-min-width; // 120rpx
+ 
+ 
