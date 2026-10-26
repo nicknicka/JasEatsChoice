@@ -100,6 +100,16 @@ spring.mvc:
   async:
     request-timeout: 300000
 
+# ==================== Flyway 迁移配置 ====================
+spring.flyway:
+  enabled: true
+  locations: classpath:db/migration
+  baseline-on-migrate: true
+  baseline-version: 0
+  encoding: UTF-8
+  # 开发环境关闭校验（允许不一致的本地修改），生产建议开启
+  validate-on-migrate: true
+
 # MyBatis-Plus配置
 mybatis-plus:
   mapper-locations: classpath:mapper/*.xml
@@ -193,7 +203,27 @@ id:
     datacenter-id: ${DATACENTER_ID:1}  # 数据中心ID（0-31），可通过环境变量覆盖
     epoch: 1704067200000                  # 纪元时间（2024-01-01 00:00:00 CST）
 
-# ==================== 智谱AI配置 ====================
+# ==================== 通用AI配置 ====================
+# 供应商无关的顶层配置。具体供应商的专属参数在下方各段中。
+ai:
+  # AI 供应商：zhipu（默认，兼容历史）/ qwen / doubao / ollama ...
+  provider: ${AI_PROVIDER:zhipu}
+  # 通用 API Key（供应商优先读自己的，没有再回退到这里）
+  api-key: ${AI_API_KEY:}
+  # 通用文本推理模型名
+  model: ${AI_MODEL:glm-4-flash}
+  # Supervisor 专用模型名（推理更强、温度更低）
+  supervisor-model: ${AI_SUPERVISOR_MODEL:glm-4-flash}
+  # 视觉识别模型名
+  vision-model: ${AI_VISION_MODEL:glm-4.1v-thinking-flash}
+  # API 基础 URL（可选，留空用供应商默认）
+  base-url: ${AI_BASE_URL:}
+  # 请求超时时间（毫秒）
+  timeout: ${AI_TIMEOUT:30000}
+  # 温度参数
+  temperature: ${AI_TEMPERATURE:0.7}
+
+# ==================== 智谱AI配置（专属参数，兼容旧版） ====================
 zhipuai:
   # API密钥（建议通过环境变量 ZHIPU_API_KEY 注入，兼容旧名 ZHIPUAI_API_KEY）
   api-key: ${ZHIPU_API_KEY:${ZHIPUAI_API_KEY:}}

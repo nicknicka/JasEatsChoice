@@ -41,10 +41,10 @@ import com.xx.jaseatschoicejava.agent.tools.user.UserHealthGoalTools;
 import com.xx.jaseatschoicejava.agent.tools.user.UserPreferenceTools;
 import com.xx.jaseatschoicejava.agent.tools.user.UserProfileTools;
 import com.xx.jaseatschoicejava.agent.tools.user.UserQueryTools;
-import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
+import com.xx.jaseatschoicejava.config.AIConfig;
 
 import dev.langchain4j.agentic.AgenticServices;
-import dev.langchain4j.community.model.zhipu.ZhipuAiChatModel;
+
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.chat.ChatModel;
 import jakarta.annotation.PreDestroy;
@@ -61,13 +61,16 @@ import jakarta.annotation.Resource;
  * @updated 2026-04-03 清理废弃Agent和旧版工具
  */
 @Configuration
-@EnableConfigurationProperties(ZhipuAIConfig.class)
+@EnableConfigurationProperties(AIConfig.class)
 public class LangChain4jConfig {
 
     private static final Logger log = LoggerFactory.getLogger(LangChain4jConfig.class);
 
     @Resource
-    private ZhipuAIConfig zhipuAIConfig;
+    private AIConfig aiConfig;
+
+    @Resource(name = "chatModelProvider")
+    private ChatModelProvider chatModelProvider;
 
     // ==================== L1 Agent 工具注入 ====================
 
@@ -150,60 +153,44 @@ public class LangChain4jConfig {
 
     // ==================== ChatModel Bean ====================
 
-    private boolean hasZhipuApiKey() {
-        String key = zhipuAIConfig.getApiKey();
-        return key != null && !key.isBlank();
+    private boolean hasApiKey() {
+        return chatModelProvider != null && chatModelProvider.isAvailable();
     }
 
     private ChatModel disabledModel(String which) {
-        log.warn("ZHIPU_API_KEY 未配置，{}模型降级为占位实现：AI 接口在调用时会返回未配置错误，其余功能不受影响", which);
-        return new ZhipuDisabledChatModel();
+        log.warn("AI API Key 未配置，{}模型降级为占位实现：AI 接口在调用时会返回未配置错误，其余功能不受影响", which);
+        return new NoopChatModel();
     }
 
     /**
      * Supervisor专用模型（更强推理能力）
-     * 使用glm-4-plus提供更好的规划和决策能力
      *
      * 包装MarkdownStrippingChatModel：GLM模型倾向将JSON包裹在```json中，
      * langchain4j的extractAndParseJson无法处理，需要预先剥离
      */
     @Bean("supervisorModel")
     public ChatModel supervisorModel() {
-        if (!hasZhipuApiKey()) {
+        if (!hasApiKey()) {
             return disabledModel("Supervisor");
         }
-        log.info("初始化Supervisor专用模型，模型：{}（含Markdown剥离包装）", zhipuAIConfig.getModel());
+        log.info("初始化Supervisor专用模型（供应商：{}），含Markdown剥离包装", aiConfig.getProvider());
 
-        ChatModel rawModel = ZhipuAiChatModel.builder()
-                .apiKey(zhipuAIConfig.getApiKey())
-            .model(zhipuAIConfig.getModel())
-                .temperature(0.3)
-                .maxToken(4096)
-                .maxRetries(1)
-                .build();
-
+        ChatModel rawModel = chatModelProvider.buildSupervisorModel();
         return new MarkdownStrippingChatModel(rawModel);
     }
 
     /**
      * 通用AI模型
-     * 实际模型由 application.yml 中的 zhipuai.model 决定
+     * 实际模型由 application.yml 中的 ai.model 决定
      */
     @Bean("aiModel")
     public ChatModel aiModel() {
-        if (!hasZhipuApiKey()) {
+        if (!hasApiKey()) {
             return disabledModel("通用AI");
         }
-        log.info("初始化通用AI模型，模型：{}", zhipuAIConfig.getModel());
+        log.info("初始化通用AI模型（供应商：{}），模型：{}", aiConfig.getProvider(), aiConfig.getModel());
 
-        return ZhipuAiChatModel.builder()
-                .apiKey(zhipuAIConfig.getApiKey())
-                .model(zhipuAIConfig.getModel())
-                .temperature(0.7)
-                .maxRetries(2)
-                .connectTimeout(java.time.Duration.ofSeconds(60))
-                .readTimeout(java.time.Duration.ofSeconds(60))
-                .build();
+        return chatModelProvider.buildAiModel();
     }
 
     /**
@@ -229,22 +216,15 @@ public class LangChain4jConfig {
 
     /**
      * 视觉模型（用于菜品识别、图像理解）
-     * 使用 glm-4.6v-flash 支持视觉识别
      */
     @Bean("visionModel")
     public ChatModel visionModel() {
-        if (!hasZhipuApiKey()) {
+        if (!hasApiKey()) {
             return disabledModel("视觉");
         }
-        log.info("初始化视觉模型，模型：{}", zhipuAIConfig.getVisionModel());
+        log.info("初始化视觉模型（供应商：{}），模型：{}", aiConfig.getProvider(), aiConfig.getVisionModel());
 
-        return ZhipuAiChatModel.builder()
-                .apiKey(zhipuAIConfig.getApiKey())
-                .model(zhipuAIConfig.getVisionModel())
-                .temperature(0.3)
-                .maxToken(2048)
-                .maxRetries(1)
-                .build();
+        return chatModelProvider.buildVisionModel();
     }
 
     // ==================== L1 专家 Agent ====================
