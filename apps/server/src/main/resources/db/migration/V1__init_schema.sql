@@ -1,31 +1,12 @@
--- JasEatsChoice init: table definitions only, no rows.
--- Regenerate with scripts/build_db_seed.py + scripts/fix_dump_mojibake.py (see db/README.md).
-SET NAMES utf8mb4;-- MySQL dump 10.13  Distrib 9.4.0, for Linux (aarch64)
---
--- Host: localhost    Database: jia_shi_yi_xuan
--- ------------------------------------------------------
--- Server version	9.4.0
+-- V1: 初始 schema - 74 张表
+-- 来源：db/init/01_schema.sql（mysqldump 导出，已清理 mysqldump 特有语法）
+-- 仅包含 CREATE TABLE，不包含视图、触发器、存储过程
 
-/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
-/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
-/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!50503 SET NAMES utf8mb4 */;
-/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
-/*!40103 SET TIME_ZONE='+00:00' */;
-/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
-/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
-/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
-/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+SET NAMES utf8mb4;
 
---
--- Table structure for table `announcement`
---
-
-DROP TABLE IF EXISTS `announcement`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: announcement
 CREATE TABLE `announcement` (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '公告ID',
+`id` bigint NOT NULL AUTO_INCREMENT COMMENT '公告ID',
   `merchant_id` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '商家ID，NULL表示系统公告',
   `title` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '公告标题',
   `content` text COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '公告内容',
@@ -42,18 +23,11 @@ CREATE TABLE `announcement` (
   PRIMARY KEY (`id`),
   KEY `idx_merchant_id` (`merchant_id`),
   KEY `idx_status` (`status`)
-) ENGINE=InnoDB AUTO_INCREMENT=2023710121550073858 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='å•†å®¶å…¬å‘Šè¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `discount`
---
-
-DROP TABLE IF EXISTS `discount`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: discount
 CREATE TABLE `discount` (
-  `id` bigint NOT NULL AUTO_INCREMENT,
+`id` bigint NOT NULL AUTO_INCREMENT,
   `merchant_id` bigint DEFAULT NULL,
   `name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `type` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -70,18 +44,11 @@ CREATE TABLE `discount` (
   `valid_days` int DEFAULT NULL COMMENT '有效天数',
   `used_count` int DEFAULT '0' COMMENT '使用次数',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2023714263790178307 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `dish_features`
---
-
-DROP TABLE IF EXISTS `dish_features`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: dish_features
 CREATE TABLE `dish_features` (
-  `id` bigint NOT NULL AUTO_INCREMENT,
+`id` bigint NOT NULL AUTO_INCREMENT,
   `dish_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'èœå“ID',
   `category` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'èœå“åˆ†ç±»',
   `tags` json DEFAULT NULL COMMENT 'æ ‡ç­¾æ•°ç»„: ["è¾£", "å·èœ", "ä¸‹é¥­èœ"]',
@@ -101,18 +68,11 @@ CREATE TABLE `dish_features` (
   KEY `idx_category` (`category`),
   KEY `idx_popularity` (`popularity_score` DESC),
   KEY `idx_dish_id` (`dish_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=48 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='èœå“ç‰¹å¾è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `dish_similarity`
---
-
-DROP TABLE IF EXISTS `dish_similarity`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: dish_similarity
 CREATE TABLE `dish_similarity` (
-  `id` bigint NOT NULL AUTO_INCREMENT,
+`id` bigint NOT NULL AUTO_INCREMENT,
   `dish_id_a` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'èœå“A ID',
   `dish_id_b` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'èœå“B ID',
   `similarity_score` decimal(5,4) NOT NULL COMMENT '相似度分数 0-1',
@@ -120,18 +80,11 @@ CREATE TABLE `dish_similarity` (
   `updated_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_dish_pair_type` (`dish_id_a`,`dish_id_b`,`similarity_type`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='èœå“ç›¸ä¼¼åº¦è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `hot_topic`
---
-
-DROP TABLE IF EXISTS `hot_topic`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: hot_topic
 CREATE TABLE `hot_topic` (
-  `id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '主键ID',
+`id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '主键ID',
   `content` varchar(500) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '热点内容',
   `priority` int DEFAULT '0' COMMENT '优先级',
   `source_type` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT 'MANUAL' COMMENT 'æ¥æºç±»åž‹',
@@ -157,36 +110,22 @@ CREATE TABLE `hot_topic` (
   KEY `idx_status` (`status`),
   KEY `idx_priority` (`priority`),
   KEY `idx_source_type` (`source_type`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='ä»Šæ—¥çƒ­ç‚¹è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `j_food_categories`
---
-
-DROP TABLE IF EXISTS `j_food_categories`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: j_food_categories
 CREATE TABLE `j_food_categories` (
-  `id` int NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+`id` int NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `title` varchar(255) NOT NULL COMMENT '食物分类名称',
   `father_id` varchar(50) DEFAULT NULL COMMENT '父级分类ID',
   `cate_id` varchar(50) DEFAULT NULL COMMENT '当前分类ID',
   `is_subcategory` tinyint(1) DEFAULT '0' COMMENT '是否为子分类',
   `parent_category_id` int DEFAULT NULL COMMENT '父分类在数据库中的ID',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=112 DEFAULT CHARSET=utf8mb3 COMMENT='食物营养成分-分类表';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `j_food_nutrition`
---
-
-DROP TABLE IF EXISTS `j_food_nutrition`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: j_food_nutrition
 CREATE TABLE `j_food_nutrition` (
-  `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+`id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `cate_id` int DEFAULT '0',
   `food_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '食物名称',
   `alias_name` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '别名或俗名',
@@ -225,18 +164,11 @@ CREATE TABLE `j_food_nutrition` (
   PRIMARY KEY (`id`),
   KEY `idx_food_name` (`food_name`),
   KEY `idx_english_name` (`english_name`)
-) ENGINE=InnoDB AUTO_INCREMENT=1615 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='食物营养成分表';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `recommendation_log`
---
-
-DROP TABLE IF EXISTS `recommendation_log`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: recommendation_log
 CREATE TABLE `recommendation_log` (
-  `id` bigint NOT NULL AUTO_INCREMENT,
+`id` bigint NOT NULL AUTO_INCREMENT,
   `user_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '用户ID',
   `recommendation_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'æŽ¨èæ‰¹æ¬¡ID',
   `dish_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'èœå“ID',
@@ -253,18 +185,11 @@ CREATE TABLE `recommendation_log` (
   KEY `idx_recommendation_id` (`recommendation_id`),
   KEY `idx_created_time` (`created_time`),
   KEY `idx_user_recommendation` (`user_id`,`recommendation_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='æŽ¨èè®°å½•è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `system_config`
---
-
-DROP TABLE IF EXISTS `system_config`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: system_config
 CREATE TABLE `system_config` (
-  `id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'é…ç½®ID',
+`id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'é…ç½®ID',
   `config_key` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'é…ç½®é”®',
   `config_value` text COLLATE utf8mb4_unicode_ci COMMENT 'é…ç½®å€¼',
   `config_name` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'é…ç½®åç§°',
@@ -280,18 +205,11 @@ CREATE TABLE `system_config` (
   KEY `idx_config_group` (`config_group`),
   KEY `idx_config_key` (`config_key`),
   KEY `idx_status` (`status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='ç³»ç»Ÿé…ç½®è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_add_dish_request`
---
-
-DROP TABLE IF EXISTS `t_add_dish_request`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_add_dish_request
 CREATE TABLE `t_add_dish_request` (
-  `id` varchar(64) NOT NULL COMMENT 'åŠ èœè¯·æ±‚ID',
+`id` varchar(64) NOT NULL COMMENT 'åŠ èœè¯·æ±‚ID',
   `group_order_id` varchar(64) NOT NULL COMMENT '群订单ID',
   `original_order_id` varchar(64) DEFAULT NULL COMMENT 'åŽŸè®¢å•ID(å…³è”å·²æ”¯ä»˜è®¢å•)',
   `request_user_id` varchar(64) NOT NULL COMMENT '加菜请求人ID',
@@ -314,18 +232,11 @@ CREATE TABLE `t_add_dish_request` (
   KEY `idx_approval_status` (`approval_status`),
   KEY `idx_timeout_time` (`timeout_time`),
   KEY `idx_request_user` (`request_user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='åŠ èœè¯·æ±‚è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_add_dish_setting`
---
-
-DROP TABLE IF EXISTS `t_add_dish_setting`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_add_dish_setting
 CREATE TABLE `t_add_dish_setting` (
-  `id` varchar(64) NOT NULL COMMENT '主键ID',
+`id` varchar(64) NOT NULL COMMENT '主键ID',
   `group_order_id` varchar(64) NOT NULL COMMENT '群订单ID',
   `add_dish_permission` tinyint NOT NULL DEFAULT '0' COMMENT 'åŠ èœæƒé™: 0-å…¨å‘˜å¯åŠ èœ,1-ä»…å‘èµ·è€…å¯åŠ èœ',
   `budget_limit` decimal(10,2) DEFAULT NULL COMMENT 'å•æ¬¡åŠ èœé¢„ç®—é™åˆ¶(å¯é€‰)',
@@ -335,18 +246,11 @@ CREATE TABLE `t_add_dish_setting` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `group_order_id` (`group_order_id`),
   KEY `idx_group_order_id` (`group_order_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='åŠ èœè®¾ç½®è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_address`
---
-
-DROP TABLE IF EXISTS `t_address`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_address
 CREATE TABLE `t_address` (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT 'åœ°å€ID',
+`id` bigint NOT NULL AUTO_INCREMENT COMMENT 'åœ°å€ID',
   `user_id` bigint NOT NULL COMMENT '用户ID',
   `receiver_name` varchar(50) NOT NULL COMMENT 'æ”¶è´§äººå§“å',
   `receiver_phone` varchar(20) NOT NULL COMMENT 'æ”¶è´§äººç”µè¯',
@@ -359,18 +263,11 @@ CREATE TABLE `t_address` (
   `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
   KEY `idx_user` (`user_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2059995675927699459 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='ç”¨æˆ·åœ°å€è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_admin`
---
-
-DROP TABLE IF EXISTS `t_admin`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_admin
 CREATE TABLE `t_admin` (
-  `admin_id` bigint NOT NULL AUTO_INCREMENT COMMENT 'ç®¡ç†å‘˜ID',
+`admin_id` bigint NOT NULL AUTO_INCREMENT COMMENT 'ç®¡ç†å‘˜ID',
   `username` varchar(50) NOT NULL COMMENT 'ç®¡ç†å‘˜ç”¨æˆ·å',
   `password` varchar(64) NOT NULL COMMENT 'å¯†ç ï¼ˆåŠ å¯†ï¼‰',
   `real_name` varchar(50) DEFAULT NULL COMMENT 'çœŸå®žå§“å',
@@ -391,18 +288,11 @@ CREATE TABLE `t_admin` (
   KEY `idx_username` (`username`),
   KEY `idx_status` (`status`),
   KEY `idx_role_id` (`role_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='ç®¡ç†å‘˜è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_admin_operation_log`
---
-
-DROP TABLE IF EXISTS `t_admin_operation_log`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_admin_operation_log
 CREATE TABLE `t_admin_operation_log` (
-  `log_id` bigint NOT NULL AUTO_INCREMENT COMMENT '日志ID',
+`log_id` bigint NOT NULL AUTO_INCREMENT COMMENT '日志ID',
   `admin_id` bigint DEFAULT NULL COMMENT 'ç®¡ç†å‘˜ID',
   `username` varchar(50) DEFAULT NULL COMMENT 'ç®¡ç†å‘˜ç”¨æˆ·å',
   `operation_type` varchar(50) DEFAULT NULL COMMENT 'æ“ä½œç±»åž‹ï¼šLOGIN, LOGOUT, CREATE, UPDATE, DELETE, AUDITç­‰',
@@ -421,18 +311,11 @@ CREATE TABLE `t_admin_operation_log` (
   KEY `idx_admin_id` (`admin_id`),
   KEY `idx_operation_type` (`operation_type`),
   KEY `idx_create_time` (`create_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='ç®¡ç†å‘˜æ“ä½œæ—¥å¿—è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_admin_role_relation`
---
-
-DROP TABLE IF EXISTS `t_admin_role_relation`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_admin_role_relation
 CREATE TABLE `t_admin_role_relation` (
-  `relation_id` bigint NOT NULL AUTO_INCREMENT COMMENT 'å…³è”ID',
+`relation_id` bigint NOT NULL AUTO_INCREMENT COMMENT 'å…³è”ID',
   `admin_id` bigint NOT NULL COMMENT 'ç®¡ç†å‘˜ID',
   `role_id` bigint NOT NULL COMMENT '角色ID',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -440,18 +323,11 @@ CREATE TABLE `t_admin_role_relation` (
   UNIQUE KEY `uk_admin_role` (`admin_id`,`role_id`),
   KEY `idx_admin_id` (`admin_id`),
   KEY `idx_role_id` (`role_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='ç®¡ç†å‘˜-è§’è‰²å…³è”è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_ai_chat_history`
---
-
-DROP TABLE IF EXISTS `t_ai_chat_history`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_ai_chat_history
 CREATE TABLE `t_ai_chat_history` (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+`id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `user_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '用户ID',
   `sender` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'å‘é€è€…ï¼šuser-ç”¨æˆ·ï¼Œai-AIåŠ©æ‰‹',
   `content` text COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'æ¶ˆæ¯å†…å®¹',
@@ -460,18 +336,11 @@ CREATE TABLE `t_ai_chat_history` (
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   PRIMARY KEY (`id`),
   KEY `idx_user_id` (`user_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=1104 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='AIèŠå¤©åŽ†å²è®°å½•è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_banner`
---
-
-DROP TABLE IF EXISTS `t_banner`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_banner
 CREATE TABLE `t_banner` (
-  `id` varchar(32) NOT NULL COMMENT '轮播图ID',
+`id` varchar(32) NOT NULL COMMENT '轮播图ID',
   `title` varchar(100) NOT NULL COMMENT '标题',
   `image_url` varchar(500) NOT NULL COMMENT '图片URL',
   `type` varchar(20) DEFAULT 'link' COMMENT 'ç±»åž‹: link-å¤–éƒ¨é“¾æŽ¥, dish-èœå“, merchant-å•†å®¶, activity-æ´»åŠ¨',
@@ -486,18 +355,11 @@ CREATE TABLE `t_banner` (
   PRIMARY KEY (`id`),
   KEY `idx_position` (`position`),
   KEY `idx_status` (`status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='è½®æ’­å›¾è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_calorie_record`
---
-
-DROP TABLE IF EXISTS `t_calorie_record`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_calorie_record
 CREATE TABLE `t_calorie_record` (
-  `id` varchar(64) NOT NULL COMMENT 'ID',
+`id` varchar(64) NOT NULL COMMENT 'ID',
   `user_id` bigint NOT NULL COMMENT '用户ID',
   `dish_id` bigint DEFAULT NULL COMMENT '菜品ID',
   `calorie` int NOT NULL COMMENT '卡路里',
@@ -511,18 +373,11 @@ CREATE TABLE `t_calorie_record` (
   PRIMARY KEY (`id`),
   KEY `idx_user_time` (`user_id`,`record_time`),
   KEY `idx_meal_time` (`meal_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='卡路里摄入记录表';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_chat_msg`
---
-
-DROP TABLE IF EXISTS `t_chat_msg`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_chat_msg
 CREATE TABLE `t_chat_msg` (
-  `msg_id` varchar(64) NOT NULL,
+`msg_id` varchar(64) NOT NULL,
   `from_id` varchar(64) NOT NULL COMMENT 'å‘é€è€…ID',
   `to_id` varchar(64) NOT NULL COMMENT '接收者ID',
   `session_id` varchar(64) DEFAULT NULL COMMENT 'ä¼šè¯ID(ç§èŠä¸ºç”Ÿæˆçš„ä¼šè¯æ ‡è¯†,ç¾¤èŠä¸ºç¾¤ID)',
@@ -545,18 +400,11 @@ CREATE TABLE `t_chat_msg` (
   KEY `idx_reply_to` (`reply_to`),
   KEY `idx_session_time` (`session_id`,`create_time`),
   KEY `idx_file_url` (`file_url`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='èŠå¤©æ¶ˆæ¯è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_chat_session`
---
-
-DROP TABLE IF EXISTS `t_chat_session`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_chat_session
 CREATE TABLE `t_chat_session` (
-  `id` bigint NOT NULL AUTO_INCREMENT,
+`id` bigint NOT NULL AUTO_INCREMENT,
   `session_id` varchar(64) NOT NULL COMMENT 'ä¼šè¯æ ‡è¯†ï¼ˆç§èŠä¸ºåŒæ–¹ç”¨æˆ·IDç»„åˆï¼Œç¾¤èŠä¸ºç¾¤IDï¼‰',
   `user_id` varchar(64) NOT NULL COMMENT '用户ID',
   `session_type` varchar(20) NOT NULL COMMENT 'ä¼šè¯ç±»åž‹: single-ç§èŠ, group-ç¾¤èŠ',
@@ -580,18 +428,11 @@ CREATE TABLE `t_chat_session` (
   KEY `idx_last_message_time` (`last_message_time`),
   KEY `idx_group_id` (`group_id`),
   KEY `idx_target_id` (`target_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=911 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='èŠå¤©ä¼šè¯è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_collection`
---
-
-DROP TABLE IF EXISTS `t_collection`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_collection
 CREATE TABLE `t_collection` (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+`id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `user_id` bigint NOT NULL COMMENT '用户ID',
   `collectable_type` varchar(20) NOT NULL COMMENT 'æ”¶è—ç±»åž‹ï¼šmerchant, dish, article, recipeç­‰',
   `collectable_id` bigint NOT NULL COMMENT 'æ”¶è—å¯¹è±¡ID',
@@ -599,18 +440,11 @@ CREATE TABLE `t_collection` (
   PRIMARY KEY (`id`),
   KEY `idx_user_id` (`user_id`),
   KEY `idx_type_id` (`collectable_type`,`collectable_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2056958148986998786 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='æ”¶è—è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_consume_history`
---
-
-DROP TABLE IF EXISTS `t_consume_history`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_consume_history
 CREATE TABLE `t_consume_history` (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '记录ID',
+`id` bigint NOT NULL AUTO_INCREMENT COMMENT '记录ID',
   `user_id` bigint NOT NULL COMMENT '用户ID',
   `type` varchar(20) NOT NULL COMMENT 'ç±»åž‹ï¼šrechargeï¼ˆå……å€¼ï¼‰ã€consumeï¼ˆæ¶ˆè´¹ï¼‰ã€withdrawï¼ˆæçŽ°ï¼‰',
   `amount` decimal(10,2) NOT NULL COMMENT 'é‡‘é¢',
@@ -619,18 +453,11 @@ CREATE TABLE `t_consume_history` (
   `create_time` datetime NOT NULL COMMENT '创建时间',
   PRIMARY KEY (`id`),
   KEY `idx_user_id` (`user_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2062398050747514883 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='æ¶ˆè´¹è®°å½•';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_contact`
---
-
-DROP TABLE IF EXISTS `t_contact`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_contact
 CREATE TABLE `t_contact` (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '联系人ID',
+`id` bigint NOT NULL AUTO_INCREMENT COMMENT '联系人ID',
   `user_id` varchar(64) NOT NULL COMMENT '用户ID',
   `target_id` varchar(64) NOT NULL COMMENT 'ç›®æ ‡IDï¼ˆå¥½å‹IDæˆ–ç¾¤IDï¼‰',
   `relation_type` varchar(20) NOT NULL COMMENT '关系类型：friend(好友)、group(群成员)',
@@ -644,18 +471,11 @@ CREATE TABLE `t_contact` (
   KEY `idx_relation_type` (`relation_type`),
   KEY `idx_status` (`status`),
   KEY `idx_user_target_relation` (`user_id`,`target_id`,`relation_type`)
-) ENGINE=InnoDB AUTO_INCREMENT=2015816641958494219 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='联系人关系表';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_content_extraction`
---
-
-DROP TABLE IF EXISTS `t_content_extraction`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_content_extraction
 CREATE TABLE `t_content_extraction` (
-  `id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '主键ID',
+`id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '主键ID',
   `source_id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'å†…å®¹æºID',
   `dish_name` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'èœå“åç§°',
   `dish_image` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'èœå“å›¾ç‰‡',
@@ -678,18 +498,11 @@ CREATE TABLE `t_content_extraction` (
   KEY `idx_dish_name` (`dish_name`),
   KEY `idx_is_published` (`is_published`),
   KEY `idx_is_verified` (`is_verified`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='å†…å®¹æå–è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_content_source`
---
-
-DROP TABLE IF EXISTS `t_content_source`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_content_source
 CREATE TABLE `t_content_source` (
-  `id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '主键ID',
+`id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '主键ID',
   `user_id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '用户ID',
   `content_url` varchar(500) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '内容URL',
   `content_type` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '内容类型：VIDEO-视频, ARTICLE-文章, IMAGE-图片',
@@ -710,18 +523,11 @@ CREATE TABLE `t_content_source` (
   KEY `idx_platform` (`platform`),
   KEY `idx_extraction_status` (`extraction_status`),
   KEY `idx_create_time` (`create_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='å†…å®¹æºè¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_dish`
---
-
-DROP TABLE IF EXISTS `t_dish`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_dish
 CREATE TABLE `t_dish` (
-  `id` varchar(64) NOT NULL COMMENT '菜品ID',
+`id` varchar(64) NOT NULL COMMENT '菜品ID',
   `merchant_id` varchar(64) NOT NULL COMMENT '商家ID',
   `name` varchar(100) NOT NULL COMMENT '菜品名称',
   `category` varchar(50) NOT NULL DEFAULT 'å…¶ä»–' COMMENT 'èœå“åˆ†ç±»',
@@ -759,18 +565,11 @@ CREATE TABLE `t_dish` (
   KEY `idx_merchant_audit_time` (`merchant_id`,`audit_status`,`create_time`),
   KEY `idx_category_online_rating` (`category`,`is_online`,`avg_rating`),
   KEY `idx_view_order_count` (`view_count` DESC,`order_count` DESC)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='菜品表';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_dish_step_config`
---
-
-DROP TABLE IF EXISTS `t_dish_step_config`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_dish_step_config
 CREATE TABLE `t_dish_step_config` (
-  `id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '主键ID',
+`id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '主键ID',
   `merchant_id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '商家ID',
   `dish_id` varchar(32) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'èœå“IDï¼ˆä¸ºNULLè¡¨ç¤ºå…¨å±€é»˜è®¤é…ç½®ï¼‰',
   `step_code` int NOT NULL COMMENT 'æ­¥éª¤ä»£ç ',
@@ -784,18 +583,11 @@ CREATE TABLE `t_dish_step_config` (
   UNIQUE KEY `uk_merchant_dish_step` (`merchant_id`,`dish_id`,`step_code`),
   KEY `idx_merchant_id` (`merchant_id`),
   KEY `idx_dish_id` (`dish_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='èœå“æ­¥éª¤é…ç½®è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_dish_step_history`
---
-
-DROP TABLE IF EXISTS `t_dish_step_history`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_dish_step_history
 CREATE TABLE `t_dish_step_history` (
-  `id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '主键ID',
+`id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '主键ID',
   `order_dish_id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'è®¢å•èœå“ID',
   `order_id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'è®¢å•ID',
   `dish_id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'èœå“ID',
@@ -813,18 +605,11 @@ CREATE TABLE `t_dish_step_history` (
   KEY `idx_order_id` (`order_id`),
   KEY `idx_dish_id` (`dish_id`),
   KEY `idx_create_time` (`create_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='èœå“æ­¥éª¤åŽ†å²è®°å½•è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_extraction_config`
---
-
-DROP TABLE IF EXISTS `t_extraction_config`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_extraction_config
 CREATE TABLE `t_extraction_config` (
-  `id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '主键ID',
+`id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '主键ID',
   `platform` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'å¹³å°',
   `config_key` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'é…ç½®é”®',
   `config_value` text COLLATE utf8mb4_unicode_ci COMMENT 'é…ç½®å€¼',
@@ -835,18 +620,11 @@ CREATE TABLE `t_extraction_config` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_platform_key` (`platform`,`config_key`),
   KEY `idx_platform` (`platform`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='æå–é…ç½®è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_extraction_task`
---
-
-DROP TABLE IF EXISTS `t_extraction_task`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_extraction_task
 CREATE TABLE `t_extraction_task` (
-  `id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '主键ID',
+`id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '主键ID',
   `source_id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'å†…å®¹æºID',
   `task_type` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'ä»»åŠ¡ç±»åž‹ï¼šOCR-å›¾ç‰‡è¯†åˆ«, NLP-æ–‡æœ¬åˆ†æž, VIDEO-è§†é¢‘åˆ†æž',
   `task_status` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT 'PENDING' COMMENT 'ä»»åŠ¡çŠ¶æ€ï¼šPENDING-å¾…å¤„ç†, PROCESSING-å¤„ç†ä¸­, SUCCESS-æˆåŠŸ, FAILED-å¤±è´¥',
@@ -863,18 +641,11 @@ CREATE TABLE `t_extraction_task` (
   KEY `idx_task_status` (`task_status`),
   KEY `idx_priority` (`priority`),
   KEY `idx_create_time` (`create_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='æå–ä»»åŠ¡è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_festival`
---
-
-DROP TABLE IF EXISTS `t_festival`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_festival
 CREATE TABLE `t_festival` (
-  `id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '主键ID',
+`id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '主键ID',
   `festival_name` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'èŠ‚æ—¥åç§°',
   `festival_type` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '节日类型：TRADITIONAL-传统节日, WESTERN-西方节日, SEASONAL-季节性, CUSTOM-自定义',
   `festival_date` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'èŠ‚æ—¥æ—¥æœŸï¼ˆMM-ddæ ¼å¼ï¼Œå¦‚01-01ï¼‰',
@@ -894,18 +665,11 @@ CREATE TABLE `t_festival` (
   KEY `idx_festival_date` (`festival_date`),
   KEY `idx_start_end_date` (`start_date`,`end_date`),
   KEY `idx_is_active` (`is_active`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='èŠ‚æ—¥è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_festival_dish_recommend`
---
-
-DROP TABLE IF EXISTS `t_festival_dish_recommend`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_festival_dish_recommend
 CREATE TABLE `t_festival_dish_recommend` (
-  `id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '主键ID',
+`id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '主键ID',
   `festival_id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '节日ID',
   `dish_id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'èœå“ID',
   `recommend_type` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'æŽ¨èç±»åž‹ï¼šMAIN-ä¸»æŽ¨, SECONDARY-æ¬¡æŽ¨, THEME-ä¸»é¢˜, SEASONAL-å­£èŠ‚',
@@ -923,18 +687,11 @@ CREATE TABLE `t_festival_dish_recommend` (
   KEY `idx_dish_id` (`dish_id`),
   KEY `idx_recommend_type` (`recommend_type`),
   KEY `idx_priority` (`priority`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='èŠ‚æ—¥æŽ¨èèœå“å…³è”è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_group`
---
-
-DROP TABLE IF EXISTS `t_group`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_group
 CREATE TABLE `t_group` (
-  `id` varchar(64) NOT NULL COMMENT '群组ID',
+`id` varchar(64) NOT NULL COMMENT '群组ID',
   `group_name` varchar(100) NOT NULL COMMENT '群名称',
   `creator_id` varchar(64) NOT NULL COMMENT '创建者ID',
   `description` varchar(500) DEFAULT NULL COMMENT '群描述',
@@ -942,18 +699,11 @@ CREATE TABLE `t_group` (
   `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
   KEY `idx_creator_id` (`creator_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='群信息表';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_group_member`
---
-
-DROP TABLE IF EXISTS `t_group_member`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_group_member
 CREATE TABLE `t_group_member` (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+`id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `group_id` varchar(64) NOT NULL COMMENT '群ID',
   `user_id` varchar(64) NOT NULL COMMENT '用户ID',
   `role` varchar(20) DEFAULT 'member' COMMENT 'è§’è‰²ï¼šowner-ç¾¤ä¸»ï¼Œadmin-ç®¡ç†å‘˜ï¼Œmember-æ™®é€šæˆå‘˜',
@@ -963,18 +713,11 @@ CREATE TABLE `t_group_member` (
   KEY `idx_group_id` (`group_id`),
   KEY `idx_user_id` (`user_id`),
   KEY `idx_role` (`role`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='ç¾¤æˆå‘˜å…³ç³»è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_group_order`
---
-
-DROP TABLE IF EXISTS `t_group_order`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_group_order
 CREATE TABLE `t_group_order` (
-  `id` varchar(64) NOT NULL COMMENT '群订单ID',
+`id` varchar(64) NOT NULL COMMENT '群订单ID',
   `initiator_id` varchar(64) NOT NULL,
   `merchant_id` varchar(64) DEFAULT NULL,
   `group_id` varchar(64) NOT NULL,
@@ -992,18 +735,11 @@ CREATE TABLE `t_group_order` (
   PRIMARY KEY (`id`),
   KEY `idx_group_id` (`group_id`),
   KEY `idx_merchant_id` (`merchant_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='ç¾¤è®¢å•è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_group_order_addition`
---
-
-DROP TABLE IF EXISTS `t_group_order_addition`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_group_order_addition
 CREATE TABLE `t_group_order_addition` (
-  `id` varchar(32) NOT NULL COMMENT 'åŠ èœè®°å½•ID',
+`id` varchar(32) NOT NULL COMMENT 'åŠ èœè®°å½•ID',
   `group_order_id` varchar(32) NOT NULL COMMENT 'ç¾¤è®¢å•ID',
   `group_id` varchar(32) NOT NULL COMMENT '群组ID',
   `user_id` varchar(32) NOT NULL COMMENT 'åŠ èœç”¨æˆ·ID',
@@ -1025,18 +761,11 @@ CREATE TABLE `t_group_order_addition` (
   KEY `idx_user_id` (`user_id`),
   KEY `idx_status` (`status`),
   KEY `idx_request_time` (`request_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='ç¾¤è®¢å•åŠ èœè¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_group_order_dish`
---
-
-DROP TABLE IF EXISTS `t_group_order_dish`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_group_order_dish
 CREATE TABLE `t_group_order_dish` (
-  `id` varchar(64) NOT NULL COMMENT 'ID',
+`id` varchar(64) NOT NULL COMMENT 'ID',
   `group_order_id` varchar(64) NOT NULL COMMENT '群订单ID',
   `dish_id` varchar(64) NOT NULL COMMENT '菜品ID',
   `quantity` int NOT NULL COMMENT 'æ•°é‡',
@@ -1045,18 +774,11 @@ CREATE TABLE `t_group_order_dish` (
   PRIMARY KEY (`id`),
   KEY `idx_group_order_id` (`group_order_id`),
   KEY `idx_dish_id` (`dish_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='ç¾¤è®¢å•èœå“è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_group_order_member`
---
-
-DROP TABLE IF EXISTS `t_group_order_member`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_group_order_member
 CREATE TABLE `t_group_order_member` (
-  `id` varchar(64) NOT NULL COMMENT '主键ID',
+`id` varchar(64) NOT NULL COMMENT '主键ID',
   `group_order_id` varchar(64) NOT NULL COMMENT '拼单ID',
   `user_id` varchar(64) NOT NULL COMMENT '用户ID',
   `role` varchar(32) NOT NULL DEFAULT 'member' COMMENT '成员角色：initiator-发起人，member-普通成员',
@@ -1075,18 +797,11 @@ CREATE TABLE `t_group_order_member` (
   KEY `idx_group_order_member_user_id` (`user_id`),
   KEY `idx_group_order_member_leave_status` (`leave_status`),
   KEY `idx_group_order_member_pay_status` (`pay_status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='拼单成员表';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_ingredient_conflict_rule`
---
-
-DROP TABLE IF EXISTS `t_ingredient_conflict_rule`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_ingredient_conflict_rule
 CREATE TABLE `t_ingredient_conflict_rule` (
-  `id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '规则ID',
+`id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '规则ID',
   `rule_name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'è§„åˆ™åç§°',
   `conflict_type` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'å†²çªç±»åž‹ï¼šALLERGY-è¿‡æ•, INCOMPATIBLE-é£Ÿæå†²çª, CUISINE-çƒ¹é¥ªç¦å¿Œ',
   `main_ingredients` json NOT NULL COMMENT 'ä¸»è¦é£Ÿæï¼ˆJSONæ•°ç»„ï¼Œå¦‚["è¾£æ¤’", "è¾£æ¤’ç²‰"]ï¼‰',
@@ -1101,18 +816,11 @@ CREATE TABLE `t_ingredient_conflict_rule` (
   PRIMARY KEY (`id`),
   KEY `idx_conflict_type` (`conflict_type`),
   KEY `idx_enabled` (`enabled`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='é£Ÿæå†²çªè§„åˆ™è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_menu`
---
-
-DROP TABLE IF EXISTS `t_menu`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_menu
 CREATE TABLE `t_menu` (
-  `id` varchar(64) NOT NULL COMMENT '菜单ID',
+`id` varchar(64) NOT NULL COMMENT '菜单ID',
   `merchant_id` varchar(64) NOT NULL COMMENT '商家ID',
   `name` varchar(100) NOT NULL COMMENT '菜单名称',
   `type` varchar(20) NOT NULL COMMENT '菜单类型（workday/weekend/afternoon_tea/package等）',
@@ -1125,18 +833,11 @@ CREATE TABLE `t_menu` (
   PRIMARY KEY (`id`),
   KEY `idx_merchant` (`merchant_id`),
   KEY `idx_type_status` (`type`,`status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='菜单表';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_menu_dish`
---
-
-DROP TABLE IF EXISTS `t_menu_dish`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_menu_dish
 CREATE TABLE `t_menu_dish` (
-  `id` varchar(64) NOT NULL COMMENT '菜单菜品关联ID',
+`id` varchar(64) NOT NULL COMMENT '菜单菜品关联ID',
   `menu_id` varchar(64) NOT NULL COMMENT '菜单ID',
   `dish_id` varchar(64) NOT NULL COMMENT '菜品ID',
   `sort` int DEFAULT '0' COMMENT '排序',
@@ -1145,18 +846,11 @@ CREATE TABLE `t_menu_dish` (
   UNIQUE KEY `uk_menu_dish` (`menu_id`,`dish_id`),
   KEY `idx_menu` (`menu_id`),
   KEY `idx_dish` (`dish_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='菜单菜品关联表';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_merchant`
---
-
-DROP TABLE IF EXISTS `t_merchant`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_merchant
 CREATE TABLE `t_merchant` (
-  `id` varchar(64) NOT NULL COMMENT '商家ID',
+`id` varchar(64) NOT NULL COMMENT '商家ID',
   `name` varchar(100) NOT NULL COMMENT '商家名称',
   `address` varchar(255) DEFAULT NULL,
   `longitude` decimal(10,6) DEFAULT NULL,
@@ -1183,18 +877,11 @@ CREATE TABLE `t_merchant` (
   PRIMARY KEY (`id`),
   KEY `idx_category` (`category`),
   KEY `idx_location` (`longitude`,`latitude`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='商家表';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_message_record`
---
-
-DROP TABLE IF EXISTS `t_message_record`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_message_record
 CREATE TABLE `t_message_record` (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+`id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `sender_id` bigint DEFAULT NULL COMMENT 'å‘é€è€…ID',
   `receiver_id` bigint DEFAULT NULL COMMENT '接收者ID',
   `content` text COLLATE utf8mb4_unicode_ci COMMENT 'æ¶ˆæ¯å†…å®¹',
@@ -1207,18 +894,11 @@ CREATE TABLE `t_message_record` (
   KEY `idx_sender_id` (`sender_id`),
   KEY `idx_receiver_id` (`receiver_id`),
   KEY `idx_read_status` (`read_status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='æ¶ˆæ¯è®°å½•è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_mock_oauth_user`
---
-
-DROP TABLE IF EXISTS `t_mock_oauth_user`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_mock_oauth_user
 CREATE TABLE `t_mock_oauth_user` (
-  `id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '主键ID',
+`id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '主键ID',
   `provider` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'wechat/qq',
   `open_id` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '模拟OpenID',
   `union_id` varchar(128) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '模拟UnionID',
@@ -1228,18 +908,11 @@ CREATE TABLE `t_mock_oauth_user` (
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_provider_openid` (`provider`,`open_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='æ¨¡æ‹Ÿç¬¬ä¸‰æ–¹ç”¨æˆ·ï¼ˆæ¯•è®¾æ¼”ç¤ºï¼‰';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_notification`
---
-
-DROP TABLE IF EXISTS `t_notification`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_notification
 CREATE TABLE `t_notification` (
-  `id` varchar(64) NOT NULL COMMENT '通知ID',
+`id` varchar(64) NOT NULL COMMENT '通知ID',
   `user_id` varchar(64) NOT NULL COMMENT '用户ID',
   `title` varchar(100) NOT NULL COMMENT '通知标题',
   `content` text NOT NULL COMMENT '通知内容',
@@ -1250,18 +923,11 @@ CREATE TABLE `t_notification` (
   PRIMARY KEY (`id`),
   KEY `idx_user` (`user_id`),
   KEY `idx_read_status` (`read_status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='系统通知表';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_nutrition`
---
-
-DROP TABLE IF EXISTS `t_nutrition`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_nutrition
 CREATE TABLE `t_nutrition` (
-  `id` varchar(32) NOT NULL COMMENT '主键ID',
+`id` varchar(32) NOT NULL COMMENT '主键ID',
   `food_code` varchar(20) DEFAULT NULL COMMENT 'é£Ÿç‰©ç¼–ç ',
   `food_name` varchar(100) NOT NULL COMMENT 'é£Ÿç‰©åç§°',
   `edible` decimal(5,2) DEFAULT NULL COMMENT 'å¯é£Ÿéƒ¨(%)',
@@ -1305,18 +971,11 @@ CREATE TABLE `t_nutrition` (
   KEY `idx_energy_kcal` (`energy_kcal`),
   KEY `idx_protein` (`protein`),
   KEY `idx_fat` (`fat`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='ä¸­å›½é£Ÿç‰©æˆåˆ†è¡¨è¥å…»æ•°æ®';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_order`
---
-
-DROP TABLE IF EXISTS `t_order`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_order
 CREATE TABLE `t_order` (
-  `id` varchar(50) NOT NULL COMMENT 'è®¢å•ID',
+`id` varchar(50) NOT NULL COMMENT 'è®¢å•ID',
   `parent_order_id` varchar(64) DEFAULT NULL COMMENT 'çˆ¶è®¢å•ID(åŠ èœè®¢å•å…³è”åŽŸè®¢å•)',
   `is_add_order` tinyint NOT NULL DEFAULT '0' COMMENT 'æ˜¯å¦ä¸ºåŠ èœè®¢å•: 0-å¦,1-æ˜¯',
   `add_dish_request_id` varchar(64) DEFAULT NULL COMMENT 'åŠ èœè¯·æ±‚ID',
@@ -1339,18 +998,11 @@ CREATE TABLE `t_order` (
   KEY `idx_status` (`status`),
   KEY `idx_payment_id` (`payment_id`),
   KEY `idx_parent_order` (`parent_order_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='订单表';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_order_dish`
---
-
-DROP TABLE IF EXISTS `t_order_dish`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_order_dish
 CREATE TABLE `t_order_dish` (
-  `id` varchar(64) NOT NULL,
+`id` varchar(64) NOT NULL,
   `order_id` varchar(64) NOT NULL,
   `dish_id` varchar(64) NOT NULL,
   `quantity` int NOT NULL COMMENT '数量',
@@ -1371,18 +1023,11 @@ CREATE TABLE `t_order_dish` (
   KEY `idx_step_status` (`step_status`),
   KEY `idx_step_sort` (`step_sort`),
   KEY `idx_order_step_status` (`order_id`,`step_status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='订单菜品表';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_payment_record`
---
-
-DROP TABLE IF EXISTS `t_payment_record`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_payment_record
 CREATE TABLE `t_payment_record` (
-  `id` varchar(64) NOT NULL COMMENT '支付记录ID',
+`id` varchar(64) NOT NULL COMMENT '支付记录ID',
   `payment_no` varchar(64) NOT NULL COMMENT 'æ”¯ä»˜æµæ°´å·',
   `order_id` varchar(64) NOT NULL COMMENT 'è®¢å•ID',
   `user_id` varchar(64) NOT NULL COMMENT '支付用户ID',
@@ -1404,18 +1049,11 @@ CREATE TABLE `t_payment_record` (
   KEY `idx_merchant_id` (`merchant_id`),
   KEY `idx_status` (`payment_status`),
   KEY `idx_create_time` (`create_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='æ”¯ä»˜è®°å½•è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_permission`
---
-
-DROP TABLE IF EXISTS `t_permission`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_permission
 CREATE TABLE `t_permission` (
-  `permission_id` bigint NOT NULL AUTO_INCREMENT COMMENT 'æƒé™ID',
+`permission_id` bigint NOT NULL AUTO_INCREMENT COMMENT 'æƒé™ID',
   `permission_name` varchar(100) NOT NULL COMMENT 'æƒé™åç§°',
   `permission_code` varchar(50) NOT NULL COMMENT 'æƒé™ç¼–ç ',
   `resource_type` varchar(20) NOT NULL COMMENT 'èµ„æºç±»åž‹ï¼šMENU-èœå•, BUTTON-æŒ‰é’®, API-æŽ¥å£',
@@ -1432,18 +1070,11 @@ CREATE TABLE `t_permission` (
   KEY `idx_permission_code` (`permission_code`),
   KEY `idx_resource_type` (`resource_type`),
   KEY `idx_parent_id` (`parent_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=88 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='æƒé™è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_recharge_record`
---
-
-DROP TABLE IF EXISTS `t_recharge_record`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_recharge_record
 CREATE TABLE `t_recharge_record` (
-  `id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '充值记录ID',
+`id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '充值记录ID',
   `recharge_no` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'å……å€¼æµæ°´å·',
   `user_id` bigint NOT NULL COMMENT '用户ID',
   `amount` decimal(10,2) NOT NULL COMMENT 'å……å€¼é‡‘é¢',
@@ -1460,18 +1091,11 @@ CREATE TABLE `t_recharge_record` (
   KEY `idx_user_id` (`user_id`),
   KEY `idx_status` (`recharge_status`),
   KEY `idx_create_time` (`create_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='å……å€¼è®°å½•è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_recipe`
---
-
-DROP TABLE IF EXISTS `t_recipe`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_recipe
 CREATE TABLE `t_recipe` (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '食谱ID',
+`id` bigint NOT NULL AUTO_INCREMENT COMMENT '食谱ID',
   `user_id` bigint DEFAULT NULL COMMENT '用户ID',
   `name` varchar(255) NOT NULL COMMENT '食谱名称',
   `type` varchar(20) NOT NULL COMMENT '食谱类型: breakfast/lunch/dinner/snack',
@@ -1487,18 +1111,11 @@ CREATE TABLE `t_recipe` (
   `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `items` json DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2062397879099817986 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='食谱表';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_refund_record`
---
-
-DROP TABLE IF EXISTS `t_refund_record`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_refund_record
 CREATE TABLE `t_refund_record` (
-  `refund_id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '退款记录ID',
+`refund_id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '退款记录ID',
   `refund_no` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'é€€æ¬¾æµæ°´å·',
   `order_id` bigint NOT NULL COMMENT 'è®¢å•ID',
   `order_no` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'è®¢å•å·',
@@ -1524,18 +1141,11 @@ CREATE TABLE `t_refund_record` (
   KEY `idx_user_id` (`user_id`),
   KEY `idx_status` (`status`),
   KEY `idx_apply_time` (`apply_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='é€€æ¬¾è®°å½•è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_reject_recommendation`
---
-
-DROP TABLE IF EXISTS `t_reject_recommendation`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_reject_recommendation
 CREATE TABLE `t_reject_recommendation` (
-  `id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '主键ID',
+`id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '主键ID',
   `user_id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '用户ID',
   `dish_id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'èœå“ID',
   `reject_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'æ‹’ç»æ—¶é—´',
@@ -1544,18 +1154,11 @@ CREATE TABLE `t_reject_recommendation` (
   KEY `idx_user_id` (`user_id`),
   KEY `idx_dish_id` (`dish_id`),
   KEY `idx_user_dish` (`user_id`,`dish_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='æŽ¨èæ‹’ç»è®°å½•è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_review`
---
-
-DROP TABLE IF EXISTS `t_review`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_review
 CREATE TABLE `t_review` (
-  `id` varchar(50) NOT NULL COMMENT 'è¯„ä»·ID',
+`id` varchar(50) NOT NULL COMMENT 'è¯„ä»·ID',
   `user_id` varchar(50) NOT NULL COMMENT '用户ID',
   `merchant_id` varchar(50) NOT NULL COMMENT '商家ID',
   `order_id` varchar(50) NOT NULL COMMENT 'è®¢å•ID',
@@ -1572,18 +1175,11 @@ CREATE TABLE `t_review` (
   KEY `idx_order_id` (`order_id`),
   KEY `idx_dish_id` (`dish_id`),
   KEY `idx_rating_create_time` (`rating`,`create_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户评价表';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_review_reply`
---
-
-DROP TABLE IF EXISTS `t_review_reply`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_review_reply
 CREATE TABLE `t_review_reply` (
-  `id` varchar(50) NOT NULL COMMENT 'å›žå¤ID',
+`id` varchar(50) NOT NULL COMMENT 'å›žå¤ID',
   `review_id` varchar(50) NOT NULL COMMENT 'è¯„ä»·ID',
   `merchant_id` varchar(50) NOT NULL COMMENT '商家ID',
   `content` varchar(500) DEFAULT NULL COMMENT '回复内容',
@@ -1592,18 +1188,11 @@ CREATE TABLE `t_review_reply` (
   `is_additional` tinyint DEFAULT '0' COMMENT 'æ˜¯å¦ä¸ºè¿½åŠ è¯„ä»·(0-å•†å®¶å›žå¤,1-ç”¨æˆ·è¿½è¯„)',
   PRIMARY KEY (`id`),
   KEY `idx_review_id` (`review_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='评价回复表';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_role`
---
-
-DROP TABLE IF EXISTS `t_role`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_role
 CREATE TABLE `t_role` (
-  `role_id` bigint NOT NULL AUTO_INCREMENT COMMENT '角色ID',
+`role_id` bigint NOT NULL AUTO_INCREMENT COMMENT '角色ID',
   `role_name` varchar(50) NOT NULL COMMENT 'è§’è‰²åç§°',
   `role_code` varchar(20) NOT NULL COMMENT 'è§’è‰²ç¼–ç ï¼šSUPER_ADMIN-è¶…çº§ç®¡ç†å‘˜, ADMIN-æ™®é€šç®¡ç†å‘˜, AUDITOR-å®¡æ ¸å‘˜',
   `description` varchar(255) DEFAULT NULL COMMENT 'è§’è‰²æè¿°',
@@ -1615,18 +1204,11 @@ CREATE TABLE `t_role` (
   UNIQUE KEY `role_code` (`role_code`),
   KEY `idx_role_code` (`role_code`),
   KEY `idx_status` (`status`)
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='è§’è‰²è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_role_permission`
---
-
-DROP TABLE IF EXISTS `t_role_permission`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_role_permission
 CREATE TABLE `t_role_permission` (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+`id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `role_id` bigint NOT NULL COMMENT '角色ID',
   `permission_id` bigint NOT NULL COMMENT 'æƒé™ID',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -1634,18 +1216,11 @@ CREATE TABLE `t_role_permission` (
   UNIQUE KEY `uk_role_permission` (`role_id`,`permission_id`),
   KEY `idx_role_id` (`role_id`),
   KEY `idx_permission_id` (`permission_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=141 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='è§’è‰²æƒé™å…³è”è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_role_permission_relation`
---
-
-DROP TABLE IF EXISTS `t_role_permission_relation`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_role_permission_relation
 CREATE TABLE `t_role_permission_relation` (
-  `relation_id` bigint NOT NULL AUTO_INCREMENT COMMENT 'å…³è”ID',
+`relation_id` bigint NOT NULL AUTO_INCREMENT COMMENT 'å…³è”ID',
   `role_id` bigint NOT NULL COMMENT '角色ID',
   `permission_id` bigint NOT NULL COMMENT 'æƒé™ID',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -1653,18 +1228,11 @@ CREATE TABLE `t_role_permission_relation` (
   UNIQUE KEY `uk_role_permission` (`role_id`,`permission_id`),
   KEY `idx_role_id` (`role_id`),
   KEY `idx_permission_id` (`permission_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=264 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='è§’è‰²-æƒé™å…³è”è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_scheduled_task`
---
-
-DROP TABLE IF EXISTS `t_scheduled_task`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_scheduled_task
 CREATE TABLE `t_scheduled_task` (
-  `id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '任务ID',
+`id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '任务ID',
   `task_name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'ä»»åŠ¡åç§°',
   `task_code` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'ä»»åŠ¡ä»£ç ',
   `description` text COLLATE utf8mb4_unicode_ci COMMENT 'ä»»åŠ¡æè¿°',
@@ -1696,18 +1264,11 @@ CREATE TABLE `t_scheduled_task` (
   KEY `idx_task_code` (`task_code`),
   KEY `idx_next_execute_time` (`next_execute_time`),
   KEY `idx_task_group` (`task_group`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='å®šæ—¶ä»»åŠ¡è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_scheduled_task_log`
---
-
-DROP TABLE IF EXISTS `t_scheduled_task_log`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_scheduled_task_log
 CREATE TABLE `t_scheduled_task_log` (
-  `id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '日志ID',
+`id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '日志ID',
   `task_id` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '任务ID',
   `task_name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'ä»»åŠ¡åç§°',
   `task_code` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'ä»»åŠ¡ä»£ç ',
@@ -1728,18 +1289,11 @@ CREATE TABLE `t_scheduled_task_log` (
   KEY `idx_task_code` (`task_code`),
   KEY `idx_start_time` (`start_time`),
   KEY `idx_execute_status` (`execute_status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='å®šæ—¶ä»»åŠ¡æ‰§è¡Œæ—¥å¿—è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_system_log`
---
-
-DROP TABLE IF EXISTS `t_system_log`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_system_log
 CREATE TABLE `t_system_log` (
-  `log_id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '日志ID',
+`log_id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '日志ID',
   `operation_type` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'æ“ä½œç±»åž‹',
   `module` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'æ“ä½œæ¨¡å—',
   `description` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'æ“ä½œæè¿°',
@@ -1762,18 +1316,11 @@ CREATE TABLE `t_system_log` (
   KEY `idx_operation_type` (`operation_type`),
   KEY `idx_status` (`status`),
   KEY `idx_create_time` (`create_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='ç³»ç»Ÿæ—¥å¿—è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_user`
---
-
-DROP TABLE IF EXISTS `t_user`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_user
 CREATE TABLE `t_user` (
-  `user_id` varchar(64) NOT NULL COMMENT '用户ID',
+`user_id` varchar(64) NOT NULL COMMENT '用户ID',
   `phone` varchar(11) NOT NULL COMMENT '手机号',
   `password` varchar(64) NOT NULL COMMENT '密码（BCrypt加密）',
   `payment_password` varchar(255) DEFAULT NULL COMMENT 'æ”¯ä»˜å¯†ç ï¼ˆåŠ å¯†å­˜å‚¨ï¼‰',
@@ -1796,18 +1343,11 @@ CREATE TABLE `t_user` (
   `bio` text COMMENT '个人简介',
   PRIMARY KEY (`user_id`),
   UNIQUE KEY `uk_phone` (`phone`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户表';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_user_custom_event`
---
-
-DROP TABLE IF EXISTS `t_user_custom_event`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_user_custom_event
 CREATE TABLE `t_user_custom_event` (
-  `id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '主键ID',
+`id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '主键ID',
   `user_id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '用户ID',
   `event_name` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'äº‹ä»¶åç§°',
   `event_type` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'äº‹ä»¶ç±»åž‹ï¼šBIRTHDAY-ç”Ÿæ—¥, ANNIVERSARY-çºªå¿µæ—¥, PARTY-èšä¼š, OTHER-å…¶ä»–',
@@ -1825,18 +1365,11 @@ CREATE TABLE `t_user_custom_event` (
   KEY `idx_user_id` (`user_id`),
   KEY `idx_event_date` (`event_date`),
   KEY `idx_event_type` (`event_type`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='ç”¨æˆ·è‡ªå®šä¹‰äº‹ä»¶è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_user_oauth`
---
-
-DROP TABLE IF EXISTS `t_user_oauth`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_user_oauth
 CREATE TABLE `t_user_oauth` (
-  `id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'ä¸»é”®ID (OA + 16ä½æ•°å­—)',
+`id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'ä¸»é”®ID (OA + 16ä½æ•°å­—)',
   `user_id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'å…³è”çš„æœ¬åœ°ç”¨æˆ·ID',
   `provider` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'å¹³å°æ ‡è¯†: wechat/qq',
   `open_id` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'OpenID',
@@ -1852,18 +1385,11 @@ CREATE TABLE `t_user_oauth` (
   UNIQUE KEY `uk_provider_openid` (`provider`,`open_id`),
   UNIQUE KEY `uk_provider_unionid` (`provider`,`union_id`),
   KEY `idx_user_id` (`user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='ç¬¬ä¸‰æ–¹OAuthè´¦å·å…³è”è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_user_preference`
---
-
-DROP TABLE IF EXISTS `t_user_preference`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_user_preference
 CREATE TABLE `t_user_preference` (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+`id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `user_id` bigint NOT NULL COMMENT '用户ID',
   `tag_weights` varchar(1000) DEFAULT '{}' COMMENT '标签权重，JSON格式（如 {"spicy": 0.1, "sweet": 0.8}）',
   `disable_weather_recommend` bit(1) DEFAULT b'0' COMMENT '是否关闭天气推荐',
@@ -1877,18 +1403,11 @@ CREATE TABLE `t_user_preference` (
   `enable_group_chat_notification` tinyint(1) DEFAULT '1' COMMENT 'ç¾¤èŠæ¶ˆæ¯é€šçŸ¥å¼€å…³',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_user_id` (`user_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2021410848815214594 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户推荐偏好表';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_user_recommend_history`
---
-
-DROP TABLE IF EXISTS `t_user_recommend_history`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_user_recommend_history
 CREATE TABLE `t_user_recommend_history` (
-  `id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '主键ID',
+`id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '主键ID',
   `user_id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '用户ID',
   `festival_id` varchar(32) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '节日ID',
   `custom_event_id` varchar(32) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '自定义事件ID',
@@ -1905,18 +1424,11 @@ CREATE TABLE `t_user_recommend_history` (
   KEY `idx_custom_event_id` (`custom_event_id`),
   KEY `idx_dish_id` (`dish_id`),
   KEY `idx_create_time` (`create_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='ç”¨æˆ·æŽ¨èè®°å½•è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_wallet`
---
-
-DROP TABLE IF EXISTS `t_wallet`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_wallet
 CREATE TABLE `t_wallet` (
-  `id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '钱包ID',
+`id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '钱包ID',
   `user_id` bigint NOT NULL COMMENT '用户ID',
   `balance` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT 'å½“å‰ä½™é¢ï¼ˆå…ƒï¼‰',
   `total_recharge` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT 'ç´¯è®¡å……å€¼é‡‘é¢',
@@ -1933,18 +1445,11 @@ CREATE TABLE `t_wallet` (
   UNIQUE KEY `user_id` (`user_id`),
   UNIQUE KEY `uk_user_id` (`user_id`),
   KEY `idx_status` (`status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='ç”¨æˆ·é’±åŒ…è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_wish_list_item`
---
-
-DROP TABLE IF EXISTS `t_wish_list_item`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_wish_list_item
 CREATE TABLE `t_wish_list_item` (
-  `id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '主键ID',
+`id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '主键ID',
   `user_id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '用户ID',
   `merchant_id` varchar(32) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'å•†å®¶IDï¼ˆå¯é€‰ï¼ŒæŒ‡å®šå•†å®¶çš„éœ€æ±‚ï¼‰',
   `dish_name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'èœå“åç§°',
@@ -1976,18 +1481,11 @@ CREATE TABLE `t_wish_list_item` (
   KEY `idx_audit_status` (`audit_status`),
   KEY `idx_timeout_time` (`timeout_time`),
   KEY `idx_create_time` (`create_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='æƒ³åƒåˆ—è¡¨é¡¹è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `t_withdraw_record`
---
-
-DROP TABLE IF EXISTS `t_withdraw_record`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: t_withdraw_record
 CREATE TABLE `t_withdraw_record` (
-  `id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'æçŽ°è®°å½•ID',
+`id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'æçŽ°è®°å½•ID',
   `withdraw_no` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'æçŽ°æµæ°´å·',
   `user_id` bigint NOT NULL COMMENT '用户ID',
   `amount` decimal(10,2) NOT NULL COMMENT 'æçŽ°é‡‘é¢',
@@ -2009,18 +1507,11 @@ CREATE TABLE `t_withdraw_record` (
   KEY `idx_user_id` (`user_id`),
   KEY `idx_status` (`withdraw_status`),
   KEY `idx_create_time` (`create_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='æçŽ°è®°å½•è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `tutorial`
---
-
-DROP TABLE IF EXISTS `tutorial`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: tutorial
 CREATE TABLE `tutorial` (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键id',
+`id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键id',
   `title` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '教程标题',
   `type` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '教程类型：video/article',
   `duration` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '时长',
@@ -2068,18 +1559,11 @@ CREATE TABLE `tutorial` (
   KEY `idx_source_id` (`source_id`),
   KEY `idx_linked_merchant_id` (`linked_merchant_id`),
   KEY `idx_linked_dish_id` (`linked_dish_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2057327777420861443 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='制作教程与指南表';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `user_behavior`
---
-
-DROP TABLE IF EXISTS `user_behavior`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: user_behavior
 CREATE TABLE `user_behavior` (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+`id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `user_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '用户ID',
   `behavior_type` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'è¡Œä¸ºç±»åž‹: view(æµè§ˆ)/click(ç‚¹å‡»)/order(ä¸‹å•)/favorite(æ”¶è—)/reject(æ‹’ç»)/share(åˆ†äº«)',
   `item_type` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'ç‰©å“ç±»åž‹: dish(èœå“)/merchant(å•†å®¶)/recipe(é£Ÿè°±)',
@@ -2092,18 +1576,11 @@ CREATE TABLE `user_behavior` (
   KEY `idx_item_time` (`item_id`,`created_time`),
   KEY `idx_behavior_type` (`behavior_type`),
   KEY `idx_user_behavior_type` (`user_id`,`behavior_type`,`created_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='ç”¨æˆ·è¡Œä¸ºè®°å½•è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `user_coupon`
---
-
-DROP TABLE IF EXISTS `user_coupon`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: user_coupon
 CREATE TABLE `user_coupon` (
-  `id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '优惠券ID',
+`id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '优惠券ID',
   `user_id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '用户ID',
   `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'ä¼˜æƒ åˆ¸åç§°',
   `amount` decimal(10,2) NOT NULL COMMENT 'ä¼˜æƒ é‡‘é¢',
@@ -2120,18 +1597,11 @@ CREATE TABLE `user_coupon` (
   KEY `idx_expire_time` (`expire_time`),
   KEY `idx_user_id_status` (`user_id`,`status`),
   KEY `idx_user_id_expire` (`user_id`,`expire_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='ç”¨æˆ·ä¼˜æƒ åˆ¸è¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Table structure for table `user_profile`
---
-
-DROP TABLE IF EXISTS `user_profile`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+-- Table: user_profile
 CREATE TABLE `user_profile` (
-  `id` bigint NOT NULL AUTO_INCREMENT,
+`id` bigint NOT NULL AUTO_INCREMENT,
   `user_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '用户ID',
   `preference_tags` json DEFAULT NULL COMMENT 'åå¥½æ ‡ç­¾: [{"tag": "å·èœ", "score": 0.8}, ...]',
   `dietary_restrictions` json DEFAULT NULL COMMENT 'é¥®é£Ÿç¦å¿Œ: ["è¿‡æ•åŽŸ", "å®—æ•™ç¦å¿Œ"]',
@@ -2144,301 +1614,5 @@ CREATE TABLE `user_profile` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `user_id` (`user_id`),
   KEY `idx_user_id` (`user_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='ç”¨æˆ·ç”»åƒè¡¨';
-/*!40101 SET character_set_client = @saved_cs_client */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Temporary view structure for view `v_active_festivals`
---
-
-DROP TABLE IF EXISTS `v_active_festivals`;
-/*!50001 DROP VIEW IF EXISTS `v_active_festivals`*/;
-SET @saved_cs_client     = @@character_set_client;
-/*!50503 SET character_set_client = utf8mb4 */;
-/*!50001 CREATE VIEW `v_active_festivals` AS SELECT 
- 1 AS `id`,
- 1 AS `festival_name`,
- 1 AS `festival_type`,
- 1 AS `festival_date`,
- 1 AS `year`,
- 1 AS `description`,
- 1 AS `icon`,
- 1 AS `background_image`,
- 1 AS `theme_color`,
- 1 AS `start_date`,
- 1 AS `end_date`,
- 1 AS `is_active`,
- 1 AS `sort_order`,
- 1 AS `create_time`,
- 1 AS `update_time`,
- 1 AS `is_current`,
- 1 AS `days_until_festival`*/;
-SET character_set_client = @saved_cs_client;
-
---
--- Temporary view structure for view `v_content_extraction_overview`
---
-
-DROP TABLE IF EXISTS `v_content_extraction_overview`;
-/*!50001 DROP VIEW IF EXISTS `v_content_extraction_overview`*/;
-SET @saved_cs_client     = @@character_set_client;
-/*!50503 SET character_set_client = utf8mb4 */;
-/*!50001 CREATE VIEW `v_content_extraction_overview` AS SELECT 
- 1 AS `id`,
- 1 AS `user_id`,
- 1 AS `content_url`,
- 1 AS `content_type`,
- 1 AS `platform`,
- 1 AS `title`,
- 1 AS `author`,
- 1 AS `cover_image`,
- 1 AS `extraction_status`,
- 1 AS `dish_name`,
- 1 AS `dish_image`,
- 1 AS `description`,
- 1 AS `ingredients`,
- 1 AS `steps`,
- 1 AS `cooking_time`,
- 1 AS `difficulty`,
- 1 AS `tags`,
- 1 AS `calories`,
- 1 AS `is_published`,
- 1 AS `recipe_id`,
- 1 AS `is_verified`,
- 1 AS `create_time`,
- 1 AS `extraction_time`*/;
-SET character_set_client = @saved_cs_client;
-
---
--- Temporary view structure for view `v_dish_popularity`
---
-
-DROP TABLE IF EXISTS `v_dish_popularity`;
-/*!50001 DROP VIEW IF EXISTS `v_dish_popularity`*/;
-SET @saved_cs_client     = @@character_set_client;
-/*!50503 SET character_set_client = utf8mb4 */;
-/*!50001 CREATE VIEW `v_dish_popularity` AS SELECT 
- 1 AS `dish_id`,
- 1 AS `dish_name`,
- 1 AS `view_count`,
- 1 AS `order_count`,
- 1 AS `favorite_count`,
- 1 AS `avg_rating`,
- 1 AS `feature_popularity`,
- 1 AS `computed_popularity`*/;
-SET character_set_client = @saved_cs_client;
-
---
--- Temporary view structure for view `v_order_dish_step_overview`
---
-
-DROP TABLE IF EXISTS `v_order_dish_step_overview`;
-/*!50001 DROP VIEW IF EXISTS `v_order_dish_step_overview`*/;
-SET @saved_cs_client     = @@character_set_client;
-/*!50503 SET character_set_client = utf8mb4 */;
-/*!50001 CREATE VIEW `v_order_dish_step_overview` AS SELECT 
- 1 AS `order_dish_id`,
- 1 AS `order_id`,
- 1 AS `dish_id`,
- 1 AS `dish_name`,
- 1 AS `quantity`,
- 1 AS `step_status`,
- 1 AS `step_start_time`,
- 1 AS `estimated_completion_time`,
- 1 AS `cooking_minutes`,
- 1 AS `step_sort`,
- 1 AS `is_fast_food`,
- 1 AS `serving_status`,
- 1 AS `order_status`,
- 1 AS `step_change_count`,
- 1 AS `last_step_change_time`*/;
-SET character_set_client = @saved_cs_client;
-
---
--- Temporary view structure for view `v_user_behavior_stats`
---
-
-DROP TABLE IF EXISTS `v_user_behavior_stats`;
-/*!50001 DROP VIEW IF EXISTS `v_user_behavior_stats`*/;
-SET @saved_cs_client     = @@character_set_client;
-/*!50503 SET character_set_client = utf8mb4 */;
-/*!50001 CREATE VIEW `v_user_behavior_stats` AS SELECT 
- 1 AS `user_id`,
- 1 AS `behavior_type`,
- 1 AS `behavior_count`,
- 1 AS `unique_items`,
- 1 AS `first_behavior`,
- 1 AS `last_behavior`*/;
-SET character_set_client = @saved_cs_client;
-
---
--- Dumping routines for database 'jia_shi_yi_xuan'
---
-/*!50003 DROP FUNCTION IF EXISTS `generate_session_id` */;
-/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
-/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
-/*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = latin1 */ ;
-/*!50003 SET character_set_results = latin1 */ ;
-/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
-/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
-DELIMITER ;;
-CREATE DEFINER=`root`@`localhost` FUNCTION `generate_session_id`(user1 VARCHAR(64), user2 VARCHAR(64)) RETURNS varchar(128) CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci
-    READS SQL DATA
-    DETERMINISTIC
-    COMMENT 'ç”Ÿæˆå•èŠä¼šè¯ID(ä¸¤ä¸ªç”¨æˆ·IDæŒ‰å­—å…¸åºæ‹¼æŽ¥)'
-BEGIN
-  DECLARE result VARCHAR(128);
-
-  -- 按字典序排序后拼接，确保唯一性
-  IF user1 < user2 THEN
-    SET result = CONCAT(user1, '_', user2);
-  ELSE
-    SET result = CONCAT(user2, '_', user1);
-  END IF;
-
-  RETURN result;
-END ;;
-DELIMITER ;
-/*!50003 SET sql_mode              = @saved_sql_mode */ ;
-/*!50003 SET character_set_client  = @saved_cs_client */ ;
-/*!50003 SET character_set_results = @saved_cs_results */ ;
-/*!50003 SET collation_connection  = @saved_col_connection */ ;
-/*!50003 DROP PROCEDURE IF EXISTS `sp_calculate_dish_popularity` */;
-/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
-/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
-/*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = latin1 */ ;
-/*!50003 SET character_set_results = latin1 */ ;
-/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
-/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
-DELIMITER ;;
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_calculate_dish_popularity`()
-BEGIN
-  -- 更新所有菜品的 popularity_score
-  UPDATE dish_features df
-  JOIN (
-    SELECT
-      CAST(d.id AS CHAR) as dish_id,
-      (LEAST(COALESCE(d.view_count, 0), 1000) / 1000 * 30 +
-       LEAST(COALESCE(d.order_count, 0), 500) / 500 * 50 +
-       LEAST(COALESCE(d.favorite_count, 0), 200) / 200 * 20) as base_popularity
-    FROM t_dish d
-  ) calc ON df.dish_id = calc.dish_id
-  SET df.popularity_score = LEAST(base_popularity, 100) / 100;
-  
-  -- 为有评分的菜品加上评分权重
-  UPDATE dish_features df
-  JOIN t_dish d ON df.dish_id = CAST(d.id AS CHAR)
-  SET df.popularity_score = df.popularity_score + (COALESCE(d.avg_rating, 0) / 5 * 0.1)
-  WHERE d.avg_rating IS NOT NULL;
-  
-END ;;
-DELIMITER ;
-/*!50003 SET sql_mode              = @saved_sql_mode */ ;
-/*!50003 SET character_set_client  = @saved_cs_client */ ;
-/*!50003 SET character_set_results = @saved_cs_results */ ;
-/*!50003 SET collation_connection  = @saved_col_connection */ ;
-
---
--- Final view structure for view `v_active_festivals`
---
-
-/*!50001 DROP VIEW IF EXISTS `v_active_festivals`*/;
-/*!50001 SET @saved_cs_client          = @@character_set_client */;
-/*!50001 SET @saved_cs_results         = @@character_set_results */;
-/*!50001 SET @saved_col_connection     = @@collation_connection */;
-/*!50001 SET character_set_client      = latin1 */;
-/*!50001 SET character_set_results     = latin1 */;
-/*!50001 SET collation_connection      = latin1_swedish_ci */;
-/*!50001 CREATE ALGORITHM=UNDEFINED */
-/*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `v_active_festivals` AS select `f`.`id` AS `id`,`f`.`festival_name` AS `festival_name`,`f`.`festival_type` AS `festival_type`,`f`.`festival_date` AS `festival_date`,`f`.`year` AS `year`,`f`.`description` AS `description`,`f`.`icon` AS `icon`,`f`.`background_image` AS `background_image`,`f`.`theme_color` AS `theme_color`,`f`.`start_date` AS `start_date`,`f`.`end_date` AS `end_date`,`f`.`is_active` AS `is_active`,`f`.`sort_order` AS `sort_order`,`f`.`create_time` AS `create_time`,`f`.`update_time` AS `update_time`,(case when ((`f`.`festival_type` = 'SEASONAL') and (curdate() between `f`.`start_date` and `f`.`end_date`)) then 1 when ((`f`.`festival_type` <> 'SEASONAL') and ((to_days(concat(year(curdate()),'-',`f`.`festival_date`)) - to_days(curdate())) between 0 and 7)) then 1 else 0 end) AS `is_current`,(case when (`f`.`festival_type` <> 'SEASONAL') then (to_days(concat(year(curdate()),'-',`f`.`festival_date`)) - to_days(curdate())) else NULL end) AS `days_until_festival` from `t_festival` `f` where (`f`.`is_active` = 1) */;
-/*!50001 SET character_set_client      = @saved_cs_client */;
-/*!50001 SET character_set_results     = @saved_cs_results */;
-/*!50001 SET collation_connection      = @saved_col_connection */;
-
---
--- Final view structure for view `v_content_extraction_overview`
---
-
-/*!50001 DROP VIEW IF EXISTS `v_content_extraction_overview`*/;
-/*!50001 SET @saved_cs_client          = @@character_set_client */;
-/*!50001 SET @saved_cs_results         = @@character_set_results */;
-/*!50001 SET @saved_col_connection     = @@collation_connection */;
-/*!50001 SET character_set_client      = latin1 */;
-/*!50001 SET character_set_results     = latin1 */;
-/*!50001 SET collation_connection      = latin1_swedish_ci */;
-/*!50001 CREATE ALGORITHM=UNDEFINED */
-/*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `v_content_extraction_overview` AS select `cs`.`id` AS `id`,`cs`.`user_id` AS `user_id`,`cs`.`content_url` AS `content_url`,`cs`.`content_type` AS `content_type`,`cs`.`platform` AS `platform`,`cs`.`title` AS `title`,`cs`.`author` AS `author`,`cs`.`cover_image` AS `cover_image`,`cs`.`extraction_status` AS `extraction_status`,`ce`.`dish_name` AS `dish_name`,`ce`.`dish_image` AS `dish_image`,`ce`.`description` AS `description`,`ce`.`ingredients` AS `ingredients`,`ce`.`steps` AS `steps`,`ce`.`cooking_time` AS `cooking_time`,`ce`.`difficulty` AS `difficulty`,`ce`.`tags` AS `tags`,`ce`.`calories` AS `calories`,`ce`.`is_published` AS `is_published`,`ce`.`recipe_id` AS `recipe_id`,`ce`.`is_verified` AS `is_verified`,`cs`.`create_time` AS `create_time`,`cs`.`extraction_time` AS `extraction_time` from (`t_content_source` `cs` left join `t_content_extraction` `ce` on((`cs`.`id` = `ce`.`source_id`))) order by `cs`.`create_time` desc */;
-/*!50001 SET character_set_client      = @saved_cs_client */;
-/*!50001 SET character_set_results     = @saved_cs_results */;
-/*!50001 SET collation_connection      = @saved_col_connection */;
-
---
--- Final view structure for view `v_dish_popularity`
---
-
-/*!50001 DROP VIEW IF EXISTS `v_dish_popularity`*/;
-/*!50001 SET @saved_cs_client          = @@character_set_client */;
-/*!50001 SET @saved_cs_results         = @@character_set_results */;
-/*!50001 SET @saved_col_connection     = @@collation_connection */;
-/*!50001 SET character_set_client      = latin1 */;
-/*!50001 SET character_set_results     = latin1 */;
-/*!50001 SET collation_connection      = latin1_swedish_ci */;
-/*!50001 CREATE ALGORITHM=UNDEFINED */
-/*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `v_dish_popularity` AS select `d`.`id` AS `dish_id`,`d`.`name` AS `dish_name`,`d`.`view_count` AS `view_count`,`d`.`order_count` AS `order_count`,`d`.`favorite_count` AS `favorite_count`,`d`.`avg_rating` AS `avg_rating`,coalesce(`df`.`popularity_score`,0) AS `feature_popularity`,(((coalesce(`d`.`view_count`,0) * 0.3) + (coalesce(`d`.`order_count`,0) * 0.5)) + (coalesce(`d`.`favorite_count`,0) * 0.2)) AS `computed_popularity` from (`t_dish` `d` left join `dish_features` `df` on((cast(`d`.`id` as char charset latin1) = `df`.`dish_id`))) */;
-/*!50001 SET character_set_client      = @saved_cs_client */;
-/*!50001 SET character_set_results     = @saved_cs_results */;
-/*!50001 SET collation_connection      = @saved_col_connection */;
-
---
--- Final view structure for view `v_order_dish_step_overview`
---
-
-/*!50001 DROP VIEW IF EXISTS `v_order_dish_step_overview`*/;
-/*!50001 SET @saved_cs_client          = @@character_set_client */;
-/*!50001 SET @saved_cs_results         = @@character_set_results */;
-/*!50001 SET @saved_col_connection     = @@collation_connection */;
-/*!50001 SET character_set_client      = latin1 */;
-/*!50001 SET character_set_results     = latin1 */;
-/*!50001 SET collation_connection      = latin1_swedish_ci */;
-/*!50001 CREATE ALGORITHM=UNDEFINED */
-/*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `v_order_dish_step_overview` AS select `od`.`id` AS `order_dish_id`,`od`.`order_id` AS `order_id`,cast(`od`.`dish_id` as char charset binary) AS `dish_id`,`d`.`name` AS `dish_name`,`od`.`quantity` AS `quantity`,`od`.`step_status` AS `step_status`,`od`.`step_start_time` AS `step_start_time`,`od`.`estimated_completion_time` AS `estimated_completion_time`,`od`.`cooking_minutes` AS `cooking_minutes`,`od`.`step_sort` AS `step_sort`,`od`.`is_fast_food` AS `is_fast_food`,`od`.`serving_status` AS `serving_status`,`o`.`status` AS `order_status`,(select count(0) from `t_dish_step_history` `dsh` where (cast(`dsh`.`order_dish_id` as char charset binary) = cast(`od`.`id` as char charset binary))) AS `step_change_count`,(select max(`dsh`.`create_time`) from `t_dish_step_history` `dsh` where (cast(`dsh`.`order_dish_id` as char charset binary) = cast(`od`.`id` as char charset binary))) AS `last_step_change_time` from ((`t_order_dish` `od` left join `t_dish` `d` on((cast(`od`.`dish_id` as char charset binary) = cast(`d`.`id` as char charset binary)))) left join `t_order` `o` on((cast(`od`.`order_id` as char charset binary) = cast(`o`.`id` as char charset binary)))) */;
-/*!50001 SET character_set_client      = @saved_cs_client */;
-/*!50001 SET character_set_results     = @saved_cs_results */;
-/*!50001 SET collation_connection      = @saved_col_connection */;
-
---
--- Final view structure for view `v_user_behavior_stats`
---
-
-/*!50001 DROP VIEW IF EXISTS `v_user_behavior_stats`*/;
-/*!50001 SET @saved_cs_client          = @@character_set_client */;
-/*!50001 SET @saved_cs_results         = @@character_set_results */;
-/*!50001 SET @saved_col_connection     = @@collation_connection */;
-/*!50001 SET character_set_client      = latin1 */;
-/*!50001 SET character_set_results     = latin1 */;
-/*!50001 SET collation_connection      = latin1_swedish_ci */;
-/*!50001 CREATE ALGORITHM=UNDEFINED */
-/*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `v_user_behavior_stats` AS select `user_behavior`.`user_id` AS `user_id`,`user_behavior`.`behavior_type` AS `behavior_type`,count(0) AS `behavior_count`,count(distinct `user_behavior`.`item_id`) AS `unique_items`,min(`user_behavior`.`created_time`) AS `first_behavior`,max(`user_behavior`.`created_time`) AS `last_behavior` from `user_behavior` group by `user_behavior`.`user_id`,`user_behavior`.`behavior_type` */;
-/*!50001 SET character_set_client      = @saved_cs_client */;
-/*!50001 SET character_set_results     = @saved_cs_results */;
-/*!50001 SET collation_connection      = @saved_col_connection */;
-/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
-
-/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
-/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
-/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
-/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
-
--- Dump completed on 2026-10-25  8:59:53

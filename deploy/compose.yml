@@ -42,7 +42,8 @@ services:
       - MYSQL_PASSWORD=${DB_PASSWORD:?DB_PASSWORD missing; run scripts/gen-env.sh}
     volumes:
       - mysql-data:/var/lib/mysql
-      - ../db/init:/docker-entrypoint-initdb.d:ro
+      # Flyway 管理 schema 和种子数据，db/init 不再挂载到 initdb.d
+      # - ../db/init:/docker-entrypoint-initdb.d:ro
     networks:
       - jaseats-net
     healthcheck:
