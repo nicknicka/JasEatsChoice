@@ -23,12 +23,12 @@
 - 考虑到当前是单体应用 + MySQL 单库，`bigint` 自增更简单高效
 - 但改 ID 类型改动极大（所有关联字段都要改），需要评估 ROI
 
-### 2. 冗余/重复代码（中优先级）
+### 2. 冗余/重复代码（中优先级）✅ 已完成
 
 - **UserAddress Entity**：死代码，无调用方，对应表不存在。有 `Address` 作为活跃实现。
 - 可能还有其他冗余 Entity，待排查。
 
-### 3. 索引缺失（低优先级）
+### 3. 索引缺失（中优先级）✅ 已完成
 
 只有 3 张表只有主键索引（无二级索引）：
 - `cnt_recipe`
@@ -53,7 +53,7 @@
 
 第一阶段只改了表名，字段名没有统一。
 
-### 6. 金额字段类型（低优先级）
+### 6. 金额字段类型（高优先级）✅ 已修复
 
 需要检查所有金额字段是否都用了 `DECIMAL` 而不是 `DOUBLE` / `FLOAT`。
 浮点数存金额会有精度问题。
@@ -70,4 +70,16 @@
 
 ## 状态
 
-proposed — 待评估是否执行、执行哪些。
+partially-completed — 已完成 P1（清理死代码）、P2（补索引）、P4（金额精度修复）。
+
+## 已完成变更
+
+- V5 迁移：补充 cnt_recipe (idx_recipe_user_create, idx_recipe_user_favorite) 和 wlt_discount (idx_discount_merchant) 索引
+- V5 迁移：soc_group_order.total_amount / wlt_discount.discount_value / wlt_discount.min_amount 从 double → decimal(10,2)
+- 删除 UserAddress / UserAddressMapper / UserAddressService / UserAddressServiceImpl 死代码
+
+## 剩余未做（ROI 偏低，暂缓）
+
+- 字段命名统一（create_time → created_at 等）— 改动大，收益低
+- ID 类型统一 — 改动极大，收益低
+
