@@ -6,6 +6,7 @@ import dev.langchain4j.community.model.zhipu.ZhipuAiChatModel;
 import dev.langchain4j.community.model.zhipu.ZhipuAiStreamingChatModel;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
+import com.xx.jaseatschoicejava.agent.dto.AiCapabilitiesDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -147,6 +148,23 @@ public class ZhipuChatModelFactory {
                     .apiKey(apiKey)
                     .model(model)
                     .temperature(aiConfig.getTemperature() != null ? aiConfig.getTemperature() : 0.7)
+                    .build();
+            }
+
+            @Override
+            public AiCapabilitiesDTO getCapabilities() {
+                return AiCapabilitiesDTO.builder()
+                    .available(hasKey)
+                    .provider("zhipu")
+                    .model(model)
+                    .visionModel(visionModel)
+                    .textChat(hasKey)
+                    .streaming(hasKey)
+                    .vision(hasKey)
+                    .functionCalling(hasKey)
+                    .agentic(hasKey)
+                    .unavailableMessage(hasKey ? "" :
+                        "AI 未配置：请设置 AI_API_KEY（或 ZHIPU_API_KEY）后重启服务")
                     .build();
             }
         };

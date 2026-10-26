@@ -1,5 +1,6 @@
 package com.xx.jaseatschoicejava.agent.config;
 
+import com.xx.jaseatschoicejava.exception.BusinessException;
 import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
@@ -15,6 +16,6 @@ public class NoopStreamingChatModel implements StreamingChatModel {
 
     @Override
     public void doChat(ChatRequest chatRequest, StreamingChatResponseHandler handler) {
-        handler.onError(new IllegalStateException(NoopChatModel.MESSAGE));
+        handler.onError(new BusinessException(NoopChatModel.ERROR_CODE, NoopChatModel.MESSAGE));
     }
 }
