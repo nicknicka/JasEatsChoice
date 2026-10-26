@@ -1,20 +1,10 @@
 package com.xx.jaseatschoicejava.agent.config;
 
-import dev.langchain4j.model.chat.StreamingChatModel;
-import dev.langchain4j.model.chat.request.ChatRequest;
-import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
-
 /**
- * 未配置 ZHIPU_API_KEY 时占位的流式 ChatModel。
+ * 兼容旧名：请使用 {@link NoopStreamingChatModel}。
  *
- * 同 {@link ZhipuDisabledChatModel}：构造期不能抛异常，否则 Spring 上下文起不来。
- * 流式接口是回调式的，所以失败通过 handler.onError 交回调用方，而不是把异常
- * 抛回调用线程。
+ * @deprecated 统一使用 {@link NoopStreamingChatModel}
  */
-public class ZhipuDisabledStreamingChatModel implements StreamingChatModel {
-
-    @Override
-    public void doChat(ChatRequest chatRequest, StreamingChatResponseHandler handler) {
-        handler.onError(new IllegalStateException(ZhipuDisabledChatModel.MESSAGE));
-    }
+@Deprecated
+public class ZhipuDisabledStreamingChatModel extends NoopStreamingChatModel {
 }
