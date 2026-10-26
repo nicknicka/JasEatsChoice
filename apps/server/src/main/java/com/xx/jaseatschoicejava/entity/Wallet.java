@@ -19,7 +19,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("t_wallet")
+@TableName("wlt_wallet")
 @ApiModel(description = "用户钱包实体")
 public class Wallet {
 

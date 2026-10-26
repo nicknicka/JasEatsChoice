@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
  * @since 2025-01-30
  */
 @Data
-@TableName("t_ingredient_conflict_rule")
+@TableName("nut_ingredient_conflict_rule")
 @ApiModel(description = "食材冲突规则")
 public class IngredientConflictRule {
 

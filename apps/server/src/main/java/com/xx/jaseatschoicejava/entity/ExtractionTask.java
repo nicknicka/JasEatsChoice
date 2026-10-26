@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
  * @since 2025-01-31
  */
 @Data
-@TableName("t_extraction_task")
+@TableName("ext_extraction_task")
 public class ExtractionTask {
 
     /**

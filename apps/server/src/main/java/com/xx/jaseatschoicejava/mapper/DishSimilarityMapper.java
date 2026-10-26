@@ -18,19 +18,19 @@ public interface DishSimilarityMapper extends BaseMapper<DishSimilarity> {
     /**
      * 获取菜品的相似菜品列表（按相似度降序）
      */
-    @Select("SELECT * FROM dish_similarity WHERE dish_id_a = #{dishId} AND similarity_type = #{similarityType} ORDER BY similarity_score DESC LIMIT #{limit}")
+    @Select("SELECT * FROM mch_dish_similarity WHERE dish_id_a = #{dishId} AND similarity_type = #{similarityType} ORDER BY similarity_score DESC LIMIT #{limit}")
     List<DishSimilarity> getSimilarDishes(@Param("dishId") String dishId, @Param("similarityType") String similarityType, @Param("limit") int limit);
 
     /**
      * 获取菜品的高相似度菜品（相似度 > 阈值）
      */
-    @Select("SELECT * FROM dish_similarity WHERE dish_id_a = #{dishId} AND similarity_type = #{similarityType} AND similarity_score >= #{threshold} ORDER BY similarity_score DESC")
+    @Select("SELECT * FROM mch_dish_similarity WHERE dish_id_a = #{dishId} AND similarity_type = #{similarityType} AND similarity_score >= #{threshold} ORDER BY similarity_score DESC")
     List<DishSimilarity> getHighSimilarityDishes(@Param("dishId") String dishId, @Param("similarityType") String similarityType, @Param("threshold") BigDecimal threshold);
 
     /**
      * 获取两个菜品之间的相似度
      */
-    @Select("SELECT * FROM dish_similarity WHERE dish_id_a = #{dishIdA} AND dish_id_b = #{dishIdB} AND similarity_type = #{similarityType}")
+    @Select("SELECT * FROM mch_dish_similarity WHERE dish_id_a = #{dishIdA} AND dish_id_b = #{dishIdB} AND similarity_type = #{similarityType}")
     DishSimilarity getSimilarity(@Param("dishIdA") String dishIdA, @Param("dishIdB") String dishIdB, @Param("similarityType") String similarityType);
 
     /**

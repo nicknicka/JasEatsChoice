@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
  * 群订单实体
  */
 @Data
-@TableName("t_group_order")
+@TableName("soc_group_order")
 public class GroupOrder {
     @TableId(value = "id", type = IdType.ASSIGN_ID)
     private String id;

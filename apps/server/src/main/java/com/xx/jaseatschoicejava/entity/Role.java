@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("t_role")
+@TableName("sys_role")
 @ApiModel(description = "角色实体")
 public class Role {
 

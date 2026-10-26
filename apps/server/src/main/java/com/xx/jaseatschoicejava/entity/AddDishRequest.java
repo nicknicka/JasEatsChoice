@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
  * 加菜请求实体
  */
 @Data
-@TableName("t_add_dish_request")
+@TableName("cnt_add_dish_request")
 public class AddDishRequest {
     @TableId(value = "id", type = IdType.INPUT)
     private String id;

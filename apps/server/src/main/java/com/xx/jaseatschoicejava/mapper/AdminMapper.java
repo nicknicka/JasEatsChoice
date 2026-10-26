@@ -18,8 +18,8 @@ public interface AdminMapper extends BaseMapper<Admin> {
     /**
      * 根据用户名查询管理员（包含角色信息）
      */
-    @Select("SELECT a.*, r.role_name, r.role_code FROM t_admin a " +
-            "LEFT JOIN t_role r ON a.role_id = r.role_id " +
+    @Select("SELECT a.*, r.role_name, r.role_code FROM sys_admin a " +
+            "LEFT JOIN sys_role r ON a.role_id = r.role_id " +
             "WHERE a.username = #{username} AND a.status != 'DELETED'")
     Admin selectByUsernameWithRole(@Param("username") String username);
 
@@ -27,8 +27,8 @@ public interface AdminMapper extends BaseMapper<Admin> {
      * 分页查询管理员列表（包含角色信息）
      */
     @Select("<script>" +
-            "SELECT a.*, r.role_name, r.role_code FROM t_admin a " +
-            "LEFT JOIN t_role r ON a.role_id = r.role_id " +
+            "SELECT a.*, r.role_name, r.role_code FROM sys_admin a " +
+            "LEFT JOIN sys_role r ON a.role_id = r.role_id " +
             "WHERE a.status != 'DELETED' " +
             "<if test='username != null and username != \"\"'>" +
             "AND a.username LIKE CONCAT('%', #{username}, '%') " +

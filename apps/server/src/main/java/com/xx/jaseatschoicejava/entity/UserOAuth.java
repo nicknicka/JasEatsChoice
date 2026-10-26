@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("t_user_oauth")
+@TableName("usr_user_oauth")
 @ApiModel(description = "第三方OAuth账号关联")
 public class UserOAuth {
 

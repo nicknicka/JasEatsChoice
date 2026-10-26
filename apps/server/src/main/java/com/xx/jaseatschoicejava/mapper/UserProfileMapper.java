@@ -17,13 +17,13 @@ public interface UserProfileMapper extends BaseMapper<UserProfile> {
     /**
      * 根据用户ID查询用户画像
      */
-    @Select("SELECT * FROM user_profile WHERE user_id = #{userId}")
+    @Select("SELECT * FROM usr_profile WHERE user_id = #{userId}")
     UserProfile getByUserId(@Param("userId") String userId);
 
     /**
      * 获取需要更新的用户画像列表（根据最后更新时间）
      */
-    @Select("SELECT * FROM user_profile WHERE last_updated < #{threshold}")
+    @Select("SELECT * FROM usr_profile WHERE last_updated < #{threshold}")
     List<UserProfile> getProfilesNeedUpdate(java.time.LocalDateTime threshold);
 
     /**

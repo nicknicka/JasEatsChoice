@@ -18,7 +18,7 @@ import java.util.Map;
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
-@TableName(value = "user_profile", autoResultMap = true)
+@TableName(value = "usr_profile", autoResultMap = true)
 public class UserProfile {
 
     /**

@@ -70,7 +70,7 @@ public class PaymentController {
             if (order.getPaidAmount() != null && order.getTotalAmount() != null) {
                 discount = order.getTotalAmount().subtract(order.getPaidAmount());
             }
-            paymentInfo.put("discount", discount);
+            paymentInfo.put("wlt_discount", discount);
             paymentInfo.put("finalAmount", order.getTotalAmount().subtract(discount));
 
             return ResponseResult.success(paymentInfo);

@@ -243,7 +243,7 @@ public class DishFeatureServiceImpl implements DishFeatureService {
      */
     private List<String> getUsersWhoLikedDish(String dishId) {
         // TODO: 从user_behavior表查询
-        // SELECT DISTINCT user_id FROM user_behavior WHERE item_type='dish' AND item_id=dishId AND behavior_type IN ('click', 'order', 'favorite')
+        // SELECT DISTINCT user_id FROM ai_user_behavior WHERE item_type='dish' AND item_id=dishId AND behavior_type IN ('click', 'order', 'favorite')
 
         // 暂时返回空列表，实际应该从数据库查询
         return new ArrayList<>();

@@ -23,7 +23,7 @@ public interface UserCustomEventMapper extends BaseMapper<UserCustomEvent> {
      * @param userId 用户ID
      * @return 事件列表
      */
-    @Select("SELECT * FROM t_user_custom_event WHERE user_id = #{userId} AND is_active = 1 ORDER BY create_time DESC")
+    @Select("SELECT * FROM usr_user_custom_event WHERE user_id = #{userId} AND is_active = 1 ORDER BY create_time DESC")
     List<UserCustomEvent> selectByUserId(@Param("userId") String userId);
 
     /**
@@ -33,7 +33,7 @@ public interface UserCustomEventMapper extends BaseMapper<UserCustomEvent> {
      * @param days 天数范围
      * @return 事件列表
      */
-    @Select("SELECT * FROM t_user_custom_event " +
+    @Select("SELECT * FROM usr_user_custom_event " +
             "WHERE user_id = #{userId} AND is_active = 1 " +
             "AND DATEDIFF(CONCAT(IFNULL(year, YEAR(CURDATE())), '-', event_date), CURDATE()) BETWEEN 0 AND #{days} " +
             "ORDER BY event_date ASC")

@@ -18,7 +18,7 @@ import java.util.List;
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
-@TableName("recommendation_log")
+@TableName("ai_recommendation_log")
 public class RecommendationLog {
 
     /**
@@ -128,7 +128,7 @@ public class RecommendationLog {
         COLLABORATIVE_FILTERING("collaborative_filtering", "协同过滤"),
         CONTENT_BASED("content_based", "基于内容"),
         HOT("hot", "热门推荐"),
-        USER_PROFILE("user_profile", "用户画像"),
+        USER_PROFILE("usr_profile", "用户画像"),
         HYBRID("hybrid", "混合推荐");
 
         private final String code;

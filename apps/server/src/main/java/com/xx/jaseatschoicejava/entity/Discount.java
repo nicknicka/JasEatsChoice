@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
  * 优惠活动实体类
  */
 @Data
-@TableName("discount")
+@TableName("wlt_discount")
 public class Discount {
     @TableId(type = IdType.ASSIGN_ID)
     @ApiModelProperty(value = "优惠ID")

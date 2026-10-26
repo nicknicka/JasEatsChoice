@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("t_admin_role_relation")
+@TableName("sys_admin_role_relation")
 @ApiModel(description = "管理员-角色关联实体")
 public class AdminRoleRelation {
 

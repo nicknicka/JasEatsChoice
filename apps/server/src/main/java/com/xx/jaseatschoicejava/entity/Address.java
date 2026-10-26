@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
  * 用户地址实体
  */
 @Data
-@TableName("t_address")
+@TableName("usr_address")
 public class Address {
     @TableId(value = "id", type = IdType.ASSIGN_ID)
     private String id;

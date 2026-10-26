@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("t_mock_oauth_user")
+@TableName("usr_mock_oauth_user")
 public class MockOAuthUser {
 
     @TableId(value = "id", type = com.baomidou.mybatisplus.annotation.IdType.INPUT)

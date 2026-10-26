@@ -26,8 +26,8 @@ public interface MenuDishMapper extends BaseMapper<MenuDish> {
      * @return 菜单信息列表，包含菜单ID、名称、类型、状态以及菜品在该菜单中的状态
      */
     @Select("SELECT m.id, m.name, m.type, m.status AS menu_status, md.status AS dish_status " +
-            "FROM t_menu m " +
-            "INNER JOIN t_menu_dish md ON m.id = md.menu_id " +
+            "FROM mch_menu m " +
+            "INNER JOIN mch_menu_dish md ON m.id = md.menu_id " +
             "WHERE md.dish_id = #{dishId}")
     @Results({
         @Result(column = "id", property = "id"),
@@ -43,6 +43,6 @@ public interface MenuDishMapper extends BaseMapper<MenuDish> {
      * @param menuId 菜单ID
      * @return 菜品数量
      */
-    @Select("SELECT COUNT(*) FROM t_menu_dish WHERE menu_id = #{menuId}")
+    @Select("SELECT COUNT(*) FROM mch_menu_dish WHERE menu_id = #{menuId}")
     Integer selectDishCountByMenuId(@Param("menuId") String menuId);
 }

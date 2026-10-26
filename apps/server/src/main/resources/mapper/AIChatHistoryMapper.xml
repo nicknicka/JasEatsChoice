@@ -4,7 +4,7 @@
 
     <!-- 根据用户ID删除所有聊天记录 -->
     <delete id="deleteByUserId" parameterType="java.lang.String">
-        DELETE FROM t_ai_chat_history
+        DELETE FROM ai_chat_history
         WHERE user_id = #{userId}
     </delete>
 

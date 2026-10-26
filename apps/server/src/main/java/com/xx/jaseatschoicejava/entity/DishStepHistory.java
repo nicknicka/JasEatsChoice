@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
  * @since 2025-01-30
  */
 @Data
-@TableName("t_dish_step_history")
+@TableName("cnt_dish_step_history")
 public class DishStepHistory {
 
     /**

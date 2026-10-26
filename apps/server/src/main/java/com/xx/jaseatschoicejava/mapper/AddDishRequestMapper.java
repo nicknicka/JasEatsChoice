@@ -18,7 +18,7 @@ public interface AddDishRequestMapper extends BaseMapper<AddDishRequest> {
     /**
      * 查询超时的待审核请求
      */
-    @Select("SELECT * FROM t_add_dish_request " +
+    @Select("SELECT * FROM cnt_add_dish_request " +
             "WHERE approval_status = 0 " +
             "AND timeout_time < #{now}")
     List<AddDishRequest> selectTimeoutRequests(@Param("now") LocalDateTime now);
@@ -26,7 +26,7 @@ public interface AddDishRequestMapper extends BaseMapper<AddDishRequest> {
     /**
      * 查询需要提醒的请求（10分钟未处理且未发送二次提醒）
      */
-    @Select("SELECT * FROM t_add_dish_request " +
+    @Select("SELECT * FROM cnt_add_dish_request " +
             "WHERE approval_status = 0 " +
             "AND first_remind_time < #{now} " +
             "AND second_remind_time IS NULL")

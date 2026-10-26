@@ -15,7 +15,7 @@ import lombok.AllArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("t_menu_dish")
+@TableName("mch_menu_dish")
 @ApiModel(description = "菜单菜品关联实体")
 public class MenuDish {
 

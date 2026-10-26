@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("t_permission")
+@TableName("sys_permission")
 @ApiModel(description = "权限实体")
 public class Permission {
 

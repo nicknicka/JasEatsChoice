@@ -18,7 +18,7 @@ import java.util.Map;
  * 食谱实体
  */
 @Data
-@TableName("t_recipe")
+@TableName("cnt_recipe")
 @ApiModel(description = "食谱实体")
 public class Recipe {
 

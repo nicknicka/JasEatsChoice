@@ -23,7 +23,7 @@ public interface JFoodNutritionMapper extends BaseMapper<JFoodNutrition> {
      * @param foodName 食物名称
      * @return 营养数据列表
      */
-    @Select("SELECT * FROM j_food_nutrition WHERE food_name LIKE CONCAT('%', #{foodName}, '%') LIMIT 10")
+    @Select("SELECT * FROM nut_food_nutrition WHERE food_name LIKE CONCAT('%', #{foodName}, '%') LIMIT 10")
     List<JFoodNutrition> searchByFoodName(@Param("foodName") String foodName);
 
     /**
@@ -32,7 +32,7 @@ public interface JFoodNutritionMapper extends BaseMapper<JFoodNutrition> {
      * @param foodName 食物名称
      * @return 营养数据
      */
-    @Select("SELECT * FROM j_food_nutrition WHERE food_name = #{foodName} LIMIT 1")
+    @Select("SELECT * FROM nut_food_nutrition WHERE food_name = #{foodName} LIMIT 1")
     JFoodNutrition getByFoodName(@Param("foodName") String foodName);
 
     /**
@@ -41,6 +41,6 @@ public interface JFoodNutritionMapper extends BaseMapper<JFoodNutrition> {
      * @param aliasName 别名
      * @return 营养数据
      */
-    @Select("SELECT * FROM j_food_nutrition WHERE alias_name LIKE CONCAT('%', #{aliasName}, '%') LIMIT 10")
+    @Select("SELECT * FROM nut_food_nutrition WHERE alias_name LIKE CONCAT('%', #{aliasName}, '%') LIMIT 10")
     List<JFoodNutrition> searchByAliasName(@Param("aliasName") String aliasName);
 }

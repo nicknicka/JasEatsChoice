@@ -19,8 +19,8 @@ public interface RefundRecordMapper extends BaseMapper<RefundRecord> {
      */
     @Select("<script>" +
             "SELECT r.*, u.phone AS username, u.nickname " +
-            "FROM t_refund_record r " +
-            "LEFT JOIN t_user u ON r.user_id = u.user_id " +
+            "FROM ord_refund_record r " +
+            "LEFT JOIN usr_user u ON r.user_id = u.user_id " +
             "WHERE 1=1 " +
             "<if test='keyword != null and keyword != \"\"'>" +
             "AND (r.order_no LIKE CONCAT('%', #{keyword}, '%') " +
@@ -40,6 +40,6 @@ public interface RefundRecordMapper extends BaseMapper<RefundRecord> {
     /**
      * 统计退款金额（按状态）
      */
-    @Select("SELECT COALESCE(SUM(refund_amount), 0) FROM t_refund_record WHERE status = #{status}")
+    @Select("SELECT COALESCE(SUM(refund_amount), 0) FROM ord_refund_record WHERE status = #{status}")
     java.math.BigDecimal sumRefundAmountByStatus(@Param("status") String status);
 }

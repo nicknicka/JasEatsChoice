@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
  * 收藏实体类
  */
 @Data
-@TableName("t_collection")
+@TableName("soc_collection")
 public class UserCollection {
 
     @TableId(type = IdType.ASSIGN_ID)

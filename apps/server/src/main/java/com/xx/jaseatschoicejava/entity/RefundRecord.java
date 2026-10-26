@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("t_refund_record")
+@TableName("ord_refund_record")
 @ApiModel(description = "退款记录实体")
 public class RefundRecord {
 

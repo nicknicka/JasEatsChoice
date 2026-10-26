@@ -18,7 +18,7 @@ import java.math.BigDecimal;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("t_order_dish")
+@TableName("ord_order_dish")
 @ApiModel(description = "订单菜品VO（包含菜品详细信息）")
 public class OrderDishVO {
 

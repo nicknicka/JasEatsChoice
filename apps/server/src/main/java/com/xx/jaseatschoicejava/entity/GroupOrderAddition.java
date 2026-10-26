@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
  * 群订单加菜实体
  */
 @Data
-@TableName("t_group_order_addition")
+@TableName("soc_group_order_addition")
 public class GroupOrderAddition {
 
     @TableId(value = "id", type = IdType.ASSIGN_ID)

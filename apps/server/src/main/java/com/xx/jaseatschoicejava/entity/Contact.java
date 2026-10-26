@@ -19,7 +19,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("t_contact")
+@TableName("usr_contact")
 @ApiModel(description = "联系人关系实体")
 public class Contact {
 

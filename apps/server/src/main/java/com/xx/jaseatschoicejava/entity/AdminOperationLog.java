@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("t_admin_operation_log")
+@TableName("sys_admin_operation_log")
 @ApiModel(description = "管理员操作日志实体")
 public class AdminOperationLog {
 

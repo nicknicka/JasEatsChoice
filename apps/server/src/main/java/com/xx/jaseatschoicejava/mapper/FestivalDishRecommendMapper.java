@@ -24,8 +24,8 @@ public interface FestivalDishRecommendMapper extends BaseMapper<FestivalDishReco
      * @return 推荐菜品列表
      */
     @Select("SELECT fdr.*, d.dish_name, d.dish_image, d.price " +
-            "FROM t_festival_dish_recommend fdr " +
-            "LEFT JOIN t_dish d ON fdr.dish_id = d.id " +
+            "FROM cnt_festival_dish_recommend fdr " +
+            "LEFT JOIN mch_dish d ON fdr.dish_id = d.id " +
             "WHERE fdr.festival_id = #{festivalId} AND fdr.is_active = 1 " +
             "ORDER BY fdr.priority DESC, fdr.order_count DESC")
     List<FestivalDishRecommend> selectByFestivalIdWithDish(@Param("festivalId") String festivalId);
@@ -39,8 +39,8 @@ public interface FestivalDishRecommendMapper extends BaseMapper<FestivalDishReco
      * @return 推荐菜品列表
      */
     @Select("SELECT fdr.*, d.dish_name, d.dish_image, d.price " +
-            "FROM t_festival_dish_recommend fdr " +
-            "LEFT JOIN t_dish d ON fdr.dish_id = d.id " +
+            "FROM cnt_festival_dish_recommend fdr " +
+            "LEFT JOIN mch_dish d ON fdr.dish_id = d.id " +
             "WHERE fdr.festival_id IN " +
             "<foreach collection='festivalIds' item='id' open='(' separator=',' close=')'>" +
             "#{id}" +

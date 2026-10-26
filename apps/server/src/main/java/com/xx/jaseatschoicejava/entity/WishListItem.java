@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
  * @since 2025-01-30
  */
 @Data
-@TableName("t_wish_list_item")
+@TableName("soc_wish_list_item")
 @ApiModel(description = "想吃列表项")
 public class WishListItem {
 

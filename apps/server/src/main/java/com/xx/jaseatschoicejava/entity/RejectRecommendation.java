@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
  * 推荐拒绝行为实体
  */
 @Data
-@TableName("t_reject_recommendation")
+@TableName("ai_reject_recommendation")
 public class RejectRecommendation {
     /**
      * 主键ID

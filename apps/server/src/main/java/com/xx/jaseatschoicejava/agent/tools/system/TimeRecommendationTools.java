@@ -305,7 +305,7 @@ public class TimeRecommendationTools {
             );
 
             if (dishes.isEmpty()) {
-                log.info("📭 [Tool] t_dish 中无上架菜品匹配时段={}", timePeriodTag);
+                log.info("📭 [Tool] mch_dish 中无上架菜品匹配时段={}", timePeriodTag);
                 return null;
             }
 

@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("t_group_order_member")
+@TableName("soc_group_order_member")
 @ApiModel(description = "拼单成员实体")
 public class GroupOrderMember {
 

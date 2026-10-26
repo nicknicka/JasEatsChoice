@@ -18,18 +18,18 @@ public interface AdminRoleRelationMapper extends BaseMapper<AdminRoleRelation> {
     /**
      * 删除管理员的所有角色
      */
-    @Delete("DELETE FROM t_admin_role_relation WHERE admin_id = #{adminId}")
+    @Delete("DELETE FROM sys_admin_role_relation WHERE admin_id = #{adminId}")
     boolean deleteByAdminId(@Param("adminId") Long adminId);
 
     /**
      * 删除角色的所有管理员关联
      */
-    @Delete("DELETE FROM t_admin_role_relation WHERE role_id = #{roleId}")
+    @Delete("DELETE FROM sys_admin_role_relation WHERE role_id = #{roleId}")
     boolean deleteByRoleId(@Param("roleId") Long roleId);
 
     /**
      * 根据管理员ID查询角色ID列表
      */
-    @Select("SELECT role_id FROM t_admin_role_relation WHERE admin_id = #{adminId}")
+    @Select("SELECT role_id FROM sys_admin_role_relation WHERE admin_id = #{adminId}")
     List<Long> selectRoleIdsByAdminId(@Param("adminId") Long adminId);
 }

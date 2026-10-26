@@ -19,7 +19,7 @@ import java.math.BigDecimal;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("t_order")
+@TableName("ord_order")
 @ApiModel(description = "订单实体")
 public class Order {
 

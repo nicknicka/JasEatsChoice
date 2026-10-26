@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("t_role_permission")
+@TableName("sys_role_permission")
 @ApiModel(description = "角色权限关联实体")
 public class RolePermission {
 

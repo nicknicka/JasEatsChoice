@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
  * @since 2025-01-31
  */
 @Data
-@TableName("t_user_custom_event")
+@TableName("usr_user_custom_event")
 public class UserCustomEvent {
 
     /**

@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("t_payment_record")
+@TableName("ord_payment_record")
 @ApiModel(description = "支付记录实体")
 public class PaymentRecord {
 

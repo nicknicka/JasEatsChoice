@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
  * 用户优惠券实体类
  */
 @Data
-@TableName("user_coupon")
+@TableName("usr_user_coupon")
 public class UserCoupon {
     @TableId(type = IdType.ASSIGN_ID)
     @ApiModelProperty(value = "优惠券ID")

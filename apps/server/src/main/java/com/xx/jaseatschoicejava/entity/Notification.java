@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("t_notification")
+@TableName("usr_notification")
 @ApiModel(description = "系统通知实体")
 public class Notification {
 

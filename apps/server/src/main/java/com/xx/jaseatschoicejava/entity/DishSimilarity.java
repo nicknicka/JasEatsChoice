@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
-@TableName("dish_similarity")
+@TableName("mch_dish_similarity")
 public class DishSimilarity {
 
     /**

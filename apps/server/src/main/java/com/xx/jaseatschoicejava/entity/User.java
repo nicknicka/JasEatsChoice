@@ -19,7 +19,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("t_user")
+@TableName("usr_user")
 @ApiModel(description = "用户实体")
 public class User {
     @TableId(value = "user_id", type = com.baomidou.mybatisplus.annotation.IdType.INPUT)

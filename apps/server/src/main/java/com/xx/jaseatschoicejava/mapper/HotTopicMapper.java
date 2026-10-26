@@ -20,7 +20,7 @@ public interface HotTopicMapper extends BaseMapper<HotTopic> {
      * @param now 当前时间
      * @return 生效的热点列表
      */
-    @Select("SELECT * FROM hot_topic " +
+    @Select("SELECT * FROM cnt_hot_topic " +
             "WHERE status = 'ACTIVE' " +
             "AND (start_date IS NULL OR start_date <= #{now}) " +
             "AND (end_date IS NULL OR end_date >= #{now}) " +
@@ -34,7 +34,7 @@ public interface HotTopicMapper extends BaseMapper<HotTopic> {
      *
      * @return 热点列表
      */
-    @Select("SELECT * FROM hot_topic " +
+    @Select("SELECT * FROM cnt_hot_topic " +
             "ORDER BY create_time DESC " +
             "LIMIT #{limit}")
     List<HotTopic> selectRecentHotTopics(int limit);
@@ -44,7 +44,7 @@ public interface HotTopicMapper extends BaseMapper<HotTopic> {
      *
      * @param id 热点ID
      */
-    @Select("UPDATE hot_topic SET click_count = click_count + 1 WHERE id = #{id}")
+    @Select("UPDATE cnt_hot_topic SET click_count = click_count + 1 WHERE id = #{id}")
     void incrementClickCount(String id);
 
     /**
@@ -52,6 +52,6 @@ public interface HotTopicMapper extends BaseMapper<HotTopic> {
      *
      * @param id 热点ID
      */
-    @Select("UPDATE hot_topic SET share_count = share_count + 1 WHERE id = #{id}")
+    @Select("UPDATE cnt_hot_topic SET share_count = share_count + 1 WHERE id = #{id}")
     void incrementShareCount(String id);
 }

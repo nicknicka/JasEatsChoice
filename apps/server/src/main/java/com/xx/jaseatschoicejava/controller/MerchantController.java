@@ -225,7 +225,7 @@ public class MerchantController {
             try {
                 // 我们可以通过直接查询 SQL 来获取原始的 JSON 字符串
                 // 然后手动解析为 JsonNode
-                String sql = "SELECT business_scope, business_hours, album FROM t_merchant WHERE id = ?";
+                String sql = "SELECT business_scope, business_hours, album FROM mch_merchant WHERE id = ?";
                 Object[] params = new Object[]{merchantId};
 
                 // 使用 JdbcTemplate 直接查询
@@ -467,7 +467,7 @@ public class MerchantController {
         try {
             // 使用原生SQL直接查询album字段（因为JacksonTypeHandler在读取时有问题）
             String albumJson = jdbcTemplate.queryForObject(
-                "SELECT album FROM t_merchant WHERE id = ?",
+                "SELECT album FROM mch_merchant WHERE id = ?",
                 String.class,
                 merchantId
             );
@@ -515,7 +515,7 @@ public class MerchantController {
 
             // 使用原生SQL直接查询album字段（避免JacksonTypeHandler的bug）
             String albumJson = jdbcTemplate.queryForObject(
-                "SELECT album FROM t_merchant WHERE id = ?",
+                "SELECT album FROM mch_merchant WHERE id = ?",
                 String.class,
                 merchantId
             );
@@ -558,7 +558,7 @@ public class MerchantController {
 
             // 使用原生SQL更新album字段
             int updateCount = jdbcTemplate.update(
-                "UPDATE t_merchant SET album = ?, update_time = NOW() WHERE id = ?",
+                "UPDATE mch_merchant SET album = ?, update_time = NOW() WHERE id = ?",
                 updatedAlbumJson,
                 merchantId
             );
@@ -566,7 +566,7 @@ public class MerchantController {
 
             // 验证更新是否成功 - 重新查询
             Map<String, Object> result = jdbcTemplate.queryForMap(
-                "SELECT album FROM t_merchant WHERE id = ?",
+                "SELECT album FROM mch_merchant WHERE id = ?",
                 merchantId
             );
             logger.info("验证更新后的相册数据: {}", result.get("album"));
@@ -590,7 +590,7 @@ public class MerchantController {
         try {
             // 使用原生SQL直接查询album字段（避免JacksonTypeHandler的bug）
             String albumJson = jdbcTemplate.queryForObject(
-                "SELECT album FROM t_merchant WHERE id = ?",
+                "SELECT album FROM mch_merchant WHERE id = ?",
                 String.class,
                 merchantId
             );
@@ -614,7 +614,7 @@ public class MerchantController {
 
                 // 使用原生SQL更新album字段
                 int updateCount = jdbcTemplate.update(
-                    "UPDATE t_merchant SET album = ?, update_time = NOW() WHERE id = ?",
+                    "UPDATE mch_merchant SET album = ?, update_time = NOW() WHERE id = ?",
                     updatedAlbumJson,
                     merchantId
                 );
