@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 教程服务实现类
@@ -337,5 +338,10 @@ public class TutorialServiceImpl extends ServiceImpl<TutorialMapper, Tutorial> i
         tutorial.setUpdatedAt(new Date());
 
         return updateById(tutorial);
+    }
+
+    @Override
+    public Map<String, Object> getOverviewStatistics() {
+        return tutorialMapper.selectStatisticsOverview();
     }
 }

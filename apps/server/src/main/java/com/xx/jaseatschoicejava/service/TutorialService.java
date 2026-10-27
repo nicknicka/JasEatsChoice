@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.xx.jaseatschoicejava.entity.Tutorial;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 教程服务接口
@@ -122,4 +123,9 @@ public interface TutorialService extends IService<Tutorial> {
      * 增加收藏次数
      */
     boolean incrementFavoriteCount(String tutorialId);
+
+    /**
+     * 获取教程统计概览
+     */
+    Map<String, Object> getOverviewStatistics();
 }

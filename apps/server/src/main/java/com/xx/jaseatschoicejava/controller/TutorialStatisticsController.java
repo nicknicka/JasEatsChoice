@@ -82,15 +82,6 @@ public class TutorialStatisticsController {
     @GetMapping("/overview")
     @PreAuthorize("hasAnyRole('ADMIN', 'MERCHANT')")
     public ResponseEntity<Map<String, Object>> getOverview() {
-        // TODO: 实现统计数据查询
-        Map<String, Object> stats = new HashMap<>();
-        stats.put("totalTutorials", 0);
-        stats.put("publishedTutorials", 0);
-        stats.put("pendingReview", 0);
-        stats.put("totalViews", 0);
-        stats.put("totalFavorites", 0);
-        stats.put("averageRating", 0.0);
-
-        return ResponseEntity.ok(stats);
+        return ResponseEntity.ok(tutorialService.getOverviewStatistics());
     }
 }
