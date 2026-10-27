@@ -1,5 +1,5 @@
 const { test, expect, loginAsMerchant } = require('../fixtures/test-base')
-const { markRunning, markPassed, markFailed, markSkipped, updateSummary } = require('../utils/progress')
+const { markRunning, markPassed, markFailed, updateSummary } = require('../utils/progress')
 
 test.describe('模块十一：商家端-经营与AI', () => {
 
@@ -69,11 +69,8 @@ test.describe('模块十一：商家端-经营与AI', () => {
       await page.goto('/merchant/home/comments')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const analysis = page.locator('[class*="analysis"], [class*="rating"], [class*="统计"]')
-      if (await analysis.count() > 0) {
-        markPassed('11.6', '评价分析区域存在')
-      } else {
-        markSkipped('11.6', '未找到评价分析区域')
-      }
+      await expect(analysis.first()).toBeVisible({ timeout: 10000 })
+      markPassed('11.6', '评价分析区域存在')
     } catch (e) { markFailed('11.6', e.message.slice(0, 50)); throw e }
   })
 

@@ -1,5 +1,5 @@
 const { test, expect, bootstrapAdminSession } = require('../fixtures/test-base')
-const { markRunning, markPassed, markFailed, markSkipped, updateSummary } = require('../utils/progress')
+const { markRunning, markPassed, markFailed, updateSummary } = require('../utils/progress')
 
 test.describe('模块十四：管理员端-系统管理', () => {
 

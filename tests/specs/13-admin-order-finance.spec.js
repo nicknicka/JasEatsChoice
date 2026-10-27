@@ -1,5 +1,5 @@
 const { test, expect, bootstrapAdminSession } = require('../fixtures/test-base')
-const { markRunning, markPassed, markFailed, markSkipped, updateSummary } = require('../utils/progress')
+const { markRunning, markPassed, markFailed, updateSummary } = require('../utils/progress')
 
 test.describe('模块十三：管理员端-订单菜品与财务', () => {
 
@@ -22,11 +22,8 @@ test.describe('模块十三：管理员端-订单菜品与财务', () => {
       await page.goto('/admin/orders')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const statusBtn = page.locator('button:has-text("状态"), .el-select').first()
-      if (await statusBtn.count() > 0) {
-        markPassed('13.2', '状态更新控件存在')
-      } else {
-        markSkipped('13.2', '未找到状态更新控件')
-      }
+      await expect(statusBtn).toBeVisible({ timeout: 10000 })
+      markPassed('13.2', '状态更新控件存在')
     } catch (e) { markFailed('13.2', e.message.slice(0, 50)); throw e }
   })
 

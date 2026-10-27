@@ -1,5 +1,5 @@
 const { test, expect, loginAsMerchant } = require('../fixtures/test-base')
-const { markRunning, markPassed, markFailed, markSkipped, updateSummary } = require('../utils/progress')
+const { markRunning, markPassed, markFailed, updateSummary } = require('../utils/progress')
 
 test.describe('模块十：商家端-订单与菜品管理', () => {
 
@@ -44,11 +44,8 @@ test.describe('模块十：商家端-订单与菜品管理', () => {
       await page.goto('/merchant/home/orders')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const acceptBtn = page.locator('button:has-text("接单"), button:has-text("接受")').first()
-      if (await acceptBtn.count() > 0) {
-        markPassed('10.4', '接单按钮存在')
-      } else {
-        markSkipped('10.4', '无待接单订单')
-      }
+      await expect(acceptBtn).toBeVisible({ timeout: 10000 })
+      markPassed('10.4', '接单按钮存在')
     } catch (e) { markFailed('10.4', e.message.slice(0, 50)); throw e }
   })
 
@@ -58,11 +55,8 @@ test.describe('模块十：商家端-订单与菜品管理', () => {
       await page.goto('/merchant/home/orders')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const statusBtn = page.locator('button:has-text("出餐"), button:has-text("配送"), button:has-text("完成")').first()
-      if (await statusBtn.count() > 0) {
-        markPassed('10.5', '状态更新按钮存在')
-      } else {
-        markSkipped('10.5', '无可更新状态订单')
-      }
+      await expect(statusBtn).toBeVisible({ timeout: 10000 })
+      markPassed('10.5', '状态更新按钮存在')
     } catch (e) { markFailed('10.5', e.message.slice(0, 50)); throw e }
   })
 
@@ -83,11 +77,8 @@ test.describe('模块十：商家端-订单与菜品管理', () => {
       await page.goto('/merchant/home/menu')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const editBtn = page.locator('button:has-text("编辑"), [class*="edit"]').first()
-      if (await editBtn.count() > 0) {
-        markPassed('10.7', '菜单编辑按钮存在')
-      } else {
-        markSkipped('10.7', '无菜单可编辑')
-      }
+      await expect(editBtn).toBeVisible({ timeout: 10000 })
+      markPassed('10.7', '菜单编辑按钮存在')
     } catch (e) { markFailed('10.7', e.message.slice(0, 50)); throw e }
   })
 
@@ -119,11 +110,8 @@ test.describe('模块十：商家端-订单与菜品管理', () => {
       await page.goto('/merchant/home/dish-management')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const editBtn = page.locator('button:has-text("编辑"), [class*="edit"]').first()
-      if (await editBtn.count() > 0) {
-        markPassed('10.10', '编辑菜品按钮存在')
-      } else {
-        markSkipped('10.10', '无菜品可编辑')
-      }
+      await expect(editBtn).toBeVisible({ timeout: 10000 })
+      markPassed('10.10', '编辑菜品按钮存在')
     } catch (e) { markFailed('10.10', e.message.slice(0, 50)); throw e }
   })
 
@@ -133,11 +121,8 @@ test.describe('模块十：商家端-订单与菜品管理', () => {
       await page.goto('/merchant/home/dish-management')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const toggleBtn = page.locator('.el-switch, button:has-text("上架"), button:has-text("下架")').first()
-      if (await toggleBtn.count() > 0) {
-        markPassed('10.11', '上下架开关存在')
-      } else {
-        markSkipped('10.11', '未找到上下架开关')
-      }
+      await expect(toggleBtn).toBeVisible({ timeout: 10000 })
+      markPassed('10.11', '上下架开关存在')
     } catch (e) { markFailed('10.11', e.message.slice(0, 50)); throw e }
   })
 

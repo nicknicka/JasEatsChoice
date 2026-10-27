@@ -1,5 +1,5 @@
 const { test, expect, loginAsUser } = require('../fixtures/test-base')
-const { markRunning, markPassed, markFailed, markSkipped, updateSummary } = require('../utils/progress')
+const { markRunning, markPassed, markFailed, updateSummary } = require('../utils/progress')
 
 test.describe('模块六：钱包与支付', () => {
 
@@ -22,11 +22,8 @@ test.describe('模块六：钱包与支付', () => {
       await page.goto('/user/home/wallet-management')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const rechargeBtn = page.locator('button:has-text("充值"), [class*="recharge"]').first()
-      if (await rechargeBtn.count() > 0) {
-        markPassed('6.2', '充值按钮存在')
-      } else {
-        markSkipped('6.2', '未找到充值按钮')
-      }
+      await expect(rechargeBtn).toBeVisible({ timeout: 10000 })
+      markPassed('6.2', '充值按钮存在')
     } catch (e) { markFailed('6.2', e.message.slice(0, 50)); throw e }
   })
 
@@ -36,11 +33,8 @@ test.describe('模块六：钱包与支付', () => {
       await page.goto('/user/home/wallet-management')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const withdrawBtn = page.locator('button:has-text("提现"), [class*="withdraw"]').first()
-      if (await withdrawBtn.count() > 0) {
-        markPassed('6.3', '提现按钮存在')
-      } else {
-        markSkipped('6.3', '未找到提现按钮')
-      }
+      await expect(withdrawBtn).toBeVisible({ timeout: 10000 })
+      markPassed('6.3', '提现按钮存在')
     } catch (e) { markFailed('6.3', e.message.slice(0, 50)); throw e }
   })
 

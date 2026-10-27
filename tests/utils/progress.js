@@ -6,7 +6,7 @@ const PROGRESS_FILE = path.join(__dirname, '..', 'progress.txt')
 const LEGEND = [
   '# 佳食宜选自动化测试进度记录',
   '# 格式：[状态] 阶段-编号 | 功能名称 | 结果说明',
-  '# 状态：PENDING(待执行) / RUNNING(执行中) / PASSED(通过) / FAILED(失败) / SKIPPED(跳过)'
+  '# 状态：PENDING(待执行) / RUNNING(执行中) / PASSED(通过) / FAILED(失败) / SKIPPED(已确认产品缺口)'
 ]
 
 // progress.txt 只是运行台账，缺失或不含某个编号时不能让整条用例因为写进度而失败。
@@ -33,7 +33,14 @@ function updateProgress(id, status, message = '') {
 function markRunning(id) { updateProgress(id, 'RUNNING', '执行中...') }
 function markPassed(id, msg = '通过') { updateProgress(id, 'PASSED', msg) }
 function markFailed(id, msg = '失败') { updateProgress(id, 'FAILED', msg) }
-function markSkipped(id, msg = '跳过') { updateProgress(id, 'SKIPPED', msg) }
+// 软跳过不再作为通过路径：未实现功能必须在 Playwright 层用 test.fixme('blocked by #xx')。
+// 如需记录已确认产品缺口，必须显式提供 blocker issue，避免再次出现无依据跳过。
+function markSkipped(id, blocker, msg = '已确认产品缺口') {
+  if (!/^#\d+$/.test(blocker || '')) {
+    throw new Error(`markSkipped 必须提供 blocker issue，例如 #34；用例 ${id}`)
+  }
+  updateProgress(id, 'SKIPPED', `blocked by ${blocker}：${msg}`)
+}
 
 function updateSummary() {
   const lines = readLines()

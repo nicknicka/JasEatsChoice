@@ -1,5 +1,5 @@
 const { test, expect, loginAsUser } = require('../fixtures/test-base')
-const { markRunning, markPassed, markFailed, markSkipped, updateSummary } = require('../utils/progress')
+const { markRunning, markPassed, markFailed, updateSummary } = require('../utils/progress')
 
 test.describe('模块五：饮食管理与收藏', () => {
 
@@ -57,11 +57,8 @@ test.describe('模块五：饮食管理与收藏', () => {
       await page.goto('/user/home/calorie')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const nutrition = page.locator('[class*="nutrition"], [class*="nutrient"], [class*="分析"]')
-      if (await nutrition.count() > 0) {
-        markPassed('5.5', '营养分析区域存在')
-      } else {
-        markSkipped('5.5', '未找到营养分析区域')
-      }
+      await expect(nutrition.first()).toBeVisible({ timeout: 10000 })
+      markPassed('5.5', '营养分析区域存在')
     } catch (e) { markFailed('5.5', e.message.slice(0, 50)); throw e }
   })
 

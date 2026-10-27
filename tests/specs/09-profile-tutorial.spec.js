@@ -1,5 +1,5 @@
 const { test, expect, loginAsUser } = require('../fixtures/test-base')
-const { markRunning, markPassed, markFailed, markSkipped, updateSummary } = require('../utils/progress')
+const { markRunning, markPassed, markFailed, updateSummary } = require('../utils/progress')
 
 test.describe('模块九：个人中心与教程', () => {
 
@@ -22,11 +22,8 @@ test.describe('模块九：个人中心与教程', () => {
       await page.goto('/user/home/profile')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const avatar = page.locator('[class*="avatar"], [class*="upload"], input[type="file"]').first()
-      if (await avatar.count() > 0) {
-        markPassed('9.2', '头像上传区域存在')
-      } else {
-        markSkipped('9.2', '未找到头像上传区域')
-      }
+      await expect(avatar).toBeVisible({ timeout: 10000 })
+      markPassed('9.2', '头像上传区域存在')
     } catch (e) { markFailed('9.2', e.message.slice(0, 50)); throw e }
   })
 

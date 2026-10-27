@@ -1,5 +1,5 @@
 const { test, expect, loginAsUser } = require('../fixtures/test-base')
-const { markRunning, markPassed, markFailed, markSkipped, updateSummary } = require('../utils/progress')
+const { markRunning, markPassed, markFailed, updateSummary } = require('../utils/progress')
 
 test.describe('模块八：AI助手与地址管理', () => {
 
@@ -22,11 +22,8 @@ test.describe('模块八：AI助手与地址管理', () => {
       await page.goto('/user/home/ai')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const recognizeBtn = page.locator('button:has-text("识别"), [class*="recognize"], [class*="upload"]').first()
-      if (await recognizeBtn.count() > 0) {
-        markPassed('8.2', '菜品识别功能存在')
-      } else {
-        markSkipped('8.2', '未找到识别按钮')
-      }
+      await expect(recognizeBtn).toBeVisible({ timeout: 10000 })
+      markPassed('8.2', '菜品识别功能存在')
     } catch (e) { markFailed('8.2', e.message.slice(0, 50)); throw e }
   })
 
@@ -36,11 +33,8 @@ test.describe('模块八：AI助手与地址管理', () => {
       await page.goto('/user/home/ai')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const recipeBtn = page.locator('button:has-text("食谱"), [class*="recipe"]').first()
-      if (await recipeBtn.count() > 0) {
-        markPassed('8.3', '食谱生成功能存在')
-      } else {
-        markSkipped('8.3', '未找到食谱生成按钮')
-      }
+      await expect(recipeBtn).toBeVisible({ timeout: 10000 })
+      markPassed('8.3', '食谱生成功能存在')
     } catch (e) { markFailed('8.3', e.message.slice(0, 50)); throw e }
   })
 
@@ -74,11 +68,8 @@ test.describe('模块八：AI助手与地址管理', () => {
       await page.goto('/user/home/address')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const addBtn = page.locator('button:has-text("添加"), button:has-text("新增")').first()
-      if (await addBtn.count() > 0) {
-        markPassed('8.6', '添加地址按钮存在')
-      } else {
-        markSkipped('8.6', '未找到添加按钮')
-      }
+      await expect(addBtn).toBeVisible({ timeout: 10000 })
+      markPassed('8.6', '添加地址按钮存在')
     } catch (e) { markFailed('8.6', e.message.slice(0, 50)); throw e }
   })
 
@@ -88,11 +79,8 @@ test.describe('模块八：AI助手与地址管理', () => {
       await page.goto('/user/home/address')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const editBtn = page.locator('button:has-text("编辑"), [class*="edit"]').first()
-      if (await editBtn.count() > 0) {
-        markPassed('8.7', '编辑按钮存在')
-      } else {
-        markSkipped('8.7', '无地址可编辑')
-      }
+      await expect(editBtn).toBeVisible({ timeout: 10000 })
+      markPassed('8.7', '编辑按钮存在')
     } catch (e) { markFailed('8.7', e.message.slice(0, 50)); throw e }
   })
 
@@ -102,11 +90,8 @@ test.describe('模块八：AI助手与地址管理', () => {
       await page.goto('/user/home/address')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const defaultBtn = page.locator('button:has-text("默认"), [class*="default"]').first()
-      if (await defaultBtn.count() > 0) {
-        markPassed('8.8', '默认地址按钮存在')
-      } else {
-        markSkipped('8.8', '无地址可设为默认')
-      }
+      await expect(defaultBtn).toBeVisible({ timeout: 10000 })
+      markPassed('8.8', '默认地址按钮存在')
     } catch (e) { markFailed('8.8', e.message.slice(0, 50)); throw e }
   })
 
