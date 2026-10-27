@@ -94,12 +94,15 @@ async function getDish({ merchantId, dishId } = {}) {
 
   const resolvedMerchantId = await getMerchantId({ merchantId })
   const menus = await request(`/v1/menus/merchants/${encodeURIComponent(resolvedMerchantId)}/menu`)
-  const dish = (menus || [])
+  const candidates = (menus || [])
     .flatMap((menu) => menu?.dishes || [])
-    .find((candidate) => candidate?.id && candidate.status !== false)
+    .filter((candidate) => candidate?.id && String(candidate.id) !== '1' && candidate.status !== false)
+  const dish = candidates.find((candidate) => String(candidate.id) === '1001')
+    || candidates.find((candidate) => String(candidate.id).startsWith('seed_'))
+    || candidates[0]
 
   if (!dish) {
-    throw new Error(`商家 ${resolvedMerchantId} 没有可用菜品`)
+    throw new Error(`商家 ${resolvedMerchantId} 没有可用的非 1 菜品`)
   }
   return dish
 }
