@@ -81,44 +81,46 @@ const updatePagination = () => {
   paginatedMenus.value = filteredMenus.value.slice(start, end)
 }
 
-// 页面加载时初始化
-onMounted(() => {
+const fetchMenus = async () => {
   loading.value = true
-  // 从authStore获取商家ID
   const authStore = useAuthStore()
   const merchantId = authStore.merchantId
   if (!merchantId) {
     ElMessage.error('未检测到商家ID，请重新登录')
-    return
+    loading.value = false
+    return false
   }
-  // 从API获取菜单数据
-  axios
-    .get(`${API_CONFIG.baseURL}${API_CONFIG.merchant.menu.replace('{merchantId}', merchantId)}`)
-    .then((response) => {
-      console.log('菜单数据响应:', response.data)
-      if (response.data && response.data.success) {
-        // 预处理菜单数据，统一字段名
-        menuList.value = response.data.data.map((menu) => ({
-          ...menu,
-          // 如果没有 name 字段，使用 menuName 作为 name
-          name: menu.name || menu.menuName || '',
-          menuName: menu.menuName || menu.name || ''
-        }))
-        console.log('解析后的菜单列表:', menuList.value)
-        console.log('第一个菜单数据:', menuList.value[0])
-        filteredMenus.value = [...menuList.value] // 更新筛选后的菜单
-        updatePagination() // 更新分页
-      }
-    })
-    .catch((error) => {
-      console.error('加载菜单失败:', error)
-      ElMessage.error('加载菜单失败')
-    })
-    .finally(() => {
-      loading.value = false
-      // 滚动到页面顶部
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-    })
+
+  try {
+    const response = await axios.get(
+      `${API_CONFIG.baseURL}${API_CONFIG.merchant.menu.replace('{merchantId}', merchantId)}`
+    )
+    if (!response.data?.success) {
+      ElMessage.error(response.data?.message || '加载菜单失败')
+      return false
+    }
+
+    menuList.value = response.data.data.map((menu) => ({
+      ...menu,
+      name: menu.name || menu.menuName || '',
+      menuName: menu.menuName || menu.name || ''
+    }))
+    filteredMenus.value = [...menuList.value]
+    updatePagination()
+    return true
+  } catch (error) {
+    console.error('加载菜单失败:', error)
+    ElMessage.error('加载菜单失败')
+    return false
+  } finally {
+    loading.value = false
+  }
+}
+
+// 页面加载时初始化
+onMounted(() => {
+  fetchMenus()
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 })
 
 // 更新筛选
@@ -194,24 +196,56 @@ const editMenu = (menu) => {
   router.push({ path: '/merchant/home/menu-edit', query: { menuId: menu.id } })
 }
 
+const deleteMenus = async (menus) => {
+  const authStore = useAuthStore()
+  const merchantId = authStore.merchantId
+  if (!merchantId) {
+    ElMessage.error('未检测到商家ID，请重新登录')
+    return false
+  }
+
+  const menuIds = menus.map((menu) => menu.id)
+  try {
+    const response = await axios.post(`${API_CONFIG.baseURL}/v1/menus/menu/batch`, {
+      menuIds,
+      action: 'delete',
+      merchantId
+    })
+    if (!response.data?.success) {
+      ElMessage.error(response.data?.message || '删除菜单失败')
+      return false
+    }
+
+    const refreshed = await fetchMenus()
+    if (!refreshed) return false
+    updateFilter()
+    if (menuIds.some((id) => menuList.value.some((menu) => menu.id === id))) {
+      ElMessage.error('删除后菜单仍然存在，请重试')
+      return false
+    }
+    return true
+  } catch (error) {
+    console.error('删除菜单失败:', error)
+    ElMessage.error('删除菜单失败')
+    return false
+  }
+}
+
 // 删除菜单
-const deleteMenu = (menu) => {
-  ElMessageBox.confirm('确定要删除该菜单？删除后不可恢复！', '警告', {
-    confirmButtonText: '确定删除',
-    cancelButtonText: '取消',
-    type: 'danger'
-  })
-    .then(() => {
-      const index = menuList.value.findIndex((item) => item.id === menu.id)
-      if (index !== -1) {
-        menuList.value.splice(index, 1)
-        updateFilter()
-        ElMessage.success('菜单已删除')
-      }
+const deleteMenu = async (menu) => {
+  try {
+    await ElMessageBox.confirm('确定要删除该菜单？删除后不可恢复！', '警告', {
+      confirmButtonText: '确定删除',
+      cancelButtonText: '取消',
+      type: 'danger'
     })
-    .catch(() => {
-      ElMessage.info('已取消删除')
-    })
+  } catch {
+    return
+  }
+
+  if (await deleteMenus([menu])) {
+    ElMessage.success('菜单已删除')
+  }
 }
 
 // 批量操作
@@ -242,11 +276,12 @@ const batchOperation = (operation) => {
         cancelButtonText: '取消',
         type: 'danger'
       })
-        .then(() => {
-          menuList.value = menuList.value.filter((menu) => !selectedMenus.value.includes(menu))
-          selectedMenus.value = []
-          updateFilter()
-          ElMessage.success('批量删除成功')
+        .then(async () => {
+          const menusToDelete = [...selectedMenus.value]
+          if (await deleteMenus(menusToDelete)) {
+            selectedMenus.value = []
+            ElMessage.success('批量删除成功')
+          }
         })
         .catch(() => {})
       return

@@ -159,6 +159,24 @@ public class OrderController {
     }
 
     /**
+     * 物理删除订单
+     */
+    @DeleteMapping("/{orderId}")
+    public ResponseResult<?> deleteOrder(@PathVariable String orderId,
+                                         @RequestParam String merchantId) {
+        try {
+            boolean success = orderService.deleteOrder(orderId, merchantId);
+            if (success) {
+                return ResponseResult.success("订单已删除");
+            }
+            return ResponseResult.fail("404", "订单不存在或不属于当前商家");
+        } catch (Exception e) {
+            log.error("删除订单失败，订单ID：{}", orderId, e);
+            return ResponseResult.fail("500", "删除订单失败：" + e.getMessage());
+        }
+    }
+
+    /**
      * 更新订单状态
      */
     @PutMapping("/{orderId}/status")
