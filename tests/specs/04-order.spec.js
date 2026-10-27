@@ -71,15 +71,11 @@ test.describe('模块四：订单流程', () => {
     }
   })
 
-  test('4.5 确认收货', async ({ page }) => {
-    markRunning('4.5')
-    try {
-      await page.goto('/user/home/orders')
-      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
-      const confirmBtn = page.locator('button:has-text("确认收货")').first()
-      await expect(confirmBtn).toBeVisible({ timeout: 10000 })
-      markPassed('4.5', '确认收货按钮存在')
-    } catch (e) { markFailed('4.5', e.message.slice(0, 50)); throw e }
+  test.fixme('4.5 确认收货 (blocked by #25)', async ({ page }) => {
+    await page.goto('/user/home/orders')
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
+    const confirmBtn = page.locator('button:has-text("确认收货")').first()
+    await expect(confirmBtn).toBeVisible({ timeout: 10000 })
   })
 
   test('4.6 评价订单', async ({ page }) => {
@@ -110,40 +106,28 @@ test.describe('模块四：订单流程', () => {
     }
   })
 
-  test('4.8 优惠券使用', async ({ page }) => {
-    markRunning('4.8')
-    try {
-      await page.goto('/user/home/order-confirmation')
-      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
-      await expect(page.locator('.coupon-section')).toBeVisible({ timeout: 10000 })
-      markPassed('4.8', '优惠券选择区域存在')
-    } catch (e) { markFailed('4.8', e.message.slice(0, 50)); throw e }
+  test.fixme('4.8 优惠券使用 (blocked by #25)', async ({ page }) => {
+    await page.goto('/user/home/order-confirmation')
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
+    await expect(page.locator('.coupon-section')).toBeVisible({ timeout: 10000 })
   })
 
-  test('4.9 创建拼单', async ({ page }) => {
-    markRunning('4.9')
-    try {
-      await page.goto('/user/home/chat')
-      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
-      const createBtn = page.locator('button:has-text("创建群订单")').first()
-      await expect(createBtn).toBeVisible({ timeout: 10000 })
-      markPassed('4.9', '群聊创建群订单入口存在')
-    } catch (e) { markFailed('4.9', e.message.slice(0, 50)); throw e }
+  test.fixme('4.9 创建拼单 (blocked by #25)', async ({ page }) => {
+    await page.goto('/user/home/chat')
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
+    const createBtn = page.locator('.group-quick-actions .order-shortcut').first()
+    await expect(createBtn).toBeVisible({ timeout: 10000 })
   })
 
   test.fixme('4.10 加入拼单 (blocked by #37)', async ({ page }) => {
     await page.goto('/user/home/chat')
     await expect(page.locator('button:has-text("加入群订单")').first()).toBeVisible({ timeout: 10000 })
   })
-  test('4.11 拼单结算', async ({ page }) => {
-    markRunning('4.11')
-    try {
-      await page.goto('/user/home/chat')
-      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
-      const settleBtn = page.locator('button:has-text("去结算")').first()
-      await expect(settleBtn).toBeVisible({ timeout: 10000 })
-      markPassed('4.11', '拼单结算入口存在')
-    } catch (e) { markFailed('4.11', e.message.slice(0, 50)); throw e }
+  test.fixme('4.11 拼单结算 (blocked by #25)', async ({ page }) => {
+    await page.goto('/user/home/chat')
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
+    const settleBtn = page.locator('button:has-text("确认成团并结算"), button:has-text("去支付")').first()
+    await expect(settleBtn).toBeVisible({ timeout: 10000 })
   })
   test.fixme('4.12 加菜请求 (blocked by #40)', async ({ page }) => {
     await page.goto('/user/home/chat')
@@ -151,7 +135,11 @@ test.describe('模块四：订单流程', () => {
   })
 
   test.afterAll(() => {
+    markSkipped('4.5', '#25', '缺真实待收货订单前置数据')
+    markSkipped('4.8', '#25', '缺真实订单确认上下文，优惠券 UI 不可达')
+    markSkipped('4.9', '#25', '拼单创建尚未迁到真实群聊前置数据')
     markSkipped('4.10', '#37', '加入群订单仍是假成功')
+    markSkipped('4.11', '#25', '拼单结算尚未迁到真实群订单前置数据')
     markSkipped('4.12', '#40', '加菜链路尚未真实化')
     updateSummary()
   })
