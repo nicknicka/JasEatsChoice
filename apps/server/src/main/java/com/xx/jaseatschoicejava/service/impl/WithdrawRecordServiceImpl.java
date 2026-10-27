@@ -1,6 +1,7 @@
 package com.xx.jaseatschoicejava.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -118,8 +119,27 @@ public class WithdrawRecordServiceImpl extends ServiceImpl<WithdrawRecordMapper,
 
         } else if ("REJECT".equalsIgnoreCase(decision)) {
             // 审核拒绝，需要退款到钱包
+            LocalDateTime updateTime = LocalDateTime.now();
+            boolean claimed = this.update(
+                new LambdaUpdateWrapper<WithdrawRecord>()
+                    .eq(WithdrawRecord::getId, withdrawId)
+                    .eq(WithdrawRecord::getWithdrawStatus, "pending")
+                    .set(WithdrawRecord::getWithdrawStatus, "rejected")
+                    .set(WithdrawRecord::getAuditTime, record.getAuditTime())
+                    .set(WithdrawRecord::getAuditUser, record.getAuditUser())
+                    .set(WithdrawRecord::getRejectReason, comment)
+                    .set(WithdrawRecord::getRemark, comment)
+                    .set(WithdrawRecord::getCompleteTime, updateTime)
+                    .set(WithdrawRecord::getUpdatedAt, updateTime)
+            );
+
+            if (!claimed) {
+                throw new IllegalStateException("提现记录更新失败");
+            }
+
             record.setWithdrawStatus("rejected");
             record.setRejectReason(comment);
+            record.setCompleteTime(updateTime);
 
             // 通知用户提现被驳回
             NotificationUtil.createWithdrawNotification(
@@ -129,15 +149,22 @@ public class WithdrawRecordServiceImpl extends ServiceImpl<WithdrawRecordMapper,
                 comment != null ? comment : "审核未通过"
             );
 
-            // 退款到钱包（如果walletService可用）
-            if (walletService != null) {
-                try {
-                    // walletService.refundWithdraw(record.getUserId(), record.getAmount());
-                    log.info("提现拒绝，已退款到钱包: {}, 金额: {}", withdrawId, record.getAmount());
-                } catch (Exception e) {
-                    log.error("退款到钱包失败: {}", withdrawId, e);
-                    throw new RuntimeException("退款失败", e);
+            if (walletService == null) {
+                throw new IllegalStateException("钱包服务不可用，无法退款");
+            }
+
+            try {
+                boolean refunded = walletService.refund(
+                    record.getUserId(),
+                    record.getAmount(),
+                    "提现驳回退款 - " + record.getWithdrawNo()
+                );
+                if (!refunded) {
+                    throw new IllegalStateException("退款到钱包失败");
                 }
+            } catch (Exception e) {
+                log.error("退款到钱包失败: {}", withdrawId, e);
+                throw new IllegalStateException("退款失败：" + e.getMessage(), e);
             }
 
             log.info("提现审核拒绝: {}, 原因: {}", withdrawId, comment);
@@ -147,14 +174,17 @@ public class WithdrawRecordServiceImpl extends ServiceImpl<WithdrawRecordMapper,
             return false;
         }
 
-        record.setRemark(comment);
-        boolean success = this.updateById(record);
+        if ("APPROVE".equalsIgnoreCase(decision)) {
+            record.setRemark(comment);
+            boolean success = this.updateById(record);
 
-        if (success) {
-            log.info("提现审核处理成功: {}, 决定: {}", withdrawId, decision);
+            if (!success) {
+                throw new IllegalStateException("提现记录更新失败");
+            }
         }
 
-        return success;
+        log.info("提现审核处理成功: {}, 决定: {}", withdrawId, decision);
+        return true;
     }
 
     @Override
