@@ -303,17 +303,26 @@ public class ReviewController {
             @RequestParam(required = false) String sort
     ) {
         try {
-            System.out.println("获取菜品评价列表，dishId=" + dishId + ", page=" + page + ", size=" + size);
+            int currentPage = page == null || page < 1 ? 1 : page;
+            int pageSize = size == null || size < 1 ? 10 : Math.min(size, 100);
 
-            // 暂时返回空列表，因为评价功能需要复杂的订单关联查询
-            // TODO: 实现完整的菜品评价查询逻辑
-            List<Map<String, Object>> emptyList = new ArrayList<>();
-            System.out.println("该菜品暂无评价（功能开发中）");
-            return ResponseResult.success(emptyList);
+            LambdaQueryWrapper<Review> queryWrapper = new LambdaQueryWrapper<>();
+            queryWrapper.eq(Review::getDishId, dishId)
+                    .eq(Review::getStatus, 0);
+
+            if ("rating".equalsIgnoreCase(sort) || "rating_desc".equalsIgnoreCase(sort)) {
+                queryWrapper.orderByDesc(Review::getRating);
+            } else {
+                queryWrapper.orderByDesc(Review::getCreatedAt);
+            }
+
+            queryWrapper.last("LIMIT " + pageSize + " OFFSET " + ((currentPage - 1) * pageSize));
+
+            List<Review> reviews = reviewService.list(queryWrapper);
+            return ResponseResult.success(reviews);
 
         } catch (Exception e) {
-            System.err.println("获取菜品评价列表失败: " + e.getMessage());
-            e.printStackTrace();
+            log.error("获取菜品评价列表失败：dishId={}", dishId, e);
             return ResponseResult.fail("500", "获取评价列表失败：" + e.getMessage());
         }
     }

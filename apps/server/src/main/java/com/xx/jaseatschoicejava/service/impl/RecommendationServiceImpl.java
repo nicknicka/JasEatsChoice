@@ -104,36 +104,48 @@ public class RecommendationServiceImpl implements RecommendationService {
     @Transactional
     public void recordFeedback(String userId, String dishId, String recommendationId,
                              Boolean isClicked, Boolean isOrdered) {
-        try {
-            // 更新推荐记录
-            QueryWrapper<RecommendationLog> queryWrapper = new QueryWrapper<>();
-            queryWrapper.eq("recommendation_id", recommendationId)
-                    .eq("dish_id", dishId)
-                    .eq("user_id", userId)
-                    .orderByDesc("created_at")
-                    .last("LIMIT 1");
+        QueryWrapper<RecommendationLog> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("recommendation_id", recommendationId)
+                .eq("dish_id", dishId)
+                .eq("user_id", userId)
+                .orderByDesc("created_at")
+                .last("LIMIT 1");
 
-            RecommendationLog recommendationLog = recommendationLogMapper.selectOne(queryWrapper);
+        RecommendationLog recommendationLog = recommendationLogMapper.selectOne(queryWrapper);
 
-            if (recommendationLog != null) {
-                recommendationLog.setIsClicked(isClicked);
-                recommendationLog.setIsOrdered(isOrdered);
-                if (isClicked || isOrdered) {
-                    recommendationLog.setFeedbackTime(LocalDateTime.now());
-                }
-                recommendationLogMapper.updateById(recommendationLog);
+        if (recommendationLog == null) {
+            recommendationLog = new RecommendationLog();
+            recommendationLog.setUserId(userId);
+            recommendationLog.setDishId(dishId);
+            recommendationLog.setRecommendationId(recommendationId);
+            recommendationLog.setIsClicked(isClicked);
+            recommendationLog.setIsOrdered(isOrdered);
+            if (Boolean.TRUE.equals(isClicked) || Boolean.TRUE.equals(isOrdered)) {
+                recommendationLog.setFeedbackTime(LocalDateTime.now());
             }
+            recommendationLog.setCreatedAt(LocalDateTime.now());
 
-            // 如果用户下单了，触发实时画像更新
-            if (Boolean.TRUE.equals(isOrdered)) {
-                userProfileService.updateUserProfileOnBehavior(userId, "order", dishId);
+            if (recommendationLogMapper.insert(recommendationLog) == 0) {
+                throw new IllegalStateException("推荐反馈写入失败");
             }
-
-            log.debug("推荐反馈记录成功：userId={}, dishId={}, clicked={}, ordered={}",
-                    userId, dishId, isClicked, isOrdered);
-        } catch (Exception e) {
-            log.error("记录推荐反馈失败：userId={}, dishId={}", userId, dishId, e);
+        } else {
+            recommendationLog.setIsClicked(isClicked);
+            recommendationLog.setIsOrdered(isOrdered);
+            if (Boolean.TRUE.equals(isClicked) || Boolean.TRUE.equals(isOrdered)) {
+                recommendationLog.setFeedbackTime(LocalDateTime.now());
+            }
+            if (recommendationLogMapper.updateById(recommendationLog) == 0) {
+                throw new IllegalStateException("推荐反馈更新失败");
+            }
         }
+
+        // 如果用户下单了，触发实时画像更新
+        if (Boolean.TRUE.equals(isOrdered)) {
+            userProfileService.updateUserProfileOnBehavior(userId, "order", dishId);
+        }
+
+        log.debug("推荐反馈记录成功：userId={}, dishId={}, clicked={}, ordered={}",
+                userId, dishId, isClicked, isOrdered);
     }
 
     @Override

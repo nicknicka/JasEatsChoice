@@ -24,6 +24,38 @@ import static org.mockito.Mockito.when;
 public class ReviewControllerTest {
 
     @Test
+    public void getDishReviews_shouldReturnReviewsFromService() {
+        ReviewService reviewService = mock(ReviewService.class);
+        ReviewReplyService reviewReplyService = mock(ReviewReplyService.class);
+        OrderService orderService = mock(OrderService.class);
+        OrderDishService orderDishService = mock(OrderDishService.class);
+        UserService userService = mock(UserService.class);
+        DishService dishService = mock(DishService.class);
+
+        ReviewController controller = new ReviewController(
+                reviewService,
+                reviewReplyService,
+                orderService,
+                orderDishService,
+                userService,
+                dishService
+        );
+
+        Review review = new Review();
+        review.setId("r-dish-1");
+        review.setDishId("dish-1");
+        review.setRating(5);
+        review.setContent("很好吃");
+
+        when(reviewService.list(org.mockito.ArgumentMatchers.<Wrapper<Review>>any())).thenReturn(List.of(review));
+
+        ResponseResult<?> response = controller.getDishReviews("dish-1", 1, 10, null);
+
+        assertTrue(response.getSuccess());
+        assertEquals(List.of(review), response.getData());
+    }
+
+    @Test
     public void getReviewStatistics_shouldCountReviewsAndMerchantReplies() {
         ReviewService reviewService = mock(ReviewService.class);
         ReviewReplyService reviewReplyService = mock(ReviewReplyService.class);
