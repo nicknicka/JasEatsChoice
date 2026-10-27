@@ -148,8 +148,10 @@ async function getAddress({ userId, addressId, isDefault = true } = {}) {
     return byId(addresses, addressId, ['id', 'addressId'], '地址')
   }
 
-  const address = (addresses || []).find((candidate) => !isDefault || candidate?.isDefault === 1)
-    || addresses?.[0]
+  const matchesDefault = (candidate) => isDefault === true
+    ? candidate?.isDefault === 1 || candidate?.isDefault === true
+    : candidate?.isDefault === 0 || candidate?.isDefault === false
+  const address = (addresses || []).find(matchesDefault) || (isDefault ? addresses?.[0] : null)
   if (!address) {
     throw new Error(`用户 ${resolvedUserId} 没有地址`)
   }
