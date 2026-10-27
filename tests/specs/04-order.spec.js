@@ -35,11 +35,8 @@ test.describe('模块四：订单流程', () => {
       await page.goto('/user/home/orders')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const payBtn = page.locator('button:has-text("支付"), button:has-text("付款")').first()
-      if (await payBtn.count() > 0) {
-        markPassed('4.2', '支付按钮存在')
-      } else {
-        markSkipped('4.2', '无待支付订单')
-      }
+      await expect(payBtn).toBeVisible({ timeout: 10000 })
+      markPassed('4.2', '支付按钮存在')
     } catch (e) {
       markFailed('4.2', e.message.slice(0, 50))
       throw e
@@ -74,12 +71,11 @@ test.describe('模块四：订单流程', () => {
     }
   })
 
-  // 以下 6 项为产品缺口，2026-10-25 探针逐页核对过 UI 后如实跳过：
-  // 订单页签只有 全部/待支付/待接单/制作中/已完成/已取消，没有"确认收货"状态与按钮；
-  // 仓库里只有 api/coupon.example.js，订单确认页无优惠券选择 UI；
-  // 商家详情页无拼单入口（拼单仅存在于 OrderConfirmation.vue 与 Chat.vue 的文案）。
-  test('4.5 确认收货', async ({ page }) => {
-    markSkipped('4.5', '产品缺口：订单无待收货状态，无确认收货按钮')
+  test.fixme('4.5 确认收货 (blocked by #25)', async ({ page }) => {
+    await page.goto('/user/home/orders')
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
+    const confirmBtn = page.locator('button:has-text("确认收货")').first()
+    await expect(confirmBtn).toBeVisible({ timeout: 10000 })
   })
 
   test('4.6 评价订单', async ({ page }) => {
@@ -102,34 +98,49 @@ test.describe('模块四：订单流程', () => {
       await page.goto('/user/home/orders')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const cancelBtn = page.locator('button:has-text("取消")').first()
-      if (await cancelBtn.count() > 0) {
-        markPassed('4.7', '取消按钮存在')
-      } else {
-        markSkipped('4.7', '无可取消订单')
-      }
+      await expect(cancelBtn).toBeVisible({ timeout: 10000 })
+      markPassed('4.7', '取消按钮存在')
     } catch (e) {
       markFailed('4.7', e.message.slice(0, 50))
       throw e
     }
   })
 
-  test('4.8 优惠券使用', async ({ page }) => {
-    markSkipped('4.8', '产品缺口：订单确认页无优惠券选择 UI（仓库仅 api/coupon.example.js）')
+  test.fixme('4.8 优惠券使用 (blocked by #25)', async ({ page }) => {
+    await page.goto('/user/home/order-confirmation')
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
+    await expect(page.locator('.coupon-section')).toBeVisible({ timeout: 10000 })
   })
 
-  test('4.9 创建拼单', async ({ page }) => {
-    markSkipped('4.9', '产品缺口：商家详情页无拼单入口按钮')
+  test.fixme('4.9 创建拼单 (blocked by #25)', async ({ page }) => {
+    await page.goto('/user/home/chat')
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
+    const createBtn = page.locator('.group-quick-actions .order-shortcut').first()
+    await expect(createBtn).toBeVisible({ timeout: 10000 })
   })
 
-  test('4.10 加入拼单', async ({ page }) => {
-    markSkipped('4.10', '产品缺口：拼单功能无 UI 入口，无法取得拼单ID')
+  test.fixme('4.10 加入拼单 (blocked by #37)', async ({ page }) => {
+    await page.goto('/user/home/chat')
+    await expect(page.locator('button:has-text("加入群订单")').first()).toBeVisible({ timeout: 10000 })
   })
-  test('4.11 拼单结算', async ({ page }) => {
-    markSkipped('4.11', '产品缺口：拼单功能无 UI 入口，无法取得拼单ID')
+  test.fixme('4.11 拼单结算 (blocked by #25)', async ({ page }) => {
+    await page.goto('/user/home/chat')
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
+    const settleBtn = page.locator('button:has-text("确认成团并结算"), button:has-text("去支付")').first()
+    await expect(settleBtn).toBeVisible({ timeout: 10000 })
   })
-  test('4.12 加菜请求', async ({ page }) => {
-    markSkipped('4.12', '产品缺口：拼单功能无 UI 入口，无法取得拼单ID')
+  test.fixme('4.12 加菜请求 (blocked by #40)', async ({ page }) => {
+    await page.goto('/user/home/chat')
+    await expect(page.locator('button:has-text("我要加菜")').first()).toBeVisible({ timeout: 10000 })
   })
 
-  test.afterAll(() => { updateSummary() })
+  test.afterAll(() => {
+    markSkipped('4.5', '#25', '缺真实待收货订单前置数据')
+    markSkipped('4.8', '#25', '缺真实订单确认上下文，优惠券 UI 不可达')
+    markSkipped('4.9', '#25', '拼单创建尚未迁到真实群聊前置数据')
+    markSkipped('4.10', '#37', '加入群订单仍是假成功')
+    markSkipped('4.11', '#25', '拼单结算尚未迁到真实群订单前置数据')
+    markSkipped('4.12', '#40', '加菜链路尚未真实化')
+    updateSummary()
+  })
 })

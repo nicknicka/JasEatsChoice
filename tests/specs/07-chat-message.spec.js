@@ -1,5 +1,5 @@
 const { test, expect, loginAsUser } = require('../fixtures/test-base')
-const { markRunning, markPassed, markFailed, markSkipped, updateSummary } = require('../utils/progress')
+const { markRunning, markPassed, markFailed, updateSummary } = require('../utils/progress')
 
 test.describe('模块七：聊天与消息', () => {
 
@@ -22,17 +22,11 @@ test.describe('模块七：聊天与消息', () => {
       await page.goto('/user/home/chat')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const msgInput = page.locator('textarea, input[placeholder*="消息"], input[placeholder*="输入"]').first()
-      if (await msgInput.count() > 0) {
-        await msgInput.fill('测试消息')
-        const sendBtn = page.locator('button:has-text("发送"), [class*="send"]').first()
-        if (await sendBtn.count() > 0) {
-          markPassed('7.2', '消息输入和发送按钮存在')
-        } else {
-          markSkipped('7.2', '未找到发送按钮')
-        }
-      } else {
-        markSkipped('7.2', '未找到消息输入框')
-      }
+      await expect(msgInput).toBeVisible({ timeout: 10000 })
+      await msgInput.fill('测试消息')
+      const sendBtn = page.locator('button:has-text("发送"), [class*="send"]').first()
+      await expect(sendBtn).toBeVisible({ timeout: 10000 })
+      markPassed('7.2', '消息输入和发送按钮存在')
     } catch (e) { markFailed('7.2', e.message.slice(0, 50)); throw e }
   })
 

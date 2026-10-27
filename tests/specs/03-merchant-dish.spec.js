@@ -27,13 +27,10 @@ test.describe('模块三：商家浏览与详情', () => {
       await page.goto('/user/home/merchants')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const searchInput = page.locator('input[placeholder*="搜索"], input[placeholder*="商家"], .el-input__inner').first()
-      if (await searchInput.count() > 0) {
-        await searchInput.fill('测试')
-        await page.waitForTimeout(1000)
-        markPassed('3.2', '搜索功能可用')
-      } else {
-        markSkipped('3.2', '未找到搜索框')
-      }
+      await expect(searchInput).toBeVisible({ timeout: 10000 })
+      await searchInput.fill('测试')
+      await page.waitForTimeout(1000)
+      markPassed('3.2', '搜索功能可用')
     } catch (e) {
       markFailed('3.2', e.message.slice(0, 50))
       throw e
@@ -54,21 +51,10 @@ test.describe('模块三：商家浏览与详情', () => {
     }
   })
 
-  test('3.4 商家公告', async ({ page }) => {
-    markRunning('3.4')
-    try {
-      await page.goto('/user/home/merchant-detail?id=1')
-      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
-      const announcement = page.locator('[class*="announcement"], [class*="notice"], [class*="公告"]')
-      if (await announcement.count() > 0) {
-        markPassed('3.4', '公告区域存在')
-      } else {
-        markSkipped('3.4', '无公告内容')
-      }
-    } catch (e) {
-      markFailed('3.4', e.message.slice(0, 50))
-      throw e
-    }
+  test.fixme('3.4 商家公告 (blocked by #19)', async ({ page }) => {
+    await page.goto('/user/home/merchant-detail?id=1')
+    const announcement = page.locator('[class*="announcement"], [class*="notice"], [class*="公告"]')
+    await expect(announcement.first()).toBeVisible({ timeout: 10000 })
   })
 
   test('3.5 商家评价列表', async ({ page }) => {
@@ -77,11 +63,8 @@ test.describe('模块三：商家浏览与详情', () => {
       await page.goto('/user/home/merchant-detail?id=1')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const reviews = page.locator('[class*="review"], [class*="comment"], [class*="评价"]')
-      if (await reviews.count() > 0) {
-        markPassed('3.5', '评价区域存在')
-      } else {
-        markSkipped('3.5', '无评价内容')
-      }
+      await expect(reviews.first()).toBeVisible({ timeout: 10000 })
+      markPassed('3.5', '评价区域存在')
     } catch (e) {
       markFailed('3.5', e.message.slice(0, 50))
       throw e
@@ -94,11 +77,8 @@ test.describe('模块三：商家浏览与详情', () => {
       await page.goto('/user/home/merchant-detail?id=1')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const dishes = page.locator('[class*="dish"], [class*="menu-item"], [class*="菜品"]')
-      if (await dishes.count() > 0) {
-        markPassed('3.6', '菜品列表存在')
-      } else {
-        markSkipped('3.6', '无菜品内容')
-      }
+      await expect(dishes.first()).toBeVisible({ timeout: 10000 })
+      markPassed('3.6', '菜品列表存在')
     } catch (e) {
       markFailed('3.6', e.message.slice(0, 50))
       throw e
@@ -151,5 +131,8 @@ test.describe('模块三：商家浏览与详情', () => {
     }
   })
 
-  test.afterAll(() => { updateSummary() })
+  test.afterAll(() => {
+    markSkipped('3.4', '#19', '用户端无商家公告展示')
+    updateSummary()
+  })
 })

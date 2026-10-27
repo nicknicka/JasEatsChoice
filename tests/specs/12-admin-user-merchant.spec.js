@@ -22,24 +22,15 @@ test.describe('模块十二：管理员端-用户与商家管理', () => {
       await page.goto('/admin/users')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const detailBtn = page.locator('button:has-text("详情"), button:has-text("查看"), a:has-text("详情")').first()
-      if (await detailBtn.count() > 0) {
-        markPassed('12.2', '用户详情按钮存在')
-      } else {
-        markSkipped('12.2', '无用户详情按钮')
-      }
+      await expect(detailBtn).toBeVisible({ timeout: 10000 })
+      markPassed('12.2', '用户详情按钮存在')
     } catch (e) { markFailed('12.2', e.message.slice(0, 50)); throw e }
   })
 
-  test('12.3 用户状态管理', async ({ page }) => {
-    markRunning('12.3')
-    try {
-      await page.goto('/admin/users')
-      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
-      // 产品缺口：UserManagement.vue 表格无状态列，编辑弹窗只有资料字段
-      // （昵称/手机号/邮箱/头像/性别/生日/位置/简介），没有启用/禁用控件。
-      // 如实跳过，不把"打开编辑弹窗"冒充成状态管理。
-      markSkipped('12.3', '产品无用户状态管理控件：表格无状态列，编辑弹窗仅资料字段')
-    } catch (e) { markFailed('12.3', e.message.slice(0, 50)); throw e }
+  test.fixme('12.3 用户状态管理 (blocked by #34)', async ({ page }) => {
+    await page.goto('/admin/users')
+    const statusControl = page.locator('.el-table [class*="status"], button:has-text("禁用"), button:has-text("启用")').first()
+    await expect(statusControl).toBeVisible({ timeout: 10000 })
   })
 
   test('12.4 商家列表', async ({ page }) => {
@@ -90,5 +81,8 @@ test.describe('模块十二：管理员端-用户与商家管理', () => {
     } catch (e) { markFailed('12.7', e.message.slice(0, 50)); throw e }
   })
 
-  test.afterAll(() => { updateSummary() })
+  test.afterAll(() => {
+    markSkipped('12.3', '#34', '用户状态管理尚未实现')
+    updateSummary()
+  })
 })
