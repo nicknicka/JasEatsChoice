@@ -205,9 +205,13 @@ const captchaImage = ref('') // 验证码图片
 const captchaKey = ref('') // 验证码Key（用于后端验证）
 
 // 从后端获取验证码
+let captchaRequestId = 0
+
 const getCaptcha = async () => {
+  const requestId = ++captchaRequestId
   try {
     const response = await api.get('/v1/captcha/checkCode') // 调用后端验证码接口
+    if (requestId !== captchaRequestId) return
     // 添加调试信息，查看响应结构
     // console.log('验证码接口完整响应:', response);
     // console.log('验证码接口响应data:', response.data);
@@ -220,6 +224,7 @@ const getCaptcha = async () => {
       captchaKey.value = captchaData.checkCodeKey // 验证码唯一标识
     }
   } catch (error) {
+    if (requestId !== captchaRequestId) return
     console.error('获取验证码失败:', error)
     ElMessage.error('获取验证码失败，请稍后重试')
   }

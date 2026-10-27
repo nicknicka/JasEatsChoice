@@ -168,21 +168,62 @@ test.describe('模块一：认证模块', () => {
 
       const merchantName = `测试商户${suffix}`
       const merchantPhone = `137${String(suffix).slice(-8)}`
-      const captcha = await fetchCaptcha()
+      const merchantEmail = `merchant_${suffix}@example.com`
+      const businessLicense = `E2E${suffix}`
 
-      await page.getByPlaceholder('请输入商户名称').fill(merchantName)
-      await page.getByPlaceholder('请输入营业执照号').fill(`E2E${suffix}`)
+      // 页面刷新验证码后，用同一次响应填入表单，避免 onMounted 的请求覆盖 captchaKey。
+      const captchaRequestPromise = page.waitForRequest((request) =>
+        request.url().includes('/v1/captcha/checkCode') && request.method() === 'GET'
+      )
+      await page.locator('.captcha-refresh-link').click()
+      const captchaRequest = await captchaRequestPromise
+      const captchaResponse = await captchaRequest.response()
+      expect(captchaResponse, '刷新验证码请求应有响应').not.toBeNull()
+      const captchaPayload = await captchaResponse.json()
+      expect(captchaPayload.success, `验证码接口应成功：${captchaPayload.message || ''}`).toBe(true)
+      const captchaData = captchaPayload.data
+      const captchaCode = captchaData?.fixedCaptchaCode || captchaData?.captchaAnswer
+      expect(captchaCode).toBeTruthy()
+      const expectedCaptchaSrc = captchaData.checkCode.startsWith('data:image')
+        ? captchaData.checkCode
+        : `data:image/png;base64,${captchaData.checkCode}`
+      await expect(page.getByAltText('验证码')).toHaveAttribute('src', expectedCaptchaSrc)
+
+      const merchantNameInput = page.getByPlaceholder('请输入商户名称')
+      const businessLicenseInput = page.getByPlaceholder('请输入营业执照号')
+      const contactNameInput = page.getByPlaceholder('请输入联系人姓名')
+      const merchantPhoneInput = page.getByPlaceholder('请输入联系人电话')
+      const merchantEmailInput = page.getByPlaceholder('请输入邮箱')
+      const captchaInput = page.getByPlaceholder('请输入验证码')
+
+      await merchantNameInput.fill(merchantName)
+      await expect(merchantNameInput).toHaveValue(merchantName)
+      await businessLicenseInput.fill(businessLicense)
+      await expect(businessLicenseInput).toHaveValue(businessLicense)
       await page.locator('.el-select').click()
       await page.getByRole('option', { name: '中餐' }).click()
-      await page.getByPlaceholder('请输入联系人姓名').fill('测试联系人')
-      await page.getByPlaceholder('请输入联系人电话').fill(merchantPhone)
-      await page.getByPlaceholder('请输入邮箱').fill(`merchant_${suffix}@example.com`)
-      await page.getByPlaceholder('请输入验证码').fill(captcha.fixedCaptchaCode || captcha.captchaAnswer)
+      await expect(page.locator('.el-select .el-tag')).toContainText('中餐')
+      await page.keyboard.press('Escape')
+      await expect(page.locator('.el-select-dropdown')).toBeHidden()
+      await contactNameInput.waitFor({ state: 'visible' })
+      await contactNameInput.click()
+      await contactNameInput.fill('测试联系人')
+      await expect(contactNameInput).toHaveValue('测试联系人')
+      await merchantPhoneInput.fill(merchantPhone)
+      await expect(merchantPhoneInput).toHaveValue(merchantPhone)
+      await merchantEmailInput.fill(merchantEmail)
+      await expect(merchantEmailInput).toHaveValue(merchantEmail)
+      await captchaInput.fill(captchaCode)
+      await expect(captchaInput).toHaveValue(captchaCode)
+
+      await expect(page.locator('.el-form-item__error')).toHaveCount(0)
+      const registerButton = page.getByRole('button', { name: '注册', exact: true })
+      await expect(registerButton).toBeEnabled()
 
       const responsePromise = page.waitForResponse((response) =>
         response.url().includes('/v1/merchant/register') && response.request().method() === 'POST'
       )
-      await page.getByRole('button', { name: '注册', exact: true }).click()
+      await registerButton.click()
       const registerResponse = await responsePromise
       const registerPayload = await registerResponse.json()
       expect(registerPayload.success, `商家注册接口应成功：${registerPayload.message || ''}`).toBe(true)
