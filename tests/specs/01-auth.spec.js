@@ -1,5 +1,5 @@
 const { test, expect, loginAsUser, loginAsAdmin, USER_CREDENTIALS } = require('../fixtures/test-base')
-const { markRunning, markPassed, markFailed, markSkipped, updateSummary } = require('../utils/progress')
+const { markRunning, markPassed, markFailed, updateSummary } = require('../utils/progress')
 const { TEST_API_BASE } = require('../utils/api')
 
 const API_BASE = TEST_API_BASE.replace(/\/$/, '')
@@ -117,37 +117,135 @@ test.describe('模块一：认证模块', () => {
     }
   })
 
-  test.fixme('1.4 商家注册 (blocked by #58)', async ({ page }) => {
-    await loginAsUser(page)
-    await page.goto('/merchant/register')
-    await expect(page).toHaveURL(/\/merchant\/register/)
-    await expect(page.getByRole('heading', { name: '商户注册' })).toBeVisible()
+  test('1.4 商家注册', async ({ page }) => {
+    markRunning('1.4')
+    try {
+      const noAuthCaptcha = await fetchCaptcha()
+      const noAuthRegister = await api('/v1/merchant/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: '无登录态测试',
+          phone: '13500000000',
+          businessLicense: 'E2E-NO-AUTH',
+          businessScope: ['中餐'],
+          contactName: '测试联系人',
+          email: 'no-auth@example.com',
+          captcha: noAuthCaptcha.fixedCaptchaCode || noAuthCaptcha.captchaAnswer,
+          captchaKey: noAuthCaptcha.checkCodeKey
+        })
+      })
+      expect(noAuthRegister.result?.success, '缺少登录态时不应返回成功').toBe(false)
+      expect(noAuthRegister.result?.code).toBe('401')
 
-    const suffix = Date.now()
-    const merchantName = `测试商户${suffix}`
-    const phone = `137${String(suffix).slice(-8)}`
-    const captcha = await fetchCaptcha()
+      const suffix = Date.now()
+      const tempPhone = `139${String(suffix).slice(-8)}`
+      const tempPassword = 'e2ePass123'
+      const tempNickname = `merchant_e2e_${suffix}`
+      const captchaForUser = await fetchCaptcha()
 
-    await page.getByPlaceholder('请输入商户名称').fill(merchantName)
-    await page.getByPlaceholder('请输入营业执照号').fill(`E2E${suffix}`)
-    await page.locator('.el-select').click()
-    await page.getByRole('option', { name: '中餐' }).click()
-    await page.getByPlaceholder('请输入联系人姓名').fill('测试联系人')
-    await page.getByPlaceholder('请输入联系人电话').fill(phone)
-    await page.getByPlaceholder('请输入邮箱').fill(`merchant_${suffix}@example.com`)
-    await page.getByPlaceholder('请输入验证码').fill(captcha.fixedCaptchaCode || captcha.captchaAnswer)
+      const userRegister = await api('/v1/users/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nickname: tempNickname,
+          password: tempPassword,
+          email: `${tempNickname}@example.com`,
+          phone: tempPhone,
+          captcha: captchaForUser.fixedCaptchaCode || captchaForUser.captchaAnswer,
+          checkCodeKey: captchaForUser.checkCodeKey
+        })
+      })
+      expect(userRegister.result?.success, `临时用户注册应成功：${userRegister.result?.message || ''}`).toBe(true)
 
-    const responsePromise = page.waitForResponse((response) =>
-      response.url().includes('/v1/merchant/register') && response.request().method() === 'POST'
-    )
-    await page.getByRole('button', { name: '注册', exact: true }).click()
-    const response = await responsePromise
-    const payload = await response.json()
-    expect(payload.success, `商家注册接口应成功：${payload.message || ''}`).toBe(true)
-    expect(payload.data?.id).toBeTruthy()
+      await loginAsUser(page, tempPhone, tempPassword)
+      const tempUserId = await page.evaluate(() => localStorage.getItem('auth_userId'))
+      expect(tempUserId).toBeTruthy()
 
-    const users = await api(`/v1/users/search?keyword=${encodeURIComponent(phone)}&searchType=phone`)
-    expect(users.result.data[0].merchantId).toBe(payload.data.id)
+      await page.goto('/merchant/register')
+      await expect(page).toHaveURL(/\/merchant\/register/)
+      await expect(page.getByRole('heading', { name: '商户注册' })).toBeVisible()
+
+      const merchantName = `测试商户${suffix}`
+      const merchantPhone = `137${String(suffix).slice(-8)}`
+      const merchantEmail = `merchant_${suffix}@example.com`
+      const businessLicense = `E2E${suffix}`
+
+      // 页面刷新验证码后，用同一次响应填入表单，避免 onMounted 的请求覆盖 captchaKey。
+      const captchaRequestPromise = page.waitForRequest((request) =>
+        request.url().includes('/v1/captcha/checkCode') && request.method() === 'GET'
+      )
+      await page.locator('.captcha-refresh-link').click()
+      const captchaRequest = await captchaRequestPromise
+      const captchaResponse = await captchaRequest.response()
+      expect(captchaResponse, '刷新验证码请求应有响应').not.toBeNull()
+      const captchaPayload = await captchaResponse.json()
+      expect(captchaPayload.success, `验证码接口应成功：${captchaPayload.message || ''}`).toBe(true)
+      const captchaData = captchaPayload.data
+      const captchaCode = captchaData?.fixedCaptchaCode || captchaData?.captchaAnswer
+      expect(captchaCode).toBeTruthy()
+      const expectedCaptchaSrc = captchaData.checkCode.startsWith('data:image')
+        ? captchaData.checkCode
+        : `data:image/png;base64,${captchaData.checkCode}`
+      await expect(page.getByAltText('验证码')).toHaveAttribute('src', expectedCaptchaSrc)
+
+      const merchantNameInput = page.getByPlaceholder('请输入商户名称')
+      const businessLicenseInput = page.getByPlaceholder('请输入营业执照号')
+      const contactNameInput = page.getByPlaceholder('请输入联系人姓名')
+      const merchantPhoneInput = page.getByPlaceholder('请输入联系人电话')
+      const merchantEmailInput = page.getByPlaceholder('请输入邮箱')
+      const captchaInput = page.getByPlaceholder('请输入验证码')
+
+      await merchantNameInput.fill(merchantName)
+      await expect(merchantNameInput).toHaveValue(merchantName)
+      await businessLicenseInput.fill(businessLicense)
+      await expect(businessLicenseInput).toHaveValue(businessLicense)
+      await page.locator('.el-select').click()
+      await page.getByRole('option', { name: '中餐' }).click()
+      await expect(page.locator('.el-select .el-tag')).toContainText('中餐')
+      await page.keyboard.press('Escape')
+      await expect(page.locator('.el-select-dropdown')).toBeHidden()
+      await contactNameInput.waitFor({ state: 'visible' })
+      await contactNameInput.click()
+      await contactNameInput.fill('测试联系人')
+      await expect(contactNameInput).toHaveValue('测试联系人')
+      await merchantPhoneInput.fill(merchantPhone)
+      await expect(merchantPhoneInput).toHaveValue(merchantPhone)
+      await merchantEmailInput.fill(merchantEmail)
+      await expect(merchantEmailInput).toHaveValue(merchantEmail)
+      await captchaInput.fill(captchaCode)
+      await expect(captchaInput).toHaveValue(captchaCode)
+
+      await expect(page.locator('.el-form-item__error')).toHaveCount(0)
+      const registerButton = page.getByRole('button', { name: '注册', exact: true })
+      await expect(registerButton).toBeEnabled()
+
+      const responsePromise = page.waitForResponse((response) =>
+        response.url().includes('/v1/merchant/register') && response.request().method() === 'POST'
+      )
+      await registerButton.click()
+      const registerResponse = await responsePromise
+      const registerPayload = await registerResponse.json()
+      expect(registerPayload.success, `商家注册接口应成功：${registerPayload.message || ''}`).toBe(true)
+      const merchantId = registerPayload.data?.merchantId
+      expect(merchantId).toBeTruthy()
+
+      const userInfo = await api(`/v1/users/${encodeURIComponent(tempUserId)}`)
+      expect(userInfo.response.ok, '用户回查接口应返回成功').toBeTruthy()
+      expect(userInfo.result?.success, `用户回查失败：${userInfo.result?.message || ''}`).toBe(true)
+      expect(userInfo.result.data?.merchantId).toBe(merchantId)
+
+      const merchantInfo = await api(`/v1/merchant/${encodeURIComponent(merchantId)}`)
+      expect(merchantInfo.response.ok, '商家回查接口应返回成功').toBeTruthy()
+      expect(merchantInfo.result?.success, `商家回查失败：${merchantInfo.result?.message || ''}`).toBe(true)
+      expect(merchantInfo.result.data?.name).toBe(merchantName)
+      expect(merchantInfo.result.data?.phone).toBe(merchantPhone)
+
+      markPassed('1.4', '商家真实落库且用户已关联')
+    } catch (e) {
+      markFailed('1.4', e.message.slice(0, 50))
+      throw e
+    }
   })
 
   test('1.5 管理员登录', async ({ page }) => {
@@ -239,7 +337,6 @@ test.describe('模块一：认证模块', () => {
   })
 
   test.afterAll(() => {
-    markSkipped('1.4', '#58', '桌面商家注册前后端契约不一致，无法真实完成注册')
     updateSummary()
   })
 })
