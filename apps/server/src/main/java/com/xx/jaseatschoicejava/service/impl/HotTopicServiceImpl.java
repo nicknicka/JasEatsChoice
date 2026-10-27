@@ -79,7 +79,13 @@ public class HotTopicServiceImpl extends ServiceImpl<HotTopicMapper, HotTopic> i
         }
 
         // 2. 从热门教程提取
-        Tutorial hottestTutorial = getHottestTutorial();
+        Tutorial hottestTutorial;
+        try {
+            hottestTutorial = getHottestTutorial();
+        } catch (Exception e) {
+            log.error("获取最热门教程失败，将降级到其他策略", e);
+            hottestTutorial = null;
+        }
         if (hottestTutorial != null) {
             String title = hottestTutorial.getTitle();
             if (title != null && title.length() > 30) {
@@ -144,12 +150,7 @@ public class HotTopicServiceImpl extends ServiceImpl<HotTopicMapper, HotTopic> i
      * 获取最热门的教程（辅助方法）
      */
     private Tutorial getHottestTutorial() {
-        try {
-            return tutorialMapper.selectHottestTutorial();
-        } catch (Exception e) {
-            log.error("获取最热门教程失败", e);
-            return null;
-        }
+        return tutorialMapper.selectHottestTutorial();
     }
 
     /**
@@ -183,18 +184,14 @@ public class HotTopicServiceImpl extends ServiceImpl<HotTopicMapper, HotTopic> i
      */
     @Override
     public String extractFromTutorial() {
-        try {
-            Tutorial hottestTutorial = tutorialMapper.selectHottestTutorial();
-            if (hottestTutorial != null) {
-                String title = hottestTutorial.getTitle();
-                // 简化标题，去掉过长的部分
-                if (title != null && title.length() > 30) {
-                    return title.substring(0, 27) + "...";
-                }
-                return title;
+        Tutorial hottestTutorial = tutorialMapper.selectHottestTutorial();
+        if (hottestTutorial != null) {
+            String title = hottestTutorial.getTitle();
+            // 简化标题，去掉过长的部分
+            if (title != null && title.length() > 30) {
+                return title.substring(0, 27) + "...";
             }
-        } catch (Exception e) {
-            log.error("从教程提取热点失败", e);
+            return title;
         }
         return null;
     }
