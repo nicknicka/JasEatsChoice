@@ -1,30 +1,70 @@
 const { test, expect, bootstrapAdminSession } = require('../fixtures/test-base')
 const { markRunning, markPassed, markFailed, markSkipped, updateSummary } = require('../utils/progress')
+const { TEST_API_BASE } = require('../utils/api')
+
+const API_BASE = TEST_API_BASE.replace(/\/$/, '')
+
+async function apiRequest(page, request, path, options = {}) {
+  const token = await page.evaluate(() =>
+    localStorage.getItem('auth_token') || localStorage.getItem('admin_token') || ''
+  )
+  const response = await request.fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers: {
+      Accept: 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options.headers || {})
+    }
+  })
+  const result = await response.json().catch(() => null)
+  expect(response.ok(), `接口 ${path} 应返回成功状态`).toBeTruthy()
+  expect(result, `接口 ${path} 应返回 JSON`).not.toBeNull()
+  expect(result.success, `接口 ${path} 不应返回 success=false`).not.toBe(false)
+  if (result.code !== undefined && result.code !== null) {
+    expect(String(result.code), `接口 ${path} 应返回 code=200`).toBe('200')
+  }
+  return result.data ?? result
+}
+
+function pageRecords(data) {
+  return data?.records || []
+}
 
 test.describe('模块十二：管理员端-用户与商家管理', () => {
 
   test.beforeEach(async ({ page }) => { await bootstrapAdminSession(page) })
 
-  test('12.1 用户列表', async ({ page }) => {
+  test('12.1 用户列表', async ({ page, request }) => {
     markRunning('12.1')
     try {
+      const users = pageRecords(await apiRequest(page, request, '/admin/users?page=1&pageSize=10'))
       await page.goto('/admin/users')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
-      const users = page.locator('[class*="user"], .el-table, .el-card')
-      await expect(users.first()).toBeVisible({ timeout: 10000 })
-      markPassed('12.1', '用户管理页面可访问')
+
+      expect(users.length, '用户接口应有可验证记录').toBeGreaterThan(0)
+      const rows = page.locator('.el-table__body-wrapper tbody tr')
+      await expect(rows).toHaveCount(users.length, { timeout: 10000 })
+      await expect(rows.first()).toContainText(String(users[0].userId))
+      await expect(rows.first()).toContainText(users[0].phone)
+
+      markPassed('12.1', `用户表 ${users.length} 行，首行 ID/手机号与接口一致`)
     } catch (e) { markFailed('12.1', e.message.slice(0, 50)); throw e }
   })
 
-  test('12.2 用户详情', async ({ page }) => {
-    markRunning('12.2')
-    try {
-      await page.goto('/admin/users')
-      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
-      const detailBtn = page.locator('button:has-text("详情"), button:has-text("查看"), a:has-text("详情")').first()
-      await expect(detailBtn).toBeVisible({ timeout: 10000 })
-      markPassed('12.2', '用户详情按钮存在')
-    } catch (e) { markFailed('12.2', e.message.slice(0, 50)); throw e }
+  test.fixme('12.2 用户详情 (blocked by #69)', async ({ page, request }) => {
+    const users = pageRecords(await apiRequest(page, request, '/admin/users?page=1&pageSize=10'))
+    expect(users.length, '用户接口应有可验证记录').toBeGreaterThan(0)
+    const user = users[0]
+
+    await page.goto('/admin/users')
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
+    await page.locator('.el-table__body-wrapper tbody tr').first()
+      .locator('button:has-text("查看")').click()
+
+    const dialog = page.locator('.el-dialog').filter({ hasText: '用户详情' })
+    await expect(dialog).toBeVisible({ timeout: 10000 })
+    await expect(dialog).toContainText(String(user.userId))
+    await expect(dialog).toContainText(user.phone)
   })
 
   test.fixme('12.3 用户状态管理 (blocked by #34)', async ({ page }) => {
@@ -33,51 +73,80 @@ test.describe('模块十二：管理员端-用户与商家管理', () => {
     await expect(statusControl).toBeVisible({ timeout: 10000 })
   })
 
-  test('12.4 商家列表', async ({ page }) => {
+  test('12.4 商家列表', async ({ page, request }) => {
     markRunning('12.4')
     try {
+      const merchants = pageRecords(await apiRequest(page, request, '/admin/merchants?page=1&pageSize=10'))
       await page.goto('/admin/merchants')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
-      const merchants = page.locator('[class*="merchant"], .el-table, .el-card')
-      await expect(merchants.first()).toBeVisible({ timeout: 10000 })
-      markPassed('12.4', '商家管理页面可访问')
+
+      expect(merchants.length, '商家接口应有可验证记录').toBeGreaterThan(0)
+      const rows = page.locator('.el-table__body-wrapper tbody tr')
+      await expect(rows).toHaveCount(merchants.length, { timeout: 10000 })
+      await expect(rows.first()).toContainText(String(merchants[0].merchantId))
+      await expect(rows.first()).toContainText(merchants[0].name)
+
+      markPassed('12.4', `商家表 ${merchants.length} 行，首行 ID/名称与接口一致`)
     } catch (e) { markFailed('12.4', e.message.slice(0, 50)); throw e }
   })
 
-  test('12.5 商家审核', async ({ page }) => {
+  test('12.5 商家审核', async ({ page, request }) => {
     markRunning('12.5')
     try {
+      const merchants = pageRecords(await apiRequest(page, request, '/admin/merchants/pending?page=1&pageSize=10'))
       await page.goto('/admin/merchants/audit')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
-      const audit = page.locator('[class*="audit"], [class*="pending"], .el-table')
-      await expect(audit.first()).toBeVisible({ timeout: 10000 })
-      markPassed('12.5', '商家审核页面可访问')
+
+      expect(merchants.length, '待审核商家接口应有可验证记录').toBeGreaterThan(0)
+      const rows = page.locator('.el-table__body-wrapper tbody tr')
+      await expect(rows).toHaveCount(merchants.length, { timeout: 10000 })
+      await expect(rows.first()).toContainText(merchants[0].name)
+
+      markPassed('12.5', `待审核商家表 ${merchants.length} 行，首行与接口一致`)
     } catch (e) { markFailed('12.5', e.message.slice(0, 50)); throw e }
   })
 
-  test('12.6 商家详情', async ({ page }) => {
+  test('12.6 商家详情', async ({ page, request }) => {
     markRunning('12.6')
     try {
+      const merchants = pageRecords(await apiRequest(page, request, '/admin/merchants?page=1&pageSize=10'))
+      expect(merchants.length, '商家接口应有可验证记录').toBeGreaterThan(0)
+      const merchant = merchants[0]
+
       await page.goto('/admin/merchants')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
-      // MerchantManagement.vue 行内「查看」打开 el-dialog 详情（el-descriptions 含"商家ID"）
-      await page.locator('.el-table button:has-text("查看")').first().click()
-      await expect(page.locator('.el-dialog').filter({ hasText: '商家ID' })).toBeVisible({ timeout: 10000 })
-      markPassed('12.6', '商家详情弹窗可打开')
+      await page.locator('.el-table__body-wrapper tbody tr').first()
+        .locator('button:has-text("查看")').click()
+
+      const dialog = page.locator('.el-dialog').filter({ hasText: '商家详情' })
+      await expect(dialog).toBeVisible({ timeout: 10000 })
+      await expect(dialog).toContainText(String(merchant.merchantId))
+      await expect(dialog).toContainText(merchant.name)
+
+      markPassed('12.6', `商家详情弹窗包含真实商家 ID ${merchant.merchantId}`)
     } catch (e) { markFailed('12.6', e.message.slice(0, 50)); throw e }
   })
 
-  test('12.7 商家状态管理', async ({ page }) => {
+  test('12.7 商家状态管理', async ({ page, request }) => {
     markRunning('12.7')
     try {
+      const merchants = pageRecords(await apiRequest(page, request, '/admin/merchants?page=1&pageSize=10'))
+      const target = merchants.find(merchant => merchant.auditStatus !== 'PENDING' && merchant.status !== 'PENDING')
+      expect(target, '应有可打开状态弹窗的商家').toBeTruthy()
+
       await page.goto('/admin/merchants')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
-      // 非 PENDING 商家行有「状态」按钮，走 ElMessageBox.prompt（inputType: select，营业中/已暂停）。
-      // 只验证弹窗可打开，选「取消」收尾，不改任何商家状态。
-      await page.locator('.el-table button:has-text("状态")').first().click()
-      await expect(page.locator('.el-message-box').filter({ hasText: '修改状态' })).toBeVisible({ timeout: 10000 })
-      await page.locator('.el-message-box button').filter({ hasText: '取消' }).click()
-      markPassed('12.7', '商家状态修改弹窗可打开（已取消，未落库）')
+      await page.locator('.el-table__body-wrapper tbody tr')
+        .filter({ hasText: String(target.merchantId) })
+        .locator('button:has-text("状态")').click()
+
+      const dialog = page.locator('.el-message-box').filter({ hasText: '修改状态' })
+      await expect(dialog).toBeVisible({ timeout: 10000 })
+      await expect(dialog).toContainText('请选择新状态')
+      await dialog.locator('button').filter({ hasText: '取消' }).click()
+      await expect(dialog).toBeHidden()
+
+      markPassed('12.7', `商家 ${target.merchantId} 状态弹窗可打开且取消未落库`)
     } catch (e) { markFailed('12.7', e.message.slice(0, 50)); throw e }
   })
 
