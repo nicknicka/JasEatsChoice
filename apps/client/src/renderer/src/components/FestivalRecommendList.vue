@@ -130,7 +130,7 @@ const handleAddToCart = async (dish) => {
 // 提交反馈
 const handleSubmitFeedback = async (data) => {
   try {
-    await festivalApi.submitFeedback(data.recommendId, data)
+    await festivalApi.submitFeedback(data.recommendHistoryId, data)
   } catch (error) {
     console.error('提交反馈失败:', error)
   }
