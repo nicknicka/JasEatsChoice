@@ -9,7 +9,7 @@ test.describe('模块十四：管理员端-系统管理', () => {
     markRunning('14.1')
     try {
       await page.goto('/admin/dashboard')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const dashboard = page.locator('[class*="dashboard"], [class*="statistic"], .el-card')
       await expect(dashboard.first()).toBeVisible({ timeout: 10000 })
       markPassed('14.1', '仪表板页面可访问')
@@ -20,7 +20,7 @@ test.describe('模块十四：管理员端-系统管理', () => {
     markRunning('14.2')
     try {
       await page.goto('/admin/settings/roles')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const roles = page.locator('[class*="role"], .el-table, .el-card')
       await expect(roles.first()).toBeVisible({ timeout: 10000 })
       markPassed('14.2', '角色管理页面可访问')
@@ -31,7 +31,7 @@ test.describe('模块十四：管理员端-系统管理', () => {
     markRunning('14.3')
     try {
       await page.goto('/admin/settings/permissions')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const permissions = page.locator('[class*="permission"], [class*="tree"], .el-tree')
       await expect(permissions.first()).toBeVisible({ timeout: 10000 })
       markPassed('14.3', '权限管理页面可访问')
@@ -42,7 +42,7 @@ test.describe('模块十四：管理员端-系统管理', () => {
     markRunning('14.4')
     try {
       await page.goto('/admin/announcements')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const announcements = page.locator('[class*="announcement"], [class*="notice"], .el-table')
       await expect(announcements.first()).toBeVisible({ timeout: 10000 })
       markPassed('14.4', '公告管理页面可访问')
@@ -53,7 +53,7 @@ test.describe('模块十四：管理员端-系统管理', () => {
     markRunning('14.5')
     try {
       await page.goto('/admin/topics')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const topics = page.locator('[class*="topic"], .el-table, .el-card')
       await expect(topics.first()).toBeVisible({ timeout: 10000 })
       markPassed('14.5', '热点话题管理页面可访问')
@@ -64,7 +64,7 @@ test.describe('模块十四：管理员端-系统管理', () => {
     markRunning('14.6')
     try {
       await page.goto('/admin/settings')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const settings = page.locator('[class*="setting"], [class*="config"], .el-form')
       await expect(settings.first()).toBeVisible({ timeout: 10000 })
       markPassed('14.6', '系统设置页面可访问')

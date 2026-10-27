@@ -9,7 +9,7 @@ test.describe('模块十三：管理员端-订单菜品与财务', () => {
     markRunning('13.1')
     try {
       await page.goto('/admin/orders')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const orders = page.locator('[class*="order"], .el-table, .el-card')
       await expect(orders.first()).toBeVisible({ timeout: 10000 })
       markPassed('13.1', '订单管理页面可访问')
@@ -20,7 +20,7 @@ test.describe('模块十三：管理员端-订单菜品与财务', () => {
     markRunning('13.2')
     try {
       await page.goto('/admin/orders')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const statusBtn = page.locator('button:has-text("状态"), .el-select').first()
       if (await statusBtn.count() > 0) {
         markPassed('13.2', '状态更新控件存在')
@@ -34,7 +34,7 @@ test.describe('模块十三：管理员端-订单菜品与财务', () => {
     markRunning('13.3')
     try {
       await page.goto('/admin/dishes')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const dishes = page.locator('[class*="dish"], .el-table, .el-card')
       await expect(dishes.first()).toBeVisible({ timeout: 10000 })
       markPassed('13.3', '菜品管理页面可访问')
@@ -45,7 +45,7 @@ test.describe('模块十三：管理员端-订单菜品与财务', () => {
     markRunning('13.4')
     try {
       await page.goto('/admin/dishes/audit')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const audit = page.locator('[class*="audit"], [class*="pending"], .el-table')
       await expect(audit.first()).toBeVisible({ timeout: 10000 })
       markPassed('13.4', '菜品审核页面可访问')
@@ -56,7 +56,7 @@ test.describe('模块十三：管理员端-订单菜品与财务', () => {
     markRunning('13.5')
     try {
       await page.goto('/admin/finance/withdrawals')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const withdrawal = page.locator('[class*="withdrawal"], [class*="finance"], .el-table')
       await expect(withdrawal.first()).toBeVisible({ timeout: 10000 })
       markPassed('13.5', '提现审核页面可访问')
@@ -67,7 +67,7 @@ test.describe('模块十三：管理员端-订单菜品与财务', () => {
     markRunning('13.6')
     try {
       await page.goto('/admin/finance/recharges')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const recharge = page.locator('[class*="recharge"], [class*="finance"], .el-table')
       await expect(recharge.first()).toBeVisible({ timeout: 10000 })
       markPassed('13.6', '充值记录页面可访问')
@@ -78,7 +78,7 @@ test.describe('模块十三：管理员端-订单菜品与财务', () => {
     markRunning('13.7')
     try {
       await page.goto('/admin/finance/refunds')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const refund = page.locator('[class*="refund"], [class*="finance"], .el-table')
       await expect(refund.first()).toBeVisible({ timeout: 10000 })
       markPassed('13.7', '退款管理页面可访问')
@@ -89,7 +89,7 @@ test.describe('模块十三：管理员端-订单菜品与财务', () => {
     markRunning('13.8')
     try {
       await page.goto('/admin/statistics')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       // DataStatistics.vue：统计周期 radio-group（最近7/30/90天）+ 收入趋势 chart-card。
       // 切到「最近30天」触发 fetchStatistics，再断言收入趋势卡片仍在。
       await expect(page.locator('.date-selector-card')).toBeVisible({ timeout: 10000 })

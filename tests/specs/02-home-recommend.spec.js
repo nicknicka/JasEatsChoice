@@ -24,7 +24,7 @@ test.describe('模块二：用户首页与推荐', () => {
     markRunning('2.2')
     try {
       await page.goto('/user/home/recommend')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const recommendList = page.locator('[class*="recommend"], [class*="dish-card"], .el-card')
       await expect(recommendList.first()).toBeVisible({ timeout: 10000 })
       markPassed('2.2', '推荐页面可访问')
@@ -38,7 +38,7 @@ test.describe('模块二：用户首页与推荐', () => {
     markRunning('2.3')
     try {
       await page.goto('/user/home/recommend')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const refreshBtn = page.locator('button:has-text("刷新"), [class*="refresh"], .el-icon-refresh').first()
       if (await refreshBtn.count() > 0) {
         await refreshBtn.click()
@@ -57,7 +57,7 @@ test.describe('模块二：用户首页与推荐', () => {
     markRunning('2.4')
     try {
       await page.goto('/user/home/recommend')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const rejectBtn = page.locator('button:has-text("不感兴趣")').first()
       if (await rejectBtn.count() > 0) {
         await rejectBtn.click()
@@ -76,7 +76,7 @@ test.describe('模块二：用户首页与推荐', () => {
     markRunning('2.5')
     try {
       await page.goto('/user/home/hot-topic')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const hotTopic = page.locator('[class*="hot-topic"], [class*="topic-title"], .article-card, .content-area')
       if (await hotTopic.count() > 0 || await page.getByRole('heading').count() > 0) {
         await expect(hotTopic.first()).toBeVisible({ timeout: 10000 })

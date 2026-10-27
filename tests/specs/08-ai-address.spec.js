@@ -9,7 +9,7 @@ test.describe('模块八：AI助手与地址管理', () => {
     markRunning('8.1')
     try {
       await page.goto('/user/home/ai')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const aiChat = page.locator('[class*="ai"], [class*="chat"], textarea')
       await expect(aiChat.first()).toBeVisible({ timeout: 10000 })
       markPassed('8.1', 'AI助手页面可访问')
@@ -20,7 +20,7 @@ test.describe('模块八：AI助手与地址管理', () => {
     markRunning('8.2')
     try {
       await page.goto('/user/home/ai')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const recognizeBtn = page.locator('button:has-text("识别"), [class*="recognize"], [class*="upload"]').first()
       if (await recognizeBtn.count() > 0) {
         markPassed('8.2', '菜品识别功能存在')
@@ -34,7 +34,7 @@ test.describe('模块八：AI助手与地址管理', () => {
     markRunning('8.3')
     try {
       await page.goto('/user/home/ai')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const recipeBtn = page.locator('button:has-text("食谱"), [class*="recipe"]').first()
       if (await recipeBtn.count() > 0) {
         markPassed('8.3', '食谱生成功能存在')
@@ -48,7 +48,7 @@ test.describe('模块八：AI助手与地址管理', () => {
     markRunning('8.4')
     try {
       await page.goto('/user/home/ai')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       // 探针确认：种子账号在该页有历史消息。消息行 class 来自 useAIChatMessages.getMessageClasses：
       // .chat-message（.user-message / .ai-message），容器为 .chat-messages。
       await expect(page.locator('.chat-messages')).toBeVisible({ timeout: 10000 })
@@ -61,7 +61,7 @@ test.describe('模块八：AI助手与地址管理', () => {
     markRunning('8.5')
     try {
       await page.goto('/user/home/address')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const address = page.locator('[class*="address"], .el-card')
       await expect(address.first()).toBeVisible({ timeout: 10000 })
       markPassed('8.5', '地址页面可访问')
@@ -72,7 +72,7 @@ test.describe('模块八：AI助手与地址管理', () => {
     markRunning('8.6')
     try {
       await page.goto('/user/home/address')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const addBtn = page.locator('button:has-text("添加"), button:has-text("新增")').first()
       if (await addBtn.count() > 0) {
         markPassed('8.6', '添加地址按钮存在')
@@ -86,7 +86,7 @@ test.describe('模块八：AI助手与地址管理', () => {
     markRunning('8.7')
     try {
       await page.goto('/user/home/address')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const editBtn = page.locator('button:has-text("编辑"), [class*="edit"]').first()
       if (await editBtn.count() > 0) {
         markPassed('8.7', '编辑按钮存在')
@@ -100,7 +100,7 @@ test.describe('模块八：AI助手与地址管理', () => {
     markRunning('8.8')
     try {
       await page.goto('/user/home/address')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const defaultBtn = page.locator('button:has-text("默认"), [class*="default"]').first()
       if (await defaultBtn.count() > 0) {
         markPassed('8.8', '默认地址按钮存在')
