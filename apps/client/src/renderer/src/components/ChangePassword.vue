@@ -67,6 +67,7 @@ import { Check, Close } from '@element-plus/icons-vue'
 import { validatePassword, getPasswordStrength, getPasswordStrengthText, getPasswordStrengthColor } from '@/utils/validator.js'
 import axios from 'axios'
 import { changeAdminPassword } from '../api/admin'
+import { getAdminInfo } from '@/utils/auth'
 
 const props = defineProps({
   modelValue: {
@@ -155,12 +156,15 @@ const handleSubmit = async () => {
     submitting.value = true
 
     // 调用修改密码API
-    const response = await changeAdminPassword({
-      oldPassword: passwordForm.oldPassword,
-      newPassword: passwordForm.newPassword
-    })
+    const adminId = getAdminInfo()?.adminId
+    if (!adminId) {
+      ElMessage.error('未获取到管理员信息，请重新登录')
+      return
+    }
 
-    if (response.code === '200') {
+    const response = await changeAdminPassword(adminId, passwordForm.newPassword)
+
+    if (response.success) {
       ElMessage.success('密码修改成功，请重新登录')
       emit('success')
       handleClose()
