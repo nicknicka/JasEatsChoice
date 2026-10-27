@@ -204,6 +204,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { orderApi } from '@/api'
+import { paymentApi } from '@/api/modules/payment.js'
 import { createPageDebug } from '@/utils/page-debug'
 import { USER_REVIEW_SUBMIT } from '@/constants/routes'
 
@@ -289,7 +290,7 @@ const orderItems = ref([
 const orderInfo = ref({
   orderNo: 'OD20260317120000001',
   createdAt: '2026-03-17 12:00:00',
-  paymentMethod: '微信支付',
+  paymentMethod: '平台币余额',
   deliveryTime: '尽快送达（预计30分钟）'
 })
 
@@ -558,7 +559,7 @@ const reviewOrder = () => {
 }
 
 /**
- * 立即支付 - U-009: 调用支付API
+ * 立即支付 - U-009: 使用平台币余额支付
  */
 const payOrder = async () => {
   pageDebug.action('订单详情立即支付', {
@@ -572,107 +573,47 @@ const payOrder = async () => {
     return
   }
 
-  // 确认支付对话框
   uni.showModal({
     title: '确认支付',
-    content: `支付金额：¥${orderAmount.value.totalPrice}`,
+    content: `确认使用平台币余额支付 ¥${orderAmount.value.totalPrice}？`,
     confirmColor: '#FF6B35',
     success: async (res) => {
-      if (res.confirm) {
-        try {
-          uni.showLoading({ title: '正在支付...' })
+      if (!res.confirm) return
 
-          // 导入支付API
-          const { paymentApi } = await import('@/api')
-
-          // 步骤1：创建支付订单
-          const createPaymentRes = await paymentApi.createPayment({
-            orderId: orderId.value,
-            userId: uni.getStorageSync('userId') || uni.getStorageSync('userInfo')?.id,
-            paymentMethod: 'wechat' // 默认微信支付，可以根据实际需求调整
-          })
-
-          uni.hideLoading()
-
-          if (createPaymentRes.code !== 200) {
-            throw new Error(createPaymentRes.message || '创建支付订单失败')
-          }
-
-          const paymentNo = createPaymentRes.data?.paymentNo
-          if (!paymentNo) {
-            throw new Error('支付流水号获取失败')
-          }
-
-          // 步骤2：调用微信支付
-          uni.showLoading({ title: '调起支付...' })
-          const wechatPayRes = await paymentApi.wechatPay({ paymentNo })
-          uni.hideLoading()
-
-          if (wechatPayRes.code !== 200) {
-            throw new Error(wechatPayRes.message || '获取支付参数失败')
-          }
-
-          // 步骤3：调起微信支付
-          const payParams = wechatPayRes.data
-          uni.requestPayment({
-            provider: 'wxpay',
-            timeStamp: payParams.timeStamp,
-            nonceStr: payParams.nonceStr,
-            package: payParams.package,
-            signType: payParams.signType || 'MD5',
-            paySign: payParams.paySign,
-            success: async () => {
-              pageDebug.requestSuccess('订单详情支付', {
-                orderId: orderId.value
-              })
-              // 支付成功
-              uni.showToast({
-                title: '支付成功',
-                icon: 'success',
-                duration: 2000
-              })
-
-              // 更新订单状态
-              orderStatus.value = {
-                value: 'paid',
-                icon: '✅',
-                text: '支付成功',
-                tips: '商家将尽快接单'
-              }
-              currentProgressIndex.value = 1
-
-              // 重新加载订单详情
-              setTimeout(async () => {
-                await loadOrderDetail()
-              }, 1000)
-            },
-            fail: (err) => {
-              pageDebug.requestFail('订单详情支付', err)
-              // 支付失败或取消
-              console.error('支付失败:', err)
-              if (err.errMsg.includes('cancel')) {
-                uni.showToast({
-                  title: '已取消支付',
-                  icon: 'none'
-                })
-              } else {
-                uni.showToast({
-                  title: '支付失败，请重试',
-                  icon: 'none'
-                })
-              }
-            }
-          })
-        } catch (error) {
-          pageDebug.requestFail('订单详情支付', error)
-          console.error('支付失败:', error)
-          uni.hideLoading()
-          uni.showToast({
-            title: error.message || '支付失败，请重试',
-            icon: 'none',
-            duration: 2000
-          })
+      try {
+        uni.showLoading({ title: '正在支付...' })
+        const userId = uni.getStorageSync('userId') || uni.getStorageSync('userInfo')?.id
+        const createPaymentRes = await paymentApi.createPayment({
+          orderId: orderId.value,
+          userId,
+          paymentMethod: 'wallet'
+        })
+        if (createPaymentRes.code !== 200 || !createPaymentRes.data?.paymentNo) {
+          throw new Error(createPaymentRes.message || '创建支付订单失败')
         }
+        const balancePayRes = await paymentApi.balancePay({
+          paymentNo: createPaymentRes.data.paymentNo
+        })
+        if (balancePayRes.code !== 200 || balancePayRes.data?.status !== 'success') {
+          throw new Error(balancePayRes.message || '平台币支付失败')
+        }
+        uni.hideLoading()
+        orderStatus.value = {
+          value: 'paid',
+          icon: '✅',
+          text: '支付成功',
+          tips: '商家将尽快接单'
+        }
+        currentProgressIndex.value = 1
+        uni.showToast({ title: '支付成功', icon: 'success', duration: 2000 })
+        setTimeout(() => loadOrderDetail(), 1000)
+      } catch (error) {
+        uni.hideLoading()
+        pageDebug.requestFail('订单详情支付', error)
+        uni.showToast({
+          title: error.message || '支付失败，请重试',
+          icon: 'none'
+        })
       }
     }
   })
@@ -890,9 +831,8 @@ const mapOrderStatus = (status) => {
  */
 const mapPaymentMethod = (method) => {
   const methodMap = {
-    'wechat': '微信支付',
-    'alipay': '支付宝',
-    'balance': '余额支付'
+    'wallet': '平台币余额',
+    'balance': '平台币余额'
   }
   return methodMap[method] || method || '在线支付'
 }

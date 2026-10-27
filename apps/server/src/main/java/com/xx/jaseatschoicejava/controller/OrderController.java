@@ -306,12 +306,18 @@ public class OrderController {
                 return ResponseResult.fail("400", "订单状态异常，无法支付");
             }
 
+            // 当前只支持平台币（钱包余额）支付
+            if ("balance".equals(paymentMethod)) {
+                paymentMethod = "wallet";
+            }
+            if (!"wallet".equals(paymentMethod)) {
+                return ResponseResult.fail("400", "仅支持平台币支付");
+            }
+
             // 检查余额
-            if ("wallet".equals(paymentMethod)) {
-                boolean enough = walletService.checkBalance(order.getUserId(), order.getTotalAmount());
-                if (!enough) {
-                    return ResponseResult.fail("400", "余额不足");
-                }
+            boolean enough = walletService.checkBalance(order.getUserId(), order.getTotalAmount());
+            if (!enough) {
+                return ResponseResult.fail("400", "余额不足");
             }
 
             // 创建支付记录

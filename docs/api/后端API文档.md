@@ -14579,7 +14579,7 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | 接口名称 | `payGroupOrder` |
 | 请求地址 | `/api/v1/group-orders/group-orders/{groupOrderId}/pay` |
 | 请求方式 | `POST` |
-| 接口描述 | 发起拼单支付。`balance` 为真实余额扣款闭环；`wechat`、`alipay` 仅返回模拟支付参数，不接真实商户回调。 |
+| 接口描述 | 发起拼单支付。仅 `balance`（平台币余额）为可用闭环；`wechat`、`alipay` 在创建支付记录前返回 `501`，明确暂未开放，不生成支付参数、不接第三方 SDK。 |
 
 #### 请求参数
 
@@ -14588,7 +14588,7 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | `groupOrderId` | 字符串 | 是 | 拼单ID（path） | `"194857392001"` |
 | `userId` | 字符串 | 是 | 支付用户ID | `"10001"` |
 | `paymentType` | 字符串 | 否 | 支付类型：`single` 单人支付，`all` 发起人统一支付；默认 `single` | `"single"` |
-| `paymentMethod` | 字符串 | 否 | 支付方式：`balance/wechat/alipay`；默认 `balance` | `"balance"` |
+| `paymentMethod` | 字符串 | 否 | 支付方式：仅 `balance` 可用；`wechat/alipay` 在创建支付记录前返回 `501` 暂未开放；默认 `balance` | `"balance"` |
 | `couponId` | 字符串 | 否 | 优惠券ID | `"20001"` |
 | `paymentPassword` | 字符串 | 否 | 支付密码兼容入参，当前页面未启用真实校验 | `"123456"` |
 
@@ -14600,9 +14600,9 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | `data.orderId` | 字符串 | 拼单ID | `"194857392001"` |
 | `data.amount` | 数值 | 本次支付金额 | `40.00` |
 | `data.paymentMethod` | 字符串 | 支付方式 | `"balance"` |
-| `data.status` | 字符串 | 支付状态；余额支付成功后为 `success`，模拟支付通常为待后续处理状态 | `"success"` |
+| `data.status` | 字符串 | 支付状态；平台币支付成功后为 `success` | `"success"` |
 | `data.paymentParams` | 对象 | 支付补充参数 | `{}` |
-| `data.paymentParams.type` | 字符串 | 支付参数类型：`balance/wechat/alipay` | `"balance"` |
+| `data.paymentParams.type` | 字符串 | 支付参数类型：`balance` | `"balance"` |
 
 #### 异常响应
 
@@ -14613,7 +14613,8 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | `400` | `当前群订单已结束，无法继续支付` | 拼单已完成或已取消 |
 | `400` | `当前没有可支付的拼单金额` | 当前用户没有应付金额或已付完 |
 | `400` | `优惠券不可用` | 优惠券不可使用 |
-| `400` | `暂不支持该支付方式` | 传入不支持的支付方式 |
+| `400` | `userId不能为空` / `仅支持平台币支付` | 缺少用户ID或传入不支持的支付方式 |
+| `501` | `微信支付暂未开放` / `支付宝支付暂未开放` | 请求未启用的第三方支付 |
 | `403` | `当前用户未加入该拼单` | 非成员发起支付 |
 | `404` | `群订单不存在` | 拼单ID不存在 |
 | `500` | `支付失败：钱包余额不足` 等 | 余额不足、扣款失败或下单异常 |
@@ -14669,12 +14670,8 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 2. `paymentType=single` 仅同步当前成员支付状态。
 3. `paymentType=all` 由发起人统一支付后，会同步所有有效成员支付状态。
 4. 当所有有效成员完成支付后，拼单状态自动流转为 `1`，并保持 `locked=true`。
-5. `wechat`、`alipay` 仅保留模拟返回结构，统一返回：
-   - `paymentNo`
-   - `status`
-   - `paymentParams`
-   - `paymentParams.type=wechat` 或 `paymentParams.type=alipay`
-6. 微信支付、支付宝支付本轮不实现真实商户资质接入、签名验签和异步回调闭环。
+5. `wechat`、`alipay` 保留接口骨架但不实现：请求返回 `501`，不会创建支付记录，也不会返回任何支付参数。
+6. 微信支付、支付宝支付当前无支付权限、不接入第三方 SDK，不生成签名、不验签、不处理回调。
 
 ## home-controller
 
@@ -21003,46 +21000,26 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | 接口名称 | alipay |
 | 请求地址 | `/api/v1/payment/alipay` |
 | 请求方式 | `POST` |
-| 接口描述 | - |
+| 接口描述 | 保留支付宝支付接口骨架；当前未启用，明确返回 `501`，不生成 `orderInfo`、签名或成功状态。 |
 
 #### 请求参数
 
-无请求参数。
-
-#### 响应参数
-
-| 参数名 | 类型 | 说明 | 示例值 |
-| --- | --- | --- | --- |
-| `success` | 布尔 | - | `true` |
-| `code` | 字符串 | - | `"200"` |
-| `message` | 字符串 | - | `"示例内容"` |
-| `data` | 对象<字符串,对象> | - | `{}` |
+请求体字段当前不参与支付处理。
 
 #### 异常响应
 
 | 错误码 | 错误信息 | 异常场景 |
 | --- | --- | --- |
-| `400` | 请求参数错误 | 缺少必填参数、字段类型错误、业务校验失败 |
-| `401` | 未授权或登录失效 | 未携带令牌、令牌失效 |
-| `403` | 无权限访问 | 角色权限不足 |
-| `404` | 资源不存在 | 路径参数对应记录不存在 |
-| `405` | 请求方法不支持 | 请求方式与控制器定义不一致 |
-| `500` | 系统异常，请联系管理员 | 未捕获异常、服务内部错误 |
-
-#### 请求示例
-
-```json
-{}
-```
+| `501` | `支付宝支付暂未开放` | 当前无支付宝支付权限，接口未启用 |
 
 #### 响应示例
 
 ```json
 {
-  "success": true,
-  "code": "200",
-  "message": "示例内容",
-  "data": {}
+  "success": false,
+  "code": "501",
+  "message": "支付宝支付暂未开放",
+  "data": null
 }
 ```
 
@@ -21175,7 +21152,7 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | 接口名称 | createPayment |
 | 请求地址 | `/api/v1/payment/create` |
 | 请求方式 | `POST` |
-| 接口描述 | - |
+| 接口描述 | 创建平台币支付记录；`paymentMethod` 仅接受 `wallet`，其他值在创建记录前返回 `400`。 |
 
 #### 请求参数
 
@@ -21389,46 +21366,26 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | 接口名称 | wechatPay |
 | 请求地址 | `/api/v1/payment/wechat` |
 | 请求方式 | `POST` |
-| 接口描述 | - |
+| 接口描述 | 保留微信支付接口骨架；当前未启用，明确返回 `501`，不生成 `prepay_id`、签名或成功状态。 |
 
 #### 请求参数
 
-无请求参数。
-
-#### 响应参数
-
-| 参数名 | 类型 | 说明 | 示例值 |
-| --- | --- | --- | --- |
-| `success` | 布尔 | - | `true` |
-| `code` | 字符串 | - | `"200"` |
-| `message` | 字符串 | - | `"示例内容"` |
-| `data` | 对象<字符串,对象> | - | `{}` |
+请求体字段当前不参与支付处理。
 
 #### 异常响应
 
 | 错误码 | 错误信息 | 异常场景 |
 | --- | --- | --- |
-| `400` | 请求参数错误 | 缺少必填参数、字段类型错误、业务校验失败 |
-| `401` | 未授权或登录失效 | 未携带令牌、令牌失效 |
-| `403` | 无权限访问 | 角色权限不足 |
-| `404` | 资源不存在 | 路径参数对应记录不存在 |
-| `405` | 请求方法不支持 | 请求方式与控制器定义不一致 |
-| `500` | 系统异常，请联系管理员 | 未捕获异常、服务内部错误 |
-
-#### 请求示例
-
-```json
-{}
-```
+| `501` | `微信支付暂未开放` | 当前无微信支付权限，接口未启用 |
 
 #### 响应示例
 
 ```json
 {
-  "success": true,
-  "code": "200",
-  "message": "示例内容",
-  "data": {}
+  "success": false,
+  "code": "501",
+  "message": "微信支付暂未开放",
+  "data": null
 }
 ```
 

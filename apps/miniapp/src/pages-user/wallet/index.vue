@@ -163,27 +163,15 @@
         </view>
 
         <view class="payment-methods">
-          <text class="methods-title">支付方式</text>
+          <text class="methods-title">充值方式</text>
           <view class="method-list">
-            <view
-              class="method-item"
-              :class="{ active: paymentMethod === 'wechat' }"
-              @click="selectPaymentMethod('wechat')"
-            >
-              <uni-icons type="weixin" size="20" color="#07C160"></uni-icons>
-              <text class="method-name">微信支付</text>
-              <view class="method-check" v-if="paymentMethod === 'wechat'">✓</view>
-            </view>
-            <view
-              class="method-item"
-              :class="{ active: paymentMethod === 'alipay' }"
-              @click="selectPaymentMethod('alipay')"
-            >
-              <text class="method-badge alipay">支</text>
-              <text class="method-name">支付宝</text>
-              <view class="method-check" v-if="paymentMethod === 'alipay'">✓</view>
+            <view class="method-item active">
+              <uni-icons type="wallet-filled" size="20" color="#FF6B35"></uni-icons>
+              <text class="method-name">平台币充值</text>
+              <view class="method-check">✓</view>
             </view>
           </view>
+          <text class="methods-title">微信支付、支付宝暂未开放</text>
         </view>
 
         <button class="confirm-btn" @click="confirmRecharge" :disabled="!rechargeAmount">
@@ -285,7 +273,7 @@ const activeTab = ref('all')
 // 充值相关
 const rechargeAmount = ref('')
 const quickAmounts = [10, 20, 50, 100, 200, 500]
-const paymentMethod = ref('wechat')
+const paymentMethod = ref('wallet')
 const rechargePopup = ref(null)
 const withdrawPopup = ref(null)
 const withdrawAmount = ref('')
@@ -557,7 +545,7 @@ const recharge = () => {
   }
 
   rechargeAmount.value = ''
-  paymentMethod.value = 'wechat'
+  paymentMethod.value = 'wallet'
   rechargePopup.value?.open()
 }
 
@@ -583,13 +571,6 @@ const withdraw = () => {
  */
 const selectRechargeAmount = (amount) => {
   rechargeAmount.value = amount.toString()
-}
-
-/**
- * 选择支付方式
- */
-const selectPaymentMethod = (method) => {
-  paymentMethod.value = method
 }
 
 /**
@@ -629,11 +610,8 @@ const confirmRecharge = async () => {
 
     if (res.code === 200 || res.code === '200') {
       // 如果需要支付，跳转到支付页面
-      if (res.data && res.data.needPay) {
-        // 调起支付
-        await handlePayment(res.data)
-      } else {
-        // 充值成功
+      if (res.data) {
+        // 平台币充值成功
         applyWalletAmount(res.data)
         uni.showToast({
           title: '充值成功',
@@ -655,55 +633,6 @@ const confirmRecharge = async () => {
     uni.hideLoading()
     uni.showToast({
       title: error.message || '充值失败，请重试',
-      icon: 'none'
-    })
-  }
-}
-
-/**
- * 处理支付
- */
-const handlePayment = async (paymentData) => {
-  try {
-    // 根据支付方式调用不同的支付接口
-    if (paymentMethod.value === 'wechat') {
-      // 微信支付
-      const payRes = await walletApi.wechatPay(paymentData)
-      if ((payRes.code === 200 || payRes.code === '200') && payRes.data) {
-        // 调起微信支付
-        uni.requestPayment({
-          provider: 'wxpay',
-          ...payRes.data,
-          success: () => {
-            uni.showToast({
-              title: '充值成功',
-              icon: 'success'
-            })
-            loadWalletData()
-            closeRechargePopup()
-          },
-          fail: (err) => {
-            uni.showToast({
-              title: '支付失败',
-              icon: 'none'
-            })
-          }
-        })
-      }
-    } else if (paymentMethod.value === 'alipay') {
-      // 支付宝支付
-      const payRes = await walletApi.alipayPay(paymentData)
-      if ((payRes.code === 200 || payRes.code === '200') && payRes.data) {
-        // H5支付跳转
-        if (typeof window !== 'undefined') {
-          window.location.href = payRes.data.payUrl
-        }
-      }
-    }
-  } catch (error) {
-    console.error('支付失败:', error)
-    uni.showToast({
-      title: '支付失败',
       icon: 'none'
     })
   }

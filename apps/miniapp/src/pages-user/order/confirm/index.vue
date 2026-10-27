@@ -188,7 +188,7 @@ const selectedAddress = ref(null)
 const deliveryTime = ref('')
 const remark = ref('')
 const selectedCoupon = ref(null)
-const paymentMethod = ref('wechat')
+const paymentMethod = ref('balance')
 
 const normalizeImage = (src, fallback) => {
   if (!src || typeof src !== 'string') {
@@ -263,17 +263,7 @@ const quickRemarks = ref([
 // 支付方式
 const paymentMethods = ref([
   {
-    label: '微信支付',
-    value: 'wechat',
-    icon: '💬'
-  },
-  {
-    label: '支付宝',
-    value: 'alipay',
-    icon: '💰'
-  },
-  {
-    label: '余额支付',
+    label: '平台币支付',
     value: 'balance',
     icon: '💳'
   }

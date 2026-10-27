@@ -54,7 +54,7 @@
             <span class="balance-text">
               账户余额：¥{{ userBalance.toFixed(2) }}
               <span v-if="userBalance < totalAmount" class="insufficient">
-                （余额不足，请充值或选择其他支付方式）
+                （平台币余额不足，请先充值）
               </span>
             </span>
           </template>
@@ -107,29 +107,17 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'success', 'close', 'insufficient-balance'])
 
 const dialogVisible = ref(props.modelValue)
-const selectedMethod = ref('wechat')
+const selectedMethod = ref('balance')
 const isProcessing = ref(false)
 const userBalance = ref(null)
 
-// 支付方式列表
+// 支付方式列表：当前只保留平台币
 const paymentMethods = [
   {
-    value: 'wechat',
-    name: '微信支付',
-    icon: '💚',
-    description: '使用微信扫码支付'
-  },
-  {
-    value: 'alipay',
-    name: '支付宝',
-    icon: '💙',
-    description: '使用支付宝扫码支付'
-  },
-  {
     value: 'balance',
-    name: '余额支付',
+    name: '平台币支付',
     icon: '💰',
-    description: '使用账户余额支付'
+    description: '使用平台币余额支付'
   }
 ]
 

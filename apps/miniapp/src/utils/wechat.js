@@ -111,66 +111,13 @@ export const getPhoneNumber = (e) => {
 }
 
 /**
- * 微信支付
- * @param {Object} orderInfo - 订单信息
- * @param {string} orderInfo.orderId - 订单ID
- * @param {string} orderInfo.orderNo - 订单号
- * @param {number} orderInfo.amount - 支付金额
- * @returns {Promise<Object>} 支付结果
+ * 微信支付（当前未启用）
+ *
+ * 当前项目无微信支付权限，且不接入第三方 SDK，
+ * 调用时明确失败，不构造支付参数、不调起微信支付。
+ * @returns {Promise<never>} 固定拒绝
  */
-export const wechatPay = (orderInfo) => {
-  return new Promise((resolve, reject) => {
-    const token = uni.getStorageSync('token')
-
-    // 1. 调用后端接口获取支付参数
-    uni.request({
-      url: config.baseURL + '/v1/payment/wechat/prepay',
-      method: 'POST',
-      header: {
-        'Authorization': `Bearer ${token}`
-      },
-      data: {
-        orderId: orderInfo.orderId,
-        orderNo: orderInfo.orderNo,
-        amount: orderInfo.amount
-      },
-      success: (res) => {
-        if (res.statusCode === 200 && res.data.success) {
-          const paymentParams = res.data.data
-
-          // 2. 调用微信支付
-          uni.requestPayment({
-            provider: 'wxpay',
-            timeStamp: paymentParams.timeStamp,
-            nonceStr: paymentParams.nonceStr,
-            package: paymentParams.package,
-            signType: paymentParams.signType,
-            paySign: paymentParams.paySign,
-            success: (payRes) => {
-              console.log('支付成功:', payRes)
-              resolve({ success: true, ...payRes })
-            },
-            fail: (err) => {
-              console.error('支付失败:', err)
-              if (err.errMsg === 'requestPayment:fail cancel') {
-                // 用户取消支付
-                resolve({ success: false, cancelled: true })
-              } else {
-                reject(new Error('支付失败'))
-              }
-            }
-          })
-        } else {
-          reject(new Error(res.data.message || '获取支付参数失败'))
-        }
-      },
-      fail: (err) => {
-        console.error('请求支付参数失败:', err)
-        reject(err)
-      }
-    })
-  })
-}
+export const wechatPay = () => Promise.reject(new Error('微信支付暂未开放'))
 
 /**
  * 分享到微信好友

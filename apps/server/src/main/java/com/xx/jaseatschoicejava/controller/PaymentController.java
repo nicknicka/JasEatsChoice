@@ -4,11 +4,9 @@ import com.xx.jaseatschoicejava.common.ResponseResult;
 import com.xx.jaseatschoicejava.entity.Order;
 import com.xx.jaseatschoicejava.entity.PaymentRecord;
 import com.xx.jaseatschoicejava.entity.UserCoupon;
-import com.xx.jaseatschoicejava.service.AlipayPayService;
 import com.xx.jaseatschoicejava.service.OrderService;
 import com.xx.jaseatschoicejava.service.PaymentService;
 import com.xx.jaseatschoicejava.service.UserCouponService;
-import com.xx.jaseatschoicejava.service.WechatPayService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
@@ -34,8 +32,6 @@ public class PaymentController {
     private final OrderService orderService;
     private final PaymentService paymentService;
     private final UserCouponService userCouponService;
-    private final WechatPayService wechatPayService;
-    private final AlipayPayService alipayPayService;
 
     /**
      * 获取订单支付信息
@@ -110,7 +106,7 @@ public class PaymentController {
      * 创建支付订单
      * PAY-003: 调用统一支付API
      */
-    @ApiOperation("创建支付订单")
+    @ApiOperation("创建平台币支付订单")
     @PostMapping("/create")
     public ResponseResult<Map<String, Object>> createPayment(@RequestBody Map<String, Object> request) {
         try {
@@ -118,6 +114,13 @@ public class PaymentController {
             String userId = (String) request.get("userId");
             String paymentMethod = (String) request.get("paymentMethod");
             String couponId = (String) request.get("couponId");
+
+            if ("balance".equals(paymentMethod)) {
+                paymentMethod = "wallet";
+            }
+            if (!"wallet".equals(paymentMethod)) {
+                return ResponseResult.fail("400", "仅支持平台币支付");
+            }
 
             // 获取订单信息
             Order order = orderService.getById(orderId);
@@ -176,86 +179,21 @@ public class PaymentController {
     }
 
     /**
-     * 微信支付
-     * PAY-004: 调用微信支付
+     * 微信支付（当前未启用）
      */
-    @ApiOperation("微信支付")
+    @ApiOperation("微信支付（暂未开放）")
     @PostMapping("/wechat")
     public ResponseResult<Map<String, Object>> wechatPay(@RequestBody Map<String, Object> request) {
-        try {
-            String paymentNo = (String) request.get("paymentNo");
-
-            // 查询支付记录
-            PaymentRecord paymentRecord = paymentService.getPaymentByPaymentNo(paymentNo);
-            if (paymentRecord == null) {
-                return ResponseResult.fail("404", "支付记录不存在");
-            }
-
-            // 查询订单信息
-            Order order = orderService.getById(paymentRecord.getOrderId());
-            if (order == null) {
-                return ResponseResult.fail("404", "订单不存在");
-            }
-
-            // 调用微信支付服务
-            Map<String, Object> payResult = wechatPayService.createMiniPayOrder(
-                paymentNo,
-                paymentRecord.getAmount(),
-                "订单支付-" + order.getId(),
-                "" // openid需要从用户信息中获取，这里简化处理
-            );
-
-            if ("pending".equals(payResult.get("status"))) {
-                return ResponseResult.success(payResult, "微信支付订单创建成功");
-            } else {
-                return ResponseResult.fail("500", (String) payResult.get("message"));
-            }
-
-        } catch (Exception e) {
-            log.error("微信支付失败", e);
-            return ResponseResult.fail("500", "微信支付失败：" + e.getMessage());
-        }
+        return ResponseResult.fail("501", "微信支付暂未开放");
     }
 
     /**
-     * 支付宝支付
-     * PAY-005: 调用支付宝支付
+     * 支付宝支付（当前未启用）
      */
-    @ApiOperation("支付宝支付")
+    @ApiOperation("支付宝支付（暂未开放）")
     @PostMapping("/alipay")
     public ResponseResult<Map<String, Object>> alipay(@RequestBody Map<String, Object> request) {
-        try {
-            String paymentNo = (String) request.get("paymentNo");
-
-            // 查询支付记录
-            PaymentRecord paymentRecord = paymentService.getPaymentByPaymentNo(paymentNo);
-            if (paymentRecord == null) {
-                return ResponseResult.fail("404", "支付记录不存在");
-            }
-
-            // 查询订单信息
-            Order order = orderService.getById(paymentRecord.getOrderId());
-            if (order == null) {
-                return ResponseResult.fail("404", "订单不存在");
-            }
-
-            // 调用支付宝支付服务
-            Map<String, Object> payResult = alipayPayService.createWapPayOrder(
-                paymentNo,
-                paymentRecord.getAmount(),
-                "订单支付-" + order.getId()
-            );
-
-            if ("pending".equals(payResult.get("status"))) {
-                return ResponseResult.success(payResult, "支付宝支付订单创建成功");
-            } else {
-                return ResponseResult.fail("500", (String) payResult.get("message"));
-            }
-
-        } catch (Exception e) {
-            log.error("支付宝支付失败", e);
-            return ResponseResult.fail("500", "支付宝支付失败：" + e.getMessage());
-        }
+        return ResponseResult.fail("501", "支付宝支付暂未开放");
     }
 
     /**

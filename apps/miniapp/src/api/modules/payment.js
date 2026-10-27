@@ -30,7 +30,7 @@ export const paymentApi = {
    * @param {Object} data - 支付数据
    * @param {string} data.orderId - 订单ID
    * @param {string} data.userId - 用户ID
-   * @param {string} data.paymentMethod - 支付方式（wallet/wechat/alipay）
+   * @param {string} data.paymentMethod - 支付方式（仅 wallet/balance 可用）
    * @param {string} data.couponId - 优惠券ID（可选）
    * @returns {Promise} 支付订单信息
    */
