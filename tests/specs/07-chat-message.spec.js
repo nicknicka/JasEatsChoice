@@ -9,10 +9,11 @@ test.describe('模块七：聊天与消息', () => {
     markRunning('7.1')
     try {
       await page.goto('/user/home/chat')
-      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
-      const chat = page.locator('[class*="chat"], [class*="session"], .el-card')
-      await expect(chat.first()).toBeVisible({ timeout: 10000 })
-      markPassed('7.1', '聊天页面可访问')
+      await expect(page.locator('.conversation-list')).toBeVisible({ timeout: 10000 })
+      const firstConversation = page.locator('.conversation-item').first()
+      await expect(firstConversation).toBeVisible({ timeout: 10000 })
+      await expect(firstConversation.locator('.name')).not.toBeEmpty()
+      markPassed('7.1', '会话列表加载真实会话名称')
     } catch (e) { markFailed('7.1', e.message.slice(0, 50)); throw e }
   })
 
@@ -20,13 +21,26 @@ test.describe('模块七：聊天与消息', () => {
     markRunning('7.2')
     try {
       await page.goto('/user/home/chat')
-      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
-      const msgInput = page.locator('textarea, input[placeholder*="消息"], input[placeholder*="输入"]').first()
-      await expect(msgInput).toBeVisible({ timeout: 10000 })
-      await msgInput.fill('测试消息')
-      const sendBtn = page.locator('button:has-text("发送"), [class*="send"]').first()
-      await expect(sendBtn).toBeVisible({ timeout: 10000 })
-      markPassed('7.2', '消息输入和发送按钮存在')
+      const firstConversation = page.locator('.conversation-item').first()
+      await expect(firstConversation).toBeVisible({ timeout: 10000 })
+      const conversationName = (await firstConversation.locator('.name').innerText()).trim()
+      await firstConversation.click()
+
+      const header = page.locator('.chat-area-header')
+      await expect(header.locator('.name')).toHaveText(conversationName, { timeout: 10000 })
+
+      const message = `E2E 聊天消息 ${Date.now()}`
+      const input = page.locator('.message-input-container textarea').first()
+      await expect(input).toBeEnabled({ timeout: 10000 })
+      await input.fill(message)
+      await page.locator('.message-input-container .send-button').click()
+
+      const sentMessage = page.locator('.message-item.my-message', { hasText: message }).first()
+      await expect(sentMessage).toBeVisible({ timeout: 10000 })
+      await expect(sentMessage.locator('.message-status.failed')).toHaveCount(0)
+      const currentConversation = page.locator('.conversation-item').filter({ hasText: conversationName }).first()
+      await expect(currentConversation.locator('.last-message')).toContainText(message, { timeout: 10000 })
+      markPassed('7.2', '真实消息发送后出现在当前会话')
     } catch (e) { markFailed('7.2', e.message.slice(0, 50)); throw e }
   })
 
