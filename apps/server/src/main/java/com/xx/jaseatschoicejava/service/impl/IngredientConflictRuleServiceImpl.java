@@ -4,7 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xx.jaseatschoicejava.entity.IngredientConflictRule;
+import com.xx.jaseatschoicejava.entity.JFoodNutrition;
 import com.xx.jaseatschoicejava.mapper.IngredientConflictRuleMapper;
+import com.xx.jaseatschoicejava.mapper.JFoodNutritionMapper;
 import com.xx.jaseatschoicejava.service.IngredientConflictRuleService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +27,9 @@ public class IngredientConflictRuleServiceImpl extends ServiceImpl<IngredientCon
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private JFoodNutritionMapper foodNutritionMapper;
 
     @Override
     public List<IngredientConflictRule> checkConflicts(List<Long> ingredientIds) {
@@ -155,9 +160,23 @@ public class IngredientConflictRuleServiceImpl extends ServiceImpl<IngredientCon
      * 判断食材ID列表是否匹配规则
      */
     private boolean matchesRule(List<Long> ingredientIds, IngredientConflictRule rule) {
-        // 这里简化处理，实际应该检查食材ID是否在规则的主要食材列表中
-        // 完整实现需要建立食材ID与食材名称的映射关系
-        return false;
+        if (ingredientIds == null || ingredientIds.isEmpty()) {
+            return false;
+        }
+
+        List<JFoodNutrition> foods = foodNutritionMapper.selectBatchIds(ingredientIds);
+        Set<String> ingredientNames = new HashSet<>();
+        if (foods != null) {
+            for (JFoodNutrition food : foods) {
+                if (food.getFoodName() != null && !food.getFoodName().trim().isEmpty()) {
+                    ingredientNames.add(food.getFoodName().trim());
+                }
+                if (food.getAliasName() != null && !food.getAliasName().trim().isEmpty()) {
+                    ingredientNames.add(food.getAliasName().trim());
+                }
+            }
+        }
+        return matchesIngredientNames(ingredientNames, rule);
     }
 
     /**
@@ -170,8 +189,14 @@ public class IngredientConflictRuleServiceImpl extends ServiceImpl<IngredientCon
 
             // 检查是否包含任一主要食材
             for (String mainIngredient : mainIngredients) {
-                if (ingredientNames.contains(mainIngredient)) {
-                    return true;
+                String normalizedRuleIngredient = normalizeIngredientName(mainIngredient);
+                for (String ingredientName : ingredientNames) {
+                    String normalizedIngredient = normalizeIngredientName(ingredientName);
+                    if (!normalizedIngredient.isEmpty() && !normalizedRuleIngredient.isEmpty()
+                            && (normalizedIngredient.contains(normalizedRuleIngredient)
+                            || normalizedRuleIngredient.contains(normalizedIngredient))) {
+                        return true;
+                    }
                 }
             }
 
@@ -180,6 +205,15 @@ public class IngredientConflictRuleServiceImpl extends ServiceImpl<IngredientCon
             log.error("解析规则食材失败: {}", rule.getMainIngredients(), e);
             return false;
         }
+    }
+
+    private String normalizeIngredientName(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.trim()
+                .replaceAll("\\s+", "")
+                .replaceAll("[（(].*?[）)]", "");
     }
 
     /**
