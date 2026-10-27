@@ -2,10 +2,15 @@ package com.xx.jaseatschoicejava.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.xx.jaseatschoicejava.entity.ConsumeHistory;
+import com.xx.jaseatschoicejava.entity.Dish;
 import com.xx.jaseatschoicejava.entity.Order;
+import com.xx.jaseatschoicejava.entity.OrderDish;
 import com.xx.jaseatschoicejava.entity.UserCollection;
+import com.xx.jaseatschoicejava.mapper.DishFeatureMapper;
 import com.xx.jaseatschoicejava.service.CollectionService;
 import com.xx.jaseatschoicejava.service.ConsumeHistoryService;
+import com.xx.jaseatschoicejava.service.DishService;
+import com.xx.jaseatschoicejava.service.OrderDishService;
 import com.xx.jaseatschoicejava.service.OrderService;
 import com.xx.jaseatschoicejava.service.UserStatisticsService;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +19,9 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -26,7 +33,12 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UserStatisticsServiceImpl implements UserStatisticsService {
 
+    private static final ZoneId STATISTICS_ZONE = ZoneId.of("Asia/Shanghai");
+
     private final OrderService orderService;
+    private final OrderDishService orderDishService;
+    private final DishService dishService;
+    private final DishFeatureMapper dishFeatureMapper;
     private final ConsumeHistoryService consumeHistoryService;
     private final CollectionService collectionService;
 
@@ -88,35 +100,94 @@ public class UserStatisticsServiceImpl implements UserStatisticsService {
 
     @Override
     public Map<String, Object> getCaloriesStatistics(String userId, Integer days) {
-        // 由于订单中没有直接存储卡路里信息，这里使用模拟数据
-        // 实际应该从订单菜品中计算卡路里总和
+        if (days == null || days <= 0) {
+            Map<String, Object> emptyResult = new HashMap<>();
+            emptyResult.put("totalCalories", BigDecimal.ZERO);
+            emptyResult.put("avgCalories", BigDecimal.ZERO);
+            emptyResult.put("dailyCalories", Collections.emptyList());
+            return emptyResult;
+        }
 
-        LocalDateTime startTime = LocalDateTime.now().minusDays(days);
-
+        LocalDate endDate = LocalDate.now(STATISTICS_ZONE);
+        LocalDate startDate = endDate.minusDays(days - 1);
         LambdaQueryWrapper<Order> orderQuery = new LambdaQueryWrapper<>();
         orderQuery.eq(Order::getUserId, userId)
-                .ge(Order::getCreatedAt, startTime)
-                .in(Order::getStatus, Arrays.asList(3, 4)); // 已完成或已评价
+                .ge(Order::getCreatedAt, startDate.atStartOfDay())
+                .lt(Order::getCreatedAt, endDate.plusDays(1).atStartOfDay())
+                .eq(Order::getStatus, 3); // 已完成
 
         List<Order> orders = orderService.list(orderQuery);
 
-        // 模拟卡路里数据（实际应从菜品营养表计算）
-        Random random = new Random();
+        Map<String, BigDecimal> caloriesByDate = new HashMap<>();
+        if (!orders.isEmpty()) {
+            List<String> orderIds = orders.stream()
+                    .map(Order::getId)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+
+            if (!orderIds.isEmpty()) {
+                LambdaQueryWrapper<OrderDish> orderDishQuery = new LambdaQueryWrapper<>();
+                orderDishQuery.in(OrderDish::getOrderId, orderIds);
+                List<OrderDish> orderDishes = orderDishService.list(orderDishQuery);
+
+                List<String> dishIds = orderDishes.stream()
+                        .map(OrderDish::getDishId)
+                        .filter(Objects::nonNull)
+                        .distinct()
+                        .collect(Collectors.toList());
+
+                Map<String, Dish> dishMap = Collections.emptyMap();
+                if (!dishIds.isEmpty()) {
+                    LambdaQueryWrapper<Dish> dishQuery = new LambdaQueryWrapper<>();
+                    dishQuery.in(Dish::getId, dishIds);
+                    dishMap = dishService.list(dishQuery).stream()
+                            .collect(Collectors.toMap(Dish::getId, dish -> dish));
+                }
+
+                Map<String, BigDecimal> nutritionCalories = new HashMap<>();
+                if (!dishIds.isEmpty()) {
+                    for (Map<String, Object> row : dishFeatureMapper.selectNutritionCaloriesByDishIds(dishIds)) {
+                        Object dishId = row.get("dishId");
+                        Object calories = row.get("calories");
+                        if (dishId != null && calories != null) {
+                            nutritionCalories.put(dishId.toString(), new BigDecimal(calories.toString()));
+                        }
+                    }
+                }
+
+                Map<String, LocalDate> orderDates = orders.stream()
+                        .filter(order -> order.getId() != null && order.getCreatedAt() != null)
+                        .collect(Collectors.toMap(Order::getId, order -> order.getCreatedAt().toLocalDate()));
+
+                for (OrderDish orderDish : orderDishes) {
+                    Dish dish = dishMap.get(orderDish.getDishId());
+                    LocalDate orderDate = orderDates.get(orderDish.getOrderId());
+                    if (orderDate == null) {
+                        continue;
+                    }
+
+                    BigDecimal unitCalories = nutritionCalories.get(orderDish.getDishId());
+                    if (unitCalories == null && dish != null && dish.getCalorie() != null) {
+                        unitCalories = BigDecimal.valueOf(dish.getCalorie());
+                    }
+                    if (unitCalories == null) {
+                        continue;
+                    }
+
+                    int quantity = orderDish.getQuantity() == null ? 0 : orderDish.getQuantity();
+                    BigDecimal calories = unitCalories.multiply(BigDecimal.valueOf(quantity));
+                    caloriesByDate.merge(orderDate.toString(), calories, BigDecimal::add);
+                }
+            }
+        }
+
         List<Map<String, Object>> dailyCalories = new ArrayList<>();
         BigDecimal totalCalories = BigDecimal.ZERO;
 
-        for (int i = days - 1; i >= 0; i--) {
-            LocalDateTime date = LocalDateTime.now().minusDays(i);
-            String dateStr = date.toLocalDate().toString();
-
-            // 查询当天的订单
-            long orderCount = orders.stream()
-                    .filter(o -> o.getCreatedAt().toLocalDate().equals(date.toLocalDate()))
-                    .count();
-
-            // 模拟卡路里摄入（每单约500-800卡）
-            double calories = orderCount > 0 ? (double) (500 + random.nextDouble() * 300) * orderCount : 0;
-            totalCalories = totalCalories.add(BigDecimal.valueOf(calories));
+        for (int i = 0; i < days; i++) {
+            String dateStr = startDate.plusDays(i).toString();
+            BigDecimal calories = caloriesByDate.getOrDefault(dateStr, BigDecimal.ZERO);
+            totalCalories = totalCalories.add(calories);
 
             Map<String, Object> dayData = new HashMap<>();
             dayData.put("date", dateStr);
