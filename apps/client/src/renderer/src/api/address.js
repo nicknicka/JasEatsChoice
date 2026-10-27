@@ -65,10 +65,13 @@ export default {
   /**
    * 删除地址
    * @param {string} addressId - 地址ID
+   * @param {number} userId - 用户ID
    * @returns {Promise} 删除结果
    */
-  deleteAddress(addressId) {
-    return api.delete(`/v1/addresses/${addressId}`)
+  deleteAddress(addressId, userId) {
+    return api.delete(`/v1/addresses/${addressId}`, {
+      params: { userId }
+    })
   },
 
   /**
