@@ -58,7 +58,7 @@ public class HotTopicAdminController {
 
             // 按优先级降序、创建时间倒序
             queryWrapper.orderByDesc("priority")
-                .orderByDesc("create_time");
+                .orderByDesc("created_at");
 
             IPage<HotTopic> result = hotTopicService.page(pageParam, queryWrapper);
 
@@ -130,8 +130,8 @@ public class HotTopicAdminController {
             }
 
             // 设置创建时间和开始时间
-            if (hotTopic.getCreateTime() == null) {
-                hotTopic.setCreateTime(LocalDateTime.now());
+            if (hotTopic.getCreatedAt() == null) {
+                hotTopic.setCreatedAt(LocalDateTime.now());
             }
             // 如果没有设置开始时间，默认为当前时间
             if (hotTopic.getStartDate() == null) {

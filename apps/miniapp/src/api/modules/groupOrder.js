@@ -411,14 +411,14 @@ const normalizeDetailData = (rawData = {}, orderId) => {
     groupId: pickFirst(groupOrder.groupId, rawData.groupId, cached.groupId, ''),
     currentCount,
     maxParticipants,
-    deadline: pickFirst(groupOrder.deadline, rawData.deadline, cached.deadline, groupOrder.updateTime, groupOrder.createTime, ''),
+    deadline: pickFirst(groupOrder.deadline, rawData.deadline, cached.deadline, groupOrder.updatedAt, groupOrder.createdAt, ''),
     deliveryAddress: pickFirst(groupOrder.deliveryAddress, rawData.deliveryAddress, cached.deliveryAddress, groupOrder.addressId, ''),
     addressId: pickFirst(groupOrder.addressId, rawData.addressId, cached.addressId, ''),
     remark: pickFirst(groupOrder.remark, rawData.remark, cached.remark, ''),
     totalAmount: formatAmount(pickFirst(groupOrder.totalAmount, rawData.totalAmount, cached.totalAmount, orderTotalAmount, 0)),
     discount: formatAmount(pickFirst(groupOrder.discount, rawData.discount, cached.discount, 0)),
     finalAmount: formatAmount(pickFirst(groupOrder.finalAmount, rawData.finalAmount, groupOrder.totalAmount, rawData.totalAmount, cached.finalAmount, cached.totalAmount, orderTotalAmount, 0)),
-    createTime: pickFirst(groupOrder.createTime, rawData.createTime, cached.createTime, ''),
+    createdAt: pickFirst(groupOrder.createdAt, rawData.createdAt, cached.createdAt, ''),
     expireTime: pickFirst(groupOrder.expireTime, rawData.expireTime, cached.expireTime, ''),
     members,
     participants,
@@ -453,7 +453,7 @@ const normalizeCreateResponse = (response, payload) => {
     dishItems: payload.dishItems || [],
     status: 'pending',
     currentCount: 1,
-    createTime: new Date().toISOString()
+    createdAt: new Date().toISOString()
   })
 
   return {
@@ -485,7 +485,7 @@ const normalizeListItem = (order = {}) => {
     creatorName: pickFirst(order.creatorName, cached.creatorName, ''),
     currentCount,
     maxParticipants,
-    deadline: pickFirst(order.deadline, cached.deadline, order.updateTime, order.createTime, ''),
+    deadline: pickFirst(order.deadline, cached.deadline, order.updatedAt, order.createdAt, ''),
     members
   }
 }
@@ -554,8 +554,8 @@ export const groupOrderApi = {
           initiatorId: item.creatorId,
           merchantId: item.merchantId,
           status: mapStatusTextToCode(item.status) ?? 0,
-          createTime: item.createTime,
-          updateTime: item.deadline
+          createdAt: item.createdAt,
+          updatedAt: item.deadline
         }))
 
       return {

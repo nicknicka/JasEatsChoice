@@ -53,7 +53,7 @@ public class MerchantReviewServiceImpl implements MerchantReviewService {
         LambdaQueryWrapper<Review> query = new LambdaQueryWrapper<>();
         query.eq(Review::getMerchantId, merchantId)
              .eq(Review::getStatus, 0)
-             .orderByDesc(Review::getCreateTime);
+             .orderByDesc(Review::getCreatedAt);
         List<Review> reviews = reviewService.list(query);
 
         // 查询已回复的评价ID
@@ -73,7 +73,7 @@ public class MerchantReviewServiceImpl implements MerchantReviewService {
             dto.setId(review.getId());
             dto.setRating(review.getRating());
             dto.setContent(review.getContent());
-            dto.setTime(review.getCreateTime().format(formatter));
+            dto.setTime(review.getCreatedAt().format(formatter));
             dto.setReplied(repliedReviewIds.contains(review.getId()));
 
             // 获取用户名称
@@ -109,7 +109,7 @@ public class MerchantReviewServiceImpl implements MerchantReviewService {
             if (existReply != null) {
                 // 更新回复
                 existReply.setContent(request.getContent());
-                existReply.setUpdateTime(LocalDateTime.now());
+                existReply.setUpdatedAt(LocalDateTime.now());
                 return reviewReplyMapper.updateById(existReply) > 0;
             } else {
                 // 新建回复
@@ -117,8 +117,8 @@ public class MerchantReviewServiceImpl implements MerchantReviewService {
                 reply.setReviewId(request.getReviewId());
                 reply.setMerchantId(request.getMerchantId());
                 reply.setContent(request.getContent());
-                reply.setCreateTime(LocalDateTime.now());
-                reply.setUpdateTime(LocalDateTime.now());
+                reply.setCreatedAt(LocalDateTime.now());
+                reply.setUpdatedAt(LocalDateTime.now());
                 reply.setIsAdditional(0);
                 return reviewReplyMapper.insert(reply) > 0;
             }

@@ -75,11 +75,11 @@ public class Order {
     @ApiModelProperty(value = "订单备注")
     private String remark; // 订单备注
 
-    @TableField("create_time")
+    @TableField("created_at")
     @ApiModelProperty(value = "创建时间")
-    private LocalDateTime createTime; // 创建时间
+    private LocalDateTime createdAt; // 创建时间
 
-    @TableField("update_time")
+    @TableField("updated_at")
     @ApiModelProperty(value = "更新时间")
-    private LocalDateTime updateTime; // 更新时间
+    private LocalDateTime updatedAt; // 更新时间
 }

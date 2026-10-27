@@ -75,3 +75,23 @@
 - ID 类型继续多态存在，但通过"新表规范"停止扩散；维护者需接受这是有意的技术债。
 - `GLOSSARY.md` 增加命名约定小节，作为唯一事实来源。
 - 若未来真出现跨表 JOIN 的性能问题，再重新评估 ID 统一（届时有真实数据支撑）。
+
+## 执行结果（时间字段统一）
+
+本节记录决策 1 的落地情况。
+
+- **迁移**：`V6__rename_time_columns.sql`，113 条 `ALTER TABLE ... RENAME COLUMN`，按 10 个领域分组。用 `RENAME COLUMN` 保留数据、默认值、`ON UPDATE` 与注释；两处依赖时间列的视图（`v_active_festivals`、`v_user_behavior_stats`）在脚本末尾重建。
+- **库**：115 列（`create_time` 60 / `update_time` 48 / `created_time` 4 / `updated_time` 3）全部改为 `created_at`(64) / `updated_at`(51)。
+- **代码**：266 个文件，965 增 / 965 删（纯对称改名）。覆盖 164 个 Java（含 13 个测试）、82 个 Vue、17 个 JS、2 个 TS、1 个 Mapper XML。
+- **API 契约**：因 Jackson `LOWER_CAMEL_CASE`，Entity 属性名即 API 字段名，前端 renderer 与小程序同步改为 `createdAt`/`updatedAt`。项目未对外发布，无兼容负担。
+- **文档**：`docs/api/后端API文档.md` 同步更新。
+- **验证**：全量 Playwright 107/107 通过；`make check` 全绿；空库 `make reset-db` 从 V1 跑到 V6 成功，测试账号可登录，视图可查询。
+
+### 未纳入本次
+
+- **索引名**：11 个索引名里仍带旧列名（如 `idx_create_time`）。索引名只是标签，不改不影响功能；按 ADR-0005 的新表规范，新索引才用 `<前缀>_idx_<字段>`，存量不在本次范围。
+- **`scripts/playwright_capture_thesis_screenshots.js`**：毕设截图脚本的 mock 数据仍用旧字段名。该脚本对应已删除的论文材料，不属于运行时代码。
+
+## 状态
+
+accepted — 决策 1（时间字段统一）已执行完毕；决策 2（ID 类型）为维持现状的长期决策；决策 3（新表规范）自本 ADR 起生效。

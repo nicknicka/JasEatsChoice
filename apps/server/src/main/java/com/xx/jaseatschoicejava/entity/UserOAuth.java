@@ -61,11 +61,11 @@ public class UserOAuth {
     @ApiModelProperty(value = "access_token过期时间")
     private LocalDateTime tokenExpiresAt;
 
-    @TableField("create_time")
+    @TableField("created_at")
     @ApiModelProperty(value = "绑定时间")
-    private LocalDateTime createTime;
+    private LocalDateTime createdAt;
 
-    @TableField("update_time")
+    @TableField("updated_at")
     @ApiModelProperty(value = "更新时间")
-    private LocalDateTime updateTime;
+    private LocalDateTime updatedAt;
 }

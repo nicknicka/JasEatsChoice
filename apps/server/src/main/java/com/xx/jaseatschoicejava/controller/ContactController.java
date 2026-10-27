@@ -154,7 +154,7 @@ public class ContactController {
                 .eq(Contact::getTargetId, userId)
                 .eq(Contact::getRelationType, "friend")
                 .eq(Contact::getStatus, "pending")
-                .orderByDesc(Contact::getCreateTime)
+                .orderByDesc(Contact::getCreatedAt)
                 .list();
         System.out.println("获取好友请求列表，userId: " + userId + ", 请求数量: " + requests.size());
         for (Contact contact : requests) {

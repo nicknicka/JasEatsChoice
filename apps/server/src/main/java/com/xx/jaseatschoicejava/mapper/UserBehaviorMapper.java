@@ -19,13 +19,13 @@ public interface UserBehaviorMapper extends BaseMapper<UserBehavior> {
     /**
      * 获取用户指定时间之后的行为列表
      */
-    @Select("SELECT * FROM ai_user_behavior WHERE user_id = #{userId} AND created_time >= #{startTime} ORDER BY created_time DESC")
+    @Select("SELECT * FROM ai_user_behavior WHERE user_id = #{userId} AND created_at >= #{startTime} ORDER BY created_at DESC")
     List<UserBehavior> getBehaviorsSince(@Param("userId") String userId, @Param("startTime") LocalDateTime startTime);
 
     /**
      * 获取用户最近的行为记录
      */
-    @Select("SELECT * FROM ai_user_behavior WHERE user_id = #{userId} ORDER BY created_time DESC LIMIT #{limit}")
+    @Select("SELECT * FROM ai_user_behavior WHERE user_id = #{userId} ORDER BY created_at DESC LIMIT #{limit}")
     List<UserBehavior> getRecentBehaviors(@Param("userId") String userId, @Param("limit") int limit);
 
     /**
@@ -46,7 +46,7 @@ public interface UserBehaviorMapper extends BaseMapper<UserBehavior> {
      * 统计用户行为数量（按类型）
      */
     @Select("SELECT behavior_type, COUNT(*) as count FROM ai_user_behavior " +
-            "WHERE user_id = #{userId} AND created_time >= #{startTime} " +
+            "WHERE user_id = #{userId} AND created_at >= #{startTime} " +
             "GROUP BY behavior_type")
     List<Map<String, Object>> countBehaviorsByType(@Param("userId") String userId, @Param("startTime") LocalDateTime startTime);
 
@@ -55,7 +55,7 @@ public interface UserBehaviorMapper extends BaseMapper<UserBehavior> {
      */
     @Select("SELECT item_id FROM ai_user_behavior " +
             "WHERE user_id = #{userId} AND behavior_type = 'order' AND item_type = 'dish' " +
-            "ORDER BY created_time DESC LIMIT #{limit}")
+            "ORDER BY created_at DESC LIMIT #{limit}")
     List<String> getRecentOrderedDishes(@Param("userId") String userId, @Param("limit") int limit);
 
     /**
@@ -72,6 +72,6 @@ public interface UserBehaviorMapper extends BaseMapper<UserBehavior> {
             "WHERE user_id = #{userId} AND item_type = 'dish' " +
             "AND behavior_type IN ('order', 'favorite') " +
             "GROUP BY item_id " +
-            "ORDER BY MAX(created_time) DESC")
+            "ORDER BY MAX(created_at) DESC")
     List<String> getUserLikedDishes(@Param("userId") String userId);
 }

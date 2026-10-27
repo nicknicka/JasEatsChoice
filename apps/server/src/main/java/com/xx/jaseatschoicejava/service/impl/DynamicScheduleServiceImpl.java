@@ -261,7 +261,7 @@ public class DynamicScheduleServiceImpl implements DynamicScheduleService {
     public boolean logTaskExecution(String taskId, ScheduledTaskLog taskLog) {
         try {
             taskLog.setTaskId(taskId);
-            taskLog.setCreateTime(LocalDateTime.now());
+            taskLog.setCreatedAt(LocalDateTime.now());
             scheduledTaskLogMapper.insert(taskLog);
             return true;
         } catch (Exception e) {

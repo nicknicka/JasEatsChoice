@@ -76,15 +76,15 @@ export function useOrderFilter(orders) {
     switch (sortBy.value) {
       case 'timeDesc': // 最新订单（时间倒序）
         return sortedOrders.sort((a, b) => {
-          const timeA = new Date(a._raw?.createTime || a.time).getTime()
-          const timeB = new Date(b._raw?.createTime || b.time).getTime()
+          const timeA = new Date(a._raw?.createdAt || a.time).getTime()
+          const timeB = new Date(b._raw?.createdAt || b.time).getTime()
           return timeB - timeA
         })
 
       case 'timeAsc': // 最早订单（时间正序）
         return sortedOrders.sort((a, b) => {
-          const timeA = new Date(a._raw?.createTime || a.time).getTime()
-          const timeB = new Date(b._raw?.createTime || b.time).getTime()
+          const timeA = new Date(a._raw?.createdAt || a.time).getTime()
+          const timeB = new Date(b._raw?.createdAt || b.time).getTime()
           return timeA - timeB
         })
 
@@ -96,8 +96,8 @@ export function useOrderFilter(orders) {
           if (priorityA !== priorityB) {
             return priorityA - priorityB
           }
-          const timeA = new Date(a._raw?.createTime || a.time).getTime()
-          const timeB = new Date(b._raw?.createTime || b.time).getTime()
+          const timeA = new Date(a._raw?.createdAt || a.time).getTime()
+          const timeB = new Date(b._raw?.createdAt || b.time).getTime()
           return timeB - timeA
         })
 

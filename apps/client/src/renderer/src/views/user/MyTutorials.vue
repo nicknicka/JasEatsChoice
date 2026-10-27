@@ -488,7 +488,7 @@ onMounted(() => {
               </div>
 
               <div class="tutorial-footer">
-                <span class="create-time">{{ tutorial.create_time?.split(' ')[0] || '' }}</span>
+                <span class="create-time">{{ tutorial.created_at?.split(' ')[0] || '' }}</span>
                 <div class="action-buttons" @click.stop>
                   <el-button
                     v-if="isEditable(tutorial)"

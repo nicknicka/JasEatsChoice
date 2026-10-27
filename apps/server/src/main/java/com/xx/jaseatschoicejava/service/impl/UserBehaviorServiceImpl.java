@@ -38,7 +38,7 @@ public class UserBehaviorServiceImpl implements UserBehaviorService {
             behavior.setItemId(behaviorDTO.getItemId());
             behavior.setContext(behaviorDTO.getContext());
             behavior.setDuration(behaviorDTO.getDuration());
-            behavior.setCreatedTime(LocalDateTime.now());
+            behavior.setCreatedAt(LocalDateTime.now());
 
             userBehaviorMapper.insert(behavior);
 

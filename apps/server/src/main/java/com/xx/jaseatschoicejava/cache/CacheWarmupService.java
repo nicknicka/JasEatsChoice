@@ -122,7 +122,7 @@ public class CacheWarmupService implements ApplicationRunner {
             // 示例：预热最近添加的菜品
             // List<Dish> popularDishes = dishService.lambdaQuery()
             //     .eq(Dish::getIsOnline, true)
-            //     .orderByDesc(Dish::getCreateTime)
+            //     .orderByDesc(Dish::getCreatedAt)
             //     .last("LIMIT " + maxDishes)
             //     .list();
 
@@ -160,7 +160,7 @@ public class CacheWarmupService implements ApplicationRunner {
             // 示例：预热状态为营业的商家
             // List<Merchant> activeMerchants = merchantService.lambdaQuery()
             //     .eq(Merchant::getStatus, true)
-            //     .orderByDesc(Merchant::getUpdateTime)
+            //     .orderByDesc(Merchant::getUpdatedAt)
             //     .last("LIMIT " + maxMerchants)
             //     .list();
 

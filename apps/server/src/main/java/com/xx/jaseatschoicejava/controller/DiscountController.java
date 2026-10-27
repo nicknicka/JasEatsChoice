@@ -43,7 +43,7 @@ public class DiscountController {
         discount.setMerchantId(merchantId);
         boolean success = discountService.save(discount);
         if (success) {
-            // 重新查询数据库以获取完整的字段值（包括自动填充的createTime和updateTime）
+            // 重新查询数据库以获取完整的字段值（包括自动填充的createdAt和updatedAt）
             Discount savedDiscount = discountService.getById(discount.getId());
             return ResponseResult.success(savedDiscount, "优惠活动添加成功");
         }

@@ -714,8 +714,8 @@
 | `district` | 字符串 | 否 | - | `"示例值"` |
 | `detail` | 字符串 | 否 | - | `"示例值"` |
 | `isDefault` | 整数 | 否 | - | `1` |
-| `createTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
-| `updateTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `updatedAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 
 #### 响应参数
 
@@ -794,8 +794,8 @@
 | `data.district` | 字符串 | - | `"示例值"` |
 | `data.detail` | 字符串 | - | `"示例值"` |
 | `data.isDefault` | 整数 | - | `1` |
-| `data.createTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
-| `data.updateTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `data.createdAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `data.updatedAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
 
 #### 异常响应
 
@@ -865,8 +865,8 @@
 | `data[].district` | 字符串 | - | `"示例值"` |
 | `data[].detail` | 字符串 | - | `"示例值"` |
 | `data[].isDefault` | 整数 | - | `1` |
-| `data[].createTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
-| `data[].updateTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `data[].createdAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `data[].updatedAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
 
 #### 异常响应
 
@@ -978,8 +978,8 @@
 | `district` | 字符串 | 否 | - | `"示例值"` |
 | `detail` | 字符串 | 否 | - | `"示例值"` |
 | `isDefault` | 整数 | 否 | - | `1` |
-| `createTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
-| `updateTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `updatedAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 
 #### 响应参数
 
@@ -1123,8 +1123,8 @@
 | `records[].status` | 字符串 | - | `"1"` |
 | `records[].startTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `records[].endTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
-| `records[].createTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
-| `records[].updateTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `records[].createdAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `records[].updatedAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `total` | 整数 | - | `1` |
 | `current` | 整数 | - | `1` |
 | `pages` | 整数 | - | `1` |
@@ -1493,8 +1493,8 @@
 | `roleId` | 整数 | 否 | - | `1` |
 | `lastLoginTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 | `lastLoginIp` | 字符串 | 否 | - | `"示例值"` |
-| `createTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
-| `updateTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `updatedAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 | `createBy` | 整数 | 否 | - | `1` |
 | `updateBy` | 整数 | 否 | - | `1` |
 | `remark` | 字符串 | 否 | - | `"示例内容"` |
@@ -1613,8 +1613,8 @@
 | `records[].roleId` | 整数 | - | `1` |
 | `records[].lastLoginTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `records[].lastLoginIp` | 字符串 | - | `"示例值"` |
-| `records[].createTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
-| `records[].updateTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `records[].createdAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `records[].updatedAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `records[].createBy` | 整数 | - | `1` |
 | `records[].updateBy` | 整数 | - | `1` |
 | `records[].remark` | 字符串 | - | `"示例内容"` |
@@ -1925,8 +1925,8 @@
 | `records[].auditAdminId` | 整数 | - | `1` |
 | `records[].submitTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `records[].stock` | 整数 | - | `1` |
-| `records[].createTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
-| `records[].updateTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `records[].createdAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `records[].updatedAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `records[].status` | 布尔 | - | `true` |
 | `records[].cookingMinutes` | 整数 | - | `1` |
 | `records[].dishId` | 字符串 | - | `"10001"` |
@@ -2019,8 +2019,8 @@
 | `records[].auditAdminId` | 整数 | - | `1` |
 | `records[].submitTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `records[].stock` | 整数 | - | `1` |
-| `records[].createTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
-| `records[].updateTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `records[].createdAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `records[].updatedAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `records[].status` | 布尔 | - | `true` |
 | `records[].cookingMinutes` | 整数 | - | `1` |
 | `records[].dishId` | 字符串 | - | `"10001"` |
@@ -2109,8 +2109,8 @@
 | `auditAdminId` | 整数 | - | `1` |
 | `submitTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `stock` | 整数 | - | `1` |
-| `createTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
-| `updateTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `updatedAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `status` | 布尔 | - | `true` |
 | `cookingMinutes` | 整数 | - | `1` |
 | `dishId` | 字符串 | - | `"10001"` |
@@ -2637,8 +2637,8 @@
 | `records[].auditReason` | 字符串 | - | `"示例内容"` |
 | `records[].auditTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `records[].auditBy` | 字符串 | - | `"示例值"` |
-| `records[].createTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
-| `records[].updateTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `records[].createdAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `records[].updatedAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `records[].album` | JsonNode | - | `{}` |
 | `records[].merchantId` | 字符串 | - | `"10001"` |
 | `total` | 整数 | - | `1` |
@@ -2720,8 +2720,8 @@
 | `records[].auditReason` | 字符串 | - | `"示例内容"` |
 | `records[].auditTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `records[].auditBy` | 字符串 | - | `"示例值"` |
-| `records[].createTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
-| `records[].updateTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `records[].createdAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `records[].updatedAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `records[].album` | JsonNode | - | `{}` |
 | `records[].merchantId` | 字符串 | - | `"10001"` |
 | `total` | 整数 | - | `1` |
@@ -2932,8 +2932,8 @@
 | `records[].addressId` | 字符串 | - | `"10001"` |
 | `records[].address` | 字符串 | - | `"示例值"` |
 | `records[].remark` | 字符串 | - | `"示例内容"` |
-| `records[].createTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
-| `records[].updateTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `records[].createdAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `records[].updatedAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `total` | 整数 | - | `1` |
 | `current` | 整数 | - | `1` |
 | `pages` | 整数 | - | `1` |
@@ -3180,8 +3180,8 @@
 | `records[].description` | 字符串 | - | `"示例值"` |
 | `records[].sortOrder` | 整数 | - | `1` |
 | `records[].status` | 字符串 | - | `"1"` |
-| `records[].createTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
-| `records[].updateTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `records[].createdAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `records[].updatedAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `records[].children` | 数组<Permission> | - | `[{"permissionId": 1, "permissionName": "示例名称", "permissionCode": "200", "resourceType": "示例值", "parentId": 1}]` |
 | `total` | 整数 | - | `1` |
 | `current` | 整数 | - | `1` |
@@ -3553,8 +3553,8 @@
 | `records[].roleCode` | 字符串 | - | `"200"` |
 | `records[].description` | 字符串 | - | `"示例值"` |
 | `records[].status` | 字符串 | - | `"1"` |
-| `records[].createTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
-| `records[].updateTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `records[].createdAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `records[].updatedAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `records[].sortOrder` | 整数 | - | `1` |
 | `records[].permissionCount` | 整数 | - | `1` |
 | `total` | 整数 | - | `1` |
@@ -4050,8 +4050,8 @@
 | `records[].description` | 字符串 | - | `"示例值"` |
 | `records[].isSystem` | 布尔 | - | `true` |
 | `records[].status` | 字符串 | - | `"1"` |
-| `records[].createTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
-| `records[].updateTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `records[].createdAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `records[].updatedAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `total` | 整数 | - | `1` |
 | `current` | 整数 | - | `1` |
 | `pages` | 整数 | - | `1` |
@@ -4470,8 +4470,8 @@
 | `records[].email` | 字符串 | - | `"demo@example.com"` |
 | `records[].disableWeatherRecommend` | 布尔 | - | `true` |
 | `records[].merchantId` | 字符串 | - | `"10001"` |
-| `records[].createTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
-| `records[].updateTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `records[].createdAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `records[].updatedAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `records[].avatar` | 字符串 | - | `"https://example.com/file.png"` |
 | `records[].location` | 字符串 | - | `"示例值"` |
 | `records[].gender` | 字符串 | - | `"示例值"` |
@@ -5721,8 +5721,8 @@
 | `position` | 字符串 | 否 | - | `"示例值"` |
 | `sortOrder` | 整数 | 否 | - | `1` |
 | `status` | 整数 | 否 | - | `1` |
-| `createTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
-| `updateTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `updatedAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 
 #### 响应参数
 
@@ -5901,8 +5901,8 @@
 | `position` | 字符串 | 否 | - | `"示例值"` |
 | `sortOrder` | 整数 | 否 | - | `1` |
 | `status` | 整数 | 否 | - | `1` |
-| `createTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
-| `updateTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `updatedAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 
 #### 响应参数
 
@@ -6816,7 +6816,7 @@
 | `content` | 字符串 | 否 | - | `"示例内容"` |
 | `replyTo` | 字符串 | 否 | - | `"示例值"` |
 | `readStatus` | 布尔 | 否 | - | `true` |
-| `createTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 | `fileUrl` | 字符串 | 否 | - | `"https://example.com/file.png"` |
 | `fileName` | 字符串 | 否 | - | `"https://example.com/file.png"` |
 | `fileSize` | 整数 | 否 | - | `1` |
@@ -7657,7 +7657,7 @@
 | `userId` | 字符串 | 否 | - | `"10001"` |
 | `collectableType` | 字符串 | 否 | - | `"示例值"` |
 | `collectableId` | 字符串 | 否 | - | `"10001"` |
-| `createTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 
 #### 响应参数
 
@@ -7687,7 +7687,7 @@
   "userId": "10001",
   "collectableType": "示例值",
   "collectableId": "10001",
-  "createTime": "2026-04-15 21:00:00"
+  "createdAt": "2026-04-15 21:00:00"
 }
 ```
 
@@ -8122,8 +8122,8 @@
 | `relationType` | 字符串 | 否 | - | `"示例值"` |
 | `status` | 字符串 | 否 | - | `"1"` |
 | `role` | 字符串 | 否 | - | `"示例值"` |
-| `createTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
-| `updateTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `updatedAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 
 #### 响应参数
 
@@ -8243,8 +8243,8 @@
 | `relationType` | 字符串 | 否 | - | `"示例值"` |
 | `status` | 字符串 | 否 | - | `"1"` |
 | `role` | 字符串 | 否 | - | `"示例值"` |
-| `createTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
-| `updateTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `updatedAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 
 #### 响应参数
 
@@ -8524,8 +8524,8 @@
 | `data.manualScore` | 整数 | - | `1` |
 | `data.isVerified` | 布尔 | - | `true` |
 | `data.extractionMethod` | 字符串 | - | `"示例值"` |
-| `data.createTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
-| `data.updateTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `data.createdAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `data.updatedAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
 
 #### 异常响应
 
@@ -8830,7 +8830,7 @@
 | `data.extractedDishName` | 字符串 | - | `"示例名称"` |
 | `data.extractedDishImage` | 字符串 | - | `"https://example.com/file.png"` |
 | `data.isPublished` | 布尔 | - | `true` |
-| `data.createTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `data.createdAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `data.extractionTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
 
 #### 异常响应
@@ -8964,7 +8964,7 @@
 | `data[].extractedDishName` | 字符串 | - | `"示例名称"` |
 | `data[].extractedDishImage` | 字符串 | - | `"https://example.com/file.png"` |
 | `data[].isPublished` | 布尔 | - | `true` |
-| `data[].createTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `data[].createdAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `data[].extractionTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
 
 #### 异常响应
@@ -9087,8 +9087,8 @@
 | `data.status` | 字符串 | - | `"1"` |
 | `data.orderId` | 字符串 | - | `"10001"` |
 | `data.expireTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
-| `data.createTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
-| `data.updateTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `data.createdAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `data.updatedAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `data.useTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
 
 #### 异常响应
@@ -9268,8 +9268,8 @@
 | `data[].status` | 字符串 | - | `"1"` |
 | `data[].orderId` | 字符串 | - | `"10001"` |
 | `data[].expireTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
-| `data[].createTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
-| `data[].updateTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `data[].createdAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `data[].updatedAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `data[].useTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
 
 #### 异常响应
@@ -9388,8 +9388,8 @@
 | `validityPeriod` | 字符串 | 否 | - | `"示例值"` |
 | `validDays` | 整数 | 否 | - | `1` |
 | `usedCount` | 整数 | 否 | - | `1` |
-| `createTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
-| `updateTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `updatedAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 
 #### 响应参数
 
@@ -9629,8 +9629,8 @@
 | `validityPeriod` | 字符串 | 否 | - | `"示例值"` |
 | `validDays` | 整数 | 否 | - | `1` |
 | `usedCount` | 整数 | 否 | - | `1` |
-| `createTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
-| `updateTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `updatedAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 
 #### 响应参数
 
@@ -9830,8 +9830,8 @@
 | `auditAdminId` | 整数 | 否 | - | `1` |
 | `submitTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 | `stock` | 整数 | 否 | - | `1` |
-| `createTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
-| `updateTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `updatedAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 | `status` | 布尔 | 否 | - | `true` |
 | `cookingMinutes` | 整数 | 否 | - | `1` |
 | `dishId` | 字符串 | 否 | - | `"10001"` |
@@ -10248,8 +10248,8 @@
 | `auditAdminId` | 整数 | 否 | - | `1` |
 | `submitTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 | `stock` | 整数 | 否 | - | `1` |
-| `createTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
-| `updateTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `updatedAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 | `status` | 布尔 | 否 | - | `true` |
 | `cookingMinutes` | 整数 | 否 | - | `1` |
 | `dishId` | 字符串 | 否 | - | `"10001"` |
@@ -11091,7 +11091,7 @@
 | `userId` | 字符串 | 否 | - | `"10001"` |
 | `collectableType` | 字符串 | 否 | - | `"示例值"` |
 | `collectableId` | 字符串 | 否 | - | `"10001"` |
-| `createTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 
 #### 响应参数
 
@@ -11121,7 +11121,7 @@
   "userId": "10001",
   "collectableType": "示例值",
   "collectableId": "10001",
-  "createTime": "2026-04-15 21:00:00"
+  "createdAt": "2026-04-15 21:00:00"
 }
 ```
 
@@ -11265,7 +11265,7 @@
 | `userId` | 字符串 | 否 | - | `"10001"` |
 | `collectableType` | 字符串 | 否 | - | `"示例值"` |
 | `collectableId` | 字符串 | 否 | - | `"10001"` |
-| `createTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 
 #### 响应参数
 
@@ -11295,7 +11295,7 @@
   "userId": "10001",
   "collectableType": "示例值",
   "collectableId": "10001",
-  "createTime": "2026-04-15 21:00:00"
+  "createdAt": "2026-04-15 21:00:00"
 }
 ```
 
@@ -11438,7 +11438,7 @@
 | `userId` | 字符串 | 否 | - | `"10001"` |
 | `collectableType` | 字符串 | 否 | - | `"示例值"` |
 | `collectableId` | 字符串 | 否 | - | `"10001"` |
-| `createTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 
 #### 响应参数
 
@@ -11468,7 +11468,7 @@
   "userId": "10001",
   "collectableType": "示例值",
   "collectableId": "10001",
-  "createTime": "2026-04-15 21:00:00"
+  "createdAt": "2026-04-15 21:00:00"
 }
 ```
 
@@ -11708,8 +11708,8 @@
 | `data[].budgetPerPerson` | 数字 | - | `99.9` |
 | `data[].isActive` | 布尔 | - | `true` |
 | `data[].daysUntilEvent` | 整数 | - | `1` |
-| `data[].createTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
-| `data[].updateTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `data[].createdAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `data[].updatedAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
 
 #### 异常响应
 
@@ -11779,8 +11779,8 @@
 | `data[].budgetPerPerson` | 数字 | - | `99.9` |
 | `data[].isActive` | 布尔 | - | `true` |
 | `data[].daysUntilEvent` | 整数 | - | `1` |
-| `data[].createTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
-| `data[].updateTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `data[].createdAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `data[].updatedAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
 
 #### 异常响应
 
@@ -12512,8 +12512,8 @@
 | `creatorId` | 字符串 | 否 | - | `"10001"` |
 | `groupName` | 字符串 | 否 | - | `"示例名称"` |
 | `description` | 字符串 | 否 | - | `"示例值"` |
-| `createTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
-| `updateTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `updatedAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 
 #### 响应参数
 
@@ -12543,7 +12543,7 @@
   "creatorId": "10001",
   "groupName": "示例名称",
   "description": "示例值",
-  "createTime": "2026-04-15 21:00:00"
+  "createdAt": "2026-04-15 21:00:00"
 }
 ```
 
@@ -12740,8 +12740,8 @@
 | `creatorId` | 字符串 | 否 | - | `"10001"` |
 | `groupName` | 字符串 | 否 | - | `"示例名称"` |
 | `description` | 字符串 | 否 | - | `"示例值"` |
-| `createTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
-| `updateTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `updatedAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 
 #### 响应参数
 
@@ -12771,7 +12771,7 @@
   "creatorId": "10001",
   "groupName": "示例名称",
   "description": "示例值",
-  "createTime": "2026-04-15 21:00:00"
+  "createdAt": "2026-04-15 21:00:00"
 }
 ```
 
@@ -14706,7 +14706,7 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | `data.sourceId` | 字符串 | - | `"10001"` |
 | `data.redirectUrl` | 字符串 | - | `"https://example.com/file.png"` |
 | `data.clickable` | 布尔 | - | `true` |
-| `data.createTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `data.createdAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
 
 #### 异常响应
 
@@ -14888,8 +14888,8 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | `records[].reviewTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `records[].reviewComment` | 字符串 | - | `"示例值"` |
 | `records[].remark` | 字符串 | - | `"示例内容"` |
-| `records[].createTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
-| `records[].updateTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `records[].createdAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `records[].updatedAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `records[].createBy` | 整数 | - | `1` |
 | `records[].updateBy` | 整数 | - | `1` |
 | `records[].active` | 布尔 | - | `true` |
@@ -15004,8 +15004,8 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | `reviewTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 | `reviewComment` | 字符串 | 否 | - | `"示例值"` |
 | `remark` | 字符串 | 否 | - | `"示例内容"` |
-| `createTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
-| `updateTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `updatedAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 | `createBy` | 整数 | 否 | - | `1` |
 | `updateBy` | 整数 | 否 | - | `1` |
 | `active` | 布尔 | 否 | - | `true` |
@@ -15252,8 +15252,8 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | `reviewTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 | `reviewComment` | 字符串 | 否 | - | `"示例值"` |
 | `remark` | 字符串 | 否 | - | `"示例内容"` |
-| `createTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
-| `updateTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `updatedAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 | `createBy` | 整数 | 否 | - | `1` |
 | `updateBy` | 整数 | 否 | - | `1` |
 | `active` | 布尔 | 否 | - | `true` |
@@ -15370,8 +15370,8 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | `description` | 字符串 | 否 | - | `"示例值"` |
 | `suggestion` | 字符串 | 否 | - | `"示例值"` |
 | `enabled` | 布尔 | 否 | - | `true` |
-| `createTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
-| `updateTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `updatedAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 
 #### 响应参数
 
@@ -15760,8 +15760,8 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | `description` | 字符串 | 否 | - | `"示例值"` |
 | `suggestion` | 字符串 | 否 | - | `"示例值"` |
 | `enabled` | 布尔 | 否 | - | `true` |
-| `createTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
-| `updateTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `updatedAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 
 #### 响应参数
 
@@ -15887,8 +15887,8 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | `district` | 字符串 | 否 | - | `"示例值"` |
 | `detail` | 字符串 | 否 | - | `"示例值"` |
 | `isDefault` | 整数 | 否 | - | `1` |
-| `createTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
-| `updateTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `updatedAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 
 #### 响应参数
 
@@ -16014,8 +16014,8 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | `district` | 字符串 | 否 | - | `"示例值"` |
 | `detail` | 字符串 | 否 | - | `"示例值"` |
 | `isDefault` | 整数 | 否 | - | `1` |
-| `createTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
-| `updateTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `updatedAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 
 #### 响应参数
 
@@ -16732,8 +16732,8 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | `merchantId` | 字符串 | 否 | - | `"10001"` |
 | `description` | 字符串 | 否 | - | `"示例值"` |
 | `status` | 字符串 | 否 | - | `"1"` |
-| `createTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
-| `updateTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `updatedAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 | `dishCount` | 整数 | 否 | - | `1` |
 | `menuName` | 字符串 | 否 | - | `"示例名称"` |
 | `category` | 字符串 | 否 | - | `"示例值"` |
@@ -16768,7 +16768,7 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
   "merchantId": "10001",
   "description": "示例值",
   "status": "1",
-  "createTime": "2026-04-15 21:00:00"
+  "createdAt": "2026-04-15 21:00:00"
 }
 ```
 
@@ -17485,8 +17485,8 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | `status` | 字符串 | 否 | - | `"1"` |
 | `startTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 | `endTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
-| `createTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
-| `updateTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `updatedAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 
 #### 响应参数
 
@@ -17615,8 +17615,8 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | `status` | 字符串 | 否 | - | `"1"` |
 | `startTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 | `endTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
-| `createTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
-| `updateTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `updatedAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 
 #### 响应参数
 
@@ -19132,8 +19132,8 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | `messageType` | 字符串 | 否 | - | `"示例内容"` |
 | `sendTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 | `readStatus` | 整数 | 否 | - | `1` |
-| `createTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
-| `updateTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `updatedAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 
 #### 响应参数
 
@@ -20220,8 +20220,8 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | `order.addressId` | 字符串 | 否 | - | `"10001"` |
 | `order.address` | 字符串 | 否 | - | `"示例值"` |
 | `order.remark` | 字符串 | 否 | - | `"示例内容"` |
-| `order.createTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
-| `order.updateTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `order.createdAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `order.updatedAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 | `dishes` | 数组<OrderDish> | 否 | - | `[{"id": "10001", "orderId": "10001", "dishId": "10001", "quantity": 1, "price": 99.9}]` |
 | `dishes[].id` | 字符串 | 否 | - | `"10001"` |
 | `dishes[].orderId` | 字符串 | 否 | - | `"10001"` |
@@ -21132,8 +21132,8 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | `data[].status` | 字符串 | - | `"1"` |
 | `data[].orderId` | 字符串 | - | `"10001"` |
 | `data[].expireTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
-| `data[].createTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
-| `data[].updateTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `data[].createdAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `data[].updatedAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `data[].useTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
 
 #### 异常响应
@@ -21740,8 +21740,8 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | `detail` | 字符串 | 否 | - | `"示例值"` |
 | `cookTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 | `favorite` | 布尔 | 否 | - | `true` |
-| `createTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
-| `updateTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `updatedAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 
 #### 响应参数
 
@@ -22243,8 +22243,8 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | `detail` | 字符串 | 否 | - | `"示例值"` |
 | `cookTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 | `favorite` | 布尔 | 否 | - | `true` |
-| `createTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
-| `updateTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `updatedAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 
 #### 响应参数
 
@@ -23959,8 +23959,8 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | `retriedCount` | 整数 | 否 | - | `1` |
 | `taskGroup` | 字符串 | 否 | - | `"示例值"` |
 | `priority` | 整数 | 否 | - | `1` |
-| `createTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
-| `updateTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `updatedAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 | `createdBy` | 字符串 | 否 | - | `"示例值"` |
 | `updatedBy` | 字符串 | 否 | - | `"2026-04-15"` |
 
@@ -24260,8 +24260,8 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | `retriedCount` | 整数 | 否 | - | `1` |
 | `taskGroup` | 字符串 | 否 | - | `"示例值"` |
 | `priority` | 整数 | 否 | - | `1` |
-| `createTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
-| `updateTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `updatedAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 | `createdBy` | 字符串 | 否 | - | `"示例值"` |
 | `updatedBy` | 字符串 | 否 | - | `"2026-04-15"` |
 
@@ -24991,8 +24991,8 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | `favoriteCount` | 整数 | 否 | - | `1` |
 | `viewCount` | 整数 | 否 | - | `1` |
 | `shareCount` | 整数 | 否 | - | `1` |
-| `createTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
-| `updateTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `updatedAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 | `official` | 布尔 | 否 | - | `true` |
 | `editable` | 布尔 | 否 | - | `true` |
 | `published` | 布尔 | 否 | - | `true` |
@@ -25037,8 +25037,8 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | `favoriteCount` | 整数 | - | `1` |
 | `viewCount` | 整数 | - | `1` |
 | `shareCount` | 整数 | - | `1` |
-| `createTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
-| `updateTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `updatedAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `official` | 布尔 | - | `true` |
 | `editable` | 布尔 | - | `true` |
 | `published` | 布尔 | - | `true` |
@@ -25187,8 +25187,8 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | `records[].favoriteCount` | 整数 | - | `1` |
 | `records[].viewCount` | 整数 | - | `1` |
 | `records[].shareCount` | 整数 | - | `1` |
-| `records[].createTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
-| `records[].updateTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `records[].createdAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `records[].updatedAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `records[].official` | 布尔 | - | `true` |
 | `records[].editable` | 布尔 | - | `true` |
 | `records[].published` | 布尔 | - | `true` |
@@ -25577,8 +25577,8 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | `records[].favoriteCount` | 整数 | - | `1` |
 | `records[].viewCount` | 整数 | - | `1` |
 | `records[].shareCount` | 整数 | - | `1` |
-| `records[].createTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
-| `records[].updateTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `records[].createdAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `records[].updatedAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `records[].official` | 布尔 | - | `true` |
 | `records[].editable` | 布尔 | - | `true` |
 | `records[].published` | 布尔 | - | `true` |
@@ -25685,8 +25685,8 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | `favoriteCount` | 整数 | - | `1` |
 | `viewCount` | 整数 | - | `1` |
 | `shareCount` | 整数 | - | `1` |
-| `createTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
-| `updateTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `updatedAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `official` | 布尔 | - | `true` |
 | `editable` | 布尔 | - | `true` |
 | `published` | 布尔 | - | `true` |
@@ -25773,8 +25773,8 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | `favoriteCount` | 整数 | 否 | - | `1` |
 | `viewCount` | 整数 | 否 | - | `1` |
 | `shareCount` | 整数 | 否 | - | `1` |
-| `createTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
-| `updateTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `updatedAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 | `official` | 布尔 | 否 | - | `true` |
 | `editable` | 布尔 | 否 | - | `true` |
 | `published` | 布尔 | 否 | - | `true` |
@@ -25819,8 +25819,8 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | `favoriteCount` | 整数 | - | `1` |
 | `viewCount` | 整数 | - | `1` |
 | `shareCount` | 整数 | - | `1` |
-| `createTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
-| `updateTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `updatedAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `official` | 布尔 | - | `true` |
 | `editable` | 布尔 | - | `true` |
 | `published` | 布尔 | - | `true` |
@@ -25919,8 +25919,8 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | `records[].favoriteCount` | 整数 | - | `1` |
 | `records[].viewCount` | 整数 | - | `1` |
 | `records[].shareCount` | 整数 | - | `1` |
-| `records[].createTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
-| `records[].updateTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `records[].createdAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `records[].updatedAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `records[].official` | 布尔 | - | `true` |
 | `records[].editable` | 布尔 | - | `true` |
 | `records[].published` | 布尔 | - | `true` |
@@ -26066,8 +26066,8 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | `favoriteCount` | 整数 | 否 | - | `1` |
 | `viewCount` | 整数 | 否 | - | `1` |
 | `shareCount` | 整数 | 否 | - | `1` |
-| `createTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
-| `updateTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `updatedAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 | `official` | 布尔 | 否 | - | `true` |
 | `editable` | 布尔 | 否 | - | `true` |
 | `published` | 布尔 | 否 | - | `true` |
@@ -26378,8 +26378,8 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | `favoriteCount` | 整数 | 否 | - | `1` |
 | `viewCount` | 整数 | 否 | - | `1` |
 | `shareCount` | 整数 | 否 | - | `1` |
-| `createTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
-| `updateTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `updatedAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 | `official` | 布尔 | 否 | - | `true` |
 | `editable` | 布尔 | 否 | - | `true` |
 | `published` | 布尔 | 否 | - | `true` |
@@ -26424,8 +26424,8 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | `favoriteCount` | 整数 | - | `1` |
 | `viewCount` | 整数 | - | `1` |
 | `shareCount` | 整数 | - | `1` |
-| `createTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
-| `updateTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `updatedAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `official` | 布尔 | - | `true` |
 | `editable` | 布尔 | - | `true` |
 | `published` | 布尔 | - | `true` |
@@ -26606,8 +26606,8 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | `favoriteCount` | 整数 | 否 | - | `1` |
 | `viewCount` | 整数 | 否 | - | `1` |
 | `shareCount` | 整数 | 否 | - | `1` |
-| `createTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
-| `updateTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `createdAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `updatedAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 | `official` | 布尔 | 否 | - | `true` |
 | `editable` | 布尔 | 否 | - | `true` |
 | `published` | 布尔 | 否 | - | `true` |
@@ -27496,7 +27496,7 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | `enableActivityNotification` | 布尔 | 否 | - | `true` |
 | `enableMerchantReplyNotification` | 布尔 | 否 | - | `true` |
 | `enableGroupChatNotification` | 布尔 | 否 | - | `true` |
-| `updateTime` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
+| `updatedAt` | 字符串 | 否 | - | `"2026-04-15 21:00:00"` |
 
 #### 响应参数
 
@@ -28726,7 +28726,7 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | `data.actualAvailableTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `data.timeoutTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `data.remainingHours` | 整数 | - | `1` |
-| `data.createTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `data.createdAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `data.canAppeal` | 布尔 | - | `true` |
 | `data.canWithdraw` | 布尔 | - | `true` |
 
@@ -28816,7 +28816,7 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | `data[].actualAvailableTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `data[].timeoutTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `data[].remainingHours` | 整数 | - | `1` |
-| `data[].createTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `data[].createdAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `data[].canAppeal` | 布尔 | - | `true` |
 | `data[].canWithdraw` | 布尔 | - | `true` |
 
@@ -28902,7 +28902,7 @@ DELETE /api/v1/group-orders/group-orders/194857392001/leave?userId=10002
 | `data[].actualAvailableTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `data[].timeoutTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `data[].remainingHours` | 整数 | - | `1` |
-| `data[].createTime` | 字符串 | - | `"2026-04-15 21:00:00"` |
+| `data[].createdAt` | 字符串 | - | `"2026-04-15 21:00:00"` |
 | `data[].canAppeal` | 布尔 | - | `true` |
 | `data[].canWithdraw` | 布尔 | - | `true` |
 

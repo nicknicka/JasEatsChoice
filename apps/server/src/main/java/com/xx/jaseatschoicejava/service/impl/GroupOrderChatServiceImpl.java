@@ -66,8 +66,8 @@ public class GroupOrderChatServiceImpl extends ServiceImpl<ChatSessionMapper, Ch
         session.setRelatedOrderId(groupOrderId);
         session.setUnreadCount(0);
         session.setPinned(1); // 默认置顶
-        session.setCreateTime(LocalDateTime.now());
-        session.setUpdateTime(LocalDateTime.now());
+        session.setCreatedAt(LocalDateTime.now());
+        session.setUpdatedAt(LocalDateTime.now());
 
         // 设置最后消息为订单创建消息
         String lastMessage = "群订单已创建，等待商家接单";
@@ -124,7 +124,7 @@ public class GroupOrderChatServiceImpl extends ServiceImpl<ChatSessionMapper, Ch
         // 更新会话名称，添加"已完成"标记
         session.setSessionName(session.getSessionName() + " [已完成]");
         session.setPinned(0); // 取消置顶
-        session.setUpdateTime(LocalDateTime.now());
+        session.setUpdatedAt(LocalDateTime.now());
 
         return chatSessionService.updateById(session);
     }
@@ -171,7 +171,7 @@ public class GroupOrderChatServiceImpl extends ServiceImpl<ChatSessionMapper, Ch
 
         session.setLastMessage(lastMessage);
         session.setLastMessageTime(LocalDateTime.parse(lastMessageTime, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-        session.setUpdateTime(LocalDateTime.now());
+        session.setUpdatedAt(LocalDateTime.now());
 
         return chatSessionService.updateById(session);
     }

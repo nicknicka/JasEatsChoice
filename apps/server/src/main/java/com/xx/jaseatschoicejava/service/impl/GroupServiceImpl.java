@@ -28,8 +28,8 @@ public class GroupServiceImpl extends ServiceImpl<GroupMapper, Group> implements
 
         // 设置创建时间和更新时间
         LocalDateTime now = LocalDateTime.now();
-        group.setCreateTime(now);
-        group.setUpdateTime(now);
+        group.setCreatedAt(now);
+        group.setUpdatedAt(now);
 
         // 调用父类的save方法
         return super.save(group);

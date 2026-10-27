@@ -63,7 +63,7 @@ const normalizeTransactionType = (type) => {
 
 const normalizeTransactionItem = (record) => {
   const type = normalizeTransactionType(record?.type)
-  const createTime = record?.createTime || record?.time || Date.now()
+  const createdAt = record?.createdAt || record?.time || Date.now()
   const amount = Number(record?.amount || 0)
   return {
     id: record?.id || `${type}-${Date.now()}-${Math.random()}`,
@@ -82,7 +82,7 @@ const normalizeTransactionItem = (record) => {
         : type === 'withdraw'
           ? '💸'
           : '💳',
-    time: new Date(createTime).toLocaleString(),
+    time: new Date(createdAt).toLocaleString(),
     amount: Number.isFinite(amount) ? amount : 0,
     statusText: record?.status === 'failed' ? '失败' : '成功',
     status: record?.status || 'success'

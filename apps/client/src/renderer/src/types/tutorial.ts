@@ -89,8 +89,8 @@ export interface Tutorial {
   shareCount?: number
 
   // 时间戳
-  createTime?: string
-  updateTime?: string
+  createdAt?: string
+  updatedAt?: string
 
   // 关联数据（用于显示）
   merchantName?: string

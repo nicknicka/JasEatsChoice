@@ -34,8 +34,8 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantMapper, Merchant> i
         // 默认新注册商家为营业状态
         merchant.setStatus(true);
         // 设置创建时间
-        merchant.setCreateTime(LocalDateTime.now());
-        merchant.setUpdateTime(LocalDateTime.now());
+        merchant.setCreatedAt(LocalDateTime.now());
+        merchant.setUpdatedAt(LocalDateTime.now());
         // 地址、经纬度等字段可以为空，无需默认值
         // 数据库已修改为允许这些字段为空
         boolean success = save(merchant);
@@ -63,7 +63,7 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantMapper, Merchant> i
     @CacheEvict(value = CACHE_NAME, key = "#merchant.id")
     public boolean updateMerchantInfo(Merchant merchant) {
         log.debug("更新商家信息并清除缓存: merchantId={}", merchant.getId());
-        merchant.setUpdateTime(LocalDateTime.now());
+        merchant.setUpdatedAt(LocalDateTime.now());
         return updateById(merchant);
     }
 

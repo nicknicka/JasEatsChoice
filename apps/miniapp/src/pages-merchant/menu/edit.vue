@@ -233,7 +233,7 @@ const sortOptions = ref([
   { label: '按销量排序', value: 'sales' },
   { label: '按价格排序', value: 'price' },
   { label: '按评分排序', value: 'rating' },
-  { label: '按创建时间', value: 'createTime' }
+  { label: '按创建时间', value: 'createdAt' }
 ])
 
 const sortIndex = ref(0)

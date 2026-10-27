@@ -692,7 +692,7 @@ onMounted(() => {
 						</el-table-column>
 						<el-table-column prop="author" label="作者" width="120" />
 						<el-table-column
-							prop="create_time"
+							prop="created_at"
 							label="创建时间"
 							width="180"
 						/>

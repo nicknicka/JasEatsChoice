@@ -73,7 +73,7 @@
                 </el-tag>
                 <el-tag v-if="source.isPublished" type="success" size="small">已发布</el-tag>
               </p>
-              <p class="source-time">{{ formatTime(source.extractionTime || source.createTime) }}</p>
+              <p class="source-time">{{ formatTime(source.extractionTime || source.createdAt) }}</p>
             </div>
 
             <div class="source-actions">

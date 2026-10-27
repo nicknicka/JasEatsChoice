@@ -205,7 +205,7 @@ const loadConversations = async (isRefresh = false) => {
         pinned: conv.isPinned || false,
         lastMessage: conv.lastMessage?.content || '',
         lastMessageType: conv.lastMessage?.type || 'text',
-        time: formatTime(conv.lastMessageTime || conv.updateTime || new Date()),
+        time: formatTime(conv.lastMessageTime || conv.updatedAt || new Date()),
         unread: conv.unreadCount || 0
       }))
 
@@ -391,7 +391,7 @@ const onSearch = async (e) => {
         pinned: conv.isPinned || false,
         lastMessage: conv.lastMessage?.content || '',
         lastMessageType: conv.lastMessage?.type || 'text',
-        time: formatTime(conv.lastMessageTime || conv.updateTime || new Date()),
+        time: formatTime(conv.lastMessageTime || conv.updatedAt || new Date()),
         unread: conv.unreadCount || 0
       }))
 

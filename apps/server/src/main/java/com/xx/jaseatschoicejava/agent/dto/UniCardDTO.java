@@ -182,7 +182,7 @@ public class UniCardDTO {
         private String statusColor;
         private Integer dishCount;
         private BigDecimal totalAmount;
-        private String createTime;
+        private String createdAt;
         private List<CardAction> actions;
     }
 

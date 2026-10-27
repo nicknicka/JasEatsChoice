@@ -212,8 +212,8 @@ const loadOrders = async (isRefresh = false) => {
                 quantity: dish.quantity || 1
               })),
               remark: order.remark || '',
-              orderTime: formatFullTime(order.createTime),
-              expectTime: formatFullTime(order.updateTime) || '未设置',
+              orderTime: formatFullTime(order.createdAt),
+              expectTime: formatFullTime(order.updatedAt) || '未设置',
               takeType: '到店自取',
               amount: formatAmount(order.totalAmount || 0),
               customerId: order.userId
@@ -227,7 +227,7 @@ const loadOrders = async (isRefresh = false) => {
               statusText: getStatusText(normalizedStatus),
               dishes: [],
               remark: order.remark || '',
-              orderTime: formatFullTime(order.createTime),
+              orderTime: formatFullTime(order.createdAt),
               expectTime: '未设置',
               takeType: '到店自取',
               amount: formatAmount(order.totalAmount || 0),

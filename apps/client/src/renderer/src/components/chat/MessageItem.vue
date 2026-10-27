@@ -230,7 +230,7 @@ const senderName = computed(() => {
 })
 
 const formattedTime = computed(() => {
-  return props.message.formattedTime || props.formatMessageTime(props.message.createTime || props.message.time)
+  return props.message.formattedTime || props.formatMessageTime(props.message.createdAt || props.message.time)
 })
 
 // 格式化文件大小

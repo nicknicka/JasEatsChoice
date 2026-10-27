@@ -537,7 +537,7 @@ onMounted(() => {
       <el-table
         ref="tableRef"
         :data="discounts"
-        :default-sort="{ prop: 'createTime', order: 'descending' }"
+        :default-sort="{ prop: 'createdAt', order: 'descending' }"
         @selection-change="handleSelectionChange"
         style="width: 100%"
         :row-style="{ height: '60px' }"
@@ -597,14 +597,14 @@ onMounted(() => {
           </template>
         </el-table-column>
         <el-table-column
-          prop="createTime"
+          prop="createdAt"
           label="创建时间"
           width="160"
           align="center"
           class-name="time-column"
         >
           <template #default="scope">
-            {{ formatDateTime(scope.row.createTime) }}
+            {{ formatDateTime(scope.row.createdAt) }}
           </template>
         </el-table-column>
         <el-table-column

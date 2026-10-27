@@ -97,7 +97,7 @@ export function useFavorites() {
         userId,
         collectableType: item.type,
         collectableId: String(item.id),
-        createTime: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
         // 保留原有的字段以兼容现有代码
         dishId: item.id,
         name: item.name,
@@ -125,7 +125,7 @@ export function useFavorites() {
           userId: String(authStore.userId || 1) || '1',
           collectableType: item.type,
           collectableId: String(item.id),
-          createTime: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
           // 保留原有的字段以兼容现有代码
           dishId: item.id,
           name: item.name,

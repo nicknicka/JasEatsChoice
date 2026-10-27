@@ -92,7 +92,7 @@ public class GroupOrderController {
             queryWrapper.eq(GroupOrder::getGroupId, groupId);
             queryWrapper.eq(GroupOrder::getInitiatorId, initiatorId);
             queryWrapper.eq(GroupOrder::getStatus, -1); // 草稿状态
-            queryWrapper.orderByDesc(GroupOrder::getCreateTime);
+            queryWrapper.orderByDesc(GroupOrder::getCreatedAt);
             queryWrapper.last("LIMIT 1");
 
             GroupOrder draftOrder = groupOrderService.getOne(queryWrapper);
@@ -111,8 +111,8 @@ public class GroupOrderController {
                 newDraftOrder.setInitiatorId(initiatorId);
                 newDraftOrder.setGroupId(groupId);
                 newDraftOrder.setStatus(-1); // 草稿状态
-                newDraftOrder.setCreateTime(LocalDateTime.now());
-                newDraftOrder.setUpdateTime(LocalDateTime.now());
+                newDraftOrder.setCreatedAt(LocalDateTime.now());
+                newDraftOrder.setUpdatedAt(LocalDateTime.now());
 
                 boolean saved = groupOrderService.save(newDraftOrder);
                 if (saved) {
@@ -326,7 +326,7 @@ public class GroupOrderController {
             draftUpdated = true;
         }
         if (draftUpdated) {
-            groupOrder.setUpdateTime(LocalDateTime.now());
+            groupOrder.setUpdatedAt(LocalDateTime.now());
             groupOrderService.updateById(groupOrder);
         }
 
@@ -686,7 +686,7 @@ public class GroupOrderController {
 
             // 更新订单状态为已取消(6)
             groupOrder.setStatus(6);
-            groupOrder.setUpdateTime(LocalDateTime.now());
+            groupOrder.setUpdatedAt(LocalDateTime.now());
             boolean updated = groupOrderService.updateById(groupOrder);
 
             if (updated) {
@@ -747,7 +747,7 @@ public class GroupOrderController {
 
             // 更新状态
             groupOrder.setStatus(newStatus);
-            groupOrder.setUpdateTime(LocalDateTime.now());
+            groupOrder.setUpdatedAt(LocalDateTime.now());
 
             // 如果提供了总金额，也更新总金额
             if (params.containsKey("totalAmount")) {
@@ -874,8 +874,8 @@ public class GroupOrderController {
         result.put("totalAmount", groupOrder.getTotalAmount());
         result.put("status", groupOrder.getStatus());
         result.put("confirmedTime", runtimeState.getOrDefault("confirmedTime", groupOrder.getConfirmedTime()));
-        result.put("createTime", groupOrder.getCreateTime());
-        result.put("updateTime", groupOrder.getUpdateTime());
+        result.put("createdAt", groupOrder.getCreatedAt());
+        result.put("updatedAt", groupOrder.getUpdatedAt());
         result.put("currentCount", runtimeState.getOrDefault("currentCount", participants.size()));
         result.put("maxParticipants", runtimeState.getOrDefault("maxParticipants", participants.size()));
         result.put("members", participants);
@@ -941,7 +941,7 @@ public class GroupOrderController {
 
         if (!walletService.checkBalance(paymentRecord.getUserId(), paymentRecord.getAmount())) {
             paymentRecord.setPaymentStatus("failed");
-            paymentRecord.setUpdateTime(LocalDateTime.now());
+            paymentRecord.setUpdatedAt(LocalDateTime.now());
             paymentService.updateById(paymentRecord);
             throw new RuntimeException("钱包余额不足");
         }
@@ -953,14 +953,14 @@ public class GroupOrderController {
         );
         if (!deducted) {
             paymentRecord.setPaymentStatus("failed");
-            paymentRecord.setUpdateTime(LocalDateTime.now());
+            paymentRecord.setUpdatedAt(LocalDateTime.now());
             paymentService.updateById(paymentRecord);
             throw new RuntimeException("余额支付失败");
         }
 
         paymentRecord.setPaymentStatus("success");
         paymentRecord.setPaidTime(LocalDateTime.now());
-        paymentRecord.setUpdateTime(LocalDateTime.now());
+        paymentRecord.setUpdatedAt(LocalDateTime.now());
         paymentService.updateById(paymentRecord);
         Integer previousStatus = groupOrder.getStatus();
         GroupOrder updatedGroupOrder = groupOrderService.refreshGroupOrderPaymentState(

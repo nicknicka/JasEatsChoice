@@ -115,7 +115,7 @@ export function useMessageActions({ chatHistory, chatMessages, userId, formatMes
     content += `${'='.repeat(50)}\n\n`
 
     messages.forEach((msg) => {
-      const time = msg.formattedTime || formatMessageTime(msg.createTime || msg.time)
+      const time = msg.formattedTime || formatMessageTime(msg.createdAt || msg.time)
       const sender = msg.fromId === userId.value.toString() ? '我' : msg.senderName || msg.fromId
       const status = msg.readStatus !== false ? '' : ' (未读)'
 
@@ -142,9 +142,9 @@ export function useMessageActions({ chatHistory, chatMessages, userId, formatMes
    * 判断消息是否可以撤回
    */
   const canRecallMessage = (message) => {
-    if (!message.createTime && !message.time) return false
+    if (!message.createdAt && !message.time) return false
 
-    const msgTime = new Date(message.createTime || message.time)
+    const msgTime = new Date(message.createdAt || message.time)
     const now = new Date()
     const diffMinutes = (now - msgTime) / 1000 / 60
 

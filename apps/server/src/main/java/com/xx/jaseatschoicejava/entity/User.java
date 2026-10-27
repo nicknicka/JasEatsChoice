@@ -80,13 +80,13 @@ public class User {
     @ApiModelProperty(value = "商家ID")
     private String merchantId; // 商家ID，如果不为空表示用户已注册为商家
 
-    @TableField("create_time")
+    @TableField("created_at")
     @ApiModelProperty(value = "创建时间")
-    private LocalDateTime createTime; // 创建时间
+    private LocalDateTime createdAt; // 创建时间
 
-    @TableField("update_time")
+    @TableField("updated_at")
     @ApiModelProperty(value = "更新时间")
-    private LocalDateTime updateTime; // 更新时间
+    private LocalDateTime updatedAt; // 更新时间
 
     @TableField("avatar")
     @ApiModelProperty(value = "用户头像URL")

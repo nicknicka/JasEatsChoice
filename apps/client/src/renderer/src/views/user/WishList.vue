@@ -71,7 +71,7 @@
           </div>
 
           <div class="meta-row">
-            <span>提交：{{ formatTime(item.createTime) }}</span>
+            <span>提交：{{ formatTime(item.createdAt) }}</span>
             <span v-if="item.auditStatus === 0">剩余：{{ item.remainingHours ?? '-' }}小时</span>
             <span v-if="item.expectedAvailableTime">期望：{{ formatDate(item.expectedAvailableTime) }}</span>
           </div>

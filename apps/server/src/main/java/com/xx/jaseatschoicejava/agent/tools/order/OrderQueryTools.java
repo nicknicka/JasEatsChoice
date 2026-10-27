@@ -94,7 +94,7 @@ public class OrderQueryTools {
                 order.getPaidAmount(),
                 order.getAddress() != null ? order.getAddress() : "无",
                 order.getRemark() != null ? order.getRemark() : "无",
-                order.getCreateTime()
+                order.getCreatedAt()
             );
 
             log.info("✅ [Tool] 查询订单详情成功: {}", order.getId());
@@ -133,7 +133,7 @@ public class OrderQueryTools {
             List<Order> orders = orderService.list(
                 new LambdaQueryWrapper<Order>()
                     .eq(Order::getUserId, userId)
-                    .orderByDesc(Order::getCreateTime)
+                    .orderByDesc(Order::getCreatedAt)
                     .last("LIMIT 20")
             );
 
@@ -158,8 +158,8 @@ public class OrderQueryTools {
                     item.setStatusColor(getStatusColor(order.getStatus()));
                     item.setDishCount(dishCountMap.getOrDefault(order.getId(), 0L).intValue());
                     item.setTotalAmount(order.getTotalAmount());
-                    item.setCreateTime(order.getCreateTime() != null
-                        ? order.getCreateTime().toString() : "");
+                    item.setCreatedAt(order.getCreatedAt() != null
+                        ? order.getCreatedAt().toString() : "");
                     return item;
                 })
                 .collect(Collectors.toList());
@@ -188,7 +188,7 @@ public class OrderQueryTools {
                     getStatusText(order.getStatus()),
                     order.getTotalAmount(),
                     dishCount,
-                    order.getCreateTime()
+                    order.getCreatedAt()
                 ));
             }
 
@@ -251,7 +251,7 @@ public class OrderQueryTools {
                 "💰 订单金额：%.2f元",
                 order.getId(),
                 statusText,
-                order.getCreateTime(),
+                order.getCreatedAt(),
                 order.getTotalAmount()
             );
 
@@ -296,7 +296,7 @@ public class OrderQueryTools {
                     .eq(Order::getUserId, userId)
                     .isNotNull(Order::getAddress)
                     .ne(Order::getAddress, "")
-                    .orderByDesc(Order::getCreateTime)
+                    .orderByDesc(Order::getCreatedAt)
                     .last("LIMIT 5")
             );
 

@@ -22,7 +22,7 @@ public class UserCollection {
 
     private String collectableId; // 收藏对象ID
 
-    private LocalDateTime createTime; // 创建时间
+    private LocalDateTime createdAt; // 创建时间
 
     // 显式声明 getter/setter 方法，确保编译器能识别
     public String getCollectableType() {
@@ -57,11 +57,11 @@ public class UserCollection {
         this.userId = userId;
     }
 
-    public LocalDateTime getCreateTime() {
-        return createTime;
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
     }
 
-    public void setCreateTime(LocalDateTime createTime) {
-        this.createTime = createTime;
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 }

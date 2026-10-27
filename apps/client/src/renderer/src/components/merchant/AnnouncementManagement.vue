@@ -316,7 +316,7 @@ onMounted(() => {
       </el-button>
     </div>
     <div class="announcement-table-container">
-      <el-table :data="announcements" :default-sort="{ prop: 'createdTime', order: 'descending' }">
+      <el-table :data="announcements" :default-sort="{ prop: 'createdAt', order: 'descending' }">
         <el-table-column prop="title" label="公告标题" min-width="200">
           <template #default="scope">
             <span>{{ scope.row.title }}</span>

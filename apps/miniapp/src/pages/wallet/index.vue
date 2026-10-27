@@ -142,7 +142,7 @@
 
             <view class="transaction-info">
               <text class="transaction-type">{{ getTransactionTypeText(transaction.type) }}</text>
-              <text class="transaction-time">{{ formatTime(transaction.createTime) }}</text>
+              <text class="transaction-time">{{ formatTime(transaction.createdAt) }}</text>
             </view>
 
             <view class="transaction-amount" :class="transaction.type === 'recharge' ? 'amount-plus' : 'amount-minus'">
@@ -331,25 +331,25 @@ const loadRecentTransactions = async () => {
         id: 1,
         type: 'consume',
         amount: 38.00,
-        createTime: new Date(Date.now() - 1000 * 60 * 30).toISOString()
+        createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString()
       },
       {
         id: 2,
         type: 'recharge',
         amount: 100.00,
-        createTime: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString()
+        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString()
       },
       {
         id: 3,
         type: 'consume',
         amount: 28.50,
-        createTime: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString()
+        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString()
       },
       {
         id: 4,
         type: 'recharge',
         amount: 50.00,
-        createTime: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString()
+        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString()
       }
     ]
 
@@ -534,7 +534,7 @@ const viewHelp = () => {
 const viewTransactionDetail = (transaction) => {
   uni.showModal({
     title: '交易详情',
-    content: `${getTransactionTypeText(transaction.type)}\n金额：¥${formatAmount(transaction.amount)}\n时间：${formatTime(transaction.createTime)}`,
+    content: `${getTransactionTypeText(transaction.type)}\n金额：¥${formatAmount(transaction.amount)}\n时间：${formatTime(transaction.createdAt)}`,
     showCancel: false
   })
 }

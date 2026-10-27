@@ -70,7 +70,7 @@ public class AdminOrderController {
             );
         }
 
-        queryWrapper.orderByDesc("create_time");
+        queryWrapper.orderByDesc("created_at");
 
         IPage<Order> result = orderService.page(pageParam, queryWrapper);
 
@@ -130,8 +130,8 @@ public class AdminOrderController {
             data.put("paymentTime", order.getPaymentTime());
             data.put("address", order.getAddress());
             data.put("remark", order.getRemark());
-            data.put("createTime", order.getCreateTime());
-            data.put("updateTime", order.getUpdateTime());
+            data.put("createdAt", order.getCreatedAt());
+            data.put("updatedAt", order.getUpdatedAt());
             data.put("dishes", dishes);
 
             response.put("success", true);
@@ -176,7 +176,7 @@ public class AdminOrderController {
 
         // 更新订单状态
         order.setStatus(newStatus);
-        order.setUpdateTime(LocalDateTime.now());
+        order.setUpdatedAt(LocalDateTime.now());
 
         boolean success = orderService.updateById(order);
 
@@ -264,7 +264,7 @@ public class AdminOrderController {
                 Order order = orderService.getById(orderId);
                 if (order != null && isValidStatusTransition(order.getStatus(), newStatus)) {
                     order.setStatus(newStatus);
-                    order.setUpdateTime(LocalDateTime.now());
+                    order.setUpdatedAt(LocalDateTime.now());
                     if (orderService.updateById(order)) {
                         successCount++;
                     } else {

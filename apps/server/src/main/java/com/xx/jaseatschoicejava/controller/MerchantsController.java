@@ -58,7 +58,7 @@ public class MerchantsController {
             if ("rating".equals(sort)) {
                 queryWrapper.orderByDesc(Merchant::getRating);
             } else {
-                queryWrapper.orderByDesc(Merchant::getCreateTime);
+                queryWrapper.orderByDesc(Merchant::getCreatedAt);
             }
 
             // 分页

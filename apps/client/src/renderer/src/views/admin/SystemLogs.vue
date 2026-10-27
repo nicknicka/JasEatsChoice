@@ -229,7 +229,7 @@
             </span>
           </template>
         </el-table-column>
-        <el-table-column prop="createTime" label="操作时间" width="165" />
+        <el-table-column prop="createdAt" label="操作时间" width="165" />
         <el-table-column label="操作" width="80" align="center" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" link @click="handleViewDetail(row)">
@@ -318,7 +318,7 @@
               </el-tag>
             </el-descriptions-item>
             <el-descriptions-item label="操作时间" :span="2">
-              {{ currentLog.createTime }}
+              {{ currentLog.createdAt }}
             </el-descriptions-item>
             <el-descriptions-item label="浏览器">
               <span class="env-info">{{ currentLog.browser || '-' }}</span>

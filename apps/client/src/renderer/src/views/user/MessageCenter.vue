@@ -48,7 +48,7 @@ const loadMessages = async () => {
           id: message.id,
           title: message.title || message.content,
           content: message.content,
-          time: message.sendTime || message.createTime,
+          time: message.sendTime || message.createdAt,
           read: message.readStatus,
           type: message.type || 'system'
         }

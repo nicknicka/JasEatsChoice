@@ -92,7 +92,7 @@
           </template>
         </el-table-column>
         <el-table-column prop="transactionId" label="交易单号" min-width="220" show-overflow-tooltip />
-        <el-table-column prop="createTime" label="充值时间" width="180" />
+        <el-table-column prop="createdAt" label="充值时间" width="180" />
         <el-table-column label="操作" width="100" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" link @click="handleView(row)">详情</el-button>
@@ -138,7 +138,7 @@
         <el-descriptions-item label="充值前余额">¥{{ currentRecord.balanceBefore || 0 }}</el-descriptions-item>
         <el-descriptions-item label="充值后余额">¥{{ currentRecord.balanceAfter || 0 }}</el-descriptions-item>
         <el-descriptions-item label="交易单号" :span="2">{{ currentRecord.transactionId || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="充值时间" :span="2">{{ currentRecord.createTime }}</el-descriptions-item>
+        <el-descriptions-item label="充值时间" :span="2">{{ currentRecord.createdAt }}</el-descriptions-item>
         <el-descriptions-item label="备注" :span="2">{{ currentRecord.remark || '-' }}</el-descriptions-item>
       </el-descriptions>
 

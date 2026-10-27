@@ -101,7 +101,7 @@ public class DishStepDetailVO {
         private String rollbackReason;
 
         @ApiModelProperty(value = "创建时间")
-        private LocalDateTime createTime;
+        private LocalDateTime createdAt;
 
         @ApiModelProperty(value = "预计耗时（分钟）")
         private Integer estimatedMinutes;

@@ -59,8 +59,8 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
     @Transactional(rollbackFor = Exception.class)
     public boolean createGroupOrder(GroupOrder groupOrder, List<GroupOrderDish> dishItems) {
         LocalDateTime now = LocalDateTime.now();
-        groupOrder.setCreateTime(now);
-        groupOrder.setUpdateTime(now);
+        groupOrder.setCreatedAt(now);
+        groupOrder.setUpdatedAt(now);
         if (groupOrder.getStatus() == null) {
             groupOrder.setStatus(0);
         }
@@ -109,7 +109,7 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
     public List<GroupOrder> getGroupOrdersByGroupId(String groupId, Integer status, Integer page, Integer size) {
         LambdaQueryWrapper<GroupOrder> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(GroupOrder::getGroupId, groupId);
-        queryWrapper.orderByDesc(GroupOrder::getCreateTime);
+        queryWrapper.orderByDesc(GroupOrder::getCreatedAt);
 
         if (status != null) {
             queryWrapper.eq(GroupOrder::getStatus, status);
@@ -145,7 +145,7 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
         if (status != null) {
             initiatorQuery.eq(GroupOrder::getStatus, status);
         }
-        initiatorQuery.orderByDesc(GroupOrder::getCreateTime);
+        initiatorQuery.orderByDesc(GroupOrder::getCreatedAt);
         list(initiatorQuery).forEach(order -> orderMap.put(order.getId(), order));
 
         LambdaQueryWrapper<GroupOrderMember> memberQuery = new LambdaQueryWrapper<>();
@@ -161,13 +161,13 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
             if (status != null) {
                 joinedOrderQuery.eq(GroupOrder::getStatus, status);
             }
-            joinedOrderQuery.orderByDesc(GroupOrder::getCreateTime);
+            joinedOrderQuery.orderByDesc(GroupOrder::getCreatedAt);
             list(joinedOrderQuery).forEach(order -> orderMap.putIfAbsent(order.getId(), order));
         }
 
         return orderMap.values().stream()
                 .sorted(Comparator.comparing(
-                        GroupOrder::getCreateTime,
+                        GroupOrder::getCreatedAt,
                         Comparator.nullsLast(Comparator.reverseOrder())
                 ))
                 .skip((long) Math.max(page - 1, 0) * size)
@@ -328,7 +328,7 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
 
         member.setLeaveStatus(1);
         member.setLeaveTime(LocalDateTime.now());
-        member.setUpdateTime(LocalDateTime.now());
+        member.setUpdatedAt(LocalDateTime.now());
         groupOrderMemberMapper.updateById(member);
 
         LambdaQueryWrapper<GroupOrderDish> removeQuery = new LambdaQueryWrapper<>();
@@ -374,7 +374,7 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
                 existing.setPayStatus(PAY_STATUS_PENDING);
                 existing.setPaidAmount(BigDecimal.ZERO);
             }
-            existing.setUpdateTime(now);
+            existing.setUpdatedAt(now);
             groupOrderMemberMapper.updateById(existing);
             return existing;
         }
@@ -389,8 +389,8 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
         member.setLeaveStatus(0);
         member.setLeaveTime(null);
         member.setInviteBy(inviteBy);
-        member.setCreateTime(now);
-        member.setUpdateTime(now);
+        member.setCreatedAt(now);
+        member.setUpdatedAt(now);
         groupOrderMemberMapper.insert(member);
         return member;
     }
@@ -413,7 +413,7 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
         } else if (member.getPaidAmount() == null) {
             member.setPaidAmount(BigDecimal.ZERO);
         }
-        member.setUpdateTime(LocalDateTime.now());
+        member.setUpdatedAt(LocalDateTime.now());
         groupOrderMemberMapper.updateById(member);
     }
 
@@ -427,7 +427,7 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
             if (member.getPaidAmount() == null) {
                 member.setPaidAmount(BigDecimal.ZERO);
             }
-            member.setUpdateTime(now);
+            member.setUpdatedAt(now);
             groupOrderMemberMapper.updateById(member);
         }
     }
@@ -519,7 +519,7 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
             groupOrder.setMaxParticipants(Math.max(getActiveGroupOrderMembers(groupOrderId).size(), 1));
         }
         groupOrder.setTotalAmount(calculateGroupOrderTotalAmount(groupOrderId).doubleValue());
-        groupOrder.setUpdateTime(LocalDateTime.now());
+        groupOrder.setUpdatedAt(LocalDateTime.now());
         updateById(groupOrder);
         return getById(groupOrderId);
     }
@@ -566,7 +566,7 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
                 groupOrder.setConfirmedTime(LocalDateTime.now());
             }
         }
-        groupOrder.setUpdateTime(LocalDateTime.now());
+        groupOrder.setUpdatedAt(LocalDateTime.now());
         updateById(groupOrder);
         return getById(groupOrderId);
     }
@@ -583,7 +583,7 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
             queryWrapper.eq(GroupOrderMember::getLeaveStatus, 0);
         }
         queryWrapper.orderByDesc(GroupOrderMember::getLeaveStatus)
-                .orderByDesc(GroupOrderMember::getUpdateTime)
+                .orderByDesc(GroupOrderMember::getUpdatedAt)
                 .last("LIMIT 1");
         return groupOrderMemberMapper.selectOne(queryWrapper);
     }
@@ -615,7 +615,7 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
         }
 
         groupOrder.setTotalAmount(calculateGroupOrderTotalAmount(groupOrderId).doubleValue());
-        groupOrder.setUpdateTime(LocalDateTime.now());
+        groupOrder.setUpdatedAt(LocalDateTime.now());
         updateById(groupOrder);
     }
 

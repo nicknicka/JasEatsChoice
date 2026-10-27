@@ -414,7 +414,7 @@ public class MerchantController {
             }
 
             // 更新时间
-            merchant.setUpdateTime(LocalDateTime.now());
+            merchant.setUpdatedAt(LocalDateTime.now());
 
             // 更新商家信息
             boolean success = merchantService.updateById(merchant);
@@ -558,7 +558,7 @@ public class MerchantController {
 
             // 使用原生SQL更新album字段
             int updateCount = jdbcTemplate.update(
-                "UPDATE mch_merchant SET album = ?, update_time = NOW() WHERE id = ?",
+                "UPDATE mch_merchant SET album = ?, updated_at = NOW() WHERE id = ?",
                 updatedAlbumJson,
                 merchantId
             );
@@ -614,7 +614,7 @@ public class MerchantController {
 
                 // 使用原生SQL更新album字段
                 int updateCount = jdbcTemplate.update(
-                    "UPDATE mch_merchant SET album = ?, update_time = NOW() WHERE id = ?",
+                    "UPDATE mch_merchant SET album = ?, updated_at = NOW() WHERE id = ?",
                     updatedAlbumJson,
                     merchantId
                 );
@@ -706,8 +706,8 @@ public class MerchantController {
             // 查询今日订单
             LambdaQueryWrapper<Order> queryWrapper = new LambdaQueryWrapper<>();
             queryWrapper.eq(Order::getMerchantId, merchantId)
-                       .ge(Order::getCreateTime, startOfDay)
-                       .le(Order::getCreateTime, endOfDay);
+                       .ge(Order::getCreatedAt, startOfDay)
+                       .le(Order::getCreatedAt, endOfDay);
 
             // 获取订单列表
             List<Order> orders = orderService.list(queryWrapper);
@@ -726,8 +726,8 @@ public class MerchantController {
             // 查询昨日订单
             LambdaQueryWrapper<Order> yesterdayQueryWrapper = new LambdaQueryWrapper<>();
             yesterdayQueryWrapper.eq(Order::getMerchantId, merchantId)
-                                .ge(Order::getCreateTime, startOfYesterday)
-                                .le(Order::getCreateTime, endOfYesterday);
+                                .ge(Order::getCreatedAt, startOfYesterday)
+                                .le(Order::getCreatedAt, endOfYesterday);
 
             // 获取昨日订单列表
             List<Order> yesterdayOrders = orderService.list(yesterdayQueryWrapper);
@@ -761,7 +761,7 @@ public class MerchantController {
             LambdaQueryWrapper<Review> reviewQueryWrapper = new LambdaQueryWrapper<>();
             reviewQueryWrapper.eq(Review::getMerchantId, merchantId)
                            .eq(Review::getStatus, 0) // 正常状态
-                           .ge(Review::getCreateTime, oneWeekAgo);
+                           .ge(Review::getCreatedAt, oneWeekAgo);
             long newCommentsCount = reviewService.count(reviewQueryWrapper);
             overview.put("newComments", newCommentsCount);  // 新增评价
 
@@ -770,8 +770,8 @@ public class MerchantController {
             LambdaQueryWrapper<Review> lastWeekReviewQueryWrapper = new LambdaQueryWrapper<>();
             lastWeekReviewQueryWrapper.eq(Review::getMerchantId, merchantId)
                                     .eq(Review::getStatus, 0)
-                                    .ge(Review::getCreateTime, twoWeeksAgo)
-                                    .le(Review::getCreateTime, oneWeekAgo);
+                                    .ge(Review::getCreatedAt, twoWeeksAgo)
+                                    .le(Review::getCreatedAt, oneWeekAgo);
             long lastWeekCommentsCount = reviewService.count(lastWeekReviewQueryWrapper);
 
             String commentsTrend = calculateTrend(
@@ -871,9 +871,9 @@ public class MerchantController {
 
             // 只有非全部时间才添加时间范围条件
             if (!isAllTime && startTime != null) {
-                orderQuery.ge(Order::getCreateTime, startTime);
+                orderQuery.ge(Order::getCreatedAt, startTime);
             }
-            orderQuery.le(Order::getCreateTime, endTime);
+            orderQuery.le(Order::getCreatedAt, endTime);
 
             List<Order> orders = orderService.list(orderQuery);
 
@@ -913,8 +913,8 @@ public class MerchantController {
 
                     long count = orders.stream()
                                       .filter(order -> {
-                                          LocalDateTime createTime = order.getCreateTime();
-                                          return !createTime.isBefore(monthStart) && !createTime.isAfter(monthEnd);
+                                          LocalDateTime createdAt = order.getCreatedAt();
+                                          return !createdAt.isBefore(monthStart) && !createdAt.isAfter(monthEnd);
                                       })
                                       .count();
 
@@ -942,7 +942,7 @@ public class MerchantController {
                     }
 
                     long count = orders.stream()
-                                      .filter(order -> order.getCreateTime().isAfter(finalStart) && order.getCreateTime().isBefore(finalEnd))
+                                      .filter(order -> order.getCreatedAt().isAfter(finalStart) && order.getCreatedAt().isBefore(finalEnd))
                                       .count();
 
                     Map<String, Object> trendItem = new HashMap<>();
@@ -959,7 +959,7 @@ public class MerchantController {
                     LocalDateTime dayEnd = startTime.plusDays(i).plusDays(1).minusSeconds(1);
 
                     long count = orders.stream()
-                                      .filter(order -> order.getCreateTime().isAfter(dayStart) && order.getCreateTime().isBefore(dayEnd))
+                                      .filter(order -> order.getCreatedAt().isAfter(dayStart) && order.getCreatedAt().isBefore(dayEnd))
                                       .count();
 
                     Map<String, Object> trendItem = new HashMap<>();
@@ -979,7 +979,7 @@ public class MerchantController {
                     LocalDateTime dayEnd = startTime.plusDays(i).plusDays(1).minusSeconds(1);
 
                     long count = orders.stream()
-                                      .filter(order -> order.getCreateTime().isAfter(dayStart) && order.getCreateTime().isBefore(dayEnd))
+                                      .filter(order -> order.getCreatedAt().isAfter(dayStart) && order.getCreatedAt().isBefore(dayEnd))
                                       .count();
 
                     Map<String, Object> trendItem = new HashMap<>();
@@ -1052,7 +1052,7 @@ public class MerchantController {
         try {
             LambdaQueryWrapper<Announcement> queryWrapper = new LambdaQueryWrapper<>();
             queryWrapper.eq(Announcement::getMerchantId, merchantId)
-                    .orderByDesc(Announcement::getCreateTime);
+                    .orderByDesc(Announcement::getCreatedAt);
             List<Announcement> announcements = announcementService.list(queryWrapper);
             return ResponseResult.success(announcements);
         } catch (Exception e) {
@@ -1070,7 +1070,7 @@ public class MerchantController {
             announcement.setMerchantId(merchantId);
             boolean success = announcementService.save(announcement);
             if (success) {
-                // 重新查询数据库以获取完整的字段值（包括自动填充的createTime和updateTime）
+                // 重新查询数据库以获取完整的字段值（包括自动填充的createdAt和updatedAt）
                 Announcement savedAnnouncement = announcementService.getById(announcement.getId());
                 return ResponseResult.success(savedAnnouncement, "公告添加成功");
             }
@@ -1193,7 +1193,7 @@ public class MerchantController {
 
                 // 更新订单状态为备菜中(2)
                 order.setStatus(2);
-                order.setUpdateTime(LocalDateTime.now());
+                order.setUpdatedAt(LocalDateTime.now());
                 boolean success = orderService.updateById(order);
 
                 if (success) {
@@ -1227,7 +1227,7 @@ public class MerchantController {
 
                 // 更新群订单状态为备菜中(2)
                 groupOrder.setStatus(2);
-                groupOrder.setUpdateTime(LocalDateTime.now());
+                groupOrder.setUpdatedAt(LocalDateTime.now());
                 boolean success = groupOrderService.updateById(groupOrder);
 
                 if (success) {

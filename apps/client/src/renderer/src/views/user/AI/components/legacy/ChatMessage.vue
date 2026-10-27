@@ -235,7 +235,7 @@ function parseOrderList(content) {
           statusText: '未知',
           dishCount: 0,
           totalAmount: '0.00',
-          createTime: '',
+          createdAt: '',
           actions: []
         }
 
@@ -273,7 +273,7 @@ function parseOrderList(content) {
       // 解析时间
       if (line.includes('时间：') || line.includes('时间:')) {
         const timeText = line.split(/：|:/)[1]?.trim() || ''
-        currentOrder.createTime = timeText
+        currentOrder.createdAt = timeText
       }
     }
 

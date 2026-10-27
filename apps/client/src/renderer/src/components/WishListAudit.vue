@@ -47,7 +47,7 @@
               <h4 class="dish-name">{{ item.dishName }}</h4>
               <p class="wish-meta">
                 <el-icon><Calendar /></el-icon>
-                <span>{{ formatTime(item.createTime) }}</span>
+                <span>{{ formatTime(item.createdAt) }}</span>
                 <el-tag v-if="item.tasteRequirement" size="small" type="info">
                   {{ item.tasteRequirement }}
                 </el-tag>
@@ -407,7 +407,7 @@ const viewDetail = (item) => {
     <div style="line-height: 1.8;">
       <p><strong>菜品名称：</strong>${item.dishName || '未命名'}</p>
       <p><strong>期望上架时间：</strong>${item.expectedAvailableTime || '未设置'}</p>
-      <p><strong>提交时间：</strong>${item.createTime || ''}</p>
+      <p><strong>提交时间：</strong>${item.createdAt || ''}</p>
       <p><strong>用户备注：</strong>${item.remark || '无'}</p>
       ${item.image ? `<p><strong>图片：</strong><br/><img src="${item.image}" style="max-width: 200px; max-height: 200px; border-radius: 8px;" /></p>` : ''}
     </div>

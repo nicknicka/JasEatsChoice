@@ -136,7 +136,7 @@ const filteredOrders = computed(() => {
         return statusMatch && searchMatch
       })
       // 按创建时间倒序排序
-      .sort((a, b) => new Date(b.createTime) - new Date(a.createTime))
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
   )
 })
 
@@ -569,9 +569,9 @@ onMounted(() => {
                     <span class="amount-label">金额</span>
                     <span class="amount-value">¥{{ (order.totalAmount || 0).toFixed(2) }}</span>
                   </div>
-                  <div class="order-time" :title="order.createTime">
+                  <div class="order-time" :title="order.createdAt">
                     <span class="time-label">时间</span>
-                    <span class="time-value">{{ getRelativeTime(order.createTime) }}</span>
+                    <span class="time-value">{{ getRelativeTime(order.createdAt) }}</span>
                   </div>
                 </div>
 

@@ -41,7 +41,7 @@ const loadNotifications = async () => {
         id: item.id,
         title: item.title || '系统通知',
         content: item.content,
-        time: item.sendTime || item.createTime,
+        time: item.sendTime || item.createdAt,
         read: item.readStatus,
         type: item.type || 'system'
       }))

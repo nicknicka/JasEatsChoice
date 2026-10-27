@@ -83,7 +83,7 @@ public interface StreamingResponseAgent {
 
         2. order_list（订单列表）：
            { "tag": "order_list", "total": N, "pendingCount": N, "orders": [
-             { "orderId": "", "status": "", "statusText": "", "statusColor": "orange", "dishCount": N, "totalAmount": N, "createTime": "" }
+             { "orderId": "", "status": "", "statusText": "", "statusColor": "orange", "dishCount": N, "totalAmount": N, "createdAt": "" }
            ]}
 
         3. health_stats（营养统计）：

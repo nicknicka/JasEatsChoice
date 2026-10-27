@@ -91,7 +91,7 @@ public class StructuredQueryService {
         // 查询订单列表
         QueryWrapper<Order> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("user_id", userId)
-                .orderByDesc("create_time");
+                .orderByDesc("created_at");
 
         List<Order> orders = orderService.list(queryWrapper);
 
@@ -132,7 +132,7 @@ public class StructuredQueryService {
         orderMap.put("dishNames", Collections.singletonList("查看详情获取菜品信息"));
 
         orderMap.put("totalAmount", order.getTotalAmount());
-        orderMap.put("createTime", formatTime(order.getCreateTime()));
+        orderMap.put("createdAt", formatTime(order.getCreatedAt()));
 
         // 判断操作权限
         boolean canCancel = canCancelOrder(order);
@@ -225,7 +225,7 @@ public class StructuredQueryService {
                     favMap.put("price", dish.getPrice());
                     favMap.put("rating", dish.getAvgRating());
                     favMap.put("salesCount", 0);
-                    favMap.put("collectionTime", formatTime(collection.getCreateTime()));
+                    favMap.put("collectionTime", formatTime(collection.getCreatedAt()));
 
                     // 标签
                     List<String> tags = new ArrayList<>();
@@ -265,7 +265,7 @@ public class StructuredQueryService {
         // 查询评价列表
         QueryWrapper<Review> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("user_id", userId)
-                .orderByDesc("create_time");
+                .orderByDesc("created_at");
 
         List<Review> reviews = reviewService.list(queryWrapper);
 
@@ -292,7 +292,7 @@ public class StructuredQueryService {
                     reviewMap.put("rating", review.getRating());
                     reviewMap.put("content", review.getContent());
                     reviewMap.put("images", parseImagesJson(review.getImages()));
-                    reviewMap.put("createTime", formatTime(review.getCreateTime()));
+                    reviewMap.put("createdAt", formatTime(review.getCreatedAt()));
                     reviewMap.put("merchantReply", "");
 
                     // 操作按钮
@@ -327,7 +327,7 @@ public class StructuredQueryService {
         QueryWrapper<UserCoupon> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("user_id", userId)
                 .in("status", Arrays.asList("available", "used", "expired"))
-                .orderByDesc("create_time");
+                .orderByDesc("created_at");
 
         List<UserCoupon> coupons = userCouponService.list(queryWrapper);
 
@@ -390,8 +390,8 @@ public class StructuredQueryService {
         basicInfo.put("location", user.getLocation());
         basicInfo.put("gender", user.getGender());
         basicInfo.put("avatar", user.getAvatar());
-        basicInfo.put("registerTime", user.getCreateTime() != null ?
-                user.getCreateTime().toLocalDate().toString() : null);
+        basicInfo.put("registerTime", user.getCreatedAt() != null ?
+                user.getCreatedAt().toLocalDate().toString() : null);
 
         // 构建身体数据
         Map<String, Object> bodyData = new HashMap<>();

@@ -240,7 +240,7 @@ export function useAIChatMessages(options = {}) {
 						sender: item.sender,
 						content: parsedResult.content,
 						displayContent: parsedResult.content || '',
-						time: new Date(item.createTime).toLocaleTimeString([], {
+						time: new Date(item.createdAt).toLocaleTimeString([], {
 							hour: '2-digit', minute: '2-digit'
 						}),
 						avatar: item.sender === 'ai' ? '🤖' : userStore.userInfo?.avatar || '',

@@ -1263,7 +1263,7 @@ const exportToDietRecord = () => {
           <el-option
             v-for="order in orders"
             :key="order.id"
-            :label="`订单号: ${order.orderNo} (${new Date(order.createTime).toLocaleString()})`"
+            :label="`订单号: ${order.orderNo} (${new Date(order.createdAt).toLocaleString()})`"
             :value="order"
           />
         </el-select>
@@ -1271,7 +1271,7 @@ const exportToDietRecord = () => {
         <div v-if="selectedOrder" class="order-preview">
           <div class="order-meta">
             <span>订单号: {{ selectedOrder.orderNo }}</span>
-            <span>{{ new Date(selectedOrder.createTime).toLocaleString() }}</span>
+            <span>{{ new Date(selectedOrder.createdAt).toLocaleString() }}</span>
           </div>
           <div class="order-dishes">
             <span

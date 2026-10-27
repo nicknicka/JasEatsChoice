@@ -29,7 +29,7 @@ public interface UserCouponMapper extends BaseMapper<UserCoupon> {
      */
     @Select("SELECT * FROM usr_user_coupon " +
             "WHERE user_id = #{userId} " +
-            "ORDER BY create_time DESC")
+            "ORDER BY created_at DESC")
     List<UserCoupon> findByUserId(@Param("userId") String userId);
 
     /**

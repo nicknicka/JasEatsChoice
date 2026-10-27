@@ -54,7 +54,7 @@ public class WithdrawRecordServiceImpl extends ServiceImpl<WithdrawRecordMapper,
         }
 
         // 按创建时间倒序
-        queryWrapper.orderByDesc("create_time");
+        queryWrapper.orderByDesc("created_at");
 
         IPage<WithdrawRecord> result = this.page(pageParam, queryWrapper);
 
@@ -188,8 +188,8 @@ public class WithdrawRecordServiceImpl extends ServiceImpl<WithdrawRecordMapper,
         record.setWithdrawStatus("pending"); // 待审核状态
         record.setFee(BigDecimal.ZERO); // 手续费，可以根据需要计算
         record.setActualAmount(amount); // 实际到账金额
-        record.setCreateTime(LocalDateTime.now());
-        record.setUpdateTime(LocalDateTime.now());
+        record.setCreatedAt(LocalDateTime.now());
+        record.setUpdatedAt(LocalDateTime.now());
 
         boolean success = this.save(record);
         if (success) {
@@ -228,7 +228,7 @@ public class WithdrawRecordServiceImpl extends ServiceImpl<WithdrawRecordMapper,
                 // 更新提现记录状态为失败
                 record.setWithdrawStatus("failed");
                 record.setRemark("余额不足");
-                record.setUpdateTime(LocalDateTime.now());
+                record.setUpdatedAt(LocalDateTime.now());
                 this.updateById(record);
                 return false;
             }
@@ -246,7 +246,7 @@ public class WithdrawRecordServiceImpl extends ServiceImpl<WithdrawRecordMapper,
                 // 更新提现记录状态为处理中
                 record.setWithdrawStatus("processing");
                 record.setCompleteTime(LocalDateTime.now());
-                record.setUpdateTime(LocalDateTime.now());
+                record.setUpdatedAt(LocalDateTime.now());
                 this.updateById(record);
 
                 log.info("提现扣款成功: {}", withdrawId);
@@ -260,7 +260,7 @@ public class WithdrawRecordServiceImpl extends ServiceImpl<WithdrawRecordMapper,
             // 更新提现记录状态为失败
             record.setWithdrawStatus("failed");
             record.setRemark("扣款异常: " + e.getMessage());
-            record.setUpdateTime(LocalDateTime.now());
+            record.setUpdatedAt(LocalDateTime.now());
             this.updateById(record);
             return false;
         }

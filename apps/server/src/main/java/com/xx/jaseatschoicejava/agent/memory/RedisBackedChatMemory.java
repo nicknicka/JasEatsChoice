@@ -278,7 +278,7 @@ public class RedisBackedChatMemory implements ChatMemory {
         try {
             QueryWrapper<AIChatHistory> wrapper = new QueryWrapper<>();
             wrapper.eq("user_id", userId.toString())
-                   .orderByDesc("create_time")
+                   .orderByDesc("created_at")
                    .last("LIMIT " + maxMessages);
 
             List<AIChatHistory> histories = chatHistoryMapper.selectList(wrapper);
@@ -330,7 +330,7 @@ public class RedisBackedChatMemory implements ChatMemory {
             history.setUserId(userId.toString());
             history.setContent(content);
             history.setSender(getSenderType(message));
-            history.setCreateTime(LocalDateTime.now());
+            history.setCreatedAt(LocalDateTime.now());
 
             chatHistoryMapper.insert(history);
 

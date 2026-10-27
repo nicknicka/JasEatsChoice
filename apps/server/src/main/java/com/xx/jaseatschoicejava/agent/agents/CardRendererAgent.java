@@ -117,7 +117,7 @@ public interface CardRendererAgent {
               "statusColor": "orange",
               "dishCount": 3,
               "totalAmount": 56.00,
-              "createTime": "2026-04-03 12:30",
+              "createdAt": "2026-04-03 12:30",
               "actions": []
             }
           ]

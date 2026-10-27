@@ -19,8 +19,8 @@ public class WalletDTO {
     private BigDecimal totalWithdraw;
     private Integer version;
     private String status;
-    private LocalDateTime createTime;
-    private LocalDateTime updateTime;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
     /**
      * 从Wallet实体转换为WalletDTO
@@ -38,8 +38,8 @@ public class WalletDTO {
         dto.setTotalWithdraw(wallet.getTotalWithdraw());
         dto.setVersion(wallet.getVersion());
         dto.setStatus(wallet.getStatus());
-        dto.setCreateTime(wallet.getCreateTime());
-        dto.setUpdateTime(wallet.getUpdateTime());
+        dto.setCreatedAt(wallet.getCreatedAt());
+        dto.setUpdatedAt(wallet.getUpdatedAt());
         return dto;
     }
 }

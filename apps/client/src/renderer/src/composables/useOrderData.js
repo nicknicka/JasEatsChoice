@@ -129,7 +129,7 @@ export function useOrderData() {
       merchant: merchantName,
       merchantId: order.merchantId,
       total: order.totalAmount,
-      time: formatTime(order.createTime),
+      time: formatTime(order.createdAt),
       items,
       itemCount: calculateItemCount(items),
       _raw: order

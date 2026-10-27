@@ -59,13 +59,13 @@ public class Permission {
     @ApiModelProperty(value = "状态：ACTIVE-启用, DISABLED-禁用")
     private String status;
 
-    @TableField("create_time")
+    @TableField("created_at")
     @ApiModelProperty(value = "创建时间")
-    private LocalDateTime createTime;
+    private LocalDateTime createdAt;
 
-    @TableField("update_time")
+    @TableField("updated_at")
     @ApiModelProperty(value = "更新时间")
-    private LocalDateTime updateTime;
+    private LocalDateTime updatedAt;
 
     @TableField(exist = false)
     @ApiModelProperty(value = "子权限列表（非数据库字段，树形结构使用）")

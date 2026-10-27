@@ -61,7 +61,7 @@
         </el-table-column>
         <el-table-column prop="address" label="地址" min-width="200" show-overflow-tooltip />
         <el-table-column prop="phone" label="联系电话" width="140" />
-        <el-table-column prop="createTime" label="注册时间" width="180" />
+        <el-table-column prop="createdAt" label="注册时间" width="180" />
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" link @click="handleView(row)">查看</el-button>
@@ -112,7 +112,7 @@
         <el-descriptions-item label="地址" :span="2">{{ currentMerchant.address }}</el-descriptions-item>
         <el-descriptions-item label="营业时间" :span="2">{{ currentMerchant.businessHours || '-' }}</el-descriptions-item>
         <el-descriptions-item label="商家简介" :span="2">{{ currentMerchant.description || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="注册时间" :span="2">{{ currentMerchant.createTime }}</el-descriptions-item>
+        <el-descriptions-item label="注册时间" :span="2">{{ currentMerchant.createdAt }}</el-descriptions-item>
       </el-descriptions>
 
       <template #footer>

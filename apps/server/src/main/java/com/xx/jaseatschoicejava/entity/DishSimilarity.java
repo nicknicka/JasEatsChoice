@@ -51,7 +51,7 @@ public class DishSimilarity {
     /**
      * 更新时间
      */
-    private LocalDateTime updatedTime;
+    private LocalDateTime updatedAt;
 
     /**
      * 相似度类型枚举

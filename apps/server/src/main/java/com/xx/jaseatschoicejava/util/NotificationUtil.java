@@ -51,7 +51,7 @@ public class NotificationUtil {
             notification.setType(type.getCode());
             notification.setReadStatus(false);
             notification.setSendTime(LocalDateTime.now());
-            notification.setCreateTime(LocalDateTime.now());
+            notification.setCreatedAt(LocalDateTime.now());
 
             notificationService.save(notification);
             log.debug("通知创建成功 - userId: {}, type: {}, title: {}", userId, type.getCode(), title);

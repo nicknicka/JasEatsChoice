@@ -124,8 +124,8 @@ public class ReviewController {
             review.setImages(imagesJson);
 
             review.setStatus(0); // 正常状态
-            review.setCreateTime(LocalDateTime.now());
-            review.setUpdateTime(LocalDateTime.now());
+            review.setCreatedAt(LocalDateTime.now());
+            review.setUpdatedAt(LocalDateTime.now());
 
             boolean success = reviewService.save(review);
 
@@ -184,7 +184,7 @@ public class ReviewController {
             // 查询回复信息
             LambdaQueryWrapper<ReviewReply> replyWrapper = new LambdaQueryWrapper<>();
             replyWrapper.eq(ReviewReply::getReviewId, review.getId())
-                       .orderByAsc(ReviewReply::getCreateTime);
+                       .orderByAsc(ReviewReply::getCreatedAt);
             List<ReviewReply> replies = reviewReplyService.list(replyWrapper);
 
             Map<String, Object> result = new HashMap<>();
@@ -194,8 +194,8 @@ public class ReviewController {
             result.put("merchantId", review.getMerchantId());
             result.put("rating", review.getRating());
             result.put("content", review.getContent());
-            result.put("createTime", review.getCreateTime());
-            result.put("updateTime", review.getUpdateTime());
+            result.put("createdAt", review.getCreatedAt());
+            result.put("updatedAt", review.getUpdatedAt());
 
             // 将JSON字符串转换为List返回
             try {
@@ -217,7 +217,7 @@ public class ReviewController {
                 Map<String, Object> replyItem = new HashMap<>();
                 replyItem.put("id", reply.getId());
                 replyItem.put("content", reply.getContent());
-                replyItem.put("createTime", reply.getCreateTime());
+                replyItem.put("createdAt", reply.getCreatedAt());
                 replyItem.put("isAdditional", reply.getIsAdditional() != null ? reply.getIsAdditional() : 0);
                 replyList.add(replyItem);
             }
@@ -265,8 +265,8 @@ public class ReviewController {
             reply.setMerchantId(review.getMerchantId());
             reply.setContent(content);
             reply.setIsAdditional(1); // 标记为追评
-            reply.setCreateTime(LocalDateTime.now());
-            reply.setUpdateTime(LocalDateTime.now());
+            reply.setCreatedAt(LocalDateTime.now());
+            reply.setUpdatedAt(LocalDateTime.now());
 
             boolean success = reviewReplyService.save(reply);
 
@@ -363,7 +363,7 @@ public class ReviewController {
             LambdaQueryWrapper<Review> queryWrapper = new LambdaQueryWrapper<>();
             queryWrapper.eq(Review::getMerchantId, merchantId)
                        .eq(Review::getStatus, 0) // 只查询正常状态的评价
-                       .orderByDesc(Review::getCreateTime);
+                       .orderByDesc(Review::getCreatedAt);
 
             // 评分筛选
             if (rating != null) {
@@ -381,7 +381,7 @@ public class ReviewController {
             if (!reviewIds.isEmpty()) {
                 LambdaQueryWrapper<ReviewReply> replyWrapper = new LambdaQueryWrapper<>();
                 replyWrapper.in(ReviewReply::getReviewId, reviewIds)
-                           .orderByDesc(ReviewReply::getCreateTime); // 改为倒序，最新的在前
+                           .orderByDesc(ReviewReply::getCreatedAt); // 改为倒序，最新的在前
                 List<ReviewReply> replies = reviewReplyService.list(replyWrapper);
 
                 replyMap = replies.stream()
@@ -454,7 +454,7 @@ public class ReviewController {
                 item.put("rating", review.getRating());
                 item.put("content", review.getContent());
                 item.put("images", review.getImages());
-                item.put("createTime", review.getCreateTime());
+                item.put("createdAt", review.getCreatedAt());
 
                 // 用户信息
                 User user = userMap.get(review.getUserId());
@@ -490,8 +490,8 @@ public class ReviewController {
 
                         replyItem.put("id", reply.getId());
                         replyItem.put("content", reply.getContent());
-                        replyItem.put("time", reply.getCreateTime().toString().replace("T", " ").substring(0, 16));
-                        replyItem.put("createTime", reply.getCreateTime()); // 添加原始时间用于排序
+                        replyItem.put("time", reply.getCreatedAt().toString().replace("T", " ").substring(0, 16));
+                        replyItem.put("createdAt", reply.getCreatedAt()); // 添加原始时间用于排序
                         // isAdditional: 0/null=商家回复, 1=用户追评
                         replyItem.put("isAdditional", isAdditional == null ? 0 : isAdditional);
                         replyItem.put("isMerchant", isAdditional == null || isAdditional == 0);
@@ -506,8 +506,8 @@ public class ReviewController {
 
                     // 确保按时间倒序排序（最新的在前）
                     allReplies.sort((a, b) -> {
-                        LocalDateTime timeA = (LocalDateTime) a.get("createTime");
-                        LocalDateTime timeB = (LocalDateTime) b.get("createTime");
+                        LocalDateTime timeA = (LocalDateTime) a.get("createdAt");
+                        LocalDateTime timeB = (LocalDateTime) b.get("createdAt");
                         return timeB.compareTo(timeA); // 降序：最新的在前
                     });
                 }
@@ -519,7 +519,7 @@ public class ReviewController {
                 item.put("replies", allReplies);
 
                 // 格式化时间
-                item.put("time", review.getCreateTime().toString().replace("T", " ").substring(0, 16));
+                item.put("time", review.getCreatedAt().toString().replace("T", " ").substring(0, 16));
 
                 resultList.add(item);
             }
@@ -593,8 +593,8 @@ public class ReviewController {
             reply.setReviewId(reviewId);
             reply.setMerchantId(merchantId);
             reply.setContent(content);
-            reply.setCreateTime(LocalDateTime.now());
-            reply.setUpdateTime(LocalDateTime.now());
+            reply.setCreatedAt(LocalDateTime.now());
+            reply.setUpdatedAt(LocalDateTime.now());
 
             boolean success = reviewReplyService.save(reply);
 

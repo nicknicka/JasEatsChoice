@@ -78,7 +78,7 @@
             <span style="color: #f56c6c; font-weight: bold">¥{{ row.totalAmount }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="createTime" label="下单时间" width="180" />
+        <el-table-column prop="createdAt" label="下单时间" width="180" />
         <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" link @click="handleView(row)">查看</el-button>
@@ -123,7 +123,7 @@
         <el-descriptions-item label="支付方式">{{ currentOrder.paymentMethod || '-' }}</el-descriptions-item>
         <el-descriptions-item label="收货地址" :span="2">{{ currentOrder.deliveryAddress || '-' }}</el-descriptions-item>
         <el-descriptions-item label="备注" :span="2">{{ currentOrder.remark || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="下单时间" :span="2">{{ currentOrder.createTime }}</el-descriptions-item>
+        <el-descriptions-item label="下单时间" :span="2">{{ currentOrder.createdAt }}</el-descriptions-item>
       </el-descriptions>
 
       <!-- 订单菜品 -->

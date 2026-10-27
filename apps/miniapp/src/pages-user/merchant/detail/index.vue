@@ -484,7 +484,7 @@ const loadReviews = async () => {
           name: review.userName || review.user?.name || '用户***'
         },
         rating: review.rating || review.score || 5,
-        date: review.createTime || review.date || '',
+        date: review.createdAt || review.date || '',
         content: review.content || review.comment || '',
         dishes: review.dishes || []
       }))

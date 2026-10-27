@@ -59,7 +59,7 @@ public class WalletServiceImpl implements WalletService {
         // 更新余额和累计充值
         wallet.setBalance(wallet.getBalance().add(amount));
         wallet.setTotalRecharge(wallet.getTotalRecharge().add(amount));
-        wallet.setUpdateTime(LocalDateTime.now());
+        wallet.setUpdatedAt(LocalDateTime.now());
 
         // 更新数据库（使用乐观锁）
         int rows = walletMapper.updateById(wallet);
@@ -74,7 +74,7 @@ public class WalletServiceImpl implements WalletService {
         history.setAmount(amount);
         history.setDescription("钱包充值 - " + rechargeNo);
         history.setStatus("success");
-        history.setCreateTime(LocalDateTime.now());
+        history.setCreatedAt(LocalDateTime.now());
         consumeHistoryService.save(history);
 
         log.info("用户{}充值成功，金额：{}，流水号：{}", userId, amount, rechargeNo);
@@ -105,7 +105,7 @@ public class WalletServiceImpl implements WalletService {
         // 扣减余额
         wallet.setBalance(wallet.getBalance().subtract(amount));
         wallet.setTotalConsume(wallet.getTotalConsume().add(amount));
-        wallet.setUpdateTime(LocalDateTime.now());
+        wallet.setUpdatedAt(LocalDateTime.now());
 
         // 更新数据库（使用乐观锁）
         int rows = walletMapper.updateById(wallet);
@@ -120,7 +120,7 @@ public class WalletServiceImpl implements WalletService {
         history.setAmount(amount);
         history.setDescription(description);
         history.setStatus("success");
-        history.setCreateTime(LocalDateTime.now());
+        history.setCreatedAt(LocalDateTime.now());
         consumeHistoryService.save(history);
 
         log.info("用户{}扣费成功，金额：{}，描述：{}", userId, amount, description);
@@ -167,7 +167,7 @@ public class WalletServiceImpl implements WalletService {
 
         // 增加余额
         wallet.setBalance(wallet.getBalance().add(amount));
-        wallet.setUpdateTime(LocalDateTime.now());
+        wallet.setUpdatedAt(LocalDateTime.now());
 
         // 更新数据库（使用乐观锁）
         int rows = walletMapper.updateById(wallet);
@@ -182,7 +182,7 @@ public class WalletServiceImpl implements WalletService {
         history.setAmount(amount);
         history.setDescription(description);
         history.setStatus("success");
-        history.setCreateTime(LocalDateTime.now());
+        history.setCreatedAt(LocalDateTime.now());
         consumeHistoryService.save(history);
 
         log.info("用户{}退款成功，金额：{}，描述：{}", userId, amount, description);
@@ -210,8 +210,8 @@ public class WalletServiceImpl implements WalletService {
         wallet.setTotalWithdraw(BigDecimal.ZERO);
         wallet.setVersion(0);
         wallet.setStatus("active");
-        wallet.setCreateTime(LocalDateTime.now());
-        wallet.setUpdateTime(LocalDateTime.now());
+        wallet.setCreatedAt(LocalDateTime.now());
+        wallet.setUpdatedAt(LocalDateTime.now());
 
         walletMapper.insert(wallet);
         log.info("为用户{}创建钱包成功", userId);
@@ -229,7 +229,7 @@ public class WalletServiceImpl implements WalletService {
     public boolean freezeWallet(String userId) {
         Wallet wallet = getWalletByUserId(userId);
         wallet.setStatus("frozen");
-        wallet.setUpdateTime(LocalDateTime.now());
+        wallet.setUpdatedAt(LocalDateTime.now());
         int rows = walletMapper.updateById(wallet);
         return rows > 0;
     }
@@ -239,7 +239,7 @@ public class WalletServiceImpl implements WalletService {
     public boolean unfreezeWallet(String userId) {
         Wallet wallet = getWalletByUserId(userId);
         wallet.setStatus("active");
-        wallet.setUpdateTime(LocalDateTime.now());
+        wallet.setUpdatedAt(LocalDateTime.now());
         int rows = walletMapper.updateById(wallet);
         return rows > 0;
     }
@@ -257,7 +257,7 @@ public class WalletServiceImpl implements WalletService {
         }
 
         wallet.setLocked(locked);
-        wallet.setUpdateTime(LocalDateTime.now());
+        wallet.setUpdatedAt(LocalDateTime.now());
         int rows = walletMapper.updateById(wallet);
 
         log.info("用户{}钱包锁定状态已更新为：{}", userId, locked);

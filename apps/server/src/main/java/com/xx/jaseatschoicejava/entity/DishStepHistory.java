@@ -75,7 +75,7 @@ public class DishStepHistory {
     /**
      * 创建时间
      */
-    private LocalDateTime createTime;
+    private LocalDateTime createdAt;
 
     /**
      * 预计完成时间（分钟）

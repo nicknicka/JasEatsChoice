@@ -41,8 +41,8 @@ public class AIChatHistory {
     private String content;
 
     @ApiModelProperty(value = "创建时间")
-    @TableField("create_time")
-    private LocalDateTime createTime;
+    @TableField("created_at")
+    private LocalDateTime createdAt;
 
     @ApiModelProperty(value = "消息类型（用于卡片显示）")
     @TableField("message_type")

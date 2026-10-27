@@ -280,7 +280,7 @@ const loadOrderDetail = async () => {
         totalAmount: parseFloat(data.totalAmount || 0).toFixed(2),
         discount: parseFloat(data.discount || 0).toFixed(2),
         finalAmount: parseFloat(data.finalAmount || data.totalAmount || 0).toFixed(2),
-        createTime: data.createTime,
+        createdAt: data.createdAt,
         expireTime: data.expireTime
       }
 

@@ -27,7 +27,7 @@ public class HotTopicResponse {
     private Boolean clickable;
 
     @ApiModelProperty(value = "创建时间")
-    private LocalDateTime createTime;
+    private LocalDateTime createdAt;
 
     public HotTopicResponse() {
     }
@@ -72,12 +72,12 @@ public class HotTopicResponse {
         this.clickable = clickable;
     }
 
-    public LocalDateTime getCreateTime() {
-        return createTime;
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
     }
 
-    public void setCreateTime(LocalDateTime createTime) {
-        this.createTime = createTime;
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 
     /**

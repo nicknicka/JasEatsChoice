@@ -44,7 +44,7 @@ public class ScheduledTaskController {
         if (taskGroup != null) {
             queryWrapper.eq(ScheduledTask::getTaskGroup, taskGroup);
         }
-        queryWrapper.orderByDesc(ScheduledTask::getCreateTime);
+        queryWrapper.orderByDesc(ScheduledTask::getCreatedAt);
 
         // TODO: 实现分页查询
         List<ScheduledTask> tasks = dynamicScheduleService.getRunningTasks();

@@ -143,15 +143,15 @@ public class OrderController {
             java.time.LocalDateTime todayStart = java.time.LocalDateTime.now().toLocalDate().atStartOfDay();
             java.time.LocalDateTime todayEnd = todayStart.plusDays(1).minusNanos(1);
 
-            queryWrapper.ge(Order::getCreateTime, todayStart);
-            queryWrapper.le(Order::getCreateTime, todayEnd);
+            queryWrapper.ge(Order::getCreatedAt, todayStart);
+            queryWrapper.le(Order::getCreatedAt, todayEnd);
             log.info("商家{}查询今日订单", merchantId);
         } else {
             log.info("商家{}查询全部订单", merchantId);
         }
 
         // 按创建时间倒序排序
-        queryWrapper.orderByDesc(Order::getCreateTime);
+        queryWrapper.orderByDesc(Order::getCreatedAt);
 
         List<Order> orders = orderService.list(queryWrapper);
         log.info("商家{}订单数量：{}", merchantId, orders.size());
@@ -262,7 +262,7 @@ public class OrderController {
 
             // 更新订单状态为已取消(4)
             order.setStatus(4);
-            order.setUpdateTime(java.time.LocalDateTime.now());
+            order.setUpdatedAt(java.time.LocalDateTime.now());
             boolean success = orderService.updateById(order);
             if (success) {
                 log.info("订单取消成功，订单ID：{}", orderId);

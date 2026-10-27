@@ -177,7 +177,7 @@ const getMealTypeText = (mealType) => {
 const formatRecipeData = (recipe) => {
   return {
     id: recipe.recipeId || recipe.id,
-    date: recipe.createTime || recipe.createdAt || '',
+    date: recipe.createdAt || '',
     mealType: recipe.mealType || 'lunch',
     mealTypeText: getMealTypeText(recipe.mealType),
     title: recipe.recipeName || recipe.name,

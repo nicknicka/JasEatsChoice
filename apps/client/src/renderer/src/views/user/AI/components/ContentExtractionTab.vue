@@ -184,7 +184,7 @@
                   <span class="content-type">{{ source.contentTypeName }}</span>
                 </div>
                 <div class="card-footer">
-                  <span class="card-time">{{ formatTime(source.extractionTime || source.createTime) }}</span>
+                  <span class="card-time">{{ formatTime(source.extractionTime || source.createdAt) }}</span>
                   <div class="card-actions">
                     <button
                       v-if="!source.isPublished && source.extractionStatus === 'SUCCESS'"
@@ -273,7 +273,7 @@
                 </span>
               </td>
               <td>{{ source.extractedDishName || '-' }}</td>
-              <td class="time-cell">{{ source.createTime }}</td>
+              <td class="time-cell">{{ source.createdAt }}</td>
             </tr>
           </tbody>
         </table>

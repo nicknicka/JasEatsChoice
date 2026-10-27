@@ -69,7 +69,7 @@ public class AdminController {
                 adminInfo.put("roleCode", admin.getRoleCode() != null ? admin.getRoleCode() : "");
                 adminInfo.put("roleName", admin.getRoleName() != null ? admin.getRoleName() : "");
                 adminInfo.put("status", admin.getStatus() != null ? admin.getStatus() : "ACTIVE");
-                adminInfo.put("createTime", admin.getCreateTime() != null ? admin.getCreateTime().toString() : "");
+                adminInfo.put("createdAt", admin.getCreatedAt() != null ? admin.getCreatedAt().toString() : "");
                 response.put("admin", adminInfo);
             }
             return ResponseEntity.ok(response);
@@ -212,7 +212,7 @@ public class AdminController {
                 adminInfo.put("roleCode", admin.getRoleCode() != null ? admin.getRoleCode() : "");
                 adminInfo.put("roleName", admin.getRoleName() != null ? admin.getRoleName() : "超级管理员");
                 adminInfo.put("status", admin.getStatus() != null ? admin.getStatus() : "ACTIVE");
-                adminInfo.put("createTime", admin.getCreateTime() != null ? admin.getCreateTime().toString() : "");
+                adminInfo.put("createdAt", admin.getCreatedAt() != null ? admin.getCreatedAt().toString() : "");
                 response.put("success", true);
                 response.put("admin", adminInfo);
                 return ResponseEntity.ok()
@@ -289,7 +289,7 @@ public class AdminController {
                     adminInfo.put("roleCode", updatedAdmin.getRoleCode() != null ? updatedAdmin.getRoleCode() : "");
                     adminInfo.put("roleName", updatedAdmin.getRoleName() != null ? updatedAdmin.getRoleName() : "");
                     adminInfo.put("status", updatedAdmin.getStatus() != null ? updatedAdmin.getStatus() : "");
-                    adminInfo.put("createTime", updatedAdmin.getCreateTime() != null ? updatedAdmin.getCreateTime().toString() : "");
+                    adminInfo.put("createdAt", updatedAdmin.getCreatedAt() != null ? updatedAdmin.getCreatedAt().toString() : "");
                 }
 
                 response.put("success", true);

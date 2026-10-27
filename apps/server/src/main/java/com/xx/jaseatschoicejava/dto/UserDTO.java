@@ -24,8 +24,8 @@ public class UserDTO {
     private Boolean disableWeatherRecommend;
     private String merchantId; // 商家ID，如果不为空表示用户已注册为商家
     private String avatar;
-    private LocalDateTime createTime;
-    private LocalDateTime updateTime;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
     // 支付密码相关
     private Boolean hasPaymentPassword; // 是否已设置支付密码
@@ -53,8 +53,8 @@ public class UserDTO {
         userDTO.setDisableWeatherRecommend(user.getDisableWeatherRecommend());
         userDTO.setMerchantId(user.getMerchantId());
         userDTO.setAvatar(user.getAvatar());
-        userDTO.setCreateTime(user.getCreateTime());
-        userDTO.setUpdateTime(user.getUpdateTime());
+        userDTO.setCreatedAt(user.getCreatedAt());
+        userDTO.setUpdatedAt(user.getUpdatedAt());
         userDTO.setHasPaymentPassword(user.getHasPaymentPassword());
         // 敏感信息如password、paymentPassword已自动隐藏，不进行设置
         return userDTO;

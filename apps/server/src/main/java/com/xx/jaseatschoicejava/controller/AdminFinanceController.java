@@ -252,7 +252,7 @@ public class AdminFinanceController {
         java.util.List<RechargeRecord> todayRecords = rechargeRecordService.list(
             new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<RechargeRecord>()
                 .eq("recharge_status", "success")
-                .ge("create_time", todayStart)
+                .ge("created_at", todayStart)
         );
 
         java.math.BigDecimal todayAmount = todayRecords.stream()
@@ -267,7 +267,7 @@ public class AdminFinanceController {
         java.util.List<RechargeRecord> monthRecords = rechargeRecordService.list(
             new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<RechargeRecord>()
                 .eq("recharge_status", "success")
-                .ge("create_time", monthStart)
+                .ge("created_at", monthStart)
         );
 
         java.math.BigDecimal monthAmount = monthRecords.stream()

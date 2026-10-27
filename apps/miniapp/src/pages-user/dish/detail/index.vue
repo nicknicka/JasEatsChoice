@@ -389,7 +389,7 @@ const loadReviews = async () => {
         images: review.images || [],
         tags: review.tags || [],
         reply: review.merchantReply || null,
-        createTime: review.createTime || review.createdAt,
+        createdAt: review.createdAt,
         likeCount: review.likeCount || 0
       }))
     } else {

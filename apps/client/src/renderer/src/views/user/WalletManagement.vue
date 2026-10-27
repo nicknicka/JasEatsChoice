@@ -118,7 +118,7 @@
           </div>
           <div class="transaction-info">
             <div class="transaction-type">{{ getTransactionTypeText(transaction.type) }}</div>
-            <div class="transaction-time">{{ formatTime(transaction.createTime) }}</div>
+            <div class="transaction-time">{{ formatTime(transaction.createdAt) }}</div>
           </div>
           <div class="transaction-amount" :class="getAmountClass(transaction.type)">
             {{ transaction.type === 'recharge' ? '+' : '-' }}{{ formatNumber(transaction.amount) }}

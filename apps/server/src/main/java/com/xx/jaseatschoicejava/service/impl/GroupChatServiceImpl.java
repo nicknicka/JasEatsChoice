@@ -35,7 +35,7 @@ public class GroupChatServiceImpl implements GroupChatService {
             chatMsg.setMsgType(MsgType.ORDER_SYNC.getValue()); // 订单同步消息类型
             chatMsg.setContent(message);
             chatMsg.setReadStatus(false); // 初始为未读
-            chatMsg.setCreateTime(LocalDateTime.now());
+            chatMsg.setCreatedAt(LocalDateTime.now());
 
             // 保存消息到数据库
             chatMsgService.save(chatMsg);

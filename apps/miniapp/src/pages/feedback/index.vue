@@ -96,7 +96,7 @@
               </view>
             </view>
             <text class="history-content">{{ item.content }}</text>
-            <text class="history-time">{{ formatTime(item.createTime) }}</text>
+            <text class="history-time">{{ formatTime(item.createdAt) }}</text>
           </view>
         </view>
       </view>
@@ -149,14 +149,14 @@ const loadHistory = async () => {
         type: 'bug',
         content: '订单支付时偶尔会出现卡顿',
         status: 1,
-        createTime: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString()
+        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString()
       },
       {
         id: 2,
         type: 'feature',
         content: '希望增加菜品收藏功能',
         status: 0,
-        createTime: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString()
+        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString()
       }
     ]
   } catch (error) {

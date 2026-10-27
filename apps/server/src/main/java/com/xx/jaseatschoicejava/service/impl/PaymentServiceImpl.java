@@ -51,8 +51,8 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentRecordMapper, Payment
         paymentRecord.setPaymentMethod(paymentMethod);
         paymentRecord.setPaymentStatus("pending");
         paymentRecord.setRefundAmount(BigDecimal.ZERO);
-        paymentRecord.setCreateTime(LocalDateTime.now());
-        paymentRecord.setUpdateTime(LocalDateTime.now());
+        paymentRecord.setCreatedAt(LocalDateTime.now());
+        paymentRecord.setUpdatedAt(LocalDateTime.now());
 
         save(paymentRecord);
         log.info("创建支付记录成功，流水号：{}，订单：{}，金额：{}", paymentNo, orderId, amount);
@@ -108,7 +108,7 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentRecordMapper, Payment
             // 更新支付状态
             paymentRecord.setPaymentStatus("success");
             paymentRecord.setPaidTime(LocalDateTime.now());
-            paymentRecord.setUpdateTime(LocalDateTime.now());
+            paymentRecord.setUpdatedAt(LocalDateTime.now());
             updateById(paymentRecord);
 
             // 更新订单状态 - 支持普通订单和群订单
@@ -119,7 +119,7 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentRecordMapper, Payment
                 order.setPaymentId(paymentRecord.getId());
                 order.setPaidAmount(paymentRecord.getAmount());
                 order.setPaymentTime(LocalDateTime.now());
-                order.setUpdateTime(LocalDateTime.now());
+                order.setUpdatedAt(LocalDateTime.now());
                 orderService.updateById(order);
 
                 // 通知用户支付成功
@@ -144,7 +144,7 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentRecordMapper, Payment
                     if (groupOrder != null) {
                         // 更新群订单状态为待接单
                         groupOrder.setStatus(1); // 待接单
-                        groupOrder.setUpdateTime(LocalDateTime.now());
+                        groupOrder.setUpdatedAt(LocalDateTime.now());
                         groupOrderService.updateById(groupOrder);
 
                         // 通知用户群订单支付成功
@@ -174,7 +174,7 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentRecordMapper, Payment
         } catch (Exception e) {
             log.error("钱包支付失败，流水号：{}", paymentNo, e);
             paymentRecord.setPaymentStatus("failed");
-            paymentRecord.setUpdateTime(LocalDateTime.now());
+            paymentRecord.setUpdatedAt(LocalDateTime.now());
             updateById(paymentRecord);
             throw new RuntimeException("支付失败：" + e.getMessage());
         }
@@ -213,7 +213,7 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentRecordMapper, Payment
             // 更新支付状态
             paymentRecord.setPaymentStatus("success");
             paymentRecord.setPaidTime(LocalDateTime.now());
-            paymentRecord.setUpdateTime(LocalDateTime.now());
+            paymentRecord.setUpdatedAt(LocalDateTime.now());
             updateById(paymentRecord);
 
             // 更新订单状态 - 支持普通订单和群订单
@@ -224,7 +224,7 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentRecordMapper, Payment
                 order.setPaymentId(paymentRecord.getId());
                 order.setPaidAmount(paymentRecord.getAmount());
                 order.setPaymentTime(LocalDateTime.now());
-                order.setUpdateTime(LocalDateTime.now());
+                order.setUpdatedAt(LocalDateTime.now());
                 orderService.updateById(order);
 
                 // 通知用户支付成功
@@ -249,7 +249,7 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentRecordMapper, Payment
                     if (groupOrder != null) {
                         // 更新群订单状态为待接单
                         groupOrder.setStatus(1); // 待接单
-                        groupOrder.setUpdateTime(LocalDateTime.now());
+                        groupOrder.setUpdatedAt(LocalDateTime.now());
                         groupOrderService.updateById(groupOrder);
 
                         // 通知用户群订单支付成功
@@ -279,7 +279,7 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentRecordMapper, Payment
         } catch (Exception e) {
             log.error("钱包支付失败（含密码验证），流水号：{}", paymentNo, e);
             paymentRecord.setPaymentStatus("failed");
-            paymentRecord.setUpdateTime(LocalDateTime.now());
+            paymentRecord.setUpdatedAt(LocalDateTime.now());
             updateById(paymentRecord);
             throw new RuntimeException("支付失败：" + e.getMessage());
         }
@@ -298,7 +298,7 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentRecordMapper, Payment
         }
 
         paymentRecord.setPaymentStatus("failed");
-        paymentRecord.setUpdateTime(LocalDateTime.now());
+        paymentRecord.setUpdatedAt(LocalDateTime.now());
         updateById(paymentRecord);
 
         log.info("取消支付成功，流水号：{}", paymentNo);
@@ -309,7 +309,7 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentRecordMapper, Payment
     public PaymentRecord getPaymentByOrderId(String orderId) {
         LambdaQueryWrapper<PaymentRecord> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(PaymentRecord::getOrderId, orderId);
-        queryWrapper.orderByDesc(PaymentRecord::getCreateTime);
+        queryWrapper.orderByDesc(PaymentRecord::getCreatedAt);
         queryWrapper.last("LIMIT 1");
         return getOne(queryWrapper);
     }
@@ -375,7 +375,7 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentRecordMapper, Payment
                 paymentRecord.setPaymentStatus("refund");
             }
 
-            paymentRecord.setUpdateTime(LocalDateTime.now());
+            paymentRecord.setUpdatedAt(LocalDateTime.now());
             updateById(paymentRecord);
 
             log.info("钱包退款成功，订单：{}，退款金额：{}，总退款：{}",

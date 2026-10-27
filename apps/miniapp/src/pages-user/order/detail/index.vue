@@ -74,7 +74,7 @@
 
         <view class="info-item">
           <text class="info-label">下单时间</text>
-          <text class="info-value">{{ orderInfo.createTime }}</text>
+          <text class="info-value">{{ orderInfo.createdAt }}</text>
         </view>
 
         <view class="info-item">
@@ -288,7 +288,7 @@ const orderItems = ref([
 // 订单信息
 const orderInfo = ref({
   orderNo: 'OD20260317120000001',
-  createTime: '2026-03-17 12:00:00',
+  createdAt: '2026-03-17 12:00:00',
   paymentMethod: '微信支付',
   deliveryTime: '尽快送达（预计30分钟）'
 })
@@ -812,7 +812,7 @@ const loadOrderDetail = async () => {
     // 订单基本信息
     orderInfo.value = {
       orderNo: res.orderNo || res.orderNumber,
-      createTime: res.createTime || res.createdAt,
+      createdAt: res.createdAt,
       paymentMethod: mapPaymentMethod(res.paymentMethod),
       deliveryTime: res.deliveryTime || res.expectedDeliveryTime || '尽快送达'
     }
@@ -841,7 +841,7 @@ const loadOrderDetail = async () => {
     if (res.progress && Array.isArray(res.progress)) {
       orderProgress.value = res.progress.map((step, index) => ({
         title: step.title || step.status,
-        time: step.time || step.createTime || '',
+        time: step.time || step.createdAt || '',
         completed: step.completed || step.status === 'completed'
       }))
 

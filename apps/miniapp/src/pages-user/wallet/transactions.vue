@@ -260,9 +260,9 @@ const normalizeTransactionItem = (record) => {
   const amount = Number(record?.amount || 0)
   const amountNumber = Number.isFinite(amount) ? amount : 0
   const normalizedType = type === 'other' ? record?.type || 'other' : type
-  const createTime = record?.createTime || record?.time
+  const createdAt = record?.createdAt || record?.time
   const direction = normalizedType === 'recharge' ? 'income' : 'expense'
-  const parsedTime = createTime ? new Date(createTime).getTime() : NaN
+  const parsedTime = createdAt ? new Date(createdAt).getTime() : NaN
 
   return {
     id: record?.id || `${normalizedType}-${Date.now()}-${Math.random()}`,
@@ -272,8 +272,8 @@ const normalizeTransactionItem = (record) => {
     direction,
     status: record?.status === 'failed' ? 'failed' : 'success',
     rawTime: Number.isFinite(parsedTime) ? parsedTime : Date.now(),
-    time: formatTime(createTime),
-    fullTime: formatFullTime(createTime),
+    time: formatTime(createdAt),
+    fullTime: formatFullTime(createdAt),
     orderNo: record?.orderNo || record?.id || '',
     description: record?.description || ''
   }

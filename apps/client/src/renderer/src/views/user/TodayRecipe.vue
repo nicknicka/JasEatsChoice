@@ -861,10 +861,10 @@ const filteredRecipes = computed(() => {
     if (a.isFavorite && !b.isFavorite) return -1
     if (!a.isFavorite && b.isFavorite) return 1
 
-    // 如果收藏状态相同，比较修改时间（假设字段名为updateTime）
+    // 如果收藏状态相同，比较修改时间（假设字段名为updatedAt）
     // 这里需要根据实际字段名调整，如果没有则可以注释这部分
-    const timeA = new Date(a.updateTime || 0)
-    const timeB = new Date(b.updateTime || 0)
+    const timeA = new Date(a.updatedAt || 0)
+    const timeB = new Date(b.updatedAt || 0)
     return timeB - timeA // 从晚到早排序（最新修改的在最上面）
   })
 

@@ -420,7 +420,7 @@ const loadTargetInfo = async () => {
           targetInfo.value = {
             name: res.data.merchantName || res.data.merchant?.name,
             image: res.data.merchantImage || res.data.merchant?.logo || res.data.merchant?.avatar,
-            meta: `${res.data.createTime || res.data.createdAt} 订单`
+            meta: `${res.data.createdAt} 订单`
           }
         }
       } catch (error) {

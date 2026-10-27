@@ -140,19 +140,19 @@ public class Dish {
 
     @TableField(exist = false)  // 不映射到数据库字段
     @ApiModelProperty(value = "提交时间（用于前端显示）")
-    private String submitTime; // 提交时间（用于前端显示，映射自create_time）
+    private String submitTime; // 提交时间（用于前端显示，映射自created_at）
 
     @TableField("stock")
     @ApiModelProperty(value = "库存数量")
     private Integer stock; // 库存数量
 
-    @TableField("create_time")
+    @TableField("created_at")
     @ApiModelProperty(value = "创建时间")
-    private LocalDateTime createTime; // 创建时间
+    private LocalDateTime createdAt; // 创建时间
 
-    @TableField("update_time")
+    @TableField("updated_at")
     @ApiModelProperty(value = "更新时间")
-    private LocalDateTime updateTime; // 更新时间
+    private LocalDateTime updatedAt; // 更新时间
 
     // ========== 兼容方法（向后兼容旧代码）==========
 

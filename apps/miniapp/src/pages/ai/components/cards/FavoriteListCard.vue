@@ -56,7 +56,7 @@
 						<view class="favorite-meta">
 							<text class="price" v-if="item.price">¥{{ item.price }}</text>
 							<text class="category" v-if="item.category">{{ item.category }}</text>
-							<text class="time">{{ formatTime(item.createTime) }}</text>
+							<text class="time">{{ formatTime(item.createdAt) }}</text>
 						</view>
 
 						<!-- 操作按钮 -->

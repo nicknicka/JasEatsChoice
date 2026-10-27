@@ -86,8 +86,8 @@
                     {{ request.requesterInfo?.nickname || '未知用户' }}
                   </h4>
                   <p class="requester-id">用户ID: {{ request.requesterInfo?.id }}</p>
-                  <p v-if="request.createTime" class="request-time">
-                    {{ request.createTime }}
+                  <p v-if="request.createdAt" class="request-time">
+                    {{ request.createdAt }}
                   </p>
                 </div>
               </div>
@@ -523,7 +523,7 @@ const fetchFriends = async () => {
               id: contact.targetId,
               name: userData.nickname || userData.username || '好友',
               avatar: avatar,
-              createTime: contact.createTime // 保留创建时间用于去重时选择最新的
+              createdAt: contact.createdAt // 保留创建时间用于去重时选择最新的
             }
           } catch (error) {
             console.error(`❌ [Contacts] 获取好友 ${contact.targetId} 信息失败:`, error)
@@ -532,7 +532,7 @@ const fetchFriends = async () => {
               id: contact.targetId,
               name: '好友',
               avatar: '👤',
-              createTime: contact.createTime
+              createdAt: contact.createdAt
             }
           }
         })
@@ -547,8 +547,8 @@ const fetchFriends = async () => {
           friendMap.set(friend.id, friend)
         } else {
           // 比较创建时间，保留最新的
-          const existingTime = new Date(existingFriend.createTime || 0).getTime()
-          const newTime = new Date(friend.createTime || 0).getTime()
+          const existingTime = new Date(existingFriend.createdAt || 0).getTime()
+          const newTime = new Date(friend.createdAt || 0).getTime()
           if (newTime > existingTime) {
             friendMap.set(friend.id, friend)
             console.log(`🔄 [Contacts] 发现重复好友关系，保留最新的 - id: ${friend.id}`)
@@ -849,8 +849,8 @@ const loadFriendRequests = async () => {
             requestMap.set(requestUserId, request)
           } else {
             // 比较创建时间，保留最新的
-            const existingTime = new Date(existingRequest.createTime || 0).getTime()
-            const newTime = new Date(request.createTime || 0).getTime()
+            const existingTime = new Date(existingRequest.createdAt || 0).getTime()
+            const newTime = new Date(request.createdAt || 0).getTime()
             if (newTime > existingTime) {
               requestMap.set(requestUserId, request)
             }

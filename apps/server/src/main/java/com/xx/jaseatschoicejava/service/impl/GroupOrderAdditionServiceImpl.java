@@ -55,7 +55,7 @@ public class GroupOrderAdditionServiceImpl
         LambdaQueryWrapper<GroupOrder> groupOrderQuery = new LambdaQueryWrapper<>();
         groupOrderQuery.eq(GroupOrder::getGroupId, groupId);
         groupOrderQuery.in(GroupOrder::getStatus, List.of(0, 1, 2, 3, 4, 5));
-        groupOrderQuery.orderByDesc(GroupOrder::getCreateTime);
+        groupOrderQuery.orderByDesc(GroupOrder::getCreatedAt);
         groupOrderQuery.last("LIMIT 1");
 
         GroupOrder groupOrder = groupOrderService.getOne(groupOrderQuery);
@@ -209,8 +209,8 @@ public class GroupOrderAdditionServiceImpl
             additionOrder.setAddressId(groupOrder.getAddressId());
             additionOrder.setRemark("群订单加菜");
             additionOrder.setStatus(1); // 待接单
-            additionOrder.setCreateTime(LocalDateTime.now());
-            additionOrder.setUpdateTime(LocalDateTime.now());
+            additionOrder.setCreatedAt(LocalDateTime.now());
+            additionOrder.setUpdatedAt(LocalDateTime.now());
 
             orderService.save(additionOrder);
 

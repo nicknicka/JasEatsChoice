@@ -84,7 +84,7 @@ public class AdminAnnouncementController {
         if (StringUtils.hasText(startDate)) {
             try {
                 LocalDateTime start = LocalDateTime.parse(startDate + "T00:00:00");
-                queryWrapper.ge("create_time", start);
+                queryWrapper.ge("created_at", start);
             } catch (Exception e) {
                 log.warn("开始时间格式错误: {}", startDate);
             }
@@ -92,7 +92,7 @@ public class AdminAnnouncementController {
         if (StringUtils.hasText(endDate)) {
             try {
                 LocalDateTime end = LocalDateTime.parse(endDate + "T23:59:59");
-                queryWrapper.le("create_time", end);
+                queryWrapper.le("created_at", end);
             } catch (Exception e) {
                 log.warn("结束时间格式错误: {}", endDate);
             }
@@ -108,7 +108,7 @@ public class AdminAnnouncementController {
         }
 
         // 按创建时间倒序
-        queryWrapper.orderByDesc("create_time");
+        queryWrapper.orderByDesc("created_at");
 
         IPage<Announcement> result = announcementService.page(pageParam, queryWrapper);
 
@@ -484,7 +484,7 @@ public class AdminAnnouncementController {
         // 今日新增公告数
         LocalDateTime todayStart = java.time.LocalDate.now().atStartOfDay();
         QueryWrapper<Announcement> todayWrapper = new QueryWrapper<>();
-        todayWrapper.isNull("merchant_id").ge("create_time", todayStart);
+        todayWrapper.isNull("merchant_id").ge("created_at", todayStart);
         long todayNewCount = announcementService.count(todayWrapper);
 
         stats.put("totalCount", totalCount);

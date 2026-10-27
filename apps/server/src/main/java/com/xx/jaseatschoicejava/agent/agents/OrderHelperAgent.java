@@ -69,7 +69,7 @@ public interface OrderHelperAgent {
               "statusColor": "orange/green/blue",
               "items": [{"name": "菜品名", "quantity": 数量, "price": 单价}],
               "total": 总价,
-              "createTime": "创建时间",
+              "createdAt": "创建时间",
               "timeline": [{"time": "时间", "event": "事件"}]
             }
           ]

@@ -519,7 +519,7 @@ const handleWebSocketMessage = (data) => {
           ...data.content,
           msgId: messageId,  // ⭐ 确保保留 msgId 字段
           id: messageId,     // ⭐ 标准化为 id 字段（兼容）
-          formattedTime: formatMessageTime(data.content.createTime || data.content.time),
+          formattedTime: formatMessageTime(data.content.createdAt || data.content.time),
           fromId,
           senderName
         }
@@ -862,7 +862,7 @@ const selectConversation = async (conversation) => {
           orderItems: [],
           totalAmount: Number(draftOrder.totalAmount || 0),
           status: 'active',
-          createTime: draftOrder.createTime,
+          createdAt: draftOrder.createdAt,
           merchantId: draftOrder.merchantId,
           merchantName: draftOrder.merchantName,
           addressId: draftOrder.addressId,
@@ -909,8 +909,8 @@ const selectConversation = async (conversation) => {
           orderId: order.id,
           totalAmount: order.totalAmount || 0,
           status: order.status === 3 ? 'completed' : 'paid', // 3-已完成, 1-已支付
-          paymentTime: order.updateTime || order.createTime,
-          createTime: order.createTime,
+          paymentTime: order.updatedAt || order.createdAt,
+          createdAt: order.createdAt,
           remark: order.remark,
           orderItems: order.dishItems?.map(dish => ({
             productName: dish.dishName || dish.name,
@@ -952,7 +952,7 @@ const selectConversation = async (conversation) => {
               sessionType: 'group',
               msgType: 'text',
               content: `群订单已支付完成，金额：¥${justPaidOrder.totalAmount?.toFixed(2) || '0.00'}`,
-              createTime: new Date().toISOString(),
+              createdAt: new Date().toISOString(),
               formattedTime: '刚刚',
               sender: '系统',
               avatar: '💰'
@@ -985,7 +985,7 @@ const selectConversation = async (conversation) => {
           orderItems: pendingOrder.cartItems,
           totalAmount: pendingOrder.totalAmount,
           status: 'active',
-          createTime: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
           merchantId: pendingOrder.merchant?.id || pendingOrder.merchant?.merchantId,
           merchantName: pendingOrder.merchant?.name,
           locked: Boolean(pendingOrder.locked),
@@ -1099,7 +1099,7 @@ const sendMessage = async (content) => {
     replyContent: messageData.replyContent,
     replyFromId: messageData.replyFromId,
     replyFromName: messageData.replyFromName,
-    createTime: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
     formattedTime: '刚刚',
     status: 'sending'
   }
@@ -1119,7 +1119,7 @@ const sendMessage = async (content) => {
       if (index !== -1) {
         chatMessages.value[index] = {
           ...sentMessage,
-          formattedTime: formatMessageTime(sentMessage.createTime || sentMessage.time),
+          formattedTime: formatMessageTime(sentMessage.createdAt || sentMessage.time),
           fromId: sentMessage.fromId || userId.value.toString(),
           status: 'success'
         }
@@ -1194,7 +1194,7 @@ const sendImageMessage = async (fileInfo) => {
     fileName: fileInfo.fileName,
     fileSize: fileInfo.fileSize,
     fileType: fileInfo.fileType,
-    createTime: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
     formattedTime: '刚刚',
     status: 'sending',
     isLoading: true  // 标记为加载中，用于显示骨架屏
@@ -1246,7 +1246,7 @@ const sendImageMessage = async (fileInfo) => {
           id: sentMessage.msgId || sentMessage.id || tempMessage.id,  // 优先使用后端返回的ID
           // 保留fullUrl，因为后端返回的数据可能没有这个字段
           fullUrl: sentMessage.fullUrl || tempMessage.fullUrl,
-          formattedTime: formatMessageTime(sentMessage.createTime || sentMessage.time),
+          formattedTime: formatMessageTime(sentMessage.createdAt || sentMessage.time),
           fromId: sentMessage.fromId || userId.value.toString(),
           status: 'success',
           isLoading: false
@@ -1326,7 +1326,7 @@ const sendFileMessage = async (fileInfo) => {
     fileName: fileInfo.fileName,
     fileSize: fileInfo.fileSize,
     fileType: fileInfo.fileType,
-    createTime: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
     formattedTime: '刚刚',
     status: 'sending'
   }
@@ -1357,7 +1357,7 @@ const sendFileMessage = async (fileInfo) => {
       if (index !== -1) {
         chatMessages.value[index] = {
           ...sentMessage,
-          formattedTime: formatMessageTime(sentMessage.createTime || sentMessage.time),
+          formattedTime: formatMessageTime(sentMessage.createdAt || sentMessage.time),
           fromId: sentMessage.fromId || userId.value.toString(),
           status: 'success'
         }
@@ -1720,10 +1720,10 @@ const openGroupDetail = async () => {
 
     // 4. 格式化创建时间
     let formattedCreateTime = '未知时间'
-    if (groupData.createTime) {
+    if (groupData.createdAt) {
       try {
-        const createTime = new Date(groupData.createTime)
-        formattedCreateTime = createTime.toLocaleString('zh-CN', {
+        const createdAt = new Date(groupData.createdAt)
+        formattedCreateTime = createdAt.toLocaleString('zh-CN', {
           year: 'numeric',
           month: '2-digit',
           day: '2-digit',
@@ -1830,7 +1830,7 @@ const createGroupOrder = async () => {
         orderItems: [],
         totalAmount: Number(draftOrder.totalAmount || 0),
         status: 'active',
-        createTime: draftOrder.createTime || new Date().toISOString(),
+        createdAt: draftOrder.createdAt || new Date().toISOString(),
         // 保存后端订单信息
         merchantId: draftOrder.merchantId,
         merchantName: draftOrder.merchantName,
@@ -1851,7 +1851,7 @@ const createGroupOrder = async () => {
         sessionType: 'group',
         msgType: 'text',
         content: '我创建了一个群订单，大家可以加入并添加商品',
-        createTime: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
         formattedTime: '刚刚',
         sender: '我',
         avatar: '👤'
@@ -1875,7 +1875,7 @@ const createGroupOrder = async () => {
         orderItems: [],
         totalAmount: Number(draftOrder.totalAmount || 0),
         status: 'active',
-        createTime: draftOrder.createTime || new Date().toISOString(),
+        createdAt: draftOrder.createdAt || new Date().toISOString(),
         // 保存后端订单信息
         merchantId: draftOrder.merchantId,
         merchantName: draftOrder.merchantName,
@@ -1897,7 +1897,7 @@ const createGroupOrder = async () => {
         sessionType: 'group',
         msgType: 'text',
         content: '我创建了一个群订单，大家可以加入并添加商品',
-        createTime: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
         formattedTime: '刚刚',
         sender: '我',
         avatar: '👤'
@@ -2209,7 +2209,7 @@ const handleCancelGroupOrder = async () => {
         sessionType: 'group',
         msgType: 'text',
         content: '我取消了群订单',
-        createTime: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
         formattedTime: '刚刚',
         sender: '我',
         avatar: '👤'
@@ -2286,7 +2286,7 @@ const handleCreateNewOrder = async () => {
         totalAmount: currentOrder.totalAmount,
         status: currentOrder.status,
         paymentTime: new Date().toLocaleString(),
-        createTime: currentOrder.createTime,
+        createdAt: currentOrder.createdAt,
         remark: currentOrder.remark,
         orderItems: [...currentOrder.orderItems]
       })

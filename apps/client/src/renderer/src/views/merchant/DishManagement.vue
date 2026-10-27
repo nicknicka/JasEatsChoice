@@ -69,8 +69,8 @@ onMounted(() => {
         // 预处理菜品数据，确保所有菜品都有有效的状态和时间格式
         const processedDishes = response.data.data.map((dish) => {
           // 转换时间格式为 yyyy-MM-dd HH:mm:ss
-          if (dish.createTime) {
-            dish.createTime = new Date(dish.createTime).toLocaleString('zh-CN', {
+          if (dish.createdAt) {
+            dish.createdAt = new Date(dish.createdAt).toLocaleString('zh-CN', {
               year: 'numeric',
               month: '2-digit',
               day: '2-digit',
@@ -79,8 +79,8 @@ onMounted(() => {
               second: '2-digit'
             })
           }
-          if (dish.updateTime) {
-            dish.updateTime = new Date(dish.updateTime).toLocaleString('zh-CN', {
+          if (dish.updatedAt) {
+            dish.updatedAt = new Date(dish.updatedAt).toLocaleString('zh-CN', {
               year: 'numeric',
               month: '2-digit',
               day: '2-digit',
@@ -1080,7 +1080,7 @@ const getDishCheckedState = (dish) => {
                 </div>
                 <div class="stat-item">
                   <span class="stat-label">⏰ 更新时间：</span>
-                  <span class="stat-value">{{ dish.updateTime }}</span>
+                  <span class="stat-value">{{ dish.updatedAt }}</span>
                 </div>
               </div>
 

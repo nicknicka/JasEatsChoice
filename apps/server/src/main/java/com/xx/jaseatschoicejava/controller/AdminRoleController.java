@@ -128,8 +128,8 @@ public class AdminRoleController {
         role.setDescription(description);
         role.setStatus("ACTIVE");
         role.setSortOrder(sortOrder != null ? sortOrder : 0);
-        role.setCreateTime(LocalDateTime.now());
-        role.setUpdateTime(LocalDateTime.now());
+        role.setCreatedAt(LocalDateTime.now());
+        role.setUpdatedAt(LocalDateTime.now());
 
         boolean success = roleService.save(role);
 
@@ -184,7 +184,7 @@ public class AdminRoleController {
         if (description != null) role.setDescription(description);
         if (status != null) role.setStatus(status);
         if (sortOrder != null) role.setSortOrder(sortOrder);
-        role.setUpdateTime(LocalDateTime.now());
+        role.setUpdatedAt(LocalDateTime.now());
 
         boolean success = roleService.updateById(role);
 

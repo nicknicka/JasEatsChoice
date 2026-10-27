@@ -82,11 +82,11 @@ public class ChatSession {
     @ApiModelProperty(value = "关联的群订单ID（群订单专属会话有效）")
     private String relatedOrderId; // 关联的群订单ID
 
-    @TableField("create_time")
+    @TableField("created_at")
     @ApiModelProperty(value = "创建时间")
-    private LocalDateTime createTime; // 创建时间
+    private LocalDateTime createdAt; // 创建时间
 
-    @TableField("update_time")
+    @TableField("updated_at")
     @ApiModelProperty(value = "更新时间")
-    private LocalDateTime updateTime; // 更新时间
+    private LocalDateTime updatedAt; // 更新时间
 }

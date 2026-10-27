@@ -104,7 +104,7 @@ public class WishListItemDetailVO {
     private Long remainingHours;
 
     @ApiModelProperty(value = "创建时间")
-    private LocalDateTime createTime;
+    private LocalDateTime createdAt;
 
     @ApiModelProperty(value = "是否可申诉")
     private Boolean canAppeal;

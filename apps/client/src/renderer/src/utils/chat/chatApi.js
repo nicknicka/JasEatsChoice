@@ -153,7 +153,7 @@ export const getChatMessages = async (sessionId, userId) => {
         id: message.id,
         sender: message.fromId === userId ? 'merchant' : message.fromId,
         content: message.content,
-        time: message.createTime,
+        time: message.createdAt,
         isRead: message.readStatus
       }))
 

@@ -12,7 +12,7 @@
  *    - minAmount: 最低消费金额
  *    - status: 状态（available-可用, used-已使用, expired-已过期）
  *    - orderId: 关联订单ID（使用后）
- *    - createTime: 创建时间
+ *    - createdAt: 创建时间
  *    - expireTime: 过期时间
  *
  * 2. CouponService服务类

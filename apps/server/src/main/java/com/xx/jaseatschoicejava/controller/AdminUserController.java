@@ -60,7 +60,7 @@ public class AdminUserController {
         }
 
         // 按创建时间倒序排序
-        queryWrapper.orderByDesc("create_time");
+        queryWrapper.orderByDesc("created_at");
 
         IPage<User> result = userService.page(pageParam, queryWrapper);
 
@@ -146,7 +146,7 @@ public class AdminUserController {
             user.setBio((String) updateData.get("bio"));
         }
 
-        user.setUpdateTime(LocalDateTime.now());
+        user.setUpdatedAt(LocalDateTime.now());
 
         boolean success = userService.updateById(user);
 
@@ -276,7 +276,7 @@ public class AdminUserController {
         // - 注册天数
         stats.put("userId", userId);
         stats.put("nickname", user.getNickname());
-        stats.put("createTime", user.getCreateTime());
+        stats.put("createdAt", user.getCreatedAt());
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);

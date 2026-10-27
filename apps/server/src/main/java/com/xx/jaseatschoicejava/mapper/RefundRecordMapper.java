@@ -31,7 +31,7 @@ public interface RefundRecordMapper extends BaseMapper<RefundRecord> {
             "<if test='status != null and status != \"\"'>" +
             "AND r.status = #{status} " +
             "</if>" +
-            "ORDER BY r.create_time DESC" +
+            "ORDER BY r.created_at DESC" +
             "</script>")
     IPage<RefundRecord> selectRefundPageWithUser(Page<RefundRecord> page,
                                                 @Param("keyword") String keyword,

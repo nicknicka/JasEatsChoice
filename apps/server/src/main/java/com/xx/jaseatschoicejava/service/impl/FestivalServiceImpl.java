@@ -121,8 +121,8 @@ public class FestivalServiceImpl implements FestivalService {
             recommend.setClickCount(0);
             recommend.setOrderCount(0);
             recommend.setIsActive(true);
-            recommend.setCreateTime(LocalDateTime.now());
-            recommend.setUpdateTime(LocalDateTime.now());
+            recommend.setCreatedAt(LocalDateTime.now());
+            recommend.setUpdatedAt(LocalDateTime.now());
 
             festivalDishRecommendMapper.insert(recommend);
         }
@@ -148,8 +148,8 @@ public class FestivalServiceImpl implements FestivalService {
         event.setGuestCount(dto.getGuestCount());
         event.setBudgetPerPerson(dto.getBudgetPerPerson());
         event.setIsActive(true);
-        event.setCreateTime(LocalDateTime.now());
-        event.setUpdateTime(LocalDateTime.now());
+        event.setCreatedAt(LocalDateTime.now());
+        event.setUpdatedAt(LocalDateTime.now());
 
         userCustomEventMapper.insert(event);
         return event.getId();

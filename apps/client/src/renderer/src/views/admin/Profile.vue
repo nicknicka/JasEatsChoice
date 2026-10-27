@@ -74,7 +74,7 @@
           </el-tooltip>
         </el-descriptions-item>
         <el-descriptions-item label="创建时间">
-          {{ profileForm.createTime }}
+          {{ profileForm.createdAt }}
         </el-descriptions-item>
       </el-descriptions>
     </el-card>
@@ -104,7 +104,7 @@ const profileForm = reactive({
   roleCode: '',
   roleName: '',
   status: '',
-  createTime: ''
+  createdAt: ''
 })
 
 const rules = {

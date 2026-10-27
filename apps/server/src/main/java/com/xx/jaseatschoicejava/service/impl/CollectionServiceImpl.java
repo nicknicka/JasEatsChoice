@@ -23,7 +23,7 @@ public class CollectionServiceImpl implements CollectionService {
     public List<UserCollection> getCollectionsByUserId(String userId) {
         LambdaQueryWrapper<UserCollection> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(UserCollection::getUserId, userId)
-                .orderByDesc(UserCollection::getCreateTime);
+                .orderByDesc(UserCollection::getCreatedAt);
         return collectionMapper.selectList(queryWrapper);
     }
 
@@ -32,13 +32,13 @@ public class CollectionServiceImpl implements CollectionService {
         LambdaQueryWrapper<UserCollection> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(UserCollection::getUserId, userId)
                 .eq(UserCollection::getCollectableType, type)
-                .orderByDesc(UserCollection::getCreateTime);
+                .orderByDesc(UserCollection::getCreatedAt);
         return collectionMapper.selectList(queryWrapper);
     }
 
     @Override
     public UserCollection addCollection(UserCollection collection) {
-        collection.setCreateTime(LocalDateTime.now());
+        collection.setCreatedAt(LocalDateTime.now());
         collectionMapper.insert(collection);
         return collection;
     }

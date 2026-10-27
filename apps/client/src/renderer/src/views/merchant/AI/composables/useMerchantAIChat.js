@@ -85,7 +85,7 @@ export function useMerchantAIChat() {
           id: item.id || index + 1,
           sender: item.sender,
           content: item.content,
-          time: formatTime(new Date(item.createTime)),
+          time: formatTime(new Date(item.createdAt)),
           avatar: item.sender === 'ai' ? '🤖' : '👤'
         }))
       } else {
