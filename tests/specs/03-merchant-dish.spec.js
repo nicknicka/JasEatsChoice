@@ -82,7 +82,7 @@ test.describe('模块三：商家浏览与详情', () => {
     await expect(announcement.first()).toBeVisible({ timeout: 10000 })
   })
 
-  test.fixme('3.5 商家评价列表 (blocked by #19)', async ({ page }) => {
+  test.fixme('3.5 商家评价列表 (blocked by #65)', async ({ page }) => {
     const merchant = await getMerchant()
     const merchantId = merchant.merchantId || merchant.id
     const response = await fetch(`${TEST_API_BASE}/v1/reviews/merchant/${encodeURIComponent(merchantId)}`)
@@ -123,7 +123,7 @@ test.describe('模块三：商家浏览与详情', () => {
     }
   })
 
-  test.fixme('3.7 菜品详情 (blocked by #17)', async ({ page }) => {
+  test.fixme('3.7 菜品详情 (blocked by #66)', async ({ page }) => {
     const merchant = await getMerchant()
     const merchantId = merchant.merchantId || merchant.id
     const dish = await getDish({ merchantId })
@@ -137,7 +137,7 @@ test.describe('模块三：商家浏览与详情', () => {
     await expect(page.locator('.current-price')).toContainText(`¥${Number(dish.price).toFixed(2)}`)
   })
 
-  test.fixme('3.8 菜品收藏 (blocked by #17)', async ({ page }) => {
+  test.fixme('3.8 菜品收藏 (blocked by #66)', async ({ page }) => {
     // 该测试用户已拒绝过全部推荐；先隔离共享拒绝记录，再验证收藏状态切换。
     await page.route('**/v1/recommendations/rejects/list*', route => route.fulfill({
       status: 200,
