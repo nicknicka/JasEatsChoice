@@ -1,5 +1,5 @@
 const { test, expect, loginAsUser } = require('../fixtures/test-base')
-const { getMerchant, getDish } = require('../utils/real-data')
+const { getMerchant, getDish, getUserId } = require('../utils/real-data')
 const { TEST_API_BASE } = require('../utils/api')
 const { markRunning, markPassed, markFailed, updateSummary } = require('../utils/progress')
 
@@ -123,38 +123,103 @@ test.describe('模块三：商家浏览与详情', () => {
     }
   })
 
-  test.fixme('3.7 菜品详情 (blocked by #66)', async ({ page }) => {
-    const merchant = await getMerchant()
-    const merchantId = merchant.merchantId || merchant.id
-    const dish = await getDish({ merchantId })
-    const dishId = dish.id || dish.dishId
-    const dishName = dish.name || dish.dishName
+  test('3.7 菜品详情', async ({ page }) => {
+    markRunning('3.7')
+    try {
+      const merchant = await getMerchant()
+      const merchantId = merchant.merchantId || merchant.id
+      const dish = await getDish({ merchantId })
+      const dishId = dish.id || dish.dishId
+      const dishName = dish.name || dish.dishName
 
-    await page.goto(`/user/home/dish-detail/${encodeURIComponent(dishId)}`)
+      await page.goto(`/user/home/dish-detail/${encodeURIComponent(dishId)}`)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
 
-    await expect(page.locator('.page-title')).toHaveText('菜品详情')
-    await expect(page.locator('.dish-name')).toHaveText(dishName)
-    await expect(page.locator('.current-price')).toContainText(`¥${Number(dish.price).toFixed(2)}`)
+      await expect(page.locator('.page-title')).toHaveText('菜品详情')
+      await expect(page.locator('.dish-name')).toHaveText(dishName)
+      await expect(page.locator('.current-price')).toContainText(`¥${Number(dish.price).toFixed(2)}`)
+      markPassed('3.7', `菜品详情展示真实菜品 ${dishName}`)
+    } catch (e) {
+      markFailed('3.7', e.message.slice(0, 50))
+      throw e
+    }
   })
 
-  test.fixme('3.8 菜品收藏 (blocked by #66)', async ({ page }) => {
-    // 该测试用户已拒绝过全部推荐；先隔离共享拒绝记录，再验证收藏状态切换。
-    await page.route('**/v1/recommendations/rejects/list*', route => route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ success: true, code: '200', message: '成功', data: [] })
-    }))
+  test('3.8 菜品收藏', async ({ page }) => {
+    markRunning('3.8')
+    try {
+      // 该测试用户已拒绝过全部推荐；先隔离共享拒绝记录，再验证收藏状态切换。
+      await page.route('**/v1/recommendations/rejects/list*', route => route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, code: '200', message: '成功', data: [] })
+      }))
 
-    await page.goto('/user/home/recommend')
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
+      await page.goto('/user/home/recommend')
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
 
-    const favoriteButton = page.locator('.recommend-item button.act-btn', { hasText: '收藏' }).first()
-    await expect(favoriteButton).toBeVisible({ timeout: 10000 })
-    await expect(favoriteButton).toHaveText(/☆ 收藏/)
+      const favoriteButton = page.locator('.recommend-item button.act-btn', { hasText: '收藏' }).first()
+      await expect(favoriteButton).toBeVisible({ timeout: 10000 })
+      await expect(favoriteButton).toHaveText(/☆ 收藏/)
 
-    await favoriteButton.click()
-    await expect(favoriteButton).toHaveText(/★ 已收藏/)
-    await expect(page.locator('.el-message')).toHaveText(/收藏成功/, { timeout: 10000 })
+      const collectionRequestPromise = page.waitForRequest((request) =>
+        request.method() === 'POST' && new URL(request.url()).pathname.endsWith('/v1/collections')
+      )
+      await favoriteButton.click()
+      const collectionRequest = await collectionRequestPromise
+      const collectionPayload = collectionRequest.postDataJSON()
+
+      expect(collectionPayload.collectableType).toBe('dish')
+      expect(collectionPayload.collectableId).toBeTruthy()
+      await expect(favoriteButton).toHaveText(/★ 已收藏/)
+      await expect(page.locator('.el-message--success')).toHaveText(/收藏成功/, { timeout: 10000 })
+
+      const userId = await getUserId()
+      const queryResponse = await fetch(`${TEST_API_BASE}/v1/collections?userId=${encodeURIComponent(userId)}`)
+      const payload = await queryResponse.json()
+      expect(queryResponse.ok).toBeTruthy()
+      expect(payload.success).toBe(true)
+      expect((payload.data || []).some((item) =>
+        item.collectableType === collectionPayload.collectableType
+        && String(item.collectableId) === String(collectionPayload.collectableId)
+      )).toBeTruthy()
+
+      const cleanupUrl = new URL(`${TEST_API_BASE}/v1/collections`)
+      cleanupUrl.searchParams.set('userId', userId)
+      cleanupUrl.searchParams.set('type', collectionPayload.collectableType)
+      cleanupUrl.searchParams.set('id', String(collectionPayload.collectableId))
+      await fetch(cleanupUrl, { method: 'DELETE' })
+
+      await page.route('**/v1/collections', route => {
+        if (route.request().method() === 'POST') {
+          return route.fulfill({
+            status: 500,
+            contentType: 'application/json',
+            body: JSON.stringify({ success: false, code: '500', message: '收藏失败' })
+          })
+        }
+        return route.continue()
+      })
+
+      await page.reload()
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
+      await expect(favoriteButton).toHaveText(/☆ 收藏/)
+      await favoriteButton.click()
+      await expect(page.locator('.el-message--error')).toHaveText(/收藏失败/, { timeout: 10000 })
+      await expect(favoriteButton).toHaveText(/☆ 收藏/)
+
+      const failedQueryResponse = await fetch(`${TEST_API_BASE}/v1/collections?userId=${encodeURIComponent(userId)}`)
+      const failedPayload = await failedQueryResponse.json()
+      expect((failedPayload.data || []).some((item) =>
+        item.collectableType === collectionPayload.collectableType
+        && String(item.collectableId) === String(collectionPayload.collectableId)
+      )).toBeFalsy()
+
+      markPassed('3.8', '收藏成功落库，失败时保持未收藏状态')
+    } catch (e) {
+      markFailed('3.8', e.message.slice(0, 50))
+      throw e
+    }
   })
 
   test('3.9 菜品加购', async ({ page }) => {

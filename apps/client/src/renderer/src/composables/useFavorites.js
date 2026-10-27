@@ -74,9 +74,11 @@ export function useFavorites() {
     try {
       const userId = String(authStore.userId || 1) || '1'
 
+      const collectableId = String(item.dishId || item.id)
+
       // 检查是否已收藏
       const isFavorited = favorites.value.some(
-        (fav) => fav.collectableId === item.id && fav.collectableType === item.type
+        (fav) => String(fav.collectableId) === collectableId && fav.collectableType === 'dish'
       )
 
       if (isFavorited) {
@@ -87,21 +89,21 @@ export function useFavorites() {
       // 调用后端API
       await axios.post(`${API_CONFIG.baseURL}/v1/collections`, {
         userId,
-        collectableType: item.type,
-        collectableId: String(item.id)
+        collectableType: 'dish',
+        collectableId
       })
 
       // 添加到本地收藏列表
       favorites.value.push({
         id: Date.now(),
         userId,
-        collectableType: item.type,
-        collectableId: String(item.id),
+        collectableType: 'dish',
+        collectableId,
         createdAt: new Date().toISOString(),
         // 保留原有的字段以兼容现有代码
-        dishId: item.id,
+        dishId: collectableId,
         name: item.name,
-        type: item.type,
+        type: 'dish',
         calories: item.calories,
         tags: item.tags,
         image: item.image,
@@ -113,33 +115,7 @@ export function useFavorites() {
       return true
     } catch (error) {
       console.error('收藏失败:', error)
-
-      // 后端失败时，仅添加到本地
-      const isFavorited = favorites.value.some(
-        (fav) => fav.collectableId === item.id && fav.collectableType === item.type
-      )
-
-      if (!isFavorited) {
-        favorites.value.push({
-          id: Date.now(),
-          userId: String(authStore.userId || 1) || '1',
-          collectableType: item.type,
-          collectableId: String(item.id),
-          createdAt: new Date().toISOString(),
-          // 保留原有的字段以兼容现有代码
-          dishId: item.id,
-          name: item.name,
-          type: item.type,
-          calories: item.calories,
-          tags: item.tags,
-          image: item.image,
-          rating: item.rating
-        })
-        saveFavoritesToStorage()
-        ElMessage.success('收藏成功（仅本地）')
-        return true
-      }
-
+      ElMessage.error(error.response?.data?.message || '收藏失败')
       return false
     }
   }
@@ -150,10 +126,11 @@ export function useFavorites() {
   const removeFavorite = async (item) => {
     try {
       const userId = String(authStore.userId || 1) || '1'
+      const collectableId = String(item.dishId || item.id)
 
       // 找到收藏项
       const favoriteItem = favorites.value.find(
-        (fav) => fav.collectableId === String(item.id) && fav.collectableType === item.type
+        (fav) => String(fav.collectableId) === collectableId && fav.collectableType === 'dish'
       )
 
       if (favoriteItem) {
@@ -161,15 +138,15 @@ export function useFavorites() {
         await axios.delete(`${API_CONFIG.baseURL}/v1/collections`, {
           params: {
             userId,
-            type: item.type,
-            id: String(item.id)
+            type: 'dish',
+            id: collectableId
           }
         })
       }
 
       // 从本地列表中移除
       const index = favorites.value.findIndex(
-        (fav) => fav.collectableId === String(item.id) && fav.collectableType === item.type
+        (fav) => String(fav.collectableId) === collectableId && fav.collectableType === 'dish'
       )
 
       if (index > -1) {
@@ -182,19 +159,7 @@ export function useFavorites() {
       return false
     } catch (error) {
       console.error('取消收藏失败:', error)
-
-      // 后端失败时，仅从本地移除
-      const index = favorites.value.findIndex(
-        (fav) => fav.collectableId === String(item.id) && fav.collectableType === item.type
-      )
-
-      if (index > -1) {
-        favorites.value.splice(index, 1)
-        saveFavoritesToStorage()
-        ElMessage.success('已取消收藏（仅本地）')
-        return true
-      }
-
+      ElMessage.error(error.response?.data?.message || '取消收藏失败')
       return false
     }
   }
@@ -203,23 +168,19 @@ export function useFavorites() {
    * 切换收藏状态
    */
   const toggleFavorite = async (item) => {
-    const isFavorited = isFavoritedItem(item)
-
-    if (isFavorited) {
-      await removeFavorite(item)
-    } else {
-      await addFavorite(item)
+    if (isFavoritedItem(item)) {
+      return removeFavorite(item)
     }
-
-    return !isFavorited
+    return addFavorite(item)
   }
 
   /**
    * 检查是否已收藏
    */
   const isFavoritedItem = (item) => {
+    const collectableId = String(item.dishId || item.id)
     return favorites.value.some(
-      (fav) => fav.collectableId === String(item.id) && fav.collectableType === item.type
+      (fav) => String(fav.collectableId) === collectableId && fav.collectableType === 'dish'
     )
   }
 
