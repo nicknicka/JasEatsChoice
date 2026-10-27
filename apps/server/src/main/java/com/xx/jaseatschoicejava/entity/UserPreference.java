@@ -9,7 +9,7 @@ import lombok.Data;
  * 用户推荐偏好
  */
 @Data
-@TableName("t_user_preference")
+@TableName("usr_user_preference")
 public class UserPreference {
     @TableId(value = "id", type = IdType.ASSIGN_ID)
     private String id;

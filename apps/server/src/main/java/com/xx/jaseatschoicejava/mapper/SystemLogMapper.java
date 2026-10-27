@@ -18,7 +18,7 @@ public interface SystemLogMapper extends BaseMapper<SystemLog> {
      * 分页查询系统日志列表
      */
     @Select("<script>" +
-            "SELECT * FROM t_system_log " +
+            "SELECT * FROM sys_system_log " +
             "WHERE 1=1 " +
             "<if test='operatorName != null and operatorName != \"\"'>" +
             "AND operator_name LIKE CONCAT('%', #{operatorName}, '%') " +
@@ -51,6 +51,6 @@ public interface SystemLogMapper extends BaseMapper<SystemLog> {
     /**
      * 统计操作次数（按操作类型）
      */
-    @Select("SELECT COUNT(*) FROM t_system_log WHERE operation_type = #{operationType}")
+    @Select("SELECT COUNT(*) FROM sys_system_log WHERE operation_type = #{operationType}")
     Long countByOperationType(@Param("operationType") String operationType);
 }

@@ -21,7 +21,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("t_chat_msg")
+@TableName("ai_chat_msg")
 @ApiModel(description = "聊天消息实体")
 public class ChatMsg {
 

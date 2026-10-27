@@ -17,7 +17,7 @@ public interface UserCouponMapper extends BaseMapper<UserCoupon> {
     /**
      * 查询用户的可用优惠券（使用索引优化）
      */
-    @Select("SELECT * FROM user_coupon " +
+    @Select("SELECT * FROM usr_user_coupon " +
             "WHERE user_id = #{userId} " +
             "AND status = 'available' " +
             "AND expire_time > NOW() " +
@@ -27,7 +27,7 @@ public interface UserCouponMapper extends BaseMapper<UserCoupon> {
     /**
      * 查询用户的优惠券（包含已过期）
      */
-    @Select("SELECT * FROM user_coupon " +
+    @Select("SELECT * FROM usr_user_coupon " +
             "WHERE user_id = #{userId} " +
             "ORDER BY create_time DESC")
     List<UserCoupon> findByUserId(@Param("userId") String userId);
@@ -35,7 +35,7 @@ public interface UserCouponMapper extends BaseMapper<UserCoupon> {
     /**
      * 查询特定优惠券（用于使用和释放操作）
      */
-    @Select("SELECT * FROM user_coupon " +
+    @Select("SELECT * FROM usr_user_coupon " +
             "WHERE id = #{couponId} " +
             "AND user_id = #{userId} " +
             "LIMIT 1")
@@ -44,7 +44,7 @@ public interface UserCouponMapper extends BaseMapper<UserCoupon> {
     /**
      * 统计用户可用优惠券数量
      */
-    @Select("SELECT COUNT(*) FROM user_coupon " +
+    @Select("SELECT COUNT(*) FROM usr_user_coupon " +
             "WHERE user_id = #{userId} " +
             "AND status = 'available' " +
             "AND expire_time > NOW()")

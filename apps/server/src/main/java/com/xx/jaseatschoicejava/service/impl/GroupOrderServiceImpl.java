@@ -310,7 +310,7 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
         result.put("subtotal", subtotal);
         result.put("deliveryFee", BigDecimal.ZERO);
         result.put("packagingFee", BigDecimal.ZERO);
-        result.put("discount", BigDecimal.ZERO);
+        result.put("wlt_discount", BigDecimal.ZERO);
         result.put("totalAmount", subtotal);
         result.put("orderId", groupOrderId);
         result.put("merchantId", groupOrder == null ? null : groupOrder.getMerchantId());

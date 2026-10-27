@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 /**
  * 今日热点实体类
  */
-@TableName("hot_topic")
+@TableName("cnt_hot_topic")
 @ApiModel(description = "今日热点实体")
 public class HotTopic {
 

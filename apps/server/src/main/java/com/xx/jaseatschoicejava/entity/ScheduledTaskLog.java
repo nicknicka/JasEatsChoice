@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
  * @since 2025-02-12
  */
 @Data
-@TableName("t_scheduled_task_log")
+@TableName("sys_scheduled_task_log")
 @ApiModel(description = "定时任务执行日志")
 public class ScheduledTaskLog {
 

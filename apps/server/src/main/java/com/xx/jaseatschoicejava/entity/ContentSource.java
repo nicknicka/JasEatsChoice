@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
  * @since 2025-01-31
  */
 @Data
-@TableName("t_content_source")
+@TableName("ext_content_source")
 public class ContentSource {
 
     /**

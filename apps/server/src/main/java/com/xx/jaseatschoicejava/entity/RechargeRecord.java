@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("t_recharge_record")
+@TableName("wlt_recharge_record")
 @ApiModel(description = "充值记录实体")
 public class RechargeRecord {
 

@@ -17,7 +17,7 @@ import java.util.Map;
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
-@TableName("user_behavior")
+@TableName("ai_user_behavior")
 public class UserBehavior {
 
     /**

@@ -22,7 +22,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("t_chat_session")
+@TableName("ai_chat_session")
 @ApiModel(description = "聊天会话实体")
 public class ChatSession {
 

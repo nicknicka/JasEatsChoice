@@ -20,7 +20,7 @@ import java.math.BigDecimal;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("t_merchant")
+@TableName("mch_merchant")
 @ApiModel(description = "商家实体")
 public class Merchant {
 

@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("t_order_dish")
+@TableName("ord_order_dish")
 @ApiModel(description = "订单菜品实体")
 public class OrderDish {
 

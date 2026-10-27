@@ -23,7 +23,7 @@ public interface ContentExtractionMapper extends BaseMapper<ContentExtraction> {
      * @param sourceId 内容源ID
      * @return 提取结果
      */
-    @Select("SELECT * FROM t_content_extraction WHERE source_id = #{sourceId}")
+    @Select("SELECT * FROM ext_content_extraction WHERE source_id = #{sourceId}")
     ContentExtraction selectBySourceId(@Param("sourceId") String sourceId);
 
     /**
@@ -31,7 +31,7 @@ public interface ContentExtractionMapper extends BaseMapper<ContentExtraction> {
      *
      * @return 提取结果列表
      */
-    @Select("SELECT * FROM t_content_extraction WHERE is_published = 0 ORDER BY create_time DESC")
+    @Select("SELECT * FROM ext_content_extraction WHERE is_published = 0 ORDER BY create_time DESC")
     List<ContentExtraction> selectUnpublished();
 
     /**
@@ -39,6 +39,6 @@ public interface ContentExtractionMapper extends BaseMapper<ContentExtraction> {
      *
      * @return 提取结果列表
      */
-    @Select("SELECT * FROM t_content_extraction WHERE is_verified = 0 ORDER BY create_time DESC")
+    @Select("SELECT * FROM ext_content_extraction WHERE is_verified = 0 ORDER BY create_time DESC")
     List<ContentExtraction> selectUnverified();
 }

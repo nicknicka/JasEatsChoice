@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("t_withdraw_record")
+@TableName("wlt_withdraw_record")
 @ApiModel(description = "提现记录实体")
 public class WithdrawRecord {
 

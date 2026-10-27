@@ -8,7 +8,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("t_consume_history")
+@TableName("wlt_consume_history")
 public class ConsumeHistory {
 
     @TableId(type = IdType.ASSIGN_ID)

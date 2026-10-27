@@ -40,6 +40,6 @@ public interface FestivalMapper extends BaseMapper<Festival> {
      * @param festivalType 节日类型
      * @return 节日列表
      */
-    @Select("SELECT * FROM t_festival WHERE festival_type = #{festivalType} AND is_active = 1 ORDER BY sort_order DESC")
+    @Select("SELECT * FROM cnt_festival WHERE festival_type = #{festivalType} AND is_active = 1 ORDER BY sort_order DESC")
     List<Festival> selectByType(@Param("festivalType") String festivalType);
 }

@@ -22,6 +22,8 @@ import com.xx.jaseatschoicejava.common.ResponseResult;
 import com.xx.jaseatschoicejava.config.FileUploadConfig;
 import com.xx.jaseatschoicejava.dto.DishDescriptionRequestDTO;
 import com.xx.jaseatschoicejava.service.DishDescriptionService;
+import com.xx.jaseatschoicejava.agent.config.ChatModelProvider;
+import com.xx.jaseatschoicejava.agent.dto.AiCapabilitiesDTO;
 import com.xx.jaseatschoicejava.service.ZhipuAIService;
 
 import io.swagger.annotations.Api;
@@ -47,6 +49,9 @@ public class AIController {
     private static final long SSE_TIMEOUT_MS = 300000L;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Resource(name = "chatModelProvider")
+    private ChatModelProvider chatModelProvider;
 
     @Resource
     private ZhipuAIService zhipuAIService;
@@ -360,6 +365,13 @@ public class AIController {
      *
      * 路由: /v1/ai/health
      */
+    @ApiOperation(value = "AI 能力清单", notes = "返回当前模型支持的能力，供前端动态调整UI")
+    @GetMapping("/capabilities")
+    public ResponseResult<AiCapabilitiesDTO> getCapabilities() {
+        AiCapabilitiesDTO capabilities = chatModelProvider.getCapabilities();
+        return ResponseResult.success(capabilities);
+    }
+
     @ApiOperation(value = "健康检查", notes = "检查AI服务状态")
     @GetMapping("/health")
     public ResponseResult<Map<String, Object>> health() {

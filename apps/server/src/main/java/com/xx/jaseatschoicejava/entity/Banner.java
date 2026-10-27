@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
  * 轮播图实体类
  */
 @Data
-@TableName("t_banner")
+@TableName("cnt_banner")
 public class Banner implements Serializable {
 
     private static final long serialVersionUID = 1L;

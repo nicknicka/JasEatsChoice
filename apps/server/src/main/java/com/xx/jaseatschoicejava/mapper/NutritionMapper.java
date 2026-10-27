@@ -23,7 +23,7 @@ public interface NutritionMapper extends BaseMapper<Nutrition> {
      * @param foodName 食物名称
      * @return 营养数据列表
      */
-    @Select("SELECT * FROM t_nutrition WHERE food_name LIKE CONCAT('%', #{foodName}, '%') LIMIT 10")
+    @Select("SELECT * FROM nut_nutrition WHERE food_name LIKE CONCAT('%', #{foodName}, '%') LIMIT 10")
     List<Nutrition> searchByFoodName(@Param("foodName") String foodName);
 
     /**
@@ -32,6 +32,6 @@ public interface NutritionMapper extends BaseMapper<Nutrition> {
      * @param foodName 食物名称
      * @return 营养数据
      */
-    @Select("SELECT * FROM t_nutrition WHERE food_name = #{foodName} LIMIT 1")
+    @Select("SELECT * FROM nut_nutrition WHERE food_name = #{foodName} LIMIT 1")
     Nutrition getByFoodName(@Param("foodName") String foodName);
 }

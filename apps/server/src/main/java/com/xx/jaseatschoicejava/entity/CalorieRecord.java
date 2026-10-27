@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("t_calorie_record")
+@TableName("nut_calorie_record")
 @ApiModel(description = "卡路里摄入记录实体")
 public class CalorieRecord {
 

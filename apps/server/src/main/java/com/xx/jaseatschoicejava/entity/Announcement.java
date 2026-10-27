@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
  * 商家公告实体类
  */
 @Data
-@TableName("announcement")
+@TableName("sys_announcement")
 public class Announcement {
     @TableId(type = IdType.ASSIGN_ID)
     @ApiModelProperty(value = "公告ID")

@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("t_group_member")
+@TableName("soc_group_member")
 @ApiModel(description = "群成员关系实体")
 public class GroupMember {
 

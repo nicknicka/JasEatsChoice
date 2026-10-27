@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
  * @since 2025-01-31
  */
 @Data
-@TableName("t_festival")
+@TableName("cnt_festival")
 public class Festival {
 
     /**

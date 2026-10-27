@@ -9,7 +9,7 @@ import lombok.Data;
  * 群订单菜品实体
  */
 @Data
-@TableName("t_group_order_dish")
+@TableName("soc_group_order_dish")
 public class GroupOrderDish {
     @TableId(value = "id", type = IdType.ASSIGN_ID)
     private String id;

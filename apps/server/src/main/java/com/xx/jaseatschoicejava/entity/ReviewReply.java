@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
  * 评价回复实体类
  */
 @Data
-@TableName("t_review_reply")
+@TableName("soc_review_reply")
 public class ReviewReply {
 
     /**

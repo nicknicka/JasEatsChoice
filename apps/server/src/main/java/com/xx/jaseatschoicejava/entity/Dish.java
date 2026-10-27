@@ -22,7 +22,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName(value = "t_dish", autoResultMap = true)
+@TableName(value = "mch_dish", autoResultMap = true)
 @ApiModel(description = "菜品实体")
 public class Dish {
 

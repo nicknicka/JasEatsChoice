@@ -22,7 +22,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("t_nutrition")
+@TableName("nut_nutrition")
 @ApiModel(description = "营养数据实体")
 public class Nutrition {
 

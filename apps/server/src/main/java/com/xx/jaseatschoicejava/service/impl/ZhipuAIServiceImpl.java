@@ -1,6 +1,5 @@
 package com.xx.jaseatschoicejava.service.impl;
 
-import ai.z.openapi.ZhipuAiClient;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xx.jaseatschoicejava.service.ZhipuAIService;
@@ -19,7 +18,6 @@ import jakarta.annotation.Resource;
 import java.util.*;
 import java.io.IOException;
 
-import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 
 /**
  * 智谱AI服务实现（视觉识别与特殊功能）
@@ -39,21 +37,14 @@ import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 @Service
 public class ZhipuAIServiceImpl implements ZhipuAIService {
 
-    @Resource
     @Qualifier("visionModel")
     private ChatModel visionModel;
 
-    @Resource
     @Qualifier("aiModel")
     private ChatModel aiModel;
 
-    @Resource
-    private ZhipuAiClient zhipuClient;
 
-    @Resource
-    private ZhipuAIConfig zhipuAIConfig;
 
-    @Resource
     private StreamingChatModel streamingChatLanguageModel;
 
     private final ObjectMapper objectMapper = new ObjectMapper();

@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
  * 加菜设置实体
  */
 @Data
-@TableName("t_add_dish_setting")
+@TableName("cnt_add_dish_setting")
 public class AddDishSetting {
     @TableId(value = "id", type = IdType.ASSIGN_ID)
     private String id;

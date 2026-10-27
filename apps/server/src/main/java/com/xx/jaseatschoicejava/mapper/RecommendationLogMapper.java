@@ -19,13 +19,13 @@ public interface RecommendationLogMapper extends BaseMapper<RecommendationLog> {
     /**
      * 获取用户指定时间内的推荐记录
      */
-    @Select("SELECT * FROM recommendation_log WHERE user_id = #{userId} AND created_time >= #{startTime} ORDER BY created_time DESC")
+    @Select("SELECT * FROM ai_recommendation_log WHERE user_id = #{userId} AND created_time >= #{startTime} ORDER BY created_time DESC")
     List<RecommendationLog> getRecommendationsSince(@Param("userId") String userId, @Param("startTime") LocalDateTime startTime);
 
     /**
      * 获取推荐批次的所有记录
      */
-    @Select("SELECT * FROM recommendation_log WHERE recommendation_id = #{recommendationId} ORDER BY rank")
+    @Select("SELECT * FROM ai_recommendation_log WHERE recommendation_id = #{recommendationId} ORDER BY rank")
     List<RecommendationLog> getByRecommendationId(@Param("recommendationId") String recommendationId);
 
     /**
@@ -36,7 +36,7 @@ public interface RecommendationLogMapper extends BaseMapper<RecommendationLog> {
             "SUM(CASE WHEN is_clicked = TRUE THEN 1 ELSE 0 END) as total_clicks, " +
             "SUM(CASE WHEN is_ordered = TRUE THEN 1 ELSE 0 END) as total_orders, " +
             "AVG(score) as avg_score " +
-            "FROM recommendation_log " +
+            "FROM ai_recommendation_log " +
             "WHERE user_id = #{userId} AND created_time >= #{startTime}")
     Map<String, Object> getRecommendationStats(@Param("userId") String userId, @Param("startTime") LocalDateTime startTime);
 

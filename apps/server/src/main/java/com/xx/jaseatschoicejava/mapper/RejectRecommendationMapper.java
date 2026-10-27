@@ -20,7 +20,7 @@ public interface RejectRecommendationMapper extends BaseMapper<RejectRecommendat
      * @param dishId 菜品ID
      * @return 拒绝次数
      */
-    @Select("SELECT COUNT(*) FROM t_reject_recommendation WHERE user_id = #{userId} AND dish_id = #{dishId}")
+    @Select("SELECT COUNT(*) FROM ai_reject_recommendation WHERE user_id = #{userId} AND dish_id = #{dishId}")
     int countRejects(@Param("userId") String userId, @Param("dishId") String dishId);
 
     /**
@@ -28,7 +28,7 @@ public interface RejectRecommendationMapper extends BaseMapper<RejectRecommendat
      * @param userId 用户ID
      * @return 菜品ID列表
      */
-    @Select("SELECT DISTINCT dish_id FROM t_reject_recommendation WHERE user_id = #{userId}")
+    @Select("SELECT DISTINCT dish_id FROM ai_reject_recommendation WHERE user_id = #{userId}")
     List<String> getRejectedDishIds(@Param("userId") String userId);
 
     /**
@@ -37,7 +37,7 @@ public interface RejectRecommendationMapper extends BaseMapper<RejectRecommendat
      * @param threshold 拒绝次数阈值
      * @return 菜品ID列表
      */
-    @Select("SELECT dish_id FROM t_reject_recommendation " +
+    @Select("SELECT dish_id FROM ai_reject_recommendation " +
             "WHERE user_id = #{userId} " +
             "GROUP BY dish_id " +
             "HAVING COUNT(*) >= #{threshold}")

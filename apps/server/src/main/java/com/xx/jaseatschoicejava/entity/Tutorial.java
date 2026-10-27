@@ -10,7 +10,7 @@ import java.util.Date;
  * 支持三种数据来源：管理员(ADMIN)、商家(MERCHANT)、用户(USER)、AI生成(AI_GENERATED)
  */
 @Data
-@TableName("tutorial")
+@TableName("cnt_tutorial")
 public class Tutorial {
     @TableId(value = "id", type = IdType.ASSIGN_ID)
     private String id;

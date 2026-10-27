@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("t_admin")
+@TableName("sys_admin")
 @ApiModel(description = "管理员实体")
 public class Admin {
 

@@ -236,8 +236,8 @@ public class HotTopicServiceImpl extends ServiceImpl<HotTopicMapper, HotTopic> i
             // 示例：调用微博热搜API（需要实际配置API地址和密钥）
             Map<String, Object> response = restTemplate.getForObject(thirdPartyApiUrl, Map.class);
 
-            if (response != null && response.containsKey("hot_topic")) {
-                String topic = (String) response.get("hot_topic");
+            if (response != null && response.containsKey("cnt_hot_topic")) {
+                String topic = (String) response.get("cnt_hot_topic");
                 log.info("从第三方API获取热点成功: {}", topic);
                 return topic;
             }

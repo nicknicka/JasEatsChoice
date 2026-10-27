@@ -1,0 +1,85 @@
+# 0004 — 数据库重构第二阶段：结构优化与清理
+
+第一阶段完成了命名规范和领域分组，但还有一些深层的结构问题需要处理。
+本 ADR 记录第二阶段的发现、优先级和建议处理方式。
+
+## 发现的问题
+
+### 1. ID 类型不统一（中优先级）
+
+74 张表使用了 4 种 ID 类型：
+- `varchar(64/50)` — 27 张表（雪花算法字符串）
+- `bigint` 自增 — 20 张表
+- `varchar(32)` — 16 张表（雪花算法字符串，更短）
+- `int` — 1 张表
+
+**影响**：
+- JOIN 时类型不匹配可能导致索引失效
+- 业务代码中 ID 处理不一致（有时 Long，有时 String）
+- 新表开发时不知道该用哪种
+
+**建议**：
+- 统一为 `bigint` 自增（简单、高效），或统一为 `varchar(32)` 雪花 ID（分布式友好）
+- 考虑到当前是单体应用 + MySQL 单库，`bigint` 自增更简单高效
+- 但改 ID 类型改动极大（所有关联字段都要改），需要评估 ROI
+
+### 2. 冗余/重复代码（中优先级）✅ 已完成
+
+- **UserAddress Entity**：死代码，无调用方，对应表不存在。有 `Address` 作为活跃实现。
+- 可能还有其他冗余 Entity，待排查。
+
+### 3. 索引缺失（中优先级）✅ 已完成
+
+只有 3 张表只有主键索引（无二级索引）：
+- `cnt_recipe`
+- `nut_food_categories`
+- `wlt_discount`
+
+其中 `nut_food_categories` 是营养分类字典表，数据量小，影响不大。
+`cnt_recipe` 如果查询多的话可能需要加索引，待确认。
+
+### 4. 视图问题（已处理）
+
+- `v_active_festivals` — 已在 V4 重建
+- `v_user_behavior_stats` — 已在 V3 重建
+- `v_content_extraction_overview` — 废弃，代码无引用
+
+### 5. 字段命名不统一（低优先级）
+
+虽然表名统一了前缀，但字段名还有一些不一致：
+- 有些表用 `create_time` / `update_time`
+- 有些表用 `created_time` / `updated_time`
+- 有些表用 `created_at` / `updated_at`（ADR-0002 规划的目标，但很多表还没改）
+
+第一阶段只改了表名，字段名没有统一。
+
+### 6. 金额字段类型（高优先级）✅ 已修复
+
+需要检查所有金额字段是否都用了 `DECIMAL` 而不是 `DOUBLE` / `FLOAT`。
+浮点数存金额会有精度问题。
+
+## 第二阶段建议任务
+
+按优先级排序：
+
+1. **清理死代码 Entity**（UserAddress 等）— 改动小，收益中
+2. **补充缺失索引** — 改动小，收益中
+3. **字段命名统一**（created_at/updated_at）— 改动中，收益低（规范统一）
+4. **金额字段类型检查与修复** — 改动中，收益高（如果有精度问题的话）
+5. **ID 类型统一** — 改动极大，收益低（功能上不影响，只是规范问题）
+
+## 状态
+
+partially-completed — 已完成 P1（清理死代码）、P2（补索引）、P4（金额精度修复）。
+
+## 已完成变更
+
+- V5 迁移：补充 cnt_recipe (idx_recipe_user_create, idx_recipe_user_favorite) 和 wlt_discount (idx_discount_merchant) 索引
+- V5 迁移：soc_group_order.total_amount / wlt_discount.discount_value / wlt_discount.min_amount 从 double → decimal(10,2)
+- 删除 UserAddress / UserAddressMapper / UserAddressService / UserAddressServiceImpl 死代码
+
+## 剩余未做（ROI 偏低，暂缓）
+
+- 字段命名统一（create_time → created_at 等）— 改动大，收益低
+- ID 类型统一 — 改动极大，收益低
+

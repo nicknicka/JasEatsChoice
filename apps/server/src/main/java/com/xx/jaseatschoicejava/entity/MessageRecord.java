@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
  * @date 2025-01-26
  */
 @Data
-@TableName("t_message_record")
+@TableName("ai_message_record")
 public class MessageRecord {
 
     /**

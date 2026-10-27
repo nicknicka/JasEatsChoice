@@ -16,20 +16,20 @@ public interface RolePermissionRelationMapper extends BaseMapper<RolePermissionR
     /**
      * 删除角色的所有权限
      */
-    @Delete("DELETE FROM t_role_permission_relation WHERE role_id = #{roleId}")
+    @Delete("DELETE FROM sys_role_permission_relation WHERE role_id = #{roleId}")
     boolean deleteByRoleId(@Param("roleId") Long roleId);
 
     /**
      * 删除权限的所有角色关联
      */
-    @Delete("DELETE FROM t_role_permission_relation WHERE permission_id = #{permissionId}")
+    @Delete("DELETE FROM sys_role_permission_relation WHERE permission_id = #{permissionId}")
     boolean deleteByPermissionId(@Param("permissionId") Long permissionId);
 
     /**
      * 批量插入角色权限关联
      */
     @Insert("<script>" +
-            "INSERT INTO t_role_permission_relation (role_id, permission_id, create_time) VALUES " +
+            "INSERT INTO sys_role_permission_relation (role_id, permission_id, create_time) VALUES " +
             "<foreach collection='list' item='item' separator=','>" +
             "(#{item.roleId}, #{item.permissionId}, NOW())" +
             "</foreach>" +

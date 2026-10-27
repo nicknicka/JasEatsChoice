@@ -23,7 +23,7 @@ public interface DishStepHistoryMapper extends BaseMapper<DishStepHistory> {
      * @param orderId 订单ID
      * @return 步骤历史列表
      */
-    @Select("SELECT * FROM t_dish_step_history WHERE order_id = #{orderId} ORDER BY create_time ASC")
+    @Select("SELECT * FROM cnt_dish_step_history WHERE order_id = #{orderId} ORDER BY create_time ASC")
     List<DishStepHistory> listByOrderId(@Param("orderId") String orderId);
 
     /**
@@ -32,7 +32,7 @@ public interface DishStepHistoryMapper extends BaseMapper<DishStepHistory> {
      * @param orderDishId 订单菜品ID
      * @return 步骤历史列表
      */
-    @Select("SELECT * FROM t_dish_step_history WHERE order_dish_id = #{orderDishId} ORDER BY create_time ASC")
+    @Select("SELECT * FROM cnt_dish_step_history WHERE order_dish_id = #{orderDishId} ORDER BY create_time ASC")
     List<DishStepHistory> listByOrderDishId(@Param("orderDishId") String orderDishId);
 
     /**
@@ -42,6 +42,6 @@ public interface DishStepHistoryMapper extends BaseMapper<DishStepHistory> {
      * @param stepStatus 步骤状态
      * @return 步骤历史列表
      */
-    @Select("SELECT * FROM t_dish_step_history WHERE order_id = #{orderId} AND new_step_status = #{stepStatus} ORDER BY create_time DESC")
+    @Select("SELECT * FROM cnt_dish_step_history WHERE order_id = #{orderId} AND new_step_status = #{stepStatus} ORDER BY create_time DESC")
     List<DishStepHistory> listByOrderIdAndStepStatus(@Param("orderId") String orderId, @Param("stepStatus") Integer stepStatus);
 }

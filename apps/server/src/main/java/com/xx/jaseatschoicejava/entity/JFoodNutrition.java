@@ -19,7 +19,7 @@ import lombok.AllArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("j_food_nutrition")
+@TableName("nut_food_nutrition")
 @ApiModel(description = "食物营养成分实体")
 public class JFoodNutrition {
 

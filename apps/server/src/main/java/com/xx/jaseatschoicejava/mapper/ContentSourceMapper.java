@@ -24,7 +24,7 @@ public interface ContentSourceMapper extends BaseMapper<ContentSource> {
      * @param userId 用户ID
      * @return 内容源列表
      */
-    @Select("SELECT * FROM t_content_source WHERE user_id = #{userId} ORDER BY create_time DESC")
+    @Select("SELECT * FROM ext_content_source WHERE user_id = #{userId} ORDER BY create_time DESC")
     List<ContentSource> selectByUserId(@Param("userId") String userId);
 
     /**
@@ -32,7 +32,7 @@ public interface ContentSourceMapper extends BaseMapper<ContentSource> {
      *
      * @return 内容源列表
      */
-    @Select("SELECT * FROM t_content_source WHERE extraction_status = 'PENDING' ORDER BY create_time ASC")
+    @Select("SELECT * FROM ext_content_source WHERE extraction_status = 'PENDING' ORDER BY create_time ASC")
     List<ContentSource> selectPendingSources();
 
     /**
@@ -41,6 +41,6 @@ public interface ContentSourceMapper extends BaseMapper<ContentSource> {
      * @param maxRetryCount 最大重试次数
      * @return 内容源列表
      */
-    @Select("SELECT * FROM t_content_source WHERE extraction_status IN ('FAILED', 'PARSE_FAILED') ORDER BY create_time ASC LIMIT #{limit}")
+    @Select("SELECT * FROM ext_content_source WHERE extraction_status IN ('FAILED', 'PARSE_FAILED') ORDER BY create_time ASC LIMIT #{limit}")
     List<ContentSource> selectFailedSources(@Param("limit") int limit);
 }

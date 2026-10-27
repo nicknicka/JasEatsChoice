@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("system_config")
+@TableName("sys_system_config")
 @ApiModel(description = "系统配置实体")
 public class SystemConfig {
 

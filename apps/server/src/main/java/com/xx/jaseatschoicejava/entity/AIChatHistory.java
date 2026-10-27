@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("t_ai_chat_history")
+@TableName("ai_chat_history")
 @ApiModel(description = "AI聊天历史实体")
 public class AIChatHistory {
 

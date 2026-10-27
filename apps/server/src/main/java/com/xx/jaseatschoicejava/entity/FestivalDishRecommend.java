@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
  * @since 2025-01-31
  */
 @Data
-@TableName("t_festival_dish_recommend")
+@TableName("cnt_festival_dish_recommend")
 public class FestivalDishRecommend {
 
     /**

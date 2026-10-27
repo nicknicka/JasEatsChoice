@@ -17,7 +17,7 @@ import java.util.Map;
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
-@TableName("dish_features")
+@TableName("mch_dish_features")
 public class DishFeature {
 
     /**

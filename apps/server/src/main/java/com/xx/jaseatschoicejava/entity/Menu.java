@@ -19,7 +19,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("t_menu")
+@TableName("mch_menu")
 @ApiModel(description = "菜单实体")
 public class Menu {
 
