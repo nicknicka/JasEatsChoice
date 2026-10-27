@@ -830,26 +830,17 @@ const selectConversation = async (conversation) => {
       const groupId = conversation.groupId || conversation.id
       console.log('🔵 [selectConversation] groupId:', groupId)
 
-      const response = await api.get(`/v1/group-orders/groups/${groupId}/draft-order`, {
-        params: { initiatorId: userId.value.toString() }
+      const response = await api.get(`/v1/group-orders/groups/${groupId}/orders`, {
+        params: {
+          status: -1,
+          page: 1,
+          size: 10
+        }
       })
 
       console.log('🔵 [selectConversation] API响应:', response.data)
-      console.log('🔵 [selectConversation] response.data.success:', response.data?.success)
-      console.log('🔵 [selectConversation] response.data.id:', response.data?.id)
-
-      let draftOrder = null
-
-      // 处理两种响应格式
-      if (response.data && response.data.success) {
-        // 格式1: {success: true, data: {...}}
-        draftOrder = response.data.data
-        console.log('🟢 [selectConversation] 使用格式1: success/data')
-      } else if (response.data && response.data.id) {
-        // 格式2: 直接是订单对象 {...}
-        draftOrder = response.data
-        console.log('🟢 [selectConversation] 使用格式2: 直接订单对象')
-      }
+      const draftOrders = Array.isArray(response.data) ? response.data : []
+      const draftOrder = draftOrders.find((order) => String(order.initiatorId) === userId.value.toString()) || null
 
       // 如果有草稿订单，恢复它
       if (draftOrder) {
