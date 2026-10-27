@@ -357,12 +357,17 @@ public class MenuController {
      */
     @PostMapping("/menu/batch")
     public ResponseResult<?> batchOperateMenus(@RequestBody Map<String, Object> params) {
-        // 将菜单ID转换为String类型
-        List<String> menuIds = ((List<?>) params.get("menuIds")).stream()
+        Object menuIdsValue = params.get("menuIds");
+        if (!(menuIdsValue instanceof List<?> ids) || ids.isEmpty()) {
+            return ResponseResult.fail("400", "菜单ID不能为空");
+        }
+
+        List<String> menuIds = ids.stream()
             .map(Object::toString)
             .collect(java.util.stream.Collectors.toList());
         String action = (String) params.get("action");
-        boolean success = menuService.batchOperateMenus(menuIds, action);
+        String merchantId = params.get("merchantId") == null ? null : params.get("merchantId").toString();
+        boolean success = menuService.batchOperateMenus(menuIds, action, merchantId);
         if (success) {
             return ResponseResult.success("批量操作成功");
         }

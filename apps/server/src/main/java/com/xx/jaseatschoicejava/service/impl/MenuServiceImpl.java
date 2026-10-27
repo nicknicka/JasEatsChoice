@@ -13,6 +13,7 @@ import com.xx.jaseatschoicejava.service.DishService;
 import com.xx.jaseatschoicejava.service.MenuService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import com.xx.jaseatschoicejava.dto.MenuWithDishStatusDTO;
@@ -45,7 +46,30 @@ public class MenuServiceImpl extends ServiceImpl<MenuMapper, Menu> implements Me
     }
 
     @Override
-    public boolean batchOperateMenus(List<String> menuIds, String action) {
+    @Transactional(rollbackFor = Exception.class)
+    public boolean batchOperateMenus(List<String> menuIds, String action, String merchantId) {
+        if (menuIds == null || menuIds.isEmpty() || action == null) {
+            return false;
+        }
+
+        if ("delete".equals(action)) {
+            if (merchantId == null || merchantId.isBlank()) {
+                return false;
+            }
+            List<Menu> menus = list(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Menu>()
+                    .in(Menu::getId, menuIds)
+                    .eq(Menu::getMerchantId, merchantId));
+            if (menus.size() != menuIds.stream().distinct().count()) {
+                return false;
+            }
+
+            com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MenuDish> menuDishWrapper =
+                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
+            menuDishWrapper.in(MenuDish::getMenuId, menuIds);
+            menuDishMapper.delete(menuDishWrapper);
+            return removeByIds(menuIds);
+        }
+
         Menu updateMenu = new Menu();
         switch (action) {
             case "activate":
@@ -54,8 +78,6 @@ public class MenuServiceImpl extends ServiceImpl<MenuMapper, Menu> implements Me
             case "deactivate":
                 updateMenu.setStatus("inactive");
                 break;
-            case "delete":
-                return removeByIds(menuIds);
             default:
                 return false;
         }

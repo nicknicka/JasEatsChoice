@@ -102,6 +102,31 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     }
 
     /**
+     * 物理删除订单及其菜品明细
+     * @param orderId 订单ID
+     * @param merchantId 订单所属商家ID
+     * @return 是否删除成功
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean deleteOrder(String orderId, String merchantId) {
+        if (orderId == null || orderId.isBlank() || merchantId == null || merchantId.isBlank()) {
+            return false;
+        }
+
+        Order order = this.getById(orderId);
+        if (order == null || !merchantId.equals(order.getMerchantId())) {
+            return false;
+        }
+
+        LambdaQueryWrapper<OrderDish> orderDishWrapper = new LambdaQueryWrapper<>();
+        orderDishWrapper.eq(OrderDish::getOrderId, orderId);
+        orderDishService.remove(orderDishWrapper);
+
+        return this.removeById(orderId);
+    }
+
+    /**
      * 再来一单 - 智能复购
      * @param orderId 原订单ID
      * @return 再来一单响应数据

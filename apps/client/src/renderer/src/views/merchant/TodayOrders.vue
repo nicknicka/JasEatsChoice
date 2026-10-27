@@ -228,9 +228,11 @@ const fetchOrders = async () => {
         ...order,
         status: normalizeOrderStatusCode(order.status)
       }))
+      return true
     } else {
       console.error('[今日订单] API返回失败:', response)
       ElMessage.error(response.message || '获取订单列表失败')
+      return false
     }
   } catch (error) {
     console.error('[今日订单] 加载订单异常:', error)
@@ -241,6 +243,7 @@ const fetchOrders = async () => {
     })
     ElMessage.error('加载订单失败')
     orders.value = []
+    return false
   } finally {
     loading.value = false
     console.log('[今日订单] 获取订单完成，loading设置为false')
@@ -336,21 +339,38 @@ const cancelOrder = async (order) => {
 }
 
 // 删除订单
-const deleteOrder = (order) => {
-  ElMessageBox.confirm('删除后订单将无法恢复，确定要删除吗？', '删除订单确认', {
-    confirmButtonText: '确定删除',
-    cancelButtonText: '取消',
-    type: 'error',
-    distinguishCancelAndClose: true
-  })
-    .then(() => {
-      const index = orders.value.findIndex((item) => item.id === order.id)
-      if (index !== -1) {
-        orders.value.splice(index, 1)
-        ElMessage.success('订单已删除')
-      }
+const deleteOrder = async (order) => {
+  try {
+    await ElMessageBox.confirm('删除后订单将无法恢复，确定要删除吗？', '删除订单确认', {
+      confirmButtonText: '确定删除',
+      cancelButtonText: '取消',
+      type: 'error',
+      distinguishCancelAndClose: true
     })
-    .catch(() => {})
+  } catch {
+    return
+  }
+
+  try {
+    const response = await api.delete(`/v1/orders/${encodeURIComponent(order.id)}`, {
+      params: { merchantId }
+    })
+    if (!response.success) {
+      ElMessage.error(response.message || '删除订单失败')
+      return
+    }
+
+    const refreshed = await fetchOrders()
+    if (!refreshed) return
+    if (orders.value.some((item) => item.id === order.id)) {
+      ElMessage.error('删除后订单仍然存在，请重试')
+      return
+    }
+    ElMessage.success('订单已删除')
+  } catch (error) {
+    console.error('删除订单失败:', error)
+    ElMessage.error(error.message || '删除订单失败')
+  }
 }
 
 // 获取状态标签文本（显示全部订单的数量，不受搜索影响）

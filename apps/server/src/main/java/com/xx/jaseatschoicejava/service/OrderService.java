@@ -22,6 +22,14 @@ public interface OrderService extends IService<Order> {
     boolean createOrderWithDishes(Order order, List<OrderDish> orderDishes);
 
     /**
+     * 物理删除订单及其菜品明细
+     * @param orderId 订单ID
+     * @param merchantId 订单所属商家ID
+     * @return 是否删除成功
+     */
+    boolean deleteOrder(String orderId, String merchantId);
+
+    /**
      * 再来一单 - 智能复购
      * @param orderId 原订单ID
      * @return 再来一单响应数据

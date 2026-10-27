@@ -26,9 +26,10 @@ public interface MenuService extends IService<Menu> {
      * 批量操作菜单
      * @param menuIds 菜单ID列表
      * @param action 操作类型：activate/deactivate/delete
+     * @param merchantId 菜单所属商家ID（删除时校验归属）
      * @return 是否操作成功
      */
-    boolean batchOperateMenus(List<String> menuIds, String action);
+    boolean batchOperateMenus(List<String> menuIds, String action, String merchantId);
 
     /**
      * 审核"想吃列表"

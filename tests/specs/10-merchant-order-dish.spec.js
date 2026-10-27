@@ -50,6 +50,51 @@ async function fetchJson(page, path, params = {}) {
   return response.json()
 }
 
+async function createTemporaryOrder(page, merchantId) {
+  const userId = await page.evaluate(() => localStorage.getItem('auth_userId'))
+  const dishes = await apiRequest(page, `/v1/dishes?merchantId=${encodeURIComponent(merchantId)}`)
+  const dish = dishes?.[0]
+  expect(dish, '商家没有可用于创建临时订单的菜品').toBeTruthy()
+
+  const orderId = await apiRequest(page, '/v1/orders', {
+    method: 'POST',
+    body: JSON.stringify({
+      order: {
+        userId: String(userId),
+        merchantId,
+        totalAmount: Number(dish.price),
+        status: 1,
+        address: '删除回归临时订单'
+      },
+      dishes: [{ dishId: String(dish.id), quantity: 1, price: Number(dish.price) }]
+    })
+  })
+  return { orderId, dish }
+}
+
+async function createTemporaryMenu(page, merchantId, dishId) {
+  const name = `删除回归-${Date.now()}`
+  const menu = await apiRequest(page, `/v1/menus/merchants/${encodeURIComponent(merchantId)}/menu`, {
+    method: 'POST',
+    body: JSON.stringify({
+      merchantId,
+      menuName: name,
+      category: '删除回归',
+      status: 'inactive'
+    })
+  })
+  await apiRequest(page, `/v1/menus/merchants/${encodeURIComponent(merchantId)}/menu/${encodeURIComponent(menu.id)}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      name,
+      category: '删除回归',
+      status: 'offline',
+      dishes: [{ id: String(dishId), status: 1 }]
+    })
+  })
+  return { ...menu, name }
+}
+
 test.describe('模块十：商家端-订单与菜品管理', () => {
   test.beforeEach(async ({ page }) => {
     await loginAsMerchant(page)
@@ -264,6 +309,88 @@ test.describe('模块十：商家端-订单与菜品管理', () => {
     } catch (e) {
       markFailed('10.10', e.message.slice(0, 50))
       throw e
+    }
+  })
+
+  test('10.12 删除订单后查询与刷新均不再出现', async ({ page }) => {
+    markRunning('10.12')
+    const merchantId = await getMerchantId()
+    let orderId
+    try {
+      const temporary = await createTemporaryOrder(page, merchantId)
+      orderId = temporary.orderId
+      await page.goto('/merchant/home/orders')
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
+      const row = page.locator('.order-item', { hasText: orderId })
+      await expect(row).toBeVisible()
+      await row.locator('.more-btn').click()
+      await page.locator('.el-dropdown-menu:visible').getByText('删除订单', { exact: true }).click()
+      await page.locator('.el-message-box').getByRole('button', { name: '确定删除' }).click()
+      await expect(page.locator('.el-message').filter({ hasText: '订单已删除' })).toBeVisible()
+
+      await expect.poll(async () => {
+        const orders = await apiRequest(page, `/v1/orders/merchant/${encodeURIComponent(merchantId)}?today=false`)
+        return orders.some((order) => order.id === orderId)
+      }).toBe(false)
+
+      await page.reload()
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
+      await expect(page.locator('.order-item', { hasText: orderId })).toHaveCount(0)
+      markPassed('10.12', `临时订单 ${orderId} 删除后 API 查询与刷新均不存在`)
+      orderId = null
+    } catch (e) {
+      markFailed('10.12', e.message.slice(0, 50))
+      throw e
+    } finally {
+      if (orderId) {
+        await apiRequest(page, `/v1/orders/${encodeURIComponent(orderId)}?merchantId=${encodeURIComponent(merchantId)}`, {
+          method: 'DELETE'
+        }).catch(() => null)
+      }
+    }
+  })
+
+  test('10.13 批量删除菜单后查询与刷新均不再出现', async ({ page }) => {
+    markRunning('10.13')
+    const merchantId = await getMerchantId()
+    const dishes = await apiRequest(page, `/v1/dishes?merchantId=${encodeURIComponent(merchantId)}`)
+    const dish = dishes?.[0]
+    expect(dish, '商家没有可用于创建临时菜单的菜品').toBeTruthy()
+    let menuId
+    let menuName
+    try {
+      const menu = await createTemporaryMenu(page, merchantId, dish.id)
+      menuId = menu.id
+      menuName = menu.name
+      await page.goto('/merchant/home/menu')
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
+      const row = page.locator('.menu-item', { hasText: menuName })
+      await expect(row).toBeVisible()
+      await row.locator('.el-checkbox').click()
+      await page.getByRole('button', { name: '批量删除' }).click()
+      await page.locator('.el-message-box').getByRole('button', { name: '确定删除' }).click()
+      await expect(page.locator('.el-message').filter({ hasText: '批量删除成功' })).toBeVisible()
+
+      await expect.poll(async () => {
+        const menus = await apiRequest(page, `/v1/menus/merchants/${encodeURIComponent(merchantId)}/menu`)
+        return menus.some((item) => item.id === menuId)
+      }).toBe(false)
+
+      await page.reload()
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
+      await expect(page.locator('.menu-item', { hasText: menuName })).toHaveCount(0)
+      markPassed('10.13', `临时菜单 ${menuName} 批量删除后 API 查询与刷新均不存在`)
+      menuId = null
+    } catch (e) {
+      markFailed('10.13', e.message.slice(0, 50))
+      throw e
+    } finally {
+      if (menuId) {
+        await apiRequest(page, '/v1/menus/menu/batch', {
+          method: 'POST',
+          body: JSON.stringify({ menuIds: [menuId], action: 'delete', merchantId })
+        }).catch(() => null)
+      }
     }
   })
 
