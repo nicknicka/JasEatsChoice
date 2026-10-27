@@ -7,6 +7,7 @@ import com.xx.jaseatschoicejava.entity.Festival;
 import com.xx.jaseatschoicejava.entity.FestivalDishRecommend;
 import com.xx.jaseatschoicejava.entity.UserCustomEvent;
 import com.xx.jaseatschoicejava.enums.UserEventType;
+import com.xx.jaseatschoicejava.exception.BusinessException;
 import com.xx.jaseatschoicejava.mapper.FestivalDishRecommendMapper;
 import com.xx.jaseatschoicejava.mapper.FestivalMapper;
 import com.xx.jaseatschoicejava.mapper.UserCustomEventMapper;
@@ -174,9 +175,28 @@ public class FestivalServiceImpl implements FestivalService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean submitRecommendFeedback(RecommendFeedbackDTO dto, String userId) {
+        if (dto == null || dto.getRecommendHistoryId() == null
+                || dto.getRecommendHistoryId().isBlank()) {
+            throw new BusinessException("400", "推荐记录ID不能为空");
+        }
+        if (dto.getFeedbackScore() != null) {
+            throw new BusinessException("400", "节日推荐反馈暂不支持评分");
+        }
+
+        int clickIncrement = Boolean.TRUE.equals(dto.getIsClicked()) ? 1 : 0;
+        int orderIncrement = Boolean.TRUE.equals(dto.getIsOrdered()) ? 1 : 0;
+        if (clickIncrement == 0 && orderIncrement == 0) {
+            throw new BusinessException("400", "反馈内容不能为空");
+        }
+
         log.info("提交推荐反馈: userId={}, recommendHistoryId={}, feedback={}",
             userId, dto.getRecommendHistoryId(), dto.getFeedbackScore());
-        // TODO: 实现反馈记录逻辑
+
+        int updated = festivalDishRecommendMapper.incrementFeedbackCounts(
+            dto.getRecommendHistoryId(), clickIncrement, orderIncrement);
+        if (updated != 1) {
+            throw new BusinessException("404", "推荐记录不存在");
+        }
         return true;
     }
 
@@ -185,8 +205,13 @@ public class FestivalServiceImpl implements FestivalService {
     public String recordRecommend(String userId, String festivalId, String dishId, String recommendType) {
         log.info("记录推荐: userId={}, festivalId={}, dishId={}, type={}",
             userId, festivalId, dishId, recommendType);
-        // TODO: 实现推荐记录逻辑
-        return UUID.randomUUID().toString().replace("-", "");
+
+        FestivalDishRecommend recommend =
+            festivalDishRecommendMapper.selectByFestivalAndDish(festivalId, dishId);
+        if (recommend == null) {
+            throw new BusinessException("404", "推荐记录不存在");
+        }
+        return recommend.getId();
     }
 
     /**
@@ -223,10 +248,7 @@ public class FestivalServiceImpl implements FestivalService {
                     item.setRecommendReason(rec.getRecommendReason());
                     item.setPriority(rec.getPriority());
 
-                    // 记录推荐历史
-                    String historyId = recordRecommend(userId, festival.getId(),
-                        rec.getDishId(), rec.getRecommendType());
-                    item.setRecommendHistoryId(historyId);
+                    item.setRecommendHistoryId(rec.getId());
 
                     return item;
                 })
@@ -285,9 +307,7 @@ public class FestivalServiceImpl implements FestivalService {
                         item.setRecommendReason(rec.getRecommendReason());
                         item.setPriority(rec.getPriority());
 
-                        String historyId = recordRecommend(userId, festival.getId(),
-                            rec.getDishId(), rec.getRecommendType());
-                        item.setRecommendHistoryId(historyId);
+                        item.setRecommendHistoryId(rec.getId());
 
                         return item;
                     })
