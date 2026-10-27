@@ -3,6 +3,7 @@ package com.xx.jaseatschoicejava.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xx.jaseatschoicejava.dto.*;
 import com.xx.jaseatschoicejava.entity.*;
@@ -10,7 +11,13 @@ import com.xx.jaseatschoicejava.enums.AddDishApprovalStatus;
 import com.xx.jaseatschoicejava.enums.AddDishPermission;
 import com.xx.jaseatschoicejava.mapper.AddDishRequestMapper;
 import com.xx.jaseatschoicejava.mapper.AddDishSettingMapper;
+import com.xx.jaseatschoicejava.mapper.DishFeatureMapper;
 import com.xx.jaseatschoicejava.service.AddDishService;
+import com.xx.jaseatschoicejava.service.DishService;
+import com.xx.jaseatschoicejava.service.GroupMemberService;
+import com.xx.jaseatschoicejava.service.GroupOrderService;
+import com.xx.jaseatschoicejava.service.IngredientConflictRuleService;
+import com.xx.jaseatschoicejava.service.UserService;
 import com.xx.jaseatschoicejava.util.IdGenerator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +27,13 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -36,6 +49,24 @@ public class AddDishServiceImpl extends ServiceImpl<AddDishRequestMapper, AddDis
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private DishService dishService;
+
+    @Autowired
+    private GroupOrderService groupOrderService;
+
+    @Autowired
+    private GroupMemberService groupMemberService;
+
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private IngredientConflictRuleService conflictRuleService;
+
+    @Autowired
+    private DishFeatureMapper dishFeatureMapper;
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String createAddDishRequest(CreateAddDishDTO dto, String requestUserId) {
@@ -44,10 +75,14 @@ public class AddDishServiceImpl extends ServiceImpl<AddDishRequestMapper, AddDis
             throw new RuntimeException("无加菜权限");
         }
 
-        // 2. 获取群订单信息（这里需要注入GroupOrderService，暂时简化处理）
-        // GroupOrder groupOrder = groupOrderService.getById(dto.getGroupOrderId());
+        // 2. 获取群订单信息
+        GroupOrder groupOrder = groupOrderService.getById(dto.getGroupOrderId());
+        if (groupOrder == null) {
+            throw new RuntimeException("群订单不存在");
+        }
 
         // 3. 检查加菜设置（预算限制、数量限制）
+        BigDecimal totalAmount = calculateTotalAmount(dto);
         AddDishSetting setting = getSettingEntity(dto.getGroupOrderId());
         if (setting != null) {
             // 检查数量限制
@@ -56,8 +91,6 @@ public class AddDishServiceImpl extends ServiceImpl<AddDishRequestMapper, AddDis
                 throw new RuntimeException("超过单次加菜数量限制");
             }
 
-            // 计算总金额（需要获取菜品价格，这里简化处理）
-            BigDecimal totalAmount = calculateTotalAmount(dto);
             if (setting.getBudgetLimit() != null &&
                 totalAmount.compareTo(setting.getBudgetLimit()) > 0) {
                 throw new RuntimeException("超过单次加菜预算限制");
@@ -72,7 +105,8 @@ public class AddDishServiceImpl extends ServiceImpl<AddDishRequestMapper, AddDis
         request.setGroupOrderId(dto.getGroupOrderId());
         request.setOriginalOrderId(dto.getOriginalOrderId());
         request.setRequestUserId(requestUserId);
-        // request.setMerchantId(merchantId); // 从群订单获取
+        request.setMerchantId(groupOrder.getMerchantId());
+        request.setTotalAmount(totalAmount);
         request.setApprovalStatus(AddDishApprovalStatus.PENDING.getValue());
         request.setCreatedAt(LocalDateTime.now());
         request.setUpdatedAt(LocalDateTime.now());
@@ -202,12 +236,64 @@ public class AddDishServiceImpl extends ServiceImpl<AddDishRequestMapper, AddDis
 
     @Override
     public AllergyCheckResultDTO checkAllergyConflict(CreateAddDishDTO dto) {
-        // TODO: 实现饮食禁忌检测逻辑
-        // 1. 获取群成员列表
-        // 2. 获取成员饮食禁忌
-        // 3. 获取菜品食材信息
-        // 4. 检测冲突
-        return new AllergyCheckResultDTO(false, new ArrayList<>());
+        if (dto == null || dto.getGroupOrderId() == null) {
+            return new AllergyCheckResultDTO(false, new ArrayList<>());
+        }
+
+        GroupOrder groupOrder = groupOrderService.getById(dto.getGroupOrderId());
+        if (groupOrder == null || groupOrder.getGroupId() == null) {
+            return new AllergyCheckResultDTO(false, new ArrayList<>());
+        }
+
+        Map<String, User> groupUsers = new HashMap<>();
+        List<GroupMember> groupMembers = groupMemberService.getGroupMembers(groupOrder.getGroupId());
+        if (groupMembers != null) {
+            for (GroupMember member : groupMembers) {
+                User user = userService.getById(member.getUserId());
+                if (user != null) {
+                    groupUsers.put(user.getUserId(), user);
+                }
+            }
+        }
+
+        List<IngredientConflictRule> rules = conflictRuleService.getEnabledRules();
+        if (rules == null) {
+            rules = new ArrayList<>();
+        }
+
+        List<AllergyCheckResultDTO.ConflictItem> conflicts = new ArrayList<>();
+        if (dto.getDishItems() != null) {
+            for (CreateAddDishDTO.DishItem item : dto.getDishItems()) {
+                Dish dish = dishService.getById(item.getDishId());
+                if (dish == null) {
+                    continue;
+                }
+
+                Set<String> ingredientNames = resolveIngredientNames(dish);
+                List<AllergyCheckResultDTO.UserConflict> conflictUsers = new ArrayList<>();
+                for (User user : groupUsers.values()) {
+                    List<String> matchedAllergies = new ArrayList<>();
+                    Set<String> userAllergies = new LinkedHashSet<>(parseAllergies(user.getAllergies()));
+                    userAllergies.addAll(parseAllergies(user.getPreferTags()));
+                    for (String allergy : userAllergies) {
+                        if (matchesDishIngredient(allergy, ingredientNames, rules)) {
+                            matchedAllergies.add(allergy);
+                        }
+                    }
+                    if (!matchedAllergies.isEmpty()) {
+                        conflictUsers.add(new AllergyCheckResultDTO.UserConflict(
+                                user.getUserId(), user.getNickname(), matchedAllergies));
+                    }
+                }
+
+                if (!conflictUsers.isEmpty()) {
+                    conflicts.add(new AllergyCheckResultDTO.ConflictItem(
+                            dish.getId(), dish.getName(), conflictUsers));
+                }
+            }
+        }
+
+        return new AllergyCheckResultDTO(!conflicts.isEmpty(), conflicts);
     }
 
     @Override
@@ -263,9 +349,8 @@ public class AddDishServiceImpl extends ServiceImpl<AddDishRequestMapper, AddDis
         // 3. 检查权限模式
         if (AddDishPermission.INITIATOR_ONLY.getValue().equals(setting.getAddDishPermission())) {
             // 仅发起者可加菜 - 需要检查是否为发起者
-            // GroupOrder groupOrder = groupOrderService.getById(groupOrderId);
-            // return groupOrder.getInitiatorId().equals(userId);
-            return true; // 临时返回
+            GroupOrder groupOrder = groupOrderService.getById(groupOrderId);
+            return groupOrder != null && Objects.equals(groupOrder.getInitiatorId(), userId);
         }
 
         return true;
@@ -319,11 +404,190 @@ public class AddDishServiceImpl extends ServiceImpl<AddDishRequestMapper, AddDis
     }
 
     /**
-     * 计算总金额（简化版本）
+     * 按菜品价格和数量计算总金额
      */
     private BigDecimal calculateTotalAmount(CreateAddDishDTO dto) {
-        // TODO: 根据菜品ID获取实际价格并计算
-        return BigDecimal.ZERO;
+        if (dto == null || dto.getDishItems() == null || dto.getDishItems().isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+
+        BigDecimal total = BigDecimal.ZERO;
+        for (CreateAddDishDTO.DishItem item : dto.getDishItems()) {
+            Dish dish = dishService.getById(item.getDishId());
+            if (dish == null || dish.getPrice() == null) {
+                throw new RuntimeException("菜品不存在或未设置价格: " + item.getDishId());
+            }
+            int quantity = item.getQuantity() == null ? 0 : item.getQuantity();
+            total = total.add(dish.getPrice().multiply(BigDecimal.valueOf(quantity)));
+        }
+        return total;
+    }
+
+    /**
+     * 获取菜品的食材名称，优先使用菜品特征中的名称，并解析菜品 JSON 中的 ID。
+     */
+    private Set<String> resolveIngredientNames(Dish dish) {
+        Set<String> tokens = new LinkedHashSet<>();
+        tokens.addAll(parseIngredientTokens(dish.getIngredients()));
+
+        tokens.addAll(parseIngredientTokens(
+                dishFeatureMapper.getIngredientsJsonByDishId(dish.getId())));
+
+        Set<String> names = new LinkedHashSet<>();
+        for (String token : tokens) {
+            if (!isNumeric(token)) {
+                names.add(token);
+            }
+        }
+        return names;
+    }
+
+    private Set<String> parseIngredientTokens(String ingredientsJson) {
+        Set<String> tokens = new LinkedHashSet<>();
+        if (ingredientsJson == null || ingredientsJson.trim().isEmpty()) {
+            return tokens;
+        }
+        try {
+            collectIngredientTokens(objectMapper.readTree(ingredientsJson), tokens);
+        } catch (Exception e) {
+            log.warn("解析菜品食材失败: {}", ingredientsJson, e);
+        }
+        return tokens;
+    }
+
+    private void collectIngredientTokens(JsonNode node, Set<String> tokens) {
+        if (node == null || node.isNull()) {
+            return;
+        }
+        if (node.isValueNode()) {
+            String value = node.asText().trim();
+            if (!value.isEmpty()) {
+                tokens.add(value);
+            }
+            return;
+        }
+        if (node.isArray()) {
+            for (JsonNode child : node) {
+                collectIngredientTokens(child, tokens);
+            }
+            return;
+        }
+        if (node.isObject()) {
+            JsonNode name = node.get("name");
+            if (name == null) {
+                name = node.get("ingredientName");
+            }
+            if (name != null && !name.isNull()) {
+                tokens.add(name.asText());
+                return;
+            }
+
+            JsonNode id = node.get("id");
+            if (id == null) {
+                id = node.get("ingredientId");
+            }
+            if (id != null && !id.isNull()) {
+                tokens.add(id.asText());
+                return;
+            }
+
+            node.fields().forEachRemaining(entry -> collectIngredientTokens(entry.getValue(), tokens));
+        }
+    }
+
+    private List<String> parseAllergies(JsonNode allergies) {
+        List<String> result = new ArrayList<>();
+        if (allergies == null || allergies.isNull()) {
+            return result;
+        }
+        if (allergies.isArray()) {
+            for (JsonNode node : allergies) {
+                if (node != null && !node.isNull() && !node.asText().trim().isEmpty()) {
+                    result.add(node.asText().trim());
+                }
+            }
+        } else if (allergies.isObject()) {
+            JsonNode nested = allergies.get("allergies");
+            if (nested != null && nested.isArray()) {
+                for (JsonNode node : nested) {
+                    if (node != null && !node.isNull() && !node.asText().trim().isEmpty()) {
+                        result.add(node.asText().trim());
+                    }
+                }
+            }
+        } else if (allergies.isTextual()) {
+            for (String item : allergies.asText().split("[,，、]")) {
+                if (!item.trim().isEmpty()) {
+                    result.add(item.trim());
+                }
+            }
+        }
+        return result;
+    }
+
+    private boolean matchesDishIngredient(String allergy, Set<String> ingredientNames,
+                                          List<IngredientConflictRule> rules) {
+        for (String ingredientName : ingredientNames) {
+            if (ingredientNameMatches(allergy, ingredientName)) {
+                return true;
+            }
+        }
+
+        for (IngredientConflictRule rule : rules) {
+            for (String ruleIngredient : parseRuleIngredients(rule.getMainIngredients())) {
+                boolean dishContains = ingredientNames.stream()
+                        .anyMatch(name -> ingredientNameMatches(name, ruleIngredient));
+                if (dishContains && ingredientNameMatches(allergy, ruleIngredient)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private List<String> parseRuleIngredients(String json) {
+        List<String> result = new ArrayList<>();
+        if (json == null || json.trim().isEmpty()) {
+            return result;
+        }
+        try {
+            JsonNode node = objectMapper.readTree(json);
+            if (node.isArray()) {
+                for (JsonNode item : node) {
+                    if (item != null && !item.isNull() && !item.asText().trim().isEmpty()) {
+                        result.add(item.asText().trim());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("解析冲突规则食材失败: {}", json, e);
+        }
+        return result;
+    }
+
+    private boolean ingredientNameMatches(String left, String right) {
+        String normalizedLeft = normalizeIngredientName(left);
+        String normalizedRight = normalizeIngredientName(right);
+        if (normalizedLeft.isEmpty() || normalizedRight.isEmpty()) {
+            return false;
+        }
+        return normalizedLeft.equals(normalizedRight)
+                || normalizedLeft.contains(normalizedRight)
+                || normalizedRight.contains(normalizedLeft);
+    }
+
+    private String normalizeIngredientName(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.trim()
+                .replaceAll("\\s+", "")
+                .replaceAll("[（(].*?[）)]", "")
+                .toLowerCase(Locale.ROOT);
+    }
+
+    private boolean isNumeric(String value) {
+        return value != null && value.matches("\\d+");
     }
 
     /**
@@ -337,6 +601,7 @@ public class AddDishServiceImpl extends ServiceImpl<AddDishRequestMapper, AddDis
         vo.setStatusDesc(AddDishApprovalStatus.fromValue(request.getApprovalStatus()).getDesc());
         vo.setSubmitTime(request.getCreatedAt());
         vo.setRejectReason(request.getRejectReason());
+        vo.setTotalAmount(request.getTotalAmount());
 
         // 计算剩余时间
         if (request.getTimeoutTime() != null &&

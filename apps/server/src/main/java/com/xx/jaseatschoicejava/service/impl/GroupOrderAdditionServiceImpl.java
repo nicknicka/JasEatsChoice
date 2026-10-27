@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.xx.jaseatschoicejava.entity.GroupOrder;
 import com.xx.jaseatschoicejava.entity.GroupOrderAddition;
+import com.xx.jaseatschoicejava.entity.Dish;
 import com.xx.jaseatschoicejava.entity.Notification;
 import com.xx.jaseatschoicejava.entity.Order;
 import com.xx.jaseatschoicejava.entity.OrderDish;
@@ -11,6 +12,7 @@ import com.xx.jaseatschoicejava.entity.User;
 import com.xx.jaseatschoicejava.mapper.GroupOrderAdditionMapper;
 import com.xx.jaseatschoicejava.service.GroupOrderAdditionService;
 import com.xx.jaseatschoicejava.service.GroupOrderService;
+import com.xx.jaseatschoicejava.service.DishService;
 import com.xx.jaseatschoicejava.service.NotificationService;
 import com.xx.jaseatschoicejava.service.OrderService;
 import com.xx.jaseatschoicejava.service.OrderDishService;
@@ -39,6 +41,7 @@ public class GroupOrderAdditionServiceImpl
         implements GroupOrderAdditionService {
 
     private final GroupOrderService groupOrderService;
+    private final DishService dishService;
     private final UserService userService;
     private final OrderService orderService;
     private final OrderDishService orderDishService;
@@ -63,8 +66,8 @@ public class GroupOrderAdditionServiceImpl
             throw new RuntimeException("未找到进行中的群订单");
         }
 
-        // 2. 计算总金额（简化实现，前端传入已计算好的金额）
-        BigDecimal totalAmount = new BigDecimal("0");
+        // 2. 计算总金额
+        BigDecimal totalAmount = calculateTotalAmount(dishes);
 
         // 3. 创建加菜记录
         GroupOrderAddition addition = new GroupOrderAddition();
@@ -72,7 +75,11 @@ public class GroupOrderAdditionServiceImpl
         addition.setGroupId(groupId);
         addition.setUserId(userId);
         addition.setUserName(getUserName(userId));
-        addition.setDishes("{\"dishes\": []}"); // 简化
+        try {
+            addition.setDishes(objectMapper.writeValueAsString(Map.of("dishes", dishes)));
+        } catch (Exception e) {
+            throw new RuntimeException("保存菜品信息失败", e);
+        }
         addition.setTotalAmount(totalAmount);
         addition.setStatus("pending_review");
         addition.setRequestTime(LocalDateTime.now());
@@ -257,8 +264,28 @@ public class GroupOrderAdditionServiceImpl
     @Override
     public BigDecimal calculateTotalAmount(List<Map<String, Object>> dishes) {
         BigDecimal total = BigDecimal.ZERO;
-        // TODO: 实现从菜品ID获取价格并计算总额
-        // 简化实现，返回0
+        if (dishes == null || dishes.isEmpty()) {
+            return total;
+        }
+
+        for (Map<String, Object> item : dishes) {
+            Object dishIdValue = item.get("dishId");
+            if (dishIdValue == null) {
+                dishIdValue = item.get("id");
+            }
+            if (dishIdValue == null) {
+                throw new RuntimeException("菜品ID不能为空");
+            }
+
+            Dish dish = dishService.getById(dishIdValue.toString());
+            if (dish == null || dish.getPrice() == null) {
+                throw new RuntimeException("菜品不存在或未设置价格: " + dishIdValue);
+            }
+
+            Object quantityValue = item.get("quantity");
+            int quantity = quantityValue == null ? 1 : Integer.parseInt(quantityValue.toString());
+            total = total.add(dish.getPrice().multiply(BigDecimal.valueOf(quantity)));
+        }
         return total;
     }
 

@@ -21,6 +21,12 @@ public interface DishFeatureMapper extends BaseMapper<DishFeature> {
     DishFeature getByDishId(@Param("dishId") String dishId);
 
     /**
+     * 根据菜品ID查询食材 JSON，避免 List 字段缺少 type handler 时返回 null。
+     */
+    @Select("SELECT COALESCE(CAST(ingredients AS CHAR), '[]') FROM mch_dish_features WHERE dish_id = #{dishId}")
+    String getIngredientsJsonByDishId(@Param("dishId") String dishId);
+
+    /**
      * 根据分类查询菜品特征
      */
     @Select("SELECT * FROM mch_dish_features WHERE category = #{category} ORDER BY popularity_score DESC")
