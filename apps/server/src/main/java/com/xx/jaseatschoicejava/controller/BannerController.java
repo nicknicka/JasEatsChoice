@@ -103,8 +103,8 @@ public class BannerController {
     @PostMapping
     public ResponseResult<?> createBanner(@RequestBody Banner banner) {
         try {
-            banner.setCreateTime(LocalDateTime.now());
-            banner.setUpdateTime(LocalDateTime.now());
+            banner.setCreatedAt(LocalDateTime.now());
+            banner.setUpdatedAt(LocalDateTime.now());
             boolean success = bannerService.save(banner);
             if (success) {
                 return ResponseResult.success(banner, "创建成功");
@@ -123,7 +123,7 @@ public class BannerController {
     public ResponseResult<?> updateBanner(@PathVariable String bannerId, @RequestBody Banner banner) {
         try {
             banner.setId(bannerId);
-            banner.setUpdateTime(LocalDateTime.now());
+            banner.setUpdatedAt(LocalDateTime.now());
             boolean success = bannerService.updateById(banner);
             if (success) {
                 return ResponseResult.success("更新成功");
@@ -162,7 +162,7 @@ public class BannerController {
             Banner banner = bannerService.getById(bannerId);
             if (banner != null) {
                 banner.setStatus(status);
-                banner.setUpdateTime(LocalDateTime.now());
+                banner.setUpdatedAt(LocalDateTime.now());
                 boolean success = bannerService.updateById(banner);
                 if (success) {
                     return ResponseResult.success("状态更新成功");

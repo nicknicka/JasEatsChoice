@@ -172,8 +172,8 @@ public class ChatSessionController {
             session.setGroupId(groupId); // ⭐ 保存 groupId（仅群聊有值）
             session.setUnreadCount(0);
             session.setPinned(0);  // 0-未置顶
-            session.setCreateTime(LocalDateTime.now());
-            session.setUpdateTime(LocalDateTime.now());
+            session.setCreatedAt(LocalDateTime.now());
+            session.setUpdatedAt(LocalDateTime.now());
 
             // ⭐ 设置 targetId（仅单聊）
             if ("single".equals(sessionType) && targetId != null && !targetId.isEmpty()) {
@@ -192,7 +192,7 @@ public class ChatSessionController {
                     existingSession.setSessionName(sessionName);
                     existingSession.setAvatar(avatar);
                     existingSession.setMemberCount(memberCount);
-                    existingSession.setUpdateTime(LocalDateTime.now());
+                    existingSession.setUpdatedAt(LocalDateTime.now());
                     chatSessionService.updateById(existingSession);
                     return ResponseResult.success(existingSession);
                 } else {
@@ -204,7 +204,7 @@ public class ChatSessionController {
             session.setSessionName(sessionName);
             session.setAvatar(avatar);
             session.setMemberCount(memberCount);
-            session.setUpdateTime(LocalDateTime.now());
+            session.setUpdatedAt(LocalDateTime.now());
             chatSessionService.updateById(session);
         }
 
@@ -229,7 +229,7 @@ public class ChatSessionController {
         updateWrapper.eq(ChatSession::getSessionId, sessionId);
         updateWrapper.set(ChatSession::getLastMessage, content);
         updateWrapper.set(ChatSession::getLastMessageTime, messageTime);
-        updateWrapper.set(ChatSession::getUpdateTime, LocalDateTime.now());
+        updateWrapper.set(ChatSession::getUpdatedAt, LocalDateTime.now());
         chatSessionService.update(updateWrapper);
 
         return ResponseResult.success("更新成功");
@@ -253,7 +253,7 @@ public class ChatSessionController {
 
         if (session != null) {
             session.setUnreadCount((session.getUnreadCount() != null ? session.getUnreadCount() : 0) + 1);
-            session.setUpdateTime(LocalDateTime.now());
+            session.setUpdatedAt(LocalDateTime.now());
             chatSessionService.updateById(session);
         }
 
@@ -274,7 +274,7 @@ public class ChatSessionController {
         updateWrapper.eq(ChatSession::getUserId, userId);
         updateWrapper.eq(ChatSession::getSessionId, sessionId);
         updateWrapper.set(ChatSession::getUnreadCount, 0);
-        updateWrapper.set(ChatSession::getUpdateTime, LocalDateTime.now());
+        updateWrapper.set(ChatSession::getUpdatedAt, LocalDateTime.now());
         chatSessionService.update(updateWrapper);
 
         return ResponseResult.success("清除成功");
@@ -300,7 +300,7 @@ public class ChatSessionController {
             // 切换置顶状态：0变1，1变0
             int newPinned = (session.getPinned() == null || session.getPinned() == 0) ? 1 : 0;
             session.setPinned(newPinned);
-            session.setUpdateTime(LocalDateTime.now());
+            session.setUpdatedAt(LocalDateTime.now());
             chatSessionService.updateById(session);
             return ResponseResult.success(newPinned == 1);
         }

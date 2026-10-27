@@ -22,7 +22,7 @@ public interface ExtractionTaskMapper extends BaseMapper<ExtractionTask> {
      *
      * @return 任务列表
      */
-    @Select("SELECT * FROM ext_extraction_task WHERE task_status = 'PENDING' ORDER BY priority DESC, create_time ASC")
+    @Select("SELECT * FROM ext_extraction_task WHERE task_status = 'PENDING' ORDER BY priority DESC, created_at ASC")
     List<ExtractionTask> selectPendingTasks();
 
     /**
@@ -31,6 +31,6 @@ public interface ExtractionTaskMapper extends BaseMapper<ExtractionTask> {
      * @param sourceId 内容源ID
      * @return 任务列表
      */
-    @Select("SELECT * FROM ext_extraction_task WHERE source_id = #{sourceId} ORDER BY create_time DESC")
+    @Select("SELECT * FROM ext_extraction_task WHERE source_id = #{sourceId} ORDER BY created_at DESC")
     List<ExtractionTask> selectBySourceId(@Param("sourceId") String sourceId);
 }

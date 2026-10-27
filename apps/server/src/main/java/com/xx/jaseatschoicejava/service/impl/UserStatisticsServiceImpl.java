@@ -37,7 +37,7 @@ public class UserStatisticsServiceImpl implements UserStatisticsService {
         // 查询指定时间范围内的订单
         LambdaQueryWrapper<Order> orderQuery = new LambdaQueryWrapper<>();
         orderQuery.eq(Order::getUserId, userId)
-                .ge(Order::getCreateTime, startTime)
+                .ge(Order::getCreatedAt, startTime)
                 .in(Order::getStatus, Arrays.asList(1, 2, 3, 4)); // 待接单、制作中、已完成、已评价
 
         List<Order> orders = orderService.list(orderQuery);
@@ -62,13 +62,13 @@ public class UserStatisticsServiceImpl implements UserStatisticsService {
         // 按日期分组统计
         Map<String, Long> dailyOrders = orders.stream()
                 .collect(Collectors.groupingBy(
-                        o -> o.getCreateTime().toLocalDate().toString(),
+                        o -> o.getCreatedAt().toLocalDate().toString(),
                         Collectors.counting()
                 ));
 
         Map<String, BigDecimal> dailyAmount = orders.stream()
                 .collect(Collectors.groupingBy(
-                        o -> o.getCreateTime().toLocalDate().toString(),
+                        o -> o.getCreatedAt().toLocalDate().toString(),
                         Collectors.mapping(
                                 o -> o.getTotalAmount() != null ? o.getTotalAmount() : BigDecimal.ZERO,
                                 Collectors.reducing(BigDecimal.ZERO, BigDecimal::add)
@@ -95,7 +95,7 @@ public class UserStatisticsServiceImpl implements UserStatisticsService {
 
         LambdaQueryWrapper<Order> orderQuery = new LambdaQueryWrapper<>();
         orderQuery.eq(Order::getUserId, userId)
-                .ge(Order::getCreateTime, startTime)
+                .ge(Order::getCreatedAt, startTime)
                 .in(Order::getStatus, Arrays.asList(3, 4)); // 已完成或已评价
 
         List<Order> orders = orderService.list(orderQuery);
@@ -111,7 +111,7 @@ public class UserStatisticsServiceImpl implements UserStatisticsService {
 
             // 查询当天的订单
             long orderCount = orders.stream()
-                    .filter(o -> o.getCreateTime().toLocalDate().equals(date.toLocalDate()))
+                    .filter(o -> o.getCreatedAt().toLocalDate().equals(date.toLocalDate()))
                     .count();
 
             // 模拟卡路里摄入（每单约500-800卡）
@@ -143,7 +143,7 @@ public class UserStatisticsServiceImpl implements UserStatisticsService {
 
         LambdaQueryWrapper<Order> orderQuery = new LambdaQueryWrapper<>();
         orderQuery.eq(Order::getUserId, userId)
-                .ge(Order::getCreateTime, startTime);
+                .ge(Order::getCreatedAt, startTime);
 
         List<Order> orders = orderService.list(orderQuery);
 

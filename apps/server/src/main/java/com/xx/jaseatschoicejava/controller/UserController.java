@@ -270,8 +270,8 @@ public class UserController {
                 user.setAvatar(avatarUrl);
                 user.setGender(gender);
                 user.setLocation(location);
-                user.setCreateTime(LocalDateTime.now());
-                user.setUpdateTime(LocalDateTime.now());
+                user.setCreatedAt(LocalDateTime.now());
+                user.setUpdatedAt(LocalDateTime.now());
 
                 boolean saved = userService.save(user);
                 if (!saved) {
@@ -296,7 +296,7 @@ public class UserController {
                 }
 
                 if (changed) {
-                    existingUser.setUpdateTime(LocalDateTime.now());
+                    existingUser.setUpdatedAt(LocalDateTime.now());
                     userService.updateById(existingUser);
                 }
 

@@ -31,7 +31,7 @@ public class RolePermission {
     @ApiModelProperty(value = "权限ID")
     private Long permissionId;
 
-    @TableField("create_time")
+    @TableField("created_at")
     @ApiModelProperty(value = "创建时间")
-    private LocalDateTime createTime;
+    private LocalDateTime createdAt;
 }

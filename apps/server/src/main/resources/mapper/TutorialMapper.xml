@@ -4,7 +4,7 @@
 <mapper namespace="com.xx.jaseatschoicejava.mapper.TutorialMapper">
     <!-- 自定义查询：获取首页推荐的教程 -->
     <select id="selectFeaturedTutorials" resultType="com.xx.jaseatschoicejava.entity.Tutorial">
-        SELECT * FROM tutorial WHERE featured = 1 ORDER BY create_time DESC LIMIT 2
+        SELECT * FROM tutorial WHERE featured = 1 ORDER BY created_at DESC LIMIT 2
     </select>
 
     <!-- 查询最热门的教程（按浏览量排序） -->
@@ -12,7 +12,7 @@
         SELECT * FROM tutorial
         WHERE status = 'PUBLISHED'
         AND review_status = 'APPROVED'
-        ORDER BY view_count DESC, create_time DESC
+        ORDER BY view_count DESC, created_at DESC
         LIMIT 1
     </select>
 </mapper>

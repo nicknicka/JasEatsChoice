@@ -74,7 +74,7 @@ public class OrderDetail {
     /**
      * 下单时间
      */
-    private LocalDateTime createTime;
+    private LocalDateTime createdAt;
 
     /**
      * 支付时间

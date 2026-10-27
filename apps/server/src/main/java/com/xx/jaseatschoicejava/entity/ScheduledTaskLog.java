@@ -67,5 +67,5 @@ public class ScheduledTaskLog {
     private String serverHostname;
 
     @ApiModelProperty(value = "创建时间")
-    private LocalDateTime createTime;
+    private LocalDateTime createdAt;
 }

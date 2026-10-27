@@ -43,8 +43,8 @@ public class Contact {
     private String role; // 群角色：creator(创建者)、admin(管理员)、member(普通成员)
 
     @ApiModelProperty(value = "创建时间")
-    private LocalDateTime createTime; // 创建时间
+    private LocalDateTime createdAt; // 创建时间
 
     @ApiModelProperty(value = "更新时间")
-    private LocalDateTime updateTime; // 更新时间
+    private LocalDateTime updatedAt; // 更新时间
 }

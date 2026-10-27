@@ -25,7 +25,7 @@ public interface HotTopicMapper extends BaseMapper<HotTopic> {
             "AND (start_date IS NULL OR start_date <= #{now}) " +
             "AND (end_date IS NULL OR end_date >= #{now}) " +
             "AND (require_review = FALSE OR review_status = 'APPROVED') " +
-            "ORDER BY priority DESC, create_time DESC " +
+            "ORDER BY priority DESC, created_at DESC " +
             "LIMIT 1")
     HotTopic selectActiveHotTopic(LocalDateTime now);
 
@@ -35,7 +35,7 @@ public interface HotTopicMapper extends BaseMapper<HotTopic> {
      * @return 热点列表
      */
     @Select("SELECT * FROM cnt_hot_topic " +
-            "ORDER BY create_time DESC " +
+            "ORDER BY created_at DESC " +
             "LIMIT #{limit}")
     List<HotTopic> selectRecentHotTopics(int limit);
 

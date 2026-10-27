@@ -63,13 +63,13 @@ public class Admin {
     @ApiModelProperty(value = "最后登录IP")
     private String lastLoginIp;
 
-    @TableField("create_time")
+    @TableField("created_at")
     @ApiModelProperty(value = "创建时间")
-    private LocalDateTime createTime;
+    private LocalDateTime createdAt;
 
-    @TableField("update_time")
+    @TableField("updated_at")
     @ApiModelProperty(value = "更新时间")
-    private LocalDateTime updateTime;
+    private LocalDateTime updatedAt;
 
     @TableField("create_by")
     @ApiModelProperty(value = "创建人ID")

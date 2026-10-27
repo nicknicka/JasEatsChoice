@@ -23,7 +23,7 @@ public interface UserCustomEventMapper extends BaseMapper<UserCustomEvent> {
      * @param userId 用户ID
      * @return 事件列表
      */
-    @Select("SELECT * FROM usr_user_custom_event WHERE user_id = #{userId} AND is_active = 1 ORDER BY create_time DESC")
+    @Select("SELECT * FROM usr_user_custom_event WHERE user_id = #{userId} AND is_active = 1 ORDER BY created_at DESC")
     List<UserCustomEvent> selectByUserId(@Param("userId") String userId);
 
     /**

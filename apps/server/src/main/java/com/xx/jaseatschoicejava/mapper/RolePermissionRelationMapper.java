@@ -29,7 +29,7 @@ public interface RolePermissionRelationMapper extends BaseMapper<RolePermissionR
      * 批量插入角色权限关联
      */
     @Insert("<script>" +
-            "INSERT INTO sys_role_permission_relation (role_id, permission_id, create_time) VALUES " +
+            "INSERT INTO sys_role_permission_relation (role_id, permission_id, created_at) VALUES " +
             "<foreach collection='list' item='item' separator=','>" +
             "(#{item.roleId}, #{item.permissionId}, NOW())" +
             "</foreach>" +

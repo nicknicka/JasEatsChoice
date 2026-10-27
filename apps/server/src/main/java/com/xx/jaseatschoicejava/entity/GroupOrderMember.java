@@ -68,11 +68,11 @@ public class GroupOrderMember {
     @ApiModelProperty(value = "备注")
     private String remark;
 
-    @TableField(value = "create_time", fill = FieldFill.INSERT)
+    @TableField(value = "created_at", fill = FieldFill.INSERT)
     @ApiModelProperty(value = "创建时间")
-    private LocalDateTime createTime;
+    private LocalDateTime createdAt;
 
-    @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
+    @TableField(value = "updated_at", fill = FieldFill.INSERT_UPDATE)
     @ApiModelProperty(value = "更新时间")
-    private LocalDateTime updateTime;
+    private LocalDateTime updatedAt;
 }

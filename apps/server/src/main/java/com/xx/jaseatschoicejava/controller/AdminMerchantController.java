@@ -62,7 +62,7 @@ public class AdminMerchantController {
             );
         }
 
-        queryWrapper.orderByDesc("create_time");
+        queryWrapper.orderByDesc("created_at");
 
         IPage<Merchant> result = merchantService.page(pageParam, queryWrapper);
 
@@ -217,7 +217,7 @@ public class AdminMerchantController {
 
         var queryWrapper = new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Merchant>()
             .eq("audit_status", "PENDING")
-            .orderByDesc("create_time");
+            .orderByDesc("created_at");
 
         IPage<Merchant> result = merchantService.page(pageParam, queryWrapper);
 

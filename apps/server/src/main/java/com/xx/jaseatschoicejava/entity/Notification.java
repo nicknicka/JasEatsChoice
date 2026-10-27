@@ -49,7 +49,7 @@ public class Notification {
     @ApiModelProperty(value = "已读状态：true-已读，false-未读")
     private Boolean readStatus; // 已读状态：true-已读，false-未读
 
-    @TableField("create_time")
+    @TableField("created_at")
     @ApiModelProperty(value = "创建时间")
-    private LocalDateTime createTime; // 创建时间
+    private LocalDateTime createdAt; // 创建时间
 }

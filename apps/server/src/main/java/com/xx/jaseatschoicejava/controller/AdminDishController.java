@@ -156,7 +156,7 @@ public class AdminDishController {
         }
 
         // 按创建时间倒序
-        queryWrapper.orderByDesc(Dish::getCreateTime);
+        queryWrapper.orderByDesc(Dish::getCreatedAt);
 
         Page<Dish> pageParam = new Page<>(page, pageSize);
         IPage<Dish> result = dishService.page(pageParam, queryWrapper);
@@ -173,8 +173,8 @@ public class AdminDishController {
             }
 
             // 设置提交时间（格式化后的创建时间）
-            if (dish.getCreateTime() != null) {
-                dish.setSubmitTime(dish.getCreateTime().format(formatter));
+            if (dish.getCreatedAt() != null) {
+                dish.setSubmitTime(dish.getCreatedAt().format(formatter));
             }
 
             // 设置状态代码
@@ -203,9 +203,9 @@ public class AdminDishController {
             }
 
             // 设置提交时间
-            if (dish.getCreateTime() != null) {
+            if (dish.getCreatedAt() != null) {
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-                dish.setSubmitTime(dish.getCreateTime().format(formatter));
+                dish.setSubmitTime(dish.getCreatedAt().format(formatter));
             }
 
             // 设置状态代码

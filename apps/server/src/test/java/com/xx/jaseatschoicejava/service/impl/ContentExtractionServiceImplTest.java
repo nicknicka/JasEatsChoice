@@ -79,8 +79,8 @@ class ContentExtractionServiceImplTest {
         task.setTaskStatus("PENDING");
         task.setRetryCount(0);
         task.setPriority(0);
-        task.setCreateTime(LocalDateTime.now());
-        task.setUpdateTime(LocalDateTime.now());
+        task.setCreatedAt(LocalDateTime.now());
+        task.setUpdatedAt(LocalDateTime.now());
 
         ContentSource source = new ContentSource();
         source.setId("source-1");
@@ -90,8 +90,8 @@ class ContentExtractionServiceImplTest {
         source.setPlatform(ContentPlatform.DOUYIN.getCode());
         source.setExtractionStatus(ExtractionStatus.PENDING.getCode());
         source.setIsExtracted(false);
-        source.setCreateTime(LocalDateTime.now());
-        source.setUpdateTime(LocalDateTime.now());
+        source.setCreatedAt(LocalDateTime.now());
+        source.setUpdatedAt(LocalDateTime.now());
 
         FetchedContent fetchedContent = FetchedContent.builder()
             .title("测试标题")

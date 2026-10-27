@@ -25,7 +25,7 @@ public class RechargeRecordServiceImpl extends ServiceImpl<RechargeRecordMapper,
                 .like(StringUtils.hasText(keyword), "recharge_no", keyword)
                 .eq(StringUtils.hasText(paymentMethod), "payment_method", paymentMethod)
                 .eq(StringUtils.hasText(status), "recharge_status", status)
-                .orderByDesc("create_time")
+                .orderByDesc("created_at")
         );
     }
 

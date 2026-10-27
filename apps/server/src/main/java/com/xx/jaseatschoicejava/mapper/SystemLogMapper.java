@@ -33,12 +33,12 @@ public interface SystemLogMapper extends BaseMapper<SystemLog> {
             "AND status = #{status} " +
             "</if>" +
             "<if test='startTime != null'>" +
-            "AND create_time &gt;= #{startTime} " +
+            "AND created_at &gt;= #{startTime} " +
             "</if>" +
             "<if test='endTime != null'>" +
-            "AND create_time &lt;= #{endTime} " +
+            "AND created_at &lt;= #{endTime} " +
             "</if>" +
-            "ORDER BY create_time DESC" +
+            "ORDER BY created_at DESC" +
             "</script>")
     IPage<SystemLog> selectLogPage(Page<SystemLog> page,
                                    @Param("operatorName") String operatorName,

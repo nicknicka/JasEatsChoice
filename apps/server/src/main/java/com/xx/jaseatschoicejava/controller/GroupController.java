@@ -86,7 +86,7 @@ public class GroupController {
             LambdaQueryWrapper<ChatMsg> queryWrapper = new LambdaQueryWrapper<>();
             queryWrapper.eq(ChatMsg::getSessionId, groupIdOrSessionId);
             queryWrapper.eq(ChatMsg::getSessionType, "group");
-            queryWrapper.orderByDesc(ChatMsg::getCreateTime);
+            queryWrapper.orderByDesc(ChatMsg::getCreatedAt);
             queryWrapper.last("LIMIT 1");
 
             ChatMsg chatMsg = chatMsgService.getOne(queryWrapper);

@@ -40,7 +40,7 @@ public class TutorialServiceImpl extends ServiceImpl<TutorialMapper, Tutorial> i
         QueryWrapper<Tutorial> wrapper = new QueryWrapper<>();
         wrapper.eq("status", Tutorial.Status.PUBLISHED.getCode())
                .eq("review_status", Tutorial.ReviewStatus.APPROVED.getCode())
-               .orderByDesc("create_time");
+               .orderByDesc("created_at");
         return list(wrapper);
     }
 
@@ -70,7 +70,7 @@ public class TutorialServiceImpl extends ServiceImpl<TutorialMapper, Tutorial> i
                    .eq("review_status", Tutorial.ReviewStatus.APPROVED.getCode());
         }
 
-        wrapper.orderByDesc("create_time");
+        wrapper.orderByDesc("created_at");
         return page(pageInfo, wrapper);
     }
 
@@ -80,7 +80,7 @@ public class TutorialServiceImpl extends ServiceImpl<TutorialMapper, Tutorial> i
     public List<Tutorial> getAllTutorialsForAdmin() {
         QueryWrapper<Tutorial> wrapper = new QueryWrapper<>();
         // 管理员可以看到所有状态的教程
-        wrapper.orderByDesc("create_time");
+        wrapper.orderByDesc("created_at");
         return list(wrapper);
     }
 
@@ -92,8 +92,8 @@ public class TutorialServiceImpl extends ServiceImpl<TutorialMapper, Tutorial> i
         tutorial.setStatus(Tutorial.Status.PUBLISHED.getCode());
         tutorial.setReviewStatus(Tutorial.ReviewStatus.APPROVED.getCode());
         tutorial.setOfficial(true);
-        tutorial.setCreateTime(new Date());
-        tutorial.setUpdateTime(new Date());
+        tutorial.setCreatedAt(new Date());
+        tutorial.setUpdatedAt(new Date());
 
         save(tutorial);
         return tutorial;
@@ -104,7 +104,7 @@ public class TutorialServiceImpl extends ServiceImpl<TutorialMapper, Tutorial> i
         Page<Tutorial> pageInfo = new Page<>(page, size);
         QueryWrapper<Tutorial> wrapper = new QueryWrapper<>();
         wrapper.eq("review_status", Tutorial.ReviewStatus.PENDING.getCode())
-               .orderByDesc("create_time");
+               .orderByDesc("created_at");
         return page(pageInfo, wrapper);
     }
 
@@ -122,7 +122,7 @@ public class TutorialServiceImpl extends ServiceImpl<TutorialMapper, Tutorial> i
         tutorial.setReviewTime(new Date());
         tutorial.setReviewComment(comment);
         tutorial.setFeatured(setFeatured);
-        tutorial.setUpdateTime(new Date());
+        tutorial.setUpdatedAt(new Date());
 
         return updateById(tutorial);
     }
@@ -140,7 +140,7 @@ public class TutorialServiceImpl extends ServiceImpl<TutorialMapper, Tutorial> i
         tutorial.setReviewerId(reviewerId);
         tutorial.setReviewTime(new Date());
         tutorial.setReviewComment(comment);
-        tutorial.setUpdateTime(new Date());
+        tutorial.setUpdatedAt(new Date());
 
         return updateById(tutorial);
     }
@@ -159,7 +159,7 @@ public class TutorialServiceImpl extends ServiceImpl<TutorialMapper, Tutorial> i
         }
 
         tutorial.setFeatured(featured);
-        tutorial.setUpdateTime(new Date());
+        tutorial.setUpdatedAt(new Date());
 
         return updateById(tutorial);
     }
@@ -174,8 +174,8 @@ public class TutorialServiceImpl extends ServiceImpl<TutorialMapper, Tutorial> i
         tutorial.setStatus(Tutorial.Status.DRAFT.getCode());
         tutorial.setReviewStatus(Tutorial.ReviewStatus.NOT_SUBMITTED.getCode());
         tutorial.setOfficial(false);
-        tutorial.setCreateTime(new Date());
-        tutorial.setUpdateTime(new Date());
+        tutorial.setCreatedAt(new Date());
+        tutorial.setUpdatedAt(new Date());
 
         boolean saved = save(tutorial);
         if (!saved) {
@@ -204,7 +204,7 @@ public class TutorialServiceImpl extends ServiceImpl<TutorialMapper, Tutorial> i
         }
 
         tutorial.setId(tutorialId);
-        tutorial.setUpdateTime(new Date());
+        tutorial.setUpdatedAt(new Date());
         return updateById(tutorial);
     }
 
@@ -218,7 +218,7 @@ public class TutorialServiceImpl extends ServiceImpl<TutorialMapper, Tutorial> i
 
         tutorial.setStatus(Tutorial.Status.PENDING.getCode());
         tutorial.setReviewStatus(Tutorial.ReviewStatus.PENDING.getCode());
-        tutorial.setUpdateTime(new Date());
+        tutorial.setUpdatedAt(new Date());
 
         return updateById(tutorial);
     }
@@ -229,7 +229,7 @@ public class TutorialServiceImpl extends ServiceImpl<TutorialMapper, Tutorial> i
         QueryWrapper<Tutorial> wrapper = new QueryWrapper<>();
         wrapper.eq("author_id", merchantId)
                .eq("author_type", Tutorial.AuthorType.MERCHANT.getCode())
-               .orderByDesc("create_time");
+               .orderByDesc("created_at");
         return page(pageInfo, wrapper);
     }
 
@@ -240,7 +240,7 @@ public class TutorialServiceImpl extends ServiceImpl<TutorialMapper, Tutorial> i
         // 查询该用户ID的所有教程，不限制author_type
         // 这样可以查询到用户类型和商家类型的教程（如果用户同时也是商家）
         wrapper.eq("author_id", userId)
-               .orderByDesc("create_time");
+               .orderByDesc("created_at");
         return page(pageInfo, wrapper);
     }
 
@@ -252,8 +252,8 @@ public class TutorialServiceImpl extends ServiceImpl<TutorialMapper, Tutorial> i
         tutorial.setStatus(Tutorial.Status.DRAFT.getCode());
         tutorial.setReviewStatus(Tutorial.ReviewStatus.NOT_SUBMITTED.getCode());
         tutorial.setOfficial(false);
-        tutorial.setCreateTime(new Date());
-        tutorial.setUpdateTime(new Date());
+        tutorial.setCreatedAt(new Date());
+        tutorial.setUpdatedAt(new Date());
 
         boolean saved = save(tutorial);
         if (!saved) {
@@ -279,8 +279,8 @@ public class TutorialServiceImpl extends ServiceImpl<TutorialMapper, Tutorial> i
         tutorial.setReviewStatus(Tutorial.ReviewStatus.NOT_SUBMITTED.getCode());
         tutorial.setOfficial(false);
         tutorial.setAiModelVersion("GPT-4-v2"); // 可以从配置读取
-        tutorial.setCreateTime(new Date());
-        tutorial.setUpdateTime(new Date());
+        tutorial.setCreatedAt(new Date());
+        tutorial.setUpdatedAt(new Date());
 
         save(tutorial);
         return tutorial;
@@ -298,7 +298,7 @@ public class TutorialServiceImpl extends ServiceImpl<TutorialMapper, Tutorial> i
 
         int currentCount = tutorial.getViewCount() != null ? tutorial.getViewCount() : 0;
         tutorial.setViewCount(currentCount + 1);
-        tutorial.setUpdateTime(new Date());
+        tutorial.setUpdatedAt(new Date());
 
         return updateById(tutorial);
     }
@@ -319,7 +319,7 @@ public class TutorialServiceImpl extends ServiceImpl<TutorialMapper, Tutorial> i
 
         tutorial.setRating(java.math.BigDecimal.valueOf(newRating));
         tutorial.setRatingCount(currentCount + 1);
-        tutorial.setUpdateTime(new Date());
+        tutorial.setUpdatedAt(new Date());
 
         return updateById(tutorial);
     }
@@ -334,7 +334,7 @@ public class TutorialServiceImpl extends ServiceImpl<TutorialMapper, Tutorial> i
 
         int currentCount = tutorial.getFavoriteCount() != null ? tutorial.getFavoriteCount() : 0;
         tutorial.setFavoriteCount(currentCount + 1);
-        tutorial.setUpdateTime(new Date());
+        tutorial.setUpdatedAt(new Date());
 
         return updateById(tutorial);
     }

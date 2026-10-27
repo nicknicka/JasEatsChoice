@@ -32,16 +32,16 @@ public class ConsumeHistoryServiceImpl extends ServiceImpl<ConsumeHistoryMapper,
         // 日期范围筛选
         if (startDate != null) {
             LocalDateTime startDateTime = LocalDate.parse(startDate).atStartOfDay();
-            queryWrapper.ge(ConsumeHistory::getCreateTime, startDateTime);
+            queryWrapper.ge(ConsumeHistory::getCreatedAt, startDateTime);
         }
 
         if (endDate != null) {
             LocalDateTime endDateTime = LocalDate.parse(endDate).atTime(LocalTime.MAX);
-            queryWrapper.le(ConsumeHistory::getCreateTime, endDateTime);
+            queryWrapper.le(ConsumeHistory::getCreatedAt, endDateTime);
         }
 
         // 按时间倒序
-        queryWrapper.orderByDesc(ConsumeHistory::getCreateTime);
+        queryWrapper.orderByDesc(ConsumeHistory::getCreatedAt);
 
         // 分页查询
         return consumeHistoryMapper.selectPage(new Page<>(pageNum, pageSize), queryWrapper);

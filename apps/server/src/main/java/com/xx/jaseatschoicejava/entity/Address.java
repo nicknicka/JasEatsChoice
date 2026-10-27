@@ -59,10 +59,10 @@ public class Address {
     /**
      * 创建时间
      */
-    private LocalDateTime createTime;
+    private LocalDateTime createdAt;
 
     /**
      * 更新时间
      */
-    private LocalDateTime updateTime;
+    private LocalDateTime updatedAt;
 }

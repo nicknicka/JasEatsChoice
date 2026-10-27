@@ -52,8 +52,8 @@ public class IngredientConflictRule {
     private Boolean enabled;
 
     @ApiModelProperty(value = "创建时间")
-    private LocalDateTime createTime;
+    private LocalDateTime createdAt;
 
     @ApiModelProperty(value = "更新时间")
-    private LocalDateTime updateTime;
+    private LocalDateTime updatedAt;
 }

@@ -86,10 +86,10 @@ public class GroupOrderAddition {
     /**
      * 创建时间
      */
-    private LocalDateTime createdTime;
+    private LocalDateTime createdAt;
 
     /**
      * 更新时间
      */
-    private LocalDateTime updatedTime;
+    private LocalDateTime updatedAt;
 }

@@ -71,7 +71,7 @@ public class AdminOperationLogServiceImpl extends ServiceImpl<AdminOperationLogM
             log.setResponseResult(status);
             log.setIpAddress(getClientIp());
             log.setStatus(status);
-            log.setCreateTime(LocalDateTime.now());
+            log.setCreatedAt(LocalDateTime.now());
             log.setExecuteTime(0);
 
             save(log);

@@ -74,8 +74,8 @@ public class AddDishServiceImpl extends ServiceImpl<AddDishRequestMapper, AddDis
         request.setRequestUserId(requestUserId);
         // request.setMerchantId(merchantId); // 从群订单获取
         request.setApprovalStatus(AddDishApprovalStatus.PENDING.getValue());
-        request.setCreateTime(LocalDateTime.now());
-        request.setUpdateTime(LocalDateTime.now());
+        request.setCreatedAt(LocalDateTime.now());
+        request.setUpdatedAt(LocalDateTime.now());
 
         // 设置超时时间
         request.setTimeoutTime(LocalDateTime.now().plusMinutes(15));
@@ -134,7 +134,7 @@ public class AddDishServiceImpl extends ServiceImpl<AddDishRequestMapper, AddDis
 
                 request.setReviewerId(dto.getReviewerId());
                 request.setReviewTime(LocalDateTime.now());
-                request.setUpdateTime(LocalDateTime.now());
+                request.setUpdatedAt(LocalDateTime.now());
                 updateById(request);
 
             } catch (Exception e) {
@@ -169,7 +169,7 @@ public class AddDishServiceImpl extends ServiceImpl<AddDishRequestMapper, AddDis
         }
 
         request.setApprovalStatus(AddDishApprovalStatus.WITHDRAWN.getValue());
-        request.setUpdateTime(LocalDateTime.now());
+        request.setUpdatedAt(LocalDateTime.now());
 
         return updateById(request);
     }
@@ -179,7 +179,7 @@ public class AddDishServiceImpl extends ServiceImpl<AddDishRequestMapper, AddDis
         LambdaQueryWrapper<AddDishRequest> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(AddDishRequest::getGroupOrderId, groupOrderId)
                    .eq(AddDishRequest::getApprovalStatus, AddDishApprovalStatus.PENDING.getValue())
-                   .orderByDesc(AddDishRequest::getCreateTime);
+                   .orderByDesc(AddDishRequest::getCreatedAt);
 
         List<AddDishRequest> requests = list(queryWrapper);
         return requests.stream().map(this::convertToVO).collect(Collectors.toList());
@@ -194,7 +194,7 @@ public class AddDishServiceImpl extends ServiceImpl<AddDishRequestMapper, AddDis
                        AddDishApprovalStatus.REJECTED.getValue(),
                        AddDishApprovalStatus.WITHDRAWN.getValue(),
                        AddDishApprovalStatus.TIMEOUT_REJECTED.getValue())
-                   .orderByDesc(AddDishRequest::getCreateTime);
+                   .orderByDesc(AddDishRequest::getCreatedAt);
 
         List<AddDishRequest> requests = list(queryWrapper);
         return requests.stream().map(this::convertToVO).collect(Collectors.toList());
@@ -219,7 +219,7 @@ public class AddDishServiceImpl extends ServiceImpl<AddDishRequestMapper, AddDis
         for (AddDishRequest request : timeoutRequests) {
             try {
                 request.setApprovalStatus(AddDishApprovalStatus.TIMEOUT_REJECTED.getValue());
-                request.setUpdateTime(LocalDateTime.now());
+                request.setUpdatedAt(LocalDateTime.now());
                 updateById(request);
 
                 // 发送超时通知
@@ -335,7 +335,7 @@ public class AddDishServiceImpl extends ServiceImpl<AddDishRequestMapper, AddDis
         vo.setGroupOrderId(request.getGroupOrderId());
         vo.setStatus(request.getApprovalStatus());
         vo.setStatusDesc(AddDishApprovalStatus.fromValue(request.getApprovalStatus()).getDesc());
-        vo.setSubmitTime(request.getCreateTime());
+        vo.setSubmitTime(request.getCreatedAt());
         vo.setRejectReason(request.getRejectReason());
 
         // 计算剩余时间

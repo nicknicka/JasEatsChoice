@@ -127,7 +127,7 @@ public class MerchantInsightServiceImpl implements MerchantInsightService {
             for (int i = 0; i < 24; i++) {
                 final int hour = i;
                 double amount = orders.stream()
-                        .filter(o -> o.getCreateTime().getHour() == hour && o.getStatus() != 4)
+                        .filter(o -> o.getCreatedAt().getHour() == hour && o.getStatus() != 4)
                         .map(Order::getTotalAmount)
                         .reduce(BigDecimal.ZERO, BigDecimal::add)
                         .doubleValue();
@@ -149,7 +149,7 @@ public class MerchantInsightServiceImpl implements MerchantInsightService {
                 final LocalDateTime dayEnd = date.atTime(23, 59, 59);
 
                 double amount = orders.stream()
-                        .filter(o -> !o.getCreateTime().isBefore(dayStart) && !o.getCreateTime().isAfter(dayEnd) && o.getStatus() != 4)
+                        .filter(o -> !o.getCreatedAt().isBefore(dayStart) && !o.getCreatedAt().isAfter(dayEnd) && o.getStatus() != 4)
                         .map(Order::getTotalAmount)
                         .reduce(BigDecimal.ZERO, BigDecimal::add)
                         .doubleValue();
@@ -170,7 +170,7 @@ public class MerchantInsightServiceImpl implements MerchantInsightService {
                 final LocalDateTime dayEnd = date.atTime(23, 59, 59);
 
                 double amount = orders.stream()
-                        .filter(o -> !o.getCreateTime().isBefore(dayStart) && !o.getCreateTime().isAfter(dayEnd) && o.getStatus() != 4)
+                        .filter(o -> !o.getCreatedAt().isBefore(dayStart) && !o.getCreatedAt().isAfter(dayEnd) && o.getStatus() != 4)
                         .map(Order::getTotalAmount)
                         .reduce(BigDecimal.ZERO, BigDecimal::add)
                         .doubleValue();
@@ -329,8 +329,8 @@ public class MerchantInsightServiceImpl implements MerchantInsightService {
     private List<Order> getOrdersByTimeRange(String merchantId, LocalDateTime startTime, LocalDateTime endTime) {
         LambdaQueryWrapper<Order> query = new LambdaQueryWrapper<>();
         query.eq(Order::getMerchantId, merchantId)
-             .ge(startTime != null, Order::getCreateTime, startTime)
-             .le(Order::getCreateTime, endTime);
+             .ge(startTime != null, Order::getCreatedAt, startTime)
+             .le(Order::getCreatedAt, endTime);
         return orderService.list(query);
     }
 
@@ -366,8 +366,8 @@ public class MerchantInsightServiceImpl implements MerchantInsightService {
         LambdaQueryWrapper<Review> query = new LambdaQueryWrapper<>();
         query.eq(Review::getMerchantId, merchantId)
              .eq(Review::getStatus, 0)
-             .ge(startTime != null, Review::getCreateTime, startTime)
-             .le(Review::getCreateTime, endTime);
+             .ge(startTime != null, Review::getCreatedAt, startTime)
+             .le(Review::getCreatedAt, endTime);
 
         List<Review> reviews = reviewService.list(query);
         if (reviews.isEmpty()) {

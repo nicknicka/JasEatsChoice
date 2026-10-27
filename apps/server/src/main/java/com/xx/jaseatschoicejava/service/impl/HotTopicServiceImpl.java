@@ -74,7 +74,7 @@ public class HotTopicServiceImpl extends ServiceImpl<HotTopicMapper, HotTopic> i
                 response.setClickable(false);
             }
 
-            response.setCreateTime(dbHotTopic.getCreateTime());
+            response.setCreatedAt(dbHotTopic.getCreatedAt());
             return response;
         }
 
@@ -377,8 +377,8 @@ public class HotTopicServiceImpl extends ServiceImpl<HotTopicMapper, HotTopic> i
     @Transactional
     public boolean createHotTopic(HotTopic hotTopic) {
         try {
-            hotTopic.setCreateTime(LocalDateTime.now());
-            hotTopic.setUpdateTime(LocalDateTime.now());
+            hotTopic.setCreatedAt(LocalDateTime.now());
+            hotTopic.setUpdatedAt(LocalDateTime.now());
             return hotTopicMapper.insert(hotTopic) > 0;
         } catch (Exception e) {
             log.error("创建热点失败", e);
@@ -393,7 +393,7 @@ public class HotTopicServiceImpl extends ServiceImpl<HotTopicMapper, HotTopic> i
     @Transactional
     public boolean updateHotTopic(HotTopic hotTopic) {
         try {
-            hotTopic.setUpdateTime(LocalDateTime.now());
+            hotTopic.setUpdatedAt(LocalDateTime.now());
             return hotTopicMapper.updateById(hotTopic) > 0;
         } catch (Exception e) {
             log.error("更新热点失败", e);

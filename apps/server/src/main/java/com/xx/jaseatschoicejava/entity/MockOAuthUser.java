@@ -39,6 +39,6 @@ public class MockOAuthUser {
     @TableField("password")
     private String password;
 
-    @TableField("create_time")
-    private LocalDateTime createTime;
+    @TableField("created_at")
+    private LocalDateTime createdAt;
 }

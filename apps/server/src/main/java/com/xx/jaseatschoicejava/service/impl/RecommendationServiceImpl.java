@@ -110,7 +110,7 @@ public class RecommendationServiceImpl implements RecommendationService {
             queryWrapper.eq("recommendation_id", recommendationId)
                     .eq("dish_id", dishId)
                     .eq("user_id", userId)
-                    .orderByDesc("created_time")
+                    .orderByDesc("created_at")
                     .last("LIMIT 1");
 
             RecommendationLog recommendationLog = recommendationLogMapper.selectOne(queryWrapper);
@@ -586,7 +586,7 @@ public class RecommendationServiceImpl implements RecommendationService {
                                         (Dish dish) -> Optional.ofNullable(dish.getFavoriteCount()).orElse(0),
                                         Comparator.reverseOrder()
                                 )
-                                .thenComparing(Dish::getCreateTime, Comparator.nullsLast(Comparator.reverseOrder()))
+                                .thenComparing(Dish::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder()))
                 )
                 .collect(Collectors.toList());
 
@@ -763,7 +763,7 @@ public class RecommendationServiceImpl implements RecommendationService {
             log.setRank(result.getRank());
             log.setScore(result.getScore());
             log.setAlgorithm("hybrid");
-            log.setCreatedTime(now);
+            log.setCreatedAt(now);
 
             // 设置推荐理由
             if (result.getReason() != null) {

@@ -53,8 +53,8 @@ public class WishListServiceImpl implements WishListService {
         // 设置初始状态和超时时间（24小时后自动通过）
         item.setAuditStatus(WishListAuditStatus.PENDING.getCode());
         item.setTimeoutTime(LocalDateTime.now().plusHours(24));
-        item.setCreateTime(LocalDateTime.now());
-        item.setUpdateTime(LocalDateTime.now());
+        item.setCreatedAt(LocalDateTime.now());
+        item.setUpdatedAt(LocalDateTime.now());
 
         wishListItemMapper.insert(item);
         return item.getId();
@@ -112,7 +112,7 @@ public class WishListServiceImpl implements WishListService {
                 .set(WishListItem::getAuditTime, LocalDateTime.now());
         }
 
-        updateWrapper.set(WishListItem::getUpdateTime, LocalDateTime.now());
+        updateWrapper.set(WishListItem::getUpdatedAt, LocalDateTime.now());
 
         int updated = wishListItemMapper.update(null, updateWrapper);
         return updated > 0;
@@ -140,7 +140,7 @@ public class WishListServiceImpl implements WishListService {
             .set(WishListItem::getIsAppealed, true)
             .set(WishListItem::getAppealContent, dto.getAppealContent())
             .set(WishListItem::getAppealTime, LocalDateTime.now())
-            .set(WishListItem::getUpdateTime, LocalDateTime.now());
+            .set(WishListItem::getUpdatedAt, LocalDateTime.now());
 
         int updated = wishListItemMapper.update(null, updateWrapper);
         return updated > 0;
@@ -168,7 +168,7 @@ public class WishListServiceImpl implements WishListService {
             .set(WishListItem::getAppealReply, dto.getAppealReply())
             .set(WishListItem::getAppealReplyTime, LocalDateTime.now())
             .set(WishListItem::getAppealReplierId, replierId)
-            .set(WishListItem::getUpdateTime, LocalDateTime.now());
+            .set(WishListItem::getUpdatedAt, LocalDateTime.now());
 
         int updated = wishListItemMapper.update(null, updateWrapper);
         return updated > 0;
@@ -181,7 +181,7 @@ public class WishListServiceImpl implements WishListService {
         updateWrapper.eq(WishListItem::getId, wishListItemId)
             .eq(WishListItem::getUserId, userId)
             .set(WishListItem::getAuditStatus, WishListAuditStatus.WITHDRAWN.getCode())
-            .set(WishListItem::getUpdateTime, LocalDateTime.now());
+            .set(WishListItem::getUpdatedAt, LocalDateTime.now());
 
         int updated = wishListItemMapper.update(null, updateWrapper);
         return updated > 0;
@@ -208,7 +208,7 @@ public class WishListServiceImpl implements WishListService {
                 updateWrapper.eq(WishListItem::getId, item.getId())
                     .set(WishListItem::getAuditStatus, WishListAuditStatus.AUTO_APPROVED.getCode())
                     .set(WishListItem::getAuditRemark, "超时自动通过（24小时未审核）")
-                    .set(WishListItem::getUpdateTime, LocalDateTime.now());
+                    .set(WishListItem::getUpdatedAt, LocalDateTime.now());
 
                 if (wishListItemMapper.update(null, updateWrapper) > 0) {
                     count++;
@@ -251,7 +251,7 @@ public class WishListServiceImpl implements WishListService {
         vo.setExpectedAvailableTime(item.getExpectedAvailableTime());
         vo.setActualAvailableTime(item.getActualAvailableTime());
         vo.setTimeoutTime(item.getTimeoutTime());
-        vo.setCreateTime(item.getCreateTime());
+        vo.setCreatedAt(item.getCreatedAt());
 
         // 计算剩余时间
         if (item.getTimeoutTime() != null && item.getAuditStatus() == 0) {

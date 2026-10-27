@@ -392,7 +392,7 @@ public class UserProfileServiceImpl implements UserProfileService {
         Map<String, Long> periodCounts = behaviors.stream()
                 .filter(b -> "order".equals(b.getBehaviorType()))
                 .collect(Collectors.groupingBy(
-                        b -> getTimePeriod(b.getCreatedTime().toLocalTime()),
+                        b -> getTimePeriod(b.getCreatedAt().toLocalTime()),
                         Collectors.counting()
                 ));
 

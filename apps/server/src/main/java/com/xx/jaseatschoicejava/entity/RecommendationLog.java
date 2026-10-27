@@ -82,7 +82,7 @@ public class RecommendationLog {
     /**
      * 推荐时间
      */
-    private LocalDateTime createdTime;
+    private LocalDateTime createdAt;
 
     /**
      * 推荐理由内部类

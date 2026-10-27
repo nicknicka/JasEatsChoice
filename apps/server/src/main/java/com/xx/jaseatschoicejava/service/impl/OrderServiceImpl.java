@@ -347,7 +347,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         LambdaUpdateWrapper<Order> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.eq(Order::getId, orderId)
                 .set(Order::getStatus, targetStatus)
-                .set(Order::getUpdateTime, LocalDateTime.now());
+                .set(Order::getUpdatedAt, LocalDateTime.now());
 
         int updated = this.getBaseMapper().update(null, updateWrapper);
 
@@ -461,7 +461,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         LambdaUpdateWrapper<Order> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.eq(Order::getId, orderId)
                 .set(Order::getStatus, status)
-                .set(Order::getUpdateTime, LocalDateTime.now());
+                .set(Order::getUpdatedAt, LocalDateTime.now());
         return update(updateWrapper);
     }
 

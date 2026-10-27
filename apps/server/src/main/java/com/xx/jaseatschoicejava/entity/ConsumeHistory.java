@@ -24,5 +24,5 @@ public class ConsumeHistory {
 
     private String status; // 状态：success（成功）、failed（失败）
 
-    private LocalDateTime createTime; // 创建时间
+    private LocalDateTime createdAt; // 创建时间
 }

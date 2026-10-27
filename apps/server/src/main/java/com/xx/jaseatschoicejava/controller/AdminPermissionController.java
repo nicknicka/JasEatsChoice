@@ -154,8 +154,8 @@ public class AdminPermissionController {
         permission.setDescription(description);
         permission.setStatus("ACTIVE");
         permission.setSortOrder(sortOrder != null ? sortOrder : 0);
-        permission.setCreateTime(LocalDateTime.now());
-        permission.setUpdateTime(LocalDateTime.now());
+        permission.setCreatedAt(LocalDateTime.now());
+        permission.setUpdatedAt(LocalDateTime.now());
 
         boolean success = permissionService.save(permission);
 
@@ -216,7 +216,7 @@ public class AdminPermissionController {
         if (description != null) permission.setDescription(description);
         if (status != null) permission.setStatus(status);
         if (sortOrder != null) permission.setSortOrder(sortOrder);
-        permission.setUpdateTime(LocalDateTime.now());
+        permission.setUpdatedAt(LocalDateTime.now());
 
         boolean success = permissionService.updateById(permission);
 

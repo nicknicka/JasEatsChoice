@@ -110,7 +110,7 @@ public class WebSocketMessageService {
         dto.put("content", chatMsg.getContent());
         dto.put("msgType", chatMsg.getMsgType());
         dto.put("readStatus", chatMsg.getReadStatus());
-        dto.put("createTime", chatMsg.getCreateTime());
+        dto.put("createdAt", chatMsg.getCreatedAt());
         dto.put("fileUrl", chatMsg.getFileUrl());
         dto.put("fileName", chatMsg.getFileName());
 

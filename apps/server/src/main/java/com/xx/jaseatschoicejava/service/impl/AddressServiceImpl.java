@@ -41,8 +41,8 @@ public class AddressServiceImpl extends ServiceImpl<AddressMapper, Address> impl
     public boolean addAddress(Address address) {
         log.debug("添加地址并清除缓存: userId={}", address.getUserId());
         // 设置创建时间和更新时间
-        address.setCreateTime(LocalDateTime.now());
-        address.setUpdateTime(LocalDateTime.now());
+        address.setCreatedAt(LocalDateTime.now());
+        address.setUpdatedAt(LocalDateTime.now());
 
         // 如果设置为默认地址，先将其他地址设置为非默认
         if (address.getIsDefault() != null && address.getIsDefault() == 1) {
@@ -60,7 +60,7 @@ public class AddressServiceImpl extends ServiceImpl<AddressMapper, Address> impl
     public boolean updateAddress(Address address) {
         log.debug("更新地址并清除缓存: userId={}", address.getUserId());
         // 设置更新时间
-        address.setUpdateTime(LocalDateTime.now());
+        address.setUpdatedAt(LocalDateTime.now());
 
         // 如果设置为默认地址，先将其他地址设置为非默认
         if (address.getIsDefault() != null && address.getIsDefault() == 1) {

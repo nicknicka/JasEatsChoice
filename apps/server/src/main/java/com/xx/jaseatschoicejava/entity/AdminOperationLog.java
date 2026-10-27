@@ -75,7 +75,7 @@ public class AdminOperationLog {
     @ApiModelProperty(value = "错误信息")
     private String errorMessage;
 
-    @TableField("create_time")
+    @TableField("created_at")
     @ApiModelProperty(value = "创建时间")
-    private LocalDateTime createTime;
+    private LocalDateTime createdAt;
 }

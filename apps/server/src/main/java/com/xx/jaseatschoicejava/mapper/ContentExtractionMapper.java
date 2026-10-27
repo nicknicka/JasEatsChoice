@@ -31,7 +31,7 @@ public interface ContentExtractionMapper extends BaseMapper<ContentExtraction> {
      *
      * @return 提取结果列表
      */
-    @Select("SELECT * FROM ext_content_extraction WHERE is_published = 0 ORDER BY create_time DESC")
+    @Select("SELECT * FROM ext_content_extraction WHERE is_published = 0 ORDER BY created_at DESC")
     List<ContentExtraction> selectUnpublished();
 
     /**
@@ -39,6 +39,6 @@ public interface ContentExtractionMapper extends BaseMapper<ContentExtraction> {
      *
      * @return 提取结果列表
      */
-    @Select("SELECT * FROM ext_content_extraction WHERE is_verified = 0 ORDER BY create_time DESC")
+    @Select("SELECT * FROM ext_content_extraction WHERE is_verified = 0 ORDER BY created_at DESC")
     List<ContentExtraction> selectUnverified();
 }

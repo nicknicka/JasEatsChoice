@@ -140,7 +140,7 @@ public class SystemLogHelper {
             }
 
             // 时间戳
-            systemLog.setCreateTime(LocalDateTime.now());
+            systemLog.setCreatedAt(LocalDateTime.now());
 
             // 异步保存
             saveLogAsync(systemLog);

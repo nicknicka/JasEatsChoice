@@ -70,7 +70,7 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
         // 今日新增用户
         LocalDateTime todayStart = LocalDate.now().atStartOfDay();
         QueryWrapper<User> userWrapper = new QueryWrapper<>();
-        userWrapper.ge("create_time", todayStart);
+        userWrapper.ge("created_at", todayStart);
         Long newUsers = userMapper.selectCount(userWrapper);
 
         // 总商家数
@@ -78,7 +78,7 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
 
         // 今日新增商家
         QueryWrapper<Merchant> merchantWrapper = new QueryWrapper<>();
-        merchantWrapper.ge("create_time", todayStart);
+        merchantWrapper.ge("created_at", todayStart);
         Long newMerchants = merchantMapper.selectCount(merchantWrapper);
 
         // 总订单数
@@ -86,7 +86,7 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
 
         // 今日新订单
         QueryWrapper<Order> orderWrapper = new QueryWrapper<>();
-        orderWrapper.ge("create_time", todayStart);
+        orderWrapper.ge("created_at", todayStart);
         Long newOrders = orderMapper.selectCount(orderWrapper);
 
         // 总收入（已完成订单）
@@ -121,26 +121,26 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
 
             // 当天新增用户
             QueryWrapper<User> userWrapper = new QueryWrapper<>();
-            userWrapper.ge("create_time", dayStart);
-            userWrapper.lt("create_time", dayEnd);
+            userWrapper.ge("created_at", dayStart);
+            userWrapper.lt("created_at", dayEnd);
             Long newUsers = userMapper.selectCount(userWrapper);
 
             // 当天新增商家
             QueryWrapper<Merchant> merchantWrapper = new QueryWrapper<>();
-            merchantWrapper.ge("create_time", dayStart);
-            merchantWrapper.lt("create_time", dayEnd);
+            merchantWrapper.ge("created_at", dayStart);
+            merchantWrapper.lt("created_at", dayEnd);
             Long newMerchants = merchantMapper.selectCount(merchantWrapper);
 
             // 当天订单数
             QueryWrapper<Order> orderWrapper = new QueryWrapper<>();
-            orderWrapper.ge("create_time", dayStart);
-            orderWrapper.lt("create_time", dayEnd);
+            orderWrapper.ge("created_at", dayStart);
+            orderWrapper.lt("created_at", dayEnd);
             Long totalOrders = orderMapper.selectCount(orderWrapper);
 
             // 当天已完成订单（状态7=已完成）
             QueryWrapper<Order> completedOrderWrapper = new QueryWrapper<>();
-            completedOrderWrapper.ge("create_time", dayStart);
-            completedOrderWrapper.lt("create_time", dayEnd);
+            completedOrderWrapper.ge("created_at", dayStart);
+            completedOrderWrapper.lt("created_at", dayEnd);
             completedOrderWrapper.eq("status", 3);
             Long completedOrders = orderMapper.selectCount(completedOrderWrapper);
 
@@ -149,8 +149,8 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
 
             // 活跃用户（有订单的用户数）
             QueryWrapper<Order> activeUserWrapper = new QueryWrapper<>();
-            activeUserWrapper.ge("create_time", dayStart);
-            activeUserWrapper.lt("create_time", dayEnd);
+            activeUserWrapper.ge("created_at", dayStart);
+            activeUserWrapper.lt("created_at", dayEnd);
             Long activeUsers = orderMapper.selectCount(activeUserWrapper);
 
             // 平均订单金额

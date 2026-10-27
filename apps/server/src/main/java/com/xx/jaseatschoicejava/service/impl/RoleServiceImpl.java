@@ -62,7 +62,7 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
                 RolePermissionRelation relation = new RolePermissionRelation();
                 relation.setRoleId(roleId);
                 relation.setPermissionId(permissionId);
-                relation.setCreateTime(LocalDateTime.now());
+                relation.setCreatedAt(LocalDateTime.now());
                 relations.add(relation);
             }
             // 批量插入
@@ -91,7 +91,7 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
                 AdminRoleRelation relation = new AdminRoleRelation();
                 relation.setAdminId(adminId);
                 relation.setRoleId(roleId);
-                relation.setCreateTime(LocalDateTime.now());
+                relation.setCreatedAt(LocalDateTime.now());
                 adminRoleRelationMapper.insert(relation);
             }
         }

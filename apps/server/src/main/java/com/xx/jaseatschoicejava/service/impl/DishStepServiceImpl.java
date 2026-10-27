@@ -391,7 +391,7 @@ public class DishStepServiceImpl implements DishStepService {
         history.setRollbackReason(rollbackReason);
         history.setRemark(remark);
         history.setEstimatedMinutes(estimatedMinutes);
-        history.setCreateTime(LocalDateTime.now());
+        history.setCreatedAt(LocalDateTime.now());
 
         dishStepHistoryMapper.insert(history);
     }
@@ -458,7 +458,7 @@ public class DishStepServiceImpl implements DishStepService {
         item.setOperatorId(history.getOperatorId());
         item.setOperatorName(history.getOperatorName());
         item.setRollbackReason(history.getRollbackReason());
-        item.setCreateTime(history.getCreateTime());
+        item.setCreatedAt(history.getCreatedAt());
         item.setEstimatedMinutes(history.getEstimatedMinutes());
 
         DishStepStatus oldStatus = DishStepStatus.getByCode(history.getOldStepStatus());

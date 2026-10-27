@@ -15,8 +15,8 @@ public class GroupDTO {
     private String creatorId; // 创建者ID，带U前缀
     private String groupName; // 群名称
     private String description; // 群描述
-    private LocalDateTime createTime; // 创建时间
-    private LocalDateTime updateTime; // 更新时间
+    private LocalDateTime createdAt; // 创建时间
+    private LocalDateTime updatedAt; // 更新时间
 
     /**
      * 从Group实体转换为GroupDTO，自动添加前缀
@@ -33,8 +33,8 @@ public class GroupDTO {
         groupDTO.setCreatorId(IdPrefixUtil.addUserPrefix(group.getCreatorId()));
         groupDTO.setGroupName(group.getGroupName());
         groupDTO.setDescription(group.getDescription());
-        groupDTO.setCreateTime(group.getCreateTime());
-        groupDTO.setUpdateTime(group.getUpdateTime());
+        groupDTO.setCreatedAt(group.getCreatedAt());
+        groupDTO.setUpdatedAt(group.getUpdatedAt());
 
         return groupDTO;
     }

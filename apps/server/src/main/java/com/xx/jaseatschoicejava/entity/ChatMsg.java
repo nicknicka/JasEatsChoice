@@ -61,9 +61,9 @@ public class ChatMsg {
     @ApiModelProperty(value = "已读状态：0-未读，1-已读")
     private Boolean readStatus; // 已读状态（改为Integer类型，与数据库TINYINT对应）
 
-    @TableField("create_time")
+    @TableField("created_at")
     @ApiModelProperty(value = "创建时间")
-    private LocalDateTime createTime; // 创建时间
+    private LocalDateTime createdAt; // 创建时间
 
     @TableField("file_url")
     @ApiModelProperty(value = "文件URL（图片/文件消息时使用）")

@@ -61,7 +61,7 @@ public class UserBehavior {
     /**
      * 行为时间
      */
-    private LocalDateTime createdTime;
+    private LocalDateTime createdAt;
 
     /**
      * 行为类型枚举

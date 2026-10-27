@@ -62,8 +62,8 @@ public class Tutorial {
     private Integer shareCount; // 分享数
 
     // ========== 时间戳 ==========
-    private Date createTime; // 创建时间
-    private Date updateTime; // 更新时间
+    private Date createdAt; // 创建时间
+    private Date updatedAt; // 更新时间
 
     // ========== 枚举定义 ==========
 

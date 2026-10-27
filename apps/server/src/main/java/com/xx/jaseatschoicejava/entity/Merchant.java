@@ -107,13 +107,13 @@ public class Merchant {
     @ApiModelProperty(value = "审核人ID")
     private String auditBy; // 审核人ID
 
-    @TableField("create_time")
+    @TableField("created_at")
     @ApiModelProperty(value = "创建时间")
-    private LocalDateTime createTime; // 创建时间
+    private LocalDateTime createdAt; // 创建时间
 
-    @TableField("update_time")
+    @TableField("updated_at")
     @ApiModelProperty(value = "更新时间")
-    private LocalDateTime updateTime; // 更新时间
+    private LocalDateTime updatedAt; // 更新时间
 
     @TableField(value = "album", typeHandler = com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler.class)
     @ApiModelProperty(value = "店铺相册（JSON格式，包含environment和dishes两个数组）")

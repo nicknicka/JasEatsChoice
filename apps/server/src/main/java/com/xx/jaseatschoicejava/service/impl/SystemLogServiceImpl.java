@@ -28,8 +28,8 @@ public class SystemLogServiceImpl extends ServiceImpl<SystemLogMapper, SystemLog
 
     @Override
     public boolean saveLog(SystemLog systemLog) {
-        if (systemLog.getCreateTime() == null) {
-            systemLog.setCreateTime(LocalDateTime.now());
+        if (systemLog.getCreatedAt() == null) {
+            systemLog.setCreatedAt(LocalDateTime.now());
         }
         return save(systemLog);
     }
@@ -64,7 +64,7 @@ public class SystemLogServiceImpl extends ServiceImpl<SystemLogMapper, SystemLog
     public boolean cleanExpiredLogs(int days) {
         LocalDateTime expireDate = LocalDateTime.now().minusDays(days);
         QueryWrapper<SystemLog> wrapper = new QueryWrapper<>();
-        wrapper.lt("create_time", expireDate);
+        wrapper.lt("created_at", expireDate);
         return remove(wrapper);
     }
 }

@@ -22,6 +22,6 @@ public interface OrderMapper extends BaseMapper<Order> {
      */
     @Select("SELECT COALESCE(SUM(total_amount), 0) FROM ord_order " +
             "WHERE status = 3 " +
-            "AND (#{startTime} IS NULL OR create_time >= #{startTime})")
+            "AND (#{startTime} IS NULL OR created_at >= #{startTime})")
     BigDecimal sumCompletedOrdersRevenue(@Param("startTime") LocalDateTime startTime);
 }

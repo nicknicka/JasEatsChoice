@@ -75,7 +75,7 @@ public class AdminSystemConfigController {
 
         // 按配置分组和创建时间排序
         queryWrapper.orderByAsc("config_group")
-            .orderByDesc("create_time");
+            .orderByDesc("created_at");
 
         IPage<SystemConfig> result = systemConfigService.page(pageParam, queryWrapper);
 
@@ -185,8 +185,8 @@ public class AdminSystemConfigController {
         config.setDescription(description);
         config.setIsSystem(false);
         config.setStatus("active");
-        config.setCreateTime(LocalDateTime.now());
-        config.setUpdateTime(LocalDateTime.now());
+        config.setCreatedAt(LocalDateTime.now());
+        config.setUpdatedAt(LocalDateTime.now());
 
         boolean success = systemConfigService.save(config);
 
@@ -242,7 +242,7 @@ public class AdminSystemConfigController {
         if (StringUtils.hasText(description)) config.setDescription(description);
         if (StringUtils.hasText(status)) config.setStatus(status);
 
-        config.setUpdateTime(LocalDateTime.now());
+        config.setUpdatedAt(LocalDateTime.now());
 
         boolean success = systemConfigService.updateById(config);
 

@@ -124,7 +124,7 @@ public class AIChatHistoryService {
             chatHistory.setUserId(userId);
             chatHistory.setSender(sender);
             chatHistory.setContent(content);
-            chatHistory.setCreateTime(LocalDateTime.now());
+            chatHistory.setCreatedAt(LocalDateTime.now());
             chatHistory.setMessageType(messageType);
             chatHistory.setCardData(cardData);
 
@@ -171,7 +171,7 @@ public class AIChatHistoryService {
             // 2. Redis未命中，查询MySQL
             QueryWrapper<AIChatHistory> queryWrapper = new QueryWrapper<>();
             queryWrapper.eq("user_id", userId)
-                    .orderByAsc("create_time");
+                    .orderByAsc("created_at");
 
             List<AIChatHistory> historyList = aiChatHistoryMapper.selectList(queryWrapper);
             if (historyList == null) {

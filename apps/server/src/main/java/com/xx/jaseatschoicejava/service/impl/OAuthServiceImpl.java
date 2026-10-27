@@ -212,8 +212,8 @@ public class OAuthServiceImpl implements OAuthService {
         newUser.setPassword(""); // 第三方登录用户无密码
         newUser.setNickname((String) tempData.get("nickname"));
         newUser.setAvatar((String) tempData.get("avatarUrl"));
-        newUser.setCreateTime(LocalDateTime.now());
-        newUser.setUpdateTime(LocalDateTime.now());
+        newUser.setCreatedAt(LocalDateTime.now());
+        newUser.setUpdatedAt(LocalDateTime.now());
         userMapper.insert(newUser);
 
         // 4. 创建 OAuth 关联记录
@@ -307,7 +307,7 @@ public class OAuthServiceImpl implements OAuthService {
             info.setProvider(oauth.getProvider());
             info.setNickname(oauth.getNickname());
             info.setAvatarUrl(oauth.getAvatarUrl());
-            info.setBindTime(oauth.getCreateTime() != null ? oauth.getCreateTime().toString() : "");
+            info.setBindTime(oauth.getCreatedAt() != null ? oauth.getCreatedAt().toString() : "");
             result.add(info);
         }
         return result;
@@ -408,8 +408,8 @@ public class OAuthServiceImpl implements OAuthService {
                 oauth.setTokenExpiresAt(LocalDateTime.now().plusSeconds(expiresIn));
             }
         }
-        oauth.setCreateTime(LocalDateTime.now());
-        oauth.setUpdateTime(LocalDateTime.now());
+        oauth.setCreatedAt(LocalDateTime.now());
+        oauth.setUpdatedAt(LocalDateTime.now());
         userOAuthMapper.insert(oauth);
     }
 
@@ -425,7 +425,7 @@ public class OAuthServiceImpl implements OAuthService {
                 oauth.setTokenExpiresAt(LocalDateTime.now().plusSeconds(expiresIn));
             }
         }
-        oauth.setUpdateTime(LocalDateTime.now());
+        oauth.setUpdatedAt(LocalDateTime.now());
         userOAuthMapper.updateById(oauth);
     }
 

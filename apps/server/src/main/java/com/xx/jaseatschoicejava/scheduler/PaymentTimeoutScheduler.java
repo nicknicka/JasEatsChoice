@@ -49,7 +49,7 @@ public class PaymentTimeoutScheduler {
             // 查询超时的待支付记录
             LambdaQueryWrapper<PaymentRecord> queryWrapper = new LambdaQueryWrapper<>();
             queryWrapper.eq(PaymentRecord::getPaymentStatus, "pending")
-                    .le(PaymentRecord::getCreateTime, timeoutTime);
+                    .le(PaymentRecord::getCreatedAt, timeoutTime);
 
             List<PaymentRecord> expiredPayments = paymentService.list(queryWrapper);
 
@@ -67,7 +67,7 @@ public class PaymentTimeoutScheduler {
                                 .eq(PaymentRecord::getPaymentStatus, "pending") // 乐观锁，确保状态未被修改
                                 .set(PaymentRecord::getPaymentStatus, "failed")
                                 .set(PaymentRecord::getRemark, "支付超时自动取消")
-                                .set(PaymentRecord::getUpdateTime, LocalDateTime.now());
+                                .set(PaymentRecord::getUpdatedAt, LocalDateTime.now());
 
                         boolean paymentUpdated = paymentService.update(paymentUpdateWrapper);
 
@@ -80,7 +80,7 @@ public class PaymentTimeoutScheduler {
                                 Order order = orderService.getById(payment.getOrderId());
                                 if (order != null && order.getStatus() == 0) { // 只有待支付订单才能自动取消
                                     order.setStatus(4); // 4-已取消
-                                    order.setUpdateTime(LocalDateTime.now());
+                                    order.setUpdatedAt(LocalDateTime.now());
                                     boolean orderUpdated = orderService.updateById(order);
 
                                     if (orderUpdated) {
@@ -114,7 +114,7 @@ public class PaymentTimeoutScheduler {
             LambdaQueryWrapper<Order> orderQueryWrapper = new LambdaQueryWrapper<>();
             orderQueryWrapper.eq(Order::getStatus, 0) // 待支付
                     .isNull(Order::getPaymentId) // 没有支付记录
-                    .le(Order::getCreateTime, timeoutTime);
+                    .le(Order::getCreatedAt, timeoutTime);
 
             List<Order> expiredOrdersWithoutPayment = orderService.list(orderQueryWrapper);
 
@@ -124,7 +124,7 @@ public class PaymentTimeoutScheduler {
                 for (Order order : expiredOrdersWithoutPayment) {
                     try {
                         order.setStatus(4); // 4-已取消
-                        order.setUpdateTime(LocalDateTime.now());
+                        order.setUpdatedAt(LocalDateTime.now());
                         boolean orderUpdated = orderService.updateById(order);
 
                         if (orderUpdated) {

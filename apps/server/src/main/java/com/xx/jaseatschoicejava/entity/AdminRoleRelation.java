@@ -31,7 +31,7 @@ public class AdminRoleRelation {
     @ApiModelProperty(value = "角色ID")
     private Long roleId;
 
-    @TableField("create_time")
+    @TableField("created_at")
     @ApiModelProperty(value = "创建时间")
-    private LocalDateTime createTime;
+    private LocalDateTime createdAt;
 }

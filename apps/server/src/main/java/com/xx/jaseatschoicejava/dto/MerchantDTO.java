@@ -21,8 +21,8 @@ public class MerchantDTO {
     private String phone; // 联系电话
     private boolean status; // 营业状态：true-营业中，false-已关闭
     private String businessLicense; // 营业执照
-    private LocalDateTime createTime; // 创建时间
-    private LocalDateTime updateTime; // 更新时间
+    private LocalDateTime createdAt; // 创建时间
+    private LocalDateTime updatedAt; // 更新时间
     private String avatar; // 商家头像URL
 
     /**
@@ -44,8 +44,8 @@ public class MerchantDTO {
         merchantDTO.setPhone(merchant.getPhone());
         merchantDTO.setStatus(merchant.getStatus());
         merchantDTO.setBusinessLicense(merchant.getBusinessLicense());
-        merchantDTO.setCreateTime(merchant.getCreateTime());
-        merchantDTO.setUpdateTime(merchant.getUpdateTime());
+        merchantDTO.setCreatedAt(merchant.getCreatedAt());
+        merchantDTO.setUpdatedAt(merchant.getUpdatedAt());
         merchantDTO.setAvatar(merchant.getAvatar());
 
         return merchantDTO;

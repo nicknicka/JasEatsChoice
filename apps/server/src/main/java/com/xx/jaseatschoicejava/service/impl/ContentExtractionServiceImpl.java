@@ -91,8 +91,8 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
         source.setPlatform(platform.getCode());
         source.setExtractionStatus(ExtractionStatus.PENDING.getCode());
         source.setIsExtracted(false);
-        source.setCreateTime(LocalDateTime.now());
-        source.setUpdateTime(LocalDateTime.now());
+        source.setCreatedAt(LocalDateTime.now());
+        source.setUpdatedAt(LocalDateTime.now());
 
         contentSourceMapper.insert(source);
 
@@ -104,8 +104,8 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
         task.setTaskStatus("PENDING");
         task.setRetryCount(0);
         task.setPriority(0);
-        task.setCreateTime(LocalDateTime.now());
-        task.setUpdateTime(LocalDateTime.now());
+        task.setCreatedAt(LocalDateTime.now());
+        task.setUpdatedAt(LocalDateTime.now());
 
         extractionTaskMapper.insert(task);
 
@@ -189,7 +189,7 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
         }
 
         extraction.setCalories(dto.getCalories());
-        extraction.setUpdateTime(LocalDateTime.now());
+        extraction.setUpdatedAt(LocalDateTime.now());
 
         int updated = contentExtractionMapper.updateById(extraction);
         return updated > 0;
@@ -213,7 +213,7 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
         // 更新提取记录
         extraction.setIsPublished(true);
         extraction.setRecipeId(recipeId);
-        extraction.setUpdateTime(LocalDateTime.now());
+        extraction.setUpdatedAt(LocalDateTime.now());
 
         contentExtractionMapper.updateById(extraction);
 
@@ -232,7 +232,7 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
 
         extraction.setIsVerified(verified);
         extraction.setManualScore(score);
-        extraction.setUpdateTime(LocalDateTime.now());
+        extraction.setUpdatedAt(LocalDateTime.now());
 
         int updated = contentExtractionMapper.updateById(extraction);
         return updated > 0;
@@ -261,7 +261,7 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
         source.setExtractionStatus(ExtractionStatus.PENDING.getCode());
         source.setIsExtracted(false);
         source.setErrorMessage(null);
-        source.setUpdateTime(LocalDateTime.now());
+        source.setUpdatedAt(LocalDateTime.now());
 
         contentSourceMapper.updateById(source);
 
@@ -273,8 +273,8 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
         task.setTaskStatus("PENDING");
         task.setRetryCount(0);
         task.setPriority(1); // 提高优先级
-        task.setCreateTime(LocalDateTime.now());
-        task.setUpdateTime(LocalDateTime.now());
+        task.setCreatedAt(LocalDateTime.now());
+        task.setUpdatedAt(LocalDateTime.now());
 
         extractionTaskMapper.insert(task);
 
@@ -341,7 +341,7 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
         // 更新任务状态为处理中
         task.setTaskStatus("PROCESSING");
         task.setStartTime(LocalDateTime.now());
-        task.setUpdateTime(LocalDateTime.now());
+        task.setUpdatedAt(LocalDateTime.now());
         extractionTaskMapper.updateById(task);
 
         ContentSource source = contentSourceMapper.selectById(task.getSourceId());
@@ -382,7 +382,7 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
             if (fetchedContent.getCoverImage() != null && !fetchedContent.getCoverImage().isEmpty()) {
                 source.setCoverImage(fetchedContent.getCoverImage());
             }
-            source.setUpdateTime(LocalDateTime.now());
+            source.setUpdatedAt(LocalDateTime.now());
             contentSourceMapper.updateById(source);
 
             // 6. 创建提取记录
@@ -407,8 +407,8 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
 
             extraction.setIsPublished(false);
             extraction.setIsVerified(false);
-            extraction.setCreateTime(LocalDateTime.now());
-            extraction.setUpdateTime(LocalDateTime.now());
+            extraction.setCreatedAt(LocalDateTime.now());
+            extraction.setUpdatedAt(LocalDateTime.now());
 
             contentExtractionMapper.insert(extraction);
 
@@ -416,13 +416,13 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
             source.setExtractionStatus(ExtractionStatus.SUCCESS.getCode());
             source.setIsExtracted(true);
             source.setExtractionTime(LocalDateTime.now());
-            source.setUpdateTime(LocalDateTime.now());
+            source.setUpdatedAt(LocalDateTime.now());
             contentSourceMapper.updateById(source);
 
             // 8. 更新任务状态为成功
             task.setTaskStatus("SUCCESS");
             task.setEndTime(LocalDateTime.now());
-            task.setUpdateTime(LocalDateTime.now());
+            task.setUpdatedAt(LocalDateTime.now());
             extractionTaskMapper.updateById(task);
 
             log.info("提取任务完成: taskId={}, extractionId={}, dishName={}",
@@ -437,13 +437,13 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
             task.setTaskStatus("FAILED");
             task.setErrorMessage(e.getMessage());
             task.setEndTime(LocalDateTime.now());
-            task.setUpdateTime(LocalDateTime.now());
+            task.setUpdatedAt(LocalDateTime.now());
             extractionTaskMapper.updateById(task);
 
             // 更新内容源状态为失败
             source.setExtractionStatus(ExtractionStatus.FAILED.getCode());
             source.setErrorMessage(e.getMessage());
-            source.setUpdateTime(LocalDateTime.now());
+            source.setUpdatedAt(LocalDateTime.now());
             contentSourceMapper.updateById(source);
 
             throw new RuntimeException("提取任务失败: " + e.getMessage(), e);
@@ -457,14 +457,14 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
         if (task.getRetryCount() < MAX_RETRY_COUNT) {
             task.setRetryCount(task.getRetryCount() + 1);
             task.setTaskStatus("PENDING"); // 重新排队
-            task.setUpdateTime(LocalDateTime.now());
+            task.setUpdatedAt(LocalDateTime.now());
             extractionTaskMapper.updateById(task);
             log.info("任务将重试: taskId={}, retryCount={}", task.getId(), task.getRetryCount());
         } else {
             task.setTaskStatus("FAILED");
             task.setErrorMessage("重试" + MAX_RETRY_COUNT + "次后仍失败: " + e.getMessage());
             task.setEndTime(LocalDateTime.now());
-            task.setUpdateTime(LocalDateTime.now());
+            task.setUpdatedAt(LocalDateTime.now());
             extractionTaskMapper.updateById(task);
         }
     }
@@ -477,7 +477,7 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
         task.setResultData(e.getRawResponse());
         task.setErrorMessage(e.getMessage());
         task.setEndTime(LocalDateTime.now());
-        task.setUpdateTime(LocalDateTime.now());
+        task.setUpdatedAt(LocalDateTime.now());
         extractionTaskMapper.updateById(task);
 
         ContentSource source = contentSourceMapper.selectById(task.getSourceId());
@@ -485,7 +485,7 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
             source.setExtractionStatus(ExtractionStatus.PARSE_FAILED.getCode());
             source.setIsExtracted(false);
             source.setErrorMessage(e.getMessage());
-            source.setUpdateTime(LocalDateTime.now());
+            source.setUpdatedAt(LocalDateTime.now());
             contentSourceMapper.updateById(source);
         }
     }

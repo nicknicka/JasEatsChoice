@@ -99,8 +99,8 @@ public class DishFeatureServiceImpl implements DishFeatureService {
         BigDecimal popularityScore = calculatePopularityScore(String.valueOf(dish.getId()));
         feature.setPopularityScore(popularityScore);
 
-        feature.setCreatedTime(LocalDateTime.now());
-        feature.setUpdatedTime(LocalDateTime.now());
+        feature.setCreatedAt(LocalDateTime.now());
+        feature.setUpdatedAt(LocalDateTime.now());
 
         return feature;
     }
@@ -305,7 +305,7 @@ public class DishFeatureServiceImpl implements DishFeatureService {
                 DishFeature feature = dishFeatureMapper.getByDishId(String.valueOf(dish.getId()));
                 if (feature != null) {
                     feature.setPopularityScore(score);
-                    feature.setUpdatedTime(LocalDateTime.now());
+                    feature.setUpdatedAt(LocalDateTime.now());
                     dishFeatureMapper.updateById(feature);
                 }
             }
@@ -560,7 +560,7 @@ public class DishFeatureServiceImpl implements DishFeatureService {
         similarity.setDishIdB(dishIdB);
         similarity.setSimilarityScore(BigDecimal.valueOf(score).setScale(4, RoundingMode.HALF_UP));
         similarity.setSimilarityType(similarityType);
-        similarity.setUpdatedTime(LocalDateTime.now());
+        similarity.setUpdatedAt(LocalDateTime.now());
 
         dishSimilarityMapper.insert(similarity);
     }

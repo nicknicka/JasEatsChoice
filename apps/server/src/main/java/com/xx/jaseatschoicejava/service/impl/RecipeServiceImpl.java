@@ -37,14 +37,14 @@ public class RecipeServiceImpl extends ServiceImpl<RecipeMapper, Recipe> impleme
             logger.error("请求食谱的用户ID为null，请检查！");
         }
 
-        // 2. 根据createTime筛选出今日的食谱
+        // 2. 根据createdAt筛选出今日的食谱
         LocalDate today = LocalDate.now();
         // 使用ge和le方法筛选出今天的所有食谱
-        queryWrapper.ge("create_time", today.atStartOfDay());
-        queryWrapper.le("create_time", today.plusDays(1).atStartOfDay());
+        queryWrapper.ge("created_at", today.atStartOfDay());
+        queryWrapper.le("created_at", today.plusDays(1).atStartOfDay());
 
-        // 3. 按照updateTime排序
-        queryWrapper.orderByDesc("update_time");
+        // 3. 按照updatedAt排序
+        queryWrapper.orderByDesc("updated_at");
 
         List<Recipe> recipes = list(queryWrapper);
         logger.info("返回的recipes: {}", recipes);
@@ -93,7 +93,7 @@ public class RecipeServiceImpl extends ServiceImpl<RecipeMapper, Recipe> impleme
         if (userId != null) {
             queryWrapper.eq("user_id", userId);
         }
-        queryWrapper.orderByDesc("update_time");
+        queryWrapper.orderByDesc("updated_at");
 
         return list(queryWrapper);
     }
@@ -113,14 +113,14 @@ public class RecipeServiceImpl extends ServiceImpl<RecipeMapper, Recipe> impleme
     public List<Recipe> getAllRecipes(String userId) {
         QueryWrapper<Recipe> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("user_id", userId);
-        queryWrapper.orderByDesc("create_time");
+        queryWrapper.orderByDesc("created_at");
         return list(queryWrapper);
     }
 
     @Override
     public Recipe addRecipe(Recipe recipe) {
-        recipe.setCreateTime(LocalDateTime.now());
-        recipe.setUpdateTime(LocalDateTime.now());
+        recipe.setCreatedAt(LocalDateTime.now());
+        recipe.setUpdatedAt(LocalDateTime.now());
         if (recipe.getFavorite() == null) {
             recipe.setFavorite(false);
         }
@@ -166,7 +166,7 @@ public class RecipeServiceImpl extends ServiceImpl<RecipeMapper, Recipe> impleme
         existingRecipe.setCookTime(recipe.getCookTime());
         existingRecipe.setFavorite(recipe.getFavorite());
         existingRecipe.setCustomNutrition(recipe.getCustomNutrition());
-        existingRecipe.setUpdateTime(LocalDateTime.now());
+        existingRecipe.setUpdatedAt(LocalDateTime.now());
         updateById(existingRecipe);
         return existingRecipe;
     }
@@ -183,7 +183,7 @@ public class RecipeServiceImpl extends ServiceImpl<RecipeMapper, Recipe> impleme
             return null;
         }
         recipe.setFavorite(!recipe.getFavorite());
-        recipe.setUpdateTime(LocalDateTime.now());
+        recipe.setUpdatedAt(LocalDateTime.now());
         updateById(recipe);
         return recipe;
     }
@@ -200,7 +200,7 @@ public class RecipeServiceImpl extends ServiceImpl<RecipeMapper, Recipe> impleme
         LocalDateTime now = LocalDateTime.now();
         for (Recipe recipe : recipes) {
             recipe.setFavorite(favorite);
-            recipe.setUpdateTime(now);
+            recipe.setUpdatedAt(now);
         }
 
         // 批量更新数据库

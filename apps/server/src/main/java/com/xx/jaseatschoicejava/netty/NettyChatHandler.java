@@ -249,7 +249,7 @@ public class NettyChatHandler extends SimpleChannelInboundHandler<TextWebSocketF
                 chatMsg.setMsgType(msgType);
                 chatMsg.setContent(content);
                 chatMsg.setReadStatus(false); // 未读状态
-                chatMsg.setCreateTime(LocalDateTime.now());
+                chatMsg.setCreatedAt(LocalDateTime.now());
 
                 chatMsgService.save(chatMsg);
                 logger.info("Message stored in database for user: {}", userId);

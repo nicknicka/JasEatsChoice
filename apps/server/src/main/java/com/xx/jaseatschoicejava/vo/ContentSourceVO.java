@@ -116,7 +116,7 @@ public class ContentSourceVO {
     /**
      * 创建时间
      */
-    private LocalDateTime createTime;
+    private LocalDateTime createdAt;
 
     /**
      * 提取时间

@@ -59,13 +59,13 @@ public class Menu {
     @JsonProperty("autoOffline") // 前端使用的字段名是autoOffline
     private LocalDateTime autoEndTime; // 自动结束时间
 
-    @TableField("create_time")
+    @TableField("created_at")
     @ApiModelProperty(value = "创建时间")
-    private LocalDateTime createTime; // 创建时间
+    private LocalDateTime createdAt; // 创建时间
 
-    @TableField("update_time")
+    @TableField("updated_at")
     @ApiModelProperty(value = "更新时间")
-    private LocalDateTime updateTime; // 更新时间
+    private LocalDateTime updatedAt; // 更新时间
 
     @TableField(exist = false)
     @ApiModelProperty(value = "菜品数量")

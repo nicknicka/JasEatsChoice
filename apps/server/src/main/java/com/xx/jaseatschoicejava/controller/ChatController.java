@@ -203,7 +203,7 @@ public class ChatController {
                     if (!joinTimes.isEmpty()) {
                         // 只查询用户最后一次加入之后的消息
                         LocalDateTime lastJoinTime = joinTimes.get(joinTimes.size() - 1);
-                        queryWrapper.ge(ChatMsg::getCreateTime, lastJoinTime);
+                        queryWrapper.ge(ChatMsg::getCreatedAt, lastJoinTime);
                         System.out.println("  - 过滤条件: 只显示 " + lastJoinTime + " 之后的消息");
                     } else {
                         // 用户从未加入过该群，返回空结果
@@ -224,7 +224,7 @@ public class ChatController {
         }
 
         // 按时间倒序排序(最新的在前)
-        queryWrapper.orderByDesc(ChatMsg::getCreateTime);
+        queryWrapper.orderByDesc(ChatMsg::getCreatedAt);
 
         // 查询结果
         long startTime = System.currentTimeMillis();
@@ -327,7 +327,7 @@ public class ChatController {
     public ResponseResult<?> sendMessage(@RequestBody ChatMsg chatMsg) {
         // 设置默认值
         chatMsg.setReadStatus(false);  // 0-未读
-        chatMsg.setCreateTime(LocalDateTime.now());
+        chatMsg.setCreatedAt(LocalDateTime.now());
 
         // 🔍 调试日志：检查接收到的消息数据
         System.out.println("📨 [Chat] 接收到消息");
@@ -373,7 +373,7 @@ public class ChatController {
                 chatMsg.getToId(),
                 chatMsg.getSessionType(),
                 chatMsg.getContent(),
-                chatMsg.getCreateTime()
+                chatMsg.getCreatedAt()
             );
 
             // 2. 为接收者创建或更新会话（如果是群聊，所有成员都会收到消息）
@@ -404,7 +404,7 @@ public class ChatController {
                         groupId,       // 群ID
                         chatMsg.getSessionType(),
                         chatMsg.getContent(),
-                        chatMsg.getCreateTime()
+                        chatMsg.getCreatedAt()
                     );
                 }
             } else {
@@ -414,7 +414,7 @@ public class ChatController {
                     chatMsg.getFromId(),
                     chatMsg.getSessionType(),
                     chatMsg.getContent(),
-                    chatMsg.getCreateTime()
+                    chatMsg.getCreatedAt()
                 );
             }
 
@@ -511,7 +511,7 @@ public class ChatController {
             session.setMemberCount("group".equals(sessionType) ? 0 : null);
             session.setUnreadCount(0);
             session.setPinned(0);  // 0-未置顶
-            session.setCreateTime(LocalDateTime.now());
+            session.setCreatedAt(LocalDateTime.now());
 
             // ⭐ 设置 groupId（仅群聊）
             if ("group".equals(sessionType)) {
@@ -526,7 +526,7 @@ public class ChatController {
         // 更新会话信息
         session.setLastMessage(content);
         session.setLastMessageTime(messageTime);
-        session.setUpdateTime(LocalDateTime.now());
+        session.setUpdatedAt(LocalDateTime.now());
 
         // 保存会话
         chatSessionService.saveOrUpdate(session);
@@ -571,10 +571,10 @@ public class ChatController {
             session.setMemberCount(isGroup ? 0 : null);
             session.setUnreadCount(1);  // 新会话，初始未读数为1
             session.setPinned(0);  // 0-未置顶
-            session.setCreateTime(LocalDateTime.now());
+            session.setCreatedAt(LocalDateTime.now());
             session.setLastMessage(content);
             session.setLastMessageTime(messageTime);
-            session.setUpdateTime(LocalDateTime.now());
+            session.setUpdatedAt(LocalDateTime.now());
 
             // ⭐ 设置 groupId（仅群聊）
             if (isGroup) {
@@ -591,7 +591,7 @@ public class ChatController {
             session.setLastMessage(content);
             session.setLastMessageTime(messageTime);
             session.setUnreadCount((session.getUnreadCount() != null ? session.getUnreadCount() : 0) + 1);
-            session.setUpdateTime(LocalDateTime.now());
+            session.setUpdatedAt(LocalDateTime.now());
             chatSessionService.updateById(session);
         }
     }
@@ -679,9 +679,9 @@ public class ChatController {
         }
 
         // 检查消息是否已过期（2分钟内可以撤回）
-        LocalDateTime createTime = chatMsg.getCreateTime();
+        LocalDateTime createdAt = chatMsg.getCreatedAt();
         LocalDateTime now = LocalDateTime.now();
-        long minutesDiff = java.time.Duration.between(createTime, now).toMinutes();
+        long minutesDiff = java.time.Duration.between(createdAt, now).toMinutes();
         if (minutesDiff > 2) {
             return ResponseResult.fail("400", "消息已超过2分钟，无法撤回");
         }
