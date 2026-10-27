@@ -145,13 +145,14 @@ export function updateAdminProfile(profileData) {
 
 /**
  * 修改密码
- * @param {Object} passwordData - 密码数据
+ * @param {number} adminId - 管理员ID
+ * @param {string} password - 新密码
  * @returns {Promise} 修改结果
  */
-export function changeAdminPassword(passwordData) {
-  console.log('[管理员API] 修改密码')
+export function changeAdminPassword(adminId, password) {
+  console.log('[管理员API] 修改密码:', adminId)
   return api
-    .put('/admin/password', passwordData)
+    .put(buildUrl(API.ADMIN.RESET_PASSWORD, { adminId }), { password })
     .then((response) => {
       console.log('[管理员API] 修改密码成功')
       return response
