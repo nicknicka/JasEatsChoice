@@ -11,7 +11,7 @@ test.describe('模块三：商家浏览与详情', () => {
     markRunning('3.1')
     try {
       await page.goto('/user/home/merchants')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const merchantList = page.locator('[class*="merchant"], .el-card, [class*="list"]')
       await expect(merchantList.first()).toBeVisible({ timeout: 10000 })
       markPassed('3.1', '商家列表页面可访问')
@@ -25,7 +25,7 @@ test.describe('模块三：商家浏览与详情', () => {
     markRunning('3.2')
     try {
       await page.goto('/user/home/merchants')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const searchInput = page.locator('input[placeholder*="搜索"], input[placeholder*="商家"], .el-input__inner').first()
       if (await searchInput.count() > 0) {
         await searchInput.fill('测试')
@@ -44,7 +44,7 @@ test.describe('模块三：商家浏览与详情', () => {
     markRunning('3.3')
     try {
       await page.goto('/user/home/merchant-detail?id=1')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const detail = page.locator('[class*="detail"], [class*="merchant"]')
       await expect(detail.first()).toBeVisible({ timeout: 10000 })
       markPassed('3.3', '商家详情页面可访问')
@@ -58,7 +58,7 @@ test.describe('模块三：商家浏览与详情', () => {
     markRunning('3.4')
     try {
       await page.goto('/user/home/merchant-detail?id=1')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const announcement = page.locator('[class*="announcement"], [class*="notice"], [class*="公告"]')
       if (await announcement.count() > 0) {
         markPassed('3.4', '公告区域存在')
@@ -75,7 +75,7 @@ test.describe('模块三：商家浏览与详情', () => {
     markRunning('3.5')
     try {
       await page.goto('/user/home/merchant-detail?id=1')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const reviews = page.locator('[class*="review"], [class*="comment"], [class*="评价"]')
       if (await reviews.count() > 0) {
         markPassed('3.5', '评价区域存在')
@@ -92,7 +92,7 @@ test.describe('模块三：商家浏览与详情', () => {
     markRunning('3.6')
     try {
       await page.goto('/user/home/merchant-detail?id=1')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const dishes = page.locator('[class*="dish"], [class*="menu-item"], [class*="菜品"]')
       if (await dishes.count() > 0) {
         markPassed('3.6', '菜品列表存在')
@@ -109,7 +109,7 @@ test.describe('模块三：商家浏览与详情', () => {
     markRunning('3.7')
     try {
       await page.goto('/user/home/dish-detail/1')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const detail = page.locator('[class*="detail"], [class*="dish"]')
       await expect(detail.first()).toBeVisible({ timeout: 10000 })
       markPassed('3.7', '菜品详情页面可访问')
@@ -124,7 +124,7 @@ test.describe('模块三：商家浏览与详情', () => {
     try {
       // 收藏按钮在推荐页菜品卡上（Recommend.vue 的「☆ 收藏」），不在菜品详情页。
       await page.goto('/user/home/recommend')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       await expect(page.locator('button.act-btn', { hasText: '收藏' }).first()).toBeVisible({ timeout: 10000 })
       await page.locator('button.act-btn', { hasText: '收藏' }).first().click()
       markPassed('3.8', '推荐页收藏按钮可点击')
@@ -140,7 +140,7 @@ test.describe('模块三：商家浏览与详情', () => {
       // 加购按钮在商家详情页菜品卡上（MerchantDetail.vue 的「加入购物车」）。
       // 种子数据里菜品挂在商家 7638432224340229 下（id=1 是错误商家号，无上架菜品）。
       await page.goto('/user/home/merchant-detail?id=7638432224340229')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       await expect(page.locator('button:has-text("加入购物车")').first()).toBeVisible({ timeout: 10000 })
       await page.locator('button:has-text("加入购物车")').first().click()
       await expect(page.locator('.el-message')).toHaveText(/已加入购物车/, { timeout: 10000 })

@@ -14,7 +14,7 @@ class LoginPage {
 
   async goto() {
     await this.page.goto('/login')
-    await this.page.waitForLoadState('networkidle').catch(() => null)
+    await this.page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
     await this.phoneInput.waitFor({ state: 'visible', timeout: 10000 })
   }
 
@@ -83,7 +83,7 @@ class RegisterPage {
 
   async goto() {
     await this.page.goto('/register')
-    await this.page.waitForLoadState('networkidle').catch(() => null)
+    await this.page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
   }
 
   async fillForm(data) {
@@ -108,7 +108,7 @@ class AdminLoginPage {
 
   async goto() {
     await this.page.goto('/admin/login')
-    await this.page.waitForLoadState('networkidle').catch(() => null)
+    await this.page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
     await this.usernameInput.waitFor({ state: 'visible', timeout: 10000 })
   }
 
@@ -126,12 +126,12 @@ class UserHomePage {
 
   async goto() {
     await this.page.goto('/user/home')
-    await this.page.waitForLoadState('networkidle').catch(() => null)
+    await this.page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
   }
 
   async navigateTo(route) {
     await this.page.goto(`/user/home/${route}`)
-    await this.page.waitForLoadState('networkidle').catch(() => null)
+    await this.page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
   }
 }
 
@@ -142,12 +142,12 @@ class MerchantHomePage {
 
   async goto() {
     await this.page.goto('/merchant/home')
-    await this.page.waitForLoadState('networkidle').catch(() => null)
+    await this.page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
   }
 
   async navigateTo(route) {
     await this.page.goto(`/merchant/home/${route}`)
-    await this.page.waitForLoadState('networkidle').catch(() => null)
+    await this.page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
   }
 }
 
@@ -158,7 +158,7 @@ class AdminDashboardPage {
 
   async goto() {
     await this.page.goto('/admin/dashboard')
-    await this.page.waitForLoadState('networkidle').catch(() => null)
+    await this.page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
   }
 }
 

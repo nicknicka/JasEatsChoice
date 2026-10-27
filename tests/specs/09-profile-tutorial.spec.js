@@ -9,7 +9,7 @@ test.describe('模块九：个人中心与教程', () => {
     markRunning('9.1')
     try {
       await page.goto('/user/home/profile')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const profile = page.locator('[class*="profile"], [class*="user-info"], .el-form')
       await expect(profile.first()).toBeVisible({ timeout: 10000 })
       markPassed('9.1', '个人信息页面可访问')
@@ -20,7 +20,7 @@ test.describe('模块九：个人中心与教程', () => {
     markRunning('9.2')
     try {
       await page.goto('/user/home/profile')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const avatar = page.locator('[class*="avatar"], [class*="upload"], input[type="file"]').first()
       if (await avatar.count() > 0) {
         markPassed('9.2', '头像上传区域存在')
@@ -34,7 +34,7 @@ test.describe('模块九：个人中心与教程', () => {
     markRunning('9.3')
     try {
       await page.goto('/user/home/settings')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       // 用户改密入口在「设置 → 密码」，没有独立的 change-password 路由
       await expect(page.getByText('密码', { exact: true })).toBeVisible({ timeout: 10000 })
       await expect(page.locator('.el-button:has-text("修改")').first()).toBeVisible({ timeout: 10000 })
@@ -46,7 +46,7 @@ test.describe('模块九：个人中心与教程', () => {
     markRunning('9.4')
     try {
       await page.goto('/user/home/profile')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       await page.locator('button:has-text("编辑")').first().click()
       // 饮食偏好在个人中心的编辑面板里
       await expect(page.getByText('饮食偏好', { exact: true })).toBeVisible({ timeout: 10000 })
@@ -59,7 +59,7 @@ test.describe('模块九：个人中心与教程', () => {
     markRunning('9.5')
     try {
       await page.goto('/user/home/consume-history')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       await expect(page.getByText('消费记录').first()).toBeVisible({ timeout: 10000 })
       await expect(page.getByText('当前余额')).toBeVisible({ timeout: 10000 })
       markPassed('9.5', '消费记录页含余额与流水')
@@ -70,7 +70,7 @@ test.describe('模块九：个人中心与教程', () => {
     markRunning('9.6')
     try {
       await page.goto('/user/home/tutorials')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const tutorial = page.locator('[class*="tutorial"], [class*="guide"], .el-card')
       await expect(tutorial.first()).toBeVisible({ timeout: 10000 })
       markPassed('9.6', '教程列表页面可访问')
@@ -81,7 +81,7 @@ test.describe('模块九：个人中心与教程', () => {
     markRunning('9.7')
     try {
       await page.goto('/user/home/tutorials')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const card = page.locator('[class*="tutorial-card"], [class*="tutorial-item"], .el-card').first()
       await expect(card).toBeVisible({ timeout: 10000 })
       await card.click()
@@ -95,7 +95,7 @@ test.describe('模块九：个人中心与教程', () => {
     markRunning('9.8')
     try {
       await page.goto('/user/home/tutorials/publish')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       await expect(page.getByText('发布教程').first()).toBeVisible({ timeout: 10000 })
       await expect(page.getByText('快速模板')).toBeVisible({ timeout: 10000 })
       markPassed('9.8', '发布教程页含模板入口')
@@ -106,7 +106,7 @@ test.describe('模块九：个人中心与教程', () => {
     markRunning('9.9')
     try {
       await page.goto('/user/home/tutorials/my')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       await expect(page.getByText('我的教程').first()).toBeVisible({ timeout: 10000 })
       await expect(page.locator('button:has-text("发布新教程")')).toBeVisible({ timeout: 10000 })
       markPassed('9.9', '我的教程页含发布入口')

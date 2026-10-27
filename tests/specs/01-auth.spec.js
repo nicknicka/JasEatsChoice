@@ -35,7 +35,7 @@ test.describe('模块一：认证模块', () => {
     markRunning('1.3')
     try {
       await page.goto('/forgot-password')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       await expect(page).toHaveURL(/forgot-password/)
       markPassed('1.3', '找回密码页面可访问')
     } catch (e) {
@@ -48,7 +48,7 @@ test.describe('模块一：认证模块', () => {
     markRunning('1.4')
     try {
       await page.goto('/merchant/register')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       await expect(page).toHaveURL(/merchant\/register/)
       markPassed('1.4', '商家注册页面可访问')
     } catch (e) {

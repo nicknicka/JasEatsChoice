@@ -11,7 +11,7 @@ test.describe('模块四：订单流程', () => {
     markRunning('4.1')
     try {
       await page.goto('/user/home/merchants')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       await page.locator('a[href*="merchant-detail"], [class*="merchant-card"], [class*="merchant-item"]').first().click()
       await page.waitForTimeout(1500)
       await page.locator('button:has-text("加入购物车")').first().click()
@@ -33,7 +33,7 @@ test.describe('模块四：订单流程', () => {
     markRunning('4.2')
     try {
       await page.goto('/user/home/orders')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const payBtn = page.locator('button:has-text("支付"), button:has-text("付款")').first()
       if (await payBtn.count() > 0) {
         markPassed('4.2', '支付按钮存在')
@@ -50,7 +50,7 @@ test.describe('模块四：订单流程', () => {
     markRunning('4.3')
     try {
       await page.goto('/user/home/orders')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const orderList = page.locator('[class*="order"], .el-card, [class*="list"]')
       await expect(orderList.first()).toBeVisible({ timeout: 10000 })
       markPassed('4.3', '订单列表页面可访问')
@@ -64,7 +64,7 @@ test.describe('模块四：订单流程', () => {
     markRunning('4.4')
     try {
       await page.goto('/user/home/order-detail/1')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const detail = page.locator('[class*="detail"], [class*="order"]')
       await expect(detail.first()).toBeVisible({ timeout: 10000 })
       markPassed('4.4', '订单详情页面可访问')
@@ -86,7 +86,7 @@ test.describe('模块四：订单流程', () => {
     markRunning('4.6')
     try {
       await page.goto('/user/home/evaluate-order/1')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const evalForm = page.locator('[class*="evaluate"], [class*="review"], .el-rate')
       await expect(evalForm.first()).toBeVisible({ timeout: 10000 })
       markPassed('4.6', '评价页面可访问')
@@ -100,7 +100,7 @@ test.describe('模块四：订单流程', () => {
     markRunning('4.7')
     try {
       await page.goto('/user/home/orders')
-      await page.waitForLoadState('networkidle').catch(() => null)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const cancelBtn = page.locator('button:has-text("取消")').first()
       if (await cancelBtn.count() > 0) {
         markPassed('4.7', '取消按钮存在')
