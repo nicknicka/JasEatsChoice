@@ -225,7 +225,7 @@ test.describe('模块四：订单流程', () => {
       await expect(page.locator('.chat-area-header')).toContainText(groupName, { timeout: 10000 })
       const createBtn = page.locator('.group-quick-actions .order-shortcut')
       await expect(createBtn).toBeVisible({ timeout: 10000 })
-      await createBtn.dispatchEvent('click')
+      await createBtn.click()
       await expect(page.locator('.el-message').filter({ hasText: '群订单已创建' })).toBeVisible({ timeout: 10000 })
 
       await expect.poll(async () => {
