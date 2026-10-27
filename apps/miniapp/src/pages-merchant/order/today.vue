@@ -262,9 +262,9 @@ const loadOrders = async (isRefresh = false) => {
               })),
               remark: order.remark || '',
               tableNo: order.tableNo || 'A01',
-              waitTime: calculateWaitTime(order.createTime),
-              orderTime: formatTime(order.createTime),
-              isUrgent: calculateWaitTime(order.createTime).includes('25分钟'),
+              waitTime: calculateWaitTime(order.createdAt),
+              orderTime: formatTime(order.createdAt),
+              isUrgent: calculateWaitTime(order.createdAt).includes('25分钟'),
               customerId: order.userId
             }
           } catch (error) {
@@ -278,7 +278,7 @@ const loadOrders = async (isRefresh = false) => {
               remark: order.remark || '',
               tableNo: 'A01',
               waitTime: '等待中',
-              orderTime: formatTime(order.createTime),
+              orderTime: formatTime(order.createdAt),
               isUrgent: false,
               customerId: order.userId
             }

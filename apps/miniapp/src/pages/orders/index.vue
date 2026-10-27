@@ -68,7 +68,7 @@
 
           <!-- 订单信息 -->
           <view class="order-info">
-            <text class="order-time">{{ formatTime(order.createTime) }}</text>
+            <text class="order-time">{{ formatTime(order.createdAt) }}</text>
             <text class="order-total">共{{ getTotalCount(order.dishes) }}件 实付</text>
             <text class="order-amount">¥{{ order.totalAmount }}</text>
           </view>

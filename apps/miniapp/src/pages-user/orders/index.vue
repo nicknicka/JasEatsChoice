@@ -323,7 +323,7 @@ const loadOrders = async (showLoading = true) => {
           items,
           totalQuantity: items.reduce((sum, item) => sum + item.quantity, 0),
           totalAmount: Number(order.amount?.total || order.totalAmount || 0).toFixed(2),
-          createTime: order.createTime || order.createdAt || ''
+          createdAt: order.createdAt || ''
         }
       })
 

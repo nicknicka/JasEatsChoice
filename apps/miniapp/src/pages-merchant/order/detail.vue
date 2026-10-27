@@ -273,8 +273,8 @@ const loadOrderDetail = async () => {
           image: dish.image || dish.coverImage || ''
         })),
         remark: data.remark || '',
-        orderTime: formatFullTime(data.createTime),
-        expectTime: formatFullTime(data.updateTime) || '未设置',
+        orderTime: formatFullTime(data.createdAt),
+        expectTime: formatFullTime(data.updatedAt) || '未设置',
         takeType: '到店自取',
         tableNo: '',
         paymentMethod: '微信支付',

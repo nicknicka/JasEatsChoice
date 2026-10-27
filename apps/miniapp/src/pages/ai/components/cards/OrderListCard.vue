@@ -33,7 +33,7 @@
 								<text class="status-text">{{ getStatusText(order.status) }}</text>
 							</view>
 						</view>
-						<text class="order-time">{{ formatTime(order.createTime) }}</text>
+						<text class="order-time">{{ formatTime(order.createdAt) }}</text>
 					</view>
 
 					<!-- 订单内容（商家信息） -->

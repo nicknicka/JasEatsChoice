@@ -347,7 +347,7 @@ const resolveTransactionStatusText = (status) => {
 const normalizeWalletTransaction = (record) => {
   const meta = resolveTransactionMeta(record?.type)
   const amount = Number(record?.amount || 0)
-  const rawTime = record?.createTime || record?.time
+  const rawTime = record?.createdAt || record?.time
   const timestamp = new Date(rawTime).getTime()
 
   return {

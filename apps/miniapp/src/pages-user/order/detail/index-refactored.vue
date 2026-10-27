@@ -33,7 +33,7 @@
         </view>
         <view class="info-item">
           <text class="info-label">下单时间</text>
-          <text class="info-value">{{ orderInfo.createTime }}</text>
+          <text class="info-value">{{ orderInfo.createdAt }}</text>
         </view>
         <view class="info-item">
           <text class="info-label">支付方式</text>
@@ -107,7 +107,7 @@ const orderInfo = ref({
   id: '',
   orderNo: '',
   status: 'pending',
-  createTime: '',
+  createdAt: '',
   paymentMethod: '微信支付',
   deliveryTime: '预计30分钟送达'
 })
@@ -156,7 +156,7 @@ const loadOrderDetail = async (orderId) => {
       id: orderId,
       orderNo: 'DD' + Date.now(),
       status: 'delivering',
-      createTime: '2026-03-20 12:30',
+      createdAt: '2026-03-20 12:30',
       paymentMethod: '微信支付',
       deliveryTime: '预计30分钟送达'
     }

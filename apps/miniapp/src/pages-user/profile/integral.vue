@@ -125,7 +125,7 @@ const loadIntegralList = async () => {
       integralList.value = res.map(record => ({
         id: record.id || record.recordId,
         title: record.description || record.title || '积分变动',
-        time: formatTime(record.createTime || record.createdAt),
+        time: formatTime(record.createdAt),
         amount: Math.abs(record.points || record.amount || 0),
         type: (record.points > 0 || record.amount > 0) ? 'income' : 'expense'
       }))
@@ -133,7 +133,7 @@ const loadIntegralList = async () => {
       integralList.value = res.data.map(record => ({
         id: record.id || record.recordId,
         title: record.description || record.title || '积分变动',
-        time: formatTime(record.createTime || record.createdAt),
+        time: formatTime(record.createdAt),
         amount: Math.abs(record.points || record.amount || 0),
         type: (record.points > 0 || record.amount > 0) ? 'income' : 'expense'
       }))

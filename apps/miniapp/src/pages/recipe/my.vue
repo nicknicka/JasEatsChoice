@@ -115,7 +115,7 @@
               >{{ tag }}</text>
             </view>
 
-            <text class="recipe-time">{{ formatTime(recipe.createTime) }}</text>
+            <text class="recipe-time">{{ formatTime(recipe.createdAt) }}</text>
           </view>
 
           <!-- 快速操作 -->
@@ -237,7 +237,7 @@ const loadRecipes = async () => {
         servings: 2,
         time: 30,
         tags: ['低脂', '高蛋白', '健康'],
-        createTime: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString()
+        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString()
       },
       {
         id: 2,
@@ -257,7 +257,7 @@ const loadRecipes = async () => {
         servings: 1,
         time: 20,
         tags: ['高蛋白', '增肌', '健身'],
-        createTime: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString()
+        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString()
       },
       {
         id: 3,
@@ -276,7 +276,7 @@ const loadRecipes = async () => {
         servings: 3,
         time: 45,
         tags: ['家常', '营养', '下饭'],
-        createTime: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString()
+        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString()
       },
       {
         id: 4,
@@ -294,7 +294,7 @@ const loadRecipes = async () => {
         servings: 1,
         time: 15,
         tags: ['轻食', '低卡', '素食'],
-        createTime: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString()
+        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString()
       }
     ]
 

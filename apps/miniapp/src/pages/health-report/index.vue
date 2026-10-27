@@ -59,7 +59,7 @@
             <view class="cover-icon">{{ getReportIcon(report.type) }}</view>
             <view class="cover-info">
               <text class="cover-title">{{ getReportTitle(report.type) }}</text>
-              <text class="cover-date">{{ formatDate(report.createTime) }}</text>
+              <text class="cover-date">{{ formatDate(report.createdAt) }}</text>
             </view>
             <view class="cover-score">
               <text class="score-value">{{ report.score }}</text>
@@ -140,7 +140,7 @@
 
             <view class="header-info">
               <text class="report-name">{{ getReportTitle(currentReport.type) }}</text>
-              <text class="report-time">生成时间：{{ formatFullTime(currentReport.createTime) }}</text>
+              <text class="report-time">生成时间：{{ formatFullTime(currentReport.createdAt) }}</text>
             </view>
           </view>
 
@@ -308,7 +308,7 @@ const loadReports = async () => {
       {
         id: 1,
         type: 'weekly',
-        createTime: new Date(now - 1000 * 60 * 60 * 24 * 7).toISOString(),
+        createdAt: new Date(now - 1000 * 60 * 60 * 24 * 7).toISOString(),
         score: 85,
         dietScore: 4,
         nutritionScore: 78,
@@ -345,7 +345,7 @@ const loadReports = async () => {
       {
         id: 2,
         type: 'monthly',
-        createTime: new Date(now - 1000 * 60 * 60 * 24 * 30).toISOString(),
+        createdAt: new Date(now - 1000 * 60 * 60 * 24 * 30).toISOString(),
         score: 82,
         dietScore: 4,
         nutritionScore: 75,
@@ -374,7 +374,7 @@ const loadReports = async () => {
       {
         id: 3,
         type: 'quarterly',
-        createTime: new Date(now - 1000 * 60 * 60 * 24 * 90).toISOString(),
+        createdAt: new Date(now - 1000 * 60 * 60 * 24 * 90).toISOString(),
         score: 80,
         dietScore: 3,
         nutritionScore: 72,

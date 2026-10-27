@@ -216,7 +216,7 @@ const loadConversations = async (isRefresh = false) => {
         unread: conv.unreadCount || 0,
         lastMessage: conv.lastMessage?.content || '',
         lastMessageType: conv.lastMessage?.type || 'text',
-        lastTime: conv.lastMessageTime || conv.updateTime || new Date()
+        lastTime: conv.lastMessageTime || conv.updatedAt || new Date()
       }))
 
       // 排序：置顶的在前，然后按时间排序

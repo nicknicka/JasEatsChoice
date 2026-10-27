@@ -459,7 +459,7 @@ const loadOrderProgress = async () => {
       status: mapOrderStatus(orderData.status || orderData.orderStatus),
       statusDesc: orderData.statusDesc || '',
       estimatedTime: orderData.estimatedTime || orderData.estimated_time || '',
-      createdAt: formatTime(orderData.createdAt || orderData.create_time || orderData.created_at),
+      createdAt: formatTime(orderData.createdAt),
       confirmedAt: formatTime(orderData.confirmedAt),
       preparingAt: formatTime(orderData.preparingAt),
       readyAt: formatTime(orderData.readyAt),

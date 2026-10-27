@@ -310,7 +310,7 @@ const loadReviews = async (refresh = false) => {
         name: review.isAnonymous ? '匿名用户' : (review.userName || review.user?.name || '用户***')
       },
       rating: review.rating || 5,
-      date: review.createTime || review.createdAt || '',
+      date: review.createdAt || '',
       content: review.content || '',
       images: review.images || [],
       dishes: (review.dishes || []).map(dish => ({

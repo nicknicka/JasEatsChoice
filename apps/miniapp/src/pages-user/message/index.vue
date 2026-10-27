@@ -212,7 +212,7 @@ const resolveSortTime = (value, fallback = 0) => {
 
 const resolveConversationSortTime = (conversation, index) => {
   const directTimestamp = resolveSortTime(
-    conversation.lastMessageTime || conversation.updateTime || conversation.createTime,
+    conversation.lastMessageTime || conversation.updatedAt || conversation.createdAt,
     0
   )
   if (directTimestamp > 0) {
@@ -252,7 +252,7 @@ const extractNotificationList = (data) => {
 const mapNotificationMessage = (notif, index) => {
   const rawId = notif.notificationId || notif.id
   const sortTime = resolveSortTime(
-    notif.sendTime || notif.createTime || notif.createdAt,
+    notif.sendTime || notif.createdAt,
     Date.now() - 100000 - index
   )
   const type = normalizeMessageType(notif.type)

@@ -148,7 +148,7 @@ export function useDishDetail() {
           content: review.content || '',
           images: review.images || [],
           merchantReply: review.merchantReply || null,
-          date: review.createTime || review.createdAt || ''
+          date: review.createdAt || ''
         }))
       } else {
         reviews.value = []

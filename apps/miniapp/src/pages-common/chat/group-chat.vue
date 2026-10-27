@@ -413,7 +413,7 @@ const loadMessages = async () => {
         isGroup: true,
         type: msg.messageType || 'text',
         content: msg.content,
-        time: new Date(msg.createTime || Date.now()),
+        time: new Date(msg.createdAt || Date.now()),
         showTime: false,
         status: 'success'
       }))
@@ -517,7 +517,7 @@ const loadMoreMessages = async () => {
           isGroup: true,
           type: msg.messageType || 'text',
           content: msg.content,
-          time: new Date(msg.createTime || Date.now()),
+          time: new Date(msg.createdAt || Date.now()),
           showTime: false,
           status: 'success'
         }))

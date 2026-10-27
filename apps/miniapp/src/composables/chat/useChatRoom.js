@@ -166,7 +166,7 @@ export function useChatRoom() {
           isGroup: false,
           type: msg.messageType || 'text',
           content: msg.content,
-          time: new Date(msg.createTime || Date.now()),
+          time: new Date(msg.createdAt || Date.now()),
           showTime: false,
           status: 'success'
         }))
@@ -262,7 +262,7 @@ export function useChatRoom() {
             isGroup: false,
             type: msg.messageType || 'text',
             content: msg.content,
-            time: new Date(msg.createTime || Date.now()),
+            time: new Date(msg.createdAt || Date.now()),
             showTime: false,
             status: 'success'
           }))

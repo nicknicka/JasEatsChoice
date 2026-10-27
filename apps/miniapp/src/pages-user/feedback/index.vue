@@ -323,7 +323,7 @@ const loadHistoryFeedback = async () => {
         content: item.content,
         status: item.status,
         statusText: getStatusText(item.status),
-        time: formatTime(item.createTime || item.createdAt),
+        time: formatTime(item.createdAt),
         reply: item.reply || null
       }
     })
