@@ -213,7 +213,7 @@
         </el-table-column>
         <el-table-column label="创建时间" width="155" align="center">
           <template #default="{ row }">
-            {{ formatDateTime(row.create_time) }}
+            {{ formatDateTime(row.created_at) }}
           </template>
         </el-table-column>
         <el-table-column label="操作" width="220" fixed="right" align="center">
@@ -437,7 +437,7 @@
           </div>
           <div class="info-row">
             <span class="label">创建时间：</span>
-            <span>{{ formatDateTime(currentAnnouncement.create_time) }}</span>
+            <span>{{ formatDateTime(currentAnnouncement.created_at) }}</span>
           </div>
           <div class="info-row" v-if="currentAnnouncement.read_count !== undefined">
             <span class="label">阅读统计：</span>
@@ -475,7 +475,7 @@
           >
             {{ priorityLabel(previewAnnouncement.priority) }}
           </el-tag>
-          <span class="preview-date">{{ formatDateTime(previewAnnouncement.create_time) }}</span>
+          <span class="preview-date">{{ formatDateTime(previewAnnouncement.created_at) }}</span>
         </div>
         <h3 class="preview-title">{{ previewAnnouncement.title }}</h3>
         <div class="preview-content">{{ previewAnnouncement.content }}</div>

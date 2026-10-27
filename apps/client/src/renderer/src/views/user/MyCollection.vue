@@ -568,7 +568,7 @@ const refreshCollections = async () => {
             id: item.id,
             collectableId: item.collectableId,
             type: item.collectableType,
-            date: formatDate(item.createTime),
+            date: formatDate(item.createdAt),
             title: `${typeName} ${item.collectableId}`,
             description: '信息加载失败',
             image: item.collectableType === 'article' ? null : defaultImage,
@@ -620,7 +620,7 @@ const fetchCollectionItemDetails = async (item) => {
     id: item.id,
     collectableId: item.collectableId,
     type: item.collectableType,
-    date: formatDate(item.createTime)
+    date: formatDate(item.createdAt)
   }
 
   try {
@@ -726,7 +726,7 @@ onMounted(async () => {
             id: item.id,
             collectableId: item.collectableId,
             type: item.collectableType,
-            date: formatDate(item.createTime),
+            date: formatDate(item.createdAt),
             title: `${typeName} ${item.collectableId}`,
             description: '信息加载失败',
             image: item.collectableType === 'article' ? null : defaultImage,

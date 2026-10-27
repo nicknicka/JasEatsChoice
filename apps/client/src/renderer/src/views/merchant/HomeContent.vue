@@ -202,7 +202,7 @@ const filterOrders = (filterType) => {
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
 
   filteredOrders.value = allOrders.value.filter((order) => {
-    const orderDate = new Date(order.createTime)
+    const orderDate = new Date(order.createdAt)
 
     // 时间范围过滤
     let timeMatch = true
@@ -262,7 +262,7 @@ const fetchTodayMenus = () => {
           // 暂时设置dishes为0，后面需要实现获取菜品数量的接口
           dishes: 0,
           // 格式转换：LocalDateTime to String
-          updateTime: menu.updateTime ? menu.updateTime.replace('T', ' ') : '',
+          updatedAt: menu.updatedAt ? menu.updatedAt.replace('T', ' ') : '',
           autoOnline: menu.autoStartTime ? menu.autoStartTime.replace('T', ' ') : '',
           autoOffline: menu.autoEndTime ? menu.autoEndTime.replace('T', ' ') : ''
         }))

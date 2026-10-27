@@ -634,8 +634,8 @@ const userInfo = ref({
   merchantId: null,
 
   // 时间戳
-  createTime: '',
-  updateTime: null
+  createdAt: '',
+  updatedAt: null
 })
 
 // 组件引用

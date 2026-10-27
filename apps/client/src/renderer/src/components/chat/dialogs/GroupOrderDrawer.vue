@@ -204,7 +204,7 @@
                 <el-tag :type="paidOrder.status === 'completed' ? 'success' : 'warning'" size="small">
                   {{ paidOrder.status === 'completed' ? '已完成' : '已支付' }}
                 </el-tag>
-                <span class="paid-order-time">{{ paidOrder.paymentTime || paidOrder.createTime }}</span>
+                <span class="paid-order-time">{{ paidOrder.paymentTime || paidOrder.createdAt }}</span>
               </div>
               <div class="paid-order-amount-right">
                 <div class="paid-order-amount">¥{{ paidOrder.totalAmount?.toFixed(2) || '0.00' }}</div>

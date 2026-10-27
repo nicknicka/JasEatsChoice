@@ -70,7 +70,7 @@ const menuStatistics = computed(() => {
   const latestUpdate =
     todayMenus.value.length > 0
       ? todayMenus.value.reduce((latest, menu) => {
-          return !latest || (menu.updateTime && menu.updateTime > latest) ? menu.updateTime : latest
+          return !latest || (menu.updatedAt && menu.updatedAt > latest) ? menu.updatedAt : latest
         }, '')
       : '暂无'
 
@@ -95,7 +95,7 @@ const fetchTodayMenus = () => {
           // 后端直接返回 online/offline，不需要转换
           status: menu.status || 'offline',
           dishes: Array.isArray(menu.dishes) ? menu.dishes.length : menu.dishes || 0,
-          updateTime: menu.updateTime ? menu.updateTime.replace('T', ' ') : '',
+          updatedAt: menu.updatedAt ? menu.updatedAt.replace('T', ' ') : '',
           autoOnline: menu.autoOnline ? menu.autoOnline.replace('T', ' ') : '',
           autoOffline: menu.autoOffline ? menu.autoOffline.replace('T', ' ') : ''
         }))
@@ -290,7 +290,7 @@ onMounted(() => {
                 ><el-icon :size="14"><Dish /></el-icon> {{ menu.dishes }} 菜品</span
               >
               <span class="update-time"
-                ><el-icon :size="14"><Clock /></el-icon> {{ formatTime(menu.updateTime) }}</span
+                ><el-icon :size="14"><Clock /></el-icon> {{ formatTime(menu.updatedAt) }}</span
               >
             </div>
             <div class="menu-auto-time" v-if="menu.autoOnline || menu.autoOffline">

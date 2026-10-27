@@ -49,7 +49,7 @@ const filterOrders = (filterType) => {
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
 
   filteredOrders.value = allOrders.value.filter((order) => {
-    const orderDate = new Date(order.createTime)
+    const orderDate = new Date(order.createdAt)
 
     // 时间范围过滤
     let timeMatch = true
@@ -290,7 +290,7 @@ onMounted(() => {
               <span class="amount"
                 >¥{{ order.totalAmount ? order.totalAmount.toFixed(2) : '0.00' }}</span
               >
-              <span class="time">⏱️ {{ order.createTime }}</span>
+              <span class="time">⏱️ {{ order.createdAt }}</span>
             </div>
           </div>
 

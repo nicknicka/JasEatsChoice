@@ -218,7 +218,7 @@
                   <span class="amount-text highlight">¥{{ row.actualAmount || row.amount }}</span>
                 </el-descriptions-item>
                 <el-descriptions-item label="提现账号" :span="3">{{ row.accountInfo || '-' }}</el-descriptions-item>
-                <el-descriptions-item label="申请时间" :span="3">{{ row.createTime }}</el-descriptions-item>
+                <el-descriptions-item label="申请时间" :span="3">{{ row.createdAt }}</el-descriptions-item>
                 <el-descriptions-item v-if="row.auditor" label="审核人">{{ row.auditor }}</el-descriptions-item>
                 <el-descriptions-item v-if="row.auditTime" label="审核时间">{{ row.auditTime }}</el-descriptions-item>
                 <el-descriptions-item v-if="row.rejectReason" label="拒绝原因" :span="3">
@@ -273,7 +273,7 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createTime" label="申请时间" width="180" sortable />
+        <el-table-column prop="createdAt" label="申请时间" width="180" sortable />
         <el-table-column v-if="showAuditInfo" label="审核人" width="120">
           <template #default="{ row }">
             {{ row.auditor || '-' }}
@@ -379,7 +379,7 @@
               {{ getStatusText(currentRow.withdrawStatus) }}
             </el-tag>
           </el-descriptions-item>
-          <el-descriptions-item label="申请时间">{{ currentRow.createTime }}</el-descriptions-item>
+          <el-descriptions-item label="申请时间">{{ currentRow.createdAt }}</el-descriptions-item>
           <el-descriptions-item v-if="currentRow.auditor" label="审核人">
             {{ currentRow.auditor }}
           </el-descriptions-item>

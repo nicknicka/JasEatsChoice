@@ -77,7 +77,7 @@ const normalizeMessage = (message) => {
     title: content || '未命名消息',
     content,
     sender: message?.senderName || message?.senderId || '系统',
-    time: message?.createTime || message?.sendTime || '',
+    time: message?.createdAt || message?.sendTime || '',
     isRead: message?.readStatus === 1 || message?.readStatus === true,
     type: determineMessageType(message)
   }
@@ -149,7 +149,7 @@ const initWebSocket = () => {
             title: data.content || data.title,
             content: data.content || '',
             sender: data.senderName || data.fromId || '系统',
-            time: data.createTime || data.time || new Date().toISOString().slice(0, 19).replace('T', ' '),
+            time: data.createdAt || data.time || new Date().toISOString().slice(0, 19).replace('T', ' '),
             isRead: data.readStatus || false,
             type: data.type || 'system'
           }

@@ -74,7 +74,7 @@
           </div>
 
           <div class="review-footer">
-            <span class="review-time">{{ review.createTime }}</span>
+            <span class="review-time">{{ review.createdAt }}</span>
             <div class="review-actions">
               <el-button
                 v-for="action in review.actions"

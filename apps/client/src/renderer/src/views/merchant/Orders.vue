@@ -135,15 +135,15 @@ const filteredOrders = computed(() => {
       // 根据选择的排序方式排序
       switch (sortOrder.value) {
         case 'time-desc':
-          return new Date(b.createTime) - new Date(a.createTime)
+          return new Date(b.createdAt) - new Date(a.createdAt)
         case 'time-asc':
-          return new Date(a.createTime) - new Date(b.createTime)
+          return new Date(a.createdAt) - new Date(b.createdAt)
         case 'amount-desc':
           return (b.totalAmount || 0) - (a.totalAmount || 0)
         case 'amount-asc':
           return (a.totalAmount || 0) - (b.totalAmount || 0)
         default:
-          return new Date(b.createTime) - new Date(a.createTime)
+          return new Date(b.createdAt) - new Date(a.createdAt)
       }
     })
 })
@@ -610,9 +610,9 @@ onMounted(() => {
                   <span class="amount-label">金额</span>
                   <span class="amount-value">¥{{ (order.totalAmount || 0).toFixed(2) }}</span>
                 </div>
-                <div class="order-time" :title="order.createTime">
+                <div class="order-time" :title="order.createdAt">
                   <span class="time-label">时间</span>
-                  <span class="time-value">{{ order.createTime || '--' }}</span>
+                  <span class="time-value">{{ order.createdAt || '--' }}</span>
                 </div>
               </div>
 

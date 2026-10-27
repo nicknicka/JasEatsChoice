@@ -50,7 +50,7 @@
         {{ message.content }}
 
         <div class="message-time">
-          {{ message.formattedTime || formatMessageTime(message.createTime || message.time) }}
+          {{ message.formattedTime || formatMessageTime(message.createdAt || message.time) }}
         </div>
 
         <!-- 消息操作按钮 -->

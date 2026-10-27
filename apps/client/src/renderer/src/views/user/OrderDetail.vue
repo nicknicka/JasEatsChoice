@@ -160,11 +160,11 @@ const loadOrderDetail = async () => {
       merchant: merchantName,
       merchantId: orderData.merchantId,
       total: orderData.totalAmount,
-      time: formatTime(orderData.createTime),
+      time: formatTime(orderData.createdAt),
       items: items,
       itemCount: items.reduce((sum, item) => sum + item.quantity, 0),
       paymentMethod: '平台币余额',
-      paymentTime: orderData.updateTime ? formatTime(orderData.updateTime) : null,
+      paymentTime: orderData.updatedAt ? formatTime(orderData.updatedAt) : null,
       remark: orderData.remark || '',
       _raw: orderData
     }

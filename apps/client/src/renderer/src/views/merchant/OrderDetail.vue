@@ -45,8 +45,8 @@ const orderDetail = ref({
   phone: '',
   address: '',
   totalAmount: 0,
-  createTime: '',
-  updateTime: '',
+  createdAt: '',
+  updatedAt: '',
   orderDishes: [],
   remark: ''
 })
@@ -107,8 +107,8 @@ const loadOrderDetail = async () => {
       user: userInfo?.nickname || userInfo?.phone || orderData.userId,
       phone: userInfo?.phone || '--',
       // 格式化时间
-      createTime: formatDateTime(orderData.createTime),
-      updateTime: formatDateTime(orderData.updateTime)
+      createdAt: formatDateTime(orderData.createdAt),
+      updatedAt: formatDateTime(orderData.updatedAt)
     }
 
     console.log('✨ [订单详情] 订单详情已完整组装:', orderDetail.value)
@@ -150,7 +150,7 @@ const updateOrderStatus = async (newStatus) => {
     if (response.data && response.data.success) {
       orderDetail.value.status = newStatus
       const now = new Date()
-      orderDetail.value.updateTime = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+      orderDetail.value.updatedAt = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
       ElMessage.success(`订单状态已更新为${orderStatusMap[newStatus].text}`)
     }
   } catch (error) {
@@ -325,14 +325,14 @@ onMounted(() => {
               <el-icon><Clock /></el-icon>
               <span>下单时间</span>
             </div>
-            <div class="info-value">{{ orderDetail.createTime || '--' }}</div>
+            <div class="info-value">{{ orderDetail.createdAt || '--' }}</div>
           </div>
           <div class="info-card">
             <div class="info-label">
               <el-icon><Refresh /></el-icon>
               <span>更新时间</span>
             </div>
-            <div class="info-value">{{ orderDetail.updateTime || '--' }}</div>
+            <div class="info-value">{{ orderDetail.updatedAt || '--' }}</div>
           </div>
           <div class="info-card full-width remark-card">
             <div class="info-label">

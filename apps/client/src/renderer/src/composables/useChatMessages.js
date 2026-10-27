@@ -136,7 +136,7 @@ export function useChatMessages({ userId, selectedConversation }) {
           msgId: messageMsgId, // ⭐ 标准化 msgId 字段
           id: messageMsgId, // 同时保留 id 字段用于兼容
           msgType,
-          formattedTime: formatMessageTime(msg.createTime || msg.time),
+          formattedTime: formatMessageTime(msg.createdAt || msg.time),
           fromId,
           senderName,
           // 显式确保 URL 字段存在
@@ -184,7 +184,7 @@ export function useChatMessages({ userId, selectedConversation }) {
 
       Object.keys(chatHistory.value).forEach((sessionId) => {
         const recentMessages = chatHistory.value[sessionId].filter((msg) => {
-          const msgTime = new Date(msg.createTime || msg.time).getTime()
+          const msgTime = new Date(msg.createdAt || msg.time).getTime()
           return msgTime > cutoffTime
         })
 
@@ -343,7 +343,7 @@ export function useChatMessages({ userId, selectedConversation }) {
         ...message,
         msgId: messageMsgId, // ⭐ 确保 msgId 字段存在
         msgType,
-        formattedTime: formatMessageTime(message.createTime || message.time),
+        formattedTime: formatMessageTime(message.createdAt || message.time),
         fromId,
         senderName,
         // 显式确保 URL 字段存在

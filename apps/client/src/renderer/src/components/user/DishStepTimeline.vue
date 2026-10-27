@@ -84,7 +84,7 @@
                 :key="record.id"
                 class="history-record"
               >
-                <div class="record-time">{{ formatDateTime(record.createTime) }}</div>
+                <div class="record-time">{{ formatDateTime(record.createdAt) }}</div>
                 <div class="record-content">
                   <el-tag size="small" type="info">{{ record.oldStepStatusName || '初始' }}</el-tag>
                   <el-icon><ArrowRight /></el-icon>
@@ -215,7 +215,7 @@ const getStepTime = (dish, stepCode) => {
     // 从历史记录中查找完成时间
     const history = dish.stepHistory || []
     const record = history.find(h => h.newStepStatus === stepCode)
-    return record ? formatDateTime(record.createTime) : ''
+    return record ? formatDateTime(record.createdAt) : ''
   }
   return ''
 }

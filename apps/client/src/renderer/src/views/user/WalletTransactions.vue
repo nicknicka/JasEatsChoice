@@ -117,7 +117,7 @@
                 </el-tag>
               </div>
               <div class="transaction-desc">{{ transaction.description }}</div>
-              <div class="transaction-time">{{ formatDateTime(transaction.createTime) }}</div>
+              <div class="transaction-time">{{ formatDateTime(transaction.createdAt) }}</div>
             </div>
             <div class="transaction-amount" :class="getAmountClass(transaction.type)">
               {{ transaction.type === 'recharge' ? '+' : '-'
@@ -169,7 +169,7 @@
         </div>
         <div class="detail-row">
           <span class="detail-label">交易时间：</span>
-          <span class="detail-value">{{ formatDateTime(selectedTransaction.createTime) }}</span>
+          <span class="detail-value">{{ formatDateTime(selectedTransaction.createdAt) }}</span>
         </div>
       </div>
       <template #footer>

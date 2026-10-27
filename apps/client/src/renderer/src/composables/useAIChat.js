@@ -72,7 +72,7 @@ export function useAIChat() {
           id: index + 1,
           sender: item.sender,
           content: item.content,
-          time: formatTime(new Date(item.createTime)),
+          time: formatTime(new Date(item.createdAt)),
           avatar: item.sender === 'ai' ? '🤖' : '👤'
         }))
         logger.log('✅ 成功加载聊天历史:', messages.value.length, '条消息')

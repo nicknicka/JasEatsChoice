@@ -54,7 +54,7 @@ const pageSize = ref(10)
 const paginatedMenus = ref([])
 
 // 排序相关
-const sortField = ref('updateTime') // 默认按更新时间排序
+const sortField = ref('updatedAt') // 默认按更新时间排序
 const sortOrder = ref('desc') // 'asc' 或 'desc'
 
 // 更新排序
@@ -267,7 +267,7 @@ const exportMenu = (menu) => {
       menu.name,
       menuStatusMap[menu.status].text,
       Array.isArray(menu.dishes) ? menu.dishes.length : menu.dishes || 0,
-      dayjs(menu.updateTime).format('YYYY-MM-DD HH:mm:ss'),
+      dayjs(menu.updatedAt).format('YYYY-MM-DD HH:mm:ss'),
       menu.autoOnline
         ? menu.autoOnline.includes('T') || menu.autoOnline.length > 8
           ? dayjs(menu.autoOnline).format('HH:mm')
@@ -477,7 +477,7 @@ const toggleSelectAll = () => {
             style="width: 120px; margin-right: 8px"
             @change="updateFilter"
           >
-            <el-option label="更新时间" value="updateTime" />
+            <el-option label="更新时间" value="updatedAt" />
             <el-option label="菜单名称" value="menuName" />
           </el-select>
 
@@ -649,7 +649,7 @@ const toggleSelectAll = () => {
               <div class="menu-stats">
                 <span class="update-time">
                   <el-icon><Clock /></el-icon>
-                  更新时间：{{ dayjs(menu.updateTime).format('YYYY年MM月DD日 HH:mm:ss') }}
+                  更新时间：{{ dayjs(menu.updatedAt).format('YYYY年MM月DD日 HH:mm:ss') }}
                 </span>
               </div>
 

@@ -259,7 +259,7 @@ export function useGroupOrder({ selectedConversation, chatMessages }) {
           orderItems: [],
           totalAmount: 0,
           status: ORDER_STATUS.ACTIVE,
-          createTime: draftOrder.createTime || new Date().toISOString(),
+          createdAt: draftOrder.createdAt || new Date().toISOString(),
           // 保存后端订单信息
           merchantId: draftOrder.merchantId,
           addressId: draftOrder.addressId,
@@ -318,7 +318,7 @@ export function useGroupOrder({ selectedConversation, chatMessages }) {
           orderItems: [],
           totalAmount: 0,
           status: ORDER_STATUS.ACTIVE,
-          createTime: draftOrder.createTime,
+          createdAt: draftOrder.createdAt,
           // 保存后端订单信息
           merchantId: draftOrder.merchantId,
           addressId: draftOrder.addressId,
@@ -417,7 +417,7 @@ export function useGroupOrder({ selectedConversation, chatMessages }) {
           sessionType: 'group',
           msgType: 'text',
           content: '我取消了群订单',
-          createTime: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
           formattedTime: '刚刚',
           sender: '我',
           avatar: '👤'

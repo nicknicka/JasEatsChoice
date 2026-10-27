@@ -76,7 +76,7 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createTime" label="创建时间" width="180" />
+        <el-table-column prop="createdAt" label="创建时间" width="180" />
         <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" link @click="handleView(row)">查看</el-button>
@@ -130,7 +130,7 @@
         <el-descriptions-item label="库存">{{ currentDish.stock || '不限量' }}</el-descriptions-item>
         <el-descriptions-item label="销量">{{ currentDish.sales || 0 }}</el-descriptions-item>
         <el-descriptions-item label="评分">{{ currentDish.rating || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="创建时间" :span="2">{{ currentDish.createTime }}</el-descriptions-item>
+        <el-descriptions-item label="创建时间" :span="2">{{ currentDish.createdAt }}</el-descriptions-item>
         <el-descriptions-item label="菜品描述" :span="2">{{ currentDish.description || '-' }}</el-descriptions-item>
         <el-descriptions-item label="菜品图片" :span="2">
           <el-image

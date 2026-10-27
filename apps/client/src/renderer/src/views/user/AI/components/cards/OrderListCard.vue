@@ -52,7 +52,7 @@
             </div>
             <div class="info-row">
               <span class="label">下单时间：</span>
-              <span class="value">{{ order.createTime }}</span>
+              <span class="value">{{ order.createdAt }}</span>
             </div>
           </div>
 

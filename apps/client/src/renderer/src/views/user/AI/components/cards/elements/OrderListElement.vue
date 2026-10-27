@@ -30,9 +30,9 @@
             <span class="label">总金额：</span>
             <span class="value price">¥{{ order.totalAmount }}</span>
           </div>
-          <div v-if="order.createTime" class="info-row">
+          <div v-if="order.createdAt" class="info-row">
             <span class="label">下单时间：</span>
-            <span class="value">{{ order.createTime }}</span>
+            <span class="value">{{ order.createdAt }}</span>
           </div>
         </div>
 

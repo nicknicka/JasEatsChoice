@@ -16,8 +16,8 @@ export interface UserInfo {
   allergies: any // 过敏原信息，JSON格式
   preferTags: any // 饮食偏好标签，JSON格式
   disableWeatherRecommend: boolean | null
-  createTime: string // 创建时间
-  updateTime: string | null
+  createdAt: string // 创建时间
+  updatedAt: string | null
   merchantId: string | null // 商家ID，如果不为空表示用户已注册为商家
   avatar: string // 用户头像URL
 }
@@ -28,8 +28,8 @@ export interface MerchantInfo {
   address?: string
   phone: string
   status: boolean
-  createTime?: string
-  updateTime?: string
+  createdAt?: string
+  updatedAt?: string
   businessLicense: string
   businessScope: string[]
   contactName: string

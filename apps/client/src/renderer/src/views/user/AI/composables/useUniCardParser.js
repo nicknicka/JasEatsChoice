@@ -51,7 +51,7 @@ function normalizeOrder(order) {
     orderId: order.orderId || order.id || null,
     statusText: order.statusText || order.status || null,
     totalAmount: order.totalAmount || order.total || 0,
-    createTime: order.createTime || null,
+    createdAt: order.createdAt || null,
     dishCount: order.dishCount || (order.items ? order.items.length : 0),
     actions: order.actions || []
   }

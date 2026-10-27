@@ -33,7 +33,7 @@
         <el-table-column prop="name" label="商家名称" min-width="180" />
         <el-table-column prop="phone" label="联系电话" width="140" />
         <el-table-column prop="address" label="地址" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="createTime" label="申请时间" width="180" />
+        <el-table-column prop="createdAt" label="申请时间" width="180" />
         <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
             <el-button type="success" size="small" link @click="handleAudit(row, 'APPROVED')">通过</el-button>

@@ -25,7 +25,7 @@
         </div>
         <div class="remark-content">{{ remark.content }}</div>
         <div class="remark-meta">
-          <span class="remark-time">{{ formatTime(remark.createTime) }}</span>
+          <span class="remark-time">{{ formatTime(remark.createdAt) }}</span>
         </div>
       </div>
 
@@ -42,7 +42,7 @@
         </div>
         <div class="remark-content">{{ remark.content }}</div>
         <div class="remark-meta">
-          <span class="remark-time">{{ formatTime(remark.createTime) }}</span>
+          <span class="remark-time">{{ formatTime(remark.createdAt) }}</span>
         </div>
       </div>
 
@@ -59,7 +59,7 @@
         </div>
         <div class="remark-content">{{ remark.content }}</div>
         <div class="remark-meta">
-          <span class="remark-time">{{ formatTime(remark.createTime) }}</span>
+          <span class="remark-time">{{ formatTime(remark.createdAt) }}</span>
         </div>
       </div>
 
@@ -76,7 +76,7 @@
         </div>
         <div class="remark-content">{{ remark.content }}</div>
         <div class="remark-meta">
-          <span class="remark-time">{{ formatTime(remark.createTime) }}</span>
+          <span class="remark-time">{{ formatTime(remark.createdAt) }}</span>
         </div>
       </div>
     </div>

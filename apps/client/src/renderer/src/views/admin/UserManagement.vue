@@ -42,7 +42,7 @@
             <span>{{ row.location || '-' }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="createTime" label="注册时间" width="180" />
+        <el-table-column prop="createdAt" label="注册时间" width="180" />
         <el-table-column label="操作" width="180" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" link @click="handleView(row)">查看</el-button>
@@ -82,7 +82,7 @@
         <el-descriptions-item label="体重">{{ currentUser.weight ? currentUser.weight + 'kg' : '-' }}</el-descriptions-item>
         <el-descriptions-item label="饮食目标">{{ currentUser.dietGoal || '-' }}</el-descriptions-item>
         <el-descriptions-item label="位置">{{ currentUser.location || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="注册时间" :span="2">{{ currentUser.createTime }}</el-descriptions-item>
+        <el-descriptions-item label="注册时间" :span="2">{{ currentUser.createdAt }}</el-descriptions-item>
       </el-descriptions>
 
       <template #footer>
@@ -248,7 +248,7 @@ const handleExport = () => {
     { key: 'phone', label: '手机号', width: 15 },
     { key: 'email', label: '邮箱', width: 25 },
     { key: 'location', label: '位置', width: 12 },
-    { key: 'createTime', label: '注册时间', width: 20 }
+    { key: 'createdAt', label: '注册时间', width: 20 }
   ]
 
   const success = exportToExcel(userList.value, {

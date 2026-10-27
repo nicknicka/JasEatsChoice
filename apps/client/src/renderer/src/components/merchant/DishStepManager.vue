@@ -206,7 +206,7 @@
         <el-timeline-item
           v-for="item in currentDishHistory"
           :key="item.id"
-          :timestamp="item.createTime"
+          :timestamp="item.createdAt"
           placement="top"
         >
           <el-card>

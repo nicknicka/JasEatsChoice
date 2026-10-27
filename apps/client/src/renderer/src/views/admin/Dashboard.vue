@@ -290,7 +290,7 @@ onMounted(() => {
           </template>
         </el-table-column>
 
-        <el-table-column prop="create_time" label="创建时间" width="120" />
+        <el-table-column prop="created_at" label="创建时间" width="120" />
       </el-table>
     </div>
   </div>
