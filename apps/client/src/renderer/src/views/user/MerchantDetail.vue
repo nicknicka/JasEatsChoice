@@ -125,7 +125,11 @@
             </div>
 
             <!-- 使用子组件：评价区域 -->
-            <comments-section :comments="comments" :merchant-rating="merchant.rating" />
+            <comments-section
+              :comments="comments"
+              :loading="commentsLoading"
+              :error="commentsError"
+            />
           </div>
         </template>
       </div>
@@ -187,6 +191,7 @@ import ShoppingCartDialog from './components/ShoppingCart.vue'
 
 // 引入API配置
 import { API_CONFIG } from '../../config/index.js'
+import reviewAPI from '../../api/review.js'
 
 const router = useRouter()
 const route = useRoute()
@@ -200,7 +205,7 @@ const merchant = ref({
   id: 0,
   name: '', // 后端字段名是 name，不是 nickname
   type: '',
-  rating: 4.5, // Default to 4.5 for mock data
+  rating: 0,
   distance: '',
   status: '',
   tags: [],
@@ -218,7 +223,7 @@ const createDefaultMerchant = () => ({
   merchantId: '',
   name: '',
   type: '',
-  rating: 4.5,
+  rating: 0,
   distance: '',
   status: '',
   tags: [],
@@ -331,6 +336,8 @@ const filteredAndSortedDishes = (category) => {
 
 // 评价数据
 const comments = ref([])
+const commentsLoading = ref(false)
+const commentsError = ref('')
 
 // 菜单数据
 const menuItems = ref([])
@@ -466,7 +473,10 @@ const initializeMerchantPage = async () => {
   cartItems.value = cartItemsByMerchant.value[effectiveMerchantId]
   updateCartStats()
 
-  await loadMerchantDetails(effectiveMerchantId)
+  await Promise.all([
+    loadMerchantDetails(effectiveMerchantId),
+    loadMerchantReviews(effectiveMerchantId)
+  ])
   await checkFavoriteStatus()
   restorePendingOrder()
   handleRouteCartActions()
@@ -668,6 +678,28 @@ const loadMerchantDetails = async (merchantId) => {
     ElMessage.error('加载商家详情失败，请稍后重试')
     hasMenus.value = false
     isLoading.value = false
+  }
+}
+
+const loadMerchantReviews = async (merchantId) => {
+  commentsLoading.value = true
+  commentsError.value = ''
+
+  try {
+    const response = await reviewAPI.getMerchantReviews(merchantId)
+    const payload = response.data
+
+    if (payload?.success !== true || !Array.isArray(payload.data)) {
+      throw new Error(payload?.message || '评价数据格式异常')
+    }
+
+    comments.value = payload.data
+  } catch (error) {
+    console.error('加载商家评价失败:', error)
+    comments.value = []
+    commentsError.value = '评价加载失败，请稍后重试'
+  } finally {
+    commentsLoading.value = false
   }
 }
 

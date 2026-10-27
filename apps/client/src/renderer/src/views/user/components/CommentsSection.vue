@@ -3,12 +3,11 @@
     <div class="comments-header">
       <h3 class="comments-title">用户评价</h3>
       <div class="comments-stats">
-        <!-- 参照顶部评分的数据来源和设计 -->
-        <div v-if="merchantRating !== undefined && merchantRating !== 0" class="average-rating">
+        <div v-if="averageRating !== null" class="average-rating">
           <div class="rating-stars">
-            <el-rate :model-value="merchantRating" disabled size="small" />
+            <el-rate :model-value="averageRating" disabled size="small" />
           </div>
-          <div class="rating-score-text">{{ merchantRating }}分</div>
+          <div class="rating-score-text">{{ averageRating }}分</div>
         </div>
         <div v-else class="rating-placeholder">
           <span class="rating-number">暂无评分</span>
@@ -17,7 +16,22 @@
       </div>
     </div>
 
-    <div class="comments-list">
+    <div v-if="loading" class="comments-loading">
+      <el-skeleton :rows="4" animated />
+    </div>
+
+    <el-alert
+      v-else-if="error"
+      :title="error"
+      type="error"
+      :closable="false"
+      show-icon
+      class="comments-error"
+    />
+
+    <el-empty v-else-if="comments.length === 0" description="暂无评价" />
+
+    <div v-else class="comments-list">
       <div class="comment-card" v-for="comment in comments" :key="comment.id">
         <div class="comment-main">
           <div class="comment-avatar">
@@ -27,15 +41,14 @@
             <div class="comment-header">
               <div class="comment-user-info">
                 <span class="user-name">{{ comment.userName }}</span>
-                <el-tag size="small" class="user-badge">VIP会员</el-tag>
               </div>
-              <span class="comment-date">{{ comment.date }}</span>
+              <span class="comment-date">{{ comment.time }}</span>
             </div>
             <div class="comment-rating">
-              <el-rate v-model="comment.rating" :disabled="true" size="small" />
+              <el-rate :model-value="comment.rating" :disabled="true" size="small" />
             </div>
             <div class="comment-content">
-              {{ comment.comment }}
+              {{ comment.content }}
             </div>
 
             <!-- 展开/折叠回复按钮 -->
@@ -47,7 +60,7 @@
                 class="toggle-button"
               >
                 <el-icon class="toggle-icon">
-                  <component :is="comment.expandReplies ? 'ArrowUp' : 'ArrowDown'" />
+                  <component :is="comment.expandReplies ? ArrowUp : ArrowDown" />
                 </el-icon>
                 {{ comment.expandReplies ? '收起回复' : `查看回复 (${comment.replies.length})` }}
               </el-button>
@@ -62,19 +75,19 @@
               class="reply-card"
               v-for="reply in comment.replies"
               :key="reply.id"
-              :class="{ 'merchant-reply': reply.type === 'merchant' }"
+              :class="{ 'merchant-reply': reply.isMerchant }"
             >
               <div class="reply-avatar">
                 <el-icon :size="20">
-                  <component :is="reply.type === 'merchant' ? 'Shop' : 'User'" />
+                  <component :is="reply.isMerchant ? Shop : User" />
                 </el-icon>
               </div>
               <div class="reply-body">
                 <div class="reply-header">
                   <div class="reply-user-info">
-                    <span class="reply-username">{{ reply.userName }}</span>
+                    <span class="reply-username">{{ reply.isMerchant ? '商家' : '用户追评' }}</span>
                     <el-tag
-                      v-if="reply.type === 'merchant'"
+                      v-if="reply.isMerchant"
                       size="small"
                       type="success"
                       class="merchant-badge"
@@ -82,10 +95,10 @@
                       商家
                     </el-tag>
                   </div>
-                  <span class="reply-date">{{ reply.date }}</span>
+                  <span class="reply-date">{{ reply.time }}</span>
                 </div>
                 <div class="reply-content">
-                  {{ reply.comment }}
+                  {{ reply.content }}
                 </div>
               </div>
             </div>
@@ -105,14 +118,29 @@ const props = defineProps({
     type: Array,
     default: () => []
   },
-  merchantRating: {
-    type: Number
+  loading: {
+    type: Boolean,
+    default: false
+  },
+  error: {
+    type: String,
+    default: ''
   }
 })
 
 // 评价总数
 const totalComments = computed(() => {
   return props.comments?.length || 0
+})
+
+// 使用真实评价计算平均分，避免展示商家表中的无关评分
+const averageRating = computed(() => {
+  if (props.comments.length === 0) {
+    return null
+  }
+
+  const total = props.comments.reduce((sum, comment) => sum + Number(comment.rating || 0), 0)
+  return Math.round((total / props.comments.length) * 10) / 10
 })
 </script>
 
@@ -241,16 +269,6 @@ const totalComments = computed(() => {
               font-size: 1.071rem /* 原值: 15px */;
               font-weight: 600;
               color: #1e293b;
-            }
-
-            .user-badge {
-              background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-              border: none;
-              color: white;
-              font-size: 0.75rem /* 原值: 11px */;
-              padding: 2px 8px;
-              height: auto;
-              font-weight: 500;
             }
           }
 
