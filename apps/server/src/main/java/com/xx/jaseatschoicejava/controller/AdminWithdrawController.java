@@ -2,6 +2,7 @@ package com.xx.jaseatschoicejava.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.xx.jaseatschoicejava.entity.User;
 import com.xx.jaseatschoicejava.entity.WithdrawRecord;
 import com.xx.jaseatschoicejava.enums.NotificationTypeEnum;
@@ -18,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -305,6 +307,7 @@ public class AdminWithdrawController {
     @ApiOperation("标记提现失败")
     @PutMapping("/{withdrawId}/fail")
     @PreAuthorize("hasAnyAuthority('admin:finance:withdrawal')")
+    @Transactional(rollbackFor = Exception.class)
     public ResponseEntity<Map<String, Object>> failWithdraw(
             @PathVariable String withdrawId,
             @RequestBody Map<String, String> request) {
@@ -327,51 +330,65 @@ public class AdminWithdrawController {
             return ResponseEntity.status(400).body(response);
         }
 
+        LocalDateTime completeTime = LocalDateTime.now();
+        boolean claimed = withdrawRecordService.update(
+            new LambdaUpdateWrapper<WithdrawRecord>()
+                .eq(WithdrawRecord::getId, withdrawId)
+                .eq(WithdrawRecord::getWithdrawStatus, "processing")
+                .set(WithdrawRecord::getWithdrawStatus, "failed")
+                .set(WithdrawRecord::getRejectReason, reason)
+                .set(WithdrawRecord::getCompleteTime, completeTime)
+                .set(WithdrawRecord::getUpdatedAt, completeTime)
+        );
+
+        if (!claimed) {
+            throw new IllegalStateException("提现记录更新失败");
+        }
+
         record.setWithdrawStatus("failed");
         record.setRejectReason(reason);
-        record.setCompleteTime(LocalDateTime.now());
+        record.setCompleteTime(completeTime);
 
         // 退款到用户钱包
-        if (walletService != null) {
-            try {
-                // walletService.refundWithdraw(record.getUserId(), record.getAmount());
-                log.info("提现失败，已退款到钱包: {}, 金额: {}", withdrawId, record.getAmount());
-            } catch (Exception e) {
-                log.error("退款到钱包失败: {}", withdrawId, e);
-            }
+        if (walletService == null) {
+            throw new IllegalStateException("钱包服务不可用，无法退款");
         }
 
-        boolean success = withdrawRecordService.updateById(record);
-
-        if (success) {
-            // 通知用户提现失败
-            NotificationUtil.createWithdrawNotification(
+        try {
+            boolean refunded = walletService.refund(
                 record.getUserId(),
-                NotificationTypeEnum.WITHDRAW_FAILED,
-                record.getAmount().toString(),
-                reason != null ? reason : "提现失败"
+                record.getAmount(),
+                "提现失败退款 - " + record.getWithdrawNo()
             );
-
-            // 记录操作日志
-            SystemLogHelper.logUpdate(
-                "提现管理",
-                "提现失败并退款：" + record.getWithdrawNo(),
-                AdminContext.getAdminId(),
-                AdminContext.getAdminUsername(),
-                Map.of("withdrawId", withdrawId, "reason", reason)
-            );
+            if (!refunded) {
+                throw new IllegalStateException("退款到钱包失败");
+            }
+        } catch (Exception e) {
+            log.error("退款到钱包失败: {}", withdrawId, e);
+            throw new IllegalStateException("退款失败：" + e.getMessage(), e);
         }
+
+        // 通知用户提现失败
+        NotificationUtil.createWithdrawNotification(
+            record.getUserId(),
+            NotificationTypeEnum.WITHDRAW_FAILED,
+            record.getAmount().toString(),
+            reason != null ? reason : "提现失败"
+        );
+
+        // 记录操作日志
+        SystemLogHelper.logUpdate(
+            "提现管理",
+            "提现失败并退款：" + record.getWithdrawNo(),
+            AdminContext.getAdminId(),
+            AdminContext.getAdminUsername(),
+            Map.of("withdrawId", withdrawId, "reason", reason)
+        );
 
         Map<String, Object> response = new HashMap<>();
-        if (success) {
-            response.put("success", true);
-            response.put("message", "已标记为失败并退款");
-            return ResponseEntity.ok(response);
-        } else {
-            response.put("success", false);
-            response.put("message", "操作失败");
-            return ResponseEntity.status(500).body(response);
-        }
+        response.put("success", true);
+        response.put("message", "已标记为失败并退款");
+        return ResponseEntity.ok(response);
     }
 
     /**
