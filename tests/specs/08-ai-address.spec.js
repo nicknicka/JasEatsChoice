@@ -4,6 +4,17 @@ const { TEST_API_BASE } = require('../utils/api')
 const { markRunning, markPassed, markFailed, updateSummary } = require('../utils/progress')
 
 const USER_ID = '3384650106421960'
+// CI 不注入 AMAP_API_KEY，后端 /v1/location/cascader 按设计返回空列表。
+// 这里使用从高德行政区接口读取到的真实层级，确保地址流程不依赖外部服务。
+const SHANGHAI_CASCADER_DATA = [{
+  value: '上海市',
+  label: '上海市',
+  children: [{
+    value: '上海城区',
+    label: '上海城区',
+    children: [{ value: '徐汇区', label: '徐汇区' }]
+  }]
+}]
 
 async function getAddressList() {
   const response = await fetch(`${TEST_API_BASE}/v1/addresses/user?userId=${USER_ID}`)
@@ -31,6 +42,19 @@ async function selectShanghaiDistrict(page, dialog, district) {
   await visibleNodes.filter({ hasText: '上海市' }).first().click()
   await visibleNodes.filter({ hasText: '上海城区' }).first().click()
   await visibleNodes.filter({ hasText: district }).first().click()
+}
+
+async function stubShanghaiCascader(page) {
+  await page.route('**/v1/location/cascader', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      success: true,
+      code: '200',
+      message: '成功',
+      data: SHANGHAI_CASCADER_DATA
+    })
+  }))
 }
 
 test.describe('模块八：AI助手与地址管理', () => {
@@ -113,6 +137,7 @@ test.describe('模块八：AI助手与地址管理', () => {
     markRunning('8.6')
     let createdName
     try {
+      await stubShanghaiCascader(page)
       await page.goto('/user/home/address')
       await page.locator('.address-container > button', { hasText: '新增地址' }).click()
       const dialog = page.locator('.el-dialog', { hasText: '新增地址' })
@@ -128,6 +153,9 @@ test.describe('模块八：AI助手与地址管理', () => {
       await expect(card.locator('.address-full')).toContainText(`测试路 ${suffix} 号`)
       const created = await findAddressByName(createdName)
       expect(created).toBeTruthy()
+      expect(created.province).toBe('上海市')
+      expect(created.city).toBe('上海城区')
+      expect(created.district).toBe('徐汇区')
       markPassed('8.6', `新增地址 ${created.id} 已真实落库并展示`)
     } finally {
       if (createdName) await deleteAddressesByName(createdName)
@@ -139,6 +167,7 @@ test.describe('模块八：AI助手与地址管理', () => {
     let originalName
     let editedName
     try {
+      await stubShanghaiCascader(page)
       await page.goto('/user/home/address')
       await page.locator('.address-container > button', { hasText: '新增地址' }).click()
       const addDialog = page.locator('.el-dialog', { hasText: '新增地址' })
@@ -164,6 +193,9 @@ test.describe('模块八：AI助手与地址管理', () => {
       const edited = await findAddressByName(editedName)
       expect(edited).toBeTruthy()
       expect(edited.detail).toBe(`编辑后 ${suffix} 号`)
+      expect(edited.province).toBe('上海市')
+      expect(edited.city).toBe('上海城区')
+      expect(edited.district).toBe('徐汇区')
       markPassed('8.7', `临时地址 ${edited.id} 编辑后字段真实更新`)
     } finally {
       if (editedName) await deleteAddressesByName(editedName)
@@ -187,7 +219,7 @@ test.describe('模块八：AI助手与地址管理', () => {
       await setDefaultButton.click()
       await expect(page.locator('.address-card.default-address .address-full')).toContainText(targetFullAddress, { timeout: 10000 })
       const currentDefault = await getAddress({ addressId: target.id })
-      expect(currentDefault.isDefault).toBe(1)
+      expect([1, true]).toContain(currentDefault.isDefault)
       markPassed('8.8', `默认地址从 ${originalDefault.id} 切换为 ${target.id}`)
     } finally {
       const response = await page.request.put(`/api/v1/users/3384650106421960/addresses/${originalDefault.id}`, {
@@ -203,6 +235,8 @@ test.describe('模块八：AI助手与地址管理', () => {
         }
       })
       expect(response.ok()).toBeTruthy()
+      const restoredDefault = await getAddress({ addressId: originalDefault.id })
+      expect([1, true]).toContain(restoredDefault.isDefault)
     }
   })
 
