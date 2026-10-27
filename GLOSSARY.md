@@ -169,3 +169,17 @@ _Avoid_: 代理路由、分层智能体
 **二级缓存（TwoLevelCache）**：
 Caffeine 本地缓存 + Redis 分布式缓存的两级缓存架构，优先读本地、未命中再读 Redis。
 _Avoid_: 多级缓存
+
+## 命名约定
+
+数据库表名与字段名的唯一约定来源。review 时按此检查；存量不达标的地方见 ADR-0005 的迁移计划。
+
+**表名**：`<领域前缀>_<实体名>`，全小写下划线。前缀取 `usr_` `mch_` `ord_` `wlt_` `ai_` `nut_` `soc_` `cnt_` `sys_` `ext_` 之一（见 ADR-0002）。
+
+**时间字段**：`created_at` / `updated_at`。禁用 `create_time` / `update_time` / `created_time` / `updated_time`。
+
+**主键**：统一命名 `id`。新表类型统一 `bigint`。
+
+**索引**：`<领域前缀>_idx_<字段>`（普通索引）、`<领域前缀>_uk_<字段>`（唯一索引），如 `ord_order_idx_user_id`。
+
+**逻辑删除**：当前不引入软删除，一律物理删除；将来若引入，字段名用 `is_deleted`（0=未删，1=已删）。
