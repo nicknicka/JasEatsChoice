@@ -192,21 +192,34 @@ public class AdminUserController {
             return ResponseEntity.status(404).body(response);
         }
 
-        String status = request.get("status"); // ACTIVE, LOCKED, DELETED
+        String status = request.get("status"); // ACTIVE, LOCKED
         String reason = request.get("reason");
 
-        // 记录操作日志
+        if (!"ACTIVE".equalsIgnoreCase(status) && !"LOCKED".equalsIgnoreCase(status)) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "无效的用户状态");
+            return ResponseEntity.badRequest().body(response);
+        }
+
+        user.setStatus("ACTIVE".equalsIgnoreCase(status));
+        boolean success = userService.updateById(user);
+
+        Map<String, Object> response = new HashMap<>();
+        if (!success) {
+            response.put("success", false);
+            response.put("message", "状态修改失败");
+            return ResponseEntity.status(500).body(response);
+        }
+
         SystemLogHelper.logUpdate(
             "用户管理",
             "修改用户状态：" + user.getNickname() + " -> " + status,
             AdminContext.getAdminId(),
             AdminContext.getAdminUsername(),
-            Map.of("userId", userId, "status", status, "reason", reason)
+            Map.of("userId", userId, "status", status, "reason", reason == null ? "" : reason)
         );
 
-        // 注意：User表需要添加status字段，这里只是示例
-        // 实际实现需要根据业务需求调整
-        Map<String, Object> response = new HashMap<>();
         response.put("success", true);
         response.put("message", "状态修改成功");
         return ResponseEntity.ok(response);

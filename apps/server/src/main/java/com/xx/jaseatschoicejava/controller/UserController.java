@@ -159,6 +159,9 @@ public class UserController {
                 if (user == null) {
                     return ResponseResult.fail("400", "用户不存在，请先注册");
                 }
+                if (!userService.isLoginAllowed(user)) {
+                    return ResponseResult.fail("403", "账号已被禁用，请联系管理员");
+                }
 
                 // 生成token（使用JWT）
                 String token = generateJWTToken(user);
@@ -199,6 +202,13 @@ public class UserController {
                 }
 
                 // 调用登录服务
+                User loginUser = userService.lambdaQuery()
+                        .eq(User::getPhone, account)
+                        .one();
+                if (loginUser != null && !userService.isLoginAllowed(loginUser)) {
+                    return ResponseResult.fail("403", "账号已被禁用，请联系管理员");
+                }
+
                 String token = userService.login(account, password);
                 if (token != null) {
                     // 登录成功，查询用户详细信息

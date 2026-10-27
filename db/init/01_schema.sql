@@ -1778,6 +1778,7 @@ CREATE TABLE `t_user` (
   `password` varchar(64) NOT NULL COMMENT '密码（BCrypt加密）',
   `payment_password` varchar(255) DEFAULT NULL COMMENT 'æ”¯ä»˜å¯†ç ï¼ˆåŠ å¯†å­˜å‚¨ï¼‰',
   `has_payment_password` tinyint(1) DEFAULT '0' COMMENT 'æ˜¯å¦å·²è®¾ç½®æ”¯ä»˜å¯†ç ï¼š0-æœªè®¾ç½®ï¼Œ1-å·²è®¾ç½®',
+  `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '状态：1-启用，0-禁用',
   `nickname` varchar(50) DEFAULT NULL COMMENT '昵称',
   `height` decimal(5,1) DEFAULT NULL COMMENT '身高(cm)',
   `weight` decimal(5,1) DEFAULT NULL COMMENT '体重(kg)',

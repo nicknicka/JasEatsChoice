@@ -72,6 +72,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         return null;
     }
 
+    @Override
+    public boolean isLoginAllowed(User user) {
+        return user != null && !Boolean.FALSE.equals(user.getStatus());
+    }
+
     /**
      * Search users by keyword
      * @param keyword Keyword to search

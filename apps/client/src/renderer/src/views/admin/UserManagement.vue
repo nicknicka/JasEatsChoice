@@ -37,16 +37,31 @@
         <el-table-column prop="nickname" label="昵称" min-width="120" />
         <el-table-column prop="phone" label="手机号" width="130" />
         <el-table-column prop="email" label="邮箱" min-width="180" />
+        <el-table-column label="状态" width="90">
+          <template #default="{ row }">
+            <el-tag :type="row.status === false ? 'danger' : 'success'">
+              {{ row.status === false ? '已禁用' : '已启用' }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="位置" width="100">
           <template #default="{ row }">
             <span>{{ row.location || '-' }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="createdAt" label="注册时间" width="180" />
-        <el-table-column label="操作" width="180" fixed="right">
+        <el-table-column label="操作" width="240" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" link @click="handleView(row)">查看</el-button>
             <el-button type="warning" size="small" link @click="handleEdit(row)">编辑</el-button>
+            <el-button
+              :type="row.status === false ? 'success' : 'danger'"
+              size="small"
+              link
+              @click="handleToggleStatus(row)"
+            >
+              {{ row.status === false ? '启用' : '禁用' }}
+            </el-button>
             <el-button type="danger" size="small" link @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
@@ -154,7 +169,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Download } from '@element-plus/icons-vue'
-import { getUserList, getUserDetail, deleteUser, updateUser } from '@/api/admin'
+import { getUserList, getUserDetail, deleteUser, updateUser, updateUserStatus } from '@/api/admin'
 import { exportToExcel } from '@/utils/export.js'
 import { getAvatarUrl } from '@/utils/avatar'
 
@@ -334,6 +349,37 @@ const handleSubmitEdit = async () => {
     }
   } finally {
     editLoading.value = false
+  }
+}
+
+// 启用/禁用用户
+const handleToggleStatus = async (row) => {
+  const nextStatus = row.status === false ? 'ACTIVE' : 'LOCKED'
+  const action = nextStatus === 'ACTIVE' ? '启用' : '禁用'
+
+  try {
+    await ElMessageBox.confirm(
+      `确定要${action}用户 "${row.nickname || row.phone}" 吗？`,
+      '提示',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    const response = await updateUserStatus(row.userId, nextStatus)
+    if (response.success) {
+      ElMessage.success(response.message || `${action}成功`)
+      fetchUserList()
+    } else {
+      ElMessage.error(response.message || `${action}失败`)
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error(`[用户管理] ${action}用户失败:`, error)
+      ElMessage.error(`${action}用户失败: ` + (error.message || '网络错误'))
+    }
   }
 }
 

@@ -25,6 +25,13 @@ public interface UserService extends IService<User> {
     String login(String phone, String password);
 
     /**
+     * 校验用户是否可以登录
+     * @param user 用户
+     * @return 禁用时返回 false
+     */
+    boolean isLoginAllowed(User user);
+
+    /**
      * Search users by keyword
      * @param keyword Keyword to search
      * @param searchType Search type: nickname, phone, email; if null or empty, search all three fields
