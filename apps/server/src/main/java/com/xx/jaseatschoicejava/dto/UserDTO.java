@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 public class UserDTO {
     private String userId;
     private String phone;
+    private Boolean status;
     private String nickname;
     private Double height;
     private Double weight;
@@ -42,6 +43,7 @@ public class UserDTO {
         UserDTO userDTO = new UserDTO();
         userDTO.setUserId(user.getUserId());
         userDTO.setPhone(user.getPhone());
+        userDTO.setStatus(user.getStatus());
         userDTO.setNickname(user.getNickname());
         userDTO.setHeight(user.getHeight());
         userDTO.setWeight(user.getWeight());

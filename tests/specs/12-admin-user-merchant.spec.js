@@ -1,5 +1,5 @@
 const { test, expect, bootstrapAdminSession } = require('../fixtures/test-base')
-const { markRunning, markPassed, markFailed, markSkipped, updateSummary } = require('../utils/progress')
+const { markRunning, markPassed, markFailed, updateSummary } = require('../utils/progress')
 const { TEST_API_BASE } = require('../utils/api')
 
 const API_BASE = TEST_API_BASE.replace(/\/$/, '')
@@ -67,10 +67,116 @@ test.describe('模块十二：管理员端-用户与商家管理', () => {
     await expect(dialog).toContainText(user.phone)
   })
 
-  test.fixme('12.3 用户状态管理 (blocked by #34)', async ({ page }) => {
-    await page.goto('/admin/users')
-    const statusControl = page.locator('.el-table [class*="status"], button:has-text("禁用"), button:has-text("启用")').first()
-    await expect(statusControl).toBeVisible({ timeout: 10000 })
+  test('12.3 用户状态管理', async ({ page, request }) => {
+    markRunning('12.3')
+    const phone = `139${String(Date.now()).slice(-8)}`
+    const password = 'e2eStatus123'
+    let userId
+
+    const publicRequest = (path, options = {}) => request.fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+      }
+    })
+
+    try {
+      const registerResponse = await publicRequest('/v1/users/register', {
+        method: 'POST',
+        data: {
+          phone,
+          password,
+          nickname: '状态管理用例',
+          email: `${phone}@example.com`,
+          captcha: '8888',
+          checkCodeKey: 'e2e-status-check'
+        }
+      })
+      const registerResult = await registerResponse.json()
+      expect(registerResponse.ok(), `注册临时用户应成功：${registerResult.message || ''}`).toBeTruthy()
+      expect(registerResult.success, `注册临时用户应成功：${registerResult.message || ''}`).toBe(true)
+
+      const user = pageRecords(await apiRequest(page, request, `/admin/users?page=1&pageSize=10&keyword=${phone}`))
+        .find(item => item.phone === phone)
+      expect(user, '应能在管理员用户列表查到刚创建的临时用户').toBeTruthy()
+      userId = user.userId
+      expect(user.status, '新用户默认应启用').not.toBe(false)
+
+      await page.goto('/admin/users')
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
+      await page.getByPlaceholder('搜索用户名、手机号、邮箱').fill(phone)
+      await page.getByRole('button', { name: '搜索' }).click()
+
+      const row = page.locator('.el-table__body-wrapper tbody tr').filter({ hasText: phone })
+      await expect(row).toHaveCount(1, { timeout: 10000 })
+      await expect(row.getByRole('button', { name: '禁用' })).toBeVisible()
+      const disableResponsePromise = page.waitForResponse((response) =>
+        response.url().includes(`/admin/users/${userId}/status`) &&
+        response.request().method() === 'PUT' &&
+        response.request().postDataJSON()?.status === 'LOCKED'
+      )
+      await row.getByRole('button', { name: '禁用' }).click()
+      const disableDialog = page.locator('.el-message-box').filter({ hasText: '确定要禁用用户' })
+      await expect(disableDialog).toBeVisible()
+      await disableDialog.getByRole('button', { name: '确定' }).click()
+      const disableResponse = await disableResponsePromise
+      expect(disableResponse.ok(), '禁用接口应返回成功状态').toBeTruthy()
+      await expect(page.locator('.el-message--success').filter({ hasText: '状态修改成功' }).first()).toBeVisible()
+
+      let saved = pageRecords(await apiRequest(page, request, `/admin/users?page=1&pageSize=10&keyword=${phone}`))
+        .find(item => item.userId === userId)
+      expect(saved?.status, '禁用操作应真实落库').toBe(false)
+
+      const blockedResponse = await publicRequest('/v1/users/login', {
+        method: 'POST',
+        data: { phone, password, captcha: '8888', checkCodeKey: 'e2e-status-check' }
+      })
+      const blockedResult = await blockedResponse.json()
+      expect(blockedResult.success, '禁用用户登录应失败').toBe(false)
+      expect(blockedResult.message, '禁用用户登录提示应明确').toContain('禁用')
+
+      const enabledRow = page.locator('.el-table__body-wrapper tbody tr').filter({ hasText: phone })
+      await expect(enabledRow.getByRole('button', { name: '启用' })).toBeVisible()
+      const enableResponsePromise = page.waitForResponse((response) =>
+        response.url().includes(`/admin/users/${userId}/status`) &&
+        response.request().method() === 'PUT' &&
+        response.request().postDataJSON()?.status === 'ACTIVE'
+      )
+      await enabledRow.getByRole('button', { name: '启用' }).click()
+      const enableDialog = page.locator('.el-message-box').filter({ hasText: '确定要启用用户' })
+      await expect(enableDialog).toBeVisible()
+      await enableDialog.getByRole('button', { name: '确定' }).click()
+      const enableResponse = await enableResponsePromise
+      expect(enableResponse.ok(), '启用接口应返回成功状态').toBeTruthy()
+      await expect(page.locator('.el-message--success').filter({ hasText: '状态修改成功' }).first()).toBeVisible()
+
+      saved = pageRecords(await apiRequest(page, request, `/admin/users?page=1&pageSize=10&keyword=${phone}`))
+        .find(item => item.userId === userId)
+      expect(saved?.status, '启用操作应真实落库').toBe(true)
+
+      const enabledResponse = await publicRequest('/v1/users/login', {
+        method: 'POST',
+        data: { phone, password, captcha: '8888', checkCodeKey: 'e2e-status-check' }
+      })
+      const enabledResult = await enabledResponse.json()
+      expect(enabledResult.success, `启用后应可登录：${enabledResult.message || ''}`).toBe(true)
+      expect(enabledResult.data?.token, '启用后登录应返回 token').toBeTruthy()
+
+      markPassed('12.3', `临时用户 ${phone} 禁用后被拒、启用后登录成功，状态均回查落库`)
+    } catch (e) {
+      markFailed('12.3', e.message.slice(0, 50))
+      throw e
+    } finally {
+      if (userId) {
+        await apiRequest(page, request, `/admin/users/${userId}/status`, {
+          method: 'PUT',
+          data: { status: 'ACTIVE' }
+        })
+        await apiRequest(page, request, `/admin/users/${userId}`, { method: 'DELETE' })
+      }
+    }
   })
 
   test('12.4 商家列表', async ({ page, request }) => {
@@ -151,7 +257,6 @@ test.describe('模块十二：管理员端-用户与商家管理', () => {
   })
 
   test.afterAll(() => {
-    markSkipped('12.3', '#34', '用户状态管理尚未实现')
     updateSummary()
   })
 })

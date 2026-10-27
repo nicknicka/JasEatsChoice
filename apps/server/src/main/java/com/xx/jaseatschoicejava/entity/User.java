@@ -44,6 +44,10 @@ public class User {
     @ApiModelProperty(value = "是否已设置支付密码：0-未设置，1-已设置")
     private Boolean hasPaymentPassword; // 是否已设置支付密码
 
+    @TableField("status")
+    @ApiModelProperty(value = "状态：true-启用，false-禁用")
+    private Boolean status; // 状态：true-启用，false-禁用
+
     @TableField("nickname")
     @ApiModelProperty(value = "昵称")
     private String nickname; // 昵称
