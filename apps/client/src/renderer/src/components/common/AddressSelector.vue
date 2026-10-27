@@ -422,7 +422,7 @@ const deleteAddress = (address) => {
   )
     .then(async () => {
       try {
-        const response = await addressApi.deleteAddress(address.id)
+        const response = await addressApi.deleteAddress(address.id, userId.value)
         if (response.code === '200') {
           ElMessage.success('删除成功')
           if (selectedAddress.value?.id === address.id) {
