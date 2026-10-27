@@ -52,6 +52,8 @@
         <ChatAreaHeader
           :conversation="selectedConversation"
           :has-group-order="hasGroupOrder"
+          :can-join-group-order="canJoinGroupOrder"
+          :joining="joiningGroupOrder"
           @search="searchMessages"
           @export="exportChatHistory"
           @create-group-order="createGroupOrder"
@@ -576,6 +578,7 @@ const { initWebSocket, closeWebSocket } = useWebSocketChat({
 // ========== 群订单管理 ==========
 const groupOrders = ref({})
 const orderDrawerVisible = ref(false)
+const joiningGroupOrder = ref(false)
 
 // ========== SessionStorage 持久化工具函数（带用户ID，避免多账号混淆）==========
 /**
@@ -646,6 +649,18 @@ const currentGroupOrder = computed(() => {
 
 const groupOrderItemsCount = computed(() => {
   return currentGroupOrder.value?.orderItems?.length || 0
+})
+
+const canJoinGroupOrder = computed(() => {
+  const order = currentGroupOrder.value
+  if (!order || !selectedConversation.value || selectedConversation.value.type !== 'group') {
+    return false
+  }
+  return order.draftStatus === -1
+    && !order.locked
+    && String(order.initiatorId || '') !== userId.value.toString()
+    && order.currentUserJoined !== true
+    && Number(order.currentCount || 0) < Number(order.maxParticipants || 1)
 })
 
 // ========== 商家选择相关 ==========
@@ -840,20 +855,54 @@ const selectConversation = async (conversation) => {
 
       console.log('🔵 [selectConversation] API响应:', response.data)
       const draftOrders = Array.isArray(response.data) ? response.data : []
-      const draftOrder = draftOrders.find((order) => String(order.initiatorId) === userId.value.toString()) || null
+      const ownDraftOrder = draftOrders.find((order) => String(order.initiatorId) === userId.value.toString()) || null
+      let joinedDraftOrder = null
+      let joinableDraftOrder = null
 
-      // 如果有草稿订单，恢复它
+      // 列表接口不带当前用户上下文，以详情接口确认“已加入/可加入”状态。
+      if (!ownDraftOrder) {
+        for (const candidate of draftOrders) {
+          if (String(candidate.initiatorId) === userId.value.toString()) {
+            continue
+          }
+
+          try {
+            const detailResponse = await api.get(`/v1/group-orders/group-orders/${candidate.id}`, {
+              params: { userId: userId.value.toString() }
+            })
+            const detail = detailResponse?.data?.groupOrder
+            if (detail?.currentUserJoined === true) {
+              joinedDraftOrder = detail
+              break
+            }
+            if (!joinableDraftOrder && detail?.joinable === true) {
+              joinableDraftOrder = detail
+            }
+          } catch (error) {
+            console.error(`加载群订单 ${candidate.id} 详情失败:`, error)
+          }
+        }
+      }
+
+      const draftOrder = ownDraftOrder || joinedDraftOrder || joinableDraftOrder
+
+      // 当前用户发起的草稿优先恢复；否则保留已加入/可加入订单供页面使用
       if (draftOrder) {
         groupOrders.value[conversation.id] = {
           orderId: draftOrder.id,
           groupId: draftOrder.groupId,
           groupName: conversation.name,
-          creator: '我',
+          creator: String(draftOrder.initiatorId) === userId.value.toString() ? '我' : '群成员',
           members: extractGroupMemberNames(draftOrder.members || draftOrder.participants || []),
           orderItems: [],
           totalAmount: Number(draftOrder.totalAmount || 0),
           status: 'active',
           createdAt: draftOrder.createdAt,
+          initiatorId: draftOrder.initiatorId,
+          currentUserJoined: Boolean(draftOrder.currentUserJoined),
+          currentCount: Number(draftOrder.currentCount || 0),
+          maxParticipants: Number(draftOrder.maxParticipants || 0),
+          joinable: Boolean(draftOrder.joinable),
           merchantId: draftOrder.merchantId,
           merchantName: draftOrder.merchantName,
           addressId: draftOrder.addressId,
@@ -1907,8 +1956,51 @@ const createGroupOrder = async () => {
   }
 }
 
-const joinGroupOrder = () => {
-  ElMessage.info('已加入群订单')
+const joinGroupOrder = async () => {
+  const order = currentGroupOrder.value
+  if (!order?.orderId) {
+    ElMessage.error('当前没有可加入的群订单')
+    return
+  }
+
+  joiningGroupOrder.value = true
+  try {
+    const shareResponse = await api.post(`/v1/group-orders/group-orders/${order.orderId}/invite`, {
+      friendIds: []
+    })
+    if (!shareResponse?.success || !shareResponse.data?.orderCode) {
+      throw new Error(shareResponse?.message || '获取订单码失败')
+    }
+
+    const joinResponse = await api.post('/v1/group-orders/join', {
+      orderCode: shareResponse.data.orderCode,
+      userId: userId.value.toString()
+    })
+    if (!joinResponse?.success) {
+      throw new Error(joinResponse?.message || '加入群订单失败')
+    }
+
+    const detailResponse = await api.get(`/v1/group-orders/group-orders/${order.orderId}`, {
+      params: { userId: userId.value.toString() }
+    })
+    const detail = detailResponse?.data?.groupOrder
+    if (!detailResponse?.success || !detail) {
+      throw new Error(detailResponse?.message || '刷新群订单失败')
+    }
+
+    order.members = extractGroupMemberNames(detail.members || detail.participants || [])
+    order.currentUserJoined = Boolean(detail.currentUserJoined)
+    order.currentCount = Number(detail.currentCount || order.currentCount || 0)
+    order.maxParticipants = Number(detail.maxParticipants || order.maxParticipants || 0)
+    order.joinable = Boolean(detail.joinable)
+    order.locked = Boolean(detail.locked)
+    ElMessage.success('已加入群订单')
+  } catch (error) {
+    console.error('加入群订单失败:', error)
+    ElMessage.error(error.data?.message || error.message || '加入群订单失败，请稍后重试')
+  } finally {
+    joiningGroupOrder.value = false
+  }
 }
 
 const openMerchantSelectDialog = async () => {

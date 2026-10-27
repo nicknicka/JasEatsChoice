@@ -240,9 +240,57 @@ test.describe('模块四：订单流程', () => {
     }
   })
 
-  test.fixme('4.10 加入拼单 (blocked by #37)', async ({ page }) => {
-    await page.goto('/user/home/chat')
-    await expect(page.locator('button:has-text("加入群订单")').first()).toBeVisible({ timeout: 10000 })
+  test('4.10 加入拼单', async ({ page, request }) => {
+    markRunning('4.10')
+    try {
+      const groupName = `E2E加入拼单 ${Date.now()}`
+      const { groupId } = await createGroupWithSession(request, groupName)
+      const currentUserId = await getUserId()
+      const initiatorId = await getUserId({ phone: '13800138010' })
+      const groupOrderId = await apiRequest(request, 'POST', '/v1/group-orders/group-orders', {
+        initiatorId,
+        groupId,
+        maxParticipants: 2
+      })
+
+      await page.goto('/user/home/chat')
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
+      const conversation = page.locator('.conversation-item').filter({ hasText: groupName })
+      await expect(conversation).toBeVisible({ timeout: 10000 })
+      await conversation.click()
+
+      const joinBtn = page.locator('button:has-text("加入群订单")').first()
+      await expect(joinBtn).toBeVisible({ timeout: 10000 })
+      await joinBtn.click()
+      await expect(page.locator('.el-message').filter({ hasText: '已加入群订单' })).toBeVisible({ timeout: 10000 })
+
+      const getDetail = () => apiRequest(
+        request,
+        'GET',
+        `/v1/group-orders/group-orders/${groupOrderId}?userId=${currentUserId}`
+      )
+      await expect.poll(async () => {
+        const detail = await getDetail()
+        return detail.groupOrder?.currentUserJoined === true
+          && detail.groupOrder.members?.some((member) => String(member.userId) === String(currentUserId))
+      }).toBe(true)
+
+      await page.reload()
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
+      const refreshedConversation = page.locator('.conversation-item').filter({ hasText: groupName })
+      await expect(refreshedConversation).toBeVisible({ timeout: 10000 })
+      await refreshedConversation.click()
+      await expect(page.locator('button:has-text("加入群订单")')).toBeHidden()
+      await expect(page.locator('.floating-order-btn')).toBeVisible({ timeout: 10000 })
+
+      const refreshedDetail = await getDetail()
+      expect(refreshedDetail.groupOrder.currentUserJoined).toBe(true)
+      expect(refreshedDetail.groupOrder.members.some((member) => String(member.userId) === String(currentUserId))).toBe(true)
+      markPassed('4.10', `用户 ${currentUserId} 通过 UI 加入群订单 ${groupOrderId}，刷新后仍在成员中`)
+    } catch (e) {
+      markFailed('4.10', e.message.slice(0, 50))
+      throw e
+    }
   })
 
   test('4.11 拼单结算', async ({ page, request }) => {

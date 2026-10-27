@@ -87,6 +87,16 @@
             @click="handleCreateGroupOrder"
           />
         </el-tooltip>
+        <el-button
+          v-if="canJoinGroupOrder"
+          size="small"
+          type="primary"
+          class="join-order-btn"
+          :loading="joining"
+          @click="$emit('join-group-order')"
+        >
+          加入群订单
+        </el-button>
         <el-tooltip content="群聊详情" placement="bottom">
           <el-button
             :icon="InfoFilled"
@@ -113,6 +123,14 @@ const props = defineProps({
     required: true
   },
   hasGroupOrder: {
+    type: Boolean,
+    default: false
+  },
+  canJoinGroupOrder: {
+    type: Boolean,
+    default: false
+  },
+  joining: {
     type: Boolean,
     default: false
   }
@@ -296,6 +314,12 @@ const handleCreateGroupOrder = () => {
         border-color: transparent;
         background: linear-gradient(180deg, lighten(@nordic-accent, 4%) 0%, @nordic-accent-dark 100%);
       }
+    }
+
+    .join-order-btn {
+      border-radius: 10px;
+      font-weight: 600;
+      box-shadow: 0 8px 16px fade(@nordic-accent, 12%);
     }
 
     .search-button-wrapper {
