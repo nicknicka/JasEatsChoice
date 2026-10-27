@@ -47,7 +47,7 @@ test.describe('模块八：AI助手与地址管理', () => {
     } catch (e) { markFailed('8.1', e.message.slice(0, 50)); throw e }
   })
 
-  test.fixme('8.2 菜品识别 (blocked by #4)', async ({ page }) => {
+  test.fixme('8.2 菜品识别 (blocked by #71)', async ({ page }) => {
     markRunning('8.2')
     try {
       await page.goto('/user/home/ai')
@@ -62,7 +62,7 @@ test.describe('模块八：AI助手与地址管理', () => {
     } catch (e) { markFailed('8.2', e.message.slice(0, 50)); throw e }
   })
 
-  test.fixme('8.3 食谱生成 (blocked by #4)', async ({ page }) => {
+  test.fixme('8.3 食谱生成 (blocked by #71)', async ({ page }) => {
     markRunning('8.3')
     try {
       await page.goto('/user/home/ai')
