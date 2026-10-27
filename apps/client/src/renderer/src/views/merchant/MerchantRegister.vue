@@ -246,12 +246,16 @@ const submitForm = () => {
   if (registerFormRef.value) {
     registerFormRef.value.validate((valid) => {
       if (valid) {
+        const authStore = useAuthStore()
+        if (!authStore.token) {
+          ElMessage.error('请先登录后再注册商家')
+          return
+        }
+
         // 准备后端需要的数据结构
         const merchantData = {
-          // 注意：前端字段与后端字段映射
-          nickname: registerForm.merchantName, // 后端是nickname，前端是merchantName
-          phone: registerForm.contactPhone, // 后端是phone，前端是contactPhone
-          // 其他字段暂时保留，等待后端实体更新后启用
+          name: registerForm.merchantName,
+          phone: registerForm.contactPhone,
           businessLicense: registerForm.businessLicense,
           businessScope: registerForm.businessScope, // 直接发送数组
           contactName: registerForm.contactName,
@@ -264,9 +268,14 @@ const submitForm = () => {
         api
           .post(API_CONFIG.merchant.register, merchantData)
           .then((apiResponse) => {
-            // 严格检查响应是否有效（注意：响应拦截器已将 response.data 直接返回）
-            if (!apiResponse || !apiResponse.data?.id) {
-              // 检查商家ID是否存在
+            if (!apiResponse?.success) {
+              console.error('注册失败:', apiResponse)
+              ElMessage.error(apiResponse?.message || '注册失败，请稍后重试')
+              getCaptcha() // 注册失败时刷新验证码
+              return
+            }
+
+            if (!apiResponse.data?.merchantId) {
               console.error('注册失败: 无效的API响应', apiResponse)
               ElMessage.error('注册失败: 服务器返回无效响应')
               getCaptcha() // 注册失败时刷新验证码
@@ -276,14 +285,12 @@ const submitForm = () => {
             ElMessage.success('注册成功！')
             getCaptcha() // 注册成功时刷新验证码
 
-            // 获取 Pinia 存储实例
-            const authStore = useAuthStore()
             const userStore = useUserStore()
 
             console.log('商家注册响应:', apiResponse.data)
             // 保存用户信息和角色
             const merchantInfo = {
-              merchantId: apiResponse.data.id, // 商家ID
+              merchantId: apiResponse.data.merchantId,
               name: apiResponse.data.name,
               phone: apiResponse.data.phone,
               email: apiResponse.data.email,
@@ -313,7 +320,7 @@ const submitForm = () => {
           })
           .catch((error) => {
             console.error('注册失败:', error)
-            ElMessage.error('注册失败，请稍后重试')
+            ElMessage.error(error?.message || '注册失败，请稍后重试')
             getCaptcha() // 注册失败时刷新验证码
           })
       } else {

@@ -110,6 +110,27 @@ public class MerchantController {
     @PostMapping("/register")
     public ResponseResult<?> register(@RequestBody MerchantRegisterRequest registerRequest, @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
         try {
+            if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+                return ResponseResult.fail("401", "请先登录后再注册商家");
+            }
+
+            String currentUserId;
+            try {
+                String token = authorizationHeader.substring("Bearer ".length()).trim();
+                currentUserId = jwtUtil.extractUserId(token);
+                if (currentUserId == null || currentUserId.isBlank()) {
+                    return ResponseResult.fail("401", "登录已失效，请重新登录");
+                }
+            } catch (Exception e) {
+                logger.warn("商家注册登录态无效: {}", e.getMessage());
+                return ResponseResult.fail("401", "登录已失效，请重新登录");
+            }
+
+            User currentUser = userService.getById(currentUserId);
+            if (currentUser == null) {
+                return ResponseResult.fail("401", "当前用户不存在，请重新登录");
+            }
+
             // 验证验证码
             if (registerRequest.getCaptcha() == null || registerRequest.getCaptchaKey() == null) {
                 return ResponseResult.fail("400", "验证码不能为空");
@@ -137,36 +158,18 @@ public class MerchantController {
             merchant.setPhone(registerRequest.getPhone());
             merchant.setEmail(registerRequest.getEmail());
 
-            Merchant    savedMerchant = merchantService.register(merchant);
-            if (savedMerchant != null) {
-                try {
-                    // 从Authorization头中提取token
-                    String token = authorizationHeader.replace("Bearer ", "").trim();
-                    // 提取当前用户ID
-                    String currentUserId = jwtUtil.extractUserId(token);
+            Merchant savedMerchant = merchantService.register(merchant, currentUserId);
 
-                    // 将merchantId存入user表
-                    User user = userService.getById(currentUserId);
-                    if (user != null) {
-                        user.setMerchantId(savedMerchant.getId());
-                        userService.updateById(user);
-                    }
-                } catch (Exception e) {
-                    // 记录token处理异常，但不影响商家注册
-                    e.printStackTrace();
-                    logger.warn("处理用户-商家关联时失败: {}", e.getMessage());
-                }
-
-                // 可以选择在返回前清除密码等敏感信息
-                savedMerchant.setPassword(null);
-                return ResponseResult.success(savedMerchant);
-            }
-            return ResponseResult.fail("500", "注册失败");
+            // 可以选择在返回前清除密码等敏感信息
+            savedMerchant.setPassword(null);
+            return ResponseResult.success(savedMerchant);
         } catch (org.springframework.dao.DuplicateKeyException e) {
             // 处理手机号或邮箱重复的情况
             return ResponseResult.fail("400", "该手机号或邮箱已被注册，请更换其他账号");
+        } catch (IllegalArgumentException e) {
+            return ResponseResult.fail("401", e.getMessage());
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("商家注册失败", e);
             return ResponseResult.fail("500", "注册失败");
         }
     }
