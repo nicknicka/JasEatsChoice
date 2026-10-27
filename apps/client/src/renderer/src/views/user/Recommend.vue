@@ -83,15 +83,12 @@ const updateRecommendationsByLocation = (location) => {
 // 处理收藏点击（增强版 - 记录行为）
 const handleFavoriteClick = async (item) => {
   const isFavorited = isFavoritedItem(item)
+  const success = await toggleFavorite(item)
 
-  // 记录收藏/取消收藏行为
-  await recordFavoriteBehavior(item, !isFavorited)
-
-  // 切换收藏状态
-  await toggleFavorite(item)
-
-  // 更新收藏状态
-  initFavorites()
+  if (success) {
+    await recordFavoriteBehavior(item, !isFavorited)
+    await initFavorites()
+  }
 }
 
 // 处理点击菜品（记录点击反馈）

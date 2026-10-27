@@ -594,7 +594,7 @@ CREATE TABLE `t_collection` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `user_id` bigint NOT NULL COMMENT '用户ID',
   `collectable_type` varchar(20) NOT NULL COMMENT 'æ”¶è—ç±»åž‹ï¼šmerchant, dish, article, recipeç­‰',
-  `collectable_id` bigint NOT NULL COMMENT 'æ”¶è—å¯¹è±¡ID',
+  `collectable_id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'æ”¶è—å¯¹è±¡ID',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   PRIMARY KEY (`id`),
   KEY `idx_user_id` (`user_id`),

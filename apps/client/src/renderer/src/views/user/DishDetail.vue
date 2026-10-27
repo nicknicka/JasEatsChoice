@@ -322,7 +322,7 @@ import CommonBackButton from '../../components/common/CommonBackButton.vue'
 
 const route = useRoute()
 const router = useRouter()
-const dishId = ref(route.params.id)
+const dishId = ref(route.params.dishId)
 const dish = ref(null)
 const loading = ref(true)
 const quantity = ref(1)
@@ -336,6 +336,11 @@ const nutritionDisplayMap = {
   fiber: '膳食纤维',
   sodium: '钠',
   calories: '热量'
+}
+
+const parseJsonValue = (value, fallback) => {
+  if (!value) return fallback
+  return typeof value === 'string' ? JSON.parse(value) : value
 }
 
 // 判断是否有食材数据
@@ -398,9 +403,9 @@ const loadDishDetail = async () => {
       requiredIngredients: dishData.ingredients?.required || [],
       optionalIngredients: dishData.ingredients?.optional || [],
       // 解析烹饪步骤
-      cookingSteps: dishData.cookingSteps ? JSON.parse(dishData.cookingSteps) : [],
+      cookingSteps: parseJsonValue(dishData.cookingSteps, []),
       // 营养信息
-      nutrition: dishData.nutrition ? JSON.parse(dishData.nutrition) : null,
+      nutrition: parseJsonValue(dishData.nutrition, null),
       // 检测过敏原
       detectedAllergens: detectAllergens(dishData.ingredients)
     }
