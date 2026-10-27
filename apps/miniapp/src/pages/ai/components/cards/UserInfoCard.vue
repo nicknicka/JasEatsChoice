@@ -142,7 +142,7 @@ const handleEditProfile = () => {
 
 	// 跳转到编辑页面
 	uni.navigateTo({
-		url: '/pages/user-center/edit'
+		url: '/pages-user/profile/user-center/edit/index'
 	});
 };
 </script>
