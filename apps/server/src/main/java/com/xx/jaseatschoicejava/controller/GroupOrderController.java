@@ -11,7 +11,6 @@ import com.xx.jaseatschoicejava.entity.PaymentRecord;
 import com.xx.jaseatschoicejava.entity.UserCoupon;
 import com.xx.jaseatschoicejava.entity.User;
 import com.xx.jaseatschoicejava.enums.NotificationTypeEnum;
-import com.xx.jaseatschoicejava.service.AlipayPayService;
 import com.xx.jaseatschoicejava.service.DishService;
 import com.xx.jaseatschoicejava.service.GroupChatService;
 import com.xx.jaseatschoicejava.service.GroupOrderService;
@@ -21,7 +20,6 @@ import com.xx.jaseatschoicejava.service.PaymentService;
 import com.xx.jaseatschoicejava.service.UserCouponService;
 import com.xx.jaseatschoicejava.service.UserService;
 import com.xx.jaseatschoicejava.service.WalletService;
-import com.xx.jaseatschoicejava.service.WechatPayService;
 import com.xx.jaseatschoicejava.util.NotificationUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,12 +70,6 @@ public class GroupOrderController {
 
     @Autowired
     private WalletService walletService;
-
-    @Autowired
-    private WechatPayService wechatPayService;
-
-    @Autowired
-    private AlipayPayService alipayPayService;
 
     /**
      * 获取或创建群组的草稿订单
@@ -461,6 +453,15 @@ public class GroupOrderController {
         }
 
         String normalizedPaymentMethod = "balance".equals(paymentMethod) ? "wallet" : paymentMethod;
+        if ("wechat".equals(normalizedPaymentMethod)) {
+            return ResponseResult.fail("501", "微信支付暂未开放");
+        }
+        if ("alipay".equals(normalizedPaymentMethod)) {
+            return ResponseResult.fail("501", "支付宝支付暂未开放");
+        }
+        if (!"wallet".equals(normalizedPaymentMethod)) {
+            return ResponseResult.fail("400", "仅支持平台币支付");
+        }
         BigDecimal payableAmount = calculatePayableAmount(groupOrderId, userId, paymentType);
         if (payableAmount.compareTo(BigDecimal.ZERO) <= 0) {
             return ResponseResult.fail("400", "当前没有可支付的拼单金额");
@@ -502,30 +503,7 @@ public class GroupOrderController {
                 )), "支付成功");
             }
 
-            if ("wechat".equals(normalizedPaymentMethod)) {
-                Map<String, Object> payResult = wechatPayService.createMiniPayOrder(
-                        paymentRecord.getPaymentNo(),
-                        payableAmount,
-                        "群订单支付-" + groupOrderId,
-                        ""
-                );
-                Map<String, Object> paymentParams = new HashMap<>(payResult);
-                paymentParams.put("type", "wechat");
-                return ResponseResult.success(buildPaymentResponse(paymentRecord, paymentMethod, paymentParams), "支付单创建成功");
-            }
-
-            if ("alipay".equals(normalizedPaymentMethod)) {
-                Map<String, Object> payResult = alipayPayService.createWapPayOrder(
-                        paymentRecord.getPaymentNo(),
-                        payableAmount,
-                        "群订单支付-" + groupOrderId
-                );
-                Map<String, Object> paymentParams = new HashMap<>(payResult);
-                paymentParams.put("type", "alipay");
-                return ResponseResult.success(buildPaymentResponse(paymentRecord, paymentMethod, paymentParams), "支付单创建成功");
-            }
-
-            return ResponseResult.fail("400", "暂不支持该支付方式");
+            return ResponseResult.fail("400", "仅支持平台币支付");
         } catch (Exception e) {
             logger.error("群订单支付失败 - groupOrderId: {}", groupOrderId, e);
             if (couponUsed && couponId != null && !couponId.isBlank()) {

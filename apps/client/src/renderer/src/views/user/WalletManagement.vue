@@ -236,7 +236,7 @@
           <ul style="margin: 5px 0; padding-left: 20px">
             <li>充值即时到账，无手续费</li>
             <li>1平台币 = 1元人民币</li>
-            <li>支持微信支付、支付宝等方式</li>
+            <li>当前仅支持平台币余额充值</li>
             <li>充值遇到问题请联系客服</li>
           </ul>
         </template>
@@ -253,19 +253,9 @@
             <template #append>平台币</template>
           </el-input>
         </el-form-item>
-        <el-form-item label="支付方式">
-          <el-radio-group v-model="rechargeForm.paymentMethod">
-            <el-radio value="wechat">
-              <span style="display: flex; align-items: center; gap: 5px">
-                <span style="color: #09bb07">💬</span> 微信支付
-              </span>
-            </el-radio>
-            <el-radio value="alipay">
-              <span style="display: flex; align-items: center; gap: 5px">
-                <span style="color: #1677ff">💳</span> 支付宝
-              </span>
-            </el-radio>
-          </el-radio-group>
+        <el-form-item label="充值方式">
+          <el-tag type="info">平台币充值</el-tag>
+          <span class="method-tip">微信支付、支付宝暂未开放</span>
         </el-form-item>
         <el-form-item label="快捷金额">
           <div class="quick-amount-buttons">
@@ -319,7 +309,7 @@ const rechargeDialogVisible = ref(false)
 const recharging = ref(false)
 const rechargeForm = ref({
   amount: null,
-  paymentMethod: 'wechat'
+  paymentMethod: 'wallet'
 })
 const quickAmounts = [10, 50, 100, 200, 500]
 
@@ -472,17 +462,9 @@ const confirmRecharge = async () => {
     return
   }
 
-  // 检查支付方式
-  if (!rechargeForm.value.paymentMethod) {
-    ElMessage.warning('请选择支付方式')
-    return
-  }
-
   recharging.value = true
   try {
     const rechargeNo = 'RCH' + new Date().getTime() + Math.floor(Math.random() * 1000)
-
-    ElMessage.info(`提交${rechargeForm.value.paymentMethod === 'wechat' ? '微信' : '支付宝'}充值请求...`)
 
     const response = await walletApi.recharge(userId, rechargeForm.value.amount, rechargeNo)
 
@@ -650,6 +632,12 @@ onMounted(() => {
 
 <style scoped lang="less">
 @import '../../assets/css/nordic-theme.less';
+
+.method-tip {
+  margin-left: 12px;
+  color: #909399;
+  font-size: 13px;
+}
 
 .wallet-management-container {
   padding: 0 @nordic-space-lg @nordic-space-lg @nordic-space-lg;

@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.util.Map;
 
 /**
- * 支付宝支付服务接口
+ * 支付宝支付服务接口骨架。当前无支付权限，不接第三方 SDK，实现类统一返回“未启用”。
  */
 public interface AlipayPayService {
 

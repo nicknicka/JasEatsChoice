@@ -4,20 +4,21 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * 支付配置类
- * 用于配置微信支付和支付宝支付的参数
+ * 支付配置类。
+ *
+ * <p>微信支付、支付宝支付当前未启用，仅保留配置位；所有外部配置只允许通过环境变量注入。</p>
  */
 @Configuration
 @ConfigurationProperties(prefix = "payment")
 public class PaymentConfig {
 
     /**
-     * 微信支付配置
+     * 微信支付配置（当前未启用）
      */
     private WechatConfig wechat = new WechatConfig();
 
     /**
-     * 支付宝支付配置
+     * 支付宝支付配置（当前未启用）
      */
     private AlipayConfig alipay = new AlipayConfig();
 

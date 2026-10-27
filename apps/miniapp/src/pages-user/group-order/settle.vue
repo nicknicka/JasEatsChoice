@@ -95,15 +95,13 @@
     <!-- 支付方式 -->
     <view class="payment-methods">
       <text class="section-title">支付方式</text>
-      <radio-group @change="onPaymentMethodChange">
-        <label class="payment-item" v-for="method in paymentMethods" :key="method.value">
-          <view class="payment-info">
-            <text class="icon">{{ method.icon }}</text>
-            <text class="name">{{ method.label }}</text>
-          </view>
-          <radio :value="method.value" :checked="paymentMethod === method.value" color="#FF6B35" />
-        </label>
-      </radio-group>
+      <view class="payment-item active">
+        <view class="payment-info">
+          <text class="icon">💰</text>
+          <text class="name">平台币支付</text>
+        </view>
+        <text class="payment-check">✓</text>
+      </view>
     </view>
 
     <!-- 底部支付栏 -->
@@ -153,13 +151,8 @@ const myOrder = ref(null)
 const availableCoupons = ref([])
 const selectedCoupon = ref(null)
 
-// 支付方式
+// 当前仅支持平台币支付
 const paymentMethod = ref('balance')
-const paymentMethods = [
-  { value: 'balance', label: '余额支付', icon: '💰' },
-  { value: 'wechat', label: '微信支付（模拟）', icon: '💚' },
-  { value: 'alipay', label: '支付宝支付（模拟）', icon: '💙' },
-]
 
 // 最终金额
 const finalAmount = computed(() => {
@@ -371,13 +364,6 @@ const recalculateAmount = () => {
 }
 
 /**
- * 支付方式变更
- */
-const onPaymentMethodChange = (e) => {
-  paymentMethod.value = e.detail.value
-}
-
-/**
  * GROUP-004: 处理支付
  */
 const processPayment = async () => {
@@ -438,16 +424,7 @@ const processPayment = async () => {
     if (res.code === 200 && res.data) {
       uni.hideLoading()
 
-      // 调用支付接口
-      const paymentParams = res.data.paymentParams
-
-      if (paymentMethod.value === 'wechat') {
-        await invokeWechatPayment(paymentParams)
-      } else if (paymentMethod.value === 'alipay') {
-        await invokeAlipayPayment(paymentParams)
-      } else if (paymentMethod.value === 'balance') {
-        await handleBalancePayment(res.data)
-      }
+      await handleBalancePayment(res.data)
     } else {
       throw new Error(res.message || '支付失败')
     }
@@ -462,39 +439,7 @@ const processPayment = async () => {
 }
 
 /**
- * 调用微信支付
- */
-const invokeWechatPayment = (paymentParams) => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      uni.showToast({
-        title: '微信支付为模拟流程',
-        icon: 'none'
-      })
-      handlePaymentSuccess()
-      resolve(paymentParams)
-    }, 500)
-  })
-}
-
-/**
- * 调用支付宝支付
- */
-const invokeAlipayPayment = (paymentParams) => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      uni.showToast({
-        title: '支付宝支付为模拟流程',
-        icon: 'none'
-      })
-      handlePaymentSuccess()
-      resolve(paymentParams)
-    }, 500)
-  })
-}
-
-/**
- * 处理余额支付
+ * 处理平台币支付
  */
 const handleBalancePayment = async (paymentData) => {
   try {
@@ -835,6 +780,12 @@ const handlePaymentSuccess = () => {
 .payment-info .name {
   font-size: 28rpx;
   color: #333;
+}
+
+.payment-check {
+  font-size: 30rpx;
+  color: #FF6B35;
+  font-weight: bold;
 }
 
 /* 支付栏 */

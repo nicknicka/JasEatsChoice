@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.util.Map;
 
 /**
- * 微信支付服务接口
+ * 微信支付服务接口骨架。当前无支付权限，不接第三方 SDK，实现类统一返回“未启用”。
  */
 public interface WechatPayService {
 
@@ -14,7 +14,7 @@ public interface WechatPayService {
      * @param amount 支付金额
      * @param description 商品描述
      * @param openid 用户openid
-     * @return 支付参数（包含timeStamp, nonceStr, package, signType, paySign）
+     * @return 保留的支付参数返回类型；当前实现不会返回参数，而是明确报未启用
      */
     Map<String, Object> createMiniPayOrder(String paymentNo, BigDecimal amount, String description, String openid);
 

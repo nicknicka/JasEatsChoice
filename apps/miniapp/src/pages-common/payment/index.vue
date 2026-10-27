@@ -26,58 +26,20 @@
       </view>
     </view>
 
-    <!-- 支付方式 -->
+    <!-- 支付方式：当前只保留平台币 -->
     <view class="payment-methods">
-      <view class="section-title">选择支付方式</view>
+      <view class="section-title">支付方式</view>
       <view class="methods-list">
-        <view
-          class="method-item"
-          :class="{ active: selectedMethod === 'wechat' }"
-          @tap="selectMethod('wechat')"
-        >
-          <view class="method-icon wechat">
-            <uni-icons type="weixin" size="28" color="#fff"></uni-icons>
-          </view>
-          <view class="method-info">
-            <text class="method-name">微信支付</text>
-            <text class="method-desc">推荐使用</text>
-          </view>
-          <view class="method-check" v-if="selectedMethod === 'wechat'">
-            <uni-icons type="circle-filled" size="20" color="#09BB07"></uni-icons>
-          </view>
-        </view>
-
-        <view
-          class="method-item"
-          :class="{ active: selectedMethod === 'alipay' }"
-          @tap="selectMethod('alipay')"
-        >
-          <view class="method-icon alipay">
-            <uni-icons type="wallet-filled" size="28" color="#fff"></uni-icons>
-          </view>
-          <view class="method-info">
-            <text class="method-name">支付宝</text>
-            <text class="method-desc">数亿用户的选择</text>
-          </view>
-          <view class="method-check" v-if="selectedMethod === 'alipay'">
-            <uni-icons type="circle-filled" size="20" color="#1677FF"></uni-icons>
-          </view>
-        </view>
-
-        <view
-          class="method-item wallet-method"
-          :class="{ active: selectedMethod === 'wallet' }"
-          @tap="selectMethod('wallet')"
-        >
+        <view class="method-item wallet-method active">
           <view class="method-icon wallet">
             <uni-icons type="wallet" size="28" color="#fff"></uni-icons>
           </view>
           <view class="method-info">
-            <text class="method-name">余额支付</text>
-            <text class="method-desc">余额：¥{{ userBalance }}</text>
+            <text class="method-name">平台币支付</text>
+            <text class="method-desc">平台币余额：¥{{ userBalance }}</text>
           </view>
-          <view class="method-check" v-if="selectedMethod === 'wallet'">
-            <uni-icons type="circle-filled" size="20" color="#FF6B35"></uni-icons>
+          <view class="method-check">
+            <uni-icons type="circle-filled" size="20" color="#fff"></uni-icons>
           </view>
         </view>
       </view>
@@ -133,7 +95,7 @@
       </view>
       <button
         class="pay-btn"
-        :disabled="!selectedMethod || paying"
+        :disabled="paying"
         @tap="confirmPayment"
       >
         {{ paying ? '支付中...' : '确认支付' }}
@@ -180,7 +142,6 @@ import { onLoad } from '@dcloudio/uni-app'
 import { formatShortDateTime } from '@/utils/helper'
 import { paymentApi } from '@/api/modules/payment.js'
 import { walletApi } from '@/api/modules/wallet.js'
-import { PaymentMethod } from '@/config/payment.js'
 
 // 订单信息
 const orderInfo = ref({
@@ -203,8 +164,7 @@ const userBalance = ref('0.00')
 // 用户ID
 const userId = ref('')
 
-// 支付方式
-const selectedMethod = ref('wechat')
+// 当前仅支持平台币支付，不再暴露支付方式选择状态
 const paying = ref(false)
 
 // 优惠券
@@ -375,13 +335,6 @@ const finalAmount = computed(() => {
 })
 
 /**
- * 选择支付方式
- */
-const selectMethod = (method) => {
-  selectedMethod.value = method
-}
-
-/**
  * 选择优惠券
  */
 const selectCoupon = () => {
@@ -422,29 +375,18 @@ const viewMerchant = () => {
  * 确认支付
  */
 const confirmPayment = () => {
-  if (!selectedMethod.value) {
-    uni.showToast({
-      title: '请选择支付方式',
-      icon: 'none'
+  if (parseFloat(userBalance.value) < parseFloat(finalAmount.value)) {
+    uni.showModal({
+      title: '余额不足',
+      content: '平台币余额不足，请先充值',
+      showCancel: false,
+      success: () => {
+        uni.navigateTo({
+          url: '/pages-user/wallet/index'
+        })
+      }
     })
     return
-  }
-
-  // 余额支付检查
-  if (selectedMethod.value === 'wallet') {
-    if (parseFloat(userBalance.value) < parseFloat(finalAmount.value)) {
-      uni.showModal({
-        title: '余额不足',
-        content: '当前余额不足，请选择其他支付方式或先充值',
-        showCancel: false,
-        success: () => {
-          uni.navigateTo({
-            url: '/pages-user/wallet/index'
-          })
-        }
-      })
-      return
-    }
   }
 
   uni.showModal({
@@ -469,7 +411,7 @@ const processPayment = async () => {
     const paymentData = {
       orderId: orderInfo.value.orderId,
       userId: userId.value,
-      paymentMethod: selectedMethod.value,
+      paymentMethod: 'wallet',
       couponId: selectedCoupon.value?.id || null
     }
 
@@ -482,27 +424,8 @@ const processPayment = async () => {
 
       console.log('支付订单创建成功:', { paymentNo, amount, status })
 
-      // 根据支付方式调用不同的支付接口
-      if (selectedMethod.value === PaymentMethod.WECHAT) {
-        // PAY-004: 调用微信支付
-        const payResult = await wechatPay(paymentNo)
-        if (payResult) {
-          await checkPaymentStatus(paymentNo)
-        } else {
-          paying.value = false
-        }
-      } else if (selectedMethod.value === PaymentMethod.ALIPAY) {
-        // PAY-005: 调用支付宝支付
-        const payResult = await alipay(paymentNo)
-        if (payResult) {
-          await checkPaymentStatus(paymentNo)
-        } else {
-          paying.value = false
-        }
-      } else if (selectedMethod.value === PaymentMethod.WALLET) {
-        // PAY-006: 调用余额支付API
-        await walletPay(paymentNo)
-      }
+      // 当前只保留平台币支付链路
+      await walletPay(paymentNo)
     } else {
       throw new Error(res.message || '创建支付订单失败')
     }
@@ -519,151 +442,7 @@ const processPayment = async () => {
 }
 
 /**
- * 微信支付 - PAY-004: 调用微信支付
- * @param {string} paymentNo - 支付流水号
- */
-const wechatPay = async (paymentNo) => {
-  try {
-    // 调用后端API获取微信支付参数
-    const res = await paymentApi.wechatPay({ paymentNo })
-
-    if (res.code === 200 && res.data) {
-      const payParams = res.data
-
-      // 检查是否需要调起支付
-      if (payParams.status === 'success') {
-        // 已经支付成功（可能是余额直接扣款）
-        return true
-      }
-
-      // 调起微信支付
-      return new Promise((resolve) => {
-        uni.requestPayment({
-          provider: 'wxpay',
-          timeStamp: payParams.timeStamp || Date.now().toString(),
-          nonceStr: payParams.nonceStr || Math.random().toString(36).substr(2, 15),
-          package: payParams.package || 'prepay_id=wx',
-          signType: payParams.signType || 'MD5',
-          paySign: payParams.paySign || '',
-          success: () => {
-            uni.showToast({
-              title: '支付成功',
-              icon: 'success'
-            })
-            resolve(true)
-          },
-          fail: (err) => {
-            console.error('微信支付失败:', err)
-
-            if (err.errMsg === 'requestPayment:fail cancel') {
-              uni.showToast({
-                title: '取消支付',
-                icon: 'none'
-              })
-            } else {
-              uni.showToast({
-                title: '支付失败',
-                icon: 'none'
-              })
-            }
-
-            resolve(false)
-          }
-        })
-      })
-    } else {
-      throw new Error(res.message || '获取微信支付参数失败')
-    }
-  } catch (error) {
-    console.error('微信支付异常:', error)
-
-    // 如果是开发环境或后端返回"功能开发中"，模拟支付成功
-    if (error.message?.includes('开发中') || process.env.NODE_ENV === 'development') {
-      console.log('微信支付功能开发中，模拟支付成功')
-      uni.showToast({
-        title: '模拟支付成功',
-        icon: 'success'
-      })
-      return true
-    }
-
-    throw error
-  }
-}
-
-/**
- * 支付宝支付 - PAY-005: 调用支付宝支付
- * @param {string} paymentNo - 支付流水号
- */
-const alipay = async (paymentNo) => {
-  try {
-    // 调用后端API获取支付宝支付参数
-    const res = await paymentApi.alipay({ paymentNo })
-
-    if (res.code === 200 && res.data) {
-      const payParams = res.data
-
-      // 检查是否需要调起支付
-      if (payParams.status === 'success') {
-        // 已经支付成功
-        return true
-      }
-
-      // 调起支付宝支付
-      return new Promise((resolve) => {
-        uni.requestPayment({
-          provider: 'alipay',
-          orderInfo: payParams.orderInfo || JSON.stringify({
-            orderNo: paymentNo
-          }),
-          success: () => {
-            uni.showToast({
-              title: '支付成功',
-              icon: 'success'
-            })
-            resolve(true)
-          },
-          fail: (err) => {
-            console.error('支付宝支付失败:', err)
-
-            if (err.errMsg === 'requestPayment:fail cancel') {
-              uni.showToast({
-                title: '取消支付',
-                icon: 'none'
-              })
-            } else {
-              uni.showToast({
-                title: '支付失败',
-                icon: 'none'
-              })
-            }
-
-            resolve(false)
-          }
-        })
-      })
-    } else {
-      throw new Error(res.message || '获取支付宝支付参数失败')
-    }
-  } catch (error) {
-    console.error('支付宝支付异常:', error)
-
-    // 如果是开发环境或后端返回"功能开发中"，模拟支付成功
-    if (error.message?.includes('开发中') || process.env.NODE_ENV === 'development') {
-      console.log('支付宝支付功能开发中，模拟支付成功')
-      uni.showToast({
-        title: '模拟支付成功',
-        icon: 'success'
-      })
-      return true
-    }
-
-    throw error
-  }
-}
-
-/**
- * 余额支付 - PAY-006: 调用余额支付API
+ * 平台币支付 - PAY-006: 调用余额支付API
  * @param {string} paymentNo - 支付流水号
  */
 const walletPay = async (paymentNo) => {
@@ -786,75 +565,6 @@ const showPaymentPasswordDialog = () => {
       }
     })
   })
-}
-
-/**
- * 查询支付状态 - PAY-007: 轮询查询支付状态
- * @param {string} paymentNo - 支付流水号
- */
-const checkPaymentStatus = async (paymentNo) => {
-  try {
-    // 显示轮询提示
-    uni.showLoading({
-      title: '确认支付中...',
-      mask: true
-    })
-
-    // 调用API模块的轮询方法
-    await paymentApi.pollPaymentStatus(paymentNo, {
-      interval: 2000,      // 每2秒查询一次
-      maxAttempts: 15,     // 最多查询15次（30秒）
-      onSuccess: (data) => {
-        console.log('支付轮询成功:', data)
-        uni.hideLoading()
-
-        uni.showToast({
-          title: '支付成功',
-          icon: 'success'
-        })
-
-        // 延迟跳转到结果页
-        setTimeout(() => {
-          goToResult(true, paymentNo)
-        }, 1500)
-      },
-      onFailed: (data) => {
-        console.log('支付轮询失败:', data)
-        uni.hideLoading()
-
-        uni.showModal({
-          title: '支付失败',
-          content: '支付未成功，请重试或联系客服',
-          showCancel: false,
-          success: () => {
-            paying.value = false
-          }
-        })
-      },
-      onTimeout: () => {
-        console.log('支付轮询超时')
-        uni.hideLoading()
-
-        uni.showModal({
-          title: '支付超时',
-          content: '支付确认超时，请稍后在订单中查看支付状态',
-          showCancel: false,
-          success: () => {
-            goToResult(false, paymentNo)
-          }
-        })
-      }
-    })
-  } catch (error) {
-    console.error('支付状态查询异常:', error)
-    uni.hideLoading()
-    paying.value = false
-
-    uni.showToast({
-      title: '查询支付状态失败',
-      icon: 'none'
-    })
-  }
 }
 
 /**
@@ -1025,13 +735,6 @@ const formatAmount = (amount) => {
   border-radius: 12rpx;
   @include flex-center;
 
-  &.wechat {
-    background: #09BB07;
-  }
-
-  &.alipay {
-    background: #1677FF;
-  }
 
   &.wallet {
     background: #FF6B35;
