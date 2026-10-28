@@ -128,6 +128,8 @@ export const userApi = {
    * @param {string} data.bio - 个人简介
    * @param {string} data.signature - 个性签名（兼容字段）
    * @param {string} data.goal - 饮食目标（兼容字段）
+   * @param {Array} data.taste - 口味偏好（兼容字段）
+   * @param {Array} data.allergies - 禁忌食材
    * @returns {Promise} 返回更新结果
    */
   updateUserInfo: (userId, data) => {
