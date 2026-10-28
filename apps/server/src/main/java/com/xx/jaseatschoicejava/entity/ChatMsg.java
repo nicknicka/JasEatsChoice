@@ -61,6 +61,9 @@ public class ChatMsg {
     @ApiModelProperty(value = "已读状态：0-未读，1-已读")
     private Boolean readStatus; // 已读状态（改为Integer类型，与数据库TINYINT对应）
 
+    @TableField("synced")
+    @ApiModelProperty(value = "是否已同步到群：0-未同步，1-已同步")
+    private Boolean synced; // 是否已同步到群
     @TableField("created_at")
     @ApiModelProperty(value = "创建时间")
     private LocalDateTime createdAt; // 创建时间
