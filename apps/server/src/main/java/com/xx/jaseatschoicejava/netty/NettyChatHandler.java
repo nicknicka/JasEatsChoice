@@ -22,7 +22,6 @@ import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Netty聊天消息处理器
@@ -38,9 +37,6 @@ public class NettyChatHandler extends SimpleChannelInboundHandler<TextWebSocketF
 
     // 存储所有在线Channel
     private static final ChannelGroup CHANNEL_GROUP = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
-
-    // 存储用户ID与Channel的映射关系
-    private static final ConcurrentHashMap<String, Channel> USER_CHANNEL_MAP = new ConcurrentHashMap<>();
 
     // JSON解析器
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -73,10 +69,7 @@ public class NettyChatHandler extends SimpleChannelInboundHandler<TextWebSocketF
             String userId = ctx.channel().attr(com.xx.jaseatschoicejava.netty.WebSocketAuthHandler.USER_ID_KEY).get();
 
             if (userId != null && !userId.isEmpty()) {
-                // 绑定用户ID与Channel
-                USER_CHANNEL_MAP.put(userId, ctx.channel());
-
-                // ⭐ 注册到WebSocketMessageService（用于HTTP API推送）
+                // 在线连接统一登记到 WebSocketMessageService（唯一权威来源）
                 WebSocketMessageService.registerChannel(userId, ctx.channel());
 
                 logger.info("✅ [WebSocket] 用户 {} 的Channel已自动注册", userId);
@@ -93,11 +86,8 @@ public class NettyChatHandler extends SimpleChannelInboundHandler<TextWebSocketF
         // 移除Channel
         CHANNEL_GROUP.remove(ctx.channel());
 
-        // ⭐ 从WebSocketMessageService中移除Channel
+        // 从统一在线连接表移除
         WebSocketMessageService.removeChannel(ctx.channel());
-
-        // 移除用户映射
-        USER_CHANNEL_MAP.entrySet().removeIf(entry -> entry.getValue().equals(ctx.channel()));
 
         logger.info("Channel {} disconnected", ctx.channel().remoteAddress());
     }
@@ -145,10 +135,7 @@ public class NettyChatHandler extends SimpleChannelInboundHandler<TextWebSocketF
             responseMsg.put("timestamp", Instant.now().toEpochMilli());
             responseMsg.put("ack", true);
 
-            // 将用户ID与Channel绑定
-            USER_CHANNEL_MAP.putIfAbsent(fromId, ctx.channel());
-
-            // ⭐ 注册到WebSocketMessageService（用于HTTP API推送）
+            // 在线连接统一登记到 WebSocketMessageService（唯一权威来源）
             if (!fromId.isEmpty()) {
                 WebSocketMessageService.registerChannel(fromId, ctx.channel());
             }
@@ -179,10 +166,7 @@ public class NettyChatHandler extends SimpleChannelInboundHandler<TextWebSocketF
                     // 身份验证消息，验证用户身份
                     // 从fromId获取用户ID（前端发送auth消息时，fromId应为用户ID）
                     if (!fromId.isEmpty()) {
-                        // 绑定用户ID与Channel
-                        USER_CHANNEL_MAP.put(fromId, ctx.channel());
-
-                        // ⭐ 注册到WebSocketMessageService（用于HTTP API推送）
+                        // 在线连接统一登记到 WebSocketMessageService（唯一权威来源）
                         WebSocketMessageService.registerChannel(fromId, ctx.channel());
 
                         // 返回认证成功响应
@@ -220,15 +204,8 @@ public class NettyChatHandler extends SimpleChannelInboundHandler<TextWebSocketF
      * 发送消息给指定用户
      */
     private void sendMessageToUser(String userId, String message) {
-        Channel channel = USER_CHANNEL_MAP.get(userId);
-        if (channel != null && channel.isActive()) {
-            try {
-                // 发送WebSocket文本帧消息
-                channel.writeAndFlush(new TextWebSocketFrame(message));
-                logger.info("Sent message: {} to user: {}", message, userId);
-            } catch (Exception e) {
-                logger.error("Failed to send message to user {}: {}", userId, e.getMessage());
-            }
+        if (WebSocketMessageService.pushToUser(userId, message) > 0) {
+            logger.info("Sent message: {} to user: {}", message, userId);
         } else {
             logger.info("User {} is offline, storing message in database", userId);
             // 将消息存入数据库，等待用户上线后推送
