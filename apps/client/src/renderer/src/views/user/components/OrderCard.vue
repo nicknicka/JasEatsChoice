@@ -33,6 +33,15 @@
         查看详情
       </el-button>
       <el-button
+        v-if="canPay"
+        type="warning"
+        size="small"
+        class="pay-btn"
+        @click="handlePay"
+      >
+        支付
+      </el-button>
+      <el-button
         v-if="canCancel"
         type="danger"
         size="small"
@@ -102,7 +111,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['view-details', 'cancel', 'confirm-receipt', 'evaluate', 'additional-review', 'reorder', 'image-error'])
+const emit = defineEmits(['view-details', 'pay', 'cancel', 'confirm-receipt', 'evaluate', 'additional-review', 'reorder', 'image-error'])
 
 /**
  * 获取状态文本
@@ -117,6 +126,11 @@ function getStatusText(status) {
 function getTagType(status) {
   return getOrderStatusTagType(status)
 }
+
+/**
+ * 是否可以支付订单
+ */
+const canPay = computed(() => props.order.status === 'pending')
 
 /**
  * 是否可以取消订单
@@ -156,6 +170,13 @@ const canReorder = computed(() => {
  */
 function handleViewDetails() {
   emit('view-details', props.order)
+}
+
+/**
+ * 支付订单
+ */
+function handlePay() {
+  emit('pay', props.order)
 }
 
 /**

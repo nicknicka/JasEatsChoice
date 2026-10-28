@@ -6,6 +6,8 @@ import { API_CONFIG } from '../../config'
 import { ElMessage } from 'element-plus'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
 import { reviewAPI } from '../../api/review.js'
+import paymentApi from '../../api/payment'
+import { useOrderData } from '../../composables/useOrderData'
 import {
   Shop,
   Money,
@@ -21,6 +23,8 @@ const router = useRouter()
 const orderId = ref(route.params.id)
 const order = ref(null)
 const loading = ref(true)
+const paying = ref(false)
+const { getUserId } = useOrderData()
 
 // 评价相关
 const review = ref(null)
@@ -289,6 +293,26 @@ watch(
     }
   }
 )
+
+// 支付订单
+const payOrder = async (order) => {
+  paying.value = true
+  try {
+    const response = await paymentApi.payOrder(order.id, getUserId(), 'wallet')
+
+    if (response?.success) {
+      ElMessage.success(response.message || '支付成功')
+      await loadOrderDetail()
+    } else {
+      ElMessage.error(response?.message || '支付失败')
+    }
+  } catch (error) {
+    console.error('订单支付失败:', error)
+    ElMessage.error(error?.data?.message || error?.response?.data?.message || error?.message || '支付失败')
+  } finally {
+    paying.value = false
+  }
+}
 
 // 取消订单
 const cancelOrder = (order) => {
@@ -573,6 +597,16 @@ const getActiveStep = () => {
 
         <!-- 操作按钮 -->
         <div class="order-actions">
+          <el-button
+            v-if="order.status === 'pending'"
+            type="warning"
+            size="large"
+            :loading="paying"
+            @click="payOrder(order)"
+            class="action-btn pay-btn"
+          >
+            支付
+          </el-button>
           <el-button
             v-if="order.status === 'pending' || order.status === 'pendingAccept'"
             type="danger"
