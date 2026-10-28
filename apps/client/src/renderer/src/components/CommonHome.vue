@@ -21,6 +21,7 @@ import { decodeJwt } from '../utils/api.js'
 import { useAuthStore } from '../store/authStore'
 import { useUserStore } from '../store/userStore'
 import { useLoginTransition } from '../composables/useLoginTransition'
+import { useOrderWebSocket } from '../composables/useOrderWebSocket'
 import api from '../utils/api.js'
 // 导入CommonAvatar组件
 import CommonAvatar from './CommonAvatar.vue'
@@ -713,6 +714,24 @@ onUnmounted(() => {
     clearInterval(unreadCountTimer)
     unreadCountTimer = null
   }
+})
+
+// 用户端共享的订单/推荐连接：布局层持有，子页面（如订单页）复用同一条连接。
+// 连接只在用户侧建立；商家端不接收推荐推送。
+const { initWebSocket: initUserRealtimeSocket } = useOrderWebSocket()
+
+function syncRealtimeSocketWithRole() {
+  if (userRole.value === 'user' && authStore.token) {
+    initUserRealtimeSocket()
+  }
+}
+
+watch(userRole, () => {
+  syncRealtimeSocketWithRole()
+})
+
+onMounted(() => {
+  syncRealtimeSocketWithRole()
 })
 
 // 监听路由变化，当从消息中心返回时刷新未读数量

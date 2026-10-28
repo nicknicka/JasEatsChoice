@@ -66,7 +66,9 @@ function handleOrderUpdate(orderUpdate) {
 }
 
 // 初始化 WebSocket
-const { initWebSocket } = useOrderWebSocket(handleOrderUpdate)
+const { initWebSocket } = useOrderWebSocket({
+  onOrderUpdate: handleOrderUpdate
+})
 
 let autoRefreshTimer = null
 let silentRefreshTimer = null
