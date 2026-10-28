@@ -109,16 +109,7 @@ export const recipeApi = {
    */
   deleteRecipe: (recipeId) => del(buildUrl(RECIPE_API.DELETE_RECIPE, { recipeId })),
 
-  /**
-   * 搜索食谱
-   * GET /api/recipe/search
-   * @param {Object} params - 查询参数
-   * @param {string} params.keyword - 关键词
-   * @param {string} params.category - 分类
-   * @param {string} params.difficulty - 难度
-   * @returns {Promise} 返回搜索结果
-   */
-  search: (params) => get('/v1/recipe/search', params),
+  // 后端 RecipeController 未提供食谱搜索接口，前端搜索页需显式降级
 
   /**
    * 推荐食谱

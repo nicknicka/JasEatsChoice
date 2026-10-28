@@ -101,14 +101,6 @@ export const orderApi = {
   ),
 
   /**
-   * 确认收货
-   * POST /v1/orders/{orderId}/confirm
-   * @param {string} orderId - 订单ID
-   * @returns {Promise} 返回确认结果
-   */
-  confirm: (orderId) => post(buildUrl('/v1/orders/:orderId/confirm', { orderId })),
-
-  /**
    * 申请退款
    * POST /v1/orders/{orderId}/refund
    * @param {string} orderId - 订单ID
