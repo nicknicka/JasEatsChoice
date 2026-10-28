@@ -8,12 +8,15 @@ import com.xx.jaseatschoicejava.mapper.ScheduledTaskMapper;
 import com.xx.jaseatschoicejava.service.DynamicScheduleService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationContext;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.support.CronTrigger;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -36,6 +39,7 @@ public class DynamicScheduleServiceImpl implements DynamicScheduleService {
     private final ScheduledTaskMapper scheduledTaskMapper;
     private final ScheduledTaskLogMapper scheduledTaskLogMapper;
     private final TaskScheduler taskScheduler;
+    private final ApplicationContext applicationContext;
 
     // 存储任务ID到ScheduledFuture的映射
     private final Map<String, ScheduledFuture<?>> taskFutures = new ConcurrentHashMap<>();
@@ -72,7 +76,7 @@ public class DynamicScheduleServiceImpl implements DynamicScheduleService {
         // 启动每个任务
         for (ScheduledTask task : tasks) {
             try {
-                addAndStartTask(task);
+                startExistingTask(task);
                 log.info("任务 [{}] 启动成功", task.getTaskName());
             } catch (Exception e) {
                 log.error("任务 [{}] 启动失败: {}", task.getTaskName(), e.getMessage(), e);
@@ -84,76 +88,33 @@ public class DynamicScheduleServiceImpl implements DynamicScheduleService {
 
     @Override
     public boolean addAndStartTask(ScheduledTask task) {
+        String taskId = task.getId();
         try {
-            String taskId = task.getId();
+            if (taskId != null && scheduledTaskMapper.selectById(taskId) != null) {
+                log.error("创建任务失败，任务已存在: {}", taskId);
+                return false;
+            }
+            cancelTrackedTask(taskId);
 
-            // 如果任务已存在，先停止
-            if (taskFutures.containsKey(taskId)) {
-                stopAndRemoveTask(taskId);
+            task.setStatus("RUNNING");
+            int affectedRows = scheduledTaskMapper.insert(task);
+            if (affectedRows != 1) {
+                log.error("任务 [{}] 保存失败，影响行数: {}", task.getTaskName(), affectedRows);
+                return false;
             }
 
-            // 根据任务类型调度
-            ScheduledFuture<?> future = null;
-
-            switch (task.getTaskType()) {
-                case "CRON":
-                    // Cron表达式任务
-                    CronTrigger cronTrigger = new CronTrigger(task.getCronExpression());
-                    future = taskScheduler.schedule(
-                            () -> executeTask(task),
-                            cronTrigger
-                    );
-                    break;
-
-                case "FIXED_RATE":
-                    // 固定频率任务
-                    future = taskScheduler.scheduleAtFixedRate(
-                            () -> executeTask(task),
-                            Instant.now(),
-                            Duration.ofMillis(task.getRateInMillis())
-                    );
-                    break;
-
-                case "FIXED_DELAY":
-                    // 固定延迟任务
-                    future = taskScheduler.scheduleWithFixedDelay(
-                            () -> executeTask(task),
-                            Instant.now(),
-                            Duration.ofMillis(task.getRateInMillis())
-                    );
-                    break;
-
-                case "ONCE":
-                    // 一次性任务
-                    future = taskScheduler.schedule(
-                            () -> executeTask(task),
-                            Instant.now()
-                    );
-                    break;
-
-                default:
-                    log.error("不支持的任务类型: {}", task.getTaskType());
-                    return false;
+            taskId = task.getId();
+            if (taskId == null || taskId.isBlank()) {
+                log.error("任务 [{}] 保存后任务ID为空", task.getTaskName());
+                return false;
             }
 
-            if (future != null) {
-                taskFutures.put(taskId, future);
-
-                // 存储运行中的任务信息
-                Map<String, Object> taskInfo = new HashMap<>();
-                taskInfo.put("task", task);
-                taskInfo.put("startTime", LocalDateTime.now());
-                runningTasks.put(taskId, taskInfo);
-
-                // 更新任务状态
-                task.setStatus("RUNNING");
-                scheduledTaskMapper.updateById(task);
-
-                log.info("任务 [{}] 已添加并启动", task.getTaskName());
-                return true;
+            if (!scheduleAndTrackTask(task)) {
+                return false;
             }
 
-            return false;
+            log.info("任务 [{}] 已添加并启动", task.getTaskName());
+            return true;
 
         } catch (Exception e) {
             log.error("添加并启动任务失败: {}", task.getTaskName(), e);
@@ -163,11 +124,87 @@ public class DynamicScheduleServiceImpl implements DynamicScheduleService {
 
     @Override
     public boolean updateAndRestartTask(ScheduledTask task) {
-        // 先停止旧任务
-        stopAndRemoveTask(task.getId());
+        String taskId = task.getId();
+        if (taskId == null || scheduledTaskMapper.selectById(taskId) == null) {
+            log.error("更新任务失败，任务不存在: {}", taskId);
+            return false;
+        }
 
-        // 重新启动任务
-        return addAndStartTask(task);
+        if (!startExistingTask(task)) {
+            return false;
+        }
+
+        log.info("任务 [{}] 已更新并重新启动", task.getTaskName());
+        return true;
+    }
+
+    private boolean startExistingTask(ScheduledTask task) {
+        cancelTrackedTask(task.getId());
+        task.setStatus("RUNNING");
+        if (scheduledTaskMapper.updateById(task) != 1) {
+            log.error("启动任务失败，任务不存在: {}", task.getId());
+            return false;
+        }
+        return scheduleAndTrackTask(task);
+    }
+
+    private boolean scheduleAndTrackTask(ScheduledTask task) {
+        ScheduledFuture<?> future;
+        switch (task.getTaskType()) {
+            case "CRON":
+                future = taskScheduler.schedule(
+                        () -> executeTask(task),
+                        new CronTrigger(task.getCronExpression())
+                );
+                break;
+            case "FIXED_RATE":
+                future = taskScheduler.scheduleAtFixedRate(
+                        () -> executeTask(task),
+                        Instant.now(),
+                        Duration.ofMillis(task.getRateInMillis())
+                );
+                break;
+            case "FIXED_DELAY":
+                future = taskScheduler.scheduleWithFixedDelay(
+                        () -> executeTask(task),
+                        Instant.now(),
+                        Duration.ofMillis(task.getRateInMillis())
+                );
+                break;
+            case "ONCE":
+                future = taskScheduler.schedule(
+                        () -> executeTask(task),
+                        Instant.now()
+                );
+                break;
+            default:
+                log.error("不支持的任务类型: {}", task.getTaskType());
+                return false;
+        }
+
+        if (future == null) {
+            log.error("任务 [{}] 调度失败", task.getTaskName());
+            return false;
+        }
+
+        String taskId = task.getId();
+        taskFutures.put(taskId, future);
+        Map<String, Object> taskInfo = new HashMap<>();
+        taskInfo.put("task", task);
+        taskInfo.put("startTime", LocalDateTime.now());
+        runningTasks.put(taskId, taskInfo);
+        return true;
+    }
+
+    private void cancelTrackedTask(String taskId) {
+        if (taskId == null) {
+            return;
+        }
+        ScheduledFuture<?> future = taskFutures.remove(taskId);
+        if (future != null) {
+            future.cancel(false);
+        }
+        runningTasks.remove(taskId);
     }
 
     @Override
@@ -195,9 +232,7 @@ public class DynamicScheduleServiceImpl implements DynamicScheduleService {
     public boolean resumeTask(String taskId) {
         ScheduledTask task = scheduledTaskMapper.selectById(taskId);
         if (task != null && "PAUSED".equals(task.getStatus())) {
-            task.setStatus("ENABLED");
-            scheduledTaskMapper.updateById(task);
-            return addAndStartTask(task);
+            return startExistingTask(task);
         }
         return false;
     }
@@ -320,17 +355,13 @@ public class DynamicScheduleServiceImpl implements DynamicScheduleService {
         taskLog.setExecuteStatus("RUNNING");
 
         try {
-            // TODO: 根据taskClassName和taskMethodName反射调用
-            // 这里简化处理，实际应该使用反射调用具体的方法
-            log.debug("执行任务逻辑: {} - {}", task.getTaskClassName(), task.getTaskMethodName());
-
-            // 模拟任务执行
-            Thread.sleep(1000);
+            invokeTask(task);
 
             // 更新任务信息
             task.setLastExecuteTime(startTime);
             task.setExecuteCount((task.getExecuteCount() != null ? task.getExecuteCount() : 0) + 1);
             task.setLastExecuteResult("SUCCESS");
+            task.setLastErrorMessage(null);
             task.setRetriedCount(0);
 
             // 记录日志
@@ -344,11 +375,13 @@ public class DynamicScheduleServiceImpl implements DynamicScheduleService {
                     taskLog.getDuration());
 
         } catch (Exception e) {
-            log.error("任务 [{}] 执行失败", task.getTaskName(), e);
+            Throwable cause = getCause(e);
+            String errorMessage = getErrorMessage(cause);
+            log.error("任务 [{}] 执行失败: {}", task.getTaskName(), errorMessage, cause);
 
             // 更新任务信息
             task.setLastExecuteResult("FAILED");
-            task.setLastErrorMessage(e.getMessage());
+            task.setLastErrorMessage(errorMessage);
             task.setFailCount((task.getFailCount() != null ? task.getFailCount() : 0) + 1);
 
             // 记录日志
@@ -356,8 +389,8 @@ public class DynamicScheduleServiceImpl implements DynamicScheduleService {
             taskLog.setEndTime(endTime);
             taskLog.setDuration(java.time.Duration.between(startTime, endTime).toMillis());
             taskLog.setExecuteStatus("FAILED");
-            taskLog.setErrorMessage(e.getMessage());
-            taskLog.setExceptionStack(getStackTrace(e));
+            taskLog.setErrorMessage(errorMessage);
+            taskLog.setExceptionStack(getStackTrace(cause));
 
             // 重试逻辑
             if (task.getRetryCount() != null && task.getRetryCount() > 0) {
@@ -380,6 +413,62 @@ public class DynamicScheduleServiceImpl implements DynamicScheduleService {
             // 更新任务信息
             scheduledTaskMapper.updateById(task);
         }
+    }
+
+    /**
+     * 反射调用任务配置中指定的真实 Spring Bean 方法。
+     */
+    private void invokeTask(ScheduledTask task) throws Exception {
+        String className = task.getTaskClassName();
+        String methodName = task.getTaskMethodName();
+        if (className == null || className.isBlank() || methodName == null || methodName.isBlank()) {
+            throw new IllegalStateException("任务类名或方法名不能为空");
+        }
+
+        Class<?> taskClass;
+        try {
+            taskClass = Class.forName(className);
+        } catch (ClassNotFoundException e) {
+            throw new IllegalStateException("任务类不存在: " + className, e);
+        }
+
+        Object taskBean;
+        try {
+            taskBean = applicationContext.getBean(taskClass);
+        } catch (Exception e) {
+            throw new IllegalStateException("任务 Bean 不存在: " + className, e);
+        }
+
+        Method method;
+        try {
+            method = taskClass.getMethod(methodName);
+        } catch (NoSuchMethodException e) {
+            throw new IllegalStateException("任务方法不存在或需要参数: " + methodName, e);
+        }
+
+        try {
+            method.invoke(taskBean);
+        } catch (InvocationTargetException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof Exception exception) {
+                throw exception;
+            }
+            throw e;
+        }
+    }
+
+    private Throwable getCause(Exception exception) {
+        Throwable cause = exception instanceof InvocationTargetException
+                ? ((InvocationTargetException) exception).getCause()
+                : exception;
+        return cause != null ? cause : exception;
+    }
+
+    private String getErrorMessage(Throwable throwable) {
+        String message = throwable.getMessage();
+        return message != null && !message.isBlank()
+                ? message
+                : throwable.getClass().getName();
     }
 
     /**
