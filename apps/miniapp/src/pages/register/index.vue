@@ -40,12 +40,12 @@
         </view>
 
         <view class="form-item">
-          <view class="label">验证码</view>
+          <view class="label">短信验证码</view>
           <view class="input-wrapper">
             <input
               type="number"
-              v-model="form.code"
-              placeholder="请输入验证码"
+              v-model="form.smsCode"
+              placeholder="请输入短信验证码"
               maxlength="6"
             />
             <button
@@ -55,6 +55,25 @@
             >
               {{ countdown > 0 ? `${countdown}s` : '获取验证码' }}
             </button>
+          </view>
+        </view>
+
+        <view class="form-item">
+          <view class="label">图形验证码</view>
+          <view class="input-wrapper">
+            <input
+              v-model="form.captcha"
+              placeholder="请输入计算结果"
+              maxlength="10"
+            />
+            <image
+              v-if="captchaImage"
+              class="captcha-image"
+              :src="captchaImage"
+              mode="aspectFit"
+              @click="refreshCaptcha"
+            />
+            <button class="code-btn" @click="refreshCaptcha">刷新</button>
           </view>
         </view>
 
@@ -279,7 +298,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useUserStore } from '@/store'
 import { userApi } from '@/api'
 
@@ -299,13 +318,52 @@ const loading = ref(false)
 const countdown = ref(0)
 let countdownTimer = null
 
+// 图形验证码
+const captchaLoading = ref(false)
+const captchaImage = ref('')
+const checkCodeKey = ref('')
+
+const refreshCaptcha = async () => {
+  if (captchaLoading.value) return
+
+  captchaLoading.value = true
+
+  try {
+    const res = await userApi.getCaptcha()
+    const captchaData = res.data
+    captchaImage.value = captchaData.checkCode
+    checkCodeKey.value = captchaData.checkCodeKey
+
+    if (import.meta.env.DEV && captchaData.captchaAnswer) {
+      form.value.captcha = captchaData.captchaAnswer.toUpperCase()
+    } else if (captchaData.fixedCaptchaEnabled === 'true' && captchaData.fixedCaptchaCode) {
+      form.value.captcha = captchaData.fixedCaptchaCode.toUpperCase()
+    } else {
+      form.value.captcha = ''
+    }
+  } catch (error) {
+    console.error('获取图形验证码失败:', error)
+    uni.showToast({
+      title: '获取验证码失败，请稍后重试',
+      icon: 'none'
+    })
+  } finally {
+    captchaLoading.value = false
+  }
+}
+
+onMounted(() => {
+  refreshCaptcha()
+})
+
 // 辣度等级
 const spicinessLevel = ref(1)
 
 // 表单数据
 const form = ref({
   phone: '',
-  code: '',
+  smsCode: '',
+  captcha: '',
   password: '',
   confirmPassword: '',
   height: '',
@@ -342,7 +400,8 @@ const allergies = [
 // 计算属性：步骤1是否有效
 const isStep1Valid = computed(() => {
   return form.value.phone.length === 11 &&
-         form.value.code.length === 6 &&
+         form.value.smsCode.length === 6 &&
+         form.value.captcha.length > 0 &&
          form.value.password.length >= 6 &&
          form.value.password === form.value.confirmPassword &&
          agreedToTerms.value
@@ -385,7 +444,7 @@ const sendCode = async () => {
   }
 
   try {
-    // 调用后端发送验证码接口
+    // 注册接口使用密码登录链路，后端不校验该短信验证码，但页面保留短信输入用于后续扩展
     await userApi.sendCode(form.value.phone)
 
     uni.showToast({
@@ -488,35 +547,37 @@ const handleSubmit = async () => {
     // 1. 先调用注册接口
     const registerData = {
       phone: form.value.phone,
-      code: form.value.code,
       password: form.value.password,
-      nickname: form.value.phone.substring(7) // 使用手机号后4位作为默认昵称
+      nickname: form.value.phone.slice(-4), // 使用手机号后4位作为默认昵称
+      captcha: form.value.captcha,
+      checkCodeKey: checkCodeKey.value
     }
 
-    const registerRes = await userStore.register(registerData)
+    await userStore.register(registerData)
 
-    // 2. 注册成功后，完善身体数据
+    // 注册接口不返回 userId，用注册手机号重新登录获取登录态与 userId
+    const loginRes = await userApi.login({
+      phone: form.value.phone,
+      code: form.value.smsCode
+    })
+    const loginUser = loginRes.data.user || loginRes.data.userInfo
+    userStore.setToken(loginRes.data.token)
+    userStore.setUserInfo(loginUser)
+
+    // 后端资料更新接口接受部分字段，身体数据与饮食偏好都落在用户信息上
+    // 对齐资料编辑页的既有提交口径，后端按性别数字与 preferTags 首项处理
+    const profileData = {
+      height: Number(form.value.height),
+      weight: Number(form.value.weight),
+      gender: form.value.gender === 'female' ? 2 : 1,
+      birthday: form.value.birthday,
+      goal: form.value.goal,
+      taste: form.value.tastes,
+      allergies: form.value.allergies
+    }
+
     if (form.value.height && form.value.weight) {
-      try {
-        const profileData = {
-          userId: registerRes.userId || registerRes.data?.userId,
-          height: Number(form.value.height),
-          weight: Number(form.value.weight),
-          gender: form.value.gender,
-          birthday: form.value.birthday,
-          goal: form.value.goal,
-          preferences: {
-            tastes: form.value.tastes,
-            allergies: form.value.allergies,
-            spiciness: spicinessLevel.value
-          }
-        }
-
-        await userApi.completeProfile(profileData)
-      } catch (profileError) {
-        console.error('完善身体数据失败:', profileError)
-        // 身体数据失败不影响注册流程
-      }
+      await userApi.updateUserInfo(loginUser.userId, profileData)
     }
 
     uni.showToast({
@@ -532,11 +593,12 @@ const handleSubmit = async () => {
     }, 1500)
 
   } catch (error) {
-    console.error('注册失败:', error)
+    console.error('注册或资料保存失败:', error)
     uni.showToast({
-      title: error.message || '注册失败，请重试',
+      title: error.message || '注册或资料保存失败，请重试',
       icon: 'none'
     })
+    refreshCaptcha()
   } finally {
     loading.value = false
   }
@@ -715,6 +777,22 @@ const toPrivacy = () => {
 
 .code-btn:disabled {
   color: #999;
+}
+
+/* 图形验证码 */
+.captcha-image {
+  width: 180rpx;
+  height: 72rpx;
+  margin-left: 20rpx;
+  flex-shrink: 0;
+}
+
+/* 图形验证码 */
+.captcha-image {
+  width: 180rpx;
+  height: 72rpx;
+  margin-left: 20rpx;
+  flex-shrink: 0;
 }
 
 /* 性别选择 */

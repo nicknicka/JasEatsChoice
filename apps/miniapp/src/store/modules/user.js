@@ -268,6 +268,8 @@ export const useUserStore = defineStore('user', {
     /**
      * 注册
      * @param {Object} data - 注册数据
+     * @param {string} data.captcha - 图形验证码
+     * @param {string} data.checkCodeKey - 图形验证码key
      */
     async register(data) {
       try {
@@ -297,11 +299,12 @@ export const useUserStore = defineStore('user', {
 
     /**
      * 更新用户信息
+     * @param {string} userId - 用户ID
      * @param {Object} data - 用户信息
      */
-    async updateUserInfo(data) {
+    async updateUserInfo(userId, data) {
       try {
-        const res = await userApi.updateUserInfo(data)
+        const res = await userApi.updateUserInfo(userId, data)
         this.setUserInfo(res.data)
         return res.data
       } catch (error) {
