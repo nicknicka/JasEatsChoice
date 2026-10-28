@@ -202,31 +202,32 @@ request.js 自动清除 token 并跳转登录页。
 
 ---
 
-## 已重构的 API 模块
+## 模块划分
 
-- ✅ banner.js - 轮播图
-- ✅ merchant.js - 商家
-- ✅ user.js - 用户
-- ✅ dish.js - 菜品
-- ✅ order.js - 订单
+所有 API 模块统一放在 `modules/` 下，通过 `@/api` 统一入口导入：
 
-### 待重构的模块
+- `modules/banner.js` - 轮播图
+- `modules/merchant.js` - 商家
+- `modules/user.js` - 用户
+- `modules/dish.js` - 菜品
+- `modules/order.js` - 订单
+- `modules/cart.js` - 购物车
+- `modules/review.js` - 评价
+- `modules/coupon.js` - 优惠券
+- `modules/wallet.js` - 钱包
+- `modules/address.js` - 地址
+- `modules/ai.js` - AI
+- `modules/chat.js` - 聊天
+- `modules/conversation.js` - 会话
+- `modules/message.js` - 消息
+- `modules/notification.js` - 通知
+- `modules/history.js` - 历史
+- `modules/feedback.js` - 反馈
+- `modules/wishlist.js` - 愿望清单
+- `modules/groupOrder.js` - 拼单
+- `modules/recipe.js` - 食谱
 
-- cart.js - 购物车
-- review.js - 评价
-- coupon.js - 优惠券
-- wallet.js - 钱包
-- address.js - 地址
-- ai.js - AI
-- chat.js - 聊天
-- conversation.js - 会话
-- message.js - 消息
-- notification.js - 通知
-- history.js - 历史
-- feedback.js - 反馈
-- wishlist.js - 愿望清单
-- groupOrder.js - 拼单
-- recipe.js - 食谱
+统一入口 `index.js` 与路径枚举 `urlEnum.js` 保留在 `api/` 下；`modules/` 之外不再保留旧版实现。
 
 ---
 
