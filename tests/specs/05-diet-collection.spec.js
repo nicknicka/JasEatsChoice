@@ -164,10 +164,12 @@ test.describe('模块五：饮食管理与收藏', () => {
     )
   })
 
-  test.fixme('5.8 取消收藏 (blocked by #17)', async ({ page }) => {
+  test('5.8 取消收藏', async ({ page }) => {
     await page.goto('/user/home/my-collection')
     await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
     const before = await getCollections()
+    expect(before.length).toBeGreaterThan(0)
+    const target = before[0]
     const card = page.locator('.collection-card').first()
     const title = await card.locator('.collection-title').innerText()
 
@@ -177,6 +179,7 @@ test.describe('模块五：饮食管理与收藏', () => {
 
     const after = await getCollections()
     expect(after).toHaveLength(before.length - 1)
+    expect(after.some((entry) => String(entry.id) === String(target.id))).toBe(false)
   })
 
   test.afterAll(() => { updateSummary() })
