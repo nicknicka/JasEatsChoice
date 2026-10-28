@@ -11,9 +11,9 @@
 | `apps/client` | Electron + Vue 3 渲染进程，双目标：桌面端与 Web 版 |
 | `apps/miniapp` | UniApp 微信小程序端 |
 | `deploy` | Compose 基础文件 + dev/prod overlay、nginx 配置、环境变量模板 |
-| `db/init` | 容器首次启动时导入的建表与演示数据脚本 |
-| `db/migrations` | 历史迁移脚本归档（Flyway 未接入，不参与启动） |
-| `tests` | 14 个 spec / 107 条 Playwright 用例与进度台账 |
+| `db/init` | Flyway 建表与种子迁移的来源；后端从 classpath 下的 `db/migration` 自动执行，运行时不挂载到容器 |
+| `db/migrations` | 历史迁移脚本归档，仅作追溯，不参与启动 |
+| `tests` | 14 个 spec / 111 条 Playwright 用例与进度台账 |
 | `scripts` | 生成环境变量、等待健康、CI 入口、种子校验等脚本 |
 | `docs` | 当前有效的产品、接口、技术、测试、交付文档；`docs/archive` 存历史总结 |
 
@@ -32,7 +32,7 @@ make up          # 起 MySQL + Redis + Spring Boot + nginx，并等待全部 hea
 - 健康检查 `http://localhost/api/actuator/health`、`http://localhost/nginx-health`
 - 前端在宿主机跑开发服务器（保留 HMR）：`cd apps/client && npm run dev:web` → `http://localhost:5173`
 
-演示账号在 `db/init/02_seed.sql` 里，也是测试夹具依赖的账号：
+演示账号在后端 classpath 下的 `db/migration` 种子迁移里，也是测试夹具依赖的账号：
 
 | 角色 | 账号 | 密码 |
 |---|---|---|
@@ -43,7 +43,7 @@ make up          # 起 MySQL + Redis + Spring Boot + nginx，并等待全部 hea
 
 ```bash
 make test-smoke   # 只跑 01/04/10 三条冒烟
-make test         # 全部 107 条
+make test         # 全部 111 条
 ```
 
 用例打的是 Web 版渲染进程（`PLAYWRIGHT_BASE_URL`，默认 `http://localhost:5173`），
@@ -103,7 +103,7 @@ npm run build:mp-weixin    # 产物 dist/build/mp-weixin，用微信开发者工
 ## CI
 
 - `.github/workflows/smoke.yml`：PR 与主干推送跑 3 条冒烟。
-- `.github/workflows/regression.yml`：每晚定时 + 手动触发跑全量 107 条，上传 HTML 报告。
+- `.github/workflows/regression.yml`：每晚定时 + 手动触发跑全量 111 条，上传 HTML 报告。
 
 ## 历史仓库
 
