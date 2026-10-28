@@ -6,6 +6,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.InvalidDataAccessResourceUsageException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.BindException;
@@ -188,6 +191,15 @@ public class GlobalExceptionHandler {
     public ResponseResult<?> handleBindException(org.springframework.validation.BindException e) {
         logger.error("BindException: {}", e.getMessage());
         return ResponseResult.fail("400", "参数绑定失败: " + e.getFieldError().getDefaultMessage());
+    }
+
+    /**
+     * 静态资源不存在时返回 404，避免被统一 JSON 异常响应包装。
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<Void> handleNoResourceFound(NoResourceFoundException e) {
+        logger.debug("Static resource not found: {}", e.getResourcePath());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
     }
 
     /**

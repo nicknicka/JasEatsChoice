@@ -8,6 +8,8 @@ apps/miniapp/dist/
 
 # 运行时数据与生成物
 uploads/
+!apps/server/src/main/resources/static/uploads/
+!apps/server/src/main/resources/static/uploads/**
 output/
 *.log
 *.dump

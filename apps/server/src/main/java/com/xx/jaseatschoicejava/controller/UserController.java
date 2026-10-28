@@ -356,14 +356,8 @@ public class UserController {
             // 隐藏敏感信息
             user.setPassword(null);
             log.info("user entity: {}", user);
-            // 将头像转换为base64编码
-            String avatarBase64 = convertAvatarToBase64(user.getAvatar());
 
-            // 如果转换成功，使用base64，否则保留原始URL
-            if (avatarBase64 != null) {
-                // 将base64头像直接存入User对象
-                user.setAvatar(avatarBase64);
-            }
+            // 头像交给静态资源接口返回，资料接口保留真实 URL
 
             // 转换为UserDTO
             com.xx.jaseatschoicejava.dto.UserDTO userDTO = com.xx.jaseatschoicejava.dto.UserDTO.fromUser(user);
@@ -837,9 +831,7 @@ public class UserController {
                 User updatedUser = userService.getById(userId);
                 updatedUser.setPassword(null); // 隐藏密码
 
-                // 将头像转换为base64编码
-                String avatarBase64 = convertAvatarToBase64(updatedUser.getAvatar());
-                updatedUser.setAvatar(avatarBase64);
+                // 头像交给静态资源接口返回，资料接口保留真实 URL
 
                 return ResponseResult.success(updatedUser);
             }

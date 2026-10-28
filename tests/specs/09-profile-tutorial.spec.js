@@ -35,16 +35,27 @@ test.describe('模块九：个人中心与教程', () => {
     }
   })
 
-  test.fixme('9.2 头像上传 (blocked by #61)', async ({ page }) => {
-    const user = await getUser()
-    await page.goto('/user/home/profile')
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
+  test('9.2 头像上传', async ({ page }) => {
+    markRunning('9.2')
+    try {
+      const user = await getUser()
+      const avatarResponse = await fetch(new URL(user.avatar, TEST_API_BASE))
+      expect(avatarResponse.ok).toBe(true)
+      expect(avatarResponse.headers.get('content-type')).toMatch(/^image\//)
+      expect((await avatarResponse.arrayBuffer()).byteLength).toBeGreaterThan(0)
 
-    await expect(page.getByRole('button', { name: '更换头像' })).toBeVisible()
-    await expect(page.locator('.avatar-wrapper .el-avatar img')).toHaveAttribute(
-      'src',
-      new RegExp(user.avatar.split('/').pop())
-    )
+      await page.goto('/user/home/profile')
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
+
+      await expect(page.getByRole('button', { name: '更换头像' })).toBeVisible()
+      const avatarImage = page.locator('.avatar-wrapper .el-avatar img')
+      await expect(avatarImage).toHaveAttribute('src', new RegExp(user.avatar.split('/').pop()))
+      await expect.poll(() => avatarImage.evaluate((img) => img.complete && img.naturalWidth > 0)).toBe(true)
+      markPassed('9.2', `头像 ${user.avatar.split('/').pop()} 返回图片并成功展示`)
+    } catch (e) {
+      markFailed('9.2', e.message.slice(0, 50))
+      throw e
+    }
   })
 
   test('9.3 修改密码', async ({ page }) => {
@@ -66,17 +77,28 @@ test.describe('模块九：个人中心与教程', () => {
     }
   })
 
-  test.fixme('9.4 饮食偏好 (blocked by #61)', async ({ page }) => {
-    const user = await getUser()
-    await page.goto('/user/home/profile')
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
-    await page.getByRole('button', { name: '编辑资料' }).click()
+  test('9.4 饮食偏好', async ({ page }) => {
+    markRunning('9.4')
+    try {
+      const user = await getUser()
+      await page.goto('/user/home/profile')
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
+      await page.getByRole('button', { name: '编辑资料' }).click()
 
-    const dialog = page.getByRole('dialog')
-    await expect(dialog.locator(`input[placeholder="给自己取个名字吧"]`)).toHaveValue(user.nickname)
-    await expect(dialog.locator(`input[placeholder="example@email.com"]`)).toHaveValue(user.email)
-    await expect(dialog.getByText(user.preferTags.priceRange, { exact: true })).toBeVisible()
-    await expect(dialog.getByText(user.preferTags.nutritionNeeds, { exact: true })).toBeVisible()
+      const dialog = page.getByRole('dialog')
+      await expect(dialog.locator(`input[placeholder="给自己取个名字吧"]`)).toHaveValue(user.nickname)
+      await expect(dialog.locator(`input[placeholder="example@email.com"]`)).toHaveValue(user.email)
+      const locationValue = await dialog.locator('input[placeholder="选择省 / 市 / 区"]').inputValue()
+      for (const part of user.location.split(' ')) {
+        expect(locationValue).toContain(part)
+      }
+      await expect(dialog.getByText(user.preferTags.priceRange, { exact: true })).toBeVisible()
+      await expect(dialog.getByText(user.preferTags.nutritionNeeds, { exact: true })).toBeVisible()
+      markPassed('9.4', `回填 ${user.nickname} 的邮箱与饮食偏好`)
+    } catch (e) {
+      markFailed('9.4', e.message.slice(0, 50))
+      throw e
+    }
   })
 
   test('9.5 消费记录', async ({ page }) => {
