@@ -32,15 +32,6 @@ public interface MenuService extends IService<Menu> {
     boolean batchOperateMenus(List<String> menuIds, String action, String merchantId);
 
     /**
-     * 审核"想吃列表"
-     * @param itemId 想吃列表ID
-     * @param status 审核状态：approved/rejected
-     * @param remark 审核备注
-     * @return 是否审核成功
-     */
-    boolean reviewWantToEat(Long itemId, String status, String remark);
-
-    /**
      * 更新菜品在菜单中的状态
      * @param menuId 菜单ID
      * @param dishId 菜品ID
