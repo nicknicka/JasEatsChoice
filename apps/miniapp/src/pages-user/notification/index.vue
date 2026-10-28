@@ -46,7 +46,7 @@
         class="notification-item"
         v-for="notification in notificationList"
         :key="notification.id"
-        :class="{ unread: !notification.isRead, selected: selectedIds.includes(notification.id) }"
+        :class="{ unread: !notification.readStatus, selected: selectedIds.includes(notification.id) }"
         @tap="goToDetail(notification)"
       >
         <!-- 选择框 -->
@@ -62,7 +62,7 @@
           <uni-icons
             :type="getIconType(notification.type)"
             size="24"
-            :color="notification.isRead ? '#999' : '#FF6B35'"
+            :color="notification.readStatus ? '#999' : '#FF6B35'"
           />
         </view>
 
@@ -89,7 +89,7 @@
         </view>
 
         <!-- 未读标识 -->
-        <view class="unread-dot" v-if="!notification.isRead"></view>
+        <view class="unread-dot" v-if="!notification.readStatus"></view>
       </view>
 
       <!-- 空状态 -->
@@ -128,14 +128,17 @@ const userId = ref('')
 const activeType = ref('all')
 const typeTabs = ref([
   { label: '全部', value: 'all', count: 0 },
-  { label: '系统', value: 'system', count: 0 },
-  { label: '订单', value: 'order', count: 0 },
-  { label: '活动', value: 'activity', count: 0 },
-  { label: '互动', value: 'chat', count: 0 }
+  { label: '系统', value: '系统', count: 0 },
+  { label: '订单', value: '订单', count: 0 },
+  { label: '群订单', value: '群订单', count: 0 },
+  { label: '钱包', value: '钱包', count: 0 },
+  { label: '评价', value: '评价', count: 0 },
+  { label: '菜品', value: '菜品', count: 0 },
+  { label: '商家', value: '商家', count: 0 }
 ])
 
 // 通知列表
-const notificationList = ref([])
+const allNotifications = ref([])
 const selectedIds = ref([])
 const loading = ref(false)
 const refreshing = ref(false)
@@ -147,6 +150,29 @@ const hasMore = ref(true)
 const isAllSelected = computed(() => {
   return notificationList.value.length > 0 &&
          selectedIds.value.length === notificationList.value.length
+})
+
+/**
+ * 后端返回的 type 是 NotificationTypeEnum 的 code，没有返回 category；
+ * 按 code 前缀映射出枚举中定义的分类。
+ */
+const getNotificationCategory = (type) => {
+  if (type.startsWith('group_order_')) return '群订单'
+  if (type.startsWith('order_')) return '订单'
+  if (type.startsWith('withdraw_')) return '钱包'
+  if (type.startsWith('review_')) return '评价'
+  if (type.startsWith('dish_')) return '菜品'
+  if (type.startsWith('merchant_')) return '商家'
+  if (type === 'system') return '系统'
+  return type
+}
+
+// 当前分类下的通知；后端列表接口不支持类型筛选，因此在前端过滤真实 type
+const notificationList = computed(() => {
+  if (activeType.value === 'all') return allNotifications.value
+  return allNotifications.value.filter(
+    notification => getNotificationCategory(notification.type) === activeType.value
+  )
 })
 
 onMounted(() => {
@@ -175,31 +201,27 @@ const loadNotificationList = async (isRefresh = false) => {
       size: pageSize.value
     }
 
-    if (activeType.value !== 'all') {
-      params.type = activeType.value
-    }
-
     // NOTIF-001: 调用API获取通知列表
     const res = await notificationApi.getList(params)
 
     if (res.code === 200 && res.data) {
       const notifications = res.data.list || res.data || []
 
-      // 转换数据格式
+      // 转换数据格式，已读字段与后端 readStatus 对齐
       const formattedNotifications = notifications.map(notif => ({
         id: notif.id,
-        type: notif.type || 'system',
+        type: notif.type,
         title: notif.title || '通知',
         content: notif.content || '',
-        isRead: notif.isRead || false,
+        readStatus: notif.readStatus || false,
         time: formatRelativeTime(notif.createdAt),
         extra: notif.extra || null
       }))
 
       if (isRefresh) {
-        notificationList.value = formattedNotifications
+        allNotifications.value = formattedNotifications
       } else {
-        notificationList.value.push(...formattedNotifications)
+        allNotifications.value.push(...formattedNotifications)
       }
 
       // 更新未读计数
@@ -299,9 +321,9 @@ const batchMarkRead = async () => {
 
     if (res.code === 200) {
       // 更新本地状态
-      notificationList.value.forEach(notif => {
+      allNotifications.value.forEach(notif => {
         if (selectedIds.value.includes(notif.id)) {
-          notif.isRead = true
+          notif.readStatus = true
         }
       })
 
@@ -351,7 +373,7 @@ const batchDelete = async () => {
 
           if (res.code === 200) {
             // 从列表中移除
-            notificationList.value = notificationList.value.filter(
+            allNotifications.value = allNotifications.value.filter(
               n => !selectedIds.value.includes(n.id)
             )
 
@@ -395,8 +417,8 @@ const markAllRead = async () => {
 
     if (res.code === 200) {
       // 更新本地状态
-      notificationList.value.forEach(notif => {
-        notif.isRead = true
+      allNotifications.value.forEach(notif => {
+        notif.readStatus = true
       })
 
       uni.showToast({
@@ -479,13 +501,10 @@ const goToDetail = (notification) => {
  * 获取图标类型
  */
 const getIconType = (type) => {
-  const iconMap = {
-    system: 'sound',
-    order: 'paperplane',
-    activity: 'gift',
-    chat: 'chatbubble'
-  }
-  return iconMap[type] || 'notification'
+  if (type.startsWith('group_order_') || type.startsWith('order_')) return 'paperplane'
+  if (type.startsWith('withdraw_') || type.startsWith('dish_') || type.startsWith('merchant_')) return 'gift'
+  if (type.startsWith('review_')) return 'chatbubble'
+  return 'sound'
 }
 
 /**

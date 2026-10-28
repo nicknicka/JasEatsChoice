@@ -8,7 +8,7 @@
           class="search-input"
           type="text"
           v-model="searchKeyword"
-          placeholder="搜索菜品、商家或食谱..."
+          placeholder="搜索菜品或商家..."
           :focus="inputFocused"
           @input="onSearchInput"
           @confirm="onSearch"
@@ -152,32 +152,10 @@
             </view>
           </view>
 
-          <!-- 食谱结果 -->
-          <view v-if="activeTab === 'recipe' && recipeResults.length > 0">
-            <view class="section-header">
-              <text class="section-title">食谱</text>
-              <text class="result-count">共{{ recipeResults.length }}个</text>
-            </view>
-            <view class="recipe-list">
-              <view
-                class="recipe-item card"
-                v-for="recipe in recipeResults"
-                :key="recipe.id"
-                @click="toRecipeDetail(recipe.id)"
-              >
-                <image class="recipe-image" :src="recipe.image" mode="aspectFill" />
-                <view class="recipe-info">
-                  <view class="recipe-name">{{ recipe.name }}</view>
-                  <view class="recipe-meta">
-                    <text class="meta-item">🔥 {{ recipe.calories }}卡</text>
-                    <text class="meta-item">⏱️ {{ recipe.cookTime }}分钟</text>
-                  </view>
-                  <view class="recipe-tags">
-                    <text class="tag" v-for="tag in recipe.tags" :key="tag">{{ tag }}</text>
-                  </view>
-                </view>
-              </view>
-            </view>
+          <!-- 食谱搜索后端暂未提供接口 -->
+          <view class="empty-result" v-if="unsupportedResults.recipe">
+            <view class="empty-icon">📖</view>
+            <view class="empty-text">暂不支持食谱搜索</view>
           </view>
 
           <!-- 空结果 -->
@@ -199,11 +177,10 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { dishApi, merchantApi, recipeApi } from '@/api'
+import { dishApi, merchantApi } from '@/api'
 import {
   toDishDetail as goToDishDetailPage,
-  toMerchantDetail as goToMerchantDetailPage,
-  toRecipeDetail as goToRecipeDetailPage
+  toMerchantDetail as goToMerchantDetailPage
 } from '@/utils/router'
 
 // 状态
@@ -245,13 +222,12 @@ const searchTabs = ref([
 // 搜索结果
 const merchantResults = ref([])
 const dishResults = ref([])
-const recipeResults = ref([])
+const unsupportedResults = ref({ recipe: false })
 
 // 计算属性
 const allResultsEmpty = computed(() => {
   return merchantResults.value.length === 0 &&
-         dishResults.value.length === 0 &&
-         recipeResults.value.length === 0
+         dishResults.value.length === 0
 })
 
 /**
@@ -325,15 +301,8 @@ const onSearch = async () => {
     }
 
     if (activeTab.value === 'all' || activeTab.value === 'recipe') {
-      const recipeRes = await recipeApi.search({ keyword, page: 1, size: 20 })
-      const recipes = recipeRes.list || recipeRes.data?.list || []
-      recipeResults.value = recipes.map(recipe => ({
-        id: recipe.recipeId || recipe.id,
-        name: recipe.recipeName || recipe.name,
-        description: recipe.description || '',
-        image: recipe.image || recipe.cover || '',
-        difficulty: recipe.difficulty || '简单'
-      }))
+      // 后端未提供食谱搜索接口，不发必然失败的请求
+      unsupportedResults.value = { recipe: true }
     }
 
     // 清空建议
@@ -373,7 +342,7 @@ const clearSearch = () => {
   searchSuggestions.value = []
   merchantResults.value = []
   dishResults.value = []
-  recipeResults.value = []
+  unsupportedResults.value = { recipe: false }
 }
 
 /**
@@ -434,13 +403,6 @@ const toMerchantDetail = (merchantId) => {
  */
 const toDishDetail = (dishId) => {
   goToDishDetailPage(dishId)
-}
-
-/**
- * 跳转到食谱详情
- */
-const toRecipeDetail = (recipeId) => {
-  goToRecipeDetailPage(recipeId)
 }
 
 /**

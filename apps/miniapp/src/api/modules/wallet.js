@@ -26,7 +26,6 @@ const normalizeWalletResponse = (response) => {
   return {
     ...response,
     balance: data.balance,
-    points: data.points,
     redEnvelopes: data.redEnvelopes ?? data.redPackets ?? 0
   }
 }
@@ -105,24 +104,6 @@ export const walletApi = {
    * @returns {Promise} 返回余额
    */
   getBalanceOld: (params = {}) => walletApi.getBalance(params.userId),
-
-  /**
-   * 获取积分
-   * 当前后端未提供独立积分接口，先复用钱包信息
-   * @param {Object} params - 查询参数
-   * @returns {Promise} 返回积分信息
-   */
-  getPoints: async (params = {}) => {
-    const response = await walletApi.getWallet(params.userId)
-    return {
-      ...response,
-      data: {
-        ...response.data,
-        points: response.data?.points || 0,
-        integral: response.data?.points || 0
-      }
-    }
-  },
 
   /**
    * 获取红包列表
@@ -216,20 +197,6 @@ export const walletApi = {
    * @returns {Promise}
    */
   transfer: () => Promise.reject(new Error('后端暂未提供转账接口')),
-
-  /**
-   * 获取积分记录
-   * 当前后端未提供独立积分明细接口，先返回空数组
-   * @returns {Promise<Array>} 返回空列表
-   */
-  getPointsRecords: async () => [],
-
-  /**
-   * 积分兑换
-   * 当前后端未提供积分兑换接口
-   * @returns {Promise}
-   */
-  exchangePoints: () => Promise.reject(new Error('后端暂未提供积分兑换接口')),
 
   /**
    * 获取充值套餐

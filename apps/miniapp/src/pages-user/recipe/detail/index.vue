@@ -357,8 +357,11 @@ const checkFavorite = async () => {
     }
 
     const userId = userStore.userInfo?.userId || userStore.userInfo?.id
-    const res = await favoriteApi.checkRecipe(recipeId.value, { userId })
-    recipe.value.isFavorite = res || false
+    const res = await favoriteApi.getRecipeList({ userId })
+    const favorites = Array.isArray(res?.data) ? res.data : []
+    recipe.value.isFavorite = favorites.some(
+      favorite => favorite.collectableId === recipeId.value
+    )
   } catch (error) {
     console.error('检查收藏状态失败:', error)
   }
