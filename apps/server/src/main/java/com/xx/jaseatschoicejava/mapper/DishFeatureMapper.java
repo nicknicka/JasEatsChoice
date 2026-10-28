@@ -7,6 +7,7 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 菜品特征Mapper接口
@@ -25,6 +26,20 @@ public interface DishFeatureMapper extends BaseMapper<DishFeature> {
      */
     @Select("SELECT COALESCE(CAST(ingredients AS CHAR), '[]') FROM mch_dish_features WHERE dish_id = #{dishId}")
     String getIngredientsJsonByDishId(@Param("dishId") String dishId);
+
+    /**
+     * 批量查询菜品营养表中的卡路里。
+     */
+    @Select("<script>" +
+            "SELECT dish_id AS dishId, " +
+            "CAST(JSON_UNQUOTE(JSON_EXTRACT(nutrition_info, '$.calories')) AS DECIMAL(10,2)) AS calories " +
+            "FROM mch_dish_features " +
+            "WHERE nutrition_info IS NOT NULL " +
+            "AND JSON_EXTRACT(nutrition_info, '$.calories') IS NOT NULL " +
+            "AND dish_id IN " +
+            "<foreach collection='dishIds' item='dishId' open='(' separator=',' close=')'>#{dishId}</foreach>" +
+            "</script>")
+    List<Map<String, Object>> selectNutritionCaloriesByDishIds(@Param("dishIds") List<String> dishIds);
 
     /**
      * 根据分类查询菜品特征
