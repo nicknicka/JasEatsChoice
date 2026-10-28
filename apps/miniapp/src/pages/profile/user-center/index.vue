@@ -102,8 +102,8 @@
         <view class="section-card">
           <view class="section-header" @click="navigateTo('wallet')">
             <view class="section-title-wrap">
-              <text class="section-title">钱包与积分</text>
-              <text class="section-subtitle">余额、积分和优惠券统一查看</text>
+              <text class="section-title">钱包与优惠券</text>
+              <text class="section-subtitle">余额和优惠券统一查看</text>
             </view>
             <view class="section-more">
               <text>查看全部</text>
@@ -378,13 +378,6 @@ const benefitItems = computed(() => ([
     money: true
   },
   {
-    key: 'integral',
-    label: '积分',
-    value: formatBadgeValue(wallet.value.points),
-    desc: '查看积分明细',
-    page: 'integral'
-  },
-  {
     key: 'coupons',
     label: '优惠券',
     value: formatBadgeValue(stats.value.coupons),
@@ -514,8 +507,7 @@ function createDefaultOrderCounts() {
 
 function createDefaultWallet() {
   return {
-    balance: '0.00',
-    points: 0
+    balance: '0.00'
   }
 }
 
@@ -813,8 +805,7 @@ async function loadWalletData() {
     const data = unwrapResponse(response)
 
     wallet.value = {
-      balance: formatMoney(data.balance),
-      points: toNumber(data.points)
+      balance: formatMoney(data.balance)
     }
 
     pageDebug.requestSuccess('加载钱包数据', wallet.value)
