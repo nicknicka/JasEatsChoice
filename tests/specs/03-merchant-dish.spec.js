@@ -73,13 +73,45 @@ test.describe('模块三：商家浏览与详情', () => {
     }
   })
 
-  test.fixme('3.4 商家公告 (blocked by #94)', async ({ page }) => {
-    const merchant = await getMerchant()
-    const merchantId = merchant.merchantId || merchant.id
+  test('3.4 商家公告', async ({ page }) => {
+    markRunning('3.4')
+    try {
+      const merchantsResponse = await fetch(`${TEST_API_BASE}/v1/merchants?page=1&size=100`)
+      const merchantsPayload = await merchantsResponse.json()
+      expect(merchantsResponse.ok).toBeTruthy()
+      expect(merchantsPayload.success).toBe(true)
+      const merchant = merchantsPayload.data.find(item => (item.merchantId || item.id).toString() === '7638432224340229')
+      expect(merchant).toBeTruthy()
+      const merchantId = merchant.merchantId || merchant.id
+      const response = await fetch(`${TEST_API_BASE}/v1/merchant/${encodeURIComponent(merchantId)}/announcements`)
+      const payload = await response.json()
 
-    await page.goto(`/user/home/merchant-detail?merchantId=${encodeURIComponent(merchantId)}`)
-    const announcement = page.locator('[class*="announcement"], [class*="notice"], [class*="公告"]')
-    await expect(announcement.first()).toBeVisible({ timeout: 10000 })
+      expect(response.ok).toBeTruthy()
+      expect(payload.success).toBe(true)
+      const announcements = (payload.data || []).filter(item => item.status === 'active')
+      expect(announcements.length).toBeGreaterThan(0)
+
+      await page.goto(`/user/home/merchant-detail?merchantId=${encodeURIComponent(merchantId)}`)
+      await expect(page.locator('.merchant-announcements')).toBeVisible({ timeout: 10000 })
+      await expect(page.locator('.announcements-count')).toHaveText(`共 ${announcements.length} 条`)
+      const cards = page.locator('.announcement-card')
+      await expect(cards).toHaveCount(announcements.length)
+      await expect(cards.first().locator('.announcement-title')).toHaveText(announcements[0].title)
+      await expect(cards.first().locator('.announcement-content')).toHaveText(announcements[0].content)
+      markPassed('3.4', `公告区块与接口一致（${announcements.length} 条）`)
+
+      const emptyResponse = await fetch(`${TEST_API_BASE}/v1/merchant/${encodeURIComponent('9999999999999')}/announcements`)
+      const emptyPayload = await emptyResponse.json()
+      expect(emptyResponse.ok).toBeTruthy()
+      expect(emptyPayload.success).toBe(true)
+      expect(emptyPayload.data).toEqual([])
+
+      await page.goto(`/user/home/merchant-detail?merchantId=${encodeURIComponent('9999999999999')}`)
+      await expect(page.locator('.announcements-empty')).toHaveText('该商家暂无公告')
+    } catch (e) {
+      markFailed('3.4', e.message.slice(0, 50))
+      throw e
+    }
   })
 
   test.fixme('3.5 商家评价列表 (blocked by #65)', async ({ page }) => {
