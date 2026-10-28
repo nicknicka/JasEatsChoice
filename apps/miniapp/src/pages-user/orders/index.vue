@@ -152,6 +152,7 @@
 import { ref, onMounted } from 'vue'
 import { useUserStore } from '@/store'
 import { orderApi } from '@/api'
+import { getStatusByKey } from '@/config/order-status'
 import { createPageDebug } from '@/utils/page-debug'
 import {
   HOME,
@@ -546,19 +547,18 @@ const confirmReceipt = async (order) => {
     success: async (res) => {
       if (res.confirm) {
         try {
-          // 调用后端API确认收货
-          await orderApi.confirm(order.id, {
-            userId: userStore.userInfo?.userId || userStore.userInfo?.id
-          })
+          // 调用后端API把订单更新为已完成
+          await orderApi.updateStatus(order.id, 3)
           pageDebug.requestSuccess('确认收货', {
             orderId: order.id
           })
 
-          // 更新订单状态
+          // 按既有配置更新界面状态
+          const completedStatus = getStatusByKey('completed')
           const index = orders.value.findIndex(item => item.id === order.id)
           if (index > -1) {
-            orders.value[index].status = 'completed'
-            orders.value[index].statusText = '已完成'
+            orders.value[index].status = completedStatus.key
+            orders.value[index].statusText = completedStatus.label
           }
 
           uni.showToast({
