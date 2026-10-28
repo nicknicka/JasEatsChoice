@@ -81,46 +81,24 @@ const fetchCommonCategories = async () => {
       localStorage.setItem('commonCategories', JSON.stringify(commonCategories.value))
     } else {
       console.error('获取常用品类失败：API返回失败', response)
-      // 从 localStorage 中获取缓存数据
       const cachedCategories = localStorage.getItem('commonCategories')
       if (cachedCategories) {
         commonCategories.value = JSON.parse(cachedCategories)
         ElMessage.warning('常用品类数据加载失败，使用缓存数据')
       } else {
-        // 如果没有缓存，使用默认数据
-        commonCategories.value = [
-          '中式快餐',
-          '火锅',
-          '烧烤',
-          '川菜',
-          '湘菜',
-          '粤菜',
-          '西餐',
-          '日韩料理'
-        ]
-        ElMessage.warning('常用品类数据加载失败，使用默认数据')
+        commonCategories.value = []
+        ElMessage.error('常用品类数据加载失败，请稍后重试')
       }
     }
   } catch (error) {
     console.error('获取常用品类失败:', error)
-    // 从 localStorage 中获取缓存数据
     const cachedCategories = localStorage.getItem('commonCategories')
     if (cachedCategories) {
       commonCategories.value = JSON.parse(cachedCategories)
       ElMessage.warning('常用品类数据加载失败，使用缓存数据')
     } else {
-      // 如果没有缓存，使用默认数据
-      commonCategories.value = [
-        '中式快餐',
-        '火锅',
-        '烧烤',
-        '川菜',
-        '湘菜',
-        '粤菜',
-        '西餐',
-        '日韩料理'
-      ]
-      ElMessage.warning('常用品类数据加载失败，使用默认数据')
+      commonCategories.value = []
+      ElMessage.error('常用品类数据加载失败，请稍后重试')
     }
   }
 }

@@ -330,7 +330,8 @@ export function useCardHandler(messages) {
 							ElMessage.warning(result.message || '催单请求已发送')
 						}
 					} catch (error) {
-						ElMessage.success('已通知商家尽快处理您的订单')
+							console.error('催单失败:', error)
+							ElMessage.error('催单失败，请稍后重试')
 					}
 					break
 				}

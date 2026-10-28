@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { ElNotification, ElMessage } from 'element-plus'
 import { useWeather } from '../../composables/useWeather.js'
 import { getAvatarUrl } from '../../utils/avatar'
@@ -732,12 +732,8 @@ const fetchFeaturedTutorials = async () => {
     }))
   } catch (error) {
     console.error('加载精选教程失败:', error)
-    // 失败时使用模拟数据作为备份
-    featuredTutorials.value = [
-      { name: '青木瓜沙拉制作教程', type: 'video' },
-      { name: '夏日低卡饮食指南', type: 'article' }
-    ]
-    showError('加载教程失败,显示默认内容')
+    featuredTutorials.value = []
+    showError('加载教程失败,请稍后重试')
   } finally {
     tutorialsLoading.value = false
   }
@@ -828,7 +824,6 @@ onMounted(async () => {
   loadLastLocation() // 加载上次保存的位置
   loadFavorites() // 加载收藏列表
   fetchFeaturedTutorials()
-  fetchRecommendedDishes()
   await fetchWeather()
   fetchHotTopic() // 新增：获取今日热点
 
@@ -836,6 +831,14 @@ onMounted(async () => {
     initializeWebSocket()
   }
 })
+
+watch(
+  () => authStore.userId || localStorage.getItem('auth_userId'),
+  (userId) => {
+    if (userId) fetchRecommendedDishes()
+  },
+  { immediate: true }
+)
 </script>
 
 

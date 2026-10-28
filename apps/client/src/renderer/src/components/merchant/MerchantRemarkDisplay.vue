@@ -160,8 +160,6 @@ const formatTime = (timeStr) => {
 // 加载订单备注
 const loadRemarks = async () => {
   try {
-    // 这里应该调用获取订单备注的API
-    // 暂时使用模拟数据
     const response = await api.get(`/v1/orders/${props.orderId}/remarks`)
 
     if (response.data.success) {
@@ -169,7 +167,6 @@ const loadRemarks = async () => {
     }
   } catch (error) {
     console.error('加载备注失败:', error)
-    // 使用模拟数据
     remarks.value = []
   }
 }

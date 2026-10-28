@@ -686,9 +686,7 @@ watch(orderingMerchant, (newMerchant) => {
   }
 }, { deep: true })
 
-const merchants = ref([
-  // 模拟商家数据
-])
+const merchants = ref([])
 
 // ========== 对话框状态管理 ==========
 const actionPanelVisible = ref(false)

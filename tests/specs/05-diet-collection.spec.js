@@ -19,6 +19,17 @@ async function getCollections() {
   return getJson(`/v1/collections?userId=${encodeURIComponent(testUserId)}`)
 }
 
+async function removeCollection(dishId) {
+  const response = await fetch(
+    `${API_BASE}/v1/collections?userId=${encodeURIComponent(testUserId)}&type=dish&id=${encodeURIComponent(dishId)}`,
+    { method: 'DELETE' }
+  )
+  const body = await response.json()
+  if (!response.ok || body.success !== true) {
+    throw new Error(`DELETE /v1/collections 失败：${body.message || response.statusText}`)
+  }
+}
+
 async function findRecommendationDish(page) {
   const name = await page.locator('.recommend-item').first().locator('.item-name').innerText()
   const recommendations = await getJson(`/v1/recommendations/${testUserId}`)
@@ -128,16 +139,24 @@ test.describe('模块五：饮食管理与收藏', () => {
     } catch (e) { markFailed('5.6', e.message.slice(0, 50)); throw e }
   })
 
-  test.fixme('5.7 添加收藏 (blocked by #46)', async ({ page }) => {
+  test('5.7 添加收藏', async ({ page }) => {
     await page.goto('/user/home/recommend')
     await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
     await expect(page.locator('.recommend-item').first()).toBeVisible({ timeout: 10000 })
     const dish = await findRecommendationDish(page)
+    const existing = (await getCollections()).find(
+      (entry) => entry.collectableType === 'dish' && String(entry.collectableId) === dish.id
+    )
+    if (existing) {
+      await removeCollection(dish.id)
+      await page.reload()
+      await expect(page.locator('.recommend-item').first()).toBeVisible({ timeout: 10000 })
+    }
     const before = await getCollections()
     const item = page.locator('.recommend-item').filter({ hasText: dish.name }).first()
 
     await item.locator('button.act-btn').filter({ hasText: '☆ 收藏' }).click()
-    await expect(item.locator('button.act-btn')).toContainText('★ 已收藏')
+    await expect(item.locator('button.act-btn').filter({ hasText: '★ 已收藏' })).toBeVisible()
 
     const after = await getCollections()
     expect(after.filter((entry) => entry.collectableType === 'dish' && String(entry.collectableId) === dish.id)).toHaveLength(

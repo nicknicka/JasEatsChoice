@@ -4,8 +4,6 @@
  * 后端需要实现的接口：
  * - POST /v1/verification/send - 发送验证码
  * - POST /v1/verification/verify - 验证验证码
- *
- * 当前状态：使用模拟数据，待后端API实现后启用真实API调用
  */
 import api from '../utils/api'
 
