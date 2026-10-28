@@ -73,64 +73,91 @@ test.describe('模块三：商家浏览与详情', () => {
     }
   })
 
-  test('3.4 商家公告', async ({ page }) => {
+  test('3.4 商家公告', async ({ page, request }) => {
     markRunning('3.4')
+    const merchantId = '7638432224340229'
+    const title = `E2E 公告 ${Date.now()}`
+    let createdId
     try {
-      const merchantsResponse = await fetch(`${TEST_API_BASE}/v1/merchants?page=1&size=100`)
-      const merchantsPayload = await merchantsResponse.json()
-      expect(merchantsResponse.ok).toBeTruthy()
-      expect(merchantsPayload.success).toBe(true)
-      const merchant = merchantsPayload.data.find(item => (item.merchantId || item.id).toString() === '7638432224340229')
-      expect(merchant).toBeTruthy()
-      const merchantId = merchant.merchantId || merchant.id
-      const response = await fetch(`${TEST_API_BASE}/v1/merchant/${encodeURIComponent(merchantId)}/announcements`)
-      const payload = await response.json()
+      // seed 公告的 end_time 已过期，会被 AnnouncementScheduler 自动下线，不能作为稳定前置数据。
+      // 这里自建一条 end_time 在未来的临时公告，验证后再清理。
+      const createResp = await request.post(`${TEST_API_BASE}/v1/merchant/${merchantId}/announcements`, {
+        data: {
+          title,
+          content: `${title} 的内容`,
+          type: 'system',
+          priority: 'normal',
+          targetAudience: 'all',
+          readCount: 0,
+          readUsers: 0,
+          status: 'active',
+          startTime: new Date(Date.now() - 3600_000).toISOString().slice(0, 19),
+          endTime: new Date(Date.now() + 86_400_000).toISOString().slice(0, 19)
+        }
+      })
+      const createBody = await createResp.json()
+      expect(createBody.success, `新增公告应成功：${createBody.message || ''}`).toBe(true)
+      createdId = createBody.data.id
+      expect(createdId).toBeTruthy()
 
-      expect(response.ok).toBeTruthy()
-      expect(payload.success).toBe(true)
-      const announcements = (payload.data || []).filter(item => item.status === 'active')
-      expect(announcements.length).toBeGreaterThan(0)
+      const listResp = await request.get(`${TEST_API_BASE}/v1/merchant/${merchantId}/announcements`)
+      const listBody = await listResp.json()
+      expect(listBody.success).toBe(true)
+      const mine = (listBody.data || []).find((item) => String(item.id) === String(createdId))
+      expect(mine, '刚创建的公告应能在接口中查到').toBeTruthy()
+      expect(mine.status).toBe('active')
 
       await page.goto(`/user/home/merchant-detail?merchantId=${encodeURIComponent(merchantId)}`)
       await expect(page.locator('.merchant-announcements')).toBeVisible({ timeout: 10000 })
-      await expect(page.locator('.announcements-count')).toHaveText(`共 ${announcements.length} 条`)
-      const cards = page.locator('.announcement-card')
-      await expect(cards).toHaveCount(announcements.length)
-      await expect(cards.first().locator('.announcement-title')).toHaveText(announcements[0].title)
-      await expect(cards.first().locator('.announcement-content')).toHaveText(announcements[0].content)
-      markPassed('3.4', `公告区块与接口一致（${announcements.length} 条）`)
+      const card = page.locator('.announcement-card', { hasText: title })
+      await expect(card).toBeVisible({ timeout: 10000 })
+      await expect(card.locator('.announcement-title')).toHaveText(title)
+      await expect(card.locator('.announcement-content')).toHaveText(`${title} 的内容`)
+      markPassed('3.4', `商家公告展示与接口一致（临时公告 ${createdId}）`)
 
-      const emptyResponse = await fetch(`${TEST_API_BASE}/v1/merchant/${encodeURIComponent('9999999999999')}/announcements`)
-      const emptyPayload = await emptyResponse.json()
-      expect(emptyResponse.ok).toBeTruthy()
-      expect(emptyPayload.success).toBe(true)
-      expect(emptyPayload.data).toEqual([])
-
-      await page.goto(`/user/home/merchant-detail?merchantId=${encodeURIComponent('9999999999999')}`)
+      const emptyResp = await request.get(`${TEST_API_BASE}/v1/merchant/9999999999999/announcements`)
+      const emptyBody = await emptyResp.json()
+      expect(emptyBody.success).toBe(true)
+      expect(emptyBody.data).toEqual([])
+      await page.goto(`/user/home/merchant-detail?merchantId=9999999999999`)
       await expect(page.locator('.announcements-empty')).toHaveText('该商家暂无公告')
     } catch (e) {
       markFailed('3.4', e.message.slice(0, 50))
       throw e
+    } finally {
+      if (createdId) {
+        await request.delete(`${TEST_API_BASE}/v1/merchant/${merchantId}/announcements/${createdId}`).catch(() => null)
+      }
     }
   })
 
-  test.fixme('3.5 商家评价列表 (blocked by #65)', async ({ page }) => {
-    const merchant = await getMerchant()
-    const merchantId = merchant.merchantId || merchant.id
-    const response = await fetch(`${TEST_API_BASE}/v1/reviews/merchant/${encodeURIComponent(merchantId)}`)
-    const payload = await response.json()
+  test('3.5 商家评价列表', async ({ page }) => {
+    markRunning('3.5')
+    try {
+      const merchant = await getMerchant()
+      const merchantId = merchant.merchantId || merchant.id
+      const response = await fetch(`${TEST_API_BASE}/v1/reviews/merchant/${encodeURIComponent(merchantId)}`)
+      const payload = await response.json()
 
-    expect(response.ok).toBeTruthy()
-    expect(payload.success).toBe(true)
-    const reviews = payload.data || []
-    expect(reviews.length).toBeGreaterThan(0)
+      expect(response.ok).toBeTruthy()
+      expect(payload.success).toBe(true)
+      const reviews = payload.data || []
+      expect(reviews.length).toBeGreaterThan(0)
 
-    await page.goto(`/user/home/merchant-detail?merchantId=${encodeURIComponent(merchantId)}`)
-    await page.locator('.el-tabs__item', { hasText: '用户评价' }).click()
-
-    await expect(page.locator('.comments-header')).toContainText(`共 ${reviews.length} 条评价`)
-    await expect(page.locator('.comment-card')).toHaveCount(reviews.length)
-    await expect(page.locator('.comment-content').first()).toHaveText(reviews[0].content)
+      await page.goto(`/user/home/merchant-detail?merchantId=${encodeURIComponent(merchantId)}`)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
+      const commentsTab = page.locator('.merchant-menu-tabs .el-tabs__item', { hasText: '用户评价' })
+      await expect(commentsTab).toBeVisible({ timeout: 10000 })
+      await commentsTab.scrollIntoViewIfNeeded()
+      await commentsTab.click()
+      await expect(page.locator('.comments-header')).toContainText(`共 ${reviews.length} 条评价`)
+      await expect(page.locator('.comment-card')).toHaveCount(reviews.length)
+      await expect(page.locator('.comment-content').first()).toHaveText(reviews[0].content)
+      markPassed('3.5', `评价列表与接口一致（${reviews.length} 条）`)
+    } catch (e) {
+      markFailed('3.5', e.message.slice(0, 50))
+      throw e
+    }
   })
 
   test('3.6 菜品列表', async ({ page }) => {
