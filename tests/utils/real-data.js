@@ -192,6 +192,70 @@ async function getCouponId(options = {}) {
   return idOf(await getCoupon(options), ['id', 'couponId'], '优惠券')
 }
 
+/**
+ * 在运行中的测试库里登记一个不会自动调度的临时任务，
+ * 用于通过既有执行接口触发后端的真实定时方法（例如定时推荐推送）。
+ * 返回任务 ID，调用方必须在 finally 中用 deleteEphemeralTask 清理。
+ */
+function createEphemeralTask({ id, taskName, className, methodName }) {
+  const normalizedId = String(id)
+  if (!/^[A-Za-z0-9_-]+$/.test(normalizedId)) {
+    throw new Error(`临时任务 ID 非法：${normalizedId}`)
+  }
+
+  const repoRoot = path.resolve(__dirname, '../..')
+  const sql = [
+    'INSERT INTO sys_scheduled_task',
+    '(id, task_name, task_code, task_type, status, task_class_name, task_method_name, log_execution, priority)',
+    `VALUES ('${normalizedId}', '${taskName}', '${normalizedId}', 'ONCE', 'DISABLED',`,
+    `'${className}', '${methodName}', 0, 3)`
+  ].join(' ')
+
+  execFileSync('docker', [
+    'compose',
+    '--env-file', path.join(repoRoot, 'deploy/.env'),
+    '-f', path.join(repoRoot, 'deploy/compose.yml'),
+    '-f', path.join(repoRoot, 'deploy/compose.dev.yml'),
+    'exec', '-T', 'mysql', 'sh', '-c',
+    `mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "${sql}"`
+  ], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+    env: { ...process.env, COMPOSE_PROJECT_NAME: process.env.COMPOSE_PROJECT_NAME || 'jaseats' }
+  }).trim()
+
+  return normalizedId
+}
+
+/**
+ * 删除 createEphemeralTask 登记的临时任务及其执行日志。
+ */
+function deleteEphemeralTask(taskId) {
+  const normalizedId = String(taskId)
+  if (!/^[A-Za-z0-9_-]+$/.test(normalizedId)) {
+    throw new Error(`临时任务 ID 非法：${normalizedId}`)
+  }
+
+  const repoRoot = path.resolve(__dirname, '../..')
+  const sql = `DELETE FROM sys_scheduled_task_log WHERE task_id = '${normalizedId}'; ` +
+    `DELETE FROM sys_scheduled_task WHERE id = '${normalizedId}';`
+
+  execFileSync('docker', [
+    'compose',
+    '--env-file', path.join(repoRoot, 'deploy/.env'),
+    '-f', path.join(repoRoot, 'deploy/compose.yml'),
+    '-f', path.join(repoRoot, 'deploy/compose.dev.yml'),
+    'exec', '-T', 'mysql', 'sh', '-c',
+    `mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "${sql}"`
+  ], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+    env: { ...process.env, COMPOSE_PROJECT_NAME: process.env.COMPOSE_PROJECT_NAME || 'jaseats' }
+  }).trim()
+}
+
 function deleteCoupon(couponId) {
   const normalizedId = String(couponId)
   if (!/^\d+$/.test(normalizedId)) {
@@ -232,5 +296,7 @@ module.exports = {
   getAddressId,
   getCoupon,
   getCouponId,
-  deleteCoupon
+  deleteCoupon,
+  createEphemeralTask,
+  deleteEphemeralTask
 }

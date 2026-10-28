@@ -86,6 +86,25 @@ public class WebSocketMessageServiceTest {
     }
 
     @Test
+    public void writeThatFailsImmediatelyIsNotCountedAsDelivered() {
+        // 连接仍报告 active，但写入立刻失败（对端刚断开、事件循环拒绝写入）。
+        // 这种"尝试了但没写进去"的连接不应被算作已送达。
+        EmbeddedChannel failing = new EmbeddedChannel(new io.netty.channel.ChannelOutboundHandlerAdapter() {
+            @Override
+            public void write(io.netty.channel.ChannelHandlerContext ctx, Object msg,
+                              io.netty.channel.ChannelPromise promise) {
+                promise.setFailure(new java.io.IOException("模拟写入失败"));
+            }
+        });
+        openedChannels.add(failing);
+        WebSocketMessageService.registerChannel("user-write-fails", failing);
+
+        int delivered = WebSocketMessageService.pushToUser("user-write-fails", "{\"msgType\":\"recommendation\"}");
+
+        assertEquals("写入失败的连接不应计入送达", 0, delivered);
+    }
+
+    @Test
     public void onlineUsersSnapshotIsTakenAtCallTime() {
         EmbeddedChannel channel = openChannel();
         WebSocketMessageService.registerChannel("user-snapshot", channel);

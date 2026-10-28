@@ -237,13 +237,8 @@ public class WebSocketMessageService {
 
         int delivered = 0;
         for (Channel channel : channels) {
-            if (channel != null && channel.isActive()) {
-                try {
-                    channel.writeAndFlush(new TextWebSocketFrame(message));
-                    delivered++;
-                } catch (Exception e) {
-                    logger.warn("⚠️ [WebSocket] 推送失败 userId={}: {}", userId, e.getMessage());
-                }
+            if (writeToChannel(channel, message, userId)) {
+                delivered++;
             }
         }
         return delivered;
@@ -262,17 +257,39 @@ public class WebSocketMessageService {
         int delivered = 0;
         for (Map.Entry<String, Set<Channel>> entry : USER_CHANNELS.entrySet()) {
             for (Channel channel : entry.getValue()) {
-                if (channel != null && channel.isActive()) {
-                    try {
-                        channel.writeAndFlush(new TextWebSocketFrame(message));
-                        delivered++;
-                    } catch (Exception e) {
-                        logger.warn("⚠️ [WebSocket] 广播失败 userId={}: {}", entry.getKey(), e.getMessage());
-                    }
+                if (writeToChannel(channel, message, entry.getKey())) {
+                    delivered++;
                 }
             }
         }
         return delivered;
+    }
+
+    /**
+     * 把消息写入一条连接，返回是否真的写进去了。
+     *
+     * 只把"写入成功"计入送达：连接已失效、写入被拒或写入立即失败都返回 false。
+     * 调用方据此得到的是实际送达数，而不是尝试次数。
+     */
+    private static boolean writeToChannel(Channel channel, String message, String userId) {
+        if (channel == null || !channel.isActive()) {
+            return false;
+        }
+        try {
+            io.netty.channel.ChannelFuture future =
+                    channel.writeAndFlush(new TextWebSocketFrame(message));
+            if (future.isDone() && !future.isSuccess()) {
+                logger.warn("⚠️ [WebSocket] 推送失败 userId={}: {}",
+                        userId, future.cause() == null ? "写入未成功" : future.cause().getMessage());
+                return false;
+            }
+            // 写入尚未完成（异步 flush 进行中）：视为已交给连接，
+            // 后续失败由连接自身的异常处理与断开清理负责。
+            return true;
+        } catch (Exception e) {
+            logger.warn("⚠️ [WebSocket] 推送失败 userId={}: {}", userId, e.getMessage());
+            return false;
+        }
     }
 
     /**

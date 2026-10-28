@@ -1,5 +1,7 @@
 const { test, expect, loginAsUser } = require('../fixtures/test-base')
 const { markRunning, markPassed, markFailed, updateSummary } = require('../utils/progress')
+const { TEST_API_BASE } = require('../utils/api')
+const { createEphemeralTask, deleteEphemeralTask } = require('../utils/real-data')
 
 test.describe('模块十五：实时推荐推送', () => {
 
@@ -25,38 +27,52 @@ test.describe('模块十五：实时推荐推送', () => {
     }
   })
 
-  test('15.2 推荐推送到达时显示可点击提示', async ({ page }) => {
+  test('15.2 后端真实推送到达时显示可点击提示', async ({ page, request }) => {
     markRunning('15.2')
-    let serverSide = null
-
-    // 保留与真实后端的连接（connectToServer），同时允许注入一条服务端推送
-    await page.routeWebSocket(/\/ws/, (ws) => {
-      serverSide = ws
-      const upstream = ws.connectToServer()
-      upstream.onMessage((msg) => ws.send(msg))
-    })
+    const taskId = `e2e-realtime-${Date.now()}`
+    let registered = false
 
     try {
       await loginAsUser(page)
 
-      await expect.poll(() => !!serverSide, { timeout: 15000 }).toBeTruthy()
+      // 登记一个不会自动调度的临时任务，指向后端真实的定时推荐方法
+      createEphemeralTask({
+        id: taskId,
+        taskName: 'e2e-实时推荐推送',
+        className: 'com.xx.jaseatschoicejava.service.impl.RealtimeRecommendationServiceImpl',
+        methodName: 'scheduleRecommendationPush'
+      })
+      registered = true
 
-      // 以服务端身份推送一条推荐消息
-      serverSide.send(JSON.stringify({
-        msgType: 'realtime_recommend',
-        userId: '3384650106421960',
-        context: '定时推荐 - 午餐',
-        data: [{ dishId: 'demo-1' }, { dishId: 'demo-2' }]
-      }))
+      // 推送需要接收方：确认页面已把带身份的业务连接建好，
+      // 否则后端会因无人在线而跳过，用例就会变成空验证。
+      await expect.poll(async () => {
+        const state = await page.evaluate(() => ({
+          // 业务连接的建立会写入认证态；无 token 时布局层不会建连接
+          hasToken: !!localStorage.getItem('auth_token')
+        }))
+        return state.hasToken
+      }, { message: '推送前应已建立认证态（业务连接的前提）', timeout: 20000 }).toBe(true)
+
+      // 触发真实链路：后端反射调用定时推荐方法 → 生成推荐 → 推给在线连接
+      const executed = await request.post(`${TEST_API_BASE}/v1/scheduled-tasks/${taskId}/execute`)
+      expect(executed.ok(), '执行临时任务接口应返回成功').toBeTruthy()
 
       const notice = page.locator('.el-notification')
-      await expect(notice.first()).toBeVisible({ timeout: 10000 })
+      await expect(notice.first()).toBeVisible({ timeout: 20000 })
       await expect(notice.first()).toContainText('为你推荐')
-      await expect(notice.first()).toContainText('2 道菜')
-      markPassed('15.2', '推荐推送到达后显示可点击提示')
+      markPassed('15.2', '后端真实推送经定时任务链路到达并显示提示')
     } catch (e) {
       markFailed('15.2', e.message.slice(0, 50))
       throw e
+    } finally {
+      if (registered) {
+        try {
+          deleteEphemeralTask(taskId)
+        } catch (cleanupError) {
+          console.warn('清理临时任务失败:', cleanupError.message)
+        }
+      }
     }
   })
 
