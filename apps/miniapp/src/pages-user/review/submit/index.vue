@@ -114,6 +114,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useUserStore } from '@/store'
 import { reviewApi } from '@/api'
+import config from '@/config/index.js'
 
 // Store
 const userStore = useUserStore()
@@ -203,7 +204,7 @@ const chooseImage = async () => {
         const uploadPromises = tempFilePaths.map(filePath => {
           return new Promise((resolve, reject) => {
             uni.uploadFile({
-              url: `${getApp().globalData.baseUrl}/v1/reviews/images`,
+              url: `${config.baseURL}/v1/chat/upload-image`,
               filePath: filePath,
               name: 'file',
               header: {
@@ -211,10 +212,10 @@ const chooseImage = async () => {
               },
               success: (uploadRes) => {
                 const data = JSON.parse(uploadRes.data)
-                if (data.success) {
-                  resolve(data.data)
+                if (data.code === 200 && data.data) {
+                  resolve(data.data.fileUrl)
                 } else {
-                  reject(new Error(data.message))
+                  reject(new Error(data.message || '上传失败'))
                 }
               },
               fail: reject

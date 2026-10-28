@@ -119,12 +119,8 @@
             <view class="reply-content">{{ review.merchantReply }}</view>
           </view>
 
-          <!-- 点赞和评论 -->
+          <!-- 评论入口 -->
           <view class="review-actions">
-            <view class="action-item" @click="toggleLike(review)">
-              <text class="action-icon">{{ review.liked ? '❤️' : '🤍' }}</text>
-              <text class="action-text">{{ review.likeCount || '点赞' }}</text>
-            </view>
             <view class="action-item" @click="showCommentInput(review)">
               <text class="action-icon">💬</text>
               <text class="action-text">{{ review.commentCount || '评论' }}</text>
@@ -183,11 +179,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useUserStore } from '@/store'
 import { reviewApi } from '@/api'
-
-// Store
-const userStore = useUserStore()
 
 // 状态
 const targetType = ref('dish') // dish 或 merchant
@@ -320,8 +312,6 @@ const loadReviews = async (refresh = false) => {
       })),
       merchantReply: review.merchantReply || '',
       replyTime: review.replyTime || '',
-      liked: review.liked || false,
-      likeCount: review.likeCount || 0,
       commentCount: review.commentCount || 0,
       comments: (review.comments || []).map(comment => ({
         id: comment.commentId || comment.id,
@@ -390,35 +380,6 @@ const previewImage = (images, index) => {
     urls: images,
     current: index
   })
-}
-
-/**
- * REVIEW-002: 点赞评价
- */
-const toggleLike = async (review) => {
-  try {
-    // REVIEW-002: 调用API点赞/取消点赞
-    if (review.liked) {
-      await reviewApi.unlike(review.id, { userId: userStore.userId })
-    } else {
-      await reviewApi.like(review.id, { userId: userStore.userId })
-    }
-
-    review.liked = !review.liked
-    review.likeCount = review.liked ? (review.likeCount || 0) + 1 : Math.max((review.likeCount || 0) - 1, 0)
-
-    uni.showToast({
-      title: review.liked ? '已点赞' : '已取消',
-      icon: 'success',
-      duration: 1500
-    })
-  } catch (error) {
-    console.error('点赞失败:', error)
-    uni.showToast({
-      title: '操作失败',
-      icon: 'none'
-    })
-  }
 }
 
 /**
