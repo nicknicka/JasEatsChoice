@@ -32,18 +32,23 @@ test.describe('模块十四：管理员端-系统管理', () => {
 
   test.beforeEach(async ({ page }) => { await bootstrapAdminSession(page) })
 
-  test.fixme('14.1 数据统计 (blocked by #72)', async ({ page, request }) => {
-    const dashboard = await apiRequest(page, request, '/admin/statistics/dashboard?days=7')
-    await page.goto('/admin/dashboard')
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
+  test('14.1 数据统计', async ({ page, request }) => {
+    markRunning('14.1')
+    try {
+      const dashboard = await apiRequest(page, request, '/admin/statistics/dashboard?days=7')
+      await page.goto('/admin/dashboard')
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
 
-    const cards = page.locator('.stats-grid .stat-card')
-    await expect(cards).toHaveCount(5)
-    await expect(cards.filter({ hasText: '用户总数' })).toContainText(String(dashboard.summary.totalUsers))
-    await expect(cards.filter({ hasText: '商家总数' })).toContainText(String(dashboard.summary.totalMerchants))
-    await expect(cards.filter({ hasText: '今日订单' })).toContainText(String(dashboard.summary.newOrders))
-    await expect(cards.filter({ hasText: '今日收入' })).toContainText(Number(dashboard.summary.newRevenue).toFixed(2))
-    await expect(cards.filter({ hasText: '今日新增用户' })).toContainText(String(dashboard.summary.newUsers))
+      const cards = page.locator('.stats-grid .stat-card')
+      await expect(cards).toHaveCount(5)
+      await expect(cards.filter({ hasText: '用户总数' })).toContainText(String(dashboard.summary.totalUsers))
+      await expect(cards.filter({ hasText: '商家总数' })).toContainText(String(dashboard.summary.totalMerchants))
+      await expect(cards.filter({ hasText: '今日订单' })).toContainText(String(dashboard.summary.newOrders))
+      await expect(cards.filter({ hasText: '今日收入' })).toContainText(Number(dashboard.summary.newRevenue).toFixed(2))
+      await expect(cards.filter({ hasText: '今日新增用户' })).toContainText(String(dashboard.summary.newUsers))
+
+      markPassed('14.1', '五张统计卡与接口 summary 值一致')
+    } catch (e) { markFailed('14.1', e.message.slice(0, 50)); throw e }
   })
 
   test('14.2 角色管理', async ({ page, request }) => {
