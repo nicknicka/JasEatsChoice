@@ -821,17 +821,20 @@ const selectConversation = async (conversation) => {
   // 清空未读消息
   if (conversation.unreadCount > 0) {
     try {
-      // 调用后端API清空未读数
-      await api.post(`/v1/chat/sessions/${conversation.id}/unread-clear`, {
+      const response = await api.post(`/v1/chat/sessions/${conversation.id}/unread-clear`, {
         userId: userId.value.toString()
       })
+
+      if (!response?.success) {
+        ElMessage.error(response?.message || '标记已读失败')
+        return
+      }
 
       conversation.unreadCount = 0
       ElMessage.success('消息已标记为已读')
     } catch (error) {
       console.error('标记已读失败:', error)
-      // 即使API调用失败，也清空前端未读数（用户体验优先）
-      conversation.unreadCount = 0
+      ElMessage.error('标记已读失败，请稍后重试')
     }
   }
 

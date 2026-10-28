@@ -15,7 +15,7 @@ function apiUrl(path, params = {}) {
 }
 
 async function apiRequest(page, path, options = {}) {
-  const token = await page.evaluate(() => localStorage.getItem('token'))
+  const token = await page.evaluate(() => localStorage.getItem('auth_token') || localStorage.getItem('token'))
   const response = await fetch(`${TEST_API_BASE}${path}`, {
     ...options,
     headers: {
@@ -39,8 +39,13 @@ async function restoreOrderStatus(page, orderId, status) {
   })
 }
 
+async function getChatSession(page, userId, sessionId) {
+  const sessions = await apiRequest(page, `/v1/chat/users/${encodeURIComponent(userId)}/chat-sessions`)
+  return sessions.find(item => item.id === sessionId)
+}
+
 async function fetchJson(page, path, params = {}) {
-  const token = await page.evaluate(() => localStorage.getItem('token'))
+  const token = await page.evaluate(() => localStorage.getItem('auth_token') || localStorage.getItem('token'))
   const response = await fetch(apiUrl(path, params), {
     headers: token ? { Authorization: `Bearer ${token}` } : {}
   })
@@ -426,6 +431,52 @@ test.describe('模块十：商家端-订单与菜品管理', () => {
         method: 'PUT',
         body: JSON.stringify({ status: originalStatus })
       })
+    }
+  })
+
+  test('10.14 商家会话已读持久化', async ({ page }) => {
+    markRunning('10.14')
+    const merchantId = await getMerchantId()
+    const sessionId = `Se2e_read_${Date.now()}`
+    try {
+      await apiRequest(page, '/v1/chat/sessions', {
+        method: 'POST',
+        body: JSON.stringify({
+          userId: String(merchantId),
+          sessionId,
+          sessionType: 'single',
+          sessionName: 'E2E已读会话',
+          memberCount: 0,
+          targetId: `e2e_missing_${Date.now()}`
+        })
+      })
+      await apiRequest(page, `/v1/chat/sessions/${sessionId}/unread-clear`, {
+        method: 'POST',
+        body: JSON.stringify({ userId: String(merchantId) })
+      })
+      await apiRequest(page, `/v1/chat/sessions/${sessionId}/unread-increment`, {
+        method: 'POST',
+        body: JSON.stringify({ userId: String(merchantId) })
+      })
+      expect((await getChatSession(page, merchantId, sessionId)).unreadCount).toBe(1)
+
+      await page.goto('/merchant/home/chat')
+      const conversation = page.locator('.conversation-item').filter({ hasText: 'E2E已读会话' }).first()
+      await expect(conversation).toBeVisible({ timeout: 10000 })
+      await conversation.click()
+      await expect(page.locator('.el-message').filter({ hasText: '消息已标记为已读' })).toBeVisible({ timeout: 10000 })
+
+      await expect.poll(async () => (await getChatSession(page, merchantId, sessionId)).unreadCount).toBe(0)
+      await page.reload()
+      await expect(page.locator('.conversation-item').filter({ hasText: 'E2E已读会话' }).first().locator('.unread-badge')).toHaveCount(0, { timeout: 10000 })
+      markPassed('10.14', `商家会话 ${sessionId} 已读状态刷新后仍为已读`)
+    } catch (e) {
+      markFailed('10.14', e.message.slice(0, 50))
+      throw e
+    } finally {
+      await apiRequest(page, `/v1/chat/sessions/${sessionId}?userId=${encodeURIComponent(merchantId)}`, {
+        method: 'DELETE'
+      }).catch(() => null)
     }
   })
 

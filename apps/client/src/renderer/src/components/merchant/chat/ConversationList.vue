@@ -1,6 +1,5 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { ElMessage } from 'element-plus'
 import { ChatDotRound } from '@element-plus/icons-vue'
 import { getAvatarText, getAvatarUrl } from '../../../utils/avatar'
 
@@ -56,11 +55,6 @@ const filteredConversations = computed(() => {
 // 选择会话
 const selectConversation = (conversation) => {
   emit('select', conversation)
-  // 清空未读消息
-  if (conversation.unreadCount > 0) {
-    conversation.unreadCount = 0
-    ElMessage.success('消息已标记为已读')
-  }
 }
 
 const shouldShowImageAvatar = (conversation) => {

@@ -211,15 +211,16 @@ export const markMessagesAsRead = async (sessionId, userId) => {
       userId: String(userId)
     })
 
-    return {
-      success: response?.success || false
+    if (!response?.success) {
+      handleApiError(new Error(response?.message || '标记已读失败'))
+      return { success: false }
     }
+
+    return { success: true }
   } catch (error) {
     console.error('标记已读失败:', error)
-    // 静默失败，不显示错误提示
-    return {
-      success: false
-    }
+    handleApiError(error, '标记已读失败')
+    return { success: false }
   }
 }
 

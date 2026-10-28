@@ -275,7 +275,23 @@ public class ChatSessionController {
         updateWrapper.eq(ChatSession::getSessionId, sessionId);
         updateWrapper.set(ChatSession::getUnreadCount, 0);
         updateWrapper.set(ChatSession::getUpdatedAt, LocalDateTime.now());
-        chatSessionService.update(updateWrapper);
+        boolean updated = chatSessionService.update(updateWrapper);
+
+        if (!updated) {
+            ChatSession session = chatSessionService.getOne(
+                    new LambdaQueryWrapper<ChatSession>()
+                            .eq(ChatSession::getUserId, userId)
+                            .eq(ChatSession::getSessionId, sessionId)
+            );
+
+            if (session == null) {
+                return ResponseResult.fail("404", "会话不存在");
+            }
+
+            if (session.getUnreadCount() != null && session.getUnreadCount() != 0) {
+                return ResponseResult.fail("500", "未读状态更新失败");
+            }
+        }
 
         return ResponseResult.success("清除成功");
     }
@@ -301,7 +317,12 @@ public class ChatSessionController {
             int newPinned = (session.getPinned() == null || session.getPinned() == 0) ? 1 : 0;
             session.setPinned(newPinned);
             session.setUpdatedAt(LocalDateTime.now());
-            chatSessionService.updateById(session);
+            boolean updated = chatSessionService.updateById(session);
+
+            if (!updated) {
+                return ResponseResult.fail("500", "置顶状态更新失败");
+            }
+
             return ResponseResult.success(newPinned == 1);
         }
 

@@ -89,22 +89,34 @@ export function useConversations(userId = ref(null)) {
   /**
    * 切换置顶状态
    */
-  const togglePin = (conversation) => {
+  const togglePin = async (conversation) => {
     if (conversation.type === 'group') {
       ElMessage.info('群聊不支持置顶')
       return
     }
 
-    conversation.pinned = !conversation.pinned
-    contextMenuVisible.value = false
-    selectedContextConversation.value = null
+    try {
+      const response = await api.post(`/v1/chat/sessions/${conversation.id}/toggle-pin`, {
+        userId: userId.value?.toString()
+      })
 
-    ElMessage({
-      message: conversation.pinned ? '会话已置顶' : '会话已取消置顶',
-      type: 'success'
-    })
+      if (!response?.success || typeof response.data !== 'boolean') {
+        ElMessage.error(response?.message || '置顶状态更新失败')
+        return
+      }
 
-    // TODO: 持久化到后端
+      conversation.pinned = response.data
+      contextMenuVisible.value = false
+      selectedContextConversation.value = null
+
+      ElMessage({
+        message: conversation.pinned ? '会话已置顶' : '会话已取消置顶',
+        type: 'success'
+      })
+    } catch (error) {
+      console.error('置顶状态更新失败:', error)
+      ElMessage.error('置顶状态更新失败，请稍后重试')
+    }
   }
 
   /**
@@ -175,17 +187,20 @@ export function useConversations(userId = ref(null)) {
     // 清空未读消息
     if (conversation.unreadCount > 0) {
       try {
-        // 调用后端API清空未读数
-        await api.post(`/v1/chat/sessions/${conversation.id}/unread-clear`, {
+        const response = await api.post(`/v1/chat/sessions/${conversation.id}/unread-clear`, {
           userId: userId.toString()
         })
+
+        if (!response?.success) {
+          ElMessage.error(response?.message || '标记已读失败')
+          return
+        }
 
         conversation.unreadCount = 0
         ElMessage.success('消息已标记为已读')
       } catch (error) {
         console.error('标记已读失败:', error)
-        // 即使API调用失败，也清空前端未读数（用户体验优先）
-        conversation.unreadCount = 0
+        ElMessage.error('标记已读失败，请稍后重试')
       }
     }
   }

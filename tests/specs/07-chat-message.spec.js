@@ -1,7 +1,35 @@
 const { test, expect, loginAsUser } = require('../fixtures/test-base')
 const { markRunning, markPassed, markFailed, updateSummary } = require('../utils/progress')
+const { TEST_API_BASE } = require('../utils/api')
 
 test.describe('模块七：聊天与消息', () => {
+
+async function apiRequest(page, request, path, options = {}) {
+  const token = await page.evaluate(() => localStorage.getItem('auth_token') || localStorage.getItem('token') || '')
+  const { body, ...requestOptions } = options
+  const response = await request.fetch(`${TEST_API_BASE.replace(/\/$/, '')}${path}`, {
+    ...requestOptions,
+    data: body,
+    headers: {
+      Accept: 'application/json',
+      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options.headers || {})
+    }
+  })
+  const responseBody = await response.json().catch(() => null)
+  if (!response.ok() || !responseBody?.success) {
+    throw new Error(`请求 ${path} 失败（${response.status()}）：${responseBody?.message || '无响应'}`)
+  }
+  return responseBody.data
+}
+
+async function getConversation(page, request, userId, sessionId) {
+  const conversations = await apiRequest(page, request, `/v1/chat/users/${encodeURIComponent(userId)}/chat-sessions`)
+  const conversation = conversations.find(item => item.id === sessionId)
+  if (!conversation) throw new Error(`会话 ${sessionId} 不存在`)
+  return conversation
+}
 
   test.beforeEach(async ({ page }) => { await loginAsUser(page) })
 
@@ -42,6 +70,51 @@ test.describe('模块七：聊天与消息', () => {
       await expect(currentConversation.locator('.last-message')).toContainText(message, { timeout: 10000 })
       markPassed('7.2', '真实消息发送后出现在当前会话')
     } catch (e) { markFailed('7.2', e.message.slice(0, 50)); throw e }
+  })
+
+  test('7.6 会话置顶持久化', async ({ page, request }) => {
+    markRunning('7.6')
+    const userId = await page.evaluate(() => localStorage.getItem('auth_userId') || localStorage.getItem('userId'))
+    const sessionId = `Se2e_pin_${Date.now()}`
+    try {
+      await apiRequest(page, request, '/v1/chat/sessions', {
+        method: 'POST',
+        body: JSON.stringify({
+          userId: String(userId),
+          sessionId,
+          sessionType: 'single',
+          sessionName: 'E2E置顶会话',
+          avatar: '💬',
+          memberCount: 0,
+          targetId: `e2e_pin_target_${Date.now()}`
+        })
+      })
+
+      await page.goto('/user/home/chat')
+      const targetConversation = page.locator('.conversation-item').filter({ hasText: 'E2E置顶会话' }).first()
+      await expect(targetConversation).toBeVisible({ timeout: 10000 })
+      const pinResponsePromise = page.waitForResponse((response) =>
+        response.url().includes(`/v1/chat/sessions/${sessionId}/toggle-pin`) &&
+        response.request().method() === 'POST'
+      )
+      await targetConversation.dispatchEvent('contextmenu')
+      await page.locator('.context-menu .menu-item').filter({ hasText: '置顶会话' }).click()
+      const pinResponse = await pinResponsePromise
+      const pinBody = await pinResponse.json()
+      expect(pinResponse.ok(), `置顶接口应返回成功：${pinBody.message || ''}`).toBeTruthy()
+      expect(pinBody.success, `置顶接口不应返回失败：${pinBody.message || ''}`).toBe(true)
+      expect(pinBody.data).toBe(true)
+
+      await expect.poll(async () => (await getConversation(page, request, userId, sessionId)).pinned).toBe(true)
+      await page.reload()
+      await expect.poll(async () => (await getConversation(page, request, userId, sessionId)).pinned).toBe(true)
+      markPassed('7.6', `临时会话 ${sessionId} 置顶并重新查询后仍为 true`)
+    } catch (e) { markFailed('7.6', e.message.slice(0, 50)); throw e }
+    finally {
+      await apiRequest(page, request, `/v1/chat/sessions/${sessionId}?userId=${encodeURIComponent(userId)}`, {
+        method: 'DELETE'
+      }).catch(() => null)
+    }
   })
 
   test('7.3 消息通知', async ({ page }) => {
