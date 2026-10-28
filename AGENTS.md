@@ -55,6 +55,22 @@ bash scripts/ci-e2e.sh [spec ...]   # 一条命令从空仓到跑完用例
 - **`tests/progress.txt` 是用例台账**，跑测试会写它，不要手工改成"通过"。
 - macOS 自带 `/bin/bash` 是 3.2，没有关联数组；脚本里别用 `declare -A`。
 
+## 多 agent 协作与收尾
+
+多个 agent 并行改造时，按下面的规矩收尾，否则仓库和工作机会越积越乱（都是实测踩过的）。
+
+- **一个 issue = 一个 worktree + 一个分支。** 分支统一 `codex/<issue>-<slug>`。
+- **合并 PR 后立即清理**：`git worktree remove --force <path>`、删本地与远端分支。不要攒批，攒完很难判断哪个还有用。
+- **清理前先确认没有 agent 还在写**（有人正在跑时清理，会白清一遍）。
+- **agent 收尾必须销毁自己的验证栈**：`docker compose ... down -v`；隔离栈统一用 `--project-name codex<issue>`，别用 `jaseats-`、`jaseats-codex-60-` 这类乱名，否则无法批量清理。
+- **`deploy/.env` 是 gitignore 的，worktree 里不存在。** 需要栈时用临时 env，或接受无 key 的降级验证。
+- **`tests/progress.txt` 是运行产物**，提交前 `git checkout -- tests/progress.txt`，任何 PR 都不该含它的 diff。
+- **PR 的 smoke 只跑 `01/04/10` 三个 spec**；改动涉及 03/05/06/07/08/09/11~14 时，必须本地跑对应 spec，不能只看 PR 绿就合并。
+- **判断"某分支自己改了什么"** 用 `git diff $(git merge-base origin/main <branch>)..<branch>`，或用三点 `git diff origin/main...<branch>`；直接 `git diff origin/main..<branch>` 会把主干新增显示成该分支的删除，容易误判。
+- **测试数据别依赖会随时间失效的 seed。** 例如公告有 `start_time`/`end_time`，`AnnouncementScheduler` 会把过期公告置为 `inactive`；用例应自建临时数据并在 `finally` 清理。
+- **关闭 issue 前搜一遍指向它的 `test.fixme`**，避免留下永远解不开的孤儿 fixme。
+- **长任务（全量回归、镜像构建）用持久会话跑**；`nohup ... &` 在会话结束后会被杀掉，看起来像"跑完了"其实没有。
+
 ## Agent skills
 
 ### Issue tracker
