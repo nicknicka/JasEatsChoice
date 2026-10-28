@@ -3,7 +3,7 @@
 # Shared by the smoke and regression workflows so CI and `make test` use one path.
 #
 #   scripts/ci-e2e.sh <spec> [<spec> ...]
-#   scripts/ci-e2e.sh all            # 全部 107 条
+#   scripts/ci-e2e.sh all            # 全部 114 条
 #
 # Everything binds 127.0.0.1 on purpose: nginx serves `listen 80` (IPv4) and Vite
 # inherits that, so a "localhost" base URL can resolve to ::1 first and be refused.
@@ -56,7 +56,7 @@ WAIT_TIMEOUT="${WAIT_TIMEOUT:-600}" scripts/wait-healthy.sh mysql redis spring-b
 
 echo "==> 3/5 种子与账号自检"
 curl -fsS http://127.0.0.1:7777/api/actuator/health | grep -q '"status":"UP"'
-# 用例的登录夹具依赖这两个账号，先在这里确认，免得 107 条一起红
+# 用例的登录夹具依赖这两个账号，先在这里确认，免得 114 条一起红
 curl -fsS -X POST http://127.0.0.1:7777/api/admin/login \
   -H 'Content-Type: application/json' \
   -d '{"username":"admin","password":"admin123"}' | grep -q '"success":true'
@@ -76,7 +76,7 @@ curl -fsS -o /dev/null "$PLAYWRIGHT_BASE_URL/" || {
 }
 echo "  $PLAYWRIGHT_BASE_URL 可访问"
 
-echo "==> 5/5 跑用例：$([[ $ALL_TESTS -eq 1 ]] && echo 全部 107 条 || echo "${SPECS[*]}")"
+echo "==> 5/5 跑用例：$([[ $ALL_TESTS -eq 1 ]] && echo 全部 114 条 || echo "${SPECS[*]}")"
 cd tests
 if [[ $ALL_TESTS -eq 1 ]]; then
   npx playwright test
