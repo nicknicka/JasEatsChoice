@@ -4,9 +4,9 @@
 #   make env         生成 deploy/.env（随机密码与 JWT 密钥，永不入库）
 #   make up          起开发栈（MySQL + Redis + Spring Boot + nginx），并等健康
 #   make down        停栈（保留数据卷）
-#   make reset-db    删掉 MySQL 数据卷并重新导入 db/init（会清空现有数据）
+#   make reset-db    删掉 MySQL 数据卷，空卷启动后由后端 Flyway 重新迁移（会清空现有数据）
 #   make web         构建 Web 版静态产物到 apps/client/dist-web
-#   make test        跑全部 107 条 Playwright 用例
+#   make test        跑全部 111 条 Playwright 用例
 #   make test-smoke  只跑 01/04/10 三条冒烟
 #   make check       静态防线：单测 + 路由漂移 + lint 门禁（不起容器）
 #   make desktop     Electron 打包回归（build:mac）
@@ -75,11 +75,11 @@ ps:
 logs:
 	$(COMPOSE_DEV) logs -f spring-boot
 
-# 数据卷是唯一的数据来源；db/init 下的脚本只在空卷时执行
+# 数据卷是唯一的数据来源；空卷启动后由后端 Flyway 依次执行迁移
 reset-db:
 	$(COMPOSE_DEV) down -v
 	$(COMPOSE_DEV) up -d mysql
-	@echo "等待 MySQL 导入 db/init…"
+	@echo "等待 MySQL 就绪；后端启动时由 Flyway 执行迁移…"
 	@for i in $$(seq 1 60); do \
 		if $(COMPOSE_DEV) exec -T mysql mysqladmin ping -h localhost -uroot -p"$$MYSQL_ROOT_PASSWORD" >/dev/null 2>&1; then break; fi; \
 		sleep 3; \
