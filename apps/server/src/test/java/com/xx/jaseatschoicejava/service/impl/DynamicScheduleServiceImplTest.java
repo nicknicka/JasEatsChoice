@@ -14,12 +14,14 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.scheduling.TaskScheduler;
 
 import java.time.Instant;
+import java.util.concurrent.ScheduledFuture;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -49,6 +51,7 @@ public class DynamicScheduleServiceImplTest {
         ScheduledTask task = task(SuccessfulTask.class.getName(), "execute");
         task.setLastErrorMessage("旧错误");
         when(scheduledTaskMapper.selectById(TASK_ID)).thenReturn(task);
+        when(scheduledTaskMapper.updateById(task)).thenReturn(1);
         when(applicationContext.getBean(SuccessfulTask.class)).thenReturn(taskBean);
 
         assertTrue(service.executeNow(TASK_ID));
@@ -70,6 +73,7 @@ public class DynamicScheduleServiceImplTest {
         FailingTask taskBean = new FailingTask();
         ScheduledTask task = task(FailingTask.class.getName(), "execute");
         when(scheduledTaskMapper.selectById(TASK_ID)).thenReturn(task);
+        when(scheduledTaskMapper.updateById(task)).thenReturn(1);
         when(applicationContext.getBean(FailingTask.class)).thenReturn(taskBean);
 
         assertTrue(service.executeNow(TASK_ID));
@@ -83,6 +87,74 @@ public class DynamicScheduleServiceImplTest {
         assertEquals("FAILED", taskLog.getExecuteStatus());
         assertEquals("业务执行失败", taskLog.getErrorMessage());
         assertTrue(taskLog.getExceptionStack().contains("业务执行失败"));
+    }
+
+    @Test
+    public void addAndStartTask_whenTaskDoesNotExist_shouldInsert() {
+        ScheduledTask task = task(SuccessfulTask.class.getName(), "execute");
+        task.setTaskType("ONCE");
+        when(scheduledTaskMapper.selectById(TASK_ID)).thenReturn(null);
+        when(scheduledTaskMapper.insert(task)).thenReturn(1);
+        when(taskScheduler.schedule(any(Runnable.class), any(Instant.class)))
+                .thenReturn(taskFuture());
+
+        assertTrue(service.addAndStartTask(task));
+
+        assertEquals("RUNNING", task.getStatus());
+        verify(scheduledTaskMapper).insert(task);
+        verify(scheduledTaskMapper, never()).updateById(task);
+    }
+
+    @Test
+    public void addAndStartTask_whenTaskExists_shouldFailInsteadOfUpdate() {
+        ScheduledTask task = task(SuccessfulTask.class.getName(), "execute");
+        task.setTaskType("ONCE");
+        when(scheduledTaskMapper.selectById(TASK_ID)).thenReturn(task);
+
+        assertEquals(false, service.addAndStartTask(task));
+
+        verify(scheduledTaskMapper, never()).insert(task);
+        verify(scheduledTaskMapper, never()).updateById(task);
+        verify(taskScheduler, never()).schedule(any(Runnable.class), any(Instant.class));
+    }
+
+    @Test
+    public void addAndStartTask_whenInsertAffectsNoRows_shouldFail() {
+        ScheduledTask task = task(SuccessfulTask.class.getName(), "execute");
+        task.setTaskType("ONCE");
+        when(scheduledTaskMapper.selectById(TASK_ID)).thenReturn(null);
+        when(scheduledTaskMapper.insert(task)).thenReturn(0);
+
+        assertEquals(false, service.addAndStartTask(task));
+
+        verify(taskScheduler, never()).schedule(any(Runnable.class), any(Instant.class));
+    }
+
+    @Test
+    public void updateAndRestartTask_whenTaskExists_shouldUpdateInsteadOfInsert() {
+        ScheduledTask task = task(SuccessfulTask.class.getName(), "execute");
+        task.setTaskType("ONCE");
+        when(scheduledTaskMapper.selectById(TASK_ID)).thenReturn(task);
+        when(scheduledTaskMapper.updateById(task)).thenReturn(1);
+        when(taskScheduler.schedule(any(Runnable.class), any(Instant.class)))
+                .thenReturn(taskFuture());
+
+        assertTrue(service.updateAndRestartTask(task));
+
+        verify(scheduledTaskMapper).updateById(task);
+        verify(scheduledTaskMapper, never()).insert(task);
+    }
+
+    @Test
+    public void updateAndRestartTask_whenUpdateAffectsNoRows_shouldFail() {
+        ScheduledTask task = task(SuccessfulTask.class.getName(), "execute");
+        task.setTaskType("ONCE");
+        when(scheduledTaskMapper.selectById(TASK_ID)).thenReturn(task);
+        when(scheduledTaskMapper.updateById(task)).thenReturn(0);
+
+        assertEquals(false, service.updateAndRestartTask(task));
+
+        verify(taskScheduler, never()).schedule(any(Runnable.class), any(Instant.class));
     }
 
     private ScheduledTask task(String className, String methodName) {
@@ -108,6 +180,10 @@ public class DynamicScheduleServiceImplTest {
         ArgumentCaptor<ScheduledTaskLog> captor = ArgumentCaptor.forClass(ScheduledTaskLog.class);
         verify(scheduledTaskLogMapper).insert(captor.capture());
         return captor.getValue();
+    }
+
+    private ScheduledFuture taskFuture() {
+        return org.mockito.Mockito.mock(ScheduledFuture.class);
     }
 
     public static class SuccessfulTask {

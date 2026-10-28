@@ -76,7 +76,7 @@ public class DynamicScheduleServiceImpl implements DynamicScheduleService {
         // 启动每个任务
         for (ScheduledTask task : tasks) {
             try {
-                addAndStartTask(task);
+                startExistingTask(task);
                 log.info("任务 [{}] 启动成功", task.getTaskName());
             } catch (Exception e) {
                 log.error("任务 [{}] 启动失败: {}", task.getTaskName(), e.getMessage(), e);
@@ -88,76 +88,33 @@ public class DynamicScheduleServiceImpl implements DynamicScheduleService {
 
     @Override
     public boolean addAndStartTask(ScheduledTask task) {
+        String taskId = task.getId();
         try {
-            String taskId = task.getId();
+            if (taskId != null && scheduledTaskMapper.selectById(taskId) != null) {
+                log.error("创建任务失败，任务已存在: {}", taskId);
+                return false;
+            }
+            cancelTrackedTask(taskId);
 
-            // 如果任务已存在，先停止
-            if (taskFutures.containsKey(taskId)) {
-                stopAndRemoveTask(taskId);
+            task.setStatus("RUNNING");
+            int affectedRows = scheduledTaskMapper.insert(task);
+            if (affectedRows != 1) {
+                log.error("任务 [{}] 保存失败，影响行数: {}", task.getTaskName(), affectedRows);
+                return false;
             }
 
-            // 根据任务类型调度
-            ScheduledFuture<?> future = null;
-
-            switch (task.getTaskType()) {
-                case "CRON":
-                    // Cron表达式任务
-                    CronTrigger cronTrigger = new CronTrigger(task.getCronExpression());
-                    future = taskScheduler.schedule(
-                            () -> executeTask(task),
-                            cronTrigger
-                    );
-                    break;
-
-                case "FIXED_RATE":
-                    // 固定频率任务
-                    future = taskScheduler.scheduleAtFixedRate(
-                            () -> executeTask(task),
-                            Instant.now(),
-                            Duration.ofMillis(task.getRateInMillis())
-                    );
-                    break;
-
-                case "FIXED_DELAY":
-                    // 固定延迟任务
-                    future = taskScheduler.scheduleWithFixedDelay(
-                            () -> executeTask(task),
-                            Instant.now(),
-                            Duration.ofMillis(task.getRateInMillis())
-                    );
-                    break;
-
-                case "ONCE":
-                    // 一次性任务
-                    future = taskScheduler.schedule(
-                            () -> executeTask(task),
-                            Instant.now()
-                    );
-                    break;
-
-                default:
-                    log.error("不支持的任务类型: {}", task.getTaskType());
-                    return false;
+            taskId = task.getId();
+            if (taskId == null || taskId.isBlank()) {
+                log.error("任务 [{}] 保存后任务ID为空", task.getTaskName());
+                return false;
             }
 
-            if (future != null) {
-                taskFutures.put(taskId, future);
-
-                // 存储运行中的任务信息
-                Map<String, Object> taskInfo = new HashMap<>();
-                taskInfo.put("task", task);
-                taskInfo.put("startTime", LocalDateTime.now());
-                runningTasks.put(taskId, taskInfo);
-
-                // 更新任务状态
-                task.setStatus("RUNNING");
-                scheduledTaskMapper.updateById(task);
-
-                log.info("任务 [{}] 已添加并启动", task.getTaskName());
-                return true;
+            if (!scheduleAndTrackTask(task)) {
+                return false;
             }
 
-            return false;
+            log.info("任务 [{}] 已添加并启动", task.getTaskName());
+            return true;
 
         } catch (Exception e) {
             log.error("添加并启动任务失败: {}", task.getTaskName(), e);
@@ -167,11 +124,87 @@ public class DynamicScheduleServiceImpl implements DynamicScheduleService {
 
     @Override
     public boolean updateAndRestartTask(ScheduledTask task) {
-        // 先停止旧任务
-        stopAndRemoveTask(task.getId());
+        String taskId = task.getId();
+        if (taskId == null || scheduledTaskMapper.selectById(taskId) == null) {
+            log.error("更新任务失败，任务不存在: {}", taskId);
+            return false;
+        }
 
-        // 重新启动任务
-        return addAndStartTask(task);
+        if (!startExistingTask(task)) {
+            return false;
+        }
+
+        log.info("任务 [{}] 已更新并重新启动", task.getTaskName());
+        return true;
+    }
+
+    private boolean startExistingTask(ScheduledTask task) {
+        cancelTrackedTask(task.getId());
+        task.setStatus("RUNNING");
+        if (scheduledTaskMapper.updateById(task) != 1) {
+            log.error("启动任务失败，任务不存在: {}", task.getId());
+            return false;
+        }
+        return scheduleAndTrackTask(task);
+    }
+
+    private boolean scheduleAndTrackTask(ScheduledTask task) {
+        ScheduledFuture<?> future;
+        switch (task.getTaskType()) {
+            case "CRON":
+                future = taskScheduler.schedule(
+                        () -> executeTask(task),
+                        new CronTrigger(task.getCronExpression())
+                );
+                break;
+            case "FIXED_RATE":
+                future = taskScheduler.scheduleAtFixedRate(
+                        () -> executeTask(task),
+                        Instant.now(),
+                        Duration.ofMillis(task.getRateInMillis())
+                );
+                break;
+            case "FIXED_DELAY":
+                future = taskScheduler.scheduleWithFixedDelay(
+                        () -> executeTask(task),
+                        Instant.now(),
+                        Duration.ofMillis(task.getRateInMillis())
+                );
+                break;
+            case "ONCE":
+                future = taskScheduler.schedule(
+                        () -> executeTask(task),
+                        Instant.now()
+                );
+                break;
+            default:
+                log.error("不支持的任务类型: {}", task.getTaskType());
+                return false;
+        }
+
+        if (future == null) {
+            log.error("任务 [{}] 调度失败", task.getTaskName());
+            return false;
+        }
+
+        String taskId = task.getId();
+        taskFutures.put(taskId, future);
+        Map<String, Object> taskInfo = new HashMap<>();
+        taskInfo.put("task", task);
+        taskInfo.put("startTime", LocalDateTime.now());
+        runningTasks.put(taskId, taskInfo);
+        return true;
+    }
+
+    private void cancelTrackedTask(String taskId) {
+        if (taskId == null) {
+            return;
+        }
+        ScheduledFuture<?> future = taskFutures.remove(taskId);
+        if (future != null) {
+            future.cancel(false);
+        }
+        runningTasks.remove(taskId);
     }
 
     @Override
@@ -199,9 +232,7 @@ public class DynamicScheduleServiceImpl implements DynamicScheduleService {
     public boolean resumeTask(String taskId) {
         ScheduledTask task = scheduledTaskMapper.selectById(taskId);
         if (task != null && "PAUSED".equals(task.getStatus())) {
-            task.setStatus("ENABLED");
-            scheduledTaskMapper.updateById(task);
-            return addAndStartTask(task);
+            return startExistingTask(task);
         }
         return false;
     }
