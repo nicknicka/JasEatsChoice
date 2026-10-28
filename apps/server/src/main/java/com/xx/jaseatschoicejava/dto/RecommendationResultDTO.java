@@ -12,6 +12,11 @@ import java.util.List;
 public class RecommendationResultDTO {
 
     /**
+     * 推荐批次ID（对应 ai_recommendation_log.recommendation_id）
+     */
+    private String recommendationId;
+
+    /**
      * 菜品ID
      */
     private String dishId;

@@ -795,6 +795,7 @@ public class RecommendationServiceImpl implements RecommendationService {
             }
 
             recommendationLogMapper.insert(log);
+            result.setRecommendationId(recommendationId);
         }
     }
 
