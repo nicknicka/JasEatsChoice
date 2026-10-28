@@ -35,6 +35,8 @@ public class WebSocketMessageServiceTest {
     public void tearDown() {
         // 注册表是静态的，测试之间必须彻底断开，否则会互相污染
         for (EmbeddedChannel channel : openedChannels) {
+            // 注册表是静态的：必须显式注销，否则会污染同 JVM 内的其它测试
+            WebSocketMessageService.removeChannel(channel);
             if (channel.isOpen()) {
                 channel.close();
             }

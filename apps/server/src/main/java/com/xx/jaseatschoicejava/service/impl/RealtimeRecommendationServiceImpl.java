@@ -6,7 +6,7 @@ import com.xx.jaseatschoicejava.dto.RecommendationResultDTO;
 import com.xx.jaseatschoicejava.entity.Dish;
 import com.xx.jaseatschoicejava.enums.MsgType;
 import com.xx.jaseatschoicejava.mapper.DishMapper;
-import com.xx.jaseatschoicejava.netty.NettyServer;
+import com.xx.jaseatschoicejava.websocket.WebSocketMessageService;
 import com.xx.jaseatschoicejava.service.RealtimeRecommendationService;
 import com.xx.jaseatschoicejava.service.RecommendationService;
 import lombok.extern.slf4j.Slf4j;
@@ -30,9 +30,6 @@ public class RealtimeRecommendationServiceImpl implements RealtimeRecommendation
 
     @Autowired
     private DishMapper dishMapper;
-
-    @Autowired(required = false)
-    private NettyServer nettyServer;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -112,6 +109,15 @@ public class RealtimeRecommendationServiceImpl implements RealtimeRecommendation
 
     @Override
     public void pushRealtimeRecommendation(String userId, String context) {
+        deliverRealtimeRecommendation(userId, context);
+    }
+
+    /**
+     * 生成并推送实时推荐，返回实际送达的连接数。
+     *
+     * 0 表示用户不在线，或生成/推送过程中失败（失败已记录日志，不向上抛）。
+     */
+    public int deliverRealtimeRecommendation(String userId, String context) {
         try {
             // 获取实时推荐
             RecommendationRequestDTO request = new RecommendationRequestDTO();
@@ -137,13 +143,18 @@ public class RealtimeRecommendationServiceImpl implements RealtimeRecommendation
 
             String messageJson = objectMapper.writeValueAsString(message);
 
-            // 通过WebSocket推送给用户
-            sendToUser(userId, messageJson);
-
-            log.info("推送实时推荐成功：userId={}, context={}", userId, context);
+            int delivered = WebSocketMessageService.pushToUser(userId, messageJson);
+            if (delivered > 0) {
+                log.info("推送实时推荐成功：userId={}, context={}, 送达连接数={}", userId, context, delivered);
+            } else {
+                // 用户不在线是正常情况，不是错误
+                log.debug("用户不在线，跳过实时推荐：userId={}", userId);
+            }
+            return delivered;
 
         } catch (Exception e) {
             log.error("推送实时推荐失败：userId={}", userId, e);
+            return 0;
         }
     }
 
@@ -153,26 +164,19 @@ public class RealtimeRecommendationServiceImpl implements RealtimeRecommendation
         log.info("开始定时推送推荐任务");
 
         try {
-            // TODO: 获取所有在线用户列表
-            // 这里应该从WebSocket连接管理器获取在线用户
-            List<String> onlineUsers = getOnlineUsers();
+            Set<String> onlineUsers = getOnlineUsers();
 
-            int pushCount = 0;
+            int attempted = 0;
+            int delivered = 0;
             for (String userId : onlineUsers) {
-                try {
-                    // 为每个用户生成并推送推荐
-                    String context = "定时推荐 - " + getCurrentTimePeriod();
-                    pushRealtimeRecommendation(userId, context);
-                    pushCount++;
-
-                    // 避免推送过快，稍微延迟
-                    Thread.sleep(100);
-                } catch (Exception e) {
-                    log.error("推送推荐失败：userId={}", userId, e);
-                }
+                // 单个用户失败在方法内部已兜住，不会中断整批推送
+                String context = "定时推荐 - " + getCurrentTimePeriod();
+                attempted++;
+                delivered += deliverRealtimeRecommendation(userId, context);
             }
 
-            log.info("定时推荐推送完成：在线用户数={}, 成功推送={}", onlineUsers.size(), pushCount);
+            log.info("定时推荐推送完成：在线用户数={}, 尝试推送={}, 实际送达连接数={}",
+                    onlineUsers.size(), attempted, delivered);
 
         } catch (Exception e) {
             log.error("定时推荐推送任务失败", e);
@@ -183,37 +187,28 @@ public class RealtimeRecommendationServiceImpl implements RealtimeRecommendation
      * 向指定用户发送消息
      */
     private void sendToUser(String userId, String message) {
-        if (nettyServer == null) {
-            log.warn("NettyServer未初始化，无法推送消息");
-            return;
+        int delivered = WebSocketMessageService.pushToUser(userId, message);
+        if (delivered > 0) {
+            log.info("已推送消息给用户：userId={}, 送达连接数={}", userId, delivered);
+        } else {
+            // 用户不在线是正常情况，不是错误
+            log.debug("用户不在线，跳过推送：userId={}", userId);
         }
-
-        // TODO: 通过NettyServer向指定用户发送消息
-        // 这里需要调用NettyServer的方法来发送消息给特定用户
-        // 暂时记录日志
-        log.debug("发送消息给用户：userId={}, message={}", userId, message);
     }
 
     /**
      * 向所有在线用户广播消息
      */
     private void broadcastToAll(String message) {
-        if (nettyServer == null) {
-            log.warn("NettyServer未初始化，无法广播消息");
-            return;
-        }
-
-        // TODO: 通过NettyServer广播消息给所有在线用户
-        log.debug("广播消息：message={}", message);
+        int delivered = WebSocketMessageService.broadcastToAll(message);
+        log.info("已广播消息，送达连接数={}", delivered);
     }
 
     /**
      * 获取所有在线用户
      */
-    private List<String> getOnlineUsers() {
-        // TODO: 从WebSocket连接管理器获取在线用户列表
-        // 暂时返回空列表
-        return new ArrayList<>();
+    private Set<String> getOnlineUsers() {
+        return WebSocketMessageService.getOnlineUsers();
     }
 
     /**
