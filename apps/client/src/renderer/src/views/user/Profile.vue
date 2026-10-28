@@ -17,6 +17,10 @@
       </el-skeleton>
     </div>
 
+    <el-card v-else-if="profileError" class="profile-card scale-in">
+      <el-empty :description="profileError" />
+    </el-card>
+
     <el-card v-else class="profile-card scale-in">
       <!-- 顶部头像区域 -->
       <div class="profile-header fade-in-up">
@@ -320,19 +324,25 @@
             <div class="ep-section-content">
               <el-form-item prop="location">
                 <el-cascader
+                  v-if="cascaderData.length > 0"
                   v-model="selectedLocation"
                   :options="cascaderData"
                   :props="cascaderProps"
                   :loading="locationDataLoading"
-                  :disabled="cascaderData.length === 0 && !locationDataLoading"
                   placeholder="选择省 / 市 / 区"
                   clearable
                   filterable
                   style="width: 100%"
                   @change="handleLocationChange"
                 />
+                <el-input
+                  v-else
+                  :model-value="editForm.location"
+                  placeholder="选择省 / 市 / 区"
+                  disabled
+                />
                 <div v-if="cascaderData.length === 0 && !locationDataLoading" class="ep-error">
-                  地址数据加载失败，请刷新页面重试
+                  地址数据加载失败，当前仅展示已保存资料
                 </div>
               </el-form-item>
             </div>
@@ -593,6 +603,7 @@ const userStore = useUserStore()
 // 响应式变量 & Refs
 const loading = ref(true)
 const saving = ref(false)
+const profileError = ref('')
 
 // 用户信息 - 必须与 userStore.UserInfo 接口的字段完全匹配
 const userInfo = ref({
@@ -644,7 +655,7 @@ const commonAvatarRef = ref(null)
 // 计算属性
 // 头像来源 - 统一使用userStore中的头像信息
 const avatarSrc = computed(() => {
-  return userStore.userInfo?.avatar
+  return userInfo.value.avatar
 })
 
 // 今日摄入显示
@@ -838,19 +849,16 @@ const fetchUserInfo = async () => {
     throw new Error('无效的用户ID')
   }
 
-  // 检查是否需要从后端获取
-  const storedInfo = userStore.userInfo
-  const isUserInfoEmpty =
-    !storedInfo ||
-    Object.keys(storedInfo).length === 0 ||
-    !storedInfo.nickname ||
-    !storedInfo.phone
-
-  if (isUserInfoEmpty) {
+  try {
+    profileError.value = ''
     const freshInfo = await userStore.fetchUserInfo(userId)
+    if (!freshInfo) {
+      throw new Error('用户资料为空')
+    }
     userInfo.value = { ...userInfo.value, ...freshInfo }
-  } else {
-    userInfo.value = { ...userInfo.value, ...storedInfo }
+  } catch (error) {
+    profileError.value = '个人资料加载失败，请刷新重试'
+    throw error
   }
 }
 
@@ -1185,6 +1193,19 @@ const handleImageRemove = (file) => {
 }
 
 // 资料编辑功能
+const normalizePreferTags = (preferTags) => {
+  if (Array.isArray(preferTags)) {
+    return preferTags
+  }
+  if (!preferTags || typeof preferTags !== 'object') {
+    return []
+  }
+  return Object.values(preferTags)
+    .flat()
+    .filter((value) => value !== null && value !== undefined && value !== '')
+    .map((value) => String(value))
+}
+
 // 编辑资料
 const editProfile = () => {
   // 将当前用户信息填充到编辑表单
@@ -1196,7 +1217,7 @@ const editProfile = () => {
     height: Number(userInfo.value.height) || 0,
     weight: Number(userInfo.value.weight) || 0,
     dietGoal: userInfo.value.dietGoal || '',
-    preferTags: userInfo.value.preferTags || [],
+    preferTags: normalizePreferTags(userInfo.value.preferTags),
     allergies: userInfo.value.allergies || ''
   })
 

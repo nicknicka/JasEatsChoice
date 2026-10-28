@@ -85,13 +85,8 @@ public class WebConfig implements WebMvcConfigurer {
         // 配置上传文件访问路径
         // 注意：由于 context-path 是 /api，所以这里配置 /uploads/** 后，实际访问路径是 /api/uploads/**
         registry.addResourceHandler("/uploads/**")
-                .addResourceLocations("file:" + absolutePath)
+                .addResourceLocations("file:" + absolutePath, "classpath:/static/uploads/")
                 .setCachePeriod(0); // 禁用缓存，便于调试
-
-        // 同时配置不带 /api 前缀的映射（用于兼容）
-        registry.addResourceHandler("/api/uploads/**")
-                .addResourceLocations("file:" + absolutePath)
-                .setCachePeriod(0);
 
         // 配置通配符文件访问映射（用于兼容旧的直接文件名访问方式）
         // 例如：/api/abc123.png 会映射到 uploads 目录下的 abc123.png
