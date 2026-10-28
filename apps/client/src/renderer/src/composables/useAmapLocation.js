@@ -307,7 +307,6 @@ export const resolveAmapAddress = async ({ lng, lat, AMap = getAmapGlobal() }) =
 export const resolveAmapLocation = async ({
   getLastLocation,
   saveLastLocation,
-  defaultPosition,
   clientIp = null,
   preferCacheFirst = true,
   cacheSources = TRUSTED_CACHE_SOURCES,
@@ -444,21 +443,6 @@ export const resolveAmapLocation = async ({
       address,
       source: cityFallback.source || 'city-fallback',
       accuracy: 'city',
-      reason: highAccuracyError,
-      hasLocation: true
-    }
-  }
-
-  if (defaultPosition?.lng && defaultPosition?.lat) {
-    const address = await reverseGeocode({ lng: defaultPosition.lng, lat: defaultPosition.lat, AMap })
-    return {
-      lng: defaultPosition.lng,
-      lat: defaultPosition.lat,
-      province: '',
-      city: '',
-      address,
-      source: 'default',
-      accuracy: 'default',
       reason: highAccuracyError,
       hasLocation: true
     }

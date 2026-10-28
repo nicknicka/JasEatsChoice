@@ -50,15 +50,15 @@ const addToLocationHistory = (location) => {
 export function useWeather() {
   // 天气数据
   const weather = ref({
-    temp: 32,
-    tempMin: 28,
-    tempMax: 36,
-    condition: '晴天',
+    temp: '',
+    tempMin: '',
+    tempMax: '',
+    condition: '',
     city: '',
     address: '',
-    humidity: 65,
-    windSpeed: 3,
-    aqi: 50,
+    humidity: '',
+    windSpeed: '',
+    aqi: '',
     loading: false,
     error: null
   })
@@ -71,6 +71,9 @@ export function useWeather() {
     const condition = weather.value.condition
     const temp = weather.value.temp
 
+    if (!condition || temp === '' || temp === null || temp === undefined) {
+      return 'linear-gradient(135deg, #C9C4BC 0%, #A8A29A 100%)'
+    }
     if (condition.includes('晴') || condition.includes('热')) {
       // 晴天/热天 - 橙红色
       return 'linear-gradient(135deg, #ff9a56 0%, #ff6b6b 100%)'
@@ -106,7 +109,7 @@ export function useWeather() {
   // 获取天气对应的图标
   const getWeatherIcon = () => {
     const condition = weather.value.condition
-    if (!condition) return 'Sunny'
+    if (!condition) return ''
 
     if (condition.includes('晴')) return 'Sunny'
     if (condition.includes('云') || condition.includes('阴')) return 'Cloudy'
@@ -121,7 +124,7 @@ export function useWeather() {
   // 获取天气对应的 Emoji
   const getWeatherEmoji = () => {
     const condition = weather.value.condition
-    if (!condition) return '☀️'
+    if (!condition) return ''
 
     if (condition.includes('晴')) return '☀️'
     if (condition.includes('云')) return '⛅'
@@ -138,6 +141,9 @@ export function useWeather() {
   // 获取空气质量描述
   const getAQIDescription = () => {
     const aqi = weather.value.aqi
+    if (aqi === '' || aqi === null || aqi === undefined) {
+      return { text: '暂无数据', color: '#8A857E' }
+    }
     if (aqi <= 50) return { text: '优', color: '#52c41a' }
     if (aqi <= 100) return { text: '良', color: '#1890ff' }
     if (aqi <= 150) return { text: '轻度污染', color: '#faad14' }
@@ -152,6 +158,10 @@ export function useWeather() {
     const temp = weather.value.temp
     const humidity = weather.value.humidity
     const hour = new Date().getHours()
+
+    if (!condition || temp === '' || temp === null || temp === undefined) {
+      return '暂无天气建议'
+    }
 
     // 早餐时段 (6-10点)
     if (hour >= 6 && hour < 10) {
@@ -213,6 +223,9 @@ export function useWeather() {
     const temp = weather.value.temp
     const condition = weather.value.condition
 
+    if (temp === '' || temp === null || temp === undefined) {
+      return ''
+    }
     if (temp < 10) {
       return '寒冷，建议穿羽绒服、棉衣等厚重冬装'
     }
@@ -233,6 +246,9 @@ export function useWeather() {
     const condition = weather.value.condition
     const aqi = weather.value.aqi
 
+    if (!condition || aqi === '' || aqi === null || aqi === undefined) {
+      return ''
+    }
     if (aqi > 150) {
       return '空气质量不佳，不建议户外运动'
     }
@@ -349,16 +365,19 @@ export function useWeather() {
         const response = await api.get(
           `${API_CONFIG.weather.current}?city=${encodeURIComponent(selectedCity)}`
         )
+        if (response?.success === false) {
+          throw new Error(response.message || '天气服务不可用')
+        }
 
         if (response?.data) {
           weatherData = {
-            temp: response.data.temperature || 25,
-            tempMin: response.data.tempMin || response.data.temperature - 3,
-            tempMax: response.data.tempMax || response.data.temperature + 3,
-            condition: response.data.condition || '晴天',
-            humidity: response.data.humidity || 60,
-            windSpeed: response.data.windSpeed || 3,
-            aqi: response.data.aqi || 50,
+            temp: response.data.temperature ?? '',
+            tempMin: response.data.tempMin ?? '',
+            tempMax: response.data.tempMax ?? '',
+            condition: response.data.condition ?? '',
+            humidity: response.data.humidity ?? '',
+            windSpeed: response.data.windSpeed ?? '',
+            aqi: response.data.aqi ?? '',
             city: selectedCity
           }
 
@@ -379,6 +398,9 @@ export function useWeather() {
 
         // 步骤1: 获取位置
         const locationResponse = await api.get(API_CONFIG.location.location)
+        if (locationResponse?.success === false) {
+          throw new Error(locationResponse.message || '定位服务不可用')
+        }
 
         if (locationResponse?.data) {
           let { city, address } = locationResponse.data
@@ -401,16 +423,19 @@ export function useWeather() {
           const weatherResponse = await api.get(
             `${API_CONFIG.weather.current}?city=${encodeURIComponent(city)}`
           )
+          if (weatherResponse?.success === false) {
+            throw new Error(weatherResponse.message || '天气服务不可用')
+          }
 
           if (weatherResponse?.data) {
             weatherData = {
-              temp: weatherResponse.data.temperature || 25,
-              tempMin: weatherResponse.data.tempMin || weatherResponse.data.temperature - 3,
-              tempMax: weatherResponse.data.tempMax || weatherResponse.data.temperature + 3,
-              condition: weatherResponse.data.condition || '晴天',
-              humidity: weatherResponse.data.humidity || 60,
-              windSpeed: weatherResponse.data.windSpeed || 3,
-              aqi: weatherResponse.data.aqi || 50,
+              temp: weatherResponse.data.temperature ?? '',
+              tempMin: weatherResponse.data.tempMin ?? '',
+              tempMax: weatherResponse.data.tempMax ?? '',
+              condition: weatherResponse.data.condition ?? '',
+              humidity: weatherResponse.data.humidity ?? '',
+              windSpeed: weatherResponse.data.windSpeed ?? '',
+              aqi: weatherResponse.data.aqi ?? '',
               city: city,
               address: address
             }

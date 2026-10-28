@@ -9,7 +9,7 @@ const props = defineProps({
   // 城市名称
   city: {
     type: String,
-    default: '北京'
+    default: ''
   },
   // 用户ID（用于获取用户偏好）
   userId: {
@@ -58,16 +58,20 @@ const generateWeatherTags = () => {
 
 // 获取当前天气数据
 const getCurrentWeather = async (targetCity = props.city) => {
-  if (!weatherRecommendationEnabled.value) return
+  if (!weatherRecommendationEnabled.value || !targetCity) return
 
   try {
     isLoading.value = true
 
     const response = await axios.get(API_CONFIG.baseURL + API_CONFIG.weather.current, {
       params: {
-        city: targetCity || '北京'
+        city: targetCity
       }
     })
+
+    if (response.data?.success === false) {
+      throw new Error(response.data.message || '天气服务不可用')
+    }
 
     if (response.data && response.data.data) {
       weatherData.value = response.data.data
@@ -83,7 +87,8 @@ const getCurrentWeather = async (targetCity = props.city) => {
     }
   } catch (error) {
     console.error('获取天气数据失败:', error)
-    ElMessage.error('天气推荐功能暂时不可用')
+    weatherData.value = null
+    ElMessage.error(error?.message || '天气推荐功能暂时不可用')
     emit('weather-error', error)
   } finally {
     isLoading.value = false
@@ -93,7 +98,9 @@ const getCurrentWeather = async (targetCity = props.city) => {
 // 组件挂载时加载天气设置并获取天气数据
 onMounted(() => {
   loadWeatherSettings()
-  getCurrentWeather()
+  if (props.city) {
+    getCurrentWeather()
+  }
 })
 
 // 监听城市变化，重新获取天气数据

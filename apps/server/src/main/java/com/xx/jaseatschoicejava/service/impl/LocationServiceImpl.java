@@ -18,6 +18,7 @@ import org.springframework.web.client.RestClientException;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xx.jaseatschoicejava.exception.BusinessException;
 import com.xx.jaseatschoicejava.service.AMapService;
 import com.xx.jaseatschoicejava.service.LocationService;
 import com.xx.jaseatschoicejava.service.dto.AmapApiResponse;
@@ -60,67 +61,72 @@ public class LocationServiceImpl implements LocationService {
 
     @Override
     public Map<String, Object> getCurrentLocation(Double latitude, Double longitude, String clientIp) {
-        // 如果前端传入了经纬度，使用逆地理编码获取定位信息
         if (latitude != null && longitude != null) {
-            try {
-                String url = String.format("%s/geocode/regeo?location=%f,%f&key=%s", gaodeApiUrl, longitude, latitude, gaodeApiKey);
-                ResponseEntity<String> responseEntity = restTemplate.getForEntity(url, String.class);
-                String response = responseEntity.getBody();
-                if (response == null || response.isEmpty()) {
-                    return new HashMap<>();
-                }
-
-                ObjectMapper mapper = new ObjectMapper();
-                Map<String, Object> responseMap = mapper.readValue(response, new TypeReference<Map<String, Object>>() {});
-
-                boolean success = "1".equals(responseMap.get("status"));
-                if (success) {
-                    Map<String, Object> location = new HashMap<>();
-
-                    Map<String, Object> regeocode = asMap(responseMap.get("regeocode"));
-                    if (regeocode != null) {
-                        String formattedAddress = (String) regeocode.get("formatted_address");
-                        location.put("address", formattedAddress);
-                        location.put("formattedAddress", formattedAddress);
-
-                        Map<String, Object> addressComponent = asMap(regeocode.get("addressComponent"));
-                        if (addressComponent != null) {
-                            String province = (String) addressComponent.get("province");
-                            String city = (String) addressComponent.get("city");
-                            String district = (String) addressComponent.get("district");
-
-                            location.put("province", province != null ? province : "");
-                            location.put("city", city != null ? city : "");
-                            location.put("district", district != null ? district : "");
-                        }
-                    }
-
-                    putCoordinateFields(location, longitude.toString(), latitude.toString());
-                    location.put("accuracy", "gps");
-                    return location;
-                }
-            } catch (RestClientException | java.io.IOException e) {
-                logger.error("从高德地图API获取逆地理编码数据失败: {}", e.getMessage());
+            if (!hasText(gaodeApiKey)) {
+                logger.error("逆地理编码失败: gaode.map.api.key 未配置");
+                throw new BusinessException("LOCATION_KEY_MISSING", "定位服务未配置 AMAP_API_KEY");
             }
+            return reverseGeocodeByCoordinates(latitude, longitude);
         }
 
-        // 如果前端没有传入经纬度或者逆地理编码失败，回退到腾讯IP定位
+        if (!hasText(tencentApiKey)) {
+            logger.error("IP定位失败: tencent.map.api.key 未配置");
+            throw new BusinessException("LOCATION_KEY_MISSING", "IP定位服务未配置 TENCENT_MAP_KEY");
+        }
+
         Map<String, Object> tencentLocation = getLocationByTencentIp(clientIp);
-        if (!tencentLocation.isEmpty()) {
-            return tencentLocation;
+        if (tencentLocation.isEmpty()) {
+            throw new BusinessException("LOCATION_UPSTREAM_ERROR", "IP定位服务未返回有效位置");
         }
+        return tencentLocation;
+    }
 
-        logger.warn("腾讯IP定位未返回有效结果，返回空定位数据供前端继续降级处理");
-        return new HashMap<>();
+    private Map<String, Object> reverseGeocodeByCoordinates(Double latitude, Double longitude) {
+        try {
+            String url = String.format("%s/geocode/regeo?location=%f,%f&key=%s", gaodeApiUrl, longitude, latitude, gaodeApiKey);
+            ResponseEntity<String> responseEntity = restTemplate.getForEntity(url, String.class);
+            String response = responseEntity.getBody();
+            if (!hasText(response)) {
+                throw new BusinessException("LOCATION_UPSTREAM_ERROR", "逆地理编码服务未返回数据");
+            }
+
+            ObjectMapper mapper = new ObjectMapper();
+            Map<String, Object> responseMap = mapper.readValue(response, new TypeReference<Map<String, Object>>() {});
+
+            if (!"1".equals(String.valueOf(responseMap.get("status")))) {
+                logger.warn("高德逆地理编码返回失败: status={}, info={}, infocode={}",
+                        responseMap.get("status"), responseMap.get("info"), responseMap.get("infocode"));
+                throw new BusinessException("LOCATION_UPSTREAM_ERROR", "逆地理编码服务返回失败");
+            }
+
+            Map<String, Object> location = new HashMap<>();
+            Map<String, Object> regeocode = asMap(responseMap.get("regeocode"));
+            if (regeocode != null) {
+                String formattedAddress = asText(regeocode.get("formatted_address"));
+                location.put("address", formattedAddress);
+                location.put("formattedAddress", formattedAddress);
+
+                Map<String, Object> addressComponent = asMap(regeocode.get("addressComponent"));
+                if (addressComponent != null) {
+                    location.put("province", asText(addressComponent.get("province")));
+                    location.put("city", asText(addressComponent.get("city")));
+                    location.put("district", asText(addressComponent.get("district")));
+                }
+            }
+
+            putCoordinateFields(location, longitude.toString(), latitude.toString());
+            location.put("accuracy", "gps");
+            return location;
+        } catch (BusinessException e) {
+            throw e;
+        } catch (RestClientException | java.io.IOException e) {
+            logger.error("从高德地图API获取逆地理编码数据失败: {}", e.getMessage());
+            throw new BusinessException("LOCATION_UPSTREAM_ERROR", "逆地理编码服务调用失败");
+        }
     }
 
     private Map<String, Object> getLocationByTencentIp(String clientIp) {
         Map<String, Object> emptyLocation = new HashMap<>();
-
-        if (!hasText(tencentApiKey)) {
-            logger.warn("腾讯IP定位失败: tencent.map.api.key 未配置");
-            return emptyLocation;
-        }
 
         try {
             StringBuilder urlBuilder = new StringBuilder(tencentApiUrl)
@@ -259,6 +265,10 @@ public class LocationServiceImpl implements LocationService {
         return value != null && !value.trim().isEmpty();
     }
 
+    private String asText(Object value) {
+        return value == null ? "" : value.toString();
+    }
+
     private void putCoordinateFields(Map<String, Object> location, String longitude, String latitude) {
         if (hasText(longitude)) {
             location.put("longitude", longitude);
@@ -289,14 +299,26 @@ public class LocationServiceImpl implements LocationService {
 
     @Override
     public Map<String, Object> geocode(String address, String city) {
+        if (!hasText(gaodeApiKey)) {
+            throw new BusinessException("LOCATION_KEY_MISSING", "定位服务未配置 AMAP_API_KEY");
+        }
         AmapApiResponse<AmapLocationData> result = aMapService.geocode(address, city);
-        return toLocationMap(result != null ? result.data() : null);
+        if (result == null || !result.isSuccess() || result.data() == null) {
+            throw new BusinessException("LOCATION_UPSTREAM_ERROR", "地理编码服务未返回有效位置");
+        }
+        return toLocationMap(result.data());
     }
 
     @Override
     public Map<String, Object> reverseGeocode(String lng, String lat) {
+        if (!hasText(gaodeApiKey)) {
+            throw new BusinessException("LOCATION_KEY_MISSING", "定位服务未配置 AMAP_API_KEY");
+        }
         AmapApiResponse<AmapLocationData> result = aMapService.reverseGeocode(lng, lat);
-        return toLocationMap(result != null ? result.data() : null);
+        if (result == null || !result.isSuccess() || result.data() == null) {
+            throw new BusinessException("LOCATION_UPSTREAM_ERROR", "逆地理编码服务未返回有效位置");
+        }
+        return toLocationMap(result.data());
     }
 
     @Override
