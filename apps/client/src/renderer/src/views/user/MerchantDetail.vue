@@ -134,6 +134,38 @@
         </template>
       </div>
 
+      <!-- 商家公告 -->
+      <section class="merchant-announcements">
+        <div class="announcements-header">
+          <h2 class="announcements-title">商家公告</h2>
+          <span class="announcements-count">共 {{ announcements.length }} 条</span>
+        </div>
+        <div v-if="announcementsLoading" class="announcements-loading">
+          <el-skeleton :rows="2" animated />
+        </div>
+        <div v-else-if="announcementsError" class="announcements-error">
+          {{ announcementsError }}
+        </div>
+        <div v-else-if="announcements.length === 0" class="announcements-empty">
+          该商家暂无公告
+        </div>
+        <div v-else class="announcements-list">
+          <article
+            v-for="announcement in announcements"
+            :key="announcement.id"
+            class="announcement-card"
+          >
+            <div class="announcement-header">
+              <h3 class="announcement-title">{{ announcement.title }}</h3>
+              <span v-if="formatAnnouncementTime(announcement.createdAt)" class="announcement-time">
+                {{ formatAnnouncementTime(announcement.createdAt) }}
+              </span>
+            </div>
+            <p class="announcement-content">{{ announcement.content }}</p>
+          </article>
+        </div>
+      </section>
+
       <!-- 立即下单快捷操作区（仅在order模式下显示） -->
       <div v-if="viewMode === 'order' && hasMenus" class="quick-order-section">
         <el-button
@@ -339,6 +371,16 @@ const comments = ref([])
 const commentsLoading = ref(false)
 const commentsError = ref('')
 
+// 公告数据
+const announcements = ref([])
+const announcementsLoading = ref(false)
+const announcementsError = ref('')
+const formatAnnouncementTime = (value) => {
+  const time = new Date(value)
+  if (!value || Number.isNaN(time.getTime())) return ''
+  return time.toLocaleString('zh-CN', { hour12: false })
+}
+
 // 菜单数据
 const menuItems = ref([])
 
@@ -475,7 +517,8 @@ const initializeMerchantPage = async () => {
 
   await Promise.all([
     loadMerchantDetails(effectiveMerchantId),
-    loadMerchantReviews(effectiveMerchantId)
+    loadMerchantReviews(effectiveMerchantId),
+    loadAnnouncements(effectiveMerchantId)
   ])
   await checkFavoriteStatus()
   restorePendingOrder()
@@ -678,6 +721,26 @@ const loadMerchantDetails = async (merchantId) => {
     ElMessage.error('加载商家详情失败，请稍后重试')
     hasMenus.value = false
     isLoading.value = false
+  }
+}
+
+// 从后端加载商家公告列表
+const loadAnnouncements = async (merchantId) => {
+  announcementsLoading.value = true
+  announcementsError.value = ''
+  try {
+    const response = await axios.get(`${API_CONFIG.baseURL}/v1/merchant/${merchantId}/announcements`)
+    const payload = response.data
+    if (payload?.success !== true || !Array.isArray(payload.data)) {
+      throw new Error(payload?.message || '公告数据格式异常')
+    }
+    announcements.value = payload.data.filter(item => item?.status === 'active')
+  } catch (error) {
+    console.error('加载商家公告失败:', error)
+    announcements.value = []
+    announcementsError.value = '公告加载失败，请稍后重试'
+  } finally {
+    announcementsLoading.value = false
   }
 }
 
@@ -1348,6 +1411,85 @@ watch(activeMenuTab, (newTab, oldTab) => {
           font-size: @nordic-text-md;
           font-weight: 500;
           margin: 0;
+        }
+      }
+    }
+
+    // 商家公告
+    .merchant-announcements {
+      margin-top: @nordic-space-xl;
+      padding: @nordic-space-lg;
+      background-color: @nordic-surface;
+      border-top: 1px solid fade(@nordic-accent, 10%);
+
+      .announcements-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: @nordic-space-md;
+
+        .announcements-title {
+          font-size: @nordic-text-xl;
+          font-weight: bold;
+          color: @nordic-text;
+          margin: 0;
+        }
+
+        .announcements-count {
+          font-size: @nordic-text-base;
+          color: @nordic-text-secondary;
+        }
+      }
+
+      .announcements-loading,
+      .announcements-error,
+      .announcements-empty {
+        padding: @nordic-space-xl;
+        border-radius: @nordic-radius-md;
+        background-color: @nordic-bg;
+        color: @nordic-text-secondary;
+        text-align: center;
+      }
+
+      .announcements-error {
+        color: @nordic-red;
+      }
+
+      .announcements-list {
+        display: flex;
+        flex-direction: column;
+        gap: @nordic-space-md;
+
+        .announcement-card {
+          padding: @nordic-space-md;
+          border: 1px solid @nordic-border;
+          border-radius: @nordic-radius-md;
+
+          .announcement-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: @nordic-space-md;
+
+            .announcement-title {
+              font-size: @nordic-text-md;
+              font-weight: 600;
+              color: @nordic-text;
+              margin: 0;
+            }
+
+            .announcement-time {
+              flex-shrink: 0;
+              font-size: @nordic-text-sm;
+              color: @nordic-text-muted;
+            }
+          }
+
+          .announcement-content {
+            margin: @nordic-space-sm 0 0;
+            color: @nordic-text-secondary;
+            line-height: 1.6;
+          }
         }
       }
     }
