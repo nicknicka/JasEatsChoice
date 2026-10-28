@@ -737,7 +737,7 @@ const loadAvailableDishes = async () => {
 
   try {
     const response = await api.get(`/v1/dishes/merchant/${currentGroupOrder.value.merchantId}`)
-    availableDishes.value = response.data.data || []
+    availableDishes.value = response.data || []
   } catch (error) {
     console.error('加载可用菜品失败:', error)
   }

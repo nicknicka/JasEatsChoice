@@ -73,7 +73,7 @@ test.describe('模块三：商家浏览与详情', () => {
     }
   })
 
-  test.fixme('3.4 商家公告 (blocked by #19)', async ({ page }) => {
+  test.fixme('3.4 商家公告 (blocked by #94)', async ({ page }) => {
     const merchant = await getMerchant()
     const merchantId = merchant.merchantId || merchant.id
 

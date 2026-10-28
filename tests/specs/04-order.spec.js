@@ -329,9 +329,118 @@ test.describe('模块四：订单流程', () => {
     }
   })
 
-  test.fixme('4.12 加菜请求 (blocked by #40)', async ({ page }) => {
-    await page.goto('/user/home/chat')
-    await expect(page.locator('button:has-text("我要加菜")').first()).toBeVisible({ timeout: 10000 })
+  test('4.12 加菜请求', async ({ page, request }) => {
+    markRunning('4.12')
+    try {
+      const groupName = `E2E加菜 ${Date.now()}`
+      const { groupId } = await createGroupWithSession(request, groupName)
+      const merchantId = await getMerchantId()
+      const merchant = await getMerchant({ merchantId })
+      const dish = await getDish({ merchantId })
+      const dishId = dish.id || dish.dishId
+      const userId = await getUserId()
+      const groupOrderId = await apiRequest(request, 'POST', '/v1/group-orders/group-orders', {
+        initiatorId: userId,
+        groupId,
+        maxParticipants: 2,
+        dishItems: []
+      })
+
+      const rechargeNo = `E2E-ADD-DISH-${Date.now()}`
+      const rechargeAmount = Math.max(Number(dish.price || 0), 1) + 10
+      await apiRequest(
+        request,
+        'POST',
+        `/v1/wallet/recharge?userId=${encodeURIComponent(userId)}&amount=${encodeURIComponent(rechargeAmount)}&rechargeNo=${encodeURIComponent(rechargeNo)}`
+      )
+
+      await page.goto('/user/home/chat')
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
+      const conversation = page.locator('.conversation-item').filter({ hasText: groupName })
+      await expect(conversation).toBeVisible({ timeout: 10000 })
+      await conversation.click()
+      const floatingOrderBtn = page.locator('.floating-order-btn')
+      await expect(floatingOrderBtn).toBeVisible({ timeout: 10000 })
+
+      await floatingOrderBtn.click()
+      const draftDrawer = page.locator('.group-order-drawer').filter({ hasText: groupName })
+      await expect(draftDrawer).toBeVisible({ timeout: 10000 })
+      await draftDrawer.locator('button.quick-order-btn:has-text("选择商家")').click()
+
+      const merchantDialog = page.locator('.merchant-select-dialog')
+      await expect(merchantDialog).toBeVisible({ timeout: 10000 })
+      await merchantDialog.locator('.merchant-card').filter({ hasText: merchant.name }).first().click()
+
+      const productDialog = page.locator('.product-select-dialog')
+      await expect(productDialog).toBeVisible({ timeout: 10000 })
+      const productItem = productDialog.locator('.product-item').filter({ hasText: dish.name }).first()
+      await expect(productItem).toBeVisible({ timeout: 10000 })
+      await productItem.locator('.el-checkbox').click()
+      await productDialog.locator('button.batch-btn:has-text("加入订单")').click()
+      await expect(page.locator('.el-message').filter({ hasText: '已批量加入 1 个商品' })).toBeVisible({ timeout: 10000 })
+
+      await draftDrawer.locator('.el-drawer__close-btn').click()
+      await expect(draftDrawer).toBeHidden({ timeout: 10000 })
+
+      await apiRequest(request, 'POST', `/v1/group-orders/group-orders/${groupOrderId}/selections`, {
+        userId,
+        merchantId,
+        dishes: [{ dishId: String(dishId), quantity: 1, customization: 'E2E 加菜前置' }]
+      })
+      await apiRequest(request, 'POST', `/v1/group-orders/group-orders/${groupOrderId}/confirm`, { userId })
+      await apiRequest(request, 'POST', `/v1/group-orders/group-orders/${groupOrderId}/pay`, {
+        userId,
+        paymentType: 'single',
+        paymentMethod: 'balance'
+      })
+
+      await page.evaluate((paidGroupOrderId) => {
+        sessionStorage.setItem('paidGroupOrderId', paidGroupOrderId)
+      }, groupOrderId)
+      await conversation.click()
+      await floatingOrderBtn.click()
+
+      const drawer = page.locator('.group-order-drawer, .el-drawer').filter({ hasText: groupName })
+      await expect(drawer).toBeVisible({ timeout: 10000 })
+      await expect(drawer.locator('.header-right .el-tag').filter({ hasText: '已支付' })).toBeVisible({ timeout: 10000 })
+      const addDishBtn = drawer.locator('button:has-text("我要加菜")')
+      await drawer.locator('.el-drawer__body').evaluate((element) => {
+        element.scrollTop = element.scrollHeight
+      })
+      await expect(addDishBtn).toBeVisible({ timeout: 10000 })
+      await addDishBtn.click()
+      const dialog = page.locator('.add-dish-dialog')
+      await expect(dialog).toBeVisible({ timeout: 10000 })
+
+      const dishItem = dialog.locator('.dish-item').filter({ hasText: dish.name }).first()
+      await expect(dishItem).toBeVisible({ timeout: 10000 })
+      await dishItem.locator('button:has-text("添加")').click()
+      const submitBtn = dialog.locator('button:has-text("提交加菜请求")')
+      await expect(submitBtn).toBeEnabled()
+
+      const addDishResponsePromise = page.waitForResponse((response) =>
+        response.request().method() === 'POST'
+          && response.url().includes('/api/v1/add-dish/request')
+      )
+      await submitBtn.click()
+      const addDishResponse = await addDishResponsePromise
+      expect(addDishResponse.ok()).toBeTruthy()
+      const submitted = addDishResponse.request().postDataJSON()
+      expect(submitted.groupOrderId).toBe(groupOrderId)
+      expect(String(submitted.dishItems[0].dishId)).toBe(String(dishId))
+
+      await expect(page.locator('.el-message').filter({ hasText: '加菜请求已提交' }).first()).toBeVisible({ timeout: 10000 })
+
+      const reviewList = await apiRequest(request, 'GET', `/v1/add-dish/review-list/${groupOrderId}`)
+      expect(reviewList).toHaveLength(1)
+      expect(reviewList[0].status).toBe(0)
+      expect(reviewList[0].groupOrderId).toBe(groupOrderId)
+      expect(Number(reviewList[0].totalAmount)).toBe(Number(dish.price))
+      markPassed('4.12', `群订单 ${groupOrderId} 经 UI 提交加菜请求并回查 pending 记录`)
+    } catch (e) {
+      markFailed('4.12', e.message.slice(0, 50))
+      throw e
+    }
   })
 
   test.afterAll(() => {
