@@ -100,17 +100,13 @@ const merchantId = ref('')
 // 是否是编辑模式
 const isEdit = ref(false)
 
-// 原评价
+// 原评价（从商家评价列表接口加载）
 const comment = ref({
-  id: 1,
-  user: {
-    id: 1,
-    name: '张同学',
-    avatar: 'https://via.placeholder.com/60/FF6B35/FFFFFF?text=张'
-  },
+  id: '',
+  user: { name: '', avatar: '' },
   rating: 5,
-  time: '2小时前',
-  content: '味道非常不错，宫保鸡丁很正宗，分量也足，下次还会再来的！'
+  time: '',
+  content: ''
 })
 
 // 回复内容
@@ -150,25 +146,30 @@ onMounted(async () => {
 })
 
 /**
- * REVIEW-005: 加载评价详情
+ * REVIEW-005: 从商家评价列表加载评价内容
+ * 后端没有按评价ID取详情的路由，用列表接口返回的完整评价字段替代
  */
 const loadReviewDetail = async () => {
-  try {
-    const res = await reviewApi.getDetail(reviewId.value)
+  if (!merchantId.value) return
 
-    if (res.code === 200 && res.data) {
-      const data = res.data
-      comment.value = {
-        id: data.id,
-        user: {
-          id: data.userId,
-          name: data.isAnonymous ? '匿名用户' : (data.userName || '用户***'),
-          avatar: data.userAvatar || 'https://via.placeholder.com/60'
-        },
-        rating: data.rating || 5,
-        time: formatTime(data.createdAt),
-        content: data.content || ''
-      }
+  try {
+    const res = await reviewApi.getMerchantReviews(merchantId.value)
+
+    if (res.code !== 200 || !Array.isArray(res.data)) return
+
+    const data = res.data.find(item => item.id === reviewId.value)
+    if (!data) return
+
+    comment.value = {
+      id: data.id,
+      user: {
+        id: data.userId,
+        name: data.userName || '用户***',
+        avatar: data.userAvatar || ''
+      },
+      rating: data.rating || 5,
+      time: formatRelativeTime(data.createdAt),
+      content: data.content || ''
     }
   } catch (error) {
     console.error('加载评价详情失败:', error)
@@ -176,18 +177,24 @@ const loadReviewDetail = async () => {
 }
 
 /**
- * REVIEW-006: 加载已有回复
+ * REVIEW-006: 加载已有商家回复
  */
 const loadReply = async () => {
-  if (!reviewId.value) return
+  if (!reviewId.value || !merchantId.value) return
 
   try {
-    // REVIEW-006: 调用API获取评价详情（包含回复信息）
-    const res = await reviewApi.getDetail(reviewId.value)
+    const res = await reviewApi.getMerchantReviews(merchantId.value)
 
-    if (res.code === 200 && res.data && res.data.reply) {
-      replyContent.value = res.data.reply.content || ''
-      replyImages.value = res.data.reply.images || []
+    if (res.code !== 200 || !Array.isArray(res.data)) return
+
+    const data = res.data.find(item => item.id === reviewId.value)
+    if (!data || !Array.isArray(data.replies)) return
+
+    // isMerchant: 0=商家回复, 1=用户追评
+    const merchantReply = data.replies.find(reply => reply.isMerchant)
+    if (merchantReply) {
+      replyContent.value = merchantReply.content || ''
+      replyImages.value = merchantReply.images || []
     }
   } catch (error) {
     console.error('加载回复失败:', error)
