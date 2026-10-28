@@ -112,10 +112,6 @@
             <text class="asset-label">余额</text>
           </view>
           <view class="asset-item">
-            <text class="asset-value">{{ wallet.points }}</text>
-            <text class="asset-label">积分</text>
-          </view>
-          <view class="asset-item">
             <text class="asset-value">{{ wallet.redEnvelopes }}</text>
             <text class="asset-label">红包</text>
           </view>
@@ -475,7 +471,6 @@ const loadWallet = async () => {
     if (res && res.data) {
       wallet.value = {
         balance: res.data.balance || '0.00',
-        points: res.data.points || 0,
         redEnvelopes: res.data.redEnvelopes || res.data.redPackets || 0
       }
     }
@@ -484,7 +479,6 @@ const loadWallet = async () => {
     // 使用默认值
     wallet.value = {
       balance: '0.00',
-      points: 0,
       redEnvelopes: 0
     }
   }
