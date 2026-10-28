@@ -284,12 +284,12 @@ const handleView = async (row) => {
     console.log('[用户管理] 查看用户详情, 用户ID:', row.userId)
     const response = await getUserDetail(row.userId)
 
-    if (response.success && response.user) {
-      currentUser.value = response.user
+    if (response?.success && response.data) {
+      currentUser.value = response.data
       detailDialogVisible.value = true
       console.log('[用户管理] 获取用户详情成功')
     } else {
-      ElMessage.error(response.message || '获取用户详情失败')
+      ElMessage.error(response?.message || '获取用户详情失败')
     }
   } catch (error) {
     console.error('[用户管理] 获取用户详情失败:', error)

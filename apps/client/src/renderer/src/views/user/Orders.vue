@@ -13,6 +13,7 @@ import { useOrderFilter } from '../../composables/useOrderFilter'
 import { useOrderPagination } from '../../composables/useOrderPagination'
 import { useOrderWebSocket } from '../../composables/useOrderWebSocket'
 import orderApi from '../../api/order'
+import paymentApi from '../../api/payment'
 
 const router = useRouter()
 const route = useRoute()
@@ -28,7 +29,8 @@ const {
   loadOrders,
   handleRefresh,
   handleImageError,
-  updateOrderStatus
+  updateOrderStatus,
+  getUserId
 } = useOrderData()
 
 const {
@@ -120,6 +122,26 @@ function viewOrderDetails(order) {
     name: 'user-order-detail',
     params: { id: order.id }
   })
+}
+
+/**
+ * 支付订单
+ */
+async function payOrder(order) {
+  try {
+    const response = await paymentApi.payOrder(order.id, getUserId(), 'wallet')
+
+    if (response?.success) {
+      updateOrderStatus(order.id, 1)
+      ElMessage.success(response.message || '支付成功')
+      scheduleSilentRefresh()
+    } else {
+      ElMessage.error(response?.message || '支付失败')
+    }
+  } catch (error) {
+    console.error('订单支付失败:', error)
+    ElMessage.error(error?.data?.message || error?.response?.data?.message || error?.message || '支付失败')
+  }
 }
 
 /**
@@ -347,6 +369,7 @@ watch(
         class="stagger-item"
         :max-display="3"
         @view-details="viewOrderDetails"
+        @pay="payOrder"
         @cancel="cancelOrder"
         @confirm-receipt="confirmReceipt"
         @evaluate="goToEvaluate"

@@ -316,15 +316,25 @@ public class DishController {
     @PutMapping("/{dishId}/status")
     public ResponseResult<?> updateDishStatus(@PathVariable String dishId, @RequestBody java.util.Map<String, Object> request) {
         Boolean status = (Boolean) request.get("status");
+        if (status == null) {
+            return ResponseResult.fail("400", "菜品状态不能为空");
+        }
         Dish dish = dishService.getById(dishId);
         if (dish == null) {
             throw new BusinessException("404", "菜品不存在");
         }
-        dish.setStatus(status);
-        boolean updated = dishService.updateById(dish);
-            log.info("更新菜品状态 {} {}", dishId, status);
-        log.info("updated {} ", updated);
+        Dish statusUpdate = new Dish();
+        statusUpdate.setId(dishId);
+        statusUpdate.setIsOnline(status);
+        boolean updated = dishService.updateById(statusUpdate);
+        log.info("更新菜品状态 {} {}", dishId, status);
         if (updated) {
+            Dish persistedDish = dishService.getById(dishId);
+            if (persistedDish == null || !status.equals(persistedDish.getIsOnline())) {
+                log.error("菜品状态未持久化，dishId: {}, status: {}", dishId, status);
+                return ResponseResult.fail("500", "菜品状态更新失败");
+            }
+
             // 当菜品下架时，同步更新该菜品在所有菜单中的状态为下架
             if (!status) {
                 // 获取该菜品关联的所有菜单

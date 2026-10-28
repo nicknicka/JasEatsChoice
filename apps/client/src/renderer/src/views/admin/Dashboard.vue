@@ -21,14 +21,13 @@ const router = useRouter()
 
 // 统计数据
 const stats = ref({
-  totalUsers: 0,
-  todayNewUsers: 0,
-  totalMerchants: 0,
-  todayOrders: 0,
-  todayRevenue: 0,
-  pendingAudits: 0,
-  systemAlerts: 0
+  totalUsers: null,
+  totalMerchants: null,
+  newOrders: null,
+  newRevenue: null,
+  newUsers: null
 })
+const statsError = ref('')
 
 // 最近教程
 const recentTutorials = ref([])
@@ -79,16 +78,20 @@ const fetchStats = async () => {
     console.log('[Dashboard] 获取控制台统计数据')
     const response = await getDashboardStats()
 
-    if (response.success && response.data) {
-      stats.value = response.data
+    if (response.success && response.data?.summary) {
+      const { totalUsers, totalMerchants, newOrders, newRevenue, newUsers } = response.data.summary
+      stats.value = { totalUsers, totalMerchants, newOrders, newRevenue, newUsers }
+      statsError.value = ''
       console.log('[Dashboard] 获取统计数据成功:', stats.value)
     } else {
       console.warn('[Dashboard] 获取统计数据返回格式异常:', response)
-      ElMessage.warning('获取统计数据失败，显示默认值')
+      statsError.value = response.message || '接口返回数据格式异常'
+      ElMessage.error(`获取统计数据失败: ${statsError.value}`)
     }
   } catch (error) {
     console.error('[Dashboard] 获取统计数据失败:', error)
-    ElMessage.error('获取统计数据失败: ' + (error.message || '网络错误'))
+    statsError.value = error.message || '网络错误'
+    ElMessage.error(`获取统计数据失败: ${statsError.value}`)
   }
 }
 
@@ -150,6 +153,16 @@ onMounted(() => {
       <p class="subtitle">欢迎回来，管理员</p>
     </div>
 
+    <el-alert
+      v-if="statsError"
+      class="stats-error"
+      title="统计数据加载失败"
+      :description="statsError"
+      type="error"
+      :closable="false"
+      show-icon
+    />
+
     <!-- 统计卡片 -->
     <div class="stats-grid">
       <div class="stat-card primary">
@@ -157,7 +170,7 @@ onMounted(() => {
           <el-icon :size="40"><User /></el-icon>
         </div>
         <div class="stat-info">
-          <div class="stat-value">{{ stats.totalUsers }}</div>
+          <div class="stat-value">{{ stats.totalUsers ?? '--' }}</div>
           <div class="stat-label">用户总数</div>
         </div>
       </div>
@@ -167,7 +180,7 @@ onMounted(() => {
           <el-icon :size="40"><Shop /></el-icon>
         </div>
         <div class="stat-info">
-          <div class="stat-value">{{ stats.totalMerchants }}</div>
+          <div class="stat-value">{{ stats.totalMerchants ?? '--' }}</div>
           <div class="stat-label">商家总数</div>
         </div>
       </div>
@@ -177,7 +190,7 @@ onMounted(() => {
           <el-icon :size="40"><Document /></el-icon>
         </div>
         <div class="stat-info">
-          <div class="stat-value">{{ stats.todayOrders }}</div>
+          <div class="stat-value">{{ stats.newOrders ?? '--' }}</div>
           <div class="stat-label">今日订单</div>
         </div>
       </div>
@@ -187,7 +200,9 @@ onMounted(() => {
           <el-icon :size="40"><TrendCharts /></el-icon>
         </div>
         <div class="stat-info">
-          <div class="stat-value">¥{{ (stats.todayRevenue || 0).toFixed(2) }}</div>
+          <div class="stat-value">
+            {{ stats.newRevenue == null ? '--' : `¥${Number(stats.newRevenue).toFixed(2)}` }}
+          </div>
           <div class="stat-label">今日收入</div>
         </div>
       </div>
@@ -197,7 +212,7 @@ onMounted(() => {
           <el-icon :size="40"><Checked /></el-icon>
         </div>
         <div class="stat-info">
-          <div class="stat-value">{{ stats.todayNewUsers }}</div>
+          <div class="stat-value">{{ stats.newUsers ?? '--' }}</div>
           <div class="stat-label">今日新增用户</div>
         </div>
       </div>
@@ -314,6 +329,10 @@ onMounted(() => {
       margin: 0;
       font-size: 1rem /* 原值: 14px */;
     }
+  }
+
+  .stats-error {
+    margin-bottom: 20px;
   }
 
   .stats-grid {

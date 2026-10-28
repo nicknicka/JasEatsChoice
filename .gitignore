@@ -30,3 +30,11 @@ deploy/.env
 .omx/
 .playwright-mcp/
 *.iml
+
+# Python 工具产物
+__pycache__/
+*.pyc
+
+# Playwright 运行产物
+tests/test-results/
+tests/.last-run.json
