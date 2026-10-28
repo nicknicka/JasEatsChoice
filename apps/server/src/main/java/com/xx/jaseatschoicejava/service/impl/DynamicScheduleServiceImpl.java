@@ -8,12 +8,15 @@ import com.xx.jaseatschoicejava.mapper.ScheduledTaskMapper;
 import com.xx.jaseatschoicejava.service.DynamicScheduleService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationContext;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.support.CronTrigger;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -36,6 +39,7 @@ public class DynamicScheduleServiceImpl implements DynamicScheduleService {
     private final ScheduledTaskMapper scheduledTaskMapper;
     private final ScheduledTaskLogMapper scheduledTaskLogMapper;
     private final TaskScheduler taskScheduler;
+    private final ApplicationContext applicationContext;
 
     // 存储任务ID到ScheduledFuture的映射
     private final Map<String, ScheduledFuture<?>> taskFutures = new ConcurrentHashMap<>();
@@ -320,17 +324,13 @@ public class DynamicScheduleServiceImpl implements DynamicScheduleService {
         taskLog.setExecuteStatus("RUNNING");
 
         try {
-            // TODO: 根据taskClassName和taskMethodName反射调用
-            // 这里简化处理，实际应该使用反射调用具体的方法
-            log.debug("执行任务逻辑: {} - {}", task.getTaskClassName(), task.getTaskMethodName());
-
-            // 模拟任务执行
-            Thread.sleep(1000);
+            invokeTask(task);
 
             // 更新任务信息
             task.setLastExecuteTime(startTime);
             task.setExecuteCount((task.getExecuteCount() != null ? task.getExecuteCount() : 0) + 1);
             task.setLastExecuteResult("SUCCESS");
+            task.setLastErrorMessage(null);
             task.setRetriedCount(0);
 
             // 记录日志
@@ -344,11 +344,13 @@ public class DynamicScheduleServiceImpl implements DynamicScheduleService {
                     taskLog.getDuration());
 
         } catch (Exception e) {
-            log.error("任务 [{}] 执行失败", task.getTaskName(), e);
+            Throwable cause = getCause(e);
+            String errorMessage = getErrorMessage(cause);
+            log.error("任务 [{}] 执行失败: {}", task.getTaskName(), errorMessage, cause);
 
             // 更新任务信息
             task.setLastExecuteResult("FAILED");
-            task.setLastErrorMessage(e.getMessage());
+            task.setLastErrorMessage(errorMessage);
             task.setFailCount((task.getFailCount() != null ? task.getFailCount() : 0) + 1);
 
             // 记录日志
@@ -356,8 +358,8 @@ public class DynamicScheduleServiceImpl implements DynamicScheduleService {
             taskLog.setEndTime(endTime);
             taskLog.setDuration(java.time.Duration.between(startTime, endTime).toMillis());
             taskLog.setExecuteStatus("FAILED");
-            taskLog.setErrorMessage(e.getMessage());
-            taskLog.setExceptionStack(getStackTrace(e));
+            taskLog.setErrorMessage(errorMessage);
+            taskLog.setExceptionStack(getStackTrace(cause));
 
             // 重试逻辑
             if (task.getRetryCount() != null && task.getRetryCount() > 0) {
@@ -380,6 +382,62 @@ public class DynamicScheduleServiceImpl implements DynamicScheduleService {
             // 更新任务信息
             scheduledTaskMapper.updateById(task);
         }
+    }
+
+    /**
+     * 反射调用任务配置中指定的真实 Spring Bean 方法。
+     */
+    private void invokeTask(ScheduledTask task) throws Exception {
+        String className = task.getTaskClassName();
+        String methodName = task.getTaskMethodName();
+        if (className == null || className.isBlank() || methodName == null || methodName.isBlank()) {
+            throw new IllegalStateException("任务类名或方法名不能为空");
+        }
+
+        Class<?> taskClass;
+        try {
+            taskClass = Class.forName(className);
+        } catch (ClassNotFoundException e) {
+            throw new IllegalStateException("任务类不存在: " + className, e);
+        }
+
+        Object taskBean;
+        try {
+            taskBean = applicationContext.getBean(taskClass);
+        } catch (Exception e) {
+            throw new IllegalStateException("任务 Bean 不存在: " + className, e);
+        }
+
+        Method method;
+        try {
+            method = taskClass.getMethod(methodName);
+        } catch (NoSuchMethodException e) {
+            throw new IllegalStateException("任务方法不存在或需要参数: " + methodName, e);
+        }
+
+        try {
+            method.invoke(taskBean);
+        } catch (InvocationTargetException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof Exception exception) {
+                throw exception;
+            }
+            throw e;
+        }
+    }
+
+    private Throwable getCause(Exception exception) {
+        Throwable cause = exception instanceof InvocationTargetException
+                ? ((InvocationTargetException) exception).getCause()
+                : exception;
+        return cause != null ? cause : exception;
+    }
+
+    private String getErrorMessage(Throwable throwable) {
+        String message = throwable.getMessage();
+        return message != null && !message.isBlank()
+                ? message
+                : throwable.getClass().getName();
     }
 
     /**
