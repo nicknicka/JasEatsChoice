@@ -381,16 +381,18 @@ const selectConversation = async (conversation) => {
 
   // 标记已读
   if (conversation.unreadCount > 0) {
-    conversation.unreadCount = 0
-
-    // 仅在非模拟数据模式下显示提示和调用API
+    // 仅在非模拟数据模式下调用 API，成功后清空未读并提示
     if (!USE_MOCK_DATA) {
-      ElMessage.success('消息已标记为已读')
-
-      // ⭐ 直接使用后端返回的 sessionId（conversation.id）
-      // ⚠️ 不再使用 buildSessionId，因为后端已经统一生成了sessionId
       const sessionId = conversation.id
-      await markMessagesAsRead(sessionId, currentUserId.value) // ⭐ 需要传入 userId
+      const result = await markMessagesAsRead(sessionId, currentUserId.value)
+
+      if (!result.success) {
+        await loadMessages(conversation)
+        return
+      }
+
+      conversation.unreadCount = 0
+      ElMessage.success('消息已标记为已读')
     }
   }
 
