@@ -114,7 +114,7 @@ const notificationDetail = ref({
   type: 'system',
   title: '',
   content: '',
-  isRead: false,
+  readStatus: false,
   time: '',
   extra: null,
   action: null,
@@ -158,7 +158,7 @@ const loadNotificationDetail = async () => {
         type: data.type || 'system',
         title: data.title || '通知',
         content: data.content || '',
-        isRead: data.isRead || false,
+        readStatus: data.readStatus || false,
         time: formatShortDateTime(data.createdAt),
         extra: extra,
         action: data.action || null,
@@ -166,7 +166,7 @@ const loadNotificationDetail = async () => {
       }
 
       // NOTIF-006: 如果未读，标记为已读
-      if (!data.isRead) {
+      if (!data.readStatus) {
         await markAsRead()
       }
     }
@@ -193,7 +193,7 @@ const markAsRead = async () => {
     })
 
     if (res.code === 200) {
-      notificationDetail.value.isRead = true
+      notificationDetail.value.readStatus = true
 
       // 更新列表页的未读数
       uni.$emit('notificationRead', notificationId.value)
@@ -337,13 +337,10 @@ const goBack = () => {
  * 获取图标类型
  */
 const getIconType = (type) => {
-  const iconMap = {
-    system: 'sound',
-    order: 'paperplane',
-    activity: 'gift',
-    chat: 'chatbubble'
-  }
-  return iconMap[type] || 'notification'
+  if (type.startsWith('group_order_') || type.startsWith('order_')) return 'paperplane'
+  if (type.startsWith('withdraw_') || type.startsWith('dish_') || type.startsWith('merchant_')) return 'gift'
+  if (type.startsWith('review_')) return 'chatbubble'
+  return 'sound'
 }
 </script>
 

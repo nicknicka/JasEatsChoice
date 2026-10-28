@@ -221,6 +221,7 @@ import { useUserStore } from '@/store'
 import Loading from '@/components/common/Loading.vue'
 import Empty from '@/components/common/Empty.vue'
 import { orderApi } from '@/api'
+import { getStatusByKey } from '@/config/order-status'
 import { toCustomerService, toOrderDetail } from '@/utils/router'
 
 // 用户信息store
@@ -635,8 +636,10 @@ const confirmReceipt = () => {
     success: async (res) => {
       if (res.confirm) {
         try {
-          const userId = userStore.userInfo?.userId || userStore.userInfo?.id
-          await orderApi.confirm(orderId.value, { userId })
+          await orderApi.updateStatus(orderId.value, 3)
+
+          // 按既有配置同步本地状态
+          order.value.status = getStatusByKey('completed').key
 
           uni.showToast({
             title: '已确认收货',

@@ -500,7 +500,7 @@ const confirmReceipt = async () => {
         try {
           uni.showLoading({ title: '处理中...' })
 
-          await orderApi.confirm(orderId.value)
+          await orderApi.updateStatus(orderId.value, 3)
           pageDebug.requestSuccess('订单详情确认收货', {
             orderId: orderId.value
           })
