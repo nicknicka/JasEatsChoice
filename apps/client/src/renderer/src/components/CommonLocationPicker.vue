@@ -28,7 +28,6 @@ const locationSource = ref('unknown')
 
 // 本地存储键名
 const LOCATION_STORAGE_KEY = 'user_last_location'
-const DEFAULT_LOCATION = { lng: 116.397428, lat: 39.90923 }
 const LOCATION_CACHE_DURATION = 24 * 60 * 60 * 1000
 const TRUSTED_LOCATION_SOURCES = ['gps', 'manual', 'search']
 
@@ -59,7 +58,6 @@ const getCurrentLocation = async () => {
     const result = await resolveAmapLocation({
       getLastLocation,
       saveLastLocation,
-      defaultPosition: DEFAULT_LOCATION,
       clientIp: null,
       preferCacheFirst: true,
       cacheSources: TRUSTED_LOCATION_SOURCES,

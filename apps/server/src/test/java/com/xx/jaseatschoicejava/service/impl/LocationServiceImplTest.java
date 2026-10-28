@@ -2,29 +2,29 @@ package com.xx.jaseatschoicejava.service.impl;
 
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.Mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.MockitoJUnitRunner;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestTemplate;
 
+import com.xx.jaseatschoicejava.exception.BusinessException;
 import com.xx.jaseatschoicejava.service.AMapService;
 import com.xx.jaseatschoicejava.service.dto.AmapApiResponse;
-import com.xx.jaseatschoicejava.service.dto.AmapLocationData;
 
-@ExtendWith(MockitoExtension.class)
-class LocationServiceImplTest {
+@RunWith(MockitoJUnitRunner.class)
+public class LocationServiceImplTest {
 
     @Mock
     private RestTemplate restTemplate;
@@ -39,8 +39,8 @@ class LocationServiceImplTest {
     private static final String TENCENT_API_KEY = "test-tencent-key";
     private static final String TENCENT_API_URL = "https://apis.map.qq.com";
 
-    @BeforeEach
-    void setUp() {
+    @Before
+    public void setUp() {
         locationService = new LocationServiceImpl(aMapService);
         ReflectionTestUtils.setField(locationService, "restTemplate", restTemplate);
         ReflectionTestUtils.setField(locationService, "gaodeApiKey", GAODE_API_KEY);
@@ -50,7 +50,7 @@ class LocationServiceImplTest {
     }
 
     @Test
-    void getCurrentLocation_ipLocation_shouldBuildTencentUrl() {
+    public void getCurrentLocation_ipLocation_shouldBuildTencentUrl() {
         String mockResponse = """
             {
                 "status": 0,
@@ -76,15 +76,10 @@ class LocationServiceImplTest {
 
         when(restTemplate.getForEntity(anyString(), eq(String.class)))
                 .thenReturn(ResponseEntity.ok(mockResponse));
-        when(aMapService.geocode(eq("白云区"), eq("广州市")))
-                .thenReturn(new AmapApiResponse<>("200", "搜索成功",
-                    new AmapLocationData(113.27324, 23.15792, "广东省", "广州市", "city", "广东省广州市白云区")));
-
         Map<String, Object> result = locationService.getCurrentLocation(null, null, "1.2.3.4");
 
         String expectedUrl = String.format("%s/ws/location/v1/ip?key=%s&ip=%s", TENCENT_API_URL, TENCENT_API_KEY, "1.2.3.4");
         verify(restTemplate).getForEntity(eq(expectedUrl), eq(String.class));
-        verify(aMapService).geocode(eq("白云区"), eq("广州市"));
 
         assertNotNull(result);
         assertEquals("广东省", result.get("province"));
@@ -94,7 +89,7 @@ class LocationServiceImplTest {
     }
 
     @Test
-    void getCurrentLocation_ipLocation_shouldParseTencentResult() {
+    public void getCurrentLocation_ipLocation_shouldParseTencentResult() {
         String mockResponse = """
             {
                 "status": 0,
@@ -116,9 +111,6 @@ class LocationServiceImplTest {
 
         when(restTemplate.getForEntity(anyString(), eq(String.class)))
                 .thenReturn(ResponseEntity.ok(mockResponse));
-        when(aMapService.geocode(eq("南山区"), eq("深圳市")))
-                .thenReturn(new AmapApiResponse<>("200", "搜索成功",
-                    new AmapLocationData(113.93041, 22.53332, "广东省", "深圳市", "city", "广东省深圳市南山区")));
 
         Map<String, Object> result = locationService.getCurrentLocation(null, null, null);
 
@@ -128,18 +120,18 @@ class LocationServiceImplTest {
     }
 
     @Test
-    void getCurrentLocation_ipLocation_shouldHandleEmptyResponse() {
+    public void getCurrentLocation_ipLocation_shouldHandleEmptyResponse() {
         when(restTemplate.getForEntity(anyString(), eq(String.class)))
                 .thenReturn(ResponseEntity.ok(""));
 
-        Map<String, Object> result = locationService.getCurrentLocation(null, null, null);
+        BusinessException error = assertThrows(BusinessException.class,
+                () -> locationService.getCurrentLocation(null, null, null));
 
-        assertNotNull(result);
-        assertTrue(result.isEmpty());
+        assertEquals("LOCATION_UPSTREAM_ERROR", error.getCode());
     }
 
     @Test
-    void getCurrentLocation_ipLocation_shouldHandleFailedStatus() {
+    public void getCurrentLocation_ipLocation_shouldHandleFailedStatus() {
         String mockResponse = """
             {
                 "status": 1,
@@ -150,25 +142,45 @@ class LocationServiceImplTest {
         when(restTemplate.getForEntity(anyString(), eq(String.class)))
                 .thenReturn(ResponseEntity.ok(mockResponse));
 
-        Map<String, Object> result = locationService.getCurrentLocation(null, null, null);
+        BusinessException error = assertThrows(BusinessException.class,
+                () -> locationService.getCurrentLocation(null, null, null));
 
-        assertNotNull(result);
-        assertTrue(result.isEmpty());
+        assertEquals("LOCATION_UPSTREAM_ERROR", error.getCode());
     }
 
     @Test
-    void getCurrentLocation_ipLocation_shouldHandleException() {
+    public void getCurrentLocation_ipLocation_shouldHandleException() {
         when(restTemplate.getForEntity(anyString(), eq(String.class)))
                 .thenThrow(new RuntimeException("网络错误"));
 
-        Map<String, Object> result = locationService.getCurrentLocation(null, null, null);
+        BusinessException error = assertThrows(BusinessException.class,
+                () -> locationService.getCurrentLocation(null, null, null));
 
-        assertNotNull(result);
-        assertTrue(result.isEmpty());
+        assertEquals("LOCATION_UPSTREAM_ERROR", error.getCode());
     }
 
     @Test
-    void getCurrentLocation_reverseGeocode_shouldBuildCorrectUrl() {
+    public void getCurrentLocation_withoutAmapKey_shouldFailExplicitly() {
+        ReflectionTestUtils.setField(locationService, "gaodeApiKey", "");
+
+        BusinessException error = assertThrows(BusinessException.class,
+                () -> locationService.getCurrentLocation(39.90923, 116.397428, null));
+
+        assertEquals("LOCATION_KEY_MISSING", error.getCode());
+    }
+
+    @Test
+    public void getCurrentLocation_withoutTencentKey_shouldFailExplicitly() {
+        ReflectionTestUtils.setField(locationService, "tencentApiKey", "");
+
+        BusinessException error = assertThrows(BusinessException.class,
+                () -> locationService.getCurrentLocation(null, null, "1.2.3.4"));
+
+        assertEquals("LOCATION_KEY_MISSING", error.getCode());
+    }
+
+    @Test
+    public void getCurrentLocation_reverseGeocode_shouldBuildCorrectUrl() {
         String mockResponse = """
             {
                 "status": "1",

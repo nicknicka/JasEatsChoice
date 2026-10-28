@@ -81,7 +81,7 @@
           <span class="atlas-map-error-icon">🛰️</span>
           <p class="atlas-map-error-title">地图暂时不可用</p>
           <p class="atlas-map-error-text">{{ mapErrorMessage }}</p>
-          <p class="atlas-map-error-hint">你仍可以稍后联网后重新打开，或通过搜索框输入地址再确认。</p>
+          <p class="atlas-map-error-hint">请检查 VITE_AMAP_KEY 配置与网络连接后重试。</p>
         </div>
 
         <div v-if="mapLoading" class="atlas-map-loading">
@@ -145,10 +145,10 @@ const props = defineProps({
     type: Boolean,
     default: false
   },
-  // 默认位置
+  // 地图初始中心；没有真实定位结果时由父组件传空值
   defaultPosition: {
     type: Object,
-    default: () => ({ lng: 116.397428, lat: 39.90923 }) // 默认北京
+    default: null
   }
 })
 
@@ -220,17 +220,17 @@ const initMap = async () => {
     console.log('开始初始化地图...')
 
     // 创建地图实例 - 1.4.15 使用标准配置
-    map.value = new AMap.Map('mapContainer', {
-      zoom: 15,
-      center: [props.defaultPosition.lng, props.defaultPosition.lat]
-    })
+    const initialPosition = props.defaultPosition
+    const mapOptions = { zoom: 15 }
+    if (initialPosition?.lng && initialPosition?.lat) {
+      mapOptions.center = [initialPosition.lng, initialPosition.lat]
+    }
+    map.value = new AMap.Map('mapContainer', mapOptions)
 
     console.log('地图实例创建成功')
 
-    // 添加标记
-    if (props.defaultPosition) {
-      addMarker(props.defaultPosition.lng, props.defaultPosition.lat)
-      console.log('默认标记已添加')
+    if (initialPosition?.lng && initialPosition?.lat) {
+      addMarker(initialPosition.lng, initialPosition.lat)
     }
 
     // 点击地图事件
@@ -442,17 +442,6 @@ const applyResolvedLocation = async (result, { source = 'unknown', silent = fals
     }
     selectedAddress.value = address || province || city || '未知地址'
 
-    if (finalSource === 'default') {
-      if (!silent) {
-        ElMessage.warning({
-          message: '无法获取精确位置，已显示默认位置。请在地图上点击选择您的实际位置。',
-          duration: 5000,
-          showClose: true
-        })
-      }
-      return false
-    }
-
     if (TRUSTED_LOCATION_SOURCES.includes(finalSource)) {
       saveLastLocation(lng, lat, finalSource, {
         address: selectedAddress.value,
@@ -491,7 +480,6 @@ const runLocationFlow = async ({ silent = false, preferCacheFirst = true } = {})
   const result = await resolveAmapLocation({
     getLastLocation,
     saveLastLocation,
-    defaultPosition: props.defaultPosition,
     clientIp: null,
     preferCacheFirst,
     cacheSources: TRUSTED_LOCATION_SOURCES,
@@ -504,9 +492,9 @@ const runLocationFlow = async ({ silent = false, preferCacheFirst = true } = {})
     silent
   })
 
-  if (!applied && !silent && result?.source !== 'default') {
+  if (!applied && !silent) {
     ElMessage.warning({
-      message: '无法自动定位，已显示默认位置。请在地图上点击选择您的实际位置。',
+      message: '无法自动定位，请在地图上点击选择您的实际位置。',
       duration: 5000,
       showClose: true
     })

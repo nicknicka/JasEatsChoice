@@ -306,7 +306,7 @@ const handleLocationSelected = async (locationData) => {
 
 // 从地址中提取城市名称
 const extractCityFromAddress = (address) => {
-  if (!address) return '北京'
+  if (!address) return ''
 
   // 简单的提取逻辑，可以根据实际地址格式调整
   const cityMatch = address.match(/(北京市|上海市|广州市|深圳市|杭州市|成都市|武汉市|西安市|南京市|重庆市|天津市|青岛市|大连市|厦门市|苏州市|无锡市|宁波市|长沙市|郑州市)/)
@@ -323,7 +323,7 @@ const extractCityFromAddress = (address) => {
     }
   }
 
-  return '北京'
+  return ''
 }
 
 // 从 localStorage 读取上次保存的位置
@@ -357,9 +357,9 @@ const loadLastLocation = async () => {
           const locationApi = (await import('../../api/location.js')).default
           const response = await locationApi.reverseGeocode(lng.toString(), lat.toString())
 
-          if (response && response.code === '200' && response.data) {
-            const address = response.data.formattedAddress
-            weather.value.address = address
+          if (response && (response.success === true || response.code === '200') && response.data) {
+            const address = response.data.formattedAddress || response.data.address
+            weather.value.address = address || ''
             weather.value.city = extractCityFromAddress(address)
             weather.value.locationSource = locationSource.value
             console.log('已加载上次保存的位置:', address, locationSource.value)
