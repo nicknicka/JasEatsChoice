@@ -147,7 +147,7 @@
                 circle
                 size="small"
                 class="delete-btn"
-                @click.stop="removeCollection(item.id)"
+                @click.stop="removeCollection(item)"
               />
             </div>
 
@@ -431,9 +431,9 @@ const resetFilter = () => {
 }
 
 // 移除收藏
-const removeCollection = (id) => {
+const removeCollection = (item) => {
   // 找到要删除的收藏项
-  const collectionIndex = collections.value.findIndex((item) => item.id === id)
+  const collectionIndex = collections.value.findIndex((entry) => entry.id === item.id)
   if (collectionIndex === -1) {
     ElMessage.error('未找到该收藏项')
     return
@@ -446,11 +446,30 @@ const removeCollection = (id) => {
   })
     .then(async () => {
       try {
-        // 使用 RESTful 风格的 API 调用
-        const response = await api.delete(`/v1/collections/${id}`)
+        const response = await api.delete('/v1/collections', {
+          params: {
+            userId: String(authStore.userId || '1'),
+            type: item.type,
+            id: item.collectableId
+          }
+        })
 
         if (response.code === '200') {
-          // 从本地数组中删除该收藏项
+          const query = await api.get('/v1/collections', { params: { userId: String(authStore.userId || '1') } })
+          const rawCollections = Array.isArray(query.data?.data)
+            ? query.data.data
+            : Array.isArray(query.data)
+            ? query.data
+            : []
+          const stillExists = rawCollections.some(
+            (entry) => String(entry.id) === String(item.id)
+          )
+
+          if (stillExists) {
+            ElMessage.error('删除失败：取消收藏后仍查询到该记录')
+            return
+          }
+
           collections.value.splice(collectionIndex, 1)
           ElMessage.success('收藏已删除')
         } else {
