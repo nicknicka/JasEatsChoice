@@ -22,7 +22,6 @@ import static org.junit.Assert.assertTrue;
  */
 public class WebSocketMessageServiceTest {
 
-    private final WebSocketMessageService service = new WebSocketMessageService();
     private final List<EmbeddedChannel> openedChannels = new ArrayList<>();
 
     private EmbeddedChannel openChannel() {
@@ -83,6 +82,16 @@ public class WebSocketMessageServiceTest {
         assertNotNull(readText(first));
         assertNotNull(readText(second));
         assertNotNull(readText(third));
+    }
+
+    @Test
+    public void pushWithNullUserIdIsRejectedWithoutThrowing() {
+        // 聊天链路会把消息对象的接收方直接透传过来，该字段可能为空
+        // （例如只有发送者的草稿消息）。这种情况应安静地视为未送达，
+        // 而不是让 ConcurrentHashMap 抛 NPE 打断整条推送流程。
+        int delivered = WebSocketMessageService.pushToUser(null, "{\"msgType\":\"text\"}");
+
+        assertEquals("空接收方应返回 0", 0, delivered);
     }
 
     @Test
