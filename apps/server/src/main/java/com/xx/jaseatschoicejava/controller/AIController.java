@@ -47,6 +47,8 @@ public class AIController {
 
     private static final Logger log = LoggerFactory.getLogger(AIController.class);
     private static final long SSE_TIMEOUT_MS = 300000L;
+    private static final String AI_NOT_CONFIGURED_CODE = "AI_NOT_CONFIGURED";
+    private static final String AI_VISION_NOT_CONFIGURED_CODE = "AI_VISION_NOT_CONFIGURED";
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -74,6 +76,10 @@ public class AIController {
     @PostMapping(value = "/dish-recognize", consumes = "multipart/form-data")
     public ResponseResult<?> dishRecognize(@RequestParam("image") MultipartFile image,
                                           @RequestParam(value = "userId", required = false) String userId) {
+        if (!chatModelProvider.getCapabilities().isVision()) {
+            return ResponseResult.fail(AI_VISION_NOT_CONFIGURED_CODE, "菜品识别暂未开放：请配置可用的视觉模型");
+        }
+
         try {
             log.info("接收到菜品识别请求，文件名：{}, 大小：{}", image.getOriginalFilename(), image.getSize());
 
@@ -213,6 +219,10 @@ public class AIController {
                 return ResponseResult.fail("400", "食谱内容不能为空");
             }
 
+            if (!chatModelProvider.getCapabilities().isTextChat()) {
+                return ResponseResult.fail(AI_NOT_CONFIGURED_CODE, "食谱优化暂未开放：请先配置 AI 模型");
+            }
+
             log.info("食谱优化请求，目标：{}，输入：{}", goal, inputText.length() > 100 ? inputText.substring(0, 100) + "..." : inputText);
             Map<String, Object> result = zhipuAIService.optimizeRecipe(inputText);
 
@@ -220,7 +230,9 @@ public class AIController {
             if (Boolean.TRUE.equals(result.get("error"))) {
                 String errorMsg = (String) result.get("message");
                 log.warn("食谱优化服务返回错误：{}", errorMsg);
-                return ResponseResult.fail("500", errorMsg != null ? errorMsg : "食谱优化失败");
+                String errorCode = errorMsg != null && errorMsg.contains("未配置")
+                        ? AI_NOT_CONFIGURED_CODE : "500";
+                return ResponseResult.fail(errorCode, errorMsg != null ? errorMsg : "食谱优化失败");
             }
 
             log.info("食谱优化成功，返回字段：{}", result.keySet());
@@ -260,6 +272,13 @@ public class AIController {
 
         if (inputText == null || inputText.trim().isEmpty()) {
             sendRecipeSseData(emitter, Map.of("error", true, "message", "食谱内容不能为空", "done", true));
+            emitter.complete();
+            return emitter;
+        }
+
+        if (!chatModelProvider.getCapabilities().isStreaming()) {
+            sendRecipeSseData(emitter, Map.of("error", true,
+                    "message", "食谱优化暂未开放：请先配置支持流式输出的 AI 模型", "done", true));
             emitter.complete();
             return emitter;
         }

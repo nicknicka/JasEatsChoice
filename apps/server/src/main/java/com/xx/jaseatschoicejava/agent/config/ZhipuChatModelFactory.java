@@ -97,6 +97,7 @@ public class ZhipuChatModelFactory {
         String visionModel = effectiveVisionModel();
         Duration to = timeout();
         boolean hasKey = apiKey != null && !apiKey.isBlank();
+        boolean hasVisionModel = visionModel != null && !visionModel.isBlank();
 
         log.info("AI 供应商：智谱 (zhipu)，模型：{}，视觉模型：{}，key 已配置：{}",
             model, visionModel, hasKey);
@@ -153,6 +154,7 @@ public class ZhipuChatModelFactory {
 
             @Override
             public AiCapabilitiesDTO getCapabilities() {
+                boolean visionAvailable = hasKey && hasVisionModel;
                 return AiCapabilitiesDTO.builder()
                     .available(hasKey)
                     .provider("zhipu")
@@ -160,7 +162,7 @@ public class ZhipuChatModelFactory {
                     .visionModel(visionModel)
                     .textChat(hasKey)
                     .streaming(hasKey)
-                    .vision(hasKey)
+                    .vision(visionAvailable)
                     .functionCalling(hasKey)
                     .agentic(hasKey)
                     .unavailableMessage(hasKey ? "" :
