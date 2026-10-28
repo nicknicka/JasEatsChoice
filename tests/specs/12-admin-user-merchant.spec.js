@@ -51,20 +51,29 @@ test.describe('模块十二：管理员端-用户与商家管理', () => {
     } catch (e) { markFailed('12.1', e.message.slice(0, 50)); throw e }
   })
 
-  test.fixme('12.2 用户详情 (blocked by #69)', async ({ page, request }) => {
-    const users = pageRecords(await apiRequest(page, request, '/admin/users?page=1&pageSize=10'))
-    expect(users.length, '用户接口应有可验证记录').toBeGreaterThan(0)
-    const user = users[0]
+  test('12.2 用户详情', async ({ page, request }) => {
+    markRunning('12.2')
+    try {
+      const users = pageRecords(await apiRequest(page, request, '/admin/users?page=1&pageSize=10'))
+      expect(users.length, '用户接口应有可验证记录').toBeGreaterThan(0)
+      const user = users[0]
+      const detail = await apiRequest(page, request, `/admin/users/${user.userId}`)
 
-    await page.goto('/admin/users')
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
-    await page.locator('.el-table__body-wrapper tbody tr').first()
-      .locator('button:has-text("查看")').click()
+      await page.goto('/admin/users')
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
+      await page.locator('.el-table__body-wrapper tbody tr').first()
+        .locator('button:has-text("查看")').click()
 
-    const dialog = page.locator('.el-dialog').filter({ hasText: '用户详情' })
-    await expect(dialog).toBeVisible({ timeout: 10000 })
-    await expect(dialog).toContainText(String(user.userId))
-    await expect(dialog).toContainText(user.phone)
+      const dialog = page.locator('.el-dialog').filter({ hasText: '用户详情' })
+      await expect(dialog).toBeVisible({ timeout: 10000 })
+      await expect(dialog).toContainText(String(detail.userId))
+      await expect(dialog).toContainText(detail.phone)
+
+      markPassed('12.2', `用户 ${detail.userId} 详情弹窗 ID/手机号与详情接口一致`)
+    } catch (e) {
+      markFailed('12.2', e.message.slice(0, 50))
+      throw e
+    }
   })
 
   test('12.3 用户状态管理', async ({ page, request }) => {
