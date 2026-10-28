@@ -27,13 +27,23 @@ test.describe('模块十五：实时推荐推送', () => {
     }
   })
 
-  test('15.2 后端真实推送到达时显示可点击提示', async ({ page, request }) => {
+  test('15.2 后端真实推送到达时显示可点击提示并跳转推荐页', async ({ page, request }) => {
     markRunning('15.2')
     const taskId = `e2e-realtime-${Date.now()}`
     let registered = false
+    const socketUrls = []
+    page.on('websocket', (ws) => socketUrls.push(ws.url()))
 
     try {
       await loginAsUser(page)
+
+      // 推送需要接收方：先确认带身份的业务连接真的建立了，
+      // 否则后端会因无人在线而跳过，用例就退化成空验证。
+      const isBusinessSocket = (u) => /\/ws\?/.test(u) && u.includes('userId=')
+      await expect.poll(
+        () => socketUrls.some(isBusinessSocket),
+        { message: '推送前应已建立带身份的业务连接', timeout: 20000 }
+      ).toBeTruthy()
 
       // 登记一个不会自动调度的临时任务，指向后端真实的定时推荐方法
       createEphemeralTask({
@@ -44,16 +54,6 @@ test.describe('模块十五：实时推荐推送', () => {
       })
       registered = true
 
-      // 推送需要接收方：确认页面已把带身份的业务连接建好，
-      // 否则后端会因无人在线而跳过，用例就会变成空验证。
-      await expect.poll(async () => {
-        const state = await page.evaluate(() => ({
-          // 业务连接的建立会写入认证态；无 token 时布局层不会建连接
-          hasToken: !!localStorage.getItem('auth_token')
-        }))
-        return state.hasToken
-      }, { message: '推送前应已建立认证态（业务连接的前提）', timeout: 20000 }).toBe(true)
-
       // 触发真实链路：后端反射调用定时推荐方法 → 生成推荐 → 推给在线连接
       const executed = await request.post(`${TEST_API_BASE}/v1/scheduled-tasks/${taskId}/execute`)
       expect(executed.ok(), '执行临时任务接口应返回成功').toBeTruthy()
@@ -61,7 +61,12 @@ test.describe('模块十五：实时推荐推送', () => {
       const notice = page.locator('.el-notification')
       await expect(notice.first()).toBeVisible({ timeout: 20000 })
       await expect(notice.first()).toContainText('为你推荐')
-      markPassed('15.2', '后端真实推送经定时任务链路到达并显示提示')
+
+      // 提示应可点击并进入推荐页
+      await notice.first().click()
+      await expect(page).toHaveURL(/\/user\/home\/recommend/, { timeout: 15000 })
+
+      markPassed('15.2', '后端真实推送到达、显示提示且点击进入推荐页')
     } catch (e) {
       markFailed('15.2', e.message.slice(0, 50))
       throw e

@@ -63,9 +63,6 @@ public class WebSocketMessageService {
      * 注册用户Channel
      */
     public static void registerChannel(String userId, Channel channel) {
-        if (userId == null || channel == null) {
-            return;
-        }
         USER_CHANNELS.computeIfAbsent(userId, key -> ConcurrentHashMap.newKeySet()).add(channel);
         logger.info("✅ [WebSocket] 用户 {} 的Channel已注册，当前连接数 {}", userId, USER_CHANNELS.get(userId).size());
     }
@@ -74,9 +71,6 @@ public class WebSocketMessageService {
      * 移除用户Channel
      */
     public static void removeChannel(Channel channel) {
-        if (channel == null) {
-            return;
-        }
         USER_CHANNELS.entrySet().removeIf(entry -> {
             entry.getValue().remove(channel);
             return entry.getValue().isEmpty();
@@ -230,8 +224,11 @@ public class WebSocketMessageService {
      * @return 实际写入成功的连接数；0 表示用户不在线或连接已失效（正常情况，不是异常）
      */
     public static int pushToUser(String userId, String message) {
-        Set<Channel> channels = userId == null ? null : USER_CHANNELS.get(userId);
-        if (channels == null || channels.isEmpty() || message == null) {
+        if (userId == null) {
+            return 0;
+        }
+        Set<Channel> channels = USER_CHANNELS.get(userId);
+        if (channels == null || channels.isEmpty()) {
             return 0;
         }
 
@@ -250,10 +247,6 @@ public class WebSocketMessageService {
      * @return 实际写入成功的连接数
      */
     public static int broadcastToAll(String message) {
-        if (message == null) {
-            return 0;
-        }
-
         int delivered = 0;
         for (Map.Entry<String, Set<Channel>> entry : USER_CHANNELS.entrySet()) {
             for (Channel channel : entry.getValue()) {
@@ -272,7 +265,7 @@ public class WebSocketMessageService {
      * 调用方据此得到的是实际送达数，而不是尝试次数。
      */
     private static boolean writeToChannel(Channel channel, String message, String userId) {
-        if (channel == null || !channel.isActive()) {
+        if (!channel.isActive()) {
             return false;
         }
         try {
@@ -296,12 +289,15 @@ public class WebSocketMessageService {
      * 判断该用户是否有任意一条活跃连接
      */
     public static boolean hasActiveConnection(String userId) {
-        Set<Channel> channels = userId == null ? null : USER_CHANNELS.get(userId);
+        if (userId == null) {
+            return false;
+        }
+        Set<Channel> channels = USER_CHANNELS.get(userId);
         if (channels == null || channels.isEmpty()) {
             return false;
         }
         for (Channel channel : channels) {
-            if (channel != null && channel.isActive()) {
+            if (channel.isActive()) {
                 return true;
             }
         }
