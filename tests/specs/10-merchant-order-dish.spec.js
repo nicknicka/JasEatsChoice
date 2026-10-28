@@ -399,7 +399,8 @@ test.describe('模块十：商家端-订单与菜品管理', () => {
     }
   })
 
-  test.fixme('10.11 菜品上下架 (blocked by #63)', async ({ page }) => {
+  test('10.11 菜品上下架', async ({ page }) => {
+    markRunning('10.11')
     const merchantId = await getMerchantId()
     const menus = await apiRequest(page, `/v1/menus/merchants/${encodeURIComponent(merchantId)}/menu`)
     const linkedDishIds = new Set(
@@ -415,12 +416,18 @@ test.describe('模块十：商家端-订单与菜品管理', () => {
       const dishRow = page.locator('.dish-item', { hasText: dish.name }).first()
       const actionName = originalStatus ? '下架' : '上架'
       await expect(dishRow).toBeVisible()
+      const updateResponse = page.waitForResponse((response) =>
+        response.url().includes(`/api/v1/dishes/${dish.id}/status`) &&
+        response.request().method() === 'PUT'
+      )
       await dishRow.getByRole('button', { name: actionName, exact: true }).click()
       await page.locator('.el-message-box').getByRole('button', { name: '确定' }).click()
+      expect((await updateResponse).ok()).toBe(true)
 
-      const updated = (await apiRequest(page, `/v1/dishes?merchantId=${encodeURIComponent(merchantId)}`))
-        .find((item) => String(item.id) === String(dish.id))
-      expect(updated.status).toBe(!originalStatus)
+      await expect.poll(async () => {
+        const dishes = await apiRequest(page, `/v1/dishes?merchantId=${encodeURIComponent(merchantId)}`)
+        return dishes.find((item) => String(item.id) === String(dish.id))?.status
+      }).toBe(!originalStatus)
       await expect(dishRow.getByText(originalStatus ? '下架' : '上架', { exact: true })).toBeVisible()
       markPassed('10.11', `菜品 ${dish.name} 从${originalStatus ? '上架' : '下架'}切换为${originalStatus ? '下架' : '上架'}`)
     } catch (e) {
