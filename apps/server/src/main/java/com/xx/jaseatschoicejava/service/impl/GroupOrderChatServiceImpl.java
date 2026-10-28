@@ -2,12 +2,19 @@ package com.xx.jaseatschoicejava.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.xx.jaseatschoicejava.entity.Contact;
+import com.xx.jaseatschoicejava.entity.ChatMsg;
 import com.xx.jaseatschoicejava.entity.ChatSession;
 import com.xx.jaseatschoicejava.entity.GroupOrder;
 import com.xx.jaseatschoicejava.mapper.ChatSessionMapper;
+import com.xx.jaseatschoicejava.service.ChatMsgService;
 import com.xx.jaseatschoicejava.service.ChatSessionService;
+import com.xx.jaseatschoicejava.service.ContactService;
 import com.xx.jaseatschoicejava.service.GroupOrderChatService;
 import com.xx.jaseatschoicejava.service.GroupOrderService;
+import com.xx.jaseatschoicejava.util.ChatSessionIdGenerator;
+import com.xx.jaseatschoicejava.util.IdGenerator;
+import com.xx.jaseatschoicejava.websocket.WebSocketMessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -30,6 +37,9 @@ public class GroupOrderChatServiceImpl extends ServiceImpl<ChatSessionMapper, Ch
 
     private final ChatSessionService chatSessionService;
     private final GroupOrderService groupOrderService;
+    private final ChatMsgService chatMsgService;
+    private final ContactService contactService;
+    private final WebSocketMessageService webSocketMessageService;
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
@@ -95,13 +105,39 @@ public class GroupOrderChatServiceImpl extends ServiceImpl<ChatSessionMapper, Ch
         // 构建同步消息，添加前缀和标签
         String syncedMessage = buildSyncMessage(messageType, message);
 
-        // 这里需要调用群聊服务发送消息
-        // 实际发送由 GroupChatService 或 ChatController 处理
-        // 此服务只负责构建消息格式
-        // TODO: 调用群聊消息发送接口
+        GroupOrder groupOrder = groupOrderService.getById(groupOrderId);
+        if (groupOrder == null || groupOrder.getGroupId() == null || groupOrder.getGroupId().isEmpty()) {
+            log.warn("群订单缺少群信息 - groupOrderId: {}", groupOrderId);
+            return null;
+        }
+
+        ChatMsg chatMsg = new ChatMsg();
+        chatMsg.setMsgId(IdGenerator.toChatMsgIdString(IdGenerator.generateId()));
+        chatMsg.setFromId(merchantId);
+        chatMsg.setToId(groupOrder.getGroupId());
+        chatMsg.setSessionId(ChatSessionIdGenerator.getGroupChatSessionId(groupOrder.getGroupId()));
+        chatMsg.setSessionType("group");
+        chatMsg.setMsgType("text");
+        chatMsg.setContent(syncedMessage);
+        chatMsg.setReadStatus(false);
+        chatMsg.setSynced(false);
+        chatMsg.setCreatedAt(LocalDateTime.now());
+
+        if (!chatMsgService.save(chatMsg)) {
+            throw new IllegalStateException("群订单消息保存失败");
+        }
 
         // 更新会话的最后消息
         updateLastMessage(groupOrderId, syncedMessage, LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+
+        List<Contact> members = contactService.lambdaQuery()
+                .eq(Contact::getTargetId, groupOrder.getGroupId())
+                .eq(Contact::getRelationType, "group")
+                .eq(Contact::getStatus, "normal")
+                .list();
+        for (Contact member : members) {
+            webSocketMessageService.pushChatMessageToUser(member.getUserId(), chatMsg);
+        }
 
         return syncedMessage;
     }
@@ -156,9 +192,13 @@ public class GroupOrderChatServiceImpl extends ServiceImpl<ChatSessionMapper, Ch
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean markMessageAsSynced(String messageId) {
-        // TODO: 标记消息为已同步
-        // 需要在消息表中添加 synced 字段
-        return true;
+        ChatMsg chatMsg = chatMsgService.getById(messageId);
+        if (chatMsg == null) {
+            return false;
+        }
+
+        chatMsg.setSynced(true);
+        return chatMsgService.updateById(chatMsg);
     }
 
     @Override

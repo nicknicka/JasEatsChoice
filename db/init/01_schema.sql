@@ -534,6 +534,7 @@ CREATE TABLE `t_chat_msg` (
   `reply_from_id` varchar(64) DEFAULT NULL COMMENT 'è¢«å›žå¤æ¶ˆæ¯çš„å‘é€è€…ID',
   `reply_from_name` varchar(100) DEFAULT NULL COMMENT 'è¢«å›žå¤æ¶ˆæ¯çš„å‘é€è€…åç§°',
   `read_status` tinyint(1) DEFAULT '0' COMMENT 'å·²è¯»çŠ¶æ€:0-æœªè¯»,1-å·²è¯»',
+  `synced` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否已同步到群：0-未同步，1-已同步',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `file_url` varchar(512) DEFAULT NULL COMMENT 'æ–‡ä»¶URLï¼ˆå›¾ç‰‡/æ–‡ä»¶æ¶ˆæ¯æ—¶ä½¿ç”¨ï¼‰',
   `file_name` varchar(255) DEFAULT NULL COMMENT 'æ–‡ä»¶åï¼ˆæ–‡ä»¶æ¶ˆæ¯æ—¶ä½¿ç”¨ï¼‰',
