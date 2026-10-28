@@ -2,23 +2,14 @@
  * 推荐系统相关逻辑
  */
 
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import axios from 'axios'
 import { API_CONFIG } from '../config/index.js'
 import {
-  FESTIVAL_DISHES,
-  getCurrentFestival,
-  getDishIcon,
-  getDishCalories
-} from '../constants/festivalDishes.js'
-import {
   RECOMMENDATION_TYPES,
-  MOCK_DISHES,
-  REJECTION_THRESHOLD,
   DIVERSITY_CONFIG,
-  getRandomTagType,
-  getCurrentTimePeriod
+  getRandomTagType
 } from '../constants/recommendationConstants.js'
 import pinia from '../store'
 import { useAuthStore } from '../store/authStore'
@@ -26,6 +17,13 @@ import { useAuthStore } from '../store/authStore'
 export function useRecommendations() {
   // 在函数内部获取 store，避免模块加载时的初始化问题
   const authStore = useAuthStore(pinia)
+  const getCurrentUserId = () => {
+    const userId = authStore.userId || localStorage.getItem('auth_userId') || ''
+    if (!userId) {
+      throw new Error('用户未登录')
+    }
+    return String(userId)
+  }
 
   // 状态管理
   const recommendations = ref([])
@@ -56,7 +54,7 @@ export function useRecommendations() {
    */
   const loadRejectionHistory = async () => {
     try {
-      const userId = String(authStore.userId || 1)
+      const userId = getCurrentUserId()
       const response = await axios.get(`${API_CONFIG.baseURL}${API_CONFIG.recommendReject.list}`, {
         params: { userId }
       })
@@ -116,7 +114,7 @@ export function useRecommendations() {
    * 记录点击反馈
    */
   const recordClickFeedback = async (item) => {
-    const userId = String(authStore.userId || 1)
+    const userId = getCurrentUserId()
     const dishId = String(item.dishId || item.id || '')
     const recommendationId = item.recommendationId || item.id || ''
 
@@ -160,7 +158,7 @@ export function useRecommendations() {
    * 记录下单反馈
    */
   const recordOrderFeedback = async (item) => {
-    const userId = String(authStore.userId || 1)
+    const userId = getCurrentUserId()
     const dishId = String(item.dishId || item.id || '')
     const recommendationId = item.recommendationId || item.id || ''
 
@@ -206,7 +204,7 @@ export function useRecommendations() {
    * 记录收藏行为
    */
   const recordFavoriteBehavior = async (item, isFavorited) => {
-    const userId = String(authStore.userId || 1)
+    const userId = getCurrentUserId()
     const dishId = String(item.dishId || item.id || '')
 
     try {
@@ -233,7 +231,7 @@ export function useRecommendations() {
    * 拒绝推荐（增强版 - 记录拒绝原因）
    */
   const rejectRecommendation = async (item, reason = '不感兴趣') => {
-    const userId = String(authStore.userId || 1)
+    const userId = getCurrentUserId()
     const dishId = String(item.dishId || item.id || '')
 
     try {
@@ -291,131 +289,11 @@ export function useRecommendations() {
   }
 
   /**
-   * 根据天气和时间生成推荐菜品
-   */
-  const generateWeatherTimeRecommendations = (timeType, weatherTags, rejectedDishIds) => {
-    const filteredDishes = MOCK_DISHES.filter((dish) => {
-      const matchesCriteria =
-        dish.type.includes(timeType) || weatherTags.some((tag) => dish.tags.includes(tag))
-
-      // 检查是否被拒绝过（基于菜品名称匹配）
-      const isRejectedDish =
-        rejectedDishIds &&
-        rejectedDishIds.some((id) => {
-          // 这里使用名称匹配作为临时方案，因为 MOCK_DISHES 没有 dishId
-          const rejectedDish = MOCK_DISHES.find((d) => String(d.id || '') === String(id))
-          return rejectedDish && rejectedDish.name === dish.name
-        })
-
-      return matchesCriteria && !isRejectedDish
-    })
-
-    return filteredDishes.map((dish, index) => ({
-      id: Date.now() + index,
-      dishId: String(dish.id || Date.now() + index), // 添加 dishId 用于后端记录
-      name: `${timeType}推荐: ${dish.name}`,
-      type: RECOMMENDATION_TYPES.TIME,
-      calories: dish.calories,
-      tags: [...dish.tags, timeType],
-      nutrition: dish.nutrition,
-      reason: `${timeType}${weatherTags.length > 0 ? `，${weatherTags.join('、')}适合` : '适合'}`,
-      rating: 4.8,
-      image: '🍱',
-      recommendSource: RECOMMENDATION_TYPES.TIME
-    }))
-  }
-
-  /**
-   * 根据节日/节气添加特色菜品推荐
-   */
-  const addFestivalRecommendations = (rejectedDishIds) => {
-    const currentFestival = getCurrentFestival()
-    if (!currentFestival || !FESTIVAL_DISHES[currentFestival]) {
-      return []
-    }
-
-    const festivalDishList = FESTIVAL_DISHES[currentFestival]
-
-    // 非食品项目列表（需要过滤掉）
-    const nonFoodItems = ['花灯', '年夜饭', '贴秋膘'] // 贴秋膘是习俗不是菜品
-
-    const festivalRecommendations = festivalDishList
-      .filter((dishName) => {
-        // 过滤非食品项目
-        if (nonFoodItems.some((nonFood) => dishName.includes(nonFood))) {
-          return false
-        }
-
-        // 检查是否被拒绝过
-        return (
-          !rejectedDishIds ||
-          !rejectedDishIds.some((id) => {
-            // 这里使用名称匹配作为临时方案
-            return String(id).includes(dishName) || dishName.includes(String(id))
-          })
-        )
-      })
-      .map((dishName, index) => {
-        return {
-          id: Date.now() + index + 1000,
-          dishId: `festival_${currentFestival}_${dishName}`, // 添加 dishId 用于后端记录
-          name: `${currentFestival}特色: ${dishName}`,
-          type: RECOMMENDATION_TYPES.FESTIVAL,
-          calories: getDishCalories(dishName), // 使用卡路里估算函数
-          tags: ['节日特供', currentFestival],
-          reason: `${currentFestival}传统特色美食`,
-          rating: 4.9,
-          image: getDishIcon(dishName),
-          recommendSource: RECOMMENDATION_TYPES.FESTIVAL
-        }
-      })
-
-    return festivalRecommendations
-  }
-
-  /**
-   * 天气与时间双维度推荐逻辑
-   */
-  const updateRecommendationsByWeatherAndTime = async (rejectedDishIds) => {
-    const savedSettings = localStorage.getItem('userSettings')
-    let weatherRecommendationEnabled = true
-
-    if (savedSettings) {
-      const parsedSettings = JSON.parse(savedSettings)
-      weatherRecommendationEnabled = parsedSettings.privacy?.weatherRecommendation !== false
-    }
-
-    if (!weatherRecommendationEnabled) {
-      return []
-    }
-
-    try {
-      const response = await axios.get(API_CONFIG.baseURL + API_CONFIG.weather.current, {
-        params: { city: '北京' }
-      })
-      const weatherData = response.data.data
-      const { temperature, humidity } = weatherData
-
-      const timeType = getCurrentTimePeriod()
-
-      let weatherTags = []
-      if (temperature > 30) weatherTags.push('冰饮', '凉菜', '轻食')
-      else if (temperature < 10) weatherTags.push('热饮', '热菜', '火锅')
-      if (humidity > 80) weatherTags.push('祛湿粥品', '清淡饮食')
-
-      return generateWeatherTimeRecommendations(timeType, weatherTags, rejectedDishIds)
-    } catch (error) {
-      console.error('天气推荐失败:', error)
-      return []
-    }
-  }
-
-  /**
    * 从后端获取推荐数据（优化版）
    */
   const fetchRecommendationsFromBackend = async (rejectedDishIds) => {
     try {
-      const userId = String(authStore.userId || 1)
+      const userId = getCurrentUserId()
 
       // 传入上下文信息：时段和天气
       const timePeriod = getCurrentTimePeriod()
@@ -485,8 +363,7 @@ export function useRecommendations() {
       return []
     } catch (error) {
       console.error('获取推荐数据失败:', error)
-      // 降级方案：返回 null 让系统使用本地推荐
-      return null
+      throw error
     }
   }
 
@@ -571,13 +448,13 @@ export function useRecommendations() {
   }
 
   /**
-   * 加载所有推荐（优化版 - 多层降级策略）
+   * 加载所有推荐（仅使用后端数据）
    */
   const loadAllRecommendations = async () => {
     try {
       isLoading.value = true
 
-      // 步骤1: 加载拒绝历史（带降级）
+      // 步骤1: 加载拒绝历史
       let rejectedDishIds = []
       try {
         rejectedDishIds = await loadRejectionHistory()
@@ -586,59 +463,11 @@ export function useRecommendations() {
         rejectedDishIds = []
       }
 
-      // 步骤2: 并行加载多种推荐（独立错误处理）
-      let personalizedRecs = []
-      let weatherTimeRecs = []
-      let festivalRecs = []
+      // 步骤2: 只加载后端推荐
+      let allRecommendations = await fetchRecommendationsFromBackend(rejectedDishIds)
 
-      const results = await Promise.allSettled([
-        fetchRecommendationsFromBackend(rejectedDishIds),
-        updateRecommendationsByWeatherAndTime(rejectedDishIds)
-      ])
-
-      // 处理后端推荐结果
-      if (results[0].status === 'fulfilled' && results[0].value) {
-        personalizedRecs = results[0].value
-        console.log(`✓ 后端推荐加载成功: ${personalizedRecs.length}个`)
-      } else if (results[0].status === 'rejected') {
-        console.warn('✗ 后端推荐失败，将使用降级方案:', results[0].reason)
-      } else {
-        console.log('ℹ 后端推荐返回空，使用本地推荐')
-      }
-
-      // 处理天气推荐结果
-      if (results[1].status === 'fulfilled') {
-        weatherTimeRecs = results[1].value
-        console.log(`✓ 天气推荐加载成功: ${weatherTimeRecs.length}个`)
-      } else {
-        console.warn('✗ 天气推荐失败:', results[1].reason)
-      }
-
-      // 处理节日推荐
-      try {
-        festivalRecs = addFestivalRecommendations(rejectedDishIds)
-        console.log(`✓ 节日推荐加载成功: ${festivalRecs.length}个`)
-      } catch (error) {
-        console.warn('✗ 节日推荐失败:', error)
-      }
-
-      // 步骤3: 智能合并推荐（多层降级）
-      let allRecommendations = []
-
-      // 优先级1: 后端个性化推荐
-      if (personalizedRecs.length > 0) {
-        allRecommendations = [...allRecommendations, ...personalizedRecs]
-        console.log(`使用后端推荐: ${personalizedRecs.length}个`)
-      }
-      // 降级1: 如果后端推荐数量不足，补充天气推荐
-      else if (weatherTimeRecs.length > 0) {
-        allRecommendations = [...allRecommendations, ...weatherTimeRecs]
-        console.log(`使用天气推荐降级: ${weatherTimeRecs.length}个`)
-      }
-
-      // 降级2: 补充节日推荐
-      if (festivalRecs.length > 0) {
-        allRecommendations = [...allRecommendations, ...festivalRecs]
+      if (!Array.isArray(allRecommendations)) {
+        allRecommendations = []
       }
 
       // 如果所有推荐都为空，直接返回空数组显示暂无推荐
@@ -661,10 +490,8 @@ export function useRecommendations() {
 
       return allRecommendations
     } catch (error) {
-      console.error('❌ 加载推荐失败:', error)
+      console.error('加载推荐失败:', error)
       ElMessage.error('加载推荐失败，请稍后重试')
-
-      // 最终降级: 返回空数组而不是抛出错误
       recommendations.value = []
       return []
     } finally {

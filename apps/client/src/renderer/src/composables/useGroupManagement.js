@@ -165,72 +165,50 @@ export function useGroupManagement({ userId, conversations, chatMessages }) {
       }
     } catch (error) {
       console.error('创建群聊失败:', error)
-
-      // 如果后端调用失败，使用前端模拟数据（开发模式）
-      const newGroupId = Date.now()
-      const memberNames = groupForm.value.members
-        .split(',')
-        .map((name) => name.trim())
-        .filter((name) => name)
-
-      const newGroup = {
-        id: newGroupId,
-        type: 'group',
-        name: groupForm.value.name.trim(),
-        avatar: '👥',
-        lastMessage: '暂无消息',
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        unreadCount: 0,
-        memberCount: memberNames.length + 1,
-        pinned: false
-      }
-
-      conversations.value.push(newGroup)
-
-      const systemMsg = {
-        id: chatMessages.value.length + 1,
-        sender: '系统',
-        content: `群聊 "${newGroup.name}" 已创建`,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      }
-
-      chatMessages.value.push(systemMsg)
-      newGroup.lastMessage = systemMsg.content
-
-      groupDialogVisible.value = false
-      groupForm.value = {
-        name: '',
-        members: ''
-      }
-      selectedGroupMembers.value = []
-
-      ElMessage.success('群聊已创建')
-      return newGroup
+      ElMessage.error('创建群聊失败，请稍后重试')
+      return null
     }
   }
 
   /**
    * 打开群详情
    */
-  const openGroupDetail = (conversation) => {
+  const openGroupDetail = async (conversation) => {
     if (!conversation || conversation.type !== 'group') {
       ElMessage.warning('请选择一个群聊')
       return
     }
 
-    // 模拟群详情数据
-    // 实际项目中应该从后端API获取
-    currentGroupInfo.value = {
-      id: conversation.id,
-      name: conversation.name,
-      avatar: conversation.avatar,
-      memberCount: conversation.memberCount || 0,
-      members: ['我', '张三', '李四', '王五', '赵六'], // 模拟群成员
-      creator: '我',
-      createdAt: '2024-01-15 10:30:00'
-    }
+    try {
+      const groupId = conversation.groupId || conversation.id
+      const response = await api.get(`/v1/groups/${groupId}/members`)
 
-    groupDetailDialogVisible.value = true
+      if (response.code !== '200' || !Array.isArray(response.data)) {
+        ElMessage.error('获取群成员失败')
+        return
+      }
+
+      currentGroupInfo.value = {
+        id: groupId,
+        name: conversation.name,
+        avatar: conversation.avatar,
+        memberCount: response.data.length,
+        members: response.data.map((member) => member.userId),
+        memberDetails: response.data.map((member) => ({
+          id: member.userId,
+          name: member.userId,
+          role: member.role || 'member'
+        })),
+        creator: response.data.find((member) => member.role === 'owner')?.userId || '未知',
+        creatorId: response.data.find((member) => member.role === 'owner')?.userId || '',
+        createdAt: ''
+      }
+
+      groupDetailDialogVisible.value = true
+    } catch (error) {
+      console.error('获取群详情失败:', error)
+      ElMessage.error('获取群详情失败，请稍后重试')
+    }
   }
 
   /**

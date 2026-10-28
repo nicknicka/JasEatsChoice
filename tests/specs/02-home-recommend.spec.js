@@ -71,9 +71,10 @@ test.describe('模块二：用户首页与推荐', () => {
 
       const hotTopic = await getJson('/v1/home/hot-topic')
       await expect(page.getByText('今日推荐', { exact: true })).toBeVisible({ timeout: 15000 })
-      const visibleNames = await page.locator('.rec-card .rec-dish-name').allTextContents()
-      expect(visibleNames).toHaveLength(3)
-      expect(visibleNames.every((name) => expectedNames.includes(name))).toBe(true)
+      await expect.poll(async () => {
+        const visibleNames = await page.locator('.rec-card .rec-dish-name').allTextContents()
+        return visibleNames.length === 3 && visibleNames.every((name) => expectedNames.includes(name))
+      }).toBe(true)
       await expect(page.locator('.hot-content')).toHaveText(hotTopic.content)
 
       markPassed('2.1', '首页展示接口返回的推荐与热点真实数据')

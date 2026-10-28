@@ -61,9 +61,8 @@ export const orderActions = {
       )
       return response.data
     } catch (error) {
-      // 如果后端没有催单接口，返回成功提示
-      console.warn('催单接口不存在，使用模拟响应')
-      return { code: 200, message: '催单成功' }
+      console.error('催单失败:', error)
+      throw error
     }
   },
 
@@ -162,9 +161,8 @@ export const cartActions = {
       )
       return response.data
     } catch (error) {
-      // 如果购物车接口不存在，返回成功响应
-      console.warn('购物车接口不存在，使用模拟响应')
-      return { code: 200, message: '已添加到购物车' }
+      console.error('加入购物车失败:', error)
+      throw error
     }
   }
 }

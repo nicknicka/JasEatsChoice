@@ -4,51 +4,6 @@ import { API_CONFIG } from '../config/index.js'
 
 const DEFAULT_CACHE_KEY = 'jaseatschoice_location_cascader_data'
 
-const getFallbackAddressData = () => [
-  {
-    value: '北京市',
-    label: '北京市',
-    children: [
-      { value: '朝阳区', label: '朝阳区' },
-      { value: '海淀区', label: '海淀区' },
-      { value: '东城区', label: '东城区' },
-      { value: '西城区', label: '西城区' }
-    ]
-  },
-  {
-    value: '上海市',
-    label: '上海市',
-    children: [
-      { value: '黄浦区', label: '黄浦区' },
-      { value: '徐汇区', label: '徐汇区' },
-      { value: '长宁区', label: '长宁区' },
-      { value: '浦东新区', label: '浦东新区' }
-    ]
-  },
-  {
-    value: '广东省',
-    label: '广东省',
-    children: [
-      {
-        value: '广州市',
-        label: '广州市',
-        children: [
-          { value: '天河区', label: '天河区' },
-          { value: '越秀区', label: '越秀区' }
-        ]
-      },
-      {
-        value: '深圳市',
-        label: '深圳市',
-        children: [
-          { value: '福田区', label: '福田区' },
-          { value: '南山区', label: '南山区' }
-        ]
-      }
-    ]
-  }
-]
-
 const readCachedData = (cacheKey) => {
   try {
     const cachedData = localStorage.getItem(cacheKey)
@@ -82,8 +37,6 @@ export function useCascaderLocationData(options = {}) {
   const cascaderData = ref([])
   const loading = ref(false)
   const cacheKey = options.cacheKey || DEFAULT_CACHE_KEY
-  const fallbackData =
-    typeof options.fallbackData === 'function' ? options.fallbackData : getFallbackAddressData
 
   const loadLocationData = async () => {
     loading.value = true
@@ -108,9 +61,8 @@ export function useCascaderLocationData(options = {}) {
         return { source: 'cache', data: cachedData }
       }
 
-      const fallback = fallbackData()
-      cascaderData.value = fallback
-      return { source: 'fallback', data: fallback }
+      cascaderData.value = []
+      return { source: 'empty', data: [] }
     } finally {
       loading.value = false
     }
@@ -122,5 +74,3 @@ export function useCascaderLocationData(options = {}) {
     loadLocationData
   }
 }
-
-export { getFallbackAddressData }

@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Picture } from '@element-plus/icons-vue'
+import { Search } from '@element-plus/icons-vue'
 import router from '../../router'
 import { useAuthStore } from '../../store/authStore'
 import ConversationList from '../../components/merchant/chat/ConversationList.vue'
@@ -13,16 +13,11 @@ import {
   getChatMessages,
   sendMessage as sendChatMessage,
   markMessagesAsRead,
-  buildSessionId,
   formatMessageForSend,
   createLocalMessage,
   handleApiError
 } from '../../utils/chat/chatApi'
-import {
-  formatConversationTime,
-  cleanMessage,
-  sortConversationsByUnread
-} from '../../utils/chat/messageUtils'
+import { cleanMessage, sortConversationsByUnread } from '../../utils/chat/messageUtils'
 
 // ==================== 数据定义 ====================
 
@@ -49,9 +44,6 @@ const sending = ref(false)
 
 // 当前用户ID
 const currentUserId = ref('')
-
-// 模拟数据开关
-const USE_MOCK_DATA = false
 
 // 会话列表宽度
 const conversationListWidth = ref(250)
@@ -89,209 +81,10 @@ const filteredConversations = computed(() => {
   return sortConversationsByUnread(result)
 })
 
-// ==================== 模拟数据 ====================
-
-// 模拟会话列表
-const getMockConversations = () => {
-  const now = new Date()
-  return [
-    {
-      id: 'user001',
-      type: 'private',
-      name: '张三',
-      avatar: '👨',
-      lastMessage: '请问今天的套餐还有吗？',
-      time: new Date(now - 5 * 60000).toISOString().slice(0, 19).replace('T', ' '),
-      unreadCount: 2,
-      relatedOrder: true
-    },
-    {
-      id: 'user002',
-      type: 'private',
-      name: '李四',
-      avatar: '👩',
-      lastMessage: '好的，我马上下单',
-      time: new Date(now - 30 * 60000).toISOString().slice(0, 19).replace('T', ' '),
-      unreadCount: 0
-    },
-    {
-      id: 'user003',
-      type: 'private',
-      name: '王五',
-      avatar: '👴',
-      lastMessage: '什么时候能送到？',
-      time: new Date(now - 2 * 3600000).toISOString().slice(0, 19).replace('T', ' '),
-      unreadCount: 1,
-      relatedOrder: true
-    },
-    {
-      id: 'group001',
-      type: 'group',
-      name: '今日订单群',
-      avatar: '👥',
-      lastMessage: '【订单同步】张三：请问今天的套餐还有吗？',
-      time: new Date(now - 10 * 60000).toISOString().slice(0, 19).replace('T', ' '),
-      unreadCount: 5,
-      memberCount: 32
-    },
-    {
-      id: 'group002',
-      type: 'group',
-      name: 'VIP客户群',
-      avatar: '👥',
-      lastMessage: '李四：好的，我马上下单',
-      time: new Date(now - 1 * 3600000).toISOString().slice(0, 19).replace('T', ' '),
-      unreadCount: 0,
-      memberCount: 18
-    },
-    {
-      id: 'user004',
-      type: 'private',
-      name: '赵六',
-      avatar: '👵',
-      lastMessage: '谢谢，收到订单了',
-      time: new Date(now - 4 * 3600000).toISOString().slice(0, 19).replace('T', ' '),
-      unreadCount: 0
-    },
-    {
-      id: 'user005',
-      type: 'private',
-      name: '小明',
-      avatar: '👦',
-      lastMessage: '能不能加个辣？',
-      time: new Date(now - 1 * 86400000).toISOString().slice(0, 19).replace('T', ' '),
-      unreadCount: 3
-    }
-  ]
-}
-
-// 模拟聊天记录
-const getMockMessages = (conversationId) => {
-  const now = new Date()
-  const messagesMap = {
-    user001: [
-      {
-        id: 1,
-        sender: 'customer',
-        content: '你好，在吗？',
-        time: new Date(now - 30 * 60000).toISOString().slice(0, 19).replace('T', ' '),
-        isRead: true
-      },
-      {
-        id: 2,
-        sender: 'merchant',
-        content: '在的，请问有什么需要帮助的？',
-        time: new Date(now - 25 * 60000).toISOString().slice(0, 19).replace('T', ' '),
-        isRead: true
-      },
-      {
-        id: 3,
-        sender: 'customer',
-        content: '请问今天的套餐还有吗？',
-        time: new Date(now - 5 * 60000).toISOString().slice(0, 19).replace('T', ' '),
-        isRead: false
-      }
-    ],
-    user002: [
-      {
-        id: 1,
-        sender: 'merchant',
-        content: '您好，感谢关注我们的店铺！',
-        time: new Date(now - 1 * 3600000).toISOString().slice(0, 19).replace('T', ' '),
-        isRead: true
-      },
-      {
-        id: 2,
-        sender: 'customer',
-        content: '好的，我马上下单',
-        time: new Date(now - 30 * 60000).toISOString().slice(0, 19).replace('T', ' '),
-        isRead: true
-      }
-    ],
-    user003: [
-      {
-        id: 1,
-        sender: 'customer',
-        content: '我下单了',
-        time: new Date(now - 3 * 3600000).toISOString().slice(0, 19).replace('T', ' '),
-        isRead: true
-      },
-      {
-        id: 2,
-        sender: 'merchant',
-        content: '好的，收到您的订单了',
-        time: new Date(now - 2.5 * 3600000).toISOString().slice(0, 19).replace('T', ' '),
-        isRead: true
-      },
-      {
-        id: 3,
-        sender: 'customer',
-        content: '什么时候能送到？',
-        time: new Date(now - 2 * 3600000).toISOString().slice(0, 19).replace('T', ' '),
-        isRead: false
-      }
-    ],
-    group001: [
-      {
-        id: 1,
-        sender: '张三',
-        content: '大家好，今天有什么推荐？',
-        time: new Date(now - 1 * 3600000).toISOString().slice(0, 19).replace('T', ' '),
-        isRead: true
-      },
-      {
-        id: 2,
-        sender: '我',
-        content: '今天有红烧肉套餐和鱼香肉丝套餐',
-        time: new Date(now - 55 * 60000).toISOString().slice(0, 19).replace('T', ' '),
-        isRead: true
-      },
-      {
-        id: 3,
-        sender: '李四',
-        content: '我要一份红烧肉套餐',
-        time: new Date(now - 50 * 60000).toISOString().slice(0, 19).replace('T', ' '),
-        isRead: true
-      },
-      {
-        id: 4,
-        sender: '我',
-        content: '收到，马上为您准备',
-        time: new Date(now - 45 * 60000).toISOString().slice(0, 19).replace('T', ' '),
-        isRead: true
-      }
-    ],
-    group002: [
-      {
-        id: 1,
-        sender: '王总',
-        content: '明天的团餐准备好了吗？',
-        time: new Date(now - 2 * 3600000).toISOString().slice(0, 19).replace('T', ' '),
-        isRead: true
-      },
-      {
-        id: 2,
-        sender: '我',
-        content: '正在准备中，明天早上准时送到',
-        time: new Date(now - 1.5 * 3600000).toISOString().slice(0, 19).replace('T', ' '),
-        isRead: true
-      }
-    ]
-  }
-  return messagesMap[conversationId] || []
-}
-
 // ==================== 初始化 ====================
 
 // 页面加载
 onMounted(async () => {
-  // 使用模拟数据时跳过用户ID验证
-  if (USE_MOCK_DATA) {
-    // 加载模拟会话列表
-    await loadSessions()
-    return
-  }
-
   // 获取当前商家ID（商家端聊天使用 merchantId）
   currentUserId.value = getCurrentMerchantId()
 
@@ -326,16 +119,7 @@ onMounted(async () => {
 // 加载会话列表
 const loadSessions = async () => {
   try {
-    let sessions
-
-    if (USE_MOCK_DATA) {
-      // 使用模拟数据
-      sessions = getMockConversations()
-      currentUserId.value = 'merchant001'
-    } else {
-      // 从 API 获取数据
-      sessions = await getChatSessions(currentUserId.value)
-    }
+    const sessions = await getChatSessions(currentUserId.value)
 
     if (sessions.length > 0) {
       conversations.value = sessions
@@ -354,17 +138,10 @@ const loadSessions = async () => {
 // 加载聊天记录
 const loadMessages = async (conversation) => {
   try {
-    let messages
-
-    if (USE_MOCK_DATA) {
-      // 使用模拟数据
-      messages = getMockMessages(conversation.id)
-    } else {
-      // ⭐ 直接使用后端返回的 sessionId（conversation.id）
-      // ⚠️ 不再使用 buildSessionId，因为后端已经统一生成了sessionId
-      const sessionId = conversation.id
-      messages = await getChatMessages(sessionId, currentUserId.value)
-    }
+    // ⭐ 直接使用后端返回的 sessionId（conversation.id）
+    // ⚠️ 不再使用 buildSessionId，因为后端已经统一生成了sessionId
+    const sessionId = conversation.id
+    const messages = await getChatMessages(sessionId, currentUserId.value)
 
     chatMessages.value = messages
   } catch (error) {
@@ -381,19 +158,16 @@ const selectConversation = async (conversation) => {
 
   // 标记已读
   if (conversation.unreadCount > 0) {
-    // 仅在非模拟数据模式下调用 API，成功后清空未读并提示
-    if (!USE_MOCK_DATA) {
-      const sessionId = conversation.id
-      const result = await markMessagesAsRead(sessionId, currentUserId.value)
+    const sessionId = conversation.id
+    const result = await markMessagesAsRead(sessionId, currentUserId.value)
 
-      if (!result.success) {
-        await loadMessages(conversation)
-        return
-      }
-
-      conversation.unreadCount = 0
-      ElMessage.success('消息已标记为已读')
+    if (!result.success) {
+      await loadMessages(conversation)
+      return
     }
+
+    conversation.unreadCount = 0
+    ElMessage.success('消息已标记为已读')
   }
 
   // 加载聊天记录
