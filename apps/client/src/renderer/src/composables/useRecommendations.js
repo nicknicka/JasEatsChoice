@@ -116,7 +116,11 @@ export function useRecommendations() {
   const recordClickFeedback = async (item) => {
     const userId = getCurrentUserId()
     const dishId = String(item.dishId || item.id || '')
-    const recommendationId = item.recommendationId || item.id || ''
+    const recommendationId = item.recommendationId || ''
+    if (!recommendationId) {
+      ElMessage.warning('推荐结果缺少 recommendationId，无法反馈')
+      return
+    }
 
     try {
       // 异步记录到后端
@@ -150,7 +154,7 @@ export function useRecommendations() {
       await updateRecommendationsOnBehavior('click', item)
     } catch (error) {
       console.warn('记录点击反馈失败:', error)
-      // 不阻塞用户操作
+      ElMessage.warning('推荐反馈记录失败，请稍后重试')
     }
   }
 
@@ -160,7 +164,11 @@ export function useRecommendations() {
   const recordOrderFeedback = async (item) => {
     const userId = getCurrentUserId()
     const dishId = String(item.dishId || item.id || '')
-    const recommendationId = item.recommendationId || item.id || ''
+    const recommendationId = item.recommendationId || ''
+    if (!recommendationId) {
+      ElMessage.warning('推荐结果缺少 recommendationId，无法反馈')
+      return
+    }
 
     try {
       // 记录到后端
@@ -196,7 +204,7 @@ export function useRecommendations() {
       await updateRecommendationsOnBehavior('order', item)
     } catch (error) {
       console.warn('记录下单反馈失败:', error)
-      // 不阻塞用户操作
+      ElMessage.warning('推荐反馈记录失败，请稍后重试')
     }
   }
 
@@ -332,6 +340,7 @@ export function useRecommendations() {
             return {
               id: dish.id || Date.now() + index + 2000,
               dishId: String(dishId || Date.now() + index + 2000),
+              recommendationId: dish.recommendationId || null,
               name: dishName,
               image: dishImage,
               category: dish.category,
