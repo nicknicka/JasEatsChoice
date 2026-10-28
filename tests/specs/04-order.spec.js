@@ -15,7 +15,7 @@ async function apiRequest(api, method, path, data) {
   return body.data
 }
 
-async function createOrder(api, status) {
+async function createOrder(api, status, totalAmount) {
   const userId = await getUserId()
   const merchantId = await getMerchantId()
   const dish = await getDish({ merchantId })
@@ -25,7 +25,7 @@ async function createOrder(api, status) {
     order: {
       userId,
       merchantId,
-      totalAmount: price,
+      totalAmount: totalAmount ?? price,
       status,
       address: '到店自取'
     },
@@ -86,14 +86,80 @@ test.describe('模块四：订单流程', () => {
     }
   })
 
-  test.fixme('4.2 订单支付 (blocked by #59)', async ({ page, request }) => {
-    const orderId = await createOrder(request, 0)
-    await page.goto('/user/home/orders?status=pending')
-    const card = page.locator('.order-card').filter({ hasText: orderId })
-    await expect(card).toBeVisible({ timeout: 10000 })
-    await expect(card.locator('.el-tag')).toContainText('待支付')
-    await card.locator('button:has-text("支付"), button:has-text("付款")').click()
-    await expect.poll(async () => (await getOrder({ orderId })).status).toBe(1)
+  test('4.2 订单支付', async ({ page, request }) => {
+    markRunning('4.2')
+    try {
+      const userId = await getUserId()
+      const orderId = await createOrder(request, 0)
+      const order = await getOrder({ orderId })
+      const amount = Number(order.totalAmount)
+
+      // 充值后支付相同金额，既保证余额充足，也让钱包余额回到测试前水平。
+      const walletBefore = await apiRequest(request, 'GET', `/v1/wallet/info/${userId}`)
+      const rechargeNo = `e2e-order-pay-${Date.now()}`
+      await apiRequest(
+        request,
+        'POST',
+        `/v1/wallet/recharge?userId=${encodeURIComponent(userId)}&amount=${encodeURIComponent(amount)}&rechargeNo=${encodeURIComponent(rechargeNo)}`
+      )
+      const walletAfterRecharge = await apiRequest(request, 'GET', `/v1/wallet/info/${userId}`)
+
+      await page.goto('/user/home/orders?status=pending')
+      const card = page.locator('.order-card').filter({ hasText: orderId })
+      await expect(card).toBeVisible({ timeout: 10000 })
+      await expect(card.locator('.el-tag')).toContainText('待支付')
+      const payButton = card.locator('button:has-text("支付")')
+      await expect(payButton).toBeVisible()
+      await payButton.click()
+
+      await expect.poll(async () => (await getOrder({ orderId })).status).toBe(1)
+      const walletAfterPayment = await apiRequest(request, 'GET', `/v1/wallet/info/${userId}`)
+      expect(Number(walletAfterRecharge.balance) - Number(walletAfterPayment.balance)).toBe(amount)
+      expect(Number(walletAfterPayment.balance)).toBe(Number(walletBefore.balance))
+
+      // 详情页同样必须提供可见入口，且支付后状态立即刷新。
+      const detailOrderId = await createOrder(request, 0)
+      const detailOrder = await getOrder({ orderId: detailOrderId })
+      const detailAmount = Number(detailOrder.totalAmount)
+      const detailRechargeNo = `e2e-order-detail-pay-${Date.now()}`
+      await apiRequest(
+        request,
+        'POST',
+        `/v1/wallet/recharge?userId=${encodeURIComponent(userId)}&amount=${encodeURIComponent(detailAmount)}&rechargeNo=${encodeURIComponent(detailRechargeNo)}`
+      )
+      await page.goto(`/user/home/order-detail/${detailOrderId}`)
+      const detailPayButton = page.locator('.order-actions button:has-text("支付")')
+      await expect(detailPayButton).toBeVisible()
+      await detailPayButton.click()
+      await expect.poll(async () => (await getOrder({ orderId: detailOrderId })).status).toBe(1)
+      await expect(page.locator('.status-header .el-tag')).toContainText('待接单')
+      const walletAfterDetailPayment = await apiRequest(request, 'GET', `/v1/wallet/info/${userId}`)
+      expect(Number(walletAfterDetailPayment.balance)).toBe(Number(walletBefore.balance))
+
+      // 支付失败必须展示后端消息，且订单不能变成已支付。
+      const blockedWalletBefore = await apiRequest(request, 'GET', `/v1/wallet/info/${userId}`)
+      const blockedOrderId = await createOrder(request, 0, Number(blockedWalletBefore.balance) + 100)
+      await page.goto(`/user/home/order-detail/${blockedOrderId}`)
+      const blockedPayButton = page.locator('.order-actions button:has-text("支付")')
+      await expect(blockedPayButton).toBeVisible()
+      const blockedResponse = page.waitForResponse((response) =>
+        response.url().includes(`/v1/orders/${blockedOrderId}/pay`)
+      )
+      await blockedPayButton.click()
+      const blockedHttpResponse = await blockedResponse
+      const blockedBody = await blockedHttpResponse.json()
+      expect(blockedBody.success).toBe(false)
+      expect(blockedBody.message).toContain('余额不足')
+      await expect(page.locator('.el-message--error')).toContainText(blockedBody.message)
+      await expect.poll(async () => (await getOrder({ orderId: blockedOrderId })).status).toBe(0)
+      const blockedWalletAfter = await apiRequest(request, 'GET', `/v1/wallet/info/${userId}`)
+      expect(Number(blockedWalletAfter.balance)).toBe(Number(blockedWalletBefore.balance))
+
+      markPassed('4.2', `订单 ${orderId} 列表支付、订单 ${detailOrderId} 详情支付均成功，状态 0→1，钱包余额恢复；余额不足时显示后端错误`)
+    } catch (e) {
+      markFailed('4.2', e.message.slice(0, 50))
+      throw e
+    }
   })
 
   test('4.3 订单列表', async ({ page }) => {
