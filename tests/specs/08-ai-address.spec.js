@@ -44,6 +44,15 @@ async function selectShanghaiDistrict(page, dialog, district) {
   await visibleNodes.filter({ hasText: district }).first().click()
 }
 
+async function getAiCapabilities() {
+  const response = await fetch(`${TEST_API_BASE}/v1/ai/capabilities`)
+  const result = await response.json()
+  if (!response.ok || !result?.success || !result.data) {
+    throw new Error('读取 AI 能力清单失败')
+  }
+  return result.data
+}
+
 async function stubShanghaiCascader(page) {
   await page.route('**/v1/location/cascader', (route) => route.fulfill({
     status: 200,
@@ -71,7 +80,9 @@ test.describe('模块八：AI助手与地址管理', () => {
     } catch (e) { markFailed('8.1', e.message.slice(0, 50)); throw e }
   })
 
-  test.fixme('8.2 菜品识别 (blocked by #71)', async ({ page }) => {
+  // 真实 8.2/8.3 需要有效的 ZHIPU_API_KEY 与可用模型；仓库和 CI 不保存真实密钥，
+  // 不能把模拟或将空结果视为成功。无凭据时的真实降级路径由下方 8.2a/8.3a 覆盖。
+  test.fixme('8.2 菜品识别 (needs real ZHIPU_API_KEY)', async ({ page }) => {
     markRunning('8.2')
     try {
       await page.goto('/user/home/ai')
@@ -86,7 +97,7 @@ test.describe('模块八：AI助手与地址管理', () => {
     } catch (e) { markFailed('8.2', e.message.slice(0, 50)); throw e }
   })
 
-  test.fixme('8.3 食谱生成 (blocked by #71)', async ({ page }) => {
+  test.fixme('8.3 食谱生成 (needs real ZHIPU_API_KEY)', async ({ page }) => {
     markRunning('8.3')
     try {
       await page.goto('/user/home/ai')
@@ -105,6 +116,58 @@ test.describe('模块八：AI助手与地址管理', () => {
       await expect(result.locator('.improvement-item')).toHaveCount(3)
       markPassed('8.3', '食谱优化返回原食谱与优化结果')
     } catch (e) { markFailed('8.3', e.message.slice(0, 50)); throw e }
+  })
+
+  test('8.2a 无视觉模型时菜品识别入口降级', async ({ page }) => {
+    markRunning('8.2a')
+    try {
+      await page.goto('/user/home/ai')
+      const capabilities = await getAiCapabilities()
+      expect(capabilities.vision).toBe(false)
+      await expect(page.locator('.status-badge')).not.toHaveText('检测中', { timeout: 10000 })
+      const recognitionTab = page.locator('#tab-btn-recognition')
+      await expect(recognitionTab).toBeDisabled()
+      await expect(recognitionTab).toContainText('暂未开放')
+
+      const response = await page.request.post('/api/v1/ai/dish-recognize', {
+        multipart: {
+          image: {
+            name: 'banner1.jpg',
+            mimeType: 'image/jpeg',
+            buffer: require('fs').readFileSync(require('path').resolve(__dirname, '../../apps/miniapp/src/static/banner1.jpg'))
+          }
+        }
+      })
+      const body = await response.json()
+      expect(response.status()).toBe(200)
+      expect(body.success).toBe(false)
+      expect(body.code).toBe('AI_VISION_NOT_CONFIGURED')
+      expect(body.message).toContain('暂未开放')
+      markPassed('8.2a', '无视觉模型时入口禁用且接口返回明确业务错误')
+    } catch (e) { markFailed('8.2a', e.message.slice(0, 50)); throw e }
+  })
+
+  test('8.3a 无流式模型时食谱优化入口降级', async ({ page }) => {
+    markRunning('8.3a')
+    try {
+      await page.goto('/user/home/ai')
+      const capabilities = await getAiCapabilities()
+      expect(capabilities.streaming).toBe(false)
+      await expect(page.locator('.status-badge')).not.toHaveText('检测中', { timeout: 10000 })
+      const recipeTab = page.locator('#tab-btn-recipe')
+      await expect(recipeTab).toBeDisabled()
+      await expect(recipeTab).toContainText('暂未开放')
+
+      const response = await page.request.post('/api/v1/ai/recipe/stream', {
+        data: { foodName: '番茄炒蛋：准备鸡蛋2个、番茄2个，调味后出锅。' },
+        headers: { Accept: 'text/event-stream' }
+      })
+      expect(response.status()).toBe(200)
+      const body = await response.text()
+      expect(body).toContain('"error":true')
+      expect(body).toContain('暂未开放')
+      markPassed('8.3a', '无流式模型时入口禁用且 SSE 返回明确业务错误')
+    } catch (e) { markFailed('8.3a', e.message.slice(0, 50)); throw e }
   })
 
   test('8.4 AI聊天历史', async ({ page }) => {

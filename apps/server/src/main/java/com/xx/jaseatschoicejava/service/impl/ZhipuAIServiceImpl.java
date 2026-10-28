@@ -11,7 +11,6 @@ import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.Resource;
@@ -37,14 +36,13 @@ import java.io.IOException;
 @Service
 public class ZhipuAIServiceImpl implements ZhipuAIService {
 
-    @Qualifier("visionModel")
+    @Resource(name = "visionModel")
     private ChatModel visionModel;
 
-    @Qualifier("aiModel")
+    @Resource(name = "aiModel")
     private ChatModel aiModel;
 
-
-
+    @Resource(name = "streamingChatLanguageModel")
     private StreamingChatModel streamingChatLanguageModel;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -154,6 +152,10 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
         if (imageBase64 == null || imageBase64.isEmpty()) {
             log.error("图片Base64数据为空");
             return Map.of("error", true, "message", "图片数据不能为空");
+        }
+
+        if (visionModel == null) {
+            return Map.of("error", true, "message", "视觉识别暂未开放：未配置视觉模型");
         }
 
         try {
@@ -296,6 +298,12 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
 
         if (originalRecipe == null || originalRecipe.trim().isEmpty()) {
             progressCallback.accept("ERROR:食谱内容不能为空");
+            onComplete.run();
+            return;
+        }
+
+        if (streamingChatLanguageModel == null) {
+            progressCallback.accept("ERROR:食谱优化暂未开放：未配置流式模型");
             onComplete.run();
             return;
         }
@@ -573,15 +581,11 @@ public class ZhipuAIServiceImpl implements ZhipuAIService {
      * 调用食谱优化模型（使用通用 aiModel，由配置决定具体模型）。
      */
     private String callRecipeOptimizationModel(String prompt) {
-        try {
-            String responseText = aiModel.chat(prompt);
-            if (responseText != null && !responseText.isBlank()) {
-                return responseText.trim();
-            }
+        String responseText = aiModel.chat(prompt);
+        if (responseText == null || responseText.isBlank()) {
             log.warn("食谱优化模型返回空结果");
-        } catch (Exception e) {
-            log.error("食谱优化模型调用失败", e);
+            return "";
         }
-        return "";
+        return responseText.trim();
     }
 }

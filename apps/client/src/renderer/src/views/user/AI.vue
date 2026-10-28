@@ -2,9 +2,9 @@
   <el-main class="ai-page-content">
     <header class="page-header">
       <h2>AI饮食助手</h2>
-      <div class="status-badge">
+      <div class="status-badge" :class="{ offline: aiStatus !== '在线' }">
         <span class="status-dot"></span>
-        在线
+        {{ aiStatus }}
       </div>
     </header>
 
@@ -15,15 +15,24 @@
           :id="`tab-btn-${tab.name}`"
           :key="tab.name"
           class="tab-btn"
-          :class="{ active: activeTab === tab.name }"
+          :class="{ active: activeTab === tab.name, disabled: !isTabAvailable(tab.name) }"
+          :disabled="!isTabAvailable(tab.name)"
+          :title="tabUnavailableText(tab.name)"
           @click="switchTab(tab.name)"
         >
           <el-icon :size="16"><component :is="tab.icon" /></el-icon>
           <span>{{ tab.label }}</span>
+          <span v-if="isCapabilityControlled(tab.name) && !isTabAvailable(tab.name)" class="tab-unavailable">
+            暂未开放
+          </span>
         </button>
         <div class="tab-slider" :style="sliderStyle"></div>
       </div>
     </nav>
+
+    <div v-if="capabilityNotice" class="capability-notice">
+      {{ capabilityNotice }}
+    </div>
 
     <div class="tab-content-area">
       <!-- 缓存流式任务组件，避免切换 tab 时中断 -->
@@ -38,6 +47,7 @@
 import { ref, computed, watch, nextTick, onMounted, onActivated, defineAsyncComponent, h, markRaw } from 'vue'
 import { ChatRound, Camera, Document, Link as LinkIcon } from '@element-plus/icons-vue'
 import AiChatFull from './AI/components/AIChatFull.vue'
+import { API_CONFIG } from '../../config'
 
 const DishRecognition = defineAsyncComponent(() =>
   import('./AI/components/DishRecognition.vue')
@@ -71,6 +81,9 @@ const tabs = [
 ]
 
 const activeTab = ref('')
+const capabilities = ref(null)
+const capabilitiesLoaded = ref(false)
+const capabilitiesError = ref('')
 const sliderLeft = ref(0)
 const sliderWidth = ref(0)
 const aiChatRef = ref(null)
@@ -85,6 +98,35 @@ const tabComponents = {
 
 // 当前 tab 对应的组件
 const currentTabComponent = computed(() => tabComponents[activeTab.value] || null)
+
+const isCapabilityControlled = (name) => name === 'recognition' || name === 'recipe'
+
+const isTabAvailable = (name) => {
+  if (!isCapabilityControlled(name)) return true
+  if (!capabilitiesLoaded.value || !capabilities.value) return false
+  return name === 'recognition' ? capabilities.value.vision === true : capabilities.value.streaming === true
+}
+
+const tabUnavailableText = (name) => {
+  if (!isCapabilityControlled(name) || isTabAvailable(name)) return ''
+  return name === 'recognition' ? '菜品识别暂未开放' : '食谱优化暂未开放'
+}
+
+const aiStatus = computed(() => {
+  if (!capabilitiesLoaded.value) return '检测中'
+  if (capabilitiesError.value) return '状态未知'
+  return capabilities.value?.available ? '在线' : '未配置'
+})
+
+const capabilityNotice = computed(() => {
+  if (!capabilitiesLoaded.value) return '正在检测 AI 能力...'
+  if (capabilitiesError.value) return 'AI 能力状态读取失败，菜品识别与食谱优化暂不可用'
+
+  const unavailable = []
+  if (capabilities.value?.vision !== true) unavailable.push('菜品识别')
+  if (capabilities.value?.streaming !== true) unavailable.push('食谱优化')
+  return unavailable.length > 0 ? `${unavailable.join('、')}暂未开放` : ''
+})
 
 const sliderStyle = computed(() => ({
   left: `${sliderLeft.value}px`,
@@ -103,9 +145,28 @@ const updateSlider = () => {
 }
 
 const switchTab = (name) => {
-  if (name === activeTab.value) return
+  if (name === activeTab.value || !isTabAvailable(name)) return
   activeTab.value = name
   updateSlider()
+}
+
+const loadCapabilities = async () => {
+  try {
+    const response = await fetch(API_CONFIG.baseURL + API_CONFIG.ai.capabilities)
+    const result = await response.json()
+    if (!response.ok || !result?.success || !result.data) {
+      throw new Error(result?.message || '能力状态读取失败')
+    }
+    capabilities.value = result.data
+  } catch (error) {
+    capabilitiesError.value = error?.message || '能力状态读取失败'
+  } finally {
+    capabilitiesLoaded.value = true
+    if (!isTabAvailable(activeTab.value)) {
+      activeTab.value = 'chat'
+      updateSlider()
+    }
+  }
 }
 
 const triggerAiChatScroll = async () => {
@@ -125,6 +186,7 @@ watch(activeTab, async (newTab) => {
 })
 
 onMounted(() => {
+  loadCapabilities()
   setTimeout(() => {
     activeTab.value = 'chat'
     updateSlider()
@@ -181,6 +243,16 @@ onActivated(() => {
     font-size: @nordic-text-sm;
     font-weight: 600;
 
+    &.offline {
+      background: @nordic-border;
+      color: @nordic-text-secondary;
+
+      .status-dot {
+        background: @nordic-text-secondary;
+        animation: none;
+      }
+    }
+
     .status-dot {
       width: 7px;
       height: 7px;
@@ -230,9 +302,35 @@ onActivated(() => {
       color: @nordic-text;
       font-weight: 600;
     }
-  }
 
-  .tab-slider {
+    &.disabled,
+    &:disabled {
+      color: @nordic-text-secondary;
+      cursor: not-allowed;
+      opacity: 0.65;
+    }
+
+    .tab-unavailable {
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: @nordic-border;
+      color: @nordic-text-secondary;
+      font-size: 11px;
+      font-weight: 500;
+    }
+  }
+}
+
+.capability-notice {
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: @nordic-border;
+  color: @nordic-text-secondary;
+  font-size: @nordic-text-sm;
+}
+
+.tab-slider {
     position: absolute;
     top: 4px;
     bottom: 4px;
@@ -241,7 +339,6 @@ onActivated(() => {
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.04);
     transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 0;
-  }
 }
 
 .tab-content-area {
