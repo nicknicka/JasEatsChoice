@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xx.jaseatschoicejava.entity.ChatMsg;
 import com.xx.jaseatschoicejava.service.ChatMsgService;
 import com.xx.jaseatschoicejava.util.JwtUtil;
+import com.xx.jaseatschoicejava.websocket.WebSocketMessageService;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -12,8 +13,6 @@ import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 订单WebSocket处理器
@@ -32,8 +31,7 @@ public class NettyOrderHandler extends SimpleChannelInboundHandler<TextWebSocket
     private final ChatMsgService chatMsgService;
     private final JwtUtil jwtUtil;
 
-    // 存储用户ID和Channel的映射
-    public static final ConcurrentHashMap<String, ChannelHandlerContext> userChannels = new ConcurrentHashMap<>();
+    // 在线连接统一登记到 WebSocketMessageService，此处不再维护第二份映射。
 
     public NettyOrderHandler(ChatMsgService chatMsgService, JwtUtil jwtUtil) {
         this.chatMsgService = chatMsgService;
@@ -87,8 +85,8 @@ public class NettyOrderHandler extends SimpleChannelInboundHandler<TextWebSocket
                 return;
             }
 
-            // 保存用户Channel映射（如果还未保存）
-            userChannels.put(userId, ctx);
+            // 登记到统一在线连接表（同一用户的多个连接各自独立保留）
+            WebSocketMessageService.registerChannel(userId, ctx.channel());
 
             logger.info("订单WebSocket认证确认，用户ID: {}", userId);
             sendMessage(ctx, createMessage("system", "auth", "认证成功", ""));
@@ -117,6 +115,14 @@ public class NettyOrderHandler extends SimpleChannelInboundHandler<TextWebSocket
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (evt instanceof WebSocketServerProtocolHandler.HandshakeComplete) {
             logger.info("订单WebSocket握手完成");
+
+            // 握手阶段已完成 token 校验，此处即可登记连接，
+            // 不必等客户端再补发一条认证消息，连接的可用时机因此确定。
+            String userId = ctx.channel().attr(WebSocketAuthHandler.USER_ID_KEY).get();
+            if (userId != null && !userId.isEmpty()) {
+                WebSocketMessageService.registerChannel(userId, ctx.channel());
+                logger.info("订单WebSocket连接已登记，用户ID: {}", userId);
+            }
         }
     }
 
@@ -124,7 +130,7 @@ public class NettyOrderHandler extends SimpleChannelInboundHandler<TextWebSocket
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         String userId = ctx.channel().attr(WebSocketAuthHandler.USER_ID_KEY).get();
         if (userId != null) {
-            userChannels.remove(userId);
+            WebSocketMessageService.removeChannel(ctx.channel());
             logger.info("订单WebSocket用户断开连接，用户ID: {}", userId);
         }
     }

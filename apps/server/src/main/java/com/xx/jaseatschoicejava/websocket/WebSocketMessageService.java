@@ -16,6 +16,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.HashMap;
 
@@ -29,8 +31,11 @@ public class WebSocketMessageService {
 
     private static final Logger logger = LoggerFactory.getLogger(WebSocketMessageService.class);
 
-    // 存储用户的Netty Channel (userId -> Channel)
-    private static final Map<String, Channel> USER_CHANNELS = new ConcurrentHashMap<>();
+    // 存储用户的Netty Channel (userId -> 该用户的全部连接)
+    // 同一用户可能同时打开多个页面/标签，每个连接必须独立保留：
+    // 早先的 userId -> 单个 Channel 模型会让后建立的连接覆盖先建立的，
+    // 导致先建立的连接从此收不到任何推送。
+    private static final Map<String, Set<Channel>> USER_CHANNELS = new ConcurrentHashMap<>();
 
     private final ObjectMapper objectMapper;
 
@@ -58,15 +63,24 @@ public class WebSocketMessageService {
      * 注册用户Channel
      */
     public static void registerChannel(String userId, Channel channel) {
-        USER_CHANNELS.put(userId, channel);
-        logger.info("✅ [WebSocket] 用户 {} 的Channel已注册", userId);
+        if (userId == null || channel == null) {
+            return;
+        }
+        USER_CHANNELS.computeIfAbsent(userId, key -> ConcurrentHashMap.newKeySet()).add(channel);
+        logger.info("✅ [WebSocket] 用户 {} 的Channel已注册，当前连接数 {}", userId, USER_CHANNELS.get(userId).size());
     }
 
     /**
      * 移除用户Channel
      */
     public static void removeChannel(Channel channel) {
-        USER_CHANNELS.entrySet().removeIf(entry -> entry.getValue().equals(channel));
+        if (channel == null) {
+            return;
+        }
+        USER_CHANNELS.entrySet().removeIf(entry -> {
+            entry.getValue().remove(channel);
+            return entry.getValue().isEmpty();
+        });
         logger.info("❌ [WebSocket] Channel已移除");
     }
 
@@ -74,8 +88,7 @@ public class WebSocketMessageService {
      * 推送聊天消息给指定用户
      */
     public void pushChatMessageToUser(String userId, ChatMsg chatMsg) {
-        Channel channel = USER_CHANNELS.get(userId);
-        if (channel == null || !channel.isActive()) {
+        if (!hasActiveConnection(userId)) {
             logger.info("⚠️ [WebSocket] 用户 {} 不在线或WebSocket未连接", userId);
             return;
         }
@@ -88,11 +101,10 @@ public class WebSocketMessageService {
 
             String messageJson = objectMapper.writeValueAsString(messageData);
 
-            // 使用Netty Channel发送消息
-            channel.writeAndFlush(new TextWebSocketFrame(messageJson));
+            int delivered = pushToUser(userId, messageJson);
 
-            logger.info("✅ [WebSocket] 推送消息给用户 {}, messageId: {}, sessionId: {}",
-                userId, chatMsg.getMsgId(), chatMsg.getSessionId());
+            logger.info("✅ [WebSocket] 推送消息给用户 {}, messageId: {}, sessionId: {}, 送达连接数 {}",
+                userId, chatMsg.getMsgId(), chatMsg.getSessionId(), delivered);
         } catch (Exception e) {
             logger.error("❌ [WebSocket] 推送消息失败给用户 {}: {}", userId, e.getMessage(), e);
         }
@@ -168,9 +180,8 @@ public class WebSocketMessageService {
             int successCount = 0;
             for (com.xx.jaseatschoicejava.entity.GroupMember member : members) {
                 String userId = member.getUserId();
-                Channel channel = USER_CHANNELS.get(userId);
 
-                if (channel != null && channel.isActive()) {
+                if (hasActiveConnection(userId)) {
                     try {
                         // 构造消息
                         Map<String, Object> messageData = new HashMap<>();
@@ -181,9 +192,8 @@ public class WebSocketMessageService {
                         messageData.put("timestamp", System.currentTimeMillis());
 
                         String messageJson = objectMapper.writeValueAsString(messageData);
-                        channel.writeAndFlush(new TextWebSocketFrame(messageJson));
+                        successCount += pushToUser(userId, messageJson);
 
-                        successCount++;
                         logger.info("✅ [WebSocket] 成功推送群事件消息给用户: userId={}, eventType={}", userId, messageType);
                     } catch (Exception e) {
                         logger.error("❌ [WebSocket] 推送消息失败给用户 {}: {}", userId, e.getMessage());
@@ -205,5 +215,79 @@ public class WebSocketMessageService {
      */
     public int getOnlineUserCount() {
         return USER_CHANNELS.size();
+    }
+
+    /**
+     * 枚举当前在线用户（返回快照，遍历期间连接变化不会影响结果）
+     */
+    public static Set<String> getOnlineUsers() {
+        return new HashSet<>(USER_CHANNELS.keySet());
+    }
+
+    /**
+     * 向指定用户推送已序列化的消息。
+     *
+     * @return 实际写入成功的连接数；0 表示用户不在线或连接已失效（正常情况，不是异常）
+     */
+    public static int pushToUser(String userId, String message) {
+        Set<Channel> channels = userId == null ? null : USER_CHANNELS.get(userId);
+        if (channels == null || channels.isEmpty() || message == null) {
+            return 0;
+        }
+
+        int delivered = 0;
+        for (Channel channel : channels) {
+            if (channel != null && channel.isActive()) {
+                try {
+                    channel.writeAndFlush(new TextWebSocketFrame(message));
+                    delivered++;
+                } catch (Exception e) {
+                    logger.warn("⚠️ [WebSocket] 推送失败 userId={}: {}", userId, e.getMessage());
+                }
+            }
+        }
+        return delivered;
+    }
+
+    /**
+     * 向全体在线用户广播已序列化的消息。
+     *
+     * @return 实际写入成功的连接数
+     */
+    public static int broadcastToAll(String message) {
+        if (message == null) {
+            return 0;
+        }
+
+        int delivered = 0;
+        for (Map.Entry<String, Set<Channel>> entry : USER_CHANNELS.entrySet()) {
+            for (Channel channel : entry.getValue()) {
+                if (channel != null && channel.isActive()) {
+                    try {
+                        channel.writeAndFlush(new TextWebSocketFrame(message));
+                        delivered++;
+                    } catch (Exception e) {
+                        logger.warn("⚠️ [WebSocket] 广播失败 userId={}: {}", entry.getKey(), e.getMessage());
+                    }
+                }
+            }
+        }
+        return delivered;
+    }
+
+    /**
+     * 判断该用户是否有任意一条活跃连接
+     */
+    public static boolean hasActiveConnection(String userId) {
+        Set<Channel> channels = userId == null ? null : USER_CHANNELS.get(userId);
+        if (channels == null || channels.isEmpty()) {
+            return false;
+        }
+        for (Channel channel : channels) {
+            if (channel != null && channel.isActive()) {
+                return true;
+            }
+        }
+        return false;
     }
 }
