@@ -1,6 +1,6 @@
 const { test, expect, loginAsUser } = require('../fixtures/test-base')
 const { markRunning, markPassed, markFailed, updateSummary } = require('../utils/progress')
-const { getOrder, getUserId, getMerchant, getMerchantId, getDish, getDishId, getCoupon } = require('../utils/real-data')
+const { getOrder, getUserId, getMerchant, getMerchantId, getDish, getDishId, deleteCoupon } = require('../utils/real-data')
 const { TEST_API_BASE } = require('../utils/api')
 
 async function apiRequest(api, method, path, data) {
@@ -252,29 +252,79 @@ test.describe('模块四：订单流程', () => {
     }
   })
 
-  test.fixme('4.8 优惠券使用 (blocked by #60)', async ({ page, request }) => {
+  test('4.8 优惠券使用', async ({ page, request }) => {
+    markRunning('4.8')
     const merchant = await getMerchant()
     const dish = await getDish({ merchantId: merchant.merchantId || merchant.id })
     const userId = await getUserId()
-    const coupon = await getCoupon({ userId, issueIfMissing: true })
-    const totalAmount = Math.max(Number(coupon.minAmount || 0), 120)
+    const coupon = await apiRequest(
+      request,
+      'POST',
+      `/v1/coupons/issue-test?userId=${encodeURIComponent(userId)}`
+    )
+    const couponId = coupon.id || coupon.couponId
+    const couponAmount = Number(coupon.amount)
+    const couponMinAmount = Number(coupon.minAmount || 0)
+    const belowThresholdAmount = Math.max(couponMinAmount - 1, 1)
+    const qualifyingAmount = Math.max(couponMinAmount, 120)
 
-    await page.addInitScript(({ pendingOrder }) => {
-      sessionStorage.setItem('pendingOrder', JSON.stringify(pendingOrder))
-    }, {
-      pendingOrder: {
-        cartItems: [{ id: dish.id || dish.dishId, name: dish.name, price: totalAmount, quantity: 1 }],
-        totalAmount,
-        merchant: { id: merchant.merchantId || merchant.id, name: merchant.name }
-      }
-    })
-    await page.goto('/user/home/order-confirmation')
-    const couponSection = page.locator('.coupon-section')
-    await expect(couponSection).toBeVisible({ timeout: 10000 })
-    await expect(couponSection).toContainText(coupon.name)
-    await couponSection.locator('button:has-text("使用")').click()
-    await expect(page.locator('.discount')).toBeVisible({ timeout: 10000 })
-    await expect(page.locator('.total-value')).not.toHaveText(`¥${totalAmount.toFixed(2)}`)
+    try {
+      expect(coupon.status).toBe('available')
+      expect(couponAmount).toBeGreaterThan(0)
+      expect(couponMinAmount).toBeGreaterThan(0)
+
+      await page.addInitScript(({ dish, merchant, belowThresholdAmount, qualifyingAmount }) => {
+        const qualifying = sessionStorage.getItem('e2eCouponPhase') === 'qualifying'
+        const totalAmount = qualifying ? qualifyingAmount : belowThresholdAmount
+        sessionStorage.setItem('pendingOrder', JSON.stringify({
+          cartItems: [{ id: dish.id || dish.dishId, name: dish.name, price: totalAmount, quantity: 1 }],
+          totalAmount,
+          merchant: { id: merchant.merchantId || merchant.id, name: merchant.name }
+        }))
+      }, { dish, merchant, belowThresholdAmount, qualifyingAmount })
+
+      await page.goto('/user/home/order-confirmation')
+      const couponSection = page.locator('.coupon-section')
+      await expect(couponSection).toBeVisible({ timeout: 10000 })
+      const couponItem = couponSection.locator('.coupon-item').filter({ hasText: coupon.name }).first()
+      await expect(couponItem).toBeVisible({ timeout: 10000 })
+
+      await couponItem.locator('button:has-text("使用")').click()
+      await expect(page.locator('.el-message').filter({
+        hasText: `此优惠券需满${couponMinAmount}元可用`
+      })).toBeVisible({ timeout: 10000 })
+      await expect(page.locator('.discount')).toHaveCount(0)
+      await expect(page.locator('.total-value')).toHaveText(`¥${belowThresholdAmount.toFixed(2)}`)
+
+      await page.evaluate(() => sessionStorage.setItem('e2eCouponPhase', 'qualifying'))
+      await page.reload()
+      await expect(couponItem).toBeVisible({ timeout: 10000 })
+
+      const checkRequestPromise = page.waitForRequest((request) =>
+        request.method() === 'POST'
+        && new URL(request.url()).pathname.endsWith('/v1/coupons/check')
+      )
+      await couponItem.locator('button:has-text("使用")').click()
+      const checkRequest = await checkRequestPromise
+      const checkUrl = new URL(checkRequest.url())
+      expect(checkUrl.searchParams.get('couponId')).toBe(String(couponId))
+      expect(Number(checkUrl.searchParams.get('orderAmount'))).toBe(qualifyingAmount)
+
+      const expectedDiscount = Math.min(couponAmount, qualifyingAmount)
+      const expectedTotal = qualifyingAmount - expectedDiscount
+      await expect(page.locator('.discount')).toHaveText(`-¥${expectedDiscount.toFixed(2)}`, { timeout: 10000 })
+      await expect(page.locator('.total-value')).toHaveText(`¥${expectedTotal.toFixed(2)}`)
+      await expect(page.locator('.el-message').filter({
+        hasText: `优惠已使用，减免¥${expectedDiscount.toFixed(2)}`
+      })).toBeVisible({ timeout: 10000 })
+      markPassed('4.8', `临时优惠券 ${couponId} 经门槛校验后减免 ${expectedDiscount}，应付 ${expectedTotal}`)
+    } catch (e) {
+      markFailed('4.8', e.message.slice(0, 50))
+      throw e
+    } finally {
+      deleteCoupon(couponId)
+      await page.evaluate(() => sessionStorage.removeItem('e2eCouponPhase')).catch(() => null)
+    }
   })
 
   test('4.9 创建拼单', async ({ page, request }) => {

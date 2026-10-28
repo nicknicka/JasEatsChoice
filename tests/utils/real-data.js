@@ -1,4 +1,6 @@
 // E2E 真实前置数据 helper：统一从运行中的测试后端 API 获取。
+const { execFileSync } = require('child_process')
+const path = require('path')
 const { TEST_API_BASE } = require('./api')
 
 const DEFAULT_USER_PHONE = process.env.TEST_USER_PHONE || process.env.TEST_USER || '17322222222'
@@ -190,6 +192,33 @@ async function getCouponId(options = {}) {
   return idOf(await getCoupon(options), ['id', 'couponId'], '优惠券')
 }
 
+function deleteCoupon(couponId) {
+  const normalizedId = String(couponId)
+  if (!/^\d+$/.test(normalizedId)) {
+    throw new Error(`临时优惠券 ID 非法：${normalizedId}`)
+  }
+
+  const repoRoot = path.resolve(__dirname, '../..')
+  const sql = `DELETE FROM usr_user_coupon WHERE id = '${normalizedId}'; SELECT ROW_COUNT();`
+  const output = execFileSync('docker', [
+    'compose',
+    '--env-file', path.join(repoRoot, 'deploy/.env'),
+    '-f', path.join(repoRoot, 'deploy/compose.yml'),
+    '-f', path.join(repoRoot, 'deploy/compose.dev.yml'),
+    'exec', '-T', 'mysql', 'sh', '-c',
+    `mysql -N -B -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "${sql}"`
+  ], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+    env: { ...process.env, COMPOSE_PROJECT_NAME: process.env.COMPOSE_PROJECT_NAME || 'jaseats' }
+  }).trim()
+
+  if (output !== '1') {
+    throw new Error(`临时优惠券 ${normalizedId} 清理失败，影响行数：${output || 0}`)
+  }
+}
+
 module.exports = {
   getUser,
   getUserId,
@@ -202,5 +231,6 @@ module.exports = {
   getAddress,
   getAddressId,
   getCoupon,
-  getCouponId
+  getCouponId,
+  deleteCoupon
 }

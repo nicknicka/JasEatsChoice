@@ -133,7 +133,7 @@
                 type="warning"
                 size="small"
                 plain
-                @click="useDiscount"
+                @click="useDiscount(discount)"
               >
                 使用
               </el-button>
@@ -586,12 +586,9 @@ const loadCoupons = async (userId) => {
   try {
     const couponResponse = await couponApi.getUserCoupons(userId)
     if (couponResponse.code === '200' || couponResponse.code === 200) {
-      const currentAmount = orderInfo.value.totalUnpaid
-      const availableCoupons = (couponResponse.data || []).filter(
-        (c) => (c.status === 'available' || c.status === 'valid')
-          && (!c.minAmount || c.minAmount <= currentAmount)
+      discounts.value = (couponResponse.data || []).filter(
+        (c) => c.status === 'available' || c.status === 'valid'
       )
-      discounts.value = availableCoupons
       return
     }
   } catch (couponError) {
@@ -746,12 +743,16 @@ const updateCustomShare = (index, amount) => {
 }
 
 // 使用优惠
-const useDiscount = async () => {
-  const discount = discounts.value[0]
-  if (!discount || !discount.available || discount.used) return
+const useDiscount = async (discount) => {
+  if (!discount || discount.used) return
+
+  if (discount.status !== 'available' && discount.status !== 'valid') {
+    ElMessage.warning(discount.status === 'expired' ? '优惠券已过期' : '优惠券已使用')
+    return
+  }
 
   // 检查最低消费限制（如果有）
-  const minAmount = discount.minAmount || 0
+  const minAmount = Number(discount.minAmount || 0)
   const currentAmount = orderInfo.value.totalUnpaid
 
   if (currentAmount < minAmount) {
@@ -772,7 +773,8 @@ const useDiscount = async () => {
     }
   } catch (error) {
     console.error('检查优惠券失败:', error)
-    // 继续执行，使用前端验证
+    ElMessage.warning('优惠券校验失败，请稍后重试')
+    return
   }
 
   selectedDiscount.value = discount
