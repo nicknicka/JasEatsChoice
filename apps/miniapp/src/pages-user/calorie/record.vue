@@ -121,7 +121,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useUserStore } from '@/store'
 import { formatDate } from '@/utils/helper'
-import { aiApi } from '@/api'
+import { aiApi, calorieApi } from '@/api'
 
 const userStore = useUserStore()
 
@@ -325,26 +325,37 @@ const saveRecord = async () => {
   try {
     const userId = userStore.userInfo?.userId || userStore.userInfo?.id
 
-    // 调用API保存记录（这里使用AI分析API的扩展功能）
-    // 注意：如果后端没有专门的保存记录接口，可能需要添加
+    // 保存到后端，字段与 CalorieRecord 实体对齐
     const mealTypeMap = { 1: 'breakfast', 2: 'lunch', 3: 'dinner', 4: 'snack' }
+    const selectedDate = new Date(`${currentDate.value}T00:00:00`)
+    const now = new Date()
+    const recordTime = new Date(
+      selectedDate.getFullYear(),
+      selectedDate.getMonth(),
+      selectedDate.getDate(),
+      now.getHours(),
+      now.getMinutes(),
+      now.getSeconds()
+    )
+    const pad = (value) => String(value).padStart(2, '0')
 
     const newRecord = {
       userId,
-      date: currentDate.value,
-      mealType: mealTypeMap[formData.value.mealType],
       foodName: formData.value.name,
-      calories: parseInt(formData.value.calories),
-      remark: formData.value.remark
+      calorie: parseInt(formData.value.calories),
+      mealTime: mealTypeMap[formData.value.mealType],
+      description: formData.value.remark,
+      // 后端 LocalDateTime 只接受不带时区的 ISO 本地时间
+      recordTime: `${recordTime.getFullYear()}-${pad(recordTime.getMonth() + 1)}-${pad(recordTime.getDate())}T${pad(recordTime.getHours())}:${pad(recordTime.getMinutes())}:${pad(recordTime.getSeconds())}`
     }
 
-    // U-026: 调用后端API保存记录
+    // 保存失败时保留本地记录，但明确告知未同步
+    let serverSaved = true
     try {
-      const { aiApi } = await import('@/api')
-      await aiApi.saveNutritionRecord(newRecord)
+      await calorieApi.createRecord(newRecord)
     } catch (error) {
+      serverSaved = false
       console.error('保存记录到服务器失败，仅保存到本地:', error)
-      // 如果API调用失败，仅保存到本地，不中断流程
     }
 
     // 临时添加到本地列表
@@ -363,8 +374,8 @@ const saveRecord = async () => {
     summary.value[meal] += parseInt(formData.value.calories)
 
     uni.showToast({
-      title: '记录成功',
-      icon: 'success'
+      title: serverSaved ? '记录成功' : '已保存到本地，未同步到服务器',
+      icon: serverSaved ? 'success' : 'none'
     })
 
     closePopup()
