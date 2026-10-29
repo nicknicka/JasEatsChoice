@@ -530,26 +530,21 @@ const loadSettings = async () => {
   try {
     const userId = userStore.userInfo?.userId || userStore.userInfo?.id
 
+    // 后端无 settings 路由，非通知项从本地读取
+    const localSettings = uni.getStorageSync('settings')
+    if (localSettings) {
+      settings.value = JSON.parse(localSettings)
+    }
+
     // 加载通知偏好设置
     const res = await notificationApi.getPreferences({ userId })
 
     if (res && res.data) {
-      settings.value = {
-        messageNotification: res.data.orderNotify !== false,
-        marketingNotification: res.data.activityNotify || false,
-        profileVisible: true,
-        locationEnabled: true,
-        darkMode: false
-      }
+      settings.value.messageNotification = res.data.orderNotify !== false
+      settings.value.marketingNotification = res.data.activityNotify || false
 
       // 保存到本地存储
       uni.setStorageSync('settings', JSON.stringify(settings.value))
-    } else {
-      // 从本地存储读取
-      const localSettings = uni.getStorageSync('settings')
-      if (localSettings) {
-        settings.value = JSON.parse(localSettings)
-      }
     }
   } catch (error) {
     console.error('加载设置失败:', error)
