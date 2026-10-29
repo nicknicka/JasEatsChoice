@@ -27,7 +27,6 @@
       refresher-enabled
       :refresher-triggered="refreshing"
       @refresherrefresh="onRefresh"
-      @scrolltolower="onLoadMore"
     >
       <!-- 菜品收藏 -->
       <view class="collection-list" v-if="activeTab === 'dish'">
@@ -131,12 +130,6 @@
           </view>
         </view>
       </view>
-
-      <!-- 加载状态 -->
-      <view class="load-more" v-if="hasMore && (dishList.length > 0 || merchantList.length > 0)">
-        <view class="load-text" v-if="loading">加载中...</view>
-        <view class="load-text" v-else>上拉加载更多</view>
-      </view>
     </scroll-view>
   </view>
 </template>
@@ -145,7 +138,7 @@
 import { ref, onMounted } from 'vue'
 import { useUserStore } from '@/store'
 import Empty from '@/components/common/Empty.vue'
-import { favoriteApi, merchantApi } from '@/api'
+import { favoriteApi, merchantApi, dishApi } from '@/api'
 import { HOME } from '@/constants/routes'
 import { toDishDetail, toMerchantDetail } from '@/utils/router'
 
@@ -166,18 +159,12 @@ const merchantCount = ref(0)
 // 加载状态
 const loading = ref(false)
 const refreshing = ref(false)
-const hasMore = ref(true)
-
-// 分页参数
-const page = ref(1)
-const pageSize = ref(10)
 
 /**
  * 切换Tab
  */
 const changeTab = (tab) => {
   activeTab.value = tab
-  page.value = 1
   dishList.value = []
   merchantList.value = []
   loadData()
@@ -204,28 +191,33 @@ const loadData = async (showLoading = true) => {
 
     if (activeTab.value === 'dish') {
       // 加载菜品收藏
-      const res = await favoriteApi.getDishList({
-        userId,
-        page: page.value,
-        size: pageSize.value
-      })
+      // 后端该接口返回扁平的收藏记录（UserCollection），不含分页；
+      // 记录里只有 collectableId，展示字段需再查菜品详情补齐。
+      const res = await favoriteApi.getDishList({ userId })
+      const collections = res.data || []
 
-      const list = res.list || res.data?.list || []
-      if (page.value === 1) {
-        dishList.value = list
-        dishCount.value = res.total || res.data?.total || 0
-      } else {
-        dishList.value.push(...list)
-      }
-
-      hasMore.value = list.length >= pageSize.value
+      // 收藏记录里可能残留已下架或已删除的菜品（详情接口会拒返），
+      // 用 allSettled 跳过这些条目，避免单条失败拖垮整个列表。
+      const settled = await Promise.allSettled(collections.map(async (collection) => {
+        const dish = await dishApi.getDetail(collection.collectableId)
+        return {
+          ...dish,
+          id: collection.collectableId,
+          isFavorite: true
+        }
+      }))
+      dishList.value = settled
+        .filter((item) => item.status === 'fulfilled' && item.value)
+        .map((item) => item.value)
+      dishCount.value = dishList.value.length
     } else {
       // 加载商家收藏，接口一次返回全量收藏记录
       const res = await favoriteApi.getMerchantList(userId)
       const collections = res.data || []
 
-      // 收藏记录只包含商家ID，展示字段从商家详情补齐
-      merchantList.value = await Promise.all(collections.map(async (collection) => {
+      // 收藏记录只包含商家ID，展示字段从商家详情补齐；
+      // 同样跳过已删除的商家，避免单条失败拖垮整个列表。
+      const settled = await Promise.allSettled(collections.map(async (collection) => {
         const merchant = await merchantApi.getDetail(collection.collectableId)
         return {
           ...merchant,
@@ -233,8 +225,10 @@ const loadData = async (showLoading = true) => {
           isFavorite: true
         }
       }))
+      merchantList.value = settled
+        .filter((item) => item.status === 'fulfilled' && item.value)
+        .map((item) => item.value)
       merchantCount.value = merchantList.value.length
-      hasMore.value = false
     }
   } catch (error) {
     console.error('加载收藏数据失败:', error)
@@ -252,18 +246,8 @@ const loadData = async (showLoading = true) => {
  */
 const onRefresh = async () => {
   refreshing.value = true
-  page.value = 1
   await loadData(false)
   refreshing.value = false
-}
-
-/**
- * 上拉加载更多
- */
-const onLoadMore = () => {
-  if (loading.value || !hasMore.value) return
-  page.value++
-  loadData()
 }
 
 /**
@@ -646,14 +630,4 @@ onMounted(() => {
   font-weight: $font-weight-medium;
 }
 
-/* 加载状态 */
-.load-more {
-  @include flex-center;
-  padding: $spacing-lg 0;
-}
-
-.load-text {
-  font-size: $font-size-sm;
-  color: $text-color-secondary;
-}
 </style>
