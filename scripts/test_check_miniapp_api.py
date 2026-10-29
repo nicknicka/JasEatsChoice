@@ -11,6 +11,8 @@
   3. JS 内建方法
   4. 嵌套对象与函数参数的键
 """
+import contextlib
+import io
 import tempfile
 import unittest
 from pathlib import Path
@@ -18,7 +20,10 @@ from pathlib import Path
 from check_miniapp_api import (
     JS_BUILTINS,
     collect_api_methods,
+    collect_calls,
     find_violations,
+    iter_source_files,
+    main,
     object_keys,
     strip_noise,
 )
@@ -116,6 +121,53 @@ class TestFindViolations(unittest.TestCase):
     def test_builtin_list_contains_common_methods(self):
         for m in ("map", "filter", "trim", "includes", "then"):
             self.assertIn(m, JS_BUILTINS)
+
+
+class TestEndToEnd(unittest.TestCase):
+    """端到端：用真实的临时目录跑一遍 main()。
+
+    这一组是 #134 验收标准「脚本能检出人为植入的违规（验证它不是恒真通过）」
+    的可追溯证据——收录进 make check 后每次都会重跑。
+    """
+
+    def _make_tree(self, d, call_source):
+        mods = Path(d) / "api/modules"
+        mods.mkdir(parents=True)
+        (mods / "demo.js").write_text(
+            "export const demoApi = {\n"
+            "  known: (x) => x\n"
+            "}\n"
+            "export default demoApi\n",
+            encoding="utf-8",
+        )
+        src = Path(d) / "pages"
+        src.mkdir()
+        (src / "a.vue").write_text(call_source, encoding="utf-8")
+        return mods, src
+
+    def test_clean_tree_passes(self):
+        with tempfile.TemporaryDirectory() as d:
+            mods, src = self._make_tree(d, "demoApi.known(1)\n")
+            with contextlib.redirect_stdout(io.StringIO()):
+                rc = main(["--modules-dir", str(mods), "--source-root", str(src)])
+        self.assertEqual(rc, 0, "干净代码库应通过")
+
+    def test_planted_violation_is_detected(self):
+        with tempfile.TemporaryDirectory() as d:
+            mods, src = self._make_tree(d, "demoApi.known(1)\ndemoApi.plantedMissing(2)\n")
+            with contextlib.redirect_stdout(io.StringIO()):
+                rc = main(["--modules-dir", str(mods), "--source-root", str(src)])
+        self.assertEqual(rc, 1, "植入的违规必须被检出（否则检查是恒真通过）")
+
+    def test_violation_reports_file_and_line(self):
+        with tempfile.TemporaryDirectory() as d:
+            mods, src = self._make_tree(d, "// 占位\ndemoApi.plantedMissing(2)\n")
+            apis = collect_api_methods(mods)
+            calls = collect_calls(iter_source_files(src), set(apis))
+            out = find_violations(apis, calls)
+        self.assertEqual(len(out), 1)
+        self.assertEqual(out[0]["line"], 2, "行号应指向真实调用处")
+        self.assertTrue(out[0]["file"].endswith("a.vue"))
 
 
 if __name__ == "__main__":

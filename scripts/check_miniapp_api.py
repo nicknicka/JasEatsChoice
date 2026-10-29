@@ -215,16 +215,21 @@ def collect_calls(files, api_names: set[str]) -> list[tuple[str, int, str, str]]
     """扫出 `xxxApi.method(` 形式的调用点。
 
     只认同一个模块里出现过名字的 api 对象，避免把无关变量误判。
+    返回的路径：在仓库内则相对仓库根，否则用原样路径（便于测试与外部目录）。
     """
     pattern = re.compile(r"\b(" + "|".join(sorted(api_names)) + r")\.([A-Za-z_$][\w$]*)\s*\(")
     calls: list[tuple[str, int, str, str]] = []
     for p in files:
         text = p.read_text(encoding="utf-8", errors="ignore")
         clean = strip_noise(text)
+        try:
+            shown = p.resolve().relative_to(REPO_ROOT.resolve()).as_posix()
+        except ValueError:
+            shown = p.as_posix()
         for m in pattern.finditer(clean):
             api, method = m.group(1), m.group(2)
             line = clean[: m.start()].count("\n") + 1
-            calls.append((p.relative_to(REPO_ROOT).as_posix(), line, api, method))
+            calls.append((shown, line, api, method))
     return calls
 
 
