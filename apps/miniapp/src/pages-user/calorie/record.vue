@@ -346,7 +346,7 @@ const saveRecord = async () => {
       mealTime: mealTypeMap[formData.value.mealType],
       description: formData.value.remark,
       // 后端 LocalDateTime 只接受不带时区的 ISO 本地时间
-      recordTime: `${recordTime.getFullYear()}-${pad(recordTime.getMonth() + 1)}-${pad(recordTime.getDate())} ${pad(recordTime.getHours())}:${pad(recordTime.getMinutes())}:${pad(recordTime.getSeconds())}`
+      recordTime: `${recordTime.getFullYear()}-${pad(recordTime.getMonth() + 1)}-${pad(recordTime.getDate())}T${pad(recordTime.getHours())}:${pad(recordTime.getMinutes())}:${pad(recordTime.getSeconds())}`
     }
 
     // 保存失败时保留本地记录，但明确告知未同步
