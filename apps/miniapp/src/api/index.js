@@ -11,6 +11,7 @@ export { merchantApi } from './modules/merchant'
 export { recipeApi } from './modules/recipe'
 export { addressApi } from './modules/address'
 export { aiApi } from './modules/ai'
+export { calorieApi } from './modules/calorie'
 export { chatApi } from './modules/chat'
 export { couponApi } from './modules/coupon'
 export { favoriteApi } from './modules/favorite'
@@ -34,6 +35,7 @@ import { merchantApi } from './modules/merchant'
 import { recipeApi } from './modules/recipe'
 import { addressApi } from './modules/address'
 import { aiApi } from './modules/ai'
+import { calorieApi } from './modules/calorie'
 import { chatApi } from './modules/chat'
 import { couponApi } from './modules/coupon'
 import { favoriteApi } from './modules/favorite'
@@ -57,6 +59,7 @@ export default {
   recipe: recipeApi,
   address: addressApi,
   ai: aiApi,
+  calorie: calorieApi,
   chat: chatApi,
   coupon: couponApi,
   favorite: favoriteApi,

@@ -38,6 +38,16 @@ export const favoriteApi = {
   getRecipeList: (params) => get('/v1/favorites/recipes', params),
 
   /**
+   * 获取收藏商家列表
+   * GET /v1/favorites?type=merchant
+   * @param {string} userId - 用户ID
+   */
+  getMerchantList: (userId) => get('/v1/favorites', {
+    userId: normalizeUserId(userId),
+    type: 'merchant'
+  }),
+
+  /**
    * 检查菜品是否收藏
    * GET /v1/favorites/dishes/{dishId}/check
    * @param {string} dishId - 菜品ID

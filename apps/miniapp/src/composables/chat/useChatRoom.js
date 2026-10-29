@@ -326,7 +326,7 @@ export function useChatRoom() {
     scrollToBottom()
 
     try {
-      const res = await messageApi.sendMessage({
+      const res = await messageApi.sendTextMessage({
         conversationId: conversationId.value,
         senderId: currentUserId.value,
         receiverId: userInfo.value.id,

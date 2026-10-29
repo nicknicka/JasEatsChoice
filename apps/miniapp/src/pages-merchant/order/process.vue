@@ -104,11 +104,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { merchantApi } from '@/api'
-import { formatTime } from '@/utils/helper'
-import { useMerchantStore } from '@/store/modules/merchant'
 import { normalizeOrderStatusCode } from '@/config/order-status'
-
-const merchantStore = useMerchantStore()
 
 // 订单ID
 const orderId = ref('')
@@ -169,52 +165,30 @@ onMounted(() => {
  */
 const loadOrderProcess = async () => {
   try {
-    // 调用API获取订单进度
-    const res = await merchantApi.getOrderProgress(orderId.value)
+    // 调用订单详情接口，detail 返回订单本体，dishes 返回订单菜品
+    const res = await merchantApi.getOrderDetail(orderId.value)
+    const dishesRes = await merchantApi.getOrderDishes(orderId.value)
 
-    if (res && res.data) {
+    if (res && res.success && res.data) {
       const data = res.data
-      const normalizedStatus = normalizeOrderStatusCode(data.order?.status)
+      const normalizedStatus = normalizeOrderStatusCode(data.status)
+      const dishes = dishesRes && dishesRes.success ? dishesRes.data || [] : []
 
       // 更新订单信息
-      if (data.order) {
-        orderInfo.value = {
-          id: data.order.orderId || data.order.id,
-          orderNo: data.order.orderNo || data.order.order_no,
-          status: normalizedStatus,
-          statusText: getStatusText(normalizedStatus),
-          dishes: Array.isArray(data.order.dishes) ? data.order.dishes.map(dish => ({
-            id: dish.dishId || dish.id,
-            name: dish.dishName || dish.name,
-            quantity: dish.quantity || 1
-          })) : []
-        }
+      orderInfo.value = {
+        id: data.id,
+        orderNo: `OD${String(data.id).padStart(6, '0')}`,
+        status: normalizedStatus,
+        statusText: getStatusText(normalizedStatus),
+        dishes: dishes.map(dish => ({
+          id: dish.dishId || dish.id,
+          name: dish.dishName || dish.name,
+          quantity: dish.quantity || 1
+        }))
       }
 
       // 更新当前步骤
-      currentStep.value = data.currentStep || 0
-
-      // 更新预计完成时间
-      if (data.expectTime) {
-        expectTime.value = formatTime(data.expectTime)
-      }
-
-      // 更新进度历史
-      if (Array.isArray(data.history)) {
-        progressHistory.value = data.history.map(item => ({
-          step: item.step || item.stepName,
-          time: formatTime(item.time || item.created_at),
-          remark: item.remark || ''
-        }))
-      }
-
-      // 更新制作步骤
-      if (Array.isArray(data.steps)) {
-        processSteps.value = data.steps.map(step => ({
-          name: step.name || step.stepName,
-          time: step.time ? formatTime(step.time) : ''
-        }))
-      }
+      currentStep.value = mapStatusToStep(normalizedStatus)
     }
   } catch (error) {
     console.error('加载订单进度失败:', error)
@@ -251,6 +225,29 @@ const selectStep = (index) => {
 }
 
 /**
+ * 页面步骤序号与后端订单状态互转
+ * 页面步骤：0-开始制作、1-食材准备中、2-烹饪中、3-摆盘装盒、4-已完成
+ * 后端状态：1-待接单、2-制作中、3-已完成
+ * 制作中的四个细分步骤都对应 2；已完成对应 3
+ */
+const STATUS_TO_STEP = {
+  1: 0,
+  2: 0,
+  3: 4
+}
+
+const STEP_TO_ORDER_STATUS = {
+  0: 2,
+  1: 2,
+  2: 2,
+  3: 2,
+  4: 3
+}
+
+const mapStatusToStep = (status) => STATUS_TO_STEP[status] ?? currentStep.value
+const mapStepToStatus = (step) => STEP_TO_ORDER_STATUS[step] ?? 2
+
+/**
  * 时间变更
  */
 const onTimeChange = (e) => {
@@ -269,16 +266,8 @@ const submitProgress = async () => {
     success: async (res) => {
       if (res.confirm) {
         try {
-          const merchantId = merchantStore.merchantInfo?.merchantId || merchantStore.merchantInfo?.id
-
-          // 调用API更新进度
-          await merchantApi.updateOrderProgress(orderId.value, {
-            merchantId,
-            step: currentStep.value,
-            stepName: stepName,
-            expectTime: expectTime.value,
-            remark: processRemark.value
-          })
+          // 调用API更新订单状态
+          await merchantApi.updateOrderStatus(orderId.value, mapStepToStatus(currentStep.value))
 
           uni.showToast({
             title: '更新成功',
