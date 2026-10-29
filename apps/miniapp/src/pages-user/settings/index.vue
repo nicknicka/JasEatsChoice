@@ -244,7 +244,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useUserStore } from '@/store'
-import { userApi, notificationApi } from '@/api'
+import { notificationApi } from '@/api'
 import {
   LOGIN,
   USER_ADDRESS,
