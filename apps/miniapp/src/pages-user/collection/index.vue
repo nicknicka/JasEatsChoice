@@ -145,7 +145,7 @@
 import { ref, onMounted } from 'vue'
 import { useUserStore } from '@/store'
 import Empty from '@/components/common/Empty.vue'
-import { favoriteApi } from '@/api'
+import { favoriteApi, merchantApi } from '@/api'
 import { HOME } from '@/constants/routes'
 import { toDishDetail, toMerchantDetail } from '@/utils/router'
 
@@ -220,22 +220,21 @@ const loadData = async (showLoading = true) => {
 
       hasMore.value = list.length >= pageSize.value
     } else {
-      // 加载商家收藏
-      const res = await favoriteApi.getMerchantList({
-        userId,
-        page: page.value,
-        size: pageSize.value
-      })
+      // 加载商家收藏，接口一次返回全量收藏记录
+      const res = await favoriteApi.getMerchantList(userId)
+      const collections = res.data || []
 
-      const list = res.list || res.data?.list || []
-      if (page.value === 1) {
-        merchantList.value = list
-        merchantCount.value = res.total || res.data?.total || 0
-      } else {
-        merchantList.value.push(...list)
-      }
-
-      hasMore.value = list.length >= pageSize.value
+      // 收藏记录只包含商家ID，展示字段从商家详情补齐
+      merchantList.value = await Promise.all(collections.map(async (collection) => {
+        const merchant = await merchantApi.getDetail(collection.collectableId)
+        return {
+          ...merchant,
+          id: collection.collectableId,
+          isFavorite: true
+        }
+      }))
+      merchantCount.value = merchantList.value.length
+      hasMore.value = false
     }
   } catch (error) {
     console.error('加载收藏数据失败:', error)
