@@ -8,7 +8,7 @@
 #   make web         构建 Web 版静态产物到 apps/client/dist-web
 #   make test        跑全部 114 条 Playwright 用例
 #   make test-smoke  只跑 01/04/10 三条冒烟
-#   make check       静态防线：单测 + 路由漂移 + lint 门禁（不起容器）
+#   make check       静态防线：单测 + 路由漂移 + 小程序 API 调用 + lint 门禁（不起容器）
 #   make desktop     Electron 打包回归（build:mac）
 #   make logs        跟随后端日志
 
@@ -21,7 +21,7 @@ NPM := npm --no-audit --no-fund
 CHECK_SOURCE ?= auto
 
 .PHONY: doctor env deps up down ps logs reset-db web desktop test test-smoke lint \
-	check check-unit check-routes check-lint nginx-test config-prod
+	check check-unit check-routes check-miniapp-api check-lint nginx-test config-prod
 
 doctor:
 	@echo "== Docker =="
@@ -106,13 +106,19 @@ lint:
 
 # 静态防线：不起容器、不打桩，一分钟内把机械性问题挡在跑 5 分钟端到端之前。
 # CI 与本地共用这三个目标，命令不在两处各自演化。
-check: check-unit check-routes check-lint
+check: check-unit check-routes check-miniapp-api check-lint
 
 check-unit:
 	python3 -m unittest discover -s scripts -p 'test_*.py'
 
 check-routes:
 	python3 scripts/check_routes.py --source $(CHECK_SOURCE)
+
+# 小程序：页面调用的 xxxApi.method 是否真的存在于对应 api 模块里。
+# 这类缺陷不会被编译或路由检查发现——调用瞬间抛 TypeError，若被 try/catch
+# 吞掉就只剩一行 console.error，能长期潜伏。
+check-miniapp-api:
+	python3 scripts/check_miniapp_api.py
 
 # eslint 自己会因 error 数非零退出 1，所以这里容忍它的退出码，
 # 由 check_lint.py 拿冻结基线去判“有没有变差”。
