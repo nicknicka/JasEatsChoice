@@ -365,20 +365,14 @@ const toggleSetting = async (key) => {
   try {
     const userId = userStore.userInfo?.userId || userStore.userInfo?.id
 
-    // 根据设置类型调用不同的API
+    // 后端无 settings 路由，通知偏好沿用本地存储实现
     if (key.includes('Notification')) {
-      // 更新通知偏好设置
       await notificationApi.setPreferences({
         userId,
         orderNotify: settings.value.messageNotification,
         activityNotify: settings.value.marketingNotification,
         systemNotify: true,
         chatNotify: true
-      })
-    } else {
-      // 更新用户设置
-      await userApi.updateSettings(userId, {
-        [key]: settings.value[key]
       })
     }
 
@@ -479,14 +473,7 @@ const logout = () => {
     confirmColor: '#FF6B35',
     success: async (res) => {
       if (res.confirm) {
-        try {
-          // 调用退出登录API
-          await userApi.logout()
-        } catch (error) {
-          console.error('退出登录API调用失败:', error)
-        }
-
-        // 清除登录信息
+        // 后端无 logout 路由，仅做本地清理
         uni.removeStorageSync('token')
         uni.removeStorageSync('userInfo')
 
