@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import com.xx.jaseatschoicejava.agent.agents.CardRendererAgent;
+import com.xx.jaseatschoicejava.agent.agents.CustomerServiceAgent;
 import com.xx.jaseatschoicejava.agent.agents.DishRecommendationAgent;
 import com.xx.jaseatschoicejava.agent.agents.LocationServiceAgent;
 import com.xx.jaseatschoicejava.agent.agents.MerchantInfoAgent;
@@ -51,6 +52,7 @@ public class SupervisorAgentFactory {
     private final ChatModel supervisorModel;
     private final ChatMemoryFactory chatMemoryFactory;
     private final CardRendererAgent cardRendererAgent;
+    private final CustomerServiceAgent customerServiceAgent;
 
     // L1专家Agent注入
     private final DishRecommendationAgent dishRecommendationAgent;
@@ -65,6 +67,7 @@ public class SupervisorAgentFactory {
             @Qualifier("supervisorModel") ChatModel supervisorModel,
             ChatMemoryFactory chatMemoryFactory,
             CardRendererAgent cardRendererAgent,
+            CustomerServiceAgent customerServiceAgent,
             DishRecommendationAgent dishRecommendationAgent,
             UserPreferenceAgent userPreferenceAgent,
             NutritionGuideAgent nutritionGuideAgent,
@@ -75,6 +78,7 @@ public class SupervisorAgentFactory {
         this.supervisorModel = supervisorModel;
         this.chatMemoryFactory = chatMemoryFactory;
         this.cardRendererAgent = cardRendererAgent;
+        this.customerServiceAgent = customerServiceAgent;
         this.dishRecommendationAgent = dishRecommendationAgent;
         this.userPreferenceAgent = userPreferenceAgent;
         this.nutritionGuideAgent = nutritionGuideAgent;
@@ -109,6 +113,7 @@ public class SupervisorAgentFactory {
                 .description("L2智能调度代理，直接协调L1专家Agent完成复杂任务")
                 .subAgents(
                     // 直接注入所有L1专家Agent
+                    customerServiceAgent,
                     dishRecommendationAgent,
                     userPreferenceAgent,
                     nutritionGuideAgent,
@@ -221,10 +226,11 @@ public class SupervisorAgentFactory {
                → 先调用 NutritionGuideAgent 获取营养建议，再调用 DishRecommendationAgent 推荐菜品
 
             ### 单一意图（只调用1个Agent）
+            - 平台规则、平台活动、公告、满减、优惠、退款说明等知识问题 → CustomerServiceAgent
             - 纯菜品/食物推荐（上下文已有偏好数据）→ DishRecommendationAgent
             - 纯偏好/忌口/过敏设置 → UserPreferenceAgent
             - 纯营养/热量/健康咨询 → NutritionGuideAgent
-            - 订单/催单/配送 → OrderHelperAgent
+            - 订单、催单、配送、优惠券余额等结构化数据 → OrderHelperAgent
             - 商家/餐厅信息 → MerchantInfoAgent
             - 时段/三餐搭配 → TimeAwareAgent
             - 附近/距离/位置 → LocationServiceAgent

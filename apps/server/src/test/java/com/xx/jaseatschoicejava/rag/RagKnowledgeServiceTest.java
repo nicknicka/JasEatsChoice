@@ -30,6 +30,38 @@ class RagKnowledgeServiceTest {
         announcementService, new DeterministicEmbeddingModel(), store);
 
     @Test
+    void customerWithNamedMerchantScopeCannotSeeOtherMerchants() {
+        Announcement platform = activePlatformAnnouncement();
+        platform.setId("platform-customer");
+
+        Announcement targetOwn = merchantAnnouncement("merchant-2", "customer");
+        targetOwn.setId("target-own");
+
+        Announcement otherOwn = merchantAnnouncement("merchant-3", "customer");
+        otherOwn.setId("other-own");
+
+        Announcement platformMerchant = activePlatformAnnouncement();
+        platformMerchant.setId("platform-merchant");
+        platformMerchant.setTargetAudience("merchant");
+
+        when(announcementService.getById("platform-customer")).thenReturn(platform);
+        when(announcementService.getById("target-own")).thenReturn(targetOwn);
+        when(announcementService.getById("other-own")).thenReturn(otherOwn);
+        when(announcementService.getById("platform-merchant")).thenReturn(platformMerchant);
+        service.syncAnnouncement("platform-customer");
+        service.syncAnnouncement("target-own");
+        service.syncAnnouncement("other-own");
+        service.syncAnnouncement("platform-merchant");
+
+        List<RagKnowledgeResult> results = service.search(new RagKnowledgeQuery(
+            "weekend discount", RagAudience.CUSTOMER, "merchant-2",
+            LocalDateTime.parse("2026-10-31T12:00:00"), 10));
+
+        assertThat(results).extracting(RagKnowledgeResult::announcementId)
+            .containsExactlyInAnyOrder("platform-customer", "target-own");
+    }
+
+    @Test
     void activePlatformAnnouncement_isIndexedAndSearchableByCustomerWithoutMerchant() {
         Announcement announcement = activePlatformAnnouncement();
         when(announcementService.getById("announcement-1")).thenReturn(announcement);

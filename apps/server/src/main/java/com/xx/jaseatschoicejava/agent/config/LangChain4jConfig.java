@@ -18,6 +18,7 @@ import com.xx.jaseatschoicejava.agent.agents.NutritionGuideAgent;
 import com.xx.jaseatschoicejava.agent.agents.OrderHelperAgent;
 import com.xx.jaseatschoicejava.agent.agents.TimeAwareAgent;
 import com.xx.jaseatschoicejava.agent.agents.UserPreferenceAgent;
+import com.xx.jaseatschoicejava.agent.tools.announcement.AnnouncementKnowledgeTools;
 import com.xx.jaseatschoicejava.agent.tools.menu.MenuQueryTools;
 import com.xx.jaseatschoicejava.agent.tools.merchant.MerchantQueryTools;
 import com.xx.jaseatschoicejava.agent.tools.merchant.MerchantStatsTools;
@@ -73,6 +74,9 @@ public class LangChain4jConfig {
     private ChatModelProvider chatModelProvider;
 
     // ==================== L1 Agent 工具注入 ====================
+
+    @Resource
+    private AnnouncementKnowledgeTools announcementKnowledgeTools;
 
     @Resource
     private UserProfileTools userProfileTools;
@@ -230,15 +234,19 @@ public class LangChain4jConfig {
     // ==================== L1 专家 Agent ====================
 
     /**
-     * L1 客服助手Agent（无个性化服务）
+     * L1 知识客服Agent（公告 RAG）
      */
     @Bean
     @Scope("prototype")
     public CustomerServiceAgent customerServiceAgent(@Qualifier("aiModel") ChatModel aiModel) {
-        log.info("构建CustomerServiceAgent（客服助手）...");
+        log.info("构建CustomerServiceAgent（知识客服）...");
 
-        return dev.langchain4j.service.AiServices.builder(CustomerServiceAgent.class)
+        return AgenticServices.agentBuilder(CustomerServiceAgent.class)
                 .chatModel(aiModel)
+                .chatMemory(MessageWindowChatMemory.withMaxMessages(20))
+                .name("CustomerServiceAgent")
+                .description("知识客服专家，基于公告回答平台规则和活动问题")
+                .tools(announcementKnowledgeTools)
                 .build();
     }
 

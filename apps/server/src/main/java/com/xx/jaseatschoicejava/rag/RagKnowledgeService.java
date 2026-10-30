@@ -150,7 +150,8 @@ public class RagKnowledgeService {
         String now = datetime(query.now());
         List<Filter> merchantFilters = new ArrayList<>();
         merchantFilters.add(metadataKey("merchantId").isEqualTo("platform"));
-        if (query.audience() == RagAudience.MERCHANT) {
+        if (query.audience() == RagAudience.MERCHANT
+            || (query.audience() == RagAudience.CUSTOMER && query.merchantId() != null)) {
             merchantFilters.add(metadataKey("merchantId").isEqualTo(query.merchantId()));
         }
         Filter merchantScope = merchantFilters.getFirst();
