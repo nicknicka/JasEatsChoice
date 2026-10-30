@@ -1,17 +1,17 @@
 <template>
   <div v-if="parsedCard" class="merchant-ai-card">
-    <UniCard :data="sanitizedCard" />
+    <UniCard :data="parsedCard" />
   </div>
   <div v-else class="merchant-ai-card-fallback">
     <span class="fallback-icon">📄</span>
-    <span class="fallback-text">{{ fallbackText || '卡片内容暂不可用' }}</span>
+    <span class="fallback-text">{{ safeFallbackText }}</span>
   </div>
 </template>
 
 <script setup>
 import { computed } from 'vue'
 import UniCard from '@/views/user/AI/components/cards/UniCard.vue'
-import { useUniCardParser } from '@/views/user/AI/composables/useUniCardParser'
+import { createMerchantAICardViewModel } from '../composables/merchantAICardDisplayService'
 
 const props = defineProps({
   data: {
@@ -24,28 +24,9 @@ const props = defineProps({
   }
 })
 
-const { parseCardData } = useUniCardParser()
-
-const parseResult = computed(() => parseCardData(props.data))
-const parsedCard = computed(() => (parseResult.value.parsed ? parseResult.value.card : null))
-
-const sanitizeCardData = (value) => {
-  if (Array.isArray(value)) {
-    return value.map(sanitizeCardData)
-  }
-
-  if (!value || typeof value !== 'object') {
-    return value
-  }
-
-  return Object.fromEntries(
-    Object.entries(value)
-      .filter(([key]) => key !== 'actions')
-      .map(([key, item]) => [key, sanitizeCardData(item)])
-  )
-}
-
-const sanitizedCard = computed(() => sanitizeCardData(parsedCard.value))
+const cardViewModel = computed(() => createMerchantAICardViewModel(props.data, props.fallbackText))
+const parsedCard = computed(() => (cardViewModel.value.kind === 'card' ? cardViewModel.value.card : null))
+const safeFallbackText = computed(() => (cardViewModel.value.kind === 'text' ? cardViewModel.value.text : '卡片内容暂不可用'))
 </script>
 
 <style scoped lang="less">

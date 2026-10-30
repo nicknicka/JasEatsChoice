@@ -6,6 +6,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { sanitizeAICardMarkdown } from '@/utils/aiCardMarkdownSanitizer'
 
 const props = defineProps({
   element: {
@@ -17,13 +18,7 @@ const props = defineProps({
 // 渲染内容，优先使用 content，降级使用 text
 const content = computed(() => props.element.content || props.element.text || '')
 
-// 基础的安全清理：移除 script 标签
-const sanitizedContent = computed(() => {
-  const raw = content.value
-  if (!raw) return ''
-  // 移除 script 标签及其内容
-  return raw.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-})
+const sanitizedContent = computed(() => sanitizeAICardMarkdown(content.value))
 </script>
 
 <style scoped>

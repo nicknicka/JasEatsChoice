@@ -20,7 +20,8 @@
     "build:linux": "npm run build && electron-builder --linux --config",
     "test:ai-card-data-parser": "node --test scripts/test-ai-card-data-parser.mjs",
     "test:merchant-ai-history": "node --test scripts/test-merchant-ai-history.mjs",
-    "test:merchant-ai-multi-card-stream": "node --test scripts/test-merchant-ai-multi-card-stream.mjs"
+    "test:merchant-ai-multi-card-stream": "node --test scripts/test-merchant-ai-multi-card-stream.mjs",
+    "test:merchant-ai-card-hardening": "node --test scripts/test-merchant-ai-card-hardening.mjs"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^2.0.0",

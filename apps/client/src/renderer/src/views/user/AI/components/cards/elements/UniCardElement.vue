@@ -6,7 +6,7 @@
   />
   <!-- 未知 tag 降级显示 -->
   <div v-if="!elementComponent" class="unknown-element">
-    <span class="unknown-tag">{{ element.tag }}</span>
+    <span class="unknown-tag">该卡片元素暂不支持</span>
   </div>
 </template>
 

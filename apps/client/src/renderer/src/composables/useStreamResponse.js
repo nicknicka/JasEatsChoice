@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { logger } from '../config/chatConfig'
+import { logger } from '../config/chatConfig.js'
 
 /**
  * 流式响应处理
@@ -130,7 +130,11 @@ export function useStreamResponse() {
 
           // 原始事件回调：允许调用方处理 card_data 等非文本事件
           if (onEvent) {
-            onEvent(parsedData)
+            try {
+              onEvent(parsedData)
+            } catch (eventError) {
+              logger.error('⚠️ 原始事件处理失败:', eventError)
+            }
           }
 
           // 检查是否结束（done标记）
