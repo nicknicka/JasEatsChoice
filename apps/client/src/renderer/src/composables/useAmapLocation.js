@@ -50,7 +50,7 @@ export const loadAMapSDK = () => {
     }
 
     const script = document.createElement('script')
-    script.src = `https://webapi.amap.com/maps?v=1.4.15&key=${AMAP_CONFIG.key}&plugin=AMap.Scale,AMap.ToolBar,AMap.Geocoder,AMap.PlaceSearch,AMap.CitySearch`
+    script.src = `https://webapi.amap.com/maps?v=1.4.15&key=${AMAP_CONFIG.key}&plugin=AMap.Scale,AMap.ToolBar,AMap.Geocoder,AMap.PlaceSearch,AMap.CitySearch,AMap.Geolocation`
     script.type = 'text/javascript'
 
     const timeout = setTimeout(() => {

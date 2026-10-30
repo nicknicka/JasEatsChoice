@@ -4,7 +4,7 @@
     width="560px"
     :close-on-click-modal="false"
     class="atlas-dialog"
-    @open="handleDialogOpen"
+    @opened="handleDialogOpen"
     @close="handleDialogClose"
   >
     <!-- 自定义头部 -->
@@ -134,7 +134,7 @@
 </template>
 
 <script setup>
-import { ref, watch, computed, onBeforeUnmount } from 'vue'
+import { ref, watch, computed, onBeforeUnmount, nextTick } from 'vue'
 import { Search, Location, Loading, Close, ArrowRight } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { loadAMapSDK, resolveAmapAddress, resolveAmapLocation } from '../composables/useAmapLocation'
@@ -212,6 +212,13 @@ watch(dialogVisible, (val) => {
 const initMap = async () => {
   mapLoading.value = true
   mapErrorMessage.value = ''
+
+  // 防止重复打开弹窗或热更新后在同一个容器上叠加旧地图实例
+  if (map.value) {
+    map.value.destroy()
+    map.value = null
+    marker.value = null
+  }
 
   try {
     // 动态加载地图 SDK（Electron 兼容）
@@ -475,7 +482,11 @@ const applyResolvedLocation = async (result, { source = 'unknown', silent = fals
   return false
 }
 
-const runLocationFlow = async ({ silent = false, preferCacheFirst = true } = {}) => {
+const runLocationFlow = async ({
+  silent = false,
+  preferCacheFirst = true,
+  useHighAccuracy = false
+} = {}) => {
   const AMapGlobal = typeof AMap !== 'undefined' ? AMap : null
   const result = await resolveAmapLocation({
     getLastLocation,
@@ -483,7 +494,7 @@ const runLocationFlow = async ({ silent = false, preferCacheFirst = true } = {})
     clientIp: null,
     preferCacheFirst,
     cacheSources: TRUSTED_LOCATION_SOURCES,
-    useHighAccuracy: false,
+    useHighAccuracy,
     AMap: AMapGlobal
   })
 
@@ -510,7 +521,11 @@ const handleGetCurrentLocation = async () => {
   console.log('开始获取当前位置...')
 
   try {
-    await runLocationFlow({ silent: false, preferCacheFirst: false })
+    await runLocationFlow({
+      silent: false,
+      preferCacheFirst: false,
+      useHighAccuracy: true
+    })
   } catch (error) {
     console.error('手动定位失败:', error)
   } finally {
@@ -591,10 +606,10 @@ const handleCancel = () => {
 
 // 对话框打开
 const handleDialogOpen = () => {
-  // 延迟初始化地图，确保 DOM 已渲染
-  setTimeout(() => {
+  // 等弹窗过渡完成且容器完成布局后再初始化地图
+  nextTick(() => {
     initMap()
-  }, 300)
+  })
 }
 
 // 自动定位（静默模式，不显示加载状态和提示）
@@ -602,7 +617,11 @@ const autoLocate = async () => {
   console.log('开始自动定位...')
 
   try {
-    await runLocationFlow({ silent: true })
+    await runLocationFlow({
+      silent: true,
+      preferCacheFirst: false,
+      useHighAccuracy: true
+    })
   } catch (error) {
     console.log('自动定位失败:', error.message)
   }

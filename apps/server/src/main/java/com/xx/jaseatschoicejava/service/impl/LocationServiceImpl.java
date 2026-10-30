@@ -75,10 +75,18 @@ public class LocationServiceImpl implements LocationService {
         }
 
         Map<String, Object> tencentLocation = getLocationByTencentIp(clientIp);
-        if (tencentLocation.isEmpty()) {
-            throw new BusinessException("LOCATION_UPSTREAM_ERROR", "IP定位服务未返回有效位置");
+        if (!tencentLocation.isEmpty()) {
+            return tencentLocation;
         }
-        return tencentLocation;
+
+        logger.warn("腾讯IP定位未返回有效位置，回退高德IP定位: clientIp={}",
+                hasText(clientIp) ? clientIp.trim() : "");
+        Map<String, Object> gaodeLocation = getLocationByGaodeIp(clientIp);
+        if (!gaodeLocation.isEmpty()) {
+            return gaodeLocation;
+        }
+
+        throw new BusinessException("LOCATION_UPSTREAM_ERROR", "IP定位服务未返回有效位置");
     }
 
     private Map<String, Object> reverseGeocodeByCoordinates(Double latitude, Double longitude) {
@@ -218,6 +226,97 @@ public class LocationServiceImpl implements LocationService {
         } catch (RuntimeException e) {
             logger.error("从腾讯地图API获取真实定位数据失败: {}", e.getMessage());
             logger.warn("由于API获取失败，返回空的定位数据");
+        }
+
+        return emptyLocation;
+    }
+
+    /**
+     * 高德 IP 定位兜底：腾讯 IP 定位不可用时（如配额耗尽）回退到高德 /v3/ip。
+     * 高德只返回省市与矩形范围，取矩形左上角作为近似坐标。
+     */
+    private Map<String, Object> getLocationByGaodeIp(String clientIp) {
+        Map<String, Object> emptyLocation = new HashMap<>();
+
+        if (!hasText(gaodeApiKey)) {
+            logger.warn("高德IP定位兜底跳过: gaode.map.api.key 未配置");
+            return emptyLocation;
+        }
+
+        try {
+            StringBuilder urlBuilder = new StringBuilder(gaodeApiUrl)
+                .append("/ip?key=")
+                .append(URLEncoder.encode(gaodeApiKey.trim(), StandardCharsets.UTF_8));
+
+            if (hasText(clientIp)) {
+                urlBuilder.append("&ip=")
+                    .append(URLEncoder.encode(clientIp.trim(), StandardCharsets.UTF_8));
+            }
+
+            ResponseEntity<String> responseEntity = restTemplate.getForEntity(urlBuilder.toString(), String.class);
+            String response = responseEntity.getBody();
+            if (!hasText(response)) {
+                logger.warn("高德IP定位失败: 响应体为空");
+                return emptyLocation;
+            }
+
+            ObjectMapper mapper = new ObjectMapper();
+            Map<String, Object> responseMap = mapper.readValue(response, new TypeReference<Map<String, Object>>() {});
+            if (responseMap == null) {
+                logger.warn("高德IP定位失败: 响应解析为空");
+                return emptyLocation;
+            }
+
+            String status = extractTextField(responseMap.get("status"));
+            String province = extractTextField(responseMap.get("province"));
+            String city = extractTextField(responseMap.get("city"));
+            String district = extractTextField(responseMap.get("district"));
+
+            logger.info("高德IP定位响应: clientIp={}, status={}, province={}, city={}, district={}",
+                hasText(clientIp) ? clientIp.trim() : "", status, province, city, district);
+
+            if (!"1".equals(status)) {
+                logger.warn("高德IP定位返回非成功状态: status={}, info={}",
+                    status, extractTextField(responseMap.get("info")));
+                return emptyLocation;
+            }
+
+            // 高德对未收录的 IP 会返回“局域网”占位值，按无效处理
+            if ("局域网".equals(province)) {
+                province = "";
+            }
+
+            String pointLongitude = null;
+            String pointLatitude = null;
+            String[] points = extractTextField(responseMap.get("rectangle")).split(";");
+            if (points.length > 0) {
+                String[] coords = points[0].split(",");
+                if (coords.length == 2) {
+                    pointLongitude = coords[0];
+                    pointLatitude = coords[1];
+                }
+            }
+
+            boolean hasRegionData = hasText(province) || hasText(city) || hasText(district);
+            boolean hasCoordinateData = hasText(pointLongitude) && hasText(pointLatitude);
+            if (!hasRegionData && !hasCoordinateData) {
+                logger.warn("高德IP定位未返回有效位置: clientIp={}",
+                    hasText(clientIp) ? clientIp.trim() : "");
+                return emptyLocation;
+            }
+
+            Map<String, Object> location = new HashMap<>();
+            location.put("province", province);
+            location.put("city", city);
+            location.put("district", district);
+            location.put("address", province + city + district);
+            putCoordinateFields(location, pointLongitude, pointLatitude);
+            location.put("accuracy", "city");
+            return location;
+        } catch (java.io.IOException e) {
+            logger.error("从高德IP接口解析定位数据失败: {}", e.getMessage());
+        } catch (RuntimeException e) {
+            logger.error("从高德IP接口获取定位数据失败: {}", e.getMessage());
         }
 
         return emptyLocation;

@@ -9,6 +9,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.Mock;
@@ -155,6 +156,86 @@ public class LocationServiceImplTest {
 
         BusinessException error = assertThrows(BusinessException.class,
                 () -> locationService.getCurrentLocation(null, null, null));
+
+        assertEquals("LOCATION_UPSTREAM_ERROR", error.getCode());
+    }
+
+    @Test
+    public void getCurrentLocation_tencentQuotaExhausted_shouldFallbackToGaodeIp() {
+        String tencentQuotaResponse = """
+            {
+                "status": 121,
+                "message": "此key每日调用量已达到上限"
+            }
+            """;
+        String gaodeIpResponse = """
+            {
+                "status": "1",
+                "info": "OK",
+                "infocode": "10000",
+                "province": "北京市",
+                "city": "北京市",
+                "adcode": "110000",
+                "rectangle": "116.0119343,39.66127144;116.7829835,40.2164962"
+            }
+            """;
+
+        when(restTemplate.getForEntity(anyString(), eq(String.class))).thenAnswer(invocation -> {
+            String url = invocation.getArgument(0);
+            return ResponseEntity.ok(url.contains("apis.map.qq.com") ? tencentQuotaResponse : gaodeIpResponse);
+        });
+
+        Map<String, Object> result = locationService.getCurrentLocation(null, null, "220.181.38.148");
+
+        assertNotNull(result);
+        assertEquals("北京市", result.get("province"));
+        assertEquals("北京市", result.get("city"));
+        assertEquals("116.0119343", result.get("longitude").toString());
+        assertEquals("39.66127144", result.get("latitude").toString());
+        assertEquals("city", result.get("accuracy"));
+        verify(restTemplate).getForEntity(
+                argThat((String url) -> url.contains("restapi.amap.com/v3/ip")
+                        && url.contains("ip=220.181.38.148")),
+                eq(String.class));
+    }
+
+    @Test
+    public void getCurrentLocation_bothProvidersUnavailable_shouldThrow() {
+        when(restTemplate.getForEntity(anyString(), eq(String.class)))
+                .thenReturn(ResponseEntity.ok("{\"status\":121,\"message\":\"此key每日调用量已达到上限\"}"));
+
+        BusinessException error = assertThrows(BusinessException.class,
+                () -> locationService.getCurrentLocation(null, null, "220.181.38.148"));
+
+        assertEquals("LOCATION_UPSTREAM_ERROR", error.getCode());
+    }
+
+    @Test
+    public void getCurrentLocation_gaodeIpReturnsLanPlaceholder_shouldThrow() {
+        String tencentQuotaResponse = """
+            {
+                "status": 121,
+                "message": "此key每日调用量已达到上限"
+            }
+            """;
+        String gaodeLanResponse = """
+            {
+                "status": "1",
+                "info": "OK",
+                "province": "局域网",
+                "city": [],
+                "adcode": [],
+                "rectangle": []
+            }
+            """;
+
+        when(restTemplate.getForEntity(anyString(), eq(String.class))).thenAnswer(invocation -> {
+            String url = invocation.getArgument(0);
+            return ResponseEntity.ok(url.contains("apis.map.qq.com") ? tencentQuotaResponse : gaodeLanResponse);
+        });
+
+        BusinessException error = assertThrows(BusinessException.class,
+                () -> locationService.getCurrentLocation(null, null, "192.168.1.5"));
 
         assertEquals("LOCATION_UPSTREAM_ERROR", error.getCode());
     }
