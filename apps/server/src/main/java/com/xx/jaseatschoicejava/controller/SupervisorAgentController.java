@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.xx.jaseatschoicejava.agent.context.AgentChatContext;
+import com.xx.jaseatschoicejava.agent.context.AgentChatContextResolver;
 import com.xx.jaseatschoicejava.agent.service.SupervisorAgentFactory;
 import com.xx.jaseatschoicejava.common.ResponseResult;
 
@@ -17,6 +19,7 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
 import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * SupervisorAgent 控制器（V2 架构）
@@ -42,17 +45,21 @@ public class SupervisorAgentController {
     @Resource
     private SupervisorAgentFactory supervisorAgentFactory;
 
+    @Resource
+    private AgentChatContextResolver agentChatContextResolver;
+
     /**
      * 统一聊天接口（智能路由）
      */
     @ApiOperation("统一聊天接口（智能路由）")
     @PostMapping("/chat")
-    public ResponseResult<String> chat(@RequestBody ChatRequest request) {
-        log.info("收到SupervisorAgent聊天请求, 用户ID: {}, 消息: {}",
-                request.getUserId(), truncate(request.getMessage(), 100));
+    public ResponseResult<String> chat(@RequestBody ChatRequest request, HttpServletRequest httpRequest) {
+        AgentChatContext context = agentChatContextResolver.resolve(httpRequest).orElse(null);
+        log.info("收到SupervisorAgent聊天请求, audience: {}, 消息: {}",
+                context == null ? "anonymous" : context.getAudience(), truncate(request.getMessage(), 100));
 
         try {
-            String result = processWithSupervisor(request.getMessage(), request.getUserId());
+            String result = processWithSupervisor(request.getMessage(), context);
             return ResponseResult.success(result);
         } catch (Exception e) {
             log.error("SupervisorAgent处理失败", e);
@@ -65,14 +72,16 @@ public class SupervisorAgentController {
      */
     @ApiOperation("带用户上下文的聊天接口")
     @PostMapping("/chatWithContext")
-    public ResponseResult<String> chatWithContext(@RequestBody ChatRequest request) {
-        log.info("收到SupervisorAgent聊天请求（带上下文）, 用户ID: {}, 消息: {}",
-                request.getUserId(), truncate(request.getMessage(), 100));
+    public ResponseResult<String> chatWithContext(@RequestBody ChatRequest request, HttpServletRequest httpRequest) {
+        AgentChatContext context = agentChatContextResolver.resolve(httpRequest).orElse(null);
+        log.info("收到SupervisorAgent聊天请求（带上下文）, audience: {}, 消息: {}",
+                context == null ? "anonymous" : context.getAudience(), truncate(request.getMessage(), 100));
 
         try {
-            String messageWithUser = String.format("[用户ID: %s] %s",
-                    request.getUserId(), request.getMessage());
-            String result = processWithSupervisor(messageWithUser, request.getUserId());
+            String messageWithUser = context == null
+                    ? request.getMessage()
+                    : String.format("[用户ID: %s] %s", context.getUserId(), request.getMessage());
+            String result = processWithSupervisor(messageWithUser, context);
             return ResponseResult.success(result);
         } catch (Exception e) {
             log.error("SupervisorAgent处理失败", e);
@@ -87,16 +96,15 @@ public class SupervisorAgentController {
     @GetMapping("/chat")
     public ResponseResult<String> quickChat(
             @ApiParam("用户消息") @RequestParam String message,
-            @ApiParam("用户ID") @RequestParam(required = false) String userId) {
-        log.info("收到SupervisorAgent快速聊天请求, 用户ID: {}, 消息: {}",
-                userId, truncate(message, 100));
+            @ApiParam("用户ID") @RequestParam(required = false) String userId,
+            HttpServletRequest httpRequest) {
+        AgentChatContext context = agentChatContextResolver.resolve(httpRequest).orElse(null);
+        log.info("收到SupervisorAgent快速聊天请求, audience: {}, 消息: {}",
+                context == null ? "anonymous" : context.getAudience(),
+                truncate(message, 100));
 
         try {
-            String effectiveUserId = (userId != null && !userId.isEmpty()) ? userId : "anonymous";
-            String messageWithUser = (userId != null && !userId.isEmpty())
-                    ? String.format("[用户ID: %s] %s", userId, message)
-                    : message;
-            String result = processWithSupervisor(messageWithUser, effectiveUserId);
+            String result = processWithSupervisor(message, context);
             return ResponseResult.success(result);
         } catch (Exception e) {
             log.error("SupervisorAgent处理失败", e);
@@ -109,19 +117,24 @@ public class SupervisorAgentController {
      *
      * 阶段1：SupervisorAgent 协调 L1 专家 Agent（同步）
      */
-    private String processWithSupervisor(String message, String userId) {
+    private String processWithSupervisor(String message, AgentChatContext context) {
         // ===== 阶段1：同步 Supervisor 执行 =====
-        log.info("[阶段1] SupervisorAgent开始处理: userId={}", userId);
+        log.info("[阶段1] SupervisorAgent开始处理: memoryId={}", memoryIdFor(context));
         dev.langchain4j.agentic.supervisor.SupervisorAgent supervisorAgent =
-                supervisorAgentFactory.createWithListener(null, userId);
+                supervisorAgentFactory.createWithListener(null, context);
         String supervisorResult = supervisorAgent.invoke(message);
 
         // 清理 LangChain4j 调试信息
         String cleanedResult = supervisorAgentFactory.cleanDebugInfo(supervisorResult);
         log.info("[阶段1] SupervisorAgent完成，结果长度: {} 字符", cleanedResult.length());
 
-        log.info("[阶段2] 直接返回阶段1结果: userId={}, 结果长度: {}", userId, cleanedResult.length());
+        log.info("[阶段2] 直接返回阶段1结果: memoryId={}, 结果长度: {}",
+                memoryIdFor(context), cleanedResult.length());
         return cleanedResult;
+    }
+
+    private String memoryIdFor(AgentChatContext context) {
+        return context == null ? "anonymous" : context.getUserId();
     }
 
     /**

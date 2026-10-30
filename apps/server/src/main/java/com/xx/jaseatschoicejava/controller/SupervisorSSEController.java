@@ -17,6 +17,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import com.xx.jaseatschoicejava.agent.context.AgentChatContext;
+import com.xx.jaseatschoicejava.agent.context.AgentChatContextResolver;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xx.jaseatschoicejava.agent.agents.CustomerServiceAgent;
 import com.xx.jaseatschoicejava.agent.agents.SimpleChatAgent;
@@ -26,6 +28,7 @@ import com.xx.jaseatschoicejava.agent.service.IntentClassifier.IntentType;
 import com.xx.jaseatschoicejava.agent.service.SupervisorAgentFactory;
 
 import dev.langchain4j.agentic.supervisor.SupervisorAgent;
+import jakarta.servlet.http.HttpServletRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -62,17 +65,20 @@ public class SupervisorSSEController {
     private final IntentClassifier intentClassifier;
     private final ExecutorService executorService = Executors.newCachedThreadPool();
     private final ObjectMapper objectMapper;
+    private final AgentChatContextResolver agentChatContextResolver;
 
     public SupervisorSSEController(
             SupervisorAgentFactory supervisorAgentFactory,
             CustomerServiceAgent customerServiceAgent,
             SimpleChatAgent simpleChatAgent,
-            IntentClassifier intentClassifier) {
+            IntentClassifier intentClassifier,
+            AgentChatContextResolver agentChatContextResolver) {
         this.supervisorAgentFactory = supervisorAgentFactory;
         this.customerServiceAgent = customerServiceAgent;
         this.simpleChatAgent = simpleChatAgent;
         this.intentClassifier = intentClassifier;
         this.objectMapper = new ObjectMapper();
+        this.agentChatContextResolver = agentChatContextResolver;
     }
 
     /**
@@ -89,23 +95,26 @@ public class SupervisorSSEController {
             @RequestParam String message,
 
             @Parameter(description = "用户ID（开启个性化服务后传入）", required = false)
-            @RequestParam(required = false) String userId) {
+            @RequestParam(required = false) String userId,
+            HttpServletRequest httpRequest) {
 
-        log.info("收到SSE聊天请求: message={}, userId={}", message, userId);
+        AgentChatContext context = agentChatContextResolver.resolve(httpRequest).orElse(null);
+        log.info("收到SSE聊天请求: message={}, audience={}",
+                message, context == null ? "anonymous" : context.getAudience());
 
-        // 路由逻辑：无userId使用客服助手，有userId先做意图分类
-        if (userId == null || userId.isEmpty()) {
-            log.info("未提供userId，使用客服助手Agent（无个性化服务）");
+        // 路由逻辑：无可信身份使用客服助手，有可信身份先做意图分类
+        if (context == null) {
+            log.info("未获得可信身份，使用客服助手Agent并保持下游能力失败关闭");
             return handleCustomerServiceChat(message);
         } else {
             // 意图分类：简单对话走快速通道，业务意图走 SupervisorAgent
             IntentType intent = intentClassifier.classify(message);
             if (intent == IntentType.SIMPLE_CHAT) {
-                log.info("简单对话意图，走快速通道: userId={}", userId);
+                log.info("简单对话意图，走快速通道: audience={}", context.getAudience());
                 return handleSimpleChat(message);
             }
-            log.info("业务意图，使用SupervisorAgent: userId={}", userId);
-            return handleSupervisorChat(message, userId);
+            log.info("业务意图，使用SupervisorAgent: audience={}", context.getAudience());
+            return handleSupervisorChat(message, context);
         }
     }
 
@@ -172,20 +181,21 @@ public class SupervisorSSEController {
      * 阶段1（同步）：SupervisorAgent 协调 L1 专家 Agent，进度事件实时推送
      * 阶段2（流式）：StreamingResponseAgent 逐字输出，每个 token 作为 SSE 事件发送
      */
-    private SseEmitter handleSupervisorChat(String message, String userId) {
+    private SseEmitter handleSupervisorChat(String message, AgentChatContext context) {
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MS);
 
         // 创建监听器（进度推送）
-        SSEAgentListener listener = new SSEAgentListener(emitter, userId, message);
+        SSEAgentListener listener = new SSEAgentListener(emitter, context, message);
 
         CompletableFuture.runAsync(() -> {
             long totalStartTime = System.currentTimeMillis();
             try {
                 // ===== 阶段1：同步 Supervisor 执行 =====
-                log.info("[阶段1] SupervisorAgent开始处理: userId={}, message={}", userId, message);
+                log.info("[阶段1] SupervisorAgent开始处理: memoryId={}, message={}",
+                        context == null ? "anonymous" : context.getUserId(), message);
 
                 long t1 = System.currentTimeMillis();
-                SupervisorAgent agent = supervisorAgentFactory.createWithListener(listener, userId);
+                SupervisorAgent agent = supervisorAgentFactory.createWithListener(listener, context);
                 long t1Create = System.currentTimeMillis();
                 log.info("⏱️ [耗时] SupervisorAgent创建: {}ms", t1Create - t1);
 
@@ -213,7 +223,8 @@ public class SupervisorSSEController {
                 }
 
                 // ===== 阶段2：直接输出阶段1结果 =====
-                log.info("[阶段2] 直接输出阶段1结果: userId={}", userId);
+                log.info("[阶段2] 直接输出阶段1结果: memoryId={}",
+                        context == null ? "anonymous" : context.getUserId());
 
                 boolean hasResultCards = !preExtractedCards.isEmpty();
                 emitFinalResponse(emitter, cleanedResult, hasResultCards);
@@ -223,11 +234,13 @@ public class SupervisorSSEController {
                         totalEndTime - totalStartTime, t1Clean - t1, totalEndTime - t1Clean);
 
                 try { emitter.complete(); } catch (Exception ignored) {}
-                log.info("Supervisor + Direct Response 完成: userId={}", userId);
+                log.info("Supervisor + Direct Response 完成: memoryId={}",
+                        context == null ? "anonymous" : context.getUserId());
 
             } catch (Exception e) {
-                log.error("SupervisorAgent处理失败: userId={}, 错误类型={}", userId, e.getClass().getSimpleName(), e);
-                handleSupervisorFailure(emitter, message, userId, e);
+            log.error("SupervisorAgent处理失败: memoryId={}, 错误类型={}",
+                    context == null ? "anonymous" : context.getUserId(), e.getClass().getSimpleName(), e);
+            handleSupervisorFailure(emitter, message, context, e);
             } finally {
                 // 清理工具执行上下文，防止 ThreadLocal 泄漏
                 com.xx.jaseatschoicejava.agent.context.ToolExecutionContext.clear();
@@ -236,17 +249,20 @@ public class SupervisorSSEController {
 
         // 设置超时和错误回调
         emitter.onTimeout(() -> {
-            log.warn("SSE连接超时: userId={}", userId);
+            log.warn("SSE连接超时: memoryId={}",
+                    context == null ? "anonymous" : context.getUserId());
             try { emitter.complete(); } catch (Exception ignored) {}
         });
 
         emitter.onError(error -> {
             Throwable safeError = Objects.requireNonNull(error);
-            log.error("SSE连接错误: userId={}", userId, safeError);
+            log.error("SSE连接错误: memoryId={}",
+                    context == null ? "anonymous" : context.getUserId(), safeError);
             try { emitter.completeWithError(safeError); } catch (Exception ignored) {}
         });
 
-        emitter.onCompletion(() -> log.debug("SSE连接完成: userId={}", userId));
+        emitter.onCompletion(() -> log.debug("SSE连接完成: memoryId={}",
+                context == null ? "anonymous" : context.getUserId()));
 
         return emitter;
     }
@@ -256,8 +272,8 @@ public class SupervisorSSEController {
      */
     @Operation(summary = "POST方式SSE流式聊天", description = "支持复杂请求体的流式聊天")
     @PostMapping(value = "/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter chatStreamPost(@RequestBody ChatRequest request) {
-        return chatStream(request.getMessage(), request.getUserId());
+    public SseEmitter chatStreamPost(@RequestBody ChatRequest request, HttpServletRequest httpRequest) {
+        return chatStream(request.getMessage(), request.getUserId(), httpRequest);
     }
 
     /**
@@ -267,11 +283,12 @@ public class SupervisorSSEController {
      * 1. 第一次失败后，用简化提示词重试一次（仅路由到最相关的单个Agent）
      * 2. 重试仍失败则返回用户友好的错误提示，SSE链路正常结束
      */
-    private void handleSupervisorFailure(SseEmitter emitter, String message, String userId, Exception firstError) {
+    private void handleSupervisorFailure(SseEmitter emitter, String message, AgentChatContext context, Exception firstError) {
         // 重试：用简化提示词再触发一次
-        log.info("[降级重试] SupervisorAgent第一次失败，尝试简化重试: userId={}", userId);
+        log.info("[降级重试] SupervisorAgent第一次失败，尝试简化重试: memoryId={}",
+                context == null ? "anonymous" : context.getUserId());
         try {
-            String retryResult = retryWithSimplePrompt(message, userId);
+            String retryResult = retryWithSimplePrompt(message, context);
             if (retryResult != null && !retryResult.isEmpty()) {
                 log.info("[降级重试] 成功，结果长度: {} 字符", retryResult.length());
                 String cleanedResult = supervisorAgentFactory.cleanDebugInfo(retryResult);
@@ -280,11 +297,13 @@ public class SupervisorSSEController {
                 return;
             }
         } catch (Exception retryError) {
-            log.warn("[降级重试] 重试也失败: userId={}, 错误={}", userId, retryError.getMessage());
+            log.warn("[降级重试] 重试也失败: memoryId={}, 错误={}",
+                    context == null ? "anonymous" : context.getUserId(), retryError.getMessage());
         }
 
         // 重试失败：返回用户友好的错误提示，SSE链路正常结束
-        log.error("[降级] SupervisorAgent最终失败: userId={}, 原始错误={}", userId, firstError.getMessage());
+        log.error("[降级] SupervisorAgent最终失败: memoryId={}, 原始错误={}",
+                context == null ? "anonymous" : context.getUserId(), firstError.getMessage());
         sendSseEvent(emitter, "message", Map.of("error", "抱歉，智能推荐暂时遇到了问题，请稍后重试"));
         sendSseEvent(emitter, "message", Map.of("done", true));
         try { emitter.complete(); } catch (Exception ignored) {}
@@ -296,9 +315,9 @@ public class SupervisorSSEController {
      * 不使用完整的supervisorContext，只传递最基本的信息，
      * 降低LLM输出复杂度和JSON截断风险
      */
-    private String retryWithSimplePrompt(String message, String userId) {
-        SSEAgentListener retryListener = new SSEAgentListener(null, userId, message);
-        SupervisorAgent retryAgent = supervisorAgentFactory.createRetryAgent(retryListener, userId);
+    private String retryWithSimplePrompt(String message, AgentChatContext context) {
+        SSEAgentListener retryListener = new SSEAgentListener(null, context, message);
+        SupervisorAgent retryAgent = supervisorAgentFactory.createRetryAgent(retryListener, context);
         return retryAgent.invoke(message);
     }
 
