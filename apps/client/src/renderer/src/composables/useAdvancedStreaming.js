@@ -7,6 +7,7 @@ import {
 } from '@element-plus/icons-vue'
 // [UniCard迁移] 导入 UniCardParser
 import { useUniCardParser } from '../views/user/AI/composables/useUniCardParser'
+import { normalizeAICardData } from '../utils/aiCardDataParser.js'
 
 /**
  * 增强版流式传输
@@ -279,12 +280,11 @@ export function useAdvancedStreaming(options) {
 			const message = getMessage(messageIndex)
 			if (message) {
 				try {
-					let cardDataObj = parsedData.card_data
-					if (typeof cardDataObj === 'string') {
-						cardDataObj = JSON.parse(cardDataObj)
-					}
+					const cardDataObj = normalizeAICardData(parsedData.card_data)
+					const cardArray = Array.isArray(cardDataObj)
+						? cardDataObj
+						: (cardDataObj ? [cardDataObj] : [])
 
-					let cardArray = Array.isArray(cardDataObj) ? cardDataObj : [cardDataObj]
 					if (cardArray.length > 0) {
 						const firstCard = cardArray[0]
 

@@ -26,18 +26,7 @@ const props = defineProps({
 
 const { parseCardData } = useUniCardParser()
 
-const normalizedData = computed(() => {
-  const rawData = Array.isArray(props.data) ? props.data[0] : props.data
-  if (typeof rawData !== 'string') return rawData
-
-  try {
-    return JSON.parse(rawData)
-  } catch (error) {
-    return null
-  }
-})
-
-const parseResult = computed(() => parseCardData(normalizedData.value))
+const parseResult = computed(() => parseCardData(props.data))
 const parsedCard = computed(() => (parseResult.value.parsed ? parseResult.value.card : null))
 
 const sanitizeCardData = (value) => {

@@ -6,6 +6,7 @@ import { useAuthStore } from '../store/authStore'
 import { orderActions, favoriteActions, cartActions, reviewActions } from '../views/user/AI/utils/cardActionService'
 // [UniCard迁移] 导入 UniCardParser
 import { useUniCardParser } from '../views/user/AI/composables/useUniCardParser'
+import { parseCardContent } from '../utils/aiCardDataParser.js'
 
 /**
  * 卡片操作处理器
@@ -76,75 +77,51 @@ export function useCardHandler(messages) {
 	/**
 	 * 从消息内容中提取卡片数据和类型
 	 * @param {string} content - 原始消息内容
-	 * @returns {{ content: string, cardData: object|null, messageType: string|null }}
+	 * @returns {{ content: string, cardData: object|null|Array, messageType: string|null }}
 	 */
 	const parseCardDataFromContent = (content) => {
-		if (!content || typeof content !== 'string') {
-			return { content, cardData: null, messageType: null }
-		}
-
-		if (!content.includes('[CARD_DATA_START]') || !content.includes('[CARD_DATA_END]')) {
-			return { content, cardData: null, messageType: null }
-		}
-
-		const cardDataStart = content.indexOf('[CARD_DATA_START]')
-		const cardDataEnd = content.indexOf('[CARD_DATA_END]')
-
-		if (cardDataStart === -1 || cardDataEnd === -1) {
-			return { content, cardData: null, messageType: null }
-		}
-
-		const cardDataString = content.substring(
-			cardDataStart + '[CARD_DATA_START]'.length,
-			cardDataEnd
-		).trim()
-
-		const cleanContent = content.substring(0, cardDataStart).trim()
-
+		const parsedContent = parseCardContent(content)
+		const parsedData = parsedContent.cardData
+		const cardDataArray = Array.isArray(parsedData)
+			? parsedData
+			: (parsedData ? [parsedData] : [])
+		const firstCard = cardDataArray[0]
 		let cardData = null
 		let messageType = null
 
-		try {
-			let parsedData = JSON.parse(cardDataString)
-			let cardDataArray = Array.isArray(parsedData) ? parsedData : [parsedData]
+		if (firstCard) {
+			const cardType = firstCard.type || firstCard.cardType
 
-			if (cardDataArray.length > 0) {
-				const firstCard = cardDataArray[0]
-				const cardType = firstCard.type || firstCard.cardType
-
-				if (cardType) {
-					messageType = convertToSupportedCardType(cardType)
-				}
-
-				if (firstCard.recommendations) {
-					cardData = { recommendations: firstCard.recommendations }
-				} else if (firstCard.orders) {
-					cardData = { orders: firstCard.orders }
-				} else if (firstCard.dishes) {
-					cardData = { dishes: firstCard.dishes }
-				} else if (cardType === 'dish') {
-					cardData = {
-						dishes: cardDataArray.map(dish => ({
-							dishId: dish.dishId || dish.id,
-							dishName: dish.dishName || dish.title,
-							imageUrl: dish.imageUrl || dish.image,
-							description: dish.description || dish.highlight,
-							price: dish.price,
-							rating: dish.rating,
-							category: dish.category,
-							tags: dish.tags || [],
-							actions: dish.actions || []
-						}))
-					}
-				} else {
-					cardData = firstCard
-				}
+			if (cardType) {
+				messageType = convertToSupportedCardType(cardType)
 			}
-		} catch (error) {
-			console.warn('解析卡片数据失败:', error.message)
+
+			if (firstCard.recommendations) {
+				cardData = { recommendations: firstCard.recommendations }
+			} else if (firstCard.orders) {
+				cardData = { orders: firstCard.orders }
+			} else if (firstCard.dishes) {
+				cardData = { dishes: firstCard.dishes }
+			} else if (cardType === 'dish') {
+				cardData = {
+					dishes: cardDataArray.map(dish => ({
+						dishId: dish.dishId || dish.id,
+						dishName: dish.dishName || dish.title,
+						imageUrl: dish.imageUrl || dish.image,
+						description: dish.description || dish.highlight,
+						price: dish.price,
+						rating: dish.rating,
+						category: dish.category,
+						tags: dish.tags || [],
+						actions: dish.actions || []
+					}))
+				}
+			} else {
+				cardData = firstCard
+			}
 		}
 
-		return { content: cleanContent, cardData, messageType }
+		return { content: parsedContent.content, cardData, messageType }
 	}
 
 	/**
@@ -154,54 +131,24 @@ export function useCardHandler(messages) {
 	 * @returns {{ content: string, cardData: object|null, messageType: string|null }}
 	 */
 	const parseCardDataFromContentUniCard = (content) => {
-		if (!content || typeof content !== 'string') {
-			return { content, cardData: null, messageType: null }
-		}
-
-		if (!content.includes('[CARD_DATA_START]') || !content.includes('[CARD_DATA_END]')) {
-			return { content, cardData: null, messageType: null }
-		}
-
-		const cardDataStart = content.indexOf('[CARD_DATA_START]')
-		const cardDataEnd = content.indexOf('[CARD_DATA_END]')
-
-		if (cardDataStart === -1 || cardDataEnd === -1) {
-			return { content, cardData: null, messageType: null }
-		}
-
-		const cardDataString = content.substring(
-			cardDataStart + '[CARD_DATA_START]'.length,
-			cardDataEnd
-		).trim()
-
-		const cleanContent = content.substring(0, cardDataStart).trim()
-
+		const parsedContent = parseCardContent(content)
+		const firstCard = Array.isArray(parsedContent.cardData)
+			? parsedContent.cardData[0]
+			: parsedContent.cardData
 		let cardData = null
-		let messageType = null
+		let messageType = parsedContent.messageType
 
-		try {
-			let parsedData = JSON.parse(cardDataString)
-			let cardDataArray = Array.isArray(parsedData) ? parsedData : [parsedData]
-
-			if (cardDataArray.length > 0) {
-				const firstCard = cardDataArray[0]
-
-				// 统一使用 UniCardParser 解析
-				const { parseCardData } = useUniCardParser()
-				const parseResult = parseCardData(firstCard)
-				if (parseResult.parsed) {
-					cardData = parseResult.card
-					messageType = 'uni_card'
-				} else {
-					cardData = firstCard
-					messageType = 'uni_card'
-				}
+		if (firstCard) {
+			const { parseCardData } = useUniCardParser()
+			const parseResult = parseCardData(firstCard)
+			if (parseResult.parsed) {
+				cardData = parseResult.card
+			} else {
+				cardData = firstCard
 			}
-		} catch (error) {
-			console.warn('[UniCard] 解析卡片数据失败:', error.message)
 		}
 
-		return { content: cleanContent, cardData, messageType }
+		return { content: parsedContent.content, cardData, messageType }
 	}
 
 	/**

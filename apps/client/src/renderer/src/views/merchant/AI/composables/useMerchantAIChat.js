@@ -9,6 +9,7 @@ import { API_CONFIG } from '../../../../config/index'
 import { formatTime } from '../../../../utils/dateFormatter'
 import { handleApiError } from '../../../../utils/errorHandler'
 import { useStreamResponse } from '../../../../composables/useStreamResponse'
+import { normalizeAICardData, parseCardContent } from '../../../../utils/aiCardDataParser.js'
 import {
   MERCHANT_CHAT_CONFIG,
   MERCHANT_WELCOME_MESSAGE,
@@ -18,41 +19,6 @@ import {
 
 const messages = ref([])
 const isLoading = ref(false)
-
-const normalizeCardData = (cardData) => {
-  if (!cardData) return null
-  if (Array.isArray(cardData)) return cardData.length > 0 ? normalizeCardData(cardData[0]) : null
-  if (typeof cardData === 'string') {
-    try {
-      return normalizeCardData(JSON.parse(cardData))
-    } catch (error) {
-      merchantLogger.warn('卡片数据不是有效 JSON:', error.message)
-      return null
-    }
-  }
-  return typeof cardData === 'object' ? cardData : null
-}
-
-const extractCardDataFromContent = (content) => {
-  if (!content || typeof content !== 'string') {
-    return { content, cardData: null }
-  }
-
-  const startMarker = '[CARD_DATA_START]'
-  const endMarker = '[CARD_DATA_END]'
-  const startIndex = content.indexOf(startMarker)
-  const endIndex = content.indexOf(endMarker)
-
-  if (startIndex === -1 || endIndex === -1 || endIndex < startIndex) {
-    return { content, cardData: null }
-  }
-
-  const cardJson = content.substring(startIndex + startMarker.length, endIndex).trim()
-  return {
-    content: content.substring(0, startIndex).trim(),
-    cardData: normalizeCardData(cardJson)
-  }
-}
 
 export function useMerchantAIChat() {
   const authStore = useAuthStore()
@@ -152,8 +118,8 @@ export function useMerchantAIChat() {
       const historyList = response.data?.data
       if (response.data?.code === 200 && Array.isArray(historyList) && historyList.length > 0) {
         messages.value = historyList.map((item, index) => {
-          const extracted = extractCardDataFromContent(item.content)
-          const cardData = normalizeCardData(item.cardData) || extracted.cardData
+          const extracted = parseCardContent(item.content)
+          const cardData = normalizeAICardData(item.cardData) || extracted.cardData
 
           return {
             id: item.id || index + 1,
@@ -244,7 +210,7 @@ export function useMerchantAIChat() {
         reader,
         (chunk) => {
           const message = messages.value[aiMessageIndex]
-          const extracted = extractCardDataFromContent(chunk)
+          const extracted = parseCardContent(chunk)
 
           message.isThinking = false
           message.progress = false
@@ -283,7 +249,7 @@ export function useMerchantAIChat() {
         },
         (payload) => {
           const message = messages.value[aiMessageIndex]
-          const cardData = normalizeCardData(payload?.card_data)
+          const cardData = normalizeAICardData(payload?.card_data)
 
           if (!message || !cardData) return
 
