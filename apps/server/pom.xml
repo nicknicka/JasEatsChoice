@@ -335,9 +335,6 @@
                         <version>3.1.2</version>
                     </dependency>
                 </dependencies>
-                <configuration>
-                    <skipTests>false</skipTests>
-                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
