@@ -34,6 +34,9 @@
               :data="card"
               :fallback-text="msg.content"
             />
+            <div v-if="hasCardPayload(msg) && messageCards(msg).length === 0" class="text">
+              卡片内容暂不可用
+            </div>
           </div>
           <div v-if="msg.saveStatus === 'retryable'" class="save-status">
             <span>历史保存失败，待重试</span>
@@ -103,7 +106,7 @@ import { computed, ref, onMounted } from 'vue'
 import { Delete, Position, Loading } from '@element-plus/icons-vue'
 import { useMerchantAIChat } from '../composables/useMerchantAIChat'
 import MerchantAICard from './MerchantAICard.vue'
-import { normalizeAICardList } from '../../../../utils/aiCardDataParser.js'
+import { hasAICardPayload, normalizeAICardList } from '../../../../utils/aiCardDataParser.js'
 import { MERCHANT_QUICK_QUESTIONS } from '../../../../config/merchantChatConfig'
 import { useUserStore } from '../../../../store/userStore'
 import { getAvatarUrl } from '../../../../utils/avatar'
@@ -129,6 +132,7 @@ const merchantAvatarUrl = computed(() => {
   return avatar ? getAvatarUrl(avatar) : ''
 })
 const messageCards = (message) => normalizeAICardList(message.cardData)
+const hasCardPayload = (message) => hasAICardPayload(message.cardData)
 
 const merchantFallbackText = computed(() => {
   const name = userStore.merchantInfo?.nickname || userStore.merchantInfo?.name || '店'

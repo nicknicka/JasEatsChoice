@@ -91,10 +91,10 @@ export function useStreamResponse() {
    * @param {Function} onComplete - 完成回调
    * @param {Function} onError - 错误回调
    * @param {Function} onProgress - 进度回调（可选）
-   * @param {Function} onEvent - 原始事件回调（可选，用于 card_data 等非文本事件）
+   * @param {Function} onCardData - 卡片数据回调（可选，只回调 card_data 字段）
    * @returns {Promise<void>}
    */
-  const processStream = async (reader, onContent, onComplete, onError, onProgress, onEvent) => {
+  const processStream = async (reader, onContent, onComplete, onError, onProgress, onCardData) => {
     isStreaming.value = true
     const decoder = new TextDecoder()
     let buffer = ''
@@ -128,12 +128,12 @@ export function useStreamResponse() {
           const parsedData = parseSSELine(line)
           if (!parsedData) continue
 
-          // 原始事件回调：允许调用方处理 card_data 等非文本事件
-          if (onEvent) {
+          // 只回调调用方关心的卡片数据，避免暴露完整 SSE 事件结构
+          if (onCardData && Object.prototype.hasOwnProperty.call(parsedData, 'card_data')) {
             try {
-              onEvent(parsedData)
+              onCardData(parsedData.card_data)
             } catch (eventError) {
-              logger.error('⚠️ 原始事件处理失败:', eventError)
+              logger.error('⚠️ 卡片数据处理失败:', eventError)
             }
           }
 

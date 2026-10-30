@@ -241,11 +241,11 @@ export function useMerchantAIChat() {
           message.thinkingText = progressText || '正在思考中...'
           scrollToBottom(false)
         },
-        (payload) => {
+        (cardData) => {
           const message = messages.value[aiMessageIndex]
-          if (!message || !payload?.card_data) return
+          if (!message || !cardData) return
 
-          streamingCollector.appendCardData(payload.card_data)
+          streamingCollector.appendCardData(cardData)
           const extracted = streamingCollector.getSnapshot()
 
           message.cardData = extracted.cardData

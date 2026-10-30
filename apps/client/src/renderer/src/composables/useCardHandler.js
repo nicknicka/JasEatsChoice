@@ -6,7 +6,7 @@ import { useAuthStore } from '../store/authStore'
 import { orderActions, favoriteActions, cartActions, reviewActions } from '../views/user/AI/utils/cardActionService'
 // [UniCard迁移] 导入 UniCardParser
 import { useUniCardParser } from '../views/user/AI/composables/useUniCardParser'
-import { parseCardContent } from '../utils/aiCardDataParser.js'
+import { getFirstAICardData, parseFirstCardContent } from '../utils/aiCardDataParser.js'
 
 /**
  * 卡片操作处理器
@@ -80,7 +80,7 @@ export function useCardHandler(messages) {
 	 * @returns {{ content: string, cardData: object|null|Array, messageType: string|null }}
 	 */
 	const parseCardDataFromContent = (content) => {
-		const parsedContent = parseCardContent(content)
+		const parsedContent = parseFirstCardContent(content)
 		const parsedData = parsedContent.cardData
 		const cardDataArray = Array.isArray(parsedData)
 			? parsedData
@@ -131,12 +131,10 @@ export function useCardHandler(messages) {
 	 * @returns {{ content: string, cardData: object|null, messageType: string|null }}
 	 */
 	const parseCardDataFromContentUniCard = (content) => {
-		const parsedContent = parseCardContent(content)
-		const firstCard = Array.isArray(parsedContent.cardData)
-			? parsedContent.cardData[0]
-			: parsedContent.cardData
+		const parsedContent = parseFirstCardContent(content)
+		const firstCard = getFirstAICardData(parsedContent.cardData)
 		let cardData = null
-		let messageType = parsedContent.messageType
+		let messageType = firstCard ? 'uni_card' : null
 
 		if (firstCard) {
 			const { parseCardData } = useUniCardParser()

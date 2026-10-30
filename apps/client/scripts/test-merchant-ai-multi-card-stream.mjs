@@ -63,13 +63,25 @@ test('显式卡片数据和相同的内容卡片标记不会重复展示', () =>
   const collector = createMerchantAIStreamingCollector()
 
   collector.appendCardData(cardA)
-  collector.appendContent(
-    `说明[CARD_DATA_START]${JSON.stringify(cardA)}[CARD_DATA_END]后续内容`
-  )
+  collector.appendContent(`说明[CARD_DATA_START]${JSON.stringify(cardA)}[CARD_DATA_END]后续内容`)
 
   assert.deepEqual(collector.getSnapshot(), {
     content: '说明后续内容',
     cardData: [cardA],
+    messageType: 'uni_card'
+  })
+})
+
+test('连续完全相同的独立卡片事件不会被全局去重合并', () => {
+  const collector = createMerchantAIStreamingCollector()
+
+  collector.appendCardData(cardA)
+  collector.appendCardData(cardA)
+  collector.appendContent(`说明[CARD_DATA_START]${JSON.stringify(cardA)}[CARD_DATA_END]后续内容`)
+
+  assert.deepEqual(collector.getSnapshot(), {
+    content: '说明后续内容',
+    cardData: [cardA, cardA],
     messageType: 'uni_card'
   })
 })
@@ -87,7 +99,13 @@ test('卡片-only 和文本加卡片消息保存与刷新后都能恢复多张�
   assert.deepEqual(cardOnlyPayload.cardData, [cardA, cardB])
   assert.deepEqual(
     mapMerchantHistoryMessage(
-      { sender: 'ai', content: '', messageType: 'uni_card', cardData: JSON.stringify([cardA, cardB]), createdAt },
+      {
+        sender: 'ai',
+        content: '',
+        messageType: 'uni_card',
+        cardData: JSON.stringify([cardA, cardB]),
+        createdAt
+      },
       0,
       formatTime
     ),

@@ -1,45 +1,35 @@
 /**
  * 商家AI流式消息的多卡片收集边界
  */
-import { createCardContentStreamParser, normalizeAICardData } from '../../../../utils/aiCardDataParser.js'
+import {
+  createAICardSourceCollector,
+  createCardContentStreamParser,
+  normalizeAICardList
+} from '../../../../utils/aiCardDataParser.js'
 
 export function createMerchantAIStreamingCollector() {
   let content = ''
-  const cards = []
-  const cardKeys = new Set()
-
-  const appendCard = (card) => {
-    const key = JSON.stringify(card)
-    if (cardKeys.has(key)) return
-
-    cards.push(card)
-    cardKeys.add(key)
-  }
+  const cardCollector = createAICardSourceCollector()
 
   const appendCardData = (rawCardData) => {
-    const cardData = normalizeAICardData(rawCardData)
-    if (!cardData) return
-
-    if (Array.isArray(cardData)) {
-      cardData.forEach(appendCard)
-      return
-    }
-
-    appendCard(cardData)
+    normalizeAICardList(rawCardData).forEach((card) => cardCollector.appendExplicitCard(card))
   }
 
   const parser = createCardContentStreamParser({
     onText: (text) => {
       content += text
     },
-    onCard: appendCard
+    onCard: (card) => cardCollector.appendContentCard(card)
   })
 
-  const getSnapshot = () => ({
-    content,
-    cardData: cards.length > 0 ? cards : null,
-    messageType: cards.length > 0 ? 'uni_card' : null
-  })
+  const getSnapshot = () => {
+    const cards = cardCollector.getUniqueCards()
+    return {
+      content,
+      cardData: cards.length > 0 ? cards : null,
+      messageType: cards.length > 0 ? 'uni_card' : null
+    }
+  }
 
   return {
     appendContent: (chunk) => {

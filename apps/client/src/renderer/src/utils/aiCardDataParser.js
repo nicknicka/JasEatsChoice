@@ -29,7 +29,7 @@ export function normalizeAICardData(rawData) {
 
   if (typeof rawData === 'string') {
     if (rawData.includes(CARD_START) && rawData.includes(CARD_END)) {
-      return parseCardContent(rawData).cardData
+      return parseFirstCardContent(rawData).cardData
     }
     return parseCardJSON(rawData)
   }
@@ -44,41 +44,21 @@ export function normalizeAICardList(rawData) {
   return Array.isArray(normalizedData) ? normalizedData : [normalizedData]
 }
 
-export function parseCardContents(content) {
-  if (typeof content !== 'string') {
-    return { content, cardData: null, messageType: null }
+export function getFirstAICardData(rawData) {
+  return normalizeAICardList(rawData)[0] || null
+}
+
+export function hasAICardPayload(rawData) {
+  if (!rawData) return false
+
+  if (typeof rawData === 'string') {
+    const trimmedData = rawData.trim()
+    return (
+      rawData.includes(CARD_START) || trimmedData.startsWith('{') || trimmedData.startsWith('[')
+    )
   }
 
-  const textParts = []
-  const cards = []
-  let cursor = 0
-
-  while (cursor <= content.length) {
-    const startIndex = content.indexOf(CARD_START, cursor)
-    if (startIndex === -1) {
-      textParts.push(content.substring(cursor))
-      break
-    }
-
-    textParts.push(content.substring(cursor, startIndex))
-    const endIndex = content.indexOf(CARD_END, startIndex + CARD_START.length)
-    if (endIndex === -1) {
-      break
-    }
-
-    normalizeAICardList(content.substring(startIndex + CARD_START.length, endIndex)).forEach((card) => {
-      cards.push(card)
-    })
-    cursor = endIndex + CARD_END.length
-  }
-
-  const text = textParts.join('').trim()
-
-  return {
-    content: text,
-    cardData: cards.length > 0 ? cards : null,
-    messageType: cards.length > 0 ? 'uni_card' : null
-  }
+  return true
 }
 
 export function createCardContentStreamParser({ onText, onCard }) {
@@ -150,21 +130,86 @@ export function createCardContentStreamParser({ onText, onCard }) {
   return { append }
 }
 
-export function parseCardContent(content) {
+export function createAICardSourceCollector() {
+  const tokens = []
+
+  const appendToken = (card, source) => {
+    if (!card || typeof card !== 'object') return
+
+    const key = JSON.stringify(card)
+    const hasCrossSourceDuplicate = tokens.some(
+      (token) => !token.duplicate && token.source !== source && JSON.stringify(token.card) === key
+    )
+
+    tokens.push({ card, source, duplicate: hasCrossSourceDuplicate })
+  }
+
+  return {
+    appendExplicitCard: (card) => appendToken(card, 'explicit'),
+    appendContentCard: (card) => appendToken(card, 'content'),
+    getUniqueCards: () => tokens.filter((token) => !token.duplicate).map((token) => token.card)
+  }
+}
+
+const findCardSegment = (content, cursor = 0) => {
+  const startIndex = content.indexOf(CARD_START, cursor)
+  if (startIndex === -1) return null
+
+  const endIndex = content.indexOf(CARD_END, startIndex + CARD_START.length)
+  if (endIndex === -1) return null
+
+  return { startIndex, endIndex }
+}
+
+export function parseCardContentList(content) {
   if (typeof content !== 'string') {
     return { content, cardData: null, messageType: null }
   }
 
-  if (!content.includes(CARD_START) || !content.includes(CARD_END)) {
+  const textParts = []
+  const cards = []
+  let cursor = 0
+
+  while (cursor <= content.length) {
+    const segment = findCardSegment(content, cursor)
+    if (!segment) {
+      textParts.push(content.substring(cursor))
+      break
+    }
+
+    textParts.push(content.substring(cursor, segment.startIndex))
+    cards.push(
+      ...normalizeAICardList(
+        content.substring(segment.startIndex + CARD_START.length, segment.endIndex)
+      )
+    )
+    cursor = segment.endIndex + CARD_END.length
+  }
+
+  const text = textParts.join('').trim()
+  return {
+    content: text,
+    cardData: cards.length > 0 ? cards : null,
+    messageType: cards.length > 0 ? 'uni_card' : null
+  }
+}
+
+export function parseFirstCardContent(content) {
+  if (typeof content !== 'string') {
     return { content, cardData: null, messageType: null }
   }
 
-  const startIndex = content.indexOf(CARD_START)
-  const endIndex = content.indexOf(CARD_END)
-  const cardData = normalizeAICardData(content.substring(startIndex + CARD_START.length, endIndex))
+  const segment = findCardSegment(content)
+  if (!segment) {
+    return { content, cardData: null, messageType: null }
+  }
+
+  const cardData = normalizeAICardData(
+    content.substring(segment.startIndex + CARD_START.length, segment.endIndex)
+  )
 
   return {
-    content: content.substring(0, startIndex).trim(),
+    content: content.substring(0, segment.startIndex).trim(),
     cardData,
     messageType: cardData ? 'uni_card' : null
   }

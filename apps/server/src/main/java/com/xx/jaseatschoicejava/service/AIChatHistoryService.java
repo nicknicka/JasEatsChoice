@@ -84,9 +84,11 @@ public class AIChatHistoryService {
      */
     @Transactional(rollbackFor = Exception.class)
     public void saveMessage(String userId, String sender, String content, String messageType, String cardData, String clientMessageId) {
+        String dedupKey = null;
+
         try {
             if (StringUtils.hasText(clientMessageId)) {
-                String dedupKey = buildDedupKey(userId, sender, clientMessageId);
+                dedupKey = buildDedupKey(userId, sender, clientMessageId);
                 Boolean firstSeen = redisTemplate.opsForValue().setIfAbsent(
                     Objects.requireNonNull(dedupKey),
                     "1",
@@ -137,8 +139,12 @@ public class AIChatHistoryService {
 
             log.info("=====================================================");
         } catch (Exception e) {
+            // 入库失败时释放幂等 key，让前端重试可以再次保存
+            if (dedupKey != null) {
+                redisTemplate.delete(dedupKey);
+            }
             log.error("❌ [AIChatHistoryService] 保存AI聊天消息失败: userId={}, sender={}", userId, sender, e);
-            log.error("❌ [AIChatHistoryService] 错误详情:", e);
+            throw new RuntimeException("保存AI聊天消息失败", e);
         }
     }
 

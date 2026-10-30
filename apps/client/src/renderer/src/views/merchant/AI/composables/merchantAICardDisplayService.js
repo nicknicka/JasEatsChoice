@@ -15,9 +15,9 @@ const looksLikeJSON = (text) => {
   )
 }
 
-export function sanitizeMerchantAICardData(value) {
+export function removeMerchantAICardActions(value) {
   if (Array.isArray(value)) {
-    return value.map(sanitizeMerchantAICardData)
+    return value.map(removeMerchantAICardActions)
   }
 
   if (!value || typeof value !== 'object') {
@@ -27,7 +27,7 @@ export function sanitizeMerchantAICardData(value) {
   return Object.fromEntries(
     Object.entries(value)
       .filter(([key]) => key !== 'actions')
-      .map(([key, item]) => [key, sanitizeMerchantAICardData(item)])
+      .map(([key, item]) => [key, removeMerchantAICardActions(item)])
   )
 }
 
@@ -44,6 +44,6 @@ export function createMerchantAICardViewModel(rawCard, fallbackText = '') {
 
   return {
     kind: 'card',
-    card: sanitizeMerchantAICardData(parseResult.card)
+    card: removeMerchantAICardActions(parseResult.card)
   }
 }

@@ -3,7 +3,7 @@
  * 统一处理各种卡片数据格式，转换为标准 UniCard 格式（jaseat_card_v1）
  */
 
-import { normalizeAICardData } from '../../../../utils/aiCardDataParser.js'
+import { getFirstAICardData } from '../../../../utils/aiCardDataParser.js'
 
 const UNICARD_SCHEMA = 'jaseat_card_v1'
 
@@ -261,10 +261,7 @@ function convertLegacyToUniCard(legacyData) {
  */
 function parseCardData(rawData) {
   // 先统一归一化，再按 UniCard 或老格式解析
-  const normalizedData = normalizeAICardData(rawData)
-  const normalizedCard = Array.isArray(normalizedData)
-    ? normalizedData.find((item) => item && typeof item === 'object')
-    : normalizedData
+  const normalizedCard = getFirstAICardData(rawData)
   const uniCardResult = parseUniCard(normalizedCard)
   if (uniCardResult.isUniCard) {
     return {

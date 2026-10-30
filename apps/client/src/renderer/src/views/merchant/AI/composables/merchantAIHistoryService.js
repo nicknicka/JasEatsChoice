@@ -2,22 +2,18 @@
  * 商家AI聊天历史持久化边界
  */
 import { API_CONFIG } from '../../../../config/index.js'
-import { normalizeAICardList, parseCardContents } from '../../../../utils/aiCardDataParser.js'
+import {
+  createAICardSourceCollector,
+  normalizeAICardList,
+  parseCardContentList
+} from '../../../../utils/aiCardDataParser.js'
 
 export function mapMerchantHistoryMessage(item, index, formatTime) {
-  const extracted = parseCardContents(item.content)
-  const explicitCards = normalizeAICardList(item.cardData)
-  const contentCards = extracted.cardData || []
-  const cardKeys = new Set()
-  const cards = []
-
-  ;[...explicitCards, ...contentCards].forEach((card) => {
-    const key = JSON.stringify(card)
-    if (cardKeys.has(key)) return
-
-    cards.push(card)
-    cardKeys.add(key)
-  })
+  const extracted = parseCardContentList(item.content)
+  const cardCollector = createAICardSourceCollector()
+  normalizeAICardList(item.cardData).forEach((card) => cardCollector.appendExplicitCard(card))
+  ;(extracted.cardData || []).forEach((card) => cardCollector.appendContentCard(card))
+  const cards = cardCollector.getUniqueCards()
   const cardData = cards.length > 0 ? cards : null
 
   return {

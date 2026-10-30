@@ -126,7 +126,7 @@ export const ERROR_MESSAGES = {
 export const WELCOME_MESSAGE = '您好！我是您的AI饮食助手。我可以帮助您：\n - 推荐健康食谱\n- 分析营养成分\n- 提供饮食建议\n\n 有什么可以帮您的吗？'
 
 // 调试配置
-export const DEBUG = import.meta.env?.DEV
+export const DEBUG = import.meta.env.DEV
 
 // 日志辅助函数
 export const logger = {
