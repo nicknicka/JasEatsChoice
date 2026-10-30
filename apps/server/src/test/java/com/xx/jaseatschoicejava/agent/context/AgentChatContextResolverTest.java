@@ -3,6 +3,7 @@ package com.xx.jaseatschoicejava.agent.context;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -20,6 +21,10 @@ class AgentChatContextResolverTest {
     private final UserService userService = mock(UserService.class);
     private final JwtUtil jwtUtil = mock(JwtUtil.class);
     private final AgentChatContextResolver resolver = new AgentChatContextResolver(userService, jwtUtil);
+
+    {
+        when(userService.isLoginAllowed(any())).thenReturn(true);
+    }
 
     @Test
     void resolvesCustomerContextFromSignedIdentityOnly() {
@@ -82,6 +87,7 @@ class AgentChatContextResolverTest {
         user.setStatus(false);
         when(jwtUtil.extractUserId("token")).thenReturn("1001");
         when(userService.getById("1001")).thenReturn(user);
+        when(userService.isLoginAllowed(user)).thenReturn(false);
 
         assertTrue(resolver.resolve(request).isEmpty());
     }
