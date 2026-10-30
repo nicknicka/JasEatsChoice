@@ -11,6 +11,10 @@ import { handleApiError } from '../../../../utils/errorHandler'
 import { useStreamResponse } from '../../../../composables/useStreamResponse'
 import { normalizeAICardData, parseCardContent } from '../../../../utils/aiCardDataParser.js'
 import {
+  createMerchantAIHistoryService,
+  mapMerchantHistoryMessage
+} from './merchantAIHistoryService.js'
+import {
   MERCHANT_CHAT_CONFIG,
   MERCHANT_WELCOME_MESSAGE,
   MERCHANT_ERROR_MESSAGES,
@@ -68,39 +72,34 @@ export function useMerchantAIChat() {
     return ''
   }
 
+  const historyService = createMerchantAIHistoryService({
+    request: axios,
+    getUserId,
+    getToken: () => authStore.token
+  })
+
   /**
-   * 保存带卡片的 AI 回复，供历史记录回显
+   * 保存单条聊天记录，失败时保留待重试状态
    */
-  const saveCardMessageToBackend = async (message) => {
-    if (!message?.cardData || message._cardSaved) {
+  const saveHistoryMessage = async (message) => {
+    if (!message || message.saveStatus === 'saved' || message.saveStatus === 'saving') {
       return
     }
 
-    const payload = {
-      userId: getUserId(),
-      sender: 'ai',
-      content: message.content || '',
-      messageType: message.messageType || 'uni_card',
-      cardData: message.cardData
+    message.saveStatus = 'saving'
+    const result = await historyService.saveMessage(message)
+    message.saveStatus = result.status
+
+    if (!result.ok) {
+      merchantLogger.warn('保存商家AI聊天记录失败:', result.error)
     }
+  }
 
-    if (message.clientMessageId) {
-      payload.clientMessageId = message.clientMessageId
-    }
-
-    try {
-      const response = await axios.post(API_CONFIG.baseURL + API_CONFIG.ai.save, payload, {
-        headers: { Authorization: `Bearer ${authStore.token}` }
-      })
-
-      if (response.data?.code !== 200) {
-        throw new Error(response.data?.message || '保存卡片消息失败')
-      }
-
-      message._cardSaved = true
-    } catch (error) {
-      merchantLogger.error('保存商家AI卡片消息失败:', error)
-    }
+  /**
+   * 重试保存聊天记录，继续复用原来的 clientMessageId
+   */
+  const retrySaveMessage = (message) => {
+    return saveHistoryMessage(message)
   }
 
   /**
@@ -117,20 +116,9 @@ export function useMerchantAIChat() {
 
       const historyList = response.data?.data
       if (response.data?.code === 200 && Array.isArray(historyList) && historyList.length > 0) {
-        messages.value = historyList.map((item, index) => {
-          const extracted = parseCardContent(item.content)
-          const cardData = normalizeAICardData(item.cardData) || extracted.cardData
-
-          return {
-            id: item.id || index + 1,
-            sender: item.sender,
-            content: extracted.content,
-            messageType: item.messageType || (cardData ? 'uni_card' : null),
-            cardData,
-            time: formatTime(new Date(item.createdAt)),
-            avatar: item.sender === 'ai' ? '🤖' : '👤'
-          }
-        })
+        messages.value = historyList.map((item, index) =>
+          mapMerchantHistoryMessage(item, index, formatTime)
+        )
       } else {
         messages.value = [createWelcomeMessage()]
       }
@@ -153,13 +141,17 @@ export function useMerchantAIChat() {
       return
     }
 
-    messages.value.push({
+    const userMessage = {
       id: messages.value.length + 1,
       sender: 'user',
       content: trimmedContent,
+      clientMessageId: `merchant-user-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
       time: formatTime(),
-      avatar: '👤'
-    })
+      avatar: '👤',
+      saveStatus: 'pending'
+    }
+    messages.value.push(userMessage)
+    saveHistoryMessage(userMessage)
     scrollToBottom(true)
 
     const aiMessageIndex = messages.value.length
@@ -171,7 +163,7 @@ export function useMerchantAIChat() {
       messageType: null,
       cardData: null,
       clientMessageId: aiClientMessageId,
-      _cardSaved: false,
+      saveStatus: 'pending',
       time: formatTime(),
       avatar: '🤖',
       isThinking: true,
@@ -262,7 +254,7 @@ export function useMerchantAIChat() {
         }
       )
 
-      await saveCardMessageToBackend(messages.value[aiMessageIndex])
+      await saveHistoryMessage(messages.value[aiMessageIndex])
     } catch (error) {
       if (error.name === 'AbortError') {
         merchantLogger.warn('商家AI回复被主动中断')
@@ -325,6 +317,7 @@ export function useMerchantAIChat() {
     chatContainerRef,
     loadMessages,
     sendMessage,
+    retrySaveMessage,
     clearChat,
     scrollToBottom
   }

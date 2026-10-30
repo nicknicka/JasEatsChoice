@@ -18,7 +18,8 @@
     "build:win": "npm run build && electron-builder --win --config",
     "build:mac": "npm run build && electron-builder --mac --config",
     "build:linux": "npm run build && electron-builder --linux --config",
-    "test:ai-card-data-parser": "node --test scripts/test-ai-card-data-parser.mjs"
+    "test:ai-card-data-parser": "node --test scripts/test-ai-card-data-parser.mjs",
+    "test:merchant-ai-history": "node --test scripts/test-merchant-ai-history.mjs"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^2.0.0",

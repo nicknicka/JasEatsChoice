@@ -30,6 +30,12 @@
             <div v-if="msg.content" class="text" v-html="formatMarkdown(msg.content)"></div>
             <MerchantAICard v-if="msg.cardData" :data="msg.cardData" :fallback-text="msg.content" />
           </div>
+          <div v-if="msg.saveStatus === 'retryable'" class="save-status">
+            <span>历史保存失败，待重试</span>
+            <button type="button" class="save-retry-btn" @click="retrySaveMessage(msg)">
+              重试
+            </button>
+          </div>
           <div class="time">{{ msg.time }}</div>
         </div>
       </div>
@@ -103,6 +109,7 @@ const {
   chatContainerRef,
   loadMessages,
   sendMessage: sendChatMessage,
+  retrySaveMessage,
   clearChat
 } = useMerchantAIChat()
 
@@ -639,5 +646,28 @@ onMounted(() => {
 .quick-fade-leave-to {
   opacity: 0;
   transform: translateY(-10px);
+}
+
+.save-status {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #c0392b;
+}
+
+.save-retry-btn {
+  padding: 2px 8px;
+  border: 1px solid #c0392b;
+  border-radius: 12px;
+  background: transparent;
+  color: #c0392b;
+  cursor: pointer;
+}
+
+.save-retry-btn:hover {
+  background: rgba(192, 57, 43, 0.08);
 }
 </style>
