@@ -739,7 +739,7 @@ const handleSaveAvatar = async () => {
               @error="handleAvatarError"
             />
             <div v-else class="avatar-placeholder">
-              <ShoppingBag style="font-size: 2.286rem /* 原值: 32px */; color: #409eff" />
+              <span class="avatar-letter">{{ (merchantInfo.name || '店').charAt(0) }}</span>
             </div>
             <ElButton
               type="primary"
@@ -1579,10 +1579,21 @@ const handleSaveAvatar = async () => {
             width: 80px;
             height: 80px;
             border-radius: 50%;
-            background-color: @merchant-primary-light;
+            background-color: @merchant-surface;
+            border: 3px solid @merchant-primary-light;
             display: flex;
             align-items: center;
             justify-content: center;
+
+            .avatar-letter {
+              font-size: 2rem;
+              font-weight: 600;
+              line-height: 1;
+              background: linear-gradient(135deg, #ff6b6b 0%, #ffa500 100%);
+              -webkit-background-clip: text;
+              background-clip: text;
+              color: transparent;
+            }
           }
 
           .avatar-edit-btn {
