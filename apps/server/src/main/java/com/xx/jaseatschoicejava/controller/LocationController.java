@@ -26,7 +26,11 @@ import jakarta.servlet.http.HttpServletRequest;
 @RequestMapping("/v1/location")
 public class LocationController {
 
+    // 国内地图服务（腾讯/高德）从国内视角看来源 IP，因此回显服务也优先走国内，
+    // 避免分流代理下"国外回显拿到代理出口 IP、地图服务却看到真实 IP"的错配。
     private static final List<String> PUBLIC_IP_PROVIDERS = List.of(
+            "https://ip.3322.net",
+            "https://ipv4.ip.mir6.com",
             "https://api.ip.sb/ip",
             "https://api64.ipify.org?format=text",
             "https://checkip.amazonaws.com"
@@ -60,14 +64,9 @@ public class LocationController {
         }
 
         String effectiveIp = resolveClientIp(ip, request);
-        if (latitude == null && longitude == null && !hasText(effectiveIp)) {
-            effectiveIp = fetchPublicIpFromExternalServices();
-        }
 
-        if (latitude == null && longitude == null && !hasText(effectiveIp)) {
-            return ResponseResult.fail("LOCATION_PARAM_MISSING", "未传递ip或经纬度信息无法定位");
-        }
-
+        // 拿不到真实客户端 IP 时不要臆造：交给地图服务用自身视角判断来源 IP。
+        // 否则在分流代理环境下会把代理出口 IP 当成本机 IP，导致定位失败。
         Map<String, Object> location = locationService.getCurrentLocation(latitude, longitude, effectiveIp);
         return ResponseResult.success(location);
     }

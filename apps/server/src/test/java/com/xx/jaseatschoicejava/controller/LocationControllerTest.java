@@ -94,13 +94,19 @@ class LocationControllerTest {
         verify(locationService).getCurrentLocation(null, null, "8.8.8.8");
         }
 
-        @Test
-        void getCurrentLocation_withoutLatLngAndIp_shouldReturnFail() throws Exception {
+    @Test
+    void getCurrentLocation_withoutLatLngAndIp_shouldDelegateNullIpToService() throws Exception {
+        Map<String, Object> data = new HashMap<>();
+        data.put("city", "广州市");
+
+        when(locationService.getCurrentLocation(null, null, null)).thenReturn(data);
+
         mockMvc.perform(get("/v1/location"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.success").value(false))
-            .andExpect(jsonPath("$.code").value("LOCATION_PARAM_MISSING"))
-            .andExpect(jsonPath("$.message").value("未传递ip或经纬度信息无法定位"));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.city").value("广州市"));
+
+        verify(locationService).getCurrentLocation(null, null, null);
     }
 
     @Test
