@@ -17,7 +17,7 @@ public class AnnouncementRagProperties {
     public static class Qdrant {
         private String host = "localhost";
         private int port = 6334;
-        private String collection = "jaseats_announcements";
+        private String collection = "jaseats_knowledge_v1";
         private Duration timeout = Duration.ofSeconds(5);
     }
 

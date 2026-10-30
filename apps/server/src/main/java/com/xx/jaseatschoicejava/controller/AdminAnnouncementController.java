@@ -35,6 +35,9 @@ public class AdminAnnouncementController {
     @Autowired
     private AnnouncementService announcementService;
 
+    @Autowired
+    private com.xx.jaseatschoicejava.rag.RagKnowledgeService ragKnowledgeService;
+
 
     /**
      * 获取公告列表（分页）
@@ -454,6 +457,37 @@ public class AdminAnnouncementController {
             response.put("message", "状态修改失败");
             return ResponseEntity.status(500).body(response);
         }
+    }
+
+    /**
+     * 重建单个公告的知识索引
+     */
+    @ApiOperation("重建单个公告知识索引")
+    @PostMapping("/{announcementId}/rag/rebuild")
+    public ResponseEntity<Map<String, Object>> rebuildAnnouncementRag(
+            @PathVariable String announcementId) {
+        ragKnowledgeService.rebuildAnnouncement(announcementId);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "公告知识索引已触发重建");
+        response.put("announcementId", announcementId);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 重建全部公告的知识索引
+     */
+    @ApiOperation("重建全部公告知识索引")
+    @PostMapping("/rag/rebuild")
+    public ResponseEntity<Map<String, Object>> rebuildAllAnnouncementRag() {
+        int rebuildCount = ragKnowledgeService.rebuildAllAnnouncements();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "公告知识索引已触发全量重建");
+        response.put("rebuildCount", rebuildCount);
+        return ResponseEntity.ok(response);
     }
 
     /**

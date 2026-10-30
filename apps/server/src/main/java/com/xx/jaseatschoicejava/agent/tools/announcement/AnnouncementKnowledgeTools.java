@@ -8,14 +8,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.xx.jaseatschoicejava.agent.context.AgentChatContext;
-import com.xx.jaseatschoicejava.entity.Merchant;
 import com.xx.jaseatschoicejava.rag.RagAudience;
 import com.xx.jaseatschoicejava.rag.RagKnowledgeQuery;
 import com.xx.jaseatschoicejava.rag.RagKnowledgeResult;
 import com.xx.jaseatschoicejava.rag.RagKnowledgeService;
-import com.xx.jaseatschoicejava.service.MerchantService;
 
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
@@ -25,7 +22,7 @@ import dev.langchain4j.agentic.scope.AgenticScope;
  * 公告知识检索工具。
  *
  * 权限只来自 AgentChatContextListener 写入的 AgenticScope；
- * merchantName 仅用于用户端把商家名称解析成唯一商家绑定。
+ * 商家和用户范围由可信聊天上下文决定。
  */
 @Service
 public class AnnouncementKnowledgeTools {
@@ -34,28 +31,23 @@ public class AnnouncementKnowledgeTools {
     private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     private final RagKnowledgeService knowledgeService;
-    private final MerchantService merchantService;
 
-    public AnnouncementKnowledgeTools(
-        RagKnowledgeService knowledgeService,
-        MerchantService merchantService) {
+    public AnnouncementKnowledgeTools(RagKnowledgeService knowledgeService) {
         this.knowledgeService = knowledgeService;
-        this.merchantService = merchantService;
     }
 
     @Tool("""
         检索当前有效且当前角色可见的平台公告和商家公告。
 
         优先用于平台规则、活动、公告、满减、优惠和退款说明等知识问题。
-        可选 merchantName 只在用户指定商家时填写；商家端应留空并自动使用绑定商家。
-        可选 limit 控制返回条数；未填写时默认 5。
+        商家和用户范围由可信聊天上下文决定，不接受工具参数指定。
+        可选 limit 控制返回条数；未填写时默认 3。
 
         返回公告标题、原文片段和有效期；没有命中时明确说明未查询到。
         """)
     public String searchAnnouncements(
         AgenticScope scope,
         @P("检索问题或关键词") String query,
-        @P(value = "商家名称，可选，仅用户指定商家时填写", required = false) String merchantName,
         @P(value = "返回数量，可选", required = false) Integer limit
     ) {
         if (scope == null) {
@@ -66,20 +58,11 @@ public class AnnouncementKnowledgeTools {
             String audienceValue = (String) scope.readState("audience");
             RagAudience audience = audience(scope, audienceValue);
             String merchantId = null;
-
             if (AgentChatContext.AUDIENCE_MERCHANT.equals(audienceValue)) {
                 merchantId = (String) scope.readState("merchantId");
                 if (merchantId == null || merchantId.isBlank()) {
                     return "未查询到相关有效公告。";
                 }
-            }
-            else if (hasText(merchantName)) {
-                List<Merchant> merchants = merchantService.list(new LambdaQueryWrapper<Merchant>()
-                    .eq(Merchant::getName, merchantName));
-                if (merchants.size() != 1) {
-                    return "未查询到相关有效公告。";
-                }
-                merchantId = merchants.getFirst().getId();
             }
 
             List<RagKnowledgeResult> results = knowledgeService.search(new RagKnowledgeQuery(
@@ -87,7 +70,7 @@ public class AnnouncementKnowledgeTools {
                 audience,
                 merchantId,
                 LocalDateTime.now(),
-                limit == null ? 5 : limit
+                limit == null ? 3 : limit
             ));
             return format(results);
         }
@@ -135,7 +118,4 @@ public class AnnouncementKnowledgeTools {
         return TIME_FORMAT.format(result.startTime()) + " 至 " + TIME_FORMAT.format(result.endTime());
     }
 
-    private boolean hasText(String value) {
-        return value != null && !value.isBlank();
-    }
 }

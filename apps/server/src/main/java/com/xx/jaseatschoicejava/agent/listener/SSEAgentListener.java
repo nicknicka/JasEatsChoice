@@ -37,8 +37,6 @@ public class SSEAgentListener implements AgentListener {
 
     private final SseEmitter emitter;
     private final ObjectMapper objectMapper;
-    private final AgentChatContext chatContext;
-    private final AgentChatContextListener contextListener;
     private final String originalUserMessage;
     private volatile boolean emitterFailed = false;
 
@@ -47,8 +45,7 @@ public class SSEAgentListener implements AgentListener {
 
     public SSEAgentListener(SseEmitter emitter, AgentChatContext chatContext, String originalUserMessage) {
         this.emitter = emitter;
-        this.chatContext = chatContext;
-        this.contextListener = new AgentChatContextListener(chatContext);
+        // 可信上下文由 SupervisorAgentFactory 统一包装 AgentChatContextListener 写入。
         this.originalUserMessage = originalUserMessage;
         this.objectMapper = new ObjectMapper();
     }
@@ -190,9 +187,6 @@ public class SSEAgentListener implements AgentListener {
         ExecutionEvent event = new ExecutionEvent();
         event.setAgentName("SupervisorAgent");
         event.setAgentId(String.valueOf(scope.memoryId()));
-
-        // 使用与同步入口相同的可信上下文初始化逻辑
-        contextListener.afterAgenticScopeCreated(scope);
 
         if (originalUserMessage != null && !originalUserMessage.isEmpty()) {
             scope.writeState("originalUserMessage", originalUserMessage);

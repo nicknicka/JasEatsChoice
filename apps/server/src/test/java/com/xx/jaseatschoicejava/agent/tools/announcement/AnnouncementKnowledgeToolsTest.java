@@ -2,7 +2,6 @@ package com.xx.jaseatschoicejava.agent.tools.announcement;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -14,15 +13,12 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
-import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.xx.jaseatschoicejava.agent.context.AgentChatContext;
 import com.xx.jaseatschoicejava.agent.listener.AgentChatContextListener;
-import com.xx.jaseatschoicejava.entity.Merchant;
 import com.xx.jaseatschoicejava.rag.RagAudience;
 import com.xx.jaseatschoicejava.rag.RagKnowledgeQuery;
 import com.xx.jaseatschoicejava.rag.RagKnowledgeResult;
 import com.xx.jaseatschoicejava.rag.RagKnowledgeService;
-import com.xx.jaseatschoicejava.service.MerchantService;
 
 import dev.langchain4j.agentic.scope.AgentInvocation;
 import dev.langchain4j.agentic.scope.AgenticScope;
@@ -30,40 +26,34 @@ import dev.langchain4j.agentic.scope.AgenticScope;
 class AnnouncementKnowledgeToolsTest {
 
     private final RagKnowledgeService knowledgeService = mock(RagKnowledgeService.class);
-    private final MerchantService merchantService = mock(MerchantService.class);
-    private final AnnouncementKnowledgeTools tools = new AnnouncementKnowledgeTools(knowledgeService, merchantService);
+    private final AnnouncementKnowledgeTools tools = new AnnouncementKnowledgeTools(knowledgeService);
 
     @Test
-    void customerScopeSearchesPlatformAndOnlyNamedMerchant() {
+    void customerMerchantNameCannotExpandTrustedScope() {
         AgenticScope scope = scopeFor(AgentChatContext.customer("1001"));
-        Merchant merchant = new Merchant();
-        merchant.setId("merchant-2");
-        merchant.setName("第一食堂");
-        when(merchantService.list(any(Wrapper.class))).thenReturn(List.of(merchant));
         when(knowledgeService.search(any())).thenReturn(List.of());
 
-        tools.searchAnnouncements(scope, "有什么满减活动", "第一食堂", 3);
+        tools.searchAnnouncements(scope, "有什么满减活动", 3);
 
         ArgumentCaptor<RagKnowledgeQuery> captor = ArgumentCaptor.forClass(RagKnowledgeQuery.class);
         verify(knowledgeService).search(captor.capture());
         assertThat(captor.getValue().audience()).isEqualTo(RagAudience.CUSTOMER);
-        assertThat(captor.getValue().merchantId()).isEqualTo("merchant-2");
+        assertThat(captor.getValue().merchantId()).isNull();
         assertThat(captor.getValue().limit()).isEqualTo(3);
     }
 
     @Test
-    void merchantScopeUsesTrustedBindingAndIgnoresModelMerchantName() {
+    void merchantScopeUsesTrustedBindingOnly() {
         AgenticScope scope = scopeFor(AgentChatContext.merchant("2002", "merchant-2"));
         when(knowledgeService.search(any())).thenReturn(List.of());
 
-        tools.searchAnnouncements(scope, "平台对商家的上架规则", "另一个商家", 2);
+        tools.searchAnnouncements(scope, "平台对商家的上架规则", 2);
 
         ArgumentCaptor<RagKnowledgeQuery> captor = ArgumentCaptor.forClass(RagKnowledgeQuery.class);
         verify(knowledgeService).search(captor.capture());
         assertThat(captor.getValue().audience()).isEqualTo(RagAudience.MERCHANT);
         assertThat(captor.getValue().merchantId()).isEqualTo("merchant-2");
         assertThat(captor.getValue().limit()).isEqualTo(2);
-        verifyNoInteractions(merchantService);
     }
 
     @Test
@@ -71,25 +61,13 @@ class AnnouncementKnowledgeToolsTest {
         AgenticScope scope = scopeFor(AgentChatContext.customer("1001"));
         when(knowledgeService.search(any())).thenReturn(List.of());
 
-        tools.searchAnnouncements(scope, "平台活动", null, null);
+        tools.searchAnnouncements(scope, "平台活动", null);
 
         ArgumentCaptor<RagKnowledgeQuery> captor = ArgumentCaptor.forClass(RagKnowledgeQuery.class);
         verify(knowledgeService).search(captor.capture());
         assertThat(captor.getValue().audience()).isEqualTo(RagAudience.CUSTOMER);
         assertThat(captor.getValue().merchantId()).isNull();
-        assertThat(captor.getValue().limit()).isEqualTo(5);
-        verifyNoInteractions(merchantService);
-    }
-
-    @Test
-    void unmatchedCustomerMerchantFailsClosedWithoutSearching() {
-        AgenticScope scope = scopeFor(AgentChatContext.customer("1001"));
-        when(merchantService.list(any(Wrapper.class))).thenReturn(List.of());
-
-        String answer = tools.searchAnnouncements(scope, "有什么满减活动", "不存在的商家", 3);
-
-        assertThat(answer).contains("未查询到相关有效公告");
-        verifyNoInteractions(knowledgeService);
+        assertThat(captor.getValue().limit()).isEqualTo(3);
     }
 
     @Test
@@ -97,7 +75,7 @@ class AnnouncementKnowledgeToolsTest {
         AgenticScope scope = scopeFor(AgentChatContext.customer("1001"));
         when(knowledgeService.search(any())).thenReturn(List.of(result()));
 
-        String answer = tools.searchAnnouncements(scope, "周末活动", null, null);
+        String answer = tools.searchAnnouncements(scope, "周末活动", null);
 
         assertThat(answer).contains("周末满减");
         assertThat(answer).contains("2026-10-01 00:00");
@@ -113,17 +91,17 @@ class AnnouncementKnowledgeToolsTest {
         AgenticScope scope = scopeFor(AgentChatContext.customer("1001"));
         when(knowledgeService.search(any())).thenReturn(List.of());
 
-        String answer = tools.searchAnnouncements(scope, "不存在的话题", null, null);
+        String answer = tools.searchAnnouncements(scope, "不存在的话题", null);
 
         assertThat(answer).isEqualTo("未查询到相关有效公告。");
     }
 
     @Test
     void missingScopeFailsClosed() {
-        String answer = tools.searchAnnouncements(null, "平台活动", null, null);
+        String answer = tools.searchAnnouncements(null, "平台活动", null);
 
         assertThat(answer).isEqualTo("公告检索暂不可用，请重新登录后再试。");
-        verifyNoInteractions(knowledgeService, merchantService);
+        verifyNoInteractions(knowledgeService);
     }
 
     @Test
@@ -131,7 +109,7 @@ class AnnouncementKnowledgeToolsTest {
         AgenticScope scope = scopeFor(AgentChatContext.customer("1001"));
         when(knowledgeService.search(any())).thenThrow(new IllegalStateException("qdrant unavailable"));
 
-        String answer = tools.searchAnnouncements(scope, "平台活动", null, null);
+        String answer = tools.searchAnnouncements(scope, "平台活动", null);
 
         assertThat(answer).isEqualTo("公告检索暂不可用，请稍后再试。");
     }

@@ -237,18 +237,6 @@ zhipuai:
   # 超时时间（毫秒）
   timeout: 30000
 
-# ==================== 公告 RAG 基础设施 ====================
-announcement-rag:
-  enabled: ${ANNOUNCEMENT_RAG_ENABLED:true}
-  qdrant:
-    host: ${QDRANT_HOST:localhost}
-    port: ${QDRANT_PORT:6334}
-    collection: ${QDRANT_COLLECTION:jaseats_announcements}
-  embedding:
-    model: ${ZHIPU_EMBEDDING_MODEL:embedding-3}
-    dimensions: ${AI_EMBEDDING_DIMENSIONS:2048}
-    base-url: ${ZHIPU_EMBEDDING_BASE_URL:}
-
 # ==================== 内容提取配置 ====================
 content-extraction:
   fetch:

@@ -1,7 +1,7 @@
 # 公告 RAG 发布验收记录（Issue #149）
 
 - 验收日期：2026-10-31
-- 分支：`codex/149-release-hardening`
+- 证据分支：`codex/149-release-hardening`（票内证据，已包含于集成基线 `254c9d1`）
 - 基线：`codex/144-announcement-rag` @ `5b115fd`
 - 结论：**未达到完整发布验收通过**。失败恢复、重建补齐、降级与数据边界已由自动化测试验证；真实智谱 LLM/Embedding 冒烟被有效凭据缺失阻塞。
 
@@ -11,7 +11,7 @@
 2. `ANNOUNCEMENT_RAG_ENABLED=true`。
 3. 有效的 `ZHIPU_API_KEY`，用于 `glm-4-flash` 聊天与 `embedding-3` 向量化。
 4. Qdrant gRPC 端口可达；compose 内部服务名 `qdrant`、端口 `6334`。
-5. Qdrant collection 由启动初始化器自动创建，默认 `jaseats_announcements`，维度 `2048`。
+5. Qdrant collection 由启动初始化器自动创建，默认 `jaseats_knowledge_v1`，维度 `2048`。
 6. 冒烟只使用临时公告，脚本 `finally` 删除公告并检查向量残留。
 
 ## 自动化验证
@@ -56,7 +56,7 @@ JAVA_HOME=$(/usr/libexec/java_home -v 21) ./apps/server/mvnw -f apps/server/pom.
 使用独立 compose 项目 `codex149` 启动 MySQL/Redis/Qdrant，并用本地构建 JAR 启动后端：
 
 - `/api/actuator/health` 返回 `UP`，DB、Redis 正常。
-- Qdrant REST `/collections` 确认 `jaseats_announcements` 已创建。
+- Qdrant REST `/collections` 确认 `jaseats_knowledge_v1` 已创建。
 - 使用种子账号完成管理员登录和带上下文的用户/商家登录。
 - 临时创建平台公告、本商家公告、其他商家公告、过期公告共 4 条。
 - 调用 `/api/agent/supervisor/chat` 分别执行用户端与商家端提问。
@@ -83,5 +83,5 @@ JAVA_HOME=$(/usr/libexec/java_home -v 21) ./apps/server/mvnw -f apps/server/pom.
 ## 冒烟栈收尾证据
 
 - 临时公告数据库计数：`0`（条件：`title like 'codex149%'`）。
-- Qdrant `jaseats_announcements` 点数：`0`。
+- Qdrant `jaseats_knowledge_v1` 点数：`0`。
 - 独立验证栈已执行 `docker compose --project-name codex149 down -v`；容器、网络和数据卷均已删除。

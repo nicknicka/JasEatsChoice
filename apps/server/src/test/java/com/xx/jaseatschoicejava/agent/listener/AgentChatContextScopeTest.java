@@ -50,20 +50,34 @@ class AgentChatContextScopeTest {
     }
 
     @Test
-    void sseScopeUsesSameContextSemantics() {
+    void sseListenerDoesNotDuplicateContextListenerWrites() {
         RecordingScope customerScope = new RecordingScope();
-        new SSEAgentListener(null, AgentChatContext.customer("1001"), "推荐菜品")
-                .afterAgenticScopeCreated(customerScope);
+        var composite = new CompositeAgentListener(
+            new AgentChatContextListener(AgentChatContext.customer("1001")),
+            new SSEAgentListener(null, AgentChatContext.customer("1001"), "推荐菜品"));
+        composite.afterAgenticScopeCreated(customerScope);
         assertEquals("1001", customerScope.states.get("userId"));
         assertEquals("customer", customerScope.states.get("audience"));
         assertFalse(customerScope.states.containsKey("merchantId"));
 
         RecordingScope merchantScope = new RecordingScope();
-        new SSEAgentListener(null, AgentChatContext.merchant("2002", "m-2002"), "查看店铺公告")
-                .afterAgenticScopeCreated(merchantScope);
+        var merchantComposite = new CompositeAgentListener(
+            new AgentChatContextListener(AgentChatContext.merchant("2002", "m-2002")),
+            new SSEAgentListener(null, AgentChatContext.merchant("2002", "m-2002"), "查看店铺公告"));
+        merchantComposite.afterAgenticScopeCreated(merchantScope);
         assertEquals("2002", merchantScope.states.get("userId"));
         assertEquals("merchant", merchantScope.states.get("audience"));
         assertEquals("m-2002", merchantScope.states.get("merchantId"));
+    }
+
+    @Test
+    void sseAloneDoesNotInitializeContextBecauseFactoryOwnsIt() {
+        RecordingScope scope = new RecordingScope();
+        new SSEAgentListener(null, AgentChatContext.customer("1001"), "推荐菜品")
+                .afterAgenticScopeCreated(scope);
+        assertFalse(scope.states.containsKey("userId"));
+        assertFalse(scope.states.containsKey("audience"));
+        assertFalse(scope.states.containsKey("merchantId"));
     }
 
     private static class RecordingScope implements AgenticScope {

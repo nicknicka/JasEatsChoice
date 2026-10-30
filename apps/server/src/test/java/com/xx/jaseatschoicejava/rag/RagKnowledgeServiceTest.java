@@ -80,6 +80,79 @@ class RagKnowledgeServiceTest {
     }
 
     @Test
+    void notStartedExpiredActiveAnnouncementsAreNotIndexedOrRebuilt() {
+        Announcement notStarted = activePlatformAnnouncement();
+        notStarted.setId("not-started");
+        notStarted.setStartTime(LocalDateTime.parse("2026-11-20T00:00:00"));
+        notStarted.setEndTime(null);
+        Announcement expired = activePlatformAnnouncement();
+        expired.setId("expired");
+        expired.setStartTime(LocalDateTime.parse("2026-10-01T00:00:00"));
+        expired.setEndTime(LocalDateTime.parse("2026-10-15T00:00:00"));
+
+        when(announcementService.getById("not-started")).thenReturn(notStarted);
+        when(announcementService.getById("expired")).thenReturn(expired);
+        service.syncAnnouncement("not-started");
+        service.syncAnnouncement("expired");
+
+        assertThat(indexedCount()).isZero();
+
+        when(announcementService.list(any(Wrapper.class))).thenReturn(List.of(notStarted, expired));
+        service.rebuildAllAnnouncements();
+
+        assertThat(indexedCount()).isZero();
+    }
+
+    @Test
+    void searchUsesTenCandidatesDeduplicatesAnnouncementsAndReturnsTopThreeByDefault() {
+        List<String> ids = List.of("announcement-1", "announcement-2", "announcement-3", "announcement-4");
+        for (String id : ids) {
+            Announcement announcement = activePlatformAnnouncement();
+            announcement.setId(id);
+            announcement.setTitle("Weekend discount " + id);
+            announcement.setContent("Spend 30 get 30 off 5 during the weekend.");
+            when(announcementService.getById(id)).thenReturn(announcement);
+            service.syncAnnouncement(id);
+        }
+
+        List<RagKnowledgeResult> results = service.search(new RagKnowledgeQuery(
+            "weekend discount", RagAudience.CUSTOMER, null,
+            LocalDateTime.parse("2026-10-31T12:00:00"), 0));
+
+        assertThat(results).hasSize(3);
+        assertThat(results).extracting(RagKnowledgeResult::announcementId)
+            .doesNotHaveDuplicates();
+    }
+
+    @Test
+    void payloadStoresSourceContentHash() {
+        Announcement announcement = activePlatformAnnouncement();
+        when(announcementService.getById("announcement-1")).thenReturn(announcement);
+        service.syncAnnouncement("announcement-1");
+
+        var request = dev.langchain4j.store.embedding.EmbeddingSearchRequest.builder()
+            .queryEmbedding(new Embedding(new float[] {1f, 1f, 1f, 0f}))
+            .maxResults(1)
+            .filter(dev.langchain4j.store.embedding.filter.MetadataFilterBuilder
+                .metadataKey("contentId").isEqualTo("announcement-1"))
+            .build();
+        Metadata metadata = store.search(request).matches().getFirst().embedded().metadata();
+
+        assertThat(metadata.getString("contentHash")).startsWith("sha256:");
+        assertThat(metadata.getString("contentHash")).hasSize(64 + "sha256:".length());
+    }
+
+    private long indexedCount() {
+        var request = dev.langchain4j.store.embedding.EmbeddingSearchRequest.builder()
+            .queryEmbedding(new Embedding(new float[] {1f, 1f, 1f, 0f}))
+            .maxResults(10)
+            .filter(dev.langchain4j.store.embedding.filter.MetadataFilterBuilder
+                .metadataKey("sourceType").isEqualTo("announcement"))
+            .build();
+        return store.search(request).matches().size();
+    }
+
+    @Test
     void update_replacesOldContentAndOldChunkIsNotReturned() {
         Announcement original = activePlatformAnnouncement();
         original.setTitle("OLD weekend discount");
@@ -160,11 +233,10 @@ class RagKnowledgeServiceTest {
         when(announcementService.getById("announcement-1")).thenReturn(original);
         service.syncAnnouncement("announcement-1");
 
-        List<RagKnowledgeResult> originalResults = service.search(new RagKnowledgeQuery(
-            "weekend discount", RagAudience.CUSTOMER, null, LocalDateTime.parse("2026-10-31T12:00:00"), 20));
-        assertThat(originalResults.size()).isGreaterThan(1);
-        assertThat(originalResults).extracting(RagKnowledgeResult::chunkCount)
-            .containsOnly(originalResults.size());
+        assertThat(storedSegments("announcement-1")).hasSize(2);
+        assertThat(service.search(new RagKnowledgeQuery(
+            "weekend discount", RagAudience.CUSTOMER, null, LocalDateTime.parse("2026-10-31T12:00:00"), 20)))
+            .hasSize(1);
 
         Announcement updated = activePlatformAnnouncement();
         when(announcementService.getById("announcement-1")).thenReturn(updated);
@@ -272,19 +344,19 @@ class RagKnowledgeServiceTest {
         service.syncAnnouncement("announcement-1");
         service.syncAnnouncement("announcement-1");
 
-        List<RagKnowledgeResult> results = service.search(new RagKnowledgeQuery(
-            "weekend discount", RagAudience.CUSTOMER, null, LocalDateTime.parse("2026-10-31T12:00:00"), 20));
+        List<TextSegment> firstIndexed = storedSegments("announcement-1");
+        int firstChunkCount = firstIndexed.size();
+        assertThat(firstChunkCount).isGreaterThan(1);
+        assertThat(firstIndexed.stream().map(segment -> segment.metadata().getInteger("chunkIndex")).distinct())
+            .hasSize(firstChunkCount);
 
-        assertThat(results).isNotEmpty();
-        assertThat(results).allSatisfy(result -> assertThat(result.announcementId()).isEqualTo("announcement-1"));
-        assertThat(results.stream().map(RagKnowledgeResult::chunkIndex).distinct()).hasSize(results.size());
-        int firstChunkCount = results.getFirst().chunkCount();
         service.rebuildAnnouncement("announcement-1");
-        List<RagKnowledgeResult> rebuilt = service.search(new RagKnowledgeQuery(
-            "weekend discount", RagAudience.CUSTOMER, null, LocalDateTime.parse("2026-10-31T12:00:00"), 20));
+        List<TextSegment> rebuilt = storedSegments("announcement-1");
         assertThat(rebuilt).hasSize(firstChunkCount);
-        assertThat(rebuilt).extracting(RagKnowledgeResult::chunkIndex)
-            .containsExactlyElementsOf(results.stream().map(RagKnowledgeResult::chunkIndex).toList());
+        assertThat(rebuilt.stream().map(segment -> segment.metadata().getInteger("chunkIndex")))
+            .containsExactlyElementsOf(firstIndexed.stream()
+                .map(segment -> segment.metadata().getInteger("chunkIndex"))
+                .toList());
     }
 
     @Test
@@ -368,6 +440,18 @@ class RagKnowledgeServiceTest {
             LocalDateTime.parse("2026-10-31T12:00:00"), 5));
         assertThat(results).hasSize(1);
         assertThat(results.getFirst().title()).isEqualTo("Weekend discount");
+    }
+
+    private List<TextSegment> storedSegments(String announcementId) {
+        var request = dev.langchain4j.store.embedding.EmbeddingSearchRequest.builder()
+            .queryEmbedding(new Embedding(new float[] {1f, 1f, 1f, 0f}))
+            .maxResults(20)
+            .filter(dev.langchain4j.store.embedding.filter.MetadataFilterBuilder
+                .metadataKey("contentId").isEqualTo(announcementId))
+            .build();
+        return store.search(request).matches().stream()
+            .map(match -> match.embedded())
+            .toList();
     }
 
     private static Announcement merchantAnnouncement(String merchantId, String audience) {

@@ -27,7 +27,6 @@ import com.xx.jaseatschoicejava.rag.RagAudience;
 import com.xx.jaseatschoicejava.rag.RagKnowledgeQuery;
 import com.xx.jaseatschoicejava.rag.RagKnowledgeResult;
 import com.xx.jaseatschoicejava.rag.RagKnowledgeService;
-import com.xx.jaseatschoicejava.service.MerchantService;
 import com.xx.jaseatschoicejava.agent.agents.CardRendererAgent;
 
 import dev.langchain4j.agentic.AgenticServices;
@@ -44,13 +43,12 @@ class SupervisorAgentRoutingTest {
     private final ChatModel supervisorModel = new FixedRouteChatModel();
     private final ChatMemoryFactory chatMemoryFactory = mock(ChatMemoryFactory.class);
     private final RagKnowledgeService knowledgeService = mock(RagKnowledgeService.class);
-    private final MerchantService merchantService = mock(MerchantService.class);
     private final CardRendererAgent cardRendererAgent = agent(CardRendererAgent.class, "CardRendererAgent", "已渲染");
     private final CustomerServiceAgent customerServiceAgent = AgenticServices.agentBuilder(CustomerServiceAgent.class)
         .chatModel(new ToolThenAnswerChatModel())
         .name("CustomerServiceAgent")
         .description("知识客服专家，基于公告回答平台规则和活动问题")
-        .tools(new AnnouncementKnowledgeTools(knowledgeService, merchantService))
+        .tools(new AnnouncementKnowledgeTools(knowledgeService))
         .build();
     private final DishRecommendationAgent dishRecommendationAgent = agent(DishRecommendationAgent.class, "DishRecommendationAgent", "未使用");
     private final UserPreferenceAgent userPreferenceAgent = agent(UserPreferenceAgent.class, "UserPreferenceAgent", "未使用");

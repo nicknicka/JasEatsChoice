@@ -2,7 +2,11 @@ package com.xx.jaseatschoicejava.rag;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.UUID;
 
@@ -73,7 +77,7 @@ public class RagKnowledgeService {
     }
 
     private void synchronizeAnnouncement(Announcement announcement) {
-        if (isActive(announcement)) {
+        if (isIndexable(announcement)) {
             indexAnnouncement(announcement);
         }
         else {
@@ -93,14 +97,18 @@ public class RagKnowledgeService {
         Embedding queryEmbedding = embeddingModel.embed(query.query()).content();
         var result = embeddingStore.search(EmbeddingSearchRequest.builder()
             .queryEmbedding(queryEmbedding)
-            .maxResults(query.limit() <= 0 ? 5 : query.limit())
+            .maxResults(10)
             .minScore(0d)
             .filter(visibilityFilter(query))
             .build());
 
-        return result.matches().stream()
-            .map(match -> toResult(match.embedded()))
-            .toList();
+        int topK = query.limit() <= 0 ? 3 : query.limit();
+        LinkedHashMap<String, RagKnowledgeResult> bestByAnnouncement = new LinkedHashMap<>();
+        for (var match : result.matches()) {
+            RagKnowledgeResult candidate = toResult(match.embedded());
+            bestByAnnouncement.putIfAbsent(candidate.announcementId(), candidate);
+        }
+        return bestByAnnouncement.values().stream().limit(topK).toList();
     }
 
     private void indexAnnouncement(Announcement announcement) {
@@ -140,6 +148,7 @@ public class RagKnowledgeService {
         metadata.put("chunkCount", chunkCount);
         metadata.put("title", announcement.getTitle());
         metadata.put("text", chunk);
+        metadata.put("contentHash", contentHash(announcement));
         metadata.put("merchantId", announcement.getMerchantId() == null ? "platform" : announcement.getMerchantId());
         metadata.put("targetAudience", announcement.getTargetAudience());
         metadata.put("status", announcement.getStatus());
@@ -216,6 +225,27 @@ public class RagKnowledgeService {
 
     private boolean isActive(Announcement announcement) {
         return "active".equals(announcement.getStatus());
+    }
+
+    private boolean isIndexable(Announcement announcement) {
+        if (!isActive(announcement)) {
+            return false;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        return (announcement.getStartTime() == null || !now.isBefore(announcement.getStartTime()))
+            && (announcement.getEndTime() == null || !now.isAfter(announcement.getEndTime()));
+    }
+
+    private String contentHash(Announcement announcement) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest((announcement.getTitle() + "\n" + announcement.getContent())
+                .getBytes(StandardCharsets.UTF_8));
+            return "sha256:" + HexFormat.of().formatHex(hash);
+        }
+        catch (Exception exception) {
+            throw new IllegalStateException("无法计算公告内容哈希", exception);
+        }
     }
 
     private List<String> chunkText(String title, String content) {
