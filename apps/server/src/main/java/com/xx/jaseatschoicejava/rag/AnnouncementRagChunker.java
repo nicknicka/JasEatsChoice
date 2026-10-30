@@ -5,7 +5,7 @@ import java.util.List;
 
 class AnnouncementRagChunker {
 
-    private static final int MAX_BODY_LENGTH = 500;
+    private static final int MAX_TOTAL_LENGTH = 800;
     private static final int OVERLAP_LENGTH = 80;
 
     private AnnouncementRagChunker() {
@@ -18,38 +18,40 @@ class AnnouncementRagChunker {
             return List.of(normalizedTitle);
         }
 
-        List<String> bodyChunks = splitParagraphs(normalizedContent);
+        int titleLength = normalizedTitle.isEmpty() ? 0 : normalizedTitle.length() + 1;
+        int bodyLimit = Math.max(OVERLAP_LENGTH, MAX_TOTAL_LENGTH - titleLength);
+        List<String> bodyChunks = splitParagraphs(normalizedContent, bodyLimit);
         return bodyChunks.stream()
             .map(bodyChunk -> normalizedTitle + "\n" + bodyChunk)
             .toList();
     }
 
-    private static List<String> splitParagraphs(String content) {
+    private static List<String> splitParagraphs(String content, int bodyLimit) {
         List<String> chunks = new ArrayList<>();
         for (String paragraph : content.split("\\n\\s*\\n")) {
             String normalizedParagraph = paragraph.strip();
             if (normalizedParagraph.isEmpty()) {
                 continue;
             }
-            if (normalizedParagraph.length() <= MAX_BODY_LENGTH) {
+            if (normalizedParagraph.length() <= bodyLimit) {
                 chunks.add(normalizedParagraph);
                 continue;
             }
-            chunks.addAll(splitLongParagraph(normalizedParagraph));
+            chunks.addAll(splitLongParagraph(normalizedParagraph, bodyLimit));
         }
         return chunks;
     }
 
-    private static List<String> splitLongParagraph(String paragraph) {
+    private static List<String> splitLongParagraph(String paragraph, int bodyLimit) {
         List<String> chunks = new ArrayList<>();
         int start = 0;
         while (start < paragraph.length()) {
-            int end = Math.min(start + MAX_BODY_LENGTH, paragraph.length());
+            int end = Math.min(start + bodyLimit, paragraph.length());
             if (end < paragraph.length()) {
                 int sentenceEnd = Math.max(
                     paragraph.lastIndexOf('。', end),
                     paragraph.lastIndexOf('.', end));
-                if (sentenceEnd > start + MAX_BODY_LENGTH / 2) {
+                if (sentenceEnd > start + bodyLimit / 2) {
                     end = sentenceEnd + 1;
                 }
             }

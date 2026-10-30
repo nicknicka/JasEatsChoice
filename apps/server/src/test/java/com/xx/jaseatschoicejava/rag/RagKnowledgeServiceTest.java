@@ -106,6 +106,20 @@ class RagKnowledgeServiceTest {
     }
 
     @Test
+    void announcementUnder800CharactersIsSingleChunk() {
+        Announcement announcement = activePlatformAnnouncement();
+        announcement.setContent("Weekend discount details. ".repeat(28).strip());
+        when(announcementService.getById("announcement-1")).thenReturn(announcement);
+        service.syncAnnouncement("announcement-1");
+
+        List<RagKnowledgeResult> results = service.search(new RagKnowledgeQuery(
+            "weekend discount", RagAudience.CUSTOMER, null, LocalDateTime.parse("2026-10-31T12:00:00"), 20));
+
+        assertThat(results).hasSize(1);
+        assertThat(results.getFirst().chunkCount()).isEqualTo(1);
+    }
+
+    @Test
     void longAnnouncementIsStableChunkedAndUpdateRemovesOldChunks() {
         Announcement original = activePlatformAnnouncement();
         original.setTitle("Weekend discount");
