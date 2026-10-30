@@ -95,16 +95,8 @@
 import { ref, onMounted } from 'vue'
 import { dishApi } from '@/api/modules/dish.js'
 
-// 分类数据
-const categories = ref([
-  { label: '全部', value: 'all' },
-  { label: '热菜', value: 'hot' },
-  { label: '凉菜', value: 'cold' },
-  { label: '汤羹', value: 'soup' },
-  { label: '主食', value: 'staple' },
-  { label: '饮料', value: 'drink' },
-  { label: '小吃', value: 'snack' }
-])
+// 分类数据（"全部"固定，其余按商家实际使用的分类动态加载）
+const categories = ref([{ label: '全部', value: 'all' }])
 
 const activeCategory = ref('all')
 const dishList = ref([])
@@ -127,6 +119,7 @@ onMounted(() => {
     })
     return
   }
+  loadCategories()
   loadDishes()
 })
 
@@ -138,6 +131,23 @@ const changeCategory = (category) => {
   page.value = 1
   noMore.value = false
   loadDishes()
+}
+
+/**
+ * 加载菜品分类（按商家维度，仅返回已在使用的分类）
+ */
+const loadCategories = async () => {
+  try {
+    const res = await dishApi.getCategories({ merchantId: merchantId.value })
+    if (res.success === true && Array.isArray(res.data)) {
+      categories.value = [
+        { label: '全部', value: 'all' },
+        ...res.data.map(category => ({ label: category, value: category }))
+      ]
+    }
+  } catch (error) {
+    console.error('加载菜品分类失败:', error)
+  }
 }
 
 /**
@@ -167,7 +177,7 @@ const loadDishes = async (isRefresh = false) => {
 
     const res = await dishApi.getList(params)
 
-    if (res.code === 200 && res.data) {
+    if (res.success === true && res.data) {
       // 转换后端数据格式为前端所需格式
       const transformedDishes = res.data.map(dish => ({
         id: dish.id,

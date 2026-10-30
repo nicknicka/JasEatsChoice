@@ -96,6 +96,25 @@ public class DishController {
     }
 
     /**
+     * 获取菜品分类列表（按商家维度去重，仅返回已在使用的分类）
+     */
+    @GetMapping("/categories")
+    public ResponseResult<?> getDishCategories(@RequestParam(required = false) String merchantId) {
+        log.info("获取菜品分类列表, merchantId: {}", merchantId);
+        LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();
+        if (merchantId != null && !merchantId.isEmpty()) {
+            queryWrapper.eq(Dish::getMerchantId, merchantId);
+        }
+        List<Dish> dishes = dishService.list(queryWrapper);
+        List<String> categories = dishes.stream()
+                .map(Dish::getCategory)
+                .filter(category -> category != null && !category.trim().isEmpty())
+                .distinct()
+                .collect(java.util.stream.Collectors.toList());
+        return ResponseResult.success(categories);
+    }
+
+    /**
      * 根据商家ID获取菜品列表
      */
     @GetMapping("/merchant/{merchantId}")
