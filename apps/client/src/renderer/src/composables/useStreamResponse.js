@@ -91,9 +91,10 @@ export function useStreamResponse() {
    * @param {Function} onComplete - 完成回调
    * @param {Function} onError - 错误回调
    * @param {Function} onProgress - 进度回调（可选）
+   * @param {Function} onEvent - 原始事件回调（可选，用于 card_data 等非文本事件）
    * @returns {Promise<void>}
    */
-  const processStream = async (reader, onContent, onComplete, onError, onProgress) => {
+  const processStream = async (reader, onContent, onComplete, onError, onProgress, onEvent) => {
     isStreaming.value = true
     const decoder = new TextDecoder()
     let buffer = ''
@@ -126,6 +127,11 @@ export function useStreamResponse() {
         for (const line of lines) {
           const parsedData = parseSSELine(line)
           if (!parsedData) continue
+
+          // 原始事件回调：允许调用方处理 card_data 等非文本事件
+          if (onEvent) {
+            onEvent(parsedData)
+          }
 
           // 检查是否结束（done标记）
           if (parsedData.done === true) {

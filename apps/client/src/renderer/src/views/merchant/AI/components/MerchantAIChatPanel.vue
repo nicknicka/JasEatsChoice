@@ -26,7 +26,10 @@
             </div>
             <div class="thinking-text">{{ msg.thinkingText || '正在思考中...' }}</div>
           </div>
-          <div v-else class="text" v-html="formatMarkdown(msg.content)"></div>
+          <div v-else class="message-content">
+            <div v-if="msg.content" class="text" v-html="formatMarkdown(msg.content)"></div>
+            <MerchantAICard v-if="msg.cardData" :data="msg.cardData" :fallback-text="msg.content" />
+          </div>
           <div class="time">{{ msg.time }}</div>
         </div>
       </div>
@@ -88,6 +91,7 @@
 import { computed, ref, onMounted } from 'vue'
 import { Delete, Position, Loading } from '@element-plus/icons-vue'
 import { useMerchantAIChat } from '../composables/useMerchantAIChat'
+import MerchantAICard from './MerchantAICard.vue'
 import { MERCHANT_QUICK_QUESTIONS } from '../../../../config/merchantChatConfig'
 import { useUserStore } from '../../../../store/userStore'
 import { getAvatarUrl } from '../../../../utils/avatar'
@@ -316,6 +320,12 @@ onMounted(() => {
     padding: 14px 18px;
     border-radius: 18px;
     position: relative;
+
+    .message-content {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
 
     .text {
       font-size: 14px;

@@ -19,6 +19,41 @@ import {
 const messages = ref([])
 const isLoading = ref(false)
 
+const normalizeCardData = (cardData) => {
+  if (!cardData) return null
+  if (Array.isArray(cardData)) return cardData.length > 0 ? normalizeCardData(cardData[0]) : null
+  if (typeof cardData === 'string') {
+    try {
+      return normalizeCardData(JSON.parse(cardData))
+    } catch (error) {
+      merchantLogger.warn('卡片数据不是有效 JSON:', error.message)
+      return null
+    }
+  }
+  return typeof cardData === 'object' ? cardData : null
+}
+
+const extractCardDataFromContent = (content) => {
+  if (!content || typeof content !== 'string') {
+    return { content, cardData: null }
+  }
+
+  const startMarker = '[CARD_DATA_START]'
+  const endMarker = '[CARD_DATA_END]'
+  const startIndex = content.indexOf(startMarker)
+  const endIndex = content.indexOf(endMarker)
+
+  if (startIndex === -1 || endIndex === -1 || endIndex < startIndex) {
+    return { content, cardData: null }
+  }
+
+  const cardJson = content.substring(startIndex + startMarker.length, endIndex).trim()
+  return {
+    content: content.substring(0, startIndex).trim(),
+    cardData: normalizeCardData(cardJson)
+  }
+}
+
 export function useMerchantAIChat() {
   const authStore = useAuthStore()
   const { isStreaming, processStream } = useStreamResponse()
@@ -68,6 +103,41 @@ export function useMerchantAIChat() {
   }
 
   /**
+   * 保存带卡片的 AI 回复，供历史记录回显
+   */
+  const saveCardMessageToBackend = async (message) => {
+    if (!message?.cardData || message._cardSaved) {
+      return
+    }
+
+    const payload = {
+      userId: getUserId(),
+      sender: 'ai',
+      content: message.content || '',
+      messageType: message.messageType || 'uni_card',
+      cardData: message.cardData
+    }
+
+    if (message.clientMessageId) {
+      payload.clientMessageId = message.clientMessageId
+    }
+
+    try {
+      const response = await axios.post(API_CONFIG.baseURL + API_CONFIG.ai.save, payload, {
+        headers: { Authorization: `Bearer ${authStore.token}` }
+      })
+
+      if (response.data?.code !== 200) {
+        throw new Error(response.data?.message || '保存卡片消息失败')
+      }
+
+      message._cardSaved = true
+    } catch (error) {
+      merchantLogger.error('保存商家AI卡片消息失败:', error)
+    }
+  }
+
+  /**
    * 加载聊天历史
    */
   const loadMessages = async () => {
@@ -81,13 +151,20 @@ export function useMerchantAIChat() {
 
       const historyList = response.data?.data
       if (response.data?.code === 200 && Array.isArray(historyList) && historyList.length > 0) {
-        messages.value = historyList.map((item, index) => ({
-          id: item.id || index + 1,
-          sender: item.sender,
-          content: item.content,
-          time: formatTime(new Date(item.createdAt)),
-          avatar: item.sender === 'ai' ? '🤖' : '👤'
-        }))
+        messages.value = historyList.map((item, index) => {
+          const extracted = extractCardDataFromContent(item.content)
+          const cardData = normalizeCardData(item.cardData) || extracted.cardData
+
+          return {
+            id: item.id || index + 1,
+            sender: item.sender,
+            content: extracted.content,
+            messageType: item.messageType || (cardData ? 'uni_card' : null),
+            cardData,
+            time: formatTime(new Date(item.createdAt)),
+            avatar: item.sender === 'ai' ? '🤖' : '👤'
+          }
+        })
       } else {
         messages.value = [createWelcomeMessage()]
       }
@@ -120,10 +197,15 @@ export function useMerchantAIChat() {
     scrollToBottom(true)
 
     const aiMessageIndex = messages.value.length
+    const aiClientMessageId = `merchant-ai-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
     messages.value.push({
       id: aiMessageIndex + 1,
       sender: 'ai',
       content: '',
+      messageType: null,
+      cardData: null,
+      clientMessageId: aiClientMessageId,
+      _cardSaved: false,
       time: formatTime(),
       avatar: '🤖',
       isThinking: true,
@@ -162,10 +244,18 @@ export function useMerchantAIChat() {
         reader,
         (chunk) => {
           const message = messages.value[aiMessageIndex]
+          const extracted = extractCardDataFromContent(chunk)
+
           message.isThinking = false
           message.progress = false
           message.thinkingText = ''
-          message.content += chunk
+          message.content += extracted.content
+
+          if (extracted.cardData) {
+            message.cardData = extracted.cardData
+            message.messageType = 'uni_card'
+          }
+
           scrollToBottom(false)
         },
         () => {
@@ -190,8 +280,23 @@ export function useMerchantAIChat() {
           message.progress = true
           message.thinkingText = progressText || '正在思考中...'
           scrollToBottom(false)
+        },
+        (payload) => {
+          const message = messages.value[aiMessageIndex]
+          const cardData = normalizeCardData(payload?.card_data)
+
+          if (!message || !cardData) return
+
+          message.cardData = cardData
+          message.messageType = 'uni_card'
+          message.isThinking = false
+          message.progress = false
+          message.thinkingText = ''
+          scrollToBottom(false)
         }
       )
+
+      await saveCardMessageToBackend(messages.value[aiMessageIndex])
     } catch (error) {
       if (error.name === 'AbortError') {
         merchantLogger.warn('商家AI回复被主动中断')
