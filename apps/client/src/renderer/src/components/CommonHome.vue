@@ -829,7 +829,11 @@ const handleSearch = (value) => {
             :size="80"
             class="user-avatar"
             :avatar-url="userRole === 'merchant' ? userStore.merchantInfo?.avatar : userStore.userInfo?.avatar"
-            :fallback-text="userStore.userInfo?.nickname"
+            :fallback-text="
+              userRole === 'merchant'
+                ? userStore.merchantInfo?.name || userStore.merchantInfo?.nickname
+                : userStore.userInfo?.nickname
+            "
             :show-upload="false"
             :click-to-enlarge="true"
           >
