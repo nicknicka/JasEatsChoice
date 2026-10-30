@@ -83,7 +83,7 @@ Issue 与 spec 都放 GitHub Issues（私有仓 nicknicka/JasEatsChoice），一
 
 ### Domain docs
 
-single-context：词表在根目录 `GLOSSARY.md`，架构决策在 `docs/adr/`（当前 5 篇 ADR）。见 `docs/agents/domain.md`。
+single-context：词表在根目录 `GLOSSARY.md`，架构决策在 `docs/adr/`（当前 6 篇 ADR）。见 `docs/agents/domain.md`。
 
 ## 代码规范
 
