@@ -14,6 +14,13 @@ x-app-env: &app-env
   - JWT_EXPIRATION=${JWT_EXPIRATION:-86400000}
   - ZHIPU_API_KEY=${ZHIPU_API_KEY:-}
   - ZHIPU_MODEL=${ZHIPU_MODEL:-glm-4-flash}
+  - ANNOUNCEMENT_RAG_ENABLED=${ANNOUNCEMENT_RAG_ENABLED:-true}
+  - QDRANT_HOST=qdrant
+  - QDRANT_PORT=6334
+  - QDRANT_COLLECTION=${QDRANT_COLLECTION:-jaseats_announcements}
+  - ZHIPU_EMBEDDING_MODEL=${ZHIPU_EMBEDDING_MODEL:-embedding-3}
+  - AI_EMBEDDING_DIMENSIONS=${AI_EMBEDDING_DIMENSIONS:-2048}
+  - ZHIPU_EMBEDDING_BASE_URL=${ZHIPU_EMBEDDING_BASE_URL:-}
   - AMAP_API_KEY=${AMAP_API_KEY:-}
   - TENCENT_MAP_KEY=${TENCENT_MAP_KEY:-}
   - MAIL_USERNAME=${MAIL_USERNAME:-}
@@ -58,6 +65,20 @@ services:
       start_period: 40s
     restart: unless-stopped
 
+  qdrant:
+    image: qdrant/qdrant:v1.17.0
+    volumes:
+      - qdrant-data:/qdrant/storage
+    networks:
+      - jaseats-net
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/6333'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    restart: unless-stopped
+
   redis:
     image: redis:7-alpine
     command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:-}", "--appendonly", "yes"]
@@ -83,6 +104,8 @@ services:
       mysql:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      qdrant:
         condition: service_healthy
     networks:
       - jaseats-net
@@ -122,4 +145,5 @@ networks:
 volumes:
   mysql-data:
   redis-data:
+  qdrant-data:
   uploads:
