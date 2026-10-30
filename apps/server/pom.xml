@@ -28,6 +28,7 @@
     </scm>
     <properties>
         <java.version>21</java.version>
+        <testcontainers.version>2.0.5</testcontainers.version>
     </properties>
     <dependencies>
         <!-- 算术验证码依赖 -->
@@ -241,6 +242,13 @@
             <version>1.12.1-beta21</version>
         </dependency>
 
+        <!-- LangChain4j Qdrant 集成（传递 io.qdrant:client） -->
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-qdrant</artifactId>
+            <version>1.12.1-beta21</version>
+        </dependency>
+
 
         <!-- 邮件服务依赖 -->
         <dependency>
@@ -269,6 +277,17 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Qdrant collection 初始化集成测试 -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -309,6 +328,13 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.1.2</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.apache.maven.surefire</groupId>
+                        <artifactId>surefire-junit-platform</artifactId>
+                        <version>3.1.2</version>
+                    </dependency>
+                </dependencies>
                 <configuration>
                     <skipTests>false</skipTests>
                 </configuration>
