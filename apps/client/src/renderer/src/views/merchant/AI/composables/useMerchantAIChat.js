@@ -9,7 +9,8 @@ import { API_CONFIG } from '../../../../config/index'
 import { formatTime } from '../../../../utils/dateFormatter'
 import { handleApiError } from '../../../../utils/errorHandler'
 import { useStreamResponse } from '../../../../composables/useStreamResponse'
-import { normalizeAICardData, parseCardContent } from '../../../../utils/aiCardDataParser.js'
+import { createMerchantAIStreamingCollector } from './merchantAIStreamingService.js'
+
 import {
   createMerchantAIHistoryService,
   mapMerchantHistoryMessage
@@ -174,6 +175,7 @@ export function useMerchantAIChat() {
 
     abortController.value = new AbortController()
     isLoading.value = true
+    const streamingCollector = createMerchantAIStreamingCollector()
 
     try {
       const response = await fetch(API_CONFIG.baseURL + API_CONFIG.ai.chat, {
@@ -202,12 +204,12 @@ export function useMerchantAIChat() {
         reader,
         (chunk) => {
           const message = messages.value[aiMessageIndex]
-          const extracted = parseCardContent(chunk)
+          const extracted = streamingCollector.appendContent(chunk)
 
           message.isThinking = false
           message.progress = false
           message.thinkingText = ''
-          message.content += extracted.content
+          if (extracted.content) message.content = extracted.content
 
           if (extracted.cardData) {
             message.cardData = extracted.cardData
@@ -241,12 +243,13 @@ export function useMerchantAIChat() {
         },
         (payload) => {
           const message = messages.value[aiMessageIndex]
-          const cardData = normalizeAICardData(payload?.card_data)
+          if (!message || !payload?.card_data) return
 
-          if (!message || !cardData) return
+          streamingCollector.appendCardData(payload.card_data)
+          const extracted = streamingCollector.getSnapshot()
 
-          message.cardData = cardData
-          message.messageType = 'uni_card'
+          message.cardData = extracted.cardData
+          message.messageType = extracted.messageType
           message.isThinking = false
           message.progress = false
           message.thinkingText = ''

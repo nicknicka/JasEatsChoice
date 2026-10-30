@@ -48,7 +48,7 @@ test('历史消息按接口返回顺序恢复发送者、文字和卡片', () =>
       sender: 'ai',
       content: '这是订单卡片',
       messageType: 'uni_card',
-      cardData: card,
+      cardData: [card],
       time: '10:30',
       avatar: '🤖'
     }
