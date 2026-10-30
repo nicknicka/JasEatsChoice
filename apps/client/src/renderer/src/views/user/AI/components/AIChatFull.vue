@@ -463,6 +463,7 @@ import ErrorCard from "./cards/ErrorCard.vue";
 import OrderGuideCard from "./cards/OrderGuideCard.vue";
 // [UniCard迁移] 导入 UniCard 统一卡片组件
 import UniCard from "./cards/UniCard.vue";
+import { normalizeAICardData } from "../../../../utils/aiCardDataParser.js";
 
 const cardComponents = {
 	order_list_card: OrderListCard,
@@ -489,18 +490,7 @@ const getCardComponent = (messageType) => {
 	return UniCard;
 };
 
-const parseCardData = (cardData) => {
-	if (!cardData) return null;
-	if (typeof cardData === "object") return cardData;
-	if (typeof cardData === "string") {
-		try {
-			return JSON.parse(cardData);
-		} catch {
-			return null;
-		}
-	}
-	return null;
-};
+const parseCardData = normalizeAICardData;
 
 // ========== 引用 ==========
 const chatContainerRef = ref(null);

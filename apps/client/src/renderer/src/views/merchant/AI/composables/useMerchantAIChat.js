@@ -9,6 +9,12 @@ import { API_CONFIG } from '../../../../config/index'
 import { formatTime } from '../../../../utils/dateFormatter'
 import { handleApiError } from '../../../../utils/errorHandler'
 import { useStreamResponse } from '../../../../composables/useStreamResponse'
+import { createMerchantAIStreamingCollector } from './merchantAIStreamingService.js'
+
+import {
+  createMerchantAIHistoryService,
+  mapMerchantHistoryMessage
+} from './merchantAIHistoryService.js'
 import {
   MERCHANT_CHAT_CONFIG,
   MERCHANT_WELCOME_MESSAGE,
@@ -67,6 +73,36 @@ export function useMerchantAIChat() {
     return ''
   }
 
+  const historyService = createMerchantAIHistoryService({
+    request: axios,
+    getUserId,
+    getToken: () => authStore.token
+  })
+
+  /**
+   * 保存单条聊天记录，失败时保留待重试状态
+   */
+  const saveHistoryMessage = async (message) => {
+    if (!message || message.saveStatus === 'saved' || message.saveStatus === 'saving') {
+      return
+    }
+
+    message.saveStatus = 'saving'
+    const result = await historyService.saveMessage(message)
+    message.saveStatus = result.status
+
+    if (!result.ok) {
+      merchantLogger.warn('保存商家AI聊天记录失败:', result.error)
+    }
+  }
+
+  /**
+   * 重试保存聊天记录，继续复用原来的 clientMessageId
+   */
+  const retrySaveMessage = (message) => {
+    return saveHistoryMessage(message)
+  }
+
   /**
    * 加载聊天历史
    */
@@ -81,13 +117,9 @@ export function useMerchantAIChat() {
 
       const historyList = response.data?.data
       if (response.data?.code === 200 && Array.isArray(historyList) && historyList.length > 0) {
-        messages.value = historyList.map((item, index) => ({
-          id: item.id || index + 1,
-          sender: item.sender,
-          content: item.content,
-          time: formatTime(new Date(item.createdAt)),
-          avatar: item.sender === 'ai' ? '🤖' : '👤'
-        }))
+        messages.value = historyList.map((item, index) =>
+          mapMerchantHistoryMessage(item, index, formatTime)
+        )
       } else {
         messages.value = [createWelcomeMessage()]
       }
@@ -110,20 +142,29 @@ export function useMerchantAIChat() {
       return
     }
 
-    messages.value.push({
+    const userMessage = {
       id: messages.value.length + 1,
       sender: 'user',
       content: trimmedContent,
+      clientMessageId: `merchant-user-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
       time: formatTime(),
-      avatar: '👤'
-    })
+      avatar: '👤',
+      saveStatus: 'pending'
+    }
+    messages.value.push(userMessage)
+    saveHistoryMessage(userMessage)
     scrollToBottom(true)
 
     const aiMessageIndex = messages.value.length
+    const aiClientMessageId = `merchant-ai-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
     messages.value.push({
       id: aiMessageIndex + 1,
       sender: 'ai',
       content: '',
+      messageType: null,
+      cardData: null,
+      clientMessageId: aiClientMessageId,
+      saveStatus: 'pending',
       time: formatTime(),
       avatar: '🤖',
       isThinking: true,
@@ -134,6 +175,7 @@ export function useMerchantAIChat() {
 
     abortController.value = new AbortController()
     isLoading.value = true
+    const streamingCollector = createMerchantAIStreamingCollector()
 
     try {
       const response = await fetch(API_CONFIG.baseURL + API_CONFIG.ai.chat, {
@@ -162,10 +204,18 @@ export function useMerchantAIChat() {
         reader,
         (chunk) => {
           const message = messages.value[aiMessageIndex]
+          const extracted = streamingCollector.appendContent(chunk)
+
           message.isThinking = false
           message.progress = false
           message.thinkingText = ''
-          message.content += chunk
+          if (extracted.content) message.content = extracted.content
+
+          if (extracted.cardData) {
+            message.cardData = extracted.cardData
+            message.messageType = 'uni_card'
+          }
+
           scrollToBottom(false)
         },
         () => {
@@ -190,8 +240,24 @@ export function useMerchantAIChat() {
           message.progress = true
           message.thinkingText = progressText || '正在思考中...'
           scrollToBottom(false)
+        },
+        (cardData) => {
+          const message = messages.value[aiMessageIndex]
+          if (!message || !cardData) return
+
+          streamingCollector.appendCardData(cardData)
+          const extracted = streamingCollector.getSnapshot()
+
+          message.cardData = extracted.cardData
+          message.messageType = extracted.messageType
+          message.isThinking = false
+          message.progress = false
+          message.thinkingText = ''
+          scrollToBottom(false)
         }
       )
+
+      await saveHistoryMessage(messages.value[aiMessageIndex])
     } catch (error) {
       if (error.name === 'AbortError') {
         merchantLogger.warn('商家AI回复被主动中断')
@@ -254,6 +320,7 @@ export function useMerchantAIChat() {
     chatContainerRef,
     loadMessages,
     sendMessage,
+    retrySaveMessage,
     clearChat,
     scrollToBottom
   }

@@ -7,6 +7,7 @@ import {
 } from '@element-plus/icons-vue'
 // [UniCard迁移] 导入 UniCardParser
 import { useUniCardParser } from '../views/user/AI/composables/useUniCardParser'
+import { getFirstAICardData } from '../utils/aiCardDataParser.js'
 
 /**
  * 增强版流式传输
@@ -279,15 +280,9 @@ export function useAdvancedStreaming(options) {
 			const message = getMessage(messageIndex)
 			if (message) {
 				try {
-					let cardDataObj = parsedData.card_data
-					if (typeof cardDataObj === 'string') {
-						cardDataObj = JSON.parse(cardDataObj)
-					}
+					const firstCard = getFirstAICardData(parsedData.card_data)
 
-					let cardArray = Array.isArray(cardDataObj) ? cardDataObj : [cardDataObj]
-					if (cardArray.length > 0) {
-						const firstCard = cardArray[0]
-
+					if (firstCard) {
 						// 统一使用 UniCardParser 解析所有卡片数据
 						const { parseCardData } = useUniCardParser()
 						const parseResult = parseCardData(firstCard)

@@ -17,7 +17,11 @@
     "postinstall": "electron-builder install-app-deps",
     "build:win": "npm run build && electron-builder --win --config",
     "build:mac": "npm run build && electron-builder --mac --config",
-    "build:linux": "npm run build && electron-builder --linux --config"
+    "build:linux": "npm run build && electron-builder --linux --config",
+    "test:ai-card-data-parser": "node --test scripts/test-ai-card-data-parser.mjs",
+    "test:merchant-ai-history": "node --test scripts/test-merchant-ai-history.mjs",
+    "test:merchant-ai-multi-card-stream": "node --test scripts/test-merchant-ai-multi-card-stream.mjs",
+    "test:merchant-ai-card-hardening": "node --import ./scripts/register-test-import-meta-env.mjs --test scripts/test-merchant-ai-card-hardening.mjs"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^2.0.0",

@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { logger } from '../config/chatConfig'
+import { logger } from '../config/chatConfig.js'
 
 /**
  * 流式响应处理
@@ -91,9 +91,10 @@ export function useStreamResponse() {
    * @param {Function} onComplete - 完成回调
    * @param {Function} onError - 错误回调
    * @param {Function} onProgress - 进度回调（可选）
+   * @param {Function} onCardData - 卡片数据回调（可选，只回调 card_data 字段）
    * @returns {Promise<void>}
    */
-  const processStream = async (reader, onContent, onComplete, onError, onProgress) => {
+  const processStream = async (reader, onContent, onComplete, onError, onProgress, onCardData) => {
     isStreaming.value = true
     const decoder = new TextDecoder()
     let buffer = ''
@@ -126,6 +127,15 @@ export function useStreamResponse() {
         for (const line of lines) {
           const parsedData = parseSSELine(line)
           if (!parsedData) continue
+
+          // 只回调调用方关心的卡片数据，避免暴露完整 SSE 事件结构
+          if (onCardData && Object.prototype.hasOwnProperty.call(parsedData, 'card_data')) {
+            try {
+              onCardData(parsedData.card_data)
+            } catch (eventError) {
+              logger.error('⚠️ 卡片数据处理失败:', eventError)
+            }
+          }
 
           // 检查是否结束（done标记）
           if (parsedData.done === true) {
