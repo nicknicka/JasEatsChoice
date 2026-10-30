@@ -62,8 +62,12 @@ public class RagKnowledgeService {
     }
 
     public int rebuildAllAnnouncements() {
+        if (embeddingStore == null) {
+            return 0;
+        }
         List<Announcement> announcements = announcementService.list(
             new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>());
+        embeddingStore.removeAll(metadataKey("sourceType").isEqualTo("announcement"));
         announcements.forEach(this::synchronizeAnnouncement);
         return announcements.size();
     }

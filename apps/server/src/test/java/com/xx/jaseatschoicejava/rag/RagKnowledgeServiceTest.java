@@ -15,6 +15,7 @@ import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.xx.jaseatschoicejava.entity.Announcement;
 import com.xx.jaseatschoicejava.service.AnnouncementService;
 
+import dev.langchain4j.data.document.Metadata;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.embedding.EmbeddingModel;
@@ -305,6 +306,38 @@ class RagKnowledgeServiceTest {
     }
 
     @Test
+    void fullRebuildRemovesOrphanVectorsMissingFromDatabase() {
+        Announcement announcement = activePlatformAnnouncement();
+        when(announcementService.list(any(Wrapper.class))).thenReturn(List.of(announcement));
+        service.syncAnnouncement("announcement-1");
+
+        Metadata orphanMetadata = new Metadata();
+        orphanMetadata.put("sourceType", "announcement");
+        orphanMetadata.put("contentId", "orphan-announcement");
+        orphanMetadata.put("title", "Orphan expired promotion");
+        orphanMetadata.put("chunkIndex", 0);
+        orphanMetadata.put("chunkCount", 1);
+        orphanMetadata.put("text", "Orphan expired promotion weekend discount text.");
+        orphanMetadata.put("merchantId", "platform");
+        orphanMetadata.put("targetAudience", "customer");
+        orphanMetadata.put("audienceTags", "customer");
+        orphanMetadata.put("status", "active");
+        orphanMetadata.put("startAt", "2026-10-01T00:00:00");
+        orphanMetadata.put("endAt", "2026-11-30T23:59:59");
+        store.add("orphan-point", new Embedding(new float[] {1f, 1f, 1f, 0f}),
+            TextSegment.from("Orphan expired promotion weekend discount text.", orphanMetadata));
+
+        service.rebuildAllAnnouncements();
+
+        List<RagKnowledgeResult> results = service.search(new RagKnowledgeQuery(
+            "weekend discount", RagAudience.CUSTOMER, null,
+            LocalDateTime.parse("2026-10-31T12:00:00"), 5));
+        assertThat(results).hasSize(1);
+        assertThat(results.getFirst().announcementId()).isEqualTo("announcement-1");
+        assertThat(results.getFirst().title()).isEqualTo("Weekend discount");
+    }
+
+    @Test
     void syncFailureDoesNotPropagateAfterAnnouncementWrite() {
         Announcement announcement = activePlatformAnnouncement();
         when(announcementService.getById("announcement-1")).thenReturn(announcement);
@@ -316,6 +349,25 @@ class RagKnowledgeServiceTest {
         assertThat(service.search(new RagKnowledgeQuery(
             "weekend discount", RagAudience.CUSTOMER, null, LocalDateTime.parse("2026-10-31T12:00:00"), 5)))
             .isEmpty();
+    }
+
+    @Test
+    void syncFailureThenFullRebuildRestoresVector() {
+        Announcement announcement = activePlatformAnnouncement();
+        when(announcementService.getById("announcement-1")).thenReturn(announcement);
+        when(announcementService.list(any(Wrapper.class))).thenReturn(List.of(announcement));
+        EmbeddingModel failingModel = mock(EmbeddingModel.class);
+        when(failingModel.embedAll(any())).thenThrow(new IllegalStateException("embedding failed"));
+        RagKnowledgeService failingService = new RagKnowledgeService(announcementService, failingModel, store);
+        failingService.syncAnnouncement("announcement-1");
+
+        service.rebuildAllAnnouncements();
+
+        List<RagKnowledgeResult> results = service.search(new RagKnowledgeQuery(
+            "weekend discount", RagAudience.CUSTOMER, null,
+            LocalDateTime.parse("2026-10-31T12:00:00"), 5));
+        assertThat(results).hasSize(1);
+        assertThat(results.getFirst().title()).isEqualTo("Weekend discount");
     }
 
     private static Announcement merchantAnnouncement(String merchantId, String audience) {
