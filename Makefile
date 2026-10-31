@@ -101,6 +101,11 @@ test:
 test-smoke:
 	cd tests && npx playwright test 01-auth.spec.js 04-order.spec.js 10-merchant-order-dish.spec.js
 
+# 后端单测：只起依赖（mysql/redis/qdrant），应用上下文由测试自己拉起。
+# 脚本会临时导出 deploy/.env 的库凭据；Netty 端口已在 pom 里固定为随机端口。
+test-backend:
+	bash scripts/ci-backend.sh
+
 lint:
 	cd apps/client && $(NPM) run lint
 
