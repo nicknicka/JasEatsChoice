@@ -2,39 +2,37 @@ package com.xx.jaseatschoicejava.agent.config;
 
 import com.xx.jaseatschoicejava.agent.dto.AiCapabilitiesDTO;
 import com.xx.jaseatschoicejava.config.AIConfig;
-import com.xx.jaseatschoicejava.config.AiApiKeyResolver;
-import com.xx.jaseatschoicejava.config.AiRuntimeKeyStore;
+import com.xx.jaseatschoicejava.config.AiModelConfig;
 import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 import com.xx.jaseatschoicejava.service.impl.AiModelClientFactory;
+import com.xx.jaseatschoicejava.service.impl.AiProviderRegistry;
 
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * 智谱 AI 模型装配。运行时客户端由动态代理按当前激活快照解析。
+ * AI 模型装配。运行时客户端由动态代理按当前激活快照解析。
+ *
+ * 能力与可用性按当前激活快照的 provider 从 {@link AiProviderRegistry} 解析，
+ * 因此新增供应商适配器（如 openai-compatible）时这里无需改动。
  */
 @Configuration
-@ConditionalOnProperty(prefix = "ai", name = "provider", havingValue = "zhipu", matchIfMissing = true)
 @EnableConfigurationProperties({ AIConfig.class, ZhipuAIConfig.class })
 public class ZhipuChatModelFactory {
 
     @Bean
     public ChatModelProvider chatModelProvider(
             @Autowired DynamicAiModelRegistry registry,
-            @Autowired AiModelClientFactory modelFactory,
-            @Autowired AIConfig aiConfig,
-            @Autowired ZhipuAIConfig zhipuConfig,
-            @Autowired AiRuntimeKeyStore runtimeKeyStore) {
+            @Autowired AiProviderRegistry providerRegistry,
+            @Autowired AIConfig aiConfig) {
         return new ChatModelProvider() {
             @Override
             public boolean isAvailable() {
-                String apiKey = AiApiKeyResolver.resolve(zhipuConfig, aiConfig, runtimeKeyStore);
-                return apiKey != null && !apiKey.isBlank();
+                return activeAdapter().capabilities(activeConfig()).isAvailable();
             }
 
             @Override
@@ -59,7 +57,19 @@ public class ZhipuChatModelFactory {
 
             @Override
             public AiCapabilitiesDTO getCapabilities() {
-                return modelFactory.capabilities(registry.current().config());
+                return activeAdapter().capabilities(activeConfig());
+            }
+
+            private AiModelClientFactory activeAdapter() {
+                return providerRegistry.required(activeConfig().getProvider());
+            }
+
+            private AiModelConfig activeConfig() {
+                AiModelConfig config = registry.current().config();
+                if (config != null) {
+                    return config;
+                }
+                return providerRegistry.required(aiConfig.getProvider()).environmentConfig(aiConfig);
             }
         };
     }
