@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Configuration;
 
 import com.xx.jaseatschoicejava.config.AIConfig;
 import com.xx.jaseatschoicejava.config.AiApiKeyResolver;
+import com.xx.jaseatschoicejava.config.AiRuntimeKeyStore;
 import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 
 import dev.langchain4j.community.model.zhipu.ZhipuAiEmbeddingModel;
@@ -28,8 +29,9 @@ public class AnnouncementRagConfig {
     public EmbeddingModel announcementEmbeddingModel(
         AnnouncementRagProperties properties,
         ZhipuAIConfig zhipuAIConfig,
-        AIConfig aiConfig) {
-        String apiKey = AiApiKeyResolver.resolve(zhipuAIConfig, aiConfig);
+        AIConfig aiConfig,
+        AiRuntimeKeyStore runtimeKeyStore) {
+        String apiKey = AiApiKeyResolver.resolve(zhipuAIConfig, aiConfig, runtimeKeyStore);
         if (apiKey.isBlank()) {
             return new AnnouncementRagDisabledEmbeddingModel();
         }
@@ -50,10 +52,11 @@ public class AnnouncementRagConfig {
         AnnouncementRagProperties properties,
         ZhipuAIConfig zhipuAIConfig,
         AIConfig aiConfig,
+        AiRuntimeKeyStore runtimeKeyStore,
         EmbeddingModel announcementEmbeddingModel,
         QdrantClient announcementQdrantClient) {
         return new AnnouncementRagInfrastructure(
-            properties, AiApiKeyResolver.resolve(zhipuAIConfig, aiConfig),
+            properties, AiApiKeyResolver.resolve(zhipuAIConfig, aiConfig, runtimeKeyStore),
             announcementEmbeddingModel, announcementQdrantClient);
     }
 }

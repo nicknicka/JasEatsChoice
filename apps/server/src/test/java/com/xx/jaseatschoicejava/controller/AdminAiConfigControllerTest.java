@@ -45,7 +45,7 @@ class AdminAiConfigControllerTest {
             .providers(List.of(new AiRuntimeConfigSnapshot.AiProviderOption("zhipu", "智谱",
                 List.of("glm-4-flash", "glm-4.6v-flash"))))
             .build();
-        snapshot.setKeyStatus(new AiRuntimeConfigSnapshot.AiKeyStatus(true, "abcd12345678", "8901"));
+        snapshot.setKeyStatus(new AiRuntimeConfigSnapshot.AiKeyStatus(true, "abcd12345678"));
         when(service.getCurrentSnapshot()).thenReturn(snapshot);
 
         String body = mockMvc.perform(get("/admin/settings/ai/current"))
@@ -56,7 +56,7 @@ class AdminAiConfigControllerTest {
             .andExpect(jsonPath("$.data.supervisorModel").value("glm-4-flash"))
             .andExpect(jsonPath("$.data.visionModel").value("glm-4.6v-flash"))
             .andExpect(jsonPath("$.data.keyStatus.configured").value(true))
-            .andExpect(jsonPath("$.data.keyStatus.last4").value("8901"))
+            .andExpect(jsonPath("$.data.keyStatus.last4").doesNotExist())
             .andReturn().getResponse().getContentAsString();
 
         org.junit.jupiter.api.Assertions.assertFalse(body.contains("secret-key"));

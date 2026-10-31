@@ -13,6 +13,8 @@ public interface AiModelClientFactory {
 
     ChatModel buildChatModel(AiModelConfig config);
 
+    ChatModel buildChatModel(AiModelConfig config, String candidateApiKey);
+
     ChatModel buildSupervisorModel(AiModelConfig config);
 
     ChatModel buildVisionModel(AiModelConfig config);

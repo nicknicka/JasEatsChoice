@@ -37,4 +37,7 @@ public class AiModelCandidateDTO {
 
     @ApiModelProperty("温度")
     private Double temperature;
+
+    @ApiModelProperty("候选 API key；成功激活前不持久化，响应不回传")
+    private String apiKey;
 }

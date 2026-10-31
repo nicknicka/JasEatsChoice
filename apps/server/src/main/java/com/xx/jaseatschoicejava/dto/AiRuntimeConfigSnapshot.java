@@ -66,7 +66,6 @@ public class AiRuntimeConfigSnapshot {
     public static class AiKeyStatus {
         private boolean configured;
         private String fingerprint;
-        private String last4;
     }
 
     @Data

@@ -50,7 +50,8 @@ const aiCandidate = ref({
   visionModel: '',
   baseUrl: '',
   timeoutMs: 30000,
-  temperature: 0.7
+  temperature: 0.7,
+  apiKey: ''
 })
 const aiConfig = ref({
   provider: '',
@@ -61,7 +62,7 @@ const aiConfig = ref({
   timeoutMs: 30000,
   temperature: 0.7,
   updatedAt: '',
-  keyStatus: { configured: false, fingerprint: '', last4: '' },
+  keyStatus: { configured: false, fingerprint: '' },
   capabilities: {
     available: false,
     textChat: false,
@@ -278,7 +279,8 @@ function resetAiCandidateFromCurrent(config = {}) {
     visionModel: config.visionModel || '',
     baseUrl: config.baseUrl || '',
     timeoutMs: config.timeoutMs || 30000,
-    temperature: config.temperature || 0.7
+    temperature: config.temperature || 0.7,
+    apiKey: ''
   }
 }
 
@@ -491,7 +493,7 @@ onMounted(async () => {
               {{ aiConfig.keyStatus.configured ? '已配置' : '未配置' }}
             </el-tag>
             <span v-if="aiConfig.keyStatus.configured" class="key-status">
-              指纹：{{ aiConfig.keyStatus.fingerprint }} / 尾号：{{ aiConfig.keyStatus.last4 }}
+              指纹：{{ aiConfig.keyStatus.fingerprint }}
             </span>
 
             <h4>能力状态</h4>
@@ -529,6 +531,16 @@ onMounted(async () => {
 
             <h4>候选配置</h4>
             <el-form :model="aiCandidate" label-width="180px" style="max-width: 700px">
+              <el-form-item label="API Key">
+                <el-input
+                  v-model="aiCandidate.apiKey"
+                  type="password"
+                  show-password
+                  autocomplete="new-password"
+                  placeholder="输入新 active key；留空沿用当前 key"
+                />
+              </el-form-item>
+
               <el-form-item label="Provider">
                 <el-select v-model="aiCandidate.provider" placeholder="选择后端支持的 Provider">
                   <el-option
@@ -605,7 +617,7 @@ onMounted(async () => {
 
             <el-alert
               title="热切换说明"
-              description="新请求立即使用新模型；正在执行的请求继续使用旧模型。Embedding 模型与向量维度不在线切换。API key 仍由启动配置管理，本页面不保存明文 key。"
+              description="新请求立即使用新模型；正在执行的请求继续使用旧模型。候选 key 测试成功后写入运行时密钥文件，并优先于 AI_API_KEY。Embedding 模型与向量维度不在线切换。页面只显示状态和不可逆指纹，不显示明文 key。"
               type="warning"
               show-icon
               :closable="false"

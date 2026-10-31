@@ -16,6 +16,7 @@ import com.xx.jaseatschoicejava.agent.config.ChatModelProvider;
 import com.xx.jaseatschoicejava.agent.config.DynamicAiModelRegistry;
 import com.xx.jaseatschoicejava.agent.dto.AiCapabilitiesDTO;
 import com.xx.jaseatschoicejava.config.AiApiKeyResolver;
+import com.xx.jaseatschoicejava.config.AiRuntimeKeyStore;
 import com.xx.jaseatschoicejava.config.AiModelConfig;
 import com.xx.jaseatschoicejava.config.AIConfig;
 import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
@@ -52,6 +53,7 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
     private final DynamicAiModelRegistry registry;
     private final AiModelClientFactory modelFactory;
     private final ObjectMapper objectMapper;
+    private final AiRuntimeKeyStore runtimeKeyStore;
     private volatile long version = 0L;
     private volatile String updatedAt = LocalDateTime.now().withNano(0).toString();
 
@@ -63,7 +65,8 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
             SystemConfigService systemConfigService,
             DynamicAiModelRegistry registry,
             AiModelClientFactory modelFactory,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            AiRuntimeKeyStore runtimeKeyStore) {
         this.aiConfig = aiConfig;
         this.zhipuConfig = zhipuConfig;
         this.chatModelProvider = chatModelProvider;
@@ -71,6 +74,7 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
         this.registry = registry;
         this.modelFactory = modelFactory;
         this.objectMapper = objectMapper;
+        this.runtimeKeyStore = runtimeKeyStore;
     }
 
     public AiRuntimeConfigServiceImpl(
@@ -78,7 +82,7 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
             ZhipuAIConfig zhipuConfig,
             ChatModelProvider chatModelProvider) {
         this(aiConfig, zhipuConfig, chatModelProvider, null, new DynamicAiModelRegistry(),
-            new ZhipuAiModelClientFactory(aiConfig, zhipuConfig), new ObjectMapper());
+            new ZhipuAiModelClientFactory(aiConfig, zhipuConfig, null), new ObjectMapper(), null);
     }
 
     public AiRuntimeConfigServiceImpl(
@@ -89,7 +93,7 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
             AiModelClientFactory modelFactory,
             ObjectMapper objectMapper) {
         this(aiConfig, zhipuConfig, null, systemConfigService, registry,
-            modelFactory, objectMapper);
+            modelFactory, objectMapper, null);
     }
 
     @PostConstruct
@@ -113,7 +117,7 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
             ? config.getTimeoutMs() : timeout(aiConfig.getTimeout());
         double temperature = config != null ? config.getTemperature()
             : (aiConfig.getTemperature() != null ? aiConfig.getTemperature() : 0.7);
-        String apiKey = AiApiKeyResolver.resolve(zhipuConfig, aiConfig);
+        String apiKey = resolveKey();
 
         List<String> supportedModels = new ArrayList<>(ZHIPU_KNOWN_MODELS);
         for (String currentModel : List.of(config != null ? config.getModel() : null, supervisorModel, visionModel)) {
@@ -142,7 +146,7 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
 
     @Override
     public AiConnectivityResult testCurrentConnectivity() {
-        String apiKey = AiApiKeyResolver.resolve(zhipuConfig, aiConfig);
+        String apiKey = resolveKey();
         if (!hasText(apiKey)) {
             return failure(currentConfig().getModel(), "AI key 未配置");
         }
@@ -165,12 +169,16 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
         } catch (BusinessException exception) {
             return failure(candidate == null ? null : candidate.getModel(), exception.getMessage());
         }
-        String apiKey = AiApiKeyResolver.resolve(zhipuConfig, aiConfig);
+        String candidateKey = candidateKey(candidate);
+        String apiKey = candidateKey != null ? candidateKey : resolveKey();
         if (!hasText(apiKey)) {
             return failure(config.getModel(), "AI key 未配置");
         }
         try {
-            modelFactory.buildChatModel(config).chat("ping");
+            ChatModel candidateModel = candidateKey != null
+                ? modelFactory.buildChatModel(config, candidateKey)
+                : modelFactory.buildChatModel(config);
+            candidateModel.chat("ping");
             return new AiConnectivityResult(true, "连接成功", testedAt(), config.getModel());
         } catch (Exception exception) {
             return failure(config.getModel(), safeMessage(exception, apiKey));
@@ -185,18 +193,40 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
         }
 
         AiModelConfig config = validatedConfig(candidate);
+        String candidateKey = candidateKey(candidate);
+        String previousKey = resolveKey();
         long nextVersion = version + 1;
-        DynamicAiModelRegistry.ActiveModels clients = new DynamicAiModelRegistry.ActiveModels(
-            config,
-            modelFactory.buildChatModel(config),
-            modelFactory.buildSupervisorModel(config),
-            modelFactory.buildVisionModel(config),
-            modelFactory.buildStreamingModel(config),
-            nextVersion);
+        DynamicAiModelRegistry.ActiveModels clients;
+        try {
+            if (candidateKey != null) {
+                runtimeKeyStore.writeKey(candidateKey);
+            }
+            clients = new DynamicAiModelRegistry.ActiveModels(
+                config,
+                modelFactory.buildChatModel(config),
+                modelFactory.buildSupervisorModel(config),
+                modelFactory.buildVisionModel(config),
+                modelFactory.buildStreamingModel(config),
+                nextVersion);
+        } catch (Exception exception) {
+            rollbackRuntimeKey(candidateKey, previousKey);
+            if (exception instanceof BusinessException businessException) {
+                throw businessException;
+            }
+            throw new BusinessException("AI_KEY_WRITE_FAILED", "AI key 保存失败，当前 key 未变更");
+        }
+
         String configValue = writeConfigValue(config);
-        boolean saved = systemConfigService.setConfigValue(
-            CONFIG_KEY, configValue, "AI 模型运行时配置", CONFIG_GROUP);
+        boolean saved;
+        try {
+            saved = systemConfigService.setConfigValue(
+                CONFIG_KEY, configValue, "AI 模型运行时配置", CONFIG_GROUP);
+        } catch (Exception exception) {
+            rollbackRuntimeKey(candidateKey, previousKey);
+            throw new BusinessException("AI_CONFIG_SAVE_FAILED", "AI 配置保存失败");
+        }
         if (!saved) {
+            rollbackRuntimeKey(candidateKey, previousKey);
             throw new BusinessException("AI_CONFIG_SAVE_FAILED", "AI 配置保存失败");
         }
 
@@ -306,6 +336,30 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
         return active.config() != null ? active.config() : environmentConfig();
     }
 
+    private String resolveKey() {
+        return AiApiKeyResolver.resolve(zhipuConfig, aiConfig, runtimeKeyStore);
+    }
+
+    private String candidateKey(AiModelCandidateDTO candidate) {
+        return candidate != null && hasText(candidate.getApiKey())
+            ? candidate.getApiKey().trim() : null;
+    }
+
+    private void rollbackRuntimeKey(String candidateKey, String previousKey) {
+        if (candidateKey == null || runtimeKeyStore == null) {
+            return;
+        }
+        try {
+            if (runtimeKeyStore.exists() && hasText(previousKey)) {
+                runtimeKeyStore.writeKey(previousKey);
+            } else {
+                runtimeKeyStore.deleteKey();
+            }
+        } catch (Exception exception) {
+            log.error("AI key 回滚失败", exception);
+        }
+    }
+
     private AiCapabilitiesDTO capabilities(AiModelConfig config) {
         if (chatModelProvider != null) {
             return chatModelProvider.getCapabilities();
@@ -330,13 +384,12 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
 
     private AiRuntimeConfigSnapshot.AiKeyStatus keyStatus(String apiKey) {
         if (!hasText(apiKey)) {
-            return new AiRuntimeConfigSnapshot.AiKeyStatus(false, null, null);
+            return new AiRuntimeConfigSnapshot.AiKeyStatus(false, null);
         }
         String key = apiKey.trim();
         return new AiRuntimeConfigSnapshot.AiKeyStatus(
             true,
-            shortSha256(key),
-            key.length() >= 8 ? key.substring(key.length() - 4) : null
+            shortSha256(key)
         );
     }
 

@@ -20,7 +20,7 @@ class AnnouncementRagConfigTest {
         ZhipuAIConfig zhipuConfig = new ZhipuAIConfig();
         zhipuConfig.setApiKey("");
 
-        EmbeddingModel model = config.announcementEmbeddingModel(properties, zhipuConfig, new AIConfig());
+        EmbeddingModel model = config.announcementEmbeddingModel(properties, zhipuConfig, new AIConfig(), null);
 
         assertInstanceOf(AnnouncementRagDisabledEmbeddingModel.class, model);
     }
@@ -31,7 +31,7 @@ class AnnouncementRagConfigTest {
         ZhipuAIConfig zhipuConfig = new ZhipuAIConfig();
         zhipuConfig.setApiKey("test-key");
 
-        EmbeddingModel model = config.announcementEmbeddingModel(properties, zhipuConfig, new AIConfig());
+        EmbeddingModel model = config.announcementEmbeddingModel(properties, zhipuConfig, new AIConfig(), null);
 
         assertInstanceOf(ZhipuAiEmbeddingModel.class, model);
     }
@@ -44,7 +44,7 @@ class AnnouncementRagConfigTest {
         AIConfig aiConfig = new AIConfig();
         aiConfig.setApiKey("generic-test-key");
 
-        EmbeddingModel model = config.announcementEmbeddingModel(properties, zhipuConfig, aiConfig);
+        EmbeddingModel model = config.announcementEmbeddingModel(properties, zhipuConfig, aiConfig, null);
 
         assertInstanceOf(ZhipuAiEmbeddingModel.class, model);
     }

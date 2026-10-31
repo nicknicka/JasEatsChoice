@@ -10,6 +10,7 @@ import com.xx.jaseatschoicejava.agent.dto.AiCapabilitiesDTO;
 import com.xx.jaseatschoicejava.config.AiApiKeyResolver;
 import com.xx.jaseatschoicejava.config.AiModelConfig;
 import com.xx.jaseatschoicejava.config.AIConfig;
+import com.xx.jaseatschoicejava.config.AiRuntimeKeyStore;
 import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 
 import dev.langchain4j.community.model.zhipu.ZhipuAiChatModel;
@@ -25,19 +26,30 @@ public class ZhipuAiModelClientFactory implements AiModelClientFactory {
 
     private final AIConfig aiConfig;
     private final ZhipuAIConfig zhipuConfig;
+    private final AiRuntimeKeyStore runtimeKeyStore;
 
-    public ZhipuAiModelClientFactory(AIConfig aiConfig, ZhipuAIConfig zhipuConfig) {
+    public ZhipuAiModelClientFactory(
+            AIConfig aiConfig,
+            ZhipuAIConfig zhipuConfig,
+            AiRuntimeKeyStore runtimeKeyStore) {
         this.aiConfig = aiConfig;
         this.zhipuConfig = zhipuConfig;
+        this.runtimeKeyStore = runtimeKeyStore;
     }
 
     @Override
     public ChatModel buildChatModel(AiModelConfig config) {
-        if (!hasKey()) {
+        return buildChatModel(config, null);
+    }
+
+    @Override
+    public ChatModel buildChatModel(AiModelConfig config, String candidateApiKey) {
+        String key = hasText(candidateApiKey) ? candidateApiKey.trim() : key();
+        if (!hasText(key)) {
             return new NoopChatModel();
         }
         var builder = ZhipuAiChatModel.builder()
-            .apiKey(key())
+            .apiKey(key)
             .model(config.getModel())
             .temperature(config.getTemperature())
             .maxRetries(2)
@@ -123,7 +135,7 @@ public class ZhipuAiModelClientFactory implements AiModelClientFactory {
     }
 
     private String key() {
-        return AiApiKeyResolver.resolve(zhipuConfig, aiConfig);
+        return AiApiKeyResolver.resolve(zhipuConfig, aiConfig, runtimeKeyStore);
     }
 
     private boolean hasKey() {

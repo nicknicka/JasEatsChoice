@@ -3,6 +3,7 @@ package com.xx.jaseatschoicejava.agent.config;
 import com.xx.jaseatschoicejava.agent.dto.AiCapabilitiesDTO;
 import com.xx.jaseatschoicejava.config.AIConfig;
 import com.xx.jaseatschoicejava.config.AiApiKeyResolver;
+import com.xx.jaseatschoicejava.config.AiRuntimeKeyStore;
 import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 import com.xx.jaseatschoicejava.service.impl.AiModelClientFactory;
 
@@ -27,12 +28,13 @@ public class ZhipuChatModelFactory {
             @Autowired DynamicAiModelRegistry registry,
             @Autowired AiModelClientFactory modelFactory,
             @Autowired AIConfig aiConfig,
-            @Autowired ZhipuAIConfig zhipuConfig) {
+            @Autowired ZhipuAIConfig zhipuConfig,
+            @Autowired AiRuntimeKeyStore runtimeKeyStore) {
         return new ChatModelProvider() {
             @Override
             public boolean isAvailable() {
-                return AiApiKeyResolver.resolve(zhipuConfig, aiConfig) != null
-                    && !AiApiKeyResolver.resolve(zhipuConfig, aiConfig).isBlank();
+                String apiKey = AiApiKeyResolver.resolve(zhipuConfig, aiConfig, runtimeKeyStore);
+                return apiKey != null && !apiKey.isBlank();
             }
 
             @Override

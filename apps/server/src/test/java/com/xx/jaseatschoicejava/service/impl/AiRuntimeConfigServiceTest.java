@@ -73,7 +73,6 @@ class AiRuntimeConfigServiceTest {
         assertNotNull(snapshot.getSupportedModels());
         assertTrue(snapshot.getSupportedModels().contains("generic-chat-model"));
         assertTrue(snapshot.getKeyStatus().isConfigured());
-        assertEquals("8901", snapshot.getKeyStatus().getLast4());
         assertNotNull(snapshot.getKeyStatus().getFingerprint());
         assertFalse(json.contains("secret-key-12345678901"));
     }
@@ -94,20 +93,18 @@ class AiRuntimeConfigServiceTest {
         assertEquals("zhipu-vision-model", snapshot.getVisionModel());
         assertEquals("https://ai.example.com", snapshot.getBaseUrl());
         assertEquals(54321, snapshot.getTimeoutMs());
-        assertEquals("2109", snapshot.getKeyStatus().getLast4());
         assertFalse(json.contains("zhipu-key-98765432109"));
         assertFalse(json.contains("generic-key-12345678901"));
     }
 
     @Test
-    void veryShortConfiguredKeyDoesNotExposeLast4AsPlaintext() throws Exception {
+    void veryShortConfiguredKeyDoesNotExposeTailAsPlaintext() throws Exception {
         aiConfig.setApiKey("abcd");
 
         AiRuntimeConfigSnapshot snapshot = service.getCurrentSnapshot();
         String json = new ObjectMapper().writeValueAsString(snapshot);
 
         assertTrue(snapshot.getKeyStatus().isConfigured());
-        assertNull(snapshot.getKeyStatus().getLast4());
         assertFalse(json.contains("abcd"));
     }
 

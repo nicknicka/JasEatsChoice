@@ -31,9 +31,10 @@ class ZhipuChatModelFactoryTest {
         ZhipuChatModelFactory factory = new ZhipuChatModelFactory();
         AiCapabilitiesDTO capabilities = factory.chatModelProvider(
             registry,
-            new ZhipuAiModelClientFactory(aiConfig, zhipuConfig),
+            new ZhipuAiModelClientFactory(aiConfig, zhipuConfig, null),
             aiConfig,
-            zhipuConfig
+            zhipuConfig,
+            null
         ).getCapabilities();
 
         assertFalse(capabilities.isAvailable());

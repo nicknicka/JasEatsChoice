@@ -15,6 +15,9 @@ RUN apk add --no-cache curl
 
 COPY --from=build /app/target/*.jar app.jar
 
+# The named volume copies this restricted directory mode on first use.
+RUN mkdir -p /app/runtime/secrets/ai && chmod 700 /app/runtime/secrets/ai
+
 EXPOSE 7777 11277
 
 ENTRYPOINT ["java", \

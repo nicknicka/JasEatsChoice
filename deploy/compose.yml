@@ -14,6 +14,7 @@ x-app-env: &app-env
   - JWT_EXPIRATION=${JWT_EXPIRATION:-86400000}
   - AI_PROVIDER=${AI_PROVIDER:-zhipu}
   - AI_API_KEY=${AI_API_KEY:-}
+  - AI_ACTIVE_KEY_FILE=/app/runtime/secrets/ai/active-key
   - AI_MODEL=${AI_MODEL:-glm-4-flash}
   - AI_SUPERVISOR_MODEL=${AI_SUPERVISOR_MODEL:-glm-4-flash}
   - AI_VISION_MODEL=${AI_VISION_MODEL:-glm-4.1v-thinking-flash}
@@ -106,6 +107,7 @@ services:
     environment: *app-env
     volumes:
       - uploads:/data/uploads
+      - ai-runtime-keys:/app/runtime/secrets/ai
     depends_on:
       mysql:
         condition: service_healthy
@@ -149,6 +151,7 @@ networks:
     driver: bridge
 
 volumes:
+  ai-runtime-keys:
   mysql-data:
   redis-data:
   qdrant-data:
