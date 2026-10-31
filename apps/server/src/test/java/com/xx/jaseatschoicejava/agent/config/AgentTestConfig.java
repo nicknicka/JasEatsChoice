@@ -25,6 +25,12 @@ public class AgentTestConfig {
      */
     @Bean
     public ChatModel testChatModel(ZhipuAIConfig zhipuAIConfig) {
+        String apiKey = zhipuAIConfig.getApiKey();
+        if (apiKey == null || apiKey.isBlank()) {
+            // 与生产 LangChain4jConfig 保持一致：无 key 时降级为占位实现，
+            // 否则测试上下文会因缺少凭据而整体启动失败
+            return new NoopChatModel();
+        }
         return ZhipuAiChatModel.builder()
                 .apiKey(zhipuAIConfig.getApiKey())
                 .model(zhipuAIConfig.getModel())

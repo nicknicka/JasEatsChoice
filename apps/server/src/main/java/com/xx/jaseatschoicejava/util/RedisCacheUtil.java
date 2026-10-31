@@ -40,7 +40,7 @@ public class RedisCacheUtil {
     /**
      * 空值标识
      */
-    private static final Object NULL_VALUE = new Object();
+    private static final String NULL_VALUE = "__NULL__";
 
     /**
      * 缓存前缀
@@ -123,7 +123,7 @@ public class RedisCacheUtil {
             Object value = redisTemplate.opsForValue().get(fullKey);
 
             // 如果是空值标识，返回null
-            if (value == NULL_VALUE) {
+            if (NULL_VALUE.equals(value)) {
                 log.debug("获取到空值缓存: key={}", fullKey);
                 return null;
             }

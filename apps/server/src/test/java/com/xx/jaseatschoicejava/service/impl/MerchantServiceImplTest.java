@@ -4,11 +4,13 @@ import com.xx.jaseatschoicejava.entity.Merchant;
 import com.xx.jaseatschoicejava.entity.User;
 import com.xx.jaseatschoicejava.mapper.MerchantMapper;
 import com.xx.jaseatschoicejava.mapper.UserMapper;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -27,6 +29,12 @@ class MerchantServiceImplTest {
 
     @InjectMocks
     private MerchantServiceImpl merchantService;
+
+    @BeforeEach
+    void injectBaseMapper() {
+        // ServiceImpl 的 baseMapper 平时由 MyBatis-Plus 容器注入，纯单测需手动补齐
+        ReflectionTestUtils.setField(merchantService, "baseMapper", merchantMapper);
+    }
 
     @Test
     void register_whenUserAssociationFails_shouldThrowForRollback() {

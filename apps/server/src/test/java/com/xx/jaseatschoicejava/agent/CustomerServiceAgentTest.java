@@ -3,6 +3,7 @@ package com.xx.jaseatschoicejava.agent;
 import com.xx.jaseatschoicejava.JasEatsChoiceJavaApplication;
 import com.xx.jaseatschoicejava.agent.agents.CustomerServiceAgent;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +33,7 @@ public class CustomerServiceAgentTest {
     private CustomerServiceAgent customerServiceAgent;
 
     @Test
+    @EnabledIfEnvironmentVariable(named = "AI_API_KEY", matches = ".+")
     public void testBasicConversation() {
         log.info("=== 测试基础对话功能 ===");
 
@@ -47,6 +49,7 @@ public class CustomerServiceAgentTest {
     }
 
     @Test
+    @EnabledIfEnvironmentVariable(named = "AI_API_KEY", matches = ".+")
     public void testNutritionConsultation() {
         log.info("=== 测试营养咨询功能 ===");
 
@@ -63,6 +66,7 @@ public class CustomerServiceAgentTest {
     }
 
     @Test
+    @EnabledIfEnvironmentVariable(named = "AI_API_KEY", matches = ".+")
     public void testPersonalizationGuidance() {
         log.info("=== 测试个性化服务引导 ===");
 
@@ -82,6 +86,7 @@ public class CustomerServiceAgentTest {
     }
 
     @Test
+    @EnabledIfEnvironmentVariable(named = "AI_API_KEY", matches = ".+")
     public void testOrderQueryGuidance() {
         log.info("=== 测试订单查询引导 ===");
 
@@ -101,6 +106,7 @@ public class CustomerServiceAgentTest {
     }
 
     @Test
+    @EnabledIfEnvironmentVariable(named = "AI_API_KEY", matches = ".+")
     public void testPlatformIntroduction() {
         log.info("=== 测试平台功能介绍 ===");
 
@@ -117,6 +123,7 @@ public class CustomerServiceAgentTest {
     }
 
     @Test
+    @EnabledIfEnvironmentVariable(named = "AI_API_KEY", matches = ".+")
     public void testHealthAdvice() {
         log.info("=== 测试健康建议功能 ===");
 
@@ -133,6 +140,7 @@ public class CustomerServiceAgentTest {
     }
 
     @Test
+    @EnabledIfEnvironmentVariable(named = "AI_API_KEY", matches = ".+")
     public void testMultipleConversationRounds() {
         log.info("=== 测试多轮对话 ===");
 

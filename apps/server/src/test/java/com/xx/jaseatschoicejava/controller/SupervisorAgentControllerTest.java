@@ -2,6 +2,7 @@ package com.xx.jaseatschoicejava.controller;
 
 import com.xx.jaseatschoicejava.JasEatsChoiceJavaApplication;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -36,6 +37,7 @@ public class SupervisorAgentControllerTest {
      * 测试基本聊天接口（POST）
      */
     @Test
+    @EnabledIfEnvironmentVariable(named = "AI_API_KEY", matches = ".+")
     public void testChatEndpoint() throws Exception {
         String requestBody = """
             {
@@ -44,7 +46,7 @@ public class SupervisorAgentControllerTest {
             }
             """;
 
-        mockMvc.perform(post("/api/agent/supervisor/chat")
+        mockMvc.perform(post("/agent/supervisor/chat")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestBody))
                 .andExpect(status().isOk())
@@ -57,6 +59,7 @@ public class SupervisorAgentControllerTest {
      * 测试带用户上下文的聊天接口
      */
     @Test
+    @EnabledIfEnvironmentVariable(named = "AI_API_KEY", matches = ".+")
     public void testChatWithContextEndpoint() throws Exception {
         String requestBody = """
             {
@@ -66,7 +69,7 @@ public class SupervisorAgentControllerTest {
             }
             """;
 
-        mockMvc.perform(post("/api/agent/supervisor/chatWithContext")
+        mockMvc.perform(post("/agent/supervisor/chatWithContext")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestBody))
                 .andExpect(status().isOk())
@@ -78,8 +81,9 @@ public class SupervisorAgentControllerTest {
      * 测试GET方式的快速聊天接口
      */
     @Test
+    @EnabledIfEnvironmentVariable(named = "AI_API_KEY", matches = ".+")
     public void testQuickChatEndpoint() throws Exception {
-        mockMvc.perform(get("/api/agent/supervisor/chat")
+        mockMvc.perform(get("/agent/supervisor/chat")
                 .param("message", "宫保鸡丁有多少卡路里？")
                 .param("userId", "user123"))
                 .andExpect(status().isOk())
@@ -91,8 +95,9 @@ public class SupervisorAgentControllerTest {
      * 测试GET方式不带用户ID
      */
     @Test
+    @EnabledIfEnvironmentVariable(named = "AI_API_KEY", matches = ".+")
     public void testQuickChatWithoutUserId() throws Exception {
-        mockMvc.perform(get("/api/agent/supervisor/chat")
+        mockMvc.perform(get("/agent/supervisor/chat")
                 .param("message", "你好"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
@@ -111,7 +116,7 @@ public class SupervisorAgentControllerTest {
             }
             """;
 
-        mockMvc.perform(post("/api/agent/supervisor/chat")
+        mockMvc.perform(post("/agent/supervisor/chat")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestBody))
                 .andExpect(status().isOk());
@@ -121,6 +126,7 @@ public class SupervisorAgentControllerTest {
      * 测试不同类型的用户问题
      */
     @Test
+    @EnabledIfEnvironmentVariable(named = "AI_API_KEY", matches = ".+")
     public void testDifferentQuestionTypes() throws Exception {
         // 推荐类问题
         testQuestionType("推荐一些健康的菜");
@@ -146,7 +152,7 @@ public class SupervisorAgentControllerTest {
             }
             """, message);
 
-        mockMvc.perform(post("/api/agent/supervisor/chat")
+        mockMvc.perform(post("/agent/supervisor/chat")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestBody))
                 .andExpect(status().isOk())
@@ -157,6 +163,7 @@ public class SupervisorAgentControllerTest {
      * 测试长消息处理
      */
     @Test
+    @EnabledIfEnvironmentVariable(named = "AI_API_KEY", matches = ".+")
     public void testLongMessageHandling() throws Exception {
         StringBuilder longMessage = new StringBuilder();
         longMessage.append("我想要减肥，最近在控制饮食。");
@@ -172,7 +179,7 @@ public class SupervisorAgentControllerTest {
             }
             """, longMessage.toString());
 
-        mockMvc.perform(post("/api/agent/supervisor/chat")
+        mockMvc.perform(post("/agent/supervisor/chat")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestBody))
                 .andExpect(status().isOk())
@@ -183,6 +190,7 @@ public class SupervisorAgentControllerTest {
      * 测试并发请求
      */
     @Test
+    @EnabledIfEnvironmentVariable(named = "AI_API_KEY", matches = ".+")
     public void testConcurrentRequests() throws Exception {
         String requestBody = """
             {
@@ -193,7 +201,7 @@ public class SupervisorAgentControllerTest {
 
         // 发送多个并发请求
         for (int i = 0; i < 5; i++) {
-            mockMvc.perform(post("/api/agent/supervisor/chat")
+            mockMvc.perform(post("/agent/supervisor/chat")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(requestBody))
                     .andExpect(status().isOk())

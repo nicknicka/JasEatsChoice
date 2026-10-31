@@ -2,6 +2,7 @@ package com.xx.jaseatschoicejava.agent;
 
 import dev.langchain4j.agentic.supervisor.SupervisorAgent;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -40,6 +41,7 @@ public class AgenticScopeTest {
      * 测试 L1 Agent 单独调用
      */
     @Test
+    @EnabledIfEnvironmentVariable(named = "AI_API_KEY", matches = ".+")
     public void testL1Agent_UserPreference() {
         if (userPreferenceAgent == null) {
             System.out.println("⚠️ UserPreferenceAgent 未配置，跳过测试");
@@ -54,6 +56,7 @@ public class AgenticScopeTest {
      * 测试 L1 Agent 单独调用
      */
     @Test
+    @EnabledIfEnvironmentVariable(named = "AI_API_KEY", matches = ".+")
     public void testL1Agent_NutritionGuide() {
         if (nutritionGuideAgent == null) {
             System.out.println("⚠️ NutritionGuideAgent 未配置，跳过测试");
@@ -68,6 +71,7 @@ public class AgenticScopeTest {
      * 测试 L1 Agent 单独调用
      */
     @Test
+    @EnabledIfEnvironmentVariable(named = "AI_API_KEY", matches = ".+")
     public void testL1Agent_DishRecommendation() {
         if (dishRecommendationAgent == null) {
             System.out.println("⚠️ DishRecommendationAgent 未配置，跳过测试");

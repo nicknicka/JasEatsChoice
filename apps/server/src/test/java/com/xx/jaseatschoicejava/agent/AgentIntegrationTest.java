@@ -5,6 +5,7 @@ import com.xx.jaseatschoicejava.agent.agents.*;
 import dev.langchain4j.agentic.supervisor.SupervisorAgent;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -93,6 +94,7 @@ public class AgentIntegrationTest {
 
     @Test
     @DisplayName("验证所有L2领域智能体Bean是否成功创建")
+    @EnabledIfEnvironmentVariable(named = "AI_API_KEY", matches = ".+")
     public void testL2AgentsCreation() {
         // L2 Agents should be created
         assertNotNull(smartRecommendationAgent, "SmartRecommendationAgent should be created");
@@ -105,6 +107,7 @@ public class AgentIntegrationTest {
 
     @Test
     @DisplayName("验证L3监督代理Bean是否成功创建")
+    @EnabledIfEnvironmentVariable(named = "AI_API_KEY", matches = ".+")
     public void testL3SupervisorAgentCreation() {
         // L3 SupervisorAgent should be created
         assertNotNull(supervisorAgent, "SupervisorAgent should be created");
@@ -114,6 +117,7 @@ public class AgentIntegrationTest {
 
     @Test
     @DisplayName("验证所有12个Agent总数是否正确")
+    @EnabledIfEnvironmentVariable(named = "AI_API_KEY", matches = ".+")
     public void testTotalAgentCount() {
         int agentCount = 0;
 

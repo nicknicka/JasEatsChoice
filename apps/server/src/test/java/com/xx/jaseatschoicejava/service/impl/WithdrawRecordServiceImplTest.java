@@ -1,14 +1,19 @@
 package com.xx.jaseatschoicejava.service.impl;
 
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.xx.jaseatschoicejava.entity.WithdrawRecord;
 import com.xx.jaseatschoicejava.mapper.WithdrawRecordMapper;
 import com.xx.jaseatschoicejava.service.WalletService;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 
@@ -30,6 +35,15 @@ class WithdrawRecordServiceImplTest {
 
     @InjectMocks
     private WithdrawRecordServiceImpl withdrawRecordService;
+
+    @BeforeEach
+    void setUpMybatisPlus() {
+        // 生产代码内部构造 LambdaUpdateWrapper，方法引用解析依赖 TableInfo 缓存；
+        // baseMapper 平时由 MyBatis-Plus 容器注入，纯单测需手动补齐。
+        TableInfoHelper.initTableInfo(
+            new MapperBuilderAssistant(new MybatisConfiguration(), ""), WithdrawRecord.class);
+        ReflectionTestUtils.setField(withdrawRecordService, "baseMapper", withdrawRecordMapper);
+    }
 
     @Test
     void reject_withSuccessfulRefund_shouldUpdateStatusAndRefund() {
