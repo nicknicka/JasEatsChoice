@@ -1604,3 +1604,41 @@ export function testAiConnectivity() {
       throw error
     })
 }
+
+/**
+ * 测试候选 AI 配置（不持久化）
+ * @param {Object} candidate 非密钥候选配置
+ * @returns {Promise} 连通性测试结果
+ */
+export function testAiCandidate(candidate) {
+  console.log('[管理员API] 测试候选 AI 配置')
+  return api
+    .post(API.ADMIN.AI_CANDIDATE_TEST, candidate)
+    .then((response) => {
+      console.log('[管理员API] 测试候选 AI 配置完成')
+      return response
+    })
+    .catch((error) => {
+      console.error('[管理员API] 测试候选 AI 配置失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 保存并激活候选 AI 配置
+ * @param {Object} candidate 非密钥候选配置
+ * @returns {Promise} 激活后的 AI 运行时配置
+ */
+export function activateAiConfig(candidate) {
+  console.log('[管理员API] 保存并激活 AI 配置')
+  return api
+    .post(API.ADMIN.AI_ACTIVATE, candidate)
+    .then((response) => {
+      console.log('[管理员API] 保存并激活 AI 配置成功')
+      return response
+    })
+    .catch((error) => {
+      console.error('[管理员API] 保存并激活 AI 配置失败:', error)
+      throw error
+    })
+}

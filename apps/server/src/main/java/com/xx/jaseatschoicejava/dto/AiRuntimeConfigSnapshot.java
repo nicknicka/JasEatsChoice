@@ -45,6 +45,9 @@ public class AiRuntimeConfigSnapshot {
     @ApiModelProperty("当前快照加载时间")
     private String updatedAt;
 
+    @ApiModelProperty("当前生效配置版本")
+    private Long version;
+
     @ApiModelProperty("key 脱敏状态")
     private AiKeyStatus keyStatus;
 

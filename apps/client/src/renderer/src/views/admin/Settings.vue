@@ -6,7 +6,9 @@ import {
   getSystemConfigsByGroup,
   batchUpdateSystemConfigs,
   getAiRuntimeConfig,
-  testAiConnectivity
+  testAiConnectivity,
+  testAiCandidate,
+  activateAiConfig
 } from '@/api/admin'
 
 const activeTab = ref('system')
@@ -35,10 +37,21 @@ const securitySettings = ref({
   passwordMinLength: 6
 })
 
-// AI 配置（只读）
+// AI 配置
 const aiLoading = ref(false)
 const testingAi = ref(false)
+const activatingAi = ref(false)
+const aiAdvanced = ref(false)
 const connectivityResult = ref(null)
+const aiCandidate = ref({
+  provider: '',
+  model: '',
+  supervisorModel: '',
+  visionModel: '',
+  baseUrl: '',
+  timeoutMs: 30000,
+  temperature: 0.7
+})
 const aiConfig = ref({
   provider: '',
   model: '',
@@ -244,12 +257,75 @@ async function loadAiConfig() {
         supportedModels: response.data.supportedModels || [],
         providers: response.data.providers || []
       }
+
+      if (!aiCandidate.value.provider) {
+        resetAiCandidateFromCurrent(aiConfig.value)
+      }
     }
   } catch (error) {
     console.error('加载 AI 配置失败:', error)
     ElMessage.error(error?.response?.data?.message || '无权访问 AI 配置或加载失败')
   } finally {
     aiLoading.value = false
+  }
+}
+
+function resetAiCandidateFromCurrent(config = {}) {
+  aiCandidate.value = {
+    provider: config.provider || '',
+    model: config.model || '',
+    supervisorModel: config.supervisorModel || '',
+    visionModel: config.visionModel || '',
+    baseUrl: config.baseUrl || '',
+    timeoutMs: config.timeoutMs || 30000,
+    temperature: config.temperature || 0.7
+  }
+}
+
+function selectedProviderModels() {
+  const provider = aiConfig.value.providers?.find(item => item.code === aiCandidate.value.provider)
+  return provider?.models || []
+}
+
+async function runAiCandidateTest() {
+  testingAi.value = true
+  try {
+    const response = await testAiCandidate(aiCandidate.value)
+    if (response.success && response.data) {
+      connectivityResult.value = response.data
+      ElMessage.success(response.data.message || '候选配置测试完成')
+    }
+  } catch (error) {
+    connectivityResult.value = {
+      success: false,
+      message: error?.response?.data?.message || '候选配置测试失败'
+    }
+    ElMessage.error(connectivityResult.value.message)
+  } finally {
+    testingAi.value = false
+  }
+}
+
+async function saveAndActivateAi() {
+  activatingAi.value = true
+  try {
+    const response = await activateAiConfig(aiCandidate.value)
+    if (response.success && response.data) {
+      aiConfig.value = {
+        ...aiConfig.value,
+        ...response.data,
+        keyStatus: response.data.keyStatus || aiConfig.value.keyStatus,
+        capabilities: response.data.capabilities || aiConfig.value.capabilities,
+        supportedModels: response.data.supportedModels || [],
+        providers: response.data.providers || []
+      }
+      resetAiCandidateFromCurrent(aiConfig.value)
+      ElMessage.success('AI 配置已保存并激活')
+    }
+  } catch (error) {
+    ElMessage.error(error?.response?.data?.message || '保存或激活失败，当前配置未改变')
+  } finally {
+    activatingAi.value = false
   }
 }
 
@@ -390,8 +466,8 @@ onMounted(async () => {
         <el-tab-pane label="AI 模型" name="ai">
           <div v-loading="aiLoading" style="max-width: 900px">
             <el-alert
-              title="AI 配置当前为只读模式"
-              description="这里展示后端当前生效的 AI 运行时配置，不会保存或热切换配置。API key 不会返回明文。"
+              title="AI 模型热切换"
+              description="这里展示后端当前生效的 AI 运行时配置；候选配置测试通过后可保存并激活。API key 不会返回明文。"
               type="info"
               show-icon
               :closable="false"
@@ -439,7 +515,7 @@ onMounted(async () => {
             </div>
 
             <div class="connectivity-section">
-              <el-button type="primary" :icon="Connection" :loading="testingAi" @click="runAiConnectivityTest">
+              <el-button :icon="Connection" :loading="testingAi" @click="runAiConnectivityTest">
                 测试当前配置连通性
               </el-button>
               <div v-if="connectivityResult" class="connectivity-result">
@@ -450,6 +526,91 @@ onMounted(async () => {
                 <span v-if="connectivityResult.model" class="connectivity-message">（{{ connectivityResult.model }}）</span>
               </div>
             </div>
+
+            <h4>候选配置</h4>
+            <el-form :model="aiCandidate" label-width="180px" style="max-width: 700px">
+              <el-form-item label="Provider">
+                <el-select v-model="aiCandidate.provider" placeholder="选择后端支持的 Provider">
+                  <el-option
+                    v-for="provider in aiConfig.providers"
+                    :key="provider.code"
+                    :label="provider.name"
+                    :value="provider.code"
+                  />
+                </el-select>
+              </el-form-item>
+
+              <el-form-item label="聊天模型">
+                <el-select
+                  v-model="aiCandidate.model"
+                  filterable
+                  allow-create
+                  default-first-option
+                  placeholder="从已知模型选择或输入自定义模型"
+                >
+                  <el-option v-for="model in selectedProviderModels()" :key="model" :label="model" :value="model" />
+                </el-select>
+              </el-form-item>
+
+              <el-form-item label="Supervisor 模型">
+                <el-select
+                  v-model="aiCandidate.supervisorModel"
+                  filterable
+                  allow-create
+                  default-first-option
+                  placeholder="从已知模型选择或输入自定义模型"
+                >
+                  <el-option v-for="model in selectedProviderModels()" :key="model" :label="model" :value="model" />
+                </el-select>
+              </el-form-item>
+
+              <el-form-item label="视觉模型">
+                <el-select
+                  v-model="aiCandidate.visionModel"
+                  filterable
+                  allow-create
+                  default-first-option
+                  placeholder="从已知模型选择或输入自定义模型"
+                >
+                  <el-option v-for="model in selectedProviderModels()" :key="model" :label="model" :value="model" />
+                </el-select>
+              </el-form-item>
+
+              <el-form-item>
+                <el-switch v-model="aiAdvanced" active-text="高级设置" />
+              </el-form-item>
+
+              <template v-if="aiAdvanced">
+                <el-form-item label="服务地址">
+                  <el-input v-model="aiCandidate.baseUrl" placeholder="留空使用供应商默认地址" />
+                </el-form-item>
+                <el-form-item label="超时时间">
+                  <el-input-number v-model="aiCandidate.timeoutMs" :min="1000" :step="1000" />
+                  <span class="form-tip">单位：毫秒</span>
+                </el-form-item>
+                <el-form-item label="温度">
+                  <el-input-number v-model="aiCandidate.temperature" :min="0" :max="2" :step="0.1" />
+                </el-form-item>
+              </template>
+
+              <el-form-item>
+                <el-button :icon="Connection" :loading="testingAi" @click="runAiCandidateTest">
+                  测试候选配置
+                </el-button>
+                <el-button type="primary" :loading="activatingAi" @click="saveAndActivateAi">
+                  保存并激活
+                </el-button>
+              </el-form-item>
+            </el-form>
+
+            <el-alert
+              title="热切换说明"
+              description="新请求立即使用新模型；正在执行的请求继续使用旧模型。Embedding 模型与向量维度不在线切换。API key 仍由启动配置管理，本页面不保存明文 key。"
+              type="warning"
+              show-icon
+              :closable="false"
+              class="ai-alert"
+            />
           </div>
         </el-tab-pane>
       </el-tabs>

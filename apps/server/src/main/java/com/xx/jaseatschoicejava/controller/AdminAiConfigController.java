@@ -3,10 +3,13 @@ package com.xx.jaseatschoicejava.controller;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.xx.jaseatschoicejava.common.ResponseResult;
+import com.xx.jaseatschoicejava.dto.AiConnectivityResult;
+import com.xx.jaseatschoicejava.dto.AiModelCandidateDTO;
 import com.xx.jaseatschoicejava.dto.AiRuntimeConfigSnapshot;
 import com.xx.jaseatschoicejava.service.AiRuntimeConfigService;
 
@@ -14,7 +17,7 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 
 /**
- * 管理端 AI 配置只读切片。
+ * 管理端 AI 配置接口。
  */
 @Api(tags = "管理员-AI配置")
 @RestController
@@ -37,7 +40,21 @@ public class AdminAiConfigController {
     @ApiOperation("测试当前 AI 配置连通性")
     @PostMapping("/connectivity-test")
     @PreAuthorize("hasAnyAuthority('admin:setting:ai')")
-    public ResponseResult<com.xx.jaseatschoicejava.dto.AiConnectivityResult> testConnectivity() {
+    public ResponseResult<AiConnectivityResult> testConnectivity() {
         return ResponseResult.success(aiRuntimeConfigService.testCurrentConnectivity());
+    }
+
+    @ApiOperation("测试候选 AI 配置（不持久化）")
+    @PostMapping("/test")
+    @PreAuthorize("hasAnyAuthority('admin:setting:ai')")
+    public ResponseResult<AiConnectivityResult> testCandidate(@RequestBody AiModelCandidateDTO candidate) {
+        return ResponseResult.success(aiRuntimeConfigService.testCandidateConnectivity(candidate));
+    }
+
+    @ApiOperation("测试通过后保存并激活候选 AI 配置")
+    @PostMapping("/activate")
+    @PreAuthorize("hasAnyAuthority('admin:setting:ai')")
+    public ResponseResult<AiRuntimeConfigSnapshot> saveAndActivate(@RequestBody AiModelCandidateDTO candidate) {
+        return ResponseResult.success(aiRuntimeConfigService.saveAndActivate(candidate));
     }
 }

@@ -70,8 +70,8 @@ public class LangChain4jConfig {
     @Resource
     private AIConfig aiConfig;
 
-    @Resource(name = "chatModelProvider")
-    private ChatModelProvider chatModelProvider;
+    @Resource
+    private DynamicAiModelRegistry dynamicAiModelRegistry;
 
     // ==================== L1 Agent 工具注入 ====================
 
@@ -157,14 +157,6 @@ public class LangChain4jConfig {
 
     // ==================== ChatModel Bean ====================
 
-    private boolean hasApiKey() {
-        return chatModelProvider != null && chatModelProvider.isAvailable();
-    }
-
-    private ChatModel disabledModel(String which) {
-        log.warn("AI API Key 未配置，{}模型降级为占位实现：AI 接口在调用时会返回未配置错误，其余功能不受影响", which);
-        return new NoopChatModel();
-    }
 
     /**
      * Supervisor专用模型（更强推理能力）
@@ -174,13 +166,8 @@ public class LangChain4jConfig {
      */
     @Bean("supervisorModel")
     public ChatModel supervisorModel() {
-        if (!hasApiKey()) {
-            return disabledModel("Supervisor");
-        }
-        log.info("初始化Supervisor专用模型（供应商：{}），含Markdown剥离包装", aiConfig.getProvider());
-
-        ChatModel rawModel = chatModelProvider.buildSupervisorModel();
-        return new MarkdownStrippingChatModel(rawModel);
+        log.info("初始化Supervisor动态模型代理（供应商：{}），含Markdown剥离包装", aiConfig.getProvider());
+        return new MarkdownStrippingChatModel(dynamicAiModelRegistry.supervisorModel());
     }
 
     /**
@@ -189,12 +176,8 @@ public class LangChain4jConfig {
      */
     @Bean("aiModel")
     public ChatModel aiModel() {
-        if (!hasApiKey()) {
-            return disabledModel("通用AI");
-        }
-        log.info("初始化通用AI模型（供应商：{}），模型：{}", aiConfig.getProvider(), aiConfig.getModel());
-
-        return chatModelProvider.buildAiModel();
+        log.info("初始化通用AI动态模型代理（供应商：{}），模型：{}", aiConfig.getProvider(), aiConfig.getModel());
+        return dynamicAiModelRegistry.chatModel();
     }
 
     /**
@@ -223,12 +206,8 @@ public class LangChain4jConfig {
      */
     @Bean("visionModel")
     public ChatModel visionModel() {
-        if (!hasApiKey()) {
-            return disabledModel("视觉");
-        }
-        log.info("初始化视觉模型（供应商：{}），模型：{}", aiConfig.getProvider(), aiConfig.getVisionModel());
-
-        return chatModelProvider.buildVisionModel();
+        log.info("初始化视觉动态模型代理（供应商：{}），模型：{}", aiConfig.getProvider(), aiConfig.getVisionModel());
+        return dynamicAiModelRegistry.visionModel();
     }
 
     // ==================== L1 专家 Agent ====================

@@ -1,0 +1,136 @@
+package com.xx.jaseatschoicejava.service.impl;
+
+import java.time.Duration;
+
+import org.springframework.stereotype.Component;
+
+import com.xx.jaseatschoicejava.agent.config.NoopChatModel;
+import com.xx.jaseatschoicejava.agent.config.NoopStreamingChatModel;
+import com.xx.jaseatschoicejava.agent.dto.AiCapabilitiesDTO;
+import com.xx.jaseatschoicejava.config.AiApiKeyResolver;
+import com.xx.jaseatschoicejava.config.AiModelConfig;
+import com.xx.jaseatschoicejava.config.AIConfig;
+import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
+
+import dev.langchain4j.community.model.zhipu.ZhipuAiChatModel;
+import dev.langchain4j.community.model.zhipu.ZhipuAiStreamingChatModel;
+import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.model.chat.StreamingChatModel;
+
+/**
+ * 智谱模型客户端工厂。
+ */
+@Component
+public class ZhipuAiModelClientFactory implements AiModelClientFactory {
+
+    private final AIConfig aiConfig;
+    private final ZhipuAIConfig zhipuConfig;
+
+    public ZhipuAiModelClientFactory(AIConfig aiConfig, ZhipuAIConfig zhipuConfig) {
+        this.aiConfig = aiConfig;
+        this.zhipuConfig = zhipuConfig;
+    }
+
+    @Override
+    public ChatModel buildChatModel(AiModelConfig config) {
+        if (!hasKey()) {
+            return new NoopChatModel();
+        }
+        var builder = ZhipuAiChatModel.builder()
+            .apiKey(key())
+            .model(config.getModel())
+            .temperature(config.getTemperature())
+            .maxRetries(2)
+            .connectTimeout(Duration.ofMillis(config.getTimeoutMs()))
+            .readTimeout(Duration.ofMillis(config.getTimeoutMs()));
+        if (hasText(config.getBaseUrl())) {
+            builder.baseUrl(config.getBaseUrl());
+        }
+        return builder.build();
+    }
+
+    @Override
+    public ChatModel buildSupervisorModel(AiModelConfig config) {
+        if (!hasKey()) {
+            return new NoopChatModel();
+        }
+        var builder = ZhipuAiChatModel.builder()
+            .apiKey(key())
+            .model(config.getSupervisorModel())
+            .temperature(0.3)
+            .maxToken(4096)
+            .maxRetries(1)
+            .connectTimeout(Duration.ofMillis(config.getTimeoutMs()))
+            .readTimeout(Duration.ofMillis(config.getTimeoutMs()));
+        if (hasText(config.getBaseUrl())) {
+            builder.baseUrl(config.getBaseUrl());
+        }
+        return builder.build();
+    }
+
+    @Override
+    public ChatModel buildVisionModel(AiModelConfig config) {
+        if (!hasKey()) {
+            return new NoopChatModel();
+        }
+        var builder = ZhipuAiChatModel.builder()
+            .apiKey(key())
+            .model(config.getVisionModel())
+            .temperature(0.3)
+            .maxToken(2048)
+            .maxRetries(1)
+            .connectTimeout(Duration.ofMillis(config.getTimeoutMs()))
+            .readTimeout(Duration.ofMillis(config.getTimeoutMs()));
+        if (hasText(config.getBaseUrl())) {
+            builder.baseUrl(config.getBaseUrl());
+        }
+        return builder.build();
+    }
+
+    @Override
+    public StreamingChatModel buildStreamingModel(AiModelConfig config) {
+        if (!hasKey()) {
+            return new NoopStreamingChatModel();
+        }
+        var builder = ZhipuAiStreamingChatModel.builder()
+            .apiKey(key())
+            .model(config.getModel())
+            .temperature(config.getTemperature())
+            .connectTimeout(Duration.ofMillis(config.getTimeoutMs()))
+            .readTimeout(Duration.ofMillis(config.getTimeoutMs()));
+        if (hasText(config.getBaseUrl())) {
+            builder.baseUrl(config.getBaseUrl());
+        }
+        return builder.build();
+    }
+
+    @Override
+    public AiCapabilitiesDTO capabilities(AiModelConfig config) {
+        boolean hasKey = hasKey();
+        boolean visionAvailable = hasKey && hasText(config.getVisionModel());
+        return AiCapabilitiesDTO.builder()
+            .available(hasKey)
+            .provider(config.getProvider())
+            .model(config.getModel())
+            .visionModel(config.getVisionModel())
+            .textChat(hasKey)
+            .streaming(hasKey)
+            .vision(visionAvailable)
+            .functionCalling(hasKey)
+            .agentic(hasKey)
+            .unavailableMessage(hasKey ? "" : "AI 未配置：请设置 AI_API_KEY 后重启服务")
+            .build();
+    }
+
+    private String key() {
+        return AiApiKeyResolver.resolve(zhipuConfig, aiConfig);
+    }
+
+    private boolean hasKey() {
+        return hasText(key());
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
+    }
+}
