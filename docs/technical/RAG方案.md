@@ -15,7 +15,7 @@ RAG 的落地目标：
 1. 用户问“这家店现在有什么优惠”“满减规则是什么”“退款怎么处理”时，Agent 能检索公告或教程原文，再基于原文回答。
 2. 检索必须受平台/商家/目标群体/有效期约束，不能把其他商家的私有公告召回给当前上下文。
 3. 已过期、已下线、已删除的内容不能继续被 AI 引用。
-4. `ZHIPU_API_KEY` / `ZHIPUAI_API_KEY` / `AI_API_KEY` 都未配置，或 Qdrant 不可用时，项目仍然能启动；只有 RAG 检索能力降级，不能让整个 Spring 上下文起不来。
+4. `AI_API_KEY` / `AI_API_KEY` / `AI_API_KEY` 都未配置，或 Qdrant 不可用时，项目仍然能启动；只有 RAG 检索能力降级，不能让整个 Spring 上下文起不来。
 5. RAG 只接入 AI 聊天。商家详情页、通知中心、群公告等结构化展示继续走原 SQL 查询，两种读取路径不互相替代。
 
 明确不做：
@@ -221,17 +221,14 @@ Agent 只基于检索文本组织回答
 ai:
   embedding-model: ${AI_EMBEDDING_MODEL:embedding-3}
   embedding-dimensions: ${AI_EMBEDDING_DIMENSIONS:2048}
-
-zhipuai:
-  embedding-model: ${ZHIPU_EMBEDDING_MODEL:embedding-3}
-  embedding-base-url: ${ZHIPU_EMBEDDING_BASE_URL:}
+  embedding-base-url: ${AI_EMBEDDING_BASE_URL:}
 ```
 
 注意：现有 `zhipuai.base-url` 是 chat completions 地址，不能直接复用于 embedding。`ZhipuAiEmbeddingModel` 默认使用智谱开放平台根地址；如果显式配置，应使用根地址而不是 `/chat/completions`。
 
 ### 6.2 降级
 
-- 有效智谱 key 为空时，embedding Bean 返回 `DisabledEmbeddingModel`。有效 key 的解析顺序与聊天模型一致：`ZHIPU_API_KEY` > `ZHIPUAI_API_KEY` > `AI_API_KEY`。
+- 有效智谱 key 为空时，embedding Bean 返回 `DisabledEmbeddingModel`。有效 key 的解析顺序与聊天模型一致：`AI_API_KEY` > `AI_API_KEY` > `AI_API_KEY`。
 - 应用启动不因缺 key 失败。
 - RAG 工具被调用时返回“知识检索暂不可用，请基于现有工具结果回答”，不能编造平台规则。
 - 单次 embedding 调用失败时，索引同步记录错误；内容写事务已经提交，不回滚。
@@ -459,17 +456,16 @@ public String searchKnowledge(
 
 ```dotenv
 # ---- RAG / Qdrant ----
-RAG_ENABLED=true
+ANNOUNCEMENT_RAG_ENABLED=true
 QDRANT_HOST=qdrant
-QDRANT_PORT=6333
-RAG_COLLECTION=jaseats_knowledge_v1
-RAG_EMBEDDING_DIMENSIONS=2048
+QDRANT_PORT=6334
+QDRANT_COLLECTION=jaseats_knowledge_v1
 AI_EMBEDDING_MODEL=embedding-3
-ZHIPU_EMBEDDING_MODEL=embedding-3
-ZHIPU_EMBEDDING_BASE_URL=
+AI_EMBEDDING_DIMENSIONS=2048
+AI_EMBEDDING_BASE_URL=
 ```
 
-不新增真实密钥。智谱专属 key 和通用 `AI_API_KEY` 都只放 `deploy/.env`。
+不新增真实密钥。所有 AI key 统一使用 `AI_API_KEY`，只放 `deploy/.env`。
 
 ### 9.4 启动降级
 
@@ -492,7 +488,7 @@ ZHIPU_EMBEDDING_BASE_URL=
 
 验证：
 
-- 无智谱专属 key、无 `AI_API_KEY` 时 Spring 正常启动。
+- 无 `AI_API_KEY` 时 Spring 正常启动。
 - 无 Qdrant 时 Spring 正常启动，聊天不受影响。
 - Qdrant 启动后能创建 collection 和 payload index。
 - `RAG_ENABLED=false` 时工具不可用且提示明确。

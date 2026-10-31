@@ -162,7 +162,7 @@ public class ZhipuChatModelFactory {
                     .functionCalling(hasKey)
                     .agentic(hasKey)
                     .unavailableMessage(hasKey ? "" :
-                        "AI 未配置：请设置 AI_API_KEY（或 ZHIPU_API_KEY）后重启服务")
+                        "AI 未配置：请设置 AI_API_KEY（或 AI_API_KEY）后重启服务")
                     .build();
             }
         };

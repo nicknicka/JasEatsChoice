@@ -21,6 +21,6 @@
 ## 后果
 
 - 新增 Qdrant 服务、Embedding 配置和公告重建入口。
-- 没有 `ZHIPU_API_KEY` 或 Qdrant 不可用时，应用仍可启动，RAG 能力单独降级。
+- 没有 `AI_API_KEY` 或 Qdrant 不可用时，应用仍可启动，RAG 能力单独降级。
 - 向量模型或维度变化需要新建 collection 并全量重建。
 - 后续接入其他内容源时复用同一检索工具、租户过滤和同步链路。

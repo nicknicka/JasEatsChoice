@@ -21,8 +21,8 @@ file:
     server-url: ${FILE_SERVER_URL:http://localhost:7777/api}
 
 zhipuai:
-  api-key: ${ZHIPU_API_KEY:${ZHIPUAI_API_KEY:}}
-  model: ${ZHIPU_MODEL:glm-4.7}
+  api-key: ${AI_API_KEY:}
+  model: ${AI_MODEL:glm-4.7}
   # 本地预留 Ollama 配置位：当前代码尚未接入，先放这里方便后续切换
   ollama:
     enabled: false
