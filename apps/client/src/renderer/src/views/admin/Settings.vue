@@ -66,7 +66,7 @@ const aiConfig = ref({
   timeoutMs: 30000,
   temperature: 0.7,
   updatedAt: '',
-  keyStatus: { configured: false, fingerprint: '' },
+  keyStatus: { configured: false, fingerprint: '', updatedAt: '' },
   capabilities: {
     available: false,
     textChat: false,
@@ -258,18 +258,7 @@ async function loadAiConfig() {
     ])
     if (response.success && response.data) {
       previousAiConfig.value = previousResponse?.data || null
-      aiConfig.value = {
-        ...aiConfig.value,
-        ...response.data,
-        keyStatus: response.data.keyStatus || aiConfig.value.keyStatus,
-        capabilities: response.data.capabilities || aiConfig.value.capabilities,
-        supportedModels: response.data.supportedModels || [],
-        providers: response.data.providers || []
-      }
-
-      if (!aiCandidate.value.provider) {
-        resetAiCandidateFromCurrent(aiConfig.value)
-      }
+      applyAiSnapshot(response.data)
     }
   } catch (error) {
     console.error('加载 AI 配置失败:', error)
@@ -277,6 +266,18 @@ async function loadAiConfig() {
   } finally {
     aiLoading.value = false
   }
+}
+
+function applyAiSnapshot(snapshot = {}) {
+  aiConfig.value = {
+    ...aiConfig.value,
+    ...snapshot,
+    keyStatus: snapshot.keyStatus || aiConfig.value.keyStatus,
+    capabilities: snapshot.capabilities || aiConfig.value.capabilities,
+    supportedModels: snapshot.supportedModels || [],
+    providers: snapshot.providers || []
+  }
+  resetAiCandidateFromCurrent(aiConfig.value)
 }
 
 function resetAiCandidateFromCurrent(config = {}) {
@@ -321,15 +322,7 @@ async function rollbackAi() {
   try {
     const response = await rollbackAiConfig()
     if (response.success && response.data) {
-      aiConfig.value = {
-        ...aiConfig.value,
-        ...response.data,
-        keyStatus: response.data.keyStatus || aiConfig.value.keyStatus,
-        capabilities: response.data.capabilities || aiConfig.value.capabilities,
-        supportedModels: response.data.supportedModels || [],
-        providers: response.data.providers || []
-      }
-      resetAiCandidateFromCurrent(aiConfig.value)
+      applyAiSnapshot(response.data)
       await loadAiPreviousSummary()
       ElMessage.success('AI 配置已回滚')
     }
@@ -354,15 +347,7 @@ async function saveAndActivateAi() {
   try {
     const response = await activateAiConfig(aiCandidate.value)
     if (response.success && response.data) {
-      aiConfig.value = {
-        ...aiConfig.value,
-        ...response.data,
-        keyStatus: response.data.keyStatus || aiConfig.value.keyStatus,
-        capabilities: response.data.capabilities || aiConfig.value.capabilities,
-        supportedModels: response.data.supportedModels || [],
-        providers: response.data.providers || []
-      }
-      resetAiCandidateFromCurrent(aiConfig.value)
+      applyAiSnapshot(response.data)
       await loadAiPreviousSummary()
       ElMessage.success('AI 配置已保存并激活')
     }
@@ -563,6 +548,7 @@ onMounted(async () => {
             <span v-if="aiConfig.keyStatus.configured" class="key-status">
               指纹：{{ aiConfig.keyStatus.fingerprint }}
             </span>
+            <span class="key-status">更新时间：{{ aiConfig.keyStatus.updatedAt || '-' }}</span>
 
             <h4>能力状态</h4>
             <div class="capability-tags">
@@ -624,9 +610,9 @@ onMounted(async () => {
                 <el-select
                   v-model="aiCandidate.model"
                   filterable
-                  allow-create
+                  :allow-create="aiAdvanced"
                   default-first-option
-                  placeholder="从已知模型选择或输入自定义模型"
+                  :placeholder="aiAdvanced ? '从已知模型选择或输入自定义模型' : '从已知模型选择'"
                 >
                   <el-option v-for="model in selectedProviderModels()" :key="model" :label="model" :value="model" />
                 </el-select>
@@ -636,9 +622,9 @@ onMounted(async () => {
                 <el-select
                   v-model="aiCandidate.supervisorModel"
                   filterable
-                  allow-create
+                  :allow-create="aiAdvanced"
                   default-first-option
-                  placeholder="从已知模型选择或输入自定义模型"
+                  :placeholder="aiAdvanced ? '从已知模型选择或输入自定义模型' : '从已知模型选择'"
                 >
                   <el-option v-for="model in selectedProviderModels()" :key="model" :label="model" :value="model" />
                 </el-select>
@@ -648,9 +634,9 @@ onMounted(async () => {
                 <el-select
                   v-model="aiCandidate.visionModel"
                   filterable
-                  allow-create
+                  :allow-create="aiAdvanced"
                   default-first-option
-                  placeholder="从已知模型选择或输入自定义模型"
+                  :placeholder="aiAdvanced ? '从已知模型选择或输入自定义模型' : '从已知模型选择'"
                 >
                   <el-option v-for="model in selectedProviderModels()" :key="model" :label="model" :value="model" />
                 </el-select>

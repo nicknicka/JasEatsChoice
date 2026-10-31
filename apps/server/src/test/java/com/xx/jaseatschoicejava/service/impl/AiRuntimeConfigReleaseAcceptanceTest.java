@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
 
@@ -88,6 +89,16 @@ class AiRuntimeConfigReleaseAcceptanceTest {
 
         databaseConfigs.clear();
         historyRows.clear();
+        when(modelFactory.providerCode()).thenReturn("zhipu");
+        when(modelFactory.environmentConfig(aiConfig)).thenReturn(AiModelConfig.builder()
+            .provider("zhipu")
+            .model(aiConfig.getModel())
+            .supervisorModel(aiConfig.getSupervisorModel())
+            .visionModel(aiConfig.getVisionModel())
+            .baseUrl(aiConfig.getBaseUrl())
+            .timeoutMs(aiConfig.getTimeout())
+            .temperature(aiConfig.getTemperature())
+            .build());
         when(systemConfigService.getConfigsByGroup("ai")).thenAnswer(
             ignored -> new HashMap<>(databaseConfigs));
         when(systemConfigService.setConfigValue(anyString(), anyString(), anyString(), anyString()))
@@ -101,11 +112,16 @@ class AiRuntimeConfigReleaseAcceptanceTest {
             historyRows.add(invocation.getArgument(0));
             return null;
         }).when(historyStore).save(anyString());
-        when(modelFactory.buildSupervisorModel(any(AiModelConfig.class))).thenReturn(mock(ChatModel.class));
-        when(modelFactory.buildVisionModel(any(AiModelConfig.class))).thenReturn(mock(ChatModel.class));
+        when(modelFactory.buildSupervisorModel(any(AiModelConfig.class), isNull())).thenReturn(mock(ChatModel.class));
+        when(modelFactory.buildVisionModel(any(AiModelConfig.class), isNull())).thenReturn(mock(ChatModel.class));
         when(modelFactory.buildStreamingModel(any(AiModelConfig.class))).thenReturn(mock(StreamingChatModel.class));
         ChatModel initialChatModel = successfulModel();
-        when(modelFactory.buildChatModel(any(AiModelConfig.class))).thenReturn(initialChatModel);
+        when(modelFactory.buildChatModel(any(AiModelConfig.class), isNull())).thenReturn(initialChatModel);
+        when(modelFactory.resolveKey(any())).thenAnswer(invocation -> {
+            AiRuntimeKeyStore keyStore = invocation.getArgument(0);
+            String runtime = keyStore.readKey();
+            return runtime.isBlank() ? aiConfig.getApiKey() : runtime;
+        });
     }
 
     @Test
@@ -138,6 +154,10 @@ class AiRuntimeConfigReleaseAcceptanceTest {
         ChatModel candidateChatModel = successfulModel();
         when(modelFactory.buildChatModel(any(AiModelConfig.class), eq(RUNTIME_KEY)))
             .thenReturn(candidateChatModel);
+        when(modelFactory.buildSupervisorModel(any(AiModelConfig.class), eq(RUNTIME_KEY)))
+            .thenReturn(mock(ChatModel.class));
+        when(modelFactory.buildVisionModel(any(AiModelConfig.class), eq(RUNTIME_KEY)))
+            .thenReturn(mock(ChatModel.class));
 
         AiRuntimeConfigSnapshot activated = service.saveAndActivate(candidate("release-chat-one"));
         assertEquals("release-chat-one", activated.getModel());
@@ -157,7 +177,7 @@ class AiRuntimeConfigReleaseAcceptanceTest {
 
         AiRuntimeConfigSnapshot rollback = restartedService.rollbackToPrevious("13800000000");
         assertEquals("release-chat-one", rollback.getModel());
-        assertEquals(2L, rollback.getVersion());
+        assertEquals(4L, rollback.getVersion());
         assertEquals(RUNTIME_FINGERPRINT, rollback.getKeyStatus().getFingerprint());
 
         assertFalse(serialize(databaseConfigs).contains(RUNTIME_KEY));
@@ -173,6 +193,10 @@ class AiRuntimeConfigReleaseAcceptanceTest {
         ChatModel candidateChatModel = successfulModel();
         when(modelFactory.buildChatModel(any(AiModelConfig.class), eq(RUNTIME_KEY)))
             .thenReturn(candidateChatModel);
+        when(modelFactory.buildSupervisorModel(any(AiModelConfig.class), eq(RUNTIME_KEY)))
+            .thenReturn(mock(ChatModel.class));
+        when(modelFactory.buildVisionModel(any(AiModelConfig.class), eq(RUNTIME_KEY)))
+            .thenReturn(mock(ChatModel.class));
         service.saveAndActivate(candidate("release-chat-one"));
 
         Files.deleteIfExists(keyPath);
@@ -191,9 +215,9 @@ class AiRuntimeConfigReleaseAcceptanceTest {
     }
 
     private AiRuntimeConfigServiceImpl service(Path keyPath) {
-        return new AiRuntimeConfigServiceImpl(aiConfig, zhipuConfig, null, systemConfigService,
-            new DynamicAiModelRegistry(), modelFactory, new ObjectMapper(),
-            new AiRuntimeKeyStore(keyPath.toString()), null, historyStore);
+        return new AiRuntimeConfigServiceImpl(aiConfig, systemConfigService,
+            new DynamicAiModelRegistry(), new AiProviderRegistry(java.util.List.of(modelFactory)),
+            new ObjectMapper(), new AiRuntimeKeyStore(keyPath.toString()), null, historyStore);
     }
 
     private AiRuntimeKeyStore keyStore(Path keyPath) {

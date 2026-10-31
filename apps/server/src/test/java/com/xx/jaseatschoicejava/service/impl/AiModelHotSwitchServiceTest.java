@@ -7,10 +7,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import java.util.Map;
 
@@ -19,12 +21,15 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xx.jaseatschoicejava.agent.config.DynamicAiModelRegistry;
 import com.xx.jaseatschoicejava.agent.dto.AiCapabilitiesDTO;
 import com.xx.jaseatschoicejava.config.AIConfig;
 import com.xx.jaseatschoicejava.config.AiModelConfig;
+import com.xx.jaseatschoicejava.config.AiRuntimeKeyStore;
 import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 import com.xx.jaseatschoicejava.dto.AiConnectivityResult;
 import com.xx.jaseatschoicejava.dto.AiModelCandidateDTO;
@@ -36,6 +41,7 @@ import com.xx.jaseatschoicejava.service.impl.AiModelClientFactory;
 import dev.langchain4j.model.chat.ChatModel;
 
 @ExtendWith(MockitoExtension.class)
+@org.mockito.junit.jupiter.MockitoSettings(strictness = org.mockito.quality.Strictness.LENIENT)
 class AiModelHotSwitchServiceTest {
 
     @Mock
@@ -66,8 +72,31 @@ class AiModelHotSwitchServiceTest {
         zhipuConfig.setBaseUrl("");
         zhipuConfig.setTimeout(null);
         registry = new DynamicAiModelRegistry();
-        service = new AiRuntimeConfigServiceImpl(
-            aiConfig, zhipuConfig, systemConfigService, registry, modelFactory, new ObjectMapper());
+                when(modelFactory.providerCode()).thenReturn("zhipu");
+        when(modelFactory.resolveKey(null)).thenAnswer(ignored -> aiConfig.getApiKey());
+        when(modelFactory.buildChatModel(any(AiModelConfig.class), isNull()))
+            .thenReturn(org.mockito.Mockito.mock(ChatModel.class));
+        when(modelFactory.buildSupervisorModel(any(AiModelConfig.class), isNull()))
+            .thenReturn(org.mockito.Mockito.mock(ChatModel.class));
+        when(modelFactory.buildVisionModel(any(AiModelConfig.class), isNull()))
+            .thenReturn(org.mockito.Mockito.mock(ChatModel.class));
+        when(modelFactory.environmentConfig(any(AIConfig.class))).thenReturn(AiModelConfig.builder()
+            .provider("zhipu")
+            .model(aiConfig.getModel())
+            .supervisorModel(aiConfig.getSupervisorModel())
+            .visionModel(aiConfig.getVisionModel())
+            .baseUrl(aiConfig.getBaseUrl())
+            .timeoutMs(aiConfig.getTimeout())
+            .temperature(aiConfig.getTemperature())
+            .build());
+        when(modelFactory.resolveKey(any())).thenAnswer(invocation -> {
+            AiRuntimeKeyStore store = invocation.getArgument(0);
+            String runtimeKey = store == null ? "" : store.readKey();
+            return runtimeKey.isBlank() ? aiConfig.getApiKey() : runtimeKey;
+        });
+service = new AiRuntimeConfigServiceImpl(
+            aiConfig, systemConfigService, registry, new AiProviderRegistry(java.util.List.of(modelFactory)),
+            new ObjectMapper(), null, null, null);
         service.initialize();
     }
 
@@ -126,7 +155,7 @@ class AiModelHotSwitchServiceTest {
     void candidateTestDoesNotPersistOrActivate() {
         ChatModel candidateModel = mock(ChatModel.class);
         when(candidateModel.chat("ping")).thenReturn("pong");
-        when(modelFactory.buildChatModel(any(AiModelConfig.class))).thenReturn(candidateModel);
+        when(modelFactory.buildChatModel(any(AiModelConfig.class), isNull())).thenReturn(candidateModel);
 
         AiConnectivityResult result = service.testCandidateConnectivity(candidate());
 
@@ -140,7 +169,7 @@ class AiModelHotSwitchServiceTest {
     void savePersistsThenAtomicallyActivatesCandidate() {
         ChatModel candidateModel = mock(ChatModel.class);
         when(candidateModel.chat("ping")).thenReturn("pong");
-        when(modelFactory.buildChatModel(any(AiModelConfig.class))).thenReturn(candidateModel);
+        when(modelFactory.buildChatModel(any(AiModelConfig.class), isNull())).thenReturn(candidateModel);
         when(systemConfigService.setConfigValue(anyString(), anyString(), anyString(), anyString())).thenReturn(true);
 
         AiRuntimeConfigSnapshot snapshot = service.saveAndActivate(candidate());
@@ -156,7 +185,7 @@ class AiModelHotSwitchServiceTest {
     void failedCandidateTestKeepsOldConfigAndDatabase() {
         ChatModel candidateModel = mock(ChatModel.class);
         when(candidateModel.chat("ping")).thenThrow(new IllegalStateException("model unavailable"));
-        when(modelFactory.buildChatModel(any(AiModelConfig.class))).thenReturn(candidateModel);
+        when(modelFactory.buildChatModel(any(AiModelConfig.class), isNull())).thenReturn(candidateModel);
 
         BusinessException exception = assertThrows(BusinessException.class,
             () -> service.saveAndActivate(candidate()));
@@ -170,7 +199,7 @@ class AiModelHotSwitchServiceTest {
     void persistenceFailureKeepsOldActiveConfig() {
         ChatModel candidateModel = mock(ChatModel.class);
         when(candidateModel.chat("ping")).thenReturn("pong");
-        when(modelFactory.buildChatModel(any(AiModelConfig.class))).thenReturn(candidateModel);
+        when(modelFactory.buildChatModel(any(AiModelConfig.class), isNull())).thenReturn(candidateModel);
         when(systemConfigService.setConfigValue(anyString(), anyString(), anyString(), anyString())).thenReturn(false);
 
         BusinessException exception = assertThrows(BusinessException.class,
@@ -178,6 +207,31 @@ class AiModelHotSwitchServiceTest {
 
         assertEquals("AI_CONFIG_SAVE_FAILED", exception.getCode());
         assertEquals("env-chat", service.getCurrentSnapshot().getModel());
+    }
+
+    @Test
+    void candidateTestValidatesChatSupervisorAndVisionModels() {
+        AiModelCandidateDTO candidate = candidate().toBuilder().apiKey("candidate-key-1234567890").build();
+        ChatModel chatModel = mock(ChatModel.class);
+        ChatModel supervisorModel = mock(ChatModel.class);
+        ChatModel visionModel = mock(ChatModel.class);
+        when(modelFactory.buildChatModel(any(AiModelConfig.class), eq("candidate-key-1234567890")))
+            .thenReturn(chatModel);
+        when(modelFactory.buildSupervisorModel(any(AiModelConfig.class), eq("candidate-key-1234567890")))
+            .thenReturn(supervisorModel);
+        when(modelFactory.buildVisionModel(any(AiModelConfig.class), eq("candidate-key-1234567890")))
+            .thenReturn(visionModel);
+        when(chatModel.chat("ping")).thenReturn("pong");
+        when(visionModel.chat("ping")).thenReturn("pong");
+        when(supervisorModel.chat("ping")).thenThrow(new IllegalStateException("invalid supervisor"));
+
+        AiConnectivityResult result = service.testCandidateConnectivity(candidate);
+
+        assertFalse(result.isSuccess());
+        assertTrue(result.getMessage().contains("invalid supervisor"));
+        verify(modelFactory).buildChatModel(any(AiModelConfig.class), eq("candidate-key-1234567890"));
+        verify(modelFactory).buildSupervisorModel(any(AiModelConfig.class), eq("candidate-key-1234567890"));
+        verify(systemConfigService, never()).setConfigValue(anyString(), anyString(), anyString(), anyString());
     }
 
     @Test

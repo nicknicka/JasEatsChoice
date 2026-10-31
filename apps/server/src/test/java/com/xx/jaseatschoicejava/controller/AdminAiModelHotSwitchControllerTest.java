@@ -48,7 +48,7 @@ class AdminAiModelHotSwitchControllerTest {
             .provider("zhipu").model("glm-4-flash")
             .supervisorModel("glm-4-flash").visionModel("glm-4.6v-flash")
             .timeoutMs(30000).temperature(0.7).version(2L)
-            .keyStatus(new AiRuntimeConfigSnapshot.AiKeyStatus(true, "8d43aa55aa4f"))
+            .keyStatus(new AiRuntimeConfigSnapshot.AiKeyStatus(true, "8d43aa55aa4f", "2026-10-31T08:00:00"))
             .build();
         when(service.saveAndActivate(Mockito.any(AiModelCandidateDTO.class), Mockito.any()))
             .thenReturn(snapshot);

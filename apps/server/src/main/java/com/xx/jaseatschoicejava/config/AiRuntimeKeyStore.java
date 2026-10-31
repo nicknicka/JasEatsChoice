@@ -5,6 +5,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.FileTime;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.nio.file.attribute.PosixFilePermission;
 import java.util.Set;
 
@@ -72,6 +75,20 @@ public class AiRuntimeKeyStore {
             }
         } catch (IOException exception) {
             throw new IllegalStateException("AI key 文件写入失败", exception);
+        }
+    }
+
+    public String updatedAt() {
+        if (!exists()) {
+            return null;
+        }
+        try {
+            FileTime fileTime = Files.getLastModifiedTime(Path.of(filePath));
+            return LocalDateTime.ofInstant(fileTime.toInstant(), ZoneId.systemDefault())
+                .withNano(0)
+                .toString();
+        } catch (IOException exception) {
+            return null;
         }
     }
 

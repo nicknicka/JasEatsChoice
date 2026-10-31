@@ -18,7 +18,7 @@ function snapshot(model, version, fingerprint) {
     temperature: 0.7,
     updatedAt: '2026-10-31T09:00:00',
     version,
-    keyStatus: { configured: true, fingerprint },
+    keyStatus: { configured: true, fingerprint, updatedAt: '2026-10-31T08:30:00' },
     capabilities: {
       available: true,
       textChat: true,
@@ -86,6 +86,7 @@ test.describe('AI 热加载发布验收', () => {
       await expect(page.getByText('首期仅支持单后端实例')).toBeVisible()
       await expect(aiSection.getByText(currentModel).first()).toBeVisible()
       await expect(aiSection.getByText(`指纹：${ACTIVE_FINGERPRINT}`)).toBeVisible()
+      await expect(aiSection.getByText('更新时间：2026-10-31T08:30:00')).toBeVisible()
 
       const formItem = label => aiSection.locator('.el-form-item').filter({ hasText: label })
       await formItem('API Key').locator('input[type="password"]').fill(SECRET_KEY)
@@ -94,16 +95,13 @@ test.describe('AI 热加载发布验收', () => {
       await page.getByRole('option', { name: '智谱' }).click()
 
       await formItem('聊天模型').locator('.el-select').click()
-      await page.keyboard.type(candidateModel)
-      await page.keyboard.press('Enter')
+      await page.getByRole('option', { name: candidateModel, exact: true }).last().click()
 
       await formItem('Supervisor 模型').locator('.el-select').click()
-      await page.keyboard.type(candidateModel)
-      await page.keyboard.press('Enter')
+      await page.getByRole('option', { name: candidateModel, exact: true }).last().click()
 
       await formItem('视觉模型').locator('.el-select').click()
-      await page.keyboard.type('glm-4.6v-flash')
-      await page.keyboard.press('Enter')
+      await page.getByRole('option', { name: 'glm-4.6v-flash', exact: true }).last().click()
 
       await Promise.all([
         page.waitForResponse(response => new URL(response.url()).pathname === '/api/admin/settings/ai/test'),

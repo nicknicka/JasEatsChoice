@@ -13,14 +13,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.xx.jaseatschoicejava.agent.config.ChatModelProvider;
 import com.xx.jaseatschoicejava.agent.config.DynamicAiModelRegistry;
-import com.xx.jaseatschoicejava.agent.dto.AiCapabilitiesDTO;
-import com.xx.jaseatschoicejava.config.AiApiKeyResolver;
-import com.xx.jaseatschoicejava.config.AiRuntimeKeyStore;
 import com.xx.jaseatschoicejava.config.AiModelConfig;
 import com.xx.jaseatschoicejava.config.AIConfig;
-import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
+import com.xx.jaseatschoicejava.config.AiRuntimeKeyStore;
 import com.xx.jaseatschoicejava.dto.AiConnectivityResult;
 import com.xx.jaseatschoicejava.dto.AiConfigAuditEvent;
 import com.xx.jaseatschoicejava.dto.AiModelCandidateDTO;
@@ -46,18 +42,11 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
 
     private static final String CONFIG_KEY = "ai.runtime-config";
     private static final String CONFIG_GROUP = "ai";
-    private static final List<String> ZHIPU_KNOWN_MODELS = List.of(
-        "glm-4-flash",
-        "glm-4.6v-flash",
-        "glm-4.1v-thinking-flash"
-    );
 
     private final AIConfig aiConfig;
-    private final ZhipuAIConfig zhipuConfig;
-    private final ChatModelProvider chatModelProvider;
     private final SystemConfigService systemConfigService;
     private final DynamicAiModelRegistry registry;
-    private final AiModelClientFactory modelFactory;
+    private final AiProviderRegistry providerRegistry;
     private final ObjectMapper objectMapper;
     private final AiRuntimeKeyStore runtimeKeyStore;
     private final AiConfigAuditService auditService;
@@ -73,72 +62,21 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
     @Autowired
     public AiRuntimeConfigServiceImpl(
             AIConfig aiConfig,
-            ZhipuAIConfig zhipuConfig,
-            ChatModelProvider chatModelProvider,
             SystemConfigService systemConfigService,
             DynamicAiModelRegistry registry,
-            AiModelClientFactory modelFactory,
-            ObjectMapper objectMapper,
-            AiRuntimeKeyStore runtimeKeyStore) {
-        this(aiConfig, zhipuConfig, chatModelProvider, systemConfigService, registry,
-            modelFactory, objectMapper, runtimeKeyStore, null, null);
-    }
-
-    public AiRuntimeConfigServiceImpl(
-            AIConfig aiConfig,
-            ZhipuAIConfig zhipuConfig,
-            ChatModelProvider chatModelProvider,
-            SystemConfigService systemConfigService,
-            DynamicAiModelRegistry registry,
-            AiModelClientFactory modelFactory,
-            ObjectMapper objectMapper,
-            AiRuntimeKeyStore runtimeKeyStore,
-            AiConfigAuditService auditService) {
-        this(aiConfig, zhipuConfig, chatModelProvider, systemConfigService, registry,
-            modelFactory, objectMapper, runtimeKeyStore, auditService, null);
-    }
-
-    @Autowired
-    public AiRuntimeConfigServiceImpl(
-            AIConfig aiConfig,
-            ZhipuAIConfig zhipuConfig,
-            ChatModelProvider chatModelProvider,
-            SystemConfigService systemConfigService,
-            DynamicAiModelRegistry registry,
-            AiModelClientFactory modelFactory,
+            AiProviderRegistry providerRegistry,
             ObjectMapper objectMapper,
             AiRuntimeKeyStore runtimeKeyStore,
             AiConfigAuditService auditService,
             AiConfigHistoryStore historyStore) {
         this.aiConfig = aiConfig;
-        this.zhipuConfig = zhipuConfig;
-        this.chatModelProvider = chatModelProvider;
         this.systemConfigService = systemConfigService;
         this.registry = registry;
-        this.modelFactory = modelFactory;
+        this.providerRegistry = providerRegistry;
         this.objectMapper = objectMapper;
         this.runtimeKeyStore = runtimeKeyStore;
         this.auditService = auditService;
         this.historyStore = historyStore;
-    }
-
-    public AiRuntimeConfigServiceImpl(
-            AIConfig aiConfig,
-            ZhipuAIConfig zhipuConfig,
-            ChatModelProvider chatModelProvider) {
-        this(aiConfig, zhipuConfig, chatModelProvider, null, new DynamicAiModelRegistry(),
-            new ZhipuAiModelClientFactory(aiConfig, zhipuConfig, null), new ObjectMapper(), null, null);
-    }
-
-    public AiRuntimeConfigServiceImpl(
-            AIConfig aiConfig,
-            ZhipuAIConfig zhipuConfig,
-            SystemConfigService systemConfigService,
-            DynamicAiModelRegistry registry,
-            AiModelClientFactory modelFactory,
-            ObjectMapper objectMapper) {
-        this(aiConfig, zhipuConfig, null, systemConfigService, registry,
-            modelFactory, objectMapper, null, null);
     }
 
     @PostConstruct
@@ -155,7 +93,7 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
         if (previous == null) {
             return null;
         }
-        String apiKey = resolveKey();
+        String apiKey = activeKey();
         return AiPreviousConfigSummary.builder()
             .version(previous.getVersion())
             .updatedAt(previous.getUpdatedAt())
@@ -172,7 +110,7 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
     }
 
     @Override
-    public AiRuntimeConfigSnapshot rollbackToPrevious(String operator) {
+    public synchronized AiRuntimeConfigSnapshot rollbackToPrevious(String operator) {
         AiRuntimeConfigHistory.Entry previous = previousEntry();
         if (previous == null) {
             recordAudit("ROLLBACK_FAILED", version, null, currentConfig(), null, operator,
@@ -180,17 +118,15 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
             throw new BusinessException("AI_CONFIG_ROLLBACK_INVALID", "没有可回滚的上一版配置");
         }
 
-        String apiKey = resolveKey();
-        if (!hasText(apiKey)) {
+        if (!hasText(activeKey())) {
             recordAudit("ROLLBACK_FAILED", version, null, currentConfig(), null, operator,
                 null, "FAILED", "上一版 key 已清除，请重新输入后保存");
             throw new BusinessException("AI_KEY_REQUIRED", "上一版 key 已清除，请重新输入后保存");
         }
+
+        AiModelClientFactory adapter = adapter(previous.getConfig().getProvider());
         try {
-            ChatModel rollbackModel = chatModelProvider != null
-                ? chatModelProvider.buildAiModel()
-                : modelFactory.buildChatModel(previous.getConfig());
-            rollbackModel.chat("ping");
+            pingRoles(adapter, previous.getConfig(), null);
         } catch (Exception exception) {
             recordAudit("ROLLBACK_FAILED", version, null, currentConfig(), null, operator,
                 null, "FAILED", "上一版配置测试失败，请重新输入有效 key");
@@ -203,11 +139,17 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
         String currentUpdatedAt = updatedAt;
         AiRuntimeConfigHistory.Entry currentEntry = historyEntry(
             currentConfig, currentVersion, currentUpdatedAt);
-
+        long rollbackVersion = nextVersion();
+        String now = LocalDateTime.now().withNano(0).toString();
         List<AiRuntimeConfigHistory.Entry> entries = new ArrayList<>(configHistory.getHistory());
-        entries.removeIf(entry -> entry.getVersion() == previous.getVersion());
         entries.add(currentEntry);
+        AiRuntimeConfigHistory restored = AiRuntimeConfigHistory.builder()
+            .activeVersion(rollbackVersion)
+            .activeUpdatedAt(now)
+            .history(entries)
+            .build();
 
+        String previousDatabaseValue = databaseConfigValue();
         String configValue = writeConfigValue(previous.getConfig());
         boolean saved;
         try {
@@ -223,25 +165,24 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
                 null, "FAILED", "回滚失败，当前配置未改变");
             throw new BusinessException("AI_CONFIG_ROLLBACK_FAILED", "回滚失败，当前配置未改变");
         }
-        AiRuntimeConfigHistory restored = AiRuntimeConfigHistory.builder()
-            .activeVersion(previous.getVersion())
-            .activeUpdatedAt(previous.getUpdatedAt())
-            .history(entries)
-            .build();
-        persistHistory(restored);
 
-        DynamicAiModelRegistry.ActiveModels clients = new DynamicAiModelRegistry.ActiveModels(
-            previous.getConfig(),
-            modelFactory.buildChatModel(previous.getConfig()),
-            modelFactory.buildSupervisorModel(previous.getConfig()),
-            modelFactory.buildVisionModel(previous.getConfig()),
-            modelFactory.buildStreamingModel(previous.getConfig()),
-            previous.getVersion());
+        try {
+            persistHistory(restored);
+        } catch (Exception exception) {
+            restoreDatabaseConfig(previousDatabaseValue);
+            recordAudit("ROLLBACK_FAILED", version, null, currentConfig(), null, operator,
+                null, "FAILED", "回滚历史保存失败，当前配置未改变");
+            throw new BusinessException("AI_CONFIG_ROLLBACK_HISTORY_FAILED",
+                "回滚历史保存失败，当前配置未改变");
+        }
+
+        DynamicAiModelRegistry.ActiveModels clients = activeClients(
+            adapter, previous.getConfig(), null, rollbackVersion);
         registry.activate(clients);
         configHistory = restored;
-        version = previous.getVersion();
-        updatedAt = previous.getUpdatedAt();
-        recordAudit("ROLLBACK_SUCCEEDED", currentVersion, previous.getVersion(), currentConfig,
+        version = rollbackVersion;
+        updatedAt = now;
+        recordAudit("ROLLBACK_SUCCEEDED", currentVersion, rollbackVersion, currentConfig,
             previous.getConfig(), operator, null, "SUCCESS", "AI 配置已回滚");
         return getCurrentSnapshot();
     }
@@ -249,79 +190,67 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
     @Override
     public AiRuntimeConfigSnapshot getCurrentSnapshot() {
         AiModelConfig config = currentConfig();
-        String model = effectiveModel();
-        String supervisorModel = config != null && hasText(config.getSupervisorModel())
-            ? config.getSupervisorModel() : aiConfig.getSupervisorModel();
-        String visionModel = config != null && hasText(config.getVisionModel())
-            ? config.getVisionModel() : aiConfig.getVisionModel();
-        String baseUrl = config != null && config.getBaseUrl() != null
-            ? config.getBaseUrl() : aiConfig.getBaseUrl();
-        int timeout = config != null && config.getTimeoutMs() > 0
-            ? config.getTimeoutMs() : timeout(aiConfig.getTimeout());
-        double temperature = config != null ? config.getTemperature()
-            : (aiConfig.getTemperature() != null ? aiConfig.getTemperature() : 0.7);
-        String apiKey = resolveKey();
+        AiModelClientFactory adapter = adapter(config.getProvider());
+        String apiKey = activeKey();
 
-        List<String> supportedModels = new ArrayList<>(ZHIPU_KNOWN_MODELS);
-        for (String currentModel : List.of(config != null ? config.getModel() : null, supervisorModel, visionModel)) {
+        List<String> supportedModels = new ArrayList<>(adapter.knownModels());
+        for (String currentModel : List.of(config.getModel(), config.getSupervisorModel(),
+                config.getVisionModel())) {
             if (hasText(currentModel) && !supportedModels.contains(currentModel)) {
                 supportedModels.add(currentModel);
             }
         }
 
         return AiRuntimeConfigSnapshot.builder()
-            .provider("zhipu")
-            .model(config != null && hasText(config.getModel()) ? config.getModel() : effectiveModel())
-            .supervisorModel(supervisorModel)
-            .visionModel(visionModel)
-            .baseUrl(baseUrl == null ? "" : baseUrl)
-            .timeoutMs(timeout)
-            .temperature(temperature)
+            .provider(config.getProvider())
+            .model(config.getModel())
+            .supervisorModel(config.getSupervisorModel())
+            .visionModel(config.getVisionModel())
+            .baseUrl(config.getBaseUrl() == null ? "" : config.getBaseUrl())
+            .timeoutMs(config.getTimeoutMs())
+            .temperature(config.getTemperature())
             .updatedAt(updatedAt)
             .version(version)
             .keyStatus(keyStatus(apiKey))
-            .capabilities(capabilities(config))
+            .capabilities(adapter.capabilities(config))
             .supportedModels(supportedModels)
-            .providers(List.of(new AiRuntimeConfigSnapshot.AiProviderOption(
-                "zhipu", "智谱", ZHIPU_KNOWN_MODELS)))
+            .providers(providerRegistry.options())
             .build();
     }
 
     @Override
     public AiConnectivityResult testCurrentConnectivity() {
-        String apiKey = resolveKey();
+        AiModelConfig config = currentConfig();
+        AiModelClientFactory adapter = adapter(config.getProvider());
+        String apiKey = activeKey();
         if (!hasText(apiKey)) {
-            return failure(currentConfig().getModel(), "AI key 未配置");
+            return failure(config.getModel(), "AI key 未配置");
         }
         try {
-            ChatModel chatModel = chatModelProvider != null
-                ? chatModelProvider.buildAiModel()
-                : modelFactory.buildChatModel(currentConfig());
-            chatModel.chat("ping");
-            return new AiConnectivityResult(true, "连接成功", testedAt(), currentConfig().getModel());
+            pingRoles(adapter, config, null);
+            return new AiConnectivityResult(true, "连接成功", testedAt(), config.getModel());
         } catch (Exception exception) {
-            return failure(currentConfig().getModel(), safeMessage(exception, apiKey));
+            return failure(config.getModel(), safeMessage(exception, apiKey));
         }
     }
 
     @Override
     public AiConnectivityResult testCandidateConnectivity(AiModelCandidateDTO candidate) {
         AiModelConfig config;
+        AiModelClientFactory adapter;
         try {
             config = validatedConfig(candidate);
-        } catch (BusinessException exception) {
+            adapter = adapter(config.getProvider());
+        } catch (BusinessException | IllegalArgumentException exception) {
             return failure(candidate == null ? null : candidate.getModel(), exception.getMessage());
         }
         String candidateKey = candidateKey(candidate);
-        String apiKey = candidateKey != null ? candidateKey : resolveKey();
+        String apiKey = candidateKey != null ? candidateKey : activeKey();
         if (!hasText(apiKey)) {
             return failure(config.getModel(), "AI key 未配置");
         }
         try {
-            ChatModel candidateModel = candidateKey != null
-                ? modelFactory.buildChatModel(config, candidateKey)
-                : modelFactory.buildChatModel(config);
-            candidateModel.chat("ping");
+            pingRoles(adapter, config, candidateKey);
             return new AiConnectivityResult(true, "连接成功", testedAt(), config.getModel());
         } catch (Exception exception) {
             return failure(config.getModel(), safeMessage(exception, apiKey));
@@ -334,7 +263,8 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
     }
 
     @Override
-    public AiRuntimeConfigSnapshot saveAndActivate(AiModelCandidateDTO candidate, String operator) {
+    public synchronized AiRuntimeConfigSnapshot saveAndActivate(
+            AiModelCandidateDTO candidate, String operator) {
         AiConnectivityResult testResult = testCandidateConnectivity(candidate);
         if (!testResult.isSuccess()) {
             recordAudit("SAVE_FAILED", null, null, null, candidate, operator, testResult,
@@ -343,21 +273,20 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
         }
 
         AiModelConfig config = validatedConfig(candidate);
+        AiModelClientFactory adapter = adapter(config.getProvider());
         String candidateKey = candidateKey(candidate);
-        String previousKey = resolveKey();
+        String previousKey = activeKey();
+        String previousDatabaseValue = databaseConfigValue();
         long nextVersion = version + 1;
         DynamicAiModelRegistry.ActiveModels clients;
         try {
+            clients = activeClients(adapter, config, candidateKey, nextVersion);
             if (candidateKey != null) {
+                if (runtimeKeyStore == null) {
+                    throw new IllegalStateException("AI_ACTIVE_KEY_FILE 未配置");
+                }
                 runtimeKeyStore.writeKey(candidateKey);
             }
-            clients = new DynamicAiModelRegistry.ActiveModels(
-                config,
-                modelFactory.buildChatModel(config),
-                modelFactory.buildSupervisorModel(config),
-                modelFactory.buildVisionModel(config),
-                modelFactory.buildStreamingModel(config),
-                nextVersion);
         } catch (Exception exception) {
             rollbackRuntimeKey(candidateKey, previousKey);
             if (exception instanceof BusinessException businessException) {
@@ -370,11 +299,10 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
             throw new BusinessException("AI_KEY_WRITE_FAILED", "AI key 保存失败，当前 key 未变更");
         }
 
-        String configValue = writeConfigValue(config);
         boolean saved;
         try {
-            saved = systemConfigService.setConfigValue(
-                CONFIG_KEY, configValue, "AI 模型运行时配置", CONFIG_GROUP);
+            saved = systemConfigService != null && systemConfigService.setConfigValue(
+                CONFIG_KEY, writeConfigValue(config), "AI 模型运行时配置", CONFIG_GROUP);
         } catch (Exception exception) {
             rollbackRuntimeKey(candidateKey, previousKey);
             recordAudit("SAVE_FAILED", version, null, currentConfig(), candidate, operator,
@@ -391,33 +319,68 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
         AiModelConfig previousConfig = currentConfig();
         long previousVersion = version;
         String previousUpdatedAt = updatedAt;
-
-        recordAudit("SAVE_SUCCEEDED", version, nextVersion, currentConfig(), candidate,
+        recordAudit("SAVE_SUCCEEDED", previousVersion, nextVersion, previousConfig, candidate,
             operator, testResult, "SUCCESS", "AI 非密钥配置已保存");
+
         String now = LocalDateTime.now().withNano(0).toString();
-        registry.activate(clients);
-        version = nextVersion;
-        updatedAt = now;
         List<AiRuntimeConfigHistory.Entry> entries = new ArrayList<>(configHistory.getHistory());
         entries.add(historyEntry(previousConfig, previousVersion, previousUpdatedAt));
-        configHistory = AiRuntimeConfigHistory.builder()
+        AiRuntimeConfigHistory history = AiRuntimeConfigHistory.builder()
             .activeVersion(nextVersion)
             .activeUpdatedAt(now)
             .history(entries)
             .build();
-        persistHistory(configHistory);
+        try {
+            persistHistory(history);
+        } catch (Exception exception) {
+            rollbackRuntimeKey(candidateKey, previousKey);
+            restoreDatabaseConfig(previousDatabaseValue);
+            recordAudit("SAVE_FAILED", previousVersion, null, previousConfig, candidate, operator,
+                testResult, "FAILED", "AI 配置历史保存失败");
+            throw new BusinessException("AI_CONFIG_HISTORY_SAVE_FAILED",
+                "AI 配置历史保存失败，当前配置未变更");
+        }
+
+        registry.activate(clients);
+        version = nextVersion;
+        updatedAt = now;
+        configHistory = history;
         recordAudit("ACTIVATED", previousVersion, nextVersion, previousConfig, candidate,
             operator, testResult, "SUCCESS", "AI 配置已保存并激活");
         return getCurrentSnapshot();
     }
 
+    private DynamicAiModelRegistry.ActiveModels activeClients(
+            AiModelClientFactory adapter,
+            AiModelConfig config,
+            String candidateKey,
+            long version) {
+        return new DynamicAiModelRegistry.ActiveModels(
+            config,
+            adapter.buildChatModel(config, candidateKey),
+            adapter.buildSupervisorModel(config, candidateKey),
+            adapter.buildVisionModel(config, candidateKey),
+            adapter.buildStreamingModel(config),
+            version);
+    }
+
+    private void pingRoles(
+            AiModelClientFactory adapter,
+            AiModelConfig config,
+            String candidateKey) {
+        adapter.buildChatModel(config, candidateKey).chat("ping");
+        adapter.buildSupervisorModel(config, candidateKey).chat("ping");
+        adapter.buildVisionModel(config, candidateKey).chat("ping");
+    }
+
     private void activate(AiModelConfig config, long nextVersion) {
+        AiModelClientFactory adapter = adapter(config.getProvider());
         DynamicAiModelRegistry.ActiveModels clients = new DynamicAiModelRegistry.ActiveModels(
             config,
-            modelFactory.buildChatModel(config),
-            modelFactory.buildSupervisorModel(config),
-            modelFactory.buildVisionModel(config),
-            modelFactory.buildStreamingModel(config),
+            adapter.buildChatModel(config),
+            adapter.buildSupervisorModel(config),
+            adapter.buildVisionModel(config),
+            adapter.buildStreamingModel(config),
             nextVersion);
         registry.activate(clients);
         version = nextVersion;
@@ -430,19 +393,11 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
 
     private AiRuntimeConfigHistory loadHistory() {
         if (historyStore == null) {
-            return AiRuntimeConfigHistory.builder()
-                .activeVersion(1L)
-                .activeUpdatedAt(LocalDateTime.now().withNano(0).toString())
-                .history(new ArrayList<>())
-                .build();
+            return emptyHistory();
         }
         String value = historyStore.load();
         if (!hasText(value)) {
-            return AiRuntimeConfigHistory.builder()
-                .activeVersion(1L)
-                .activeUpdatedAt(LocalDateTime.now().withNano(0).toString())
-                .history(new ArrayList<>())
-                .build();
+            return emptyHistory();
         }
         try {
             AiRuntimeConfigHistory history = objectMapper.readValue(value, AiRuntimeConfigHistory.class);
@@ -455,12 +410,16 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
                 .build();
         } catch (Exception exception) {
             log.warn("AI 配置历史无效，忽略回滚历史", exception);
-            return AiRuntimeConfigHistory.builder()
-                .activeVersion(1L)
-                .activeUpdatedAt(LocalDateTime.now().withNano(0).toString())
-                .history(new ArrayList<>())
-                .build();
+            return emptyHistory();
         }
+    }
+
+    private AiRuntimeConfigHistory emptyHistory() {
+        return AiRuntimeConfigHistory.builder()
+            .activeVersion(1L)
+            .activeUpdatedAt(LocalDateTime.now().withNano(0).toString())
+            .history(new ArrayList<>())
+            .build();
     }
 
     private void persistHistory(AiRuntimeConfigHistory history) {
@@ -470,7 +429,7 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
         try {
             historyStore.save(objectMapper.writeValueAsString(history));
         } catch (Exception exception) {
-            log.warn("AI 配置历史保存失败", exception);
+            throw new IllegalStateException("AI 配置历史保存失败", exception);
         }
     }
 
@@ -481,7 +440,7 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
 
     private AiRuntimeConfigHistory.Entry historyEntry(
             AiModelConfig config, long version, String updatedAt) {
-        String apiKey = resolveKey();
+        String apiKey = activeKey();
         return AiRuntimeConfigHistory.Entry.builder()
             .version(version)
             .updatedAt(updatedAt)
@@ -492,43 +451,33 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
     }
 
     private AiModelConfig effectiveConfig(Map<String, String> databaseConfigs) {
+        String provider = bootstrapProvider();
+        AiModelConfig fallback = adapter(provider).environmentConfig(aiConfig);
         if (databaseConfigs == null || !hasText(databaseConfigs.get(CONFIG_KEY))) {
-            return environmentConfig();
+            return fallback;
         }
         try {
             AiModelConfig dbConfig = objectMapper.readValue(
                 databaseConfigs.get(CONFIG_KEY), AiModelConfig.class);
+            String dbProvider = hasText(dbConfig.getProvider()) ? dbConfig.getProvider() : provider;
+            AiModelConfig providerFallback = adapter(dbProvider).environmentConfig(aiConfig);
             return AiModelConfig.builder()
-                .provider(hasText(dbConfig.getProvider()) ? dbConfig.getProvider() : aiConfig.getProvider())
-                .model(hasText(dbConfig.getModel()) ? dbConfig.getModel() : aiConfig.getModel())
+                .provider(dbProvider)
+                .model(hasText(dbConfig.getModel()) ? dbConfig.getModel() : providerFallback.getModel())
                 .supervisorModel(hasText(dbConfig.getSupervisorModel())
-                    ? dbConfig.getSupervisorModel() : aiConfig.getSupervisorModel())
+                    ? dbConfig.getSupervisorModel() : providerFallback.getSupervisorModel())
                 .visionModel(hasText(dbConfig.getVisionModel())
-                    ? dbConfig.getVisionModel() : aiConfig.getVisionModel())
-                .baseUrl(dbConfig.getBaseUrl() != null ? dbConfig.getBaseUrl() : aiConfig.getBaseUrl())
+                    ? dbConfig.getVisionModel() : providerFallback.getVisionModel())
+                .baseUrl(dbConfig.getBaseUrl() != null ? dbConfig.getBaseUrl() : providerFallback.getBaseUrl())
                 .timeoutMs(dbConfig.getTimeoutMs() > 0
-                    ? dbConfig.getTimeoutMs() : timeout(aiConfig.getTimeout()))
+                    ? dbConfig.getTimeoutMs() : providerFallback.getTimeoutMs())
                 .temperature(dbConfig.getTemperature() >= 0 ? dbConfig.getTemperature()
-                    : (aiConfig.getTemperature() != null ? aiConfig.getTemperature() : 0.7))
+                    : providerFallback.getTemperature())
                 .build();
         } catch (Exception exception) {
             log.warn("AI 数据库配置无效，回退环境变量", exception);
-            return environmentConfig();
+            return fallback;
         }
-    }
-
-    private AiModelConfig environmentConfig() {
-        return AiModelConfig.builder()
-            .provider(hasText(aiConfig.getProvider()) ? aiConfig.getProvider() : "zhipu")
-            .model(effectiveModel())
-            .supervisorModel(aiConfig.getSupervisorModel())
-            .visionModel(hasText(zhipuConfig.getVisionModel())
-                ? zhipuConfig.getVisionModel() : aiConfig.getVisionModel())
-            .baseUrl(hasText(zhipuConfig.getBaseUrl())
-                ? zhipuConfig.getBaseUrl() : aiConfig.getBaseUrl())
-            .timeoutMs(timeout(zhipuConfig.getTimeout() != null ? zhipuConfig.getTimeout() : aiConfig.getTimeout()))
-            .temperature(aiConfig.getTemperature() != null ? aiConfig.getTemperature() : 0.7)
-            .build();
     }
 
     private AiModelConfig validatedConfig(AiModelCandidateDTO candidate) {
@@ -539,10 +488,8 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
                 || !hasText(candidate.getVisionModel())) {
             throw new BusinessException("AI_CONFIG_INVALID", "provider 和模型名不能为空");
         }
-        if (!"zhipu".equals(candidate.getProvider())) {
-            throw new BusinessException("AI_CONFIG_INVALID", "暂不支持的 AI provider");
-        }
-        int timeout = candidate.getTimeoutMs() != null ? candidate.getTimeoutMs() : timeout(aiConfig.getTimeout());
+        adapter(candidate.getProvider());
+        int timeout = candidate.getTimeoutMs() != null ? candidate.getTimeoutMs() : 30000;
         if (timeout <= 0) {
             throw new BusinessException("AI_CONFIG_INVALID", "超时时间必须大于 0");
         }
@@ -573,11 +520,13 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
 
     private AiModelConfig currentConfig() {
         DynamicAiModelRegistry.ActiveModels active = registry.current();
-        return active.config() != null ? active.config() : environmentConfig();
+        return active.config() != null ? active.config()
+            : adapter(bootstrapProvider()).environmentConfig(aiConfig);
     }
 
-    private String resolveKey() {
-        return AiApiKeyResolver.resolve(zhipuConfig, aiConfig, runtimeKeyStore);
+    private String activeKey() {
+        AiModelClientFactory adapter = adapter(currentConfig().getProvider());
+        return adapter.resolveKey(runtimeKeyStore);
     }
 
     private String candidateKey(AiModelCandidateDTO candidate) {
@@ -600,22 +549,50 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
         }
     }
 
-    private AiCapabilitiesDTO capabilities(AiModelConfig config) {
-        if (chatModelProvider != null) {
-            return chatModelProvider.getCapabilities();
+    private String bootstrapProvider() {
+        if (hasText(aiConfig.getProvider())) {
+            return aiConfig.getProvider();
         }
-        return modelFactory.capabilities(config);
+        List<AiRuntimeConfigSnapshot.AiProviderOption> options = providerRegistry.options();
+        if (options.isEmpty()) {
+            throw new IllegalStateException("没有已实现的 AI provider");
+        }
+        return options.get(0).getCode();
     }
 
-    private String effectiveModel() {
-        if (hasText(zhipuConfig.getModel())) {
-            return zhipuConfig.getModel();
-        }
-        return hasText(aiConfig.getModel()) ? aiConfig.getModel() : "glm-4-flash";
+    private AiModelClientFactory adapter(String provider) {
+        return providerRegistry.required(hasText(provider) ? provider : bootstrapProvider());
     }
 
-    private int timeout(Integer value) {
-        return value != null && value > 0 ? value : 30000;
+    private String databaseConfigValue() {
+        if (systemConfigService == null) {
+            return null;
+        }
+        return systemConfigService.getConfigsByGroup(CONFIG_GROUP).get(CONFIG_KEY);
+    }
+
+    private void restoreDatabaseConfig(String previousDatabaseValue) {
+        if (systemConfigService == null) {
+            return;
+        }
+        if (hasText(previousDatabaseValue)) {
+            systemConfigService.setConfigValue(
+                CONFIG_KEY, previousDatabaseValue, "AI 模型运行时配置", CONFIG_GROUP);
+            return;
+        }
+        systemConfigService.deleteConfig(CONFIG_KEY);
+        systemConfigService.refreshConfigCache();
+    }
+
+    private long nextVersion() {
+        long result = version + 1;
+        List<AiRuntimeConfigHistory.Entry> entries = configHistory.getHistory();
+        if (entries != null) {
+            for (AiRuntimeConfigHistory.Entry entry : entries) {
+                result = Math.max(result, entry.getVersion() + 1);
+            }
+        }
+        return result;
     }
 
     private AiConnectivityResult failure(String model, String message) {
@@ -623,13 +600,15 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
     }
 
     private AiRuntimeConfigSnapshot.AiKeyStatus keyStatus(String apiKey) {
+        String keyUpdatedAt = runtimeKeyStore == null ? null : runtimeKeyStore.updatedAt();
         if (!hasText(apiKey)) {
-            return new AiRuntimeConfigSnapshot.AiKeyStatus(false, null);
+            return new AiRuntimeConfigSnapshot.AiKeyStatus(false, null, null);
         }
         String key = apiKey.trim();
         return new AiRuntimeConfigSnapshot.AiKeyStatus(
             true,
-            shortSha256(key)
+            shortSha256(key),
+            hasText(keyUpdatedAt) ? keyUpdatedAt : updatedAt
         );
     }
 
@@ -668,7 +647,7 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
         if (auditService == null) {
             return;
         }
-        String key = resolveKey();
+        String key = activeKey();
         Map<String, Object> oldSummary = oldConfig == null ? Map.of() : summary(oldConfig, key);
         Map<String, Object> newSummary;
         if (newConfig instanceof AiModelConfig modelConfig) {

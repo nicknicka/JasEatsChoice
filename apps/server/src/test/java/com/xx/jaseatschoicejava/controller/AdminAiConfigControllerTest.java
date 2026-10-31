@@ -47,7 +47,7 @@ class AdminAiConfigControllerTest {
             .providers(List.of(new AiRuntimeConfigSnapshot.AiProviderOption("zhipu", "智谱",
                 List.of("glm-4-flash", "glm-4.6v-flash"))))
             .build();
-        snapshot.setKeyStatus(new AiRuntimeConfigSnapshot.AiKeyStatus(true, "abcd12345678"));
+        snapshot.setKeyStatus(new AiRuntimeConfigSnapshot.AiKeyStatus(true, "abcd12345678", "2026-10-31T08:00:00"));
         when(service.getCurrentSnapshot()).thenReturn(snapshot);
 
         String body = mockMvc.perform(get("/admin/settings/ai/current"))

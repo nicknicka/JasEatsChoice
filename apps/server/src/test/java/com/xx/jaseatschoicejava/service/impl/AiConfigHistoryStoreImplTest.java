@@ -22,7 +22,7 @@ class AiConfigHistoryStoreImplTest {
     void loadsLatestHistory() {
         AiConfigHistoryMapper mapper = mock(AiConfigHistoryMapper.class);
         AiConfigHistoryEntity latest = new AiConfigHistoryEntity(
-            "latest", "{\"activeVersion\":2}", LocalDateTime.now(), LocalDateTime.now());
+            null, "{\"activeVersion\":2}", LocalDateTime.now(), LocalDateTime.now());
         when(mapper.selectList(any(QueryWrapper.class))).thenReturn(List.of(latest));
 
         AiConfigHistoryStoreImpl store = new AiConfigHistoryStoreImpl(mapper);

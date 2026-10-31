@@ -6,6 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.any;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -13,14 +15,19 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.xx.jaseatschoicejava.agent.config.ChatModelProvider;
+
+
 import com.xx.jaseatschoicejava.agent.dto.AiCapabilitiesDTO;
 import com.xx.jaseatschoicejava.config.AIConfig;
+import com.xx.jaseatschoicejava.config.AiModelConfig;
 import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
+import com.xx.jaseatschoicejava.agent.config.DynamicAiModelRegistry;
 import com.xx.jaseatschoicejava.dto.AiRuntimeConfigSnapshot;
 import com.xx.jaseatschoicejava.exception.BusinessException;
 import com.xx.jaseatschoicejava.service.AiRuntimeConfigService;
@@ -28,10 +35,11 @@ import com.xx.jaseatschoicejava.service.AiRuntimeConfigService;
 import dev.langchain4j.model.chat.ChatModel;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class AiRuntimeConfigServiceTest {
 
     @Mock
-    private ChatModelProvider chatModelProvider;
+    private AiModelClientFactory modelFactory;
 
     private AIConfig aiConfig;
     private ZhipuAIConfig zhipuConfig;
@@ -45,7 +53,39 @@ class AiRuntimeConfigServiceTest {
         zhipuConfig.setVisionModel("");
         zhipuConfig.setBaseUrl("");
         zhipuConfig.setTimeout(null);
-        service = new AiRuntimeConfigServiceImpl(aiConfig, zhipuConfig, chatModelProvider);
+        when(modelFactory.providerCode()).thenReturn("zhipu");
+        when(modelFactory.providerDisplayName()).thenReturn("智谱");
+        when(modelFactory.knownModels()).thenReturn(java.util.List.of(
+            "glm-4-flash", "glm-4.6v-flash", "glm-4.1v-thinking-flash"));
+        when(modelFactory.environmentConfig(aiConfig)).thenAnswer(ignored -> AiModelConfig.builder()
+            .provider("zhipu")
+            .model(zhipuConfig.getModel() != null && !zhipuConfig.getModel().isBlank()
+                ? zhipuConfig.getModel()
+                : (aiConfig.getModel() != null && !aiConfig.getModel().isBlank()
+                    ? aiConfig.getModel() : "glm-4-flash"))
+            .supervisorModel(aiConfig.getSupervisorModel() != null
+                ? aiConfig.getSupervisorModel() : "glm-4-flash")
+            .visionModel(zhipuConfig.getVisionModel() != null && !zhipuConfig.getVisionModel().isBlank()
+                ? zhipuConfig.getVisionModel()
+                : (aiConfig.getVisionModel() != null ? aiConfig.getVisionModel() : "glm-4.1v-thinking-flash"))
+            .baseUrl(zhipuConfig.getBaseUrl() != null && !zhipuConfig.getBaseUrl().isBlank()
+                ? zhipuConfig.getBaseUrl() : aiConfig.getBaseUrl())
+            .timeoutMs(zhipuConfig.getTimeout() != null ? zhipuConfig.getTimeout()
+                : (aiConfig.getTimeout() != null ? aiConfig.getTimeout() : 30000))
+            .temperature(aiConfig.getTemperature() != null ? aiConfig.getTemperature() : 0.7)
+            .build());
+        when(modelFactory.resolveKey(null)).thenAnswer(ignored -> {
+            if (zhipuConfig.getApiKey() != null && !zhipuConfig.getApiKey().isBlank()) {
+                return zhipuConfig.getApiKey();
+            }
+            return aiConfig.getApiKey() == null ? "" : aiConfig.getApiKey();
+        });
+        service = new AiRuntimeConfigServiceImpl(aiConfig, null, registry(),
+            new AiProviderRegistry(java.util.List.of(modelFactory)), new ObjectMapper(), null, null, null);
+    }
+
+    private DynamicAiModelRegistry registry() {
+        return new DynamicAiModelRegistry();
     }
 
     @Test
@@ -111,7 +151,7 @@ class AiRuntimeConfigServiceTest {
     @Test
     void snapshotReportsCapabilityStateFromCurrentProvider() throws Exception {
         aiConfig.setApiKey("secret-key-12345678901");
-        when(chatModelProvider.getCapabilities()).thenReturn(AiCapabilitiesDTO.builder()
+        when(modelFactory.capabilities(any(AiModelConfig.class))).thenReturn(AiCapabilitiesDTO.builder()
             .available(true)
             .provider("zhipu")
             .textChat(true)
@@ -152,7 +192,11 @@ class AiRuntimeConfigServiceTest {
         zhipuConfig.setModel("zhipu-chat-model");
         ChatModel chatModel = mock(ChatModel.class);
         when(chatModel.chat("ping")).thenReturn("pong");
-        when(chatModelProvider.buildAiModel()).thenReturn(chatModel);
+        when(modelFactory.buildChatModel(any(AiModelConfig.class), isNull())).thenReturn(chatModel);
+        when(modelFactory.buildSupervisorModel(any(AiModelConfig.class), isNull()))
+            .thenReturn(org.mockito.Mockito.mock(ChatModel.class));
+        when(modelFactory.buildVisionModel(any(AiModelConfig.class), isNull()))
+            .thenReturn(org.mockito.Mockito.mock(ChatModel.class));
 
         var result = service.testCurrentConnectivity();
 
@@ -164,7 +208,11 @@ class AiRuntimeConfigServiceTest {
         aiConfig.setApiKey("secret-key-12345678901");
         ChatModel chatModel = mock(ChatModel.class);
         when(chatModel.chat("ping")).thenReturn("pong");
-        when(chatModelProvider.buildAiModel()).thenReturn(chatModel);
+        when(modelFactory.buildChatModel(any(AiModelConfig.class), isNull())).thenReturn(chatModel);
+        when(modelFactory.buildSupervisorModel(any(AiModelConfig.class), isNull()))
+            .thenReturn(org.mockito.Mockito.mock(ChatModel.class));
+        when(modelFactory.buildVisionModel(any(AiModelConfig.class), isNull()))
+            .thenReturn(org.mockito.Mockito.mock(ChatModel.class));
 
         var result = service.testCurrentConnectivity();
         String json = new ObjectMapper().writeValueAsString(result);
@@ -180,7 +228,11 @@ class AiRuntimeConfigServiceTest {
         aiConfig.setApiKey("secret-key-12345678901");
         ChatModel chatModel = mock(ChatModel.class);
         when(chatModel.chat("ping")).thenThrow(new BusinessException("AI_TEST_FAILED", "模型不可用"));
-        when(chatModelProvider.buildAiModel()).thenReturn(chatModel);
+        when(modelFactory.buildChatModel(any(AiModelConfig.class), isNull())).thenReturn(chatModel);
+        when(modelFactory.buildSupervisorModel(any(AiModelConfig.class), isNull()))
+            .thenReturn(org.mockito.Mockito.mock(ChatModel.class));
+        when(modelFactory.buildVisionModel(any(AiModelConfig.class), isNull()))
+            .thenReturn(org.mockito.Mockito.mock(ChatModel.class));
 
         var result = service.testCurrentConnectivity();
         String json = new ObjectMapper().writeValueAsString(result);

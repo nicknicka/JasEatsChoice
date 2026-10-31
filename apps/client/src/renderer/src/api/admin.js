@@ -1625,9 +1625,8 @@ export function testAiCandidate(candidate) {
 }
 
 /**
- * 保存并激活候选 AI 配置
- * @param {Object} candidate 非密钥候选配置
- * @returns {Promise} 激活后的 AI 运行时配置
+ * 获取上一版有效 AI 配置摘要
+ * @returns {Promise} 上一版 AI 配置摘要
  */
 export function getAiPreviousConfigSummary() {
   console.log('[管理员API] 获取上一版 AI 配置摘要')

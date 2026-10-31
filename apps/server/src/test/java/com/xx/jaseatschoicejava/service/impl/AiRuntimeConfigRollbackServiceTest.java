@@ -9,9 +9,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -27,6 +29,8 @@ import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xx.jaseatschoicejava.agent.config.DynamicAiModelRegistry;
@@ -36,6 +40,7 @@ import com.xx.jaseatschoicejava.config.AiRuntimeKeyStore;
 import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 import com.xx.jaseatschoicejava.dto.AiModelCandidateDTO;
 import com.xx.jaseatschoicejava.dto.AiPreviousConfigSummary;
+import com.xx.jaseatschoicejava.dto.AiRuntimeConfigSnapshot;
 import com.xx.jaseatschoicejava.exception.BusinessException;
 import com.xx.jaseatschoicejava.dto.AiConfigAuditEvent;
 import com.xx.jaseatschoicejava.service.AiConfigAuditService;
@@ -45,6 +50,7 @@ import com.xx.jaseatschoicejava.service.SystemConfigService;
 import dev.langchain4j.model.chat.ChatModel;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class AiRuntimeConfigRollbackServiceTest {
 
     private static final String OLD_KEY = "old-active-key-0987654321";
@@ -92,9 +98,24 @@ class AiRuntimeConfigRollbackServiceTest {
 
         registry = new DynamicAiModelRegistry();
         keyStore = new AiRuntimeKeyStore(tempDir.resolve("ai-active-key").toString());
-        service = new AiRuntimeConfigServiceImpl(aiConfig, zhipuConfig, null,
-            systemConfigService, registry, modelFactory, new ObjectMapper(), keyStore, auditService,
-            historyStore);
+                when(modelFactory.providerCode()).thenReturn("zhipu");
+        when(modelFactory.environmentConfig(any(AIConfig.class))).thenReturn(AiModelConfig.builder()
+            .provider("zhipu")
+            .model(aiConfig.getModel())
+            .supervisorModel(aiConfig.getSupervisorModel())
+            .visionModel(aiConfig.getVisionModel())
+            .baseUrl(aiConfig.getBaseUrl())
+            .timeoutMs(aiConfig.getTimeout())
+            .temperature(aiConfig.getTemperature())
+            .build());
+        when(modelFactory.resolveKey(any())).thenAnswer(invocation -> {
+            AiRuntimeKeyStore store = invocation.getArgument(0);
+            String runtimeKey = store.readKey();
+            return runtimeKey.isBlank() ? aiConfig.getApiKey() : runtimeKey;
+        });
+service = new AiRuntimeConfigServiceImpl(aiConfig, systemConfigService, registry,
+            new AiProviderRegistry(java.util.List.of(modelFactory)), new ObjectMapper(), keyStore,
+            auditService, historyStore);
         service.initialize();
     }
 
@@ -127,9 +148,11 @@ class AiRuntimeConfigRollbackServiceTest {
         ChatModel visionModel = mock(ChatModel.class);
         when(modelFactory.buildChatModel(any(AiModelConfig.class), eq(NEW_KEY)))
             .thenReturn(candidateModel);
-        when(modelFactory.buildChatModel(any(AiModelConfig.class))).thenReturn(rollbackModel);
-        when(modelFactory.buildSupervisorModel(any(AiModelConfig.class))).thenReturn(supervisorModel);
-        when(modelFactory.buildVisionModel(any(AiModelConfig.class))).thenReturn(visionModel);
+        when(modelFactory.buildChatModel(any(AiModelConfig.class), isNull())).thenReturn(rollbackModel);
+        when(modelFactory.buildSupervisorModel(any(AiModelConfig.class), eq(NEW_KEY))).thenReturn(supervisorModel);
+        when(modelFactory.buildVisionModel(any(AiModelConfig.class), eq(NEW_KEY))).thenReturn(visionModel);
+        when(modelFactory.buildSupervisorModel(any(AiModelConfig.class), isNull())).thenReturn(supervisorModel);
+        when(modelFactory.buildVisionModel(any(AiModelConfig.class), isNull())).thenReturn(visionModel);
         when(modelFactory.buildStreamingModel(any(AiModelConfig.class))).thenReturn(null);
         when(systemConfigService.setConfigValue(anyString(), anyString(), anyString(), anyString()))
             .thenReturn(true);
@@ -161,8 +184,10 @@ class AiRuntimeConfigRollbackServiceTest {
         ChatModel visionModel = org.mockito.Mockito.mock(ChatModel.class);
         when(modelFactory.buildChatModel(any(AiModelConfig.class), eq(NEW_KEY)))
             .thenReturn(candidateModel);
-        when(modelFactory.buildSupervisorModel(any(AiModelConfig.class))).thenReturn(supervisorModel);
-        when(modelFactory.buildVisionModel(any(AiModelConfig.class))).thenReturn(visionModel);
+        when(modelFactory.buildSupervisorModel(any(AiModelConfig.class), eq(NEW_KEY)))
+            .thenReturn(supervisorModel);
+        when(modelFactory.buildVisionModel(any(AiModelConfig.class), eq(NEW_KEY)))
+            .thenReturn(visionModel);
         when(modelFactory.buildStreamingModel(any(AiModelConfig.class))).thenReturn(null);
         when(systemConfigService.setConfigValue(anyString(), anyString(), anyString(), anyString()))
             .thenReturn(true);
@@ -189,7 +214,9 @@ class AiRuntimeConfigRollbackServiceTest {
         ChatModel failingModel = org.mockito.Mockito.mock(ChatModel.class);
         org.mockito.Mockito.doThrow(new IllegalStateException("model unavailable"))
             .when(failingModel).chat("ping");
-        when(modelFactory.buildChatModel(any(AiModelConfig.class))).thenReturn(failingModel);
+        when(modelFactory.buildChatModel(any(AiModelConfig.class), isNull())).thenReturn(failingModel);
+        when(modelFactory.buildSupervisorModel(any(AiModelConfig.class), isNull())).thenReturn(org.mockito.Mockito.mock(ChatModel.class));
+        when(modelFactory.buildVisionModel(any(AiModelConfig.class), isNull())).thenReturn(org.mockito.Mockito.mock(ChatModel.class));
 
         BusinessException exception = assertThrows(BusinessException.class,
             () -> service.rollbackToPrevious("13800000000"));
@@ -202,7 +229,9 @@ class AiRuntimeConfigRollbackServiceTest {
     void failedRollbackPersistenceKeepsActiveConfig() throws Exception {
         saveCandidate();
         ChatModel rollbackModel = successfulModel();
-        when(modelFactory.buildChatModel(any(AiModelConfig.class))).thenReturn(rollbackModel);
+        when(modelFactory.buildChatModel(any(AiModelConfig.class), isNull())).thenReturn(rollbackModel);
+        when(modelFactory.buildSupervisorModel(any(AiModelConfig.class), isNull())).thenReturn(org.mockito.Mockito.mock(ChatModel.class));
+        when(modelFactory.buildVisionModel(any(AiModelConfig.class), isNull())).thenReturn(org.mockito.Mockito.mock(ChatModel.class));
         clearInvocations(systemConfigService, historyStore);
         when(systemConfigService.setConfigValue(
             eq("ai.runtime-config"), anyString(), anyString(), anyString())).thenReturn(false);
@@ -218,14 +247,53 @@ class AiRuntimeConfigRollbackServiceTest {
     }
 
     @Test
+    void historyPersistenceFailureKeepsOldConfigKeyAndDatabase() throws Exception {
+        saveCandidate();
+        clearInvocations(systemConfigService, historyStore, auditService);
+        doThrow(new IllegalStateException("history unavailable"))
+            .when(historyStore).save(anyString());
+
+        BusinessException exception = assertThrows(BusinessException.class,
+            () -> service.saveAndActivate(candidate().toBuilder()
+                .model("history-failure-model")
+                .apiKey(NEW_KEY).build(), "13800000000"));
+
+        assertEquals("AI_CONFIG_HISTORY_SAVE_FAILED", exception.getCode());
+        assertEquals("glm-4-flash", service.getCurrentSnapshot().getModel());
+        assertEquals(2L, service.getCurrentSnapshot().getVersion());
+        assertEquals(NEW_KEY, java.nio.file.Files.readString(tempDir.resolve("ai-active-key")).trim());
+        verify(systemConfigService).setConfigValue(
+            eq("ai.runtime-config"), anyString(), anyString(), anyString());
+        verify(systemConfigService, atLeastOnce()).deleteConfig("ai.runtime-config");
+    }
+
+    @Test
+    void rollbackIncreasesVersionMonotonically() throws Exception {
+        saveCandidate();
+        ChatModel rollbackModel = successfulModel();
+        ChatModel supervisorModel = org.mockito.Mockito.mock(ChatModel.class);
+        ChatModel visionModel = org.mockito.Mockito.mock(ChatModel.class);
+        when(modelFactory.buildChatModel(any(AiModelConfig.class), isNull())).thenReturn(rollbackModel);
+        when(modelFactory.buildSupervisorModel(any(AiModelConfig.class), isNull())).thenReturn(supervisorModel);
+        when(modelFactory.buildVisionModel(any(AiModelConfig.class), isNull())).thenReturn(visionModel);
+        when(modelFactory.buildStreamingModel(any(AiModelConfig.class))).thenReturn(null);
+
+        AiRuntimeConfigSnapshot rolledBack = service.rollbackToPrevious("13800000000");
+
+        assertEquals("env-chat", rolledBack.getModel());
+        assertEquals(3L, rolledBack.getVersion());
+        assertTrue(rolledBack.getVersion() > 2L);
+    }
+
+    @Test
     void auditRecordsActivationAndSuccessfulRollbackWithoutKeyMaterial() throws Exception {
         saveCandidate();
         ChatModel rollbackModel = successfulModel();
         ChatModel supervisorModel = org.mockito.Mockito.mock(ChatModel.class);
         ChatModel visionModel = org.mockito.Mockito.mock(ChatModel.class);
-        when(modelFactory.buildChatModel(any(AiModelConfig.class))).thenReturn(rollbackModel);
-        when(modelFactory.buildSupervisorModel(any(AiModelConfig.class))).thenReturn(supervisorModel);
-        when(modelFactory.buildVisionModel(any(AiModelConfig.class))).thenReturn(visionModel);
+        when(modelFactory.buildChatModel(any(AiModelConfig.class), isNull())).thenReturn(rollbackModel);
+        when(modelFactory.buildSupervisorModel(any(AiModelConfig.class), isNull())).thenReturn(supervisorModel);
+        when(modelFactory.buildVisionModel(any(AiModelConfig.class), isNull())).thenReturn(visionModel);
         when(modelFactory.buildStreamingModel(any(AiModelConfig.class))).thenReturn(null);
         service.rollbackToPrevious("13800000000");
 
