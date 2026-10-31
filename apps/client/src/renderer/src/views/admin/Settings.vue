@@ -1,10 +1,12 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { Setting, Notification, Lock, User } from '@element-plus/icons-vue'
+import { Setting, Connection } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import {
   getSystemConfigsByGroup,
-  batchUpdateSystemConfigs
+  batchUpdateSystemConfigs,
+  getAiRuntimeConfig,
+  testAiConnectivity
 } from '@/api/admin'
 
 const activeTab = ref('system')
@@ -31,6 +33,33 @@ const securitySettings = ref({
   sessionTimeout: 30,
   maxLoginAttempts: 5,
   passwordMinLength: 6
+})
+
+// AI 配置（只读）
+const aiLoading = ref(false)
+const testingAi = ref(false)
+const connectivityResult = ref(null)
+const aiConfig = ref({
+  provider: '',
+  model: '',
+  supervisorModel: '',
+  visionModel: '',
+  baseUrl: '',
+  timeoutMs: 30000,
+  temperature: 0.7,
+  updatedAt: '',
+  keyStatus: { configured: false, fingerprint: '', last4: '' },
+  capabilities: {
+    available: false,
+    textChat: false,
+    streaming: false,
+    vision: false,
+    functionCalling: false,
+    agentic: false,
+    unavailableMessage: ''
+  },
+  supportedModels: [],
+  providers: []
 })
 
 // 配置键映射
@@ -199,6 +228,59 @@ async function saveSecuritySettings() {
   }
 }
 
+/**
+ * 加载 AI 运行时配置快照
+ */
+async function loadAiConfig() {
+  aiLoading.value = true
+  try {
+    const response = await getAiRuntimeConfig()
+    if (response.success && response.data) {
+      aiConfig.value = {
+        ...aiConfig.value,
+        ...response.data,
+        keyStatus: response.data.keyStatus || aiConfig.value.keyStatus,
+        capabilities: response.data.capabilities || aiConfig.value.capabilities,
+        supportedModels: response.data.supportedModels || [],
+        providers: response.data.providers || []
+      }
+    }
+  } catch (error) {
+    console.error('加载 AI 配置失败:', error)
+    ElMessage.error(error?.response?.data?.message || '无权访问 AI 配置或加载失败')
+  } finally {
+    aiLoading.value = false
+  }
+}
+
+/**
+ * 测试当前 AI 配置连通性
+ */
+async function runAiConnectivityTest() {
+  testingAi.value = true
+  try {
+    const response = await testAiConnectivity()
+    if (response.success && response.data) {
+      connectivityResult.value = response.data
+      ElMessage.success(response.data.message || '连通性测试完成')
+    }
+  } catch (error) {
+    connectivityResult.value = {
+      success: false,
+      message: error?.response?.data?.message || '连通性测试失败'
+    }
+    ElMessage.error(connectivityResult.value.message)
+  } finally {
+    testingAi.value = false
+  }
+}
+
+function handleTabChange(name) {
+  if (name === 'ai' && !aiConfig.value.updatedAt) {
+    loadAiConfig()
+  }
+}
+
 // 组件挂载时加载所有配置
 onMounted(async () => {
   await Promise.all([
@@ -221,7 +303,7 @@ onMounted(async () => {
         </div>
       </template>
 
-      <el-tabs v-model="activeTab">
+      <el-tabs v-model="activeTab" @tab-change="handleTabChange">
         <!-- 系统设置 -->
         <el-tab-pane label="系统设置" name="system">
           <el-form :model="systemSettings" label-width="180px" style="max-width: 600px" v-loading="loading">
@@ -304,6 +386,72 @@ onMounted(async () => {
             </el-form-item>
           </el-form>
         </el-tab-pane>
+        <!-- AI 模型（只读） -->
+        <el-tab-pane label="AI 模型" name="ai">
+          <div v-loading="aiLoading" style="max-width: 900px">
+            <el-alert
+              title="AI 配置当前为只读模式"
+              description="这里展示后端当前生效的 AI 运行时配置，不会保存或热切换配置。API key 不会返回明文。"
+              type="info"
+              show-icon
+              :closable="false"
+              class="ai-alert"
+            />
+
+            <h4>当前配置</h4>
+            <el-descriptions :column="2" border>
+              <el-descriptions-item label="Provider">{{ aiConfig.provider || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="更新时间">{{ aiConfig.updatedAt || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="聊天模型">{{ aiConfig.model || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="Supervisor 模型">{{ aiConfig.supervisorModel || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="视觉模型">{{ aiConfig.visionModel || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="服务地址">{{ aiConfig.baseUrl || '供应商默认' }}</el-descriptions-item>
+              <el-descriptions-item label="超时时间">{{ aiConfig.timeoutMs }} ms</el-descriptions-item>
+              <el-descriptions-item label="温度">{{ aiConfig.temperature }}</el-descriptions-item>
+            </el-descriptions>
+
+            <h4>API Key 状态</h4>
+            <el-tag :type="aiConfig.keyStatus.configured ? 'success' : 'danger'">
+              {{ aiConfig.keyStatus.configured ? '已配置' : '未配置' }}
+            </el-tag>
+            <span v-if="aiConfig.keyStatus.configured" class="key-status">
+              指纹：{{ aiConfig.keyStatus.fingerprint }} / 尾号：{{ aiConfig.keyStatus.last4 }}
+            </span>
+
+            <h4>能力状态</h4>
+            <div class="capability-tags">
+              <el-tag :type="aiConfig.capabilities.available ? 'success' : 'info'">可用</el-tag>
+              <el-tag :type="aiConfig.capabilities.textChat ? 'success' : 'info'">文本对话</el-tag>
+              <el-tag :type="aiConfig.capabilities.streaming ? 'success' : 'info'">流式输出</el-tag>
+              <el-tag :type="aiConfig.capabilities.vision ? 'success' : 'info'">视觉理解</el-tag>
+              <el-tag :type="aiConfig.capabilities.functionCalling ? 'success' : 'info'">函数调用</el-tag>
+              <el-tag :type="aiConfig.capabilities.agentic ? 'success' : 'info'">Agent</el-tag>
+            </div>
+            <div v-if="aiConfig.capabilities.unavailableMessage" class="unavailable-message">
+              {{ aiConfig.capabilities.unavailableMessage }}
+            </div>
+
+            <h4>支持模型</h4>
+            <div class="model-tags">
+              <el-tag v-for="model in aiConfig.supportedModels" :key="model" class="model-tag">
+                {{ model }}
+              </el-tag>
+            </div>
+
+            <div class="connectivity-section">
+              <el-button type="primary" :icon="Connection" :loading="testingAi" @click="runAiConnectivityTest">
+                测试当前配置连通性
+              </el-button>
+              <div v-if="connectivityResult" class="connectivity-result">
+                <el-tag :type="connectivityResult.success ? 'success' : 'danger'">
+                  {{ connectivityResult.success ? '连通成功' : '连通失败' }}
+                </el-tag>
+                <span class="connectivity-message">{{ connectivityResult.message }}</span>
+                <span v-if="connectivityResult.model" class="connectivity-message">（{{ connectivityResult.model }}）</span>
+              </div>
+            </div>
+          </div>
+        </el-tab-pane>
       </el-tabs>
     </el-card>
   </div>
@@ -330,6 +478,48 @@ onMounted(async () => {
       margin: 20px 0 15px 0;
       padding-bottom: 8px;
       border-bottom: 2px solid #ff6b6b;
+  }
+
+  .ai-alert {
+    margin-bottom: 16px;
+  }
+
+  .key-status {
+    margin-left: 10px;
+    color: #606266;
+  }
+
+  .capability-tags,
+  .model-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .model-tag {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  .unavailable-message {
+    margin-top: 8px;
+    color: #909399;
+  }
+
+  .connectivity-section {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid #ebeef5;
+  }
+
+  .connectivity-result {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .connectivity-message {
+    color: #606266;
   }
 
   .form-tip {

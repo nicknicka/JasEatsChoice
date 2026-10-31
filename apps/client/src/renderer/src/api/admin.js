@@ -1568,3 +1568,39 @@ export function refreshSystemConfigCache() {
       throw error
     })
 }
+
+/**
+ * 获取当前 AI 运行时配置快照（只读，不含 API key 明文）
+ * @returns {Promise} AI 运行时配置
+ */
+export function getAiRuntimeConfig() {
+  console.log('[管理员API] 获取 AI 运行时配置')
+  return api
+    .get(API.ADMIN.AI_RUNTIME)
+    .then((response) => {
+      console.log('[管理员API] 获取 AI 运行时配置成功')
+      return response
+    })
+    .catch((error) => {
+      console.error('[管理员API] 获取 AI 运行时配置失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 测试当前 AI 配置连通性
+ * @returns {Promise} 连通性测试结果
+ */
+export function testAiConnectivity() {
+  console.log('[管理员API] 测试 AI 配置连通性')
+  return api
+    .post(API.ADMIN.AI_CONNECTIVITY_TEST)
+    .then((response) => {
+      console.log('[管理员API] 测试 AI 配置连通性完成')
+      return response
+    })
+    .catch((error) => {
+      console.error('[管理员API] 测试 AI 配置连通性失败:', error)
+      throw error
+    })
+}

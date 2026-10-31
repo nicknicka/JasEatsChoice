@@ -522,7 +522,11 @@ export const ADMIN_API = {
   UPDATE_CONFIG: '/admin/settings/config/:configId',
   DELETE_CONFIG: '/admin/settings/config/:configId',
   BATCH_UPDATE_CONFIG: '/admin/settings/config/batch',
-  REFRESH_CONFIG_CACHE: '/admin/settings/config/refresh'
+  REFRESH_CONFIG_CACHE: '/admin/settings/config/refresh',
+
+  // AI 配置（只读）
+  AI_RUNTIME: '/admin/settings/ai/current',
+  AI_CONNECTIVITY_TEST: '/admin/settings/ai/connectivity-test'
 }
 
 // ==================== 轮播图相关 ====================
