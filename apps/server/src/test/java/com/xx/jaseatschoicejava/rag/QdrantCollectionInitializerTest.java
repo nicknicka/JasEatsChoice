@@ -19,7 +19,6 @@ import io.qdrant.client.grpc.Collections.PayloadSchemaType;
 
 import com.xx.jaseatschoicejava.config.AIConfig;
 import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
-import dev.langchain4j.community.model.zhipu.ZhipuAiEmbeddingModel;
 
 @Testcontainers(disabledWithoutDocker = true)
 class QdrantCollectionInitializerTest {
@@ -69,7 +68,7 @@ class QdrantCollectionInitializerTest {
             infrastructure.initialize();
 
             assertEquals(AnnouncementRagState.READY, infrastructure.status().state());
-            assertEquals(ZhipuAiEmbeddingModel.class, infrastructure.embeddingModel().getClass());
+            assertEquals(AnnouncementRagRuntimeEmbeddingModel.class, infrastructure.embeddingModel().getClass());
             assertEquals(QdrantEmbeddingStore.class, infrastructure.embeddingStore().getClass());
         }
     }

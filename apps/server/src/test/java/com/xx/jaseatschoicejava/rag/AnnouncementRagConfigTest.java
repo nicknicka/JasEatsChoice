@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Test;
 import com.xx.jaseatschoicejava.config.AIConfig;
 import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 
-import dev.langchain4j.community.model.zhipu.ZhipuAiEmbeddingModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 
 class AnnouncementRagConfigTest {
@@ -20,7 +19,7 @@ class AnnouncementRagConfigTest {
         ZhipuAIConfig zhipuConfig = new ZhipuAIConfig();
         zhipuConfig.setApiKey("");
 
-        EmbeddingModel model = config.announcementEmbeddingModel(properties, zhipuConfig, new AIConfig(), null);
+        EmbeddingModel model = config.configuredEmbeddingModel(properties, zhipuConfig, new AIConfig(), null);
 
         assertInstanceOf(AnnouncementRagDisabledEmbeddingModel.class, model);
     }
@@ -33,7 +32,7 @@ class AnnouncementRagConfigTest {
 
         EmbeddingModel model = config.announcementEmbeddingModel(properties, zhipuConfig, new AIConfig(), null);
 
-        assertInstanceOf(ZhipuAiEmbeddingModel.class, model);
+        assertInstanceOf(AnnouncementRagRuntimeEmbeddingModel.class, model);
     }
 
     @Test
@@ -46,6 +45,6 @@ class AnnouncementRagConfigTest {
 
         EmbeddingModel model = config.announcementEmbeddingModel(properties, zhipuConfig, aiConfig, null);
 
-        assertInstanceOf(ZhipuAiEmbeddingModel.class, model);
+        assertInstanceOf(AnnouncementRagRuntimeEmbeddingModel.class, model);
     }
 }

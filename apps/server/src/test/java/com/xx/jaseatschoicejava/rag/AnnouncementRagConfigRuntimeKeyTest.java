@@ -1,5 +1,6 @@
 package com.xx.jaseatschoicejava.rag;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 import java.io.IOException;
@@ -35,7 +36,7 @@ class AnnouncementRagConfigRuntimeKeyTest {
         EmbeddingModel model = new AnnouncementRagConfig().announcementEmbeddingModel(
             properties, zhipuConfig, aiConfig, keyStore);
 
-        assertInstanceOf(ZhipuAiEmbeddingModel.class, model);
+        assertInstanceOf(AnnouncementRagRuntimeEmbeddingModel.class, model);
     }
 
     @Test
@@ -51,6 +52,29 @@ class AnnouncementRagConfigRuntimeKeyTest {
         EmbeddingModel model = new AnnouncementRagConfig().announcementEmbeddingModel(
             properties, zhipuConfig, aiConfig, keyStore);
 
-        assertInstanceOf(ZhipuAiEmbeddingModel.class, model);
+        assertInstanceOf(AnnouncementRagRuntimeEmbeddingModel.class, model);
+    }
+
+
+    @Test
+    void eachEmbeddingCallResolvesCurrentRuntimeModel() {
+        EmbeddingModel firstModel = org.mockito.Mockito.mock(EmbeddingModel.class);
+        EmbeddingModel secondModel = org.mockito.Mockito.mock(EmbeddingModel.class);
+        java.util.concurrent.atomic.AtomicInteger creations = new java.util.concurrent.atomic.AtomicInteger();
+        AnnouncementRagRuntimeEmbeddingModel model = new AnnouncementRagRuntimeEmbeddingModel(() -> {
+            if (creations.incrementAndGet() == 1) {
+                return firstModel;
+            }
+            return secondModel;
+        });
+
+        model.embedAll(java.util.List.of(dev.langchain4j.data.segment.TextSegment.from("first")));
+        model.embedAll(java.util.List.of(dev.langchain4j.data.segment.TextSegment.from("second")));
+
+        assertEquals(2, creations.get());
+        org.mockito.Mockito.verify(firstModel)
+            .embedAll(java.util.List.of(dev.langchain4j.data.segment.TextSegment.from("first")));
+        org.mockito.Mockito.verify(secondModel)
+            .embedAll(java.util.List.of(dev.langchain4j.data.segment.TextSegment.from("second")));
     }
 }

@@ -31,6 +31,15 @@ public class AnnouncementRagConfig {
         ZhipuAIConfig zhipuAIConfig,
         AIConfig aiConfig,
         AiRuntimeKeyStore runtimeKeyStore) {
+        return new AnnouncementRagRuntimeEmbeddingModel(
+            properties, zhipuAIConfig, aiConfig, runtimeKeyStore);
+    }
+
+    EmbeddingModel configuredEmbeddingModel(
+        AnnouncementRagProperties properties,
+        ZhipuAIConfig zhipuAIConfig,
+        AIConfig aiConfig,
+        AiRuntimeKeyStore runtimeKeyStore) {
         String apiKey = AiApiKeyResolver.resolve(zhipuAIConfig, aiConfig, runtimeKeyStore);
         if (apiKey.isBlank()) {
             return new AnnouncementRagDisabledEmbeddingModel();
