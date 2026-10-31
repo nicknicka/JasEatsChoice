@@ -511,7 +511,7 @@ onMounted(async () => {
           <div v-loading="aiLoading" style="max-width: 900px">
             <el-alert
               title="AI 模型热切换"
-              description="这里展示后端当前生效的 AI 运行时配置；候选配置测试通过后可保存并激活。API key 不会返回明文。"
+              description="这里展示后端当前生效的 AI 运行时配置；候选配置测试通过后可保存并激活。API key 不会返回明文。首期仅支持单后端实例，运行时配置和 key 不会广播到其他实例。"
               type="info"
               show-icon
               :closable="false"

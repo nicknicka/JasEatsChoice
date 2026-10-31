@@ -23,9 +23,8 @@ function updateProgress(id, status, message = '') {
   if (index === -1) {
     lines.push(`[${status}] ${id} | - | ${message}`)
   } else {
-    lines[index] = lines[index]
-      .replace(/\[(PENDING|RUNNING|PASSED|FAILED|SKIPPED)\]/, `[${status}]`)
-      .replace(/-$/, message || '-')
+    const name = lines[index].split('|')[1]?.trim() || '-'
+    lines[index] = `[${status}] ${id} | ${name} | ${message || '-'}`
   }
   fs.writeFileSync(PROGRESS_FILE, lines.join('\n'), 'utf-8')
 }
