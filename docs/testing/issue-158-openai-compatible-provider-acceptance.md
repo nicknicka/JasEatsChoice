@@ -57,6 +57,20 @@
 
 > 备注：key 指纹（非密钥本体）在快照中展示，用于管理员核对，不构成泄漏。
 
+## 多模型可用性（openai-compatible 不绑定模型清单）
+
+适配器只透传 `model`，因此除智谱外的模型都可直接使用，无需改代码。管理员在「高级设置」里开启
+自定义输入（`allow-create`）即可填任意模型名；Trae 分组（`Sub2API-Trae`，base
+`http://host.docker.internal:3065/v1`）实际暴露 18 个模型，其中已实测可对话的有：
+
+- `glm-5.3-solo`（默认预设，已用于上方主冒烟）
+- `deepseek-v4.1-flash-solo`、`qwen3.8-max-solo`、`Doubao-Seed-2.1-Pro-solo`、
+  `minimax-m3-solo`、`step-5-preview-solo`
+- `kimi-k3.1-pro-solo` 返回上游 429（限流），非配置问题
+
+另用 `deepseek-v4.1-flash-solo` 复跑了 app 端到端：候选测试“连接成功” → 激活（v2）→ 能力全开 →
+连通性“连接成功” → `POST /api/v1/ai/recipe` 返回真实菜谱。说明更换 provider/模型不需要改代码。
+
 ## 单元测试
 
 ```bash
