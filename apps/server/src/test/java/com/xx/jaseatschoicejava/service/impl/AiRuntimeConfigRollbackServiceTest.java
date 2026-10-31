@@ -39,6 +39,7 @@ import com.xx.jaseatschoicejava.dto.AiPreviousConfigSummary;
 import com.xx.jaseatschoicejava.exception.BusinessException;
 import com.xx.jaseatschoicejava.dto.AiConfigAuditEvent;
 import com.xx.jaseatschoicejava.service.AiConfigAuditService;
+import com.xx.jaseatschoicejava.service.AiConfigHistoryStore;
 import com.xx.jaseatschoicejava.service.SystemConfigService;
 
 import dev.langchain4j.model.chat.ChatModel;
@@ -60,6 +61,9 @@ class AiRuntimeConfigRollbackServiceTest {
 
     @Mock
     private AiConfigAuditService auditService;
+
+    @Mock
+    private AiConfigHistoryStore historyStore;
 
     private AIConfig aiConfig;
     private ZhipuAIConfig zhipuConfig;
@@ -89,7 +93,8 @@ class AiRuntimeConfigRollbackServiceTest {
         registry = new DynamicAiModelRegistry();
         keyStore = new AiRuntimeKeyStore(tempDir.resolve("ai-active-key").toString());
         service = new AiRuntimeConfigServiceImpl(aiConfig, zhipuConfig, null,
-            systemConfigService, registry, modelFactory, new ObjectMapper(), keyStore, auditService);
+            systemConfigService, registry, modelFactory, new ObjectMapper(), keyStore, auditService,
+            historyStore);
         service.initialize();
     }
 
@@ -198,7 +203,7 @@ class AiRuntimeConfigRollbackServiceTest {
         saveCandidate();
         ChatModel rollbackModel = successfulModel();
         when(modelFactory.buildChatModel(any(AiModelConfig.class))).thenReturn(rollbackModel);
-        clearInvocations(systemConfigService);
+        clearInvocations(systemConfigService, historyStore);
         when(systemConfigService.setConfigValue(
             eq("ai.runtime-config"), anyString(), anyString(), anyString())).thenReturn(false);
 
@@ -209,6 +214,7 @@ class AiRuntimeConfigRollbackServiceTest {
         assertEquals("glm-4-flash", service.getCurrentSnapshot().getModel());
         verify(systemConfigService, never()).setConfigValue(
             eq("ai.runtime-config-history"), anyString(), anyString(), anyString());
+        verify(historyStore, never()).save(anyString());
     }
 
     @Test

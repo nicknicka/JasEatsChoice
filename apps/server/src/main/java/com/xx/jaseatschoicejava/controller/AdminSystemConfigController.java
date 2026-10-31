@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.xx.jaseatschoicejava.entity.SystemConfig;
+import com.xx.jaseatschoicejava.service.AiSystemConfigGuard;
 import com.xx.jaseatschoicejava.service.SystemConfigService;
 import com.xx.jaseatschoicejava.util.SystemLogHelper;
 import com.xx.jaseatschoicejava.util.AdminContext;
@@ -35,6 +36,9 @@ public class AdminSystemConfigController {
 
     @Autowired
     private SystemConfigService systemConfigService;
+
+    @Autowired
+    private AiSystemConfigGuard aiSystemConfigGuard;
 
     /**
      * 获取配置列表（分页）
@@ -78,6 +82,10 @@ public class AdminSystemConfigController {
             .orderByDesc("created_at");
 
         IPage<SystemConfig> result = systemConfigService.page(pageParam, queryWrapper);
+        if (!aiSystemConfigGuard.canAccessAiRuntimeConfig()) {
+            result.getRecords().removeIf(config ->
+                aiSystemConfigGuard.isAiRuntimeConfig(config.getConfigKey(), config.getConfigGroup()));
+        }
 
         return ResponseEntity.ok(result);
     }
@@ -109,6 +117,12 @@ public class AdminSystemConfigController {
     @GetMapping("/group/{configGroup}")
     @PreAuthorize("hasAnyAuthority('admin:setting:config')")
     public ResponseEntity<Map<String, Object>> getConfigsByGroup(@PathVariable String configGroup) {
+        if ("ai".equals(configGroup) && !aiSystemConfigGuard.canAccessAiRuntimeConfig()) {
+            Map<String, Object> denied = new HashMap<>();
+            denied.put("success", false);
+            denied.put("message", "需要 admin:setting:ai 权限");
+            return ResponseEntity.status(403).body(denied);
+        }
         Map<String, String> configs = systemConfigService.getConfigsByGroup(configGroup);
 
         Map<String, Object> response = new HashMap<>();
@@ -129,6 +143,14 @@ public class AdminSystemConfigController {
 
         Map<String, Object> response = new HashMap<>();
         if (config != null) {
+            try {
+                aiSystemConfigGuard.requireAiRuntimeAccess(
+                    config.getConfigKey(), config.getConfigGroup());
+            } catch (org.springframework.security.access.AccessDeniedException exception) {
+                response.put("success", false);
+                response.put("message", "需要 admin:setting:ai 权限");
+                return ResponseEntity.status(403).body(response);
+            }
             response.put("success", true);
             response.put("data", config);
             return ResponseEntity.ok(response);
@@ -165,6 +187,15 @@ public class AdminSystemConfigController {
             response.put("success", false);
             response.put("message", "配置分组不能为空");
             return ResponseEntity.status(400).body(response);
+        }
+
+        try {
+            aiSystemConfigGuard.requireAiRuntimeAccess(configKey, configGroup);
+        } catch (org.springframework.security.access.AccessDeniedException exception) {
+            Map<String, Object> denied = new HashMap<>();
+            denied.put("success", false);
+            denied.put("message", "需要 admin:setting:ai 权限");
+            return ResponseEntity.status(403).body(denied);
         }
 
         // 检查配置键是否已存在
@@ -232,6 +263,16 @@ public class AdminSystemConfigController {
             return ResponseEntity.status(404).body(response);
         }
 
+        try {
+            aiSystemConfigGuard.requireAiRuntimeAccess(
+                config.getConfigKey(), config.getConfigGroup());
+        } catch (org.springframework.security.access.AccessDeniedException exception) {
+            Map<String, Object> denied = new HashMap<>();
+            denied.put("success", false);
+            denied.put("message", "需要 admin:setting:ai 权限");
+            return ResponseEntity.status(403).body(denied);
+        }
+
         String configValue = (String) request.get("configValue");
         String configName = (String) request.get("configName");
         String description = (String) request.get("description");
@@ -287,6 +328,16 @@ public class AdminSystemConfigController {
             response.put("success", false);
             response.put("message", "配置不存在");
             return ResponseEntity.status(404).body(response);
+        }
+
+        try {
+            aiSystemConfigGuard.requireAiRuntimeAccess(
+                config.getConfigKey(), config.getConfigGroup());
+        } catch (org.springframework.security.access.AccessDeniedException exception) {
+            Map<String, Object> denied = new HashMap<>();
+            denied.put("success", false);
+            denied.put("message", "需要 admin:setting:ai 权限");
+            return ResponseEntity.status(403).body(denied);
         }
 
         // 系统内置配置不允许删除
@@ -347,6 +398,16 @@ public class AdminSystemConfigController {
 
         int successCount = 0;
         int failCount = 0;
+
+        try {
+            configs.keySet().forEach(configKey ->
+                aiSystemConfigGuard.requireAiRuntimeAccess(configKey, configGroup));
+        } catch (org.springframework.security.access.AccessDeniedException exception) {
+            Map<String, Object> denied = new HashMap<>();
+            denied.put("success", false);
+            denied.put("message", "需要 admin:setting:ai 权限");
+            return ResponseEntity.status(403).body(denied);
+        }
 
         for (Map.Entry<String, String> entry : configs.entrySet()) {
             String configKey = entry.getKey();

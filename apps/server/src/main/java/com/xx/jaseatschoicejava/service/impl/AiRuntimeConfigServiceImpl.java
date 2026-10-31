@@ -29,6 +29,7 @@ import com.xx.jaseatschoicejava.dto.AiRuntimeConfigHistory;
 import com.xx.jaseatschoicejava.dto.AiRuntimeConfigSnapshot;
 import com.xx.jaseatschoicejava.exception.BusinessException;
 import com.xx.jaseatschoicejava.service.AiConfigAuditService;
+import com.xx.jaseatschoicejava.service.AiConfigHistoryStore;
 import com.xx.jaseatschoicejava.service.AiRuntimeConfigService;
 import com.xx.jaseatschoicejava.service.SystemConfigService;
 
@@ -44,7 +45,6 @@ import lombok.extern.slf4j.Slf4j;
 public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
 
     private static final String CONFIG_KEY = "ai.runtime-config";
-    private static final String CONFIG_HISTORY_KEY = "ai.runtime-config-history";
     private static final String CONFIG_GROUP = "ai";
     private static final List<String> ZHIPU_KNOWN_MODELS = List.of(
         "glm-4-flash",
@@ -61,6 +61,7 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
     private final ObjectMapper objectMapper;
     private final AiRuntimeKeyStore runtimeKeyStore;
     private final AiConfigAuditService auditService;
+    private final AiConfigHistoryStore historyStore;
     private volatile long version = 1L;
     private volatile String updatedAt = LocalDateTime.now().withNano(0).toString();
     private AiRuntimeConfigHistory configHistory = AiRuntimeConfigHistory.builder()
@@ -80,7 +81,7 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
             ObjectMapper objectMapper,
             AiRuntimeKeyStore runtimeKeyStore) {
         this(aiConfig, zhipuConfig, chatModelProvider, systemConfigService, registry,
-            modelFactory, objectMapper, runtimeKeyStore, null);
+            modelFactory, objectMapper, runtimeKeyStore, null, null);
     }
 
     public AiRuntimeConfigServiceImpl(
@@ -93,6 +94,22 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
             ObjectMapper objectMapper,
             AiRuntimeKeyStore runtimeKeyStore,
             AiConfigAuditService auditService) {
+        this(aiConfig, zhipuConfig, chatModelProvider, systemConfigService, registry,
+            modelFactory, objectMapper, runtimeKeyStore, auditService, null);
+    }
+
+    @Autowired
+    public AiRuntimeConfigServiceImpl(
+            AIConfig aiConfig,
+            ZhipuAIConfig zhipuConfig,
+            ChatModelProvider chatModelProvider,
+            SystemConfigService systemConfigService,
+            DynamicAiModelRegistry registry,
+            AiModelClientFactory modelFactory,
+            ObjectMapper objectMapper,
+            AiRuntimeKeyStore runtimeKeyStore,
+            AiConfigAuditService auditService,
+            AiConfigHistoryStore historyStore) {
         this.aiConfig = aiConfig;
         this.zhipuConfig = zhipuConfig;
         this.chatModelProvider = chatModelProvider;
@@ -102,6 +119,7 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
         this.objectMapper = objectMapper;
         this.runtimeKeyStore = runtimeKeyStore;
         this.auditService = auditService;
+        this.historyStore = historyStore;
     }
 
     public AiRuntimeConfigServiceImpl(
@@ -411,14 +429,14 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
     }
 
     private AiRuntimeConfigHistory loadHistory() {
-        if (systemConfigService == null) {
+        if (historyStore == null) {
             return AiRuntimeConfigHistory.builder()
                 .activeVersion(1L)
                 .activeUpdatedAt(LocalDateTime.now().withNano(0).toString())
                 .history(new ArrayList<>())
                 .build();
         }
-        String value = systemConfigService.getConfigValue(CONFIG_HISTORY_KEY);
+        String value = historyStore.load();
         if (!hasText(value)) {
             return AiRuntimeConfigHistory.builder()
                 .activeVersion(1L)
@@ -446,13 +464,11 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
     }
 
     private void persistHistory(AiRuntimeConfigHistory history) {
-        if (systemConfigService == null) {
+        if (historyStore == null) {
             return;
         }
         try {
-            systemConfigService.setConfigValue(
-                CONFIG_HISTORY_KEY, objectMapper.writeValueAsString(history),
-                "AI 模型运行时配置历史", CONFIG_GROUP);
+            historyStore.save(objectMapper.writeValueAsString(history));
         } catch (Exception exception) {
             log.warn("AI 配置历史保存失败", exception);
         }
