@@ -1,6 +1,6 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import { Setting, Connection } from '@element-plus/icons-vue'
+import { ref, computed, onMounted } from 'vue'
+import { Setting, Connection, Refresh } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import {
   getSystemConfigsByGroup,
@@ -8,6 +8,7 @@ import {
   getAiRuntimeConfig,
   testAiConnectivity,
   testAiCandidate,
+  discoverAiModels,
   getAiPreviousConfigSummary,
   rollbackAiConfig,
   activateAiConfig
@@ -45,6 +46,8 @@ const testingAi = ref(false)
 const activatingAi = ref(false)
 const rollingBackAi = ref(false)
 const aiAdvanced = ref(false)
+const aiDiscoveredModels = ref([])
+const loadingAiModels = ref(false)
 const previousAiConfig = ref(null)
 const connectivityResult = ref(null)
 const aiCandidate = ref({
@@ -296,6 +299,51 @@ function resetAiCandidateFromCurrent(config = {}) {
 function selectedProviderModels() {
   const provider = aiConfig.value.providers?.find(item => item.code === aiCandidate.value.provider)
   return provider?.models || []
+}
+
+// 优先用"从网关获取"的真实模型列表；否则回落到 registry 给的预设
+const aiModelOptions = computed(() => {
+  if (aiDiscoveredModels.value.length) {
+    return aiDiscoveredModels.value.map(item => ({ value: item.id, label: item.name || item.id }))
+  }
+  return selectedProviderModels().map(id => ({ value: id, label: id }))
+})
+
+// 有图像能力信息时，视觉下拉只保留支持图片输入的模型
+const aiVisionModelOptions = computed(() => {
+  if (aiDiscoveredModels.value.length) {
+    const vision = aiDiscoveredModels.value.filter(item => item.supportsImages)
+    const usable = vision.length ? vision : aiDiscoveredModels.value
+    return usable.map(item => ({ value: item.id, label: item.name || item.id }))
+  }
+  return aiModelOptions.value
+})
+
+function onProviderChange() {
+  aiDiscoveredModels.value = []
+}
+
+async function loadAiModels() {
+  if (!aiCandidate.value.provider) {
+    ElMessage.warning('请先选择 Provider')
+    return
+  }
+  loadingAiModels.value = true
+  try {
+    const response = await discoverAiModels(aiCandidate.value)
+    const list = response?.data || []
+    aiDiscoveredModels.value = list
+    if (list.length) {
+      ElMessage.success(`已获取 ${list.length} 个模型`)
+    } else {
+      ElMessage.warning('网关未返回模型列表，已回落到内置预设')
+    }
+  } catch (error) {
+    aiDiscoveredModels.value = []
+    ElMessage.error(error?.response?.data?.message || '获取模型列表失败')
+  } finally {
+    loadingAiModels.value = false
+  }
 }
 
 async function runAiCandidateTest() {
@@ -596,7 +644,7 @@ onMounted(async () => {
               </el-form-item>
 
               <el-form-item label="Provider">
-                <el-select v-model="aiCandidate.provider" placeholder="选择后端支持的 Provider">
+                <el-select v-model="aiCandidate.provider" placeholder="选择后端支持的 Provider" @change="onProviderChange">
                   <el-option
                     v-for="provider in aiConfig.providers"
                     :key="provider.code"
@@ -604,6 +652,13 @@ onMounted(async () => {
                     :value="provider.code"
                   />
                 </el-select>
+              </el-form-item>
+
+              <el-form-item label="模型列表">
+                <el-button :icon="Refresh" :loading="loadingAiModels" @click="loadAiModels">
+                  从网关获取模型
+                </el-button>
+                <span v-if="aiDiscoveredModels.length" class="form-tip">已获取 {{ aiDiscoveredModels.length }} 个模型</span>
               </el-form-item>
 
               <el-form-item label="聊天模型">
@@ -614,7 +669,7 @@ onMounted(async () => {
                   default-first-option
                   :placeholder="aiAdvanced ? '从已知模型选择或输入自定义模型' : '从已知模型选择'"
                 >
-                  <el-option v-for="model in selectedProviderModels()" :key="model" :label="model" :value="model" />
+                  <el-option v-for="option in aiModelOptions" :key="option.value" :label="option.label" :value="option.value" />
                 </el-select>
               </el-form-item>
 
@@ -626,7 +681,7 @@ onMounted(async () => {
                   default-first-option
                   :placeholder="aiAdvanced ? '从已知模型选择或输入自定义模型' : '从已知模型选择'"
                 >
-                  <el-option v-for="model in selectedProviderModels()" :key="model" :label="model" :value="model" />
+                  <el-option v-for="option in aiModelOptions" :key="option.value" :label="option.label" :value="option.value" />
                 </el-select>
               </el-form-item>
 
@@ -638,7 +693,7 @@ onMounted(async () => {
                   default-first-option
                   :placeholder="aiAdvanced ? '从已知模型选择或输入自定义模型' : '从已知模型选择'"
                 >
-                  <el-option v-for="model in selectedProviderModels()" :key="model" :label="model" :value="model" />
+                  <el-option v-for="option in aiVisionModelOptions" :key="option.value" :label="option.label" :value="option.value" />
                 </el-select>
               </el-form-item>
 

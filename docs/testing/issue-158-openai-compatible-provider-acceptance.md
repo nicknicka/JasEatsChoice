@@ -71,6 +71,24 @@
 另用 `deepseek-v4.1-flash-solo` 复跑了 app 端到端：候选测试“连接成功” → 激活（v2）→ 能力全开 →
 连通性“连接成功” → `POST /api/v1/ai/recipe` 返回真实菜谱。说明更换 provider/模型不需要改代码。
 
+## 模型列表实时发现（管理端）
+
+把预设写死会失真：同一个网关按 key 下发不同模型集（实测 `Sub2API-Trae` 18 / `Qoder` 8 /
+`WorkBuddy` 15 / `Loomy` 12，不带 key 是网关全量 62）。因此管理端不再只靠静态预设：
+
+- 新增 `POST /admin/settings/ai/models`；`openai-compatible` 用 baseUrl + key 调
+  `{baseUrl}/models`，返回 `{id, name, supportsImages}`。
+- 其它 provider 回落到 registry 静态预设；网关不可达或缺 key 时返回空数组，前端回落预设。
+- 管理端新增「从网关获取模型」按钮；模型下拉改用发现结果（label 用网关人类名），
+  有图像能力信息时视觉下拉只保留 `supportsImages=true` 的模型；高级设置仍可自由输入。
+
+实测（本分支栈 + Trae 分组 key）：`POST /admin/settings/ai/models` 返回 18 个真实模型（含
+`supportsImages`），响应无 key 明文；`zhipu` 回落静态预设；缺 key/baseUrl 返回空数组。
+前端验证：`make check` 通过、`npm run build:web` 通过、`tests/specs/16-admin-ai-release.spec.js`
+本地通过（含点击「从网关获取模型」并断言发现结果）。
+
+> 说明：内置预设（`gpt-4o-mini` 等）仅作网关不可达时的兜底，并非本网关真实可用清单。
+
 ## 单元测试
 
 ```bash

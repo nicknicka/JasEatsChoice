@@ -65,6 +65,12 @@ test.describe('AI 热加载发布验收', () => {
       route.fulfill({ json: { success: true, data: activeSnapshot } }))
     await page.route('**/api/admin/settings/ai/previous-summary', route =>
       route.fulfill({ json: { success: true, data: previousSummary } }))
+    await page.route('**/api/admin/settings/ai/models', route =>
+      route.fulfill({ json: { success: true, data: [
+        { id: 'glm-4-flash', name: 'glm-4-flash', supportsImages: false },
+        { id: 'glm-4.6v-flash', name: 'glm-4.6v-flash', supportsImages: true },
+        { id: 'glm-4.1v-thinking-flash', name: 'glm-4.1v-thinking-flash', supportsImages: true }
+      ] } }))
     await page.route('**/api/admin/settings/ai/test', route =>
       route.fulfill({ json: { success: true, data: { success: true, message: '连接成功', model: candidateModel, testedAt: '2026-10-31T09:01:00' } } }))
     await page.route('**/api/admin/settings/ai/activate', route =>
@@ -93,6 +99,12 @@ test.describe('AI 热加载发布验收', () => {
 
       await formItem('Provider').locator('.el-select').click()
       await page.getByRole('option', { name: '智谱' }).click()
+
+      await Promise.all([
+        page.waitForResponse(response => new URL(response.url()).pathname === '/api/admin/settings/ai/models'),
+        formItem('模型列表').getByRole('button', { name: '从网关获取模型' }).click()
+      ])
+      await expect(aiSection.getByText('已获取 3 个模型')).toBeVisible()
 
       await formItem('聊天模型').locator('.el-select').click()
       await page.getByRole('option', { name: candidateModel, exact: true }).last().click()
