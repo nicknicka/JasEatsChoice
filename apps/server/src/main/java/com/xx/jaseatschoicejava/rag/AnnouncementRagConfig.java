@@ -4,6 +4,8 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import com.xx.jaseatschoicejava.config.AIConfig;
+import com.xx.jaseatschoicejava.config.AiApiKeyResolver;
 import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 
 import dev.langchain4j.community.model.zhipu.ZhipuAiEmbeddingModel;
@@ -12,7 +14,7 @@ import io.qdrant.client.QdrantClient;
 import io.qdrant.client.QdrantGrpcClient;
 
 @Configuration
-@EnableConfigurationProperties({AnnouncementRagProperties.class, ZhipuAIConfig.class})
+@EnableConfigurationProperties({AnnouncementRagProperties.class, ZhipuAIConfig.class, AIConfig.class})
 public class AnnouncementRagConfig {
 
     @Bean(destroyMethod = "close")
@@ -25,14 +27,16 @@ public class AnnouncementRagConfig {
     @Bean
     public EmbeddingModel announcementEmbeddingModel(
         AnnouncementRagProperties properties,
-        ZhipuAIConfig zhipuAIConfig) {
-        if (zhipuAIConfig.getApiKey() == null || zhipuAIConfig.getApiKey().isBlank()) {
+        ZhipuAIConfig zhipuAIConfig,
+        AIConfig aiConfig) {
+        String apiKey = AiApiKeyResolver.resolve(zhipuAIConfig, aiConfig);
+        if (apiKey.isBlank()) {
             return new AnnouncementRagDisabledEmbeddingModel();
         }
 
         String baseUrl = properties.getEmbedding().getBaseUrl();
         return ZhipuAiEmbeddingModel.builder()
-            .apiKey(zhipuAIConfig.getApiKey())
+            .apiKey(apiKey)
             .model(properties.getEmbedding().getModel())
             .dimensions(properties.getEmbedding().getDimensions())
             .baseUrl(baseUrl == null || baseUrl.isBlank() ? null : baseUrl)
@@ -45,9 +49,11 @@ public class AnnouncementRagConfig {
     public AnnouncementRagInfrastructure announcementRagInfrastructure(
         AnnouncementRagProperties properties,
         ZhipuAIConfig zhipuAIConfig,
+        AIConfig aiConfig,
         EmbeddingModel announcementEmbeddingModel,
         QdrantClient announcementQdrantClient) {
         return new AnnouncementRagInfrastructure(
-            properties, zhipuAIConfig, announcementEmbeddingModel, announcementQdrantClient);
+            properties, AiApiKeyResolver.resolve(zhipuAIConfig, aiConfig),
+            announcementEmbeddingModel, announcementQdrantClient);
     }
 }

@@ -36,6 +36,21 @@ class AnnouncementRagStartupTest {
     }
 
     @Test
+    void genericAiKey_configuresEmbeddingAndReachesQdrantStage() {
+        contextRunner
+            .withPropertyValues(
+                "announcement-rag.enabled=true",
+                "zhipuai.api-key=",
+                "ai.api-key=generic-test-key",
+                "announcement-rag.qdrant.host=localhost",
+                "announcement-rag.qdrant.port=1")
+            .run(context -> {
+                AnnouncementRagStatus status = context.getBean(AnnouncementRagInfrastructure.class).status();
+                assertThat(status.state()).isEqualTo(AnnouncementRagState.UNAVAILABLE);
+            });
+    }
+
+    @Test
     void unavailableQdrant_startsInUnavailableState() {
         contextRunner
             .withPropertyValues(

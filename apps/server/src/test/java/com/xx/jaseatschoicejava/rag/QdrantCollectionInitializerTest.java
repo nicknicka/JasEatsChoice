@@ -17,6 +17,7 @@ import io.qdrant.client.QdrantClient;
 import io.qdrant.client.QdrantGrpcClient;
 import io.qdrant.client.grpc.Collections.PayloadSchemaType;
 
+import com.xx.jaseatschoicejava.config.AIConfig;
 import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 import dev.langchain4j.community.model.zhipu.ZhipuAiEmbeddingModel;
 
@@ -63,8 +64,8 @@ class QdrantCollectionInitializerTest {
         zhipuConfig.setApiKey("test-key");
         try (QdrantClient client = client()) {
             AnnouncementRagInfrastructure infrastructure = new AnnouncementRagInfrastructure(
-                properties, zhipuConfig,
-                new AnnouncementRagConfig().announcementEmbeddingModel(properties, zhipuConfig), client);
+                properties, zhipuConfig.getApiKey(),
+                new AnnouncementRagConfig().announcementEmbeddingModel(properties, zhipuConfig, new AIConfig()), client);
             infrastructure.initialize();
 
             assertEquals(AnnouncementRagState.READY, infrastructure.status().state());

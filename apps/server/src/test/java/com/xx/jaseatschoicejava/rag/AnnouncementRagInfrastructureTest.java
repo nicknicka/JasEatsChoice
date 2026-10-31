@@ -17,7 +17,7 @@ class AnnouncementRagInfrastructureTest {
         ZhipuAIConfig zhipuConfig = new ZhipuAIConfig();
         zhipuConfig.setApiKey("");
         AnnouncementRagInfrastructure infrastructure = new AnnouncementRagInfrastructure(
-            properties, zhipuConfig, new AnnouncementRagDisabledEmbeddingModel(), null);
+            properties, zhipuConfig.getApiKey(), new AnnouncementRagDisabledEmbeddingModel(), null);
 
         infrastructure.initialize();
 
@@ -36,7 +36,7 @@ class AnnouncementRagInfrastructureTest {
         try (var qdrantClient = new QdrantClient(
             QdrantGrpcClient.newBuilder("localhost", unavailablePort, false).build())) {
             AnnouncementRagInfrastructure infrastructure = new AnnouncementRagInfrastructure(
-                properties, zhipuConfig, new AnnouncementRagDisabledEmbeddingModel(), qdrantClient);
+                properties, zhipuConfig.getApiKey(), new AnnouncementRagDisabledEmbeddingModel(), qdrantClient);
 
             infrastructure.initialize();
 
@@ -49,8 +49,7 @@ class AnnouncementRagInfrastructureTest {
         AnnouncementRagProperties properties = new AnnouncementRagProperties();
         properties.setEnabled(false);
         AnnouncementRagInfrastructure infrastructure = new AnnouncementRagInfrastructure(
-            properties, new com.xx.jaseatschoicejava.config.ZhipuAIConfig(),
-            new AnnouncementRagDisabledEmbeddingModel(), null);
+            properties, "", new AnnouncementRagDisabledEmbeddingModel(), null);
 
         infrastructure.initialize();
 

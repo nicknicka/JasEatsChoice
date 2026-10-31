@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 import org.junit.jupiter.api.Test;
 
+import com.xx.jaseatschoicejava.config.AIConfig;
 import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 
 import dev.langchain4j.community.model.zhipu.ZhipuAiEmbeddingModel;
@@ -19,7 +20,7 @@ class AnnouncementRagConfigTest {
         ZhipuAIConfig zhipuConfig = new ZhipuAIConfig();
         zhipuConfig.setApiKey("");
 
-        EmbeddingModel model = config.announcementEmbeddingModel(properties, zhipuConfig);
+        EmbeddingModel model = config.announcementEmbeddingModel(properties, zhipuConfig, new AIConfig());
 
         assertInstanceOf(AnnouncementRagDisabledEmbeddingModel.class, model);
     }
@@ -30,7 +31,20 @@ class AnnouncementRagConfigTest {
         ZhipuAIConfig zhipuConfig = new ZhipuAIConfig();
         zhipuConfig.setApiKey("test-key");
 
-        EmbeddingModel model = config.announcementEmbeddingModel(properties, zhipuConfig);
+        EmbeddingModel model = config.announcementEmbeddingModel(properties, zhipuConfig, new AIConfig());
+
+        assertInstanceOf(ZhipuAiEmbeddingModel.class, model);
+    }
+
+    @Test
+    void embeddingModel_withGenericAiKey_returnsConfiguredZhipuModel() {
+        AnnouncementRagProperties properties = new AnnouncementRagProperties();
+        ZhipuAIConfig zhipuConfig = new ZhipuAIConfig();
+        zhipuConfig.setApiKey("");
+        AIConfig aiConfig = new AIConfig();
+        aiConfig.setApiKey("generic-test-key");
+
+        EmbeddingModel model = config.announcementEmbeddingModel(properties, zhipuConfig, aiConfig);
 
         assertInstanceOf(ZhipuAiEmbeddingModel.class, model);
     }

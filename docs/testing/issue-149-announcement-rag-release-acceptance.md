@@ -9,7 +9,7 @@
 
 1. Java 21（本机使用 `/usr/libexec/java_home -v 21`）。
 2. `ANNOUNCEMENT_RAG_ENABLED=true`。
-3. 有效的 `ZHIPU_API_KEY`，用于 `glm-4-flash` 聊天与 `embedding-3` 向量化。
+3. 有效的 `ZHIPU_API_KEY` 或通用 `AI_API_KEY`，用于 `glm-4-flash` 聊天与 `embedding-3` 向量化；优先级为 `ZHIPU_API_KEY` > `ZHIPUAI_API_KEY` > `AI_API_KEY`。
 4. Qdrant gRPC 端口可达；compose 内部服务名 `qdrant`、端口 `6334`。
 5. Qdrant collection 由启动初始化器自动创建，默认 `jaseats_knowledge_v1`，维度 `2048`。
 6. 冒烟只使用临时公告，脚本 `finally` 删除公告并检查向量残留。
@@ -78,7 +78,7 @@ JAVA_HOME=$(/usr/libexec/java_home -v 21) ./apps/server/mvnw -f apps/server/pom.
 | 自动化降级、写入、恢复、幂等与隔离测试 | 通过 | 无 |
 | 临时数据清理与 Qdrant 向量残留检查 | 通过 | 无 |
 
-获得有效 `ZHIPU_API_KEY` 后，需重跑真实冒烟；只有用户端/商家端回答断言通过后，才可将 Issue #149 视为完整验收通过。
+获得有效智谱 key（`ZHIPU_API_KEY` 或 `AI_API_KEY`）后，需重跑真实冒烟；只有用户端/商家端回答断言通过后，才可将 Issue #149 视为完整验收通过。
 
 ## 冒烟栈收尾证据
 

@@ -2,8 +2,6 @@ package com.xx.jaseatschoicejava.rag;
 
 import java.util.concurrent.TimeUnit;
 
-import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
-
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.store.embedding.EmbeddingStore;
@@ -14,7 +12,7 @@ import jakarta.annotation.PostConstruct;
 public class AnnouncementRagInfrastructure {
 
     private final AnnouncementRagProperties properties;
-    private final ZhipuAIConfig zhipuAIConfig;
+    private final String apiKey;
     private final EmbeddingModel embeddingModel;
     private final QdrantClient qdrantClient;
     private EmbeddingStore<TextSegment> embeddingStore;
@@ -23,11 +21,11 @@ public class AnnouncementRagInfrastructure {
 
     public AnnouncementRagInfrastructure(
         AnnouncementRagProperties properties,
-        ZhipuAIConfig zhipuAIConfig,
+        String apiKey,
         EmbeddingModel embeddingModel,
         QdrantClient qdrantClient) {
         this.properties = properties;
-        this.zhipuAIConfig = zhipuAIConfig;
+        this.apiKey = apiKey;
         this.embeddingModel = embeddingModel;
         this.qdrantClient = qdrantClient;
     }
@@ -42,7 +40,7 @@ public class AnnouncementRagInfrastructure {
             status = new AnnouncementRagStatus(AnnouncementRagState.DISABLED, "公告 RAG 已显式关闭");
             return;
         }
-        if (zhipuAIConfig.getApiKey() == null || zhipuAIConfig.getApiKey().isBlank()) {
+        if (apiKey == null || apiKey.isBlank()) {
             status = new AnnouncementRagStatus(AnnouncementRagState.NOT_CONFIGURED, "智谱 API key 未配置");
             return;
         }

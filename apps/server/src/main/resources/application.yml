@@ -208,7 +208,7 @@ id:
 ai:
   # AI 供应商：zhipu（默认，兼容历史）/ qwen / doubao / ollama ...
   provider: ${AI_PROVIDER:zhipu}
-  # 通用 API Key（供应商优先读自己的，没有再回退到这里）
+  # 通用 API Key（聊天和 Embedding 都优先读供应商专属 key，没有再回退到这里）
   api-key: ${AI_API_KEY:}
   # 通用文本推理模型名
   model: ${AI_MODEL:glm-4-flash}
