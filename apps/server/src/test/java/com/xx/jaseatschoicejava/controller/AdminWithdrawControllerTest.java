@@ -1,9 +1,13 @@
 package com.xx.jaseatschoicejava.controller;
 
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.xx.jaseatschoicejava.entity.WithdrawRecord;
 import com.xx.jaseatschoicejava.service.WalletService;
 import com.xx.jaseatschoicejava.service.WithdrawRecordService;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -34,11 +38,18 @@ class AdminWithdrawControllerTest {
     @InjectMocks
     private AdminWithdrawController controller;
 
+    @BeforeAll
+    static void initMybatisPlusTableInfo() {
+        // controller 内部构造 LambdaUpdateWrapper，方法引用解析依赖 TableInfo 缓存
+        TableInfoHelper.initTableInfo(
+            new MapperBuilderAssistant(new MybatisConfiguration(), ""), WithdrawRecord.class);
+    }
+
     @Test
     void fail_withSuccessfulRefund_shouldReturnSuccess() {
         WithdrawRecord record = processingRecord();
         when(withdrawRecordService.getById("withdraw-1")).thenReturn(record);
-        when(withdrawRecordService.update(any(), any(LambdaUpdateWrapper.class))).thenReturn(true);
+        when(withdrawRecordService.update(any(LambdaUpdateWrapper.class))).thenReturn(true);
         when(walletService.refund("user-1", new BigDecimal("88.00"), "提现失败退款 - WTH-1"))
             .thenReturn(true);
 
@@ -54,7 +65,7 @@ class AdminWithdrawControllerTest {
     void fail_whenRefundFails_shouldThrowAndNotReportSuccess() {
         WithdrawRecord record = processingRecord();
         when(withdrawRecordService.getById("withdraw-1")).thenReturn(record);
-        when(withdrawRecordService.update(any(), any(LambdaUpdateWrapper.class))).thenReturn(true);
+        when(withdrawRecordService.update(any(LambdaUpdateWrapper.class))).thenReturn(true);
         when(walletService.refund("user-1", new BigDecimal("88.00"), "提现失败退款 - WTH-1"))
             .thenReturn(false);
 
@@ -70,7 +81,7 @@ class AdminWithdrawControllerTest {
     void fail_whenStatusUpdateLosesRace_shouldThrowBeforeRefund() {
         WithdrawRecord record = processingRecord();
         when(withdrawRecordService.getById("withdraw-1")).thenReturn(record);
-        when(withdrawRecordService.update(any(), any(LambdaUpdateWrapper.class))).thenReturn(false);
+        when(withdrawRecordService.update(any(LambdaUpdateWrapper.class))).thenReturn(false);
 
         assertThrowsBeforeRefund();
     }
