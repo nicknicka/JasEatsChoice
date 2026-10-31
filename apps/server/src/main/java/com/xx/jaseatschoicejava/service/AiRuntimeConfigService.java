@@ -2,6 +2,7 @@ package com.xx.jaseatschoicejava.service;
 
 import com.xx.jaseatschoicejava.dto.AiConnectivityResult;
 import com.xx.jaseatschoicejava.dto.AiModelCandidateDTO;
+import com.xx.jaseatschoicejava.dto.AiPreviousConfigSummary;
 import com.xx.jaseatschoicejava.dto.AiRuntimeConfigSnapshot;
 
 /**
@@ -16,4 +17,10 @@ public interface AiRuntimeConfigService {
     AiConnectivityResult testCandidateConnectivity(AiModelCandidateDTO candidate);
 
     AiRuntimeConfigSnapshot saveAndActivate(AiModelCandidateDTO candidate);
+
+    AiRuntimeConfigSnapshot saveAndActivate(AiModelCandidateDTO candidate, String operator);
+
+    AiPreviousConfigSummary getPreviousConfigSummary();
+
+    AiRuntimeConfigSnapshot rollbackToPrevious(String operator);
 }

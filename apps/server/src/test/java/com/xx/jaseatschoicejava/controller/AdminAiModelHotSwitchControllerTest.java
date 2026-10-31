@@ -55,7 +55,7 @@ class AdminAiModelHotSwitchControllerTest {
 
     @Test
     void saveAndActivateEndpointReturnsCurrentSnapshot() throws Exception {
-        when(service.saveAndActivate(Mockito.any(AiModelCandidateDTO.class)))
+        when(service.saveAndActivate(Mockito.any(AiModelCandidateDTO.class), Mockito.any()))
             .thenReturn(AiRuntimeConfigSnapshot.builder()
                 .provider("zhipu").model("glm-4-flash")
                 .supervisorModel("glm-4-flash").visionModel("glm-4.6v-flash")
@@ -69,6 +69,6 @@ class AdminAiModelHotSwitchControllerTest {
             .andExpect(jsonPath("$.data.version").value(2))
             .andExpect(jsonPath("$.data.model").value("glm-4-flash"));
 
-        verify(service).saveAndActivate(Mockito.any(AiModelCandidateDTO.class));
+        verify(service).saveAndActivate(Mockito.any(AiModelCandidateDTO.class), Mockito.any());
     }
 }

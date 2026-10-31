@@ -1,5 +1,6 @@
 package com.xx.jaseatschoicejava.controller;
 
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -15,6 +16,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import com.xx.jaseatschoicejava.dto.AiConnectivityResult;
+import com.xx.jaseatschoicejava.dto.AiPreviousConfigSummary;
 import com.xx.jaseatschoicejava.dto.AiRuntimeConfigSnapshot;
 import com.xx.jaseatschoicejava.service.AiRuntimeConfigService;
 
@@ -60,6 +62,37 @@ class AdminAiConfigControllerTest {
             .andReturn().getResponse().getContentAsString();
 
         org.junit.jupiter.api.Assertions.assertFalse(body.contains("secret-key"));
+    }
+
+    @Test
+    void returnsPreviousConfigSummary() throws Exception {
+        when(service.getPreviousConfigSummary()).thenReturn(AiPreviousConfigSummary.builder()
+            .version(1L).updatedAt("2026-10-31T00:00:00")
+            .provider("zhipu").model("glm-4-flash").supervisorModel("glm-4-flash")
+            .visionModel("glm-4.6v-flash").baseUrl("").timeoutMs(30000).temperature(0.7)
+            .keyConfigured(true).keyFingerprint("abcd12345678")
+            .build());
+
+        mockMvc.perform(get("/admin/settings/ai/previous-summary"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.version").value(1))
+            .andExpect(jsonPath("$.data.model").value("glm-4-flash"))
+            .andExpect(jsonPath("$.data.keyFingerprint").value("abcd12345678"));
+    }
+
+    @Test
+    void rollbackEndpointReturnsCurrentSnapshot() throws Exception {
+        when(service.rollbackToPrevious(null)).thenReturn(AiRuntimeConfigSnapshot.builder()
+            .version(1L).model("glm-4-flash").build());
+
+        mockMvc.perform(post("/admin/settings/ai/rollback"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.version").value(1))
+            .andExpect(jsonPath("$.data.model").value("glm-4-flash"));
+
+        verify(service).rollbackToPrevious(null);
     }
 
     @Test

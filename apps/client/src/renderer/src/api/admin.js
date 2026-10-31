@@ -1629,6 +1629,38 @@ export function testAiCandidate(candidate) {
  * @param {Object} candidate 非密钥候选配置
  * @returns {Promise} 激活后的 AI 运行时配置
  */
+export function getAiPreviousConfigSummary() {
+  console.log('[管理员API] 获取上一版 AI 配置摘要')
+  return api
+    .get(API.ADMIN.AI_PREVIOUS_SUMMARY)
+    .then((response) => {
+      console.log('[管理员API] 获取上一版 AI 配置摘要成功')
+      return response
+    })
+    .catch((error) => {
+      console.error('[管理员API] 获取上一版 AI 配置摘要失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 回滚到上一版有效 AI 配置
+ * @returns {Promise} 回滚后的 AI 运行时配置
+ */
+export function rollbackAiConfig() {
+  console.log('[管理员API] 回滚 AI 配置')
+  return api
+    .post(API.ADMIN.AI_ROLLBACK)
+    .then((response) => {
+      console.log('[管理员API] 回滚 AI 配置成功')
+      return response
+    })
+    .catch((error) => {
+      console.error('[管理员API] 回滚 AI 配置失败:', error)
+      throw error
+    })
+}
+
 export function activateAiConfig(candidate) {
   console.log('[管理员API] 保存并激活 AI 配置')
   return api

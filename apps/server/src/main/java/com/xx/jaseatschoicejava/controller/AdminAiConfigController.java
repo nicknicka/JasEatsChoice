@@ -10,8 +10,10 @@ import org.springframework.web.bind.annotation.RestController;
 import com.xx.jaseatschoicejava.common.ResponseResult;
 import com.xx.jaseatschoicejava.dto.AiConnectivityResult;
 import com.xx.jaseatschoicejava.dto.AiModelCandidateDTO;
+import com.xx.jaseatschoicejava.dto.AiPreviousConfigSummary;
 import com.xx.jaseatschoicejava.dto.AiRuntimeConfigSnapshot;
 import com.xx.jaseatschoicejava.service.AiRuntimeConfigService;
+import com.xx.jaseatschoicejava.util.SecurityUtil;
 
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -55,6 +57,22 @@ public class AdminAiConfigController {
     @PostMapping("/activate")
     @PreAuthorize("hasAnyAuthority('admin:setting:ai')")
     public ResponseResult<AiRuntimeConfigSnapshot> saveAndActivate(@RequestBody AiModelCandidateDTO candidate) {
-        return ResponseResult.success(aiRuntimeConfigService.saveAndActivate(candidate));
+        return ResponseResult.success(aiRuntimeConfigService.saveAndActivate(
+            candidate, SecurityUtil.getCurrentPhone()));
+    }
+
+    @ApiOperation("获取上一版有效 AI 配置摘要")
+    @GetMapping("/previous-summary")
+    @PreAuthorize("hasAnyAuthority('admin:setting:ai')")
+    public ResponseResult<AiPreviousConfigSummary> getPreviousConfigSummary() {
+        return ResponseResult.success(aiRuntimeConfigService.getPreviousConfigSummary());
+    }
+
+    @ApiOperation("回滚到上一版有效 AI 配置")
+    @PostMapping("/rollback")
+    @PreAuthorize("hasAnyAuthority('admin:setting:ai')")
+    public ResponseResult<AiRuntimeConfigSnapshot> rollbackToPrevious() {
+        return ResponseResult.success(aiRuntimeConfigService.rollbackToPrevious(
+            SecurityUtil.getCurrentPhone()));
     }
 }

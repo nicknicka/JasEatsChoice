@@ -87,6 +87,22 @@ class AdminAiConfigPermissionTest {
     }
 
     @Test
+    void adminWithoutAiPermissionCannotReadPreviousSummaryOrRollback() {
+        assertThrows(AccessDeniedException.class, controller::getPreviousConfigSummary);
+        assertThrows(AccessDeniedException.class, controller::rollbackToPrevious);
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    void adminWithAiPermissionCanReadPreviousSummaryAndRollback() {
+        setAuthority("admin:setting:ai");
+        assertDoesNotThrow(controller::getPreviousConfigSummary);
+        assertDoesNotThrow(controller::rollbackToPrevious);
+        verify(service).getPreviousConfigSummary();
+        verify(service).rollbackToPrevious("admin");
+    }
+
+    @Test
     void superAdminCanReadAiConfig() {
         setAuthority("admin:super");
         assertDoesNotThrow(controller::getCurrentConfig);

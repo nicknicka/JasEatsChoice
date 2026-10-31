@@ -8,6 +8,8 @@ import {
   getAiRuntimeConfig,
   testAiConnectivity,
   testAiCandidate,
+  getAiPreviousConfigSummary,
+  rollbackAiConfig,
   activateAiConfig
 } from '@/api/admin'
 
@@ -41,7 +43,9 @@ const securitySettings = ref({
 const aiLoading = ref(false)
 const testingAi = ref(false)
 const activatingAi = ref(false)
+const rollingBackAi = ref(false)
 const aiAdvanced = ref(false)
+const previousAiConfig = ref(null)
 const connectivityResult = ref(null)
 const aiCandidate = ref({
   provider: '',
@@ -248,8 +252,12 @@ async function saveSecuritySettings() {
 async function loadAiConfig() {
   aiLoading.value = true
   try {
-    const response = await getAiRuntimeConfig()
+    const [response, previousResponse] = await Promise.all([
+      getAiRuntimeConfig(),
+      getAiPreviousConfigSummary().catch(() => null)
+    ])
     if (response.success && response.data) {
+      previousAiConfig.value = previousResponse?.data || null
       aiConfig.value = {
         ...aiConfig.value,
         ...response.data,
@@ -308,6 +316,39 @@ async function runAiCandidateTest() {
   }
 }
 
+async function rollbackAi() {
+  rollingBackAi.value = true
+  try {
+    const response = await rollbackAiConfig()
+    if (response.success && response.data) {
+      aiConfig.value = {
+        ...aiConfig.value,
+        ...response.data,
+        keyStatus: response.data.keyStatus || aiConfig.value.keyStatus,
+        capabilities: response.data.capabilities || aiConfig.value.capabilities,
+        supportedModels: response.data.supportedModels || [],
+        providers: response.data.providers || []
+      }
+      resetAiCandidateFromCurrent(aiConfig.value)
+      await loadAiPreviousSummary()
+      ElMessage.success('AI 配置已回滚')
+    }
+  } catch (error) {
+    ElMessage.error(error?.response?.data?.message || '回滚失败，当前配置未改变')
+  } finally {
+    rollingBackAi.value = false
+  }
+}
+
+async function loadAiPreviousSummary() {
+  try {
+    const response = await getAiPreviousConfigSummary()
+    previousAiConfig.value = response?.data || null
+  } catch {
+    previousAiConfig.value = null
+  }
+}
+
 async function saveAndActivateAi() {
   activatingAi.value = true
   try {
@@ -322,6 +363,7 @@ async function saveAndActivateAi() {
         providers: response.data.providers || []
       }
       resetAiCandidateFromCurrent(aiConfig.value)
+      await loadAiPreviousSummary()
       ElMessage.success('AI 配置已保存并激活')
     }
   } catch (error) {
@@ -487,6 +529,32 @@ onMounted(async () => {
               <el-descriptions-item label="超时时间">{{ aiConfig.timeoutMs }} ms</el-descriptions-item>
               <el-descriptions-item label="温度">{{ aiConfig.temperature }}</el-descriptions-item>
             </el-descriptions>
+
+            <h4>上一版有效配置</h4>
+            <el-descriptions v-if="previousAiConfig" :column="2" border>
+              <el-descriptions-item label="版本">{{ previousAiConfig.version || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="生效时间">{{ previousAiConfig.updatedAt || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="聊天模型">{{ previousAiConfig.model || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="Supervisor 模型">{{ previousAiConfig.supervisorModel || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="视觉模型">{{ previousAiConfig.visionModel || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="Key 状态">
+                {{ previousAiConfig.keyConfigured ? `已配置（${previousAiConfig.keyFingerprint || '-'}）` : '未配置' }}
+              </el-descriptions-item>
+            </el-descriptions>
+            <el-empty v-else description="暂无可回滚的上一版配置" :image-size="60" />
+            <div class="connectivity-section">
+              <el-button
+                type="warning"
+                :loading="rollingBackAi"
+                :disabled="!previousAiConfig"
+                @click="rollbackAi"
+              >
+                回滚上一版
+              </el-button>
+              <span v-if="previousAiConfig && !previousAiConfig.keyConfigured" class="connectivity-message">
+                上一版 key 已清除，回滚前请重新输入有效 key。
+              </span>
+            </div>
 
             <h4>API Key 状态</h4>
             <el-tag :type="aiConfig.keyStatus.configured ? 'success' : 'danger'">
