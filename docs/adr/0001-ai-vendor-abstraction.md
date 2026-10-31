@@ -22,6 +22,6 @@
 ## 后果
 
 - 换供应商只需改配置，不需要改业务代码
-- `ZHIPU_API_KEY` 留空也能启动的模式扩展为"任何供应商缺失都能启动"
+- `AI_API_KEY` 留空也能启动的模式扩展为"任何供应商缺失都能启动"
 - 后续接入本地模型（Ollama）做离线降级时，只需加一个配置 profile
 - 代码改动集中在 `agent/config/` 和 `application.yml`，Agent 和 Tool 层基本不动

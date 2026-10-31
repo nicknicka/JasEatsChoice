@@ -208,7 +208,7 @@ id:
 ai:
   # AI 供应商：zhipu（默认，兼容历史）/ qwen / doubao / ollama ...
   provider: ${AI_PROVIDER:zhipu}
-  # 通用 API Key（供应商优先读自己的，没有再回退到这里）
+  # 通用 API Key（聊天和 Embedding 都优先读供应商专属 key，没有再回退到这里）
   api-key: ${AI_API_KEY:}
   # 通用文本推理模型名
   model: ${AI_MODEL:glm-4-flash}
@@ -224,18 +224,19 @@ ai:
   temperature: ${AI_TEMPERATURE:0.7}
 
 # ==================== 智谱AI配置（专属参数，兼容旧版） ====================
+# 智谱适配器配置。对外只使用通用 AI_* 环境变量，不暴露厂商专属变量。
 zhipuai:
-  # API密钥（建议通过环境变量 ZHIPU_API_KEY 注入，兼容旧名 ZHIPUAI_API_KEY）
-  api-key: ${ZHIPU_API_KEY:${ZHIPUAI_API_KEY:}}
-  # 文本推理模型：GLM-4-flash（快速响应，免费）
-  model: ${ZHIPU_MODEL:glm-4-flash}
-  # 视觉模型选择（用于菜品识别、图像理解）
-  # glm-4.1v-thinking-flash: 免费视觉推理模型，作为菜品识别的默认模型
-  vision-model: glm-4.1v-thinking-flash
-  # API地址
-  base-url: https://open.bigmodel.cn/api/paas/v4/chat/completions
-  # 超时时间（毫秒）
-  timeout: 30000
+  api-key: ${AI_API_KEY:}
+  model: ${AI_MODEL:glm-4-flash}
+  vision-model: ${AI_VISION_MODEL:glm-4.1v-thinking-flash}
+  base-url: ${AI_BASE_URL:https://open.bigmodel.cn/api/paas/v4/chat/completions}
+  timeout: ${AI_TIMEOUT:30000}
+
+announcement-rag:
+  embedding:
+    model: ${AI_EMBEDDING_MODEL:embedding-3}
+    dimensions: ${AI_EMBEDDING_DIMENSIONS:2048}
+    base-url: ${AI_EMBEDDING_BASE_URL:}
 
 # ==================== 内容提取配置 ====================
 content-extraction:

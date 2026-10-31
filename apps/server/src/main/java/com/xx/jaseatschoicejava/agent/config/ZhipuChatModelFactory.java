@@ -1,6 +1,7 @@
 package com.xx.jaseatschoicejava.agent.config;
 
 import com.xx.jaseatschoicejava.config.AIConfig;
+import com.xx.jaseatschoicejava.config.AiApiKeyResolver;
 import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 import dev.langchain4j.community.model.zhipu.ZhipuAiChatModel;
 import dev.langchain4j.community.model.zhipu.ZhipuAiStreamingChatModel;
@@ -49,12 +50,7 @@ public class ZhipuChatModelFactory {
      * 生效的 API Key：zhipuai.api-key 优先，其次 ai.api-key
      */
     private String effectiveApiKey() {
-        String zk = zhipuAIConfig.getApiKey();
-        if (zk != null && !zk.isBlank()) {
-            return zk;
-        }
-        String ak = aiConfig.getApiKey();
-        return ak != null ? ak : "";
+        return AiApiKeyResolver.resolve(zhipuAIConfig, aiConfig);
     }
 
     /**
@@ -166,7 +162,7 @@ public class ZhipuChatModelFactory {
                     .functionCalling(hasKey)
                     .agentic(hasKey)
                     .unavailableMessage(hasKey ? "" :
-                        "AI 未配置：请设置 AI_API_KEY（或 ZHIPU_API_KEY）后重启服务")
+                        "AI 未配置：请设置 AI_API_KEY（或 AI_API_KEY）后重启服务")
                     .build();
             }
         };

@@ -13,6 +13,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xx.jaseatschoicejava.agent.context.AgentChatContext;
 
 import dev.langchain4j.agentic.observability.AfterAgentToolExecution;
 import dev.langchain4j.agentic.observability.AgentInvocationError;
@@ -36,16 +37,15 @@ public class SSEAgentListener implements AgentListener {
 
     private final SseEmitter emitter;
     private final ObjectMapper objectMapper;
-    private final String userId;
     private final String originalUserMessage;
     private volatile boolean emitterFailed = false;
 
     // 去重：记录已发送的事件签名（agentId + eventType），防止重复推送
     private final Set<String> sentEventKeys = new HashSet<>();
 
-    public SSEAgentListener(SseEmitter emitter, String userId, String originalUserMessage) {
+    public SSEAgentListener(SseEmitter emitter, AgentChatContext chatContext, String originalUserMessage) {
         this.emitter = emitter;
-        this.userId = userId;
+        // 可信上下文由 SupervisorAgentFactory 统一包装 AgentChatContextListener 写入。
         this.originalUserMessage = originalUserMessage;
         this.objectMapper = new ObjectMapper();
     }
@@ -187,12 +187,6 @@ public class SSEAgentListener implements AgentListener {
         ExecutionEvent event = new ExecutionEvent();
         event.setAgentName("SupervisorAgent");
         event.setAgentId(String.valueOf(scope.memoryId()));
-
-        // 将userId写入AgenticScope，供所有L1子Agent的工具读取
-        if (userId != null && !userId.isEmpty()) {
-            scope.writeState("userId", userId);
-            log.info("🔑 [AgenticScope] 已写入userId: {}", userId);
-        }
 
         if (originalUserMessage != null && !originalUserMessage.isEmpty()) {
             scope.writeState("originalUserMessage", originalUserMessage);

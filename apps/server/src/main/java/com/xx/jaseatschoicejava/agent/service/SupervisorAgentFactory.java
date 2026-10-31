@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import com.xx.jaseatschoicejava.agent.agents.CardRendererAgent;
+import com.xx.jaseatschoicejava.agent.agents.CustomerServiceAgent;
 import com.xx.jaseatschoicejava.agent.agents.DishRecommendationAgent;
 import com.xx.jaseatschoicejava.agent.agents.LocationServiceAgent;
 import com.xx.jaseatschoicejava.agent.agents.MerchantInfoAgent;
@@ -14,6 +15,9 @@ import com.xx.jaseatschoicejava.agent.agents.OrderHelperAgent;
 import com.xx.jaseatschoicejava.agent.agents.TimeAwareAgent;
 import com.xx.jaseatschoicejava.agent.agents.UserPreferenceAgent;
 import com.xx.jaseatschoicejava.agent.config.ChatMemoryFactory;
+import com.xx.jaseatschoicejava.agent.context.AgentChatContext;
+import com.xx.jaseatschoicejava.agent.listener.AgentChatContextListener;
+import com.xx.jaseatschoicejava.agent.listener.CompositeAgentListener;
 
 import dev.langchain4j.agentic.AgenticServices;
 import dev.langchain4j.agentic.observability.AgentListener;
@@ -48,6 +52,7 @@ public class SupervisorAgentFactory {
     private final ChatModel supervisorModel;
     private final ChatMemoryFactory chatMemoryFactory;
     private final CardRendererAgent cardRendererAgent;
+    private final CustomerServiceAgent customerServiceAgent;
 
     // L1专家Agent注入
     private final DishRecommendationAgent dishRecommendationAgent;
@@ -62,6 +67,7 @@ public class SupervisorAgentFactory {
             @Qualifier("supervisorModel") ChatModel supervisorModel,
             ChatMemoryFactory chatMemoryFactory,
             CardRendererAgent cardRendererAgent,
+            CustomerServiceAgent customerServiceAgent,
             DishRecommendationAgent dishRecommendationAgent,
             UserPreferenceAgent userPreferenceAgent,
             NutritionGuideAgent nutritionGuideAgent,
@@ -72,6 +78,7 @@ public class SupervisorAgentFactory {
         this.supervisorModel = supervisorModel;
         this.chatMemoryFactory = chatMemoryFactory;
         this.cardRendererAgent = cardRendererAgent;
+        this.customerServiceAgent = customerServiceAgent;
         this.dishRecommendationAgent = dishRecommendationAgent;
         this.userPreferenceAgent = userPreferenceAgent;
         this.nutritionGuideAgent = nutritionGuideAgent;
@@ -92,20 +99,21 @@ public class SupervisorAgentFactory {
      * - 提升性能和响应速度
      *
      * @param listener Agent监听器
-     * @param userId 用户ID（作为memoryId）
+     * @param context 可信聊天上下文（作为memoryId来源）
      * @return SupervisorAgent实例
      */
-    public SupervisorAgent createWithListener(AgentListener listener, String userId) {
-        log.debug("创建带监听器的L2 SupervisorAgent（直接对接L1），userId={}", userId);
+    public SupervisorAgent createWithListener(AgentListener listener, AgentChatContext context) {
+        log.debug("创建带监听器的L2 SupervisorAgent（直接对接L1），memoryId={}", memoryIdFor(context));
 
         return AgenticServices
                 .supervisorBuilder()
                 .chatModel(supervisorModel)
-                .chatMemoryProvider(memoryId -> chatMemoryFactory.createChatMemory(userId))
+                .chatMemoryProvider(memoryId -> chatMemoryFactory.createChatMemory(memoryIdFor(context)))
                 .name("SupervisorAgent")
                 .description("L2智能调度代理，直接协调L1专家Agent完成复杂任务")
                 .subAgents(
                     // 直接注入所有L1专家Agent
+                    customerServiceAgent,
                     dishRecommendationAgent,
                     userPreferenceAgent,
                     nutritionGuideAgent,
@@ -115,7 +123,7 @@ public class SupervisorAgentFactory {
                     locationServiceAgent
                 )
                 .outputKey("supervisorResult")
-                .listener(listener)
+                .listener(withAgentChatContext(listener, context))
                 .supervisorContext(createSupervisorContext())
                 .contextGenerationStrategy(dev.langchain4j.agentic.supervisor.SupervisorContextStrategy.CHAT_MEMORY_AND_SUMMARIZATION)
                 .responseStrategy(dev.langchain4j.agentic.supervisor.SupervisorResponseStrategy.LAST)
@@ -130,16 +138,16 @@ public class SupervisorAgentFactory {
      * 降低LLM输出复杂度和JSON截断风险
      *
      * @param listener Agent监听器（可为null，降级场景不发送进度事件）
-     * @param userId 用户ID
+     * @param context 可信聊天上下文
      * @return 简化版SupervisorAgent实例
      */
-    public SupervisorAgent createRetryAgent(AgentListener listener, String userId) {
-        log.debug("创建简化版SupervisorAgent（降级重试），userId={}", userId);
+    public SupervisorAgent createRetryAgent(AgentListener listener, AgentChatContext context) {
+        log.debug("创建简化版SupervisorAgent（降级重试），memoryId={}", memoryIdFor(context));
 
         return AgenticServices
                 .supervisorBuilder()
                 .chatModel(supervisorModel)
-                .chatMemoryProvider(memoryId -> chatMemoryFactory.createChatMemory(userId))
+                .chatMemoryProvider(memoryId -> chatMemoryFactory.createChatMemory(memoryIdFor(context)))
                 .name("SupervisorAgent-Retry")
                 .description("降级重试调度代理")
                 .subAgents(
@@ -148,12 +156,24 @@ public class SupervisorAgentFactory {
                     nutritionGuideAgent
                 )
                 .outputKey("supervisorResult")
-                .listener(listener)
+                .listener(withAgentChatContext(listener, context))
                 .supervisorContext(createRetrySupervisorContext())
                 .contextGenerationStrategy(dev.langchain4j.agentic.supervisor.SupervisorContextStrategy.CHAT_MEMORY_AND_SUMMARIZATION)
                 .responseStrategy(dev.langchain4j.agentic.supervisor.SupervisorResponseStrategy.LAST)
                 .maxAgentsInvocations(1)
                 .build();
+    }
+
+    private String memoryIdFor(AgentChatContext context) {
+        return context == null ? "anonymous" : context.getUserId();
+    }
+
+    private AgentListener withAgentChatContext(AgentListener listener, AgentChatContext context) {
+        if (context == null) {
+            return listener;
+        }
+        AgentChatContextListener contextListener = new AgentChatContextListener(context);
+        return listener == null ? contextListener : new CompositeAgentListener(contextListener, listener);
     }
 
     /**
@@ -206,10 +226,11 @@ public class SupervisorAgentFactory {
                → 先调用 NutritionGuideAgent 获取营养建议，再调用 DishRecommendationAgent 推荐菜品
 
             ### 单一意图（只调用1个Agent）
+            - 平台规则、平台活动、公告、满减、优惠、退款说明等知识问题 → CustomerServiceAgent
             - 纯菜品/食物推荐（上下文已有偏好数据）→ DishRecommendationAgent
             - 纯偏好/忌口/过敏设置 → UserPreferenceAgent
             - 纯营养/热量/健康咨询 → NutritionGuideAgent
-            - 订单/催单/配送 → OrderHelperAgent
+            - 订单、催单、配送、优惠券余额等结构化数据 → OrderHelperAgent
             - 商家/餐厅信息 → MerchantInfoAgent
             - 时段/三餐搭配 → TimeAwareAgent
             - 附近/距离/位置 → LocationServiceAgent

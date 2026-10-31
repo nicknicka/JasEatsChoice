@@ -20,7 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 public class ZhipuClientConfig {
 
     /**
-     * 缺 ZHIPU_API_KEY 时的占位 key，只用于让 Bean 能构造出来。
+     * 缺通用 AI_API_KEY 时的占位 key，只用于让 Bean 能构造出来。
      * ZaiConfig 的构造器要求 apiKey.split(".") 恰好得到 2 段，所以必须带一个点，
      * 否则 SDK 会在这里抛 "invalid api Key"，整个上下文又起不来。
      */
@@ -47,7 +47,7 @@ public class ZhipuClientConfig {
         String apiKey = zhipuAIConfig.getApiKey();
         if (apiKey == null || apiKey.isEmpty()) {
             log.warn("智谱AI API Key未配置，将使用占位 key 初始化客户端；"
-                + "请在 deploy/.env 设置 ZHIPU_API_KEY（兼容旧名 ZHIPUAI_API_KEY）后重启，"
+                + "请在 deploy/.env 设置 AI_API_KEY后重启，"
                 + "否则所有 AI 接口调用都会返回鉴权失败");
             apiKey = PLACEHOLDER_API_KEY;
         }

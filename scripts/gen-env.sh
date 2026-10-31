@@ -38,5 +38,5 @@ for var in MYSQL_ROOT_PASSWORD DB_PASSWORD REDIS_PASSWORD JWT_SECRET; do
 done
 
 echo
-echo "Next: put real values in $TARGET for ZHIPU_API_KEY, AMAP_API_KEY, TENCENT_MAP_KEY, MAIL_USERNAME, MAIL_PASSWORD."
+echo "Next: put real values in $TARGET for AI_API_KEY, AMAP_API_KEY, TENCENT_MAP_KEY, MAIL_USERNAME, MAIL_PASSWORD."
 echo "This file is git-ignored; never commit it."

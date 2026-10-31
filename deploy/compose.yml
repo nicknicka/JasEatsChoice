@@ -12,8 +12,21 @@ x-app-env: &app-env
   - REDIS_PASSWORD=${REDIS_PASSWORD:-}
   - JWT_SECRET=${JWT_SECRET:?JWT_SECRET missing; run scripts/gen-env.sh}
   - JWT_EXPIRATION=${JWT_EXPIRATION:-86400000}
-  - ZHIPU_API_KEY=${ZHIPU_API_KEY:-}
-  - ZHIPU_MODEL=${ZHIPU_MODEL:-glm-4-flash}
+  - AI_PROVIDER=${AI_PROVIDER:-zhipu}
+  - AI_API_KEY=${AI_API_KEY:-}
+  - AI_MODEL=${AI_MODEL:-glm-4-flash}
+  - AI_SUPERVISOR_MODEL=${AI_SUPERVISOR_MODEL:-glm-4-flash}
+  - AI_VISION_MODEL=${AI_VISION_MODEL:-glm-4.1v-thinking-flash}
+  - AI_BASE_URL=${AI_BASE_URL:-}
+  - AI_TIMEOUT=${AI_TIMEOUT:-30000}
+  - AI_TEMPERATURE=${AI_TEMPERATURE:-0.7}
+  - ANNOUNCEMENT_RAG_ENABLED=${ANNOUNCEMENT_RAG_ENABLED:-true}
+  - QDRANT_HOST=qdrant
+  - QDRANT_PORT=6334
+  - QDRANT_COLLECTION=${QDRANT_COLLECTION:-jaseats_knowledge_v1}
+  - AI_EMBEDDING_MODEL=${AI_EMBEDDING_MODEL:-embedding-3}
+  - AI_EMBEDDING_DIMENSIONS=${AI_EMBEDDING_DIMENSIONS:-2048}
+  - AI_EMBEDDING_BASE_URL=${AI_EMBEDDING_BASE_URL:-}
   - AMAP_API_KEY=${AMAP_API_KEY:-}
   - TENCENT_MAP_KEY=${TENCENT_MAP_KEY:-}
   - MAIL_USERNAME=${MAIL_USERNAME:-}
@@ -58,6 +71,20 @@ services:
       start_period: 40s
     restart: unless-stopped
 
+  qdrant:
+    image: qdrant/qdrant:v1.17.0
+    volumes:
+      - qdrant-data:/qdrant/storage
+    networks:
+      - jaseats-net
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/6333'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    restart: unless-stopped
+
   redis:
     image: redis:7-alpine
     command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:-}", "--appendonly", "yes"]
@@ -83,6 +110,8 @@ services:
       mysql:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      qdrant:
         condition: service_healthy
     networks:
       - jaseats-net
@@ -122,4 +151,5 @@ networks:
 volumes:
   mysql-data:
   redis-data:
+  qdrant-data:
   uploads:
