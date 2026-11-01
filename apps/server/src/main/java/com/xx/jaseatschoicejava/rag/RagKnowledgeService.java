@@ -29,6 +29,11 @@ public class RagKnowledgeService {
 
     private static final Logger log = LoggerFactory.getLogger(RagKnowledgeService.class);
     private static final DateTimeFormatter DATETIME = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+    /**
+     * 单次向量召回上限。有效期过滤在应用层完成（见 {@link #isEffectiveAt}），
+     * 因此需要多取一些候选，避免过滤后可用结果不足。
+     */
+    private static final int MAX_SEARCH_RESULTS = 50;
 
     private final AnnouncementService announcementService;
     private final EmbeddingModel embeddingModel;
@@ -97,15 +102,19 @@ public class RagKnowledgeService {
         Embedding queryEmbedding = embeddingModel.embed(query.query()).content();
         var result = embeddingStore.search(EmbeddingSearchRequest.builder()
             .queryEmbedding(queryEmbedding)
-            .maxResults(10)
+            .maxResults(MAX_SEARCH_RESULTS)
             .minScore(0d)
             .filter(visibilityFilter(query))
             .build());
 
+        LocalDateTime now = query.now() == null ? LocalDateTime.now() : query.now();
         int topK = query.limit() <= 0 ? 3 : query.limit();
         LinkedHashMap<String, RagKnowledgeResult> bestByAnnouncement = new LinkedHashMap<>();
         for (var match : result.matches()) {
             RagKnowledgeResult candidate = toResult(match.embedded());
+            if (!isEffectiveAt(candidate, now)) {
+                continue;
+            }
             bestByAnnouncement.putIfAbsent(candidate.announcementId(), candidate);
         }
         return bestByAnnouncement.values().stream().limit(topK).toList();
@@ -160,7 +169,6 @@ public class RagKnowledgeService {
     }
 
     private Filter visibilityFilter(RagKnowledgeQuery query) {
-        String now = datetime(query.now());
         List<Filter> merchantFilters = new ArrayList<>();
         merchantFilters.add(metadataKey("merchantId").isEqualTo("platform"));
         if (query.audience() == RagAudience.MERCHANT
@@ -176,9 +184,7 @@ public class RagKnowledgeService {
             metadataKey("sourceType").isEqualTo("announcement"),
             metadataKey("status").isEqualTo("active"),
             metadataKey("audienceTags").isIn(java.util.List.of("all", query.audience().name().toLowerCase())),
-            merchantScope,
-            timeFilter("startAt", now),
-            endTimeFilter(now)
+            merchantScope
         );
         Filter result = filters.getFirst();
         for (int index = 1; index < filters.size(); index++) {
@@ -187,18 +193,15 @@ public class RagKnowledgeService {
         return result;
     }
 
-    private Filter timeFilter(String key, String now) {
-        return Filter.or(
-            metadataKey(key).isEqualTo(""),
-            metadataKey(key).isLessThanOrEqualTo(now)
-        );
-    }
-
-    private Filter endTimeFilter(String now) {
-        return Filter.or(
-            metadataKey("endAt").isEqualTo(""),
-            metadataKey("endAt").isGreaterThanOrEqualTo(now)
-        );
+    /**
+     * 有效期过滤放在应用层：langchain4j 的 Qdrant 过滤器只支持数值 range，
+     * 而 startAt/endAt 是 Datetime 类型，放进向量检索条件会导致真实 Qdrant 报错。
+     */
+    private boolean isEffectiveAt(RagKnowledgeResult result, LocalDateTime now) {
+        if (result.startTime() != null && now.isBefore(result.startTime())) {
+            return false;
+        }
+        return result.endTime() == null || !now.isAfter(result.endTime());
     }
 
     private Filter documentFilter(String announcementId) {

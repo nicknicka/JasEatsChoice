@@ -104,7 +104,7 @@ class RagKnowledgeServiceTest {
     }
 
     @Test
-    void searchUsesTenCandidatesDeduplicatesAnnouncementsAndReturnsTopThreeByDefault() {
+    void searchDeduplicatesAnnouncementsAndReturnsTopThreeByDefault() {
         List<String> ids = List.of("announcement-1", "announcement-2", "announcement-3", "announcement-4");
         for (String id : ids) {
             Announcement announcement = activePlatformAnnouncement();
