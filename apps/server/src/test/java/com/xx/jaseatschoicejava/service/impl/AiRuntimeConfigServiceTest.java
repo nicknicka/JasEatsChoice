@@ -7,14 +7,19 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.nio.file.Path;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.mockito.Mock;
@@ -26,17 +31,23 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xx.jaseatschoicejava.agent.dto.AiCapabilitiesDTO;
 import com.xx.jaseatschoicejava.config.AIConfig;
 import com.xx.jaseatschoicejava.config.AiModelConfig;
+import com.xx.jaseatschoicejava.config.AiRuntimeKeyStore;
 import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 import com.xx.jaseatschoicejava.agent.config.DynamicAiModelRegistry;
+import com.xx.jaseatschoicejava.dto.AiModelCandidateDTO;
 import com.xx.jaseatschoicejava.dto.AiRuntimeConfigSnapshot;
 import com.xx.jaseatschoicejava.exception.BusinessException;
 import com.xx.jaseatschoicejava.service.AiRuntimeConfigService;
+import com.xx.jaseatschoicejava.service.SystemConfigService;
 
 import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.model.chat.StreamingChatModel;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class AiRuntimeConfigServiceTest {
+
+    private static final String CANDIDATE_KEY = "candidate-key-1234567890";
 
     @Mock
     private AiModelClientFactory modelFactory;
@@ -240,6 +251,41 @@ class AiRuntimeConfigServiceTest {
         assertFalse(result.isSuccess());
         assertEquals("模型不可用", result.getMessage());
         assertFalse(json.contains("secret-key-12345678901"));
+    }
+
+    @Test
+    void activationBuildsStreamingModelWithCandidateKey(@TempDir Path tempDir) throws Exception {
+        AiRuntimeKeyStore keyStore = new AiRuntimeKeyStore(tempDir.resolve("active-key").toString());
+        when(modelFactory.resolveKey(any(AiRuntimeKeyStore.class)))
+            .thenAnswer(ignored -> keyStore.readKey());
+        SystemConfigService systemConfigService = mock(SystemConfigService.class);
+        when(systemConfigService.setConfigValue(anyString(), anyString(), anyString(), anyString()))
+            .thenReturn(true);
+        AiRuntimeConfigServiceImpl activationService = new AiRuntimeConfigServiceImpl(
+            aiConfig, systemConfigService, registry(), new AiProviderRegistry(List.of(modelFactory)),
+            new ObjectMapper(), keyStore, null, null);
+
+        ChatModel chatModel = mock(ChatModel.class);
+        when(chatModel.chat("ping")).thenReturn("pong");
+        when(modelFactory.buildChatModel(any(AiModelConfig.class), eq(CANDIDATE_KEY)))
+            .thenReturn(chatModel);
+        when(modelFactory.buildSupervisorModel(any(AiModelConfig.class), eq(CANDIDATE_KEY)))
+            .thenReturn(mock(ChatModel.class));
+        when(modelFactory.buildVisionModel(any(AiModelConfig.class), eq(CANDIDATE_KEY)))
+            .thenReturn(mock(ChatModel.class));
+        when(modelFactory.buildStreamingModel(any(AiModelConfig.class), eq(CANDIDATE_KEY)))
+            .thenReturn(mock(StreamingChatModel.class));
+
+        activationService.saveAndActivate(AiModelCandidateDTO.builder()
+            .provider("zhipu")
+            .model("chat-model")
+            .supervisorModel("supervisor-model")
+            .visionModel("vision-model")
+            .apiKey(CANDIDATE_KEY)
+            .build(), "tester");
+
+        verify(modelFactory).buildStreamingModel(any(AiModelConfig.class), eq(CANDIDATE_KEY));
+        assertEquals(CANDIDATE_KEY, keyStore.readKey());
     }
 
     @Test

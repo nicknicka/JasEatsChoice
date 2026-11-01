@@ -367,7 +367,7 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
             adapter.buildChatModel(config, candidateKey),
             adapter.buildSupervisorModel(config, candidateKey),
             adapter.buildVisionModel(config, candidateKey),
-            adapter.buildStreamingModel(config),
+            adapter.buildStreamingModel(config, candidateKey),
             version);
     }
 
