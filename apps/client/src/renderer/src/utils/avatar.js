@@ -44,8 +44,8 @@ export function normalizeImageUrl(url) {
  */
 export function getAvatarUrl(avatar) {
   if (!avatar) {
-    // 返回默认头像（Element Plus默认头像）
-    return 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
+    // 返回空值，让 CommonAvatar 使用用户名首字作为暖色兜底头像
+    return ''
   }
 
   // base64 内联图片可直接使用
