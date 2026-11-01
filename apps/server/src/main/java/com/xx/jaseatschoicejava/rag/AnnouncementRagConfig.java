@@ -1,6 +1,7 @@
 package com.xx.jaseatschoicejava.rag;
 
 import java.time.Duration;
+import java.util.List;
 
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -32,7 +33,9 @@ public class AnnouncementRagConfig {
         ZhipuAIConfig zhipuAIConfig,
         AIConfig aiConfig,
         AiRuntimeKeyStore runtimeKeyStore,
-        AnnouncementEmbeddingModelFactory embeddingModelFactory) {
+        List<AnnouncementEmbeddingModelFactory> embeddingModelFactories) {
+        AnnouncementEmbeddingModelFactory embeddingModelFactory = selectEmbeddingModelFactory(
+            embeddingModelFactories, properties.getEmbedding().getProvider());
         return new AnnouncementRagRuntimeEmbeddingModel(() ->
             configuredEmbeddingModel(
                 properties, zhipuAIConfig, aiConfig, runtimeKeyStore, embeddingModelFactory));
@@ -56,6 +59,23 @@ public class AnnouncementRagConfig {
             embedding.getDimensions(),
             embedding.getBaseUrl(),
             Duration.ofMillis(zhipuAIConfig.getTimeout()));
+    }
+
+    AnnouncementEmbeddingModelFactory selectEmbeddingModelFactory(
+        List<AnnouncementEmbeddingModelFactory> embeddingModelFactories, String provider) {
+        if (embeddingModelFactories == null || embeddingModelFactories.isEmpty()) {
+            throw new IllegalStateException("没有可用的 Embedding provider 实现");
+        }
+        for (AnnouncementEmbeddingModelFactory factory : embeddingModelFactories) {
+            if (factory.providerCode().equals(provider)) {
+                return factory;
+            }
+        }
+        List<String> available = embeddingModelFactories.stream()
+            .map(AnnouncementEmbeddingModelFactory::providerCode)
+            .toList();
+        throw new IllegalArgumentException(
+            "不支持的 Embedding provider：" + provider + "，可用：" + available);
     }
 
     @Bean

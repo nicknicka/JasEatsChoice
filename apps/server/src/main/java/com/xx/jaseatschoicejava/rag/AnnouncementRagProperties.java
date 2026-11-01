@@ -23,6 +23,7 @@ public class AnnouncementRagProperties {
 
     @Data
     public static class Embedding {
+        private String provider = "zhipu";
         private String model = "embedding-3";
         private int dimensions = 2048;
         private String baseUrl = "";
