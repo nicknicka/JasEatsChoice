@@ -10,7 +10,8 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 class AnnouncementRagStartupTest {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-        .withUserConfiguration(AnnouncementRagConfig.class, ZhipuAnnouncementEmbeddingModelFactory.class)
+        .withUserConfiguration(AnnouncementRagConfig.class, ZhipuAnnouncementEmbeddingModelFactory.class,
+            OpenAiCompatibleAnnouncementEmbeddingModelFactory.class)
         .withBean("aiRuntimeKeyStore", AiRuntimeKeyStore.class, () -> new AiRuntimeKeyStore(""));
 
     @Test

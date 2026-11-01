@@ -64,7 +64,7 @@ class QdrantCollectionInitializerTest {
         try (QdrantClient client = client()) {
             AnnouncementRagInfrastructure infrastructure = new AnnouncementRagInfrastructure(
                 properties, zhipuConfig.getApiKey(),
-                new AnnouncementRagConfig().announcementEmbeddingModel(properties, zhipuConfig, new AIConfig(), null, new ZhipuAnnouncementEmbeddingModelFactory()), client);
+                new AnnouncementRagConfig().announcementEmbeddingModel(properties, zhipuConfig, new AIConfig(), null, java.util.List.of(new ZhipuAnnouncementEmbeddingModelFactory(), new OpenAiCompatibleAnnouncementEmbeddingModelFactory())), client);
             infrastructure.initialize();
 
             assertEquals(AnnouncementRagState.READY, infrastructure.status().state());

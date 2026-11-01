@@ -234,6 +234,7 @@ zhipuai:
 
 announcement-rag:
   embedding:
+    provider: ${AI_EMBEDDING_PROVIDER:zhipu}
     model: ${AI_EMBEDDING_MODEL:embedding-3}
     dimensions: ${AI_EMBEDDING_DIMENSIONS:2048}
     base-url: ${AI_EMBEDDING_BASE_URL:}
