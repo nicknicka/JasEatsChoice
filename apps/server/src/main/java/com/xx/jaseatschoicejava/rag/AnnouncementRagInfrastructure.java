@@ -12,7 +12,7 @@ import jakarta.annotation.PostConstruct;
 public class AnnouncementRagInfrastructure {
 
     private final AnnouncementRagProperties properties;
-    private final String apiKey;
+    private final boolean embeddingConfigured;
     private final EmbeddingModel embeddingModel;
     private final QdrantClient qdrantClient;
     private EmbeddingStore<TextSegment> embeddingStore;
@@ -21,11 +21,11 @@ public class AnnouncementRagInfrastructure {
 
     public AnnouncementRagInfrastructure(
         AnnouncementRagProperties properties,
-        String apiKey,
+        boolean embeddingConfigured,
         EmbeddingModel embeddingModel,
         QdrantClient qdrantClient) {
         this.properties = properties;
-        this.apiKey = apiKey;
+        this.embeddingConfigured = embeddingConfigured;
         this.embeddingModel = embeddingModel;
         this.qdrantClient = qdrantClient;
     }
@@ -40,8 +40,8 @@ public class AnnouncementRagInfrastructure {
             status = new AnnouncementRagStatus(AnnouncementRagState.DISABLED, "公告 RAG 已显式关闭");
             return;
         }
-        if (apiKey == null || apiKey.isBlank()) {
-            status = new AnnouncementRagStatus(AnnouncementRagState.NOT_CONFIGURED, "智谱 API key 未配置");
+        if (!embeddingConfigured) {
+            status = new AnnouncementRagStatus(AnnouncementRagState.NOT_CONFIGURED, "公告 RAG Embedding 未配置");
             return;
         }
         if (qdrantClient == null) {

@@ -13,6 +13,7 @@ import com.xx.jaseatschoicejava.config.AIConfig;
 import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 
 import dev.langchain4j.model.embedding.EmbeddingModel;
+import dev.langchain4j.model.openai.OpenAiEmbeddingModel;
 
 class AnnouncementRagConfigTest {
 
@@ -63,6 +64,34 @@ class AnnouncementRagConfigTest {
             allFactories());
 
         assertInstanceOf(AnnouncementRagRuntimeEmbeddingModel.class, model);
+    }
+
+    @Test
+    void openAiCompatibleEmbedding_withoutKeyButWithBaseUrl_buildsModel() {
+        AnnouncementRagProperties properties = new AnnouncementRagProperties();
+        properties.getEmbedding().setProvider("openai-compatible");
+        properties.getEmbedding().setModel("bge-m3");
+        properties.getEmbedding().setDimensions(1024);
+        properties.getEmbedding().setBaseUrl("http://localhost:11434/v1");
+
+        EmbeddingModel model = config.configuredEmbeddingModel(
+            properties, new ZhipuAIConfig(), new AIConfig(), null, null,
+            new OpenAiCompatibleAnnouncementEmbeddingModelFactory());
+
+        assertInstanceOf(OpenAiEmbeddingModel.class, model);
+    }
+
+    @Test
+    void openAiCompatibleEmbedding_withoutBaseUrl_isDisabled() {
+        AnnouncementRagProperties properties = new AnnouncementRagProperties();
+        properties.getEmbedding().setProvider("openai-compatible");
+        properties.getEmbedding().setBaseUrl("");
+
+        EmbeddingModel model = config.configuredEmbeddingModel(
+            properties, new ZhipuAIConfig(), new AIConfig(), null, null,
+            new OpenAiCompatibleAnnouncementEmbeddingModelFactory());
+
+        assertInstanceOf(AnnouncementRagDisabledEmbeddingModel.class, model);
     }
 
     @Test

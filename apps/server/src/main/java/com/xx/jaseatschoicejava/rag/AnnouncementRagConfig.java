@@ -52,7 +52,7 @@ public class AnnouncementRagConfig {
         String activeProvider,
         AnnouncementEmbeddingModelFactory embeddingModelFactory) {
         String apiKey = embeddingApiKey(properties, zhipuAIConfig, aiConfig, runtimeKeyStore, activeProvider);
-        if (apiKey.isBlank()) {
+        if (!embeddingModelFactory.isConfigured(apiKey, properties.getEmbedding().getBaseUrl())) {
             return new AnnouncementRagDisabledEmbeddingModel();
         }
 
@@ -89,12 +89,16 @@ public class AnnouncementRagConfig {
         AIConfig aiConfig,
         AiRuntimeKeyStore runtimeKeyStore,
         DynamicAiModelRegistry dynamicAiModelRegistry,
+        List<AnnouncementEmbeddingModelFactory> embeddingModelFactories,
         EmbeddingModel announcementEmbeddingModel,
         QdrantClient announcementQdrantClient) {
+        AnnouncementEmbeddingModelFactory embeddingModelFactory = selectEmbeddingModelFactory(
+            embeddingModelFactories, properties.getEmbedding().getProvider());
+        String apiKey = embeddingApiKey(properties, zhipuAIConfig, aiConfig, runtimeKeyStore,
+            activeProvider(dynamicAiModelRegistry, aiConfig));
         return new AnnouncementRagInfrastructure(
             properties,
-            embeddingApiKey(properties, zhipuAIConfig, aiConfig, runtimeKeyStore,
-                activeProvider(dynamicAiModelRegistry, aiConfig)),
+            embeddingModelFactory.isConfigured(apiKey, properties.getEmbedding().getBaseUrl()),
             announcementEmbeddingModel, announcementQdrantClient);
     }
 

@@ -19,4 +19,13 @@ public interface AnnouncementEmbeddingModelFactory {
      * 按给定参数构建 Embedding 客户端。
      */
     EmbeddingModel build(String apiKey, String model, int dimensions, String baseUrl, Duration timeout);
+
+    /**
+     * 配置是否完整到可以构建客户端。
+     *
+     * 默认要求有 apiKey；本地 OpenAI 兼容端点（如 Ollama）不需要 key，可覆盖为只校验地址。
+     */
+    default boolean isConfigured(String apiKey, String baseUrl) {
+        return apiKey != null && !apiKey.isBlank();
+    }
 }
