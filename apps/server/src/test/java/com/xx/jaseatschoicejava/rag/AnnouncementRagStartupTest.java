@@ -84,6 +84,24 @@ class AnnouncementRagStartupTest {
     }
 
     @Test
+    void keylessOpenAiCompatibleEndpointPassesConfigurationGate() {
+        contextRunner
+            .withPropertyValues(
+                "announcement-rag.enabled=true",
+                "zhipuai.api-key=",
+                "announcement-rag.embedding.provider=openai-compatible",
+                "announcement-rag.embedding.model=bge-m3",
+                "announcement-rag.embedding.dimensions=1024",
+                "announcement-rag.embedding.base-url=http://localhost:11434/v1",
+                "announcement-rag.qdrant.host=localhost",
+                "announcement-rag.qdrant.port=1")
+            .run(context -> {
+                AnnouncementRagStatus status = context.getBean(AnnouncementRagInfrastructure.class).status();
+                assertThat(status.state()).isEqualTo(AnnouncementRagState.UNAVAILABLE);
+            });
+    }
+
+    @Test
     void unavailableQdrant_startsInUnavailableState() {
         contextRunner
             .withPropertyValues(

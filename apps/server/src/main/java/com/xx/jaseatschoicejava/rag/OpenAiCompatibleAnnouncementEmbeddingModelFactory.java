@@ -18,6 +18,15 @@ public class OpenAiCompatibleAnnouncementEmbeddingModelFactory implements Announ
         return "openai-compatible";
     }
 
+    /**
+     * OpenAI 兼容端点只要有服务地址即可：本地 Ollama 之类不校验 Authorization，
+     * 远端网关需要的 key 仍可照常通过 AI_API_KEY / 运行时 key 提供。
+     */
+    @Override
+    public boolean isConfigured(String apiKey, String baseUrl) {
+        return baseUrl != null && !baseUrl.isBlank();
+    }
+
     @Override
     public EmbeddingModel build(String apiKey, String model, int dimensions, String baseUrl, Duration timeout) {
         if (baseUrl == null || baseUrl.isBlank()) {

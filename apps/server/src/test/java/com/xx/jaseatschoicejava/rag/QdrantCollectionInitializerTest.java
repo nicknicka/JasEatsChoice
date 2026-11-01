@@ -63,7 +63,7 @@ class QdrantCollectionInitializerTest {
         zhipuConfig.setApiKey("test-key");
         try (QdrantClient client = client()) {
             AnnouncementRagInfrastructure infrastructure = new AnnouncementRagInfrastructure(
-                properties, zhipuConfig.getApiKey(),
+                properties, true,
                 new AnnouncementRagConfig().announcementEmbeddingModel(properties, zhipuConfig, new AIConfig(), null, new com.xx.jaseatschoicejava.agent.config.DynamicAiModelRegistry(), java.util.List.of(new ZhipuAnnouncementEmbeddingModelFactory(), new OpenAiCompatibleAnnouncementEmbeddingModelFactory())), client);
             infrastructure.initialize();
 
