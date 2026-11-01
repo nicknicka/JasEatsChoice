@@ -222,6 +222,13 @@
             <version>1.12.1</version>
         </dependency>
 
+        <!-- LangChain4j OpenAI-compatible provider -->
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-open-ai</artifactId>
+            <version>1.12.1</version>
+        </dependency>
+
         <!-- LangChain4j Agentic模块 (监督代理支持) -->
         <dependency>
             <groupId>dev.langchain4j</groupId>

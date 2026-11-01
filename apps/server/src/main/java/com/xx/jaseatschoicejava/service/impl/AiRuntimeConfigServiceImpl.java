@@ -20,6 +20,7 @@ import com.xx.jaseatschoicejava.config.AiRuntimeKeyStore;
 import com.xx.jaseatschoicejava.dto.AiConnectivityResult;
 import com.xx.jaseatschoicejava.dto.AiConfigAuditEvent;
 import com.xx.jaseatschoicejava.dto.AiModelCandidateDTO;
+import com.xx.jaseatschoicejava.dto.AiModelOption;
 import com.xx.jaseatschoicejava.dto.AiPreviousConfigSummary;
 import com.xx.jaseatschoicejava.dto.AiRuntimeConfigHistory;
 import com.xx.jaseatschoicejava.dto.AiRuntimeConfigSnapshot;
@@ -232,6 +233,12 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
         } catch (Exception exception) {
             return failure(config.getModel(), safeMessage(exception, apiKey));
         }
+    }
+
+    @Override
+    public List<AiModelOption> discoverModels(AiModelCandidateDTO candidate) {
+        AiModelClientFactory adapter = adapter(candidate == null ? null : candidate.getProvider());
+        return adapter.discoverModels(candidate);
     }
 
     @Override

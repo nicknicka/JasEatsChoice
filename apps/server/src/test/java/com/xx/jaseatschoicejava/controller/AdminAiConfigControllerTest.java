@@ -12,10 +12,12 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import com.xx.jaseatschoicejava.dto.AiConnectivityResult;
+import com.xx.jaseatschoicejava.dto.AiModelOption;
 import com.xx.jaseatschoicejava.dto.AiPreviousConfigSummary;
 import com.xx.jaseatschoicejava.dto.AiRuntimeConfigSnapshot;
 import com.xx.jaseatschoicejava.service.AiRuntimeConfigService;
@@ -93,6 +95,22 @@ class AdminAiConfigControllerTest {
             .andExpect(jsonPath("$.data.model").value("glm-4-flash"));
 
         verify(service).rollbackToPrevious(null);
+    }
+
+    @Test
+    void discoverModelsReturnsProviderModelOptions() throws Exception {
+        when(service.discoverModels(Mockito.any())).thenReturn(List.of(
+            AiModelOption.builder().id("glm-5.3-solo").name("GLM-5.3").supportsImages(false).build(),
+            AiModelOption.builder().id("qwen3.8-max-solo").name("Qwen3.8-Max").supportsImages(true).build()));
+
+        mockMvc.perform(post("/admin/settings/ai/models")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"provider\":\"openai-compatible\",\"baseUrl\":\"http://gw/v1\",\"apiKey\":\"secret\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data[0].id").value("glm-5.3-solo"))
+            .andExpect(jsonPath("$.data[0].supportsImages").value(false))
+            .andExpect(jsonPath("$.data[1].supportsImages").value(true));
     }
 
     @Test

@@ -1660,6 +1660,25 @@ export function rollbackAiConfig() {
     })
 }
 
+/**
+ * 获取 provider 当前可用模型列表（不持久化）
+ * @param {Object} candidate 非密钥候选配置（provider/baseUrl/apiKey 等）
+ * @returns {Promise} 模型选项数组
+ */
+export function discoverAiModels(candidate) {
+  console.log('[管理员API] 获取 AI 模型列表')
+  return api
+    .post(API.ADMIN.AI_MODELS, candidate)
+    .then((response) => {
+      console.log('[管理员API] 获取 AI 模型列表完成')
+      return response
+    })
+    .catch((error) => {
+      console.error('[管理员API] 获取 AI 模型列表失败:', error)
+      throw error
+    })
+}
+
 export function activateAiConfig(candidate) {
   console.log('[管理员API] 保存并激活 AI 配置')
   return api

@@ -1,5 +1,7 @@
 package com.xx.jaseatschoicejava.controller;
 
+import java.util.List;
+
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -10,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.xx.jaseatschoicejava.common.ResponseResult;
 import com.xx.jaseatschoicejava.dto.AiConnectivityResult;
 import com.xx.jaseatschoicejava.dto.AiModelCandidateDTO;
+import com.xx.jaseatschoicejava.dto.AiModelOption;
 import com.xx.jaseatschoicejava.dto.AiPreviousConfigSummary;
 import com.xx.jaseatschoicejava.dto.AiRuntimeConfigSnapshot;
 import com.xx.jaseatschoicejava.service.AiRuntimeConfigService;
@@ -51,6 +54,13 @@ public class AdminAiConfigController {
     @PreAuthorize("hasAnyAuthority('admin:setting:ai')")
     public ResponseResult<AiConnectivityResult> testCandidate(@RequestBody AiModelCandidateDTO candidate) {
         return ResponseResult.success(aiRuntimeConfigService.testCandidateConnectivity(candidate));
+    }
+
+    @ApiOperation("获取 provider 可用模型列表（不持久化）")
+    @PostMapping("/models")
+    @PreAuthorize("hasAnyAuthority('admin:setting:ai')")
+    public ResponseResult<List<AiModelOption>> discoverModels(@RequestBody AiModelCandidateDTO candidate) {
+        return ResponseResult.success(aiRuntimeConfigService.discoverModels(candidate));
     }
 
     @ApiOperation("测试通过后保存并激活候选 AI 配置")
