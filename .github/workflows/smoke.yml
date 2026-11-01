@@ -61,7 +61,7 @@ jobs:
         run: cd tests && npx playwright install --with-deps chromium
 
       - name: Run smoke specs
-        run: bash scripts/ci-e2e.sh 01-auth.spec.js 04-order.spec.js 10-merchant-order-dish.spec.js
+        run: bash scripts/ci-e2e.sh 01-auth.spec.js 04-order.spec.js 10-merchant-order-dish.spec.js 16-admin-ai-release.spec.js
 
       - name: Upload Playwright report
         if: failure()
