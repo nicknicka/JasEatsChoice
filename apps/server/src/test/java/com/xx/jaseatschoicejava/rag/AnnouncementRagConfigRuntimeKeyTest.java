@@ -34,7 +34,7 @@ class AnnouncementRagConfigRuntimeKeyTest {
         aiConfig.setApiKey("generic-key");
 
         EmbeddingModel model = new AnnouncementRagConfig().announcementEmbeddingModel(
-            properties, zhipuConfig, aiConfig, keyStore);
+            properties, zhipuConfig, aiConfig, keyStore, new ZhipuAnnouncementEmbeddingModelFactory());
 
         assertInstanceOf(AnnouncementRagRuntimeEmbeddingModel.class, model);
     }
@@ -50,7 +50,7 @@ class AnnouncementRagConfigRuntimeKeyTest {
             tempDir.resolve("missing").resolve("ai-active-key").toString());
 
         EmbeddingModel model = new AnnouncementRagConfig().announcementEmbeddingModel(
-            properties, zhipuConfig, aiConfig, keyStore);
+            properties, zhipuConfig, aiConfig, keyStore, new ZhipuAnnouncementEmbeddingModelFactory());
 
         assertInstanceOf(AnnouncementRagRuntimeEmbeddingModel.class, model);
     }

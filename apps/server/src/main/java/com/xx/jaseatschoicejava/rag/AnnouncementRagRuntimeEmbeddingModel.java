@@ -1,12 +1,6 @@
 package com.xx.jaseatschoicejava.rag;
 
 import java.util.List;
-import java.util.function.Supplier;
-
-import com.xx.jaseatschoicejava.config.AiApiKeyResolver;
-import com.xx.jaseatschoicejava.config.AIConfig;
-import com.xx.jaseatschoicejava.config.AiRuntimeKeyStore;
-import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
@@ -14,20 +8,11 @@ import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.output.Response;
 
 /**
- * 每次调用前重新解析 active key，保证公告 Embedding 也使用轮换后的运行时密钥。
+ * 每次调用前重建 Embedding 客户端，保证公告向量化使用轮换后的运行时密钥与当前配置。
  */
 public class AnnouncementRagRuntimeEmbeddingModel implements EmbeddingModel {
 
     private final EmbeddingModelFactory modelFactory;
-
-    public AnnouncementRagRuntimeEmbeddingModel(
-            AnnouncementRagProperties properties,
-            ZhipuAIConfig zhipuAIConfig,
-            AIConfig aiConfig,
-            AiRuntimeKeyStore runtimeKeyStore) {
-        this.modelFactory = () -> new AnnouncementRagConfig().configuredEmbeddingModel(
-            properties, zhipuAIConfig, aiConfig, runtimeKeyStore);
-    }
 
     AnnouncementRagRuntimeEmbeddingModel(EmbeddingModelFactory modelFactory) {
         this.modelFactory = modelFactory;
