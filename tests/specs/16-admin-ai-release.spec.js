@@ -86,6 +86,11 @@ test.describe('AI 热加载发布验收', () => {
 
     try {
       await page.goto('/admin/settings')
+      // Element Plus 下拉的过渡动画会让元素在无头浏览器下持续移动，Playwright 会报
+      // "element is not stable"（见 #174）。测试里禁用过渡与动画，避免依赖浏览器通道。
+      await page.addStyleTag({
+        content: '*, *::before, *::after { transition: none !important; animation: none !important; }'
+      })
       await page.getByRole('tab', { name: 'AI 模型' }).click()
       const aiSection = page.locator('.el-tab-pane').filter({ hasText: '当前配置' })
 
