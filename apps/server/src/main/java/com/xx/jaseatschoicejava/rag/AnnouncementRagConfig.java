@@ -7,6 +7,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import com.xx.jaseatschoicejava.agent.config.DynamicAiModelRegistry;
 import com.xx.jaseatschoicejava.config.AIConfig;
 import com.xx.jaseatschoicejava.config.AiApiKeyResolver;
 import com.xx.jaseatschoicejava.config.AiRuntimeKeyStore;
@@ -33,12 +34,14 @@ public class AnnouncementRagConfig {
         ZhipuAIConfig zhipuAIConfig,
         AIConfig aiConfig,
         AiRuntimeKeyStore runtimeKeyStore,
+        DynamicAiModelRegistry dynamicAiModelRegistry,
         List<AnnouncementEmbeddingModelFactory> embeddingModelFactories) {
         AnnouncementEmbeddingModelFactory embeddingModelFactory = selectEmbeddingModelFactory(
             embeddingModelFactories, properties.getEmbedding().getProvider());
         return new AnnouncementRagRuntimeEmbeddingModel(() ->
             configuredEmbeddingModel(
-                properties, zhipuAIConfig, aiConfig, runtimeKeyStore, embeddingModelFactory));
+                properties, zhipuAIConfig, aiConfig, runtimeKeyStore,
+                activeProvider(dynamicAiModelRegistry, aiConfig), embeddingModelFactory));
     }
 
     EmbeddingModel configuredEmbeddingModel(
@@ -46,8 +49,9 @@ public class AnnouncementRagConfig {
         ZhipuAIConfig zhipuAIConfig,
         AIConfig aiConfig,
         AiRuntimeKeyStore runtimeKeyStore,
+        String activeProvider,
         AnnouncementEmbeddingModelFactory embeddingModelFactory) {
-        String apiKey = AiApiKeyResolver.resolve(zhipuAIConfig, aiConfig, runtimeKeyStore);
+        String apiKey = embeddingApiKey(properties, zhipuAIConfig, aiConfig, runtimeKeyStore, activeProvider);
         if (apiKey.isBlank()) {
             return new AnnouncementRagDisabledEmbeddingModel();
         }
@@ -84,10 +88,40 @@ public class AnnouncementRagConfig {
         ZhipuAIConfig zhipuAIConfig,
         AIConfig aiConfig,
         AiRuntimeKeyStore runtimeKeyStore,
+        DynamicAiModelRegistry dynamicAiModelRegistry,
         EmbeddingModel announcementEmbeddingModel,
         QdrantClient announcementQdrantClient) {
         return new AnnouncementRagInfrastructure(
-            properties, AiApiKeyResolver.resolve(zhipuAIConfig, aiConfig, runtimeKeyStore),
+            properties,
+            embeddingApiKey(properties, zhipuAIConfig, aiConfig, runtimeKeyStore,
+                activeProvider(dynamicAiModelRegistry, aiConfig)),
             announcementEmbeddingModel, announcementQdrantClient);
+    }
+
+    /**
+     * 公告向量化使用的 key。
+     *
+     * 管理员轮换的运行时 key 属于“当前激活的对话供应商”，只有 embedding 供应商与它一致时才能复用；
+     * 否则会把对话供应商的 key 发到 embedding 供应商（例如拿第三方对话 key 调智谱 embedding）。
+     */
+    String embeddingApiKey(
+            AnnouncementRagProperties properties,
+            ZhipuAIConfig zhipuAIConfig,
+            AIConfig aiConfig,
+            AiRuntimeKeyStore runtimeKeyStore,
+            String activeProvider) {
+        String embeddingProvider = properties.getEmbedding().getProvider();
+        if (activeProvider != null && !activeProvider.isBlank()
+                && activeProvider.equals(embeddingProvider)) {
+            return AiApiKeyResolver.resolve(zhipuAIConfig, aiConfig, runtimeKeyStore);
+        }
+        return AiApiKeyResolver.resolve(zhipuAIConfig, aiConfig);
+    }
+
+    private String activeProvider(DynamicAiModelRegistry registry, AIConfig aiConfig) {
+        if (registry != null && registry.current() != null && registry.current().config() != null) {
+            return registry.current().config().getProvider();
+        }
+        return aiConfig == null ? null : aiConfig.getProvider();
     }
 }

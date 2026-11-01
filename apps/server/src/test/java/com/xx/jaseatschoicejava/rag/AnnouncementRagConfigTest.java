@@ -8,6 +8,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import com.xx.jaseatschoicejava.agent.config.DynamicAiModelRegistry;
 import com.xx.jaseatschoicejava.config.AIConfig;
 import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 
@@ -30,7 +31,8 @@ class AnnouncementRagConfigTest {
         zhipuConfig.setApiKey("");
 
         EmbeddingModel model = config.configuredEmbeddingModel(
-            properties, zhipuConfig, new AIConfig(), null, new ZhipuAnnouncementEmbeddingModelFactory());
+            properties, zhipuConfig, new AIConfig(), null, null,
+            new ZhipuAnnouncementEmbeddingModelFactory());
 
         assertInstanceOf(AnnouncementRagDisabledEmbeddingModel.class, model);
     }
@@ -42,7 +44,8 @@ class AnnouncementRagConfigTest {
         zhipuConfig.setApiKey("test-key");
 
         EmbeddingModel model = config.announcementEmbeddingModel(
-            properties, zhipuConfig, new AIConfig(), null, allFactories());
+            properties, zhipuConfig, new AIConfig(), null, new DynamicAiModelRegistry(),
+            allFactories());
 
         assertInstanceOf(AnnouncementRagRuntimeEmbeddingModel.class, model);
     }
@@ -56,7 +59,8 @@ class AnnouncementRagConfigTest {
         aiConfig.setApiKey("generic-test-key");
 
         EmbeddingModel model = config.announcementEmbeddingModel(
-            properties, zhipuConfig, aiConfig, null, allFactories());
+            properties, zhipuConfig, aiConfig, null, new DynamicAiModelRegistry(),
+            allFactories());
 
         assertInstanceOf(AnnouncementRagRuntimeEmbeddingModel.class, model);
     }
@@ -102,6 +106,7 @@ class AnnouncementRagConfigTest {
 
         assertThrows(IllegalArgumentException.class, () ->
             config.announcementEmbeddingModel(
-                properties, zhipuConfig, new AIConfig(), null, allFactories()));
+                properties, zhipuConfig, new AIConfig(), null, new DynamicAiModelRegistry(),
+                allFactories()));
     }
 }

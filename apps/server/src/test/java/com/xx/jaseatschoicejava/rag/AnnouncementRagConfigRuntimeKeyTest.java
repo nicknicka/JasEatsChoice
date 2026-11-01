@@ -9,7 +9,9 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import com.xx.jaseatschoicejava.agent.config.DynamicAiModelRegistry;
 import com.xx.jaseatschoicejava.config.AIConfig;
+import com.xx.jaseatschoicejava.config.AiModelConfig;
 import com.xx.jaseatschoicejava.config.AiRuntimeKeyStore;
 import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 
@@ -34,7 +36,7 @@ class AnnouncementRagConfigRuntimeKeyTest {
         aiConfig.setApiKey("generic-key");
 
         EmbeddingModel model = new AnnouncementRagConfig().announcementEmbeddingModel(
-            properties, zhipuConfig, aiConfig, keyStore,
+            properties, zhipuConfig, aiConfig, keyStore, new DynamicAiModelRegistry(),
             java.util.List.of(new ZhipuAnnouncementEmbeddingModelFactory(),
                 new OpenAiCompatibleAnnouncementEmbeddingModelFactory()));
 
@@ -52,7 +54,7 @@ class AnnouncementRagConfigRuntimeKeyTest {
             tempDir.resolve("missing").resolve("ai-active-key").toString());
 
         EmbeddingModel model = new AnnouncementRagConfig().announcementEmbeddingModel(
-            properties, zhipuConfig, aiConfig, keyStore,
+            properties, zhipuConfig, aiConfig, keyStore, new DynamicAiModelRegistry(),
             java.util.List.of(new ZhipuAnnouncementEmbeddingModelFactory(),
                 new OpenAiCompatibleAnnouncementEmbeddingModelFactory()));
 
@@ -80,5 +82,59 @@ class AnnouncementRagConfigRuntimeKeyTest {
             .embedAll(java.util.List.of(dev.langchain4j.data.segment.TextSegment.from("first")));
         org.mockito.Mockito.verify(secondModel)
             .embedAll(java.util.List.of(dev.langchain4j.data.segment.TextSegment.from("second")));
+    }
+
+    @Test
+    void runtimeKeyUsedWhenActiveProviderMatchesEmbeddingProvider() throws IOException {
+        Path keyFile = tempDir.resolve("matching-active-key");
+        AiRuntimeKeyStore keyStore = new AiRuntimeKeyStore(keyFile.toString());
+        keyStore.writeKey("runtime-key");
+
+        AnnouncementRagProperties properties = new AnnouncementRagProperties();
+        ZhipuAIConfig zhipuConfig = new ZhipuAIConfig();
+        zhipuConfig.setApiKey("zhipu-env-key");
+
+        assertEquals("runtime-key", new AnnouncementRagConfig().embeddingApiKey(
+            properties, zhipuConfig, new AIConfig(), keyStore, "zhipu"));
+    }
+
+    @Test
+    void runtimeKeyIgnoredWhenActiveProviderDiffersFromEmbeddingProvider() throws IOException {
+        Path keyFile = tempDir.resolve("foreign-active-key");
+        AiRuntimeKeyStore keyStore = new AiRuntimeKeyStore(keyFile.toString());
+        keyStore.writeKey("third-party-chat-key");
+
+        AnnouncementRagProperties properties = new AnnouncementRagProperties();
+        ZhipuAIConfig zhipuConfig = new ZhipuAIConfig();
+        zhipuConfig.setApiKey("zhipu-env-key");
+
+        assertEquals("zhipu-env-key", new AnnouncementRagConfig().embeddingApiKey(
+            properties, zhipuConfig, new AIConfig(), keyStore, "openai-compatible"));
+    }
+
+    @Test
+    void foreignRuntimeKeyDoesNotEnableEmbeddingWithoutOwnKey() throws IOException {
+        Path keyFile = tempDir.resolve("foreign-only-key");
+        AiRuntimeKeyStore keyStore = new AiRuntimeKeyStore(keyFile.toString());
+        keyStore.writeKey("third-party-chat-key");
+
+        AnnouncementRagProperties properties = new AnnouncementRagProperties();
+        ZhipuAIConfig zhipuConfig = new ZhipuAIConfig();
+        zhipuConfig.setApiKey("");
+
+        EmbeddingModel model = new AnnouncementRagConfig().configuredEmbeddingModel(
+            properties, zhipuConfig, new AIConfig(), keyStore, "openai-compatible",
+            new ZhipuAnnouncementEmbeddingModelFactory());
+
+        assertInstanceOf(AnnouncementRagDisabledEmbeddingModel.class, model);
+    }
+
+    @Test
+    void activeProviderIsReadFromRegistrySnapshot() {
+        DynamicAiModelRegistry registry = new DynamicAiModelRegistry();
+        registry.activate(AiModelConfig.builder().provider("openai-compatible").build(),
+            null, null, null, 1L);
+
+        assertEquals("openai-compatible", registry.current().config().getProvider());
     }
 }
